@@ -14,7 +14,7 @@ Issues and specs for this repo live as GitHub issues. Use the `gh` CLI for all o
 
 Infer the repo from `git remote -v`; `gh` does this automatically when run inside a clone.
 
-**This repo is a fork.** Issues and PRs belong on `neutraltone/opentv`, never on the upstream `opentvproject/opentv`. `gh repo set-default neutraltone/opentv` pins this clone; if `gh` ever resolves to the upstream (e.g. after adding an `upstream` remote), pass `-R neutraltone/opentv` explicitly.
+Issues and PRs belong on `neutraltone/settee`. Never use the archived `neutraltone/opentv` fork or the abandoned upstream `opentvproject/opentv`. `gh repo set-default neutraltone/settee` pins this clone; if `gh` ever resolves elsewhere (e.g. after adding an `upstream` remote), pass `-R neutraltone/settee` explicitly.
 
 ## Pull requests as a triage surface
 

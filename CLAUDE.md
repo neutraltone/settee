@@ -9,7 +9,8 @@ module (`app/`), Kotlin + Jetpack Compose + Room + Media3/ExoPlayer. Sources are
 M3U/M3U8 playlists, Stalker/Ministra portals and Stremio add-ons. **D-pad first**: every UI change must
 be fully navigable with a remote (focus order, focus visuals), touch is secondary.
 
-This checkout is a personal fork of `opentvproject/opentv`; the primary target device is a Fire TV Stick.
+This is **Settee** (`neutraltone/settee`), a personal app based on the abandoned `opentvproject/opentv` and
+being rebranded (see the spec, neutraltone/settee#1). The primary target device is a Fire TV Stick.
 
 ## Commands
 
@@ -106,7 +107,7 @@ never release/rebuild on channel change). Retries 403/429/5xx with backoff; not 
 
 ### Issue tracker
 
-Issues live in GitHub Issues on the fork `neutraltone/opentv` (never upstream), via the `gh` CLI. See `docs/agents/issue-tracker.md`.
+Issues live in GitHub Issues on `neutraltone/settee`, via the `gh` CLI. See `docs/agents/issue-tracker.md`.
 
 ### Triage labels
 
