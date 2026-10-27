@@ -50,7 +50,7 @@ fun UpdateGate(viewModel: UpdateViewModel = viewModel()) {
             title = { Text("Update available") },
             text = {
                 Column(Modifier.verticalScroll(rememberScrollState())) {
-                    Text("OpenTV ${s.update.versionName} is available. You have ${BuildConfig.VERSION_NAME}.")
+                    Text("Settee ${s.update.versionName} is available. You have ${BuildConfig.VERSION_NAME}.")
                     if (s.update.notes.isNotBlank()) {
                         Text(
                             text = s.update.notes,

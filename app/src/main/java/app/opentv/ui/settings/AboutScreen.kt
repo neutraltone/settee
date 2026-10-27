@@ -8,7 +8,6 @@ package app.opentv.ui.settings
 import android.content.Intent
 import android.net.Uri
 import android.widget.Toast
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -18,7 +17,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
@@ -26,8 +24,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.graphics.asImageBitmap
-import app.opentv.pairing.QrCodes
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
@@ -50,7 +46,7 @@ import app.opentv.update.UpdateChecker
 import kotlinx.coroutines.launch
 
 /**
- * About: what this is, what version it is, and how to get involved. The update check here is the
+ * About: what this is, what version it is, and what it is built on. The update check here is the
  * manual counterpart to the automatic one — someone who just heard a fix landed can pull it now
  * instead of waiting for the periodic check.
  */
@@ -76,7 +72,12 @@ fun AboutScreen(onBack: () -> Unit) {
         Spacer(Modifier.height(20.dp))
 
         Section(stringResource(R.string.about_version)) {
-            Text("OpenTV ${BuildConfig.VERSION_NAME}", style = MaterialTheme.typography.titleMedium)
+            Text("${stringResource(R.string.app_name)} ${BuildConfig.VERSION_NAME}", style = MaterialTheme.typography.titleMedium)
+            Text(
+                stringResource(R.string.about_based_on),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
             Spacer(Modifier.height(12.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
                 OutlinedButton(
@@ -132,48 +133,13 @@ fun AboutScreen(onBack: () -> Unit) {
 
         Spacer(Modifier.height(16.dp))
 
-        Section(stringResource(R.string.about_support_title)) {
-            Text(
-                stringResource(R.string.about_support_body),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Spacer(Modifier.height(12.dp))
-            LinkLine(stringResource(R.string.about_sponsor_github), "github.com/sponsors/legionnaireneyland")
-            Spacer(Modifier.height(12.dp))
-            LinkLine(
-                stringResource(R.string.about_donate_paypal),
-                "leetobin1982@gmail.com",
-                url = "https://www.paypal.com/donate/?business=leetobin1982@gmail.com&item_name=Support+OpenTV&no_recurring=0&currency_code=GBP",
-            )
-            Spacer(Modifier.height(12.dp))
-            val donateQr = remember { QrCodes.render("https://github.com/sponsors/legionnaireneyland", 400) }
-            donateQr?.let { bmp ->
-                Image(
-                    bitmap = bmp.asImageBitmap(),
-                    contentDescription = stringResource(R.string.about_scan_to_donate),
-                    modifier = Modifier.size(180.dp).clip(RoundedCornerShape(8.dp)),
-                )
-                Spacer(Modifier.height(6.dp))
-                Text(
-                    stringResource(R.string.about_scan_to_donate),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-        }
-
-        Spacer(Modifier.height(16.dp))
-
         Section(stringResource(R.string.about_licence_links_title)) {
             LinkLine(
                 stringResource(R.string.about_licence_label),
                 "GNU General Public License v3.0",
                 url = "https://www.gnu.org/licenses/gpl-3.0.html",
             )
-            LinkLine(stringResource(R.string.about_source_code), "github.com/opentvproject/opentv")
-            LinkLine(stringResource(R.string.about_report_bug), "github.com/opentvproject/opentv/issues")
-            LinkLine(stringResource(R.string.about_install_page), "opentvproject.github.io/opentv")
+            LinkLine(stringResource(R.string.about_source_code), "github.com/neutraltone/settee")
         }
     }
 }

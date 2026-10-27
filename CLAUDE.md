@@ -4,13 +4,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-OpenTV: a GPL-3.0 IPTV player for Android TV, Fire TV, phones and tablets — one APK, single Gradle
+Settee: a GPL-3.0 IPTV player for Android TV, Fire TV, phones and tablets — one APK, single Gradle
 module (`app/`), Kotlin + Jetpack Compose + Room + Media3/ExoPlayer. Sources are Xtream Codes logins,
 M3U/M3U8 playlists, Stalker/Ministra portals and Stremio add-ons. **D-pad first**: every UI change must
 be fully navigable with a remote (focus order, focus visuals), touch is secondary.
 
-This is **Settee** (`neutraltone/settee`), a personal app based on the abandoned `opentvproject/opentv` and
-being rebranded (see the spec, neutraltone/settee#1). The primary target device is a Fire TV Stick.
+This is **Settee** (`neutraltone/settee`), a personal app based on the abandoned OpenTV project (see the
+spec, neutraltone/settee#1). The primary target device is a Fire TV Stick. The application ID is
+`uk.neutraltone.settee`, but the Kotlin package stays `app.opentv` and the GPL headers still credit the
+OpenTV contributors — don't rename either.
 
 ## Commands
 
@@ -31,8 +33,8 @@ python3 tools/stalker_mock.py [port]        # mock Stalker portal with free test
 No linter/formatter is configured. Tests live in `app/src/test` (JUnit4, Truth, Robolectric, Room
 testing, coroutines-test); there are no instrumented tests.
 
-The debug build has `applicationIdSuffix = ".debug"` (`app.opentv.debug`), so it installs alongside a
-release build without touching its data.
+The debug build has `applicationIdSuffix = ".debug"` (`uk.neutraltone.settee.debug`), so it installs
+alongside a release build without touching its data.
 
 ## Architecture
 
@@ -99,8 +101,9 @@ never release/rebuild on channel change). Retries 403/429/5xx with backoff; not 
 - Releases: bump `versionCode`/`versionName` in `app/build.gradle.kts`, add a `CHANGELOG.md` entry, push a
   `v*` tag (`.github/workflows/release.yml`). Release builds fall back to the debug key without keystore
   secrets — see `docs/RELEASING.md`.
-- The in-app updater checks `UpdateChecker.REPO_SLUG` (`opentvproject/opentv`); for fork releases point it
-  at the fork or upstream releases will be offered over fork builds.
+- The in-app updater checks `UpdateChecker.REPO_SLUG` (`neutraltone/settee`) and installs the release's
+  versioned `settee-<tag>.apk`; the release workflow also publishes a fixed-name `settee.apk` for the
+  Downloader short code. Keep both names in step with `GitHubRelease.apkAsset`.
 - Never put provider URLs, usernames, passwords or MACs in logs, tests or fixtures.
 
 ## Agent skills
