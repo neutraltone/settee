@@ -78,7 +78,7 @@ fun MoviesScreen(
     viewModel: VodViewModel = viewModel(),
 ) {
     val categories by viewModel.movieCategories.collectAsState()
-    val resume by viewModel.continueWatching.collectAsState()
+    val resume by viewModel.continueWatchingMovies.collectAsState()
     val favourites = viewModel.favouriteMovies.collectAsState().value.orEmpty()
     val recommended by viewModel.recommendedMovies.collectAsState()
     val recentlyAdded by viewModel.recentlyAddedMovies.collectAsState()
@@ -202,7 +202,7 @@ fun SeriesScreen(
     viewModel: VodViewModel = viewModel(),
 ) {
     val categories by viewModel.seriesCategories.collectAsState()
-    val resume by viewModel.continueWatching.collectAsState()
+    val resume by viewModel.continueWatchingSeries.collectAsState()
     val favourites = viewModel.favouriteSeries.collectAsState().value.orEmpty()
     val recentlyAdded by viewModel.recentlyAddedSeries.collectAsState()
     val genreRows by viewModel.seriesGenreRows.collectAsState()
@@ -545,13 +545,13 @@ internal fun ContinueWatchingRow(
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             items(items, key = { it.mediaKey }) { item ->
-                ResumeCard(item) { onResume(item.mediaKey, item.streamUrl, item.title) }
+                ResumeCard(item) { onResume(item.mediaKey, item.streamUrl, item.playerTitle) }
             }
         }
     }
 }
 
-/** A landscape resume thumbnail with a progress fill — a movie or an episode part-way through. */
+/** A landscape resume thumbnail with a progress fill: a movie, or a series with the episode it plays. */
 @Composable
 private fun ResumeCard(item: VodViewModel.ResumeItem, onClick: () -> Unit) {
     var focused by remember { mutableStateOf(false) }
@@ -588,10 +588,12 @@ private fun ResumeCard(item: VodViewModel.ResumeItem, onClick: () -> Unit) {
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.fillMaxSize(),
             )
-            LinearProgressIndicator(
-                progress = { item.progress },
-                modifier = Modifier.fillMaxWidth().height(4.dp).align(Alignment.BottomStart),
-            )
+            item.progress?.let { progress ->
+                LinearProgressIndicator(
+                    progress = { progress },
+                    modifier = Modifier.fillMaxWidth().height(4.dp).align(Alignment.BottomStart),
+                )
+            }
         }
         Spacer(Modifier.height(6.dp))
         Text(
@@ -601,6 +603,14 @@ private fun ResumeCard(item: VodViewModel.ResumeItem, onClick: () -> Unit) {
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
+        item.episode?.let {
+            Text(
+                stringResource(R.string.vod_season_episode, it.season, it.episode),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+            )
+        }
     }
 }
 

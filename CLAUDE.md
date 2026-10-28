@@ -109,7 +109,8 @@ catalogue refresh, playback or Xtream parsing. The big picture:
   device-wide columns on `channels`. Sync carries each Profile's Favourites under its name (additive)
   and positions newest-wins (`sync/SyncData.kt`, `SyncEngine.kt`) — keep new watch/favourite state
   syncable the same way.
-- `VodViewModel.continueWatching` builds the Continue Watching shelf from `ViewerLibrary.inProgress()`.
+- Continue Watching comes from `ViewerLibrary.continueWatchingMovies()` / `continueWatchingSeries()` (one card per
+  series: its In Progress episode or else its Up Next); `VodViewModel` adds titles and artwork per tab.
 
 ### Database migrations
 

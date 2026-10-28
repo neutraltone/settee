@@ -36,7 +36,7 @@ class ViewerLibraryFavouritesTest {
         .allowMainThreadQueries()
         .build()
     private val activeProfile = MutableStateFlow(1L)
-    private val library = ViewerLibrary(db.positions(), db.favourites(), activeProfile)
+    private val library = ViewerLibrary(db.positions(), db.episodes(), db.favourites(), activeProfile)
 
     @Before
     fun twoProviders() = runTest {

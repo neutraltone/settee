@@ -34,7 +34,14 @@ class VodShelvesTest {
     val artwork = PlaceholderArtwork()
 
     private val resume = listOf(
-        VodViewModel.ResumeItem("movie:9", "Collateral", posterUrl = null, streamUrl = "", progress = 0.4f),
+        VodViewModel.ResumeItem(
+            "movie:9",
+            "Collateral",
+            playerTitle = "Collateral",
+            posterUrl = null,
+            streamUrl = "",
+            progress = 0.4f,
+        ),
     )
 
     private fun movie(id: Long, name: String) = Movie(

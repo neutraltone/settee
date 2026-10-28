@@ -546,6 +546,9 @@ interface SeriesDao {
     @Query("SELECT * FROM series WHERE id = :id")
     suspend fun byId(id: Long): Series?
 
+    @Query("SELECT * FROM series WHERE sourceId = :sourceId AND seriesId = :seriesId LIMIT 1")
+    suspend fun byProviderId(sourceId: Long, seriesId: String): Series?
+
     @Upsert
     suspend fun upsertAll(items: List<Series>)
 
@@ -560,6 +563,19 @@ interface EpisodeDao {
 
     @Query("SELECT * FROM episodes WHERE id = :id")
     suspend fun byId(id: Long): Episode?
+
+    /**
+     * Every episode [profileId] has any progress on. A join rather than `IN (:ids)`: a long watch
+     * history would run past SQLite's bound-variable limit.
+     */
+    @Query(
+        "SELECT episodes.* FROM episodes JOIN playback_positions " +
+            "ON playback_positions.mediaKey = 'ep:' || episodes.id WHERE playback_positions.profileId = :profileId",
+    )
+    fun observePlayed(profileId: Long): Flow<List<Episode>>
+
+    @Query("SELECT * FROM episodes WHERE sourceId = :sourceId AND seriesId = :seriesId")
+    suspend fun forSeries(sourceId: Long, seriesId: String): List<Episode>
 
     @Query("SELECT * FROM episodes WHERE streamUrl = :url LIMIT 1")
     suspend fun byStreamUrl(url: String): Episode?

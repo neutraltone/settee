@@ -194,6 +194,10 @@ class CatalogRepository(
 
     suspend fun series(id: Long): app.opentv.data.model.Series? = seriesDao.byId(id)
 
+    /** The series an episode belongs to, by the provider's id for it. */
+    suspend fun seriesOf(episode: Episode): app.opentv.data.model.Series? =
+        seriesDao.byProviderId(episode.sourceId, episode.seriesId)
+
     // ---- Netflix-style home feeds ---------------------------------------------------------------
     // All local: derived from the catalogue already on disk plus the active profile's watch history.
     // The plain catalogue rows (recently added) are Flows so they fill in live as a VOD sync lands;

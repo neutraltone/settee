@@ -28,8 +28,8 @@ import app.opentv.data.model.StremioStream
 import app.opentv.data.parser.ChannelNameNormalizer
 import app.opentv.data.parser.displayTitle
 import app.opentv.data.repo.CatalogRepository
+import app.opentv.data.repo.ContinueWatchingCard
 import app.opentv.data.repo.GenreGroup
-import app.opentv.data.repo.InProgressTitle
 import app.opentv.data.repo.MovieVariantGroup
 import app.opentv.data.repo.PersonTitle
 import app.opentv.data.repo.distinctByQuality
@@ -38,6 +38,7 @@ import app.opentv.sync.NasSync
 import app.opentv.sync.SyncClient
 import app.opentv.sync.SyncEngine
 import app.opentv.sync.SyncServer
+import app.opentv.ui.vod.playerTitle
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
@@ -759,45 +760,64 @@ class EpgViewModel(app: Application) : AndroidViewModel(app) {
     }
 }
 
-class VodViewModel(app: Application) : AndroidViewModel(app) {
-    private val graph = ServiceLocator.get(app)
+class VodViewModel @JvmOverloads constructor(
+    app: Application,
+    private val graph: ServiceLocator.Graph = ServiceLocator.get(app),
+) : AndroidViewModel(app) {
     private val settings = graph.settings
 
-    /** One card in the Continue Watching shelf — a movie or episode with somewhere left to go. */
+    /** Which episode a series card picks up at. */
+    data class SeasonEpisode(val season: Int, val episode: Int)
+
+    /**
+     * One card in the Continue Watching shelf: a movie, or a series at its In Progress episode or
+     * Up Next. A series card is titled with the series and carries the [episode] it plays;
+     * [playerTitle] is what the player shows once it starts.
+     */
     data class ResumeItem(
         val mediaKey: String,
         val title: String,
+        val playerTitle: String,
         val posterUrl: String?,
         val streamUrl: String,
-        val progress: Float,
+        /** How far through, 0..1; null when it has never been played, so the card shows no bar. */
+        val progress: Float?,
+        val episode: SeasonEpisode? = null,
     )
 
     @OptIn(ExperimentalCoroutinesApi::class)
-    val continueWatching: StateFlow<List<ResumeItem>> =
-        graph.viewerLibrary.inProgress()
-            .mapLatest { titles -> titles.mapNotNull { resolveResume(it) } }
+    val continueWatchingMovies: StateFlow<List<ResumeItem>> =
+        graph.viewerLibrary.continueWatchingMovies()
+            .mapLatest { cards -> cards.mapNotNull { resolveResume(it) } }
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val continueWatchingSeries: StateFlow<List<ResumeItem>> =
+        graph.viewerLibrary.continueWatchingSeries()
+            .mapLatest { cards -> cards.mapNotNull { resolveResume(it) } }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     /** Each episode's Watched / In Progress / Unwatched status for the active Profile. */
     val episodeStatuses = graph.viewerLibrary.episodeStatuses()
 
-    private suspend fun resolveResume(title: InProgressTitle): ResumeItem? {
-        val id = title.mediaKey.substringAfter(':', missingDelimiterValue = "").toLongOrNull() ?: return null
-        val progress = title.progress
-        return when (title.mediaKey.substringBefore(':')) {
-            "movie" -> graph.catalogRepository.movie(id)?.let {
-                ResumeItem(title.mediaKey, it.displayTitle, it.posterUrl, it.streamUrl, progress)
-            }
-            "ep" -> graph.catalogRepository.episode(id)?.let {
+    private suspend fun resolveResume(card: ContinueWatchingCard): ResumeItem? = when (card) {
+        is ContinueWatchingCard.Movie -> graph.catalogRepository.movie(card.movieId)?.let {
+            ResumeItem("movie:${it.id}", it.displayTitle, it.displayTitle, it.posterUrl, it.streamUrl, card.progress)
+        }
+        is ContinueWatchingCard.Series -> {
+            val ep = card.episode
+            graph.catalogRepository.seriesOf(ep)?.let {
                 ResumeItem(
-                    title.mediaKey,
-                    it.title.ifBlank { "S${it.season} E${it.episodeNumber}" },
-                    it.stillUrl,
-                    it.streamUrl,
-                    progress,
+                    mediaKey = "ep:${ep.id}",
+                    title = it.name,
+                    playerTitle = ep.playerTitle,
+                    // The card is landscape: the wide backdrop fits it, a portrait poster only crops.
+                    posterUrl = it.backdropUrl ?: it.posterUrl,
+                    streamUrl = ep.streamUrl,
+                    progress = card.progress,
+                    episode = SeasonEpisode(ep.season, ep.episodeNumber),
                 )
             }
-            else -> null
         }
     }
 
