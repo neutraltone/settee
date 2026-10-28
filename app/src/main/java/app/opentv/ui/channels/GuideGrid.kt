@@ -127,7 +127,7 @@ fun GuideGrid(
 /**
  * The live channels as a plain vertical list instead of the time-grid — one channel per row with
  * its logo, name, and now/next line. This is the "list mode instead of tiles" some users prefer on
- * a busy line-up. It keeps the exact same focus/key contract as [GuideGrid] so [HomeScreen] can
+ * a busy line-up. It keeps the exact same focus/key contract as [GuideGrid] so [LiveScreen] can
  * swap between the two with nothing else changing: focus follows the d-pad (updating the preview),
  * OK opens the channel menu, and LEFT from a row asks the host to reopen the category rail.
  */
