@@ -361,9 +361,6 @@
     <string name="search_type_name">พิมพ์ชื่อ</string>
     <string name="search_start_hint">เริ่มพิมพ์เพื่อค้นหาช่อง ภาพยนตร์ และซีรีส์</string>
     <string name="search_no_results">ไม่มีผลลัพธ์สำหรับ \"%1$s\"</string>
-    <string name="kbd_space">เว้นวรรค</string>
-    <string name="kbd_del">ลบ</string>
-    <string name="kbd_clear">ล้าง</string>
     <string name="kbd_paste">วาง</string>
     <string name="kbd_clipboard_empty">ไม่มีอะไรให้วาง</string>
     <string name="vod_loading_movies">กำลังโหลดภาพยนตร์</string>

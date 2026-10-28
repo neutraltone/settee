@@ -361,9 +361,6 @@
     <string name="search_type_name">Typ een naam</string>
     <string name="search_start_hint">Begin met typen om zenders, films en series te zoeken.</string>
     <string name="search_no_results">Geen resultaten voor “%1$s”.</string>
-    <string name="kbd_space">Spatie</string>
-    <string name="kbd_del">Wis</string>
-    <string name="kbd_clear">Wissen</string>
     <string name="kbd_paste">Plakken</string>
     <string name="kbd_clipboard_empty">Niets om te plakken</string>
     <string name="vod_loading_movies">Films laden</string>

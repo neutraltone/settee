@@ -361,9 +361,6 @@
     <string name="search_type_name">Πληκτρολογήστε ένα όνομα</string>
     <string name="search_start_hint">Ξεκινήστε να πληκτρολογείτε για αναζήτηση καναλιών, ταινιών και σειρών.</string>
     <string name="search_no_results">Δεν βρέθηκαν αποτελέσματα για «%1$s».</string>
-    <string name="kbd_space">Διάστημα</string>
-    <string name="kbd_del">Διαγραφή</string>
-    <string name="kbd_clear">Καθαρισμός</string>
     <string name="kbd_paste">Επικόλληση</string>
     <string name="kbd_clipboard_empty">Τίποτα για επικόλληση</string>
     <string name="vod_loading_movies">Φόρτωση ταινιών</string>

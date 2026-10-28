@@ -361,9 +361,6 @@
     <string name="search_type_name">Zadajte názov</string>
     <string name="search_start_hint">Začnite písať a vyhľadajte kanály, filmy a seriály.</string>
     <string name="search_no_results">Žiadne výsledky pre „%1$s“.</string>
-    <string name="kbd_space">Medzera</string>
-    <string name="kbd_del">Del</string>
-    <string name="kbd_clear">Vymazať všetko</string>
     <string name="kbd_paste">Prilepiť</string>
     <string name="kbd_clipboard_empty">Nie je čo prilepiť</string>
     <string name="vod_loading_movies">Načítavajú sa filmy</string>

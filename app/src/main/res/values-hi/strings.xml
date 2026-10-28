@@ -361,9 +361,6 @@
     <string name="search_type_name">एक नाम टाइप करें</string>
     <string name="search_start_hint">चैनल, फ़िल्में और शोज़ खोजने के लिए टाइप करना शुरू करें।</string>
     <string name="search_no_results">“%1$s” के लिए कोई परिणाम नहीं।</string>
-    <string name="kbd_space">स्पेस</string>
-    <string name="kbd_del">डिलीट</string>
-    <string name="kbd_clear">साफ़ करें</string>
     <string name="kbd_paste">पेस्ट करें</string>
     <string name="kbd_clipboard_empty">पेस्ट करने के लिए कुछ नहीं</string>
     <string name="vod_loading_movies">फ़िल्में लोड हो रही हैं</string>

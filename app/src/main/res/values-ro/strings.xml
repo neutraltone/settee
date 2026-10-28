@@ -361,9 +361,6 @@
     <string name="search_type_name">Introdu un nume</string>
     <string name="search_start_hint">Începe să tastezi pentru a căuta canale, filme și seriale.</string>
     <string name="search_no_results">Niciun rezultat pentru „%1$s”.</string>
-    <string name="kbd_space">Spațiu</string>
-    <string name="kbd_del">Șterge</string>
-    <string name="kbd_clear">Șterge tot</string>
     <string name="kbd_paste">Lipește</string>
     <string name="kbd_clipboard_empty">Nimic de lipit</string>
     <string name="vod_loading_movies">Se încarcă filmele</string>

@@ -17,12 +17,15 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.input.TextFieldState
+import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.StarOutline
@@ -39,6 +42,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -51,7 +55,9 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -83,11 +89,11 @@ fun ChannelManagerScreen(onBack: () -> Unit, viewModel: ChannelsViewModel = view
     val browseRows by viewModel.managerRows.collectAsState()
 
     // Search is one option among browse-by-category: the "Search" rail entry flips the right pane
-    // to the original keyboard-driven search, which is kept intact rather than thrown away.
+    // to a search box in place of the channel list.
     var searchMode by remember { mutableStateOf(false) }
-    var query by remember { mutableStateOf("") }
+    val query = rememberTextFieldState()
     val searchResults by viewModel.managerResults.collectAsState()
-    LaunchedEffect(query) { viewModel.setManagerQuery(query) }
+    LaunchedEffect(query) { snapshotFlow { query.text.toString() }.collect { viewModel.setManagerQuery(it) } }
 
     // Focus handoff between the panes, mirroring LiveScreen's rail: the active left entry (the
     // selected category, or Search) carries this requester, so LEFT from a channel row lands
@@ -199,15 +205,12 @@ fun ChannelManagerScreen(onBack: () -> Unit, viewModel: ChannelsViewModel = view
                     .padding(horizontal = 24.dp, vertical = 12.dp),
             ) {
                 if (searchMode) {
-                    SearchPane(
+                    ChannelManagerSearchPane(
                         query = query,
                         results = searchResults,
-                        onKey = { if (query.length < 40) query += it },
-                        onSpace = { if (query.length < 40) query += " " },
-                        onBackspace = { query = query.dropLast(1) },
-                        onClear = { query = "" },
                         onToggleHidden = { row, hidden -> viewModel.setRowHidden(row, !hidden) },
                         onToggleFavourite = { viewModel.toggleFavourite(it) },
+                        onExitLeft = onExitLeftToRail,
                     )
                 } else {
                     BrowsePane(
@@ -224,36 +227,50 @@ fun ChannelManagerScreen(onBack: () -> Unit, viewModel: ChannelsViewModel = view
     }
 }
 
-/** The kept-intact keyboard-driven search: on-screen keyboard on the left, matches on the right. */
+/** Search: a box at the top, its matches below it, each with the same star and switch. */
 @Composable
-private fun SearchPane(
-    query: String,
+internal fun ChannelManagerSearchPane(
+    query: TextFieldState,
     results: List<ChannelsViewModel.Row>,
-    onKey: (String) -> Unit,
-    onSpace: () -> Unit,
-    onBackspace: () -> Unit,
-    onClear: () -> Unit,
     onToggleHidden: (ChannelsViewModel.Row, Boolean) -> Unit,
     onToggleFavourite: (ChannelsViewModel.Row) -> Unit,
+    onExitLeft: () -> Boolean,
 ) {
-    Row(Modifier.fillMaxSize()) {
-        OnScreenKeyboard(onKey = onKey, onSpace = onSpace, onBackspace = onBackspace, onClear = onClear)
-        Spacer(Modifier.width(24.dp))
-        Column(Modifier.weight(1f).fillMaxSize()) {
-            when {
-                query.isBlank() -> Hint(stringResource(R.string.channels_manager_search_hint))
-                query.trim().length < 2 -> Hint(stringResource(R.string.common_keep_typing))
-                results.isEmpty() -> Hint(stringResource(R.string.channels_manager_no_match, query))
-                else -> LazyColumn(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    items(results, key = { it.key }) { row ->
-                        val hidden = row.variants.all { it.hidden }
-                        ManagerRow(
-                            row = row,
-                            hidden = hidden,
-                            onToggleHidden = { onToggleHidden(row, hidden) },
-                            onToggleFavourite = { onToggleFavourite(row) },
-                        )
-                    }
+    val searchBox = remember { FocusRequester() }
+    LaunchedEffect(Unit) { runCatching { searchBox.requestFocus() } }
+    val typed = query.text.toString()
+    Column(Modifier.fillMaxSize()) {
+        DeviceTextField(
+            state = query,
+            placeholder = stringResource(R.string.search_type_name),
+            maxLength = MAX_SEARCH_LENGTH,
+            imeAction = ImeAction.Search,
+            // Left with the cursor at the start has nothing to move over, so it goes to the rail,
+            // as it does from a channel row; anywhere else it still moves the cursor.
+            modifier = Modifier
+                .fillMaxWidth()
+                .focusRequester(searchBox)
+                .onPreviewKeyEvent { e ->
+                    e.type == KeyEventType.KeyDown &&
+                        e.key == Key.DirectionLeft &&
+                        query.selection == TextRange.Zero &&
+                        onExitLeft()
+                },
+        )
+        Spacer(Modifier.height(16.dp))
+        when {
+            typed.isBlank() -> Hint(stringResource(R.string.channels_manager_search_hint))
+            typed.trim().length < 2 -> Hint(stringResource(R.string.common_keep_typing))
+            results.isEmpty() -> Hint(stringResource(R.string.channels_manager_no_match, typed))
+            else -> LazyColumn(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                items(results, key = { it.key }) { row ->
+                    val hidden = row.variants.all { it.hidden }
+                    ManagerRow(
+                        row = row,
+                        hidden = hidden,
+                        onToggleHidden = { onToggleHidden(row, hidden) },
+                        onToggleFavourite = { onToggleFavourite(row) },
+                    )
                 }
             }
         }

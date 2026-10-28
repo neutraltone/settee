@@ -23,6 +23,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.input.TextFieldState
+import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
@@ -33,11 +35,15 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -55,11 +61,10 @@ import java.util.Date
 import java.util.Locale
 
 /**
- * Channel search with an on-screen keyboard.
+ * Search across channels, movies and shows, with matches shown live as you type.
  *
- * Android TV's default text field punts to "type on your phone", which is useless if your phone
- * isn't to hand. This screen draws its own d-pad keyboard so search works with the remote alone,
- * and shows matching channels live as you type.
+ * The box is a plain text field so the device's own keyboard opens: on a Fire TV that keyboard
+ * takes dictation from the remote's mic, which a keyboard drawn by the app never could.
  */
 @Composable
 fun SearchScreen(
@@ -70,17 +75,46 @@ fun SearchScreen(
     viewModel: ChannelsViewModel = viewModel(),
     vodViewModel: VodViewModel = viewModel(),
 ) {
-    var query by remember { mutableStateOf("") }
+    val query = rememberTextFieldState()
     val channelResults by viewModel.searchResults.collectAsState()
     val movieResults by vodViewModel.movieResults.collectAsState()
     val seriesResults by vodViewModel.seriesResults.collectAsState()
-    val anyResults = channelResults.isNotEmpty() || movieResults.isNotEmpty() || seriesResults.isNotEmpty()
 
     LaunchedEffect(query) {
-        viewModel.setSearchQuery(query)
-        vodViewModel.setVodSearchQuery(query)
+        snapshotFlow { query.text.toString() }.collect {
+            viewModel.setSearchQuery(it)
+            vodViewModel.setVodSearchQuery(it)
+        }
     }
     BackHandler { onBack() }
+
+    SearchContent(
+        query = query,
+        channelResults = channelResults,
+        movieResults = movieResults,
+        seriesResults = seriesResults,
+        onPlayChannel = onPlayChannel,
+        onPlayMovie = onPlayMovie,
+        onOpenSeries = onOpenSeries,
+        onBack = onBack,
+    )
+}
+
+/** The search screen's body, apart from its view models, so it can be shown in a test. */
+@Composable
+internal fun SearchContent(
+    query: TextFieldState,
+    channelResults: List<ChannelsViewModel.Row>,
+    movieResults: List<Movie>,
+    seriesResults: List<Series>,
+    onPlayChannel: (Channel) -> Unit,
+    onPlayMovie: (Movie) -> Unit,
+    onOpenSeries: (Series) -> Unit,
+    onBack: () -> Unit,
+) {
+    val anyResults = channelResults.isNotEmpty() || movieResults.isNotEmpty() || seriesResults.isNotEmpty()
+    val searchBox = remember { FocusRequester() }
+    LaunchedEffect(Unit) { runCatching { searchBox.requestFocus() } }
 
     Column(
         Modifier
@@ -90,57 +124,45 @@ fun SearchScreen(
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(stringResource(R.string.nav_search), style = MaterialTheme.typography.headlineMedium)
             Spacer(Modifier.width(20.dp))
-            Text(
-                query.ifEmpty { stringResource(R.string.search_type_name) },
-                style = MaterialTheme.typography.titleLarge,
-                color = if (query.isEmpty()) {
-                    MaterialTheme.colorScheme.onSurfaceVariant
-                } else {
-                    MaterialTheme.colorScheme.primary
-                },
+            DeviceTextField(
+                state = query,
+                placeholder = stringResource(R.string.search_type_name),
+                maxLength = MAX_SEARCH_LENGTH,
+                imeAction = ImeAction.Search,
+                modifier = Modifier.weight(1f).focusRequester(searchBox),
             )
-            Spacer(Modifier.weight(1f))
+            Spacer(Modifier.width(20.dp))
             OutlinedButton(onClick = onBack) { Text(stringResource(R.string.common_done)) }
         }
 
         Spacer(Modifier.height(20.dp))
 
-        Row(Modifier.fillMaxSize()) {
-            OnScreenKeyboard(
-                onKey = { if (query.length < 40) query += it },
-                onSpace = { if (query.length < 40) query += " " },
-                onBackspace = { query = query.dropLast(1) },
-                onClear = { query = "" },
-            )
-
-            Spacer(Modifier.width(28.dp))
-
-            Column(Modifier.weight(1f).fillMaxSize()) {
-                when {
-                    query.isBlank() -> Hint(stringResource(R.string.search_start_hint))
-                    query.trim().length < 2 -> Hint(stringResource(R.string.common_keep_typing))
-                    !anyResults -> Hint(stringResource(R.string.search_no_results, query))
-                    else -> LazyColumn(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        if (channelResults.isNotEmpty()) {
-                            item { SectionHeader(stringResource(R.string.common_channels)) }
-                            items(channelResults, key = { "c${it.key}" }) { row ->
-                                SearchResultRow(row = row, onClick = { onPlayChannel(row.primary) })
+        val typed = query.text.toString()
+        Column(Modifier.fillMaxSize()) {
+            when {
+                typed.isBlank() -> Hint(stringResource(R.string.search_start_hint))
+                typed.trim().length < 2 -> Hint(stringResource(R.string.common_keep_typing))
+                !anyResults -> Hint(stringResource(R.string.search_no_results, typed))
+                else -> LazyColumn(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    if (channelResults.isNotEmpty()) {
+                        item { SectionHeader(stringResource(R.string.common_channels)) }
+                        items(channelResults, key = { "c${it.key}" }) { row ->
+                            SearchResultRow(row = row, onClick = { onPlayChannel(row.primary) })
+                        }
+                    }
+                    if (movieResults.isNotEmpty()) {
+                        item { SectionHeader(stringResource(R.string.nav_movies)) }
+                        items(movieResults, key = { "m${it.id}" }) { movie ->
+                            VodResultRow(movie.displayTitle, movie.posterUrl, movie.year?.toString()) {
+                                onPlayMovie(movie)
                             }
                         }
-                        if (movieResults.isNotEmpty()) {
-                            item { SectionHeader(stringResource(R.string.nav_movies)) }
-                            items(movieResults, key = { "m${it.id}" }) { movie ->
-                                VodResultRow(movie.displayTitle, movie.posterUrl, movie.year?.toString()) {
-                                    onPlayMovie(movie)
-                                }
-                            }
-                        }
-                        if (seriesResults.isNotEmpty()) {
-                            item { SectionHeader(stringResource(R.string.nav_shows)) }
-                            items(seriesResults, key = { "s${it.id}" }) { show ->
-                                VodResultRow(show.displayTitle, show.posterUrl, show.year?.toString()) {
-                                    onOpenSeries(show)
-                                }
+                    }
+                    if (seriesResults.isNotEmpty()) {
+                        item { SectionHeader(stringResource(R.string.nav_shows)) }
+                        items(seriesResults, key = { "s${it.id}" }) { show ->
+                            VodResultRow(show.displayTitle, show.posterUrl, show.year?.toString()) {
+                                onOpenSeries(show)
                             }
                         }
                     }

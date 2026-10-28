@@ -361,9 +361,6 @@
     <string name="search_type_name">Kirjoita nimi</string>
     <string name="search_start_hint">Ala kirjoittaa etsiäksesi kanavia, elokuvia ja sarjoja.</string>
     <string name="search_no_results">Ei tuloksia haulle “%1$s”.</string>
-    <string name="kbd_space">Väli</string>
-    <string name="kbd_del">Poista</string>
-    <string name="kbd_clear">Tyhjennä</string>
     <string name="kbd_paste">Liitä</string>
     <string name="kbd_clipboard_empty">Ei mitään liitettävää</string>
     <string name="vod_loading_movies">Ladataan elokuvia</string>

@@ -361,9 +361,6 @@
     <string name="search_type_name">Nhập tên</string>
     <string name="search_start_hint">Bắt đầu nhập để tìm kênh, phim và phim bộ.</string>
     <string name="search_no_results">Không có kết quả cho “%1$s”.</string>
-    <string name="kbd_space">Cách</string>
-    <string name="kbd_del">Xóa</string>
-    <string name="kbd_clear">Xóa hết</string>
     <string name="kbd_paste">Dán</string>
     <string name="kbd_clipboard_empty">Không có gì để dán</string>
     <string name="vod_loading_movies">Đang tải phim</string>

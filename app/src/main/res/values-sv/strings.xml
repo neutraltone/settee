@@ -361,9 +361,6 @@
     <string name="search_type_name">Skriv ett namn</string>
     <string name="search_start_hint">Börja skriva för att söka bland kanaler, filmer och serier.</string>
     <string name="search_no_results">Inga resultat för “%1$s”.</string>
-    <string name="kbd_space">Mellanslag</string>
-    <string name="kbd_del">Radera</string>
-    <string name="kbd_clear">Rensa</string>
     <string name="kbd_paste">Klistra in</string>
     <string name="kbd_clipboard_empty">Inget att klistra in</string>
     <string name="vod_loading_movies">Läser in filmer</string>

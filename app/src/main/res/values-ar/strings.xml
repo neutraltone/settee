@@ -361,9 +361,6 @@
     <string name="search_type_name">اكتب اسمًا</string>
     <string name="search_start_hint">ابدأ الكتابة للبحث عن القنوات والأفلام والمسلسلات.</string>
     <string name="search_no_results">لا توجد نتائج لـ «%1$s».</string>
-    <string name="kbd_space">مسافة</string>
-    <string name="kbd_del">حذف</string>
-    <string name="kbd_clear">مسح</string>
     <string name="kbd_paste">لصق</string>
     <string name="kbd_clipboard_empty">لا يوجد شيء للصقه</string>
     <string name="vod_loading_movies">جارٍ تحميل الأفلام</string>

@@ -361,9 +361,6 @@
     <string name="search_type_name">Upišite naziv</string>
     <string name="search_start_hint">Počnite tipkati za pretraživanje kanala, filmova i serija.</string>
     <string name="search_no_results">Nema rezultata za „%1$s”.</string>
-    <string name="kbd_space">Razmak</string>
-    <string name="kbd_del">Izbriši</string>
-    <string name="kbd_clear">Očisti</string>
     <string name="kbd_paste">Zalijepi</string>
     <string name="kbd_clipboard_empty">Nema ničega za lijepljenje</string>
     <string name="vod_loading_movies">Učitavanje filmova</string>

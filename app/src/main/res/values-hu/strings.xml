@@ -361,9 +361,6 @@
     <string name="search_type_name">Írjon be egy nevet</string>
     <string name="search_start_hint">Kezdjen el gépelni a csatornák, filmek és sorozatok kereséséhez.</string>
     <string name="search_no_results">Nincs találat erre: „%1$s”.</string>
-    <string name="kbd_space">Szóköz</string>
-    <string name="kbd_del">Törlés</string>
-    <string name="kbd_clear">Összes törlése</string>
     <string name="kbd_paste">Beillesztés</string>
     <string name="kbd_clipboard_empty">Nincs mit beilleszteni</string>
     <string name="vod_loading_movies">Filmek betöltése</string>

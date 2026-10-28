@@ -5,6 +5,8 @@
  */
 package app.opentv.ui.onboarding
 
+import android.content.ClipboardManager
+import android.content.Context
 import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -49,7 +51,6 @@ import app.opentv.data.model.Source
 import app.opentv.data.model.SourceKind
 import app.opentv.isRunningOnTelevision
 import app.opentv.ui.SourcesViewModel
-import app.opentv.ui.channels.readClipboardText
 
 /**
  * First-run setup.
@@ -361,8 +362,8 @@ fun AddSourceScreen(viewModel: SourcesViewModel, onFinished: () -> Unit, editing
 /**
  * A trailing "paste" affordance for a provider field: reads the system clipboard and appends it
  * via [onPaste]. A long Xtream URL or username is miserable to type on a d-pad, so this is exactly
- * what the reporter asked for. Reads the same clipboard as the on-screen keyboard's Paste key; an
- * empty clipboard just shows a brief message rather than doing nothing silently.
+ * what the reporter asked for. An empty clipboard just shows a brief message rather than doing
+ * nothing silently.
  */
 @Composable
 private fun PasteButton(onPaste: (String) -> Unit) {
@@ -381,3 +382,14 @@ private fun PasteButton(onPaste: (String) -> Unit) {
         Icon(Icons.Filled.ContentPaste, contentDescription = stringResource(R.string.kbd_paste))
     }
 }
+
+/** Plain text currently on the system clipboard, trimmed, or null when there's nothing to paste. */
+private fun readClipboardText(context: Context): String? =
+    (context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager)
+        ?.primaryClip
+        ?.takeIf { it.itemCount > 0 }
+        ?.getItemAt(0)
+        ?.coerceToText(context)
+        ?.toString()
+        ?.trim()
+        ?.takeIf { it.isNotEmpty() }
