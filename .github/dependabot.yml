@@ -26,10 +26,18 @@ updates:
       code-quality:
         patterns: ['io.gitlab.arturbosch.detekt*', 'io.nlopez.compose.rules:*', 'org.jlleitschuh.gradle.ktlint*', 'com.pinterest.ktlint*']
       testing:
-        patterns: ['junit:*', 'com.google.truth:*', 'org.robolectric:*', 'org.jetbrains.kotlinx:kotlinx-coroutines-test']
+        patterns: ['junit:*', 'com.google.truth:*', 'org.robolectric:*', 'io.github.takahirom.roborazzi*', 'org.jetbrains.kotlinx:kotlinx-coroutines-test']
       # Everything else (okhttp, coil, kotlinx, zxing, smbj, ...) in one weekly PR.
       other:
         patterns: ['*']
+
+  # Pillow for the Screenshots workflow's comparison (tools/screenshots/requirements.txt).
+  - package-ecosystem: pip
+    directory: /tools/screenshots
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: build
 
   - package-ecosystem: github-actions
     directory: /

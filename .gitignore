@@ -16,3 +16,6 @@ captures/
 
 # Kotlin compiler transient logs
 .kotlin/
+
+# Python bytecode from tools/
+__pycache__/

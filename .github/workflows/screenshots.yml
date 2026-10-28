@@ -1,0 +1,115 @@
+name: Screenshots
+
+# Shows before and after screenshots of every screen a PR changes, in its description (#44).
+# Renders the PR's base and head in this one job, on this one runner, so nothing has to be stored
+# as a reference: no images are committed, pushed to a branch or kept in a gist. gh --attach uploads
+# the changed ones as ordinary attachments, like an image dragged into the description.
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+# Queued rather than cancelled: each run rewrites the description and compares against the push
+# before it, so runs for the same PR take turns.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: false
+
+jobs:
+  screenshots:
+    name: Screenshots
+    # Dependabot and release-please change no screens. A fork's PR gets a read-only token, which
+    # can't edit the description.
+    if: >-
+      github.event.pull_request.user.login != 'dependabot[bot]' &&
+      !startsWith(github.head_ref, 'release-please--') &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    env:
+      GH_VERSION: 2.102.0 # the first gh with --attach
+      PR: ${{ github.event.pull_request.number }}
+      BASE_SHA: ${{ github.event.pull_request.base.sha }}
+      HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+      # The head before this push; only a synchronize event has one.
+      PREVIOUS_SHA: ${{ github.event.action == 'synchronize' && github.event.before || '' }}
+
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+
+      - name: Install Pillow
+        run: |
+          pip install -r tools/screenshots/requirements.txt
+          echo "SHOTS=$RUNNER_TEMP/shots" >> "$GITHUB_ENV"
+
+      - name: Install gh ${{ env.GH_VERSION }} if the runner's is older
+        run: |
+          current=$(gh --version | head -n 1 | awk '{print $3}')
+          if [ "$(printf '%s\n' "$GH_VERSION" "$current" | sort -V | head -n 1)" != "$GH_VERSION" ]; then
+            curl -sSfL "https://github.com/cli/cli/releases/download/v${GH_VERSION}/gh_${GH_VERSION}_linux_amd64.tar.gz" \
+              | tar xz -C "$RUNNER_TEMP"
+            echo "$RUNNER_TEMP/gh_${GH_VERSION}_linux_amd64/bin" >> "$GITHUB_PATH"
+          fi
+
+      # The check reports and never fails a PR: it can't know whether a change was meant, so every
+      # step from here only warns.
+
+      # The merge base rather than the base branch's tip, so screens that changed on main since
+      # the branch was cut don't show up as this PR's changes.
+      - name: Render the base
+        continue-on-error: true
+        run: tools/screenshots/render.sh "$(git merge-base "$BASE_SHA" "$HEAD_SHA")" "$SHOTS/base"
+
+      - name: Render the head
+        continue-on-error: true
+        run: tools/screenshots/render.sh "$HEAD_SHA" "$SHOTS/head"
+
+      - name: Render the previous push
+        if: env.PREVIOUS_SHA != ''
+        continue-on-error: true
+        run: tools/screenshots/render.sh "$PREVIOUS_SHA" "$SHOTS/previous"
+
+      - name: Compare
+        id: compare
+        continue-on-error: true
+        run: |
+          # A head that rendered nothing (its build broke) would read as every screen removed; leave
+          # the description as it was, since the Build workflow already reports the failure.
+          if [ -z "$(find "$SHOTS/head" -name '*.png' 2>/dev/null)" ]; then
+            echo "::warning::The head rendered no screenshots, so the description is left alone."
+            exit 0
+          fi
+          echo "publish=true" >> "$GITHUB_OUTPUT"
+          python3 tools/screenshots/screenshots.py section "$SHOTS/base" "$SHOTS/head" "$SHOTS/section"
+          # A previous push that rendered nothing (its build broke) would make every screen look new.
+          if [ -n "$(find "$SHOTS/previous" -name '*.png' 2>/dev/null)" ]; then
+            python3 tools/screenshots/screenshots.py comments "$SHOTS/previous" "$SHOTS/head" "$SHOTS/comments" "$PREVIOUS_SHA"
+          fi
+
+      # The token is only here: the renders above run each commit's own Gradle build.
+      - name: Update the description
+        if: steps.compare.outputs.publish == 'true'
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: tools/screenshots/publish.sh "$PR" "$SHOTS/section" "$SHOTS/comments"
