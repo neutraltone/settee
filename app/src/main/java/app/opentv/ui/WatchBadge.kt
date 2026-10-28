@@ -48,6 +48,8 @@ fun WatchBadge(status: WatchStatus, modifier: Modifier = Modifier) {
 @Composable
 private fun inProgressText(remainingMillis: Long?): String {
     if (remainingMillis == null) return stringResource(R.string.watch_badge_in_progress)
+    // Nearest minute, not up like the sleep timer: this is a rough "how much is left", not a countdown.
+    // Never 0, which would read as finished.
     val minutes = ((remainingMillis + 30_000) / 60_000).toInt().coerceAtLeast(1)
     return pluralStringResource(R.plurals.watch_badge_minutes_left, minutes, minutes)
 }

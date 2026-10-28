@@ -85,6 +85,7 @@ class EpisodeRowTest {
         show(WatchStatus.InProgress(progress = 0f, remainingMillis = null))
 
         compose.onNodeWithText("In progress", useUnmergedTree = true).assertExists()
+        captureScreen("episode_row_in_progress_unknown_duration")
     }
 
     @Test
