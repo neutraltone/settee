@@ -29,10 +29,13 @@ Once a release exists release-please ignores `bootstrap-sha`.
 
 release-please opens no release PR until a `feat`, `fix` or `perf` commit lands. To release
 without one, give any commit that reaches `main` a `Release-As: x.y.z` footer (the last line of
-the body, after a blank line); the next push opens a release PR for that version.
+the body, after a blank line); the next push opens a release PR for that version. Merge the PR
+carrying that commit with a merge commit: a squash commit gets the PR title and an empty body,
+which drops the footer.
 
-The Downloader short code (see `README.md`) points at `releases/latest/download/settee.apk`, so it
-only works once a release with an APK exists.
+The Downloader short code 6405610 (registered at go.aftvnews.com, see `README.md`) points at
+`releases/latest/download/settee.apk`, so it always serves the newest release and never needs
+changing.
 
 ### One-time repository settings
 
@@ -41,11 +44,11 @@ only works once a release with an APK exists.
 - **Settings → General → Pull Requests:** allow squash merging, with the default commit message set
   to "Pull request title" (otherwise a single-commit PR's commit title is used instead of the
   checked PR title).
-- **Checks on the release PR (optional):** a PR opened with the default `GITHUB_TOKEN` doesn't trigger
-  other workflows, so the release PR shows no checks. That's fine while `main` has no required
-  checks. If you add them, create a fine-grained personal access token for this repo with Contents
-  and Pull requests read/write and store it as the `RELEASE_PLEASE_TOKEN` Actions secret; the
-  workflow uses it when present.
+- **Checks on the release PR:** a PR opened with the default `GITHUB_TOKEN` is authored by
+  `github-actions`, which GitHub treats as a first-time contributor, so its check runs wait for a
+  maintainer to approve them. To avoid that, create a fine-grained personal access token for this
+  repo with Contents and Pull requests read/write and store it as the `RELEASE_PLEASE_TOKEN`
+  Actions secret; the workflow uses it when present, and the release PR is then opened as you.
 
 ## Signing
 

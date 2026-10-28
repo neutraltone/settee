@@ -63,8 +63,9 @@ newest build. Once installed, the built-in updater offers each new release.
 2. Let it install apps: **Settings → My Fire TV → Developer Options → Install unknown apps →
    Downloader → On**. If Developer Options is missing, open **Settings → My Fire TV → About** and
    press select on the device name seven times.
-3. Open Downloader and type the full URL above into its address box, then **Go**. When the
-   download finishes, choose **Install**, then **Delete** to free the space.
+3. Open Downloader, type the code **6405610** into its address box (or `aftv.news/6405610`, or the
+   full URL above), then **Go**. When the download finishes, choose **Install**, then **Delete**
+   to free the space.
 
 Every release is built by GitHub Actions from a tagged commit, so the APK can be checked against
 the source. See [docs/RELEASING.md](docs/RELEASING.md).
