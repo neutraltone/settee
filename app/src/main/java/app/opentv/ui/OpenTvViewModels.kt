@@ -15,6 +15,7 @@ import app.opentv.core.StatusBus
 import app.opentv.data.model.Category
 import app.opentv.data.model.Channel
 import app.opentv.data.model.EpgFeed
+import app.opentv.data.model.Episode
 import app.opentv.data.model.LiveStreamFormat
 import app.opentv.data.model.Movie
 import app.opentv.data.model.Profile
@@ -1056,6 +1057,9 @@ class VodViewModel(app: Application) : AndroidViewModel(app) {
             graph.catalogRepository.ensureEpisodes(source, series.seriesId)
         }
     }
+
+    /** The series page's main button over that series' [episodes]: Resume, Up Next or the first episode. */
+    fun seriesMainAction(episodes: List<Episode>) = graph.viewerLibrary.seriesMainAction(episodes)
 
     fun episodes(series: Series) = graph.catalogRepository.observeEpisodes(series.sourceId, series.seriesId)
 

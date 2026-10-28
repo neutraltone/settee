@@ -443,6 +443,9 @@
     <string name="vod_categories">Categories</string>
     <string name="vod_watch_now">Watch now</string>
     <string name="vod_resume">Resume</string>
+    <!-- The series page's main button: season and episode numbers. -->
+    <string name="vod_resume_episode">Resume S%1$d E%2$d</string>
+    <string name="vod_play_episode">Play S%1$d E%2$d</string>
     <string name="vod_addon_sources">Add-on sources</string>
     <string name="vod_addon_pick_title">Choose a stream</string>
     <string name="vod_addon_loading">Finding streams from your add-ons…</string>
