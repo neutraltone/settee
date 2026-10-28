@@ -42,6 +42,10 @@ if [ "$actual" != "$expected" ]; then
     echo "$apk is not signed with the release key." >&2
     echo "  expected: $expected" >&2
     echo "  found:    $(printf '%s' "$actual" | tr '\n' ' ')" >&2
+    if [ -z "$actual" ]; then
+        echo "No signer digest in the output of $APKSIGNER:" >&2
+        printf '%s\n' "$certs" | sed 's/^/  /' >&2
+    fi
     exit 1
 fi
 
