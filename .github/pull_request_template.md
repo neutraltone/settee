@@ -1,4 +1,6 @@
-<!-- Title: type(#issue): description — e.g. fix(#42): keep favourites across a refresh -->
+<!-- Title: type(#issue): description — e.g. fix(#42): keep favourites across a refresh
+     feat/fix/perf titles become the in-app release notes, so describe what a viewer notices.
+     Before 1.0, a change that wipes the database gets `!` and says what the viewer has to redo. -->
 
 ## Summary
 

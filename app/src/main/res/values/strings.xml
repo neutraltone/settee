@@ -336,6 +336,14 @@
     <string name="about_up_to_date">You\'re on the latest version.</string>
     <string name="about_checking">Checking…</string>
     <string name="about_check_updates">Check for updates</string>
+    <string name="about_whats_new">What\'s new</string>
+    <string name="whats_new_title">What\'s new in %1$s</string>
+    <string name="whats_new_dismiss">Got it</string>
+    <string name="whats_new_heads_up">Heads up</string>
+    <string name="whats_new_new_features">New Features</string>
+    <string name="whats_new_bug_fixes">Bug Fixes</string>
+    <string name="whats_new_performance">Performance Improvements</string>
+    <string name="whats_new_nothing">Nothing in this version changes what you see.</string>
     <string name="about_what_is_title">What it is</string>
     <string name="about_what_is_body">A free, open-source IPTV player for Android TV, Fire TV and phones. It\'s a player only — it doesn\'t supply channels; you connect the service you already pay for. Nothing you enter leaves your device except to talk to your own provider.</string>
     <string name="about_built_open_title">Built in the open</string>

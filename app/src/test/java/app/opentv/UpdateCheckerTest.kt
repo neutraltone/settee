@@ -5,7 +5,10 @@
  */
 package app.opentv
 
+import app.opentv.update.NotesHeading
+import app.opentv.update.NotesSection
 import app.opentv.update.UpdateChecker
+import app.opentv.update.VersionNotes
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.runBlocking
 import okhttp3.MediaType.Companion.toMediaType
@@ -41,6 +44,7 @@ class UpdateCheckerTest {
           "tag_name": "v0.2.0",
           "name": "Settee 0.2.0",
           "html_url": "https://github.com/neutraltone/settee/releases/tag/v0.2.0",
+          "body": "### Features\n\n* **#9:** episodes show how far through them you are ([516bf6a](https://github.com/neutraltone/settee/commit/516bf6a))\n\n---\nsigned: yes\n\nBuilt by GitHub Actions from the tagged commit.\n\n---",
           "assets": [
             {
               "name": "settee.apk",
@@ -70,5 +74,17 @@ class UpdateCheckerTest {
 
         assertThat(update?.apkUrl)
             .isEqualTo("https://github.com/neutraltone/settee/releases/download/v0.2.0/settee-v0.2.0.apk")
+    }
+
+    @Test
+    fun `offers the release's viewer-facing notes`() {
+        val update = runBlocking { UpdateChecker(githubReplying(releaseWithBothApks), "0.1.0").check() }
+
+        assertThat(update?.notes).isEqualTo(
+            VersionNotes(
+                "0.2.0",
+                listOf(NotesSection(NotesHeading.NewFeatures, listOf("episodes show how far through them you are"))),
+            ),
+        )
     }
 }

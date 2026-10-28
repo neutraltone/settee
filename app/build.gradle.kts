@@ -119,6 +119,35 @@ android {
     }
 }
 
+// The What's new dialog reads the changelog release-please writes, shipped unchanged: filtering it
+// down to what a viewer cares about happens at runtime (app.opentv.update.ReleaseNotes), so the
+// same parser also serves the GitHub release body in the update dialog.
+abstract class CopyChangelog : DefaultTask() {
+    @get:InputFile
+    @get:PathSensitive(PathSensitivity.NONE)
+    abstract val changelog: RegularFileProperty
+
+    @get:OutputDirectory
+    abstract val outputDir: DirectoryProperty
+
+    @TaskAction
+    fun copy() {
+        changelog.get().asFile.copyTo(outputDir.file("CHANGELOG.md").get().asFile, overwrite = true)
+    }
+}
+
+val copyChangelog =
+    tasks.register<CopyChangelog>("copyChangelog") {
+        changelog.set(rootProject.layout.projectDirectory.file("CHANGELOG.md"))
+        outputDir.set(layout.buildDirectory.dir("generated/changelog"))
+    }
+
+androidComponents {
+    onVariants { variant ->
+        variant.sources.assets?.addGeneratedSourceDirectory(copyChangelog, CopyChangelog::outputDir)
+    }
+}
+
 ktlint {
     version.set(libs.versions.ktlint)
     android.set(true)

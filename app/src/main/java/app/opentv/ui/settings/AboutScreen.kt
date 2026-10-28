@@ -44,7 +44,13 @@ import app.opentv.BuildConfig
 import app.opentv.R
 import app.opentv.core.ServiceLocator
 import app.opentv.update.UpdateChecker
+import app.opentv.update.VersionNotes
+import app.opentv.update.WhatsNew
+import app.opentv.update.WhatsNewDialog
+import app.opentv.update.bundledChangelog
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * About: what this is, what version it is, and what it is built on. The update check here is the
@@ -58,6 +64,9 @@ fun AboutScreen(onBack: () -> Unit) {
     val scope = rememberCoroutineScope()
     var updateLine by remember { mutableStateOf<String?>(null) }
     var checking by remember { mutableStateOf(false) }
+    var whatsNew by remember { mutableStateOf<List<VersionNotes>?>(null) }
+
+    whatsNew?.let { WhatsNewDialog(BuildConfig.VERSION_NAME, it) { whatsNew = null } }
 
     Column(
         Modifier
@@ -120,6 +129,14 @@ fun AboutScreen(onBack: () -> Unit) {
                         },
                     )
                 }
+                Spacer(Modifier.width(12.dp))
+                OutlinedButton(onClick = {
+                    scope.launch {
+                        whatsNew = withContext(Dispatchers.IO) {
+                            WhatsNew.installedNotes(BuildConfig.VERSION_NAME, context.bundledChangelog())
+                        }
+                    }
+                }) { Text(stringResource(R.string.about_whats_new)) }
                 updateLine?.let {
                     Spacer(Modifier.width(16.dp))
                     Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary)
