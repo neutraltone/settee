@@ -72,22 +72,12 @@ internal fun HomeScreen(
     takeFocus: Boolean,
     viewModel: HomeViewModel = viewModel(),
 ) {
-    val continueWatching = viewModel.continueWatching.collectAsState().value
-    val favouriteShows = viewModel.favouriteShows.collectAsState().value
-    val favouriteMovies = viewModel.favouriteMovies.collectAsState().value
-    val favouriteChannels = viewModel.favouriteChannels.collectAsState().value
-    if (continueWatching == null ||
-        favouriteShows == null ||
-        favouriteMovies == null ||
-        favouriteChannels == null
-    ) {
-        return
-    }
+    val state = viewModel.state.collectAsState().value ?: return
     HomeContent(
-        continueWatching,
-        favouriteShows,
-        favouriteMovies,
-        favouriteChannels,
+        state.continueWatching,
+        state.favouriteShows,
+        state.favouriteMovies,
+        state.favouriteChannels,
         onResume,
         onOpenSeries,
         onOpenMovie,
@@ -112,11 +102,7 @@ internal fun HomeContent(
     onPlayChannel: (Channel) -> Unit,
     takeFocus: Boolean,
 ) {
-    if (continueWatching.isEmpty() &&
-        favouriteShows.isEmpty() &&
-        favouriteMovies.isEmpty() &&
-        favouriteChannels.isEmpty()
-    ) {
+    if (listOf(continueWatching, favouriteShows, favouriteMovies, favouriteChannels).all { it.isEmpty() }) {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Text(
                 stringResource(R.string.home_empty_hint),

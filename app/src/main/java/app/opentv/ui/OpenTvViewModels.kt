@@ -1169,37 +1169,42 @@ private suspend fun resumeItem(catalog: CatalogRepository, card: ContinueWatchin
         }
     }
 
+/** What Home shows: the active Profile's Continue Watching and its Favourites, by kind. */
+data class HomeState(
+    val continueWatching: List<VodViewModel.ResumeItem>,
+    val favouriteShows: List<Series>,
+    val favouriteMovies: List<Movie>,
+    val favouriteChannels: List<Channel>,
+)
+
 /**
- * Home: the active Profile's Continue Watching across movies and series, and its Favourites. Each
- * is null until it has loaded, so Home never flashes its nothing-here hint at a Profile that has rows.
- * A content type switched off in settings is left off Home too, as its tab is from the side menu.
+ * Home: the active Profile's Continue Watching across movies and series, and its Favourites. The
+ * state is null until all of it has loaded, so Home never flashes its nothing-here hint at a
+ * Profile that has rows. A content type switched off in settings is left off Home too, as its tab
+ * is from the side menu.
  */
 class HomeViewModel(app: Application) : AndroidViewModel(app) {
     private val graph = ServiceLocator.get(app)
     private val settings = graph.settings
 
     @OptIn(ExperimentalCoroutinesApi::class)
-    val continueWatching: StateFlow<List<VodViewModel.ResumeItem>?> =
-        combine(
-            graph.viewerLibrary.continueWatching()
-                .mapLatest { cards -> cards.mapNotNull { resumeItem(graph.catalogRepository, it) } },
-            settings.moviesEnabled,
-            settings.seriesEnabled,
-        ) { items, movies, series -> items.filter { if (it.episode == null) movies else series } }
-            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+    private val continueWatching: Flow<List<VodViewModel.ResumeItem>> = combine(
+        graph.viewerLibrary.continueWatching()
+            .mapLatest { cards -> cards.mapNotNull { resumeItem(graph.catalogRepository, it) } },
+        settings.moviesEnabled,
+        settings.seriesEnabled,
+    ) { items, movies, series -> items.filter { if (it.episode == null) movies else series } }
 
-    val favouriteShows: StateFlow<List<Series>?> =
-        graph.viewerLibrary.favourites.series().onlyWhen(settings.seriesEnabled)
+    val state: StateFlow<HomeState?> = combine(
+        continueWatching,
+        graph.viewerLibrary.favourites.series().onlyWhen(settings.seriesEnabled),
+        graph.viewerLibrary.favourites.movies().onlyWhen(settings.moviesEnabled),
+        graph.viewerLibrary.favourites.channels().onlyWhen(settings.liveEnabled),
+        ::HomeState,
+    ).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
-    val favouriteMovies: StateFlow<List<Movie>?> =
-        graph.viewerLibrary.favourites.movies().onlyWhen(settings.moviesEnabled)
-
-    val favouriteChannels: StateFlow<List<Channel>?> =
-        graph.viewerLibrary.favourites.channels().onlyWhen(settings.liveEnabled)
-
-    private fun <T> Flow<List<T>>.onlyWhen(enabled: StateFlow<Boolean>): StateFlow<List<T>?> =
+    private fun <T> Flow<List<T>>.onlyWhen(enabled: StateFlow<Boolean>): Flow<List<T>> =
         combine(this, enabled) { list, on -> if (on) list else emptyList() }
-            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 }
 
 /**

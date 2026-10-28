@@ -92,12 +92,14 @@ class HomeContentTest {
         number = null,
     )
 
+    /** The channel a test's Home last played. */
+    private var played: Channel? = null
+
     private fun setHome(
         resume: List<VodViewModel.ResumeItem> = this.resume,
         shows: List<Series> = listOf(series(1, "Severance")),
         movies: List<Movie> = listOf(movie(2, "Heat")),
         channels: List<Channel> = listOf(channel(3, "BBC One")),
-        onPlayChannel: (Channel) -> Unit = {},
         takeFocus: Boolean = true,
     ) = compose.setTvContent {
         HomeContent(
@@ -108,7 +110,7 @@ class HomeContentTest {
             onResume = { _, _, _ -> },
             onOpenSeries = {},
             onOpenMovie = {},
-            onPlayChannel = onPlayChannel,
+            onPlayChannel = { played = it },
             takeFocus = takeFocus,
         )
     }
@@ -163,8 +165,7 @@ class HomeContentTest {
 
     @Test
     fun `selecting a Favourite channel plays it`() {
-        var played: Channel? = null
-        setHome(resume = emptyList(), shows = emptyList(), movies = emptyList(), onPlayChannel = { played = it })
+        setHome(resume = emptyList(), shows = emptyList(), movies = emptyList())
 
         compose.onNodeWithText("BBC One").performClick()
 
