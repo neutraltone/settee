@@ -29,8 +29,11 @@ import app.opentv.data.remote.StalkerApi
 import app.opentv.data.remote.TmdbClient
 import app.opentv.data.remote.XtreamApi
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -130,8 +133,22 @@ class CatalogRepository(
     private val settings: AppSettings,
 ) {
 
+    /** Where work that outlives a sync runs, such as [LatestAirDates]. */
+    private val background = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
     /** TMDB back-fill for VOD detail pages, gated on a user-supplied key. See [TmdbClient]. */
     private val tmdb = TmdbClient(http, settings)
+
+    /** Movies [movieDetail] has already looked for a release date this run. */
+    private val datesSought: MutableSet<Long> = java.util.concurrent.ConcurrentHashMap.newKeySet()
+
+    private val latestAirDates = LatestAirDates(seriesDao, api) { series ->
+        if (tmdb.isConfigured()) {
+            tmdb.seriesMeta(VodTitleCleaner.clean(series.name), series.year, series.tmdbId)?.lastAirDate
+        } else {
+            null
+        }
+    }
 
     sealed interface SyncResult {
         data class Success(val channelCount: Int, val movieCount: Int, val seriesCount: Int) : SyncResult
@@ -211,6 +228,14 @@ class CatalogRepository(
 
     /** "Recently Added" series, newest first. Reactive. */
     fun recentlyAddedSeries(limit: Int = 30): Flow<List<Series>> = seriesDao.observeRecentlyAdded(limit)
+
+    /** Home's "Recently Released" movies, newest first, without undated ones or any not out by [nowMillis]. Reactive. */
+    fun recentlyReleasedMovies(nowMillis: Long, limit: Int = 30): Flow<List<Movie>> =
+        movieDao.observeRecentlyReleased(nowMillis, limit)
+
+    /** Home's "Recently Released" shows, by their newest episode (see [LatestAirDates]). Reactive. */
+    fun recentlyReleasedSeries(nowMillis: Long, limit: Int = 30): Flow<List<Series>> =
+        seriesDao.observeRecentlyReleased(nowMillis, limit)
 
     /** Every movie, newest first — for a caller that wants to build its own groupings. */
     suspend fun allMovies(): List<Movie> = withContext(Dispatchers.IO) { movieDao.all() }
@@ -404,9 +429,12 @@ class CatalogRepository(
         val movie = movieDao.byId(id) ?: return@withContext null
         var result = movie
         val source = sourceDao.byId(movie.sourceId)
+        // The list rarely carries a full release date, and Recently Released needs one. Most movies
+        // have one nowhere, though, so each is asked about once per run, not on every open.
+        val seekDate = movie.releaseDate == null && datesSought.add(movie.id)
 
-        // 1) Provider back-fill from get_vod_info, for a still-bare row on an Xtream source.
-        if (!result.isEnriched && source?.kind == SourceKind.XTREAM) {
+        // 1) Provider back-fill from get_vod_info, for a still-bare or undated row on an Xtream source.
+        if ((!result.isEnriched || seekDate) && source?.kind == SourceKind.XTREAM) {
             val info = runCatching { api.movieInfo(source, result.streamId) }.getOrNull()
             if (info != null) {
                 result = result.copy(
@@ -419,14 +447,18 @@ class CatalogRepository(
                     rating = result.rating ?: info.rating,
                     year = result.year ?: info.year,
                     durationSeconds = result.durationSeconds ?: info.durationSeconds,
+                    releaseDate = result.releaseDate ?: info.releaseDate,
                 )
             }
         }
 
         // 2) TMDB fallback for whatever the provider still left blank — only when the user set a
         //    key, and only while a headline visual field is missing (so it stops re-fetching once
-        //    filled). This is the "match Plex" back-fill for posters, backdrops, synopsis and cast.
-        if (tmdb.isConfigured() && (result.backdropUrl == null || result.plot == null || result.cast == null)) {
+        //    filled). This is the "match Plex" back-fill for posters, backdrops, synopsis and cast,
+        //    and the release date when the provider gave none. Only here, on open: a bulk lookup
+        //    across the catalogue would spend the user's TMDB quota on titles nobody looks at.
+        val wantsTmdb = result.lacksTmdbFields || seekDate && result.releaseDate == null
+        if (tmdb.isConfigured() && wantsTmdb) {
             val meta = runCatching {
                 tmdb.movieMeta(VodTitleCleaner.clean(result.name), result.year, result.tmdbId)
             }.getOrNull()
@@ -441,6 +473,7 @@ class CatalogRepository(
                     tmdbId = result.tmdbId ?: meta.tmdbId,
                     rating = result.rating ?: meta.rating,
                     year = result.year ?: meta.year,
+                    releaseDate = result.releaseDate ?: meta.releaseDate,
                 )
             }
         }
@@ -508,6 +541,10 @@ class CatalogRepository(
      *  acceptable, and it self-limits the moment anything comes back. */
     private val Movie.isEnriched: Boolean
         get() = backdropUrl != null || cast != null || genre != null || director != null
+
+    /** Whether a headline field TMDB can fill on detail open is still blank. */
+    private val Movie.lacksTmdbFields: Boolean
+        get() = backdropUrl == null || plot == null || cast == null
 
     private val Series.isEnriched: Boolean
         get() = backdropUrl != null || cast != null || genre != null
@@ -720,8 +757,62 @@ class CatalogRepository(
         if (movieCategories.isNotEmpty() || seriesCategories.isNotEmpty()) {
             categoryDao.upsertAll(movieCategories + seriesCategories)
         }
-        if (movies.isNotEmpty()) movieDao.upsertAll(movies)
-        if (series.isNotEmpty()) seriesDao.upsertAll(series)
+        // Fresh rows carry no local id, and an upsert without one hits the unique (source, provider
+        // id) index and then updates nothing, so a title's last_modified would never move after
+        // its first sync. Matching each to the row it replaces fixes that, keeps the local id that
+        // resume points hang off, and keeps what detail opens and the air-date step filled in.
+        if (movies.isNotEmpty()) {
+            val stored = movieDao.forSource(source.id).associateBy { it.streamId }
+            movieDao.upsertAll(movies.map { it.over(stored[it.streamId]) })
+        }
+        if (series.isNotEmpty()) {
+            val stored = seriesDao.forSource(source.id).associateBy { it.seriesId }
+            seriesDao.upsertAll(series.map { it.over(stored[it.seriesId]) })
+            // Fifty get_series_info calls would hold the sync up for a while; the catalogue is
+            // saved, so date the shows afterwards. Recently Released Shows fills in as it goes.
+            background.launch {
+                runCatching { latestAirDates.refresh(source) }
+                    .onFailure { Log.w(TAG, "Air dates failed for source ${source.id}", it) }
+            }
+        }
+    }
+
+    /** This freshly fetched movie in place of [old], keeping whatever it lacks that [old] had. */
+    private fun Movie.over(old: Movie?): Movie = if (old == null) {
+        this
+    } else {
+        copy(
+            id = old.id,
+            posterUrl = posterUrl ?: old.posterUrl,
+            rating = rating ?: old.rating,
+            year = year ?: old.year,
+            plot = plot ?: old.plot,
+            durationSeconds = durationSeconds ?: old.durationSeconds,
+            backdropUrl = backdropUrl ?: old.backdropUrl,
+            cast = cast ?: old.cast,
+            genre = genre ?: old.genre,
+            tmdbId = tmdbId ?: old.tmdbId,
+            director = director ?: old.director,
+            releaseDate = releaseDate ?: old.releaseDate,
+        )
+    }
+
+    /** This freshly fetched series in place of [old]; see the [Movie] version. */
+    private fun Series.over(old: Series?): Series = if (old == null) {
+        this
+    } else {
+        copy(
+            id = old.id,
+            posterUrl = posterUrl ?: old.posterUrl,
+            rating = rating ?: old.rating,
+            year = year ?: old.year,
+            plot = plot ?: old.plot,
+            backdropUrl = backdropUrl ?: old.backdropUrl,
+            cast = cast ?: old.cast,
+            genre = genre ?: old.genre,
+            tmdbId = tmdbId ?: old.tmdbId,
+            latestAirDate = old.latestAirDate,
+        )
     }
 
     private suspend fun syncM3u(source: Source, nowUtcMillis: Long): SyncResult {

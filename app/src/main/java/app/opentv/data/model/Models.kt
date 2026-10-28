@@ -283,6 +283,11 @@ data class Movie(
     val tmdbId: String? = null,
     /** Director(s), provider-formatted. Movies only. */
     val director: String? = null,
+    /**
+     * The day it was released, as UTC epoch millis at midnight, for Home's Recently Released row.
+     * From the provider, else TMDB on detail open. Null when only a year is known (see [year]).
+     */
+    val releaseDate: Long? = null,
 )
 
 @Entity(
@@ -316,6 +321,12 @@ data class Series(
     val genre: String? = null,
     /** TMDB id, stored only — resolved/used by a later agent. Coerced to String (panels vary). */
     val tmdbId: String? = null,
+    /**
+     * When its newest episode aired (UTC epoch millis at midnight), so a long-running show with an
+     * episode out yesterday counts as recently released. Filled in the background after a sync for
+     * the most recently updated series only (see LatestAirDates); null for the rest.
+     */
+    val latestAirDate: Long? = null,
 )
 
 @Entity(

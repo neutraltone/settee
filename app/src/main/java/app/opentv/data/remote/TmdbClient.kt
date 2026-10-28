@@ -7,6 +7,7 @@ package app.opentv.data.remote
 
 import android.util.Log
 import app.opentv.core.AppSettings
+import app.opentv.data.parser.parseReleaseDate
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.contentOrNull
@@ -33,6 +34,10 @@ data class TmdbMeta(
     val genre: String? = null,
     val rating: Double? = null,
     val year: Int? = null,
+    /** Release day (a film) or first air day (a show), UTC epoch millis at midnight. */
+    val releaseDate: Long? = null,
+    /** When a show's latest episode aired, UTC epoch millis at midnight. Null for films. */
+    val lastAirDate: Long? = null,
 )
 
 /**
@@ -163,6 +168,8 @@ class TmdbClient(
             genre = genre,
             rating = rating,
             year = year,
+            releaseDate = parseReleaseDate(dateStr),
+            lastAirDate = parseReleaseDate(o["last_air_date"]?.jsonPrimitive?.contentOrNull),
         )
     }
 

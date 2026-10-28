@@ -42,6 +42,7 @@ import app.opentv.ui.vod.playerTitle
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -51,6 +52,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
@@ -1169,16 +1171,33 @@ private suspend fun resumeItem(catalog: CatalogRepository, card: ContinueWatchin
         }
     }
 
-/** What Home shows: the active Profile's Continue Watching and its Favourites, by kind. */
+/** What Home shows: the active Profile's Continue Watching and its Favourites, by kind, then [recent]. */
 data class HomeState(
     val continueWatching: List<VodViewModel.ResumeItem>,
     val favouriteShows: List<Series>,
     val favouriteMovies: List<Movie>,
     val favouriteChannels: List<Channel>,
+    val recent: RecentRows,
 )
 
 /**
- * Home: the active Profile's Continue Watching across movies and series, and its Favourites. The
+ * Home's discovery rows, the same for every Profile because the catalogue is device-wide.
+ * Released goes by release date (shows: their newest episode); added by when the provider added or
+ * last updated the title. A title can be in more than one.
+ */
+data class RecentRows(
+    val releasedMovies: List<Movie> = emptyList(),
+    val addedMovies: List<Movie> = emptyList(),
+    val releasedShows: List<Series> = emptyList(),
+    val addedShows: List<Series> = emptyList(),
+) {
+    fun isEmpty(): Boolean =
+        releasedMovies.isEmpty() && addedMovies.isEmpty() && releasedShows.isEmpty() && addedShows.isEmpty()
+}
+
+/**
+ * Home: the active Profile's Continue Watching across movies and series, its Favourites, and the
+ * catalogue's recently released and added titles ([RecentRows]). The
  * state is null until all of it has loaded, so Home never flashes its nothing-here hint at a
  * Profile that has rows. A content type switched off in settings is left off Home too, as its tab
  * is from the side menu.
@@ -1195,16 +1214,41 @@ class HomeViewModel(app: Application) : AndroidViewModel(app) {
         settings.seriesEnabled,
     ) { items, movies, series -> items.filter { if (it.episode == null) movies else series } }
 
+    /** The time now, again every hour, so a title comes out on Home without Home being reopened. */
+    private val clock: Flow<Long> = flow {
+        while (true) {
+            emit(System.currentTimeMillis())
+            delay(CLOCK_TICK_MILLIS)
+        }
+    }
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    private val recent: Flow<RecentRows> = clock.flatMapLatest { now ->
+        combine(
+            graph.catalogRepository.recentlyReleasedMovies(now).onlyWhen(settings.moviesEnabled),
+            graph.catalogRepository.recentlyAddedMovies().onlyWhen(settings.moviesEnabled),
+            graph.catalogRepository.recentlyReleasedSeries(now).onlyWhen(settings.seriesEnabled),
+            graph.catalogRepository.recentlyAddedSeries().onlyWhen(settings.seriesEnabled),
+            ::RecentRows,
+        )
+    }
+
     val state: StateFlow<HomeState?> = combine(
         continueWatching,
         graph.viewerLibrary.favourites.series().onlyWhen(settings.seriesEnabled),
         graph.viewerLibrary.favourites.movies().onlyWhen(settings.moviesEnabled),
         graph.viewerLibrary.favourites.channels().onlyWhen(settings.liveEnabled),
+        recent,
         ::HomeState,
     ).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
     private fun <T> Flow<List<T>>.onlyWhen(enabled: StateFlow<Boolean>): Flow<List<T>> =
         combine(this, enabled) { list, on -> if (on) list else emptyList() }
+
+    private companion object {
+        // Release dates are whole days, so an hour late is soon enough.
+        const val CLOCK_TICK_MILLIS = 60L * 60 * 1000
+    }
 }
 
 /**

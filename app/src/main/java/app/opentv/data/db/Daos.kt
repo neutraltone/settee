@@ -424,6 +424,16 @@ interface MovieDao {
     @Query("SELECT * FROM movies ORDER BY addedMillis DESC LIMIT :limit")
     fun observeRecentlyAdded(limit: Int): Flow<List<Movie>>
 
+    /** Newest release first, for Home's "Recently Released" row; titles not out yet or with no date are left out. */
+    @Query(
+        """
+        SELECT * FROM movies
+        WHERE releaseDate IS NOT NULL AND releaseDate <= :nowMillis
+        ORDER BY releaseDate DESC LIMIT :limit
+        """,
+    )
+    fun observeRecentlyReleased(nowMillis: Long, limit: Int): Flow<List<Movie>>
+
     /**
      * Every movie, newest first — the working set for the Kotlin-side feeds (by-genre grouping,
      * genre-affinity recommendations, more-like-this). One pass over a few thousand rows is cheap;
@@ -436,6 +446,9 @@ interface MovieDao {
      *  from "same as last time" without loading every row (see VodViewModel.loadHomeFeeds). */
     @Query("SELECT COUNT(*) FROM movies")
     suspend fun count(): Int
+
+    @Query("SELECT * FROM movies WHERE sourceId = :sourceId")
+    suspend fun forSource(sourceId: Long): List<Movie>
 
     /**
      * Fallback for More-Like-This when a movie has no genre to match on: other titles from the same
@@ -511,6 +524,16 @@ interface SeriesDao {
     @Query("SELECT * FROM series ORDER BY addedMillis DESC LIMIT :limit")
     fun observeRecentlyAdded(limit: Int): Flow<List<Series>>
 
+    /** Newest episode first, for Home's "Recently Released" row; series never looked up are left out. */
+    @Query(
+        """
+        SELECT * FROM series
+        WHERE latestAirDate IS NOT NULL AND latestAirDate <= :nowMillis
+        ORDER BY latestAirDate DESC LIMIT :limit
+        """,
+    )
+    fun observeRecentlyReleased(nowMillis: Long, limit: Int): Flow<List<Series>>
+
     /** Every series, newest first — working set for the Kotlin-side by-genre / more-like-this feeds. */
     @Query("SELECT * FROM series ORDER BY addedMillis DESC")
     suspend fun all(): List<Series>
@@ -518,6 +541,16 @@ interface SeriesDao {
     /** How many series are on disk — the cheap "did the library grow" check for the home feeds. */
     @Query("SELECT COUNT(*) FROM series")
     suspend fun count(): Int
+
+    @Query("SELECT * FROM series WHERE sourceId = :sourceId")
+    suspend fun forSource(sourceId: Long): List<Series>
+
+    /** The [limit] series a source most recently added or updated (`last_modified`). */
+    @Query("SELECT * FROM series WHERE sourceId = :sourceId ORDER BY addedMillis DESC LIMIT :limit")
+    suspend fun mostRecentlyUpdated(sourceId: Long, limit: Int): List<Series>
+
+    @Query("UPDATE series SET latestAirDate = :latestAirDate WHERE id = :id")
+    suspend fun setLatestAirDate(id: Long, latestAirDate: Long)
 
     /** Fallback for More-Like-This when a series has no genre: same source/category, best-rated first. */
     @Query(
