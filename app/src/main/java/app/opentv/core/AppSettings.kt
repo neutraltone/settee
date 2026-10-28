@@ -263,6 +263,16 @@ class AppSettings private constructor(context: Context) {
         }
 
     /**
+     * The version whose What's new this device last showed (or skipped as a fresh install). Per
+     * device, not per Profile, and kept when the database is rebuilt: it names a release, not a row.
+     */
+    var lastSeenVersion: String?
+        get() = prefs.getString(KEY_LAST_SEEN_VERSION, null)
+        set(value) {
+            prefs.edit { putString(KEY_LAST_SEEN_VERSION, value) }
+        }
+
+    /**
      * Video scaling in the player, as an [androidx.media3.ui.AspectRatioFrameLayout] RESIZE_MODE_*
      * constant (0 = Fit). Persisted so the choice survives leaving the player, which testers asked
      * for — picking Fill every single time you open a channel gets old fast.
@@ -448,6 +458,7 @@ class AppSettings private constructor(context: Context) {
         private const val KEY_CONTENT_MOVIES = "content_movies"
         private const val KEY_CONTENT_SERIES = "content_series"
         private const val KEY_LAST_CHANNEL = "last_channel_id"
+        private const val KEY_LAST_SEEN_VERSION = "last_seen_version"
         private const val KEY_RESIZE_MODE = "player_resize_mode"
         private const val KEY_LANGUAGE = "language_tag"
 

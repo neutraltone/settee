@@ -130,6 +130,11 @@ never release/rebuild on channel change). Retries 403/429/5xx with backoff; not 
   (enable with `git config core.hooksPath .githooks`) and the PR title check. The hook lets git's own
   `Merge …`, `Revert "…"` and `fixup!`/`squash!`/`amend!` messages through; PR titles get no such
   exemption.
+- **`feat`, `fix` and `perf` titles describe what a viewer notices** ("episodes show how far through
+  them you are", not "add ViewerLibrary"), because release-please turns them into `CHANGELOG.md` and
+  the app shows that, filtered by `update/ReleaseNotes`, as its What's new and update-available notes.
+  Other types never reach a viewer. Before 1.0, a change that wipes the database is marked `!` and its
+  title says what the viewer has to redo (e.g. "add your providers again").
 - **Releases:** one branch and PR per ticket, squash-merged so the PR title becomes the commit on
   `main`. release-please (`.github/workflows/release-please.yml`) keeps a `chore(main): release x.y.z`
   PR open that bumps `appVersionName` in `app/build.gradle.kts` (`versionCode` is derived from it) and

@@ -7,6 +7,7 @@ package app.opentv.update
 
 import android.app.Application
 import android.content.Context
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -20,7 +21,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.content.edit
 import androidx.lifecycle.AndroidViewModel
@@ -44,24 +44,11 @@ fun UpdateGate(viewModel: UpdateViewModel = viewModel()) {
     when (val s = state) {
         UpdateUiState.Idle -> Unit
 
-        is UpdateUiState.Available -> AlertDialog(
-            onDismissRequest = viewModel::dismiss,
-            confirmButton = { TextButton(onClick = viewModel::install) { Text("Update") } },
-            dismissButton = { TextButton(onClick = viewModel::dismiss) { Text("Later") } },
-            title = { Text("Update available") },
-            text = {
-                Column(Modifier.verticalScroll(rememberScrollState())) {
-                    Text("Settee ${s.update.versionName} is available. You have ${BuildConfig.VERSION_NAME}.")
-                    if (s.update.notes.isNotBlank()) {
-                        Text(
-                            text = s.update.notes,
-                            modifier = Modifier.padding(top = 12.dp),
-                            maxLines = 12,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                    }
-                }
-            },
+        is UpdateUiState.Available -> UpdateAvailableDialog(
+            update = s.update,
+            installedVersion = BuildConfig.VERSION_NAME,
+            onInstall = viewModel::install,
+            onLater = viewModel::dismiss,
         )
 
         is UpdateUiState.Downloading -> AlertDialog(
@@ -91,6 +78,32 @@ fun UpdateGate(viewModel: UpdateViewModel = viewModel()) {
             text = { Text("Could not download the update. Check the connection and try again.") },
         )
     }
+}
+
+/** "Update available", with the new release's notes. */
+@Composable
+fun UpdateAvailableDialog(
+    update: UpdateChecker.Update,
+    installedVersion: String,
+    onInstall: () -> Unit,
+    onLater: () -> Unit,
+) {
+    val scroll = rememberScrollState()
+    val dpadScroll = rememberDpadScroll(scroll)
+    AlertDialog(
+        onDismissRequest = onLater,
+        confirmButton = { TextButton(onClick = onInstall, modifier = dpadScroll) { Text("Update") } },
+        dismissButton = { TextButton(onClick = onLater, modifier = dpadScroll) { Text("Later") } },
+        title = { Text("Update available") },
+        text = {
+            Column(Modifier.verticalScroll(scroll)) {
+                Text("Settee ${update.versionName} is available. You have $installedVersion.")
+                update.notes?.let { notes ->
+                    Box(Modifier.padding(top = 12.dp)) { ReleaseNotesBody(listOf(notes)) }
+                }
+            }
+        },
+    )
 }
 
 sealed interface UpdateUiState {

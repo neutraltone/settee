@@ -54,6 +54,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import app.opentv.core.AppSettings
 import app.opentv.core.ServiceLocator
@@ -83,6 +84,7 @@ import app.opentv.ui.vod.PersonScreen
 import app.opentv.ui.vod.SeriesDetailScreen
 import app.opentv.ui.vod.VodPlayerScreen
 import app.opentv.update.UpdateGate
+import app.opentv.update.WhatsNewGate
 
 class MainActivity : ComponentActivity() {
 
@@ -537,6 +539,11 @@ private fun OpenTvApp(isTelevision: Boolean) {
 
         // Sits above the whole nav graph so a found update can prompt from any screen.
         UpdateGate()
+
+        // Only over the main screen: never over first-run setup, and never over playback when the
+        // app boots straight into the last channel; it waits until the viewer backs out to Home.
+        val route by navController.currentBackStackEntryAsState()
+        WhatsNewGate(canShow = route?.destination?.route == Routes.MAIN)
 
         // "About to switch to a recording" banner — shows 30s before an auto-switch fires.
         RecordingSwitchBanner()
