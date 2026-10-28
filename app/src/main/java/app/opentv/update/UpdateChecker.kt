@@ -13,7 +13,7 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 
 /**
- * Checks whether a newer OpenTV release has been published, so a sideloaded install can
+ * Checks whether a newer Settee release has been published, so a sideloaded install can
  * update itself.
  *
  * Sideloaded apps get no automatic updates — nothing on the device knows to look. Without
@@ -80,7 +80,7 @@ class UpdateChecker(
 
     companion object {
         /** The single place the project's GitHub location is written down. */
-        const val REPO_SLUG = "opentvproject/opentv"
+        const val REPO_SLUG = "neutraltone/settee"
 
         /**
          * The GitHub release body is written for developers and has GitHub's auto-generated

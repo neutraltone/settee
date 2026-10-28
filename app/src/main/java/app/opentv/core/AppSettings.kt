@@ -311,7 +311,7 @@ class AppSettings private constructor(context: Context) {
     val smbShare: StateFlow<String> = _smbShare.asStateFlow()
 
     /** Sub-folder within the share, e.g. `Recordings`. Blank = share root. */
-    private val _smbFolder = MutableStateFlow(prefs.getString(KEY_SMB_FOLDER, "OpenTV").orEmpty())
+    private val _smbFolder = MutableStateFlow(prefs.getString(KEY_SMB_FOLDER, "Settee").orEmpty())
     val smbFolder: StateFlow<String> = _smbFolder.asStateFlow()
 
     private val _smbUser = MutableStateFlow(prefs.getString(KEY_SMB_USER, "").orEmpty())

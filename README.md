@@ -1,35 +1,18 @@
-# OpenTV
+# Settee
 
-**A free, open-source IPTV player for Android TV, Fire TV, phones and tablets.**
+**A personal IPTV player for Android TV, Fire TV, phones and tablets, built for a Fire TV Stick.**
 
-No account. No subscription. No server of ours between you and your provider.
+No account. No subscription. No server between you and your provider.
 
-[![Build](https://github.com/opentvproject/opentv/actions/workflows/build.yml/badge.svg)](https://github.com/opentvproject/opentv/actions/workflows/build.yml)
+[![Build](https://github.com/neutraltone/settee/actions/workflows/build.yml/badge.svg)](https://github.com/neutraltone/settee/actions/workflows/build.yml)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
-[![GitHub Sponsors](https://img.shields.io/badge/GitHub-Sponsors-ea4aaa.svg)](https://github.com/sponsors/legionnaireneyland)
 
 ---
 
-> **Support OpenTV** — it's free and always will be. If it saved you from a dead "lifetime"
-> app, you can chip in via **[GitHub Sponsors](https://github.com/sponsors/legionnaireneyland)**
-> or **[PayPal](https://www.paypal.com/donate/?business=leetobin1982@gmail.com&item_name=Support+OpenTV&no_recurring=0&currency_code=GBP)**.
-> Entirely optional; the app is never paywalled.
-
-## Why this exists
-
-There is a recurring pattern in this corner of the app world. A promising IPTV player appears.
-It looks good. It sells a "lifetime" subscription. The lifetime turns out to be shorter than
-the buyer's — the developer burns out, or moves on, or simply stops replying, and everyone who
-paid is left with an app that no longer works and no way to fix it.
-
-The people affected are not helpless. They are often technical. What they lack is not skill
-but *access*: the code is closed, so nobody else can pick it up.
-
-OpenTV is the same category of app built so that cannot happen. The source is public and
-GPL-licensed. If the current maintainers vanish tomorrow, anyone can fork it, build it and
-keep it alive. That is the entire point.
-
-**OpenTV is not a fork or a decompilation of any existing app.** It is written from scratch.
+Settee is based on [OpenTV](https://github.com/opentvproject/opentv), a GPL-licensed, clean-room
+IPTV player whose original project has been abandoned. Settee carries it on as its own app with
+its own name, application ID and update channel, and installs alongside OpenTV rather than over
+it. The licence and the per-file copyright of the OpenTV contributors stay as they are.
 
 ## What it does
 
@@ -52,7 +35,7 @@ keep it alive. That is the entire point.
 
 The live TV guide — programme grid, favourites, and a live preview:
 
-![OpenTV live TV guide](docs/screenshots/01-guide.png)
+![Live TV guide](docs/screenshots/01-guide.png)
 
 | Recordings &amp; reminders | Free cloud sync — your own NAS, no server |
 | :---: | :---: |
@@ -60,54 +43,35 @@ The live TV guide — programme grid, favourites, and a live preview:
 | Movies &amp; series | Settings |
 | ![Movies](docs/screenshots/04-movies.png) | ![Settings](docs/screenshots/05-settings.png) |
 
-Open-source through and through — the About screen carries the licence, the links, and a donation QR:
-
-![About](docs/screenshots/06-about.png)
-
 ## What it deliberately does not do
 
-- **No servers of ours, no web dashboard, no account.** Your provider credentials never leave
-  your device, and syncing happens directly between your devices — or through your own NAS —
-  never through a machine we run. This is a feature, not a gap — see
-  [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the reasoning, and note that "sync your
-  channel list to *our* servers" is precisely the feature whose hosting bill makes a one-off
-  payment unsustainable.
-- **No content.** OpenTV is a player. You bring a service you already pay for. The project has
-  no affiliation with any provider and does not help you find one.
+- **No servers, no web dashboard, no account.** Your provider credentials never leave your
+  device, and syncing happens directly between your devices — or through your own NAS — never
+  through a machine anyone else runs. See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the
+  reasoning.
+- **No content.** Settee is a player. You bring a service you already pay for.
 
 ## Install
 
-**→ [Install page](https://opentvproject.github.io/opentv/)** — step-by-step for Chromecast with
-Google TV, Android TV boxes, Fire TV Sticks, and phones.
+Grab `settee.apk` from [the latest release](https://github.com/neutraltone/settee/releases/latest).
+`https://github.com/neutraltone/settee/releases/latest/download/settee.apk` always serves the
+newest build, which is what the Downloader app on a Fire TV Stick points at. Once installed, the
+built-in updater offers each new release.
 
-On a TV, the quickest route is the **[Downloader app](https://www.aftvnews.com/downloader/)** —
-enter the code:
-
-```
-6398449
-```
-
-That code (or `aftv.news/6398449` in a browser) always points at the newest APK, so it never
-goes stale. On a phone, the [install page](https://opentvproject.github.io/opentv/) is a
-one-tap download. Or grab the APK straight from [Releases](../../releases).
-
-Every release is built by GitHub Actions from a tagged commit, and the workflow that built it
-is public — you can check the APK against the source, or rebuild it yourself, rather than
-trusting anyone's word.
-
-New to this? [SETUP.md](SETUP.md) walks through getting the repo, the install page and the
-first build running.
+Every release is built by GitHub Actions from a tagged commit, so the APK can be checked against
+the source. See [docs/RELEASING.md](docs/RELEASING.md).
 
 ## Build it yourself
 
 ```bash
-git clone https://github.com/opentvproject/opentv.git
-cd opentv
+git clone https://github.com/neutraltone/settee.git
+cd settee
 ./gradlew assembleDebug
 ```
 
-You need JDK 17+ and the Android SDK (API 35). Android Studio will fetch it for you. The debug
-APK lands in `app/build/outputs/apk/debug/`.
+You need JDK 17 and the Android SDK (API 35); Android Studio provides both. The debug APK lands
+in `app/build/outputs/apk/debug/` and installs as `uk.neutraltone.settee.debug`, alongside a
+release build.
 
 Run the tests:
 
@@ -115,50 +79,18 @@ Run the tests:
 ./gradlew test
 ```
 
-## How it was built
+## Clean-room
 
-OpenTV was written with **Claude**, Anthropic's AI assistant, working from a human's
-direction — the design decisions, the priorities, the "no server, ever" rule, and every
-review of what shipped were the maintainer's; Claude did the bulk of the drafting, wiring and
-debugging against that direction.
-
-That is relevant here for one specific reason: **it kept the project genuinely clean-room.**
-Nothing was decompiled or copied from any existing IPTV app. The code was written from public
-specifications (the Xtream Codes request format, the XMLTV and M3U formats, the Kodi catch-up
-tags) and from describing how other apps *behave* as a user — never from their source. That is
-the legal footing that lets anyone fork this and keep it alive, which is the whole point.
-
-## Contributing
-
-Please do. See [CONTRIBUTING.md](CONTRIBUTING.md).
-
-The project is explicitly looking for people who own devices the maintainers do not. Most
-"works for me" bugs in this category are device-specific — an Ugoos box, a first-gen ONN, a
-Fire Stick Lite — and a bug report from someone who owns one is worth more than a week of
-guessing. If a channel fails on your setup, [open an issue](../../issues/new/choose).
-
-## Supporting the project
-
-OpenTV is free and always will be. There is nothing to buy, no premium tier, and no lifetime
-subscription — the failure mode this project was built in response to is a promise nobody
-could keep, so we are not making one.
-
-If it saves you money or annoyance and you want to say thanks, you can sponsor the project via
-[GitHub Sponsors](https://github.com/sponsors/legionnaireneyland) or
-[PayPal](https://www.paypal.com/donate/?business=leetobin1982@gmail.com&item_name=Support+OpenTV&no_recurring=0&currency_code=GBP)
-— see [.github/FUNDING.yml](.github/FUNDING.yml). Tips fund nothing except spare-evening development;
-nobody is owed a feature for one, and nothing is gated behind one.
+Nothing in OpenTV or Settee was decompiled or copied from another IPTV app. The code was written
+from public specifications (the Xtream Codes request format, the XMLTV and M3U formats, the Kodi
+catch-up tags) and from how other apps *behave*, never from their source.
 
 ## Licence
 
-[GPL-3.0-or-later](LICENSE).
-
-Chosen deliberately. GPL means anyone can take this code, but if they ship it they must ship
-their source too. Nobody gets to close it, rebrand it, and sell a lifetime subscription on top
-of work the community did for free.
+[GPL-3.0-or-later](LICENSE), inherited from OpenTV.
 
 ## Legal
 
-OpenTV is a media player, comparable to VLC. It ships with no channels, no playlists, and no
+Settee is a media player, comparable to VLC. It ships with no channels, no playlists, and no
 links to any. What you point it at, and whether you are entitled to, is between you and your
 provider.

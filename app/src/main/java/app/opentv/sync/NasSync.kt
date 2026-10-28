@@ -84,6 +84,6 @@ class NasSync(private val graph: ServiceLocator.Graph) {
         "smb://${config.host}/${config.share}/${syncFolderPath(config)}/$fileName"
 
     private companion object {
-        const val SYNC_DIR = "OpenTV"
+        const val SYNC_DIR = "Settee"
     }
 }

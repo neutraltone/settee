@@ -148,7 +148,7 @@ object ManagerPage {
                 <label class="field"><span>Server (IP address)</span>
                   <input id="recHost" placeholder="192.168.0.214" autocapitalize="off" autocorrect="off" spellcheck="false"></label>
                 <label class="field"><span>Share</span>
-                  <input id="recShare" placeholder="OpenTV" autocapitalize="off" autocorrect="off" spellcheck="false"></label>
+                  <input id="recShare" placeholder="Settee" autocapitalize="off" autocorrect="off" spellcheck="false"></label>
                 <label class="field"><span>Folder (optional)</span>
                   <input id="recFolder" placeholder="(leave blank)" autocapitalize="off" autocorrect="off" spellcheck="false"></label>
                 <label class="field"><span>Username</span>

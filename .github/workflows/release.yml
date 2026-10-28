@@ -47,8 +47,9 @@ jobs:
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: ./gradlew assembleRelease
 
-      # A stable asset name matters: the install page and the /apk short link both look for
-      # a file ending in .apk, and a predictable name keeps direct links working.
+      # Two copies of the same APK: the fixed-name settee.apk makes releases/latest/download/settee.apk
+      # always serve the newest build (the Downloader short code points there), and the versioned
+      # one is what the in-app updater picks, so a downloaded file says which version it is.
       - name: Name the artifact
         id: artifact
         run: |
@@ -59,9 +60,9 @@ jobs:
             exit 1
           fi
           mkdir -p dist
-          cp "$SOURCE" "dist/opentv-${TAG}.apk"
-          cp "$SOURCE" "dist/opentv.apk"
-          echo "path=dist/opentv-${TAG}.apk" >> "$GITHUB_OUTPUT"
+          cp "$SOURCE" "dist/settee-${TAG}.apk"
+          cp "$SOURCE" "dist/settee.apk"
+          echo "path=dist/settee-${TAG}.apk" >> "$GITHUB_OUTPUT"
           echo "signed=$([ -n "$KEYSTORE_PATH" ] && echo yes || echo debug-key)" >> "$GITHUB_OUTPUT"
 
       - name: Release notes from CHANGELOG

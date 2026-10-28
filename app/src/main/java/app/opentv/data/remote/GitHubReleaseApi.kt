@@ -25,8 +25,15 @@ data class GitHubRelease(
     @SerialName("html_url") val htmlUrl: String = "",
     val assets: List<GitHubAsset> = emptyList(),
 ) {
-    /** The first attached `.apk`, which is the thing we can actually install. */
-    fun apkAsset(): GitHubAsset? = assets.firstOrNull { it.name.endsWith(".apk", ignoreCase = true) }
+    /**
+     * The attached `.apk` to install. Releases carry the same APK twice, `settee-<tag>.apk` and a
+     * fixed-name `settee.apk` for Downloader short codes; prefer the versioned one so the file the
+     * updater downloads says which version it is. Falls back to any `.apk` for older releases.
+     */
+    fun apkAsset(): GitHubAsset? {
+        val apks = assets.filter { it.name.endsWith(".apk", ignoreCase = true) }
+        return apks.firstOrNull { tagName.isNotEmpty() && it.name.contains(tagName) } ?: apks.firstOrNull()
+    }
 }
 
 @Serializable
