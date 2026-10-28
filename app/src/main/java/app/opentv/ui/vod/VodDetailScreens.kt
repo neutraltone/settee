@@ -441,7 +441,10 @@ internal fun SeriesDetailContent(
 
 /** Hands [ep] to the player; the player resumes it itself if the Profile has it In Progress. */
 private fun playEpisode(ep: Episode, onPlay: (mediaKey: String, url: String, title: String) -> Unit) =
-    onPlay("ep:${ep.id}", ep.streamUrl, "S${ep.season}E${ep.episodeNumber} · ${ep.title}")
+    onPlay("ep:${ep.id}", ep.streamUrl, ep.playerTitle)
+
+/** What the player calls an episode, wherever it was started from. */
+internal val Episode.playerTitle: String get() = "S${season}E$episodeNumber · $title"
 
 // ---- Shared detail pieces ----------------------------------------------------------------------
 
