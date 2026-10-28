@@ -1,0 +1,44 @@
+name: Release Please
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+# Two pushes to main in quick succession would otherwise race to rewrite the same release PR.
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+jobs:
+  release-please:
+    name: Update the release PR
+    runs-on: ubuntu-latest
+    outputs:
+      release_created: ${{ steps.release.outputs.release_created }}
+      tag_name: ${{ steps.release.outputs.tag_name }}
+
+    steps:
+      # Config is release-please-config.json and .release-please-manifest.json. A PR opened with the
+      # default token doesn't trigger other workflows, so the release PR gets no checks unless
+      # RELEASE_PLEASE_TOKEN is set — see docs/RELEASING.md.
+      - id: release
+        uses: googleapis/release-please-action@v5
+        with:
+          token: ${{ secrets.RELEASE_PLEASE_TOKEN || github.token }}
+
+  # Called directly rather than by the tag push: a tag created with the default token doesn't
+  # trigger workflows, and calling it also means a personal token can't build the release twice.
+  build:
+    name: Build and publish APK
+    needs: release-please
+    if: needs.release-please.outputs.release_created == 'true'
+    permissions:
+      contents: write
+    uses: ./.github/workflows/release.yml
+    with:
+      tag: ${{ needs.release-please.outputs.tag_name }}
+    secrets: inherit

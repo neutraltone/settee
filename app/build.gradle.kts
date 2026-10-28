@@ -9,7 +9,8 @@ plugins {
 }
 
 // A release changes this and nothing else; versionCodeOf (buildSrc/AppVersion.kt) derives the code.
-val appVersionName = "0.1.0"
+// release-please bumps it in the release PR, finding the line by the marker comment.
+val appVersionName = "0.1.0" // x-release-please-version
 
 android {
     namespace = "app.opentv"

@@ -15,6 +15,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: The convention's own tests pass
+        run: tools/check-message-test.sh
+
       # Squash-merging makes the PR title the commit on main, so it follows the commit convention.
       # Passed through env, not interpolated into the script, so a title can't inject shell.
       - name: Title follows the commit convention
