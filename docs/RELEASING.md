@@ -10,7 +10,9 @@ Releases are cut by merging the release PR. GitHub Actions does the rest.
    from the `feat`, `fix` and `perf` commits since the last release. Other types don't appear.
 3. Merge the release PR when you want to ship. release-please tags `vx.y.z` and creates the GitHub
    release, then calls `.github/workflows/release.yml`, which runs the tests, assembles the release
-   APK and attaches `settee-vx.y.z.apk` and `settee.apk`.
+   APK and attaches `settee-vx.y.z.apk` and `settee.apk`. For the few minutes that takes, the
+   release exists without an APK: the in-app updater ignores it until the APK lands, but the
+   `releases/latest/download/settee.apk` link 404s.
 
 Don't bump the version, write the changelog entry or push a tag by hand. To rebuild an existing
 release's APKs, run the Release workflow from the Actions tab with its tag.
@@ -80,7 +82,8 @@ Losing the keystore is unrecoverable. There is no reset.
 ## Version numbers
 
 `appVersionName` in `app/build.gradle.kts` is the only number a release changes, and release-please
-changes it. `versionCode` is worked out from it by `versionCodeOf` (`buildSrc/src/main/kotlin/AppVersion.kt`)
-as major×10000 + minor×100 + patch (0.1.0 → 100, 1.2.3 → 10203), so minor and patch must stay
-below 100. Android uses `versionCode`, not `versionName`, to
-decide what counts as an upgrade, which is why the two are never set by hand separately.
+changes it. `versionCode` is worked out from it by `versionCodeOf`
+(`buildSrc/src/main/kotlin/AppVersion.kt`) as major×10000 + minor×100 + patch (0.1.0 → 100,
+1.2.3 → 10203), so minor and patch must stay below 100. Android uses `versionCode`, not
+`versionName`, to decide what counts as an upgrade, which is why the two are never set by hand
+separately.

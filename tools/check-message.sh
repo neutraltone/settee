@@ -9,8 +9,8 @@
 # Only the first line counts; grep would otherwise pass a message if any later line matched.
 line=$(printf '%s\n' "$1" | head -n 1)
 
-if printf '%s\n' "$line" | grep -Eq '^(feat|fix|refactor|perf)\(#[0-9]+\)!?: .+' ||
-    printf '%s\n' "$line" | grep -Eq '^(docs|chore|ci|test|build)(\(#[0-9]+\))?!?: .+' ||
+if printf '%s\n' "$line" | grep -Eq '^(feat|fix|refactor|perf)\(#[0-9]+\)!?: [^[:space:]]' ||
+    printf '%s\n' "$line" | grep -Eq '^(docs|chore|ci|test|build)(\(#[0-9]+\))?!?: [^[:space:]]' ||
     printf '%s\n' "$line" | grep -Eq '^chore\(main\): release [0-9]+\.[0-9]+\.[0-9]+'; then
     exit 0
 fi

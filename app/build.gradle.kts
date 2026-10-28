@@ -9,7 +9,8 @@ plugins {
 }
 
 // A release changes this and nothing else; versionCodeOf (buildSrc/AppVersion.kt) derives the code.
-// release-please bumps it in the release PR, finding the line by the marker comment.
+// Keep the marker comment: release-please finds the line by it, and without it a release PR bumps
+// CHANGELOG.md but not the APK's version.
 val appVersionName = "0.1.0" // x-release-please-version
 
 android {

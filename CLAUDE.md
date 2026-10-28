@@ -41,10 +41,10 @@ instrumented tests.
 
 `.github/workflows/build.yml` runs one job per required check: **Test and assemble** (unit tests, debug
 APK, and a fail if the build changed `app/schemas/`), **Android Lint**, **ktlint**, **detekt** and
-**gitleaks**. `pr-hygiene.yml` runs `tools/check-message-test.sh` and checks the PR title with `tools/check-message.sh`. Lint and detekt fail
-only on findings missing from `app/lint-baseline.xml` / `app/detekt-baseline.xml`: fix a new finding,
-don't regenerate a baseline to hide it. `.gitleaks.toml` adds rules for Xtream credentials in URLs
-and MAG MACs; use placeholders such as `u`/`p`, `example.com` or `00:1A:79:00:00:01` in tests.
+**gitleaks**. `pr-hygiene.yml` runs `tools/check-message-test.sh` and checks the PR title with
+`tools/check-message.sh`. Lint and detekt fail only on findings missing from `app/lint-baseline.xml` /
+`app/detekt-baseline.xml`: fix a new finding, don't regenerate a baseline to hide it. `.gitleaks.toml`
+adds rules for Xtream credentials in URLs and MAG MACs; use placeholders such as `u`/`p`, `example.com` or `00:1A:79:00:00:01` in tests.
 `RoomMigrationTest` walks every exported schema to the latest with `OpenTvDatabase.MIGRATIONS`.
 
 The debug build has `applicationIdSuffix = ".debug"` (`uk.neutraltone.settee.debug`), so it installs
@@ -121,7 +121,8 @@ never release/rebuild on channel change). Retries 403/429/5xx with backoff; not 
   and `build`; `!` before the colon marks a breaking change; release-please's `chore(main): release
   x.y.z` also passes. `tools/check-message.sh` is the rule, shared by the `.githooks/commit-msg` hook
   (enable with `git config core.hooksPath .githooks`) and the PR title check. The hook lets git's own
-  `Merge …`, `Revert "…"` and `fixup!`/`squash!` messages through; PR titles get no such exemption.
+  `Merge …`, `Revert "…"` and `fixup!`/`squash!`/`amend!` messages through; PR titles get no such
+  exemption.
 - **Releases:** one branch and PR per ticket, squash-merged so the PR title becomes the commit on
   `main`. release-please (`.github/workflows/release-please.yml`) keeps a `chore(main): release x.y.z`
   PR open that bumps `appVersionName` in `app/build.gradle.kts` (`versionCode` is derived from it) and

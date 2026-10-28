@@ -33,7 +33,7 @@ jobs:
   # Called directly rather than by the tag push: a tag created with the default token doesn't
   # trigger workflows, and calling it also means a personal token can't build the release twice.
   build:
-    name: Build and publish APK
+    name: Release
     needs: release-please
     if: needs.release-please.outputs.release_created == 'true'
     permissions:

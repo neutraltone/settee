@@ -53,6 +53,8 @@ title fail 'chore(main): release notes'
 title fail 'feature(#12): do the thing'
 title fail 'feat(12): do the thing'
 title fail 'feat(#12):'
+title fail 'feat(#12):   '
+title fail 'docs:   '
 title fail 'Feat(#12): do the thing'
 # Only the first line counts, so a good body can't rescue a bad subject.
 title fail 'do the thing
@@ -63,6 +65,7 @@ hook pass "Merge branch 'main' into feat/12-series-rules"
 hook pass 'Revert "feat(#12): add series rules"'
 hook pass 'fixup! feat(#12): add series rules'
 hook pass 'squash! feat(#12): add series rules'
+hook pass 'amend! feat(#12): add series rules'
 title fail "Merge branch 'main' into feat/12-series-rules"
 title fail 'Revert "feat(#12): add series rules"'
 title fail 'fixup! feat(#12): add series rules'
