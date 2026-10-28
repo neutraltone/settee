@@ -82,8 +82,8 @@ catalogue refresh, playback or Xtream parsing. The big picture:
 
 - **Catalogue refresh merges, never wipes.** `ChannelDao.replaceCatalogue` carries `hidden`, `sortIndex`,
   custom names and EPG overrides across by `streamId`; M3U `streamId`s are stable FNV-1a hashes.
-  Favourites aren't on the rows: they match by stream URL (series: provider `seriesId`), so anything that
-  changes a URL or series id silently drops them.
+  Favourites aren't on the rows: they match by source name plus `streamId` (series: `seriesId`), so
+  anything that changes those ids, or renaming a source, silently drops them.
 - **EPG never deletes before it has the replacement**: batched upserts of 500, pruning by age only after
   success. Times are UTC epoch millis everywhere; convert to local only when drawing.
 - **SQLite bound-variable limit:** never write `IN (:hugeList)` / `NOT IN (:everyId)` over catalogue-sized
@@ -102,12 +102,13 @@ catalogue refresh, playback or Xtream parsing. The big picture:
   Watched = past 93%, everywhere (status, resume, Continue Watching). Live TV is never resumed.
 - Resume points are `PlaybackPosition`, keyed `(profileId, mediaKey)` where `mediaKey` is `movie:<localId>`
   or `ep:<localId>` (local Room row ids).
-- Favourites belong to a Profile (ADR 0001): the `favourites` table is keyed `(profileId, kind, identity)`,
-  identity being the `streamUrl` (channels, movies) or provider `seriesId` (series), so they survive a
-  catalogue refresh and match across devices. Hidden channels and channel order stay device-wide columns
-  on `channels`. Sync uses the same identities, and positions newest-wins (`sync/SyncData.kt`,
-  `SyncEngine.kt`); until sync groups Favourites by Profile it carries only the active Profile's — keep
-  new watch/favourite state syncable the same way.
+- Favourites belong to a Profile (ADR 0001): the `favourites` table is keyed `(profileId, kind, source,
+  itemId)` — the source's name and the provider's `streamId` (channels, movies) or `seriesId` (series) —
+  never the stream URL, which Xtream changes with the live format and the account password. So they
+  survive a catalogue refresh and match across devices. Hidden channels and channel order stay
+  device-wide columns on `channels`. Sync carries each Profile's Favourites under its name (additive)
+  and positions newest-wins (`sync/SyncData.kt`, `SyncEngine.kt`) — keep new watch/favourite state
+  syncable the same way.
 - `VodViewModel.continueWatching` builds the Continue Watching shelf from `ViewerLibrary.inProgress()`.
 
 ### Database migrations

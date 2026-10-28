@@ -25,10 +25,8 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Extension
 import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.PlayCircle
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.StarOutline
 import androidx.compose.material3.CircularProgressIndicator
@@ -67,8 +65,10 @@ import app.opentv.data.model.Series
 import app.opentv.data.model.StremioStream
 import app.opentv.data.parser.displayTitle
 import app.opentv.data.repo.EpisodeStatuses
+import app.opentv.data.repo.SeriesMainAction
 import app.opentv.data.repo.WatchStatus
 import app.opentv.ui.VodViewModel
+import app.opentv.ui.WatchBadge
 import coil.compose.AsyncImage
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -111,8 +111,9 @@ fun MovieDetailScreen(
         LoadingDetail()
         return
     }
+    // Null until the Profile's Favourites have loaded: the star stays put and ignores a press till then.
     val favouriteMovies by viewModel.favouriteMovies.collectAsState()
-    val favourite = favouriteMovies.any { it.streamUrl == m.streamUrl }
+    val favourite = favouriteMovies?.any { it.id == m.id }
 
     // Land focus on the primary action once the page is up, so a d-pad has somewhere to be.
     LaunchedEffect(m.id) {
@@ -135,11 +136,11 @@ fun MovieDetailScreen(
                     modifier = Modifier.focusRequester(playFocus),
                 ) { onPlay(m) }
                 DetailButton(
-                    icon = if (favourite) Icons.Filled.Star else Icons.Outlined.StarOutline,
+                    icon = if (favourite == true) Icons.Filled.Star else Icons.Outlined.StarOutline,
                     label = stringResource(
-                        if (favourite) R.string.common_remove_favourite else R.string.common_favourite,
+                        if (favourite == true) R.string.common_remove_favourite else R.string.common_favourite,
                     ),
-                ) { viewModel.setMovieFavourite(m, !favourite) }
+                ) { favourite?.let { viewModel.setMovieFavourite(m, !it) } }
                 // Only when the user has add-ons set up — queries them for this film's streams.
                 if (hasAddons) {
                     DetailButton(
@@ -285,7 +286,6 @@ fun SeriesDetailScreen(
 ) {
     var series by remember(seriesId) { mutableStateOf<Series?>(null) }
     var moreLike by remember(seriesId) { mutableStateOf<List<Series>>(emptyList()) }
-    val favFocus = remember { FocusRequester() }
 
     LaunchedEffect(seriesId) {
         val loaded = viewModel.seriesDetail(seriesId)
@@ -300,6 +300,7 @@ fun SeriesDetailScreen(
     val episodes by (s?.let { viewModel.episodes(it) } ?: viewModel.noEpisodes)
         .collectAsState(initial = emptyList())
     val statuses by viewModel.episodeStatuses.collectAsState(initial = EpisodeStatuses())
+    val mainAction by remember(episodes) { viewModel.seriesMainAction(episodes) }.collectAsState(initial = null)
     val favouriteSeries by viewModel.favouriteSeries.collectAsState()
 
     if (s == null) {
@@ -307,11 +308,53 @@ fun SeriesDetailScreen(
         return
     }
 
-    LaunchedEffect(s.id) {
+    SeriesDetailContent(
+        series = s,
+        episodes = episodes,
+        statuses = statuses,
+        mainAction = mainAction,
+        favourite = favouriteSeries?.any { it.id == s.id },
+        moreLike = moreLike,
+        onPlayEpisode = onPlayEpisode,
+        onSetFavourite = { viewModel.setSeriesFavourite(s, it) },
+        onOpenSeries = onOpenSeries,
+        onOpenPerson = onOpenPerson,
+    )
+}
+
+/**
+ * The series page once the series is known: the header with its main button (Resume or Play the
+ * right episode, from [mainAction]) and the favourite toggle, then the episodes by season.
+ * [favourite] is null until the Profile's Favourites have loaded, and the toggle does nothing till then.
+ */
+@Composable
+internal fun SeriesDetailContent(
+    series: Series,
+    episodes: List<Episode>,
+    statuses: EpisodeStatuses,
+    mainAction: SeriesMainAction?,
+    favourite: Boolean?,
+    moreLike: List<Series>,
+    onPlayEpisode: (mediaKey: String, url: String, title: String) -> Unit,
+    onSetFavourite: (Boolean) -> Unit,
+    onOpenSeries: (Series) -> Unit,
+    onOpenPerson: (String) -> Unit,
+) {
+    val mainFocus = remember { FocusRequester() }
+    val favFocus = remember { FocusRequester() }
+    val hasMainAction = mainAction != null
+    var favFocused by remember { mutableStateOf(false) }
+    var highlightPlaced by remember(series.id) { mutableStateOf(false) }
+
+    // Episodes are fetched on demand, so the main button can appear after the page does: the
+    // highlight waits on the favourite toggle until then, and moves across only if it is still
+    // there, never pulling a viewer back up from wherever they have gone since.
+    LaunchedEffect(series.id, hasMainAction) {
         delay(60)
-        runCatching { favFocus.requestFocus() }
+        if (highlightPlaced && !favFocused) return@LaunchedEffect
+        runCatching { (if (hasMainAction) mainFocus else favFocus).requestFocus() }
+        highlightPlaced = true
     }
-    val favourite = favouriteSeries.any { it.seriesId == s.seriesId }
 
     // Group episodes by season (seasons ascending, episodes ordered within each) — the classic
     // "episode-by-season" list.
@@ -324,27 +367,46 @@ fun SeriesDetailScreen(
     LazyColumn(Modifier.fillMaxSize()) {
         item(key = "header") {
             DetailBackdrop(
-                title = s.displayTitle,
-                backdropUrl = s.backdropUrl,
-                posterUrl = s.posterUrl,
-                meta = seriesMeta(s),
+                title = series.displayTitle,
+                backdropUrl = series.backdropUrl,
+                posterUrl = series.posterUrl,
+                meta = seriesMeta(series),
             ) {
+                if (mainAction != null) {
+                    val ep = mainAction.episode
+                    DetailButton(
+                        icon = Icons.Filled.PlayArrow,
+                        label = stringResource(
+                            when (mainAction) {
+                                is SeriesMainAction.Resume -> R.string.vod_resume_episode
+                                is SeriesMainAction.Play -> R.string.vod_play_episode
+                            },
+                            ep.season,
+                            ep.episodeNumber,
+                        ),
+                        primary = true,
+                        modifier = Modifier.focusRequester(mainFocus),
+                    ) { playEpisode(ep, onPlayEpisode) }
+                }
                 DetailButton(
-                    icon = if (favourite) Icons.Filled.Star else Icons.Outlined.StarOutline,
+                    icon = if (favourite == true) Icons.Filled.Star else Icons.Outlined.StarOutline,
                     label = stringResource(
-                        if (favourite) R.string.common_remove_favourite else R.string.common_favourite,
+                        if (favourite == true) R.string.common_remove_favourite else R.string.common_favourite,
                     ),
-                    primary = true,
-                    modifier = Modifier.focusRequester(favFocus),
-                ) { viewModel.setSeriesFavourite(s, !favourite) }
+                    primary = !hasMainAction,
+                    modifier = Modifier
+                        .focusRequester(favFocus)
+                        .onFocusChanged { favFocused = it.isFocused },
+                    onClick = { favourite?.let { onSetFavourite(!it) } },
+                )
             }
         }
         item(key = "info") {
             DetailInfo(
-                plot = s.plot,
-                cast = s.cast,
+                plot = series.plot,
+                cast = series.cast,
                 director = null,
-                genre = s.genre,
+                genre = series.genre,
                 onOpenPerson = onOpenPerson,
             )
         }
@@ -364,7 +426,7 @@ fun SeriesDetailScreen(
                     SectionHeader(stringResource(R.string.vod_season, season))
                 }
                 items(eps, key = { it.id }) { ep ->
-                    EpisodeRow(ep, statuses[ep.id], s.posterUrl, onPlayEpisode)
+                    EpisodeRow(ep, statuses[ep.id], series.posterUrl, onPlayEpisode)
                 }
             }
         }
@@ -377,6 +439,10 @@ fun SeriesDetailScreen(
         }
     }
 }
+
+/** Hands [ep] to the player; the player resumes it itself if the Profile has it In Progress. */
+private fun playEpisode(ep: Episode, onPlay: (mediaKey: String, url: String, title: String) -> Unit) =
+    onPlay("ep:${ep.id}", ep.streamUrl, "S${ep.season}E${ep.episodeNumber} · ${ep.title}")
 
 // ---- Shared detail pieces ----------------------------------------------------------------------
 
@@ -681,7 +747,10 @@ private fun DetailButton(
     }
 }
 
-/** One episode row: season/episode marker, title, watch badge and a focus highlight; plays on click. */
+/**
+ * One episode row: thumbnail with its watch badge, season/episode marker, title and a focus
+ * highlight; plays on click.
+ */
 @Composable
 internal fun EpisodeRow(
     ep: Episode,
@@ -710,9 +779,7 @@ internal fun EpisodeRow(
                     Modifier
                 },
             )
-            .clickable {
-                onPlay("ep:${ep.id}", ep.streamUrl, "S${ep.season}E${ep.episodeNumber} · ${ep.title}")
-            }
+            .clickable { playEpisode(ep, onPlay) }
             .padding(14.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -731,19 +798,6 @@ internal fun EpisodeRow(
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.weight(1f),
         )
-        when (status) {
-            WatchStatus.Watched -> Icon(
-                Icons.Filled.CheckCircle,
-                contentDescription = stringResource(R.string.vod_episode_watched),
-                tint = MaterialTheme.colorScheme.primary,
-            )
-            is WatchStatus.InProgress -> Icon(
-                Icons.Filled.PlayCircle,
-                contentDescription = stringResource(R.string.vod_episode_in_progress),
-                tint = MaterialTheme.colorScheme.primary,
-            )
-            WatchStatus.Unwatched -> Unit
-        }
     }
 }
 
@@ -758,8 +812,8 @@ private fun EpisodeThumbnail(ep: Episode, status: WatchStatus, seriesArtUrl: Str
     val showStill = ep.stillUrl != null && !stillFailed
     Box(
         Modifier
-            .width(128.dp)
-            .height(72.dp)
+            .width(160.dp)
+            .height(90.dp)
             .clip(RoundedCornerShape(6.dp))
             .background(MaterialTheme.colorScheme.surfaceVariant),
     ) {
@@ -779,6 +833,7 @@ private fun EpisodeThumbnail(ep: Episode, status: WatchStatus, seriesArtUrl: Str
                 modifier = Modifier.align(Alignment.Center),
             )
         }
+        WatchBadge(status, Modifier.align(Alignment.TopEnd).padding(4.dp))
         if (status is WatchStatus.InProgress) {
             LinearProgressIndicator(
                 progress = { status.progress },

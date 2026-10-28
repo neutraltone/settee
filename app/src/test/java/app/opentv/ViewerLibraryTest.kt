@@ -42,10 +42,10 @@ class ViewerLibraryTest {
     private suspend fun statusOf(episodeId: Long): WatchStatus = library.episodeStatuses().first()[episodeId]
 
     @Test
-    fun `an episode played part way is In Progress with how far through it is`() = runTest {
+    fun `an episode played part way is In Progress with how far through it is and how long is left`() = runTest {
         library.recordProgress("ep:7", positionMillis = 600_000, durationMillis = 2_400_000)
 
-        assertThat(statusOf(7)).isEqualTo(WatchStatus.InProgress(progress = 0.25f))
+        assertThat(statusOf(7)).isEqualTo(WatchStatus.InProgress(progress = 0.25f, remainingMillis = 1_800_000))
     }
 
     @Test
@@ -59,7 +59,7 @@ class ViewerLibraryTest {
     fun `an episode stopped at exactly 93 percent is still In Progress`() = runTest {
         library.recordProgress("ep:7", positionMillis = 930_000, durationMillis = 1_000_000)
 
-        assertThat(statusOf(7)).isEqualTo(WatchStatus.InProgress(progress = 0.93f))
+        assertThat(statusOf(7)).isEqualTo(WatchStatus.InProgress(progress = 0.93f, remainingMillis = 70_000))
     }
 
     @Test
@@ -79,10 +79,10 @@ class ViewerLibraryTest {
     }
 
     @Test
-    fun `progress with no known duration is In Progress from the start`() = runTest {
+    fun `progress with no known duration is In Progress from the start with no idea how long is left`() = runTest {
         library.recordProgress("ep:7", positionMillis = 600_000, durationMillis = 0)
 
-        assertThat(statusOf(7)).isEqualTo(WatchStatus.InProgress(progress = 0f))
+        assertThat(statusOf(7)).isEqualTo(WatchStatus.InProgress(progress = 0f, remainingMillis = null))
     }
 
     @Test
@@ -133,7 +133,7 @@ class ViewerLibraryTest {
     fun `a nonsense negative position from sync counts as the very start`() = runTest {
         library.mergeSynced(synced(profileId = 1, positionMillis = -5_000, updatedAtMillis = now))
 
-        assertThat(statusOf(7)).isEqualTo(WatchStatus.InProgress(progress = 0f))
+        assertThat(statusOf(7)).isEqualTo(WatchStatus.InProgress(progress = 0f, remainingMillis = 1_000_000))
         assertThat(library.resumeFrom("ep:7")).isEqualTo(0)
     }
 
@@ -173,7 +173,7 @@ class ViewerLibraryTest {
         val merged = library.mergeSynced(synced(profileId = 1, positionMillis = 950_000, updatedAtMillis = now - 1))
 
         assertThat(merged).isFalse()
-        assertThat(statusOf(7)).isEqualTo(WatchStatus.InProgress(progress = 0.5f))
+        assertThat(statusOf(7)).isEqualTo(WatchStatus.InProgress(progress = 0.5f, remainingMillis = 500_000))
     }
 
     @Test
@@ -182,6 +182,6 @@ class ViewerLibraryTest {
 
         assertThat(statusOf(7)).isEqualTo(WatchStatus.Unwatched)
         activeProfile.value = 2L
-        assertThat(statusOf(7)).isEqualTo(WatchStatus.InProgress(progress = 0.5f))
+        assertThat(statusOf(7)).isEqualTo(WatchStatus.InProgress(progress = 0.5f, remainingMillis = 500_000))
     }
 }

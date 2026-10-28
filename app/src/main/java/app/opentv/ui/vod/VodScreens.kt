@@ -79,7 +79,7 @@ fun MoviesScreen(
 ) {
     val categories by viewModel.movieCategories.collectAsState()
     val resume by viewModel.continueWatching.collectAsState()
-    val favourites by viewModel.favouriteMovies.collectAsState()
+    val favourites = viewModel.favouriteMovies.collectAsState().value.orEmpty()
     val recommended by viewModel.recommendedMovies.collectAsState()
     val recentlyAdded by viewModel.recentlyAddedMovies.collectAsState()
     val genreRows by viewModel.movieGenreRows.collectAsState()
@@ -203,7 +203,7 @@ fun SeriesScreen(
 ) {
     val categories by viewModel.seriesCategories.collectAsState()
     val resume by viewModel.continueWatching.collectAsState()
-    val favourites by viewModel.favouriteSeries.collectAsState()
+    val favourites = viewModel.favouriteSeries.collectAsState().value.orEmpty()
     val recentlyAdded by viewModel.recentlyAddedSeries.collectAsState()
     val genreRows by viewModel.seriesGenreRows.collectAsState()
     val categorySeries by viewModel.series.collectAsState()

@@ -12,12 +12,15 @@ import app.opentv.data.db.OpenTvDatabase
 import app.opentv.data.model.Channel
 import app.opentv.data.model.Movie
 import app.opentv.data.model.Series
+import app.opentv.data.model.Source
+import app.opentv.data.model.SourceKind
 import app.opentv.data.repo.ViewerLibrary
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.After
+import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -35,10 +38,16 @@ class ViewerLibraryFavouritesTest {
     private val activeProfile = MutableStateFlow(1L)
     private val library = ViewerLibrary(db.positions(), db.favourites(), activeProfile)
 
+    @Before
+    fun twoProviders() = runTest {
+        db.sources().insert(Source(id = 1, name = "Provider A", kind = SourceKind.XTREAM, url = "http://example.com"))
+        db.sources().insert(Source(id = 2, name = "Provider B", kind = SourceKind.XTREAM, url = "http://example.org"))
+    }
+
     @After
     fun close() = db.close()
 
-    private fun channel(streamId: String, name: String, hidden: Boolean = false) = Channel(
+    private fun channel(streamId: String, name: String, hidden: Boolean = false, format: String = "ts") = Channel(
         sourceId = 1,
         streamId = streamId,
         name = name,
@@ -46,7 +55,7 @@ class ViewerLibraryFavouritesTest {
         logoUrl = null,
         epgChannelId = null,
         number = null,
-        streamUrl = "http://example.com/live/u/p/$streamId.ts",
+        streamUrl = "http://example.com/live/u/p/$streamId.$format",
         hidden = hidden,
     )
 
@@ -76,11 +85,11 @@ class ViewerLibraryFavouritesTest {
         return db.movies().all().single { it.streamId == streamId }
     }
 
-    private suspend fun series(seriesId: String, name: String): Series {
+    private suspend fun series(seriesId: String, name: String, sourceId: Long = 1): Series {
         db.series().upsertAll(
             listOf(
                 Series(
-                    sourceId = 1,
+                    sourceId = sourceId,
                     seriesId = seriesId,
                     name = name,
                     categoryId = null,
@@ -91,7 +100,7 @@ class ViewerLibraryFavouritesTest {
                 ),
             ),
         )
-        return db.series().all().single { it.seriesId == seriesId }
+        return db.series().all().single { it.seriesId == seriesId && it.sourceId == sourceId }
     }
 
     @Test
@@ -174,6 +183,30 @@ class ViewerLibraryFavouritesTest {
         series("10", "Severance")
 
         assertThat(library.favouriteMovies().first().map { it.name }).containsExactly("Heat")
+        assertThat(library.favouriteSeries().first().map { it.name }).containsExactly("Severance")
+    }
+
+    @Test
+    fun `a Favourite channel stays a Favourite when its stream URL changes`() = runTest {
+        val (bbcOne) = storedChannels(channel("1", "BBC One", format = "ts"))
+        library.setFavourite(bbcOne, favourite = true)
+
+        db.channels().replaceCatalogue(
+            sourceId = 1,
+            incoming = listOf(channel("1", "BBC One", format = "m3u8")),
+            syncStamp = 2,
+        )
+
+        assertThat(library.favouriteChannels().first().map { it.name }).containsExactly("BBC One")
+    }
+
+    @Test
+    fun `a Favourite series on one provider is not a Favourite on another with the same series id`() = runTest {
+        val severance = series("123", "Severance", sourceId = 1)
+        series("123", "Bluey", sourceId = 2)
+
+        library.setFavourite(severance, favourite = true)
+
         assertThat(library.favouriteSeries().first().map { it.name }).containsExactly("Severance")
     }
 }

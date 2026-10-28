@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 2,
-    "identityHash": "fed65c30589438fdbaf2b39f7ffcd27c",
+    "identityHash": "95ef422087bdc7845bbfdc4a4516a810",
     "entities": [
       {
         "tableName": "sources",
@@ -888,7 +888,7 @@
       },
       {
         "tableName": "favourites",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`profileId` INTEGER NOT NULL, `kind` TEXT NOT NULL, `identity` TEXT NOT NULL, PRIMARY KEY(`profileId`, `kind`, `identity`))",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`profileId` INTEGER NOT NULL, `kind` TEXT NOT NULL, `source` TEXT NOT NULL, `itemId` TEXT NOT NULL, PRIMARY KEY(`profileId`, `kind`, `source`, `itemId`))",
         "fields": [
           {
             "fieldPath": "profileId",
@@ -903,8 +903,14 @@
             "notNull": true
           },
           {
-            "fieldPath": "identity",
-            "columnName": "identity",
+            "fieldPath": "source",
+            "columnName": "source",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "itemId",
+            "columnName": "itemId",
             "affinity": "TEXT",
             "notNull": true
           }
@@ -914,7 +920,8 @@
           "columnNames": [
             "profileId",
             "kind",
-            "identity"
+            "source",
+            "itemId"
           ]
         }
       },
@@ -1248,7 +1255,7 @@
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'fed65c30589438fdbaf2b39f7ffcd27c')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '95ef422087bdc7845bbfdc4a4516a810')"
     ]
   }
 }

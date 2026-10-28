@@ -8,6 +8,7 @@ package app.opentv.data.repo
 import app.opentv.data.db.FavouriteDao
 import app.opentv.data.db.PlaybackPositionDao
 import app.opentv.data.model.Channel
+import app.opentv.data.model.Episode
 import app.opentv.data.model.Favourite
 import app.opentv.data.model.Movie
 import app.opentv.data.model.PlaybackPosition
@@ -18,14 +19,18 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 
 /** Where the active Profile is with one movie or episode. */
 sealed interface WatchStatus {
     data object Unwatched : WatchStatus
 
-    /** [progress] is how far through, 0..1. */
-    data class InProgress(val progress: Float) : WatchStatus
+    /**
+     * [progress] is how far through, 0..1; [remainingMillis] is how long is left, null when the
+     * duration is unknown.
+     */
+    data class InProgress(val progress: Float, val remainingMillis: Long?) : WatchStatus
 
     data object Watched : WatchStatus
 }
@@ -36,6 +41,17 @@ data class InProgressTitle(val mediaKey: String, val progress: Float)
 /** The active Profile's status for each episode, by local episode id; any episode not in it is Unwatched. */
 data class EpisodeStatuses(private val byEpisodeId: Map<Long, WatchStatus> = emptyMap()) {
     operator fun get(episodeId: Long): WatchStatus = byEpisodeId[episodeId] ?: WatchStatus.Unwatched
+}
+
+/** What a series page's main button does for the active Profile. */
+sealed interface SeriesMainAction {
+    val episode: Episode
+
+    /** Pick [episode] back up where the Profile stopped. */
+    data class Resume(override val episode: Episode) : SeriesMainAction
+
+    /** Start [episode]: Up Next, or the first episode when there is no Up Next. */
+    data class Play(override val episode: Episode) : SeriesMainAction
 }
 
 /**
@@ -119,26 +135,36 @@ class ViewerLibrary(
         .distinctUntilChanged()
 
     suspend fun setFavourite(channel: Channel, favourite: Boolean) =
-        setFavourite(Favourite(activeProfileId.value, StreamKind.LIVE, channel.streamUrl), favourite)
+        setFavourite(StreamKind.LIVE, channel.sourceId, channel.streamId, favourite)
 
     suspend fun setFavourite(movie: Movie, favourite: Boolean) =
-        setFavourite(Favourite(activeProfileId.value, StreamKind.MOVIE, movie.streamUrl), favourite)
+        setFavourite(StreamKind.MOVIE, movie.sourceId, movie.streamId, favourite)
 
     suspend fun setFavourite(series: Series, favourite: Boolean) =
-        setFavourite(Favourite(activeProfileId.value, StreamKind.SERIES, series.seriesId), favourite)
+        setFavourite(StreamKind.SERIES, series.sourceId, series.seriesId, favourite)
 
-    private suspend fun setFavourite(item: Favourite, favourite: Boolean) {
-        if (favourite) favourites.upsert(item) else favourites.delete(item)
+    private suspend fun setFavourite(kind: StreamKind, sourceId: Long, itemId: String, favourite: Boolean) {
+        val profileId = activeProfileId.value
+        if (favourite) {
+            favourites.add(
+                profileId,
+                kind,
+                sourceId,
+                itemId,
+            )
+        } else {
+            favourites.remove(profileId, kind, sourceId, itemId)
+        }
     }
 
     /** The active Profile's Favourite channels in guide order, leaving out channels hidden on this device. */
     @OptIn(ExperimentalCoroutinesApi::class)
     fun favouriteChannels(): Flow<List<Channel>> = activeProfileId.flatMapLatest { favourites.observeChannels(it) }
 
-    /** Stream URLs of the active Profile's Favourite channels, hidden ones included: what lights each star. */
+    /** Row ids of the active Profile's Favourite channels, hidden ones included: what lights each star. */
     @OptIn(ExperimentalCoroutinesApi::class)
-    fun favouriteChannelUrls(): Flow<Set<String>> = activeProfileId
-        .flatMapLatest { favourites.observeIdentities(it, StreamKind.LIVE) }
+    fun favouriteChannelIds(): Flow<Set<Long>> = activeProfileId
+        .flatMapLatest { favourites.observeChannelIds(it) }
         .map { it.toSet() }
 
     /** The active Profile's Favourite movies, by name. */
@@ -149,26 +175,47 @@ class ViewerLibrary(
     @OptIn(ExperimentalCoroutinesApi::class)
     fun favouriteSeries(): Flow<List<Series>> = activeProfileId.flatMapLatest { favourites.observeSeries(it) }
 
-    /**
-     * The active Profile's Favourites of one [kind], by identity (stream URL, or series id for
-     * series) — what sync sends. Until sync groups Favourites by Profile it carries only the
-     * active Profile's.
-     */
-    suspend fun favouriteIdentities(kind: StreamKind): List<String> = favourites.identities(activeProfileId.value, kind)
+    /** Every Profile's Favourites on this device — what sync sends to the other side. */
+    suspend fun everyProfilesFavourites(): List<Favourite> = favourites.all()
 
-    /** Adds a Favourite synced from another device to the active Profile; sync never removes one. */
-    suspend fun addSyncedFavourite(kind: StreamKind, identity: String) =
-        favourites.upsert(Favourite(activeProfileId.value, kind, identity))
+    /** Adds a Favourite synced from another device; sync never removes one. Returns whether it was new here. */
+    suspend fun mergeSynced(favourite: Favourite): Boolean = favourites.insert(favourite) != -1L
+
+    /** The series page's main action over [episodes] (one series' episodes, any order); null when there are none. */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    fun seriesMainAction(episodes: List<Episode>): Flow<SeriesMainAction?> {
+        val ordered = episodes.sortedWith(EPISODE_ORDER)
+        val indexByKey = ordered.withIndex().associate { (i, ep) -> "$EPISODE_PREFIX${ep.id}" to i }
+        // Season 0 is where providers put specials: starting a series there would open on a
+        // trailer or a behind-the-scenes, so the start is S1 E1 unless specials are all there is.
+        val start = ordered.firstOrNull { it.season > 0 } ?: ordered.firstOrNull() ?: return flowOf(null)
+        return activeProfileId
+            .flatMapLatest { pid -> positions.observeKind(pid, EPISODE_PREFIX) }
+            .map<List<PlaybackPosition>, SeriesMainAction?> { list ->
+                val latest = list.filter { it.mediaKey in indexByKey }.maxByOrNull { it.updatedAtMillis }
+                val at = latest?.let { indexByKey.getValue(it.mediaKey) }
+                when {
+                    at == null -> SeriesMainAction.Play(start)
+                    statusOf(latest) is WatchStatus.InProgress -> SeriesMainAction.Resume(ordered[at])
+                    // No Up Next after the last episode: offer the series from the start.
+                    else -> SeriesMainAction.Play(ordered.getOrNull(at + 1) ?: start)
+                }
+            }
+            .distinctUntilChanged()
+    }
 
     private fun statusOf(pos: PlaybackPosition): WatchStatus {
         // Synced positions can arrive without a duration; that says nothing about how far through.
         // Nor does a negative position, which only a confused peer would send.
-        val progress =
-            if (pos.durationMillis > 0) pos.positionMillis.coerceAtLeast(0).toDouble() / pos.durationMillis else 0.0
-        return if (progress > WATCHED_FRACTION) WatchStatus.Watched else WatchStatus.InProgress(progress.toFloat())
+        val position = pos.positionMillis.coerceAtLeast(0)
+        val known = pos.durationMillis > 0
+        val progress = if (known) position.toDouble() / pos.durationMillis else 0.0
+        if (progress > WATCHED_FRACTION) return WatchStatus.Watched
+        return WatchStatus.InProgress(progress.toFloat(), if (known) pos.durationMillis - position else null)
     }
 
     private companion object {
+        val EPISODE_ORDER = compareBy<Episode>({ it.season }, { it.episodeNumber })
         const val EPISODE_PREFIX = "ep:"
         const val MOVIE_PREFIX = "movie:"
         const val IN_PROGRESS_LIMIT = 30

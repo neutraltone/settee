@@ -6,7 +6,6 @@
 package app.opentv.data.db
 
 import androidx.room.Dao
-import androidx.room.Delete
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
@@ -602,15 +601,35 @@ interface PlaybackPositionDao {
 
 @Dao
 interface FavouriteDao {
-    @Upsert
-    suspend fun upsert(favourite: Favourite)
-
-    @Delete
-    suspend fun delete(favourite: Favourite)
+    // Writes go by the row's source id and look up its name in SQL, so callers never handle names.
+    @Query(
+        """
+        INSERT OR IGNORE INTO favourites (profileId, kind, source, itemId)
+        SELECT :profileId, :kind, name, :itemId FROM sources WHERE id = :sourceId
+        """,
+    )
+    suspend fun add(profileId: Long, kind: StreamKind, sourceId: Long, itemId: String)
 
     @Query(
         """
-        SELECT m.* FROM movies m JOIN favourites f ON f.identity = m.streamUrl
+        DELETE FROM favourites WHERE profileId = :profileId AND kind = :kind AND itemId = :itemId
+          AND source = (SELECT name FROM sources WHERE id = :sourceId)
+        """,
+    )
+    suspend fun remove(profileId: Long, kind: StreamKind, sourceId: Long, itemId: String)
+
+    /** Adds [favourite] unless it is already there; returns whether it was new. */
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insert(favourite: Favourite): Long
+
+    @Query("SELECT * FROM favourites")
+    suspend fun all(): List<Favourite>
+
+    @Query(
+        """
+        SELECT m.* FROM favourites f
+        JOIN sources src ON src.name = f.source
+        JOIN movies m ON m.sourceId = src.id AND m.streamId = f.itemId
         WHERE f.profileId = :profileId AND f.kind = 'MOVIE' ORDER BY m.name
         """,
     )
@@ -618,7 +637,9 @@ interface FavouriteDao {
 
     @Query(
         """
-        SELECT s.* FROM series s JOIN favourites f ON f.identity = s.seriesId
+        SELECT s.* FROM favourites f
+        JOIN sources src ON src.name = f.source
+        JOIN series s ON s.sourceId = src.id AND s.seriesId = f.itemId
         WHERE f.profileId = :profileId AND f.kind = 'SERIES' ORDER BY s.name
         """,
     )
@@ -626,18 +647,24 @@ interface FavouriteDao {
 
     @Query(
         """
-        SELECT c.* FROM channels c JOIN favourites f ON f.identity = c.streamUrl
+        SELECT c.* FROM favourites f
+        JOIN sources src ON src.name = f.source
+        JOIN channels c ON c.sourceId = src.id AND c.streamId = f.itemId
         WHERE f.profileId = :profileId AND f.kind = 'LIVE' AND c.hidden = 0
         ORDER BY c.sortIndex, c.displayName
         """,
     )
     fun observeChannels(profileId: Long): Flow<List<Channel>>
 
-    @Query("SELECT identity FROM favourites WHERE profileId = :profileId AND kind = :kind")
-    fun observeIdentities(profileId: Long, kind: StreamKind): Flow<List<String>>
-
-    @Query("SELECT identity FROM favourites WHERE profileId = :profileId AND kind = :kind")
-    suspend fun identities(profileId: Long, kind: StreamKind): List<String>
+    @Query(
+        """
+        SELECT c.id FROM favourites f
+        JOIN sources src ON src.name = f.source
+        JOIN channels c ON c.sourceId = src.id AND c.streamId = f.itemId
+        WHERE f.profileId = :profileId AND f.kind = 'LIVE'
+        """,
+    )
+    fun observeChannelIds(profileId: Long): Flow<List<Long>>
 }
 
 @Dao

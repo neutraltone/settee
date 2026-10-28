@@ -93,7 +93,8 @@ yours" bug.
 `ChannelDao.replaceCatalogue` merges rather than wipes: it reads existing rows, carries
 `hidden` and `sortIndex` across to the incoming rows by `streamId`, upserts, and only then
 deletes channels the provider no longer lists. Favourites live in their own per-Profile table,
-matched by stream URL (or provider series id), so a channel dropped and re-listed keeps them.
+matched by source name and provider id (not stream URL, which Xtream changes with the live format
+and the password), so a channel dropped and re-listed keeps them.
 
 This is why `M3uParser` works so hard to produce a **stable** `streamId` for playlists with no
 `tvg-id` — an FNV-1a hash of the URL rather than `String.hashCode()`. An unstable id means

@@ -6,6 +6,7 @@
 package app.opentv.sync
 
 import app.opentv.core.ServiceLocator
+import app.opentv.data.model.Favourite
 import app.opentv.data.model.PlaybackPosition
 import app.opentv.data.model.Profile
 import app.opentv.data.model.Recording
@@ -92,14 +93,16 @@ class SyncEngine(private val graph: ServiceLocator.Graph) {
                     sizeBytes = r.sizeBytes,
                 )
             }
+        val favourites = graph.viewerLibrary.everyProfilesFavourites().mapNotNull { fav ->
+            val profileName = names[fav.profileId] ?: return@mapNotNull null
+            SyncFavourite(profile = profileName, kind = fav.kind.name, source = fav.source, id = fav.itemId)
+        }
         return SyncBundle(
             generatedAtMillis = System.currentTimeMillis(),
             profiles = profiles.map { it.name },
             positions = positions,
-            favouriteChannels = graph.viewerLibrary.favouriteIdentities(StreamKind.LIVE),
+            favourites = favourites,
             hiddenChannels = graph.catalogRepository.hiddenChannelUrls(),
-            favouriteMovies = graph.viewerLibrary.favouriteIdentities(StreamKind.MOVIE),
-            favouriteSeries = graph.viewerLibrary.favouriteIdentities(StreamKind.SERIES),
             hiddenCategories = graph.settings.hiddenCategories.value.toList(),
             recordings = recordings,
         )
@@ -125,16 +128,10 @@ class SyncEngine(private val graph: ServiceLocator.Graph) {
 
         var favourites = 0
         var hidden = 0
-        for ((kind, identities) in listOf(
-            StreamKind.LIVE to bundle.favouriteChannels,
-            StreamKind.MOVIE to bundle.favouriteMovies,
-            StreamKind.SERIES to bundle.favouriteSeries,
-        )) {
-            val local = graph.viewerLibrary.favouriteIdentities(kind).toHashSet()
-            for (identity in identities) {
-                graph.viewerLibrary.addSyncedFavourite(kind, identity)
-                if (local.add(identity)) favourites++
-            }
+        for (item in bundle.favourites) {
+            val kind = runCatching { StreamKind.valueOf(item.kind) }.getOrNull() ?: continue
+            val profileId = profileIdFor(item.profile) ?: continue
+            if (graph.viewerLibrary.mergeSynced(Favourite(profileId, kind, item.source, item.id))) favourites++
         }
         for (url in bundle.hiddenChannels) {
             graph.catalogRepository.markChannelHiddenByUrl(url)

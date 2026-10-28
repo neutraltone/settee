@@ -356,13 +356,15 @@ data class PlaybackPosition(
 )
 
 /**
- * A channel, movie or series one Profile has marked a Favourite (ADR 0001). Keyed by [identity],
- * not the local row id, because a catalogue refresh can give the same title a new row: the
- * stream URL for channels and movies, the provider's series id for series. The same identities
- * match the item on another device when syncing. Read and written only through ViewerLibrary.
+ * A channel, movie or series one Profile has marked a Favourite (ADR 0001). Keyed by the
+ * provider's own id ([itemId]: stream id for channels and movies, series id for series) within
+ * the [source] it came from, by name, not by local row id or stream URL: a refresh can give a
+ * title a new row, and Xtream stream URLs change with the live format and the account password.
+ * Provider ids alone repeat across providers, and a source's name is what another device knows
+ * it by when syncing. Read and written only through ViewerLibrary.
  */
-@Entity(tableName = "favourites", primaryKeys = ["profileId", "kind", "identity"])
-data class Favourite(val profileId: Long, val kind: StreamKind, val identity: String)
+@Entity(tableName = "favourites", primaryKeys = ["profileId", "kind", "source", "itemId"])
+data class Favourite(val profileId: Long, val kind: StreamKind, val source: String, val itemId: String)
 
 /** A local viewing profile — just a name. No account, no password; it lives on this device. */
 @Entity(tableName = "profiles")

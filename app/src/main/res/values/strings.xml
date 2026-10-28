@@ -444,6 +444,9 @@
     <string name="vod_categories">Categories</string>
     <string name="vod_watch_now">Watch now</string>
     <string name="vod_resume">Resume</string>
+    <!-- The series page's main button: season and episode numbers. -->
+    <string name="vod_resume_episode">Resume S%1$d E%2$d</string>
+    <string name="vod_play_episode">Play S%1$d E%2$d</string>
     <string name="vod_addon_sources">Add-on sources</string>
     <string name="vod_addon_pick_title">Choose a stream</string>
     <string name="vod_addon_loading">Finding streams from your add-ons…</string>
@@ -453,12 +456,18 @@
     <string name="vod_cast">Cast</string>
     <string name="vod_director">Director</string>
     <string name="vod_season">Season %1$d</string>
-    <string name="vod_episode_watched">Watched</string>
-    <string name="vod_episode_in_progress">In progress</string>
     <string name="vod_episode_thumbnail">Thumbnail for episode %1$d</string>
     <string name="vod_detail_loading">Loading…</string>
     <string name="vod_person_title">With %1$s</string>
     <string name="vod_person_empty">Nothing else with %1$s in your library.</string>
+
+    <!-- ============================ Watch badge ============================ -->
+    <string name="watch_badge_watched">Watched</string>
+    <string name="watch_badge_in_progress">In progress</string>
+    <plurals name="watch_badge_minutes_left">
+        <item quantity="one">%1$d min left</item>
+        <item quantity="other">%1$d min left</item>
+    </plurals>
 
     <!-- ============================ Reminder notification ============================ -->
     <string name="reminder_starting_now">Starting now on %1$s</string>

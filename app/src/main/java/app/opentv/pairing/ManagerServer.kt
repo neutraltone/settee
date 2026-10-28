@@ -10,7 +10,6 @@ import app.opentv.core.AppSettings
 import app.opentv.data.model.Channel
 import app.opentv.data.model.Source
 import app.opentv.data.model.SourceKind
-import app.opentv.data.model.StreamKind
 import app.opentv.data.model.shownName
 import app.opentv.data.repo.CatalogRepository
 import app.opentv.data.repo.SourceRepository
@@ -33,6 +32,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.Serializable
@@ -291,8 +291,8 @@ class ManagerServer(
         if (cat.isNullOrBlank()) return@runBlocking json.encodeToString(serializer, emptyList())
         val source = query["source"]?.toLongOrNull()
         // Stars show the Favourites of whichever Profile is active on the TV.
-        val favourites = viewerLibrary.favouriteIdentities(StreamKind.LIVE).toHashSet()
-        val rows = catalog.channelsInCategoryForManager(source, cat).map { it.toDto(it.streamUrl in favourites) }
+        val favourites = viewerLibrary.favouriteChannelIds().first()
+        val rows = catalog.channelsInCategoryForManager(source, cat).map { it.toDto(it.id in favourites) }
         json.encodeToString(serializer, rows)
     }
 
@@ -306,8 +306,13 @@ class ManagerServer(
         // Unknown ids simply update zero rows — harmless, so no existence check.
         runBlocking {
             patch.hidden?.let { catalog.setChannelHidden(patch.id, it) }
+            // Every quality variant follows, as when favouriting from the guide.
             patch.favourite?.let { favourite ->
-                catalog.channel(patch.id)?.let { viewerLibrary.setFavourite(it, favourite) }
+                catalog.channel(patch.id)?.let { channel ->
+                    (catalog.variants(channel) + channel).distinctBy {
+                        it.id
+                    }.forEach { viewerLibrary.setFavourite(it, favourite) }
+                }
             }
             // A blank name clears the rename back to the provider's own (see setChannelCustomName).
             patch.name?.let { catalog.setChannelCustomName(patch.id, it) }
