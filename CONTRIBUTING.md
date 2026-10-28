@@ -48,7 +48,7 @@ cd opentv
 ./gradlew assembleDebug
 ```
 
-JDK 17+ and Android SDK API 35. Android Studio handles both.
+JDK 17+ and Android SDK API 37. Android Studio handles both.
 
 Testing against a real provider is the hard part of working on this project. If you do not have
 one, the parsers, the database layer and the UI can all be worked on with unit tests and

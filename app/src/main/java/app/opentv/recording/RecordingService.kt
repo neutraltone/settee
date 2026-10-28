@@ -123,7 +123,7 @@ class RecordingService : Service() {
                 val bytesThisLeg = try {
                     call.execute().use { response ->
                         if (!response.isSuccessful) throw java.io.IOException("HTTP ${response.code}")
-                        val input = response.body?.byteStream() ?: throw java.io.IOException("Empty response")
+                        val input = response.body.byteStream()
                         var leg = 0L
                         while (kotlin.coroutines.coroutineContext[Job]?.isActive == true) {
                             val read = input.read(buffer)
@@ -203,12 +203,7 @@ class RecordingService : Service() {
 
     private fun stopSelfSafely() {
         releaseWakeLock()
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-            stopForeground(STOP_FOREGROUND_REMOVE)
-        } else {
-            @Suppress("DEPRECATION")
-            stopForeground(true)
-        }
+        stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()
     }
 

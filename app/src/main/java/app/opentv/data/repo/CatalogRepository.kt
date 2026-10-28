@@ -750,8 +750,7 @@ class CatalogRepository(
             if (!response.isSuccessful) {
                 return SyncResult.Failed("Playlist download failed (HTTP ${response.code}).", null)
             }
-            val stream = response.body?.byteStream()
-                ?: return SyncResult.Failed("The playlist was empty.", null)
+            val stream = response.body.byteStream()
             M3uParser.parse(stream, source.id)
         }
 

@@ -254,8 +254,7 @@ class EpgRepository(
                     response.close()
                     throw IllegalStateException("Guide download failed (HTTP ${response.code}).")
                 }
-                response.body?.byteStream()
-                    ?: throw IllegalStateException("The server returned an empty guide.")
+                response.body.byteStream()
             }
             else -> throw IllegalStateException("Feed has no URL and no provider.")
         }

@@ -50,8 +50,8 @@ class ApkInstaller(private val http: OkHttpClient) {
             val request = Request.Builder().url(url).header("User-Agent", "OpenTV").build()
             http.newCall(request).execute().use { response ->
                 if (!response.isSuccessful) error("Download failed: HTTP ${response.code}")
-                val bodyStream = response.body?.byteStream() ?: error("Empty download")
-                val total = if (expectedBytes > 0) expectedBytes else (response.body?.contentLength() ?: -1L)
+                val bodyStream = response.body.byteStream()
+                val total = if (expectedBytes > 0) expectedBytes else response.body.contentLength()
 
                 out.outputStream().use { sink ->
                     val buffer = ByteArray(64 * 1024)

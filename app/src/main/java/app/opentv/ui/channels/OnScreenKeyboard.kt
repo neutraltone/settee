@@ -36,6 +36,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -55,6 +56,7 @@ internal fun OnScreenKeyboard(
     val keyRows = listOf("1234567890", "QWERTYUIOP", "ASDFGHJKL", "ZXCVBNM")
     val firstKey = remember { FocusRequester() }
     val context = LocalContext.current
+    val resources = LocalResources.current
 
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         keyRows.forEachIndexed { rowIndex, line ->
@@ -82,7 +84,7 @@ internal fun OnScreenKeyboard(
                     } else {
                         Toast.makeText(
                             context,
-                            context.getString(R.string.kbd_clipboard_empty),
+                            resources.getString(R.string.kbd_clipboard_empty),
                             Toast.LENGTH_SHORT,
                         ).show()
                     }

@@ -57,7 +57,7 @@ class UpdateChecker(
 
             http.newCall(request).execute().use { response ->
                 if (!response.isSuccessful) return@withContext null
-                val body = response.body?.string().orEmpty()
+                val body = response.body.string()
                 if (body.isBlank()) return@withContext null
 
                 val release = json.decodeFromString<GitHubRelease>(body)

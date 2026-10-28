@@ -1,6 +1,5 @@
 plugins {
     alias(libs.plugins.android.application)
-    alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.ksp)
@@ -15,11 +14,11 @@ val appVersionName = "0.1.0" // x-release-please-version
 
 android {
     namespace = "app.opentv"
-    compileSdk = 35
+    compileSdk = 37
 
     defaultConfig {
         applicationId = "uk.neutraltone.settee"
-        minSdk = 23
+        minSdk = 24
         targetSdk = 35
         versionCode = versionCodeOf(appVersionName)
         versionName = appVersionName
@@ -80,10 +79,6 @@ android {
         isCoreLibraryDesugaringEnabled = true
     }
 
-    kotlinOptions {
-        jvmTarget = "17"
-    }
-
     buildFeatures {
         compose = true
         buildConfig = true
@@ -141,7 +136,7 @@ ksp {
 }
 
 dependencies {
-    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.3")
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.5")
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
@@ -186,7 +181,7 @@ dependencies {
 
     // SMB/CIFS client for recording to a NAS (Synology etc.) and playing those recordings
     // back in-app over the network. Pure-Java SMB2/3, no native bits.
-    implementation("com.hierynomus:smbj:0.12.2")
+    implementation("com.hierynomus:smbj:0.15.0")
 
     detektPlugins(libs.compose.rules.detekt)
 
