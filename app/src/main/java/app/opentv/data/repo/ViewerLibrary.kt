@@ -18,8 +18,8 @@ import kotlinx.coroutines.flow.map
 sealed interface WatchStatus {
     data object Unwatched : WatchStatus
 
-    /** [progress] is how far through, 0..1. */
-    data class InProgress(val progress: Float) : WatchStatus
+    /** [progress] is how far through, 0..1; [remainingMillis] is how long is left, null when the duration is unknown. */
+    data class InProgress(val progress: Float, val remainingMillis: Long?) : WatchStatus
 
     data object Watched : WatchStatus
 }
@@ -113,9 +113,11 @@ class ViewerLibrary(
     private fun statusOf(pos: PlaybackPosition): WatchStatus {
         // Synced positions can arrive without a duration; that says nothing about how far through.
         // Nor does a negative position, which only a confused peer would send.
-        val progress =
-            if (pos.durationMillis > 0) pos.positionMillis.coerceAtLeast(0).toDouble() / pos.durationMillis else 0.0
-        return if (progress > WATCHED_FRACTION) WatchStatus.Watched else WatchStatus.InProgress(progress.toFloat())
+        val position = pos.positionMillis.coerceAtLeast(0)
+        val known = pos.durationMillis > 0
+        val progress = if (known) position.toDouble() / pos.durationMillis else 0.0
+        if (progress > WATCHED_FRACTION) return WatchStatus.Watched
+        return WatchStatus.InProgress(progress.toFloat(), if (known) pos.durationMillis - position else null)
     }
 
     private companion object {

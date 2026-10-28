@@ -25,10 +25,8 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Extension
 import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.PlayCircle
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.StarOutline
 import androidx.compose.material3.CircularProgressIndicator
@@ -69,6 +67,7 @@ import app.opentv.data.parser.displayTitle
 import app.opentv.data.repo.EpisodeStatuses
 import app.opentv.data.repo.WatchStatus
 import app.opentv.ui.VodViewModel
+import app.opentv.ui.WatchBadge
 import coil.compose.AsyncImage
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -683,7 +682,7 @@ private fun DetailButton(
     }
 }
 
-/** One episode row: season/episode marker, title, watch badge and a focus highlight; plays on click. */
+/** One episode row: thumbnail with its watch badge, season/episode marker, title and a focus highlight; plays on click. */
 @Composable
 internal fun EpisodeRow(
     ep: Episode,
@@ -733,19 +732,6 @@ internal fun EpisodeRow(
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.weight(1f),
         )
-        when (status) {
-            WatchStatus.Watched -> Icon(
-                Icons.Filled.CheckCircle,
-                contentDescription = stringResource(R.string.vod_episode_watched),
-                tint = MaterialTheme.colorScheme.primary,
-            )
-            is WatchStatus.InProgress -> Icon(
-                Icons.Filled.PlayCircle,
-                contentDescription = stringResource(R.string.vod_episode_in_progress),
-                tint = MaterialTheme.colorScheme.primary,
-            )
-            WatchStatus.Unwatched -> Unit
-        }
     }
 }
 
@@ -760,8 +746,8 @@ private fun EpisodeThumbnail(ep: Episode, status: WatchStatus, seriesArtUrl: Str
     val showStill = ep.stillUrl != null && !stillFailed
     Box(
         Modifier
-            .width(128.dp)
-            .height(72.dp)
+            .width(160.dp)
+            .height(90.dp)
             .clip(RoundedCornerShape(6.dp))
             .background(MaterialTheme.colorScheme.surfaceVariant),
     ) {
@@ -781,6 +767,7 @@ private fun EpisodeThumbnail(ep: Episode, status: WatchStatus, seriesArtUrl: Str
                 modifier = Modifier.align(Alignment.Center),
             )
         }
+        WatchBadge(status, Modifier.align(Alignment.TopEnd).padding(4.dp))
         if (status is WatchStatus.InProgress) {
             LinearProgressIndicator(
                 progress = { status.progress },
