@@ -384,10 +384,12 @@ private fun PasteButton(onPaste: (String) -> Unit) {
 }
 
 /** Plain text currently on the system clipboard, trimmed, or null when there's nothing to paste. */
-private fun readClipboardText(context: Context): String? {
-    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager ?: return null
-    val clip = clipboard.primaryClip ?: return null
-    if (clip.itemCount == 0) return null
-    val text = clip.getItemAt(0)?.coerceToText(context)?.toString()
-    return text?.trim()?.takeIf { it.isNotEmpty() }
-}
+private fun readClipboardText(context: Context): String? =
+    (context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager)
+        ?.primaryClip
+        ?.takeIf { it.itemCount > 0 }
+        ?.getItemAt(0)
+        ?.coerceToText(context)
+        ?.toString()
+        ?.trim()
+        ?.takeIf { it.isNotEmpty() }

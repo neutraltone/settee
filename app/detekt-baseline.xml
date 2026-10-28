@@ -204,7 +204,6 @@
     <ID>ReturnCount:ManagerServer.kt$ManagerServer$fun start()</ID>
     <ID>ReturnCount:ManagerServer.kt$ManagerServer$private fun SourceReq.toDraftOrNull(): Source?</ID>
     <ID>ReturnCount:ManagerServer.kt$ManagerServer$private fun handle(client: Socket)</ID>
-    <ID>ReturnCount:OnScreenKeyboard.kt$internal fun readClipboardText(context: Context): String?</ID>
     <ID>ReturnCount:OpenTvViewModels.kt$VodViewModel$suspend fun addonStreams(movie: Movie): List&lt;StremioStream&gt;</ID>
     <ID>ReturnCount:PairingHttp.kt$PairingHttp$fun isPrivateAddress(host: String?): Boolean</ID>
     <ID>ReturnCount:PairingServer.kt$PairingServer$fun start()</ID>
