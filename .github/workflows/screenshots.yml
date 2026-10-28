@@ -117,4 +117,9 @@ jobs:
           # publish.sh runs gh from the screenshot directories, outside the checkout, where gh
           # can't tell which repository the PR number belongs to.
           GH_REPO: ${{ github.repository }}
-        run: tools/screenshots/publish.sh "$PR" "$SHOTS/section" "$SHOTS/comments"
+        run: |
+          if [ -z "$GH_TOKEN" ]; then
+            echo "::warning::RELEASE_PLEASE_TOKEN is empty, so the screenshots can't be uploaded. See docs/RELEASING.md."
+            exit 0
+          fi
+          tools/screenshots/publish.sh "$PR" "$SHOTS/section" "$SHOTS/comments"
