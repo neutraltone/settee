@@ -6,6 +6,7 @@
 package app.opentv.data.repo
 
 import app.opentv.data.db.EpisodeDao
+import app.opentv.data.db.FavouriteDao
 import app.opentv.data.db.PlaybackPositionDao
 import app.opentv.data.model.Episode
 import app.opentv.data.model.PlaybackPosition
@@ -60,15 +61,20 @@ sealed interface SeriesMainAction {
 }
 
 /**
- * Everything a Profile has watched: the one owner of per-Profile watch state. Screens ask it for
- * statuses and resume points instead of reading playback positions themselves.
+ * Everything a Profile has watched and kept: the one owner of per-Profile watch state and
+ * Favourites. Screens ask it for statuses, resume points and Favourites instead of reading those
+ * tables themselves.
  */
 class ViewerLibrary(
     private val positions: PlaybackPositionDao,
     private val episodes: EpisodeDao,
+    favouriteDao: FavouriteDao,
     private val activeProfileId: StateFlow<Long>,
     private val clock: () -> Long = System::currentTimeMillis,
 ) {
+    /** The active Profile's Favourites, and every Profile's for sync. */
+    val favourites = Favourites(favouriteDao, activeProfileId)
+
     suspend fun recordProgress(mediaKey: String, positionMillis: Long, durationMillis: Long) {
         positions.upsert(
             PlaybackPosition(

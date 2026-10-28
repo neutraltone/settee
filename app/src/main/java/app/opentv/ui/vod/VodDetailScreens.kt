@@ -111,6 +111,9 @@ fun MovieDetailScreen(
         LoadingDetail()
         return
     }
+    // Null until the Profile's Favourites have loaded: the star stays put and ignores a press till then.
+    val favouriteMovies by viewModel.favouriteMovies.collectAsState()
+    val favourite = favouriteMovies?.any { it.id == m.id }
 
     // Land focus on the primary action once the page is up, so a d-pad has somewhere to be.
     LaunchedEffect(m.id) {
@@ -133,14 +136,11 @@ fun MovieDetailScreen(
                     modifier = Modifier.focusRequester(playFocus),
                 ) { onPlay(m) }
                 DetailButton(
-                    icon = if (m.favourite) Icons.Filled.Star else Icons.Outlined.StarOutline,
+                    icon = if (favourite == true) Icons.Filled.Star else Icons.Outlined.StarOutline,
                     label = stringResource(
-                        if (m.favourite) R.string.common_remove_favourite else R.string.common_favourite,
+                        if (favourite == true) R.string.common_remove_favourite else R.string.common_favourite,
                     ),
-                ) {
-                    viewModel.toggleMovieFavourite(m)
-                    movie = m.copy(favourite = !m.favourite)
-                }
+                ) { favourite?.let { viewModel.setMovieFavourite(m, !it) } }
                 // Only when the user has add-ons set up — queries them for this film's streams.
                 if (hasAddons) {
                     DetailButton(
@@ -301,6 +301,7 @@ fun SeriesDetailScreen(
         .collectAsState(initial = emptyList())
     val statuses by viewModel.episodeStatuses.collectAsState(initial = EpisodeStatuses())
     val mainAction by remember(episodes) { viewModel.seriesMainAction(episodes) }.collectAsState(initial = null)
+    val favouriteSeries by viewModel.favouriteSeries.collectAsState()
 
     if (s == null) {
         LoadingDetail()
@@ -312,12 +313,10 @@ fun SeriesDetailScreen(
         episodes = episodes,
         statuses = statuses,
         mainAction = mainAction,
+        favourite = favouriteSeries?.any { it.id == s.id },
         moreLike = moreLike,
         onPlayEpisode = onPlayEpisode,
-        onToggleFavourite = {
-            viewModel.toggleSeriesFavourite(s)
-            series = s.copy(favourite = !s.favourite)
-        },
+        onSetFavourite = { viewModel.setSeriesFavourite(s, it) },
         onOpenSeries = onOpenSeries,
         onOpenPerson = onOpenPerson,
     )
@@ -326,6 +325,7 @@ fun SeriesDetailScreen(
 /**
  * The series page once the series is known: the header with its main button (Resume or Play the
  * right episode, from [mainAction]) and the favourite toggle, then the episodes by season.
+ * [favourite] is null until the Profile's Favourites have loaded, and the toggle does nothing till then.
  */
 @Composable
 internal fun SeriesDetailContent(
@@ -333,9 +333,10 @@ internal fun SeriesDetailContent(
     episodes: List<Episode>,
     statuses: EpisodeStatuses,
     mainAction: SeriesMainAction?,
+    favourite: Boolean?,
     moreLike: List<Series>,
     onPlayEpisode: (mediaKey: String, url: String, title: String) -> Unit,
-    onToggleFavourite: () -> Unit,
+    onSetFavourite: (Boolean) -> Unit,
     onOpenSeries: (Series) -> Unit,
     onOpenPerson: (String) -> Unit,
 ) {
@@ -388,15 +389,15 @@ internal fun SeriesDetailContent(
                     ) { playEpisode(ep, onPlayEpisode) }
                 }
                 DetailButton(
-                    icon = if (series.favourite) Icons.Filled.Star else Icons.Outlined.StarOutline,
+                    icon = if (favourite == true) Icons.Filled.Star else Icons.Outlined.StarOutline,
                     label = stringResource(
-                        if (series.favourite) R.string.common_remove_favourite else R.string.common_favourite,
+                        if (favourite == true) R.string.common_remove_favourite else R.string.common_favourite,
                     ),
                     primary = !hasMainAction,
                     modifier = Modifier
                         .focusRequester(favFocus)
                         .onFocusChanged { favFocused = it.isFocused },
-                    onClick = onToggleFavourite,
+                    onClick = { favourite?.let { onSetFavourite(!it) } },
                 )
             }
         }

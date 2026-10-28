@@ -18,6 +18,7 @@ import app.opentv.data.model.Channel
 import app.opentv.data.model.EpgChannelAlias
 import app.opentv.data.model.EpgFeed
 import app.opentv.data.model.Episode
+import app.opentv.data.model.Favourite
 import app.opentv.data.model.LiveStreamFormat
 import app.opentv.data.model.Movie
 import app.opentv.data.model.PlaybackPosition
@@ -66,12 +67,13 @@ class Converters {
         Series::class,
         Episode::class,
         PlaybackPosition::class,
+        Favourite::class,
         Profile::class,
         Recording::class,
         SeriesRule::class,
         Reminder::class,
     ],
-    version = 1,
+    version = 2,
     exportSchema = true,
 )
 @TypeConverters(Converters::class)
@@ -86,6 +88,7 @@ abstract class OpenTvDatabase : RoomDatabase() {
     abstract fun series(): SeriesDao
     abstract fun episodes(): EpisodeDao
     abstract fun positions(): PlaybackPositionDao
+    abstract fun favourites(): FavouriteDao
     abstract fun profiles(): ProfileDao
     abstract fun recordings(): RecordingDao
     abstract fun seriesRules(): SeriesRuleDao

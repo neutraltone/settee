@@ -1058,12 +1058,12 @@ private fun ChannelRow(
 
         IconButton(onClick = onToggleFavourite) {
             Icon(
-                imageVector = if (row.primary.favourite) {
+                imageVector = if (row.favourite) {
                     Icons.Default.Star
                 } else {
                     Icons.Outlined.StarOutline
                 },
-                contentDescription = if (row.primary.favourite) {
+                contentDescription = if (row.favourite) {
                     stringResource(
                         R.string.common_remove_favourite,
                     )

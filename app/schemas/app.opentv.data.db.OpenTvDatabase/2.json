@@ -1,8 +1,8 @@
 {
   "formatVersion": 1,
   "database": {
-    "version": 1,
-    "identityHash": "b67af1cae1ebed2a7dc1a5427b602cb8",
+    "version": 2,
+    "identityHash": "95ef422087bdc7845bbfdc4a4516a810",
     "entities": [
       {
         "tableName": "sources",
@@ -35,26 +35,22 @@
           {
             "fieldPath": "username",
             "columnName": "username",
-            "affinity": "TEXT",
-            "notNull": false
+            "affinity": "TEXT"
           },
           {
             "fieldPath": "password",
             "columnName": "password",
-            "affinity": "TEXT",
-            "notNull": false
+            "affinity": "TEXT"
           },
           {
             "fieldPath": "macAddress",
             "columnName": "macAddress",
-            "affinity": "TEXT",
-            "notNull": false
+            "affinity": "TEXT"
           },
           {
             "fieldPath": "epgUrl",
             "columnName": "epgUrl",
-            "affinity": "TEXT",
-            "notNull": false
+            "affinity": "TEXT"
           },
           {
             "fieldPath": "userAgent",
@@ -86,9 +82,7 @@
           "columnNames": [
             "id"
           ]
-        },
-        "indices": [],
-        "foreignKeys": []
+        }
       },
       {
         "tableName": "categories",
@@ -132,13 +126,11 @@
             "id",
             "kind"
           ]
-        },
-        "indices": [],
-        "foreignKeys": []
+        }
       },
       {
         "tableName": "channels",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `sourceId` INTEGER NOT NULL, `streamId` TEXT NOT NULL, `name` TEXT NOT NULL, `displayName` TEXT NOT NULL, `groupKey` TEXT NOT NULL, `qualityRank` INTEGER NOT NULL, `qualityLabel` TEXT NOT NULL, `categoryId` TEXT, `logoUrl` TEXT, `epgChannelId` TEXT, `matchedEpgId` TEXT, `epgOverrideId` TEXT, `tvArchive` INTEGER NOT NULL DEFAULT 0, `tvArchiveDays` INTEGER NOT NULL DEFAULT 0, `number` INTEGER, `streamUrl` TEXT NOT NULL, `cmd` TEXT, `favourite` INTEGER NOT NULL, `hidden` INTEGER NOT NULL, `sortIndex` INTEGER NOT NULL, `customName` TEXT, `lastSeenMillis` INTEGER NOT NULL)",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `sourceId` INTEGER NOT NULL, `streamId` TEXT NOT NULL, `name` TEXT NOT NULL, `displayName` TEXT NOT NULL, `groupKey` TEXT NOT NULL, `qualityRank` INTEGER NOT NULL, `qualityLabel` TEXT NOT NULL, `categoryId` TEXT, `logoUrl` TEXT, `epgChannelId` TEXT, `matchedEpgId` TEXT, `epgOverrideId` TEXT, `tvArchive` INTEGER NOT NULL DEFAULT 0, `tvArchiveDays` INTEGER NOT NULL DEFAULT 0, `number` INTEGER, `streamUrl` TEXT NOT NULL, `cmd` TEXT, `hidden` INTEGER NOT NULL, `sortIndex` INTEGER NOT NULL, `customName` TEXT, `lastSeenMillis` INTEGER NOT NULL)",
         "fields": [
           {
             "fieldPath": "id",
@@ -191,32 +183,27 @@
           {
             "fieldPath": "categoryId",
             "columnName": "categoryId",
-            "affinity": "TEXT",
-            "notNull": false
+            "affinity": "TEXT"
           },
           {
             "fieldPath": "logoUrl",
             "columnName": "logoUrl",
-            "affinity": "TEXT",
-            "notNull": false
+            "affinity": "TEXT"
           },
           {
             "fieldPath": "epgChannelId",
             "columnName": "epgChannelId",
-            "affinity": "TEXT",
-            "notNull": false
+            "affinity": "TEXT"
           },
           {
             "fieldPath": "matchedEpgId",
             "columnName": "matchedEpgId",
-            "affinity": "TEXT",
-            "notNull": false
+            "affinity": "TEXT"
           },
           {
             "fieldPath": "epgOverrideId",
             "columnName": "epgOverrideId",
-            "affinity": "TEXT",
-            "notNull": false
+            "affinity": "TEXT"
           },
           {
             "fieldPath": "tvArchive",
@@ -235,8 +222,7 @@
           {
             "fieldPath": "number",
             "columnName": "number",
-            "affinity": "INTEGER",
-            "notNull": false
+            "affinity": "INTEGER"
           },
           {
             "fieldPath": "streamUrl",
@@ -247,14 +233,7 @@
           {
             "fieldPath": "cmd",
             "columnName": "cmd",
-            "affinity": "TEXT",
-            "notNull": false
-          },
-          {
-            "fieldPath": "favourite",
-            "columnName": "favourite",
-            "affinity": "INTEGER",
-            "notNull": true
+            "affinity": "TEXT"
           },
           {
             "fieldPath": "hidden",
@@ -271,8 +250,7 @@
           {
             "fieldPath": "customName",
             "columnName": "customName",
-            "affinity": "TEXT",
-            "notNull": false
+            "affinity": "TEXT"
           },
           {
             "fieldPath": "lastSeenMillis",
@@ -316,18 +294,8 @@
             ],
             "orders": [],
             "createSql": "CREATE INDEX IF NOT EXISTS `index_channels_groupKey` ON `${TABLE_NAME}` (`groupKey`)"
-          },
-          {
-            "name": "index_channels_favourite",
-            "unique": false,
-            "columnNames": [
-              "favourite"
-            ],
-            "orders": [],
-            "createSql": "CREATE INDEX IF NOT EXISTS `index_channels_favourite` ON `${TABLE_NAME}` (`favourite`)"
           }
-        ],
-        "foreignKeys": []
+        ]
       },
       {
         "tableName": "epg_feeds",
@@ -348,14 +316,12 @@
           {
             "fieldPath": "url",
             "columnName": "url",
-            "affinity": "TEXT",
-            "notNull": false
+            "affinity": "TEXT"
           },
           {
             "fieldPath": "providerSourceId",
             "columnName": "providerSourceId",
-            "affinity": "INTEGER",
-            "notNull": false
+            "affinity": "INTEGER"
           },
           {
             "fieldPath": "builtIn",
@@ -387,9 +353,7 @@
           "columnNames": [
             "id"
           ]
-        },
-        "indices": [],
-        "foreignKeys": []
+        }
       },
       {
         "tableName": "epg_channels",
@@ -437,8 +401,7 @@
             "orders": [],
             "createSql": "CREATE INDEX IF NOT EXISTS `index_epg_channels_normalizedKey` ON `${TABLE_NAME}` (`normalizedKey`)"
           }
-        ],
-        "foreignKeys": []
+        ]
       },
       {
         "tableName": "programmes",
@@ -483,32 +446,27 @@
           {
             "fieldPath": "description",
             "columnName": "description",
-            "affinity": "TEXT",
-            "notNull": false
+            "affinity": "TEXT"
           },
           {
             "fieldPath": "category",
             "columnName": "category",
-            "affinity": "TEXT",
-            "notNull": false
+            "affinity": "TEXT"
           },
           {
             "fieldPath": "season",
             "columnName": "season",
-            "affinity": "INTEGER",
-            "notNull": false
+            "affinity": "INTEGER"
           },
           {
             "fieldPath": "episode",
             "columnName": "episode",
-            "affinity": "INTEGER",
-            "notNull": false
+            "affinity": "INTEGER"
           },
           {
             "fieldPath": "iconUrl",
             "columnName": "iconUrl",
-            "affinity": "TEXT",
-            "notNull": false
+            "affinity": "TEXT"
           }
         ],
         "primaryKey": {
@@ -547,12 +505,11 @@
             "orders": [],
             "createSql": "CREATE INDEX IF NOT EXISTS `index_programmes_epgChannelId` ON `${TABLE_NAME}` (`epgChannelId`)"
           }
-        ],
-        "foreignKeys": []
+        ]
       },
       {
         "tableName": "movies",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `sourceId` INTEGER NOT NULL, `streamId` TEXT NOT NULL, `name` TEXT NOT NULL, `categoryId` TEXT, `posterUrl` TEXT, `rating` REAL, `year` INTEGER, `plot` TEXT, `durationSeconds` INTEGER, `containerExtension` TEXT, `streamUrl` TEXT NOT NULL, `favourite` INTEGER NOT NULL, `addedMillis` INTEGER NOT NULL, `backdropUrl` TEXT, `cast` TEXT, `genre` TEXT, `tmdbId` TEXT, `director` TEXT)",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `sourceId` INTEGER NOT NULL, `streamId` TEXT NOT NULL, `name` TEXT NOT NULL, `categoryId` TEXT, `posterUrl` TEXT, `rating` REAL, `year` INTEGER, `plot` TEXT, `durationSeconds` INTEGER, `containerExtension` TEXT, `streamUrl` TEXT NOT NULL, `addedMillis` INTEGER NOT NULL, `backdropUrl` TEXT, `cast` TEXT, `genre` TEXT, `tmdbId` TEXT, `director` TEXT)",
         "fields": [
           {
             "fieldPath": "id",
@@ -581,55 +538,42 @@
           {
             "fieldPath": "categoryId",
             "columnName": "categoryId",
-            "affinity": "TEXT",
-            "notNull": false
+            "affinity": "TEXT"
           },
           {
             "fieldPath": "posterUrl",
             "columnName": "posterUrl",
-            "affinity": "TEXT",
-            "notNull": false
+            "affinity": "TEXT"
           },
           {
             "fieldPath": "rating",
             "columnName": "rating",
-            "affinity": "REAL",
-            "notNull": false
+            "affinity": "REAL"
           },
           {
             "fieldPath": "year",
             "columnName": "year",
-            "affinity": "INTEGER",
-            "notNull": false
+            "affinity": "INTEGER"
           },
           {
             "fieldPath": "plot",
             "columnName": "plot",
-            "affinity": "TEXT",
-            "notNull": false
+            "affinity": "TEXT"
           },
           {
             "fieldPath": "durationSeconds",
             "columnName": "durationSeconds",
-            "affinity": "INTEGER",
-            "notNull": false
+            "affinity": "INTEGER"
           },
           {
             "fieldPath": "containerExtension",
             "columnName": "containerExtension",
-            "affinity": "TEXT",
-            "notNull": false
+            "affinity": "TEXT"
           },
           {
             "fieldPath": "streamUrl",
             "columnName": "streamUrl",
             "affinity": "TEXT",
-            "notNull": true
-          },
-          {
-            "fieldPath": "favourite",
-            "columnName": "favourite",
-            "affinity": "INTEGER",
             "notNull": true
           },
           {
@@ -641,32 +585,27 @@
           {
             "fieldPath": "backdropUrl",
             "columnName": "backdropUrl",
-            "affinity": "TEXT",
-            "notNull": false
+            "affinity": "TEXT"
           },
           {
             "fieldPath": "cast",
             "columnName": "cast",
-            "affinity": "TEXT",
-            "notNull": false
+            "affinity": "TEXT"
           },
           {
             "fieldPath": "genre",
             "columnName": "genre",
-            "affinity": "TEXT",
-            "notNull": false
+            "affinity": "TEXT"
           },
           {
             "fieldPath": "tmdbId",
             "columnName": "tmdbId",
-            "affinity": "TEXT",
-            "notNull": false
+            "affinity": "TEXT"
           },
           {
             "fieldPath": "director",
             "columnName": "director",
-            "affinity": "TEXT",
-            "notNull": false
+            "affinity": "TEXT"
           }
         ],
         "primaryKey": {
@@ -696,12 +635,11 @@
             "orders": [],
             "createSql": "CREATE INDEX IF NOT EXISTS `index_movies_sourceId_categoryId` ON `${TABLE_NAME}` (`sourceId`, `categoryId`)"
           }
-        ],
-        "foreignKeys": []
+        ]
       },
       {
         "tableName": "series",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `sourceId` INTEGER NOT NULL, `seriesId` TEXT NOT NULL, `name` TEXT NOT NULL, `categoryId` TEXT, `posterUrl` TEXT, `rating` REAL, `year` INTEGER, `plot` TEXT, `favourite` INTEGER NOT NULL, `addedMillis` INTEGER NOT NULL, `backdropUrl` TEXT, `cast` TEXT, `genre` TEXT, `tmdbId` TEXT)",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `sourceId` INTEGER NOT NULL, `seriesId` TEXT NOT NULL, `name` TEXT NOT NULL, `categoryId` TEXT, `posterUrl` TEXT, `rating` REAL, `year` INTEGER, `plot` TEXT, `addedMillis` INTEGER NOT NULL, `backdropUrl` TEXT, `cast` TEXT, `genre` TEXT, `tmdbId` TEXT)",
         "fields": [
           {
             "fieldPath": "id",
@@ -730,38 +668,27 @@
           {
             "fieldPath": "categoryId",
             "columnName": "categoryId",
-            "affinity": "TEXT",
-            "notNull": false
+            "affinity": "TEXT"
           },
           {
             "fieldPath": "posterUrl",
             "columnName": "posterUrl",
-            "affinity": "TEXT",
-            "notNull": false
+            "affinity": "TEXT"
           },
           {
             "fieldPath": "rating",
             "columnName": "rating",
-            "affinity": "REAL",
-            "notNull": false
+            "affinity": "REAL"
           },
           {
             "fieldPath": "year",
             "columnName": "year",
-            "affinity": "INTEGER",
-            "notNull": false
+            "affinity": "INTEGER"
           },
           {
             "fieldPath": "plot",
             "columnName": "plot",
-            "affinity": "TEXT",
-            "notNull": false
-          },
-          {
-            "fieldPath": "favourite",
-            "columnName": "favourite",
-            "affinity": "INTEGER",
-            "notNull": true
+            "affinity": "TEXT"
           },
           {
             "fieldPath": "addedMillis",
@@ -772,26 +699,22 @@
           {
             "fieldPath": "backdropUrl",
             "columnName": "backdropUrl",
-            "affinity": "TEXT",
-            "notNull": false
+            "affinity": "TEXT"
           },
           {
             "fieldPath": "cast",
             "columnName": "cast",
-            "affinity": "TEXT",
-            "notNull": false
+            "affinity": "TEXT"
           },
           {
             "fieldPath": "genre",
             "columnName": "genre",
-            "affinity": "TEXT",
-            "notNull": false
+            "affinity": "TEXT"
           },
           {
             "fieldPath": "tmdbId",
             "columnName": "tmdbId",
-            "affinity": "TEXT",
-            "notNull": false
+            "affinity": "TEXT"
           }
         ],
         "primaryKey": {
@@ -821,8 +744,7 @@
             "orders": [],
             "createSql": "CREATE INDEX IF NOT EXISTS `index_series_sourceId_categoryId` ON `${TABLE_NAME}` (`sourceId`, `categoryId`)"
           }
-        ],
-        "foreignKeys": []
+        ]
       },
       {
         "tableName": "episodes",
@@ -873,20 +795,17 @@
           {
             "fieldPath": "plot",
             "columnName": "plot",
-            "affinity": "TEXT",
-            "notNull": false
+            "affinity": "TEXT"
           },
           {
             "fieldPath": "durationSeconds",
             "columnName": "durationSeconds",
-            "affinity": "INTEGER",
-            "notNull": false
+            "affinity": "INTEGER"
           },
           {
             "fieldPath": "stillUrl",
             "columnName": "stillUrl",
-            "affinity": "TEXT",
-            "notNull": false
+            "affinity": "TEXT"
           },
           {
             "fieldPath": "streamUrl",
@@ -922,8 +841,7 @@
             "orders": [],
             "createSql": "CREATE INDEX IF NOT EXISTS `index_episodes_sourceId_seriesId` ON `${TABLE_NAME}` (`sourceId`, `seriesId`)"
           }
-        ],
-        "foreignKeys": []
+        ]
       },
       {
         "tableName": "playback_positions",
@@ -966,9 +884,46 @@
             "profileId",
             "mediaKey"
           ]
-        },
-        "indices": [],
-        "foreignKeys": []
+        }
+      },
+      {
+        "tableName": "favourites",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`profileId` INTEGER NOT NULL, `kind` TEXT NOT NULL, `source` TEXT NOT NULL, `itemId` TEXT NOT NULL, PRIMARY KEY(`profileId`, `kind`, `source`, `itemId`))",
+        "fields": [
+          {
+            "fieldPath": "profileId",
+            "columnName": "profileId",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "kind",
+            "columnName": "kind",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "source",
+            "columnName": "source",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "itemId",
+            "columnName": "itemId",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "profileId",
+            "kind",
+            "source",
+            "itemId"
+          ]
+        }
       },
       {
         "tableName": "profiles",
@@ -998,9 +953,7 @@
           "columnNames": [
             "id"
           ]
-        },
-        "indices": [],
-        "foreignKeys": []
+        }
       },
       {
         "tableName": "recordings",
@@ -1033,8 +986,7 @@
           {
             "fieldPath": "logoUrl",
             "columnName": "logoUrl",
-            "affinity": "TEXT",
-            "notNull": false
+            "affinity": "TEXT"
           },
           {
             "fieldPath": "title",
@@ -1045,8 +997,7 @@
           {
             "fieldPath": "description",
             "columnName": "description",
-            "affinity": "TEXT",
-            "notNull": false
+            "affinity": "TEXT"
           },
           {
             "fieldPath": "filePath",
@@ -1105,20 +1056,17 @@
           {
             "fieldPath": "seriesRuleId",
             "columnName": "seriesRuleId",
-            "affinity": "INTEGER",
-            "notNull": false
+            "affinity": "INTEGER"
           },
           {
             "fieldPath": "profileId",
             "columnName": "profileId",
-            "affinity": "INTEGER",
-            "notNull": false
+            "affinity": "INTEGER"
           },
           {
             "fieldPath": "error",
             "columnName": "error",
-            "affinity": "TEXT",
-            "notNull": false
+            "affinity": "TEXT"
           }
         ],
         "primaryKey": {
@@ -1146,8 +1094,7 @@
             "orders": [],
             "createSql": "CREATE INDEX IF NOT EXISTS `index_recordings_channelId` ON `${TABLE_NAME}` (`channelId`)"
           }
-        ],
-        "foreignKeys": []
+        ]
       },
       {
         "tableName": "series_rules",
@@ -1212,8 +1159,7 @@
             "orders": [],
             "createSql": "CREATE INDEX IF NOT EXISTS `index_series_rules_channelId` ON `${TABLE_NAME}` (`channelId`)"
           }
-        ],
-        "foreignKeys": []
+        ]
       },
       {
         "tableName": "reminders",
@@ -1240,8 +1186,7 @@
           {
             "fieldPath": "logoUrl",
             "columnName": "logoUrl",
-            "affinity": "TEXT",
-            "notNull": false
+            "affinity": "TEXT"
           },
           {
             "fieldPath": "title",
@@ -1305,14 +1250,12 @@
             "orders": [],
             "createSql": "CREATE INDEX IF NOT EXISTS `index_reminders_channelId` ON `${TABLE_NAME}` (`channelId`)"
           }
-        ],
-        "foreignKeys": []
+        ]
       }
     ],
-    "views": [],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'b67af1cae1ebed2a7dc1a5427b602cb8')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '95ef422087bdc7845bbfdc4a4516a810')"
     ]
   }
 }

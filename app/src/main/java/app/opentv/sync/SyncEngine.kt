@@ -6,10 +6,12 @@
 package app.opentv.sync
 
 import app.opentv.core.ServiceLocator
+import app.opentv.data.model.Favourite
 import app.opentv.data.model.PlaybackPosition
 import app.opentv.data.model.Profile
 import app.opentv.data.model.Recording
 import app.opentv.data.model.RecordingStatus
+import app.opentv.data.model.StreamKind
 import app.opentv.recording.SmbClient
 import kotlinx.serialization.json.Json
 
@@ -91,14 +93,16 @@ class SyncEngine(private val graph: ServiceLocator.Graph) {
                     sizeBytes = r.sizeBytes,
                 )
             }
+        val favourites = graph.viewerLibrary.favourites.everyProfiles().mapNotNull { fav ->
+            val profileName = names[fav.profileId] ?: return@mapNotNull null
+            SyncFavourite(profile = profileName, kind = fav.kind.name, source = fav.source, id = fav.itemId)
+        }
         return SyncBundle(
             generatedAtMillis = System.currentTimeMillis(),
             profiles = profiles.map { it.name },
             positions = positions,
-            favouriteChannels = graph.catalogRepository.favouriteChannelUrls(),
+            favourites = favourites,
             hiddenChannels = graph.catalogRepository.hiddenChannelUrls(),
-            favouriteMovies = graph.catalogRepository.favouriteMovieUrls(),
-            favouriteSeries = graph.catalogRepository.favouriteSeriesIds(),
             hiddenCategories = graph.settings.hiddenCategories.value.toList(),
             recordings = recordings,
         )
@@ -120,28 +124,23 @@ class SyncEngine(private val graph: ServiceLocator.Graph) {
 
         // Curation — additive union, keyed by stable identifiers. Count only genuinely new keys
         // (ones we hadn't already curated) so the "Synced N" line means "new to this device".
-        val localFavChannels = graph.catalogRepository.favouriteChannelUrls().toHashSet()
         val localHiddenChannels = graph.catalogRepository.hiddenChannelUrls().toHashSet()
-        val localFavMovies = graph.catalogRepository.favouriteMovieUrls().toHashSet()
-        val localFavSeries = graph.catalogRepository.favouriteSeriesIds().toHashSet()
 
         var favourites = 0
         var hidden = 0
-        for (url in bundle.favouriteChannels) {
-            graph.catalogRepository.markChannelFavouriteByUrl(url)
-            if (localFavChannels.add(url)) favourites++
+        for (item in bundle.favourites) {
+            val kind = runCatching { StreamKind.valueOf(item.kind) }.getOrNull() ?: continue
+            val profileId = profileIdFor(item.profile) ?: continue
+            if (graph.viewerLibrary.favourites.mergeSynced(
+                    Favourite(profileId, kind, item.source, item.id),
+                )
+            ) {
+                favourites++
+            }
         }
         for (url in bundle.hiddenChannels) {
             graph.catalogRepository.markChannelHiddenByUrl(url)
             if (localHiddenChannels.add(url)) hidden++
-        }
-        for (url in bundle.favouriteMovies) {
-            graph.catalogRepository.markMovieFavouriteByUrl(url)
-            if (localFavMovies.add(url)) favourites++
-        }
-        for (seriesId in bundle.favouriteSeries) {
-            graph.catalogRepository.markSeriesFavouriteBySeriesId(seriesId)
-            if (localFavSeries.add(seriesId)) favourites++
         }
         if (bundle.hiddenCategories.isNotEmpty()) {
             graph.settings.setHiddenCategories(

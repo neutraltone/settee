@@ -33,7 +33,8 @@ class UpNextTest {
         .build()
     private val activeProfile = MutableStateFlow(1L)
     private var now = 1_000_000L
-    private val library = ViewerLibrary(db.positions(), db.episodes(), activeProfile, clock = { now })
+    private val library =
+        ViewerLibrary(db.positions(), db.episodes(), db.favourites(), activeProfile, clock = { now })
 
     @After
     fun close() = db.close()

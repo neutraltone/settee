@@ -56,6 +56,10 @@ class SeriesDetailContentTest {
 
     private var played: String? = null
 
+    private val favourite = mutableStateOf<Boolean?>(false)
+
+    private val favouriteRequests = mutableListOf<Boolean>()
+
     private val mainAction = mutableStateOf<SeriesMainAction?>(null)
 
     private fun show(initial: SeriesMainAction?) {
@@ -66,9 +70,10 @@ class SeriesDetailContentTest {
                 episodes = episodes,
                 statuses = EpisodeStatuses(),
                 mainAction = mainAction.value,
+                favourite = favourite.value,
                 moreLike = emptyList(),
                 onPlayEpisode = { key, _, _ -> played = key },
-                onToggleFavourite = {},
+                onSetFavourite = { favouriteRequests += it },
                 onOpenSeries = {},
                 onOpenPerson = {},
             )
@@ -143,5 +148,35 @@ class SeriesDetailContentTest {
         settle()
 
         compose.onNodeWithText("Play S1 E1").assertIsFocused()
+    }
+
+    @Test
+    fun `a Favourite series offers to remove it`() {
+        favourite.value = true
+        show(SeriesMainAction.Play(testEpisode(2, 5)))
+
+        compose.onNodeWithText("Remove favourite").performClick()
+
+        assertThat(favouriteRequests).containsExactly(false)
+        captureScreen("series_detail_favourite")
+    }
+
+    @Test
+    fun `a series that is not a Favourite offers to add it`() {
+        show(SeriesMainAction.Play(testEpisode(2, 5)))
+
+        compose.onNodeWithText("Favourite").performClick()
+
+        assertThat(favouriteRequests).containsExactly(true)
+    }
+
+    @Test
+    fun `the favourite button does nothing until the Profile's Favourites have loaded`() {
+        favourite.value = null
+        show(SeriesMainAction.Play(testEpisode(2, 5)))
+
+        compose.onNodeWithText("Favourite").performClick()
+
+        assertThat(favouriteRequests).isEmpty()
     }
 }

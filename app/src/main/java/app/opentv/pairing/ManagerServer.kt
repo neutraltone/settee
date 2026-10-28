@@ -13,6 +13,7 @@ import app.opentv.data.model.SourceKind
 import app.opentv.data.model.shownName
 import app.opentv.data.repo.CatalogRepository
 import app.opentv.data.repo.SourceRepository
+import app.opentv.data.repo.ViewerLibrary
 import app.opentv.recording.SmbClient
 import app.opentv.recording.SmbConfig
 import java.io.BufferedReader
@@ -31,6 +32,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.Serializable
@@ -64,6 +66,7 @@ import kotlinx.serialization.json.Json
 class ManagerServer(
     private val scope: CoroutineScope,
     private val catalog: CatalogRepository,
+    private val viewerLibrary: ViewerLibrary,
     private val settings: AppSettings,
     private val sourceRepository: SourceRepository,
 ) {
@@ -287,7 +290,9 @@ class ManagerServer(
         val cat = query["cat"]
         if (cat.isNullOrBlank()) return@runBlocking json.encodeToString(serializer, emptyList())
         val source = query["source"]?.toLongOrNull()
-        val rows = catalog.channelsInCategoryForManager(source, cat).map { it.toDto() }
+        // Stars show the Favourites of whichever Profile is active on the TV.
+        val favourites = viewerLibrary.favourites.channelIds().first()
+        val rows = catalog.channelsInCategoryForManager(source, cat).map { it.toDto(it.id in favourites) }
         json.encodeToString(serializer, rows)
     }
 
@@ -301,7 +306,14 @@ class ManagerServer(
         // Unknown ids simply update zero rows — harmless, so no existence check.
         runBlocking {
             patch.hidden?.let { catalog.setChannelHidden(patch.id, it) }
-            patch.favourite?.let { catalog.setChannelFavourite(patch.id, it) }
+            // Every quality variant follows, as when favouriting from the guide.
+            patch.favourite?.let { favourite ->
+                catalog.channel(patch.id)?.let { channel ->
+                    (catalog.variants(channel) + channel).distinctBy {
+                        it.id
+                    }.forEach { viewerLibrary.favourites.set(it, favourite) }
+                }
+            }
             // A blank name clears the rename back to the provider's own (see setChannelCustomName).
             patch.name?.let { catalog.setChannelCustomName(patch.id, it) }
         }
@@ -455,7 +467,7 @@ class ManagerServer(
         output.write(PairingHttp.httpResponse("200 OK", "application/json", json.encodeToString(serializer, value)))
     }
 
-    private fun Channel.toDto() = ChannelDto(
+    private fun Channel.toDto(favourite: Boolean) = ChannelDto(
         id = id,
         name = shownName,
         original = displayName,

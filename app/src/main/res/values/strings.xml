@@ -436,6 +436,7 @@
     <string name="vod_search_hint">Search movies &amp; shows</string>
     <string name="vod_continue_watching">Continue watching</string>
     <string name="vod_large_provider_note">A large provider can take a couple of minutes the first time.</string>
+    <string name="vod_favourites">Favourites</string>
     <string name="vod_recommended">Recommended for you</string>
     <string name="vod_recently_added">Recently added</string>
     <string name="vod_categories">Categories</string>

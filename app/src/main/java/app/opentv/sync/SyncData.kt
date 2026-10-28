@@ -11,10 +11,10 @@ import kotlinx.serialization.Serializable
  * The state two OpenTV devices exchange when they sync.
  *
  * Nothing here is keyed by a local database id — those differ from one install to the next. An
- * item is identified by something stable for the same provider: a channel/movie by its **stream
- * URL**, a series by its **provider series id**, a profile by its **name**, a category by its
- * **group key**, a NAS recording by its **smb:// locator**. So a bundle from one device makes
- * sense on another.
+ * item is identified by something stable for the same provider: a watch position or hidden
+ * channel by its **stream URL**, a Favourite by its **source name and provider id**, a profile by
+ * its **name**, a category by its **group key**, a NAS recording by its **smb:// locator**. So a
+ * bundle from one device makes sense on another.
  *
  * Two merge policies travel together, matching how people actually use this:
  *  - **Watch positions** are two-way, newest-wins per item (you watch on any device, resume on
@@ -28,18 +28,16 @@ import kotlinx.serialization.Serializable
  */
 @Serializable
 data class SyncBundle(
-    val version: Int = 3,
+    val version: Int = 4,
     val generatedAtMillis: Long = 0,
     /** Profile names the peer knows about. Others add any they are missing (add-only). */
     val profiles: List<String> = emptyList(),
     /** Two-way, newest-wins resume points. */
     val positions: List<SyncPosition> = emptyList(),
-    /** Additive curation, keyed by the stable identifiers noted above. */
-    val favouriteChannels: List<String> = emptyList(),
+    /** Every Profile's Favourites, each landing on the Profile with the same name (additive). */
+    val favourites: List<SyncFavourite> = emptyList(),
+    /** Additive device-wide curation, keyed by the stable identifiers noted above. */
     val hiddenChannels: List<String> = emptyList(),
-    val favouriteMovies: List<String> = emptyList(),
-    /** Favourite series, keyed by the provider's own series id (series carry no stream URL). */
-    val favouriteSeries: List<String> = emptyList(),
     val hiddenCategories: List<String> = emptyList(),
     /**
      * Recordings that live on the shared NAS (their [SyncRecording.filePath] is an `smb://`
@@ -48,6 +46,10 @@ data class SyncBundle(
      */
     val recordings: List<SyncRecording> = emptyList(),
 )
+
+/** One Profile's Favourite: [kind] is a StreamKind name, [id] the provider's stream or series id within [source]. */
+@Serializable
+data class SyncFavourite(val profile: String, val kind: String, val source: String, val id: String)
 
 @Serializable
 data class SyncPosition(
