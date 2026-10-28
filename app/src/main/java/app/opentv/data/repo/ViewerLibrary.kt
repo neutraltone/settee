@@ -146,13 +146,15 @@ class ViewerLibrary(
             }
         }
 
-    private suspend fun seriesCard(latest: Episode, pos: PlaybackPosition): ContinueWatchingCard? {
-        val status = statusOf(pos)
-        if (status is WatchStatus.InProgress) return ContinueWatchingCard.Series(latest, status.progress)
-        val ordered = episodes.forSeries(latest.sourceId, latest.seriesId).sortedWith(EPISODE_ORDER)
-        val next = ordered.getOrNull(ordered.indexOfFirst { it.id == latest.id } + 1) ?: return null
-        return ContinueWatchingCard.Series(next, 0f)
-    }
+    private suspend fun seriesCard(latest: Episode, pos: PlaybackPosition): ContinueWatchingCard? =
+        when (val status = statusOf(pos)) {
+            is WatchStatus.InProgress -> ContinueWatchingCard.Series(latest, status.progress)
+            else -> {
+                val ordered = episodes.forSeries(latest.sourceId, latest.seriesId).sortedWith(EPISODE_ORDER)
+                ordered.getOrNull(ordered.indexOfFirst { it.id == latest.id } + 1)
+                    ?.let { ContinueWatchingCard.Series(it, 0f) }
+            }
+        }
 
     /** Every episode's status for the active Profile; re-emits only when a status actually changes. */
     @OptIn(ExperimentalCoroutinesApi::class)
@@ -190,16 +192,6 @@ class ViewerLibrary(
             .distinctUntilChanged()
     }
 
-    private fun statusOf(pos: PlaybackPosition): WatchStatus {
-        // Synced positions can arrive without a duration; that says nothing about how far through.
-        // Nor does a negative position, which only a confused peer would send.
-        val position = pos.positionMillis.coerceAtLeast(0)
-        val known = pos.durationMillis > 0
-        val progress = if (known) position.toDouble() / pos.durationMillis else 0.0
-        if (progress > WATCHED_FRACTION) return WatchStatus.Watched
-        return WatchStatus.InProgress(progress.toFloat(), if (known) pos.durationMillis - position else null)
-    }
-
     private companion object {
         val EPISODE_ORDER = compareBy<Episode>({ it.season }, { it.episodeNumber })
         const val EPISODE_PREFIX = "ep:"
@@ -208,5 +200,15 @@ class ViewerLibrary(
 
         /** Past this, the credits are rolling: the title counts as Watched and is not resumed. */
         const val WATCHED_FRACTION = 0.93
+
+        fun statusOf(pos: PlaybackPosition): WatchStatus {
+            // Synced positions can arrive without a duration; that says nothing about how far through.
+            // Nor does a negative position, which only a confused peer would send.
+            val position = pos.positionMillis.coerceAtLeast(0)
+            val known = pos.durationMillis > 0
+            val progress = if (known) position.toDouble() / pos.durationMillis else 0.0
+            if (progress > WATCHED_FRACTION) return WatchStatus.Watched
+            return WatchStatus.InProgress(progress.toFloat(), if (known) pos.durationMillis - position else null)
+        }
     }
 }
