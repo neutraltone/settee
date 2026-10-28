@@ -92,7 +92,7 @@ fun ChannelManagerScreen(
     val searchResults by viewModel.managerResults.collectAsState()
     LaunchedEffect(query) { viewModel.setManagerQuery(query) }
 
-    // Focus handoff between the panes, mirroring HomeScreen's rail: the active left entry (the
+    // Focus handoff between the panes, mirroring LiveScreen's rail: the active left entry (the
     // selected category, or Search) carries this requester, so LEFT from a channel row lands
     // straight back on it. The rail is always visible, so if the requester's node is scrolled out
     // this returns false and ordinary left-navigation still reaches a visible entry.

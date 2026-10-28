@@ -107,7 +107,7 @@ import kotlinx.coroutines.launch
  * lines say so honestly instead of going quietly stale.
  */
 @Composable
-fun HomeScreen(
+fun LiveScreen(
     isTelevision: Boolean,
     hasSources: Boolean,
     isSyncing: Boolean,

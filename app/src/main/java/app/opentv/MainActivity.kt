@@ -183,7 +183,7 @@ class MainActivity : ComponentActivity() {
 }
 
 object Routes {
-    const val HOME = "home"
+    const val MAIN = "main"
     const val ADD_SOURCE = "add-source"
     const val PLAYER = "player/{channelId}"
     const val SEARCH = "search"
@@ -246,14 +246,14 @@ private fun OpenTvApp(isTelevision: Boolean) {
 
     // First run goes straight to setup — an empty channel list with no explanation is the
     // worst possible first impression.
-    val start = if (sourcesUi.sources.isEmpty()) Routes.ADD_SOURCE else Routes.HOME
+    val start = if (sourcesUi.sources.isEmpty()) Routes.ADD_SOURCE else Routes.MAIN
 
     // Boot to last channel: if enabled and we have one, jump straight into the player on launch.
     // Runs once; backing out returns to the guide and doesn't re-trigger.
     val bootContext = androidx.compose.ui.platform.LocalContext.current
     val bootSettings = remember { ServiceLocator.get(bootContext).settings }
     LaunchedEffect(start) {
-        if (start == Routes.HOME && bootSettings.resumeLastChannel.value && bootSettings.lastChannelId != 0L) {
+        if (start == Routes.MAIN && bootSettings.resumeLastChannel.value && bootSettings.lastChannelId != 0L) {
             navController.navigate(Routes.player(bootSettings.lastChannelId))
         }
     }
@@ -306,7 +306,7 @@ private fun OpenTvApp(isTelevision: Boolean) {
                 AddSourceScreen(
                     viewModel = sourcesViewModel,
                     onFinished = {
-                        navController.navigate(Routes.HOME) {
+                        navController.navigate(Routes.MAIN) {
                             popUpTo(Routes.ADD_SOURCE) { inclusive = true }
                         }
                     },
@@ -322,7 +322,7 @@ private fun OpenTvApp(isTelevision: Boolean) {
                 )
             }
 
-            composable(Routes.HOME) {
+            composable(Routes.MAIN) {
                 MainScreen(
                     isTelevision = isTelevision,
                     hasSources = sourcesUi.sources.isNotEmpty(),

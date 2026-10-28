@@ -65,7 +65,7 @@ import app.opentv.data.model.Channel
 import app.opentv.data.model.Movie
 import app.opentv.data.model.Recording
 import app.opentv.data.model.Series
-import app.opentv.ui.channels.HomeScreen
+import app.opentv.ui.channels.LiveScreen
 import app.opentv.ui.recordings.RecordingsScreen
 import app.opentv.ui.vod.MoviesScreen
 import app.opentv.ui.vod.SeriesScreen
@@ -173,7 +173,7 @@ fun MainScreen(
 
         Box(Modifier.weight(1f).fillMaxHeight()) {
             when (tab) {
-                Tab.LIVE -> HomeScreen(
+                Tab.LIVE -> LiveScreen(
                     isTelevision = isTelevision,
                     hasSources = hasSources,
                     isSyncing = isSyncing,
