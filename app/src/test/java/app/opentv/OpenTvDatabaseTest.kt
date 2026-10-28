@@ -22,8 +22,7 @@ import org.robolectric.annotation.Config
  * Settee restarted its schema at version 1, but any device that ran a build from before the
  * restart still has an upstream database at version 11. Room refuses to open a database newer
  * than its schema unless told otherwise, so without a destructive fallback those installs crash
- * on launch instead of starting clean. When the fallback goes at the first tagged release, the
- * wipe tests go with it.
+ * on launch instead of starting clean. When the fallback goes at 1.0, the wipe tests go with it.
  */
 // Plain Application: OpenTvApp schedules WorkManager on start, which the database doesn't need.
 @RunWith(RobolectricTestRunner::class)
