@@ -58,15 +58,17 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import androidx.core.net.toUri
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
 import app.opentv.R
 import app.opentv.core.AppSettings
@@ -117,6 +119,7 @@ fun LiveScreen(
     viewModel: ChannelsViewModel = viewModel(),
 ) {
     val context = LocalContext.current
+    val resources = LocalResources.current
     val graph = remember { ServiceLocator.get(context) }
     val settings = remember { graph.settings }
     val previewEnabled by settings.guidePreviewVideo.collectAsState()
@@ -402,14 +405,14 @@ fun LiveScreen(
                         graph.recordingEngine.stop(active.id)
                         Toast.makeText(
                             context,
-                            context.getString(R.string.rec_recording_stopped),
+                            resources.getString(R.string.rec_recording_stopped),
                             Toast.LENGTH_SHORT,
                         ).show()
                     } else {
                         recordScope.launch { graph.recordingEngine.startChannel(row.primary, row.now) }
                         Toast.makeText(
                             context,
-                            context.getString(R.string.rec_recording_started_see_tab, row.primary.shownName),
+                            resources.getString(R.string.rec_recording_started_see_tab, row.primary.shownName),
                             Toast.LENGTH_LONG,
                         ).show()
                         promptBackgroundIfNeeded()
@@ -576,7 +579,7 @@ fun LiveScreen(
                         graph.recordingEngine.stop(recordingThis.id)
                         Toast.makeText(
                             context,
-                            context.getString(R.string.rec_recording_stopped),
+                            resources.getString(R.string.rec_recording_stopped),
                             Toast.LENGTH_SHORT,
                         ).show()
                         recordTarget = null
@@ -585,7 +588,7 @@ fun LiveScreen(
                         recordScope.launch { graph.recordingEngine.startChannel(chosenVariant, programme) }
                         Toast.makeText(
                             context,
-                            context.getString(R.string.rec_recording_channel, channel.shownName),
+                            resources.getString(R.string.rec_recording_channel, channel.shownName),
                             Toast.LENGTH_LONG,
                         ).show()
                         promptBackgroundIfNeeded()
@@ -601,7 +604,7 @@ fun LiveScreen(
                             if (source == null) {
                                 Toast.makeText(
                                     context,
-                                    context.getString(R.string.guide_catchup_link_failed),
+                                    resources.getString(R.string.guide_catchup_link_failed),
                                     Toast.LENGTH_SHORT,
                                 ).show()
                             } else {
@@ -626,7 +629,7 @@ fun LiveScreen(
                         recordScope.launch { graph.recordingEngine.scheduleProgramme(chosenVariant, programme) }
                         Toast.makeText(
                             context,
-                            context.getString(R.string.rec_scheduled_title, programme.title),
+                            resources.getString(R.string.rec_scheduled_title, programme.title),
                             Toast.LENGTH_LONG,
                         ).show()
                         promptBackgroundIfNeeded()
@@ -653,7 +656,7 @@ fun LiveScreen(
                             }
                             Toast.makeText(
                                 context,
-                                context.getString(R.string.guide_reminder_removed),
+                                resources.getString(R.string.guide_reminder_removed),
                                 Toast.LENGTH_SHORT,
                             ).show()
                             recordTarget = null
@@ -663,7 +666,7 @@ fun LiveScreen(
                             recordScope.launch { setReminder(graph, context, channel, programme, autoTune = false) }
                             Toast.makeText(
                                 context,
-                                context.getString(R.string.guide_reminder_set, programme.title),
+                                resources.getString(R.string.guide_reminder_set, programme.title),
                                 Toast.LENGTH_LONG,
                             ).show()
                             recordTarget = null
@@ -672,7 +675,7 @@ fun LiveScreen(
                             recordScope.launch { setReminder(graph, context, channel, programme, autoTune = true) }
                             Toast.makeText(
                                 context,
-                                context.getString(R.string.guide_will_switch, channel.shownName),
+                                resources.getString(R.string.guide_will_switch, channel.shownName),
                                 Toast.LENGTH_LONG,
                             ).show()
                             recordTarget = null
@@ -685,7 +688,7 @@ fun LiveScreen(
                     }
                     Toast.makeText(
                         context,
-                        context.getString(R.string.rec_series_recording_set, programme.title),
+                        resources.getString(R.string.rec_series_recording_set, programme.title),
                         Toast.LENGTH_LONG,
                     ).show()
                     promptBackgroundIfNeeded()
@@ -780,7 +783,7 @@ fun LiveScreen(
                         recordScope.launch {
                             val ua = graph.sourceRepository.byId(channel.sourceId)?.userAgent ?: "OpenTV/0.1 (Android)"
                             val intent = Intent(Intent.ACTION_VIEW).apply {
-                                setDataAndType(android.net.Uri.parse(channel.streamUrl), "video/*")
+                                setDataAndType(channel.streamUrl.toUri(), "video/*")
                                 putExtra("title", channel.shownName)
                                 // MX Player / VLC read the User-Agent from this header extra.
                                 putExtra("headers", arrayOf("User-Agent", ua))
@@ -788,13 +791,13 @@ fun LiveScreen(
                             }
                             runCatching {
                                 context.startActivity(
-                                    Intent.createChooser(intent, context.getString(R.string.guide_play_channel_with))
+                                    Intent.createChooser(intent, resources.getString(R.string.guide_play_channel_with))
                                         .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
                                 )
                             }.onFailure {
                                 Toast.makeText(
                                     context,
-                                    context.getString(R.string.guide_no_external_player),
+                                    resources.getString(R.string.guide_no_external_player),
                                     Toast.LENGTH_SHORT,
                                 ).show()
                             }
@@ -805,7 +808,7 @@ fun LiveScreen(
                             graph.recordingEngine.stop(recordingThis.id)
                             Toast.makeText(
                                 context,
-                                context.getString(R.string.rec_recording_stopped),
+                                resources.getString(R.string.rec_recording_stopped),
                                 Toast.LENGTH_SHORT,
                             ).show()
                             channelMenu = null
@@ -815,7 +818,7 @@ fun LiveScreen(
                             recordScope.launch { graph.recordingEngine.startChannel(channel, nowProg) }
                             Toast.makeText(
                                 context,
-                                context.getString(R.string.rec_recording_started_see_tab, channel.shownName),
+                                resources.getString(R.string.rec_recording_started_see_tab, channel.shownName),
                                 Toast.LENGTH_LONG,
                             ).show()
                             promptBackgroundIfNeeded()
@@ -829,7 +832,7 @@ fun LiveScreen(
                             }
                             Toast.makeText(
                                 context,
-                                context.getString(R.string.rec_series_recording_set, nowProg.title),
+                                resources.getString(R.string.rec_series_recording_set, nowProg.title),
                                 Toast.LENGTH_LONG,
                             ).show()
                             promptBackgroundIfNeeded()

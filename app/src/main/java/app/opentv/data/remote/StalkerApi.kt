@@ -278,7 +278,7 @@ class StalkerApi(
         return runCatching {
             http.newCall(request).execute().use { response ->
                 if (!response.isSuccessful) return null
-                val text = response.body?.string().orEmpty()
+                val text = response.body.string()
                 if (text.isBlank()) return null
                 json.parseToJsonElement(text)
             }

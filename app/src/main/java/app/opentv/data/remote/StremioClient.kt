@@ -80,7 +80,7 @@ class StremioClient(
         return runCatching {
             http.newCall(request).execute().use { response ->
                 if (!response.isSuccessful) return null
-                val body = response.body?.string() ?: return null
+                val body = response.body.string()
                 json.parseToJsonElement(body)
             }
         }.onFailure { Log.w(TAG, "Stremio request failed", it) }.getOrNull()

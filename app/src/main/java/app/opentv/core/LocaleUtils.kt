@@ -13,7 +13,7 @@ import java.util.Locale
  * Applies the user's chosen UI language by wrapping a base [Context] with an overridden locale.
  *
  * Done at attachBaseContext time (rather than the newer per-app-language API) so it works the same
- * on every supported version — minSdk 23 through the latest — and on Fire OS, without pulling in
+ * on every supported version — minSdk 24 through the latest — and on Fire OS, without pulling in
  * AppCompat. A blank tag means "follow the device", so nothing is overridden.
  */
 object LocaleUtils {

@@ -278,8 +278,7 @@ class XtreamApi(
             response.close()
             throw XtreamException("Guide download failed (HTTP ${response.code}).")
         }
-        response.body?.byteStream()
-            ?: throw XtreamException("The server returned an empty guide.")
+        response.body.byteStream()
     }
 
     // ---- URL construction ----------------------------------------------------------------
@@ -329,7 +328,7 @@ class XtreamApi(
             if (!response.isSuccessful) {
                 throw XtreamException(describeHttpFailure(response.code))
             }
-            val text = response.body?.string().orEmpty()
+            val text = response.body.string()
             if (text.isBlank()) throw XtreamException("The server returned an empty response.")
             return try {
                 json.parseToJsonElement(text)

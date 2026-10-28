@@ -39,6 +39,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -64,6 +65,7 @@ import app.opentv.ui.channels.readClipboardText
 @Composable
 fun AddSourceScreen(viewModel: SourcesViewModel, onFinished: () -> Unit, editingSourceId: Long? = null) {
     val context = LocalContext.current
+    val resources = LocalResources.current
     // The QR "set it up from your phone" flow only makes sense on a TV — it serves a setup page
     // FROM this device for a phone to fill in. On a phone that same screen shows a QR meant to be
     // scanned BY a phone, which is nonsensical and traps the user — so a non-TV device defaults
@@ -108,9 +110,9 @@ fun AddSourceScreen(viewModel: SourcesViewModel, onFinished: () -> Unit, editing
     fun draft(): Source = (existing ?: Source(name = "", kind = kind, url = "")).copy(
         name = name.ifBlank {
             if (kind == SourceKind.M3U) {
-                context.getString(R.string.onboarding_default_playlist_name)
+                resources.getString(R.string.onboarding_default_playlist_name)
             } else {
-                context.getString(R.string.onboarding_default_provider_name)
+                resources.getString(R.string.onboarding_default_provider_name)
             }
         },
         kind = kind,
@@ -365,13 +367,14 @@ fun AddSourceScreen(viewModel: SourcesViewModel, onFinished: () -> Unit, editing
 @Composable
 private fun PasteButton(onPaste: (String) -> Unit) {
     val context = LocalContext.current
+    val resources = LocalResources.current
     IconButton(
         onClick = {
             val pasted = readClipboardText(context)
             if (pasted != null) {
                 onPaste(pasted)
             } else {
-                Toast.makeText(context, context.getString(R.string.kbd_clipboard_empty), Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, resources.getString(R.string.kbd_clipboard_empty), Toast.LENGTH_SHORT).show()
             }
         },
     ) {

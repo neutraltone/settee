@@ -37,7 +37,7 @@ class SyncClient(private val httpClient: OkHttpClient) {
                         },
                     )
                 }
-                val body = response.body?.string().orEmpty()
+                val body = response.body.string()
                 json.decodeFromString(SyncBundle.serializer(), body)
             }
         }

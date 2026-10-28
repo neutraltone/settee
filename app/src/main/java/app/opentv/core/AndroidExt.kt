@@ -10,10 +10,9 @@ import android.app.Activity
 import android.content.Context
 import android.content.ContextWrapper
 import android.content.Intent
-import android.net.Uri
-import android.os.Build
 import android.os.PowerManager
 import android.provider.Settings
+import androidx.core.net.toUri
 
 /**
  * The [Activity] behind a Compose [Context], unwrapping the `ContextWrapper` chain Compose hands
@@ -30,10 +29,9 @@ tailrec fun Context.findActivity(): Activity? = when (this) {
  * Whether the OS is currently exempting OpenTV from battery optimisation ("Doze"). When it isn't,
  * Android TV / Fire TV are free to freeze the app while the box is in standby, which stops an
  * in-progress or scheduled recording dead — the single biggest reason captures don't survive the
- * device going to sleep. Pre-Marshmallow there is no Doze, so it is always treated as exempt.
+ * device going to sleep.
  */
 fun Context.isIgnoringBatteryOptimizations(): Boolean {
-    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) return true
     val pm = getSystemService(Context.POWER_SERVICE) as? PowerManager ?: return true
     return pm.isIgnoringBatteryOptimizations(packageName)
 }
@@ -47,10 +45,9 @@ fun Context.isIgnoringBatteryOptimizations(): Boolean {
  */
 @SuppressLint("BatteryLife")
 fun Context.requestIgnoreBatteryOptimizations() {
-    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) return
     val direct = Intent(
         Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
-        Uri.parse("package:$packageName"),
+        "package:$packageName".toUri(),
     ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
     val launched = runCatching { startActivity(direct) }.isSuccess
     if (!launched) {

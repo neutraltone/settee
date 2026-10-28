@@ -6,6 +6,7 @@
 package app.opentv.core
 
 import android.content.Context
+import androidx.core.content.edit
 import app.opentv.data.model.StremioAddon
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -61,7 +62,7 @@ class AppSettings private constructor(context: Context) {
     val activeProfileId: StateFlow<Long> = _activeProfileId.asStateFlow()
 
     fun setActiveProfile(id: Long) {
-        prefs.edit().putLong(KEY_ACTIVE_PROFILE, id).apply()
+        prefs.edit { putLong(KEY_ACTIVE_PROFILE, id) }
         _activeProfileId.value = id
     }
 
@@ -95,12 +96,12 @@ class AppSettings private constructor(context: Context) {
     val hiddenUnlocked: StateFlow<Boolean> = _hiddenUnlocked.asStateFlow()
 
     fun setPin(pin: String) {
-        prefs.edit().putString(KEY_PIN_HASH, hashPin(pin)).apply()
+        prefs.edit { putString(KEY_PIN_HASH, hashPin(pin)) }
         _pinIsSet.value = true
     }
 
     fun clearPin() {
-        prefs.edit().remove(KEY_PIN_HASH).apply()
+        prefs.edit { remove(KEY_PIN_HASH) }
         _pinIsSet.value = false
         _hiddenUnlocked.value = true
     }
@@ -111,7 +112,7 @@ class AppSettings private constructor(context: Context) {
     }
 
     fun setHiddenCategories(keys: Set<String>) {
-        prefs.edit().putStringSet(KEY_HIDDEN_CATS, keys).apply()
+        prefs.edit { putStringSet(KEY_HIDDEN_CATS, keys) }
         _hiddenCategories.value = keys.toSet()
     }
 
@@ -126,27 +127,27 @@ class AppSettings private constructor(context: Context) {
     }
 
     fun setThemeMode(mode: ThemeMode) {
-        prefs.edit().putString(KEY_THEME, mode.name).apply()
+        prefs.edit { putString(KEY_THEME, mode.name) }
         _themeMode.value = mode
     }
 
     fun setChannelLayout(layout: ChannelLayout) {
-        prefs.edit().putString(KEY_CHANNEL_LAYOUT, layout.name).apply()
+        prefs.edit { putString(KEY_CHANNEL_LAYOUT, layout.name) }
         _channelLayout.value = layout
     }
 
     fun setSubtitlesEnabled(enabled: Boolean) {
-        prefs.edit().putBoolean(KEY_SUBTITLES, enabled).apply()
+        prefs.edit { putBoolean(KEY_SUBTITLES, enabled) }
         _subtitlesEnabled.value = enabled
     }
 
     fun setGuidePreviewVideo(enabled: Boolean) {
-        prefs.edit().putBoolean(KEY_PREVIEW_VIDEO, enabled).apply()
+        prefs.edit { putBoolean(KEY_PREVIEW_VIDEO, enabled) }
         _guidePreviewVideo.value = enabled
     }
 
     fun setGuidePreviewSound(enabled: Boolean) {
-        prefs.edit().putBoolean(KEY_PREVIEW_SOUND, enabled).apply()
+        prefs.edit { putBoolean(KEY_PREVIEW_SOUND, enabled) }
         _guidePreviewSound.value = enabled
     }
 
@@ -155,7 +156,7 @@ class AppSettings private constructor(context: Context) {
     val resumeLastChannel: StateFlow<Boolean> = _resumeLastChannel.asStateFlow()
 
     fun setResumeLastChannel(enabled: Boolean) {
-        prefs.edit().putBoolean(KEY_RESUME_LAST, enabled).apply()
+        prefs.edit { putBoolean(KEY_RESUME_LAST, enabled) }
         _resumeLastChannel.value = enabled
     }
 
@@ -172,7 +173,7 @@ class AppSettings private constructor(context: Context) {
     fun setRecordPadding(startMinutes: Int, endMinutes: Int) {
         val s = startMinutes.coerceIn(0, 30)
         val e = endMinutes.coerceIn(0, 60)
-        prefs.edit().putInt(KEY_PAD_START, s).putInt(KEY_PAD_END, e).apply()
+        prefs.edit { putInt(KEY_PAD_START, s).putInt(KEY_PAD_END, e) }
         _recordPadStartMinutes.value = s
         _recordPadEndMinutes.value = e
     }
@@ -186,7 +187,7 @@ class AppSettings private constructor(context: Context) {
     val recordAutoSwitch: StateFlow<Boolean> = _recordAutoSwitch.asStateFlow()
 
     fun setRecordAutoSwitch(enabled: Boolean) {
-        prefs.edit().putBoolean(KEY_REC_AUTOSWITCH, enabled).apply()
+        prefs.edit { putBoolean(KEY_REC_AUTOSWITCH, enabled) }
         _recordAutoSwitch.value = enabled
     }
 
@@ -198,7 +199,7 @@ class AppSettings private constructor(context: Context) {
     val livePauseEnabled: StateFlow<Boolean> = _livePauseEnabled.asStateFlow()
 
     fun setLivePauseEnabled(enabled: Boolean) {
-        prefs.edit().putBoolean(KEY_LIVE_PAUSE, enabled).apply()
+        prefs.edit { putBoolean(KEY_LIVE_PAUSE, enabled) }
         _livePauseEnabled.value = enabled
     }
 
@@ -219,25 +220,25 @@ class AppSettings private constructor(context: Context) {
     val seriesEnabled: StateFlow<Boolean> = _seriesEnabled.asStateFlow()
 
     fun setLiveEnabled(enabled: Boolean) {
-        prefs.edit().putBoolean(KEY_CONTENT_LIVE, enabled).apply()
+        prefs.edit { putBoolean(KEY_CONTENT_LIVE, enabled) }
         _liveEnabled.value = enabled
     }
 
     fun setMoviesEnabled(enabled: Boolean) {
         // Also reset the VOD freshness stamp so the next Movies/Shows open re-syncs immediately
         // rather than waiting out the cache TTL — turning a content type on should show it now.
-        prefs.edit()
-            .putBoolean(KEY_CONTENT_MOVIES, enabled)
-            .putLong(KEY_VOD_SYNCED_AT, 0L)
-            .apply()
+        prefs.edit {
+            putBoolean(KEY_CONTENT_MOVIES, enabled)
+            putLong(KEY_VOD_SYNCED_AT, 0L)
+        }
         _moviesEnabled.value = enabled
     }
 
     fun setSeriesEnabled(enabled: Boolean) {
-        prefs.edit()
-            .putBoolean(KEY_CONTENT_SERIES, enabled)
-            .putLong(KEY_VOD_SYNCED_AT, 0L)
-            .apply()
+        prefs.edit {
+            putBoolean(KEY_CONTENT_SERIES, enabled)
+            putLong(KEY_VOD_SYNCED_AT, 0L)
+        }
         _seriesEnabled.value = enabled
     }
 
@@ -250,7 +251,7 @@ class AppSettings private constructor(context: Context) {
     val languageTag: StateFlow<String> = _languageTag.asStateFlow()
 
     fun setLanguageTag(tag: String) {
-        prefs.edit().putString(KEY_LANGUAGE, tag).apply()
+        prefs.edit { putString(KEY_LANGUAGE, tag) }
         _languageTag.value = tag
     }
 
@@ -258,7 +259,7 @@ class AppSettings private constructor(context: Context) {
     var lastChannelId: Long
         get() = prefs.getLong(KEY_LAST_CHANNEL, 0L)
         set(value) {
-            prefs.edit().putLong(KEY_LAST_CHANNEL, value).apply()
+            prefs.edit { putLong(KEY_LAST_CHANNEL, value) }
         }
 
     /**
@@ -270,7 +271,7 @@ class AppSettings private constructor(context: Context) {
     val playerResizeMode: StateFlow<Int> = _playerResizeMode.asStateFlow()
 
     fun setPlayerResizeMode(mode: Int) {
-        prefs.edit().putInt(KEY_RESIZE_MODE, mode).apply()
+        prefs.edit { putInt(KEY_RESIZE_MODE, mode) }
         _playerResizeMode.value = mode
     }
 
@@ -307,10 +308,10 @@ class AppSettings private constructor(context: Context) {
 
     /** Save (or clear, with null) the granted USB tree URI and its display label together. */
     fun setUsbTree(treeUri: String?, label: String?) {
-        prefs.edit()
-            .putString(KEY_USB_TREE, treeUri)
-            .putString(KEY_USB_LABEL, label)
-            .apply()
+        prefs.edit {
+            putString(KEY_USB_TREE, treeUri)
+            putString(KEY_USB_LABEL, label)
+        }
         _usbTreeUri.value = treeUri
         _usbFolderLabel.value = label
     }
@@ -333,18 +334,18 @@ class AppSettings private constructor(context: Context) {
     val smbPassword: StateFlow<String> = _smbPassword.asStateFlow()
 
     fun setRecordingTarget(target: RecordingTarget) {
-        prefs.edit().putString(KEY_REC_TARGET, target.name).apply()
+        prefs.edit { putString(KEY_REC_TARGET, target.name) }
         _recordingTarget.value = target
     }
 
     fun setSmbConfig(host: String, share: String, folder: String, user: String, password: String) {
-        prefs.edit()
-            .putString(KEY_SMB_HOST, host.trim())
-            .putString(KEY_SMB_SHARE, share.trim())
-            .putString(KEY_SMB_FOLDER, folder.trim())
-            .putString(KEY_SMB_USER, user)
-            .putString(KEY_SMB_PASS, password)
-            .apply()
+        prefs.edit {
+            putString(KEY_SMB_HOST, host.trim())
+            putString(KEY_SMB_SHARE, share.trim())
+            putString(KEY_SMB_FOLDER, folder.trim())
+            putString(KEY_SMB_USER, user)
+            putString(KEY_SMB_PASS, password)
+        }
         _smbHost.value = host.trim()
         _smbShare.value = share.trim()
         _smbFolder.value = folder.trim()
@@ -365,14 +366,14 @@ class AppSettings private constructor(context: Context) {
      */
     val syncDeviceId: String
         get() = prefs.getString(KEY_SYNC_DEVICE_ID, null) ?: java.util.UUID.randomUUID().toString()
-            .also { prefs.edit().putString(KEY_SYNC_DEVICE_ID, it).apply() }
+            .also { prefs.edit { putString(KEY_SYNC_DEVICE_ID, it) } }
 
     /** Whether to run a NAS sync automatically each time the app is opened. Off by default. */
     private val _nasAutoSync = MutableStateFlow(prefs.getBoolean(KEY_NAS_AUTO_SYNC, false))
     val nasAutoSync: StateFlow<Boolean> = _nasAutoSync.asStateFlow()
 
     fun setNasAutoSync(enabled: Boolean) {
-        prefs.edit().putBoolean(KEY_NAS_AUTO_SYNC, enabled).apply()
+        prefs.edit { putBoolean(KEY_NAS_AUTO_SYNC, enabled) }
         _nasAutoSync.value = enabled
     }
 
@@ -388,7 +389,7 @@ class AppSettings private constructor(context: Context) {
     var vodSyncedAtMillis: Long
         get() = prefs.getLong(KEY_VOD_SYNCED_AT, 0L)
         set(value) {
-            prefs.edit().putLong(KEY_VOD_SYNCED_AT, value).apply()
+            prefs.edit { putLong(KEY_VOD_SYNCED_AT, value) }
         }
 
     /**
@@ -401,7 +402,7 @@ class AppSettings private constructor(context: Context) {
 
     fun setTmdbApiKey(key: String) {
         val trimmed = key.trim()
-        prefs.edit().putString(KEY_TMDB_KEY, trimmed).apply()
+        prefs.edit { putString(KEY_TMDB_KEY, trimmed) }
         _tmdbApiKey.value = trimmed
     }
 
@@ -425,7 +426,7 @@ class AppSettings private constructor(context: Context) {
     }
 
     private fun persistStremioAddons(list: List<StremioAddon>) {
-        prefs.edit().putString(KEY_STREMIO_ADDONS, addonJson.encodeToString(list)).apply()
+        prefs.edit { putString(KEY_STREMIO_ADDONS, addonJson.encodeToString(list)) }
         _stremioAddons.value = list
     }
 

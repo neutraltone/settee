@@ -171,7 +171,7 @@ class TmdbClient(
         return runCatching {
             http.newCall(request).execute().use { response ->
                 if (!response.isSuccessful) return null
-                val body = response.body?.string() ?: return null
+                val body = response.body.string()
                 json.parseToJsonElement(body)
             }
         }.onFailure { Log.w(TAG, "TMDB request failed", it) }.getOrNull()

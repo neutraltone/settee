@@ -22,6 +22,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.core.content.edit
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -135,7 +136,7 @@ class UpdateViewModel(app: Application) : AndroidViewModel(app) {
             if (now - prefs.getLong(KEY_LAST_CHECK, 0L) < CHECK_INTERVAL_MS) return@launch
 
             val update = checker.check()
-            prefs.edit().putLong(KEY_LAST_CHECK, now).apply()
+            prefs.edit { putLong(KEY_LAST_CHECK, now) }
             if (update != null) _state.value = UpdateUiState.Available(update)
         }
     }

@@ -153,7 +153,7 @@
 
     <issue
         id="DiscouragedApi"
-        message="Should not restrict activity to fixed orientation. This may not be suitable for different form factors, causing the app to be letterboxed."
+        message="Fixed screen orientations will be ignored in most cases, starting from Android 16. Android is moving toward a model where apps are expected to adapt to various orientations, display sizes, and aspect ratios."
         errorLine1="            android:screenOrientation=&quot;fullUser&quot;"
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
@@ -259,28 +259,6 @@
             file="src/main/res/values/strings.xml"
             line="468"
             column="5"/>
-    </issue>
-
-    <issue
-        id="ObsoleteSdkInt"
-        message="Unnecessary; SDK_INT is never &lt; 23"
-        errorLine1="    if (Build.VERSION.SDK_INT &lt; Build.VERSION_CODES.M) return true"
-        errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/app/opentv/core/AndroidExt.kt"
-            line="36"
-            column="9"/>
-    </issue>
-
-    <issue
-        id="ObsoleteSdkInt"
-        message="Unnecessary; SDK_INT is never &lt; 23"
-        errorLine1="    if (Build.VERSION.SDK_INT &lt; Build.VERSION_CODES.M) return"
-        errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/app/opentv/core/AndroidExt.kt"
-            line="50"
-            column="9"/>
     </issue>
 
     <issue

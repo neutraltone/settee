@@ -69,7 +69,7 @@ cd settee
 ./gradlew assembleDebug
 ```
 
-You need JDK 17 and the Android SDK (API 35); Android Studio provides both. The debug APK lands
+You need JDK 17 and the Android SDK (API 37); Android Studio provides both. The debug APK lands
 in `app/build/outputs/apk/debug/` and installs as `uk.neutraltone.settee.debug`, alongside a
 release build.
 

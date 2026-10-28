@@ -59,7 +59,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -68,6 +68,7 @@ import androidx.compose.ui.unit.dp
 import androidx.documentfile.provider.DocumentFile
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import app.opentv.R
 import app.opentv.core.AppSettings
 import app.opentv.core.ServiceLocator
@@ -89,6 +90,7 @@ import kotlinx.coroutines.withContext
 @Composable
 fun RecordingSettingsScreen(onBack: () -> Unit) {
     val context = LocalContext.current
+    val resources = LocalResources.current
     val settings = remember { ServiceLocator.get(context).settings }
     val scope = rememberCoroutineScope()
 
@@ -119,12 +121,12 @@ fun RecordingSettingsScreen(onBack: () -> Unit) {
             val flags = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
             runCatching { context.contentResolver.takePersistableUriPermission(uri, flags) }
             val label = DocumentFile.fromTreeUri(context, uri)?.name
-                ?: uri.lastPathSegment ?: context.getString(R.string.recset_usb_label)
+                ?: uri.lastPathSegment ?: resources.getString(R.string.recset_usb_label)
             settings.setUsbTree(uri.toString(), label)
             usbTree = uri.toString()
             usbLabel = label
             target = AppSettings.RecordingTarget.USB
-            status = context.getString(R.string.recset_usb_saving_to, label)
+            status = resources.getString(R.string.recset_usb_saving_to, label)
         }
     }
 
@@ -246,7 +248,7 @@ fun RecordingSettingsScreen(onBack: () -> Unit) {
                         enabled = !testing && host.isNotBlank() && share.isNotBlank(),
                         onClick = {
                             testing = true
-                            status = context.getString(R.string.recset_status_testing)
+                            status = resources.getString(R.string.recset_status_testing)
                             val cfg = SmbConfig(host.trim(), share.trim(), folder.trim(), user, password)
                             scope.launch {
                                 val result = withContext(Dispatchers.IO) {
@@ -254,9 +256,9 @@ fun RecordingSettingsScreen(onBack: () -> Unit) {
                                 }
                                 testing = false
                                 status = result.fold(
-                                    onSuccess = { context.getString(R.string.recset_status_connected) },
+                                    onSuccess = { resources.getString(R.string.recset_status_connected) },
                                     onFailure = {
-                                        context.getString(
+                                        resources.getString(
                                             R.string.recset_status_failed,
                                             it.message ?: it.javaClass.simpleName,
                                         )
@@ -312,7 +314,7 @@ fun RecordingSettingsScreen(onBack: () -> Unit) {
                 Spacer(Modifier.height(12.dp))
                 Button(onClick = {
                     runCatching { folderPicker.launch(null) }
-                        .onFailure { status = context.getString(R.string.recset_usb_no_picker) }
+                        .onFailure { status = resources.getString(R.string.recset_usb_no_picker) }
                 }) {
                     Text(
                         if (usbTree != null) {
@@ -351,7 +353,7 @@ fun RecordingSettingsScreen(onBack: () -> Unit) {
             enabled = target != AppSettings.RecordingTarget.USB || usbTree != null,
             onClick = {
                 persist()
-                status = context.getString(R.string.recset_status_saved)
+                status = resources.getString(R.string.recset_status_saved)
             },
         ) { Text(stringResource(R.string.common_save)) }
     }
@@ -485,6 +487,7 @@ private fun StepButton(icon: androidx.compose.ui.graphics.vector.ImageVector, en
 @Composable
 private fun BackgroundStatus() {
     val context = LocalContext.current
+    val resources = LocalResources.current
     val lifecycleOwner = LocalLifecycleOwner.current
     var allowed by remember { mutableStateOf(context.isIgnoringBatteryOptimizations()) }
     DisposableEffect(lifecycleOwner) {
@@ -495,7 +498,7 @@ private fun BackgroundStatus() {
                 if (now && !allowed) {
                     Toast.makeText(
                         context,
-                        context.getString(R.string.recset_background_toast),
+                        resources.getString(R.string.recset_background_toast),
                         Toast.LENGTH_LONG,
                     ).show()
                 }
