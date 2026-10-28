@@ -153,6 +153,24 @@ jobs:
           path: app/build/reports/detekt/
           if-no-files-found: ignore
 
+  screenshot-tools:
+    name: Screenshot tools
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+
+      # The Screenshots workflow never fails a PR (#44), so its comparison logic is tested here.
+      - name: Comparison tests
+        run: |
+          pip install -r tools/screenshots/requirements.txt
+          python3 -m unittest discover -s tools/screenshots
+
   gitleaks:
     name: gitleaks
     runs-on: ubuntu-latest

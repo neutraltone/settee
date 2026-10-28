@@ -5,6 +5,7 @@ plugins {
     alias(libs.plugins.ksp)
     alias(libs.plugins.ktlint)
     alias(libs.plugins.detekt)
+    alias(libs.plugins.roborazzi)
 }
 
 // A release changes this and nothing else; versionCodeOf (buildSrc/AppVersion.kt) derives the code.
@@ -225,4 +226,9 @@ dependencies {
     testImplementation(platform(libs.androidx.compose.bom))
     testImplementation(libs.androidx.compose.ui.test.junit4)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
+    // Screenshots (#44): Roborazzi captures them inside the Robolectric UI tests, and only when
+    // recording (./gradlew recordRoborazziDebug); a plain test run skips the capture.
+    testImplementation(libs.roborazzi)
+    testImplementation(libs.roborazzi.compose)
+    testImplementation(libs.coil.test)
 }

@@ -6,11 +6,14 @@
 package app.opentv
 
 import androidx.compose.ui.semantics.ProgressBarRangeInfo
+import androidx.compose.ui.test.assertIsFocused
+import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasProgressBarRangeInfo
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.requestFocus
 import app.opentv.data.model.Episode
 import app.opentv.data.repo.WatchStatus
 import app.opentv.ui.vod.EpisodeRow
@@ -19,14 +22,19 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import org.robolectric.annotation.GraphicsMode
 
 // Plain Application: OpenTvApp schedules WorkManager on start, which a lone composable doesn't need.
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [34], application = android.app.Application::class)
+@Config(sdk = [34], qualifiers = TV_1080P, application = android.app.Application::class)
+@GraphicsMode(GraphicsMode.Mode.NATIVE)
 class EpisodeRowTest {
 
     @get:Rule
     val compose = createComposeRule()
+
+    @get:Rule
+    val artwork = PlaceholderArtwork()
 
     private val episode = Episode(
         id = 7,
@@ -42,7 +50,7 @@ class EpisodeRowTest {
         streamUrl = "https://example.com/e.mkv",
     )
 
-    private fun show(status: WatchStatus, ep: Episode = episode) = compose.setContent {
+    private fun show(status: WatchStatus, ep: Episode = episode) = compose.setTvContent {
         EpisodeRow(ep, status, seriesArtUrl = "https://example.com/poster.jpg", onPlay = { _, _, _ -> })
     }
 
@@ -51,6 +59,7 @@ class EpisodeRowTest {
         show(WatchStatus.Watched)
 
         compose.onNodeWithContentDescription("Watched", useUnmergedTree = true).assertExists()
+        captureScreen("episode_row_watched")
     }
 
     @Test
@@ -60,6 +69,7 @@ class EpisodeRowTest {
         compose.onNodeWithContentDescription("In progress", useUnmergedTree = true).assertExists()
         compose.onNode(hasProgressBarRangeInfo(ProgressBarRangeInfo(0.25f, 0f..1f)), useUnmergedTree = true)
             .assertExists()
+        captureScreen("episode_row_in_progress")
     }
 
     @Test
@@ -70,6 +80,7 @@ class EpisodeRowTest {
         compose.onNode(hasContentDescription("In progress"), useUnmergedTree = true).assertDoesNotExist()
         compose.onNode(hasProgressBarRangeInfo(ProgressBarRangeInfo(0f, 0f..1f)), useUnmergedTree = true)
             .assertDoesNotExist()
+        captureScreen("episode_row_unwatched")
     }
 
     @Test
@@ -86,5 +97,16 @@ class EpisodeRowTest {
 
         compose.onNode(hasContentDescription("Thumbnail for episode 3"), useUnmergedTree = true).assertExists()
         compose.onNode(hasText("3"), useUnmergedTree = true).assertExists()
+        captureScreen("episode_row_series_artwork")
+    }
+
+    @Test
+    fun `a focused episode is highlighted`() {
+        show(WatchStatus.InProgress(progress = 0.6f))
+
+        compose.onNode(hasClickAction()).requestFocus()
+
+        compose.onNode(hasClickAction()).assertIsFocused()
+        captureScreen("episode_row_focused")
     }
 }
