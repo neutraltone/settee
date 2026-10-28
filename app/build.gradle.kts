@@ -94,6 +94,15 @@ android {
         // Existing findings live in the baseline so CI fails only on new ones; regenerate with
         // ./gradlew updateLintBaseline after fixing some, never to hide a new finding.
         baseline = file("lint-baseline.xml")
+        // New strings go in the base file only and fall back to English, so a missing
+        // translation is expected, not an error. Dependency versions are Dependabot's job.
+        disable +=
+            setOf(
+                "MissingTranslation",
+                "GradleDependency",
+                "AndroidGradlePluginVersion",
+                "NewerVersionAvailable",
+            )
     }
 
     testOptions {
