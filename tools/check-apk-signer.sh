@@ -35,8 +35,11 @@ if ! certs=$("$APKSIGNER" verify --print-certs "$apk"); then
     exit 1
 fi
 
-# With key rotation one signer is listed once per SDK range, hence the de-duplication.
-actual=$(printf '%s\n' "$certs" | sed -n 's/^Signer .*certificate SHA-256 digest: //p' | normalise | sort -u)
+# Older build-tools print "Signer #1 certificate SHA-256 digest: …", 37 prints "V2 Signer: certificate
+# SHA-256 digest: …", once per signature scheme. The same signer may also be listed once per SDK
+# range after key rotation, hence the de-duplication. A source stamp is not a signing key.
+actual=$(printf '%s\n' "$certs" | sed -n '/^Source Stamp/d; s/^[^ ]* *Signer[^:]*:* *certificate SHA-256 digest: //p' |
+    normalise | sort -u)
 
 if [ "$actual" != "$expected" ]; then
     echo "$apk is not signed with the release key." >&2
