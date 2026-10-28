@@ -106,12 +106,14 @@ jobs:
             python3 tools/screenshots/screenshots.py comments "$SHOTS/previous" "$SHOTS/head" "$SHOTS/comments" "$PREVIOUS_SHA"
           fi
 
-      # The token is only here: the renders above run each commit's own Gradle build.
+      # The token is only here: the renders above run each commit's own Gradle build. It's the
+      # personal token release-please uses (docs/RELEASING.md), because GitHub refuses gh --attach
+      # uploads from Actions' own token ("unsupported authentication type").
       - name: Update the description
         if: steps.compare.outputs.publish == 'true'
         continue-on-error: true
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ secrets.RELEASE_PLEASE_TOKEN }}
           # publish.sh runs gh from the screenshot directories, outside the checkout, where gh
           # can't tell which repository the PR number belongs to.
           GH_REPO: ${{ github.repository }}

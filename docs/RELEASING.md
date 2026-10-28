@@ -49,6 +49,8 @@ changing.
   maintainer to approve them. To avoid that, create a fine-grained personal access token for this
   repo with Contents and Pull requests read/write and store it as the `RELEASE_PLEASE_TOKEN`
   Actions secret; the workflow uses it when present, and the release PR is then opened as you.
+  The Screenshots workflow needs the same token to upload images to PR descriptions, which
+  Actions' own token can't do; without it, PRs get no screenshots.
 
 ## Signing
 

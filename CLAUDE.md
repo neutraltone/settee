@@ -54,7 +54,7 @@ adds rules for Xtream credentials in URLs and MAG MACs; use placeholders such as
 
 `screenshots.yml` renders the screenshots of a PR's merge base and head in one job, and writes a before |
 after table of the changed screens into the description between `<!-- screenshots:start -->` markers,
-uploading the images with `gh --attach` (later pushes also get a comment of what changed since the
+uploading the images with `gh --attach` as `RELEASE_PLEASE_TOKEN`, since Actions' own token can't (later pushes also get a comment of what changed since the
 previous one). It only reports, never fails, and skips Dependabot and release-please. Nothing is
 committed: there are no reference images.
 
