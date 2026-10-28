@@ -17,11 +17,15 @@ updates:
       androidx:
         patterns: ['androidx.*']
       kotlin:
-        patterns: ['org.jetbrains.kotlin*', 'com.google.devtools.ksp']
+        # Not org.jetbrains.kotlin*, which would also swallow kotlinx-coroutines-test.
+        patterns: ['org.jetbrains.kotlin:*', 'org.jetbrains.kotlin.*', 'com.google.devtools.ksp*']
       code-quality:
-        patterns: ['io.gitlab.arturbosch.detekt*', 'io.nlopez.compose.rules:*', 'org.jlleitschuh.gradle.ktlint']
+        patterns: ['io.gitlab.arturbosch.detekt*', 'io.nlopez.compose.rules:*', 'org.jlleitschuh.gradle.ktlint*', 'com.pinterest.ktlint*']
       testing:
         patterns: ['junit:*', 'com.google.truth:*', 'org.robolectric:*', 'org.jetbrains.kotlinx:kotlinx-coroutines-test']
+      # Everything else (okhttp, coil, kotlinx, zxing, smbj, ...) in one weekly PR.
+      other:
+        patterns: ['*']
 
   - package-ecosystem: github-actions
     directory: /

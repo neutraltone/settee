@@ -10,6 +10,9 @@ id = "xtream-query-credentials"
 description = "Xtream/M3U URL with a real-looking username and password in the query"
 regex = '''(?i)username=([^&\s"'$]{3,})&password=([^&\s"'$]{3,})'''
 [[rules.allowlists]]
+# Without this the allowlist is tested against the first capture group (the username) only;
+# "line" so it also sees the example.com host before the query.
+regexTarget = "line"
 regexes = ['''(?i)example\.(com|org|net)''', '''(?i)username=(user|test|demo)[^&]*&password=(pass|test|demo)''']
 
 [[rules]]
@@ -17,6 +20,7 @@ id = "xtream-path-credentials"
 description = "Xtream stream URL with username/password path segments"
 regex = '''(?i)/(?:live|movie|series)/([A-Za-z0-9._%-]{3,})/([A-Za-z0-9._%-]{3,})/[0-9]+'''
 [[rules.allowlists]]
+regexTarget = "match"
 regexes = ['''(?i)/(?:live|movie|series)/(user|test|demo)[^/]*/(pass|test|demo)''']
 
 [[rules]]

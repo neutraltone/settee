@@ -3,10 +3,11 @@
 #   type(#issue): description
 # The issue scope is required for feat, fix, refactor and perf, and optional for docs, chore, ci,
 # test and build. release-please's own "chore(main): release x.y.z" also passes.
-# Usage: tools/check-message.sh "<first line>"
+# Usage: tools/check-message.sh "<message or title>"
 # POSIX sh and grep -E only, so the commit-msg hook (#6) and CI can share it with no Node.
 
-line=$1
+# Only the first line counts; grep would otherwise pass a message if any later line matched.
+line=$(printf '%s\n' "$1" | head -n 1)
 
 if printf '%s\n' "$line" | grep -Eq '^(feat|fix|refactor|perf)\(#[0-9]+\)!?: .+' ||
     printf '%s\n' "$line" | grep -Eq '^(docs|chore|ci|test|build)(\(#[0-9]+\))?!?: .+' ||
