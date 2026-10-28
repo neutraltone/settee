@@ -114,7 +114,7 @@ internal fun collapseMovieVariants(movies: List<Movie>): List<MovieVariantGroup>
  *
  * Same principle as [EpgRepository]: a refresh that fails must never leave the user with less
  * than they started with. Catalogue writes go through [ChannelDao.replaceCatalogue], which
- * merges rather than wipes and carries favourites, hidden flags and manual ordering across.
+ * merges rather than wipes and carries hidden flags and manual ordering across.
  */
 class CatalogRepository(
     private val sourceDao: SourceDao,
@@ -151,8 +151,6 @@ class CatalogRepository(
      */
     fun observeChannelsInIncludingHidden(sourceId: Long?, categoryIds: List<String>): Flow<List<Channel>> =
         channelDao.observeInCategoriesIncludingHidden(sourceId, categoryIds)
-
-    fun observeFavouriteChannels(): Flow<List<Channel>> = channelDao.observeFavourites()
 
     /** Reactive number of visible channels on disk — the UI uses this to tell "guide still
      * building" (channels exist) apart from "nothing loaded" (a failed or empty sync). */
@@ -395,8 +393,8 @@ class CatalogRepository(
      * Loads a movie and, if its detail fields are still bare, back-fills them from the provider's
      * `get_vod_info` and persists the merged row before returning it. Safe to call whenever a detail
      * screen opens: it runs off the main thread, only touches the network when something is missing,
-     * tolerates any failure (returning the row unchanged), and — because it copies the stored row —
-     * preserves the favourite flag. Non-Xtream sources are returned as-is.
+     * tolerates any failure (returning the row unchanged), and copies the stored row so nothing
+     * already on it is lost. Non-Xtream sources are returned as-is.
      */
     suspend fun movieDetail(id: Long): Movie? = withContext(Dispatchers.IO) {
         val movie = movieDao.byId(id) ?: return@withContext null
@@ -542,8 +540,6 @@ class CatalogRepository(
     /** How many of a title's genres are in the wanted set — the More-Like-This overlap. */
     private fun sharedGenreCount(genre: String?, wanted: Set<String>): Int = splitGenres(genre).count { it in wanted }
 
-    suspend fun setChannelFavourite(id: Long, favourite: Boolean) = channelDao.setFavourite(id, favourite)
-
     suspend fun setChannelHidden(id: Long, hidden: Boolean) = channelDao.setHidden(id, hidden)
 
     /** Sets (or clears, on blank) a channel's manual rename. Trimmed; a blank name clears it. */
@@ -555,7 +551,7 @@ class CatalogRepository(
     // --- Web channel manager: one-shot reads for the socket-thread server ------------------------
     // The manager server handles one HTTP request at a time off the UI thread and wants plain
     // lists, not Flows. These are read-only pass-throughs; every mutation still goes through the
-    // suspend setters above (setChannelHidden/Favourite/CustomName/SortIndex).
+    // suspend setters above (setChannelHidden/CustomName/SortIndex).
 
     /** Enabled providers, for the manager's source selector. */
     suspend fun enabledSources(): List<Source> = sourceDao.enabled()
@@ -571,17 +567,9 @@ class CatalogRepository(
     suspend fun channelsInCategoryForManager(sourceId: Long?, categoryId: String): List<Channel> =
         channelDao.channelsInCategoryIncludingHidden(sourceId, categoryId)
 
-    suspend fun setMovieFavourite(id: Long, favourite: Boolean) = movieDao.setFavourite(id, favourite)
-
-    // --- Sync helpers: read/apply curation by stable stream URL ---
-    suspend fun favouriteChannelUrls(): List<String> = channelDao.favouriteUrls()
+    // --- Sync helpers: read/apply hidden channels by stable stream URL ---
     suspend fun hiddenChannelUrls(): List<String> = channelDao.hiddenUrls()
-    suspend fun markChannelFavouriteByUrl(url: String) = channelDao.markFavouriteByUrl(url)
     suspend fun markChannelHiddenByUrl(url: String) = channelDao.markHiddenByUrl(url)
-    suspend fun favouriteMovieUrls(): List<String> = movieDao.favouriteUrls()
-    suspend fun markMovieFavouriteByUrl(url: String) = movieDao.markFavouriteByUrl(url)
-    suspend fun favouriteSeriesIds(): List<String> = seriesDao.favouriteSeriesIds()
-    suspend fun markSeriesFavouriteBySeriesId(seriesId: String) = seriesDao.markFavouriteBySeriesId(seriesId)
 
     /** Series episodes are fetched lazily — panels are slow and most series are never opened. */
     suspend fun ensureEpisodes(source: Source, seriesId: String) {

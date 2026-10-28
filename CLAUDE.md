@@ -80,9 +80,10 @@ catalogue refresh, playback or Xtream parsing. The big picture:
 
 ### Data rules that are easy to break
 
-- **Catalogue refresh merges, never wipes.** `ChannelDao.replaceCatalogue` carries `favourite`, `hidden`,
-  `sortIndex`, custom names and EPG overrides across by `streamId`; M3U `streamId`s are stable FNV-1a
-  hashes. Anything that changes identity silently deletes users' favourites.
+- **Catalogue refresh merges, never wipes.** `ChannelDao.replaceCatalogue` carries `hidden`, `sortIndex`,
+  custom names and EPG overrides across by `streamId`; M3U `streamId`s are stable FNV-1a hashes.
+  Favourites aren't on the rows: they match by stream URL (series: provider `seriesId`), so anything that
+  changes a URL or series id silently drops them.
 - **EPG never deletes before it has the replacement**: batched upserts of 500, pruning by age only after
   success. Times are UTC epoch millis everywhere; convert to local only when drawing.
 - **SQLite bound-variable limit:** never write `IN (:hugeList)` / `NOT IN (:everyId)` over catalogue-sized
@@ -94,15 +95,19 @@ catalogue refresh, playback or Xtream parsing. The big picture:
 
 ### Watch state, favourites, profiles
 
-- **`data/repo/ViewerLibrary` owns all per-Profile watch state**: it records progress, answers each
-  title's `WatchStatus` (Watched, In Progress, Unwatched), resume points and the In Progress list, and
-  merges synced positions newest-wins. Screens and sync go through it, never `PlaybackPositionDao`.
+- **`data/repo/ViewerLibrary` owns all per-Profile watch state and Favourites**: it records progress,
+  answers each title's `WatchStatus` (Watched, In Progress, Unwatched), resume points and the In Progress
+  list, merges synced positions newest-wins, and sets and lists Favourites. Screens and sync go through
+  it, never `PlaybackPositionDao` or `FavouriteDao`.
   Watched = past 93%, everywhere (status, resume, Continue Watching). Live TV is never resumed.
 - Resume points are `PlaybackPosition`, keyed `(profileId, mediaKey)` where `mediaKey` is `movie:<localId>`
   or `ep:<localId>` (local Room row ids).
-- `favourite` is a column on `channels`, `movies` and `series`. Cross-device sync identifies favourites by
-  `streamUrl` (channels, movies) or provider `seriesId` (series), and positions newest-wins
-  (`sync/SyncData.kt`, `SyncEngine.kt`) — keep new watch/favourite state syncable the same way.
+- Favourites belong to a Profile (ADR 0001): the `favourites` table is keyed `(profileId, kind, identity)`,
+  identity being the `streamUrl` (channels, movies) or provider `seriesId` (series), so they survive a
+  catalogue refresh and match across devices. Hidden channels and channel order stay device-wide columns
+  on `channels`. Sync uses the same identities, and positions newest-wins (`sync/SyncData.kt`,
+  `SyncEngine.kt`); until sync groups Favourites by Profile it carries only the active Profile's — keep
+  new watch/favourite state syncable the same way.
 - `VodViewModel.continueWatching` builds the Continue Watching shelf from `ViewerLibrary.inProgress()`.
 
 ### Database migrations

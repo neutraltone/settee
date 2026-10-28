@@ -278,13 +278,13 @@ private fun ChannelListRow(
         }
         IconButton(onClick = onToggleFavourite, modifier = Modifier.size(40.dp)) {
             Icon(
-                imageVector = if (row.primary.favourite) Icons.Filled.Star else Icons.Outlined.StarOutline,
-                contentDescription = if (row.primary.favourite) {
+                imageVector = if (row.favourite) Icons.Filled.Star else Icons.Outlined.StarOutline,
+                contentDescription = if (row.favourite) {
                     stringResource(R.string.common_remove_favourite)
                 } else {
                     stringResource(R.string.common_favourite)
                 },
-                tint = if (row.primary.favourite) {
+                tint = if (row.favourite) {
                     MaterialTheme.colorScheme.primary
                 } else {
                     MaterialTheme.colorScheme.onSurfaceVariant
@@ -421,13 +421,13 @@ private fun GuideRow(
                 modifier = Modifier.size(40.dp),
             ) {
                 Icon(
-                    imageVector = if (row.primary.favourite) Icons.Filled.Star else Icons.Outlined.StarOutline,
-                    contentDescription = if (row.primary.favourite) {
+                    imageVector = if (row.favourite) Icons.Filled.Star else Icons.Outlined.StarOutline,
+                    contentDescription = if (row.favourite) {
                         stringResource(R.string.common_remove_favourite)
                     } else {
                         stringResource(R.string.common_favourite)
                     },
-                    tint = if (row.primary.favourite) {
+                    tint = if (row.favourite) {
                         MaterialTheme.colorScheme.primary
                     } else {
                         MaterialTheme.colorScheme.onSurfaceVariant

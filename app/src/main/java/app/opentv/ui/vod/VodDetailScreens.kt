@@ -111,6 +111,8 @@ fun MovieDetailScreen(
         LoadingDetail()
         return
     }
+    val favouriteMovies by viewModel.favouriteMovies.collectAsState()
+    val favourite = favouriteMovies.any { it.streamUrl == m.streamUrl }
 
     // Land focus on the primary action once the page is up, so a d-pad has somewhere to be.
     LaunchedEffect(m.id) {
@@ -133,14 +135,11 @@ fun MovieDetailScreen(
                     modifier = Modifier.focusRequester(playFocus),
                 ) { onPlay(m) }
                 DetailButton(
-                    icon = if (m.favourite) Icons.Filled.Star else Icons.Outlined.StarOutline,
+                    icon = if (favourite) Icons.Filled.Star else Icons.Outlined.StarOutline,
                     label = stringResource(
-                        if (m.favourite) R.string.common_remove_favourite else R.string.common_favourite,
+                        if (favourite) R.string.common_remove_favourite else R.string.common_favourite,
                     ),
-                ) {
-                    viewModel.toggleMovieFavourite(m)
-                    movie = m.copy(favourite = !m.favourite)
-                }
+                ) { viewModel.setMovieFavourite(m, !favourite) }
                 // Only when the user has add-ons set up — queries them for this film's streams.
                 if (hasAddons) {
                     DetailButton(
@@ -301,6 +300,7 @@ fun SeriesDetailScreen(
     val episodes by (s?.let { viewModel.episodes(it) } ?: viewModel.noEpisodes)
         .collectAsState(initial = emptyList())
     val statuses by viewModel.episodeStatuses.collectAsState(initial = EpisodeStatuses())
+    val favouriteSeries by viewModel.favouriteSeries.collectAsState()
 
     if (s == null) {
         LoadingDetail()
@@ -311,6 +311,7 @@ fun SeriesDetailScreen(
         delay(60)
         runCatching { favFocus.requestFocus() }
     }
+    val favourite = favouriteSeries.any { it.seriesId == s.seriesId }
 
     // Group episodes by season (seasons ascending, episodes ordered within each) — the classic
     // "episode-by-season" list.
@@ -329,16 +330,13 @@ fun SeriesDetailScreen(
                 meta = seriesMeta(s),
             ) {
                 DetailButton(
-                    icon = if (s.favourite) Icons.Filled.Star else Icons.Outlined.StarOutline,
+                    icon = if (favourite) Icons.Filled.Star else Icons.Outlined.StarOutline,
                     label = stringResource(
-                        if (s.favourite) R.string.common_remove_favourite else R.string.common_favourite,
+                        if (favourite) R.string.common_remove_favourite else R.string.common_favourite,
                     ),
                     primary = true,
                     modifier = Modifier.focusRequester(favFocus),
-                ) {
-                    viewModel.toggleSeriesFavourite(s)
-                    series = s.copy(favourite = !s.favourite)
-                }
+                ) { viewModel.setSeriesFavourite(s, !favourite) }
             }
         }
         item(key = "info") {

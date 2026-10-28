@@ -58,6 +58,7 @@ import app.opentv.data.model.Movie
 import app.opentv.data.model.Series
 import app.opentv.data.model.Source
 import app.opentv.data.parser.displayTitle
+import app.opentv.data.repo.GenreGroup
 import app.opentv.ui.VodViewModel
 import coil.compose.AsyncImage
 
@@ -78,6 +79,7 @@ fun MoviesScreen(
 ) {
     val categories by viewModel.movieCategories.collectAsState()
     val resume by viewModel.continueWatching.collectAsState()
+    val favourites by viewModel.favouriteMovies.collectAsState()
     val recommended by viewModel.recommendedMovies.collectAsState()
     val recentlyAdded by viewModel.recentlyAddedMovies.collectAsState()
     val genreRows by viewModel.movieGenreRows.collectAsState()
@@ -97,6 +99,7 @@ fun MoviesScreen(
     var browseCategory by remember { mutableStateOf<String?>(null) }
 
     val hasContent = resume.isNotEmpty() ||
+        favourites.isNotEmpty() ||
         recommended.isNotEmpty() ||
         recentlyAdded.isNotEmpty() ||
         genreRows.isNotEmpty()
@@ -139,27 +142,46 @@ fun MoviesScreen(
                     )
                     else -> EmptyVod(stringResource(R.string.vod_no_movies), stringResource(R.string.vod_no_movies_add))
                 }
-                else -> LazyColumn(
-                    contentPadding = PaddingValues(vertical = 8.dp),
-                    verticalArrangement = Arrangement.spacedBy(14.dp),
-                    modifier = Modifier.fillMaxSize(),
-                ) {
-                    if (resume.isNotEmpty()) item(key = "cw") { ContinueWatchingRow(resume, onResume) }
-                    if (recommended.isNotEmpty()) {
-                        item(key = "rec") {
-                            MoviePosterRow(stringResource(R.string.vod_recommended), recommended, onOpenMovie)
-                        }
-                    }
-                    if (recentlyAdded.isNotEmpty()) {
-                        item(key = "recent") {
-                            MoviePosterRow(stringResource(R.string.vod_recently_added), recentlyAdded, onOpenMovie)
-                        }
-                    }
-                    items(genreRows, key = { "g:${it.genre}" }) { group ->
-                        MoviePosterRow(group.genre, group.items, onOpenMovie)
-                    }
-                }
+                else -> MovieShelves(resume, favourites, recommended, recentlyAdded, genreRows, onResume, onOpenMovie)
             }
+        }
+    }
+}
+
+/** The Movies home rows, top to bottom. An empty row is left out rather than shown blank. */
+@Composable
+internal fun MovieShelves(
+    resume: List<VodViewModel.ResumeItem>,
+    favourites: List<Movie>,
+    recommended: List<Movie>,
+    recentlyAdded: List<Movie>,
+    genreRows: List<GenreGroup<Movie>>,
+    onResume: (mediaKey: String, url: String, title: String) -> Unit,
+    onOpenMovie: (Movie) -> Unit,
+) {
+    LazyColumn(
+        contentPadding = PaddingValues(vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp),
+        modifier = Modifier.fillMaxSize(),
+    ) {
+        if (resume.isNotEmpty()) item(key = "cw") { ContinueWatchingRow(resume, onResume) }
+        if (favourites.isNotEmpty()) {
+            item(key = "fav") {
+                MoviePosterRow(stringResource(R.string.vod_favourites), favourites, onOpenMovie)
+            }
+        }
+        if (recommended.isNotEmpty()) {
+            item(key = "rec") {
+                MoviePosterRow(stringResource(R.string.vod_recommended), recommended, onOpenMovie)
+            }
+        }
+        if (recentlyAdded.isNotEmpty()) {
+            item(key = "recent") {
+                MoviePosterRow(stringResource(R.string.vod_recently_added), recentlyAdded, onOpenMovie)
+            }
+        }
+        items(genreRows, key = { "g:${it.genre}" }) { group ->
+            MoviePosterRow(group.genre, group.items, onOpenMovie)
         }
     }
 }
@@ -181,6 +203,7 @@ fun SeriesScreen(
 ) {
     val categories by viewModel.seriesCategories.collectAsState()
     val resume by viewModel.continueWatching.collectAsState()
+    val favourites by viewModel.favouriteSeries.collectAsState()
     val recentlyAdded by viewModel.recentlyAddedSeries.collectAsState()
     val genreRows by viewModel.seriesGenreRows.collectAsState()
     val categorySeries by viewModel.series.collectAsState()
@@ -195,7 +218,10 @@ fun SeriesScreen(
 
     var browseCategory by remember { mutableStateOf<String?>(null) }
 
-    val hasContent = resume.isNotEmpty() || recentlyAdded.isNotEmpty() || genreRows.isNotEmpty()
+    val hasContent = resume.isNotEmpty() ||
+        favourites.isNotEmpty() ||
+        recentlyAdded.isNotEmpty() ||
+        genreRows.isNotEmpty()
 
     Column(Modifier.fillMaxSize()) {
         SearchAffordance(onOpenSearch)
@@ -233,22 +259,40 @@ fun SeriesScreen(
                     )
                     else -> EmptyVod(stringResource(R.string.vod_no_shows), stringResource(R.string.vod_no_shows_add))
                 }
-                else -> LazyColumn(
-                    contentPadding = PaddingValues(vertical = 8.dp),
-                    verticalArrangement = Arrangement.spacedBy(14.dp),
-                    modifier = Modifier.fillMaxSize(),
-                ) {
-                    if (resume.isNotEmpty()) item(key = "cw") { ContinueWatchingRow(resume, onResume) }
-                    if (recentlyAdded.isNotEmpty()) {
-                        item(key = "recent") {
-                            SeriesPosterRow(stringResource(R.string.vod_recently_added), recentlyAdded, onOpenSeries)
-                        }
-                    }
-                    items(genreRows, key = { "g:${it.genre}" }) { group ->
-                        SeriesPosterRow(group.genre, group.items, onOpenSeries)
-                    }
-                }
+                else -> SeriesShelves(resume, favourites, recentlyAdded, genreRows, onResume, onOpenSeries)
             }
+        }
+    }
+}
+
+/** The Shows home rows, top to bottom. An empty row is left out rather than shown blank. */
+@Composable
+internal fun SeriesShelves(
+    resume: List<VodViewModel.ResumeItem>,
+    favourites: List<Series>,
+    recentlyAdded: List<Series>,
+    genreRows: List<GenreGroup<Series>>,
+    onResume: (mediaKey: String, url: String, title: String) -> Unit,
+    onOpenSeries: (Series) -> Unit,
+) {
+    LazyColumn(
+        contentPadding = PaddingValues(vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp),
+        modifier = Modifier.fillMaxSize(),
+    ) {
+        if (resume.isNotEmpty()) item(key = "cw") { ContinueWatchingRow(resume, onResume) }
+        if (favourites.isNotEmpty()) {
+            item(key = "fav") {
+                SeriesPosterRow(stringResource(R.string.vod_favourites), favourites, onOpenSeries)
+            }
+        }
+        if (recentlyAdded.isNotEmpty()) {
+            item(key = "recent") {
+                SeriesPosterRow(stringResource(R.string.vod_recently_added), recentlyAdded, onOpenSeries)
+            }
+        }
+        items(genreRows, key = { "g:${it.genre}" }) { group ->
+            SeriesPosterRow(group.genre, group.items, onOpenSeries)
         }
     }
 }

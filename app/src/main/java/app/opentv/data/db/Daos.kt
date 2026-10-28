@@ -6,6 +6,7 @@
 package app.opentv.data.db
 
 import androidx.room.Dao
+import androidx.room.Delete
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
@@ -17,6 +18,7 @@ import app.opentv.data.model.Channel
 import app.opentv.data.model.EpgChannelAlias
 import app.opentv.data.model.EpgFeed
 import app.opentv.data.model.Episode
+import app.opentv.data.model.Favourite
 import app.opentv.data.model.Movie
 import app.opentv.data.model.PlaybackPosition
 import app.opentv.data.model.Profile
@@ -69,9 +71,6 @@ interface ChannelDao {
         """,
     )
     fun observe(sourceId: Long?, categoryId: String?): Flow<List<Channel>>
-
-    @Query("SELECT * FROM channels WHERE favourite = 1 AND hidden = 0 ORDER BY sortIndex, displayName")
-    fun observeFavourites(): Flow<List<Channel>>
 
     /**
      * Channels across a SET of provider categories. Needed because one logical category
@@ -142,7 +141,7 @@ interface ChannelDao {
         SELECT * FROM channels
         WHERE hidden = 0
           AND (displayName LIKE '%' || :query || '%' OR name LIKE '%' || :query || '%')
-        ORDER BY favourite DESC, sortIndex, displayName
+        ORDER BY sortIndex, displayName
         LIMIT :limit
         """,
     )
@@ -153,7 +152,7 @@ interface ChannelDao {
         """
         SELECT * FROM channels
         WHERE (displayName LIKE '%' || :query || '%' OR name LIKE '%' || :query || '%')
-        ORDER BY hidden, favourite DESC, sortIndex, displayName
+        ORDER BY hidden, sortIndex, displayName
         LIMIT :limit
         """,
     )
@@ -183,9 +182,6 @@ interface ChannelDao {
     @Query("SELECT COUNT(*) FROM channels WHERE hidden = 0")
     fun observeVisibleCount(): Flow<Int>
 
-    @Query("UPDATE channels SET favourite = :favourite WHERE id = :id")
-    suspend fun setFavourite(id: Long, favourite: Boolean)
-
     @Query("UPDATE channels SET hidden = :hidden WHERE id = :id")
     suspend fun setHidden(id: Long, hidden: Boolean)
 
@@ -203,15 +199,9 @@ interface ChannelDao {
     @Query("UPDATE channels SET streamUrl = :url WHERE id = :id")
     suspend fun updateStreamUrl(id: Long, url: String)
 
-    // --- Sync: identify favourites/hidden by stream URL (stable across devices) ---
-    @Query("SELECT streamUrl FROM channels WHERE favourite = 1")
-    suspend fun favouriteUrls(): List<String>
-
+    // --- Sync: identify hidden channels by stream URL (stable across devices) ---
     @Query("SELECT streamUrl FROM channels WHERE hidden = 1")
     suspend fun hiddenUrls(): List<String>
-
-    @Query("UPDATE channels SET favourite = 1 WHERE streamUrl = :url")
-    suspend fun markFavouriteByUrl(url: String)
 
     @Query("UPDATE channels SET hidden = 1 WHERE streamUrl = :url")
     suspend fun markHiddenByUrl(url: String)
@@ -248,7 +238,7 @@ interface ChannelDao {
     suspend fun deleteForSource(sourceId: Long)
 
     /**
-     * Preserves user state (favourites, hidden, manual order, custom names, EPG overrides) across a
+     * Preserves device state (hidden, manual order, custom names, EPG overrides) across a
      * catalogue refresh. Upsert would otherwise overwrite them with the defaults from the
      * freshly parsed rows.
      */
@@ -264,7 +254,6 @@ interface ChannelDao {
             } else {
                 channel.copy(
                     id = previous.id,
-                    favourite = previous.favourite,
                     // OR, not overwrite: the importer hides separator rows ('### UK ###')
                     // at parse time, and that decision must stick even for rows that
                     // predate the rule. User hides are preserved the same way.
@@ -429,9 +418,6 @@ interface MovieDao {
     )
     fun observe(categoryId: String?): Flow<List<Movie>>
 
-    @Query("SELECT * FROM movies WHERE favourite = 1 ORDER BY name")
-    fun observeFavourites(): Flow<List<Movie>>
-
     @Query("SELECT * FROM movies WHERE name LIKE '%' || :query || '%' ORDER BY name LIMIT :limit")
     fun search(query: String, limit: Int = 200): Flow<List<Movie>>
 
@@ -501,16 +487,6 @@ interface MovieDao {
     @Query("SELECT * FROM movies WHERE streamUrl = :url LIMIT 1")
     suspend fun byStreamUrl(url: String): Movie?
 
-    @Query("UPDATE movies SET favourite = :favourite WHERE id = :id")
-    suspend fun setFavourite(id: Long, favourite: Boolean)
-
-    // --- Sync: favourites by stream URL ---
-    @Query("SELECT streamUrl FROM movies WHERE favourite = 1")
-    suspend fun favouriteUrls(): List<String>
-
-    @Query("UPDATE movies SET favourite = 1 WHERE streamUrl = :url")
-    suspend fun markFavouriteByUrl(url: String)
-
     @Upsert
     suspend fun upsertAll(movies: List<Movie>)
 
@@ -571,16 +547,6 @@ interface SeriesDao {
     @Query("SELECT * FROM series WHERE id = :id")
     suspend fun byId(id: Long): Series?
 
-    @Query("UPDATE series SET favourite = :favourite WHERE id = :id")
-    suspend fun setFavourite(id: Long, favourite: Boolean)
-
-    // --- Sync: favourites by provider series id (series carry no stream URL) ---
-    @Query("SELECT seriesId FROM series WHERE favourite = 1")
-    suspend fun favouriteSeriesIds(): List<String>
-
-    @Query("UPDATE series SET favourite = 1 WHERE seriesId = :seriesId")
-    suspend fun markFavouriteBySeriesId(seriesId: String)
-
     @Upsert
     suspend fun upsertAll(items: List<Series>)
 
@@ -635,6 +601,46 @@ interface PlaybackPositionDao {
 }
 
 @Dao
+interface FavouriteDao {
+    @Upsert
+    suspend fun upsert(favourite: Favourite)
+
+    @Delete
+    suspend fun delete(favourite: Favourite)
+
+    @Query(
+        """
+        SELECT m.* FROM movies m JOIN favourites f ON f.identity = m.streamUrl
+        WHERE f.profileId = :profileId AND f.kind = 'MOVIE' ORDER BY m.name
+        """,
+    )
+    fun observeMovies(profileId: Long): Flow<List<Movie>>
+
+    @Query(
+        """
+        SELECT s.* FROM series s JOIN favourites f ON f.identity = s.seriesId
+        WHERE f.profileId = :profileId AND f.kind = 'SERIES' ORDER BY s.name
+        """,
+    )
+    fun observeSeries(profileId: Long): Flow<List<Series>>
+
+    @Query(
+        """
+        SELECT c.* FROM channels c JOIN favourites f ON f.identity = c.streamUrl
+        WHERE f.profileId = :profileId AND f.kind = 'LIVE' AND c.hidden = 0
+        ORDER BY c.sortIndex, c.displayName
+        """,
+    )
+    fun observeChannels(profileId: Long): Flow<List<Channel>>
+
+    @Query("SELECT identity FROM favourites WHERE profileId = :profileId AND kind = :kind")
+    fun observeIdentities(profileId: Long, kind: StreamKind): Flow<List<String>>
+
+    @Query("SELECT identity FROM favourites WHERE profileId = :profileId AND kind = :kind")
+    suspend fun identities(profileId: Long, kind: StreamKind): List<String>
+}
+
+@Dao
 interface ProfileDao {
     @Query("SELECT * FROM profiles ORDER BY id")
     fun observeAll(): Flow<List<Profile>>
@@ -657,6 +663,9 @@ interface ProfileDao {
     /** Removing a profile takes its watch history with it. */
     @Query("DELETE FROM playback_positions WHERE profileId = :id")
     suspend fun deletePositions(id: Long)
+
+    @Query("DELETE FROM favourites WHERE profileId = :id")
+    suspend fun deleteFavourites(id: Long)
 }
 
 @Dao

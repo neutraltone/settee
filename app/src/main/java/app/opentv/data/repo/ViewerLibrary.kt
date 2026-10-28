@@ -5,8 +5,14 @@
  */
 package app.opentv.data.repo
 
+import app.opentv.data.db.FavouriteDao
 import app.opentv.data.db.PlaybackPositionDao
+import app.opentv.data.model.Channel
+import app.opentv.data.model.Favourite
+import app.opentv.data.model.Movie
 import app.opentv.data.model.PlaybackPosition
+import app.opentv.data.model.Series
+import app.opentv.data.model.StreamKind
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
@@ -33,11 +39,13 @@ data class EpisodeStatuses(private val byEpisodeId: Map<Long, WatchStatus> = emp
 }
 
 /**
- * Everything a Profile has watched: the one owner of per-Profile watch state. Screens ask it for
- * statuses and resume points instead of reading playback positions themselves.
+ * Everything a Profile has watched and kept: the one owner of per-Profile watch state and
+ * Favourites. Screens ask it for statuses, resume points and Favourites instead of reading those
+ * tables themselves.
  */
 class ViewerLibrary(
     private val positions: PlaybackPositionDao,
+    private val favourites: FavouriteDao,
     private val activeProfileId: StateFlow<Long>,
     private val clock: () -> Long = System::currentTimeMillis,
 ) {
@@ -109,6 +117,48 @@ class ViewerLibrary(
             )
         }
         .distinctUntilChanged()
+
+    suspend fun setFavourite(channel: Channel, favourite: Boolean) =
+        setFavourite(Favourite(activeProfileId.value, StreamKind.LIVE, channel.streamUrl), favourite)
+
+    suspend fun setFavourite(movie: Movie, favourite: Boolean) =
+        setFavourite(Favourite(activeProfileId.value, StreamKind.MOVIE, movie.streamUrl), favourite)
+
+    suspend fun setFavourite(series: Series, favourite: Boolean) =
+        setFavourite(Favourite(activeProfileId.value, StreamKind.SERIES, series.seriesId), favourite)
+
+    private suspend fun setFavourite(item: Favourite, favourite: Boolean) {
+        if (favourite) favourites.upsert(item) else favourites.delete(item)
+    }
+
+    /** The active Profile's Favourite channels in guide order, leaving out channels hidden on this device. */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    fun favouriteChannels(): Flow<List<Channel>> = activeProfileId.flatMapLatest { favourites.observeChannels(it) }
+
+    /** Stream URLs of the active Profile's Favourite channels, hidden ones included: what lights each star. */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    fun favouriteChannelUrls(): Flow<Set<String>> = activeProfileId
+        .flatMapLatest { favourites.observeIdentities(it, StreamKind.LIVE) }
+        .map { it.toSet() }
+
+    /** The active Profile's Favourite movies, by name. */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    fun favouriteMovies(): Flow<List<Movie>> = activeProfileId.flatMapLatest { favourites.observeMovies(it) }
+
+    /** The active Profile's Favourite series, by name. */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    fun favouriteSeries(): Flow<List<Series>> = activeProfileId.flatMapLatest { favourites.observeSeries(it) }
+
+    /**
+     * The active Profile's Favourites of one [kind], by identity (stream URL, or series id for
+     * series) — what sync sends. Until sync groups Favourites by Profile it carries only the
+     * active Profile's.
+     */
+    suspend fun favouriteIdentities(kind: StreamKind): List<String> = favourites.identities(activeProfileId.value, kind)
+
+    /** Adds a Favourite synced from another device to the active Profile; sync never removes one. */
+    suspend fun addSyncedFavourite(kind: StreamKind, identity: String) =
+        favourites.upsert(Favourite(activeProfileId.value, kind, identity))
 
     private fun statusOf(pos: PlaybackPosition): WatchStatus {
         // Synced positions can arrive without a duration; that says nothing about how far through.

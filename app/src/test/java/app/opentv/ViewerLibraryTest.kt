@@ -34,7 +34,7 @@ class ViewerLibraryTest {
         .build()
     private val activeProfile = MutableStateFlow(1L)
     private var now = 1_000_000L
-    private val library = ViewerLibrary(db.positions(), activeProfile, clock = { now })
+    private val library = ViewerLibrary(db.positions(), db.favourites(), activeProfile, clock = { now })
 
     @After
     fun close() = db.close()

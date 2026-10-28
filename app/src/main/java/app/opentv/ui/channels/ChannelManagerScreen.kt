@@ -392,8 +392,8 @@ private fun ManagerRow(
         // The star is the row's leftmost focusable, so it carries the LEFT-to-rail handler.
         IconButton(onClick = onToggleFavourite, modifier = leftEdgeModifier) {
             Icon(
-                imageVector = if (row.primary.favourite) Icons.Filled.Star else Icons.Outlined.StarOutline,
-                contentDescription = if (row.primary.favourite) {
+                imageVector = if (row.favourite) Icons.Filled.Star else Icons.Outlined.StarOutline,
+                contentDescription = if (row.favourite) {
                     stringResource(
                         R.string.common_remove_favourite,
                     )

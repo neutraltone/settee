@@ -91,13 +91,14 @@ yours" bug.
 ## Catalogue refresh preserves what the user did
 
 `ChannelDao.replaceCatalogue` merges rather than wipes: it reads existing rows, carries
-`favourite`, `hidden` and `sortIndex` across to the incoming rows by `streamId`, upserts, and
-only then deletes channels the provider no longer lists.
+`hidden` and `sortIndex` across to the incoming rows by `streamId`, upserts, and only then
+deletes channels the provider no longer lists. Favourites live in their own per-Profile table,
+matched by stream URL (or provider series id), so a channel dropped and re-listed keeps them.
 
 This is why `M3uParser` works so hard to produce a **stable** `streamId` for playlists with no
 `tvg-id` — an FNV-1a hash of the URL rather than `String.hashCode()`. An unstable id means
-every refresh looks like a completely new set of channels, and the user's favourites silently
-vanish.
+every refresh looks like a completely new set of channels, and the user's hidden channels and
+ordering silently vanish.
 
 ## SQLite's bound-variable limit is a real constraint here
 
@@ -186,5 +187,5 @@ whole playlist.
 Things worth testing that are not yet covered, and would be very welcome contributions:
 
 - `EpgRepository.sync` against a mid-stream failure, asserting the old guide survives
-- `ChannelDao.replaceCatalogue` preserving favourites across a refresh
+- `ChannelDao.replaceCatalogue` preserving hidden channels and ordering across a refresh
 - `XtreamApi` against captured real-world panel responses (with credentials stripped)

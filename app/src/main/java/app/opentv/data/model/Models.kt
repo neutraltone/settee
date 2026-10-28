@@ -97,7 +97,6 @@ data class Category(val id: String, val sourceId: Long, val name: String, val ki
         Index(value = ["sourceId", "streamId"], unique = true),
         Index(value = ["sourceId", "categoryId"]),
         Index(value = ["groupKey"]),
-        Index(value = ["favourite"]),
     ],
 )
 data class Channel(
@@ -139,7 +138,6 @@ data class Channel(
      * turns into a short-lived playable URL at tune time. Null for Xtream/M3U.
      */
     val cmd: String? = null,
-    val favourite: Boolean = false,
     val hidden: Boolean = false,
     val sortIndex: Int = 0,
     /**
@@ -269,7 +267,6 @@ data class Movie(
     val durationSeconds: Int?,
     val containerExtension: String?,
     val streamUrl: String,
-    val favourite: Boolean = false,
     val addedMillis: Long = 0,
     /**
      * Richer metadata for the Netflix-style detail/home surfaces, pulled from the provider's own
@@ -305,7 +302,6 @@ data class Series(
     val rating: Double?,
     val year: Int?,
     val plot: String?,
-    val favourite: Boolean = false,
     val addedMillis: Long = 0,
     /**
      * Richer metadata for the Netflix-style detail/home surfaces, from the provider's own Xtream
@@ -358,6 +354,15 @@ data class PlaybackPosition(
     val durationMillis: Long,
     val updatedAtMillis: Long,
 )
+
+/**
+ * A channel, movie or series one Profile has marked a Favourite (ADR 0001). Keyed by [identity],
+ * not the local row id, because a catalogue refresh can give the same title a new row: the
+ * stream URL for channels and movies, the provider's series id for series. The same identities
+ * match the item on another device when syncing. Read and written only through ViewerLibrary.
+ */
+@Entity(tableName = "favourites", primaryKeys = ["profileId", "kind", "identity"])
+data class Favourite(val profileId: Long, val kind: StreamKind, val identity: String)
 
 /** A local viewing profile — just a name. No account, no password; it lives on this device. */
 @Entity(tableName = "profiles")
