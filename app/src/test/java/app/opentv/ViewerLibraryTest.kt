@@ -10,7 +10,7 @@ import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import app.opentv.data.db.OpenTvDatabase
 import app.opentv.data.model.PlaybackPosition
-import app.opentv.data.repo.InProgressTitle
+import app.opentv.data.repo.ContinueWatchingCard
 import app.opentv.data.repo.ViewerLibrary
 import app.opentv.data.repo.WatchStatus
 import com.google.common.truth.Truth.assertThat
@@ -34,7 +34,7 @@ class ViewerLibraryTest {
         .build()
     private val activeProfile = MutableStateFlow(1L)
     private var now = 1_000_000L
-    private val library = ViewerLibrary(db.positions(), activeProfile, clock = { now })
+    private val library = ViewerLibrary(db.positions(), db.episodes(), activeProfile, clock = { now })
 
     @After
     fun close() = db.close()
@@ -105,16 +105,16 @@ class ViewerLibraryTest {
     }
 
     @Test
-    fun `In Progress titles are listed most recently played first, leaving out Watched ones`() = runTest {
+    fun `In Progress movies are listed most recently played first, leaving out Watched ones`() = runTest {
         library.recordProgress("movie:3", positionMillis = 600_000, durationMillis = 2_400_000)
         now += 60_000
         library.recordProgress("movie:4", positionMillis = 2_400_000, durationMillis = 2_400_000)
         now += 60_000
-        library.recordProgress("ep:7", positionMillis = 1_200_000, durationMillis = 2_400_000)
+        library.recordProgress("movie:5", positionMillis = 1_200_000, durationMillis = 2_400_000)
 
-        assertThat(library.inProgress().first()).containsExactly(
-            InProgressTitle("ep:7", progress = 0.5f),
-            InProgressTitle("movie:3", progress = 0.25f),
+        assertThat(library.continueWatchingMovies().first()).containsExactly(
+            ContinueWatchingCard.Movie(movieId = 5, progress = 0.5f),
+            ContinueWatchingCard.Movie(movieId = 3, progress = 0.25f),
         ).inOrder()
     }
 
@@ -138,14 +138,15 @@ class ViewerLibraryTest {
     }
 
     @Test
-    fun `an In Progress title stays listed however many titles were Watched after it`() = runTest {
+    fun `an In Progress movie stays listed however many titles were Watched after it`() = runTest {
         library.recordProgress("movie:3", positionMillis = 600_000, durationMillis = 2_400_000)
         for (episode in 100L until 140L) {
             now += 60_000
             library.recordProgress("ep:$episode", positionMillis = 2_400_000, durationMillis = 2_400_000)
         }
 
-        assertThat(library.inProgress().first()).containsExactly(InProgressTitle("movie:3", progress = 0.25f))
+        assertThat(library.continueWatchingMovies().first())
+            .containsExactly(ContinueWatchingCard.Movie(movieId = 3, progress = 0.25f))
     }
 
     private fun synced(profileId: Long, positionMillis: Long, updatedAtMillis: Long) = PlaybackPosition(

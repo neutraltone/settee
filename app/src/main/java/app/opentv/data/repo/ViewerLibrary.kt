@@ -5,12 +5,14 @@
  */
 package app.opentv.data.repo
 
+import app.opentv.data.db.EpisodeDao
 import app.opentv.data.db.PlaybackPositionDao
 import app.opentv.data.model.Episode
 import app.opentv.data.model.PlaybackPosition
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
@@ -29,12 +31,18 @@ sealed interface WatchStatus {
     data object Watched : WatchStatus
 }
 
-/** A movie or episode ("movie:<id>" / "ep:<id>") the active Profile has started but not Watched. */
-data class InProgressTitle(val mediaKey: String, val progress: Float)
-
 /** The active Profile's status for each episode, by local episode id; any episode not in it is Unwatched. */
 data class EpisodeStatuses(private val byEpisodeId: Map<Long, WatchStatus> = emptyMap()) {
     operator fun get(episodeId: Long): WatchStatus = byEpisodeId[episodeId] ?: WatchStatus.Unwatched
+}
+
+/** One card in Continue Watching. */
+sealed interface ContinueWatchingCard {
+    /** A movie the Profile stopped part way through; [progress] is how far, 0..1. */
+    data class Movie(val movieId: Long, val progress: Float) : ContinueWatchingCard
+
+    /** A series, picked back up at [episode]; [progress] is how far through it is, 0..1. */
+    data class Series(val episode: Episode, val progress: Float) : ContinueWatchingCard
 }
 
 /** What a series page's main button does for the active Profile. */
@@ -54,6 +62,7 @@ sealed interface SeriesMainAction {
  */
 class ViewerLibrary(
     private val positions: PlaybackPositionDao,
+    private val episodes: EpisodeDao,
     private val activeProfileId: StateFlow<Long>,
     private val clock: () -> Long = System::currentTimeMillis,
 ) {
@@ -100,18 +109,45 @@ class ViewerLibrary(
         .mapNotNull { it.mediaKey.removePrefix(MOVIE_PREFIX).toLongOrNull() }
         .toSet()
 
-    /** The active Profile's In Progress titles, most recently played first. */
+    /** The active Profile's Continue Watching for movies: each In Progress one, most recently played first. */
     @OptIn(ExperimentalCoroutinesApi::class)
-    fun inProgress(): Flow<List<InProgressTitle>> = activeProfileId
+    fun continueWatchingMovies(): Flow<List<ContinueWatchingCard>> = activeProfileId
         .flatMapLatest { pid -> positions.observeNewestFirst(pid) }
         .map { list ->
             list.asSequence()
+                .filter { it.mediaKey.startsWith(MOVIE_PREFIX) }
                 .mapNotNull { pos ->
-                    (statusOf(pos) as? WatchStatus.InProgress)?.let { InProgressTitle(pos.mediaKey, it.progress) }
+                    val id = pos.mediaKey.removePrefix(MOVIE_PREFIX).toLongOrNull() ?: return@mapNotNull null
+                    (statusOf(pos) as? WatchStatus.InProgress)?.let { ContinueWatchingCard.Movie(id, it.progress) }
                 }
                 .take(IN_PROGRESS_LIMIT)
                 .toList()
         }
+
+    /**
+     * The active Profile's Continue Watching for series: one card per series, at the episode it
+     * played most recently if that is In Progress, or else its Up Next.
+     */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    fun continueWatchingSeries(): Flow<List<ContinueWatchingCard>> = activeProfileId
+        .flatMapLatest { pid ->
+            // Played episodes are observed as well as positions so a newly added Up Next shows up.
+            combine(positions.observeNewestFirst(pid), episodes.observePlayed(pid)) { list, played ->
+                val byKey = played.associateBy { "$EPISODE_PREFIX${it.id}" }
+                list.mapNotNull { pos -> byKey[pos.mediaKey]?.let { it to pos } }
+                    .distinctBy { (ep, _) -> ep.sourceId to ep.seriesId }
+                    .take(IN_PROGRESS_LIMIT)
+                    .mapNotNull { (ep, pos) -> seriesCard(ep, pos) }
+            }
+        }
+
+    private suspend fun seriesCard(latest: Episode, pos: PlaybackPosition): ContinueWatchingCard? {
+        val status = statusOf(pos)
+        if (status is WatchStatus.InProgress) return ContinueWatchingCard.Series(latest, status.progress)
+        val ordered = episodes.forSeries(latest.sourceId, latest.seriesId).sortedWith(EPISODE_ORDER)
+        val next = ordered.getOrNull(ordered.indexOfFirst { it.id == latest.id } + 1) ?: return null
+        return ContinueWatchingCard.Series(next, 0f)
+    }
 
     /** Every episode's status for the active Profile; re-emits only when a status actually changes. */
     @OptIn(ExperimentalCoroutinesApi::class)
