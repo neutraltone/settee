@@ -136,7 +136,7 @@ ksp {
 }
 
 dependencies {
-    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.3")
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.5")
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
@@ -181,7 +181,7 @@ dependencies {
 
     // SMB/CIFS client for recording to a NAS (Synology etc.) and playing those recordings
     // back in-app over the network. Pure-Java SMB2/3, no native bits.
-    implementation("com.hierynomus:smbj:0.12.2")
+    implementation("com.hierynomus:smbj:0.15.0")
 
     detektPlugins(libs.compose.rules.detekt)
 
