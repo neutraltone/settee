@@ -99,9 +99,10 @@ catalogue refresh, playback or Xtream parsing. The big picture:
 Room schema version lives in `data/db/OpenTvDatabase.kt`; schemas are exported to `app/schemas/`. The
 schema restarted at version 1 for Settee, with none of upstream's migrations.
 
-**Until the first tagged release, a schema change may wipe data:** bump the version, commit the newly
-exported schema, and let `fallbackToDestructiveMigration()` rebuild the database. **From the first tagged
-release on, real migrations are required:** every schema change bumps the version and adds a hand-written
+**Until 1.0, a schema change may wipe data:** bump the version, commit the newly exported schema, and
+let `fallbackToDestructiveMigration()` rebuild the database. The 0.x releases are installed only by the
+developer, so losing favourites on an upgrade is acceptable while the schema is still settling. **From
+1.0 on, real migrations are required:** every schema change bumps the version and adds a hand-written
 `Migration` that matches Room's generated DDL so favourites survive, and the destructive fallback (with the
 pre-restart test in `OpenTvDatabaseTest`) is deleted.
 

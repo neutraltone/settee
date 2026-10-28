@@ -96,8 +96,8 @@ abstract class OpenTvDatabase : RoomDatabase() {
 
         /**
          * Every migration, in order. Shared with the migration test so neither list can lag. Empty
-         * while the pre-release wipe policy below holds; the first tagged release's schema change
-         * adds MIGRATION_1_2 here.
+         * while the pre-1.0 wipe policy below holds; the first schema change from 1.0 on adds
+         * MIGRATION_x_y here.
          */
         internal val MIGRATIONS: Array<Migration> = emptyArray()
 
@@ -113,11 +113,10 @@ abstract class OpenTvDatabase : RoomDatabase() {
                 .setJournalMode(JournalMode.WRITE_AHEAD_LOGGING)
                 .addMigrations(*MIGRATIONS)
                 /*
-                 * Pre-release policy: until the first tagged release, schema changes drop and
-                 * rebuild the database. Everything in it is re-derivable from the provider (one
-                 * sync away) except favourites and overrides, which only the developer has yet.
-                 * From the first tagged release every schema change ships a Migration and this
-                 * line is deleted.
+                 * Pre-1.0 policy: until 1.0, schema changes drop and rebuild the database.
+                 * Everything in it is re-derivable from the provider (one sync away) except
+                 * favourites and overrides, and only the developer installs 0.x releases. From
+                 * 1.0 every schema change ships a Migration and this line is deleted.
                  *
                  * It also covers downgrades, which matters because the schema restarted at v1: a
                  * device that ran a build from before the restart holds an upstream v11 database.
