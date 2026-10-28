@@ -23,7 +23,7 @@ import org.robolectric.annotation.Config
  * restart still has an upstream database at version 11. Room refuses to open a database newer
  * than its schema unless told otherwise, so without a destructive fallback those installs crash
  * on launch instead of starting clean. When the fallback goes at the first tagged release, the
- * second test goes with it.
+ * wipe tests go with it.
  */
 // Plain Application: OpenTvApp schedules WorkManager on start, which the database doesn't need.
 @RunWith(RobolectricTestRunner::class)
@@ -32,37 +32,55 @@ class OpenTvDatabaseTest {
 
     private val context: Context = ApplicationProvider.getApplicationContext()
     private var db: OpenTvDatabase? = null
+    private var wipes = 0
 
-    @Before
-    fun startWithNoDatabase() {
-        context.deleteDatabase("opentv.db")
-    }
+    private fun open(): OpenTvDatabase =
+        OpenTvDatabase.build(context, onWiped = { wipes++ }).also { db = it }
 
-    @After
-    fun closeAndDeleteDatabase() {
-        db?.close()
-        context.deleteDatabase("opentv.db")
-    }
+    private fun OpenTvDatabase.version(): Int = openHelper.readableDatabase.version
 
-    @Test
-    fun `a fresh install opens at schema version 1`() {
-        db = OpenTvDatabase.build(context)
-
-        assertThat(db!!.openHelper.readableDatabase.version).isEqualTo(1)
-    }
-
-    @Test
-    fun `a database left by a pre-restart build is wiped rather than crashing`() = runTest {
-        val path = context.getDatabasePath("opentv.db").apply { parentFile?.mkdirs() }
+    private fun leaveUpstreamV11Database() {
+        val path = context.getDatabasePath(OpenTvDatabase.FILE_NAME).apply { parentFile?.mkdirs() }
         SQLiteDatabase.openOrCreateDatabase(path, null).use {
             it.execSQL("CREATE TABLE sources (id INTEGER PRIMARY KEY, name TEXT, enabled INTEGER)")
             it.execSQL("INSERT INTO sources VALUES (1, 'Old provider', 1)")
             it.version = 11
         }
+    }
 
-        db = OpenTvDatabase.build(context)
+    @Before
+    fun startWithNoDatabase() {
+        context.deleteDatabase(OpenTvDatabase.FILE_NAME)
+    }
 
-        assertThat(db!!.openHelper.readableDatabase.version).isEqualTo(1)
-        assertThat(db!!.sources().enabled()).isEmpty()
+    @After
+    fun closeAndDeleteDatabase() {
+        db?.close()
+        context.deleteDatabase(OpenTvDatabase.FILE_NAME)
+    }
+
+    @Test
+    fun `a fresh install opens at schema version 1 without counting as a wipe`() {
+        assertThat(open().version()).isEqualTo(1)
+        assertThat(wipes).isEqualTo(0)
+    }
+
+    @Test
+    fun `a database left by a pre-restart build is wiped rather than crashing`() = runTest {
+        leaveUpstreamV11Database()
+
+        val opened = open()
+
+        assertThat(opened.version()).isEqualTo(1)
+        assertThat(opened.sources().enabled()).isEmpty()
+    }
+
+    @Test
+    fun `wiping the database is reported so settings holding row ids can be reset`() {
+        leaveUpstreamV11Database()
+
+        open().version()
+
+        assertThat(wipes).isEqualTo(1)
     }
 }

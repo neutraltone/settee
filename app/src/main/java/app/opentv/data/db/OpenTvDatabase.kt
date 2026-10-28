@@ -11,6 +11,7 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverter
 import androidx.room.TypeConverters
+import androidx.sqlite.db.SupportSQLiteDatabase
 import app.opentv.data.model.Category
 import app.opentv.data.model.Channel
 import app.opentv.data.model.EpgChannelAlias
@@ -90,8 +91,15 @@ abstract class OpenTvDatabase : RoomDatabase() {
     abstract fun reminders(): ReminderDao
 
     companion object {
-        fun build(context: Context): OpenTvDatabase =
-            Room.databaseBuilder(context, OpenTvDatabase::class.java, "opentv.db")
+        const val FILE_NAME = "opentv.db"
+
+        /**
+         * [onWiped] runs when the destructive fallback below rebuilds the database. Settings that
+         * hold a row id (active profile, last channel) would otherwise outlive their rows and
+         * later match whatever reuses that id.
+         */
+        fun build(context: Context, onWiped: () -> Unit = {}): OpenTvDatabase =
+            Room.databaseBuilder(context, OpenTvDatabase::class.java, FILE_NAME)
                 // WAL keeps guide writes from blocking guide reads, so a background EPG
                 // refresh cannot make the UI stutter on a slow TV box.
                 .setJournalMode(JournalMode.WRITE_AHEAD_LOGGING)
@@ -106,6 +114,9 @@ abstract class OpenTvDatabase : RoomDatabase() {
                  * device that ran a build from before the restart holds an upstream v11 database.
                  */
                 .fallbackToDestructiveMigration()
+                .addCallback(object : Callback() {
+                    override fun onDestructiveMigration(db: SupportSQLiteDatabase) = onWiped()
+                })
                 .build()
     }
 }
