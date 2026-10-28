@@ -6,7 +6,7 @@
 package app.opentv.recording
 
 import android.content.Context
-import android.net.Uri
+import androidx.core.net.toUri
 import androidx.documentfile.provider.DocumentFile
 import app.opentv.R
 import app.opentv.core.AppSettings
@@ -99,7 +99,7 @@ object RecordingStorage {
             openUsbSink(context, settings, locator.removePrefix(USB_PLACEHOLDER_PREFIX))
         isContent(locator) -> {
             // A USB recording whose document already exists (e.g. re-opened): write into it.
-            val uri = Uri.parse(locator)
+            val uri = locator.toUri()
             val out = context.contentResolver.openOutputStream(uri, "w")
                 ?: throw IOException(context.getString(R.string.rec_error_usb_unavailable))
             Sink(out, resolvedLocator = locator) {
@@ -125,7 +125,7 @@ object RecordingStorage {
     private fun openUsbSink(context: Context, settings: AppSettings, filename: String): Sink {
         val treeUriString = settings.usbTreeUri.value
             ?: throw IOException(context.getString(R.string.rec_error_usb_no_folder))
-        val tree = DocumentFile.fromTreeUri(context, Uri.parse(treeUriString))
+        val tree = DocumentFile.fromTreeUri(context, treeUriString.toUri())
         if (tree == null || !tree.canWrite()) {
             throw IOException(context.getString(R.string.rec_error_usb_unavailable))
         }
@@ -149,7 +149,7 @@ object RecordingStorage {
         when {
             SmbClient.isSmb(locator) -> runCatching { SmbClient.delete(smbConfig(settings), locator) }
             isContent(locator) ->
-                runCatching { DocumentFile.fromSingleUri(context, Uri.parse(locator))?.delete() }
+                runCatching { DocumentFile.fromSingleUri(context, locator.toUri())?.delete() }
             isUsbPlaceholder(locator) -> Unit // never created — nothing on disk to remove
             else -> runCatching { File(locator).delete() }
         }

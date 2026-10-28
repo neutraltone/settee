@@ -7,6 +7,7 @@ package app.opentv.pairing
 
 import android.graphics.Bitmap
 import android.graphics.Color
+import androidx.core.graphics.createBitmap
 import com.google.zxing.BarcodeFormat
 import com.google.zxing.EncodeHintType
 import com.google.zxing.qrcode.QRCodeWriter
@@ -41,7 +42,7 @@ object QrCodes {
                 pixels[offset + x] = if (matrix[x, y]) Color.BLACK else Color.WHITE
             }
         }
-        Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888).apply {
+        createBitmap(width, height).apply {
             setPixels(pixels, 0, width, 0, 0, width, height)
         }
     }.getOrNull()

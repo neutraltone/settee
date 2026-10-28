@@ -10,9 +10,9 @@ import android.app.Activity
 import android.content.Context
 import android.content.ContextWrapper
 import android.content.Intent
-import android.net.Uri
 import android.os.PowerManager
 import android.provider.Settings
+import androidx.core.net.toUri
 
 /**
  * The [Activity] behind a Compose [Context], unwrapping the `ContextWrapper` chain Compose hands
@@ -47,7 +47,7 @@ fun Context.isIgnoringBatteryOptimizations(): Boolean {
 fun Context.requestIgnoreBatteryOptimizations() {
     val direct = Intent(
         Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
-        Uri.parse("package:$packageName"),
+        "package:$packageName".toUri(),
     ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
     val launched = runCatching { startActivity(direct) }.isSuccess
     if (!launched) {

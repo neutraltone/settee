@@ -19,7 +19,8 @@ OpenTV contributors — don't rename either.
 Requires JDK 17 or newer (CI uses Temurin 17; Gradle 9 also runs on 25) and Android SDK API 37 —
 Android Studio provides both. AGP 9 compiles Kotlin itself, so there is no `kotlin.android` plugin;
 AGP, the Gradle wrapper, Kotlin and KSP move together (Dependabot's `toolchain` group).
-minSdk is 24 (Android 7.0), which WorkManager 2.12 requires; every Fire TV is API 25 or newer.
+minSdk is 24 (Android 7.0), which WorkManager 2.12 requires. Fire OS 6+ (API 25) is unaffected; Fire
+OS 5 (API 22) was already unsupported.
 
 ```bash
 ./gradlew test                              # all unit tests (what CI runs)

@@ -6,7 +6,6 @@
 package app.opentv.ui.settings
 
 import android.content.Intent
-import android.net.Uri
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -40,6 +39,7 @@ import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.core.net.toUri
 import app.opentv.BuildConfig
 import app.opentv.R
 import app.opentv.core.ServiceLocator
@@ -96,7 +96,8 @@ fun AboutScreen(onBack: () -> Unit) {
                                 UpdateChecker(graph.httpClient, BuildConfig.VERSION_NAME).check()
                             }.getOrNull()
                             updateLine = when {
-                                update != null -> resources.getString(R.string.about_update_available, update.versionName)
+                                update != null ->
+                                    resources.getString(R.string.about_update_available, update.versionName)
                                 else -> resources.getString(R.string.about_up_to_date)
                             }
                             // Raise the shared update prompt right here — UpdateGate overlays every
@@ -189,7 +190,7 @@ private fun LinkLine(label: String, value: String, url: String = "https://$value
             .clickable {
                 runCatching {
                     context.startActivity(
-                        Intent(Intent.ACTION_VIEW, Uri.parse(url)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+                        Intent(Intent.ACTION_VIEW, url.toUri()).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
                     )
                 }.onFailure { Toast.makeText(context, url, Toast.LENGTH_LONG).show() }
             }

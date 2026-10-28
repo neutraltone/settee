@@ -7,6 +7,7 @@ package app.opentv
 
 import android.app.Application
 import android.content.Context
+import androidx.core.content.edit
 import app.opentv.core.LocaleUtils
 import app.opentv.core.ServiceLocator
 import app.opentv.data.repo.CatalogRepository
@@ -102,7 +103,7 @@ class OpenTvApp :
             val seen = prefs.getInt("normalizer_version", 0)
             if (seen < CatalogRepository.NORMALIZER_VERSION) {
                 graph.catalogRepository.renormalizeAll()
-                prefs.edit().putInt("normalizer_version", CatalogRepository.NORMALIZER_VERSION).apply()
+                prefs.edit { putInt("normalizer_version", CatalogRepository.NORMALIZER_VERSION) }
             }
             // Runs on every launch. It is cheap when nothing is stale (feeds within their
             // refresh window are skipped), but it is what makes the free regional guide turn

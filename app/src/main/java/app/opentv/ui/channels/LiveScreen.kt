@@ -59,15 +59,16 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalResources
-import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import androidx.core.net.toUri
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
 import app.opentv.R
 import app.opentv.core.AppSettings
@@ -782,7 +783,7 @@ fun LiveScreen(
                         recordScope.launch {
                             val ua = graph.sourceRepository.byId(channel.sourceId)?.userAgent ?: "OpenTV/0.1 (Android)"
                             val intent = Intent(Intent.ACTION_VIEW).apply {
-                                setDataAndType(android.net.Uri.parse(channel.streamUrl), "video/*")
+                                setDataAndType(channel.streamUrl.toUri(), "video/*")
                                 putExtra("title", channel.shownName)
                                 // MX Player / VLC read the User-Agent from this header extra.
                                 putExtra("headers", arrayOf("User-Agent", ua))

@@ -108,7 +108,7 @@ android {
     sourceSets {
         // MigrationTestHelper reads exported schemas from assets, and Robolectric only sees the
         // variant's merged assets. Debug only, so the release APK doesn't carry the JSON.
-        getByName("debug").assets.srcDir("$projectDir/schemas")
+        getByName("debug").assets.directories += "$projectDir/schemas"
     }
 
     testOptions {
@@ -140,6 +140,7 @@ dependencies {
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
+    implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.activity.compose)
 

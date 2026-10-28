@@ -36,7 +36,7 @@ class BrandingStringsTest {
             (0 until strings.length).map { strings.item(it) as Element }
                 .filter { it.getAttribute("name") !in creditKeys }
                 .filter { it.textContent.contains("OpenTV") }
-                .map { "${file.parentFile.name}/${it.getAttribute("name")}" }
+                .map { "${file.parentFile?.name}/${it.getAttribute("name")}" }
         }
 
         assertWithMessage("strings still naming OpenTV").that(offenders).isEmpty()
