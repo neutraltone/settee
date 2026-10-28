@@ -762,11 +762,9 @@ class VodViewModel(app: Application) : AndroidViewModel(app) {
     val episodeStatuses = graph.viewerLibrary.episodeStatuses()
 
     private suspend fun resolveResume(title: InProgressTitle): ResumeItem? {
-        val parts = title.mediaKey.split(":", limit = 2)
-        if (parts.size != 2) return null
-        val id = parts[1].toLongOrNull() ?: return null
+        val id = title.mediaKey.substringAfter(':', missingDelimiterValue = "").toLongOrNull() ?: return null
         val progress = title.progress
-        return when (parts[0]) {
+        return when (title.mediaKey.substringBefore(':')) {
             "movie" -> graph.catalogRepository.movie(id)?.let {
                 ResumeItem(title.mediaKey, it.displayTitle, it.posterUrl, it.streamUrl, progress)
             }
