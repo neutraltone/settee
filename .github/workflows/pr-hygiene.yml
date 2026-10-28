@@ -1,0 +1,23 @@
+name: PR hygiene
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+
+permissions:
+  contents: read
+
+jobs:
+  title:
+    name: PR title
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # Squash-merging makes the PR title the commit on main, so it follows the commit convention.
+      # Passed through env, not interpolated into the script, so a title can't inject shell.
+      - name: Title follows the commit convention
+        env:
+          TITLE: ${{ github.event.pull_request.title }}
+        run: tools/check-message.sh "$TITLE"

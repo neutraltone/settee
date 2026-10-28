@@ -1,0 +1,34 @@
+version: 2
+
+# Prefixes make Dependabot's titles pass the PR title check (tools/check-message.sh):
+# "build: Bump okhttp from 4.12.0 to 4.12.1".
+updates:
+  - package-ecosystem: gradle
+    directory: /
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: build
+    groups:
+      # Dependabot puts each dependency in the first group that matches, so media3 precedes
+      # the androidx catch-all.
+      media3:
+        patterns: ['androidx.media3:*']
+      androidx:
+        patterns: ['androidx.*']
+      kotlin:
+        patterns: ['org.jetbrains.kotlin*', 'com.google.devtools.ksp']
+      code-quality:
+        patterns: ['io.gitlab.arturbosch.detekt*', 'io.nlopez.compose.rules:*', 'org.jlleitschuh.gradle.ktlint']
+      testing:
+        patterns: ['junit:*', 'com.google.truth:*', 'org.robolectric:*', 'org.jetbrains.kotlinx:kotlinx-coroutines-test']
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: ci
+    groups:
+      actions:
+        patterns: ['*']

@@ -60,12 +60,35 @@ synthetic data — and those are where most of the interesting bugs are.
   hard to revert.
 - Add a test if the change is testable. Parsers, URL handling, time arithmetic and database
   merge logic all are.
-- Run `./gradlew test` before pushing.
+- Run the checks before pushing (see below).
+- Title the PR `type(#issue): description`, e.g. `fix(#42): keep favourites across a refresh`.
+  `feat`, `fix`, `refactor` and `perf` need the issue number; `docs`, `chore`, `ci`, `test` and
+  `build` don't. `tools/check-message.sh "<title>"` checks one.
 - Explain the *why* in the description. The code says what it does.
 
 Comments should explain reasoning, not restate the line below them. Look at
 `EpgRepository` or `PlayerController` for the house style: the interesting comments are the ones
 explaining why an obvious implementation was rejected.
+
+## Checks on every pull request
+
+Each of these must pass before a PR can merge. All but the title check run locally too:
+
+| Check | What it catches | Run it locally |
+|---|---|---|
+| Test and assemble | Failing unit tests, a broken build, Room schema changes that weren't committed | `./gradlew test assembleDebug` |
+| ktlint | Formatting | `./gradlew ktlintCheck` (`ktlintFormat` fixes most of it) |
+| detekt | Kotlin and Compose code smells | `./gradlew detekt` |
+| Android Lint | Android API misuse, resource problems | `./gradlew lintDebug` |
+| gitleaks | Provider URLs with credentials, MAC addresses, API keys | [gitleaks](https://github.com/gitleaks/gitleaks): `gitleaks git . --config .gitleaks.toml` |
+| PR title | The title convention above | `tools/check-message.sh "<title>"` |
+
+detekt and Lint compare against baselines of findings that predate them, so they only flag what
+your change adds. Fix those rather than adding them to a baseline.
+
+**Changing the database?** Bump the version in `OpenTvDatabase`, commit the new schema JSON that the
+build writes to `app/schemas/`, and add a `Migration` to `OpenTvDatabase.MIGRATIONS`.
+`RoomMigrationTest` fails if one is missing.
 
 ## Good first issues
 
