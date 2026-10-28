@@ -30,6 +30,8 @@ adb logcat -s OpenTV:* EpgRepository:* SyncWorker:*
 python3 tools/stalker_mock.py [port]        # mock Stalker portal with free test streams (live only)
 ./gradlew ktlintFormat                      # auto-fix formatting (ktlintCheck is what CI runs)
 ./gradlew detekt lintDebug                  # static analysis, as CI runs it
+git config core.hooksPath .githooks         # once per clone: enables the commit-msg hook
+tools/check-message-test.sh                 # tests for the commit/PR-title convention
 ```
 
 Tests live in `app/src/test` (JUnit4, Truth, Robolectric, Room testing, coroutines-test); there are no
@@ -39,10 +41,10 @@ instrumented tests.
 
 `.github/workflows/build.yml` runs one job per required check: **Test and assemble** (unit tests, debug
 APK, and a fail if the build changed `app/schemas/`), **Android Lint**, **ktlint**, **detekt** and
-**gitleaks**. `pr-hygiene.yml` checks the PR title with `tools/check-message.sh`. Lint and detekt fail
-only on findings missing from `app/lint-baseline.xml` / `app/detekt-baseline.xml`: fix a new finding,
-don't regenerate a baseline to hide it. `.gitleaks.toml` adds rules for Xtream credentials in URLs
-and MAG MACs; use placeholders such as `u`/`p`, `example.com` or `00:1A:79:00:00:01` in tests.
+**gitleaks**. `pr-hygiene.yml` runs `tools/check-message-test.sh` and checks the PR title with
+`tools/check-message.sh`. Lint and detekt fail only on findings missing from `app/lint-baseline.xml` /
+`app/detekt-baseline.xml`: fix a new finding, don't regenerate a baseline to hide it. `.gitleaks.toml`
+adds rules for Xtream credentials in URLs and MAG MACs; use placeholders such as `u`/`p`, `example.com` or `00:1A:79:00:00:01` in tests.
 `RoomMigrationTest` walks every exported schema to the latest with `OpenTvDatabase.MIGRATIONS`.
 
 The debug build has `applicationIdSuffix = ".debug"` (`uk.neutraltone.settee.debug`), so it installs
@@ -114,16 +116,24 @@ never release/rebuild on channel change). Retries 403/429/5xx with backoff; not 
   restate code.
 - User-facing strings go in `res/values/strings.xml`; ~30 `values-*` translations exist. Add new keys to
   the base file (translations fall back to English).
-- Releases: bump `appVersionName` in `app/build.gradle.kts` (`versionCode` is derived from it), add a
-  `CHANGELOG.md` entry, push a `v*` tag (`.github/workflows/release.yml`). Release builds fall back to the
-  debug key without keystore secrets — see `docs/RELEASING.md`.
+- **Commits and PR titles** follow `type(#issue): description`, e.g. `feat(#12): add series rules`. The
+  issue is required for `feat`, `fix`, `refactor` and `perf`, optional for `docs`, `chore`, `ci`, `test`
+  and `build`; `!` before the colon marks a breaking change; release-please's `chore(main): release
+  x.y.z` also passes. `tools/check-message.sh` is the rule, shared by the `.githooks/commit-msg` hook
+  (enable with `git config core.hooksPath .githooks`) and the PR title check. The hook lets git's own
+  `Merge …`, `Revert "…"` and `fixup!`/`squash!`/`amend!` messages through; PR titles get no such
+  exemption.
+- **Releases:** one branch and PR per ticket, squash-merged so the PR title becomes the commit on
+  `main`. release-please (`.github/workflows/release-please.yml`) keeps a `chore(main): release x.y.z`
+  PR open that bumps `appVersionName` in `app/build.gradle.kts` (`versionCode` is derived from it) and
+  adds the `CHANGELOG.md` entry from `feat`/`fix`/`perf` commits. Merge that PR to ship: it tags
+  `vx.y.z`, creates the GitHub release and calls `release.yml` to attach the APKs. Don't bump versions,
+  edit released `CHANGELOG.md` entries or push tags by hand. Release builds fall back to the debug key
+  without keystore secrets — see `docs/RELEASING.md`.
 - The in-app updater checks `UpdateChecker.REPO_SLUG` (`neutraltone/settee`) and installs the release's
   versioned `settee-<tag>.apk`; the release workflow also publishes a fixed-name `settee.apk` for the
   Downloader short code. Keep both names in step with `GitHubRelease.apkAsset`.
 - Never put provider URLs, usernames, passwords or MACs in logs, tests or fixtures.
-- PR titles (and, once #6 lands, commit messages) follow `type(#issue): description`; the issue is
-  required for `feat`, `fix`, `refactor` and `perf`, optional for `docs`, `chore`, `ci`, `test` and
-  `build`. `tools/check-message.sh` is the rule.
 - Before opening a PR, ask the user whether to run `/code-review` against `main` first.
 
 ## Agent skills
