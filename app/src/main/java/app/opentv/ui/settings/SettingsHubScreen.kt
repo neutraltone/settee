@@ -27,8 +27,8 @@ import androidx.compose.material.icons.filled.Dns
 import androidx.compose.material.icons.filled.Extension
 import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.LiveTv
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.PhoneAndroid
 import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material.icons.filled.Sync
@@ -72,16 +72,66 @@ fun SettingsHubScreen(
     onBack: () -> Unit,
 ) {
     val entries = listOf(
-        HubEntry(Icons.Filled.Dns, stringResource(R.string.settings_providers_title), stringResource(R.string.settings_providers_subtitle), onOpenProviders),
-        HubEntry(Icons.Filled.Extension, stringResource(R.string.settings_addons_title), stringResource(R.string.settings_addons_subtitle), onOpenAddons),
-        HubEntry(Icons.Filled.LiveTv, stringResource(R.string.settings_guide_title), stringResource(R.string.settings_guide_subtitle), onOpenGuide),
-        HubEntry(Icons.Filled.GridView, stringResource(R.string.common_channels), stringResource(R.string.settings_channels_subtitle), onOpenChannels),
-        HubEntry(Icons.Filled.PhoneAndroid, stringResource(R.string.settings_webmanager_title), stringResource(R.string.settings_webmanager_subtitle), onOpenWebManager),
-        HubEntry(Icons.Filled.Tune, stringResource(R.string.settings_display_title), stringResource(R.string.settings_display_subtitle), onOpenDisplay),
-        HubEntry(Icons.Filled.Storage, stringResource(R.string.settings_recording_title), stringResource(R.string.settings_recording_subtitle), onOpenRecordings),
-        HubEntry(Icons.Filled.Lock, stringResource(R.string.settings_parental_title), stringResource(R.string.settings_parental_subtitle), onOpenParental),
-        HubEntry(Icons.Filled.Sync, stringResource(R.string.settings_sync_title), stringResource(R.string.settings_sync_subtitle), onOpenSync),
-        HubEntry(Icons.Filled.Info, stringResource(R.string.settings_about_title), stringResource(R.string.settings_about_subtitle), onOpenAbout),
+        HubEntry(
+            Icons.Filled.Dns,
+            stringResource(R.string.settings_providers_title),
+            stringResource(R.string.settings_providers_subtitle),
+            onOpenProviders,
+        ),
+        HubEntry(
+            Icons.Filled.Extension,
+            stringResource(R.string.settings_addons_title),
+            stringResource(R.string.settings_addons_subtitle),
+            onOpenAddons,
+        ),
+        HubEntry(
+            Icons.Filled.LiveTv,
+            stringResource(R.string.settings_guide_title),
+            stringResource(R.string.settings_guide_subtitle),
+            onOpenGuide,
+        ),
+        HubEntry(
+            Icons.Filled.GridView,
+            stringResource(R.string.common_channels),
+            stringResource(R.string.settings_channels_subtitle),
+            onOpenChannels,
+        ),
+        HubEntry(
+            Icons.Filled.PhoneAndroid,
+            stringResource(R.string.settings_webmanager_title),
+            stringResource(R.string.settings_webmanager_subtitle),
+            onOpenWebManager,
+        ),
+        HubEntry(
+            Icons.Filled.Tune,
+            stringResource(R.string.settings_display_title),
+            stringResource(R.string.settings_display_subtitle),
+            onOpenDisplay,
+        ),
+        HubEntry(
+            Icons.Filled.Storage,
+            stringResource(R.string.settings_recording_title),
+            stringResource(R.string.settings_recording_subtitle),
+            onOpenRecordings,
+        ),
+        HubEntry(
+            Icons.Filled.Lock,
+            stringResource(R.string.settings_parental_title),
+            stringResource(R.string.settings_parental_subtitle),
+            onOpenParental,
+        ),
+        HubEntry(
+            Icons.Filled.Sync,
+            stringResource(R.string.settings_sync_title),
+            stringResource(R.string.settings_sync_subtitle),
+            onOpenSync,
+        ),
+        HubEntry(
+            Icons.Filled.Info,
+            stringResource(R.string.settings_about_title),
+            stringResource(R.string.settings_about_subtitle),
+            onOpenAbout,
+        ),
     )
 
     Column(
@@ -108,12 +158,7 @@ fun SettingsHubScreen(
     }
 }
 
-private data class HubEntry(
-    val icon: ImageVector,
-    val title: String,
-    val subtitle: String,
-    val onClick: () -> Unit,
-)
+private data class HubEntry(val icon: ImageVector, val title: String, val subtitle: String, val onClick: () -> Unit)
 
 @Composable
 private fun HubRow(entry: HubEntry) {
@@ -124,12 +169,18 @@ private fun HubRow(entry: HubEntry) {
             .onFocusChanged { focused = it.isFocused }
             .clip(RoundedCornerShape(14.dp))
             .background(
-                if (focused) MaterialTheme.colorScheme.primaryContainer
-                else MaterialTheme.colorScheme.surfaceVariant,
+                if (focused) {
+                    MaterialTheme.colorScheme.primaryContainer
+                } else {
+                    MaterialTheme.colorScheme.surfaceVariant
+                },
             )
             .then(
-                if (focused) Modifier.border(2.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(14.dp))
-                else Modifier,
+                if (focused) {
+                    Modifier.border(2.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(14.dp))
+                } else {
+                    Modifier
+                },
             )
             .clickable(onClick = entry.onClick)
             .padding(horizontal = 18.dp, vertical = 16.dp),
@@ -147,14 +198,20 @@ private fun HubRow(entry: HubEntry) {
                 entry.title,
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
-                color = if (focused) MaterialTheme.colorScheme.onPrimaryContainer
-                else MaterialTheme.colorScheme.onSurface,
+                color = if (focused) {
+                    MaterialTheme.colorScheme.onPrimaryContainer
+                } else {
+                    MaterialTheme.colorScheme.onSurface
+                },
             )
             Text(
                 entry.subtitle,
                 style = MaterialTheme.typography.bodyMedium,
-                color = if (focused) MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
-                else MaterialTheme.colorScheme.onSurfaceVariant,
+                color = if (focused) {
+                    MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
+                } else {
+                    MaterialTheme.colorScheme.onSurfaceVariant
+                },
             )
         }
     }

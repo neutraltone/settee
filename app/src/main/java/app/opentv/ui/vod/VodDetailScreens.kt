@@ -11,6 +11,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
@@ -19,7 +20,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -55,6 +55,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.viewmodel.compose.viewModel
 import app.opentv.R
 import app.opentv.data.model.Episode
@@ -64,7 +65,6 @@ import app.opentv.data.model.StremioStream
 import app.opentv.data.parser.displayTitle
 import app.opentv.ui.VodViewModel
 import coil.compose.AsyncImage
-import androidx.compose.ui.window.Dialog
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -102,7 +102,10 @@ fun MovieDetailScreen(
         }
     }
 
-    val m = movie ?: run { LoadingDetail(); return }
+    val m = movie ?: run {
+        LoadingDetail()
+        return
+    }
 
     // Land focus on the primary action once the page is up, so a d-pad has somewhere to be.
     LaunchedEffect(m.id) {
@@ -112,7 +115,12 @@ fun MovieDetailScreen(
 
     LazyColumn(Modifier.fillMaxSize()) {
         item(key = "header") {
-            DetailBackdrop(title = m.displayTitle, backdropUrl = m.backdropUrl, posterUrl = m.posterUrl, meta = movieMeta(m)) {
+            DetailBackdrop(
+                title = m.displayTitle,
+                backdropUrl = m.backdropUrl,
+                posterUrl = m.posterUrl,
+                meta = movieMeta(m),
+            ) {
                 DetailButton(
                     icon = Icons.Filled.PlayArrow,
                     label = stringResource(if (resumeExists) R.string.vod_resume else R.string.vod_watch_now),
@@ -121,7 +129,9 @@ fun MovieDetailScreen(
                 ) { onPlay(m) }
                 DetailButton(
                     icon = if (m.favourite) Icons.Filled.Star else Icons.Outlined.StarOutline,
-                    label = stringResource(if (m.favourite) R.string.common_remove_favourite else R.string.common_favourite),
+                    label = stringResource(
+                        if (m.favourite) R.string.common_remove_favourite else R.string.common_favourite,
+                    ),
                 ) {
                     viewModel.toggleMovieFavourite(m)
                     movie = m.copy(favourite = !m.favourite)
@@ -166,7 +176,10 @@ fun MovieDetailScreen(
                 addonStreams = null
                 onPlayUrl("movie:${m.id}", stream.url, m.displayTitle)
             },
-            onDismiss = { addonStreams = null; addonLoading = false },
+            onDismiss = {
+                addonStreams = null
+                addonLoading = false
+            },
         )
     }
 }
@@ -226,7 +239,9 @@ private fun AddonStreamRow(stream: StremioStream, onPick: (StremioStream) -> Uni
             .fillMaxWidth()
             .onFocusChanged { focused = it.isFocused }
             .clip(RoundedCornerShape(10.dp))
-            .background(if (focused) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant)
+            .background(
+                if (focused) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant,
+            )
             .clickable { onPick(stream) }
             .padding(horizontal = 14.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -281,7 +296,10 @@ fun SeriesDetailScreen(
     val episodes by (s?.let { viewModel.episodes(it) } ?: viewModel.noEpisodes)
         .collectAsState(initial = emptyList())
 
-    if (s == null) { LoadingDetail(); return }
+    if (s == null) {
+        LoadingDetail()
+        return
+    }
 
     LaunchedEffect(s.id) {
         delay(60)
@@ -298,10 +316,17 @@ fun SeriesDetailScreen(
 
     LazyColumn(Modifier.fillMaxSize()) {
         item(key = "header") {
-            DetailBackdrop(title = s.displayTitle, backdropUrl = s.backdropUrl, posterUrl = s.posterUrl, meta = seriesMeta(s)) {
+            DetailBackdrop(
+                title = s.displayTitle,
+                backdropUrl = s.backdropUrl,
+                posterUrl = s.posterUrl,
+                meta = seriesMeta(s),
+            ) {
                 DetailButton(
                     icon = if (s.favourite) Icons.Filled.Star else Icons.Outlined.StarOutline,
-                    label = stringResource(if (s.favourite) R.string.common_remove_favourite else R.string.common_favourite),
+                    label = stringResource(
+                        if (s.favourite) R.string.common_remove_favourite else R.string.common_favourite,
+                    ),
                     primary = true,
                     modifier = Modifier.focusRequester(favFocus),
                 ) {
@@ -526,12 +551,11 @@ private fun DetailInfo(
 }
 
 /** Splits a provider multi-value string (comma/pipe/slash) into trimmed, de-duplicated, non-blank names. */
-private fun splitNames(raw: String?, vararg delimiters: Char): List<String> =
-    raw?.split(*delimiters)
-        ?.map { it.trim() }
-        ?.filter { it.isNotEmpty() }
-        ?.distinct()
-        .orEmpty()
+private fun splitNames(raw: String?, vararg delimiters: Char): List<String> = raw?.split(*delimiters)
+    ?.map { it.trim() }
+    ?.filter { it.isNotEmpty() }
+    ?.distinct()
+    .orEmpty()
 
 /** A section label ("Cast", "Director") aligned with the page's 24dp gutter. */
 @Composable
@@ -600,8 +624,11 @@ private fun PersonChip(name: String, onClick: () -> Unit) {
             .clip(RoundedCornerShape(22.dp))
             .background(container)
             .then(
-                if (focused) Modifier.border(2.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(22.dp))
-                else Modifier,
+                if (focused) {
+                    Modifier.border(2.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(22.dp))
+                } else {
+                    Modifier
+                },
             )
             .clickable(onClick = onClick)
             .padding(horizontal = 16.dp, vertical = 10.dp),
@@ -634,8 +661,11 @@ private fun DetailButton(
             .clip(RoundedCornerShape(12.dp))
             .background(container)
             .then(
-                if (focused) Modifier.border(2.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(12.dp))
-                else Modifier,
+                if (focused) {
+                    Modifier.border(2.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(12.dp))
+                } else {
+                    Modifier
+                },
             )
             .clickable(onClick = onClick)
             .padding(horizontal = 18.dp, vertical = 12.dp),
@@ -658,12 +688,18 @@ private fun EpisodeRow(ep: Episode, onPlay: (mediaKey: String, url: String, titl
             .onFocusChanged { focused = it.isFocused }
             .clip(RoundedCornerShape(8.dp))
             .background(
-                if (focused) MaterialTheme.colorScheme.primaryContainer
-                else MaterialTheme.colorScheme.surface,
+                if (focused) {
+                    MaterialTheme.colorScheme.primaryContainer
+                } else {
+                    MaterialTheme.colorScheme.surface
+                },
             )
             .then(
-                if (focused) Modifier.border(2.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(8.dp))
-                else Modifier,
+                if (focused) {
+                    Modifier.border(2.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(8.dp))
+                } else {
+                    Modifier
+                },
             )
             .clickable {
                 onPlay("ep:${ep.id}", ep.streamUrl, "S${ep.season}E${ep.episodeNumber} · ${ep.title}")

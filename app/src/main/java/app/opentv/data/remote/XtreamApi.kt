@@ -43,7 +43,10 @@ import okhttp3.Request
  */
 class XtreamApi(
     private val http: OkHttpClient,
-    private val json: Json = Json { ignoreUnknownKeys = true; isLenient = true },
+    private val json: Json = Json {
+        ignoreUnknownKeys = true
+        isLenient = true
+    },
 ) {
 
     class XtreamException(message: String, cause: Throwable? = null) : Exception(message, cause)
@@ -80,23 +83,20 @@ class XtreamApi(
     suspend fun seriesCategories(source: Source): List<Category> =
         categories(source, "get_series_categories", StreamKind.SERIES)
 
-    private suspend fun categories(
-        source: Source,
-        action: String,
-        kind: StreamKind,
-    ): List<Category> = withContext(Dispatchers.IO) {
-        getJson(source, action).arrayOrEmpty.mapIndexedNotNull { index, element ->
-            val obj = element.jsonObjectOrNull ?: return@mapIndexedNotNull null
-            val id = obj["category_id"].asStringOrNull ?: return@mapIndexedNotNull null
-            Category(
-                id = id,
-                sourceId = source.id,
-                name = obj["category_name"].asStringOrNull ?: id,
-                kind = kind,
-                sortIndex = index,
-            )
+    private suspend fun categories(source: Source, action: String, kind: StreamKind): List<Category> =
+        withContext(Dispatchers.IO) {
+            getJson(source, action).arrayOrEmpty.mapIndexedNotNull { index, element ->
+                val obj = element.jsonObjectOrNull ?: return@mapIndexedNotNull null
+                val id = obj["category_id"].asStringOrNull ?: return@mapIndexedNotNull null
+                Category(
+                    id = id,
+                    sourceId = source.id,
+                    name = obj["category_name"].asStringOrNull ?: id,
+                    kind = kind,
+                    sortIndex = index,
+                )
+            }
         }
-    }
 
     suspend fun liveStreams(source: Source): List<Channel> = withContext(Dispatchers.IO) {
         getJson(source, "get_live_streams").arrayOrEmpty.mapIndexedNotNull { index, element ->
@@ -184,44 +184,43 @@ class XtreamApi(
      * panels, where it is an array of arrays, and on others where a season with a single
      * episode collapses to a bare object. All three shapes are handled.
      */
-    suspend fun episodes(source: Source, seriesId: String): List<Episode> =
-        withContext(Dispatchers.IO) {
-            val body = getJson(source, "get_series_info") { it.addQueryParameter("series_id", seriesId) }
-            val episodesNode = body.jsonObjectOrNull?.get("episodes") ?: return@withContext emptyList()
+    suspend fun episodes(source: Source, seriesId: String): List<Episode> = withContext(Dispatchers.IO) {
+        val body = getJson(source, "get_series_info") { it.addQueryParameter("series_id", seriesId) }
+        val episodesNode = body.jsonObjectOrNull?.get("episodes") ?: return@withContext emptyList()
 
-            val seasonBuckets: List<Pair<Int?, JsonElement>> = when (episodesNode) {
-                is JsonObject -> episodesNode.entries.map { it.key.toIntOrNull() to it.value }
-                is JsonArray -> episodesNode.mapIndexed { index, value -> index to value }
+        val seasonBuckets: List<Pair<Int?, JsonElement>> = when (episodesNode) {
+            is JsonObject -> episodesNode.entries.map { it.key.toIntOrNull() to it.value }
+            is JsonArray -> episodesNode.mapIndexed { index, value -> index to value }
+            else -> emptyList()
+        }
+
+        seasonBuckets.flatMap { (seasonHint, bucket) ->
+            val items: List<JsonElement> = when (bucket) {
+                is JsonArray -> bucket.toList()
+                is JsonObject -> listOf(bucket)
                 else -> emptyList()
             }
-
-            seasonBuckets.flatMap { (seasonHint, bucket) ->
-                val items: List<JsonElement> = when (bucket) {
-                    is JsonArray -> bucket.toList()
-                    is JsonObject -> listOf(bucket)
-                    else -> emptyList()
-                }
-                items.mapNotNull { element ->
-                    val obj = element.jsonObjectOrNull ?: return@mapNotNull null
-                    val episodeId = obj["id"].asStringOrNull ?: return@mapNotNull null
-                    val info = obj["info"].jsonObjectOrNull
-                    val extension = obj["container_extension"].asStringOrNull
-                        ?.takeIf { it.isNotBlank() }
-                    Episode(
-                        sourceId = source.id,
-                        seriesId = seriesId,
-                        episodeId = episodeId,
-                        season = obj["season"].asIntOrNull ?: seasonHint ?: 1,
-                        episodeNumber = obj["episode_num"].asIntOrNull ?: 0,
-                        title = obj["title"].asStringOrNull ?: "Episode",
-                        plot = info?.get("plot").asStringOrNull,
-                        durationSeconds = info?.get("duration_secs").asIntOrNull,
-                        stillUrl = info?.get("movie_image").asStringOrNull?.takeIf { it.isNotBlank() },
-                        streamUrl = seriesStreamUrl(source, episodeId, extension),
-                    )
-                }
+            items.mapNotNull { element ->
+                val obj = element.jsonObjectOrNull ?: return@mapNotNull null
+                val episodeId = obj["id"].asStringOrNull ?: return@mapNotNull null
+                val info = obj["info"].jsonObjectOrNull
+                val extension = obj["container_extension"].asStringOrNull
+                    ?.takeIf { it.isNotBlank() }
+                Episode(
+                    sourceId = source.id,
+                    seriesId = seriesId,
+                    episodeId = episodeId,
+                    season = obj["season"].asIntOrNull ?: seasonHint ?: 1,
+                    episodeNumber = obj["episode_num"].asIntOrNull ?: 0,
+                    title = obj["title"].asStringOrNull ?: "Episode",
+                    plot = info?.get("plot").asStringOrNull,
+                    durationSeconds = info?.get("duration_secs").asIntOrNull,
+                    stillUrl = info?.get("movie_image").asStringOrNull?.takeIf { it.isNotBlank() },
+                    streamUrl = seriesStreamUrl(source, episodeId, extension),
+                )
             }
         }
+    }
 
     /**
      * Rich metadata for a single movie, from `get_vod_info`'s `info` object.
@@ -307,24 +306,18 @@ class XtreamApi(
         return "${source.url}/timeshift/${source.username}/${source.password}/$minutes/$stamp/$streamId.ts"
     }
 
-    private fun xmltvUrl(source: Source): HttpUrl =
-        baseUrl(source).newBuilder()
-            .encodedPath("/xmltv.php")
-            .addQueryParameter("username", source.username.orEmpty())
-            .addQueryParameter("password", source.password.orEmpty())
-            .build()
+    private fun xmltvUrl(source: Source): HttpUrl = baseUrl(source).newBuilder()
+        .encodedPath("/xmltv.php")
+        .addQueryParameter("username", source.username.orEmpty())
+        .addQueryParameter("password", source.password.orEmpty())
+        .build()
 
-    private fun baseUrl(source: Source): HttpUrl =
-        source.url.toHttpUrlOrNull()
-            ?: throw XtreamException("\"${source.url}\" is not a valid server address.")
+    private fun baseUrl(source: Source): HttpUrl = source.url.toHttpUrlOrNull()
+        ?: throw XtreamException("\"${source.url}\" is not a valid server address.")
 
     // ---- Plumbing ------------------------------------------------------------------------
 
-    private fun getJson(
-        source: Source,
-        action: String?,
-        extra: (HttpUrl.Builder) -> Unit = {},
-    ): JsonElement {
+    private fun getJson(source: Source, action: String?, extra: (HttpUrl.Builder) -> Unit = {}): JsonElement {
         val builder = baseUrl(source).newBuilder()
             .encodedPath("/player_api.php")
             .addQueryParameter("username", source.username.orEmpty())
@@ -352,19 +345,20 @@ class XtreamApi(
         }
     }
 
-    private fun request(source: Source, url: HttpUrl): Request =
-        Request.Builder()
-            .url(url)
-            .header("User-Agent", source.userAgent)
-            .build()
+    private fun request(source: Source, url: HttpUrl): Request = Request.Builder()
+        .url(url)
+        .header("User-Agent", source.userAgent)
+        .build()
 
     private fun describeHttpFailure(code: Int): String = when (code) {
-        401, 403 -> "The server refused the request (HTTP $code). The username or password " +
-            "may be wrong, or the provider may be blocking this app's User-Agent — try " +
-            "changing it in the source's advanced settings."
+        401, 403 ->
+            "The server refused the request (HTTP $code). The username or password " +
+                "may be wrong, or the provider may be blocking this app's User-Agent — try " +
+                "changing it in the source's advanced settings."
         404 -> "No Xtream API at that address (HTTP 404). Check the URL and port."
-        405 -> "The server rejected the request method (HTTP 405). This usually means the " +
-            "address points at a plain playlist rather than an Xtream panel."
+        405 ->
+            "The server rejected the request method (HTTP 405). This usually means the " +
+                "address points at a plain playlist rather than an Xtream panel."
         429 -> "The server is rate-limiting this device (HTTP 429). Try again shortly."
         in 500..599 -> "The provider's server is having problems (HTTP $code)."
         else -> "The server returned HTTP $code."

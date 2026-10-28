@@ -80,8 +80,7 @@ class EpgRepository(
     fun observeWindow(fromUtcMillis: Long, toUtcMillis: Long): Flow<List<Programme>> =
         programmeDao.observeWindow(fromUtcMillis, toUtcMillis)
 
-    fun observeNow(nowUtcMillis: Long): Flow<List<Programme>> =
-        programmeDao.observeNow(nowUtcMillis)
+    fun observeNow(nowUtcMillis: Long): Flow<List<Programme>> = programmeDao.observeNow(nowUtcMillis)
 
     suspend fun upcoming(epgChannelId: String, nowUtcMillis: Long, limit: Int = 12): List<Programme> =
         programmeDao.upcoming(epgChannelId, nowUtcMillis, limit)
@@ -135,47 +134,46 @@ class EpgRepository(
     // ---- Sync ------------------------------------------------------------------------------
 
     /** Downloads every enabled feed, merges, prunes, and re-runs the matcher. */
-    suspend fun syncAll(nowUtcMillis: Long, force: Boolean = false): SyncSummary =
-        withContext(Dispatchers.IO) {
-            ensureFeeds()
-            maybeAutoEnableRegionalFeed()
+    suspend fun syncAll(nowUtcMillis: Long, force: Boolean = false): SyncSummary = withContext(Dispatchers.IO) {
+        ensureFeeds()
+        maybeAutoEnableRegionalFeed()
 
-            var succeeded = 0
-            var failed = 0
-            var written = 0
+        var succeeded = 0
+        var failed = 0
+        var written = 0
 
-            for (feed in feedDao.enabled()) {
-                if (!force && nowUtcMillis - feed.lastSyncMillis < REFRESH_INTERVAL_MILLIS) {
+        for (feed in feedDao.enabled()) {
+            if (!force && nowUtcMillis - feed.lastSyncMillis < REFRESH_INTERVAL_MILLIS) {
+                succeeded++
+                continue
+            }
+            when (val result = syncFeed(feed, nowUtcMillis)) {
+                is FeedResult.Success -> {
                     succeeded++
-                    continue
+                    written += result.programmes
+                    feedDao.markSynced(
+                        feed.id,
+                        nowUtcMillis,
+                        "${result.programmes} programmes, ${result.channels} channels",
+                    )
                 }
-                when (val result = syncFeed(feed, nowUtcMillis)) {
-                    is FeedResult.Success -> {
-                        succeeded++
-                        written += result.programmes
-                        feedDao.markSynced(
-                            feed.id,
-                            nowUtcMillis,
-                            "${result.programmes} programmes, ${result.channels} channels",
-                        )
-                    }
-                    is FeedResult.Failed -> {
-                        failed++
-                        // The stamp is NOT advanced on failure, so the next sync retries
-                        // rather than waiting out the interval on a feed that never landed.
-                        feedDao.markSynced(feed.id, feed.lastSyncMillis, result.reason)
-                        Log.w(TAG, "Feed '${feed.name}' failed: ${result.reason}")
-                    }
+                is FeedResult.Failed -> {
+                    failed++
+                    // The stamp is NOT advanced on failure, so the next sync retries
+                    // rather than waiting out the interval on a feed that never landed.
+                    feedDao.markSynced(feed.id, feed.lastSyncMillis, result.reason)
+                    Log.w(TAG, "Feed '${feed.name}' failed: ${result.reason}")
                 }
             }
-
-            if (succeeded > 0) {
-                programmeDao.deleteEndedBefore(nowUtcMillis - RETENTION_PAST_MILLIS)
-            }
-
-            val (matched, total) = runMatcher()
-            SyncSummary(succeeded, failed, written, matched, total)
         }
+
+        if (succeeded > 0) {
+            programmeDao.deleteEndedBefore(nowUtcMillis - RETENTION_PAST_MILLIS)
+        }
+
+        val (matched, total) = runMatcher()
+        SyncSummary(succeeded, failed, written, matched, total)
+    }
 
     private sealed interface FeedResult {
         data class Success(val programmes: Int, val channels: Int) : FeedResult
@@ -304,8 +302,7 @@ class EpgRepository(
         return matched to channels.size
     }
 
-    suspend fun setManualOverride(channelId: Long, epgId: String?) =
-        channelDao.setEpgOverride(channelId, epgId)
+    suspend fun setManualOverride(channelId: Long, epgId: String?) = channelDao.setEpgOverride(channelId, epgId)
 
     /**
      * Turns on the free guide for the user's region, once, on a pristine install.

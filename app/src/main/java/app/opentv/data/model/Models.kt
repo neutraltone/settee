@@ -89,13 +89,7 @@ enum class StreamKind { LIVE, MOVIE, SERIES }
     tableName = "categories",
     primaryKeys = ["sourceId", "id", "kind"],
 )
-data class Category(
-    val id: String,
-    val sourceId: Long,
-    val name: String,
-    val kind: StreamKind,
-    val sortIndex: Int = 0,
-)
+data class Category(val id: String, val sourceId: Long, val name: String, val kind: StreamKind, val sortIndex: Int = 0)
 
 @Entity(
     tableName = "channels",
@@ -247,8 +241,7 @@ data class Programme(
 ) {
     val durationMillis: Long get() = endUtcMillis - startUtcMillis
 
-    fun isLiveAt(nowUtcMillis: Long): Boolean =
-        nowUtcMillis in startUtcMillis until endUtcMillis
+    fun isLiveAt(nowUtcMillis: Long): Boolean = nowUtcMillis in startUtcMillis until endUtcMillis
 
     fun progressAt(nowUtcMillis: Long): Float {
         if (durationMillis <= 0L) return 0f
@@ -371,11 +364,7 @@ data class PlaybackPosition(
 
 /** A local viewing profile — just a name. No account, no password; it lives on this device. */
 @Entity(tableName = "profiles")
-data class Profile(
-    @PrimaryKey(autoGenerate = true) val id: Long = 0,
-    val name: String,
-    val createdAtMillis: Long = 0,
-)
+data class Profile(@PrimaryKey(autoGenerate = true) val id: Long = 0, val name: String, val createdAtMillis: Long = 0)
 
 /** Where a recording is in its lifecycle. */
 enum class RecordingStatus {

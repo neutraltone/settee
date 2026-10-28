@@ -75,10 +75,7 @@ import kotlinx.coroutines.delay
  * 20,000-channel provider is unscrollable on a remote, so browsing is by category by design.
  */
 @Composable
-fun ChannelManagerScreen(
-    onBack: () -> Unit,
-    viewModel: ChannelsViewModel = viewModel(),
-) {
+fun ChannelManagerScreen(onBack: () -> Unit, viewModel: ChannelsViewModel = viewModel()) {
     val sources by viewModel.sources.collectAsState()
     val categoryGroups by viewModel.managerCategoryGroups.collectAsState()
     val selectedSource by viewModel.managerSelectedSource.collectAsState()
@@ -161,14 +158,20 @@ fun ChannelManagerScreen(
                         RailEntry(
                             label = stringResource(R.string.channels_manager_all_sources),
                             selected = selectedSource == null,
-                            onClick = { searchMode = false; viewModel.selectManagerSource(null) },
+                            onClick = {
+                                searchMode = false
+                                viewModel.selectManagerSource(null)
+                            },
                         )
                     }
                     items(sources, key = { "src-${it.id}" }) { source ->
                         RailEntry(
                             label = source.name,
                             selected = selectedSource == source.id,
-                            onClick = { searchMode = false; viewModel.selectManagerSource(source.id) },
+                            onClick = {
+                                searchMode = false
+                                viewModel.selectManagerSource(source.id)
+                            },
                         )
                     }
                 }
@@ -179,7 +182,10 @@ fun ChannelManagerScreen(
                     RailEntry(
                         label = group.label,
                         selected = groupSelected,
-                        onClick = { searchMode = false; viewModel.selectManagerCategory(group.key) },
+                        onClick = {
+                            searchMode = false
+                            viewModel.selectManagerCategory(group.key)
+                        },
                         modifier = if (groupSelected) Modifier.focusRequester(railFocusRequester) else Modifier,
                     )
                 }
@@ -282,8 +288,11 @@ private fun BrowsePane(
                     // LEFT from the row's leftmost control (the star) hops back to the category
                     // rail; from the switch it first steps left to the star, as usual.
                     leftEdgeModifier = Modifier.onPreviewKeyEvent { e ->
-                        if (e.type == KeyEventType.KeyDown && e.key == Key.DirectionLeft) onExitLeft()
-                        else false
+                        if (e.type == KeyEventType.KeyDown && e.key == Key.DirectionLeft) {
+                            onExitLeft()
+                        } else {
+                            false
+                        }
                     },
                 )
             }
@@ -292,12 +301,7 @@ private fun BrowsePane(
 }
 
 @Composable
-private fun RailEntry(
-    label: String,
-    selected: Boolean,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
+private fun RailEntry(label: String, selected: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
     var focused by remember { mutableStateOf(false) }
     val bg = when {
         focused -> MaterialTheme.colorScheme.primary
@@ -377,8 +381,11 @@ private fun ManagerRow(
             Text(
                 if (hidden) stringResource(R.string.channels_hidden) else stringResource(R.string.channels_showing),
                 style = MaterialTheme.typography.bodyMedium,
-                color = if (hidden) MaterialTheme.colorScheme.onSurfaceVariant
-                else MaterialTheme.colorScheme.primary,
+                color = if (hidden) {
+                    MaterialTheme.colorScheme.onSurfaceVariant
+                } else {
+                    MaterialTheme.colorScheme.primary
+                },
             )
         }
 
@@ -386,12 +393,22 @@ private fun ManagerRow(
         IconButton(onClick = onToggleFavourite, modifier = leftEdgeModifier) {
             Icon(
                 imageVector = if (row.primary.favourite) Icons.Filled.Star else Icons.Outlined.StarOutline,
-                contentDescription = if (row.primary.favourite) stringResource(R.string.common_remove_favourite) else stringResource(R.string.common_favourite),
+                contentDescription = if (row.primary.favourite) {
+                    stringResource(
+                        R.string.common_remove_favourite,
+                    )
+                } else {
+                    stringResource(R.string.common_favourite)
+                },
             )
         }
         Spacer(Modifier.width(8.dp))
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(stringResource(R.string.channels_show), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
+            Text(
+                stringResource(R.string.channels_show),
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Medium,
+            )
             // Checked = visible; off = hidden. Reads the natural way: switch it off to hide.
             Switch(checked = !hidden, onCheckedChange = { onToggleHidden() })
         }

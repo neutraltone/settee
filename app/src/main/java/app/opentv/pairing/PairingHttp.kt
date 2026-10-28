@@ -57,8 +57,7 @@ object PairingHttp {
         }.toMap()
     }
 
-    private fun decode(value: String): String =
-        URLDecoder.decode(value.replace("+", "%20"), "UTF-8")
+    private fun decode(value: String): String = URLDecoder.decode(value.replace("+", "%20"), "UTF-8")
 
     /** Parses one header line into a lowercased name and its value. */
     fun parseHeader(line: String): Pair<String, String>? {
@@ -113,11 +112,7 @@ object PairingHttp {
         }
     }
 
-    fun httpResponse(
-        status: String,
-        contentType: String,
-        body: String,
-    ): ByteArray {
+    fun httpResponse(status: String, contentType: String, body: String): ByteArray {
         val bytes = body.toByteArray(Charsets.UTF_8)
         val head = buildString {
             append("HTTP/1.1 ").append(status).append("\r\n")

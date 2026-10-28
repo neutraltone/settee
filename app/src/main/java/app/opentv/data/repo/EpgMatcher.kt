@@ -32,10 +32,7 @@ object EpgMatcher {
         val key: String,
     )
 
-    class Index internal constructor(
-        private val exact: Map<String, String>,
-        private val sortedKeys: List<Alias>,
-    ) {
+    class Index internal constructor(private val exact: Map<String, String>, private val sortedKeys: List<Alias>) {
         /** Returns the epg id for a provider channel's group key, or null. */
         fun match(groupKey: String): String? {
             if (groupKey.length < MIN_KEY_LENGTH) return null

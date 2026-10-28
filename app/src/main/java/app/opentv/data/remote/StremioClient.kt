@@ -37,7 +37,10 @@ import okhttp3.Request
  */
 class StremioClient(
     private val http: OkHttpClient,
-    private val json: Json = Json { ignoreUnknownKeys = true; isLenient = true },
+    private val json: Json = Json {
+        ignoreUnknownKeys = true
+        isLenient = true
+    },
 ) {
 
     /**

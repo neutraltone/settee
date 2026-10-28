@@ -20,7 +20,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 
-class OpenTvApp : Application(), ImageLoaderFactory {
+class OpenTvApp :
+    Application(),
+    ImageLoaderFactory {
     private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     /**
@@ -34,22 +36,21 @@ class OpenTvApp : Application(), ImageLoaderFactory {
      *  - RGB_565 for opaque art (posters/backdrops) halves the memory per bitmap, so more fits in
      *    cache; Coil keeps ARGB_8888 for anything with transparency, so channel logos are untouched.
      */
-    override fun newImageLoader(): ImageLoader =
-        ImageLoader.Builder(this)
-            .memoryCache {
-                MemoryCache.Builder(this)
-                    .maxSizePercent(0.25)
-                    .build()
-            }
-            .diskCache {
-                DiskCache.Builder()
-                    .directory(cacheDir.resolve("image_cache"))
-                    .maxSizeBytes(256L * 1024 * 1024)
-                    .build()
-            }
-            .crossfade(false)
-            .allowRgb565(true)
-            .build()
+    override fun newImageLoader(): ImageLoader = ImageLoader.Builder(this)
+        .memoryCache {
+            MemoryCache.Builder(this)
+                .maxSizePercent(0.25)
+                .build()
+        }
+        .diskCache {
+            DiskCache.Builder()
+                .directory(cacheDir.resolve("image_cache"))
+                .maxSizeBytes(256L * 1024 * 1024)
+                .build()
+        }
+        .crossfade(false)
+        .allowRgb565(true)
+        .build()
 
     // So notifications and any app-context resources use the chosen language too, not just the UI.
     override fun attachBaseContext(base: Context) {

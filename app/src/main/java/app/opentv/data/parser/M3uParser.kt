@@ -30,11 +30,9 @@ object M3uParser {
         val skippedEntries: Int,
     )
 
-    fun parse(input: InputStream, sourceId: Long): Result =
-        input.bufferedReader().use { parse(it, sourceId) }
+    fun parse(input: InputStream, sourceId: Long): Result = input.bufferedReader().use { parse(it, sourceId) }
 
-    fun parse(text: String, sourceId: Long): Result =
-        parse(text.reader().buffered(), sourceId)
+    fun parse(text: String, sourceId: Long): Result = parse(text.reader().buffered(), sourceId)
 
     fun parse(reader: BufferedReader, sourceId: Long): Result {
         val channels = ArrayList<Channel>()
@@ -120,10 +118,9 @@ object M3uParser {
             ?: attributes["tvg-name"]?.takeIf { it.isNotBlank() }
     }
 
-    private fun parseAttributes(line: String): Map<String, String> =
-        ATTRIBUTE_REGEX.findAll(line).associate { match ->
-            match.groupValues[1].lowercase() to match.groupValues[2]
-        }
+    private fun parseAttributes(line: String): Map<String, String> = ATTRIBUTE_REGEX.findAll(line).associate { match ->
+        match.groupValues[1].lowercase() to match.groupValues[2]
+    }
 
     /** FNV-1a. Stable across processes and platforms, unlike [String.hashCode] guarantees. */
     private fun stableHash(value: String): String {

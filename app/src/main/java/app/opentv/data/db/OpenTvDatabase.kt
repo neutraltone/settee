@@ -199,7 +199,9 @@ abstract class OpenTvDatabase : RoomDatabase() {
                         "`createdAtMillis` INTEGER NOT NULL, " +
                         "`fired` INTEGER NOT NULL)",
                 )
-                db.execSQL("CREATE INDEX IF NOT EXISTS `index_reminders_startUtcMillis` ON `reminders` (`startUtcMillis`)")
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS `index_reminders_startUtcMillis` ON `reminders` (`startUtcMillis`)",
+                )
                 db.execSQL("CREATE INDEX IF NOT EXISTS `index_reminders_channelId` ON `reminders` (`channelId`)")
             }
         }

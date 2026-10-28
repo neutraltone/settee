@@ -9,11 +9,11 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import androidx.core.content.FileProvider
+import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
-import java.io.File
 
 /**
  * Downloads an update APK and hands it to the system installer.
@@ -35,46 +35,37 @@ class ApkInstaller(private val http: OkHttpClient) {
      * Downloads [url] and launches the installer. Returns true once the installer intent has
      * been fired; throws on a download failure so the caller can show a retry.
      */
-    suspend fun downloadAndInstall(
-        context: Context,
-        url: String,
-        expectedBytes: Long,
-        progress: Progress,
-    ): Boolean {
+    suspend fun downloadAndInstall(context: Context, url: String, expectedBytes: Long, progress: Progress): Boolean {
         val apk = download(context, url, expectedBytes, progress)
         launchInstaller(context, apk)
         return true
     }
 
-    private suspend fun download(
-        context: Context,
-        url: String,
-        expectedBytes: Long,
-        progress: Progress,
-    ): File = withContext(Dispatchers.IO) {
-        val dir = File(context.cacheDir, "updates").apply { mkdirs() }
-        // A fixed name means each download overwrites the last rather than piling up copies.
-        val out = File(dir, "opentv-update.apk")
+    private suspend fun download(context: Context, url: String, expectedBytes: Long, progress: Progress): File =
+        withContext(Dispatchers.IO) {
+            val dir = File(context.cacheDir, "updates").apply { mkdirs() }
+            // A fixed name means each download overwrites the last rather than piling up copies.
+            val out = File(dir, "opentv-update.apk")
 
-        val request = Request.Builder().url(url).header("User-Agent", "OpenTV").build()
-        http.newCall(request).execute().use { response ->
-            if (!response.isSuccessful) error("Download failed: HTTP ${response.code}")
-            val bodyStream = response.body?.byteStream() ?: error("Empty download")
-            val total = if (expectedBytes > 0) expectedBytes else (response.body?.contentLength() ?: -1L)
+            val request = Request.Builder().url(url).header("User-Agent", "OpenTV").build()
+            http.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) error("Download failed: HTTP ${response.code}")
+                val bodyStream = response.body?.byteStream() ?: error("Empty download")
+                val total = if (expectedBytes > 0) expectedBytes else (response.body?.contentLength() ?: -1L)
 
-            out.outputStream().use { sink ->
-                val buffer = ByteArray(64 * 1024)
-                var read: Int
-                var written = 0L
-                while (bodyStream.read(buffer).also { read = it } != -1) {
-                    sink.write(buffer, 0, read)
-                    written += read
-                    progress.onProgress(if (total > 0) (written.toFloat() / total) else -1f)
+                out.outputStream().use { sink ->
+                    val buffer = ByteArray(64 * 1024)
+                    var read: Int
+                    var written = 0L
+                    while (bodyStream.read(buffer).also { read = it } != -1) {
+                        sink.write(buffer, 0, read)
+                        written += read
+                        progress.onProgress(if (total > 0) (written.toFloat() / total) else -1f)
+                    }
                 }
             }
+            out
         }
-        out
-    }
 
     private fun launchInstaller(context: Context, apk: File) {
         val uri: Uri = FileProvider.getUriForFile(

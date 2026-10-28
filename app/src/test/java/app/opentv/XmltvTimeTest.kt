@@ -109,14 +109,7 @@ class XmltvTimeTest {
         assertThat(XmltvParser.parseXmltvTime("20260727183000 UTC")).isEqualTo(expected)
     }
 
-    private fun utcMillis(
-        year: Int,
-        month: Int,
-        day: Int,
-        hour: Int,
-        minute: Int,
-        second: Int,
-    ): Long {
+    private fun utcMillis(year: Int, month: Int, day: Int, hour: Int, minute: Int, second: Int): Long {
         val calendar = java.util.Calendar.getInstance(TimeZone.getTimeZone("UTC"))
         calendar.clear()
         calendar.set(year, month - 1, day, hour, minute, second)

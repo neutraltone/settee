@@ -135,11 +135,7 @@ class CatalogRepository(
     private val tmdb = TmdbClient(http, settings)
 
     sealed interface SyncResult {
-        data class Success(
-            val channelCount: Int,
-            val movieCount: Int,
-            val seriesCount: Int,
-        ) : SyncResult
+        data class Success(val channelCount: Int, val movieCount: Int, val seriesCount: Int) : SyncResult
 
         data class Failed(val reason: String, val cause: Throwable?) : SyncResult
     }
@@ -147,8 +143,7 @@ class CatalogRepository(
     fun observeChannels(sourceId: Long? = null, categoryId: String? = null): Flow<List<Channel>> =
         channelDao.observe(sourceId, categoryId)
 
-    fun observeChannelsIn(categoryIds: List<String>): Flow<List<Channel>> =
-        channelDao.observeInCategories(categoryIds)
+    fun observeChannelsIn(categoryIds: List<String>): Flow<List<Channel>> = channelDao.observeInCategories(categoryIds)
 
     /**
      * Channels in a set of categories INCLUDING hidden ones, optionally scoped to one source — the
@@ -175,8 +170,7 @@ class CatalogRepository(
 
     fun searchChannels(query: String): Flow<List<Channel>> = channelDao.search(query)
 
-    fun searchChannelsIncludingHidden(query: String): Flow<List<Channel>> =
-        channelDao.searchIncludingHidden(query)
+    fun searchChannelsIncludingHidden(query: String): Flow<List<Channel>> = channelDao.searchIncludingHidden(query)
 
     fun searchMovies(query: String): Flow<List<Movie>> = movieDao.search(query)
 
@@ -251,7 +245,11 @@ class CatalogRepository(
         withContext(Dispatchers.Default) { groupByGenre(all, Movie::genre, maxGenres, perGenre) }
 
     /** Series grouped by genre from an already-loaded list — the single-scan path. See [moviesByGenreFrom]. */
-    suspend fun seriesByGenreFrom(all: List<Series>, maxGenres: Int = 12, perGenre: Int = 30): List<GenreGroup<Series>> =
+    suspend fun seriesByGenreFrom(
+        all: List<Series>,
+        maxGenres: Int = 12,
+        perGenre: Int = 30,
+    ): List<GenreGroup<Series>> =
         withContext(Dispatchers.Default) { groupByGenre(all, Series::genre, maxGenres, perGenre) }
 
     /**
@@ -356,25 +354,24 @@ class CatalogRepository(
      * they act in, movies they directed and series they act in, de-duplicating movies that credit the
      * same person as both actor and director. Movies (best-rated first) lead, then series.
      */
-    suspend fun titlesWithPerson(name: String, perKind: Int = 40): List<PersonTitle> =
-        withContext(Dispatchers.IO) {
-            val query = name.trim()
-            if (query.isEmpty()) return@withContext emptyList()
+    suspend fun titlesWithPerson(name: String, perKind: Int = 40): List<PersonTitle> = withContext(Dispatchers.IO) {
+        val query = name.trim()
+        if (query.isEmpty()) return@withContext emptyList()
 
-            val movies = LinkedHashMap<Long, Movie>()
-            for (m in movieDao.moviesWithActor(query, perKind)) movies[m.id] = m
-            for (m in movieDao.moviesByDirector(query, perKind)) movies.putIfAbsent(m.id, m)
+        val movies = LinkedHashMap<Long, Movie>()
+        for (m in movieDao.moviesWithActor(query, perKind)) movies[m.id] = m
+        for (m in movieDao.moviesByDirector(query, perKind)) movies.putIfAbsent(m.id, m)
 
-            val orderedMovies = movies.values.sortedWith(
-                compareByDescending<Movie> { it.rating ?: -1.0 }.thenByDescending { it.addedMillis },
-            )
-            val series = seriesDao.seriesWithActor(query, perKind)
+        val orderedMovies = movies.values.sortedWith(
+            compareByDescending<Movie> { it.rating ?: -1.0 }.thenByDescending { it.addedMillis },
+        )
+        val series = seriesDao.seriesWithActor(query, perKind)
 
-            buildList(orderedMovies.size + series.size) {
-                orderedMovies.forEach { add(PersonTitle.MovieItem(it)) }
-                series.forEach { add(PersonTitle.SeriesItem(it)) }
-            }
+        buildList(orderedMovies.size + series.size) {
+            orderedMovies.forEach { add(PersonTitle.MovieItem(it)) }
+            series.forEach { add(PersonTitle.SeriesItem(it)) }
         }
+    }
 
     /** "More Like This" for a series. See [moreLikeThis]. */
     suspend fun moreLikeThisSeries(series: Series, limit: Int = 20): List<Series> = withContext(Dispatchers.IO) {
@@ -516,12 +513,11 @@ class CatalogRepository(
         get() = backdropUrl != null || cast != null || genre != null
 
     /** Splits a provider genre string ("Action, Thriller" / "Action|Thriller") into clean genres. */
-    private fun splitGenres(raw: String?): List<String> =
-        raw?.split(',', '|')
-            ?.map { it.trim() }
-            ?.filter { it.isNotEmpty() }
-            ?.distinct()
-            .orEmpty()
+    private fun splitGenres(raw: String?): List<String> = raw?.split(',', '|')
+        ?.map { it.trim() }
+        ?.filter { it.isNotEmpty() }
+        ?.distinct()
+        .orEmpty()
 
     private fun <T> groupByGenre(
         items: List<T>,
@@ -546,8 +542,7 @@ class CatalogRepository(
         splitGenres(genre).sumOf { affinity[it] ?: 0 }
 
     /** How many of a title's genres are in the wanted set — the More-Like-This overlap. */
-    private fun sharedGenreCount(genre: String?, wanted: Set<String>): Int =
-        splitGenres(genre).count { it in wanted }
+    private fun sharedGenreCount(genre: String?, wanted: Set<String>): Int = splitGenres(genre).count { it in wanted }
 
     /** Extracts a movie's local id from a playback-position mediaKey ("movie:42" → 42). */
     private fun movieIdFromMediaKey(mediaKey: String): Long? {
@@ -555,8 +550,7 @@ class CatalogRepository(
         return if (parts.size == 2 && parts[0] == "movie") parts[1].toLongOrNull() else null
     }
 
-    suspend fun setChannelFavourite(id: Long, favourite: Boolean) =
-        channelDao.setFavourite(id, favourite)
+    suspend fun setChannelFavourite(id: Long, favourite: Boolean) = channelDao.setFavourite(id, favourite)
 
     suspend fun setChannelHidden(id: Long, hidden: Boolean) = channelDao.setHidden(id, hidden)
 
@@ -585,8 +579,7 @@ class CatalogRepository(
     suspend fun channelsInCategoryForManager(sourceId: Long?, categoryId: String): List<Channel> =
         channelDao.channelsInCategoryIncludingHidden(sourceId, categoryId)
 
-    suspend fun setMovieFavourite(id: Long, favourite: Boolean) =
-        movieDao.setFavourite(id, favourite)
+    suspend fun setMovieFavourite(id: Long, favourite: Boolean) = movieDao.setFavourite(id, favourite)
 
     // --- Sync helpers: read/apply curation by stable stream URL ---
     suspend fun favouriteChannelUrls(): List<String> = channelDao.favouriteUrls()
@@ -596,8 +589,7 @@ class CatalogRepository(
     suspend fun favouriteMovieUrls(): List<String> = movieDao.favouriteUrls()
     suspend fun markMovieFavouriteByUrl(url: String) = movieDao.markFavouriteByUrl(url)
     suspend fun favouriteSeriesIds(): List<String> = seriesDao.favouriteSeriesIds()
-    suspend fun markSeriesFavouriteBySeriesId(seriesId: String) =
-        seriesDao.markFavouriteBySeriesId(seriesId)
+    suspend fun markSeriesFavouriteBySeriesId(seriesId: String) = seriesDao.markFavouriteBySeriesId(seriesId)
 
     /** Series episodes are fetched lazily — panels are slow and most series are never opened. */
     suspend fun ensureEpisodes(source: Source, seriesId: String) {
@@ -618,8 +610,11 @@ class CatalogRepository(
         // Live is gated here (not in syncLive) so onboarding's direct syncLive still loads channels.
         // Already-synced rows are left untouched: turning a type back on and refreshing restores it.
         val live =
-            if (settings.liveEnabled.value) syncLive(source, nowUtcMillis)
-            else SyncResult.Success(0, 0, 0)
+            if (settings.liveEnabled.value) {
+                syncLive(source, nowUtcMillis)
+            } else {
+                SyncResult.Success(0, 0, 0)
+            }
         if (live is SyncResult.Success && source.kind == SourceKind.XTREAM) {
             runCatching { syncXtreamVod(source, nowUtcMillis) }
                 .onFailure { Log.w(TAG, "VOD sync failed for source ${source.id}", it) }
@@ -714,17 +709,29 @@ class CatalogRepository(
         if (!moviesOn && !seriesOn) return
 
         val movieCategories =
-            if (moviesOn) runCatching { api.movieCategories(source) }.getOrDefault(emptyList())
-            else emptyList()
+            if (moviesOn) {
+                runCatching { api.movieCategories(source) }.getOrDefault(emptyList())
+            } else {
+                emptyList()
+            }
         val movies =
-            if (moviesOn) runCatching { api.movies(source) }.getOrDefault(emptyList())
-            else emptyList()
+            if (moviesOn) {
+                runCatching { api.movies(source) }.getOrDefault(emptyList())
+            } else {
+                emptyList()
+            }
         val seriesCategories =
-            if (seriesOn) runCatching { api.seriesCategories(source) }.getOrDefault(emptyList())
-            else emptyList()
+            if (seriesOn) {
+                runCatching { api.seriesCategories(source) }.getOrDefault(emptyList())
+            } else {
+                emptyList()
+            }
         val series =
-            if (seriesOn) runCatching { api.series(source) }.getOrDefault(emptyList())
-            else emptyList()
+            if (seriesOn) {
+                runCatching { api.series(source) }.getOrDefault(emptyList())
+            } else {
+                emptyList()
+            }
 
         if (movieCategories.isNotEmpty() || seriesCategories.isNotEmpty()) {
             categoryDao.upsertAll(movieCategories + seriesCategories)
@@ -790,10 +797,7 @@ class CatalogRepository(
      * variants of a channel into a single row and is the join key for EPG matching, and
      * [Channel.displayName] is the cleaned name the UI shows instead of `UK| BBC ONE FHD`.
      */
-    private fun normalized(
-        channels: List<Channel>,
-        categoryNames: Map<String, String>,
-    ): List<Channel> {
+    private fun normalized(channels: List<Channel>, categoryNames: Map<String, String>): List<Channel> {
         val stamped = channels.map { channel ->
             val n = ChannelNameNormalizer.normalize(channel.name)
             var rank = n.qualityRank
@@ -853,8 +857,10 @@ class CatalogRepository(
             // Only write rows that actually changed, to keep the write small.
             val diff = renamed.filterIndexed { i, c ->
                 val old = channels[i]
-                c.displayName != old.displayName || c.groupKey != old.groupKey ||
-                    c.qualityLabel != old.qualityLabel || c.qualityRank != old.qualityRank ||
+                c.displayName != old.displayName ||
+                    c.groupKey != old.groupKey ||
+                    c.qualityLabel != old.qualityLabel ||
+                    c.qualityRank != old.qualityRank ||
                     c.hidden != old.hidden
             }
             if (diff.isNotEmpty()) {

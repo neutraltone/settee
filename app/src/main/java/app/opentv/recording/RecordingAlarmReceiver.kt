@@ -114,10 +114,9 @@ class RecordingAlarmReceiver : BroadcastReceiver() {
     }
 
     /** A plain-file (internal) recording is the only kind the growing-file player can follow. */
-    private fun isTailWatchable(rec: Recording): Boolean =
-        !SmbClient.isSmb(rec.filePath) &&
-            !RecordingStorage.isContent(rec.filePath) &&
-            !RecordingStorage.isUsbPlaceholder(rec.filePath)
+    private fun isTailWatchable(rec: Recording): Boolean = !SmbClient.isSmb(rec.filePath) &&
+        !RecordingStorage.isContent(rec.filePath) &&
+        !RecordingStorage.isUsbPlaceholder(rec.filePath)
 
     private fun notifySwitch(context: Context, rec: Recording) {
         createChannel(context)

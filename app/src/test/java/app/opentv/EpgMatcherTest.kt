@@ -17,11 +17,9 @@ import org.junit.Test
 class EpgMatcherTest {
 
     /** Shorthand: build an index from (epgId, displayName) pairs. */
-    private fun index(vararg aliases: Pair<String, String>) =
-        EpgMatcher.buildIndex(aliases.toList())
+    private fun index(vararg aliases: Pair<String, String>) = EpgMatcher.buildIndex(aliases.toList())
 
-    private fun keyOf(providerName: String) =
-        ChannelNameNormalizer.normalize(providerName).groupKey
+    private fun keyOf(providerName: String) = ChannelNameNormalizer.normalize(providerName).groupKey
 
     @Test
     fun `provider channel matches guide channel by normalised name`() {

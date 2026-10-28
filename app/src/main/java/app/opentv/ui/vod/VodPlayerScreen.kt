@@ -21,18 +21,18 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.WindowInsetsSides
-import androidx.compose.foundation.layout.only
-import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -110,13 +110,7 @@ import kotlinx.coroutines.launch
  */
 @OptIn(UnstableApi::class)
 @Composable
-fun VodPlayerScreen(
-    mediaKey: String,
-    streamUrl: String,
-    title: String,
-    userAgent: String,
-    onBack: () -> Unit,
-) {
+fun VodPlayerScreen(mediaKey: String, streamUrl: String, title: String, userAgent: String, onBack: () -> Unit) {
     val context = LocalContext.current
     val view = LocalView.current
     val graph = remember { ServiceLocator.get(context) }
@@ -130,20 +124,27 @@ fun VodPlayerScreen(
     // http/file URLs of ordinary VOD.
     val controller = remember {
         PlayerController(
-            context, scope, graph.streamingHttpClient, subtitlesEnabled = false,
+            context,
+            scope,
+            graph.streamingHttpClient,
+            subtitlesEnabled = false,
             smbDataSourceFactory = app.opentv.player.SmbDataSource.Factory(graph.settings),
             // Lets an `optvrec://<id>` recording play while it's still being written.
             growingDataSourceFactory =
-                app.opentv.player.GrowingRecordingDataSource.Factory(context.applicationContext),
+            app.opentv.player.GrowingRecordingDataSource.Factory(context.applicationContext),
             liveRecording = growingRec,
         )
     }
+
     // Skip forward/back within the recorded portion. For a growing recording ExoPlayer won't report
     // the item as seekable (no fixed length), so we seek directly, clamped to what's on disk.
     fun seekRelative(deltaMs: Long) {
         val p = controller.player
-        val ceiling = if (growingRec) p.bufferedPosition.coerceAtLeast(0L)
-        else (p.duration.takeIf { it > 0 } ?: Long.MAX_VALUE)
+        val ceiling = if (growingRec) {
+            p.bufferedPosition.coerceAtLeast(0L)
+        } else {
+            (p.duration.takeIf { it > 0 } ?: Long.MAX_VALUE)
+        }
         p.seekTo((p.currentPosition + deltaMs).coerceIn(0L, ceiling))
     }
     val state by controller.state.collectAsState()
@@ -162,7 +163,10 @@ fun VodPlayerScreen(
     val barFocus = remember { FocusRequester() }
     val rootFocus = remember { FocusRequester() }
 
-    fun reveal() { controlsVisible = true; interaction++ }
+    fun reveal() {
+        controlsVisible = true
+        interaction++
+    }
 
     suspend fun savePosition() {
         val player = controller.player
@@ -232,8 +236,11 @@ fun VodPlayerScreen(
                 positionMs = controller.player.currentPosition.coerceAtLeast(0)
                 // A growing recording has no fixed length; the recorded-so-far extent (how far you
                 // can skip ahead) is what's been read into the buffer.
-                durationMs = if (growingRec) controller.player.bufferedPosition.coerceAtLeast(0)
-                else controller.player.duration.takeIf { it > 0 } ?: 0
+                durationMs = if (growingRec) {
+                    controller.player.bufferedPosition.coerceAtLeast(0)
+                } else {
+                    controller.player.duration.takeIf { it > 0 } ?: 0
+                }
             }
             delay(500)
         }
@@ -277,8 +284,14 @@ fun VodPlayerScreen(
             .onPreviewKeyEvent { event ->
                 when {
                     event.key == Key.Back || event.key == Key.Escape -> false
-                    event.type == KeyEventType.KeyDown && !controlsVisible -> { reveal(); true }
-                    event.type == KeyEventType.KeyDown -> { interaction++; false }
+                    event.type == KeyEventType.KeyDown && !controlsVisible -> {
+                        reveal()
+                        true
+                    }
+                    event.type == KeyEventType.KeyDown -> {
+                        interaction++
+                        false
+                    }
                     else -> false
                 }
             }
@@ -358,7 +371,10 @@ fun VodPlayerScreen(
                         controller = controller,
                         tracks = tracks,
                         firstFocus = panelFocus,
-                        onDone = { vodPanel = VodPanel.NONE; interaction++ },
+                        onDone = {
+                            vodPanel = VodPanel.NONE
+                            interaction++
+                        },
                     )
                     Spacer(Modifier.height(16.dp))
                 }
@@ -390,7 +406,11 @@ fun VodPlayerScreen(
                     Slider(
                         value = if (scrubbing) scrubValue else positionMs.toFloat(),
                         valueRange = 0f..(durationMs.takeIf { it > 0 }?.toFloat() ?: 1f),
-                        onValueChange = { scrubbing = true; scrubValue = it; interaction++ },
+                        onValueChange = {
+                            scrubbing = true
+                            scrubValue = it
+                            interaction++
+                        },
                         onValueChangeFinished = {
                             controller.player.seekTo(scrubValue.toLong())
                             positionMs = scrubValue.toLong()
@@ -407,12 +427,19 @@ fun VodPlayerScreen(
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     VodChip(Icons.Filled.FastRewind, stringResource(R.string.player_rewind)) {
-                        if (growingRec) seekRelative(-15_000) else controller.seekBackward(); interaction++
+                        if (growingRec) seekRelative(-15_000) else controller.seekBackward()
+                        interaction++
                     }
                     Spacer(Modifier.width(10.dp))
                     VodChip(
                         icon = if (paused) Icons.Filled.PlayArrow else Icons.Filled.Pause,
-                        label = if (paused) stringResource(R.string.common_play) else stringResource(R.string.player_pause),
+                        label = if (paused) {
+                            stringResource(
+                                R.string.common_play,
+                            )
+                        } else {
+                            stringResource(R.string.player_pause)
+                        },
                         focusRequester = barFocus,
                     ) {
                         paused = !paused
@@ -421,7 +448,8 @@ fun VodPlayerScreen(
                     }
                     Spacer(Modifier.width(10.dp))
                     VodChip(Icons.Filled.FastForward, stringResource(R.string.player_forward)) {
-                        if (growingRec) seekRelative(15_000) else controller.seekForward(); interaction++
+                        if (growingRec) seekRelative(15_000) else controller.seekForward()
+                        interaction++
                     }
                     Spacer(Modifier.width(20.dp))
                     VodChip(Icons.Filled.ClosedCaption, stringResource(R.string.player_subtitles)) {
@@ -440,12 +468,7 @@ fun VodPlayerScreen(
 }
 
 @Composable
-private fun VodChip(
-    icon: ImageVector,
-    label: String,
-    focusRequester: FocusRequester? = null,
-    onClick: () -> Unit,
-) {
+private fun VodChip(icon: ImageVector, label: String, focusRequester: FocusRequester? = null, onClick: () -> Unit) {
     var focused by remember { mutableStateOf(false) }
     val container = if (focused) MaterialTheme.colorScheme.primary else Color.White.copy(alpha = 0.14f)
     val content = if (focused) MaterialTheme.colorScheme.onPrimary else Color.White
@@ -456,8 +479,11 @@ private fun VodChip(
             .clip(RoundedCornerShape(12.dp))
             .background(container)
             .then(
-                if (focused) Modifier.border(2.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(12.dp))
-                else Modifier,
+                if (focused) {
+                    Modifier.border(2.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(12.dp))
+                } else {
+                    Modifier
+                },
             )
             .clickable(onClick = onClick)
             .padding(horizontal = 14.dp, vertical = 10.dp),
@@ -486,14 +512,19 @@ private fun TrackPanel(
 
     if (panel == VodPanel.SUBTITLES) {
         val anySelected = groups.any { g -> (0 until g.length).any { g.isTrackSelected(it) } }
-        options += Triple(stringResource(R.string.player_subtitles_off), !anySelected) { controller.disableText(); onDone() }
+        options +=
+            Triple(stringResource(R.string.player_subtitles_off), !anySelected) {
+                controller.disableText()
+                onDone()
+            }
     }
     groups.forEach { group ->
         for (i in 0 until group.length) {
             if (!group.isTrackSupported(i)) continue
             val format = group.getTrackFormat(i)
             options += Triple(vodTrackLabel(format.label, format.language, options.size), group.isTrackSelected(i)) {
-                controller.selectTrack(group, i); onDone()
+                controller.selectTrack(group, i)
+                onDone()
             }
         }
     }
@@ -506,14 +537,24 @@ private fun TrackPanel(
             .padding(16.dp),
     ) {
         Text(
-            if (panel == VodPanel.SUBTITLES) stringResource(R.string.player_subtitles) else stringResource(R.string.player_audio),
+            if (panel ==
+                VodPanel.SUBTITLES
+            ) {
+                stringResource(R.string.player_subtitles)
+            } else {
+                stringResource(R.string.player_audio)
+            },
             style = MaterialTheme.typography.titleMedium,
             color = Color.White.copy(alpha = 0.7f),
         )
         Spacer(Modifier.height(8.dp))
         Column(Modifier.heightIn(max = 220.dp).verticalScroll(rememberScrollState())) {
             if (options.isEmpty()) {
-                Text(stringResource(R.string.player_none_available), color = Color.White.copy(alpha = 0.6f), modifier = Modifier.padding(8.dp))
+                Text(
+                    stringResource(R.string.player_none_available),
+                    color = Color.White.copy(alpha = 0.6f),
+                    modifier = Modifier.padding(8.dp),
+                )
             }
             options.forEachIndexed { index, (label, selected, onClick) ->
                 TrackRow(label, selected, onClick, if (index == 0) firstFocus else null)

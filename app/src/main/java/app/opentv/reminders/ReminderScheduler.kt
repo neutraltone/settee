@@ -52,15 +52,14 @@ object ReminderScheduler {
             putExtra(EXTRA_ID, reminderId)
         }
 
-    private fun pendingIntent(context: Context, reminderId: Long): PendingIntent =
-        PendingIntent.getBroadcast(
-            context,
-            // Offset so a reminder id and a recording id that happen to be equal never share a
-            // PendingIntent slot (the target receiver differs too, but this makes it obvious).
-            (reminderId + REQUEST_OFFSET).toInt(),
-            intentFor(context, reminderId),
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
-        )
+    private fun pendingIntent(context: Context, reminderId: Long): PendingIntent = PendingIntent.getBroadcast(
+        context,
+        // Offset so a reminder id and a recording id that happen to be equal never share a
+        // PendingIntent slot (the target receiver differs too, but this makes it obvious).
+        (reminderId + REQUEST_OFFSET).toInt(),
+        intentFor(context, reminderId),
+        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+    )
 
     private const val REQUEST_OFFSET = 1_000_000L
 }

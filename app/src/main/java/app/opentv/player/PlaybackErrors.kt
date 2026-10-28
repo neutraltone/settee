@@ -36,18 +36,21 @@ object PlaybackErrors {
 
         return when (error.errorCode) {
             PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_FAILED,
-            PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_TIMEOUT ->
+            PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_TIMEOUT,
+            ->
                 "Lost connection to the server."
 
             PlaybackException.ERROR_CODE_IO_INVALID_HTTP_CONTENT_TYPE ->
                 "The server sent a web page instead of a stream. The link may have expired."
 
             PlaybackException.ERROR_CODE_PARSING_CONTAINER_MALFORMED,
-            PlaybackException.ERROR_CODE_PARSING_MANIFEST_MALFORMED ->
+            PlaybackException.ERROR_CODE_PARSING_MANIFEST_MALFORMED,
+            ->
                 "This stream is malformed and can't be played."
 
             PlaybackException.ERROR_CODE_DECODER_INIT_FAILED,
-            PlaybackException.ERROR_CODE_DECODER_QUERY_FAILED ->
+            PlaybackException.ERROR_CODE_DECODER_QUERY_FAILED,
+            ->
                 "This device has no decoder for that format."
 
             PlaybackException.ERROR_CODE_DECODING_FORMAT_UNSUPPORTED ->
@@ -62,12 +65,14 @@ object PlaybackErrors {
 
     fun describeHttpStatus(code: Int): String = when (code) {
         401 -> "The server rejected these credentials. Check the username and password."
-        403 -> "The server refused this stream (403). Often this means the account is already " +
-            "streaming on another device, or the provider is blocking this app's User-Agent — " +
-            "you can change it in the source's advanced settings."
+        403 ->
+            "The server refused this stream (403). Often this means the account is already " +
+                "streaming on another device, or the provider is blocking this app's User-Agent — " +
+                "you can change it in the source's advanced settings."
         404 -> "That channel no longer exists on the server. Refresh the channel list."
-        405 -> "The server rejected the request (405). The stream address looks wrong for this " +
-            "provider — try switching the source between Xtream and playlist mode."
+        405 ->
+            "The server rejected the request (405). The stream address looks wrong for this " +
+                "provider — try switching the source between Xtream and playlist mode."
         429 -> "Too many requests. The provider is rate-limiting this device."
         451 -> "Blocked for legal reasons in this region."
         in 500..599 -> "The provider's server is having problems ($code)."

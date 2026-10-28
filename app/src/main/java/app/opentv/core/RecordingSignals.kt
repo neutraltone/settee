@@ -5,10 +5,10 @@
  */
 package app.opentv.core
 
+import java.util.concurrent.ConcurrentHashMap
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import java.util.concurrent.ConcurrentHashMap
 
 /**
  * The link between a scheduled recording firing and the live UI reacting to it.
@@ -34,12 +34,7 @@ object RecordingSignals {
     val watch: StateFlow<Watch?> = _watch.asStateFlow()
 
     /** A booking about to start — shown as a brief "we're about to switch" banner. */
-    data class Imminent(
-        val recordingId: Long,
-        val title: String,
-        val channelName: String,
-        val startAtMillis: Long,
-    )
+    data class Imminent(val recordingId: Long, val title: String, val channelName: String, val startAtMillis: Long)
 
     private val _imminent = MutableStateFlow<Imminent?>(null)
     val imminent: StateFlow<Imminent?> = _imminent.asStateFlow()
