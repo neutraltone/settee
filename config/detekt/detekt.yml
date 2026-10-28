@@ -13,6 +13,11 @@ style:
     ignorePropertyDeclaration: true
     ignoreCompanionObjectPropertyDeclaration: true
 
+performance:
+  SpreadOperator:
+    # Flags an array copy per call; every spread here runs once (e.g. per database build).
+    active: false
+
 complexity:
   LongParameterList:
     # Composables take their state and callbacks as parameters by design.
