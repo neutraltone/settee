@@ -67,6 +67,7 @@ import app.opentv.data.model.Series
 import app.opentv.data.model.StremioStream
 import app.opentv.data.parser.displayTitle
 import app.opentv.data.repo.EpisodeStatuses
+import app.opentv.data.repo.SeriesMainAction
 import app.opentv.data.repo.WatchStatus
 import app.opentv.ui.VodViewModel
 import coil.compose.AsyncImage
@@ -286,7 +287,6 @@ fun SeriesDetailScreen(
 ) {
     var series by remember(seriesId) { mutableStateOf<Series?>(null) }
     var moreLike by remember(seriesId) { mutableStateOf<List<Series>>(emptyList()) }
-    val favFocus = remember { FocusRequester() }
 
     LaunchedEffect(seriesId) {
         val loaded = viewModel.seriesDetail(seriesId)
@@ -301,15 +301,59 @@ fun SeriesDetailScreen(
     val episodes by (s?.let { viewModel.episodes(it) } ?: viewModel.noEpisodes)
         .collectAsState(initial = emptyList())
     val statuses by viewModel.episodeStatuses.collectAsState(initial = EpisodeStatuses())
+    val mainAction by remember(episodes) { viewModel.seriesMainAction(episodes) }.collectAsState(initial = null)
 
     if (s == null) {
         LoadingDetail()
         return
     }
 
-    LaunchedEffect(s.id) {
+    SeriesDetailContent(
+        series = s,
+        episodes = episodes,
+        statuses = statuses,
+        mainAction = mainAction,
+        moreLike = moreLike,
+        onPlayEpisode = onPlayEpisode,
+        onToggleFavourite = {
+            viewModel.toggleSeriesFavourite(s)
+            series = s.copy(favourite = !s.favourite)
+        },
+        onOpenSeries = onOpenSeries,
+        onOpenPerson = onOpenPerson,
+    )
+}
+
+/**
+ * The series page once the series is known: the header with its main button (Resume or Play the
+ * right episode, from [mainAction]) and the favourite toggle, then the episodes by season.
+ */
+@Composable
+internal fun SeriesDetailContent(
+    series: Series,
+    episodes: List<Episode>,
+    statuses: EpisodeStatuses,
+    mainAction: SeriesMainAction?,
+    moreLike: List<Series>,
+    onPlayEpisode: (mediaKey: String, url: String, title: String) -> Unit,
+    onToggleFavourite: () -> Unit,
+    onOpenSeries: (Series) -> Unit,
+    onOpenPerson: (String) -> Unit,
+) {
+    val mainFocus = remember { FocusRequester() }
+    val favFocus = remember { FocusRequester() }
+    val hasMainAction = mainAction != null
+    var favFocused by remember { mutableStateOf(false) }
+    var highlightPlaced by remember(series.id) { mutableStateOf(false) }
+
+    // Episodes are fetched on demand, so the main button can appear after the page does: the
+    // highlight waits on the favourite toggle until then, and moves across only if it is still
+    // there, never pulling a viewer back up from wherever they have gone since.
+    LaunchedEffect(series.id, hasMainAction) {
         delay(60)
-        runCatching { favFocus.requestFocus() }
+        if (highlightPlaced && !favFocused) return@LaunchedEffect
+        runCatching { (if (hasMainAction) mainFocus else favFocus).requestFocus() }
+        highlightPlaced = true
     }
 
     // Group episodes by season (seasons ascending, episodes ordered within each) — the classic
@@ -323,30 +367,46 @@ fun SeriesDetailScreen(
     LazyColumn(Modifier.fillMaxSize()) {
         item(key = "header") {
             DetailBackdrop(
-                title = s.displayTitle,
-                backdropUrl = s.backdropUrl,
-                posterUrl = s.posterUrl,
-                meta = seriesMeta(s),
+                title = series.displayTitle,
+                backdropUrl = series.backdropUrl,
+                posterUrl = series.posterUrl,
+                meta = seriesMeta(series),
             ) {
-                DetailButton(
-                    icon = if (s.favourite) Icons.Filled.Star else Icons.Outlined.StarOutline,
-                    label = stringResource(
-                        if (s.favourite) R.string.common_remove_favourite else R.string.common_favourite,
-                    ),
-                    primary = true,
-                    modifier = Modifier.focusRequester(favFocus),
-                ) {
-                    viewModel.toggleSeriesFavourite(s)
-                    series = s.copy(favourite = !s.favourite)
+                if (mainAction != null) {
+                    val ep = mainAction.episode
+                    DetailButton(
+                        icon = Icons.Filled.PlayArrow,
+                        label = stringResource(
+                            when (mainAction) {
+                                is SeriesMainAction.Resume -> R.string.vod_resume_episode
+                                is SeriesMainAction.Play -> R.string.vod_play_episode
+                            },
+                            ep.season,
+                            ep.episodeNumber,
+                        ),
+                        primary = true,
+                        modifier = Modifier.focusRequester(mainFocus),
+                    ) { playEpisode(ep, onPlayEpisode) }
                 }
+                DetailButton(
+                    icon = if (series.favourite) Icons.Filled.Star else Icons.Outlined.StarOutline,
+                    label = stringResource(
+                        if (series.favourite) R.string.common_remove_favourite else R.string.common_favourite,
+                    ),
+                    primary = !hasMainAction,
+                    modifier = Modifier
+                        .focusRequester(favFocus)
+                        .onFocusChanged { favFocused = it.isFocused },
+                    onClick = onToggleFavourite,
+                )
             }
         }
         item(key = "info") {
             DetailInfo(
-                plot = s.plot,
-                cast = s.cast,
+                plot = series.plot,
+                cast = series.cast,
                 director = null,
-                genre = s.genre,
+                genre = series.genre,
                 onOpenPerson = onOpenPerson,
             )
         }
@@ -366,7 +426,7 @@ fun SeriesDetailScreen(
                     SectionHeader(stringResource(R.string.vod_season, season))
                 }
                 items(eps, key = { it.id }) { ep ->
-                    EpisodeRow(ep, statuses[ep.id], s.posterUrl, onPlayEpisode)
+                    EpisodeRow(ep, statuses[ep.id], series.posterUrl, onPlayEpisode)
                 }
             }
         }
@@ -379,6 +439,10 @@ fun SeriesDetailScreen(
         }
     }
 }
+
+/** Hands [ep] to the player; the player resumes it itself if the Profile has it In Progress. */
+private fun playEpisode(ep: Episode, onPlay: (mediaKey: String, url: String, title: String) -> Unit) =
+    onPlay("ep:${ep.id}", ep.streamUrl, "S${ep.season}E${ep.episodeNumber} · ${ep.title}")
 
 // ---- Shared detail pieces ----------------------------------------------------------------------
 
@@ -712,9 +776,7 @@ internal fun EpisodeRow(
                     Modifier
                 },
             )
-            .clickable {
-                onPlay("ep:${ep.id}", ep.streamUrl, "S${ep.season}E${ep.episodeNumber} · ${ep.title}")
-            }
+            .clickable { playEpisode(ep, onPlay) }
             .padding(14.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
