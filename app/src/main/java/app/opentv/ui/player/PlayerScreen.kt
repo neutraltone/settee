@@ -22,19 +22,19 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.WindowInsetsSides
-import androidx.compose.foundation.layout.only
-import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -107,13 +107,13 @@ import app.opentv.player.PlayerController
 import app.opentv.ui.RecordingBackgroundDialog
 import app.opentv.ui.RecordingBackgroundPrompt
 import coil.compose.AsyncImage
+import java.util.Locale
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import java.util.Locale
 
 /**
  * Full-screen live playback.
@@ -129,10 +129,7 @@ import java.util.Locale
  */
 @OptIn(UnstableApi::class)
 @Composable
-fun PlayerScreen(
-    channelId: Long?,
-    onBack: () -> Unit,
-) {
+fun PlayerScreen(channelId: Long?, onBack: () -> Unit) {
     val context = LocalContext.current
     val view = LocalView.current
     val graph = remember { ServiceLocator.get(context) }
@@ -141,7 +138,9 @@ fun PlayerScreen(
     val subtitlesDefault by settings.subtitlesEnabled.collectAsState()
     val controller = remember {
         PlayerController(
-            context, scope, graph.streamingHttpClient,
+            context,
+            scope,
+            graph.streamingHttpClient,
             subtitlesEnabled = settings.subtitlesEnabled.value,
             // Opt-in shallow DVR so the transport's pause/rewind actually holds on a live stream.
             dvr = settings.livePauseEnabled.value,
@@ -300,7 +299,9 @@ fun PlayerScreen(
 
     // Auto-hide the bar after a few seconds — but never while paused or with a picker open.
     LaunchedEffect(controlsVisible, interaction, state, paused, panel) {
-        if (controlsVisible && !paused && panel == Panel.NONE &&
+        if (controlsVisible &&
+            !paused &&
+            panel == Panel.NONE &&
             state is PlayerController.State.Playing
         ) {
             delay(CONTROLS_TIMEOUT_MILLIS)
@@ -368,7 +369,9 @@ fun PlayerScreen(
                     // Typing a channel number jumps to it, TiviMate-style.
                     digit != null -> {
                         numberEntry = (numberEntry + digit).take(4)
-                        reveal(); interaction++; true
+                        reveal()
+                        interaction++
+                        true
                     }
                     // A picker or the channel list owns the whole d-pad while it's up.
                     channelListVisible || panel != Panel.NONE -> {
@@ -378,19 +381,37 @@ fun PlayerScreen(
                     // Channel up/down works whether or not the bar is showing — this remote has no
                     // CH+/CH- keys, so up/down IS the channel changer. Each zap flashes the bar as a
                     // channel banner, then it auto-hides.
-                    event.key == Key.DirectionUp || event.key == Key.ChannelUp -> { zapBy(-1); reveal(); true }
-                    event.key == Key.DirectionDown || event.key == Key.ChannelDown -> { zapBy(1); reveal(); true }
+                    event.key == Key.DirectionUp || event.key == Key.ChannelUp -> {
+                        zapBy(-1)
+                        reveal()
+                        true
+                    }
+                    event.key == Key.DirectionDown || event.key == Key.ChannelDown -> {
+                        zapBy(1)
+                        reveal()
+                        true
+                    }
                     // With the bar up, left/right drive its buttons; let them through.
                     controlsVisible -> {
                         interaction++
                         false
                     }
                     // Immersive: left opens the channel list, right the quality picker.
-                    event.key == Key.DirectionLeft -> { if (queue.isNotEmpty()) channelListVisible = true; true }
-                    event.key == Key.DirectionRight -> {
-                        if (variants.size > 1) { reveal(); panel = Panel.QUALITY }; true
+                    event.key == Key.DirectionLeft -> {
+                        if (queue.isNotEmpty()) channelListVisible = true
+                        true
                     }
-                    else -> { reveal(); true }
+                    event.key == Key.DirectionRight -> {
+                        if (variants.size > 1) {
+                            reveal()
+                            panel = Panel.QUALITY
+                        }
+                        true
+                    }
+                    else -> {
+                        reveal()
+                        true
+                    }
                 }
             }
             .focusRequester(rootFocus)
@@ -503,10 +524,16 @@ fun PlayerScreen(
                         variants = variants,
                         currentId = currentId,
                         resizeMode = resizeMode,
-                        onResize = { resizeMode = it; settings.setPlayerResizeMode(it) },
+                        onResize = {
+                            resizeMode = it
+                            settings.setPlayerResizeMode(it)
+                        },
                         onTune = { tuneTo(it) },
                         firstFocus = panelFocus,
-                        onDone = { panel = Panel.NONE; interaction++ },
+                        onDone = {
+                            panel = Panel.NONE
+                            interaction++
+                        },
                     )
                     Spacer(Modifier.height(16.dp))
                 }
@@ -525,13 +552,20 @@ fun PlayerScreen(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     if (controller.isSeekable) {
                         BarChip(Icons.Filled.FastRewind, stringResource(R.string.player_rewind), false) {
-                            controller.seekBackward(); interaction++
+                            controller.seekBackward()
+                            interaction++
                         }
                         Spacer(Modifier.width(10.dp))
                     }
                     BarChip(
                         icon = if (paused) Icons.Filled.PlayArrow else Icons.Filled.Pause,
-                        label = if (paused) stringResource(R.string.common_play) else stringResource(R.string.player_pause),
+                        label = if (paused) {
+                            stringResource(
+                                R.string.common_play,
+                            )
+                        } else {
+                            stringResource(R.string.player_pause)
+                        },
                         selected = false,
                         focusRequester = barFocus,
                     ) {
@@ -542,33 +576,52 @@ fun PlayerScreen(
                     if (controller.isSeekable) {
                         Spacer(Modifier.width(10.dp))
                         BarChip(Icons.Filled.FastForward, stringResource(R.string.player_forward), false) {
-                            controller.seekForward(); interaction++
+                            controller.seekForward()
+                            interaction++
                         }
                     }
 
                     Spacer(Modifier.width(20.dp))
-                    BarChip(Icons.Filled.Subtitles, stringResource(R.string.player_subtitles), panel == Panel.SUBTITLES) {
-                        panel = if (panel == Panel.SUBTITLES) Panel.NONE else Panel.SUBTITLES; interaction++
+                    BarChip(
+                        Icons.Filled.Subtitles,
+                        stringResource(R.string.player_subtitles),
+                        panel == Panel.SUBTITLES,
+                    ) {
+                        panel = if (panel == Panel.SUBTITLES) Panel.NONE else Panel.SUBTITLES
+                        interaction++
                     }
                     Spacer(Modifier.width(10.dp))
                     BarChip(Icons.Filled.Audiotrack, stringResource(R.string.player_audio), panel == Panel.AUDIO) {
-                        panel = if (panel == Panel.AUDIO) Panel.NONE else Panel.AUDIO; interaction++
+                        panel = if (panel == Panel.AUDIO) Panel.NONE else Panel.AUDIO
+                        interaction++
                     }
                     if (variants.size > 1) {
                         Spacer(Modifier.width(10.dp))
-                        BarChip(Icons.Filled.HighQuality, stringResource(R.string.player_quality), panel == Panel.QUALITY) {
-                            panel = if (panel == Panel.QUALITY) Panel.NONE else Panel.QUALITY; interaction++
+                        BarChip(
+                            Icons.Filled.HighQuality,
+                            stringResource(R.string.player_quality),
+                            panel == Panel.QUALITY,
+                        ) {
+                            panel = if (panel == Panel.QUALITY) Panel.NONE else Panel.QUALITY
+                            interaction++
                         }
                     }
                     Spacer(Modifier.width(10.dp))
                     BarChip(Icons.Filled.AspectRatio, stringResource(R.string.player_aspect), panel == Panel.ASPECT) {
-                        panel = if (panel == Panel.ASPECT) Panel.NONE else Panel.ASPECT; interaction++
+                        panel = if (panel == Panel.ASPECT) Panel.NONE else Panel.ASPECT
+                        interaction++
                     }
                     Spacer(Modifier.width(10.dp))
                     val recordingThis = activeRecordings.any { it.channelId == currentId }
                     BarChip(
                         icon = Icons.Filled.FiberManualRecord,
-                        label = if (recordingThis) stringResource(R.string.common_stop) else stringResource(R.string.player_record),
+                        label = if (recordingThis) {
+                            stringResource(
+                                R.string.common_stop,
+                            )
+                        } else {
+                            stringResource(R.string.player_record)
+                        },
                         selected = recordingThis,
                         iconTint = Color(0xFFE53935),
                     ) { toggleRecord() }
@@ -690,7 +743,13 @@ private fun ChannelListRow(
             modifier = Modifier.size(32.dp).clip(RoundedCornerShape(4.dp)),
         )
         Spacer(Modifier.width(12.dp))
-        Text(item.name, style = MaterialTheme.typography.titleMedium, color = fg, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Text(
+            item.name,
+            style = MaterialTheme.typography.titleMedium,
+            color = fg,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
     }
 }
 
@@ -720,17 +779,23 @@ private fun OptionPanel(
         Panel.SUBTITLES -> buildSubtitleOptions(controller, settings, tracks, offLabel, onDone)
         Panel.AUDIO -> buildAudioOptions(controller, tracks, onDone)
         Panel.QUALITY -> variants.map { v ->
-            Option(v.qualityLabel.ifEmpty { standardLabel }, v.id == currentId) { onTune(v); onDone() }
+            Option(v.qualityLabel.ifEmpty { standardLabel }, v.id == currentId) {
+                onTune(v)
+                onDone()
+            }
         }
         Panel.ASPECT -> listOf(
             Option(fitLabel, resizeMode == AspectRatioFrameLayout.RESIZE_MODE_FIT) {
-                onResize(AspectRatioFrameLayout.RESIZE_MODE_FIT); onDone()
+                onResize(AspectRatioFrameLayout.RESIZE_MODE_FIT)
+                onDone()
             },
             Option(fillLabel, resizeMode == AspectRatioFrameLayout.RESIZE_MODE_ZOOM) {
-                onResize(AspectRatioFrameLayout.RESIZE_MODE_ZOOM); onDone()
+                onResize(AspectRatioFrameLayout.RESIZE_MODE_ZOOM)
+                onDone()
             },
             Option(stretchLabel, resizeMode == AspectRatioFrameLayout.RESIZE_MODE_FILL) {
-                onResize(AspectRatioFrameLayout.RESIZE_MODE_FILL); onDone()
+                onResize(AspectRatioFrameLayout.RESIZE_MODE_FILL)
+                onDone()
             },
         )
         Panel.NONE -> emptyList()
@@ -758,7 +823,11 @@ private fun OptionPanel(
             verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
             if (options.isEmpty()) {
-                Text(stringResource(R.string.player_none_available), color = Color.White.copy(alpha = 0.6f), modifier = Modifier.padding(8.dp))
+                Text(
+                    stringResource(R.string.player_none_available),
+                    color = Color.White.copy(alpha = 0.6f),
+                    modifier = Modifier.padding(8.dp),
+                )
             }
             options.forEachIndexed { index, option ->
                 OptionRow(
@@ -805,11 +874,7 @@ private fun buildSubtitleOptions(
 }
 
 @OptIn(UnstableApi::class)
-private fun buildAudioOptions(
-    controller: PlayerController,
-    tracks: Tracks,
-    onDone: () -> Unit,
-): List<Option> {
+private fun buildAudioOptions(controller: PlayerController, tracks: Tracks, onDone: () -> Unit): List<Option> {
     val audioGroups = tracks.groups.filter { it.type == C.TRACK_TYPE_AUDIO }
     val list = mutableListOf<Option>()
     audioGroups.forEach { group ->
@@ -834,12 +899,7 @@ private fun trackLabel(label: String?, language: String?, index: Int): String {
 }
 
 @Composable
-private fun OptionRow(
-    label: String,
-    selected: Boolean,
-    onClick: () -> Unit,
-    focusRequester: FocusRequester?,
-) {
+private fun OptionRow(label: String, selected: Boolean, onClick: () -> Unit, focusRequester: FocusRequester?) {
     var focused by remember { mutableStateOf(false) }
     val bg = if (focused) MaterialTheme.colorScheme.primary else Color.White.copy(alpha = 0.08f)
     val fg = if (focused) MaterialTheme.colorScheme.onPrimary else Color.White
@@ -885,8 +945,11 @@ private fun BarChip(
             .clip(RoundedCornerShape(12.dp))
             .background(container)
             .then(
-                if (focused) Modifier.border(2.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(12.dp))
-                else Modifier,
+                if (focused) {
+                    Modifier.border(2.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(12.dp))
+                } else {
+                    Modifier
+                },
             )
             .clickable(onClick = onClick)
             .padding(horizontal = 14.dp, vertical = 10.dp),

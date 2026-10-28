@@ -50,10 +50,7 @@ import app.opentv.ui.EpgViewModel
  * exists to avoid.
  */
 @Composable
-fun EpgSettingsScreen(
-    onBack: () -> Unit,
-    viewModel: EpgViewModel = viewModel(),
-) {
+fun EpgSettingsScreen(onBack: () -> Unit, viewModel: EpgViewModel = viewModel()) {
     val ui by viewModel.ui.collectAsState()
     var showAdd by remember { mutableStateOf(false) }
     var newName by remember { mutableStateOf("") }
@@ -128,11 +125,15 @@ fun EpgSettingsScreen(
                                 Button(
                                     onClick = {
                                         viewModel.addCustom(newName, newUrl)
-                                        newName = ""; newUrl = ""; showAdd = false
+                                        newName = ""
+                                        newUrl = ""
+                                        showAdd = false
                                     },
                                     enabled = newUrl.isNotBlank(),
                                 ) { Text(stringResource(R.string.epg_add_guide)) }
-                                TextButton(onClick = { showAdd = false }) { Text(stringResource(R.string.common_cancel)) }
+                                TextButton(onClick = {
+                                    showAdd = false
+                                }) { Text(stringResource(R.string.common_cancel)) }
                             }
                         }
                     }
@@ -143,11 +144,7 @@ fun EpgSettingsScreen(
 }
 
 @Composable
-private fun FeedRow(
-    feed: EpgFeed,
-    onToggle: (Boolean) -> Unit,
-    onRemove: () -> Unit,
-) {
+private fun FeedRow(feed: EpgFeed, onToggle: (Boolean) -> Unit, onRemove: () -> Unit) {
     Card {
         Row(
             Modifier

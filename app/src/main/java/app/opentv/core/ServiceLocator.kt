@@ -32,10 +32,9 @@ object ServiceLocator {
 
     @Volatile private var instance: Graph? = null
 
-    fun get(context: Context): Graph =
-        instance ?: synchronized(this) {
-            instance ?: Graph(context.applicationContext).also { instance = it }
-        }
+    fun get(context: Context): Graph = instance ?: synchronized(this) {
+        instance ?: Graph(context.applicationContext).also { instance = it }
+    }
 
     class Graph(context: Context) {
         private val appContext = context.applicationContext
@@ -130,8 +129,12 @@ object ServiceLocator {
 
         val recordingEngine: RecordingEngine by lazy {
             RecordingEngine(
-                appContext, recordingRepository, sourceRepository, settings,
-                database.channels(), epgRepository,
+                appContext,
+                recordingRepository,
+                sourceRepository,
+                settings,
+                database.channels(),
+                epgRepository,
             )
         }
     }

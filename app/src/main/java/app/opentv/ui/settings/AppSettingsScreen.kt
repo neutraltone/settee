@@ -5,6 +5,8 @@
  */
 package app.opentv.ui.settings
 
+import android.content.Context
+import android.widget.Toast
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -41,8 +43,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import android.content.Context
-import android.widget.Toast
 import app.opentv.R
 import app.opentv.core.AppSettings
 import app.opentv.core.SleepTimer
@@ -329,15 +329,22 @@ private fun SleepTimerSection() {
             verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
             Text(
-                if (remaining == null) stringResource(R.string.settings_sleep_off_desc)
-                else stringResource(R.string.settings_sleep_on_desc, remaining),
+                if (remaining == null) {
+                    stringResource(R.string.settings_sleep_off_desc)
+                } else {
+                    stringResource(R.string.settings_sleep_on_desc, remaining)
+                },
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Spacer(Modifier.height(4.dp))
-            SleepOption(stringResource(R.string.settings_sleep_off), selected = remaining == null) { SleepTimer.clear() }
+            SleepOption(stringResource(R.string.settings_sleep_off), selected = remaining == null) {
+                SleepTimer.clear()
+            }
             SleepTimer.presets.forEach { mins ->
-                SleepOption(stringResource(R.string.settings_sleep_minutes, mins), selected = false) { SleepTimer.armMinutes(mins) }
+                SleepOption(stringResource(R.string.settings_sleep_minutes, mins), selected = false) {
+                    SleepTimer.armMinutes(mins)
+                }
             }
         }
     }
@@ -392,12 +399,7 @@ private fun ThemeOption(label: String, selected: Boolean, onSelect: () -> Unit) 
 }
 
 @Composable
-private fun ToggleRow(
-    title: String,
-    subtitle: String,
-    checked: Boolean,
-    onToggle: (Boolean) -> Unit,
-) {
+private fun ToggleRow(title: String, subtitle: String, checked: Boolean, onToggle: (Boolean) -> Unit) {
     Row(
         Modifier
             .fillMaxWidth()

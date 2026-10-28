@@ -158,10 +158,7 @@ private fun ProviderRow(
  * container is a filled button, the other outlined) with a one-line hint on when to reach for it.
  */
 @Composable
-private fun StreamFormatSelector(
-    selected: LiveStreamFormat,
-    onSelect: (LiveStreamFormat) -> Unit,
-) {
+private fun StreamFormatSelector(selected: LiveStreamFormat, onSelect: (LiveStreamFormat) -> Unit) {
     Column {
         Text(
             stringResource(R.string.provider_stream_format),
@@ -201,5 +198,4 @@ private fun FormatSegment(label: String, selected: Boolean, onClick: () -> Unit)
 }
 
 /** Host only — the full URL carries the login and has no place on a settings list. */
-private fun hostOf(url: String): String =
-    runCatching { java.net.URI(url).host ?: url }.getOrDefault(url)
+private fun hostOf(url: String): String = runCatching { java.net.URI(url).host ?: url }.getOrDefault(url)

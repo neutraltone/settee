@@ -44,10 +44,7 @@ import app.opentv.ui.channels.OnScreenKeyboard
  * whose continue-watching and watched state is in play across the app.
  */
 @Composable
-fun ProfilesScreen(
-    onBack: () -> Unit,
-    viewModel: ProfilesViewModel = viewModel(),
-) {
+fun ProfilesScreen(onBack: () -> Unit, viewModel: ProfilesViewModel = viewModel()) {
     val profiles by viewModel.profiles.collectAsState()
     val activeId by viewModel.activeProfileId.collectAsState()
 
@@ -57,7 +54,13 @@ fun ProfilesScreen(
     editing?.let { target ->
         NameEntry(
             initial = if (target == NEW) "" else profiles.firstOrNull { it.id == target }?.name.orEmpty(),
-            heading = if (target == NEW) stringResource(R.string.profiles_new_heading) else stringResource(R.string.profiles_rename_heading),
+            heading = if (target ==
+                NEW
+            ) {
+                stringResource(R.string.profiles_new_heading)
+            } else {
+                stringResource(R.string.profiles_rename_heading)
+            },
             onCancel = { editing = null },
             onSave = { name ->
                 if (target == NEW) viewModel.addProfile(name) else viewModel.rename(target, name)
@@ -108,11 +111,17 @@ fun ProfilesScreen(
                             }
                         }
                         if (!active) {
-                            TextButton(onClick = { viewModel.select(profile.id) }) { Text(stringResource(R.string.profiles_use)) }
+                            TextButton(onClick = {
+                                viewModel.select(profile.id)
+                            }) { Text(stringResource(R.string.profiles_use)) }
                         }
-                        TextButton(onClick = { editing = profile.id }) { Text(stringResource(R.string.profiles_rename)) }
+                        TextButton(onClick = {
+                            editing = profile.id
+                        }) { Text(stringResource(R.string.profiles_rename)) }
                         if (profile.id != 1L) {
-                            TextButton(onClick = { viewModel.remove(profile.id) }) { Text(stringResource(R.string.common_remove)) }
+                            TextButton(onClick = {
+                                viewModel.remove(profile.id)
+                            }) { Text(stringResource(R.string.common_remove)) }
                         }
                     }
                 }
@@ -122,12 +131,7 @@ fun ProfilesScreen(
 }
 
 @Composable
-private fun NameEntry(
-    initial: String,
-    heading: String,
-    onCancel: () -> Unit,
-    onSave: (String) -> Unit,
-) {
+private fun NameEntry(initial: String, heading: String, onCancel: () -> Unit, onSave: (String) -> Unit) {
     var name by remember { mutableStateOf(initial) }
     Column(
         Modifier
@@ -143,7 +147,9 @@ private fun NameEntry(
                 color = MaterialTheme.colorScheme.primary,
             )
             Spacer(Modifier.weight(1f))
-            Button(enabled = name.isNotBlank(), onClick = { onSave(name) }) { Text(stringResource(R.string.common_save)) }
+            Button(enabled = name.isNotBlank(), onClick = {
+                onSave(name)
+            }) { Text(stringResource(R.string.common_save)) }
             Spacer(Modifier.width(12.dp))
             OutlinedButton(onClick = onCancel) { Text(stringResource(R.string.common_cancel)) }
         }

@@ -26,7 +26,10 @@ import kotlinx.serialization.json.Json
  */
 class SyncEngine(private val graph: ServiceLocator.Graph) {
 
-    private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
+    private val json = Json {
+        ignoreUnknownKeys = true
+        encodeDefaults = true
+    }
 
     /** What a single [apply] actually changed — summed across peers for the NAS "Synced N" line. */
     data class MergeResult(
@@ -103,8 +106,7 @@ class SyncEngine(private val graph: ServiceLocator.Graph) {
 
     fun encode(bundle: SyncBundle): String = json.encodeToString(SyncBundle.serializer(), bundle)
 
-    fun decode(bundleJson: String): SyncBundle =
-        json.decodeFromString(SyncBundle.serializer(), bundleJson)
+    fun decode(bundleJson: String): SyncBundle = json.decodeFromString(SyncBundle.serializer(), bundleJson)
 
     /** Applies a received bundle. Returns what changed, so callers can report "Synced N items". */
     suspend fun apply(bundle: SyncBundle): MergeResult {

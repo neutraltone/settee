@@ -18,10 +18,10 @@ import app.opentv.recording.RecordingLiveState
 import app.opentv.recording.RecordingStorage
 import app.opentv.recording.SmbClient
 import app.opentv.recording.SmbReadHandle
-import kotlinx.coroutines.runBlocking
 import java.io.File
 import java.io.IOException
 import java.io.RandomAccessFile
+import kotlinx.coroutines.runBlocking
 
 /**
  * Plays a recording *while it is still being recorded*, whether it's being written to this box's

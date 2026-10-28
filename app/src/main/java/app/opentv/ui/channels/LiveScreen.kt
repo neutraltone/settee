@@ -5,6 +5,9 @@
  */
 package app.opentv.ui.channels
 
+import android.content.Intent
+import android.view.WindowManager
+import android.widget.Toast
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -20,16 +23,15 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.StarOutline
 import androidx.compose.material3.CircularProgressIndicator
@@ -39,12 +41,14 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -53,22 +57,17 @@ import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalLifecycleOwner
-import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.viewmodel.compose.viewModel
-import android.content.Intent
-import android.view.WindowManager
-import android.widget.Toast
-import androidx.compose.ui.window.Dialog
 import app.opentv.R
 import app.opentv.core.AppSettings
 import app.opentv.core.ServiceLocator
@@ -78,9 +77,9 @@ import app.opentv.data.model.Channel
 import app.opentv.data.model.Programme
 import app.opentv.data.model.Reminder
 import app.opentv.data.model.shownName
-import app.opentv.reminders.ReminderScheduler
 import app.opentv.player.PlaybackQueue
 import app.opentv.player.PlayerController
+import app.opentv.reminders.ReminderScheduler
 import app.opentv.ui.ChannelsViewModel
 import app.opentv.ui.RecordingBackgroundDialog
 import app.opentv.ui.RecordingBackgroundPrompt
@@ -292,7 +291,6 @@ fun LiveScreen(
     }
 
     Row(Modifier.fillMaxSize()) {
-
         // ---- Category rail -----------------------------------------------------------------
         // Width animates to 0 while focus is in the guide (see onFocusRow) so the grid gets the
         // whole screen; d-pad LEFT from the guide's channel column slides it back (onExitLeft…).
@@ -402,10 +400,18 @@ fun LiveScreen(
                     val active = activeRecordings.firstOrNull { it.channelId == row.primary.id }
                     if (active != null) {
                         graph.recordingEngine.stop(active.id)
-                        Toast.makeText(context, context.getString(R.string.rec_recording_stopped), Toast.LENGTH_SHORT).show()
+                        Toast.makeText(
+                            context,
+                            context.getString(R.string.rec_recording_stopped),
+                            Toast.LENGTH_SHORT,
+                        ).show()
                     } else {
                         recordScope.launch { graph.recordingEngine.startChannel(row.primary, row.now) }
-                        Toast.makeText(context, context.getString(R.string.rec_recording_started_see_tab, row.primary.shownName), Toast.LENGTH_LONG).show()
+                        Toast.makeText(
+                            context,
+                            context.getString(R.string.rec_recording_started_see_tab, row.primary.shownName),
+                            Toast.LENGTH_LONG,
+                        ).show()
                         promptBackgroundIfNeeded()
                     }
                 }
@@ -515,7 +521,9 @@ fun LiveScreen(
                 )
                 Spacer(Modifier.height(4.dp))
                 Text(
-                    "${formatTime(programme.startUtcMillis)}–${formatTime(programme.endUtcMillis)}   ${channel.shownName}",
+                    "${formatTime(
+                        programme.startUtcMillis,
+                    )}–${formatTime(programme.endUtcMillis)}   ${channel.shownName}",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -561,26 +569,49 @@ fun LiveScreen(
 
                 val isPast = programme.endUtcMillis <= nowMillis
                 when {
-                    liveNow && recordingThis != null -> RecordActionRow(stringResource(R.string.rec_stop_recording), primary = true) {
+                    liveNow && recordingThis != null -> RecordActionRow(
+                        stringResource(R.string.rec_stop_recording),
+                        primary = true,
+                    ) {
                         graph.recordingEngine.stop(recordingThis.id)
-                        Toast.makeText(context, context.getString(R.string.rec_recording_stopped), Toast.LENGTH_SHORT).show()
+                        Toast.makeText(
+                            context,
+                            context.getString(R.string.rec_recording_stopped),
+                            Toast.LENGTH_SHORT,
+                        ).show()
                         recordTarget = null
                     }
                     liveNow -> RecordActionRow(stringResource(R.string.rec_record_now), primary = true) {
                         recordScope.launch { graph.recordingEngine.startChannel(chosenVariant, programme) }
-                        Toast.makeText(context, context.getString(R.string.rec_recording_channel, channel.shownName), Toast.LENGTH_LONG).show()
+                        Toast.makeText(
+                            context,
+                            context.getString(R.string.rec_recording_channel, channel.shownName),
+                            Toast.LENGTH_LONG,
+                        ).show()
                         promptBackgroundIfNeeded()
                         recordTarget = null
                     }
                     // A finished programme on a catch-up channel plays back from the archive.
-                    isPast && channel.tvArchive -> RecordActionRow(stringResource(R.string.guide_watch_from_start), primary = true) {
+                    isPast && channel.tvArchive -> RecordActionRow(
+                        stringResource(R.string.guide_watch_from_start),
+                        primary = true,
+                    ) {
                         recordScope.launch {
                             val source = graph.sourceRepository.byId(channel.sourceId)
                             if (source == null) {
-                                Toast.makeText(context, context.getString(R.string.guide_catchup_link_failed), Toast.LENGTH_SHORT).show()
+                                Toast.makeText(
+                                    context,
+                                    context.getString(R.string.guide_catchup_link_failed),
+                                    Toast.LENGTH_SHORT,
+                                ).show()
                             } else {
                                 val mins = (programme.durationMillis / 60000).toInt().coerceAtLeast(1)
-                                val url = graph.xtreamApi.catchupUrl(source, channel.streamId, programme.startUtcMillis, mins)
+                                val url = graph.xtreamApi.catchupUrl(
+                                    source,
+                                    channel.streamId,
+                                    programme.startUtcMillis,
+                                    mins,
+                                )
                                 onPlayCatchup(
                                     "catchup:${channel.id}:${programme.startUtcMillis}",
                                     url,
@@ -593,7 +624,11 @@ fun LiveScreen(
                     }
                     !isPast -> RecordActionRow(stringResource(R.string.rec_schedule_recording), primary = true) {
                         recordScope.launch { graph.recordingEngine.scheduleProgramme(chosenVariant, programme) }
-                        Toast.makeText(context, context.getString(R.string.rec_scheduled_title, programme.title), Toast.LENGTH_LONG).show()
+                        Toast.makeText(
+                            context,
+                            context.getString(R.string.rec_scheduled_title, programme.title),
+                            Toast.LENGTH_LONG,
+                        ).show()
                         promptBackgroundIfNeeded()
                         recordTarget = null
                     }
@@ -616,18 +651,30 @@ fun LiveScreen(
                                     graph.reminderRepository.delete(it.id)
                                 }
                             }
-                            Toast.makeText(context, context.getString(R.string.guide_reminder_removed), Toast.LENGTH_SHORT).show()
+                            Toast.makeText(
+                                context,
+                                context.getString(R.string.guide_reminder_removed),
+                                Toast.LENGTH_SHORT,
+                            ).show()
                             recordTarget = null
                         }
                     } else {
                         RecordActionRow(stringResource(R.string.guide_remind_me)) {
                             recordScope.launch { setReminder(graph, context, channel, programme, autoTune = false) }
-                            Toast.makeText(context, context.getString(R.string.guide_reminder_set, programme.title), Toast.LENGTH_LONG).show()
+                            Toast.makeText(
+                                context,
+                                context.getString(R.string.guide_reminder_set, programme.title),
+                                Toast.LENGTH_LONG,
+                            ).show()
                             recordTarget = null
                         }
                         RecordActionRow(stringResource(R.string.guide_auto_switch)) {
                             recordScope.launch { setReminder(graph, context, channel, programme, autoTune = true) }
-                            Toast.makeText(context, context.getString(R.string.guide_will_switch, channel.shownName), Toast.LENGTH_LONG).show()
+                            Toast.makeText(
+                                context,
+                                context.getString(R.string.guide_will_switch, channel.shownName),
+                                Toast.LENGTH_LONG,
+                            ).show()
                             recordTarget = null
                         }
                     }
@@ -636,7 +683,11 @@ fun LiveScreen(
                     recordScope.launch {
                         graph.recordingEngine.recordSeries(channel, programme, targetRow.programmes)
                     }
-                    Toast.makeText(context, context.getString(R.string.rec_series_recording_set, programme.title), Toast.LENGTH_LONG).show()
+                    Toast.makeText(
+                        context,
+                        context.getString(R.string.rec_series_recording_set, programme.title),
+                        Toast.LENGTH_LONG,
+                    ).show()
                     promptBackgroundIfNeeded()
                     recordTarget = null
                 }
@@ -741,20 +792,32 @@ fun LiveScreen(
                                         .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
                                 )
                             }.onFailure {
-                                Toast.makeText(context, context.getString(R.string.guide_no_external_player), Toast.LENGTH_SHORT).show()
+                                Toast.makeText(
+                                    context,
+                                    context.getString(R.string.guide_no_external_player),
+                                    Toast.LENGTH_SHORT,
+                                ).show()
                             }
                         }
                     }
                     if (recordingThis != null) {
                         RecordActionRow(stringResource(R.string.rec_stop_recording), primary = true) {
                             graph.recordingEngine.stop(recordingThis.id)
-                            Toast.makeText(context, context.getString(R.string.rec_recording_stopped), Toast.LENGTH_SHORT).show()
+                            Toast.makeText(
+                                context,
+                                context.getString(R.string.rec_recording_stopped),
+                                Toast.LENGTH_SHORT,
+                            ).show()
                             channelMenu = null
                         }
                     } else {
                         RecordActionRow(stringResource(R.string.guide_record_now_playing), primary = true) {
                             recordScope.launch { graph.recordingEngine.startChannel(channel, nowProg) }
-                            Toast.makeText(context, context.getString(R.string.rec_recording_started_see_tab, channel.shownName), Toast.LENGTH_LONG).show()
+                            Toast.makeText(
+                                context,
+                                context.getString(R.string.rec_recording_started_see_tab, channel.shownName),
+                                Toast.LENGTH_LONG,
+                            ).show()
                             promptBackgroundIfNeeded()
                             channelMenu = null
                         }
@@ -764,7 +827,11 @@ fun LiveScreen(
                             recordScope.launch {
                                 graph.recordingEngine.recordSeries(channel, nowProg, menuRow.programmes)
                             }
-                            Toast.makeText(context, context.getString(R.string.rec_series_recording_set, nowProg.title), Toast.LENGTH_LONG).show()
+                            Toast.makeText(
+                                context,
+                                context.getString(R.string.rec_series_recording_set, nowProg.title),
+                                Toast.LENGTH_LONG,
+                            ).show()
                             promptBackgroundIfNeeded()
                             channelMenu = null
                         }
@@ -890,16 +957,22 @@ private fun RailEntry(label: String, selected: Boolean, onClick: () -> Unit, mod
         text = label,
         style = MaterialTheme.typography.titleMedium,
         fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
-        color = if (selected) MaterialTheme.colorScheme.onPrimaryContainer
-        else MaterialTheme.colorScheme.onSurfaceVariant,
+        color = if (selected) {
+            MaterialTheme.colorScheme.onPrimaryContainer
+        } else {
+            MaterialTheme.colorScheme.onSurfaceVariant
+        },
         maxLines = 1,
         overflow = TextOverflow.Ellipsis,
         modifier = modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(8.dp))
             .background(
-                if (selected) MaterialTheme.colorScheme.primaryContainer
-                else MaterialTheme.colorScheme.surface,
+                if (selected) {
+                    MaterialTheme.colorScheme.primaryContainer
+                } else {
+                    MaterialTheme.colorScheme.surface
+                },
             )
             .clickable(onClick = onClick)
             .padding(horizontal = 12.dp, vertical = 10.dp),
@@ -915,8 +988,11 @@ private fun ChannelRow(
 ) {
     val now = System.currentTimeMillis()
     val background =
-        if (isSelected) MaterialTheme.colorScheme.surfaceVariant
-        else MaterialTheme.colorScheme.background
+        if (isSelected) {
+            MaterialTheme.colorScheme.surfaceVariant
+        } else {
+            MaterialTheme.colorScheme.background
+        }
 
     Row(
         modifier = Modifier
@@ -979,9 +1055,18 @@ private fun ChannelRow(
 
         IconButton(onClick = onToggleFavourite) {
             Icon(
-                imageVector = if (row.primary.favourite) Icons.Default.Star
-                else Icons.Outlined.StarOutline,
-                contentDescription = if (row.primary.favourite) stringResource(R.string.common_remove_favourite) else stringResource(R.string.common_favourite),
+                imageVector = if (row.primary.favourite) {
+                    Icons.Default.Star
+                } else {
+                    Icons.Outlined.StarOutline
+                },
+                contentDescription = if (row.primary.favourite) {
+                    stringResource(
+                        R.string.common_remove_favourite,
+                    )
+                } else {
+                    stringResource(R.string.common_favourite)
+                },
             )
         }
     }
@@ -1094,7 +1179,9 @@ private fun EmptyState(onAddSource: () -> Unit) {
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Spacer(Modifier.height(16.dp))
-            androidx.compose.material3.Button(onClick = onAddSource) { Text(stringResource(R.string.guide_add_provider_button)) }
+            androidx.compose.material3.Button(onClick = onAddSource) {
+                Text(stringResource(R.string.guide_add_provider_button))
+            }
         }
     }
 }

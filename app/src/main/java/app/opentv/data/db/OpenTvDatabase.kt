@@ -11,6 +11,7 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverter
 import androidx.room.TypeConverters
+import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 import app.opentv.data.model.Category
 import app.opentv.data.model.Channel
@@ -94,6 +95,13 @@ abstract class OpenTvDatabase : RoomDatabase() {
         const val FILE_NAME = "opentv.db"
 
         /**
+         * Every migration, in order. Shared with the migration test so neither list can lag. Empty
+         * while the pre-release wipe policy below holds; the first tagged release's schema change
+         * adds MIGRATION_1_2 here.
+         */
+        internal val MIGRATIONS: Array<Migration> = emptyArray()
+
+        /**
          * [onWiped] runs when the destructive fallback below rebuilds the database. Settings that
          * hold a row id (active profile, last channel) would otherwise outlive their rows and
          * later match whatever reuses that id.
@@ -103,6 +111,7 @@ abstract class OpenTvDatabase : RoomDatabase() {
                 // WAL keeps guide writes from blocking guide reads, so a background EPG
                 // refresh cannot make the UI stutter on a slow TV box.
                 .setJournalMode(JournalMode.WRITE_AHEAD_LOGGING)
+                .addMigrations(*MIGRATIONS)
                 /*
                  * Pre-release policy: until the first tagged release, schema changes drop and
                  * rebuild the database. Everything in it is re-derivable from the provider (one
@@ -114,9 +123,11 @@ abstract class OpenTvDatabase : RoomDatabase() {
                  * device that ran a build from before the restart holds an upstream v11 database.
                  */
                 .fallbackToDestructiveMigration()
-                .addCallback(object : Callback() {
-                    override fun onDestructiveMigration(db: SupportSQLiteDatabase) = onWiped()
-                })
+                .addCallback(
+                    object : Callback() {
+                        override fun onDestructiveMigration(db: SupportSQLiteDatabase) = onWiped()
+                    },
+                )
                 .build()
     }
 }

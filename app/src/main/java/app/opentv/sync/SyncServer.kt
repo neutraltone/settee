@@ -50,6 +50,7 @@ class SyncServer(private val scope: CoroutineScope) {
     private var code: String = ""
     private var bundle: String = ""
     private var wrongAttempts = 0
+
     @Volatile private var running = false
 
     fun start(bundleJson: String) {

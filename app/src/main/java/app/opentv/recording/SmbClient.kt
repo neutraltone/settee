@@ -107,12 +107,7 @@ object SmbClient {
         return Quad(client, connection, session, share)
     }
 
-    private class Quad(
-        val client: SMBClient,
-        val connection: Connection,
-        val session: Session,
-        val share: DiskShare,
-    )
+    private class Quad(val client: SMBClient, val connection: Connection, val session: Session, val share: DiskShare)
 
     /** SMB paths use backslashes; the folder may be nested and is created if missing. */
     private fun ensureFolder(share: DiskShare, folder: String) {
@@ -149,8 +144,13 @@ object SmbClient {
                 null,
             )
             return SmbWriteHandle(
-                q.client, q.connection, q.session, q.share, file,
-                file.outputStream, locator,
+                q.client,
+                q.connection,
+                q.session,
+                q.share,
+                file,
+                file.outputStream,
+                locator,
             )
         } catch (t: Throwable) {
             runCatching { q.share.close() }

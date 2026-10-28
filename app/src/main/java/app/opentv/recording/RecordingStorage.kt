@@ -60,8 +60,7 @@ object RecordingStorage {
     )
 
     /** Internal recordings dir on the device's own (app-private) external storage — no permission needed. */
-    fun internalDir(context: Context): File =
-        File(context.getExternalFilesDir(null), "recordings").apply { mkdirs() }
+    fun internalDir(context: Context): File = File(context.getExternalFilesDir(null), "recordings").apply { mkdirs() }
 
     /**
      * The locator a new recording named [filename] would be stored at, given the current target.
@@ -103,7 +102,12 @@ object RecordingStorage {
             val uri = Uri.parse(locator)
             val out = context.contentResolver.openOutputStream(uri, "w")
                 ?: throw IOException(context.getString(R.string.rec_error_usb_unavailable))
-            Sink(out, resolvedLocator = locator) { runCatching { out.flush(); out.close() } }
+            Sink(out, resolvedLocator = locator) {
+                runCatching {
+                    out.flush()
+                    out.close()
+                }
+            }
         }
         else -> {
             val file = File(locator)
@@ -130,7 +134,10 @@ object RecordingStorage {
         val out = context.contentResolver.openOutputStream(doc.uri)
             ?: throw IOException(context.getString(R.string.rec_error_usb_unavailable))
         return Sink(out, resolvedLocator = doc.uri.toString()) {
-            runCatching { out.flush(); out.close() }
+            runCatching {
+                out.flush()
+                out.close()
+            }
         }
     }
 
@@ -153,8 +160,11 @@ object RecordingStorage {
      * instead).
      */
     fun sizeOf(locator: String): Long =
-        if (SmbClient.isSmb(locator) || isContent(locator) || isUsbPlaceholder(locator)) -1L
-        else File(locator).length()
+        if (SmbClient.isSmb(locator) || isContent(locator) || isUsbPlaceholder(locator)) {
+            -1L
+        } else {
+            File(locator).length()
+        }
 
     /** A filesystem-safe recording filename: `Channel - 2026-08-02 1830.ts`. */
     fun fileNameFor(channelName: String, title: String, startMillis: Long): String {

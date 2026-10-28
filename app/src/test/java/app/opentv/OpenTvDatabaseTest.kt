@@ -34,8 +34,7 @@ class OpenTvDatabaseTest {
     private var db: OpenTvDatabase? = null
     private var wipes = 0
 
-    private fun open(): OpenTvDatabase =
-        OpenTvDatabase.build(context, onWiped = { wipes++ }).also { db = it }
+    private fun open(): OpenTvDatabase = OpenTvDatabase.build(context, onWiped = { wipes++ }).also { db = it }
 
     private fun OpenTvDatabase.version(): Int = openHelper.readableDatabase.version
 

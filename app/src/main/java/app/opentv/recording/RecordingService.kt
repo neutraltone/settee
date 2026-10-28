@@ -18,6 +18,7 @@ import android.util.Log
 import androidx.core.app.NotificationCompat
 import app.opentv.R
 import app.opentv.core.ServiceLocator
+import java.util.concurrent.ConcurrentHashMap
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -25,7 +26,6 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import okhttp3.Call
 import okhttp3.Request
-import java.util.concurrent.ConcurrentHashMap
 
 /**
  * A foreground service that captures live streams to storage. Recording has to keep going when the
@@ -206,7 +206,8 @@ class RecordingService : Service() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
             stopForeground(STOP_FOREGROUND_REMOVE)
         } else {
-            @Suppress("DEPRECATION") stopForeground(true)
+            @Suppress("DEPRECATION")
+            stopForeground(true)
         }
         stopSelf()
     }
@@ -293,6 +294,7 @@ class RecordingService : Service() {
         private const val BUFFER_BYTES = 64 * 1024
         private const val SIZE_REPORT_BYTES = 4L * 1024 * 1024
         private const val MAX_WAKE_MILLIS = 6L * 60 * 60 * 1000 // 6h safety cap
+
         // Providers close a live .ts socket every ~30s; reconnect and keep appending. Give up only
         // after this many consecutive reconnects deliver nothing (the stream is genuinely gone).
         private const val MAX_DEAD_RECONNECTS = 5

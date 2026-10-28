@@ -22,8 +22,6 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
@@ -35,6 +33,8 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -72,7 +72,10 @@ fun AboutScreen(onBack: () -> Unit) {
         Spacer(Modifier.height(20.dp))
 
         Section(stringResource(R.string.about_version)) {
-            Text("${stringResource(R.string.app_name)} ${BuildConfig.VERSION_NAME}", style = MaterialTheme.typography.titleMedium)
+            Text(
+                "${stringResource(R.string.app_name)} ${BuildConfig.VERSION_NAME}",
+                style = MaterialTheme.typography.titleMedium,
+            )
             Text(
                 stringResource(R.string.about_based_on),
                 style = MaterialTheme.typography.bodyMedium,
@@ -103,7 +106,17 @@ fun AboutScreen(onBack: () -> Unit) {
                             checking = false
                         }
                     },
-                ) { Text(if (checking) stringResource(R.string.about_checking) else stringResource(R.string.about_check_updates)) }
+                ) {
+                    Text(
+                        if (checking) {
+                            stringResource(
+                                R.string.about_checking,
+                            )
+                        } else {
+                            stringResource(R.string.about_check_updates)
+                        },
+                    )
+                }
                 updateLine?.let {
                     Spacer(Modifier.width(16.dp))
                     Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary)
@@ -165,8 +178,11 @@ private fun LinkLine(label: String, value: String, url: String = "https://$value
             .onFocusChanged { focused = it.isFocused }
             .clip(RoundedCornerShape(8.dp))
             .then(
-                if (focused) Modifier.background(MaterialTheme.colorScheme.primary.copy(alpha = 0.18f))
-                else Modifier,
+                if (focused) {
+                    Modifier.background(MaterialTheme.colorScheme.primary.copy(alpha = 0.18f))
+                } else {
+                    Modifier
+                },
             )
             .clickable {
                 runCatching {

@@ -53,10 +53,7 @@ import app.opentv.ui.ChannelsViewModel
  * salted hash, enough to stop casual access, not a serious attacker.
  */
 @Composable
-fun ParentalControlsScreen(
-    onBack: () -> Unit,
-    channelsViewModel: ChannelsViewModel = viewModel(),
-) {
+fun ParentalControlsScreen(onBack: () -> Unit, channelsViewModel: ChannelsViewModel = viewModel()) {
     val context = LocalContext.current
     val settings = remember { ServiceLocator.get(context).settings }
     val pinIsSet by settings.pinIsSet.collectAsState()
@@ -92,7 +89,11 @@ fun ParentalControlsScreen(
 
         Spacer(Modifier.height(16.dp))
 
-        Text(stringResource(R.string.parental_hidden_categories), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+        Text(
+            stringResource(R.string.parental_hidden_categories),
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.primary,
+        )
         Spacer(Modifier.height(6.dp))
         Text(
             stringResource(R.string.parental_hidden_desc),
@@ -108,7 +109,10 @@ fun ParentalControlsScreen(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Column(Modifier.weight(1f)) {
-                    Text(stringResource(R.string.parental_show_hidden_title), style = MaterialTheme.typography.titleMedium)
+                    Text(
+                        stringResource(R.string.parental_show_hidden_title),
+                        style = MaterialTheme.typography.titleMedium,
+                    )
                     Text(
                         stringResource(R.string.parental_show_hidden_subtitle),
                         style = MaterialTheme.typography.bodyMedium,
@@ -142,11 +146,17 @@ fun ParentalControlsScreen(
                             Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            Text(group.label, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+                            Text(
+                                group.label,
+                                style = MaterialTheme.typography.titleMedium,
+                                modifier = Modifier.weight(1f),
+                            )
                             Switch(
                                 checked = group.key in hidden,
                                 onCheckedChange = { on ->
-                                    val next = hidden.toMutableSet().apply { if (on) add(group.key) else remove(group.key) }
+                                    val next = hidden.toMutableSet().apply {
+                                        if (on) add(group.key) else remove(group.key)
+                                    }
                                     settings.setHiddenCategories(next)
                                 },
                             )
@@ -160,11 +170,7 @@ fun ParentalControlsScreen(
 }
 
 @Composable
-private fun PinSection(
-    pinIsSet: Boolean,
-    onSetPin: (String) -> Unit,
-    onClearPin: () -> Unit,
-) {
+private fun PinSection(pinIsSet: Boolean, onSetPin: (String) -> Unit, onClearPin: () -> Unit) {
     var editing by remember { mutableStateOf(false) }
     var pin by remember { mutableStateOf("") }
     var confirm by remember { mutableStateOf("") }
@@ -172,7 +178,11 @@ private fun PinSection(
     val pinLenError = stringResource(R.string.parental_pin_len_error)
     val pinMismatchError = stringResource(R.string.parental_pin_mismatch)
 
-    Text(stringResource(R.string.parental_pin), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+    Text(
+        stringResource(R.string.parental_pin),
+        style = MaterialTheme.typography.titleMedium,
+        color = MaterialTheme.colorScheme.primary,
+    )
     Spacer(Modifier.height(8.dp))
     Card {
         Column(Modifier.fillMaxWidth().padding(16.dp)) {
@@ -180,20 +190,43 @@ private fun PinSection(
                 Text(stringResource(R.string.parental_pin_is_set), style = MaterialTheme.typography.titleMedium)
                 Spacer(Modifier.height(12.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    OutlinedButton(onClick = { editing = true; pin = ""; confirm = ""; error = null }) {
+                    OutlinedButton(onClick = {
+                        editing = true
+                        pin = ""
+                        confirm = ""
+                        error = null
+                    }) {
                         Text(stringResource(R.string.parental_change_pin))
                     }
                     OutlinedButton(onClick = onClearPin) { Text(stringResource(R.string.parental_remove_pin)) }
                 }
             } else {
                 Text(
-                    if (pinIsSet) stringResource(R.string.parental_pin_enter_new) else stringResource(R.string.parental_pin_set),
+                    if (pinIsSet) {
+                        stringResource(
+                            R.string.parental_pin_enter_new,
+                        )
+                    } else {
+                        stringResource(R.string.parental_pin_set)
+                    },
                     style = MaterialTheme.typography.titleMedium,
                 )
                 Spacer(Modifier.height(12.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    PinField(stringResource(R.string.parental_pin_new), pin) { if (it.length <= 4) pin = it.filter(Char::isDigit) }
-                    PinField(stringResource(R.string.parental_pin_confirm), confirm) { if (it.length <= 4) confirm = it.filter(Char::isDigit) }
+                    PinField(stringResource(R.string.parental_pin_new), pin) {
+                        if (it.length <=
+                            4
+                        ) {
+                            pin = it.filter(Char::isDigit)
+                        }
+                    }
+                    PinField(stringResource(R.string.parental_pin_confirm), confirm) {
+                        if (it.length <=
+                            4
+                        ) {
+                            confirm = it.filter(Char::isDigit)
+                        }
+                    }
                 }
                 error?.let {
                     Spacer(Modifier.height(8.dp))
@@ -208,13 +241,20 @@ private fun PinSection(
                                 pin.length != 4 -> error = pinLenError
                                 pin != confirm -> error = pinMismatchError
                                 else -> {
-                                    onSetPin(pin); editing = false; pin = ""; confirm = ""; error = null
+                                    onSetPin(pin)
+                                    editing = false
+                                    pin = ""
+                                    confirm = ""
+                                    error = null
                                 }
                             }
                         },
                     ) { Text(stringResource(R.string.parental_save_pin)) }
                     if (editing) {
-                        OutlinedButton(onClick = { editing = false; error = null }) { Text(stringResource(R.string.common_cancel)) }
+                        OutlinedButton(onClick = {
+                            editing = false
+                            error = null
+                        }) { Text(stringResource(R.string.common_cancel)) }
                     }
                 }
             }
@@ -253,7 +293,12 @@ private fun PinGate(onCancel: () -> Unit, onSubmit: (String) -> Boolean) {
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 Button(
                     enabled = pin.length == 4,
-                    onClick = { if (!onSubmit(pin)) { error = true; pin = "" } },
+                    onClick = {
+                        if (!onSubmit(pin)) {
+                            error = true
+                            pin = ""
+                        }
+                    },
                 ) { Text(stringResource(R.string.parental_unlock)) }
                 OutlinedButton(onClick = onCancel) { Text(stringResource(R.string.common_back)) }
             }

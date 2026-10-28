@@ -27,10 +27,7 @@ import java.util.concurrent.TimeUnit
  * which on a TV box happens constantly. Failures return [Result.retry] with WorkManager's
  * exponential backoff — the app never hammers a provider that is already struggling.
  */
-class SyncWorker(
-    context: Context,
-    params: WorkerParameters,
-) : CoroutineWorker(context, params) {
+class SyncWorker(context: Context, params: WorkerParameters) : CoroutineWorker(context, params) {
 
     override suspend fun doWork(): Result {
         val graph = ServiceLocator.get(applicationContext)
@@ -49,7 +46,6 @@ class SyncWorker(
                     Log.w(TAG, "Catalogue for ${source.name} failed: ${result.reason}")
                 }
             }
-
         }
 
         // Guides sync as one pass across every enabled feed — provider guides, built-in

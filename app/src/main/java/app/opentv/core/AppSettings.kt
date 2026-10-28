@@ -257,7 +257,9 @@ class AppSettings private constructor(context: Context) {
     /** The last channel played, for boot-to-last-channel. Not a flow — only read once at launch. */
     var lastChannelId: Long
         get() = prefs.getLong(KEY_LAST_CHANNEL, 0L)
-        set(value) { prefs.edit().putLong(KEY_LAST_CHANNEL, value).apply() }
+        set(value) {
+            prefs.edit().putLong(KEY_LAST_CHANNEL, value).apply()
+        }
 
     /**
      * Video scaling in the player, as an [androidx.media3.ui.AspectRatioFrameLayout] RESIZE_MODE_*
@@ -272,9 +274,8 @@ class AppSettings private constructor(context: Context) {
         _playerResizeMode.value = mode
     }
 
-    private fun readThemeMode(): ThemeMode =
-        runCatching { ThemeMode.valueOf(prefs.getString(KEY_THEME, null) ?: "") }
-            .getOrDefault(ThemeMode.SYSTEM)
+    private fun readThemeMode(): ThemeMode = runCatching { ThemeMode.valueOf(prefs.getString(KEY_THEME, null) ?: "") }
+        .getOrDefault(ThemeMode.SYSTEM)
 
     private fun readChannelLayout(): ChannelLayout =
         runCatching { ChannelLayout.valueOf(prefs.getString(KEY_CHANNEL_LAYOUT, null) ?: "") }
@@ -386,7 +387,9 @@ class AppSettings private constructor(context: Context) {
      */
     var vodSyncedAtMillis: Long
         get() = prefs.getLong(KEY_VOD_SYNCED_AT, 0L)
-        set(value) { prefs.edit().putLong(KEY_VOD_SYNCED_AT, value).apply() }
+        set(value) {
+            prefs.edit().putLong(KEY_VOD_SYNCED_AT, value).apply()
+        }
 
     /**
      * The user's own TMDB API key (v3 auth), stored on-device only exactly like provider
@@ -426,10 +429,9 @@ class AppSettings private constructor(context: Context) {
         _stremioAddons.value = list
     }
 
-    private fun readStremioAddons(): List<StremioAddon> =
-        runCatching {
-            prefs.getString(KEY_STREMIO_ADDONS, null)?.let { addonJson.decodeFromString<List<StremioAddon>>(it) }
-        }.getOrNull() ?: emptyList()
+    private fun readStremioAddons(): List<StremioAddon> = runCatching {
+        prefs.getString(KEY_STREMIO_ADDONS, null)?.let { addonJson.decodeFromString<List<StremioAddon>>(it) }
+    }.getOrNull() ?: emptyList()
 
     companion object {
         private const val KEY_THEME = "theme_mode"
@@ -475,9 +477,8 @@ class AppSettings private constructor(context: Context) {
 
         @Volatile private var instance: AppSettings? = null
 
-        fun get(context: Context): AppSettings =
-            instance ?: synchronized(this) {
-                instance ?: AppSettings(context).also { instance = it }
-            }
+        fun get(context: Context): AppSettings = instance ?: synchronized(this) {
+            instance ?: AppSettings(context).also { instance = it }
+        }
     }
 }

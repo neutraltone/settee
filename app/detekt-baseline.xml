@@ -1,0 +1,300 @@
+<?xml version="1.0" ?>
+<SmellBaseline>
+  <ManuallySuppressedIssues/>
+  <CurrentIssues>
+    <ID>ComplexCondition:CatalogRepository.kt$CatalogRepository$tmdb.isConfigured() &amp;&amp; (result.backdropUrl == null || result.plot == null || result.cast == null)</ID>
+    <ID>ComplexCondition:LiveScreen.kt$!previewEnabled || !screenResumed || recordingActive || row == null</ID>
+    <ID>ComplexCondition:OpenTvViewModels.kt$VodViewModel$prev != null &amp;&amp; prev.profileId == profileId &amp;&amp; prev.movieCount == movieCount &amp;&amp; prev.seriesCount == seriesCount</ID>
+    <ID>ComplexCondition:PlayerScreen.kt$controlsVisible &amp;&amp; !paused &amp;&amp; panel == Panel.NONE &amp;&amp; state is PlayerController.State.Playing</ID>
+    <ID>ComplexCondition:VodPlayerScreen.kt$controlsVisible &amp;&amp; !paused &amp;&amp; !scrubbing &amp;&amp; vodPanel == VodPanel.NONE &amp;&amp; activelyPlaying</ID>
+    <ID>ComposableParamOrder:GuideGrid.kt$ChannelList</ID>
+    <ID>ComposableParamOrder:GuideGrid.kt$GuideGrid</ID>
+    <ID>ComposableParamOrder:GuidePreview.kt$GuidePreview</ID>
+    <ID>ComposableParamOrder:RecordingsScreen.kt$RecordingRow</ID>
+    <ID>CyclomaticComplexMethod:AddSourceScreen.kt$@Composable fun AddSourceScreen(viewModel: SourcesViewModel, onFinished: () -&gt; Unit, editingSourceId: Long? = null)</ID>
+    <ID>CyclomaticComplexMethod:CatalogRepository.kt$CatalogRepository$suspend fun movieDetail(id: Long): Movie?</ID>
+    <ID>CyclomaticComplexMethod:CatalogRepository.kt$CatalogRepository$suspend fun seriesDetail(id: Long): Series?</ID>
+    <ID>CyclomaticComplexMethod:GuideGrid.kt$@Composable private fun ChannelListRow( row: ChannelsViewModel.Row, nowMillis: Long, isSelected: Boolean, onSelect: () -&gt; Unit, onFocus: () -&gt; Unit, onToggleFavourite: () -&gt; Unit, onExitLeft: () -&gt; Boolean, )</ID>
+    <ID>CyclomaticComplexMethod:GuideGrid.kt$@Composable private fun GuideRow( row: ChannelsViewModel.Row, windowStartMillis: Long, nowMillis: Long, scroll: androidx.compose.foundation.ScrollState, isSelected: Boolean, onSelect: () -&gt; Unit, onFocus: () -&gt; Unit, onProgramme: (Programme) -&gt; Unit, onToggleFavourite: () -&gt; Unit = {}, onExitLeft: () -&gt; Boolean = { false }, )</ID>
+    <ID>CyclomaticComplexMethod:GuidePreview.kt$@OptIn(UnstableApi::class) @Composable fun GuidePreview( row: ChannelsViewModel.Row?, nowMillis: Long, onWatch: () -&gt; Unit, onRefresh: () -&gt; Unit, onAddSource: () -&gt; Unit, previewPlayer: ExoPlayer?, isRecording: Boolean = false, onRecord: () -&gt; Unit = {}, dayLabel: String = "", canGoPrevDay: Boolean = false, onPrevDay: () -&gt; Unit = {}, onNextDay: () -&gt; Unit = {}, modifier: Modifier = Modifier, )</ID>
+    <ID>CyclomaticComplexMethod:LiveScreen.kt$@Composable fun LiveScreen( isTelevision: Boolean, hasSources: Boolean, isSyncing: Boolean, onPlayChannel: (Channel) -&gt; Unit, onAddSource: () -&gt; Unit, onRefresh: () -&gt; Unit, onPlayCatchup: (mediaKey: String, url: String, title: String, ua: String) -&gt; Unit = { _, _, _, _ -&gt; }, viewModel: ChannelsViewModel = viewModel(), )</ID>
+    <ID>CyclomaticComplexMethod:MainActivity.kt$@Composable private fun OpenTvApp(isTelevision: Boolean)</ID>
+    <ID>CyclomaticComplexMethod:ManagerServer.kt$ManagerServer$private fun handle(client: Socket)</ID>
+    <ID>CyclomaticComplexMethod:PairingHttp.kt$PairingHttp$fun isPrivateAddress(host: String?): Boolean</ID>
+    <ID>CyclomaticComplexMethod:PairingServer.kt$PairingServer$private fun handle(client: Socket)</ID>
+    <ID>CyclomaticComplexMethod:PlayerScreen.kt$@OptIn(UnstableApi::class) @Composable fun PlayerScreen(channelId: Long?, onBack: () -&gt; Unit)</ID>
+    <ID>CyclomaticComplexMethod:RecordingService.kt$RecordingService$private suspend fun runCapture(id: Long)</ID>
+    <ID>CyclomaticComplexMethod:RecordingSettingsScreen.kt$@Composable fun RecordingSettingsScreen(onBack: () -&gt; Unit)</ID>
+    <ID>CyclomaticComplexMethod:SyncEngine.kt$SyncEngine$suspend fun apply(bundle: SyncBundle): MergeResult</ID>
+    <ID>CyclomaticComplexMethod:VodPlayerScreen.kt$@OptIn(UnstableApi::class) @Composable fun VodPlayerScreen(mediaKey: String, streamUrl: String, title: String, userAgent: String, onBack: () -&gt; Unit)</ID>
+    <ID>CyclomaticComplexMethod:VodScreens.kt$@Composable fun MoviesScreen( onOpenMovie: (Movie) -&gt; Unit, onResume: (mediaKey: String, url: String, title: String) -&gt; Unit, onOpenSearch: () -&gt; Unit, hasSources: Boolean, isSyncing: Boolean, viewModel: VodViewModel = viewModel(), )</ID>
+    <ID>CyclomaticComplexMethod:XmltvParser.kt$XmltvParser$private fun readProgramme(parser: XmlPullParser, feedId: Long): Programme?</ID>
+    <ID>ImplicitDefaultLocale:RecordingSettingsScreen.kt$String.format("%.0f MB", mb)</ID>
+    <ID>ImplicitDefaultLocale:RecordingSettingsScreen.kt$String.format("%.1f GB", mb / 1024.0)</ID>
+    <ID>ImplicitDefaultLocale:RecordingsScreen.kt$String.format("%.0f MB", mb)</ID>
+    <ID>ImplicitDefaultLocale:RecordingsScreen.kt$String.format("%.1f GB", mb / 1024.0)</ID>
+    <ID>InstanceOfCheckForException:RecordingService.kt$RecordingService$t is kotlinx.coroutines.CancellationException</ID>
+    <ID>LambdaParameterEventTrailing:VodDetailScreens.kt$onClick</ID>
+    <ID>LambdaParameterInRestartableEffect:PhonePairingScreen.kt$onReceived</ID>
+    <ID>LambdaParameterInRestartableEffect:PlayerScreen.kt$onBack</ID>
+    <ID>LambdaParameterInRestartableEffect:VodPlayerScreen.kt$onBack</ID>
+    <ID>LongMethod:ManagerPage.kt$ManagerPage$fun page(token: String): String</ID>
+    <ID>LongMethod:PairingPage.kt$PairingPage$fun form(token: String, error: String?): String</ID>
+    <ID>LongMethod:PairingServer.kt$PairingServer$private fun handleSubmit(output: java.io.OutputStream, body: String)</ID>
+    <ID>LongMethod:RecordingService.kt$RecordingService$private suspend fun runCapture(id: Long)</ID>
+    <ID>LongMethod:SyncEngine.kt$SyncEngine$suspend fun apply(bundle: SyncBundle): MergeResult</ID>
+    <ID>LongMethod:XmltvParser.kt$XmltvParser$private fun readProgramme(parser: XmlPullParser, feedId: Long): Programme?</ID>
+    <ID>LongParameterList:CatalogRepository.kt$CatalogRepository$( private val sourceDao: SourceDao, private val channelDao: ChannelDao, private val categoryDao: CategoryDao, private val movieDao: MovieDao, private val seriesDao: SeriesDao, private val episodeDao: EpisodeDao, private val positionDao: PlaybackPositionDao, private val api: XtreamApi, private val stalkerApi: StalkerApi, private val http: OkHttpClient, private val settings: AppSettings, )</ID>
+    <ID>LongParameterList:EpgRepository.kt$EpgRepository$( private val programmeDao: ProgrammeDao, private val feedDao: EpgFeedDao, private val aliasDao: EpgChannelAliasDao, private val channelDao: ChannelDao, private val sourceDao: SourceDao, private val api: XtreamApi, private val http: OkHttpClient, )</ID>
+    <ID>LongParameterList:PlayerController.kt$PlayerController$( context: Context, private val scope: CoroutineScope, httpClient: OkHttpClient, subtitlesEnabled: Boolean = true, /** * Tunes the player for the guide's muted preview pane: a shallow start buffer so a highlighted * channel shows a frame quickly, and a longer switch debounce so scrolling the channel list * does not tune to every channel passed over. The full-screen players leave this false and keep * the deep buffer that rides out a twitchy IPTV source. */ private val preview: Boolean = false, /** * Turns the live player into a shallow DVR: a retained back-buffer so the viewer can pause and * rewind live TV within the last few minutes. Off by default because holding minutes of video * in memory is a real cost on a cheap box; the recording player and preview never set it. */ private val dvr: Boolean = false, /** * When set, `smb://` media (a recording on a NAS) is read through this source so it plays and * seeks in-app. Null for the live/VOD players, which never see an smb URI. */ smbDataSourceFactory: androidx.media3.datasource.DataSource.Factory? = null, /** * When set, `optvrec://&lt;id&gt;` media (a recording still being written) is read through this * tail-following source so it can be watched while it records. Null everywhere except the * recording player. */ growingDataSourceFactory: androidx.media3.datasource.DataSource.Factory? = null, /** * Playing a recording that is still being written (watch-while-recording). Playback is held a * cushion *behind* the file's growing edge (see the LIVE_REC_* constants) so the bursty arrival * of an IPTV source — worst when the recording is read back over SMB from a NAS, where each read * is a network round-trip — rides over the gaps instead of stalling on every one. */ private val liveRecording: Boolean = false, )</ID>
+    <ID>LongParameterList:SmbClient.kt$SmbWriteHandle$( private val client: SMBClient, private val connection: Connection, private val session: Session, private val share: DiskShare, private val file: com.hierynomus.smbj.share.File, val output: OutputStream, /** The `smb://host/share/path` locator stored on the recording row. */ val locator: String, )</ID>
+    <ID>LongParameterList:XmltvTimeTest.kt$XmltvTimeTest$(year: Int, month: Int, day: Int, hour: Int, minute: Int, second: Int)</ID>
+    <ID>LoopWithTooManyJumpStatements:ManagerServer.kt$ManagerServer$for</ID>
+    <ID>LoopWithTooManyJumpStatements:ManagerServer.kt$ManagerServer$while</ID>
+    <ID>LoopWithTooManyJumpStatements:NasSync.kt$NasSync$for</ID>
+    <ID>LoopWithTooManyJumpStatements:OpenTvViewModels.kt$SyncViewModel$for</ID>
+    <ID>LoopWithTooManyJumpStatements:PairingServer.kt$PairingServer$for</ID>
+    <ID>LoopWithTooManyJumpStatements:PairingServer.kt$PairingServer$while</ID>
+    <ID>LoopWithTooManyJumpStatements:RecordingEngine.kt$RecordingEngine$for</ID>
+    <ID>LoopWithTooManyJumpStatements:RecordingService.kt$RecordingService$while</ID>
+    <ID>LoopWithTooManyJumpStatements:SyncEngine.kt$SyncEngine$for</ID>
+    <ID>LoopWithTooManyJumpStatements:SyncServer.kt$SyncServer$for</ID>
+    <ID>LoopWithTooManyJumpStatements:SyncServer.kt$SyncServer$while</ID>
+    <ID>LoopWithTooManyJumpStatements:VodTitleCleaner.kt$VodTitleCleaner$while</ID>
+    <ID>MagicNumber:ApkInstaller.kt$ApkInstaller$1024</ID>
+    <ID>MagicNumber:ApkInstaller.kt$ApkInstaller$64</ID>
+    <ID>MagicNumber:AppSettings.kt$AppSettings$30</ID>
+    <ID>MagicNumber:AppSettings.kt$AppSettings$60</ID>
+    <ID>MagicNumber:CatalogRepository.kt$CatalogRepository$3</ID>
+    <ID>MagicNumber:CatalogRepository.kt$CatalogRepository$500</ID>
+    <ID>MagicNumber:CatalogRepository.kt$CatalogRepository$6</ID>
+    <ID>MagicNumber:EpgRepository.kt$EpgRepository$0x8b</ID>
+    <ID>MagicNumber:EpgRepository.kt$EpgRepository$1024</ID>
+    <ID>MagicNumber:EpgRepository.kt$EpgRepository$256</ID>
+    <ID>MagicNumber:EpgRepository.kt$EpgRepository$8</ID>
+    <ID>MagicNumber:GuideGrid.kt$60_000L</ID>
+    <ID>MagicNumber:M3uParser.kt$M3uParser$0x100000001b3L</ID>
+    <ID>MagicNumber:M3uParser.kt$M3uParser$0xff</ID>
+    <ID>MagicNumber:MainActivity.kt$MainActivity$16</ID>
+    <ID>MagicNumber:MainActivity.kt$MainActivity$9</ID>
+    <ID>MagicNumber:ManagerServer.kt$ManagerServer$5</ID>
+    <ID>MagicNumber:OpenTvApp.kt$OpenTvApp$0.25</ID>
+    <ID>MagicNumber:OpenTvApp.kt$OpenTvApp$1024</ID>
+    <ID>MagicNumber:OpenTvApp.kt$OpenTvApp$256L</ID>
+    <ID>MagicNumber:OpenTvViewModels.kt$ChannelsViewModel$2000</ID>
+    <ID>MagicNumber:OpenTvViewModels.kt$ChannelsViewModel$400</ID>
+    <ID>MagicNumber:OpenTvViewModels.kt$ChannelsViewModel$8000</ID>
+    <ID>MagicNumber:PairingHttp.kt$PairingHttp$10</ID>
+    <ID>MagicNumber:PairingHttp.kt$PairingHttp$100</ID>
+    <ID>MagicNumber:PairingHttp.kt$PairingHttp$127</ID>
+    <ID>MagicNumber:PairingHttp.kt$PairingHttp$16</ID>
+    <ID>MagicNumber:PairingHttp.kt$PairingHttp$168</ID>
+    <ID>MagicNumber:PairingHttp.kt$PairingHttp$169</ID>
+    <ID>MagicNumber:PairingHttp.kt$PairingHttp$172</ID>
+    <ID>MagicNumber:PairingHttp.kt$PairingHttp$192</ID>
+    <ID>MagicNumber:PairingHttp.kt$PairingHttp$254</ID>
+    <ID>MagicNumber:PairingHttp.kt$PairingHttp$31</ID>
+    <ID>MagicNumber:PairingHttp.kt$PairingHttp$4</ID>
+    <ID>MagicNumber:PairingHttp.kt$PairingHttp$64</ID>
+    <ID>MagicNumber:PairingServer.kt$PairingServer$1_000_000</ID>
+    <ID>MagicNumber:PairingServer.kt$PairingServer$24</ID>
+    <ID>MagicNumber:PlaybackErrors.kt$PlaybackErrors$401</ID>
+    <ID>MagicNumber:PlaybackErrors.kt$PlaybackErrors$403</ID>
+    <ID>MagicNumber:PlaybackErrors.kt$PlaybackErrors$404</ID>
+    <ID>MagicNumber:PlaybackErrors.kt$PlaybackErrors$405</ID>
+    <ID>MagicNumber:PlaybackErrors.kt$PlaybackErrors$429</ID>
+    <ID>MagicNumber:PlaybackErrors.kt$PlaybackErrors$451</ID>
+    <ID>MagicNumber:PlaybackErrors.kt$PlaybackErrors$500</ID>
+    <ID>MagicNumber:PlaybackErrors.kt$PlaybackErrors$599</ID>
+    <ID>MagicNumber:RecordingEngine.kt$RecordingEngine$1_000L</ID>
+    <ID>MagicNumber:RecordingEngine.kt$RecordingEngine$200</ID>
+    <ID>MagicNumber:RecordingEngine.kt$RecordingEngine$60_000L</ID>
+    <ID>MagicNumber:RecordingSettingsScreen.kt$1024</ID>
+    <ID>MagicNumber:RecordingSettingsScreen.kt$1024.0</ID>
+    <ID>MagicNumber:RecordingStorage.kt$RecordingStorage$80</ID>
+    <ID>MagicNumber:RecordingsScreen.kt$1024</ID>
+    <ID>MagicNumber:RecordingsScreen.kt$1024.0</ID>
+    <ID>MagicNumber:RecordingsScreen.kt$60</ID>
+    <ID>MagicNumber:RecordingsScreen.kt$60000</ID>
+    <ID>MagicNumber:SleepTimer.kt$SleepTimer$59_999L</ID>
+    <ID>MagicNumber:SleepTimer.kt$SleepTimer$60_000L</ID>
+    <ID>MagicNumber:StalkerApi.kt$StalkerApi$1000</ID>
+    <ID>MagicNumber:StalkerApi.kt$StalkerApi$13</ID>
+    <ID>MagicNumber:SyncClient.kt$SyncClient$401</ID>
+    <ID>MagicNumber:SyncServer.kt$SyncServer$1_000_000</ID>
+    <ID>MagicNumber:SyncWorker.kt$SyncWorker.Companion$15</ID>
+    <ID>MagicNumber:SyncWorker.kt$SyncWorker.Companion$6</ID>
+    <ID>MagicNumber:TmdbClient.kt$TmdbClient$4</ID>
+    <ID>MagicNumber:UpdateChecker.kt$UpdateChecker.Companion$1200</ID>
+    <ID>MagicNumber:VodDetailScreens.kt$60</ID>
+    <ID>MagicNumber:VodPlayerScreen.kt$1000</ID>
+    <ID>MagicNumber:VodPlayerScreen.kt$3600</ID>
+    <ID>MagicNumber:VodPlayerScreen.kt$60</ID>
+    <ID>MagicNumber:VodTitleCleaner.kt$VodTitleCleaner$3</ID>
+    <ID>MagicNumber:XmltvParser.kt$XmltvParser$10</ID>
+    <ID>MagicNumber:XmltvParser.kt$XmltvParser$12</ID>
+    <ID>MagicNumber:XmltvParser.kt$XmltvParser$4</ID>
+    <ID>MagicNumber:XmltvParser.kt$XmltvParser$6</ID>
+    <ID>MagicNumber:XmltvParser.kt$XmltvParser$60</ID>
+    <ID>MagicNumber:XmltvParser.kt$XmltvParser$60_000L</ID>
+    <ID>MagicNumber:XmltvParser.kt$XmltvParser$8</ID>
+    <ID>MagicNumber:XtreamApi.kt$XtreamApi$1000</ID>
+    <ID>MagicNumber:XtreamApi.kt$XtreamApi$4</ID>
+    <ID>MagicNumber:XtreamApi.kt$XtreamApi$401</ID>
+    <ID>MagicNumber:XtreamApi.kt$XtreamApi$403</ID>
+    <ID>MagicNumber:XtreamApi.kt$XtreamApi$404</ID>
+    <ID>MagicNumber:XtreamApi.kt$XtreamApi$405</ID>
+    <ID>MagicNumber:XtreamApi.kt$XtreamApi$429</ID>
+    <ID>MagicNumber:XtreamApi.kt$XtreamApi$500</ID>
+    <ID>MagicNumber:XtreamApi.kt$XtreamApi$599</ID>
+    <ID>MatchingDeclarationName:BatteryOptimizationPrompt.kt$RecordingBackgroundPrompt</ID>
+    <ID>MatchingDeclarationName:MainScreen.kt$Tab</ID>
+    <ID>MatchingDeclarationName:RecordingsScreen.kt$RecordingsViewModel : AndroidViewModel</ID>
+    <ID>MatchingDeclarationName:StremioAddonsScreen.kt$StremioAddonsViewModel : AndroidViewModel</ID>
+    <ID>MaxLineLength:Daos.kt$RecordingDao$"UPDATE recordings SET status = :status, endedAtMillis = :endedAt, sizeBytes = :bytes, error = :error WHERE id = :id"</ID>
+    <ID>ModifierMissing:AboutScreen.kt$AboutScreen</ID>
+    <ID>ModifierMissing:AddSourceScreen.kt$AddSourceScreen</ID>
+    <ID>ModifierMissing:AppSettingsScreen.kt$AppSettingsScreen</ID>
+    <ID>ModifierMissing:ChannelManagerScreen.kt$ChannelManagerScreen</ID>
+    <ID>ModifierMissing:EpgSettingsScreen.kt$EpgSettingsScreen</ID>
+    <ID>ModifierMissing:LiveScreen.kt$LiveScreen</ID>
+    <ID>ModifierMissing:MainScreen.kt$MainScreen</ID>
+    <ID>ModifierMissing:ParentalControlsScreen.kt$ParentalControlsScreen</ID>
+    <ID>ModifierMissing:PersonScreen.kt$PersonScreen</ID>
+    <ID>ModifierMissing:PhonePairingScreen.kt$PhonePairingScreen</ID>
+    <ID>ModifierMissing:PlayerScreen.kt$PlayerScreen</ID>
+    <ID>ModifierMissing:ProfilesScreen.kt$ProfilesScreen</ID>
+    <ID>ModifierMissing:ProvidersScreen.kt$ProvidersScreen</ID>
+    <ID>ModifierMissing:RecordingSettingsScreen.kt$RecordingSettingsScreen</ID>
+    <ID>ModifierMissing:RecordingsScreen.kt$RecordingsScreen</ID>
+    <ID>ModifierMissing:SearchScreen.kt$SearchScreen</ID>
+    <ID>ModifierMissing:SettingsHubScreen.kt$SettingsHubScreen</ID>
+    <ID>ModifierMissing:StremioAddonsScreen.kt$StremioAddonsScreen</ID>
+    <ID>ModifierMissing:SyncScreen.kt$SyncScreen</ID>
+    <ID>ModifierMissing:VodDetailScreens.kt$MovieDetailScreen</ID>
+    <ID>ModifierMissing:VodDetailScreens.kt$SeriesDetailScreen</ID>
+    <ID>ModifierMissing:VodPlayerScreen.kt$VodPlayerScreen</ID>
+    <ID>ModifierMissing:VodScreens.kt$MoviesScreen</ID>
+    <ID>ModifierMissing:VodScreens.kt$SeriesScreen</ID>
+    <ID>ModifierMissing:WebManagerScreen.kt$WebManagerScreen</ID>
+    <ID>ModifierNaming:ChannelManagerScreen.kt$leftEdgeModifier</ID>
+    <ID>MultipleEmitters:AboutScreen.kt$Section</ID>
+    <ID>MultipleEmitters:AppSettingsScreen.kt$SettingsSection</ID>
+    <ID>MultipleEmitters:AppSettingsScreen.kt$SleepTimerSection</ID>
+    <ID>MultipleEmitters:ParentalControlsScreen.kt$PinSection</ID>
+    <ID>MultipleEmitters:RecordingSettingsScreen.kt$StorageInfo</ID>
+    <ID>MutableStateAutoboxing:VodDetailScreens.kt$mutableStateOf(0)</ID>
+    <ID>NestedBlockDepth:EpgRepository.kt$EpgRepository$private suspend fun syncFeed(feed: EpgFeed, nowUtcMillis: Long): FeedResult</ID>
+    <ID>NestedBlockDepth:RecordingService.kt$RecordingService$private suspend fun runCapture(id: Long)</ID>
+    <ID>NestedBlockDepth:XmltvParser.kt$XmltvParser$private fun readProgramme(parser: XmlPullParser, feedId: Long): Programme?</ID>
+    <ID>NestedBlockDepth:XmltvParser.kt$XmltvParser$suspend fun parse( input: InputStream, feedId: Long, onChannelAlias: (id: String, displayName: String?) -&gt; Unit = { _, _ -&gt; }, onProgramme: suspend (Programme) -&gt; Unit, ): Stats</ID>
+    <ID>ParameterNaming:AddSourceScreen.kt$onFinished</ID>
+    <ID>ParameterNaming:ChannelManagerScreen.kt$onToggleHidden</ID>
+    <ID>ParameterNaming:PhonePairingScreen.kt$onReceived</ID>
+    <ID>ParameterNaming:PlayerScreen.kt$onDone</ID>
+    <ID>ParameterNaming:VodPlayerScreen.kt$onDone</ID>
+    <ID>ReturnCount:AndroidExt.kt$fun Context.isIgnoringBatteryOptimizations(): Boolean</ID>
+    <ID>ReturnCount:CatalogRepository.kt$CatalogRepository$private suspend fun syncM3u(source: Source, nowUtcMillis: Long): SyncResult</ID>
+    <ID>ReturnCount:CatalogRepository.kt$CatalogRepository$suspend fun resolvePlaybackUrl(channel: Channel, source: Source?): String</ID>
+    <ID>ReturnCount:EpgMatcher.kt$EpgMatcher.Index$fun match(groupKey: String): String?</ID>
+    <ID>ReturnCount:EpgRepository.kt$EpgRepository$private suspend fun maybeAutoEnableRegionalFeed()</ID>
+    <ID>ReturnCount:EpgRepository.kt$EpgRepository$private suspend fun syncFeed(feed: EpgFeed, nowUtcMillis: Long): FeedResult</ID>
+    <ID>ReturnCount:GrowingRecordingDataSource.kt$GrowingRecordingDataSource$private fun readLocal(buffer: ByteArray, offset: Int, length: Int): Int</ID>
+    <ID>ReturnCount:GrowingRecordingDataSource.kt$GrowingRecordingDataSource$private fun readSmb(buffer: ByteArray, offset: Int, length: Int): Int</ID>
+    <ID>ReturnCount:ManagerServer.kt$ManagerServer$fun start()</ID>
+    <ID>ReturnCount:ManagerServer.kt$ManagerServer$private fun SourceReq.toDraftOrNull(): Source?</ID>
+    <ID>ReturnCount:ManagerServer.kt$ManagerServer$private fun handle(client: Socket)</ID>
+    <ID>ReturnCount:OnScreenKeyboard.kt$internal fun readClipboardText(context: Context): String?</ID>
+    <ID>ReturnCount:OpenTvViewModels.kt$VodViewModel$private suspend fun resolveResume(pos: PlaybackPosition): ResumeItem?</ID>
+    <ID>ReturnCount:OpenTvViewModels.kt$VodViewModel$suspend fun addonStreams(movie: Movie): List&lt;StremioStream&gt;</ID>
+    <ID>ReturnCount:PairingHttp.kt$PairingHttp$fun isPrivateAddress(host: String?): Boolean</ID>
+    <ID>ReturnCount:PairingServer.kt$PairingServer$fun start()</ID>
+    <ID>ReturnCount:PairingServer.kt$PairingServer$private fun handle(client: Socket)</ID>
+    <ID>ReturnCount:PairingServer.kt$PairingServer$private fun handleSubmit(output: java.io.OutputStream, body: String)</ID>
+    <ID>ReturnCount:PlaybackErrors.kt$PlaybackErrors$fun describe(error: PlaybackException): String</ID>
+    <ID>ReturnCount:PlayerScreen.kt$private fun trackLabel(label: String?, language: String?, index: Int): String</ID>
+    <ID>ReturnCount:RecordingEngine.kt$RecordingEngine$private suspend fun alternateProviderForClash(channel: Channel, startMillis: Long, endMillis: Long): Channel</ID>
+    <ID>ReturnCount:RecordingEngine.kt$RecordingEngine$suspend fun scheduleProgramme( channel: Channel, programme: Programme, ruleId: Long? = null, profileId: Long = settings.activeProfileId.value, ): Long</ID>
+    <ID>ReturnCount:SleepTimer.kt$SleepTimer$fun minutesRemaining(nowMillis: Long = System.currentTimeMillis()): Int?</ID>
+    <ID>ReturnCount:SmbDataSource.kt$SmbDataSource$override fun read(buffer: ByteArray, offset: Int, length: Int): Int</ID>
+    <ID>ReturnCount:SourceRepository.kt$SourceRepository.Companion$fun normaliseUrl(raw: String, kind: SourceKind): String</ID>
+    <ID>ReturnCount:StalkerApi.kt$StalkerApi$private fun execute(source: Source, url: HttpUrl, token: String?): JsonElement?</ID>
+    <ID>ReturnCount:StalkerApi.kt$StalkerApi$private fun handshake(source: Source, endpoint: HttpUrl): Handshake?</ID>
+    <ID>ReturnCount:StremioClient.kt$StremioClient$fun fetchManifest(manifestUrl: String): String?</ID>
+    <ID>ReturnCount:StremioClient.kt$StremioClient$fun streams(addonManifestUrl: String, addonName: String, type: String, id: String): List&lt;StremioStream&gt;</ID>
+    <ID>ReturnCount:StremioClient.kt$StremioClient$private fun get(url: HttpUrl): JsonElement?</ID>
+    <ID>ReturnCount:SyncServer.kt$SyncServer$fun start(bundleJson: String)</ID>
+    <ID>ReturnCount:SyncServer.kt$SyncServer$private fun handle(client: Socket)</ID>
+    <ID>ReturnCount:TmdbClient.kt$TmdbClient$fun imdbId(title: String, year: Int?, isMovie: Boolean, tmdbId: String?): String?</ID>
+    <ID>ReturnCount:TmdbClient.kt$TmdbClient$private fun get(url: HttpUrl): JsonElement?</ID>
+    <ID>ReturnCount:TmdbClient.kt$TmdbClient$private fun lookup(isMovie: Boolean, title: String, year: Int?, tmdbId: String?): TmdbMeta?</ID>
+    <ID>ReturnCount:VodPlayerScreen.kt$private fun vodTrackLabel(label: String?, language: String?, index: Int): String</ID>
+    <ID>ReturnCount:VodTitleCleaner.kt$VodTitleCleaner$private fun isPrefixTag(token: String, bracketed: Boolean, separator: Char?): Boolean</ID>
+    <ID>ReturnCount:XmltvParser.kt$XmltvParser$fun parseXmltvTime(raw: String?): Long?</ID>
+    <ID>ReturnCount:XmltvParser.kt$XmltvParser$private fun parseOffset(raw: String): Int?</ID>
+    <ID>ReturnCount:XmltvParser.kt$XmltvParser$private fun readProgramme(parser: XmlPullParser, feedId: Long): Programme?</ID>
+    <ID>ReturnCount:XtreamApi.kt$private fun JsonObject.asBackdropUrl(vararg fallbackKeys: String): String?</ID>
+    <ID>SpreadOperator:VodTitleCleaner.kt$VodTitleCleaner$(*EDGE_JUNK)</ID>
+    <ID>ThrowsCount:EpgRepository.kt$EpgRepository$private suspend fun openFeedStream(feed: EpgFeed): InputStream</ID>
+    <ID>ThrowsCount:RecordingService.kt$RecordingService$private suspend fun runCapture(id: Long)</ID>
+    <ID>ThrowsCount:RecordingStorage.kt$RecordingStorage$private fun openUsbSink(context: Context, settings: AppSettings, filename: String): Sink</ID>
+    <ID>ThrowsCount:XtreamApi.kt$XtreamApi$private fun getJson(source: Source, action: String?, extra: (HttpUrl.Builder) -&gt; Unit = {}): JsonElement</ID>
+    <ID>TooGenericExceptionCaught:CatalogRepository.kt$CatalogRepository$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:EpgRepository.kt$EpgRepository$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:ManagerServer.kt$ManagerServer$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:PairingServer.kt$PairingServer$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:RecordingService.kt$RecordingService$t: Throwable</ID>
+    <ID>TooGenericExceptionCaught:SmbClient.kt$SmbClient$t: Throwable</ID>
+    <ID>TooGenericExceptionCaught:SyncServer.kt$SyncServer$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:XtreamApi.kt$XtreamApi$e: Exception</ID>
+    <ID>TooManyFunctions:AppSettings.kt$AppSettings</ID>
+    <ID>TooManyFunctions:CatalogRepository.kt$CatalogRepository</ID>
+    <ID>TooManyFunctions:Daos.kt$ChannelDao</ID>
+    <ID>TooManyFunctions:Daos.kt$MovieDao</ID>
+    <ID>TooManyFunctions:Daos.kt$RecordingDao</ID>
+    <ID>TooManyFunctions:Daos.kt$SeriesDao</ID>
+    <ID>TooManyFunctions:EpgRepository.kt$EpgRepository</ID>
+    <ID>TooManyFunctions:LiveScreen.kt$app.opentv.ui.channels.LiveScreen.kt</ID>
+    <ID>TooManyFunctions:ManagerServer.kt$ManagerServer</ID>
+    <ID>TooManyFunctions:OpenTvDatabase.kt$OpenTvDatabase : RoomDatabase</ID>
+    <ID>TooManyFunctions:OpenTvViewModels.kt$ChannelsViewModel : AndroidViewModel</ID>
+    <ID>TooManyFunctions:OpenTvViewModels.kt$VodViewModel : AndroidViewModel</ID>
+    <ID>TooManyFunctions:RecordingEngine.kt$RecordingEngine</ID>
+    <ID>TooManyFunctions:RecordingRepository.kt$RecordingRepository</ID>
+    <ID>TooManyFunctions:RecordingService.kt$RecordingService : Service</ID>
+    <ID>TooManyFunctions:RecordingStorage.kt$RecordingStorage</ID>
+    <ID>TooManyFunctions:RecordingsScreen.kt$app.opentv.ui.recordings.RecordingsScreen.kt</ID>
+    <ID>TooManyFunctions:SmbClient.kt$SmbClient</ID>
+    <ID>TooManyFunctions:StalkerApi.kt$StalkerApi</ID>
+    <ID>TooManyFunctions:VodDetailScreens.kt$app.opentv.ui.vod.VodDetailScreens.kt</ID>
+    <ID>TooManyFunctions:VodScreens.kt$app.opentv.ui.vod.VodScreens.kt</ID>
+    <ID>TooManyFunctions:XtreamApi.kt$XtreamApi</ID>
+    <ID>UnstableCollections:ChannelManagerScreen.kt$List&lt;ChannelsViewModel.Row&gt;</ID>
+    <ID>UnstableCollections:GuideGrid.kt$List&lt;ChannelsViewModel.Row&gt;</ID>
+    <ID>UnstableCollections:MainScreen.kt$List&lt;Tab&gt;</ID>
+    <ID>UnstableCollections:PlayerScreen.kt$List&lt;Channel&gt;</ID>
+    <ID>UnstableCollections:RecordingsScreen.kt$Map&lt;Long, String&gt;</ID>
+    <ID>UnstableCollections:VodDetailScreens.kt$List&lt;StremioStream&gt;</ID>
+    <ID>UnstableCollections:VodScreens.kt$List&lt;Movie&gt;</ID>
+    <ID>UnstableCollections:VodScreens.kt$List&lt;Pair&lt;String, String&gt;&gt;</ID>
+    <ID>UnstableCollections:VodScreens.kt$List&lt;Series&gt;</ID>
+    <ID>UnstableCollections:VodScreens.kt$List&lt;Source&gt;</ID>
+    <ID>UnstableCollections:VodScreens.kt$List&lt;VodViewModel.ResumeItem&gt;</ID>
+    <ID>UnusedParameter:CatalogRepository.kt$CatalogRepository$nowUtcMillis: Long</ID>
+    <ID>UnusedParameter:LiveScreen.kt$isTelevision: Boolean</ID>
+    <ID>UnusedPrivateMember:LiveScreen.kt$@Composable private fun ChannelRow( row: ChannelsViewModel.Row, isSelected: Boolean, onClick: () -&gt; Unit, onToggleFavourite: () -&gt; Unit, )</ID>
+    <ID>UseCheckOrError:EpgRepository.kt$EpgRepository$throw IllegalStateException("Feed has no URL and no provider.")</ID>
+    <ID>UseCheckOrError:EpgRepository.kt$EpgRepository$throw IllegalStateException("Guide download failed (HTTP ${response.code}).")</ID>
+    <ID>UseCheckOrError:EpgRepository.kt$EpgRepository$throw IllegalStateException("Provider for this guide no longer exists.")</ID>
+    <ID>UseCheckOrError:EpgRepository.kt$EpgRepository$throw IllegalStateException("The server returned an empty guide.")</ID>
+    <ID>ViewModelForwarding:SyncScreen.kt$NasPane(viewModel)</ID>
+    <ID>ViewModelForwarding:SyncScreen.kt$ReceivePane(viewModel)</ID>
+    <ID>ViewModelForwarding:SyncScreen.kt$SharePane(viewModel)</ID>
+    <ID>ViewModelForwarding:VodScreens.kt$MovieCategoryGrid(categoryMovies, viewModel, onOpenMovie)</ID>
+    <ID>ViewModelInjection:MainActivity.kt$profilesViewModel</ID>
+    <ID>ViewModelInjection:MainActivity.kt$sourcesViewModel</ID>
+    <ID>ViewModelInjection:MainActivity.kt$vodViewModel</ID>
+    <ID>ViewModelInjection:RecordingsScreen.kt$viewModel</ID>
+    <ID>ViewModelInjection:StremioAddonsScreen.kt$viewModel</ID>
+  </CurrentIssues>
+</SmellBaseline>

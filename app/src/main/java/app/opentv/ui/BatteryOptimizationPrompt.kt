@@ -46,8 +46,7 @@ object RecordingBackgroundPrompt {
     @Volatile private var shownThisSession = false
 
     /** True at most once per app session, and only while OpenTV still isn't Doze-exempt. */
-    fun shouldShow(context: Context): Boolean =
-        !shownThisSession && !context.isIgnoringBatteryOptimizations()
+    fun shouldShow(context: Context): Boolean = !shownThisSession && !context.isIgnoringBatteryOptimizations()
 
     fun markShown() {
         shownThisSession = true

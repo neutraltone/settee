@@ -93,6 +93,7 @@ class PlayerController(
         data object Idle : State
         data class Buffering(val title: String) : State
         data class Playing(val title: String) : State
+
         /** Playback stopped and retries are exhausted. [message] is written for humans. */
         data class Error(val title: String, val message: String, val canRetry: Boolean) : State
     }
@@ -162,9 +163,11 @@ class PlayerController(
 
         override fun getMinimumLoadableRetryCount(dataType: Int): Int = MAX_LOAD_RETRIES
 
-        private fun backoffFor(errorCount: Int): Long =
-            if (errorCount > MAX_LOAD_RETRIES) C_TIME_UNSET
-            else minOf(INITIAL_BACKOFF_MILLIS * (1L shl (errorCount - 1)), MAX_BACKOFF_MILLIS)
+        private fun backoffFor(errorCount: Int): Long = if (errorCount > MAX_LOAD_RETRIES) {
+            C_TIME_UNSET
+        } else {
+            minOf(INITIAL_BACKOFF_MILLIS * (1L shl (errorCount - 1)), MAX_BACKOFF_MILLIS)
+        }
     }
 
     /**

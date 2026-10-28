@@ -1,0 +1,3 @@
+# Bulk reformats. Use with: git config blame.ignoreRevsFile .git-blame-ignore-revs
+# ktlint reformat (#23)
+5f114f519fdac3b0fba2cd62154213f1028421e1

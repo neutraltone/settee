@@ -96,8 +96,10 @@ fun MoviesScreen(
     // null = the curated home rows; a category id = that category's full grid.
     var browseCategory by remember { mutableStateOf<String?>(null) }
 
-    val hasContent = resume.isNotEmpty() || recommended.isNotEmpty() ||
-        recentlyAdded.isNotEmpty() || genreRows.isNotEmpty()
+    val hasContent = resume.isNotEmpty() ||
+        recommended.isNotEmpty() ||
+        recentlyAdded.isNotEmpty() ||
+        genreRows.isNotEmpty()
 
     Column(Modifier.fillMaxSize()) {
         SearchAffordance(onOpenSearch)
@@ -105,15 +107,24 @@ fun MoviesScreen(
             ProviderChips(
                 sources = sources,
                 selected = selectedSource,
-                onSelectAll = { browseCategory = null; viewModel.selectVodSource(null) },
-                onSelectSource = { id -> browseCategory = null; viewModel.selectVodSource(id) },
+                onSelectAll = {
+                    browseCategory = null
+                    viewModel.selectVodSource(null)
+                },
+                onSelectSource = { id ->
+                    browseCategory = null
+                    viewModel.selectVodSource(id)
+                },
             )
         }
         CategoryChips(
             entries = categories.map { it.id to it.name },
             selected = browseCategory,
             onSelectHome = { browseCategory = null },
-            onSelectCategory = { id -> browseCategory = id; viewModel.selectMovieCategory(id) },
+            onSelectCategory = { id ->
+                browseCategory = id
+                viewModel.selectMovieCategory(id)
+            },
         )
         // Weighted so the shelves fill the space under the fixed search + chips header, exactly and
         // unambiguously — the same reason Live TV weights its guide grid.
@@ -122,7 +133,10 @@ fun MoviesScreen(
                 browseCategory != null -> MovieCategoryGrid(categoryMovies, viewModel, onOpenMovie)
                 !hasContent -> when {
                     vodLoading || isSyncing -> LoadingVod(stringResource(R.string.vod_loading_movies))
-                    hasSources -> EmptyVod(stringResource(R.string.vod_no_movies), stringResource(R.string.vod_no_movies_provider))
+                    hasSources -> EmptyVod(
+                        stringResource(R.string.vod_no_movies),
+                        stringResource(R.string.vod_no_movies_provider),
+                    )
                     else -> EmptyVod(stringResource(R.string.vod_no_movies), stringResource(R.string.vod_no_movies_add))
                 }
                 else -> LazyColumn(
@@ -131,11 +145,15 @@ fun MoviesScreen(
                     modifier = Modifier.fillMaxSize(),
                 ) {
                     if (resume.isNotEmpty()) item(key = "cw") { ContinueWatchingRow(resume, onResume) }
-                    if (recommended.isNotEmpty()) item(key = "rec") {
-                        MoviePosterRow(stringResource(R.string.vod_recommended), recommended, onOpenMovie)
+                    if (recommended.isNotEmpty()) {
+                        item(key = "rec") {
+                            MoviePosterRow(stringResource(R.string.vod_recommended), recommended, onOpenMovie)
+                        }
                     }
-                    if (recentlyAdded.isNotEmpty()) item(key = "recent") {
-                        MoviePosterRow(stringResource(R.string.vod_recently_added), recentlyAdded, onOpenMovie)
+                    if (recentlyAdded.isNotEmpty()) {
+                        item(key = "recent") {
+                            MoviePosterRow(stringResource(R.string.vod_recently_added), recentlyAdded, onOpenMovie)
+                        }
                     }
                     items(genreRows, key = { "g:${it.genre}" }) { group ->
                         MoviePosterRow(group.genre, group.items, onOpenMovie)
@@ -185,22 +203,34 @@ fun SeriesScreen(
             ProviderChips(
                 sources = sources,
                 selected = selectedSource,
-                onSelectAll = { browseCategory = null; viewModel.selectVodSource(null) },
-                onSelectSource = { id -> browseCategory = null; viewModel.selectVodSource(id) },
+                onSelectAll = {
+                    browseCategory = null
+                    viewModel.selectVodSource(null)
+                },
+                onSelectSource = { id ->
+                    browseCategory = null
+                    viewModel.selectVodSource(id)
+                },
             )
         }
         CategoryChips(
             entries = categories.map { it.id to it.name },
             selected = browseCategory,
             onSelectHome = { browseCategory = null },
-            onSelectCategory = { id -> browseCategory = id; viewModel.selectSeriesCategory(id) },
+            onSelectCategory = { id ->
+                browseCategory = id
+                viewModel.selectSeriesCategory(id)
+            },
         )
         Box(Modifier.weight(1f).fillMaxWidth()) {
             when {
                 browseCategory != null -> SeriesCategoryGrid(categorySeries, onOpenSeries)
                 !hasContent -> when {
                     vodLoading || isSyncing -> LoadingVod(stringResource(R.string.vod_loading_shows))
-                    hasSources -> EmptyVod(stringResource(R.string.vod_no_shows), stringResource(R.string.vod_no_shows_provider))
+                    hasSources -> EmptyVod(
+                        stringResource(R.string.vod_no_shows),
+                        stringResource(R.string.vod_no_shows_provider),
+                    )
                     else -> EmptyVod(stringResource(R.string.vod_no_shows), stringResource(R.string.vod_no_shows_add))
                 }
                 else -> LazyColumn(
@@ -209,8 +239,10 @@ fun SeriesScreen(
                     modifier = Modifier.fillMaxSize(),
                 ) {
                     if (resume.isNotEmpty()) item(key = "cw") { ContinueWatchingRow(resume, onResume) }
-                    if (recentlyAdded.isNotEmpty()) item(key = "recent") {
-                        SeriesPosterRow(stringResource(R.string.vod_recently_added), recentlyAdded, onOpenSeries)
+                    if (recentlyAdded.isNotEmpty()) {
+                        item(key = "recent") {
+                            SeriesPosterRow(stringResource(R.string.vod_recently_added), recentlyAdded, onOpenSeries)
+                        }
                     }
                     items(genreRows, key = { "g:${it.genre}" }) { group ->
                         SeriesPosterRow(group.genre, group.items, onOpenSeries)
@@ -226,7 +258,10 @@ fun SeriesScreen(
 /** One category's films as a poster grid. Quality variants collapse to one card, badged. */
 @Composable
 private fun MovieCategoryGrid(movies: List<Movie>, viewModel: VodViewModel, onOpenMovie: (Movie) -> Unit) {
-    if (movies.isEmpty()) { LoadingVod(stringResource(R.string.vod_loading_movies)); return }
+    if (movies.isEmpty()) {
+        LoadingVod(stringResource(R.string.vod_loading_movies))
+        return
+    }
     val groups = remember(movies) { viewModel.collapseVariants(movies) }
     LazyVerticalGrid(
         columns = GridCells.Adaptive(minSize = 140.dp),
@@ -258,7 +293,10 @@ private fun MovieCategoryGrid(movies: List<Movie>, viewModel: VodViewModel, onOp
 /** One category's shows as a poster grid. */
 @Composable
 private fun SeriesCategoryGrid(series: List<Series>, onOpenSeries: (Series) -> Unit) {
-    if (series.isEmpty()) { LoadingVod(stringResource(R.string.vod_loading_shows)); return }
+    if (series.isEmpty()) {
+        LoadingVod(stringResource(R.string.vod_loading_shows))
+        return
+    }
     LazyVerticalGrid(
         columns = GridCells.Adaptive(minSize = 140.dp),
         contentPadding = PaddingValues(16.dp),
@@ -359,7 +397,10 @@ internal fun PosterCard(
     Column(
         modifier
             .width(POSTER_WIDTH)
-            .graphicsLayer { scaleX = scale; scaleY = scale }
+            .graphicsLayer {
+                scaleX = scale
+                scaleY = scale
+            }
             .onFocusChanged { focused = it.isFocused }
             .clip(RoundedCornerShape(10.dp))
             .clickable(onClick = onClick)
@@ -372,8 +413,11 @@ internal fun PosterCard(
                 .clip(RoundedCornerShape(8.dp))
                 .background(MaterialTheme.colorScheme.surfaceVariant)
                 .then(
-                    if (focused) Modifier.border(3.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(8.dp))
-                    else Modifier,
+                    if (focused) {
+                        Modifier.border(3.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(8.dp))
+                    } else {
+                        Modifier
+                    },
                 ),
         ) {
             AsyncImage(
@@ -424,8 +468,11 @@ internal fun PosterCard(
 /** A small rounded chip drawn over poster art — a rating or a quality label. */
 @Composable
 private fun Badge(text: String, modifier: Modifier = Modifier, highlight: Boolean = false) {
-    val bg = if (highlight) MaterialTheme.colorScheme.primary
-    else androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.66f)
+    val bg = if (highlight) {
+        MaterialTheme.colorScheme.primary
+    } else {
+        androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.66f)
+    }
     val fg = if (highlight) MaterialTheme.colorScheme.onPrimary else androidx.compose.ui.graphics.Color.White
     Text(
         text,
@@ -468,7 +515,10 @@ private fun ResumeCard(item: VodViewModel.ResumeItem, onClick: () -> Unit) {
     Column(
         Modifier
             .width(190.dp)
-            .graphicsLayer { scaleX = scale; scaleY = scale }
+            .graphicsLayer {
+                scaleX = scale
+                scaleY = scale
+            }
             .onFocusChanged { focused = it.isFocused }
             .clip(RoundedCornerShape(8.dp))
             .clickable(onClick = onClick)
@@ -481,8 +531,11 @@ private fun ResumeCard(item: VodViewModel.ResumeItem, onClick: () -> Unit) {
                 .clip(RoundedCornerShape(6.dp))
                 .background(MaterialTheme.colorScheme.surfaceVariant)
                 .then(
-                    if (focused) Modifier.border(3.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(6.dp))
-                    else Modifier,
+                    if (focused) {
+                        Modifier.border(3.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(6.dp))
+                    } else {
+                        Modifier
+                    },
                 ),
         ) {
             AsyncImage(
@@ -616,16 +669,22 @@ private fun SearchAffordance(onOpenSearch: () -> Unit) {
             .padding(horizontal = 16.dp, vertical = 12.dp)
             .clip(RoundedCornerShape(10.dp))
             .background(
-                if (focused) MaterialTheme.colorScheme.primary
-                else MaterialTheme.colorScheme.surfaceVariant,
+                if (focused) {
+                    MaterialTheme.colorScheme.primary
+                } else {
+                    MaterialTheme.colorScheme.surfaceVariant
+                },
             )
             .onFocusChanged { focused = it.isFocused }
             .clickable(onClick = onOpenSearch)
             .padding(horizontal = 16.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        val tint = if (focused) MaterialTheme.colorScheme.onPrimary
-        else MaterialTheme.colorScheme.onSurfaceVariant
+        val tint = if (focused) {
+            MaterialTheme.colorScheme.onPrimary
+        } else {
+            MaterialTheme.colorScheme.onSurfaceVariant
+        }
         Icon(Icons.Filled.Search, contentDescription = null, tint = tint)
         Spacer(Modifier.width(12.dp))
         Text(

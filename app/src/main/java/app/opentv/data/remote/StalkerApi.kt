@@ -10,6 +10,8 @@ import app.opentv.data.model.Category
 import app.opentv.data.model.Channel
 import app.opentv.data.model.Source
 import app.opentv.data.model.StreamKind
+import java.net.URLEncoder
+import java.util.concurrent.ConcurrentHashMap
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
@@ -22,8 +24,6 @@ import okhttp3.HttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.OkHttpClient
 import okhttp3.Request
-import java.net.URLEncoder
-import java.util.concurrent.ConcurrentHashMap
 
 /**
  * A client for the Stalker / Ministra portal protocol (the "MAG box" middleware many panels speak).
@@ -44,7 +44,10 @@ import java.util.concurrent.ConcurrentHashMap
  */
 class StalkerApi(
     private val http: OkHttpClient,
-    private val json: Json = Json { ignoreUnknownKeys = true; isLenient = true },
+    private val json: Json = Json {
+        ignoreUnknownKeys = true
+        isLenient = true
+    },
 ) {
 
     class StalkerException(message: String, cause: Throwable? = null) : Exception(message, cause)
@@ -62,7 +65,8 @@ class StalkerApi(
 
     /** Live categories ("genres") for the guide's rail. */
     suspend fun liveCategories(source: Source): List<Category> = withContext(Dispatchers.IO) {
-        val arr = callRetrying(source, type = "itv", action = "get_genres") as? JsonArray ?: return@withContext emptyList()
+        val arr =
+            callRetrying(source, type = "itv", action = "get_genres") as? JsonArray ?: return@withContext emptyList()
         arr.mapIndexedNotNull { index, element ->
             val o = element as? JsonObject ?: return@mapIndexedNotNull null
             val id = o.str("id") ?: return@mapIndexedNotNull null
@@ -302,9 +306,11 @@ class StalkerApi(
     }
 
     /** Provider logos are often relative to the portal host. */
-    private fun absoluteLogo(endpoint: HttpUrl, logo: String): String =
-        if (logo.startsWith("http")) logo
-        else "${endpoint.scheme}://${endpoint.host}:${endpoint.port}/${logo.trimStart('/')}"
+    private fun absoluteLogo(endpoint: HttpUrl, logo: String): String = if (logo.startsWith("http")) {
+        logo
+    } else {
+        "${endpoint.scheme}://${endpoint.host}:${endpoint.port}/${logo.trimStart('/')}"
+    }
 
     /** create_link returns e.g. "ffmpeg http://…" / "auto http://…" / a bare URL; keep just the URL. */
     private fun stripCmdPrefix(cmd: String): String {

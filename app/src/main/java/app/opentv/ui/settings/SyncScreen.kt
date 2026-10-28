@@ -17,7 +17,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
@@ -49,10 +48,7 @@ import app.opentv.ui.SyncViewModel
  * device shares behind a code, the other receives. Only continue-watching positions travel.
  */
 @Composable
-fun SyncScreen(
-    onBack: () -> Unit,
-    viewModel: SyncViewModel = viewModel(),
-) {
+fun SyncScreen(onBack: () -> Unit, viewModel: SyncViewModel = viewModel()) {
     var mode by remember { mutableStateOf(Mode.SHARE) }
 
     Column(
@@ -112,7 +108,9 @@ private fun SharePane(viewModel: SyncViewModel) {
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                     Spacer(Modifier.height(16.dp))
-                    OutlinedButton(onClick = { viewModel.stopSharing() }) { Text(stringResource(R.string.sync_stop_sharing)) }
+                    OutlinedButton(onClick = {
+                        viewModel.stopSharing()
+                    }) { Text(stringResource(R.string.sync_stop_sharing)) }
                 }
                 is SyncServer.State.Failed -> {
                     Text(s.reason, color = MaterialTheme.colorScheme.error)
@@ -142,8 +140,11 @@ private fun ReceivePane(viewModel: SyncViewModel) {
                 Text(
                     entry.ifEmpty { "address:port#code" },
                     style = MaterialTheme.typography.headlineSmall,
-                    color = if (entry.isEmpty()) MaterialTheme.colorScheme.onSurfaceVariant
-                    else MaterialTheme.colorScheme.primary,
+                    color = if (entry.isEmpty()) {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    } else {
+                        MaterialTheme.colorScheme.primary
+                    },
                 )
                 Spacer(Modifier.height(16.dp))
                 NumPad(
@@ -151,7 +152,10 @@ private fun ReceivePane(viewModel: SyncViewModel) {
                     onBackspace = { entry = entry.dropLast(1) },
                 )
                 Spacer(Modifier.height(16.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
                     Button(
                         enabled = entry.contains('#') && state !is SyncViewModel.ReceiveState.Connecting,
                         onClick = {
@@ -299,8 +303,11 @@ private fun NumKey(label: String, onClick: () -> Unit) {
             .clip(RoundedCornerShape(8.dp))
             .background(bg)
             .then(
-                if (focused) Modifier.border(2.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(8.dp))
-                else Modifier,
+                if (focused) {
+                    Modifier.border(2.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(8.dp))
+                } else {
+                    Modifier
+                },
             )
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center,

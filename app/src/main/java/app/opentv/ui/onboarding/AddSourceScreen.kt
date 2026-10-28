@@ -62,11 +62,7 @@ import app.opentv.ui.channels.readClipboardText
  *    looking for a privacy policy.
  */
 @Composable
-fun AddSourceScreen(
-    viewModel: SourcesViewModel,
-    onFinished: () -> Unit,
-    editingSourceId: Long? = null,
-) {
+fun AddSourceScreen(viewModel: SourcesViewModel, onFinished: () -> Unit, editingSourceId: Long? = null) {
     val context = LocalContext.current
     // The QR "set it up from your phone" flow only makes sense on a TV — it serves a setup page
     // FROM this device for a phone to fill in. On a phone that same screen shows a QR meant to be
@@ -111,8 +107,11 @@ fun AddSourceScreen(
     // are preserved; a fresh add starts from a blank Source (id 0, so save() inserts).
     fun draft(): Source = (existing ?: Source(name = "", kind = kind, url = "")).copy(
         name = name.ifBlank {
-            if (kind == SourceKind.M3U) context.getString(R.string.onboarding_default_playlist_name)
-            else context.getString(R.string.onboarding_default_provider_name)
+            if (kind == SourceKind.M3U) {
+                context.getString(R.string.onboarding_default_playlist_name)
+            } else {
+                context.getString(R.string.onboarding_default_provider_name)
+            }
         },
         kind = kind,
         url = url,
@@ -123,11 +122,12 @@ fun AddSourceScreen(
         userAgent = userAgent.ifBlank { Source.DEFAULT_USER_AGENT },
     )
 
-    val canSubmit = url.isNotBlank() && when (kind) {
-        SourceKind.XTREAM -> username.isNotBlank() && password.isNotBlank()
-        SourceKind.M3U -> true
-        SourceKind.STALKER -> mac.isNotBlank()
-    }
+    val canSubmit = url.isNotBlank() &&
+        when (kind) {
+            SourceKind.XTREAM -> username.isNotBlank() && password.isNotBlank()
+            SourceKind.M3U -> true
+            SourceKind.STALKER -> mac.isNotBlank()
+        }
 
     Column(
         modifier = Modifier
@@ -139,8 +139,11 @@ fun AddSourceScreen(
         Column(Modifier.widthIn(max = 640.dp)) {
             Text(
                 stringResource(
-                    if (existing != null) R.string.settings_edit_provider_title
-                    else R.string.onboarding_add_provider_title,
+                    if (existing != null) {
+                        R.string.settings_edit_provider_title
+                    } else {
+                        R.string.onboarding_add_provider_title
+                    },
                 ),
                 style = MaterialTheme.typography.displaySmall,
             )
@@ -247,7 +250,15 @@ fun AddSourceScreen(
 
             Spacer(Modifier.height(12.dp))
             OutlinedButton(onClick = { showAdvanced = !showAdvanced }) {
-                Text(if (showAdvanced) stringResource(R.string.onboarding_hide_advanced) else stringResource(R.string.onboarding_advanced))
+                Text(
+                    if (showAdvanced) {
+                        stringResource(
+                            R.string.onboarding_hide_advanced,
+                        )
+                    } else {
+                        stringResource(R.string.onboarding_advanced)
+                    },
+                )
             }
 
             if (showAdvanced) {
@@ -314,7 +325,15 @@ fun AddSourceScreen(
                     onClick = { viewModel.saveAndSync(draft()) { ok -> if (ok) onFinished() } },
                     enabled = canSubmit && !ui.testing && !ui.syncing,
                 ) {
-                    Text(if (ui.syncing) stringResource(R.string.onboarding_working) else stringResource(R.string.onboarding_save_load))
+                    Text(
+                        if (ui.syncing) {
+                            stringResource(
+                                R.string.onboarding_working,
+                            )
+                        } else {
+                            stringResource(R.string.onboarding_save_load)
+                        },
+                    )
                 }
             }
 
@@ -349,8 +368,11 @@ private fun PasteButton(onPaste: (String) -> Unit) {
     IconButton(
         onClick = {
             val pasted = readClipboardText(context)
-            if (pasted != null) onPaste(pasted)
-            else Toast.makeText(context, context.getString(R.string.kbd_clipboard_empty), Toast.LENGTH_SHORT).show()
+            if (pasted != null) {
+                onPaste(pasted)
+            } else {
+                Toast.makeText(context, context.getString(R.string.kbd_clipboard_empty), Toast.LENGTH_SHORT).show()
+            }
         },
     ) {
         Icon(Icons.Filled.ContentPaste, contentDescription = stringResource(R.string.kbd_paste))
