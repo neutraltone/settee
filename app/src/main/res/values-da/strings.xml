@@ -361,9 +361,6 @@
     <string name="search_type_name">Indtast et navn</string>
     <string name="search_start_hint">Begynd at skrive for at søge i kanaler, film og serier.</string>
     <string name="search_no_results">Ingen resultater for “%1$s”.</string>
-    <string name="kbd_space">Mellemrum</string>
-    <string name="kbd_del">Slet</string>
-    <string name="kbd_clear">Ryd</string>
     <string name="kbd_paste">Indsæt</string>
     <string name="kbd_clipboard_empty">Intet at indsætte</string>
     <string name="vod_loading_movies">Indlæser film</string>

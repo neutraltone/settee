@@ -361,9 +361,6 @@
     <string name="search_type_name">Ketik nama</string>
     <string name="search_start_hint">Mulai mengetik untuk mencari saluran, film, dan acara TV.</string>
     <string name="search_no_results">Tidak ada hasil untuk \"%1$s\".</string>
-    <string name="kbd_space">Spasi</string>
-    <string name="kbd_del">Del</string>
-    <string name="kbd_clear">Hapus</string>
     <string name="kbd_paste">Tempel</string>
     <string name="kbd_clipboard_empty">Tidak ada yang bisa ditempel</string>
     <string name="vod_loading_movies">Memuat film</string>

@@ -361,9 +361,6 @@
     <string name="search_type_name">输入名称</string>
     <string name="search_start_hint">开始输入以搜索频道、电影和剧集。</string>
     <string name="search_no_results">没有找到与“%1$s”相关的结果。</string>
-    <string name="kbd_space">空格</string>
-    <string name="kbd_del">删除</string>
-    <string name="kbd_clear">清空</string>
     <string name="kbd_paste">粘贴</string>
     <string name="kbd_clipboard_empty">剪贴板为空</string>
     <string name="vod_loading_movies">正在加载电影</string>

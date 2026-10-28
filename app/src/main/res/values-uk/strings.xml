@@ -361,9 +361,6 @@
     <string name="search_type_name">Введіть назву</string>
     <string name="search_start_hint">Почніть вводити текст, щоб шукати канали, фільми та серіали.</string>
     <string name="search_no_results">Немає результатів для «%1$s».</string>
-    <string name="kbd_space">Пробіл</string>
-    <string name="kbd_del">Del</string>
-    <string name="kbd_clear">Очистити</string>
     <string name="kbd_paste">Вставити</string>
     <string name="kbd_clipboard_empty">Нічого вставляти</string>
     <string name="vod_loading_movies">Завантаження фільмів</string>

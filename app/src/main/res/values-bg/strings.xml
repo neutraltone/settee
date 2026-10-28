@@ -361,9 +361,6 @@
     <string name="search_type_name">Въведете име</string>
     <string name="search_start_hint">Започнете да пишете, за да търсите канали, филми и сериали.</string>
     <string name="search_no_results">Няма резултати за „%1$s“.</string>
-    <string name="kbd_space">Интервал</string>
-    <string name="kbd_del">Изтр.</string>
-    <string name="kbd_clear">Изчистване</string>
     <string name="kbd_paste">Постави</string>
     <string name="kbd_clipboard_empty">Няма какво да се постави</string>
     <string name="vod_loading_movies">Зареждане на филми</string>

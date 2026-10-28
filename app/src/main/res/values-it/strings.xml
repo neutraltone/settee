@@ -361,9 +361,6 @@
     <string name="search_type_name">Digita un nome</string>
     <string name="search_start_hint">Inizia a digitare per cercare canali, film e serie.</string>
     <string name="search_no_results">Nessun risultato per “%1$s”.</string>
-    <string name="kbd_space">Spazio</string>
-    <string name="kbd_del">Canc</string>
-    <string name="kbd_clear">Cancella tutto</string>
     <string name="kbd_paste">Incolla</string>
     <string name="kbd_clipboard_empty">Niente da incollare</string>
     <string name="vod_loading_movies">Caricamento film</string>

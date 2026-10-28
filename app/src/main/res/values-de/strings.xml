@@ -361,9 +361,6 @@
     <string name="search_type_name">Gib einen Namen ein</string>
     <string name="search_start_hint">Beginne zu tippen, um nach Sendern, Filmen und Serien zu suchen.</string>
     <string name="search_no_results">Keine Ergebnisse für „%1$s”.</string>
-    <string name="kbd_space">Leertaste</string>
-    <string name="kbd_del">Entf</string>
-    <string name="kbd_clear">Alles löschen</string>
     <string name="kbd_paste">Einfügen</string>
     <string name="kbd_clipboard_empty">Nichts zum Einfügen</string>
     <string name="vod_loading_movies">Filme werden geladen</string>

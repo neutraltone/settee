@@ -361,9 +361,6 @@
     <string name="search_type_name">نامی تایپ کنید</string>
     <string name="search_start_hint">برای جستجوی کانال‌ها، فیلم‌ها و سریال‌ها، تایپ را شروع کنید.</string>
     <string name="search_no_results">نتیجه‌ای برای «%1$s» یافت نشد.</string>
-    <string name="kbd_space">فاصله</string>
-    <string name="kbd_del">حذف</string>
-    <string name="kbd_clear">پاک کردن</string>
     <string name="kbd_paste">چسباندن</string>
     <string name="kbd_clipboard_empty">چیزی برای چسباندن نیست</string>
     <string name="vod_loading_movies">در حال بارگذاری فیلم‌ها</string>

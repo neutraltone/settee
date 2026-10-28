@@ -228,6 +228,7 @@
     <string name="profiles_active">Active</string>
     <string name="profiles_use">Use</string>
     <string name="profiles_rename">Rename</string>
+    <string name="profiles_name_placeholder">Name</string>
 
     <!-- ============================ Providers ============================ -->
     <string name="providers_add">Add provider</string>
@@ -418,9 +419,6 @@
     <string name="search_no_results">No results for “%1$s”.</string>
 
     <!-- ============================ On-screen keyboard ============================ -->
-    <string name="kbd_space">Space</string>
-    <string name="kbd_del">Del</string>
-    <string name="kbd_clear">Clear</string>
     <string name="kbd_paste">Paste</string>
     <string name="kbd_clipboard_empty">Nothing to paste</string>
 

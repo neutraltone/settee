@@ -361,9 +361,6 @@
     <string name="search_type_name">Zadejte název</string>
     <string name="search_start_hint">Začněte psát a vyhledávejte kanály, filmy a seriály.</string>
     <string name="search_no_results">Žádné výsledky pro „%1$s“.</string>
-    <string name="kbd_space">Mezerník</string>
-    <string name="kbd_del">Smazat</string>
-    <string name="kbd_clear">Vymazat</string>
     <string name="kbd_paste">Vložit</string>
     <string name="kbd_clipboard_empty">Není co vložit</string>
     <string name="vod_loading_movies">Načítání filmů</string>

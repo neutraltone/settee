@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
@@ -24,6 +25,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -31,13 +33,15 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import app.opentv.R
 import app.opentv.ui.ProfilesViewModel
-import app.opentv.ui.channels.OnScreenKeyboard
+import app.opentv.ui.channels.DeviceTextField
 
 /**
  * Who's watching. Add, rename, remove and switch between local profiles; the active one decides
@@ -52,7 +56,7 @@ fun ProfilesScreen(onBack: () -> Unit, viewModel: ProfilesViewModel = viewModel(
     var editing by remember { mutableStateOf<Long?>(null) }
 
     editing?.let { target ->
-        NameEntry(
+        ProfileNameEntry(
             initial = if (target == NEW) "" else profiles.firstOrNull { it.id == target }?.name.orEmpty(),
             heading = if (target ==
                 NEW
@@ -130,9 +134,13 @@ fun ProfilesScreen(onBack: () -> Unit, viewModel: ProfilesViewModel = viewModel(
     }
 }
 
+/** Naming a new profile or renaming one: a box for the name with Save and Cancel above it. */
 @Composable
-private fun NameEntry(initial: String, heading: String, onCancel: () -> Unit, onSave: (String) -> Unit) {
-    var name by remember { mutableStateOf(initial) }
+internal fun ProfileNameEntry(initial: String, heading: String, onCancel: () -> Unit, onSave: (String) -> Unit) {
+    val name = rememberTextFieldState(initial)
+    val nameBox = remember { FocusRequester() }
+    LaunchedEffect(Unit) { runCatching { nameBox.requestFocus() } }
+    val save = { if (name.text.isNotBlank()) onSave(name.text.toString()) }
     Column(
         Modifier
             .fillMaxSize()
@@ -140,27 +148,21 @@ private fun NameEntry(initial: String, heading: String, onCancel: () -> Unit, on
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(heading, style = MaterialTheme.typography.headlineMedium)
-            Spacer(Modifier.width(20.dp))
-            Text(
-                name.ifEmpty { "…" },
-                style = MaterialTheme.typography.titleLarge,
-                color = MaterialTheme.colorScheme.primary,
-            )
             Spacer(Modifier.weight(1f))
-            Button(enabled = name.isNotBlank(), onClick = {
-                onSave(name)
-            }) { Text(stringResource(R.string.common_save)) }
+            Button(enabled = name.text.isNotBlank(), onClick = save) { Text(stringResource(R.string.common_save)) }
             Spacer(Modifier.width(12.dp))
             OutlinedButton(onClick = onCancel) { Text(stringResource(R.string.common_cancel)) }
         }
         Spacer(Modifier.height(24.dp))
-        OnScreenKeyboard(
-            onKey = { if (name.length < 24) name += it },
-            onSpace = { if (name.length < 24) name += " " },
-            onBackspace = { name = name.dropLast(1) },
-            onClear = { name = "" },
+        DeviceTextField(
+            state = name,
+            placeholder = stringResource(R.string.profiles_name_placeholder),
+            maxLength = MAX_NAME,
+            onSubmit = save,
+            modifier = Modifier.widthIn(max = 760.dp).fillMaxWidth().focusRequester(nameBox),
         )
     }
 }
 
+private const val MAX_NAME = 24
 private const val NEW = -1L

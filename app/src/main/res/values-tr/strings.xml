@@ -361,9 +361,6 @@
     <string name="search_type_name">Bir ad yazın</string>
     <string name="search_start_hint">Kanalları, filmleri ve dizileri aramak için yazmaya başlayın.</string>
     <string name="search_no_results">“%1$s” için sonuç bulunamadı.</string>
-    <string name="kbd_space">Boşluk</string>
-    <string name="kbd_del">Sil</string>
-    <string name="kbd_clear">Temizle</string>
     <string name="kbd_paste">Yapıştır</string>
     <string name="kbd_clipboard_empty">Yapıştıracak bir şey yok</string>
     <string name="vod_loading_movies">Filmler yükleniyor</string>
