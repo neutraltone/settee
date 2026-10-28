@@ -13,6 +13,8 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+# Each check is its own job so it shows as its own required status, and they run in parallel.
+# setup-gradle shares one cache between them.
 jobs:
   build:
     name: Test and assemble
@@ -36,6 +38,17 @@ jobs:
       - name: Assemble debug APK
         run: ./gradlew assembleDebug --stacktrace
 
+      # KSP rewrites app/schemas/ from the entities. A change here means an entity moved without
+      # its schema being committed, or without a version bump (the current version's JSON was
+      # overwritten) — RoomMigrationTest can't see either, so catch it here.
+      - name: Room schemas are committed
+        run: |
+          if [ -n "$(git status --porcelain -- app/schemas)" ]; then
+            git status --short -- app/schemas
+            echo "::error::app/schemas/ changed during the build. Commit the new schema; if an existing version's JSON changed, bump the database version and add a Migration."
+            exit 1
+          fi
+
       - name: Upload debug APK
         uses: actions/upload-artifact@v4
         with:
@@ -50,3 +63,97 @@ jobs:
           name: test-reports
           path: app/build/reports/tests/
           if-no-files-found: ignore
+
+  lint:
+    name: Android Lint
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Android Lint
+        run: ./gradlew lintDebug --stacktrace
+
+      - name: Upload Lint report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lint-report
+          path: app/build/reports/lint-results-debug.html
+          if-no-files-found: ignore
+
+  ktlint:
+    name: ktlint
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: ktlint
+        run: ./gradlew ktlintCheck --stacktrace
+
+  detekt:
+    name: detekt
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: detekt
+        run: ./gradlew detekt --stacktrace
+
+      - name: Upload detekt report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: detekt-report
+          path: app/build/reports/detekt/
+          if-no-files-found: ignore
+
+  gitleaks:
+    name: gitleaks
+    runs-on: ubuntu-latest
+    env:
+      GITLEAKS_VERSION: 8.30.1
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # The binary rather than gitleaks-action, which needs a licence key for organisation repos.
+      # The whole history scans in about a second, so there's no need to narrow it to the PR.
+      - name: Install gitleaks
+        run: |
+          curl -sSfL "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" \
+            | tar xz -C "$RUNNER_TEMP" gitleaks
+
+      - name: Scan for credentials
+        run: '"$RUNNER_TEMP/gitleaks" git . --config .gitleaks.toml --redact --verbose'

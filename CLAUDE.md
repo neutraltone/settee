@@ -28,10 +28,22 @@ Android SDK API 35 — Android Studio provides both.
 adb connect <firestick-ip>:5555             # Fire TV over wifi (enable ADB debugging on the stick)
 adb logcat -s OpenTV:* EpgRepository:* SyncWorker:*
 python3 tools/stalker_mock.py [port]        # mock Stalker portal with free test streams (live only)
+./gradlew ktlintFormat                      # auto-fix formatting (ktlintCheck is what CI runs)
+./gradlew detekt lintDebug                  # static analysis, as CI runs it
 ```
 
-No linter/formatter is configured. Tests live in `app/src/test` (JUnit4, Truth, Robolectric, Room
-testing, coroutines-test); there are no instrumented tests.
+Tests live in `app/src/test` (JUnit4, Truth, Robolectric, Room testing, coroutines-test); there are no
+instrumented tests.
+
+### PR checks
+
+`.github/workflows/build.yml` runs one job per required check: **Test and assemble** (unit tests, debug
+APK, and a fail if the build changed `app/schemas/`), **Android Lint**, **ktlint**, **detekt** and
+**gitleaks**. `pr-hygiene.yml` checks the PR title with `tools/check-message.sh`. Lint and detekt fail
+only on findings missing from `app/lint-baseline.xml` / `app/detekt-baseline.xml`: fix a new finding,
+don't regenerate a baseline to hide it. `.gitleaks.toml` adds rules for Xtream credentials in URLs
+and MAG MACs; use placeholders such as `u`/`p`, `example.com` or `00:1A:79:00:00:01` in tests.
+`RoomMigrationTest` walks every exported schema to the latest with `OpenTvDatabase.MIGRATIONS`.
 
 The debug build has `applicationIdSuffix = ".debug"` (`uk.neutraltone.settee.debug`), so it installs
 alongside a release build without touching its data.
@@ -105,6 +117,10 @@ never release/rebuild on channel change). Retries 403/429/5xx with backoff; not 
   versioned `settee-<tag>.apk`; the release workflow also publishes a fixed-name `settee.apk` for the
   Downloader short code. Keep both names in step with `GitHubRelease.apkAsset`.
 - Never put provider URLs, usernames, passwords or MACs in logs, tests or fixtures.
+- PR titles (and, once #6 lands, commit messages) follow `type(#issue): description`; the issue is
+  required for `feat`, `fix`, `refactor` and `perf`, optional for `docs`, `chore`, `ci`, `test` and
+  `build`. `tools/check-message.sh` is the rule.
+- Before opening a PR, ask the user whether to run `/code-review` against `main` first.
 
 ## Agent skills
 

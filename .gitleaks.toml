@@ -1,0 +1,35 @@
+# gitleaks' default rules cover API keys and tokens; these add the IPTV credentials CLAUDE.md
+# forbids in code, tests and fixtures. Placeholders (u/p, example.com, 00:1A:79:00:00:0x) pass.
+title = "Settee"
+
+[extend]
+useDefault = true
+
+[[rules]]
+id = "xtream-query-credentials"
+description = "Xtream/M3U URL with a real-looking username and password in the query"
+regex = '''(?i)username=([^&\s"'$]{3,})&password=([^&\s"'$]{3,})'''
+[[rules.allowlists]]
+# Without this the allowlist is tested against the first capture group (the username) only;
+# "line" so it also sees the example.com host before the query.
+regexTarget = "line"
+regexes = ['''(?i)example\.(com|org|net)''', '''(?i)username=(user|test|demo)[^&]*&password=(pass|test|demo)''']
+
+[[rules]]
+id = "xtream-path-credentials"
+description = "Xtream stream URL with username/password path segments"
+regex = '''(?i)/(?:live|movie|series)/([A-Za-z0-9._%-]{3,})/([A-Za-z0-9._%-]{3,})/[0-9]+'''
+[[rules.allowlists]]
+regexTarget = "match"
+regexes = ['''(?i)/(?:live|movie|series)/(user|test|demo)[^/]*/(pass|test|demo)''']
+
+[[rules]]
+id = "mag-mac-address"
+description = "MAG set-top box MAC address (Stalker portal login)"
+regex = '''(?i)\b00:1A:79(?::[0-9A-F]{2}){3}\b'''
+[[rules.allowlists]]
+regexes = ['''(?i)00:1A:79:00:00:0[0-9A-F]''']
+
+[allowlist]
+description = "Mock Stalker portal that serves free test streams"
+paths = ['''tools/stalker_mock\.py''']
