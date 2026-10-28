@@ -93,7 +93,7 @@ class SyncEngine(private val graph: ServiceLocator.Graph) {
                     sizeBytes = r.sizeBytes,
                 )
             }
-        val favourites = graph.viewerLibrary.everyProfilesFavourites().mapNotNull { fav ->
+        val favourites = graph.viewerLibrary.favourites.everyProfiles().mapNotNull { fav ->
             val profileName = names[fav.profileId] ?: return@mapNotNull null
             SyncFavourite(profile = profileName, kind = fav.kind.name, source = fav.source, id = fav.itemId)
         }
@@ -131,7 +131,12 @@ class SyncEngine(private val graph: ServiceLocator.Graph) {
         for (item in bundle.favourites) {
             val kind = runCatching { StreamKind.valueOf(item.kind) }.getOrNull() ?: continue
             val profileId = profileIdFor(item.profile) ?: continue
-            if (graph.viewerLibrary.mergeSynced(Favourite(profileId, kind, item.source, item.id))) favourites++
+            if (graph.viewerLibrary.favourites.mergeSynced(
+                    Favourite(profileId, kind, item.source, item.id),
+                )
+            ) {
+                favourites++
+            }
         }
         for (url in bundle.hiddenChannels) {
             graph.catalogRepository.markChannelHiddenByUrl(url)

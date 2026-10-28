@@ -390,7 +390,7 @@ class ChannelsViewModel(app: Application) : AndroidViewModel(app) {
             .flatMapLatest { (key, source) ->
                 val channelFlow = when {
                     key.query.isNotBlank() -> graph.catalogRepository.searchChannels(key.query)
-                    key.favs -> graph.viewerLibrary.favouriteChannels()
+                    key.favs -> graph.viewerLibrary.favourites.channels()
                     key.categoryIds != null -> graph.catalogRepository.observeChannelsIn(key.categoryIds)
                     else -> graph.catalogRepository.observeChannels(source)
                 }
@@ -504,7 +504,7 @@ class ChannelsViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     val favourites: StateFlow<List<Channel>> =
-        graph.viewerLibrary.favouriteChannels()
+        graph.viewerLibrary.favourites.channels()
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     /**
@@ -680,13 +680,13 @@ class ChannelsViewModel(app: Application) : AndroidViewModel(app) {
             // Favouriting the row favourites the logical channel: every variant follows,
             // so the choice survives switching quality.
             val target = !row.favourite
-            row.variants.forEach { graph.viewerLibrary.setFavourite(it, target) }
+            row.variants.forEach { graph.viewerLibrary.favourites.set(it, target) }
         }
     }
 
     /** Marks each row a Favourite when any of its variants is one of the active Profile's. */
     private fun Flow<List<Row>>.withFavourites(): Flow<List<Row>> =
-        combine(graph.viewerLibrary.favouriteChannelIds()) { rows, ids ->
+        combine(graph.viewerLibrary.favourites.channelIds()) { rows, ids ->
             rows.map { row -> row.copy(favourite = row.variants.any { it.id in ids }) }
         }
 
@@ -1063,15 +1063,15 @@ class VodViewModel(app: Application) : AndroidViewModel(app) {
      * stars. Null until first loaded, so a star never shows "not a Favourite" for a frame and acts on it.
      */
     val favouriteMovies: StateFlow<List<Movie>?> =
-        graph.viewerLibrary.favouriteMovies()
+        graph.viewerLibrary.favourites.movies()
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
     val favouriteSeries: StateFlow<List<Series>?> =
-        graph.viewerLibrary.favouriteSeries()
+        graph.viewerLibrary.favourites.series()
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
     fun setMovieFavourite(movie: Movie, favourite: Boolean) {
-        viewModelScope.launch { graph.viewerLibrary.setFavourite(movie, favourite) }
+        viewModelScope.launch { graph.viewerLibrary.favourites.set(movie, favourite) }
     }
 
     /**
@@ -1130,7 +1130,7 @@ class VodViewModel(app: Application) : AndroidViewModel(app) {
         graph.catalogRepository.collapseVariants(movies)
 
     fun setSeriesFavourite(series: Series, favourite: Boolean) {
-        viewModelScope.launch { graph.viewerLibrary.setFavourite(series, favourite) }
+        viewModelScope.launch { graph.viewerLibrary.favourites.set(series, favourite) }
     }
 
     /** The user-agent to play a movie/episode with (per source). */

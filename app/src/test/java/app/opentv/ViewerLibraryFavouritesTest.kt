@@ -108,33 +108,33 @@ class ViewerLibraryFavouritesTest {
         val heat = movie("1", "Heat")
         movie("2", "Ronin")
 
-        library.setFavourite(heat, favourite = true)
+        library.favourites.set(heat, favourite = true)
 
-        assertThat(library.favouriteMovies().first().map { it.name }).containsExactly("Heat")
+        assertThat(library.favourites.movies().first().map { it.name }).containsExactly("Heat")
     }
 
     @Test
     fun `a movie the Profile unfavourites is no longer a Favourite`() = runTest {
         val heat = movie("1", "Heat")
-        library.setFavourite(heat, favourite = true)
+        library.favourites.set(heat, favourite = true)
 
-        library.setFavourite(heat, favourite = false)
+        library.favourites.set(heat, favourite = false)
 
-        assertThat(library.favouriteMovies().first()).isEmpty()
+        assertThat(library.favourites.movies().first()).isEmpty()
     }
 
     @Test
     fun `switching Profile switches Favourites`() = runTest {
         val heat = movie("1", "Heat")
         val ronin = movie("2", "Ronin")
-        library.setFavourite(heat, favourite = true)
+        library.favourites.set(heat, favourite = true)
 
         activeProfile.value = 2L
-        library.setFavourite(ronin, favourite = true)
+        library.favourites.set(ronin, favourite = true)
 
-        assertThat(library.favouriteMovies().first().map { it.name }).containsExactly("Ronin")
+        assertThat(library.favourites.movies().first().map { it.name }).containsExactly("Ronin")
         activeProfile.value = 1L
-        assertThat(library.favouriteMovies().first().map { it.name }).containsExactly("Heat")
+        assertThat(library.favourites.movies().first().map { it.name }).containsExactly("Heat")
     }
 
     @Test
@@ -142,54 +142,54 @@ class ViewerLibraryFavouritesTest {
         val severance = series("10", "Severance")
         val slowHorses = series("11", "Slow Horses")
 
-        library.setFavourite(severance, favourite = true)
-        library.setFavourite(slowHorses, favourite = true)
-        library.setFavourite(slowHorses, favourite = false)
+        library.favourites.set(severance, favourite = true)
+        library.favourites.set(slowHorses, favourite = true)
+        library.favourites.set(slowHorses, favourite = false)
 
-        assertThat(library.favouriteSeries().first().map { it.name }).containsExactly("Severance")
+        assertThat(library.favourites.series().first().map { it.name }).containsExactly("Severance")
     }
 
     @Test
     fun `Favourite channels leave out channels hidden on this device`() = runTest {
         val (bbcOne, bbcTwo) = storedChannels(channel("1", "BBC One"), channel("2", "BBC Two", hidden = true))
 
-        library.setFavourite(bbcOne, favourite = true)
-        library.setFavourite(bbcTwo, favourite = true)
+        library.favourites.set(bbcOne, favourite = true)
+        library.favourites.set(bbcTwo, favourite = true)
 
-        assertThat(library.favouriteChannels().first().map { it.name }).containsExactly("BBC One")
+        assertThat(library.favourites.channels().first().map { it.name }).containsExactly("BBC One")
     }
 
     @Test
     fun `a Favourite channel stays a Favourite when a catalogue refresh drops it and lists it again`() = runTest {
         val (bbcOne) = storedChannels(channel("1", "BBC One"))
-        library.setFavourite(bbcOne, favourite = true)
+        library.favourites.set(bbcOne, favourite = true)
 
         db.channels().replaceCatalogue(sourceId = 1, incoming = listOf(channel("2", "BBC Two")), syncStamp = 2)
         db.channels().replaceCatalogue(sourceId = 1, incoming = listOf(channel("1", "BBC One")), syncStamp = 3)
 
-        val favourites = library.favouriteChannels().first()
+        val favourites = library.favourites.channels().first()
         assertThat(favourites.map { it.name }).containsExactly("BBC One")
         assertThat(favourites.single().id).isNotEqualTo(bbcOne.id)
     }
 
     @Test
     fun `Favourite movies and series stay Favourites when their provider's catalogue is reloaded`() = runTest {
-        library.setFavourite(movie("1", "Heat"), favourite = true)
-        library.setFavourite(series("10", "Severance"), favourite = true)
+        library.favourites.set(movie("1", "Heat"), favourite = true)
+        library.favourites.set(series("10", "Severance"), favourite = true)
 
         db.movies().deleteForSource(1)
         db.series().deleteForSource(1)
         movie("1", "Heat")
         series("10", "Severance")
 
-        assertThat(library.favouriteMovies().first().map { it.name }).containsExactly("Heat")
-        assertThat(library.favouriteSeries().first().map { it.name }).containsExactly("Severance")
+        assertThat(library.favourites.movies().first().map { it.name }).containsExactly("Heat")
+        assertThat(library.favourites.series().first().map { it.name }).containsExactly("Severance")
     }
 
     @Test
     fun `a Favourite channel stays a Favourite when its stream URL changes`() = runTest {
         val (bbcOne) = storedChannels(channel("1", "BBC One", format = "ts"))
-        library.setFavourite(bbcOne, favourite = true)
+        library.favourites.set(bbcOne, favourite = true)
 
         db.channels().replaceCatalogue(
             sourceId = 1,
@@ -197,7 +197,7 @@ class ViewerLibraryFavouritesTest {
             syncStamp = 2,
         )
 
-        assertThat(library.favouriteChannels().first().map { it.name }).containsExactly("BBC One")
+        assertThat(library.favourites.channels().first().map { it.name }).containsExactly("BBC One")
     }
 
     @Test
@@ -205,8 +205,8 @@ class ViewerLibraryFavouritesTest {
         val severance = series("123", "Severance", sourceId = 1)
         series("123", "Bluey", sourceId = 2)
 
-        library.setFavourite(severance, favourite = true)
+        library.favourites.set(severance, favourite = true)
 
-        assertThat(library.favouriteSeries().first().map { it.name }).containsExactly("Severance")
+        assertThat(library.favourites.series().first().map { it.name }).containsExactly("Severance")
     }
 }

@@ -291,7 +291,7 @@ class ManagerServer(
         if (cat.isNullOrBlank()) return@runBlocking json.encodeToString(serializer, emptyList())
         val source = query["source"]?.toLongOrNull()
         // Stars show the Favourites of whichever Profile is active on the TV.
-        val favourites = viewerLibrary.favouriteChannelIds().first()
+        val favourites = viewerLibrary.favourites.channelIds().first()
         val rows = catalog.channelsInCategoryForManager(source, cat).map { it.toDto(it.id in favourites) }
         json.encodeToString(serializer, rows)
     }
@@ -311,7 +311,7 @@ class ManagerServer(
                 catalog.channel(patch.id)?.let { channel ->
                     (catalog.variants(channel) + channel).distinctBy {
                         it.id
-                    }.forEach { viewerLibrary.setFavourite(it, favourite) }
+                    }.forEach { viewerLibrary.favourites.set(it, favourite) }
                 }
             }
             // A blank name clears the rename back to the provider's own (see setChannelCustomName).
