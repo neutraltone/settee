@@ -69,6 +69,7 @@ internal fun HomeScreen(
     onOpenSeries: (Series) -> Unit,
     onOpenMovie: (Movie) -> Unit,
     onPlayChannel: (Channel) -> Unit,
+    takeFocus: Boolean,
     viewModel: HomeViewModel = viewModel(),
 ) {
     val continueWatching = viewModel.continueWatching.collectAsState().value
@@ -91,6 +92,7 @@ internal fun HomeScreen(
         onOpenSeries,
         onOpenMovie,
         onPlayChannel,
+        takeFocus,
     )
 }
 
@@ -108,6 +110,7 @@ internal fun HomeContent(
     onOpenSeries: (Series) -> Unit,
     onOpenMovie: (Movie) -> Unit,
     onPlayChannel: (Channel) -> Unit,
+    takeFocus: Boolean,
 ) {
     if (continueWatching.isEmpty() &&
         favouriteShows.isEmpty() &&
@@ -123,11 +126,13 @@ internal fun HomeContent(
         }
         return
     }
-    // Home opens on its first card, so OK straight away picks up what was last watched. The
-    // request lands on the list, which hands focus to its first card; it waits a frame because a
-    // lazy list only composes its cards when it is first laid out, and until then has none to give.
+    // Home opens on its first card, so OK straight away picks up what was last watched — unless
+    // [takeFocus] is false because Home was just picked in the side menu, where the highlight
+    // stays. The request lands on the list, which hands focus to its first card; it waits a frame
+    // because a lazy list only composes its cards when it is first laid out.
     val start = remember { FocusRequester() }
     LaunchedEffect(start) {
+        if (!takeFocus) return@LaunchedEffect
         withFrameNanos {}
         runCatching { start.requestFocus() }
     }

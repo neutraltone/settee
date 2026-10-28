@@ -75,7 +75,8 @@ catalogue refresh, playback or Xtream parsing. The big picture:
   `EpgRepository`, `SourceRepository`, …) → `ui/OpenTvViewModels.kt` (most view models in one file) →
   Compose screens under `ui/`. `data/model/Models.kt` entities double as domain models.
 - **Navigation:** `MainActivity.kt` owns the `NavHost` and the `Routes` object. `ui/MainScreen.kt` is the
-  tabbed shell (`enum class Tab`: Live, Movies, Shows, Recordings), toggled by settings.
+  tabbed shell (`enum class Tab`: Home, Live, Movies, Shows, Recordings). Home is always first and is
+  where the app opens; the content-type tabs are toggled by settings.
 - **Settings** are in `core/AppSettings.kt` (exposed as `StateFlow`s, e.g. `activeProfileId`).
 
 ### Data rules that are easy to break

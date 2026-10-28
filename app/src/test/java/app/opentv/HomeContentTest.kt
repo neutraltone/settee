@@ -5,7 +5,11 @@
  */
 package app.opentv
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.assertIsFocused
+import androidx.compose.ui.test.assertIsNotFocused
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.hasScrollToNodeAction
 import androidx.compose.ui.test.hasText
@@ -94,6 +98,7 @@ class HomeContentTest {
         movies: List<Movie> = listOf(movie(2, "Heat")),
         channels: List<Channel> = listOf(channel(3, "BBC One")),
         onPlayChannel: (Channel) -> Unit = {},
+        takeFocus: Boolean = true,
     ) = compose.setTvContent {
         HomeContent(
             continueWatching = resume,
@@ -104,6 +109,7 @@ class HomeContentTest {
             onOpenSeries = {},
             onOpenMovie = {},
             onPlayChannel = onPlayChannel,
+            takeFocus = takeFocus,
         )
     }
 
@@ -152,6 +158,7 @@ class HomeContentTest {
         setHome(resume = emptyList())
 
         compose.onNodeWithText("Severance").assertIsFocused()
+        captureScreen("home_no_continue_watching")
     }
 
     @Test
@@ -162,5 +169,35 @@ class HomeContentTest {
         compose.onNodeWithText("BBC One").performClick()
 
         assertThat(played).isEqualTo(channel(3, "BBC One"))
+    }
+
+    @Test
+    fun `Home picked from the side menu leaves the highlight on the menu`() {
+        setHome(takeFocus = false)
+
+        compose.onNodeWithText("Collateral").assertIsNotFocused()
+    }
+
+    @Test
+    fun `when the highlighted card's row goes, the highlight moves to the row that takes its place`() {
+        var resume by mutableStateOf(this.resume)
+        compose.setTvContent {
+            HomeContent(
+                continueWatching = resume,
+                favouriteShows = listOf(series(1, "Severance")),
+                favouriteMovies = emptyList(),
+                favouriteChannels = emptyList(),
+                onResume = { _, _, _ -> },
+                onOpenSeries = {},
+                onOpenMovie = {},
+                onPlayChannel = {},
+                takeFocus = true,
+            )
+        }
+        compose.onNodeWithText("Collateral").assertIsFocused()
+
+        resume = emptyList()
+
+        compose.onNodeWithText("Severance").assertIsFocused()
     }
 }

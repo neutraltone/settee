@@ -131,6 +131,10 @@ fun MainScreen(
 
     var tab by remember { mutableStateOf(homeTab) }
 
+    // Home takes the highlight when it appears, except when it was picked in the rail: moving the
+    // highlight out of the menu is something no other tab does.
+    var railFocused by remember { mutableStateOf(false) }
+
     // If the selected tab gets hidden (its type toggled off while it's open), drop back to the
     // home tab so the content area never tries to show a tab that's no longer there.
     LaunchedEffect(visibleTabs) {
@@ -177,6 +181,7 @@ fun MainScreen(
                 onOpenSettings = onOpenSettings,
                 onOpenProfiles = onOpenProfiles,
                 activeProfileName = activeProfileName,
+                modifier = Modifier.onFocusChanged { railFocused = it.hasFocus },
             )
 
             Box(Modifier.weight(1f).fillMaxHeight()) {
@@ -186,6 +191,7 @@ fun MainScreen(
                         onOpenSeries = onOpenSeries,
                         onOpenMovie = onOpenMovie,
                         onPlayChannel = onPlayChannel,
+                        takeFocus = !railFocused,
                     )
                     Tab.LIVE -> LiveScreen(
                         isTelevision = isTelevision,
