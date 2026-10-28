@@ -35,20 +35,28 @@ python3 tools/stalker_mock.py [port]        # mock Stalker portal with free test
 ./gradlew detekt lintDebug                  # static analysis, as CI runs it
 git config core.hooksPath .githooks         # once per clone: enables the commit-msg hook
 tools/check-message-test.sh                 # tests for the commit/PR-title convention
+./gradlew recordRoborazziDebug              # screenshots → app/build/outputs/roborazzi/
+python3 -m unittest discover -s tools/screenshots  # screenshot comparison tests (needs Pillow)
 ```
 
-Tests live in `app/src/test` (JUnit4, Truth, Robolectric, Room testing, coroutines-test); there are no
+Tests live in `app/src/test` (JUnit4, Truth, Robolectric, Room testing, coroutines-test, Roborazzi for screenshots); there are no
 instrumented tests.
 
 ### PR checks
 
 `.github/workflows/build.yml` runs one job per required check: **Test and assemble** (unit tests, debug
-APK, and a fail if the build changed `app/schemas/`), **Android Lint**, **ktlint**, **detekt** and
-**gitleaks**. `pr-hygiene.yml` runs `tools/check-message-test.sh` and checks the PR title with
+APK, and a fail if the build changed `app/schemas/`), **Android Lint**, **ktlint**, **detekt**,
+**Screenshot tools** (the Python tests in `tools/screenshots/`) and **gitleaks**. `pr-hygiene.yml` runs `tools/check-message-test.sh` and checks the PR title with
 `tools/check-message.sh`. Lint and detekt fail only on findings missing from `app/lint-baseline.xml` /
 `app/detekt-baseline.xml`: fix a new finding, don't regenerate a baseline to hide it. `.gitleaks.toml`
 adds rules for Xtream credentials in URLs and MAG MACs; use placeholders such as `u`/`p`, `example.com` or `00:1A:79:00:00:01` in tests.
 `RoomMigrationTest` walks every exported schema to the latest with `OpenTvDatabase.MIGRATIONS`.
+
+`screenshots.yml` renders the screenshots of a PR's merge base and head in one job, and writes a before |
+after table of the changed screens into the description between `<!-- screenshots:start -->` markers,
+uploading the images with `gh --attach` as `RELEASE_PLEASE_TOKEN`, since Actions' own token can't (later pushes also get a comment of what changed since the
+previous one). It only reports, never fails, and skips Dependabot and release-please. Nothing is
+committed: there are no reference images.
 
 The debug build has `applicationIdSuffix = ".debug"` (`uk.neutraltone.settee.debug`), so it installs
 alongside a release build without touching its data.
@@ -121,6 +129,12 @@ never release/rebuild on channel change). Retries 403/429/5xx with backoff; not 
 - Every `.kt` file starts with the GPL header block used throughout the repo.
 - Comments explain *why* an obvious approach was rejected (see `EpgRepository`, `PlayerController`); don't
   restate code.
+- **Screenshots:** a ticket that changes a screen adds or updates screenshot coverage in that screen's UI
+  tests: the screen with its initial highlight showing, plus each state the tests already cover.
+  A screenshot is one extra `captureScreen("<screen>_<state>")` line in an existing test, not a
+  separate suite; `app/src/test/java/app/opentv/Screenshots.kt` has the setup (1080p TV qualifiers,
+  `setTvContent`, `PlaceholderArtwork` for Coil). Existing screens get coverage only when a ticket
+  touches them.
 - User-facing strings go in `res/values/strings.xml`; ~30 `values-*` translations exist. Add new keys to
   the base file (translations fall back to English).
 - **Commits and PR titles** follow `type(#issue): description`, e.g. `feat(#12): add series rules`. The

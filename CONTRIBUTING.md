@@ -82,6 +82,11 @@ Each of these must pass before a PR can merge. All but the title check run local
 | Android Lint | Android API misuse, resource problems | `./gradlew lintDebug` |
 | gitleaks | Provider URLs with credentials, MAC addresses, API keys | [gitleaks](https://github.com/gitleaks/gitleaks): `gitleaks git . --config .gitleaks.toml` |
 | PR title | The title convention above | `tools/check-message.sh "<title>"` |
+| Screenshot tools | The screenshot comparison's own tests | `python3 -m unittest discover -s tools/screenshots` |
+
+The **Screenshots** workflow also runs on each PR. It never fails one: it adds a before | after table
+of every screen your change altered to the PR description, so a reviewer can see a UI change without
+installing the build.
 
 detekt and Lint compare against baselines of findings that predate them, so they only flag what
 your change adds. Fix those rather than adding them to a baseline.
@@ -89,6 +94,25 @@ your change adds. Fix those rather than adding them to a baseline.
 **Changing the database?** Bump the version in `OpenTvDatabase`, commit the new schema JSON that the
 build writes to `app/schemas/`, and add a `Migration` to `OpenTvDatabase.MIGRATIONS`.
 `RoomMigrationTest` fails if one is missing.
+
+## Screenshots
+
+If your change alters a screen, add a screenshot to that screen's UI tests: one
+`captureScreen("<screen>_<state>")` line after the assertions for each state, plus one with the
+screen's initial focus highlight showing. `EpisodeRowTest` is the example, and
+`app/src/test/java/app/opentv/Screenshots.kt` explains the setup. Screenshots render on the JVM
+under Robolectric at the Fire TV Stick's 1080p, with placeholder artwork instead of network images.
+
+To render them locally:
+
+```bash
+./gradlew recordRoborazziDebug                                  # every screen
+./gradlew recordRoborazziDebug --tests 'app.opentv.EpisodeRowTest'  # one test class
+open app/build/outputs/roborazzi/                               # the PNGs
+```
+
+A plain `./gradlew test` runs the same tests without writing images. Nothing under
+`app/build/outputs/roborazzi/` is committed: the Screenshots workflow renders both sides of a PR itself.
 
 ## Good first issues
 
