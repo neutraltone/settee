@@ -800,26 +800,7 @@ class VodViewModel @JvmOverloads constructor(
     /** Each episode's Watched / In Progress / Unwatched status for the active Profile. */
     val episodeStatuses = graph.viewerLibrary.episodeStatuses()
 
-    private suspend fun resolveResume(card: ContinueWatchingCard): ResumeItem? = when (card) {
-        is ContinueWatchingCard.Movie -> graph.catalogRepository.movie(card.movieId)?.let {
-            ResumeItem("movie:${it.id}", it.displayTitle, it.displayTitle, it.posterUrl, it.streamUrl, card.progress)
-        }
-        is ContinueWatchingCard.Series -> {
-            val ep = card.episode
-            graph.catalogRepository.seriesOf(ep)?.let {
-                ResumeItem(
-                    mediaKey = "ep:${ep.id}",
-                    title = it.name,
-                    playerTitle = ep.playerTitle,
-                    // The card is landscape: the wide backdrop fits it, a portrait poster only crops.
-                    posterUrl = it.backdropUrl ?: it.posterUrl,
-                    streamUrl = ep.streamUrl,
-                    progress = card.progress,
-                    episode = SeasonEpisode(ep.season, ep.episodeNumber),
-                )
-            }
-        }
-    }
+    private suspend fun resolveResume(card: ContinueWatchingCard) = resumeItem(graph.catalogRepository, card)
 
     private val movieCategory = MutableStateFlow<String?>(null)
     private val seriesCategory = MutableStateFlow<String?>(null)
@@ -1156,6 +1137,74 @@ class VodViewModel @JvmOverloads constructor(
     /** The user-agent to play a movie/episode with (per source). */
     suspend fun userAgentForSource(sourceId: Long): String =
         graph.sourceRepository.byId(sourceId)?.userAgent ?: "OpenTV/0.1 (Android)"
+}
+
+/** [card] as Continue Watching draws it, or null when its title has left the catalogue. */
+private suspend fun resumeItem(catalog: CatalogRepository, card: ContinueWatchingCard): VodViewModel.ResumeItem? =
+    when (card) {
+        is ContinueWatchingCard.Movie -> catalog.movie(card.movieId)?.let {
+            VodViewModel.ResumeItem(
+                "movie:${it.id}",
+                it.displayTitle,
+                it.displayTitle,
+                it.posterUrl,
+                it.streamUrl,
+                card.progress,
+            )
+        }
+        is ContinueWatchingCard.Series -> {
+            val ep = card.episode
+            catalog.seriesOf(ep)?.let {
+                VodViewModel.ResumeItem(
+                    mediaKey = "ep:${ep.id}",
+                    title = it.name,
+                    playerTitle = ep.playerTitle,
+                    // The card is landscape: the wide backdrop fits it, a portrait poster only crops.
+                    posterUrl = it.backdropUrl ?: it.posterUrl,
+                    streamUrl = ep.streamUrl,
+                    progress = card.progress,
+                    episode = VodViewModel.SeasonEpisode(ep.season, ep.episodeNumber),
+                )
+            }
+        }
+    }
+
+/** What Home shows: the active Profile's Continue Watching and its Favourites, by kind. */
+data class HomeState(
+    val continueWatching: List<VodViewModel.ResumeItem>,
+    val favouriteShows: List<Series>,
+    val favouriteMovies: List<Movie>,
+    val favouriteChannels: List<Channel>,
+)
+
+/**
+ * Home: the active Profile's Continue Watching across movies and series, and its Favourites. The
+ * state is null until all of it has loaded, so Home never flashes its nothing-here hint at a
+ * Profile that has rows. A content type switched off in settings is left off Home too, as its tab
+ * is from the side menu.
+ */
+class HomeViewModel(app: Application) : AndroidViewModel(app) {
+    private val graph = ServiceLocator.get(app)
+    private val settings = graph.settings
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    private val continueWatching: Flow<List<VodViewModel.ResumeItem>> = combine(
+        graph.viewerLibrary.continueWatching()
+            .mapLatest { cards -> cards.mapNotNull { resumeItem(graph.catalogRepository, it) } },
+        settings.moviesEnabled,
+        settings.seriesEnabled,
+    ) { items, movies, series -> items.filter { if (it.episode == null) movies else series } }
+
+    val state: StateFlow<HomeState?> = combine(
+        continueWatching,
+        graph.viewerLibrary.favourites.series().onlyWhen(settings.seriesEnabled),
+        graph.viewerLibrary.favourites.movies().onlyWhen(settings.moviesEnabled),
+        graph.viewerLibrary.favourites.channels().onlyWhen(settings.liveEnabled),
+        ::HomeState,
+    ).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
+    private fun <T> Flow<List<T>>.onlyWhen(enabled: StateFlow<Boolean>): Flow<List<T>> =
+        combine(this, enabled) { list, on -> if (on) list else emptyList() }
 }
 
 /**

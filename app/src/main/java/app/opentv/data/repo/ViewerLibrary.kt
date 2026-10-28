@@ -75,6 +75,8 @@ class ViewerLibrary(
     /** The active Profile's Favourites, and every Profile's for sync. */
     val favourites = Favourites(favouriteDao, activeProfileId)
 
+    private val cards = ContinueWatchingCards(positions, episodes)
+
     suspend fun recordProgress(mediaKey: String, positionMillis: Long, durationMillis: Long) {
         positions.upsert(
             PlaybackPosition(
@@ -121,17 +123,8 @@ class ViewerLibrary(
     /** The active Profile's Continue Watching for movies: each In Progress one, most recently played first. */
     @OptIn(ExperimentalCoroutinesApi::class)
     fun continueWatchingMovies(): Flow<List<ContinueWatchingCard>> = activeProfileId
-        .flatMapLatest { pid -> positions.observeNewestFirst(pid) }
-        .map { list ->
-            list.asSequence()
-                .filter { it.mediaKey.startsWith(MOVIE_PREFIX) }
-                .mapNotNull { pos ->
-                    val id = pos.mediaKey.removePrefix(MOVIE_PREFIX).toLongOrNull() ?: return@mapNotNull null
-                    (statusOf(pos) as? WatchStatus.InProgress)?.let { ContinueWatchingCard.Movie(id, it.progress) }
-                }
-                .take(IN_PROGRESS_LIMIT)
-                .toList()
-        }
+        .flatMapLatest { pid -> cards.movies(pid) }
+        .map { list -> list.map { it.card } }
 
     /**
      * The active Profile's Continue Watching for series: one card per series, at the episode it
@@ -139,39 +132,17 @@ class ViewerLibrary(
      */
     @OptIn(ExperimentalCoroutinesApi::class)
     fun continueWatchingSeries(): Flow<List<ContinueWatchingCard>> = activeProfileId
-        .flatMapLatest { pid ->
-            // Played episodes are observed as well as positions so a newly added Up Next shows up.
-            combine(positions.observeNewestFirst(pid), episodes.observePlayed(pid)) { list, played ->
-                val byKey = played.associateBy { "$EPISODE_PREFIX${it.id}" }
-                val positionOf = list.associateBy { it.mediaKey }
-                val latestPerSeries = list.mapNotNull { pos -> byKey[pos.mediaKey]?.let { it to pos } }
-                    .distinctBy { (ep, _) -> ep.sourceId to ep.seriesId }
-                // Capped on cards, not series: a series with nothing left to watch takes no slot.
-                buildList {
-                    for ((ep, pos) in latestPerSeries) {
-                        if (size == IN_PROGRESS_LIMIT) break
-                        seriesCard(ep, pos, positionOf)?.let(::add)
-                    }
-                }
-            }
-        }
+        .flatMapLatest { pid -> cards.series(pid) }
+        .map { list -> list.map { it.card } }
 
-    private suspend fun seriesCard(
-        latest: Episode,
-        pos: PlaybackPosition,
-        positionOf: Map<String, PlaybackPosition>,
-    ): ContinueWatchingCard? = when (val status = statusOf(pos)) {
-        is WatchStatus.InProgress -> ContinueWatchingCard.Series(latest, status.progress)
-        else -> {
-            val ordered = episodes.forSeries(latest.sourceId, latest.seriesId).sortedWith(EPISODE_ORDER)
-            ordered.getOrNull(ordered.indexOfFirst { it.id == latest.id } + 1)?.let { next ->
-                // Up Next may have been started before an earlier episode was finished; the player
-                // resumes it there, so the card shows that progress rather than none.
-                val started = positionOf["$EPISODE_PREFIX${next.id}"]?.let(::statusOf) as? WatchStatus.InProgress
-                ContinueWatchingCard.Series(next, started?.progress)
+    /** Home's Continue Watching: movies and series together, most recently played first. */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    fun continueWatching(): Flow<List<ContinueWatchingCard>> = activeProfileId
+        .flatMapLatest { pid ->
+            combine(cards.movies(pid), cards.series(pid)) { movies, series ->
+                (movies + series).sortedByDescending { it.playedAtMillis }.take(IN_PROGRESS_LIMIT).map { it.card }
             }
         }
-    }
 
     /** Every episode's status for the active Profile; re-emits only when a status actually changes. */
     @OptIn(ExperimentalCoroutinesApi::class)
@@ -208,24 +179,77 @@ class ViewerLibrary(
             }
             .distinctUntilChanged()
     }
+}
 
-    private companion object {
-        val EPISODE_ORDER = compareBy<Episode>({ it.season }, { it.episodeNumber })
-        const val EPISODE_PREFIX = "ep:"
-        const val MOVIE_PREFIX = "movie:"
-        const val IN_PROGRESS_LIMIT = 30
+/** A card with when the Profile last played what it stands for, so movies and series can be interleaved. */
+private data class Played(val card: ContinueWatchingCard, val playedAtMillis: Long)
 
-        /** Past this, the credits are rolling: the title counts as Watched and is not resumed. */
-        const val WATCHED_FRACTION = 0.93
+/**
+ * Builds each kind's Continue Watching cards for one Profile, each with when it was last played;
+ * ViewerLibrary picks the Profile and decides how kinds are listed.
+ */
+private class ContinueWatchingCards(private val positions: PlaybackPositionDao, private val episodes: EpisodeDao) {
+    fun movies(pid: Long): Flow<List<Played>> = positions.observeNewestFirst(pid).map { list ->
+        list.asSequence()
+            .filter { it.mediaKey.startsWith(MOVIE_PREFIX) }
+            .mapNotNull { pos ->
+                val id = pos.mediaKey.removePrefix(MOVIE_PREFIX).toLongOrNull() ?: return@mapNotNull null
+                (statusOf(pos) as? WatchStatus.InProgress)?.let {
+                    Played(ContinueWatchingCard.Movie(id, it.progress), pos.updatedAtMillis)
+                }
+            }
+            .take(IN_PROGRESS_LIMIT)
+            .toList()
+    }
 
-        fun statusOf(pos: PlaybackPosition): WatchStatus {
-            // Synced positions can arrive without a duration; that says nothing about how far through.
-            // Nor does a negative position, which only a confused peer would send.
-            val position = pos.positionMillis.coerceAtLeast(0)
-            val known = pos.durationMillis > 0
-            val progress = if (known) position.toDouble() / pos.durationMillis else 0.0
-            if (progress > WATCHED_FRACTION) return WatchStatus.Watched
-            return WatchStatus.InProgress(progress.toFloat(), if (known) pos.durationMillis - position else null)
+    // Played episodes are observed as well as positions so a newly added Up Next shows up.
+    fun series(pid: Long): Flow<List<Played>> =
+        combine(positions.observeNewestFirst(pid), episodes.observePlayed(pid)) { list, played ->
+            val byKey = played.associateBy { "$EPISODE_PREFIX${it.id}" }
+            val positionOf = list.associateBy { it.mediaKey }
+            val latestPerSeries = list.mapNotNull { pos -> byKey[pos.mediaKey]?.let { it to pos } }
+                .distinctBy { (ep, _) -> ep.sourceId to ep.seriesId }
+            // Capped on cards, not series: a series with nothing left to watch takes no slot.
+            buildList {
+                for ((ep, pos) in latestPerSeries) {
+                    if (size == IN_PROGRESS_LIMIT) break
+                    seriesCard(ep, pos, positionOf)?.let { add(Played(it, pos.updatedAtMillis)) }
+                }
+            }
+        }
+
+    private suspend fun seriesCard(
+        latest: Episode,
+        pos: PlaybackPosition,
+        positionOf: Map<String, PlaybackPosition>,
+    ): ContinueWatchingCard? = when (val status = statusOf(pos)) {
+        is WatchStatus.InProgress -> ContinueWatchingCard.Series(latest, status.progress)
+        else -> {
+            val ordered = episodes.forSeries(latest.sourceId, latest.seriesId).sortedWith(EPISODE_ORDER)
+            ordered.getOrNull(ordered.indexOfFirst { it.id == latest.id } + 1)?.let { next ->
+                // Up Next may have been started before an earlier episode was finished; the player
+                // resumes it there, so the card shows that progress rather than none.
+                val started = positionOf["$EPISODE_PREFIX${next.id}"]?.let(::statusOf) as? WatchStatus.InProgress
+                ContinueWatchingCard.Series(next, started?.progress)
+            }
         }
     }
+}
+
+private val EPISODE_ORDER = compareBy<Episode>({ it.season }, { it.episodeNumber })
+private const val EPISODE_PREFIX = "ep:"
+private const val MOVIE_PREFIX = "movie:"
+private const val IN_PROGRESS_LIMIT = 30
+
+/** Past this, the credits are rolling: the title counts as Watched and is not resumed. */
+private const val WATCHED_FRACTION = 0.93
+
+private fun statusOf(pos: PlaybackPosition): WatchStatus {
+    // Synced positions can arrive without a duration; that says nothing about how far through.
+    // Nor does a negative position, which only a confused peer would send.
+    val position = pos.positionMillis.coerceAtLeast(0)
+    val known = pos.durationMillis > 0
+    val progress = if (known) position.toDouble() / pos.durationMillis else 0.0
+    if (progress > WATCHED_FRACTION) return WatchStatus.Watched
+    return WatchStatus.InProgress(progress.toFloat(), if (known) pos.durationMillis - position else null)
 }
