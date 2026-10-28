@@ -38,6 +38,16 @@ jobs:
       - name: Assemble debug APK
         run: ./gradlew assembleDebug --stacktrace
 
+      # The release workflow runs this against the real key. Running it here against the debug
+      # APK and AGP's debug keystore means a change in apksigner's or keytool's output breaks a
+      # PR rather than the next release.
+      - name: Signing check
+        env:
+          KEYSTORE_PASSWORD: android
+        run: >
+          tools/check-apk-signer.sh app/build/outputs/apk/debug/*.apk
+          "${ANDROID_USER_HOME:-$HOME/.android}/debug.keystore" androiddebugkey
+
       # KSP rewrites app/schemas/ from the entities. A change here means an entity moved without
       # its schema being committed, or without a version bump (the current version's JSON was
       # overwritten) — RoomMigrationTest can't see either, so catch it here.
