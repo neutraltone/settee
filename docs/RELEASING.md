@@ -51,5 +51,8 @@ Losing the keystore is unrecoverable. There is no reset.
 
 ## Version numbers
 
-Bump `versionCode` and `versionName` in `app/build.gradle.kts`. `versionCode` must increase on
-every release; Android uses it, not `versionName`, to decide what counts as an upgrade.
+Bump `appVersionName` in `app/build.gradle.kts` — that is the only number a release changes.
+`versionCode` is worked out from it by `versionCodeOf` (`buildSrc/src/main/kotlin/AppVersion.kt`)
+as major×10000 + minor×100 + patch (0.1.0 → 100, 1.2.3 → 10203), so minor and patch must stay
+below 100. Android uses `versionCode`, not `versionName`, to
+decide what counts as an upgrade, which is why the two are never set by hand separately.

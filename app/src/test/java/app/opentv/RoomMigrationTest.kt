@@ -65,7 +65,7 @@ class RoomMigrationTest {
             assertThat(db.openHelper.readableDatabase.version).isEqualTo(exportedVersions.last())
         } finally {
             db.close()
-            context.deleteDatabase("opentv.db")
+            context.deleteDatabase(OpenTvDatabase.FILE_NAME)
         }
     }
 }

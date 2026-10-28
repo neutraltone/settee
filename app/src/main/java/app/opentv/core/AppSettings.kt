@@ -65,6 +65,17 @@ class AppSettings private constructor(context: Context) {
         _activeProfileId.value = id
     }
 
+    /**
+     * Called when the database is rebuilt from scratch. Rows are gone and ids restart from 1, so
+     * every setting that names a row goes back to its default; the VOD stamp goes too, or a warm
+     * launch would skip the download and leave Movies and Shows empty.
+     */
+    fun forgetDatabaseRows() {
+        setActiveProfile(1L)
+        lastChannelId = 0L
+        vodSyncedAtMillis = 0L
+    }
+
     // ---- Parental controls -------------------------------------------------------------------
 
     /** Whether a parental PIN is set. The PIN itself is only ever stored as a salted hash. */

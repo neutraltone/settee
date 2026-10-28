@@ -8,6 +8,9 @@ plugins {
     alias(libs.plugins.detekt)
 }
 
+// A release changes this and nothing else; versionCodeOf (buildSrc/AppVersion.kt) derives the code.
+val appVersionName = "0.1.0"
+
 android {
     namespace = "app.opentv"
     compileSdk = 35
@@ -16,8 +19,8 @@ android {
         applicationId = "uk.neutraltone.settee"
         minSdk = 23
         targetSdk = 35
-        versionCode = 20
-        versionName = "0.11.8"
+        versionCode = versionCodeOf(appVersionName)
+        versionName = appVersionName
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 

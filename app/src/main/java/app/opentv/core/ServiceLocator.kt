@@ -41,7 +41,9 @@ object ServiceLocator {
 
         val settings: AppSettings by lazy { AppSettings.get(appContext) }
 
-        val database: OpenTvDatabase by lazy { OpenTvDatabase.build(context) }
+        val database: OpenTvDatabase by lazy {
+            OpenTvDatabase.build(context, onWiped = settings::forgetDatabaseRows)
+        }
 
         val httpClient: OkHttpClient by lazy {
             OkHttpClient.Builder()
