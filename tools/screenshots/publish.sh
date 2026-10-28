@@ -2,7 +2,8 @@
 # Writes the Screenshots section into a PR's description and posts the since-last-push comments that
 # screenshots.py rendered, uploading their images with gh --attach (#44). gh rewrites each ./x.png
 # reference to the uploaded file's URL, so nothing is committed anywhere.
-# Needs gh 2.102 or newer (the first with --attach) and GH_TOKEN.
+# Needs gh 2.102 or newer (the first with --attach), GH_TOKEN, and GH_REPO (owner/name): gh runs
+# from the screenshot directories, outside any checkout.
 # Usage: tools/screenshots/publish.sh PR SECTION_DIR [COMMENTS_DIR]
 # No -u: bash 3.2 (macOS) calls an empty array unbound.
 set -eo pipefail
