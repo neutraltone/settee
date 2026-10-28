@@ -15,6 +15,17 @@ tools/check-apk-signer.sh settee.apk settee-release.jks settee
 It needs `keytool` (any JDK) and `apksigner` (Android build-tools). Set `APKSIGNER` to the
 binary, or `ANDROID_HOME` for the newest one under `build-tools/`.
 
+## check-message.sh
+
+The commit convention, `type(#issue): description`, as one POSIX `sh` script. The
+`.githooks/commit-msg` hook and the PR title check in `.github/workflows/pr-hygiene.yml` both call
+it. `check-message-test.sh` is its table of passing and failing examples.
+
+```sh
+tools/check-message.sh "feat(#12): add series rules"   # exit 0, or the rule on stderr
+tools/check-message-test.sh                            # run the examples
+```
+
 ## stalker_mock.py
 
 A tiny, dependency-free mock **Stalker / Ministra portal** for testing OpenTV's Stalker

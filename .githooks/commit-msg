@@ -1,0 +1,15 @@
+#!/bin/sh
+# Rejects a commit whose message doesn't follow the convention in tools/check-message.sh.
+# Enable once per clone: git config core.hooksPath .githooks
+
+# Git runs this hook before it strips comments and leading blank lines, so the subject is the first
+# line that survives that cleanup, not necessarily line one of the file.
+subject=$(grep -v '^#' "$1" | grep -v '^[[:space:]]*$' | head -n 1)
+
+# Messages git writes for merges, reverts and --fixup/--squash. They never reach main: work is
+# squash-merged under the PR title, which CI checks without this exemption.
+if printf '%s\n' "$subject" | grep -Eq '^(Merge |Revert "|fixup! |squash! |amend! )'; then
+    exit 0
+fi
+
+exec "$(git rev-parse --show-toplevel)/tools/check-message.sh" "$subject"

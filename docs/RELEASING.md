@@ -1,14 +1,44 @@
 # Releasing
 
-Releases are cut by pushing a tag. GitHub Actions does the rest.
+Releases are cut by merging the release PR. GitHub Actions does the rest.
 
-```bash
-git tag v0.1.0
-git push origin v0.1.0
-```
+1. Each ticket gets its own branch and PR with a conventional title (`feat(#12): add series rules` —
+   see `CLAUDE.md`), squash-merged into `main` so the title becomes the commit.
+2. On every push to `main`, `.github/workflows/release-please.yml` updates a release PR titled
+   `chore(main): release x.y.z`. It bumps `appVersionName` in `app/build.gradle.kts` (the line marked
+   `x-release-please-version`) and `.release-please-manifest.json`, and adds a `CHANGELOG.md` entry
+   from the `feat`, `fix` and `perf` commits since the last release. Other types don't appear.
+3. Merge the release PR when you want to ship. release-please tags `vx.y.z` and creates the GitHub
+   release, then calls `.github/workflows/release.yml`, which runs the tests, assembles the release
+   APK and attaches `settee-vx.y.z.apk` and `settee.apk`. For the few minutes that takes, the
+   release exists without an APK: the in-app updater ignores it until the APK lands, but the
+   `releases/latest/download/settee.apk` link 404s.
 
-`.github/workflows/release.yml` runs the tests, assembles the release APK and attaches it to a
-GitHub release.
+Don't bump the version, write the changelog entry or push a tag by hand. To rebuild an existing
+release's APKs, run the Release workflow from the Actions tab with its tag.
+
+Before 1.0, a breaking change (`feat(#12)!: …`) bumps the minor version and a `feat` bumps the minor
+version too; a `fix` or `perf` bumps the patch.
+
+### First release
+
+0.1.0 is the baseline and was never released. `bootstrap-sha` in `release-please-config.json` is the
+`main` commit release-please started from, so the first release PR is 0.2.0 (or 0.1.1 if it only
+holds fixes), listing work merged after that commit. Work before it is the hand-written 0.1.0 entry.
+Once a release exists release-please ignores `bootstrap-sha`.
+
+### One-time repository settings
+
+- **Settings → Actions → General → Workflow permissions:** tick "Allow GitHub Actions to create and
+  approve pull requests", or release-please can't open its PR.
+- **Settings → General → Pull Requests:** allow squash merging, with the default commit message set
+  to "Pull request title" (otherwise a single-commit PR's commit title is used instead of the
+  checked PR title).
+- **Checks on the release PR (optional):** a PR opened with the default `GITHUB_TOKEN` doesn't trigger
+  other workflows, so the release PR shows no checks. That's fine while `main` has no required
+  checks. If you add them, create a fine-grained personal access token for this repo with Contents
+  and Pull requests read/write and store it as the `RELEASE_PLEASE_TOKEN` Actions secret; the
+  workflow uses it when present.
 
 ## Signing
 
@@ -18,8 +48,9 @@ version. So every release must be signed with the one release key.
 
 `release.yml` enforces that. After building, it runs `tools/check-apk-signer.sh` to confirm the
 APK is signed by exactly the certificate in the release keystore. If the signing secrets are
-missing, or the APK carries any other signer, the workflow fails before publishing. Each
-release's notes include `signed: yes` and the certificate's SHA-256 digest, which should be
+missing, or the APK carries any other signer, the workflow fails without attaching any APK.
+release-please has already created the release by then, so it stays without an APK: add the
+secrets, then rebuild it by running the Release workflow with its tag. Each release's notes include `signed: yes` and the certificate's SHA-256 digest, which should be
 the same in every release.
 
 Without a keystore, `app/build.gradle.kts` signs release builds with the Android debug key, so
@@ -61,17 +92,18 @@ This is the owner's job. The passwords and backups stay with them, not with CI o
    `release.yml` and `build.gradle.kts` already read them. Then delete the local
    `settee-release.jks`; 1Password holds the copy.
 
-4. Cut a release and check that its notes say `signed: yes`. Note the certificate digest:
+4. Merge the next release PR, and check that its notes say `signed: yes`. Note the certificate digest:
    every later release should show the same one.
 
-5. Confirm that upgrades work on the Fire Stick: install that release, cut a second one, and
+5. Confirm that upgrades work on the Fire Stick: install that release, merge the following release PR, and
    install it over the first (through the in-app updater or `adb install -r settee.apk`). It
    must install without asking you to uninstall, and keep your sources.
 
 ## Version numbers
 
-Bump `appVersionName` in `app/build.gradle.kts` — that is the only number a release changes.
-`versionCode` is worked out from it by `versionCodeOf` (`buildSrc/src/main/kotlin/AppVersion.kt`)
-as major×10000 + minor×100 + patch (0.1.0 → 100, 1.2.3 → 10203), so minor and patch must stay
-below 100. Android uses `versionCode`, not `versionName`, to
-decide what counts as an upgrade, which is why the two are never set by hand separately.
+`appVersionName` in `app/build.gradle.kts` is the only number a release changes, and release-please
+changes it. `versionCode` is worked out from it by `versionCodeOf`
+(`buildSrc/src/main/kotlin/AppVersion.kt`) as major×10000 + minor×100 + patch (0.1.0 → 100,
+1.2.3 → 10203), so minor and patch must stay below 100. Android uses `versionCode`, not
+`versionName`, to decide what counts as an upgrade, which is why the two are never set by hand
+separately.

@@ -1,9 +1,20 @@
 name: Release
 
+# release-please.yml calls this once it has tagged a release. Run it by hand only to rebuild an
+# existing release's APK.
 on:
-  push:
-    tags: ['v*']
+  workflow_call:
+    inputs:
+      tag:
+        description: Release tag to build, e.g. v0.2.0
+        required: true
+        type: string
   workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag to build, e.g. v0.2.0
+        required: true
+        type: string
 
 permissions:
   contents: write
@@ -12,9 +23,13 @@ jobs:
   release:
     name: Build and publish APK
     runs-on: ubuntu-latest
+    env:
+      TAG: ${{ inputs.tag }}
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag }}
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4
@@ -55,7 +70,6 @@ jobs:
       - name: Name the artifact
         id: artifact
         run: |
-          TAG="${GITHUB_REF_NAME}"
           SOURCE=$(find app/build/outputs/apk/release -name '*.apk' | head -1)
           if [ -z "$SOURCE" ]; then
             echo "::error::No APK was produced by assembleRelease"
@@ -78,14 +92,15 @@ jobs:
           DIGEST=$(tools/check-apk-signer.sh "$APK" "$KEYSTORE_PATH" "$KEY_ALIAS")
           echo "digest=$DIGEST" >> "$GITHUB_OUTPUT"
 
-      # The certificate digest lets anyone check that a release is signed with the same key as
-      # the last one, which is what decides whether it will install over it.
+      # release-please writes headings as "## [0.2.0](compare link) (date)". The certificate digest
+      # lets anyone check that a release is signed with the same key as the last one, which is what
+      # decides whether it will install over it.
       - name: Release notes from CHANGELOG
         env:
           DIGEST: ${{ steps.signing.outputs.digest }}
         run: |
-          VERSION="${GITHUB_REF_NAME#v}"
-          awk -v v="$VERSION" '$0 ~ ("^## " v "([^0-9]|$)"){f=1;next} /^## /{f=0} f{print}' CHANGELOG.md > release-notes.md
+          VERSION="${TAG#v}"
+          awk -v v="$VERSION" '$0 ~ ("^## \\[?" v "([^0-9]|$)"){f=1;next} /^## /{f=0} f{print}' CHANGELOG.md > release-notes.md
           if [ ! -s release-notes.md ]; then echo "See the changelog for what is new in this release." > release-notes.md; fi
           {
             echo ""
@@ -96,9 +111,11 @@ jobs:
             echo "Built by GitHub Actions from the tagged commit — the workflow is public, so anyone can verify this APK against the source."
           } >> release-notes.md
 
+      # release-please has already created the release; this attaches the APKs to it.
       - name: Publish release
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ inputs.tag }}
           files: dist/*.apk
           generate_release_notes: false
           body_path: release-notes.md
