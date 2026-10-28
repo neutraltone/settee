@@ -11,7 +11,6 @@ import app.opentv.data.db.CategoryDao
 import app.opentv.data.db.ChannelDao
 import app.opentv.data.db.EpisodeDao
 import app.opentv.data.db.MovieDao
-import app.opentv.data.db.PlaybackPositionDao
 import app.opentv.data.db.SeriesDao
 import app.opentv.data.db.SourceDao
 import app.opentv.data.model.Category
@@ -124,7 +123,7 @@ class CatalogRepository(
     private val movieDao: MovieDao,
     private val seriesDao: SeriesDao,
     private val episodeDao: EpisodeDao,
-    private val positionDao: PlaybackPositionDao,
+    private val viewerLibrary: ViewerLibrary,
     private val api: XtreamApi,
     private val stalkerApi: StalkerApi,
     private val http: OkHttpClient,
@@ -261,7 +260,7 @@ class CatalogRepository(
      * only watched movies that carry no genre — it falls back to top-rated, then recently-added.
      */
     suspend fun recommendedMovies(profileId: Long, limit: Int = 30): List<Movie> =
-        withContext(Dispatchers.IO) { recommendFrom(movieDao.all(), watchedMovieIds(profileId), limit) }
+        withContext(Dispatchers.IO) { recommendFrom(movieDao.all(), startedMovieIds(profileId), limit) }
 
     /**
      * "Recommended for you" from an ALREADY-LOADED movie list — the single-scan path (see
@@ -270,11 +269,10 @@ class CatalogRepository(
      * the (20k-title) table once for the whole home feed rather than once per row.
      */
     suspend fun recommendedMoviesFrom(all: List<Movie>, profileId: Long, limit: Int = 30): List<Movie> =
-        withContext(Dispatchers.IO) { recommendFrom(all, watchedMovieIds(profileId), limit) }
+        withContext(Dispatchers.IO) { recommendFrom(all, startedMovieIds(profileId), limit) }
 
-    /** The movie ids this profile has watched or resumed — the input to the affinity heuristic. */
-    private suspend fun watchedMovieIds(profileId: Long): Set<Long> =
-        positionDao.forProfile(profileId).mapNotNull { movieIdFromMediaKey(it.mediaKey) }.toSet()
+    /** The movie ids this profile has started, Watched or not — the input to the affinity heuristic. */
+    private suspend fun startedMovieIds(profileId: Long): Set<Long> = viewerLibrary.startedMovieIds(profileId)
 
     /** The pure genre-affinity ranking pass shared by [recommendedMovies] and [recommendedMoviesFrom]. */
     private fun recommendFrom(all: List<Movie>, watchedMovieIds: Set<Long>, limit: Int): List<Movie> {
@@ -543,12 +541,6 @@ class CatalogRepository(
 
     /** How many of a title's genres are in the wanted set — the More-Like-This overlap. */
     private fun sharedGenreCount(genre: String?, wanted: Set<String>): Int = splitGenres(genre).count { it in wanted }
-
-    /** Extracts a movie's local id from a playback-position mediaKey ("movie:42" → 42). */
-    private fun movieIdFromMediaKey(mediaKey: String): Long? {
-        val parts = mediaKey.split(":", limit = 2)
-        return if (parts.size == 2 && parts[0] == "movie") parts[1].toLongOrNull() else null
-    }
 
     suspend fun setChannelFavourite(id: Long, favourite: Boolean) = channelDao.setFavourite(id, favourite)
 

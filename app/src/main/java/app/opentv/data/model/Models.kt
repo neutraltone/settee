@@ -347,7 +347,8 @@ data class Episode(
  * Resume position for a movie or episode, per profile. Live TV is never resumed.
  *
  * Keyed by (profileId, mediaKey) so two people's progress through the same film stay separate —
- * the whole point of profiles.
+ * the whole point of profiles. Read and written only through ViewerLibrary, which decides what
+ * counts as Watched.
  */
 @Entity(tableName = "playback_positions", primaryKeys = ["profileId", "mediaKey"])
 data class PlaybackPosition(
@@ -356,11 +357,7 @@ data class PlaybackPosition(
     val positionMillis: Long,
     val durationMillis: Long,
     val updatedAtMillis: Long,
-) {
-    /** Treat the last 5% as "finished" so we do not resume two seconds before the credits. */
-    val isFinished: Boolean
-        get() = durationMillis > 0 && positionMillis.toDouble() / durationMillis > 0.95
-}
+)
 
 /** A local viewing profile — just a name. No account, no password; it lives on this device. */
 @Entity(tableName = "profiles")

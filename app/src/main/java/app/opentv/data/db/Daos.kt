@@ -611,14 +611,17 @@ interface PlaybackPositionDao {
     @Query("SELECT * FROM playback_positions WHERE profileId = :profileId AND mediaKey = :key")
     suspend fun get(profileId: Long, key: String): PlaybackPosition?
 
-    @Query(
-        "SELECT * FROM playback_positions WHERE profileId = :profileId " +
-            "ORDER BY updatedAtMillis DESC LIMIT :limit",
-    )
-    fun observeRecent(profileId: Long, limit: Int = 30): Flow<List<PlaybackPosition>>
+    // No LIMIT: the caller drops Watched titles first, and a LIMIT applied before that lets a run of
+    // newer Watched episodes push every In Progress title off the end.
+    @Query("SELECT * FROM playback_positions WHERE profileId = :profileId ORDER BY updatedAtMillis DESC")
+    fun observeNewestFirst(profileId: Long): Flow<List<PlaybackPosition>>
 
     @Query("SELECT * FROM playback_positions")
     suspend fun all(): List<PlaybackPosition>
+
+    /** One profile's positions of one kind ("ep:", "movie:") — a series page needs every episode's. */
+    @Query("SELECT * FROM playback_positions WHERE profileId = :profileId AND mediaKey LIKE :prefix || '%'")
+    fun observeKind(profileId: Long, prefix: String): Flow<List<PlaybackPosition>>
 
     /** One profile's whole watch history — the input to genre-affinity recommendations. */
     @Query("SELECT * FROM playback_positions WHERE profileId = :profileId")
