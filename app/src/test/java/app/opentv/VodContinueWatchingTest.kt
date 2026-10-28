@@ -58,7 +58,7 @@ class VodContinueWatchingTest {
     )
 
     @Test
-    fun `a series card is titled with the series, numbered with its episode and shows the series' artwork`() = runTest {
+    fun `a series card shows the series and its artwork, and plays under the episode's title`() = runTest {
         graph.database.series().upsertAll(listOf(show))
         graph.database.episodes().upsertAll(listOf(testEpisode(2, 4)))
         graph.viewerLibrary.recordProgress("ep:24", positionMillis = 600_000, durationMillis = 2_400_000)
@@ -69,6 +69,7 @@ class VodContinueWatchingTest {
             ResumeItem(
                 mediaKey = "ep:24",
                 title = "The Show",
+                playerTitle = "S2E4 · Episode 4",
                 posterUrl = "https://example.com/backdrop.jpg",
                 streamUrl = "https://example.com/2-4.mkv",
                 progress = 0.25f,

@@ -38,6 +38,7 @@ import app.opentv.sync.NasSync
 import app.opentv.sync.SyncClient
 import app.opentv.sync.SyncEngine
 import app.opentv.sync.SyncServer
+import app.opentv.ui.vod.playerTitle
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
@@ -751,11 +752,13 @@ class VodViewModel @JvmOverloads constructor(
 
     /**
      * One card in the Continue Watching shelf: a movie, or a series at its In Progress episode or
-     * Up Next. A series card is titled with the series and carries the [episode] it plays.
+     * Up Next. A series card is titled with the series and carries the [episode] it plays;
+     * [playerTitle] is what the player shows once it starts.
      */
     data class ResumeItem(
         val mediaKey: String,
         val title: String,
+        val playerTitle: String,
         val posterUrl: String?,
         val streamUrl: String,
         val progress: Float,
@@ -779,7 +782,7 @@ class VodViewModel @JvmOverloads constructor(
 
     private suspend fun resolveResume(card: ContinueWatchingCard): ResumeItem? = when (card) {
         is ContinueWatchingCard.Movie -> graph.catalogRepository.movie(card.movieId)?.let {
-            ResumeItem("movie:${it.id}", it.displayTitle, it.posterUrl, it.streamUrl, card.progress)
+            ResumeItem("movie:${it.id}", it.displayTitle, it.displayTitle, it.posterUrl, it.streamUrl, card.progress)
         }
         is ContinueWatchingCard.Series -> {
             val ep = card.episode
@@ -787,6 +790,7 @@ class VodViewModel @JvmOverloads constructor(
                 ResumeItem(
                     mediaKey = "ep:${ep.id}",
                     title = it.name,
+                    playerTitle = ep.playerTitle,
                     // The card is landscape: the wide backdrop fits it, a portrait poster only crops.
                     posterUrl = it.backdropUrl ?: it.posterUrl,
                     streamUrl = ep.streamUrl,

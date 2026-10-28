@@ -501,7 +501,7 @@ internal fun ContinueWatchingRow(
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             items(items, key = { it.mediaKey }) { item ->
-                ResumeCard(item) { onResume(item.mediaKey, item.streamUrl, item.title) }
+                ResumeCard(item) { onResume(item.mediaKey, item.streamUrl, item.playerTitle) }
             }
         }
     }

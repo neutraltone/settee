@@ -38,6 +38,7 @@ class ContinueWatchingRowTest {
     private val inProgress = ResumeItem(
         mediaKey = "ep:24",
         title = "The Show",
+        playerTitle = "S2E4 · The one with the card",
         posterUrl = "https://example.com/backdrop.jpg",
         streamUrl = "https://example.com/2-4.mkv",
         progress = 0.25f,
@@ -72,13 +73,13 @@ class ContinueWatchingRowTest {
     }
 
     @Test
-    fun `selecting a card plays its episode`() {
+    fun `selecting a card plays its episode, titled as the series page titles it`() {
         show(inProgress)
 
         compose.onNode(hasClickAction()).requestFocus()
         captureScreen("continue_watching_focused")
         compose.onNode(hasClickAction()).performClick()
 
-        assertThat(played).isEqualTo(Triple("ep:24", "https://example.com/2-4.mkv", "The Show"))
+        assertThat(played).isEqualTo(Triple("ep:24", "https://example.com/2-4.mkv", "S2E4 · The one with the card"))
     }
 }

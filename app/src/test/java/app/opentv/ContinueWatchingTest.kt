@@ -120,4 +120,19 @@ class ContinueWatchingTest {
             .containsExactly(ContinueWatchingCard.Movie(movieId = 3, progress = 0.25f))
         assertThat(seriesCards()).containsExactly(ContinueWatchingCard.Series(testEpisode(1, 1), progress = 0.25f))
     }
+
+    @Test
+    fun `series with nothing left to watch don't crowd out older ones that have`() = runTest {
+        val finished = (1..30).map {
+            testEpisode(1, 1).copy(id = 1_000L + it, seriesId = "done-$it", episodeId = "done-$it")
+        }
+        db.episodes().upsertAll(episodes + finished)
+        stopPartWay(testEpisode(1, 1))
+        finished.forEach {
+            now += 60_000
+            watch(it)
+        }
+
+        assertThat(seriesCards()).containsExactly(ContinueWatchingCard.Series(testEpisode(1, 1), progress = 0.25f))
+    }
 }

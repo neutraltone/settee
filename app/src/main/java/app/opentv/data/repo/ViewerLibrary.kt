@@ -134,10 +134,15 @@ class ViewerLibrary(
             // Played episodes are observed as well as positions so a newly added Up Next shows up.
             combine(positions.observeNewestFirst(pid), episodes.observePlayed(pid)) { list, played ->
                 val byKey = played.associateBy { "$EPISODE_PREFIX${it.id}" }
-                list.mapNotNull { pos -> byKey[pos.mediaKey]?.let { it to pos } }
+                val latestPerSeries = list.mapNotNull { pos -> byKey[pos.mediaKey]?.let { it to pos } }
                     .distinctBy { (ep, _) -> ep.sourceId to ep.seriesId }
-                    .take(IN_PROGRESS_LIMIT)
-                    .mapNotNull { (ep, pos) -> seriesCard(ep, pos) }
+                // Capped on cards, not series: a series with nothing left to watch takes no slot.
+                buildList {
+                    for ((ep, pos) in latestPerSeries) {
+                        if (size == IN_PROGRESS_LIMIT) break
+                        seriesCard(ep, pos)?.let(::add)
+                    }
+                }
             }
         }
 
