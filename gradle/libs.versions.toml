@@ -1,5 +1,5 @@
 [versions]
-agp = "9.4.1"
+agp = "9.5.0"
 # AGP 9 compiles Kotlin with whichever kotlin-gradle-plugin is on the classpath, falling back to the
 # older one it bundles. This version only wins because the compose and serialization plugins below
 # pull it in, so keep at least one of them, or add the KGP to the root buildscript classpath.
