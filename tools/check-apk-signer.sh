@@ -21,10 +21,12 @@ normalise() { tr -d ': ' | tr 'A-F' 'a-f'; }
 
 # -storepass:env keeps the password out of the process list. keytool lists every certificate in
 # the key's chain; the first is the key's own, the one apksigner reports.
-expected=$(keytool -list -v -keystore "$keystore" -alias "$alias" -storepass:env KEYSTORE_PASSWORD |
-    sed -n 's/^[[:space:]]*SHA256:[[:space:]]*//p' | head -n 1 | normalise)
+# keytool reports errors on stdout, so its output is kept to show if no digest comes out of it.
+listing=$(keytool -list -v -keystore "$keystore" -alias "$alias" -storepass:env KEYSTORE_PASSWORD 2>&1) || true
+expected=$(printf '%s\n' "$listing" | sed -n 's/^[[:space:]]*SHA256:[[:space:]]*//p' | head -n 1 | normalise)
 if [ -z "$expected" ]; then
-    echo "Could not read the certificate for alias '$alias' from the keystore" >&2
+    echo "Could not read the certificate for alias '$alias' from $keystore:" >&2
+    printf '%s\n' "$listing" | sed 's/^/  /' >&2
     exit 1
 fi
 
