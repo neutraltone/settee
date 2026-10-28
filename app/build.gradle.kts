@@ -53,13 +53,12 @@ android {
              * Falls back to the debug key when no keystore is configured.
              *
              * An *unsigned* APK cannot be installed on Android at all — it is rejected before
-             * the user sees anything, with an error that explains nothing. For an early
-             * project that means every tester is blocked on the maintainer setting up signing
-             * infrastructure first.
+             * the user sees anything, with an error that explains nothing, so a local release
+             * build without the secrets would otherwise be useless.
              *
-             * The trade-off is real and is written up in docs/RELEASING.md: moving to a
-             * proper keystore later changes the signature, and Android will refuse to upgrade
-             * over a debug-signed install. Set up real signing before announcing publicly.
+             * Android will not upgrade between APKs signed with different keys, so the release
+             * workflow checks the built APK's certificate and refuses to publish a debug-key
+             * build (docs/RELEASING.md).
              */
             signingConfig =
                 if (providers.environmentVariable("KEYSTORE_PATH").orNull != null) {
