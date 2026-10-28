@@ -6,9 +6,12 @@
 package app.opentv.ui
 
 import android.app.Application
+import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import app.opentv.R
 import app.opentv.core.ServiceLocator
+import app.opentv.core.StatusBus
 import app.opentv.data.model.Category
 import app.opentv.data.model.Channel
 import app.opentv.data.model.EpgFeed
@@ -20,46 +23,43 @@ import app.opentv.data.model.Programme
 import app.opentv.data.model.Series
 import app.opentv.data.model.Source
 import app.opentv.data.model.SourceKind
-import app.opentv.data.model.StremioStream
 import app.opentv.data.model.StreamKind
-import app.opentv.data.parser.displayTitle
+import app.opentv.data.model.StremioStream
 import app.opentv.data.parser.ChannelNameNormalizer
+import app.opentv.data.parser.displayTitle
 import app.opentv.data.repo.CatalogRepository
 import app.opentv.data.repo.GenreGroup
 import app.opentv.data.repo.MovieVariantGroup
 import app.opentv.data.repo.PersonTitle
 import app.opentv.data.repo.distinctByQuality
-import app.opentv.R
 import app.opentv.pairing.ManagerServer
 import app.opentv.sync.NasSync
 import app.opentv.sync.SyncBundle
 import app.opentv.sync.SyncClient
 import app.opentv.sync.SyncPosition
 import app.opentv.sync.SyncServer
-import kotlinx.serialization.json.Json
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
-import android.util.Log
-import app.opentv.core.StatusBus
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.flowOn
-import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.mapLatest
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
+import kotlinx.serialization.json.Json
 
 /**
  * View models for the whole app.
@@ -216,6 +216,7 @@ class ChannelsViewModel(app: Application) : AndroidViewModel(app) {
     /** null = All. Exposed so the sidebar can highlight the active entry. */
     val selectedCategory = MutableStateFlow<String?>(null)
     val favouritesOnly = MutableStateFlow(false)
+
     /** Provider filter for the live guide. null = every source. Only surfaced when there's >1 source. */
     val selectedSource = MutableStateFlow<Long?>(null)
     private val query = MutableStateFlow("")
@@ -265,8 +266,11 @@ class ChannelsViewModel(app: Application) : AndroidViewModel(app) {
      */
     private val hiddenCategoryIds: StateFlow<Set<String>> =
         combine(categoryGroups, settings.hiddenCategories, settings.hiddenUnlocked) { groups, hidden, unlocked ->
-            if (unlocked) emptySet()
-            else groups.filter { it.key in hidden }.flatMap { it.ids }.toSet()
+            if (unlocked) {
+                emptySet()
+            } else {
+                groups.filter { it.key in hidden }.flatMap { it.ids }.toSet()
+            }
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptySet())
 
     /** The rail's view of categories: hidden ones drop out until the session is unlocked. */
@@ -307,7 +311,9 @@ class ChannelsViewModel(app: Application) : AndroidViewModel(app) {
         _guideDayOffset.value = (_guideDayOffset.value + delta).coerceIn(0, GUIDE_MAX_DAYS)
     }
 
-    fun guideToNow() { _guideDayOffset.value = 0 }
+    fun guideToNow() {
+        _guideDayOffset.value = 0
+    }
 
     val windowStartMillis: StateFlow<Long> =
         combine(nowTick.map { it - it % HALF_HOUR_MILLIS }, _guideDayOffset) { base, day ->
@@ -316,7 +322,8 @@ class ChannelsViewModel(app: Application) : AndroidViewModel(app) {
             // with real time only on the "today" page.
             if (day <= 0) base else startOfLocalDay(base) + day * DAY_MILLIS
         }.stateIn(
-            viewModelScope, SharingStarted.WhileSubscribed(5_000),
+            viewModelScope,
+            SharingStarted.WhileSubscribed(5_000),
             System.currentTimeMillis().let { it - it % HALF_HOUR_MILLIS },
         )
 
@@ -368,7 +375,12 @@ class ChannelsViewModel(app: Application) : AndroidViewModel(app) {
     @OptIn(ExperimentalCoroutinesApi::class)
     val rows: StateFlow<List<Row>> =
         combine(selectedCategory, favouritesOnly, query, categoryGroups, hiddenCategoryIds) {
-                category, favs, q, groups, hidden ->
+                category,
+                favs,
+                q,
+                groups,
+                hidden,
+            ->
             val ids = category?.let { key -> groups.firstOrNull { it.key == key }?.ids }
             RowsKey(ids, favs, q, hidden)
         }
@@ -396,8 +408,11 @@ class ChannelsViewModel(app: Application) : AndroidViewModel(app) {
                     // Adult/hidden channels drop out everywhere they could otherwise leak —
                     // All, search and favourites — until the session is unlocked.
                     val visible =
-                        if (key.hiddenIds.isEmpty()) scoped
-                        else scoped.filter { it.categoryId !in key.hiddenIds }
+                        if (key.hiddenIds.isEmpty()) {
+                            scoped
+                        } else {
+                            scoped.filter { it.categoryId !in key.hiddenIds }
+                        }
                     // Show the size-aware loading bar for the FIRST guide build only (start-up).
                     // After that the guide is built and flicking between categories is cheap, so
                     // don't flash a loading line on every tap — that bar was only ever meant for
@@ -413,7 +428,12 @@ class ChannelsViewModel(app: Application) : AndroidViewModel(app) {
             .flowOn(Dispatchers.Default)
             // Once the first guide is on screen, clear the start-up bar — and never show it for a
             // plain category switch again.
-            .onEach { if (!guideBuilt) { guideBuilt = true; StatusBus.set(null) } }
+            .onEach {
+                if (!guideBuilt) {
+                    guideBuilt = true
+                    StatusBus.set(null)
+                }
+            }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     private fun buildRows(
@@ -512,7 +532,9 @@ class ChannelsViewModel(app: Application) : AndroidViewModel(app) {
         favouritesOnly.value = false
     }
 
-    fun search(text: String) { query.value = text }
+    fun search(text: String) {
+        query.value = text
+    }
 
     // ---- Dedicated channel search --------------------------------------------------------------
     // Kept separate from the guide's `rows` on purpose: `rows` loads the entire 12-hour EPG
@@ -520,7 +542,9 @@ class ChannelsViewModel(app: Application) : AndroidViewModel(app) {
     // This path is channel-only — no programme window — debounced, and capped by the DAO's LIMIT.
     private val searchInput = MutableStateFlow("")
 
-    fun setSearchQuery(text: String) { searchInput.value = text }
+    fun setSearchQuery(text: String) {
+        searchInput.value = text
+    }
 
     @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
     val searchResults: StateFlow<List<Row>> =
@@ -529,20 +553,27 @@ class ChannelsViewModel(app: Application) : AndroidViewModel(app) {
             .debounce(200)
             .distinctUntilChanged()
             .flatMapLatest { q ->
-                if (q.length < 2) flowOf(emptyList())
-                else graph.catalogRepository.searchChannels(q)
-                    // No EPG here — group channels into rows with no now/next. Finding and
-                    // playing the channel is the job; guide detail would cost the slow query.
-                    .map { channels -> buildRows(channels, emptyMap(), System.currentTimeMillis()) }
+                if (q.length < 2) {
+                    flowOf(emptyList())
+                } else {
+                    graph.catalogRepository.searchChannels(q)
+                        // No EPG here — group channels into rows with no now/next. Finding and
+                        // playing the channel is the job; guide detail would cost the slow query.
+                        .map { channels -> buildRows(channels, emptyMap(), System.currentTimeMillis()) }
+                }
             }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
-    fun tick() { nowTick.value = System.currentTimeMillis() }
+    fun tick() {
+        nowTick.value = System.currentTimeMillis()
+    }
 
     // ---- Channel manager (search, then hide/show or favourite) ---------------------------------
     private val managerInput = MutableStateFlow("")
 
-    fun setManagerQuery(text: String) { managerInput.value = text }
+    fun setManagerQuery(text: String) {
+        managerInput.value = text
+    }
 
     @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
     val managerResults: StateFlow<List<Row>> =
@@ -551,9 +582,12 @@ class ChannelsViewModel(app: Application) : AndroidViewModel(app) {
             .debounce(200)
             .distinctUntilChanged()
             .flatMapLatest { q ->
-                if (q.length < 2) flowOf(emptyList())
-                else graph.catalogRepository.searchChannelsIncludingHidden(q)
-                    .map { channels -> buildRows(channels, emptyMap(), System.currentTimeMillis()) }
+                if (q.length < 2) {
+                    flowOf(emptyList())
+                } else {
+                    graph.catalogRepository.searchChannelsIncludingHidden(q)
+                        .map { channels -> buildRows(channels, emptyMap(), System.currentTimeMillis()) }
+                }
             }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
@@ -602,9 +636,12 @@ class ChannelsViewModel(app: Application) : AndroidViewModel(app) {
         }
             .distinctUntilChanged()
             .flatMapLatest { (source, ids) ->
-                if (ids.isNullOrEmpty()) flowOf(emptyList())
-                else graph.catalogRepository.observeChannelsInIncludingHidden(source, ids)
-                    .map { channels -> buildRows(channels, emptyMap(), System.currentTimeMillis()) }
+                if (ids.isNullOrEmpty()) {
+                    flowOf(emptyList())
+                } else {
+                    graph.catalogRepository.observeChannelsInIncludingHidden(source, ids)
+                        .map { channels -> buildRows(channels, emptyMap(), System.currentTimeMillis()) }
+                }
             }
             .flowOn(Dispatchers.Default)
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
@@ -615,7 +652,9 @@ class ChannelsViewModel(app: Application) : AndroidViewModel(app) {
         managerSelectedCategory.value = null
     }
 
-    fun selectManagerCategory(key: String?) { managerSelectedCategory.value = key }
+    fun selectManagerCategory(key: String?) {
+        managerSelectedCategory.value = key
+    }
 
     /** Hide or show a whole logical channel — every quality variant follows. */
     fun setRowHidden(row: Row, hidden: Boolean) {
@@ -640,9 +679,9 @@ class ChannelsViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     private companion object {
-        const val GUIDE_LOOKAHEAD_MILLIS = 24 * 60 * 60 * 1000L  // a full day fits the grid
+        const val GUIDE_LOOKAHEAD_MILLIS = 24 * 60 * 60 * 1000L // a full day fits the grid
         const val DAY_MILLIS = 24 * 60 * 60 * 1000L
-        const val GUIDE_MAX_DAYS = 6  // browse up to a week out, matching typical XMLTV depth
+        const val GUIDE_MAX_DAYS = 6 // browse up to a week out, matching typical XMLTV depth
         const val HALF_HOUR_MILLIS = 30 * 60 * 1000L
     }
 }
@@ -783,9 +822,13 @@ class VodViewModel(app: Application) : AndroidViewModel(app) {
         .flatMapLatest { graph.catalogRepository.observeSeries(it) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
-    fun selectMovieCategory(id: String?) { movieCategory.value = id }
+    fun selectMovieCategory(id: String?) {
+        movieCategory.value = id
+    }
 
-    fun selectSeriesCategory(id: String?) { seriesCategory.value = id }
+    fun selectSeriesCategory(id: String?) {
+        seriesCategory.value = id
+    }
 
     /** True when at least one Stremio add-on is configured — gates the "add-on sources" button. */
     val hasAddons: StateFlow<Boolean> =
@@ -885,9 +928,13 @@ class VodViewModel(app: Application) : AndroidViewModel(app) {
                 // recomposition must not trigger another full-library scan. Only a profile change or
                 // a catalogue whose size moved gets past here.
                 val prev = loadedHomeFeeds
-                if (prev != null && prev.profileId == profileId &&
-                    prev.movieCount == movieCount && prev.seriesCount == seriesCount
-                ) return@withLock
+                if (prev != null &&
+                    prev.profileId == profileId &&
+                    prev.movieCount == movieCount &&
+                    prev.seriesCount == seriesCount
+                ) {
+                    return@withLock
+                }
 
                 // One scan of each library (repo switches to IO), reused across every computed row.
                 val allMovies = runCatching { graph.catalogRepository.allMovies() }.getOrDefault(emptyList())
@@ -917,7 +964,7 @@ class VodViewModel(app: Application) : AndroidViewModel(app) {
     @Volatile private var vodRequested = false
 
     /** How long a fetched VOD catalogue is trusted before a warm launch re-syncs it. */
-    private val VOD_TTL_MILLIS = 12L * 60 * 60 * 1000  // 12 hours
+    private val vodTtlMillis = 12L * 60 * 60 * 1000 // 12 hours
 
     fun ensureVodLoaded() {
         if (vodRequested) return
@@ -948,7 +995,7 @@ class VodViewModel(app: Application) : AndroidViewModel(app) {
                 graph.catalogRepository.movieCount() + graph.catalogRepository.seriesCount()
             }.getOrDefault(0) > 0
             val last = settings.vodSyncedAtMillis
-            val fresh = last > 0 && now - last < VOD_TTL_MILLIS
+            val fresh = last > 0 && now - last < vodTtlMillis
             if (haveCatalogue && fresh) {
                 loadHomeFeeds()
                 return
@@ -974,7 +1021,9 @@ class VodViewModel(app: Application) : AndroidViewModel(app) {
     // ---- VOD search (shared by the unified search screen) --------------------------------------
     private val vodSearchInput = MutableStateFlow("")
 
-    fun setVodSearchQuery(text: String) { vodSearchInput.value = text }
+    fun setVodSearchQuery(text: String) {
+        vodSearchInput.value = text
+    }
 
     @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
     val movieResults: StateFlow<List<Movie>> =
@@ -1011,8 +1060,7 @@ class VodViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    fun episodes(series: Series) =
-        graph.catalogRepository.observeEpisodes(series.sourceId, series.seriesId)
+    fun episodes(series: Series) = graph.catalogRepository.observeEpisodes(series.sourceId, series.seriesId)
 
     /** For the series detail screen: look the series up by row id. */
     fun seriesById(id: Long): kotlinx.coroutines.flow.Flow<Series?> =
@@ -1039,12 +1087,10 @@ class VodViewModel(app: Application) : AndroidViewModel(app) {
     suspend fun moreLikeThis(movie: Movie): List<Movie> = graph.catalogRepository.moreLikeThis(movie)
 
     /** "More like this" for the series detail screen. */
-    suspend fun moreLikeThisSeries(series: Series): List<Series> =
-        graph.catalogRepository.moreLikeThisSeries(series)
+    suspend fun moreLikeThisSeries(series: Series): List<Series> = graph.catalogRepository.moreLikeThisSeries(series)
 
     /** Every library title (movies + series) featuring a person — the Person screen's grid. */
-    suspend fun titlesWithPerson(name: String): List<PersonTitle> =
-        graph.catalogRepository.titlesWithPerson(name)
+    suspend fun titlesWithPerson(name: String): List<PersonTitle> = graph.catalogRepository.titlesWithPerson(name)
 
     /** The active profile's saved resume position for a movie/episode, or null — drives Resume vs Watch now. */
     suspend fun resumePosition(mediaKey: String): PlaybackPosition? =
@@ -1102,7 +1148,9 @@ class ProfilesViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch { graph.profiles.rename(id, name.trim().ifBlank { "Profile" }) }
     }
 
-    fun select(id: Long) { settings.setActiveProfile(id) }
+    fun select(id: Long) {
+        settings.setActiveProfile(id)
+    }
 
     fun remove(id: Long) {
         // The base profile stays — there is always at least one to be.
@@ -1167,8 +1215,11 @@ class SyncViewModel(app: Application) : AndroidViewModel(app) {
             val ctx = getApplication<Application>()
             _nasState.value = when (val result = nas.sync()) {
                 is NasSync.Result.Success ->
-                    if (result.peers == 0) NasState.Done(ctx.getString(R.string.sync_nas_uploaded))
-                    else NasState.Done(ctx.getString(R.string.sync_nas_done, result.merged, result.peers))
+                    if (result.peers == 0) {
+                        NasState.Done(ctx.getString(R.string.sync_nas_uploaded))
+                    } else {
+                        NasState.Done(ctx.getString(R.string.sync_nas_done, result.merged, result.peers))
+                    }
                 is NasSync.Result.NotConfigured ->
                     NasState.Failed(ctx.getString(R.string.sync_nas_needs_setup))
                 is NasSync.Result.Failed ->
@@ -1192,7 +1243,9 @@ class SyncViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    fun resetReceive() { _receiveState.value = ReceiveState.Idle }
+    fun resetReceive() {
+        _receiveState.value = ReceiveState.Idle
+    }
 
     private suspend fun buildBundleJson(): String {
         val names = graph.profiles.all().associate { it.id to it.name }

@@ -39,8 +39,11 @@ class SmbDataSource(private val settings: AppSettings) : BaseDataSource(true) {
         this.handle = handle
         position = dataSpec.position
         bytesRemaining =
-            if (dataSpec.length != C.LENGTH_UNSET.toLong()) dataSpec.length
-            else (handle.length - dataSpec.position).coerceAtLeast(0)
+            if (dataSpec.length != C.LENGTH_UNSET.toLong()) {
+                dataSpec.length
+            } else {
+                (handle.length - dataSpec.position).coerceAtLeast(0)
+            }
         opened = true
         transferStarted(dataSpec)
         return bytesRemaining
@@ -86,18 +89,15 @@ class RoutingDataSourceFactory(
     private val default: DataSource.Factory,
     private val bySchemes: Map<String, DataSource.Factory>,
 ) : DataSource.Factory {
-    override fun createDataSource(): DataSource =
-        RoutingDataSource(
-            default.createDataSource(),
-            bySchemes.mapValues { (_, factory) -> factory.createDataSource() },
-        )
+    override fun createDataSource(): DataSource = RoutingDataSource(
+        default.createDataSource(),
+        bySchemes.mapValues { (_, factory) -> factory.createDataSource() },
+    )
 }
 
 @OptIn(UnstableApi::class)
-private class RoutingDataSource(
-    private val default: DataSource,
-    private val byScheme: Map<String, DataSource>,
-) : DataSource {
+private class RoutingDataSource(private val default: DataSource, private val byScheme: Map<String, DataSource>) :
+    DataSource {
     private var active: DataSource? = null
 
     override fun addTransferListener(transferListener: TransferListener) {
@@ -116,8 +116,7 @@ private class RoutingDataSource(
 
     override fun getUri(): Uri? = active?.uri
 
-    override fun getResponseHeaders(): Map<String, List<String>> =
-        active?.responseHeaders ?: emptyMap()
+    override fun getResponseHeaders(): Map<String, List<String>> = active?.responseHeaders ?: emptyMap()
 
     override fun close() {
         active?.close()

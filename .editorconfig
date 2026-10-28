@@ -1,0 +1,18 @@
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+
+[*.{kt,kts}]
+indent_size = 4
+indent_style = space
+max_line_length = 120
+# android_studio matches how the existing code was written; ktlint_official would rewrap most files.
+ktlint_code_style = android_studio
+# The codebase already uses trailing commas on multi-line declarations and calls.
+ij_kotlin_allow_trailing_comma = true
+ij_kotlin_allow_trailing_comma_on_call_site = true
+# Composables are PascalCase by Compose convention.
+ktlint_function_naming_ignore_when_annotated_with = Composable

@@ -7,12 +7,10 @@ package app.opentv.ui
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.animateDpAsState
-import app.opentv.R
-import app.opentv.core.findActivity
-import app.opentv.core.StatusBus
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -34,11 +32,11 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Tv
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.LinearProgressIndicator
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -51,16 +49,18 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import app.opentv.core.AppSettings
-import androidx.compose.foundation.focusGroup
-import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import app.opentv.R
+import app.opentv.core.AppSettings
+import app.opentv.core.StatusBus
+import app.opentv.core.findActivity
 import app.opentv.data.model.Channel
 import app.opentv.data.model.Movie
 import app.opentv.data.model.Recording
@@ -146,7 +146,10 @@ fun MainScreen(
             title = { Text(stringResource(R.string.exit_title)) },
             text = { Text(stringResource(R.string.exit_body)) },
             confirmButton = {
-                TextButton(onClick = { showExit = false; context.findActivity()?.finish() }) {
+                TextButton(onClick = {
+                    showExit = false
+                    context.findActivity()?.finish()
+                }) {
                     Text(stringResource(R.string.exit_confirm))
                 }
             },
@@ -160,47 +163,47 @@ fun MainScreen(
     // screen has its own category rail down its left edge, and an overlaying menu would land on top
     // of it and leave a sliver poking out — so they live side by side and never collide.
     Column(Modifier.fillMaxSize()) {
-      Row(Modifier.weight(1f).fillMaxWidth()) {
-        NavRail(
-            tabs = visibleTabs,
-            current = tab,
-            onSelect = { tab = it },
-            onOpenSearch = onOpenSearch,
-            onOpenSettings = onOpenSettings,
-            onOpenProfiles = onOpenProfiles,
-            activeProfileName = activeProfileName,
-        )
+        Row(Modifier.weight(1f).fillMaxWidth()) {
+            NavRail(
+                tabs = visibleTabs,
+                current = tab,
+                onSelect = { tab = it },
+                onOpenSearch = onOpenSearch,
+                onOpenSettings = onOpenSettings,
+                onOpenProfiles = onOpenProfiles,
+                activeProfileName = activeProfileName,
+            )
 
-        Box(Modifier.weight(1f).fillMaxHeight()) {
-            when (tab) {
-                Tab.LIVE -> LiveScreen(
-                    isTelevision = isTelevision,
-                    hasSources = hasSources,
-                    isSyncing = isSyncing,
-                    onPlayChannel = onPlayChannel,
-                    onAddSource = onAddSource,
-                    onRefresh = onRefresh,
-                    onPlayCatchup = onPlayCatchup,
-                )
-                Tab.MOVIES -> MoviesScreen(
-                    onOpenMovie = onOpenMovie,
-                    onResume = onResume,
-                    onOpenSearch = onOpenSearch,
-                    hasSources = hasSources,
-                    isSyncing = isSyncing,
-                )
-                Tab.SHOWS -> SeriesScreen(
-                    onOpenSeries = onOpenSeries,
-                    onResume = onResume,
-                    onOpenSearch = onOpenSearch,
-                    hasSources = hasSources,
-                    isSyncing = isSyncing,
-                )
-                Tab.RECORDINGS -> RecordingsScreen(onPlay = onPlayRecording)
+            Box(Modifier.weight(1f).fillMaxHeight()) {
+                when (tab) {
+                    Tab.LIVE -> LiveScreen(
+                        isTelevision = isTelevision,
+                        hasSources = hasSources,
+                        isSyncing = isSyncing,
+                        onPlayChannel = onPlayChannel,
+                        onAddSource = onAddSource,
+                        onRefresh = onRefresh,
+                        onPlayCatchup = onPlayCatchup,
+                    )
+                    Tab.MOVIES -> MoviesScreen(
+                        onOpenMovie = onOpenMovie,
+                        onResume = onResume,
+                        onOpenSearch = onOpenSearch,
+                        hasSources = hasSources,
+                        isSyncing = isSyncing,
+                    )
+                    Tab.SHOWS -> SeriesScreen(
+                        onOpenSeries = onOpenSeries,
+                        onResume = onResume,
+                        onOpenSearch = onOpenSearch,
+                        hasSources = hasSources,
+                        isSyncing = isSyncing,
+                    )
+                    Tab.RECORDINGS -> RecordingsScreen(onPlay = onPlayRecording)
+                }
             }
         }
-      }
-      StatusBar()
+        StatusBar()
     }
 }
 
@@ -320,22 +323,20 @@ private fun NavRail(
 }
 
 @Composable
-private fun RailItem(
-    icon: ImageVector,
-    label: String,
-    expanded: Boolean,
-    selected: Boolean,
-    onClick: () -> Unit,
-) {
+private fun RailItem(icon: ImageVector, label: String, expanded: Boolean, selected: Boolean, onClick: () -> Unit) {
     var focused by remember { mutableStateOf(false) }
     val bg = when {
         focused -> MaterialTheme.colorScheme.primary
         selected -> MaterialTheme.colorScheme.surfaceVariant
         else -> MaterialTheme.colorScheme.surface
     }
-    val tint = if (focused) MaterialTheme.colorScheme.onPrimary
-    else if (selected) MaterialTheme.colorScheme.onSurface
-    else MaterialTheme.colorScheme.onSurfaceVariant
+    val tint = if (focused) {
+        MaterialTheme.colorScheme.onPrimary
+    } else if (selected) {
+        MaterialTheme.colorScheme.onSurface
+    } else {
+        MaterialTheme.colorScheme.onSurfaceVariant
+    }
 
     Row(
         Modifier

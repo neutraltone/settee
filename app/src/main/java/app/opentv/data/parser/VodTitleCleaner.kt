@@ -63,14 +63,14 @@ object VodTitleCleaner {
      * because its `+` is not a bare-token character.
      */
     private val SERVICE_CODES: Set<String> = setOf(
-        "NF",                    // Netflix
-        "AMZ", "AMZN", "PMV",    // Amazon Prime Video
-        "DSNY", "DNSP", "D+",    // Disney+
-        "HBO", "HMAX",           // HBO / Max
-        "ATV", "ATVP",           // Apple TV+
-        "PMT",                   // Paramount+
-        "HULU",                  // Hulu
-        "PCOK",                  // Peacock
+        "NF", // Netflix
+        "AMZ", "AMZN", "PMV", // Amazon Prime Video
+        "DSNY", "DNSP", "D+", // Disney+
+        "HBO", "HMAX", // HBO / Max
+        "ATV", "ATVP", // Apple TV+
+        "PMT", // Paramount+
+        "HULU", // Hulu
+        "PCOK", // Peacock
     )
 
     /** Edge junk trimmed off the final result — never a parenthesis, so a trailing `(2023)` stays. */

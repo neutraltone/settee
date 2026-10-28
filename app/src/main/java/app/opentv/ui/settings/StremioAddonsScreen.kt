@@ -84,7 +84,9 @@ class StremioAddonsViewModel(app: Application) : AndroidViewModel(app) {
 
     fun remove(addon: StremioAddon) = graph.settings.removeStremioAddon(addon.manifestUrl)
 
-    fun clearStatus() { _status.value = Status.Idle }
+    fun clearStatus() {
+        _status.value = Status.Idle
+    }
 }
 
 /**
@@ -213,5 +215,4 @@ private fun AddonRow(addon: StremioAddon, onRemove: () -> Unit) {
 }
 
 /** Host only — a personalised manifest URL can embed a key, which has no place on a settings list. */
-private fun hostOf(url: String): String =
-    runCatching { java.net.URI(url).host ?: url }.getOrDefault(url)
+private fun hostOf(url: String): String = runCatching { java.net.URI(url).host ?: url }.getOrDefault(url)

@@ -46,11 +46,11 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.media3.common.util.UnstableApi
-import app.opentv.R
-import app.opentv.data.model.shownName
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
+import app.opentv.R
+import app.opentv.data.model.shownName
 import app.opentv.ui.ChannelsViewModel
 import coil.compose.AsyncImage
 import java.text.SimpleDateFormat
@@ -154,7 +154,11 @@ fun GuidePreview(
                     modifier = Modifier.size(16.dp),
                 )
                 Spacer(Modifier.width(4.dp))
-                Text(stringResource(R.string.guide_watch_label), color = Color.White, style = MaterialTheme.typography.labelMedium)
+                Text(
+                    stringResource(R.string.guide_watch_label),
+                    color = Color.White,
+                    style = MaterialTheme.typography.labelMedium,
+                )
             }
         }
 
@@ -170,8 +174,11 @@ fun GuidePreview(
                         Icon(
                             Icons.Default.KeyboardArrowLeft,
                             contentDescription = stringResource(R.string.guide_prev_day),
-                            tint = if (canGoPrevDay) MaterialTheme.colorScheme.onSurface
-                            else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f),
+                            tint = if (canGoPrevDay) {
+                                MaterialTheme.colorScheme.onSurface
+                            } else {
+                                MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
+                            },
                         )
                     }
                     Text(
@@ -195,7 +202,13 @@ fun GuidePreview(
                         // something (● start → ■ stop) rather than looking inert.
                         Icon(
                             if (isRecording) Icons.Default.Stop else Icons.Default.FiberManualRecord,
-                            contentDescription = if (isRecording) stringResource(R.string.guide_cd_stop_recording) else stringResource(R.string.guide_cd_record_now),
+                            contentDescription = if (isRecording) {
+                                stringResource(
+                                    R.string.guide_cd_stop_recording,
+                                )
+                            } else {
+                                stringResource(R.string.guide_cd_record_now)
+                            },
                             tint = Color(0xFFE53935),
                         )
                     }

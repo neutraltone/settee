@@ -105,10 +105,10 @@ class UpdateChecker(
             text = text
                 .replace(Regex("""\[([^\]]+)\]\([^)]*\)"""), "$1") // [label](url) -> label
                 .replace(Regex("""[*_]{1,3}([^*_\n]+)[*_]{1,3}"""), "$1") // **bold**/_em_ -> plain
-                .replace("`", "")                                   // inline-code ticks
-                .replace(Regex("""(?m)^\s{0,3}#{1,6}\s*"""), "")    // ## headers -> text
-                .replace(Regex("""(?m)^\s*[-*]\s+"""), "• ")        // "- item" -> "• item"
-                .replace(Regex("""(?m)^\s*-{3,}\s*$"""), "")        // --- horizontal rules
+                .replace("`", "") // inline-code ticks
+                .replace(Regex("""(?m)^\s{0,3}#{1,6}\s*"""), "") // ## headers -> text
+                .replace(Regex("""(?m)^\s*[-*]\s+"""), "• ") // "- item" -> "• item"
+                .replace(Regex("""(?m)^\s*-{3,}\s*$"""), "") // --- horizontal rules
             return text.lines().joinToString("\n") { it.trimEnd() }
                 .replace(Regex("\n{3,}"), "\n\n")
                 .trim()
@@ -134,9 +134,8 @@ class UpdateChecker(
             return false
         }
 
-        private fun versionParts(v: String): List<Int> =
-            v.trim().trimStart('v', 'V')
-                .split('.', '-', '+')
-                .map { part -> part.takeWhile(Char::isDigit).toIntOrNull() ?: 0 }
+        private fun versionParts(v: String): List<Int> = v.trim().trimStart('v', 'V')
+            .split('.', '-', '+')
+            .map { part -> part.takeWhile(Char::isDigit).toIntOrNull() ?: 0 }
     }
 }

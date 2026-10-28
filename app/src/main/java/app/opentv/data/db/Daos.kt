@@ -66,7 +66,7 @@ interface ChannelDao {
           AND (:sourceId IS NULL OR sourceId = :sourceId)
           AND (:categoryId IS NULL OR categoryId = :categoryId)
         ORDER BY sortIndex, displayName
-        """
+        """,
     )
     fun observe(sourceId: Long?, categoryId: String?): Flow<List<Channel>>
 
@@ -84,7 +84,7 @@ interface ChannelDao {
         SELECT * FROM channels
         WHERE hidden = 0 AND categoryId IN (:categoryIds)
         ORDER BY sortIndex, displayName
-        """
+        """,
     )
     fun observeInCategories(categoryIds: List<String>): Flow<List<Channel>>
 
@@ -102,7 +102,7 @@ interface ChannelDao {
         WHERE (:sourceId IS NULL OR sourceId = :sourceId)
           AND categoryId IN (:categoryIds)
         ORDER BY sortIndex, displayName
-        """
+        """,
     )
     fun observeInCategoriesIncludingHidden(sourceId: Long?, categoryIds: List<String>): Flow<List<Channel>>
 
@@ -118,7 +118,7 @@ interface ChannelDao {
         WHERE (:sourceId IS NULL OR sourceId = :sourceId)
           AND categoryId = :categoryId
         ORDER BY sortIndex, displayName
-        """
+        """,
     )
     suspend fun channelsInCategoryIncludingHidden(sourceId: Long?, categoryId: String): List<Channel>
 
@@ -133,7 +133,7 @@ interface ChannelDao {
         FROM channels
         WHERE categoryId IS NOT NULL
         GROUP BY sourceId, categoryId
-        """
+        """,
     )
     suspend fun channelCountsByCategory(): List<CategoryChannelCount>
 
@@ -144,7 +144,7 @@ interface ChannelDao {
           AND (displayName LIKE '%' || :query || '%' OR name LIKE '%' || :query || '%')
         ORDER BY favourite DESC, sortIndex, displayName
         LIMIT :limit
-        """
+        """,
     )
     fun search(query: String, limit: Int = 200): Flow<List<Channel>>
 
@@ -155,7 +155,7 @@ interface ChannelDao {
         WHERE (displayName LIKE '%' || :query || '%' OR name LIKE '%' || :query || '%')
         ORDER BY hidden, favourite DESC, sortIndex, displayName
         LIMIT :limit
-        """
+        """,
     )
     fun searchIncludingHidden(query: String, limit: Int = 200): Flow<List<Channel>>
 
@@ -168,7 +168,7 @@ interface ChannelDao {
         SELECT * FROM channels
         WHERE groupKey = :groupKey AND groupKey != '' AND hidden = 0
         ORDER BY qualityRank DESC, displayName
-        """
+        """,
     )
     suspend fun variantsInGroup(groupKey: String): List<Channel>
 
@@ -378,7 +378,7 @@ interface ProgrammeDao {
         WHERE endUtcMillis > :fromUtcMillis
           AND startUtcMillis < :toUtcMillis
         ORDER BY epgChannelId, startUtcMillis
-        """
+        """,
     )
     fun observeWindow(fromUtcMillis: Long, toUtcMillis: Long): Flow<List<Programme>>
 
@@ -387,7 +387,7 @@ interface ProgrammeDao {
         """
         SELECT * FROM programmes
         WHERE startUtcMillis <= :nowUtcMillis AND endUtcMillis > :nowUtcMillis
-        """
+        """,
     )
     fun observeNow(nowUtcMillis: Long): Flow<List<Programme>>
 
@@ -396,7 +396,7 @@ interface ProgrammeDao {
         SELECT * FROM programmes
         WHERE epgChannelId = :channelId AND endUtcMillis > :nowUtcMillis
         ORDER BY startUtcMillis LIMIT :limit
-        """
+        """,
     )
     suspend fun upcoming(channelId: String, nowUtcMillis: Long, limit: Int): List<Programme>
 
@@ -425,7 +425,7 @@ interface MovieDao {
         SELECT * FROM movies
         WHERE (:categoryId IS NULL OR categoryId = :categoryId)
         ORDER BY addedMillis DESC, name
-        """
+        """,
     )
     fun observe(categoryId: String?): Flow<List<Movie>>
 
@@ -463,7 +463,7 @@ interface MovieDao {
           AND (:categoryId IS NULL OR categoryId = :categoryId)
         ORDER BY rating DESC, addedMillis DESC
         LIMIT :limit
-        """
+        """,
     )
     suspend fun similarByCategory(sourceId: Long, categoryId: String?, excludeId: Long, limit: Int): List<Movie>
 
@@ -479,7 +479,7 @@ interface MovieDao {
         WHERE `cast` IS NOT NULL AND `cast` != '' AND `cast` LIKE '%' || :name || '%'
         ORDER BY rating DESC, addedMillis DESC
         LIMIT :limit
-        """
+        """,
     )
     suspend fun moviesWithActor(name: String, limit: Int): List<Movie>
 
@@ -490,7 +490,7 @@ interface MovieDao {
         WHERE director IS NOT NULL AND director != '' AND director LIKE '%' || :name || '%'
         ORDER BY rating DESC, addedMillis DESC
         LIMIT :limit
-        """
+        """,
     )
     suspend fun moviesByDirector(name: String, limit: Int): List<Movie>
 
@@ -525,7 +525,7 @@ interface SeriesDao {
         SELECT * FROM series
         WHERE (:categoryId IS NULL OR categoryId = :categoryId)
         ORDER BY addedMillis DESC, name
-        """
+        """,
     )
     fun observe(categoryId: String?): Flow<List<Series>>
 
@@ -552,7 +552,7 @@ interface SeriesDao {
           AND (:categoryId IS NULL OR categoryId = :categoryId)
         ORDER BY rating DESC, addedMillis DESC
         LIMIT :limit
-        """
+        """,
     )
     suspend fun similarByCategory(sourceId: Long, categoryId: String?, excludeId: Long, limit: Int): List<Series>
 
@@ -564,7 +564,7 @@ interface SeriesDao {
         WHERE `cast` IS NOT NULL AND `cast` != '' AND `cast` LIKE '%' || :name || '%'
         ORDER BY rating DESC, addedMillis DESC
         LIMIT :limit
-        """
+        """,
     )
     suspend fun seriesWithActor(name: String, limit: Int): List<Series>
 
@@ -688,7 +688,7 @@ interface RecordingDao {
         """
         SELECT COUNT(*) FROM recordings
         WHERE seriesRuleId = :ruleId AND channelId = :channelId AND scheduledStartMillis = :startMillis
-        """
+        """,
     )
     suspend fun countForRuleAt(ruleId: Long, channelId: Long, startMillis: Long): Int
 
@@ -698,7 +698,7 @@ interface RecordingDao {
         SELECT * FROM recordings
         WHERE channelId = :channelId AND scheduledStartMillis = :startMillis
           AND status IN ('SCHEDULED', 'RECORDING') LIMIT 1
-        """
+        """,
     )
     suspend fun bookingAt(channelId: Long, startMillis: Long): Recording?
 
@@ -719,12 +719,12 @@ interface RecordingDao {
     suspend fun setFilePath(id: Long, filePath: String)
 
     @Query(
-        "UPDATE recordings SET status = :status, startedAtMillis = :startedAt WHERE id = :id"
+        "UPDATE recordings SET status = :status, startedAtMillis = :startedAt WHERE id = :id",
     )
     suspend fun markStarted(id: Long, status: RecordingStatus, startedAt: Long)
 
     @Query(
-        "UPDATE recordings SET status = :status, endedAtMillis = :endedAt, sizeBytes = :bytes, error = :error WHERE id = :id"
+        "UPDATE recordings SET status = :status, endedAtMillis = :endedAt, sizeBytes = :bytes, error = :error WHERE id = :id",
     )
     suspend fun markFinished(id: Long, status: RecordingStatus, endedAt: Long, bytes: Long, error: String?)
 

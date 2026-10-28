@@ -24,7 +24,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.FiberManualRecord
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
@@ -34,6 +33,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -43,15 +43,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.compose.runtime.collectAsState
 import app.opentv.R
 import app.opentv.core.ServiceLocator
 import app.opentv.data.model.Profile
@@ -139,12 +138,17 @@ fun RecordingsScreen(onPlay: (Recording) -> Unit) {
     // connection clash. Overlaps spread across two providers (the multi-provider fallback did its
     // job) both record fine and aren't flagged.
     val clashingIds = buildSet {
-        for (i in scheduled.indices) for (j in i + 1 until scheduled.size) {
-            val a = scheduled[i]; val b = scheduled[j]
-            if (a.sourceId == b.sourceId &&
-                a.scheduledStartMillis < b.scheduledEndMillis && b.scheduledStartMillis < a.scheduledEndMillis
-            ) {
-                add(a.id); add(b.id)
+        for (i in scheduled.indices) {
+            for (j in i + 1 until scheduled.size) {
+                val a = scheduled[i]
+                val b = scheduled[j]
+                if (a.sourceId == b.sourceId &&
+                    a.scheduledStartMillis < b.scheduledEndMillis &&
+                    b.scheduledStartMillis < a.scheduledEndMillis
+                ) {
+                    add(a.id)
+                    add(b.id)
+                }
             }
         }
     }
@@ -261,8 +265,11 @@ private fun ReminderRow(reminder: Reminder, onCancel: () -> Unit) {
                 overflow = TextOverflow.Ellipsis,
             )
             Spacer(Modifier.height(2.dp))
-            val prefix = if (reminder.autoTune) stringResource(R.string.rec_reminder_autoswitch)
-            else stringResource(R.string.rec_reminder_plain)
+            val prefix = if (reminder.autoTune) {
+                stringResource(R.string.rec_reminder_autoswitch)
+            } else {
+                stringResource(R.string.rec_reminder_plain)
+            }
             Text(
                 "$prefix · ${reminder.channelName} · ${formatWhen(reminder.startUtcMillis)}",
                 style = MaterialTheme.typography.bodySmall,
@@ -453,7 +460,11 @@ private fun statusLine(rec: Recording): String {
             listOf(whenStr, rec.channelName, formatDuration(rec.durationMillis), formatSize(rec.sizeBytes))
                 .filter { it.isNotBlank() }.joinToString(" · ")
         RecordingStatus.FAILED ->
-            stringResource(R.string.rec_status_failed_at, whenStr, rec.error ?: stringResource(R.string.rec_error_unknown))
+            stringResource(
+                R.string.rec_status_failed_at,
+                whenStr,
+                rec.error ?: stringResource(R.string.rec_error_unknown),
+            )
     }
 }
 

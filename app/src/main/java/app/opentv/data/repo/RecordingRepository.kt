@@ -13,10 +13,7 @@ import app.opentv.data.model.SeriesRule
 import kotlinx.coroutines.flow.Flow
 
 /** Reads and writes over the recordings + series-rule tables. Pure data access, no capture logic. */
-class RecordingRepository(
-    private val dao: RecordingDao,
-    private val ruleDao: SeriesRuleDao,
-) {
+class RecordingRepository(private val dao: RecordingDao, private val ruleDao: SeriesRuleDao) {
     fun observeAll(): Flow<List<Recording>> = dao.observeAll()
     fun observeActive(): Flow<List<Recording>> = dao.observeActive()
     fun observeRules(): Flow<List<SeriesRule>> = ruleDao.observeAll()
@@ -30,25 +27,22 @@ class RecordingRepository(
     suspend fun insert(recording: Recording): Long = dao.insert(recording)
     suspend fun update(recording: Recording) = dao.update(recording)
 
-    suspend fun markStarted(id: Long, atMillis: Long) =
-        dao.markStarted(id, RecordingStatus.RECORDING, atMillis)
+    suspend fun markStarted(id: Long, atMillis: Long) = dao.markStarted(id, RecordingStatus.RECORDING, atMillis)
 
     suspend fun setSize(id: Long, bytes: Long) = dao.setSize(id, bytes)
 
     /** Repoint a recording at its real locator (a USB capture's content:// URI, once created). */
     suspend fun setFilePath(id: Long, filePath: String) = dao.setFilePath(id, filePath)
 
-    suspend fun markFinished(id: Long, ok: Boolean, atMillis: Long, bytes: Long, error: String?) =
-        dao.markFinished(
-            id = id,
-            status = if (ok) RecordingStatus.COMPLETED else RecordingStatus.FAILED,
-            endedAt = atMillis,
-            bytes = bytes,
-            error = error,
-        )
+    suspend fun markFinished(id: Long, ok: Boolean, atMillis: Long, bytes: Long, error: String?) = dao.markFinished(
+        id = id,
+        status = if (ok) RecordingStatus.COMPLETED else RecordingStatus.FAILED,
+        endedAt = atMillis,
+        bytes = bytes,
+        error = error,
+    )
 
-    suspend fun setStatus(id: Long, status: RecordingStatus, error: String? = null) =
-        dao.setStatus(id, status, error)
+    suspend fun setStatus(id: Long, status: RecordingStatus, error: String? = null) = dao.setStatus(id, status, error)
 
     suspend fun delete(id: Long) = dao.delete(id)
 
@@ -67,6 +61,5 @@ class RecordingRepository(
         dao.countForRuleAt(ruleId, channelId, startMillis) > 0
 
     /** An existing live/scheduled booking for this exact airing (channel + start), or null. */
-    suspend fun bookingAt(channelId: Long, startMillis: Long): Recording? =
-        dao.bookingAt(channelId, startMillis)
+    suspend fun bookingAt(channelId: Long, startMillis: Long): Recording? = dao.bookingAt(channelId, startMillis)
 }

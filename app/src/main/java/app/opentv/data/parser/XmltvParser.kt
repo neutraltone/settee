@@ -32,11 +32,7 @@ import org.xmlpull.v1.XmlPullParser
 object XmltvParser {
 
     /** Result of a parse run, for logging and for surfacing honest errors to the user. */
-    data class Stats(
-        val channelCount: Int,
-        val programmeCount: Int,
-        val skippedProgrammes: Int,
-    )
+    data class Stats(val channelCount: Int, val programmeCount: Int, val skippedProgrammes: Int)
 
     /**
      * @param onChannelAlias called with (channelId, displayName) for each `<channel>` element.
@@ -133,13 +129,22 @@ object XmltvParser {
                     depth++
                     when (parser.name) {
                         "title" -> {
-                            if (title == null) { title = parser.nextText().trim(); depth-- }
+                            if (title == null) {
+                                title = parser.nextText().trim()
+                                depth--
+                            }
                         }
                         "desc" -> {
-                            if (description == null) { description = parser.nextText().trim(); depth-- }
+                            if (description == null) {
+                                description = parser.nextText().trim()
+                                depth--
+                            }
                         }
                         "category" -> {
-                            if (category == null) { category = parser.nextText().trim(); depth-- }
+                            if (category == null) {
+                                category = parser.nextText().trim()
+                                depth--
+                            }
                         }
                         "icon" -> {
                             if (iconUrl == null) iconUrl = parser.getAttributeValue(null, "src")

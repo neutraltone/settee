@@ -42,7 +42,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
@@ -53,7 +52,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import app.opentv.R
-import app.opentv.data.model.Channel
 import app.opentv.data.model.Programme
 import app.opentv.data.model.shownName
 import app.opentv.ui.ChannelsViewModel
@@ -177,12 +175,18 @@ private fun ChannelListRow(
             .fillMaxWidth()
             .clip(RoundedCornerShape(8.dp))
             .background(
-                if (isSelected) MaterialTheme.colorScheme.primaryContainer
-                else MaterialTheme.colorScheme.surface,
+                if (isSelected) {
+                    MaterialTheme.colorScheme.primaryContainer
+                } else {
+                    MaterialTheme.colorScheme.surface
+                },
             )
             .then(
-                if (focused) Modifier.border(2.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(8.dp))
-                else Modifier,
+                if (focused) {
+                    Modifier.border(2.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(8.dp))
+                } else {
+                    Modifier
+                },
             )
             // LEFT from a row reopens the collapsed rail, exactly like the grid's channel column.
             .onPreviewKeyEvent { e ->
@@ -260,7 +264,11 @@ private fun ChannelListRow(
             row.next?.let { next ->
                 Spacer(Modifier.height(3.dp))
                 Text(
-                    stringResource(R.string.guide_next_prefix, clockFormat.format(Date(next.startUtcMillis)), next.title),
+                    stringResource(
+                        R.string.guide_next_prefix,
+                        clockFormat.format(Date(next.startUtcMillis)),
+                        next.title,
+                    ),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                     maxLines = 1,
@@ -271,10 +279,16 @@ private fun ChannelListRow(
         IconButton(onClick = onToggleFavourite, modifier = Modifier.size(40.dp)) {
             Icon(
                 imageVector = if (row.primary.favourite) Icons.Filled.Star else Icons.Outlined.StarOutline,
-                contentDescription = if (row.primary.favourite) stringResource(R.string.common_remove_favourite)
-                else stringResource(R.string.common_favourite),
-                tint = if (row.primary.favourite) MaterialTheme.colorScheme.primary
-                else MaterialTheme.colorScheme.onSurfaceVariant,
+                contentDescription = if (row.primary.favourite) {
+                    stringResource(R.string.common_remove_favourite)
+                } else {
+                    stringResource(R.string.common_favourite)
+                },
+                tint = if (row.primary.favourite) {
+                    MaterialTheme.colorScheme.primary
+                } else {
+                    MaterialTheme.colorScheme.onSurfaceVariant
+                },
             )
         }
     }
@@ -326,7 +340,6 @@ private fun GuideRow(
     var focused by remember { mutableStateOf(false) }
 
     Row(Modifier.fillMaxWidth().height(ROW_HEIGHT)) {
-
         // ---- Fixed channel cell (does not scroll) --------------------------------------
         Row(
             Modifier
@@ -334,20 +347,32 @@ private fun GuideRow(
                 .fillMaxSize()
                 .clip(RoundedCornerShape(8.dp))
                 .background(
-                    if (isSelected) MaterialTheme.colorScheme.primaryContainer
-                    else MaterialTheme.colorScheme.surface,
+                    if (isSelected) {
+                        MaterialTheme.colorScheme.primaryContainer
+                    } else {
+                        MaterialTheme.colorScheme.surface
+                    },
                 )
                 .then(
-                    if (focused) Modifier.border(
-                        2.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(8.dp),
-                    ) else Modifier,
+                    if (focused) {
+                        Modifier.border(
+                            2.dp,
+                            MaterialTheme.colorScheme.primary,
+                            RoundedCornerShape(8.dp),
+                        )
+                    } else {
+                        Modifier
+                    },
                 )
                 // LEFT from this leftmost column asks the host to reopen the collapsed category
                 // rail; onExitLeft consumes the key only when it handled it (rail was hidden), so
                 // moving left onto programme blocks and into an already-visible rail still works.
                 .onPreviewKeyEvent { e ->
-                    if (e.type == KeyEventType.KeyDown && e.key == Key.DirectionLeft) onExitLeft()
-                    else false
+                    if (e.type == KeyEventType.KeyDown && e.key == Key.DirectionLeft) {
+                        onExitLeft()
+                    } else {
+                        false
+                    }
                 }
                 .onFocusChanged {
                     focused = it.isFocused
@@ -397,10 +422,16 @@ private fun GuideRow(
             ) {
                 Icon(
                     imageVector = if (row.primary.favourite) Icons.Filled.Star else Icons.Outlined.StarOutline,
-                    contentDescription = if (row.primary.favourite) stringResource(R.string.common_remove_favourite)
-                    else stringResource(R.string.common_favourite),
-                    tint = if (row.primary.favourite) MaterialTheme.colorScheme.primary
-                    else MaterialTheme.colorScheme.onSurfaceVariant,
+                    contentDescription = if (row.primary.favourite) {
+                        stringResource(R.string.common_remove_favourite)
+                    } else {
+                        stringResource(R.string.common_favourite)
+                    },
+                    tint = if (row.primary.favourite) {
+                        MaterialTheme.colorScheme.primary
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    },
                 )
             }
         }
@@ -483,11 +514,15 @@ private fun ProgrammeBlock(title: String, width: Dp, isNow: Boolean, progress: F
                 },
             )
             .then(
-                if (focused || isNow) Modifier.border(
-                    if (focused) 2.dp else 1.dp,
-                    MaterialTheme.colorScheme.primary,
-                    RoundedCornerShape(6.dp),
-                ) else Modifier,
+                if (focused || isNow) {
+                    Modifier.border(
+                        if (focused) 2.dp else 1.dp,
+                        MaterialTheme.colorScheme.primary,
+                        RoundedCornerShape(6.dp),
+                    )
+                } else {
+                    Modifier
+                },
             )
             .onFocusChanged { focused = it.isFocused }
             .focusable()
@@ -530,6 +565,7 @@ private const val HOURS_IN_WINDOW = 24
 private const val HALF_HOUR_MS = 30 * 60 * 1000L
 private val CHANNEL_COLUMN = 220.dp
 private val ROW_HEIGHT = 64.dp
+
 // Floor for a programme block so a nearly-finished or very short show still shows its name.
 private val MIN_BLOCK_WIDTH = 72.dp
 private val HALF_HOUR_WIDTH: Dp = (30 * MINUTE_DP).dp

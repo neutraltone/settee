@@ -89,10 +89,15 @@ class ManagerServer(
 
     private var serverSocket: ServerSocket? = null
     private var token: String = ""
+
     @Volatile private var running = false
+
     @Volatile private var lastActivityMillis = 0L
 
-    private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
+    private val json = Json {
+        ignoreUnknownKeys = true
+        encodeDefaults = true
+    }
 
     fun start() {
         if (running) return
@@ -264,8 +269,11 @@ class ManagerServer(
             .filter { it.sourceId in sourceIds }
             .mapNotNull { cat ->
                 val count = counts[cat.sourceId to cat.id] ?: 0
-                if (count <= 0) null
-                else CategoryDto(id = cat.id, label = cat.name, sourceId = cat.sourceId, count = count)
+                if (count <= 0) {
+                    null
+                } else {
+                    CategoryDto(id = cat.id, label = cat.name, sourceId = cat.sourceId, count = count)
+                }
             }
         json.encodeToString(
             MetaDto.serializer(),
@@ -369,7 +377,9 @@ class ManagerServer(
             val e = result.exceptionOrNull()
             TestDto(ok = false, error = e?.message ?: e?.javaClass?.simpleName ?: "Connection failed")
         }
-        output.write(PairingHttp.httpResponse("200 OK", "application/json", json.encodeToString(TestDto.serializer(), dto)))
+        output.write(
+            PairingHttp.httpResponse("200 OK", "application/json", json.encodeToString(TestDto.serializer(), dto)),
+        )
     }
 
     // ---- Add a provider ------------------------------------------------------------------------
@@ -382,7 +392,11 @@ class ManagerServer(
     private fun handleAddSource(output: OutputStream, body: String) {
         val draft = runCatching { json.decodeFromString(SourceReq.serializer(), body) }.getOrNull()?.toDraftOrNull()
         if (draft == null) {
-            writeJson(output, AddResultDto.serializer(), AddResultDto(ok = false, error = "Fill in the required fields for this provider type."))
+            writeJson(
+                output,
+                AddResultDto.serializer(),
+                AddResultDto(ok = false, error = "Fill in the required fields for this provider type."),
+            )
             return
         }
         val result = runBlocking {
@@ -401,7 +415,11 @@ class ManagerServer(
     private fun handleTestSource(output: OutputStream, body: String) {
         val draft = runCatching { json.decodeFromString(SourceReq.serializer(), body) }.getOrNull()?.toDraftOrNull()
         if (draft == null) {
-            writeJson(output, TestResultDto.serializer(), TestResultDto(ok = false, error = "Fill in the required fields for this provider type."))
+            writeJson(
+                output,
+                TestResultDto.serializer(),
+                TestResultDto(ok = false, error = "Fill in the required fields for this provider type."),
+            )
             return
         }
         val result = runBlocking { sourceRepository.test(draft) }

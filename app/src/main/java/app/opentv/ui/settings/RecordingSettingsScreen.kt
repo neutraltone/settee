@@ -5,6 +5,11 @@
  */
 package app.opentv.ui.settings
 
+import android.content.Intent
+import android.net.Uri
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusable
@@ -60,11 +65,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
-import android.content.Intent
-import android.net.Uri
-import android.widget.Toast
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.documentfile.provider.DocumentFile
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -133,8 +133,11 @@ fun RecordingSettingsScreen(onBack: () -> Unit) {
         // Don't commit USB as the destination unless a folder has actually been granted, so
         // leaving the screen without picking one can never strand recordings with nowhere to go.
         val safeTarget =
-            if (target == AppSettings.RecordingTarget.USB && usbTree == null) settings.recordingTarget.value
-            else target
+            if (target == AppSettings.RecordingTarget.USB && usbTree == null) {
+                settings.recordingTarget.value
+            } else {
+                target
+            }
         settings.setRecordingTarget(safeTarget)
     }
 
@@ -147,7 +150,10 @@ fun RecordingSettingsScreen(onBack: () -> Unit) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(stringResource(R.string.settings_recording_title), style = MaterialTheme.typography.headlineMedium)
             Spacer(Modifier.weight(1f))
-            OutlinedButton(onClick = { persist(); onBack() }) { Text(stringResource(R.string.common_done)) }
+            OutlinedButton(onClick = {
+                persist()
+                onBack()
+            }) { Text(stringResource(R.string.common_done)) }
         }
         Spacer(Modifier.height(8.dp))
         Text(
@@ -169,25 +175,39 @@ fun RecordingSettingsScreen(onBack: () -> Unit) {
                 subtitle = stringResource(R.string.recset_pad_start_desc),
                 value = padStart,
                 unit = stringResource(R.string.recset_minutes_short),
-                min = 0, max = 30,
-            ) { padStart = it; settings.setRecordPadding(padStart, padEnd) }
+                min = 0,
+                max = 30,
+            ) {
+                padStart = it
+                settings.setRecordPadding(padStart, padEnd)
+            }
             StepperRow(
                 label = stringResource(R.string.recset_pad_end),
                 subtitle = stringResource(R.string.recset_pad_end_desc),
                 value = padEnd,
                 unit = stringResource(R.string.recset_minutes_short),
-                min = 0, max = 60,
-            ) { padEnd = it; settings.setRecordPadding(padStart, padEnd) }
+                min = 0,
+                max = 60,
+            ) {
+                padEnd = it
+                settings.setRecordPadding(padStart, padEnd)
+            }
             ToggleRow(
                 label = stringResource(R.string.recset_autoswitch),
                 subtitle = stringResource(R.string.recset_autoswitch_desc),
                 checked = autoSwitch,
-            ) { autoSwitch = it; settings.setRecordAutoSwitch(it) }
+            ) {
+                autoSwitch = it
+                settings.setRecordAutoSwitch(it)
+            }
             ToggleRow(
                 label = stringResource(R.string.recset_livepause),
                 subtitle = stringResource(R.string.recset_livepause_desc),
                 checked = livePause,
-            ) { livePause = it; settings.setLivePauseEnabled(it) }
+            ) {
+                livePause = it
+                settings.setLivePauseEnabled(it)
+            }
         }
 
         Spacer(Modifier.height(20.dp))
@@ -235,11 +255,26 @@ fun RecordingSettingsScreen(onBack: () -> Unit) {
                                 testing = false
                                 status = result.fold(
                                     onSuccess = { context.getString(R.string.recset_status_connected) },
-                                    onFailure = { context.getString(R.string.recset_status_failed, it.message ?: it.javaClass.simpleName) },
+                                    onFailure = {
+                                        context.getString(
+                                            R.string.recset_status_failed,
+                                            it.message ?: it.javaClass.simpleName,
+                                        )
+                                    },
                                 )
                             }
                         },
-                    ) { Text(if (testing) stringResource(R.string.recset_status_testing) else stringResource(R.string.recset_test_connection)) }
+                    ) {
+                        Text(
+                            if (testing) {
+                                stringResource(
+                                    R.string.recset_status_testing,
+                                )
+                            } else {
+                                stringResource(R.string.recset_test_connection)
+                            },
+                        )
+                    }
                 }
                 status?.let {
                     Spacer(Modifier.height(10.dp))
@@ -254,7 +289,11 @@ fun RecordingSettingsScreen(onBack: () -> Unit) {
                 val label = usbLabel
                 if (usbTree != null && label != null) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Filled.CheckCircle, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                        Icon(
+                            Icons.Filled.CheckCircle,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                        )
                         Spacer(Modifier.width(12.dp))
                         Text(
                             stringResource(R.string.recset_usb_saving_to, label),
@@ -276,8 +315,11 @@ fun RecordingSettingsScreen(onBack: () -> Unit) {
                         .onFailure { status = context.getString(R.string.recset_usb_no_picker) }
                 }) {
                     Text(
-                        if (usbTree != null) stringResource(R.string.recset_usb_change)
-                        else stringResource(R.string.recset_usb_choose),
+                        if (usbTree != null) {
+                            stringResource(R.string.recset_usb_change)
+                        } else {
+                            stringResource(R.string.recset_usb_choose)
+                        },
                     )
                 }
                 Spacer(Modifier.height(10.dp))
@@ -307,7 +349,10 @@ fun RecordingSettingsScreen(onBack: () -> Unit) {
         Spacer(Modifier.height(20.dp))
         Button(
             enabled = target != AppSettings.RecordingTarget.USB || usbTree != null,
-            onClick = { persist(); status = context.getString(R.string.recset_status_saved) },
+            onClick = {
+                persist()
+                status = context.getString(R.string.recset_status_saved)
+            },
         ) { Text(stringResource(R.string.common_save)) }
     }
 }
@@ -326,7 +371,9 @@ private fun StorageInfo() {
             val files = dir.listFiles()?.filter { it.isFile } ?: emptyList()
             Triple(files.sumOf { it.length() }, files.size, dir.usableSpace)
         }
-        used = u; count = c; free = f
+        used = u
+        count = c
+        free = f
     }
 
     if (used < 0) {
@@ -361,7 +408,11 @@ private fun ToggleRow(label: String, subtitle: String, checked: Boolean, onCheck
     ) {
         Column(Modifier.weight(1f)) {
             Text(label, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Medium)
-            Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(
+                subtitle,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
         Spacer(Modifier.width(12.dp))
         Switch(checked = checked, onCheckedChange = onCheckedChange)
@@ -385,7 +436,11 @@ private fun StepperRow(
     ) {
         Column(Modifier.weight(1f)) {
             Text(label, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Medium)
-            Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(
+                subtitle,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
         Spacer(Modifier.width(12.dp))
         StepButton(Icons.Filled.Remove, enabled = value > min) { onChange((value - 1).coerceAtLeast(min)) }
@@ -438,7 +493,11 @@ private fun BackgroundStatus() {
                 val now = context.isIgnoringBatteryOptimizations()
                 // Just came back from granting it: say so out loud so it's unmistakable.
                 if (now && !allowed) {
-                    Toast.makeText(context, context.getString(R.string.recset_background_toast), Toast.LENGTH_LONG).show()
+                    Toast.makeText(
+                        context,
+                        context.getString(R.string.recset_background_toast),
+                        Toast.LENGTH_LONG,
+                    ).show()
                 }
                 allowed = now
             }
@@ -543,7 +602,11 @@ private fun TargetRow(label: String, subtitle: String, selected: Boolean, onClic
         Spacer(Modifier.width(14.dp))
         Column(Modifier.weight(1f)) {
             Text(label, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Medium)
-            Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(
+                subtitle,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
         if (selected) Icon(Icons.Filled.CheckCircle, null, tint = MaterialTheme.colorScheme.primary)
     }
@@ -566,8 +629,16 @@ private fun Field(
         singleLine = true,
         // A recording password is a real credential (a NAS login) — don't paint it on a living-room
         // screen. Masked by default, with an eye to reveal it if you need to check what you typed.
-        visualTransformation = if (isPassword && !revealed) PasswordVisualTransformation() else VisualTransformation.None,
-        trailingIcon = if (!isPassword) null else {
+        visualTransformation = if (isPassword &&
+            !revealed
+        ) {
+            PasswordVisualTransformation()
+        } else {
+            VisualTransformation.None
+        },
+        trailingIcon = if (!isPassword) {
+            null
+        } else {
             {
                 IconButton(onClick = { revealed = !revealed }) {
                     Icon(

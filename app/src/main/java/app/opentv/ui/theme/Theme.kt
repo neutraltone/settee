@@ -74,10 +74,7 @@ private val OpenTvTypography = Typography(
 )
 
 @Composable
-fun OpenTvTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
-    content: @Composable () -> Unit,
-) {
+fun OpenTvTheme(darkTheme: Boolean = isSystemInDarkTheme(), content: @Composable () -> Unit) {
     MaterialTheme(
         colorScheme = if (darkTheme) DarkScheme else LightScheme,
         typography = OpenTvTypography,

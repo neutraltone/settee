@@ -14,11 +14,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext
 
-class SourceRepository(
-    private val dao: SourceDao,
-    private val api: XtreamApi,
-    private val stalkerApi: StalkerApi,
-) {
+class SourceRepository(private val dao: SourceDao, private val api: XtreamApi, private val stalkerApi: StalkerApi) {
     fun observeAll(): Flow<List<Source>> = dao.observeAll()
 
     suspend fun enabled(): List<Source> = dao.enabled()
@@ -27,8 +23,9 @@ class SourceRepository(
 
     suspend fun save(source: Source): Long = withContext(Dispatchers.IO) {
         val normalised = source.copy(url = normaliseUrl(source.url, source.kind))
-        if (source.id == 0L) dao.insert(normalised)
-        else {
+        if (source.id == 0L) {
+            dao.insert(normalised)
+        } else {
             dao.update(normalised)
             source.id
         }

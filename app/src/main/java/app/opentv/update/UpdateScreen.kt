@@ -118,7 +118,9 @@ class UpdateViewModel(app: Application) : AndroidViewModel(app) {
     private val _state = UpdateHub.state
     val state = _state.asStateFlow()
 
-    init { checkThrottled() }
+    init {
+        checkThrottled()
+    }
 
     /**
      * Hits the network at most once every [CHECK_INTERVAL_MS]. The guide already re-syncs on
@@ -162,7 +164,9 @@ class UpdateViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    fun dismiss() { _state.value = UpdateUiState.Idle }
+    fun dismiss() {
+        _state.value = UpdateUiState.Idle
+    }
 
     private companion object {
         const val KEY_LAST_CHECK = "last_update_check"

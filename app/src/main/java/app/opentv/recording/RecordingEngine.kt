@@ -7,12 +7,12 @@ package app.opentv.recording
 
 import android.content.Context
 import app.opentv.core.AppSettings
+import app.opentv.data.db.ChannelDao
 import app.opentv.data.model.Channel
 import app.opentv.data.model.Programme
 import app.opentv.data.model.Recording
 import app.opentv.data.model.RecordingStatus
 import app.opentv.data.model.SeriesRule
-import app.opentv.data.db.ChannelDao
 import app.opentv.data.model.Source
 import app.opentv.data.repo.EpgRepository
 import app.opentv.data.repo.RecordingRepository

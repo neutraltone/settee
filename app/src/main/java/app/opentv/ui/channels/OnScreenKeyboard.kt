@@ -13,8 +13,8 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -77,8 +77,15 @@ internal fun OnScreenKeyboard(
                 wide = 2,
                 onClick = {
                     val pasted = readClipboardText(context)
-                    if (pasted != null) onKey(pasted)
-                    else Toast.makeText(context, context.getString(R.string.kbd_clipboard_empty), Toast.LENGTH_SHORT).show()
+                    if (pasted != null) {
+                        onKey(pasted)
+                    } else {
+                        Toast.makeText(
+                            context,
+                            context.getString(R.string.kbd_clipboard_empty),
+                            Toast.LENGTH_SHORT,
+                        ).show()
+                    }
                 },
             )
             KeyCap(label = stringResource(R.string.kbd_del), icon = true, wide = 2, onClick = onBackspace)
@@ -109,8 +116,11 @@ private fun KeyCap(
             .clip(RoundedCornerShape(8.dp))
             .background(bg)
             .then(
-                if (focused) Modifier.border(2.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(8.dp))
-                else Modifier,
+                if (focused) {
+                    Modifier.border(2.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(8.dp))
+                } else {
+                    Modifier
+                },
             )
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center,

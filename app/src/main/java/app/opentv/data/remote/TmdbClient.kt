@@ -54,7 +54,10 @@ data class TmdbMeta(
 class TmdbClient(
     private val http: OkHttpClient,
     private val settings: AppSettings,
-    private val json: Json = Json { ignoreUnknownKeys = true; isLenient = true },
+    private val json: Json = Json {
+        ignoreUnknownKeys = true
+        isLenient = true
+    },
 ) {
 
     /** True once the user has saved a key. Callers gate on this so nothing runs without one. */
@@ -138,9 +141,13 @@ class TmdbClient(
             ?.take(TOP_CAST)
             ?.mapNotNull { it.jsonObject["name"]?.jsonPrimitive?.contentOrNull }
             ?.joinToString(", ")?.takeIf { it.isNotBlank() }
-        val director = if (!isMovie) null else credits?.get("crew")?.jsonArray
-            ?.firstOrNull { it.jsonObject["job"]?.jsonPrimitive?.contentOrNull == "Director" }
-            ?.jsonObject?.get("name")?.jsonPrimitive?.contentOrNull
+        val director = if (!isMovie) {
+            null
+        } else {
+            credits?.get("crew")?.jsonArray
+                ?.firstOrNull { it.jsonObject["job"]?.jsonPrimitive?.contentOrNull == "Director" }
+                ?.jsonObject?.get("name")?.jsonPrimitive?.contentOrNull
+        }
 
         val rating = o["vote_average"]?.jsonPrimitive?.doubleOrNull?.takeIf { it > 0.0 }
         val dateStr = (o["release_date"] ?: o["first_air_date"])?.jsonPrimitive?.contentOrNull
@@ -171,10 +178,9 @@ class TmdbClient(
     }
 
     /** Strips a trailing "(2023)"/year and collapses whitespace so the title searches cleanly. */
-    private fun searchTitle(raw: String): String =
-        raw.replace(Regex("""\(?(19|20)\d{2}\)?\s*$"""), "")
-            .replace(Regex("""\s+"""), " ")
-            .trim()
+    private fun searchTitle(raw: String): String = raw.replace(Regex("""\(?(19|20)\d{2}\)?\s*$"""), "")
+        .replace(Regex("""\s+"""), " ")
+        .trim()
 
     private companion object {
         const val TAG = "TmdbClient"

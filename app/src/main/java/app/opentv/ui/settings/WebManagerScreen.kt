@@ -52,10 +52,7 @@ import app.opentv.ui.WebManagerViewModel
  * model (192-bit URL token, LAN-only, only ever shown on this screen).
  */
 @Composable
-fun WebManagerScreen(
-    onBack: () -> Unit,
-    viewModel: WebManagerViewModel = viewModel(),
-) {
+fun WebManagerScreen(onBack: () -> Unit, viewModel: WebManagerViewModel = viewModel()) {
     val state by viewModel.state.collectAsState()
 
     DisposableEffect(Unit) {

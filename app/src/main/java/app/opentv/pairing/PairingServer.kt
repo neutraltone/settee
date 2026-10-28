@@ -69,6 +69,7 @@ class PairingServer(private val scope: CoroutineScope) {
     sealed interface State {
         data object Idle : State
         data class Listening(val session: Session) : State
+
         /** The phone submitted details. The UI takes it from here. */
         data class Received(val draft: Source) : State
         data class Failed(val reason: String) : State
@@ -81,6 +82,7 @@ class PairingServer(private val scope: CoroutineScope) {
     private var token: String = ""
     private var confirmCode: String = ""
     private var wrongCodeAttempts = 0
+
     @Volatile private var running = false
 
     fun start() {
