@@ -27,6 +27,13 @@ version too; a `fix` or `perf` bumps the patch.
 holds fixes), listing work merged after that commit. Work before it is the hand-written 0.1.0 entry.
 Once a release exists release-please ignores `bootstrap-sha`.
 
+release-please opens no release PR until a `feat`, `fix` or `perf` commit lands. To release
+without one, give any commit that reaches `main` a `Release-As: x.y.z` footer (the last line of
+the body, after a blank line); the next push opens a release PR for that version.
+
+The Downloader short code (see `README.md`) points at `releases/latest/download/settee.apk`, so it
+only works once a release with an APK exists.
+
 ### One-time repository settings
 
 - **Settings → Actions → General → Workflow permissions:** tick "Allow GitHub Actions to create and
