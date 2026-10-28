@@ -191,4 +191,9 @@ dependencies {
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.room.testing)
     testImplementation(libs.androidx.test.ext.junit)
+    // Compose UI tests run on the JVM under Robolectric; the manifest artifact supplies the empty
+    // activity createComposeRule() launches.
+    testImplementation(platform(libs.androidx.compose.bom))
+    testImplementation(libs.androidx.compose.ui.test.junit4)
+    debugImplementation(libs.androidx.compose.ui.test.manifest)
 }

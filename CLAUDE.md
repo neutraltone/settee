@@ -86,13 +86,16 @@ catalogue refresh, playback or Xtream parsing. The big picture:
 
 ### Watch state, favourites, profiles
 
+- **`data/repo/ViewerLibrary` owns all per-Profile watch state**: it records progress, answers each
+  title's `WatchStatus` (Watched, In Progress, Unwatched), resume points and the In Progress list, and
+  merges synced positions newest-wins. Screens and sync go through it, never `PlaybackPositionDao`.
+  Watched = past 93%, everywhere (status, resume, Continue Watching). Live TV is never resumed.
 - Resume points are `PlaybackPosition`, keyed `(profileId, mediaKey)` where `mediaKey` is `movie:<localId>`
-  or `ep:<localId>` (local Room row ids). `isFinished` = past 95%. Live TV is never resumed. Always scope
-  queries to the active profile.
+  or `ep:<localId>` (local Room row ids).
 - `favourite` is a column on `channels`, `movies` and `series`. Cross-device sync identifies favourites by
   `streamUrl` (channels, movies) or provider `seriesId` (series), and positions newest-wins
   (`sync/SyncData.kt`, `SyncEngine.kt`) — keep new watch/favourite state syncable the same way.
-- `VodViewModel.continueWatching` builds the Continue Watching shelf from recent unfinished positions.
+- `VodViewModel.continueWatching` builds the Continue Watching shelf from `ViewerLibrary.inProgress()`.
 
 ### Database migrations
 

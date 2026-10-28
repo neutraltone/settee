@@ -25,12 +25,15 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Extension
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.PlayCircle
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.StarOutline
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -63,6 +66,8 @@ import app.opentv.data.model.Movie
 import app.opentv.data.model.Series
 import app.opentv.data.model.StremioStream
 import app.opentv.data.parser.displayTitle
+import app.opentv.data.repo.EpisodeStatuses
+import app.opentv.data.repo.WatchStatus
 import app.opentv.ui.VodViewModel
 import coil.compose.AsyncImage
 import kotlinx.coroutines.delay
@@ -97,7 +102,7 @@ fun MovieDetailScreen(
         val loaded = viewModel.movieDetail(movieId)
         movie = loaded
         if (loaded != null) {
-            resumeExists = viewModel.resumePosition("movie:${loaded.id}")?.let { !it.isFinished } == true
+            resumeExists = viewModel.resumeFrom("movie:${loaded.id}") > 0
             moreLike = viewModel.moreLikeThis(loaded)
         }
     }
@@ -295,6 +300,7 @@ fun SeriesDetailScreen(
     val s = series
     val episodes by (s?.let { viewModel.episodes(it) } ?: viewModel.noEpisodes)
         .collectAsState(initial = emptyList())
+    val statuses by viewModel.episodeStatuses.collectAsState(initial = EpisodeStatuses())
 
     if (s == null) {
         LoadingDetail()
@@ -360,7 +366,7 @@ fun SeriesDetailScreen(
                     SectionHeader(stringResource(R.string.vod_season, season))
                 }
                 items(eps, key = { it.id }) { ep ->
-                    EpisodeRow(ep, onPlayEpisode)
+                    EpisodeRow(ep, statuses[ep.id], s.posterUrl, onPlayEpisode)
                 }
             }
         }
@@ -677,9 +683,14 @@ private fun DetailButton(
     }
 }
 
-/** One episode row: season/episode marker, title, and a focus highlight; plays on click. */
+/** One episode row: season/episode marker, title, watch badge and a focus highlight; plays on click. */
 @Composable
-private fun EpisodeRow(ep: Episode, onPlay: (mediaKey: String, url: String, title: String) -> Unit) {
+internal fun EpisodeRow(
+    ep: Episode,
+    status: WatchStatus,
+    seriesArtUrl: String?,
+    onPlay: (mediaKey: String, url: String, title: String) -> Unit,
+) {
     var focused by remember { mutableStateOf(false) }
     Row(
         Modifier
@@ -707,6 +718,8 @@ private fun EpisodeRow(ep: Episode, onPlay: (mediaKey: String, url: String, titl
             .padding(14.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
+        EpisodeThumbnail(ep, status, seriesArtUrl)
+        Spacer(Modifier.width(16.dp))
         Text(
             "S${ep.season}E${ep.episodeNumber}",
             style = MaterialTheme.typography.titleMedium,
@@ -718,7 +731,62 @@ private fun EpisodeRow(ep: Episode, onPlay: (mediaKey: String, url: String, titl
             style = MaterialTheme.typography.bodyLarge,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f),
         )
+        when (status) {
+            WatchStatus.Watched -> Icon(
+                Icons.Filled.CheckCircle,
+                contentDescription = stringResource(R.string.vod_episode_watched),
+                tint = MaterialTheme.colorScheme.primary,
+            )
+            is WatchStatus.InProgress -> Icon(
+                Icons.Filled.PlayCircle,
+                contentDescription = stringResource(R.string.vod_episode_in_progress),
+                tint = MaterialTheme.colorScheme.primary,
+            )
+            WatchStatus.Unwatched -> Unit
+        }
+    }
+}
+
+/**
+ * The provider's still for an episode, or the series artwork with the episode number on top when
+ * there isn't one. A still URL that fails to load counts as none: Coil would otherwise leave a
+ * blank box, which reads as a missing row on a TV.
+ */
+@Composable
+private fun EpisodeThumbnail(ep: Episode, status: WatchStatus, seriesArtUrl: String?) {
+    var stillFailed by remember(ep.stillUrl) { mutableStateOf(false) }
+    val showStill = ep.stillUrl != null && !stillFailed
+    Box(
+        Modifier
+            .width(128.dp)
+            .height(72.dp)
+            .clip(RoundedCornerShape(6.dp))
+            .background(MaterialTheme.colorScheme.surfaceVariant),
+    ) {
+        AsyncImage(
+            model = if (showStill) ep.stillUrl else seriesArtUrl,
+            contentDescription = stringResource(R.string.vod_episode_thumbnail, ep.episodeNumber),
+            contentScale = ContentScale.Crop,
+            modifier = Modifier.matchParentSize(),
+            onError = { if (showStill) stillFailed = true },
+        )
+        if (!showStill) {
+            Box(Modifier.matchParentSize().background(Color.Black.copy(alpha = 0.45f)))
+            Text(
+                "${ep.episodeNumber}",
+                style = MaterialTheme.typography.headlineMedium,
+                color = Color.White,
+                modifier = Modifier.align(Alignment.Center),
+            )
+        }
+        if (status is WatchStatus.InProgress) {
+            LinearProgressIndicator(
+                progress = { status.progress },
+                modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(4.dp),
+            )
+        }
     }
 }
 

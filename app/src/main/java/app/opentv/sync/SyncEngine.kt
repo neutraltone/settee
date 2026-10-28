@@ -51,7 +51,7 @@ class SyncEngine(private val graph: ServiceLocator.Graph) {
     suspend fun gather(): SyncBundle {
         val profiles = graph.profiles.all()
         val names = profiles.associate { it.id to it.name }
-        val positions = graph.playbackPositions.all().mapNotNull { pos ->
+        val positions = graph.viewerLibrary.everyProfilesProgress().mapNotNull { pos ->
             val profileName = names[pos.profileId] ?: return@mapNotNull null
             val parts = pos.mediaKey.split(":", limit = 2)
             if (parts.size != 2) return@mapNotNull null
@@ -190,19 +190,16 @@ class SyncEngine(private val graph: ServiceLocator.Graph) {
                 else -> null
             } ?: continue
             val mediaKey = "${item.kind}:$localId"
-            val existing = graph.playbackPositions.get(profileId, mediaKey)
-            if (existing == null || item.updatedAtMillis > existing.updatedAtMillis) {
-                graph.playbackPositions.upsert(
-                    PlaybackPosition(
-                        profileId = profileId,
-                        mediaKey = mediaKey,
-                        positionMillis = item.positionMillis,
-                        durationMillis = item.durationMillis,
-                        updatedAtMillis = item.updatedAtMillis,
-                    ),
-                )
-                positions++
-            }
+            val taken = graph.viewerLibrary.mergeSynced(
+                PlaybackPosition(
+                    profileId = profileId,
+                    mediaKey = mediaKey,
+                    positionMillis = item.positionMillis,
+                    durationMillis = item.durationMillis,
+                    updatedAtMillis = item.updatedAtMillis,
+                ),
+            )
+            if (taken) positions++
         }
         return MergeResult(
             positions = positions,

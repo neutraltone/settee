@@ -94,11 +94,13 @@ import app.opentv.core.findActivity
 import app.opentv.player.PlayerController
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * Plays a movie or episode: a single non-live stream, with resume and a proper transport bar.
@@ -114,7 +116,6 @@ fun VodPlayerScreen(mediaKey: String, streamUrl: String, title: String, userAgen
     val context = LocalContext.current
     val view = LocalView.current
     val graph = remember { ServiceLocator.get(context) }
-    val settings = remember { graph.settings }
     val scope = remember { CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate) }
     // A recording that's still being written plays through the tail-following source. It behaves a
     // little differently in the transport: the "length" is how much has been recorded so far, which
@@ -173,15 +174,7 @@ fun VodPlayerScreen(mediaKey: String, streamUrl: String, title: String, userAgen
         val pos = player.currentPosition
         val dur = player.duration.takeIf { it > 0 } ?: return
         if (pos > 5_000) {
-            graph.playbackPositions.upsert(
-                app.opentv.data.model.PlaybackPosition(
-                    profileId = settings.activeProfileId.value,
-                    mediaKey = mediaKey,
-                    positionMillis = pos,
-                    durationMillis = dur,
-                    updatedAtMillis = System.currentTimeMillis(),
-                ),
-            )
+            graph.viewerLibrary.recordProgress(mediaKey, positionMillis = pos, durationMillis = dur)
         }
     }
 
@@ -194,15 +187,17 @@ fun VodPlayerScreen(mediaKey: String, streamUrl: String, title: String, userAgen
         onDispose {
             window?.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
             view.keepScreenOn = false
-            scope.launch { savePosition() }
+            // Main.immediate runs this up to the database write before release() and cancel(); the
+            // write itself must survive the cancel, or leaving during the credits loses up to the
+            // last 15 seconds and a finished episode never becomes Watched.
+            scope.launch { withContext(NonCancellable) { savePosition() } }
             controller.release()
             scope.cancel()
         }
     }
 
     LaunchedEffect(mediaKey) {
-        val resumeFrom = graph.playbackPositions.get(settings.activeProfileId.value, mediaKey)
-            ?.takeIf { !it.isFinished }?.positionMillis ?: 0L
+        val resumeFrom = graph.viewerLibrary.resumeFrom(mediaKey)
         controller.play(
             PlayerController.Request(
                 url = streamUrl,

@@ -17,7 +17,6 @@ import app.opentv.data.model.Channel
 import app.opentv.data.model.EpgFeed
 import app.opentv.data.model.LiveStreamFormat
 import app.opentv.data.model.Movie
-import app.opentv.data.model.PlaybackPosition
 import app.opentv.data.model.Profile
 import app.opentv.data.model.Programme
 import app.opentv.data.model.Series
@@ -29,14 +28,14 @@ import app.opentv.data.parser.ChannelNameNormalizer
 import app.opentv.data.parser.displayTitle
 import app.opentv.data.repo.CatalogRepository
 import app.opentv.data.repo.GenreGroup
+import app.opentv.data.repo.InProgressTitle
 import app.opentv.data.repo.MovieVariantGroup
 import app.opentv.data.repo.PersonTitle
 import app.opentv.data.repo.distinctByQuality
 import app.opentv.pairing.ManagerServer
 import app.opentv.sync.NasSync
-import app.opentv.sync.SyncBundle
 import app.opentv.sync.SyncClient
-import app.opentv.sync.SyncPosition
+import app.opentv.sync.SyncEngine
 import app.opentv.sync.SyncServer
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -59,7 +58,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
-import kotlinx.serialization.json.Json
 
 /**
  * View models for the whole app.
@@ -756,24 +754,25 @@ class VodViewModel(app: Application) : AndroidViewModel(app) {
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val continueWatching: StateFlow<List<ResumeItem>> =
-        settings.activeProfileId
-            .flatMapLatest { pid -> graph.playbackPositions.observeRecent(pid) }
-            .mapLatest { positions -> positions.filter { !it.isFinished }.mapNotNull { resolveResume(it) } }
+        graph.viewerLibrary.inProgress()
+            .mapLatest { titles -> titles.mapNotNull { resolveResume(it) } }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
-    private suspend fun resolveResume(pos: PlaybackPosition): ResumeItem? {
-        val parts = pos.mediaKey.split(":", limit = 2)
+    /** Each episode's Watched / In Progress / Unwatched status for the active Profile. */
+    val episodeStatuses = graph.viewerLibrary.episodeStatuses()
+
+    private suspend fun resolveResume(title: InProgressTitle): ResumeItem? {
+        val parts = title.mediaKey.split(":", limit = 2)
         if (parts.size != 2) return null
         val id = parts[1].toLongOrNull() ?: return null
-        val progress =
-            if (pos.durationMillis > 0) (pos.positionMillis.toFloat() / pos.durationMillis).coerceIn(0f, 1f) else 0f
+        val progress = title.progress
         return when (parts[0]) {
             "movie" -> graph.catalogRepository.movie(id)?.let {
-                ResumeItem(pos.mediaKey, it.displayTitle, it.posterUrl, it.streamUrl, progress)
+                ResumeItem(title.mediaKey, it.displayTitle, it.posterUrl, it.streamUrl, progress)
             }
             "ep" -> graph.catalogRepository.episode(id)?.let {
                 ResumeItem(
-                    pos.mediaKey,
+                    title.mediaKey,
                     it.title.ifBlank { "S${it.season} E${it.episodeNumber}" },
                     it.stillUrl,
                     it.streamUrl,
@@ -1092,9 +1091,8 @@ class VodViewModel(app: Application) : AndroidViewModel(app) {
     /** Every library title (movies + series) featuring a person — the Person screen's grid. */
     suspend fun titlesWithPerson(name: String): List<PersonTitle> = graph.catalogRepository.titlesWithPerson(name)
 
-    /** The active profile's saved resume position for a movie/episode, or null — drives Resume vs Watch now. */
-    suspend fun resumePosition(mediaKey: String): PlaybackPosition? =
-        graph.playbackPositions.get(settings.activeProfileId.value, mediaKey)
+    /** Where the active Profile would resume a movie/episode, 0 for the start — drives Resume vs Watch now. */
+    suspend fun resumeFrom(mediaKey: String): Long = graph.viewerLibrary.resumeFrom(mediaKey)
 
     /** Collapses quality variants of a movie list for a browse grid. See CatalogRepository.collapseVariants. */
     fun collapseVariants(movies: List<Movie>): List<MovieVariantGroup> =
@@ -1175,6 +1173,7 @@ class SyncViewModel(app: Application) : AndroidViewModel(app) {
     private val graph = ServiceLocator.get(app)
     private val server = SyncServer(viewModelScope)
     private val client = SyncClient(graph.httpClient)
+    private val engine = SyncEngine(graph)
 
     val serverState: StateFlow<SyncServer.State> = server.state
 
@@ -1229,7 +1228,7 @@ class SyncViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun startSharing() {
-        viewModelScope.launch { server.start(buildBundleJson()) }
+        viewModelScope.launch { server.start(engine.encode(engine.gather())) }
     }
 
     fun stopSharing() = server.stop()
@@ -1238,62 +1237,13 @@ class SyncViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             _receiveState.value = ReceiveState.Connecting
             client.pull(address, code)
-                .onSuccess { _receiveState.value = ReceiveState.Done(merge(it)) }
+                .onSuccess { _receiveState.value = ReceiveState.Done(engine.apply(it).total) }
                 .onFailure { _receiveState.value = ReceiveState.Failed(it.message ?: "Sync failed.") }
         }
     }
 
     fun resetReceive() {
         _receiveState.value = ReceiveState.Idle
-    }
-
-    private suspend fun buildBundleJson(): String {
-        val names = graph.profiles.all().associate { it.id to it.name }
-        val items = graph.playbackPositions.all().mapNotNull { pos ->
-            val profileName = names[pos.profileId] ?: return@mapNotNull null
-            val parts = pos.mediaKey.split(":", limit = 2)
-            if (parts.size != 2) return@mapNotNull null
-            val id = parts[1].toLongOrNull() ?: return@mapNotNull null
-            val streamUrl = when (parts[0]) {
-                "movie" -> graph.catalogRepository.movie(id)?.streamUrl
-                "ep" -> graph.catalogRepository.episode(id)?.streamUrl
-                else -> null
-            } ?: return@mapNotNull null
-            SyncPosition(profileName, streamUrl, parts[0], pos.positionMillis, pos.durationMillis, pos.updatedAtMillis)
-        }
-        return Json.encodeToString(SyncBundle.serializer(), SyncBundle(positions = items))
-    }
-
-    private suspend fun merge(bundle: SyncBundle): Int {
-        var merged = 0
-        for (item in bundle.positions) {
-            val profileId = profileIdFor(item.profile) ?: continue
-            val localId = when (item.kind) {
-                "movie" -> graph.catalogRepository.movieByStreamUrl(item.streamUrl)?.id
-                "ep" -> graph.catalogRepository.episodeByStreamUrl(item.streamUrl)?.id
-                else -> null
-            } ?: continue
-            val mediaKey = "${item.kind}:$localId"
-            val existing = graph.playbackPositions.get(profileId, mediaKey)
-            if (existing == null || item.updatedAtMillis > existing.updatedAtMillis) {
-                graph.playbackPositions.upsert(
-                    PlaybackPosition(
-                        profileId = profileId,
-                        mediaKey = mediaKey,
-                        positionMillis = item.positionMillis,
-                        durationMillis = item.durationMillis,
-                        updatedAtMillis = item.updatedAtMillis,
-                    ),
-                )
-                merged++
-            }
-        }
-        return merged
-    }
-
-    private suspend fun profileIdFor(name: String): Long? {
-        graph.profiles.byName(name)?.let { return it.id }
-        return runCatching { graph.profiles.insert(Profile(name = name, createdAtMillis = 0)) }.getOrNull()
     }
 
     override fun onCleared() {

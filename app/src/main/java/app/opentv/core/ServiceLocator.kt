@@ -15,6 +15,7 @@ import app.opentv.data.repo.EpgRepository
 import app.opentv.data.repo.RecordingRepository
 import app.opentv.data.repo.ReminderRepository
 import app.opentv.data.repo.SourceRepository
+import app.opentv.data.repo.ViewerLibrary
 import app.opentv.recording.RecordingEngine
 import java.util.concurrent.TimeUnit
 import okhttp3.OkHttpClient
@@ -95,7 +96,7 @@ object ServiceLocator {
                 movieDao = database.movies(),
                 seriesDao = database.series(),
                 episodeDao = database.episodes(),
-                positionDao = database.positions(),
+                viewerLibrary = viewerLibrary,
                 api = xtreamApi,
                 stalkerApi = stalkerApi,
                 http = httpClient,
@@ -115,7 +116,7 @@ object ServiceLocator {
             )
         }
 
-        val playbackPositions get() = database.positions()
+        val viewerLibrary: ViewerLibrary by lazy { ViewerLibrary(database.positions(), settings.activeProfileId) }
 
         val profiles get() = database.profiles()
 
