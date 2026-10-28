@@ -1,12 +1,12 @@
 {
   "formatVersion": 1,
   "database": {
-    "version": 10,
-    "identityHash": "0bbb1323286d100ad4ce9c9c7779af79",
+    "version": 1,
+    "identityHash": "b67af1cae1ebed2a7dc1a5427b602cb8",
     "entities": [
       {
         "tableName": "sources",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `name` TEXT NOT NULL, `kind` TEXT NOT NULL, `url` TEXT NOT NULL, `username` TEXT, `password` TEXT, `epgUrl` TEXT, `userAgent` TEXT NOT NULL, `liveFormat` TEXT NOT NULL, `enabled` INTEGER NOT NULL, `lastCatalogSyncMillis` INTEGER NOT NULL)",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `name` TEXT NOT NULL, `kind` TEXT NOT NULL, `url` TEXT NOT NULL, `username` TEXT, `password` TEXT, `macAddress` TEXT, `epgUrl` TEXT, `userAgent` TEXT NOT NULL, `liveFormat` TEXT NOT NULL, `enabled` INTEGER NOT NULL, `lastCatalogSyncMillis` INTEGER NOT NULL)",
         "fields": [
           {
             "fieldPath": "id",
@@ -41,6 +41,12 @@
           {
             "fieldPath": "password",
             "columnName": "password",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "macAddress",
+            "columnName": "macAddress",
             "affinity": "TEXT",
             "notNull": false
           },
@@ -132,7 +138,7 @@
       },
       {
         "tableName": "channels",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `sourceId` INTEGER NOT NULL, `streamId` TEXT NOT NULL, `name` TEXT NOT NULL, `displayName` TEXT NOT NULL, `groupKey` TEXT NOT NULL, `qualityRank` INTEGER NOT NULL, `qualityLabel` TEXT NOT NULL, `categoryId` TEXT, `logoUrl` TEXT, `epgChannelId` TEXT, `matchedEpgId` TEXT, `epgOverrideId` TEXT, `tvArchive` INTEGER NOT NULL DEFAULT 0, `tvArchiveDays` INTEGER NOT NULL DEFAULT 0, `number` INTEGER, `streamUrl` TEXT NOT NULL, `favourite` INTEGER NOT NULL, `hidden` INTEGER NOT NULL, `sortIndex` INTEGER NOT NULL, `customName` TEXT, `lastSeenMillis` INTEGER NOT NULL)",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `sourceId` INTEGER NOT NULL, `streamId` TEXT NOT NULL, `name` TEXT NOT NULL, `displayName` TEXT NOT NULL, `groupKey` TEXT NOT NULL, `qualityRank` INTEGER NOT NULL, `qualityLabel` TEXT NOT NULL, `categoryId` TEXT, `logoUrl` TEXT, `epgChannelId` TEXT, `matchedEpgId` TEXT, `epgOverrideId` TEXT, `tvArchive` INTEGER NOT NULL DEFAULT 0, `tvArchiveDays` INTEGER NOT NULL DEFAULT 0, `number` INTEGER, `streamUrl` TEXT NOT NULL, `cmd` TEXT, `favourite` INTEGER NOT NULL, `hidden` INTEGER NOT NULL, `sortIndex` INTEGER NOT NULL, `customName` TEXT, `lastSeenMillis` INTEGER NOT NULL)",
         "fields": [
           {
             "fieldPath": "id",
@@ -237,6 +243,12 @@
             "columnName": "streamUrl",
             "affinity": "TEXT",
             "notNull": true
+          },
+          {
+            "fieldPath": "cmd",
+            "columnName": "cmd",
+            "affinity": "TEXT",
+            "notNull": false
           },
           {
             "fieldPath": "favourite",
@@ -1300,7 +1312,7 @@
     "views": [],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '0bbb1323286d100ad4ce9c9c7779af79')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'b67af1cae1ebed2a7dc1a5427b602cb8')"
     ]
   }
 }

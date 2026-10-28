@@ -6,6 +6,18 @@ plugins {
     alias(libs.plugins.ksp)
 }
 
+/*
+ * A release changes versionName only. Android upgrades by versionCode, so deriving it here means
+ * the two can never drift apart. Two digits each for minor and patch: 0.1.0 → 100, 1.2.3 → 10203.
+ */
+val appVersionName = "0.1.0"
+
+fun versionCodeOf(name: String): Int {
+    val (major, minor, patch) = name.split('.').map { it.toInt() }
+    require(minor < 100 && patch < 100) { "minor and patch must stay below 100: $name" }
+    return major * 10000 + minor * 100 + patch
+}
+
 android {
     namespace = "app.opentv"
     compileSdk = 35
@@ -14,8 +26,8 @@ android {
         applicationId = "uk.neutraltone.settee"
         minSdk = 23
         targetSdk = 35
-        versionCode = 20
-        versionName = "0.11.8"
+        versionCode = versionCodeOf(appVersionName)
+        versionName = appVersionName
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 

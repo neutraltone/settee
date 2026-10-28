@@ -79,10 +79,14 @@ catalogue refresh, playback or Xtream parsing. The big picture:
 
 ### Database migrations
 
-Room schema version lives in `data/db/OpenTvDatabase.kt`; schemas are exported to `app/schemas/`. Every
-schema change bumps the version and adds a hand-written `Migration` that matches Room's generated DDL
-(see existing `MIGRATION_x_y` comments) so favourites survive. `fallbackToDestructiveMigration()` is only a
-backstop.
+Room schema version lives in `data/db/OpenTvDatabase.kt`; schemas are exported to `app/schemas/`. The
+schema restarted at version 1 for Settee, with none of upstream's migrations.
+
+**Until the first tagged release, a schema change may wipe data:** bump the version, commit the newly
+exported schema, and let `fallbackToDestructiveMigration()` rebuild the database. **From the first tagged
+release on, real migrations are required:** every schema change bumps the version and adds a hand-written
+`Migration` that matches Room's generated DDL so favourites survive, and the destructive fallback (with the
+pre-restart test in `OpenTvDatabaseTest`) is deleted.
 
 ### Playback
 
@@ -98,9 +102,9 @@ never release/rebuild on channel change). Retries 403/429/5xx with backoff; not 
   restate code.
 - User-facing strings go in `res/values/strings.xml`; ~30 `values-*` translations exist. Add new keys to
   the base file (translations fall back to English).
-- Releases: bump `versionCode`/`versionName` in `app/build.gradle.kts`, add a `CHANGELOG.md` entry, push a
-  `v*` tag (`.github/workflows/release.yml`). Release builds fall back to the debug key without keystore
-  secrets — see `docs/RELEASING.md`.
+- Releases: bump `appVersionName` in `app/build.gradle.kts` (`versionCode` is derived from it), add a
+  `CHANGELOG.md` entry, push a `v*` tag (`.github/workflows/release.yml`). Release builds fall back to the
+  debug key without keystore secrets — see `docs/RELEASING.md`.
 - The in-app updater checks `UpdateChecker.REPO_SLUG` (`neutraltone/settee`) and installs the release's
   versioned `settee-<tag>.apk`; the release workflow also publishes a fixed-name `settee.apk` for the
   Downloader short code. Keep both names in step with `GitHubRelease.apkAsset`.
