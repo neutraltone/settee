@@ -27,33 +27,35 @@ jobs:
       TAG: ${{ inputs.tag }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: ${{ inputs.tag }}
 
       - name: Set up JDK 17
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: '17'
 
       - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@v6
 
-      - name: Unit tests
-        run: ./gradlew test
-
-      # Only runs if a keystore has been added to repository secrets. Without one the
-      # release build falls back to the debug key, which still produces an installable
-      # APK — see docs/RELEASING.md.
-      # The secrets context is not usable directly in an `if:`, so it is lifted into env first.
+      # Before the tests so a release without the secrets fails in seconds, not after a full build.
+      # Gradle would fall back to the debug key, and a debug-key APK cannot be upgraded by (or
+      # upgrade) a release-signed one — see docs/RELEASING.md.
       - name: Decode signing keystore
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
-        if: env.KEYSTORE_BASE64 != ''
         run: |
+          if [ -z "$KEYSTORE_BASE64" ]; then
+            echo "::error::No release keystore is configured. Add the signing secrets — see docs/RELEASING.md."
+            exit 1
+          fi
           printf '%s' "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/upload.jks"
           echo "KEYSTORE_PATH=$RUNNER_TEMP/upload.jks" >> "$GITHUB_ENV"
+
+      - name: Unit tests
+        run: ./gradlew test
 
       - name: Assemble release APK
         env:
@@ -77,10 +79,25 @@ jobs:
           cp "$SOURCE" "dist/settee-${TAG}.apk"
           cp "$SOURCE" "dist/settee.apk"
           echo "path=dist/settee-${TAG}.apk" >> "$GITHUB_OUTPUT"
-          echo "signed=$([ -n "$KEYSTORE_PATH" ] && echo yes || echo debug-key)" >> "$GITHUB_OUTPUT"
 
-      # release-please writes headings as "## [0.2.0](compare link) (date)".
+      # Checks the built APK itself, not just that the secrets were set: a wrongly signed APK will
+      # not install over a release-signed one, so it must never be published.
+      - name: Verify signing certificate
+        id: signing
+        env:
+          APK: ${{ steps.artifact.outputs.path }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+        run: |
+          DIGEST=$(tools/check-apk-signer.sh "$APK" "$KEYSTORE_PATH" "$KEY_ALIAS")
+          echo "digest=$DIGEST" >> "$GITHUB_OUTPUT"
+
+      # release-please writes headings as "## [0.2.0](compare link) (date)". The certificate digest
+      # lets anyone check that a release is signed with the same key as the last one, which is what
+      # decides whether it will install over it.
       - name: Release notes from CHANGELOG
+        env:
+          DIGEST: ${{ steps.signing.outputs.digest }}
         run: |
           VERSION="${TAG#v}"
           awk -v v="$VERSION" '$0 ~ ("^## \\[?" v "([^0-9]|$)"){f=1;next} /^## /{f=0} f{print}' CHANGELOG.md > release-notes.md
@@ -88,12 +105,15 @@ jobs:
           {
             echo ""
             echo "---"
+            echo "signed: yes"
+            echo "certificate SHA-256: ${DIGEST}"
+            echo ""
             echo "Built by GitHub Actions from the tagged commit — the workflow is public, so anyone can verify this APK against the source."
           } >> release-notes.md
 
       # release-please has already created the release; this attaches the APKs to it.
       - name: Publish release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ inputs.tag }}
           files: dist/*.apk

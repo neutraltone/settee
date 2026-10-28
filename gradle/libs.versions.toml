@@ -25,12 +25,12 @@ junit = "4.13.2"
 truth = "1.4.5"
 robolectric = "4.17"
 androidxTestExt = "1.2.1"
-ktlintGradle = "12.3.0"
+ktlintGradle = "14.2.0"
 ktlint = "1.4.1"
 detekt = "1.23.8"
 # Compose rules run under detekt only, so findings are not reported twice. 0.4.x is the last
 # line built against detekt 1.23; 0.5+ needs detekt 2.
-composeRules = "0.4.22"
+composeRules = "0.6.8"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }

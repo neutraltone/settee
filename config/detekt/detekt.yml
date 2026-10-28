@@ -46,8 +46,6 @@ Compose:
     active: true
   ModifierClickableOrder:
     active: true
-  ModifierComposable:
-    active: true
   ModifierMissing:
     active: true
   ModifierNaming:

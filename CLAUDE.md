@@ -131,8 +131,9 @@ never release/rebuild on channel change). Retries 403/429/5xx with backoff; not 
   PR open that bumps `appVersionName` in `app/build.gradle.kts` (`versionCode` is derived from it) and
   adds the `CHANGELOG.md` entry from `feat`/`fix`/`perf` commits. Merge that PR to ship: it tags
   `vx.y.z`, creates the GitHub release and calls `release.yml` to attach the APKs. Don't bump versions,
-  edit released `CHANGELOG.md` entries or push tags by hand. Release builds fall back to the debug key
-  without keystore secrets — see `docs/RELEASING.md`.
+  edit released `CHANGELOG.md` entries or push tags by hand. Local release builds fall back to the debug key
+  without keystore secrets, but `release.yml` fails rather than attach an APK that isn't signed with
+  the release key (`tools/check-apk-signer.sh`) — see `docs/RELEASING.md`.
 - The in-app updater checks `UpdateChecker.REPO_SLUG` (`neutraltone/settee`) and installs the release's
   versioned `settee-<tag>.apk`; the release workflow also publishes a fixed-name `settee.apk` for the
   Downloader short code. Keep both names in step with `GitHubRelease.apkAsset`.

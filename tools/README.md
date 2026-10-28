@@ -2,6 +2,19 @@
 
 Developer utilities. Not part of the app, not shipped in the APK.
 
+## check-apk-signer.sh
+
+Checks that an APK is signed by exactly the certificate in the release keystore, and prints the
+certificate's SHA-256 digest. `release.yml` runs it before publishing; see `docs/RELEASING.md`.
+
+```sh
+read -rs KEYSTORE_PASSWORD && export KEYSTORE_PASSWORD   # keeps it out of shell history
+tools/check-apk-signer.sh settee.apk settee-release.jks settee
+```
+
+It needs `keytool` (any JDK) and `apksigner` (Android build-tools). Set `APKSIGNER` to the
+binary, or `ANDROID_HOME` for the newest one under `build-tools/`.
+
 ## check-message.sh
 
 The commit convention, `type(#issue): description`, as one POSIX `sh` script. The
