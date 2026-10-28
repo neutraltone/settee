@@ -4,6 +4,8 @@ plugins {
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.ksp)
+    alias(libs.plugins.ktlint)
+    alias(libs.plugins.detekt)
 }
 
 android {
@@ -88,12 +90,30 @@ android {
         }
     }
 
+    lint {
+        // Existing findings live in the baseline so CI fails only on new ones; regenerate with
+        // ./gradlew updateLintBaseline after fixing some, never to hide a new finding.
+        baseline = file("lint-baseline.xml")
+    }
+
     testOptions {
         unitTests {
             isIncludeAndroidResources = true
             isReturnDefaultValues = true
         }
     }
+}
+
+ktlint {
+    version.set(libs.versions.ktlint)
+    android.set(true)
+}
+
+detekt {
+    buildUponDefaultConfig = true
+    config.setFrom(rootProject.file("config/detekt/detekt.yml"))
+    // Same deal as the Lint baseline: existing smells are recorded, new ones fail the build.
+    baseline = file("detekt-baseline.xml")
 }
 
 ksp {
@@ -147,6 +167,8 @@ dependencies {
     // SMB/CIFS client for recording to a NAS (Synology etc.) and playing those recordings
     // back in-app over the network. Pure-Java SMB2/3, no native bits.
     implementation("com.hierynomus:smbj:0.12.2")
+
+    detektPlugins(libs.compose.rules.detekt)
 
     testImplementation(libs.junit)
     testImplementation(libs.truth)
