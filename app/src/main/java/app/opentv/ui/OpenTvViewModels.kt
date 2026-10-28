@@ -800,26 +800,7 @@ class VodViewModel @JvmOverloads constructor(
     /** Each episode's Watched / In Progress / Unwatched status for the active Profile. */
     val episodeStatuses = graph.viewerLibrary.episodeStatuses()
 
-    private suspend fun resolveResume(card: ContinueWatchingCard): ResumeItem? = when (card) {
-        is ContinueWatchingCard.Movie -> graph.catalogRepository.movie(card.movieId)?.let {
-            ResumeItem("movie:${it.id}", it.displayTitle, it.displayTitle, it.posterUrl, it.streamUrl, card.progress)
-        }
-        is ContinueWatchingCard.Series -> {
-            val ep = card.episode
-            graph.catalogRepository.seriesOf(ep)?.let {
-                ResumeItem(
-                    mediaKey = "ep:${ep.id}",
-                    title = it.name,
-                    playerTitle = ep.playerTitle,
-                    // The card is landscape: the wide backdrop fits it, a portrait poster only crops.
-                    posterUrl = it.backdropUrl ?: it.posterUrl,
-                    streamUrl = ep.streamUrl,
-                    progress = card.progress,
-                    episode = SeasonEpisode(ep.season, ep.episodeNumber),
-                )
-            }
-        }
-    }
+    private suspend fun resolveResume(card: ContinueWatchingCard) = resumeItem(graph.catalogRepository, card)
 
     private val movieCategory = MutableStateFlow<String?>(null)
     private val seriesCategory = MutableStateFlow<String?>(null)
@@ -1156,6 +1137,59 @@ class VodViewModel @JvmOverloads constructor(
     /** The user-agent to play a movie/episode with (per source). */
     suspend fun userAgentForSource(sourceId: Long): String =
         graph.sourceRepository.byId(sourceId)?.userAgent ?: "OpenTV/0.1 (Android)"
+}
+
+/** [card] as Continue Watching draws it, or null when its title has left the catalogue. */
+private suspend fun resumeItem(catalog: CatalogRepository, card: ContinueWatchingCard): VodViewModel.ResumeItem? =
+    when (card) {
+        is ContinueWatchingCard.Movie -> catalog.movie(card.movieId)?.let {
+            VodViewModel.ResumeItem(
+                "movie:${it.id}",
+                it.displayTitle,
+                it.displayTitle,
+                it.posterUrl,
+                it.streamUrl,
+                card.progress,
+            )
+        }
+        is ContinueWatchingCard.Series -> {
+            val ep = card.episode
+            catalog.seriesOf(ep)?.let {
+                VodViewModel.ResumeItem(
+                    mediaKey = "ep:${ep.id}",
+                    title = it.name,
+                    playerTitle = ep.playerTitle,
+                    // The card is landscape: the wide backdrop fits it, a portrait poster only crops.
+                    posterUrl = it.backdropUrl ?: it.posterUrl,
+                    streamUrl = ep.streamUrl,
+                    progress = card.progress,
+                    episode = VodViewModel.SeasonEpisode(ep.season, ep.episodeNumber),
+                )
+            }
+        }
+    }
+
+/**
+ * Home: the active Profile's Continue Watching across movies and series, and its Favourites. Each
+ * is null until it has loaded, so Home never flashes its nothing-here hint at a Profile that has rows.
+ */
+class HomeViewModel(app: Application) : AndroidViewModel(app) {
+    private val graph = ServiceLocator.get(app)
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val continueWatching: StateFlow<List<VodViewModel.ResumeItem>?> =
+        graph.viewerLibrary.continueWatching()
+            .mapLatest { cards -> cards.mapNotNull { resumeItem(graph.catalogRepository, it) } }
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
+    val favouriteShows: StateFlow<List<Series>?> = graph.viewerLibrary.favourites.series()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
+    val favouriteMovies: StateFlow<List<Movie>?> = graph.viewerLibrary.favourites.movies()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
+    val favouriteChannels: StateFlow<List<Channel>?> = graph.viewerLibrary.favourites.channels()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 }
 
 /**

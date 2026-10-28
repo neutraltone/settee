@@ -146,4 +146,20 @@ class ContinueWatchingTest {
 
         assertThat(seriesCards()).containsExactly(ContinueWatchingCard.Series(testEpisode(1, 2), progress = 0.25f))
     }
+
+    @Test
+    fun `Home's Continue Watching mixes movies and series, newest played first`() = runTest {
+        db.episodes().upsertAll(episodes)
+        library.recordProgress("movie:3", positionMillis = 600_000, durationMillis = 2_400_000)
+        now += 60_000
+        watch(testEpisode(1, 1))
+        now += 60_000
+        library.recordProgress("movie:4", positionMillis = 600_000, durationMillis = 2_400_000)
+
+        assertThat(library.continueWatching().first()).containsExactly(
+            ContinueWatchingCard.Movie(movieId = 4, progress = 0.25f),
+            ContinueWatchingCard.Series(testEpisode(1, 2), progress = null),
+            ContinueWatchingCard.Movie(movieId = 3, progress = 0.25f),
+        ).inOrder()
+    }
 }

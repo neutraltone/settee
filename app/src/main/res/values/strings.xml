@@ -24,6 +24,7 @@
     <string name="common_try_again">Try again</string>
 
     <!-- ============================ Navigation rail ============================ -->
+    <string name="nav_home">Home</string>
     <string name="nav_live_tv">Live TV</string>
     <string name="nav_movies">Movies</string>
     <string name="nav_shows">Shows</string>
@@ -437,6 +438,10 @@
     <string name="vod_continue_watching">Continue watching</string>
     <string name="vod_large_provider_note">A large provider can take a couple of minutes the first time.</string>
     <string name="vod_favourites">Favourites</string>
+    <string name="home_favourite_shows">Favourite shows</string>
+    <string name="home_favourite_movies">Favourite movies</string>
+    <string name="home_favourite_channels">Favourite channels</string>
+    <string name="home_empty_hint">Things you watch and favourite will show up here</string>
     <string name="vod_recommended">Recommended for you</string>
     <string name="vod_recently_added">Recently added</string>
     <string name="vod_categories">Categories</string>

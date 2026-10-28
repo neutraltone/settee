@@ -26,6 +26,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.FiberManualRecord
+import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.LiveTv
 import androidx.compose.material.icons.filled.Movie
 import androidx.compose.material.icons.filled.Person
@@ -77,10 +78,24 @@ import app.opentv.ui.vod.SeriesScreen
  * rather than pushing it, so expanding the menu never reflows the guide underneath.
  */
 enum class Tab(val labelRes: Int, val icon: ImageVector) {
+    HOME(R.string.nav_home, Icons.Filled.Home),
     LIVE(R.string.nav_live_tv, Icons.Filled.LiveTv),
     MOVIES(R.string.nav_movies, Icons.Filled.Movie),
     SHOWS(R.string.nav_shows, Icons.Filled.Tv),
     RECORDINGS(R.string.nav_recordings, Icons.Filled.FiberManualRecord),
+}
+
+/**
+ * The tabs in rail order. Home is always first, so the app opens on it; a content type switched off
+ * has its tab hidden (and its sync skipped in CatalogRepository). Home and Recordings are never
+ * content types, so the shell is never blank even with all three types off.
+ */
+internal fun visibleTabs(liveEnabled: Boolean, moviesEnabled: Boolean, seriesEnabled: Boolean): List<Tab> = buildList {
+    add(Tab.HOME)
+    if (liveEnabled) add(Tab.LIVE)
+    if (moviesEnabled) add(Tab.MOVIES)
+    if (seriesEnabled) add(Tab.SHOWS)
+    add(Tab.RECORDINGS)
 }
 
 private val RAIL_COLLAPSED = 76.dp
@@ -104,25 +119,15 @@ fun MainScreen(
     onPlayCatchup: (mediaKey: String, url: String, title: String, ua: String) -> Unit,
     activeProfileName: String,
 ) {
-    // Content-type toggles: a switched-off type has its tab hidden here (and its sync skipped in
-    // CatalogRepository). Recordings is never a content type, so it always stays — which also means
-    // there is always at least one tab and never a blank shell, even with all three types off.
     val context = LocalContext.current
     val settings = remember { AppSettings.get(context) }
     val liveEnabled by settings.liveEnabled.collectAsState()
     val moviesEnabled by settings.moviesEnabled.collectAsState()
     val seriesEnabled by settings.seriesEnabled.collectAsState()
     val visibleTabs = remember(liveEnabled, moviesEnabled, seriesEnabled) {
-        buildList {
-            if (liveEnabled) add(Tab.LIVE)
-            if (moviesEnabled) add(Tab.MOVIES)
-            if (seriesEnabled) add(Tab.SHOWS)
-            add(Tab.RECORDINGS)
-        }
+        visibleTabs(liveEnabled, moviesEnabled, seriesEnabled)
     }
-    // The default/home tab is the first visible one — Live TV normally, otherwise the first type
-    // still switched on (or Recordings if none are).
-    val homeTab = visibleTabs.first()
+    val homeTab = Tab.HOME
 
     var tab by remember { mutableStateOf(homeTab) }
 
@@ -176,6 +181,12 @@ fun MainScreen(
 
             Box(Modifier.weight(1f).fillMaxHeight()) {
                 when (tab) {
+                    Tab.HOME -> HomeScreen(
+                        onResume = onResume,
+                        onOpenSeries = onOpenSeries,
+                        onOpenMovie = onOpenMovie,
+                        onPlayChannel = onPlayChannel,
+                    )
                     Tab.LIVE -> LiveScreen(
                         isTelevision = isTelevision,
                         hasSources = hasSources,
