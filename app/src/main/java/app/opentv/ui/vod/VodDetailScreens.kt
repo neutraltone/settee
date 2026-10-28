@@ -682,7 +682,10 @@ private fun DetailButton(
     }
 }
 
-/** One episode row: thumbnail with its watch badge, season/episode marker, title and a focus highlight; plays on click. */
+/**
+ * One episode row: thumbnail with its watch badge, season/episode marker, title and a focus
+ * highlight; plays on click.
+ */
 @Composable
 internal fun EpisodeRow(
     ep: Episode,

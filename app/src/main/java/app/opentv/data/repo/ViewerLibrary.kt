@@ -18,7 +18,10 @@ import kotlinx.coroutines.flow.map
 sealed interface WatchStatus {
     data object Unwatched : WatchStatus
 
-    /** [progress] is how far through, 0..1; [remainingMillis] is how long is left, null when the duration is unknown. */
+    /**
+     * [progress] is how far through, 0..1; [remainingMillis] is how long is left, null when the
+     * duration is unknown.
+     */
     data class InProgress(val progress: Float, val remainingMillis: Long?) : WatchStatus
 
     data object Watched : WatchStatus
