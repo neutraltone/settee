@@ -66,14 +66,11 @@ object ReleaseNotes {
         for (raw in lines) {
             val line = raw.trim()
             val heading = sectionHeading.matchEntire(line)?.groupValues?.get(1)
-            if (heading != null) {
-                current = viewerHeading(heading)
-                continue
-            }
-            val section = current?.let { entries.getOrPut(it) { mutableListOf() } } ?: continue
             val entry = bullet.matchEntire(line)?.groupValues?.get(1)
+            val section = current?.let { entries.getOrPut(it) { mutableListOf() } }
             when {
-                line.isEmpty() -> Unit
+                heading != null -> current = viewerHeading(heading)
+                section == null || line.isEmpty() -> Unit
                 // An indented line carries on the entry above: a wrapped sentence, or a sub-point.
                 raw.first().isWhitespace() && section.isNotEmpty() ->
                     section[section.lastIndex] += if (entry != null) "; $entry" else " $line"
