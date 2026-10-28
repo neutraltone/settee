@@ -25,11 +25,13 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import org.robolectric.annotation.GraphicsMode
 import org.robolectric.shadows.ShadowDialog
 
 // Plain Application: OpenTvApp schedules WorkManager on start, which a lone composable doesn't need.
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [34], application = android.app.Application::class)
+@Config(sdk = [34], qualifiers = TV_1080P, application = android.app.Application::class)
+@GraphicsMode(GraphicsMode.Mode.NATIVE)
 class WhatsNewDialogTest {
 
     @get:Rule
@@ -54,7 +56,7 @@ class WhatsNewDialogTest {
 
     private var dismissed = 0
 
-    private fun show() = compose.setContent {
+    private fun show() = compose.setTvContent {
         WhatsNewDialog(installedVersion = "0.4.0", notes = notes, onDismiss = { dismissed++ })
     }
 
@@ -69,6 +71,7 @@ class WhatsNewDialogTest {
         compose.onNodeWithText("Bug Fixes").assertExists()
         compose.onNodeWithText("Performance Improvements").assertExists()
         compose.onNodeWithText("pick up where you left off on any series from Home", substring = true).assertExists()
+        captureScreen("whats_new_dialog")
     }
 
     @Test
@@ -106,7 +109,7 @@ class WhatsNewDialogTest {
         val long = listOf(
             VersionNotes("0.4.0", listOf(NotesSection(NotesHeading.NewFeatures, (1..40).map { "change number $it" }))),
         )
-        compose.setContent { WhatsNewDialog(installedVersion = "0.4.0", notes = long, onDismiss = {}) }
+        compose.setTvContent { WhatsNewDialog(installedVersion = "0.4.0", notes = long, onDismiss = {}) }
         compose.onNodeWithText("change number 40", substring = true).assertIsNotDisplayed()
 
         compose.onNodeWithText("Got it").performKeyInput { repeat(40) { pressKey(Key.DirectionDown) } }

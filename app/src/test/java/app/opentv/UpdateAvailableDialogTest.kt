@@ -7,6 +7,7 @@ package app.opentv
 
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsNotDisplayed
 import androidx.compose.ui.test.isFocused
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -24,10 +25,12 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import org.robolectric.annotation.GraphicsMode
 
 // Plain Application: OpenTvApp schedules WorkManager on start, which a lone composable doesn't need.
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [34], application = android.app.Application::class)
+@Config(sdk = [34], qualifiers = TV_1080P, application = android.app.Application::class)
+@GraphicsMode(GraphicsMode.Mode.NATIVE)
 class UpdateAvailableDialogTest {
 
     @get:Rule
@@ -38,17 +41,37 @@ class UpdateAvailableDialogTest {
         title = "Settee 0.5.0",
         notes = VersionNotes(
             "0.5.0",
-            listOf(NotesSection(NotesHeading.NewFeatures, (1..40).map { "change number $it" })),
+            listOf(
+                NotesSection(NotesHeading.NewFeatures, listOf("pick up where you left off on any series from Home")),
+                NotesSection(NotesHeading.BugFixes, listOf("subtitles stay on after a channel change")),
+            ),
         ),
         apkUrl = "https://example.com/settee.apk",
         apkSizeBytes = 1000,
         releaseUrl = "https://example.com/release",
     )
 
+    private val longUpdate = update.copy(
+        notes = VersionNotes(
+            "0.5.0",
+            listOf(NotesSection(NotesHeading.NewFeatures, (1..40).map { "change number $it" })),
+        ),
+    )
+
+    @Test
+    fun `the highlight starts on Update`() {
+        compose.setTvContent {
+            UpdateAvailableDialog(update, installedVersion = "0.4.0", onInstall = {}, onLater = {})
+        }
+
+        compose.onNodeWithText("Update").assertIsFocused()
+        captureScreen("update_available_dialog")
+    }
+
     @Test
     fun `down on the remote scrolls long notes while the highlight stays where it is`() {
-        compose.setContent {
-            UpdateAvailableDialog(update, installedVersion = "0.4.0", onInstall = {}, onLater = {})
+        compose.setTvContent {
+            UpdateAvailableDialog(longUpdate, installedVersion = "0.4.0", onInstall = {}, onLater = {})
         }
         compose.onNodeWithText("change number 40", substring = true).assertIsNotDisplayed()
 

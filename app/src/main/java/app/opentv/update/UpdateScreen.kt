@@ -92,7 +92,9 @@ fun UpdateAvailableDialog(
     val dpadScroll = rememberDpadScroll(scroll)
     AlertDialog(
         onDismissRequest = onLater,
-        confirmButton = { TextButton(onClick = onInstall, modifier = dpadScroll) { Text("Update") } },
+        confirmButton = {
+            TextButton(onClick = onInstall, modifier = Modifier.startsFocused().then(dpadScroll)) { Text("Update") }
+        },
         dismissButton = { TextButton(onClick = onLater, modifier = dpadScroll) { Text("Later") } },
         title = { Text("Update available") },
         text = {

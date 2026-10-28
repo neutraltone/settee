@@ -17,6 +17,7 @@ import androidx.compose.ui.input.InputMode
 import androidx.compose.ui.platform.LocalInputModeManager
 import androidx.compose.ui.test.junit4.ComposeContentTestRule
 import androidx.test.core.app.ApplicationProvider
+import androidx.test.platform.app.InstrumentationRegistry
 import app.opentv.ui.theme.OpenTvTheme
 import coil.Coil
 import coil.ImageLoader
@@ -53,7 +54,14 @@ private val screenNamePattern = Regex("[a-z0-9_]+")
  * keyboard input mode. A remote never puts Android in touch mode, and in touch mode clickable
  * things can't take focus, so a focus highlight would never show.
  */
-fun ComposeContentTestRule.setTvContent(content: @Composable () -> Unit) = setContent {
+fun ComposeContentTestRule.setTvContent(content: @Composable () -> Unit) {
+    // The SideEffect below only reaches this window; a dialog opens in a window of its own, which
+    // would otherwise start in touch mode with nothing able to take focus.
+    InstrumentationRegistry.getInstrumentation().setInTouchMode(false)
+    setTvScreen(content)
+}
+
+private fun ComposeContentTestRule.setTvScreen(content: @Composable () -> Unit) = setContent {
     val inputMode = LocalInputModeManager.current
     SideEffect { inputMode.requestInputMode(InputMode.Keyboard) }
     OpenTvTheme(darkTheme = true) {

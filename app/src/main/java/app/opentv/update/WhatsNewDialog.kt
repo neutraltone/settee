@@ -25,6 +25,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
@@ -119,6 +121,17 @@ fun rememberDpadScroll(scroll: ScrollState): Modifier {
 }
 
 private val SCROLL_STEP = 96.dp
+
+/**
+ * Takes focus when it first appears. Out of touch mode, Compose highlights a dialog's first button in
+ * focus order, which for an AlertDialog is the dismiss button; this starts the highlight elsewhere.
+ */
+@Composable
+fun Modifier.startsFocused(): Modifier {
+    val focus = remember { FocusRequester() }
+    LaunchedEffect(focus) { focus.requestFocus() }
+    return focusRequester(focus)
+}
 
 /** Release notes as a viewer reads them; shared by the What's new and Update available dialogs. */
 @Composable
