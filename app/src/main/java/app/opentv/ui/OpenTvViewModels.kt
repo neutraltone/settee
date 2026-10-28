@@ -761,7 +761,8 @@ class VodViewModel @JvmOverloads constructor(
         val playerTitle: String,
         val posterUrl: String?,
         val streamUrl: String,
-        val progress: Float,
+        /** How far through, 0..1; null when it has never been played, so the card shows no bar. */
+        val progress: Float?,
         val episode: SeasonEpisode? = null,
     )
 

@@ -544,10 +544,12 @@ private fun ResumeCard(item: VodViewModel.ResumeItem, onClick: () -> Unit) {
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.fillMaxSize(),
             )
-            LinearProgressIndicator(
-                progress = { item.progress },
-                modifier = Modifier.fillMaxWidth().height(4.dp).align(Alignment.BottomStart),
-            )
+            item.progress?.let { progress ->
+                LinearProgressIndicator(
+                    progress = { progress },
+                    modifier = Modifier.fillMaxWidth().height(4.dp).align(Alignment.BottomStart),
+                )
+            }
         }
         Spacer(Modifier.height(6.dp))
         Text(

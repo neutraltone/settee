@@ -41,8 +41,11 @@ sealed interface ContinueWatchingCard {
     /** A movie the Profile stopped part way through; [progress] is how far, 0..1. */
     data class Movie(val movieId: Long, val progress: Float) : ContinueWatchingCard
 
-    /** A series, picked back up at [episode]; [progress] is how far through it is, 0..1. */
-    data class Series(val episode: Episode, val progress: Float) : ContinueWatchingCard
+    /**
+     * A series, picked back up at [episode]; [progress] is how far through it is, 0..1, or null for
+     * an Up Next the Profile has never played.
+     */
+    data class Series(val episode: Episode, val progress: Float?) : ContinueWatchingCard
 }
 
 /** What a series page's main button does for the active Profile. */
@@ -134,27 +137,35 @@ class ViewerLibrary(
             // Played episodes are observed as well as positions so a newly added Up Next shows up.
             combine(positions.observeNewestFirst(pid), episodes.observePlayed(pid)) { list, played ->
                 val byKey = played.associateBy { "$EPISODE_PREFIX${it.id}" }
+                val positionOf = list.associateBy { it.mediaKey }
                 val latestPerSeries = list.mapNotNull { pos -> byKey[pos.mediaKey]?.let { it to pos } }
                     .distinctBy { (ep, _) -> ep.sourceId to ep.seriesId }
                 // Capped on cards, not series: a series with nothing left to watch takes no slot.
                 buildList {
                     for ((ep, pos) in latestPerSeries) {
                         if (size == IN_PROGRESS_LIMIT) break
-                        seriesCard(ep, pos)?.let(::add)
+                        seriesCard(ep, pos, positionOf)?.let(::add)
                     }
                 }
             }
         }
 
-    private suspend fun seriesCard(latest: Episode, pos: PlaybackPosition): ContinueWatchingCard? =
-        when (val status = statusOf(pos)) {
-            is WatchStatus.InProgress -> ContinueWatchingCard.Series(latest, status.progress)
-            else -> {
-                val ordered = episodes.forSeries(latest.sourceId, latest.seriesId).sortedWith(EPISODE_ORDER)
-                ordered.getOrNull(ordered.indexOfFirst { it.id == latest.id } + 1)
-                    ?.let { ContinueWatchingCard.Series(it, 0f) }
+    private suspend fun seriesCard(
+        latest: Episode,
+        pos: PlaybackPosition,
+        positionOf: Map<String, PlaybackPosition>,
+    ): ContinueWatchingCard? = when (val status = statusOf(pos)) {
+        is WatchStatus.InProgress -> ContinueWatchingCard.Series(latest, status.progress)
+        else -> {
+            val ordered = episodes.forSeries(latest.sourceId, latest.seriesId).sortedWith(EPISODE_ORDER)
+            ordered.getOrNull(ordered.indexOfFirst { it.id == latest.id } + 1)?.let { next ->
+                // Up Next may have been started before an earlier episode was finished; the player
+                // resumes it there, so the card shows that progress rather than none.
+                val started = positionOf["$EPISODE_PREFIX${next.id}"]?.let(::statusOf) as? WatchStatus.InProgress
+                ContinueWatchingCard.Series(next, started?.progress)
             }
         }
+    }
 
     /** Every episode's status for the active Profile; re-emits only when a status actually changes. */
     @OptIn(ExperimentalCoroutinesApi::class)

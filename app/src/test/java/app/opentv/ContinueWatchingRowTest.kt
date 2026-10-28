@@ -6,6 +6,8 @@
 package app.opentv
 
 import androidx.compose.ui.semantics.ProgressBarRangeInfo
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasProgressBarRangeInfo
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -63,12 +65,12 @@ class ContinueWatchingRowTest {
     }
 
     @Test
-    fun `an Up Next card has an empty progress bar`() {
-        show(inProgress.copy(mediaKey = "ep:25", progress = 0f, episode = SeasonEpisode(season = 2, episode = 5)))
+    fun `an Up Next card never played shows no progress bar`() {
+        show(inProgress.copy(mediaKey = "ep:25", progress = null, episode = SeasonEpisode(season = 2, episode = 5)))
 
         compose.onNodeWithText("S2 · E5", useUnmergedTree = true).assertExists()
-        compose.onNode(hasProgressBarRangeInfo(ProgressBarRangeInfo(0f, 0f..1f)), useUnmergedTree = true)
-            .assertExists()
+        compose.onNode(SemanticsMatcher.keyIsDefined(SemanticsProperties.ProgressBarRangeInfo), useUnmergedTree = true)
+            .assertDoesNotExist()
         captureScreen("continue_watching_up_next")
     }
 

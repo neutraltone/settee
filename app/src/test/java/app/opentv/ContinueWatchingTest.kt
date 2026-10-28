@@ -60,12 +60,13 @@ class ContinueWatchingTest {
         library.recordProgress("ep:${ep.id}", positionMillis = 2_400_000, durationMillis = 2_400_000)
 
     @Test
-    fun `finishing an episode puts the series' Up Next in Continue Watching with nothing played of it yet`() = runTest {
-        db.episodes().upsertAll(episodes)
-        watch(testEpisode(1, 3))
+    fun `finishing an episode puts the series' Up Next in Continue Watching, with no progress if never played`() =
+        runTest {
+            db.episodes().upsertAll(episodes)
+            watch(testEpisode(1, 3))
 
-        assertThat(seriesCards()).containsExactly(ContinueWatchingCard.Series(testEpisode(2, 1), progress = 0f))
-    }
+            assertThat(seriesCards()).containsExactly(ContinueWatchingCard.Series(testEpisode(2, 1), progress = null))
+        }
 
     @Test
     fun `finishing the last available episode takes the series out of Continue Watching`() = runTest {
@@ -104,7 +105,7 @@ class ContinueWatchingTest {
         watch(testEpisode(1, 1))
 
         assertThat(seriesCards()).containsExactly(
-            ContinueWatchingCard.Series(testEpisode(1, 2), progress = 0f),
+            ContinueWatchingCard.Series(testEpisode(1, 2), progress = null),
             ContinueWatchingCard.Series(otherSeries, progress = 0.25f),
         ).inOrder()
     }
@@ -134,5 +135,15 @@ class ContinueWatchingTest {
         }
 
         assertThat(seriesCards()).containsExactly(ContinueWatchingCard.Series(testEpisode(1, 1), progress = 0.25f))
+    }
+
+    @Test
+    fun `an Up Next started earlier shows how far through it is, since that is where it resumes`() = runTest {
+        db.episodes().upsertAll(episodes)
+        stopPartWay(testEpisode(1, 2))
+        now += 60_000
+        watch(testEpisode(1, 1))
+
+        assertThat(seriesCards()).containsExactly(ContinueWatchingCard.Series(testEpisode(1, 2), progress = 0.25f))
     }
 }
