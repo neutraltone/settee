@@ -132,6 +132,8 @@ class PlayerController(
     private val _playWhenReady = MutableStateFlow(false)
     val playWhenReady: StateFlow<Boolean> = _playWhenReady.asStateFlow()
 
+    private val strings = context.applicationContext
+
     private var switchJob: Job? = null
     private val streamSubtitles = StreamSubtitles()
     private var current: Request? = null
@@ -291,19 +293,24 @@ class PlayerController(
         // Cancelling here is what makes fast channel-changing safe: the previous switch never
         // reaches the player, so we never stack prepares.
         switchJob?.cancel()
+        // An automatic restart plays the same request again and keeps counting, so a stream that
+        // keeps dropping stops after MAX_AUTO_RESTARTS rather than retrying (and, on a portal,
+        // minting a link) forever.
+        if (request != current) consecutiveFailures = 0
         current = request
 
         switchJob = scope.launch {
             if (debounce) delay(switchDebounceMillis)
 
-            consecutiveFailures = 0
             // A restart keeps its title while it asks again; a new channel has none until it's known.
             if (request.key != titled) _title.value = ""
             _state.value = State.Buffering(_title.value)
             val playable = when (val resolved = resolve(request.key)) {
                 is Playable.Ready -> resolved
                 is Playable.Failed -> {
-                    _state.value = State.Error(_title.value, PlaybackErrors.describe(resolved.failure), canRetry = true)
+                    val title = resolved.title.ifEmpty { _title.value }
+                    _state.value =
+                        State.Error(title, strings.getString(PlaybackErrors.messageOf(resolved.failure)), true)
                     return@launch
                 }
             }
@@ -346,6 +353,7 @@ class PlayerController(
     }
 
     fun retry() {
+        consecutiveFailures = 0
         current?.let { play(it, debounce = false) }
     }
 

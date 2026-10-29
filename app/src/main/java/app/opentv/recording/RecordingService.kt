@@ -19,6 +19,7 @@ import androidx.core.app.NotificationCompat
 import app.opentv.R
 import app.opentv.core.ServiceLocator
 import app.opentv.data.repo.MediaKey
+import app.opentv.player.PlaybackErrors
 import java.util.concurrent.ConcurrentHashMap
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -107,7 +108,7 @@ class RecordingService : Service() {
                 endAtMillis = recording.scheduledEndMillis,
                 onCall = { captures[id]?.call = it },
                 onProgress = { repo.setSize(id, it) },
-            ).failure
+            ).failure?.let { getString(PlaybackErrors.messageOf(it)) }
         } catch (t: Throwable) {
             // A cancelled stop is a clean finish, not an error.
             if (t is kotlinx.coroutines.CancellationException) {

@@ -7,7 +7,6 @@ package app.opentv.recording
 
 import android.util.Log
 import app.opentv.data.repo.Playable
-import app.opentv.player.PlaybackErrors
 import java.io.IOException
 import java.io.InputStream
 import java.io.OutputStream
@@ -35,7 +34,7 @@ class StreamCapture(
     private val resolve: suspend () -> Playable,
 ) {
     /** What a capture came to: how much it wrote, and why it wrote nothing when it did. */
-    data class Outcome(val bytes: Long, val failure: String?)
+    data class Outcome(val bytes: Long, val failure: Playable.Failure?)
 
     /** Written so far; read by a capture that was stopped part-way, which never gets its [Outcome]. */
     @Volatile
@@ -69,8 +68,7 @@ class StreamCapture(
                 delay(RECONNECT_BACKOFF_MILLIS)
             }
         }
-        val failure = refused?.takeIf { bytes == 0L }?.let(PlaybackErrors::describe)
-        return Outcome(bytes, failure)
+        return Outcome(bytes, refused?.takeIf { bytes == 0L })
     }
 
     /** One connection's worth of the capture: what it writes into, and until when. */

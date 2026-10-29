@@ -34,7 +34,8 @@ class PlaybackSourcesTest {
 
     private val test = TestCatalog(ApplicationProvider.getApplicationContext())
     private val db = test.db
-    private val sources = PlaybackSources(db, XtreamApi(test.panel.http), StalkerApi(test.panel.http))
+    private val context = ApplicationProvider.getApplicationContext<android.content.Context>()
+    private val sources = PlaybackSources(db, XtreamApi(test.panel.http), StalkerApi(test.panel.http), clock = { NOW })
 
     @After
     fun close() = test.close()
@@ -90,8 +91,8 @@ class PlaybackSourcesTest {
 
         val playable = sources.forWatching(key)
 
-        assertThat(playable).isEqualTo(Playable.Failed(key, Playable.Failure.LINK_REFUSED))
-        assertThat(PlaybackErrors.describe(Playable.Failure.LINK_REFUSED)).isEqualTo(
+        assertThat(playable).isEqualTo(Playable.Failed(key, Playable.Failure.LINK_REFUSED, title = "BBC One"))
+        assertThat(message(Playable.Failure.LINK_REFUSED)).isEqualTo(
             "The portal didn't give a link for this channel. Refresh the channel list, or check the " +
                 "MAC address is still authorised.",
         )
@@ -177,7 +178,7 @@ class PlaybackSourcesTest {
         val playable = sources.forWatching(key)
 
         assertThat(playable).isEqualTo(Playable.Failed(key, Playable.Failure.NO_CATCHUP))
-        assertThat(PlaybackErrors.describe(Playable.Failure.NO_CATCHUP))
+        assertThat(message(Playable.Failure.NO_CATCHUP))
             .isEqualTo("This provider doesn't offer catch-up. Only Xtream providers can play past programmes.")
     }
 
@@ -264,6 +265,23 @@ class PlaybackSourcesTest {
         }
 
     @Test
+    fun `a clash recording whose other copy has gone captures the channel the viewer picked`() = runTest {
+        db.sources().insert(PANEL_SOURCE)
+        db.sources().insert(STALKER_SOURCE)
+        db.channels().upsertAll(
+            listOf(bbcOne(sourceId = PANEL_SOURCE.id, streamUrl = "http://example.com/live/u/p/9.m3u8")),
+        )
+        val picked = db.channels().allForMatching().single().id
+        val id = db.recordings().insert(
+            recording("/data/rec/news.ts", RecordingStatus.SCHEDULED, picked).copy(sourceId = STALKER_SOURCE.id),
+        )
+
+        val capture = sources.forRecording(MediaKey.Recording(id)) as Playable.Ready
+
+        assertThat(capture.url).isEqualTo("http://example.com/live/u/p/9.ts")
+    }
+
+    @Test
     fun `a Stalker recording is given a freshly minted link each time it asks`() = runTest {
         db.sources().insert(STALKER_SOURCE)
         test.panel.replies["handshake"] = """{"js": {"token": "t"}}"""
@@ -308,7 +326,7 @@ class PlaybackSourcesTest {
         val key = MediaKey.Recording(id)
 
         assertThat(sources.forRecording(key)).isEqualTo(Playable.Failed(key, Playable.Failure.GONE))
-        assertThat(PlaybackErrors.describe(Playable.Failure.GONE))
+        assertThat(message(Playable.Failure.GONE))
             .isEqualTo("This is no longer in the provider's list. Refresh the channel list and try again.")
     }
 
@@ -330,6 +348,56 @@ class PlaybackSourcesTest {
 
         assertThat(sources.forWatching(key)).isEqualTo(Playable.Failed(key, Playable.Failure.GONE))
     }
+
+    @Test
+    fun `a portal that won't take the MAC is a refused link, not a crash`() = runTest {
+        db.sources().insert(STALKER_SOURCE.copy(macAddress = ""))
+        val key = MediaKey.Live(channel(streamUrl = "stalker://2/9", sourceId = STALKER_SOURCE.id, cmd = "ffmpeg x"))
+
+        assertThat(sources.forWatching(key)).isEqualTo(Playable.Failed(key, Playable.Failure.LINK_REFUSED, "BBC One"))
+    }
+
+    @Test
+    fun `catch-up finds its programme when another feed's entry overlaps its start`() = runTest {
+        db.sources().insert(PANEL_SOURCE)
+        val id = channel(streamUrl = "http://example.com/live/u/p/9.m3u8")
+        val overlapping = news().copy(feedId = 2, startUtcMillis = NEWS_START - 30 * 60_000L, title = "Quiz")
+        db.programmes().upsertAll(listOf(overlapping, news()))
+
+        val playable = inUtc { sources.forWatching(MediaKey.Catchup(id, NEWS_START)) } as Playable.Ready
+
+        assertThat(playable.title).isEqualTo("BBC One — News")
+    }
+
+    @Test
+    fun `a booking that is due follows its file even before the recorder has marked it started`() = runTest {
+        val due = recording("/data/rec/news.ts", RecordingStatus.SCHEDULED)
+            .copy(scheduledStartMillis = NOW - 1_000, scheduledEndMillis = NOW + 60_000)
+        val id = db.recordings().insert(due)
+        val later = db.recordings().insert(
+            due.copy(
+                scheduledStartMillis = NOW + 60_000,
+                scheduledEndMillis =
+                NOW + 120_000,
+            ),
+        )
+
+        assertThat((sources.forWatching(MediaKey.Recording(id)) as Playable.Ready).url).isEqualTo("optvrec://$id")
+        assertThat(sources.isGrowing(MediaKey.Recording(id))).isTrue()
+        assertThat(sources.isGrowing(MediaKey.Recording(later))).isFalse()
+    }
+
+    @Test
+    fun `only a recording still being written grows`() = runTest {
+        db.sources().insert(PANEL_SOURCE)
+        db.movies().upsertAll(listOf(movie()))
+        val finished = db.recordings().insert(recording("/data/rec/news.ts", RecordingStatus.COMPLETED))
+
+        assertThat(sources.isGrowing(MediaKey.Movie(db.movies().all().single().id))).isFalse()
+        assertThat(sources.isGrowing(MediaKey.Recording(finished))).isFalse()
+    }
+
+    private fun message(failure: Playable.Failure) = context.getString(PlaybackErrors.messageOf(failure))
 
     private fun news() = Programme(
         feedId = 1,
@@ -399,3 +467,6 @@ class PlaybackSourcesTest {
 
 /** 2023-11-14 21:00 UTC. */
 private const val NEWS_START = 1_699_995_600_000L
+
+/** Where these tests' clock stands. */
+private const val NOW = 1_700_000_000_000L

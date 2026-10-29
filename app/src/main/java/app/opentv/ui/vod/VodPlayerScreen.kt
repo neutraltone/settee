@@ -93,7 +93,6 @@ import app.opentv.core.ServiceLocator
 import app.opentv.core.SleepTimer
 import app.opentv.core.findActivity
 import app.opentv.data.repo.MediaKey
-import app.opentv.data.repo.Playable
 import app.opentv.player.NextEpisodeCountdown
 import app.opentv.player.PlayerController
 import app.opentv.ui.formatPlaybackTime
@@ -130,9 +129,7 @@ fun VodPlayerScreen(mediaKey: MediaKey, onBack: () -> Unit, viewModel: VodPlayer
     // little differently in the transport: the "length" is how much has been recorded so far, which
     // keeps growing, and seeking is bounded to that recorded extent.
     // The player is built for it, so it waits until the recording's row says whether it is.
-    val growing by produceState<Boolean?>(null, mediaKey) {
-        value = (graph.playbackSources.forWatching(mediaKey) as? Playable.Ready)?.url?.startsWith("optvrec://") == true
-    }
+    val growing by produceState<Boolean?>(null, mediaKey) { value = graph.playbackSources.isGrowing(mediaKey) }
     val growingRec = growing ?: return
     // The SMB source lets a recording stored on a NAS play and seek in-app; harmless for the
     // http/file URLs of ordinary VOD.

@@ -72,6 +72,17 @@ class PlayerControllerTest {
         assertThat(panel.asked.count { it == "create_link" }).isEqualTo(2)
     }
 
+    @Test
+    fun `a channel that keeps failing stops restarting after a few tries`() {
+        val controller = players.controller(LIVE, failing = 100, resolve = sources::forWatching)
+
+        controller.play(PlayerController.Request(MediaKey.Live(channels.first())), debounce = false)
+        players.until { (controller.state.value as? PlayerController.State.Error)?.canRetry == false }
+        players.advance(10_000)
+
+        assertThat(panel.asked.count { it == "create_link" }).isEqualTo(3)
+    }
+
     private fun stalkerChannel(n: Int) = Channel(
         sourceId = STALKER_SOURCE.id,
         streamId = "$n",

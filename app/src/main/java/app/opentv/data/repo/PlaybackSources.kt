@@ -6,6 +6,8 @@
 package app.opentv.data.repo
 
 import android.net.Uri
+import android.util.Log
+import app.opentv.data.db.ChannelDao
 import app.opentv.data.db.OpenTvDatabase
 import app.opentv.data.model.Channel
 import app.opentv.data.model.Episode
@@ -93,8 +95,11 @@ sealed interface Playable {
         val isLive: Boolean,
     ) : Playable
 
-    /** [app.opentv.player.PlaybackErrors] says what went wrong and what to try. */
-    data class Failed(val key: MediaKey, val failure: Failure) : Playable
+    /**
+     * [app.opentv.player.PlaybackErrors] says what went wrong and what to try. [title] is what
+     * [key] is called, when it got far enough to know; empty otherwise.
+     */
+    data class Failed(val key: MediaKey, val failure: Failure, val title: String = "") : Playable
 
     enum class Failure {
         /** The Stalker portal answered create_link with nothing, or not at all. */
@@ -116,6 +121,7 @@ class PlaybackSources(
     private val db: OpenTvDatabase,
     private val xtreamApi: XtreamApi,
     private val stalkerApi: StalkerApi,
+    private val clock: () -> Long = System::currentTimeMillis,
 ) {
 
     suspend fun forWatching(key: MediaKey): Playable = resolving(key) {
@@ -130,34 +136,25 @@ class PlaybackSources(
     }
 
     /**
+     * Whether [key] is a recording still being written, which the player follows as it grows and
+     * so has to be built for.
+     */
+    suspend fun isGrowing(key: MediaKey): Boolean =
+        key is MediaKey.Recording && db.recordings().byId(key.recordingId)?.let { isGrowing(it, clock()) } == true
+
+    /**
      * What the recorder pulls for [key]: its channel's stream, resolved anew each time it is asked, so
      * a Stalker link that has expired by a reconnect, or by a booking's start, is minted again.
      */
     suspend fun forRecording(key: MediaKey.Recording): Playable = resolving(key) {
         val recording = db.recordings().byId(key.recordingId).or(Failure.GONE)
-        val channel = capturedChannel(recording)
+        val channel = db.channels().capturedFor(recording)
         if (channel == null) {
             lastKnown(key, recording)
         } else {
             live(MediaKey.Live(channel.id)).let {
                 it.copy(key = key, url = recordUrlFor(it.url), title = recording.title)
             }
-        }
-    }
-
-    /**
-     * The channel [recording] pulls from. It keeps the channel the viewer picked, but a clash with
-     * another booking can move the capture to the same channel on another provider: the row's
-     * source says which.
-     */
-    private suspend fun capturedChannel(recording: Recording): Channel? {
-        val picked = db.channels().byId(recording.channelId)
-        return if (picked == null || picked.sourceId == recording.sourceId || picked.groupKey.isEmpty()) {
-            picked
-        } else {
-            db.channels().variantsInGroup(picked.groupKey)
-                .filter { it.sourceId == recording.sourceId }
-                .maxByOrNull { it.qualityRank }
         }
     }
 
@@ -182,7 +179,7 @@ class PlaybackSources(
         // The marker a Stalker channel stores is never playable, so a refused mint is a failure:
         // handing the marker on would show a player error that says nothing about the portal.
         val url = if (source?.kind == SourceKind.STALKER) {
-            stalkerApi.createLink(source, channel.cmd.orEmpty()).or(Failure.LINK_REFUSED)
+            stalkerApi.mint(source, channel) ?: throw Unplayable(Failure.LINK_REFUSED, channel.shownName)
         } else {
             channel.streamUrl
         }
@@ -212,10 +209,9 @@ class PlaybackSources(
         val source = db.sources().byId(channel.sourceId).or(Failure.GONE)
         if (source.kind != SourceKind.XTREAM) throw Unplayable(Failure.NO_CATCHUP)
         // The archive wants the programme's length, which only the guide knows.
-        val programme = channel.epgCandidates.firstNotNullOfOrNull { epgId ->
-            db.programmes().upcoming(epgId, key.startUtcMillis, limit = 1)
-                .firstOrNull { it.startUtcMillis == key.startUtcMillis }
-        }.or(Failure.GONE)
+        val programme = channel.epgCandidates
+            .firstNotNullOfOrNull { epgId -> db.programmes().startingAt(epgId, key.startUtcMillis) }
+            .or(Failure.GONE)
         val minutes = TimeUnit.MILLISECONDS.toMinutes(programme.durationMillis).toInt()
         val url = xtreamApi.catchupUrl(source, channel.streamId, key.startUtcMillis, minutes)
         return Playable.Ready(
@@ -231,11 +227,9 @@ class PlaybackSources(
         val recording = db.recordings().byId(key.recordingId).or(Failure.GONE)
         val path = recording.filePath
         // One still being written is followed through the tail-reading optvrec:// source, so it can be
-        // watched as it records with no second connection to the provider. A USB document can't be
-        // followed that way, so it plays only what is there when it opens.
-        val growable = !RecordingStorage.isContent(path) && !RecordingStorage.isUsbPlaceholder(path)
+        // watched as it records with no second connection to the provider.
         val url = when {
-            recording.status == RecordingStatus.RECORDING && growable -> "optvrec://${recording.id}"
+            isGrowing(recording, clock()) -> "optvrec://${recording.id}"
             SmbClient.isSmb(path) || RecordingStorage.isContent(path) -> path
             else -> Uri.fromFile(File(path)).toString()
         }
@@ -243,15 +237,55 @@ class PlaybackSources(
     }
 }
 
+/**
+ * The channel [recording] pulls from. It keeps the channel the viewer picked, but a clash with
+ * another booking can move the capture to the same channel on another provider: the row's
+ * source says which.
+ */
+private suspend fun ChannelDao.capturedFor(recording: Recording): Channel? {
+    val picked = byId(recording.channelId)
+    return if (picked == null || picked.sourceId == recording.sourceId || picked.groupKey.isEmpty()) {
+        picked
+    } else {
+        variantsInGroup(picked.groupKey)
+            .filter { it.sourceId == recording.sourceId }
+            .maxByOrNull { it.qualityRank }
+            // That copy has gone since: the channel the viewer picked is still worth recording.
+            ?: picked
+    }
+}
+
+/** A portal that won't take the MAC throws rather than answering; to the viewer that's the same refusal. */
+private suspend fun StalkerApi.mint(source: Source, channel: Channel): String? = try {
+    createLink(source, channel.cmd.orEmpty())
+} catch (e: StalkerApi.StalkerException) {
+    Log.w(TAG, "The portal refused a link", e)
+    null
+}
+
+/**
+ * Being written now, or due to be: the auto-switch opens a booking the moment it's due, before
+ * the recorder has marked it started, and the growing source waits for its file to appear. A
+ * USB document can't be followed, so it plays only what is there when it opens.
+ */
+private fun isGrowing(recording: Recording, now: Long): Boolean {
+    val path = recording.filePath
+    if (RecordingStorage.isContent(path) || RecordingStorage.isUsbPlaceholder(path)) return false
+    val due = recording.status == RecordingStatus.SCHEDULED &&
+        recording.scheduledStartMillis <= now &&
+        (recording.scheduledEndMillis == 0L || now < recording.scheduledEndMillis)
+    return recording.status == RecordingStatus.RECORDING || due
+}
+
 /** Why a title can't be played, thrown from deep in a lookup and turned into [Playable.Failed]. */
-private class Unplayable(val failure: Failure) : Exception()
+private class Unplayable(val failure: Failure, val title: String = "") : Exception()
 
 private fun <T : Any> T?.or(failure: Failure): T = this ?: throw Unplayable(failure)
 
 private inline fun resolving(key: MediaKey, resolve: () -> Playable.Ready): Playable = try {
     resolve()
 } catch (e: Unplayable) {
-    Playable.Failed(key, e.failure)
+    Playable.Failed(key, e.failure, e.title)
 }
 
 /**
@@ -266,3 +300,5 @@ private fun userAgentOf(source: Source?) = source?.userAgent ?: Source.DEFAULT_U
 
 /** What the player calls an episode, wherever it was started from. */
 val Episode.playerTitle: String get() = "S${season}E$episodeNumber · $title"
+
+private const val TAG = "PlaybackSources"

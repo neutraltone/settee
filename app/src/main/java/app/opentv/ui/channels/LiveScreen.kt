@@ -777,7 +777,7 @@ fun LiveScreen(
                             if (playable is Playable.Failed) {
                                 Toast.makeText(
                                     context,
-                                    PlaybackErrors.describe(playable.failure),
+                                    PlaybackErrors.messageOf(playable.failure),
                                     Toast.LENGTH_LONG,
                                 ).show()
                                 return@launch

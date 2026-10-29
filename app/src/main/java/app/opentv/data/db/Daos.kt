@@ -391,6 +391,10 @@ interface ProgrammeDao {
     )
     suspend fun upcoming(channelId: String, nowUtcMillis: Long, limit: Int): List<Programme>
 
+    /** The programme starting at [startUtcMillis] on [channelId], for playing it back from the archive. */
+    @Query("SELECT * FROM programmes WHERE epgChannelId = :channelId AND startUtcMillis = :startUtcMillis LIMIT 1")
+    suspend fun startingAt(channelId: String, startUtcMillis: Long): Programme?
+
     @Query("SELECT COUNT(*) FROM programmes WHERE feedId = :feedId")
     suspend fun countForFeed(feedId: Long): Int
 

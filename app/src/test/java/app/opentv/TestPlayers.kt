@@ -157,6 +157,9 @@ class TestPlayers(private val context: Context) {
         error("The player never got ready: state ${player.playbackState}")
     }
 
+    /** Moves the main thread's clock on by [millis], running whatever was waiting on it. */
+    fun advance(millis: Long) = shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(millis))
+
     private class FakeSources(
         private val window: FakeTimeline.TimelineWindowDefinition,
         private val played: MutableList<String>,
