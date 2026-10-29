@@ -165,4 +165,49 @@ class ContinueWatchingTest {
             ContinueWatchingCard.Movie(movieId = 3, progress = 0.25f),
         ).inOrder()
     }
+
+    /** S3E1, which the provider added after the Profile had watched everything up to S2E3. */
+    private fun newSeason(firstSeenMillis: Long) = testEpisode(3, 1).copy(firstSeenMillis = firstSeenMillis)
+
+    @Test
+    fun `a new season after the finale brings the series back with its first episode as a New Episode`() = runTest {
+        db.episodes().upsertAll(episodes)
+        watch(testEpisode(2, 3))
+        db.episodes().upsertAll(listOf(newSeason(firstSeenMillis = now + 60_000)))
+
+        assertThat(seriesCards()).containsExactly(
+            ContinueWatchingCard.Series(
+                newSeason(firstSeenMillis = now + 60_000),
+                progress = null,
+                newEpisode = true,
+            ),
+        )
+    }
+
+    @Test
+    fun `starting a New Episode makes it an ordinary In Progress card`() = runTest {
+        db.episodes().upsertAll(episodes)
+        watch(testEpisode(2, 3))
+        db.episodes().upsertAll(listOf(newSeason(firstSeenMillis = now + 60_000)))
+        now += 120_000
+        stopPartWay(newSeason(firstSeenMillis = now))
+
+        assertThat(seriesCards()).containsExactly(
+            ContinueWatchingCard.Series(newSeason(firstSeenMillis = 1_060_000), progress = 0.25f),
+        )
+    }
+
+    @Test
+    fun `a New Episode is placed by when it was noticed, not when the series was last played`() = runTest {
+        db.episodes().upsertAll(episodes + otherSeries)
+        watch(testEpisode(2, 3))
+        now += 60_000
+        stopPartWay(otherSeries)
+        db.episodes().upsertAll(listOf(newSeason(firstSeenMillis = now + 60_000)))
+
+        assertThat(seriesCards()).containsExactly(
+            ContinueWatchingCard.Series(newSeason(firstSeenMillis = now + 60_000), progress = null, newEpisode = true),
+            ContinueWatchingCard.Series(otherSeries, progress = 0.25f),
+        ).inOrder()
+    }
 }

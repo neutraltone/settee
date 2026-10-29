@@ -497,6 +497,7 @@
     <string name="options_add_favourite">Add to Favourites</string>
     <string name="options_remove_favourite">Remove from Favourites</string>
     <string name="watch_badge_in_progress">In progress</string>
+    <string name="watch_badge_new_episode">New episode</string>
     <plurals name="watch_badge_minutes_left">
         <item quantity="one">%1$d min left</item>
         <item quantity="other">%1$d min left</item>

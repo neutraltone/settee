@@ -105,6 +105,21 @@ class ContinueWatchingRowTest {
     }
 
     @Test
+    fun `a New Episode card says so on its thumbnail`() {
+        show(inProgress.copy(mediaKey = "ep:31", progress = null, episode = SeasonEpisode(3, 1), newEpisode = true))
+
+        compose.onNodeWithText("New episode", useUnmergedTree = true).assertExists()
+        captureScreen("continue_watching_new_episode")
+    }
+
+    @Test
+    fun `an ordinary Up Next card has no New Episode badge`() {
+        show(inProgress.copy(mediaKey = "ep:25", progress = null, episode = SeasonEpisode(2, 5)))
+
+        compose.onNodeWithText("New episode", useUnmergedTree = true).assertDoesNotExist()
+    }
+
+    @Test
     fun `Menu on a card asks for its options without playing it`() {
         show(inProgress)
 

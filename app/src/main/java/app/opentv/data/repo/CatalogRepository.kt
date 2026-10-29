@@ -612,11 +612,25 @@ class CatalogRepository(
     suspend fun hiddenChannelUrls(): List<String> = channelDao.hiddenUrls()
     suspend fun markChannelHiddenByUrl(url: String) = channelDao.markHiddenByUrl(url)
 
-    /** Series episodes are fetched lazily — panels are slow and most series are never opened. */
-    suspend fun ensureEpisodes(source: Source, seriesId: String) {
+    /**
+     * Series episodes are fetched lazily — panels are slow and most series are never opened.
+     * Episodes not stored before are stamped as first seen at [nowUtcMillis].
+     */
+    suspend fun ensureEpisodes(source: Source, seriesId: String, nowUtcMillis: Long = System.currentTimeMillis()) {
         if (source.kind != SourceKind.XTREAM) return
         runCatching { api.episodes(source, seriesId) }
-            .onSuccess { if (it.isNotEmpty()) episodeDao.upsertAll(it) }
+            .onSuccess { fetched ->
+                if (fetched.isEmpty()) return@onSuccess
+                // Matched to the stored rows like a catalogue refresh: an upsert without the local
+                // id would update nothing, and an episode must keep when it was first seen.
+                val stored = episodeDao.forSeries(source.id, seriesId).associateBy { it.episodeId }
+                episodeDao.upsertAll(
+                    fetched.map { ep ->
+                        stored[ep.episodeId]?.let { ep.copy(id = it.id, firstSeenMillis = it.firstSeenMillis) }
+                            ?: ep.copy(firstSeenMillis = nowUtcMillis)
+                    },
+                )
+            }
             .onFailure { Log.w(TAG, "Episode fetch failed for series $seriesId", it) }
     }
 
@@ -637,8 +651,12 @@ class CatalogRepository(
                 SyncResult.Success(0, 0, 0)
             }
         if (live is SyncResult.Success && source.kind == SourceKind.XTREAM) {
-            runCatching { syncXtreamVod(source, nowUtcMillis) }
+            val updated = runCatching { syncXtreamVod(source, nowUtcMillis) }
                 .onFailure { Log.w(TAG, "VOD sync failed for source ${source.id}", it) }
+                .getOrDefault(emptyList())
+            // Waited for rather than launched so sources take turns; it is a handful of calls,
+            // next to the EPG a manual refresh waits for anyway.
+            viewerLibrary.newEpisodes.seriesUpdated(updated) { ensureEpisodes(source, it.seriesId, nowUtcMillis) }
         }
         live
     }
@@ -662,8 +680,17 @@ class CatalogRepository(
     /** Movies + series — best-effort, meant to run in the background so a huge VOD list never
      * blocks live TV. Silent on failure: an account with no VOD is normal, not an error. */
     suspend fun syncVod(source: Source, nowUtcMillis: Long) = withContext(Dispatchers.IO) {
-        runCatching { if (source.kind == SourceKind.XTREAM) syncXtreamVod(source, nowUtcMillis) }
+        runCatching { if (source.kind == SourceKind.XTREAM) syncXtreamVod(source, nowUtcMillis) else emptyList() }
             .onFailure { Log.w(TAG, "VOD sync failed for source ${source.id}", it) }
+            // The stored update times have moved now, so a later refresh wouldn't see these again.
+            // Launched, since this is the sync "Loading movies & shows…" waits on.
+            .onSuccess { updated ->
+                background.launch {
+                    viewerLibrary.newEpisodes.seriesUpdated(updated) {
+                        ensureEpisodes(source, it.seriesId, nowUtcMillis)
+                    }
+                }
+            }
     }
 
     private suspend fun syncXtreamLive(source: Source, nowUtcMillis: Long): SyncResult {
@@ -721,13 +748,14 @@ class CatalogRepository(
         return runCatching { stalkerApi.createLink(source, cmd) }.getOrNull() ?: channel.streamUrl
     }
 
-    private suspend fun syncXtreamVod(source: Source, nowUtcMillis: Long) {
+    /** Returns the series the provider updated since the last sync, for New Episode detection. */
+    private suspend fun syncXtreamVod(source: Source, nowUtcMillis: Long): List<Series> {
         // VOD is optional: plenty of accounts have live TV only, and a 404 on get_vod_streams
         // must not cost the user their channel list. Movies and series are gated independently so
         // a user who only turned off, say, Series still gets their movie library refreshed.
         val moviesOn = settings.moviesEnabled.value
         val seriesOn = settings.seriesEnabled.value
-        if (!moviesOn && !seriesOn) return
+        if (!moviesOn && !seriesOn) return emptyList()
 
         val movieCategories =
             if (moviesOn) {
@@ -765,9 +793,10 @@ class CatalogRepository(
             val stored = movieDao.forSource(source.id).associateBy { it.streamId }
             movieDao.upsertAll(movies.map { it.over(stored[it.streamId]) })
         }
-        if (series.isNotEmpty()) {
-            val stored = seriesDao.forSource(source.id).associateBy { it.seriesId }
-            seriesDao.upsertAll(series.map { it.over(stored[it.seriesId]) })
+        val stored = seriesDao.forSource(source.id).associateBy { it.seriesId }
+        val merged = series.map { it.over(stored[it.seriesId]) }
+        if (merged.isNotEmpty()) {
+            seriesDao.upsertAll(merged)
             // Fifty get_series_info calls would hold the sync up for a while; the catalogue is
             // saved, so date the shows afterwards. Recently Released Shows fills in as it goes.
             background.launch {
@@ -775,6 +804,8 @@ class CatalogRepository(
                     .onFailure { Log.w(TAG, "Air dates failed for source ${source.id}", it) }
             }
         }
+        // A show seen for the first time has nobody caught up on it, so only ones that moved.
+        return merged.filter { it.addedMillis > (stored[it.seriesId]?.addedMillis ?: Long.MAX_VALUE) }
     }
 
     /** This freshly fetched movie in place of [old], keeping whatever it lacks that [old] had. */
