@@ -118,6 +118,8 @@ fun MainScreen(
     onPlayRecording: (Recording) -> Unit,
     onPlayCatchup: (mediaKey: String, url: String, title: String, ua: String) -> Unit,
     activeProfileName: String,
+    tab: Tab,
+    onSelectTab: (Tab) -> Unit,
 ) {
     val context = LocalContext.current
     val settings = remember { AppSettings.get(context) }
@@ -129,20 +131,19 @@ fun MainScreen(
     }
     val homeTab = Tab.HOME
 
-    var tab by remember { mutableStateOf(homeTab) }
-
-    // Home takes the highlight when it appears, except when it was picked in the rail: moving the
-    // highlight out of the menu is something no other tab does.
+    // Home and the Live guide take the highlight when they appear (the guide on the channel last
+    // watched), except when picked in the rail: moving the highlight out of the menu would be odd.
     var railFocused by remember { mutableStateOf(false) }
 
     // If the selected tab gets hidden (its type toggled off while it's open), drop back to the
     // home tab so the content area never tries to show a tab that's no longer there.
-    LaunchedEffect(visibleTabs) {
-        if (tab !in visibleTabs) tab = homeTab
+    // Keyed on the tab too: the player can ask for Live on its way in, after Live was switched off.
+    LaunchedEffect(visibleTabs, tab) {
+        if (tab !in visibleTabs) onSelectTab(homeTab)
     }
 
     // Back from a non-home tab returns to the home tab rather than dropping out of the app.
-    BackHandler(enabled = tab != homeTab) { tab = homeTab }
+    BackHandler(enabled = tab != homeTab) { onSelectTab(homeTab) }
 
     // On the home tab, Back would otherwise drop straight out to the TV launcher — one stray press
     // and you've closed the app. Ask first. (A dialog or panel open in a child screen swallows Back
@@ -176,7 +177,7 @@ fun MainScreen(
             NavRail(
                 tabs = visibleTabs,
                 current = tab,
-                onSelect = { tab = it },
+                onSelect = onSelectTab,
                 onOpenSearch = onOpenSearch,
                 onOpenSettings = onOpenSettings,
                 onOpenProfiles = onOpenProfiles,
@@ -201,6 +202,7 @@ fun MainScreen(
                         onAddSource = onAddSource,
                         onRefresh = onRefresh,
                         onPlayCatchup = onPlayCatchup,
+                        takeFocus = !railFocused,
                     )
                     Tab.MOVIES -> MoviesScreen(
                         onOpenMovie = onOpenMovie,
