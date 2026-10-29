@@ -71,6 +71,7 @@ internal fun HomeScreen(
     onOpenMovie: (Movie) -> Unit,
     onPlayChannel: (Channel) -> Unit,
     takeFocus: Boolean,
+    onNothingToShow: () -> Unit,
     viewModel: HomeViewModel = viewModel(),
 ) {
     val state = viewModel.state.collectAsState().value ?: return
@@ -85,6 +86,7 @@ internal fun HomeScreen(
         onPlayChannel,
         takeFocus,
         state.recent,
+        onNothingToShow,
     )
 }
 
@@ -104,10 +106,18 @@ internal fun HomeContent(
     onPlayChannel: (Channel) -> Unit,
     takeFocus: Boolean,
     recent: RecentRows = RecentRows(),
+    onNothingToShow: () -> Unit = {},
 ) {
     if (listOf(continueWatching, favouriteShows, favouriteMovies, favouriteChannels).all { it.isEmpty() } &&
         recent.isEmpty()
     ) {
+        // A hint can't take the highlight, so hand it to the side menu rather than leave the remote
+        // with nothing to move. It waits a frame, as the request for the first card does below.
+        LaunchedEffect(Unit) {
+            if (!takeFocus) return@LaunchedEffect
+            withFrameNanos {}
+            onNothingToShow()
+        }
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Text(
                 stringResource(R.string.home_empty_hint),
