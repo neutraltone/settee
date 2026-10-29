@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 6,
-    "identityHash": "1c4c2b2c779268905b20dd6222195d8c",
+    "identityHash": "d3fe10d0b2a5b7528984a601df19ca84",
     "entities": [
       {
         "tableName": "sources",
@@ -992,7 +992,7 @@
       },
       {
         "tableName": "live_playback",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`profileId` INTEGER NOT NULL, `source` TEXT NOT NULL, `streamId` TEXT NOT NULL, `name` TEXT NOT NULL, `logoUrl` TEXT, `playedAtMillis` INTEGER NOT NULL, PRIMARY KEY(`profileId`))",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`profileId` INTEGER NOT NULL, `source` TEXT NOT NULL, `streamId` TEXT NOT NULL, `name` TEXT NOT NULL, `logoUrl` TEXT, `playedAtMillis` INTEGER NOT NULL, `otherPlayedAtMillis` INTEGER, PRIMARY KEY(`profileId`))",
         "fields": [
           {
             "fieldPath": "profileId",
@@ -1028,6 +1028,11 @@
             "columnName": "playedAtMillis",
             "affinity": "INTEGER",
             "notNull": true
+          },
+          {
+            "fieldPath": "otherPlayedAtMillis",
+            "columnName": "otherPlayedAtMillis",
+            "affinity": "INTEGER"
           }
         ],
         "primaryKey": {
@@ -1404,7 +1409,7 @@
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '1c4c2b2c779268905b20dd6222195d8c')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'd3fe10d0b2a5b7528984a601df19ca84')"
     ]
   }
 }

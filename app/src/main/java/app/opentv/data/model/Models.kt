@@ -391,9 +391,11 @@ data class SeriesDismissal(
  * The live channel one Profile last settled on, on this device, and when: what Home's Live Preview
  * plays. A table of its own rather than a `live:` row among [PlaybackPosition]s, which have nowhere
  * to keep [name] and [logoUrl] for a channel that has since left the catalogue, and which sync sends
- * to other devices while this stays put (ADR 0003). Keyed like a Favourite, by [source] name and the provider's
- * [streamId], so a catalogue refresh can't point it at another channel. Read and written only
- * through ViewerLibrary.
+ * to other devices while this stays put (ADR 0003). Keyed like a Favourite, by [source] name and
+ * the provider's [streamId], so a catalogue refresh can't point it at another channel.
+ * [otherPlayedAtMillis] is when this device last played the Profile a movie, episode or recording
+ * since: progress rows can't say, as a hand mark or progress synced from another device moves their
+ * times too. Read and written only through ViewerLibrary.
  */
 @Entity(tableName = "live_playback")
 data class LivePlayback(
@@ -403,6 +405,7 @@ data class LivePlayback(
     val name: String,
     val logoUrl: String?,
     val playedAtMillis: Long,
+    val otherPlayedAtMillis: Long? = null,
 )
 
 /**

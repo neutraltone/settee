@@ -645,10 +645,6 @@ interface PlaybackPositionDao {
     @Query("SELECT * FROM playback_positions")
     suspend fun all(): List<PlaybackPosition>
 
-    /** When [profileId] last played a movie, episode or recording; null if never. */
-    @Query("SELECT MAX(updatedAtMillis) FROM playback_positions WHERE profileId = :profileId")
-    fun observeLastPlayedAt(profileId: Long): Flow<Long?>
-
     /** One profile's positions of one kind ("ep:", "movie:") — a series page needs every episode's. */
     @Query("SELECT * FROM playback_positions WHERE profileId = :profileId AND mediaKey LIKE :prefix || '%'")
     fun observeKind(profileId: Long, prefix: String): Flow<List<PlaybackPosition>>
@@ -677,6 +673,9 @@ interface LivePlaybackDao {
         """,
     )
     suspend fun record(profileId: Long, channelId: Long, playedAtMillis: Long)
+
+    @Query("UPDATE live_playback SET otherPlayedAtMillis = :playedAtMillis WHERE profileId = :profileId")
+    suspend fun playedOther(profileId: Long, playedAtMillis: Long)
 
     @Query("SELECT * FROM live_playback WHERE profileId = :profileId")
     fun observe(profileId: Long): Flow<LivePlayback?>

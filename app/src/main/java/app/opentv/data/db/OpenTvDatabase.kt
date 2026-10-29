@@ -117,7 +117,8 @@ abstract class OpenTvDatabase : RoomDatabase() {
                     db.execSQL(
                         "CREATE TABLE IF NOT EXISTS `live_playback` (`profileId` INTEGER NOT NULL, " +
                             "`source` TEXT NOT NULL, `streamId` TEXT NOT NULL, `name` TEXT NOT NULL, " +
-                            "`logoUrl` TEXT, `playedAtMillis` INTEGER NOT NULL, PRIMARY KEY(`profileId`))",
+                            "`logoUrl` TEXT, `playedAtMillis` INTEGER NOT NULL, `otherPlayedAtMillis` INTEGER, " +
+                            "PRIMARY KEY(`profileId`))",
                     )
                 }
             },

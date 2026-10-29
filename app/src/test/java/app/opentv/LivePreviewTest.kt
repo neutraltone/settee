@@ -10,6 +10,7 @@ import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import app.opentv.data.db.OpenTvDatabase
 import app.opentv.data.model.Channel
+import app.opentv.data.model.PlaybackPosition
 import app.opentv.data.model.Source
 import app.opentv.data.model.SourceKind
 import app.opentv.data.repo.LivePreview
@@ -127,6 +128,35 @@ class LivePreviewTest {
         stored("202", "ITV1", syncStamp = 2)
 
         assertThat(preview()).isEqualTo(LivePreview.Gone("BBC One", "http://example.com/101.png"))
+    }
+
+    @Test
+    fun `marking a title Watched by hand isn't playing it, so the Live Preview stays`() = runTest {
+        val bbc = stored("101", "BBC One")
+        library.live.record(bbc)
+        now += 1_000
+
+        library.marks.markWatched("movie:5")
+
+        assertThat(preview()).isEqualTo(LivePreview.Playable(bbc))
+    }
+
+    @Test
+    fun `a movie watched on another device doesn't take this one's Live Preview away`() = runTest {
+        val bbc = stored("101", "BBC One")
+        library.live.record(bbc)
+
+        library.mergeSynced(
+            PlaybackPosition(
+                profileId = 1,
+                mediaKey = "movie:5",
+                positionMillis = 60_000,
+                durationMillis = 3_600_000,
+                updatedAtMillis = now + 1_000,
+            ),
+        )
+
+        assertThat(preview()).isEqualTo(LivePreview.Playable(bbc))
     }
 
     @Test

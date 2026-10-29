@@ -86,7 +86,7 @@ class ViewerLibrary(
     private val cards = ContinueWatchingCards(positions, episodes, dismissals)
 
     /** The live channel the active Profile last settled on, and its Live Preview. */
-    val live = LiveWatching(db.livePlayback(), positions, activeProfileId, clock)
+    val live = LiveWatching(db.livePlayback(), activeProfileId, clock)
 
     /** Each episode's Next Episode, in the same episode order as Up Next. */
     val nextEpisodes = NextEpisodes(episodes)
@@ -104,6 +104,7 @@ class ViewerLibrary(
                 updatedAtMillis = clock(),
             ),
         )
+        live.playedOther()
     }
 
     /**

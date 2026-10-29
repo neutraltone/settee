@@ -6,13 +6,11 @@
 package app.opentv.data.repo
 
 import app.opentv.data.db.LivePlaybackDao
-import app.opentv.data.db.PlaybackPositionDao
 import app.opentv.data.model.Channel
 import app.opentv.data.model.shownName
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
@@ -44,7 +42,6 @@ sealed interface LivePreview {
  */
 class LiveWatching internal constructor(
     private val live: LivePlaybackDao,
-    private val positions: PlaybackPositionDao,
     private val activeProfileId: StateFlow<Long>,
     private val clock: () -> Long,
 ) {
@@ -53,14 +50,20 @@ class LiveWatching internal constructor(
         live.record(activeProfileId.value, channel.id, clock())
     }
 
+    /** This device has played the active Profile a movie, episode or recording since its live channel. */
+    internal suspend fun playedOther() {
+        live.playedOther(activeProfileId.value, clock())
+    }
+
     /**
-     * The active Profile's Live Preview: only while live was the last thing it played, so a movie,
-     * episode or recording played since takes Home back.
+     * The active Profile's Live Preview: only while live was the last thing this device played it,
+     * so a movie, episode or recording played here since takes Home back, but marking one by hand or
+     * watching one on another device doesn't.
      */
     @OptIn(ExperimentalCoroutinesApi::class)
     fun preview(): Flow<LivePreview?> = activeProfileId.flatMapLatest { pid ->
-        combine(live.observe(pid), positions.observeLastPlayedAt(pid)) { played, otherAt ->
-            played?.takeIf { otherAt == null || it.playedAtMillis > otherAt }
+        live.observe(pid).map { played ->
+            played?.takeIf { it.otherPlayedAtMillis == null || it.playedAtMillis > it.otherPlayedAtMillis }
         }.distinctUntilChanged().flatMapLatest { played ->
             if (played == null) {
                 flowOf(null)
