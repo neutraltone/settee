@@ -13,7 +13,6 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -70,7 +69,6 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
@@ -95,6 +93,8 @@ import app.opentv.core.SleepTimer
 import app.opentv.core.findActivity
 import app.opentv.player.NextEpisodeCountdown
 import app.opentv.player.PlayerController
+import app.opentv.ui.player.PlayerBackButton
+import app.opentv.ui.player.PlayerChip
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
@@ -470,43 +470,32 @@ fun VodPlayerScreen(
 
                 Spacer(Modifier.height(10.dp))
 
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    VodChip(Icons.Filled.FastRewind, stringResource(R.string.player_rewind)) {
+                VodPlayerControls(
+                    paused = paused,
+                    onBack = onBack,
+                    onRewind = {
                         if (growingRec) seekRelative(-15_000) else controller.seekBackward()
                         interaction++
-                    }
-                    Spacer(Modifier.width(10.dp))
-                    VodChip(
-                        icon = if (paused) Icons.Filled.PlayArrow else Icons.Filled.Pause,
-                        label = if (paused) {
-                            stringResource(
-                                R.string.common_play,
-                            )
-                        } else {
-                            stringResource(R.string.player_pause)
-                        },
-                        focusRequester = barFocus,
-                    ) {
+                    },
+                    onPlayPause = {
                         paused = !paused
                         controller.player.playWhenReady = !paused
                         interaction++
-                    }
-                    Spacer(Modifier.width(10.dp))
-                    VodChip(Icons.Filled.FastForward, stringResource(R.string.player_forward)) {
+                    },
+                    onForward = {
                         if (growingRec) seekRelative(15_000) else controller.seekForward()
                         interaction++
-                    }
-                    Spacer(Modifier.width(20.dp))
-                    VodChip(Icons.Filled.ClosedCaption, stringResource(R.string.player_subtitles)) {
+                    },
+                    onSubtitles = {
                         vodPanel = if (vodPanel == VodPanel.SUBTITLES) VodPanel.NONE else VodPanel.SUBTITLES
                         interaction++
-                    }
-                    Spacer(Modifier.width(10.dp))
-                    VodChip(Icons.Filled.Audiotrack, stringResource(R.string.player_audio)) {
+                    },
+                    onAudio = {
                         vodPanel = if (vodPanel == VodPanel.AUDIO) VodPanel.NONE else VodPanel.AUDIO
                         interaction++
-                    }
-                }
+                    },
+                    playPauseFocus = barFocus,
+                )
             }
         }
 
@@ -519,31 +508,35 @@ private const val POLL_MILLIS = 500L
 /** How often progress is written while playing, so a crash or power cut loses little. */
 private const val SAVE_EVERY_MILLIS = 15_000L
 
+/** The movie and episode player's transport row: Back, then rewind, play/pause, forward and the pickers. */
 @Composable
-private fun VodChip(icon: ImageVector, label: String, focusRequester: FocusRequester? = null, onClick: () -> Unit) {
-    var focused by remember { mutableStateOf(false) }
-    val container = if (focused) MaterialTheme.colorScheme.primary else Color.White.copy(alpha = 0.14f)
-    val content = if (focused) MaterialTheme.colorScheme.onPrimary else Color.White
-    Row(
-        modifier = Modifier
-            .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
-            .onFocusChanged { focused = it.isFocused }
-            .clip(RoundedCornerShape(12.dp))
-            .background(container)
-            .then(
-                if (focused) {
-                    Modifier.border(2.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(12.dp))
-                } else {
-                    Modifier
-                },
-            )
-            .clickable(onClick = onClick)
-            .padding(horizontal = 14.dp, vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Icon(icon, contentDescription = label, tint = content)
-        Spacer(Modifier.width(6.dp))
-        Text(label, style = MaterialTheme.typography.labelLarge, color = content)
+fun VodPlayerControls(
+    paused: Boolean,
+    onBack: () -> Unit,
+    onRewind: () -> Unit,
+    onPlayPause: () -> Unit,
+    onForward: () -> Unit,
+    onSubtitles: () -> Unit,
+    onAudio: () -> Unit,
+    playPauseFocus: FocusRequester? = null,
+) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        PlayerBackButton(onBack)
+        Spacer(Modifier.width(20.dp))
+        PlayerChip(Icons.Filled.FastRewind, stringResource(R.string.player_rewind), onClick = onRewind)
+        Spacer(Modifier.width(10.dp))
+        PlayerChip(
+            icon = if (paused) Icons.Filled.PlayArrow else Icons.Filled.Pause,
+            label = stringResource(if (paused) R.string.common_play else R.string.player_pause),
+            focusRequester = playPauseFocus,
+            onClick = onPlayPause,
+        )
+        Spacer(Modifier.width(10.dp))
+        PlayerChip(Icons.Filled.FastForward, stringResource(R.string.player_forward), onClick = onForward)
+        Spacer(Modifier.width(20.dp))
+        PlayerChip(Icons.Filled.ClosedCaption, stringResource(R.string.player_subtitles), onClick = onSubtitles)
+        Spacer(Modifier.width(10.dp))
+        PlayerChip(Icons.Filled.Audiotrack, stringResource(R.string.player_audio), onClick = onAudio)
     }
 }
 

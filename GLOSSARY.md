@@ -5,8 +5,12 @@ An IPTV player for TV boxes and phones: it plays live channels, movies and serie
 ## Viewers
 
 **Profile**:
-One viewer on a device: a name with its own Favourites, watch progress and Recent Searches. No password, no account.
+One viewer on a device: a name with its own Favourites, watch progress, Recent Searches and Subtitle Preference. No password, no account.
 _Avoid_: User, account
+
+**Subtitle Preference**:
+Whether a Profile wants subtitles shown, and in which language. Belongs to one Profile and follows it from one title to the next, whatever kind of title it is.
+_Avoid_: Captions setting, CC, subtitle default
 
 ## Watch progress
 
