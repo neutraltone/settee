@@ -59,6 +59,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -91,6 +92,8 @@ import app.opentv.R
 import app.opentv.core.ServiceLocator
 import app.opentv.core.SleepTimer
 import app.opentv.core.findActivity
+import app.opentv.data.repo.MediaKey
+import app.opentv.data.repo.Playable
 import app.opentv.player.NextEpisodeCountdown
 import app.opentv.player.PlayerController
 import app.opentv.ui.formatPlaybackTime
@@ -118,14 +121,7 @@ import kotlinx.coroutines.withContext
  */
 @OptIn(UnstableApi::class)
 @Composable
-fun VodPlayerScreen(
-    mediaKey: String,
-    streamUrl: String,
-    title: String,
-    userAgent: String,
-    onBack: () -> Unit,
-    viewModel: VodPlayerViewModel = viewModel(),
-) {
+fun VodPlayerScreen(mediaKey: MediaKey, onBack: () -> Unit, viewModel: VodPlayerViewModel = viewModel()) {
     val context = LocalContext.current
     val view = LocalView.current
     val graph = remember { ServiceLocator.get(context) }
@@ -133,7 +129,11 @@ fun VodPlayerScreen(
     // A recording that's still being written plays through the tail-following source. It behaves a
     // little differently in the transport: the "length" is how much has been recorded so far, which
     // keeps growing, and seeking is bounded to that recorded extent.
-    val growingRec = remember(streamUrl) { streamUrl.startsWith("optvrec://") }
+    // The player is built for it, so it waits until the recording's row says whether it is.
+    val growing by produceState<Boolean?>(null, mediaKey) {
+        value = (graph.playbackSources.forWatching(mediaKey) as? Playable.Ready)?.url?.startsWith("optvrec://") == true
+    }
+    val growingRec = growing ?: return
     // The SMB source lets a recording stored on a NAS play and seek in-app; harmless for the
     // http/file URLs of ordinary VOD.
     val controller = remember {
@@ -141,6 +141,7 @@ fun VodPlayerScreen(
             context,
             scope,
             graph.streamingHttpClient,
+            resolve = graph.playbackSources::forWatching,
             // Text starts off; the Profile's Subtitle Preference turns it on once tracks arrive.
             subtitlesEnabled = false,
             smbDataSourceFactory = app.opentv.player.SmbDataSource.Factory(graph.settings),
@@ -162,16 +163,8 @@ fun VodPlayerScreen(
             }
 
             // Swapping the media item in the same player, never a new one: see PlayerController.
-            override fun play(item: VodPlayerViewModel.Item, startPositionMillis: Long) = controller.play(
-                PlayerController.Request(
-                    url = item.streamUrl,
-                    title = item.title,
-                    userAgent = item.userAgent,
-                    startPositionMillis = startPositionMillis,
-                    isLive = false,
-                ),
-                debounce = false,
-            )
+            override fun play(key: MediaKey, startPositionMillis: Long) =
+                controller.play(PlayerController.Request(key, startPositionMillis), debounce = false)
 
             override fun pause() {
                 controller.player.playWhenReady = false
@@ -204,8 +197,8 @@ fun VodPlayerScreen(
     // The route names what was opened; once the player has moved on to a Next Episode the view
     // model holds what is playing, and a rebuilt screen picks that up instead. Keyed on the route
     // so a reused entry (a single-top navigation) opened on something new plays that.
-    LaunchedEffect(mediaKey, streamUrl) {
-        viewModel.attach(VodPlayerViewModel.Item(mediaKey, streamUrl, title, userAgent), playback)
+    LaunchedEffect(mediaKey) {
+        viewModel.attach(mediaKey, playback)
         var sinceSaved = 0L
         while (isActive) {
             delay(POLL_MILLIS)
@@ -228,7 +221,7 @@ fun VodPlayerScreen(
         onBack()
     }
 
-    VodPlayerContent(controller, viewModel, title, growingRec, subtitlePicks, onBack)
+    VodPlayerContent(controller, viewModel, growingRec, subtitlePicks, onBack)
 }
 
 /**
@@ -241,7 +234,6 @@ fun VodPlayerScreen(
 fun VodPlayerContent(
     controller: PlayerController,
     viewModel: VodPlayerViewModel,
-    title: String,
     growingRec: Boolean,
     subtitlePicks: SubtitlePicks,
     onBack: () -> Unit,
@@ -265,7 +257,7 @@ fun VodPlayerContent(
     }
     val state by controller.state.collectAsState()
     val tracks by controller.tracks.collectAsState()
-    val current by viewModel.current.collectAsState()
+    val title by controller.title.collectAsState()
     val overlay by viewModel.overlay.collectAsState()
     // Whether the card or the question is up, not which second it shows: effects keyed on this
     // run when one appears or goes, rather than on every tick of the countdown.
@@ -494,7 +486,7 @@ fun VodPlayerContent(
                     }
                     Spacer(Modifier.height(4.dp))
                 }
-                Text(current?.title ?: title, style = MaterialTheme.typography.headlineSmall, color = Color.White)
+                Text(title, style = MaterialTheme.typography.headlineSmall, color = Color.White)
                 Spacer(Modifier.height(8.dp))
 
                 // Seek bar with times either side. Left/right on the remote scrubs.

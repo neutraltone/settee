@@ -26,7 +26,6 @@
     <string name="guide_favourites">★ Favorieten</string>
     <string name="guide_all_channels">Alle zenders</string>
     <string name="guide_watch_from_start">▶  Vanaf het begin kijken (catch-up)</string>
-    <string name="guide_catchup_link_failed">Kan de catch-up link niet maken</string>
     <string name="guide_cancel_reminder">🔔  Herinnering annuleren</string>
     <string name="guide_reminder_removed">Herinnering verwijderd</string>
     <string name="guide_remind_me">🔔  Herinner mij</string>

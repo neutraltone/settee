@@ -17,6 +17,7 @@ import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.requestFocus
 import app.opentv.data.model.Series
 import app.opentv.data.repo.EpisodeStatuses
+import app.opentv.data.repo.MediaKey
 import app.opentv.data.repo.SeriesMainAction
 import app.opentv.ui.vod.SeriesDetailContent
 import com.google.common.truth.Truth.assertThat
@@ -54,7 +55,7 @@ class SeriesDetailContentTest {
 
     private val episodes = listOf(1, 2).flatMap { season -> (1..5).map { testEpisode(season, it) } }
 
-    private var played: String? = null
+    private var played: MediaKey? = null
 
     private val favourite = mutableStateOf<Boolean?>(false)
 
@@ -72,7 +73,7 @@ class SeriesDetailContentTest {
                 mainAction = mainAction.value,
                 favourite = favourite.value,
                 moreLike = emptyList(),
-                onPlayEpisode = { key, _, _ -> played = key },
+                onPlayEpisode = { played = it },
                 onSetFavourite = { favouriteRequests += it },
                 onOpenSeries = {},
                 onOpenPerson = {},
@@ -117,7 +118,7 @@ class SeriesDetailContentTest {
 
         compose.onNodeWithText("Resume S2 E4").performClick()
 
-        assertThat(played).isEqualTo("ep:24")
+        assertThat(played).isEqualTo(MediaKey.Episode(24))
     }
 
     @Test

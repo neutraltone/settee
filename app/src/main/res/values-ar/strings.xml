@@ -26,7 +26,6 @@
     <string name="guide_favourites">★ المفضلة</string>
     <string name="guide_all_channels">جميع القنوات</string>
     <string name="guide_watch_from_start">▶  المشاهدة من البداية (استرجاع)</string>
-    <string name="guide_catchup_link_failed">تعذر إنشاء رابط الاسترجاع</string>
     <string name="guide_cancel_reminder">🔔  إلغاء التذكير</string>
     <string name="guide_reminder_removed">تم إزالة التذكير</string>
     <string name="guide_remind_me">🔔  تذكيري</string>

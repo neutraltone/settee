@@ -26,7 +26,6 @@
     <string name="guide_favourites">★ Suosikit</string>
     <string name="guide_all_channels">Kaikki kanavat</string>
     <string name="guide_watch_from_start">▶  Katso alusta (catch-up)</string>
-    <string name="guide_catchup_link_failed">Catch-up-linkkiä ei voitu muodostaa</string>
     <string name="guide_cancel_reminder">🔔  Peruuta muistutus</string>
     <string name="guide_reminder_removed">Muistutus poistettu</string>
     <string name="guide_remind_me">🔔  Muistuta minua</string>

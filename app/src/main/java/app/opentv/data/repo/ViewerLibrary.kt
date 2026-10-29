@@ -431,14 +431,16 @@ private class ContinueWatchingCards(
 }
 
 /** The key ViewerLibrary keeps a Profile's watch state for this movie under. */
-val Movie.mediaKey: String get() = "$MOVIE_PREFIX$id"
+val Movie.mediaKey: String get() = MediaKey.Movie(id).stored
 
 /** The key ViewerLibrary keeps a Profile's watch state for this episode under. */
-val Episode.mediaKey: String get() = "$EPISODE_PREFIX$id"
+val Episode.mediaKey: String get() = MediaKey.Episode(id).stored
 
 private val EPISODE_ORDER = compareBy<Episode>({ it.season }, { it.episodeNumber })
-private const val EPISODE_PREFIX = "ep:"
-private const val MOVIE_PREFIX = "movie:"
+
+// What each kind of stored key starts with, for matching in SQL and in bulk; MediaKey owns the form.
+private const val EPISODE_PREFIX = "${MediaKey.EPISODE}:"
+private const val MOVIE_PREFIX = "${MediaKey.MOVIE}:"
 private const val IN_PROGRESS_LIMIT = 30
 private const val TAG = "ViewerLibrary"
 

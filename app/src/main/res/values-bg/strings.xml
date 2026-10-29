@@ -26,7 +26,6 @@
     <string name="guide_favourites">★ Любими</string>
     <string name="guide_all_channels">Всички канали</string>
     <string name="guide_watch_from_start">▶  Гледане от начало (catch-up)</string>
-    <string name="guide_catchup_link_failed">Връзката за catch-up не можа да бъде създадена</string>
     <string name="guide_cancel_reminder">🔔  Отказ от напомняне</string>
     <string name="guide_reminder_removed">Напомнянето е премахнато</string>
     <string name="guide_remind_me">🔔  Напомни ми</string>

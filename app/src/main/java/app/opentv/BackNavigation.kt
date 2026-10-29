@@ -11,6 +11,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.remember
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavController
+import app.opentv.data.repo.MediaKey
 import app.opentv.ui.Tab
 
 /*
@@ -67,15 +68,13 @@ fun NavController.switchToRecording(recordingRoute: String) {
  * an episode's series' page ([seriesOfEpisode] maps an episode's row id to its series' row id).
  * Null for what has no page — recordings, catch-up — and an episode whose series has gone.
  */
-suspend fun titlePageFor(mediaKey: String, seriesOfEpisode: suspend (episodeId: Long) -> Long?): String? {
-    val localId = mediaKey.substringAfter(':').toLongOrNull()
-    return when {
-        localId == null -> null
-        mediaKey.startsWith("movie:") -> Routes.movieDetail(localId)
-        mediaKey.startsWith("ep:") -> seriesOfEpisode(localId)?.let(Routes::seriesDetail)
-        else -> null
+suspend fun titlePageFor(mediaKey: MediaKey, seriesOfEpisode: suspend (episodeId: Long) -> Long?): String? =
+    when (mediaKey) {
+        is MediaKey.Movie -> Routes.movieDetail(mediaKey.movieId)
+        is MediaKey.AddonStream -> Routes.movieDetail(mediaKey.movieId)
+        is MediaKey.Episode -> seriesOfEpisode(mediaKey.episodeId)?.let(Routes::seriesDetail)
+        is MediaKey.Live, is MediaKey.Catchup, is MediaKey.Recording -> null
     }
-}
 
 /**
  * Leaves the live player shown by [from]. Ignored once [from] is no longer on top: the on-screen

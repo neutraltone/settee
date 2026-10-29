@@ -6,6 +6,7 @@
 package app.opentv
 
 import android.content.Context
+import android.os.Looper
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
@@ -20,12 +21,17 @@ import androidx.media3.test.utils.FakeMediaSource
 import androidx.media3.test.utils.FakeTimeline
 import androidx.media3.test.utils.TestExoPlayerBuilder
 import androidx.media3.test.utils.robolectric.TestPlayerRunHelper
+import app.opentv.data.repo.MediaKey
+import app.opentv.data.repo.Playable
 import app.opentv.player.PlayerController
+import java.io.IOException
+import java.time.Duration
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import okhttp3.OkHttpClient
+import org.robolectric.Shadows.shadowOf
 
 /*
  * A real ExoPlayer for the player tests (#68), playing fake media instead of a stream. Its clock only
@@ -93,16 +99,28 @@ class TestPlayers(private val context: Context) {
     val clock = FakeClock(false)
     val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
 
-    /** A [PlayerController] whose every stream plays [window]. */
-    fun controller(window: FakeTimeline.TimelineWindowDefinition = FILM, dvr: Boolean = false) = PlayerController(
+    /** Every stream the controllers were handed, in order. */
+    val played = mutableListOf<String>()
+
+    /**
+     * A [PlayerController] whose every stream plays [window], resolved by [resolve] (by default a
+     * stream at a placeholder address). The first [failing] streams fail as a dropped connection does.
+     */
+    fun controller(
+        window: FakeTimeline.TimelineWindowDefinition = FILM,
+        dvr: Boolean = false,
+        failing: Int = 0,
+        resolve: suspend (MediaKey) -> Playable = ::placeholder,
+    ) = PlayerController(
         context,
         scope,
         OkHttpClient(),
+        resolve = resolve,
         dvr = dvr,
         buildPlayer = {
             TestExoPlayerBuilder(context)
                 .setClock(clock)
-                .setMediaSourceFactory(FakeSources(window))
+                .setMediaSourceFactory(FakeSources(window, played, failing))
                 .build()
         },
     )
@@ -112,16 +130,22 @@ class TestPlayers(private val context: Context) {
 
     /** Starts [controller] on a stream and lets it buffer until it's playing. */
     fun play(controller: PlayerController, isLive: Boolean = false) {
-        controller.play(
-            PlayerController.Request(
-                url = "https://example.com/stream",
-                title = "Film",
-                userAgent = "",
-                isLive = isLive,
-            ),
-            debounce = false,
-        )
+        controller.play(PlayerController.Request(if (isLive) MediaKey.Live(1) else MediaKey.Movie(1)), debounce = false)
         untilReady(controller.player)
+    }
+
+    /**
+     * Runs the main thread, where the controller's zap delay and restarts wait, until [done]. Moves its
+     * clock on in small steps, letting a portal call on another thread come back in between.
+     */
+    fun until(done: () -> Boolean) {
+        repeat(MAX_TICKS) {
+            if (done()) return
+            shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(TICK_MILLIS * 10))
+            clock.advanceTime(TICK_MILLIS)
+            Thread.sleep(1)
+        }
+        error("Gave up waiting on the controller")
     }
 
     fun untilReady(player: ExoPlayer) {
@@ -133,9 +157,16 @@ class TestPlayers(private val context: Context) {
         error("The player never got ready: state ${player.playbackState}")
     }
 
-    private class FakeSources(private val window: FakeTimeline.TimelineWindowDefinition) : MediaSource.Factory {
-        override fun createMediaSource(mediaItem: MediaItem): MediaSource =
-            FakeMediaSource(FakeTimeline(window), ExoPlayerTestRunner.VIDEO_FORMAT)
+    private class FakeSources(
+        private val window: FakeTimeline.TimelineWindowDefinition,
+        private val played: MutableList<String>,
+        private var failing: Int,
+    ) : MediaSource.Factory {
+        override fun createMediaSource(mediaItem: MediaItem): MediaSource {
+            played += mediaItem.localConfiguration?.uri.toString()
+            if (failing-- > 0) return DroppedSource()
+            return FakeMediaSource(FakeTimeline(window), ExoPlayerTestRunner.VIDEO_FORMAT)
+        }
 
         override fun setDrmSessionManagerProvider(provider: DrmSessionManagerProvider) = this
 
@@ -144,7 +175,20 @@ class TestPlayers(private val context: Context) {
         override fun getSupportedTypes(): IntArray = intArrayOf(C.CONTENT_TYPE_OTHER)
     }
 
+    /** A stream whose connection drops before it ever starts. */
+    private class DroppedSource : FakeMediaSource(null) {
+        override fun maybeThrowSourceInfoRefreshError() = throw IOException("Connection dropped")
+    }
+
     private companion object {
+        fun placeholder(key: MediaKey) = Playable.Ready(
+            key,
+            "https://example.com/stream",
+            userAgent = "",
+            title = "Film",
+            isLive = key is MediaKey.Live,
+        )
+
         const val TICK_MILLIS = 10L
         const val MAX_TICKS = 500
     }

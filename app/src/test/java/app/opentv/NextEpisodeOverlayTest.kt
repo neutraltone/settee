@@ -19,6 +19,7 @@ import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
 import androidx.test.core.app.ApplicationProvider
 import app.opentv.core.ServiceLocator
+import app.opentv.data.repo.MediaKey
 import app.opentv.ui.vod.NextEpisodeOverlay
 import app.opentv.ui.vod.VodPlayerViewModel
 import app.opentv.ui.vod.countsAsInput
@@ -62,7 +63,7 @@ class NextEpisodeOverlayTest {
             graph.database.episodes().upsertAll(
                 (1..6).map { testEpisode(1, it).copy(stillUrl = "https://example.com/still-$it.jpg") },
             )
-            vm.attach(testEpisode(1, 1).item(), playback)
+            vm.attach(testEpisode(1, 1).key, playback)
         }
         compose.setTvContent {
             // Stands in for the player's picture, which holds focus while nothing is drawn over it.
@@ -84,7 +85,7 @@ class NextEpisodeOverlayTest {
     // it, so waiting for the name alone can read what was played before.
     private fun waitForEpisode(id: Long) = compose.waitUntil {
         val current = vm.current.value
-        current?.mediaKey == "ep:$id" && playback.played.lastOrNull()?.first == current.streamUrl
+        current == MediaKey.Episode(id) && playback.played.lastOrNull()?.first == current
     }
 
     @Test
@@ -106,7 +107,7 @@ class NextEpisodeOverlayTest {
         press(Key.DirectionCenter)
 
         waitForEpisode(12)
-        assertThat(playback.played.last().first).isEqualTo(testEpisode(1, 2).streamUrl)
+        assertThat(playback.played.last().first).isEqualTo(testEpisode(1, 2).key)
         compose.onNodeWithText("Next episode in 12").assertDoesNotExist()
     }
 
@@ -124,7 +125,7 @@ class NextEpisodeOverlayTest {
 
         compose.onNodeWithText("Episode 2").assertDoesNotExist()
         secondsLeft(0)
-        assertThat(vm.current.value?.mediaKey).isEqualTo("ep:11")
+        assertThat(vm.current.value).isEqualTo(MediaKey.Episode(11))
     }
 
     @Test
@@ -134,7 +135,7 @@ class NextEpisodeOverlayTest {
 
         secondsLeft(0)
 
-        assertThat(vm.current.value?.mediaKey).isEqualTo("ep:12")
+        assertThat(vm.current.value).isEqualTo(MediaKey.Episode(12))
         compose.onNodeWithText("Episode 2").assertDoesNotExist()
     }
 
@@ -176,7 +177,7 @@ class NextEpisodeOverlayTest {
         runUnattended(2)
 
         compose.onNodeWithText("Are you still watching?").assertDoesNotExist()
-        assertThat(vm.current.value?.mediaKey).isEqualTo("ep:15")
+        assertThat(vm.current.value).isEqualTo(MediaKey.Episode(15))
     }
 
     @Test
@@ -201,6 +202,6 @@ class NextEpisodeOverlayTest {
         compose.waitForIdle()
 
         assertThat(stopped).isTrue()
-        assertThat(vm.current.value?.mediaKey).isEqualTo("ep:14")
+        assertThat(vm.current.value).isEqualTo(MediaKey.Episode(14))
     }
 }

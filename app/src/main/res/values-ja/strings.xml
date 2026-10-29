@@ -26,7 +26,6 @@
     <string name="guide_favourites">★ お気に入り</string>
     <string name="guide_all_channels">すべてのチャンネル</string>
     <string name="guide_watch_from_start">▶  最初から見る（見逃し配信）</string>
-    <string name="guide_catchup_link_failed">見逃し配信のリンクを作成できませんでした</string>
     <string name="guide_cancel_reminder">🔔  リマインダーを取消</string>
     <string name="guide_reminder_removed">リマインダーを削除しました</string>
     <string name="guide_remind_me">🔔  通知する</string>

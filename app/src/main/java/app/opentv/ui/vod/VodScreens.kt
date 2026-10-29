@@ -65,6 +65,7 @@ import app.opentv.data.model.Series
 import app.opentv.data.model.Source
 import app.opentv.data.parser.displayTitle
 import app.opentv.data.repo.GenreGroup
+import app.opentv.data.repo.MediaKey
 import app.opentv.ui.NewEpisodeBadge
 import app.opentv.ui.VodViewModel
 import app.opentv.ui.options.LocalOpenOptions
@@ -82,7 +83,7 @@ import coil.compose.AsyncImage
 @Composable
 fun MoviesScreen(
     onOpenMovie: (Movie) -> Unit,
-    onResume: (mediaKey: String, url: String, title: String) -> Unit,
+    onResume: (MediaKey) -> Unit,
     onOpenSearch: () -> Unit,
     hasSources: Boolean,
     isSyncing: Boolean,
@@ -167,7 +168,7 @@ internal fun MovieShelves(
     recommended: List<Movie>,
     recentlyAdded: List<Movie>,
     genreRows: List<GenreGroup<Movie>>,
-    onResume: (mediaKey: String, url: String, title: String) -> Unit,
+    onResume: (MediaKey) -> Unit,
     onOpenMovie: (Movie) -> Unit,
 ) {
     LazyColumn(
@@ -206,7 +207,7 @@ internal fun MovieShelves(
 @Composable
 fun SeriesScreen(
     onOpenSeries: (Series) -> Unit,
-    onResume: (mediaKey: String, url: String, title: String) -> Unit,
+    onResume: (MediaKey) -> Unit,
     onOpenSearch: () -> Unit,
     hasSources: Boolean,
     isSyncing: Boolean,
@@ -283,7 +284,7 @@ internal fun SeriesShelves(
     favourites: List<Series>,
     recentlyAdded: List<Series>,
     genreRows: List<GenreGroup<Series>>,
-    onResume: (mediaKey: String, url: String, title: String) -> Unit,
+    onResume: (MediaKey) -> Unit,
     onOpenSeries: (Series) -> Unit,
 ) {
     LazyColumn(
@@ -594,7 +595,7 @@ private fun Badge(text: String, modifier: Modifier = Modifier, highlight: Boolea
 internal fun ContinueWatchingRow(
     items: List<VodViewModel.ResumeItem>,
     focus: CardFocus? = null,
-    onResume: (mediaKey: String, url: String, title: String) -> Unit,
+    onResume: (MediaKey) -> Unit,
     onOptions: ((VodViewModel.ResumeItem) -> Unit)? =
         LocalOpenOptions.current?.let { open -> { open(OptionsSubject.OfContinueWatching(it)) } },
 ) {
@@ -605,11 +606,11 @@ internal fun ContinueWatchingRow(
             contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            itemsIndexed(items, key = { _, item -> item.mediaKey }) { index, item ->
+            itemsIndexed(items, key = { _, item -> item.key.stored }) { index, item ->
                 ResumeCard(
                     item,
                     Modifier.takesFocus(index, focus),
-                    onClick = { onResume(item.mediaKey, item.streamUrl, item.playerTitle) },
+                    onClick = { onResume(item.key) },
                     onOptions = onOptions?.let { { it(item) } },
                 )
             }

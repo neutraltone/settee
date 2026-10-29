@@ -26,7 +26,6 @@
     <string name="guide_favourites">★ पसंदीदा</string>
     <string name="guide_all_channels">सभी चैनल</string>
     <string name="guide_watch_from_start">▶  शुरुआत से देखें (कैच-अप)</string>
-    <string name="guide_catchup_link_failed">कैच-अप लिंक नहीं बन सका</string>
     <string name="guide_cancel_reminder">🔔  रिमाइंडर रद्द करें</string>
     <string name="guide_reminder_removed">रिमाइंडर हटाया गया</string>
     <string name="guide_remind_me">🔔  मुझे याद दिलाएं</string>

@@ -26,7 +26,6 @@
     <string name="guide_favourites">★ Yêu thích</string>
     <string name="guide_all_channels">Tất cả kênh</string>
     <string name="guide_watch_from_start">▶  Xem từ đầu (catch-up)</string>
-    <string name="guide_catchup_link_failed">Không thể tạo liên kết catch-up</string>
     <string name="guide_cancel_reminder">🔔  Hủy nhắc hẹn</string>
     <string name="guide_reminder_removed">Đã xóa nhắc hẹn</string>
     <string name="guide_remind_me">🔔  Nhắc tôi</string>

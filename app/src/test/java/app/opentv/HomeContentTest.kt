@@ -28,6 +28,7 @@ import app.opentv.data.model.Channel
 import app.opentv.data.model.Movie
 import app.opentv.data.model.Series
 import app.opentv.data.repo.LivePreview
+import app.opentv.data.repo.MediaKey
 import app.opentv.ui.HomeContent
 import app.opentv.ui.LiveNow
 import app.opentv.ui.LiveTile
@@ -56,11 +57,9 @@ class HomeContentTest {
 
     private val resume = listOf(
         VodViewModel.ResumeItem(
-            "movie:9",
+            MediaKey.Movie(9),
             "Collateral",
-            playerTitle = "Collateral",
             posterUrl = "https://example.com/9.jpg",
-            streamUrl = "",
             progress = 0.4f,
         ),
     )
@@ -157,7 +156,7 @@ class HomeContentTest {
             favouriteMovies = movies,
             favouriteChannels = channels,
             recent = recent,
-            onResume = { _, _, _ -> },
+            onResume = {},
             onOpenSeries = {},
             onOpenMovie = { opened = it },
             onPlayChannel = { played = it },
@@ -188,7 +187,7 @@ class HomeContentTest {
                     favouriteMovies = movies(),
                     favouriteChannels = listOf(channel(3, "BBC One"), channel(5, "BBC Two")),
                     recent = recent,
-                    onResume = { _, _, _ -> },
+                    onResume = {},
                     onOpenSeries = {},
                     onOpenMovie = { opened = it },
                     onPlayChannel = { played = it },
@@ -202,11 +201,9 @@ class HomeContentTest {
     private var homeTakesFocus by mutableStateOf(true)
 
     private fun resumeItem(id: Long, title: String) = VodViewModel.ResumeItem(
-        "movie:$id",
+        MediaKey.Movie(id),
         title,
-        playerTitle = title,
         posterUrl = "https://example.com/$id.jpg",
-        streamUrl = "",
         progress = 0.4f,
     )
 
@@ -377,11 +374,9 @@ class HomeContentTest {
     @Test
     fun `a show with a New Episode is labelled in Home's Continue Watching`() {
         val newEpisode = VodViewModel.ResumeItem(
-            "ep:31",
+            MediaKey.Episode(31),
             "Severance",
-            playerTitle = "S3E1 · Cold Harbor",
             posterUrl = "https://example.com/31.jpg",
-            streamUrl = "",
             progress = null,
             episode = VodViewModel.SeasonEpisode(season = 3, episode = 1),
             newEpisode = true,
@@ -527,7 +522,7 @@ class HomeContentTest {
                 favouriteShows = listOf(series(1, "Severance")),
                 favouriteMovies = emptyList(),
                 favouriteChannels = emptyList(),
-                onResume = { _, _, _ -> },
+                onResume = {},
                 onOpenSeries = {},
                 onOpenMovie = {},
                 onPlayChannel = {},
@@ -550,7 +545,7 @@ class HomeContentTest {
                 favouriteShows = listOf(series(1, "Severance")),
                 favouriteMovies = emptyList(),
                 favouriteChannels = emptyList(),
-                onResume = { _, _, _ -> },
+                onResume = {},
                 onOpenSeries = {},
                 onOpenMovie = {},
                 onPlayChannel = {},

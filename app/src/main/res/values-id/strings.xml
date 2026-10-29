@@ -26,7 +26,6 @@
     <string name="guide_favourites">★ Favorit</string>
     <string name="guide_all_channels">Semua saluran</string>
     <string name="guide_watch_from_start">▶  Tonton dari awal (catch-up)</string>
-    <string name="guide_catchup_link_failed">Gagal membuat tautan catch-up</string>
     <string name="guide_cancel_reminder">🔔  Batalkan pengingat</string>
     <string name="guide_reminder_removed">Pengingat dihapus</string>
     <string name="guide_remind_me">🔔  Ingatkan saya</string>

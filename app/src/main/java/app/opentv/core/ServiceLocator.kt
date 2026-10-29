@@ -12,6 +12,7 @@ import app.opentv.data.remote.StremioClient
 import app.opentv.data.remote.XtreamApi
 import app.opentv.data.repo.CatalogRepository
 import app.opentv.data.repo.EpgRepository
+import app.opentv.data.repo.PlaybackSources
 import app.opentv.data.repo.ProfileSettings
 import app.opentv.data.repo.RecordingRepository
 import app.opentv.data.repo.ReminderRepository
@@ -108,6 +109,9 @@ object ServiceLocator {
                 settings = settings,
             )
         }
+
+        /** The one place a title becomes something playable (see [PlaybackSources]). */
+        val playbackSources: PlaybackSources by lazy { PlaybackSources(database, xtreamApi, stalkerApi) }
 
         val epgRepository: EpgRepository by lazy {
             EpgRepository(

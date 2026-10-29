@@ -48,7 +48,7 @@ import androidx.media3.exoplayer.ExoPlayer
 import app.opentv.R
 import app.opentv.core.ServiceLocator
 import app.opentv.data.model.Channel
-import app.opentv.data.model.shownName
+import app.opentv.data.repo.MediaKey
 import app.opentv.player.PlayerController
 import app.opentv.ui.channels.PreviewVideo
 import app.opentv.ui.vod.CardFocus
@@ -79,7 +79,14 @@ internal fun rememberLivePreviewPlayer(channel: Channel?): LivePreviewPlayer {
     val controller = remember(wanted) {
         if (!wanted) return@remember null
         val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
-        PlayerController(context, scope, graph.httpClient, subtitlesEnabled = false, preview = true)
+        PlayerController(
+            context,
+            scope,
+            graph.httpClient,
+            resolve = graph.playbackSources::forWatching,
+            subtitlesEnabled = false,
+            preview = true,
+        )
             .also { it.player.volume = 0f } to scope
     }
     DisposableEffect(controller) {
@@ -97,16 +104,7 @@ internal fun rememberLivePreviewPlayer(channel: Channel?): LivePreviewPlayer {
             playing.stop()
             return@LaunchedEffect
         }
-        val source = graph.sourceRepository.byId(channel.sourceId)
-        playing.play(
-            PlayerController.Request(
-                url = channel.streamUrl,
-                title = channel.shownName,
-                userAgent = source?.userAgent ?: "OpenTV/0.1 (Android)",
-                isLive = true,
-            ),
-            debounce = false,
-        )
+        playing.play(PlayerController.Request(MediaKey.Live(channel.id)), debounce = false)
     }
     val state = playing?.state?.collectAsState()?.value
     return LivePreviewPlayer(

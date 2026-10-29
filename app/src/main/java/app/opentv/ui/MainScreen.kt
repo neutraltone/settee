@@ -68,6 +68,7 @@ import app.opentv.data.model.Channel
 import app.opentv.data.model.Movie
 import app.opentv.data.model.Recording
 import app.opentv.data.model.Series
+import app.opentv.data.repo.MediaKey
 import app.opentv.ui.channels.LiveScreen
 import app.opentv.ui.recordings.RecordingsScreen
 import app.opentv.ui.vod.MoviesScreen
@@ -111,14 +112,14 @@ fun MainScreen(
     onPlayChannel: (Channel) -> Unit,
     onOpenMovie: (Movie) -> Unit,
     onOpenSeries: (Series) -> Unit,
-    onResume: (mediaKey: String, url: String, title: String) -> Unit,
+    onResume: (MediaKey) -> Unit,
     onAddSource: () -> Unit,
     onRefresh: () -> Unit,
     onOpenSearch: () -> Unit,
     onOpenSettings: () -> Unit,
     onOpenProfiles: () -> Unit,
     onPlayRecording: (Recording) -> Unit,
-    onPlayCatchup: (mediaKey: String, url: String, title: String, ua: String) -> Unit,
+    onPlayCatchup: (MediaKey.Catchup) -> Unit,
     activeProfileName: String,
     tab: Tab,
     onSelectTab: (Tab) -> Unit,

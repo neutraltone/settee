@@ -136,7 +136,7 @@ class ItemOptionsViewModel(app: Application) : AndroidViewModel(app) {
 
     private suspend fun chooseFor(item: VodViewModel.ResumeItem, option: ItemOption) {
         val title = resolve(item) ?: return
-        mark(item.mediaKey, option)
+        mark(item.key.stored, option)
         if (option == ItemOption.RemoveFromContinueWatching) library.marks.removeFromContinueWatching(title.card)
         when (title) {
             is Resolved.MovieCard -> setFavourite(title.movie, option)

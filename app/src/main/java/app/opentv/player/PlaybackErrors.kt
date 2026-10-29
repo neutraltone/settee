@@ -9,6 +9,7 @@ import androidx.annotation.OptIn
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.HttpDataSource
+import app.opentv.data.repo.Playable
 import java.net.SocketTimeoutException
 import java.net.UnknownHostException
 
@@ -61,6 +62,16 @@ object PlaybackErrors {
 
             else -> "Playback failed (${error.errorCodeName})."
         }
+    }
+
+    /** Why [app.opentv.data.repo.PlaybackSources] had nothing to play. */
+    fun describe(failure: Playable.Failure): String = when (failure) {
+        Playable.Failure.LINK_REFUSED ->
+            "The portal didn't give a link for this channel. Refresh the channel list, or check the " +
+                "MAC address is still authorised."
+        Playable.Failure.NO_CATCHUP ->
+            "This provider doesn't offer catch-up. Only Xtream providers can play past programmes."
+        Playable.Failure.GONE -> "This is no longer in the provider's list. Refresh the channel list and try again."
     }
 
     fun describeHttpStatus(code: Int): String = when (code) {

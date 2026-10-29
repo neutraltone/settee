@@ -13,6 +13,7 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import app.opentv.data.repo.MediaKey
 import app.opentv.ui.Tab
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.test.runTest
@@ -113,7 +114,7 @@ class PlayerNavigationTest {
         act {
             selectShellTab(Tab.LIVE)
             navigate(Routes.player(5))
-            switchToRecording(Routes.vodPlayer("rec:1", "optvrec://1", "News", "ua"))
+            switchToRecording(Routes.vodPlayer(MediaKey.Recording(1)))
         }
         showing("Movie player")
 
@@ -122,7 +123,7 @@ class PlayerNavigationTest {
         showing("Main: LIVE")
     }
 
-    private fun playMovie(key: String = "movie:9") = Routes.vodPlayer(key, "https://example.com/9.mp4", "Heat", "ua")
+    private fun playMovie(key: MediaKey = MediaKey.Movie(9)) = Routes.vodPlayer(key)
 
     @Test
     fun `Back from a movie started on Home opens the movie's page, and Back from there goes Home`() {
@@ -156,7 +157,7 @@ class PlayerNavigationTest {
         setApp()
         act {
             navigate(Routes.seriesDetail(3))
-            navigate(playMovie("ep:5"))
+            navigate(playMovie(MediaKey.Episode(5)))
         }
 
         act { leaveVodPlayer(currentBackStackEntry!!, Routes.seriesDetail(3)) }
@@ -171,7 +172,7 @@ class PlayerNavigationTest {
         setApp()
         act {
             navigate(Routes.SEARCH)
-            navigate(playMovie("rec:1"))
+            navigate(playMovie(MediaKey.Recording(1)))
         }
 
         act { leaveVodPlayer(currentBackStackEntry!!, titlePage = null) }
@@ -183,17 +184,17 @@ class PlayerNavigationTest {
     fun `a movie's page is the movie's, and an episode's is its series'`() = runTest {
         val seriesOfEpisode: suspend (Long) -> Long? = { episodeId -> if (episodeId == 5L) 3L else null }
 
-        assertThat(titlePageFor("movie:9", seriesOfEpisode)).isEqualTo(Routes.movieDetail(9))
-        assertThat(titlePageFor("ep:5", seriesOfEpisode)).isEqualTo(Routes.seriesDetail(3))
+        assertThat(titlePageFor(MediaKey.Movie(9), seriesOfEpisode)).isEqualTo(Routes.movieDetail(9))
+        assertThat(titlePageFor(MediaKey.Episode(5), seriesOfEpisode)).isEqualTo(Routes.seriesDetail(3))
     }
 
     @Test
     fun `recordings, catch-up and an episode whose series is gone have no page`() = runTest {
         val seriesOfEpisode: suspend (Long) -> Long? = { null }
 
-        assertThat(titlePageFor("rec:1", seriesOfEpisode)).isNull()
-        assertThat(titlePageFor("catchup:7:1700000000000", seriesOfEpisode)).isNull()
-        assertThat(titlePageFor("ep:5", seriesOfEpisode)).isNull()
+        assertThat(titlePageFor(MediaKey.Recording(1), seriesOfEpisode)).isNull()
+        assertThat(titlePageFor(MediaKey.Catchup(7, 1_700_000_000_000L), seriesOfEpisode)).isNull()
+        assertThat(titlePageFor(MediaKey.Episode(5), seriesOfEpisode)).isNull()
     }
 
     @Test

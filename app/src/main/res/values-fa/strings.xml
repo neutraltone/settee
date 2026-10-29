@@ -26,7 +26,6 @@
     <string name="guide_favourites">★ علاقه‌مندی‌ها</string>
     <string name="guide_all_channels">همه کانال‌ها</string>
     <string name="guide_watch_from_start">▶  تماشا از ابتدا (پخش معوق)</string>
-    <string name="guide_catchup_link_failed">ساخت پیوند پخش معوق ممکن نشد</string>
     <string name="guide_cancel_reminder">🔔  لغو یادآور</string>
     <string name="guide_reminder_removed">یادآور حذف شد</string>
     <string name="guide_remind_me">🔔  تنظیم یادآور</string>

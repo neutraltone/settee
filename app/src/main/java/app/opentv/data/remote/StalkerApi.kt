@@ -33,7 +33,7 @@ import okhttp3.Request
  * that returns a short-lived **token**; every later call carries that token as a bearer. A channel's
  * real stream URL is not stable — the catalogue gives a `cmd` string, and the playable URL is minted
  * on demand by [createLink] at tune time. So [liveChannels] stores each channel's `cmd`; the playback
- * path resolves it just-in-time (see [app.opentv.data.repo.CatalogRepository.resolvePlaybackUrl]).
+ * path resolves it just-in-time (see [app.opentv.data.repo.PlaybackSources]).
  *
  * ## Portal-path and MAC quirks
  * Portals expose the API under different paths (`/portal.php`, `/server/load.php`, `/stalker_portal/...`);

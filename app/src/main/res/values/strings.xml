@@ -37,7 +37,6 @@
     <string name="guide_favourites">★ Favourites</string>
     <string name="guide_all_channels">All channels</string>
     <string name="guide_watch_from_start">▶  Watch from start (catch-up)</string>
-    <string name="guide_catchup_link_failed">Couldn\'t build the catch-up link</string>
     <string name="guide_cancel_reminder">🔔  Cancel reminder</string>
     <string name="guide_reminder_removed">Reminder removed</string>
     <string name="guide_remind_me">🔔  Remind me</string>

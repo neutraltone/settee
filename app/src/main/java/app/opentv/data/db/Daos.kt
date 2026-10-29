@@ -602,7 +602,8 @@ interface EpisodeDao {
 
     /**
      * Every episode [profileId] has any progress on. A join rather than `IN (:ids)`: a long watch
-     * history would run past SQLite's bound-variable limit.
+     * history would run past SQLite's bound-variable limit. `'ep:' || id` is
+     * [app.opentv.data.repo.MediaKey.Episode]'s stored form, which a query can't build through it.
      */
     @Query(
         "SELECT episodes.* FROM episodes JOIN playback_positions " +

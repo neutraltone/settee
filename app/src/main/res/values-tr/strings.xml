@@ -26,7 +26,6 @@
     <string name="guide_favourites">★ Favoriler</string>
     <string name="guide_all_channels">Tüm kanallar</string>
     <string name="guide_watch_from_start">▶  Baştan izle (kaçırılan yayın)</string>
-    <string name="guide_catchup_link_failed">Kaçırılan yayın bağlantısı oluşturulamadı</string>
     <string name="guide_cancel_reminder">🔔  Hatırlatmayı iptal et</string>
     <string name="guide_reminder_removed">Hatırlatma kaldırıldı</string>
     <string name="guide_remind_me">🔔  Bana hatırlat</string>

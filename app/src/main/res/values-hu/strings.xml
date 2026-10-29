@@ -26,7 +26,6 @@
     <string name="guide_favourites">★ Kedvencek</string>
     <string name="guide_all_channels">Összes csatorna</string>
     <string name="guide_watch_from_start">▶  Nézés az elejétől (catch-up)</string>
-    <string name="guide_catchup_link_failed">Nem sikerült létrehozni a catch-up hivatkozást</string>
     <string name="guide_cancel_reminder">🔔  Emlékeztető törlése</string>
     <string name="guide_reminder_removed">Emlékeztető törölve</string>
     <string name="guide_remind_me">🔔  Emlékeztessen</string>

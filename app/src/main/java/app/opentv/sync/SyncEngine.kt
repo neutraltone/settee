@@ -15,6 +15,7 @@ import app.opentv.data.model.Recording
 import app.opentv.data.model.RecordingStatus
 import app.opentv.data.model.SeriesDismissal
 import app.opentv.data.model.StreamKind
+import app.opentv.data.repo.MediaKey
 import app.opentv.recording.SmbClient
 import kotlinx.coroutines.flow.first
 import kotlinx.serialization.json.Json
@@ -106,18 +107,16 @@ class SyncEngine(private val graph: ServiceLocator.Graph) {
     private suspend fun gatherPositions(profileNames: Map<Long, String>): List<SyncPosition> =
         graph.viewerLibrary.everyProfilesProgress().mapNotNull { pos ->
             val profileName = profileNames[pos.profileId] ?: return@mapNotNull null
-            val parts = pos.mediaKey.split(":", limit = 2)
-            if (parts.size != 2) return@mapNotNull null
-            val id = parts[1].toLongOrNull() ?: return@mapNotNull null
-            val streamUrl = when (parts[0]) {
-                "movie" -> graph.catalogRepository.movie(id)?.streamUrl
-                "ep" -> graph.catalogRepository.episode(id)?.streamUrl
-                else -> null
-            } ?: return@mapNotNull null
+            val (kind, streamUrl) = when (val key = MediaKey.parse(pos.mediaKey)) {
+                is MediaKey.Movie -> MediaKey.MOVIE to graph.catalogRepository.movie(key.movieId)?.streamUrl
+                is MediaKey.Episode -> MediaKey.EPISODE to graph.catalogRepository.episode(key.episodeId)?.streamUrl
+                else -> null to null
+            }
+            if (kind == null || streamUrl == null) return@mapNotNull null
             SyncPosition(
                 profile = profileName,
                 streamUrl = streamUrl,
-                kind = parts[0],
+                kind = kind,
                 positionMillis = pos.positionMillis,
                 durationMillis = pos.durationMillis,
                 updatedAtMillis = pos.updatedAtMillis,
@@ -215,12 +214,15 @@ class SyncEngine(private val graph: ServiceLocator.Graph) {
         var positions = 0
         for (item in bundle.positions) {
             val profileId = profileIdFor(item.profile) ?: continue
-            val localId = when (item.kind) {
-                "movie" -> graph.catalogRepository.movieByStreamUrl(item.streamUrl)?.id
-                "ep" -> graph.catalogRepository.episodeByStreamUrl(item.streamUrl)?.id
+            val mediaKey = when (item.kind) {
+                MediaKey.MOVIE -> graph.catalogRepository.movieByStreamUrl(item.streamUrl)?.let {
+                    MediaKey.Movie(it.id)
+                }
+                MediaKey.EPISODE -> graph.catalogRepository.episodeByStreamUrl(item.streamUrl)?.let {
+                    MediaKey.Episode(it.id)
+                }
                 else -> null
-            } ?: continue
-            val mediaKey = "${item.kind}:$localId"
+            }?.stored ?: continue
             val taken = graph.viewerLibrary.mergeSynced(
                 PlaybackPosition(
                     profileId = profileId,
