@@ -23,7 +23,7 @@ class MovieDetailDatesTest {
     private val test = TestCatalog(ApplicationProvider.getApplicationContext())
 
     @After
-    fun close() = test.db.close()
+    fun close() = test.close()
 
     @Test
     fun `opening a movie the provider can't date asks for its date once, not on every open`() = runTest {

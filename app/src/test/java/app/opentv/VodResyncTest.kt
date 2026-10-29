@@ -25,7 +25,7 @@ class VodResyncTest {
     private val panel = test.panel
 
     @After
-    fun close() = db.close()
+    fun close() = test.close()
 
     @Test
     fun `a show the provider updated moves up Recently Added, keeping its place in the library`() = runTest {
