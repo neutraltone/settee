@@ -105,10 +105,12 @@ ordering silently vanish.
 
 A series' episodes are fetched when it is opened (`CatalogRepository.ensureEpisodes`), never
 during catalogue sync: one `get_series_info` per show across a 10,000-show catalogue would take
-hours. The exception is New Episode detection. After a refresh, every show whose `last_modified`
-moved forward goes to `ViewerLibrary.newEpisodes`, which fetches the episodes only of shows some
-Profile on the device is caught up on, one at a time in the background. That is normally a handful
-of calls, not the catalogue.
+hours. The exception is New Episode detection. Whenever the catalogue's shows are merged, every
+show whose `last_modified` moved forward goes to `ViewerLibrary.newEpisodes`, which fetches the
+episodes only of shows some Profile on the device is caught up on, one at a time. That is normally
+a handful of calls, not the catalogue. A refresh (the worker, or Refresh in settings) waits for it.
+The Movies and Shows re-sync as the app opens launches it instead, so its spinner isn't held, but
+can't skip it: once the stored times have moved, a later refresh would never see that show again.
 
 Episode lists carry no time the provider added each episode, so each row records when this device
 first stored it (`firstSeenMillis`). A New Episode is an Up Next first seen after the Profile

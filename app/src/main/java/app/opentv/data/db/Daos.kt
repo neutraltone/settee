@@ -608,6 +608,14 @@ interface EpisodeDao {
     )
     fun observePlayed(profileId: Long): Flow<List<Episode>>
 
+    /** Every episode of each series [profileId] has played any of, by a join for the same reason. */
+    @Query(
+        "SELECT * FROM episodes WHERE EXISTS (SELECT 1 FROM episodes AS played JOIN playback_positions " +
+            "ON playback_positions.mediaKey = 'ep:' || played.id WHERE playback_positions.profileId = :profileId " +
+            "AND played.sourceId = episodes.sourceId AND played.seriesId = episodes.seriesId)",
+    )
+    suspend fun ofPlayedSeries(profileId: Long): List<Episode>
+
     @Query("SELECT * FROM episodes WHERE sourceId = :sourceId AND seriesId = :seriesId")
     suspend fun forSeries(sourceId: Long, seriesId: String): List<Episode>
 

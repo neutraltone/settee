@@ -269,12 +269,20 @@ private class ContinueWatchingCards(private val positions: PlaybackPositionDao, 
         combine(positions.observeNewestFirst(pid), episodes.observePlayed(pid)) { list, played ->
             val byKey = played.associateBy { "$EPISODE_PREFIX${it.id}" }
             val positionOf = list.associateBy { it.mediaKey }
+            // One query for every played series' episodes: each card is built before the cap, and
+            // a query per series on every position written would be felt on a Fire TV Stick.
+            val episodesOf = episodes.ofPlayedSeries(pid)
+                .groupBy { it.sourceId to it.seriesId }
+                .mapValues { (_, eps) -> eps.sortedWith(EPISODE_ORDER) }
             val latestPerSeries = list.mapNotNull { pos -> byKey[pos.mediaKey]?.let { it to pos } }
                 .distinctBy { (ep, _) -> ep.sourceId to ep.seriesId }
             // Capped on cards, not series: a series with nothing left to watch takes no slot. Every
             // series is built before the cap, since a New Episode can lift one long unplayed to the top.
             latestPerSeries
-                .mapNotNull { (ep, pos) -> seriesCard(ep, pos, positionOf)?.let { Played(it, placedAt(it, pos)) } }
+                .mapNotNull { (ep, pos) ->
+                    val ordered = episodesOf[ep.sourceId to ep.seriesId].orEmpty()
+                    seriesCard(ep, pos, ordered, positionOf)?.let { Played(it, placedAt(it, pos)) }
+                }
                 .sortedByDescending { it.playedAtMillis }
                 .take(IN_PROGRESS_LIMIT)
         }
@@ -283,14 +291,14 @@ private class ContinueWatchingCards(private val positions: PlaybackPositionDao, 
     private fun placedAt(card: ContinueWatchingCard.Series, pos: PlaybackPosition): Long =
         if (card.newEpisode) maxOf(pos.updatedAtMillis, card.episode.firstSeenMillis) else pos.updatedAtMillis
 
-    private suspend fun seriesCard(
+    private fun seriesCard(
         latest: Episode,
         pos: PlaybackPosition,
+        ordered: List<Episode>,
         positionOf: Map<String, PlaybackPosition>,
     ): ContinueWatchingCard.Series? = when (val status = statusOf(pos)) {
         is WatchStatus.InProgress -> ContinueWatchingCard.Series(latest, status.progress)
         else -> {
-            val ordered = episodes.forSeries(latest.sourceId, latest.seriesId).sortedWith(EPISODE_ORDER)
             ordered.getOrNull(ordered.indexOfFirst { it.id == latest.id } + 1)?.let { next ->
                 // Up Next may have been started before an earlier episode was finished; the player
                 // resumes it there, so the card shows that progress rather than none.

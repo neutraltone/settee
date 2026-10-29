@@ -123,11 +123,7 @@ object ServiceLocator {
                 database.episodes(),
                 database.favourites(),
                 settings.activeProfileId,
-                episodeFetcher = { series ->
-                    database.sources().byId(series.sourceId)?.let {
-                        catalogRepository.ensureEpisodes(it, series.seriesId)
-                    }
-                },
+                episodeFetcher = { catalogRepository.ensureEpisodes(it) },
             )
         }
 

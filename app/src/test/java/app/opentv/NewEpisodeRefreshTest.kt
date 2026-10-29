@@ -26,10 +26,16 @@ class NewEpisodeRefreshTest {
     private val db = test.db
     private val panel = test.panel
 
+    init {
+        // A refresh only reaches movies and shows once live TV has loaded.
+        panel.replies[""] = """{"user_info": {"status": "Active"}}"""
+        panel.replies["get_live_streams"] = """[{"stream_id": 1, "name": "BBC One"}]"""
+    }
+
     @After
     fun close() = db.close()
 
-    /** `get_series_info` for show 7 with [episodes] of season 1, each `"<id>" to "<title>"`. */
+    /** `get_series_info` with [episodes] of season 1, each `"<id>" to "<title>"`. */
     private fun seriesInfo(vararg episodes: Pair<String, String>) = """
         {"info": {}, "episodes": {"1": [${
         episodes.withIndex().joinToString { (i, ep) ->
@@ -38,16 +44,22 @@ class NewEpisodeRefreshTest {
     }]}}
     """.trimIndent()
 
+    private fun listShow(id: Int, lastModified: Int) {
+        panel.replies["get_series"] = """[{"series_id": $id, "name": "Show", "last_modified": "$lastModified"}]"""
+    }
+
+    private suspend fun refresh() = test.catalog.sync(PANEL_SOURCE, now)
+
     @Test
     fun `fetching a show's episodes again updates them but keeps when each was first seen`() = runTest {
         db.sources().insert(PANEL_SOURCE)
         panel.replies["get_series_info"] = seriesInfo("1" to "Pilot")
-        test.catalog.ensureEpisodes(PANEL_SOURCE, "7")
+        test.catalog.ensureEpisodes(PANEL_SOURCE, "7", now)
         val pilot = db.episodes().forSeries(1, "7").single()
 
         now += 60_000
         panel.replies["get_series_info"] = seriesInfo("1" to "Pilot (Remastered)", "2" to "Second")
-        test.catalog.ensureEpisodes(PANEL_SOURCE, "7")
+        test.catalog.ensureEpisodes(PANEL_SOURCE, "7", now)
 
         val stored = db.episodes().forSeries(1, "7").sortedBy { it.episodeNumber }
         assertThat(stored.map { Triple(it.id, it.title, it.firstSeenMillis) }).containsExactly(
@@ -56,26 +68,25 @@ class NewEpisodeRefreshTest {
         ).inOrder()
     }
 
-    /** Show 7 with only its pilot, whose finale the Profile has just Watched. */
-    private suspend fun caughtUpOnPilot() {
-        panel.replies["get_series"] = """[{"series_id": 7, "name": "Show", "last_modified": "100"}]"""
-        panel.replies["get_series_info"] = seriesInfo("1" to "Pilot")
-        test.syncVod()
-        test.settle()
-        test.catalog.ensureEpisodes(PANEL_SOURCE, "7")
-        val pilot = db.episodes().forSeries(1, "7").single()
+    /** Show [id]'s pilot, Watched; the provider has since added a second episode. */
+    private suspend fun caughtUpOnPilot(id: String) {
+        db.sources().insert(PANEL_SOURCE)
+        panel.replies["get_series_info:$id"] = seriesInfo("$id-1" to "Pilot")
+        test.catalog.ensureEpisodes(PANEL_SOURCE, id, now)
+        val pilot = db.episodes().forSeries(1, id).single()
         test.viewerLibrary.recordProgress("ep:${pilot.id}", positionMillis = 1_000, durationMillis = 1_000)
         now += 60_000
-        panel.replies["get_series_info"] = seriesInfo("1" to "Pilot", "2" to "Second")
+        panel.replies["get_series_info:$id"] = seriesInfo("$id-1" to "Pilot", "$id-2" to "Second")
     }
 
     @Test
     fun `a refresh where the provider updated a show the Profile is caught up on brings its New Episode`() = runTest {
-        caughtUpOnPilot()
+        listShow(7, lastModified = 100)
+        refresh()
+        caughtUpOnPilot("7")
 
-        panel.replies["get_series"] = """[{"series_id": 7, "name": "Show", "last_modified": "200"}]"""
-        test.syncVod()
-        test.settle()
+        listShow(7, lastModified = 200)
+        refresh()
 
         val card = test.viewerLibrary.continueWatchingSeries().first().single() as ContinueWatchingCard.Series
         assertThat(card.episode.title).isEqualTo("Second")
@@ -84,10 +95,21 @@ class NewEpisodeRefreshTest {
 
     @Test
     fun `a refresh where the provider didn't update the show fetches nothing`() = runTest {
-        caughtUpOnPilot()
+        listShow(7, lastModified = 100)
+        refresh()
+        caughtUpOnPilot("7")
 
-        test.syncVod()
-        test.settle()
+        refresh()
+
+        assertThat(db.episodes().forSeries(1, "7")).hasSize(1)
+    }
+
+    @Test
+    fun `a show listed for the first time is not fetched, even with episodes already stored`() = runTest {
+        caughtUpOnPilot("7")
+
+        listShow(7, lastModified = 200)
+        refresh()
 
         assertThat(db.episodes().forSeries(1, "7")).hasSize(1)
     }
