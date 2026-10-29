@@ -231,4 +231,7 @@ dependencies {
     testImplementation(libs.roborazzi)
     testImplementation(libs.roborazzi.compose)
     testImplementation(libs.coil.test)
+    // The player tests (#68) drive a real ExoPlayer with fake media sources and a fake clock.
+    testImplementation(libs.media3.test.utils)
+    testImplementation(libs.media3.test.utils.robolectric)
 }

@@ -204,7 +204,7 @@ class AppSettings private constructor(context: Context) {
     }
 
     /**
-     * Pause & rewind live TV via a rolling on-disk buffer of the current channel. Experimental and
+     * Pause & rewind live TV via a rolling in-memory buffer of the current channel. Experimental and
      * heavier on weak boxes, so it's opt-in (off by default); when off, playback is unchanged.
      */
     private val _livePauseEnabled = MutableStateFlow(prefs.getBoolean(KEY_LIVE_PAUSE, false))
@@ -213,6 +213,20 @@ class AppSettings private constructor(context: Context) {
     fun setLivePauseEnabled(enabled: Boolean) {
         prefs.edit { putBoolean(KEY_LIVE_PAUSE, enabled) }
         _livePauseEnabled.value = enabled
+        // Turning it on is the viewer changing their mind, so turning it off again later asks again.
+        if (enabled) setLivePausePromptDismissed(false)
+    }
+
+    /**
+     * The viewer chose "Don't ask again" when pausing live TV with live pause off: from then on the
+     * live player's Pause does nothing rather than offering to turn live pause on. Device-wide.
+     */
+    private val _livePausePromptDismissed = MutableStateFlow(prefs.getBoolean(KEY_LIVE_PAUSE_PROMPT_DISMISSED, false))
+    val livePausePromptDismissed: StateFlow<Boolean> = _livePausePromptDismissed.asStateFlow()
+
+    fun setLivePausePromptDismissed(dismissed: Boolean) {
+        prefs.edit { putBoolean(KEY_LIVE_PAUSE_PROMPT_DISMISSED, dismissed) }
+        _livePausePromptDismissed.value = dismissed
     }
 
     // ---- Content types -----------------------------------------------------------------------
@@ -499,6 +513,7 @@ class AppSettings private constructor(context: Context) {
         private const val KEY_PAD_END = "rec_pad_end_min"
         private const val KEY_REC_AUTOSWITCH = "rec_auto_switch"
         private const val KEY_LIVE_PAUSE = "live_pause_enabled"
+        private const val KEY_LIVE_PAUSE_PROMPT_DISMISSED = "live_pause_prompt_dismissed"
 
         @Volatile private var instance: AppSettings? = null
 
