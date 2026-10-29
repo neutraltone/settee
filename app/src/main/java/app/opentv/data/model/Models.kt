@@ -355,7 +355,8 @@ data class Episode(
  *
  * Keyed by (profileId, mediaKey) so two people's progress through the same film stay separate —
  * the whole point of profiles. Read and written only through ViewerLibrary, which decides what
- * counts as Watched.
+ * counts as Watched. A [mark] set by hand outranks the position until the title is next played;
+ * it is kept on the row rather than by deleting it so that it wins newest-first in sync too.
  */
 @Entity(tableName = "playback_positions", primaryKeys = ["profileId", "mediaKey"])
 data class PlaybackPosition(
@@ -364,6 +365,26 @@ data class PlaybackPosition(
     val positionMillis: Long,
     val durationMillis: Long,
     val updatedAtMillis: Long,
+    val mark: HandMark? = null,
+)
+
+/** A Profile marking a movie or episode Watched or Unwatched by hand, whatever it has played of it. */
+enum class HandMark { WATCHED, UNWATCHED }
+
+/**
+ * A Profile taking a series out of Continue Watching. Kept, not deleted, once the series is back:
+ * the card returns when one of its episodes is played or marked after [dismissedAtMillis], or the
+ * provider adds one after the series' last episode then ([lastSeason], [lastEpisode]), which the
+ * row answers without anything having to remember to delete it.
+ */
+@Entity(tableName = "series_dismissals", primaryKeys = ["profileId", "sourceId", "seriesId"])
+data class SeriesDismissal(
+    val profileId: Long,
+    val sourceId: Long,
+    val seriesId: String,
+    val dismissedAtMillis: Long,
+    val lastSeason: Int,
+    val lastEpisode: Int,
 )
 
 /**

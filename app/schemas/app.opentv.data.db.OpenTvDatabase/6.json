@@ -1,8 +1,8 @@
 {
   "formatVersion": 1,
   "database": {
-    "version": 4,
-    "identityHash": "e987dacfe569eaccd9d05eb2e661c762",
+    "version": 6,
+    "identityHash": "1c4c2b2c779268905b20dd6222195d8c",
     "entities": [
       {
         "tableName": "sources",
@@ -855,7 +855,7 @@
       },
       {
         "tableName": "playback_positions",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`profileId` INTEGER NOT NULL, `mediaKey` TEXT NOT NULL, `positionMillis` INTEGER NOT NULL, `durationMillis` INTEGER NOT NULL, `updatedAtMillis` INTEGER NOT NULL, PRIMARY KEY(`profileId`, `mediaKey`))",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`profileId` INTEGER NOT NULL, `mediaKey` TEXT NOT NULL, `positionMillis` INTEGER NOT NULL, `durationMillis` INTEGER NOT NULL, `updatedAtMillis` INTEGER NOT NULL, `mark` TEXT, PRIMARY KEY(`profileId`, `mediaKey`))",
         "fields": [
           {
             "fieldPath": "profileId",
@@ -886,6 +886,11 @@
             "columnName": "updatedAtMillis",
             "affinity": "INTEGER",
             "notNull": true
+          },
+          {
+            "fieldPath": "mark",
+            "columnName": "mark",
+            "affinity": "TEXT"
           }
         ],
         "primaryKey": {
@@ -893,6 +898,56 @@
           "columnNames": [
             "profileId",
             "mediaKey"
+          ]
+        }
+      },
+      {
+        "tableName": "series_dismissals",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`profileId` INTEGER NOT NULL, `sourceId` INTEGER NOT NULL, `seriesId` TEXT NOT NULL, `dismissedAtMillis` INTEGER NOT NULL, `lastSeason` INTEGER NOT NULL, `lastEpisode` INTEGER NOT NULL, PRIMARY KEY(`profileId`, `sourceId`, `seriesId`))",
+        "fields": [
+          {
+            "fieldPath": "profileId",
+            "columnName": "profileId",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "sourceId",
+            "columnName": "sourceId",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "seriesId",
+            "columnName": "seriesId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "dismissedAtMillis",
+            "columnName": "dismissedAtMillis",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "lastSeason",
+            "columnName": "lastSeason",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "lastEpisode",
+            "columnName": "lastEpisode",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "profileId",
+            "sourceId",
+            "seriesId"
           ]
         }
       },
@@ -932,6 +987,53 @@
             "kind",
             "source",
             "itemId"
+          ]
+        }
+      },
+      {
+        "tableName": "live_playback",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`profileId` INTEGER NOT NULL, `source` TEXT NOT NULL, `streamId` TEXT NOT NULL, `name` TEXT NOT NULL, `logoUrl` TEXT, `playedAtMillis` INTEGER NOT NULL, PRIMARY KEY(`profileId`))",
+        "fields": [
+          {
+            "fieldPath": "profileId",
+            "columnName": "profileId",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "source",
+            "columnName": "source",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "streamId",
+            "columnName": "streamId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "name",
+            "columnName": "name",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "logoUrl",
+            "columnName": "logoUrl",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "playedAtMillis",
+            "columnName": "playedAtMillis",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "profileId"
           ]
         }
       },
@@ -1302,7 +1404,7 @@
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'e987dacfe569eaccd9d05eb2e661c762')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '1c4c2b2c779268905b20dd6222195d8c')"
     ]
   }
 }

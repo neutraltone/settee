@@ -69,6 +69,9 @@ import app.opentv.data.repo.SeriesMainAction
 import app.opentv.data.repo.WatchStatus
 import app.opentv.ui.VodViewModel
 import app.opentv.ui.WatchBadge
+import app.opentv.ui.options.OptionsSubject
+import app.opentv.ui.options.openOptionsOn
+import app.opentv.ui.options.optionsClickable
 import coil.compose.AsyncImage
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -782,7 +785,10 @@ internal fun EpisodeRow(
                     Modifier
                 },
             )
-            .clickable { playEpisode(ep, onPlay) }
+            .optionsClickable(
+                onClick = { playEpisode(ep, onPlay) },
+                onOptions = openOptionsOn(OptionsSubject.OfEpisode(ep, ep.playerTitle)),
+            )
             .padding(14.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {

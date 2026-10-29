@@ -9,7 +9,6 @@ import androidx.annotation.StringRes
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -56,6 +55,9 @@ import app.opentv.data.model.Channel
 import app.opentv.data.model.Movie
 import app.opentv.data.model.Series
 import app.opentv.data.model.shownName
+import app.opentv.ui.options.OptionsSubject
+import app.opentv.ui.options.openOptionsOn
+import app.opentv.ui.options.optionsClickable
 import app.opentv.ui.vod.CardFocus
 import app.opentv.ui.vod.ContinueWatchingRow
 import app.opentv.ui.vod.MoviePosterRow
@@ -189,9 +191,11 @@ internal fun HomeContent(
                     is Shelf.Live -> LivePreviewTile(shelf.tile, rowFocus) {
                         pick(LIVE_PICK) { shelf.tile.open(onWatchLive, onOpenLive) }
                     }
-                    is Shelf.Resume -> ContinueWatchingRow(shelf.cards, rowFocus) { key, url, title ->
-                        pick(key) { onResume(key, url, title) }
-                    }
+                    is Shelf.Resume -> ContinueWatchingRow(
+                        shelf.cards,
+                        rowFocus,
+                        onResume = { key, url, title -> pick(key) { onResume(key, url, title) } },
+                    )
                     is Shelf.Shows -> SeriesPosterRow(
                         stringResource(shelf.title),
                         shelf.shows,
@@ -345,7 +349,7 @@ private fun ChannelCard(channel: Channel, modifier: Modifier, onClick: () -> Uni
             }
             .onFocusChanged { focused = it.isFocused }
             .clip(RoundedCornerShape(10.dp))
-            .clickable(onClick = onClick)
+            .optionsClickable(onClick, openOptionsOn(OptionsSubject.OfChannel(channel)))
             .padding(4.dp),
     ) {
         Box(

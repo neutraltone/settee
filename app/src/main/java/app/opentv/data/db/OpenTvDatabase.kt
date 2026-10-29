@@ -30,6 +30,7 @@ import app.opentv.data.model.Recording
 import app.opentv.data.model.RecordingStatus
 import app.opentv.data.model.Reminder
 import app.opentv.data.model.Series
+import app.opentv.data.model.SeriesDismissal
 import app.opentv.data.model.SeriesRule
 import app.opentv.data.model.Source
 import app.opentv.data.model.SourceKind
@@ -69,6 +70,7 @@ class Converters {
         Series::class,
         Episode::class,
         PlaybackPosition::class,
+        SeriesDismissal::class,
         Favourite::class,
         LivePlayback::class,
         Profile::class,
@@ -77,7 +79,7 @@ class Converters {
         SeriesRule::class,
         Reminder::class,
     ],
-    version = 5,
+    version = 6,
     exportSchema = true,
 )
 @TypeConverters(Converters::class)
@@ -92,6 +94,7 @@ abstract class OpenTvDatabase : RoomDatabase() {
     abstract fun series(): SeriesDao
     abstract fun episodes(): EpisodeDao
     abstract fun positions(): PlaybackPositionDao
+    abstract fun seriesDismissals(): SeriesDismissalDao
     abstract fun favourites(): FavouriteDao
     abstract fun livePlayback(): LivePlaybackDao
     abstract fun profiles(): ProfileDao
@@ -109,7 +112,7 @@ abstract class OpenTvDatabase : RoomDatabase() {
          * table costs one CREATE TABLE, so it keeps everyone's Favourites rather than wiping them.
          */
         internal val MIGRATIONS: Array<Migration> = arrayOf(
-            object : Migration(4, 5) {
+            object : Migration(5, 6) {
                 override fun migrate(db: SupportSQLiteDatabase) {
                     db.execSQL(
                         "CREATE TABLE IF NOT EXISTS `live_playback` (`profileId` INTEGER NOT NULL, " +

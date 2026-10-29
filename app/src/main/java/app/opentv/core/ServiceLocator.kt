@@ -38,13 +38,17 @@ object ServiceLocator {
         instance ?: Graph(context.applicationContext).also { instance = it }
     }
 
-    class Graph(context: Context) {
+    /**
+     * [openDatabase] replaces the on-disk database, so a test can stand up two devices in one
+     * process: every Graph built from the same context would otherwise share one database file.
+     */
+    class Graph(context: Context, openDatabase: (() -> OpenTvDatabase)? = null) {
         private val appContext = context.applicationContext
 
         val settings: AppSettings by lazy { AppSettings.get(appContext) }
 
         val database: OpenTvDatabase by lazy {
-            OpenTvDatabase.build(context, onWiped = settings::forgetDatabaseRows)
+            openDatabase?.invoke() ?: OpenTvDatabase.build(context, onWiped = settings::forgetDatabaseRows)
         }
 
         val httpClient: OkHttpClient by lazy {
@@ -118,13 +122,7 @@ object ServiceLocator {
         }
 
         val viewerLibrary: ViewerLibrary by lazy {
-            ViewerLibrary(
-                database.positions(),
-                database.episodes(),
-                database.favourites(),
-                database.livePlayback(),
-                settings.activeProfileId,
-            )
+            ViewerLibrary(database, settings.activeProfileId)
         }
 
         val profileSettings: ProfileSettings by lazy {

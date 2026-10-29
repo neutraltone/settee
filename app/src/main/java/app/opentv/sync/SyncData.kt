@@ -18,7 +18,8 @@ import kotlinx.serialization.Serializable
  *
  * Two merge policies travel together, matching how people actually use this:
  *  - **Watch positions** are two-way, newest-wins per item (you watch on any device, resume on
- *    all), using [SyncPosition.updatedAtMillis].
+ *    all), using [SyncPosition.updatedAtMillis]; a hand mark rides on its position. So does a
+ *    series taken out of Continue Watching, by [SyncDismissal.dismissedAtMillis].
  *  - **Profile settings** are newest-wins per Profile and setting, using
  *    [SyncProfileSetting.updatedAtMillis]; only settings a Profile actually chose travel (ADR 0002).
  *  - **Curation and recordings** are additive: favourites, hidden channels, hidden categories and
@@ -36,6 +37,8 @@ data class SyncBundle(
     val profiles: List<String> = emptyList(),
     /** Two-way, newest-wins resume points. */
     val positions: List<SyncPosition> = emptyList(),
+    /** Two-way, newest-wins series each Profile took out of Continue Watching. */
+    val dismissals: List<SyncDismissal> = emptyList(),
     /** Every Profile's Favourites, each landing on the Profile with the same name (additive). */
     val favourites: List<SyncFavourite> = emptyList(),
     /** Additive device-wide curation, keyed by the stable identifiers noted above. */
@@ -68,6 +71,22 @@ data class SyncPosition(
     val positionMillis: Long,
     val durationMillis: Long,
     val updatedAtMillis: Long,
+    /** A HandMark name when the Profile marked the title by hand, else null. */
+    val mark: String? = null,
+)
+
+/**
+ * One series a Profile took out of Continue Watching: [seriesId] is the provider's within [source],
+ * by name; [lastSeason] and [lastEpisode] are the series' last episode then.
+ */
+@Serializable
+data class SyncDismissal(
+    val profile: String,
+    val source: String,
+    val seriesId: String,
+    val dismissedAtMillis: Long,
+    val lastSeason: Int,
+    val lastEpisode: Int,
 )
 
 /**
