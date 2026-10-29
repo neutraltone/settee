@@ -14,7 +14,9 @@ import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
 import androidx.media3.common.util.UnstableApi
 import androidx.test.core.app.ApplicationProvider
+import app.opentv.core.ServiceLocator
 import app.opentv.ui.vod.VodPlayerContent
+import app.opentv.ui.vod.VodPlayerViewModel
 import com.google.common.truth.Truth.assertThat
 import org.junit.After
 import org.junit.Rule
@@ -34,17 +36,23 @@ class VodPlayerContentTest {
     @get:Rule
     val compose = createComposeRule()
 
-    private val players = TestPlayers(ApplicationProvider.getApplicationContext())
+    private val app: android.app.Application = ApplicationProvider.getApplicationContext()
+    private val players = TestPlayers(app)
     private val controller = players.controller()
+
+    // Never attached to an episode, so no Next Episode card: these tests are about the transport.
+    private val graph = ServiceLocator.Graph(app)
+    private val viewModel = VodPlayerViewModel(app, graph)
 
     @After
     fun release() {
         controller.release()
         players.close()
+        graph.database.close()
     }
 
     private fun showFilm(growingRec: Boolean = false) {
-        compose.setTvContent { VodPlayerContent(controller, "Film", growingRec, onBack = {}) }
+        compose.setTvContent { VodPlayerContent(controller, viewModel, "Film", growingRec, onBack = {}) }
         players.play(controller)
         compose.waitForIdle()
     }
@@ -104,7 +112,7 @@ class VodPlayerContentTest {
     @Test
     fun `fast-forward on a recording still being written stops at what's recorded`() {
         val recording = players.controller(RECORDING)
-        compose.setTvContent { VodPlayerContent(recording, "Recording", growingRec = true, onBack = {}) }
+        compose.setTvContent { VodPlayerContent(recording, viewModel, "Recording", growingRec = true, onBack = {}) }
         players.play(recording)
         val recorded = recording.player.bufferedPosition
         recording.player.seekTo(recorded - 20_000)

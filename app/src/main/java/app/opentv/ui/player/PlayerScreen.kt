@@ -13,7 +13,6 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -79,7 +78,6 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
@@ -339,7 +337,7 @@ fun LivePlayerContent(
     var resizeMode by remember { mutableIntStateOf(settings.playerResizeMode.value) }
 
     var controlsVisible by remember { mutableStateOf(true) }
-    var panel by remember { mutableStateOf(Panel.NONE) }
+    var panel by remember { mutableStateOf(PlayerPanel.NONE) }
     var channelListVisible by remember { mutableStateOf(false) }
     var interaction by remember { mutableIntStateOf(0) }
 
@@ -421,7 +419,7 @@ fun LivePlayerContent(
     LaunchedEffect(controlsVisible, interaction, state, paused, panel) {
         if (controlsVisible &&
             !paused &&
-            panel == Panel.NONE &&
+            panel == PlayerPanel.NONE &&
             state is PlayerController.State.Playing
         ) {
             delay(CONTROLS_TIMEOUT_MILLIS)
@@ -434,7 +432,7 @@ fun LivePlayerContent(
     LaunchedEffect(controlsVisible, panel) {
         if (controlsVisible) {
             delay(40)
-            runCatching { if (panel != Panel.NONE) panelFocus.requestFocus() else barFocus.requestFocus() }
+            runCatching { if (panel != PlayerPanel.NONE) panelFocus.requestFocus() else barFocus.requestFocus() }
         } else {
             runCatching { rootFocus.requestFocus() }
         }
@@ -447,7 +445,7 @@ fun LivePlayerContent(
     BackHandler {
         when {
             channelListVisible -> channelListVisible = false
-            panel != Panel.NONE -> panel = Panel.NONE
+            panel != PlayerPanel.NONE -> panel = PlayerPanel.NONE
             controlsVisible -> controlsVisible = false
             else -> {
                 controller.stop()
@@ -511,7 +509,7 @@ fun LivePlayerContent(
                         true
                     }
                     // A picker or the channel list owns the whole d-pad while it's up.
-                    channelListVisible || panel != Panel.NONE -> {
+                    channelListVisible || panel != PlayerPanel.NONE -> {
                         interaction++
                         false
                     }
@@ -541,7 +539,7 @@ fun LivePlayerContent(
                     event.key == Key.DirectionRight -> {
                         if (variants.size > 1) {
                             reveal()
-                            panel = Panel.QUALITY
+                            panel = PlayerPanel.QUALITY
                         }
                         true
                     }
@@ -669,7 +667,7 @@ fun LivePlayerContent(
                     .padding(horizontal = 28.dp, vertical = 20.dp),
             ) {
                 // The open picker sits above the transport row.
-                if (panel != Panel.NONE) {
+                if (panel != PlayerPanel.NONE) {
                     OptionPanel(
                         panel = panel,
                         controller = controller,
@@ -685,7 +683,7 @@ fun LivePlayerContent(
                         onTune = onTune,
                         firstFocus = panelFocus,
                         onDone = {
-                            panel = Panel.NONE
+                            panel = PlayerPanel.NONE
                             interaction++
                         },
                     )
@@ -712,95 +710,44 @@ fun LivePlayerContent(
                     Spacer(Modifier.height(12.dp))
                 }
 
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    if (controller.isSeekable) {
-                        BarChip(Icons.Filled.FastRewind, stringResource(R.string.player_rewind), false) {
-                            controller.seekBackward()
-                            interaction++
-                        }
-                        Spacer(Modifier.width(10.dp))
-                    }
-                    if (canPause) {
-                        BarChip(
-                            icon = if (paused) Icons.Filled.PlayArrow else Icons.Filled.Pause,
-                            label = if (paused) {
-                                stringResource(
-                                    R.string.common_play,
-                                )
-                            } else {
-                                stringResource(R.string.player_pause)
-                            },
-                            selected = false,
-                            focusRequester = barFocus,
-                        ) {
-                            togglePause()
-                            interaction++
-                        }
-                    }
-                    if (controller.isSeekable) {
-                        Spacer(Modifier.width(10.dp))
-                        BarChip(Icons.Filled.FastForward, stringResource(R.string.player_forward), false) {
-                            controller.seekForward()
-                            interaction++
-                        }
-                    }
-
-                    Spacer(Modifier.width(20.dp))
-                    BarChip(
-                        Icons.Filled.Subtitles,
-                        stringResource(R.string.player_subtitles),
-                        panel == Panel.SUBTITLES,
-                        // With Pause hidden, the bar opens on the next button along.
-                        focusRequester = if (canPause) null else barFocus,
-                    ) {
-                        panel = if (panel == Panel.SUBTITLES) Panel.NONE else Panel.SUBTITLES
+                LivePlayerControls(
+                    paused = paused,
+                    onBack = {
+                        controller.stop()
+                        onBack()
+                    },
+                    onPlayPause = {
+                        togglePause()
                         interaction++
-                    }
-                    Spacer(Modifier.width(10.dp))
-                    BarChip(Icons.Filled.Audiotrack, stringResource(R.string.player_audio), panel == Panel.AUDIO) {
-                        panel = if (panel == Panel.AUDIO) Panel.NONE else Panel.AUDIO
+                    },
+                    playPauseFocus = barFocus,
+                    canPause = canPause,
+                    seekable = controller.isSeekable,
+                    onRewind = {
+                        controller.seekBackward()
                         interaction++
-                    }
-                    if (variants.size > 1) {
-                        Spacer(Modifier.width(10.dp))
-                        BarChip(
-                            Icons.Filled.HighQuality,
-                            stringResource(R.string.player_quality),
-                            panel == Panel.QUALITY,
-                        ) {
-                            panel = if (panel == Panel.QUALITY) Panel.NONE else Panel.QUALITY
-                            interaction++
-                        }
-                    }
-                    Spacer(Modifier.width(10.dp))
-                    BarChip(Icons.Filled.AspectRatio, stringResource(R.string.player_aspect), panel == Panel.ASPECT) {
-                        panel = if (panel == Panel.ASPECT) Panel.NONE else Panel.ASPECT
+                    },
+                    onForward = {
+                        controller.seekForward()
                         interaction++
-                    }
-                    Spacer(Modifier.width(10.dp))
-                    BarChip(
-                        icon = Icons.Filled.FiberManualRecord,
-                        label = if (recordingThis) {
-                            stringResource(
-                                R.string.common_stop,
-                            )
-                        } else {
-                            stringResource(R.string.player_record)
-                        },
-                        selected = recordingThis,
-                        iconTint = Color(0xFFE53935),
-                    ) {
+                    },
+                    panel = panel,
+                    onPanel = {
+                        panel = if (panel == it) PlayerPanel.NONE else it
+                        interaction++
+                    },
+                    hasQuality = variants.size > 1,
+                    recording = recordingThis,
+                    onRecord = {
                         onToggleRecord()
                         interaction++
-                    }
-                    if (pipSupported) {
-                        Spacer(Modifier.width(10.dp))
-                        BarChip(Icons.Filled.PictureInPictureAlt, stringResource(R.string.player_pop_out), false) {
-                            (context.findActivity() as? app.opentv.MainActivity)?.enterPipNow()
-                            interaction++
-                        }
-                    }
-                }
+                    },
+                    canPopOut = pipSupported,
+                    onPopOut = {
+                        (context.findActivity() as? app.opentv.MainActivity)?.enterPipNow()
+                        interaction++
+                    },
+                )
             }
         }
 
@@ -971,12 +918,12 @@ private fun ChannelListRow(
     }
 }
 
-private enum class Panel { NONE, SUBTITLES, AUDIO, QUALITY, ASPECT }
+internal enum class PlayerPanel { NONE, SUBTITLES, AUDIO, QUALITY, ASPECT }
 
 @OptIn(UnstableApi::class)
 @Composable
 private fun OptionPanel(
-    panel: Panel,
+    panel: PlayerPanel,
     controller: PlayerController,
     settings: app.opentv.core.AppSettings,
     tracks: Tracks,
@@ -994,15 +941,15 @@ private fun OptionPanel(
     val fillLabel = stringResource(R.string.player_aspect_fill)
     val stretchLabel = stringResource(R.string.player_aspect_stretch)
     val options: List<Option> = when (panel) {
-        Panel.SUBTITLES -> buildSubtitleOptions(controller, settings, tracks, offLabel, onDone)
-        Panel.AUDIO -> buildAudioOptions(controller, tracks, onDone)
-        Panel.QUALITY -> variants.map { v ->
+        PlayerPanel.SUBTITLES -> buildSubtitleOptions(controller, settings, tracks, offLabel, onDone)
+        PlayerPanel.AUDIO -> buildAudioOptions(controller, tracks, onDone)
+        PlayerPanel.QUALITY -> variants.map { v ->
             Option(v.qualityLabel.ifEmpty { standardLabel }, v.id == currentId) {
                 onTune(v)
                 onDone()
             }
         }
-        Panel.ASPECT -> listOf(
+        PlayerPanel.ASPECT -> listOf(
             Option(fitLabel, resizeMode == AspectRatioFrameLayout.RESIZE_MODE_FIT) {
                 onResize(AspectRatioFrameLayout.RESIZE_MODE_FIT)
                 onDone()
@@ -1016,15 +963,15 @@ private fun OptionPanel(
                 onDone()
             },
         )
-        Panel.NONE -> emptyList()
+        PlayerPanel.NONE -> emptyList()
     }
 
     val title = when (panel) {
-        Panel.SUBTITLES -> stringResource(R.string.player_subtitles)
-        Panel.AUDIO -> stringResource(R.string.player_audio)
-        Panel.QUALITY -> stringResource(R.string.player_quality)
-        Panel.ASPECT -> stringResource(R.string.player_aspect_ratio_title)
-        Panel.NONE -> ""
+        PlayerPanel.SUBTITLES -> stringResource(R.string.player_subtitles)
+        PlayerPanel.AUDIO -> stringResource(R.string.player_audio)
+        PlayerPanel.QUALITY -> stringResource(R.string.player_quality)
+        PlayerPanel.ASPECT -> stringResource(R.string.player_aspect_ratio_title)
+        PlayerPanel.NONE -> ""
     }
 
     Column(
@@ -1139,43 +1086,89 @@ private fun OptionRow(label: String, selected: Boolean, onClick: () -> Unit, foc
     }
 }
 
+/**
+ * The live player's control row: Back, then the transport (rewind and forward only on a stream
+ * that can seek), the pickers, Record and, where the device has it, pop-out.
+ */
 @Composable
-private fun BarChip(
-    icon: ImageVector,
-    label: String,
-    selected: Boolean,
-    focusRequester: FocusRequester? = null,
-    iconTint: Color? = null,
-    onClick: () -> Unit,
+internal fun LivePlayerControls(
+    paused: Boolean,
+    onBack: () -> Unit,
+    onPlayPause: () -> Unit,
+    playPauseFocus: FocusRequester? = null,
+    // False once the viewer chose "Don't ask again" with live pause off: there's nothing to pause.
+    canPause: Boolean = true,
+    seekable: Boolean = false,
+    onRewind: () -> Unit = {},
+    onForward: () -> Unit = {},
+    panel: PlayerPanel = PlayerPanel.NONE,
+    onPanel: (PlayerPanel) -> Unit = {},
+    hasQuality: Boolean = false,
+    recording: Boolean = false,
+    onRecord: () -> Unit = {},
+    canPopOut: Boolean = false,
+    onPopOut: () -> Unit = {},
 ) {
-    var focused by remember { mutableStateOf(false) }
-    val container = when {
-        focused -> MaterialTheme.colorScheme.primary
-        selected -> MaterialTheme.colorScheme.primary.copy(alpha = 0.55f)
-        else -> Color.White.copy(alpha = 0.14f)
-    }
-    val content = if (focused) MaterialTheme.colorScheme.onPrimary else Color.White
-
-    Row(
-        modifier = Modifier
-            .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
-            .onFocusChanged { focused = it.isFocused }
-            .clip(RoundedCornerShape(12.dp))
-            .background(container)
-            .then(
-                if (focused) {
-                    Modifier.border(2.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(12.dp))
-                } else {
-                    Modifier
-                },
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        PlayerBackButton(onBack)
+        Spacer(Modifier.width(20.dp))
+        if (seekable) {
+            PlayerChip(Icons.Filled.FastRewind, stringResource(R.string.player_rewind), onClick = onRewind)
+            Spacer(Modifier.width(10.dp))
+        }
+        if (canPause) {
+            PlayerChip(
+                icon = if (paused) Icons.Filled.PlayArrow else Icons.Filled.Pause,
+                label = stringResource(if (paused) R.string.common_play else R.string.player_pause),
+                focusRequester = playPauseFocus,
+                onClick = onPlayPause,
             )
-            .clickable(onClick = onClick)
-            .padding(horizontal = 14.dp, vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Icon(icon, contentDescription = label, tint = if (focused) content else (iconTint ?: content))
-        Spacer(Modifier.width(6.dp))
-        Text(label, style = MaterialTheme.typography.labelLarge, color = content)
+        }
+        if (seekable) {
+            Spacer(Modifier.width(10.dp))
+            PlayerChip(Icons.Filled.FastForward, stringResource(R.string.player_forward), onClick = onForward)
+        }
+
+        Spacer(Modifier.width(20.dp))
+        PlayerChip(
+            Icons.Filled.Subtitles,
+            stringResource(R.string.player_subtitles),
+            panel == PlayerPanel.SUBTITLES,
+            // With Pause hidden, the bar opens on the next button along.
+            focusRequester = if (canPause) null else playPauseFocus,
+        ) {
+            onPanel(PlayerPanel.SUBTITLES)
+        }
+        Spacer(Modifier.width(10.dp))
+        PlayerChip(Icons.Filled.Audiotrack, stringResource(R.string.player_audio), panel == PlayerPanel.AUDIO) {
+            onPanel(PlayerPanel.AUDIO)
+        }
+        if (hasQuality) {
+            Spacer(Modifier.width(10.dp))
+            PlayerChip(
+                Icons.Filled.HighQuality,
+                stringResource(R.string.player_quality),
+                panel == PlayerPanel.QUALITY,
+            ) {
+                onPanel(PlayerPanel.QUALITY)
+            }
+        }
+        Spacer(Modifier.width(10.dp))
+        PlayerChip(Icons.Filled.AspectRatio, stringResource(R.string.player_aspect), panel == PlayerPanel.ASPECT) {
+            onPanel(PlayerPanel.ASPECT)
+        }
+        Spacer(Modifier.width(10.dp))
+        PlayerChip(
+            icon = Icons.Filled.FiberManualRecord,
+            label = stringResource(if (recording) R.string.common_stop else R.string.player_record),
+            selected = recording,
+            iconTint = Color(0xFFE53935),
+            onClick = onRecord,
+        )
+        if (canPopOut) {
+            Spacer(Modifier.width(10.dp))
+            PlayerChip(Icons.Filled.PictureInPictureAlt, stringResource(R.string.player_pop_out), onClick = onPopOut)
+        }
     }
 }
 

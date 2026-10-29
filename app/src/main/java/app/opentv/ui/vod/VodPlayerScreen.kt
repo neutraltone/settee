@@ -13,7 +13,6 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -70,7 +69,6 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
@@ -83,7 +81,9 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.media3.common.C
+import androidx.media3.common.Player
 import androidx.media3.common.Tracks
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.ui.PlayerView
@@ -91,8 +91,11 @@ import app.opentv.R
 import app.opentv.core.ServiceLocator
 import app.opentv.core.SleepTimer
 import app.opentv.core.findActivity
+import app.opentv.player.NextEpisodeCountdown
 import app.opentv.player.PlayerController
 import app.opentv.ui.formatPlaybackTime
+import app.opentv.ui.player.PlayerBackButton
+import app.opentv.ui.player.PlayerChip
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
@@ -113,7 +116,14 @@ import kotlinx.coroutines.withContext
  */
 @OptIn(UnstableApi::class)
 @Composable
-fun VodPlayerScreen(mediaKey: String, streamUrl: String, title: String, userAgent: String, onBack: () -> Unit) {
+fun VodPlayerScreen(
+    mediaKey: String,
+    streamUrl: String,
+    title: String,
+    userAgent: String,
+    onBack: () -> Unit,
+    viewModel: VodPlayerViewModel = viewModel(),
+) {
     val context = LocalContext.current
     val view = LocalView.current
     val graph = remember { ServiceLocator.get(context) }
@@ -138,12 +148,33 @@ fun VodPlayerScreen(mediaKey: String, streamUrl: String, title: String, userAgen
         )
     }
 
-    suspend fun savePosition() {
-        val player = controller.player
-        val pos = player.currentPosition
-        val dur = player.duration.takeIf { it > 0 } ?: return
-        if (pos > 5_000) {
-            graph.viewerLibrary.recordProgress(mediaKey, positionMillis = pos, durationMillis = dur)
+    val playback = remember {
+        object : VodPlayerViewModel.Playback {
+            override fun progress() = controller.player.let { p ->
+                NextEpisodeCountdown.Playback(
+                    positionMillis = p.currentPosition.coerceAtLeast(0),
+                    durationMillis = p.duration.takeIf { it > 0 } ?: 0,
+                    ended = p.playbackState == Player.STATE_ENDED,
+                )
+            }
+
+            // Swapping the media item in the same player, never a new one: see PlayerController.
+            override fun play(item: VodPlayerViewModel.Item, startPositionMillis: Long) = controller.play(
+                PlayerController.Request(
+                    url = item.streamUrl,
+                    title = item.title,
+                    userAgent = item.userAgent,
+                    startPositionMillis = startPositionMillis,
+                    isLive = false,
+                ),
+                debounce = false,
+            )
+
+            override fun pause() {
+                controller.player.playWhenReady = false
+            }
+
+            override fun stop() = controller.stop()
         }
     }
 
@@ -159,27 +190,26 @@ fun VodPlayerScreen(mediaKey: String, streamUrl: String, title: String, userAgen
             // Main.immediate runs this up to the database write before release() and cancel(); the
             // write itself must survive the cancel, or leaving during the credits loses up to the
             // last 15 seconds and a finished episode never becomes Watched.
-            scope.launch { withContext(NonCancellable) { savePosition() } }
+            scope.launch { withContext(NonCancellable) { viewModel.saveProgress() } }
             controller.release()
             scope.cancel()
         }
     }
 
-    LaunchedEffect(mediaKey) {
-        val resumeFrom = graph.viewerLibrary.resumeFrom(mediaKey)
-        controller.play(
-            PlayerController.Request(
-                url = streamUrl,
-                title = title,
-                userAgent = userAgent,
-                startPositionMillis = resumeFrom,
-                isLive = false,
-            ),
-            debounce = false,
-        )
+    // The route names what was opened; once the player has moved on to a Next Episode the view
+    // model holds what is playing, and a rebuilt screen picks that up instead. Keyed on the route
+    // so a reused entry (a single-top navigation) opened on something new plays that.
+    LaunchedEffect(mediaKey, streamUrl) {
+        viewModel.attach(VodPlayerViewModel.Item(mediaKey, streamUrl, title, userAgent), playback)
+        var sinceSaved = 0L
         while (isActive) {
-            delay(15_000)
-            savePosition()
+            delay(POLL_MILLIS)
+            viewModel.poll()
+            sinceSaved += POLL_MILLIS
+            if (sinceSaved >= SAVE_EVERY_MILLIS) {
+                viewModel.saveProgress()
+                sinceSaved = 0
+            }
         }
     }
 
@@ -193,16 +223,23 @@ fun VodPlayerScreen(mediaKey: String, streamUrl: String, title: String, userAgen
         onBack()
     }
 
-    VodPlayerContent(controller, title, growingRec, onBack)
+    VodPlayerContent(controller, viewModel, title, growingRec, onBack)
 }
 
 /**
- * The player's picture and transport bar, with everything about playback that the remote drives.
- * [VodPlayerScreen] owns the stream, resume and saving the position; this owns what the viewer sees.
+ * The player's picture, transport bar and Next Episode card, with everything about playback that the
+ * remote drives. [VodPlayerScreen] owns the stream, resume, saving progress and moving between
+ * episodes; this owns what the viewer sees and presses.
  */
 @OptIn(UnstableApi::class)
 @Composable
-fun VodPlayerContent(controller: PlayerController, title: String, growingRec: Boolean, onBack: () -> Unit) {
+fun VodPlayerContent(
+    controller: PlayerController,
+    viewModel: VodPlayerViewModel,
+    title: String,
+    growingRec: Boolean,
+    onBack: () -> Unit,
+) {
     // Skip within a recording that's still being written. ExoPlayer won't report it as seekable (no
     // fixed length), so we seek directly, clamped to what's on disk.
     fun seekWithinRecorded(deltaMs: Long) {
@@ -222,9 +259,16 @@ fun VodPlayerContent(controller: PlayerController, title: String, growingRec: Bo
     }
     val state by controller.state.collectAsState()
     val tracks by controller.tracks.collectAsState()
+    val current by viewModel.current.collectAsState()
+    val overlay by viewModel.overlay.collectAsState()
+    // Whether the card or the question is up, not which second it shows: effects keyed on this
+    // run when one appears or goes, rather than on every tick of the countdown.
+    val overlayShowing = overlay !is NextEpisodeCountdown.Overlay.None
 
     val playWhenReady by controller.playWhenReady.collectAsState()
-    // Nothing loaded yet isn't "paused": the player only means to play once a stream is set.
+    // Nothing loaded yet isn't "paused": the player only means to play once a stream is set. Read
+    // from the player, so it stays right when "Are you still watching?" pauses it or the next
+    // episode starts.
     val paused = state != PlayerController.State.Idle && !playWhenReady
     var vodPanel by remember { mutableStateOf(VodPanel.NONE) }
     val panelFocus = remember { FocusRequester() }
@@ -241,6 +285,15 @@ fun VodPlayerContent(controller: PlayerController, title: String, growingRec: Bo
     fun reveal() {
         controlsVisible = true
         interaction++
+    }
+
+    // The Next Episode card sits where the transport bar would, and takes focus itself; a picker
+    // left open behind it would come back stale with the bar.
+    LaunchedEffect(overlayShowing) {
+        if (overlayShowing) {
+            controlsVisible = false
+            vodPanel = VodPanel.NONE
+        }
     }
 
     // Poll position/duration for the seek bar while the film plays.
@@ -272,12 +325,13 @@ fun VodPlayerContent(controller: PlayerController, title: String, growingRec: Bo
         }
     }
 
-    LaunchedEffect(controlsVisible, vodPanel) {
-        if (controlsVisible) {
-            delay(40)
-            runCatching { if (vodPanel != VodPanel.NONE) panelFocus.requestFocus() else barFocus.requestFocus() }
-        } else {
-            runCatching { rootFocus.requestFocus() }
+    LaunchedEffect(controlsVisible, vodPanel, overlayShowing) {
+        when {
+            controlsVisible -> {
+                delay(40)
+                runCatching { if (vodPanel != VodPanel.NONE) panelFocus.requestFocus() else barFocus.requestFocus() }
+            }
+            !overlayShowing -> runCatching { rootFocus.requestFocus() }
         }
     }
 
@@ -295,9 +349,12 @@ fun VodPlayerContent(controller: PlayerController, title: String, growingRec: Bo
         Modifier
             .fillMaxSize()
             .background(Color.Black)
+            .countsAsInput(viewModel)
             .onPreviewKeyEvent { event ->
                 when {
                     event.key == Key.Back || event.key == Key.Escape -> false
+                    // Keys belong to the card or the question while one is up, OK above all.
+                    overlayShowing -> false
                     // Media keys act whether or not the bar is up, so they come before "reveal".
                     event.key == Key.MediaPlayPause || event.key == Key.MediaPlay || event.key == Key.MediaPause -> {
                         // A held key repeats; acting on each repeat would flick between paused and playing.
@@ -430,7 +487,7 @@ fun VodPlayerContent(controller: PlayerController, title: String, growingRec: Bo
                     }
                     Spacer(Modifier.height(4.dp))
                 }
-                Text(title, style = MaterialTheme.typography.headlineSmall, color = Color.White)
+                Text(current?.title ?: title, style = MaterialTheme.typography.headlineSmall, color = Color.White)
                 Spacer(Modifier.height(8.dp))
 
                 // Seek bar with times either side. Left/right on the remote scrubs.
@@ -459,72 +516,72 @@ fun VodPlayerContent(controller: PlayerController, title: String, growingRec: Bo
 
                 Spacer(Modifier.height(10.dp))
 
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    VodChip(Icons.Filled.FastRewind, stringResource(R.string.player_rewind)) {
+                VodPlayerControls(
+                    paused = paused,
+                    onBack = onBack,
+                    onRewind = {
                         skip(forward = false)
                         interaction++
-                    }
-                    Spacer(Modifier.width(10.dp))
-                    VodChip(
-                        icon = if (paused) Icons.Filled.PlayArrow else Icons.Filled.Pause,
-                        label = if (paused) {
-                            stringResource(
-                                R.string.common_play,
-                            )
-                        } else {
-                            stringResource(R.string.player_pause)
-                        },
-                        focusRequester = barFocus,
-                    ) {
+                    },
+                    onPlayPause = {
                         controller.player.playWhenReady = paused
                         interaction++
-                    }
-                    Spacer(Modifier.width(10.dp))
-                    VodChip(Icons.Filled.FastForward, stringResource(R.string.player_forward)) {
+                    },
+                    onForward = {
                         skip(forward = true)
                         interaction++
-                    }
-                    Spacer(Modifier.width(20.dp))
-                    VodChip(Icons.Filled.ClosedCaption, stringResource(R.string.player_subtitles)) {
+                    },
+                    onSubtitles = {
                         vodPanel = if (vodPanel == VodPanel.SUBTITLES) VodPanel.NONE else VodPanel.SUBTITLES
                         interaction++
-                    }
-                    Spacer(Modifier.width(10.dp))
-                    VodChip(Icons.Filled.Audiotrack, stringResource(R.string.player_audio)) {
+                    },
+                    onAudio = {
                         vodPanel = if (vodPanel == VodPanel.AUDIO) VodPanel.NONE else VodPanel.AUDIO
                         interaction++
-                    }
-                }
+                    },
+                    playPauseFocus = barFocus,
+                )
             }
         }
+
+        NextEpisodeOverlay(viewModel, onStop = onBack)
     }
 }
 
+private const val POLL_MILLIS = 500L
+
+/** How often progress is written while playing, so a crash or power cut loses little. */
+private const val SAVE_EVERY_MILLIS = 15_000L
+
+/** The movie and episode player's transport row: Back, then rewind, play/pause, forward and the pickers. */
 @Composable
-private fun VodChip(icon: ImageVector, label: String, focusRequester: FocusRequester? = null, onClick: () -> Unit) {
-    var focused by remember { mutableStateOf(false) }
-    val container = if (focused) MaterialTheme.colorScheme.primary else Color.White.copy(alpha = 0.14f)
-    val content = if (focused) MaterialTheme.colorScheme.onPrimary else Color.White
-    Row(
-        modifier = Modifier
-            .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
-            .onFocusChanged { focused = it.isFocused }
-            .clip(RoundedCornerShape(12.dp))
-            .background(container)
-            .then(
-                if (focused) {
-                    Modifier.border(2.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(12.dp))
-                } else {
-                    Modifier
-                },
-            )
-            .clickable(onClick = onClick)
-            .padding(horizontal = 14.dp, vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Icon(icon, contentDescription = label, tint = content)
-        Spacer(Modifier.width(6.dp))
-        Text(label, style = MaterialTheme.typography.labelLarge, color = content)
+fun VodPlayerControls(
+    paused: Boolean,
+    onBack: () -> Unit,
+    onRewind: () -> Unit,
+    onPlayPause: () -> Unit,
+    onForward: () -> Unit,
+    onSubtitles: () -> Unit,
+    onAudio: () -> Unit,
+    playPauseFocus: FocusRequester? = null,
+) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        PlayerBackButton(onBack)
+        Spacer(Modifier.width(20.dp))
+        PlayerChip(Icons.Filled.FastRewind, stringResource(R.string.player_rewind), onClick = onRewind)
+        Spacer(Modifier.width(10.dp))
+        PlayerChip(
+            icon = if (paused) Icons.Filled.PlayArrow else Icons.Filled.Pause,
+            label = stringResource(if (paused) R.string.common_play else R.string.player_pause),
+            focusRequester = playPauseFocus,
+            onClick = onPlayPause,
+        )
+        Spacer(Modifier.width(10.dp))
+        PlayerChip(Icons.Filled.FastForward, stringResource(R.string.player_forward), onClick = onForward)
+        Spacer(Modifier.width(20.dp))
+        PlayerChip(Icons.Filled.ClosedCaption, stringResource(R.string.player_subtitles), onClick = onSubtitles)
+        Spacer(Modifier.width(10.dp))
+        PlayerChip(Icons.Filled.Audiotrack, stringResource(R.string.player_audio), onClick = onAudio)
     }
 }
 
