@@ -1266,6 +1266,11 @@ class ProfilesViewModel(app: Application) : AndroidViewModel(app) {
         graph.profiles.observeAll()
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
+    /** The same list, but null until it has been read once, so launch can tell "not loaded" from "none". */
+    val loadedProfiles: StateFlow<List<Profile>?> =
+        graph.profiles.observeAll()
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
     val activeProfileId: StateFlow<Long> = settings.activeProfileId
 
     init {

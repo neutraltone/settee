@@ -39,6 +39,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -60,12 +61,16 @@ import androidx.navigation.compose.rememberNavController
 import app.opentv.core.AppSettings
 import app.opentv.core.ServiceLocator
 import app.opentv.data.parser.displayTitle
+import app.opentv.ui.FirstScreen
 import app.opentv.ui.MainScreen
 import app.opentv.ui.ProfilesViewModel
 import app.opentv.ui.SourcesViewModel
 import app.opentv.ui.VodViewModel
+import app.opentv.ui.WhosWatchingAsked
+import app.opentv.ui.WhosWatchingScreen
 import app.opentv.ui.channels.ChannelManagerScreen
 import app.opentv.ui.channels.SearchScreen
+import app.opentv.ui.firstScreen
 import app.opentv.ui.onboarding.AddSourceScreen
 import app.opentv.ui.player.PlayerScreen
 import app.opentv.ui.settings.AboutScreen
@@ -234,21 +239,45 @@ private fun OpenTvApp(isTelevision: Boolean) {
     val profiles by profilesViewModel.profiles.collectAsState()
     val activeProfileId by profilesViewModel.activeProfileId.collectAsState()
     val activeProfileName = profiles.firstOrNull { it.id == activeProfileId }?.name ?: "Me"
+    val loadedProfiles by profilesViewModel.loadedProfiles.collectAsState()
+    val playRequest by app.opentv.core.PlayRequests.channelId.collectAsState()
+    val watchRequest by app.opentv.core.RecordingSignals.watch.collectAsState()
 
     // Until the saved sources have loaded from the database, we cannot tell a first run from a
     // returning user — and guessing "first run" drops a returning user on the setup screen and
     // asks for their provider again. NavHost locks in its start destination on first
-    // composition, so wait for that first load before building it.
-    if (!sourcesUi.loaded) {
+    // composition, so wait for that first load before building it. The Profiles are waited for
+    // too, or a household would see Home flash up before being asked who's watching.
+    val knownProfiles = loadedProfiles
+    if (!sourcesUi.loaded || knownProfiles == null) {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             CircularProgressIndicator()
         }
         return
     }
 
+    val first = firstScreen(
+        hasProvider = sourcesUi.sources.isNotEmpty(),
+        profileCount = knownProfiles.size,
+        askedThisProcess = WhosWatchingAsked.settled,
+        launchedToPlay = playRequest != null || watchRequest != null,
+    )
+    // Nothing is built behind Who's watching? — not the boot-to-last-channel jump, not a player
+    // restored after the process was killed — so whatever runs next runs as the chosen Profile.
+    if (first == FirstScreen.WHOS_WATCHING) {
+        WhosWatchingScreen(profiles = knownProfiles, lastActiveId = activeProfileId) { id ->
+            profilesViewModel.select(id)
+            WhosWatchingAsked.settled = true
+        }
+        return
+    }
+    // Settled for this process whichever screen it opened on, so adding a second Profile later
+    // doesn't throw the viewer out to Who's watching? mid-session.
+    SideEffect { WhosWatchingAsked.settled = true }
+
     // First run goes straight to setup — an empty channel list with no explanation is the
     // worst possible first impression.
-    val start = if (sourcesUi.sources.isEmpty()) Routes.ADD_SOURCE else Routes.MAIN
+    val start = if (first == FirstScreen.ADD_SOURCE) Routes.ADD_SOURCE else Routes.MAIN
 
     // Boot to last channel: if enabled and we have one, jump straight into the player on launch.
     // Runs once; backing out returns to the Live guide and doesn't re-trigger.
@@ -262,7 +291,6 @@ private fun OpenTvApp(isTelevision: Boolean) {
 
     // A tapped reminder notification asks for a specific channel. Consume it so it fires once and
     // never re-triggers on a later launch.
-    val playRequest by app.opentv.core.PlayRequests.channelId.collectAsState()
     LaunchedEffect(playRequest) {
         val id = playRequest
         if (id != null && id != 0L) {
@@ -273,7 +301,6 @@ private fun OpenTvApp(isTelevision: Boolean) {
 
     // Auto-switch: a scheduled recording started, so move the live view onto the recording file
     // (single-connection safe). Ignore a stale request a long-backgrounded app only now sees.
-    val watchRequest by app.opentv.core.RecordingSignals.watch.collectAsState()
     LaunchedEffect(watchRequest) {
         val req = watchRequest ?: return@LaunchedEffect
         app.opentv.core.RecordingSignals.consumeWatch()

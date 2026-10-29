@@ -8,6 +8,10 @@ An IPTV player for TV boxes and phones: it plays live channels, movies and serie
 One viewer on a device: a name with its own Favourites, watch progress, Recent Searches and Subtitle Preference. No password, no account.
 _Avoid_: User, account
 
+**Who's watching?**:
+The question the app asks when it starts on a device with more than one Profile: the viewer picks which Profile they are before Home opens.
+_Avoid_: Profile picker, profile chooser, profile select
+
 **Subtitle Preference**:
 Whether a Profile wants subtitles shown, and in which language. Belongs to one Profile and follows it from one title to the next, whatever kind of title it is.
 _Avoid_: Captions setting, CC, subtitle default
