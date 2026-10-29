@@ -64,6 +64,7 @@ fun AppSettingsScreen(onBack: () -> Unit) {
     val previewSound by settings.guidePreviewSound.collectAsState()
     val captions by settings.subtitlesEnabled.collectAsState()
     val resumeLast by settings.resumeLastChannel.collectAsState()
+    val playNext by settings.playNextAutomatically.collectAsState()
     val language by settings.languageTag.collectAsState()
     val liveEnabled by settings.liveEnabled.collectAsState()
     val moviesEnabled by settings.moviesEnabled.collectAsState()
@@ -204,6 +205,12 @@ fun AppSettingsScreen(onBack: () -> Unit) {
                 subtitle = stringResource(R.string.settings_resume_subtitle),
                 checked = resumeLast,
                 onToggle = settings::setResumeLastChannel,
+            )
+            ToggleRow(
+                title = stringResource(R.string.settings_play_next_title),
+                subtitle = stringResource(R.string.settings_play_next_subtitle),
+                checked = playNext,
+                onToggle = settings::setPlayNextAutomatically,
             )
         }
 
