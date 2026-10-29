@@ -118,6 +118,16 @@
     <!-- ============================ Player controls ============================ -->
     <string name="player_rewind">Rewind</string>
     <string name="player_pause">Pause</string>
+    <string name="player_paused_left">Paused · %1$s left</string>
+    <string name="player_back_to_live">Paused too long — back to live</string>
+    <string name="live_pause_prompt_title">Pause live TV?</string>
+    <string name="live_pause_prompt_turn_on">Turn on and pause</string>
+    <string name="live_pause_prompt_not_now">Not now</string>
+    <string name="live_pause_prompt_dont_ask">Don\'t ask again</string>
+    <plurals name="live_pause_prompt_body">
+        <item quantity="one">Live pause keeps the last minute of this channel in memory, so you can pause for up to a minute and rewind to when you turned it on. It uses more memory: on boxes like the Fire TV Stick, playback may stutter or the app may be closed. The picture will restart briefly to switch it on. You can turn it off in Settings › Recording.</item>
+        <item quantity="other">Live pause keeps the last %1$d minutes of this channel in memory, so you can pause for up to %1$d minutes and rewind to when you turned it on. It uses more memory: on boxes like the Fire TV Stick, playback may stutter or the app may be closed. The picture will restart briefly to switch it on. You can turn it off in Settings › Recording.</item>
+    </plurals>
     <string name="player_forward">Forward</string>
     <string name="player_subtitles">Subtitles</string>
     <string name="player_audio">Audio</string>

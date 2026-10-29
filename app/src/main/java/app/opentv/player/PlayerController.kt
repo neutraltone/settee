@@ -84,6 +84,11 @@ class PlayerController(
      * is a network round-trip — rides over the gaps instead of stalling on every one.
      */
     private val liveRecording: Boolean = false,
+    /**
+     * Builds the player from the configured builder. Tests swap in a player with fake media sources
+     * and a fake clock; everything else keeps the default.
+     */
+    buildPlayer: (ExoPlayer.Builder) -> ExoPlayer = ExoPlayer.Builder::build,
 ) {
 
     /** Channel-surf debounce for this controller — longer for the preview so browsing is calm. */
@@ -113,6 +118,14 @@ class PlayerController(
     /** The current stream's tracks (audio/text/video), for the in-player pickers. */
     private val _tracks = MutableStateFlow(Tracks.EMPTY)
     val tracks: StateFlow<Tracks> = _tracks.asStateFlow()
+
+    /**
+     * Whether the player means to play. The screens draw "paused" from this rather than keeping their
+     * own flag, because the controller resumes playback by itself (a new stream, an automatic restart
+     * after a dropped connection) and a copy would then claim the picture is paused while it plays.
+     */
+    private val _playWhenReady = MutableStateFlow(false)
+    val playWhenReady: StateFlow<Boolean> = _playWhenReady.asStateFlow()
 
     private var switchJob: Job? = null
     private var current: Request? = null
@@ -183,8 +196,6 @@ class PlayerController(
     }
 
     val player: ExoPlayer = ExoPlayer.Builder(context)
-        .setSeekBackIncrementMs(SEEK_INCREMENT_MILLIS)
-        .setSeekForwardIncrementMs(SEEK_INCREMENT_MILLIS)
         .setMediaSourceFactory(
             DefaultMediaSourceFactory(dataSourceFactory)
                 .setLoadErrorHandlingPolicy(loadErrorPolicy),
@@ -215,11 +226,15 @@ class PlayerController(
                 .apply { if (dvr) setBackBuffer(DVR_BACK_BUFFER_MILLIS, true) }
                 .build(),
         )
-        .build()
+        .let(buildPlayer)
         .apply {
             addListener(object : Player.Listener {
                 override fun onTracksChanged(tracks: Tracks) {
                     _tracks.value = tracks
+                }
+
+                override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
+                    _playWhenReady.value = playWhenReady
                 }
 
                 override fun onPlaybackStateChanged(playbackState: Int) {
@@ -347,12 +362,16 @@ class PlayerController(
             .build()
     }
 
-    fun seekBackward() {
-        if (player.isCurrentMediaItemSeekable) player.seekBack()
-    }
+    fun seekBackward() = seekBy(-SEEK_INCREMENT_MILLIS)
 
-    fun seekForward() {
-        if (player.isCurrentMediaItemSeekable) player.seekForward()
+    fun seekForward() = seekBy(SEEK_INCREMENT_MILLIS)
+
+    // Seeks by our own step rather than the player's seekBack()/seekForward(), so the step is this
+    // class's constant whichever way the player was built. Clamped the same way ExoPlayer clamps.
+    private fun seekBy(deltaMillis: Long) {
+        if (!player.isCurrentMediaItemSeekable) return
+        val end = player.duration.takeIf { it != C.TIME_UNSET } ?: Long.MAX_VALUE
+        player.seekTo((player.currentPosition + deltaMillis).coerceIn(0L, end))
     }
 
     val isSeekable: Boolean get() = player.isCurrentMediaItemSeekable
@@ -375,33 +394,37 @@ class PlayerController(
         player.release()
     }
 
-    private companion object {
-        const val DEFAULT_USER_AGENT = "OpenTV/0.1 (Android)"
+    companion object {
+        /** How far rewind and fast-forward skip, on screen and on the remote. */
+        const val SEEK_INCREMENT_MILLIS = 15_000L
+
+        private const val DEFAULT_USER_AGENT = "OpenTV/0.1 (Android)"
 
         /** ExoPlayer's "do not retry" sentinel. */
-        const val C_TIME_UNSET = androidx.media3.common.C.TIME_UNSET
+        private const val C_TIME_UNSET = androidx.media3.common.C.TIME_UNSET
 
-        const val SWITCH_DEBOUNCE_MILLIS = 350L
-        const val SEEK_INCREMENT_MILLIS = 15_000L
-        const val INITIAL_BACKOFF_MILLIS = 500L
-        const val MAX_BACKOFF_MILLIS = 8_000L
-        const val MAX_LOAD_RETRIES = 5
-        const val MAX_AUTO_RESTARTS = 3
-        const val AUTO_RESTART_DELAY_MILLIS = 1_500L
+        private const val SWITCH_DEBOUNCE_MILLIS = 350L
+        private const val INITIAL_BACKOFF_MILLIS = 500L
+        private const val MAX_BACKOFF_MILLIS = 8_000L
+        private const val MAX_LOAD_RETRIES = 5
+        private const val MAX_AUTO_RESTARTS = 3
+        private const val AUTO_RESTART_DELAY_MILLIS = 1_500L
 
         /**
          * Larger than ExoPlayer's defaults. IPTV sources are much twitchier than a CDN, and a
          * deeper buffer is the difference between a momentary hiccup and a visible stall.
          */
-        const val MIN_BUFFER_MILLIS = 15_000
-        const val MAX_BUFFER_MILLIS = 60_000
-        const val BUFFER_FOR_PLAYBACK_MILLIS = 2_500
-        const val BUFFER_FOR_PLAYBACK_AFTER_REBUFFER_MILLIS = 5_000
+        private const val MIN_BUFFER_MILLIS = 15_000
+        private const val MAX_BUFFER_MILLIS = 60_000
+        private const val BUFFER_FOR_PLAYBACK_MILLIS = 2_500
+        private const val BUFFER_FOR_PLAYBACK_AFTER_REBUFFER_MILLIS = 5_000
 
         // DVR mode (pause & rewind live TV): keep a couple of minutes behind the live edge to seek
         // into, and let the forward buffer grow to match so a pause of up to a couple of minutes
         // resumes cleanly. Deliberately bounded — this is memory the box has to find.
-        const val DVR_BACK_BUFFER_MILLIS = 120_000
+        private const val DVR_BACK_BUFFER_MILLIS = 120_000
+
+        /** Also how long live TV can stay paused: the forward buffer fills up after this long. */
         const val DVR_MAX_BUFFER_MILLIS = 120_000
 
         // Watch-while-recording: hold playback a cushion *behind* the file's growing edge rather than
@@ -410,20 +433,20 @@ class PlayerController(
         // read is a network round-trip. Waiting for ~8s of reservoir before playback (and rebuilding
         // it after any stall) rides straight over those gaps; because playback and the recorder both
         // advance at 1x, that cushion holds without ever catching the edge again.
-        const val LIVE_REC_MAX_BUFFER_MILLIS = 60_000
-        const val LIVE_REC_BUFFER_FOR_PLAYBACK_MILLIS = 8_000
-        const val LIVE_REC_BUFFER_AFTER_REBUFFER_MILLIS = 8_000
+        private const val LIVE_REC_MAX_BUFFER_MILLIS = 60_000
+        private const val LIVE_REC_BUFFER_FOR_PLAYBACK_MILLIS = 8_000
+        private const val LIVE_REC_BUFFER_AFTER_REBUFFER_MILLIS = 8_000
 
         // Guide-preview tuning: start fast and don't hoard buffer (the preview is muted and
         // low-stakes), and debounce channel-surfing harder so scrolling the list doesn't tune to
         // every channel in passing. Kept within DefaultLoadControl's constraints: min >= both
         // playback thresholds, max >= min.
-        const val PREVIEW_MIN_BUFFER_MILLIS = 5_000
-        const val PREVIEW_MAX_BUFFER_MILLIS = 15_000
-        const val PREVIEW_BUFFER_FOR_PLAYBACK_MILLIS = 1_000
-        const val PREVIEW_BUFFER_AFTER_REBUFFER_MILLIS = 1_500
-        const val PREVIEW_SWITCH_DEBOUNCE_MILLIS = 700L
+        private const val PREVIEW_MIN_BUFFER_MILLIS = 5_000
+        private const val PREVIEW_MAX_BUFFER_MILLIS = 15_000
+        private const val PREVIEW_BUFFER_FOR_PLAYBACK_MILLIS = 1_000
+        private const val PREVIEW_BUFFER_AFTER_REBUFFER_MILLIS = 1_500
+        private const val PREVIEW_SWITCH_DEBOUNCE_MILLIS = 700L
 
-        const val LIVE_TARGET_OFFSET_MILLIS = 10_000L
+        private const val LIVE_TARGET_OFFSET_MILLIS = 10_000L
     }
 }

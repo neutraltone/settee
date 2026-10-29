@@ -59,14 +59,17 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -85,11 +88,14 @@ import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.compose.ui.window.Dialog
 import androidx.media3.common.C
 import androidx.media3.common.Tracks
 import androidx.media3.common.util.UnstableApi
@@ -106,6 +112,8 @@ import app.opentv.player.PlaybackQueue
 import app.opentv.player.PlayerController
 import app.opentv.ui.RecordingBackgroundDialog
 import app.opentv.ui.RecordingBackgroundPrompt
+import app.opentv.ui.formatPlaybackTime
+import app.opentv.update.startsFocused
 import coil.compose.AsyncImage
 import java.util.Locale
 import kotlinx.coroutines.CoroutineScope
@@ -136,17 +144,21 @@ fun PlayerScreen(channelId: Long?, onBack: () -> Unit) {
     val settings = remember { graph.settings }
     val scope = remember { CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate) }
     val subtitlesDefault by settings.subtitlesEnabled.collectAsState()
-    val controller = remember {
+    val livePause by settings.livePauseEnabled.collectAsState()
+    val pausePromptDismissed by settings.livePausePromptDismissed.collectAsState()
+    // Rebuilt only when live pause is switched on from the player: the DVR buffer is fixed when the
+    // player is built. Changing channel never rebuilds it (see PlayerController).
+    val controller = remember(livePause) {
         PlayerController(
             context,
             scope,
             graph.streamingHttpClient,
             subtitlesEnabled = settings.subtitlesEnabled.value,
             // Opt-in shallow DVR so the transport's pause/rewind actually holds on a live stream.
-            dvr = settings.livePauseEnabled.value,
+            dvr = livePause,
         )
     }
-    val state by controller.state.collectAsState()
+    DisposableEffect(controller) { onDispose { controller.release() } }
     val tracks by controller.tracks.collectAsState()
     // What's recording right now, so the Record button can show as armed for this channel.
     val activeRecordings by graph.recordingRepository.observeActive().collectAsState(initial = emptyList())
@@ -162,7 +174,6 @@ fun PlayerScreen(channelId: Long?, onBack: () -> Unit) {
         onDispose {
             window?.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
             view.keepScreenOn = false
-            controller.release()
             scope.cancel()
         }
     }
@@ -171,28 +182,10 @@ fun PlayerScreen(channelId: Long?, onBack: () -> Unit) {
     var currentId by remember { mutableStateOf<Long?>(null) }
     // The channel we were on before this one — powers the "Last channel" recall in the list.
     var previousId by remember { mutableStateOf<Long?>(null) }
-    // Digits typed on the remote accumulate here, then jump to that channel number after a beat.
-    var numberEntry by remember { mutableStateOf("") }
-    var paused by remember { mutableStateOf(false) }
-    var resizeMode by remember { mutableIntStateOf(settings.playerResizeMode.value) }
-
-    var controlsVisible by remember { mutableStateOf(true) }
-    var panel by remember { mutableStateOf(Panel.NONE) }
-    var channelListVisible by remember { mutableStateOf(false) }
-    var interaction by remember { mutableIntStateOf(0) }
     // Offered once per session the first time the user records here while OpenTV isn't exempt from
     // battery optimisation, so the capture survives the screen sleeping. Never blocks recording.
     var showBackgroundPrompt by remember { mutableStateOf(false) }
 
-    // Picture-in-picture. While the player is on it is "eligible" to shrink to a floating window
-    // (pressing Home does it, handled in MainActivity); [inPip] drives hiding all the chrome.
-    val inPip by app.opentv.core.PipState.inPip.collectAsState()
-    val pipSupported = remember {
-        android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O &&
-            context.packageManager.hasSystemFeature(
-                android.content.pm.PackageManager.FEATURE_PICTURE_IN_PICTURE,
-            )
-    }
     DisposableEffect(Unit) {
         app.opentv.core.PipState.eligible = true
         onDispose {
@@ -200,24 +193,9 @@ fun PlayerScreen(channelId: Long?, onBack: () -> Unit) {
             app.opentv.core.PipState.isPlaying = false
         }
     }
-    LaunchedEffect(paused) { app.opentv.core.PipState.isPlaying = !paused }
-    val barFocus = remember { FocusRequester() }
-    val panelFocus = remember { FocusRequester() }
-    val rootFocus = remember { FocusRequester() }
-    val listFocus = remember { FocusRequester() }
-
-    // The channel list you were browsing, for channel up/down and the in-player list. Snapshotted
-    // on entry so it doesn't shift under you mid-session.
-    val queue = remember { PlaybackQueue.items }
-
-    fun reveal() {
-        controlsVisible = true
-        interaction++
-    }
 
     fun tuneTo(channel: Channel) {
         currentId = channel.id
-        paused = false
         settings.lastChannelId = channel.id
         scope.launch {
             val source = graph.sourceRepository.byId(channel.sourceId)
@@ -246,13 +224,6 @@ fun PlayerScreen(channelId: Long?, onBack: () -> Unit) {
         }
     }
 
-    fun zapBy(delta: Int) {
-        if (queue.isEmpty()) return
-        val cur = queue.indexOfFirst { it.id == currentId }.let { if (it < 0) 0 else it }
-        val next = (cur + delta).coerceIn(0, queue.size - 1)
-        if (next != cur) playChannelId(queue[next].id)
-    }
-
     fun toggleRecord() {
         val active = activeRecordings.firstOrNull { it.channelId == currentId }
         if (active != null) {
@@ -265,7 +236,6 @@ fun PlayerScreen(channelId: Long?, onBack: () -> Unit) {
                 showBackgroundPrompt = true
             }
         }
-        interaction++
     }
 
     LaunchedEffect(channelId) {
@@ -274,16 +244,24 @@ fun PlayerScreen(channelId: Long?, onBack: () -> Unit) {
         variants = graph.catalogRepository.variants(channel)
         tuneTo(variants.firstOrNull { it.id == channel.id } ?: channel)
     }
+    // Switching live pause on rebuilds the controller; pick the channel straight back up on it.
+    LaunchedEffect(controller) {
+        if (controller.state.value == PlayerController.State.Idle) {
+            variants.firstOrNull { it.id == currentId }?.let { tuneTo(it) }
+        }
+    }
 
     // Sleep timer: when the armed deadline passes, stop and leave the player. Re-arming from
     // settings restarts this effect with the new deadline.
     val sleepDeadline by SleepTimer.deadline.collectAsState()
+    // Switching live pause on replaces the controller while this waits; stop whichever is current.
+    val currentController by rememberUpdatedState(controller)
     LaunchedEffect(sleepDeadline) {
         val d = sleepDeadline ?: return@LaunchedEffect
         val wait = d - System.currentTimeMillis()
         if (wait > 0) delay(wait)
         SleepTimer.clear()
-        controller.stop()
+        currentController.stop()
         onBack()
     }
 
@@ -295,6 +273,148 @@ fun PlayerScreen(channelId: Long?, onBack: () -> Unit) {
             g.type == C.TRACK_TYPE_TEXT && (0 until g.length).any { g.isTrackSelected(it) }
         }
         if (subtitlesDefault && hasText && !textChosen) controller.setSubtitlesEnabled(true)
+    }
+
+    LivePlayerContent(
+        controller = controller,
+        settings = settings,
+        queue = remember { PlaybackQueue.items },
+        variants = variants,
+        currentId = currentId,
+        previousId = previousId,
+        recordingThis = activeRecordings.any { it.channelId == currentId },
+        livePause = livePause,
+        pausePromptDismissed = pausePromptDismissed,
+        onPlayChannel = ::playChannelId,
+        onTune = ::tuneTo,
+        onToggleRecord = ::toggleRecord,
+        onTurnOnLivePause = { settings.setLivePauseEnabled(true) },
+        onDontAskAgain = { settings.setLivePausePromptDismissed(true) },
+        onBack = onBack,
+    )
+
+    if (showBackgroundPrompt) {
+        RecordingBackgroundDialog(
+            onAllow = {
+                showBackgroundPrompt = false
+                context.requestIgnoreBatteryOptimizations()
+            },
+            onDismiss = { showBackgroundPrompt = false },
+        )
+    }
+}
+
+/**
+ * The live picture and its control bar, channel list and pickers, with everything the remote drives.
+ * [PlayerScreen] owns the stream, the channel being played and recording; this owns what the viewer
+ * sees and presses.
+ */
+@OptIn(UnstableApi::class)
+@Composable
+fun LivePlayerContent(
+    controller: PlayerController,
+    settings: app.opentv.core.AppSettings,
+    queue: List<PlaybackQueue.Item>,
+    variants: List<Channel>,
+    currentId: Long?,
+    previousId: Long?,
+    recordingThis: Boolean,
+    livePause: Boolean,
+    pausePromptDismissed: Boolean,
+    onPlayChannel: (Long) -> Unit,
+    onTune: (Channel) -> Unit,
+    onToggleRecord: () -> Unit,
+    onTurnOnLivePause: () -> Unit,
+    onDontAskAgain: () -> Unit,
+    onBack: () -> Unit,
+) {
+    val context = LocalContext.current
+    val state by controller.state.collectAsState()
+    val tracks by controller.tracks.collectAsState()
+    // Digits typed on the remote accumulate here, then jump to that channel number after a beat.
+    var numberEntry by remember { mutableStateOf("") }
+    val playWhenReady by controller.playWhenReady.collectAsState()
+    // Nothing tuned yet isn't "paused": the player only means to play once a stream is set.
+    val paused = state != PlayerController.State.Idle && !playWhenReady
+    var resizeMode by remember { mutableIntStateOf(settings.playerResizeMode.value) }
+
+    var controlsVisible by remember { mutableStateOf(true) }
+    var panel by remember { mutableStateOf(Panel.NONE) }
+    var channelListVisible by remember { mutableStateOf(false) }
+    var interaction by remember { mutableIntStateOf(0) }
+
+    // Picture-in-picture. While the player is on it is "eligible" to shrink to a floating window
+    // (pressing Home does it, handled in MainActivity); [inPip] drives hiding all the chrome.
+    val inPip by app.opentv.core.PipState.inPip.collectAsState()
+    val pipSupported = remember {
+        android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O &&
+            context.packageManager.hasSystemFeature(
+                android.content.pm.PackageManager.FEATURE_PICTURE_IN_PICTURE,
+            )
+    }
+    LaunchedEffect(paused) { app.opentv.core.PipState.isPlaying = !paused }
+    val barFocus = remember { FocusRequester() }
+    val panelFocus = remember { FocusRequester() }
+    val rootFocus = remember { FocusRequester() }
+    val listFocus = remember { FocusRequester() }
+
+    // While live TV is paused, how long until the forward buffer is full and the pause can't hold.
+    var pauseLeftMillis by remember { mutableLongStateOf(0L) }
+    var backToLive by remember { mutableStateOf(false) }
+    var pausePrompt by remember { mutableStateOf(false) }
+    // "Turn on and pause": the screen rebuilds the player with the DVR buffer and tunes the channel
+    // again, and the pause waits for that new player to be playing.
+    var pauseWhenBack by remember { mutableStateOf(false) }
+    LaunchedEffect(state, livePause, pauseWhenBack) {
+        if (pauseWhenBack && livePause && state is PlayerController.State.Playing) {
+            pauseWhenBack = false
+            controller.player.playWhenReady = false
+        }
+    }
+
+    // The bar's Pause and the remote's play/pause. Pausing a stream with no buffer behind it only
+    // drops the viewer behind live, so with live pause off it's offered rather than done.
+    // After "Don't ask again", live TV without live pause simply can't be paused.
+    val canPause = livePause || !pausePromptDismissed
+
+    fun setPaused(pause: Boolean) {
+        if (!livePause) {
+            if (pause && !pausePromptDismissed) pausePrompt = true
+            return
+        }
+        controller.player.playWhenReady = !pause
+    }
+
+    fun togglePause() = setPaused(!paused)
+    LaunchedEffect(paused, livePause) {
+        if (!paused || !livePause) return@LaunchedEffect
+        pauseLeftMillis = PlayerController.DVR_MAX_BUFFER_MILLIS.toLong()
+        while (pauseLeftMillis > 0) {
+            delay(COUNTDOWN_TICK_MILLIS)
+            pauseLeftMillis -= COUNTDOWN_TICK_MILLIS
+        }
+        // Past the buffer the provider stalls or drops the connection unpredictably, so rather than
+        // leave the stream sitting there, pick it back up at the live edge.
+        backToLive = true
+        controller.player.seekToDefaultPosition()
+        controller.player.playWhenReady = true
+    }
+    LaunchedEffect(backToLive) {
+        if (!backToLive) return@LaunchedEffect
+        delay(BACK_TO_LIVE_MESSAGE_MILLIS)
+        backToLive = false
+    }
+
+    fun reveal() {
+        controlsVisible = true
+        interaction++
+    }
+
+    fun zapBy(delta: Int) {
+        if (queue.isEmpty()) return
+        val cur = queue.indexOfFirst { it.id == currentId }.let { if (it < 0) 0 else it }
+        val next = (cur + delta).coerceIn(0, queue.size - 1)
+        if (next != cur) onPlayChannel(queue[next].id)
     }
 
     // Auto-hide the bar after a few seconds — but never while paused or with a picker open.
@@ -343,7 +463,7 @@ fun PlayerScreen(channelId: Long?, onBack: () -> Unit) {
         val num = numberEntry.toIntOrNull()
         numberEntry = ""
         val target = num?.let { n -> queue.firstOrNull { it.number == n } }
-        if (target != null) playChannelId(target.id)
+        if (target != null) onPlayChannel(target.id)
     }
 
     // Focus the channel list when it opens; hand focus back to the video catcher when it closes.
@@ -361,6 +481,23 @@ fun PlayerScreen(channelId: Long?, onBack: () -> Unit) {
             .fillMaxSize()
             .background(Color.Black)
             .onPreviewKeyEvent { event ->
+                // Media keys act whether or not the bar or a picker is up, and are always consumed.
+                if (event.key in MEDIA_KEYS) {
+                    // A held key repeats: rewind and fast-forward skip again on each repeat, but acting on
+                    // a repeated play/pause would flick between paused and playing.
+                    val firstPress = event.nativeKeyEvent.repeatCount == 0
+                    if (event.type == KeyEventType.KeyDown) {
+                        when (event.key) {
+                            Key.MediaRewind -> if (livePause) controller.seekBackward()
+                            Key.MediaFastForward -> if (livePause) controller.seekForward()
+                            Key.MediaPlay -> if (firstPress) setPaused(false)
+                            Key.MediaPause -> if (firstPress) setPaused(true)
+                            else -> if (firstPress) togglePause()
+                        }
+                        if (canPause) reveal()
+                    }
+                    return@onPreviewKeyEvent true
+                }
                 if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
                 val digit = keyToDigit(event.key)
                 when {
@@ -434,8 +571,25 @@ fun PlayerScreen(channelId: Long?, onBack: () -> Unit) {
                     )
                 }
             },
-            update = { it.resizeMode = resizeMode },
+            update = {
+                it.player = controller.player
+                it.resizeMode = resizeMode
+            },
         )
+
+        if (backToLive && !inPip) {
+            Text(
+                stringResource(R.string.player_back_to_live),
+                color = Color.White,
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .padding(32.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(Color.Black.copy(alpha = 0.82f))
+                    .padding(horizontal = 24.dp, vertical = 12.dp),
+            )
+        }
 
         // The channel number as you type it, top-right, until it resolves.
         if (numberEntry.isNotEmpty() && !inPip) {
@@ -528,7 +682,7 @@ fun PlayerScreen(channelId: Long?, onBack: () -> Unit) {
                             resizeMode = it
                             settings.setPlayerResizeMode(it)
                         },
-                        onTune = { tuneTo(it) },
+                        onTune = onTune,
                         firstFocus = panelFocus,
                         onDone = {
                             panel = Panel.NONE
@@ -536,6 +690,15 @@ fun PlayerScreen(channelId: Long?, onBack: () -> Unit) {
                         },
                     )
                     Spacer(Modifier.height(16.dp))
+                }
+
+                if (paused && livePause) {
+                    Text(
+                        stringResource(R.string.player_paused_left, formatPlaybackTime(pauseLeftMillis)),
+                        style = MaterialTheme.typography.titleMedium,
+                        color = Color.White,
+                    )
+                    Spacer(Modifier.height(8.dp))
                 }
 
                 if (channelTitle.isNotEmpty()) {
@@ -557,21 +720,22 @@ fun PlayerScreen(channelId: Long?, onBack: () -> Unit) {
                         }
                         Spacer(Modifier.width(10.dp))
                     }
-                    BarChip(
-                        icon = if (paused) Icons.Filled.PlayArrow else Icons.Filled.Pause,
-                        label = if (paused) {
-                            stringResource(
-                                R.string.common_play,
-                            )
-                        } else {
-                            stringResource(R.string.player_pause)
-                        },
-                        selected = false,
-                        focusRequester = barFocus,
-                    ) {
-                        paused = !paused
-                        controller.player.playWhenReady = !paused
-                        interaction++
+                    if (canPause) {
+                        BarChip(
+                            icon = if (paused) Icons.Filled.PlayArrow else Icons.Filled.Pause,
+                            label = if (paused) {
+                                stringResource(
+                                    R.string.common_play,
+                                )
+                            } else {
+                                stringResource(R.string.player_pause)
+                            },
+                            selected = false,
+                            focusRequester = barFocus,
+                        ) {
+                            togglePause()
+                            interaction++
+                        }
                     }
                     if (controller.isSeekable) {
                         Spacer(Modifier.width(10.dp))
@@ -586,6 +750,8 @@ fun PlayerScreen(channelId: Long?, onBack: () -> Unit) {
                         Icons.Filled.Subtitles,
                         stringResource(R.string.player_subtitles),
                         panel == Panel.SUBTITLES,
+                        // With Pause hidden, the bar opens on the next button along.
+                        focusRequester = if (canPause) null else barFocus,
                     ) {
                         panel = if (panel == Panel.SUBTITLES) Panel.NONE else Panel.SUBTITLES
                         interaction++
@@ -612,7 +778,6 @@ fun PlayerScreen(channelId: Long?, onBack: () -> Unit) {
                         interaction++
                     }
                     Spacer(Modifier.width(10.dp))
-                    val recordingThis = activeRecordings.any { it.channelId == currentId }
                     BarChip(
                         icon = Icons.Filled.FiberManualRecord,
                         label = if (recordingThis) {
@@ -624,7 +789,10 @@ fun PlayerScreen(channelId: Long?, onBack: () -> Unit) {
                         },
                         selected = recordingThis,
                         iconTint = Color(0xFFE53935),
-                    ) { toggleRecord() }
+                    ) {
+                        onToggleRecord()
+                        interaction++
+                    }
                     if (pipSupported) {
                         Spacer(Modifier.width(10.dp))
                         BarChip(Icons.Filled.PictureInPictureAlt, stringResource(R.string.player_pop_out), false) {
@@ -669,7 +837,7 @@ fun PlayerScreen(channelId: Long?, onBack: () -> Unit) {
                         focusRequester = null,
                         leadingLabel = stringResource(R.string.player_last),
                         onClick = {
-                            playChannelId(lastItem.id)
+                            onPlayChannel(lastItem.id)
                             channelListVisible = false
                         },
                     )
@@ -682,7 +850,7 @@ fun PlayerScreen(channelId: Long?, onBack: () -> Unit) {
                             playing = item.id == currentId,
                             focusRequester = if (index == currentIndex) listFocus else null,
                             onClick = {
-                                playChannelId(item.id)
+                                onPlayChannel(item.id)
                                 channelListVisible = false
                             },
                         )
@@ -692,14 +860,64 @@ fun PlayerScreen(channelId: Long?, onBack: () -> Unit) {
         }
     }
 
-    if (showBackgroundPrompt) {
-        RecordingBackgroundDialog(
-            onAllow = {
-                showBackgroundPrompt = false
-                context.requestIgnoreBatteryOptimizations()
+    if (pausePrompt) {
+        LivePausePrompt(
+            onTurnOn = {
+                pausePrompt = false
+                pauseWhenBack = true
+                onTurnOnLivePause()
             },
-            onDismiss = { showBackgroundPrompt = false },
+            onDontAskAgain = {
+                pausePrompt = false
+                onDontAskAgain()
+            },
+            onDismiss = { pausePrompt = false },
         )
+    }
+}
+
+/** Offers to turn live pause on, explaining what it costs, when the viewer pauses without it. */
+@Composable
+private fun LivePausePrompt(onTurnOn: () -> Unit, onDontAskAgain: () -> Unit, onDismiss: () -> Unit) {
+    val minutes = PlayerController.DVR_MAX_BUFFER_MILLIS / MILLIS_PER_MINUTE
+    Dialog(onDismissRequest = onDismiss) {
+        Column(
+            Modifier
+                .width(520.dp)
+                .clip(RoundedCornerShape(16.dp))
+                .background(MaterialTheme.colorScheme.surface)
+                .padding(24.dp),
+        ) {
+            Text(
+                stringResource(R.string.live_pause_prompt_title),
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.SemiBold,
+            )
+            Spacer(Modifier.height(12.dp))
+            Text(
+                pluralStringResource(R.plurals.live_pause_prompt_body, minutes, minutes),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Spacer(Modifier.height(20.dp))
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                TextButton(onClick = onDontAskAgain) {
+                    Text(stringResource(R.string.live_pause_prompt_dont_ask))
+                }
+                Spacer(Modifier.width(8.dp))
+                TextButton(onClick = onDismiss) {
+                    Text(stringResource(R.string.live_pause_prompt_not_now))
+                }
+                Spacer(Modifier.width(8.dp))
+                Button(onClick = onTurnOn, modifier = Modifier.startsFocused()) {
+                    Text(stringResource(R.string.live_pause_prompt_turn_on))
+                }
+            }
+        }
     }
 }
 
@@ -963,6 +1181,11 @@ private fun BarChip(
 
 private const val CONTROLS_TIMEOUT_MILLIS = 5_000L
 private const val NUMBER_ENTRY_TIMEOUT_MILLIS = 2_000L
+private const val COUNTDOWN_TICK_MILLIS = 1_000L
+private const val BACK_TO_LIVE_MESSAGE_MILLIS = 4_000L
+private const val MILLIS_PER_MINUTE = 60_000
+private val MEDIA_KEYS =
+    setOf(Key.MediaPlayPause, Key.MediaPlay, Key.MediaPause, Key.MediaRewind, Key.MediaFastForward)
 
 /** Maps a remote's number keys (top row and numeric keypad) to a digit, or null for other keys. */
 private fun keyToDigit(key: Key): Char? = when (key) {

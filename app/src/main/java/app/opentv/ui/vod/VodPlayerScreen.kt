@@ -92,6 +92,7 @@ import app.opentv.core.ServiceLocator
 import app.opentv.core.SleepTimer
 import app.opentv.core.findActivity
 import app.opentv.player.PlayerController
+import app.opentv.ui.formatPlaybackTime
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
@@ -135,38 +136,6 @@ fun VodPlayerScreen(mediaKey: String, streamUrl: String, title: String, userAgen
             app.opentv.player.GrowingRecordingDataSource.Factory(context.applicationContext),
             liveRecording = growingRec,
         )
-    }
-
-    // Skip forward/back within the recorded portion. For a growing recording ExoPlayer won't report
-    // the item as seekable (no fixed length), so we seek directly, clamped to what's on disk.
-    fun seekRelative(deltaMs: Long) {
-        val p = controller.player
-        val ceiling = if (growingRec) {
-            p.bufferedPosition.coerceAtLeast(0L)
-        } else {
-            (p.duration.takeIf { it > 0 } ?: Long.MAX_VALUE)
-        }
-        p.seekTo((p.currentPosition + deltaMs).coerceIn(0L, ceiling))
-    }
-    val state by controller.state.collectAsState()
-    val tracks by controller.tracks.collectAsState()
-
-    var paused by remember { mutableStateOf(false) }
-    var vodPanel by remember { mutableStateOf(VodPanel.NONE) }
-    val panelFocus = remember { FocusRequester() }
-    var positionMs by remember { mutableLongStateOf(0L) }
-    var durationMs by remember { mutableLongStateOf(0L) }
-    var scrubbing by remember { mutableStateOf(false) }
-    var scrubValue by remember { mutableFloatStateOf(0f) }
-
-    var controlsVisible by remember { mutableStateOf(true) }
-    var interaction by remember { androidx.compose.runtime.mutableIntStateOf(0) }
-    val barFocus = remember { FocusRequester() }
-    val rootFocus = remember { FocusRequester() }
-
-    fun reveal() {
-        controlsVisible = true
-        interaction++
     }
 
     suspend fun savePosition() {
@@ -224,6 +193,56 @@ fun VodPlayerScreen(mediaKey: String, streamUrl: String, title: String, userAgen
         onBack()
     }
 
+    VodPlayerContent(controller, title, growingRec, onBack)
+}
+
+/**
+ * The player's picture and transport bar, with everything about playback that the remote drives.
+ * [VodPlayerScreen] owns the stream, resume and saving the position; this owns what the viewer sees.
+ */
+@OptIn(UnstableApi::class)
+@Composable
+fun VodPlayerContent(controller: PlayerController, title: String, growingRec: Boolean, onBack: () -> Unit) {
+    // Skip within a recording that's still being written. ExoPlayer won't report it as seekable (no
+    // fixed length), so we seek directly, clamped to what's on disk.
+    fun seekWithinRecorded(deltaMs: Long) {
+        val p = controller.player
+        p.seekTo((p.currentPosition + deltaMs).coerceIn(0L, p.bufferedPosition.coerceAtLeast(0L)))
+    }
+
+    // The on-screen buttons and the remote's media keys both skip through here, so a recording that's
+    // still being written stays inside what's on disk either way.
+    fun skip(forward: Boolean) {
+        val step = if (forward) PlayerController.SEEK_INCREMENT_MILLIS else -PlayerController.SEEK_INCREMENT_MILLIS
+        when {
+            growingRec -> seekWithinRecorded(step)
+            forward -> controller.seekForward()
+            else -> controller.seekBackward()
+        }
+    }
+    val state by controller.state.collectAsState()
+    val tracks by controller.tracks.collectAsState()
+
+    val playWhenReady by controller.playWhenReady.collectAsState()
+    // Nothing loaded yet isn't "paused": the player only means to play once a stream is set.
+    val paused = state != PlayerController.State.Idle && !playWhenReady
+    var vodPanel by remember { mutableStateOf(VodPanel.NONE) }
+    val panelFocus = remember { FocusRequester() }
+    var positionMs by remember { mutableLongStateOf(0L) }
+    var durationMs by remember { mutableLongStateOf(0L) }
+    var scrubbing by remember { mutableStateOf(false) }
+    var scrubValue by remember { mutableFloatStateOf(0f) }
+
+    var controlsVisible by remember { mutableStateOf(true) }
+    var interaction by remember { androidx.compose.runtime.mutableIntStateOf(0) }
+    val barFocus = remember { FocusRequester() }
+    val rootFocus = remember { FocusRequester() }
+
+    fun reveal() {
+        controlsVisible = true
+        interaction++
+    }
+
     // Poll position/duration for the seek bar while the film plays.
     LaunchedEffect(Unit) {
         while (isActive) {
@@ -279,6 +298,26 @@ fun VodPlayerScreen(mediaKey: String, streamUrl: String, title: String, userAgen
             .onPreviewKeyEvent { event ->
                 when {
                     event.key == Key.Back || event.key == Key.Escape -> false
+                    // Media keys act whether or not the bar is up, so they come before "reveal".
+                    event.key == Key.MediaPlayPause || event.key == Key.MediaPlay || event.key == Key.MediaPause -> {
+                        // A held key repeats; acting on each repeat would flick between paused and playing.
+                        if (event.type == KeyEventType.KeyDown && event.nativeKeyEvent.repeatCount == 0) {
+                            controller.player.playWhenReady = when (event.key) {
+                                Key.MediaPlay -> true
+                                Key.MediaPause -> false
+                                else -> paused
+                            }
+                            reveal()
+                        }
+                        true
+                    }
+                    event.key == Key.MediaRewind || event.key == Key.MediaFastForward -> {
+                        if (event.type == KeyEventType.KeyDown) {
+                            skip(forward = event.key == Key.MediaFastForward)
+                            interaction++
+                        }
+                        true
+                    }
                     event.type == KeyEventType.KeyDown && !controlsVisible -> {
                         reveal()
                         true
@@ -396,7 +435,7 @@ fun VodPlayerScreen(mediaKey: String, streamUrl: String, title: String, userAgen
 
                 // Seek bar with times either side. Left/right on the remote scrubs.
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(formatDuration(if (scrubbing) scrubValue.toLong() else positionMs), color = Color.White)
+                    Text(formatPlaybackTime(if (scrubbing) scrubValue.toLong() else positionMs), color = Color.White)
                     Spacer(Modifier.width(12.dp))
                     Slider(
                         value = if (scrubbing) scrubValue else positionMs.toFloat(),
@@ -415,14 +454,14 @@ fun VodPlayerScreen(mediaKey: String, streamUrl: String, title: String, userAgen
                         modifier = Modifier.weight(1f),
                     )
                     Spacer(Modifier.width(12.dp))
-                    Text(formatDuration(durationMs), color = Color.White)
+                    Text(formatPlaybackTime(durationMs), color = Color.White)
                 }
 
                 Spacer(Modifier.height(10.dp))
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     VodChip(Icons.Filled.FastRewind, stringResource(R.string.player_rewind)) {
-                        if (growingRec) seekRelative(-15_000) else controller.seekBackward()
+                        skip(forward = false)
                         interaction++
                     }
                     Spacer(Modifier.width(10.dp))
@@ -437,13 +476,12 @@ fun VodPlayerScreen(mediaKey: String, streamUrl: String, title: String, userAgen
                         },
                         focusRequester = barFocus,
                     ) {
-                        paused = !paused
-                        controller.player.playWhenReady = !paused
+                        controller.player.playWhenReady = paused
                         interaction++
                     }
                     Spacer(Modifier.width(10.dp))
                     VodChip(Icons.Filled.FastForward, stringResource(R.string.player_forward)) {
-                        if (growingRec) seekRelative(15_000) else controller.seekForward()
+                        skip(forward = true)
                         interaction++
                     }
                     Spacer(Modifier.width(20.dp))
@@ -585,13 +623,4 @@ private fun vodTrackLabel(label: String?, language: String?, index: Int): String
         return runCatching { java.util.Locale(language).displayLanguage.ifBlank { language } }.getOrDefault(language)
     }
     return "Track ${index + 1}"
-}
-
-private fun formatDuration(ms: Long): String {
-    if (ms <= 0) return "0:00"
-    val totalSec = ms / 1000
-    val h = totalSec / 3600
-    val m = (totalSec % 3600) / 60
-    val s = totalSec % 60
-    return if (h > 0) "%d:%02d:%02d".format(h, m, s) else "%d:%02d".format(m, s)
 }
