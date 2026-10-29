@@ -39,11 +39,15 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -60,12 +64,16 @@ import androidx.navigation.compose.rememberNavController
 import app.opentv.core.AppSettings
 import app.opentv.core.ServiceLocator
 import app.opentv.data.parser.displayTitle
+import app.opentv.ui.FirstScreen
 import app.opentv.ui.MainScreen
 import app.opentv.ui.ProfilesViewModel
 import app.opentv.ui.SourcesViewModel
 import app.opentv.ui.VodViewModel
+import app.opentv.ui.WhosWatchingAsked
+import app.opentv.ui.WhosWatchingScreen
 import app.opentv.ui.channels.ChannelManagerScreen
 import app.opentv.ui.channels.SearchScreen
+import app.opentv.ui.firstScreen
 import app.opentv.ui.onboarding.AddSourceScreen
 import app.opentv.ui.options.ItemOptionsHost
 import app.opentv.ui.player.PlayerScreen
@@ -102,6 +110,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         handlePlayIntent(intent)
         val isTelevision = isRunningOnTelevision(this)
+        val toPlay = launchedToPlay(intent, restored = savedInstanceState != null)
 
         setContent {
             val settings = remember { ServiceLocator.get(this).settings }
@@ -117,7 +126,7 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background,
                 ) {
-                    OpenTvApp(isTelevision = isTelevision)
+                    OpenTvApp(isTelevision = isTelevision, launchedToPlay = toPlay)
                 }
             }
         }
@@ -225,9 +234,26 @@ object Routes {
     }
 }
 
+/**
+ * Whether this launch asks to play something: a tapped reminder, or a recording switching the
+ * screen to itself. Read from the intent that created the activity, not from [app.opentv.core.PlayRequests] or
+ * [app.opentv.core.RecordingSignals]: a recording alarm sets those with no launch at all, sometimes long before the
+ * viewer next opens the app, and that mustn't stop them being asked who's watching. A restore
+ * redelivers the old intent, so it never counts.
+ */
+internal fun launchedToPlay(intent: Intent?, restored: Boolean): Boolean {
+    if (restored || intent == null) return false
+    return intent.getLongExtra(MainActivity.EXTRA_PLAY_CHANNEL, 0L) != 0L ||
+        intent.getLongExtra(MainActivity.EXTRA_WATCH_RECORDING, 0L) != 0L
+}
+
 @Composable
-private fun OpenTvApp(isTelevision: Boolean) {
-    val navController = rememberNavController()
+private fun OpenTvApp(isTelevision: Boolean, launchedToPlay: Boolean) {
+    // Answering Who's watching? starts a new navigation state rather than the one Android restored
+    // after killing the process, so choosing opens Home, not whatever screen was open before. A
+    // rotation keeps the same count, and with it the back stack.
+    var navGeneration by rememberSaveable { mutableIntStateOf(0) }
+    val navController = key(navGeneration) { rememberNavController() }
     val sourcesViewModel: SourcesViewModel = viewModel()
     val vodViewModel: VodViewModel = viewModel()
     val profilesViewModel: ProfilesViewModel = viewModel()
@@ -235,21 +261,44 @@ private fun OpenTvApp(isTelevision: Boolean) {
     val profiles by profilesViewModel.profiles.collectAsState()
     val activeProfileId by profilesViewModel.activeProfileId.collectAsState()
     val activeProfileName = profiles.firstOrNull { it.id == activeProfileId }?.name ?: "Me"
+    val loadedProfiles by profilesViewModel.loadedProfiles.collectAsState()
 
     // Until the saved sources have loaded from the database, we cannot tell a first run from a
     // returning user — and guessing "first run" drops a returning user on the setup screen and
     // asks for their provider again. NavHost locks in its start destination on first
-    // composition, so wait for that first load before building it.
-    if (!sourcesUi.loaded) {
+    // composition, so wait for that first load before building it. The Profiles are waited for
+    // too, or a household would see Home flash up before being asked who's watching.
+    val knownProfiles = loadedProfiles
+    if (!sourcesUi.loaded || knownProfiles == null) {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             CircularProgressIndicator()
         }
         return
     }
 
+    val first = firstScreen(
+        hasProvider = sourcesUi.sources.isNotEmpty(),
+        profileCount = knownProfiles.size,
+        askedThisProcess = WhosWatchingAsked.settled,
+        launchedToPlay = launchedToPlay,
+    )
+    // Nothing is built behind Who's watching?, so the boot-to-last-channel jump and any reminder or
+    // recording that arrives meanwhile wait, and then run as the chosen Profile.
+    if (first == FirstScreen.WHOS_WATCHING) {
+        WhosWatchingScreen(profiles = knownProfiles, lastActiveId = activeProfileId) { id ->
+            profilesViewModel.select(id)
+            navGeneration++
+            WhosWatchingAsked.settled = true
+        }
+        return
+    }
+    // Settled for this process whichever screen it opened on, so adding a second Profile later
+    // doesn't throw the viewer out to Who's watching? mid-session.
+    SideEffect { WhosWatchingAsked.settled = true }
+
     // First run goes straight to setup — an empty channel list with no explanation is the
     // worst possible first impression.
-    val start = if (sourcesUi.sources.isEmpty()) Routes.ADD_SOURCE else Routes.MAIN
+    val start = if (first == FirstScreen.ADD_SOURCE) Routes.ADD_SOURCE else Routes.MAIN
 
     // Boot to last channel: if enabled and we have one, jump straight into the player on launch.
     // Runs once; backing out returns to the Live guide and doesn't re-trigger.

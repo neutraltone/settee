@@ -245,6 +245,7 @@
     <string name="profiles_new_heading">New profile name</string>
     <string name="profiles_rename_heading">Rename profile</string>
     <string name="profiles_title">Who\'s watching?</string>
+    <string name="whos_watching_heading">Who\'s watching?</string>
     <string name="profiles_add">Add profile</string>
     <string name="profiles_active">Active</string>
     <string name="profiles_use">Use</string>
