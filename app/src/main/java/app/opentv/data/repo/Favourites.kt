@@ -23,26 +23,20 @@ import kotlinx.coroutines.flow.map
  */
 class Favourites internal constructor(private val dao: FavouriteDao, private val activeProfileId: StateFlow<Long>) {
     suspend fun set(channel: Channel, favourite: Boolean) =
-        set(StreamKind.LIVE, channel.sourceId, channel.streamId, favourite)
+        dao.set(activeProfileId.value, StreamKind.LIVE, channel.sourceId, channel.streamId, favourite)
 
-    suspend fun set(movie: Movie, favourite: Boolean) = set(StreamKind.MOVIE, movie.sourceId, movie.streamId, favourite)
+    suspend fun set(movie: Movie, favourite: Boolean) =
+        dao.set(activeProfileId.value, StreamKind.MOVIE, movie.sourceId, movie.streamId, favourite)
 
     suspend fun set(series: Series, favourite: Boolean) =
-        set(StreamKind.SERIES, series.sourceId, series.seriesId, favourite)
+        dao.set(activeProfileId.value, StreamKind.SERIES, series.sourceId, series.seriesId, favourite)
 
-    private suspend fun set(kind: StreamKind, sourceId: Long, itemId: String, favourite: Boolean) {
-        val profileId = activeProfileId.value
-        if (favourite) {
-            dao.add(
-                profileId,
-                kind,
-                sourceId,
-                itemId,
-            )
-        } else {
-            dao.remove(profileId, kind, sourceId, itemId)
-        }
-    }
+    /**
+     * Whether the active Profile has this title as a Favourite: [itemId] is the provider's stream id
+     * ([kind] LIVE or MOVIE) or series id (SERIES) within the source [sourceId].
+     */
+    suspend fun contains(kind: StreamKind, sourceId: Long, itemId: String): Boolean =
+        dao.contains(activeProfileId.value, kind, sourceId, itemId)
 
     /** The active Profile's Favourite channels in guide order, leaving out channels hidden on this device. */
     @OptIn(ExperimentalCoroutinesApi::class)
@@ -67,4 +61,14 @@ class Favourites internal constructor(private val dao: FavouriteDao, private val
 
     /** Adds a Favourite synced from another device; sync never removes one. Returns whether it was new here. */
     suspend fun mergeSynced(favourite: Favourite): Boolean = dao.insert(favourite) != -1L
+}
+
+private suspend fun FavouriteDao.set(
+    profileId: Long,
+    kind: StreamKind,
+    sourceId: Long,
+    itemId: String,
+    favourite: Boolean,
+) {
+    if (favourite) add(profileId, kind, sourceId, itemId) else remove(profileId, kind, sourceId, itemId)
 }

@@ -118,7 +118,13 @@ object ServiceLocator {
         }
 
         val viewerLibrary: ViewerLibrary by lazy {
-            ViewerLibrary(database.positions(), database.episodes(), database.favourites(), settings.activeProfileId)
+            ViewerLibrary(
+                database.positions(),
+                database.episodes(),
+                database.favourites(),
+                database.seriesDismissals(),
+                settings.activeProfileId,
+            )
         }
 
         val profileSettings: ProfileSettings by lazy {

@@ -33,6 +33,7 @@ import app.opentv.data.repo.GenreGroup
 import app.opentv.data.repo.MovieVariantGroup
 import app.opentv.data.repo.PersonTitle
 import app.opentv.data.repo.distinctByQuality
+import app.opentv.data.repo.mediaKey
 import app.opentv.pairing.ManagerServer
 import app.opentv.sync.NasSync
 import app.opentv.sync.SyncClient
@@ -785,6 +786,8 @@ class VodViewModel @JvmOverloads constructor(
         /** How far through, 0..1; null when it has never been played, so the card shows no bar. */
         val progress: Float?,
         val episode: SeasonEpisode? = null,
+        /** The Continue Watching card this was drawn from, for the options panel to act on. */
+        val card: ContinueWatchingCard? = null,
     )
 
     @OptIn(ExperimentalCoroutinesApi::class)
@@ -1146,19 +1149,20 @@ private suspend fun resumeItem(catalog: CatalogRepository, card: ContinueWatchin
     when (card) {
         is ContinueWatchingCard.Movie -> catalog.movie(card.movieId)?.let {
             VodViewModel.ResumeItem(
-                "movie:${it.id}",
+                it.mediaKey,
                 it.displayTitle,
                 it.displayTitle,
                 it.posterUrl,
                 it.streamUrl,
                 card.progress,
+                card = card,
             )
         }
         is ContinueWatchingCard.Series -> {
             val ep = card.episode
             catalog.seriesOf(ep)?.let {
                 VodViewModel.ResumeItem(
-                    mediaKey = "ep:${ep.id}",
+                    mediaKey = ep.mediaKey,
                     title = it.name,
                     playerTitle = ep.playerTitle,
                     // The card is landscape: the wide backdrop fits it, a portrait poster only crops.
@@ -1166,6 +1170,7 @@ private suspend fun resumeItem(catalog: CatalogRepository, card: ContinueWatchin
                     streamUrl = ep.streamUrl,
                     progress = card.progress,
                     episode = VodViewModel.SeasonEpisode(ep.season, ep.episodeNumber),
+                    card = card,
                 )
             }
         }

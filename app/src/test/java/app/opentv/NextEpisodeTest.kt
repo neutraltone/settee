@@ -29,7 +29,8 @@ class NextEpisodeTest {
     private val db = Room.inMemoryDatabaseBuilder(context, OpenTvDatabase::class.java)
         .allowMainThreadQueries()
         .build()
-    private val library = ViewerLibrary(db.positions(), db.episodes(), db.favourites(), MutableStateFlow(1L))
+    private val library =
+        ViewerLibrary(db.positions(), db.episodes(), db.favourites(), db.seriesDismissals(), MutableStateFlow(1L))
 
     @After
     fun close() = db.close()

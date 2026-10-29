@@ -491,6 +491,11 @@
 
     <!-- ============================ Watch badge ============================ -->
     <string name="watch_badge_watched">Watched</string>
+    <string name="options_mark_watched">Mark watched</string>
+    <string name="options_mark_unwatched">Mark unwatched</string>
+    <string name="options_remove_continue_watching">Remove from Continue Watching</string>
+    <string name="options_add_favourite">Add to Favourites</string>
+    <string name="options_remove_favourite">Remove from Favourites</string>
     <string name="watch_badge_in_progress">In progress</string>
     <plurals name="watch_badge_minutes_left">
         <item quantity="one">%1$d min left</item>

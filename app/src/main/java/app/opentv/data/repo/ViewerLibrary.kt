@@ -8,8 +8,12 @@ package app.opentv.data.repo
 import app.opentv.data.db.EpisodeDao
 import app.opentv.data.db.FavouriteDao
 import app.opentv.data.db.PlaybackPositionDao
+import app.opentv.data.db.SeriesDismissalDao
 import app.opentv.data.model.Episode
+import app.opentv.data.model.HandMark
+import app.opentv.data.model.Movie
 import app.opentv.data.model.PlaybackPosition
+import app.opentv.data.model.SeriesDismissal
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
@@ -69,16 +73,20 @@ class ViewerLibrary(
     private val positions: PlaybackPositionDao,
     private val episodes: EpisodeDao,
     favouriteDao: FavouriteDao,
+    private val dismissals: SeriesDismissalDao,
     private val activeProfileId: StateFlow<Long>,
     private val clock: () -> Long = System::currentTimeMillis,
 ) {
     /** The active Profile's Favourites, and every Profile's for sync. */
     val favourites = Favourites(favouriteDao, activeProfileId)
 
-    private val cards = ContinueWatchingCards(positions, episodes)
+    private val cards = ContinueWatchingCards(positions, episodes, dismissals)
 
     /** Each episode's Next Episode, in the same episode order as Up Next. */
     val nextEpisodes = NextEpisodes(episodes)
+
+    /** What the active Profile sets by hand: Watched and Unwatched marks, and Continue Watching removals. */
+    val marks = HandMarks(positions, episodes, dismissals, activeProfileId, clock)
 
     suspend fun recordProgress(mediaKey: String, positionMillis: Long, durationMillis: Long) {
         positions.upsert(
@@ -115,11 +123,12 @@ class ViewerLibrary(
 
     /**
      * Every movie [profileId] has started, Watched or not: genre-affinity recommendations count a
-     * film abandoned half way as a taste signal too. Takes the Profile explicitly because the home
-     * feed computes it for whichever Profile it is building for.
+     * film abandoned half way as a taste signal too, but not one marked Unwatched (taken out of
+     * Continue Watching, say), which was given up on deliberately or never seen. Takes the Profile
+     * explicitly because the home feed computes it for whichever Profile it is building for.
      */
     suspend fun startedMovieIds(profileId: Long): Set<Long> = positions.forProfile(profileId)
-        .filter { it.mediaKey.startsWith(MOVIE_PREFIX) }
+        .filter { it.mediaKey.startsWith(MOVIE_PREFIX) && it.mark != HandMark.UNWATCHED }
         .mapNotNull { it.mediaKey.removePrefix(MOVIE_PREFIX).toLongOrNull() }
         .toSet()
 
@@ -171,7 +180,8 @@ class ViewerLibrary(
         return activeProfileId
             .flatMapLatest { pid -> positions.observeKind(pid, EPISODE_PREFIX) }
             .map<List<PlaybackPosition>, SeriesMainAction?> { list ->
-                val latest = list.filter { it.mediaKey in indexByKey }.maxByOrNull { it.updatedAtMillis }
+                val latest = list.filter { it.mediaKey in indexByKey && it.mark != HandMark.UNWATCHED }
+                    .maxByOrNull { it.updatedAtMillis }
                 val at = latest?.let { indexByKey.getValue(it.mediaKey) }
                 when {
                     at == null -> SeriesMainAction.Play(start)
@@ -198,6 +208,81 @@ class NextEpisodes internal constructor(private val episodes: EpisodeDao) {
     }
 }
 
+/**
+ * The hand-set half of [ViewerLibrary], reached as `viewerLibrary.marks`: a Profile marking a title
+ * Watched or Unwatched, or taking a card out of Continue Watching, and where it stands with one
+ * title, which is what the options panel offers marks from. Only ViewerLibrary builds one.
+ */
+class HandMarks internal constructor(
+    private val positions: PlaybackPositionDao,
+    private val episodes: EpisodeDao,
+    private val dismissals: SeriesDismissalDao,
+    private val activeProfileId: StateFlow<Long>,
+    private val clock: () -> Long,
+) {
+    /** Where the active Profile is with the movie or episode [mediaKey]. */
+    suspend fun statusOf(mediaKey: String): WatchStatus =
+        positions.get(activeProfileId.value, mediaKey)?.let(::statusOf) ?: WatchStatus.Unwatched
+
+    /** Marks [mediaKey] Watched for the active Profile, whether or not it was ever played. */
+    suspend fun markWatched(mediaKey: String) = mark(mediaKey, HandMark.WATCHED)
+
+    /** Marks [mediaKey] Unwatched for the active Profile: no resume point, and Up Next worked out without it. */
+    suspend fun markUnwatched(mediaKey: String) = mark(mediaKey, HandMark.UNWATCHED)
+
+    /** Takes [card] out of the active Profile's Continue Watching. */
+    suspend fun removeFromContinueWatching(card: ContinueWatchingCard) {
+        when (card) {
+            // Removing a movie is giving up on it, so it is not picked back up there either.
+            is ContinueWatchingCard.Movie -> markUnwatched("$MOVIE_PREFIX${card.movieId}")
+            is ContinueWatchingCard.Series -> {
+                val ep = card.episode
+                if (card.progress != null) markUnwatched("$EPISODE_PREFIX${ep.id}")
+                val last = episodes.lastOfSeries(ep.sourceId, ep.seriesId) ?: ep
+                dismissals.upsert(
+                    SeriesDismissal(
+                        profileId = activeProfileId.value,
+                        sourceId = ep.sourceId,
+                        seriesId = ep.seriesId,
+                        dismissedAtMillis = clock(),
+                        lastSeason = last.season,
+                        lastEpisode = last.episodeNumber,
+                    ),
+                )
+            }
+        }
+    }
+
+    private suspend fun mark(mediaKey: String, mark: HandMark) {
+        val pid = activeProfileId.value
+        val existing = positions.get(pid, mediaKey)
+        positions.upsert(
+            PlaybackPosition(
+                profileId = pid,
+                mediaKey = mediaKey,
+                positionMillis = existing?.positionMillis ?: 0,
+                durationMillis = existing?.durationMillis ?: 0,
+                updatedAtMillis = clock(),
+                mark = mark,
+            ),
+        )
+    }
+
+    /**
+     * Takes a series' removal from Continue Watching synced from another device if it is newer
+     * than this device's for the same Profile and series. Returns whether it was taken.
+     */
+    suspend fun mergeSynced(dismissal: SeriesDismissal): Boolean {
+        val existing = dismissals.get(dismissal.profileId, dismissal.sourceId, dismissal.seriesId)
+        if (existing != null && dismissal.dismissedAtMillis <= existing.dismissedAtMillis) return false
+        dismissals.upsert(dismissal)
+        return true
+    }
+
+    /** Every Profile's series removed from Continue Watching on this device — what sync sends. */
+    suspend fun everyProfiles(): List<SeriesDismissal> = dismissals.all()
+}
+
 /** A card with when the Profile last played what it stands for, so movies and series can be interleaved. */
 private data class Played(val card: ContinueWatchingCard, val playedAtMillis: Long)
 
@@ -205,7 +290,11 @@ private data class Played(val card: ContinueWatchingCard, val playedAtMillis: Lo
  * Builds each kind's Continue Watching cards for one Profile, each with when it was last played;
  * ViewerLibrary picks the Profile and decides how kinds are listed.
  */
-private class ContinueWatchingCards(private val positions: PlaybackPositionDao, private val episodes: EpisodeDao) {
+private class ContinueWatchingCards(
+    private val positions: PlaybackPositionDao,
+    private val episodes: EpisodeDao,
+    private val dismissals: SeriesDismissalDao,
+) {
     fun movies(pid: Long): Flow<List<Played>> = positions.observeNewestFirst(pid).map { list ->
         list.asSequence()
             .filter { it.mediaKey.startsWith(MOVIE_PREFIX) }
@@ -220,20 +309,45 @@ private class ContinueWatchingCards(private val positions: PlaybackPositionDao, 
     }
 
     // Played episodes are observed as well as positions so a newly added Up Next shows up.
-    fun series(pid: Long): Flow<List<Played>> =
-        combine(positions.observeNewestFirst(pid), episodes.observePlayed(pid)) { list, played ->
-            val byKey = played.associateBy { "$EPISODE_PREFIX${it.id}" }
-            val positionOf = list.associateBy { it.mediaKey }
-            val latestPerSeries = list.mapNotNull { pos -> byKey[pos.mediaKey]?.let { it to pos } }
-                .distinctBy { (ep, _) -> ep.sourceId to ep.seriesId }
-            // Capped on cards, not series: a series with nothing left to watch takes no slot.
-            buildList {
-                for ((ep, pos) in latestPerSeries) {
-                    if (size == IN_PROGRESS_LIMIT) break
+    fun series(pid: Long): Flow<List<Played>> = combine(
+        positions.observeNewestFirst(pid),
+        episodes.observePlayed(pid),
+        dismissals.observe(pid),
+    ) { list, played, dismissed ->
+        val dismissalOf = dismissed.associateBy { it.sourceId to it.seriesId }
+        val byKey = played.associateBy { "$EPISODE_PREFIX${it.id}" }
+        val positionOf = list.associateBy { it.mediaKey }
+        // Newest first, so the first position seen per series is when it was last played or marked.
+        val touchedAt = HashMap<Pair<Long, String>, Long>()
+        for (pos in list) {
+            byKey[pos.mediaKey]?.let {
+                touchedAt.putIfAbsent(it.sourceId to it.seriesId, pos.updatedAtMillis)
+            }
+        }
+        // An episode marked Unwatched is as if never played: Up Next comes from what remains.
+        val latestPerSeries = list.filter { it.mark != HandMark.UNWATCHED }
+            .mapNotNull { pos -> byKey[pos.mediaKey]?.let { it to pos } }
+            .distinctBy { (ep, _) -> ep.sourceId to ep.seriesId }
+        // Capped on cards, not series: a series with nothing left to watch takes no slot.
+        buildList {
+            for ((ep, pos) in latestPerSeries) {
+                if (size == IN_PROGRESS_LIMIT) break
+                val dismissal = dismissalOf[ep.sourceId to ep.seriesId]
+                if (dismissal == null || !stillDismissed(dismissal, touchedAt.getValue(ep.sourceId to ep.seriesId))) {
                     seriesCard(ep, pos, positionOf)?.let { add(Played(it, pos.updatedAtMillis)) }
                 }
             }
         }
+    }
+
+    private suspend fun stillDismissed(dismissal: SeriesDismissal, touchedAtMillis: Long): Boolean {
+        if (touchedAtMillis > dismissal.dismissedAtMillis) return false
+        val newest = episodes.lastOfSeries(dismissal.sourceId, dismissal.seriesId)
+        // Any episode after the last one there was when the series was removed is a new one.
+        return newest == null ||
+            newest.season < dismissal.lastSeason ||
+            (newest.season == dismissal.lastSeason && newest.episodeNumber <= dismissal.lastEpisode)
+    }
 
     private suspend fun seriesCard(
         latest: Episode,
@@ -253,6 +367,12 @@ private class ContinueWatchingCards(private val positions: PlaybackPositionDao, 
     }
 }
 
+/** The key ViewerLibrary keeps a Profile's watch state for this movie under. */
+val Movie.mediaKey: String get() = "$MOVIE_PREFIX$id"
+
+/** The key ViewerLibrary keeps a Profile's watch state for this episode under. */
+val Episode.mediaKey: String get() = "$EPISODE_PREFIX$id"
+
 private val EPISODE_ORDER = compareBy<Episode>({ it.season }, { it.episodeNumber })
 private const val EPISODE_PREFIX = "ep:"
 private const val MOVIE_PREFIX = "movie:"
@@ -261,7 +381,13 @@ private const val IN_PROGRESS_LIMIT = 30
 /** Past this, the credits are rolling: the title counts as Watched and is not resumed. */
 private const val WATCHED_FRACTION = 0.93
 
-private fun statusOf(pos: PlaybackPosition): WatchStatus {
+private fun statusOf(pos: PlaybackPosition): WatchStatus = when (pos.mark) {
+    HandMark.WATCHED -> WatchStatus.Watched
+    HandMark.UNWATCHED -> WatchStatus.Unwatched
+    null -> playedStatusOf(pos)
+}
+
+private fun playedStatusOf(pos: PlaybackPosition): WatchStatus {
     // Synced positions can arrive without a duration; that says nothing about how far through.
     // Nor does a negative position, which only a confused peer would send.
     val position = pos.positionMillis.coerceAtLeast(0)

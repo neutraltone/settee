@@ -66,6 +66,10 @@ import app.opentv.data.model.Source
 import app.opentv.data.parser.displayTitle
 import app.opentv.data.repo.GenreGroup
 import app.opentv.ui.VodViewModel
+import app.opentv.ui.options.LocalOpenOptions
+import app.opentv.ui.options.OptionsSubject
+import app.opentv.ui.options.openOptionsOn
+import app.opentv.ui.options.optionsClickable
 import coil.compose.AsyncImage
 
 /**
@@ -335,6 +339,7 @@ private fun MovieCategoryGrid(movies: List<Movie>, viewModel: VodViewModel, onOp
                 rating = group.primary.rating,
                 qualityBadge = badge,
                 onClick = { onOpenMovie(group.primary) },
+                onOptions = openOptionsOn(OptionsSubject.OfMovie(group.primary)),
             )
         }
     }
@@ -361,6 +366,7 @@ private fun SeriesCategoryGrid(series: List<Series>, onOpenSeries: (Series) -> U
                 subtitle = item.year?.toString(),
                 rating = item.rating,
                 onClick = { onOpenSeries(item) },
+                onOptions = openOptionsOn(OptionsSubject.OfSeries(item)),
             )
         }
     }
@@ -390,6 +396,7 @@ internal fun MoviePosterRow(
                     subtitle = movie.year?.toString(),
                     rating = movie.rating,
                     onClick = { onOpenMovie(movie) },
+                    onOptions = openOptionsOn(OptionsSubject.OfMovie(movie)),
                     modifier = Modifier.takesFocus(index, focus),
                 )
             }
@@ -419,6 +426,7 @@ internal fun SeriesPosterRow(
                     subtitle = item.year?.toString(),
                     rating = item.rating,
                     onClick = { onOpenSeries(item) },
+                    onOptions = openOptionsOn(OptionsSubject.OfSeries(item)),
                     modifier = Modifier.takesFocus(index, focus),
                 )
             }
@@ -482,6 +490,7 @@ internal fun PosterCard(
     rating: Double? = null,
     qualityBadge: String? = null,
     progress: Float? = null,
+    onOptions: (() -> Unit)? = null,
 ) {
     var focused by remember { mutableStateOf(false) }
     val scale by animateFloatAsState(if (focused) 1.06f else 1f, label = "posterScale")
@@ -494,7 +503,7 @@ internal fun PosterCard(
             }
             .onFocusChanged { focused = it.isFocused }
             .clip(RoundedCornerShape(10.dp))
-            .clickable(onClick = onClick)
+            .optionsClickable(onClick, onOptions)
             .padding(4.dp),
     ) {
         Box(
@@ -585,6 +594,8 @@ internal fun ContinueWatchingRow(
     items: List<VodViewModel.ResumeItem>,
     focus: CardFocus? = null,
     onResume: (mediaKey: String, url: String, title: String) -> Unit,
+    onOptions: ((VodViewModel.ResumeItem) -> Unit)? =
+        LocalOpenOptions.current?.let { open -> { open(OptionsSubject.OfContinueWatching(it)) } },
 ) {
     Column(Modifier.fillMaxWidth()) {
         SectionHeader(stringResource(R.string.vod_continue_watching))
@@ -594,9 +605,12 @@ internal fun ContinueWatchingRow(
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             itemsIndexed(items, key = { _, item -> item.mediaKey }) { index, item ->
-                ResumeCard(item, Modifier.takesFocus(index, focus)) {
-                    onResume(item.mediaKey, item.streamUrl, item.playerTitle)
-                }
+                ResumeCard(
+                    item,
+                    Modifier.takesFocus(index, focus),
+                    onClick = { onResume(item.mediaKey, item.streamUrl, item.playerTitle) },
+                    onOptions = onOptions?.let { { it(item) } },
+                )
             }
         }
     }
@@ -604,7 +618,12 @@ internal fun ContinueWatchingRow(
 
 /** A landscape resume thumbnail with a progress fill: a movie, or a series with the episode it plays. */
 @Composable
-private fun ResumeCard(item: VodViewModel.ResumeItem, modifier: Modifier, onClick: () -> Unit) {
+private fun ResumeCard(
+    item: VodViewModel.ResumeItem,
+    modifier: Modifier,
+    onClick: () -> Unit,
+    onOptions: (() -> Unit)?,
+) {
     var focused by remember { mutableStateOf(false) }
     val scale by animateFloatAsState(if (focused) 1.06f else 1f, label = "resumeScale")
     Column(
@@ -616,7 +635,7 @@ private fun ResumeCard(item: VodViewModel.ResumeItem, modifier: Modifier, onClic
             }
             .onFocusChanged { focused = it.isFocused }
             .clip(RoundedCornerShape(8.dp))
-            .clickable(onClick = onClick)
+            .optionsClickable(onClick, onOptions)
             .padding(4.dp),
     ) {
         Box(
