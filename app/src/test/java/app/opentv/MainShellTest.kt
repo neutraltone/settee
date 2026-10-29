@@ -25,6 +25,7 @@ import app.opentv.ui.MainShell
 import app.opentv.ui.RecentRows
 import app.opentv.ui.Tab
 import app.opentv.ui.visibleTabs
+import com.google.common.truth.Truth.assertThat
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -45,12 +46,15 @@ class MainShellTest {
     @get:Rule
     val artwork = PlaceholderArtwork()
 
+    /** The tab a test's side menu last opened. */
+    private var selected: Tab? = null
+
     /** The side menu with Home open, showing [recent] and nothing watched or favourited. */
     private fun setShell(recent: () -> RecentRows = { RecentRows() }) = compose.setTvContent {
         MainShell(
             tabs = visibleTabs(liveEnabled = true, moviesEnabled = true, seriesEnabled = true),
             current = Tab.HOME,
-            onSelect = {},
+            onSelect = { selected = it },
             onOpenSearch = {},
             onOpenSettings = {},
             onOpenProfiles = {},
@@ -89,6 +93,16 @@ class MainShellTest {
             compose.onRoot().performKeyInput { pressKey(Key.DirectionDown) }
             compose.onNodeWithContentDescription(item).assertIsFocused()
         }
+    }
+
+    @Test
+    fun `from there, OK on another tab opens it`() {
+        setShell()
+
+        compose.onRoot().performKeyInput { pressKey(Key.DirectionDown) }
+        compose.onRoot().performKeyInput { pressKey(Key.DirectionCenter) }
+
+        assertThat(selected).isEqualTo(Tab.LIVE)
     }
 
     @Test
