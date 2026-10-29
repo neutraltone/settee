@@ -92,6 +92,7 @@ import app.opentv.core.findActivity
 import app.opentv.player.PlayerController
 import app.opentv.ui.player.PlayerBackButton
 import app.opentv.ui.player.PlayerChip
+import app.opentv.ui.player.SubtitlePicks
 import app.opentv.ui.player.rememberProfileSubtitles
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -369,8 +370,7 @@ fun VodPlayerScreen(mediaKey: String, streamUrl: String, title: String, userAgen
                         panel = vodPanel,
                         controller = controller,
                         tracks = tracks,
-                        onSubtitlesOff = subtitlePicks.onOff,
-                        onSubtitlePicked = subtitlePicks.onPicked,
+                        subtitlePicks = subtitlePicks,
                         firstFocus = panelFocus,
                         onDone = {
                             vodPanel = VodPanel.NONE
@@ -497,8 +497,7 @@ private fun TrackPanel(
     panel: VodPanel,
     controller: PlayerController,
     tracks: Tracks,
-    onSubtitlesOff: () -> Unit,
-    onSubtitlePicked: (language: String?) -> Unit,
+    subtitlePicks: SubtitlePicks,
     firstFocus: FocusRequester,
     onDone: () -> Unit,
 ) {
@@ -511,7 +510,7 @@ private fun TrackPanel(
         options +=
             Triple(stringResource(R.string.player_subtitles_off), !anySelected) {
                 controller.disableText()
-                onSubtitlesOff()
+                subtitlePicks.onOff()
                 onDone()
             }
     }
@@ -521,7 +520,7 @@ private fun TrackPanel(
             val format = group.getTrackFormat(i)
             options += Triple(vodTrackLabel(format.label, format.language, options.size), group.isTrackSelected(i)) {
                 controller.selectTrack(group, i)
-                if (trackType == C.TRACK_TYPE_TEXT) onSubtitlePicked(format.language)
+                if (trackType == C.TRACK_TYPE_TEXT) subtitlePicks.onPicked(format.language)
                 onDone()
             }
         }

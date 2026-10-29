@@ -296,7 +296,11 @@ class PlayerController(
                 // stop() rather than release(): keeps the codec and the surface alive.
                 stop()
                 clearMediaItems()
-                startSubtitlesAfresh()
+                // Each stream starts with text off, then applySubtitlePreference picks its track.
+                // Left on from the last stream, the selector would choose a track itself, in the
+                // device language, and the Profile's language would only reach the first channel.
+                disableText()
+                streamSubtitles.newStream()
                 setMediaItem(mediaItem)
                 if (!request.isLive && request.startPositionMillis > 0) {
                     seekTo(request.startPositionMillis)
@@ -351,16 +355,6 @@ class PlayerController(
     fun applySubtitlePreference(preference: SubtitlePreference?) {
         val hasText = _tracks.value.groups.any { it.type == C.TRACK_TYPE_TEXT }
         if (streamSubtitles.shouldTurnOn(preference, hasText)) setSubtitlesEnabled(true, preference?.language)
-    }
-
-    /**
-     * Each stream starts with text off, then [applySubtitlePreference] picks its track. Left on
-     * from the last stream, the selector would choose a track itself, in the device language,
-     * and the Profile's language would only ever reach the first channel watched.
-     */
-    private fun startSubtitlesAfresh() {
-        disableText()
-        streamSubtitles.newStream()
     }
 
     /** Force a specific audio or text track on (used by the in-player pickers). */

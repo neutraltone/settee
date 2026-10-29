@@ -509,8 +509,7 @@ fun PlayerScreen(channelId: Long?, onBack: () -> Unit) {
                     OptionPanel(
                         panel = panel,
                         controller = controller,
-                        onSubtitlesOff = subtitlePicks.onOff,
-                        onSubtitlePicked = subtitlePicks.onPicked,
+                        subtitlePicks = subtitlePicks,
                         tracks = tracks,
                         variants = variants,
                         currentId = currentId,
@@ -702,8 +701,7 @@ internal enum class PlayerPanel { NONE, SUBTITLES, AUDIO, QUALITY, ASPECT }
 private fun OptionPanel(
     panel: PlayerPanel,
     controller: PlayerController,
-    onSubtitlesOff: () -> Unit,
-    onSubtitlePicked: (language: String?) -> Unit,
+    subtitlePicks: SubtitlePicks,
     tracks: Tracks,
     variants: List<Channel>,
     currentId: Long?,
@@ -719,14 +717,7 @@ private fun OptionPanel(
     val fillLabel = stringResource(R.string.player_aspect_fill)
     val stretchLabel = stringResource(R.string.player_aspect_stretch)
     val options: List<Option> = when (panel) {
-        PlayerPanel.SUBTITLES -> buildSubtitleOptions(
-            controller,
-            tracks,
-            offLabel,
-            onSubtitlesOff,
-            onSubtitlePicked,
-            onDone,
-        )
+        PlayerPanel.SUBTITLES -> buildSubtitleOptions(controller, tracks, offLabel, subtitlePicks, onDone)
         PlayerPanel.AUDIO -> buildAudioOptions(controller, tracks, onDone)
         PlayerPanel.QUALITY -> variants.map { v ->
             Option(v.qualityLabel.ifEmpty { standardLabel }, v.id == currentId) {
@@ -798,8 +789,7 @@ private fun buildSubtitleOptions(
     controller: PlayerController,
     tracks: Tracks,
     offLabel: String,
-    onSubtitlesOff: () -> Unit,
-    onSubtitlePicked: (language: String?) -> Unit,
+    subtitlePicks: SubtitlePicks,
     onDone: () -> Unit,
 ): List<Option> {
     val textGroups = tracks.groups.filter { it.type == C.TRACK_TYPE_TEXT }
@@ -807,7 +797,7 @@ private fun buildSubtitleOptions(
     val list = mutableListOf<Option>()
     list += Option(offLabel, !anySelected) {
         controller.disableText()
-        onSubtitlesOff()
+        subtitlePicks.onOff()
         onDone()
     }
     textGroups.forEach { group ->
@@ -816,7 +806,7 @@ private fun buildSubtitleOptions(
             val format = group.getTrackFormat(i)
             list += Option(trackLabel(format.label, format.language, list.size), group.isTrackSelected(i)) {
                 controller.selectTrack(group, i)
-                onSubtitlePicked(format.language)
+                subtitlePicks.onPicked(format.language)
                 onDone()
             }
         }
