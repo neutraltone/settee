@@ -37,8 +37,6 @@ class PlaybackSettingsTest {
             PlaybackSettingsSection(
                 subtitlesOn = subtitlesOn,
                 onSubtitlesToggle = { toggledTo = it },
-                resumeLastChannel = false,
-                onResumeLastChannelToggle = {},
                 playNext = true,
                 onPlayNextToggle = {},
             )

@@ -171,8 +171,6 @@
     <string name="settings_preview_sound_subtitle">Phát cả âm thanh của kênh xem trước, không chỉ hình ảnh.</string>
     <string name="settings_section_playback">Phát lại</string>
     <string name="settings_subtitles_title">Hiện phụ đề khi có sẵn</string>
-    <string name="settings_resume_title">Tiếp tục kênh gần nhất khi khởi động</string>
-    <string name="settings_resume_subtitle">Mở ứng dụng thẳng vào kênh bạn xem gần nhất, thay vì lịch phát. Nhấn Quay lại để vào lịch phát.</string>
     <string name="settings_sleep_timer">Hẹn giờ tắt</string>
     <string name="settings_sleep_off_desc">Tắt — quá trình phát tiếp tục cho đến khi bạn dừng.</string>
     <string name="settings_sleep_on_desc">Bật — quá trình phát sẽ dừng sau khoảng %1$d phút.</string>

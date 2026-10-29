@@ -30,7 +30,7 @@ class NextEpisodeTest {
         .allowMainThreadQueries()
         .build()
     private val library =
-        ViewerLibrary(db.positions(), db.episodes(), db.favourites(), db.seriesDismissals(), MutableStateFlow(1L))
+        ViewerLibrary(db, MutableStateFlow(1L))
 
     @After
     fun close() = db.close()

@@ -171,8 +171,6 @@
     <string name="settings_preview_sound_subtitle">Speelt ook het geluid van de voorbeeldzender af, niet alleen het beeld.</string>
     <string name="settings_section_playback">Weergave</string>
     <string name="settings_subtitles_title">Ondertitels tonen indien beschikbaar</string>
-    <string name="settings_resume_title">Laatste zender hervatten bij opstarten</string>
-    <string name="settings_resume_subtitle">Opent de app direct in de zender die je als laatste keek, in plaats van de gids. Druk op Terug om bij de gids te komen.</string>
     <string name="settings_sleep_timer">Slaaptimer</string>
     <string name="settings_sleep_off_desc">Uit — het afspelen gaat door totdat je het stopt.</string>
     <string name="settings_sleep_on_desc">Aan — het afspelen stopt over ongeveer %1$d min.</string>

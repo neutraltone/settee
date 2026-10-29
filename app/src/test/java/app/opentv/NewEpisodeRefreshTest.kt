@@ -33,7 +33,7 @@ class NewEpisodeRefreshTest {
     }
 
     @After
-    fun close() = db.close()
+    fun close() = test.close()
 
     /** `get_series_info` with [episodes] of season 1, each `"<id>" to "<title>"`. */
     private fun seriesInfo(vararg episodes: Pair<String, String>) = """

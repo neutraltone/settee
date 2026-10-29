@@ -33,6 +33,8 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.job
+import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
@@ -135,6 +137,12 @@ class CatalogRepository(
 
     /** Where work that outlives a sync runs, such as [LatestAirDates]. */
     private val background = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
+    /**
+     * Waits for the work [background] is still doing. Tests close their database straight after a
+     * sync, and work still reading it then fails into whichever test runs next.
+     */
+    internal suspend fun awaitBackground() = background.coroutineContext.job.children.toList().joinAll()
 
     /** TMDB back-fill for VOD detail pages, gated on a user-supplied key. See [TmdbClient]. */
     private val tmdb = TmdbClient(http, settings)

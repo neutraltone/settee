@@ -171,8 +171,6 @@
     <string name="settings_preview_sound_subtitle">화면뿐 아니라 미리보기 채널의 소리도 재생합니다.</string>
     <string name="settings_section_playback">재생</string>
     <string name="settings_subtitles_title">자막이 있으면 표시</string>
-    <string name="settings_resume_title">시작 시 마지막 채널 이어보기</string>
-    <string name="settings_resume_subtitle">편성표 대신 마지막으로 시청한 채널로 바로 이동하며 앱이 시작됩니다. 편성표로 이동하려면 뒤로 버튼을 누르세요.</string>
     <string name="settings_sleep_timer">수면 타이머</string>
     <string name="settings_sleep_off_desc">꺼짐 - 직접 정지할 때까지 재생이 계속됩니다.</string>
     <string name="settings_sleep_on_desc">켜짐 - 약 %1$d분 후 재생이 중지됩니다.</string>

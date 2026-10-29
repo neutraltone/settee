@@ -171,8 +171,6 @@
     <string name="settings_preview_sound_subtitle">Toista myös esikatselukanavan ääni, ei vain kuvaa.</string>
     <string name="settings_section_playback">Toisto</string>
     <string name="settings_subtitles_title">Näytä tekstitys, kun saatavilla</string>
-    <string name="settings_resume_title">Jatka viimeisimmältä kanavalta käynnistyksessä</string>
-    <string name="settings_resume_subtitle">Avaa sovellus suoraan kanavalle, jota viimeksi katsoit, oppaan sijaan. Paina Takaisin päästäksesi oppaaseen.</string>
     <string name="settings_sleep_timer">Uniajastin</string>
     <string name="settings_sleep_off_desc">Pois — toisto jatkuu, kunnes pysäytät sen.</string>
     <string name="settings_sleep_on_desc">Päällä — toisto pysähtyy noin %1$d minuutin kuluttua.</string>

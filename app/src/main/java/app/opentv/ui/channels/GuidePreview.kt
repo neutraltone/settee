@@ -119,25 +119,7 @@ fun GuidePreview(
 
             // Live video on top of the logo when preview playback is on. The transparent
             // shutter means the logo behind shows through until the first frame arrives.
-            if (previewPlayer != null && row != null) {
-                AndroidView(
-                    modifier = Modifier.fillMaxSize(),
-                    factory = { ctx ->
-                        PlayerView(ctx).apply {
-                            useController = false
-                            resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
-                            setShutterBackgroundColor(android.graphics.Color.TRANSPARENT)
-                            setBackgroundColor(android.graphics.Color.TRANSPARENT)
-                            player = previewPlayer
-                            layoutParams = ViewGroup.LayoutParams(
-                                ViewGroup.LayoutParams.MATCH_PARENT,
-                                ViewGroup.LayoutParams.MATCH_PARENT,
-                            )
-                        }
-                    },
-                    update = { it.player = previewPlayer },
-                )
-            }
+            if (previewPlayer != null && row != null) PreviewVideo(previewPlayer, Modifier.fillMaxSize())
 
             Row(
                 Modifier
@@ -301,3 +283,30 @@ fun GuidePreview(
 private val previewTimeFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
 
 private fun formatTime(utcMillis: Long): String = previewTimeFormat.format(Date(utcMillis))
+
+/**
+ * [player]'s picture with no controls, letterboxed. Its shutter is transparent, so whatever is drawn
+ * behind it (a logo) shows until the first frame and whenever the stream drops. Home's Live Preview
+ * draws the same view, so a channel looks the same in both.
+ */
+@OptIn(UnstableApi::class)
+@Composable
+internal fun PreviewVideo(player: ExoPlayer, modifier: Modifier = Modifier) {
+    AndroidView(
+        modifier = modifier,
+        factory = { ctx ->
+            PlayerView(ctx).apply {
+                useController = false
+                resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
+                setShutterBackgroundColor(android.graphics.Color.TRANSPARENT)
+                setBackgroundColor(android.graphics.Color.TRANSPARENT)
+                this.player = player
+                layoutParams = ViewGroup.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                )
+            }
+        },
+        update = { it.player = player },
+    )
+}

@@ -171,8 +171,6 @@
     <string name="settings_preview_sound_subtitle">Reproduce también el audio del canal de vista previa, no solo la imagen.</string>
     <string name="settings_section_playback">Reproducción</string>
     <string name="settings_subtitles_title">Mostrar subtítulos cuando estén disponibles</string>
-    <string name="settings_resume_title">Reanudar el último canal al iniciar</string>
-    <string name="settings_resume_subtitle">Abre la aplicación directamente en el canal que estabas viendo, en lugar de la guía. Presiona Atrás para llegar a la guía.</string>
     <string name="settings_sleep_timer">Temporizador para dormir</string>
     <string name="settings_sleep_off_desc">Desactivado — la reproducción continúa hasta que la detengas.</string>
     <string name="settings_sleep_on_desc">Activado — la reproducción se detendrá en unos %1$d min.</string>

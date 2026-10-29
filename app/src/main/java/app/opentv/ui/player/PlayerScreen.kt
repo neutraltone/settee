@@ -90,6 +90,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.media3.common.C
 import androidx.media3.common.Tracks
 import androidx.media3.common.util.UnstableApi
@@ -104,6 +106,7 @@ import app.opentv.data.model.Channel
 import app.opentv.data.model.shownName
 import app.opentv.player.PlaybackQueue
 import app.opentv.player.PlayerController
+import app.opentv.player.SettledChannel
 import app.opentv.ui.RecordingBackgroundDialog
 import app.opentv.ui.RecordingBackgroundPrompt
 import app.opentv.ui.formatPlaybackTime
@@ -187,9 +190,18 @@ fun PlayerScreen(channelId: Long?, onBack: () -> Unit) {
         }
     }
 
+    // Its waits go with [scope], so leaving the player settles on nothing.
+    val settled = remember { SettledChannel(scope) { graph.viewerLibrary.live.record(it) } }
+    // Started rather than resumed: picture-in-picture is still watching, behind another app isn't.
+    val inFront = LocalLifecycleOwner.current.lifecycle.currentStateFlow.collectAsState().value
+        .isAtLeast(Lifecycle.State.STARTED)
+    val playerState by controller.state.collectAsState()
+    LaunchedEffect(playerState, inFront) { settled.playing(inFront && playerState is PlayerController.State.Playing) }
+
     fun tuneTo(channel: Channel) {
         currentId = channel.id
         settings.lastChannelId = channel.id
+        settled.tunedTo(channel)
         scope.launch {
             val source = graph.sourceRepository.byId(channel.sourceId)
             // Xtream/M3U carry a ready URL; a Stalker channel's URL is minted here from its cmd.

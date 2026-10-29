@@ -14,6 +14,7 @@ import app.opentv.data.remote.XtreamApi
 import app.opentv.data.repo.CatalogRepository
 import app.opentv.data.repo.ViewerLibrary
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.runBlocking
 
 /**
  * A [CatalogRepository] over an in-memory database, talking to a [FakePanel]. Close [db] after.
@@ -24,14 +25,7 @@ class TestCatalog(context: Context, private val clock: () -> Long = { 0L }) {
         .allowMainThreadQueries()
         .build()
     val panel = FakePanel()
-    val viewerLibrary = ViewerLibrary(
-        db.positions(),
-        db.episodes(),
-        db.favourites(),
-        db.seriesDismissals(),
-        MutableStateFlow(1L),
-        clock = clock,
-    )
+    val viewerLibrary = ViewerLibrary(db, MutableStateFlow(1L), clock = clock)
     val catalog: CatalogRepository = CatalogRepository(
         sourceDao = db.sources(),
         channelDao = db.channels(),
@@ -45,6 +39,12 @@ class TestCatalog(context: Context, private val clock: () -> Long = { 0L }) {
         http = panel.http,
         settings = AppSettings.get(context),
     )
+
+    /** Closes the database once the catalogue's background work is done with it. */
+    fun close() = runBlocking {
+        catalog.awaitBackground()
+        db.close()
+    }
 
     /** Saves [PANEL_SOURCE] and syncs its movies and shows from the panel's current replies. */
     suspend fun syncVod() {

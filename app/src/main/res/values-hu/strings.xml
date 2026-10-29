@@ -171,8 +171,6 @@
     <string name="settings_preview_sound_subtitle">Az előnézeti csatorna hangját is lejátssza, nem csak a képet.</string>
     <string name="settings_section_playback">Lejátszás</string>
     <string name="settings_subtitles_title">Feliratok megjelenítése, ha elérhetők</string>
-    <string name="settings_resume_title">Utolsó csatorna folytatása indításkor</string>
-    <string name="settings_resume_subtitle">Az alkalmazás közvetlenül az utoljára nézett csatornával nyílik meg a műsorújság helyett. Nyomja meg a Vissza gombot a műsorújság eléréséhez.</string>
     <string name="settings_sleep_timer">Elalváskapcsoló</string>
     <string name="settings_sleep_off_desc">Kikapcsolva — a lejátszás addig folytatódik, amíg le nem állítja.</string>
     <string name="settings_sleep_on_desc">Bekapcsolva — a lejátszás körülbelül %1$d perc múlva leáll.</string>

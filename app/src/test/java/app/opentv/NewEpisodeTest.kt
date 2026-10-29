@@ -38,14 +38,7 @@ class NewEpisodeTest {
     /** What the provider has added since the last fetch, by series id; fetching stores it as now. */
     private val added = mutableMapOf<String, List<Episode>>()
     private val fetched = mutableListOf<String>()
-    private val library = ViewerLibrary(
-        db.positions(),
-        db.episodes(),
-        db.favourites(),
-        db.seriesDismissals(),
-        activeProfile,
-        clock = { now },
-    )
+    private val library = ViewerLibrary(db, activeProfile, clock = { now })
 
     /** A fake provider: fetching a series stores what it has added since, first seen now. */
     private suspend fun seriesUpdated(vararg updated: Series) =

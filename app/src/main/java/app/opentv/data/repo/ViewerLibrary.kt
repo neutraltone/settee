@@ -7,7 +7,7 @@ package app.opentv.data.repo
 
 import android.util.Log
 import app.opentv.data.db.EpisodeDao
-import app.opentv.data.db.FavouriteDao
+import app.opentv.data.db.OpenTvDatabase
 import app.opentv.data.db.PlaybackPositionDao
 import app.opentv.data.db.SeriesDismissalDao
 import app.opentv.data.model.Episode
@@ -74,17 +74,23 @@ sealed interface SeriesMainAction {
  * tables themselves.
  */
 class ViewerLibrary(
-    private val positions: PlaybackPositionDao,
-    private val episodes: EpisodeDao,
-    favouriteDao: FavouriteDao,
-    private val dismissals: SeriesDismissalDao,
+    db: OpenTvDatabase,
     private val activeProfileId: StateFlow<Long>,
     private val clock: () -> Long = System::currentTimeMillis,
 ) {
+    // The database rather than a DAO each: the library owns every per-Profile table, and the list
+    // only grows as watch state does.
+    private val positions = db.positions()
+    private val episodes = db.episodes()
+    private val dismissals = db.seriesDismissals()
+
     /** The active Profile's Favourites, and every Profile's for sync. */
-    val favourites = Favourites(favouriteDao, activeProfileId)
+    val favourites = Favourites(db.favourites(), activeProfileId)
 
     private val cards = ContinueWatchingCards(positions, episodes, dismissals)
+
+    /** The live channel the active Profile last settled on, and its Live Preview. */
+    val live = LiveWatching(db.livePlayback(), activeProfileId, clock)
 
     /** Each episode's Next Episode, in the same episode order as Up Next. */
     val nextEpisodes = NextEpisodes(episodes)
@@ -105,6 +111,7 @@ class ViewerLibrary(
                 updatedAtMillis = clock(),
             ),
         )
+        live.playedOther()
     }
 
     /**

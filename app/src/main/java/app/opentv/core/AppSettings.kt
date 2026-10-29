@@ -142,13 +142,16 @@ class AppSettings private constructor(context: Context) {
         _guidePreviewSound.value = enabled
     }
 
-    /** Whether launching the app jumps straight back to the last channel you watched. */
-    private val _resumeLastChannel = MutableStateFlow(prefs.getBoolean(KEY_RESUME_LAST, false))
-    val resumeLastChannel: StateFlow<Boolean> = _resumeLastChannel.asStateFlow()
+    /**
+     * Whether Home leads with the Live Preview when live TV was the last thing played. Device-wide
+     * rather than a Profile's: a muted stream on Home is about what the box can decode, not taste.
+     */
+    private val _livePreviewOnHome = MutableStateFlow(prefs.getBoolean(KEY_LIVE_PREVIEW_HOME, true))
+    val livePreviewOnHome: StateFlow<Boolean> = _livePreviewOnHome.asStateFlow()
 
-    fun setResumeLastChannel(enabled: Boolean) {
-        prefs.edit { putBoolean(KEY_RESUME_LAST, enabled) }
-        _resumeLastChannel.value = enabled
+    fun setLivePreviewOnHome(enabled: Boolean) {
+        prefs.edit { putBoolean(KEY_LIVE_PREVIEW_HOME, enabled) }
+        _livePreviewOnHome.value = enabled
     }
 
     /**
@@ -469,7 +472,7 @@ class AppSettings private constructor(context: Context) {
         private const val KEY_PIN_HASH = "parental_pin_hash"
         private const val KEY_HIDDEN_CATS = "hidden_categories"
         private const val KEY_ACTIVE_PROFILE = "active_profile_id"
-        private const val KEY_RESUME_LAST = "resume_last_channel"
+        private const val KEY_LIVE_PREVIEW_HOME = "live_preview_on_home"
         private const val KEY_PLAY_NEXT = "play_next_automatically"
         private const val KEY_CONTENT_LIVE = "content_live"
         private const val KEY_CONTENT_MOVIES = "content_movies"

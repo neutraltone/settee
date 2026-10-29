@@ -33,7 +33,10 @@ class AppSettingsScreenTest {
     private val settings = AppSettings.get(ApplicationProvider.getApplicationContext())
 
     @After
-    fun restore() = settings.setPlayNextAutomatically(true)
+    fun restore() {
+        settings.setPlayNextAutomatically(true)
+        settings.setLivePreviewOnHome(true)
+    }
 
     @Test
     fun `Play next episode automatically is on until it is switched off`() {
@@ -44,5 +47,23 @@ class AppSettingsScreenTest {
         compose.onNodeWithText("Play next episode automatically").performClick()
 
         assertThat(settings.playNextAutomatically.value).isFalse()
+    }
+
+    @Test
+    fun `Live preview on Home is on until it is switched off`() {
+        compose.setTvContent { AppSettingsScreen(onBack = {}) }
+
+        compose.onNodeWithText("Live preview on Home").performScrollTo()
+        captureScreen("app_settings_live_preview_on_home")
+        compose.onNodeWithText("Live preview on Home").performClick()
+
+        assertThat(settings.livePreviewOnHome.value).isFalse()
+    }
+
+    @Test
+    fun `there is no setting to start the app in the last channel`() {
+        compose.setTvContent { AppSettingsScreen(onBack = {}) }
+
+        compose.onNodeWithText("Resume last channel on startup").assertDoesNotExist()
     }
 }

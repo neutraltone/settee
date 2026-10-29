@@ -68,7 +68,7 @@ fun AppSettingsScreen(onBack: () -> Unit) {
     val profileSettings = remember { ServiceLocator.get(context).profileSettings }
     val subtitles by profileSettings.subtitlePreference.collectAsState(initial = null)
     val scope = rememberCoroutineScope()
-    val resumeLast by settings.resumeLastChannel.collectAsState()
+    val previewOnHome by settings.livePreviewOnHome.collectAsState()
     val playNext by settings.playNextAutomatically.collectAsState()
     val language by settings.languageTag.collectAsState()
     val liveEnabled by settings.liveEnabled.collectAsState()
@@ -194,6 +194,12 @@ fun AppSettingsScreen(onBack: () -> Unit) {
                 checked = previewSound,
                 onToggle = settings::setGuidePreviewSound,
             )
+            ToggleRow(
+                title = stringResource(R.string.settings_live_preview_home_title),
+                subtitle = stringResource(R.string.settings_live_preview_home_subtitle),
+                checked = previewOnHome,
+                onToggle = settings::setLivePreviewOnHome,
+            )
         }
 
         Spacer(Modifier.height(16.dp))
@@ -201,8 +207,6 @@ fun AppSettingsScreen(onBack: () -> Unit) {
         PlaybackSettingsSection(
             subtitlesOn = subtitles?.enabled ?: false,
             onSubtitlesToggle = { on -> scope.launch { profileSettings.setSubtitlesOn(on) } },
-            resumeLastChannel = resumeLast,
-            onResumeLastChannelToggle = settings::setResumeLastChannel,
             playNext = playNext,
             onPlayNextToggle = settings::setPlayNextAutomatically,
         )
@@ -218,15 +222,13 @@ fun AppSettingsScreen(onBack: () -> Unit) {
 }
 
 /**
- * Subtitles, resuming the last channel and playing the next episode. Subtitles are the active
+ * Subtitles and playing the next episode. Subtitles are the active
  * Profile's Subtitle Preference, the same one the players change, so the two can't disagree.
  */
 @Composable
 internal fun PlaybackSettingsSection(
     subtitlesOn: Boolean,
     onSubtitlesToggle: (Boolean) -> Unit,
-    resumeLastChannel: Boolean,
-    onResumeLastChannelToggle: (Boolean) -> Unit,
     playNext: Boolean,
     onPlayNextToggle: (Boolean) -> Unit,
 ) {
@@ -236,12 +238,6 @@ internal fun PlaybackSettingsSection(
             subtitle = stringResource(R.string.settings_subtitles_subtitle),
             checked = subtitlesOn,
             onToggle = onSubtitlesToggle,
-        )
-        ToggleRow(
-            title = stringResource(R.string.settings_resume_title),
-            subtitle = stringResource(R.string.settings_resume_subtitle),
-            checked = resumeLastChannel,
-            onToggle = onResumeLastChannelToggle,
         )
         ToggleRow(
             title = stringResource(R.string.settings_play_next_title),

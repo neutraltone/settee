@@ -171,8 +171,6 @@
     <string name="settings_preview_sound_subtitle">Odtwarza również dźwięk podglądanego kanału, a nie tylko obraz.</string>
     <string name="settings_section_playback">Odtwarzanie</string>
     <string name="settings_subtitles_title">Pokazuj napisy, gdy są dostępne</string>
-    <string name="settings_resume_title">Wznów ostatni kanał przy uruchomieniu</string>
-    <string name="settings_resume_subtitle">Otwiera aplikację od razu na ostatnio oglądanym kanale zamiast na przewodniku. Naciśnij Wstecz, aby przejść do przewodnika.</string>
     <string name="settings_sleep_timer">Wyłącznik czasowy</string>
     <string name="settings_sleep_off_desc">Wyłączony — odtwarzanie trwa, dopóki go nie zatrzymasz.</string>
     <string name="settings_sleep_on_desc">Włączony — odtwarzanie zatrzyma się za około %1$d min.</string>
