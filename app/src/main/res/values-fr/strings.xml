@@ -171,7 +171,6 @@
     <string name="settings_preview_sound_subtitle">Diffuse aussi le son de la chaîne en aperçu, pas seulement l\'image.</string>
     <string name="settings_section_playback">Lecture</string>
     <string name="settings_subtitles_title">Afficher les sous-titres lorsqu\'ils sont disponibles</string>
-    <string name="settings_subtitles_subtitle">Le réglage par défaut pour les nouvelles chaînes. Pendant le visionnage, le bouton Sous-titres du lecteur permet de choisir une piste précise ou de les désactiver.</string>
     <string name="settings_resume_title">Reprendre la dernière chaîne au démarrage</string>
     <string name="settings_resume_subtitle">Ouvre directement l\'application sur la dernière chaîne regardée, au lieu du guide. Appuyez sur Retour pour accéder au guide.</string>
     <string name="settings_sleep_timer">Minuterie de veille</string>

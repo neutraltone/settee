@@ -171,7 +171,6 @@
     <string name="settings_preview_sound_subtitle">Відтворювати також звук каналу попереднього перегляду, а не лише зображення.</string>
     <string name="settings_section_playback">Відтворення</string>
     <string name="settings_subtitles_title">Показувати субтитри, якщо доступні</string>
-    <string name="settings_subtitles_subtitle">Значення за замовчуванням для нових каналів. Під час перегляду кнопка «Субтитри» в плеєрі дозволяє вибрати конкретну доріжку або вимкнути їх.</string>
     <string name="settings_resume_title">Відновлювати останній канал при запуску</string>
     <string name="settings_resume_subtitle">Відкривати застосунок одразу на каналі, який ви дивилися востаннє, замість програми передач. Натисніть «Назад», щоб перейти до програми передач.</string>
     <string name="settings_sleep_timer">Таймер сну</string>

@@ -171,7 +171,6 @@
     <string name="settings_preview_sound_subtitle">Spela upp ljudet för förhandsvisningskanalen också, inte bara bilden.</string>
     <string name="settings_section_playback">Uppspelning</string>
     <string name="settings_subtitles_title">Visa undertexter när de finns</string>
-    <string name="settings_subtitles_subtitle">Standardinställningen för nya kanaler. Under tittandet kan du med knappen Undertexter i spelaren välja ett visst spår eller stänga av dem.</string>
     <string name="settings_resume_title">Återuppta senaste kanal vid start</string>
     <string name="settings_resume_subtitle">Öppna appen direkt på kanalen du senast tittade på, i stället för guiden. Tryck på Tillbaka för att komma till guiden.</string>
     <string name="settings_sleep_timer">Insomningstimer</string>

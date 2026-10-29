@@ -135,13 +135,13 @@ fun PlayerScreen(channelId: Long?, onBack: () -> Unit) {
     val graph = remember { ServiceLocator.get(context) }
     val settings = remember { graph.settings }
     val scope = remember { CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate) }
-    val subtitlesDefault by settings.subtitlesEnabled.collectAsState()
     val controller = remember {
         PlayerController(
             context,
             scope,
             graph.streamingHttpClient,
-            subtitlesEnabled = settings.subtitlesEnabled.value,
+            // Text starts off; the Profile's Subtitle Preference turns it on once tracks arrive.
+            subtitlesEnabled = false,
             // Opt-in shallow DVR so the transport's pause/rewind actually holds on a live stream.
             dvr = settings.livePauseEnabled.value,
         )
@@ -287,15 +287,7 @@ fun PlayerScreen(channelId: Long?, onBack: () -> Unit) {
         onBack()
     }
 
-    // Apply the saved captions default once the stream's tracks arrive. Only auto-selects when
-    // nothing is chosen yet, so it never overrides a track the user picked by hand.
-    LaunchedEffect(tracks) {
-        val hasText = tracks.groups.any { it.type == C.TRACK_TYPE_TEXT }
-        val textChosen = tracks.groups.any { g ->
-            g.type == C.TRACK_TYPE_TEXT && (0 until g.length).any { g.isTrackSelected(it) }
-        }
-        if (subtitlesDefault && hasText && !textChosen) controller.setSubtitlesEnabled(true)
-    }
+    val subtitlePicks = rememberProfileSubtitles(controller, graph.profileSettings, scope)
 
     // Auto-hide the bar after a few seconds — but never while paused or with a picker open.
     LaunchedEffect(controlsVisible, interaction, state, paused, panel) {
@@ -519,7 +511,8 @@ fun PlayerScreen(channelId: Long?, onBack: () -> Unit) {
                     OptionPanel(
                         panel = panel,
                         controller = controller,
-                        settings = settings,
+                        onSubtitlesOff = subtitlePicks.onOff,
+                        onSubtitlePicked = subtitlePicks.onPicked,
                         tracks = tracks,
                         variants = variants,
                         currentId = currentId,
@@ -760,7 +753,8 @@ private enum class Panel { NONE, SUBTITLES, AUDIO, QUALITY, ASPECT }
 private fun OptionPanel(
     panel: Panel,
     controller: PlayerController,
-    settings: app.opentv.core.AppSettings,
+    onSubtitlesOff: () -> Unit,
+    onSubtitlePicked: (language: String?) -> Unit,
     tracks: Tracks,
     variants: List<Channel>,
     currentId: Long?,
@@ -776,7 +770,7 @@ private fun OptionPanel(
     val fillLabel = stringResource(R.string.player_aspect_fill)
     val stretchLabel = stringResource(R.string.player_aspect_stretch)
     val options: List<Option> = when (panel) {
-        Panel.SUBTITLES -> buildSubtitleOptions(controller, settings, tracks, offLabel, onDone)
+        Panel.SUBTITLES -> buildSubtitleOptions(controller, tracks, offLabel, onSubtitlesOff, onSubtitlePicked, onDone)
         Panel.AUDIO -> buildAudioOptions(controller, tracks, onDone)
         Panel.QUALITY -> variants.map { v ->
             Option(v.qualityLabel.ifEmpty { standardLabel }, v.id == currentId) {
@@ -846,9 +840,10 @@ private data class Option(val label: String, val selected: Boolean, val onClick:
 @OptIn(UnstableApi::class)
 private fun buildSubtitleOptions(
     controller: PlayerController,
-    settings: app.opentv.core.AppSettings,
     tracks: Tracks,
     offLabel: String,
+    onSubtitlesOff: () -> Unit,
+    onSubtitlePicked: (language: String?) -> Unit,
     onDone: () -> Unit,
 ): List<Option> {
     val textGroups = tracks.groups.filter { it.type == C.TRACK_TYPE_TEXT }
@@ -856,7 +851,7 @@ private fun buildSubtitleOptions(
     val list = mutableListOf<Option>()
     list += Option(offLabel, !anySelected) {
         controller.disableText()
-        settings.setSubtitlesEnabled(false)
+        onSubtitlesOff()
         onDone()
     }
     textGroups.forEach { group ->
@@ -865,7 +860,7 @@ private fun buildSubtitleOptions(
             val format = group.getTrackFormat(i)
             list += Option(trackLabel(format.label, format.language, list.size), group.isTrackSelected(i)) {
                 controller.selectTrack(group, i)
-                settings.setSubtitlesEnabled(true)
+                onSubtitlePicked(format.language)
                 onDone()
             }
         }

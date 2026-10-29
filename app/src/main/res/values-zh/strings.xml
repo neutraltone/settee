@@ -171,7 +171,6 @@
     <string name="settings_preview_sound_subtitle">不仅播放画面，也播放预览频道的声音。</string>
     <string name="settings_section_playback">播放</string>
     <string name="settings_subtitles_title">有字幕时显示字幕</string>
-    <string name="settings_subtitles_subtitle">这是新频道的默认设置。观看时，可通过播放器的“字幕”按钮选择指定字幕轨道或将其关闭。</string>
     <string name="settings_resume_title">启动时恢复上次观看的频道</string>
     <string name="settings_resume_subtitle">启动应用后直接进入上次观看的频道，而不是节目单。按“返回”可进入节目单。</string>
     <string name="settings_sleep_timer">睡眠定时器</string>

@@ -92,6 +92,7 @@ import app.opentv.core.ServiceLocator
 import app.opentv.core.SleepTimer
 import app.opentv.core.findActivity
 import app.opentv.player.PlayerController
+import app.opentv.ui.player.rememberProfileSubtitles
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
@@ -128,6 +129,7 @@ fun VodPlayerScreen(mediaKey: String, streamUrl: String, title: String, userAgen
             context,
             scope,
             graph.streamingHttpClient,
+            // Text starts off; the Profile's Subtitle Preference turns it on once tracks arrive.
             subtitlesEnabled = false,
             smbDataSourceFactory = app.opentv.player.SmbDataSource.Factory(graph.settings),
             // Lets an `optvrec://<id>` recording play while it's still being written.
@@ -150,6 +152,8 @@ fun VodPlayerScreen(mediaKey: String, streamUrl: String, title: String, userAgen
     }
     val state by controller.state.collectAsState()
     val tracks by controller.tracks.collectAsState()
+
+    val subtitlePicks = rememberProfileSubtitles(controller, graph.profileSettings, scope)
 
     var paused by remember { mutableStateOf(false) }
     var vodPanel by remember { mutableStateOf(VodPanel.NONE) }
@@ -365,6 +369,8 @@ fun VodPlayerScreen(mediaKey: String, streamUrl: String, title: String, userAgen
                         panel = vodPanel,
                         controller = controller,
                         tracks = tracks,
+                        onSubtitlesOff = subtitlePicks.onOff,
+                        onSubtitlePicked = subtitlePicks.onPicked,
                         firstFocus = panelFocus,
                         onDone = {
                             vodPanel = VodPanel.NONE
@@ -498,6 +504,8 @@ private fun TrackPanel(
     panel: VodPanel,
     controller: PlayerController,
     tracks: Tracks,
+    onSubtitlesOff: () -> Unit,
+    onSubtitlePicked: (language: String?) -> Unit,
     firstFocus: FocusRequester,
     onDone: () -> Unit,
 ) {
@@ -510,6 +518,7 @@ private fun TrackPanel(
         options +=
             Triple(stringResource(R.string.player_subtitles_off), !anySelected) {
                 controller.disableText()
+                onSubtitlesOff()
                 onDone()
             }
     }
@@ -519,6 +528,7 @@ private fun TrackPanel(
             val format = group.getTrackFormat(i)
             options += Triple(vodTrackLabel(format.label, format.language, options.size), group.isTrackSelected(i)) {
                 controller.selectTrack(group, i)
+                if (trackType == C.TRACK_TYPE_TEXT) onSubtitlePicked(format.language)
                 onDone()
             }
         }

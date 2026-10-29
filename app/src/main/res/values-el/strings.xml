@@ -171,7 +171,6 @@
     <string name="settings_preview_sound_subtitle">Αναπαραγωγή και του ήχου του καναλιού προεπισκόπησης, όχι μόνο της εικόνας.</string>
     <string name="settings_section_playback">Αναπαραγωγή</string>
     <string name="settings_subtitles_title">Εμφάνιση υποτίτλων όταν είναι διαθέσιμοι</string>
-    <string name="settings_subtitles_subtitle">Η προεπιλογή για νέα κανάλια. Κατά την παρακολούθηση, το κουμπί Υπότιτλοι στον player σάς επιτρέπει να επιλέξετε συγκεκριμένο κομμάτι ή να τους απενεργοποιήσετε.</string>
     <string name="settings_resume_title">Συνέχιση τελευταίου καναλιού κατά την εκκίνηση</string>
     <string name="settings_resume_subtitle">Ανοίξτε την εφαρμογή απευθείας στο κανάλι που παρακολουθούσατε τελευταία, αντί για τον οδηγό. Πατήστε Πίσω για να μεταβείτε στον οδηγό.</string>
     <string name="settings_sleep_timer">Χρονοδιακόπτης ύπνου</string>

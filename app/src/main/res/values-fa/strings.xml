@@ -171,7 +171,6 @@
     <string name="settings_preview_sound_subtitle">صدای کانال پیش‌نمایش را هم پخش می‌کند، نه فقط تصویر را.</string>
     <string name="settings_section_playback">پخش</string>
     <string name="settings_subtitles_title">نمایش زیرنویس در صورت وجود</string>
-    <string name="settings_subtitles_subtitle">حالت پیش‌فرض برای کانال‌های جدید. حین تماشا، دکمه زیرنویس روی پخش‌کننده امکان انتخاب یک زیرنویس مشخص یا خاموش کردن آن را می‌دهد.</string>
     <string name="settings_resume_title">ادامه آخرین کانال هنگام راه‌اندازی</string>
     <string name="settings_resume_subtitle">برنامه را مستقیماً روی آخرین کانالی که تماشا می‌کردید باز می‌کند، به‌جای راهنما. برای رسیدن به راهنما، دکمه بازگشت را بزنید.</string>
     <string name="settings_sleep_timer">زمان‌سنج خواب</string>

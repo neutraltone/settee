@@ -171,7 +171,6 @@
     <string name="settings_preview_sound_subtitle">Spill av lyden til forhåndsvisningskanalen også, ikke bare bildet.</string>
     <string name="settings_section_playback">Avspilling</string>
     <string name="settings_subtitles_title">Vis undertekster når tilgjengelig</string>
-    <string name="settings_subtitles_subtitle">Standarden for nye kanaler. Mens du ser på, kan du bruke Undertekster-knappen i spilleren til å velge et bestemt spor eller slå dem av.</string>
     <string name="settings_resume_title">Gjenoppta siste kanal ved oppstart</string>
     <string name="settings_resume_subtitle">Åpne appen rett til kanalen du så sist, i stedet for guiden. Trykk Tilbake for å komme til guiden.</string>
     <string name="settings_sleep_timer">Innsovningstimer</string>
