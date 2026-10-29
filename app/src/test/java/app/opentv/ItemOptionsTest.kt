@@ -54,4 +54,10 @@ class ItemOptionsTest {
             ItemOption.AddFavourite,
         ).inOrder()
     }
+
+    @Test
+    fun `a Continue Watching card whose title can't be a Favourite offers no Favourite option`() {
+        assertThat(OptionsFor.ContinueWatching(favourite = null).options())
+            .containsExactly(ItemOption.MarkWatched, ItemOption.RemoveFromContinueWatching).inOrder()
+    }
 }

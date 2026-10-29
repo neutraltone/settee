@@ -9,6 +9,7 @@ import android.app.Application
 import androidx.test.core.app.ApplicationProvider
 import app.opentv.core.ServiceLocator
 import app.opentv.data.model.Series
+import app.opentv.data.repo.ContinueWatchingCard
 import app.opentv.ui.VodViewModel
 import app.opentv.ui.VodViewModel.ResumeItem
 import app.opentv.ui.VodViewModel.SeasonEpisode
@@ -74,6 +75,7 @@ class VodContinueWatchingTest {
                 streamUrl = "https://example.com/2-4.mkv",
                 progress = 0.25f,
                 episode = SeasonEpisode(season = 2, episode = 4),
+                card = ContinueWatchingCard.Series(testEpisode(2, 4), progress = 0.25f),
             ),
         )
     }

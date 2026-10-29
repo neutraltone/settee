@@ -22,8 +22,10 @@ import app.opentv.data.model.Channel
 import app.opentv.data.model.Episode
 import app.opentv.data.model.Movie
 import app.opentv.data.model.Series
+import app.opentv.data.model.StreamKind
 import app.opentv.data.parser.displayTitle
 import app.opentv.data.repo.ContinueWatchingCard
+import app.opentv.data.repo.mediaKey
 import app.opentv.ui.VodViewModel
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -47,7 +49,11 @@ sealed interface OptionsSubject {
         override val title get() = item.title
     }
 
-    data class OfChannel(val channel: Channel) : OptionsSubject {
+    /**
+     * A channel, with the quality [variants] it stands for in a list that folds them into one row:
+     * like the row's star, the Favourite covers the whole logical channel.
+     */
+    data class OfChannel(val channel: Channel, val variants: List<Channel> = listOf(channel)) : OptionsSubject {
         override val title get() = channel.displayName
     }
 }
@@ -91,18 +97,20 @@ class ItemOptionsViewModel(app: Application) : AndroidViewModel(app) {
 
     suspend fun optionsFor(subject: OptionsSubject): List<ItemOption> = when (subject) {
         is OptionsSubject.OfMovie -> OptionsFor.Movie(
-            library.marks.statusOf(subject.movie.key),
+            library.marks.statusOf(subject.movie.mediaKey),
             isFavourite(subject.movie),
         )
         is OptionsSubject.OfSeries -> OptionsFor.Series(isFavourite(subject.series))
-        is OptionsSubject.OfEpisode -> OptionsFor.Episode(library.marks.statusOf(subject.episode.key))
-        is OptionsSubject.OfChannel ->
-            OptionsFor.Channel(subject.channel.id in library.favourites.channelIds().first())
+        is OptionsSubject.OfEpisode -> OptionsFor.Episode(library.marks.statusOf(subject.episode.mediaKey))
+        is OptionsSubject.OfChannel -> {
+            val ids = library.favourites.channelIds().first()
+            OptionsFor.Channel(subject.variants.any { it.id in ids })
+        }
         is OptionsSubject.OfContinueWatching -> OptionsFor.ContinueWatching(
             when (val title = resolve(subject.item)) {
                 is Resolved.MovieCard -> isFavourite(title.movie)
-                is Resolved.SeriesCard -> title.series?.let { isFavourite(it) } ?: false
-                null -> false
+                is Resolved.SeriesCard -> title.series?.let { isFavourite(it) }
+                null -> null
             },
         )
     }.options()
@@ -112,16 +120,17 @@ class ItemOptionsViewModel(app: Application) : AndroidViewModel(app) {
             when (subject) {
                 is OptionsSubject.OfMovie -> chooseFor(subject.movie, option)
                 is OptionsSubject.OfSeries -> setFavourite(subject.series, option)
-                is OptionsSubject.OfEpisode -> mark(subject.episode.key, option)
-                is OptionsSubject.OfChannel ->
-                    library.favourites.set(subject.channel, option == ItemOption.AddFavourite)
+                is OptionsSubject.OfEpisode -> mark(subject.episode.mediaKey, option)
+                is OptionsSubject.OfChannel -> favouriteChoice(option)?.let { favourite ->
+                    subject.variants.forEach { library.favourites.set(it, favourite) }
+                }
                 is OptionsSubject.OfContinueWatching -> chooseFor(subject.item, option)
             }
         }
     }
 
     private suspend fun chooseFor(movie: Movie, option: ItemOption) {
-        mark(movie.key, option)
+        mark(movie.mediaKey, option)
         setFavourite(movie, option)
     }
 
@@ -149,22 +158,17 @@ class ItemOptionsViewModel(app: Application) : AndroidViewModel(app) {
         library.favourites.set(series, it)
     }
 
-    private suspend fun isFavourite(movie: Movie) = library.favourites.movies().first()
-        .any { it.sourceId == movie.sourceId && it.streamId == movie.streamId }
+    private suspend fun isFavourite(movie: Movie) =
+        library.favourites.contains(StreamKind.MOVIE, movie.sourceId, movie.streamId)
 
-    private suspend fun isFavourite(series: Series) = library.favourites.series().first()
-        .any { it.sourceId == series.sourceId && it.seriesId == series.seriesId }
+    private suspend fun isFavourite(series: Series) =
+        library.favourites.contains(StreamKind.SERIES, series.sourceId, series.seriesId)
 
     /** The title behind a Continue Watching card, or null when it has left the catalogue. */
-    private suspend fun resolve(item: VodViewModel.ResumeItem): Resolved? {
-        val id = item.mediaKey.substringAfter(':').toLongOrNull() ?: return null
-        return if (item.mediaKey.startsWith(MOVIE_PREFIX)) {
-            catalog.movie(id)?.let { Resolved.MovieCard(it, ContinueWatchingCard.Movie(id, item.progress ?: 0f)) }
-        } else {
-            catalog.episode(id)?.let {
-                Resolved.SeriesCard(catalog.seriesOf(it), ContinueWatchingCard.Series(it, item.progress))
-            }
-        }
+    private suspend fun resolve(item: VodViewModel.ResumeItem): Resolved? = when (val card = item.card) {
+        is ContinueWatchingCard.Movie -> catalog.movie(card.movieId)?.let { Resolved.MovieCard(it, card) }
+        is ContinueWatchingCard.Series -> Resolved.SeriesCard(catalog.seriesOf(card.episode), card)
+        null -> null
     }
 
     private sealed interface Resolved {
@@ -181,7 +185,3 @@ private fun favouriteChoice(option: ItemOption): Boolean? = when (option) {
     ItemOption.RemoveFavourite -> false
     else -> null
 }
-
-private const val MOVIE_PREFIX = "movie:"
-private val Movie.key get() = "$MOVIE_PREFIX$id"
-private val Episode.key get() = "ep:$id"

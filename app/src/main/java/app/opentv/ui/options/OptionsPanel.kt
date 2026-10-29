@@ -13,6 +13,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
@@ -32,6 +33,12 @@ fun OptionsPanel(title: String, options: List<ItemOption>, onChoose: (ItemOption
         title = { Text(title) },
         text = {
             Column {
+                // Requested from inside the dialog: its window composes after the caller's, and
+                // a FocusRequester asked before it is attached throws.
+                LaunchedEffect(first) {
+                    withFrameNanos {}
+                    runCatching { first.requestFocus() }
+                }
                 options.forEachIndexed { i, option ->
                     TextButton(
                         onClick = { onChoose(option) },
@@ -51,7 +58,6 @@ fun OptionsPanel(title: String, options: List<ItemOption>, onChoose: (ItemOption
             }
         },
     )
-    LaunchedEffect(Unit) { first.requestFocus() }
 }
 
 private val ItemOption.label: Int

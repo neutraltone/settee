@@ -13,6 +13,7 @@ import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsNotFocused
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
+import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasScrollToNodeAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -288,5 +289,28 @@ class HomeContentTest {
         resume = emptyList()
 
         compose.onNodeWithText("Severance").assertIsFocused()
+    }
+
+    @Test
+    fun `removing the last Continue Watching card moves the highlight to the row that takes its place`() {
+        var continueWatching by mutableStateOf(resume)
+        compose.setTvContent {
+            HomeContent(
+                continueWatching = continueWatching,
+                favouriteShows = listOf(series(1, "Severance")),
+                favouriteMovies = emptyList(),
+                favouriteChannels = emptyList(),
+                onResume = { _, _, _ -> },
+                onOpenSeries = {},
+                onOpenMovie = {},
+                onPlayChannel = {},
+                takeFocus = true,
+            )
+        }
+        compose.onNode(hasText("Collateral") and hasClickAction()).assertIsFocused()
+
+        continueWatching = emptyList()
+
+        compose.onNode(hasText("Severance") and hasClickAction()).assertIsFocused()
     }
 }

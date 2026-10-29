@@ -133,6 +133,16 @@ class ViewerLibraryTest {
     }
 
     @Test
+    fun `a movie taken out of Continue Watching no longer counts as started`() = runTest {
+        library.recordProgress("movie:3", positionMillis = 6_000, durationMillis = 2_400_000)
+        library.recordProgress("movie:4", positionMillis = 6_000, durationMillis = 2_400_000)
+
+        library.marks.removeFromContinueWatching(ContinueWatchingCard.Movie(movieId = 3, progress = 0f))
+
+        assertThat(library.startedMovieIds(profileId = 1)).containsExactly(4L)
+    }
+
+    @Test
     fun `a nonsense negative position from sync counts as the very start`() = runTest {
         library.mergeSynced(synced(profileId = 1, positionMillis = -5_000, updatedAtMillis = now))
 

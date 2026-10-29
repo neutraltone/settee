@@ -267,4 +267,17 @@ class HandMarksTest {
         library.marks.markWatched("movie:3")
         assertThat(library.marks.statusOf("movie:3")).isEqualTo(WatchStatus.Watched)
     }
+
+    @Test
+    fun `a removed series comes back when one of its episodes is next marked Unwatched`() = runTest {
+        db.episodes().upsertAll(episodes)
+        watch(testEpisode(1, 1))
+        watch(testEpisode(1, 2))
+        library.marks.removeFromContinueWatching(seriesCards().single())
+
+        now += 60_000
+        library.marks.markUnwatched("ep:${testEpisode(1, 2).id}")
+
+        assertThat(seriesCards()).containsExactly(ContinueWatchingCard.Series(testEpisode(1, 2), progress = null))
+    }
 }

@@ -27,11 +27,12 @@ sealed interface OptionsFor {
 
     /**
      * A Continue Watching card: a movie or episode not yet Watched, so never Mark unwatched
-     * (removing the card is how to give up on it). [favourite] is its movie's or series'.
+     * (removing the card is how to give up on it). [favourite] is its movie's or series', or null
+     * when its title isn't in the catalogue to be made one.
      */
-    data class ContinueWatching(val favourite: Boolean) : OptionsFor {
+    data class ContinueWatching(val favourite: Boolean?) : OptionsFor {
         override fun options() =
-            listOf(ItemOption.MarkWatched, ItemOption.RemoveFromContinueWatching, favourite(favourite))
+            listOfNotNull(ItemOption.MarkWatched, ItemOption.RemoveFromContinueWatching, favourite?.let(::favourite))
     }
 
     data class Series(val favourite: Boolean) : OptionsFor {

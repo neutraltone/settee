@@ -1017,7 +1017,7 @@ private fun ChannelRow(
             .fillMaxWidth()
             .clip(RoundedCornerShape(10.dp))
             .background(background)
-            .optionsClickable(onClick, openOptionsOn(OptionsSubject.OfChannel(row.primary)))
+            .optionsClickable(onClick, openOptionsOn(OptionsSubject.OfChannel(row.primary, row.variants)))
             .padding(12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {

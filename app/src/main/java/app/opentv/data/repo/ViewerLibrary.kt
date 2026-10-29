@@ -11,6 +11,7 @@ import app.opentv.data.db.PlaybackPositionDao
 import app.opentv.data.db.SeriesDismissalDao
 import app.opentv.data.model.Episode
 import app.opentv.data.model.HandMark
+import app.opentv.data.model.Movie
 import app.opentv.data.model.PlaybackPosition
 import app.opentv.data.model.SeriesDismissal
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -122,11 +123,12 @@ class ViewerLibrary(
 
     /**
      * Every movie [profileId] has started, Watched or not: genre-affinity recommendations count a
-     * film abandoned half way as a taste signal too. Takes the Profile explicitly because the home
-     * feed computes it for whichever Profile it is building for.
+     * film abandoned half way as a taste signal too, but not one marked Unwatched (taken out of
+     * Continue Watching, say), which was given up on deliberately or never seen. Takes the Profile
+     * explicitly because the home feed computes it for whichever Profile it is building for.
      */
     suspend fun startedMovieIds(profileId: Long): Set<Long> = positions.forProfile(profileId)
-        .filter { it.mediaKey.startsWith(MOVIE_PREFIX) }
+        .filter { it.mediaKey.startsWith(MOVIE_PREFIX) && it.mark != HandMark.UNWATCHED }
         .mapNotNull { it.mediaKey.removePrefix(MOVIE_PREFIX).toLongOrNull() }
         .toSet()
 
@@ -236,7 +238,7 @@ class HandMarks internal constructor(
             is ContinueWatchingCard.Series -> {
                 val ep = card.episode
                 if (card.progress != null) markUnwatched("$EPISODE_PREFIX${ep.id}")
-                val last = episodes.forSeries(ep.sourceId, ep.seriesId).maxWithOrNull(EPISODE_ORDER) ?: ep
+                val last = episodes.lastOfSeries(ep.sourceId, ep.seriesId) ?: ep
                 dismissals.upsert(
                     SeriesDismissal(
                         profileId = activeProfileId.value,
@@ -315,6 +317,13 @@ private class ContinueWatchingCards(
         val dismissalOf = dismissed.associateBy { it.sourceId to it.seriesId }
         val byKey = played.associateBy { "$EPISODE_PREFIX${it.id}" }
         val positionOf = list.associateBy { it.mediaKey }
+        // Newest first, so the first position seen per series is when it was last played or marked.
+        val touchedAt = HashMap<Pair<Long, String>, Long>()
+        for (pos in list) {
+            byKey[pos.mediaKey]?.let {
+                touchedAt.putIfAbsent(it.sourceId to it.seriesId, pos.updatedAtMillis)
+            }
+        }
         // An episode marked Unwatched is as if never played: Up Next comes from what remains.
         val latestPerSeries = list.filter { it.mark != HandMark.UNWATCHED }
             .mapNotNull { pos -> byKey[pos.mediaKey]?.let { it to pos } }
@@ -324,16 +333,16 @@ private class ContinueWatchingCards(
             for ((ep, pos) in latestPerSeries) {
                 if (size == IN_PROGRESS_LIMIT) break
                 val dismissal = dismissalOf[ep.sourceId to ep.seriesId]
-                if (dismissal == null || !stillDismissed(dismissal, pos)) {
+                if (dismissal == null || !stillDismissed(dismissal, touchedAt.getValue(ep.sourceId to ep.seriesId))) {
                     seriesCard(ep, pos, positionOf)?.let { add(Played(it, pos.updatedAtMillis)) }
                 }
             }
         }
     }
 
-    private suspend fun stillDismissed(dismissal: SeriesDismissal, latest: PlaybackPosition): Boolean {
-        if (latest.updatedAtMillis > dismissal.dismissedAtMillis) return false
-        val newest = episodes.forSeries(dismissal.sourceId, dismissal.seriesId).maxWithOrNull(EPISODE_ORDER)
+    private suspend fun stillDismissed(dismissal: SeriesDismissal, touchedAtMillis: Long): Boolean {
+        if (touchedAtMillis > dismissal.dismissedAtMillis) return false
+        val newest = episodes.lastOfSeries(dismissal.sourceId, dismissal.seriesId)
         // Any episode after the last one there was when the series was removed is a new one.
         return newest == null ||
             newest.season < dismissal.lastSeason ||
@@ -357,6 +366,12 @@ private class ContinueWatchingCards(
         }
     }
 }
+
+/** The key ViewerLibrary keeps a Profile's watch state for this movie under. */
+val Movie.mediaKey: String get() = "$MOVIE_PREFIX$id"
+
+/** The key ViewerLibrary keeps a Profile's watch state for this episode under. */
+val Episode.mediaKey: String get() = "$EPISODE_PREFIX$id"
 
 private val EPISODE_ORDER = compareBy<Episode>({ it.season }, { it.episodeNumber })
 private const val EPISODE_PREFIX = "ep:"
