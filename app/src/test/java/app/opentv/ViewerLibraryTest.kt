@@ -35,7 +35,9 @@ class ViewerLibraryTest {
     private val activeProfile = MutableStateFlow(1L)
     private var now = 1_000_000L
     private val library =
-        ViewerLibrary(db.positions(), db.episodes(), db.favourites(), activeProfile, clock = { now })
+        ViewerLibrary(db.positions(), db.episodes(), db.favourites(), db.seriesDismissals(), activeProfile, clock = {
+            now
+        })
 
     @After
     fun close() = db.close()
@@ -128,6 +130,16 @@ class ViewerLibraryTest {
         library.recordProgress("movie:5", positionMillis = 6_000, durationMillis = 2_400_000)
 
         assertThat(library.startedMovieIds(profileId = 1)).containsExactly(3L, 4L)
+    }
+
+    @Test
+    fun `a movie taken out of Continue Watching no longer counts as started`() = runTest {
+        library.recordProgress("movie:3", positionMillis = 6_000, durationMillis = 2_400_000)
+        library.recordProgress("movie:4", positionMillis = 6_000, durationMillis = 2_400_000)
+
+        library.marks.removeFromContinueWatching(ContinueWatchingCard.Movie(movieId = 3, progress = 0f))
+
+        assertThat(library.startedMovieIds(profileId = 1)).containsExactly(4L)
     }
 
     @Test

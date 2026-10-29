@@ -17,7 +17,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 
 /**
  * A [CatalogRepository] over an in-memory database, talking to a [FakePanel]. Close [db] after.
- * Episodes it fetches for New Episode detection are first seen at [clock].
+ * [viewerLibrary] records progress at [clock].
  */
 class TestCatalog(context: Context, private val clock: () -> Long = { 0L }) {
     val db: OpenTvDatabase = Room.inMemoryDatabaseBuilder(context, OpenTvDatabase::class.java)
@@ -28,9 +28,9 @@ class TestCatalog(context: Context, private val clock: () -> Long = { 0L }) {
         db.positions(),
         db.episodes(),
         db.favourites(),
+        db.seriesDismissals(),
         MutableStateFlow(1L),
         clock = clock,
-        episodeFetcher = { catalog.ensureEpisodes(it, clock()) },
     )
     val catalog: CatalogRepository = CatalogRepository(
         sourceDao = db.sources(),

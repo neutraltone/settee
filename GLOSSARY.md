@@ -56,5 +56,5 @@ The screen the app always opens on, gathering the Live Preview, Continue Watchin
 _Avoid_: Dashboard, start page
 
 **Live Preview**:
-A muted, playing tile on Home of the live channel the Profile last watched, shown only when live TV was the Profile's most recent playback.
+A muted, playing tile on Home of the live channel the Profile last watched on this device, shown only when live TV was the Profile's most recent playback. Settling on a channel full screen counts as watching it; zapping past one or seeing it in the guide's preview does not. A channel that has since left the channel list still shows, as a reminder that can't play; a channel the viewer hid does not.
 _Avoid_: Last channel, boot channel

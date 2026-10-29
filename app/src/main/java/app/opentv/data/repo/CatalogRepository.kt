@@ -612,11 +612,6 @@ class CatalogRepository(
     suspend fun hiddenChannelUrls(): List<String> = channelDao.hiddenUrls()
     suspend fun markChannelHiddenByUrl(url: String) = channelDao.markHiddenByUrl(url)
 
-    /** [series]' episodes, for New Episode detection, which knows the series but not its source. */
-    suspend fun ensureEpisodes(series: Series, nowUtcMillis: Long = System.currentTimeMillis()) {
-        sourceDao.byId(series.sourceId)?.let { ensureEpisodes(it, series.seriesId, nowUtcMillis) }
-    }
-
     /**
      * Series episodes are fetched lazily — panels are slow and most series are never opened.
      * Episodes not stored before are stamped as first seen at [nowUtcMillis].
@@ -661,7 +656,7 @@ class CatalogRepository(
                 .getOrDefault(emptyList())
             // Waited for rather than launched so sources take turns; it is a handful of calls,
             // next to the EPG a manual refresh waits for anyway.
-            viewerLibrary.newEpisodes.seriesUpdated(updated)
+            viewerLibrary.newEpisodes.seriesUpdated(updated) { ensureEpisodes(source, it.seriesId, nowUtcMillis) }
         }
         live
     }
@@ -689,7 +684,13 @@ class CatalogRepository(
             .onFailure { Log.w(TAG, "VOD sync failed for source ${source.id}", it) }
             // The stored update times have moved now, so a later refresh wouldn't see these again.
             // Launched, since this is the sync "Loading movies & shows…" waits on.
-            .onSuccess { updated -> background.launch { viewerLibrary.newEpisodes.seriesUpdated(updated) } }
+            .onSuccess { updated ->
+                background.launch {
+                    viewerLibrary.newEpisodes.seriesUpdated(updated) {
+                        ensureEpisodes(source, it.seriesId, nowUtcMillis)
+                    }
+                }
+            }
     }
 
     private suspend fun syncXtreamLive(source: Source, nowUtcMillis: Long): SyncResult {

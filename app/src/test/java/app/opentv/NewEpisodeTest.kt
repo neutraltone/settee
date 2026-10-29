@@ -42,14 +42,18 @@ class NewEpisodeTest {
         db.positions(),
         db.episodes(),
         db.favourites(),
+        db.seriesDismissals(),
         activeProfile,
         clock = { now },
-        episodeFetcher = { series ->
+    )
+
+    /** A fake provider: fetching a series stores what it has added since, first seen now. */
+    private suspend fun seriesUpdated(vararg updated: Series) =
+        library.newEpisodes.seriesUpdated(updated.toList()) { series ->
             fetched += series.seriesId
             check(series.seriesId != "broken") { "Panel timed out" }
             db.episodes().upsertAll(added[series.seriesId].orEmpty().map { it.copy(firstSeenMillis = now) })
-        },
-    )
+        }
 
     @After
     fun close() = db.close()
@@ -80,7 +84,7 @@ class NewEpisodeTest {
         added["s"] = listOf(testEpisode(3, 1))
         now += 60_000
 
-        library.newEpisodes.seriesUpdated(listOf(series))
+        seriesUpdated(series)
 
         assertThat(library.continueWatchingSeries().first()).containsExactly(
             ContinueWatchingCard.Series(
@@ -96,7 +100,7 @@ class NewEpisodeTest {
         db.episodes().upsertAll(episodes)
         watch(testEpisode(1, 2))
 
-        library.newEpisodes.seriesUpdated(listOf(series))
+        seriesUpdated(series)
 
         assertThat(fetched).isEmpty()
     }
@@ -105,7 +109,7 @@ class NewEpisodeTest {
     fun `a series nobody has watched is not fetched`() = runTest {
         db.episodes().upsertAll(episodes)
 
-        library.newEpisodes.seriesUpdated(listOf(series))
+        seriesUpdated(series)
 
         assertThat(fetched).isEmpty()
     }
@@ -118,7 +122,7 @@ class NewEpisodeTest {
         watch(testEpisode(2, 3))
         activeProfile.value = 1L
 
-        library.newEpisodes.seriesUpdated(listOf(series))
+        seriesUpdated(series)
 
         assertThat(fetched).containsExactly("s")
     }
@@ -130,7 +134,7 @@ class NewEpisodeTest {
         watch(broken)
         watch(testEpisode(2, 3))
 
-        library.newEpisodes.seriesUpdated(listOf(series.copy(seriesId = "broken"), series))
+        seriesUpdated(series.copy(seriesId = "broken"), series)
 
         assertThat(fetched).containsExactly("broken", "s").inOrder()
     }

@@ -22,11 +22,14 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items as gridItems
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Search
@@ -42,9 +45,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
@@ -61,6 +67,10 @@ import app.opentv.data.parser.displayTitle
 import app.opentv.data.repo.GenreGroup
 import app.opentv.ui.NewEpisodeBadge
 import app.opentv.ui.VodViewModel
+import app.opentv.ui.options.LocalOpenOptions
+import app.opentv.ui.options.OptionsSubject
+import app.opentv.ui.options.openOptionsOn
+import app.opentv.ui.options.optionsClickable
 import coil.compose.AsyncImage
 
 /**
@@ -165,7 +175,7 @@ internal fun MovieShelves(
         verticalArrangement = Arrangement.spacedBy(14.dp),
         modifier = Modifier.fillMaxSize(),
     ) {
-        if (resume.isNotEmpty()) item(key = "cw") { ContinueWatchingRow(resume, onResume) }
+        if (resume.isNotEmpty()) item(key = "cw") { ContinueWatchingRow(resume, onResume = onResume) }
         if (favourites.isNotEmpty()) {
             item(key = "fav") {
                 MoviePosterRow(stringResource(R.string.vod_favourites), favourites, onOpenMovie)
@@ -281,7 +291,7 @@ internal fun SeriesShelves(
         verticalArrangement = Arrangement.spacedBy(14.dp),
         modifier = Modifier.fillMaxSize(),
     ) {
-        if (resume.isNotEmpty()) item(key = "cw") { ContinueWatchingRow(resume, onResume) }
+        if (resume.isNotEmpty()) item(key = "cw") { ContinueWatchingRow(resume, onResume = onResume) }
         if (favourites.isNotEmpty()) {
             item(key = "fav") {
                 SeriesPosterRow(stringResource(R.string.vod_favourites), favourites, onOpenSeries)
@@ -330,6 +340,7 @@ private fun MovieCategoryGrid(movies: List<Movie>, viewModel: VodViewModel, onOp
                 rating = group.primary.rating,
                 qualityBadge = badge,
                 onClick = { onOpenMovie(group.primary) },
+                onOptions = openOptionsOn(OptionsSubject.OfMovie(group.primary)),
             )
         }
     }
@@ -356,6 +367,7 @@ private fun SeriesCategoryGrid(series: List<Series>, onOpenSeries: (Series) -> U
                 subtitle = item.year?.toString(),
                 rating = item.rating,
                 onClick = { onOpenSeries(item) },
+                onOptions = openOptionsOn(OptionsSubject.OfSeries(item)),
             )
         }
     }
@@ -365,20 +377,28 @@ private fun SeriesCategoryGrid(series: List<Series>, onOpenSeries: (Series) -> U
 
 /** A titled horizontal shelf of movie poster cards. Shared by the home and the detail's "more like this". */
 @Composable
-internal fun MoviePosterRow(title: String, movies: List<Movie>, onOpenMovie: (Movie) -> Unit) {
+internal fun MoviePosterRow(
+    title: String,
+    movies: List<Movie>,
+    onOpenMovie: (Movie) -> Unit,
+    focus: CardFocus? = null,
+) {
     Column(Modifier.fillMaxWidth()) {
         SectionHeader(title)
         LazyRow(
+            state = rememberRowState(focus),
             contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            items(movies, key = { it.id }) { movie ->
+            itemsIndexed(movies, key = { _, movie -> movie.id }) { index, movie ->
                 PosterCard(
                     title = movie.displayTitle,
                     posterUrl = movie.posterUrl,
                     subtitle = movie.year?.toString(),
                     rating = movie.rating,
                     onClick = { onOpenMovie(movie) },
+                    onOptions = openOptionsOn(OptionsSubject.OfMovie(movie)),
+                    modifier = Modifier.takesFocus(index, focus),
                 )
             }
         }
@@ -387,25 +407,60 @@ internal fun MoviePosterRow(title: String, movies: List<Movie>, onOpenMovie: (Mo
 
 /** A titled horizontal shelf of series poster cards. */
 @Composable
-internal fun SeriesPosterRow(title: String, series: List<Series>, onOpenSeries: (Series) -> Unit) {
+internal fun SeriesPosterRow(
+    title: String,
+    series: List<Series>,
+    onOpenSeries: (Series) -> Unit,
+    focus: CardFocus? = null,
+) {
     Column(Modifier.fillMaxWidth()) {
         SectionHeader(title)
         LazyRow(
+            state = rememberRowState(focus),
             contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            items(series, key = { it.id }) { item ->
+            itemsIndexed(series, key = { _, item -> item.id }) { index, item ->
                 PosterCard(
                     title = item.displayTitle,
                     posterUrl = item.posterUrl,
                     subtitle = item.year?.toString(),
                     rating = item.rating,
                     onClick = { onOpenSeries(item) },
+                    onOptions = openOptionsOn(OptionsSubject.OfSeries(item)),
+                    modifier = Modifier.takesFocus(index, focus),
                 )
             }
         }
     }
 }
+
+/**
+ * Asks a shelf to bring its card at [index] into view and give it the highlight, as Home does when
+ * the viewer comes back to the card they picked; [done] hears whether the card took it.
+ */
+internal class CardFocus(val index: Int, val done: (focused: Boolean) -> Unit) {
+    val requester = FocusRequester()
+}
+
+/**
+ * The shelf's scroll state, which moves to [focus]'s card and then highlights it. It waits a frame
+ * after scrolling because the card is only composed once the row has been laid out there.
+ */
+@Composable
+internal fun rememberRowState(focus: CardFocus?): LazyListState {
+    val state = rememberLazyListState()
+    LaunchedEffect(focus) {
+        if (focus == null) return@LaunchedEffect
+        state.scrollToItem(focus.index)
+        withFrameNanos {}
+        focus.done(runCatching { focus.requester.requestFocus() }.isSuccess)
+    }
+    return state
+}
+
+internal fun Modifier.takesFocus(index: Int, focus: CardFocus?): Modifier =
+    if (focus?.index == index) focusRequester(focus.requester) else this
 
 @Composable
 internal fun SectionHeader(title: String) {
@@ -436,6 +491,7 @@ internal fun PosterCard(
     rating: Double? = null,
     qualityBadge: String? = null,
     progress: Float? = null,
+    onOptions: (() -> Unit)? = null,
 ) {
     var focused by remember { mutableStateOf(false) }
     val scale by animateFloatAsState(if (focused) 1.06f else 1f, label = "posterScale")
@@ -448,7 +504,7 @@ internal fun PosterCard(
             }
             .onFocusChanged { focused = it.isFocused }
             .clip(RoundedCornerShape(10.dp))
-            .clickable(onClick = onClick)
+            .optionsClickable(onClick, onOptions)
             .padding(4.dp),
     ) {
         Box(
@@ -537,16 +593,25 @@ private fun Badge(text: String, modifier: Modifier = Modifier, highlight: Boolea
 @Composable
 internal fun ContinueWatchingRow(
     items: List<VodViewModel.ResumeItem>,
+    focus: CardFocus? = null,
     onResume: (mediaKey: String, url: String, title: String) -> Unit,
+    onOptions: ((VodViewModel.ResumeItem) -> Unit)? =
+        LocalOpenOptions.current?.let { open -> { open(OptionsSubject.OfContinueWatching(it)) } },
 ) {
     Column(Modifier.fillMaxWidth()) {
         SectionHeader(stringResource(R.string.vod_continue_watching))
         LazyRow(
+            state = rememberRowState(focus),
             contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            items(items, key = { it.mediaKey }) { item ->
-                ResumeCard(item) { onResume(item.mediaKey, item.streamUrl, item.playerTitle) }
+            itemsIndexed(items, key = { _, item -> item.mediaKey }) { index, item ->
+                ResumeCard(
+                    item,
+                    Modifier.takesFocus(index, focus),
+                    onClick = { onResume(item.mediaKey, item.streamUrl, item.playerTitle) },
+                    onOptions = onOptions?.let { { it(item) } },
+                )
             }
         }
     }
@@ -554,11 +619,16 @@ internal fun ContinueWatchingRow(
 
 /** A landscape resume thumbnail with a progress fill: a movie, or a series with the episode it plays. */
 @Composable
-private fun ResumeCard(item: VodViewModel.ResumeItem, onClick: () -> Unit) {
+private fun ResumeCard(
+    item: VodViewModel.ResumeItem,
+    modifier: Modifier,
+    onClick: () -> Unit,
+    onOptions: (() -> Unit)?,
+) {
     var focused by remember { mutableStateOf(false) }
     val scale by animateFloatAsState(if (focused) 1.06f else 1f, label = "resumeScale")
     Column(
-        Modifier
+        modifier
             .width(190.dp)
             .graphicsLayer {
                 scaleX = scale
@@ -566,7 +636,7 @@ private fun ResumeCard(item: VodViewModel.ResumeItem, onClick: () -> Unit) {
             }
             .onFocusChanged { focused = it.isFocused }
             .clip(RoundedCornerShape(8.dp))
-            .clickable(onClick = onClick)
+            .optionsClickable(onClick, onOptions)
             .padding(4.dp),
     ) {
         Box(

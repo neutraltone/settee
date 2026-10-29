@@ -5,14 +5,24 @@
  */
 package app.opentv
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.semantics.ProgressBarRangeInfo
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasProgressBarRangeInfo
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.longClick
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performKeyInput
+import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.test.requestFocus
 import app.opentv.ui.VodViewModel.ResumeItem
 import app.opentv.ui.VodViewModel.SeasonEpisode
@@ -48,9 +58,18 @@ class ContinueWatchingRowTest {
     )
 
     private var played: Triple<String, String, String>? = null
+    private var optionsAskedFor: ResumeItem? = null
+    private var optionsAsked = 0
 
     private fun show(vararg items: ResumeItem) = compose.setTvContent {
-        ContinueWatchingRow(items.toList()) { key, url, title -> played = Triple(key, url, title) }
+        ContinueWatchingRow(
+            items.toList(),
+            onResume = { key, url, title -> played = Triple(key, url, title) },
+            onOptions = {
+                optionsAskedFor = it
+                optionsAsked++
+            },
+        )
     }
 
     @Test
@@ -98,5 +117,68 @@ class ContinueWatchingRowTest {
         show(inProgress.copy(mediaKey = "ep:25", progress = null, episode = SeasonEpisode(2, 5)))
 
         compose.onNodeWithText("New episode", useUnmergedTree = true).assertDoesNotExist()
+    }
+
+    @Test
+    fun `Menu on a card asks for its options without playing it`() {
+        show(inProgress)
+
+        val card = compose.onNode(hasClickAction())
+        card.requestFocus()
+        card.performKeyInput { pressKey(Key.Menu) }
+
+        assertThat(optionsAskedFor).isEqualTo(inProgress)
+        assertThat(played).isNull()
+    }
+
+    @Test
+    fun `holding Select on a card asks for its options without playing it`() {
+        show(inProgress)
+
+        val card = compose.onNode(hasClickAction())
+        card.requestFocus()
+        card.performKeyInput {
+            keyDown(Key.DirectionCenter)
+            advanceEventTime(1_000)
+            keyUp(Key.DirectionCenter)
+        }
+
+        assertThat(optionsAskedFor).isEqualTo(inProgress)
+        assertThat(optionsAsked).isEqualTo(1)
+        assertThat(played).isNull()
+    }
+
+    @Test
+    fun `a quick press of Select still plays the card`() {
+        show(inProgress)
+
+        val card = compose.onNode(hasClickAction())
+        card.requestFocus()
+        card.performKeyInput { pressKey(Key.DirectionCenter) }
+
+        assertThat(played).isNotNull()
+        assertThat(optionsAskedFor).isNull()
+    }
+
+    @Test
+    fun `a long press on a card by touch asks for its options`() {
+        show(inProgress)
+
+        compose.onNode(hasClickAction()).performTouchInput { longClick() }
+
+        assertThat(optionsAskedFor).isEqualTo(inProgress)
+        assertThat(played).isNull()
+    }
+
+    @Test
+    fun `when the highlighted card is removed the highlight moves to the one taking its place`() {
+        val other = inProgress.copy(mediaKey = "movie:5", title = "A Film", episode = null)
+        var items by mutableStateOf(listOf(inProgress, other))
+        compose.setTvContent { ContinueWatchingRow(items, onResume = { _, _, _ -> }, onOptions = {}) }
+        compose.onNode(hasText("The Show") and hasClickAction()).requestFocus()
+
+        items = listOf(other)
+
+        compose.onNode(hasText("A Film") and hasClickAction()).assertIsFocused()
     }
 }

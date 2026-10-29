@@ -33,6 +33,7 @@ import app.opentv.data.repo.GenreGroup
 import app.opentv.data.repo.MovieVariantGroup
 import app.opentv.data.repo.PersonTitle
 import app.opentv.data.repo.distinctByQuality
+import app.opentv.data.repo.mediaKey
 import app.opentv.pairing.ManagerServer
 import app.opentv.sync.NasSync
 import app.opentv.sync.SyncClient
@@ -787,6 +788,8 @@ class VodViewModel @JvmOverloads constructor(
         val episode: SeasonEpisode? = null,
         /** Whether [episode] is a New Episode, which the card says on its thumbnail. */
         val newEpisode: Boolean = false,
+        /** The Continue Watching card this was drawn from, for the options panel to act on. */
+        val card: ContinueWatchingCard? = null,
     )
 
     @OptIn(ExperimentalCoroutinesApi::class)
@@ -1148,19 +1151,20 @@ private suspend fun resumeItem(catalog: CatalogRepository, card: ContinueWatchin
     when (card) {
         is ContinueWatchingCard.Movie -> catalog.movie(card.movieId)?.let {
             VodViewModel.ResumeItem(
-                "movie:${it.id}",
+                it.mediaKey,
                 it.displayTitle,
                 it.displayTitle,
                 it.posterUrl,
                 it.streamUrl,
                 card.progress,
+                card = card,
             )
         }
         is ContinueWatchingCard.Series -> {
             val ep = card.episode
             catalog.seriesOf(ep)?.let {
                 VodViewModel.ResumeItem(
-                    mediaKey = "ep:${ep.id}",
+                    mediaKey = ep.mediaKey,
                     title = it.name,
                     playerTitle = ep.playerTitle,
                     // The card is landscape: the wide backdrop fits it, a portrait poster only crops.
@@ -1169,6 +1173,7 @@ private suspend fun resumeItem(catalog: CatalogRepository, card: ContinueWatchin
                     progress = card.progress,
                     episode = VodViewModel.SeasonEpisode(ep.season, ep.episodeNumber),
                     newEpisode = card.newEpisode,
+                    card = card,
                 )
             }
         }
@@ -1243,7 +1248,10 @@ class HomeViewModel(app: Application) : AndroidViewModel(app) {
         graph.viewerLibrary.favourites.channels().onlyWhen(settings.liveEnabled),
         recent,
         ::HomeState,
-    ).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+        // Nothing replayed once the rows have stopped updating: back from the player, Home waits for
+        // fresh rows rather than drawing the old ones, where it would highlight a card that's about
+        // to move or go (a title just finished, a Favourite just removed).
+    ).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000, replayExpirationMillis = 0), null)
 
     private fun <T> Flow<List<T>>.onlyWhen(enabled: StateFlow<Boolean>): Flow<List<T>> =
         combine(this, enabled) { list, on -> if (on) list else emptyList() }

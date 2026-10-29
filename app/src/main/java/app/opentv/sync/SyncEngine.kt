@@ -7,13 +7,16 @@ package app.opentv.sync
 
 import app.opentv.core.ServiceLocator
 import app.opentv.data.model.Favourite
+import app.opentv.data.model.HandMark
 import app.opentv.data.model.PlaybackPosition
 import app.opentv.data.model.Profile
 import app.opentv.data.model.ProfileSetting
 import app.opentv.data.model.Recording
 import app.opentv.data.model.RecordingStatus
+import app.opentv.data.model.SeriesDismissal
 import app.opentv.data.model.StreamKind
 import app.opentv.recording.SmbClient
+import kotlinx.coroutines.flow.first
 import kotlinx.serialization.json.Json
 
 /**
@@ -56,25 +59,7 @@ class SyncEngine(private val graph: ServiceLocator.Graph) {
     suspend fun gather(): SyncBundle {
         val profiles = graph.profiles.all()
         val names = profiles.associate { it.id to it.name }
-        val positions = graph.viewerLibrary.everyProfilesProgress().mapNotNull { pos ->
-            val profileName = names[pos.profileId] ?: return@mapNotNull null
-            val parts = pos.mediaKey.split(":", limit = 2)
-            if (parts.size != 2) return@mapNotNull null
-            val id = parts[1].toLongOrNull() ?: return@mapNotNull null
-            val streamUrl = when (parts[0]) {
-                "movie" -> graph.catalogRepository.movie(id)?.streamUrl
-                "ep" -> graph.catalogRepository.episode(id)?.streamUrl
-                else -> null
-            } ?: return@mapNotNull null
-            SyncPosition(
-                profile = profileName,
-                streamUrl = streamUrl,
-                kind = parts[0],
-                positionMillis = pos.positionMillis,
-                durationMillis = pos.durationMillis,
-                updatedAtMillis = pos.updatedAtMillis,
-            )
-        }
+        val positions = gatherPositions(names)
         // Only finished recordings that live on the shared NAS travel — a device-local (file://)
         // capture can't be opened from another box, so sharing its metadata would just create a
         // library row that fails to play everywhere but here.
@@ -108,12 +93,51 @@ class SyncEngine(private val graph: ServiceLocator.Graph) {
             generatedAtMillis = System.currentTimeMillis(),
             profiles = profiles.map { it.name },
             positions = positions,
+            dismissals = gatherDismissals(names),
             favourites = favourites,
             hiddenChannels = graph.catalogRepository.hiddenChannelUrls(),
             hiddenCategories = graph.settings.hiddenCategories.value.toList(),
             recordings = recordings,
             profileSettings = profileSettings,
         )
+    }
+
+    /** Each Profile's progress, by Profile name and the title's stream URL. */
+    private suspend fun gatherPositions(profileNames: Map<Long, String>): List<SyncPosition> =
+        graph.viewerLibrary.everyProfilesProgress().mapNotNull { pos ->
+            val profileName = profileNames[pos.profileId] ?: return@mapNotNull null
+            val parts = pos.mediaKey.split(":", limit = 2)
+            if (parts.size != 2) return@mapNotNull null
+            val id = parts[1].toLongOrNull() ?: return@mapNotNull null
+            val streamUrl = when (parts[0]) {
+                "movie" -> graph.catalogRepository.movie(id)?.streamUrl
+                "ep" -> graph.catalogRepository.episode(id)?.streamUrl
+                else -> null
+            } ?: return@mapNotNull null
+            SyncPosition(
+                profile = profileName,
+                streamUrl = streamUrl,
+                kind = parts[0],
+                positionMillis = pos.positionMillis,
+                durationMillis = pos.durationMillis,
+                updatedAtMillis = pos.updatedAtMillis,
+                mark = pos.mark?.name,
+            )
+        }
+
+    /** Each Profile's series removed from Continue Watching, by Profile and source name. */
+    private suspend fun gatherDismissals(profileNames: Map<Long, String>): List<SyncDismissal> {
+        val sourceNames = graph.sourceRepository.observeAll().first().associate { it.id to it.name }
+        return graph.viewerLibrary.marks.everyProfiles().mapNotNull { d ->
+            SyncDismissal(
+                profile = profileNames[d.profileId] ?: return@mapNotNull null,
+                source = sourceNames[d.sourceId] ?: return@mapNotNull null,
+                seriesId = d.seriesId,
+                dismissedAtMillis = d.dismissedAtMillis,
+                lastSeason = d.lastSeason,
+                lastEpisode = d.lastEpisode,
+            )
+        }
     }
 
     fun encode(bundle: SyncBundle): String = json.encodeToString(SyncBundle.serializer(), bundle)
@@ -204,6 +228,24 @@ class SyncEngine(private val graph: ServiceLocator.Graph) {
                     positionMillis = item.positionMillis,
                     durationMillis = item.durationMillis,
                     updatedAtMillis = item.updatedAtMillis,
+                    mark = item.mark?.let { runCatching { HandMark.valueOf(it) }.getOrNull() },
+                ),
+            )
+            if (taken) positions++
+        }
+        // Counted with positions: both are where a Profile is with its titles.
+        val sourceIds = graph.sourceRepository.observeAll().first().associate { it.name to it.id }
+        for (item in bundle.dismissals) {
+            val profileId = profileIdFor(item.profile) ?: continue
+            val sourceId = sourceIds[item.source] ?: continue
+            val taken = graph.viewerLibrary.marks.mergeSynced(
+                SeriesDismissal(
+                    profileId = profileId,
+                    sourceId = sourceId,
+                    seriesId = item.seriesId,
+                    dismissedAtMillis = item.dismissedAtMillis,
+                    lastSeason = item.lastSeason,
+                    lastEpisode = item.lastEpisode,
                 ),
             )
             if (taken) positions++

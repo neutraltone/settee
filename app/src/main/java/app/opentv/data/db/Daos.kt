@@ -27,6 +27,7 @@ import app.opentv.data.model.Recording
 import app.opentv.data.model.RecordingStatus
 import app.opentv.data.model.Reminder
 import app.opentv.data.model.Series
+import app.opentv.data.model.SeriesDismissal
 import app.opentv.data.model.SeriesRule
 import app.opentv.data.model.Source
 import app.opentv.data.model.StreamKind
@@ -619,6 +620,15 @@ interface EpisodeDao {
     @Query("SELECT * FROM episodes WHERE sourceId = :sourceId AND seriesId = :seriesId")
     suspend fun forSeries(sourceId: Long, seriesId: String): List<Episode>
 
+    /** A series' last episode in season then episode order. */
+    @Query(
+        """
+        SELECT * FROM episodes WHERE sourceId = :sourceId AND seriesId = :seriesId
+        ORDER BY season DESC, episodeNumber DESC LIMIT 1
+        """,
+    )
+    suspend fun lastOfSeries(sourceId: Long, seriesId: String): Episode?
+
     @Query("SELECT * FROM episodes WHERE streamUrl = :url LIMIT 1")
     suspend fun byStreamUrl(url: String): Episode?
 
@@ -658,6 +668,26 @@ interface PlaybackPositionDao {
 }
 
 @Dao
+interface SeriesDismissalDao {
+    @Query("SELECT * FROM series_dismissals WHERE profileId = :profileId")
+    fun observe(profileId: Long): Flow<List<SeriesDismissal>>
+
+    @Query(
+        """
+        SELECT * FROM series_dismissals
+        WHERE profileId = :profileId AND sourceId = :sourceId AND seriesId = :seriesId
+        """,
+    )
+    suspend fun get(profileId: Long, sourceId: Long, seriesId: String): SeriesDismissal?
+
+    @Query("SELECT * FROM series_dismissals")
+    suspend fun all(): List<SeriesDismissal>
+
+    @Upsert
+    suspend fun upsert(dismissal: SeriesDismissal)
+}
+
+@Dao
 interface FavouriteDao {
     // Writes go by the row's source id and look up its name in SQL, so callers never handle names.
     @Query(
@@ -675,6 +705,16 @@ interface FavouriteDao {
         """,
     )
     suspend fun remove(profileId: Long, kind: StreamKind, sourceId: Long, itemId: String)
+
+    @Query(
+        """
+        SELECT EXISTS(
+          SELECT 1 FROM favourites WHERE profileId = :profileId AND kind = :kind AND itemId = :itemId
+            AND source = (SELECT name FROM sources WHERE id = :sourceId)
+        )
+        """,
+    )
+    suspend fun contains(profileId: Long, kind: StreamKind, sourceId: Long, itemId: String): Boolean
 
     /** Adds [favourite] unless it is already there; returns whether it was new. */
     @Insert(onConflict = OnConflictStrategy.IGNORE)

@@ -122,8 +122,8 @@ object ServiceLocator {
                 database.positions(),
                 database.episodes(),
                 database.favourites(),
+                database.seriesDismissals(),
                 settings.activeProfileId,
-                episodeFetcher = { catalogRepository.ensureEpisodes(it) },
             )
         }
 
