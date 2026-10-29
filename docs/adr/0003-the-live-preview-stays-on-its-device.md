@@ -1,0 +1,5 @@
+# The Live Preview stays on its device
+
+Watch progress and Favourites sync between a Profile's devices, and new per-Profile watch state is meant to sync the same way. The live channel a Profile last settled on, which decides Home's Live Preview, is the exception: it is kept per Profile on each device and never synced. Live TV is never resumed, so there is no position worth carrying, and a channel watched on the phone appearing, playing, on the Fire TV's Home the next morning is more surprising than useful. The Live Preview answers "what was this box last showing", which only this box knows.
+
+It has its own table rather than a `live:` row among watch positions. Watch positions have nowhere to keep the channel's name and logo, which the Live Preview needs to show a channel that has since left the catalogue, and sync sends every watch position to the other side. Because the table only adds to the schema, it arrived with a migration rather than the pre-1.0 wipe, so nobody had to add their providers again for it.

@@ -90,6 +90,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.media3.common.C
 import androidx.media3.common.Tracks
 import androidx.media3.common.util.UnstableApi
@@ -190,6 +192,11 @@ fun PlayerScreen(channelId: Long?, onBack: () -> Unit) {
 
     // Its waits go with [scope], so leaving the player settles on nothing.
     val settled = remember { SettledChannel(scope) { graph.viewerLibrary.live.record(it) } }
+    // Started rather than resumed: picture-in-picture is still watching, behind another app isn't.
+    val inFront = LocalLifecycleOwner.current.lifecycle.currentStateFlow.collectAsState().value
+        .isAtLeast(Lifecycle.State.STARTED)
+    val playerState by controller.state.collectAsState()
+    LaunchedEffect(playerState, inFront) { settled.playing(inFront && playerState is PlayerController.State.Playing) }
 
     fun tuneTo(channel: Channel) {
         currentId = channel.id

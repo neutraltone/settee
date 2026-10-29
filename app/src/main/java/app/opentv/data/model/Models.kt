@@ -370,7 +370,7 @@ data class PlaybackPosition(
  * The live channel one Profile last settled on, on this device, and when: what Home's Live Preview
  * plays. A table of its own rather than a `live:` row among [PlaybackPosition]s, which have nowhere
  * to keep [name] and [logoUrl] for a channel that has since left the catalogue, and which sync sends
- * to other devices while this stays put. Keyed like a Favourite, by [source] name and the provider's
+ * to other devices while this stays put (ADR 0003). Keyed like a Favourite, by [source] name and the provider's
  * [streamId], so a catalogue refresh can't point it at another channel. Read and written only
  * through ViewerLibrary.
  */

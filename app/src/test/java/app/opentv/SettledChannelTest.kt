@@ -30,6 +30,7 @@ class SettledChannelTest {
     fun `ten seconds on a channel settles on it`() = runTest {
         val settled = mutableListOf<Channel>()
         val watcher = SettledChannel(backgroundScope) { settled += it }
+        watcher.playing(true)
         val bbc = channel("101")
 
         watcher.tunedTo(bbc)
@@ -43,6 +44,7 @@ class SettledChannelTest {
     fun `zapping past channels settles only on the one the viewer stays on`() = runTest {
         val settled = mutableListOf<Channel>()
         val watcher = SettledChannel(backgroundScope) { settled += it }
+        watcher.playing(true)
         val itv = channel("202")
 
         for (id in listOf("101", "102", "103")) {
@@ -60,6 +62,7 @@ class SettledChannelTest {
     fun `leaving the player before ten seconds settles on nothing`() = runTest {
         val settled = mutableListOf<Channel>()
         val watcher = SettledChannel(backgroundScope) { settled += it }
+        watcher.playing(true)
 
         watcher.tunedTo(channel("101"))
         advanceTimeBy(9_000)
@@ -68,5 +71,39 @@ class SettledChannelTest {
         runCurrent()
 
         assertThat(settled).isEmpty()
+    }
+
+    @Test
+    fun `a channel that never gets going settles on nothing`() = runTest {
+        val settled = mutableListOf<Channel>()
+        val watcher = SettledChannel(backgroundScope) { settled += it }
+
+        watcher.tunedTo(channel("101"))
+        watcher.playing(false)
+        advanceTimeBy(20_000)
+        runCurrent()
+
+        assertThat(settled).isEmpty()
+    }
+
+    @Test
+    fun `the ten seconds start again when playback stops and comes back`() = runTest {
+        val settled = mutableListOf<Channel>()
+        val watcher = SettledChannel(backgroundScope) { settled += it }
+        val bbc = channel("101")
+        watcher.tunedTo(bbc)
+        watcher.playing(true)
+        advanceTimeBy(6_000)
+
+        watcher.playing(false)
+        advanceTimeBy(1_000)
+        watcher.playing(true)
+        advanceTimeBy(9_000)
+        runCurrent()
+        assertThat(settled).isEmpty()
+
+        advanceTimeBy(1_000)
+        runCurrent()
+        assertThat(settled).containsExactly(bbc)
     }
 }

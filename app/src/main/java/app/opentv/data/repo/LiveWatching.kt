@@ -8,6 +8,7 @@ package app.opentv.data.repo
 import app.opentv.data.db.LivePlaybackDao
 import app.opentv.data.db.PlaybackPositionDao
 import app.opentv.data.model.Channel
+import app.opentv.data.model.shownName
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
@@ -19,16 +20,27 @@ import kotlinx.coroutines.flow.map
 
 /** What Home's Live Preview shows: the channel playing, or a reminder of one that has gone. */
 sealed interface LivePreview {
-    data class Playable(val channel: Channel) : LivePreview
+    val name: String
+    val logoUrl: String?
+
+    /** The channel to play; null when it has gone. */
+    val channel: Channel?
+
+    data class Playable(override val channel: Channel) : LivePreview {
+        override val name get() = channel.shownName
+        override val logoUrl get() = channel.logoUrl
+    }
 
     /** The channel has left the catalogue since: shown by the [name] and [logoUrl] it had then. */
-    data class Gone(val name: String, val logoUrl: String?) : LivePreview
+    data class Gone(override val name: String, override val logoUrl: String?) : LivePreview {
+        override val channel: Channel? get() = null
+    }
 }
 
 /**
  * The live channel each Profile last settled on, on this device, and the Live Preview it makes. Part
  * of ViewerLibrary, which owns it; not synced, since a channel following the viewer to another box
- * is more surprising than useful and live TV is never resumed.
+ * is more surprising than useful and live TV is never resumed (ADR 0003).
  */
 class LiveWatching internal constructor(
     private val live: LivePlaybackDao,

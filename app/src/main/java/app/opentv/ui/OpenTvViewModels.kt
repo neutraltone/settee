@@ -1270,14 +1270,14 @@ class HomeViewModel(app: Application) : AndroidViewModel(app) {
         settings.liveEnabled,
         lockedCategoryIds,
     ) { preview, onHome, liveOn, locked ->
-        val categoryId = (preview as? LivePreview.Playable)?.channel?.categoryId
+        val categoryId = preview?.channel?.categoryId
         preview?.takeIf { onHome && liveOn && categoryId !in locked }
     }.distinctUntilChanged().flatMapLatest { preview ->
         if (preview == null) flowOf(null) else minute.map { now -> liveNow(preview, now) }.distinctUntilChanged()
     }
 
     private suspend fun liveNow(preview: LivePreview, now: Long): LiveNow {
-        val channel = (preview as? LivePreview.Playable)?.channel ?: return LiveNow(preview, null, null)
+        val channel = preview.channel ?: return LiveNow(preview, null, null)
         // The first guide id with programmes wins, as in the guide: a provider's id can point at a
         // guide it never ships.
         val shows = channel.epgCandidates.firstNotNullOfOrNull { id ->

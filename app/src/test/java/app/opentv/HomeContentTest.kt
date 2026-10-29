@@ -28,6 +28,7 @@ import app.opentv.data.model.Movie
 import app.opentv.data.model.Series
 import app.opentv.data.repo.LivePreview
 import app.opentv.ui.HomeContent
+import app.opentv.ui.LiveNow
 import app.opentv.ui.LiveTile
 import app.opentv.ui.RecentRows
 import app.opentv.ui.VodViewModel
@@ -103,7 +104,7 @@ class HomeContentTest {
     )
 
     /** The Live Preview a test's Home leads with, if any. */
-    private var live: LiveTile? = null
+    private var live by mutableStateOf<LiveTile?>(null)
 
     /** The channel a test's Live Preview last opened full screen. */
     private var watched: Channel? = null
@@ -114,9 +115,7 @@ class HomeContentTest {
     private val channel4 = channel(40, "Channel 4")
 
     private fun playable(error: String? = null) = LiveTile(
-        LivePreview.Playable(channel4),
-        nowTitle = "Countdown",
-        nextTitle = "A Place in the Sun",
+        LiveNow(LivePreview.Playable(channel4), nowTitle = "Countdown", nextTitle = "A Place in the Sun"),
         player = null,
         error = error,
     )
@@ -353,7 +352,7 @@ class HomeContentTest {
 
     @Test
     fun `a Live Preview of a channel gone from the list says so, and opens the Live tab`() {
-        live = LiveTile(LivePreview.Gone("Channel 4", null), null, null, player = null, error = null)
+        live = LiveTile(LiveNow(LivePreview.Gone("Channel 4", null), null, null), player = null, error = null)
         setHome()
 
         compose.onNodeWithText("No longer in your channel list").assertExists()
@@ -361,7 +360,7 @@ class HomeContentTest {
 
         assertThat(openedLive).isTrue()
         assertThat(watched).isNull()
-        captureScreen("home_live_preview_gone")
+        captureScreen("home_live_preview_placeholder")
     }
 
     @Test
@@ -424,6 +423,19 @@ class HomeContentTest {
         pickAndComeBack("Ronin")
 
         compose.onNodeWithText("Ronin").assertIsFocused()
+    }
+
+    @Test
+    fun `back from switching to a Profile that was watching live, Home highlights its Live Preview`() {
+        setHomeToLeave()
+
+        home = false
+        compose.waitForIdle()
+        live = playable()
+        home = true
+        compose.waitForIdle()
+
+        compose.onNodeWithText("Channel 4").assertIsFocused()
     }
 
     @Test

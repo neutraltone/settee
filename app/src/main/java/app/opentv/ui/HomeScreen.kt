@@ -56,7 +56,6 @@ import app.opentv.data.model.Channel
 import app.opentv.data.model.Movie
 import app.opentv.data.model.Series
 import app.opentv.data.model.shownName
-import app.opentv.data.repo.LivePreview
 import app.opentv.ui.vod.CardFocus
 import app.opentv.ui.vod.ContinueWatchingRow
 import app.opentv.ui.vod.MoviePosterRow
@@ -84,7 +83,7 @@ internal fun HomeScreen(
 ) {
     val state = viewModel.state.collectAsState().value ?: return
     val live = state.live
-    val preview = rememberLivePreviewPlayer((live?.preview as? LivePreview.Playable)?.channel)
+    val preview = rememberLivePreviewPlayer(live?.preview?.channel)
     HomeContent(
         state.continueWatching,
         state.favouriteShows,
@@ -97,9 +96,7 @@ internal fun HomeScreen(
         takeFocus,
         state.recent,
         onNothingToShow,
-        live = live?.let {
-            LiveTile(it.preview, it.nowTitle, it.nextTitle, preview.player, preview.error)
-        },
+        live = live?.let { LiveTile(it, preview.player, preview.error) },
         onWatchLive = { channel ->
             // Stopped before the full-screen player starts, so the box never decodes two at once.
             preview.stop()

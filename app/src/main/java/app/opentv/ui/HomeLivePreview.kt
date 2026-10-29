@@ -49,7 +49,6 @@ import app.opentv.R
 import app.opentv.core.ServiceLocator
 import app.opentv.data.model.Channel
 import app.opentv.data.model.shownName
-import app.opentv.data.repo.LivePreview
 import app.opentv.player.PlayerController
 import app.opentv.ui.channels.PreviewVideo
 import app.opentv.ui.vod.CardFocus
@@ -118,37 +117,27 @@ internal fun rememberLivePreviewPlayer(channel: Channel?): LivePreviewPlayer {
 }
 
 /**
- * What Home's Live Preview tile shows: [preview] with the titles on now and next, its picture from
- * [player] when one is playing it (none when preview video is off or the channel has gone), or
- * [error], the sentence saying why it can't play.
+ * What Home's Live Preview tile shows: [live], its picture from [player] when one is playing it (none
+ * when preview video is off or the channel has gone), or [error], the sentence saying why it can't
+ * play.
  */
-internal data class LiveTile(
-    val preview: LivePreview,
-    val nowTitle: String?,
-    val nextTitle: String?,
-    val player: ExoPlayer?,
-    val error: String?,
-)
+internal data class LiveTile(val live: LiveNow, val player: ExoPlayer?, val error: String?)
 
 /** Select on the tile: its channel full screen, or the Live tab when the channel has gone. */
-internal fun LiveTile.open(onWatch: (Channel) -> Unit, onOpenLive: () -> Unit) = when (preview) {
-    is LivePreview.Playable -> onWatch(preview.channel)
-    is LivePreview.Gone -> onOpenLive()
+internal fun LiveTile.open(onWatch: (Channel) -> Unit, onOpenLive: () -> Unit) {
+    live.preview.channel?.let(onWatch) ?: onOpenLive()
 }
 
 /** Home's lead tile: the Live Preview's picture on the left, its channel and what's on beside it. */
 @Composable
 internal fun LivePreviewTile(tile: LiveTile, focus: CardFocus?, onClick: () -> Unit) {
+    val preview = tile.live.preview
     var focused by remember { mutableStateOf(false) }
     // A row of one, so it highlights itself on coming back rather than through a row's scroll state.
     LaunchedEffect(focus) {
         if (focus == null) return@LaunchedEffect
         withFrameNanos {}
         focus.done(runCatching { focus.requester.requestFocus() }.isSuccess)
-    }
-    val (name, logoUrl) = when (val preview = tile.preview) {
-        is LivePreview.Playable -> preview.channel.shownName to preview.channel.logoUrl
-        is LivePreview.Gone -> preview.name to preview.logoUrl
     }
     val shape = RoundedCornerShape(12.dp)
     Row(
@@ -173,7 +162,7 @@ internal fun LivePreviewTile(tile: LiveTile, focus: CardFocus?, onClick: () -> U
             contentAlignment = Alignment.Center,
         ) {
             AsyncImage(
-                model = logoUrl,
+                model = preview.logoUrl,
                 contentDescription = null,
                 contentScale = ContentScale.Fit,
                 modifier = Modifier.fillMaxSize(0.6f),
@@ -196,21 +185,21 @@ internal fun LivePreviewTile(tile: LiveTile, focus: CardFocus?, onClick: () -> U
         Spacer(Modifier.width(18.dp))
         Column(Modifier.weight(1f)) {
             Text(
-                name,
+                preview.name,
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.SemiBold,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
-            if (tile.preview is LivePreview.Gone) {
+            if (preview.channel == null) {
                 Text(
                     stringResource(R.string.home_live_gone),
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-            tile.nowTitle?.let { DetailLine(stringResource(R.string.home_live_now, it)) }
-            tile.nextTitle?.let { DetailLine(stringResource(R.string.home_live_next, it)) }
+            tile.live.nowTitle?.let { DetailLine(stringResource(R.string.home_live_now, it)) }
+            tile.live.nextTitle?.let { DetailLine(stringResource(R.string.home_live_next, it)) }
         }
     }
 }
