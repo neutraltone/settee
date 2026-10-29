@@ -786,6 +786,8 @@ class VodViewModel @JvmOverloads constructor(
         /** How far through, 0..1; null when it has never been played, so the card shows no bar. */
         val progress: Float?,
         val episode: SeasonEpisode? = null,
+        /** Whether [episode] is a New Episode, which the card says on its thumbnail. */
+        val newEpisode: Boolean = false,
         /** The Continue Watching card this was drawn from, for the options panel to act on. */
         val card: ContinueWatchingCard? = null,
     )
@@ -1170,6 +1172,7 @@ private suspend fun resumeItem(catalog: CatalogRepository, card: ContinueWatchin
                     streamUrl = ep.streamUrl,
                     progress = card.progress,
                     episode = VodViewModel.SeasonEpisode(ep.season, ep.episodeNumber),
+                    newEpisode = card.newEpisode,
                     card = card,
                 )
             }
@@ -1331,6 +1334,11 @@ class ProfilesViewModel(app: Application) : AndroidViewModel(app) {
     val profiles: StateFlow<List<Profile>> =
         graph.profiles.observeAll()
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    /** The same list, but null until it has been read once, so launch can tell "not loaded" from "none". */
+    val loadedProfiles: StateFlow<List<Profile>?> =
+        graph.profiles.observeAll()
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
     val activeProfileId: StateFlow<Long> = settings.activeProfileId
 

@@ -65,6 +65,7 @@ import app.opentv.data.model.Series
 import app.opentv.data.model.Source
 import app.opentv.data.parser.displayTitle
 import app.opentv.data.repo.GenreGroup
+import app.opentv.ui.NewEpisodeBadge
 import app.opentv.ui.VodViewModel
 import app.opentv.ui.options.LocalOpenOptions
 import app.opentv.ui.options.OptionsSubject
@@ -658,6 +659,7 @@ private fun ResumeCard(
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.fillMaxSize(),
             )
+            if (item.newEpisode) NewEpisodeBadge(Modifier.align(Alignment.TopStart).padding(6.dp))
             item.progress?.let { progress ->
                 LinearProgressIndicator(
                     progress = { progress },

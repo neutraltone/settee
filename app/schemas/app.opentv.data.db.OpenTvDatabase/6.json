@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 6,
-    "identityHash": "d3fe10d0b2a5b7528984a601df19ca84",
+    "identityHash": "f9af74ebfdddafc9a7243da569543895",
     "entities": [
       {
         "tableName": "sources",
@@ -758,7 +758,7 @@
       },
       {
         "tableName": "episodes",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `sourceId` INTEGER NOT NULL, `seriesId` TEXT NOT NULL, `episodeId` TEXT NOT NULL, `season` INTEGER NOT NULL, `episodeNumber` INTEGER NOT NULL, `title` TEXT NOT NULL, `plot` TEXT, `durationSeconds` INTEGER, `stillUrl` TEXT, `streamUrl` TEXT NOT NULL)",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `sourceId` INTEGER NOT NULL, `seriesId` TEXT NOT NULL, `episodeId` TEXT NOT NULL, `season` INTEGER NOT NULL, `episodeNumber` INTEGER NOT NULL, `title` TEXT NOT NULL, `plot` TEXT, `durationSeconds` INTEGER, `stillUrl` TEXT, `streamUrl` TEXT NOT NULL, `firstSeenMillis` INTEGER NOT NULL)",
         "fields": [
           {
             "fieldPath": "id",
@@ -821,6 +821,12 @@
             "fieldPath": "streamUrl",
             "columnName": "streamUrl",
             "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "firstSeenMillis",
+            "columnName": "firstSeenMillis",
+            "affinity": "INTEGER",
             "notNull": true
           }
         ],
@@ -987,58 +993,6 @@
             "kind",
             "source",
             "itemId"
-          ]
-        }
-      },
-      {
-        "tableName": "live_playback",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`profileId` INTEGER NOT NULL, `source` TEXT NOT NULL, `streamId` TEXT NOT NULL, `name` TEXT NOT NULL, `logoUrl` TEXT, `playedAtMillis` INTEGER NOT NULL, `otherPlayedAtMillis` INTEGER, PRIMARY KEY(`profileId`))",
-        "fields": [
-          {
-            "fieldPath": "profileId",
-            "columnName": "profileId",
-            "affinity": "INTEGER",
-            "notNull": true
-          },
-          {
-            "fieldPath": "source",
-            "columnName": "source",
-            "affinity": "TEXT",
-            "notNull": true
-          },
-          {
-            "fieldPath": "streamId",
-            "columnName": "streamId",
-            "affinity": "TEXT",
-            "notNull": true
-          },
-          {
-            "fieldPath": "name",
-            "columnName": "name",
-            "affinity": "TEXT",
-            "notNull": true
-          },
-          {
-            "fieldPath": "logoUrl",
-            "columnName": "logoUrl",
-            "affinity": "TEXT"
-          },
-          {
-            "fieldPath": "playedAtMillis",
-            "columnName": "playedAtMillis",
-            "affinity": "INTEGER",
-            "notNull": true
-          },
-          {
-            "fieldPath": "otherPlayedAtMillis",
-            "columnName": "otherPlayedAtMillis",
-            "affinity": "INTEGER"
-          }
-        ],
-        "primaryKey": {
-          "autoGenerate": false,
-          "columnNames": [
-            "profileId"
           ]
         }
       },
@@ -1409,7 +1363,7 @@
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'd3fe10d0b2a5b7528984a601df19ca84')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'f9af74ebfdddafc9a7243da569543895')"
     ]
   }
 }

@@ -14,26 +14,37 @@ import app.opentv.data.remote.XtreamApi
 import app.opentv.data.repo.CatalogRepository
 import app.opentv.data.repo.ViewerLibrary
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.runBlocking
 
-/** A [CatalogRepository] over an in-memory database, talking to a [FakePanel]. Close [db] after. */
-class TestCatalog(context: Context) {
+/**
+ * A [CatalogRepository] over an in-memory database, talking to a [FakePanel]. Close [db] after.
+ * [viewerLibrary] records progress at [clock].
+ */
+class TestCatalog(context: Context, private val clock: () -> Long = { 0L }) {
     val db: OpenTvDatabase = Room.inMemoryDatabaseBuilder(context, OpenTvDatabase::class.java)
         .allowMainThreadQueries()
         .build()
     val panel = FakePanel()
-    val catalog = CatalogRepository(
+    val viewerLibrary = ViewerLibrary(db, MutableStateFlow(1L), clock = clock)
+    val catalog: CatalogRepository = CatalogRepository(
         sourceDao = db.sources(),
         channelDao = db.channels(),
         categoryDao = db.categories(),
         movieDao = db.movies(),
         seriesDao = db.series(),
         episodeDao = db.episodes(),
-        viewerLibrary = ViewerLibrary(db, MutableStateFlow(1L)),
+        viewerLibrary = viewerLibrary,
         api = XtreamApi(panel.http),
         stalkerApi = StalkerApi(panel.http),
         http = panel.http,
         settings = AppSettings.get(context),
     )
+
+    /** Closes the database once the catalogue's background work is done with it. */
+    fun close() = runBlocking {
+        catalog.awaitBackground()
+        db.close()
+    }
 
     /** Saves [PANEL_SOURCE] and syncs its movies and shows from the panel's current replies. */
     suspend fun syncVod() {

@@ -79,7 +79,7 @@ class Converters {
         SeriesRule::class,
         Reminder::class,
     ],
-    version = 6,
+    version = 7,
     exportSchema = true,
 )
 @TypeConverters(Converters::class)
@@ -112,7 +112,7 @@ abstract class OpenTvDatabase : RoomDatabase() {
          * table costs one CREATE TABLE, so it keeps everyone's Favourites rather than wiping them.
          */
         internal val MIGRATIONS: Array<Migration> = arrayOf(
-            object : Migration(5, 6) {
+            object : Migration(6, 7) {
                 override fun migrate(db: SupportSQLiteDatabase) {
                     db.execSQL(
                         "CREATE TABLE IF NOT EXISTS `live_playback` (`profileId` INTEGER NOT NULL, " +
