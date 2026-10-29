@@ -42,9 +42,12 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -106,6 +109,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         handlePlayIntent(intent)
         val isTelevision = isRunningOnTelevision(this)
+        val toPlay = launchedToPlay(intent, restored = savedInstanceState != null)
 
         setContent {
             val settings = remember { ServiceLocator.get(this).settings }
@@ -121,7 +125,7 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background,
                 ) {
-                    OpenTvApp(isTelevision = isTelevision)
+                    OpenTvApp(isTelevision = isTelevision, launchedToPlay = toPlay)
                 }
             }
         }
@@ -229,9 +233,26 @@ object Routes {
     }
 }
 
+/**
+ * Whether this launch asks to play something: a tapped reminder, or a recording switching the
+ * screen to itself. Read from the intent that created the activity, not from [app.opentv.core.PlayRequests] or
+ * [app.opentv.core.RecordingSignals]: a recording alarm sets those with no launch at all, sometimes long before the
+ * viewer next opens the app, and that mustn't stop them being asked who's watching. A restore
+ * redelivers the old intent, so it never counts.
+ */
+internal fun launchedToPlay(intent: Intent?, restored: Boolean): Boolean {
+    if (restored || intent == null) return false
+    return intent.getLongExtra(MainActivity.EXTRA_PLAY_CHANNEL, 0L) != 0L ||
+        intent.getLongExtra(MainActivity.EXTRA_WATCH_RECORDING, 0L) != 0L
+}
+
 @Composable
-private fun OpenTvApp(isTelevision: Boolean) {
-    val navController = rememberNavController()
+private fun OpenTvApp(isTelevision: Boolean, launchedToPlay: Boolean) {
+    // Answering Who's watching? starts a new navigation state rather than the one Android restored
+    // after killing the process, so choosing opens Home, not whatever screen was open before. A
+    // rotation keeps the same count, and with it the back stack.
+    var navGeneration by rememberSaveable { mutableIntStateOf(0) }
+    val navController = key(navGeneration) { rememberNavController() }
     val sourcesViewModel: SourcesViewModel = viewModel()
     val vodViewModel: VodViewModel = viewModel()
     val profilesViewModel: ProfilesViewModel = viewModel()
@@ -240,8 +261,6 @@ private fun OpenTvApp(isTelevision: Boolean) {
     val activeProfileId by profilesViewModel.activeProfileId.collectAsState()
     val activeProfileName = profiles.firstOrNull { it.id == activeProfileId }?.name ?: "Me"
     val loadedProfiles by profilesViewModel.loadedProfiles.collectAsState()
-    val playRequest by app.opentv.core.PlayRequests.channelId.collectAsState()
-    val watchRequest by app.opentv.core.RecordingSignals.watch.collectAsState()
 
     // Until the saved sources have loaded from the database, we cannot tell a first run from a
     // returning user — and guessing "first run" drops a returning user on the setup screen and
@@ -260,13 +279,14 @@ private fun OpenTvApp(isTelevision: Boolean) {
         hasProvider = sourcesUi.sources.isNotEmpty(),
         profileCount = knownProfiles.size,
         askedThisProcess = WhosWatchingAsked.settled,
-        launchedToPlay = playRequest != null || watchRequest != null,
+        launchedToPlay = launchedToPlay,
     )
-    // Nothing is built behind Who's watching? — not the boot-to-last-channel jump, not a player
-    // restored after the process was killed — so whatever runs next runs as the chosen Profile.
+    // Nothing is built behind Who's watching?, so the boot-to-last-channel jump and any reminder or
+    // recording that arrives meanwhile wait, and then run as the chosen Profile.
     if (first == FirstScreen.WHOS_WATCHING) {
         WhosWatchingScreen(profiles = knownProfiles, lastActiveId = activeProfileId) { id ->
             profilesViewModel.select(id)
+            navGeneration++
             WhosWatchingAsked.settled = true
         }
         return
@@ -291,6 +311,7 @@ private fun OpenTvApp(isTelevision: Boolean) {
 
     // A tapped reminder notification asks for a specific channel. Consume it so it fires once and
     // never re-triggers on a later launch.
+    val playRequest by app.opentv.core.PlayRequests.channelId.collectAsState()
     LaunchedEffect(playRequest) {
         val id = playRequest
         if (id != null && id != 0L) {
@@ -301,6 +322,7 @@ private fun OpenTvApp(isTelevision: Boolean) {
 
     // Auto-switch: a scheduled recording started, so move the live view onto the recording file
     // (single-connection safe). Ignore a stale request a long-backgrounded app only now sees.
+    val watchRequest by app.opentv.core.RecordingSignals.watch.collectAsState()
     LaunchedEffect(watchRequest) {
         val req = watchRequest ?: return@LaunchedEffect
         app.opentv.core.RecordingSignals.consumeWatch()
