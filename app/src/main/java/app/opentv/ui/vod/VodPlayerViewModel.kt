@@ -135,23 +135,22 @@ class VodPlayerViewModel @JvmOverloads constructor(
     private suspend fun act(decision: Decision?) {
         _overlay.value = countdown.overlay
         when (decision) {
-            Decision.PlayNext -> moveOn()
+            Decision.PlayNext -> next?.let { next ->
+                val finishing = _current.value
+                val duration = lastSeen?.durationMillis ?: 0
+                // Moving on from the card counts as finishing: on a short episode the last 15
+                // seconds can fall short of 93% through, so it is recorded at its whole length.
+                if (finishing != null && duration > 0) {
+                    graph.viewerLibrary.recordProgress(finishing.mediaKey, duration, durationMillis = duration)
+                }
+                start(
+                    Item("$EPISODE_PREFIX${next.id}", next.streamUrl, next.playerTitle, finishing?.userAgent.orEmpty()),
+                )
+            }
             Decision.Pause -> playback?.pause()
             Decision.StopStream -> playback?.stop()
             null -> Unit
         }
-    }
-
-    private suspend fun moveOn() {
-        val next = next ?: return
-        val finishing = _current.value
-        val duration = lastSeen?.durationMillis ?: 0
-        // Moving on from the card counts as finishing: on a short episode the last 15 seconds can
-        // fall short of 93% through, so the episode is recorded at its whole length.
-        if (finishing != null && duration > 0) {
-            graph.viewerLibrary.recordProgress(finishing.mediaKey, positionMillis = duration, durationMillis = duration)
-        }
-        start(Item("$EPISODE_PREFIX${next.id}", next.streamUrl, next.playerTitle, finishing?.userAgent.orEmpty()))
     }
 
     /** Plays [item] from [fromMillis], or from its resume point, and works out its Next Episode. */
@@ -163,7 +162,7 @@ class VodPlayerViewModel @JvmOverloads constructor(
         val episode = item.mediaKey.takeIf { it.startsWith(EPISODE_PREFIX) }
             ?.removePrefix(EPISODE_PREFIX)?.toLongOrNull()
             ?.let { graph.catalogRepository.episode(it) }
-        offer(episode?.let { graph.viewerLibrary.nextEpisode(it) })
+        offer(episode?.let { graph.viewerLibrary.nextEpisodes.after(it) })
         if (episode != null && next == null) {
             fetchingNext = viewModelScope.launch {
                 lookup.fetchNext(episode)?.let { found -> if (_current.value == item) offer(found) }
@@ -192,7 +191,7 @@ private class NextEpisodeLookup(private val graph: ServiceLocator.Graph) {
     suspend fun fetchNext(episode: Episode): Episode? {
         val source = graph.sourceRepository.byId(episode.sourceId) ?: return null
         graph.catalogRepository.ensureEpisodes(source, episode.seriesId)
-        return graph.viewerLibrary.nextEpisode(episode)
+        return graph.viewerLibrary.nextEpisodes.after(episode)
     }
 
     suspend fun card(episode: Episode): VodPlayerViewModel.NextEpisodeCard {

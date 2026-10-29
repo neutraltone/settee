@@ -49,20 +49,20 @@ class NextEpisodeTest {
         storeSeries()
         watch(testEpisode(1, 5))
 
-        assertThat(library.nextEpisode(testEpisode(1, 2))).isEqualTo(testEpisode(1, 3))
+        assertThat(library.nextEpisodes.after(testEpisode(1, 2))).isEqualTo(testEpisode(1, 3))
     }
 
     @Test
     fun `after a season finale the Next Episode opens the next season`() = runTest {
         storeSeries()
 
-        assertThat(library.nextEpisode(testEpisode(1, 5))).isEqualTo(testEpisode(2, 1))
+        assertThat(library.nextEpisodes.after(testEpisode(1, 5))).isEqualTo(testEpisode(2, 1))
     }
 
     @Test
     fun `a series' last episode has no Next Episode`() = runTest {
         storeSeries()
 
-        assertThat(library.nextEpisode(testEpisode(2, 5))).isNull()
+        assertThat(library.nextEpisodes.after(testEpisode(2, 5))).isNull()
     }
 }

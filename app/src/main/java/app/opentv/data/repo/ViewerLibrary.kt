@@ -77,6 +77,9 @@ class ViewerLibrary(
 
     private val cards = ContinueWatchingCards(positions, episodes)
 
+    /** Each episode's Next Episode, in the same episode order as Up Next. */
+    val nextEpisodes = NextEpisodes(episodes)
+
     suspend fun recordProgress(mediaKey: String, positionMillis: Long, durationMillis: Long) {
         positions.upsert(
             PlaybackPosition(
@@ -144,17 +147,6 @@ class ViewerLibrary(
             }
         }
 
-    /**
-     * The Next Episode after [episode]: the one that follows it in season then episode order,
-     * whatever the Profile last Watched (unlike Up Next). Null after a series' last episode, or
-     * when the series' episodes aren't loaded.
-     */
-    suspend fun nextEpisode(episode: Episode): Episode? {
-        val ordered = episodes.forSeries(episode.sourceId, episode.seriesId).sortedWith(EPISODE_ORDER)
-        val at = ordered.indexOfFirst { it.id == episode.id }
-        return if (at < 0) null else ordered.getOrNull(at + 1)
-    }
-
     /** Every episode's status for the active Profile; re-emits only when a status actually changes. */
     @OptIn(ExperimentalCoroutinesApi::class)
     fun episodeStatuses(): Flow<EpisodeStatuses> = activeProfileId
@@ -189,6 +181,20 @@ class ViewerLibrary(
                 }
             }
             .distinctUntilChanged()
+    }
+}
+
+/** Answers the Next Episode, kept beside Up Next so the two can't drift apart in how they order episodes. */
+class NextEpisodes internal constructor(private val episodes: EpisodeDao) {
+    /**
+     * The Next Episode after [episode]: the one that follows it in season then episode order,
+     * whatever the Profile last Watched (unlike Up Next). Null after a series' last episode, or
+     * when the series' episodes aren't loaded.
+     */
+    suspend fun after(episode: Episode): Episode? {
+        val ordered = episodes.forSeries(episode.sourceId, episode.seriesId).sortedWith(EPISODE_ORDER)
+        val at = ordered.indexOfFirst { it.id == episode.id }
+        return if (at < 0) null else ordered.getOrNull(at + 1)
     }
 }
 
