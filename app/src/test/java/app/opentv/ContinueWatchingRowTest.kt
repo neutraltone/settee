@@ -5,14 +5,19 @@
  */
 package app.opentv
 
+import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.semantics.ProgressBarRangeInfo
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasProgressBarRangeInfo
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.longClick
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performKeyInput
+import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.test.requestFocus
 import app.opentv.ui.VodViewModel.ResumeItem
 import app.opentv.ui.VodViewModel.SeasonEpisode
@@ -48,9 +53,18 @@ class ContinueWatchingRowTest {
     )
 
     private var played: Triple<String, String, String>? = null
+    private var optionsAskedFor: ResumeItem? = null
+    private var optionsAsked = 0
 
     private fun show(vararg items: ResumeItem) = compose.setTvContent {
-        ContinueWatchingRow(items.toList()) { key, url, title -> played = Triple(key, url, title) }
+        ContinueWatchingRow(
+            items.toList(),
+            onResume = { key, url, title -> played = Triple(key, url, title) },
+            onOptions = {
+                optionsAskedFor = it
+                optionsAsked++
+            },
+        )
     }
 
     @Test
@@ -83,5 +97,56 @@ class ContinueWatchingRowTest {
         compose.onNode(hasClickAction()).performClick()
 
         assertThat(played).isEqualTo(Triple("ep:24", "https://example.com/2-4.mkv", "S2E4 · The one with the card"))
+    }
+
+    @Test
+    fun `Menu on a card asks for its options without playing it`() {
+        show(inProgress)
+
+        val card = compose.onNode(hasClickAction())
+        card.requestFocus()
+        card.performKeyInput { pressKey(Key.Menu) }
+
+        assertThat(optionsAskedFor).isEqualTo(inProgress)
+        assertThat(played).isNull()
+    }
+
+    @Test
+    fun `holding Select on a card asks for its options without playing it`() {
+        show(inProgress)
+
+        val card = compose.onNode(hasClickAction())
+        card.requestFocus()
+        card.performKeyInput {
+            keyDown(Key.DirectionCenter)
+            advanceEventTime(1_000)
+            keyUp(Key.DirectionCenter)
+        }
+
+        assertThat(optionsAskedFor).isEqualTo(inProgress)
+        assertThat(optionsAsked).isEqualTo(1)
+        assertThat(played).isNull()
+    }
+
+    @Test
+    fun `a quick press of Select still plays the card`() {
+        show(inProgress)
+
+        val card = compose.onNode(hasClickAction())
+        card.requestFocus()
+        card.performKeyInput { pressKey(Key.DirectionCenter) }
+
+        assertThat(played).isNotNull()
+        assertThat(optionsAskedFor).isNull()
+    }
+
+    @Test
+    fun `a long press on a card by touch asks for its options`() {
+        show(inProgress)
+
+        compose.onNode(hasClickAction()).performTouchInput { longClick() }
+
+        assertThat(optionsAskedFor).isEqualTo(inProgress)
+        assertThat(played).isNull()
     }
 }

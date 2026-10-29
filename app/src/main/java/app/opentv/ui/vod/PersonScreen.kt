@@ -37,6 +37,8 @@ import app.opentv.data.model.Series
 import app.opentv.data.parser.displayTitle
 import app.opentv.data.repo.PersonTitle
 import app.opentv.ui.VodViewModel
+import app.opentv.ui.options.OptionsSubject
+import app.opentv.ui.options.openOptionsOn
 
 /**
  * Everything in the library featuring one person — the Plex-style payoff of tapping a cast member or
@@ -97,6 +99,7 @@ fun PersonScreen(
                                     subtitle = item.movie.year?.toString(),
                                     rating = item.movie.rating,
                                     onClick = { onOpenMovie(item.movie) },
+                                    onOptions = openOptionsOn(OptionsSubject.OfMovie(item.movie)),
                                 )
                                 is PersonTitle.SeriesItem -> PosterCard(
                                     title = item.series.displayTitle,
@@ -104,6 +107,7 @@ fun PersonScreen(
                                     subtitle = item.series.year?.toString(),
                                     rating = item.series.rating,
                                     onClick = { onOpenSeries(item.series) },
+                                    onOptions = openOptionsOn(OptionsSubject.OfSeries(item.series)),
                                 )
                             }
                         }

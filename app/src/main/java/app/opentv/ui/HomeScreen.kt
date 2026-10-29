@@ -8,7 +8,6 @@ package app.opentv.ui
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -53,6 +52,9 @@ import app.opentv.data.model.Channel
 import app.opentv.data.model.Movie
 import app.opentv.data.model.Series
 import app.opentv.data.model.shownName
+import app.opentv.ui.options.OptionsSubject
+import app.opentv.ui.options.openOptionsOn
+import app.opentv.ui.options.optionsClickable
 import app.opentv.ui.vod.ContinueWatchingRow
 import app.opentv.ui.vod.MoviePosterRow
 import app.opentv.ui.vod.SectionHeader
@@ -188,7 +190,7 @@ private fun ChannelCard(channel: Channel, onClick: () -> Unit) {
             }
             .onFocusChanged { focused = it.isFocused }
             .clip(RoundedCornerShape(10.dp))
-            .clickable(onClick = onClick)
+            .optionsClickable(onClick, openOptionsOn(OptionsSubject.OfChannel(channel)))
             .padding(4.dp),
     ) {
         Box(

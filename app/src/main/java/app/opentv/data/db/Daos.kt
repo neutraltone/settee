@@ -27,6 +27,7 @@ import app.opentv.data.model.Recording
 import app.opentv.data.model.RecordingStatus
 import app.opentv.data.model.Reminder
 import app.opentv.data.model.Series
+import app.opentv.data.model.SeriesDismissal
 import app.opentv.data.model.SeriesRule
 import app.opentv.data.model.Source
 import app.opentv.data.model.StreamKind
@@ -647,6 +648,26 @@ interface PlaybackPositionDao {
 
     @Query("DELETE FROM playback_positions WHERE profileId = :profileId AND mediaKey = :key")
     suspend fun delete(profileId: Long, key: String)
+}
+
+@Dao
+interface SeriesDismissalDao {
+    @Query("SELECT * FROM series_dismissals WHERE profileId = :profileId")
+    fun observe(profileId: Long): Flow<List<SeriesDismissal>>
+
+    @Query(
+        """
+        SELECT * FROM series_dismissals
+        WHERE profileId = :profileId AND sourceId = :sourceId AND seriesId = :seriesId
+        """,
+    )
+    suspend fun get(profileId: Long, sourceId: Long, seriesId: String): SeriesDismissal?
+
+    @Query("SELECT * FROM series_dismissals")
+    suspend fun all(): List<SeriesDismissal>
+
+    @Upsert
+    suspend fun upsert(dismissal: SeriesDismissal)
 }
 
 @Dao

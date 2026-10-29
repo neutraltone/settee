@@ -29,6 +29,7 @@ import app.opentv.data.model.Recording
 import app.opentv.data.model.RecordingStatus
 import app.opentv.data.model.Reminder
 import app.opentv.data.model.Series
+import app.opentv.data.model.SeriesDismissal
 import app.opentv.data.model.SeriesRule
 import app.opentv.data.model.Source
 import app.opentv.data.model.SourceKind
@@ -68,6 +69,7 @@ class Converters {
         Series::class,
         Episode::class,
         PlaybackPosition::class,
+        SeriesDismissal::class,
         Favourite::class,
         Profile::class,
         ProfileSetting::class,
@@ -75,7 +77,7 @@ class Converters {
         SeriesRule::class,
         Reminder::class,
     ],
-    version = 4,
+    version = 5,
     exportSchema = true,
 )
 @TypeConverters(Converters::class)
@@ -90,6 +92,7 @@ abstract class OpenTvDatabase : RoomDatabase() {
     abstract fun series(): SeriesDao
     abstract fun episodes(): EpisodeDao
     abstract fun positions(): PlaybackPositionDao
+    abstract fun seriesDismissals(): SeriesDismissalDao
     abstract fun favourites(): FavouriteDao
     abstract fun profiles(): ProfileDao
     abstract fun profileSettings(): ProfileSettingDao

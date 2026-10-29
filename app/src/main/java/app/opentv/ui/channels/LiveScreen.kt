@@ -85,6 +85,9 @@ import app.opentv.reminders.ReminderScheduler
 import app.opentv.ui.ChannelsViewModel
 import app.opentv.ui.RecordingBackgroundDialog
 import app.opentv.ui.RecordingBackgroundPrompt
+import app.opentv.ui.options.OptionsSubject
+import app.opentv.ui.options.openOptionsOn
+import app.opentv.ui.options.optionsClickable
 import coil.compose.AsyncImage
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -1014,7 +1017,7 @@ private fun ChannelRow(
             .fillMaxWidth()
             .clip(RoundedCornerShape(10.dp))
             .background(background)
-            .clickable(onClick = onClick)
+            .optionsClickable(onClick, openOptionsOn(OptionsSubject.OfChannel(row.primary)))
             .padding(12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
