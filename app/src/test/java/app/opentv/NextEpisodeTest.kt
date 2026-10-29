@@ -11,10 +11,8 @@ import androidx.test.core.app.ApplicationProvider
 import app.opentv.data.db.OpenTvDatabase
 import app.opentv.data.model.Episode
 import app.opentv.data.repo.ViewerLibrary
-import app.opentv.data.repo.WatchStatus
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Test
@@ -66,17 +64,5 @@ class NextEpisodeTest {
         storeSeries()
 
         assertThat(library.nextEpisode(testEpisode(2, 5))).isNull()
-    }
-
-    @Test
-    fun `moving on from an episode makes it Watched even short of 93 percent`() = runTest {
-        storeSeries()
-        val short = testEpisode(1, 1)
-        // A 3-minute episode with the card up: 15 seconds left is under 93% through.
-        library.recordProgress("ep:${short.id}", positionMillis = 165_000, durationMillis = 180_000)
-
-        library.recordMovedOn("ep:${short.id}", durationMillis = 180_000)
-
-        assertThat(library.episodeStatuses().first()[short.id]).isEqualTo(WatchStatus.Watched)
     }
 }

@@ -69,11 +69,7 @@ class NextEpisodeCountdown(
 
     /** Takes where playback is now, polled while the episode plays; returns what to do, if anything. */
     fun update(playback: Playback): Decision? {
-        (overlay as? Overlay.StillWatching)?.let { asked ->
-            if (asked.streamStopped || clock() - askedAtMillis < STOP_STREAM_AFTER_MILLIS) return null
-            overlay = Overlay.StillWatching(streamStopped = true)
-            return Decision.StopStream
-        }
+        (overlay as? Overlay.StillWatching)?.let { return whileAsking(it) }
         val leftMillis = playback.durationMillis - playback.positionMillis
         // Without a known length there is no "15 seconds before the end"; and a card that comes
         // up almost as soon as a short clip starts would be in the way rather than helpful.
@@ -98,6 +94,13 @@ class NextEpisodeCountdown(
                 moveOn()
             }
         }
+    }
+
+    /** While "Are you still watching?" waits: nothing plays, and after a while the stream goes. */
+    private fun whileAsking(asked: Overlay.StillWatching): Decision? {
+        if (asked.streamStopped || clock() - askedAtMillis < STOP_STREAM_AFTER_MILLIS) return null
+        overlay = Overlay.StillWatching(streamStopped = true)
+        return Decision.StopStream
     }
 
     /** OK on the card: skip the credits. Someone is plainly watching, so the run starts again. */

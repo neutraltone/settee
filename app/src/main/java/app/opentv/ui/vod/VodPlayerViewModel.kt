@@ -73,6 +73,7 @@ class VodPlayerViewModel @JvmOverloads constructor(
     private var route: Item? = null
     private var next: Episode? = null
     private var fetchingNext: Job? = null
+    private val lookup = NextEpisodeLookup(graph)
 
     /**
      * Where what's playing last was, while its length was known. Kept here because a stopped
@@ -101,7 +102,7 @@ class VodPlayerViewModel @JvmOverloads constructor(
     /** Polled while the screen shows: moves on when the countdown says so. */
     suspend fun poll() {
         val progress = playback?.progress() ?: return
-        remember(progress)
+        if (progress.durationMillis > 0) lastSeen = progress
         act(countdown.update(progress))
     }
 
@@ -109,7 +110,7 @@ class VodPlayerViewModel @JvmOverloads constructor(
     suspend fun saveProgress() {
         val item = _current.value ?: return
         val progress = playback?.progress() ?: return
-        remember(progress)
+        if (progress.durationMillis > 0) lastSeen = progress
         // The first seconds say nothing about wanting to come back to it.
         if (progress.durationMillis > 0 && progress.positionMillis > MIN_SAVED_MILLIS) {
             graph.viewerLibrary.recordProgress(item.mediaKey, progress.positionMillis, progress.durationMillis)
@@ -131,10 +132,6 @@ class VodPlayerViewModel @JvmOverloads constructor(
     /** A key press or touch while the player shows. */
     fun input() = countdown.input()
 
-    private fun remember(progress: NextEpisodeCountdown.Playback) {
-        if (progress.durationMillis > 0) lastSeen = progress
-    }
-
     private suspend fun act(decision: Decision?) {
         _overlay.value = countdown.overlay
         when (decision) {
@@ -149,7 +146,11 @@ class VodPlayerViewModel @JvmOverloads constructor(
         val next = next ?: return
         val finishing = _current.value
         val duration = lastSeen?.durationMillis ?: 0
-        if (finishing != null && duration > 0) graph.viewerLibrary.recordMovedOn(finishing.mediaKey, duration)
+        // Moving on from the card counts as finishing: on a short episode the last 15 seconds can
+        // fall short of 93% through, so the episode is recorded at its whole length.
+        if (finishing != null && duration > 0) {
+            graph.viewerLibrary.recordProgress(finishing.mediaKey, positionMillis = duration, durationMillis = duration)
+        }
         start(Item("$EPISODE_PREFIX${next.id}", next.streamUrl, next.playerTitle, finishing?.userAgent.orEmpty()))
     }
 
@@ -163,33 +164,41 @@ class VodPlayerViewModel @JvmOverloads constructor(
             ?.removePrefix(EPISODE_PREFIX)?.toLongOrNull()
             ?.let { graph.catalogRepository.episode(it) }
         offer(episode?.let { graph.viewerLibrary.nextEpisode(it) })
-        if (episode != null && next == null) fetchingNext = viewModelScope.launch { fetchNext(item, episode) }
+        if (episode != null && next == null) {
+            fetchingNext = viewModelScope.launch {
+                lookup.fetchNext(episode)?.let { found -> if (_current.value == item) offer(found) }
+            }
+        }
     }
 
     private suspend fun offer(episode: Episode?) {
         next = episode
-        _nextEpisode.value = episode?.let { ep ->
-            val series = graph.catalogRepository.seriesOf(ep)
-            // The card is landscape, like an episode still: the wide backdrop fits it best.
-            val image = ep.stillUrl ?: series?.backdropUrl ?: series?.posterUrl
-            NextEpisodeCard(ep.season, ep.episodeNumber, ep.title, image)
-        }
+        _nextEpisode.value = episode?.let { lookup.card(it) }
         countdown.newEpisode(hasNext = episode != null)
         _overlay.value = countdown.overlay
-    }
-
-    // A series' episodes are fetched only when its page is opened, and Continue Watching can start
-    // one without that, or the provider may have added one since. The fetch runs beside playback,
-    // not before polling, so a slow provider can't hold up the card's countdown or saving progress.
-    private suspend fun fetchNext(playing: Item, episode: Episode) {
-        val source = graph.sourceRepository.byId(episode.sourceId) ?: return
-        graph.catalogRepository.ensureEpisodes(source, episode.seriesId)
-        val found = graph.viewerLibrary.nextEpisode(episode) ?: return
-        if (_current.value == playing) offer(found)
     }
 
     private companion object {
         const val EPISODE_PREFIX = "ep:"
         const val MIN_SAVED_MILLIS = 5_000L
+    }
+}
+
+/** Finds a Next Episode the catalogue doesn't hold yet, and what its card shows. */
+private class NextEpisodeLookup(private val graph: ServiceLocator.Graph) {
+    // A series' episodes are fetched only when its page is opened, and Continue Watching can start
+    // one without that, or the provider may have added one since. The fetch runs beside playback,
+    // not before polling, so a slow provider can't hold up the card's countdown or saving progress.
+    suspend fun fetchNext(episode: Episode): Episode? {
+        val source = graph.sourceRepository.byId(episode.sourceId) ?: return null
+        graph.catalogRepository.ensureEpisodes(source, episode.seriesId)
+        return graph.viewerLibrary.nextEpisode(episode)
+    }
+
+    suspend fun card(episode: Episode): VodPlayerViewModel.NextEpisodeCard {
+        val series = graph.catalogRepository.seriesOf(episode)
+        // The card is landscape, like an episode still: the wide backdrop fits it best.
+        val image = episode.stillUrl ?: series?.backdropUrl ?: series?.posterUrl
+        return VodPlayerViewModel.NextEpisodeCard(episode.season, episode.episodeNumber, episode.title, image)
     }
 }

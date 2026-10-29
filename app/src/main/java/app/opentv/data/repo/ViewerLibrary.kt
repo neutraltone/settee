@@ -90,14 +90,6 @@ class ViewerLibrary(
     }
 
     /**
-     * Records [mediaKey] as Watched because the player moved on to the Next Episode with the credits
-     * still rolling. On a short episode the last 15 seconds can fall short of 93% through, and
-     * the viewer chose to leave it, so its progress is recorded as the whole length.
-     */
-    suspend fun recordMovedOn(mediaKey: String, durationMillis: Long) =
-        recordProgress(mediaKey, positionMillis = durationMillis, durationMillis = durationMillis)
-
-    /**
      * Takes progress synced from another device if it is newer than this device's for the same
      * Profile and title (newest wins, so watching on either device resumes on the other).
      * Returns whether it was taken.

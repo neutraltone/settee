@@ -26,7 +26,7 @@
     <ID>CyclomaticComplexMethod:RecordingService.kt$RecordingService$private suspend fun runCapture(id: Long)</ID>
     <ID>CyclomaticComplexMethod:RecordingSettingsScreen.kt$@Composable fun RecordingSettingsScreen(onBack: () -&gt; Unit)</ID>
     <ID>CyclomaticComplexMethod:SyncEngine.kt$SyncEngine$suspend fun apply(bundle: SyncBundle): MergeResult</ID>
-    <ID>CyclomaticComplexMethod:VodPlayerScreen.kt$@OptIn(UnstableApi::class) @Composable fun VodPlayerScreen(mediaKey: String, streamUrl: String, title: String, userAgent: String, onBack: () -&gt; Unit)</ID>
+    <ID>CyclomaticComplexMethod:VodPlayerScreen.kt$@OptIn(UnstableApi::class) @Composable fun VodPlayerScreen( mediaKey: String, streamUrl: String, title: String, userAgent: String, onBack: () -&gt; Unit, viewModel: VodPlayerViewModel = viewModel(), )</ID>
     <ID>CyclomaticComplexMethod:VodScreens.kt$@Composable fun MoviesScreen( onOpenMovie: (Movie) -&gt; Unit, onResume: (mediaKey: String, url: String, title: String) -&gt; Unit, onOpenSearch: () -&gt; Unit, hasSources: Boolean, isSyncing: Boolean, viewModel: VodViewModel = viewModel(), )</ID>
     <ID>CyclomaticComplexMethod:XmltvParser.kt$XmltvParser$private fun readProgramme(parser: XmlPullParser, feedId: Long): Programme?</ID>
     <ID>ImplicitDefaultLocale:RecordingSettingsScreen.kt$String.format("%.0f MB", mb)</ID>
