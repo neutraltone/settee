@@ -193,6 +193,16 @@
     <string name="settings_subtitles_title">Show subtitles when available</string>
     <string name="settings_subtitles_subtitle">For this profile, on channels, movies and shows. Picking a subtitle track or turning them off in the player changes this too, and the language you pick is used next time.</string>
     <string name="settings_resume_title">Resume last channel on startup</string>
+    <string name="player_next_episode_label">Up Next</string>
+    <string name="player_next_episode_number">S%1$d E%2$d</string>
+    <string name="player_next_episode_in">Next episode in %1$d</string>
+    <string name="player_next_episode_press_ok">Press OK to play</string>
+    <string name="player_watch_credits">Watch credits</string>
+    <string name="player_still_watching">Are you still watching?</string>
+    <string name="player_continue_watching">Continue watching</string>
+    <string name="player_stop">Stop</string>
+    <string name="settings_play_next_title">Play next episode automatically</string>
+    <string name="settings_play_next_subtitle">As an episode\'s credits start, count down and play the next one. Off, the next episode waits for you to press OK.</string>
     <string name="settings_resume_subtitle">Open the app straight into the channel you were last watching, instead of the guide. Press Back to reach the guide.</string>
     <string name="settings_sleep_timer">Sleep timer</string>
     <string name="settings_sleep_off_desc">Off — playback keeps going until you stop it.</string>

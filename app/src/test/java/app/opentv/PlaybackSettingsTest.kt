@@ -39,6 +39,8 @@ class PlaybackSettingsTest {
                 onSubtitlesToggle = { toggledTo = it },
                 resumeLastChannel = false,
                 onResumeLastChannelToggle = {},
+                playNext = true,
+                onPlayNextToggle = {},
             )
         }
         compose.waitForIdle()

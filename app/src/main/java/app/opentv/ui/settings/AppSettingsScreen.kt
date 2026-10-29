@@ -69,6 +69,7 @@ fun AppSettingsScreen(onBack: () -> Unit) {
     val subtitles by profileSettings.subtitlePreference.collectAsState(initial = null)
     val scope = rememberCoroutineScope()
     val resumeLast by settings.resumeLastChannel.collectAsState()
+    val playNext by settings.playNextAutomatically.collectAsState()
     val language by settings.languageTag.collectAsState()
     val liveEnabled by settings.liveEnabled.collectAsState()
     val moviesEnabled by settings.moviesEnabled.collectAsState()
@@ -202,6 +203,8 @@ fun AppSettingsScreen(onBack: () -> Unit) {
             onSubtitlesToggle = { on -> scope.launch { profileSettings.setSubtitlesOn(on) } },
             resumeLastChannel = resumeLast,
             onResumeLastChannelToggle = settings::setResumeLastChannel,
+            playNext = playNext,
+            onPlayNextToggle = settings::setPlayNextAutomatically,
         )
 
         Spacer(Modifier.height(16.dp))
@@ -215,7 +218,7 @@ fun AppSettingsScreen(onBack: () -> Unit) {
 }
 
 /**
- * Subtitles and resuming the last channel. Subtitles are the active Profile's Subtitle Preference,
+ * Subtitles, resuming the last channel and playing the next episode. Subtitles are the active Profile's Subtitle Preference,
  * the same one the players change, so the two can't disagree.
  */
 @Composable
@@ -224,6 +227,8 @@ internal fun PlaybackSettingsSection(
     onSubtitlesToggle: (Boolean) -> Unit,
     resumeLastChannel: Boolean,
     onResumeLastChannelToggle: (Boolean) -> Unit,
+    playNext: Boolean,
+    onPlayNextToggle: (Boolean) -> Unit,
 ) {
     SettingsSection(stringResource(R.string.settings_section_playback)) {
         ToggleRow(
@@ -237,6 +242,12 @@ internal fun PlaybackSettingsSection(
             subtitle = stringResource(R.string.settings_resume_subtitle),
             checked = resumeLastChannel,
             onToggle = onResumeLastChannelToggle,
+        )
+        ToggleRow(
+            title = stringResource(R.string.settings_play_next_title),
+            subtitle = stringResource(R.string.settings_play_next_subtitle),
+            checked = playNext,
+            onToggle = onPlayNextToggle,
         )
     }
 }

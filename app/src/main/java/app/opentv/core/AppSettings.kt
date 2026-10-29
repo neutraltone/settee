@@ -151,6 +151,18 @@ class AppSettings private constructor(context: Context) {
         _resumeLastChannel.value = enabled
     }
 
+    /**
+     * Whether an episode's Next Episode card counts down and plays it on its own. Off, the card
+     * still comes up but waits for OK.
+     */
+    private val _playNextAutomatically = MutableStateFlow(prefs.getBoolean(KEY_PLAY_NEXT, true))
+    val playNextAutomatically: StateFlow<Boolean> = _playNextAutomatically.asStateFlow()
+
+    fun setPlayNextAutomatically(enabled: Boolean) {
+        prefs.edit { putBoolean(KEY_PLAY_NEXT, enabled) }
+        _playNextAutomatically.value = enabled
+    }
+
     // ---- Recording behaviour -----------------------------------------------------------------
 
     /** Minutes to start a scheduled recording early, so a late start isn't clipped. */
@@ -444,6 +456,7 @@ class AppSettings private constructor(context: Context) {
         private const val KEY_HIDDEN_CATS = "hidden_categories"
         private const val KEY_ACTIVE_PROFILE = "active_profile_id"
         private const val KEY_RESUME_LAST = "resume_last_channel"
+        private const val KEY_PLAY_NEXT = "play_next_automatically"
         private const val KEY_CONTENT_LIVE = "content_live"
         private const val KEY_CONTENT_MOVIES = "content_movies"
         private const val KEY_CONTENT_SERIES = "content_series"
