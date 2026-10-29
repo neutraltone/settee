@@ -8,6 +8,8 @@ package app.opentv
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsNotFocused
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
@@ -15,12 +17,16 @@ import androidx.compose.ui.test.hasScrollToNodeAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.performScrollToNode
+import androidx.compose.ui.test.pressKey
 import app.opentv.data.model.Channel
 import app.opentv.data.model.Movie
 import app.opentv.data.model.Series
 import app.opentv.ui.HomeContent
+import app.opentv.ui.RecentRows
 import app.opentv.ui.VodViewModel
 import com.google.common.truth.Truth.assertThat
 import org.junit.Rule
@@ -34,6 +40,7 @@ import org.robolectric.annotation.GraphicsMode
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], qualifiers = TV_1080P, application = android.app.Application::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
+@OptIn(ExperimentalTestApi::class)
 class HomeContentTest {
 
     @get:Rule
@@ -95,21 +102,39 @@ class HomeContentTest {
     /** The channel a test's Home last played. */
     private var played: Channel? = null
 
+    /** False when a test's Home was picked in the side menu, where the highlight stays. */
+    private var takeFocus = true
+
+    /** The movie a test's Home last opened. */
+    private var opened: Movie? = null
+
+    private val recent = RecentRows(
+        releasedMovies = listOf(movie(10, "Dune: Part Two")),
+        addedMovies = listOf(movie(11, "Drive")),
+        releasedShows = listOf(series(12, "Slow Horses")),
+        addedShows = listOf(series(13, "Shogun")),
+    )
+
+    private fun scrollTo(text: String) {
+        compose.onAllNodes(hasScrollToNodeAction())[0].performScrollToNode(hasText(text))
+    }
+
     private fun setHome(
         resume: List<VodViewModel.ResumeItem> = this.resume,
         shows: List<Series> = listOf(series(1, "Severance")),
         movies: List<Movie> = listOf(movie(2, "Heat")),
         channels: List<Channel> = listOf(channel(3, "BBC One")),
-        takeFocus: Boolean = true,
+        recent: RecentRows = RecentRows(),
     ) = compose.setTvContent {
         HomeContent(
             continueWatching = resume,
             favouriteShows = shows,
             favouriteMovies = movies,
             favouriteChannels = channels,
+            recent = recent,
             onResume = { _, _, _ -> },
             onOpenSeries = {},
-            onOpenMovie = {},
+            onOpenMovie = { opened = it },
             onPlayChannel = { played = it },
             takeFocus = takeFocus,
         )
@@ -127,6 +152,67 @@ class HomeContentTest {
         compose.onAllNodes(hasScrollToNodeAction())[0].performScrollToNode(hasText("Favourite channels"))
         assertThat(topOf("Favourite movies")).isLessThan(topOf("Favourite channels"))
         compose.onNodeWithText("BBC One").assertExists()
+    }
+
+    @Test
+    fun `after Favourite Channels come recently released and added movies, then shows`() {
+        setHome(recent = recent)
+
+        val order = listOf(
+            "Favourite channels",
+            "Recently released movies",
+            "Recently added movies",
+            "Recently released shows",
+            "Recently added shows",
+        )
+        // Nine rows are far taller than a TV screen: bring each in under the one before it.
+        order.zipWithNext { above, below ->
+            scrollTo(below)
+            assertThat(topOf(above)).isLessThan(topOf(below))
+        }
+        compose.onNodeWithText("Shogun").assertExists()
+    }
+
+    @Test
+    fun `the remote's down button reaches the last of the recent rows`() {
+        setHome(
+            resume = emptyList(),
+            shows = emptyList(),
+            movies = emptyList(),
+            channels = emptyList(),
+            recent = recent,
+        )
+        compose.onNodeWithText("Dune: Part Two").assertIsFocused()
+        captureScreen("home_recent_rows")
+
+        repeat(3) { compose.onRoot().performKeyInput { pressKey(Key.DirectionDown) } }
+
+        compose.onNodeWithText("Shogun").assertIsFocused()
+    }
+
+    @Test
+    fun `selecting a recently released movie opens it`() {
+        setHome(recent = recent)
+        scrollTo("Dune: Part Two")
+
+        compose.onNodeWithText("Dune: Part Two").performClick()
+
+        assertThat(opened).isEqualTo(movie(10, "Dune: Part Two"))
+    }
+
+    @Test
+    fun `with only recent titles to show, Home shows them rather than the hint`() {
+        setHome(
+            resume = emptyList(),
+            shows = emptyList(),
+            movies = emptyList(),
+            channels = emptyList(),
+            recent = RecentRows(addedMovies = listOf(movie(11, "Drive"))),
+        )
+
+        compose.onNodeWithText("Things you watch and favourite will show up here").assertDoesNotExist()
+        compose.onNodeWithText("Recently released movies").assertDoesNotExist()
+        compose.onNodeWithText("Drive").assertIsFocused()
     }
 
     @Test
@@ -174,7 +260,9 @@ class HomeContentTest {
 
     @Test
     fun `Home picked from the side menu leaves the highlight on the menu`() {
-        setHome(takeFocus = false)
+        takeFocus = false
+
+        setHome()
 
         compose.onNodeWithText("Collateral").assertIsNotFocused()
     }

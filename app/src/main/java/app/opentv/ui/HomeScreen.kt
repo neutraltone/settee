@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -83,12 +84,13 @@ internal fun HomeScreen(
         onOpenMovie,
         onPlayChannel,
         takeFocus,
+        state.recent,
     )
 }
 
 /**
- * Home's rows, top to bottom: what the Profile can pick back up, then its Favourites by kind. An
- * empty row is left out rather than shown blank.
+ * Home's rows, top to bottom: what the Profile can pick back up, its Favourites by kind, then the
+ * [recent] titles. An empty row is left out rather than shown blank.
  */
 @Composable
 internal fun HomeContent(
@@ -101,8 +103,11 @@ internal fun HomeContent(
     onOpenMovie: (Movie) -> Unit,
     onPlayChannel: (Channel) -> Unit,
     takeFocus: Boolean,
+    recent: RecentRows = RecentRows(),
 ) {
-    if (listOf(continueWatching, favouriteShows, favouriteMovies, favouriteChannels).all { it.isEmpty() }) {
+    if (listOf(continueWatching, favouriteShows, favouriteMovies, favouriteChannels).all { it.isEmpty() } &&
+        recent.isEmpty()
+    ) {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Text(
                 stringResource(R.string.home_empty_hint),
@@ -139,7 +144,19 @@ internal fun HomeContent(
             }
         }
         if (favouriteChannels.isNotEmpty()) item(key = "channels") { ChannelRow(favouriteChannels, onPlayChannel) }
+        movieRow("releasedMovies", R.string.home_recently_released_movies, recent.releasedMovies, onOpenMovie)
+        movieRow("addedMovies", R.string.home_recently_added_movies, recent.addedMovies, onOpenMovie)
+        showRow("releasedShows", R.string.home_recently_released_shows, recent.releasedShows, onOpenSeries)
+        showRow("addedShows", R.string.home_recently_added_shows, recent.addedShows, onOpenSeries)
     }
+}
+
+private fun LazyListScope.movieRow(key: String, title: Int, movies: List<Movie>, onOpenMovie: (Movie) -> Unit) {
+    if (movies.isNotEmpty()) item(key = key) { MoviePosterRow(stringResource(title), movies, onOpenMovie) }
+}
+
+private fun LazyListScope.showRow(key: String, title: Int, series: List<Series>, onOpenSeries: (Series) -> Unit) {
+    if (series.isNotEmpty()) item(key = key) { SeriesPosterRow(stringResource(title), series, onOpenSeries) }
 }
 
 @Composable

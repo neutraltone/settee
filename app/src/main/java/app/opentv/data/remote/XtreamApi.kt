@@ -12,6 +12,7 @@ import app.opentv.data.model.Movie
 import app.opentv.data.model.Series
 import app.opentv.data.model.Source
 import app.opentv.data.model.StreamKind
+import app.opentv.data.parser.parseReleaseDate
 import java.io.InputStream
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -148,6 +149,7 @@ class XtreamApi(
                 director = obj["director"].asStringOrNull,
                 genre = obj["genre"].asStringOrNull,
                 tmdbId = obj["tmdb_id"].asStringOrNull ?: obj["tmdb"].asStringOrNull,
+                releaseDate = obj.releaseDate,
             )
         }
     }
@@ -177,48 +179,26 @@ class XtreamApi(
         }
     }
 
-    /**
-     * Episode list for one series.
-     *
-     * `episodes` is an object keyed by season number whose values are arrays — except on some
-     * panels, where it is an array of arrays, and on others where a season with a single
-     * episode collapses to a bare object. All three shapes are handled.
-     */
+    /** Episode list for one series. See [seasonEpisodes] for the shapes `episodes` comes in. */
     suspend fun episodes(source: Source, seriesId: String): List<Episode> = withContext(Dispatchers.IO) {
         val body = getJson(source, "get_series_info") { it.addQueryParameter("series_id", seriesId) }
-        val episodesNode = body.jsonObjectOrNull?.get("episodes") ?: return@withContext emptyList()
-
-        val seasonBuckets: List<Pair<Int?, JsonElement>> = when (episodesNode) {
-            is JsonObject -> episodesNode.entries.map { it.key.toIntOrNull() to it.value }
-            is JsonArray -> episodesNode.mapIndexed { index, value -> index to value }
-            else -> emptyList()
-        }
-
-        seasonBuckets.flatMap { (seasonHint, bucket) ->
-            val items: List<JsonElement> = when (bucket) {
-                is JsonArray -> bucket.toList()
-                is JsonObject -> listOf(bucket)
-                else -> emptyList()
-            }
-            items.mapNotNull { element ->
-                val obj = element.jsonObjectOrNull ?: return@mapNotNull null
-                val episodeId = obj["id"].asStringOrNull ?: return@mapNotNull null
-                val info = obj["info"].jsonObjectOrNull
-                val extension = obj["container_extension"].asStringOrNull
-                    ?.takeIf { it.isNotBlank() }
-                Episode(
-                    sourceId = source.id,
-                    seriesId = seriesId,
-                    episodeId = episodeId,
-                    season = obj["season"].asIntOrNull ?: seasonHint ?: 1,
-                    episodeNumber = obj["episode_num"].asIntOrNull ?: 0,
-                    title = obj["title"].asStringOrNull ?: "Episode",
-                    plot = info?.get("plot").asStringOrNull,
-                    durationSeconds = info?.get("duration_secs").asIntOrNull,
-                    stillUrl = info?.get("movie_image").asStringOrNull?.takeIf { it.isNotBlank() },
-                    streamUrl = seriesStreamUrl(source, episodeId, extension),
-                )
-            }
+        body.jsonObjectOrNull?.get("episodes").seasonEpisodes().mapNotNull { (seasonHint, obj) ->
+            val episodeId = obj["id"].asStringOrNull ?: return@mapNotNull null
+            val info = obj["info"].jsonObjectOrNull
+            val extension = obj["container_extension"].asStringOrNull
+                ?.takeIf { it.isNotBlank() }
+            Episode(
+                sourceId = source.id,
+                seriesId = seriesId,
+                episodeId = episodeId,
+                season = obj["season"].asIntOrNull ?: seasonHint ?: 1,
+                episodeNumber = obj["episode_num"].asIntOrNull ?: 0,
+                title = obj["title"].asStringOrNull ?: "Episode",
+                plot = info?.get("plot").asStringOrNull,
+                durationSeconds = info?.get("duration_secs").asIntOrNull,
+                stillUrl = info?.get("movie_image").asStringOrNull?.takeIf { it.isNotBlank() },
+                streamUrl = seriesStreamUrl(source, episodeId, extension),
+            )
         }
     }
 
@@ -245,6 +225,7 @@ class XtreamApi(
             rating = info["rating"].asDoubleOrNull,
             year = info["year"].asIntOrNull ?: info["releasedate"].asStringOrNull?.take(4)?.toIntOrNull(),
             durationSeconds = info["duration_secs"].asIntOrNull,
+            releaseDate = info.releaseDate,
         )
     }
 
@@ -267,6 +248,11 @@ class XtreamApi(
             plot = info["plot"].asStringOrNull ?: info["description"].asStringOrNull,
             rating = info["rating"].asDoubleOrNull,
             year = info["year"].asIntOrNull ?: info["releaseDate"].asStringOrNull?.take(4)?.toIntOrNull(),
+            releaseDate = info.releaseDate,
+            latestAirDate = body.jsonObjectOrNull?.get("episodes").seasonEpisodes().mapNotNull { (_, episode) ->
+                val episodeInfo = episode["info"].jsonObjectOrNull
+                parseReleaseDate((episodeInfo?.get("air_date") ?: episodeInfo?.get("releasedate")).asStringOrNull)
+            }.maxOrNull(),
         )
     }
 
@@ -387,6 +373,7 @@ class XtreamApi(
         val rating: Double?,
         val year: Int?,
         val durationSeconds: Int?,
+        val releaseDate: Long? = null,
     )
 
     /** Rich per-series metadata from `get_series_info`. Series have no director. See [VodInfo]. */
@@ -398,6 +385,9 @@ class XtreamApi(
         val plot: String?,
         val rating: Double?,
         val year: Int?,
+        val releaseDate: Long? = null,
+        /** The newest episode's air date, from the same `get_series_info` reply. */
+        val latestAirDate: Long? = null,
     )
 }
 
@@ -438,6 +428,32 @@ private fun JsonObject.asBackdropUrl(vararg fallbackKeys: String): String? {
     for (key in fallbackKeys) this[key].asStringOrNull?.takeIf { it.isNotBlank() }?.let { return it }
     return null
 }
+
+/**
+ * Every episode object under `get_series_info`'s `episodes`, with the season it was filed under.
+ * That is an object keyed by season number whose values are arrays, except on some panels, where
+ * it is an array of arrays, and on others where a season with a single episode collapses to a bare
+ * object. All three shapes are handled.
+ */
+private fun JsonElement?.seasonEpisodes(): List<Pair<Int?, JsonObject>> {
+    val seasonBuckets: List<Pair<Int?, JsonElement>> = when (this) {
+        is JsonObject -> entries.map { it.key.toIntOrNull() to it.value }
+        is JsonArray -> mapIndexed { index, value -> index to value }
+        else -> emptyList()
+    }
+    return seasonBuckets.flatMap { (seasonHint, bucket) ->
+        val items: List<JsonElement> = when (bucket) {
+            is JsonArray -> bucket.toList()
+            is JsonObject -> listOf(bucket)
+            else -> emptyList()
+        }
+        items.mapNotNull { element -> element.jsonObjectOrNull?.let { seasonHint to it } }
+    }
+}
+
+/** A full release date under either spelling panels use; a bare year doesn't count. */
+private val JsonObject.releaseDate: Long?
+    get() = parseReleaseDate((this["releaseDate"] ?: this["releasedate"]).asStringOrNull)
 
 private val JsonElement?.asIntOrNull: Int?
     get() = asStringOrNull?.substringBefore('.')?.toIntOrNull()
