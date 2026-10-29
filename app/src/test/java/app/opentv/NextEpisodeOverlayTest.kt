@@ -80,7 +80,12 @@ class NextEpisodeOverlayTest {
 
     private fun press(key: Key) = compose.onRoot().performKeyInput { pressKey(key) }
 
-    private fun waitForEpisode(id: Long) = compose.waitUntil { vm.current.value?.mediaKey == "ep:$id" }
+    // The view model names the episode before it has looked up where to resume, and only then starts
+    // it, so waiting for the name alone can read what was played before.
+    private fun waitForEpisode(id: Long) = compose.waitUntil {
+        val current = vm.current.value
+        current?.mediaKey == "ep:$id" && playback.played.lastOrNull()?.first == current.streamUrl
+    }
 
     @Test
     fun `15 seconds from the end the Next Episode card comes up with focus and a countdown`() {

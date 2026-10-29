@@ -362,17 +362,9 @@ class PlayerController(
             .build()
     }
 
-    fun seekBackward() = seekBy(-SEEK_INCREMENT_MILLIS)
+    fun seekBackward() = player.seekBy(-SEEK_INCREMENT_MILLIS)
 
-    fun seekForward() = seekBy(SEEK_INCREMENT_MILLIS)
-
-    // Seeks by our own step rather than the player's seekBack()/seekForward(), so the step is this
-    // class's constant whichever way the player was built. Clamped the same way ExoPlayer clamps.
-    private fun seekBy(deltaMillis: Long) {
-        if (!player.isCurrentMediaItemSeekable) return
-        val end = player.duration.takeIf { it != C.TIME_UNSET } ?: Long.MAX_VALUE
-        player.seekTo((player.currentPosition + deltaMillis).coerceIn(0L, end))
-    }
+    fun seekForward() = player.seekBy(SEEK_INCREMENT_MILLIS)
 
     val isSeekable: Boolean get() = player.isCurrentMediaItemSeekable
 
@@ -449,4 +441,12 @@ class PlayerController(
 
         private const val LIVE_TARGET_OFFSET_MILLIS = 10_000L
     }
+}
+
+// Seeks by our own step rather than the player's seekBack()/seekForward(), so the step is
+// PlayerController's constant whichever way the player was built. Clamped the same way ExoPlayer clamps.
+private fun Player.seekBy(deltaMillis: Long) {
+    if (!isCurrentMediaItemSeekable) return
+    val end = duration.takeIf { it != C.TIME_UNSET } ?: Long.MAX_VALUE
+    seekTo((currentPosition + deltaMillis).coerceIn(0L, end))
 }

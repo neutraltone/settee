@@ -58,7 +58,6 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -86,14 +85,11 @@ import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
-import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
-import androidx.compose.ui.window.Dialog
 import androidx.media3.common.C
 import androidx.media3.common.Tracks
 import androidx.media3.common.util.UnstableApi
@@ -111,7 +107,6 @@ import app.opentv.player.PlayerController
 import app.opentv.ui.RecordingBackgroundDialog
 import app.opentv.ui.RecordingBackgroundPrompt
 import app.opentv.ui.formatPlaybackTime
-import app.opentv.update.startsFocused
 import coil.compose.AsyncImage
 import java.util.Locale
 import kotlinx.coroutines.CoroutineScope
@@ -823,51 +818,6 @@ fun LivePlayerContent(
     }
 }
 
-/** Offers to turn live pause on, explaining what it costs, when the viewer pauses without it. */
-@Composable
-private fun LivePausePrompt(onTurnOn: () -> Unit, onDontAskAgain: () -> Unit, onDismiss: () -> Unit) {
-    val minutes = PlayerController.DVR_MAX_BUFFER_MILLIS / MILLIS_PER_MINUTE
-    Dialog(onDismissRequest = onDismiss) {
-        Column(
-            Modifier
-                .width(520.dp)
-                .clip(RoundedCornerShape(16.dp))
-                .background(MaterialTheme.colorScheme.surface)
-                .padding(24.dp),
-        ) {
-            Text(
-                stringResource(R.string.live_pause_prompt_title),
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.SemiBold,
-            )
-            Spacer(Modifier.height(12.dp))
-            Text(
-                pluralStringResource(R.plurals.live_pause_prompt_body, minutes, minutes),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Spacer(Modifier.height(20.dp))
-            Row(
-                Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                TextButton(onClick = onDontAskAgain) {
-                    Text(stringResource(R.string.live_pause_prompt_dont_ask))
-                }
-                Spacer(Modifier.width(8.dp))
-                TextButton(onClick = onDismiss) {
-                    Text(stringResource(R.string.live_pause_prompt_not_now))
-                }
-                Spacer(Modifier.width(8.dp))
-                Button(onClick = onTurnOn, modifier = Modifier.startsFocused()) {
-                    Text(stringResource(R.string.live_pause_prompt_turn_on))
-                }
-            }
-        }
-    }
-}
-
 @Composable
 private fun ChannelListRow(
     item: PlaybackQueue.Item,
@@ -1176,7 +1126,6 @@ private const val CONTROLS_TIMEOUT_MILLIS = 5_000L
 private const val NUMBER_ENTRY_TIMEOUT_MILLIS = 2_000L
 private const val COUNTDOWN_TICK_MILLIS = 1_000L
 private const val BACK_TO_LIVE_MESSAGE_MILLIS = 4_000L
-private const val MILLIS_PER_MINUTE = 60_000
 private val MEDIA_KEYS =
     setOf(Key.MediaPlayPause, Key.MediaPlay, Key.MediaPause, Key.MediaRewind, Key.MediaFastForward)
 
