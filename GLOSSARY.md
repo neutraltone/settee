@@ -33,8 +33,12 @@ _Avoid_: Next episode (when meaning this specific concept)
 The episode after the one playing now, in season then episode order: the player offers it as the credits start and plays it on its own unless told not to. Unlike Up Next it ignores what the Profile last Watched, so rewatching episode 2 of a series whose episode 5 is Watched offers episode 3. The card that offers it reads "Up Next" on screen.
 _Avoid_: Autoplay episode, following episode
 
+**New Episode**:
+An Up Next that the provider added after the Profile had Watched every episode the app knew of in that series. It stays a New Episode until the Profile starts it. A series the Profile is still part-way through never has one, however many episodes the provider adds.
+_Avoid_: New release, fresh episode
+
 **Continue Watching**:
-The row of things a Profile can pick back up: each In Progress movie, plus one card per series showing its In Progress episode or else its Up Next.
+The row of things a Profile can pick back up: each In Progress movie, plus one card per series showing its In Progress episode or else its Up Next. A series with a New Episode comes back to it, placed by when the episode was noticed.
 _Avoid_: Resume list, recently watched
 
 ## Curation
@@ -52,5 +56,5 @@ The screen the app always opens on, gathering the Live Preview, Continue Watchin
 _Avoid_: Dashboard, start page
 
 **Live Preview**:
-A muted, playing tile on Home of the live channel the Profile last watched, shown only when live TV was the Profile's most recent playback.
+A muted, playing tile on Home of the live channel the Profile last watched on this device, shown only when live TV was the Profile's most recent playback. Settling on a channel full screen counts as watching it; zapping past one or seeing it in the guide's preview does not. A channel that has since left the channel list still shows, as a reminder that can't play; a channel the viewer hid does not.
 _Avoid_: Last channel, boot channel
