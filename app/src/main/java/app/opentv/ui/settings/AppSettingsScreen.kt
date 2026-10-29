@@ -218,8 +218,8 @@ fun AppSettingsScreen(onBack: () -> Unit) {
 }
 
 /**
- * Subtitles, resuming the last channel and playing the next episode. Subtitles are the active Profile's Subtitle Preference,
- * the same one the players change, so the two can't disagree.
+ * Subtitles, resuming the last channel and playing the next episode. Subtitles are the active
+ * Profile's Subtitle Preference, the same one the players change, so the two can't disagree.
  */
 @Composable
 internal fun PlaybackSettingsSection(
