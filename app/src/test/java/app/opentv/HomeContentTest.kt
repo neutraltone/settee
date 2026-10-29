@@ -7,6 +7,7 @@ package app.opentv
 
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.test.ExperimentalTestApi
@@ -140,6 +141,67 @@ class HomeContentTest {
         )
     }
 
+    /** Whether a test's Home is on screen; false while the viewer is off in the player or on a title's page. */
+    private var home by mutableStateOf(true)
+
+    /**
+     * Shows Home the way the app's navigation does: going to another screen drops Home but keeps its
+     * saved state, which comes back when Home does.
+     */
+    private fun setHomeToLeave(
+        continueWatching: () -> List<VodViewModel.ResumeItem> = { resume },
+        movies: () -> List<Movie> = { listOf(movie(2, "Heat")) },
+        recent: RecentRows = RecentRows(),
+    ) = compose.setTvContent {
+        val saved = rememberSaveableStateHolder()
+        if (home) {
+            saved.SaveableStateProvider("home") {
+                HomeContent(
+                    continueWatching = continueWatching(),
+                    favouriteShows = listOf(series(1, "Severance")),
+                    favouriteMovies = movies(),
+                    favouriteChannels = listOf(channel(3, "BBC One"), channel(5, "BBC Two")),
+                    recent = recent,
+                    onResume = { _, _, _ -> },
+                    onOpenSeries = {},
+                    onOpenMovie = { opened = it },
+                    onPlayChannel = { played = it },
+                    takeFocus = homeTakesFocus,
+                )
+            }
+        }
+    }
+
+    /** False when a test's Home comes back while the side menu has the highlight. */
+    private var homeTakesFocus by mutableStateOf(true)
+
+    private fun resumeItem(id: Long, title: String) = VodViewModel.ResumeItem(
+        "movie:$id",
+        title,
+        playerTitle = title,
+        posterUrl = "https://example.com/$id.jpg",
+        streamUrl = "",
+        progress = 0.4f,
+    )
+
+    /** Leaves Home without picking anything (from the side menu, say) and comes back. */
+    private fun leaveAndComeBack() {
+        home = false
+        compose.waitForIdle()
+        home = true
+        compose.waitForIdle()
+    }
+
+    /** Picks [title] on Home, leaves for the screen it opens, and comes back. */
+    private fun pickAndComeBack(title: String, whileAway: () -> Unit = {}) {
+        compose.onNodeWithText(title).performClick()
+        home = false
+        compose.waitForIdle()
+        whileAway()
+        home = true
+        compose.waitForIdle()
+    }
+
     private fun topOf(text: String) = compose.onNodeWithText(text).getUnclippedBoundsInRoot().top
 
     @Test
@@ -247,6 +309,82 @@ class HomeContentTest {
 
         compose.onNodeWithText("Severance").assertIsFocused()
         captureScreen("home_no_continue_watching")
+    }
+
+    @Test
+    fun `back from a title's page, Home highlights the card that was picked`() {
+        setHomeToLeave(movies = { listOf(movie(2, "Heat"), movie(4, "Ronin")) })
+
+        pickAndComeBack("Ronin")
+
+        compose.onNodeWithText("Ronin").assertIsFocused()
+    }
+
+    @Test
+    fun `back from a title whose card has gone, Home highlights the card now in its place`() {
+        var movies by mutableStateOf(listOf(movie(2, "Heat"), movie(4, "Ronin"), movie(6, "Thief")))
+        setHomeToLeave(movies = { movies })
+
+        pickAndComeBack("Ronin") { movies = listOf(movie(2, "Heat"), movie(6, "Thief")) }
+
+        compose.onNodeWithText("Thief").assertIsFocused()
+    }
+
+    @Test
+    fun `back from the player, Home highlights the title played even once Continue Watching puts it first`() {
+        var cards by mutableStateOf(
+            listOf(resumeItem(9, "Collateral"), resumeItem(7, "Insomnia"), resumeItem(8, "Memento")),
+        )
+        setHomeToLeave(continueWatching = { cards })
+
+        pickAndComeBack("Memento") {
+            cards = listOf(resumeItem(8, "Memento"), resumeItem(9, "Collateral"), resumeItem(7, "Insomnia"))
+        }
+
+        compose.onNodeWithText("Memento").assertIsFocused()
+    }
+
+    @Test
+    fun `coming back again without picking anything, Home opens on its first card`() {
+        setHomeToLeave(movies = { listOf(movie(2, "Heat"), movie(4, "Ronin")) })
+        pickAndComeBack("Ronin")
+
+        leaveAndComeBack()
+
+        compose.onNodeWithText("Collateral").assertIsFocused()
+    }
+
+    @Test
+    fun `a pick Home came back to with the highlight on the side menu isn't kept for later`() {
+        setHomeToLeave(movies = { listOf(movie(2, "Heat"), movie(4, "Ronin")) })
+        homeTakesFocus = false
+        pickAndComeBack("Ronin")
+        homeTakesFocus = true
+
+        leaveAndComeBack()
+
+        compose.onNodeWithText("Collateral").assertIsFocused()
+    }
+
+    @Test
+    fun `back from the player, Home highlights the channel that was playing`() {
+        setHomeToLeave()
+        scrollTo("BBC Two")
+
+        pickAndComeBack("BBC Two")
+
+        compose.onNodeWithText("BBC Two").assertIsFocused()
+    }
+
+    @Test
+    fun `back from a show's page, Home highlights it even far down the recent rows`() {
+        setHomeToLeave(recent = recent)
+        scrollTo("Shogun")
+
+        pickAndComeBack("Shogun")
+
+        compose.onNodeWithText("Shogun").assertIsFocused()
+        captureScreen("home_back_to_picked")
     }
 
     @Test

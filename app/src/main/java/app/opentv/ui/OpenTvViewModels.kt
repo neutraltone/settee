@@ -1240,7 +1240,10 @@ class HomeViewModel(app: Application) : AndroidViewModel(app) {
         graph.viewerLibrary.favourites.channels().onlyWhen(settings.liveEnabled),
         recent,
         ::HomeState,
-    ).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+        // Nothing replayed once the rows have stopped updating: back from the player, Home waits for
+        // fresh rows rather than drawing the old ones, where it would highlight a card that's about
+        // to move or go (a title just finished, a Favourite just removed).
+    ).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000, replayExpirationMillis = 0), null)
 
     private fun <T> Flow<List<T>>.onlyWhen(enabled: StateFlow<Boolean>): Flow<List<T>> =
         combine(this, enabled) { list, on -> if (on) list else emptyList() }
