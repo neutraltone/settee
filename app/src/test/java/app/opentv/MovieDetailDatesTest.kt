@@ -28,8 +28,9 @@ class MovieDetailDatesTest {
     @Test
     fun `opening a movie the provider can't date asks for its date once, not on every open`() = runTest {
         // Already has its artwork and cast from the list, so only the missing date sends it to the provider.
-        test.panel.replies["get_vod_streams"] =
-            """[{"stream_id": 3, "name": "Drive", "cast": "Ryan Gosling", "backdrop_path": "https://example.com/b.jpg"}]"""
+        test.panel.replies["get_vod_streams"] = """
+            [{"stream_id": 3, "name": "Drive", "cast": "Ryan Gosling", "backdrop_path": "https://example.com/b.jpg"}]
+        """
         test.panel.replies["get_vod_info"] = """{"info": {"year": "2011"}}"""
         test.syncVod()
         val id = test.db.movies().all().single().id

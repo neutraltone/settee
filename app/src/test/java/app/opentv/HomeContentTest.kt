@@ -102,6 +102,9 @@ class HomeContentTest {
     /** The channel a test's Home last played. */
     private var played: Channel? = null
 
+    /** False when a test's Home was picked in the side menu, where the highlight stays. */
+    private var takeFocus = true
+
     /** The movie a test's Home last opened. */
     private var opened: Movie? = null
 
@@ -122,7 +125,6 @@ class HomeContentTest {
         movies: List<Movie> = listOf(movie(2, "Heat")),
         channels: List<Channel> = listOf(channel(3, "BBC One")),
         recent: RecentRows = RecentRows(),
-        takeFocus: Boolean = true,
     ) = compose.setTvContent {
         HomeContent(
             continueWatching = resume,
@@ -258,7 +260,9 @@ class HomeContentTest {
 
     @Test
     fun `Home picked from the side menu leaves the highlight on the menu`() {
-        setHome(takeFocus = false)
+        takeFocus = false
+
+        setHome()
 
         compose.onNodeWithText("Collateral").assertIsNotFocused()
     }

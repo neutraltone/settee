@@ -229,7 +229,7 @@ class CatalogRepository(
     /** "Recently Added" series, newest first. Reactive. */
     fun recentlyAddedSeries(limit: Int = 30): Flow<List<Series>> = seriesDao.observeRecentlyAdded(limit)
 
-    /** Home's "Recently Released" movies, newest first, without undated ones or any not out by [nowMillis]. Reactive. */
+    /** Home's "Recently Released" movies, newest first, without undated ones or any out after [nowMillis]. Reactive. */
     fun recentlyReleasedMovies(nowMillis: Long, limit: Int = 30): Flow<List<Movie>> =
         movieDao.observeRecentlyReleased(nowMillis, limit)
 
