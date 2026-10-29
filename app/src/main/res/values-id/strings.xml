@@ -171,7 +171,6 @@
     <string name="settings_preview_sound_subtitle">Putar juga audio saluran pratinjau, bukan hanya gambarnya.</string>
     <string name="settings_section_playback">Pemutaran</string>
     <string name="settings_subtitles_title">Tampilkan subtitle jika tersedia</string>
-    <string name="settings_subtitles_subtitle">Setelan default untuk saluran baru. Saat menonton, tombol Subtitel di pemutar memungkinkan Anda memilih trek tertentu atau mematikannya.</string>
     <string name="settings_resume_title">Lanjutkan saluran terakhir saat memulai</string>
     <string name="settings_resume_subtitle">Buka aplikasi langsung ke saluran yang terakhir Anda tonton, bukan ke panduan. Tekan Kembali untuk menuju panduan.</string>
     <string name="settings_sleep_timer">Pewaktu tidur</string>

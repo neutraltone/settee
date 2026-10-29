@@ -171,7 +171,6 @@
     <string name="settings_preview_sound_subtitle">تشغيل صوت قناة المعاينة أيضًا، وليس الصورة فقط.</string>
     <string name="settings_section_playback">التشغيل</string>
     <string name="settings_subtitles_title">إظهار الترجمة عند توفرها</string>
-    <string name="settings_subtitles_subtitle">الإعداد الافتراضي للقنوات الجديدة. أثناء المشاهدة، يتيح لك زر «الترجمة» في المشغّل اختيار مسار معيّن أو إيقافها.</string>
     <string name="settings_resume_title">استئناف آخر قناة عند بدء التشغيل</string>
     <string name="settings_resume_subtitle">فتح التطبيق مباشرة على آخر قناة كنت تشاهدها بدلًا من الدليل. اضغط «رجوع» للوصول إلى الدليل.</string>
     <string name="settings_sleep_timer">مؤقت النوم</string>

@@ -1300,6 +1300,7 @@ class ProfilesViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             graph.profiles.deletePositions(id)
             graph.profiles.deleteFavourites(id)
+            graph.profileSettings.forgetProfile(id)
             graph.profiles.delete(id)
             if (settings.activeProfileId.value == id) settings.setActiveProfile(1L)
         }

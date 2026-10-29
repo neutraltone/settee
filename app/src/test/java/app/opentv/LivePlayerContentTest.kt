@@ -24,6 +24,7 @@ import app.opentv.core.AppSettings
 import app.opentv.player.PlaybackQueue
 import app.opentv.player.PlayerController
 import app.opentv.ui.player.LivePlayerContent
+import app.opentv.ui.player.SubtitlePicks
 import com.google.common.truth.Truth.assertThat
 import org.junit.After
 import org.junit.Rule
@@ -89,6 +90,7 @@ class LivePlayerContentTest {
                     dontAskAgain++
                     promptDismissed = true
                 },
+                subtitlePicks = SubtitlePicks(onOff = {}, onPicked = {}),
                 onBack = {},
             )
         }

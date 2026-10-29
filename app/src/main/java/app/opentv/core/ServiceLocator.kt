@@ -12,6 +12,7 @@ import app.opentv.data.remote.StremioClient
 import app.opentv.data.remote.XtreamApi
 import app.opentv.data.repo.CatalogRepository
 import app.opentv.data.repo.EpgRepository
+import app.opentv.data.repo.ProfileSettings
 import app.opentv.data.repo.RecordingRepository
 import app.opentv.data.repo.ReminderRepository
 import app.opentv.data.repo.SourceRepository
@@ -118,6 +119,10 @@ object ServiceLocator {
 
         val viewerLibrary: ViewerLibrary by lazy {
             ViewerLibrary(database.positions(), database.episodes(), database.favourites(), settings.activeProfileId)
+        }
+
+        val profileSettings: ProfileSettings by lazy {
+            ProfileSettings(database.profileSettings(), settings.activeProfileId)
         }
 
         val profiles get() = database.profiles()

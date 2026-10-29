@@ -50,6 +50,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
@@ -131,10 +133,6 @@ fun MainScreen(
     }
     val homeTab = Tab.HOME
 
-    // Home and the Live guide take the highlight when they appear (the guide on the channel last
-    // watched), except when picked in the rail: moving the highlight out of the menu would be odd.
-    var railFocused by remember { mutableStateOf(false) }
-
     // If the selected tab gets hidden (its type toggled off while it's open), drop back to the
     // home tab so the content area never tries to show a tab that's no longer there.
     // Keyed on the tab too: the player can ask for Live on its way in, after Live was switched off.
@@ -169,60 +167,98 @@ fun MainScreen(
         )
     }
 
-    // The rail sits beside the content and pushes it, rather than floating over it. The Live TV
-    // screen has its own category rail down its left edge, and an overlaying menu would land on top
-    // of it and leave a sliver poking out — so they live side by side and never collide.
     Column(Modifier.fillMaxSize()) {
-        Row(Modifier.weight(1f).fillMaxWidth()) {
-            NavRail(
-                tabs = visibleTabs,
-                current = tab,
-                onSelect = onSelectTab,
-                onOpenSearch = onOpenSearch,
-                onOpenSettings = onOpenSettings,
-                onOpenProfiles = onOpenProfiles,
-                activeProfileName = activeProfileName,
-                modifier = Modifier.onFocusChanged { railFocused = it.hasFocus },
-            )
-
-            Box(Modifier.weight(1f).fillMaxHeight()) {
-                when (tab) {
-                    Tab.HOME -> HomeScreen(
-                        onResume = onResume,
-                        onOpenSeries = onOpenSeries,
-                        onOpenMovie = onOpenMovie,
-                        onPlayChannel = onPlayChannel,
-                        takeFocus = !railFocused,
-                    )
-                    Tab.LIVE -> LiveScreen(
-                        isTelevision = isTelevision,
-                        hasSources = hasSources,
-                        isSyncing = isSyncing,
-                        onPlayChannel = onPlayChannel,
-                        onAddSource = onAddSource,
-                        onRefresh = onRefresh,
-                        onPlayCatchup = onPlayCatchup,
-                        takeFocus = !railFocused,
-                    )
-                    Tab.MOVIES -> MoviesScreen(
-                        onOpenMovie = onOpenMovie,
-                        onResume = onResume,
-                        onOpenSearch = onOpenSearch,
-                        hasSources = hasSources,
-                        isSyncing = isSyncing,
-                    )
-                    Tab.SHOWS -> SeriesScreen(
-                        onOpenSeries = onOpenSeries,
-                        onResume = onResume,
-                        onOpenSearch = onOpenSearch,
-                        hasSources = hasSources,
-                        isSyncing = isSyncing,
-                    )
-                    Tab.RECORDINGS -> RecordingsScreen(onPlay = onPlayRecording)
-                }
+        MainShell(
+            tabs = visibleTabs,
+            current = tab,
+            onSelect = onSelectTab,
+            onOpenSearch = onOpenSearch,
+            onOpenSettings = onOpenSettings,
+            onOpenProfiles = onOpenProfiles,
+            activeProfileName = activeProfileName,
+            modifier = Modifier.weight(1f),
+        ) { shown, takeFocus, onNothingToShow ->
+            when (shown) {
+                Tab.HOME -> HomeScreen(
+                    onResume = onResume,
+                    onOpenSeries = onOpenSeries,
+                    onOpenMovie = onOpenMovie,
+                    onPlayChannel = onPlayChannel,
+                    takeFocus = takeFocus,
+                    onNothingToShow = onNothingToShow,
+                )
+                Tab.LIVE -> LiveScreen(
+                    isTelevision = isTelevision,
+                    hasSources = hasSources,
+                    isSyncing = isSyncing,
+                    onPlayChannel = onPlayChannel,
+                    onAddSource = onAddSource,
+                    onRefresh = onRefresh,
+                    onPlayCatchup = onPlayCatchup,
+                    takeFocus = takeFocus,
+                )
+                Tab.MOVIES -> MoviesScreen(
+                    onOpenMovie = onOpenMovie,
+                    onResume = onResume,
+                    onOpenSearch = onOpenSearch,
+                    hasSources = hasSources,
+                    isSyncing = isSyncing,
+                )
+                Tab.SHOWS -> SeriesScreen(
+                    onOpenSeries = onOpenSeries,
+                    onResume = onResume,
+                    onOpenSearch = onOpenSearch,
+                    hasSources = hasSources,
+                    isSyncing = isSyncing,
+                )
+                Tab.RECORDINGS -> RecordingsScreen(onPlay = onPlayRecording)
             }
         }
         StatusBar()
+    }
+}
+
+/**
+ * The side menu beside the [current] tab's [content]. The rail sits beside the content and pushes
+ * it, rather than floating over it. The Live TV screen has its own category rail down its left
+ * edge, and an overlaying menu would land on top of it and leave a sliver poking out — so they
+ * live side by side and never collide.
+ *
+ * [content] gets `takeFocus`: Home and the Live guide take the highlight when they appear (the guide
+ * on the channel last watched), except when picked in the rail, where moving the highlight out of
+ * the menu would be odd. It also gets `onNothingToShow`, which a tab with nothing to highlight calls
+ * to put the highlight on its own item in the menu.
+ */
+@Composable
+internal fun MainShell(
+    tabs: List<Tab>,
+    current: Tab,
+    onSelect: (Tab) -> Unit,
+    onOpenSearch: () -> Unit,
+    onOpenSettings: () -> Unit,
+    onOpenProfiles: () -> Unit,
+    activeProfileName: String,
+    modifier: Modifier = Modifier,
+    content: @Composable (tab: Tab, takeFocus: Boolean, onNothingToShow: () -> Unit) -> Unit,
+) {
+    var railFocused by remember { mutableStateOf(false) }
+    val currentItem = remember { FocusRequester() }
+    Row(modifier.fillMaxWidth()) {
+        NavRail(
+            tabs = tabs,
+            current = current,
+            onSelect = onSelect,
+            onOpenSearch = onOpenSearch,
+            onOpenSettings = onOpenSettings,
+            onOpenProfiles = onOpenProfiles,
+            activeProfileName = activeProfileName,
+            currentItem = currentItem,
+            modifier = Modifier.onFocusChanged { railFocused = it.hasFocus },
+        )
+
+        Box(Modifier.weight(1f).fillMaxHeight()) {
+            content(current, !railFocused) { runCatching { currentItem.requestFocus() } }
+        }
     }
 }
 
@@ -284,6 +320,7 @@ private fun NavRail(
     onOpenSettings: () -> Unit,
     onOpenProfiles: () -> Unit,
     activeProfileName: String,
+    currentItem: FocusRequester,
     modifier: Modifier = Modifier,
 ) {
     // Expand whenever focus is anywhere inside the rail; collapse back to icons when it leaves.
@@ -329,20 +366,39 @@ private fun NavRail(
         Spacer(Modifier.height(8.dp))
 
         tabs.forEach { t ->
-            RailItem(t.icon, stringResource(t.labelRes), expanded, current == t) { onSelect(t) }
+            RailItem(
+                t.icon,
+                stringResource(t.labelRes),
+                expanded,
+                current == t,
+                if (current == t) Modifier.focusRequester(currentItem) else Modifier,
+            ) { onSelect(t) }
         }
 
         Spacer(Modifier.height(1.dp).fillMaxWidth())
         Spacer(Modifier.weight(1f))
 
-        RailItem(Icons.Filled.Search, stringResource(R.string.nav_search), expanded, false, onOpenSearch)
-        RailItem(Icons.Filled.Person, activeProfileName, expanded, false, onOpenProfiles)
-        RailItem(Icons.Filled.Settings, stringResource(R.string.nav_settings), expanded, false, onOpenSettings)
+        RailItem(Icons.Filled.Search, stringResource(R.string.nav_search), expanded, false, onClick = onOpenSearch)
+        RailItem(Icons.Filled.Person, activeProfileName, expanded, false, onClick = onOpenProfiles)
+        RailItem(
+            Icons.Filled.Settings,
+            stringResource(R.string.nav_settings),
+            expanded,
+            false,
+            onClick = onOpenSettings,
+        )
     }
 }
 
 @Composable
-private fun RailItem(icon: ImageVector, label: String, expanded: Boolean, selected: Boolean, onClick: () -> Unit) {
+private fun RailItem(
+    icon: ImageVector,
+    label: String,
+    expanded: Boolean,
+    selected: Boolean,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit,
+) {
     var focused by remember { mutableStateOf(false) }
     val bg = when {
         focused -> MaterialTheme.colorScheme.primary
@@ -358,7 +414,7 @@ private fun RailItem(icon: ImageVector, label: String, expanded: Boolean, select
     }
 
     Row(
-        Modifier
+        modifier
             .fillMaxWidth()
             .padding(horizontal = 12.dp)
             .clip(RoundedCornerShape(10.dp))

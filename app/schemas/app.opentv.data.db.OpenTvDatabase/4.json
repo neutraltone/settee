@@ -1,8 +1,8 @@
 {
   "formatVersion": 1,
   "database": {
-    "version": 3,
-    "identityHash": "958badff9df4269a35f3093b252e2144",
+    "version": 4,
+    "identityHash": "e987dacfe569eaccd9d05eb2e661c762",
     "entities": [
       {
         "tableName": "sources",
@@ -966,6 +966,43 @@
         }
       },
       {
+        "tableName": "profile_settings",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`profileId` INTEGER NOT NULL, `name` TEXT NOT NULL, `value` TEXT NOT NULL, `updatedAtMillis` INTEGER NOT NULL, PRIMARY KEY(`profileId`, `name`))",
+        "fields": [
+          {
+            "fieldPath": "profileId",
+            "columnName": "profileId",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "name",
+            "columnName": "name",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "value",
+            "columnName": "value",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "updatedAtMillis",
+            "columnName": "updatedAtMillis",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "profileId",
+            "name"
+          ]
+        }
+      },
+      {
         "tableName": "recordings",
         "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `channelId` INTEGER NOT NULL, `sourceId` INTEGER NOT NULL, `channelName` TEXT NOT NULL, `logoUrl` TEXT, `title` TEXT NOT NULL, `description` TEXT, `filePath` TEXT NOT NULL, `streamUrl` TEXT NOT NULL, `userAgent` TEXT NOT NULL, `scheduledStartMillis` INTEGER NOT NULL, `scheduledEndMillis` INTEGER NOT NULL, `startedAtMillis` INTEGER NOT NULL, `endedAtMillis` INTEGER NOT NULL, `status` TEXT NOT NULL, `sizeBytes` INTEGER NOT NULL, `seriesRuleId` INTEGER, `profileId` INTEGER, `error` TEXT)",
         "fields": [
@@ -1265,7 +1302,7 @@
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '958badff9df4269a35f3093b252e2144')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'e987dacfe569eaccd9d05eb2e661c762')"
     ]
   }
 }

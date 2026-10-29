@@ -136,7 +136,6 @@ fun PlayerScreen(channelId: Long?, onBack: () -> Unit) {
     val graph = remember { ServiceLocator.get(context) }
     val settings = remember { graph.settings }
     val scope = remember { CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate) }
-    val subtitlesDefault by settings.subtitlesEnabled.collectAsState()
     val livePause by settings.livePauseEnabled.collectAsState()
     val pausePromptDismissed by settings.livePausePromptDismissed.collectAsState()
     // Rebuilt only when live pause is switched on from the player: the DVR buffer is fixed when the
@@ -146,7 +145,8 @@ fun PlayerScreen(channelId: Long?, onBack: () -> Unit) {
             context,
             scope,
             graph.streamingHttpClient,
-            subtitlesEnabled = settings.subtitlesEnabled.value,
+            // Text starts off; the Profile's Subtitle Preference turns it on once tracks arrive.
+            subtitlesEnabled = false,
             // Opt-in shallow DVR so the transport's pause/rewind actually holds on a live stream.
             dvr = livePause,
         )
@@ -258,15 +258,7 @@ fun PlayerScreen(channelId: Long?, onBack: () -> Unit) {
         onBack()
     }
 
-    // Apply the saved captions default once the stream's tracks arrive. Only auto-selects when
-    // nothing is chosen yet, so it never overrides a track the user picked by hand.
-    LaunchedEffect(tracks) {
-        val hasText = tracks.groups.any { it.type == C.TRACK_TYPE_TEXT }
-        val textChosen = tracks.groups.any { g ->
-            g.type == C.TRACK_TYPE_TEXT && (0 until g.length).any { g.isTrackSelected(it) }
-        }
-        if (subtitlesDefault && hasText && !textChosen) controller.setSubtitlesEnabled(true)
-    }
+    val subtitlePicks = rememberProfileSubtitles(controller, graph.profileSettings, scope)
 
     LivePlayerContent(
         controller = controller,
@@ -283,6 +275,7 @@ fun PlayerScreen(channelId: Long?, onBack: () -> Unit) {
         onToggleRecord = ::toggleRecord,
         onTurnOnLivePause = { settings.setLivePauseEnabled(true) },
         onDontAskAgain = { settings.setLivePausePromptDismissed(true) },
+        subtitlePicks = subtitlePicks,
         onBack = onBack,
     )
 
@@ -319,6 +312,7 @@ fun LivePlayerContent(
     onToggleRecord: () -> Unit,
     onTurnOnLivePause: () -> Unit,
     onDontAskAgain: () -> Unit,
+    subtitlePicks: SubtitlePicks,
     onBack: () -> Unit,
 ) {
     val context = LocalContext.current
@@ -666,7 +660,7 @@ fun LivePlayerContent(
                     OptionPanel(
                         panel = panel,
                         controller = controller,
-                        settings = settings,
+                        subtitlePicks = subtitlePicks,
                         tracks = tracks,
                         variants = variants,
                         currentId = currentId,
@@ -875,7 +869,7 @@ internal enum class PlayerPanel { NONE, SUBTITLES, AUDIO, QUALITY, ASPECT }
 private fun OptionPanel(
     panel: PlayerPanel,
     controller: PlayerController,
-    settings: app.opentv.core.AppSettings,
+    subtitlePicks: SubtitlePicks,
     tracks: Tracks,
     variants: List<Channel>,
     currentId: Long?,
@@ -891,7 +885,7 @@ private fun OptionPanel(
     val fillLabel = stringResource(R.string.player_aspect_fill)
     val stretchLabel = stringResource(R.string.player_aspect_stretch)
     val options: List<Option> = when (panel) {
-        PlayerPanel.SUBTITLES -> buildSubtitleOptions(controller, settings, tracks, offLabel, onDone)
+        PlayerPanel.SUBTITLES -> buildSubtitleOptions(controller, tracks, offLabel, subtitlePicks, onDone)
         PlayerPanel.AUDIO -> buildAudioOptions(controller, tracks, onDone)
         PlayerPanel.QUALITY -> variants.map { v ->
             Option(v.qualityLabel.ifEmpty { standardLabel }, v.id == currentId) {
@@ -961,9 +955,9 @@ private data class Option(val label: String, val selected: Boolean, val onClick:
 @OptIn(UnstableApi::class)
 private fun buildSubtitleOptions(
     controller: PlayerController,
-    settings: app.opentv.core.AppSettings,
     tracks: Tracks,
     offLabel: String,
+    subtitlePicks: SubtitlePicks,
     onDone: () -> Unit,
 ): List<Option> {
     val textGroups = tracks.groups.filter { it.type == C.TRACK_TYPE_TEXT }
@@ -971,7 +965,7 @@ private fun buildSubtitleOptions(
     val list = mutableListOf<Option>()
     list += Option(offLabel, !anySelected) {
         controller.disableText()
-        settings.setSubtitlesEnabled(false)
+        subtitlePicks.onOff()
         onDone()
     }
     textGroups.forEach { group ->
@@ -980,7 +974,7 @@ private fun buildSubtitleOptions(
             val format = group.getTrackFormat(i)
             list += Option(trackLabel(format.label, format.language, list.size), group.isTrackSelected(i)) {
                 controller.selectTrack(group, i)
-                settings.setSubtitlesEnabled(true)
+                subtitlePicks.onPicked(format.language)
                 onDone()
             }
         }

@@ -377,6 +377,15 @@ data class PlaybackPosition(
 @Entity(tableName = "favourites", primaryKeys = ["profileId", "kind", "source", "itemId"])
 data class Favourite(val profileId: Long, val kind: StreamKind, val source: String, val itemId: String)
 
+/**
+ * One setting a Profile has chosen (ADR 0002): a row per setting rather than a column per setting,
+ * so moving another setting to a Profile needs no schema change. [value] is text, read by
+ * ProfileSettings into its type; [updatedAtMillis] decides which device wins in sync. A setting
+ * with no row follows the device's default. Read and written only through ProfileSettings.
+ */
+@Entity(tableName = "profile_settings", primaryKeys = ["profileId", "name"])
+data class ProfileSetting(val profileId: Long, val name: String, val value: String, val updatedAtMillis: Long)
+
 /** A local viewing profile — just a name. No account, no password; it lives on this device. */
 @Entity(tableName = "profiles")
 data class Profile(@PrimaryKey(autoGenerate = true) val id: Long = 0, val name: String, val createdAtMillis: Long = 0)

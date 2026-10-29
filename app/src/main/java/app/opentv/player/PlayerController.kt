@@ -23,6 +23,8 @@ import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.exoplayer.trackselection.DefaultTrackSelector
 import androidx.media3.exoplayer.upstream.DefaultLoadErrorHandlingPolicy
 import androidx.media3.exoplayer.upstream.LoadErrorHandlingPolicy
+import app.opentv.data.repo.SubtitlePreference
+import java.util.Locale
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -128,6 +130,7 @@ class PlayerController(
     val playWhenReady: StateFlow<Boolean> = _playWhenReady.asStateFlow()
 
     private var switchJob: Job? = null
+    private val streamSubtitles = StreamSubtitles()
     private var current: Request? = null
     private var consecutiveFailures = 0
 
@@ -189,7 +192,7 @@ class PlayerController(
      */
     private val trackSelector = DefaultTrackSelector(context).apply {
         parameters = buildUponParameters()
-            .setPreferredTextLanguage(java.util.Locale.getDefault().language)
+            .setPreferredTextLanguage(Locale.getDefault().language)
             .setSelectUndeterminedTextLanguage(true)
             .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, !subtitlesEnabled)
             .build()
@@ -308,6 +311,11 @@ class PlayerController(
                 // stop() rather than release(): keeps the codec and the surface alive.
                 stop()
                 clearMediaItems()
+                // Each stream starts with text off, then applySubtitlePreference picks its track.
+                // Left on from the last stream, the selector would choose a track itself, in the
+                // device language, and the Profile's language would only reach the first channel.
+                disableText()
+                streamSubtitles.newStream()
                 setMediaItem(mediaItem)
                 if (!request.isLive && request.startPositionMillis > 0) {
                     seekTo(request.startPositionMillis)
@@ -323,19 +331,28 @@ class PlayerController(
     }
 
     /**
-     * The quick captions toggle. On is *not* merely "allow the text renderer" — that leaves it
+     * Turns subtitles on or off for the current stream. On is *not* merely "allow the text renderer" — that leaves it
      * to the selector to guess a language, which for a lot of IPTV streams guesses nothing and
-     * the user sees no captions even though they turned them on. So On explicitly selects the
-     * first available subtitle track; Off disables text entirely.
+     * the user sees no captions even though they turned them on. So On explicitly selects a track,
+     * in [preferredLanguage] when the stream has it (see [chooseSubtitleTrack]); Off disables text
+     * entirely.
      */
-    fun setSubtitlesEnabled(enabled: Boolean) {
+    fun setSubtitlesEnabled(enabled: Boolean, preferredLanguage: String? = null) {
         if (!enabled) {
             disableText()
             return
         }
-        val firstText = _tracks.value.groups.firstOrNull { it.type == C.TRACK_TYPE_TEXT && it.isSupported }
-        if (firstText != null) {
-            selectTrack(firstText, firstSupportedIndex(firstText))
+        val candidates = _tracks.value.groups
+            .filter { it.type == C.TRACK_TYPE_TEXT }
+            .flatMap { group -> (0 until group.length).map { group to it } }
+        val choice = chooseSubtitleTrack(
+            candidates.map { (group, i) -> SubtitleTrack(group.getTrackFormat(i).language, group.isTrackSupported(i)) },
+            preferred = preferredLanguage,
+            device = Locale.getDefault().language,
+        )
+        if (choice != null) {
+            val (group, i) = candidates[choice]
+            selectTrack(group, i)
         } else {
             // Nothing to select yet — allow the renderer so a track that arrives later can be
             // picked up, and re-assert once tracks change.
@@ -344,6 +361,15 @@ class PlayerController(
                 .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, false)
                 .build()
         }
+    }
+
+    /**
+     * Applies a Profile's Subtitle Preference to the current stream, once its text tracks are known
+     * (see [StreamSubtitles]). Safe to call on every tracks or preference change.
+     */
+    fun applySubtitlePreference(preference: SubtitlePreference?) {
+        val hasText = _tracks.value.groups.any { it.type == C.TRACK_TYPE_TEXT }
+        if (streamSubtitles.shouldTurnOn(preference, hasText)) setSubtitlesEnabled(true, preference?.language)
     }
 
     /** Force a specific audio or text track on (used by the in-player pickers). */
@@ -367,11 +393,6 @@ class PlayerController(
     fun seekForward() = player.seekBy(SEEK_INCREMENT_MILLIS)
 
     val isSeekable: Boolean get() = player.isCurrentMediaItemSeekable
-
-    private fun firstSupportedIndex(group: Tracks.Group): Int {
-        for (i in 0 until group.length) if (group.isTrackSupported(i)) return i
-        return 0
-    }
 
     fun stop() {
         switchJob?.cancel()

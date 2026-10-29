@@ -37,6 +37,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -45,9 +46,11 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import app.opentv.R
 import app.opentv.core.AppSettings
+import app.opentv.core.ServiceLocator
 import app.opentv.core.SleepTimer
 import app.opentv.core.findActivity
 import app.opentv.data.work.SyncWorker
+import kotlinx.coroutines.launch
 
 /**
  * Display & playback preferences: the app-behaviour settings, kept apart from the guide/data
@@ -62,7 +65,9 @@ fun AppSettingsScreen(onBack: () -> Unit) {
     val channelLayout by settings.channelLayout.collectAsState()
     val previewVideo by settings.guidePreviewVideo.collectAsState()
     val previewSound by settings.guidePreviewSound.collectAsState()
-    val captions by settings.subtitlesEnabled.collectAsState()
+    val profileSettings = remember { ServiceLocator.get(context).profileSettings }
+    val subtitles by profileSettings.subtitlePreference.collectAsState(initial = null)
+    val scope = rememberCoroutineScope()
     val resumeLast by settings.resumeLastChannel.collectAsState()
     val playNext by settings.playNextAutomatically.collectAsState()
     val language by settings.languageTag.collectAsState()
@@ -193,26 +198,14 @@ fun AppSettingsScreen(onBack: () -> Unit) {
 
         Spacer(Modifier.height(16.dp))
 
-        SettingsSection(stringResource(R.string.settings_section_playback)) {
-            ToggleRow(
-                title = stringResource(R.string.settings_subtitles_title),
-                subtitle = stringResource(R.string.settings_subtitles_subtitle),
-                checked = captions,
-                onToggle = settings::setSubtitlesEnabled,
-            )
-            ToggleRow(
-                title = stringResource(R.string.settings_resume_title),
-                subtitle = stringResource(R.string.settings_resume_subtitle),
-                checked = resumeLast,
-                onToggle = settings::setResumeLastChannel,
-            )
-            ToggleRow(
-                title = stringResource(R.string.settings_play_next_title),
-                subtitle = stringResource(R.string.settings_play_next_subtitle),
-                checked = playNext,
-                onToggle = settings::setPlayNextAutomatically,
-            )
-        }
+        PlaybackSettingsSection(
+            subtitlesOn = subtitles?.enabled ?: false,
+            onSubtitlesToggle = { on -> scope.launch { profileSettings.setSubtitlesOn(on) } },
+            resumeLastChannel = resumeLast,
+            onResumeLastChannelToggle = settings::setResumeLastChannel,
+            playNext = playNext,
+            onPlayNextToggle = settings::setPlayNextAutomatically,
+        )
 
         Spacer(Modifier.height(16.dp))
 
@@ -221,6 +214,41 @@ fun AppSettingsScreen(onBack: () -> Unit) {
         Spacer(Modifier.height(16.dp))
 
         SleepTimerSection()
+    }
+}
+
+/**
+ * Subtitles, resuming the last channel and playing the next episode. Subtitles are the active
+ * Profile's Subtitle Preference, the same one the players change, so the two can't disagree.
+ */
+@Composable
+internal fun PlaybackSettingsSection(
+    subtitlesOn: Boolean,
+    onSubtitlesToggle: (Boolean) -> Unit,
+    resumeLastChannel: Boolean,
+    onResumeLastChannelToggle: (Boolean) -> Unit,
+    playNext: Boolean,
+    onPlayNextToggle: (Boolean) -> Unit,
+) {
+    SettingsSection(stringResource(R.string.settings_section_playback)) {
+        ToggleRow(
+            title = stringResource(R.string.settings_subtitles_title),
+            subtitle = stringResource(R.string.settings_subtitles_subtitle),
+            checked = subtitlesOn,
+            onToggle = onSubtitlesToggle,
+        )
+        ToggleRow(
+            title = stringResource(R.string.settings_resume_title),
+            subtitle = stringResource(R.string.settings_resume_subtitle),
+            checked = resumeLastChannel,
+            onToggle = onResumeLastChannelToggle,
+        )
+        ToggleRow(
+            title = stringResource(R.string.settings_play_next_title),
+            subtitle = stringResource(R.string.settings_play_next_subtitle),
+            checked = playNext,
+            onToggle = onPlayNextToggle,
+        )
     }
 }
 

@@ -201,7 +201,7 @@
     <string name="settings_preview_sound_subtitle">Play the preview channel\'s audio too, not just the picture.</string>
     <string name="settings_section_playback">Playback</string>
     <string name="settings_subtitles_title">Show subtitles when available</string>
-    <string name="settings_subtitles_subtitle">The default for new channels. While watching, the Subtitles button on the player lets you pick a specific track or turn them off.</string>
+    <string name="settings_subtitles_subtitle">For this profile, on channels, movies and shows. Picking a subtitle track or turning them off in the player changes this too, and the language you pick is used next time.</string>
     <string name="settings_resume_title">Resume last channel on startup</string>
     <string name="player_next_episode_label">Up Next</string>
     <string name="player_next_episode_number">S%1$d E%2$d</string>

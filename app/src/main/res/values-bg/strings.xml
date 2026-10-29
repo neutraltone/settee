@@ -171,7 +171,6 @@
     <string name="settings_preview_sound_subtitle">Възпроизвежда и звука на канала за преглед, не само картината.</string>
     <string name="settings_section_playback">Възпроизвеждане</string>
     <string name="settings_subtitles_title">Показване на субтитри, когато има налични</string>
-    <string name="settings_subtitles_subtitle">По подразбиране за нови канали. По време на гледане бутонът Субтитри на плейъра ви позволява да изберете конкретна пътека или да ги изключите.</string>
     <string name="settings_resume_title">Възобновяване на последния канал при стартиране</string>
     <string name="settings_resume_subtitle">Отваря приложението директно на канала, който сте гледали последно, вместо програмата. Натиснете Назад, за да стигнете до програмата.</string>
     <string name="settings_sleep_timer">Таймер за сън</string>

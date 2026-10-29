@@ -171,7 +171,6 @@
     <string name="settings_preview_sound_subtitle">Riproduce anche l\'audio del canale in anteprima, non solo l\'immagine.</string>
     <string name="settings_section_playback">Riproduzione</string>
     <string name="settings_subtitles_title">Mostra i sottotitoli quando disponibili</string>
-    <string name="settings_subtitles_subtitle">L\'impostazione predefinita per i nuovi canali. Durante la visione, il pulsante Sottotitoli nel player permette di scegliere una traccia specifica o di disattivarli.</string>
     <string name="settings_resume_title">Riprendi l\'ultimo canale all\'avvio</string>
     <string name="settings_resume_subtitle">Apre l\'app direttamente sull\'ultimo canale visto, invece che sulla guida. Premi Indietro per accedere alla guida.</string>
     <string name="settings_sleep_timer">Timer di spegnimento</string>

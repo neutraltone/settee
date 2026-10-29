@@ -9,6 +9,7 @@ import app.opentv.core.ServiceLocator
 import app.opentv.data.model.Favourite
 import app.opentv.data.model.PlaybackPosition
 import app.opentv.data.model.Profile
+import app.opentv.data.model.ProfileSetting
 import app.opentv.data.model.Recording
 import app.opentv.data.model.RecordingStatus
 import app.opentv.data.model.StreamKind
@@ -39,14 +40,16 @@ class SyncEngine(private val graph: ServiceLocator.Graph) {
         val favourites: Int = 0,
         val hidden: Int = 0,
         val recordings: Int = 0,
+        val settings: Int = 0,
     ) {
-        val total: Int get() = positions + favourites + hidden + recordings
+        val total: Int get() = positions + favourites + hidden + recordings + settings
 
         operator fun plus(other: MergeResult): MergeResult = MergeResult(
             positions = positions + other.positions,
             favourites = favourites + other.favourites,
             hidden = hidden + other.hidden,
             recordings = recordings + other.recordings,
+            settings = settings + other.settings,
         )
     }
 
@@ -97,6 +100,10 @@ class SyncEngine(private val graph: ServiceLocator.Graph) {
             val profileName = names[fav.profileId] ?: return@mapNotNull null
             SyncFavourite(profile = profileName, kind = fav.kind.name, source = fav.source, id = fav.itemId)
         }
+        val profileSettings = graph.profileSettings.everyProfiles().mapNotNull { setting ->
+            val profileName = names[setting.profileId] ?: return@mapNotNull null
+            SyncProfileSetting(profileName, setting.name, setting.value, setting.updatedAtMillis)
+        }
         return SyncBundle(
             generatedAtMillis = System.currentTimeMillis(),
             profiles = profiles.map { it.name },
@@ -105,6 +112,7 @@ class SyncEngine(private val graph: ServiceLocator.Graph) {
             hiddenChannels = graph.catalogRepository.hiddenChannelUrls(),
             hiddenCategories = graph.settings.hiddenCategories.value.toList(),
             recordings = recordings,
+            profileSettings = profileSettings,
         )
     }
 
@@ -200,11 +208,22 @@ class SyncEngine(private val graph: ServiceLocator.Graph) {
             )
             if (taken) positions++
         }
+
+        // Profile settings — newest wins per Profile and setting.
+        var settings = 0
+        for (item in bundle.profileSettings) {
+            val profileId = profileIdFor(item.profile) ?: continue
+            val taken = graph.profileSettings.mergeSynced(
+                ProfileSetting(profileId, item.name, item.value, item.updatedAtMillis),
+            )
+            if (taken) settings++
+        }
         return MergeResult(
             positions = positions,
             favourites = favourites,
             hidden = hidden,
             recordings = recordings,
+            settings = settings,
         )
     }
 
