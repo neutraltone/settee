@@ -785,6 +785,8 @@ class VodViewModel @JvmOverloads constructor(
         /** How far through, 0..1; null when it has never been played, so the card shows no bar. */
         val progress: Float?,
         val episode: SeasonEpisode? = null,
+        /** Whether [episode] is a New Episode, which the card says on its thumbnail. */
+        val newEpisode: Boolean = false,
     )
 
     @OptIn(ExperimentalCoroutinesApi::class)
@@ -1166,6 +1168,7 @@ private suspend fun resumeItem(catalog: CatalogRepository, card: ContinueWatchin
                     streamUrl = ep.streamUrl,
                     progress = card.progress,
                     episode = VodViewModel.SeasonEpisode(ep.season, ep.episodeNumber),
+                    newEpisode = card.newEpisode,
                 )
             }
         }

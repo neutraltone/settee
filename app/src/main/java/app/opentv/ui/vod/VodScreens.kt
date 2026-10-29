@@ -59,6 +59,7 @@ import app.opentv.data.model.Series
 import app.opentv.data.model.Source
 import app.opentv.data.parser.displayTitle
 import app.opentv.data.repo.GenreGroup
+import app.opentv.ui.NewEpisodeBadge
 import app.opentv.ui.VodViewModel
 import coil.compose.AsyncImage
 
@@ -588,6 +589,7 @@ private fun ResumeCard(item: VodViewModel.ResumeItem, onClick: () -> Unit) {
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.fillMaxSize(),
             )
+            if (item.newEpisode) NewEpisodeBadge(Modifier.align(Alignment.TopStart).padding(6.dp))
             item.progress?.let { progress ->
                 LinearProgressIndicator(
                     progress = { progress },

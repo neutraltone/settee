@@ -118,7 +118,17 @@ object ServiceLocator {
         }
 
         val viewerLibrary: ViewerLibrary by lazy {
-            ViewerLibrary(database.positions(), database.episodes(), database.favourites(), settings.activeProfileId)
+            ViewerLibrary(
+                database.positions(),
+                database.episodes(),
+                database.favourites(),
+                settings.activeProfileId,
+                episodeFetcher = { series ->
+                    database.sources().byId(series.sourceId)?.let {
+                        catalogRepository.ensureEpisodes(it, series.seriesId)
+                    }
+                },
+            )
         }
 
         val profileSettings: ProfileSettings by lazy {

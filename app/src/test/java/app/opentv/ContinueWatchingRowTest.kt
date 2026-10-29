@@ -84,4 +84,19 @@ class ContinueWatchingRowTest {
 
         assertThat(played).isEqualTo(Triple("ep:24", "https://example.com/2-4.mkv", "S2E4 · The one with the card"))
     }
+
+    @Test
+    fun `a New Episode card says so on its thumbnail`() {
+        show(inProgress.copy(mediaKey = "ep:31", progress = null, episode = SeasonEpisode(3, 1), newEpisode = true))
+
+        compose.onNodeWithText("New episode", useUnmergedTree = true).assertExists()
+        captureScreen("continue_watching_new_episode")
+    }
+
+    @Test
+    fun `an ordinary Up Next card has no New Episode badge`() {
+        show(inProgress.copy(mediaKey = "ep:25", progress = null, episode = SeasonEpisode(2, 5)))
+
+        compose.onNodeWithText("New episode", useUnmergedTree = true).assertDoesNotExist()
+    }
 }

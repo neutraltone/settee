@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.CheckCircle
+import androidx.compose.material.icons.outlined.NewReleases
 import androidx.compose.material.icons.outlined.Timelapse
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -43,6 +44,12 @@ fun WatchBadge(status: WatchStatus, modifier: Modifier = Modifier) {
         is WatchStatus.InProgress -> Label(Icons.Outlined.Timelapse, inProgressText(status.remainingMillis), modifier)
         WatchStatus.Unwatched -> Unit
     }
+}
+
+/** The same quiet label for a New Episode, on its Continue Watching card. */
+@Composable
+fun NewEpisodeBadge(modifier: Modifier = Modifier) {
+    Label(Icons.Outlined.NewReleases, stringResource(R.string.watch_badge_new_episode), modifier)
 }
 
 @Composable

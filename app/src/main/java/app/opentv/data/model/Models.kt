@@ -348,6 +348,11 @@ data class Episode(
     val durationSeconds: Int?,
     val stillUrl: String?,
     val streamUrl: String,
+    /**
+     * When this device first stored the episode (UTC epoch millis). Episode lists carry no time the
+     * provider added each one, so this is what tells a New Episode from one that was always there.
+     */
+    val firstSeenMillis: Long = 0,
 )
 
 /**

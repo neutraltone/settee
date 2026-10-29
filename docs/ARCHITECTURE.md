@@ -101,6 +101,21 @@ This is why `M3uParser` works so hard to produce a **stable** `streamId` for pla
 every refresh looks like a completely new set of channels, and the user's hidden channels and
 ordering silently vanish.
 
+### Episodes load lazily, with one exception
+
+A series' episodes are fetched when it is opened (`CatalogRepository.ensureEpisodes`), never
+during catalogue sync: one `get_series_info` per show across a 10,000-show catalogue would take
+hours. The exception is New Episode detection. After a refresh, every show whose `last_modified`
+moved forward goes to `ViewerLibrary.newEpisodes`, which fetches the episodes only of shows some
+Profile on the device is caught up on, one at a time in the background. That is normally a handful
+of calls, not the catalogue.
+
+Episode lists carry no time the provider added each episode, so each row records when this device
+first stored it (`firstSeenMillis`). A New Episode is an Up Next first seen after the Profile
+Watched the episode before it. That is worked out on the fly rather than stored per Profile, so it
+works for every Profile and needs nothing synced. A re-fetch matches rows by provider episode id,
+keeping the local id that resume points use and the first-seen time.
+
 ## SQLite's bound-variable limit is a real constraint here
 
 Two queries are written in a non-obvious way because of it, and both are marked in the code.

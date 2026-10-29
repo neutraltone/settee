@@ -1,8 +1,8 @@
 {
   "formatVersion": 1,
   "database": {
-    "version": 4,
-    "identityHash": "e987dacfe569eaccd9d05eb2e661c762",
+    "version": 5,
+    "identityHash": "69dd39ce3dff283a2ccbe677fda6eb47",
     "entities": [
       {
         "tableName": "sources",
@@ -758,7 +758,7 @@
       },
       {
         "tableName": "episodes",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `sourceId` INTEGER NOT NULL, `seriesId` TEXT NOT NULL, `episodeId` TEXT NOT NULL, `season` INTEGER NOT NULL, `episodeNumber` INTEGER NOT NULL, `title` TEXT NOT NULL, `plot` TEXT, `durationSeconds` INTEGER, `stillUrl` TEXT, `streamUrl` TEXT NOT NULL)",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `sourceId` INTEGER NOT NULL, `seriesId` TEXT NOT NULL, `episodeId` TEXT NOT NULL, `season` INTEGER NOT NULL, `episodeNumber` INTEGER NOT NULL, `title` TEXT NOT NULL, `plot` TEXT, `durationSeconds` INTEGER, `stillUrl` TEXT, `streamUrl` TEXT NOT NULL, `firstSeenMillis` INTEGER NOT NULL)",
         "fields": [
           {
             "fieldPath": "id",
@@ -821,6 +821,12 @@
             "fieldPath": "streamUrl",
             "columnName": "streamUrl",
             "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "firstSeenMillis",
+            "columnName": "firstSeenMillis",
+            "affinity": "INTEGER",
             "notNull": true
           }
         ],
@@ -1302,7 +1308,7 @@
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'e987dacfe569eaccd9d05eb2e661c762')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '69dd39ce3dff283a2ccbe677fda6eb47')"
     ]
   }
 }

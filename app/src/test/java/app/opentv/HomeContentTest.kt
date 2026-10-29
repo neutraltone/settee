@@ -242,6 +242,24 @@ class HomeContentTest {
     }
 
     @Test
+    fun `a show with a New Episode is labelled in Home's Continue Watching`() {
+        val newEpisode = VodViewModel.ResumeItem(
+            "ep:31",
+            "Severance",
+            playerTitle = "S3E1 · Cold Harbor",
+            posterUrl = "https://example.com/31.jpg",
+            streamUrl = "",
+            progress = null,
+            episode = VodViewModel.SeasonEpisode(season = 3, episode = 1),
+            newEpisode = true,
+        )
+        setHome(resume = listOf(newEpisode) + resume)
+
+        compose.onNodeWithText("New episode", useUnmergedTree = true).assertExists()
+        captureScreen("home_continue_watching_new_episode")
+    }
+
+    @Test
     fun `with nothing to continue, the first Favourite show is highlighted`() {
         setHome(resume = emptyList())
 

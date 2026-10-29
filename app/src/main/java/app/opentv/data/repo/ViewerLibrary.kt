@@ -5,11 +5,14 @@
  */
 package app.opentv.data.repo
 
+import android.util.Log
 import app.opentv.data.db.EpisodeDao
 import app.opentv.data.db.FavouriteDao
 import app.opentv.data.db.PlaybackPositionDao
 import app.opentv.data.model.Episode
 import app.opentv.data.model.PlaybackPosition
+import app.opentv.data.model.Series
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
@@ -44,9 +47,10 @@ sealed interface ContinueWatchingCard {
 
     /**
      * A series, picked back up at [episode]; [progress] is how far through it is, 0..1, or null for
-     * an Up Next the Profile has never played.
+     * an Up Next the Profile has never played. [newEpisode] is whether [episode] is a New Episode.
      */
-    data class Series(val episode: Episode, val progress: Float?) : ContinueWatchingCard
+    data class Series(val episode: Episode, val progress: Float?, val newEpisode: Boolean = false) :
+        ContinueWatchingCard
 }
 
 /** What a series page's main button does for the active Profile. */
@@ -71,6 +75,8 @@ class ViewerLibrary(
     favouriteDao: FavouriteDao,
     private val activeProfileId: StateFlow<Long>,
     private val clock: () -> Long = System::currentTimeMillis,
+    /** Loads and stores one series' episodes from its provider. */
+    episodeFetcher: suspend (Series) -> Unit = {},
 ) {
     /** The active Profile's Favourites, and every Profile's for sync. */
     val favourites = Favourites(favouriteDao, activeProfileId)
@@ -79,6 +85,9 @@ class ViewerLibrary(
 
     /** Each episode's Next Episode, in the same episode order as Up Next. */
     val nextEpisodes = NextEpisodes(episodes)
+
+    /** Looks for New Episodes in the series a catalogue refresh says the provider updated. */
+    val newEpisodes = NewEpisodes(positions, episodes, episodeFetcher)
 
     suspend fun recordProgress(mediaKey: String, positionMillis: Long, durationMillis: Long) {
         positions.upsert(
@@ -184,6 +193,42 @@ class ViewerLibrary(
     }
 }
 
+/** Fetches the episodes a New Episode could be among; Continue Watching then shows what it finds. */
+class NewEpisodes internal constructor(
+    private val positions: PlaybackPositionDao,
+    private val episodes: EpisodeDao,
+    private val episodeFetcher: suspend (Series) -> Unit,
+) {
+    /** Fetches the episodes of each of [updated], series the provider says changed, to find New Episodes. */
+    suspend fun seriesUpdated(updated: List<Series>) {
+        if (updated.isEmpty()) return
+        // Only a series some Profile is caught up on can gain a New Episode; fetching the rest
+        // would be a panel call per updated show for nothing.
+        val everyPosition = positions.all().filter { it.mediaKey.startsWith(EPISODE_PREFIX) }
+        for (series in updated) {
+            if (!someoneIsCaughtUp(series, everyPosition)) continue
+            // One show's panel timing out must not cost the others their New Episodes.
+            runCatching { episodeFetcher(series) }
+                .onFailure { if (it is CancellationException) throw it }
+                .onFailure { Log.w(TAG, "Episode fetch failed for series ${series.seriesId}", it) }
+        }
+    }
+
+    /** Whether, for any Profile, the episode of [series] it played last is Watched and has nothing after it. */
+    private suspend fun someoneIsCaughtUp(series: Series, everyPosition: List<PlaybackPosition>): Boolean {
+        val ordered = episodes.forSeries(series.sourceId, series.seriesId).sortedWith(EPISODE_ORDER)
+        val last = ordered.lastOrNull() ?: return false
+        val keys = ordered.mapTo(HashSet()) { "$EPISODE_PREFIX${it.id}" }
+        return everyPosition.filter { it.mediaKey in keys }
+            .groupBy { it.profileId }
+            .values
+            .any { mine ->
+                val latest = mine.maxBy { it.updatedAtMillis }
+                latest.mediaKey == "$EPISODE_PREFIX${last.id}" && statusOf(latest) == WatchStatus.Watched
+            }
+    }
+}
+
 /** Answers the Next Episode, kept beside Up Next so the two can't drift apart in how they order episodes. */
 class NextEpisodes internal constructor(private val episodes: EpisodeDao) {
     /**
@@ -226,20 +271,23 @@ private class ContinueWatchingCards(private val positions: PlaybackPositionDao, 
             val positionOf = list.associateBy { it.mediaKey }
             val latestPerSeries = list.mapNotNull { pos -> byKey[pos.mediaKey]?.let { it to pos } }
                 .distinctBy { (ep, _) -> ep.sourceId to ep.seriesId }
-            // Capped on cards, not series: a series with nothing left to watch takes no slot.
-            buildList {
-                for ((ep, pos) in latestPerSeries) {
-                    if (size == IN_PROGRESS_LIMIT) break
-                    seriesCard(ep, pos, positionOf)?.let { add(Played(it, pos.updatedAtMillis)) }
-                }
-            }
+            // Capped on cards, not series: a series with nothing left to watch takes no slot. Every
+            // series is built before the cap, since a New Episode can lift one long unplayed to the top.
+            latestPerSeries
+                .mapNotNull { (ep, pos) -> seriesCard(ep, pos, positionOf)?.let { Played(it, placedAt(it, pos)) } }
+                .sortedByDescending { it.playedAtMillis }
+                .take(IN_PROGRESS_LIMIT)
         }
+
+    /** When a card counts as played for ordering: a New Episode goes by when it was noticed. */
+    private fun placedAt(card: ContinueWatchingCard.Series, pos: PlaybackPosition): Long =
+        if (card.newEpisode) maxOf(pos.updatedAtMillis, card.episode.firstSeenMillis) else pos.updatedAtMillis
 
     private suspend fun seriesCard(
         latest: Episode,
         pos: PlaybackPosition,
         positionOf: Map<String, PlaybackPosition>,
-    ): ContinueWatchingCard? = when (val status = statusOf(pos)) {
+    ): ContinueWatchingCard.Series? = when (val status = statusOf(pos)) {
         is WatchStatus.InProgress -> ContinueWatchingCard.Series(latest, status.progress)
         else -> {
             val ordered = episodes.forSeries(latest.sourceId, latest.seriesId).sortedWith(EPISODE_ORDER)
@@ -247,7 +295,9 @@ private class ContinueWatchingCards(private val positions: PlaybackPositionDao, 
                 // Up Next may have been started before an earlier episode was finished; the player
                 // resumes it there, so the card shows that progress rather than none.
                 val started = positionOf["$EPISODE_PREFIX${next.id}"]?.let(::statusOf) as? WatchStatus.InProgress
-                ContinueWatchingCard.Series(next, started?.progress)
+                // Nothing to mark it but its arriving after the Profile had Watched the one before.
+                val isNew = started == null && next.firstSeenMillis > pos.updatedAtMillis
+                ContinueWatchingCard.Series(next, started?.progress, newEpisode = isNew)
             }
         }
     }
@@ -257,6 +307,7 @@ private val EPISODE_ORDER = compareBy<Episode>({ it.season }, { it.episodeNumber
 private const val EPISODE_PREFIX = "ep:"
 private const val MOVIE_PREFIX = "movie:"
 private const val IN_PROGRESS_LIMIT = 30
+private const val TAG = "ViewerLibrary"
 
 /** Past this, the credits are rolling: the title counts as Watched and is not resumed. */
 private const val WATCHED_FRACTION = 0.93

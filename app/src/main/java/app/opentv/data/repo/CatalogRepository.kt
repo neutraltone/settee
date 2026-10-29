@@ -131,10 +131,10 @@ class CatalogRepository(
     private val stalkerApi: StalkerApi,
     private val http: OkHttpClient,
     private val settings: AppSettings,
-) {
-
+    private val clock: () -> Long = System::currentTimeMillis,
     /** Where work that outlives a sync runs, such as [LatestAirDates]. */
-    private val background = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val background: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.IO),
+) {
 
     /** TMDB back-fill for VOD detail pages, gated on a user-supplied key. See [TmdbClient]. */
     private val tmdb = TmdbClient(http, settings)
@@ -616,7 +616,19 @@ class CatalogRepository(
     suspend fun ensureEpisodes(source: Source, seriesId: String) {
         if (source.kind != SourceKind.XTREAM) return
         runCatching { api.episodes(source, seriesId) }
-            .onSuccess { if (it.isNotEmpty()) episodeDao.upsertAll(it) }
+            .onSuccess { fetched ->
+                if (fetched.isEmpty()) return@onSuccess
+                // Matched to the stored rows like a catalogue refresh: an upsert without the local
+                // id would update nothing, and an episode must keep when it was first seen.
+                val stored = episodeDao.forSeries(source.id, seriesId).associateBy { it.episodeId }
+                val firstSeen = clock()
+                episodeDao.upsertAll(
+                    fetched.map { ep ->
+                        stored[ep.episodeId]?.let { ep.copy(id = it.id, firstSeenMillis = it.firstSeenMillis) }
+                            ?: ep.copy(firstSeenMillis = firstSeen)
+                    },
+                )
+            }
             .onFailure { Log.w(TAG, "Episode fetch failed for series $seriesId", it) }
     }
 
@@ -767,7 +779,11 @@ class CatalogRepository(
         }
         if (series.isNotEmpty()) {
             val stored = seriesDao.forSource(source.id).associateBy { it.seriesId }
-            seriesDao.upsertAll(series.map { it.over(stored[it.seriesId]) })
+            val merged = series.map { it.over(stored[it.seriesId]) }
+            seriesDao.upsertAll(merged)
+            // A show seen for the first time has nobody caught up on it, so only ones that moved.
+            val updated = merged.filter { it.addedMillis > (stored[it.seriesId]?.addedMillis ?: Long.MAX_VALUE) }
+            background.launch { viewerLibrary.newEpisodes.seriesUpdated(updated) }
             // Fifty get_series_info calls would hold the sync up for a while; the catalogue is
             // saved, so date the shows afterwards. Recently Released Shows fills in as it goes.
             background.launch {
