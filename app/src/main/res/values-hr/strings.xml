@@ -171,8 +171,6 @@
     <string name="settings_preview_sound_subtitle">Reproducira i zvuk kanala u pregledu, ne samo sliku.</string>
     <string name="settings_section_playback">Reprodukcija</string>
     <string name="settings_subtitles_title">Prikaži titlove kad su dostupni</string>
-    <string name="settings_resume_title">Nastavi zadnji kanal pri pokretanju</string>
-    <string name="settings_resume_subtitle">Otvara aplikaciju izravno na kanalu koji ste zadnje gledali, umjesto vodiča. Pritisnite Natrag za pristup vodiču.</string>
     <string name="settings_sleep_timer">Odbrojavanje za spavanje</string>
     <string name="settings_sleep_off_desc">Isključeno — reprodukcija se nastavlja dok je sami ne zaustavite.</string>
     <string name="settings_sleep_on_desc">Uključeno — reprodukcija će se zaustaviti za otprilike %1$d min.</string>

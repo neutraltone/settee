@@ -184,6 +184,7 @@ fun MainScreen(
                     onOpenSeries = onOpenSeries,
                     onOpenMovie = onOpenMovie,
                     onPlayChannel = onPlayChannel,
+                    onOpenLive = { onSelectTab(Tab.LIVE) },
                     takeFocus = takeFocus,
                     onNothingToShow = onNothingToShow,
                 )

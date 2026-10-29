@@ -18,6 +18,7 @@ import app.opentv.data.model.EpgChannelAlias
 import app.opentv.data.model.EpgFeed
 import app.opentv.data.model.Episode
 import app.opentv.data.model.Favourite
+import app.opentv.data.model.LivePlayback
 import app.opentv.data.model.Movie
 import app.opentv.data.model.PlaybackPosition
 import app.opentv.data.model.Profile
@@ -634,6 +635,10 @@ interface PlaybackPositionDao {
     @Query("SELECT * FROM playback_positions")
     suspend fun all(): List<PlaybackPosition>
 
+    /** When [profileId] last played a movie, episode or recording; null if never. */
+    @Query("SELECT MAX(updatedAtMillis) FROM playback_positions WHERE profileId = :profileId")
+    fun observeLastPlayedAt(profileId: Long): Flow<Long?>
+
     /** One profile's positions of one kind ("ep:", "movie:") — a series page needs every episode's. */
     @Query("SELECT * FROM playback_positions WHERE profileId = :profileId AND mediaKey LIKE :prefix || '%'")
     fun observeKind(profileId: Long, prefix: String): Flow<List<PlaybackPosition>>
@@ -647,6 +652,32 @@ interface PlaybackPositionDao {
 
     @Query("DELETE FROM playback_positions WHERE profileId = :profileId AND mediaKey = :key")
     suspend fun delete(profileId: Long, key: String)
+}
+
+@Dao
+interface LivePlaybackDao {
+    // Copied from the channel's row in SQL, its source's name and all, so callers never handle names.
+    // The name is the one the viewer sees: their rename if they gave one.
+    @Query(
+        """
+        INSERT OR REPLACE INTO live_playback (profileId, source, streamId, name, logoUrl, playedAtMillis)
+        SELECT :profileId, src.name, c.streamId, COALESCE(NULLIF(TRIM(c.customName), ''), c.displayName),
+            c.logoUrl, :playedAtMillis
+        FROM channels c JOIN sources src ON src.id = c.sourceId WHERE c.id = :channelId
+        """,
+    )
+    suspend fun record(profileId: Long, channelId: Long, playedAtMillis: Long)
+
+    @Query("SELECT * FROM live_playback WHERE profileId = :profileId")
+    fun observe(profileId: Long): Flow<LivePlayback?>
+
+    @Query(
+        """
+        SELECT c.* FROM channels c JOIN sources src ON src.id = c.sourceId
+        WHERE src.name = :source AND c.streamId = :streamId
+        """,
+    )
+    fun observeChannel(source: String, streamId: String): Flow<Channel?>
 }
 
 @Dao

@@ -56,6 +56,7 @@ import app.opentv.data.model.Channel
 import app.opentv.data.model.Movie
 import app.opentv.data.model.Series
 import app.opentv.data.model.shownName
+import app.opentv.data.repo.LivePreview
 import app.opentv.ui.vod.CardFocus
 import app.opentv.ui.vod.ContinueWatchingRow
 import app.opentv.ui.vod.MoviePosterRow
@@ -76,11 +77,14 @@ internal fun HomeScreen(
     onOpenSeries: (Series) -> Unit,
     onOpenMovie: (Movie) -> Unit,
     onPlayChannel: (Channel) -> Unit,
+    onOpenLive: () -> Unit,
     takeFocus: Boolean,
     onNothingToShow: () -> Unit,
     viewModel: HomeViewModel = viewModel(),
 ) {
     val state = viewModel.state.collectAsState().value ?: return
+    val live = state.live
+    val preview = rememberLivePreviewPlayer((live?.preview as? LivePreview.Playable)?.channel)
     HomeContent(
         state.continueWatching,
         state.favouriteShows,
@@ -93,6 +97,15 @@ internal fun HomeScreen(
         takeFocus,
         state.recent,
         onNothingToShow,
+        live = live?.let {
+            LiveTile(it.preview, it.nowTitle, it.nextTitle, preview.player, preview.error)
+        },
+        onWatchLive = { channel ->
+            // Stopped before the full-screen player starts, so the box never decodes two at once.
+            preview.stop()
+            onPlayChannel(channel)
+        },
+        onOpenLive = onOpenLive,
     )
 }
 
@@ -113,9 +126,12 @@ internal fun HomeContent(
     takeFocus: Boolean,
     recent: RecentRows = RecentRows(),
     onNothingToShow: () -> Unit = {},
+    live: LiveTile? = null,
+    onWatchLive: (Channel) -> Unit = {},
+    onOpenLive: () -> Unit = {},
 ) {
-    val shelves = remember(continueWatching, favouriteShows, favouriteMovies, favouriteChannels, recent) {
-        homeShelves(continueWatching, favouriteShows, favouriteMovies, favouriteChannels, recent)
+    val shelves = remember(live, continueWatching, favouriteShows, favouriteMovies, favouriteChannels, recent) {
+        liveShelf(live) + homeShelves(continueWatching, favouriteShows, favouriteMovies, favouriteChannels, recent)
     }
     if (shelves.isEmpty()) {
         // A hint can't take the highlight, so hand it to the side menu rather than leave the remote
@@ -143,16 +159,7 @@ internal fun HomeContent(
     var restoring by remember { mutableStateOf(picked?.takeIf { takeFocus }) }
     val target = restoring?.let { restoreTarget(shelves.map(Shelf::row), it) }
     val start = remember { FocusRequester() }
-    val focus = remember(target) {
-        target?.let {
-            CardFocus(it.index) { focused ->
-                restoring = null
-                // The card couldn't take the highlight, so the list does, rather than leave the
-                // remote with nothing to move.
-                if (!focused) runCatching { start.requestFocus() }
-            }
-        }
-    }
+    val focus = rememberRestoreFocus(target, start) { restoring = null }
 
     // Home opens on its first card, so OK straight away picks up what was last watched — unless
     // [takeFocus] is false because Home was just picked in the side menu, where the highlight
@@ -182,6 +189,9 @@ internal fun HomeContent(
                     open()
                 }
                 when (shelf) {
+                    is Shelf.Live -> LivePreviewTile(shelf.tile, rowFocus) {
+                        pick(LIVE_PICK) { shelf.tile.open(onWatchLive, onOpenLive) }
+                    }
                     is Shelf.Resume -> ContinueWatchingRow(shelf.cards, rowFocus) { key, url, title ->
                         pick(key) { onResume(key, url, title) }
                     }
@@ -208,12 +218,30 @@ internal fun HomeContent(
     }
 }
 
+/**
+ * The highlight's way back to [target]'s card, calling [onDone] once it has tried. When the card
+ * couldn't take the highlight, [fallback] (the list) does, rather than leave the remote with nothing
+ * to move.
+ */
+@Composable
+private fun rememberRestoreFocus(target: HomePick?, fallback: FocusRequester, onDone: () -> Unit): CardFocus? =
+    remember(target) {
+        target?.let {
+            CardFocus(it.index) { focused ->
+                onDone()
+                if (!focused) runCatching { fallback.requestFocus() }
+            }
+        }
+    }
+
 /** One of Home's rows as the highlight sees it: its list key and its cards' keys, in order. */
 internal class HomeRow(val key: String, val items: List<String>)
 
 /** One of Home's rows and what it shows; the one list both draws Home and places its highlight. */
 private sealed class Shelf(key: String, items: List<String>) {
     val row = HomeRow(key, items)
+
+    class Live(val tile: LiveTile) : Shelf("live", listOf(LIVE_PICK))
 
     class Resume(val cards: List<VodViewModel.ResumeItem>) : Shelf("cw", cards.map { it.mediaKey })
 
@@ -225,6 +253,9 @@ private sealed class Shelf(key: String, items: List<String>) {
 
     class Channels(val channels: List<Channel>) : Shelf("channels", channels.map { it.pickKey })
 }
+
+/** The Live Preview's row, which leads Home when there is one. */
+private fun liveShelf(tile: LiveTile?): List<Shelf> = listOfNotNull(tile?.let(Shelf::Live))
 
 /** Home's rows that have something in them, top to bottom. */
 private fun homeShelves(
@@ -243,6 +274,8 @@ private fun homeShelves(
     Shelf.Shows("releasedShows", R.string.home_recently_released_shows, recent.releasedShows),
     Shelf.Shows("addedShows", R.string.home_recently_added_shows, recent.addedShows),
 ).filter { it.row.items.isNotEmpty() }
+
+private const val LIVE_PICK = "live"
 
 // A pick is kept by the provider's ids rather than the local row id, which a catalogue refresh can
 // change while the viewer is away.

@@ -199,10 +199,11 @@
     <string name="settings_live_preview_subtitle">Play the selected channel in the preview pane. Turn this off if the guide stutters on an older box.</string>
     <string name="settings_preview_sound_title">Preview sound</string>
     <string name="settings_preview_sound_subtitle">Play the preview channel\'s audio too, not just the picture.</string>
+    <string name="settings_live_preview_home_title">Live preview on Home</string>
+    <string name="settings_live_preview_home_subtitle">When live TV was the last thing you watched, Home opens with that channel playing silently. Turn this off to save bandwidth or if Home stutters on an older box.</string>
     <string name="settings_section_playback">Playback</string>
     <string name="settings_subtitles_title">Show subtitles when available</string>
     <string name="settings_subtitles_subtitle">For this profile, on channels, movies and shows. Picking a subtitle track or turning them off in the player changes this too, and the language you pick is used next time.</string>
-    <string name="settings_resume_title">Resume last channel on startup</string>
     <string name="player_next_episode_label">Up Next</string>
     <string name="player_next_episode_number">S%1$d E%2$d</string>
     <string name="player_next_episode_in">Next episode in %1$d</string>
@@ -213,7 +214,6 @@
     <string name="player_stop">Stop</string>
     <string name="settings_play_next_title">Play next episode automatically</string>
     <string name="settings_play_next_subtitle">As an episode\'s credits start, count down and play the next one. Off, the next episode waits for you to press OK.</string>
-    <string name="settings_resume_subtitle">Open the app straight into the channel you were last watching, instead of the guide. Press Back to reach the guide.</string>
     <string name="settings_sleep_timer">Sleep timer</string>
     <string name="settings_sleep_off_desc">Off — playback keeps going until you stop it.</string>
     <string name="settings_sleep_on_desc">On — playback will stop in about %1$d min.</string>
@@ -461,6 +461,9 @@
     <string name="home_favourite_shows">Favourite shows</string>
     <string name="home_favourite_movies">Favourite movies</string>
     <string name="home_favourite_channels">Favourite channels</string>
+    <string name="home_live_now">Now: %1$s</string>
+    <string name="home_live_next">Next: %1$s</string>
+    <string name="home_live_gone">No longer in your channel list</string>
     <string name="home_recently_released_movies">Recently released movies</string>
     <string name="home_recently_added_movies">Recently added movies</string>
     <string name="home_recently_released_shows">Recently released shows</string>

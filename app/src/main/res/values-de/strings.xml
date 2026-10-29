@@ -171,8 +171,6 @@
     <string name="settings_preview_sound_subtitle">Spielt auch den Ton des Vorschausenders ab, nicht nur das Bild.</string>
     <string name="settings_section_playback">Wiedergabe</string>
     <string name="settings_subtitles_title">Untertitel anzeigen, wenn verfügbar</string>
-    <string name="settings_resume_title">Letzten Sender beim Start fortsetzen</string>
-    <string name="settings_resume_subtitle">Öffnet die App direkt beim zuletzt gesehenen Sender statt beim Guide. Drücke Zurück, um zum Guide zu gelangen.</string>
     <string name="settings_sleep_timer">Sleep-Timer</string>
     <string name="settings_sleep_off_desc">Aus — die Wiedergabe läuft weiter, bis du sie stoppst.</string>
     <string name="settings_sleep_on_desc">An — die Wiedergabe stoppt in etwa %1$d Min.</string>

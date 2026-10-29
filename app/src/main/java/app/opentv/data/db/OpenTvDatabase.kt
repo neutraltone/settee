@@ -19,6 +19,7 @@ import app.opentv.data.model.EpgChannelAlias
 import app.opentv.data.model.EpgFeed
 import app.opentv.data.model.Episode
 import app.opentv.data.model.Favourite
+import app.opentv.data.model.LivePlayback
 import app.opentv.data.model.LiveStreamFormat
 import app.opentv.data.model.Movie
 import app.opentv.data.model.PlaybackPosition
@@ -69,13 +70,14 @@ class Converters {
         Episode::class,
         PlaybackPosition::class,
         Favourite::class,
+        LivePlayback::class,
         Profile::class,
         ProfileSetting::class,
         Recording::class,
         SeriesRule::class,
         Reminder::class,
     ],
-    version = 4,
+    version = 5,
     exportSchema = true,
 )
 @TypeConverters(Converters::class)
@@ -91,6 +93,7 @@ abstract class OpenTvDatabase : RoomDatabase() {
     abstract fun episodes(): EpisodeDao
     abstract fun positions(): PlaybackPositionDao
     abstract fun favourites(): FavouriteDao
+    abstract fun livePlayback(): LivePlaybackDao
     abstract fun profiles(): ProfileDao
     abstract fun profileSettings(): ProfileSettingDao
     abstract fun recordings(): RecordingDao
@@ -101,11 +104,21 @@ abstract class OpenTvDatabase : RoomDatabase() {
         const val FILE_NAME = "opentv.db"
 
         /**
-         * Every migration, in order. Shared with the migration test so neither list can lag. Empty
-         * while the pre-1.0 wipe policy below holds; the first schema change from 1.0 on adds
-         * MIGRATION_x_y here.
+         * Every migration, in order. Shared with the migration test so neither list can lag. The
+         * pre-1.0 wipe policy below means a change *may* skip one, but a change that only adds a
+         * table costs one CREATE TABLE, so it keeps everyone's Favourites rather than wiping them.
          */
-        internal val MIGRATIONS: Array<Migration> = emptyArray()
+        internal val MIGRATIONS: Array<Migration> = arrayOf(
+            object : Migration(4, 5) {
+                override fun migrate(db: SupportSQLiteDatabase) {
+                    db.execSQL(
+                        "CREATE TABLE IF NOT EXISTS `live_playback` (`profileId` INTEGER NOT NULL, " +
+                            "`source` TEXT NOT NULL, `streamId` TEXT NOT NULL, `name` TEXT NOT NULL, " +
+                            "`logoUrl` TEXT, `playedAtMillis` INTEGER NOT NULL, PRIMARY KEY(`profileId`))",
+                    )
+                }
+            },
+        )
 
         /**
          * [onWiped] runs when the destructive fallback below rebuilds the database. Settings that

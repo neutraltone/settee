@@ -171,8 +171,6 @@
     <string name="settings_preview_sound_subtitle">Sadece görüntüyü değil, önizlenen kanalın sesini de oynatır.</string>
     <string name="settings_section_playback">Oynatma</string>
     <string name="settings_subtitles_title">Mevcut olduğunda altyazıları göster</string>
-    <string name="settings_resume_title">Başlangıçta son kanaldan devam et</string>
-    <string name="settings_resume_subtitle">Uygulamayı rehber yerine doğrudan en son izlediğiniz kanalla açar. Rehbere ulaşmak için Geri\'ye basın.</string>
     <string name="settings_sleep_timer">Uyku zamanlayıcısı</string>
     <string name="settings_sleep_off_desc">Kapalı — siz durdurana kadar oynatma devam eder.</string>
     <string name="settings_sleep_on_desc">Açık — oynatma yaklaşık %1$d dakika içinde duracak.</string>

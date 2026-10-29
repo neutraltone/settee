@@ -171,8 +171,6 @@
     <string name="settings_preview_sound_subtitle">映像だけでなく、プレビューチャンネルの音声も再生します。</string>
     <string name="settings_section_playback">再生</string>
     <string name="settings_subtitles_title">字幕がある場合は表示する</string>
-    <string name="settings_resume_title">起動時に前回のチャンネルを再開</string>
-    <string name="settings_resume_subtitle">番組表ではなく、前回視聴していたチャンネルを直接開いて起動します。番組表に戻るには「戻る」を押してください。</string>
     <string name="settings_sleep_timer">スリープタイマー</string>
     <string name="settings_sleep_off_desc">オフ——手動で停止するまで再生を続けます。</string>
     <string name="settings_sleep_on_desc">オン——約%1$d分後に再生が停止します。</string>

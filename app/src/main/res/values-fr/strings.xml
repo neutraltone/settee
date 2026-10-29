@@ -171,8 +171,6 @@
     <string name="settings_preview_sound_subtitle">Diffuse aussi le son de la chaîne en aperçu, pas seulement l\'image.</string>
     <string name="settings_section_playback">Lecture</string>
     <string name="settings_subtitles_title">Afficher les sous-titres lorsqu\'ils sont disponibles</string>
-    <string name="settings_resume_title">Reprendre la dernière chaîne au démarrage</string>
-    <string name="settings_resume_subtitle">Ouvre directement l\'application sur la dernière chaîne regardée, au lieu du guide. Appuyez sur Retour pour accéder au guide.</string>
     <string name="settings_sleep_timer">Minuterie de veille</string>
     <string name="settings_sleep_off_desc">Désactivée — la lecture continue jusqu\'à ce que vous l\'arrêtiez.</string>
     <string name="settings_sleep_on_desc">Activée — la lecture s\'arrêtera dans environ %1$d min.</string>

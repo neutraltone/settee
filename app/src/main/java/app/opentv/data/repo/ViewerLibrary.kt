@@ -7,6 +7,7 @@ package app.opentv.data.repo
 
 import app.opentv.data.db.EpisodeDao
 import app.opentv.data.db.FavouriteDao
+import app.opentv.data.db.LivePlaybackDao
 import app.opentv.data.db.PlaybackPositionDao
 import app.opentv.data.model.Episode
 import app.opentv.data.model.PlaybackPosition
@@ -69,6 +70,7 @@ class ViewerLibrary(
     private val positions: PlaybackPositionDao,
     private val episodes: EpisodeDao,
     favouriteDao: FavouriteDao,
+    live: LivePlaybackDao,
     private val activeProfileId: StateFlow<Long>,
     private val clock: () -> Long = System::currentTimeMillis,
 ) {
@@ -76,6 +78,9 @@ class ViewerLibrary(
     val favourites = Favourites(favouriteDao, activeProfileId)
 
     private val cards = ContinueWatchingCards(positions, episodes)
+
+    /** The live channel the active Profile last settled on, and its Live Preview. */
+    val live = LiveWatching(live, positions, activeProfileId, clock)
 
     /** Each episode's Next Episode, in the same episode order as Up Next. */
     val nextEpisodes = NextEpisodes(episodes)

@@ -26,7 +26,9 @@ import androidx.compose.ui.test.pressKey
 import app.opentv.data.model.Channel
 import app.opentv.data.model.Movie
 import app.opentv.data.model.Series
+import app.opentv.data.repo.LivePreview
 import app.opentv.ui.HomeContent
+import app.opentv.ui.LiveTile
 import app.opentv.ui.RecentRows
 import app.opentv.ui.VodViewModel
 import com.google.common.truth.Truth.assertThat
@@ -100,6 +102,25 @@ class HomeContentTest {
         number = null,
     )
 
+    /** The Live Preview a test's Home leads with, if any. */
+    private var live: LiveTile? = null
+
+    /** The channel a test's Live Preview last opened full screen. */
+    private var watched: Channel? = null
+
+    /** Whether a test's Live Preview placeholder opened the Live tab. */
+    private var openedLive = false
+
+    private val channel4 = channel(40, "Channel 4")
+
+    private fun playable(error: String? = null) = LiveTile(
+        LivePreview.Playable(channel4),
+        nowTitle = "Countdown",
+        nextTitle = "A Place in the Sun",
+        player = null,
+        error = error,
+    )
+
     /** The channel a test's Home last played. */
     private var played: Channel? = null
 
@@ -128,6 +149,9 @@ class HomeContentTest {
         recent: RecentRows = RecentRows(),
     ) = compose.setTvContent {
         HomeContent(
+            live = live,
+            onWatchLive = { watched = it },
+            onOpenLive = { openedLive = true },
             continueWatching = resume,
             favouriteShows = shows,
             favouriteMovies = movies,
@@ -157,6 +181,8 @@ class HomeContentTest {
         if (home) {
             saved.SaveableStateProvider("home") {
                 HomeContent(
+                    live = live,
+                    onWatchLive = { watched = it },
                     continueWatching = continueWatching(),
                     favouriteShows = listOf(series(1, "Severance")),
                     favouriteMovies = movies(),
@@ -304,6 +330,51 @@ class HomeContentTest {
     }
 
     @Test
+    fun `Home opens with the Live Preview highlighted, above Continue Watching, with what's on`() {
+        live = playable()
+        setHome()
+
+        compose.onNodeWithText("Channel 4").assertIsFocused()
+        compose.onNodeWithText("Countdown", substring = true).assertExists()
+        compose.onNodeWithText("A Place in the Sun", substring = true).assertExists()
+        assertThat(topOf("Channel 4")).isLessThan(topOf("Collateral"))
+        captureScreen("home_live_preview")
+    }
+
+    @Test
+    fun `selecting the Live Preview watches its channel full screen`() {
+        live = playable()
+        setHome()
+
+        compose.onNodeWithText("Channel 4").performClick()
+
+        assertThat(watched).isEqualTo(channel4)
+    }
+
+    @Test
+    fun `a Live Preview of a channel gone from the list says so, and opens the Live tab`() {
+        live = LiveTile(LivePreview.Gone("Channel 4", null), null, null, player = null, error = null)
+        setHome()
+
+        compose.onNodeWithText("No longer in your channel list").assertExists()
+        compose.onNodeWithText("Channel 4").performClick()
+
+        assertThat(openedLive).isTrue()
+        assertThat(watched).isNull()
+        captureScreen("home_live_preview_gone")
+    }
+
+    @Test
+    fun `a Live Preview that can't play says why, keeping what's on`() {
+        live = playable(error = "The provider refused the stream (403). Check your subscription.")
+        setHome()
+
+        compose.onNodeWithText("The provider refused the stream", substring = true).assertExists()
+        compose.onNodeWithText("Countdown", substring = true).assertExists()
+        captureScreen("home_live_preview_error")
+    }
+
+    @Test
     fun `with nothing to continue, the first Favourite show is highlighted`() {
         setHome(resume = emptyList())
 
@@ -342,6 +413,17 @@ class HomeContentTest {
         }
 
         compose.onNodeWithText("Memento").assertIsFocused()
+    }
+
+    @Test
+    fun `back from a title picked under the Live Preview, Home highlights the title`() {
+        live = playable()
+        setHomeToLeave(movies = { listOf(movie(2, "Heat"), movie(4, "Ronin")) })
+        scrollTo("Ronin")
+
+        pickAndComeBack("Ronin")
+
+        compose.onNodeWithText("Ronin").assertIsFocused()
     }
 
     @Test

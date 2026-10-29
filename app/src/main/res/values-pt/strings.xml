@@ -171,8 +171,6 @@
     <string name="settings_preview_sound_subtitle">Reproduz também o áudio do canal em pré-visualização, não só a imagem.</string>
     <string name="settings_section_playback">Reprodução</string>
     <string name="settings_subtitles_title">Mostrar legendas quando disponíveis</string>
-    <string name="settings_resume_title">Retomar o último canal ao iniciar</string>
-    <string name="settings_resume_subtitle">Abre a aplicação diretamente no último canal que estava a ver, em vez do guia. Prima Voltar para aceder ao guia.</string>
     <string name="settings_sleep_timer">Temporizador de suspensão</string>
     <string name="settings_sleep_off_desc">Desligado — a reprodução continua até a parar.</string>
     <string name="settings_sleep_on_desc">Ligado — a reprodução vai parar dentro de cerca de %1$d min.</string>

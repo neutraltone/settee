@@ -250,15 +250,7 @@ private fun OpenTvApp(isTelevision: Boolean) {
     // worst possible first impression.
     val start = if (sourcesUi.sources.isEmpty()) Routes.ADD_SOURCE else Routes.MAIN
 
-    // Boot to last channel: if enabled and we have one, jump straight into the player on launch.
-    // Runs once; backing out returns to the Live guide and doesn't re-trigger.
     val bootContext = androidx.compose.ui.platform.LocalContext.current
-    val bootSettings = remember { ServiceLocator.get(bootContext).settings }
-    LaunchedEffect(start) {
-        if (start == Routes.MAIN && bootSettings.resumeLastChannel.value && bootSettings.lastChannelId != 0L) {
-            navController.openLivePlayerOverGuide(bootSettings.lastChannelId)
-        }
-    }
 
     // A tapped reminder notification asks for a specific channel. Consume it so it fires once and
     // never re-triggers on a later launch.

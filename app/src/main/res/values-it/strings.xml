@@ -171,8 +171,6 @@
     <string name="settings_preview_sound_subtitle">Riproduce anche l\'audio del canale in anteprima, non solo l\'immagine.</string>
     <string name="settings_section_playback">Riproduzione</string>
     <string name="settings_subtitles_title">Mostra i sottotitoli quando disponibili</string>
-    <string name="settings_resume_title">Riprendi l\'ultimo canale all\'avvio</string>
-    <string name="settings_resume_subtitle">Apre l\'app direttamente sull\'ultimo canale visto, invece che sulla guida. Premi Indietro per accedere alla guida.</string>
     <string name="settings_sleep_timer">Timer di spegnimento</string>
     <string name="settings_sleep_off_desc">Disattivato — la riproduzione continua finché non la interrompi.</string>
     <string name="settings_sleep_on_desc">Attivo — la riproduzione si interromperà tra circa %1$d min.</string>

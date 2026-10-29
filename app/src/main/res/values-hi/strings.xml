@@ -171,8 +171,6 @@
     <string name="settings_preview_sound_subtitle">सिर्फ़ तस्वीर ही नहीं, पूर्वावलोकन चैनल का ऑडियो भी चलाएं।</string>
     <string name="settings_section_playback">प्लेबैक</string>
     <string name="settings_subtitles_title">उपलब्ध होने पर सबटाइटल दिखाएं</string>
-    <string name="settings_resume_title">स्टार्टअप पर आखिरी चैनल फिर से शुरू करें</string>
-    <string name="settings_resume_subtitle">ऐप को गाइड की बजाय सीधे उस चैनल पर खोलें जिसे आप आखिरी बार देख रहे थे। गाइड तक पहुंचने के लिए Back दबाएं।</string>
     <string name="settings_sleep_timer">स्लीप टाइमर</string>
     <string name="settings_sleep_off_desc">बंद — जब तक आप न रोकें, प्लेबैक चलता रहेगा।</string>
     <string name="settings_sleep_on_desc">चालू — प्लेबैक लगभग %1$d मिनट में रुक जाएगा।</string>

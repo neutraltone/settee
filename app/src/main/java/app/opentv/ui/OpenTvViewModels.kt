@@ -30,6 +30,7 @@ import app.opentv.data.parser.displayTitle
 import app.opentv.data.repo.CatalogRepository
 import app.opentv.data.repo.ContinueWatchingCard
 import app.opentv.data.repo.GenreGroup
+import app.opentv.data.repo.LivePreview
 import app.opentv.data.repo.MovieVariantGroup
 import app.opentv.data.repo.PersonTitle
 import app.opentv.data.repo.distinctByQuality
@@ -256,8 +257,7 @@ class ChannelsViewModel(app: Application) : AndroidViewModel(app) {
         val groups = LinkedHashMap<String, Pair<String, MutableList<String>>>()
         for (category in raw) {
             val n = ChannelNameNormalizer.normalize(category.name)
-            val key = n.groupKey.ifEmpty { category.id }
-            val entry = groups.getOrPut(key) { n.baseName to mutableListOf() }
+            val entry = groups.getOrPut(categoryGroupKey(category)) { n.baseName to mutableListOf() }
             entry.second += category.id
         }
         return groups.map { (key, value) -> CategoryGroup(key, value.first, value.second) }
@@ -1171,6 +1171,16 @@ private suspend fun resumeItem(catalog: CatalogRepository, card: ContinueWatchin
         }
     }
 
+/**
+ * The key a category is grouped and locked by: categories whose names differ only by decoration
+ * (`UK| SPORTS`, `Sports`) share one, so locking one locks them all.
+ */
+internal fun categoryGroupKey(category: Category): String =
+    ChannelNameNormalizer.normalize(category.name).groupKey.ifEmpty { category.id }
+
+/** Home's Live Preview and the titles on its channel now and next, when the guide has them. */
+data class LiveNow(val preview: LivePreview, val nowTitle: String?, val nextTitle: String?)
+
 /** What Home shows: the active Profile's Continue Watching and its Favourites, by kind, then [recent]. */
 data class HomeState(
     val continueWatching: List<VodViewModel.ResumeItem>,
@@ -1178,6 +1188,7 @@ data class HomeState(
     val favouriteMovies: List<Movie>,
     val favouriteChannels: List<Channel>,
     val recent: RecentRows,
+    val live: LiveNow? = null,
 )
 
 /**
@@ -1233,17 +1244,66 @@ class HomeViewModel(app: Application) : AndroidViewModel(app) {
         )
     }
 
+    /** Category ids the parental lock is hiding right now: none once the session is unlocked. */
+    private val lockedCategoryIds: Flow<Set<String>> = combine(
+        graph.catalogRepository.observeCategories(StreamKind.LIVE),
+        settings.hiddenCategories,
+        settings.hiddenUnlocked,
+    ) { categories, hidden, unlocked ->
+        if (unlocked) emptySet() else categories.filter { categoryGroupKey(it) in hidden }.map { it.id }.toSet()
+    }
+
+    /** The time now, again every minute, so what's on the Live Preview's channel moves on. */
+    private val minute: Flow<Long> = flow {
+        while (true) {
+            emit(System.currentTimeMillis())
+            delay(MINUTE_MILLIS)
+        }
+    }
+
+    // A channel in a locked category would otherwise play on Home, unasked, for whoever is in the
+    // room next: the guide hides it until the session is unlocked, and so does Home.
+    @OptIn(ExperimentalCoroutinesApi::class)
+    private val live: Flow<LiveNow?> = combine(
+        graph.viewerLibrary.live.preview(),
+        settings.livePreviewOnHome,
+        settings.liveEnabled,
+        lockedCategoryIds,
+    ) { preview, onHome, liveOn, locked ->
+        val categoryId = (preview as? LivePreview.Playable)?.channel?.categoryId
+        preview?.takeIf { onHome && liveOn && categoryId !in locked }
+    }.distinctUntilChanged().flatMapLatest { preview ->
+        if (preview == null) flowOf(null) else minute.map { now -> liveNow(preview, now) }.distinctUntilChanged()
+    }
+
+    private suspend fun liveNow(preview: LivePreview, now: Long): LiveNow {
+        val channel = (preview as? LivePreview.Playable)?.channel ?: return LiveNow(preview, null, null)
+        // The first guide id with programmes wins, as in the guide: a provider's id can point at a
+        // guide it never ships.
+        val shows = channel.epgCandidates.firstNotNullOfOrNull { id ->
+            graph.epgRepository.upcoming(id, now, limit = 2).takeIf { it.isNotEmpty() }
+        }.orEmpty()
+        val onNow = shows.firstOrNull()?.takeIf { it.startUtcMillis <= now }
+        val next = if (onNow != null) shows.getOrNull(1) else shows.firstOrNull()
+        return LiveNow(preview, onNow?.title, next?.title)
+    }
+
     val state: StateFlow<HomeState?> = combine(
-        continueWatching,
-        graph.viewerLibrary.favourites.series().onlyWhen(settings.seriesEnabled),
-        graph.viewerLibrary.favourites.movies().onlyWhen(settings.moviesEnabled),
-        graph.viewerLibrary.favourites.channels().onlyWhen(settings.liveEnabled),
-        recent,
-        ::HomeState,
+        combine(
+            continueWatching,
+            graph.viewerLibrary.favourites.series().onlyWhen(settings.seriesEnabled),
+            graph.viewerLibrary.favourites.movies().onlyWhen(settings.moviesEnabled),
+            graph.viewerLibrary.favourites.channels().onlyWhen(settings.liveEnabled),
+            recent,
+            ::HomeState,
+        ),
+        // In the same state as the rows, so Home is first drawn with it and highlights it.
+        live,
+    ) { rows, live -> rows.copy(live = live) }
         // Nothing replayed once the rows have stopped updating: back from the player, Home waits for
         // fresh rows rather than drawing the old ones, where it would highlight a card that's about
         // to move or go (a title just finished, a Favourite just removed).
-    ).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000, replayExpirationMillis = 0), null)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000, replayExpirationMillis = 0), null)
 
     private fun <T> Flow<List<T>>.onlyWhen(enabled: StateFlow<Boolean>): Flow<List<T>> =
         combine(this, enabled) { list, on -> if (on) list else emptyList() }
@@ -1251,6 +1311,7 @@ class HomeViewModel(app: Application) : AndroidViewModel(app) {
     private companion object {
         // Release dates are whole days, so an hour late is soon enough.
         const val CLOCK_TICK_MILLIS = 60L * 60 * 1000
+        const val MINUTE_MILLIS = 60L * 1000
     }
 }
 

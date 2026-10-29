@@ -171,8 +171,6 @@
     <string name="settings_preview_sound_subtitle">Redă și sunetul canalului previzualizat, nu doar imaginea.</string>
     <string name="settings_section_playback">Redare</string>
     <string name="settings_subtitles_title">Afișează subtitrări când sunt disponibile</string>
-    <string name="settings_resume_title">Reia ultimul canal la pornire</string>
-    <string name="settings_resume_subtitle">Deschide aplicația direct pe canalul pe care îl urmăreai ultima dată, în loc de ghid. Apasă Înapoi pentru a ajunge la ghid.</string>
     <string name="settings_sleep_timer">Cronometru de oprire</string>
     <string name="settings_sleep_off_desc">Dezactivat — redarea continuă până o oprești tu.</string>
     <string name="settings_sleep_on_desc">Activat — redarea se va opri în aproximativ %1$d min.</string>

@@ -171,8 +171,6 @@
     <string name="settings_preview_sound_subtitle">Prehráva aj zvuk kanála v náhľade, nielen obraz.</string>
     <string name="settings_section_playback">Prehrávanie</string>
     <string name="settings_subtitles_title">Zobrazovať titulky, ak sú k dispozícii</string>
-    <string name="settings_resume_title">Po spustení pokračovať v poslednom kanáli</string>
-    <string name="settings_resume_subtitle">Otvorí aplikáciu priamo na kanáli, ktorý ste sledovali naposledy, namiesto programu. Do programu sa dostanete stlačením Späť.</string>
     <string name="settings_sleep_timer">Časovač spánku</string>
     <string name="settings_sleep_off_desc">Vypnutý — prehrávanie pokračuje, kým ho nezastavíte.</string>
     <string name="settings_sleep_on_desc">Zapnutý — prehrávanie sa zastaví približne o %1$d min.</string>
