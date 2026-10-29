@@ -23,7 +23,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -34,13 +36,17 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
@@ -87,9 +93,13 @@ fun GuideGrid(
     // left-navigation carry focus into the already-visible rail.
     onExitLeftFromChannel: () -> Boolean = { false },
     dayOffset: Int = 0,
+    returnToChannelId: Long? = null,
+    takeFocus: Boolean = true,
     modifier: Modifier = Modifier,
 ) {
     val scroll = rememberScrollState()
+    val listState = rememberLazyListState()
+    val returnTo = rememberReturnToChannel(returnToChannelId, takeFocus, rows, listState)
     val now = System.currentTimeMillis()
     // Jumping to another day resets the horizontal scroll to that day's start; a within-day time
     // drift (dayOffset unchanged) leaves the user's scroll position untouched.
@@ -101,10 +111,11 @@ fun GuideGrid(
         TimeHeader(windowStartMillis, scroll)
 
         LazyColumn(
+            state = listState,
             contentPadding = PaddingValues(bottom = 16.dp),
             verticalArrangement = Arrangement.spacedBy(3.dp),
         ) {
-            items(rows, key = { it.key }) { row ->
+            itemsIndexed(rows, key = { _, row -> row.key }) { index, row ->
                 GuideRow(
                     row = row,
                     windowStartMillis = windowStartMillis,
@@ -116,6 +127,7 @@ fun GuideGrid(
                     onProgramme = { programme -> onProgramme(row, programme) },
                     onToggleFavourite = { onToggleFavourite(row) },
                     onExitLeft = onExitLeftFromChannel,
+                    focusRequester = returnTo.focusRequesterFor(index),
                 )
             }
         }
@@ -137,15 +149,20 @@ fun ChannelList(
     onFocusRow: (ChannelsViewModel.Row) -> Unit,
     onToggleFavourite: (ChannelsViewModel.Row) -> Unit = {},
     onExitLeftFromChannel: () -> Boolean = { false },
+    returnToChannelId: Long? = null,
+    takeFocus: Boolean = true,
     modifier: Modifier = Modifier,
 ) {
     val now = System.currentTimeMillis()
+    val listState = rememberLazyListState()
+    val returnTo = rememberReturnToChannel(returnToChannelId, takeFocus, rows, listState)
     LazyColumn(
+        state = listState,
         modifier = modifier.fillMaxSize(),
         contentPadding = PaddingValues(vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(3.dp),
     ) {
-        items(rows, key = { it.key }) { row ->
+        itemsIndexed(rows, key = { _, row -> row.key }) { index, row ->
             ChannelListRow(
                 row = row,
                 nowMillis = now,
@@ -154,9 +171,51 @@ fun ChannelList(
                 onFocus = { onFocusRow(row) },
                 onToggleFavourite = { onToggleFavourite(row) },
                 onExitLeft = onExitLeftFromChannel,
+                focusRequester = returnTo.focusRequesterFor(index),
             )
         }
     }
+}
+
+/**
+ * Where the guide comes back to after the live player: the row of the channel you were watching
+ * (its own or one of its qualities), or the first row when the guide's filter leaves it out.
+ */
+internal fun returnRowIndex(channelId: Long, rows: List<ChannelsViewModel.Row>): Int =
+    rows.indexOfFirst { row -> row.primary.id == channelId || row.variants.any { it.id == channelId } }
+        .coerceAtLeast(0)
+
+private class ReturnToChannel(private val index: Int?, private val focusRequester: FocusRequester) {
+    fun focusRequesterFor(rowIndex: Int): FocusRequester? = focusRequester.takeIf { rowIndex == index }
+}
+
+/**
+ * Once the rows arrive, scrolls [listState] to [channelId]'s row and, if [takeFocus], focuses it.
+ * Only the first time: switching category afterwards keeps the guide's own behaviour.
+ */
+@Composable
+private fun rememberReturnToChannel(
+    channelId: Long?,
+    takeFocus: Boolean,
+    rows: List<ChannelsViewModel.Row>,
+    listState: LazyListState,
+): ReturnToChannel {
+    val focusRequester = remember { FocusRequester() }
+    var index by remember { mutableStateOf<Int?>(null) }
+    var done by remember { mutableStateOf(false) }
+    LaunchedEffect(channelId, rows.isNotEmpty()) {
+        if (done || channelId == null || rows.isEmpty()) return@LaunchedEffect
+        val target = returnRowIndex(channelId, rows)
+        index = target
+        listState.scrollToItem(target)
+        if (takeFocus) {
+            // The row scrolled in is only laid out, and so focusable, a frame later.
+            withFrameNanos {}
+            runCatching { focusRequester.requestFocus() }
+        }
+        done = true
+    }
+    return ReturnToChannel(index, focusRequester)
 }
 
 @Composable
@@ -168,10 +227,12 @@ private fun ChannelListRow(
     onFocus: () -> Unit,
     onToggleFavourite: () -> Unit,
     onExitLeft: () -> Boolean,
+    focusRequester: FocusRequester? = null,
 ) {
     var focused by remember { mutableStateOf(false) }
     Row(
         Modifier
+            .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
             .fillMaxWidth()
             .clip(RoundedCornerShape(8.dp))
             .background(
@@ -334,6 +395,7 @@ private fun GuideRow(
     onProgramme: (Programme) -> Unit,
     onToggleFavourite: () -> Unit = {},
     onExitLeft: () -> Boolean = { false },
+    focusRequester: FocusRequester? = null,
 ) {
     // Focus (the d-pad border) just moves the highlight. Selection (the filled cell) is the
     // channel the preview is playing — it only changes when you press OK.
@@ -343,6 +405,7 @@ private fun GuideRow(
         // ---- Fixed channel cell (does not scroll) --------------------------------------
         Row(
             Modifier
+                .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
                 .width(CHANNEL_COLUMN)
                 .fillMaxSize()
                 .clip(RoundedCornerShape(8.dp))
