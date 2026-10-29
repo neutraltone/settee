@@ -68,11 +68,11 @@ fun NavController.switchToRecording(recordingRoute: String) {
  * Null for what has no page — recordings, catch-up — and an episode whose series has gone.
  */
 suspend fun titlePageFor(mediaKey: String, seriesOfEpisode: suspend (episodeId: Long) -> Long?): String? {
-    val (kind, id) = mediaKey.split(':', limit = 2).takeIf { it.size == 2 } ?: return null
-    val localId = id.toLongOrNull() ?: return null
-    return when (kind) {
-        "movie" -> Routes.movieDetail(localId)
-        "ep" -> seriesOfEpisode(localId)?.let(Routes::seriesDetail)
+    val localId = mediaKey.substringAfter(':').toLongOrNull()
+    return when {
+        localId == null -> null
+        mediaKey.startsWith("movie:") -> Routes.movieDetail(localId)
+        mediaKey.startsWith("ep:") -> seriesOfEpisode(localId)?.let(Routes::seriesDetail)
         else -> null
     }
 }
