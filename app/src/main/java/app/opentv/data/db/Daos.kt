@@ -21,6 +21,7 @@ import app.opentv.data.model.Favourite
 import app.opentv.data.model.Movie
 import app.opentv.data.model.PlaybackPosition
 import app.opentv.data.model.Profile
+import app.opentv.data.model.ProfileSetting
 import app.opentv.data.model.Programme
 import app.opentv.data.model.Recording
 import app.opentv.data.model.RecordingStatus
@@ -742,6 +743,24 @@ interface ProfileDao {
 
     @Query("DELETE FROM favourites WHERE profileId = :id")
     suspend fun deleteFavourites(id: Long)
+}
+
+@Dao
+interface ProfileSettingDao {
+    @Query("SELECT * FROM profile_settings WHERE profileId = :profileId")
+    fun observeFor(profileId: Long): Flow<List<ProfileSetting>>
+
+    @Query("SELECT * FROM profile_settings")
+    suspend fun all(): List<ProfileSetting>
+
+    @Query("SELECT * FROM profile_settings WHERE profileId = :profileId AND name = :name")
+    suspend fun find(profileId: Long, name: String): ProfileSetting?
+
+    @Upsert
+    suspend fun upsert(setting: ProfileSetting)
+
+    @Query("DELETE FROM profile_settings WHERE profileId = :profileId")
+    suspend fun deleteFor(profileId: Long)
 }
 
 @Dao

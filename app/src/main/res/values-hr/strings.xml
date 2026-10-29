@@ -171,7 +171,6 @@
     <string name="settings_preview_sound_subtitle">Reproducira i zvuk kanala u pregledu, ne samo sliku.</string>
     <string name="settings_section_playback">Reprodukcija</string>
     <string name="settings_subtitles_title">Prikaži titlove kad su dostupni</string>
-    <string name="settings_subtitles_subtitle">Zadana postavka za nove kanale. Tijekom gledanja, gumb Titlovi na playeru omogućuje odabir određenog zapisa ili njihovo isključivanje.</string>
     <string name="settings_resume_title">Nastavi zadnji kanal pri pokretanju</string>
     <string name="settings_resume_subtitle">Otvara aplikaciju izravno na kanalu koji ste zadnje gledali, umjesto vodiča. Pritisnite Natrag za pristup vodiču.</string>
     <string name="settings_sleep_timer">Odbrojavanje za spavanje</string>

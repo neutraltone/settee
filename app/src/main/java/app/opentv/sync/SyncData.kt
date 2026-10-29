@@ -19,6 +19,8 @@ import kotlinx.serialization.Serializable
  * Two merge policies travel together, matching how people actually use this:
  *  - **Watch positions** are two-way, newest-wins per item (you watch on any device, resume on
  *    all), using [SyncPosition.updatedAtMillis].
+ *  - **Profile settings** are newest-wins per Profile and setting, using
+ *    [SyncProfileSetting.updatedAtMillis]; only settings a Profile actually chose travel (ADR 0002).
  *  - **Curation and recordings** are additive: favourites, hidden channels, hidden categories and
  *    NAS recordings from a peer are merged in without ever removing anything local. You tidy up on
  *    one device and the others adopt it, but a favourite set only on one box is never lost.
@@ -28,7 +30,7 @@ import kotlinx.serialization.Serializable
  */
 @Serializable
 data class SyncBundle(
-    val version: Int = 4,
+    val version: Int = 5,
     val generatedAtMillis: Long = 0,
     /** Profile names the peer knows about. Others add any they are missing (add-only). */
     val profiles: List<String> = emptyList(),
@@ -45,7 +47,13 @@ data class SyncBundle(
      * never shared — they cannot be opened from another box.
      */
     val recordings: List<SyncRecording> = emptyList(),
+    /** Every Profile's chosen settings, each landing on the Profile with the same name (newest-wins). */
+    val profileSettings: List<SyncProfileSetting> = emptyList(),
 )
+
+/** One setting a Profile chose; [name] and [value] are as ProfileSettings stores them. */
+@Serializable
+data class SyncProfileSetting(val profile: String, val name: String, val value: String, val updatedAtMillis: Long)
 
 /** One Profile's Favourite: [kind] is a StreamKind name, [id] the provider's stream or series id within [source]. */
 @Serializable

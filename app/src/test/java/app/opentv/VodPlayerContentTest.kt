@@ -15,6 +15,7 @@ import androidx.compose.ui.test.pressKey
 import androidx.media3.common.util.UnstableApi
 import androidx.test.core.app.ApplicationProvider
 import app.opentv.core.ServiceLocator
+import app.opentv.ui.player.SubtitlePicks
 import app.opentv.ui.vod.VodPlayerContent
 import app.opentv.ui.vod.VodPlayerViewModel
 import com.google.common.truth.Truth.assertThat
@@ -43,6 +44,7 @@ class VodPlayerContentTest {
     // Never attached to an episode, so no Next Episode card: these tests are about the transport.
     private val graph = ServiceLocator.Graph(app)
     private val viewModel = VodPlayerViewModel(app, graph)
+    private val noPicks = SubtitlePicks(onOff = {}, onPicked = {})
 
     @After
     fun release() {
@@ -52,7 +54,9 @@ class VodPlayerContentTest {
     }
 
     private fun showFilm(growingRec: Boolean = false) {
-        compose.setTvContent { VodPlayerContent(controller, viewModel, "Film", growingRec, onBack = {}) }
+        compose.setTvContent {
+            VodPlayerContent(controller, viewModel, "Film", growingRec, noPicks, onBack = {})
+        }
         players.play(controller)
         compose.waitForIdle()
     }
@@ -112,7 +116,9 @@ class VodPlayerContentTest {
     @Test
     fun `fast-forward on a recording still being written stops at what's recorded`() {
         val recording = players.controller(RECORDING)
-        compose.setTvContent { VodPlayerContent(recording, viewModel, "Recording", growingRec = true, onBack = {}) }
+        compose.setTvContent {
+            VodPlayerContent(recording, viewModel, "Recording", growingRec = true, noPicks, onBack = {})
+        }
         players.play(recording)
         val recorded = recording.player.bufferedPosition
         recording.player.seekTo(recorded - 20_000)

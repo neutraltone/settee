@@ -171,7 +171,6 @@
     <string name="settings_preview_sound_subtitle">Воспроизводить не только изображение, но и звук канала предпросмотра.</string>
     <string name="settings_section_playback">Воспроизведение</string>
     <string name="settings_subtitles_title">Показывать субтитры, если доступны</string>
-    <string name="settings_subtitles_subtitle">Значение по умолчанию для новых каналов. Во время просмотра кнопка «Субтитры» в плеере позволяет выбрать конкретную дорожку или отключить их.</string>
     <string name="settings_resume_title">Открывать последний канал при запуске</string>
     <string name="settings_resume_subtitle">Открывать приложение сразу на канале, который вы смотрели последним, вместо телегида. Нажмите «Назад», чтобы перейти в телегид.</string>
     <string name="settings_sleep_timer">Таймер сна</string>

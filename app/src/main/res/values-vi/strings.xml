@@ -171,7 +171,6 @@
     <string name="settings_preview_sound_subtitle">Phát cả âm thanh của kênh xem trước, không chỉ hình ảnh.</string>
     <string name="settings_section_playback">Phát lại</string>
     <string name="settings_subtitles_title">Hiện phụ đề khi có sẵn</string>
-    <string name="settings_subtitles_subtitle">Mặc định cho kênh mới. Khi đang xem, nút Phụ đề trên trình phát cho phép bạn chọn một track cụ thể hoặc tắt phụ đề.</string>
     <string name="settings_resume_title">Tiếp tục kênh gần nhất khi khởi động</string>
     <string name="settings_resume_subtitle">Mở ứng dụng thẳng vào kênh bạn xem gần nhất, thay vì lịch phát. Nhấn Quay lại để vào lịch phát.</string>
     <string name="settings_sleep_timer">Hẹn giờ tắt</string>

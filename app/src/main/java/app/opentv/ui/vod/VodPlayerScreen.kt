@@ -96,6 +96,8 @@ import app.opentv.player.PlayerController
 import app.opentv.ui.formatPlaybackTime
 import app.opentv.ui.player.PlayerBackButton
 import app.opentv.ui.player.PlayerChip
+import app.opentv.ui.player.SubtitlePicks
+import app.opentv.ui.player.rememberProfileSubtitles
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
@@ -139,6 +141,7 @@ fun VodPlayerScreen(
             context,
             scope,
             graph.streamingHttpClient,
+            // Text starts off; the Profile's Subtitle Preference turns it on once tracks arrive.
             subtitlesEnabled = false,
             smbDataSourceFactory = app.opentv.player.SmbDataSource.Factory(graph.settings),
             // Lets an `optvrec://<id>` recording play while it's still being written.
@@ -177,6 +180,8 @@ fun VodPlayerScreen(
             override fun stop() = controller.stop()
         }
     }
+
+    val subtitlePicks = rememberProfileSubtitles(controller, graph.profileSettings, scope)
 
     // Keep the screen awake during playback — see the note in PlayerScreen; a film is exactly when
     // the screensaver must not fire. Window flag is the reliable path; keepScreenOn is a backstop.
@@ -223,7 +228,7 @@ fun VodPlayerScreen(
         onBack()
     }
 
-    VodPlayerContent(controller, viewModel, title, growingRec, onBack)
+    VodPlayerContent(controller, viewModel, title, growingRec, subtitlePicks, onBack)
 }
 
 /**
@@ -238,6 +243,7 @@ fun VodPlayerContent(
     viewModel: VodPlayerViewModel,
     title: String,
     growingRec: Boolean,
+    subtitlePicks: SubtitlePicks,
     onBack: () -> Unit,
 ) {
     // Skip within a recording that's still being written. ExoPlayer won't report it as seekable (no
@@ -461,6 +467,7 @@ fun VodPlayerContent(
                         panel = vodPanel,
                         controller = controller,
                         tracks = tracks,
+                        subtitlePicks = subtitlePicks,
                         firstFocus = panelFocus,
                         onDone = {
                             vodPanel = VodPanel.NONE
@@ -593,6 +600,7 @@ private fun TrackPanel(
     panel: VodPanel,
     controller: PlayerController,
     tracks: Tracks,
+    subtitlePicks: SubtitlePicks,
     firstFocus: FocusRequester,
     onDone: () -> Unit,
 ) {
@@ -605,6 +613,7 @@ private fun TrackPanel(
         options +=
             Triple(stringResource(R.string.player_subtitles_off), !anySelected) {
                 controller.disableText()
+                subtitlePicks.onOff()
                 onDone()
             }
     }
@@ -614,6 +623,7 @@ private fun TrackPanel(
             val format = group.getTrackFormat(i)
             options += Triple(vodTrackLabel(format.label, format.language, options.size), group.isTrackSelected(i)) {
                 controller.selectTrack(group, i)
+                if (trackType == C.TRACK_TYPE_TEXT) subtitlePicks.onPicked(format.language)
                 onDone()
             }
         }

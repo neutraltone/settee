@@ -171,7 +171,6 @@
     <string name="settings_preview_sound_subtitle">เล่นเสียงของช่องตัวอย่างด้วย ไม่ใช่แค่ภาพ</string>
     <string name="settings_section_playback">การเล่น</string>
     <string name="settings_subtitles_title">แสดงคำบรรยายเมื่อมีให้ใช้งาน</string>
-    <string name="settings_subtitles_subtitle">ค่าเริ่มต้นสำหรับช่องใหม่ ขณะรับชม ปุ่มคำบรรยายในเครื่องเล่นให้คุณเลือกแทร็กที่ต้องการหรือปิดคำบรรยายได้</string>
     <string name="settings_resume_title">เปิดช่องล่าสุดต่อเมื่อเริ่มแอป</string>
     <string name="settings_resume_subtitle">เปิดแอปเข้าสู่ช่องที่คุณดูล่าสุดทันที แทนที่จะไปที่ผังรายการ กดย้อนกลับเพื่อไปยังผังรายการ</string>
     <string name="settings_sleep_timer">ตัวจับเวลาปิดอัตโนมัติ</string>
