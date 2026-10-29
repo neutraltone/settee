@@ -90,6 +90,14 @@ class ViewerLibrary(
     }
 
     /**
+     * Records [mediaKey] as Watched because the player moved on to the Next Episode with the credits
+     * still rolling. On a short episode the last 15 seconds can fall short of 93% through, and
+     * the viewer chose to leave it, so its progress is recorded as the whole length.
+     */
+    suspend fun recordMovedOn(mediaKey: String, durationMillis: Long) =
+        recordProgress(mediaKey, positionMillis = durationMillis, durationMillis = durationMillis)
+
+    /**
      * Takes progress synced from another device if it is newer than this device's for the same
      * Profile and title (newest wins, so watching on either device resumes on the other).
      * Returns whether it was taken.
@@ -143,6 +151,17 @@ class ViewerLibrary(
                 (movies + series).sortedByDescending { it.playedAtMillis }.take(IN_PROGRESS_LIMIT).map { it.card }
             }
         }
+
+    /**
+     * The Next Episode after [episode]: the one that follows it in season then episode order,
+     * whatever the Profile last Watched (unlike Up Next). Null after a series' last episode, or
+     * when the series' episodes aren't loaded.
+     */
+    suspend fun nextEpisode(episode: Episode): Episode? {
+        val ordered = episodes.forSeries(episode.sourceId, episode.seriesId).sortedWith(EPISODE_ORDER)
+        val at = ordered.indexOfFirst { it.id == episode.id }
+        return if (at < 0) null else ordered.getOrNull(at + 1)
+    }
 
     /** Every episode's status for the active Profile; re-emits only when a status actually changes. */
     @OptIn(ExperimentalCoroutinesApi::class)

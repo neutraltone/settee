@@ -83,7 +83,9 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.media3.common.C
+import androidx.media3.common.Player
 import androidx.media3.common.Tracks
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.ui.PlayerView
@@ -91,6 +93,7 @@ import app.opentv.R
 import app.opentv.core.ServiceLocator
 import app.opentv.core.SleepTimer
 import app.opentv.core.findActivity
+import app.opentv.player.NextEpisodeCountdown
 import app.opentv.player.PlayerController
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -112,7 +115,14 @@ import kotlinx.coroutines.withContext
  */
 @OptIn(UnstableApi::class)
 @Composable
-fun VodPlayerScreen(mediaKey: String, streamUrl: String, title: String, userAgent: String, onBack: () -> Unit) {
+fun VodPlayerScreen(
+    mediaKey: String,
+    streamUrl: String,
+    title: String,
+    userAgent: String,
+    onBack: () -> Unit,
+    viewModel: VodPlayerViewModel = viewModel(),
+) {
     val context = LocalContext.current
     val view = LocalView.current
     val graph = remember { ServiceLocator.get(context) }
@@ -150,6 +160,37 @@ fun VodPlayerScreen(mediaKey: String, streamUrl: String, title: String, userAgen
     }
     val state by controller.state.collectAsState()
     val tracks by controller.tracks.collectAsState()
+    val current by viewModel.current.collectAsState()
+    val overlay by viewModel.overlay.collectAsState()
+    val playback = remember {
+        object : VodPlayerViewModel.Playback {
+            override fun progress() = controller.player.let { p ->
+                NextEpisodeCountdown.Playback(
+                    positionMillis = p.currentPosition.coerceAtLeast(0),
+                    durationMillis = p.duration.takeIf { it > 0 } ?: 0,
+                    ended = p.playbackState == Player.STATE_ENDED,
+                )
+            }
+
+            // Swapping the media item in the same player, never a new one: see PlayerController.
+            override fun play(item: VodPlayerViewModel.Item, startPositionMillis: Long) = controller.play(
+                PlayerController.Request(
+                    url = item.streamUrl,
+                    title = item.title,
+                    userAgent = item.userAgent,
+                    startPositionMillis = startPositionMillis,
+                    isLive = false,
+                ),
+                debounce = false,
+            )
+
+            override fun pause() {
+                controller.player.playWhenReady = false
+            }
+
+            override fun stop() = controller.stop()
+        }
+    }
 
     var paused by remember { mutableStateOf(false) }
     var vodPanel by remember { mutableStateOf(VodPanel.NONE) }
@@ -169,15 +210,6 @@ fun VodPlayerScreen(mediaKey: String, streamUrl: String, title: String, userAgen
         interaction++
     }
 
-    suspend fun savePosition() {
-        val player = controller.player
-        val pos = player.currentPosition
-        val dur = player.duration.takeIf { it > 0 } ?: return
-        if (pos > 5_000) {
-            graph.viewerLibrary.recordProgress(mediaKey, positionMillis = pos, durationMillis = dur)
-        }
-    }
-
     // Keep the screen awake during playback — see the note in PlayerScreen; a film is exactly when
     // the screensaver must not fire. Window flag is the reliable path; keepScreenOn is a backstop.
     DisposableEffect(Unit) {
@@ -190,28 +222,34 @@ fun VodPlayerScreen(mediaKey: String, streamUrl: String, title: String, userAgen
             // Main.immediate runs this up to the database write before release() and cancel(); the
             // write itself must survive the cancel, or leaving during the credits loses up to the
             // last 15 seconds and a finished episode never becomes Watched.
-            scope.launch { withContext(NonCancellable) { savePosition() } }
+            scope.launch { withContext(NonCancellable) { viewModel.saveProgress() } }
             controller.release()
             scope.cancel()
         }
     }
 
-    LaunchedEffect(mediaKey) {
-        val resumeFrom = graph.viewerLibrary.resumeFrom(mediaKey)
-        controller.play(
-            PlayerController.Request(
-                url = streamUrl,
-                title = title,
-                userAgent = userAgent,
-                startPositionMillis = resumeFrom,
-                isLive = false,
-            ),
-            debounce = false,
-        )
+    // The route names what was opened; once the player has moved on to a Next Episode the view
+    // model holds what is playing, and a rebuilt screen picks that up instead.
+    LaunchedEffect(Unit) {
+        viewModel.attach(VodPlayerViewModel.Item(mediaKey, streamUrl, title, userAgent), playback)
+        var sinceSaved = 0L
         while (isActive) {
-            delay(15_000)
-            savePosition()
+            delay(POLL_MILLIS)
+            viewModel.poll()
+            sinceSaved += POLL_MILLIS
+            if (sinceSaved >= SAVE_EVERY_MILLIS) {
+                viewModel.saveProgress()
+                sinceSaved = 0
+            }
         }
+    }
+
+    // A new episode starts playing whatever the bar's pause chip last said.
+    LaunchedEffect(current) { paused = false }
+
+    // The Next Episode card sits where the transport bar would, and takes focus itself.
+    LaunchedEffect(overlay) {
+        if (overlay !is NextEpisodeCountdown.Overlay.None) controlsVisible = false
     }
 
     // Sleep timer: leave the film when the armed deadline passes (position is saved on dispose).
@@ -253,12 +291,13 @@ fun VodPlayerScreen(mediaKey: String, streamUrl: String, title: String, userAgen
         }
     }
 
-    LaunchedEffect(controlsVisible, vodPanel) {
-        if (controlsVisible) {
-            delay(40)
-            runCatching { if (vodPanel != VodPanel.NONE) panelFocus.requestFocus() else barFocus.requestFocus() }
-        } else {
-            runCatching { rootFocus.requestFocus() }
+    LaunchedEffect(controlsVisible, vodPanel, overlay) {
+        when {
+            controlsVisible -> {
+                delay(40)
+                runCatching { if (vodPanel != VodPanel.NONE) panelFocus.requestFocus() else barFocus.requestFocus() }
+            }
+            overlay is NextEpisodeCountdown.Overlay.None -> runCatching { rootFocus.requestFocus() }
         }
     }
 
@@ -276,9 +315,12 @@ fun VodPlayerScreen(mediaKey: String, streamUrl: String, title: String, userAgen
         Modifier
             .fillMaxSize()
             .background(Color.Black)
+            .countsAsInput(viewModel)
             .onPreviewKeyEvent { event ->
                 when {
                     event.key == Key.Back || event.key == Key.Escape -> false
+                    // Keys belong to the card or the question while one is up, OK above all.
+                    overlay !is NextEpisodeCountdown.Overlay.None -> false
                     event.type == KeyEventType.KeyDown && !controlsVisible -> {
                         reveal()
                         true
@@ -391,7 +433,7 @@ fun VodPlayerScreen(mediaKey: String, streamUrl: String, title: String, userAgen
                     }
                     Spacer(Modifier.height(4.dp))
                 }
-                Text(title, style = MaterialTheme.typography.headlineSmall, color = Color.White)
+                Text(current?.title ?: title, style = MaterialTheme.typography.headlineSmall, color = Color.White)
                 Spacer(Modifier.height(8.dp))
 
                 // Seek bar with times either side. Left/right on the remote scrubs.
@@ -459,8 +501,15 @@ fun VodPlayerScreen(mediaKey: String, streamUrl: String, title: String, userAgen
                 }
             }
         }
+
+        NextEpisodeOverlay(viewModel, onStop = onBack)
     }
 }
+
+private const val POLL_MILLIS = 500L
+
+/** How often progress is written while playing, so a crash or power cut loses little. */
+private const val SAVE_EVERY_MILLIS = 15_000L
 
 @Composable
 private fun VodChip(icon: ImageVector, label: String, focusRequester: FocusRequester? = null, onClick: () -> Unit) {
