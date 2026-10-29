@@ -42,6 +42,7 @@ import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
@@ -64,8 +65,9 @@ fun Modifier.countsAsInput(viewModel: VodPlayerViewModel): Modifier = this
     .pointerInput(viewModel) {
         awaitPointerEventScope {
             while (true) {
-                awaitPointerEvent(PointerEventPass.Initial)
-                viewModel.input()
+                // Presses only: a mouse or air-remote pointer resting on the picture sends a stream
+                // of moves that would otherwise keep resetting the run.
+                if (awaitPointerEvent(PointerEventPass.Initial).type == PointerEventType.Press) viewModel.input()
             }
         }
     }

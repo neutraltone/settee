@@ -162,6 +162,9 @@ fun VodPlayerScreen(
     val tracks by controller.tracks.collectAsState()
     val current by viewModel.current.collectAsState()
     val overlay by viewModel.overlay.collectAsState()
+    // Whether the card or the question is up, not which second it shows: effects keyed on this
+    // run when one appears or goes, rather than on every tick of the countdown.
+    val overlayShowing = overlay !is NextEpisodeCountdown.Overlay.None
     val playback = remember {
         object : VodPlayerViewModel.Playback {
             override fun progress() = controller.player.let { p ->
@@ -229,8 +232,9 @@ fun VodPlayerScreen(
     }
 
     // The route names what was opened; once the player has moved on to a Next Episode the view
-    // model holds what is playing, and a rebuilt screen picks that up instead.
-    LaunchedEffect(Unit) {
+    // model holds what is playing, and a rebuilt screen picks that up instead. Keyed on the route
+    // so a reused entry (a single-top navigation) opened on something new plays that.
+    LaunchedEffect(mediaKey, streamUrl) {
         viewModel.attach(VodPlayerViewModel.Item(mediaKey, streamUrl, title, userAgent), playback)
         var sinceSaved = 0L
         while (isActive) {
@@ -247,9 +251,13 @@ fun VodPlayerScreen(
     // A new episode starts playing whatever the bar's pause chip last said.
     LaunchedEffect(current) { paused = false }
 
-    // The Next Episode card sits where the transport bar would, and takes focus itself.
-    LaunchedEffect(overlay) {
-        if (overlay !is NextEpisodeCountdown.Overlay.None) controlsVisible = false
+    // The Next Episode card sits where the transport bar would, and takes focus itself; a picker
+    // left open behind it would come back stale with the bar.
+    LaunchedEffect(overlayShowing) {
+        if (overlayShowing) {
+            controlsVisible = false
+            vodPanel = VodPanel.NONE
+        }
     }
 
     // Sleep timer: leave the film when the armed deadline passes (position is saved on dispose).
@@ -291,13 +299,13 @@ fun VodPlayerScreen(
         }
     }
 
-    LaunchedEffect(controlsVisible, vodPanel, overlay) {
+    LaunchedEffect(controlsVisible, vodPanel, overlayShowing) {
         when {
             controlsVisible -> {
                 delay(40)
                 runCatching { if (vodPanel != VodPanel.NONE) panelFocus.requestFocus() else barFocus.requestFocus() }
             }
-            overlay is NextEpisodeCountdown.Overlay.None -> runCatching { rootFocus.requestFocus() }
+            !overlayShowing -> runCatching { rootFocus.requestFocus() }
         }
     }
 
@@ -320,7 +328,7 @@ fun VodPlayerScreen(
                 when {
                     event.key == Key.Back || event.key == Key.Escape -> false
                     // Keys belong to the card or the question while one is up, OK above all.
-                    overlay !is NextEpisodeCountdown.Overlay.None -> false
+                    overlayShowing -> false
                     event.type == KeyEventType.KeyDown && !controlsVisible -> {
                         reveal()
                         true

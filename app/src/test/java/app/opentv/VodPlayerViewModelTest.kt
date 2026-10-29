@@ -168,6 +168,68 @@ class VodPlayerViewModelTest {
         assertThat(vm.nextEpisode.value).isNull()
     }
 
+    @Test
+    fun `a player opened again with something new plays the new thing`() = runTest {
+        graph.database.episodes().upsertAll((1..3).map { testEpisode(1, it) })
+        val vm = VodPlayerViewModel(app, graph)
+        vm.attach(testEpisode(1, 1).item(), playback)
+        vm.playToEnd()
+
+        val recording = Item("rec:3", "optvrec://3", "A Recording", "ua")
+        vm.attach(recording, playback)
+
+        assertThat(vm.current.value).isEqualTo(recording)
+        assertThat(playback.played.last()).isEqualTo("optvrec://3" to 0L)
+    }
+
+    @Test
+    fun `a player rebuilt while asking whether anyone is still watching keeps asking`() = runTest {
+        graph.database.episodes().upsertAll((1..6).map { testEpisode(1, it) })
+        val vm = VodPlayerViewModel(app, graph)
+        val route = testEpisode(1, 1).item()
+        vm.attach(route, playback)
+        repeat(4) { vm.playToEnd() }
+
+        val rebuilt = FakePlayback()
+        vm.attach(route, rebuilt)
+
+        assertThat(rebuilt.played).isEmpty()
+        assertThat(vm.overlay.value).isEqualTo(Overlay.StillWatching(streamStopped = false))
+    }
+
+    @Test
+    fun `Continue after the stream was stopped still makes the finished episode Watched`() = runTest {
+        graph.database.episodes().upsertAll((1..6).map { testEpisode(1, it) })
+        var now = 0L
+        val vm = VodPlayerViewModel(app, graph, clock = { now })
+        vm.attach(testEpisode(1, 1).item(), playback)
+        repeat(4) { vm.playToEnd() }
+        now += 5 * 60_000
+        vm.poll()
+        // A stopped player has let go of its media and no longer knows how long it was.
+        playback.durationMillis = 0
+        playback.positionMillis = 0
+
+        vm.continueWatching()
+
+        assertThat(graph.viewerLibrary.episodeStatuses().first()[14]).isEqualTo(WatchStatus.Watched)
+    }
+
+    @Test
+    fun `a rebuilt player resumes where the last save saw it, without waiting for the write`() = runTest {
+        graph.database.episodes().upsertAll((1..3).map { testEpisode(1, it) })
+        val vm = VodPlayerViewModel(app, graph)
+        val route = testEpisode(1, 1).item()
+        vm.attach(route, playback)
+        playback.positionMillis = 900_000
+        vm.poll()
+
+        val rebuilt = FakePlayback()
+        vm.attach(route, rebuilt)
+
+        assertThat(rebuilt.played).containsExactly(testEpisode(1, 1).streamUrl to 900_000L)
+    }
+
     private val show = Series(
         sourceId = 1,
         seriesId = "s",
