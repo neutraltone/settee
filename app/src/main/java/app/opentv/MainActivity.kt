@@ -43,6 +43,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -85,6 +86,7 @@ import app.opentv.ui.vod.SeriesDetailScreen
 import app.opentv.ui.vod.VodPlayerScreen
 import app.opentv.update.UpdateGate
 import app.opentv.update.WhatsNewGate
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
 
@@ -249,12 +251,12 @@ private fun OpenTvApp(isTelevision: Boolean) {
     val start = if (sourcesUi.sources.isEmpty()) Routes.ADD_SOURCE else Routes.MAIN
 
     // Boot to last channel: if enabled and we have one, jump straight into the player on launch.
-    // Runs once; backing out returns to the guide and doesn't re-trigger.
+    // Runs once; backing out returns to the Live guide and doesn't re-trigger.
     val bootContext = androidx.compose.ui.platform.LocalContext.current
     val bootSettings = remember { ServiceLocator.get(bootContext).settings }
     LaunchedEffect(start) {
         if (start == Routes.MAIN && bootSettings.resumeLastChannel.value && bootSettings.lastChannelId != 0L) {
-            navController.navigate(Routes.player(bootSettings.lastChannelId))
+            navController.openLivePlayerOverGuide(bootSettings.lastChannelId)
         }
     }
 
@@ -265,7 +267,7 @@ private fun OpenTvApp(isTelevision: Boolean) {
         val id = playRequest
         if (id != null && id != 0L) {
             app.opentv.core.PlayRequests.consume()
-            navController.navigate(Routes.player(id))
+            navController.openLivePlayerOverGuide(id)
         }
     }
 
@@ -281,21 +283,14 @@ private fun OpenTvApp(isTelevision: Boolean) {
                 ServiceLocator.get(bootContext).recordingRepository.byId(req.recordingId)
             }.getOrNull() ?: return@LaunchedEffect
             runCatching {
-                navController.navigate(
+                navController.switchToRecording(
                     Routes.vodPlayer(
                         key = "rec:${rec.id}",
                         url = "optvrec://${rec.id}",
                         title = rec.title,
                         ua = rec.userAgent,
                     ),
-                ) {
-                    launchSingleTop = true
-                    // Drop the live channel we switched away from off the back stack, so Back from
-                    // the recording returns to the home screen — never to a live stream. On a single-
-                    // connection line, returning to live TV while still recording would open a second
-                    // stream and risk the provider banning the account.
-                    popUpTo(Routes.PLAYER) { inclusive = true }
-                }
+                )
             }
         }
     }
@@ -322,7 +317,8 @@ private fun OpenTvApp(isTelevision: Boolean) {
                 )
             }
 
-            composable(Routes.MAIN) {
+            composable(Routes.MAIN) { entry ->
+                val tab by entry.shellTab()
                 MainScreen(
                     isTelevision = isTelevision,
                     hasSources = sourcesUi.sources.isNotEmpty(),
@@ -375,6 +371,8 @@ private fun OpenTvApp(isTelevision: Boolean) {
                         navController.navigate(Routes.vodPlayer(key, url, title, ua))
                     },
                     activeProfileName = activeProfileName,
+                    tab = tab,
+                    onSelectTab = { navController.selectShellTab(it) },
                 )
             }
 
@@ -468,7 +466,7 @@ private fun OpenTvApp(isTelevision: Boolean) {
                 val channelId = entry.arguments?.getString("channelId")?.toLongOrNull()
                 PlayerScreen(
                     channelId = channelId,
-                    onBack = { navController.popBackStack() },
+                    onBack = { navController.leaveLivePlayer(entry) },
                 )
             }
 
@@ -527,12 +525,24 @@ private fun OpenTvApp(isTelevision: Boolean) {
             composable(Routes.VOD_PLAYER) { entry ->
                 fun arg(name: String) = entry.arguments?.getString(name)
                     ?.let { java.net.URLDecoder.decode(it, "UTF-8") }.orEmpty()
+                val mediaKey = arg("key")
+                val leaveScope = rememberCoroutineScope()
                 VodPlayerScreen(
-                    mediaKey = arg("key"),
+                    mediaKey = mediaKey,
                     streamUrl = arg("url"),
                     title = arg("title"),
                     userAgent = arg("ua").ifEmpty { "OpenTV/0.1 (Android)" },
-                    onBack = { navController.popBackStack() },
+                    // The page is looked up when Back is pressed rather than as the player opens,
+                    // so an early press can't miss it and fall back to plain Back.
+                    onBack = {
+                        leaveScope.launch {
+                            val catalog = ServiceLocator.get(bootContext).catalogRepository
+                            val titlePage = titlePageFor(mediaKey) { episodeId ->
+                                catalog.episode(episodeId)?.let { catalog.seriesOf(it) }?.id
+                            }
+                            navController.leaveVodPlayer(entry, titlePage)
+                        }
+                    },
                 )
             }
         }
