@@ -7,6 +7,9 @@ package app.opentv
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.width
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
@@ -18,6 +21,7 @@ import app.opentv.data.model.Channel
 import app.opentv.ui.ChannelsViewModel
 import app.opentv.ui.channels.ChannelList
 import app.opentv.ui.channels.GuideGrid
+import com.google.common.truth.Truth.assertThat
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -66,15 +70,21 @@ class GuideReturnTest {
         if (id == 12L) row(id, variants = listOf(channel(112, "Channel 12 HD", groupKey = "group12"))) else row(id)
     }
 
+    /** The rows the guide reported coming back to, in order. */
+    private val returnedTo = mutableListOf<String>()
+
+    private var shownRows by mutableStateOf(rows)
+
     private fun setGuide(channelId: Long?, takeFocus: Boolean = true) = compose.setTvContent {
         GuideGrid(
-            rows = rows,
+            rows = shownRows,
             windowStartMillis = 0,
             selectedKey = null,
             onSelectRow = {},
             onFocusRow = {},
             returnToChannelId = channelId,
             takeFocus = takeFocus,
+            onReturnToRow = { returnedTo += it.primary.name },
         )
     }
 
@@ -123,5 +133,21 @@ class GuideReturnTest {
         }
 
         compose.onNodeWithText("Channel 30").assertIsDisplayed().assertIsFocused()
+    }
+
+    @Test
+    fun `the guide tells the screen which row it came back to, even when it leaves focus in the menu`() {
+        setGuide(channelId = 30, takeFocus = false)
+
+        compose.runOnIdle { assertThat(returnedTo).containsExactly("Channel 30") }
+    }
+
+    @Test
+    fun `emptying and refilling the guide doesn't jump back to the last channel`() {
+        setGuide(channelId = 30)
+        compose.runOnIdle { shownRows = emptyList() }
+        compose.runOnIdle { shownRows = rows.take(5) }
+
+        compose.runOnIdle { assertThat(returnedTo).containsExactly("Channel 30") }
     }
 }

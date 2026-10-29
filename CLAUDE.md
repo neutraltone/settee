@@ -76,7 +76,10 @@ catalogue refresh, playback or Xtream parsing. The big picture:
   Compose screens under `ui/`. `data/model/Models.kt` entities double as domain models.
 - **Navigation:** `MainActivity.kt` owns the `NavHost` and the `Routes` object. `ui/MainScreen.kt` is the
   tabbed shell (`enum class Tab`: Home, Live, Movies, Shows, Recordings). Home is always first and is
-  where the app opens; the content-type tabs are toggled by settings.
+  where the app opens; the content-type tabs are toggled by settings. The selected tab lives on the
+  main screen's back stack entry (`BackNavigation.kt`), not in `remember`, so it survives the screens
+  opened over it, and Android restoring the app comes back on the tab it was on. Where Back goes
+  from the players is decided there too.
 - **Settings** are in `core/AppSettings.kt` (exposed as `StateFlow`s, e.g. `activeProfileId`).
 
 ### Data rules that are easy to break

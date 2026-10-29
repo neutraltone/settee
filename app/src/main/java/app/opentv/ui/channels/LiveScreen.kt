@@ -208,11 +208,7 @@ fun LiveScreen(
     // The guide opens on the channel last watched, so Back from the player lands where you were and
     // shows what's on it next. The guide is disposed under the player, so this is the way back in.
     val returnToChannelId = remember { settings.lastChannelId.takeIf { it != 0L } }
-    LaunchedEffect(returnToChannelId, rows.isNotEmpty()) {
-        val id = returnToChannelId ?: return@LaunchedEffect
-        if (rows.isEmpty()) return@LaunchedEffect
-        highlightedRow = rows[returnRowIndex(id, rows)]
-    }
+    val onReturnToRow: (ChannelsViewModel.Row) -> Unit = { highlightedRow = it }
 
     // ---- Live preview player -----------------------------------------------------------------
     // One muted player, reused. It only ever decodes while the guide is the foreground screen,
@@ -477,6 +473,7 @@ fun LiveScreen(
                         onExitLeftFromChannel = onExitLeftChannel,
                         returnToChannelId = returnToChannelId,
                         takeFocus = takeFocus,
+                        onReturnToRow = onReturnToRow,
                         modifier = Modifier.weight(1f).padding(start = 12.dp, end = 12.dp),
                     )
                 } else {
@@ -494,6 +491,7 @@ fun LiveScreen(
                         onExitLeftFromChannel = onExitLeftChannel,
                         returnToChannelId = returnToChannelId,
                         takeFocus = takeFocus,
+                        onReturnToRow = onReturnToRow,
                         modifier = Modifier.weight(1f).padding(start = 12.dp, end = 12.dp),
                     )
                 }

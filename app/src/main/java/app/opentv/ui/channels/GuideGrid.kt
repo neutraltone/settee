@@ -95,11 +95,12 @@ fun GuideGrid(
     dayOffset: Int = 0,
     returnToChannelId: Long? = null,
     takeFocus: Boolean = true,
+    onReturnToRow: (ChannelsViewModel.Row) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val scroll = rememberScrollState()
     val listState = rememberLazyListState()
-    val returnTo = rememberReturnToChannel(returnToChannelId, takeFocus, rows, listState)
+    val returnTo = rememberReturnToChannel(returnToChannelId, takeFocus, rows, listState, onReturnToRow)
     val now = System.currentTimeMillis()
     // Jumping to another day resets the horizontal scroll to that day's start; a within-day time
     // drift (dayOffset unchanged) leaves the user's scroll position untouched.
@@ -151,11 +152,12 @@ fun ChannelList(
     onExitLeftFromChannel: () -> Boolean = { false },
     returnToChannelId: Long? = null,
     takeFocus: Boolean = true,
+    onReturnToRow: (ChannelsViewModel.Row) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val now = System.currentTimeMillis()
     val listState = rememberLazyListState()
-    val returnTo = rememberReturnToChannel(returnToChannelId, takeFocus, rows, listState)
+    val returnTo = rememberReturnToChannel(returnToChannelId, takeFocus, rows, listState, onReturnToRow)
     LazyColumn(
         state = listState,
         modifier = modifier.fillMaxSize(),
@@ -181,7 +183,7 @@ fun ChannelList(
  * Where the guide comes back to after the live player: the row of the channel you were watching
  * (its own or one of its qualities), or the first row when the guide's filter leaves it out.
  */
-internal fun returnRowIndex(channelId: Long, rows: List<ChannelsViewModel.Row>): Int =
+private fun returnRowIndex(channelId: Long, rows: List<ChannelsViewModel.Row>): Int =
     rows.indexOfFirst { row -> row.primary.id == channelId || row.variants.any { it.id == channelId } }
         .coerceAtLeast(0)
 
@@ -190,8 +192,9 @@ private class ReturnToChannel(private val index: Int?, private val focusRequeste
 }
 
 /**
- * Once the rows arrive, scrolls [listState] to [channelId]'s row and, if [takeFocus], focuses it.
- * Only the first time: switching category afterwards keeps the guide's own behaviour.
+ * Once the rows arrive, scrolls [listState] to [channelId]'s row, tells [onReturnToRow] which row
+ * that is and, if [takeFocus], focuses it. Only the first time: emptying and refilling the list
+ * later (a filter with nothing in it) keeps the guide's own behaviour rather than jumping back.
  */
 @Composable
 private fun rememberReturnToChannel(
@@ -199,23 +202,26 @@ private fun rememberReturnToChannel(
     takeFocus: Boolean,
     rows: List<ChannelsViewModel.Row>,
     listState: LazyListState,
+    onReturnToRow: (ChannelsViewModel.Row) -> Unit,
 ): ReturnToChannel {
     val focusRequester = remember { FocusRequester() }
     var index by remember { mutableStateOf<Int?>(null) }
     var done by remember { mutableStateOf(false) }
     LaunchedEffect(channelId, rows.isNotEmpty()) {
         if (done || channelId == null || rows.isEmpty()) return@LaunchedEffect
+        done = true
         val target = returnRowIndex(channelId, rows)
         index = target
+        onReturnToRow(rows[target])
         listState.scrollToItem(target)
         if (takeFocus) {
             // The row scrolled in is only laid out, and so focusable, a frame later.
             withFrameNanos {}
             runCatching { focusRequester.requestFocus() }
         }
-        done = true
     }
-    return ReturnToChannel(index, focusRequester)
+    // Remembered so the rows, which all read it, aren't invalidated on every recomposition.
+    return remember(index) { ReturnToChannel(index, focusRequester) }
 }
 
 @Composable

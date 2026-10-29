@@ -78,19 +78,29 @@ suspend fun titlePageFor(mediaKey: String, seriesOfEpisode: suspend (episodeId: 
 }
 
 /**
- * Leaves the movie and episode player for [titlePage] (see [titlePageFor]). When that page is
- * already under the player it goes back to it; otherwise the page takes the player's place, so Back
- * from the page goes to wherever the viewer started instead of into the player again. Without a
- * page it just goes back.
+ * Leaves the live player shown by [from]. Ignored once [from] is no longer on top: the on-screen
+ * Back button stays tappable while the player animates out, and a second tap would otherwise pop
+ * the screen under it too, leaving nothing on screen.
  */
-fun NavController.leaveVodPlayer(titlePage: String?) {
+fun NavController.leaveLivePlayer(from: NavBackStackEntry) {
+    if (currentBackStackEntry == from) popBackStack()
+}
+
+/**
+ * Leaves the movie and episode player shown by [from] for [titlePage] (see [titlePageFor]). When
+ * that page is already under the player it goes back to it; otherwise the page takes the player's
+ * place, so Back from the page goes to wherever the viewer started instead of into the player
+ * again. Without a page it just goes back. Ignored once [from] is no longer on top, as for
+ * [leaveLivePlayer].
+ */
+fun NavController.leaveVodPlayer(from: NavBackStackEntry, titlePage: String?) {
+    if (currentBackStackEntry != from) return
     if (titlePage == null || previousBackStackEntry?.filledRoute() == titlePage) {
         popBackStack()
         return
     }
-    val player = currentBackStackEntry?.destination?.id ?: return
     navigate(titlePage) {
-        popUpTo(player) { inclusive = true }
+        popUpTo(from.destination.id) { inclusive = true }
     }
 }
 

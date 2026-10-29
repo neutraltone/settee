@@ -129,7 +129,7 @@ class PlayerNavigationTest {
         setApp()
         act { navigate(playMovie()) }
 
-        act { leaveVodPlayer(Routes.movieDetail(9)) }
+        act { leaveVodPlayer(currentBackStackEntry!!, Routes.movieDetail(9)) }
         showing("Movie 9")
         back()
 
@@ -144,7 +144,7 @@ class PlayerNavigationTest {
             navigate(playMovie())
         }
 
-        act { leaveVodPlayer(Routes.movieDetail(9)) }
+        act { leaveVodPlayer(currentBackStackEntry!!, Routes.movieDetail(9)) }
         showing("Movie 9")
         back()
 
@@ -159,7 +159,7 @@ class PlayerNavigationTest {
             navigate(playMovie("ep:5"))
         }
 
-        act { leaveVodPlayer(Routes.seriesDetail(3)) }
+        act { leaveVodPlayer(currentBackStackEntry!!, Routes.seriesDetail(3)) }
         showing("Series 3")
         back()
 
@@ -174,7 +174,7 @@ class PlayerNavigationTest {
             navigate(playMovie("rec:1"))
         }
 
-        act { leaveVodPlayer(titlePage = null) }
+        act { leaveVodPlayer(currentBackStackEntry!!, titlePage = null) }
 
         showing("Search")
     }
@@ -194,5 +194,35 @@ class PlayerNavigationTest {
         assertThat(titlePageFor("rec:1", seriesOfEpisode)).isNull()
         assertThat(titlePageFor("catchup:7:1700000000000", seriesOfEpisode)).isNull()
         assertThat(titlePageFor("ep:5", seriesOfEpisode)).isNull()
+    }
+
+    @Test
+    fun `tapping the live player's Back twice only leaves the player once`() {
+        setApp()
+        act { navigate(Routes.player(5)) }
+
+        act {
+            val player = currentBackStackEntry!!
+            leaveLivePlayer(player)
+            leaveLivePlayer(player)
+        }
+
+        showing("Main: HOME")
+    }
+
+    @Test
+    fun `tapping the movie player's Back twice only leaves the player once`() {
+        setApp()
+        act { navigate(playMovie()) }
+
+        act {
+            val player = currentBackStackEntry!!
+            leaveVodPlayer(player, Routes.movieDetail(9))
+            leaveVodPlayer(player, Routes.movieDetail(9))
+        }
+        showing("Movie 9")
+        back()
+
+        showing("Main: HOME")
     }
 }

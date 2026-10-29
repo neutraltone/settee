@@ -42,8 +42,8 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -86,6 +86,7 @@ import app.opentv.ui.vod.SeriesDetailScreen
 import app.opentv.ui.vod.VodPlayerScreen
 import app.opentv.update.UpdateGate
 import app.opentv.update.WhatsNewGate
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
 
@@ -465,7 +466,7 @@ private fun OpenTvApp(isTelevision: Boolean) {
                 val channelId = entry.arguments?.getString("channelId")?.toLongOrNull()
                 PlayerScreen(
                     channelId = channelId,
-                    onBack = { navController.popBackStack() },
+                    onBack = { navController.leaveLivePlayer(entry) },
                 )
             }
 
@@ -525,19 +526,23 @@ private fun OpenTvApp(isTelevision: Boolean) {
                 fun arg(name: String) = entry.arguments?.getString(name)
                     ?.let { java.net.URLDecoder.decode(it, "UTF-8") }.orEmpty()
                 val mediaKey = arg("key")
-                // Looked up as the player opens, so Back never waits on the database.
-                val titlePage by produceState<String?>(null, mediaKey) {
-                    val catalog = ServiceLocator.get(bootContext).catalogRepository
-                    value = titlePageFor(mediaKey) { episodeId ->
-                        catalog.episode(episodeId)?.let { catalog.seriesOf(it) }?.id
-                    }
-                }
+                val leaveScope = rememberCoroutineScope()
                 VodPlayerScreen(
                     mediaKey = mediaKey,
                     streamUrl = arg("url"),
                     title = arg("title"),
                     userAgent = arg("ua").ifEmpty { "OpenTV/0.1 (Android)" },
-                    onBack = { navController.leaveVodPlayer(titlePage) },
+                    // The page is looked up when Back is pressed rather than as the player opens,
+                    // so an early press can't miss it and fall back to plain Back.
+                    onBack = {
+                        leaveScope.launch {
+                            val catalog = ServiceLocator.get(bootContext).catalogRepository
+                            val titlePage = titlePageFor(mediaKey) { episodeId ->
+                                catalog.episode(episodeId)?.let { catalog.seriesOf(it) }?.id
+                            }
+                            navController.leaveVodPlayer(entry, titlePage)
+                        }
+                    },
                 )
             }
         }
