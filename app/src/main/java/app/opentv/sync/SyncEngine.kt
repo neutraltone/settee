@@ -146,7 +146,8 @@ class SyncEngine(private val graph: ServiceLocator.Graph) {
     suspend fun apply(bundle: SyncBundle): MergeResult {
         // Profiles — add any the peer has that we're missing. Never remove (that would delete a
         // local profile's watch history).
-        for (name in bundle.profiles) graph.profiles.findOrCreate(name)
+        val profileIds = HashMap<String, Long?>()
+        for (name in bundle.profiles) profileIdFor(name, profileIds)
 
         // Curation — additive union, keyed by stable identifiers. Count only genuinely new keys
         // (ones we hadn't already curated) so the "Synced N" line means "new to this device".
@@ -156,7 +157,7 @@ class SyncEngine(private val graph: ServiceLocator.Graph) {
         var hidden = 0
         for (item in bundle.favourites) {
             val kind = runCatching { StreamKind.valueOf(item.kind) }.getOrNull() ?: continue
-            val profileId = profileIdFor(item.profile) ?: continue
+            val profileId = profileIdFor(item.profile, profileIds) ?: continue
             if (graph.viewerLibrary.favourites.mergeSynced(
                     Favourite(profileId, kind, item.source, item.id),
                 )
@@ -208,7 +209,7 @@ class SyncEngine(private val graph: ServiceLocator.Graph) {
         // Watch positions — two-way, newest wins.
         var positions = 0
         for (item in bundle.positions) {
-            val profileId = profileIdFor(item.profile) ?: continue
+            val profileId = profileIdFor(item.profile, profileIds) ?: continue
             val mediaKey = when (item.kind) {
                 MediaKey.MOVIE -> graph.catalogRepository.movieByStreamUrl(item.streamUrl)?.let {
                     MediaKey.Movie(it.id)
@@ -233,7 +234,7 @@ class SyncEngine(private val graph: ServiceLocator.Graph) {
         // Counted with positions: both are where a Profile is with its titles.
         val sourceIds = graph.sourceRepository.observeAll().first().associate { it.name to it.id }
         for (item in bundle.dismissals) {
-            val profileId = profileIdFor(item.profile) ?: continue
+            val profileId = profileIdFor(item.profile, profileIds) ?: continue
             val sourceId = sourceIds[item.source] ?: continue
             val taken = graph.viewerLibrary.marks.mergeSynced(
                 SeriesDismissal(
@@ -251,7 +252,7 @@ class SyncEngine(private val graph: ServiceLocator.Graph) {
         // Profile settings — newest wins per Profile and setting.
         var settings = 0
         for (item in bundle.profileSettings) {
-            val profileId = profileIdFor(item.profile) ?: continue
+            val profileId = profileIdFor(item.profile, profileIds) ?: continue
             val taken = graph.profileSettings.mergeSynced(
                 ProfileSetting(profileId, item.name, item.value, item.updatedAtMillis),
             )
@@ -266,5 +267,7 @@ class SyncEngine(private val graph: ServiceLocator.Graph) {
         )
     }
 
-    private suspend fun profileIdFor(name: String): Long? = graph.profiles.findOrCreate(name)
+    // Once per name rather than per item: a bundle carries thousands of positions under a few Profiles.
+    private suspend fun profileIdFor(name: String, known: MutableMap<String, Long?>): Long? =
+        known.getOrPut(name) { graph.profiles.findOrCreate(name) }
 }

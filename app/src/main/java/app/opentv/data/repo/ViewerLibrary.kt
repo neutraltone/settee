@@ -212,7 +212,6 @@ class ViewerLibrary(
     }
 }
 
-/** Fetches the episodes a New Episode could be among; Continue Watching then shows what it finds. */
 /**
  * Removes a Profile from every table the library owns, in one transaction so a removal cut short
  * leaves the Profile whole rather than half forgotten. Reached as `viewerLibrary.profileRemoval`.
@@ -226,6 +225,7 @@ class ProfileRemoval internal constructor(private val db: OpenTvDatabase) {
     }
 }
 
+/** Fetches the episodes a New Episode could be among; Continue Watching then shows what it finds. */
 class NewEpisodes internal constructor(private val positions: PlaybackPositionDao, private val episodes: EpisodeDao) {
     /**
      * Fetches the episodes of each of [updated], series the provider says changed, to find New

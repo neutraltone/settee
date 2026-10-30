@@ -145,6 +145,14 @@ class ProfilesTest {
     }
 
     @Test
+    fun `renaming or removing a profile that isn't there reports nothing done`() = runTest {
+        profiles.all()
+
+        assertThat(profiles.rename(99, "Tom")).isFalse()
+        assertThat(profiles.remove(99)).isFalse()
+    }
+
+    @Test
     fun `a blank name is refused`() = runTest {
         assertThat(profiles.create("   ")).isNull()
         assertThat(profiles.rename(Profiles.BASE_PROFILE_ID, "")).isFalse()

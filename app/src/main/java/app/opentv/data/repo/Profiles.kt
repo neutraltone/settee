@@ -37,10 +37,7 @@ class Profiles(
     /** Every Profile, oldest first. Never empty: the first ask on a fresh install creates "Me". */
     fun observeAll(): Flow<List<Profile>> = dao.observeAll().onStart { ensureOne() }
 
-    suspend fun all(): List<Profile> {
-        ensureOne()
-        return dao.all()
-    }
+    suspend fun all(): List<Profile> = writes.withLock { seededProfiles() }
 
     /** Adds a Profile called [name]; returns its id, or null when the name is blank or taken. */
     suspend fun create(name: String): Long? = writes.withLock {
@@ -49,10 +46,12 @@ class Profiles(
         dao.insert(Profile(name = wanted, createdAtMillis = clock()))
     }
 
-    /** Renames a Profile; returns false when the name is blank or another Profile has it. */
+    /** Renames a Profile; returns false when there's no such Profile, or the name is blank or taken. */
     suspend fun rename(id: Long, name: String): Boolean = writes.withLock {
         val wanted = name.trim()
-        if (wanted.isEmpty() || isNameTaken(wanted, seededProfiles(), except = id)) return false
+        val profiles = seededProfiles()
+        if (profiles.none { it.id == id }) return false
+        if (wanted.isEmpty() || isNameTaken(wanted, profiles, except = id)) return false
         dao.rename(id, wanted)
         true
     }
@@ -70,17 +69,19 @@ class Profiles(
 
     /**
      * Removes a Profile and everything it owned; its recordings stay, for no one in particular.
-     * The base Profile can't be removed (returns false). Removing the active Profile makes the base
-     * Profile active. The Profile's own row goes last, so a removal cut short can be tried again.
+     * Returns false for the base Profile, which can't be removed, and for one that isn't there.
+     * Removing the active Profile makes the base Profile active. The Profile's own row goes last, so
+     * a removal cut short can be tried again. Holds [writes] throughout, so a sync can't find the
+     * Profile by name and write under its id while its rows are being cleared.
      */
-    suspend fun remove(id: Long): Boolean {
-        if (id == BASE_PROFILE_ID) return false
+    suspend fun remove(id: Long): Boolean = writes.withLock {
+        if (id == BASE_PROFILE_ID || dao.all().none { it.id == id }) return false
         viewerLibrary.profileRemoval.forget(id)
         profileSettings.forgetProfile(id)
         recordings.forgetProfile(id)
         dao.delete(id)
         if (settings.activeProfileId.value == id) settings.setActiveProfile(BASE_PROFILE_ID)
-        return true
+        true
     }
 
     private suspend fun ensureOne() = writes.withLock { seededProfiles() }

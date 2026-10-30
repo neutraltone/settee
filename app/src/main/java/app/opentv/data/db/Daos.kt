@@ -820,9 +820,6 @@ interface ProfileDao {
     @Query("SELECT * FROM profiles ORDER BY id")
     suspend fun all(): List<Profile>
 
-    @Query("SELECT * FROM profiles WHERE name = :name LIMIT 1")
-    suspend fun byName(name: String): Profile?
-
     @Insert
     suspend fun insert(profile: Profile): Long
 
