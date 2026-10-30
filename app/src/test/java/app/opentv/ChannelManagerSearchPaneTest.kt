@@ -17,6 +17,7 @@ import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.pressKey
 import app.opentv.data.model.Channel
+import app.opentv.data.repo.LineupChannel
 import app.opentv.ui.ChannelsViewModel
 import app.opentv.ui.channels.ChannelManagerSearchPane
 import com.google.common.truth.Truth.assertThat
@@ -116,12 +117,6 @@ class ChannelManagerSearchPaneTest {
             epgChannelId = null,
             number = null,
         )
-        return ChannelsViewModel.Row(
-            primary = channel,
-            variants = listOf(channel),
-            now = null,
-            next = null,
-            programmes = emptyList(),
-        )
+        return ChannelsViewModel.Row(LineupChannel(channel, listOf(channel)))
     }
 }

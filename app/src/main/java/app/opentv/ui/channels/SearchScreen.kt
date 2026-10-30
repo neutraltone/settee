@@ -93,7 +93,10 @@ fun SearchScreen(
         channelResults = channelResults,
         movieResults = movieResults,
         seriesResults = seriesResults,
-        onPlayChannel = onPlayChannel,
+        onPlayChannel = { channel ->
+            viewModel.zapFromAll()
+            onPlayChannel(channel)
+        },
         onPlayMovie = onPlayMovie,
         onOpenSeries = onOpenSeries,
         onBack = onBack,

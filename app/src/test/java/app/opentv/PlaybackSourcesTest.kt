@@ -35,7 +35,8 @@ class PlaybackSourcesTest {
     private val test = TestCatalog(ApplicationProvider.getApplicationContext())
     private val db = test.db
     private val context = ApplicationProvider.getApplicationContext<android.content.Context>()
-    private val sources = PlaybackSources(db, XtreamApi(test.panel.http), StalkerApi(test.panel.http), clock = { NOW })
+    private val sources =
+        PlaybackSources(db, XtreamApi(test.panel.http), StalkerApi(test.panel.http), test.lineup, clock = { NOW })
 
     @After
     fun close() = test.close()
@@ -166,6 +167,35 @@ class PlaybackSourcesTest {
                 isLive = false,
             ),
         )
+    }
+
+    @Test
+    fun `catch-up plays the programme from the guide the guide shows for the channel`() = runTest {
+        db.sources().insert(PANEL_SOURCE.copy(userAgent = "Panel/1"))
+        val hd = channel(streamUrl = "http://example.com/live/u/p/9.m3u8")
+        // The Channel's FHD Quality is its primary, so its guide is the one the guide draws.
+        db.channels().upsertAll(
+            listOf(
+                Channel(
+                    sourceId = PANEL_SOURCE.id,
+                    streamId = "10",
+                    name = "UK| BBC ONE FHD",
+                    displayName = "BBC One",
+                    qualityRank = 300,
+                    categoryId = null,
+                    logoUrl = null,
+                    epgChannelId = "bbc1.fhd",
+                    number = 1,
+                    streamUrl = "http://example.com/live/u/p/10.m3u8",
+                ),
+            ),
+        )
+        db.channels().allForMatching().forEach { db.channels().upsertAll(listOf(it.copy(groupKey = "uk:bbc1"))) }
+        db.programmes().upsertAll(listOf(news(), news().copy(epgChannelId = "bbc1.fhd", title = "Breakfast")))
+
+        val playable = inUtc { sources.forWatching(MediaKey.Catchup(hd, NEWS_START)) } as Playable.Ready
+
+        assertThat(playable.title).isEqualTo("BBC One — Breakfast")
     }
 
     @Test

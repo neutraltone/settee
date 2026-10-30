@@ -10,7 +10,9 @@ import android.content.Context
 import androidx.core.content.edit
 import app.opentv.core.LocaleUtils
 import app.opentv.core.ServiceLocator
+import app.opentv.data.model.StreamKind
 import app.opentv.data.repo.CatalogRepository
+import app.opentv.data.repo.migratedLockKeys
 import app.opentv.data.work.SyncWorker
 import coil.ImageLoader
 import coil.ImageLoaderFactory
@@ -19,6 +21,7 @@ import coil.memory.MemoryCache
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 class OpenTvApp :
@@ -103,6 +106,12 @@ class OpenTvApp :
             val seen = prefs.getInt("normalizer_version", 0)
             if (seen < CatalogRepository.NORMALIZER_VERSION) {
                 graph.catalogRepository.renormalizeAll()
+                if (seen < LOCK_KEYS_VERSION) {
+                    val categories = graph.database.categories().observe(StreamKind.LIVE).first()
+                    graph.settings.setHiddenCategories(
+                        migratedLockKeys(graph.settings.hiddenCategories.value, categories),
+                    )
+                }
                 prefs.edit { putInt("normalizer_version", CatalogRepository.NORMALIZER_VERSION) }
             }
             // Runs on every launch. It is cheap when nothing is stale (feeds within their
@@ -113,3 +122,6 @@ class OpenTvApp :
         }
     }
 }
+
+/** The [CatalogRepository.NORMALIZER_VERSION] that re-keyed nameless categories' locks (#104). */
+private const val LOCK_KEYS_VERSION = 3

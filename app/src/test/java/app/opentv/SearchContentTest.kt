@@ -24,6 +24,7 @@ import androidx.test.core.app.ApplicationProvider
 import app.opentv.data.model.Channel
 import app.opentv.data.model.Movie
 import app.opentv.data.model.Series
+import app.opentv.data.repo.LineupChannel
 import app.opentv.ui.ChannelsViewModel
 import app.opentv.ui.channels.SearchContent
 import com.google.common.truth.Truth.assertThat
@@ -130,21 +131,15 @@ class SearchContentTest {
         return shadowOf(context.getSystemService(InputMethodManager::class.java)).isSoftInputVisible
     }
 
-    private fun channelRow(name: String) = ChannelsViewModel.Row(
-        primary = Channel(
-            id = name.hashCode().toLong(),
-            sourceId = 1,
-            streamId = name,
-            name = name,
-            streamUrl = "https://example.com/$name.ts",
-            categoryId = null,
-            logoUrl = "https://example.com/$name.png",
-            epgChannelId = null,
-            number = null,
-        ),
-        variants = emptyList(),
-        now = null,
-        next = null,
-        programmes = emptyList(),
-    )
+    private fun channelRow(name: String) = Channel(
+        id = name.hashCode().toLong(),
+        sourceId = 1,
+        streamId = name,
+        name = name,
+        streamUrl = "https://example.com/$name.ts",
+        categoryId = null,
+        logoUrl = "https://example.com/$name.png",
+        epgChannelId = null,
+        number = null,
+    ).let { ChannelsViewModel.Row(LineupChannel(it, listOf(it))) }
 }

@@ -36,7 +36,7 @@ class StreamCaptureTest {
     private val test = TestCatalog(ApplicationProvider.getApplicationContext())
     private val db = test.db
     private val panel = test.panel
-    private val sources = PlaybackSources(db, XtreamApi(panel.http), StalkerApi(panel.http))
+    private val sources = PlaybackSources(db, XtreamApi(panel.http), StalkerApi(panel.http), test.lineup)
 
     /** Each leg the provider serves: the link it was asked on, and the user agent. */
     private val legs = mutableListOf<Pair<String, String?>>()

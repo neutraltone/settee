@@ -7,7 +7,6 @@ package app.opentv.data.repo
 
 import android.net.Uri
 import android.util.Log
-import app.opentv.data.db.ChannelDao
 import app.opentv.data.db.OpenTvDatabase
 import app.opentv.data.model.Channel
 import app.opentv.data.model.Episode
@@ -121,6 +120,7 @@ class PlaybackSources(
     private val db: OpenTvDatabase,
     private val xtreamApi: XtreamApi,
     private val stalkerApi: StalkerApi,
+    private val lineup: ChannelLineup,
     private val clock: () -> Long = System::currentTimeMillis,
 ) {
 
@@ -148,7 +148,7 @@ class PlaybackSources(
      */
     suspend fun forRecording(key: MediaKey.Recording): Playable = resolving(key) {
         val recording = db.recordings().byId(key.recordingId).or(Failure.GONE)
-        val channel = db.channels().capturedFor(recording)
+        val channel = lineup.capturedFor(recording, db)
         if (channel == null) {
             lastKnown(key, recording)
         } else {
@@ -208,9 +208,11 @@ class PlaybackSources(
         val channel = db.channels().byId(key.channelId).or(Failure.GONE)
         val source = db.sources().byId(channel.sourceId).or(Failure.GONE)
         if (source.kind != SourceKind.XTREAM) throw Unplayable(Failure.NO_CATCHUP)
-        // The archive wants the programme's length, which only the guide knows.
-        val programme = channel.epgCandidates
-            .firstNotNullOfOrNull { epgId -> db.programmes().startingAt(epgId, key.startUtcMillis) }
+        // The archive wants the programme's length, which only the guide knows: the Channel's own
+        // guide, the one the programme was picked from.
+        val programme = (lineup.channelOf(channel.id) ?: LineupChannel(channel, listOf(channel)))
+            .let { lineup.guideId(it) }
+            ?.let { epgId -> db.programmes().startingAt(epgId, key.startUtcMillis) }
             .or(Failure.GONE)
         val minutes = TimeUnit.MILLISECONDS.toMinutes(programme.durationMillis).toInt()
         val url = xtreamApi.catchupUrl(source, channel.streamId, key.startUtcMillis, minutes)
@@ -239,20 +241,17 @@ class PlaybackSources(
 
 /**
  * The channel [recording] pulls from. It keeps the channel the viewer picked, but a clash with
- * another booking can move the capture to the same channel on another provider: the row's
- * source says which.
+ * another booking can move the capture to the same Channel on another provider: the row's source
+ * says which.
  */
-private suspend fun ChannelDao.capturedFor(recording: Recording): Channel? {
-    val picked = byId(recording.channelId)
-    return if (picked == null || picked.sourceId == recording.sourceId || picked.groupKey.isEmpty()) {
-        picked
-    } else {
-        variantsInGroup(picked.groupKey)
-            .filter { it.sourceId == recording.sourceId }
-            .maxByOrNull { it.qualityRank }
-            // That copy has gone since: the channel the viewer picked is still worth recording.
-            ?: picked
-    }
+private suspend fun ChannelLineup.capturedFor(recording: Recording, db: OpenTvDatabase): Channel? {
+    val picked = db.channels().byId(recording.channelId)
+    if (picked == null || picked.sourceId == recording.sourceId) return picked
+    return channelOf(picked.id)?.qualities
+        ?.filter { it.sourceId == recording.sourceId }
+        ?.maxByOrNull { it.qualityRank }
+        // That copy has gone since: the channel the viewer picked is still worth recording.
+        ?: picked
 }
 
 /** A portal that won't take the MAC throws rather than answering; to the viewer that's the same refusal. */

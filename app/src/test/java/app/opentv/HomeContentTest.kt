@@ -27,6 +27,7 @@ import androidx.compose.ui.test.pressKey
 import app.opentv.data.model.Channel
 import app.opentv.data.model.Movie
 import app.opentv.data.model.Series
+import app.opentv.data.repo.LineupChannel
 import app.opentv.data.repo.LivePreview
 import app.opentv.data.repo.MediaKey
 import app.opentv.ui.HomeContent
@@ -103,6 +104,10 @@ class HomeContentTest {
         number = null,
     )
 
+    private fun favourite(id: Long, name: String) = channel(id, name).let {
+        LineupChannel(it, listOf(it), favourite = true)
+    }
+
     /** The Live Preview a test's Home leads with, if any. */
     private var live by mutableStateOf<LiveTile?>(null)
 
@@ -144,7 +149,7 @@ class HomeContentTest {
         resume: List<VodViewModel.ResumeItem> = this.resume,
         shows: List<Series> = listOf(series(1, "Severance")),
         movies: List<Movie> = listOf(movie(2, "Heat")),
-        channels: List<Channel> = listOf(channel(3, "BBC One")),
+        channels: List<LineupChannel> = listOf(favourite(3, "BBC One")),
         recent: RecentRows = RecentRows(),
     ) = compose.setTvContent {
         HomeContent(
@@ -185,7 +190,7 @@ class HomeContentTest {
                     continueWatching = continueWatching(),
                     favouriteShows = listOf(series(1, "Severance")),
                     favouriteMovies = movies(),
-                    favouriteChannels = listOf(channel(3, "BBC One"), channel(5, "BBC Two")),
+                    favouriteChannels = listOf(favourite(3, "BBC One"), favourite(5, "BBC Two")),
                     recent = recent,
                     onResume = {},
                     onOpenSeries = {},

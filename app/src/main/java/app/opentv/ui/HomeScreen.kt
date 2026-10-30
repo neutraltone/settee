@@ -55,6 +55,7 @@ import app.opentv.data.model.Channel
 import app.opentv.data.model.Movie
 import app.opentv.data.model.Series
 import app.opentv.data.model.shownName
+import app.opentv.data.repo.LineupChannel
 import app.opentv.data.repo.MediaKey
 import app.opentv.ui.options.OptionsSubject
 import app.opentv.ui.options.openOptionsOn
@@ -87,6 +88,11 @@ internal fun HomeScreen(
     val state = viewModel.state.collectAsState().value ?: return
     val live = state.live
     val preview = rememberLivePreviewPlayer(live?.preview?.channel)
+    // Home has no list of its own to zap through, so channel up and down go through every Channel.
+    val play: (Channel) -> Unit = { channel ->
+        viewModel.zapFromAll()
+        onPlayChannel(channel)
+    }
     HomeContent(
         state.continueWatching,
         state.favouriteShows,
@@ -95,7 +101,7 @@ internal fun HomeScreen(
         onResume,
         onOpenSeries,
         onOpenMovie,
-        onPlayChannel,
+        play,
         takeFocus,
         state.recent,
         onNothingToShow,
@@ -103,7 +109,7 @@ internal fun HomeScreen(
         onWatchLive = { channel ->
             // Stopped before the full-screen player starts, so the box never decodes two at once.
             preview.stop()
-            onPlayChannel(channel)
+            play(channel)
         },
         onOpenLive = onOpenLive,
     )
@@ -118,7 +124,7 @@ internal fun HomeContent(
     continueWatching: List<VodViewModel.ResumeItem>,
     favouriteShows: List<Series>,
     favouriteMovies: List<Movie>,
-    favouriteChannels: List<Channel>,
+    favouriteChannels: List<LineupChannel>,
     onResume: (MediaKey) -> Unit,
     onOpenSeries: (Series) -> Unit,
     onOpenMovie: (Movie) -> Unit,
@@ -253,7 +259,7 @@ private sealed class Shelf(key: String, items: List<String>) {
     class Movies(key: String, @StringRes val title: Int, val movies: List<Movie>) :
         Shelf(key, movies.map { it.pickKey })
 
-    class Channels(val channels: List<Channel>) : Shelf("channels", channels.map { it.pickKey })
+    class Channels(val channels: List<LineupChannel>) : Shelf("channels", channels.map { it.primary.pickKey })
 }
 
 /** The Live Preview's row, which leads Home when there is one. */
@@ -264,7 +270,7 @@ private fun homeShelves(
     continueWatching: List<VodViewModel.ResumeItem>,
     favouriteShows: List<Series>,
     favouriteMovies: List<Movie>,
-    favouriteChannels: List<Channel>,
+    favouriteChannels: List<LineupChannel>,
     recent: RecentRows,
 ) = listOf(
     Shelf.Resume(continueWatching),
@@ -321,7 +327,7 @@ internal fun restoreTarget(rows: List<HomeRow>, pick: HomePick): HomePick? {
 }
 
 @Composable
-private fun ChannelRow(channels: List<Channel>, onPlayChannel: (Channel) -> Unit, focus: CardFocus?) {
+private fun ChannelRow(channels: List<LineupChannel>, onPlayChannel: (Channel) -> Unit, focus: CardFocus?) {
     Column(Modifier.fillMaxWidth()) {
         SectionHeader(stringResource(R.string.home_favourite_channels))
         LazyRow(
@@ -329,8 +335,8 @@ private fun ChannelRow(channels: List<Channel>, onPlayChannel: (Channel) -> Unit
             contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            itemsIndexed(channels, key = { _, channel -> channel.id }) { index, channel ->
-                ChannelCard(channel, Modifier.takesFocus(index, focus)) { onPlayChannel(channel) }
+            itemsIndexed(channels, key = { _, channel -> channel.key }) { index, channel ->
+                ChannelCard(channel, Modifier.takesFocus(index, focus)) { onPlayChannel(channel.primary) }
             }
         }
     }
@@ -338,7 +344,8 @@ private fun ChannelRow(channels: List<Channel>, onPlayChannel: (Channel) -> Unit
 
 /** A channel's logo on a landscape tile, its name underneath; focus scales it and draws the primary border. */
 @Composable
-private fun ChannelCard(channel: Channel, modifier: Modifier, onClick: () -> Unit) {
+private fun ChannelCard(lineupChannel: LineupChannel, modifier: Modifier, onClick: () -> Unit) {
+    val channel = lineupChannel.primary
     var focused by remember { mutableStateOf(false) }
     val scale by animateFloatAsState(if (focused) 1.06f else 1f, label = "channelScale")
     Column(
@@ -350,7 +357,7 @@ private fun ChannelCard(channel: Channel, modifier: Modifier, onClick: () -> Uni
             }
             .onFocusChanged { focused = it.isFocused }
             .clip(RoundedCornerShape(10.dp))
-            .optionsClickable(onClick, openOptionsOn(OptionsSubject.OfChannel(channel)))
+            .optionsClickable(onClick, openOptionsOn(OptionsSubject.OfChannel(channel, lineupChannel.qualities)))
             .padding(4.dp),
     ) {
         Box(

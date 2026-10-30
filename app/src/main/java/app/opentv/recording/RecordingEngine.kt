@@ -7,13 +7,13 @@ package app.opentv.recording
 
 import android.content.Context
 import app.opentv.core.AppSettings
-import app.opentv.data.db.ChannelDao
 import app.opentv.data.model.Channel
 import app.opentv.data.model.Programme
 import app.opentv.data.model.Recording
 import app.opentv.data.model.RecordingStatus
 import app.opentv.data.model.SeriesRule
 import app.opentv.data.model.Source
+import app.opentv.data.repo.ChannelLineup
 import app.opentv.data.repo.EpgRepository
 import app.opentv.data.repo.RecordingRepository
 import app.opentv.data.repo.SourceRepository
@@ -28,8 +28,8 @@ class RecordingEngine(
     private val repo: RecordingRepository,
     private val sources: SourceRepository,
     private val settings: AppSettings,
-    private val channelDao: ChannelDao,
     private val epgRepository: EpgRepository,
+    private val lineup: ChannelLineup,
 ) {
 
     /** Start recording [channel] now. [programme], when given, names and time-bounds the capture. */
@@ -246,9 +246,8 @@ class RecordingEngine(
         val busy = busyProviderIds(startMillis, endMillis)
         // Our provider is free this window, or nothing else is booked — no need to move.
         if (channel.sourceId !in busy) return channel
-        if (channel.groupKey.isEmpty()) return channel
 
-        val variants = channelDao.variantsInGroup(channel.groupKey)
+        val variants = lineup.channelOf(channel.id)?.qualities.orEmpty()
             .groupBy { it.sourceId }
             .mapNotNull { (_, chans) -> chans.maxByOrNull { it.qualityRank } }
 
@@ -284,11 +283,13 @@ class RecordingEngine(
         if (rules.isEmpty()) return
         val now = System.currentTimeMillis()
         for (rule in rules) {
-            val channel = channelDao.byId(rule.channelId) ?: continue
-            val upcoming = channel.epgCandidates
-                .flatMap { epgId -> epgRepository.upcoming(epgId, now, 200) }
-                .distinctBy { it.startUtcMillis to it.title }
-            scheduleMatching(channel, rule.titleKey, rule.id, upcoming)
+            // The guide the rule was set from: its Channel's, whichever Quality the rule is on. A
+            // Channel hidden or locked since still records, from its own rows.
+            val lineupChannel = lineup.channelOf(rule.channelId) ?: lineup.channelOf(rule.channelId, manage = true)
+                ?: continue
+            val channel = lineupChannel.qualities.first { it.id == rule.channelId }
+            val guideId = lineup.guideId(lineupChannel) ?: continue
+            scheduleMatching(channel, rule.titleKey, rule.id, epgRepository.upcoming(guideId, now, 200))
         }
     }
 

@@ -82,7 +82,6 @@ import app.opentv.data.model.shownName
 import app.opentv.data.repo.MediaKey
 import app.opentv.data.repo.Playable
 import app.opentv.player.PlaybackErrors
-import app.opentv.player.PlaybackQueue
 import app.opentv.player.PlayerController
 import app.opentv.reminders.ReminderScheduler
 import app.opentv.ui.ChannelsViewModel
@@ -244,9 +243,7 @@ fun LiveScreen(
     // live is funnelled through [requestLive]: with a recording active it asks first.
     var pendingLiveChannel by remember { mutableStateOf<Channel?>(null) }
     fun startLive(channel: Channel) {
-        PlaybackQueue.items = rows.map {
-            PlaybackQueue.Item(it.primary.id, it.primary.shownName, it.primary.logoUrl, it.primary.number)
-        }
+        viewModel.zapFromGuide()
         previewController.stop()
         onPlayChannel(channel)
     }
@@ -513,7 +510,7 @@ fun LiveScreen(
         // second provider's account is what lets you keep watching on the first — the only real way
         // around a single-connection provider (something even TiviMate can't do).
         var sourceOptions by remember(channel.id) { mutableStateOf<List<Channel>>(emptyList()) }
-        LaunchedEffect(channel.id) { sourceOptions = graph.catalogRepository.recordSourceOptions(channel) }
+        LaunchedEffect(channel.id) { sourceOptions = targetRow.channel.bestPerSource(firstSourceId = channel.sourceId) }
         val multiSource = sourceOptions.size > 1
         LaunchedEffect(sourceOptions) {
             if (sourceOptions.size > 1) {
@@ -566,7 +563,7 @@ fun LiveScreen(
                         }
                     }
                     Spacer(Modifier.height(16.dp))
-                } else if (targetRow.variants.size > 1) {
+                } else if (targetRow.switchable.size > 1) {
                     Text(
                         stringResource(R.string.rec_quality_label),
                         style = MaterialTheme.typography.labelMedium,
@@ -574,7 +571,7 @@ fun LiveScreen(
                     )
                     Spacer(Modifier.height(6.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        targetRow.variants.forEach { variant ->
+                        targetRow.switchable.forEach { variant ->
                             QualityChip(
                                 label = variant.qualityLabel.ifBlank { stringResource(R.string.rec_quality_sd) },
                                 selected = variant.id == chosenVariant.id,

@@ -41,7 +41,14 @@ object ChannelNameNormalizer {
         val qualityLabel: String,
         /** Country hint from a stripped prefix (`UK`, `US`…), or null. */
         val region: String?,
-    )
+    ) {
+        /**
+         * What a channel row is stored under: [groupKey] with the region in front (`uk:itv`), so
+         * `UK| ITV` and `US| ITV` stay two channels. Guide matching and category locks use the bare
+         * [groupKey]: a guide calls both of them `ITV`.
+         */
+        val channelKey: String get() = region?.let { "${it.lowercase()}:$groupKey" } ?: groupKey
+    }
 
     /** Quality/codec tokens, matched as whole words, case-insensitively. */
     private val QUALITY_RANKS = mapOf(
@@ -193,6 +200,9 @@ object ChannelNameNormalizer {
             .filter { it.isNotEmpty() }
             .joinToString("") { word -> NUMBER_WORDS[word] ?: word }
     }
+
+    /** The [Normalized.groupKey] inside a stored [Normalized.channelKey], region dropped. */
+    fun nameKeyOf(channelKey: String): String = channelKey.substringAfter(':')
 
     private val CAMEL_BOUNDARY = Regex("""([a-z])([A-Z])""")
     private val NON_ALNUM = Regex("""[^a-zA-Z0-9]+""")

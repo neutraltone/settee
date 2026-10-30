@@ -917,7 +917,7 @@ class CatalogRepository(
             }
             channel.copy(
                 displayName = n.baseName,
-                groupKey = n.groupKey,
+                groupKey = n.channelKey,
                 qualityRank = rank,
                 qualityLabel = label,
                 // Providers ship decorative separator rows ('#### UK GENERAL ####') as
@@ -981,35 +981,6 @@ class CatalogRepository(
     }
 
     /**
-     * The switchable quality variants of a channel, best first, ONE per distinct quality.
-     *
-     * A provider often lists the same stream in several categories — PRIME American Crimes
-     * shows up twice, both RAW. Those are not "qualities"; offering a switch between two
-     * identical (and sometimes one dead) feeds is worse than useless. So variants are
-     * de-duplicated by their quality signature: only genuinely different qualities survive,
-     * and a channel that is really single-quality gets no switch at all.
-     */
-    suspend fun variants(channel: Channel): List<Channel> {
-        if (channel.groupKey.isEmpty()) return listOf(channel)
-        val all = channelDao.variantsInGroup(channel.groupKey)
-        return distinctByQuality(all).ifEmpty { listOf(channel) }
-    }
-
-    /**
-     * The record menu's "record from which provider" options: one channel per source that carries
-     * this logical channel, each that source's best-quality copy, the current source first. With two
-     * providers this lets a recording run on one account while the user keeps watching on the other —
-     * the only real way around a provider's single-connection limit (which even TiviMate can't dodge).
-     */
-    suspend fun recordSourceOptions(channel: Channel): List<Channel> = withContext(Dispatchers.IO) {
-        if (channel.groupKey.isEmpty()) return@withContext listOf(channel)
-        channelDao.variantsInGroup(channel.groupKey)
-            .groupBy { it.sourceId }
-            .map { (_, chans) -> chans.maxByOrNull { it.qualityRank } ?: chans.first() }
-            .sortedByDescending { it.sourceId == channel.sourceId }
-    }
-
-    /**
      * Switches an Xtream source's live-stream container (HLS ↔ MPEG-TS) and rewrites its live
      * channels' playback URLs in place, so the change takes effect immediately without a re-sync.
      *
@@ -1047,6 +1018,6 @@ class CatalogRepository(
          * already-imported channels. The app compares it against a stored value on launch
          * and runs [renormalizeAll] once when it moves.
          */
-        const val NORMALIZER_VERSION = 2
+        const val NORMALIZER_VERSION = 3
     }
 }
