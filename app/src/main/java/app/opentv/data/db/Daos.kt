@@ -671,6 +671,9 @@ interface PlaybackPositionDao {
 
     @Query("DELETE FROM playback_positions WHERE profileId = :profileId AND mediaKey = :key")
     suspend fun delete(profileId: Long, key: String)
+
+    @Query("DELETE FROM playback_positions WHERE profileId = :profileId")
+    suspend fun deleteFor(profileId: Long)
 }
 
 @Dao
@@ -700,6 +703,9 @@ interface LivePlaybackDao {
         """,
     )
     fun observeChannel(source: String, streamId: String): Flow<Channel?>
+
+    @Query("DELETE FROM live_playback WHERE profileId = :profileId")
+    suspend fun deleteFor(profileId: Long)
 }
 
 @Dao
@@ -720,6 +726,9 @@ interface SeriesDismissalDao {
 
     @Upsert
     suspend fun upsert(dismissal: SeriesDismissal)
+
+    @Query("DELETE FROM series_dismissals WHERE profileId = :profileId")
+    suspend fun deleteFor(profileId: Long)
 }
 
 @Dao
@@ -757,6 +766,9 @@ interface FavouriteDao {
 
     @Query("SELECT * FROM favourites")
     suspend fun all(): List<Favourite>
+
+    @Query("DELETE FROM favourites WHERE profileId = :profileId")
+    suspend fun deleteFor(profileId: Long)
 
     @Query(
         """
@@ -808,9 +820,6 @@ interface ProfileDao {
     @Query("SELECT * FROM profiles ORDER BY id")
     suspend fun all(): List<Profile>
 
-    @Query("SELECT * FROM profiles WHERE name = :name LIMIT 1")
-    suspend fun byName(name: String): Profile?
-
     @Insert
     suspend fun insert(profile: Profile): Long
 
@@ -819,13 +828,6 @@ interface ProfileDao {
 
     @Query("DELETE FROM profiles WHERE id = :id")
     suspend fun delete(id: Long)
-
-    /** Removing a profile takes its watch history with it. */
-    @Query("DELETE FROM playback_positions WHERE profileId = :id")
-    suspend fun deletePositions(id: Long)
-
-    @Query("DELETE FROM favourites WHERE profileId = :id")
-    suspend fun deleteFavourites(id: Long)
 }
 
 @Dao
@@ -868,6 +870,10 @@ interface RecordingDao {
     /** Snapshot of every recording — the NAS sync reads this to gather the smb:// ones to share. */
     @Query("SELECT * FROM recordings")
     suspend fun all(): List<Recording>
+
+    /** The Profile is being removed: its recordings stay, for everyone. */
+    @Query("UPDATE recordings SET profileId = NULL WHERE profileId = :profileId")
+    suspend fun clearProfile(profileId: Long)
 
     /** De-dup for NAS sync: a recording's smb:// locator is its stable cross-device identity. */
     @Query("SELECT * FROM recordings WHERE filePath = :filePath LIMIT 1")

@@ -13,7 +13,6 @@ import app.opentv.data.db.OpenTvDatabase
 import app.opentv.data.model.Channel
 import app.opentv.data.model.Movie
 import app.opentv.data.model.PlaybackPosition
-import app.opentv.data.model.Profile
 import app.opentv.data.model.Series
 import app.opentv.data.model.Source
 import app.opentv.data.model.SourceKind
@@ -103,12 +102,12 @@ class SyncRoundTripTest {
             db.movies().upsertAll(movies)
             db.series().upsertAll(series)
             db.episodes().upsertAll(listOf(episode))
-            profiles.forEach { db.profiles().insert(Profile(name = it)) }
+            profiles.forEach { checkNotNull(graph.profiles.create(it)) }
         }
 
-        suspend fun hasProfile(name: String): Boolean = db.profiles().byName(name) != null
+        suspend fun hasProfile(name: String): Boolean = graph.profiles.all().any { it.name == name }
 
-        suspend fun profileId(name: String): Long = checkNotNull(db.profiles().byName(name)).id
+        suspend fun profileId(name: String): Long = graph.profiles.all().single { it.name == name }.id
 
         /** Acts as [name] on this device, the way picking a Profile does. */
         suspend fun asProfile(name: String) = graph.settings.setActiveProfile(profileId(name))

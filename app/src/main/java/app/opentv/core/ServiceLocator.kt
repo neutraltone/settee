@@ -14,6 +14,7 @@ import app.opentv.data.repo.CatalogRepository
 import app.opentv.data.repo.EpgRepository
 import app.opentv.data.repo.PlaybackSources
 import app.opentv.data.repo.ProfileSettings
+import app.opentv.data.repo.Profiles
 import app.opentv.data.repo.RecordingRepository
 import app.opentv.data.repo.ReminderRepository
 import app.opentv.data.repo.SourceRepository
@@ -133,7 +134,9 @@ object ServiceLocator {
             ProfileSettings(database.profileSettings(), settings.activeProfileId)
         }
 
-        val profiles get() = database.profiles()
+        val profiles: Profiles by lazy {
+            Profiles(database.profiles(), viewerLibrary, profileSettings, recordingRepository, settings)
+        }
 
         val recordingRepository: RecordingRepository by lazy {
             RecordingRepository(database.recordings(), database.seriesRules())

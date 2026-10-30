@@ -8,6 +8,7 @@ package app.opentv.core
 import android.content.Context
 import androidx.core.content.edit
 import app.opentv.data.model.StremioAddon
+import app.opentv.data.repo.Profiles
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -53,8 +54,8 @@ class AppSettings private constructor(context: Context) {
     private val _guidePreviewSound = MutableStateFlow(prefs.getBoolean(KEY_PREVIEW_SOUND, false))
     val guidePreviewSound: StateFlow<Boolean> = _guidePreviewSound.asStateFlow()
 
-    /** The profile whose watch history is active. Defaults to the built-in profile (id 1). */
-    private val _activeProfileId = MutableStateFlow(prefs.getLong(KEY_ACTIVE_PROFILE, 1L))
+    /** The profile whose watch history is active. Defaults to the base profile. */
+    private val _activeProfileId = MutableStateFlow(prefs.getLong(KEY_ACTIVE_PROFILE, Profiles.BASE_PROFILE_ID))
     val activeProfileId: StateFlow<Long> = _activeProfileId.asStateFlow()
 
     fun setActiveProfile(id: Long) {
@@ -68,7 +69,7 @@ class AppSettings private constructor(context: Context) {
      * launch would skip the download and leave Movies and Shows empty.
      */
     fun forgetDatabaseRows() {
-        setActiveProfile(1L)
+        setActiveProfile(Profiles.BASE_PROFILE_ID)
         lastChannelId = 0L
         vodSyncedAtMillis = 0L
     }

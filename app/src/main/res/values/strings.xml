@@ -250,6 +250,7 @@
     <string name="profiles_use">Use</string>
     <string name="profiles_rename">Rename</string>
     <string name="profiles_name_placeholder">Name</string>
+    <string name="profiles_name_taken">Another profile is already called %1$s.</string>
 
     <!-- ============================ Providers ============================ -->
     <string name="providers_add">Add provider</string>

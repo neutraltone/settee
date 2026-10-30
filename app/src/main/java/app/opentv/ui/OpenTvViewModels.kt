@@ -1330,26 +1330,13 @@ class ProfilesViewModel(app: Application) : AndroidViewModel(app) {
 
     val activeProfileId: StateFlow<Long> = settings.activeProfileId
 
-    init {
-        // Fresh installs create the table empty (no migration runs), so seed the default profile.
-        viewModelScope.launch {
-            if (graph.profiles.all().isEmpty()) {
-                graph.profiles.insert(Profile(name = "Me", createdAtMillis = 0))
-            }
-        }
-    }
-
+    /** Adds a Profile and switches to it. A taken name is refused; the name entry says so first. */
     fun addProfile(name: String) {
-        viewModelScope.launch {
-            val id = graph.profiles.insert(
-                Profile(name = name.trim().ifBlank { "New profile" }, createdAtMillis = 0),
-            )
-            settings.setActiveProfile(id)
-        }
+        viewModelScope.launch { graph.profiles.create(name)?.let(settings::setActiveProfile) }
     }
 
     fun rename(id: Long, name: String) {
-        viewModelScope.launch { graph.profiles.rename(id, name.trim().ifBlank { "Profile" }) }
+        viewModelScope.launch { graph.profiles.rename(id, name) }
     }
 
     fun select(id: Long) {
@@ -1357,15 +1344,7 @@ class ProfilesViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun remove(id: Long) {
-        // The base profile stays — there is always at least one to be.
-        if (id == 1L) return
-        viewModelScope.launch {
-            graph.profiles.deletePositions(id)
-            graph.profiles.deleteFavourites(id)
-            graph.profileSettings.forgetProfile(id)
-            graph.profiles.delete(id)
-            if (settings.activeProfileId.value == id) settings.setActiveProfile(1L)
-        }
+        viewModelScope.launch { graph.profiles.remove(id) }
     }
 }
 
