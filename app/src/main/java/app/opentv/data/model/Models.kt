@@ -109,9 +109,9 @@ data class Channel(
     /** Cleaned display name: `BBC One`. What the UI shows. */
     val displayName: String = name,
     /**
-     * Normalised join key: `bbcone`. Channels sharing a groupKey are quality variants of
-     * one logical channel — shown as a single row, switchable during playback — and this is
-     * also the key the EPG matcher joins on. See ChannelNameNormalizer.
+     * Normalised name and region: `uk:bbc1`, or `bbc1` when the name has no region. Only
+     * [app.opentv.data.repo.ChannelLineup] reads it, to fold rows into one Channel; the EPG
+     * matcher joins on its name part. See ChannelNameNormalizer.channelKey.
      */
     val groupKey: String = "",
     /** Higher plays by default. 0 = the name said nothing about quality. */

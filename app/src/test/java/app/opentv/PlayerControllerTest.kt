@@ -32,7 +32,7 @@ class PlayerControllerTest {
     private val context = ApplicationProvider.getApplicationContext<Context>()
     private val test = TestCatalog(context)
     private val panel = test.panel
-    private val sources = PlaybackSources(test.db, XtreamApi(panel.http), StalkerApi(panel.http))
+    private val sources = PlaybackSources(test.db, XtreamApi(panel.http), StalkerApi(panel.http), test.lineup)
     private val players = TestPlayers(context)
     private val channels = mutableListOf<Long>()
 

@@ -163,15 +163,18 @@ interface ChannelDao {
     @Query("SELECT * FROM channels WHERE id = :id")
     suspend fun byId(id: Long): Channel?
 
-    /** Every quality variant of one logical channel, best first. */
+    /**
+     * The rows called [nameKey] in any region: `groupKey` is `nameKey` itself, or ends in
+     * `:nameKey`. Hidden ones only with [includeHidden]. What [app.opentv.data.repo.ChannelLineup]
+     * folds to find one row's Channel.
+     */
     @Query(
         """
         SELECT * FROM channels
-        WHERE groupKey = :groupKey AND groupKey != '' AND hidden = 0
-        ORDER BY qualityRank DESC, displayName
+        WHERE (:includeHidden OR hidden = 0) AND (groupKey = :nameKey OR groupKey LIKE '%:' || :nameKey)
         """,
     )
-    suspend fun variantsInGroup(groupKey: String): List<Channel>
+    suspend fun sameName(nameKey: String, includeHidden: Boolean = false): List<Channel>
 
     @Query("SELECT COUNT(*) FROM channels WHERE sourceId = :sourceId")
     suspend fun countForSource(sourceId: Long): Int
@@ -213,6 +216,10 @@ interface ChannelDao {
 
     @Query("UPDATE channels SET epgOverrideId = :epgId WHERE id = :id")
     suspend fun setEpgOverride(id: Long, epgId: String?)
+
+    /** Every channel, hidden ones too, as it changes. */
+    @Query("SELECT * FROM channels")
+    fun observeEvery(): Flow<List<Channel>>
 
     /** The matcher's working set: id, group key, and what is already known. */
     @Query("SELECT * FROM channels")
@@ -397,6 +404,9 @@ interface ProgrammeDao {
 
     @Query("SELECT COUNT(*) FROM programmes WHERE feedId = :feedId")
     suspend fun countForFeed(feedId: Long): Int
+
+    @Query("SELECT EXISTS(SELECT 1 FROM programmes WHERE epgChannelId = :epgChannelId)")
+    suspend fun hasProgrammes(epgChannelId: String): Boolean
 
     /** Distinct guide channels that actually have programmes — the match report's baseline. */
     @Query("SELECT DISTINCT epgChannelId FROM programmes")

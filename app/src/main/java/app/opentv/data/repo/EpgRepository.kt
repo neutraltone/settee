@@ -284,7 +284,7 @@ class EpgRepository(
         var matched = 0
 
         for (channel in channels) {
-            val newMatch = index.match(channel.groupKey)
+            val newMatch = index.match(ChannelNameNormalizer.nameKeyOf(channel.groupKey))
             if (newMatch != channel.matchedEpgId) {
                 channelDao.setMatchedEpgId(channel.id, newMatch)
             }

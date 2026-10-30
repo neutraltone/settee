@@ -50,6 +50,7 @@ class LivePlayerContentTest {
 
     private var turnedOn = 0
     private val played = mutableListOf<Long>()
+    private val zapped = mutableListOf<Int>()
     private var dontAskAgain = 0
 
     // What PlayerScreen reads from AppSettings; a test flips them the way the settings would change.
@@ -83,6 +84,7 @@ class LivePlayerContentTest {
                 livePause = this.livePause,
                 pausePromptDismissed = promptDismissed,
                 onPlayChannel = { played += it },
+                onZap = { zapped += it },
                 onTune = {},
                 onToggleRecord = {},
                 onTurnOnLivePause = { turnedOn++ },
@@ -309,7 +311,7 @@ class LivePlayerContentTest {
         press(Key.ChannelUp)
         press(Key.DirectionUp)
 
-        assertThat(played).containsExactly(12L, 12L, 10L, 10L).inOrder()
+        assertThat(zapped).containsExactly(1, 1, -1, -1).inOrder()
     }
 
     private companion object {
@@ -317,7 +319,6 @@ class LivePlayerContentTest {
         const val NUMBER_ENTRY_MILLIS = 2_500L
         const val HOLD_MILLIS = 1_000L
 
-        // currentId never moves in these tests, so every zap steps from the channel the test started on.
         val CHANNELS = listOf(
             PlaybackQueue.Item(10L, "One", logoUrl = null, number = 1),
             PlaybackQueue.Item(11L, "Two", logoUrl = null, number = 2),

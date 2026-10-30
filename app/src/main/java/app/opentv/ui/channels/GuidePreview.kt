@@ -223,9 +223,9 @@ fun GuidePreview(
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f),
                 )
-                if (row.variants.size > 1) {
+                if (row.switchable.size > 1) {
                     Text(
-                        stringResource(R.string.guide_qualities_count, row.variants.size),
+                        stringResource(R.string.guide_qualities_count, row.switchable.size),
                         style = MaterialTheme.typography.labelLarge,
                         color = MaterialTheme.colorScheme.primary,
                     )

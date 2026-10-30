@@ -11,6 +11,7 @@ import app.opentv.data.remote.StalkerApi
 import app.opentv.data.remote.StremioClient
 import app.opentv.data.remote.XtreamApi
 import app.opentv.data.repo.CatalogRepository
+import app.opentv.data.repo.ChannelLineup
 import app.opentv.data.repo.EpgRepository
 import app.opentv.data.repo.PlaybackSources
 import app.opentv.data.repo.ProfileSettings
@@ -112,7 +113,12 @@ object ServiceLocator {
         }
 
         /** The one place a title becomes something playable (see [PlaybackSources]). */
-        val playbackSources: PlaybackSources by lazy { PlaybackSources(database, xtreamApi, stalkerApi) }
+        /** The Channels a viewer may see, with the Parental Lock applied; see [ChannelLineup]. */
+        val channelLineup: ChannelLineup by lazy {
+            ChannelLineup(database, viewerLibrary.favourites, settings.hiddenCategories, settings.hiddenUnlocked)
+        }
+
+        val playbackSources: PlaybackSources by lazy { PlaybackSources(database, xtreamApi, stalkerApi, channelLineup) }
 
         val epgRepository: EpgRepository by lazy {
             EpgRepository(
@@ -152,8 +158,8 @@ object ServiceLocator {
                 recordingRepository,
                 sourceRepository,
                 settings,
-                database.channels(),
                 epgRepository,
+                channelLineup,
             )
         }
     }

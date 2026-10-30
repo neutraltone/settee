@@ -103,6 +103,8 @@ import app.opentv.core.SleepTimer
 import app.opentv.core.findActivity
 import app.opentv.core.requestIgnoreBatteryOptimizations
 import app.opentv.data.model.Channel
+import app.opentv.data.model.shownName
+import app.opentv.data.repo.LineupChannel
 import app.opentv.data.repo.MediaKey
 import app.opentv.player.PlaybackQueue
 import app.opentv.player.PlayerController
@@ -175,7 +177,23 @@ fun PlayerScreen(channelId: Long?, onBack: () -> Unit) {
         }
     }
 
-    var variants by remember { mutableStateOf<List<Channel>>(emptyList()) }
+    // The Channel playing: its Qualities are the same as wherever it was picked from.
+    var channel by remember { mutableStateOf<LineupChannel?>(null) }
+    var queue by remember { mutableStateOf<List<PlaybackQueue.Item>>(emptyList()) }
+    LaunchedEffect(Unit) {
+        queue = graph.channelLineup.zapChannels().map { channel ->
+            val primary = channel.primary
+            PlaybackQueue.Item(
+                primary.id,
+                primary.shownName,
+                primary.logoUrl,
+                primary.number,
+                channel.qualities.mapTo(HashSet()) {
+                    it.id
+                },
+            )
+        }
+    }
     var currentId by remember { mutableStateOf<Long?>(null) }
     // The channel we were on before this one — powers the "Last channel" recall in the list.
     var previousId by remember { mutableStateOf<Long?>(null) }
@@ -206,15 +224,27 @@ fun PlayerScreen(channelId: Long?, onBack: () -> Unit) {
         controller.play(PlayerController.Request(MediaKey.Live(channel.id)), debounce = false)
     }
 
+    /** Plays row [id] as one Quality of its Channel, so the switch and Record cover the Channel's. */
+    suspend fun play(id: Long) {
+        val playing = graph.channelLineup.channelOf(id)
+            // Hidden or locked since it was picked: still play what was asked for, on its own.
+            ?: graph.catalogRepository.channel(id)?.let { LineupChannel(it, listOf(it)) }
+            ?: return
+        channel = playing
+        tuneTo(playing.qualities.first { it.id == id })
+    }
+
     fun playChannelId(id: Long) {
         // Remember where we came from so "Last channel" can bounce straight back. Quality switches
         // go through tuneTo directly, so they never count as a channel change here.
         currentId?.let { if (it != id) previousId = it }
-        scope.launch {
-            val channel = graph.catalogRepository.channel(id) ?: return@launch
-            variants = graph.catalogRepository.variants(channel)
-            tuneTo(variants.firstOrNull { it.id == channel.id } ?: channel)
-        }
+        scope.launch { play(id) }
+    }
+
+    /** Zaps [delta] Channels on from the one playing, whichever of its Qualities that is. */
+    fun zap(delta: Int) {
+        val from = currentId ?: return
+        scope.launch { graph.channelLineup.zap(from, delta)?.let { playChannelId(it.primary.id) } }
     }
 
     fun toggleRecord() {
@@ -222,8 +252,9 @@ fun PlayerScreen(channelId: Long?, onBack: () -> Unit) {
         if (active != null) {
             graph.recordingEngine.stop(active.id)
         } else {
-            val channel = variants.firstOrNull { it.id == currentId } ?: return
-            scope.launch { graph.recordingEngine.startChannel(channel) }
+            // Every Quality, not just the switchable ones: the one playing is always among them.
+            val playing = channel?.qualities?.firstOrNull { it.id == currentId } ?: return
+            scope.launch { graph.recordingEngine.startChannel(playing) }
             if (RecordingBackgroundPrompt.shouldShow(context)) {
                 RecordingBackgroundPrompt.markShown()
                 showBackgroundPrompt = true
@@ -232,15 +263,12 @@ fun PlayerScreen(channelId: Long?, onBack: () -> Unit) {
     }
 
     LaunchedEffect(channelId) {
-        val id = channelId ?: return@LaunchedEffect
-        val channel = graph.catalogRepository.channel(id) ?: return@LaunchedEffect
-        variants = graph.catalogRepository.variants(channel)
-        tuneTo(variants.firstOrNull { it.id == channel.id } ?: channel)
+        play(channelId ?: return@LaunchedEffect)
     }
     // Switching live pause on rebuilds the controller; pick the channel straight back up on it.
     LaunchedEffect(controller) {
         if (controller.state.value == PlayerController.State.Idle) {
-            variants.firstOrNull { it.id == currentId }?.let { tuneTo(it) }
+            channel?.qualities?.firstOrNull { it.id == currentId }?.let { tuneTo(it) }
         }
     }
 
@@ -263,14 +291,15 @@ fun PlayerScreen(channelId: Long?, onBack: () -> Unit) {
     LivePlayerContent(
         controller = controller,
         settings = settings,
-        queue = remember { PlaybackQueue.items },
-        variants = variants,
+        queue = queue,
+        variants = channel?.switchable.orEmpty(),
         currentId = currentId,
         previousId = previousId,
         recordingThis = activeRecordings.any { it.channelId == currentId },
         livePause = livePause,
         pausePromptDismissed = pausePromptDismissed,
         onPlayChannel = ::playChannelId,
+        onZap = ::zap,
         onTune = ::tuneTo,
         onToggleRecord = ::toggleRecord,
         onTurnOnLivePause = { settings.setLivePauseEnabled(true) },
@@ -308,6 +337,7 @@ fun LivePlayerContent(
     livePause: Boolean,
     pausePromptDismissed: Boolean,
     onPlayChannel: (Long) -> Unit,
+    onZap: (Int) -> Unit,
     onTune: (Channel) -> Unit,
     onToggleRecord: () -> Unit,
     onTurnOnLivePause: () -> Unit,
@@ -397,12 +427,7 @@ fun LivePlayerContent(
         interaction++
     }
 
-    fun zapBy(delta: Int) {
-        if (queue.isEmpty()) return
-        val cur = queue.indexOfFirst { it.id == currentId }.let { if (it < 0) 0 else it }
-        val next = (cur + delta).coerceIn(0, queue.size - 1)
-        if (next != cur) onPlayChannel(queue[next].id)
-    }
+    fun zapBy(delta: Int) = onZap(delta)
 
     // Auto-hide the bar after a few seconds — but never while paused or with a picker open.
     LaunchedEffect(controlsVisible, interaction, state, paused, panel) {
@@ -747,7 +772,7 @@ fun LivePlayerContent(
             exit = fadeOut(),
             modifier = Modifier.align(Alignment.CenterStart),
         ) {
-            val currentIndex = queue.indexOfFirst { it.id == currentId }.coerceAtLeast(0)
+            val currentIndex = queue.indexOfFirst { currentId in it.qualityIds }.coerceAtLeast(0)
             val listState = rememberLazyListState()
             LaunchedEffect(Unit) { runCatching { listState.scrollToItem(currentIndex) } }
             Column(
@@ -765,8 +790,8 @@ fun LivePlayerContent(
                 )
                 Spacer(Modifier.height(8.dp))
                 // A quick "jump back to the channel you just left" pin, TiviMate-style.
-                val lastItem = previousId?.let { pid -> queue.firstOrNull { it.id == pid } }
-                if (lastItem != null && lastItem.id != currentId) {
+                val lastItem = previousId?.let { pid -> queue.firstOrNull { pid in it.qualityIds } }
+                if (lastItem != null && currentId !in lastItem.qualityIds) {
                     ChannelListRow(
                         item = lastItem,
                         playing = false,
@@ -783,7 +808,7 @@ fun LivePlayerContent(
                     itemsIndexed(queue, key = { _, item -> item.id }) { index, item ->
                         ChannelListRow(
                             item = item,
-                            playing = item.id == currentId,
+                            playing = currentId in item.qualityIds,
                             focusRequester = if (index == currentIndex) listFocus else null,
                             onClick = {
                                 onPlayChannel(item.id)

@@ -16,6 +16,20 @@ _Avoid_: Profile picker, profile chooser, profile select
 Whether a Profile wants subtitles shown, and in which language. Belongs to one Profile and follows it from one title to the next, whatever kind of title it is.
 _Avoid_: Captions setting, CC, subtitle default
 
+## Live TV
+
+**Channel**:
+A live station the viewer can watch, however many qualities or providers carry it. Rows with the same name and region fold into one Channel. A row with no region joins the one regional Channel of its name, if there's only one.
+_Avoid_: Stream, row
+
+**Quality**:
+One provider's stream of a Channel, such as HD, FHD or 4K. A Channel's Qualities are the same wherever it's shown.
+_Avoid_: Variant (in user-facing text), feed
+
+**Parental Lock**:
+Categories hidden on this device, for every Profile on it, from everywhere viewers browse and play, but not from the management screens. A PIN guards the setting; entering it shows them until the app closes.
+_Avoid_: Hidden channels (that's the channel manager's per-channel hide), parental controls
+
 ## Watch progress
 
 **Watched**:
