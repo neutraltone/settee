@@ -9,10 +9,10 @@ import android.app.Application
 import androidx.test.core.app.ApplicationProvider
 import app.opentv.core.ServiceLocator
 import app.opentv.data.model.Series
+import app.opentv.data.repo.MediaKey
 import app.opentv.data.repo.WatchStatus
 import app.opentv.player.NextEpisodeCountdown.Overlay
 import app.opentv.ui.vod.VodPlayerViewModel
-import app.opentv.ui.vod.VodPlayerViewModel.Item
 import app.opentv.ui.vod.VodPlayerViewModel.NextEpisodeCard
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.Dispatchers
@@ -58,21 +58,21 @@ class VodPlayerViewModelTest {
         graph.viewerLibrary.recordProgress("ep:12", positionMillis = 600_000, durationMillis = EPISODE_MILLIS)
         val vm = VodPlayerViewModel(app, graph)
 
-        vm.attach(testEpisode(1, 1).item(), playback)
+        vm.attach(testEpisode(1, 1).key, playback)
         vm.playToEnd()
 
         assertThat(playback.played).containsExactly(
-            testEpisode(1, 1).streamUrl to 0L,
-            testEpisode(1, 2).streamUrl to 600_000L,
+            testEpisode(1, 1).key to 0L,
+            testEpisode(1, 2).key to 600_000L,
         ).inOrder()
-        assertThat(vm.current.value?.mediaKey).isEqualTo("ep:12")
+        assertThat(vm.current.value).isEqualTo(MediaKey.Episode(12))
     }
 
     @Test
     fun `OK on the card moves on and makes even a short episode Watched`() = runTest {
         graph.database.episodes().upsertAll((1..3).map { testEpisode(1, it) })
         val vm = VodPlayerViewModel(app, graph)
-        vm.attach(testEpisode(1, 1).item(), playback)
+        vm.attach(testEpisode(1, 1).key, playback)
         // Three minutes long, the card up with 10 seconds left: under 93% through.
         playback.durationMillis = 180_000
         playback.positionMillis = 170_000
@@ -80,7 +80,7 @@ class VodPlayerViewModelTest {
 
         vm.ok()
 
-        assertThat(vm.current.value?.mediaKey).isEqualTo("ep:12")
+        assertThat(vm.current.value).isEqualTo(MediaKey.Episode(12))
         assertThat(graph.viewerLibrary.episodeStatuses().first()[11]).isEqualTo(WatchStatus.Watched)
     }
 
@@ -88,7 +88,7 @@ class VodPlayerViewModelTest {
     fun `a rebuilt player screen carries on with the Next Episode, not the one in the route`() = runTest {
         graph.database.episodes().upsertAll((1..3).map { testEpisode(1, it) })
         val vm = VodPlayerViewModel(app, graph)
-        val route = testEpisode(1, 1).item()
+        val route = testEpisode(1, 1).key
         vm.attach(route, playback)
         vm.playToEnd()
         playback.positionMillis = 300_000
@@ -97,7 +97,7 @@ class VodPlayerViewModelTest {
         val rebuilt = FakePlayback()
         vm.attach(route, rebuilt)
 
-        assertThat(rebuilt.played).containsExactly(testEpisode(1, 2).streamUrl to 300_000L)
+        assertThat(rebuilt.played).containsExactly(testEpisode(1, 2).key to 300_000L)
     }
 
     @Test
@@ -106,7 +106,7 @@ class VodPlayerViewModelTest {
             graph.database.episodes().upsertAll((1..6).map { testEpisode(1, it) })
             var now = 0L
             val vm = VodPlayerViewModel(app, graph, clock = { now })
-            vm.attach(testEpisode(1, 1).item(), playback)
+            vm.attach(testEpisode(1, 1).key, playback)
             repeat(3) { vm.playToEnd() }
 
             vm.playToEnd()
@@ -118,7 +118,7 @@ class VodPlayerViewModelTest {
             assertThat(playback.stopped).isTrue()
 
             vm.continueWatching()
-            assertThat(vm.current.value?.mediaKey).isEqualTo("ep:15")
+            assertThat(vm.current.value).isEqualTo(MediaKey.Episode(15))
             assertThat(vm.overlay.value).isEqualTo(Overlay.None)
         }
 
@@ -127,11 +127,11 @@ class VodPlayerViewModelTest {
         graph.database.episodes().upsertAll((1..3).map { testEpisode(1, it) })
         graph.settings.setPlayNextAutomatically(false)
         val vm = VodPlayerViewModel(app, graph)
-        vm.attach(testEpisode(1, 1).item(), playback)
+        vm.attach(testEpisode(1, 1).key, playback)
 
         vm.playToEnd()
 
-        assertThat(vm.current.value?.mediaKey).isEqualTo("ep:11")
+        assertThat(vm.current.value).isEqualTo(MediaKey.Episode(11))
         assertThat(vm.overlay.value).isEqualTo(Overlay.Card(secondsLeft = 0, counting = false))
     }
 
@@ -147,7 +147,7 @@ class VodPlayerViewModelTest {
         )
         val vm = VodPlayerViewModel(app, graph)
 
-        vm.attach(testEpisode(1, 1).item(), playback)
+        vm.attach(testEpisode(1, 1).key, playback)
         assertThat(vm.nextEpisode.value).isEqualTo(
             NextEpisodeCard(season = 1, episode = 2, title = "Episode 2", imageUrl = "https://example.com/still.jpg"),
         )
@@ -160,7 +160,7 @@ class VodPlayerViewModelTest {
     fun `a movie gets no card and plays to its end`() = runTest {
         val vm = VodPlayerViewModel(app, graph)
 
-        vm.attach(Item("movie:7", "https://example.com/movie.mkv", "A Film", "ua"), playback)
+        vm.attach(MediaKey.Movie(7), playback)
         playback.positionMillis = EPISODE_MILLIS - 10_000
         vm.poll()
 
@@ -172,21 +172,21 @@ class VodPlayerViewModelTest {
     fun `a player opened again with something new plays the new thing`() = runTest {
         graph.database.episodes().upsertAll((1..3).map { testEpisode(1, it) })
         val vm = VodPlayerViewModel(app, graph)
-        vm.attach(testEpisode(1, 1).item(), playback)
+        vm.attach(testEpisode(1, 1).key, playback)
         vm.playToEnd()
 
-        val recording = Item("rec:3", "optvrec://3", "A Recording", "ua")
+        val recording = MediaKey.Recording(3)
         vm.attach(recording, playback)
 
         assertThat(vm.current.value).isEqualTo(recording)
-        assertThat(playback.played.last()).isEqualTo("optvrec://3" to 0L)
+        assertThat(playback.played.last()).isEqualTo(recording to 0L)
     }
 
     @Test
     fun `a player rebuilt while asking whether anyone is still watching keeps asking`() = runTest {
         graph.database.episodes().upsertAll((1..6).map { testEpisode(1, it) })
         val vm = VodPlayerViewModel(app, graph)
-        val route = testEpisode(1, 1).item()
+        val route = testEpisode(1, 1).key
         vm.attach(route, playback)
         repeat(4) { vm.playToEnd() }
 
@@ -202,7 +202,7 @@ class VodPlayerViewModelTest {
         graph.database.episodes().upsertAll((1..6).map { testEpisode(1, it) })
         var now = 0L
         val vm = VodPlayerViewModel(app, graph, clock = { now })
-        vm.attach(testEpisode(1, 1).item(), playback)
+        vm.attach(testEpisode(1, 1).key, playback)
         repeat(4) { vm.playToEnd() }
         now += 5 * 60_000
         vm.poll()
@@ -219,7 +219,7 @@ class VodPlayerViewModelTest {
     fun `a rebuilt player resumes where the last save saw it, without waiting for the write`() = runTest {
         graph.database.episodes().upsertAll((1..3).map { testEpisode(1, it) })
         val vm = VodPlayerViewModel(app, graph)
-        val route = testEpisode(1, 1).item()
+        val route = testEpisode(1, 1).key
         vm.attach(route, playback)
         playback.positionMillis = 900_000
         vm.poll()
@@ -227,7 +227,7 @@ class VodPlayerViewModelTest {
         val rebuilt = FakePlayback()
         vm.attach(route, rebuilt)
 
-        assertThat(rebuilt.played).containsExactly(testEpisode(1, 1).streamUrl to 900_000L)
+        assertThat(rebuilt.played).containsExactly(testEpisode(1, 1).key to 900_000L)
     }
 
     private val show = Series(

@@ -391,6 +391,10 @@ interface ProgrammeDao {
     )
     suspend fun upcoming(channelId: String, nowUtcMillis: Long, limit: Int): List<Programme>
 
+    /** The programme starting at [startUtcMillis] on [channelId], for playing it back from the archive. */
+    @Query("SELECT * FROM programmes WHERE epgChannelId = :channelId AND startUtcMillis = :startUtcMillis LIMIT 1")
+    suspend fun startingAt(channelId: String, startUtcMillis: Long): Programme?
+
     @Query("SELECT COUNT(*) FROM programmes WHERE feedId = :feedId")
     suspend fun countForFeed(feedId: Long): Int
 
@@ -602,7 +606,8 @@ interface EpisodeDao {
 
     /**
      * Every episode [profileId] has any progress on. A join rather than `IN (:ids)`: a long watch
-     * history would run past SQLite's bound-variable limit.
+     * history would run past SQLite's bound-variable limit. `'ep:' || id` is
+     * [app.opentv.data.repo.MediaKey.Episode]'s stored form, which a query can't build through it.
      */
     @Query(
         "SELECT episodes.* FROM episodes JOIN playback_positions " +

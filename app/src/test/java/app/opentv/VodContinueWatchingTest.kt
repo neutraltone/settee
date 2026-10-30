@@ -10,6 +10,7 @@ import androidx.test.core.app.ApplicationProvider
 import app.opentv.core.ServiceLocator
 import app.opentv.data.model.Series
 import app.opentv.data.repo.ContinueWatchingCard
+import app.opentv.data.repo.MediaKey
 import app.opentv.ui.VodViewModel
 import app.opentv.ui.VodViewModel.ResumeItem
 import app.opentv.ui.VodViewModel.SeasonEpisode
@@ -68,11 +69,9 @@ class VodContinueWatchingTest {
 
         assertThat(cards).containsExactly(
             ResumeItem(
-                mediaKey = "ep:24",
+                key = MediaKey.Episode(24),
                 title = "The Show",
-                playerTitle = "S2E4 · Episode 4",
                 posterUrl = "https://example.com/backdrop.jpg",
-                streamUrl = "https://example.com/2-4.mkv",
                 progress = 0.25f,
                 episode = SeasonEpisode(season = 2, episode = 4),
                 card = ContinueWatchingCard.Series(testEpisode(2, 4), progress = 0.25f),

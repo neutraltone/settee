@@ -54,7 +54,8 @@ class RecordingEngine(
             title = title,
             description = programme?.description,
             filePath = locator,
-            streamUrl = recordUrlFor(channel.streamUrl),
+            // Last known only: the capture asks PlaybackSources each time it connects.
+            streamUrl = channel.streamUrl,
             userAgent = ua,
             scheduledStartMillis = programme?.startUtcMillis ?: 0,
             // Keep going past the listed end by the padding, so an overrun isn't cut off.
@@ -129,7 +130,7 @@ class RecordingEngine(
             title = programme.title,
             description = programme.description,
             filePath = locator,
-            streamUrl = recordUrlFor(recordFrom.streamUrl),
+            streamUrl = recordFrom.streamUrl,
             userAgent = ua,
             scheduledStartMillis = scheduledStart,
             scheduledEndMillis = scheduledEnd,
@@ -239,7 +240,7 @@ class RecordingEngine(
      * If [channel]'s own provider is already busy recording during [startMillis]..[endMillis],
      * return a copy of the same channel on a *free* provider so the two recordings don't fight over
      * one connection. Returns [channel] unchanged when its provider is free, when there's only one
-     * provider, or when no alternate is directly recordable (a Stalker cmd can't be recorded as-is).
+     * provider, or when no other provider has the channel.
      */
     private suspend fun alternateProviderForClash(channel: Channel, startMillis: Long, endMillis: Long): Channel {
         val busy = busyProviderIds(startMillis, endMillis)
@@ -254,9 +255,6 @@ class RecordingEngine(
         for (variant in variants) {
             if (variant.sourceId == channel.sourceId || variant.sourceId in busy) continue
             if (variant.streamUrl.isBlank()) continue
-            // Only a provider whose stream URL is directly fetchable is usable for a background
-            // capture; a Stalker portal needs a per-play create_link the recorder can't do here.
-            if (sources.byId(variant.sourceId)?.kind == app.opentv.data.model.SourceKind.STALKER) continue
             return variant
         }
         return channel
@@ -293,14 +291,6 @@ class RecordingEngine(
             scheduleMatching(channel, rule.titleKey, rule.id, upcoming)
         }
     }
-
-    /**
-     * Live Xtream URLs are cached as `.m3u8` (HLS) for playback, but the raw `.ts` MPEG-TS variant
-     * is a single continuous body that captures to a directly-playable file with no segment
-     * stitching. Other URL shapes (plain M3U) are recorded verbatim.
-     */
-    private fun recordUrlFor(streamUrl: String): String =
-        if (streamUrl.endsWith(".m3u8")) streamUrl.removeSuffix(".m3u8") + ".ts" else streamUrl
 
     private companion object {
         /** A programme starting within this window counts as "on now" and records immediately. */

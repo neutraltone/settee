@@ -26,7 +26,6 @@
     <string name="guide_favourites">★ Favoris</string>
     <string name="guide_all_channels">Toutes les chaînes</string>
     <string name="guide_watch_from_start">▶  Regarder depuis le début (rattrapage)</string>
-    <string name="guide_catchup_link_failed">Impossible de créer le lien de rattrapage</string>
     <string name="guide_cancel_reminder">🔔  Annuler le rappel</string>
     <string name="guide_reminder_removed">Rappel supprimé</string>
     <string name="guide_remind_me">🔔  Me le rappeler</string>

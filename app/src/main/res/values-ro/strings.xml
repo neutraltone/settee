@@ -26,7 +26,6 @@
     <string name="guide_favourites">★ Favorite</string>
     <string name="guide_all_channels">Toate canalele</string>
     <string name="guide_watch_from_start">▶  Urmărește de la început (catch-up)</string>
-    <string name="guide_catchup_link_failed">Linkul catch-up nu a putut fi creat</string>
     <string name="guide_cancel_reminder">🔔  Anulează memento-ul</string>
     <string name="guide_reminder_removed">Memento eliminat</string>
     <string name="guide_remind_me">🔔  Amintește-mi</string>

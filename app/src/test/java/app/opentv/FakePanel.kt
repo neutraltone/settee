@@ -28,11 +28,15 @@ class FakePanel(vararg initial: Pair<String, String>) {
     /** Every `action` (with its series id, where it has one) asked for, in order. */
     val asked = mutableListOf<String>()
 
+    /** Every Stalker `cmd` a link was asked for, in order. */
+    val cmds = mutableListOf<String>()
+
     val http: OkHttpClient = OkHttpClient.Builder().addInterceptor { chain ->
         val request = chain.request()
         val action = request.url.queryParameter("action").orEmpty()
         val keyed = request.url.queryParameter("series_id")?.let { "$action:$it" }
         asked += keyed ?: action
+        if (action == "create_link") cmds += request.url.queryParameter("cmd").orEmpty()
         val body = keyed?.let { replies[it] } ?: replies[action] ?: "[]"
         if (body == "!") throw java.io.IOException("Panel timed out")
         Response.Builder()
@@ -44,3 +48,13 @@ class FakePanel(vararg initial: Pair<String, String>) {
             .build()
     }.build()
 }
+
+/** A Stalker portal at a placeholder address and MAC, for [FakePanel] to answer (`handshake`, `create_link`). */
+val STALKER_SOURCE =
+    Source(
+        id = 2,
+        name = "Portal",
+        kind = SourceKind.STALKER,
+        url = "http://example.com",
+        macAddress = "00:1A:79:00:00:01",
+    )

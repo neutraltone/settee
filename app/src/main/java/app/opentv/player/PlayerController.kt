@@ -23,6 +23,9 @@ import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.exoplayer.trackselection.DefaultTrackSelector
 import androidx.media3.exoplayer.upstream.DefaultLoadErrorHandlingPolicy
 import androidx.media3.exoplayer.upstream.LoadErrorHandlingPolicy
+import app.opentv.data.model.Source
+import app.opentv.data.repo.MediaKey
+import app.opentv.data.repo.Playable
 import app.opentv.data.repo.SubtitlePreference
 import java.util.Locale
 import kotlinx.coroutines.CoroutineScope
@@ -54,6 +57,12 @@ class PlayerController(
     context: Context,
     private val scope: CoroutineScope,
     httpClient: OkHttpClient,
+    /**
+     * Turns a key into its stream: [app.opentv.data.repo.PlaybackSources.forWatching]. Asked after
+     * the zap delay rather than by the caller, so zapping through Stalker channels mints one link,
+     * not one per press, and again on each restart, so a link that has expired is minted anew.
+     */
+    private val resolve: suspend (MediaKey) -> Playable,
     subtitlesEnabled: Boolean = true,
     /**
      * Tunes the player for the guide's muted preview pane: a shallow start buffer so a highlighted
@@ -105,14 +114,8 @@ class PlayerController(
         data class Error(val title: String, val message: String, val canRetry: Boolean) : State
     }
 
-    data class Request(
-        val url: String,
-        val title: String,
-        val userAgent: String,
-        /** Live streams are never resumed; VOD is. */
-        val startPositionMillis: Long = 0L,
-        val isLive: Boolean = true,
-    )
+    /** [startPositionMillis] is ignored for live streams, which are never resumed. */
+    data class Request(val key: MediaKey, val startPositionMillis: Long = 0L)
 
     private val _state = MutableStateFlow<State>(State.Idle)
     val state: StateFlow<State> = _state.asStateFlow()
@@ -129,9 +132,16 @@ class PlayerController(
     private val _playWhenReady = MutableStateFlow(false)
     val playWhenReady: StateFlow<Boolean> = _playWhenReady.asStateFlow()
 
+    private val strings = context.applicationContext
+
     private var switchJob: Job? = null
     private val streamSubtitles = StreamSubtitles()
     private var current: Request? = null
+
+    /** What [titled] is called, once [resolve] has said. */
+    private val _title = MutableStateFlow("")
+    val title: StateFlow<String> = _title.asStateFlow()
+    private var titled: MediaKey? = null
     private var consecutiveFailures = 0
 
     /**
@@ -143,7 +153,7 @@ class PlayerController(
      * subsequent loads, which is exactly the granularity we need.
      */
     private val httpFactory = OkHttpDataSource.Factory(httpClient).apply {
-        setDefaultRequestProperties(mapOf("User-Agent" to DEFAULT_USER_AGENT))
+        setDefaultRequestProperties(mapOf("User-Agent" to Source.DEFAULT_USER_AGENT))
     }
 
     private val dataSourceFactory: androidx.media3.datasource.DataSource.Factory =
@@ -241,12 +251,11 @@ class PlayerController(
                 }
 
                 override fun onPlaybackStateChanged(playbackState: Int) {
-                    val title = current?.title.orEmpty()
                     _state.value = when (playbackState) {
-                        Player.STATE_BUFFERING -> State.Buffering(title)
+                        Player.STATE_BUFFERING -> State.Buffering(_title.value)
                         Player.STATE_READY -> {
                             consecutiveFailures = 0
-                            State.Playing(title)
+                            State.Playing(_title.value)
                         }
                         Player.STATE_IDLE -> _state.value
                         Player.STATE_ENDED -> State.Idle
@@ -258,7 +267,7 @@ class PlayerController(
                     consecutiveFailures++
                     val request = current
                     _state.value = State.Error(
-                        title = request?.title.orEmpty(),
+                        title = _title.value,
                         message = PlaybackErrors.describe(error),
                         canRetry = consecutiveFailures < MAX_AUTO_RESTARTS,
                     )
@@ -284,20 +293,37 @@ class PlayerController(
         // Cancelling here is what makes fast channel-changing safe: the previous switch never
         // reaches the player, so we never stack prepares.
         switchJob?.cancel()
+        // An automatic restart plays the same request again and keeps counting, so a stream that
+        // keeps dropping stops after MAX_AUTO_RESTARTS rather than retrying (and, on a portal,
+        // minting a link) forever.
+        if (request != current) consecutiveFailures = 0
         current = request
 
         switchJob = scope.launch {
             if (debounce) delay(switchDebounceMillis)
 
-            consecutiveFailures = 0
-            httpFactory.setDefaultRequestProperties(mapOf("User-Agent" to request.userAgent))
-            _state.value = State.Buffering(request.title)
+            // A restart keeps its title while it asks again; a new channel has none until it's known.
+            if (request.key != titled) _title.value = ""
+            _state.value = State.Buffering(_title.value)
+            val playable = when (val resolved = resolve(request.key)) {
+                is Playable.Ready -> resolved
+                is Playable.Failed -> {
+                    val title = resolved.title.ifEmpty { _title.value }
+                    _state.value =
+                        State.Error(title, strings.getString(PlaybackErrors.messageOf(resolved.failure)), true)
+                    return@launch
+                }
+            }
+            _title.value = playable.title
+            titled = request.key
+            httpFactory.setDefaultRequestProperties(mapOf("User-Agent" to playable.userAgent))
+            _state.value = State.Buffering(playable.title)
 
             val mediaItem = MediaItem.Builder()
-                .setUri(request.url)
+                .setUri(playable.url)
                 .apply {
                     // Only meaningful for live streams; setting it on VOD skews seeking.
-                    if (request.isLive) {
+                    if (playable.isLive) {
                         setLiveConfiguration(
                             MediaItem.LiveConfiguration.Builder()
                                 .setTargetOffsetMs(LIVE_TARGET_OFFSET_MILLIS)
@@ -317,7 +343,7 @@ class PlayerController(
                 disableText()
                 streamSubtitles.newStream()
                 setMediaItem(mediaItem)
-                if (!request.isLive && request.startPositionMillis > 0) {
+                if (!playable.isLive && request.startPositionMillis > 0) {
                     seekTo(request.startPositionMillis)
                 }
                 playWhenReady = true
@@ -327,6 +353,7 @@ class PlayerController(
     }
 
     fun retry() {
+        consecutiveFailures = 0
         current?.let { play(it, debounce = false) }
     }
 
@@ -410,8 +437,6 @@ class PlayerController(
     companion object {
         /** How far rewind and fast-forward skip, on screen and on the remote. */
         const val SEEK_INCREMENT_MILLIS = 15_000L
-
-        private const val DEFAULT_USER_AGENT = "OpenTV/0.1 (Android)"
 
         /** ExoPlayer's "do not retry" sentinel. */
         private const val C_TIME_UNSET = androidx.media3.common.C.TIME_UNSET

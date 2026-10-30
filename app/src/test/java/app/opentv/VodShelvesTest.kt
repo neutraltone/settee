@@ -10,6 +10,7 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import app.opentv.data.model.Movie
 import app.opentv.data.model.Series
+import app.opentv.data.repo.MediaKey
 import app.opentv.ui.VodViewModel
 import app.opentv.ui.vod.MovieShelves
 import app.opentv.ui.vod.SeriesShelves
@@ -35,11 +36,9 @@ class VodShelvesTest {
 
     private val resume = listOf(
         VodViewModel.ResumeItem(
-            "movie:9",
+            MediaKey.Movie(9),
             "Collateral",
-            playerTitle = "Collateral",
             posterUrl = null,
-            streamUrl = "",
             progress = 0.4f,
         ),
     )
@@ -82,7 +81,7 @@ class VodShelvesTest {
                 recommended = emptyList(),
                 recentlyAdded = listOf(movie(2, "Ronin")),
                 genreRows = emptyList(),
-                onResume = { _, _, _ -> },
+                onResume = {},
                 onOpenMovie = {},
             )
         }
@@ -102,7 +101,7 @@ class VodShelvesTest {
                 recommended = emptyList(),
                 recentlyAdded = listOf(movie(2, "Ronin")),
                 genreRows = emptyList(),
-                onResume = { _, _, _ -> },
+                onResume = {},
                 onOpenMovie = {},
             )
         }
@@ -118,7 +117,7 @@ class VodShelvesTest {
                 favourites = listOf(series(1, "Severance")),
                 recentlyAdded = listOf(series(2, "Slow Horses")),
                 genreRows = emptyList(),
-                onResume = { _, _, _ -> },
+                onResume = {},
                 onOpenSeries = {},
             )
         }
@@ -137,7 +136,7 @@ class VodShelvesTest {
                 favourites = emptyList(),
                 recentlyAdded = listOf(series(2, "Slow Horses")),
                 genreRows = emptyList(),
-                onResume = { _, _, _ -> },
+                onResume = {},
                 onOpenSeries = {},
             )
         }

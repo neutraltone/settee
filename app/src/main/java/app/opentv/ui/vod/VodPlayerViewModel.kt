@@ -10,6 +10,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import app.opentv.core.ServiceLocator
 import app.opentv.data.model.Episode
+import app.opentv.data.repo.MediaKey
 import app.opentv.player.NextEpisodeCountdown
 import app.opentv.player.NextEpisodeCountdown.Decision
 import app.opentv.player.NextEpisodeCountdown.Overlay
@@ -37,15 +38,12 @@ class VodPlayerViewModel @JvmOverloads constructor(
     interface Playback {
         fun progress(): NextEpisodeCountdown.Playback
 
-        fun play(item: Item, startPositionMillis: Long)
+        fun play(key: MediaKey, startPositionMillis: Long)
 
         fun pause()
 
         fun stop()
     }
-
-    /** One stream the player plays: what the route carries, and what moving on replaces. */
-    data class Item(val mediaKey: String, val streamUrl: String, val title: String, val userAgent: String)
 
     /**
      * What the Next Episode card shows: [imageUrl] is the episode's thumbnail, or else the series'
@@ -53,8 +51,9 @@ class VodPlayerViewModel @JvmOverloads constructor(
      */
     data class NextEpisodeCard(val season: Int, val episode: Int, val title: String, val imageUrl: String?)
 
-    private val _current = MutableStateFlow<Item?>(null)
-    val current: StateFlow<Item?> = _current.asStateFlow()
+    /** What the player is playing: what the route named, until moving on replaces it. */
+    private val _current = MutableStateFlow<MediaKey?>(null)
+    val current: StateFlow<MediaKey?> = _current.asStateFlow()
 
     private val countdown =
         NextEpisodeCountdown(autoPlay = { graph.settings.playNextAutomatically.value }, clock = clock)
@@ -70,7 +69,7 @@ class VodPlayerViewModel @JvmOverloads constructor(
     val overlay: StateFlow<Overlay> = _overlay.asStateFlow()
 
     private var playback: Playback? = null
-    private var route: Item? = null
+    private var route: MediaKey? = null
     private var next: Episode? = null
     private var fetchingNext: Job? = null
     private val lookup = NextEpisodeLookup(graph)
@@ -86,7 +85,7 @@ class VodPlayerViewModel @JvmOverloads constructor(
      * Starts [playback] on what is playing, or on [route] when the screen was opened on something
      * new. While "Are you still watching?" is up nothing plays until it is answered.
      */
-    suspend fun attach(route: Item, playback: Playback) {
+    suspend fun attach(route: MediaKey, playback: Playback) {
         this.playback = playback
         val current = _current.value
         when {
@@ -108,12 +107,12 @@ class VodPlayerViewModel @JvmOverloads constructor(
 
     /** Records how far through what's playing is, for resuming it and for its Watched status. */
     suspend fun saveProgress() {
-        val item = _current.value ?: return
+        val key = _current.value ?: return
         val progress = playback?.progress() ?: return
         if (progress.durationMillis > 0) lastSeen = progress
         // The first seconds say nothing about wanting to come back to it.
         if (progress.durationMillis > 0 && progress.positionMillis > MIN_SAVED_MILLIS) {
-            graph.viewerLibrary.recordProgress(item.mediaKey, progress.positionMillis, progress.durationMillis)
+            graph.viewerLibrary.recordProgress(key.stored, progress.positionMillis, progress.durationMillis)
         }
     }
 
@@ -141,11 +140,9 @@ class VodPlayerViewModel @JvmOverloads constructor(
                 // Moving on from the card counts as finishing: on a short episode the last 15
                 // seconds can fall short of 93% through, so it is recorded at its whole length.
                 if (finishing != null && duration > 0) {
-                    graph.viewerLibrary.recordProgress(finishing.mediaKey, duration, durationMillis = duration)
+                    graph.viewerLibrary.recordProgress(finishing.stored, duration, durationMillis = duration)
                 }
-                start(
-                    Item("$EPISODE_PREFIX${next.id}", next.streamUrl, next.playerTitle, finishing?.userAgent.orEmpty()),
-                )
+                start(MediaKey.Episode(next.id))
             }
             Decision.Pause -> playback?.pause()
             Decision.StopStream -> playback?.stop()
@@ -153,19 +150,17 @@ class VodPlayerViewModel @JvmOverloads constructor(
         }
     }
 
-    /** Plays [item] from [fromMillis], or from its resume point, and works out its Next Episode. */
-    private suspend fun start(item: Item, fromMillis: Long? = null) {
+    /** Plays [key] from [fromMillis], or from its resume point, and works out its Next Episode. */
+    private suspend fun start(key: MediaKey, fromMillis: Long? = null) {
         fetchingNext?.cancel()
-        _current.value = item
+        _current.value = key
         lastSeen = null
-        playback?.play(item, fromMillis ?: graph.viewerLibrary.resumeFrom(item.mediaKey))
-        val episode = item.mediaKey.takeIf { it.startsWith(EPISODE_PREFIX) }
-            ?.removePrefix(EPISODE_PREFIX)?.toLongOrNull()
-            ?.let { graph.catalogRepository.episode(it) }
+        playback?.play(key, fromMillis ?: graph.viewerLibrary.resumeFrom(key.stored))
+        val episode = (key as? MediaKey.Episode)?.let { graph.catalogRepository.episode(it.episodeId) }
         offer(episode?.let { graph.viewerLibrary.nextEpisodes.after(it) })
         if (episode != null && next == null) {
             fetchingNext = viewModelScope.launch {
-                lookup.fetchNext(episode)?.let { found -> if (_current.value == item) offer(found) }
+                lookup.fetchNext(episode)?.let { found -> if (_current.value == key) offer(found) }
             }
         }
     }
@@ -178,7 +173,6 @@ class VodPlayerViewModel @JvmOverloads constructor(
     }
 
     private companion object {
-        const val EPISODE_PREFIX = "ep:"
         const val MIN_SAVED_MILLIS = 5_000L
     }
 }

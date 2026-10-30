@@ -63,7 +63,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import app.opentv.core.AppSettings
 import app.opentv.core.ServiceLocator
-import app.opentv.data.parser.displayTitle
+import app.opentv.data.repo.MediaKey
 import app.opentv.ui.FirstScreen
 import app.opentv.ui.MainScreen
 import app.opentv.ui.ProfilesViewModel
@@ -219,18 +219,26 @@ object Routes {
     // trip — the same inline-encode/decode approach as the VOD player below.
     const val PERSON = "person?name={name}"
 
-    // VOD plays carry the stream inline; a movie/episode is a one-off URL, not a stored id
-    // the player can look up the way a channel is.
-    const val VOD_PLAYER = "vod?key={key}&url={url}&title={title}&ua={ua}"
+    // Only the key: the player asks PlaybackSources for the stream, so no URL (an Xtream one holds
+    // the account password), title or user agent sits in the back stack. An add-on's stream isn't in
+    // the catalogue, so its URL is the one thing carried besides.
+    const val VOD_PLAYER = "vod?key={key}&addon={addon}"
 
     fun player(channelId: Long) = "player/$channelId"
     fun seriesDetail(seriesId: Long) = "series/$seriesId"
     fun movieDetail(movieId: Long) = "movie/$movieId"
     fun editSource(sourceId: Long) = "edit-source/$sourceId"
     fun person(name: String) = "person?name=${java.net.URLEncoder.encode(name, "UTF-8")}"
-    fun vodPlayer(key: String, url: String, title: String, ua: String): String {
+    fun vodPlayer(key: MediaKey): String {
         fun e(v: String) = java.net.URLEncoder.encode(v, "UTF-8")
-        return "vod?key=${e(key)}&url=${e(url)}&title=${e(title)}&ua=${e(ua)}"
+        val addon = (key as? MediaKey.AddonStream)?.url.orEmpty()
+        return "vod?key=${e(key.stored)}&addon=${e(addon)}"
+    }
+
+    /** The key [vodPlayer] put in a route, from its `key` and `addon` arguments. */
+    fun vodPlayerKey(stored: String, addon: String): MediaKey? {
+        val key = MediaKey.parse(stored)
+        return if (key is MediaKey.Movie && addon.isNotEmpty()) MediaKey.AddonStream(key.movieId, addon) else key
     }
 }
 
@@ -325,14 +333,7 @@ private fun OpenTvApp(isTelevision: Boolean, launchedToPlay: Boolean) {
                 ServiceLocator.get(bootContext).recordingRepository.byId(req.recordingId)
             }.getOrNull() ?: return@LaunchedEffect
             runCatching {
-                navController.switchToRecording(
-                    Routes.vodPlayer(
-                        key = "rec:${rec.id}",
-                        url = "optvrec://${rec.id}",
-                        title = rec.title,
-                        ua = rec.userAgent,
-                    ),
-                )
+                navController.switchToRecording(Routes.vodPlayer(MediaKey.Recording(rec.id)))
             }
         }
     }
@@ -373,46 +374,18 @@ private fun OpenTvApp(isTelevision: Boolean, launchedToPlay: Boolean) {
                         onOpenSeries = { series ->
                             navController.navigate(Routes.seriesDetail(series.id))
                         },
-                        onResume = { key, url, title ->
-                            navController.navigate(
-                                Routes.vodPlayer(key, url, title, "OpenTV/0.1 (Android)"),
-                            )
-                        },
+                        onResume = { key -> navController.navigate(Routes.vodPlayer(key)) },
                         onAddSource = { navController.navigate(Routes.ADD_SOURCE) },
                         onRefresh = sourcesViewModel::refreshAll,
                         onOpenSearch = { navController.navigate(Routes.SEARCH) },
                         onOpenSettings = { navController.navigate(Routes.SETTINGS_HUB) },
                         onOpenProfiles = { navController.navigate(Routes.PROFILES) },
+                        // The player works out where the recording is stored, and follows one still capturing.
                         onPlayRecording = { rec ->
-                            // A NAS recording plays straight off its smb:// locator and a USB one off
-                            // its content:// document URI (Media3 reads both); an internal one through
-                            // a file:// uri. An internal recording that's still capturing plays through
-                            // the tail-following optvrec:// source, so it can be watched as it records
-                            // with no second connection to the provider. All go through the VOD player.
-                            val stillRecording = rec.status == app.opentv.data.model.RecordingStatus.RECORDING
-                            // Internal and NAS in-progress recordings are both tail-followable via the
-                            // growing source; USB (content://) isn't.
-                            val growable = !app.opentv.recording.RecordingStorage.isContent(rec.filePath) &&
-                                !app.opentv.recording.RecordingStorage.isUsbPlaceholder(rec.filePath)
-                            val url = when {
-                                stillRecording && growable -> "optvrec://${rec.id}"
-                                app.opentv.recording.SmbClient.isSmb(rec.filePath) -> rec.filePath
-                                app.opentv.recording.RecordingStorage.isContent(rec.filePath) -> rec.filePath
-                                else -> android.net.Uri.fromFile(java.io.File(rec.filePath)).toString()
-                            }
-                            navController.navigate(
-                                Routes.vodPlayer(
-                                    key = "rec:${rec.id}",
-                                    url = url,
-                                    title = rec.title,
-                                    ua = rec.userAgent,
-                                ),
-                            )
+                            navController.navigate(Routes.vodPlayer(MediaKey.Recording(rec.id)))
                         },
-                        onPlayCatchup = { key, url, title, ua ->
-                            // Catch-up is a seekable archive stream — plays through the VOD player.
-                            navController.navigate(Routes.vodPlayer(key, url, title, ua))
-                        },
+                        // Catch-up is a seekable archive stream — plays through the VOD player.
+                        onPlayCatchup = { key -> navController.navigate(Routes.vodPlayer(key)) },
                         activeProfileName = activeProfileName,
                         tab = tab,
                         onSelectTab = { navController.selectShellTab(it) },
@@ -429,16 +402,7 @@ private fun OpenTvApp(isTelevision: Boolean, launchedToPlay: Boolean) {
                 composable(Routes.SEARCH) {
                     SearchScreen(
                         onPlayChannel = { channel -> navController.navigate(Routes.player(channel.id)) },
-                        onPlayMovie = { movie ->
-                            navController.navigate(
-                                Routes.vodPlayer(
-                                    key = "movie:${movie.id}",
-                                    url = movie.streamUrl,
-                                    title = movie.displayTitle,
-                                    ua = "OpenTV/0.1 (Android)",
-                                ),
-                            )
-                        },
+                        onPlayMovie = { movie -> navController.navigate(Routes.vodPlayer(MediaKey.Movie(movie.id))) },
                         onOpenSeries = { series -> navController.navigate(Routes.seriesDetail(series.id)) },
                         onBack = { navController.popBackStack() },
                     )
@@ -518,11 +482,7 @@ private fun OpenTvApp(isTelevision: Boolean, launchedToPlay: Boolean) {
                     SeriesDetailScreen(
                         seriesId = seriesId,
                         viewModel = vodViewModel,
-                        onPlayEpisode = { key, url, title ->
-                            navController.navigate(
-                                Routes.vodPlayer(key, url, title, "OpenTV/0.1 (Android)"),
-                            )
-                        },
+                        onPlayEpisode = { key -> navController.navigate(Routes.vodPlayer(key)) },
                         onOpenSeries = { series -> navController.navigate(Routes.seriesDetail(series.id)) },
                         onOpenPerson = { name -> navController.navigate(Routes.person(name)) },
                     )
@@ -533,21 +493,8 @@ private fun OpenTvApp(isTelevision: Boolean, launchedToPlay: Boolean) {
                     MovieDetailScreen(
                         movieId = movieId,
                         viewModel = vodViewModel,
-                        onPlay = { movie ->
-                            navController.navigate(
-                                Routes.vodPlayer(
-                                    key = "movie:${movie.id}",
-                                    url = movie.streamUrl,
-                                    title = movie.displayTitle,
-                                    ua = "OpenTV/0.1 (Android)",
-                                ),
-                            )
-                        },
-                        onPlayUrl = { key, url, title ->
-                            navController.navigate(
-                                Routes.vodPlayer(key = key, url = url, title = title, ua = "OpenTV/0.1 (Android)"),
-                            )
-                        },
+                        onPlay = { movie -> navController.navigate(Routes.vodPlayer(MediaKey.Movie(movie.id))) },
+                        onPlayAddonStream = { key -> navController.navigate(Routes.vodPlayer(key)) },
                         onOpenMovie = { movie -> navController.navigate(Routes.movieDetail(movie.id)) },
                         onOpenPerson = { name -> navController.navigate(Routes.person(name)) },
                     )
@@ -568,13 +515,10 @@ private fun OpenTvApp(isTelevision: Boolean, launchedToPlay: Boolean) {
                 composable(Routes.VOD_PLAYER) { entry ->
                     fun arg(name: String) = entry.arguments?.getString(name)
                         ?.let { java.net.URLDecoder.decode(it, "UTF-8") }.orEmpty()
-                    val mediaKey = arg("key")
+                    val mediaKey = Routes.vodPlayerKey(arg("key"), arg("addon")) ?: return@composable
                     val leaveScope = rememberCoroutineScope()
                     VodPlayerScreen(
                         mediaKey = mediaKey,
-                        streamUrl = arg("url"),
-                        title = arg("title"),
-                        userAgent = arg("ua").ifEmpty { "OpenTV/0.1 (Android)" },
                         // The page is looked up when Back is pressed rather than as the player opens,
                         // so an early press can't miss it and fall back to plain Back.
                         onBack = {

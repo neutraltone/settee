@@ -26,7 +26,6 @@
     <string name="guide_favourites">★ 收藏</string>
     <string name="guide_all_channels">所有频道</string>
     <string name="guide_watch_from_start">▶  从头观看（回看）</string>
-    <string name="guide_catchup_link_failed">无法生成回看链接</string>
     <string name="guide_cancel_reminder">🔔  取消提醒</string>
     <string name="guide_reminder_removed">提醒已移除</string>
     <string name="guide_remind_me">🔔  提醒我</string>

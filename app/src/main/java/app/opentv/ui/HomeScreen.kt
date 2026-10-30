@@ -55,6 +55,7 @@ import app.opentv.data.model.Channel
 import app.opentv.data.model.Movie
 import app.opentv.data.model.Series
 import app.opentv.data.model.shownName
+import app.opentv.data.repo.MediaKey
 import app.opentv.ui.options.OptionsSubject
 import app.opentv.ui.options.openOptionsOn
 import app.opentv.ui.options.optionsClickable
@@ -74,7 +75,7 @@ import coil.compose.AsyncImage
  */
 @Composable
 internal fun HomeScreen(
-    onResume: (mediaKey: String, url: String, title: String) -> Unit,
+    onResume: (MediaKey) -> Unit,
     onOpenSeries: (Series) -> Unit,
     onOpenMovie: (Movie) -> Unit,
     onPlayChannel: (Channel) -> Unit,
@@ -118,7 +119,7 @@ internal fun HomeContent(
     favouriteShows: List<Series>,
     favouriteMovies: List<Movie>,
     favouriteChannels: List<Channel>,
-    onResume: (mediaKey: String, url: String, title: String) -> Unit,
+    onResume: (MediaKey) -> Unit,
     onOpenSeries: (Series) -> Unit,
     onOpenMovie: (Movie) -> Unit,
     onPlayChannel: (Channel) -> Unit,
@@ -194,7 +195,7 @@ internal fun HomeContent(
                     is Shelf.Resume -> ContinueWatchingRow(
                         shelf.cards,
                         rowFocus,
-                        onResume = { key, url, title -> pick(key) { onResume(key, url, title) } },
+                        onResume = { key -> pick(key.stored) { onResume(key) } },
                     )
                     is Shelf.Shows -> SeriesPosterRow(
                         stringResource(shelf.title),
@@ -244,7 +245,7 @@ private sealed class Shelf(key: String, items: List<String>) {
 
     class Live(val tile: LiveTile) : Shelf("live", listOf(LIVE_PICK))
 
-    class Resume(val cards: List<VodViewModel.ResumeItem>) : Shelf("cw", cards.map { it.mediaKey })
+    class Resume(val cards: List<VodViewModel.ResumeItem>) : Shelf("cw", cards.map { it.key.stored })
 
     class Shows(key: String, @StringRes val title: Int, val shows: List<Series>) :
         Shelf(key, shows.map { it.pickKey })

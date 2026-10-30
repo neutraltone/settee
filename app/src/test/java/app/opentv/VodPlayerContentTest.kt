@@ -55,7 +55,7 @@ class VodPlayerContentTest {
 
     private fun showFilm(growingRec: Boolean = false) {
         compose.setTvContent {
-            VodPlayerContent(controller, viewModel, "Film", growingRec, noPicks, onBack = {})
+            VodPlayerContent(controller, viewModel, growingRec, noPicks, onBack = {})
         }
         players.play(controller)
         compose.waitForIdle()
@@ -117,7 +117,7 @@ class VodPlayerContentTest {
     fun `fast-forward on a recording still being written stops at what's recorded`() {
         val recording = players.controller(RECORDING)
         compose.setTvContent {
-            VodPlayerContent(recording, viewModel, "Recording", growingRec = true, noPicks, onBack = {})
+            VodPlayerContent(recording, viewModel, growingRec = true, noPicks, onBack = {})
         }
         players.play(recording)
         val recorded = recording.player.bufferedPosition

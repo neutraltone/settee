@@ -37,7 +37,6 @@
     <string name="guide_favourites">★ Favourites</string>
     <string name="guide_all_channels">All channels</string>
     <string name="guide_watch_from_start">▶  Watch from start (catch-up)</string>
-    <string name="guide_catchup_link_failed">Couldn\'t build the catch-up link</string>
     <string name="guide_cancel_reminder">🔔  Cancel reminder</string>
     <string name="guide_reminder_removed">Reminder removed</string>
     <string name="guide_remind_me">🔔  Remind me</string>
@@ -556,4 +555,7 @@
     <string name="settings_tmdb_save">Save key</string>
     <string name="settings_tmdb_saved">TMDB key saved</string>
     <string name="settings_tmdb_active">Active</string>
+    <string name="playback_link_refused">The portal didn\'t give a link for this channel. Refresh the channel list, or check the MAC address is still authorised.</string>
+    <string name="playback_no_catchup">This provider doesn\'t offer catch-up. Only Xtream providers can play past programmes.</string>
+    <string name="playback_gone">This is no longer in the provider\'s list. Refresh the channel list and try again.</string>
 </resources>

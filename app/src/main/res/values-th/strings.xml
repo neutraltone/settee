@@ -26,7 +26,6 @@
     <string name="guide_favourites">★ รายการโปรด</string>
     <string name="guide_all_channels">ทุกช่อง</string>
     <string name="guide_watch_from_start">▶  ดูตั้งแต่ต้น (ย้อนหลัง)</string>
-    <string name="guide_catchup_link_failed">สร้างลิงก์ย้อนหลังไม่สำเร็จ</string>
     <string name="guide_cancel_reminder">🔔  ยกเลิกการแจ้งเตือน</string>
     <string name="guide_reminder_removed">ลบการแจ้งเตือนแล้ว</string>
     <string name="guide_remind_me">🔔  แจ้งเตือนฉัน</string>

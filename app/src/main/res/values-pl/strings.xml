@@ -26,7 +26,6 @@
     <string name="guide_favourites">★ Ulubione</string>
     <string name="guide_all_channels">Wszystkie kanały</string>
     <string name="guide_watch_from_start">▶  Oglądaj od początku (catch-up)</string>
-    <string name="guide_catchup_link_failed">Nie udało się utworzyć łącza catch-up</string>
     <string name="guide_cancel_reminder">🔔  Anuluj przypomnienie</string>
     <string name="guide_reminder_removed">Przypomnienie usunięte</string>
     <string name="guide_remind_me">🔔  Przypomnij mi</string>

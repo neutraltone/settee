@@ -66,7 +66,7 @@ class MainShellTest {
                 favouriteMovies = emptyList<Movie>(),
                 favouriteChannels = emptyList(),
                 recent = recent(),
-                onResume = { _, _, _ -> },
+                onResume = {},
                 onOpenSeries = {},
                 onOpenMovie = {},
                 onPlayChannel = {},

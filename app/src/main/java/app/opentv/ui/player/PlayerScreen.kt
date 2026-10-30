@@ -103,7 +103,7 @@ import app.opentv.core.SleepTimer
 import app.opentv.core.findActivity
 import app.opentv.core.requestIgnoreBatteryOptimizations
 import app.opentv.data.model.Channel
-import app.opentv.data.model.shownName
+import app.opentv.data.repo.MediaKey
 import app.opentv.player.PlaybackQueue
 import app.opentv.player.PlayerController
 import app.opentv.player.SettledChannel
@@ -148,6 +148,7 @@ fun PlayerScreen(channelId: Long?, onBack: () -> Unit) {
             context,
             scope,
             graph.streamingHttpClient,
+            resolve = graph.playbackSources::forWatching,
             // Text starts off; the Profile's Subtitle Preference turns it on once tracks arrive.
             subtitlesEnabled = false,
             // Opt-in shallow DVR so the transport's pause/rewind actually holds on a live stream.
@@ -202,20 +203,7 @@ fun PlayerScreen(channelId: Long?, onBack: () -> Unit) {
         currentId = channel.id
         settings.lastChannelId = channel.id
         settled.tunedTo(channel)
-        scope.launch {
-            val source = graph.sourceRepository.byId(channel.sourceId)
-            // Xtream/M3U carry a ready URL; a Stalker channel's URL is minted here from its cmd.
-            val url = graph.catalogRepository.resolvePlaybackUrl(channel, source)
-            controller.play(
-                PlayerController.Request(
-                    url = url,
-                    title = channel.shownName,
-                    userAgent = source?.userAgent ?: "OpenTV/0.1 (Android)",
-                    isLive = true,
-                ),
-                debounce = false,
-            )
-        }
+        controller.play(PlayerController.Request(MediaKey.Live(channel.id)), debounce = false)
     }
 
     fun playChannelId(id: Long) {

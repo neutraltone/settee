@@ -59,7 +59,7 @@ class EpisodeRowTest {
     )
 
     private fun show(status: WatchStatus, ep: Episode = episode) = compose.setTvContent {
-        EpisodeRow(ep, status, seriesArtUrl = "https://example.com/poster.jpg", onPlay = { _, _, _ -> })
+        EpisodeRow(ep, status, seriesArtUrl = "https://example.com/poster.jpg", onPlay = {})
     }
 
     @Test

@@ -65,8 +65,10 @@ import app.opentv.data.model.Series
 import app.opentv.data.model.StremioStream
 import app.opentv.data.parser.displayTitle
 import app.opentv.data.repo.EpisodeStatuses
+import app.opentv.data.repo.MediaKey
 import app.opentv.data.repo.SeriesMainAction
 import app.opentv.data.repo.WatchStatus
+import app.opentv.data.repo.playerTitle
 import app.opentv.ui.VodViewModel
 import app.opentv.ui.WatchBadge
 import app.opentv.ui.options.OptionsSubject
@@ -86,7 +88,7 @@ import kotlinx.coroutines.launch
 fun MovieDetailScreen(
     movieId: Long,
     onPlay: (Movie) -> Unit,
-    onPlayUrl: (key: String, url: String, title: String) -> Unit,
+    onPlayAddonStream: (MediaKey.AddonStream) -> Unit,
     onOpenMovie: (Movie) -> Unit,
     onOpenPerson: (String) -> Unit,
     viewModel: VodViewModel = viewModel(),
@@ -105,7 +107,7 @@ fun MovieDetailScreen(
         val loaded = viewModel.movieDetail(movieId)
         movie = loaded
         if (loaded != null) {
-            resumeExists = viewModel.resumeFrom("movie:${loaded.id}") > 0
+            resumeExists = viewModel.resumeFrom(MediaKey.Movie(loaded.id).stored) > 0
             moreLike = viewModel.moreLikeThis(loaded)
         }
     }
@@ -182,7 +184,7 @@ fun MovieDetailScreen(
             streams = addonStreams.orEmpty(),
             onPick = { stream ->
                 addonStreams = null
-                onPlayUrl("movie:${m.id}", stream.url, m.displayTitle)
+                onPlayAddonStream(MediaKey.AddonStream(m.id, stream.url))
             },
             onDismiss = {
                 addonStreams = null
@@ -282,7 +284,7 @@ private fun AddonStreamRow(stream: StremioStream, onPick: (StremioStream) -> Uni
 @Composable
 fun SeriesDetailScreen(
     seriesId: Long,
-    onPlayEpisode: (mediaKey: String, url: String, title: String) -> Unit,
+    onPlayEpisode: (MediaKey) -> Unit,
     onOpenSeries: (Series) -> Unit,
     onOpenPerson: (String) -> Unit,
     viewModel: VodViewModel = viewModel(),
@@ -338,7 +340,7 @@ internal fun SeriesDetailContent(
     mainAction: SeriesMainAction?,
     favourite: Boolean?,
     moreLike: List<Series>,
-    onPlayEpisode: (mediaKey: String, url: String, title: String) -> Unit,
+    onPlayEpisode: (MediaKey) -> Unit,
     onSetFavourite: (Boolean) -> Unit,
     onOpenSeries: (Series) -> Unit,
     onOpenPerson: (String) -> Unit,
@@ -444,11 +446,7 @@ internal fun SeriesDetailContent(
 }
 
 /** Hands [ep] to the player; the player resumes it itself if the Profile has it In Progress. */
-private fun playEpisode(ep: Episode, onPlay: (mediaKey: String, url: String, title: String) -> Unit) =
-    onPlay("ep:${ep.id}", ep.streamUrl, ep.playerTitle)
-
-/** What the player calls an episode, wherever it was started from. */
-internal val Episode.playerTitle: String get() = "S${season}E$episodeNumber · $title"
+private fun playEpisode(ep: Episode, onPlay: (MediaKey) -> Unit) = onPlay(MediaKey.Episode(ep.id))
 
 // ---- Shared detail pieces ----------------------------------------------------------------------
 
@@ -758,12 +756,7 @@ private fun DetailButton(
  * highlight; plays on click.
  */
 @Composable
-internal fun EpisodeRow(
-    ep: Episode,
-    status: WatchStatus,
-    seriesArtUrl: String?,
-    onPlay: (mediaKey: String, url: String, title: String) -> Unit,
-) {
+internal fun EpisodeRow(ep: Episode, status: WatchStatus, seriesArtUrl: String?, onPlay: (MediaKey) -> Unit) {
     var focused by remember { mutableStateOf(false) }
     Row(
         Modifier

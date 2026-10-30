@@ -26,7 +26,6 @@
     <string name="guide_favourites">★ Oblíbené</string>
     <string name="guide_all_channels">Všechny kanály</string>
     <string name="guide_watch_from_start">▶  Sledovat od začátku (záznam)</string>
-    <string name="guide_catchup_link_failed">Odkaz na záznam se nepodařilo vytvořit</string>
     <string name="guide_cancel_reminder">🔔  Zrušit připomenutí</string>
     <string name="guide_reminder_removed">Připomenutí odebráno</string>
     <string name="guide_remind_me">🔔  Připomenout mi</string>

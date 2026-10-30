@@ -724,7 +724,7 @@ class CatalogRepository(
 
     /**
      * Stalker/Ministra live sync. Mirrors [syncXtreamLive] but the channels it stores carry a
-     * [Channel.cmd] instead of a directly-playable URL — [resolvePlaybackUrl] mints the real URL at
+     * [Channel.cmd] instead of a directly-playable URL — [PlaybackSources] mints the real URL at
      * play time. The handshake happens inside [StalkerApi] on first call; a bad MAC or URL throws
      * here with a clear message, caught by [syncLive].
      */
@@ -742,18 +742,6 @@ class CatalogRepository(
         channelDao.replaceCatalogue(source.id, normalized(channels, categoryNames), nowUtcMillis)
         sourceDao.markCatalogSynced(source.id, nowUtcMillis)
         return SyncResult.Success(channels.size, 0, 0)
-    }
-
-    /**
-     * The URL to actually feed the player for [channel]. Xtream/M3U channels already carry a playable
-     * [Channel.streamUrl]; a Stalker channel's real URL is short-lived, so it's minted now via
-     * create_link from the channel's [Channel.cmd]. Falls back to the stored streamUrl if resolution
-     * fails, so the player surfaces an error rather than silently doing nothing.
-     */
-    suspend fun resolvePlaybackUrl(channel: Channel, source: Source?): String {
-        if (source?.kind != SourceKind.STALKER) return channel.streamUrl
-        val cmd = channel.cmd?.takeIf { it.isNotBlank() } ?: return channel.streamUrl
-        return runCatching { stalkerApi.createLink(source, cmd) }.getOrNull() ?: channel.streamUrl
     }
 
     /** Returns the series the provider updated since the last sync, for New Episode detection. */

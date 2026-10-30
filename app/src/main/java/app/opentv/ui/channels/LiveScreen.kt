@@ -79,6 +79,9 @@ import app.opentv.data.model.Channel
 import app.opentv.data.model.Programme
 import app.opentv.data.model.Reminder
 import app.opentv.data.model.shownName
+import app.opentv.data.repo.MediaKey
+import app.opentv.data.repo.Playable
+import app.opentv.player.PlaybackErrors
 import app.opentv.player.PlaybackQueue
 import app.opentv.player.PlayerController
 import app.opentv.reminders.ReminderScheduler
@@ -118,7 +121,7 @@ fun LiveScreen(
     onPlayChannel: (Channel) -> Unit,
     onAddSource: () -> Unit,
     onRefresh: () -> Unit,
-    onPlayCatchup: (mediaKey: String, url: String, title: String, ua: String) -> Unit = { _, _, _, _ -> },
+    onPlayCatchup: (MediaKey.Catchup) -> Unit = {},
     takeFocus: Boolean = true,
     viewModel: ChannelsViewModel = viewModel(),
 ) {
@@ -219,7 +222,14 @@ fun LiveScreen(
     // once — the thing that used to lock up cheap sticks.
     val previewScope = remember { CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate) }
     val previewController = remember {
-        PlayerController(context, previewScope, graph.httpClient, subtitlesEnabled = false, preview = true)
+        PlayerController(
+            context,
+            previewScope,
+            graph.httpClient,
+            resolve = graph.playbackSources::forWatching,
+            subtitlesEnabled = false,
+            preview = true,
+        )
             .also { it.player.volume = 0f }
     }
     DisposableEffect(Unit) {
@@ -289,17 +299,7 @@ fun LiveScreen(
             previewController.stop()
             return@LaunchedEffect
         }
-        val channel = row.primary
-        val source = graph.sourceRepository.byId(channel.sourceId)
-        previewController.play(
-            PlayerController.Request(
-                url = channel.streamUrl,
-                title = channel.shownName,
-                userAgent = source?.userAgent ?: "OpenTV/0.1 (Android)",
-                isLive = true,
-            ),
-            debounce = true,
-        )
+        previewController.play(PlayerController.Request(MediaKey.Live(row.primary.id)), debounce = true)
     }
 
     Row(Modifier.fillMaxSize()) {
@@ -614,30 +614,7 @@ fun LiveScreen(
                         stringResource(R.string.guide_watch_from_start),
                         primary = true,
                     ) {
-                        recordScope.launch {
-                            val source = graph.sourceRepository.byId(channel.sourceId)
-                            if (source == null) {
-                                Toast.makeText(
-                                    context,
-                                    resources.getString(R.string.guide_catchup_link_failed),
-                                    Toast.LENGTH_SHORT,
-                                ).show()
-                            } else {
-                                val mins = (programme.durationMillis / 60000).toInt().coerceAtLeast(1)
-                                val url = graph.xtreamApi.catchupUrl(
-                                    source,
-                                    channel.streamId,
-                                    programme.startUtcMillis,
-                                    mins,
-                                )
-                                onPlayCatchup(
-                                    "catchup:${channel.id}:${programme.startUtcMillis}",
-                                    url,
-                                    "${channel.shownName} — ${programme.title}",
-                                    source.userAgent,
-                                )
-                            }
-                        }
+                        onPlayCatchup(MediaKey.Catchup(channel.id, programme.startUtcMillis))
                         recordTarget = null
                     }
                     !isPast -> RecordActionRow(stringResource(R.string.rec_schedule_recording), primary = true) {
@@ -796,12 +773,21 @@ fun LiveScreen(
                     RecordActionRow(stringResource(R.string.guide_open_external)) {
                         channelMenu = null
                         recordScope.launch {
-                            val ua = graph.sourceRepository.byId(channel.sourceId)?.userAgent ?: "OpenTV/0.1 (Android)"
+                            val playable = graph.playbackSources.forWatching(MediaKey.Live(channel.id))
+                            if (playable is Playable.Failed) {
+                                Toast.makeText(
+                                    context,
+                                    PlaybackErrors.messageOf(playable.failure),
+                                    Toast.LENGTH_LONG,
+                                ).show()
+                                return@launch
+                            }
+                            playable as Playable.Ready
                             val intent = Intent(Intent.ACTION_VIEW).apply {
-                                setDataAndType(channel.streamUrl.toUri(), "video/*")
-                                putExtra("title", channel.shownName)
+                                setDataAndType(playable.url.toUri(), "video/*")
+                                putExtra("title", playable.title)
                                 // MX Player / VLC read the User-Agent from this header extra.
-                                putExtra("headers", arrayOf("User-Agent", ua))
+                                putExtra("headers", arrayOf("User-Agent", playable.userAgent))
                                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                             }
                             runCatching {

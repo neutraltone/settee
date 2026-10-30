@@ -26,7 +26,6 @@
     <string name="guide_favourites">★ Αγαπημένα</string>
     <string name="guide_all_channels">Όλα τα κανάλια</string>
     <string name="guide_watch_from_start">▶  Παρακολούθηση από την αρχή (catch-up)</string>
-    <string name="guide_catchup_link_failed">Δεν ήταν δυνατή η δημιουργία του συνδέσμου catch-up</string>
     <string name="guide_cancel_reminder">🔔  Ακύρωση υπενθύμισης</string>
     <string name="guide_reminder_removed">Η υπενθύμιση αφαιρέθηκε</string>
     <string name="guide_remind_me">🔔  Υπενθύμισέ μου</string>

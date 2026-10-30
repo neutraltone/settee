@@ -24,6 +24,7 @@ import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.test.requestFocus
+import app.opentv.data.repo.MediaKey
 import app.opentv.ui.VodViewModel.ResumeItem
 import app.opentv.ui.VodViewModel.SeasonEpisode
 import app.opentv.ui.vod.ContinueWatchingRow
@@ -48,23 +49,21 @@ class ContinueWatchingRowTest {
     val artwork = PlaceholderArtwork()
 
     private val inProgress = ResumeItem(
-        mediaKey = "ep:24",
+        key = MediaKey.Episode(24),
         title = "The Show",
-        playerTitle = "S2E4 · The one with the card",
         posterUrl = "https://example.com/backdrop.jpg",
-        streamUrl = "https://example.com/2-4.mkv",
         progress = 0.25f,
         episode = SeasonEpisode(season = 2, episode = 4),
     )
 
-    private var played: Triple<String, String, String>? = null
+    private var played: MediaKey? = null
     private var optionsAskedFor: ResumeItem? = null
     private var optionsAsked = 0
 
     private fun show(vararg items: ResumeItem) = compose.setTvContent {
         ContinueWatchingRow(
             items.toList(),
-            onResume = { key, url, title -> played = Triple(key, url, title) },
+            onResume = { played = it },
             onOptions = {
                 optionsAskedFor = it
                 optionsAsked++
@@ -85,7 +84,13 @@ class ContinueWatchingRowTest {
 
     @Test
     fun `an Up Next card never played shows no progress bar`() {
-        show(inProgress.copy(mediaKey = "ep:25", progress = null, episode = SeasonEpisode(season = 2, episode = 5)))
+        show(
+            inProgress.copy(
+                key = MediaKey.Episode(25),
+                progress = null,
+                episode = SeasonEpisode(season = 2, episode = 5),
+            ),
+        )
 
         compose.onNodeWithText("S2 · E5", useUnmergedTree = true).assertExists()
         compose.onNode(SemanticsMatcher.keyIsDefined(SemanticsProperties.ProgressBarRangeInfo), useUnmergedTree = true)
@@ -101,12 +106,19 @@ class ContinueWatchingRowTest {
         captureScreen("continue_watching_focused")
         compose.onNode(hasClickAction()).performClick()
 
-        assertThat(played).isEqualTo(Triple("ep:24", "https://example.com/2-4.mkv", "S2E4 · The one with the card"))
+        assertThat(played).isEqualTo(MediaKey.Episode(24))
     }
 
     @Test
     fun `a New Episode card says so on its thumbnail`() {
-        show(inProgress.copy(mediaKey = "ep:31", progress = null, episode = SeasonEpisode(3, 1), newEpisode = true))
+        show(
+            inProgress.copy(
+                key = MediaKey.Episode(31),
+                progress = null,
+                episode = SeasonEpisode(3, 1),
+                newEpisode = true,
+            ),
+        )
 
         compose.onNodeWithText("New episode", useUnmergedTree = true).assertExists()
         captureScreen("continue_watching_new_episode")
@@ -114,7 +126,7 @@ class ContinueWatchingRowTest {
 
     @Test
     fun `an ordinary Up Next card has no New Episode badge`() {
-        show(inProgress.copy(mediaKey = "ep:25", progress = null, episode = SeasonEpisode(2, 5)))
+        show(inProgress.copy(key = MediaKey.Episode(25), progress = null, episode = SeasonEpisode(2, 5)))
 
         compose.onNodeWithText("New episode", useUnmergedTree = true).assertDoesNotExist()
     }
@@ -172,9 +184,9 @@ class ContinueWatchingRowTest {
 
     @Test
     fun `when the highlighted card is removed the highlight moves to the one taking its place`() {
-        val other = inProgress.copy(mediaKey = "movie:5", title = "A Film", episode = null)
+        val other = inProgress.copy(key = MediaKey.Movie(5), title = "A Film", episode = null)
         var items by mutableStateOf(listOf(inProgress, other))
-        compose.setTvContent { ContinueWatchingRow(items, onResume = { _, _, _ -> }, onOptions = {}) }
+        compose.setTvContent { ContinueWatchingRow(items, onResume = {}, onOptions = {}) }
         compose.onNode(hasText("The Show") and hasClickAction()).requestFocus()
 
         items = listOf(other)

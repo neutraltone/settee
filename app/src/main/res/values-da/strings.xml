@@ -26,7 +26,6 @@
     <string name="guide_favourites">★ Favoritter</string>
     <string name="guide_all_channels">Alle kanaler</string>
     <string name="guide_watch_from_start">▶  Se fra begyndelsen (catch-up)</string>
-    <string name="guide_catchup_link_failed">Catch-up-linket kunne ikke oprettes</string>
     <string name="guide_cancel_reminder">🔔  Annuller påmindelse</string>
     <string name="guide_reminder_removed">Påmindelse fjernet</string>
     <string name="guide_remind_me">🔔  Påmind mig</string>

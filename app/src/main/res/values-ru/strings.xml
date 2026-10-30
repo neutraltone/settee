@@ -26,7 +26,6 @@
     <string name="guide_favourites">★ Избранное</string>
     <string name="guide_all_channels">Все каналы</string>
     <string name="guide_watch_from_start">▶  Смотреть с начала (архив)</string>
-    <string name="guide_catchup_link_failed">Не удалось создать ссылку для просмотра в записи</string>
     <string name="guide_cancel_reminder">🔔  Отменить напоминание</string>
     <string name="guide_reminder_removed">Напоминание удалено</string>
     <string name="guide_remind_me">🔔  Напомнить</string>

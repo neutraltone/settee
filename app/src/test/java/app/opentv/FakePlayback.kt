@@ -6,10 +6,9 @@
 package app.opentv
 
 import app.opentv.data.model.Episode
+import app.opentv.data.repo.MediaKey
 import app.opentv.player.NextEpisodeCountdown
 import app.opentv.ui.vod.VodPlayerViewModel
-import app.opentv.ui.vod.VodPlayerViewModel.Item
-import app.opentv.ui.vod.playerTitle
 
 /** How long every episode [FakePlayback] plays is. */
 const val EPISODE_MILLIS = 2_400_000L
@@ -20,12 +19,12 @@ class FakePlayback : VodPlayerViewModel.Playback {
     var durationMillis = 0L
     var paused = false
     var stopped = false
-    val played = mutableListOf<Pair<String, Long>>()
+    val played = mutableListOf<Pair<MediaKey, Long>>()
 
     override fun progress() = NextEpisodeCountdown.Playback(positionMillis, durationMillis)
 
-    override fun play(item: Item, startPositionMillis: Long) {
-        played += item.streamUrl to startPositionMillis
+    override fun play(key: MediaKey, startPositionMillis: Long) {
+        played += key to startPositionMillis
         positionMillis = startPositionMillis
         durationMillis = EPISODE_MILLIS
         paused = false
@@ -41,7 +40,7 @@ class FakePlayback : VodPlayerViewModel.Playback {
 }
 
 /** What the player is handed to play [this] episode. */
-fun Episode.item() = Item("ep:$id", streamUrl, playerTitle, userAgent = "ua")
+val Episode.key get() = MediaKey.Episode(id)
 
 /** Plays what [playback] has on through the Next Episode card to its end, polling as the screen does. */
 suspend fun VodPlayerViewModel.playToEnd(playback: FakePlayback) {

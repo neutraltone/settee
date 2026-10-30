@@ -31,16 +31,15 @@ import app.opentv.data.repo.CatalogRepository
 import app.opentv.data.repo.ContinueWatchingCard
 import app.opentv.data.repo.GenreGroup
 import app.opentv.data.repo.LivePreview
+import app.opentv.data.repo.MediaKey
 import app.opentv.data.repo.MovieVariantGroup
 import app.opentv.data.repo.PersonTitle
 import app.opentv.data.repo.distinctByQuality
-import app.opentv.data.repo.mediaKey
 import app.opentv.pairing.ManagerServer
 import app.opentv.sync.NasSync
 import app.opentv.sync.SyncClient
 import app.opentv.sync.SyncEngine
 import app.opentv.sync.SyncServer
-import app.opentv.ui.vod.playerTitle
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
@@ -774,15 +773,12 @@ class VodViewModel @JvmOverloads constructor(
 
     /**
      * One card in the Continue Watching shelf: a movie, or a series at its In Progress episode or
-     * Up Next. A series card is titled with the series and carries the [episode] it plays;
-     * [playerTitle] is what the player shows once it starts.
+     * Up Next. A series card is titled with the series and carries the [episode] it plays.
      */
     data class ResumeItem(
-        val mediaKey: String,
+        val key: MediaKey,
         val title: String,
-        val playerTitle: String,
         val posterUrl: String?,
-        val streamUrl: String,
         /** How far through, 0..1; null when it has never been played, so the card shows no bar. */
         val progress: Float?,
         val episode: SeasonEpisode? = null,
@@ -1140,10 +1136,6 @@ class VodViewModel @JvmOverloads constructor(
     fun setSeriesFavourite(series: Series, favourite: Boolean) {
         viewModelScope.launch { graph.viewerLibrary.favourites.set(series, favourite) }
     }
-
-    /** The user-agent to play a movie/episode with (per source). */
-    suspend fun userAgentForSource(sourceId: Long): String =
-        graph.sourceRepository.byId(sourceId)?.userAgent ?: "OpenTV/0.1 (Android)"
 }
 
 /** [card] as Continue Watching draws it, or null when its title has left the catalogue. */
@@ -1151,11 +1143,9 @@ private suspend fun resumeItem(catalog: CatalogRepository, card: ContinueWatchin
     when (card) {
         is ContinueWatchingCard.Movie -> catalog.movie(card.movieId)?.let {
             VodViewModel.ResumeItem(
-                it.mediaKey,
-                it.displayTitle,
+                MediaKey.Movie(it.id),
                 it.displayTitle,
                 it.posterUrl,
-                it.streamUrl,
                 card.progress,
                 card = card,
             )
@@ -1164,12 +1154,10 @@ private suspend fun resumeItem(catalog: CatalogRepository, card: ContinueWatchin
             val ep = card.episode
             catalog.seriesOf(ep)?.let {
                 VodViewModel.ResumeItem(
-                    mediaKey = ep.mediaKey,
+                    key = MediaKey.Episode(ep.id),
                     title = it.name,
-                    playerTitle = ep.playerTitle,
                     // The card is landscape: the wide backdrop fits it, a portrait poster only crops.
                     posterUrl = it.backdropUrl ?: it.posterUrl,
-                    streamUrl = ep.streamUrl,
                     progress = card.progress,
                     episode = VodViewModel.SeasonEpisode(ep.season, ep.episodeNumber),
                     newEpisode = card.newEpisode,
