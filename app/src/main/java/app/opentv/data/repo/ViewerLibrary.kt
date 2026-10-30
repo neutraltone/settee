@@ -6,6 +6,7 @@
 package app.opentv.data.repo
 
 import android.util.Log
+import androidx.room.withTransaction
 import app.opentv.data.db.EpisodeDao
 import app.opentv.data.db.OpenTvDatabase
 import app.opentv.data.db.PlaybackPositionDao
@@ -100,6 +101,9 @@ class ViewerLibrary(
 
     /** What the active Profile sets by hand: Watched and Unwatched marks, and Continue Watching removals. */
     val marks = HandMarks(positions, episodes, dismissals, activeProfileId, clock)
+
+    /** Removing a Profile's watch state and Favourites, for the Profiles module. */
+    val profileRemoval = ProfileRemoval(db)
 
     suspend fun recordProgress(mediaKey: String, positionMillis: Long, durationMillis: Long) {
         positions.upsert(
@@ -209,6 +213,19 @@ class ViewerLibrary(
 }
 
 /** Fetches the episodes a New Episode could be among; Continue Watching then shows what it finds. */
+/**
+ * Removes a Profile from every table the library owns, in one transaction so a removal cut short
+ * leaves the Profile whole rather than half forgotten. Reached as `viewerLibrary.profileRemoval`.
+ */
+class ProfileRemoval internal constructor(private val db: OpenTvDatabase) {
+    suspend fun forget(profileId: Long) = db.withTransaction {
+        db.positions().deleteFor(profileId)
+        db.seriesDismissals().deleteFor(profileId)
+        db.favourites().deleteFor(profileId)
+        db.livePlayback().deleteFor(profileId)
+    }
+}
+
 class NewEpisodes internal constructor(private val positions: PlaybackPositionDao, private val episodes: EpisodeDao) {
     /**
      * Fetches the episodes of each of [updated], series the provider says changed, to find New

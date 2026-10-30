@@ -5,7 +5,9 @@
  */
 package app.opentv
 
+import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
+import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -34,9 +36,15 @@ class ProfileNameEntryTest {
 
     private var saved: String? = null
 
-    private fun show(initial: String) {
+    private fun show(initial: String, taken: Set<String> = emptySet()) {
         compose.setTvContent {
-            ProfileNameEntry(initial = initial, heading = "Rename profile", onCancel = {}, onSave = { saved = it })
+            ProfileNameEntry(
+                initial = initial,
+                heading = "Rename profile",
+                onCancel = {},
+                onSave = { saved = it },
+                isTaken = { it.trim() in taken },
+            )
         }
         compose.waitForIdle()
     }
@@ -79,6 +87,19 @@ class ProfileNameEntryTest {
         nameBox.performTextInput("  ")
         nameBox.performImeAction()
 
+        assertThat(saved).isNull()
+    }
+
+    @Test
+    fun `a name another profile has can't be saved, and the entry says why`() {
+        show(initial = "", taken = setOf("Tom"))
+
+        nameBox.performTextInput("Tom")
+        compose.onNodeWithText("Another profile is already called Tom.").assertIsDisplayed()
+        compose.onNodeWithText("Save").assertIsNotEnabled()
+        captureScreen("profile_name_taken")
+
+        nameBox.performImeAction()
         assertThat(saved).isNull()
     }
 

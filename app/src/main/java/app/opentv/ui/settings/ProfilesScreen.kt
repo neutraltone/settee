@@ -40,6 +40,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import app.opentv.R
+import app.opentv.data.repo.Profiles
 import app.opentv.ui.ProfilesViewModel
 import app.opentv.ui.channels.DeviceTextField
 
@@ -65,6 +66,7 @@ fun ProfilesScreen(onBack: () -> Unit, viewModel: ProfilesViewModel = viewModel(
             } else {
                 stringResource(R.string.profiles_rename_heading)
             },
+            isTaken = { Profiles.isNameTaken(it, profiles, except = target) },
             onCancel = { editing = null },
             onSave = { name ->
                 if (target == NEW) viewModel.addProfile(name) else viewModel.rename(target, name)
@@ -122,7 +124,7 @@ fun ProfilesScreen(onBack: () -> Unit, viewModel: ProfilesViewModel = viewModel(
                         TextButton(onClick = {
                             editing = profile.id
                         }) { Text(stringResource(R.string.profiles_rename)) }
-                        if (profile.id != 1L) {
+                        if (profile.id != Profiles.BASE_PROFILE_ID) {
                             TextButton(onClick = {
                                 viewModel.remove(profile.id)
                             }) { Text(stringResource(R.string.common_remove)) }
@@ -134,13 +136,24 @@ fun ProfilesScreen(onBack: () -> Unit, viewModel: ProfilesViewModel = viewModel(
     }
 }
 
-/** Naming a new profile or renaming one: a box for the name with Save and Cancel above it. */
+/**
+ * Naming a new profile or renaming one: a box for the name with Save and Cancel above it. A name
+ * [isTaken] by another profile can't be saved, and the line under the box says why.
+ */
 @Composable
-internal fun ProfileNameEntry(initial: String, heading: String, onCancel: () -> Unit, onSave: (String) -> Unit) {
+internal fun ProfileNameEntry(
+    initial: String,
+    heading: String,
+    onCancel: () -> Unit,
+    onSave: (String) -> Unit,
+    isTaken: (String) -> Boolean = { false },
+) {
     val name = rememberTextFieldState(initial)
     val nameBox = remember { FocusRequester() }
     LaunchedEffect(Unit) { runCatching { nameBox.requestFocus() } }
-    val save = { if (name.text.isNotBlank()) onSave(name.text.toString()) }
+    val taken = isTaken(name.text.toString())
+    val canSave = name.text.isNotBlank() && !taken
+    val save = { if (canSave) onSave(name.text.toString()) }
     Column(
         Modifier
             .fillMaxSize()
@@ -149,7 +162,7 @@ internal fun ProfileNameEntry(initial: String, heading: String, onCancel: () -> 
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(heading, style = MaterialTheme.typography.headlineMedium)
             Spacer(Modifier.weight(1f))
-            Button(enabled = name.text.isNotBlank(), onClick = save) { Text(stringResource(R.string.common_save)) }
+            Button(enabled = canSave, onClick = save) { Text(stringResource(R.string.common_save)) }
             Spacer(Modifier.width(12.dp))
             OutlinedButton(onClick = onCancel) { Text(stringResource(R.string.common_cancel)) }
         }
@@ -161,6 +174,14 @@ internal fun ProfileNameEntry(initial: String, heading: String, onCancel: () -> 
             onSubmit = save,
             modifier = Modifier.widthIn(max = 760.dp).fillMaxWidth().focusRequester(nameBox),
         )
+        if (taken) {
+            Spacer(Modifier.height(12.dp))
+            Text(
+                stringResource(R.string.profiles_name_taken, name.text.toString().trim()),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.error,
+            )
+        }
     }
 }
 

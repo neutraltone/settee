@@ -9,7 +9,6 @@ import app.opentv.core.ServiceLocator
 import app.opentv.data.model.Favourite
 import app.opentv.data.model.HandMark
 import app.opentv.data.model.PlaybackPosition
-import app.opentv.data.model.Profile
 import app.opentv.data.model.ProfileSetting
 import app.opentv.data.model.Recording
 import app.opentv.data.model.RecordingStatus
@@ -147,11 +146,7 @@ class SyncEngine(private val graph: ServiceLocator.Graph) {
     suspend fun apply(bundle: SyncBundle): MergeResult {
         // Profiles — add any the peer has that we're missing. Never remove (that would delete a
         // local profile's watch history).
-        for (name in bundle.profiles) {
-            if (name.isNotBlank() && graph.profiles.byName(name) == null) {
-                runCatching { graph.profiles.insert(Profile(name = name, createdAtMillis = 0)) }
-            }
-        }
+        for (name in bundle.profiles) graph.profiles.findOrCreate(name)
 
         // Curation — additive union, keyed by stable identifiers. Count only genuinely new keys
         // (ones we hadn't already curated) so the "Synced N" line means "new to this device".
@@ -271,8 +266,5 @@ class SyncEngine(private val graph: ServiceLocator.Graph) {
         )
     }
 
-    private suspend fun profileIdFor(name: String): Long? {
-        graph.profiles.byName(name)?.let { return it.id }
-        return runCatching { graph.profiles.insert(Profile(name = name, createdAtMillis = 0)) }.getOrNull()
-    }
+    private suspend fun profileIdFor(name: String): Long? = graph.profiles.findOrCreate(name)
 }
