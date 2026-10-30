@@ -16,6 +16,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
@@ -25,6 +26,7 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.flow.shareIn
 
 /** Which Channels a viewer is looking at. Scope decides which Channels appear, never their Qualities. */
@@ -90,6 +92,12 @@ data class LineupChannel(
      * sibling Quality's id that works. [ChannelLineup.guideId] asks the stored guide.
      */
     fun guideId(hasProgrammes: (String) -> Boolean): String? = guideCandidates.firstOrNull(hasProgrammes)
+
+    /** Whether row [rowId] is one of this Channel's Qualities. */
+    internal fun has(rowId: Long): Boolean = qualities.any { it.id == rowId }
+
+    /** This Channel, a Favourite when any of its Qualities is among [starred] row ids. */
+    internal fun starredBy(starred: Set<Long>): LineupChannel = copy(favourite = qualities.any { it.id in starred })
 }
 
 /**
@@ -122,6 +130,7 @@ fun foldCategories(categories: List<Category>): List<CategoryGroup> {
  * The Channels a viewer may see in a scope, with the rules about what one Channel is applied once,
  * here, rather than in each screen's flow.
  */
+@OptIn(ExperimentalCoroutinesApi::class)
 class ChannelLineup(
     private val db: OpenTvDatabase,
     private val favourites: Favourites,
@@ -150,26 +159,35 @@ class ChannelLineup(
      * scope, because which Channel a row joins depends on rows outside it.
      */
     private val browsable: Flow<Catalogue> =
-        combine(channelDao.observe(null, null), locked) { rows, locked -> Catalogue(rows.withoutLocked(locked)) }
-            // One fold for every screen open at once (the guide and Home both want it), off the main thread.
+        combine(channelDao.observeEvery(), locked) { rows, locked -> Catalogue(rows) { it.isShown(locked) } }
+            // One fold for every screen open at once, off the main thread.
             .flowOn(Dispatchers.Default)
             .shareIn(sharing, SharingStarted.WhileSubscribed(SHARE_MILLIS), replay = 1)
 
     /** Every row, hidden and locked ones too: what the channel manager folds. */
-    private val manageable: Flow<Catalogue> = channelDao.observeEvery().map(::Catalogue)
+    private val manageable: Flow<Catalogue> = channelDao.observeEvery().map { Catalogue(it) }
         .flowOn(Dispatchers.Default)
         .shareIn(sharing, SharingStarted.WhileSubscribed(SHARE_MILLIS), replay = 1)
 
-    /** Every row, hidden and locked ones too, of a Channel the active Profile has starred. */
-    suspend fun favouriteRowIds(): Set<Long> {
-        val starred = favourites.channelIds().first()
-        if (starred.isEmpty()) return emptySet()
-        return manageable.first().rowsOfChannelsWith(starred)
-    }
+    /** The scope channel up and down follow: All until a screen says otherwise. */
+    private val zapScope = MutableStateFlow<LineupScope>(LineupScope.All())
 
-    /** The Channels channel up and down step through: All until a screen says otherwise. */
-    @Volatile
-    private var zapScope: LineupScope = LineupScope.All()
+    /** [zapScope]'s Channels, with the scope they're for; kept while the player watches [zapList]. */
+    private val zapped: Flow<Pair<LineupScope, List<LineupChannel>>> =
+        zapScope.flatMapLatest { scope -> channels(scope).map { scope to it } }
+            .shareIn(sharing, SharingStarted.WhileSubscribed(SHARE_MILLIS), replay = 1)
+
+    /**
+     * Every row, hidden and locked ones too, of a Channel the active Profile has starred: what
+     * lights the web manager's stars. Folds only the starred Channels' names, not the catalogue.
+     */
+    suspend fun favouriteRowIds(): Set<Long> {
+        val rows = HashSet<Long>()
+        for (id in favourites.channelIds().first()) {
+            if (id !in rows) rows += channelOf(id, manage = true)?.qualities?.map { it.id } ?: listOf(id)
+        }
+        return rows
+    }
 
     /** The categories' rail, folded by [categoryGroupKey]; locked ones are left out unless [includeLocked]. */
     fun categoryGroups(sourceId: Long? = null, includeLocked: Boolean = false): Flow<List<CategoryGroup>> =
@@ -179,11 +197,22 @@ class ChannelLineup(
         }
 
     fun channels(scope: LineupScope): Flow<List<LineupChannel>> {
+        if (scope is LineupScope.Favourites) {
+            // Folded from just their names' rows: Home shows them on start, and a handful of names
+            // is far cheaper than the whole catalogue.
+            return combine(favourites.channels(), locked, favourites.channelIds(), ::Triple)
+                .mapLatest { (rows, locked, starred) ->
+                    val named = rows.flatMap { channelDao.sameNamed(it) }.distinctBy { it.id }
+                    Catalogue(named) { it.isShown(locked) }
+                        .channelsOf(rows.from(scope.sourceId))
+                        .map { it.starredBy(starred) }
+                }
+        }
         val catalogue = when (scope) {
             is LineupScope.ManageSearch, is LineupScope.ManageGroup -> manageable
             else -> browsable
         }
-        return combine(rowsIn(scope, channelDao, categories, favourites), catalogue, favourites.channelIds()) {
+        return combine(rowsIn(scope, channelDao, categories), catalogue, favourites.channelIds()) {
                 rows,
                 catalogue,
                 starred,
@@ -213,61 +242,68 @@ class ChannelLineup(
      * stale and never one screen's list when another started playback.
      */
     fun zapFrom(scope: LineupScope) {
-        zapScope = scope
+        zapScope.value = scope
     }
 
-    /** The Channels channel up and down step through, in order: the player's channel list. */
-    suspend fun zapChannels(): List<LineupChannel> = channels(zapScope).first()
+    /** The Channels channel up and down step through, in order, as they change: the player's list. */
+    val zapList: Flow<List<LineupChannel>> = zapped.map { it.second }
+
+    /**
+     * The Channels channel up and down step through. When the one [around] is a Quality of isn't
+     * among them (played from a reminder, say, after browsing a category), they're every Channel.
+     */
+    suspend fun zapChannels(around: Long? = null): List<LineupChannel> {
+        val channels = zapped.first { it.first == zapScope.value }.second
+        if (around == null || zapScope.value == LineupScope.All() || channels.any { it.has(around) }) return channels
+        zapFrom(LineupScope.All())
+        return zapped.first { it.first == zapScope.value }.second
+    }
 
     /**
      * The Channel [delta] steps from the one [fromChannelId] is a Quality of, or null past either
      * end. Any Quality zaps from its own Channel, not only the primary.
      */
     suspend fun zap(fromChannelId: Long, delta: Int): LineupChannel? {
-        val channels = zapChannels()
-        val from = channels.indexOfFirst { channel -> channel.qualities.any { it.id == fromChannelId } }
-        if (from < 0) return null
-        return channels.getOrNull(from + delta)
+        val channels = zapChannels(around = fromChannelId)
+        val from = channels.indexOfFirst { it.has(fromChannelId) }
+        return if (from < 0) null else channels.getOrNull(from + delta)
     }
 
     /** [channelOf] as it changes: null while the row is gone, hidden or locked. */
     fun channel(channelId: Long): Flow<LineupChannel?> =
-        combine(browsable, favourites.channelIds()) { catalogue, starred ->
-            catalogue.channelContaining(channelId)?.starredBy(starred)
-        }.distinctUntilChanged()
+        // The count re-emits on any change to the channels table: only this row's names are folded.
+        combine(channelDao.observeVisibleCount(), locked, favourites.channelIds()) { _, _, _ -> }
+            .mapLatest { channelOf(channelId) }
+            .distinctUntilChanged()
 
     /**
      * The Channel [channelId] is a Quality of, or null when it's gone, hidden or locked. With
      * [manage], hidden and locked rows count, as the channel manager shows them.
      */
     suspend fun channelOf(channelId: Long, manage: Boolean = false): LineupChannel? {
+        val row = channelDao.byId(channelId) ?: return null
         val locked = if (manage) emptySet() else locked.first()
-        val row = channelDao.byId(channelId)?.takeUnless { (it.hidden && !manage) || it.isLocked(locked) }
-            ?: return null
         // Only rows of the same name can share its Channel, so the fold needn't see the catalogue.
-        val named = if (row.groupKey.isEmpty()) {
-            listOf(row)
-        } else {
-            channelDao.sameName(
-                ChannelNameNormalizer.nameKeyOf(row.groupKey),
-                includeHidden = manage,
-            ).withoutLocked(locked)
-        }
-        return Catalogue(named).channelContaining(row.id)?.starredBy(favourites.channelIds().first())
+        return Catalogue(channelDao.sameNamed(row)) { manage || it.isShown(locked) }
+            .channelContaining(row.id)
+            ?.starredBy(favourites.channelIds().first())
     }
 
-    private class Catalogue(rows: List<Channel>) {
+    /**
+     * Rows folded into Channels. Which Channel a row joins is decided over every row, hidden and
+     * locked ones too, so the guide and the channel manager agree on it; only [shown] rows are
+     * Qualities.
+     */
+    private class Catalogue(rows: List<Channel>, shown: (Channel) -> Boolean = { true }) {
         private val keyOf = channelKeys(rows)
-        private val qualities: Map<String, List<Channel>> =
-            rows.groupBy { keyOf.getValue(it.id) }.mapValues { (_, group) -> group.sortedWith(BEST_FIRST) }
-
-        fun rowsOfChannelsWith(rowIds: Set<Long>): Set<Long> {
-            val keys = rowIds.mapNotNullTo(HashSet()) { keyOf[it] }
-            return keys.flatMapTo(HashSet()) { key -> qualities.getValue(key).map { it.id } }
-        }
+        private val shownIds = rows.filter(shown).mapTo(HashSet()) { it.id }
+        private val qualities: Map<String, List<Channel>> = rows.filter { it.id in shownIds }
+            .groupBy { keyOf.getValue(it.id) }
+            .mapValues { (_, group) -> group.sortedWith(BEST_FIRST) }
 
         fun channelContaining(rowId: Long): LineupChannel? {
-            val key = keyOf[rowId] ?: return null
+            if (rowId !in shownIds) return null
+            val key = keyOf.getValue(rowId)
             val qualities = qualities.getValue(key)
             return LineupChannel(qualities.first(), qualities, key = key)
         }
@@ -276,7 +312,8 @@ class ChannelLineup(
         fun channelsOf(rows: List<Channel>): List<LineupChannel> {
             val firstRow = LinkedHashMap<String, Channel>()
             for (row in rows) {
-                val key = keyOf[row.id] ?: continue
+                if (row.id !in shownIds) continue
+                val key = keyOf.getValue(row.id)
                 val best = firstRow[key]
                 if (best == null || BEST_FIRST.compare(row, best) < 0) firstRow[key] = row
             }
@@ -291,25 +328,48 @@ class ChannelLineup(
     }
 }
 
+/**
+ * [keys] with each lock saved under a nameless category's old key, its bare id, moved to the key it
+ * has now, `source:id`, on every provider with that id, as the old key locked them all. Run once on
+ * upgrade, so a lock the viewer set doesn't quietly lift.
+ */
+fun migratedLockKeys(keys: Set<String>, categories: List<Category>): Set<String> {
+    val nameless = categories.filter { ChannelNameNormalizer.normalize(it.name).groupKey.isEmpty() }.groupBy { it.id }
+    return keys.flatMapTo(HashSet()) { key -> nameless[key]?.map(::categoryGroupKey) ?: listOf(key) }
+}
+
 /** The rows [scope] shows, in its order, before they're folded into Channels. */
 @OptIn(ExperimentalCoroutinesApi::class)
-private fun rowsIn(
-    scope: LineupScope,
-    channelDao: ChannelDao,
-    categories: Flow<List<Category>>,
-    favourites: Favourites,
-): Flow<List<Channel>> = when (scope) {
-    is LineupScope.All -> channelDao.observe(scope.sourceId, null)
-    is LineupScope.Favourites -> favourites.channels().map { it.from(scope.sourceId) }
-    is LineupScope.Search -> channelDao.search(scope.query)
-    is LineupScope.ManageSearch -> channelDao.searchIncludingHidden(scope.query)
-    is LineupScope.Group -> categories.map { it.idsOf(scope.key, scope.sourceId) }.flatMapLatest { ids ->
-        if (ids.isEmpty()) flowOf(emptyList()) else channelDao.observeInCategories(ids).map { it.from(scope.sourceId) }
+private fun rowsIn(scope: LineupScope, channelDao: ChannelDao, categories: Flow<List<Category>>): Flow<List<Channel>> =
+    when (scope) {
+        is LineupScope.All -> channelDao.observe(scope.sourceId, null)
+        // Folded from their names' rows instead: see ChannelLineup.channels.
+        is LineupScope.Favourites -> flowOf(emptyList())
+        is LineupScope.Search -> channelDao.search(scope.query)
+        is LineupScope.ManageSearch -> channelDao.searchIncludingHidden(scope.query)
+        is LineupScope.Group -> categories.map { it.idsOf(scope.key, scope.sourceId) }.flatMapLatest { ids ->
+            if (ids.isEmpty()) {
+                flowOf(emptyList())
+            } else {
+                channelDao.observeInCategories(ids).map {
+                    it.from(scope.sourceId)
+                }
+            }
+        }
+        is LineupScope.ManageGroup -> categories.map { it.idsOf(scope.key, scope.sourceId) }.flatMapLatest { ids ->
+            if (ids.isEmpty()) {
+                flowOf(
+                    emptyList(),
+                )
+            } else {
+                channelDao.observeInCategoriesIncludingHidden(scope.sourceId, ids)
+            }
+        }
     }
-    is LineupScope.ManageGroup -> categories.map { it.idsOf(scope.key, scope.sourceId) }.flatMapLatest { ids ->
-        if (ids.isEmpty()) flowOf(emptyList()) else channelDao.observeInCategoriesIncludingHidden(scope.sourceId, ids)
-    }
-}
+
+/** Every row, hidden ones too, that could share a Channel with [row]. */
+private suspend fun ChannelDao.sameNamed(row: Channel): List<Channel> =
+    if (row.groupKey.isEmpty()) listOf(row) else sameName(ChannelNameNormalizer.nameKeyOf(row.groupKey))
 
 private fun List<Channel>.from(sourceId: Long?): List<Channel> =
     if (sourceId == null) this else filter { it.sourceId == sourceId }
@@ -318,14 +378,9 @@ private fun List<Channel>.from(sourceId: Long?): List<Channel> =
 private fun List<Category>.idsOf(key: String, sourceId: Long?): List<String> =
     filter { (sourceId == null || it.sourceId == sourceId) && categoryGroupKey(it) == key }.map { it.id }
 
-private fun LineupChannel.starredBy(starred: Set<Long>): LineupChannel =
-    copy(favourite = qualities.any { it.id in starred })
-
-private fun Channel.isLocked(locked: Set<Pair<Long, String>>): Boolean =
-    categoryId != null && (sourceId to categoryId) in locked
-
-private fun List<Channel>.withoutLocked(locked: Set<Pair<Long, String>>): List<Channel> =
-    if (locked.isEmpty()) this else filterNot { it.isLocked(locked) }
+/** Whether a viewer may see this row: not hidden, and not in a [locked] category. */
+private fun Channel.isShown(locked: Set<Pair<Long, String>>): Boolean =
+    !hidden && (categoryId == null || (sourceId to categoryId) !in locked)
 
 /**
  * Which Channel each row belongs to, by row id. Rows share a Channel when they share a name and

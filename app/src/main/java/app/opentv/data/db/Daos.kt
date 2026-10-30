@@ -164,17 +164,13 @@ interface ChannelDao {
     suspend fun byId(id: Long): Channel?
 
     /**
-     * The rows called [nameKey] in any region: `groupKey` is `nameKey` itself, or ends in
-     * `:nameKey`. Hidden ones only with [includeHidden]. What [app.opentv.data.repo.ChannelLineup]
-     * folds to find one row's Channel.
+     * Every row called [nameKey] in any region, hidden ones too: `groupKey` is `nameKey` itself, or
+     * ends in `:nameKey`. What [app.opentv.data.repo.ChannelLineup] folds to find one row's Channel.
+     * A suffix match can't use the groupKey index, so this scans the table; it runs once per lookup,
+     * never per row.
      */
-    @Query(
-        """
-        SELECT * FROM channels
-        WHERE (:includeHidden OR hidden = 0) AND (groupKey = :nameKey OR groupKey LIKE '%:' || :nameKey)
-        """,
-    )
-    suspend fun sameName(nameKey: String, includeHidden: Boolean = false): List<Channel>
+    @Query("SELECT * FROM channels WHERE groupKey = :nameKey OR groupKey LIKE '%:' || :nameKey")
+    suspend fun sameName(nameKey: String): List<Channel>
 
     @Query("SELECT COUNT(*) FROM channels WHERE sourceId = :sourceId")
     suspend fun countForSource(sourceId: Long): Int

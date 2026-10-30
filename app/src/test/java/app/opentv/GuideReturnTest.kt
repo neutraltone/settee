@@ -18,6 +18,7 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.unit.dp
 import app.opentv.data.model.Channel
+import app.opentv.data.repo.LineupChannel
 import app.opentv.ui.ChannelsViewModel
 import app.opentv.ui.channels.ChannelList
 import app.opentv.ui.channels.GuideGrid
@@ -56,13 +57,7 @@ class GuideReturnTest {
 
     private fun row(id: Long, variants: List<Channel> = emptyList()): ChannelsViewModel.Row {
         val primary = channel(id, groupKey = if (variants.isEmpty()) "" else "group$id")
-        return ChannelsViewModel.Row(
-            primary,
-            listOf(primary) + variants,
-            now = null,
-            next = null,
-            programmes = emptyList(),
-        )
+        return ChannelsViewModel.Row(LineupChannel(primary, listOf(primary) + variants))
     }
 
     /** More channels than fit on a TV screen, so the guide has to scroll to reach the later ones. */

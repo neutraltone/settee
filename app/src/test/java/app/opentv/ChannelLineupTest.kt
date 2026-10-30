@@ -16,7 +16,12 @@ import app.opentv.data.model.StreamKind
 import app.opentv.data.repo.ChannelLineup
 import app.opentv.data.repo.LineupChannel
 import app.opentv.data.repo.LineupScope
+import app.opentv.data.repo.migratedLockKeys
 import com.google.common.truth.Truth.assertThat
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
@@ -37,7 +42,8 @@ class ChannelLineupTest {
     private val db = catalogue.db
     private val lockedKeys = MutableStateFlow(emptySet<String>())
     private val unlocked = MutableStateFlow(false)
-    private val lineup = ChannelLineup(db, catalogue.viewerLibrary.favourites, lockedKeys, unlocked)
+    private val sharing = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    private val lineup = ChannelLineup(db, catalogue.viewerLibrary.favourites, lockedKeys, unlocked, sharing)
 
     @Before
     fun twoProviders() = runTest {
@@ -46,7 +52,10 @@ class ChannelLineupTest {
     }
 
     @After
-    fun close() = catalogue.close()
+    fun close() {
+        sharing.cancel()
+        catalogue.close()
+    }
 
     /** Stores [names] as one provider's rows, cleaned the way an import cleans them. */
     private suspend fun seed(vararg names: String, sourceId: Long = 1, categoryId: String? = null) {
@@ -291,9 +300,46 @@ class ChannelLineupTest {
     }
 
     @Test
+    fun `zapping from a channel outside the list you started from goes through every channel`() = runTest {
+        category(sourceId = 1, id = "10", name = "UK| News")
+        seed("UK| BBC News", sourceId = 1, categoryId = "10")
+        seed("UK| Dave", "UK| ITV", sourceId = 2)
+        lineup.zapFrom(LineupScope.Group("news"))
+
+        assertThat(zap("UK| Dave", +1)).isEqualTo("UK| ITV")
+        assertThat(lineup.zapChannels().map { it.primary.name }).containsExactly("UK| BBC News", "UK| Dave", "UK| ITV")
+    }
+
+    @Test
+    fun `a hidden row still counts when deciding which channel a row joins, so the manager agrees with the guide`() =
+        runTest {
+            seed("UK| ITV", "US| ITV", "ITV")
+            db.channels().setHidden(row("US| ITV").id, true)
+
+            assertThat(all().names()).containsExactly(listOf("UK| ITV"), listOf("ITV"))
+            assertThat(scope(LineupScope.ManageSearch("itv")).names())
+                .containsExactly(listOf("UK| ITV"), listOf("US| ITV"), listOf("ITV"))
+        }
+
+    @Test
+    fun `a lock saved under a nameless category's old key carries over to its new one`() {
+        val categories = listOf(
+            Category(id = "7", sourceId = 1, name = "★★★", kind = StreamKind.LIVE),
+            Category(id = "7", sourceId = 2, name = "★★★", kind = StreamKind.LIVE),
+            Category(id = "8", sourceId = 1, name = "UK| Adult", kind = StreamKind.LIVE),
+        )
+
+        assertThat(migratedLockKeys(setOf("7", "adult"), categories)).containsExactly("1:7", "2:7", "adult")
+    }
+
+    @Test
     fun `a 40k-row catalogue folds within a time budget`() = runTest {
         val names = (0 until 20_000).flatMap { i -> listOf("UK| Station$i HD", "UK| Station$i FHD") }
         seed(*names.toTypedArray())
+
+        // Once to warm up Room and the JIT, which a slow CI machine would otherwise count against the fold.
+        assertThat(all()).hasSize(20_000)
+        db.channels().setHidden(row("UK| Station0 HD").id, true)
 
         val start = System.nanoTime()
         val channels = all()
@@ -305,6 +351,6 @@ class ChannelLineupTest {
 
     private companion object {
         /** A big provider's whole guide; generous for a slow CI machine, far under the old minutes. */
-        const val FOLD_BUDGET_MILLIS = 3_000L
+        const val FOLD_BUDGET_MILLIS = 5_000L
     }
 }

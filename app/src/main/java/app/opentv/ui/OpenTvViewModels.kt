@@ -36,7 +36,6 @@ import app.opentv.data.repo.LivePreview
 import app.opentv.data.repo.MediaKey
 import app.opentv.data.repo.MovieVariantGroup
 import app.opentv.data.repo.PersonTitle
-import app.opentv.data.repo.distinctByQuality
 import app.opentv.pairing.ManagerServer
 import app.opentv.sync.NasSync
 import app.opentv.sync.SyncClient
@@ -254,21 +253,24 @@ class ChannelsViewModel @JvmOverloads constructor(
      */
     @androidx.compose.runtime.Immutable
     data class Row(
-        val primary: Channel,
-        /** Every Quality of the Channel, the same wherever it's shown. */
-        val variants: List<Channel>,
-        val now: Programme?,
-        val next: Programme?,
+        val channel: LineupChannel,
+        val now: Programme? = null,
+        val next: Programme? = null,
         /** Every programme for this channel inside the guide window, start-ordered. */
-        val programmes: List<Programme>,
-        /** Whether the active Profile has this logical channel as a Favourite. */
-        val favourite: Boolean = false,
-        val key: Any = primary.id,
+        val programmes: List<Programme> = emptyList(),
     ) {
-        /** The Qualities worth offering as a choice: see [LineupChannel.switchable]. */
-        val switchable: List<Channel> get() = distinctByQuality(variants)
+        val primary: Channel get() = channel.primary
 
-        val channel: LineupChannel get() = LineupChannel(primary, variants, favourite, key.toString())
+        /** Every Quality of the Channel, the same wherever it's shown. */
+        val variants: List<Channel> get() = channel.qualities
+
+        /** The Qualities worth offering as a choice: see [LineupChannel.switchable]. */
+        val switchable: List<Channel> get() = channel.switchable
+
+        /** Whether the active Profile has this Channel as a Favourite. */
+        val favourite: Boolean get() = channel.favourite
+
+        val key: Any get() = channel.key
     }
 
     /**
@@ -312,20 +314,21 @@ class ChannelsViewModel @JvmOverloads constructor(
 
     /** Which Channels the guide shows now; channel up and down follow it from the guide. */
     private val guideScope: Flow<LineupScope> =
-        combine(selectedCategory, favouritesOnly, selectedSource) { category, favs, source ->
-            when {
-                favs -> LineupScope.Favourites(source)
-                category != null -> LineupScope.Group(category, source)
-                else -> LineupScope.All(source)
-            }
-        }.distinctUntilChanged()
+        combine(selectedCategory, favouritesOnly, selectedSource, ::guideScopeOf).distinctUntilChanged()
+
+    private fun guideScopeOf(category: String?, favs: Boolean, source: Long?): LineupScope = when {
+        favs -> LineupScope.Favourites(source)
+        category != null -> LineupScope.Group(category, source)
+        else -> LineupScope.All(source)
+    }
 
     /** From Search, channel up and down go through every Channel rather than the results. */
     fun zapFromAll() = lineup.zapFrom(LineupScope.All())
 
     /** Channel up and down follow the guide's current scope once you play from it. */
     fun zapFromGuide() {
-        viewModelScope.launch { lineup.zapFrom(guideScope.first()) }
+        // Set before the player opens, not in a coroutine that might land after it reads the scope.
+        lineup.zapFrom(guideScopeOf(selectedCategory.value, favouritesOnly.value, selectedSource.value))
     }
 
     /**
@@ -418,19 +421,14 @@ class ChannelsViewModel @JvmOverloads constructor(
                 }
             }
 
-            channel.toRow(
+            Row(
+                channel,
                 now = list.firstOrNull { it.isLiveAt(now) },
                 next = list.firstOrNull { it.startUtcMillis > now },
                 programmes = list,
             )
         }
     }
-
-    private fun LineupChannel.toRow(
-        now: Programme? = null,
-        next: Programme? = null,
-        programmes: List<Programme> = emptyList(),
-    ) = Row(primary, qualities, now, next, programmes, favourite, key)
 
     /** A friendly, size-aware line for the load — a small provider gets a quick word, a huge one
      * gets a "bear with me". Used at start-up so the wait always says what it's doing. */
@@ -493,7 +491,7 @@ class ChannelsViewModel @JvmOverloads constructor(
                 } else {
                     // No EPG here — rows with no now/next. Finding and playing the channel is the
                     // job; guide detail would cost the slow query.
-                    lineup.channels(LineupScope.Search(q)).map { channels -> channels.map { it.toRow() } }
+                    lineup.channels(LineupScope.Search(q)).map { channels -> channels.map { Row(it) } }
                 }
             }
             // Favourites first, then the DAO's order (sortedBy is stable). Done here rather than in
@@ -522,7 +520,7 @@ class ChannelsViewModel @JvmOverloads constructor(
                 if (q.length < 2) {
                     flowOf(emptyList())
                 } else {
-                    lineup.channels(LineupScope.ManageSearch(q)).map { channels -> channels.map { it.toRow() } }
+                    lineup.channels(LineupScope.ManageSearch(q)).map { channels -> channels.map { Row(it) } }
                 }
             }
             .map { rows -> rows.sortedWith(compareBy({ it.primary.hidden }, { !it.favourite })) }
@@ -570,7 +568,7 @@ class ChannelsViewModel @JvmOverloads constructor(
                     flowOf(emptyList())
                 } else {
                     lineup.channels(LineupScope.ManageGroup(key, source)).map { channels ->
-                        channels.map { it.toRow() }
+                        channels.map { Row(it) }
                     }
                 }
             }

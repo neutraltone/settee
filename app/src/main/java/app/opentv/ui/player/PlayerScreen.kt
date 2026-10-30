@@ -181,17 +181,15 @@ fun PlayerScreen(channelId: Long?, onBack: () -> Unit) {
     var channel by remember { mutableStateOf<LineupChannel?>(null) }
     var queue by remember { mutableStateOf<List<PlaybackQueue.Item>>(emptyList()) }
     LaunchedEffect(Unit) {
-        queue = graph.channelLineup.zapChannels().map { channel ->
-            val primary = channel.primary
-            PlaybackQueue.Item(
-                primary.id,
-                primary.shownName,
-                primary.logoUrl,
-                primary.number,
-                channel.qualities.mapTo(HashSet()) {
-                    it.id
-                },
-            )
+        // Settled before watching, so a channel outside the list zaps through every Channel instead.
+        channelId?.let { graph.channelLineup.zapChannels(around = it) }
+        // Watched for as long as the player is open, which keeps the list ready for each zap.
+        graph.channelLineup.zapList.collect { channels ->
+            queue = channels.map { channel ->
+                val primary = channel.primary
+                val qualityIds = channel.qualities.mapTo(HashSet()) { it.id }
+                PlaybackQueue.Item(primary.id, primary.shownName, primary.logoUrl, primary.number, qualityIds)
+            }
         }
     }
     var currentId by remember { mutableStateOf<Long?>(null) }

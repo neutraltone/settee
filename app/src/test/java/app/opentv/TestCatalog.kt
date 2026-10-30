@@ -14,6 +14,10 @@ import app.opentv.data.remote.XtreamApi
 import app.opentv.data.repo.CatalogRepository
 import app.opentv.data.repo.ChannelLineup
 import app.opentv.data.repo.ViewerLibrary
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.runBlocking
 
@@ -41,12 +45,17 @@ class TestCatalog(context: Context, private val clock: () -> Long = { 0L }) {
         settings = AppSettings.get(context),
     )
 
+    /** Where [lineup] keeps its folds; cancelled with the database. */
+    private val sharing = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+
     /** The catalogue's Channels, with no Parental Lock set. */
-    val lineup = ChannelLineup(db, viewerLibrary.favourites, MutableStateFlow(emptySet()), MutableStateFlow(false))
+    val lineup =
+        ChannelLineup(db, viewerLibrary.favourites, MutableStateFlow(emptySet()), MutableStateFlow(false), sharing)
 
     /** Closes the database once the catalogue's background work is done with it. */
     fun close() = runBlocking {
         catalog.awaitBackground()
+        sharing.cancel()
         db.close()
     }
 
