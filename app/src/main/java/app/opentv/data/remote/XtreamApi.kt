@@ -207,14 +207,14 @@ class XtreamApi(
      *
      * The streams list ([movies]) is deliberately lightweight; the heavy fields (backdrop art,
      * cast, director, genre) live behind this per-title call, which the detail screen makes lazily
-     * on open. Every field is best-effort — a panel that omits `info` entirely yields null, not an
-     * error, so the caller can fall back to whatever the list already had.
+     * on open. Every field is best-effort, and a panel that omits `info` or sends it as `[]` yields
+     * all nulls. Null means the panel didn't answer at all, so callers can tell the two apart.
      */
     suspend fun movieInfo(source: Source, streamId: String): VodInfo? = withContext(Dispatchers.IO) {
         val body = runCatching {
             getJson(source, "get_vod_info") { it.addQueryParameter("vod_id", streamId) }
         }.getOrNull() ?: return@withContext null
-        val info = body.jsonObjectOrNull?.get("info").jsonObjectOrNull ?: return@withContext null
+        val info = body.jsonObjectOrNull?.get("info").jsonObjectOrNull ?: JsonObject(emptyMap())
         VodInfo(
             backdropUrl = info.asBackdropUrl("movie_image", "cover_big"),
             cast = info["cast"].asStringOrNull ?: info["actors"].asStringOrNull,
@@ -239,7 +239,7 @@ class XtreamApi(
         val body = runCatching {
             getJson(source, "get_series_info") { it.addQueryParameter("series_id", seriesId) }
         }.getOrNull() ?: return@withContext null
-        val info = body.jsonObjectOrNull?.get("info").jsonObjectOrNull ?: return@withContext null
+        val info = body.jsonObjectOrNull?.get("info").jsonObjectOrNull ?: JsonObject(emptyMap())
         SeriesInfo(
             backdropUrl = info.asBackdropUrl("cover_big", "cover"),
             cast = info["cast"].asStringOrNull ?: info["actors"].asStringOrNull,

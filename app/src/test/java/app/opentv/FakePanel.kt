@@ -29,13 +29,14 @@ val PANEL_SOURCE =
 
 /**
  * An Xtream panel that answers `player_api.php?action=…` with whatever JSON [replies] holds for
- * that action (`get_series_info` can be keyed by series too, as `get_series_info:<id>`), and `[]`
- * otherwise. A reply of `"!"` fails the request, as a panel timing out would.
+ * that action (`get_series_info` and `get_vod_info` can be keyed by title too, as
+ * `get_series_info:<id>`), and `[]` otherwise. A reply of `"!"` fails the request, as a panel timing
+ * out would.
  */
 class FakePanel(vararg initial: Pair<String, String>) {
     val replies = initial.toMap().toMutableMap()
 
-    /** Every `action` (with its series id, where it has one) asked for, in order. */
+    /** Every `action` (with its series or movie id, where it has one) asked for, in order. */
     val asked: MutableList<String> = java.util.Collections.synchronizedList(mutableListOf())
 
     /** Every Stalker `cmd` a link was asked for, in order. */
@@ -63,8 +64,16 @@ class FakePanel(vararg initial: Pair<String, String>) {
         val request = chain.request()
         // A provider's guide has no action, so it answers to its file name instead.
         val guide = request.url.encodedPath.endsWith("xmltv.php")
-        val action = if (guide) "xmltv.php" else request.url.queryParameter("action").orEmpty()
-        val keyed = request.url.queryParameter("series_id")?.let { "$action:$it" }
+        // TMDB shares the client, so it answers to its path, keyed by what was searched for.
+        val tmdb = request.url.host == "api.themoviedb.org"
+        val action = when {
+            guide -> "xmltv.php"
+            tmdb -> request.url.encodedPath
+            else -> request.url.queryParameter("action").orEmpty()
+        }
+        val keyed = listOf("series_id", "vod_id", "query")
+            .firstNotNullOfOrNull { request.url.queryParameter(it) }
+            ?.let { "$action:$it" }
         asked += keyed ?: action
         if (action == "create_link") cmds += request.url.queryParameter("cmd").orEmpty()
         val body = keyed?.let { replies[it] } ?: replies[action] ?: "[]"

@@ -33,10 +33,13 @@ class MovieDetailDatesTest {
         """
         test.panel.replies["get_vod_info"] = """{"info": {"year": "2011"}}"""
         test.syncVod()
+        // The sync's own lookup asks too; this is about what opening the movie adds.
+        test.catalog.awaitBackground()
+        test.panel.asked.clear()
         val id = test.db.movies().all().single().id
 
         repeat(3) { test.catalog.movieDetail(id) }
 
-        assertThat(test.panel.asked.count { it == "get_vod_info" }).isEqualTo(1)
+        assertThat(test.panel.asked.count { it == "get_vod_info:3" }).isEqualTo(1)
     }
 }
