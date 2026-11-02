@@ -216,6 +216,7 @@ class ProfilesTest {
         graph.viewerLibrary.live.record(channel)
         graph.viewerLibrary.favourites.set(channel, favourite = true)
         graph.profileSettings.setSubtitlesOn(true)
+        graph.viewerLibrary.recentSearches.save("bbc")
         graph.settings.setActiveProfile(Profiles.BASE_PROFILE_ID)
         db.seriesDismissals().upsert(SeriesDismissal(profileId, source, "s", 1, lastSeason = 1, lastEpisode = 1))
         db.favourites().insert(Favourite(profileId, StreamKind.MOVIE, "Provider", "m1"))
@@ -266,6 +267,7 @@ class ProfilesTest {
             "series_dismissals",
             "live_playback",
             "favourites",
+            "recent_searches",
             "profile_settings",
             "recordings",
         )

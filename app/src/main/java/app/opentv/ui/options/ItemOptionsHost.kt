@@ -56,6 +56,8 @@ sealed interface OptionsSubject {
     data class OfChannel(val channel: Channel, val variants: List<Channel> = listOf(channel)) : OptionsSubject {
         override val title get() = channel.displayName
     }
+
+    data class OfRecentSearch(override val title: String) : OptionsSubject
 }
 
 /**
@@ -113,6 +115,7 @@ class ItemOptionsViewModel(app: Application) : AndroidViewModel(app) {
                 null -> null
             },
         )
+        is OptionsSubject.OfRecentSearch -> OptionsFor.RecentSearch
     }.options()
 
     fun choose(subject: OptionsSubject, option: ItemOption) {
@@ -125,6 +128,9 @@ class ItemOptionsViewModel(app: Application) : AndroidViewModel(app) {
                     subject.variants.forEach { library.favourites.set(it, favourite) }
                 }
                 is OptionsSubject.OfContinueWatching -> chooseFor(subject.item, option)
+                is OptionsSubject.OfRecentSearch -> if (option == ItemOption.RemoveRecentSearch) {
+                    library.recentSearches.remove(subject.title)
+                }
             }
         }
     }

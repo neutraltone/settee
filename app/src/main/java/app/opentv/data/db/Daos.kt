@@ -24,6 +24,7 @@ import app.opentv.data.model.PlaybackPosition
 import app.opentv.data.model.Profile
 import app.opentv.data.model.ProfileSetting
 import app.opentv.data.model.Programme
+import app.opentv.data.model.RecentSearch
 import app.opentv.data.model.Recording
 import app.opentv.data.model.RecordingStatus
 import app.opentv.data.model.Reminder
@@ -734,6 +735,25 @@ interface SeriesDismissalDao {
     suspend fun upsert(dismissal: SeriesDismissal)
 
     @Query("DELETE FROM series_dismissals WHERE profileId = :profileId")
+    suspend fun deleteFor(profileId: Long)
+}
+
+@Dao
+interface RecentSearchDao {
+    // rowid breaks ties: a search saved twice in one millisecond still has a newest.
+    @Query("SELECT text FROM recent_searches WHERE profileId = :profileId ORDER BY searchedAtMillis DESC, rowid DESC")
+    fun observe(profileId: Long): Flow<List<String>>
+
+    @Query("SELECT text FROM recent_searches WHERE profileId = :profileId ORDER BY searchedAtMillis DESC, rowid DESC")
+    suspend fun forProfile(profileId: Long): List<String>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insert(search: RecentSearch)
+
+    @Query("DELETE FROM recent_searches WHERE profileId = :profileId AND text = :text")
+    suspend fun delete(profileId: Long, text: String)
+
+    @Query("DELETE FROM recent_searches WHERE profileId = :profileId")
     suspend fun deleteFor(profileId: Long)
 }
 

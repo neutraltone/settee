@@ -1214,6 +1214,22 @@ class HomeViewModel @JvmOverloads constructor(
     }
 }
 
+/** The active Profile's Recent Searches, for the search screen. */
+class RecentSearchesViewModel(app: Application) : AndroidViewModel(app) {
+    private val recent = ServiceLocator.get(app).viewerLibrary.recentSearches
+
+    val shown: StateFlow<List<String>> =
+        recent.observe().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    fun save(text: String) {
+        viewModelScope.launch { recent.save(text) }
+    }
+
+    fun clear() {
+        viewModelScope.launch { recent.clear() }
+    }
+}
+
 /**
  * Local viewing profiles. No accounts — just names on this device — with the active one stored in
  * [app.opentv.core.AppSettings] so the whole app agrees on whose watch history is in play.

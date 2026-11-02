@@ -22,9 +22,12 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.text.input.rememberTextFieldState
+import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
@@ -32,16 +35,21 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
@@ -54,7 +62,11 @@ import app.opentv.data.model.Series
 import app.opentv.data.model.shownName
 import app.opentv.data.parser.displayTitle
 import app.opentv.ui.ChannelsViewModel
+import app.opentv.ui.RecentSearchesViewModel
 import app.opentv.ui.VodViewModel
+import app.opentv.ui.options.OptionsSubject
+import app.opentv.ui.options.openOptionsOn
+import app.opentv.ui.options.optionsClickable
 import coil.compose.AsyncImage
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -74,11 +86,13 @@ fun SearchScreen(
     onBack: () -> Unit,
     viewModel: ChannelsViewModel = viewModel(),
     vodViewModel: VodViewModel = viewModel(),
+    recentSearches: RecentSearchesViewModel = viewModel(),
 ) {
     val query = rememberTextFieldState()
     val channelResults by viewModel.searchResults.collectAsState()
     val movieResults by vodViewModel.movieResults.collectAsState()
     val seriesResults by vodViewModel.seriesResults.collectAsState()
+    val recent by recentSearches.shown.collectAsState()
 
     LaunchedEffect(query) {
         snapshotFlow { query.text.toString() }.collect {
@@ -100,6 +114,9 @@ fun SearchScreen(
         onPlayMovie = onPlayMovie,
         onOpenSeries = onOpenSeries,
         onBack = onBack,
+        recentSearches = recent,
+        onResultOpened = recentSearches::save,
+        onClearRecentSearches = recentSearches::clear,
     )
 }
 
@@ -114,10 +131,32 @@ internal fun SearchContent(
     onPlayMovie: (Movie) -> Unit,
     onOpenSeries: (Series) -> Unit,
     onBack: () -> Unit,
+    recentSearches: List<String> = emptyList(),
+    onResultOpened: (String) -> Unit = {},
+    onClearRecentSearches: () -> Unit = {},
 ) {
     val anyResults = channelResults.isNotEmpty() || movieResults.isNotEmpty() || seriesResults.isNotEmpty()
     val searchBox = remember { FocusRequester() }
+    val focusManager = LocalFocusManager.current
+    val typed = query.text.toString()
+    // A chosen Recent Search whose results haven't arrived. They take a moment (the view models
+    // debounce), so the highlight waits in the box; the row it was on has gone by then.
+    var awaitingResultsOf by remember { mutableStateOf<String?>(null) }
+
     LaunchedEffect(Unit) { runCatching { searchBox.requestFocus() } }
+    LaunchedEffect(recentSearches.isEmpty()) {
+        if (recentSearches.isEmpty()) runCatching { searchBox.requestFocus() }
+    }
+    LaunchedEffect(typed, anyResults) {
+        val awaited = awaitingResultsOf ?: return@LaunchedEffect
+        if (typed != awaited) {
+            awaitingResultsOf = null
+        } else if (anyResults) {
+            awaitingResultsOf = null
+            withFrameNanos {}
+            focusManager.moveFocus(FocusDirection.Down)
+        }
+    }
 
     Column(
         Modifier
@@ -140,39 +179,140 @@ internal fun SearchContent(
 
         Spacer(Modifier.height(20.dp))
 
-        val typed = query.text.toString()
         Column(Modifier.fillMaxSize()) {
             when {
+                typed.isBlank() && recentSearches.isNotEmpty() -> RecentSearchList(
+                    recentSearches = recentSearches,
+                    onChoose = { text ->
+                        query.setTextAndPlaceCursorAtEnd(text)
+                        awaitingResultsOf = text
+                        runCatching { searchBox.requestFocus() }
+                    },
+                    onClear = onClearRecentSearches,
+                )
                 typed.isBlank() -> Hint(stringResource(R.string.search_start_hint))
                 typed.trim().length < 2 -> Hint(stringResource(R.string.common_keep_typing))
                 !anyResults -> Hint(stringResource(R.string.search_no_results, typed))
-                else -> LazyColumn(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    if (channelResults.isNotEmpty()) {
-                        item { SectionHeader(stringResource(R.string.common_channels)) }
-                        items(channelResults, key = { "c${it.key}" }) { row ->
-                            SearchResultRow(row = row, onClick = { onPlayChannel(row.primary) })
-                        }
-                    }
-                    if (movieResults.isNotEmpty()) {
-                        item { SectionHeader(stringResource(R.string.nav_movies)) }
-                        items(movieResults, key = { "m${it.id}" }) { movie ->
-                            VodResultRow(movie.displayTitle, movie.posterUrl, movie.year?.toString()) {
-                                onPlayMovie(movie)
-                            }
-                        }
-                    }
-                    if (seriesResults.isNotEmpty()) {
-                        item { SectionHeader(stringResource(R.string.nav_shows)) }
-                        items(seriesResults, key = { "s${it.id}" }) { show ->
-                            VodResultRow(show.displayTitle, show.posterUrl, show.year?.toString()) {
-                                onOpenSeries(show)
-                            }
-                        }
-                    }
+                else -> SearchResults(
+                    channelResults = channelResults,
+                    movieResults = movieResults,
+                    seriesResults = seriesResults,
+                    onPlayChannel = {
+                        onResultOpened(typed)
+                        onPlayChannel(it)
+                    },
+                    onPlayMovie = {
+                        onResultOpened(typed)
+                        onPlayMovie(it)
+                    },
+                    onOpenSeries = {
+                        onResultOpened(typed)
+                        onOpenSeries(it)
+                    },
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun SearchResults(
+    channelResults: List<ChannelsViewModel.Row>,
+    movieResults: List<Movie>,
+    seriesResults: List<Series>,
+    onPlayChannel: (Channel) -> Unit,
+    onPlayMovie: (Movie) -> Unit,
+    onOpenSeries: (Series) -> Unit,
+) {
+    LazyColumn(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        if (channelResults.isNotEmpty()) {
+            item { SectionHeader(stringResource(R.string.common_channels)) }
+            items(channelResults, key = { "c${it.key}" }) { row ->
+                SearchResultRow(row = row, onClick = { onPlayChannel(row.primary) })
+            }
+        }
+        if (movieResults.isNotEmpty()) {
+            item { SectionHeader(stringResource(R.string.nav_movies)) }
+            items(movieResults, key = { "m${it.id}" }) { movie ->
+                VodResultRow(movie.displayTitle, movie.posterUrl, movie.year?.toString()) {
+                    onPlayMovie(movie)
+                }
+            }
+        }
+        if (seriesResults.isNotEmpty()) {
+            item { SectionHeader(stringResource(R.string.nav_shows)) }
+            items(seriesResults, key = { "s${it.id}" }) { show ->
+                VodResultRow(show.displayTitle, show.posterUrl, show.year?.toString()) {
+                    onOpenSeries(show)
                 }
             }
         }
     }
+}
+
+/**
+ * The Profile's Recent Searches, for an empty box. A plain column, not a lazy one: there are ten at
+ * most, and the highlight has to be able to land on any of them when a neighbour is removed.
+ */
+@Composable
+private fun RecentSearchList(recentSearches: List<String>, onChoose: (String) -> Unit, onClear: () -> Unit) {
+    val rows = remember(recentSearches.size) { List(recentSearches.size) { FocusRequester() } }
+    var highlighted by remember { mutableStateOf<Int?>(null) }
+    var previousSize by remember { mutableIntStateOf(recentSearches.size) }
+
+    // Removing the highlighted row would otherwise drop the highlight, leaving the remote nothing to move.
+    LaunchedEffect(recentSearches.size) {
+        val removed = recentSearches.size < previousSize
+        previousSize = recentSearches.size
+        val at = highlighted
+        if (removed && at != null) runCatching { rows[at.coerceAtMost(rows.lastIndex)].requestFocus() }
+    }
+
+    Column(
+        Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        SectionHeader(stringResource(R.string.search_recent_title))
+        recentSearches.forEachIndexed { i, text ->
+            key(text) {
+                RecentSearchRow(
+                    text = text,
+                    onClick = { onChoose(text) },
+                    modifier = Modifier
+                        .focusRequester(rows[i])
+                        .onFocusChanged { if (it.isFocused) highlighted = i },
+                )
+            }
+        }
+        OutlinedButton(onClick = onClear, modifier = Modifier.padding(top = 8.dp)) {
+            Text(stringResource(R.string.search_clear_recent))
+        }
+    }
+}
+
+@Composable
+private fun RecentSearchRow(text: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    var focused by remember { mutableStateOf(false) }
+    Text(
+        text,
+        style = MaterialTheme.typography.titleMedium,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+        modifier = modifier
+            .fillMaxWidth()
+            .onFocusChanged { focused = it.isFocused }
+            .clip(RoundedCornerShape(10.dp))
+            .background(if (focused) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface)
+            .then(
+                if (focused) {
+                    Modifier.border(2.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(10.dp))
+                } else {
+                    Modifier
+                },
+            )
+            .optionsClickable(onClick = onClick, onOptions = openOptionsOn(OptionsSubject.OfRecentSearch(text)))
+            .padding(horizontal = 12.dp, vertical = 10.dp),
+    )
 }
 
 @Composable

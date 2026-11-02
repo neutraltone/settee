@@ -15,6 +15,7 @@ import app.opentv.data.model.Episode
 import app.opentv.data.model.HandMark
 import app.opentv.data.model.Movie
 import app.opentv.data.model.PlaybackPosition
+import app.opentv.data.model.RecentSearch
 import app.opentv.data.model.Series
 import app.opentv.data.model.SeriesDismissal
 import kotlinx.coroutines.CancellationException
@@ -101,6 +102,9 @@ class ViewerLibrary(
 
     /** What the active Profile sets by hand: Watched and Unwatched marks, and Continue Watching removals. */
     val marks = HandMarks(positions, episodes, dismissals, activeProfileId, clock)
+
+    /** The active Profile's Recent Searches. */
+    val recentSearches = RecentSearches(db, activeProfileId, clock)
 
     /** Removing a Profile's watch state and Favourites, for the Profiles module. */
     val profileRemoval = ProfileRemoval(db)
@@ -222,6 +226,47 @@ class ProfileRemoval internal constructor(private val db: OpenTvDatabase) {
         db.seriesDismissals().deleteFor(profileId)
         db.favourites().deleteFor(profileId)
         db.livePlayback().deleteFor(profileId)
+        db.recentSearches().deleteFor(profileId)
+    }
+}
+
+/**
+ * The active Profile's last [MAX] searches that a result was opened from, newest first. Reached as
+ * `viewerLibrary.recentSearches`.
+ */
+class RecentSearches internal constructor(
+    private val db: OpenTvDatabase,
+    private val activeProfileId: StateFlow<Long>,
+    private val clock: () -> Long,
+) {
+    private val dao = db.recentSearches()
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    fun observe(): Flow<List<String>> = activeProfileId.flatMapLatest { dao.observe(it) }
+
+    /**
+     * Saves [typed], moving it to the top if the Profile has it already. Matched here rather than
+     * with SQLite's NOCASE, which only folds ASCII and so would keep "ÉCOLE" and "école" apart.
+     */
+    suspend fun save(typed: String) {
+        val text = typed.trim()
+        if (text.isEmpty()) return
+        val profileId = activeProfileId.value
+        db.withTransaction {
+            dao.forProfile(profileId).filter {
+                it.equals(text, ignoreCase = true)
+            }.forEach { dao.delete(profileId, it) }
+            dao.insert(RecentSearch(profileId, text, clock()))
+            dao.forProfile(profileId).drop(MAX).forEach { dao.delete(profileId, it) }
+        }
+    }
+
+    suspend fun remove(text: String) = dao.delete(activeProfileId.value, text)
+
+    suspend fun clear() = dao.deleteFor(activeProfileId.value)
+
+    private companion object {
+        const val MAX = 10
     }
 }
 

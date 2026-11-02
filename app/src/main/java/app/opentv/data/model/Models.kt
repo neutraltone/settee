@@ -425,6 +425,13 @@ data class LivePlayback(
 data class Favourite(val profileId: Long, val kind: StreamKind, val source: String, val itemId: String)
 
 /**
+ * A search one Profile made and then opened a result from, kept on this device only: it says what
+ * a viewer was after on this box, so sync leaves it behind. Read and written only through ViewerLibrary.
+ */
+@Entity(tableName = "recent_searches", primaryKeys = ["profileId", "text"])
+data class RecentSearch(val profileId: Long, val text: String, val searchedAtMillis: Long)
+
+/**
  * One setting a Profile has chosen (ADR 0002): a row per setting rather than a column per setting,
  * so moving another setting to a Profile needs no schema change. [value] is text, read by
  * ProfileSettings into its type; [updatedAtMillis] decides which device wins in sync. A setting
