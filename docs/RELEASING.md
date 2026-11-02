@@ -29,9 +29,9 @@ Once a release exists release-please ignores `bootstrap-sha`.
 
 release-please opens no release PR until a `feat`, `fix` or `perf` commit lands. To release
 without one, give any commit that reaches `main` a `Release-As: x.y.z` footer (the last line of
-the body, after a blank line); the next push opens a release PR for that version. Merge the PR
-carrying that commit with a merge commit: a squash commit gets the PR title and an empty body,
-which drops the footer.
+the body, after a blank line); the next push opens a release PR for that version. A squash commit
+gets the PR title and an empty body, which drops the footer, so pass it when merging the PR that
+carries the commit: `gh pr merge <number> --squash --body "Release-As: x.y.z"`.
 
 The Downloader short code 6405610 (registered at go.aftvnews.com, see `README.md`) points at
 `releases/latest/download/settee.apk`, so it always serves the newest release and never needs
@@ -41,9 +41,14 @@ changing.
 
 - **Settings → Actions → General → Workflow permissions:** tick "Allow GitHub Actions to create and
   approve pull requests", or release-please can't open its PR.
-- **Settings → General → Pull Requests:** allow squash merging, with the default commit message set
-  to "Pull request title" (otherwise a single-commit PR's commit title is used instead of the
-  checked PR title).
+- **Settings → General → Pull Requests:** allow only squash merging, with the default commit message
+  set to "Pull request title" (otherwise a single-commit PR's commit title is used instead of the
+  checked PR title). A merge commit makes release-please list the change twice, once for the merge
+  and once for the branch's commit.
+- **Settings → Branches → `main`:** require a pull request, with no approvals, and these status
+  checks: `Test and assemble`, `Android Lint`, `ktlint`, `detekt`, `Screenshot tools`, `gitleaks`
+  and `PR title`. Leave out `Screenshots`, which only reports. Don't require branches to be up to
+  date, or parallel PRs keep re-running each other's checks. Admins can bypass all of this.
 - **Checks on the release PR:** a PR opened with the default `GITHUB_TOKEN` is authored by
   `github-actions`, which GitHub treats as a first-time contributor, so its check runs wait for a
   maintainer to approve them. To avoid that, create a fine-grained personal access token for this
