@@ -2,6 +2,29 @@
 
 Settee is based on OpenTV 0.11.8; everything before this is in [OpenTV's changelog](https://github.com/opentvproject/opentv/blob/v0.11.8/CHANGELOG.md).
 
+## [0.4.0](https://github.com/neutraltone/settee/compare/v0.3.0...v0.4.0) (2026-11-02)
+
+
+### Features
+
+* **#20:** search remembers your recent searches, and OK opens the keyboard on Fire TV ([98c9259](https://github.com/neutraltone/settee/commit/98c9259035e5e2cc829a8995ef34119b39295e5d))
+* **#20:** search remembers your recent searches, and OK opens the keyboard on Fire TV ([be91fa4](https://github.com/neutraltone/settee/commit/be91fa4fa1170f489034b7961464e4b8a207cad7)), closes [#20](https://github.com/neutraltone/settee/issues/20)
+
+
+### Bug fixes
+
+* **#106:** a series rule books each airing once, and a provider you add always gets its guide ([7e2bc2e](https://github.com/neutraltone/settee/commit/7e2bc2e151f8dc528ed5d28e3ca22ac803ecbba7))
+* **#106:** a series rule books each airing once, and a provider you add always gets its guide ([443fa53](https://github.com/neutraltone/settee/commit/443fa53e475a0e4a56e3656d14401d315b1fa29d))
+* **#106:** Movies and Shows don't download again right after a refresh, and providers added from your phone get their guide ([b4a86db](https://github.com/neutraltone/settee/commit/b4a86dbee781d5bb98e4e17a4b419364c93237de))
+* **#106:** Movies and Shows don't download again right after a refresh, and providers added from your phone get their guide ([c1bd1f8](https://github.com/neutraltone/settee/commit/c1bd1f836012adc3a6d83ba5727172101339847d))
+* **#107:** playback errors name the video format your device can't play ([0d1e54b](https://github.com/neutraltone/settee/commit/0d1e54b3ce6d74020220352b1976b6f873efbfda))
+* **#107:** playback errors name the video format your device can't play ([c10c58f](https://github.com/neutraltone/settee/commit/c10c58f7e50f84f55005878a35ebd2ac5f788136))
+* **#108:** the seek bar shows where you are, and reaching it no longer moves the film ([61b2b06](https://github.com/neutraltone/settee/commit/61b2b062778476cad6261b24c1cb7d7ecdc12a01))
+* **#108:** the seek bar shows where you are, and reaching it no longer moves the film ([62a2d73](https://github.com/neutraltone/settee/commit/62a2d738b0914bdd73bf34c83015e28e35f91b08))
+* **#110:** live previews stay silent when they're meant to be muted ([25a7a82](https://github.com/neutraltone/settee/commit/25a7a82e86a02fca064fe98ef2b5c919f9b1fa59))
+* **#110:** live previews stay silent when they're meant to be muted ([bf81c53](https://github.com/neutraltone/settee/commit/bf81c53d6758d6c7c6b17888cfd466f763cfadc2))
+* **#111:** Recently Released Movies fills in without opening a movie, and only shows the last 12 months ([#122](https://github.com/neutraltone/settee/issues/122)) ([c0df6f6](https://github.com/neutraltone/settee/commit/c0df6f608181116c5b2c413be77797e036e7983c))
+
 ## [0.3.0](https://github.com/neutraltone/settee/compare/v0.2.0...v0.3.0) (2026-10-30)
 
 
