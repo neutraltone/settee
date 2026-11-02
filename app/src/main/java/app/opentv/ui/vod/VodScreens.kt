@@ -100,7 +100,7 @@ fun MoviesScreen(
     val sources by viewModel.sources.collectAsState()
     val selectedSource by viewModel.selectedVodSource.collectAsState()
 
-    // Pull the movie library the first time this tab is opened, not at login; refresh the computed
+    // Pull the movie library when this tab is opened if it's out of date, not at login; refresh the computed
     // home rows (recommended, by-genre) on open too — cheap, and covers a library already on disk.
     LaunchedEffect(Unit) {
         if (hasSources) viewModel.ensureVodLoaded()

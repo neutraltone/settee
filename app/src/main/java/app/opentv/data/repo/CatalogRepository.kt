@@ -642,35 +642,8 @@ class CatalogRepository(
             .onFailure { Log.w(TAG, "Episode fetch failed for series $seriesId", it) }
     }
 
-    /**
-     * Full catalogue: live channels, then movies and series. Used by the periodic worker and by a
-     * manual refresh, where there's no user staring at a spinner. The initial add takes the faster
-     * [syncLive] + background [syncVod] path instead, so the guide appears without waiting for a
-     * 40,000-title VOD list.
-     */
-    suspend fun sync(source: Source, nowUtcMillis: Long): SyncResult = withContext(Dispatchers.IO) {
-        // Skip fetching a content type the user has switched off — that's the whole speed-up.
-        // Live is gated here (not in syncLive) so onboarding's direct syncLive still loads channels.
-        // Already-synced rows are left untouched: turning a type back on and refreshing restores it.
-        val live =
-            if (settings.liveEnabled.value) {
-                syncLive(source, nowUtcMillis)
-            } else {
-                SyncResult.Success(0, 0, 0)
-            }
-        if (live is SyncResult.Success && source.kind == SourceKind.XTREAM) {
-            val updated = runCatching { syncXtreamVod(source, nowUtcMillis) }
-                .onFailure { Log.w(TAG, "VOD sync failed for source ${source.id}", it) }
-                .getOrDefault(emptyList())
-            // Waited for rather than launched so sources take turns; it is a handful of calls,
-            // next to the EPG a manual refresh waits for anyway.
-            viewerLibrary.newEpisodes.seriesUpdated(updated) { ensureEpisodes(source, it.seriesId, nowUtcMillis) }
-        }
-        live
-    }
-
-    /** Live channels only — the fast path so the guide can show before VOD and the guide load. */
-    suspend fun syncLive(source: Source, nowUtcMillis: Long): SyncResult = withContext(Dispatchers.IO) {
+    /** Live channels only: the first thing a new provider loads, so the viewer sees it working. */
+    suspend fun fetchLive(source: Source, nowUtcMillis: Long): SyncResult = withContext(Dispatchers.IO) {
         try {
             when (source.kind) {
                 SourceKind.XTREAM -> syncXtreamLive(source, nowUtcMillis)
@@ -685,21 +658,40 @@ class CatalogRepository(
         }
     }
 
-    /** Movies + series — best-effort, meant to run in the background so a huge VOD list never
-     * blocks live TV. Silent on failure: an account with no VOD is normal, not an error. */
-    suspend fun syncVod(source: Source, nowUtcMillis: Long) = withContext(Dispatchers.IO) {
-        runCatching { if (source.kind == SourceKind.XTREAM) syncXtreamVod(source, nowUtcMillis) else emptyList() }
-            .onFailure { Log.w(TAG, "VOD sync failed for source ${source.id}", it) }
-            // The stored update times have moved now, so a later refresh wouldn't see these again.
-            // Launched, since this is the sync "Loading movies & shows…" waits on.
-            .onSuccess { updated ->
-                background.launch {
-                    viewerLibrary.newEpisodes.seriesUpdated(updated) {
-                        ensureEpisodes(source, it.seriesId, nowUtcMillis)
-                    }
-                }
+    /** What [fetchVod] came back with. */
+    data class VodFetch(
+        /**
+         * False if a list couldn't be downloaded or nothing came back at all, so it's worth trying
+         * again soon. A panel having a bad moment can answer with an error object, which reads as no
+         * titles, and that mustn't leave Movies and Shows empty for hours.
+         */
+        val succeeded: Boolean,
+        /** The shows the provider updated since the last fetch, for [detectNewEpisodes]. */
+        val updatedSeries: List<Series>,
+    )
+
+    /**
+     * An Xtream provider's movies and shows, whichever of them are asked for. Never throws: an account with no VOD is
+     * normal, and a failure here must never cost the viewer their channels.
+     */
+    suspend fun fetchVod(source: Source, nowUtcMillis: Long, movies: Boolean, shows: Boolean): VodFetch =
+        withContext(Dispatchers.IO) {
+            try {
+                syncXtreamVod(source, nowUtcMillis, movies, shows)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.w(TAG, "VOD sync failed for source ${source.id}", e)
+                VodFetch(false, emptyList())
             }
-    }
+        }
+
+    /**
+     * Fetches the episodes of [updated] shows, so a Profile caught up on one sees its New Episode.
+     * The stored update times have already moved, so a later fetch would never see these shows again.
+     */
+    suspend fun detectNewEpisodes(source: Source, updated: List<Series>, nowUtcMillis: Long) =
+        viewerLibrary.newEpisodes.seriesUpdated(updated) { ensureEpisodes(source, it.seriesId, nowUtcMillis) }
 
     private suspend fun syncXtreamLive(source: Source, nowUtcMillis: Long): SyncResult {
         // Authenticate first so a wrong password produces a clear message rather than
@@ -726,7 +718,7 @@ class CatalogRepository(
      * Stalker/Ministra live sync. Mirrors [syncXtreamLive] but the channels it stores carry a
      * [Channel.cmd] instead of a directly-playable URL — [PlaybackSources] mints the real URL at
      * play time. The handshake happens inside [StalkerApi] on first call; a bad MAC or URL throws
-     * here with a clear message, caught by [syncLive].
+     * here with a clear message, caught by [fetchLive].
      */
     private suspend fun syncStalkerLive(source: Source, nowUtcMillis: Long): SyncResult {
         val liveCategories = stalkerApi.liveCategories(source)
@@ -744,39 +736,31 @@ class CatalogRepository(
         return SyncResult.Success(channels.size, 0, 0)
     }
 
-    /** Returns the series the provider updated since the last sync, for New Episode detection. */
-    private suspend fun syncXtreamVod(source: Source, nowUtcMillis: Long): List<Series> {
+    private suspend fun syncXtreamVod(
+        source: Source,
+        nowUtcMillis: Long,
+        moviesOn: Boolean,
+        seriesOn: Boolean,
+    ): VodFetch {
         // VOD is optional: plenty of accounts have live TV only, and a 404 on get_vod_streams
         // must not cost the user their channel list. Movies and series are gated independently so
         // a user who only turned off, say, Series still gets their movie library refreshed.
-        val moviesOn = settings.moviesEnabled.value
-        val seriesOn = settings.seriesEnabled.value
-        if (!moviesOn && !seriesOn) return emptyList()
-
         val movieCategories =
             if (moviesOn) {
                 runCatching { api.movieCategories(source) }.getOrDefault(emptyList())
             } else {
                 emptyList()
             }
-        val movies =
-            if (moviesOn) {
-                runCatching { api.movies(source) }.getOrDefault(emptyList())
-            } else {
-                emptyList()
-            }
+        val movieList = if (moviesOn) runCatching { api.movies(source) } else Result.success(emptyList())
+        val movies = movieList.getOrDefault(emptyList())
         val seriesCategories =
             if (seriesOn) {
                 runCatching { api.seriesCategories(source) }.getOrDefault(emptyList())
             } else {
                 emptyList()
             }
-        val series =
-            if (seriesOn) {
-                runCatching { api.series(source) }.getOrDefault(emptyList())
-            } else {
-                emptyList()
-            }
+        val seriesList = if (seriesOn) runCatching { api.series(source) } else Result.success(emptyList())
+        val series = seriesList.getOrDefault(emptyList())
 
         if (movieCategories.isNotEmpty() || seriesCategories.isNotEmpty()) {
             categoryDao.upsertAll(movieCategories + seriesCategories)
@@ -800,8 +784,11 @@ class CatalogRepository(
                     .onFailure { Log.w(TAG, "Air dates failed for source ${source.id}", it) }
             }
         }
-        // A show seen for the first time has nobody caught up on it, so only ones that moved.
-        return merged.filter { it.addedMillis > (stored[it.seriesId]?.addedMillis ?: Long.MAX_VALUE) }
+        return VodFetch(
+            succeeded = movieList.isSuccess && seriesList.isSuccess && (movies.isNotEmpty() || series.isNotEmpty()),
+            // A show seen for the first time has nobody caught up on it, so only ones that moved.
+            updatedSeries = merged.filter { it.addedMillis > (stored[it.seriesId]?.addedMillis ?: Long.MAX_VALUE) },
+        )
     }
 
     /** This freshly fetched movie in place of [old], keeping whatever it lacks that [old] had. */

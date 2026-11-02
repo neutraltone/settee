@@ -30,6 +30,12 @@ _Avoid_: Variant (in user-facing text), feed
 Categories hidden on this device, for every Profile on it, from everywhere viewers browse and play, but not from the management screens. A PIN guards the setting; entering it shows them until the app closes.
 _Avoid_: Hidden channels (that's the channel manager's per-channel hide), parental controls
 
+## Providers
+
+**Catalogue Refresh**:
+Fetching a provider's channels, movies, shows and guide again and merging them into what's on the device. It never wipes what the viewer set: hidden channels, custom names, Favourites and progress all carry across. Runs every six hours, when the viewer asks, when a provider is added, and when Movies or Shows is opened and that provider's titles are more than 12 hours old.
+_Avoid_: Sync (that's between the viewer's devices), reload, update
+
 ## Watch progress
 
 **Watched**:

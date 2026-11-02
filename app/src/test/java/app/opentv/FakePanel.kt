@@ -31,13 +31,18 @@ class FakePanel(vararg initial: Pair<String, String>) {
     /** Every Stalker `cmd` a link was asked for, in order. */
     val cmds = mutableListOf<String>()
 
+    /** Runs on each request before it's answered, so a test can hold a download open. */
+    @Volatile var onRequest: (action: String) -> Unit = {}
+
     val http: OkHttpClient = OkHttpClient.Builder().addInterceptor { chain ->
         val request = chain.request()
-        val action = request.url.queryParameter("action").orEmpty()
+        val isGuide = request.url.encodedPath.endsWith("xmltv.php")
+        val action = if (isGuide) GUIDE else request.url.queryParameter("action").orEmpty()
         val keyed = request.url.queryParameter("series_id")?.let { "$action:$it" }
-        asked += keyed ?: action
+        synchronized(asked) { asked += keyed ?: action }
         if (action == "create_link") cmds += request.url.queryParameter("cmd").orEmpty()
-        val body = keyed?.let { replies[it] } ?: replies[action] ?: "[]"
+        onRequest(action)
+        val body = keyed?.let { replies[it] } ?: replies[action] ?: if (isGuide) ONE_PROGRAMME else "[]"
         if (body == "!") throw java.io.IOException("Panel timed out")
         Response.Builder()
             .request(request)
@@ -47,6 +52,15 @@ class FakePanel(vararg initial: Pair<String, String>) {
             .body(body.toResponseBody("application/json".toMediaType()))
             .build()
     }.build()
+
+    companion object {
+        /** What [asked] records for the panel's XMLTV guide, which has no `action`. */
+        const val GUIDE = "xmltv"
+
+        // A feed with no programmes at all counts as failed.
+        private const val ONE_PROGRAMME = """<tv><programme start="20260101000000 +0000"
+            stop="20260101010000 +0000" channel="one"><title>News</title></programme></tv>"""
+    }
 }
 
 /** A Stalker portal at a placeholder address and MAC, for [FakePanel] to answer (`handshake`, `create_link`). */

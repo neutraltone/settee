@@ -507,6 +507,37 @@
         <item quantity="other">%1$d min left</item>
     </plurals>
 
+    <!-- ============================ Catalogue Refresh ============================ -->
+    <string name="refresh_running">Refreshing…</string>
+    <string name="refresh_saving_provider">Saving source…</string>
+    <string name="refresh_save_failed">Could not save source.</string>
+    <string name="refresh_loading_channels">Loading channels…</string>
+    <string name="refresh_building_guide">Building the TV guide…</string>
+    <string name="refresh_loading_vod">Loading movies &amp; shows…</string>
+    <plurals name="refresh_channels">
+        <item quantity="one">Refreshed %1$d channel</item>
+        <item quantity="other">Refreshed %1$d channels</item>
+    </plurals>
+    <plurals name="refresh_problems">
+        <item quantity="one">%1$d problem</item>
+        <item quantity="other">%1$d problems</item>
+    </plurals>
+    <string name="refresh_done">%1$s, guide matched %2$d of %3$d.</string>
+    <string name="refresh_done_with_problems">%1$s, %2$s — see Guide settings.</string>
+    <plurals name="refresh_provider_loaded">
+        <item quantity="one">Loaded %1$d channel. The guide is loading in the background; Movies and Shows load when you open them.</item>
+        <item quantity="other">Loaded %1$d channels. The guide is loading in the background; Movies and Shows load when you open them.</item>
+    </plurals>
+    <string name="refresh_guide_ready">Guide ready — matched %1$d of %2$d channels.</string>
+    <string name="refresh_guide_unmatched">Channels ready. No guide data matched yet — add a free guide under Guide settings.</string>
+    <string name="epg_status_downloading">Downloading guides…</string>
+    <string name="epg_status_matched">Guide matched %1$d of %2$d channels</string>
+    <string name="epg_status_with_failures">%1$s · %2$s</string>
+    <plurals name="epg_status_feeds_failed">
+        <item quantity="one">%1$d feed failed</item>
+        <item quantity="other">%1$d feeds failed</item>
+    </plurals>
+
     <!-- ============================ Reminder notification ============================ -->
     <string name="reminder_starting_now">Starting now on %1$s</string>
     <string name="reminder_watch_now">Watch now</string>

@@ -11,6 +11,7 @@ import app.opentv.data.remote.StalkerApi
 import app.opentv.data.remote.StremioClient
 import app.opentv.data.remote.XtreamApi
 import app.opentv.data.repo.CatalogRepository
+import app.opentv.data.repo.CatalogueRefresh
 import app.opentv.data.repo.ChannelLineup
 import app.opentv.data.repo.EpgRepository
 import app.opentv.data.repo.PlaybackSources
@@ -22,6 +23,9 @@ import app.opentv.data.repo.SourceRepository
 import app.opentv.data.repo.ViewerLibrary
 import app.opentv.recording.RecordingEngine
 import java.util.concurrent.TimeUnit
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import okhttp3.OkHttpClient
 
 /**
@@ -129,6 +133,18 @@ object ServiceLocator {
                 sourceDao = database.sources(),
                 api = xtreamApi,
                 http = httpClient,
+            )
+        }
+
+        /** Everything that fetches a catalogue or guide again asks here; see [CatalogueRefresh]. */
+        val catalogueRefresh: CatalogueRefresh by lazy {
+            CatalogueRefresh(
+                catalog = catalogRepository,
+                guide = epgRepository,
+                rescanSeriesRules = recordingEngine::rescanSeriesRules,
+                settings = settings,
+                clock = System::currentTimeMillis,
+                scope = CoroutineScope(SupervisorJob() + Dispatchers.IO),
             )
         }
 

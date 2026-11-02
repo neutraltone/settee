@@ -12,7 +12,9 @@ import app.opentv.data.db.OpenTvDatabase
 import app.opentv.data.remote.StalkerApi
 import app.opentv.data.remote.XtreamApi
 import app.opentv.data.repo.CatalogRepository
+import app.opentv.data.repo.CatalogueRefresh
 import app.opentv.data.repo.ChannelLineup
+import app.opentv.data.repo.EpgRepository
 import app.opentv.data.repo.ViewerLibrary
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -52,6 +54,29 @@ class TestCatalog(context: Context, private val clock: () -> Long = { 0L }) {
     val lineup =
         ChannelLineup(db, viewerLibrary.favourites, MutableStateFlow(emptySet()), MutableStateFlow(false), sharing)
 
+    /** A [CatalogueRefresh] over this catalogue and a real guide, downloading in [scope]. */
+    fun catalogueRefresh(
+        scope: CoroutineScope,
+        settings: AppSettings,
+        clock: () -> Long = this.clock,
+        rescanSeriesRules: suspend () -> Unit = {},
+    ) = CatalogueRefresh(
+        catalog = catalog,
+        guide = EpgRepository(
+            programmeDao = db.programmes(),
+            feedDao = db.epgFeeds(),
+            aliasDao = db.epgAliases(),
+            channelDao = db.channels(),
+            sourceDao = db.sources(),
+            api = XtreamApi(panel.http),
+            http = panel.http,
+        ),
+        rescanSeriesRules = rescanSeriesRules,
+        settings = settings,
+        clock = clock,
+        scope = scope,
+    )
+
     /** Closes the database once the catalogue's background work is done with it. */
     fun close() = runBlocking {
         catalog.awaitBackground()
@@ -62,6 +87,6 @@ class TestCatalog(context: Context, private val clock: () -> Long = { 0L }) {
     /** Saves [PANEL_SOURCE] and syncs its movies and shows from the panel's current replies. */
     suspend fun syncVod() {
         db.sources().insert(PANEL_SOURCE)
-        catalog.syncVod(PANEL_SOURCE, nowUtcMillis = 0)
+        catalog.fetchVod(PANEL_SOURCE, nowUtcMillis = 0, movies = true, shows = true)
     }
 }

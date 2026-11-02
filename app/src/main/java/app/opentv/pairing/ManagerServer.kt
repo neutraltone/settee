@@ -12,7 +12,9 @@ import app.opentv.data.model.Source
 import app.opentv.data.model.SourceKind
 import app.opentv.data.model.shownName
 import app.opentv.data.repo.CatalogRepository
+import app.opentv.data.repo.CatalogueRefresh
 import app.opentv.data.repo.ChannelLineup
+import app.opentv.data.repo.RefreshTrigger
 import app.opentv.data.repo.SourceRepository
 import app.opentv.recording.SmbClient
 import app.opentv.recording.SmbConfig
@@ -68,6 +70,7 @@ class ManagerServer(
     private val settings: AppSettings,
     private val sourceRepository: SourceRepository,
     private val lineup: ChannelLineup,
+    private val refresh: CatalogueRefresh,
 ) {
 
     data class Session(
@@ -394,7 +397,7 @@ class ManagerServer(
     /**
      * `POST /source {kind,name,url,username?,password?,mac?}` → save the provider and pull its live
      * channels, so the catalogue fills without anyone typing a server address on the TV remote.
-     * Mirrors the on-device Add-source screen: save, then load live channels first.
+     * Same as the on-device Add-source screen: channels now, the guide and series rules after.
      */
     private fun handleAddSource(output: OutputStream, body: String) {
         val draft = runCatching { json.decodeFromString(SourceReq.serializer(), body) }.getOrNull()?.toDraftOrNull()
@@ -410,10 +413,9 @@ class ManagerServer(
             val id = sourceRepository.save(draft)
             val saved = sourceRepository.byId(id)
                 ?: return@runBlocking AddResultDto(ok = false, error = "Could not save the source.")
-            when (val r = catalog.syncLive(saved, System.currentTimeMillis())) {
-                is CatalogRepository.SyncResult.Success -> AddResultDto(ok = true, channels = r.channelCount)
-                is CatalogRepository.SyncResult.Failed -> AddResultDto(ok = false, error = r.reason)
-            }
+            val outcome = refresh.refresh(RefreshTrigger.ProviderAdded(saved))
+            outcome.failure?.let { AddResultDto(ok = false, error = it) }
+                ?: AddResultDto(ok = true, channels = outcome.channels)
         }
         writeJson(output, AddResultDto.serializer(), result)
     }

@@ -13,8 +13,8 @@ app/src/main/java/app/opentv/
 │   ├── db/         Room database and DAOs
 │   ├── remote/     XtreamApi — the provider panel client
 │   ├── parser/     M3uParser, XmltvParser — pure, streaming, heavily tested
-│   ├── repo/       SourceRepository, CatalogRepository, EpgRepository
-│   └── work/       SyncWorker — periodic background refresh
+│   ├── repo/       SourceRepository, CatalogRepository, EpgRepository, CatalogueRefresh
+│   └── work/       SyncWorker — runs a Catalogue Refresh in the background
 ├── player/         PlayerController, PlaybackErrors
 └── ui/             Compose screens and view models
 ```
@@ -101,16 +101,38 @@ This is why `M3uParser` works so hard to produce a **stable** `streamId` for pla
 every refresh looks like a completely new set of channels, and the user's hidden channels and
 ordering silently vanish.
 
+### One module decides what a refresh fetches
+
+Every trigger asks `CatalogueRefresh`, saying which trigger it is; `CatalogRepository` and
+`EpgRepository` only fetch and merge. It exists because seven separate copies of the steps had
+drifted apart. Three decisions live there and are easy to undo by going around it:
+
+- **Freshness is per provider, and every fetch records it** (`AppSettings.vodFetchedAtMillis`). A
+  single stamp meant a provider added within 12 hours looked fresh, and a stamp only the Movies tab
+  wrote meant opening Movies after a refresh downloaded everything again. Only a fetch that really
+  succeeded and found titles counts, so a failure tries again on the next open.
+- **One download at a time per provider.** A second request waits for the running one and shares
+  its result, then fetches only what that one didn't cover. Downloads run in the module's scope, not
+  the caller's, so a screen closing can't cancel something another caller is waiting on. Joining has
+  limits: a provider saved with new details doesn't join a download using the old ones, and a new
+  provider or Guide settings doesn't join a guide pass that read its feed list before the change.
+  Each caller decides for itself whether to wait for the New Episode detection a download started.
+- **The switches apply to every trigger**, except that adding a provider always loads its channels,
+  so the viewer can see straight away whether the login works.
+
+Manual refreshes run as one-off work (`SyncWorker`), and screens show `CatalogueRefresh.status`
+rather than running the refresh themselves, so leaving the screen doesn't stop it.
+
 ### Episodes load lazily, with one exception
 
 A series' episodes are fetched when it is opened (`CatalogRepository.ensureEpisodes`), never
-during catalogue sync: one `get_series_info` per show across a 10,000-show catalogue would take
+during a Catalogue Refresh: one `get_series_info` per show across a 10,000-show catalogue would take
 hours. The exception is New Episode detection. Whenever the catalogue's shows are merged, every
 show whose `last_modified` moved forward goes to `ViewerLibrary.newEpisodes`, which fetches the
 episodes only of shows some Profile on the device is caught up on, one at a time. That is normally
-a handful of calls, not the catalogue. A refresh (the worker, or Refresh in settings) waits for it.
-The Movies and Shows re-sync as the app opens launches it instead, so its spinner isn't held, but
-can't skip it: once the stored times have moved, a later refresh would never see that show again.
+a handful of calls, not the catalogue. A refresh nobody is watching (the worker) waits for it.
+Opening Movies or Shows launches it instead, so its spinner isn't held, but can't skip it: once the
+stored times have moved, a later refresh would never see that show again.
 
 Episode lists carry no time the provider added each episode, so each row records when this device
 first stored it (`firstSeenMillis`). A New Episode is an Up Next first seen after the Profile
