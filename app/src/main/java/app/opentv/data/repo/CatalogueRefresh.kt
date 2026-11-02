@@ -15,6 +15,7 @@ import java.util.concurrent.atomic.AtomicLong
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -97,7 +98,7 @@ class CatalogueRefresh(
 
     private val providerTurns = ConcurrentHashMap<Long, Mutex>()
     private val liveDownloads = OneAtATime<CatalogRepository.SyncResult>()
-    private val vodDownloads = OneAtATime<Unit>()
+    private val vodDownloads = OneAtATime<Job?>()
 
     /** Serialises the guide: feeds are shared by every provider, so overlapping passes download twice. */
     private val guideLock = Mutex()
@@ -136,17 +137,16 @@ class CatalogueRefresh(
         }
     }
 
-    suspend fun refresh(trigger: Trigger.ProviderAdded): Outcome.Added {
-        val result = live(trigger.source)
-        val outcome = when (result) {
+    // In the module's scope: whoever asked leaving must not cost the provider its guide and rescan.
+    suspend fun refresh(trigger: Trigger.ProviderAdded): Outcome.Added = scope.async {
+        // Before anything else, so a login that fails doesn't leave another account's record behind.
+        settings.setVodFetchedAtMillis(trigger.source.id, 0L)
+        val outcome = when (val result = live(trigger.source)) {
             is CatalogRepository.SyncResult.Failed -> Outcome.AddFailed(result.reason)
             is CatalogRepository.SyncResult.Success -> Outcome.ChannelsLoaded(result.channelCount)
         }
         _state.update { it.copy(last = outcome) }
         if (outcome is Outcome.ChannelsLoaded) {
-            // Saving an existing provider may have pointed it at another account, whose titles
-            // what's recorded says nothing about.
-            settings.setVodFetchedAtMillis(trigger.source.id, 0L)
             scope.launch {
                 marking(guideBuilds, { copy(buildingGuide = it) }) {
                     runCatching { syncGuide(force = false) }
@@ -156,8 +156,8 @@ class CatalogueRefresh(
                 rescan()
             }
         }
-        return outcome
-    }
+        outcome
+    }.await()
 
     @Suppress("UnusedParameter") // The trigger is how a caller says what it is, as with the others.
     suspend fun refresh(trigger: Trigger.OpenedMoviesOrShows): Outcome.VodChecked {
@@ -203,16 +203,42 @@ class CatalogueRefresh(
         liveDownloads.share(source) { catalog.fetchLive(source, clock()) }
 
     private suspend fun vod(source: Source, waitForNewEpisodes: Boolean) {
-        vodDownloads.share(source) {
+        val detecting = vodDownloads.share(source) {
             val now = clock()
-            val fetched = runCatching { catalog.fetchVod(source, now, waitForNewEpisodes) }.getOrElse { e ->
+            val vod = runCatching {
+                // A refresh's list of providers can be minutes old by the time this one's turn comes,
+                // and the old account's titles would overwrite the new one's.
+                if (!catalog.holdsAccountOf(source)) return@share null
+                catalog.fetchVod(source, now)
+            }.getOrElse { e ->
                 if (e is CancellationException) throw e
                 Log.w(TAG, "Movies and shows failed for source ${source.id}", e)
-                false
+                return@share null
             }
             // Recorded by whichever refresh fetched, so opening Movies straight after doesn't repeat it.
-            if (fetched) settings.setVodFetchedAtMillis(source.id, now)
+            // Failing to must not cost the shows below their one chance at New Episode detection.
+            runCatching {
+                if (vod.complete) {
+                    settings.setVodFetchedAtMillis(source.id, now)
+                    // After the write, not before: saving a provider then clears this record, so
+                    // whichever order the two land in, a new account's titles never look fresh.
+                    if (!catalog.holdsAccountOf(source)) settings.setVodFetchedAtMillis(source.id, 0L)
+                }
+            }.onFailure { e ->
+                if (e is CancellationException) throw e
+                Log.w(TAG, "Couldn't record the movies and shows for source ${source.id}", e)
+            }
+            if (vod.updated.isEmpty()) return@share null
+            scope.launch {
+                // Its panel requests take the provider's turn like any other download.
+                providerTurns.getValue(source.id).withLock {
+                    runCatching { catalog.detectNewEpisodes(source, vod.updated, now) }
+                        .onFailure { Log.w(TAG, "New Episode detection failed for source ${source.id}", it) }
+                }
+            }
         }
+        // Each caller's own rule, whoever started the download they're sharing.
+        if (waitForNewEpisodes) detecting?.join()
     }
 
     /**
@@ -246,9 +272,8 @@ class CatalogueRefresh(
         private val running = HashMap<Source, Deferred<T>>()
 
         suspend fun share(source: Source, fetch: suspend () -> T): T {
-            // Only what reaches the provider decides: changed login details need their own download,
-            // while the sync time moving on doesn't.
-            val key = source.copy(name = "", enabled = true, lastCatalogSyncMillis = 0L)
+            // Changed login details need their own download.
+            val key = source.details()
             val turns = providerTurns.getOrPut(source.id) { Mutex() }
             val download = synchronized(running) {
                 running.getOrPut(key) {
@@ -269,4 +294,16 @@ class CatalogueRefresh(
         const val TAG = "CatalogueRefresh"
         const val VOD_FRESH_MILLIS = 12L * 60 * 60 * 1000
     }
+}
+
+/** Only what reaches the provider: the name and the sync time moving on change nothing there. */
+private fun Source.details() = copy(name = "", enabled = true, lastCatalogSyncMillis = 0L)
+
+/** Whether [source] is still enabled with the login it was read with; a new live format is the same account. */
+private suspend fun CatalogRepository.holdsAccountOf(source: Source) = enabledSources().any {
+    it.id == source.id &&
+        it.url == source.url &&
+        it.username == source.username &&
+        it.password == source.password &&
+        it.macAddress == source.macAddress
 }

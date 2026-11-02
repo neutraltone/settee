@@ -7,11 +7,21 @@ package app.opentv
 
 import app.opentv.data.model.Source
 import app.opentv.data.model.SourceKind
+import com.google.common.truth.Truth.assertThat
+import java.util.concurrent.TimeUnit
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Protocol
 import okhttp3.Response
 import okhttp3.ResponseBody.Companion.toResponseBody
+
+/** Runs [block] off the test's virtual clock, with the panel's real threads, once [hold] is reached. */
+suspend fun <T> during(hold: FakePanel.Hold, block: suspend () -> T): T = withContext(Dispatchers.Default) {
+    assertThat(hold.reached.await(10, TimeUnit.SECONDS)).isTrue()
+    block()
+}
 
 /** An Xtream source at a placeholder address, for [FakePanel] to answer. */
 val PANEL_SOURCE =

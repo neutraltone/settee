@@ -18,7 +18,11 @@ import app.opentv.data.repo.RecordingRepository
 import app.opentv.data.repo.SourceRepository
 import app.opentv.recording.RecordingEngine
 import com.google.common.truth.Truth.assertThat
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.withContext
 import org.junit.After
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -97,6 +101,21 @@ class SeriesRuleRescanTest {
 
         val padding = 60_000L * AppSettings.get(context).recordPadStartMinutes.value
         assertThat(recordings.scheduled().map { it.scheduledStartMillis }).containsExactly(tomorrow - padding)
+    }
+
+    @Test
+    fun `booking one rule from several places at once books each airing once`() = runTest {
+        db.sources().insert(PANEL_SOURCE)
+        db.channels().upsertAll(listOf(itv("2", "UK| ITV HD", 200, "itv.hd")))
+        val channel = db.channels().allForMatching().single()
+        val tomorrow = System.currentTimeMillis() + DAY
+        val airings = List(20) { airing("itv.hd", tomorrow + it * HOUR) }
+
+        withContext(Dispatchers.Default) {
+            List(8) { async { engine.scheduleMatching(channel, "countryfile", ruleId = 1, airings) } }.awaitAll()
+        }
+
+        assertThat(recordings.scheduled()).hasSize(20)
     }
 
     private companion object {

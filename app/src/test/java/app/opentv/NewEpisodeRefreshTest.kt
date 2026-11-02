@@ -42,7 +42,8 @@ class NewEpisodeRefreshTest {
         panel.replies["get_series"] = """[{"series_id": $id, "name": "Show", "last_modified": "$lastModified"}]"""
     }
 
-    private suspend fun refresh() = test.catalog.fetchVod(PANEL_SOURCE, now, waitForNewEpisodes = true)
+    private suspend fun refresh() =
+        test.catalog.detectNewEpisodes(PANEL_SOURCE, test.catalog.fetchVod(PANEL_SOURCE, now).updated, now)
 
     @Test
     fun `fetching a show's episodes again updates them but keeps when each was first seen`() = runTest {
