@@ -103,8 +103,7 @@ internal fun rememberLivePreviewPlayer(channel: Channel?): LivePreviewPlayer {
             resolve = graph.playbackSources::forWatching,
             subtitlesEnabled = false,
             preview = true,
-        )
-            .also { it.player.volume = 0f } to scope
+        ) to scope
     }
     DisposableEffect(controller) {
         onDispose {

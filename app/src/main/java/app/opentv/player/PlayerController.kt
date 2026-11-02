@@ -143,6 +143,7 @@ class PlayerController(
     private val _title = MutableStateFlow("")
     val title: StateFlow<String> = _title.asStateFlow()
     private var titled: MediaKey? = null
+    private var loaded: MediaKey? = null
     private var consecutiveFailures = 0
 
     /**
@@ -296,6 +297,23 @@ class PlayerController(
         }
 
     /**
+     * Whether a sound track is selected, for this stream and the ones after it. Off selects no audio
+     * track rather than setting the volume to 0: Dolby passed straight through over HDMI can ignore
+     * the player's volume, and it spares a cheap box decoding audio nobody is listening to.
+     */
+    var audioEnabled: Boolean
+        get() = C.TRACK_TYPE_AUDIO !in player.trackSelectionParameters.disabledTrackTypes
+        set(enabled) {
+            player.trackSelectionParameters = player.trackSelectionParameters.buildUpon()
+                .setTrackTypeDisabled(C.TRACK_TYPE_AUDIO, !enabled)
+                .build()
+        }
+
+    init {
+        if (preview) audioEnabled = false
+    }
+
+    /**
      * Switches playback.
      *
      * @param debounce when true (the default for channel surfing) the switch waits briefly so
@@ -355,6 +373,7 @@ class PlayerController(
                 disableText()
                 streamSubtitles.newStream()
                 setMediaItem(mediaItem)
+                loaded = request.key
                 if (!playable.isLive && request.startPositionMillis > 0) {
                     seekTo(request.startPositionMillis)
                 }
@@ -433,9 +452,18 @@ class PlayerController(
 
     val isSeekable: Boolean get() = player.isCurrentMediaItemSeekable
 
+    /**
+     * How far through what was asked for playback is. While the next stream resolves, the player still
+     * reports the last one's position, and a seek bar reading that would show the wrong title's place.
+     */
+    val positionMillis: Long
+        get() = current?.takeIf { it.key != loaded }?.startPositionMillis
+            ?: player.currentPosition.coerceAtLeast(0)
+
     fun stop() {
         switchJob?.cancel()
         current = null
+        loaded = null
         player.stop()
         player.clearMediaItems()
         _state.value = State.Idle

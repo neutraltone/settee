@@ -9,6 +9,7 @@ import android.content.Context
 import android.os.Looper
 import android.view.Surface
 import androidx.media3.common.C
+import androidx.media3.common.Format
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
@@ -93,6 +94,14 @@ val LIVE = FakeTimeline.TimelineWindowDefinition(
         .build(),
 )
 
+/** What a stream carries, for the tests that care about its sound. */
+@UnstableApi
+val PICTURE_AND_SOUND = listOf(ExoPlayerTestRunner.VIDEO_FORMAT, ExoPlayerTestRunner.AUDIO_FORMAT)
+
+/** A radio station: sound and nothing else. */
+@UnstableApi
+val SOUND_ONLY = listOf(ExoPlayerTestRunner.AUDIO_FORMAT)
+
 @UnstableApi
 class TestPlayers(private val context: Context) {
 
@@ -100,28 +109,34 @@ class TestPlayers(private val context: Context) {
     val clock = FakeClock(false)
     val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
 
+    /** What the streams of controllers made from now on carry. */
+    var formats = listOf(ExoPlayerTestRunner.VIDEO_FORMAT)
+
     /** Every stream the controllers were handed, in order. */
     val played = mutableListOf<String>()
 
     /**
      * A [PlayerController] whose every stream plays [window], resolved by [resolve] (by default a
      * stream at a placeholder address). The first [failing] streams fail as a dropped connection does.
+     * [preview] makes it the controller a preview pane uses.
      */
     fun controller(
         window: FakeTimeline.TimelineWindowDefinition = FILM,
         dvr: Boolean = false,
         failing: Int = 0,
+        preview: Boolean = false,
         resolve: suspend (MediaKey) -> Playable = ::placeholder,
     ) = PlayerController(
         context,
         scope,
         OkHttpClient(),
         resolve = resolve,
+        preview = preview,
         dvr = dvr,
         buildPlayer = {
             TestExoPlayerBuilder(context)
                 .setClock(clock)
-                .setMediaSourceFactory(FakeSources(window, played, failing))
+                .setMediaSourceFactory(FakeSources(window, played, failing, formats))
                 .build()
         },
     )
@@ -139,7 +154,7 @@ class TestPlayers(private val context: Context) {
         buildPlayer = { builder ->
             builder
                 .setClock(FakeClock(true))
-                .setMediaSourceFactory(FakeSources(FILM, played, failing = 0))
+                .setMediaSourceFactory(FakeSources(FILM, played, failing = 0, formats))
                 .build()
                 .apply { setVideoSurface(surface) }
         },
@@ -184,11 +199,12 @@ class TestPlayers(private val context: Context) {
         private val window: FakeTimeline.TimelineWindowDefinition,
         private val played: MutableList<String>,
         private var failing: Int,
+        private val formats: List<Format>,
     ) : MediaSource.Factory {
         override fun createMediaSource(mediaItem: MediaItem): MediaSource {
             played += mediaItem.localConfiguration?.uri.toString()
             if (failing-- > 0) return DroppedSource()
-            return FakeMediaSource(FakeTimeline(window), ExoPlayerTestRunner.VIDEO_FORMAT)
+            return FakeMediaSource(FakeTimeline(window), *formats.toTypedArray())
         }
 
         override fun setDrmSessionManagerProvider(provider: DrmSessionManagerProvider) = this

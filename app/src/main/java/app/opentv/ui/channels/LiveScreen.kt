@@ -94,10 +94,6 @@ import coil.compose.AsyncImage
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -150,7 +146,6 @@ fun LiveScreen(
     //    the list is calm and silent instead of re-tuning a stream on every keypress.
     var highlightedRow by remember { mutableStateOf<ChannelsViewModel.Row?>(null) }
     var selectedRow by remember { mutableStateOf<ChannelsViewModel.Row?>(null) }
-    val previewSound by settings.guidePreviewSound.collectAsState()
     var nowMillis by remember { mutableLongStateOf(System.currentTimeMillis()) }
 
     // Recording from the guide: what's capturing now, and a scope to kick a capture off.
@@ -216,27 +211,10 @@ fun LiveScreen(
     val onReturnToRow: (ChannelsViewModel.Row) -> Unit = { highlightedRow = it }
 
     // ---- Live preview player -----------------------------------------------------------------
-    // One muted player, reused. It only ever decodes while the guide is the foreground screen,
+    // One player, reused. It only ever decodes while the guide is the foreground screen,
     // and is stopped before any hand-off to full-screen, so the box never runs two decoders at
     // once — the thing that used to lock up cheap sticks.
-    val previewScope = remember { CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate) }
-    val previewController = remember {
-        PlayerController(
-            context,
-            previewScope,
-            graph.httpClient,
-            resolve = graph.playbackSources::forWatching,
-            subtitlesEnabled = false,
-            preview = true,
-        )
-            .also { it.player.volume = 0f }
-    }
-    DisposableEffect(Unit) {
-        onDispose {
-            previewController.release()
-            previewScope.cancel()
-        }
-    }
+    val previewController = rememberGuidePreviewController()
 
     // Watching a live channel while a recording runs opens a second stream on the same line — which
     // cuts the recording and can get a single-connection account banned. So every jump to full-screen
@@ -278,11 +256,6 @@ fun LiveScreen(
             window?.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         }
         onDispose { window?.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON) }
-    }
-
-    // Preview audio follows the setting; muted by default so browsing stays quiet.
-    LaunchedEffect(previewSound) {
-        previewController.player.volume = if (previewSound) 1f else 0f
     }
 
     // Tune the preview to the highlighted channel, so it follows the d-pad as you browse — the

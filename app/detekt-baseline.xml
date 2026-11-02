@@ -6,7 +6,6 @@
     <ID>ComplexCondition:LiveScreen.kt$!previewEnabled || !screenResumed || recordingActive || row == null</ID>
     <ID>ComplexCondition:OpenTvViewModels.kt$VodViewModel$prev != null &amp;&amp; prev.profileId == profileId &amp;&amp; prev.movieCount == movieCount &amp;&amp; prev.seriesCount == seriesCount</ID>
     <ID>ComplexCondition:PlayerScreen.kt$controlsVisible &amp;&amp; !paused &amp;&amp; panel == PlayerPanel.NONE &amp;&amp; state is PlayerController.State.Playing</ID>
-    <ID>ComplexCondition:VodPlayerScreen.kt$controlsVisible &amp;&amp; !paused &amp;&amp; !scrubbing &amp;&amp; vodPanel == VodPanel.NONE &amp;&amp; activelyPlaying</ID>
     <ID>ComposableParamOrder:GuideGrid.kt$ChannelList</ID>
     <ID>ComposableParamOrder:GuideGrid.kt$GuideGrid</ID>
     <ID>ComposableParamOrder:GuidePreview.kt$GuidePreview</ID>

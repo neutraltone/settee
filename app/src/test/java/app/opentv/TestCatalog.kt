@@ -80,7 +80,13 @@ class TestCatalog(context: Context, private val clock: () -> Long = { 0L }) {
         scope = refreshing,
     )
 
-    suspend fun awaitRefresh() = refreshing.coroutineContext.job.children.toList().joinAll()
+    suspend fun awaitRefresh() {
+        // Again until none are left: what's running can launch more.
+        do {
+            val running = refreshing.coroutineContext.job.children.toList()
+            running.joinAll()
+        } while (running.isNotEmpty())
+    }
 
     /** Closes the database once the catalogue's background work is done with it. */
     fun close() = runBlocking {
@@ -93,6 +99,6 @@ class TestCatalog(context: Context, private val clock: () -> Long = { 0L }) {
     /** Saves [PANEL_SOURCE] and syncs its movies and shows from the panel's current replies. */
     suspend fun syncVod() {
         db.sources().insert(PANEL_SOURCE)
-        catalog.fetchVod(PANEL_SOURCE, nowUtcMillis = 0)
+        catalog.detectNewEpisodes(PANEL_SOURCE, catalog.fetchVod(PANEL_SOURCE, nowUtcMillis = 0).updated, 0)
     }
 }

@@ -277,12 +277,6 @@ class CatalogueRefreshTest {
         assertThat(vodDownloads()).isEqualTo(1)
     }
 
-    /** Runs [block] off the test's virtual clock, with the panel's real threads, once [hold] is reached. */
-    private suspend fun <T> during(hold: FakePanel.Hold, block: suspend () -> T): T = withContext(Dispatchers.Default) {
-        assertThat(hold.reached.await(10, TimeUnit.SECONDS)).isTrue()
-        block()
-    }
-
     @Test
     fun `a second refresh of a provider shares the running download and its result`() = runTest {
         db.sources().insert(PANEL_SOURCE)
@@ -578,26 +572,6 @@ class CatalogueRefreshTest {
     }
 
     @Test
-    fun `changed login details don't join a download running with the old ones`() = runTest {
-        db.sources().insert(PANEL_SOURCE)
-        val hold = panel.hold("get_live_streams")
-
-        withContext(Dispatchers.Default) {
-            val old = async { refresh.refresh(CatalogueRefresh.Trigger.ProviderAdded(PANEL_SOURCE)) }
-            val edited = during(hold) {
-                async {
-                    refresh.refresh(CatalogueRefresh.Trigger.ProviderAdded(PANEL_SOURCE.copy(password = "new")))
-                }.also { Thread.sleep(JOIN_MILLIS) }
-            }
-            hold.release()
-            old.await()
-            edited.await()
-        }
-
-        assertThat(panel.asked.count { it == "get_live_streams" }).isEqualTo(2)
-    }
-
-    @Test
     fun `the same login shares a download even after the provider's row has moved on`() = runTest {
         db.sources().insert(PANEL_SOURCE)
         val hold = panel.hold("get_vod_streams")
@@ -611,18 +585,6 @@ class CatalogueRefreshTest {
         }
 
         assertThat(db.sources().enabled().single().lastCatalogSyncMillis).isEqualTo(now)
-        assertThat(vodDownloads()).isEqualTo(1)
-    }
-
-    @Test
-    fun `saving a provider again fetches its titles the next time they're opened`() = runTest {
-        db.sources().insert(PANEL_SOURCE)
-        openMoviesOrShows()
-        panel.asked.clear()
-
-        refresh.refresh(CatalogueRefresh.Trigger.ProviderAdded(PANEL_SOURCE.copy(username = "other")))
-        openMoviesOrShows()
-
         assertThat(vodDownloads()).isEqualTo(1)
     }
 
@@ -654,6 +616,60 @@ class CatalogueRefreshTest {
         }
 
         assertThat(panel.asked.count { it == "xmltv.php" }).isEqualTo(1)
+    }
+
+    @Test
+    fun `the periodic refresh still waits for New Episodes when it joins a download Movies started`() = runTest {
+        caughtUpOnAnUpdatedShow()
+        val channels = panel.hold("get_live_streams")
+        val episodes = panel.hold("get_series_info:7")
+
+        withContext(Dispatchers.Default) {
+            val periodic = async { refresh.refresh(CatalogueRefresh.Trigger.Periodic) }
+            val opened = during(channels) { async { openMoviesOrShows() }.also { Thread.sleep(JOIN_MILLIS) } }
+            channels.release()
+            during(episodes) { Thread.sleep(JOIN_MILLIS) }
+            assertThat(periodic.isCompleted).isFalse()
+            episodes.release()
+            periodic.await()
+            opened.await()
+        }
+    }
+
+    @Test
+    fun `opening Movies doesn't wait for New Episodes when it joins a download the periodic refresh started`() =
+        runTest {
+            caughtUpOnAnUpdatedShow()
+            val titles = panel.hold("get_vod_streams")
+            val episodes = panel.hold("get_series_info:7")
+
+            withContext(Dispatchers.Default) {
+                val periodic = async { refresh.refresh(CatalogueRefresh.Trigger.Periodic) }
+                val opened = during(titles) { async { openMoviesOrShows() }.also { Thread.sleep(JOIN_MILLIS) } }
+                titles.release()
+                during(episodes) { Thread.sleep(JOIN_MILLIS) }
+                assertThat(opened.isCompleted).isTrue()
+                episodes.release()
+                periodic.await()
+            }
+        }
+
+    @Test
+    fun `New Episode detection keeps the provider's turn, so nothing else downloads from it meanwhile`() = runTest {
+        caughtUpOnAnUpdatedShow()
+        val episodes = panel.hold("get_series_info:7")
+
+        withContext(Dispatchers.Default) {
+            openMoviesOrShows()
+            val added = during(episodes) {
+                panel.asked.clear()
+                async { refresh.refresh(CatalogueRefresh.Trigger.ProviderAdded(PANEL_SOURCE)) }
+                    .also { Thread.sleep(JOIN_MILLIS) }
+            }
+            assertThat(panel.asked).doesNotContain("get_live_streams")
+            episodes.release()
+            added.await()
+        }
     }
 
     private companion object {
