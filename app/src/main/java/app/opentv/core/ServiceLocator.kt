@@ -22,6 +22,7 @@ import app.opentv.data.repo.RefreshMessages
 import app.opentv.data.repo.ReminderRepository
 import app.opentv.data.repo.SourceRepository
 import app.opentv.data.repo.ViewerLibrary
+import app.opentv.data.repo.WaitingProgress
 import app.opentv.recording.RecordingEngine
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.CoroutineScope
@@ -49,8 +50,9 @@ object ServiceLocator {
     /**
      * [openDatabase] replaces the on-disk database, so a test can stand up two devices in one
      * process: every Graph built from the same context would otherwise share one database file.
+     * [http] replaces the client that talks to providers, so such a device can reach a fake panel.
      */
-    class Graph(context: Context, openDatabase: (() -> OpenTvDatabase)? = null) {
+    class Graph(context: Context, http: OkHttpClient? = null, openDatabase: (() -> OpenTvDatabase)? = null) {
         private val appContext = context.applicationContext
 
         val settings: AppSettings by lazy { AppSettings.get(appContext) }
@@ -60,7 +62,7 @@ object ServiceLocator {
         }
 
         val httpClient: OkHttpClient by lazy {
-            OkHttpClient.Builder()
+            http ?: OkHttpClient.Builder()
                 .connectTimeout(15, TimeUnit.SECONDS)
                 // Generous: catalogue endpoints on a busy panel can take a long time to
                 // produce 40,000 rows, and timing out mid-list is worse than waiting.
@@ -157,8 +159,13 @@ object ServiceLocator {
             ViewerLibrary(database, settings.activeProfileId)
         }
 
+        /** Outlives every screen, so progress still arrives after the sync screen has closed. */
+        val waitingProgress: WaitingProgress by lazy {
+            WaitingProgress(viewerLibrary, catalogRepository, database.sources(), database.episodes(), settings)
+        }
+
         val profileSettings: ProfileSettings by lazy {
-            ProfileSettings(database.profileSettings(), settings.activeProfileId)
+            ProfileSettings(database.profileSettings(), database.profiles(), settings.activeProfileId)
         }
 
         val profiles: Profiles by lazy {

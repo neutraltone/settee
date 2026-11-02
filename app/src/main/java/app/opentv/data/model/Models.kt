@@ -488,7 +488,7 @@ data class Recording(
      * (NAS), or a `content://` document URI (USB via SAF). [RecordingStorage] reads it back.
      */
     val filePath: String,
-    /** The stream URL being captured. */
+    /** The stream URL being captured. Blank on a finished recording received from another device. */
     val streamUrl: String,
     /** User-Agent to capture with (some panels only serve a UA they recognise). */
     val userAgent: String = Source.DEFAULT_USER_AGENT,

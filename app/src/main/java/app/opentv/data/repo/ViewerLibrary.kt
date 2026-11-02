@@ -87,7 +87,7 @@ class ViewerLibrary(
     private val dismissals = db.seriesDismissals()
 
     /** The active Profile's Favourites, and every Profile's for sync. */
-    val favourites = Favourites(db.favourites(), activeProfileId)
+    val favourites = Favourites(db.favourites(), db.profiles(), activeProfileId)
 
     private val cards = ContinueWatchingCards(positions, episodes, dismissals)
 
@@ -102,6 +102,12 @@ class ViewerLibrary(
 
     /** What the active Profile sets by hand: Watched and Unwatched marks, and Continue Watching removals. */
     val marks = HandMarks(positions, episodes, dismissals, activeProfileId, clock)
+
+    /** Every Profile's progress, as it travels between devices. */
+    val syncedProgress = SyncedProgress(positions, db.movies(), episodes, db.sources(), db.profiles(), ::mergeSynced)
+
+    /** Every Profile's Continue Watching removals, as they travel between devices. */
+    val syncedDismissals = SyncedDismissals(dismissals, db.sources(), db.profiles(), marks::mergeSynced)
 
     /** The active Profile's Recent Searches. */
     val recentSearches = RecentSearches(db, activeProfileId, clock)
@@ -127,15 +133,12 @@ class ViewerLibrary(
      * Profile and title (newest wins, so watching on either device resumes on the other).
      * Returns whether it was taken.
      */
-    suspend fun mergeSynced(position: PlaybackPosition): Boolean {
+    internal suspend fun mergeSynced(position: PlaybackPosition): Boolean {
         val existing = positions.get(position.profileId, position.mediaKey)
         if (existing != null && position.updatedAtMillis <= existing.updatedAtMillis) return false
         positions.upsert(position)
         return true
     }
-
-    /** Every Profile's progress on this device — what sync sends to the other side. */
-    suspend fun everyProfilesProgress(): List<PlaybackPosition> = positions.all()
 
     /** Where to start [mediaKey] for the active Profile: where they stopped, or 0 if Watched or never played. */
     suspend fun resumeFrom(mediaKey: String): Long {
@@ -383,15 +386,12 @@ class HandMarks internal constructor(
      * Takes a series' removal from Continue Watching synced from another device if it is newer
      * than this device's for the same Profile and series. Returns whether it was taken.
      */
-    suspend fun mergeSynced(dismissal: SeriesDismissal): Boolean {
+    internal suspend fun mergeSynced(dismissal: SeriesDismissal): Boolean {
         val existing = dismissals.get(dismissal.profileId, dismissal.sourceId, dismissal.seriesId)
         if (existing != null && dismissal.dismissedAtMillis <= existing.dismissedAtMillis) return false
         dismissals.upsert(dismissal)
         return true
     }
-
-    /** Every Profile's series removed from Continue Watching on this device — what sync sends. */
-    suspend fun everyProfiles(): List<SeriesDismissal> = dismissals.all()
 }
 
 /** A card with when the Profile last played what it stands for, so movies and series can be interleaved. */

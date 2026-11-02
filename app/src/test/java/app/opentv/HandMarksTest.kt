@@ -239,7 +239,7 @@ class HandMarksTest {
 
         assertThat(merged).isTrue()
         assertThat(seriesCards()).isEmpty()
-        assertThat(library.marks.everyProfiles()).containsExactly(dismissal(dismissedAtMillis = now + 1))
+        assertThat(db.seriesDismissals().all()).containsExactly(dismissal(dismissedAtMillis = now + 1))
     }
 
     @Test
@@ -252,7 +252,7 @@ class HandMarksTest {
         val merged = library.marks.mergeSynced(dismissal(dismissedAtMillis = now - 1))
 
         assertThat(merged).isFalse()
-        assertThat(library.marks.everyProfiles().single().dismissedAtMillis).isEqualTo(now)
+        assertThat(db.seriesDismissals().all().single().dismissedAtMillis).isEqualTo(now)
     }
 
     @Test

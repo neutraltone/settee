@@ -33,7 +33,7 @@ class ProfileSettingsTest {
         .build()
     private val activeProfile = MutableStateFlow(1L)
     private var now = 1_000_000L
-    private val settings = ProfileSettings(db.profileSettings(), activeProfile, clock = { now })
+    private val settings = ProfileSettings(db.profileSettings(), db.profiles(), activeProfile, clock = { now })
 
     @After
     fun close() = db.close()
@@ -43,7 +43,7 @@ class ProfileSettingsTest {
     @Test
     fun `a Profile that has never chosen has subtitles off and follows the device language`() = runTest {
         assertThat(preference()).isEqualTo(SubtitlePreference(enabled = false, language = null))
-        assertThat(settings.everyProfiles()).isEmpty()
+        assertThat(db.profileSettings().all()).isEmpty()
     }
 
     @Test
@@ -96,7 +96,7 @@ class ProfileSettingsTest {
     fun `the Subtitle Preference survives a restart`() = runTest {
         settings.pickSubtitleTrack(language = "fr")
 
-        val afterRestart = ProfileSettings(db.profileSettings(), MutableStateFlow(1L))
+        val afterRestart = ProfileSettings(db.profileSettings(), db.profiles(), MutableStateFlow(1L))
 
         assertThat(afterRestart.subtitlePreference.first())
             .isEqualTo(SubtitlePreference(enabled = true, language = "fr"))
@@ -110,7 +110,7 @@ class ProfileSettingsTest {
 
         settings.forgetProfile(2L)
 
-        assertThat(settings.everyProfiles().map { it.profileId }.distinct()).containsExactly(1L)
+        assertThat(db.profileSettings().all().map { it.profileId }.distinct()).containsExactly(1L)
     }
 
     @Test

@@ -12,6 +12,7 @@ import app.opentv.data.remote.StalkerApi
 import app.opentv.data.remote.XtreamApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 
 class SourceRepository(private val dao: SourceDao, private val api: XtreamApi, private val stalkerApi: StalkerApi) {
@@ -22,13 +23,22 @@ class SourceRepository(private val dao: SourceDao, private val api: XtreamApi, p
     suspend fun byId(id: Long): Source? = dao.byId(id)
 
     suspend fun save(source: Source): Long = withContext(Dispatchers.IO) {
-        val normalised = source.copy(url = normaliseUrl(source.url, source.kind))
+        val normalised = source.copy(url = normaliseUrl(source.url, source.kind), name = uniqueName(source))
         if (source.id == 0L) {
             dao.insert(normalised)
         } else {
             dao.update(normalised)
             source.id
         }
+    }
+
+    // Sync matches a title by its source's name (ADR 0004), and provider ids repeat across providers,
+    // so two sources sharing a name would swap progress and hidden channels. Leaving the name blank
+    // gives every source the same default, so this has to resolve a clash rather than refuse it.
+    private suspend fun uniqueName(source: Source): String {
+        val taken = dao.observeAll().first().filter { it.id != source.id }.map { it.name }.toSet()
+        if (source.name !in taken) return source.name
+        return generateSequence(2) { it + 1 }.map { "${source.name} $it" }.first { it !in taken }
     }
 
     /** Checks the details work before the user is committed to them. */

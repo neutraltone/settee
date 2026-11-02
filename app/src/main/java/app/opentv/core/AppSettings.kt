@@ -9,6 +9,7 @@ import android.content.Context
 import androidx.core.content.edit
 import app.opentv.data.model.StremioAddon
 import app.opentv.data.repo.Profiles
+import app.opentv.data.repo.WaitingProgress
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -72,6 +73,7 @@ class AppSettings private constructor(context: Context) {
         setActiveProfile(Profiles.BASE_PROFILE_ID)
         lastChannelId = 0L
         forgetVodFetches()
+        prefs.edit { remove(KEY_SYNC_EPISODES_NOT_FOUND) }
     }
 
     // ---- Parental controls -------------------------------------------------------------------
@@ -395,6 +397,13 @@ class AppSettings private constructor(context: Context) {
         get() = prefs.getString(KEY_SYNC_DEVICE_ID, null) ?: java.util.UUID.randomUUID().toString()
             .also { prefs.edit { putString(KEY_SYNC_DEVICE_ID, it) } }
 
+    /** Episodes a provider's answer left out, so sync stops asking it for them; see [WaitingProgress]. */
+    fun syncEpisodesNotFound(): Set<String> = prefs.getStringSet(KEY_SYNC_EPISODES_NOT_FOUND, emptySet())!!.toSet()
+
+    fun addSyncEpisodesNotFound(keys: List<String>) {
+        prefs.edit { putStringSet(KEY_SYNC_EPISODES_NOT_FOUND, syncEpisodesNotFound() + keys) }
+    }
+
     /** Whether to run a NAS sync automatically each time the app is opened. Off by default. */
     private val _nasAutoSync = MutableStateFlow(prefs.getBoolean(KEY_NAS_AUTO_SYNC, false))
     val nasAutoSync: StateFlow<Boolean> = _nasAutoSync.asStateFlow()
@@ -500,6 +509,7 @@ class AppSettings private constructor(context: Context) {
         private const val KEY_USB_TREE = "usb_tree_uri"
         private const val KEY_USB_LABEL = "usb_folder_label"
         private const val KEY_SYNC_DEVICE_ID = "sync_device_id"
+        private const val KEY_SYNC_EPISODES_NOT_FOUND = "sync_episodes_not_found"
         private const val KEY_NAS_AUTO_SYNC = "nas_auto_sync"
         private const val KEY_VOD_FETCHED_AT = "vod_fetched_at_"
         private const val KEY_TMDB_KEY = "tmdb_api_key"

@@ -121,16 +121,26 @@ This is why `M3uParser` works so hard to produce a **stable** `streamId` for pla
 every refresh looks like a completely new set of channels, and the user's hidden channels and
 ordering silently vanish.
 
-### Episodes load lazily, with one exception
+### Episodes load lazily, with two exceptions
 
 A series' episodes are fetched when it is opened (`CatalogRepository.ensureEpisodes`), never
 during catalogue sync: one `get_series_info` per show across a 10,000-show catalogue would take
-hours. The exception is New Episode detection. Whenever the catalogue's shows are merged, every
+hours. The first exception is New Episode detection. Whenever the catalogue's shows are merged, every
 show whose `last_modified` moved forward goes to `ViewerLibrary.newEpisodes`, which fetches the
 episodes only of shows some Profile on the device is caught up on, one at a time. That is normally
 a handful of calls, not the catalogue. A refresh (the worker, or Refresh in settings) waits for it.
 The Movies and Shows re-sync as the app opens launches it instead, so its spinner isn't held, but
 can't skip it: once the stored times have moved, a later refresh would never see that show again.
+
+The second is sync. Progress from another device can name an episode this one hasn't stored, so the
+position also carries its `seriesId`, and `WaitingProgress` fetches that series in the background
+after `SyncEngine.apply` has returned, so no sync screen waits on a provider. Each series is fetched
+once per run, however many positions or peers name it, and a failed fetch stops the rest for that
+source, so a provider that's down costs one timeout. A run fetches at most 25 series, and skips
+disabled sources. No position is stored while it waits: the peer's bundle still carries it, so a
+later sync tries again. Only an episode the provider's answer left out is noted, so it stops being
+asked for. The fetched episodes are dated back to the position rather than now, because they're new
+to this device, not to the viewer, and mustn't show as New Episodes (ADR 0004).
 
 Episode lists carry no time the provider added each episode, so each row records when this device
 first stored it (`firstSeenMillis`). A New Episode is an Up Next first seen after the Profile
