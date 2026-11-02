@@ -5,10 +5,7 @@
  */
 package app.opentv
 
-import android.content.Context
-import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
-import app.opentv.data.db.OpenTvDatabase
 import app.opentv.data.model.Movie
 import app.opentv.data.model.Series
 import com.google.common.truth.Truth.assertThat
@@ -26,13 +23,11 @@ import org.robolectric.annotation.Config
 @Config(sdk = [34], application = android.app.Application::class)
 class RecentRowsTest {
 
-    private val context: Context = ApplicationProvider.getApplicationContext()
-    private val db = Room.inMemoryDatabaseBuilder(context, OpenTvDatabase::class.java)
-        .allowMainThreadQueries()
-        .build()
+    private val test = TestCatalog(ApplicationProvider.getApplicationContext())
+    private val db = test.db
 
     @After
-    fun close() = db.close()
+    fun close() = test.close()
 
     private fun movie(name: String, releaseDate: Long? = null, added: Long = 0) = Movie(
         sourceId = 1,
@@ -75,7 +70,7 @@ class RecentRowsTest {
             ),
         )
 
-        val row = db.movies().observeRecentlyReleased(nowMillis = 1_000, limit = 30).first()
+        val row = test.catalog.recentlyReleasedMovies(nowMillis = 1_000).first()
 
         assertThat(row.map { it.name }).containsExactly("Out today", "Newer", "Older").inOrder()
     }
@@ -85,9 +80,9 @@ class RecentRowsTest {
         db.movies().upsertAll((1..5).map { movie("M$it", releaseDate = it.toLong()) })
         db.series().upsertAll((1..5).map { series("S$it", latestAirDate = it.toLong()) })
 
-        assertThat(db.movies().observeRecentlyReleased(nowMillis = 1_000, limit = 2).first().map { it.name })
+        assertThat(test.catalog.recentlyReleasedMovies(nowMillis = 1_000, limit = 2).first().map { it.name })
             .containsExactly("M5", "M4").inOrder()
-        assertThat(db.series().observeRecentlyReleased(nowMillis = 1_000, limit = 2).first().map { it.name })
+        assertThat(test.catalog.recentlyReleasedSeries(nowMillis = 1_000, limit = 2).first().map { it.name })
             .containsExactly("S5", "S4").inOrder()
     }
 
@@ -101,11 +96,62 @@ class RecentRowsTest {
             ),
         )
 
-        val row = db.series().observeRecentlyReleased(nowMillis = 1_000, limit = 30).first()
+        val row = test.catalog.recentlyReleasedSeries(nowMillis = 1_000).first()
 
         assertThat(row.map { it.name })
             .containsExactly("Long runner, new episode yesterday", "New show, nothing since")
             .inOrder()
+    }
+
+    @Test
+    fun `recently released movies go back 12 months and no further`() = runTest {
+        db.movies().upsertAll(
+            listOf(
+                movie("A year ago today", releaseDate = NOW - 31_536_000_000),
+                movie("Just too old", releaseDate = NOW - 31_536_000_001),
+            ),
+        )
+
+        val row = test.catalog.recentlyReleasedMovies(NOW).first()
+
+        assertThat(row.map { it.name }).containsExactly("A year ago today")
+    }
+
+    @Test
+    fun `recently released shows go back 12 months from their newest episode, and no further`() = runTest {
+        db.series().upsertAll(
+            listOf(
+                series("Episode a year ago today", latestAirDate = NOW - 31_536_000_000),
+                series("Finished just too long ago", latestAirDate = NOW - 31_536_000_001),
+            ),
+        )
+
+        val row = test.catalog.recentlyReleasedSeries(NOW).first()
+
+        assertThat(row.map { it.name }).containsExactly("Episode a year ago today")
+    }
+
+    @Test
+    fun `12 months back over a leap day is 366 days`() = runTest {
+        val firstOfMarch2028 = 1_835_481_600_000L
+        val firstOfMarch2027 = 1_803_859_200_000L
+        db.movies().upsertAll(
+            listOf(
+                movie("A year ago today", releaseDate = firstOfMarch2027),
+                movie("Just too old", releaseDate = firstOfMarch2027 - 1),
+            ),
+        )
+        db.series().upsertAll(
+            listOf(
+                series("Episode a year ago today", latestAirDate = firstOfMarch2027),
+                series("Finished just too long ago", latestAirDate = firstOfMarch2027 - 1),
+            ),
+        )
+
+        assertThat(test.catalog.recentlyReleasedMovies(firstOfMarch2028).first().map { it.name })
+            .containsExactly("A year ago today")
+        assertThat(test.catalog.recentlyReleasedSeries(firstOfMarch2028).first().map { it.name })
+            .containsExactly("Episode a year ago today")
     }
 
     @Test
@@ -119,5 +165,9 @@ class RecentRowsTest {
             .containsExactly("Added last", "Added first").inOrder()
         assertThat(db.series().observeRecentlyAdded(30).first().map { it.name })
             .containsExactly("Updated last", "Updated first").inOrder()
+    }
+
+    private companion object {
+        const val NOW = 1_800_000_000_000L
     }
 }

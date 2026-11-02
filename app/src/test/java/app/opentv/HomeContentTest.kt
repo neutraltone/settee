@@ -341,6 +341,20 @@ class HomeContentTest {
     }
 
     @Test
+    fun `with no titles recent enough, both Recently Released rows are left out and the added ones stay`() {
+        setHome(
+            recent = RecentRows(
+                addedMovies = listOf(movie(11, "Drive")),
+                addedShows = listOf(series(13, "Shogun")),
+            ),
+        )
+
+        scrollTo("Recently added shows")
+        compose.onNodeWithText("Recently released movies").assertDoesNotExist()
+        compose.onNodeWithText("Recently released shows").assertDoesNotExist()
+    }
+
+    @Test
     fun `a Profile with nothing watched or favourited gets a hint instead of rows`() {
         setHome(resume = emptyList(), shows = emptyList(), movies = emptyList(), channels = emptyList())
 

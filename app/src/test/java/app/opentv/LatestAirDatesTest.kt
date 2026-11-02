@@ -109,6 +109,26 @@ class LatestAirDatesTest {
     }
 
     @Test
+    fun `a show with an empty info still goes by its episodes`() = runTest {
+        db.series().upsertAll(listOf(series("7", updated = 1)))
+        panel.replies["get_series_info"] =
+            """{"info": [], "episodes": {"1": [{"id": "1", "info": {"air_date": "2024-03-15"}}]}}"""
+
+        step.refresh(PANEL_SOURCE)
+
+        assertThat(latestAirDate("7")).isEqualTo(1_710_460_800_000L)
+    }
+
+    @Test
+    fun `shows updated at the same moment go newest row first`() = runTest {
+        db.series().upsertAll((1..51).map { series("$it", updated = 0) })
+
+        step.refresh(PANEL_SOURCE)
+
+        assertThat(panel.asked.map { it.substringAfter(':') }).containsExactlyElementsIn((2..51).map { "$it" })
+    }
+
+    @Test
     fun `a TMDB lookup that throws costs only that show`() = runTest {
         db.series().upsertAll(listOf(series("throws", updated = 2), series("fine", updated = 1)))
         panel.replies["get_series_info:throws"] = """{"info": {}}"""

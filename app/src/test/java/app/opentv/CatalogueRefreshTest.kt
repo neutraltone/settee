@@ -51,6 +51,12 @@ class CatalogueRefreshTest {
 
     private fun vodDownloads() = panel.asked.count { it == "get_vod_streams" }
 
+    /** Clears the log, once a sync's background date lookups can no longer land in what comes next. */
+    private suspend fun forgetAsked() {
+        test.catalog.awaitBackground()
+        panel.asked.clear()
+    }
+
     private suspend fun openMoviesOrShows() = refresh.refresh(CatalogueRefresh.Trigger.OpenedMoviesOrShows)
 
     @Test
@@ -60,7 +66,8 @@ class CatalogueRefreshTest {
 
             refresh.refresh(CatalogueRefresh.Trigger.Periodic)
 
-            assertThat(panel.asked).containsExactly(
+            // Movies' release dates are looked up in the background, at no fixed point in this order.
+            assertThat(panel.asked.filterNot { it.startsWith("get_vod_info") }).containsExactly(
                 "",
                 "get_live_categories",
                 "get_live_streams",
@@ -77,7 +84,7 @@ class CatalogueRefreshTest {
     fun `a refresh the viewer asked for downloads the guide even if it was just fetched`() = runTest {
         db.sources().insert(PANEL_SOURCE)
         refresh.refresh(CatalogueRefresh.Trigger.Periodic)
-        panel.asked.clear()
+        forgetAsked()
 
         refresh.refresh(CatalogueRefresh.Trigger.Manual)
 
@@ -88,7 +95,7 @@ class CatalogueRefreshTest {
     fun `a periodic refresh leaves a guide it just fetched alone`() = runTest {
         db.sources().insert(PANEL_SOURCE)
         refresh.refresh(CatalogueRefresh.Trigger.Periodic)
-        panel.asked.clear()
+        forgetAsked()
 
         refresh.refresh(CatalogueRefresh.Trigger.Periodic)
 
@@ -141,7 +148,7 @@ class CatalogueRefreshTest {
 
         refresh.refresh(CatalogueRefresh.Trigger.AppLaunch)
         assertThat(panel.asked).containsExactly("xmltv.php")
-        panel.asked.clear()
+        forgetAsked()
 
         refresh.refresh(CatalogueRefresh.Trigger.AppLaunch)
         assertThat(panel.asked).isEmpty()
@@ -171,7 +178,7 @@ class CatalogueRefreshTest {
     fun `opening Movies or Shows again within 12 hours downloads nothing`() = runTest {
         db.sources().insert(PANEL_SOURCE)
         openMoviesOrShows()
-        panel.asked.clear()
+        forgetAsked()
 
         now += TWELVE_HOURS - 1
         openMoviesOrShows()
@@ -183,7 +190,7 @@ class CatalogueRefreshTest {
     fun `opening Movies or Shows after 12 hours fetches them again`() = runTest {
         db.sources().insert(PANEL_SOURCE)
         openMoviesOrShows()
-        panel.asked.clear()
+        forgetAsked()
 
         now += TWELVE_HOURS
         openMoviesOrShows()
@@ -195,7 +202,7 @@ class CatalogueRefreshTest {
     fun `opening Movies or Shows right after the periodic refresh doesn't download them again`() = runTest {
         db.sources().insert(PANEL_SOURCE)
         refresh.refresh(CatalogueRefresh.Trigger.Periodic)
-        panel.asked.clear()
+        forgetAsked()
 
         openMoviesOrShows()
 
@@ -206,7 +213,7 @@ class CatalogueRefreshTest {
     fun `opening Movies or Shows right after a manual refresh doesn't download them again`() = runTest {
         db.sources().insert(PANEL_SOURCE)
         refresh.refresh(CatalogueRefresh.Trigger.Manual)
-        panel.asked.clear()
+        forgetAsked()
 
         openMoviesOrShows()
 
@@ -217,7 +224,7 @@ class CatalogueRefreshTest {
     fun `a provider added soon after the last fetch has its titles fetched the first time they're opened`() = runTest {
         db.sources().insert(PANEL_SOURCE)
         openMoviesOrShows()
-        panel.asked.clear()
+        forgetAsked()
 
         val second = PANEL_SOURCE.copy(id = 2, name = "Second")
         db.sources().insert(second)
@@ -232,7 +239,7 @@ class CatalogueRefreshTest {
         db.sources().insert(PANEL_SOURCE)
         panel.replies["get_vod_streams"] = "!"
         openMoviesOrShows()
-        panel.asked.clear()
+        forgetAsked()
 
         panel.replies["get_vod_streams"] = """[{"stream_id": 3, "name": "Drive", "added": "100"}]"""
         openMoviesOrShows()
@@ -245,7 +252,7 @@ class CatalogueRefreshTest {
         db.sources().insert(PANEL_SOURCE)
         panel.replies["get_series"] = "!"
         openMoviesOrShows()
-        panel.asked.clear()
+        forgetAsked()
 
         panel.replies["get_series"] = "[]"
         openMoviesOrShows()
@@ -257,7 +264,7 @@ class CatalogueRefreshTest {
     fun `a database rebuilt from scratch forgets what was fetched`() = runTest {
         db.sources().insert(PANEL_SOURCE)
         openMoviesOrShows()
-        panel.asked.clear()
+        forgetAsked()
 
         test.settings.forgetDatabaseRows()
         openMoviesOrShows()
@@ -269,7 +276,7 @@ class CatalogueRefreshTest {
     fun `switching Movies on fetches every provider the next time they're opened`() = runTest {
         db.sources().insert(PANEL_SOURCE)
         openMoviesOrShows()
-        panel.asked.clear()
+        forgetAsked()
 
         test.settings.setMoviesEnabled(true)
         openMoviesOrShows()
@@ -593,7 +600,7 @@ class CatalogueRefreshTest {
         db.sources().insert(PANEL_SOURCE)
         panel.replies["get_vod_streams"] = "[]"
         openMoviesOrShows()
-        panel.asked.clear()
+        forgetAsked()
 
         openMoviesOrShows()
 

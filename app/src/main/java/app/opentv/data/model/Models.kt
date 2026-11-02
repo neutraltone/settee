@@ -285,7 +285,8 @@ data class Movie(
     val director: String? = null,
     /**
      * The day it was released, as UTC epoch millis at midnight, for Home's Recently Released row.
-     * From the provider, else TMDB on detail open. Null when only a year is known (see [year]).
+     * From the provider, else TMDB, found on detail open or after a sync for the most recently added
+     * movies (see MovieReleaseDates). Null when only a year is known (see [year]).
      */
     val releaseDate: Long? = null,
 )
