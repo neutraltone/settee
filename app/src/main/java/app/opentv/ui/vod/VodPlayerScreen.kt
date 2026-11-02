@@ -16,6 +16,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsDraggedAsState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -236,6 +238,8 @@ fun VodPlayerContent(
     subtitlePicks: SubtitlePicks,
     onBack: () -> Unit,
 ) {
+    val seek = remember { UnfinishedSeek() }
+
     // Skip within a recording that's still being written. ExoPlayer won't report it as seekable (no
     // fixed length), so we seek directly, clamped to what's on disk.
     fun seekWithinRecorded(deltaMs: Long) {
@@ -246,6 +250,8 @@ fun VodPlayerContent(
     // The on-screen buttons and the remote's media keys both skip through here, so a recording that's
     // still being written stays inside what's on disk either way.
     fun skip(forward: Boolean) {
+        // The latest thing asked for wins: the seek's key-up would otherwise undo this skip.
+        seek.drop()
         val step = if (forward) PlayerController.SEEK_INCREMENT_MILLIS else -PlayerController.SEEK_INCREMENT_MILLIS
         when {
             growingRec -> seekWithinRecorded(step)
@@ -270,8 +276,9 @@ fun VodPlayerContent(
     val panelFocus = remember { FocusRequester() }
     var positionMs by remember { mutableLongStateOf(0L) }
     var durationMs by remember { mutableLongStateOf(0L) }
-    val seek = remember { UnfinishedSeek() }
     val focusManager = LocalFocusManager.current
+    val barInteractions = remember { MutableInteractionSource() }
+    val dragging by barInteractions.collectIsDraggedAsState()
 
     var controlsVisible by remember { mutableStateOf(true) }
     var interaction by remember { androidx.compose.runtime.mutableIntStateOf(0) }
@@ -295,13 +302,16 @@ fun VodPlayerContent(
     // Poll position/duration for the seek bar while the film plays.
     LaunchedEffect(Unit) {
         while (isActive) {
-            positionMs = controller.player.currentPosition.coerceAtLeast(0)
-            // A growing recording has no fixed length; the recorded-so-far extent (how far you
-            // can skip ahead) is what's been read into the buffer.
-            durationMs = if (growingRec) {
-                controller.player.bufferedPosition.coerceAtLeast(0)
-            } else {
-                controller.player.duration.takeIf { it > 0 } ?: 0
+            positionMs = controller.positionMillis
+            // Held still during a seek: a new length rescales the bar under the viewer's finger.
+            if (seek.position == null) {
+                // A growing recording has no fixed length; the recorded-so-far extent (how far you
+                // can skip ahead) is what's been read into the buffer.
+                durationMs = if (growingRec) {
+                    controller.player.bufferedPosition.coerceAtLeast(0)
+                } else {
+                    controller.player.duration.takeIf { it > 0 } ?: 0
+                }
             }
             delay(500)
         }
@@ -311,31 +321,27 @@ fun VodPlayerContent(
     val playing by viewModel.current.collectAsState()
     LaunchedEffect(playing) {
         seek.drop()
-        positionMs = controller.player.currentPosition.coerceAtLeast(0)
+        positionMs = controller.positionMillis
     }
 
-    // Hiding counts as leaving the bar, and the Next Episode card hides the controls as it comes up.
-    // Losing focus doesn't cover it: a finger dragging the bar on a phone never gave it focus.
-    LaunchedEffect(controlsVisible) {
-        if (!controlsVisible) seek.left()
-    }
-
-    LaunchedEffect(seek.awaitingReturn) {
-        if (seek.awaitingReturn) {
+    // Not tied to the bar losing focus or the controls hiding: a key-up can go missing with the bar
+    // still focused and a paused film never hides, and neither may leave the bar stuck. A held key
+    // repeats, so it counts as activity; a finger can rest without moving, but can't get lost.
+    LaunchedEffect(seek.activity, dragging) {
+        if (seek.position != null && !dragging) {
             delay(UNFINISHED_SEEK_GRACE_MILLIS)
             seek.drop()
         }
     }
 
-    // Auto-hide when playing and not paused and no picker open. An unfinished seek doesn't hold the bar
-    // up: a held key keeps counting as interaction, and one whose key-up got lost must not pin it
-    // there for good. A growing recording dips in and out of Buffering as it rides the write head, so
-    // for that case Buffering counts as "playing" here — otherwise a single hiccup would pin the
-    // transport bar on screen for the rest of the watch.
-    LaunchedEffect(controlsVisible, interaction, state, paused, vodPanel) {
+    // Auto-hide when playing and not paused and no picker open, and no finger on the bar. A growing
+    // recording dips in and out of Buffering as it rides the write head, so for that case Buffering
+    // counts as "playing" here — otherwise a single hiccup would pin the transport bar on screen for
+    // the rest of the watch.
+    LaunchedEffect(controlsVisible, interaction, state, paused, vodPanel, dragging) {
         val activelyPlaying = state is PlayerController.State.Playing ||
             (growingRec && state is PlayerController.State.Buffering)
-        val watching = activelyPlaying && !paused
+        val watching = activelyPlaying && !paused && !dragging
         if (controlsVisible && watching && vodPanel == VodPanel.NONE) {
             delay(5_000)
             controlsVisible = false
@@ -526,18 +532,26 @@ fun VodPlayerContent(
                             }
                             interaction++
                         },
+                        interactionSource = barInteractions,
                         modifier = Modifier
                             .weight(1f)
                             .onFocusChanged { if (it.hasFocus) seek.reached() else seek.left() }
                             // The slider would seek on these too, and focus could never leave the bar.
+                            // Down goes to play/pause by name: the row is searched from the whole
+                            // width of the bar, and the nearest button could be Back.
                             .onPreviewKeyEvent { event ->
-                                val direction = when (event.key) {
-                                    Key.DirectionUp -> FocusDirection.Up
-                                    Key.DirectionDown -> FocusDirection.Down
-                                    else -> return@onPreviewKeyEvent false
+                                val pressed = event.type == KeyEventType.KeyDown
+                                when (event.key) {
+                                    Key.DirectionUp -> {
+                                        if (pressed) focusManager.moveFocus(FocusDirection.Up)
+                                        true
+                                    }
+                                    Key.DirectionDown -> {
+                                        if (pressed) barFocus.requestFocus()
+                                        true
+                                    }
+                                    else -> false
                                 }
-                                if (event.type == KeyEventType.KeyDown) focusManager.moveFocus(direction)
-                                true
                             },
                     )
                     Spacer(Modifier.width(12.dp))

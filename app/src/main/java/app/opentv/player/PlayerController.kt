@@ -142,6 +142,7 @@ class PlayerController(
     private val _title = MutableStateFlow("")
     val title: StateFlow<String> = _title.asStateFlow()
     private var titled: MediaKey? = null
+    private var loaded: MediaKey? = null
     private var consecutiveFailures = 0
 
     /**
@@ -343,6 +344,7 @@ class PlayerController(
                 disableText()
                 streamSubtitles.newStream()
                 setMediaItem(mediaItem)
+                loaded = request.key
                 if (!playable.isLive && request.startPositionMillis > 0) {
                     seekTo(request.startPositionMillis)
                 }
@@ -421,9 +423,18 @@ class PlayerController(
 
     val isSeekable: Boolean get() = player.isCurrentMediaItemSeekable
 
+    /**
+     * How far through what was asked for playback is. While the next stream resolves, the player still
+     * reports the last one's position, and a seek bar reading that would show the wrong title's place.
+     */
+    val positionMillis: Long
+        get() = current?.takeIf { it.key != loaded }?.startPositionMillis
+            ?: player.currentPosition.coerceAtLeast(0)
+
     fun stop() {
         switchJob?.cancel()
         current = null
+        loaded = null
         player.stop()
         player.clearMediaItems()
         _state.value = State.Idle

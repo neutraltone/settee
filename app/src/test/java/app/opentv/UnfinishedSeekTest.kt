@@ -57,16 +57,41 @@ class UnfinishedSeekTest {
     }
 
     @Test
-    fun `only leaving with a seek unfinished waits for the viewer to return`() {
+    fun `leaving gives a seek its time once, and leaving with none doesn't count`() {
+        val before = seek.activity
         seek.left()
-        assertThat(seek.awaitingReturn).isFalse()
+        assertThat(seek.activity).isEqualTo(before)
 
         seek.pressed(to = 60_000f)
+        val pressed = seek.activity
         seek.left()
-        assertThat(seek.awaitingReturn).isTrue()
+        val left = seek.activity
+        assertThat(left).isNotEqualTo(pressed)
+
+        // Focus going, then the controls hiding, mustn't stretch the time away from the bar.
+        seek.left()
+        assertThat(seek.activity).isEqualTo(left)
+    }
+
+    @Test
+    fun `coming back gives a seek more time`() {
+        seek.pressed(to = 60_000f)
+        seek.left()
+        val left = seek.activity
 
         seek.reached()
-        assertThat(seek.awaitingReturn).isFalse()
+
+        assertThat(seek.activity).isNotEqualTo(left)
+    }
+
+    @Test
+    fun `a key held at the end of the bar still counts, though the seek can't move`() {
+        seek.pressed(to = 60_000f)
+        val first = seek.activity
+
+        seek.pressed(to = 60_000f)
+
+        assertThat(seek.activity).isNotEqualTo(first)
     }
 
     @Test
@@ -76,7 +101,6 @@ class UnfinishedSeekTest {
         seek.drop()
 
         assertThat(seek.position).isNull()
-        assertThat(seek.awaitingReturn).isFalse()
         assertThat(seek.released()).isNull()
     }
 }

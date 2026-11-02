@@ -11,6 +11,7 @@ import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.isFocused
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
@@ -22,12 +23,14 @@ import androidx.media3.common.util.UnstableApi
 import androidx.test.core.app.ApplicationProvider
 import app.opentv.core.ServiceLocator
 import app.opentv.data.repo.MediaKey
+import app.opentv.data.repo.Playable
 import app.opentv.player.NextEpisodeCountdown
 import app.opentv.player.PlayerController
 import app.opentv.ui.player.SubtitlePicks
 import app.opentv.ui.vod.VodPlayerContent
 import app.opentv.ui.vod.VodPlayerViewModel
 import com.google.common.truth.Truth.assertThat
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Rule
@@ -212,6 +215,7 @@ class VodPlayerContentTest {
 
         assertThat(controller.player.currentPosition).isEqualTo(TEN_MINUTES)
         assertThat(barIsFocused()).isFalse()
+        compose.onNodeWithText("Pause").assertIsFocused()
 
         press(Key.DirectionUp)
         settle()
@@ -238,6 +242,7 @@ class VodPlayerContentTest {
         showFilmPartWay()
         startSeekingOnTheBar()
         assertThat(barPosition()).isEqualTo(TEN_MINUTES + ONE_PERCENT)
+        captureScreen("vod_player_seek_bar_seeking")
 
         press(Key.DirectionDown)
         letGoOfRight()
@@ -286,13 +291,16 @@ class VodPlayerContentTest {
     }
 
     @Test
-    fun `a seek whose key-up never comes is dropped once the controls have hidden`() {
+    fun `a seek whose key-up never comes is dropped, on the bar, and the controls still hide`() {
         showFilmPartWay()
         startSeekingOnTheBar()
 
+        compose.mainClock.advanceTimeBy(PAST_GRACE_MILLIS)
+        compose.waitForIdle()
+        assertThat(barPosition()).isEqualTo(TEN_MINUTES)
+
         compose.mainClock.advanceTimeBy(CONTROLS_TIMEOUT_MILLIS)
         compose.onNodeWithText("Pause").assertDoesNotExist()
-        compose.mainClock.advanceTimeBy(PAST_GRACE_MILLIS)
         press(Key.DirectionCenter)
         settle()
 
@@ -301,32 +309,69 @@ class VodPlayerContentTest {
     }
 
     @Test
-    fun `a finger still on the bar when the controls hide doesn't leave it stuck`() {
+    fun `a finger resting on the bar keeps the controls up, and lifting it finishes the seek`() {
         showFilmPartWay()
+        dragTheBar()
+        val target = barPosition()
+        assertThat(target).isNotEqualTo(TEN_MINUTES)
+
+        compose.mainClock.advanceTimeBy(CONTROLS_TIMEOUT_MILLIS + PAST_GRACE_MILLIS)
+        compose.onNodeWithText("Pause").assertExists()
+        assertThat(barPosition()).isEqualTo(target)
+
+        compose.onNode(seekBar).performTouchInput { up() }
+        compose.waitForIdle()
+
+        assertThat(controller.player.currentPosition).isEqualTo(target)
+    }
+
+    private fun dragTheBar() {
         compose.onNode(seekBar).performTouchInput {
             down(center)
             moveBy(Offset(100f, 0f))
         }
         compose.waitForIdle()
+    }
 
-        compose.mainClock.advanceTimeBy(CONTROLS_TIMEOUT_MILLIS)
+    @Test
+    fun `a seek left unfinished on the bar of a paused film doesn't stay there`() {
+        showFilmPartWay()
+        press(Key.MediaPause)
+        startSeekingOnTheBar()
+
         compose.mainClock.advanceTimeBy(PAST_GRACE_MILLIS)
-        press(Key.DirectionCenter)
+        compose.waitForIdle()
+
+        compose.onNodeWithText("Play").assertExists()
+        assertThat(barPosition()).isEqualTo(TEN_MINUTES)
+        assertThat(controller.player.currentPosition).isEqualTo(TEN_MINUTES)
+    }
+
+    @Test
+    fun `fast-forward during a seek wins, and letting go of the key doesn't undo it`() {
+        showFilmPartWay()
+        startSeekingOnTheBar()
+
+        press(Key.MediaFastForward)
+        letGoOfRight()
         players.untilReady(controller.player)
         settle()
 
-        assertThat(barPosition()).isEqualTo(controller.player.currentPosition)
+        assertThat(controller.player.currentPosition).isEqualTo(TEN_MINUTES + 15_000)
+        assertThat(barPosition()).isEqualTo(TEN_MINUTES + 15_000)
     }
 
     // What the screen hands the view model, so moving on to something else reaches the same player.
-    private val playback = object : VodPlayerViewModel.Playback {
+    private val playback = playbackOn(controller)
+
+    private fun playbackOn(player: PlayerController) = object : VodPlayerViewModel.Playback {
         override fun progress() = NextEpisodeCountdown.Playback(
-            controller.player.currentPosition,
-            controller.player.duration.coerceAtLeast(0),
+            player.player.currentPosition,
+            player.player.duration.coerceAtLeast(0),
         )
 
         override fun play(key: MediaKey, startPositionMillis: Long) =
-            controller.play(PlayerController.Request(key, startPositionMillis), debounce = false)
+            player.play(PlayerController.Request(key, startPositionMillis), debounce = false)
 
         override fun pause() = Unit
 
@@ -355,6 +400,55 @@ class VodPlayerContentTest {
 
         assertThat(barPosition()).isEqualTo(nearTheEnd)
         assertThat(controller.player.currentPosition).isEqualTo(nearTheEnd)
+    }
+
+    @Test
+    fun `a finger on the bar when the Next Episode card comes up doesn't leave the bar stuck`() {
+        val nearTheEnd = 3_588_000L
+        runBlocking { graph.database.episodes().upsertAll((1..2).map { testEpisode(1, it) }) }
+        compose.setTvContent { VodPlayerContent(controller, viewModel, false, noPicks, onBack = {}) }
+        runBlocking { viewModel.attach(testEpisode(1, 1).key, playback) }
+        players.untilReady(controller.player)
+        controller.player.seekTo(nearTheEnd)
+        players.untilReady(controller.player)
+        settle()
+        dragTheBar()
+
+        runBlocking { viewModel.poll() }
+        compose.waitForIdle()
+        viewModel.cancel()
+        compose.mainClock.advanceTimeBy(PAST_GRACE_MILLIS)
+        press(Key.DirectionCenter)
+        settle()
+
+        assertThat(barPosition()).isEqualTo(nearTheEnd)
+        assertThat(controller.player.currentPosition).isEqualTo(nearTheEnd)
+    }
+
+    @Test
+    fun `while the next one loads the bar shows where it will start, not the last one's position`() {
+        val loaded = CompletableDeferred<Unit>()
+        val slow = players.controller { key ->
+            if (key == MediaKey.Movie(2)) loaded.await()
+            Playable.Ready(key, "https://example.com/stream", userAgent = "", title = "Film", isLive = false)
+        }
+        val onSlow = playbackOn(slow)
+        compose.setTvContent { VodPlayerContent(slow, viewModel, false, noPicks, onBack = {}) }
+        runBlocking { viewModel.attach(MediaKey.Movie(1), onSlow) }
+        players.untilReady(slow.player)
+        slow.player.seekTo(TEN_MINUTES)
+        players.untilReady(slow.player)
+        settle()
+
+        runBlocking { viewModel.attach(MediaKey.Movie(2), onSlow) }
+        settle()
+
+        assertThat(slow.player.currentPosition).isEqualTo(TEN_MINUTES)
+        assertThat(barPosition()).isEqualTo(0)
+
+        loaded.complete(Unit)
+        players.until { slow.player.currentPosition < TEN_MINUTES }
+        slow.release()
     }
 
     @Test

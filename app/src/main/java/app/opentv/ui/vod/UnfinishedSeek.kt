@@ -6,6 +6,7 @@
 package app.opentv.ui.vod
 
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 
@@ -21,17 +22,22 @@ class UnfinishedSeek {
     var position by mutableStateOf<Float?>(null)
         private set
 
-    /** The viewer has left with a seek unfinished, and it lasts only a while without them. */
-    var awaitingReturn by mutableStateOf(false)
+    /**
+     * Changes whenever the viewer does something with the seek. It lapses after a while with no change,
+     * however it came to be left: away from the bar, back on it without pressing, or a lost key-up.
+     */
+    var activity by mutableIntStateOf(0)
         private set
 
     private var pressing = false
+    private var away = false
 
     /** Left or right on the bar, or a drag, has moved the seek on to [to]. */
     fun pressed(to: Float) {
         position = to
         pressing = true
-        awaitingReturn = false
+        away = false
+        activity++
     }
 
     /** The key or finger came up: where to seek to, if that finished a seek. */
@@ -42,21 +48,27 @@ class UnfinishedSeek {
         return finished
     }
 
-    /** The bar lost focus, or the controls hid. A seek in hand stays, for now, but no press is under way. */
+    /** The bar lost focus. A seek in hand stays, for now, but no press is under way. */
     fun left() {
         pressing = false
-        awaitingReturn = position != null
+        if (position != null && !away) {
+            away = true
+            activity++
+        }
     }
 
     /** The bar has focus again. */
     fun reached() {
-        awaitingReturn = false
+        if (away) {
+            away = false
+            activity++
+        }
     }
 
     /** Forgets the seek, leaving playback where it was. */
     fun drop() {
         position = null
         pressing = false
-        awaitingReturn = false
+        away = false
     }
 }
