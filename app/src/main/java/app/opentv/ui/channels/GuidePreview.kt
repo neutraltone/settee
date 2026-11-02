@@ -36,10 +36,16 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -50,12 +56,45 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
 import app.opentv.R
+import app.opentv.core.ServiceLocator
 import app.opentv.data.model.shownName
+import app.opentv.player.PlayerController
 import app.opentv.ui.ChannelsViewModel
 import coil.compose.AsyncImage
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+
+/** The guide's preview player, released with the screen. Its sound follows the guide's sound setting. */
+@Composable
+internal fun rememberGuidePreviewController(): PlayerController {
+    val context = LocalContext.current
+    val graph = remember { ServiceLocator.get(context) }
+    val scope = remember { CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate) }
+    val controller = remember {
+        PlayerController(
+            context,
+            scope,
+            graph.httpClient,
+            resolve = graph.playbackSources::forWatching,
+            subtitlesEnabled = false,
+            preview = true,
+        )
+    }
+    DisposableEffect(Unit) {
+        onDispose {
+            controller.release()
+            scope.cancel()
+        }
+    }
+    val sound by graph.settings.guidePreviewSound.collectAsState()
+    LaunchedEffect(sound) { controller.audioEnabled = sound }
+    return controller
+}
 
 /**
  * The detail pane at the top of the guide.

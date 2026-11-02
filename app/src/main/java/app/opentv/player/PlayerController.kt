@@ -284,6 +284,23 @@ class PlayerController(
         }
 
     /**
+     * Whether a sound track is selected, for this stream and the ones after it. Off selects no audio
+     * track rather than setting the volume to 0: Dolby passed straight through over HDMI can ignore
+     * the player's volume, and it spares a cheap box decoding audio nobody is listening to.
+     */
+    var audioEnabled: Boolean
+        get() = C.TRACK_TYPE_AUDIO !in player.trackSelectionParameters.disabledTrackTypes
+        set(enabled) {
+            player.trackSelectionParameters = player.trackSelectionParameters.buildUpon()
+                .setTrackTypeDisabled(C.TRACK_TYPE_AUDIO, !enabled)
+                .build()
+        }
+
+    init {
+        if (preview) audioEnabled = false
+    }
+
+    /**
      * Switches playback.
      *
      * @param debounce when true (the default for channel surfing) the switch waits briefly so
