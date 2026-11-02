@@ -133,47 +133,52 @@ class EpgRepository(
 
     // ---- Sync ------------------------------------------------------------------------------
 
-    /** Downloads every enabled feed, merges, prunes, and re-runs the matcher. */
-    suspend fun syncAll(nowUtcMillis: Long, force: Boolean = false): SyncSummary = withContext(Dispatchers.IO) {
-        ensureFeeds()
-        maybeAutoEnableRegionalFeed()
+    /**
+     * Downloads every enabled feed, merges, prunes, and re-runs the matcher. [skipFetchedSince] leaves
+     * out feeds already downloaded at or after that time, even when [force]d.
+     */
+    suspend fun syncAll(nowUtcMillis: Long, force: Boolean = false, skipFetchedSince: Long? = null): SyncSummary =
+        withContext(Dispatchers.IO) {
+            ensureFeeds()
+            maybeAutoEnableRegionalFeed()
 
-        var succeeded = 0
-        var failed = 0
-        var written = 0
+            var succeeded = 0
+            var failed = 0
+            var written = 0
 
-        for (feed in feedDao.enabled()) {
-            if (!force && nowUtcMillis - feed.lastSyncMillis < REFRESH_INTERVAL_MILLIS) {
-                succeeded++
-                continue
-            }
-            when (val result = syncFeed(feed, nowUtcMillis)) {
-                is FeedResult.Success -> {
+            for (feed in feedDao.enabled()) {
+                val inWindow = !force && nowUtcMillis - feed.lastSyncMillis < REFRESH_INTERVAL_MILLIS
+                if (inWindow || (skipFetchedSince != null && feed.lastSyncMillis >= skipFetchedSince)) {
                     succeeded++
-                    written += result.programmes
-                    feedDao.markSynced(
-                        feed.id,
-                        nowUtcMillis,
-                        "${result.programmes} programmes, ${result.channels} channels",
-                    )
+                    continue
                 }
-                is FeedResult.Failed -> {
-                    failed++
-                    // The stamp is NOT advanced on failure, so the next sync retries
-                    // rather than waiting out the interval on a feed that never landed.
-                    feedDao.markSynced(feed.id, feed.lastSyncMillis, result.reason)
-                    Log.w(TAG, "Feed '${feed.name}' failed: ${result.reason}")
+                when (val result = syncFeed(feed, nowUtcMillis)) {
+                    is FeedResult.Success -> {
+                        succeeded++
+                        written += result.programmes
+                        feedDao.markSynced(
+                            feed.id,
+                            nowUtcMillis,
+                            "${result.programmes} programmes, ${result.channels} channels",
+                        )
+                    }
+                    is FeedResult.Failed -> {
+                        failed++
+                        // The stamp is NOT advanced on failure, so the next sync retries
+                        // rather than waiting out the interval on a feed that never landed.
+                        feedDao.markSynced(feed.id, feed.lastSyncMillis, result.reason)
+                        Log.w(TAG, "Feed '${feed.name}' failed: ${result.reason}")
+                    }
                 }
             }
-        }
 
-        if (succeeded > 0) {
-            programmeDao.deleteEndedBefore(nowUtcMillis - RETENTION_PAST_MILLIS)
-        }
+            if (succeeded > 0) {
+                programmeDao.deleteEndedBefore(nowUtcMillis - RETENTION_PAST_MILLIS)
+            }
 
-        val (matched, total) = runMatcher()
-        SyncSummary(succeeded, failed, written, matched, total)
-    }
+            val (matched, total) = runMatcher()
+            SyncSummary(succeeded, failed, written, matched, total)
+        }
 
     private sealed interface FeedResult {
         data class Success(val programmes: Int, val channels: Int) : FeedResult

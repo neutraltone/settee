@@ -26,18 +26,39 @@ class FakePanel(vararg initial: Pair<String, String>) {
     val replies = initial.toMap().toMutableMap()
 
     /** Every `action` (with its series id, where it has one) asked for, in order. */
-    val asked = mutableListOf<String>()
+    val asked: MutableList<String> = java.util.Collections.synchronizedList(mutableListOf())
 
     /** Every Stalker `cmd` a link was asked for, in order. */
     val cmds = mutableListOf<String>()
 
+    private val holds = java.util.concurrent.ConcurrentHashMap<String, Hold>()
+
+    /** Keeps requests for [action] waiting until [Hold.release], so a test can act during a download. */
+    fun hold(action: String) = Hold().also { holds[action] = it }
+
+    class Hold {
+        val reached = java.util.concurrent.CountDownLatch(1)
+        private val gate = java.util.concurrent.CountDownLatch(1)
+
+        fun release() = gate.countDown()
+
+        internal fun pass() {
+            reached.countDown()
+            // Bounded, so a test that fails before releasing this fails rather than hangs.
+            gate.await(10, java.util.concurrent.TimeUnit.SECONDS)
+        }
+    }
+
     val http: OkHttpClient = OkHttpClient.Builder().addInterceptor { chain ->
         val request = chain.request()
-        val action = request.url.queryParameter("action").orEmpty()
+        // A provider's guide has no action, so it answers to its file name instead.
+        val guide = request.url.encodedPath.endsWith("xmltv.php")
+        val action = if (guide) "xmltv.php" else request.url.queryParameter("action").orEmpty()
         val keyed = request.url.queryParameter("series_id")?.let { "$action:$it" }
         asked += keyed ?: action
         if (action == "create_link") cmds += request.url.queryParameter("cmd").orEmpty()
         val body = keyed?.let { replies[it] } ?: replies[action] ?: "[]"
+        (keyed?.let { holds[it] } ?: holds[action])?.pass()
         if (body == "!") throw java.io.IOException("Panel timed out")
         Response.Builder()
             .request(request)

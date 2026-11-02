@@ -316,7 +316,7 @@ fun AddSourceScreen(viewModel: SourcesViewModel, onFinished: () -> Unit, editing
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 OutlinedButton(
                     onClick = { viewModel.test(draft()) },
-                    enabled = canSubmit && !ui.testing && !ui.syncing,
+                    enabled = canSubmit && !ui.testing && !ui.adding,
                 ) {
                     if (ui.testing) {
                         CircularProgressIndicator(Modifier.height(18.dp), strokeWidth = 2.dp)
@@ -326,10 +326,10 @@ fun AddSourceScreen(viewModel: SourcesViewModel, onFinished: () -> Unit, editing
                 }
                 Button(
                     onClick = { viewModel.saveAndSync(draft()) { ok -> if (ok) onFinished() } },
-                    enabled = canSubmit && !ui.testing && !ui.syncing,
+                    enabled = canSubmit && !ui.testing && !ui.adding,
                 ) {
                     Text(
-                        if (ui.syncing) {
+                        if (ui.adding) {
                             stringResource(
                                 R.string.onboarding_working,
                             )

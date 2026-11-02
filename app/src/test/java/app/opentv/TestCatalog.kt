@@ -12,13 +12,17 @@ import app.opentv.data.db.OpenTvDatabase
 import app.opentv.data.remote.StalkerApi
 import app.opentv.data.remote.XtreamApi
 import app.opentv.data.repo.CatalogRepository
+import app.opentv.data.repo.CatalogueRefresh
 import app.opentv.data.repo.ChannelLineup
+import app.opentv.data.repo.EpgRepository
 import app.opentv.data.repo.ViewerLibrary
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.job
+import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.runBlocking
 
 /**
@@ -45,6 +49,18 @@ class TestCatalog(context: Context, private val clock: () -> Long = { 0L }) {
         settings = AppSettings.get(context),
     )
 
+    val settings: AppSettings = AppSettings.get(context)
+
+    val guide = EpgRepository(
+        programmeDao = db.programmes(),
+        feedDao = db.epgFeeds(),
+        aliasDao = db.epgAliases(),
+        channelDao = db.channels(),
+        sourceDao = db.sources(),
+        api = XtreamApi(panel.http),
+        http = panel.http,
+    )
+
     /** Where [lineup] keeps its folds; cancelled with the database. */
     private val sharing = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
@@ -52,8 +68,23 @@ class TestCatalog(context: Context, private val clock: () -> Long = { 0L }) {
     val lineup =
         ChannelLineup(db, viewerLibrary.favourites, MutableStateFlow(emptySet()), MutableStateFlow(false), sharing)
 
+    private val refreshing = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+
+    /** A [CatalogueRefresh] over this catalogue, at [clock]; [awaitRefresh] waits for its background work. */
+    fun refresh(rescanSeriesRules: suspend () -> Unit = {}) = CatalogueRefresh(
+        catalog = catalog,
+        guide = guide,
+        settings = settings,
+        rescanSeriesRules = rescanSeriesRules,
+        clock = clock,
+        scope = refreshing,
+    )
+
+    suspend fun awaitRefresh() = refreshing.coroutineContext.job.children.toList().joinAll()
+
     /** Closes the database once the catalogue's background work is done with it. */
     fun close() = runBlocking {
+        awaitRefresh()
         catalog.awaitBackground()
         sharing.cancel()
         db.close()
@@ -62,6 +93,6 @@ class TestCatalog(context: Context, private val clock: () -> Long = { 0L }) {
     /** Saves [PANEL_SOURCE] and syncs its movies and shows from the panel's current replies. */
     suspend fun syncVod() {
         db.sources().insert(PANEL_SOURCE)
-        catalog.syncVod(PANEL_SOURCE, nowUtcMillis = 0)
+        catalog.fetchVod(PANEL_SOURCE, nowUtcMillis = 0)
     }
 }

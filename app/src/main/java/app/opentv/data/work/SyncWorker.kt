@@ -16,77 +16,56 @@ import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
+import androidx.work.workDataOf
 import app.opentv.core.ServiceLocator
-import app.opentv.data.repo.CatalogRepository
+import app.opentv.data.repo.CatalogueRefresh
 import java.util.concurrent.TimeUnit
 
 /**
- * Background refresh of the catalogue and the guide.
+ * Runs a Catalogue Refresh in the background: the periodic one, and the one a viewer asks for.
  *
  * Runs on WorkManager rather than a foreground timer so it survives the app being killed,
  * which on a TV box happens constantly. Failures return [Result.retry] with WorkManager's
  * exponential backoff — the app never hammers a provider that is already struggling.
+ *
+ * Named SyncWorker though it isn't device sync: WorkManager stores the class name for the periodic
+ * job already scheduled on devices, and renaming it would break that job.
  */
 class SyncWorker(context: Context, params: WorkerParameters) : CoroutineWorker(context, params) {
 
     override suspend fun doWork(): Result {
         val graph = ServiceLocator.get(applicationContext)
-        val now = System.currentTimeMillis()
-        val sources = graph.sourceRepository.enabled()
-        if (sources.isEmpty()) return Result.success()
+        if (graph.sourceRepository.enabled().isEmpty()) return Result.success()
 
-        var anyFailed = false
+        val manual = inputData.getBoolean(KEY_MANUAL, false)
+        val trigger = if (manual) CatalogueRefresh.Trigger.Manual else CatalogueRefresh.Trigger.Periodic
+        val outcome = graph.catalogueRefresh.refresh(trigger)
+        Log.i(TAG, "Refreshed ${outcome.channels} channels, ${outcome.problems} problem(s)")
 
-        for (source in sources) {
-            when (val result = graph.catalogRepository.sync(source, now)) {
-                is CatalogRepository.SyncResult.Success ->
-                    Log.i(TAG, "Catalogue for ${source.name}: ${result.channelCount} channels")
-                is CatalogRepository.SyncResult.Failed -> {
-                    anyFailed = true
-                    Log.w(TAG, "Catalogue for ${source.name} failed: ${result.reason}")
-                }
-            }
-        }
-
-        // Guides sync as one pass across every enabled feed — provider guides, built-in
-        // free sources and user URLs merge into a single guide, then the matcher runs.
-        val summary = graph.epgRepository.syncAll(now)
-        if (summary.feedsFailed > 0) anyFailed = true
-        Log.i(
-            TAG,
-            "Guide: ${summary.programmesWritten} programmes from ${summary.feedsSucceeded} " +
-                "feed(s), ${summary.channelsMatched}/${summary.channelsTotal} channels matched",
-        )
-
-        // Book any newly-revealed series-link airings from this fresh guide.
-        runCatching { graph.recordingEngine.rescanSeriesRules() }
-
-        // A partial failure is still a retry — but the user keeps everything already on disk.
-        return if (anyFailed) Result.retry() else Result.success()
+        // A partial failure is still a retry — but the user keeps everything already on disk. Not one
+        // the viewer asked for: they've been shown the result, and asking again is theirs to do.
+        return if (outcome.problems > 0 && !manual) Result.retry() else Result.success()
     }
 
     companion object {
         private const val TAG = "SyncWorker"
         private const val WORK_NAME = "opentv-periodic-sync"
         private const val ONE_SHOT_WORK_NAME = "opentv-manual-sync"
+        private const val KEY_MANUAL = "manual"
 
         /**
-         * Kick a single catalogue + guide refresh now, off the UI. Runs the same [doWork] as the
-         * periodic job — so it honours the content-type toggles — but as one-time work, which means
-         * it survives the user navigating away from the screen that triggered it (unlike a refresh
-         * tied to a screen's ViewModel scope). REPLACE so repeated taps coalesce into one run.
+         * Kick a manual Catalogue Refresh now, off the UI, as one-time work, which means it survives
+         * the viewer leaving the screen that asked for it. No network constraint, so with no network
+         * it fails and says so rather than sitting queued with nothing on screen. KEEP so repeated
+         * taps join the running refresh instead of cancelling its downloads.
          */
         fun refreshNow(context: Context) {
             val request = OneTimeWorkRequestBuilder<SyncWorker>()
-                .setConstraints(
-                    Constraints.Builder()
-                        .setRequiredNetworkType(NetworkType.CONNECTED)
-                        .build(),
-                )
+                .setInputData(workDataOf(KEY_MANUAL to true))
                 .build()
             WorkManager.getInstance(context).enqueueUniqueWork(
                 ONE_SHOT_WORK_NAME,
-                ExistingWorkPolicy.REPLACE,
+                ExistingWorkPolicy.KEEP,
                 request,
             )
         }

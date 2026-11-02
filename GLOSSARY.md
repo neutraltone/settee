@@ -16,6 +16,12 @@ _Avoid_: Profile picker, profile chooser, profile select
 Whether a Profile wants subtitles shown, and in which language. Belongs to one Profile and follows it from one title to the next, whatever kind of title it is.
 _Avoid_: Captions setting, CC, subtitle default
 
+## Providers
+
+**Catalogue Refresh**:
+Fetching a provider's channels, movies, shows and guide again and merging them into what's on the device. It never wipes what the viewer set: hidden channels, custom names, Favourites and progress all carry across. Runs every six hours, when the viewer asks, when a provider is added, and when Movies or Shows is opened and that provider's titles are more than 12 hours old.
+_Avoid_: Sync (that's between the viewer's devices), reload, update
+
 ## Live TV
 
 **Channel**:

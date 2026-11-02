@@ -26,12 +26,6 @@ class NewEpisodeRefreshTest {
     private val db = test.db
     private val panel = test.panel
 
-    init {
-        // A refresh only reaches movies and shows once live TV has loaded.
-        panel.replies[""] = """{"user_info": {"status": "Active"}}"""
-        panel.replies["get_live_streams"] = """[{"stream_id": 1, "name": "BBC One"}]"""
-    }
-
     @After
     fun close() = test.close()
 
@@ -48,7 +42,7 @@ class NewEpisodeRefreshTest {
         panel.replies["get_series"] = """[{"series_id": $id, "name": "Show", "last_modified": "$lastModified"}]"""
     }
 
-    private suspend fun refresh() = test.catalog.sync(PANEL_SOURCE, now)
+    private suspend fun refresh() = test.catalog.fetchVod(PANEL_SOURCE, now, waitForNewEpisodes = true)
 
     @Test
     fun `fetching a show's episodes again updates them but keeps when each was first seen`() = runTest {
