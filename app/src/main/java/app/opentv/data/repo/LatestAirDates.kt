@@ -5,12 +5,10 @@
  */
 package app.opentv.data.repo
 
-import android.util.Log
 import app.opentv.data.db.SeriesDao
 import app.opentv.data.model.Series
 import app.opentv.data.model.Source
 import app.opentv.data.remote.XtreamApi
-import kotlinx.coroutines.CancellationException
 
 /**
  * Finds when a source's recently updated shows last had an episode out, for Home's Recently
@@ -28,21 +26,13 @@ class LatestAirDates(
     /** TMDB's `last_air_date` for a show, or null without a key or a match. */
     private val tmdbLastAirDate: suspend (Series) -> Long?,
 ) {
-    suspend fun refresh(source: Source) {
-        for (series in seriesDao.mostRecentlyUpdated(source.id, count)) {
-            // One show's failure must not cost the others their dates; it is left out of the row.
-            runCatching { latestAirDate(source, series) }
-                .onFailure { if (it is CancellationException) throw it }
-                .onFailure { Log.w(TAG, "Air date lookup failed for series ${series.seriesId}", it) }
-                .getOrNull()
-                ?.let { seriesDao.setLatestAirDate(series.id, it) }
-        }
-    }
-
-    private suspend fun latestAirDate(source: Source, series: Series): Long? {
-        val info = api.seriesInfo(source, series.seriesId) ?: return null
-        return info.latestAirDate ?: info.releaseDate ?: tmdbLastAirDate(series)
-    }
+    suspend fun refresh(source: Source) = lookUpDates(
+        titles = seriesDao.mostRecentlyUpdated(source.id, count),
+        tag = TAG,
+        ask = { api.seriesInfo(source, it.seriesId) },
+        date = { series, info -> info.latestAirDate ?: info.releaseDate ?: tmdbLastAirDate(series) },
+        save = { found -> seriesDao.setLatestAirDates(found.map { (series, date) -> series.id to date }) },
+    )
 
     companion object {
         private const val TAG = "LatestAirDates"

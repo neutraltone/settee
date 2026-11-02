@@ -420,6 +420,9 @@ interface ProgrammeDao {
     suspend fun deleteForFeed(feedId: Long)
 }
 
+/** A movie's local id and the release date it has, for [MovieDao.upsertKeepingDates]. */
+data class MovieReleaseDate(val id: Long, val releaseDate: Long)
+
 @Dao
 interface MovieDao {
     @Query(
@@ -438,15 +441,18 @@ interface MovieDao {
     @Query("SELECT * FROM movies ORDER BY addedMillis DESC LIMIT :limit")
     fun observeRecentlyAdded(limit: Int): Flow<List<Movie>>
 
-    /** Newest release first, for Home's "Recently Released" row; titles not out yet or with no date are left out. */
+    /**
+     * Newest release first, for Home's "Recently Released" row; titles not out yet, out before
+     * [sinceMillis] or with no date are left out.
+     */
     @Query(
         """
         SELECT * FROM movies
-        WHERE releaseDate IS NOT NULL AND releaseDate <= :nowMillis
+        WHERE releaseDate IS NOT NULL AND releaseDate BETWEEN :sinceMillis AND :nowMillis
         ORDER BY releaseDate DESC LIMIT :limit
         """,
     )
-    fun observeRecentlyReleased(nowMillis: Long, limit: Int): Flow<List<Movie>>
+    fun observeRecentlyReleased(sinceMillis: Long, nowMillis: Long, limit: Int): Flow<List<Movie>>
 
     /**
      * Every movie, newest first — the working set for the Kotlin-side feeds (by-genre grouping,
@@ -463,6 +469,36 @@ interface MovieDao {
 
     @Query("SELECT * FROM movies WHERE sourceId = :sourceId")
     suspend fun forSource(sourceId: Long): List<Movie>
+
+    /**
+     * The [limit] movies a source most recently added. Panels that omit `added` leave every movie at
+     * 0, so the newest row breaks ties, which lets a new film into the set.
+     */
+    @Query("SELECT * FROM movies WHERE sourceId = :sourceId ORDER BY addedMillis DESC, id DESC LIMIT :limit")
+    suspend fun mostRecentlyAdded(sourceId: Long, limit: Int): List<Movie>
+
+    @Query("UPDATE movies SET releaseDate = :releaseDate WHERE id = :id")
+    suspend fun setReleaseDate(id: Long, releaseDate: Long)
+
+    /** Saves these (local id, date) pairs in one go, so everything observing movies reloads once. */
+    @Transaction
+    suspend fun setReleaseDates(dates: List<Pair<Long, Long>>) {
+        dates.forEach { (id, date) -> setReleaseDate(id, date) }
+    }
+
+    @Query("SELECT id, releaseDate FROM movies WHERE sourceId = :sourceId AND releaseDate IS NOT NULL")
+    suspend fun releaseDates(sourceId: Long): List<MovieReleaseDate>
+
+    /**
+     * Saves rows read before some slow work, keeping a release date found since. Sync and detail
+     * opens hold a row across network calls while the date lookup writes to it, and a plain upsert
+     * would put the null they read back.
+     */
+    @Transaction
+    suspend fun upsertKeepingDates(sourceId: Long, movies: List<Movie>) {
+        val dates = releaseDates(sourceId).associate { it.id to it.releaseDate }
+        upsertAll(movies.map { it.copy(releaseDate = it.releaseDate ?: dates[it.id]) })
+    }
 
     /**
      * Fallback for More-Like-This when a movie has no genre to match on: other titles from the same
@@ -538,15 +574,18 @@ interface SeriesDao {
     @Query("SELECT * FROM series ORDER BY addedMillis DESC LIMIT :limit")
     fun observeRecentlyAdded(limit: Int): Flow<List<Series>>
 
-    /** Newest episode first, for Home's "Recently Released" row; series never looked up are left out. */
+    /**
+     * Newest episode first, for Home's "Recently Released" row; series never looked up, or with
+     * nothing out since [sinceMillis], are left out.
+     */
     @Query(
         """
         SELECT * FROM series
-        WHERE latestAirDate IS NOT NULL AND latestAirDate <= :nowMillis
+        WHERE latestAirDate IS NOT NULL AND latestAirDate BETWEEN :sinceMillis AND :nowMillis
         ORDER BY latestAirDate DESC LIMIT :limit
         """,
     )
-    fun observeRecentlyReleased(nowMillis: Long, limit: Int): Flow<List<Series>>
+    fun observeRecentlyReleased(sinceMillis: Long, nowMillis: Long, limit: Int): Flow<List<Series>>
 
     /** Every series, newest first — working set for the Kotlin-side by-genre / more-like-this feeds. */
     @Query("SELECT * FROM series ORDER BY addedMillis DESC")
@@ -559,12 +598,18 @@ interface SeriesDao {
     @Query("SELECT * FROM series WHERE sourceId = :sourceId")
     suspend fun forSource(sourceId: Long): List<Series>
 
-    /** The [limit] series a source most recently added or updated (`last_modified`). */
-    @Query("SELECT * FROM series WHERE sourceId = :sourceId ORDER BY addedMillis DESC LIMIT :limit")
+    /** The [limit] series a source most recently added or updated (`last_modified`), newest row on a tie. */
+    @Query("SELECT * FROM series WHERE sourceId = :sourceId ORDER BY addedMillis DESC, id DESC LIMIT :limit")
     suspend fun mostRecentlyUpdated(sourceId: Long, limit: Int): List<Series>
 
     @Query("UPDATE series SET latestAirDate = :latestAirDate WHERE id = :id")
     suspend fun setLatestAirDate(id: Long, latestAirDate: Long)
+
+    /** Saves these (local id, date) pairs in one go, so everything observing series reloads once. */
+    @Transaction
+    suspend fun setLatestAirDates(dates: List<Pair<Long, Long>>) {
+        dates.forEach { (id, date) -> setLatestAirDate(id, date) }
+    }
 
     /** Fallback for More-Like-This when a series has no genre: same source/category, best-rated first. */
     @Query(
