@@ -128,6 +128,9 @@ class HomeContentTest {
         error = error,
     )
 
+    /** What a test's Home did when its cards were selected, in order. */
+    private val events = mutableListOf<String>()
+
     @Test
     fun `the Live Preview has no sound track`() {
         lateinit var preview: LivePreviewPlayer
@@ -166,17 +169,27 @@ class HomeContentTest {
     ) = compose.setTvContent {
         HomeContent(
             live = live,
-            onWatchLive = { watched = it },
+            onWatchLive = {
+                events += "watch"
+                watched = it
+            },
             onOpenLive = { openedLive = true },
+            stopPreview = { events += "stop" },
             continueWatching = resume,
             favouriteShows = shows,
             favouriteMovies = movies,
             favouriteChannels = channels,
             recent = recent,
-            onResume = {},
-            onOpenSeries = {},
-            onOpenMovie = { opened = it },
-            onPlayChannel = { played = it },
+            onResume = { events += "resume" },
+            onOpenSeries = { events += "series" },
+            onOpenMovie = {
+                events += "movie"
+                opened = it
+            },
+            onPlayChannel = {
+                events += "channel"
+                played = it
+            },
             takeFocus = takeFocus,
         )
     }
@@ -353,6 +366,27 @@ class HomeContentTest {
         compose.onNodeWithText("A Place in the Sun", substring = true).assertExists()
         assertThat(topOf("Channel 4")).isLessThan(topOf("Collateral"))
         captureScreen("home_live_preview")
+    }
+
+    @Test
+    fun `every card on Home stops the preview before it opens`() {
+        live = playable()
+        setHome(recent = recent)
+
+        fun selecting(card: String): List<String> {
+            events.clear()
+            scrollTo(card)
+            compose.onNodeWithText(card).performClick()
+            return events.toList()
+        }
+
+        assertThat(selecting("Channel 4")).containsExactly("stop", "watch").inOrder()
+        assertThat(selecting("Collateral")).containsExactly("stop", "resume").inOrder()
+        assertThat(selecting("Severance")).containsExactly("stop", "series").inOrder()
+        assertThat(selecting("Heat")).containsExactly("stop", "movie").inOrder()
+        assertThat(selecting("BBC One")).containsExactly("stop", "channel").inOrder()
+        assertThat(selecting("Dune: Part Two")).containsExactly("stop", "movie").inOrder()
+        assertThat(selecting("Shogun")).containsExactly("stop", "series").inOrder()
     }
 
     @Test

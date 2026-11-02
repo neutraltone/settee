@@ -59,6 +59,23 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 
+/**
+ * Whether Home's Live Preview may play. Once a card is picked it stays stopped until Home has really
+ * left, so a recording or a channel changing in that moment can't restart it beside the new stream.
+ */
+internal class LivePreviewGate {
+    private var leaving = false
+
+    fun leave() {
+        leaving = true
+    }
+
+    fun allows(resumed: Boolean, recording: Boolean): Boolean {
+        if (!resumed) leaving = false
+        return resumed && !recording && !leaving
+    }
+}
+
 /** Home's muted player for the Live Preview: [player] is null while nothing should play. */
 internal class LivePreviewPlayer(val player: ExoPlayer?, val error: String?, val stop: () -> Unit)
 
@@ -97,9 +114,10 @@ internal fun rememberLivePreviewPlayer(channel: Channel?): LivePreviewPlayer {
     val playing = controller?.first
     val resumed = LocalLifecycleOwner.current.lifecycle.currentStateFlow.collectAsState().value
         .isAtLeast(Lifecycle.State.RESUMED)
+    val gate = remember { LivePreviewGate() }
     LaunchedEffect(playing, channel?.id, resumed, recordings.isNotEmpty()) {
         if (playing == null || channel == null) return@LaunchedEffect
-        if (!resumed || recordings.isNotEmpty()) {
+        if (!gate.allows(resumed, recording = recordings.isNotEmpty())) {
             playing.stop()
             return@LaunchedEffect
         }
@@ -109,7 +127,10 @@ internal fun rememberLivePreviewPlayer(channel: Channel?): LivePreviewPlayer {
     return LivePreviewPlayer(
         player = playing?.player,
         error = (state as? PlayerController.State.Error)?.message,
-        stop = { playing?.stop() },
+        stop = {
+            gate.leave()
+            playing?.stop()
+        },
     )
 }
 

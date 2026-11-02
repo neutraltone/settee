@@ -18,6 +18,7 @@ import androidx.media3.datasource.DefaultDataSource
 import androidx.media3.datasource.HttpDataSource
 import androidx.media3.datasource.okhttp.OkHttpDataSource
 import androidx.media3.exoplayer.DefaultLoadControl
+import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.exoplayer.trackselection.DefaultTrackSelector
@@ -209,7 +210,12 @@ class PlayerController(
             .build()
     }
 
-    val player: ExoPlayer = ExoPlayer.Builder(context)
+    // Fallback is for the full-screen players: a muted preview that can't start says so on its tile
+    // rather than spend a cheap box's time trying every decoder for each channel passed over.
+    val player: ExoPlayer = ExoPlayer.Builder(
+        context,
+        DefaultRenderersFactory(context).setEnableDecoderFallback(!preview),
+    )
         .setMediaSourceFactory(
             DefaultMediaSourceFactory(dataSourceFactory)
                 .setLoadErrorHandlingPolicy(loadErrorPolicy),
@@ -242,6 +248,7 @@ class PlayerController(
         )
         .let(buildPlayer)
         .apply {
+            addAnalyticsListener(PlaybackErrors.decoderLog)
             addListener(object : Player.Listener {
                 override fun onTracksChanged(tracks: Tracks) {
                     _tracks.value = tracks
@@ -266,15 +273,20 @@ class PlayerController(
 
                 override fun onPlayerError(error: PlaybackException) {
                     consecutiveFailures++
+                    PlaybackErrors.logDecoderFailure(error)
                     val request = current
+                    // Restarting can't change what this device can decode, and on a portal it would
+                    // only mint more links for a stream that will fail the same way.
+                    val canRestart = !PlaybackErrors.isUnplayableFormat(error) &&
+                        consecutiveFailures < MAX_AUTO_RESTARTS
                     _state.value = State.Error(
                         title = _title.value,
-                        message = PlaybackErrors.describe(error),
-                        canRetry = consecutiveFailures < MAX_AUTO_RESTARTS,
+                        message = PlaybackErrors.describe(strings, error),
+                        canRetry = canRestart,
                     )
                     // One silent restart covers the common case of a provider dropping the
                     // connection when another device on the account starts streaming.
-                    if (consecutiveFailures < MAX_AUTO_RESTARTS && request != null) {
+                    if (canRestart && request != null) {
                         scope.launch {
                             delay(AUTO_RESTART_DELAY_MILLIS)
                             if (current == request) play(request, debounce = false)

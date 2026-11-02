@@ -7,6 +7,7 @@ package app.opentv
 
 import android.content.Context
 import android.os.Looper
+import android.view.Surface
 import androidx.media3.common.C
 import androidx.media3.common.Format
 import androidx.media3.common.MediaItem
@@ -137,6 +138,25 @@ class TestPlayers(private val context: Context) {
                 .setClock(clock)
                 .setMediaSourceFactory(FakeSources(window, played, failing, formats))
                 .build()
+        },
+    )
+
+    /**
+     * A [PlayerController] on the renderers it has in the app, so real decoders are chosen from the
+     * device's codec list. Plays fake H.264 video to [surface]; a decoder only starts when it has one.
+     */
+    fun realDecoderController(preview: Boolean = false, surface: Surface) = PlayerController(
+        context,
+        scope,
+        OkHttpClient(),
+        resolve = ::placeholder,
+        preview = preview,
+        buildPlayer = { builder ->
+            builder
+                .setClock(FakeClock(true))
+                .setMediaSourceFactory(FakeSources(FILM, played, failing = 0, formats))
+                .build()
+                .apply { setVideoSurface(surface) }
         },
     )
 
