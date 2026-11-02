@@ -55,6 +55,10 @@ import okhttp3.Request
  * - A failed feed leaves that feed's previous data intact and records the reason on the
  *   feed row, where the settings screen shows it — no silent failure.
  */
+/** What's showing at [nowUtcMillis], from [EpgRepository.upcoming]: its first may not have started yet. */
+internal fun List<Programme>.onNowAt(nowUtcMillis: Long): Programme? =
+    firstOrNull()?.takeIf { it.startUtcMillis <= nowUtcMillis }
+
 class EpgRepository(
     private val programmeDao: ProgrammeDao,
     private val feedDao: EpgFeedDao,
@@ -84,6 +88,10 @@ class EpgRepository(
 
     suspend fun upcoming(epgChannelId: String, nowUtcMillis: Long, limit: Int = 12): List<Programme> =
         programmeDao.upcoming(epgChannelId, nowUtcMillis, limit)
+
+    /** What's showing at [nowUtcMillis]. */
+    suspend fun programmeOnNow(epgChannelId: String, nowUtcMillis: Long): Programme? =
+        upcoming(epgChannelId, nowUtcMillis, limit = 1).onNowAt(nowUtcMillis)
 
     // ---- Feed management -------------------------------------------------------------------
 
