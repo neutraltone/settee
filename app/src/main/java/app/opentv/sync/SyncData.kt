@@ -11,10 +11,11 @@ import kotlinx.serialization.Serializable
  * The state two OpenTV devices exchange when they sync.
  *
  * Nothing here is keyed by a local database id — those differ from one install to the next. An
- * item is identified by something stable for the same provider: a watch position or hidden
- * channel by its **stream URL**, a Favourite by its **source name and provider id**, a profile by
- * its **name**, a category by its **group key**, a NAS recording by its **smb:// locator**. So a
- * bundle from one device makes sense on another.
+ * item is identified by something stable for the same provider: a watch position, hidden channel
+ * or Favourite by its **source name and provider id** (ADR 0004), a profile by its **name**, a
+ * category by its **group key**, a NAS recording by its **smb:// locator**. So a bundle from one
+ * device makes sense on another. A stream URL never travels: an Xtream one holds the account's
+ * username and password, and this bundle is left as a plain file on the NAS.
  *
  * Two merge policies travel together, matching how people actually use this:
  *  - **Watch positions** are two-way, newest-wins per item (you watch on any device, resume on
@@ -31,18 +32,22 @@ import kotlinx.serialization.Serializable
  */
 @Serializable
 data class SyncBundle(
-    val version: Int = 5,
+    val version: Int = 6,
     val generatedAtMillis: Long = 0,
     /** Profile names the peer knows about. Others add any they are missing (add-only). */
     val profiles: List<String> = emptyList(),
-    /** Two-way, newest-wins resume points. */
-    val positions: List<SyncPosition> = emptyList(),
+    /**
+     * Two-way, newest-wins resume points. A new key, not `positions`, whose items were keyed by
+     * stream URL: a peer's file that fails to decode is skipped whole, so reusing the key would
+     * cost an older bundle its Favourites too. This way only its old positions are ignored.
+     */
+    val progress: List<SyncPosition> = emptyList(),
     /** Two-way, newest-wins series each Profile took out of Continue Watching. */
     val dismissals: List<SyncDismissal> = emptyList(),
     /** Every Profile's Favourites, each landing on the Profile with the same name (additive). */
     val favourites: List<SyncFavourite> = emptyList(),
-    /** Additive device-wide curation, keyed by the stable identifiers noted above. */
-    val hiddenChannels: List<String> = emptyList(),
+    /** Additive device-wide curation, keyed by the stable identifiers noted above; a new key as [progress] is. */
+    val hiddenStreams: List<SyncHiddenChannel> = emptyList(),
     val hiddenCategories: List<String> = emptyList(),
     /**
      * Recordings that live on the shared NAS (their [SyncRecording.filePath] is an `smb://`
@@ -62,12 +67,20 @@ data class SyncProfileSetting(val profile: String, val name: String, val value: 
 @Serializable
 data class SyncFavourite(val profile: String, val kind: String, val source: String, val id: String)
 
+/** A channel hidden on the device: [id] is the provider's stream id within [source], by name. */
+@Serializable
+data class SyncHiddenChannel(val source: String, val id: String)
+
 @Serializable
 data class SyncPosition(
     val profile: String,
-    val streamUrl: String,
-    /** "movie" or "ep" — which table to resolve [streamUrl] against on the receiving device. */
+    val source: String,
+    /** "movie" or "ep" — which table to find [id] in on the receiving device. */
     val kind: String,
+    /** The provider's stream id for a movie, or episode id for an episode, within [source]. */
+    val id: String,
+    /** The series an episode belongs to, so a device that hasn't fetched the episode yet can. */
+    val seriesId: String? = null,
     val positionMillis: Long,
     val durationMillis: Long,
     val updatedAtMillis: Long,
@@ -92,17 +105,16 @@ data class SyncDismissal(
 /**
  * A finished NAS recording, portable across devices. Everything needed to insert a playable
  * library row is snapshotted here; the receiving device opens [filePath] (an `smb://` locator)
- * straight off the shared NAS. De-duplicated on the receiver by that locator.
+ * straight off the shared NAS. De-duplicated on the receiver by that locator. No stream or logo URL:
+ * either can point at the provider, so a recording from another device shows no logo.
  */
 @Serializable
 data class SyncRecording(
     val channelName: String,
-    val logoUrl: String? = null,
     val title: String,
     val description: String? = null,
     /** The `smb://host/share/…/file.ts` locator on the shared NAS. */
     val filePath: String,
-    val streamUrl: String,
     val userAgent: String,
     val scheduledStartMillis: Long = 0,
     val scheduledEndMillis: Long = 0,

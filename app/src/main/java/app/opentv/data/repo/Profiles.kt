@@ -56,6 +56,12 @@ class Profiles(
         true
     }
 
+    /** Every Profile's name, as they travel to the other side. */
+    suspend fun export(): List<String> = all().map { it.name }
+
+    /** Adds the Profiles another device has and this one doesn't. Never removes one: that would delete its history. */
+    suspend fun import(names: List<String>) = names.forEach { findOrCreate(it) }
+
     /**
      * The Profile another device calls [name], created here if there isn't one. Matches the way
      * [isNameTaken] does, so "tom" from the other side is this device's "Tom". Null for a blank name.
@@ -111,6 +117,6 @@ class Profiles(
         fun isNameTaken(name: String, among: List<Profile>, except: Long? = null): Boolean =
             among.any { it.id != except && sameName(it.name, name) }
 
-        private fun sameName(a: String, b: String) = a.trim().equals(b.trim(), ignoreCase = true)
+        internal fun sameName(a: String, b: String) = a.trim().equals(b.trim(), ignoreCase = true)
     }
 }

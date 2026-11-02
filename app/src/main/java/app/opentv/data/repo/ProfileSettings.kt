@@ -7,8 +7,10 @@ package app.opentv.data.repo
 
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.common.util.Util
+import app.opentv.data.db.ProfileDao
 import app.opentv.data.db.ProfileSettingDao
 import app.opentv.data.model.ProfileSetting
+import app.opentv.sync.SyncProfileSetting
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
@@ -36,6 +38,7 @@ fun baseLanguage(code: String?): String? =
  */
 class ProfileSettings(
     private val dao: ProfileSettingDao,
+    private val profiles: ProfileDao,
     private val activeProfileId: StateFlow<Long>,
     private val clock: () -> Long = System::currentTimeMillis,
 ) {
@@ -70,15 +73,31 @@ class ProfileSettings(
     /** The Profile is being deleted: its settings go with it. */
     suspend fun forgetProfile(profileId: Long) = dao.deleteFor(profileId)
 
-    /** Every Profile's stored settings, for sync. Settings a Profile never chose have no row. */
-    suspend fun everyProfiles(): List<ProfileSetting> = dao.all()
-
     /** A setting from another device: the newer choice wins. Returns whether it was taken. */
-    suspend fun mergeSynced(setting: ProfileSetting): Boolean {
+    internal suspend fun mergeSynced(setting: ProfileSetting): Boolean {
         val local = dao.find(setting.profileId, setting.name)
         if (local != null && local.updatedAtMillis >= setting.updatedAtMillis) return false
         dao.upsert(setting)
         return true
+    }
+
+    /** Every Profile's chosen settings, as they travel to the other side. One never chosen has no row. */
+    suspend fun export(): List<SyncProfileSetting> {
+        val names = profiles.directory()
+        return dao.all().mapNotNull { setting ->
+            names.name(setting.profileId)?.let {
+                SyncProfileSetting(it, setting.name, setting.value, setting.updatedAtMillis)
+            }
+        }
+    }
+
+    /** Merges another device's settings, newest wins. Returns how many were taken. */
+    suspend fun import(items: List<SyncProfileSetting>): Int {
+        val names = profiles.directory()
+        return items.count { item ->
+            val profileId = names.id(item.profile) ?: return@count false
+            mergeSynced(ProfileSetting(profileId, item.name, item.value, item.updatedAtMillis))
+        }
     }
 
     private companion object {

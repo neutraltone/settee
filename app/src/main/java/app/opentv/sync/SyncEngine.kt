@@ -6,29 +6,12 @@
 package app.opentv.sync
 
 import app.opentv.core.ServiceLocator
-import app.opentv.data.model.Favourite
-import app.opentv.data.model.HandMark
-import app.opentv.data.model.PlaybackPosition
-import app.opentv.data.model.ProfileSetting
-import app.opentv.data.model.Recording
-import app.opentv.data.model.RecordingStatus
-import app.opentv.data.model.SeriesDismissal
-import app.opentv.data.model.StreamKind
-import app.opentv.data.repo.MediaKey
-import app.opentv.recording.SmbClient
-import kotlinx.coroutines.flow.first
 import kotlinx.serialization.json.Json
 
 /**
- * Reads local state into a [SyncBundle] and applies a received one. The single place that knows
- * how OpenTV's tables map onto the portable, cross-device bundle, so the LAN server/client and the
- * NAS sync all agree on what travels and how it merges.
- *
- * Merge policy (see [SyncBundle]): watch positions are two-way newest-wins; curation (profiles,
- * favourites, hidden channels, hidden categories) and NAS recordings are applied **additively** —
- * we spread what a peer has without deleting anything locally. That keeps a sync from ever wiping a
- * favourite you set on one box, un-hiding the structural separator rows the importer hides, or
- * dropping a recording that only one device knows about.
+ * Collects each store's portable items into a [SyncBundle], encodes it, and hands a received one
+ * back to the stores, counting what they took. The stores own identity and merge rules; this is
+ * what the LAN server/client and the NAS sync share, so they agree on what travels.
  */
 class SyncEngine(private val graph: ServiceLocator.Graph) {
 
@@ -56,218 +39,49 @@ class SyncEngine(private val graph: ServiceLocator.Graph) {
         )
     }
 
-    suspend fun gather(): SyncBundle {
-        val profiles = graph.profiles.all()
-        val names = profiles.associate { it.id to it.name }
-        val positions = gatherPositions(names)
-        // Only finished recordings that live on the shared NAS travel — a device-local (file://)
-        // capture can't be opened from another box, so sharing its metadata would just create a
-        // library row that fails to play everywhere but here.
-        val recordings = graph.recordingRepository.all()
-            .filter { it.status == RecordingStatus.COMPLETED && SmbClient.isSmb(it.filePath) }
-            .map { r ->
-                SyncRecording(
-                    channelName = r.channelName,
-                    logoUrl = r.logoUrl,
-                    title = r.title,
-                    description = r.description,
-                    filePath = r.filePath,
-                    streamUrl = r.streamUrl,
-                    userAgent = r.userAgent,
-                    scheduledStartMillis = r.scheduledStartMillis,
-                    scheduledEndMillis = r.scheduledEndMillis,
-                    startedAtMillis = r.startedAtMillis,
-                    endedAtMillis = r.endedAtMillis,
-                    sizeBytes = r.sizeBytes,
-                )
-            }
-        val favourites = graph.viewerLibrary.favourites.everyProfiles().mapNotNull { fav ->
-            val profileName = names[fav.profileId] ?: return@mapNotNull null
-            SyncFavourite(profile = profileName, kind = fav.kind.name, source = fav.source, id = fav.itemId)
-        }
-        val profileSettings = graph.profileSettings.everyProfiles().mapNotNull { setting ->
-            val profileName = names[setting.profileId] ?: return@mapNotNull null
-            SyncProfileSetting(profileName, setting.name, setting.value, setting.updatedAtMillis)
-        }
-        return SyncBundle(
-            generatedAtMillis = System.currentTimeMillis(),
-            profiles = profiles.map { it.name },
-            positions = positions,
-            dismissals = gatherDismissals(names),
-            favourites = favourites,
-            hiddenChannels = graph.catalogRepository.hiddenChannelUrls(),
-            hiddenCategories = graph.settings.hiddenCategories.value.toList(),
-            recordings = recordings,
-            profileSettings = profileSettings,
-        )
-    }
-
-    /** Each Profile's progress, by Profile name and the title's stream URL. */
-    private suspend fun gatherPositions(profileNames: Map<Long, String>): List<SyncPosition> =
-        graph.viewerLibrary.everyProfilesProgress().mapNotNull { pos ->
-            val profileName = profileNames[pos.profileId] ?: return@mapNotNull null
-            val (kind, streamUrl) = when (val key = MediaKey.parse(pos.mediaKey)) {
-                is MediaKey.Movie -> MediaKey.MOVIE to graph.catalogRepository.movie(key.movieId)?.streamUrl
-                is MediaKey.Episode -> MediaKey.EPISODE to graph.catalogRepository.episode(key.episodeId)?.streamUrl
-                else -> null to null
-            }
-            if (kind == null || streamUrl == null) return@mapNotNull null
-            SyncPosition(
-                profile = profileName,
-                streamUrl = streamUrl,
-                kind = kind,
-                positionMillis = pos.positionMillis,
-                durationMillis = pos.durationMillis,
-                updatedAtMillis = pos.updatedAtMillis,
-                mark = pos.mark?.name,
-            )
-        }
-
-    /** Each Profile's series removed from Continue Watching, by Profile and source name. */
-    private suspend fun gatherDismissals(profileNames: Map<Long, String>): List<SyncDismissal> {
-        val sourceNames = graph.sourceRepository.observeAll().first().associate { it.id to it.name }
-        return graph.viewerLibrary.marks.everyProfiles().mapNotNull { d ->
-            SyncDismissal(
-                profile = profileNames[d.profileId] ?: return@mapNotNull null,
-                source = sourceNames[d.sourceId] ?: return@mapNotNull null,
-                seriesId = d.seriesId,
-                dismissedAtMillis = d.dismissedAtMillis,
-                lastSeason = d.lastSeason,
-                lastEpisode = d.lastEpisode,
-            )
-        }
-    }
+    suspend fun gather(): SyncBundle = SyncBundle(
+        generatedAtMillis = System.currentTimeMillis(),
+        // First: asking for them is what seeds a fresh install's Profile, which the rest belongs to.
+        profiles = graph.profiles.export(),
+        progress = graph.viewerLibrary.syncedProgress.export(),
+        dismissals = graph.viewerLibrary.syncedDismissals.export(),
+        favourites = graph.viewerLibrary.favourites.export(),
+        hiddenStreams = graph.catalogRepository.exportHiddenChannels(),
+        hiddenCategories = graph.settings.hiddenCategories.value.toList(),
+        recordings = graph.recordingRepository.export(),
+        profileSettings = graph.profileSettings.export(),
+    )
 
     fun encode(bundle: SyncBundle): String = json.encodeToString(SyncBundle.serializer(), bundle)
 
     fun decode(bundleJson: String): SyncBundle = json.decodeFromString(SyncBundle.serializer(), bundleJson)
 
-    /** Applies a received bundle. Returns what changed, so callers can report "Synced N items". */
-    suspend fun apply(bundle: SyncBundle): MergeResult {
-        // Profiles — add any the peer has that we're missing. Never remove (that would delete a
-        // local profile's watch history).
-        val profileIds = HashMap<String, Long?>()
-        for (name in bundle.profiles) profileIdFor(name, profileIds)
-
-        // Curation — additive union, keyed by stable identifiers. Count only genuinely new keys
-        // (ones we hadn't already curated) so the "Synced N" line means "new to this device".
-        val localHiddenChannels = graph.catalogRepository.hiddenChannelUrls().toHashSet()
-
-        var favourites = 0
-        var hidden = 0
-        for (item in bundle.favourites) {
-            val kind = runCatching { StreamKind.valueOf(item.kind) }.getOrNull() ?: continue
-            val profileId = profileIdFor(item.profile, profileIds) ?: continue
-            if (graph.viewerLibrary.favourites.mergeSynced(
-                    Favourite(profileId, kind, item.source, item.id),
-                )
-            ) {
-                favourites++
-            }
-        }
-        for (url in bundle.hiddenChannels) {
-            graph.catalogRepository.markChannelHiddenByUrl(url)
-            if (localHiddenChannels.add(url)) hidden++
-        }
-        if (bundle.hiddenCategories.isNotEmpty()) {
-            graph.settings.setHiddenCategories(
-                graph.settings.hiddenCategories.value + bundle.hiddenCategories,
-            )
-        }
-
-        // NAS recordings — insert any smb:// recording we don't already have, keyed by its locator.
-        // Never touch an existing row; a peer's copy and ours are the same file on the same NAS.
-        var recordings = 0
-        for (rec in bundle.recordings) {
-            if (!SmbClient.isSmb(rec.filePath)) continue
-            if (graph.recordingRepository.byFilePath(rec.filePath) != null) continue
-            val inserted = runCatching {
-                graph.recordingRepository.insert(
-                    Recording(
-                        // Ids from the source device mean nothing here; the row is self-contained.
-                        channelId = 0,
-                        sourceId = 0,
-                        channelName = rec.channelName,
-                        logoUrl = rec.logoUrl,
-                        title = rec.title,
-                        description = rec.description,
-                        filePath = rec.filePath,
-                        streamUrl = rec.streamUrl,
-                        userAgent = rec.userAgent,
-                        scheduledStartMillis = rec.scheduledStartMillis,
-                        scheduledEndMillis = rec.scheduledEndMillis,
-                        startedAtMillis = rec.startedAtMillis,
-                        endedAtMillis = rec.endedAtMillis,
-                        status = RecordingStatus.COMPLETED,
-                        sizeBytes = rec.sizeBytes,
-                    ),
-                )
-            }.isSuccess
-            if (inserted) recordings++
-        }
-
-        // Watch positions — two-way, newest wins.
-        var positions = 0
-        for (item in bundle.positions) {
-            val profileId = profileIdFor(item.profile, profileIds) ?: continue
-            val mediaKey = when (item.kind) {
-                MediaKey.MOVIE -> graph.catalogRepository.movieByStreamUrl(item.streamUrl)?.let {
-                    MediaKey.Movie(it.id)
-                }
-                MediaKey.EPISODE -> graph.catalogRepository.episodeByStreamUrl(item.streamUrl)?.let {
-                    MediaKey.Episode(it.id)
-                }
-                else -> null
-            }?.stored ?: continue
-            val taken = graph.viewerLibrary.mergeSynced(
-                PlaybackPosition(
-                    profileId = profileId,
-                    mediaKey = mediaKey,
-                    positionMillis = item.positionMillis,
-                    durationMillis = item.durationMillis,
-                    updatedAtMillis = item.updatedAtMillis,
-                    mark = item.mark?.let { runCatching { HandMark.valueOf(it) }.getOrNull() },
-                ),
-            )
-            if (taken) positions++
-        }
-        // Counted with positions: both are where a Profile is with its titles.
-        val sourceIds = graph.sourceRepository.observeAll().first().associate { it.name to it.id }
-        for (item in bundle.dismissals) {
-            val profileId = profileIdFor(item.profile, profileIds) ?: continue
-            val sourceId = sourceIds[item.source] ?: continue
-            val taken = graph.viewerLibrary.marks.mergeSynced(
-                SeriesDismissal(
-                    profileId = profileId,
-                    sourceId = sourceId,
-                    seriesId = item.seriesId,
-                    dismissedAtMillis = item.dismissedAtMillis,
-                    lastSeason = item.lastSeason,
-                    lastEpisode = item.lastEpisode,
-                ),
-            )
-            if (taken) positions++
-        }
-
-        // Profile settings — newest wins per Profile and setting.
-        var settings = 0
-        for (item in bundle.profileSettings) {
-            val profileId = profileIdFor(item.profile, profileIds) ?: continue
-            val taken = graph.profileSettings.mergeSynced(
-                ProfileSetting(profileId, item.name, item.value, item.updatedAtMillis),
-            )
-            if (taken) settings++
-        }
-        return MergeResult(
-            positions = positions,
-            favourites = favourites,
-            hidden = hidden,
-            recordings = recordings,
-            settings = settings,
-        )
+    /**
+     * Applies received bundles as one sync run. Returns what changed, so callers can report "Synced N
+     * items". Episodes this device hasn't fetched follow in the background, after this returns.
+     */
+    suspend fun apply(vararg bundles: SyncBundle): MergeResult {
+        val waiting = mutableListOf<SyncPosition>()
+        val merged = bundles.fold(MergeResult()) { merged, bundle -> merged + applyOne(bundle, waiting) }
+        graph.waitingProgress.fetchFor(waiting)
+        return merged
     }
 
-    // Once per name rather than per item: a bundle carries thousands of positions under a few Profiles.
-    private suspend fun profileIdFor(name: String, known: MutableMap<String, Long?>): Long? =
-        known.getOrPut(name) { graph.profiles.findOrCreate(name) }
+    private suspend fun applyOne(bundle: SyncBundle, waiting: MutableList<SyncPosition>): MergeResult {
+        // First: everything else lands on a Profile by name.
+        graph.profiles.import(bundle.profiles)
+        if (bundle.hiddenCategories.isNotEmpty()) {
+            graph.settings.setHiddenCategories(graph.settings.hiddenCategories.value + bundle.hiddenCategories)
+        }
+        val progress = graph.viewerLibrary.syncedProgress.import(bundle.progress)
+        waiting += progress.waiting
+        return MergeResult(
+            // Counted with positions: both are where a Profile is with its titles.
+            positions = progress.taken + graph.viewerLibrary.syncedDismissals.import(bundle.dismissals),
+            favourites = graph.viewerLibrary.favourites.import(bundle.favourites),
+            hidden = graph.catalogRepository.importHiddenChannels(bundle.hiddenStreams),
+            recordings = graph.recordingRepository.import(bundle.recordings),
+            settings = graph.profileSettings.import(bundle.profileSettings),
+        )
+    }
 }

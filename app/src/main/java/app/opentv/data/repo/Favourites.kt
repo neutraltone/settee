@@ -6,11 +6,13 @@
 package app.opentv.data.repo
 
 import app.opentv.data.db.FavouriteDao
+import app.opentv.data.db.ProfileDao
 import app.opentv.data.model.Channel
 import app.opentv.data.model.Favourite
 import app.opentv.data.model.Movie
 import app.opentv.data.model.Series
 import app.opentv.data.model.StreamKind
+import app.opentv.sync.SyncFavourite
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
@@ -21,7 +23,11 @@ import kotlinx.coroutines.flow.map
  * The Favourites half of [ViewerLibrary], reached as `viewerLibrary.favourites`: each Profile's
  * Favourite channels, movies and series (ADR 0001). Only ViewerLibrary builds one.
  */
-class Favourites internal constructor(private val dao: FavouriteDao, private val activeProfileId: StateFlow<Long>) {
+class Favourites internal constructor(
+    private val dao: FavouriteDao,
+    private val profiles: ProfileDao,
+    private val activeProfileId: StateFlow<Long>,
+) {
     suspend fun set(channel: Channel, favourite: Boolean) =
         dao.set(activeProfileId.value, StreamKind.LIVE, channel.sourceId, channel.streamId, favourite)
 
@@ -56,11 +62,23 @@ class Favourites internal constructor(private val dao: FavouriteDao, private val
     @OptIn(ExperimentalCoroutinesApi::class)
     fun series(): Flow<List<Series>> = activeProfileId.flatMapLatest { dao.observeSeries(it) }
 
-    /** Every Profile's Favourites on this device — what sync sends to the other side. */
-    suspend fun everyProfiles(): List<Favourite> = dao.all()
+    /** Every Profile's Favourites on this device, as they travel to the other side. */
+    suspend fun export(): List<SyncFavourite> {
+        val names = profiles.directory()
+        return dao.all().mapNotNull { fav ->
+            names.name(fav.profileId)?.let { SyncFavourite(it, fav.kind.name, fav.source, fav.itemId) }
+        }
+    }
 
-    /** Adds a Favourite synced from another device; sync never removes one. Returns whether it was new here. */
-    suspend fun mergeSynced(favourite: Favourite): Boolean = dao.insert(favourite) != -1L
+    /** Adds Favourites from another device; sync never removes one. Returns how many were new here. */
+    suspend fun import(items: List<SyncFavourite>): Int {
+        val names = profiles.directory()
+        return items.count { item ->
+            val kind = runCatching { StreamKind.valueOf(item.kind) }.getOrNull() ?: return@count false
+            val profileId = names.id(item.profile) ?: return@count false
+            dao.insert(Favourite(profileId, kind, item.source, item.id)) != -1L
+        }
+    }
 }
 
 private suspend fun FavouriteDao.set(

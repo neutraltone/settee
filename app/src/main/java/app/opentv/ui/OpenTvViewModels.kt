@@ -1219,9 +1219,8 @@ class ProfilesViewModel(app: Application) : AndroidViewModel(app) {
  * Local, device-to-device watch-history sync — no servers of ours.
  *
  * One device shares (a short-lived LAN server behind a six-digit code); the other receives by
- * typing that device's address and code. Only resume positions travel, keyed by stream URL and
- * profile name so they land on the right film and the right person on the other device. Merge is
- * newest-wins per item, so syncing both ways leaves the two devices agreeing.
+ * typing that device's address and code. See [SyncBundle] for what travels and how each item is
+ * identified on the other device.
  */
 class SyncViewModel(app: Application) : AndroidViewModel(app) {
     private val graph = ServiceLocator.get(app)

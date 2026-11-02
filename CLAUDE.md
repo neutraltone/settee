@@ -111,8 +111,10 @@ catalogue refresh, playback or Xtream parsing. The big picture:
   never the stream URL, which Xtream changes with the live format and the account password. So they
   survive a catalogue refresh and match across devices. Hidden channels and channel order stay
   device-wide columns on `channels`. Sync carries each Profile's Favourites under its name (additive)
-  and positions newest-wins (`sync/SyncData.kt`, `SyncEngine.kt`) — keep new watch/favourite state
-  syncable the same way.
+  and positions newest-wins (`sync/SyncData.kt`). A title travels as its source's name plus the
+  provider's id, never a stream URL, so a bundle holds no credentials (ADR 0004). Each store exports
+  and imports its own items, identity and merge included; `SyncEngine` only collects, encodes, carries
+  and counts. Keep new watch/favourite state syncable the same way.
 - Continue Watching comes from `ViewerLibrary.continueWatchingMovies()` / `continueWatchingSeries()` (one card per
   series: its In Progress episode or else its Up Next); `VodViewModel` adds titles and artwork per tab.
 

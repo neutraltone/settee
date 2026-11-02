@@ -61,16 +61,13 @@ class NasSync(private val graph: ServiceLocator.Graph) {
             val peerFiles = SmbClient.list(config, syncFolderPath(config))
                 .filter { it.endsWith(".json", ignoreCase = true) && it != ownFile }
 
-            var merged = SyncEngine.MergeResult()
-            var peers = 0
-            for (name in peerFiles) {
+            val bundles = peerFiles.mapNotNull { name ->
                 val text = runCatching { SmbClient.readText(config, locatorFor(config, name)) }
-                    .getOrNull() ?: continue
-                val bundle = runCatching { engine.decode(text) }.getOrNull() ?: continue
-                merged += engine.apply(bundle)
-                peers++
+                    .getOrNull() ?: return@mapNotNull null
+                runCatching { engine.decode(text) }.getOrNull()
             }
-            Result.Success(merged.total, peers)
+            // Together, so a series several peers name is fetched once.
+            Result.Success(engine.apply(*bundles.toTypedArray()).total, bundles.size)
         }.getOrElse { Result.Failed(it.message) }
     }
 

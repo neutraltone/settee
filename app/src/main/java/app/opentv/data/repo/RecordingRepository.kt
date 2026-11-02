@@ -10,6 +10,8 @@ import app.opentv.data.db.SeriesRuleDao
 import app.opentv.data.model.Recording
 import app.opentv.data.model.RecordingStatus
 import app.opentv.data.model.SeriesRule
+import app.opentv.recording.SmbClient
+import app.opentv.sync.SyncRecording
 import kotlinx.coroutines.flow.Flow
 
 /** Reads and writes over the recordings + series-rule tables. Pure data access, no capture logic. */
@@ -20,11 +22,60 @@ class RecordingRepository(private val dao: RecordingDao, private val ruleDao: Se
 
     suspend fun byId(id: Long): Recording? = dao.byId(id)
     suspend fun all(): List<Recording> = dao.all()
-    suspend fun byFilePath(filePath: String): Recording? = dao.byFilePath(filePath)
     suspend fun active(): List<Recording> = dao.active()
     suspend fun scheduled(): List<Recording> = dao.scheduled()
 
     suspend fun insert(recording: Recording): Long = dao.insert(recording)
+
+    /**
+     * The recordings another device can play: finished ones on the shared NAS. A device-local capture
+     * can't be opened from another box, so sharing it would make a row that fails to play everywhere else.
+     */
+    suspend fun export(): List<SyncRecording> = dao.all()
+        .filter { it.status == RecordingStatus.COMPLETED && SmbClient.isSmb(it.filePath) }
+        .map { r ->
+            SyncRecording(
+                channelName = r.channelName,
+                title = r.title,
+                description = r.description,
+                filePath = r.filePath,
+                userAgent = r.userAgent,
+                scheduledStartMillis = r.scheduledStartMillis,
+                scheduledEndMillis = r.scheduledEndMillis,
+                startedAtMillis = r.startedAtMillis,
+                endedAtMillis = r.endedAtMillis,
+                sizeBytes = r.sizeBytes,
+            )
+        }
+
+    /**
+     * Adds NAS recordings this device doesn't have, by their locator, and never touches an existing
+     * row: a peer's copy and ours are the same file. Returns how many were new here.
+     */
+    suspend fun import(items: List<SyncRecording>): Int = items.count { rec ->
+        if (!SmbClient.isSmb(rec.filePath) || dao.byFilePath(rec.filePath) != null) return@count false
+        runCatching {
+            dao.insert(
+                Recording(
+                    // Ids from the source device mean nothing here; the row is self-contained.
+                    channelId = 0,
+                    sourceId = 0,
+                    channelName = rec.channelName,
+                    title = rec.title,
+                    description = rec.description,
+                    filePath = rec.filePath,
+                    streamUrl = "",
+                    userAgent = rec.userAgent,
+                    scheduledStartMillis = rec.scheduledStartMillis,
+                    scheduledEndMillis = rec.scheduledEndMillis,
+                    startedAtMillis = rec.startedAtMillis,
+                    endedAtMillis = rec.endedAtMillis,
+                    status = RecordingStatus.COMPLETED,
+                    sizeBytes = rec.sizeBytes,
+                ),
+            )
+        }.isSuccess
+    }
     suspend fun update(recording: Recording) = dao.update(recording)
 
     /** The Profile is being removed: its recordings stay, no longer for anyone in particular. */

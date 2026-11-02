@@ -33,6 +33,7 @@ import app.opentv.data.model.SeriesDismissal
 import app.opentv.data.model.SeriesRule
 import app.opentv.data.model.Source
 import app.opentv.data.model.StreamKind
+import app.opentv.sync.SyncHiddenChannel
 import kotlinx.coroutines.flow.Flow
 
 /** Rows per upsert statement. Keeps a 40,000-channel playlist from building one huge query. */
@@ -201,12 +202,19 @@ interface ChannelDao {
     @Query("UPDATE channels SET streamUrl = :url WHERE id = :id")
     suspend fun updateStreamUrl(id: Long, url: String)
 
-    // --- Sync: identify hidden channels by stream URL (stable across devices) ---
-    @Query("SELECT streamUrl FROM channels WHERE hidden = 1")
-    suspend fun hiddenUrls(): List<String>
+    // --- Sync: identify hidden channels by source name and stream id (ADR 0004) ---
+    @Query(
+        """
+        SELECT sources.name AS source, channels.streamId AS id FROM channels
+        JOIN sources ON sources.id = channels.sourceId
+        WHERE channels.hidden = 1
+        """,
+    )
+    suspend fun hiddenForSync(): List<SyncHiddenChannel>
 
-    @Query("UPDATE channels SET hidden = 1 WHERE streamUrl = :url")
-    suspend fun markHiddenByUrl(url: String)
+    /** Hides the channel if it isn't already; returns how many rows that changed. */
+    @Query("UPDATE channels SET hidden = 1 WHERE sourceId = :sourceId AND streamId = :streamId AND hidden = 0")
+    suspend fun markHidden(sourceId: Long, streamId: String): Int
 
     @Query("UPDATE channels SET matchedEpgId = :epgId WHERE id = :id")
     suspend fun setMatchedEpgId(id: Long, epgId: String?)
@@ -509,9 +517,8 @@ interface MovieDao {
     @Query("SELECT * FROM movies WHERE id = :id")
     suspend fun byId(id: Long): Movie?
 
-    /** Stream URL is the cross-device key: the same film has the same URL on the same provider. */
-    @Query("SELECT * FROM movies WHERE streamUrl = :url LIMIT 1")
-    suspend fun byStreamUrl(url: String): Movie?
+    @Query("SELECT * FROM movies WHERE sourceId = :sourceId AND streamId = :streamId")
+    suspend fun byProviderId(sourceId: Long, streamId: String): Movie?
 
     @Upsert
     suspend fun upsertAll(movies: List<Movie>)
@@ -642,8 +649,8 @@ interface EpisodeDao {
     )
     suspend fun lastOfSeries(sourceId: Long, seriesId: String): Episode?
 
-    @Query("SELECT * FROM episodes WHERE streamUrl = :url LIMIT 1")
-    suspend fun byStreamUrl(url: String): Episode?
+    @Query("SELECT * FROM episodes WHERE sourceId = :sourceId AND episodeId = :episodeId")
+    suspend fun byProviderId(sourceId: Long, episodeId: String): Episode?
 
     @Upsert
     suspend fun upsertAll(episodes: List<Episode>)

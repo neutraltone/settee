@@ -28,6 +28,7 @@ import app.opentv.data.parser.VodTitleCleaner
 import app.opentv.data.remote.StalkerApi
 import app.opentv.data.remote.TmdbClient
 import app.opentv.data.remote.XtreamApi
+import app.opentv.sync.SyncHiddenChannel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -215,10 +216,6 @@ class CatalogRepository(
     }
 
     suspend fun episode(id: Long): Episode? = episodeDao.byId(id)
-
-    suspend fun movieByStreamUrl(url: String): Movie? = movieDao.byStreamUrl(url)
-
-    suspend fun episodeByStreamUrl(url: String): Episode? = episodeDao.byStreamUrl(url)
 
     suspend fun series(id: Long): app.opentv.data.model.Series? = seriesDao.byId(id)
 
@@ -619,17 +616,27 @@ class CatalogRepository(
     suspend fun channelsInCategoryForManager(sourceId: Long?, categoryId: String): List<Channel> =
         channelDao.channelsInCategoryIncludingHidden(sourceId, categoryId)
 
-    // --- Sync helpers: read/apply hidden channels by stable stream URL ---
-    suspend fun hiddenChannelUrls(): List<String> = channelDao.hiddenUrls()
-    suspend fun markChannelHiddenByUrl(url: String) = channelDao.markHiddenByUrl(url)
+    /** The channels hidden on this device, for sync. */
+    suspend fun exportHiddenChannels(): List<SyncHiddenChannel> = channelDao.hiddenForSync()
+
+    /** Hides what another device hid; sync never un-hides. Returns how many were newly hidden here. */
+    suspend fun importHiddenChannels(items: List<SyncHiddenChannel>): Int {
+        val sources = sourceDao.directory()
+        return items.sumOf { item -> sources.id(item.source)?.let { channelDao.markHidden(it, item.id) } ?: 0 }
+    }
 
     /**
      * Series episodes are fetched lazily — panels are slow and most series are never opened.
-     * Episodes not stored before are stamped as first seen at [nowUtcMillis].
+     * Episodes not stored before are stamped as first seen at [nowUtcMillis]. Returns false when the
+     * fetch failed; a source with nothing to fetch hasn't failed.
      */
-    suspend fun ensureEpisodes(source: Source, seriesId: String, nowUtcMillis: Long = System.currentTimeMillis()) {
-        if (source.kind != SourceKind.XTREAM) return
-        runCatching { api.episodes(source, seriesId) }
+    suspend fun ensureEpisodes(
+        source: Source,
+        seriesId: String,
+        nowUtcMillis: Long = System.currentTimeMillis(),
+    ): Boolean {
+        if (source.kind != SourceKind.XTREAM) return true
+        return runCatching { api.episodes(source, seriesId) }
             .onSuccess { fetched ->
                 if (fetched.isEmpty()) return@onSuccess
                 // Matched to the stored rows like a catalogue refresh: an upsert without the local
@@ -642,7 +649,9 @@ class CatalogRepository(
                     },
                 )
             }
+            .onFailure { if (it is CancellationException) throw it }
             .onFailure { Log.w(TAG, "Episode fetch failed for series $seriesId", it) }
+            .isSuccess
     }
 
     /** Live channels only — the fast path so the guide can show before VOD and the guide load. */

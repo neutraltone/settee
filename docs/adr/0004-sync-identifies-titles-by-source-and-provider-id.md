@@ -1,0 +1,16 @@
+# Sync identifies titles by source name and provider id, and carries no provider URLs
+
+Watch positions and hidden channels used to travel keyed by stream URL. An Xtream stream URL holds the account's username and password, and a live one also holds the live format, so changing any of them on one device silently stopped its progress and hidden channels matching on the other. It also put the password into every bundle, including the plain JSON file each device leaves on the NAS. ADR 0001 had already rejected stream URLs as the identity for Favourites for the same reason, so we extended its answer to everything that travels: a title or channel is its source's name plus the provider's own id (`streamId` for a movie or channel, `episodeId` for an episode). Recordings lose their stream and logo URLs too, since a finished NAS recording plays from its `smb://` path and a logo URL can point at the provider. A recording from another device therefore shows no logo.
+
+A position for an episode also carries its `seriesId`, because episodes are only stored once a series is opened. The receiver fetches that series in the background and then merges the position, and keeps no positions while it waits: the peer's bundle still carries them, so a later sync tries again and no new table is needed. Only when a provider answers without an episode does the device note that episode in its preferences, so it stops asking; opening the series later still places the progress.
+
+A source's name is now part of what identifies a title, so `SourceRepository` keeps names unique on a device, adding a number to a name already taken. Two sources sharing a name would otherwise swap progress, since provider ids repeat across providers.
+
+The new format replaced the old one, with no period of sending both, which would have kept the password in the bundle during the overlap. Positions and hidden channels moved to new JSON keys, so an old bundle still decodes and only those two are ignored. Reusing the old keys with a new type would have failed the whole decode, and `NasSync` skips a peer file that fails to decode, Favourites included.
+
+The limits we accepted:
+
+- Renaming a source drops its progress and hidden channels on the other device, as it does Favourites. That's a deliberate act, where a password change isn't.
+- Names are only unique on one device. Two devices with different providers under the same name, which is easy because a blank name gets a fixed default, will match each other's ids: progress and hidden channels can land on the wrong title, as Favourites already could. The fix would be an identity for the provider itself, and anything derived from its address or account would put that back in the bundle. Syncing devices are expected to share their providers.
+- An M3U entry without a `tvg-id` gets its `streamId` from a hash of its stream URL, so if that URL contains credentials, its id still changes with them. This already affected Favourites and isn't fixed here, so surviving a password change is only promised for Xtream.
+- Each device overwrites only its own NAS file, so the file of a device that never updates keeps its old URLs, password included, until someone deletes it by hand.
