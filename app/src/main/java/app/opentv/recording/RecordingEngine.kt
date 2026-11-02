@@ -17,6 +17,8 @@ import app.opentv.data.repo.ChannelLineup
 import app.opentv.data.repo.EpgRepository
 import app.opentv.data.repo.RecordingRepository
 import app.opentv.data.repo.SourceRepository
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 /**
  * Turns "record this" into a running capture: it creates the [Recording] row, works out where the
@@ -31,6 +33,11 @@ class RecordingEngine(
     private val epgRepository: EpgRepository,
     private val lineup: ChannelLineup,
 ) {
+    /**
+     * Booking checks for an existing row and then inserts one, and a rescan can overlap another or a
+     * rule being set, so without this they all pass the check and one airing is booked several times.
+     */
+    private val bookingLock = Mutex()
 
     /** Start recording [channel] now. [programme], when given, names and time-bounds the capture. */
     suspend fun startChannel(
@@ -231,9 +238,11 @@ class RecordingEngine(
     /** Book every not-yet-booked airing in [programmes] whose title matches the rule. */
     suspend fun scheduleMatching(channel: Channel, titleKey: String, ruleId: Long, programmes: List<Programme>) {
         val now = System.currentTimeMillis()
-        programmes
-            .filter { it.endUtcMillis > now && titleKeyOf(it.title) == titleKey }
-            .forEach { recordProgramme(channel, it, ruleId) }
+        bookingLock.withLock {
+            programmes
+                .filter { it.endUtcMillis > now && titleKeyOf(it.title) == titleKey }
+                .forEach { recordProgramme(channel, it, ruleId) }
+        }
     }
 
     /**

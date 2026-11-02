@@ -102,6 +102,10 @@ order, so the triggers can't drift apart.
   details shares the running one's result, and a provider's parts take turns. Downloads run in the module's scope, so the first to ask
   leaving a screen doesn't take the download away from the others.
 - **New Episode detection is waited for by refreshes nobody is watching and launched by ones a viewer is.**
+  Each caller's own rule, whoever started the download they're sharing. Detection takes the provider's turn,
+  so its panel requests don't overlap another download from that provider.
+- **A VOD download with a login the provider no longer has doesn't run, or count as fresh if it already had.**
+- **`RecordingEngine` books one rule's airings at a time,** because booking checks for a row and then inserts one.
 - **Manual refreshes run as background work,** so they outlive the screen, which watches `state` instead.
 
 ## Catalogue refresh preserves what the user did

@@ -165,7 +165,7 @@ class CatalogRepository(
     }
 
     /** Series the provider updated, for New Episode detection, and whether every list came back. */
-    private data class FetchedVod(val updated: List<Series>, val complete: Boolean)
+    data class VodFetch(val updated: List<Series>, val complete: Boolean)
 
     fun observeChannels(sourceId: Long? = null, categoryId: String? = null): Flow<List<Channel>> =
         channelDao.observe(sourceId, categoryId)
@@ -662,25 +662,22 @@ class CatalogRepository(
     }
 
     /**
-     * Movies + series — best-effort, so a huge VOD list never costs anyone live TV. Returns whether
-     * the lists all came back with something, so a failed fetch isn't remembered as fresh; otherwise silent, since
-     * an account with no VOD is normal, not an error. The stored update times have moved by the
-     * time this returns, so New Episode detection gets this one chance at them; [waitForNewEpisodes]
-     * is false where a viewer is watching the spinner, which launches it instead.
+     * Movies + series — best-effort, so a huge VOD list never costs anyone live TV. [VodFetch.complete]
+     * says whether the lists all came back with something, so a failed fetch isn't remembered as
+     * fresh; otherwise silent, since an account with no VOD is normal, not an error. The stored
+     * update times have moved by the time this returns, so [detectNewEpisodes] gets this one chance
+     * at [VodFetch.updated].
      */
-    suspend fun fetchVod(source: Source, nowUtcMillis: Long, waitForNewEpisodes: Boolean = false): Boolean =
+    suspend fun fetchVod(source: Source, nowUtcMillis: Long): VodFetch = withContext(Dispatchers.IO) {
+        if (source.kind != SourceKind.XTREAM) return@withContext VodFetch(emptyList(), complete = true)
+        runCatching { syncXtreamVod(source, nowUtcMillis) }
+            .onFailure { Log.w(TAG, "VOD sync failed for source ${source.id}", it) }
+            .getOrDefault(VodFetch(emptyList(), complete = false))
+    }
+
+    suspend fun detectNewEpisodes(source: Source, updated: List<Series>, nowUtcMillis: Long) =
         withContext(Dispatchers.IO) {
-            if (source.kind != SourceKind.XTREAM) return@withContext true
-            val vod = runCatching { syncXtreamVod(source, nowUtcMillis) }
-                .onFailure { Log.w(TAG, "VOD sync failed for source ${source.id}", it) }
-                .getOrNull() ?: return@withContext false
-            val detect: suspend () -> Unit = {
-                viewerLibrary.newEpisodes.seriesUpdated(vod.updated) {
-                    ensureEpisodes(source, it.seriesId, nowUtcMillis)
-                }
-            }
-            if (waitForNewEpisodes) detect() else background.launch { detect() }
-            vod.complete
+            viewerLibrary.newEpisodes.seriesUpdated(updated) { ensureEpisodes(source, it.seriesId, nowUtcMillis) }
         }
 
     private suspend fun syncXtreamLive(source: Source, nowUtcMillis: Long): SyncResult {
@@ -726,13 +723,13 @@ class CatalogRepository(
         return SyncResult.Success(channels.size, 0, 0)
     }
 
-    private suspend fun syncXtreamVod(source: Source, nowUtcMillis: Long): FetchedVod {
+    private suspend fun syncXtreamVod(source: Source, nowUtcMillis: Long): VodFetch {
         // VOD is optional: plenty of accounts have live TV only, and a 404 on get_vod_streams
         // must not cost the user their channel list. Movies and series are gated independently so
         // a user who only turned off, say, Series still gets their movie library refreshed.
         val moviesOn = settings.moviesEnabled.value
         val seriesOn = settings.seriesEnabled.value
-        if (!moviesOn && !seriesOn) return FetchedVod(emptyList(), complete = false)
+        if (!moviesOn && !seriesOn) return VodFetch(emptyList(), complete = false)
 
         // A failed list still leaves the others to be saved, but it must not count as fetched.
         var complete = true
@@ -771,7 +768,7 @@ class CatalogRepository(
             }
         }
         // A show seen for the first time has nobody caught up on it, so only ones that moved.
-        return FetchedVod(
+        return VodFetch(
             merged.filter { it.addedMillis > (stored[it.seriesId]?.addedMillis ?: Long.MAX_VALUE) },
             // Nothing at all may be a struggling panel's empty reply, so it isn't worth trusting for
             // 12 hours; an account with no VOD just asks again, which is a quick request.
