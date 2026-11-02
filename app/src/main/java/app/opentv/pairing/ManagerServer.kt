@@ -12,6 +12,7 @@ import app.opentv.data.model.Source
 import app.opentv.data.model.SourceKind
 import app.opentv.data.model.shownName
 import app.opentv.data.repo.CatalogRepository
+import app.opentv.data.repo.CatalogueRefresh
 import app.opentv.data.repo.ChannelLineup
 import app.opentv.data.repo.SourceRepository
 import app.opentv.recording.SmbClient
@@ -68,6 +69,7 @@ class ManagerServer(
     private val settings: AppSettings,
     private val sourceRepository: SourceRepository,
     private val lineup: ChannelLineup,
+    private val refresh: CatalogueRefresh,
 ) {
 
     data class Session(
@@ -394,7 +396,8 @@ class ManagerServer(
     /**
      * `POST /source {kind,name,url,username?,password?,mac?}` → save the provider and pull its live
      * channels, so the catalogue fills without anyone typing a server address on the TV remote.
-     * Mirrors the on-device Add-source screen: save, then load live channels first.
+     * Mirrors the on-device Add-source screen: save, then load live channels, with the guide and
+     * series rules following in the background.
      */
     private fun handleAddSource(output: OutputStream, body: String) {
         val draft = runCatching { json.decodeFromString(SourceReq.serializer(), body) }.getOrNull()?.toDraftOrNull()
@@ -410,9 +413,9 @@ class ManagerServer(
             val id = sourceRepository.save(draft)
             val saved = sourceRepository.byId(id)
                 ?: return@runBlocking AddResultDto(ok = false, error = "Could not save the source.")
-            when (val r = catalog.syncLive(saved, System.currentTimeMillis())) {
-                is CatalogRepository.SyncResult.Success -> AddResultDto(ok = true, channels = r.channelCount)
-                is CatalogRepository.SyncResult.Failed -> AddResultDto(ok = false, error = r.reason)
+            when (val r = refresh.refresh(CatalogueRefresh.Trigger.ProviderAdded(saved))) {
+                is CatalogueRefresh.Outcome.ChannelsLoaded -> AddResultDto(ok = true, channels = r.channels)
+                is CatalogueRefresh.Outcome.AddFailed -> AddResultDto(ok = false, error = r.reason)
             }
         }
         writeJson(output, AddResultDto.serializer(), result)

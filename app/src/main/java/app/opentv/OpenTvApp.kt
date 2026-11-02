@@ -12,6 +12,7 @@ import app.opentv.core.LocaleUtils
 import app.opentv.core.ServiceLocator
 import app.opentv.data.model.StreamKind
 import app.opentv.data.repo.CatalogRepository
+import app.opentv.data.repo.CatalogueRefresh
 import app.opentv.data.repo.migratedLockKeys
 import app.opentv.data.work.SyncWorker
 import coil.ImageLoader
@@ -118,7 +119,7 @@ class OpenTvApp :
             // refresh window are skipped), but it is what makes the free regional guide turn
             // itself on and download the first time — without waiting for the user to find
             // the refresh button. ensureFeeds + auto-enable-by-region + matcher all live here.
-            graph.epgRepository.syncAll(System.currentTimeMillis(), force = false)
+            graph.catalogueRefresh.refresh(CatalogueRefresh.Trigger.AppLaunch)
         }
     }
 }

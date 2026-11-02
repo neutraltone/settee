@@ -88,6 +88,22 @@ device zone, and converts to local time only at draw time. `XmltvTimeTest` chang
 default zone between assertions specifically to catch the "works on my machine, an hour out on
 yours" bug.
 
+## Every Catalogue Refresh goes through one module
+
+`data/repo/CatalogueRefresh` is asked by every trigger: the periodic worker, a manual refresh, adding a
+provider, opening Movies or Shows, app launch and Guide settings. It decides what each fetches and in what
+order, so the triggers can't drift apart.
+
+- **Freshness is per provider and recorded by every VOD fetch,** so opening Movies straight after a
+  refresh downloads nothing, and a provider added since the last fetch is still fetched. A list that failed
+  or came back with nothing at all isn't recorded, so the next open tries again; saving a provider clears
+  its record, because its login may now be another account's.
+- **Each part of a provider (live, VOD) has one download at a time.** A second request with the same login
+  details shares the running one's result, and a provider's parts take turns. Downloads run in the module's scope, so the first to ask
+  leaving a screen doesn't take the download away from the others.
+- **New Episode detection is waited for by refreshes nobody is watching and launched by ones a viewer is.**
+- **Manual refreshes run as background work,** so they outlive the screen, which watches `state` instead.
+
 ## Catalogue refresh preserves what the user did
 
 `ChannelDao.replaceCatalogue` merges rather than wipes: it reads existing rows, carries

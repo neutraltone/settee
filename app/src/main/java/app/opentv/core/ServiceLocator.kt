@@ -11,17 +11,22 @@ import app.opentv.data.remote.StalkerApi
 import app.opentv.data.remote.StremioClient
 import app.opentv.data.remote.XtreamApi
 import app.opentv.data.repo.CatalogRepository
+import app.opentv.data.repo.CatalogueRefresh
 import app.opentv.data.repo.ChannelLineup
 import app.opentv.data.repo.EpgRepository
 import app.opentv.data.repo.PlaybackSources
 import app.opentv.data.repo.ProfileSettings
 import app.opentv.data.repo.Profiles
 import app.opentv.data.repo.RecordingRepository
+import app.opentv.data.repo.RefreshMessages
 import app.opentv.data.repo.ReminderRepository
 import app.opentv.data.repo.SourceRepository
 import app.opentv.data.repo.ViewerLibrary
 import app.opentv.recording.RecordingEngine
 import java.util.concurrent.TimeUnit
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import okhttp3.OkHttpClient
 
 /**
@@ -129,6 +134,22 @@ object ServiceLocator {
                 sourceDao = database.sources(),
                 api = xtreamApi,
                 http = httpClient,
+            )
+        }
+
+        /** Outlives every screen, so a refresh keeps going when the viewer moves on. */
+        private val refreshScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
+        val refreshMessages: RefreshMessages by lazy { RefreshMessages(appContext) }
+
+        val catalogueRefresh: CatalogueRefresh by lazy {
+            CatalogueRefresh(
+                catalog = catalogRepository,
+                guide = epgRepository,
+                settings = settings,
+                rescanSeriesRules = { recordingEngine.rescanSeriesRules() },
+                clock = System::currentTimeMillis,
+                scope = refreshScope,
             )
         }
 

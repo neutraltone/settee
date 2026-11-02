@@ -27,12 +27,12 @@ class AppSettingsWipeTest {
         val settings = AppSettings.get(ApplicationProvider.getApplicationContext())
         settings.setActiveProfile(3L)
         settings.lastChannelId = 42L
-        settings.vodSyncedAtMillis = 1_700_000_000_000L
+        settings.setVodFetchedAtMillis(1, 1_700_000_000_000L)
 
         settings.forgetDatabaseRows()
 
         assertThat(settings.activeProfileId.value).isEqualTo(1L)
         assertThat(settings.lastChannelId).isEqualTo(0L)
-        assertThat(settings.vodSyncedAtMillis).isEqualTo(0L)
+        assertThat(settings.vodFetchedAtMillis(1)).isEqualTo(0L)
     }
 }

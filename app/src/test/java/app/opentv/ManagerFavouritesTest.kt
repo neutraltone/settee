@@ -47,6 +47,7 @@ class ManagerFavouritesTest {
         AppSettings.get(context),
         SourceRepository(db.sources(), XtreamApi(test.panel.http), StalkerApi(test.panel.http)),
         test.lineup,
+        test.refresh(),
     )
 
     @After

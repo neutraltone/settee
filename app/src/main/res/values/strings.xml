@@ -561,4 +561,42 @@
     <string name="playback_link_refused">The portal didn\'t give a link for this channel. Refresh the channel list, or check the MAC address is still authorised.</string>
     <string name="playback_no_catchup">This provider doesn\'t offer catch-up. Only Xtream providers can play past programmes.</string>
     <string name="playback_gone">This is no longer in the provider\'s list. Refresh the channel list and try again.</string>
+    <!-- Catalogue Refresh -->
+    <string name="refresh_saving_source">Saving source…</string>
+    <string name="refresh_save_failed">Could not save source.</string>
+    <string name="refresh_loading_channels">Loading channels…</string>
+    <string name="refresh_refreshing">Refreshing…</string>
+    <string name="refresh_building_guide">Building the TV guide…</string>
+    <string name="refresh_loading_vod">Loading movies &amp; shows…</string>
+    <string name="refresh_downloading_guides">Downloading guides…</string>
+    <string name="refresh_guide_unmatched">Channels ready. No guide data matched yet — add a free guide under Guide settings.</string>
+    <string name="refresh_guide_and_failures">%1$s · %2$s</string>
+    <plurals name="refresh_done">
+        <item quantity="one">Refreshed %1$d channel, guide matched %2$d of %3$d.</item>
+        <item quantity="other">Refreshed %1$d channels, guide matched %2$d of %3$d.</item>
+    </plurals>
+    <plurals name="refresh_done_with_problems">
+        <item quantity="one">Refreshed %1$d channel, %2$s — see Guide settings.</item>
+        <item quantity="other">Refreshed %1$d channels, %2$s — see Guide settings.</item>
+    </plurals>
+    <plurals name="refresh_problems">
+        <item quantity="one">%d problem</item>
+        <item quantity="other">%d problems</item>
+    </plurals>
+    <plurals name="refresh_channels_loaded">
+        <item quantity="one">Loaded %d channel. The guide is loading in the background; Movies and Shows load when you open them.</item>
+        <item quantity="other">Loaded %d channels. The guide is loading in the background; Movies and Shows load when you open them.</item>
+    </plurals>
+    <plurals name="refresh_guide_ready">
+        <item quantity="one">Guide ready — matched %1$d of %2$d channel.</item>
+        <item quantity="other">Guide ready — matched %1$d of %2$d channels.</item>
+    </plurals>
+    <plurals name="refresh_guide_matched">
+        <item quantity="one">Guide matched %1$d of %2$d channel</item>
+        <item quantity="other">Guide matched %1$d of %2$d channels</item>
+    </plurals>
+    <plurals name="refresh_feeds_failed">
+        <item quantity="one">%d feed failed</item>
+        <item quantity="other">%d feeds failed</item>
+    </plurals>
 </resources>

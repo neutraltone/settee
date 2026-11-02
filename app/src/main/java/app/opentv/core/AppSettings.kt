@@ -65,13 +65,13 @@ class AppSettings private constructor(context: Context) {
 
     /**
      * Called when the database is rebuilt from scratch. Rows are gone and ids restart from 1, so
-     * every setting that names a row goes back to its default; the VOD stamp goes too, or a warm
-     * launch would skip the download and leave Movies and Shows empty.
+     * every setting that names a row goes back to its default; the VOD stamps go too, or opening
+     * Movies or Shows would skip the download and leave them empty.
      */
     fun forgetDatabaseRows() {
         setActiveProfile(Profiles.BASE_PROFILE_ID)
         lastChannelId = 0L
-        vodSyncedAtMillis = 0L
+        forgetVodFetches()
     }
 
     // ---- Parental controls -------------------------------------------------------------------
@@ -246,20 +246,16 @@ class AppSettings private constructor(context: Context) {
     }
 
     fun setMoviesEnabled(enabled: Boolean) {
-        // Also reset the VOD freshness stamp so the next Movies/Shows open re-syncs immediately
-        // rather than waiting out the cache TTL — turning a content type on should show it now.
-        prefs.edit {
-            putBoolean(KEY_CONTENT_MOVIES, enabled)
-            putLong(KEY_VOD_SYNCED_AT, 0L)
-        }
+        // Also forget when VOD was fetched so the next Movies/Shows open fetches immediately rather
+        // than waiting out the 12 hours — turning a content type on should show it now.
+        prefs.edit { putBoolean(KEY_CONTENT_MOVIES, enabled) }
+        forgetVodFetches()
         _moviesEnabled.value = enabled
     }
 
     fun setSeriesEnabled(enabled: Boolean) {
-        prefs.edit {
-            putBoolean(KEY_CONTENT_SERIES, enabled)
-            putLong(KEY_VOD_SYNCED_AT, 0L)
-        }
+        prefs.edit { putBoolean(KEY_CONTENT_SERIES, enabled) }
+        forgetVodFetches()
         _seriesEnabled.value = enabled
     }
 
@@ -411,17 +407,22 @@ class AppSettings private constructor(context: Context) {
     // ---- Catalogue freshness & TMDB ----------------------------------------------------------
 
     /**
-     * When the VOD (movies + series) catalogue was last fetched from the provider, in epoch
-     * millis; 0 = never. A provider's 40k-title VOD list is expensive to re-download and
-     * re-write, so [app.opentv.ui.VodViewModel.ensureVodLoaded] uses this to skip the sync on a
-     * warm launch and show the already-stored rows instantly — the fetch only runs on first load
-     * or once this goes stale. Not a flow: it is read once when Movies/Shows is first opened.
+     * When this provider's movies and series were last fetched, in epoch millis; 0 = never. A 40k-title
+     * list is expensive to download and write, so [app.opentv.data.repo.CatalogueRefresh] skips it
+     * when opening Movies or Shows while this is recent. A preference per provider, keyed by its
+     * id, so this needs no schema change; ids aren't reused until the database is rebuilt, which
+     * clears these through [forgetDatabaseRows].
      */
-    var vodSyncedAtMillis: Long
-        get() = prefs.getLong(KEY_VOD_SYNCED_AT, 0L)
-        set(value) {
-            prefs.edit { putLong(KEY_VOD_SYNCED_AT, value) }
-        }
+    fun vodFetchedAtMillis(sourceId: Long): Long = prefs.getLong(KEY_VOD_FETCHED_AT + sourceId, 0L)
+
+    fun setVodFetchedAtMillis(sourceId: Long, millis: Long) {
+        prefs.edit { putLong(KEY_VOD_FETCHED_AT + sourceId, millis) }
+    }
+
+    private fun forgetVodFetches() {
+        val stamps = prefs.all.keys.filter { it.startsWith(KEY_VOD_FETCHED_AT) }
+        prefs.edit { stamps.forEach(::remove) }
+    }
 
     /**
      * The user's own TMDB API key (v3 auth), stored on-device only exactly like provider
@@ -500,7 +501,7 @@ class AppSettings private constructor(context: Context) {
         private const val KEY_USB_LABEL = "usb_folder_label"
         private const val KEY_SYNC_DEVICE_ID = "sync_device_id"
         private const val KEY_NAS_AUTO_SYNC = "nas_auto_sync"
-        private const val KEY_VOD_SYNCED_AT = "vod_synced_at"
+        private const val KEY_VOD_FETCHED_AT = "vod_fetched_at_"
         private const val KEY_TMDB_KEY = "tmdb_api_key"
         private const val KEY_STREMIO_ADDONS = "stremio_addons"
         private const val KEY_PAD_START = "rec_pad_start_min"

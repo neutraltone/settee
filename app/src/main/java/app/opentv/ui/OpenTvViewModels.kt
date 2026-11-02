@@ -6,7 +6,6 @@
 package app.opentv.ui
 
 import android.app.Application
-import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import app.opentv.R
@@ -27,6 +26,7 @@ import app.opentv.data.model.StreamKind
 import app.opentv.data.model.StremioStream
 import app.opentv.data.parser.displayTitle
 import app.opentv.data.repo.CatalogRepository
+import app.opentv.data.repo.CatalogueRefresh
 import app.opentv.data.repo.CategoryGroup
 import app.opentv.data.repo.ContinueWatchingCard
 import app.opentv.data.repo.GenreGroup
@@ -36,6 +36,8 @@ import app.opentv.data.repo.LivePreview
 import app.opentv.data.repo.MediaKey
 import app.opentv.data.repo.MovieVariantGroup
 import app.opentv.data.repo.PersonTitle
+import app.opentv.data.repo.RefreshMessages
+import app.opentv.data.work.SyncWorker
 import app.opentv.pairing.ManagerServer
 import app.opentv.sync.NasSync
 import app.opentv.sync.SyncClient
@@ -62,6 +64,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -89,17 +92,58 @@ class SourcesViewModel(app: Application) : AndroidViewModel(app) {
         val testing: Boolean = false,
         val testResult: String? = null,
         val testError: String? = null,
-        val syncing: Boolean = false,
+        val adding: Boolean = false,
+        val refreshing: Boolean = false,
         val syncMessage: String? = null,
-    )
+    ) {
+        val syncing: Boolean get() = adding || refreshing
+    }
 
     private val _ui = MutableStateFlow(UiState())
     val ui: StateFlow<UiState> = _ui.asStateFlow()
 
+    private val refresh = graph.catalogueRefresh
+    private val messages = graph.refreshMessages
+
     init {
         viewModelScope.launch {
             graph.sourceRepository.observeAll().collect { sources ->
-                _ui.value = _ui.value.copy(sources = sources, loaded = true)
+                _ui.update { it.copy(sources = sources, loaded = true) }
+            }
+        }
+        // A refresh runs as background work, so this is how its progress and result reach the screen.
+        // What was already there when this screen model appeared isn't news.
+        viewModelScope.launch {
+            var shown = refresh.state.value.last
+            var wasRefreshing = false
+            var announced: String? = null
+            try {
+                refresh.state.collect { state ->
+                    val news = state.last.takeIf { it !== shown || (wasRefreshing && !state.refreshing) }
+                    shown = state.last
+                    wasRefreshing = state.refreshing
+                    // On changes only: the channel list's own progress shares this status bar.
+                    val status = when {
+                        state.loadingVod -> messages.of(RefreshMessages.Step.LoadingVod)
+                        state.buildingGuide -> messages.of(RefreshMessages.Step.BuildingGuide)
+                        else -> null
+                    }
+                    if (status != announced) StatusBus.set(status)
+                    announced = status
+                    _ui.update {
+                        it.copy(
+                            refreshing = state.refreshing,
+                            syncMessage = when {
+                                state.refreshing -> messages.of(RefreshMessages.Step.Refreshing)
+                                news != null -> messages.of(news)
+                                else -> it.syncMessage
+                            },
+                        )
+                    }
+                }
+            } finally {
+                // The bar outlives this screen model, and the next one can't know this one set it.
+                if (announced != null) StatusBus.set(null)
             }
         }
     }
@@ -116,58 +160,22 @@ class SourcesViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    /** Saves, then immediately pulls the catalogue so the user sees channels, not a spinner. */
+    /** Saves, then immediately pulls the channels so the viewer sees them, not a spinner. */
     fun saveAndSync(draft: Source, onDone: (Boolean) -> Unit = {}) {
         viewModelScope.launch {
-            _ui.value = _ui.value.copy(syncing = true, syncMessage = "Saving source…")
+            _ui.update { it.copy(adding = true, syncMessage = messages.of(RefreshMessages.Step.SavingSource)) }
             val id = graph.sourceRepository.save(draft)
             val saved = graph.sourceRepository.byId(id)
             if (saved == null) {
-                _ui.value = _ui.value.copy(syncing = false, syncMessage = "Could not save source.")
+                _ui.update { it.copy(adding = false, syncMessage = messages.of(RefreshMessages.Step.SaveFailed)) }
                 onDone(false)
                 return@launch
             }
 
-            _ui.value = _ui.value.copy(syncMessage = "Loading channels…")
-            val now = System.currentTimeMillis()
-            // Load live channels first and get the user watching straight away. Movies, series and
-            // the guide are what make a big provider take minutes — they load in the background so
-            // "loading channels" is a few seconds, not a twenty-minute blank screen.
-            when (val result = graph.catalogRepository.syncLive(saved, now)) {
-                is CatalogRepository.SyncResult.Failed -> {
-                    _ui.value = _ui.value.copy(syncing = false, syncMessage = result.reason)
-                    onDone(false)
-                    return@launch
-                }
-                is CatalogRepository.SyncResult.Success -> {
-                    _ui.value = _ui.value.copy(
-                        syncing = false,
-                        syncMessage = "Loaded ${result.channelCount} channels. The guide is " +
-                            "loading in the background; Movies and Shows load when you open them.",
-                    )
-                    onDone(true)
-                }
-            }
-
-            // Background: the guide. Movies/series are pulled on demand from their own tabs, so
-            // nothing the user hasn't asked for ever blocks the channels they can already watch.
-            runCatching {
-                val summary = StatusBus.during("Building the TV guide…") {
-                    graph.epgRepository.syncAll(now)
-                }
-                _ui.value = _ui.value.copy(
-                    syncMessage = when {
-                        summary.channelsMatched > 0 ->
-                            "Guide ready — matched ${summary.channelsMatched} of " +
-                                "${summary.channelsTotal} channels."
-                        else ->
-                            "Channels ready. No guide data matched yet — add a free guide " +
-                                "under Guide settings."
-                    },
-                )
-                // Book any new series-link airings the fresh guide just revealed.
-                runCatching { graph.recordingEngine.rescanSeriesRules() }
-            }.onFailure { Log.w("OpenTV", "Background VOD/guide load failed", it) }
+            _ui.update { it.copy(syncMessage = messages.of(RefreshMessages.Step.LoadingChannels)) }
+            val outcome = refresh.refresh(CatalogueRefresh.Trigger.ProviderAdded(saved))
+            _ui.update { it.copy(adding = false, syncMessage = messages.of(outcome)) }
+            onDone(outcome is CatalogueRefresh.Outcome.ChannelsLoaded)
         }
     }
 
@@ -185,32 +193,8 @@ class SourcesViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch { graph.catalogRepository.setLiveFormat(source.id, format) }
     }
 
-    fun refreshAll() {
-        viewModelScope.launch {
-            _ui.value = _ui.value.copy(syncing = true, syncMessage = "Refreshing…")
-            val now = System.currentTimeMillis()
-            var channels = 0
-            var problems = 0
-            for (source in graph.sourceRepository.enabled()) {
-                when (val result = graph.catalogRepository.sync(source, now)) {
-                    is CatalogRepository.SyncResult.Success -> channels += result.channelCount
-                    is CatalogRepository.SyncResult.Failed -> problems++
-                }
-            }
-            val summary = graph.epgRepository.syncAll(now, force = true)
-            problems += summary.feedsFailed
-            runCatching { graph.recordingEngine.rescanSeriesRules() }
-            _ui.value = _ui.value.copy(
-                syncing = false,
-                syncMessage = if (problems == 0) {
-                    "Refreshed $channels channels, guide matched " +
-                        "${summary.channelsMatched} of ${summary.channelsTotal}."
-                } else {
-                    "Refreshed $channels channels, $problems problem(s) — see Guide settings."
-                },
-            )
-        }
-    }
+    /** Runs as background work, like Settings' Refresh now, so leaving Home doesn't stop it. */
+    fun refreshAll() = SyncWorker.refreshNow(getApplication())
 
     fun blankDraft() = Source(name = "", kind = SourceKind.XTREAM, url = "")
 }
@@ -654,14 +638,12 @@ class EpgViewModel(app: Application) : AndroidViewModel(app) {
     fun refresh() {
         if (_ui.value.syncing) return
         viewModelScope.launch {
-            _ui.value = _ui.value.copy(syncing = true, statusLine = "Downloading guides…")
-            val summary = graph.epgRepository.syncAll(System.currentTimeMillis(), force = true)
             _ui.value = _ui.value.copy(
-                syncing = false,
-                statusLine = "Guide matched ${summary.channelsMatched} of " +
-                    "${summary.channelsTotal} channels" +
-                    if (summary.feedsFailed > 0) " · ${summary.feedsFailed} feed(s) failed" else "",
+                syncing = true,
+                statusLine = graph.refreshMessages.of(RefreshMessages.Step.DownloadingGuides),
             )
+            val outcome = graph.catalogueRefresh.refresh(CatalogueRefresh.Trigger.GuideSettings)
+            _ui.value = _ui.value.copy(syncing = false, statusLine = graph.refreshMessages.of(outcome))
         }
     }
 }
@@ -883,64 +865,20 @@ class VodViewModel @JvmOverloads constructor(
     // Movies + series load on demand — the first time the user opens Movies or Shows — rather than
     // up front at login. A provider's 40,000-title VOD list is exactly what makes a first sync
     // crawl, and most sessions only ever watch live TV. Loaded once per app run.
-    private val _vodLoading = MutableStateFlow(false)
-    val vodLoading: StateFlow<Boolean> = _vodLoading.asStateFlow()
+    val vodLoading: StateFlow<Boolean> = graph.catalogueRefresh.state
+        .map { it.loadingVod }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, false)
 
     @Volatile private var vodRequested = false
-
-    /** How long a fetched VOD catalogue is trusted before a warm launch re-syncs it. */
-    private val vodTtlMillis = 12L * 60 * 60 * 1000 // 12 hours
 
     fun ensureVodLoaded() {
         if (vodRequested) return
         vodRequested = true
-        viewModelScope.launch { syncVodIfStale(force = false) }
-    }
-
-    /**
-     * Force a fresh download of the movies/series catalogue, ignoring the freshness cache. Wired
-     * to the pull-to-refresh / refresh action so the user always has a way to pull new titles in
-     * before the TTL lapses.
-     */
-    fun refreshVod() {
-        vodRequested = true
-        viewModelScope.launch { syncVodIfStale(force = true) }
-    }
-
-    private suspend fun syncVodIfStale(force: Boolean) {
-        val now = System.currentTimeMillis()
-
-        // Warm-launch fast path. The catalogue is persisted in Room, so once it has been fetched
-        // there is no reason to re-download and re-upsert a 40k-title list on every launch — that
-        // was both the multi-minute "Loading movies & shows…" and the bandwidth hog that starved
-        // the live preview into buffering. When we synced recently and already have rows, skip the
-        // network entirely and just (re)build the home shelves off what is stored.
-        if (!force) {
-            val haveCatalogue = runCatching {
-                graph.catalogRepository.movieCount() + graph.catalogRepository.seriesCount()
-            }.getOrDefault(0) > 0
-            val last = settings.vodSyncedAtMillis
-            val fresh = last > 0 && now - last < vodTtlMillis
-            if (haveCatalogue && fresh) {
-                loadHomeFeeds()
-                return
-            }
+        viewModelScope.launch {
+            graph.catalogueRefresh.refresh(CatalogueRefresh.Trigger.OpenedMoviesOrShows)
+            // The catalogue may have grown — recompute the computed home rows off the fresh data.
+            loadHomeFeeds()
         }
-
-        _vodLoading.value = true
-        val synced = StatusBus.during("Loading movies & shows…") {
-            runCatching {
-                for (source in graph.sourceRepository.enabled()) {
-                    graph.catalogRepository.syncVod(source, now)
-                }
-            }.isSuccess
-        }
-        _vodLoading.value = false
-        // Stamp the cache only when the fetch actually succeeded, so a failed sync retries on the
-        // next open instead of being remembered as "fresh" and leaving the user with no catalogue.
-        if (synced) settings.vodSyncedAtMillis = now
-        // The catalogue may have grown — recompute the computed home rows off the fresh data.
-        loadHomeFeeds()
     }
 
     // ---- VOD search (shared by the unified search screen) --------------------------------------
@@ -1384,6 +1322,7 @@ class WebManagerViewModel(app: Application) : AndroidViewModel(app) {
             graph.settings,
             graph.sourceRepository,
             graph.channelLineup,
+            graph.catalogueRefresh,
         )
 
     val state: StateFlow<ManagerServer.State> = server.state
