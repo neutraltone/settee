@@ -211,7 +211,6 @@
     <ID>ReturnCount:PairingServer.kt$PairingServer$fun start()</ID>
     <ID>ReturnCount:PairingServer.kt$PairingServer$private fun handle(client: Socket)</ID>
     <ID>ReturnCount:PairingServer.kt$PairingServer$private fun handleSubmit(output: java.io.OutputStream, body: String)</ID>
-    <ID>ReturnCount:PlaybackErrors.kt$PlaybackErrors$fun describe(error: PlaybackException): String</ID>
     <ID>ReturnCount:PlayerScreen.kt$private fun trackLabel(label: String?, language: String?, index: Int): String</ID>
     <ID>ReturnCount:RecordingEngine.kt$RecordingEngine$private suspend fun alternateProviderForClash(channel: Channel, startMillis: Long, endMillis: Long): Channel</ID>
     <ID>ReturnCount:RecordingEngine.kt$RecordingEngine$suspend fun scheduleProgramme( channel: Channel, programme: Programme, ruleId: Long? = null, profileId: Long = settings.activeProfileId.value, ): Long</ID>

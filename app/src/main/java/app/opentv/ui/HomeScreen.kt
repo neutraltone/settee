@@ -106,12 +106,9 @@ internal fun HomeScreen(
         state.recent,
         onNothingToShow,
         live = live?.let { LiveTile(it, preview.player, preview.error) },
-        onWatchLive = { channel ->
-            // Stopped before the full-screen player starts, so the box never decodes two at once.
-            preview.stop()
-            play(channel)
-        },
+        onWatchLive = play,
         onOpenLive = onOpenLive,
+        stopPreview = preview.stop,
     )
 }
 
@@ -135,6 +132,7 @@ internal fun HomeContent(
     live: LiveTile? = null,
     onWatchLive: (Channel) -> Unit = {},
     onOpenLive: () -> Unit = {},
+    stopPreview: () -> Unit = {},
 ) {
     val shelves = remember(live, continueWatching, favouriteShows, favouriteMovies, favouriteChannels, recent) {
         liveShelf(live) + homeShelves(continueWatching, favouriteShows, favouriteMovies, favouriteChannels, recent)
@@ -192,6 +190,9 @@ internal fun HomeContent(
                 val rowFocus = focus?.takeIf { target?.row == shelf.row.key }
                 fun pick(item: String, open: () -> Unit) {
                     picked = HomePick(shelf.row.key, rowIndex, item, shelf.row.items.indexOf(item))
+                    // Before the next screen starts: a second stream can cut off a single-connection
+                    // line, and waiting for the lifecycle change leaves both running for a moment.
+                    stopPreview()
                     open()
                 }
                 when (shelf) {

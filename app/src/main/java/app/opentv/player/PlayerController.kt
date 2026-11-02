@@ -18,6 +18,7 @@ import androidx.media3.datasource.DefaultDataSource
 import androidx.media3.datasource.HttpDataSource
 import androidx.media3.datasource.okhttp.OkHttpDataSource
 import androidx.media3.exoplayer.DefaultLoadControl
+import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.exoplayer.trackselection.DefaultTrackSelector
@@ -208,7 +209,12 @@ class PlayerController(
             .build()
     }
 
-    val player: ExoPlayer = ExoPlayer.Builder(context)
+    // Fallback is for the full-screen players: a muted preview that can't start says so on its tile
+    // rather than spend a cheap box's time trying every decoder for each channel passed over.
+    val player: ExoPlayer = ExoPlayer.Builder(
+        context,
+        DefaultRenderersFactory(context).setEnableDecoderFallback(!preview),
+    )
         .setMediaSourceFactory(
             DefaultMediaSourceFactory(dataSourceFactory)
                 .setLoadErrorHandlingPolicy(loadErrorPolicy),
@@ -265,10 +271,11 @@ class PlayerController(
 
                 override fun onPlayerError(error: PlaybackException) {
                     consecutiveFailures++
+                    PlaybackErrors.logDecoderFailure(error)
                     val request = current
                     _state.value = State.Error(
                         title = _title.value,
-                        message = PlaybackErrors.describe(error),
+                        message = PlaybackErrors.describe(strings, error),
                         canRetry = consecutiveFailures < MAX_AUTO_RESTARTS,
                     )
                     // One silent restart covers the common case of a provider dropping the
