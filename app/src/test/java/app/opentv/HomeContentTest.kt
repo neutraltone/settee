@@ -24,6 +24,7 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.pressKey
+import androidx.media3.common.C
 import app.opentv.data.model.Channel
 import app.opentv.data.model.Movie
 import app.opentv.data.model.Series
@@ -32,9 +33,11 @@ import app.opentv.data.repo.LivePreview
 import app.opentv.data.repo.MediaKey
 import app.opentv.ui.HomeContent
 import app.opentv.ui.LiveNow
+import app.opentv.ui.LivePreviewPlayer
 import app.opentv.ui.LiveTile
 import app.opentv.ui.RecentRows
 import app.opentv.ui.VodViewModel
+import app.opentv.ui.rememberLivePreviewPlayer
 import com.google.common.truth.Truth.assertThat
 import org.junit.Rule
 import org.junit.Test
@@ -124,6 +127,15 @@ class HomeContentTest {
         player = null,
         error = error,
     )
+
+    @Test
+    fun `the Live Preview has no sound track`() {
+        lateinit var preview: LivePreviewPlayer
+        compose.setContent { preview = rememberLivePreviewPlayer(channel4) }
+        compose.waitForIdle()
+
+        assertThat(preview.player!!.trackSelectionParameters.disabledTrackTypes).contains(C.TRACK_TYPE_AUDIO)
+    }
 
     /** The channel a test's Home last played. */
     private var played: Channel? = null
