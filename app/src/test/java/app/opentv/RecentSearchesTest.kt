@@ -75,6 +75,17 @@ class RecentSearchesTest {
     }
 
     @Test
+    fun `a clock gone back doesn't cost the newest search its place`() = runTest {
+        (1..10).forEach { recent.save("search $it") }
+
+        now = 0
+        recent.save("after the clock moved")
+
+        assertThat(shown().first()).isEqualTo("after the clock moved")
+        assertThat(shown()).hasSize(10)
+    }
+
+    @Test
     fun `a blank search saves nothing`() = runTest {
         recent.save("   ")
 

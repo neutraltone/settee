@@ -738,13 +738,17 @@ interface SeriesDismissalDao {
     suspend fun deleteFor(profileId: Long)
 }
 
+// By rowid, which only ever grows for a new row, not by time: a TV box's clock can go back (one that
+// hasn't synced since booting), and the newest search would sort last and be the one the cap removes.
+private const val RECENT_SEARCHES_NEWEST_FIRST =
+    "SELECT text FROM recent_searches WHERE profileId = :profileId ORDER BY rowid DESC"
+
 @Dao
 interface RecentSearchDao {
-    // rowid breaks ties: a search saved twice in one millisecond still has a newest.
-    @Query("SELECT text FROM recent_searches WHERE profileId = :profileId ORDER BY searchedAtMillis DESC, rowid DESC")
+    @Query(RECENT_SEARCHES_NEWEST_FIRST)
     fun observe(profileId: Long): Flow<List<String>>
 
-    @Query("SELECT text FROM recent_searches WHERE profileId = :profileId ORDER BY searchedAtMillis DESC, rowid DESC")
+    @Query(RECENT_SEARCHES_NEWEST_FIRST)
     suspend fun forProfile(profileId: Long): List<String>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)

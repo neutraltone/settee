@@ -483,7 +483,7 @@ class ChannelsViewModel @JvmOverloads constructor(
     val searchResults: StateFlow<List<Row>> =
         searchInput
             .map { it.trim() }
-            .debounce(200)
+            .debounceSearch()
             .distinctUntilChanged()
             .flatMapLatest { q ->
                 if (q.length < 2) {
@@ -952,7 +952,7 @@ class VodViewModel @JvmOverloads constructor(
 
     @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
     val movieResults: StateFlow<List<Movie>> =
-        vodSearchInput.map { it.trim() }.debounce(200).distinctUntilChanged()
+        vodSearchInput.map { it.trim() }.debounceSearch().distinctUntilChanged()
             .flatMapLatest { q ->
                 if (q.length < 2) flowOf(emptyList()) else graph.catalogRepository.searchMovies(q)
             }
@@ -960,7 +960,7 @@ class VodViewModel @JvmOverloads constructor(
 
     @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
     val seriesResults: StateFlow<List<Series>> =
-        vodSearchInput.map { it.trim() }.debounce(200).distinctUntilChanged()
+        vodSearchInput.map { it.trim() }.debounceSearch().distinctUntilChanged()
             .flatMapLatest { q ->
                 if (q.length < 2) flowOf(emptyList()) else graph.catalogRepository.searchSeries(q)
             }
@@ -1214,12 +1214,22 @@ class HomeViewModel @JvmOverloads constructor(
     }
 }
 
+/**
+ * Waits for typing to pause, except when the box is emptied: a chosen Recent Search would otherwise
+ * find the last search's results still there, and take them for its own.
+ */
+@OptIn(FlowPreview::class)
+internal fun Flow<String>.debounceSearch(): Flow<String> = debounce { if (it.isEmpty()) 0L else SEARCH_PAUSE_MILLIS }
+
+private const val SEARCH_PAUSE_MILLIS = 200L
+
 /** The active Profile's Recent Searches, for the search screen. */
 class RecentSearchesViewModel(app: Application) : AndroidViewModel(app) {
     private val recent = ServiceLocator.get(app).viewerLibrary.recentSearches
 
-    val shown: StateFlow<List<String>> =
-        recent.observe().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+    /** Null until first loaded, so the empty box's hint doesn't flash up before the list. */
+    val shown: StateFlow<List<String>?> =
+        recent.observe().stateIn<List<String>?>(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
     fun save(text: String) {
         viewModelScope.launch { recent.save(text) }

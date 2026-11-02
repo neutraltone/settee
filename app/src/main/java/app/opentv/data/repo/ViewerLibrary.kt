@@ -253,11 +253,9 @@ class RecentSearches internal constructor(
         if (text.isEmpty()) return
         val profileId = activeProfileId.value
         db.withTransaction {
-            dao.forProfile(profileId).filter {
-                it.equals(text, ignoreCase = true)
-            }.forEach { dao.delete(profileId, it) }
+            val (same, others) = dao.forProfile(profileId).partition { it.equals(text, ignoreCase = true) }
+            (same + others.drop(MAX - 1)).forEach { dao.delete(profileId, it) }
             dao.insert(RecentSearch(profileId, text, clock()))
-            dao.forProfile(profileId).drop(MAX).forEach { dao.delete(profileId, it) }
         }
     }
 

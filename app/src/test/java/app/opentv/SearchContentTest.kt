@@ -63,8 +63,9 @@ class SearchContentTest {
 
     private val query = TextFieldState()
     private lateinit var view: View
-    private var recentSearches by mutableStateOf(emptyList<String>())
+    private var recentSearches by mutableStateOf<List<String>?>(emptyList())
     private var liveChannels by mutableStateOf(emptyList<ChannelsViewModel.Row>())
+    private var liveMovies by mutableStateOf(emptyList<Movie>())
     private val opened = mutableListOf<String>()
     private val optionsOpenedOn = mutableListOf<OptionsSubject>()
     private var cleared = false
@@ -80,7 +81,7 @@ class SearchContentTest {
                 SearchContent(
                     query = query,
                     channelResults = channels + liveChannels,
-                    movieResults = movies,
+                    movieResults = movies + liveMovies,
                     seriesResults = series,
                     onPlayChannel = {},
                     onPlayMovie = {},
@@ -143,6 +144,16 @@ class SearchContentTest {
         assertThat(inputConnection()).isNull()
 
         searchBox.performKeyInput { pressKey(Key.DirectionCenter) }
+
+        assertThat(keyboardShowing()).isTrue()
+        assertThat(inputConnection()).isNotNull()
+    }
+
+    @Test
+    fun `OK from a remote that sends Enter opens the keyboard too`() {
+        show()
+
+        searchBox.performKeyInput { pressKey(Key.Enter) }
 
         assertThat(keyboardShowing()).isTrue()
         assertThat(inputConnection()).isNotNull()
@@ -212,6 +223,19 @@ class SearchContentTest {
     }
 
     @Test
+    fun `nothing shows until the Recent Searches have loaded`() {
+        recentSearches = null
+        show()
+
+        compose.onNodeWithText(HINT).assertDoesNotExist()
+        compose.onNodeWithText(CLEAR).assertDoesNotExist()
+
+        recentSearches = listOf("bbc")
+
+        compose.onNodeWithText("bbc").assertIsDisplayed()
+    }
+
+    @Test
     fun `typing hides the Recent Searches`() {
         recentSearches = listOf("bbc")
         show()
@@ -234,6 +258,52 @@ class SearchContentTest {
         assertThat(keyboardShowing()).isFalse()
 
         liveChannels = listOf(channelRow("BBC One"))
+
+        waitForResultsToSettle()
+        compose.onNodeWithText("BBC One").assertIsFocused()
+    }
+
+    @Test
+    fun `the highlight stays in the box if the viewer opens the keyboard while results load`() {
+        recentSearches = listOf("bbc")
+        show()
+        compose.onNodeWithText("bbc").requestFocus().performKeyInput { pressKey(Key.DirectionCenter) }
+        compose.waitForIdle()
+        searchBox.performKeyInput { pressKey(Key.DirectionCenter) }
+
+        liveChannels = listOf(channelRow("BBC One"))
+
+        waitForResultsToSettle()
+        searchBox.assertIsFocused()
+    }
+
+    @Test
+    fun `the highlight stays where the viewer moved it while results load`() {
+        recentSearches = listOf("bbc")
+        show()
+        compose.onNodeWithText("bbc").requestFocus().performKeyInput { pressKey(Key.DirectionCenter) }
+        compose.waitForIdle()
+        compose.onNodeWithText("Done").requestFocus()
+
+        liveChannels = listOf(channelRow("BBC One"))
+
+        waitForResultsToSettle()
+        compose.onNodeWithText("Done").assertIsFocused()
+    }
+
+    @Test
+    fun `results arriving a section at a time still highlight the first`() {
+        recentSearches = listOf("bbc")
+        show()
+        compose.onNodeWithText("bbc").requestFocus().performKeyInput { pressKey(Key.DirectionCenter) }
+        compose.waitForIdle()
+        compose.mainClock.autoAdvance = false
+
+        liveMovies = listOf(movie("Film"))
+        compose.mainClock.advanceTimeBy(50)
+        liveChannels = listOf(channelRow("BBC One"))
+        compose.mainClock.advanceTimeBy(500)
+        compose.mainClock.autoAdvance = true
 
         compose.waitForIdle()
         compose.onNodeWithText("BBC One").assertIsFocused()
@@ -310,6 +380,19 @@ class SearchContentTest {
     }
 
     @Test
+    fun `removing a Recent Search leaves the highlight alone once it has moved off the list`() {
+        recentSearches = listOf("bbc", "news")
+        show()
+        compose.onNodeWithText("news").requestFocus()
+        searchBox.requestFocus()
+
+        recentSearches = listOf("bbc")
+
+        compose.waitForIdle()
+        searchBox.assertIsFocused()
+    }
+
+    @Test
     fun `removing the only Recent Search highlights the box`() {
         recentSearches = listOf("bbc")
         show()
@@ -333,6 +416,13 @@ class SearchContentTest {
 
         compose.waitForIdle()
         searchBox.assertIsFocused()
+    }
+
+    // waitForIdle doesn't wait out a delay with nothing else pending.
+    private fun waitForResultsToSettle() {
+        compose.waitForIdle()
+        compose.mainClock.advanceTimeBy(500)
+        compose.waitForIdle()
     }
 
     private fun keyboardShowing(): Boolean {

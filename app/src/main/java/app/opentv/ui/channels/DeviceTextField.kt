@@ -5,6 +5,7 @@
  */
 package app.opentv.ui.channels
 
+import android.view.InputDevice
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.input.InputTransformation
 import androidx.compose.foundation.text.input.TextFieldLineLimits
@@ -20,6 +21,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEvent
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
@@ -41,7 +43,9 @@ import androidx.compose.ui.text.input.ImeAction
  * `showKeyboardOnFocus` off, a highlighted box has no input session, and its OK only asks for a
  * keyboard to be shown, with nothing to type into. Switching the option on when OK is pressed makes
  * Compose start the session and show the keyboard; it goes back off when the highlight leaves, so
- * arriving again still leaves the keyboard shut.
+ * arriving again still leaves the keyboard shut. That restart on a changed option is Compose's
+ * behaviour rather than a promise (no public API starts a session from a key), so
+ * SearchContentTest checks the input connection itself, to catch an upgrade that changes it.
  *
  * The keyboard's action key (Search, Done) runs [onSubmit]; without one it closes the keyboard and
  * moves the highlight down onto whatever the box filters. Compose's own handling does nothing for
@@ -73,7 +77,7 @@ internal fun DeviceTextField(
         modifier = modifier
             .onFocusChanged { if (!it.hasFocus) chosen = false }
             .onPreviewKeyEvent { event ->
-                if (event.key != Key.DirectionCenter) return@onPreviewKeyEvent false
+                if (!event.isRemoteOk) return@onPreviewKeyEvent false
                 if (event.type == KeyEventType.KeyDown) {
                     // Chosen already means a session is open, and Back has closed the keyboard over it.
                     if (chosen) keyboard?.show() else chosen = true
@@ -82,6 +86,20 @@ internal fun DeviceTextField(
             },
     )
 }
+
+/**
+ * Whether [this] is a remote's OK. Some TV-box remotes send Enter rather than D-pad centre, which
+ * Compose would take as the keyboard's action key. On a real keyboard, or from the on-screen one,
+ * Enter still is that.
+ */
+private val KeyEvent.isRemoteOk: Boolean
+    get() = when (key) {
+        Key.DirectionCenter -> true
+        Key.Enter, Key.NumPadEnter ->
+            nativeKeyEvent.flags and android.view.KeyEvent.FLAG_SOFT_KEYBOARD == 0 &&
+                nativeKeyEvent.device?.keyboardType != InputDevice.KEYBOARD_TYPE_ALPHABETIC
+        else -> false
+    }
 
 /** The longest search either search box takes, the Search screen's or the Channel manager's. */
 internal const val MAX_SEARCH_LENGTH = 40
