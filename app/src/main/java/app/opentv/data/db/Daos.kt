@@ -24,6 +24,7 @@ import app.opentv.data.model.PlaybackPosition
 import app.opentv.data.model.Profile
 import app.opentv.data.model.ProfileSetting
 import app.opentv.data.model.Programme
+import app.opentv.data.model.RecentSearch
 import app.opentv.data.model.Recording
 import app.opentv.data.model.RecordingStatus
 import app.opentv.data.model.Reminder
@@ -734,6 +735,29 @@ interface SeriesDismissalDao {
     suspend fun upsert(dismissal: SeriesDismissal)
 
     @Query("DELETE FROM series_dismissals WHERE profileId = :profileId")
+    suspend fun deleteFor(profileId: Long)
+}
+
+// By rowid, which only ever grows for a new row, not by time: a TV box's clock can go back (one that
+// hasn't synced since booting), and the newest search would sort last and be the one the cap removes.
+private const val RECENT_SEARCHES_NEWEST_FIRST =
+    "SELECT text FROM recent_searches WHERE profileId = :profileId ORDER BY rowid DESC"
+
+@Dao
+interface RecentSearchDao {
+    @Query(RECENT_SEARCHES_NEWEST_FIRST)
+    fun observe(profileId: Long): Flow<List<String>>
+
+    @Query(RECENT_SEARCHES_NEWEST_FIRST)
+    suspend fun forProfile(profileId: Long): List<String>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insert(search: RecentSearch)
+
+    @Query("DELETE FROM recent_searches WHERE profileId = :profileId AND text = :text")
+    suspend fun delete(profileId: Long, text: String)
+
+    @Query("DELETE FROM recent_searches WHERE profileId = :profileId")
     suspend fun deleteFor(profileId: Long)
 }
 

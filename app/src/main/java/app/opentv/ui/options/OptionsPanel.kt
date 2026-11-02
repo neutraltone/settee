@@ -67,4 +67,5 @@ private val ItemOption.label: Int
         ItemOption.RemoveFromContinueWatching -> R.string.options_remove_continue_watching
         ItemOption.AddFavourite -> R.string.options_add_favourite
         ItemOption.RemoveFavourite -> R.string.options_remove_favourite
+        ItemOption.RemoveRecentSearch -> R.string.common_remove
     }

@@ -8,7 +8,14 @@ package app.opentv.ui.options
 import app.opentv.data.repo.WatchStatus
 
 /** One thing the options panel can do to the highlighted item. */
-enum class ItemOption { MarkWatched, MarkUnwatched, RemoveFromContinueWatching, AddFavourite, RemoveFavourite }
+enum class ItemOption {
+    MarkWatched,
+    MarkUnwatched,
+    RemoveFromContinueWatching,
+    AddFavourite,
+    RemoveFavourite,
+    RemoveRecentSearch,
+}
 
 /**
  * What the options panel is open on, with the facts that decide which [ItemOption]s apply. Each
@@ -41,6 +48,10 @@ sealed interface OptionsFor {
 
     data class Channel(val favourite: Boolean) : OptionsFor {
         override fun options() = listOf(favourite(favourite))
+    }
+
+    data object RecentSearch : OptionsFor {
+        override fun options() = listOf(ItemOption.RemoveRecentSearch)
     }
 }
 

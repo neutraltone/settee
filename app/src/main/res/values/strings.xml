@@ -439,6 +439,8 @@
     <string name="search_type_name">Type a name</string>
     <string name="search_start_hint">Start typing to search channels, movies and shows.</string>
     <string name="search_no_results">No results for “%1$s”.</string>
+    <string name="search_recent_title">Recent searches</string>
+    <string name="search_clear_recent">Clear recent searches</string>
 
     <!-- ============================ On-screen keyboard ============================ -->
     <string name="kbd_paste">Paste</string>

@@ -8,11 +8,11 @@ package app.opentv.ui.channels
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -25,6 +25,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.text.input.rememberTextFieldState
+import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
@@ -32,6 +33,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -39,9 +41,12 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
@@ -54,11 +59,14 @@ import app.opentv.data.model.Series
 import app.opentv.data.model.shownName
 import app.opentv.data.parser.displayTitle
 import app.opentv.ui.ChannelsViewModel
+import app.opentv.ui.RecentSearchesViewModel
 import app.opentv.ui.VodViewModel
+import app.opentv.ui.options.optionsClickable
 import coil.compose.AsyncImage
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import kotlinx.coroutines.delay
 
 /**
  * Search across channels, movies and shows, with matches shown live as you type.
@@ -74,11 +82,13 @@ fun SearchScreen(
     onBack: () -> Unit,
     viewModel: ChannelsViewModel = viewModel(),
     vodViewModel: VodViewModel = viewModel(),
+    recentSearches: RecentSearchesViewModel = viewModel(),
 ) {
     val query = rememberTextFieldState()
     val channelResults by viewModel.searchResults.collectAsState()
     val movieResults by vodViewModel.movieResults.collectAsState()
     val seriesResults by vodViewModel.seriesResults.collectAsState()
+    val recent by recentSearches.shown.collectAsState()
 
     LaunchedEffect(query) {
         snapshotFlow { query.text.toString() }.collect {
@@ -100,8 +110,14 @@ fun SearchScreen(
         onPlayMovie = onPlayMovie,
         onOpenSeries = onOpenSeries,
         onBack = onBack,
+        recentSearches = recent,
+        onResultOpened = recentSearches::save,
+        onClearRecentSearches = recentSearches::clear,
     )
 }
+
+/** Long enough for each kind of result to land, short enough not to feel like a wait. */
+private const val RESULTS_SETTLE_MILLIS = 150L
 
 /** The search screen's body, apart from its view models, so it can be shown in a test. */
 @Composable
@@ -114,10 +130,34 @@ internal fun SearchContent(
     onPlayMovie: (Movie) -> Unit,
     onOpenSeries: (Series) -> Unit,
     onBack: () -> Unit,
+    recentSearches: List<String>? = emptyList(),
+    onResultOpened: (String) -> Unit = {},
+    onClearRecentSearches: () -> Unit = {},
 ) {
     val anyResults = channelResults.isNotEmpty() || movieResults.isNotEmpty() || seriesResults.isNotEmpty()
     val searchBox = remember { FocusRequester() }
+    val focusManager = LocalFocusManager.current
+    val typed = query.text.toString()
+    // A chosen Recent Search whose results haven't arrived. They take a moment (the view models
+    // debounce), so the highlight waits in the box, and stays there if the viewer does anything else.
+    var awaitingResultsOf by remember { mutableStateOf<String?>(null) }
+
     LaunchedEffect(Unit) { runCatching { searchBox.requestFocus() } }
+    LaunchedEffect(recentSearches?.isEmpty()) {
+        if (recentSearches?.isEmpty() == true) runCatching { searchBox.requestFocus() }
+    }
+    LaunchedEffect(typed, channelResults, movieResults, seriesResults) {
+        val awaited = awaitingResultsOf ?: return@LaunchedEffect
+        if (typed != awaited) {
+            awaitingResultsOf = null
+        } else if (anyResults) {
+            // Channels, movies and shows arrive separately: moving on the first to land could leave
+            // the highlight on a movie with channels about to appear above it.
+            delay(RESULTS_SETTLE_MILLIS)
+            awaitingResultsOf = null
+            focusManager.moveFocus(FocusDirection.Down)
+        }
+    }
 
     Column(
         Modifier
@@ -132,7 +172,14 @@ internal fun SearchContent(
                 placeholder = stringResource(R.string.search_type_name),
                 maxLength = MAX_SEARCH_LENGTH,
                 imeAction = ImeAction.Search,
-                modifier = Modifier.weight(1f).focusRequester(searchBox),
+                modifier = Modifier
+                    .weight(1f)
+                    .focusRequester(searchBox)
+                    .onFocusChanged { if (!it.hasFocus) awaitingResultsOf = null }
+                    .onPreviewKeyEvent {
+                        awaitingResultsOf = null
+                        false
+                    },
             )
             Spacer(Modifier.width(20.dp))
             OutlinedButton(onClick = onBack) { Text(stringResource(R.string.common_done)) }
@@ -140,63 +187,87 @@ internal fun SearchContent(
 
         Spacer(Modifier.height(20.dp))
 
-        val typed = query.text.toString()
         Column(Modifier.fillMaxSize()) {
             when {
-                typed.isBlank() -> Hint(stringResource(R.string.search_start_hint))
-                typed.trim().length < 2 -> Hint(stringResource(R.string.common_keep_typing))
-                !anyResults -> Hint(stringResource(R.string.search_no_results, typed))
-                else -> LazyColumn(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    if (channelResults.isNotEmpty()) {
-                        item { SectionHeader(stringResource(R.string.common_channels)) }
-                        items(channelResults, key = { "c${it.key}" }) { row ->
-                            SearchResultRow(row = row, onClick = { onPlayChannel(row.primary) })
-                        }
-                    }
-                    if (movieResults.isNotEmpty()) {
-                        item { SectionHeader(stringResource(R.string.nav_movies)) }
-                        items(movieResults, key = { "m${it.id}" }) { movie ->
-                            VodResultRow(movie.displayTitle, movie.posterUrl, movie.year?.toString()) {
-                                onPlayMovie(movie)
-                            }
-                        }
-                    }
-                    if (seriesResults.isNotEmpty()) {
-                        item { SectionHeader(stringResource(R.string.nav_shows)) }
-                        items(seriesResults, key = { "s${it.id}" }) { show ->
-                            VodResultRow(show.displayTitle, show.posterUrl, show.year?.toString()) {
-                                onOpenSeries(show)
-                            }
-                        }
-                    }
-                }
+                typed.isBlank() -> EmptySearchBox(
+                    recentSearches = recentSearches,
+                    onChoose = { text ->
+                        query.setTextAndPlaceCursorAtEnd(text)
+                        runCatching { searchBox.requestFocus() }
+                        awaitingResultsOf = text
+                    },
+                    onClear = onClearRecentSearches,
+                )
+                typed.trim().length < 2 -> SearchHint(stringResource(R.string.common_keep_typing))
+                !anyResults -> SearchHint(stringResource(R.string.search_no_results, typed))
+                else -> SearchResults(
+                    channelResults = channelResults,
+                    movieResults = movieResults,
+                    seriesResults = seriesResults,
+                    onPlayChannel = {
+                        onResultOpened(typed)
+                        onPlayChannel(it)
+                    },
+                    onPlayMovie = {
+                        onResultOpened(typed)
+                        onPlayMovie(it)
+                    },
+                    onOpenSeries = {
+                        onResultOpened(typed)
+                        onOpenSeries(it)
+                    },
+                )
             }
         }
     }
 }
 
 @Composable
-private fun Hint(text: String) {
-    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Text(text, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+private fun SearchResults(
+    channelResults: List<ChannelsViewModel.Row>,
+    movieResults: List<Movie>,
+    seriesResults: List<Series>,
+    onPlayChannel: (Channel) -> Unit,
+    onPlayMovie: (Movie) -> Unit,
+    onOpenSeries: (Series) -> Unit,
+) {
+    LazyColumn(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        if (channelResults.isNotEmpty()) {
+            item { SearchSectionHeader(stringResource(R.string.common_channels)) }
+            items(channelResults, key = { "c${it.key}" }) { row ->
+                SearchResultRow(row = row, onClick = { onPlayChannel(row.primary) })
+            }
+        }
+        if (movieResults.isNotEmpty()) {
+            item { SearchSectionHeader(stringResource(R.string.nav_movies)) }
+            items(movieResults, key = { "m${it.id}" }) { movie ->
+                VodResultRow(movie.displayTitle, movie.posterUrl, movie.year?.toString()) {
+                    onPlayMovie(movie)
+                }
+            }
+        }
+        if (seriesResults.isNotEmpty()) {
+            item { SearchSectionHeader(stringResource(R.string.nav_shows)) }
+            items(seriesResults, key = { "s${it.id}" }) { show ->
+                VodResultRow(show.displayTitle, show.posterUrl, show.year?.toString()) {
+                    onOpenSeries(show)
+                }
+            }
+        }
     }
 }
 
+/** One row of the search screen, with the same highlight whatever it holds. */
 @Composable
-private fun SectionHeader(title: String) {
-    Text(
-        title,
-        style = MaterialTheme.typography.titleMedium,
-        color = MaterialTheme.colorScheme.primary,
-        modifier = Modifier.padding(top = 8.dp, bottom = 2.dp),
-    )
-}
-
-@Composable
-private fun VodResultRow(name: String, posterUrl: String?, subtitle: String?, onClick: () -> Unit) {
+internal fun SearchRow(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    onOptions: (() -> Unit)? = null,
+    content: @Composable RowScope.() -> Unit,
+) {
     var focused by remember { mutableStateOf(false) }
     Row(
-        Modifier
+        modifier
             .fillMaxWidth()
             .onFocusChanged { focused = it.isFocused }
             .clip(RoundedCornerShape(10.dp))
@@ -208,10 +279,33 @@ private fun VodResultRow(name: String, posterUrl: String?, subtitle: String?, on
                     Modifier
                 },
             )
-            .clickable(onClick = onClick)
+            .optionsClickable(onClick = onClick, onOptions = onOptions)
             .padding(horizontal = 12.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
-    ) {
+        content = content,
+    )
+}
+
+@Composable
+internal fun SearchHint(text: String) {
+    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        Text(text, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+}
+
+@Composable
+internal fun SearchSectionHeader(title: String) {
+    Text(
+        title,
+        style = MaterialTheme.typography.titleMedium,
+        color = MaterialTheme.colorScheme.primary,
+        modifier = Modifier.padding(top = 8.dp, bottom = 2.dp),
+    )
+}
+
+@Composable
+private fun VodResultRow(name: String, posterUrl: String?, subtitle: String?, onClick: () -> Unit) {
+    SearchRow(onClick = onClick) {
         AsyncImage(
             model = posterUrl,
             contentDescription = null,
@@ -233,24 +327,7 @@ private fun VodResultRow(name: String, posterUrl: String?, subtitle: String?, on
 
 @Composable
 private fun SearchResultRow(row: ChannelsViewModel.Row, onClick: () -> Unit) {
-    var focused by remember { mutableStateOf(false) }
-    Row(
-        Modifier
-            .fillMaxWidth()
-            .onFocusChanged { focused = it.isFocused }
-            .clip(RoundedCornerShape(10.dp))
-            .background(if (focused) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface)
-            .then(
-                if (focused) {
-                    Modifier.border(2.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(10.dp))
-                } else {
-                    Modifier
-                },
-            )
-            .clickable(onClick = onClick)
-            .padding(horizontal = 12.dp, vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
+    SearchRow(onClick = onClick) {
         AsyncImage(
             model = row.primary.logoUrl,
             contentDescription = null,

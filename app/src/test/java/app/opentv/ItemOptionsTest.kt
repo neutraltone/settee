@@ -60,4 +60,9 @@ class ItemOptionsTest {
         assertThat(OptionsFor.ContinueWatching(favourite = null).options())
             .containsExactly(ItemOption.MarkWatched, ItemOption.RemoveFromContinueWatching).inOrder()
     }
+
+    @Test
+    fun `a Recent Search can only be removed`() {
+        assertThat(OptionsFor.RecentSearch.options()).containsExactly(ItemOption.RemoveRecentSearch)
+    }
 }
