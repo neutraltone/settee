@@ -15,12 +15,12 @@ import androidx.media3.common.PlaybackException
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.HttpDataSource
 import androidx.media3.exoplayer.ExoPlaybackException
+import androidx.media3.exoplayer.analytics.AnalyticsListener
 import androidx.media3.exoplayer.mediacodec.MediaCodecRenderer
 import app.opentv.R
 import app.opentv.data.repo.Playable
 import java.net.SocketTimeoutException
 import java.net.UnknownHostException
-import java.util.Locale
 
 /**
  * Turns a [PlaybackException] into something a person can act on.
@@ -56,16 +56,26 @@ object PlaybackErrors {
 
         PlaybackException.ERROR_CODE_DECODER_INIT_FAILED,
         PlaybackException.ERROR_CODE_DECODER_QUERY_FAILED,
+        PlaybackException.ERROR_CODE_DECODING_FAILED,
+        ->
+            describeUnplayable(context, (error as? ExoPlaybackException)?.rendererFormat)
+
         PlaybackException.ERROR_CODE_DECODING_FORMAT_UNSUPPORTED,
         PlaybackException.ERROR_CODE_DECODING_FORMAT_EXCEEDS_CAPABILITIES,
         ->
-            describeUnplayable(context, (error as? ExoPlaybackException)?.rendererFormat)
+            describeUnplayable(context, (error as? ExoPlaybackException)?.rendererFormat, suggestQuality = true)
 
         PlaybackException.ERROR_CODE_BEHIND_LIVE_WINDOW ->
             "Playback fell too far behind the live edge. Reloading."
 
         else -> "Playback failed (${error.errorCodeName})."
     }
+
+    /**
+     * Whether this stream's format is the problem, so trying it again can't help. A decoder failing
+     * partway through isn't counted: one bad frame in a stream is worth a restart.
+     */
+    fun isUnplayableFormat(error: PlaybackException): Boolean = error.errorCode in UNPLAYABLE_FORMATS
 
     /**
      * Logs what a decoder failed on. Built from named fields rather than the exception or
@@ -75,45 +85,68 @@ object PlaybackErrors {
         if (error.errorCode !in DECODER_FAILURES) return
         val failure = error as? ExoPlaybackException
         val format = failure?.rendererFormat
-        val decoder = (error.cause as? MediaCodecRenderer.DecoderInitializationException)?.codecInfo?.name
+        val details = format?.takeIf { MimeTypes.isAudio(it.sampleMimeType) }
+            ?.let { "channels=${it.channelCount} sampleRate=${it.sampleRate}" }
+            ?: "size=${format?.width}x${format?.height} bitDepth=${format?.bitDepth}"
         Log.w(
             TAG,
-            "${error.errorCodeName}: ${format?.sampleMimeType} codecs=${format?.codecs} " +
-                "size=${format?.width}x${format?.height} bitDepth=${format?.let(::bitDepthOf)} " +
-                "renderer=${failure?.rendererName} decoder=$decoder",
+            "${error.errorCodeName}: ${format?.sampleMimeType} codecs=${format?.codecs} $details " +
+                "renderer=${failure?.rendererName} decoder=${decoderNameOf(error.cause)}",
         )
     }
 
-    private fun describeUnplayable(context: Context, format: Format?): String {
+    /**
+     * Logs each decoder as it starts or fails to. Fallback recovers without an error reaching the
+     * player, so this is the only record of which decoder ended up playing.
+     */
+    val decoderLog = object : AnalyticsListener {
+        override fun onVideoDecoderInitialized(
+            eventTime: AnalyticsListener.EventTime,
+            decoderName: String,
+            initializedTimestampMs: Long,
+            initializationDurationMs: Long,
+        ) = logStarted(decoderName)
+
+        override fun onAudioDecoderInitialized(
+            eventTime: AnalyticsListener.EventTime,
+            decoderName: String,
+            initializedTimestampMs: Long,
+            initializationDurationMs: Long,
+        ) = logStarted(decoderName)
+
+        override fun onVideoCodecError(eventTime: AnalyticsListener.EventTime, videoCodecError: Exception) =
+            logWontStart(videoCodecError)
+
+        override fun onAudioCodecError(eventTime: AnalyticsListener.EventTime, audioCodecError: Exception) =
+            logWontStart(audioCodecError)
+    }
+
+    private fun logStarted(decoderName: String) {
+        Log.i(TAG, "Decoder started: $decoderName")
+    }
+
+    private fun logWontStart(error: Exception) {
+        decoderNameOf(error)?.let { Log.w(TAG, "Decoder wouldn't start: $it") }
+    }
+
+    private fun decoderNameOf(error: Throwable?): String? =
+        (error as? MediaCodecRenderer.DecoderInitializationException)?.codecInfo?.name
+
+    private fun describeUnplayable(context: Context, format: Format?, suggestQuality: Boolean = false): String {
         val mimeType = format?.sampleMimeType ?: return context.getString(R.string.playback_format_unsupported)
-        val name = nameOf(mimeType) + if (bitDepthOf(format) == TEN_BIT) " 10-bit" else ""
-        return context.getString(
+        val sentence = context.getString(
             when {
                 MimeTypes.isAudio(mimeType) -> R.string.playback_audio_format_unsupported
                 MimeTypes.isVideo(mimeType) -> R.string.playback_video_format_unsupported
                 else -> R.string.playback_other_format_unsupported
             },
-            name,
+            format.displayName,
         )
-    }
-
-    private fun nameOf(mimeType: String): String =
-        FORMAT_NAMES[mimeType] ?: mimeType.substringAfter('/').uppercase(Locale.ROOT)
-
-    /**
-     * Containers fill in the colour info or the codec string, rarely both, and 10-bit is usually what
-     * a cheap box's decoder can't do, so both are read. Null when neither says.
-     */
-    private fun bitDepthOf(format: Format): Int? =
-        format.colorInfo?.lumaBitdepth?.takeIf { it != Format.NO_VALUE } ?: format.codecs?.let(::bitDepthInCodecs)
-
-    private fun bitDepthInCodecs(codecs: String): Int? {
-        val fields = codecs.substringBefore(',').split('.')
-        return when (fields.first()) {
-            // RFC 6381: the second field is the profile, and profile 2 is Main 10.
-            "hvc1", "hev1" -> TEN_BIT.takeIf { fields.getOrNull(1) == "2" }
-            "av01", "vp09" -> fields.getOrNull(BIT_DEPTH_FIELD)?.toIntOrNull()
-            else -> null
+        // Another quality is usually another video encoding; audio tends to be the same across them.
+        return if (suggestQuality && MimeTypes.isVideo(mimeType)) {
+            "$sentence ${context.getString(R.string.playback_try_other_quality)}"
+        } else {
+            sentence
         }
     }
 
@@ -142,33 +175,13 @@ object PlaybackErrors {
     }
 
     private const val TAG = "OpenTV"
-    private const val TEN_BIT = 10
 
-    private val FORMAT_NAMES = mapOf(
-        MimeTypes.VIDEO_H264 to "H.264",
-        MimeTypes.VIDEO_H265 to "HEVC",
-        MimeTypes.VIDEO_AV1 to "AV1",
-        MimeTypes.VIDEO_VP8 to "VP8",
-        MimeTypes.VIDEO_VP9 to "VP9",
-        MimeTypes.VIDEO_MPEG2 to "MPEG-2",
-        MimeTypes.VIDEO_VC1 to "VC-1",
-        MimeTypes.VIDEO_DOLBY_VISION to "Dolby Vision",
-        MimeTypes.AUDIO_AAC to "AAC",
-        MimeTypes.AUDIO_MPEG to "MP3",
-        MimeTypes.AUDIO_AC3 to "AC-3",
-        MimeTypes.AUDIO_E_AC3 to "E-AC-3",
-        MimeTypes.AUDIO_TRUEHD to "TrueHD",
-        MimeTypes.AUDIO_DTS to "DTS",
-    )
-
-    private val DECODER_FAILURES = setOf(
+    private val UNPLAYABLE_FORMATS = setOf(
         PlaybackException.ERROR_CODE_DECODER_INIT_FAILED,
         PlaybackException.ERROR_CODE_DECODER_QUERY_FAILED,
-        PlaybackException.ERROR_CODE_DECODING_FAILED,
         PlaybackException.ERROR_CODE_DECODING_FORMAT_EXCEEDS_CAPABILITIES,
         PlaybackException.ERROR_CODE_DECODING_FORMAT_UNSUPPORTED,
     )
 
-    /** "av01.0.08M.10" and "vp09.02.10.10" both keep the bit depth in their fourth field. */
-    private const val BIT_DEPTH_FIELD = 3
+    private val DECODER_FAILURES = UNPLAYABLE_FORMATS + PlaybackException.ERROR_CODE_DECODING_FAILED
 }

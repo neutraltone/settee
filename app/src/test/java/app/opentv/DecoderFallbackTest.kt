@@ -20,6 +20,7 @@ import androidx.media3.exoplayer.mediacodec.MediaCodecUtil
 import androidx.test.core.app.ApplicationProvider
 import app.opentv.data.repo.MediaKey
 import app.opentv.player.PlayerController
+import com.google.common.truth.Correspondence
 import com.google.common.truth.Truth.assertThat
 import org.junit.After
 import org.junit.Before
@@ -105,6 +106,7 @@ class DecoderFallbackTest {
 
         assertThat(state).isInstanceOf(PlayerController.State.Playing::class.java)
         assertThat(started).containsExactly(SECOND)
+        assertThat(logged()).comparingElementsUsing(CONTAINS).containsAtLeast(FIRST, SECOND)
     }
 
     @Test
@@ -117,9 +119,23 @@ class DecoderFallbackTest {
             .isEqualTo(PlaybackException.ERROR_CODE_DECODER_INIT_FAILED)
         assertThat((state as PlayerController.State.Error).message)
             .isEqualTo("This device can't play this video format (H.264).")
-        assertThat(ShadowLog.getLogsForTag("OpenTV").single().msg).contains(FIRST)
+        assertThat(logged()).comparingElementsUsing(CONTAINS).contains(FIRST)
         assertThat(started).isEmpty()
     }
+
+    @Test
+    fun `a format the device can't play isn't restarted, since trying again can't help`() {
+        val controller = players.realDecoderController(preview = true, surface = surface)
+
+        val state = playUntilSettled(controller)
+        players.advance(10_000)
+
+        assertThat((state as PlayerController.State.Error).canRetry).isFalse()
+        assertThat(players.played).hasSize(1)
+        assertThat(controller.state.value).isInstanceOf(PlayerController.State.Error::class.java)
+    }
+
+    private fun logged() = ShadowLog.getLogsForTag("OpenTV").map { it.msg }
 
     private fun playUntilSettled(controller: PlayerController): PlayerController.State {
         controller.player.addAnalyticsListener(object : AnalyticsListener {
@@ -142,5 +158,9 @@ class DecoderFallbackTest {
     private companion object {
         const val FIRST = "first.decoder"
         const val SECOND = "second.decoder"
+        val CONTAINS: Correspondence<String, String> = Correspondence.from(
+            { actual, expected -> actual?.contains(expected!!) == true },
+            "contains",
+        )
     }
 }

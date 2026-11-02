@@ -247,6 +247,7 @@ class PlayerController(
         )
         .let(buildPlayer)
         .apply {
+            addAnalyticsListener(PlaybackErrors.decoderLog)
             addListener(object : Player.Listener {
                 override fun onTracksChanged(tracks: Tracks) {
                     _tracks.value = tracks
@@ -273,14 +274,18 @@ class PlayerController(
                     consecutiveFailures++
                     PlaybackErrors.logDecoderFailure(error)
                     val request = current
+                    // Restarting can't change what this device can decode, and on a portal it would
+                    // only mint more links for a stream that will fail the same way.
+                    val canRestart = !PlaybackErrors.isUnplayableFormat(error) &&
+                        consecutiveFailures < MAX_AUTO_RESTARTS
                     _state.value = State.Error(
                         title = _title.value,
                         message = PlaybackErrors.describe(strings, error),
-                        canRetry = consecutiveFailures < MAX_AUTO_RESTARTS,
+                        canRetry = canRestart,
                     )
                     // One silent restart covers the common case of a provider dropping the
                     // connection when another device on the account starts streaming.
-                    if (consecutiveFailures < MAX_AUTO_RESTARTS && request != null) {
+                    if (canRestart && request != null) {
                         scope.launch {
                             delay(AUTO_RESTART_DELAY_MILLIS)
                             if (current == request) play(request, debounce = false)

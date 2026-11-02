@@ -77,7 +77,81 @@ class PlaybackErrorsTest {
         val error = decoderFailure(format, PlaybackException.ERROR_CODE_DECODING_FORMAT_EXCEEDS_CAPABILITIES)
 
         assertThat(PlaybackErrors.describe(context, error))
-            .isEqualTo("This device can't play this video format (H.264).")
+            .isEqualTo("This device can't play this video format (H.264). A different quality may work.")
+    }
+
+    @Test
+    fun `an unsupported video format suggests another quality`() {
+        val format = Format.Builder().setSampleMimeType(MimeTypes.VIDEO_H265).build()
+        val error = decoderFailure(format, PlaybackException.ERROR_CODE_DECODING_FORMAT_UNSUPPORTED)
+
+        assertThat(PlaybackErrors.describe(context, error))
+            .isEqualTo("This device can't play this video format (HEVC). A different quality may work.")
+    }
+
+    @Test
+    fun `an unsupported audio format doesn't suggest another quality`() {
+        val format = Format.Builder().setSampleMimeType(MimeTypes.AUDIO_DTS).build()
+        val error = decoderFailure(format, PlaybackException.ERROR_CODE_DECODING_FORMAT_UNSUPPORTED)
+
+        assertThat(PlaybackErrors.describe(context, error))
+            .isEqualTo("This device can't play this audio format (DTS).")
+    }
+
+    @Test
+    fun `a decoder that fails after starting names the format too`() {
+        val format = Format.Builder().setSampleMimeType(MimeTypes.VIDEO_H265).setCodecs("hvc1.2.4.L153.B0").build()
+        val error = decoderFailure(format, PlaybackException.ERROR_CODE_DECODING_FAILED)
+
+        assertThat(PlaybackErrors.describe(context, error))
+            .isEqualTo("This device can't play this video format (HEVC 10-bit).")
+    }
+
+    @Test
+    fun `10-bit H_264 is named by its High 10 profile`() {
+        val format = Format.Builder().setSampleMimeType(MimeTypes.VIDEO_H264).setCodecs("avc1.6E0028").build()
+
+        assertThat(PlaybackErrors.describe(context, decoderFailure(format)))
+            .isEqualTo("This device can't play this video format (H.264 10-bit).")
+    }
+
+    @Test
+    fun `an HEVC profile with a profile space prefix is still read`() {
+        val format = Format.Builder().setSampleMimeType(MimeTypes.VIDEO_H265).setCodecs("hvc1.A2.4.L153.B0").build()
+
+        assertThat(PlaybackErrors.describe(context, decoderFailure(format)))
+            .isEqualTo("This device can't play this video format (HEVC 10-bit).")
+    }
+
+    @Test
+    fun `12-bit is named as well`() {
+        val format = Format.Builder().setSampleMimeType(MimeTypes.VIDEO_VP9).setCodecs("vp09.02.10.12").build()
+
+        assertThat(PlaybackErrors.describe(context, decoderFailure(format)))
+            .isEqualTo("This device can't play this video format (VP9 12-bit).")
+    }
+
+    @Test
+    fun `the codec matching the track is read, whichever is listed first`() {
+        val format = Format.Builder()
+            .setSampleMimeType(MimeTypes.VIDEO_H265)
+            .setCodecs("mp4a.40.2,hvc1.2.4.L153.B0")
+            .build()
+
+        assertThat(PlaybackErrors.describe(context, decoderFailure(format)))
+            .isEqualTo("This device can't play this video format (HEVC 10-bit).")
+    }
+
+    @Test
+    fun `common audio formats get their proper names`() {
+        fun named(mimeType: String) = PlaybackErrors.describe(
+            context,
+            decoderFailure(Format.Builder().setSampleMimeType(mimeType).build()),
+        )
+
+        assertThat(named(MimeTypes.AUDIO_DTS_HD)).contains("(DTS-HD)")
+        assertThat(named(MimeTypes.AUDIO_MPEG_L2)).contains("(MP2)")
+        assertThat(named(MimeTypes.AUDIO_E_AC3_JOC)).contains("(E-AC-3 JOC)")
     }
 
     @Test
@@ -115,6 +189,22 @@ class PlaybackErrorsTest {
         assertThat(logged.msg).contains("3840x2160")
         assertThat(logged.throwable).isNull()
         assertThat(logged.msg).doesNotContain("example.com")
+    }
+
+    @Test
+    fun `an audio failure logs channels and sample rate, not a picture size`() {
+        val format = Format.Builder()
+            .setSampleMimeType(MimeTypes.AUDIO_E_AC3)
+            .setChannelCount(6)
+            .setSampleRate(48_000)
+            .build()
+
+        PlaybackErrors.logDecoderFailure(decoderFailure(format))
+
+        val logged = ShadowLog.getLogsForTag("OpenTV").single().msg
+        assertThat(logged).contains("channels=6")
+        assertThat(logged).contains("sampleRate=48000")
+        assertThat(logged).doesNotContain("size=")
     }
 
     @Test

@@ -565,6 +565,7 @@
     <string name="playback_audio_format_unsupported">This device can\'t play this audio format (%1$s).</string>
     <string name="playback_other_format_unsupported">This device can\'t play this format (%1$s).</string>
     <string name="playback_format_unsupported">This device can\'t play this format.</string>
+    <string name="playback_try_other_quality">A different quality may work.</string>
     <!-- Catalogue Refresh -->
     <string name="refresh_saving_source">Saving source…</string>
     <string name="refresh_save_failed">Could not save source.</string>
