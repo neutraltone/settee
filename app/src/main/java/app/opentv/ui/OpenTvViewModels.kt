@@ -37,6 +37,7 @@ import app.opentv.data.repo.MediaKey
 import app.opentv.data.repo.MovieVariantGroup
 import app.opentv.data.repo.PersonTitle
 import app.opentv.data.repo.RefreshMessages
+import app.opentv.data.repo.onNowAt
 import app.opentv.data.work.SyncWorker
 import app.opentv.pairing.ManagerServer
 import app.opentv.sync.NasSync
@@ -1117,7 +1118,7 @@ class HomeViewModel @JvmOverloads constructor(
         // The Channel's guide, as the guide itself picks it.
         val guideId = channel?.let { lineup.guideId(it) } ?: return LiveNow(preview, null, null)
         val shows = graph.epgRepository.upcoming(guideId, now, limit = 2)
-        val onNow = shows.firstOrNull()?.takeIf { it.startUtcMillis <= now }
+        val onNow = shows.onNowAt(now)
         val next = if (onNow != null) shows.getOrNull(1) else shows.firstOrNull()
         return LiveNow(preview, onNow?.title, next?.title)
     }

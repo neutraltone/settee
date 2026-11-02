@@ -17,6 +17,7 @@ import app.opentv.data.repo.ChannelLineup
 import app.opentv.data.repo.LineupChannel
 import app.opentv.data.repo.LineupScope
 import app.opentv.data.repo.migratedLockKeys
+import app.opentv.ui.player.programmeTitleOnNow
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -236,6 +237,22 @@ class ChannelLineupTest {
     private suspend fun programmesOn(epgId: String) = db.programmes().upsertAll(
         listOf(Programme(feedId = 1, epgChannelId = epgId, startUtcMillis = 0, endUtcMillis = 60_000, title = "News")),
     )
+
+    @Test
+    fun `a channel's programme on now comes from the guide it uses`() = runTest {
+        seed("UK| ITV FHD", "UK| ITV HD")
+        guide("UK| ITV HD", "itv.hd")
+        programmesOn("itv.hd")
+
+        assertThat(programmeTitleOnNow(lineup, catalogue.guide, all().single(), nowMillis = 500)).isEqualTo("News")
+    }
+
+    @Test
+    fun `a channel with no guide has nothing on now`() = runTest {
+        seed("UK| ITV HD")
+
+        assertThat(programmeTitleOnNow(lineup, catalogue.guide, all().single(), nowMillis = 500)).isNull()
+    }
 
     @Test
     fun `a channel's guide is the first guide id with programmes, its primary quality's first`() = runTest {

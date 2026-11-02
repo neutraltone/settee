@@ -126,8 +126,9 @@ import kotlinx.coroutines.launch
  *
  * The video fills the screen with no chrome. A single control bar slides up from the bottom and
  * holds everything — transport (play/pause, rewind, forward), and pickers for subtitles, audio,
- * quality and aspect ratio. It hides after a few seconds and any remote button brings it back.
- * Nothing is ever left permanently painted over the picture.
+ * quality and aspect ratio. It hides after a few seconds and OK brings it back. Changing channel
+ * shows a brief [ChannelBanner] instead, which has no buttons and never takes focus. Nothing is ever
+ * left permanently painted over the picture.
  *
  * Subtitles and audio come from the actual tracks in the stream ([PlayerController.tracks]) and
  * are selected explicitly — that is the fix for "captions on but nothing shows", which happens
@@ -240,9 +241,12 @@ fun PlayerScreen(channelId: Long?, onBack: () -> Unit) {
     }
 
     /** Zaps [delta] Channels on from the one playing, whichever of its Qualities that is. */
-    fun zap(delta: Int) {
+    fun zap(delta: Int, atEnd: () -> Unit) {
         val from = currentId ?: return
-        scope.launch { graph.channelLineup.zap(from, delta)?.let { playChannelId(it.primary.id) } }
+        scope.launch {
+            val next = graph.channelLineup.zap(from, delta)
+            if (next != null) playChannelId(next.primary.id) else atEnd()
+        }
     }
 
     fun toggleRecord() {
@@ -293,6 +297,10 @@ fun PlayerScreen(channelId: Long?, onBack: () -> Unit) {
         variants = channel?.switchable.orEmpty(),
         currentId = currentId,
         previousId = previousId,
+        bannerChannel = channel?.let { BannerChannel(it.key, it.primary.number, it.primary.shownName) },
+        programmeOnNow = { now ->
+            channel?.let { programmeTitleOnNow(graph.channelLineup, graph.epgRepository, it, now) }
+        },
         recordingThis = activeRecordings.any { it.channelId == currentId },
         livePause = livePause,
         pausePromptDismissed = pausePromptDismissed,
@@ -317,6 +325,9 @@ fun PlayerScreen(channelId: Long?, onBack: () -> Unit) {
     }
 }
 
+/** The Channel a banner names. [key] is what says it's a different Channel: see [LineupChannel.key]. */
+data class BannerChannel(val key: String, val number: Int?, val name: String)
+
 /**
  * The live picture and its control bar, channel list and pickers, with everything the remote drives.
  * [PlayerScreen] owns the stream, the channel being played and recording; this owns what the viewer
@@ -331,11 +342,13 @@ fun LivePlayerContent(
     variants: List<Channel>,
     currentId: Long?,
     previousId: Long?,
+    bannerChannel: BannerChannel?,
+    programmeOnNow: suspend (Long) -> String?,
     recordingThis: Boolean,
     livePause: Boolean,
     pausePromptDismissed: Boolean,
     onPlayChannel: (Long) -> Unit,
-    onZap: (Int) -> Unit,
+    onZap: (delta: Int, atEnd: () -> Unit) -> Unit,
     onTune: (Channel) -> Unit,
     onToggleRecord: () -> Unit,
     onTurnOnLivePause: () -> Unit,
@@ -353,7 +366,10 @@ fun LivePlayerContent(
     val paused = state != PlayerController.State.Idle && !playWhenReady
     var resizeMode by remember { mutableIntStateOf(settings.playerResizeMode.value) }
 
-    var controlsVisible by remember { mutableStateOf(true) }
+    var controlsVisible by remember { mutableStateOf(false) }
+    var bannerVisible by remember { mutableStateOf(false) }
+    var bannerShows by remember { mutableIntStateOf(0) }
+    var openingPress by remember { mutableStateOf(false) }
     var panel by remember { mutableStateOf(PlayerPanel.NONE) }
     var channelListVisible by remember { mutableStateOf(false) }
     var interaction by remember { mutableIntStateOf(0) }
@@ -422,10 +438,37 @@ fun LivePlayerContent(
 
     fun reveal() {
         controlsVisible = true
+        bannerVisible = false
         interaction++
     }
 
-    fun zapBy(delta: Int) = onZap(delta)
+    /** Says which Channel is on: the banner, or the bar's title if the bar's already up. */
+    fun announceChannel() {
+        if (controlsVisible) {
+            interaction++
+        } else if (!channelListVisible) {
+            bannerVisible = true
+            bannerShows++
+        }
+    }
+
+    /** Picking the Channel that's on doesn't change it, so nothing else would announce it. */
+    fun playPicked(item: PlaybackQueue.Item) {
+        onPlayChannel(item.id)
+        if (currentId in item.qualityIds) announceChannel()
+    }
+
+    // By the Channel, not currentId: a Quality switch changes currentId and stays on the Channel.
+    LaunchedEffect(bannerChannel?.key) {
+        if (bannerChannel != null) announceChannel()
+    }
+
+    // Not the bar's auto-hide, which waits for Playing: nothing here needs the viewer to act on it, so
+    // it shouldn't outstay a channel that's still buffering or has failed.
+    LaunchedEffect(bannerShows) {
+        delay(BANNER_TIMEOUT_MILLIS)
+        bannerVisible = false
+    }
 
     // Auto-hide the bar after a few seconds — but never while paused or with a picker open.
     LaunchedEffect(controlsVisible, interaction, state, paused, panel) {
@@ -440,13 +483,17 @@ fun LivePlayerContent(
     }
 
     // Focus: a picker's first row when one is open, otherwise the bar, otherwise the full-screen
-    // catcher (so the next remote press brings the bar back).
+    // catcher (so OK can bring the bar back, and up and down can change channel).
     LaunchedEffect(controlsVisible, panel) {
         if (controlsVisible) {
             delay(40)
             runCatching { if (panel != PlayerPanel.NONE) panelFocus.requestFocus() else barFocus.requestFocus() }
         } else {
             runCatching { rootFocus.requestFocus() }
+            // The player opens with nothing else to focus, and without focus the remote does nothing,
+            // so ask again after the beat the bar waits, in case the screen was still opening.
+            delay(40)
+            if (!channelListVisible) runCatching { rootFocus.requestFocus() }
         }
     }
 
@@ -473,7 +520,7 @@ fun LivePlayerContent(
         val num = numberEntry.toIntOrNull()
         numberEntry = ""
         val target = num?.let { n -> queue.firstOrNull { it.number == n } }
-        if (target != null) onPlayChannel(target.id)
+        if (target != null) playPicked(target)
     }
 
     // Focus the channel list when it opens; hand focus back to the video catcher when it closes.
@@ -508,6 +555,15 @@ fun LivePlayerContent(
                     }
                     return@onPreviewKeyEvent true
                 }
+                // The press that opens the bar isn't also a press on the button focus lands on: held,
+                // its repeats and release would reach that button and pause the channel. A new press
+                // means the release went astray.
+                if (openingPress && event.key in OK_KEYS) {
+                    val releasing = event.type == KeyEventType.KeyUp
+                    val repeating = event.type == KeyEventType.KeyDown && event.nativeKeyEvent.repeatCount > 0
+                    if (!repeating) openingPress = false
+                    if (releasing || repeating) return@onPreviewKeyEvent true
+                }
                 if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
                 val digit = keyToDigit(event.key)
                 when {
@@ -516,7 +572,6 @@ fun LivePlayerContent(
                     // Typing a channel number jumps to it, TiviMate-style.
                     digit != null -> {
                         numberEntry = (numberEntry + digit).take(4)
-                        reveal()
                         interaction++
                         true
                     }
@@ -526,16 +581,15 @@ fun LivePlayerContent(
                         false
                     }
                     // Channel up/down works whether or not the bar is showing — this remote has no
-                    // CH+/CH- keys, so up/down IS the channel changer. Each zap flashes the bar as a
-                    // channel banner, then it auto-hides.
+                    // CH+/CH- keys, so up/down IS the channel changer. Only announced if the zap finds
+                    // nothing, at either end of the list: otherwise the Channel changing announces it,
+                    // and announcing now would show the old one until the new one is found.
                     event.key == Key.DirectionUp || event.key == Key.ChannelUp -> {
-                        zapBy(-1)
-                        reveal()
+                        onZap(-1, ::announceChannel)
                         true
                     }
                     event.key == Key.DirectionDown || event.key == Key.ChannelDown -> {
-                        zapBy(1)
-                        reveal()
+                        onZap(1, ::announceChannel)
                         true
                     }
                     // With the bar up, left/right drive its buttons; let them through.
@@ -545,7 +599,10 @@ fun LivePlayerContent(
                     }
                     // Immersive: left opens the channel list, right the quality picker.
                     event.key == Key.DirectionLeft -> {
-                        if (queue.isNotEmpty()) channelListVisible = true
+                        if (queue.isNotEmpty()) {
+                            channelListVisible = true
+                            bannerVisible = false
+                        }
                         true
                     }
                     event.key == Key.DirectionRight -> {
@@ -555,10 +612,12 @@ fun LivePlayerContent(
                         }
                         true
                     }
-                    else -> {
+                    event.key in OK_KEYS -> {
                         reveal()
+                        openingPress = true
                         true
                     }
+                    else -> false
                 }
             }
             .focusRequester(rootFocus)
@@ -763,6 +822,17 @@ fun LivePlayerContent(
             }
         }
 
+        if (bannerChannel != null) {
+            AnimatedVisibility(
+                visible = bannerVisible && !inPip,
+                enter = fadeIn(),
+                exit = fadeOut(),
+                modifier = Modifier.align(Alignment.BottomStart),
+            ) {
+                ChannelBanner(bannerChannel, programmeOnNow)
+            }
+        }
+
         // Left-side transparent channel list — d-pad Left opens it, pick a channel to switch.
         AnimatedVisibility(
             visible = channelListVisible && !inPip,
@@ -796,8 +866,8 @@ fun LivePlayerContent(
                         focusRequester = null,
                         leadingLabel = stringResource(R.string.player_last),
                         onClick = {
-                            onPlayChannel(lastItem.id)
                             channelListVisible = false
+                            playPicked(lastItem)
                         },
                     )
                     Spacer(Modifier.height(4.dp))
@@ -809,8 +879,8 @@ fun LivePlayerContent(
                             playing = currentId in item.qualityIds,
                             focusRequester = if (index == currentIndex) listFocus else null,
                             onClick = {
-                                onPlayChannel(item.id)
                                 channelListVisible = false
+                                playPicked(item)
                             },
                         )
                     }
@@ -1140,9 +1210,11 @@ internal fun LivePlayerControls(
 }
 
 private const val CONTROLS_TIMEOUT_MILLIS = 5_000L
+private const val BANNER_TIMEOUT_MILLIS = 4_000L
 private const val NUMBER_ENTRY_TIMEOUT_MILLIS = 2_000L
 private const val COUNTDOWN_TICK_MILLIS = 1_000L
 private const val BACK_TO_LIVE_MESSAGE_MILLIS = 4_000L
+private val OK_KEYS = setOf(Key.DirectionCenter, Key.Enter, Key.NumPadEnter, Key.ButtonA)
 private val MEDIA_KEYS =
     setOf(Key.MediaPlayPause, Key.MediaPlay, Key.MediaPause, Key.MediaRewind, Key.MediaFastForward)
 
