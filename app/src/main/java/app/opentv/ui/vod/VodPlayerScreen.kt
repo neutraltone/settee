@@ -56,7 +56,6 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
@@ -65,6 +64,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
@@ -77,6 +77,7 @@ import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
@@ -269,8 +270,8 @@ fun VodPlayerContent(
     val panelFocus = remember { FocusRequester() }
     var positionMs by remember { mutableLongStateOf(0L) }
     var durationMs by remember { mutableLongStateOf(0L) }
-    var scrubbing by remember { mutableStateOf(false) }
-    var scrubValue by remember { mutableFloatStateOf(0f) }
+    val seek = remember { UnfinishedSeek() }
+    val focusManager = LocalFocusManager.current
 
     var controlsVisible by remember { mutableStateOf(true) }
     var interaction by remember { androidx.compose.runtime.mutableIntStateOf(0) }
@@ -294,27 +295,48 @@ fun VodPlayerContent(
     // Poll position/duration for the seek bar while the film plays.
     LaunchedEffect(Unit) {
         while (isActive) {
-            if (!scrubbing) {
-                positionMs = controller.player.currentPosition.coerceAtLeast(0)
-                // A growing recording has no fixed length; the recorded-so-far extent (how far you
-                // can skip ahead) is what's been read into the buffer.
-                durationMs = if (growingRec) {
-                    controller.player.bufferedPosition.coerceAtLeast(0)
-                } else {
-                    controller.player.duration.takeIf { it > 0 } ?: 0
-                }
+            positionMs = controller.player.currentPosition.coerceAtLeast(0)
+            // A growing recording has no fixed length; the recorded-so-far extent (how far you
+            // can skip ahead) is what's been read into the buffer.
+            durationMs = if (growingRec) {
+                controller.player.bufferedPosition.coerceAtLeast(0)
+            } else {
+                controller.player.duration.takeIf { it > 0 } ?: 0
             }
             delay(500)
         }
     }
 
-    // Auto-hide when playing and not paused/scrubbing and no picker open. A growing recording dips in
-    // and out of Buffering as it rides the write head, so for that case Buffering counts as "playing"
-    // here — otherwise a single hiccup would pin the transport bar on screen for the rest of the watch.
-    LaunchedEffect(controlsVisible, interaction, state, paused, scrubbing, vodPanel) {
+    // A seek through the last episode means nothing in this one, so it gets no grace.
+    val playing by viewModel.current.collectAsState()
+    LaunchedEffect(playing) {
+        seek.drop()
+        positionMs = controller.player.currentPosition.coerceAtLeast(0)
+    }
+
+    // Hiding counts as leaving the bar, and the Next Episode card hides the controls as it comes up.
+    // Losing focus doesn't cover it: a finger dragging the bar on a phone never gave it focus.
+    LaunchedEffect(controlsVisible) {
+        if (!controlsVisible) seek.left()
+    }
+
+    LaunchedEffect(seek.awaitingReturn) {
+        if (seek.awaitingReturn) {
+            delay(UNFINISHED_SEEK_GRACE_MILLIS)
+            seek.drop()
+        }
+    }
+
+    // Auto-hide when playing and not paused and no picker open. An unfinished seek doesn't hold the bar
+    // up: a held key keeps counting as interaction, and one whose key-up got lost must not pin it
+    // there for good. A growing recording dips in and out of Buffering as it rides the write head, so
+    // for that case Buffering counts as "playing" here — otherwise a single hiccup would pin the
+    // transport bar on screen for the rest of the watch.
+    LaunchedEffect(controlsVisible, interaction, state, paused, vodPanel) {
         val activelyPlaying = state is PlayerController.State.Playing ||
             (growingRec && state is PlayerController.State.Buffering)
-        if (controlsVisible && !paused && !scrubbing && vodPanel == VodPanel.NONE && activelyPlaying) {
+        val watching = activelyPlaying && !paused
+        if (controlsVisible && watching && vodPanel == VodPanel.NONE) {
             delay(5_000)
             controlsVisible = false
         }
@@ -488,23 +510,35 @@ fun VodPlayerContent(
 
                 // Seek bar with times either side. Left/right on the remote scrubs.
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(formatPlaybackTime(if (scrubbing) scrubValue.toLong() else positionMs), color = Color.White)
+                    Text(formatPlaybackTime(seek.position?.toLong() ?: positionMs), color = Color.White)
                     Spacer(Modifier.width(12.dp))
                     Slider(
-                        value = if (scrubbing) scrubValue else positionMs.toFloat(),
+                        value = seek.position ?: positionMs.toFloat(),
                         valueRange = 0f..(durationMs.takeIf { it > 0 }?.toFloat() ?: 1f),
                         onValueChange = {
-                            scrubbing = true
-                            scrubValue = it
+                            seek.pressed(to = it)
                             interaction++
                         },
                         onValueChangeFinished = {
-                            controller.player.seekTo(scrubValue.toLong())
-                            positionMs = scrubValue.toLong()
-                            scrubbing = false
+                            seek.released()?.let { target ->
+                                controller.player.seekTo(target)
+                                positionMs = target
+                            }
                             interaction++
                         },
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier
+                            .weight(1f)
+                            .onFocusChanged { if (it.hasFocus) seek.reached() else seek.left() }
+                            // The slider would seek on these too, and focus could never leave the bar.
+                            .onPreviewKeyEvent { event ->
+                                val direction = when (event.key) {
+                                    Key.DirectionUp -> FocusDirection.Up
+                                    Key.DirectionDown -> FocusDirection.Down
+                                    else -> return@onPreviewKeyEvent false
+                                }
+                                if (event.type == KeyEventType.KeyDown) focusManager.moveFocus(direction)
+                                true
+                            },
                     )
                     Spacer(Modifier.width(12.dp))
                     Text(formatPlaybackTime(durationMs), color = Color.White)
@@ -545,6 +579,9 @@ fun VodPlayerContent(
 }
 
 private const val POLL_MILLIS = 500L
+
+/** How long an unfinished seek waits for the viewer to come back to the bar. To adjust once tried on the Stick. */
+private const val UNFINISHED_SEEK_GRACE_MILLIS = 3_000L
 
 /** How often progress is written while playing, so a crash or power cut loses little. */
 private const val SAVE_EVERY_MILLIS = 15_000L
