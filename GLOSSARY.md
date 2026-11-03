@@ -26,6 +26,14 @@ _Avoid_: Captions setting, CC, subtitle default
 
 ## Providers
 
+**Provider**:
+The IPTV service the viewer already pays for, connected by an Xtream Codes login, an M3U playlist or a Stalker portal. It supplies the channels, movies and shows; Settee only plays them.
+_Avoid_: Source, playlist (that's only one way to connect)
+
+**EPG Source**:
+Where a provider's guide data comes from, such as an XMLTV link. The term is for setup; everywhere else the viewer just sees the guide.
+_Avoid_: Source on its own, feed
+
 **Catalogue Refresh**:
 Fetching a provider's channels, movies, shows and guide again and merging them into what's on the device. It never wipes what the viewer set: hidden channels, custom names, Favourites and progress all carry across. Runs every six hours, when the viewer asks, when a provider is added, and when Movies or Shows is opened and that provider's titles are more than 12 hours old.
 _Avoid_: Sync (that's between the viewer's devices), reload, update
