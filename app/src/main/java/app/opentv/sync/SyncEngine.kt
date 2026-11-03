@@ -48,6 +48,7 @@ class SyncEngine(private val graph: ServiceLocator.Graph) {
         favourites = graph.viewerLibrary.favourites.export(),
         hiddenStreams = graph.catalogRepository.exportHiddenChannels(),
         hiddenCategories = graph.settings.hiddenCategories.value.toList(),
+        categoryLocks = graph.settings.exportCategoryLocks(),
         recordings = graph.recordingRepository.export(),
         profileSettings = graph.profileSettings.export(),
     )
@@ -70,9 +71,9 @@ class SyncEngine(private val graph: ServiceLocator.Graph) {
     private suspend fun applyOne(bundle: SyncBundle, waiting: MutableList<SyncPosition>): MergeResult {
         // First: everything else lands on a Profile by name.
         graph.profiles.import(bundle.profiles)
-        if (bundle.hiddenCategories.isNotEmpty()) {
-            graph.settings.setHiddenCategories(graph.settings.hiddenCategories.value + bundle.hiddenCategories)
-        }
+        graph.settings.importCategoryLocks(
+            bundle.categoryLocks + bundle.hiddenCategories.map { SyncCategoryLock(it, 0) },
+        )
         val progress = graph.viewerLibrary.syncedProgress.import(bundle.progress)
         waiting += progress.waiting
         return MergeResult(

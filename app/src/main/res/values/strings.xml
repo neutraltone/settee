@@ -223,6 +223,7 @@
     <string name="parental_hidden_desc">Anything switched on here is removed from Live TV until you turn on “Show hidden now” below. With a PIN set, this screen stays locked, so hidden stays hidden.</string>
     <string name="parental_show_hidden_title">Show hidden now (this session)</string>
     <string name="parental_show_hidden_subtitle">Reveals hidden categories until the app is restarted.</string>
+    <string name="parental_lock_sync_note">Categories you lock here are also locked on your other devices when they sync. Unlocking one only unlocks it on this device.</string>
     <string name="parental_no_categories">No categories yet — add a provider first.</string>
     <string name="parental_pin">PIN</string>
     <string name="parental_pin_is_set">A PIN is set.</string>

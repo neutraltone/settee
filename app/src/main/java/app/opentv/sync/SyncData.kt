@@ -23,7 +23,9 @@ import kotlinx.serialization.Serializable
  *    series taken out of Continue Watching, by [SyncDismissal.dismissedAtMillis].
  *  - **Profile settings** are newest-wins per Profile and setting, using
  *    [SyncProfileSetting.updatedAtMillis]; only settings a Profile actually chose travel (ADR 0002).
- *  - **Curation and recordings** are additive: favourites, hidden channels, hidden categories and
+ *  - **Locked categories** spread by the time they were locked, and an unlock stays on its device:
+ *    a lock only applies where it's newer than that device's last unlock (ADR 0005).
+ *  - **Curation and recordings** are additive: favourites, hidden channels and
  *    NAS recordings from a peer are merged in without ever removing anything local. You tidy up on
  *    one device and the others adopt it, but a favourite set only on one box is never lost.
  *
@@ -32,7 +34,7 @@ import kotlinx.serialization.Serializable
  */
 @Serializable
 data class SyncBundle(
-    val version: Int = 6,
+    val version: Int = 7,
     val generatedAtMillis: Long = 0,
     /** Profile names the peer knows about. Others add any they are missing (add-only). */
     val profiles: List<String> = emptyList(),
@@ -48,7 +50,10 @@ data class SyncBundle(
     val favourites: List<SyncFavourite> = emptyList(),
     /** Additive device-wide curation, keyed by the stable identifiers noted above; a new key as [progress] is. */
     val hiddenStreams: List<SyncHiddenChannel> = emptyList(),
+    /** The locked categories without their times, for older devices, which don't read [categoryLocks]. */
     val hiddenCategories: List<String> = emptyList(),
+    /** Locked categories with when each was made; a new key, as [progress] is, since older files have none. */
+    val categoryLocks: List<SyncCategoryLock> = emptyList(),
     /**
      * Recordings that live on the shared NAS (their [SyncRecording.filePath] is an `smb://`
      * locator) and so play on any device pointed at the same NAS. Device-local recordings are
@@ -58,6 +63,10 @@ data class SyncBundle(
     /** Every Profile's chosen settings, each landing on the Profile with the same name (newest-wins). */
     val profileSettings: List<SyncProfileSetting> = emptyList(),
 )
+
+/** A locked category: [key] is its group key, [lockedAtMillis] when the lock was first made. */
+@Serializable
+data class SyncCategoryLock(val key: String, val lockedAtMillis: Long)
 
 /** One setting a Profile chose; [name] and [value] are as ProfileSettings stores them. */
 @Serializable

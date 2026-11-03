@@ -10,9 +10,11 @@ import androidx.core.content.edit
 import app.opentv.data.model.StremioAddon
 import app.opentv.data.repo.Profiles
 import app.opentv.data.repo.WaitingProgress
+import app.opentv.sync.SyncCategoryLock
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.serialization.Serializable
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -122,6 +124,56 @@ class AppSettings private constructor(context: Context, fileName: String = "open
         prefs.edit { putStringSet(KEY_HIDDEN_CATS, keys) }
         _hiddenCategories.value = keys.toSet()
     }
+
+    /**
+     * The viewer locked or unlocked a category here. The only thing that records a time: a lock that
+     * arrived from another device keeps the time it was first made, or an old lock passed around
+     * would look new and re-lock a device that has since unlocked (ADR 0005).
+     */
+    fun setCategoryLocked(key: String, locked: Boolean, now: Long = System.currentTimeMillis()) {
+        val times = categoryLockTimes()
+        val previous = times[key] ?: CategoryLockTimes()
+        val updated = if (locked) previous.copy(lockedAt = now) else previous.copy(unlockedAt = now)
+        storeCategoryLockTimes(times + (key to updated))
+        setHiddenCategories(if (locked) hiddenCategories.value + key else hiddenCategories.value - key)
+    }
+
+    /** The locks in force here, each with the time it was made, as they travel to the other side. */
+    fun exportCategoryLocks(): List<SyncCategoryLock> {
+        val times = categoryLockTimes()
+        return hiddenCategories.value.map { SyncCategoryLock(it, times[it]?.lockedAt ?: 0) }
+    }
+
+    /**
+     * Takes each lock from another device unless it's no newer than this device's last unlock of that
+     * category. An undated lock counts as the oldest possible, so only a category never unlocked
+     * here takes one. Keeps the newest time, so a deliberate new lock travels on through this device.
+     */
+    fun importCategoryLocks(locks: List<SyncCategoryLock>) {
+        val times = categoryLockTimes().toMutableMap()
+        val taken = locks.filter { lock ->
+            val previous = times[lock.key] ?: CategoryLockTimes()
+            val unlockedAt = previous.unlockedAt
+            val takes = unlockedAt == null || lock.lockedAtMillis > unlockedAt
+            if (takes) times[lock.key] = previous.copy(lockedAt = maxOf(previous.lockedAt, lock.lockedAtMillis))
+            takes
+        }
+        if (taken.isEmpty()) return
+        storeCategoryLockTimes(times)
+        setHiddenCategories(hiddenCategories.value + taken.map { it.key })
+    }
+
+    private fun categoryLockTimes(): Map<String, CategoryLockTimes> = runCatching {
+        prefs.getString(KEY_CATEGORY_LOCK_TIMES, null)?.let {
+            addonJson.decodeFromString<Map<String, CategoryLockTimes>>(it)
+        }
+    }.getOrNull() ?: emptyMap()
+
+    private fun storeCategoryLockTimes(times: Map<String, CategoryLockTimes>) =
+        prefs.edit { putString(KEY_CATEGORY_LOCK_TIMES, addonJson.encodeToString(times)) }
+
+    @Serializable
+    private data class CategoryLockTimes(val lockedAt: Long = 0, val unlockedAt: Long? = null)
 
     fun setHiddenUnlocked(unlocked: Boolean) {
         _hiddenUnlocked.value = unlocked
@@ -490,6 +542,7 @@ class AppSettings private constructor(context: Context, fileName: String = "open
         private const val KEY_PREVIEW_SOUND = "guide_preview_sound"
         private const val KEY_PIN_HASH = "parental_pin_hash"
         private const val KEY_HIDDEN_CATS = "hidden_categories"
+        private const val KEY_CATEGORY_LOCK_TIMES = "category_lock_times"
         private const val KEY_ACTIVE_PROFILE = "active_profile_id"
         private const val KEY_REMOVED_PROFILES = "removed_profile_names"
         private const val KEY_LIVE_PREVIEW_HOME = "live_preview_on_home"

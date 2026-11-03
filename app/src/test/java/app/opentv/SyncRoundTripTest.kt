@@ -741,6 +741,71 @@ class SyncRoundTripTest {
         assertThat(deviceB.db.positions().all().filter { it.profileId == tom }).isEmpty()
     }
 
+    @Test
+    fun `a lock spreads to the other device`() = runTest {
+        deviceA.seed()
+        deviceB.seed()
+        deviceA.graph.settings.setCategoryLocked("adult", locked = true, now = 1_000)
+
+        syncAToB()
+
+        assertThat(deviceB.graph.settings.hiddenCategories.value).containsExactly("adult")
+    }
+
+    @Test
+    fun `an unlock stays on its device and a sync doesn't undo it`() = runTest {
+        deviceA.seed()
+        deviceB.seed()
+        deviceA.graph.settings.setCategoryLocked("adult", locked = true, now = 1_000)
+        val oldFile = bundleFromA()
+        syncAToB()
+
+        deviceB.graph.settings.setCategoryLocked("adult", locked = false, now = 2_000)
+        syncAToB()
+        deviceB.sync.apply(oldFile)
+        deviceA.sync.apply(deviceA.sync.decode(deviceB.sync.encode(deviceB.sync.gather())))
+
+        assertThat(deviceB.graph.settings.hiddenCategories.value).isEmpty()
+        assertThat(deviceA.graph.settings.hiddenCategories.value).containsExactly("adult")
+    }
+
+    @Test
+    fun `a newer lock from another device applies after an unlock`() = runTest {
+        deviceA.seed()
+        deviceB.seed()
+        deviceB.graph.settings.setCategoryLocked("adult", locked = true, now = 1_000)
+        deviceB.graph.settings.setCategoryLocked("adult", locked = false, now = 2_000)
+
+        deviceA.graph.settings.setCategoryLocked("adult", locked = true, now = 3_000)
+        syncAToB()
+
+        assertThat(deviceB.graph.settings.hiddenCategories.value).containsExactly("adult")
+    }
+
+    @Test
+    fun `a lock passed on by a third device keeps the time it was made`() = runTest {
+        deviceA.seed()
+        deviceB.seed()
+        deviceC.seed()
+        deviceC.graph.settings.setCategoryLocked("adult", locked = false, now = 2_000)
+        deviceA.graph.settings.setCategoryLocked("adult", locked = true, now = 1_000)
+        syncAToB()
+
+        deviceC.sync.apply(deviceC.sync.decode(deviceB.sync.encode(deviceB.sync.gather())))
+
+        assertThat(deviceC.graph.settings.hiddenCategories.value).isEmpty()
+    }
+
+    @Test
+    fun `a lock from an old bundle applies only where this device has never changed it`() = runTest {
+        deviceB.seed()
+        deviceB.graph.settings.setCategoryLocked("unlocked", locked = false, now = 2_000)
+
+        deviceB.sync.apply(deviceB.sync.decode("""{"version": 6, "hiddenCategories": ["unlocked", "adult"]}"""))
+
+        assertThat(deviceB.graph.settings.hiddenCategories.value).containsExactly("adult")
+    }
+
     private companion object {
         const val RACE_ITEMS = 3_000
         const val NAS_RECORDING = "smb://nas.example.com/share/Settee/the-match.ts"
