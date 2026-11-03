@@ -137,9 +137,7 @@ class VodPlayerViewModel(
         // recordProgress clears a hand mark, and the player saves again as it closes.
         if (key == null || progress == null || key == marked) return
         if (progress.durationMillis > 0) lastSeen = progress
-        // The first seconds say nothing about wanting to come back to it.
-        if (progress.durationMillis > 0 && progress.positionMillis > MIN_SAVED_MILLIS) {
-            graph.viewerLibrary.recordProgress(key.stored, progress.positionMillis, progress.durationMillis)
+        if (graph.viewerLibrary.recordProgress(key.stored, progress.positionMillis, progress.durationMillis)) {
             _canMarkWatched.value = graph.canMarkWatched(key)
             startedAtZero = false
         }
@@ -178,12 +176,8 @@ class VodPlayerViewModel(
         _overlay.value = countdown.overlay
         when (decision) {
             Decision.PlayNext -> next?.let { next ->
-                val finishing = _current.value
-                val duration = lastSeen?.durationMillis ?: 0
-                // Moving on from the card counts as finishing: on a short episode the last 15
-                // seconds can fall short of 93% through, so it is recorded at its whole length.
-                if (finishing != null && duration > 0) {
-                    graph.viewerLibrary.recordProgress(finishing.stored, duration, durationMillis = duration)
+                _current.value?.let {
+                    graph.viewerLibrary.nextEpisodes.movedOnFrom(it.stored, lastSeen?.durationMillis ?: 0)
                 }
                 start(MediaKey.Episode(next.id))
             }
@@ -215,10 +209,6 @@ class VodPlayerViewModel(
                 lookup.fetchNext(episode)?.let { found -> if (_current.value == key) offer(found) }
             }
         }
-    }
-
-    private companion object {
-        const val MIN_SAVED_MILLIS = 5_000L
     }
 }
 

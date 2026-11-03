@@ -71,13 +71,15 @@ sealed interface MediaKey {
         /** The key [stored] names, or null when it names none. */
         fun parse(stored: String): MediaKey? {
             val kind = stored.substringBefore(':')
-            val ids = stored.substringAfter(':', missingDelimiterValue = "").split(':').map { it.toLongOrNull() }
-            val id = ids.first() ?: return null
+            val rest = stored.substringAfter(':', missingDelimiterValue = "")
             return when (kind) {
-                MOVIE -> Movie(id).takeIf { ids.size == 1 }
-                EPISODE -> Episode(id).takeIf { ids.size == 1 }
-                RECORDING -> Recording(id).takeIf { ids.size == 1 }
-                CATCHUP -> ids.getOrNull(1)?.takeIf { ids.size == 2 }?.let { Catchup(id, it) }
+                MOVIE -> rest.toLongOrNull()?.let(::Movie)
+                EPISODE -> rest.toLongOrNull()?.let(::Episode)
+                RECORDING -> rest.toLongOrNull()?.let(::Recording)
+                CATCHUP -> {
+                    val channelId = rest.substringBefore(':').toLongOrNull() ?: return null
+                    rest.substringAfter(':', missingDelimiterValue = "").toLongOrNull()?.let { Catchup(channelId, it) }
+                }
                 else -> null
             }
         }

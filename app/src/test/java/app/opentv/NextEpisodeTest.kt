@@ -11,6 +11,7 @@ import androidx.test.core.app.ApplicationProvider
 import app.opentv.data.db.OpenTvDatabase
 import app.opentv.data.model.Episode
 import app.opentv.data.repo.ViewerLibrary
+import app.opentv.data.repo.WatchStatus
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.runTest
@@ -44,6 +45,36 @@ class NextEpisodeTest {
 
     private suspend fun watch(ep: Episode) =
         library.recordProgress("ep:${ep.id}", positionMillis = 2_400_000, durationMillis = 2_400_000)
+
+    @Test
+    fun `moving on from a short episode at the card makes it Watched, short of 93 percent`() = runTest {
+        val key = "ep:${testEpisode(1, 1).id}"
+        library.recordProgress(key, positionMillis = 45_000, durationMillis = 60_000)
+
+        library.nextEpisodes.movedOnFrom(key, durationMillis = 60_000)
+
+        assertThat(library.marks.statusOf(key)).isEqualTo(WatchStatus.Watched)
+    }
+
+    @Test
+    fun `moving on from a clip of only a few seconds at the card still makes it Watched`() = runTest {
+        val key = "ep:${testEpisode(1, 1).id}"
+
+        library.nextEpisodes.movedOnFrom(key, durationMillis = 4_000)
+
+        assertThat(library.marks.statusOf(key)).isEqualTo(WatchStatus.Watched)
+    }
+
+    @Test
+    fun `moving on from an episode whose length isn't known records nothing`() = runTest {
+        val key = "ep:${testEpisode(1, 1).id}"
+        library.recordProgress(key, positionMillis = 45_000, durationMillis = 2_400_000)
+        val before = library.marks.statusOf(key)
+
+        library.nextEpisodes.movedOnFrom(key, durationMillis = 0)
+
+        assertThat(library.marks.statusOf(key)).isEqualTo(before)
+    }
 
     @Test
     fun `the Next Episode follows the episode playing, not the last one Watched`() = runTest {
