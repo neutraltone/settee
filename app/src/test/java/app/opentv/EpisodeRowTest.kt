@@ -5,10 +5,16 @@
  */
 package app.opentv
 
+import androidx.compose.foundation.layout.Column
+import androidx.compose.material3.ColorScheme
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.ProgressBarRangeInfo
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertHeightIsEqualTo
 import androidx.compose.ui.test.assertIsFocused
+import androidx.compose.ui.test.assertIsNotFocused
 import androidx.compose.ui.test.assertWidthIsEqualTo
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.hasAnyChild
@@ -19,7 +25,9 @@ import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isFocusable
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.requestFocus
+import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.unit.dp
 import app.opentv.data.model.Episode
 import app.opentv.data.repo.WatchStatus
@@ -58,7 +66,10 @@ class EpisodeRowTest {
         streamUrl = "https://example.com/e.mkv",
     )
 
+    private lateinit var colours: ColorScheme
+
     private fun show(status: WatchStatus, ep: Episode = episode) = compose.setTvContent {
+        colours = MaterialTheme.colorScheme
         EpisodeRow(ep, status, seriesArtUrl = "https://example.com/poster.jpg", onPlay = {})
     }
 
@@ -163,5 +174,47 @@ class EpisodeRowTest {
 
         compose.onNode(hasClickAction()).assertIsFocused()
         captureScreen("episode_row_focused")
+    }
+
+    @Test
+    fun `the season and episode marker is easy to read on the focus highlight`() {
+        show(WatchStatus.Unwatched)
+
+        compose.onNode(hasClickAction()).requestFocus()
+
+        assertThat(markerColour()).isEqualTo(colours.onPrimaryContainer)
+    }
+
+    @Test
+    fun `the season and episode marker stays the accent colour on an unfocused row`() {
+        show(WatchStatus.Unwatched)
+
+        assertThat(markerColour()).isEqualTo(colours.primary)
+    }
+
+    @Test
+    fun `the season and episode marker goes back to the accent colour when focus moves to the next episode`() {
+        compose.setTvContent {
+            colours = MaterialTheme.colorScheme
+            Column {
+                EpisodeRow(episode, WatchStatus.Unwatched, seriesArtUrl = null, onPlay = {})
+                val next = episode.copy(id = 8, episodeNumber = 4)
+                EpisodeRow(next, WatchStatus.Unwatched, seriesArtUrl = null, onPlay = {})
+            }
+        }
+        compose.onNodeWithText("S1E3").requestFocus()
+
+        compose.onNodeWithText("S1E4").requestFocus()
+
+        compose.onNodeWithText("S1E3").assertIsNotFocused()
+        assertThat(markerColour("S1E3")).isEqualTo(colours.primary)
+        assertThat(markerColour("S1E4")).isEqualTo(colours.onPrimaryContainer)
+    }
+
+    private fun markerColour(marker: String = "S1E3"): Color {
+        val layouts = mutableListOf<TextLayoutResult>()
+        compose.onNodeWithText(marker, useUnmergedTree = true)
+            .performSemanticsAction(SemanticsActions.GetTextLayoutResult) { it(layouts) }
+        return layouts.single().layoutInput.style.color
     }
 }
