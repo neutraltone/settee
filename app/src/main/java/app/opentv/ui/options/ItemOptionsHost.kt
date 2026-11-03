@@ -24,6 +24,7 @@ import app.opentv.data.model.Movie
 import app.opentv.data.model.Series
 import app.opentv.data.model.StreamKind
 import app.opentv.data.parser.displayTitle
+import app.opentv.data.repo.CatchUpMarks
 import app.opentv.data.repo.ContinueWatchingCard
 import app.opentv.data.repo.mediaKey
 import app.opentv.ui.VodViewModel
@@ -44,6 +45,9 @@ sealed interface OptionsSubject {
 
     /** [title] is how the series page lists the episode. */
     data class OfEpisode(val episode: Episode, override val title: String) : OptionsSubject
+
+    /** A season header on the series page: [episodes] are the season's, [title] how the header reads. */
+    data class OfSeason(val episodes: List<Episode>, override val title: String) : OptionsSubject
 
     data class OfContinueWatching(val item: VodViewModel.ResumeItem) : OptionsSubject {
         override val title get() = item.title
@@ -103,7 +107,14 @@ class ItemOptionsViewModel(app: Application) : AndroidViewModel(app) {
             isFavourite(subject.movie),
         )
         is OptionsSubject.OfSeries -> OptionsFor.Series(isFavourite(subject.series))
-        is OptionsSubject.OfEpisode -> OptionsFor.Episode(library.marks.statusOf(subject.episode.mediaKey))
+        is OptionsSubject.OfEpisode -> OptionsFor.Episode(
+            library.marks.statusOf(subject.episode.mediaKey),
+            library.catchUp.hasEarlierToMark(subject.episode),
+        )
+        is OptionsSubject.OfSeason -> {
+            val statuses = library.episodeStatuses().first()
+            OptionsFor.Season(subject.episodes.map { statuses[it.id] })
+        }
         is OptionsSubject.OfChannel -> {
             val ids = library.favourites.channelIds().first()
             OptionsFor.Channel(subject.variants.any { it.id in ids })
@@ -123,7 +134,11 @@ class ItemOptionsViewModel(app: Application) : AndroidViewModel(app) {
             when (subject) {
                 is OptionsSubject.OfMovie -> chooseFor(subject.movie, option)
                 is OptionsSubject.OfSeries -> setFavourite(subject.series, option)
-                is OptionsSubject.OfEpisode -> mark(subject.episode.mediaKey, option)
+                is OptionsSubject.OfEpisode -> {
+                    mark(subject.episode.mediaKey, option)
+                    library.catchUp.chooseUpToHere(subject.episode, option)
+                }
+                is OptionsSubject.OfSeason -> library.catchUp.chooseForSeason(subject.episodes, option)
                 is OptionsSubject.OfChannel -> favouriteChoice(option)?.let { favourite ->
                     subject.variants.forEach { library.favourites.set(it, favourite) }
                 }
@@ -184,6 +199,16 @@ class ItemOptionsViewModel(app: Application) : AndroidViewModel(app) {
 
         data class SeriesCard(val series: Series?, override val card: ContinueWatchingCard) : Resolved
     }
+}
+
+private suspend fun CatchUpMarks.chooseUpToHere(episode: Episode, option: ItemOption) {
+    if (option == ItemOption.MarkWatchedUpToHere) markWatchedUpTo(episode)
+}
+
+private suspend fun CatchUpMarks.chooseForSeason(episodes: List<Episode>, option: ItemOption) = when (option) {
+    ItemOption.MarkSeasonWatched -> markSeasonWatched(episodes)
+    ItemOption.MarkSeasonUnwatched -> markSeasonUnwatched(episodes)
+    else -> Unit
 }
 
 private fun favouriteChoice(option: ItemOption): Boolean? = when (option) {

@@ -33,7 +33,50 @@ class ItemOptionsTest {
 
     @Test
     fun `an episode offers only how it is marked, as episodes aren't Favourites`() {
-        assertThat(OptionsFor.Episode(WatchStatus.Watched).options()).containsExactly(ItemOption.MarkUnwatched)
+        assertThat(OptionsFor.Episode(WatchStatus.Watched, earlierToMark = false).options())
+            .containsExactly(ItemOption.MarkUnwatched)
+    }
+
+    @Test
+    fun `an episode with an earlier one not Watched can be marked up to here`() {
+        assertThat(OptionsFor.Episode(WatchStatus.Unwatched, earlierToMark = true).options())
+            .containsExactly(ItemOption.MarkWatched, ItemOption.MarkWatchedUpToHere).inOrder()
+    }
+
+    @Test
+    fun `a Watched episode with an earlier one not Watched can still be marked up to here`() {
+        assertThat(OptionsFor.Episode(WatchStatus.Watched, earlierToMark = true).options())
+            .containsExactly(ItemOption.MarkWatchedUpToHere, ItemOption.MarkUnwatched).inOrder()
+    }
+
+    @Test
+    fun `an episode with every earlier one Watched doesn't repeat Mark watched as up to here`() {
+        assertThat(OptionsFor.Episode(WatchStatus.Unwatched, earlierToMark = false).options())
+            .containsExactly(ItemOption.MarkWatched)
+    }
+
+    @Test
+    fun `a season all Unwatched can only be marked Watched`() {
+        assertThat(OptionsFor.Season(listOf(WatchStatus.Unwatched, WatchStatus.Unwatched)).options())
+            .containsExactly(ItemOption.MarkSeasonWatched)
+    }
+
+    @Test
+    fun `a season all Watched can only be marked Unwatched`() {
+        assertThat(OptionsFor.Season(listOf(WatchStatus.Watched, WatchStatus.Watched)).options())
+            .containsExactly(ItemOption.MarkSeasonUnwatched)
+    }
+
+    @Test
+    fun `a mixed season offers both marks`() {
+        assertThat(OptionsFor.Season(listOf(WatchStatus.Watched, WatchStatus.Unwatched)).options())
+            .containsExactly(ItemOption.MarkSeasonWatched, ItemOption.MarkSeasonUnwatched).inOrder()
+    }
+
+    @Test
+    fun `a season of one In Progress episode offers both marks`() {
+        assertThat(OptionsFor.Season(listOf(WatchStatus.InProgress(0.5f, null))).options())
+            .containsExactly(ItemOption.MarkSeasonWatched, ItemOption.MarkSeasonUnwatched).inOrder()
     }
 
     @Test

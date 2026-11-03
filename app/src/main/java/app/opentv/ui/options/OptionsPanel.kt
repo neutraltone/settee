@@ -64,6 +64,9 @@ private val ItemOption.label: Int
     get() = when (this) {
         ItemOption.MarkWatched -> R.string.options_mark_watched
         ItemOption.MarkUnwatched -> R.string.options_mark_unwatched
+        ItemOption.MarkWatchedUpToHere -> R.string.options_mark_watched_up_to_here
+        ItemOption.MarkSeasonWatched -> R.string.options_mark_season_watched
+        ItemOption.MarkSeasonUnwatched -> R.string.options_mark_season_unwatched
         ItemOption.RemoveFromContinueWatching -> R.string.options_remove_continue_watching
         ItemOption.AddFavourite -> R.string.options_add_favourite
         ItemOption.RemoveFavourite -> R.string.options_remove_favourite
