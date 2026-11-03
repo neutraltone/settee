@@ -20,8 +20,11 @@ import androidx.test.core.app.ApplicationProvider
 import androidx.test.platform.app.InstrumentationRegistry
 import app.opentv.ui.theme.OpenTvTheme
 import coil.Coil
+import coil.EventListener
 import coil.ImageLoader
 import coil.decode.DataSource
+import coil.request.ErrorResult
+import coil.request.ImageRequest
 import coil.request.SuccessResult
 import coil.test.FakeImageLoaderEngine
 import com.github.takahirom.roborazzi.RobolectricDeviceQualifiers
@@ -86,19 +89,38 @@ fun captureScreen(name: String) {
  * on the network. Each URL gets its own colour, so a screenshot still shows which artwork went where.
  */
 class PlaceholderArtwork : ExternalResource() {
+    /** URLs that fail to load, for a test of what a screen falls back to. */
+    val failingUrls = mutableSetOf<String>()
+
+    /** Whether an image has reached its target; Compose's idling doesn't wait for Coil. */
+    @Volatile
+    var hasLoaded = false
+        private set
+
     override fun before() {
         val engine = FakeImageLoaderEngine.Builder()
             .default { chain ->
-                SuccessResult(
-                    drawable = ColorDrawable(colourFor(chain.request.data)),
-                    request = chain.request,
-                    dataSource = DataSource.MEMORY,
-                )
+                if (chain.request.data.toString() in failingUrls) {
+                    ErrorResult(null, chain.request, IllegalStateException("Failing on purpose"))
+                } else {
+                    SuccessResult(
+                        drawable = ColorDrawable(colourFor(chain.request.data)),
+                        request = chain.request,
+                        dataSource = DataSource.MEMORY,
+                    )
+                }
             }
             .build()
         Coil.setImageLoader(
             ImageLoader.Builder(ApplicationProvider.getApplicationContext())
                 .components { add(engine) }
+                .eventListener(
+                    object : EventListener {
+                        override fun onSuccess(request: ImageRequest, result: SuccessResult) {
+                            hasLoaded = true
+                        }
+                    },
+                )
                 .build(),
         )
     }
