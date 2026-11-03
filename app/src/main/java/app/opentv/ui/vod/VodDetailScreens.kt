@@ -751,6 +751,9 @@ private fun DetailButton(
     }
 }
 
+// 30% barely separated dark stills from Unwatched rows; at 65% they nearly merged into the row (#52).
+private const val WATCHED_EPISODE_SCRIM_ALPHA = 0.5f
+
 /**
  * One episode row: thumbnail with its watch badge, season/episode marker, title and a focus
  * highlight; plays on click.
@@ -785,7 +788,7 @@ internal fun EpisodeRow(ep: Episode, status: WatchStatus, seriesArtUrl: String?,
             .padding(14.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        EpisodeThumbnail(ep, status, seriesArtUrl)
+        EpisodeThumbnail(ep, status, seriesArtUrl, dimmed = status == WatchStatus.Watched && !focused)
         Spacer(Modifier.width(16.dp))
         Text(
             "S${ep.season}E${ep.episodeNumber}",
@@ -809,7 +812,7 @@ internal fun EpisodeRow(ep: Episode, status: WatchStatus, seriesArtUrl: String?,
  * blank box, which reads as a missing row on a TV.
  */
 @Composable
-private fun EpisodeThumbnail(ep: Episode, status: WatchStatus, seriesArtUrl: String?) {
+private fun EpisodeThumbnail(ep: Episode, status: WatchStatus, seriesArtUrl: String?, dimmed: Boolean) {
     var stillFailed by remember(ep.stillUrl) { mutableStateOf(false) }
     val showStill = ep.stillUrl != null && !stillFailed
     Box(
@@ -826,6 +829,10 @@ private fun EpisodeThumbnail(ep: Episode, status: WatchStatus, seriesArtUrl: Str
             modifier = Modifier.matchParentSize(),
             onError = { if (showStill) stillFailed = true },
         )
+        if (dimmed) {
+            // A scrim, not the image's alpha, which would fade towards surfaceVariant rather than black.
+            Box(Modifier.matchParentSize().background(Color.Black.copy(alpha = WATCHED_EPISODE_SCRIM_ALPHA)))
+        }
         if (!showStill) {
             Box(Modifier.matchParentSize().background(Color.Black.copy(alpha = 0.45f)))
             Text(
