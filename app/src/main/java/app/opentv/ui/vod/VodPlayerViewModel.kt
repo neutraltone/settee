@@ -7,18 +7,22 @@ package app.opentv.ui.vod
 
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import app.opentv.core.ServiceLocator
 import app.opentv.data.model.Episode
 import app.opentv.data.repo.MediaKey
+import app.opentv.data.repo.WatchStatus
 import app.opentv.player.NextEpisodeCountdown
 import app.opentv.player.NextEpisodeCountdown.Decision
 import app.opentv.player.NextEpisodeCountdown.Overlay
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * What the movie and episode player is playing, and moving on to the Next Episode.
@@ -28,11 +32,16 @@ import kotlinx.coroutines.launch
  * the episode it was showing. The screen keeps the [Playback] (its PlayerController) and hands it
  * over in [attach], so moving on swaps the media item in the same player instead of navigating.
  */
-class VodPlayerViewModel @JvmOverloads constructor(
+class VodPlayerViewModel(
     app: Application,
     private val graph: ServiceLocator.Graph = ServiceLocator.get(app),
     clock: () -> Long = System::currentTimeMillis,
+    private val savedState: SavedStateHandle? = null,
 ) : AndroidViewModel(app) {
+
+    /** The signature the default view model factory looks for to hand over the saved state. */
+    constructor(app: Application, savedState: SavedStateHandle) :
+        this(app, ServiceLocator.get(app), savedState = savedState)
 
     /** The screen's player, as far as moving between episodes needs it. */
     interface Playback {
@@ -68,6 +77,11 @@ class VodPlayerViewModel @JvmOverloads constructor(
     /** The Next Episode card or "Are you still watching?", whichever is showing. */
     val overlay: StateFlow<Overlay> = _overlay.asStateFlow()
 
+    private val _canMarkWatched = MutableStateFlow(false)
+
+    /** Whether the options list offers Mark watched: a movie or episode not already Watched. */
+    val canMarkWatched: StateFlow<Boolean> = _canMarkWatched.asStateFlow()
+
     private var playback: Playback? = null
     private var route: MediaKey? = null
     private var next: Episode? = null
@@ -81,20 +95,31 @@ class VodPlayerViewModel @JvmOverloads constructor(
      */
     private var lastSeen: NextEpisodeCountdown.Playback? = null
 
+    /** What was marked Watched from the options list, which saving progress must leave alone. */
+    private var marked: MediaKey? = null
+
+    /**
+     * Whether what's playing was started at 0 and hasn't saved a position yet. Until it does its
+     * old resume point is still the saved one, so a rebuilt screen mustn't look there.
+     */
+    private var startedAtZero = false
+
     /**
      * Starts [playback] on what is playing, or on [route] when the screen was opened on something
-     * new. While "Are you still watching?" is up nothing plays until it is answered.
+     * new. While "Are you still watching?" is up nothing plays until it is answered. [fromStart]
+     * says the route's first start is at 0 rather than its resume point.
      */
-    suspend fun attach(route: MediaKey, playback: Playback) {
+    suspend fun attach(route: MediaKey, playback: Playback, fromStart: Boolean = false) {
         this.playback = playback
         val current = _current.value
         when {
             current == null || route != this.route -> {
                 this.route = route
-                start(route)
+                marked = null
+                start(route, fromMillis = if (fromStart && savedState.spendFromStart()) 0 else null)
             }
             countdown.overlay is Overlay.StillWatching -> Unit
-            else -> start(current, fromMillis = lastSeen?.positionMillis)
+            else -> start(current, fromMillis = lastSeen?.positionMillis ?: 0L.takeIf { startedAtZero })
         }
     }
 
@@ -107,12 +132,16 @@ class VodPlayerViewModel @JvmOverloads constructor(
 
     /** Records how far through what's playing is, for resuming it and for its Watched status. */
     suspend fun saveProgress() {
-        val key = _current.value ?: return
-        val progress = playback?.progress() ?: return
+        val key = _current.value
+        val progress = playback?.progress()
+        // recordProgress clears a hand mark, and the player saves again as it closes.
+        if (key == null || progress == null || key == marked) return
         if (progress.durationMillis > 0) lastSeen = progress
         // The first seconds say nothing about wanting to come back to it.
         if (progress.durationMillis > 0 && progress.positionMillis > MIN_SAVED_MILLIS) {
             graph.viewerLibrary.recordProgress(key.stored, progress.positionMillis, progress.durationMillis)
+            _canMarkWatched.value = graph.canMarkWatched(key)
+            startedAtZero = false
         }
     }
 
@@ -123,6 +152,20 @@ class VodPlayerViewModel @JvmOverloads constructor(
     fun cancel() {
         countdown.cancel()
         _overlay.value = countdown.overlay
+    }
+
+    /**
+     * Mark watched in the options list: moves on to the Next Episode, or returns true when there
+     * isn't one known and the player should close.
+     */
+    suspend fun markWatched(): Boolean {
+        val key = _current.value ?: return true
+        marked = key
+        // Must survive the screen closing: saving progress already leaves this title alone.
+        withContext(NonCancellable) { graph.viewerLibrary.marks.markWatched(key.stored) }
+        val following = next
+        if (following != null) start(MediaKey.Episode(following.id)) else _canMarkWatched.value = false
+        return following == null
     }
 
     /** Continue watching on "Are you still watching?". */
@@ -152,10 +195,19 @@ class VodPlayerViewModel @JvmOverloads constructor(
 
     /** Plays [key] from [fromMillis], or from its resume point, and works out its Next Episode. */
     private suspend fun start(key: MediaKey, fromMillis: Long? = null) {
+        suspend fun offer(episode: Episode?) {
+            next = episode
+            _nextEpisode.value = episode?.let { lookup.card(it) }
+            countdown.newEpisode(hasNext = episode != null)
+            _overlay.value = countdown.overlay
+        }
+
         fetchingNext?.cancel()
+        startedAtZero = fromMillis == 0L || (startedAtZero && key == _current.value)
         _current.value = key
         lastSeen = null
         playback?.play(key, fromMillis ?: graph.viewerLibrary.resumeFrom(key.stored))
+        _canMarkWatched.value = graph.canMarkWatched(key)
         val episode = (key as? MediaKey.Episode)?.let { graph.catalogRepository.episode(it.episodeId) }
         offer(episode?.let { graph.viewerLibrary.nextEpisodes.after(it) })
         if (episode != null && next == null) {
@@ -165,16 +217,26 @@ class VodPlayerViewModel @JvmOverloads constructor(
         }
     }
 
-    private suspend fun offer(episode: Episode?) {
-        next = episode
-        _nextEpisode.value = episode?.let { lookup.card(it) }
-        countdown.newEpisode(hasNext = episode != null)
-        _overlay.value = countdown.overlay
-    }
-
     private companion object {
         const val MIN_SAVED_MILLIS = 5_000L
     }
+}
+
+/** Recordings and catch-up have no watch state to mark. */
+private suspend fun ServiceLocator.Graph.canMarkWatched(key: MediaKey): Boolean {
+    val hasWatchState = key is MediaKey.Movie || key is MediaKey.AddonStream || key is MediaKey.Episode
+    return hasWatchState && viewerLibrary.marks.statusOf(key.stored) != WatchStatus.Watched
+}
+
+private const val FROM_START_SPENT = "fromStartSpent"
+
+// The route keeps saying from the start for as long as it's on the back stack, including after
+// Android restores the app. Only saved state outlives the process, to tell that from the first
+// start, and restarting at 0 then would lose the progress made since.
+private fun SavedStateHandle?.spendFromStart(): Boolean {
+    val unspent = this?.get<Boolean>(FROM_START_SPENT) != true
+    this?.set(FROM_START_SPENT, true)
+    return unspent
 }
 
 /** Finds a Next Episode the catalogue doesn't hold yet, and what its card shows. */

@@ -203,18 +203,21 @@ internal fun HomeContent(
                         shelf.cards,
                         rowFocus,
                         onResume = { key -> pick(key.stored) { onResume(key) } },
+                        onLeave = { card -> { go -> pick(card.key.stored, go) } },
                     )
                     is Shelf.Shows -> SeriesPosterRow(
                         stringResource(shelf.title),
                         shelf.shows,
                         { show -> pick(show.pickKey) { onOpenSeries(show) } },
                         rowFocus,
+                        onLeave = { show -> { go -> pick(show.pickKey, go) } },
                     )
                     is Shelf.Movies -> MoviePosterRow(
                         stringResource(shelf.title),
                         shelf.movies,
                         { movie -> pick(movie.pickKey) { onOpenMovie(movie) } },
                         rowFocus,
+                        onLeave = { movie -> { go -> pick(movie.pickKey, go) } },
                     )
                     is Shelf.Channels -> ChannelRow(
                         shelf.channels,

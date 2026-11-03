@@ -721,12 +721,20 @@ interface PlaybackPositionDao {
     @Query("SELECT * FROM playback_positions WHERE profileId = :profileId AND mediaKey LIKE :prefix || '%'")
     fun observeKind(profileId: Long, prefix: String): Flow<List<PlaybackPosition>>
 
+    /** The same as a one-off read, for a hand mark deciding what it would change. */
+    @Query("SELECT * FROM playback_positions WHERE profileId = :profileId AND mediaKey LIKE :prefix || '%'")
+    suspend fun ofKind(profileId: Long, prefix: String): List<PlaybackPosition>
+
     /** One profile's whole watch history — the input to genre-affinity recommendations. */
     @Query("SELECT * FROM playback_positions WHERE profileId = :profileId")
     suspend fun forProfile(profileId: Long): List<PlaybackPosition>
 
     @Upsert
     suspend fun upsert(position: PlaybackPosition)
+
+    /** One write however long the list, so Continue Watching's queries re-run once for a bulk mark. */
+    @Upsert
+    suspend fun upsertAll(positions: List<PlaybackPosition>)
 
     @Query("DELETE FROM playback_positions WHERE profileId = :profileId AND mediaKey = :key")
     suspend fun delete(profileId: Long, key: String)

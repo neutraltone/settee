@@ -14,6 +14,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performKeyInput
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.pressKey
 import app.opentv.ui.player.LivePlayerControls
 import app.opentv.ui.vod.VodPlayerControls
@@ -44,6 +45,8 @@ class PlayerControlsTest {
         compose.runOnIdle { playPause.requestFocus() }
     }
 
+    private var optionsOpened = false
+
     @Composable
     private fun vodControls() {
         VodPlayerControls(
@@ -54,6 +57,7 @@ class PlayerControlsTest {
             onForward = {},
             onSubtitles = {},
             onAudio = {},
+            onOptions = { optionsOpened = true },
             playPauseFocus = playPause,
         )
     }
@@ -74,6 +78,16 @@ class PlayerControlsTest {
     }
 
     private fun press(key: Key) = compose.onRoot().performKeyInput { pressKey(key) }
+
+    @Test
+    @Config(qualifiers = "w640dp-h360dp")
+    fun `a phone can reach the movie player's Options button, past the edge of the screen`() {
+        setVodControls()
+
+        compose.onNodeWithText("Options").performScrollTo().performClick()
+
+        assertThat(optionsOpened).isTrue()
+    }
 
     @Test
     fun `the movie player's Back button leaves the player`() {

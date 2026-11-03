@@ -6,6 +6,10 @@
 package app.opentv
 
 import android.app.Application
+import android.os.Bundle
+import androidx.activity.ComponentActivity
+import androidx.lifecycle.SavedStateHandle
+import androidx.lifecycle.ViewModelProvider
 import androidx.test.core.app.ApplicationProvider
 import app.opentv.core.ServiceLocator
 import app.opentv.data.model.Series
@@ -18,6 +22,7 @@ import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
@@ -26,6 +31,7 @@ import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.robolectric.Robolectric
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
@@ -230,6 +236,268 @@ class VodPlayerViewModelTest {
         assertThat(rebuilt.played).containsExactly(testEpisode(1, 1).key to 900_000L)
     }
 
+    @Test
+    fun `Mark watched on a movie leaves the player, and it's still Watched after the player saves as it closes`() =
+        runTest {
+            val vm = VodPlayerViewModel(app, graph)
+            vm.attach(MediaKey.Movie(7), playback)
+            playback.positionMillis = 900_000
+
+            val leaves = vm.markWatched()
+            vm.saveProgress()
+
+            assertThat(leaves).isTrue()
+            assertThat(graph.viewerLibrary.marks.statusOf("movie:7")).isEqualTo(WatchStatus.Watched)
+        }
+
+    @Test
+    fun `Mark watched on an episode starts the Next Episode, and the one marked stays Watched`() = runTest {
+        graph.database.episodes().upsertAll((1..3).map { testEpisode(1, it) })
+        val vm = VodPlayerViewModel(app, graph)
+        vm.attach(testEpisode(1, 1).key, playback)
+        playback.positionMillis = 600_000
+
+        val leaves = vm.markWatched()
+        vm.saveProgress()
+
+        assertThat(leaves).isFalse()
+        assertThat(vm.current.value).isEqualTo(testEpisode(1, 2).key)
+        assertThat(graph.viewerLibrary.episodeStatuses().first()[11]).isEqualTo(WatchStatus.Watched)
+    }
+
+    @Test
+    fun `Mark watched on an episode whose length isn't known yet still stays Watched`() = runTest {
+        graph.database.episodes().upsertAll((1..3).map { testEpisode(1, it) })
+        val vm = VodPlayerViewModel(app, graph)
+        vm.attach(testEpisode(1, 1).key, playback)
+        playback.durationMillis = 0
+
+        vm.markWatched()
+
+        assertThat(vm.current.value).isEqualTo(testEpisode(1, 2).key)
+        assertThat(graph.viewerLibrary.episodeStatuses().first()[11]).isEqualTo(WatchStatus.Watched)
+    }
+
+    @Test
+    fun `Mark watched on a series' last episode leaves the player`() = runTest {
+        graph.database.episodes().upsertAll((1..2).map { testEpisode(1, it) })
+        val vm = VodPlayerViewModel(app, graph)
+        vm.attach(testEpisode(1, 2).key, playback)
+        playback.positionMillis = 600_000
+
+        val leaves = vm.markWatched()
+        vm.saveProgress()
+
+        assertThat(leaves).isTrue()
+        assertThat(playback.played).containsExactly(testEpisode(1, 2).key to 0L)
+        assertThat(graph.viewerLibrary.episodeStatuses().first()[12]).isEqualTo(WatchStatus.Watched)
+    }
+
+    @Test
+    fun `the Next Episode's progress still saves after moving on from a mark`() = runTest {
+        graph.database.episodes().upsertAll((1..3).map { testEpisode(1, it) })
+        val vm = VodPlayerViewModel(app, graph)
+        vm.attach(testEpisode(1, 1).key, playback)
+
+        vm.markWatched()
+        playback.positionMillis = 300_000
+        vm.saveProgress()
+
+        assertThat(graph.viewerLibrary.resumeFrom("ep:12")).isEqualTo(300_000L)
+    }
+
+    @Test
+    fun `movies, add-on streams and episodes can be marked until they're Watched`() = runTest {
+        graph.database.episodes().upsertAll(listOf(testEpisode(1, 1)))
+        val vm = VodPlayerViewModel(app, graph)
+
+        vm.attach(MediaKey.Movie(7), playback)
+        assertThat(vm.canMarkWatched.value).isTrue()
+
+        vm.attach(MediaKey.AddonStream(8, "https://example.com/8.mkv"), playback)
+        assertThat(vm.canMarkWatched.value).isTrue()
+
+        vm.attach(testEpisode(1, 1).key, playback)
+        assertThat(vm.canMarkWatched.value).isTrue()
+
+        graph.viewerLibrary.marks.markWatched("movie:9")
+        vm.attach(MediaKey.Movie(9), playback)
+        assertThat(vm.canMarkWatched.value).isFalse()
+    }
+
+    @Test
+    fun `a title played past 93 percent stops offering Mark watched once that's saved`() = runTest {
+        val vm = VodPlayerViewModel(app, graph)
+        vm.attach(MediaKey.Movie(7), playback)
+        playback.positionMillis = EPISODE_MILLIS - 60_000
+
+        vm.saveProgress()
+
+        assertThat(vm.canMarkWatched.value).isFalse()
+    }
+
+    @Test
+    fun `recordings and catch-up have no watch state to mark`() = runTest {
+        val vm = VodPlayerViewModel(app, graph)
+
+        vm.attach(MediaKey.Recording(3), playback)
+        assertThat(vm.canMarkWatched.value).isFalse()
+
+        vm.attach(MediaKey.Catchup(1, 1_000), playback)
+        assertThat(vm.canMarkWatched.value).isFalse()
+    }
+
+    @Test
+    fun `leaving just as Mark watched is chosen doesn't lose the mark`() = runTest {
+        val vm = VodPlayerViewModel(app, graph)
+        vm.attach(MediaKey.Movie(7), playback)
+
+        val marking = launch(UnconfinedTestDispatcher(testScheduler)) { vm.markWatched() }
+        marking.cancel()
+        marking.join()
+
+        assertThat(graph.viewerLibrary.marks.statusOf("movie:7")).isEqualTo(WatchStatus.Watched)
+    }
+
+    @Test
+    fun `a title marked earlier saves progress again when it's opened anew`() = runTest {
+        val vm = VodPlayerViewModel(app, graph)
+        vm.attach(MediaKey.Movie(7), playback)
+        vm.markWatched()
+        vm.attach(MediaKey.Movie(8), playback)
+        vm.attach(MediaKey.Movie(7), playback)
+
+        playback.positionMillis = 600_000
+        vm.saveProgress()
+
+        assertThat(graph.viewerLibrary.resumeFrom("movie:7")).isEqualTo(600_000L)
+    }
+
+    /** Episode 1 of 3 with a resume point, opened from the start. */
+    private suspend fun playFromStart(vm: VodPlayerViewModel = VodPlayerViewModel(app, graph)): VodPlayerViewModel {
+        graph.database.episodes().upsertAll((1..3).map { testEpisode(1, it) })
+        graph.viewerLibrary.recordProgress("ep:11", positionMillis = OLD_RESUME_POINT, durationMillis = EPISODE_MILLIS)
+        vm.attach(testEpisode(1, 1).key, playback, fromStart = true)
+        return vm
+    }
+
+    @Test
+    fun `Play from start starts at 0 rather than the resume point`() = runTest {
+        playFromStart()
+
+        assertThat(playback.played).containsExactly(testEpisode(1, 1).key to 0L)
+    }
+
+    @Test
+    fun `stopping after the first 5 seconds of Play from start records the new position`() = runTest {
+        val vm = playFromStart()
+        playback.positionMillis = 60_000
+
+        vm.saveProgress()
+
+        assertThat(graph.viewerLibrary.resumeFrom("ep:11")).isEqualTo(60_000L)
+    }
+
+    @Test
+    fun `stopping within 5 seconds of Play from start leaves the old resume point`() = runTest {
+        val vm = playFromStart()
+        playback.positionMillis = 4_000
+
+        vm.saveProgress()
+
+        assertThat(graph.viewerLibrary.resumeFrom("ep:11")).isEqualTo(OLD_RESUME_POINT)
+    }
+
+    @Test
+    fun `a player rebuilt before Play from start knows its position stays at the start, however many times`() =
+        runTest {
+            val vm = playFromStart()
+            val route = testEpisode(1, 1).key
+
+            val rebuilt = FakePlayback()
+            vm.attach(route, rebuilt, fromStart = true)
+            val rebuiltAgain = FakePlayback()
+            vm.attach(route, rebuiltAgain, fromStart = true)
+
+            assertThat(rebuilt.played).containsExactly(route to 0L)
+            assertThat(rebuiltAgain.played).containsExactly(route to 0L)
+        }
+
+    @Test
+    fun `a second rebuild in the first seconds of Play from start still doesn't jump to the old resume point`() =
+        runTest {
+            val vm = playFromStart()
+            val route = testEpisode(1, 1).key
+            playback.positionMillis = 3_000
+            vm.poll()
+            vm.attach(route, FakePlayback(), fromStart = true)
+
+            // This player hasn't reported a position either, and 3 seconds was too early to save.
+            val rebuiltAgain = FakePlayback()
+            vm.attach(route, rebuiltAgain, fromStart = true)
+
+            assertThat(rebuiltAgain.played).containsExactly(route to 0L)
+        }
+
+    @Test
+    fun `once Play from start has saved a position, a rebuild that knows no position resumes from it`() = runTest {
+        val vm = playFromStart()
+        val route = testEpisode(1, 1).key
+        playback.positionMillis = 60_000
+        vm.saveProgress()
+        vm.attach(route, FakePlayback(), fromStart = true)
+
+        val rebuiltAgain = FakePlayback()
+        vm.attach(route, rebuiltAgain, fromStart = true)
+
+        assertThat(rebuiltAgain.played).containsExactly(route to 60_000L)
+    }
+
+    @Test
+    fun `the view model Android builds keeps Play from start spent across a restore`() = runTest {
+        val shared = ServiceLocator.get(app)
+        val movie = MediaKey.Movie(77)
+        shared.viewerLibrary.recordProgress(movie.stored, OLD_RESUME_POINT, EPISODE_MILLIS)
+        val first = Robolectric.buildActivity(ComponentActivity::class.java).setup()
+        val opened = FakePlayback()
+        ViewModelProvider(first.get())[VodPlayerViewModel::class.java].attach(movie, opened, fromStart = true)
+        val saved = Bundle().also(first::saveInstanceState)
+
+        val restored = FakePlayback()
+        val second = Robolectric.buildActivity(ComponentActivity::class.java).setup(saved)
+        ViewModelProvider(second.get())[VodPlayerViewModel::class.java].attach(movie, restored, fromStart = true)
+
+        assertThat(opened.played).containsExactly(movie to 0L)
+        assertThat(restored.played).containsExactly(movie to OLD_RESUME_POINT)
+    }
+
+    @Test
+    fun `Android restoring the app after Play from start resumes the progress made since`() = runTest {
+        val saved = SavedStateHandle()
+        val vm = playFromStart(VodPlayerViewModel(app, graph, savedState = saved))
+        playback.positionMillis = 60_000
+        vm.saveProgress()
+
+        // The route still says from the start, and only the saved state outlives the process.
+        val restored = FakePlayback()
+        VodPlayerViewModel(app, graph, savedState = saved).attach(testEpisode(1, 1).key, restored, fromStart = true)
+
+        assertThat(restored.played).containsExactly(testEpisode(1, 1).key to 60_000L)
+    }
+
+    @Test
+    fun `a Next Episode following Play from start resumes as normal, even if the player is then rebuilt`() = runTest {
+        val vm = playFromStart()
+        graph.viewerLibrary.recordProgress("ep:12", positionMillis = 600_000, durationMillis = EPISODE_MILLIS)
+
+        vm.playToEnd()
+        val rebuilt = FakePlayback()
+        vm.attach(testEpisode(1, 1).key, rebuilt, fromStart = true)
+
+        assertThat(playback.played.last()).isEqualTo(testEpisode(1, 2).key to 600_000L)
+        assertThat(rebuilt.played).containsExactly(testEpisode(1, 2).key to 600_000L)
+    }
+
     private val show = Series(
         sourceId = 1,
         seriesId = "s",
@@ -241,4 +509,8 @@ class VodPlayerViewModelTest {
         plot = null,
         backdropUrl = "https://example.com/backdrop.jpg",
     )
+
+    private companion object {
+        const val OLD_RESUME_POINT = 900_000L
+    }
 }

@@ -133,6 +133,8 @@
     <string name="player_quality">Quality</string>
     <string name="player_aspect">Aspect</string>
     <string name="player_record">Record</string>
+    <string name="player_options">Options</string>
+    <string name="player_sleep_left">%1$d min left</string>
     <string name="player_pop_out">Pop out</string>
     <string name="player_last">Last</string>
     <string name="player_quality_standard">Standard</string>
@@ -497,8 +499,13 @@
 
     <!-- ============================ Watch badge ============================ -->
     <string name="watch_badge_watched">Watched</string>
+    <string name="options_play_from_start">Play from start</string>
+    <string name="options_show_info">Show info</string>
     <string name="options_mark_watched">Mark watched</string>
     <string name="options_mark_unwatched">Mark unwatched</string>
+    <string name="options_mark_watched_up_to_here">Mark watched up to here</string>
+    <string name="options_mark_season_watched">Mark season watched</string>
+    <string name="options_mark_season_unwatched">Mark season unwatched</string>
     <string name="options_remove_continue_watching">Remove from Continue Watching</string>
     <string name="options_add_favourite">Add to Favourites</string>
     <string name="options_remove_favourite">Remove from Favourites</string>
