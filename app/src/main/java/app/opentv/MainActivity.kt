@@ -76,6 +76,7 @@ import app.opentv.ui.channels.SearchScreen
 import app.opentv.ui.firstScreen
 import app.opentv.ui.onboarding.AddSourceScreen
 import app.opentv.ui.options.ItemOptionsHost
+import app.opentv.ui.options.OptionsDestination
 import app.opentv.ui.player.PlayerScreen
 import app.opentv.ui.settings.AboutScreen
 import app.opentv.ui.settings.AppSettingsScreen
@@ -221,18 +222,26 @@ object Routes {
 
     // Only the key: the player asks PlaybackSources for the stream, so no URL (an Xtream one holds
     // the account password), title or user agent sits in the back stack. An add-on's stream isn't in
-    // the catalogue, so its URL is the one thing carried besides.
-    const val VOD_PLAYER = "vod?key={key}&addon={addon}"
+    // the catalogue, so its URL is the one thing carried besides. Whether to start at 0 can't be
+    // looked up either; the player's view model makes sure it only applies once.
+    const val VOD_PLAYER = "vod?key={key}&addon={addon}&fromStart={fromStart}"
 
     fun player(channelId: Long) = "player/$channelId"
     fun seriesDetail(seriesId: Long) = "series/$seriesId"
     fun movieDetail(movieId: Long) = "movie/$movieId"
     fun editSource(sourceId: Long) = "edit-source/$sourceId"
     fun person(name: String) = "person?name=${java.net.URLEncoder.encode(name, "UTF-8")}"
-    fun vodPlayer(key: MediaKey): String {
+    fun vodPlayer(key: MediaKey, fromStart: Boolean = false): String {
         fun e(v: String) = java.net.URLEncoder.encode(v, "UTF-8")
         val addon = (key as? MediaKey.AddonStream)?.url.orEmpty()
-        return "vod?key=${e(key.stored)}&addon=${e(addon)}"
+        return "vod?key=${e(key.stored)}&addon=${e(addon)}&fromStart=$fromStart"
+    }
+
+    /** The route of where the options panel is leaving for. */
+    fun of(destination: OptionsDestination) = when (destination) {
+        is OptionsDestination.PlayFromStart -> vodPlayer(destination.key, fromStart = true)
+        is OptionsDestination.MoviePage -> movieDetail(destination.movieId)
+        is OptionsDestination.SeriesPage -> seriesDetail(destination.seriesId)
     }
 
     /** The key [vodPlayer] put in a route, from its `key` and `addon` arguments. */
@@ -338,7 +347,7 @@ private fun OpenTvApp(isTelevision: Boolean, launchedToPlay: Boolean) {
         }
     }
 
-    ItemOptionsHost {
+    ItemOptionsHost(navigate = { destination -> navController.navigate(Routes.of(destination)) }) {
         Box(Modifier.fillMaxSize()) {
             NavHost(navController = navController, startDestination = start) {
                 composable(Routes.ADD_SOURCE) {
@@ -519,6 +528,7 @@ private fun OpenTvApp(isTelevision: Boolean, launchedToPlay: Boolean) {
                     val leaveScope = rememberCoroutineScope()
                     VodPlayerScreen(
                         mediaKey = mediaKey,
+                        fromStart = arg("fromStart").toBoolean(),
                         // The page is looked up when Back is pressed rather than as the player opens,
                         // so an early press can't miss it and fall back to plain Back.
                         onBack = {
