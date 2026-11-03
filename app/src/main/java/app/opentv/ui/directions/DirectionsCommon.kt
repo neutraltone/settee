@@ -84,6 +84,7 @@ enum class Screen {
     SHOWS_CATEGORIES,
     MOVIES,
     MOVIES_CATEGORIES,
+    DETAILS_EPISODE,
 }
 
 /** What a highlight's OK does on the emulator build. Screenshots never press it. */

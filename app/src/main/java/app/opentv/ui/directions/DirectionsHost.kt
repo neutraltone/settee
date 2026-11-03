@@ -19,6 +19,7 @@ enum class Direction(val key: String, val label: String) {
 fun DirectionScreen(direction: Direction, screen: Screen) {
     val base = when (screen) {
         Screen.GUIDE_CATEGORIES -> Screen.GUIDE
+        Screen.DETAILS_EPISODE -> Screen.DETAILS
         Screen.SHOWS_CATEGORIES, Screen.MOVIES, Screen.MOVIES_CATEGORIES -> Screen.SHOWS
         else -> screen
     }

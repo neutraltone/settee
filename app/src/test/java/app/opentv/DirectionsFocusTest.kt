@@ -55,6 +55,16 @@ class DirectionsFocusTest {
     }
 
     @Test
+    fun `details open on Resume, and one Down reaches the episode in progress`() {
+        compose.setTvContent { DirectionScreen(Direction.COMBINED, Screen.DETAILS) }
+        compose.waitForIdle()
+        focusedHolds("Resume S2 E5")
+        compose.onNode(isFocused()).performKeyInput { pressKey(Key.DirectionDown) }
+        compose.waitForIdle()
+        focusedHolds("Slack Water")
+    }
+
+    @Test
     fun `Left from the guide's first column opens categories on the current one`() {
         compose.setTvContent { DirectionScreen(Direction.COMBINED, Screen.GUIDE) }
         compose.waitForIdle()

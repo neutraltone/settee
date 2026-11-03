@@ -26,7 +26,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChevronLeft
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.StarBorder
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -45,6 +47,7 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
@@ -138,7 +141,8 @@ fun CombinedScreen(screen: Screen) {
         Screen.SHOWS_CATEGORIES -> Browse(movies = false, open = true)
         Screen.MOVIES -> Browse(movies = true, open = false)
         Screen.MOVIES_CATEGORIES -> Browse(movies = true, open = true)
-        Screen.DETAILS -> Details()
+        Screen.DETAILS -> Details(onEpisode = false)
+        Screen.DETAILS_EPISODE -> Details(onEpisode = true)
     }
 }
 
@@ -636,41 +640,69 @@ private fun PosterTile(
     ) { focused -> ArtCard(item, focused, COVER) }
 }
 
+private val seriesEpisodes =
+    listOf(
+        Item("Home Water", "S2 E1", 36, Watch.Watched),
+        Item("The Keeper's Log", "S2 E2", 37, Watch.Watched),
+    ) + ProtoData.episodes + Item("Lights Out", "S2 E8", 38, Watch.Unwatched)
+
+/**
+ * E's hero above Listings' two columns, with the real app's thumbnail-left rows. Stacking the rows
+ * under the hero, as main does, would show about one and a half episodes before scrolling.
+ */
 @Composable
-private fun Details() {
+private fun Details(onEpisode: Boolean) {
+    val current = remember { FocusRequester() }
     Box(Modifier.fillMaxSize().background(Bg)) {
         Art(11, Modifier.fillMaxSize())
         Box(
             Modifier.fillMaxSize().background(
-                Brush.verticalGradient(0.2f to Bg.copy(alpha = 0f), 0.62f to Bg),
+                Brush.verticalGradient(0.05f to Bg.copy(alpha = 0f), 0.5f to Bg),
             ),
         )
-        Column(Modifier.fillMaxSize().padding(start = 48.dp, end = 48.dp, top = 84.dp, bottom = 27.dp)) {
+        Column(Modifier.fillMaxSize().padding(start = 48.dp, end = 48.dp, top = 56.dp)) {
             OneLine(ProtoData.detailTitle, Ink, 54, Title)
             OneLine(ProtoData.detailMeta, Coral, 16, Body, weight = FontWeight.Medium)
-            Spacer(Modifier.height(6.dp))
-            Text(
-                ProtoData.detailBlurb,
-                color = Ink,
-                fontFamily = Body,
-                fontSize = 18.sp,
-                lineHeight = 23.sp,
-                maxLines = 3,
-                modifier = Modifier.width(620.dp),
-            )
             Spacer(Modifier.height(12.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Action("▶  Resume S2 E5", true)
-                Action("Episodes", false)
-                Action("☆  Favourite", false)
-            }
-            Spacer(Modifier.weight(1f))
-            Row(
-                Modifier.padding(horizontal = 5.dp, vertical = 5.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                ProtoData.episodes.forEach { episode ->
-                    Tile(Modifier.width(158.dp)) { focused -> ArtCard(episode, focused, STILL) }
+            Row(Modifier.fillMaxSize()) {
+                Column(Modifier.width(350.dp)) {
+                    Text(
+                        ProtoData.detailBlurb,
+                        color = Ink,
+                        fontFamily = Body,
+                        fontSize = 18.sp,
+                        lineHeight = 23.sp,
+                        maxLines = 6,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    Spacer(Modifier.height(14.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Action(Icons.Filled.PlayArrow, "Resume S2 E5", !onEpisode, current)
+                        Action(Icons.Filled.StarBorder, "Favourite", false, current)
+                    }
+                }
+                Spacer(Modifier.width(24.dp))
+                // A season's list stays in reach: Down from either button lands on the episode in progress.
+                Column(
+                    Modifier
+                        .weight(1f)
+                        .fillMaxHeight()
+                        .verticalScroll(rememberScrollState())
+                        .padding(bottom = 27.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
+                    OneLine("Series 2", Ink, 18, Title)
+                    Box(Modifier.fillMaxWidth().height(1.dp).background(Rule))
+                    Spacer(Modifier.height(2.dp))
+                    seriesEpisodes.forEach { episode ->
+                        val inProgress = episode.watch is Watch.InProgress
+                        Tile(
+                            Modifier
+                                .fillMaxWidth()
+                                .then(if (inProgress) Modifier.focusRequester(current) else Modifier),
+                            initial = onEpisode && inProgress,
+                        ) { focused -> EpisodeRow(episode, focused) }
+                    }
                 }
             }
         }
@@ -678,14 +710,72 @@ private fun Details() {
 }
 
 @Composable
-private fun Action(text: String, primary: Boolean) {
-    Tile(initial = primary) { focused ->
-        Box(
+private fun EpisodeRow(episode: Item, focused: Boolean) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .height(62.dp)
+            .clip(Card)
+            .background(if (focused) Coral else Panel)
+            .padding(horizontal = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(Modifier.size(width = 96.dp, height = 54.dp).clip(RoundedCornerShape(7.dp))) {
+            if (episode.seed != null) Art(episode.seed, Modifier.fillMaxSize())
+            val watch = episode.watch
+            if (watch is Watch.InProgress) {
+                ProgressLine(watch.fraction, Raised, if (focused) Ink else Coral, Modifier.align(Alignment.BottomCenter), 4.dp)
+            }
+        }
+        Spacer(Modifier.width(12.dp))
+        Column(Modifier.weight(1f)) {
+            // Watched episodes step back by colour rather than alpha, which would force a layer (#85).
+            OneLine(
+                episode.title,
+                when {
+                    focused -> OnCoral
+                    episode.watch == Watch.Watched -> Soft
+                    else -> Ink
+                },
+                17,
+                Body,
+                weight = FontWeight.Bold,
+            )
+            OneLine(episode.sub, if (focused) OnCoral else Soft, 15, Body)
+        }
+        val status = when (val watch = episode.watch) {
+            Watch.Watched -> "✓ Watched"
+            is Watch.InProgress -> watch.left
+            else -> ""
+        }
+        OneLine(
+            status,
+            when {
+                focused -> OnCoral
+                episode.watch == Watch.Watched -> Soft
+                else -> Coral
+            },
+            15,
+            Body,
+            Modifier.padding(start = 8.dp, end = 10.dp),
+            FontWeight.Medium,
+        )
+    }
+}
+
+@Composable
+private fun Action(icon: ImageVector, text: String, primary: Boolean, down: FocusRequester) {
+    Tile(Modifier.focusProperties { this.down = down }, initial = primary) { focused ->
+        Row(
             Modifier
+                .height(40.dp)
                 .clip(RoundedCornerShape(50))
                 .background(if (focused) Coral else Raised)
-                .padding(horizontal = 20.dp, vertical = 9.dp),
+                .padding(start = 14.dp, end = 18.dp),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
+            Icon(icon, contentDescription = null, tint = if (focused) OnCoral else Ink, modifier = Modifier.size(20.dp))
+            Spacer(Modifier.width(6.dp))
             OneLine(text, if (focused) OnCoral else Ink, 17, Body, weight = FontWeight.Bold)
         }
     }
