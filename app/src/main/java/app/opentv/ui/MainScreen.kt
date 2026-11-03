@@ -251,6 +251,9 @@ internal fun MainShell(
             RailVariant.B -> AlwaysOpenShell(
                 tabs, current, onSelect, onOpenSearch, onOpenSettings, onOpenProfiles, activeProfileName, content,
             )
+            RailVariant.C -> SlidingPushShell(
+                tabs, current, onSelect, onOpenSearch, onOpenSettings, onOpenProfiles, activeProfileName, content,
+            )
             RailVariant.TODAY -> TodayShell(
                 tabs, current, onSelect, onOpenSearch, onOpenSettings, onOpenProfiles, activeProfileName, content,
             )

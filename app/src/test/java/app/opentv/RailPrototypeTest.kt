@@ -68,7 +68,7 @@ class RailPrototypeTest(private val variant: RailVariant) {
 
     @After
     fun resetVariant() {
-        RailPrototype.variant = RailVariant.A
+        RailPrototype.variant = RailVariant.C
     }
 
     private fun setShell() {
@@ -240,6 +240,6 @@ class RailPrototypeTest(private val variant: RailVariant) {
     companion object {
         @JvmStatic
         @ParameterizedRobolectricTestRunner.Parameters(name = "{0}")
-        fun variants() = listOf(arrayOf(RailVariant.A), arrayOf(RailVariant.B))
+        fun variants() = listOf(arrayOf(RailVariant.A), arrayOf(RailVariant.B), arrayOf(RailVariant.C))
     }
 }

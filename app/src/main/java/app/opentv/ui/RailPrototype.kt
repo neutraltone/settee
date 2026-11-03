@@ -5,6 +5,7 @@
  */
 package app.opentv.ui
 
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -68,21 +69,22 @@ import kotlinx.coroutines.delay
 /*
  * PROTOTYPE for #90: how the left-hand navigation behaves with a remote. Throwaway, never merged.
  *
- * Three rails on the real main screen, cycled with the remote's rewind and fast-forward:
- * A snaps open over the content, B is always open, and Today is the rail on main, for comparison.
- * A and B share #90's rules: Left enters on the current tab, Right returns to the item left, Back is
+ * Four rails on the real main screen, cycled with the remote's rewind and fast-forward: A snaps open
+ * over the content, B is always open, C slides open and pushes the content, and Today is the rail on
+ * main, for comparison. A, B and C share #90's rules: Left enters on the current tab, Right returns to the item left, Back is
  * unchanged, OK on a tab moves the highlight into it, and the current tab stays marked when collapsed. Search, Profile and Settings stay in
  * the rail only because #90 hasn't settled where they go.
  */
 enum class RailVariant(val label: String) {
     A("A: snaps open over content"),
     B("B: always open"),
+    C("C: slides open, pushes content"),
     TODAY("Today: animated, pushes content"),
 }
 
 internal object RailPrototype {
-    // In memory only, so a restart always opens on A.
-    var variant by mutableStateOf(RailVariant.A)
+    // In memory only, so a restart always opens on C.
+    var variant by mutableStateOf(RailVariant.C)
 }
 
 // #86 keeps focused items inside a 5% overscan margin: 48dp across and 27dp down at 960x540dp.
@@ -201,6 +203,47 @@ internal fun AlwaysOpenShell(
             railReturn = railReturn,
             entry = entry,
             modifier = Modifier.width(EXPANDED).onFocusChanged { railFocused = it.hasFocus },
+        )
+        ContentArea(railReturn, contentFocus, Modifier.weight(1f)) {
+            content(current, !railFocused || entry.entering) { runCatching { currentItem.requestFocus() } }
+        }
+    }
+}
+
+/**
+ * C: collapsed until the highlight is in it, then slides open and pushes the content aside. #85 rules
+ * out animated layout because the content re-measures every frame, so this one has to earn its place
+ * against the Stick baseline in #84.
+ */
+@Composable
+internal fun SlidingPushShell(
+    tabs: List<Tab>,
+    current: Tab,
+    onSelect: (Tab) -> Unit,
+    onOpenSearch: () -> Unit,
+    onOpenSettings: () -> Unit,
+    onOpenProfiles: () -> Unit,
+    activeProfileName: String,
+    content: @Composable (tab: Tab, takeFocus: Boolean, onNothingToShow: () -> Unit) -> Unit,
+) {
+    var railFocused by remember { mutableStateOf(false) }
+    val currentItem = remember { FocusRequester() }
+    val railReturn = remember(current) { RailReturn() }
+    val contentFocus = remember { FocusRequester() }
+    val entry = remember { RailEntry() }
+    EnterContentAfterPick(entry, railFocused, railReturn, contentFocus)
+    val railWidth by animateDpAsState(if (railFocused) EXPANDED else COLLAPSED, label = "railWidth")
+    Row(Modifier.fillMaxSize()) {
+        PrototypeRail(
+            tabs, current, { tab ->
+                entry.pick(tab, current)
+                onSelect(tab)
+            }, onOpenSearch, onOpenSettings, onOpenProfiles, activeProfileName,
+            expanded = railFocused,
+            currentItem = currentItem,
+            railReturn = railReturn,
+            entry = entry,
+            modifier = Modifier.width(railWidth).onFocusChanged { railFocused = it.hasFocus },
         )
         ContentArea(railReturn, contentFocus, Modifier.weight(1f)) {
             content(current, !railFocused || entry.entering) { runCatching { currentItem.requestFocus() } }
