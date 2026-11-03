@@ -11,6 +11,8 @@ import app.opentv.data.model.StremioAddon
 import app.opentv.data.repo.Profiles
 import app.opentv.data.repo.WaitingProgress
 import app.opentv.sync.SyncCategoryLock
+import app.opentv.sync.SyncProfileAdd
+import app.opentv.sync.SyncProfileRename
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -73,6 +75,22 @@ class AppSettings private constructor(context: Context, fileName: String = "open
     fun removedProfileNames(): Set<String> = prefs.getStringSet(KEY_REMOVED_PROFILES, emptySet())!!.toSet()
 
     fun setRemovedProfileNames(names: Set<String>) = prefs.edit { putStringSet(KEY_REMOVED_PROFILES, names) }
+
+    /** Every Profile Rename this device has made or received, passed on so old files keep resolving. */
+    fun profileRenames(): List<SyncProfileRename> = readJsonList(KEY_PROFILE_RENAMES)
+
+    fun setProfileRenames(renames: List<SyncProfileRename>) =
+        prefs.edit { putString(KEY_PROFILE_RENAMES, addonJson.encodeToString(renames)) }
+
+    /** Every Profile added deliberately, here or on a device this one heard from, kept like [profileRenames]. */
+    fun profileAdds(): List<SyncProfileAdd> = readJsonList(KEY_PROFILE_ADDS)
+
+    fun setProfileAdds(adds: List<SyncProfileAdd>) =
+        prefs.edit { putString(KEY_PROFILE_ADDS, addonJson.encodeToString(adds)) }
+
+    private inline fun <reified T> readJsonList(key: String): List<T> = runCatching {
+        prefs.getString(key, null)?.let { addonJson.decodeFromString<List<T>>(it) }
+    }.getOrNull() ?: emptyList()
 
     /**
      * Called when the database is rebuilt from scratch. Rows are gone and ids restart from 1, so
@@ -545,6 +563,8 @@ class AppSettings private constructor(context: Context, fileName: String = "open
         private const val KEY_CATEGORY_LOCK_TIMES = "category_lock_times"
         private const val KEY_ACTIVE_PROFILE = "active_profile_id"
         private const val KEY_REMOVED_PROFILES = "removed_profile_names"
+        private const val KEY_PROFILE_RENAMES = "profile_renames"
+        private const val KEY_PROFILE_ADDS = "profile_adds"
         private const val KEY_LIVE_PREVIEW_HOME = "live_preview_on_home"
         private const val KEY_PLAY_NEXT = "play_next_automatically"
         private const val KEY_CONTENT_LIVE = "content_live"

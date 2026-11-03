@@ -60,7 +60,8 @@ class RemoveProfileDialogTest {
         val app: Application = ApplicationProvider.getApplicationContext()
         val profiles = ServiceLocator.get(app).profiles
         profiles.create("Tom")
-        compose.setTvContent { ProfilesScreen(onBack = {}, viewModel = ProfilesViewModel(app)) }
+        val viewModel = ProfilesViewModel(app)
+        compose.setTvContent { ProfilesScreen(onBack = {}, viewModel = viewModel) }
         compose.waitUntil { compose.onAllNodesWithText("Tom").fetchSemanticsNodes().isNotEmpty() }
 
         compose.onNodeWithText("Remove").performClick()

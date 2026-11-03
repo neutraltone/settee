@@ -5,6 +5,7 @@
  */
 package app.opentv.sync
 
+import app.opentv.data.repo.ProfileHistory
 import kotlinx.serialization.Serializable
 
 /**
@@ -27,6 +28,8 @@ import kotlinx.serialization.Serializable
  *    a lock only applies where it's newer than that device's last unlock (ADR 0005).
  *  - **Favourites and hidden channels** are newest-wins per item, by the time each last changed, so
  *    unstarring and unhiding spread too. A time of zero means the bundle had none, and counts as the oldest possible.
+ *  - **Profile Renames and adds** are dated records every device keeps and passes on, applied once
+ *    each in time order, and anything labelled with an old name lands on the new one (ADR 0005).
  *  - **Recordings** are additive: NAS recordings from a peer are merged in without removing anything.
  *
  * Every field defaults to empty and the reader ignores unknown keys, so a positions-only device
@@ -36,8 +39,12 @@ import kotlinx.serialization.Serializable
 data class SyncBundle(
     val version: Int = 7,
     val generatedAtMillis: Long = 0,
-    /** Profile names the peer knows about. Others add any they are missing (add-only). */
+    /** Profile names the peer knows about. Others add any they are missing and haven't removed. */
     val profiles: List<String> = emptyList(),
+    /** Every Profile Rename the peer has made or heard of. */
+    val profileRenames: List<SyncProfileRename> = emptyList(),
+    /** Every Profile the peer has added deliberately or heard of, which decides who owns a reused name. */
+    val profileAdds: List<SyncProfileAdd> = emptyList(),
     /**
      * Two-way, newest-wins resume points. A new key, not `positions`, whose items were keyed by
      * stream URL: a peer's file that fails to decode is skipped whole, so reusing the key would
@@ -48,7 +55,7 @@ data class SyncBundle(
     val dismissals: List<SyncDismissal> = emptyList(),
     /** Every Profile's Favourites, unstarred ones too, each landing on the Profile with the same name. */
     val favourites: List<SyncFavourite> = emptyList(),
-    /** Channels a viewer hid or showed, device-wide, by the stable identifiers noted above; a new key as [progress] is. */
+    /** Channels a viewer hid or showed, device-wide, by the identifiers noted above; a new key as [progress] is. */
     val hiddenStreams: List<SyncHiddenChannel> = emptyList(),
     /** The locked categories without their times, for older devices, which don't read [categoryLocks]. */
     val hiddenCategories: List<String> = emptyList(),
@@ -64,9 +71,26 @@ data class SyncBundle(
     val profileSettings: List<SyncProfileSetting> = emptyList(),
 )
 
+/** "[from] became [to] at this time." */
+@Serializable
+data class SyncProfileRename(val from: String, val to: String, val atMillis: Long)
+
+/** A viewer added a Profile called [name] at this time. */
+@Serializable
+data class SyncProfileAdd(val name: String, val atMillis: Long)
+
 /** A locked category: [key] is its group key, [lockedAtMillis] when the lock was first made. */
 @Serializable
 data class SyncCategoryLock(val key: String, val lockedAtMillis: Long)
+
+/** This bundle with every Profile label moved to the name it has now, going by each item's own time. */
+internal fun SyncBundle.relabelled(history: ProfileHistory) = copy(
+    profiles = profiles.map { history.currentName(it, generatedAtMillis) }.distinct(),
+    progress = progress.map { it.copy(profile = history.currentName(it.profile, it.updatedAtMillis)) },
+    dismissals = dismissals.map { it.copy(profile = history.currentName(it.profile, it.dismissedAtMillis)) },
+    favourites = favourites.map { it.copy(profile = history.currentName(it.profile, it.changedAtMillis)) },
+    profileSettings = profileSettings.map { it.copy(profile = history.currentName(it.profile, it.updatedAtMillis)) },
+)
 
 /** One setting a Profile chose; [name] and [value] are as ProfileSettings stores them. */
 @Serializable

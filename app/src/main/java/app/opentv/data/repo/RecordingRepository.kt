@@ -81,6 +81,9 @@ class RecordingRepository(private val dao: RecordingDao, private val ruleDao: Se
     /** The Profile is being removed: its recordings stay, no longer for anyone in particular. */
     suspend fun forgetProfile(profileId: Long) = dao.clearProfile(profileId)
 
+    /** Profile [from] is merging into [into]: its recordings follow. */
+    suspend fun moveProfile(from: Long, into: Long) = dao.moveProfile(from, into)
+
     suspend fun markStarted(id: Long, atMillis: Long) = dao.markStarted(id, RecordingStatus.RECORDING, atMillis)
 
     suspend fun setSize(id: Long, bytes: Long) = dao.setSize(id, bytes)

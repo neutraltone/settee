@@ -5,7 +5,6 @@
  */
 package app.opentv.data.repo
 
-import app.opentv.data.db.FavouriteDao
 import app.opentv.data.db.OpenTvDatabase
 import app.opentv.data.model.Channel
 import app.opentv.data.model.Favourite
@@ -31,14 +30,26 @@ class Favourites internal constructor(
     private val dao = db.favourites()
     private val profiles = db.profiles()
 
-    suspend fun set(channel: Channel, favourite: Boolean) =
-        dao.set(activeProfileId.value, StreamKind.LIVE, channel.sourceId, channel.streamId, favourite, clock())
+    suspend fun set(channel: Channel, favourite: Boolean) = db.setFavourite(
+        activeProfileId.value,
+        FavouriteTitle(StreamKind.LIVE, channel.sourceId, channel.streamId),
+        favourite,
+        clock(),
+    )
 
-    suspend fun set(movie: Movie, favourite: Boolean) =
-        dao.set(activeProfileId.value, StreamKind.MOVIE, movie.sourceId, movie.streamId, favourite, clock())
+    suspend fun set(movie: Movie, favourite: Boolean) = db.setFavourite(
+        activeProfileId.value,
+        FavouriteTitle(StreamKind.MOVIE, movie.sourceId, movie.streamId),
+        favourite,
+        clock(),
+    )
 
-    suspend fun set(series: Series, favourite: Boolean) =
-        dao.set(activeProfileId.value, StreamKind.SERIES, series.sourceId, series.seriesId, favourite, clock())
+    suspend fun set(series: Series, favourite: Boolean) = db.setFavourite(
+        activeProfileId.value,
+        FavouriteTitle(StreamKind.SERIES, series.sourceId, series.seriesId),
+        favourite,
+        clock(),
+    )
 
     /**
      * Whether the active Profile has this title as a Favourite: [itemId] is the provider's stream id
@@ -81,29 +92,37 @@ class Favourites internal constructor(
         return items.count { item ->
             val kind = runCatching { StreamKind.valueOf(item.kind) }.getOrNull() ?: return@count false
             val profileId = names.id(item.profile) ?: return@count false
-            db.ifProfileExists(profileId) { merge(profileId, kind, item) } == true
+            db.ifProfileExists(profileId) {
+                val here = dao.find(profileId, kind, item.source, item.id)
+                val newer = isNewerChange(item.changedAtMillis, here?.changedAtMillis)
+                if (newer) {
+                    dao.upsert(
+                        Favourite(profileId, kind, item.source, item.id, item.changedAtMillis, item.removed),
+                    )
+                }
+                newer && (here?.removed ?: true) != item.removed
+            } == true
         }
-    }
-
-    private suspend fun merge(profileId: Long, kind: StreamKind, item: SyncFavourite): Boolean {
-        val here = dao.find(profileId, kind, item.source, item.id)
-        if (!isNewerChange(item.changedAtMillis, here?.changedAtMillis)) return false
-        dao.upsert(Favourite(profileId, kind, item.source, item.id, item.changedAtMillis, item.removed))
-        return (here?.removed ?: true) != item.removed
     }
 }
 
-private suspend fun FavouriteDao.set(
+/** A title as a screen knows it: the provider's stream or series id within the source's row. */
+private class FavouriteTitle(val kind: StreamKind, val sourceId: Long, val itemId: String)
+
+/** Stars a title, or marks it unstarred if it was starred. A title never starred gets no row. */
+private suspend fun OpenTvDatabase.setFavourite(
     profileId: Long,
-    kind: StreamKind,
-    sourceId: Long,
-    itemId: String,
+    title: FavouriteTitle,
     favourite: Boolean,
     changedAtMillis: Long,
 ) {
+    val source = sources().directory().name(title.sourceId) ?: return
+    val dao = favourites()
     if (favourite) {
-        add(profileId, kind, sourceId, itemId, changedAtMillis)
+        dao.upsert(Favourite(profileId, title.kind, source, title.itemId, changedAtMillis))
     } else {
-        remove(profileId, kind, sourceId, itemId, changedAtMillis)
+        dao.find(profileId, title.kind, source, title.itemId)?.let {
+            dao.upsert(it.copy(removed = true, changedAtMillis = changedAtMillis))
+        }
     }
 }

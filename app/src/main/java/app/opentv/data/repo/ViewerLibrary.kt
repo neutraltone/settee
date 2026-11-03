@@ -122,6 +122,9 @@ class ViewerLibrary(
     /** Removing a Profile's watch state and Favourites, for the Profiles module. */
     val profileRemoval = ProfileRemoval(db)
 
+    /** Merging one Profile's watch state and Favourites into another's, for the Profiles module. */
+    val profileMerge = ProfileMerge(db, ::mergeSynced, marks::mergeSynced, recentSearches)
+
     suspend fun recordProgress(mediaKey: String, positionMillis: Long, durationMillis: Long) {
         positions.upsert(
             PlaybackPosition(
@@ -241,6 +244,49 @@ class ProfileRemoval internal constructor(private val db: OpenTvDatabase) {
 }
 
 /**
+ * Moves everything one Profile has in the library's tables onto another, newest wins wherever both
+ * have the same thing, leaving nothing behind. Reached as `viewerLibrary.profileMerge`.
+ */
+class ProfileMerge internal constructor(
+    private val db: OpenTvDatabase,
+    private val mergePosition: suspend (PlaybackPosition) -> Boolean,
+    private val mergeDismissal: suspend (SeriesDismissal) -> Boolean,
+    private val recentSearches: RecentSearches,
+) {
+    suspend fun merge(from: Long, into: Long) = db.withTransaction {
+        db.positions().forProfile(from).forEach { mergePosition(it.copy(profileId = into)) }
+        db.positions().deleteFor(from)
+        db.seriesDismissals().all().filter {
+            it.profileId == from
+        }.forEach { mergeDismissal(it.copy(profileId = into)) }
+        db.seriesDismissals().deleteFor(from)
+        mergeFavourites(from, into)
+        recentSearches.mergeProfile(from, into)
+        mergeLivePlayback(from, into)
+    }
+
+    private suspend fun mergeFavourites(from: Long, into: Long) {
+        val dao = db.favourites()
+        dao.all().filter { it.profileId == from }.forEach { fav ->
+            val here = dao.find(into, fav.kind, fav.source, fav.itemId)
+            if (isNewerChange(fav.changedAtMillis, here?.changedAtMillis)) dao.upsert(fav.copy(profileId = into))
+        }
+        dao.deleteFor(from)
+    }
+
+    private suspend fun mergeLivePlayback(from: Long, into: Long) {
+        val dao = db.livePlayback()
+        val theirs = dao.get(from) ?: return
+        val ours = dao.get(into)
+        val newest = if (ours == null || theirs.playedAtMillis > ours.playedAtMillis) theirs else ours
+        // Kept apart from which channel wins: it's what says live TV is no longer the latest playback.
+        val otherPlayedAt = listOfNotNull(theirs.otherPlayedAtMillis, ours?.otherPlayedAtMillis).maxOrNull()
+        dao.upsert(newest.copy(profileId = into, otherPlayedAtMillis = otherPlayedAt))
+        dao.deleteFor(from)
+    }
+}
+
+/**
  * The active Profile's last [MAX] searches that a result was opened from, newest first. Reached as
  * `viewerLibrary.recentSearches`.
  */
@@ -272,6 +318,18 @@ class RecentSearches internal constructor(
     suspend fun remove(text: String) = dao.delete(activeProfileId.value, text)
 
     suspend fun clear() = dao.deleteFor(activeProfileId.value)
+
+    /** Profile [from] is merging into [into]: the newest of both Profiles' searches stay, once each. */
+    internal suspend fun mergeProfile(from: Long, into: Long) {
+        val newest = (dao.rowsFor(from) + dao.rowsFor(into))
+            .sortedByDescending { it.searchedAtMillis }
+            .distinctBy { it.text.lowercase() }
+            .take(MAX)
+        dao.deleteFor(from)
+        dao.deleteFor(into)
+        // Oldest first: the list reads newest first by row order, not by the time stored on each.
+        newest.asReversed().forEach { dao.insert(it.copy(profileId = into)) }
+    }
 
     private companion object {
         const val MAX = 10

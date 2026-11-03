@@ -769,6 +769,12 @@ interface LivePlaybackDao {
     )
     suspend fun record(profileId: Long, channelId: Long, playedAtMillis: Long)
 
+    @Query("SELECT * FROM live_playback WHERE profileId = :profileId")
+    suspend fun get(profileId: Long): LivePlayback?
+
+    @Upsert
+    suspend fun upsert(playback: LivePlayback)
+
     @Query("UPDATE live_playback SET otherPlayedAtMillis = :playedAtMillis WHERE profileId = :profileId")
     suspend fun playedOther(profileId: Long, playedAtMillis: Long)
 
@@ -823,6 +829,9 @@ interface RecentSearchDao {
     @Query(RECENT_SEARCHES_NEWEST_FIRST)
     suspend fun forProfile(profileId: Long): List<String>
 
+    @Query("SELECT * FROM recent_searches WHERE profileId = :profileId")
+    suspend fun rowsFor(profileId: Long): List<RecentSearch>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(search: RecentSearch)
 
@@ -835,24 +844,6 @@ interface RecentSearchDao {
 
 @Dao
 interface FavouriteDao {
-    // Writes go by the row's source id and look up its name in SQL, so callers never handle names.
-    @Query(
-        """
-        INSERT OR REPLACE INTO favourites (profileId, kind, source, itemId, changedAtMillis, removed)
-        SELECT :profileId, :kind, name, :itemId, :changedAtMillis, 0 FROM sources WHERE id = :sourceId
-        """,
-    )
-    suspend fun add(profileId: Long, kind: StreamKind, sourceId: Long, itemId: String, changedAtMillis: Long)
-
-    @Query(
-        """
-        UPDATE favourites SET removed = 1, changedAtMillis = :changedAtMillis
-        WHERE profileId = :profileId AND kind = :kind AND itemId = :itemId
-          AND source = (SELECT name FROM sources WHERE id = :sourceId)
-        """,
-    )
-    suspend fun remove(profileId: Long, kind: StreamKind, sourceId: Long, itemId: String, changedAtMillis: Long)
-
     @Query(
         """
         SELECT EXISTS(
@@ -867,7 +858,10 @@ interface FavouriteDao {
     suspend fun upsert(favourite: Favourite)
 
     @Query(
-        "SELECT * FROM favourites WHERE profileId = :profileId AND kind = :kind AND source = :source AND itemId = :itemId",
+        """
+        SELECT * FROM favourites
+        WHERE profileId = :profileId AND kind = :kind AND source = :source AND itemId = :itemId
+        """,
     )
     suspend fun find(profileId: Long, kind: StreamKind, source: String, itemId: String): Favourite?
 
@@ -985,6 +979,9 @@ interface RecordingDao {
     /** The Profile is being removed: its recordings stay, for everyone. */
     @Query("UPDATE recordings SET profileId = NULL WHERE profileId = :profileId")
     suspend fun clearProfile(profileId: Long)
+
+    @Query("UPDATE recordings SET profileId = :into WHERE profileId = :from")
+    suspend fun moveProfile(from: Long, into: Long)
 
     /** De-dup for NAS sync: a recording's smb:// locator is its stable cross-device identity. */
     @Query("SELECT * FROM recordings WHERE filePath = :filePath LIMIT 1")

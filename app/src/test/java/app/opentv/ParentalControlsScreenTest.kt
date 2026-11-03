@@ -5,12 +5,9 @@
  */
 package app.opentv
 
-import android.app.Application
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performScrollTo
-import androidx.test.core.app.ApplicationProvider
-import app.opentv.core.AppSettings
 import app.opentv.ui.settings.ParentalControlsScreen
 import org.junit.Rule
 import org.junit.Test
@@ -28,11 +25,8 @@ class ParentalControlsScreenTest {
     @get:Rule
     val compose = createComposeRule()
 
-    private val app: Application = ApplicationProvider.getApplicationContext()
-
     @Test
     fun `it explains how a lock travels between devices`() {
-        AppSettings.get(app).clearPin()
         compose.setTvContent { ParentalControlsScreen(onBack = {}) }
 
         compose.onNodeWithText(

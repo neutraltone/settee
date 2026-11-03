@@ -74,6 +74,12 @@ class ProfileSettings(
     /** The Profile is being deleted: its settings go with it. */
     suspend fun forgetProfile(profileId: Long) = dao.deleteFor(profileId)
 
+    /** Profile [from] is merging into [into]: its settings follow, the newer choice winning. */
+    suspend fun mergeProfile(from: Long, into: Long) {
+        dao.all().filter { it.profileId == from }.forEach { mergeSynced(it.copy(profileId = into)) }
+        dao.deleteFor(from)
+    }
+
     /** A setting from another device: the newer choice wins. Returns whether it was taken. */
     internal suspend fun mergeSynced(setting: ProfileSetting): Boolean {
         val local = dao.find(setting.profileId, setting.name)

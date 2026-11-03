@@ -8,7 +8,10 @@ package app.opentv.data.repo
 import androidx.room.withTransaction
 import app.opentv.core.AppSettings
 import app.opentv.data.db.OpenTvDatabase
+import app.opentv.data.db.ProfileDao
 import app.opentv.data.model.Profile
+import app.opentv.sync.SyncProfileAdd
+import app.opentv.sync.SyncProfileRename
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.sync.Mutex
@@ -23,6 +26,7 @@ import kotlinx.coroutines.sync.withLock
  * deleting from every table here, so a store's tables stay its own business. `ProfilesTest` fails
  * if a table with a `profileId` keeps a removed Profile's rows. A removed Profile's name goes on a
  * list that stays on this device, so sync can't bring it back, until the name is added here again.
+ * Names stay a Profile's identity, so a rename travels as a dated record (see [ProfileHistory]).
  */
 class Profiles(
     private val db: OpenTvDatabase,
@@ -33,32 +37,41 @@ class Profiles(
     private val clock: () -> Long = System::currentTimeMillis,
 ) {
     private val dao = db.profiles()
+    private val removed = RemovedProfiles(settings)
+    private val renames = ProfileRenames(db, viewerLibrary, profileSettings, recordings, settings, removed)
 
     // Name checks and the first Profile's seeding read before they write; two at once would let a
     // duplicate name, or two "Me"s, through.
     private val writes = Mutex()
 
-    /** Every Profile, oldest first. Never empty: the first ask on a fresh install creates "Me". */
-    fun observeAll(): Flow<List<Profile>> = dao.observeAll().onStart { ensureOne() }
+    /** What the Profile Renames and adds known here say about names, for labelling a bundle's items. */
+    val history: ProfileHistory get() = ProfileHistory(settings.profileRenames(), settings.profileAdds())
 
-    suspend fun all(): List<Profile> = writes.withLock { seededProfiles() }
+    /** Every Profile, oldest first. Never empty: the first ask on a fresh install creates "Me". */
+    fun observeAll(): Flow<List<Profile>> = dao.observeAll().onStart { all() }
+
+    suspend fun all(): List<Profile> = writes.withLock { dao.seeded(clock()) }
 
     /** Adds a Profile called [name]; returns its id, or null when the name is blank or taken. */
     suspend fun create(name: String): Long? = writes.withLock {
         val wanted = name.trim()
-        if (wanted.isEmpty() || isNameTaken(wanted, seededProfiles())) return null
-        liftRemoval(wanted)
+        if (wanted.isEmpty() || isNameTaken(wanted, dao.seeded(clock()))) return null
+        removed.lift(wanted)
+        settings.setProfileAdds(settings.profileAdds() + SyncProfileAdd(wanted, clock()))
         dao.insert(Profile(name = wanted, createdAtMillis = clock()))
     }
 
     /** Renames a Profile; returns false when there's no such Profile, or the name is blank or taken. */
     suspend fun rename(id: Long, name: String): Boolean = writes.withLock {
         val wanted = name.trim()
-        val profiles = seededProfiles()
-        if (profiles.none { it.id == id }) return false
+        val profiles = dao.seeded(clock())
+        val profile = profiles.firstOrNull { it.id == id } ?: return false
         if (wanted.isEmpty() || isNameTaken(wanted, profiles, except = id)) return false
+        if (profile.name != wanted) {
+            settings.setProfileRenames(settings.profileRenames() + SyncProfileRename(profile.name, wanted, clock()))
+        }
         dao.rename(id, wanted)
-        liftRemoval(wanted)
+        removed.lift(wanted)
         true
     }
 
@@ -76,12 +89,39 @@ class Profiles(
      * [isNameTaken] does, so "tom" from the other side is this device's "Tom". Null for a blank name,
      * and for one removed on this device.
      */
-    suspend fun findOrCreate(name: String): Long? = writes.withLock {
+    suspend fun findOrCreate(name: String): Long? = writes.withLock { findOrCreateLocked(name) }
+
+    private suspend fun findOrCreateLocked(name: String): Long? {
         val wanted = name.trim()
-        if (wanted.isEmpty()) return null
-        seededProfiles().firstOrNull { sameName(it.name, wanted) }?.let { return it.id }
-        if (settings.removedProfileNames().any { sameName(it, wanted) }) return null
-        dao.insert(Profile(name = wanted, createdAtMillis = clock()))
+        val existing = dao.seeded(clock()).firstOrNull { sameName(it.name, wanted) }
+        return when {
+            wanted.isEmpty() -> null
+            existing != null -> existing.id
+            wanted in removed -> null
+            else -> dao.insert(Profile(name = wanted, createdAtMillis = clock()))
+        }
+    }
+
+    /**
+     * Applies the Profile Renames and adds this device hasn't seen, oldest first and each only once,
+     * so Tom → Thomas → Tom can't loop and a record seen again on a later sync changes nothing.
+     * On the same millisecond a rename goes first, since adding its old name has to follow it.
+     */
+    suspend fun importChanges(renames: List<SyncProfileRename>, adds: List<SyncProfileAdd>) = writes.withLock {
+        val newRenames = renames.distinct() - settings.profileRenames().toSet()
+        val newAdds = adds.distinct() - settings.profileAdds().toSet()
+        val steps = newRenames.map { rename ->
+            rename.atMillis to suspend {
+                this.renames.apply(rename, dao.seeded(clock()))
+                settings.setProfileRenames(settings.profileRenames() + rename)
+            }
+        } + newAdds.map { add ->
+            add.atMillis to suspend {
+                findOrCreateLocked(add.name)
+                settings.setProfileAdds(settings.profileAdds() + add)
+            }
+        }
+        steps.sortedBy { it.first }.forEach { it.second() }
     }
 
     /**
@@ -93,7 +133,7 @@ class Profiles(
     suspend fun remove(id: Long): Boolean = writes.withLock {
         val profile = dao.all().firstOrNull { it.id == id }
         if (id == BASE_PROFILE_ID || profile == null) return false
-        settings.setRemovedProfileNames(settings.removedProfileNames() + profile.name)
+        removed.add(profile.name)
         db.withTransaction {
             viewerLibrary.profileRemoval.forget(id)
             profileSettings.forgetProfile(id)
@@ -102,20 +142,6 @@ class Profiles(
         }
         if (settings.activeProfileId.value == id) settings.setActiveProfile(BASE_PROFILE_ID)
         true
-    }
-
-    private fun liftRemoval(name: String) =
-        settings.setRemovedProfileNames(settings.removedProfileNames().filterNot { sameName(it, name) }.toSet())
-
-    private suspend fun ensureOne() = writes.withLock { seededProfiles() }
-
-    // Every write seeds first: a Profile added before anything had read the list would otherwise
-    // take id 1 and become the base Profile, and "Me" would never be created. Call under [writes].
-    private suspend fun seededProfiles(): List<Profile> {
-        val existing = dao.all()
-        if (existing.isNotEmpty()) return existing
-        dao.insert(Profile(name = FIRST_PROFILE_NAME, createdAtMillis = clock()))
-        return dao.all()
     }
 
     companion object {
@@ -135,5 +161,28 @@ class Profiles(
             among.any { it.id != except && sameName(it.name, name) }
 
         internal fun sameName(a: String, b: String) = a.trim().equals(b.trim(), ignoreCase = true)
+
+        // Every write seeds first: a Profile added before anything had read the list would otherwise
+        // take id 1 and become the base Profile, and "Me" would never be created. Call under the lock.
+        private suspend fun ProfileDao.seeded(now: Long): List<Profile> {
+            val existing = all()
+            if (existing.isNotEmpty()) return existing
+            insert(Profile(name = FIRST_PROFILE_NAME, createdAtMillis = now))
+            return all()
+        }
     }
+}
+
+/**
+ * Names of Profiles removed on this device, which sync must not bring back. They match the way
+ * Profile names do, and only adding the name on this device lifts one (ADR 0005).
+ */
+internal class RemovedProfiles(private val settings: AppSettings) {
+    operator fun contains(name: String) = settings.removedProfileNames().any { Profiles.sameName(it, name) }
+
+    fun add(name: String) = settings.setRemovedProfileNames(settings.removedProfileNames() + name)
+
+    fun lift(name: String) = settings.setRemovedProfileNames(
+        settings.removedProfileNames().filterNot { Profiles.sameName(it, name) }.toSet(),
+    )
 }

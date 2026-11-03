@@ -14,6 +14,7 @@ import app.opentv.data.model.Channel
 import app.opentv.data.model.Favourite
 import app.opentv.data.model.Profile
 import app.opentv.data.model.ProfileSetting
+import app.opentv.data.model.RecentSearch
 import app.opentv.data.model.Recording
 import app.opentv.data.model.RecordingStatus
 import app.opentv.data.model.SeriesDismissal
@@ -21,6 +22,7 @@ import app.opentv.data.model.Source
 import app.opentv.data.model.SourceKind
 import app.opentv.data.model.StreamKind
 import app.opentv.data.repo.Profiles
+import app.opentv.sync.SyncProfileRename
 import com.google.common.truth.Truth.assertThat
 import com.google.common.truth.Truth.assertWithMessage
 import kotlinx.coroutines.flow.first
@@ -73,6 +75,39 @@ class ProfilesTest {
             assertWithMessage(table).that(rowsFor(table, tom)).isEqualTo(0)
         }
         assertThat(profiles.all().map { it.name }).containsExactly("Me")
+    }
+
+    @Test
+    fun `a merged profile's rows all move to the one it merged into, leaving nothing behind`() = runTest {
+        val tom = checkNotNull(profiles.create("Tom"))
+        val thomas = checkNotNull(profiles.create("Thomas"))
+        giveEveryPerProfileTableARowFor(tom)
+
+        profiles.importChanges(listOf(SyncProfileRename("Tom", "Thomas", Long.MAX_VALUE)), emptyList())
+
+        for (table in tablesWithAProfileId()) {
+            assertWithMessage(table).that(rowsFor(table, tom)).isEqualTo(0)
+            assertWithMessage(table).that(rowsFor(table, thomas)).isGreaterThan(0)
+        }
+        assertThat(profiles.all().map { it.name }).containsExactly("Me", "Thomas").inOrder()
+    }
+
+    @Test
+    fun `merging moves the active profile, removal markers and recent searches, newest first`() = runTest {
+        val tom = checkNotNull(profiles.create("Tom"))
+        val thomas = checkNotNull(profiles.create("Thomas"))
+        db.favourites().upsert(Favourite(tom, StreamKind.MOVIE, "Provider", "m1", changedAtMillis = 2, removed = true))
+        db.favourites().upsert(Favourite(thomas, StreamKind.MOVIE, "Provider", "m1", changedAtMillis = 1))
+        db.recentSearches().insert(RecentSearch(tom, "BBC", 3))
+        db.recentSearches().insert(RecentSearch(thomas, "bbc", 1))
+        db.recentSearches().insert(RecentSearch(thomas, "itv", 2))
+        graph.settings.setActiveProfile(tom)
+
+        profiles.importChanges(listOf(SyncProfileRename("Tom", "Thomas", Long.MAX_VALUE)), emptyList())
+
+        assertThat(graph.settings.activeProfileId.value).isEqualTo(thomas)
+        assertThat(db.favourites().all().single().removed).isTrue()
+        assertThat(db.recentSearches().forProfile(thomas)).containsExactly("BBC", "itv").inOrder()
     }
 
     /**

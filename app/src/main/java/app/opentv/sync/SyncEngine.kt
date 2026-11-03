@@ -40,9 +40,11 @@ class SyncEngine(private val graph: ServiceLocator.Graph) {
     }
 
     suspend fun gather(): SyncBundle = SyncBundle(
-        generatedAtMillis = System.currentTimeMillis(),
+        generatedAtMillis = graph.clock(),
         // First: asking for them is what seeds a fresh install's Profile, which the rest belongs to.
         profiles = graph.profiles.export(),
+        profileRenames = graph.settings.profileRenames(),
+        profileAdds = graph.settings.profileAdds(),
         progress = graph.viewerLibrary.syncedProgress.export(),
         dismissals = graph.viewerLibrary.syncedDismissals.export(),
         favourites = graph.viewerLibrary.favourites.export(),
@@ -68,8 +70,10 @@ class SyncEngine(private val graph: ServiceLocator.Graph) {
         return merged
     }
 
-    private suspend fun applyOne(bundle: SyncBundle, waiting: MutableList<SyncPosition>): MergeResult {
-        // First: everything else lands on a Profile by name.
+    private suspend fun applyOne(received: SyncBundle, waiting: MutableList<SyncPosition>): MergeResult {
+        // First: everything else lands on a Profile by name, and these decide what the names are now.
+        graph.profiles.importChanges(received.profileRenames, received.profileAdds)
+        val bundle = received.relabelled(graph.profiles.history)
         graph.profiles.import(bundle.profiles)
         graph.settings.importCategoryLocks(
             bundle.categoryLocks + bundle.hiddenCategories.map { SyncCategoryLock(it, 0) },

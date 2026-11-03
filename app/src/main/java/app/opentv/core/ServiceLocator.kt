@@ -58,7 +58,7 @@ object ServiceLocator {
         context: Context,
         http: OkHttpClient? = null,
         settingsFile: String? = null,
-        private val clock: () -> Long = System::currentTimeMillis,
+        val clock: () -> Long = System::currentTimeMillis,
         openDatabase: (() -> OpenTvDatabase)? = null,
     ) {
         private val appContext = context.applicationContext
@@ -126,7 +126,6 @@ object ServiceLocator {
                 stalkerApi = stalkerApi,
                 http = httpClient,
                 settings = settings,
-                clock = clock,
             )
         }
 

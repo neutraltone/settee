@@ -136,7 +136,6 @@ class CatalogRepository(
     private val stalkerApi: StalkerApi,
     private val http: OkHttpClient,
     private val settings: AppSettings,
-    private val clock: () -> Long = System::currentTimeMillis,
 ) {
 
     /** Where work that outlives a sync runs, such as [LatestAirDates] and [MovieReleaseDates]. */
@@ -618,7 +617,8 @@ class CatalogRepository(
     private fun sharedGenreCount(genre: String?, wanted: Set<String>): Int = splitGenres(genre).count { it in wanted }
 
     /** The viewer hid or showed a channel, on the TV or the web manager; dated, so the change can travel. */
-    suspend fun setChannelHidden(id: Long, hidden: Boolean) = channelDao.setHidden(id, hidden, clock())
+    suspend fun setChannelHidden(id: Long, hidden: Boolean, now: Long = System.currentTimeMillis()) =
+        channelDao.setHidden(id, hidden, now)
 
     /** Sets (or clears, on blank) a channel's manual rename. Trimmed; a blank name clears it. */
     suspend fun setChannelCustomName(id: Long, name: String?) =
