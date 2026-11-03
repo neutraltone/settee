@@ -35,6 +35,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -53,10 +54,14 @@ import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.layout.onPlaced
+import androidx.compose.ui.layout.positionInRoot
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.launch
 
 /*
  * E: the owner's combination from the first round. Picture House's colours, rounded cards with text
@@ -141,8 +146,7 @@ fun CombinedScreen(screen: Screen) {
         Screen.SHOWS_CATEGORIES -> Browse(movies = false, open = true)
         Screen.MOVIES -> Browse(movies = true, open = false)
         Screen.MOVIES_CATEGORIES -> Browse(movies = true, open = true)
-        Screen.DETAILS -> Details(onEpisode = false)
-        Screen.DETAILS_EPISODE -> Details(onEpisode = true)
+        Screen.DETAILS -> Details()
     }
 }
 
@@ -647,62 +651,75 @@ private val seriesEpisodes =
     ) + ProtoData.episodes + Item("Lights Out", "S2 E8", 38, Watch.Unwatched)
 
 /**
- * E's hero above Listings' two columns, with the real app's thumbnail-left rows. Stacking the rows
- * under the hero, as main does, would show about one and a half episodes before scrolling.
+ * Picture House's hero with the real app's thumbnail-left rows under it, so a film's page is the same
+ * hero with nothing beneath. The page scrolls as one, carrying the hero off as the highlight goes down.
  */
 @Composable
-private fun Details(onEpisode: Boolean) {
+private fun Details() {
     val current = remember { FocusRequester() }
+    val scroll = rememberScrollState()
+    val scope = rememberCoroutineScope()
+    var listTop by remember { mutableStateOf(0) }
+    // Snaps in one step between the hero and the list: left to itself the page scrolls only enough to
+    // show the row, which cuts the title in half and leaves the highlight in the overscan margin.
+    val showHero = { scope.launch { scroll.scrollTo(0) } }
+    val showList = { if (scroll.value < listTop) scope.launch { scroll.scrollTo(listTop) } }
     Box(Modifier.fillMaxSize().background(Bg)) {
-        Art(11, Modifier.fillMaxSize())
-        Box(
-            Modifier.fillMaxSize().background(
-                Brush.verticalGradient(0.05f to Bg.copy(alpha = 0f), 0.5f to Bg),
-            ),
-        )
-        Column(Modifier.fillMaxSize().padding(start = 48.dp, end = 48.dp, top = 56.dp)) {
+        // Leaves with the hero, through graphicsLayer so scrolling never redraws or re-measures it.
+        Box(Modifier.fillMaxSize().graphicsLayer { translationY = -scroll.value.toFloat() }) {
+            Art(11, Modifier.fillMaxSize())
+            Box(
+                Modifier.fillMaxSize().background(
+                    Brush.verticalGradient(0.2f to Bg.copy(alpha = 0f), 0.62f to Bg),
+                ),
+            )
+        }
+        Column(
+            Modifier
+                .fillMaxSize()
+                .verticalScroll(scroll)
+                .padding(start = 48.dp, end = 48.dp, top = 76.dp, bottom = 27.dp),
+        ) {
             OneLine(ProtoData.detailTitle, Ink, 54, Title)
             OneLine(ProtoData.detailMeta, Coral, 16, Body, weight = FontWeight.Medium)
+            Spacer(Modifier.height(6.dp))
+            Text(
+                ProtoData.detailBlurb,
+                color = Ink,
+                fontFamily = Body,
+                fontSize = 18.sp,
+                lineHeight = 23.sp,
+                maxLines = 3,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.width(620.dp),
+            )
             Spacer(Modifier.height(12.dp))
-            Row(Modifier.fillMaxSize()) {
-                Column(Modifier.width(350.dp)) {
-                    Text(
-                        ProtoData.detailBlurb,
-                        color = Ink,
-                        fontFamily = Body,
-                        fontSize = 18.sp,
-                        lineHeight = 23.sp,
-                        maxLines = 6,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                    Spacer(Modifier.height(14.dp))
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Action(Icons.Filled.PlayArrow, "Resume S2 E5", !onEpisode, current)
-                        Action(Icons.Filled.StarBorder, "Favourite", false, current)
-                    }
-                }
-                Spacer(Modifier.width(24.dp))
-                // A season's list stays in reach: Down from either button lands on the episode in progress.
-                Column(
-                    Modifier
-                        .weight(1f)
-                        .fillMaxHeight()
-                        .verticalScroll(rememberScrollState())
-                        .padding(bottom = 27.dp),
-                    verticalArrangement = Arrangement.spacedBy(4.dp),
-                ) {
-                    OneLine("Series 2", Ink, 18, Title)
-                    Box(Modifier.fillMaxWidth().height(1.dp).background(Rule))
-                    Spacer(Modifier.height(2.dp))
-                    seriesEpisodes.forEach { episode ->
-                        val inProgress = episode.watch is Watch.InProgress
-                        Tile(
-                            Modifier
-                                .fillMaxWidth()
-                                .then(if (inProgress) Modifier.focusRequester(current) else Modifier),
-                            initial = onEpisode && inProgress,
-                        ) { focused -> EpisodeRow(episode, focused) }
-                    }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Action(Icons.Filled.PlayArrow, "Resume S2 E5", true, current) { showHero() }
+                Action(Icons.Filled.StarBorder, "Favourite", false, current) { showHero() }
+            }
+            Spacer(Modifier.height(14.dp))
+            val margin = with(LocalDensity.current) { 27.dp.roundToPx() }
+            OneLine(
+                "Series 2",
+                Ink,
+                18,
+                Title,
+                Modifier.onPlaced { listTop = it.positionInRoot().y.toInt() + scroll.value - margin },
+            )
+            Spacer(Modifier.height(3.dp))
+            Box(Modifier.fillMaxWidth().height(1.dp).background(Rule))
+            Spacer(Modifier.height(6.dp))
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                // Down from either button lands on the episode in progress, not the top of the list.
+                seriesEpisodes.forEach { episode ->
+                    val inProgress = episode.watch is Watch.InProgress
+                    Tile(
+                        Modifier
+                            .fillMaxWidth()
+                            .then(if (inProgress) Modifier.focusRequester(current) else Modifier),
+                        onFocused = { showList() },
+                    ) { focused -> EpisodeRow(episode, focused) }
                 }
             }
         }
@@ -764,8 +781,8 @@ private fun EpisodeRow(episode: Item, focused: Boolean) {
 }
 
 @Composable
-private fun Action(icon: ImageVector, text: String, primary: Boolean, down: FocusRequester) {
-    Tile(Modifier.focusProperties { this.down = down }, initial = primary) { focused ->
+private fun Action(icon: ImageVector, text: String, primary: Boolean, down: FocusRequester, onFocused: () -> Unit) {
+    Tile(Modifier.focusProperties { this.down = down }, initial = primary, onFocused = onFocused) { focused ->
         Row(
             Modifier
                 .height(40.dp)

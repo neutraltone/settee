@@ -7,10 +7,12 @@ package app.opentv
 
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasAnyDescendant
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isFocused
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
 import app.opentv.ui.directions.Direction
@@ -62,6 +64,15 @@ class DirectionsFocusTest {
         compose.onNode(isFocused()).performKeyInput { pressKey(Key.DirectionDown) }
         compose.waitForIdle()
         focusedHolds("Slack Water")
+        compose.onNode(isFocused()).assertIsDisplayed()
+        captureScreen("e_combined_details_episode")
+        repeat(5) {
+            compose.onNode(isFocused()).performKeyInput { pressKey(Key.DirectionUp) }
+            compose.waitForIdle()
+        }
+        compose.onNode(isFocused() and (hasAnyDescendant(hasText("Resume S2 E5")) or hasAnyDescendant(hasText("Favourite"))))
+            .assertIsDisplayed()
+        compose.onNodeWithText("Harbour Lights").assertIsDisplayed()
     }
 
     @Test
