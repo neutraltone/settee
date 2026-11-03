@@ -815,7 +815,7 @@ internal fun EpisodeRow(ep: Episode, status: WatchStatus, seriesArtUrl: String?,
         Text(
             "S${ep.season}E${ep.episodeNumber}",
             style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.primary,
+            color = if (focused) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.primary,
             modifier = Modifier.width(72.dp),
         )
         Text(
