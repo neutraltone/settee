@@ -33,13 +33,10 @@
     <string name="guide_auto_switch">📺  Vaihda automaattisesti alkaessa</string>
     <string name="guide_will_switch">📺 Vaihtuu kanavalle %1$s alkaessa</string>
     <string name="guide_watch_channel">Katso kanavaa</string>
-    <string name="guide_now_title">Nyt: %1$s</string>
     <string name="guide_watch">▶  Katso</string>
     <string name="guide_open_external">Avaa ulkoisessa soittimessa</string>
     <string name="guide_play_channel_with">Toista kanava sovelluksella</string>
     <string name="guide_no_external_player">Ulkoista soitinta ei ole asennettu</string>
-    <string name="guide_record_now_playing">●  Tallenna nyt käynnissä oleva</string>
-    <string name="guide_later_header">Myöhemmin — tallenna tai muistuta</string>
     <string name="guide_no_info">Ei opastietoja</string>
     <string name="guide_next_prefix">Seuraavaksi  %1$s  %2$s</string>
     <string name="guide_loading_channels">Ladataan kanaviasi</string>

@@ -33,13 +33,10 @@
     <string name="guide_auto_switch">📺  สลับอัตโนมัติเมื่อเริ่ม</string>
     <string name="guide_will_switch">📺 จะสลับไปที่ %1$s เมื่อเริ่ม</string>
     <string name="guide_watch_channel">ดูช่อง</string>
-    <string name="guide_now_title">กำลังฉาย: %1$s</string>
     <string name="guide_watch">▶  ดู</string>
     <string name="guide_open_external">เปิดในเครื่องเล่นภายนอก</string>
     <string name="guide_play_channel_with">เล่นช่องด้วย</string>
     <string name="guide_no_external_player">ไม่มีเครื่องเล่นภายนอกติดตั้งอยู่</string>
-    <string name="guide_record_now_playing">●  บันทึกรายการที่กำลังฉาย</string>
-    <string name="guide_later_header">ภายหลัง — บันทึกหรือแจ้งเตือน</string>
     <string name="guide_no_info">ไม่มีข้อมูลผังรายการ</string>
     <string name="guide_next_prefix">ถัดไป  %1$s  %2$s</string>
     <string name="guide_loading_channels">กำลังโหลดช่องของคุณ</string>

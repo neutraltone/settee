@@ -33,13 +33,10 @@
     <string name="guide_auto_switch">📺  Alih otomatis saat mulai</string>
     <string name="guide_will_switch">📺 Akan beralih ke %1$s saat mulai</string>
     <string name="guide_watch_channel">Tonton saluran</string>
-    <string name="guide_now_title">Sekarang: %1$s</string>
     <string name="guide_watch">▶  Tonton</string>
     <string name="guide_open_external">Buka di pemutar eksternal</string>
     <string name="guide_play_channel_with">Putar saluran dengan</string>
     <string name="guide_no_external_player">Tidak ada pemutar eksternal terpasang</string>
-    <string name="guide_record_now_playing">●  Rekam yang sedang tayang</string>
-    <string name="guide_later_header">Nanti — rekam atau ingatkan</string>
     <string name="guide_no_info">Tidak ada info panduan</string>
     <string name="guide_next_prefix">Berikutnya  %1$s  %2$s</string>
     <string name="guide_loading_channels">Memuat saluran Anda</string>

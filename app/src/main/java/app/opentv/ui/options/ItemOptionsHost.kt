@@ -6,30 +6,43 @@
 package app.opentv.ui.options
 
 import android.app.Application
+import android.content.Context
+import android.widget.Toast
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
+import app.opentv.R
 import app.opentv.core.ServiceLocator
-import app.opentv.data.model.Channel
+import app.opentv.core.requestIgnoreBatteryOptimizations
 import app.opentv.data.model.Episode
 import app.opentv.data.model.Movie
+import app.opentv.data.model.Programme
 import app.opentv.data.model.Series
 import app.opentv.data.model.StreamKind
+import app.opentv.data.model.shownName
 import app.opentv.data.parser.displayTitle
 import app.opentv.data.repo.CatalogRepository
 import app.opentv.data.repo.CatchUpMarks
 import app.opentv.data.repo.ContinueWatchingCard
+import app.opentv.data.repo.LineupChannel
 import app.opentv.data.repo.MediaKey
 import app.opentv.data.repo.mediaKey
+import app.opentv.ui.ChannelsViewModel
+import app.opentv.ui.RecordingBackgroundDialog
+import app.opentv.ui.RecordingBackgroundPrompt
 import app.opentv.ui.VodViewModel
+import app.opentv.ui.channels.ProgrammeDialog
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
@@ -56,11 +69,12 @@ sealed interface OptionsSubject {
     }
 
     /**
-     * A channel, with the quality [variants] it stands for in a list that folds them into one row:
-     * like the row's star, the Favourite covers the whole logical channel.
+     * A channel with all its Qualities, which every action covers. [onWatch] is what Select does on
+     * the surface it was opened from: only that surface knows what has to happen before playing,
+     * such as Home stopping its preview, and the player switches channel rather than opening another.
      */
-    data class OfChannel(val channel: Channel, val variants: List<Channel> = listOf(channel)) : OptionsSubject {
-        override val title get() = channel.displayName
+    data class OfChannel(val channel: LineupChannel, val onWatch: () -> Unit = {}) : OptionsSubject {
+        override val title get() = channel.primary.shownName
     }
 
     data class OfRecentSearch(override val title: String) : OptionsSubject
@@ -81,6 +95,9 @@ typealias LeaveScreen = (go: () -> Unit) -> Unit
 /** For a screen with nothing to do before leaving. */
 val LeaveDirectly: LeaveScreen = { go -> go() }
 
+/** To call whenever a recording is started or booked, wherever from. */
+val LocalRecordingStarted = staticCompositionLocalOf<() -> Unit> { {} }
+
 /**
  * Holds the app's one options panel. Cards anywhere below open it through [LocalOpenOptions]
  * rather than each screen threading a callback and a panel of its own down to every card.
@@ -92,7 +109,10 @@ fun ItemOptionsHost(
     viewModel: ItemOptionsViewModel = viewModel(),
     content: @Composable () -> Unit,
 ) {
+    val context = LocalContext.current
     var open by remember { mutableStateOf<OpenPanel?>(null) }
+    var scheduling by remember { mutableStateOf<Scheduling?>(null) }
+    var showBackgroundPrompt by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     val openOptions: (OptionsSubject, LeaveScreen) -> Unit = remember(viewModel, scope) {
         { subject, leave ->
@@ -101,23 +121,128 @@ fun ItemOptionsHost(
             }
         }
     }
-    CompositionLocalProvider(LocalOpenOptions provides openOptions, content = content)
-    open?.let { panel ->
-        OptionsPanel(
-            title = panel.subject.title,
-            options = panel.options,
-            onChoose = { option ->
+    // First time the viewer records or schedules while the app isn't exempt from battery optimisation,
+    // offer the exemption so the capture survives standby. Once per session; never blocks recording.
+    val recordingStarted: () -> Unit = remember(context) {
+        {
+            if (RecordingBackgroundPrompt.shouldShow(context)) {
+                RecordingBackgroundPrompt.markShown()
+                showBackgroundPrompt = true
+            }
+        }
+    }
+
+    fun chooseForChannel(subject: OptionsSubject.OfChannel, option: ItemOption) {
+        when (option) {
+            ItemOption.ScheduleLater -> scope.launch {
+                // The panel stays up, moving on to its next list.
+                val later = viewModel.channels.laterProgrammes(subject.channel).map(ItemOption::LaterProgramme)
+                open = OpenPanel(subject, later, destinations = emptyMap(), leave = LeaveDirectly)
+            }
+            is ItemOption.LaterProgramme -> {
                 open = null
-                // Known before the panel opened: looking it up now would hand the highlight back
-                // to the card first, where a quick Select would navigate as well.
-                when (val destination = panel.destinations[option]) {
-                    null -> viewModel.choose(panel.subject, option)
-                    else -> panel.leave { navigate(destination) }
+                scope.launch {
+                    scheduling =
+                        Scheduling(viewModel.channels.rowWithProgrammes(subject.channel), option.programme, subject)
                 }
+            }
+            ItemOption.Watch -> {
+                open = null
+                subject.onWatch()
+            }
+            ItemOption.OpenInExternalPlayer -> {
+                open = null
+                scope.launch { viewModel.channels.openInExternalPlayer(context, subject.channel) }
+            }
+            else -> {
+                open = null
+                viewModel.choose(subject, option)
+                tellViewer(context, subject, option, recordingStarted)
+            }
+        }
+    }
+
+    val activeRecordings by viewModel.channels.activeRecordings.collectAsState(initial = emptyList())
+    val sources by viewModel.channels.sources.collectAsState(initial = emptyList())
+    ConfirmLiveHost(activeRecordings, viewModel.channels::stopRecording) {
+        CompositionLocalProvider(
+            LocalOpenOptions provides openOptions,
+            LocalRecordingStarted provides recordingStarted,
+        ) {
+            content()
+            scheduling?.let { (row, programme, subject) ->
+                ProgrammeDialog(
+                    targetRow = row,
+                    programme = programme,
+                    nowMillis = System.currentTimeMillis(),
+                    sources = sources,
+                    activeRecordings = activeRecordings,
+                    scope = scope,
+                    onWatch = { subject.onWatch() },
+                    // Only a finished programme offers catch-up, and these are all still to come.
+                    onPlayCatchup = {},
+                    onDismiss = { scheduling = null },
+                )
+            }
+        }
+        open?.let { panel ->
+            OptionsPanel(
+                title = panel.subject.title,
+                options = panel.options,
+                onChoose = { option ->
+                    val subject = panel.subject
+                    if (subject is OptionsSubject.OfChannel) {
+                        chooseForChannel(subject, option)
+                    } else {
+                        open = null
+                        // Known before the panel opened: looking it up now would hand the highlight back
+                        // to the card first, where a quick Select would navigate as well.
+                        when (val destination = panel.destinations[option]) {
+                            null -> viewModel.choose(subject, option)
+                            else -> panel.leave { navigate(destination) }
+                        }
+                    }
+                },
+                onDismiss = { open = null },
+            )
+        }
+    }
+    if (showBackgroundPrompt) {
+        RecordingBackgroundDialog(
+            onAllow = {
+                showBackgroundPrompt = false
+                context.requestIgnoreBatteryOptimizations()
             },
-            onDismiss = { open = null },
+            onDismiss = { showBackgroundPrompt = false },
         )
     }
+}
+
+/** The programme picked from a channel's Schedule a later programme list. */
+private data class Scheduling(
+    val row: ChannelsViewModel.Row,
+    val programme: Programme,
+    val subject: OptionsSubject.OfChannel,
+)
+
+/** Says what a channel action did, as the guide always has, and where a hidden channel can be found. */
+private fun tellViewer(
+    context: Context,
+    subject: OptionsSubject.OfChannel,
+    option: ItemOption,
+    recordingStarted: () -> Unit,
+) {
+    val name = subject.channel.primary.shownName
+    val message = when (option) {
+        ItemOption.HideChannel -> context.getString(R.string.options_channel_hidden, name)
+        ItemOption.RecordNow -> context.getString(R.string.rec_recording_started_see_tab, name)
+        ItemOption.StopRecording -> context.getString(R.string.rec_recording_stopped)
+        is ItemOption.RecordWholeSeries ->
+            context.getString(R.string.rec_series_recording_set, option.programme.title)
+        else -> return
+    }
+    Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+    if (option == ItemOption.RecordNow || option is ItemOption.RecordWholeSeries) recordingStarted()
 }
 
 private class OpenPanel(
@@ -138,10 +263,14 @@ sealed interface OptionsDestination {
 }
 
 /** Works out what a subject's panel offers, and does what was chosen, for the active Profile. */
-class ItemOptionsViewModel(app: Application) : AndroidViewModel(app) {
-    private val graph = ServiceLocator.get(app)
+class ItemOptionsViewModel @JvmOverloads constructor(
+    app: Application,
+    private val graph: ServiceLocator.Graph = ServiceLocator.get(app),
+) : AndroidViewModel(app) {
     private val library get() = graph.viewerLibrary
     private val catalog get() = graph.catalogRepository
+
+    val channels = ChannelOptions(graph)
 
     suspend fun optionsFor(subject: OptionsSubject): List<ItemOption> = when (subject) {
         is OptionsSubject.OfMovie -> OptionsFor.Movie(
@@ -159,7 +288,7 @@ class ItemOptionsViewModel(app: Application) : AndroidViewModel(app) {
         }
         is OptionsSubject.OfChannel -> {
             val ids = library.favourites.channelIds().first()
-            OptionsFor.Channel(subject.variants.any { it.id in ids })
+            channels.factsAbout(subject.channel, ids)
         }
         is OptionsSubject.OfContinueWatching -> {
             val favourite = when (val title = catalog.resolve(subject.item)) {
@@ -182,23 +311,19 @@ class ItemOptionsViewModel(app: Application) : AndroidViewModel(app) {
         catalog.pageOf(subject)?.let { put(ItemOption.ShowInfo, it) }
     }
 
-    fun choose(subject: OptionsSubject, option: ItemOption) {
-        viewModelScope.launch {
-            when (subject) {
-                is OptionsSubject.OfMovie -> chooseFor(subject.movie, option)
-                is OptionsSubject.OfSeries -> setFavourite(subject.series, option)
-                is OptionsSubject.OfEpisode -> {
-                    mark(subject.episode.mediaKey, option)
-                    library.catchUp.chooseUpToHere(subject.episode, option)
-                }
-                is OptionsSubject.OfSeason -> library.catchUp.chooseForSeason(subject.episodes, option)
-                is OptionsSubject.OfChannel -> favouriteChoice(option)?.let { favourite ->
-                    subject.variants.forEach { library.favourites.set(it, favourite) }
-                }
-                is OptionsSubject.OfContinueWatching -> chooseFor(subject.item, option)
-                is OptionsSubject.OfRecentSearch -> if (option == ItemOption.RemoveRecentSearch) {
-                    library.recentSearches.remove(subject.title)
-                }
+    fun choose(subject: OptionsSubject, option: ItemOption): Job = viewModelScope.launch {
+        when (subject) {
+            is OptionsSubject.OfMovie -> chooseFor(subject.movie, option)
+            is OptionsSubject.OfSeries -> setFavourite(subject.series, option)
+            is OptionsSubject.OfEpisode -> {
+                mark(subject.episode.mediaKey, option)
+                library.catchUp.chooseUpToHere(subject.episode, option)
+            }
+            is OptionsSubject.OfSeason -> library.catchUp.chooseForSeason(subject.episodes, option)
+            is OptionsSubject.OfChannel -> channels.choose(subject.channel, option)
+            is OptionsSubject.OfContinueWatching -> chooseFor(subject.item, option)
+            is OptionsSubject.OfRecentSearch -> if (option == ItemOption.RemoveRecentSearch) {
+                library.recentSearches.remove(subject.title)
             }
         }
     }

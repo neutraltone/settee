@@ -33,13 +33,10 @@
     <string name="guide_auto_switch">📺  Αυτόματη εναλλαγή όταν ξεκινήσει</string>
     <string name="guide_will_switch">📺 Θα μεταβεί στο %1$s κατά την έναρξη</string>
     <string name="guide_watch_channel">Παρακολούθηση καναλιού</string>
-    <string name="guide_now_title">Τώρα: %1$s</string>
     <string name="guide_watch">▶  Παρακολούθηση</string>
     <string name="guide_open_external">Άνοιγμα σε εξωτερικό player</string>
     <string name="guide_play_channel_with">Αναπαραγωγή καναλιού με</string>
     <string name="guide_no_external_player">Δεν έχει εγκατασταθεί εξωτερικός player</string>
-    <string name="guide_record_now_playing">●  Εγγραφή του τρέχοντος προγράμματος</string>
-    <string name="guide_later_header">Αργότερα — εγγραφή ή υπενθύμιση</string>
     <string name="guide_no_info">Δεν υπάρχουν πληροφορίες οδηγού</string>
     <string name="guide_next_prefix">Επόμενο  %1$s  %2$s</string>
     <string name="guide_loading_channels">Φόρτωση των καναλιών σας</string>

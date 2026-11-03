@@ -33,13 +33,10 @@
     <string name="guide_auto_switch">📺  Byt automatiskt när det börjar</string>
     <string name="guide_will_switch">📺 Byter till %1$s vid start</string>
     <string name="guide_watch_channel">Se kanal</string>
-    <string name="guide_now_title">Nu: %1$s</string>
     <string name="guide_watch">▶  Titta</string>
     <string name="guide_open_external">Öppna i extern spelare</string>
     <string name="guide_play_channel_with">Spela kanalen med</string>
     <string name="guide_no_external_player">Ingen extern spelare installerad</string>
-    <string name="guide_record_now_playing">●  Spela in det som visas nu</string>
-    <string name="guide_later_header">Senare – spela in eller påminn</string>
     <string name="guide_no_info">Ingen guideinformation</string>
     <string name="guide_next_prefix">Nästa  %1$s  %2$s</string>
     <string name="guide_loading_channels">Läser in dina kanaler</string>

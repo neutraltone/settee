@@ -57,9 +57,11 @@ import app.opentv.data.model.Series
 import app.opentv.data.model.shownName
 import app.opentv.data.repo.LineupChannel
 import app.opentv.data.repo.MediaKey
+import app.opentv.ui.options.LocalConfirmLive
 import app.opentv.ui.options.OptionsSubject
 import app.opentv.ui.options.openOptionsOn
 import app.opentv.ui.options.optionsClickable
+import app.opentv.ui.options.rememberRowHighlight
 import app.opentv.ui.vod.CardFocus
 import app.opentv.ui.vod.ContinueWatchingRow
 import app.opentv.ui.vod.MoviePosterRow
@@ -171,6 +173,7 @@ internal fun HomeContent(
     // because a lazy list only composes its cards when it is first laid out. Coming back to a
     // picked card, the list instead scrolls to its row, which highlights the card itself.
     val column = rememberLazyListState()
+    val confirmLive = LocalConfirmLive.current
     LaunchedEffect(start) {
         picked = null
         if (!takeFocus || restoring != null) return@LaunchedEffect
@@ -197,7 +200,10 @@ internal fun HomeContent(
                 }
                 when (shelf) {
                     is Shelf.Live -> LivePreviewTile(shelf.tile, rowFocus) {
-                        pick(LIVE_PICK) { shelf.tile.open(onWatchLive, onOpenLive) }
+                        shelf.tile.open(
+                            { channel -> confirmLive { pick(LIVE_PICK) { onWatchLive(channel) } } },
+                            { pick(LIVE_PICK, onOpenLive) },
+                        )
                     }
                     is Shelf.Resume -> ContinueWatchingRow(
                         shelf.cards,
@@ -221,7 +227,9 @@ internal fun HomeContent(
                     )
                     is Shelf.Channels -> ChannelRow(
                         shelf.channels,
-                        { channel -> pick(channel.pickKey) { onPlayChannel(channel) } },
+                        // Asked before the pick, which stops the preview: choosing to keep recording
+                        // leaves Home just as it was.
+                        { channel -> confirmLive { pick(channel.pickKey) { onPlayChannel(channel) } } },
                         rowFocus,
                     )
                 }
@@ -332,15 +340,19 @@ internal fun restoreTarget(rows: List<HomeRow>, pick: HomePick): HomePick? {
 
 @Composable
 private fun ChannelRow(channels: List<LineupChannel>, onPlayChannel: (Channel) -> Unit, focus: CardFocus?) {
+    val rowState = rememberRowState(focus)
+    val highlight = rememberRowHighlight(channels, rowState) { it.key }
     Column(Modifier.fillMaxWidth()) {
         SectionHeader(stringResource(R.string.home_favourite_channels))
         LazyRow(
-            state = rememberRowState(focus),
+            state = rowState,
             contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             itemsIndexed(channels, key = { _, channel -> channel.key }) { index, channel ->
-                ChannelCard(channel, Modifier.takesFocus(index, focus)) { onPlayChannel(channel.primary) }
+                ChannelCard(channel, Modifier.takesFocus(index, focus).then(highlight.modifier(index, channel.key))) {
+                    onPlayChannel(channel.primary)
+                }
             }
         }
     }
@@ -361,7 +373,7 @@ private fun ChannelCard(lineupChannel: LineupChannel, modifier: Modifier, onClic
             }
             .onFocusChanged { focused = it.isFocused }
             .clip(RoundedCornerShape(10.dp))
-            .optionsClickable(onClick, openOptionsOn(OptionsSubject.OfChannel(channel, lineupChannel.qualities)))
+            .optionsClickable(onClick, openOptionsOn(OptionsSubject.OfChannel(lineupChannel, onWatch = onClick)))
             .padding(4.dp),
     ) {
         Box(

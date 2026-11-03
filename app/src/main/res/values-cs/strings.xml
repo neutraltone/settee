@@ -33,13 +33,10 @@
     <string name="guide_auto_switch">📺  Automaticky přepnout při zahájení</string>
     <string name="guide_will_switch">📺 Přepne na %1$s při zahájení</string>
     <string name="guide_watch_channel">Sledovat kanál</string>
-    <string name="guide_now_title">Nyní: %1$s</string>
     <string name="guide_watch">▶  Sledovat</string>
     <string name="guide_open_external">Otevřít v externím přehrávači</string>
     <string name="guide_play_channel_with">Přehrát kanál pomocí</string>
     <string name="guide_no_external_player">Není nainstalován žádný externí přehrávač</string>
-    <string name="guide_record_now_playing">●  Nahrát právě vysílaný pořad</string>
-    <string name="guide_later_header">Později — nahrát nebo připomenout</string>
     <string name="guide_no_info">Žádné informace o programu</string>
     <string name="guide_next_prefix">Další  %1$s  %2$s</string>
     <string name="guide_loading_channels">Načítání vašich kanálů</string>

@@ -28,6 +28,7 @@ import app.opentv.data.model.SourceKind
 import app.opentv.ui.player.PlayerScreen
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
+import org.junit.After
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -63,6 +64,12 @@ class PlayerScreenOptionsTest {
         streamUrl = "http://example.com/live/u/p/$streamId.ts",
         qualityLabel = quality,
     )
+
+    // A recording left running would make any later test's Select stop to ask about it.
+    @After
+    fun stopRecordings() = runBlocking {
+        graph.recordingRepository.active().forEach { graph.database.recordings().delete(it.id) }
+    }
 
     // The graph is process-wide, so its database outlives each test.
     @Before

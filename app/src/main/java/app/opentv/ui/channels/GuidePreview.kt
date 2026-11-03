@@ -61,9 +61,6 @@ import app.opentv.data.model.shownName
 import app.opentv.player.PlayerController
 import app.opentv.ui.ChannelsViewModel
 import coil.compose.AsyncImage
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -318,10 +315,6 @@ fun GuidePreview(
         }
     }
 }
-
-private val previewTimeFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
-
-private fun formatTime(utcMillis: Long): String = previewTimeFormat.format(Date(utcMillis))
 
 /**
  * [player]'s picture with no controls, letterboxed. Its shutter is transparent, so whatever is drawn

@@ -33,13 +33,10 @@
     <string name="guide_auto_switch">📺  التبديل التلقائي عند البدء</string>
     <string name="guide_will_switch">📺 سيتم التبديل إلى %1$s عند البدء</string>
     <string name="guide_watch_channel">مشاهدة القناة</string>
-    <string name="guide_now_title">الآن: %1$s</string>
     <string name="guide_watch">▶  مشاهدة</string>
     <string name="guide_open_external">فتح في مشغل خارجي</string>
     <string name="guide_play_channel_with">تشغيل القناة باستخدام</string>
     <string name="guide_no_external_player">لا يوجد مشغل خارجي مثبت</string>
-    <string name="guide_record_now_playing">●  تسجيل ما يُعرض الآن</string>
-    <string name="guide_later_header">لاحقًا — تسجيل أو تذكير</string>
     <string name="guide_no_info">لا توجد معلومات دليل البرامج</string>
     <string name="guide_next_prefix">التالي  %1$s  %2$s</string>
     <string name="guide_loading_channels">جارٍ تحميل قنواتك</string>

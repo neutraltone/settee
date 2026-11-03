@@ -5,28 +5,69 @@
  */
 package app.opentv.ui.options
 
+import app.opentv.data.model.Programme
 import app.opentv.data.repo.WatchStatus
 
 /** One thing the options panel can do to the highlighted item. */
-enum class ItemOption {
-    PlayFromStart,
-    ShowInfo,
-    MarkWatched,
-    MarkUnwatched,
-    MarkWatchedUpToHere,
-    MarkSeasonWatched,
-    MarkSeasonUnwatched,
-    RemoveFromContinueWatching,
-    AddFavourite,
-    RemoveFavourite,
-    RemoveRecentSearch,
-    Subtitles,
-    Audio,
-    Quality,
-    AspectRatio,
-    SleepTimer,
-    RecordNow,
-    StopRecording,
+sealed interface ItemOption {
+    data object PlayFromStart : ItemOption
+
+    data object ShowInfo : ItemOption
+
+    data object MarkWatched : ItemOption
+
+    data object MarkUnwatched : ItemOption
+
+    data object MarkWatchedUpToHere : ItemOption
+
+    data object MarkSeasonWatched : ItemOption
+
+    data object MarkSeasonUnwatched : ItemOption
+
+    data object RemoveFromContinueWatching : ItemOption
+
+    data object AddFavourite : ItemOption
+
+    data object RemoveFavourite : ItemOption
+
+    data object RemoveRecentSearch : ItemOption
+
+    /** What only a player offers, kept apart like [ChannelAction]. */
+    sealed interface PlayerAction : ItemOption
+
+    data object Subtitles : PlayerAction
+
+    data object Audio : PlayerAction
+
+    data object Quality : PlayerAction
+
+    data object AspectRatio : PlayerAction
+
+    data object SleepTimer : PlayerAction
+
+    /** What's done to a channel; kept apart so each kind's labels stay short and checked by the compiler. */
+    sealed interface ChannelAction : ItemOption
+
+    data object Watch : ChannelAction
+
+    data object HideChannel : ChannelAction
+
+    data object OpenInExternalPlayer : ChannelAction
+
+    data object RecordNow : ChannelAction
+
+    data object StopRecording : ChannelAction
+
+    /**
+     * The [programme] on now when the panel opened. Carried rather than looked up again, so the series
+     * set is the one the label named even if that programme has ended by the time it's chosen.
+     */
+    data class RecordWholeSeries(val programme: Programme) : ChannelAction
+
+    data object ScheduleLater : ChannelAction
+
+    /** One of the programmes Schedule a later programme lists. */
+    data class LaterProgramme(val programme: Programme) : ChannelAction
 }
 
 /**
@@ -81,8 +122,25 @@ sealed interface OptionsFor {
         override fun options() = listOf(ItemOption.ShowInfo, favourite(favourite))
     }
 
-    data class Channel(val favourite: Boolean) : OptionsFor {
-        override fun options() = listOf(favourite(favourite))
+    /**
+     * A channel, however many Qualities it has: [recording] if any of them is, [programmeOnNow] what's
+     * on it now, and [hasUpcoming] whether the guide lists anything later.
+     */
+    data class Channel(
+        val favourite: Boolean,
+        val recording: Boolean,
+        val programmeOnNow: Programme?,
+        val hasUpcoming: Boolean,
+    ) : OptionsFor {
+        override fun options() = buildList {
+            add(ItemOption.Watch)
+            add(favourite(favourite))
+            add(ItemOption.HideChannel)
+            add(ItemOption.OpenInExternalPlayer)
+            add(if (recording) ItemOption.StopRecording else ItemOption.RecordNow)
+            programmeOnNow?.let { add(ItemOption.RecordWholeSeries(it)) }
+            if (hasUpcoming) add(ItemOption.ScheduleLater)
+        }
     }
 
     data object RecentSearch : OptionsFor {
@@ -113,7 +171,7 @@ sealed interface OptionsFor {
     }
 }
 
-private fun playFromStart(status: WatchStatus) =
+private fun playFromStart(status: WatchStatus): List<ItemOption> =
     if (status is WatchStatus.InProgress) listOf(ItemOption.PlayFromStart) else emptyList()
 
 // In Progress offers both: Watched to finish it, Unwatched to start again from the beginning.

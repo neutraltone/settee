@@ -14,13 +14,22 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.res.stringResource
 import app.opentv.R
+import app.opentv.ui.channels.formatTime
+import app.opentv.ui.player.OK_KEYS
 
 /**
  * The options panel for one item, headed [title]: a button per option, the first highlighted so
@@ -33,7 +42,7 @@ fun OptionsPanel(
     options: List<ItemOption>,
     onChoose: (ItemOption) -> Unit,
     onDismiss: () -> Unit,
-    labelOf: @Composable (ItemOption) -> String = { stringResource(it.label) },
+    labelOf: @Composable (ItemOption) -> String = { it.label() },
 ) {
     ChoicePanel(title, options, labelOf, onChoose, onDismiss)
 }
@@ -48,15 +57,30 @@ internal fun <T> ChoicePanel(
     onDismiss: () -> Unit,
 ) {
     val first = remember { FocusRequester() }
+    // Holding Select is one way to open this, and the highlight lands on the first option with the key
+    // still down. Its repeats and release would press that option, so only a new press counts.
+    var newPress by remember { mutableStateOf(false) }
     AlertDialog(
         onDismissRequest = onDismiss,
         confirmButton = {},
         title = { Text(title) },
         text = {
-            Column(Modifier.verticalScroll(rememberScrollState())) {
+            // Scrolls because a list can outgrow the screen: focus moving down it brings each row in.
+            Column(
+                Modifier
+                    .onPreviewKeyEvent { event ->
+                        if (event.key !in OK_KEYS) return@onPreviewKeyEvent false
+                        if (event.type == KeyEventType.KeyDown && event.nativeKeyEvent.repeatCount == 0) {
+                            newPress = true
+                        }
+                        !newPress
+                    }
+                    .verticalScroll(rememberScrollState()),
+            ) {
                 // Requested from inside the dialog: its window composes after the caller's, and
-                // a FocusRequester asked before it is attached throws.
-                LaunchedEffect(first) {
+                // a FocusRequester asked before it is attached throws. Asked again for each list, as
+                // the row that had the highlight may be gone from the next.
+                LaunchedEffect(choices) {
                     withFrameNanos {}
                     runCatching { first.requestFocus() }
                 }
@@ -75,24 +99,40 @@ internal fun <T> ChoicePanel(
     )
 }
 
-internal val ItemOption.label: Int
-    get() = when (this) {
-        ItemOption.PlayFromStart -> R.string.options_play_from_start
-        ItemOption.ShowInfo -> R.string.options_show_info
-        ItemOption.MarkWatched -> R.string.options_mark_watched
-        ItemOption.MarkUnwatched -> R.string.options_mark_unwatched
-        ItemOption.MarkWatchedUpToHere -> R.string.options_mark_watched_up_to_here
-        ItemOption.MarkSeasonWatched -> R.string.options_mark_season_watched
-        ItemOption.MarkSeasonUnwatched -> R.string.options_mark_season_unwatched
-        ItemOption.RemoveFromContinueWatching -> R.string.options_remove_continue_watching
-        ItemOption.AddFavourite -> R.string.options_add_favourite
-        ItemOption.RemoveFavourite -> R.string.options_remove_favourite
-        ItemOption.RemoveRecentSearch -> R.string.common_remove
-        ItemOption.Subtitles -> R.string.player_subtitles
-        ItemOption.Audio -> R.string.player_audio
-        ItemOption.Quality -> R.string.player_quality
-        ItemOption.AspectRatio -> R.string.player_aspect_ratio_title
-        ItemOption.SleepTimer -> R.string.settings_sleep_timer
-        ItemOption.RecordNow -> R.string.rec_record_now
-        ItemOption.StopRecording -> R.string.rec_stop_recording
-    }
+@Composable
+internal fun ItemOption.label(): String = when (this) {
+    ItemOption.PlayFromStart -> stringResource(R.string.options_play_from_start)
+    ItemOption.ShowInfo -> stringResource(R.string.options_show_info)
+    ItemOption.MarkWatched -> stringResource(R.string.options_mark_watched)
+    ItemOption.MarkUnwatched -> stringResource(R.string.options_mark_unwatched)
+    ItemOption.MarkWatchedUpToHere -> stringResource(R.string.options_mark_watched_up_to_here)
+    ItemOption.MarkSeasonWatched -> stringResource(R.string.options_mark_season_watched)
+    ItemOption.MarkSeasonUnwatched -> stringResource(R.string.options_mark_season_unwatched)
+    ItemOption.RemoveFromContinueWatching -> stringResource(R.string.options_remove_continue_watching)
+    ItemOption.AddFavourite -> stringResource(R.string.options_add_favourite)
+    ItemOption.RemoveFavourite -> stringResource(R.string.options_remove_favourite)
+    ItemOption.RemoveRecentSearch -> stringResource(R.string.common_remove)
+    is ItemOption.PlayerAction -> label()
+    is ItemOption.ChannelAction -> label()
+}
+
+@Composable
+private fun ItemOption.PlayerAction.label(): String = when (this) {
+    ItemOption.Subtitles -> stringResource(R.string.player_subtitles)
+    ItemOption.Audio -> stringResource(R.string.player_audio)
+    ItemOption.Quality -> stringResource(R.string.player_quality)
+    ItemOption.AspectRatio -> stringResource(R.string.player_aspect_ratio_title)
+    ItemOption.SleepTimer -> stringResource(R.string.settings_sleep_timer)
+}
+
+@Composable
+private fun ItemOption.ChannelAction.label(): String = when (this) {
+    ItemOption.Watch -> stringResource(R.string.guide_watch)
+    ItemOption.HideChannel -> stringResource(R.string.options_hide_channel)
+    ItemOption.OpenInExternalPlayer -> stringResource(R.string.guide_open_external)
+    ItemOption.RecordNow -> stringResource(R.string.rec_record_now)
+    ItemOption.StopRecording -> stringResource(R.string.rec_stop_recording)
+    is ItemOption.RecordWholeSeries -> stringResource(R.string.rec_record_series_named, programme.title)
+    ItemOption.ScheduleLater -> stringResource(R.string.options_schedule_later)
+    is ItemOption.LaterProgramme -> "${formatTime(programme.startUtcMillis)}   ${programme.title}"
+}

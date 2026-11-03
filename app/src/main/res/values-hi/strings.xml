@@ -33,13 +33,10 @@
     <string name="guide_auto_switch">📺  शुरू होने पर ऑटो-स्विच करें</string>
     <string name="guide_will_switch">📺 शुरू होने पर %1$s पर स्विच होगा</string>
     <string name="guide_watch_channel">चैनल देखें</string>
-    <string name="guide_now_title">अभी: %1$s</string>
     <string name="guide_watch">▶  देखें</string>
     <string name="guide_open_external">बाहरी प्लेयर में खोलें</string>
     <string name="guide_play_channel_with">इसके साथ चैनल चलाएं</string>
     <string name="guide_no_external_player">कोई बाहरी प्लेयर इंस्टॉल नहीं है</string>
-    <string name="guide_record_now_playing">●  अभी चल रहा प्रोग्राम रिकॉर्ड करें</string>
-    <string name="guide_later_header">बाद में — रिकॉर्ड करें या याद दिलाएं</string>
     <string name="guide_no_info">कोई गाइड जानकारी नहीं</string>
     <string name="guide_next_prefix">अगला  %1$s  %2$s</string>
     <string name="guide_loading_channels">आपके चैनल लोड हो रहे हैं</string>

@@ -38,7 +38,7 @@ internal fun PlayerOptions(options: List<ItemOption>, onChoose: (ItemOption) -> 
         title = stringResource(R.string.player_options),
         options = options,
         labelOf = { option ->
-            val name = stringResource(option.label)
+            val name = option.label()
             if (option == ItemOption.SleepTimer && sleepLeft != null) "$name · $sleepLeft" else name
         },
         onChoose = { option ->
