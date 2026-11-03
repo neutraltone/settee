@@ -62,6 +62,8 @@ fun OptionsPanel(title: String, options: List<ItemOption>, onChoose: (ItemOption
 
 private val ItemOption.label: Int
     get() = when (this) {
+        ItemOption.PlayFromStart -> R.string.options_play_from_start
+        ItemOption.ShowInfo -> R.string.options_show_info
         ItemOption.MarkWatched -> R.string.options_mark_watched
         ItemOption.MarkUnwatched -> R.string.options_mark_unwatched
         ItemOption.RemoveFromContinueWatching -> R.string.options_remove_continue_watching
