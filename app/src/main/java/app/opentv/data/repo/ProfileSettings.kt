@@ -7,8 +7,7 @@ package app.opentv.data.repo
 
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.common.util.Util
-import app.opentv.data.db.ProfileDao
-import app.opentv.data.db.ProfileSettingDao
+import app.opentv.data.db.OpenTvDatabase
 import app.opentv.data.model.ProfileSetting
 import app.opentv.sync.SyncProfileSetting
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -37,11 +36,13 @@ fun baseLanguage(code: String?): String? =
  * `profile_settings` table. Screens, players and sync ask it, never the DAO.
  */
 class ProfileSettings(
-    private val dao: ProfileSettingDao,
-    private val profiles: ProfileDao,
+    private val db: OpenTvDatabase,
     private val activeProfileId: StateFlow<Long>,
     private val clock: () -> Long = System::currentTimeMillis,
 ) {
+    private val dao = db.profileSettings()
+    private val profiles = db.profiles()
+
     /** The active Profile's Subtitle Preference; follows Profile switches. */
     @OptIn(ExperimentalCoroutinesApi::class)
     val subtitlePreference: Flow<SubtitlePreference> = activeProfileId
@@ -96,7 +97,8 @@ class ProfileSettings(
         val names = profiles.directory()
         return items.count { item ->
             val profileId = names.id(item.profile) ?: return@count false
-            mergeSynced(ProfileSetting(profileId, item.name, item.value, item.updatedAtMillis))
+            val setting = ProfileSetting(profileId, item.name, item.value, item.updatedAtMillis)
+            db.ifProfileExists(profileId) { mergeSynced(setting) } == true
         }
     }
 

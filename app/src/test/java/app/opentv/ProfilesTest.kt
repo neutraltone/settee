@@ -26,7 +26,6 @@ import com.google.common.truth.Truth.assertWithMessage
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.After
-import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -41,12 +40,10 @@ class ProfilesTest {
     private val db = Room.inMemoryDatabaseBuilder(app, OpenTvDatabase::class.java)
         .allowMainThreadQueries()
         .build()
-    private val graph = ServiceLocator.Graph(app) { db }
-    private val profiles get() = graph.profiles
 
-    // Settings are process-wide, so each test starts on the base Profile whatever the last one left.
-    @Before
-    fun startOnBaseProfile() = graph.settings.setActiveProfile(Profiles.BASE_PROFILE_ID)
+    // Settings of its own: the removed list would otherwise outlive the test in the process-wide ones.
+    private val graph = ServiceLocator.Graph(app, settingsFile = "profiles_test") { db }
+    private val profiles get() = graph.profiles
 
     @After
     fun close() = db.close()
@@ -168,7 +165,7 @@ class ProfilesTest {
     @Test
     fun `a new profile records when it was created`() = runTest {
         val profiles = with(graph) {
-            Profiles(db.profiles(), viewerLibrary, profileSettings, recordingRepository, settings, clock = { 42_000L })
+            Profiles(db, viewerLibrary, profileSettings, recordingRepository, settings, clock = { 42_000L })
         }
 
         val tom = checkNotNull(profiles.create("Tom"))
@@ -186,6 +183,40 @@ class ProfilesTest {
         assertThat(profiles.findOrCreate("Sam")).isEqualTo(sam)
         assertThat(profiles.findOrCreate(" ")).isNull()
         assertThat(profiles.all().map { it.name }).containsExactly("Me", "Tom", "Sam")
+    }
+
+    @Test
+    fun `sync doesn't bring back a removed profile, however the name is written`() = runTest {
+        val tom = checkNotNull(profiles.create("Tom"))
+        profiles.remove(tom)
+
+        assertThat(profiles.findOrCreate(" TOM ")).isNull()
+        profiles.import(listOf("Tom", "Sam"))
+
+        assertThat(profiles.all().map { it.name }).containsExactly("Me", "Sam").inOrder()
+    }
+
+    @Test
+    fun `adding a removed name lifts the removal`() = runTest {
+        profiles.remove(checkNotNull(profiles.create("Tom")))
+
+        val again = checkNotNull(profiles.create("tom"))
+
+        assertThat(profiles.findOrCreate("Tom")).isEqualTo(again)
+        profiles.remove(again)
+        assertThat(profiles.findOrCreate("Tom")).isNull()
+    }
+
+    @Test
+    fun `renaming onto a removed name lifts the removal`() = runTest {
+        profiles.remove(checkNotNull(profiles.create("Tom")))
+        val sam = checkNotNull(profiles.create("Sam"))
+
+        profiles.rename(sam, "Tom")
+        profiles.rename(sam, "Sam")
+
+        val tom = checkNotNull(profiles.findOrCreate("Tom"))
+        assertThat(tom).isNotEqualTo(sam)
     }
 
     @Test

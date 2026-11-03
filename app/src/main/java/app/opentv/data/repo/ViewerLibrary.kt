@@ -87,7 +87,7 @@ class ViewerLibrary(
     private val dismissals = db.seriesDismissals()
 
     /** The active Profile's Favourites, and every Profile's for sync. */
-    val favourites = Favourites(db.favourites(), db.profiles(), activeProfileId)
+    val favourites = Favourites(db, activeProfileId)
 
     private val cards = ContinueWatchingCards(positions, episodes, dismissals)
 
@@ -107,10 +107,14 @@ class ViewerLibrary(
     val catchUp = CatchUpMarks(positions, episodes, activeProfileId, clock) { db.withTransaction(it) }
 
     /** Every Profile's progress, as it travels between devices. */
-    val syncedProgress = SyncedProgress(positions, db.movies(), episodes, db.sources(), db.profiles(), ::mergeSynced)
+    val syncedProgress = SyncedProgress(positions, db.movies(), episodes, db.sources(), db.profiles()) {
+        db.ifProfileExists(it.profileId) { mergeSynced(it) } == true
+    }
 
     /** Every Profile's Continue Watching removals, as they travel between devices. */
-    val syncedDismissals = SyncedDismissals(dismissals, db.sources(), db.profiles(), marks::mergeSynced)
+    val syncedDismissals = SyncedDismissals(dismissals, db.sources(), db.profiles()) {
+        db.ifProfileExists(it.profileId) { marks.mergeSynced(it) } == true
+    }
 
     /** The active Profile's Recent Searches. */
     val recentSearches = RecentSearches(db, activeProfileId, clock)

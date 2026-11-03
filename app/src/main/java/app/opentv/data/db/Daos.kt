@@ -918,6 +918,9 @@ interface ProfileDao {
 
     @Query("DELETE FROM profiles WHERE id = :id")
     suspend fun delete(id: Long)
+
+    @Query("SELECT EXISTS(SELECT 1 FROM profiles WHERE id = :id)")
+    suspend fun exists(id: Long): Boolean
 }
 
 @Dao

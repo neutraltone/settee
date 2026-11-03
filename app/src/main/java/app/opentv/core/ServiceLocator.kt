@@ -51,11 +51,19 @@ object ServiceLocator {
      * [openDatabase] replaces the on-disk database, so a test can stand up two devices in one
      * process: every Graph built from the same context would otherwise share one database file.
      * [http] replaces the client that talks to providers, so such a device can reach a fake panel.
+     * [settingsFile] gives it settings of its own, which are otherwise one per process.
      */
-    class Graph(context: Context, http: OkHttpClient? = null, openDatabase: (() -> OpenTvDatabase)? = null) {
+    class Graph(
+        context: Context,
+        http: OkHttpClient? = null,
+        settingsFile: String? = null,
+        openDatabase: (() -> OpenTvDatabase)? = null,
+    ) {
         private val appContext = context.applicationContext
 
-        val settings: AppSettings by lazy { AppSettings.get(appContext) }
+        val settings: AppSettings by lazy {
+            settingsFile?.let { AppSettings.separate(appContext, it) } ?: AppSettings.get(appContext)
+        }
 
         val database: OpenTvDatabase by lazy {
             openDatabase?.invoke() ?: OpenTvDatabase.build(context, onWiped = settings::forgetDatabaseRows)
@@ -165,11 +173,11 @@ object ServiceLocator {
         }
 
         val profileSettings: ProfileSettings by lazy {
-            ProfileSettings(database.profileSettings(), database.profiles(), settings.activeProfileId)
+            ProfileSettings(database, settings.activeProfileId)
         }
 
         val profiles: Profiles by lazy {
-            Profiles(database.profiles(), viewerLibrary, profileSettings, recordingRepository, settings)
+            Profiles(database, viewerLibrary, profileSettings, recordingRepository, settings)
         }
 
         val recordingRepository: RecordingRepository by lazy {

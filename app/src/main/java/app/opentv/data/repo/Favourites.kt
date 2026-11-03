@@ -6,7 +6,7 @@
 package app.opentv.data.repo
 
 import app.opentv.data.db.FavouriteDao
-import app.opentv.data.db.ProfileDao
+import app.opentv.data.db.OpenTvDatabase
 import app.opentv.data.model.Channel
 import app.opentv.data.model.Favourite
 import app.opentv.data.model.Movie
@@ -23,11 +23,10 @@ import kotlinx.coroutines.flow.map
  * The Favourites half of [ViewerLibrary], reached as `viewerLibrary.favourites`: each Profile's
  * Favourite channels, movies and series (ADR 0001). Only ViewerLibrary builds one.
  */
-class Favourites internal constructor(
-    private val dao: FavouriteDao,
-    private val profiles: ProfileDao,
-    private val activeProfileId: StateFlow<Long>,
-) {
+class Favourites internal constructor(private val db: OpenTvDatabase, private val activeProfileId: StateFlow<Long>) {
+    private val dao = db.favourites()
+    private val profiles = db.profiles()
+
     suspend fun set(channel: Channel, favourite: Boolean) =
         dao.set(activeProfileId.value, StreamKind.LIVE, channel.sourceId, channel.streamId, favourite)
 
@@ -76,7 +75,8 @@ class Favourites internal constructor(
         return items.count { item ->
             val kind = runCatching { StreamKind.valueOf(item.kind) }.getOrNull() ?: return@count false
             val profileId = names.id(item.profile) ?: return@count false
-            dao.insert(Favourite(profileId, kind, item.source, item.id)) != -1L
+            db.ifProfileExists(profileId) { dao.insert(Favourite(profileId, kind, item.source, item.id)) != -1L } ==
+                true
         }
     }
 }

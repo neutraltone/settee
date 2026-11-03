@@ -24,10 +24,9 @@ import kotlinx.serialization.json.Json
  * ceremony that comes with it. Each setting is also mirrored into a [StateFlow] so Compose
  * recomposes the moment one changes.
  */
-class AppSettings private constructor(context: Context) {
+class AppSettings private constructor(context: Context, fileName: String = "opentv_settings") {
 
-    private val prefs =
-        context.applicationContext.getSharedPreferences("opentv_settings", Context.MODE_PRIVATE)
+    private val prefs = context.applicationContext.getSharedPreferences(fileName, Context.MODE_PRIVATE)
 
     private val addonJson = Json { ignoreUnknownKeys = true }
 
@@ -63,6 +62,15 @@ class AppSettings private constructor(context: Context) {
         prefs.edit { putLong(KEY_ACTIVE_PROFILE, id) }
         _activeProfileId.value = id
     }
+
+    /**
+     * Names of Profiles removed on this device, which sync must not bring back (ADR 0005). They stay
+     * on this device, and outlive a database rebuild, since a name isn't a row. As written when
+     * removed: [Profiles] does the matching, so it stays the one rule for what counts as the same name.
+     */
+    fun removedProfileNames(): Set<String> = prefs.getStringSet(KEY_REMOVED_PROFILES, emptySet())!!.toSet()
+
+    fun setRemovedProfileNames(names: Set<String>) = prefs.edit { putStringSet(KEY_REMOVED_PROFILES, names) }
 
     /**
      * Called when the database is rebuilt from scratch. Rows are gone and ids restart from 1, so
@@ -483,6 +491,7 @@ class AppSettings private constructor(context: Context) {
         private const val KEY_PIN_HASH = "parental_pin_hash"
         private const val KEY_HIDDEN_CATS = "hidden_categories"
         private const val KEY_ACTIVE_PROFILE = "active_profile_id"
+        private const val KEY_REMOVED_PROFILES = "removed_profile_names"
         private const val KEY_LIVE_PREVIEW_HOME = "live_preview_on_home"
         private const val KEY_PLAY_NEXT = "play_next_automatically"
         private const val KEY_CONTENT_LIVE = "content_live"
@@ -525,5 +534,8 @@ class AppSettings private constructor(context: Context) {
         fun get(context: Context): AppSettings = instance ?: synchronized(this) {
             instance ?: AppSettings(context).also { instance = it }
         }
+
+        /** Settings of their own, for a test standing up several devices in one process. */
+        internal fun separate(context: Context, fileName: String) = AppSettings(context, fileName)
     }
 }

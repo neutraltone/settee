@@ -5,8 +5,9 @@
  */
 package app.opentv.data.repo
 
+import androidx.room.withTransaction
 import app.opentv.core.AppSettings
-import app.opentv.data.db.ProfileDao
+import app.opentv.data.db.OpenTvDatabase
 import app.opentv.data.model.Profile
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.onStart
@@ -20,16 +21,19 @@ import kotlinx.coroutines.sync.withLock
  *
  * Removing a Profile asks each store that keeps per-Profile state to forget it, rather than
  * deleting from every table here, so a store's tables stay its own business. `ProfilesTest` fails
- * if a table with a `profileId` keeps a removed Profile's rows.
+ * if a table with a `profileId` keeps a removed Profile's rows. A removed Profile's name goes on a
+ * list that stays on this device, so sync can't bring it back, until the name is added here again.
  */
 class Profiles(
-    private val dao: ProfileDao,
+    private val db: OpenTvDatabase,
     private val viewerLibrary: ViewerLibrary,
     private val profileSettings: ProfileSettings,
     private val recordings: RecordingRepository,
     private val settings: AppSettings,
     private val clock: () -> Long = System::currentTimeMillis,
 ) {
+    private val dao = db.profiles()
+
     // Name checks and the first Profile's seeding read before they write; two at once would let a
     // duplicate name, or two "Me"s, through.
     private val writes = Mutex()
@@ -43,6 +47,7 @@ class Profiles(
     suspend fun create(name: String): Long? = writes.withLock {
         val wanted = name.trim()
         if (wanted.isEmpty() || isNameTaken(wanted, seededProfiles())) return null
+        liftRemoval(wanted)
         dao.insert(Profile(name = wanted, createdAtMillis = clock()))
     }
 
@@ -53,42 +58,54 @@ class Profiles(
         if (profiles.none { it.id == id }) return false
         if (wanted.isEmpty() || isNameTaken(wanted, profiles, except = id)) return false
         dao.rename(id, wanted)
+        liftRemoval(wanted)
         true
     }
 
     /** Every Profile's name, as they travel to the other side. */
     suspend fun export(): List<String> = all().map { it.name }
 
-    /** Adds the Profiles another device has and this one doesn't. Never removes one: that would delete its history. */
+    /**
+     * Adds the Profiles another device has and this one doesn't, unless they were removed here. Never
+     * removes one: that would delete its history.
+     */
     suspend fun import(names: List<String>) = names.forEach { findOrCreate(it) }
 
     /**
      * The Profile another device calls [name], created here if there isn't one. Matches the way
-     * [isNameTaken] does, so "tom" from the other side is this device's "Tom". Null for a blank name.
+     * [isNameTaken] does, so "tom" from the other side is this device's "Tom". Null for a blank name,
+     * and for one removed on this device.
      */
     suspend fun findOrCreate(name: String): Long? = writes.withLock {
         val wanted = name.trim()
         if (wanted.isEmpty()) return null
         seededProfiles().firstOrNull { sameName(it.name, wanted) }?.let { return it.id }
+        if (settings.removedProfileNames().any { sameName(it, wanted) }) return null
         dao.insert(Profile(name = wanted, createdAtMillis = clock()))
     }
 
     /**
      * Removes a Profile and everything it owned; its recordings stay, for no one in particular.
      * Returns false for the base Profile, which can't be removed, and for one that isn't there.
-     * Removing the active Profile makes the base Profile active. The Profile's own row goes last, so
-     * a removal cut short can be tried again. Holds [writes] throughout, so a sync can't find the
-     * Profile by name and write under its id while its rows are being cleared.
+     * Removing the active Profile makes the base Profile active. One transaction, which a sync's
+     * writes order themselves against (see [ifProfileExists]) so none lands under the old id.
      */
     suspend fun remove(id: Long): Boolean = writes.withLock {
-        if (id == BASE_PROFILE_ID || dao.all().none { it.id == id }) return false
-        viewerLibrary.profileRemoval.forget(id)
-        profileSettings.forgetProfile(id)
-        recordings.forgetProfile(id)
-        dao.delete(id)
+        val profile = dao.all().firstOrNull { it.id == id }
+        if (id == BASE_PROFILE_ID || profile == null) return false
+        settings.setRemovedProfileNames(settings.removedProfileNames() + profile.name)
+        db.withTransaction {
+            viewerLibrary.profileRemoval.forget(id)
+            profileSettings.forgetProfile(id)
+            recordings.forgetProfile(id)
+            dao.delete(id)
+        }
         if (settings.activeProfileId.value == id) settings.setActiveProfile(BASE_PROFILE_ID)
         true
     }
+
+    private fun liftRemoval(name: String) =
+        settings.setRemovedProfileNames(settings.removedProfileNames().filterNot { sameName(it, name) }.toSet())
 
     private suspend fun ensureOne() = writes.withLock { seededProfiles() }
 

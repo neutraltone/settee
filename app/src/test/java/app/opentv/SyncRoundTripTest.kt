@@ -23,8 +23,13 @@ import app.opentv.data.repo.MediaKey
 import app.opentv.data.repo.Playable
 import app.opentv.data.repo.WatchStatus
 import app.opentv.sync.SyncEngine
+import app.opentv.sync.SyncFavourite
+import app.opentv.sync.SyncProfileSetting
 import com.google.common.truth.Truth.assertThat
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
 import org.junit.After
@@ -41,16 +46,15 @@ class SyncRoundTripTest {
     private val app: Application = ApplicationProvider.getApplicationContext()
 
     /**
-     * One device: its own database, holding the same provider's catalogue under its own row ids.
-     * Settings are process-wide, so the devices share an active Profile: every helper picks its
-     * Profile before acting rather than trusting whichever the other device left selected.
+     * One device: its own database and settings, holding the same provider's catalogue under its
+     * own row ids.
      */
     private inner class Device(private val rowIdOffset: Long) {
         val db: OpenTvDatabase = Room.inMemoryDatabaseBuilder(app, OpenTvDatabase::class.java)
             .allowMainThreadQueries()
             .build()
         val panel = FakePanel()
-        val graph = ServiceLocator.Graph(app, panel.http) { db }
+        val graph = ServiceLocator.Graph(app, panel.http, settingsFile = "device_$rowIdOffset") { db }
         val sync = SyncEngine(graph)
         private val library get() = graph.viewerLibrary
 
@@ -252,8 +256,6 @@ class SyncRoundTripTest {
         deviceA.db.close()
         deviceB.db.close()
         deviceC.db.close()
-        // Settings outlive the test and the devices share them; leave them as a fresh database would find them.
-        deviceA.graph.settings.forgetDatabaseRows()
     }
 
     /** Sends A's state to B the way the transports do: gathered, as JSON, then applied. */
@@ -659,7 +661,88 @@ class SyncRoundTripTest {
         return """{"info": {}, "episodes": {"1": [$episodes]}}"""
     }
 
+    @Test
+    fun `a Profile removed here doesn't come back from another device or an old NAS file`() = runTest {
+        deviceA.seed("Tom")
+        deviceB.seed("Tom")
+        deviceA.favourite("Tom", 1)
+        val oldFile = bundleFromA()
+        syncAToB()
+
+        deviceB.graph.profiles.remove(deviceB.profileId("Tom"))
+        syncAToB()
+        deviceB.sync.apply(oldFile)
+
+        assertThat(deviceB.hasProfile("Tom")).isFalse()
+        assertThat(deviceB.db.favourites().all()).isEmpty()
+        assertThat(deviceA.hasProfile("Tom")).isTrue()
+        assertThat(deviceA.favouriteNames("Tom")).containsExactly("Channel 1", "Movie 1", "Series 1")
+    }
+
+    @Test
+    fun `adding a removed name back brings its history from the other device`() = runTest {
+        deviceA.seed("Tom")
+        deviceB.seed("Tom")
+        deviceA.favourite("Tom", 1)
+        deviceB.graph.profiles.remove(deviceB.profileId("Tom"))
+
+        deviceB.graph.profiles.create("Tom")
+        syncAToB()
+
+        assertThat(deviceB.favouriteNames("Tom")).containsExactly("Channel 1", "Movie 1", "Series 1")
+    }
+
+    @Test
+    fun `a new Profile of a removed name on another device doesn't lift the removal here`() = runTest {
+        deviceB.seed("Tom")
+        deviceB.graph.profiles.remove(deviceB.profileId("Tom"))
+
+        deviceA.seed()
+        deviceA.graph.profiles.create("Tom")
+        syncAToB()
+
+        assertThat(deviceB.hasProfile("Tom")).isFalse()
+    }
+
+    @Test
+    fun `a Profile removed while a sync is applying is left with no rows under its id`() = runBlocking {
+        deviceA.seed("Tom")
+        deviceB.seed("Tom")
+        val tom = deviceB.profileId("Tom")
+        val bundle = bundleFromA().copy(
+            favourites = List(RACE_ITEMS) { SyncFavourite("Tom", "MOVIE", "Provider", "race$it") },
+            profileSettings = List(RACE_ITEMS) { SyncProfileSetting("Tom", "setting$it", "value", 1) },
+        )
+
+        val applying = launch(Dispatchers.IO) { deviceB.sync.apply(bundle) }
+        while (deviceB.db.favourites().all().isEmpty()) delay(1)
+        deviceB.graph.profiles.remove(tom)
+        applying.join()
+
+        assertThat(deviceB.db.favourites().all().filter { it.profileId == tom }).isEmpty()
+        assertThat(deviceB.db.profileSettings().all().filter { it.profileId == tom }).isEmpty()
+    }
+
+    @Test
+    fun `a Profile removed while its episodes are being fetched is left with no rows under its id`() = runTest {
+        deviceA.seed("Tom")
+        deviceB.openedSeries = false
+        deviceB.seed("Tom")
+        deviceB.panel.replies["get_series_info:s"] = episodesReply("1-1")
+        val hold = deviceB.panel.hold("get_series_info:s")
+        deviceA.play("Tom", deviceA.episodeKey, 900_000, EPISODE_MILLIS)
+        val tom = deviceB.profileId("Tom")
+
+        syncAToB()
+        during(hold) { deviceB.graph.profiles.remove(tom) }
+        hold.release()
+        deviceB.awaitEpisodes()
+
+        assertThat(deviceB.db.positions().all().filter { it.profileId == tom }).isEmpty()
+    }
+
     private companion object {
+        const val RACE_ITEMS = 3_000
         const val NAS_RECORDING = "smb://nas.example.com/share/Settee/the-match.ts"
 
         // Distinctive, because a bundle is searched for them. The user/pass prefixes satisfy gitleaks.

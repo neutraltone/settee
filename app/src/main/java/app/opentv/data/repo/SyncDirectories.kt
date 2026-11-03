@@ -5,6 +5,8 @@
  */
 package app.opentv.data.repo
 
+import androidx.room.withTransaction
+import app.opentv.data.db.OpenTvDatabase
 import app.opentv.data.db.ProfileDao
 import app.opentv.data.db.SourceDao
 import app.opentv.data.model.Profile
@@ -24,6 +26,16 @@ internal class ProfileDirectory(private val profiles: List<Profile>) {
 }
 
 internal suspend fun ProfileDao.directory() = ProfileDirectory(all())
+
+/**
+ * Runs [write] unless Profile [profileId] has been removed, returning null if it has. A sync looks its
+ * Profiles up before it writes, and may then spend a while writing, so a Profile can go in between.
+ * One transaction, because [Profiles.remove] is one too: SQLite orders the two, so this write either
+ * sees the Profile gone or is deleted with it. Holding a lock for a whole sync instead would leave
+ * Who's watching? waiting on a slow one, and wouldn't cover progress arriving after it has returned.
+ */
+internal suspend fun <T> OpenTvDatabase.ifProfileExists(profileId: Long, write: suspend () -> T): T? =
+    withTransaction { if (profiles().exists(profileId)) write() else null }
 
 /** This device's sources by id and by name, which [SourceRepository] keeps unique (ADR 0004). */
 internal class SourceDirectory(sources: List<Source>) {
