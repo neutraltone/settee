@@ -76,7 +76,8 @@ tbody th { color: var(--soft); font-weight: 400; white-space: nowrap; }
       <h3>E's costs</h3>
       <ul>
         <li>No press added on the way to a card, but the rail is now two Lefts from the leftmost item, not one.</li>
-        <li>The Live Preview takes about 190dp of Home, so less of Favourites shows without scrolling.</li>
+        <li>The Live Preview takes about 140dp of Home, and with it showing, the status text on Favourites sits below the screen edge until you scroll.</li>
+        <li>Text on the art needs a gradient on every card, which is provisional until #84. Real covers also carry their own titles, which may clash with it.</li>
         <li>The backdrop on Shows and Movies changes on every press and stacks two gradients. It's the costliest part, and provisional until #84.</li>
         <li>The large header leaves room for about one and a half rows of posters.</li>
       </ul>
@@ -86,7 +87,8 @@ tbody th { color: var(--soft); font-weight: 400; white-space: nowrap; }
       <ul>
         <li>Right from the sidebar lands on the nearest row, not the one you left. The real build would need to remember it.</li>
         <li>The grids here are short samples. A real 8,000-title grid needs a lazy list, which hasn't been measured.</li>
-        <li>Coral fills are large and bright. Judge them on a TV in a dark room.</li>
+        <li>Cards are highlighted with a ring and a lift, while the guide and sidebar fill with coral. Check both are obvious from the sofa.</li>
+        <li>Favourite channels have no cover art, so they need their own card if they share Home's Favourites row.</li>
       </ul>
     </div>
   </section>
@@ -144,7 +146,7 @@ const directions = [
   ["b_hearth", "B: Hearth", "Warmest. Amber and brown, a serif with character, the largest artwork, and an amber glow."],
   ["c_listings", "C: Listings", "Type-led, like a printed listings page. Oxblood-black, a slab serif, and a cream marker."],
   ["d_picture_house", "D: Picture House", "Artwork first. Plum-charcoal, a round sans, text on the art, and a coral ring."],
-  ["e_combined", "E: Combined", "Your combination: Picture House's colours and Shows and details layouts, Hearth's type and larger first card, Lamplight's thumbnails, and Listings' Live Preview and guide, with square corners and a categories sidebar."],
+  ["e_combined", "E: Combined", "Your combination: Picture House's colours, rounded cards, pill buttons and Shows and details layouts; Hearth's type and larger first card; Listings' square guide and Live Preview layout; and a categories sidebar. Cover art is portrait, and anything showing progress is landscape."],
 ];
 const combinedOnly = [
   ["guide_categories", "Live guide with categories open"],
