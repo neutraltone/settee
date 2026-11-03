@@ -30,6 +30,7 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.StarOutline
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -54,6 +55,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
@@ -428,7 +430,7 @@ internal fun SeriesDetailContent(
             seasons.forEach { (season, eps) ->
                 item(key = "season:$season") {
                     Spacer(Modifier.height(8.dp))
-                    SectionHeader(stringResource(R.string.vod_season, season))
+                    SeasonHeader(stringResource(R.string.vod_season, season), eps)
                 }
                 items(eps, key = { it.id }) { ep ->
                     EpisodeRow(ep, statuses[ep.id], series.posterUrl, onPlayEpisode)
@@ -751,6 +753,42 @@ private fun DetailButton(
     }
 }
 
+/** What a row on the series page draws behind itself, and around itself while highlighted. */
+private fun Modifier.rowHighlight(focused: Boolean, colors: ColorScheme): Modifier {
+    if (!focused) return background(colors.surface)
+    return background(colors.primaryContainer).border(2.dp, colors.primary, RoundedCornerShape(8.dp))
+}
+
+/**
+ * A season's heading, which opens the season's options: on Select too, as it has no other action.
+ * Plain text where no options panel is above, since the highlight would have nothing to offer.
+ */
+@Composable
+private fun SeasonHeader(title: String, episodes: List<Episode>) {
+    val openOptions = openOptionsOn(OptionsSubject.OfSeason(episodes, title))
+    if (openOptions == null) {
+        SectionHeader(title)
+        return
+    }
+    var focused by remember { mutableStateOf(false) }
+    Text(
+        title,
+        style = MaterialTheme.typography.titleMedium,
+        fontWeight = FontWeight.SemiBold,
+        color = MaterialTheme.colorScheme.onSurface,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 24.dp, vertical = 3.dp)
+            .onFocusChanged { focused = it.isFocused }
+            .clip(RoundedCornerShape(8.dp))
+            .rowHighlight(focused, MaterialTheme.colorScheme)
+            .optionsClickable(onClick = openOptions, onOptions = openOptions)
+            .padding(horizontal = 14.dp, vertical = 8.dp),
+    )
+}
+
 /**
  * One episode row: thumbnail with its watch badge, season/episode marker, title and a focus
  * highlight; plays on click.
@@ -764,20 +802,7 @@ internal fun EpisodeRow(ep: Episode, status: WatchStatus, seriesArtUrl: String?,
             .padding(horizontal = 24.dp, vertical = 3.dp)
             .onFocusChanged { focused = it.isFocused }
             .clip(RoundedCornerShape(8.dp))
-            .background(
-                if (focused) {
-                    MaterialTheme.colorScheme.primaryContainer
-                } else {
-                    MaterialTheme.colorScheme.surface
-                },
-            )
-            .then(
-                if (focused) {
-                    Modifier.border(2.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(8.dp))
-                } else {
-                    Modifier
-                },
-            )
+            .rowHighlight(focused, MaterialTheme.colorScheme)
             .optionsClickable(
                 onClick = { playEpisode(ep, onPlay) },
                 onOptions = openOptionsOn(OptionsSubject.OfEpisode(ep, ep.playerTitle)),

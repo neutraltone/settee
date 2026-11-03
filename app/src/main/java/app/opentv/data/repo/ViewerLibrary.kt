@@ -103,6 +103,9 @@ class ViewerLibrary(
     /** What the active Profile sets by hand: Watched and Unwatched marks, and Continue Watching removals. */
     val marks = HandMarks(positions, episodes, dismissals, activeProfileId, clock)
 
+    /** Hand marks over many episodes at once, for catching up on a series started elsewhere. */
+    val catchUp = CatchUpMarks(positions, episodes, activeProfileId, clock) { db.withTransaction(it) }
+
     /** Every Profile's progress, as it travels between devices. */
     val syncedProgress = SyncedProgress(positions, db.movies(), episodes, db.sources(), db.profiles(), ::mergeSynced)
 
@@ -369,17 +372,7 @@ class HandMarks internal constructor(
 
     private suspend fun mark(mediaKey: String, mark: HandMark) {
         val pid = activeProfileId.value
-        val existing = positions.get(pid, mediaKey)
-        positions.upsert(
-            PlaybackPosition(
-                profileId = pid,
-                mediaKey = mediaKey,
-                positionMillis = existing?.positionMillis ?: 0,
-                durationMillis = existing?.durationMillis ?: 0,
-                updatedAtMillis = clock(),
-                mark = mark,
-            ),
-        )
+        positions.upsert(markedPosition(pid, mediaKey, positions.get(pid, mediaKey), mark, clock()))
     }
 
     /**
@@ -391,6 +384,80 @@ class HandMarks internal constructor(
         if (existing != null && dismissal.dismissedAtMillis <= existing.dismissedAtMillis) return false
         dismissals.upsert(dismissal)
         return true
+    }
+}
+
+/**
+ * Marks by the batch, for catching up on a series started elsewhere: a run of episodes or a whole
+ * season, each reaching the database as one write. Reached as `viewerLibrary.catchUp`.
+ */
+class CatchUpMarks internal constructor(
+    private val positions: PlaybackPositionDao,
+    private val episodes: EpisodeDao,
+    private val activeProfileId: StateFlow<Long>,
+    private val clock: () -> Long,
+    private val inTransaction: suspend (suspend () -> Unit) -> Unit,
+) {
+    /** Marks [episode] and every earlier episode of its series Watched for the active Profile. */
+    suspend fun markWatchedUpTo(episode: Episode) = markWatched(upTo(episode))
+
+    /** Marks every one of [season]'s episodes Watched, so Up Next is the episode after its last. */
+    suspend fun markSeasonWatched(season: List<Episode>) = markWatched(season)
+
+    /**
+     * Marks [season]'s played episodes Unwatched, so Up Next is worked out from what remains. One
+     * never played here is Unwatched already, and a mark on it would beat another device's progress.
+     */
+    suspend fun markSeasonUnwatched(season: List<Episode>) = inTransaction {
+        val mine = episodePositions()
+        val played = season.filter { ep ->
+            mine[ep.mediaKey]?.let(::statusOf).let { it != null && it != WatchStatus.Unwatched }
+        }
+        write(played.sortedWith(EPISODE_ORDER), HandMark.UNWATCHED, mine)
+    }
+
+    /** Whether [markWatchedUpTo] would mark an episode before [episode], rather than only [episode] itself. */
+    suspend fun hasEarlierToMark(episode: Episode): Boolean {
+        val mine = episodePositions()
+        return upTo(episode).any { ep ->
+            ep.id != episode.id && mine[ep.mediaKey]?.let(::statusOf) != WatchStatus.Watched
+        }
+    }
+
+    private suspend fun upTo(episode: Episode): List<Episode> = episodes.forSeries(episode.sourceId, episode.seriesId)
+        .filter { EPISODE_ORDER.compare(it, episode) <= 0 }
+        // Specials sort first but aren't part of the story being caught up on.
+        .filter { it.season > 0 || episode.season == 0 }
+
+    private suspend fun markWatched(titles: List<Episode>) = inTransaction {
+        val mine = episodePositions()
+        val ordered = titles.sortedWith(EPISODE_ORDER)
+        // Already Watched ones are left as they are, so sync carries only what changed; the last
+        // is written regardless, as Up Next follows the newest stamp.
+        val changed = ordered.filter { ep ->
+            ep == ordered.last() || mine[ep.mediaKey]?.let(::statusOf) != WatchStatus.Watched
+        }
+        write(changed, HandMark.WATCHED, mine)
+    }
+
+    private suspend fun episodePositions(): Map<String, PlaybackPosition> =
+        positions.ofKind(activeProfileId.value, EPISODE_PREFIX).associateBy { it.mediaKey }
+
+    private suspend fun write(ordered: List<Episode>, mark: HandMark, mine: Map<String, PlaybackPosition>) {
+        // Up Next goes by the newest stamp, so a shared one would leave it to chance. Counted back
+        // from now, as one stamped ahead of the clock would also beat later changes in sync.
+        val newest = clock()
+        positions.upsertAll(
+            ordered.mapIndexed { index, ep ->
+                markedPosition(
+                    profileId = activeProfileId.value,
+                    mediaKey = ep.mediaKey,
+                    existing = mine[ep.mediaKey],
+                    mark = mark,
+                    atMillis = newest - (ordered.lastIndex - index),
+                )
+            },
+        )
     }
 }
 
@@ -496,7 +563,9 @@ val Movie.mediaKey: String get() = MediaKey.Movie(id).stored
 /** The key ViewerLibrary keeps a Profile's watch state for this episode under. */
 val Episode.mediaKey: String get() = MediaKey.Episode(id).stored
 
-private val EPISODE_ORDER = compareBy<Episode>({ it.season }, { it.episodeNumber })
+// The id settles episodes a provider numbers the same, which would otherwise fall in whatever order
+// the query returned them, so "the episode after this one" could change between reads.
+private val EPISODE_ORDER = compareBy<Episode>({ it.season }, { it.episodeNumber }, { it.id })
 
 // What each kind of stored key starts with, for matching in SQL and in bulk; MediaKey owns the form.
 private const val EPISODE_PREFIX = "${MediaKey.EPISODE}:"
@@ -506,6 +575,22 @@ private const val TAG = "ViewerLibrary"
 
 /** Past this, the credits are rolling: the title counts as Watched and is not resumed. */
 private const val WATCHED_FRACTION = 0.93
+
+/** [mediaKey]'s row once marked: a mark says nothing of how far it was played, so that is kept. */
+private fun markedPosition(
+    profileId: Long,
+    mediaKey: String,
+    existing: PlaybackPosition?,
+    mark: HandMark,
+    atMillis: Long,
+) = PlaybackPosition(
+    profileId = profileId,
+    mediaKey = mediaKey,
+    positionMillis = existing?.positionMillis ?: 0,
+    durationMillis = existing?.durationMillis ?: 0,
+    updatedAtMillis = atMillis,
+    mark = mark,
+)
 
 private fun statusOf(pos: PlaybackPosition): WatchStatus = when (pos.mark) {
     HandMark.WATCHED -> WatchStatus.Watched

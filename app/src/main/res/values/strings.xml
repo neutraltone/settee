@@ -501,6 +501,9 @@
     <string name="options_show_info">Show info</string>
     <string name="options_mark_watched">Mark watched</string>
     <string name="options_mark_unwatched">Mark unwatched</string>
+    <string name="options_mark_watched_up_to_here">Mark watched up to here</string>
+    <string name="options_mark_season_watched">Mark season watched</string>
+    <string name="options_mark_season_unwatched">Mark season unwatched</string>
     <string name="options_remove_continue_watching">Remove from Continue Watching</string>
     <string name="options_add_favourite">Add to Favourites</string>
     <string name="options_remove_favourite">Remove from Favourites</string>
