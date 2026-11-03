@@ -243,9 +243,35 @@ internal fun MainShell(
     modifier: Modifier = Modifier,
     content: @Composable (tab: Tab, takeFocus: Boolean, onNothingToShow: () -> Unit) -> Unit,
 ) {
+    RailPrototypeSwitcher(modifier) { variant ->
+        when (variant) {
+            RailVariant.A -> SnapOverlayShell(
+                tabs, current, onSelect, onOpenSearch, onOpenSettings, onOpenProfiles, activeProfileName, content,
+            )
+            RailVariant.B -> AlwaysOpenShell(
+                tabs, current, onSelect, onOpenSearch, onOpenSettings, onOpenProfiles, activeProfileName, content,
+            )
+            RailVariant.TODAY -> TodayShell(
+                tabs, current, onSelect, onOpenSearch, onOpenSettings, onOpenProfiles, activeProfileName, content,
+            )
+        }
+    }
+}
+
+@Composable
+private fun TodayShell(
+    tabs: List<Tab>,
+    current: Tab,
+    onSelect: (Tab) -> Unit,
+    onOpenSearch: () -> Unit,
+    onOpenSettings: () -> Unit,
+    onOpenProfiles: () -> Unit,
+    activeProfileName: String,
+    content: @Composable (tab: Tab, takeFocus: Boolean, onNothingToShow: () -> Unit) -> Unit,
+) {
     var railFocused by remember { mutableStateOf(false) }
     val currentItem = remember { FocusRequester() }
-    Row(modifier.fillMaxWidth()) {
+    Row(Modifier.fillMaxWidth()) {
         NavRail(
             tabs = tabs,
             current = current,

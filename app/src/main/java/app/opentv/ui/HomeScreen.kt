@@ -198,6 +198,7 @@ internal fun HomeContent(
                     stopPreview()
                     open()
                 }
+                Box(Modifier.railReturnTarget()) { // PROTOTYPE #90
                 when (shelf) {
                     is Shelf.Live -> LivePreviewTile(shelf.tile, rowFocus) {
                         shelf.tile.open(
@@ -232,6 +233,7 @@ internal fun HomeContent(
                         { channel -> confirmLive { pick(channel.pickKey) { onPlayChannel(channel) } } },
                         rowFocus,
                     )
+                }
                 }
             }
         }
