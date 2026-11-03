@@ -67,6 +67,7 @@ import app.opentv.data.model.Programme
 import app.opentv.data.model.shownName
 import app.opentv.data.repo.MediaKey
 import app.opentv.player.PlayerController
+import app.opentv.ui.railReturnTarget
 import app.opentv.ui.ChannelsViewModel
 import app.opentv.ui.options.LocalConfirmLive
 import app.opentv.ui.options.LocalRecordingStarted
@@ -415,7 +416,7 @@ fun LiveScreen(
                         returnToChannelId = returnToChannelId,
                         takeFocus = takeFocus,
                         onReturnToRow = onReturnToRow,
-                        modifier = Modifier.weight(1f).padding(start = 12.dp, end = 12.dp),
+                        modifier = Modifier.weight(1f).padding(start = 12.dp, end = 12.dp).railReturnTarget(), // PROTOTYPE #90
                     )
                 } else {
                     GuideGrid(
@@ -431,7 +432,7 @@ fun LiveScreen(
                         returnToChannelId = returnToChannelId,
                         takeFocus = takeFocus,
                         onReturnToRow = onReturnToRow,
-                        modifier = Modifier.weight(1f).padding(start = 12.dp, end = 12.dp),
+                        modifier = Modifier.weight(1f).padding(start = 12.dp, end = 12.dp).railReturnTarget(), // PROTOTYPE #90
                     )
                 }
             }

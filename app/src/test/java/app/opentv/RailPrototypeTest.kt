@@ -6,17 +6,27 @@
 package app.opentv
 
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Column
+import androidx.compose.material3.Text
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsNotFocused
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
@@ -30,6 +40,7 @@ import app.opentv.ui.RecentRows
 import app.opentv.ui.Tab
 import app.opentv.ui.visibleTabs
 import com.google.common.truth.Truth.assertThat
+import kotlinx.coroutines.delay
 import org.junit.After
 import org.junit.Rule
 import org.junit.Test
@@ -132,12 +143,56 @@ class RailPrototypeTest(private val variant: RailVariant) {
         compose.onNodeWithContentDescription("Recordings").assertIsFocused()
 
         press(Key.DirectionCenter)
+        compose.mainClock.advanceTimeBy(300)
+        compose.waitForIdle()
         assertThat(selected).isEqualTo(Tab.RECORDINGS)
         compose.onNodeWithContentDescription("Recordings").assertIsNotFocused()
         captureScreen("rail_${name}_after_pick")
 
         press(Key.DirectionCenter)
         assertThat(focusedCard).isEqualTo("Film 11")
+    }
+
+    @Test
+    fun `a tab that takes the highlight itself once loaded isn't beaten to it`() {
+        RailPrototype.variant = variant
+        var current by mutableStateOf(Tab.SHOWS)
+        compose.setTvContent {
+            MainShell(
+                tabs = visibleTabs(liveEnabled = true, moviesEnabled = true, seriesEnabled = true),
+                current = current,
+                onSelect = { current = it },
+                onOpenSearch = {},
+                onOpenSettings = {},
+                onOpenProfiles = {},
+                activeProfileName = "Sam",
+                modifier = Modifier.fillMaxSize(),
+            ) { tab, takeFocus, _ ->
+                key(tab) {
+                    val channel = remember { FocusRequester() }
+                    val takeIt by rememberUpdatedState(takeFocus)
+                    // Like the guide: it decides whether to take the highlight when its rows arrive.
+                    LaunchedEffect(Unit) {
+                        delay(500)
+                        if (tab == Tab.LIVE && takeIt) channel.requestFocus()
+                    }
+                    Column {
+                        Text("Watch", Modifier.testTag("watch").clickable {})
+                        Text("Channel", Modifier.testTag("channel").focusRequester(channel).clickable {})
+                    }
+                }
+            }
+        }
+        press(Key.DirectionRight)
+        press(Key.DirectionLeft)
+        press(Key.DirectionUp, times = 2)
+        compose.onNodeWithContentDescription("Live TV").assertIsFocused()
+
+        press(Key.DirectionCenter)
+        compose.mainClock.advanceTimeBy(1000)
+        compose.waitForIdle()
+
+        compose.onNodeWithTag("channel").assertIsFocused()
     }
 
     @Test

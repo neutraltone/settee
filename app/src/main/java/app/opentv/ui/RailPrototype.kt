@@ -155,7 +155,10 @@ internal fun SnapOverlayShell(
             content(current, !railFocused || entry.entering) { runCatching { currentItem.requestFocus() } }
         }
         PrototypeRail(
-            tabs, current, { tab -> entry.entering = true; onSelect(tab) }, onOpenSearch, onOpenSettings, onOpenProfiles, activeProfileName,
+            tabs, current, { tab ->
+                entry.pick(tab, current)
+                onSelect(tab)
+            }, onOpenSearch, onOpenSettings, onOpenProfiles, activeProfileName,
             expanded = railFocused,
             currentItem = currentItem,
             railReturn = railReturn,
@@ -189,7 +192,10 @@ internal fun AlwaysOpenShell(
     EnterContentAfterPick(entry, railFocused, railReturn, contentFocus)
     Row(Modifier.fillMaxSize()) {
         PrototypeRail(
-            tabs, current, { tab -> entry.entering = true; onSelect(tab) }, onOpenSearch, onOpenSettings, onOpenProfiles, activeProfileName,
+            tabs, current, { tab ->
+                entry.pick(tab, current)
+                onSelect(tab)
+            }, onOpenSearch, onOpenSettings, onOpenProfiles, activeProfileName,
             expanded = true,
             currentItem = currentItem,
             railReturn = railReturn,
@@ -205,12 +211,22 @@ internal fun AlwaysOpenShell(
 /** OK on a tab sends the highlight into that tab, until it gets there or she moves on in the rail. */
 internal class RailEntry {
     var entering by mutableStateOf(false)
+
+    /** Home and the guide take the highlight once they've loaded, so they get first go at it. */
+    var tabTakesItself = false
+
+    fun pick(tab: Tab, current: Tab) {
+        tabTakesItself = tab != current && (tab == Tab.HOME || tab == Tab.LIVE)
+        entering = true
+    }
 }
 
 /**
  * Home and the guide take the highlight themselves, on the card or channel they'd open on. This
  * catches the tabs that don't and OK on the tab already open. It retries because a tab can still be
- * loading, and gives up after two seconds, leaving the highlight in the rail.
+ * loading, and gives up after two seconds, leaving the highlight in the rail. It must not act early on
+ * a tab that takes the highlight itself: that once landed on the guide's Watch tile and ended
+ * [RailEntry.entering] before the channels had loaded, so the guide never took the highlight.
  */
 @Composable
 private fun EnterContentAfterPick(
@@ -222,12 +238,13 @@ private fun EnterContentAfterPick(
     val stillInRail by rememberUpdatedState(railFocused)
     LaunchedEffect(entry.entering, railReturn) {
         if (!entry.entering) return@LaunchedEffect
-        repeat(ENTRY_TRIES) {
+        repeat(ENTRY_TRIES) { attempt ->
             delay(ENTRY_RETRY_MILLIS)
             if (!stillInRail) {
                 entry.entering = false
                 return@LaunchedEffect
             }
+            if (entry.tabTakesItself && attempt < ENTRY_TRIES - 1) return@repeat
             val moved = runCatching { railReturn.target?.requestFocus() }.getOrDefault(false) == true ||
                 runCatching { contentFocus.requestFocus() }.getOrDefault(false)
             if (moved) {
