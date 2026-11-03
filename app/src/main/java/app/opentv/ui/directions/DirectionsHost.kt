@@ -12,14 +12,21 @@ enum class Direction(val key: String, val label: String) {
     HEARTH("b_hearth", "B: Hearth"),
     LISTINGS("c_listings", "C: Listings"),
     PICTURE_HOUSE("d_picture_house", "D: Picture House"),
+    COMBINED("e_combined", "E: Combined"),
 }
 
 @Composable
 fun DirectionScreen(direction: Direction, screen: Screen) {
+    val base = when (screen) {
+        Screen.GUIDE_CATEGORIES -> Screen.GUIDE
+        Screen.SHOWS_CATEGORIES, Screen.MOVIES, Screen.MOVIES_CATEGORIES -> Screen.SHOWS
+        else -> screen
+    }
     when (direction) {
-        Direction.LAMPLIGHT -> LamplightScreen(screen)
-        Direction.HEARTH -> HearthScreen(screen)
-        Direction.LISTINGS -> ListingsScreen(screen)
-        Direction.PICTURE_HOUSE -> PictureHouseScreen(screen)
+        Direction.LAMPLIGHT -> LamplightScreen(base)
+        Direction.HEARTH -> HearthScreen(base)
+        Direction.LISTINGS -> ListingsScreen(base)
+        Direction.PICTURE_HOUSE -> PictureHouseScreen(base)
+        Direction.COMBINED -> CombinedScreen(screen)
     }
 }

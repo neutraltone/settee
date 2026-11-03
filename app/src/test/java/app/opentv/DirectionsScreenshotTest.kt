@@ -36,6 +36,9 @@ class DirectionsScreenshotTest(private val direction: Direction, private val scr
         @JvmStatic
         @ParameterizedRobolectricTestRunner.Parameters(name = "{0}_{1}")
         fun cases(): List<Array<Any>> =
-            Direction.entries.flatMap { direction -> Screen.entries.map { arrayOf<Any>(direction, it) } }
+            Direction.entries.flatMap { direction ->
+                val screens = if (direction == Direction.COMBINED) Screen.entries else Screen.entries.take(5)
+                screens.map { arrayOf<Any>(direction, it) }
+            }
     }
 }

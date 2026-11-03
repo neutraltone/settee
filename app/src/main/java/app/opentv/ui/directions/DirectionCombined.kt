@@ -1,0 +1,657 @@
+/*
+ * This file is part of OpenTV.
+ * Copyright (C) 2026 The OpenTV Contributors
+ * Licensed under the GNU General Public License v3.0 or later.
+ */
+package app.opentv.ui.directions
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ChevronLeft
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.Icon
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+
+/*
+ * E: the owner's combination from the first round. Picture House's colours, Hearth's type and larger
+ * first card, Lamplight's thumbnails, Listings' Live Preview and ruled guide, Picture House's Shows
+ * and details layouts, and square corners rather than rounded rectangles everywhere.
+ *
+ * Providers carry around 100k titles, so Live TV, Movies and Shows get a categories sidebar. It
+ * stays tucked away until Left from the leftmost item opens it, so no press is added on the way to a
+ * card, and it pushes the content in one step with no animated layout. Back to the first item is one
+ * Right. Reaching the rail from content costs one extra Left.
+ */
+private val Bg = Color(0xFF1A1416)
+private val Panel = Color(0xFF281F22)
+private val Raised = Color(0xFF362A2E)
+private val Rule = Color(0xFF45373B)
+private val Ink = Color(0xFFF8EFEA)
+private val Soft = Color(0xFFBDABA8)
+private val Coral = Color(0xFFFF8F6B)
+private val OnCoral = Color(0xFF2A130B)
+private val Title = YoungSerif
+private val Body = Alegreya
+private val Corner = RoundedCornerShape(2.dp)
+
+private data class Category(val name: String, val count: String)
+
+private val liveCategories = listOf(
+    Category("Favourites", "24"),
+    Category("All channels", "48,212"),
+    Category("UK Entertainment", "1,204"),
+    Category("UK News", "86"),
+    Category("UK Sport", "412"),
+    Category("UK Kids", "96"),
+    Category("US Entertainment", "3,118"),
+    Category("US News", "240"),
+    Category("US Sport", "1,905"),
+    Category("Films 24/7", "2,310"),
+    Category("Music", "188"),
+)
+private val showCategories = listOf(
+    Category("For you", ""),
+    Category("All shows", "38,940"),
+    Category("Drama", "8,431"),
+    Category("Comedy", "6,120"),
+    Category("Crime", "3,904"),
+    Category("Documentary", "5,212"),
+    Category("Kids", "4,377"),
+    Category("Reality", "2,908"),
+    Category("Sci-Fi & Fantasy", "1,766"),
+    Category("UK", "7,045"),
+    Category("US", "12,880"),
+)
+private val movieCategories = listOf(
+    Category("For you", ""),
+    Category("All films", "61,302"),
+    Category("Action", "9,118"),
+    Category("Comedy", "8,206"),
+    Category("Drama", "12,744"),
+    Category("Family", "3,590"),
+    Category("Horror", "4,871"),
+    Category("Romance", "3,322"),
+    Category("Thriller", "6,015"),
+    Category("4K", "2,467"),
+    Category("Classics", "1,903"),
+)
+
+@Composable
+private fun Rail(current: Int) = PlainRail(current, Panel, Soft, Coral, Coral, Coral, OnCoral)
+
+@Composable
+fun CombinedScreen(screen: Screen) {
+    when (screen) {
+        Screen.HOME_PREVIEW -> Home(preview = true)
+        Screen.HOME -> Home(preview = false)
+        Screen.GUIDE -> Guide(open = false)
+        Screen.GUIDE_CATEGORIES -> Guide(open = true)
+        Screen.SHOWS -> Browse(movies = false, open = false)
+        Screen.SHOWS_CATEGORIES -> Browse(movies = false, open = true)
+        Screen.MOVIES -> Browse(movies = true, open = false)
+        Screen.MOVIES_CATEGORIES -> Browse(movies = true, open = true)
+        Screen.DETAILS -> Details()
+    }
+}
+
+/** Left from the leftmost item opens the sidebar, as the guide's channel column already does on main. */
+private fun Modifier.leftOpens(open: () -> Unit): Modifier = onPreviewKeyEvent { event ->
+    val left = event.key == Key.DirectionLeft
+    if (left && event.type == KeyEventType.KeyDown) open()
+    left
+}
+
+@Composable
+private fun Sidebar(
+    categories: List<Category>,
+    selected: Int,
+    unit: String,
+    onSelect: (Int) -> Unit,
+    onLeave: () -> Unit,
+) {
+    var entered by remember { mutableStateOf(false) }
+    Column(
+        Modifier
+            .width(214.dp)
+            .fillMaxHeight()
+            .background(Panel)
+            .onFocusChanged {
+                if (it.hasFocus) entered = true
+                if (entered && !it.hasFocus) onLeave()
+            }
+            .verticalScroll(rememberScrollState())
+            .padding(start = 8.dp, end = 8.dp, top = 27.dp, bottom = 27.dp),
+    ) {
+        Tile(Modifier.fillMaxWidth()) { focused ->
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .height(36.dp)
+                    .clip(Corner)
+                    .background(if (focused) Coral else Panel)
+                    .padding(horizontal = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(
+                    Icons.Filled.Search,
+                    contentDescription = null,
+                    tint = if (focused) OnCoral else Soft,
+                    modifier = Modifier.size(18.dp),
+                )
+                Spacer(Modifier.width(6.dp))
+                OneLine("Find a category", if (focused) OnCoral else Soft, 15, Body)
+            }
+        }
+        Box(Modifier.fillMaxWidth().height(1.dp).background(Rule))
+        categories.forEachIndexed { index, category ->
+            Tile(
+                Modifier.fillMaxWidth(),
+                initial = index == selected,
+                onClick = { onSelect(index) },
+            ) { focused ->
+                val current = index == selected
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .height(38.dp)
+                        .clip(Corner)
+                        .background(if (focused) Coral else Panel)
+                        .padding(horizontal = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    OneLine(
+                        category.name,
+                        when {
+                            focused -> OnCoral
+                            current -> Coral
+                            else -> Ink
+                        },
+                        16,
+                        Body,
+                        Modifier.weight(1f),
+                        if (current || focused) FontWeight.Bold else FontWeight.Normal,
+                    )
+                    OneLine(category.count, if (focused) OnCoral else Soft, 14, Body)
+                }
+            }
+        }
+        Spacer(Modifier.height(6.dp))
+        OneLine("11 of 214 $unit", Soft, 14, Body, Modifier.padding(horizontal = 8.dp))
+    }
+}
+
+/** Where you are, and the only sign of the sidebar while it's tucked away. */
+@Composable
+private fun CategoryHeader(name: String, count: String, unit: String, open: Boolean) {
+    Row(verticalAlignment = Alignment.Bottom) {
+        OneLine(name, Ink, 28, Title)
+        Spacer(Modifier.width(12.dp))
+        OneLine(
+            if (count.isEmpty()) "" else "$count $unit",
+            Soft,
+            15,
+            Body,
+            Modifier.padding(bottom = 3.dp).weight(1f),
+        )
+        if (!open) {
+            Icon(
+                Icons.Filled.ChevronLeft,
+                contentDescription = null,
+                tint = Coral,
+                modifier = Modifier.padding(bottom = 3.dp).size(18.dp),
+            )
+            OneLine("Categories", Coral, 15, Body, Modifier.padding(bottom = 3.dp), FontWeight.Medium)
+        }
+    }
+}
+
+@Composable
+private fun Heading(text: String) {
+    Column(Modifier.fillMaxWidth().padding(end = 48.dp)) {
+        OneLine(text, Ink, 18, Title)
+        Spacer(Modifier.height(3.dp))
+        Box(Modifier.fillMaxWidth().height(1.dp).background(Rule))
+        Spacer(Modifier.height(6.dp))
+    }
+}
+
+private fun statusText(item: Item): String = when (val watch = item.watch) {
+    Watch.Unwatched -> item.sub
+    Watch.Watched -> "✓ Watched"
+    is Watch.EpisodesLeft -> watch.label()
+    else -> "${item.sub}  ·  ${watch.label()}"
+}
+
+@Composable
+private fun NoArt(title: String) {
+    Box(
+        Modifier
+            .fillMaxSize()
+            .background(Raised)
+            .padding(8.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(title, color = Ink, fontFamily = Title, fontSize = 15.sp, lineHeight = 19.sp, maxLines = 3)
+    }
+}
+
+/** Lamplight's thumbnail in coral: art with its text underneath, and the whole card fills on focus. */
+@Composable
+private fun Thumbnail(item: Item, focused: Boolean, ratio: Float, poster: Boolean = false) {
+    Column(
+        Modifier
+            .clip(Corner)
+            .background(if (focused) Coral else Bg),
+    ) {
+        Box(Modifier.fillMaxWidth().aspectRatio(ratio).padding(if (focused) 3.dp else 0.dp)) {
+            if (item.seed != null) {
+                Art(item.seed, Modifier.fillMaxSize().clip(Corner), if (poster) item.title else null)
+            } else {
+                NoArt(item.title)
+            }
+            val watch = item.watch
+            if (watch is Watch.InProgress) {
+                ProgressLine(watch.fraction, Raised, Coral, Modifier.align(Alignment.BottomCenter), 4.dp)
+            }
+        }
+        Column(Modifier.padding(horizontal = 5.dp, vertical = 3.dp)) {
+            OneLine(item.title, if (focused) OnCoral else Ink, 16, Body, weight = FontWeight.Bold)
+            OneLine(statusText(item), if (focused) OnCoral else Soft, 15, Body)
+        }
+    }
+}
+
+@Composable
+private fun Home(preview: Boolean) = WithRail(Bg, { Rail(0) }) {
+    Column(
+        Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(top = 27.dp, bottom = 27.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp),
+    ) {
+        if (preview) LivePreview()
+        Column {
+            Heading("Continue Watching")
+            Row(
+                Modifier.horizontalScroll(rememberScrollState()).padding(end = 48.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.Bottom,
+            ) {
+                ProtoData.continueWatching.forEachIndexed { index, item ->
+                    Tile(
+                        Modifier.width(if (index == 0 && !preview) 300.dp else 186.dp),
+                        initial = index == 0 && !preview,
+                    ) { focused -> Thumbnail(item, focused, 16f / 9f) }
+                }
+            }
+        }
+        HomeRow("Favourites", ProtoData.favourites)
+        HomeRow("New", ProtoData.newTitles)
+    }
+}
+
+@Composable
+private fun HomeRow(title: String, items: List<Item>) {
+    Column {
+        Heading(title)
+        Row(
+            Modifier.horizontalScroll(rememberScrollState()).padding(end = 48.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            items.forEach { item ->
+                Tile(Modifier.width(186.dp)) { focused -> Thumbnail(item, focused, 16f / 9f) }
+            }
+        }
+    }
+}
+
+/** Listings' Live Preview: only after live playback, so Home without it opens on Continue Watching. */
+@Composable
+private fun LivePreview() {
+    val channel = ProtoData.channels.first()
+    Column(Modifier.padding(end = 48.dp)) {
+        Row(Modifier.fillMaxWidth().height(138.dp)) {
+            Art(ProtoData.LIVE_SEED, Modifier.fillMaxHeight().aspectRatio(16f / 9f).clip(Corner))
+            Spacer(Modifier.width(18.dp))
+            Column(Modifier.weight(1f)) {
+                OneLine(ProtoData.liveProgramme, Ink, 28, Title)
+                OneLine("${channel.name}  ·  ${ProtoData.liveTimes}", Coral, 15, Body, weight = FontWeight.Medium)
+                Spacer(Modifier.height(6.dp))
+                ProgressLine(ProtoData.LIVE_PROGRESS, Rule, Coral)
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    ProtoData.liveBlurb,
+                    color = Soft,
+                    fontFamily = Body,
+                    fontSize = 16.sp,
+                    lineHeight = 21.sp,
+                    maxLines = 3,
+                )
+            }
+        }
+        Spacer(Modifier.height(6.dp))
+        Tile(Modifier.fillMaxWidth(), initial = true) { focused ->
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .height(44.dp)
+                    .clip(Corner)
+                    .background(if (focused) Coral else Panel)
+                    .padding(horizontal = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                LogoTile(channel, 32.dp, fontFamily = Title)
+                Spacer(Modifier.width(10.dp))
+                OneLine("Back to ${channel.name}", if (focused) OnCoral else Ink, 18, Title)
+                Spacer(Modifier.weight(1f))
+                OneLine(ProtoData.liveTimes, if (focused) OnCoral else Soft, 15, Body)
+            }
+        }
+    }
+}
+
+private const val GUIDE_MINUTES = 90f
+private const val LIVE_SELECTED = 1
+
+@Composable
+private fun Guide(open: Boolean) = WithRail(Bg, { Rail(1) }) {
+    var isOpen by remember { mutableStateOf(open) }
+    var selected by remember { mutableStateOf(LIVE_SELECTED) }
+    Row(Modifier.fillMaxSize()) {
+        if (isOpen) {
+            Sidebar(liveCategories, selected, "categories", { selected = it }, { isOpen = false })
+            Spacer(Modifier.width(14.dp))
+        }
+        Column(Modifier.weight(1f).fillMaxHeight().padding(top = 27.dp, end = 48.dp, bottom = 27.dp)) {
+            CategoryHeader(liveCategories[selected].name, liveCategories[selected].count, "channels", isOpen)
+            Spacer(Modifier.height(10.dp))
+            val channelWidth = if (isOpen) 150.dp else 190.dp
+            Row(Modifier.fillMaxWidth().padding(bottom = 4.dp)) {
+                OneLine("Now ${ProtoData.nowLabel}", Coral, 15, Body, Modifier.width(channelWidth), FontWeight.Bold)
+                Row(Modifier.weight(1f)) {
+                    ProtoData.times.forEach { OneLine(it, Soft, 15, Body, Modifier.weight(1f), FontWeight.Medium) }
+                }
+            }
+            Box(Modifier.fillMaxWidth().height(2.dp).background(Ink))
+            ProtoData.channels.forEachIndexed { row, channel ->
+                Row(Modifier.fillMaxWidth().height(50.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Row(Modifier.width(channelWidth), verticalAlignment = Alignment.CenterVertically) {
+                        LogoTile(channel, 28.dp, fontFamily = Title)
+                        Spacer(Modifier.width(8.dp))
+                        OneLine(channel.name, Ink, 16, Body, Modifier.weight(1f), FontWeight.Bold)
+                    }
+                    Row(Modifier.weight(1f).fillMaxHeight()) {
+                        channel.programmes.forEachIndexed { index, programme ->
+                            GuideCell(programme, index, row == 0 && !open, Modifier.weight(programme.minutes / GUIDE_MINUTES)) {
+                                isOpen = true
+                            }
+                            if (index != channel.programmes.lastIndex) {
+                                Box(Modifier.width(1.dp).fillMaxHeight().padding(vertical = 10.dp).background(Rule))
+                            }
+                        }
+                    }
+                }
+                Box(Modifier.fillMaxWidth().height(1.dp).background(Rule))
+            }
+        }
+    }
+}
+
+@Composable
+private fun GuideCell(programme: Programme, index: Int, firstRow: Boolean, modifier: Modifier, openSidebar: () -> Unit) {
+    Tile(
+        modifier
+            .fillMaxHeight()
+            .then(if (index == 0) Modifier.leftOpens(openSidebar) else Modifier),
+        initial = firstRow && index == 0,
+    ) { focused ->
+        Box(
+            Modifier
+                .fillMaxSize()
+                .padding(vertical = 3.dp)
+                .clip(Corner)
+                .background(if (focused) Coral else Bg)
+                .padding(horizontal = 8.dp),
+            contentAlignment = Alignment.CenterStart,
+        ) {
+            OneLine(
+                programme.title,
+                when {
+                    focused -> OnCoral
+                    index == 0 -> Ink
+                    else -> Soft
+                },
+                16,
+                Body,
+                weight = if (focused || index == 0) FontWeight.Bold else FontWeight.Normal,
+            )
+        }
+    }
+}
+
+/**
+ * Movies and Shows share this. "For you" keeps the tab's rows (#87); any other category is that
+ * category's whole grid, which is what 100k titles needs and what chips open on main today.
+ */
+@Composable
+private fun Browse(movies: Boolean, open: Boolean) {
+    val nav = LocalProtoNav.current
+    val categories = if (movies) movieCategories else showCategories
+    val unit = if (movies) "films" else "shows"
+    val toFilm = { item: Item -> item.copy(sub = "Film") }
+    val first = if (movies) ProtoData.newTitles.map(toFilm) else ProtoData.drama
+    val second = if (movies) ProtoData.drama.map(toFilm) else ProtoData.comedy
+    var isOpen by remember { mutableStateOf(open) }
+    var selected by remember { mutableStateOf(if (open) 2 else 0) }
+    var lead by remember { mutableStateOf(first.first()) }
+    Box(Modifier.fillMaxSize().background(Bg)) {
+        // Full-bleed, swapped on each press, so provisional until #84 reports. Two gradients here
+        // would need merging into the one scrim #86 allows.
+        lead.seed?.let { Art(it, Modifier.fillMaxWidth().height(290.dp)) }
+        Box(
+            Modifier.fillMaxWidth().height(292.dp).background(
+                Brush.verticalGradient(0.3f to Bg.copy(alpha = 0f), 1f to Bg),
+            ),
+        )
+        Box(
+            Modifier.fillMaxWidth().height(292.dp).background(
+                Brush.horizontalGradient(0.1f to Bg, 0.7f to Bg.copy(alpha = 0f)),
+            ),
+        )
+        WithRail(Color.Transparent, { Rail(if (movies) 2 else 3) }) {
+            Row(Modifier.fillMaxSize()) {
+                if (isOpen) {
+                    Sidebar(categories, selected, "categories", { selected = it }, { isOpen = false })
+                    Spacer(Modifier.width(14.dp))
+                }
+                Column(Modifier.weight(1f).fillMaxHeight().padding(top = 27.dp)) {
+                    Box(Modifier.padding(end = 48.dp)) {
+                        CategoryHeader(categories[selected].name, categories[selected].count, unit, isOpen)
+                    }
+                    Spacer(Modifier.height(8.dp))
+                    OneLine(lead.title, Ink, 32, Title, Modifier.padding(end = 48.dp))
+                    OneLine(
+                        if (lead.watch == Watch.Unwatched) lead.sub else "${lead.sub}  ·  ${statusText(lead)}",
+                        Coral,
+                        15,
+                        Body,
+                        weight = FontWeight.Medium,
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        ProtoData.detailBlurb,
+                        color = Ink,
+                        fontFamily = Body,
+                        fontSize = 16.sp,
+                        lineHeight = 20.sp,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.width(470.dp),
+                    )
+                    Spacer(Modifier.height(10.dp))
+                    Column(
+                        Modifier
+                            .weight(1f)
+                            .fillMaxWidth()
+                            .verticalScroll(rememberScrollState())
+                            .padding(bottom = 27.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
+                        if (selected == 0) {
+                            PosterRow("Recently added", first, !open, { lead = it }, { isOpen = true }) { nav(Screen.DETAILS) }
+                            PosterRow(if (movies) "Top rated" else "New episodes", second, false, { lead = it }, { isOpen = true }) {
+                                nav(Screen.DETAILS)
+                            }
+                        } else {
+                            val perRow = if (isOpen) 4 else 5
+                            (first + second).chunked(perRow).forEachIndexed { row, items ->
+                                Row(Modifier.padding(end = 48.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                                    items.forEachIndexed { index, item ->
+                                        PosterTile(
+                                            item,
+                                            row == 0 && index == 0 && !open,
+                                            index == 0,
+                                            { lead = item },
+                                            { isOpen = true },
+                                        ) { nav(Screen.DETAILS) }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun PosterRow(
+    title: String,
+    items: List<Item>,
+    initial: Boolean,
+    onLead: (Item) -> Unit,
+    openSidebar: () -> Unit,
+    onClick: () -> Unit,
+) {
+    Column {
+        Heading(title)
+        Row(
+            Modifier.horizontalScroll(rememberScrollState()).padding(end = 48.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            items.forEachIndexed { index, item ->
+                PosterTile(item, initial && index == 0, index == 0, { onLead(item) }, openSidebar, onClick)
+            }
+        }
+    }
+}
+
+@Composable
+private fun PosterTile(
+    item: Item,
+    initial: Boolean,
+    leftmost: Boolean,
+    onFocused: () -> Unit,
+    openSidebar: () -> Unit,
+    onClick: () -> Unit,
+) {
+    Tile(
+        Modifier
+            .width(118.dp)
+            .then(if (leftmost) Modifier.leftOpens(openSidebar) else Modifier),
+        initial = initial,
+        onFocused = onFocused,
+        onClick = onClick,
+    ) { focused -> Thumbnail(item, focused, 2f / 3f, poster = true) }
+}
+
+@Composable
+private fun Details() {
+    Box(Modifier.fillMaxSize().background(Bg)) {
+        Art(11, Modifier.fillMaxSize())
+        Box(
+            Modifier.fillMaxSize().background(
+                Brush.verticalGradient(0.2f to Bg.copy(alpha = 0f), 0.62f to Bg),
+            ),
+        )
+        Column(Modifier.fillMaxSize().padding(start = 48.dp, end = 48.dp, top = 84.dp, bottom = 27.dp)) {
+            OneLine(ProtoData.detailTitle, Ink, 54, Title)
+            OneLine(ProtoData.detailMeta, Coral, 16, Body, weight = FontWeight.Medium)
+            Spacer(Modifier.height(6.dp))
+            Text(
+                ProtoData.detailBlurb,
+                color = Ink,
+                fontFamily = Body,
+                fontSize = 18.sp,
+                lineHeight = 23.sp,
+                maxLines = 3,
+                modifier = Modifier.width(620.dp),
+            )
+            Spacer(Modifier.height(12.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Action("▶  Resume S2 E5", true)
+                Action("Episodes", false)
+                Action("☆  Favourite", false)
+            }
+            Spacer(Modifier.weight(1f))
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                ProtoData.episodes.forEach { episode ->
+                    Tile(Modifier.width(158.dp)) { focused -> Thumbnail(episode, focused, 16f / 9f) }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun Action(text: String, primary: Boolean) {
+    Tile(initial = primary) { focused ->
+        Box(
+            Modifier
+                .clip(Corner)
+                .background(if (focused) Coral else Raised)
+                .padding(horizontal = 16.dp, vertical = 9.dp),
+        ) {
+            OneLine(text, if (focused) OnCoral else Ink, 17, Body, weight = FontWeight.Bold)
+        }
+    }
+}

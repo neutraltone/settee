@@ -55,15 +55,44 @@ tbody th { color: var(--soft); font-weight: 400; white-space: nowrap; }
 <div class="wrap">
   <header style="display:grid;gap:8px">
     <h1>Which visual direction is Settee?</h1>
-    <p class="soft">Four directions for #89, rendered at 1080p from Compose. React to any part: "the highlight from A with the type from C" is a useful answer. The catalogue and artwork are invented, so judge colour, type, highlight and layout, not the paintings. Warm near-blacks still need judging on a real TV.</p>
+    <p class="soft">Round two for #89: E combines your reactions to the first four directions, which are still here to compare, all rendered at 1080p from Compose. The catalogue, category counts and artwork are invented, so judge colour, type, highlight and layout, not the paintings. Warm near-blacks still need judging on a real TV.</p>
   </header>
 
   <nav id="nav" aria-label="Choose what to compare"></nav>
 
   <section id="view" style="display:grid;gap:16px"></section>
 
+  <section class="notes">
+    <div>
+      <h3>E's categories sidebar</h3>
+      <ul>
+        <li>On Live TV, Movies and Shows. It stays tucked away until Left from the leftmost item opens it, on the current category.</li>
+        <li>It pushes the content in one step, with no animation, and Right closes it.</li>
+        <li>"For you" keeps the tab's rows. Any other category opens its whole grid.</li>
+        <li>"Find a category" is only a placeholder, for providers with hundreds of categories.</li>
+      </ul>
+    </div>
+    <div>
+      <h3>E's costs</h3>
+      <ul>
+        <li>No press added on the way to a card, but the rail is now two Lefts from the leftmost item, not one.</li>
+        <li>The Live Preview takes about 190dp of Home, so less of Favourites shows without scrolling.</li>
+        <li>The backdrop on Shows and Movies changes on every press and stacks two gradients. It's the costliest part, and provisional until #84.</li>
+        <li>The large header leaves room for about one and a half rows of posters.</li>
+      </ul>
+    </div>
+    <div>
+      <h3>E: still to settle</h3>
+      <ul>
+        <li>Right from the sidebar lands on the nearest row, not the one you left. The real build would need to remember it.</li>
+        <li>The grids here are short samples. A real 8,000-title grid needs a lazy list, which hasn't been measured.</li>
+        <li>Coral fills are large and bright. Judge them on a TV in a dark room.</li>
+      </ul>
+    </div>
+  </section>
+
   <section style="display:grid;gap:12px">
-    <h2>How they differ</h2>
+    <h2>How A to D differ</h2>
     <div class="table"><table>
       <thead><tr><th></th><th>A: Lamplight</th><th>B: Hearth</th><th>C: Listings</th><th>D: Picture House</th></tr></thead>
       <tbody>
@@ -115,6 +144,13 @@ const directions = [
   ["b_hearth", "B: Hearth", "Warmest. Amber and brown, a serif with character, the largest artwork, and an amber glow."],
   ["c_listings", "C: Listings", "Type-led, like a printed listings page. Oxblood-black, a slab serif, and a cream marker."],
   ["d_picture_house", "D: Picture House", "Artwork first. Plum-charcoal, a round sans, text on the art, and a coral ring."],
+  ["e_combined", "E: Combined", "Your combination: Picture House's colours and Shows and details layouts, Hearth's type and larger first card, Lamplight's thumbnails, and Listings' Live Preview and guide, with square corners and a categories sidebar."],
+];
+const combinedOnly = [
+  ["guide_categories", "Live guide with categories open"],
+  ["shows_categories", "Shows with categories open, on a category's grid"],
+  ["movies", "Movies"],
+  ["movies_categories", "Movies with categories open, on a category's grid"],
 ];
 const screens = [
   ["home_preview", "Home with the Live Preview"],
@@ -125,7 +161,7 @@ const screens = [
 ];
 const nav = document.getElementById("nav");
 const view = document.getElementById("view");
-let current = "a_lamplight";
+let current = "e_combined";
 
 function figure(src, caption) {
   const f = document.createElement("figure");
@@ -153,7 +189,10 @@ function render() {
   heading.append(h, p);
   const grid = document.createElement("div");
   grid.className = "grid";
-  if (direction) screens.forEach(s => grid.append(figure(`${current}_${s[0]}`, s[1])));
+  if (direction) {
+    screens.forEach(s => grid.append(figure(`${current}_${s[0]}`, s[1])));
+    if (current === "e_combined") combinedOnly.forEach(s => grid.append(figure(`${current}_${s[0]}`, s[1])));
+  }
   else directions.forEach(d => grid.append(figure(`${d[0]}_${current}`, d[1])));
   view.append(heading, grid);
   nav.querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.key === current)));

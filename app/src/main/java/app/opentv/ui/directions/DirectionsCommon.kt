@@ -72,7 +72,19 @@ import kotlin.random.Random
  * no blur, no alpha-dimmed shelves, no animated layout, shadow on the focused item only.
  */
 
-enum class Screen { HOME_PREVIEW, HOME, GUIDE, SHOWS, DETAILS }
+enum class Screen {
+    HOME_PREVIEW,
+    HOME,
+    GUIDE,
+    SHOWS,
+    DETAILS,
+
+    // Only E draws these; A to D fall back to the nearest screen they have.
+    GUIDE_CATEGORIES,
+    SHOWS_CATEGORIES,
+    MOVIES,
+    MOVIES_CATEGORIES,
+}
 
 /** What a highlight's OK does on the emulator build. Screenshots never press it. */
 val LocalProtoNav = compositionLocalOf<(Screen) -> Unit> { {} }
@@ -351,7 +363,7 @@ fun PlainRail(
     val entries = listOf(
         RailEntry(Icons.Filled.Home, Screen.HOME),
         RailEntry(Icons.Filled.LiveTv, Screen.GUIDE),
-        RailEntry(Icons.Filled.Movie, Screen.SHOWS),
+        RailEntry(Icons.Filled.Movie, Screen.MOVIES),
         RailEntry(Icons.Filled.Tv, Screen.SHOWS),
         RailEntry(Icons.Filled.FiberManualRecord, null),
     )

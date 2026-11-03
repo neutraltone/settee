@@ -43,7 +43,7 @@ class DirectionsActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            var direction by remember { mutableStateOf(Direction.LAMPLIGHT) }
+            var direction by remember { mutableStateOf(Direction.COMBINED) }
             var screen by remember { mutableStateOf(Screen.HOME) }
             val directions = Direction.entries
             BackHandler(screen == Screen.DETAILS) { screen = Screen.SHOWS }

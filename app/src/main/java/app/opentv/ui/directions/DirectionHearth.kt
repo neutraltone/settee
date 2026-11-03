@@ -65,6 +65,7 @@ fun HearthScreen(screen: Screen) {
         Screen.GUIDE -> Guide()
         Screen.SHOWS -> Shows()
         Screen.DETAILS -> Details()
+        else -> Unit
     }
 }
 
