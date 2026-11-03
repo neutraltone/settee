@@ -1,0 +1,178 @@
+<title>Settee Direction Round</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap">
+<style>
+/* A contact sheet for one person judging screens: the screenshots are the page, the words stay small. */
+:root {
+  color-scheme: dark;
+  --bg: #0d0c0b;
+  --panel: #191715;
+  --line: #2f2b27;
+  --fg: #f1ece4;
+  --soft: #a9a196;
+  --mark: #e9c89a;
+  --body: "Atkinson Hyperlegible", system-ui, sans-serif;
+}
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font: 16px/1.5 var(--body);
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 24px 64px;
+}
+.wrap { max-width: 1320px; margin: 0 auto; display: grid; gap: 24px; }
+h1 { font-size: 28px; line-height: 1.2; margin: 0; text-wrap: balance; }
+h2 { font-size: 22px; margin: 0; }
+h3 { font-size: 14px; letter-spacing: .04em; text-transform: uppercase; color: var(--soft); margin: 0 0 6px; }
+p { margin: 0; max-width: 68ch; }
+.soft { color: var(--soft); }
+nav { display: flex; flex-wrap: wrap; gap: 6px; position: sticky; top: env(safe-area-inset-top, 0px); background: var(--bg); padding-block: 8px; z-index: 5; }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--bg); }
+nav .gap { width: 14px; }
+button {
+  font: inherit; color: var(--fg); background: var(--panel); border: 1px solid var(--line);
+  border-radius: 6px; padding: 6px 12px; cursor: pointer;
+}
+button[aria-pressed="true"] { background: var(--fg); color: var(--bg); border-color: var(--fg); font-weight: 700; }
+button:focus-visible { outline: 2px solid var(--mark); outline-offset: 2px; }
+.grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+@media (max-width: 720px) { .grid { grid-template-columns: minmax(0, 1fr); } }
+figure { margin: 0; min-width: 0; }
+figure img { display: block; width: 100%; height: auto; aspect-ratio: 16 / 9; border-radius: 4px; background: var(--panel); }
+figcaption { font-size: 14px; color: var(--soft); padding-top: 4px; }
+.notes { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px 28px; }
+.notes > div { min-width: 0; }
+ul { margin: 0; padding-left: 18px; }
+li + li { margin-top: 4px; }
+.table { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; min-width: 760px; font-size: 15px; }
+th, td { text-align: left; vertical-align: top; padding: 8px 12px 8px 0; border-bottom: 1px solid var(--line); }
+th { font-weight: 700; }
+tbody th { color: var(--soft); font-weight: 400; white-space: nowrap; }
+</style>
+
+<div class="wrap">
+  <header style="display:grid;gap:8px">
+    <h1>Which visual direction is Settee?</h1>
+    <p class="soft">Four directions for #89, rendered at 1080p from Compose. React to any part: "the highlight from A with the type from C" is a useful answer. The catalogue and artwork are invented, so judge colour, type, highlight and layout, not the paintings. Warm near-blacks still need judging on a real TV.</p>
+  </header>
+
+  <nav id="nav" aria-label="Choose what to compare"></nav>
+
+  <section id="view" style="display:grid;gap:16px"></section>
+
+  <section style="display:grid;gap:12px">
+    <h2>How they differ</h2>
+    <div class="table"><table>
+      <thead><tr><th></th><th>A: Lamplight</th><th>B: Hearth</th><th>C: Listings</th><th>D: Picture House</th></tr></thead>
+      <tbody>
+        <tr><th>Warmth</th><td>A hint: warm near-black</td><td>Openly amber and brown</td><td>Oxblood-black with cream</td><td>Dusky plum-charcoal with coral</td></tr>
+        <tr><th>Type</th><td>Atkinson Hyperlegible: plain, built for legibility. Its zero is slashed</td><td>Young Serif titles, Alegreya Sans text</td><td>Zilla Slab titles, Alegreya Sans text</td><td>Poppins: round, modern</td></tr>
+        <tr><th>Highlight</th><td>White: the item inverts</td><td>Amber border or fill with a glow</td><td>Cream marker across the whole line</td><td>Coral ring, and the card lifts</td></tr>
+        <tr><th>Home</th><td>Compact rows, text under cards</td><td>Rows with a larger first card</td><td>Three text columns under one image</td><td>Rows with text on the art</td></tr>
+        <tr><th>Live guide</th><td>Grid with preview above</td><td>Grid of rounded blocks, no preview</td><td>Ruled timetable, no blocks</td><td>Channel list with preview, no timeline</td></tr>
+        <tr><th>Shows</th><td>Medium posters</td><td>Largest posters</td><td>List beside one poster</td><td>Backdrop above a poster row</td></tr>
+        <tr><th>Details</th><td>Backdrop fades in from the right</td><td>Poster over a tinted backdrop</td><td>Backdrop band, ruled episode list</td><td>Full-bleed, large title low down</td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <section class="notes">
+    <div>
+      <h3>Same in every direction</h3>
+      <ul>
+        <li>The plain rail with #87's five tabs. Only its colours change, because #90 decides how it behaves.</li>
+        <li>Home's order: Live Preview only after live playback, then Continue Watching, Favourites and new titles.</li>
+        <li>Watch status on every card, and 14sp minimum text.</li>
+        <li>No blur or alpha-dimmed shelves, and a shadow only on the focused item.</li>
+      </ul>
+    </div>
+    <div>
+      <h3>Provisional until #84 measures a Stick</h3>
+      <ul>
+        <li>B: the artwork tint on details.</li>
+        <li>C and D: changing the large image on every press.</li>
+        <li>D: a gradient on every card.</li>
+        <li>All: full-bleed backdrops. A's details and D's Shows stack two gradient layers, and B's details stacks a tint and a gradient. #86 asks for one scrim, so these would need merging.</li>
+      </ul>
+    </div>
+    <div>
+      <h3>Trade-offs to weigh</h3>
+      <ul>
+        <li>C: Favourites is one Right from Continue Watching, so it adds no presses, but its columns go down rather than along.</li>
+        <li>D: no timeline in the guide. Seeing later programmes would need another screen.</li>
+        <li>Amazon recommends cool, less saturated colours. B moves furthest from that.</li>
+        <li>Rows run to the screen edge, so partly hidden text sits outside the overscan margin. The highlighted item always scrolls in, but the margin isn't enforced yet.</li>
+      </ul>
+    </div>
+  </section>
+</div>
+
+<script>
+const directions = [
+  ["a_lamplight", "A: Lamplight", "Quietest. A barely warm near-black, a plain legible sans, and a white highlight."],
+  ["b_hearth", "B: Hearth", "Warmest. Amber and brown, a serif with character, the largest artwork, and an amber glow."],
+  ["c_listings", "C: Listings", "Type-led, like a printed listings page. Oxblood-black, a slab serif, and a cream marker."],
+  ["d_picture_house", "D: Picture House", "Artwork first. Plum-charcoal, a round sans, text on the art, and a coral ring."],
+];
+const screens = [
+  ["home_preview", "Home with the Live Preview"],
+  ["home", "Home without the Live Preview"],
+  ["guide", "Live guide"],
+  ["shows", "Shows"],
+  ["details", "Details page"],
+];
+const nav = document.getElementById("nav");
+const view = document.getElementById("view");
+let current = "a_lamplight";
+
+function figure(src, caption) {
+  const f = document.createElement("figure");
+  const i = document.createElement("img");
+  i.src = src + ".png";
+  i.alt = caption;
+  i.loading = "lazy";
+  const c = document.createElement("figcaption");
+  c.textContent = caption;
+  f.append(i, c);
+  return f;
+}
+
+function render() {
+  view.replaceChildren();
+  const direction = directions.find(d => d[0] === current);
+  const screen = screens.find(s => s[0] === current);
+  const heading = document.createElement("div");
+  heading.style.cssText = "display:grid;gap:2px";
+  const h = document.createElement("h2");
+  const p = document.createElement("p");
+  p.className = "soft";
+  h.textContent = direction ? direction[1] : screen[1];
+  p.textContent = direction ? direction[2] : "The same screen across all four directions.";
+  heading.append(h, p);
+  const grid = document.createElement("div");
+  grid.className = "grid";
+  if (direction) screens.forEach(s => grid.append(figure(`${current}_${s[0]}`, s[1])));
+  else directions.forEach(d => grid.append(figure(`${d[0]}_${current}`, d[1])));
+  view.append(heading, grid);
+  nav.querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.key === current)));
+}
+
+function button(key, label) {
+  const b = document.createElement("button");
+  b.type = "button";
+  b.dataset.key = key;
+  b.textContent = label;
+  b.addEventListener("click", () => { current = key; render(); });
+  return b;
+}
+
+directions.forEach(d => nav.append(button(d[0], d[1])));
+const gap = document.createElement("span");
+gap.className = "gap";
+nav.append(gap);
+[["home_preview", "Home + preview"], ["home", "Home"], ["guide", "Guide"], ["shows", "Shows"], ["details", "Details"]]
+  .forEach(([key, label]) => nav.append(button(key, label)));
+render();
+</script>

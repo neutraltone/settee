@@ -68,6 +68,13 @@
           trade-off is documented in docs/PRIVACY.md.
         -->
 
+        <!-- PROTOTYPE for #89: throwaway, never merged. -->
+        <activity
+            android:name=".ui.directions.DirectionsActivity"
+            android:exported="true"
+            android:label="Settee directions"
+            android:theme="@style/Theme.OpenTV" />
+
         <activity
             android:name=".MainActivity"
             android:exported="true"
