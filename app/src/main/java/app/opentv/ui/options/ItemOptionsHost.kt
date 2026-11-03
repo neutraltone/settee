@@ -24,8 +24,10 @@ import app.opentv.data.model.Movie
 import app.opentv.data.model.Series
 import app.opentv.data.model.StreamKind
 import app.opentv.data.parser.displayTitle
+import app.opentv.data.repo.CatalogRepository
 import app.opentv.data.repo.CatchUpMarks
 import app.opentv.data.repo.ContinueWatchingCard
+import app.opentv.data.repo.MediaKey
 import app.opentv.data.repo.mediaKey
 import app.opentv.ui.VodViewModel
 import kotlinx.coroutines.flow.first
@@ -68,31 +70,71 @@ sealed interface OptionsSubject {
  * Opens the options panel on a subject; null where no [ItemOptionsHost] is above, so a card drawn
  * on its own (a test, a preview) is plainly clickable.
  */
-val LocalOpenOptions = staticCompositionLocalOf<((OptionsSubject) -> Unit)?> { null }
+val LocalOpenOptions = staticCompositionLocalOf<((OptionsSubject, LeaveScreen) -> Unit)?> { null }
+
+/**
+ * How a screen lets the panel leave it for the next one: whatever it does before a card's usual
+ * Select leaves, then `go`. The panel sits above the screens, so it can't know what that is.
+ */
+typealias LeaveScreen = (go: () -> Unit) -> Unit
+
+/** For a screen with nothing to do before leaving. */
+val LeaveDirectly: LeaveScreen = { go -> go() }
 
 /**
  * Holds the app's one options panel. Cards anywhere below open it through [LocalOpenOptions]
  * rather than each screen threading a callback and a panel of its own down to every card.
+ * [navigate] goes where an option that leaves the screen says.
  */
 @Composable
-fun ItemOptionsHost(viewModel: ItemOptionsViewModel = viewModel(), content: @Composable () -> Unit) {
-    var open by remember { mutableStateOf<Pair<OptionsSubject, List<ItemOption>>?>(null) }
+fun ItemOptionsHost(
+    navigate: (OptionsDestination) -> Unit = {},
+    viewModel: ItemOptionsViewModel = viewModel(),
+    content: @Composable () -> Unit,
+) {
+    var open by remember { mutableStateOf<OpenPanel?>(null) }
     val scope = rememberCoroutineScope()
-    val openOptions: (OptionsSubject) -> Unit = remember(viewModel, scope) {
-        { subject -> scope.launch { open = subject to viewModel.optionsFor(subject) } }
+    val openOptions: (OptionsSubject, LeaveScreen) -> Unit = remember(viewModel, scope) {
+        { subject, leave ->
+            scope.launch {
+                open = OpenPanel(subject, viewModel.optionsFor(subject), viewModel.destinationsFor(subject), leave)
+            }
+        }
     }
     CompositionLocalProvider(LocalOpenOptions provides openOptions, content = content)
-    open?.let { (subject, options) ->
+    open?.let { panel ->
         OptionsPanel(
-            title = subject.title,
-            options = options,
-            onChoose = {
-                viewModel.choose(subject, it)
+            title = panel.subject.title,
+            options = panel.options,
+            onChoose = { option ->
                 open = null
+                // Known before the panel opened: looking it up now would hand the highlight back
+                // to the card first, where a quick Select would navigate as well.
+                when (val destination = panel.destinations[option]) {
+                    null -> viewModel.choose(panel.subject, option)
+                    else -> panel.leave { navigate(destination) }
+                }
             },
             onDismiss = { open = null },
         )
     }
+}
+
+private class OpenPanel(
+    val subject: OptionsSubject,
+    val options: List<ItemOption>,
+    val destinations: Map<ItemOption, OptionsDestination>,
+    val leave: LeaveScreen,
+)
+
+/** Where an option that leaves the screen goes; the app's navigation turns it into a route. */
+sealed interface OptionsDestination {
+    /** The player, at 0 rather than [key]'s resume point. */
+    data class PlayFromStart(val key: MediaKey) : OptionsDestination
+
+    data class MoviePage(val movieId: Long) : OptionsDestination
+
+    data class SeriesPage(val seriesId: Long) : OptionsDestination
 }
 
 /** Works out what a subject's panel offers, and does what was chosen, for the active Profile. */
@@ -119,15 +161,26 @@ class ItemOptionsViewModel(app: Application) : AndroidViewModel(app) {
             val ids = library.favourites.channelIds().first()
             OptionsFor.Channel(subject.variants.any { it.id in ids })
         }
-        is OptionsSubject.OfContinueWatching -> OptionsFor.ContinueWatching(
-            when (val title = resolve(subject.item)) {
+        is OptionsSubject.OfContinueWatching -> {
+            val favourite = when (val title = catalog.resolve(subject.item)) {
                 is Resolved.MovieCard -> isFavourite(title.movie)
                 is Resolved.SeriesCard -> title.series?.let { isFavourite(it) }
                 null -> null
-            },
-        )
+            }
+            OptionsFor.ContinueWatching(
+                library.marks.statusOf(subject.item.key.stored),
+                inCatalogue = favourite != null,
+                favourite = favourite == true,
+            )
+        }
         is OptionsSubject.OfRecentSearch -> OptionsFor.RecentSearch
     }.options()
+
+    /** Where the options that leave the screen go on [subject]; the rest stay on it. */
+    suspend fun destinationsFor(subject: OptionsSubject): Map<ItemOption, OptionsDestination> = buildMap {
+        playKeyOf(subject)?.let { put(ItemOption.PlayFromStart, OptionsDestination.PlayFromStart(it)) }
+        catalog.pageOf(subject)?.let { put(ItemOption.ShowInfo, it) }
+    }
 
     fun choose(subject: OptionsSubject, option: ItemOption) {
         viewModelScope.launch {
@@ -156,7 +209,7 @@ class ItemOptionsViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     private suspend fun chooseFor(item: VodViewModel.ResumeItem, option: ItemOption) {
-        val title = resolve(item) ?: return
+        val title = catalog.resolve(item) ?: return
         mark(item.key.stored, option)
         if (option == ItemOption.RemoveFromContinueWatching) library.marks.removeFromContinueWatching(title.card)
         when (title) {
@@ -184,21 +237,39 @@ class ItemOptionsViewModel(app: Application) : AndroidViewModel(app) {
 
     private suspend fun isFavourite(series: Series) =
         library.favourites.contains(StreamKind.SERIES, series.sourceId, series.seriesId)
+}
 
-    /** The title behind a Continue Watching card, or null when it has left the catalogue. */
-    private suspend fun resolve(item: VodViewModel.ResumeItem): Resolved? = when (val card = item.card) {
-        is ContinueWatchingCard.Movie -> catalog.movie(card.movieId)?.let { Resolved.MovieCard(it, card) }
-        is ContinueWatchingCard.Series -> Resolved.SeriesCard(catalog.seriesOf(card.episode), card)
+/** The title behind a Continue Watching card, or null when it has left the catalogue. */
+private suspend fun CatalogRepository.resolve(item: VodViewModel.ResumeItem): Resolved? = when (val card = item.card) {
+    is ContinueWatchingCard.Movie -> movie(card.movieId)?.let { Resolved.MovieCard(it, card) }
+    is ContinueWatchingCard.Series -> Resolved.SeriesCard(seriesOf(card.episode), card)
+    null -> null
+}
+
+private sealed interface Resolved {
+    val card: ContinueWatchingCard
+
+    data class MovieCard(val movie: Movie, override val card: ContinueWatchingCard) : Resolved
+
+    data class SeriesCard(val series: Series?, override val card: ContinueWatchingCard) : Resolved
+}
+
+private suspend fun CatalogRepository.pageOf(subject: OptionsSubject): OptionsDestination? = when (subject) {
+    is OptionsSubject.OfMovie -> OptionsDestination.MoviePage(subject.movie.id)
+    is OptionsSubject.OfSeries -> OptionsDestination.SeriesPage(subject.series.id)
+    is OptionsSubject.OfContinueWatching -> when (val title = resolve(subject.item)) {
+        is Resolved.MovieCard -> OptionsDestination.MoviePage(title.movie.id)
+        is Resolved.SeriesCard -> title.series?.let { OptionsDestination.SeriesPage(it.id) }
         null -> null
     }
+    else -> null
+}
 
-    private sealed interface Resolved {
-        val card: ContinueWatchingCard
-
-        data class MovieCard(val movie: Movie, override val card: ContinueWatchingCard) : Resolved
-
-        data class SeriesCard(val series: Series?, override val card: ContinueWatchingCard) : Resolved
-    }
+private fun playKeyOf(subject: OptionsSubject): MediaKey? = when (subject) {
+    is OptionsSubject.OfMovie -> MediaKey.Movie(subject.movie.id)
+    is OptionsSubject.OfEpisode -> MediaKey.Episode(subject.episode.id)
+    is OptionsSubject.OfContinueWatching -> subject.item.key
+    else -> null
 }
 
 private suspend fun CatchUpMarks.chooseUpToHere(episode: Episode, option: ItemOption) {

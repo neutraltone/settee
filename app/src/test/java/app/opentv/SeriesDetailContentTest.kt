@@ -189,7 +189,7 @@ class SeriesDetailContentTest {
     /** The page with its options panel stood in for, and the highlight on season [season]'s header. */
     private fun showOnSeasonHeader(season: Int): SemanticsNodeInteraction {
         compose.setTvContent {
-            CompositionLocalProvider(LocalOpenOptions provides { optionsAskedFor += it }) {
+            CompositionLocalProvider(LocalOpenOptions provides { subject, _ -> optionsAskedFor += subject }) {
                 SeriesDetailContent(
                     series = series,
                     episodes = episodes,

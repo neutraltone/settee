@@ -9,6 +9,8 @@ import app.opentv.data.repo.WatchStatus
 
 /** One thing the options panel can do to the highlighted item. */
 enum class ItemOption {
+    PlayFromStart,
+    ShowInfo,
     MarkWatched,
     MarkUnwatched,
     MarkWatchedUpToHere,
@@ -28,7 +30,7 @@ sealed interface OptionsFor {
     fun options(): List<ItemOption>
 
     data class Movie(val status: WatchStatus, val favourite: Boolean) : OptionsFor {
-        override fun options() = marks(status) + favourite(favourite)
+        override fun options() = playFromStart(status) + ItemOption.ShowInfo + marks(status) + favourite(favourite)
     }
 
     /**
@@ -36,7 +38,7 @@ sealed interface OptionsFor {
      * up to here would only repeat Mark watched, which sits beside it.
      */
     data class Episode(val status: WatchStatus, val earlierToMark: Boolean) : OptionsFor {
-        override fun options() = buildList {
+        override fun options() = playFromStart(status) + buildList {
             if (status != WatchStatus.Watched) add(ItemOption.MarkWatched)
             if (earlierToMark) add(ItemOption.MarkWatchedUpToHere)
             if (status != WatchStatus.Unwatched) add(ItemOption.MarkUnwatched)
@@ -53,16 +55,23 @@ sealed interface OptionsFor {
 
     /**
      * A Continue Watching card: a movie or episode not yet Watched, so never Mark unwatched
-     * (removing the card is how to give up on it). [favourite] is its movie's or series', or null
-     * when its title isn't in the catalogue to be made one.
+     * (removing the card is how to give up on it). [status] is that movie's or episode's, and
+     * [favourite] its movie's or series'. A title no longer [inCatalogue] has nothing to play from
+     * the start, no page to show and nothing to make a Favourite.
      */
-    data class ContinueWatching(val favourite: Boolean?) : OptionsFor {
-        override fun options() =
-            listOfNotNull(ItemOption.MarkWatched, ItemOption.RemoveFromContinueWatching, favourite?.let(::favourite))
+    data class ContinueWatching(val status: WatchStatus, val inCatalogue: Boolean, val favourite: Boolean) :
+        OptionsFor {
+        override fun options() = if (inCatalogue) {
+            playFromStart(status) + ItemOption.ShowInfo + cardOptions + favourite(favourite)
+        } else {
+            cardOptions
+        }
+
+        private val cardOptions get() = listOf(ItemOption.MarkWatched, ItemOption.RemoveFromContinueWatching)
     }
 
     data class Series(val favourite: Boolean) : OptionsFor {
-        override fun options() = listOf(favourite(favourite))
+        override fun options() = listOf(ItemOption.ShowInfo, favourite(favourite))
     }
 
     data class Channel(val favourite: Boolean) : OptionsFor {
@@ -73,6 +82,9 @@ sealed interface OptionsFor {
         override fun options() = listOf(ItemOption.RemoveRecentSearch)
     }
 }
+
+private fun playFromStart(status: WatchStatus) =
+    if (status is WatchStatus.InProgress) listOf(ItemOption.PlayFromStart) else emptyList()
 
 // In Progress offers both: Watched to finish it, Unwatched to start again from the beginning.
 private fun marks(status: WatchStatus) = buildList {

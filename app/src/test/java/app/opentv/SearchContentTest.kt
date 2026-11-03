@@ -37,6 +37,7 @@ import app.opentv.data.model.Series
 import app.opentv.data.repo.LineupChannel
 import app.opentv.ui.ChannelsViewModel
 import app.opentv.ui.channels.SearchContent
+import app.opentv.ui.options.LeaveScreen
 import app.opentv.ui.options.LocalOpenOptions
 import app.opentv.ui.options.OptionsSubject
 import com.google.common.truth.Truth.assertThat
@@ -68,6 +69,7 @@ class SearchContentTest {
     private var liveMovies by mutableStateOf(emptyList<Movie>())
     private val opened = mutableListOf<String>()
     private val optionsOpenedOn = mutableListOf<OptionsSubject>()
+    private var leaveThroughOptions: LeaveScreen? = null
     private var cleared = false
 
     private fun show(
@@ -77,7 +79,12 @@ class SearchContentTest {
     ) {
         compose.setTvContent {
             view = LocalView.current
-            CompositionLocalProvider(LocalOpenOptions provides { optionsOpenedOn += it }) {
+            CompositionLocalProvider(
+                LocalOpenOptions provides { subject, leave ->
+                    optionsOpenedOn += subject
+                    leaveThroughOptions = leave
+                },
+            ) {
                 SearchContent(
                     query = query,
                     channelResults = channels + liveChannels,
@@ -343,6 +350,47 @@ class SearchContentTest {
         compose.onNodeWithText("Show").performClick()
 
         assertThat(opened).containsExactly("bbc", "bbc")
+    }
+
+    @Test
+    fun `Menu on a movie result opens its options`() {
+        query.setTextAndPlaceCursorAtEnd("film")
+        val film = movie("Film")
+        show(movies = listOf(film))
+
+        compose.onNodeWithText("Film").requestFocus().performKeyInput { pressKey(Key.Menu) }
+
+        assertThat(optionsOpenedOn).containsExactly(OptionsSubject.OfMovie(film))
+        captureScreen("search_results_movie")
+    }
+
+    @Test
+    fun `holding Select on a series result opens its options without opening it`() {
+        query.setTextAndPlaceCursorAtEnd("show")
+        val show = series("Show")
+        show(series = listOf(show))
+
+        compose.onNodeWithText("Show").requestFocus().performKeyInput {
+            keyDown(Key.DirectionCenter)
+            advanceEventTime(1_000)
+            keyUp(Key.DirectionCenter)
+        }
+
+        assertThat(optionsOpenedOn).containsExactly(OptionsSubject.OfSeries(show))
+        assertThat(opened).isEmpty()
+    }
+
+    @Test
+    fun `leaving through a result's options saves the search, as opening the result does`() {
+        query.setTextAndPlaceCursorAtEnd("film")
+        show(movies = listOf(movie("Film")))
+        compose.onNodeWithText("Film").requestFocus().performKeyInput { pressKey(Key.Menu) }
+        var left = false
+
+        leaveThroughOptions!! { left = true }
+
+        assertThat(opened).containsExactly("film")
+        assertThat(left).isTrue()
     }
 
     @Test

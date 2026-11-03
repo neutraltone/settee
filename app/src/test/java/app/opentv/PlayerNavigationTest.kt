@@ -15,6 +15,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import app.opentv.data.repo.MediaKey
 import app.opentv.ui.Tab
+import app.opentv.ui.options.OptionsDestination
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.test.runTest
 import org.junit.Rule
@@ -124,6 +125,31 @@ class PlayerNavigationTest {
     }
 
     private fun playMovie(key: MediaKey = MediaKey.Movie(9)) = Routes.vodPlayer(key)
+
+    @Test
+    fun `the player's route says when a play is from the start, and only then`() {
+        setApp()
+
+        act { navigate(Routes.of(OptionsDestination.PlayFromStart(MediaKey.Movie(9)))) }
+        showing("Movie player")
+        compose.runOnIdle { assertThat(nav.playerArg("fromStart").toBoolean()).isTrue() }
+
+        act { navigate(playMovie()) }
+        compose.runOnIdle { assertThat(nav.playerArg("fromStart").toBoolean()).isFalse() }
+    }
+
+    @Test
+    fun `the options panel's pages are the title's own pages`() {
+        setApp()
+
+        act { navigate(Routes.of(OptionsDestination.MoviePage(9))) }
+        showing("Movie 9")
+
+        act { navigate(Routes.of(OptionsDestination.SeriesPage(7))) }
+        showing("Series 7")
+    }
+
+    private fun NavHostController.playerArg(name: String) = currentBackStackEntry?.arguments?.getString(name).orEmpty()
 
     @Test
     fun `Back from a movie started on Home opens the movie's page, and Back from there goes Home`() {

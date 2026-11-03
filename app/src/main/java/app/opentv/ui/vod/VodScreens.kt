@@ -68,6 +68,8 @@ import app.opentv.data.repo.GenreGroup
 import app.opentv.data.repo.MediaKey
 import app.opentv.ui.NewEpisodeBadge
 import app.opentv.ui.VodViewModel
+import app.opentv.ui.options.LeaveDirectly
+import app.opentv.ui.options.LeaveScreen
 import app.opentv.ui.options.LocalOpenOptions
 import app.opentv.ui.options.OptionsSubject
 import app.opentv.ui.options.openOptionsOn
@@ -383,6 +385,7 @@ internal fun MoviePosterRow(
     movies: List<Movie>,
     onOpenMovie: (Movie) -> Unit,
     focus: CardFocus? = null,
+    onLeave: (Movie) -> LeaveScreen = { LeaveDirectly },
 ) {
     Column(Modifier.fillMaxWidth()) {
         SectionHeader(title)
@@ -398,7 +401,7 @@ internal fun MoviePosterRow(
                     subtitle = movie.year?.toString(),
                     rating = movie.rating,
                     onClick = { onOpenMovie(movie) },
-                    onOptions = openOptionsOn(OptionsSubject.OfMovie(movie)),
+                    onOptions = openOptionsOn(OptionsSubject.OfMovie(movie), onLeave(movie)),
                     modifier = Modifier.takesFocus(index, focus),
                 )
             }
@@ -413,6 +416,7 @@ internal fun SeriesPosterRow(
     series: List<Series>,
     onOpenSeries: (Series) -> Unit,
     focus: CardFocus? = null,
+    onLeave: (Series) -> LeaveScreen = { LeaveDirectly },
 ) {
     Column(Modifier.fillMaxWidth()) {
         SectionHeader(title)
@@ -428,7 +432,7 @@ internal fun SeriesPosterRow(
                     subtitle = item.year?.toString(),
                     rating = item.rating,
                     onClick = { onOpenSeries(item) },
-                    onOptions = openOptionsOn(OptionsSubject.OfSeries(item)),
+                    onOptions = openOptionsOn(OptionsSubject.OfSeries(item), onLeave(item)),
                     modifier = Modifier.takesFocus(index, focus),
                 )
             }
@@ -596,8 +600,9 @@ internal fun ContinueWatchingRow(
     items: List<VodViewModel.ResumeItem>,
     focus: CardFocus? = null,
     onResume: (MediaKey) -> Unit,
+    onLeave: (VodViewModel.ResumeItem) -> LeaveScreen = { LeaveDirectly },
     onOptions: ((VodViewModel.ResumeItem) -> Unit)? =
-        LocalOpenOptions.current?.let { open -> { open(OptionsSubject.OfContinueWatching(it)) } },
+        LocalOpenOptions.current?.let { open -> { open(OptionsSubject.OfContinueWatching(it), onLeave(it)) } },
 ) {
     Column(Modifier.fillMaxWidth()) {
         SectionHeader(stringResource(R.string.vod_continue_watching))
