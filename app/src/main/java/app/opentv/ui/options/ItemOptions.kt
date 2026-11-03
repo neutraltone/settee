@@ -15,6 +15,13 @@ enum class ItemOption {
     AddFavourite,
     RemoveFavourite,
     RemoveRecentSearch,
+    Subtitles,
+    Audio,
+    Quality,
+    AspectRatio,
+    SleepTimer,
+    RecordNow,
+    StopRecording,
 }
 
 /**
@@ -52,6 +59,29 @@ sealed interface OptionsFor {
 
     data object RecentSearch : OptionsFor {
         override fun options() = listOf(ItemOption.RemoveRecentSearch)
+    }
+
+    /** The live player, on the Channel being watched. */
+    data class LivePlayer(val hasQualities: Boolean, val favourite: Boolean, val recording: Boolean) : OptionsFor {
+        override fun options() = buildList {
+            add(ItemOption.Subtitles)
+            add(ItemOption.Audio)
+            if (hasQualities) add(ItemOption.Quality)
+            add(ItemOption.AspectRatio)
+            add(ItemOption.SleepTimer)
+            add(favourite(favourite))
+            add(if (recording) ItemOption.StopRecording else ItemOption.RecordNow)
+        }
+    }
+
+    /** The movie and episode player, which also plays recordings and catch-up: those can't be marked. */
+    data class VodPlayer(val canMarkWatched: Boolean) : OptionsFor {
+        override fun options() = buildList {
+            add(ItemOption.Subtitles)
+            add(ItemOption.Audio)
+            add(ItemOption.SleepTimer)
+            if (canMarkWatched) add(ItemOption.MarkWatched)
+        }
     }
 }
 

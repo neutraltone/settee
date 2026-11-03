@@ -45,6 +45,7 @@ import androidx.compose.material.icons.filled.ClosedCaption
 import androidx.compose.material.icons.filled.FastForward
 import androidx.compose.material.icons.filled.FastRewind
 import androidx.compose.material.icons.filled.FiberManualRecord
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Button
@@ -62,6 +63,7 @@ import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -99,8 +101,11 @@ import app.opentv.data.repo.MediaKey
 import app.opentv.player.NextEpisodeCountdown
 import app.opentv.player.PlayerController
 import app.opentv.ui.formatPlaybackTime
+import app.opentv.ui.options.ItemOption
+import app.opentv.ui.options.OptionsFor
 import app.opentv.ui.player.PlayerBackButton
 import app.opentv.ui.player.PlayerChip
+import app.opentv.ui.player.PlayerOptions
 import app.opentv.ui.player.SubtitlePicks
 import app.opentv.ui.player.rememberProfileSubtitles
 import kotlinx.coroutines.CoroutineScope
@@ -273,6 +278,9 @@ fun VodPlayerContent(
     // episode starts.
     val paused = state != PlayerController.State.Idle && !playWhenReady
     var vodPanel by remember { mutableStateOf(VodPanel.NONE) }
+    var optionsOpen by remember { mutableStateOf(false) }
+    val canMarkWatched by viewModel.canMarkWatched.collectAsState()
+    val marking = rememberCoroutineScope()
     val panelFocus = remember { FocusRequester() }
     var positionMs by remember { mutableLongStateOf(0L) }
     var durationMs by remember { mutableLongStateOf(0L) }
@@ -296,6 +304,7 @@ fun VodPlayerContent(
         if (overlayShowing) {
             controlsVisible = false
             vodPanel = VodPanel.NONE
+            optionsOpen = false
         }
     }
 
@@ -338,11 +347,12 @@ fun VodPlayerContent(
     // recording dips in and out of Buffering as it rides the write head, so for that case Buffering
     // counts as "playing" here — otherwise a single hiccup would pin the transport bar on screen for
     // the rest of the watch.
-    LaunchedEffect(controlsVisible, interaction, state, paused, vodPanel, dragging) {
+    LaunchedEffect(controlsVisible, interaction, state, paused, vodPanel, dragging, optionsOpen) {
         val activelyPlaying = state is PlayerController.State.Playing ||
             (growingRec && state is PlayerController.State.Buffering)
         val watching = activelyPlaying && !paused && !dragging
-        if (controlsVisible && watching && vodPanel == VodPanel.NONE) {
+        val inUse = vodPanel != VodPanel.NONE || optionsOpen
+        if (controlsVisible && watching && !inUse) {
             delay(5_000)
             controlsVisible = false
         }
@@ -396,6 +406,10 @@ fun VodPlayerContent(
                             skip(forward = event.key == Key.MediaFastForward)
                             interaction++
                         }
+                        true
+                    }
+                    event.key == Key.Menu && vodPanel == VodPanel.NONE -> {
+                        if (event.type == KeyEventType.KeyDown) optionsOpen = true
                         true
                     }
                     event.type == KeyEventType.KeyDown && !controlsVisible -> {
@@ -583,12 +597,35 @@ fun VodPlayerContent(
                         vodPanel = if (vodPanel == VodPanel.AUDIO) VodPanel.NONE else VodPanel.AUDIO
                         interaction++
                     },
+                    onOptions = { optionsOpen = true },
                     playPauseFocus = barFocus,
                 )
             }
         }
 
         NextEpisodeOverlay(viewModel, onStop = onBack)
+    }
+
+    if (optionsOpen) {
+        PlayerOptions(
+            options = OptionsFor.VodPlayer(canMarkWatched).options(),
+            onChoose = { option ->
+                optionsOpen = false
+                when (option) {
+                    ItemOption.Subtitles -> {
+                        reveal()
+                        vodPanel = VodPanel.SUBTITLES
+                    }
+                    ItemOption.Audio -> {
+                        reveal()
+                        vodPanel = VodPanel.AUDIO
+                    }
+                    ItemOption.MarkWatched -> marking.launch { if (viewModel.markWatched()) onBack() }
+                    else -> Unit
+                }
+            },
+            onDismiss = { optionsOpen = false },
+        )
     }
 }
 
@@ -610,6 +647,7 @@ fun VodPlayerControls(
     onForward: () -> Unit,
     onSubtitles: () -> Unit,
     onAudio: () -> Unit,
+    onOptions: () -> Unit,
     playPauseFocus: FocusRequester? = null,
 ) {
     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -629,6 +667,8 @@ fun VodPlayerControls(
         PlayerChip(Icons.Filled.ClosedCaption, stringResource(R.string.player_subtitles), onClick = onSubtitles)
         Spacer(Modifier.width(10.dp))
         PlayerChip(Icons.Filled.Audiotrack, stringResource(R.string.player_audio), onClick = onAudio)
+        Spacer(Modifier.width(10.dp))
+        PlayerChip(Icons.Filled.MoreVert, stringResource(R.string.player_options), onClick = onOptions)
     }
 }
 

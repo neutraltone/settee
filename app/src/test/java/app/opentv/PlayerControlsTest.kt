@@ -54,6 +54,7 @@ class PlayerControlsTest {
             onForward = {},
             onSubtitles = {},
             onAudio = {},
+            onOptions = {},
             playPauseFocus = playPause,
         )
     }

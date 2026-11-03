@@ -230,6 +230,117 @@ class VodPlayerViewModelTest {
         assertThat(rebuilt.played).containsExactly(testEpisode(1, 1).key to 900_000L)
     }
 
+    @Test
+    fun `Mark watched on a movie leaves the player, and it's still Watched after the player saves as it closes`() =
+        runTest {
+            val vm = VodPlayerViewModel(app, graph)
+            vm.attach(MediaKey.Movie(7), playback)
+            playback.positionMillis = 900_000
+
+            val leaves = vm.markWatched()
+            vm.saveProgress()
+
+            assertThat(leaves).isTrue()
+            assertThat(graph.viewerLibrary.marks.statusOf("movie:7")).isEqualTo(WatchStatus.Watched)
+        }
+
+    @Test
+    fun `Mark watched on an episode starts the Next Episode, and the one marked stays Watched`() = runTest {
+        graph.database.episodes().upsertAll((1..3).map { testEpisode(1, it) })
+        val vm = VodPlayerViewModel(app, graph)
+        vm.attach(testEpisode(1, 1).key, playback)
+        playback.positionMillis = 600_000
+
+        val leaves = vm.markWatched()
+        vm.saveProgress()
+
+        assertThat(leaves).isFalse()
+        assertThat(vm.current.value).isEqualTo(testEpisode(1, 2).key)
+        assertThat(graph.viewerLibrary.episodeStatuses().first()[11]).isEqualTo(WatchStatus.Watched)
+    }
+
+    @Test
+    fun `Mark watched on an episode whose length isn't known yet still stays Watched`() = runTest {
+        graph.database.episodes().upsertAll((1..3).map { testEpisode(1, it) })
+        val vm = VodPlayerViewModel(app, graph)
+        vm.attach(testEpisode(1, 1).key, playback)
+        playback.durationMillis = 0
+
+        vm.markWatched()
+
+        assertThat(vm.current.value).isEqualTo(testEpisode(1, 2).key)
+        assertThat(graph.viewerLibrary.episodeStatuses().first()[11]).isEqualTo(WatchStatus.Watched)
+    }
+
+    @Test
+    fun `Mark watched on a series' last episode leaves the player`() = runTest {
+        graph.database.episodes().upsertAll((1..2).map { testEpisode(1, it) })
+        val vm = VodPlayerViewModel(app, graph)
+        vm.attach(testEpisode(1, 2).key, playback)
+        playback.positionMillis = 600_000
+
+        val leaves = vm.markWatched()
+        vm.saveProgress()
+
+        assertThat(leaves).isTrue()
+        assertThat(playback.played).containsExactly(testEpisode(1, 2).key to 0L)
+        assertThat(graph.viewerLibrary.episodeStatuses().first()[12]).isEqualTo(WatchStatus.Watched)
+    }
+
+    @Test
+    fun `the Next Episode's progress still saves after moving on from a mark`() = runTest {
+        graph.database.episodes().upsertAll((1..3).map { testEpisode(1, it) })
+        val vm = VodPlayerViewModel(app, graph)
+        vm.attach(testEpisode(1, 1).key, playback)
+
+        vm.markWatched()
+        playback.positionMillis = 300_000
+        vm.saveProgress()
+
+        assertThat(graph.viewerLibrary.resumeFrom("ep:12")).isEqualTo(300_000L)
+    }
+
+    @Test
+    fun `movies, add-on streams and episodes can be marked until they're Watched`() = runTest {
+        graph.database.episodes().upsertAll(listOf(testEpisode(1, 1)))
+        val vm = VodPlayerViewModel(app, graph)
+
+        vm.attach(MediaKey.Movie(7), playback)
+        assertThat(vm.canMarkWatched.value).isTrue()
+
+        vm.attach(MediaKey.AddonStream(8, "https://example.com/8.mkv"), playback)
+        assertThat(vm.canMarkWatched.value).isTrue()
+
+        vm.attach(testEpisode(1, 1).key, playback)
+        assertThat(vm.canMarkWatched.value).isTrue()
+
+        graph.viewerLibrary.marks.markWatched("movie:9")
+        vm.attach(MediaKey.Movie(9), playback)
+        assertThat(vm.canMarkWatched.value).isFalse()
+    }
+
+    @Test
+    fun `a title played past 93 percent stops offering Mark watched once that's saved`() = runTest {
+        val vm = VodPlayerViewModel(app, graph)
+        vm.attach(MediaKey.Movie(7), playback)
+        playback.positionMillis = EPISODE_MILLIS - 60_000
+
+        vm.saveProgress()
+
+        assertThat(vm.canMarkWatched.value).isFalse()
+    }
+
+    @Test
+    fun `recordings and catch-up have no watch state to mark`() = runTest {
+        val vm = VodPlayerViewModel(app, graph)
+
+        vm.attach(MediaKey.Recording(3), playback)
+        assertThat(vm.canMarkWatched.value).isFalse()
+
+        vm.attach(MediaKey.Catchup(1, 1_000), playback)
+        assertThat(vm.canMarkWatched.value).isFalse()
+    }
+
     private val show = Series(
         sourceId = 1,
         seriesId = "s",
