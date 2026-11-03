@@ -9,6 +9,8 @@ import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.size
+import androidx.compose.material3.ColorScheme
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
@@ -17,10 +19,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.ProgressBarRangeInfo
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertHeightIsEqualTo
 import androidx.compose.ui.test.assertIsFocused
+import androidx.compose.ui.test.assertIsNotFocused
 import androidx.compose.ui.test.assertWidthIsEqualTo
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
@@ -33,7 +37,9 @@ import androidx.compose.ui.test.isFocusable
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.requestFocus
+import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.unit.dp
 import app.opentv.data.model.Episode
 import app.opentv.data.repo.WatchStatus
@@ -71,6 +77,8 @@ class EpisodeRowTest {
         stillUrl = "https://example.com/still.jpg",
         streamUrl = "https://example.com/e.mkv",
     )
+
+    private lateinit var colours: ColorScheme
 
     private fun show(status: WatchStatus, ep: Episode = episode) {
         showChangeable(status, ep)
@@ -177,6 +185,41 @@ class EpisodeRowTest {
 
         compose.onNode(hasClickAction()).assertIsFocused()
         captureScreen("episode_row_focused")
+    }
+
+    @Test
+    fun `the season and episode marker is easy to read on the focus highlight`() {
+        show(WatchStatus.Unwatched)
+
+        compose.onNode(hasClickAction()).requestFocus()
+
+        assertThat(markerColour()).isEqualTo(colours.onPrimaryContainer)
+    }
+
+    @Test
+    fun `the season and episode marker stays the accent colour on an unfocused row`() {
+        show(WatchStatus.Unwatched)
+
+        assertThat(markerColour()).isEqualTo(colours.primary)
+    }
+
+    @Test
+    fun `the season and episode marker goes back to the accent colour when focus moves to the next episode`() {
+        compose.setTvContent {
+            colours = MaterialTheme.colorScheme
+            Column {
+                EpisodeRow(episode, WatchStatus.Unwatched, seriesArtUrl = null, onPlay = {})
+                val next = episode.copy(id = 8, episodeNumber = 4)
+                EpisodeRow(next, WatchStatus.Unwatched, seriesArtUrl = null, onPlay = {})
+            }
+        }
+        compose.onNodeWithText("S1E3").requestFocus()
+
+        compose.onNodeWithText("S1E4").requestFocus()
+
+        compose.onNodeWithText("S1E3").assertIsNotFocused()
+        assertThat(markerColour("S1E3")).isEqualTo(colours.primary)
+        assertThat(markerColour("S1E4")).isEqualTo(colours.onPrimaryContainer)
     }
 
     @Test
@@ -288,6 +331,13 @@ class EpisodeRowTest {
         assertThat(brightestChannel(hasText("3"))).isAtLeast(WHITE_TEXT)
     }
 
+    private fun markerColour(marker: String = "S1E3"): Color {
+        val layouts = mutableListOf<TextLayoutResult>()
+        compose.onNodeWithText(marker, useUnmergedTree = true)
+            .performSemanticsAction(SemanticsActions.GetTextLayoutResult) { it(layouts) }
+        return layouts.single().layoutInput.style.color
+    }
+
     private fun showChangeable(
         initial: WatchStatus,
         ep: Episode = episode,
@@ -295,6 +345,7 @@ class EpisodeRowTest {
     ): MutableState<WatchStatus> {
         val status = mutableStateOf(initial)
         compose.setTvContent {
+            colours = MaterialTheme.colorScheme
             Column {
                 EpisodeRow(ep, status.value, seriesArtUrl = "https://example.com/poster.jpg", onPlay = {})
                 below()
