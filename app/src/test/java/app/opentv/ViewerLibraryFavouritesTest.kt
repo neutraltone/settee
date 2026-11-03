@@ -11,9 +11,11 @@ import androidx.test.core.app.ApplicationProvider
 import app.opentv.data.db.OpenTvDatabase
 import app.opentv.data.model.Channel
 import app.opentv.data.model.Movie
+import app.opentv.data.model.Profile
 import app.opentv.data.model.Series
 import app.opentv.data.model.Source
 import app.opentv.data.model.SourceKind
+import app.opentv.data.model.StreamKind
 import app.opentv.data.repo.ViewerLibrary
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -47,6 +49,39 @@ class ViewerLibraryFavouritesTest {
 
     @After
     fun close() = db.close()
+
+    @Test
+    fun `an unstarred Favourite shows nowhere a viewer browses, but still travels`() = runTest {
+        val channel = storedChannels(channel("c1", "Channel 1")).single()
+        val film = movie("m1", "Film")
+        val show = series("s1", "Show")
+        library.favourites.set(channel, favourite = true)
+        library.favourites.set(film, favourite = true)
+        library.favourites.set(show, favourite = true)
+
+        library.favourites.set(channel, favourite = false)
+        library.favourites.set(film, favourite = false)
+        library.favourites.set(show, favourite = false)
+
+        assertThat(library.favourites.channels().first()).isEmpty()
+        assertThat(library.favourites.channelIds().first()).isEmpty()
+        assertThat(library.favourites.movies().first()).isEmpty()
+        assertThat(library.favourites.series().first()).isEmpty()
+        assertThat(library.favourites.contains(StreamKind.MOVIE, film.sourceId, film.streamId)).isFalse()
+        db.profiles().insert(Profile(id = 1, name = "Me", createdAtMillis = 1))
+        assertThat(library.favourites.export().map { it.removed }).containsExactly(true, true, true)
+    }
+
+    @Test
+    fun `starring a title again brings back its unstarred row`() = runTest {
+        val film = movie("m1", "Film")
+        library.favourites.set(film, favourite = true)
+        library.favourites.set(film, favourite = false)
+
+        library.favourites.set(film, favourite = true)
+
+        assertThat(library.favourites.movies().first().map { it.name }).containsExactly("Film")
+    }
 
     private fun channel(streamId: String, name: String, hidden: Boolean = false, format: String = "ts") = Channel(
         sourceId = 1,

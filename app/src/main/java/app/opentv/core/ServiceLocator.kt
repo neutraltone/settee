@@ -51,11 +51,21 @@ object ServiceLocator {
      * [openDatabase] replaces the on-disk database, so a test can stand up two devices in one
      * process: every Graph built from the same context would otherwise share one database file.
      * [http] replaces the client that talks to providers, so such a device can reach a fake panel.
+     * [settingsFile] gives it settings of its own, which are otherwise one per process, and [clock]
+     * lets a test say which of two devices changed something last.
      */
-    class Graph(context: Context, http: OkHttpClient? = null, openDatabase: (() -> OpenTvDatabase)? = null) {
+    class Graph(
+        context: Context,
+        http: OkHttpClient? = null,
+        settingsFile: String? = null,
+        val clock: () -> Long = System::currentTimeMillis,
+        openDatabase: (() -> OpenTvDatabase)? = null,
+    ) {
         private val appContext = context.applicationContext
 
-        val settings: AppSettings by lazy { AppSettings.get(appContext) }
+        val settings: AppSettings by lazy {
+            settingsFile?.let { AppSettings.separate(appContext, it) } ?: AppSettings.get(appContext)
+        }
 
         val database: OpenTvDatabase by lazy {
             openDatabase?.invoke() ?: OpenTvDatabase.build(context, onWiped = settings::forgetDatabaseRows)
@@ -156,7 +166,7 @@ object ServiceLocator {
         }
 
         val viewerLibrary: ViewerLibrary by lazy {
-            ViewerLibrary(database, settings.activeProfileId)
+            ViewerLibrary(database, settings.activeProfileId, clock)
         }
 
         /** Outlives every screen, so progress still arrives after the sync screen has closed. */
@@ -165,11 +175,11 @@ object ServiceLocator {
         }
 
         val profileSettings: ProfileSettings by lazy {
-            ProfileSettings(database.profileSettings(), database.profiles(), settings.activeProfileId)
+            ProfileSettings(database, settings.activeProfileId)
         }
 
         val profiles: Profiles by lazy {
-            Profiles(database.profiles(), viewerLibrary, profileSettings, recordingRepository, settings)
+            Profiles(database, viewerLibrary, profileSettings, recordingRepository, settings, clock)
         }
 
         val recordingRepository: RecordingRepository by lazy {

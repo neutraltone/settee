@@ -14,6 +14,7 @@ import app.opentv.data.model.Channel
 import app.opentv.data.model.Favourite
 import app.opentv.data.model.Profile
 import app.opentv.data.model.ProfileSetting
+import app.opentv.data.model.RecentSearch
 import app.opentv.data.model.Recording
 import app.opentv.data.model.RecordingStatus
 import app.opentv.data.model.SeriesDismissal
@@ -21,12 +22,12 @@ import app.opentv.data.model.Source
 import app.opentv.data.model.SourceKind
 import app.opentv.data.model.StreamKind
 import app.opentv.data.repo.Profiles
+import app.opentv.sync.SyncProfileRename
 import com.google.common.truth.Truth.assertThat
 import com.google.common.truth.Truth.assertWithMessage
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.After
-import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -41,12 +42,10 @@ class ProfilesTest {
     private val db = Room.inMemoryDatabaseBuilder(app, OpenTvDatabase::class.java)
         .allowMainThreadQueries()
         .build()
-    private val graph = ServiceLocator.Graph(app) { db }
-    private val profiles get() = graph.profiles
 
-    // Settings are process-wide, so each test starts on the base Profile whatever the last one left.
-    @Before
-    fun startOnBaseProfile() = graph.settings.setActiveProfile(Profiles.BASE_PROFILE_ID)
+    // Settings of its own: the removed list would otherwise outlive the test in the process-wide ones.
+    private val graph = ServiceLocator.Graph(app, settingsFile = "profiles_test") { db }
+    private val profiles get() = graph.profiles
 
     @After
     fun close() = db.close()
@@ -76,6 +75,39 @@ class ProfilesTest {
             assertWithMessage(table).that(rowsFor(table, tom)).isEqualTo(0)
         }
         assertThat(profiles.all().map { it.name }).containsExactly("Me")
+    }
+
+    @Test
+    fun `a merged profile's rows all move to the one it merged into, leaving nothing behind`() = runTest {
+        val tom = checkNotNull(profiles.create("Tom"))
+        val thomas = checkNotNull(profiles.create("Thomas"))
+        giveEveryPerProfileTableARowFor(tom)
+
+        profiles.importChanges(listOf(SyncProfileRename("Tom", "Thomas", Long.MAX_VALUE)), emptyList())
+
+        for (table in tablesWithAProfileId()) {
+            assertWithMessage(table).that(rowsFor(table, tom)).isEqualTo(0)
+            assertWithMessage(table).that(rowsFor(table, thomas)).isGreaterThan(0)
+        }
+        assertThat(profiles.all().map { it.name }).containsExactly("Me", "Thomas").inOrder()
+    }
+
+    @Test
+    fun `merging moves the active profile, removal markers and recent searches, newest first`() = runTest {
+        val tom = checkNotNull(profiles.create("Tom"))
+        val thomas = checkNotNull(profiles.create("Thomas"))
+        db.favourites().upsert(Favourite(tom, StreamKind.MOVIE, "Provider", "m1", changedAtMillis = 2, removed = true))
+        db.favourites().upsert(Favourite(thomas, StreamKind.MOVIE, "Provider", "m1", changedAtMillis = 1))
+        db.recentSearches().insert(RecentSearch(tom, "BBC", 3))
+        db.recentSearches().insert(RecentSearch(thomas, "bbc", 1))
+        db.recentSearches().insert(RecentSearch(thomas, "itv", 2))
+        graph.settings.setActiveProfile(tom)
+
+        profiles.importChanges(listOf(SyncProfileRename("Tom", "Thomas", Long.MAX_VALUE)), emptyList())
+
+        assertThat(graph.settings.activeProfileId.value).isEqualTo(thomas)
+        assertThat(db.favourites().all().single().removed).isTrue()
+        assertThat(db.recentSearches().forProfile(thomas)).containsExactly("BBC", "itv").inOrder()
     }
 
     /**
@@ -168,7 +200,7 @@ class ProfilesTest {
     @Test
     fun `a new profile records when it was created`() = runTest {
         val profiles = with(graph) {
-            Profiles(db.profiles(), viewerLibrary, profileSettings, recordingRepository, settings, clock = { 42_000L })
+            Profiles(db, viewerLibrary, profileSettings, recordingRepository, settings, clock = { 42_000L })
         }
 
         val tom = checkNotNull(profiles.create("Tom"))
@@ -186,6 +218,40 @@ class ProfilesTest {
         assertThat(profiles.findOrCreate("Sam")).isEqualTo(sam)
         assertThat(profiles.findOrCreate(" ")).isNull()
         assertThat(profiles.all().map { it.name }).containsExactly("Me", "Tom", "Sam")
+    }
+
+    @Test
+    fun `sync doesn't bring back a removed profile, however the name is written`() = runTest {
+        val tom = checkNotNull(profiles.create("Tom"))
+        profiles.remove(tom)
+
+        assertThat(profiles.findOrCreate(" TOM ")).isNull()
+        profiles.import(listOf("Tom", "Sam"))
+
+        assertThat(profiles.all().map { it.name }).containsExactly("Me", "Sam").inOrder()
+    }
+
+    @Test
+    fun `adding a removed name lifts the removal`() = runTest {
+        profiles.remove(checkNotNull(profiles.create("Tom")))
+
+        val again = checkNotNull(profiles.create("tom"))
+
+        assertThat(profiles.findOrCreate("Tom")).isEqualTo(again)
+        profiles.remove(again)
+        assertThat(profiles.findOrCreate("Tom")).isNull()
+    }
+
+    @Test
+    fun `renaming onto a removed name lifts the removal`() = runTest {
+        profiles.remove(checkNotNull(profiles.create("Tom")))
+        val sam = checkNotNull(profiles.create("Sam"))
+
+        profiles.rename(sam, "Tom")
+        profiles.rename(sam, "Sam")
+
+        val tom = checkNotNull(profiles.findOrCreate("Tom"))
+        assertThat(tom).isNotEqualTo(sam)
     }
 
     @Test
@@ -219,7 +285,7 @@ class ProfilesTest {
         graph.viewerLibrary.recentSearches.save("bbc")
         graph.settings.setActiveProfile(Profiles.BASE_PROFILE_ID)
         db.seriesDismissals().upsert(SeriesDismissal(profileId, source, "s", 1, lastSeason = 1, lastEpisode = 1))
-        db.favourites().insert(Favourite(profileId, StreamKind.MOVIE, "Provider", "m1"))
+        db.favourites().upsert(Favourite(profileId, StreamKind.MOVIE, "Provider", "m1"))
         db.profileSettings().upsert(ProfileSetting(profileId, "other", "value", 1))
         graph.recordingRepository.insert(recording(profileId))
 

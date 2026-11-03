@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.input.rememberTextFieldState
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
@@ -40,9 +41,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import app.opentv.R
+import app.opentv.data.model.Profile
 import app.opentv.data.repo.Profiles
 import app.opentv.ui.ProfilesViewModel
 import app.opentv.ui.channels.DeviceTextField
+import app.opentv.update.startsFocused
 
 /**
  * Who's watching. Add, rename, remove and switch between local profiles; the active one decides
@@ -55,6 +58,7 @@ fun ProfilesScreen(onBack: () -> Unit, viewModel: ProfilesViewModel = viewModel(
 
     // null = list; NEW = adding; a positive id = renaming that profile.
     var editing by remember { mutableStateOf<Long?>(null) }
+    var removing by remember { mutableStateOf<Profile?>(null) }
 
     editing?.let { target ->
         ProfileNameEntry(
@@ -74,6 +78,17 @@ fun ProfilesScreen(onBack: () -> Unit, viewModel: ProfilesViewModel = viewModel(
             },
         )
         return
+    }
+
+    removing?.let { profile ->
+        RemoveProfileDialog(
+            name = profile.name,
+            onCancel = { removing = null },
+            onRemove = {
+                viewModel.remove(profile.id)
+                removing = null
+            },
+        )
     }
 
     Column(
@@ -126,7 +141,7 @@ fun ProfilesScreen(onBack: () -> Unit, viewModel: ProfilesViewModel = viewModel(
                         }) { Text(stringResource(R.string.profiles_rename)) }
                         if (profile.id != Profiles.BASE_PROFILE_ID) {
                             TextButton(onClick = {
-                                viewModel.remove(profile.id)
+                                removing = profile
                             }) { Text(stringResource(R.string.common_remove)) }
                         }
                     }
@@ -134,6 +149,23 @@ fun ProfilesScreen(onBack: () -> Unit, viewModel: ProfilesViewModel = viewModel(
             }
         }
     }
+}
+
+/** Asks before removing a Profile. Cancel starts highlighted, so a stray press of Select changes nothing. */
+@Composable
+internal fun RemoveProfileDialog(name: String, onCancel: () -> Unit, onRemove: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onCancel,
+        text = { Text(stringResource(R.string.profiles_remove_confirm, name)) },
+        dismissButton = {
+            TextButton(onClick = onCancel, modifier = Modifier.startsFocused()) {
+                Text(stringResource(R.string.common_cancel))
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onRemove) { Text(stringResource(R.string.common_remove)) }
+        },
+    )
 }
 
 /**

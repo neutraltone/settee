@@ -5,8 +5,8 @@
  */
 package app.opentv.data.repo
 
-import app.opentv.data.db.FavouriteDao
-import app.opentv.data.db.ProfileDao
+import androidx.room.withTransaction
+import app.opentv.data.db.OpenTvDatabase
 import app.opentv.data.model.Channel
 import app.opentv.data.model.Favourite
 import app.opentv.data.model.Movie
@@ -24,18 +24,33 @@ import kotlinx.coroutines.flow.map
  * Favourite channels, movies and series (ADR 0001). Only ViewerLibrary builds one.
  */
 class Favourites internal constructor(
-    private val dao: FavouriteDao,
-    private val profiles: ProfileDao,
+    private val db: OpenTvDatabase,
     private val activeProfileId: StateFlow<Long>,
+    private val clock: () -> Long,
 ) {
-    suspend fun set(channel: Channel, favourite: Boolean) =
-        dao.set(activeProfileId.value, StreamKind.LIVE, channel.sourceId, channel.streamId, favourite)
+    private val dao = db.favourites()
+    private val profiles = db.profiles()
 
-    suspend fun set(movie: Movie, favourite: Boolean) =
-        dao.set(activeProfileId.value, StreamKind.MOVIE, movie.sourceId, movie.streamId, favourite)
+    suspend fun set(channel: Channel, favourite: Boolean) = db.setFavourite(
+        activeProfileId.value,
+        FavouriteTitle(StreamKind.LIVE, channel.sourceId, channel.streamId),
+        favourite,
+        clock(),
+    )
 
-    suspend fun set(series: Series, favourite: Boolean) =
-        dao.set(activeProfileId.value, StreamKind.SERIES, series.sourceId, series.seriesId, favourite)
+    suspend fun set(movie: Movie, favourite: Boolean) = db.setFavourite(
+        activeProfileId.value,
+        FavouriteTitle(StreamKind.MOVIE, movie.sourceId, movie.streamId),
+        favourite,
+        clock(),
+    )
+
+    suspend fun set(series: Series, favourite: Boolean) = db.setFavourite(
+        activeProfileId.value,
+        FavouriteTitle(StreamKind.SERIES, series.sourceId, series.seriesId),
+        favourite,
+        clock(),
+    )
 
     /**
      * Whether the active Profile has this title as a Favourite: [itemId] is the provider's stream id
@@ -62,31 +77,56 @@ class Favourites internal constructor(
     @OptIn(ExperimentalCoroutinesApi::class)
     fun series(): Flow<List<Series>> = activeProfileId.flatMapLatest { dao.observeSeries(it) }
 
-    /** Every Profile's Favourites on this device, as they travel to the other side. */
+    /** Every Profile's Favourites on this device, unstarred ones included, as they travel to the other side. */
     suspend fun export(): List<SyncFavourite> {
         val names = profiles.directory()
         return dao.all().mapNotNull { fav ->
-            names.name(fav.profileId)?.let { SyncFavourite(it, fav.kind.name, fav.source, fav.itemId) }
+            names.name(fav.profileId)?.let {
+                SyncFavourite(it, fav.kind.name, fav.source, fav.itemId, fav.changedAtMillis, fav.removed)
+            }
         }
     }
 
-    /** Adds Favourites from another device; sync never removes one. Returns how many were new here. */
-    suspend fun import(items: List<SyncFavourite>): Int {
+    /**
+     * Merges another device's Favourites, newest change wins, labels going by [history]. Returns how
+     * many it starred or unstarred here.
+     */
+    suspend fun import(items: List<SyncFavourite>, history: ProfileHistory = ProfileHistory.NONE): Int {
         val names = profiles.directory()
-        return items.count { item ->
-            val kind = runCatching { StreamKind.valueOf(item.kind) }.getOrNull() ?: return@count false
-            val profileId = names.id(item.profile) ?: return@count false
-            dao.insert(Favourite(profileId, kind, item.source, item.id)) != -1L
+        val placed = items.mapNotNull { item ->
+            val kind = runCatching { StreamKind.valueOf(item.kind) }.getOrNull() ?: return@mapNotNull null
+            val profileId = names.id(history.currentName(item.profile, item.changedAtMillis)) ?: return@mapNotNull null
+            Favourite(profileId, kind, item.source, item.id, item.changedAtMillis, item.removed)
+        }
+        return db.mergeForProfiles(placed, { it.profileId }) { fav ->
+            val here = dao.find(fav.profileId, fav.kind, fav.source, fav.itemId)
+            val newer = isNewerChange(fav.changedAtMillis, here?.changedAtMillis)
+            if (newer) dao.upsert(fav)
+            newer && (here?.removed ?: true) != fav.removed
         }
     }
 }
 
-private suspend fun FavouriteDao.set(
+/** A title as a screen knows it: the provider's stream or series id within the source's row. */
+private class FavouriteTitle(val kind: StreamKind, val sourceId: Long, val itemId: String)
+
+/** Stars a title, or marks it unstarred if it was starred. A title never starred gets no row. */
+private suspend fun OpenTvDatabase.setFavourite(
     profileId: Long,
-    kind: StreamKind,
-    sourceId: Long,
-    itemId: String,
+    title: FavouriteTitle,
     favourite: Boolean,
+    changedAtMillis: Long,
 ) {
-    if (favourite) add(profileId, kind, sourceId, itemId) else remove(profileId, kind, sourceId, itemId)
+    val source = sources().byId(title.sourceId)?.name ?: return
+    val dao = favourites()
+    // One transaction, so a sync's newer change to this row can't land between the read and the write.
+    withTransaction {
+        if (favourite) {
+            dao.upsert(Favourite(profileId, title.kind, source, title.itemId, changedAtMillis))
+        } else {
+            dao.find(profileId, title.kind, source, title.itemId)?.let {
+                dao.upsert(it.copy(removed = true, changedAtMillis = changedAtMillis))
+            }
+        }
+    }
 }

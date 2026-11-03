@@ -15,6 +15,7 @@ import app.opentv.data.db.SeriesDao
 import app.opentv.data.db.SourceDao
 import app.opentv.data.model.Category
 import app.opentv.data.model.Channel
+import app.opentv.data.model.ChannelHiddenChange
 import app.opentv.data.model.Episode
 import app.opentv.data.model.LiveStreamFormat
 import app.opentv.data.model.Movie
@@ -616,7 +617,9 @@ class CatalogRepository(
     /** How many of a title's genres are in the wanted set — the More-Like-This overlap. */
     private fun sharedGenreCount(genre: String?, wanted: Set<String>): Int = splitGenres(genre).count { it in wanted }
 
-    suspend fun setChannelHidden(id: Long, hidden: Boolean) = channelDao.setHidden(id, hidden)
+    /** The viewer hid or showed a channel, on the TV or the web manager; dated, so the change can travel. */
+    suspend fun setChannelHidden(id: Long, hidden: Boolean, now: Long = System.currentTimeMillis()) =
+        channelDao.changeHidden(id, hidden, now)
 
     /** Sets (or clears, on blank) a channel's manual rename. Trimmed; a blank name clears it. */
     suspend fun setChannelCustomName(id: Long, name: String?) =
@@ -643,13 +646,28 @@ class CatalogRepository(
     suspend fun channelsInCategoryForManager(sourceId: Long?, categoryId: String): List<Channel> =
         channelDao.channelsInCategoryIncludingHidden(sourceId, categoryId)
 
-    /** The channels hidden on this device, for sync. */
+    /** The channels a viewer hid or showed on this device, for sync. */
     suspend fun exportHiddenChannels(): List<SyncHiddenChannel> = channelDao.hiddenForSync()
 
-    /** Hides what another device hid; sync never un-hides. Returns how many were newly hidden here. */
+    /**
+     * Merges another device's hides and unhides, newest change wins. A dated change is kept even if
+     * the provider isn't listing that channel right now. Returns how many channels it changed here.
+     */
     suspend fun importHiddenChannels(items: List<SyncHiddenChannel>): Int {
         val sources = sourceDao.directory()
-        return items.sumOf { item -> sources.id(item.source)?.let { channelDao.markHidden(it, item.id) } ?: 0 }
+        return items.count { item ->
+            val sourceId = sources.id(item.source) ?: return@count false
+            val here = channelDao.hiddenChange(item.source, item.id)?.changedAtMillis
+            if (!isNewerChange(item.changedAtMillis, here)) return@count false
+            if (item.changedAtMillis > 0) {
+                channelDao.upsertHiddenChange(
+                    ChannelHiddenChange(item.source, item.id, item.hidden, item.changedAtMillis),
+                )
+            }
+            val wasHidden = channelDao.isHidden(sourceId, item.id)
+            channelDao.setHidden(sourceId, item.id, item.hidden)
+            wasHidden != null && wasHidden != item.hidden
+        }
     }
 
     /**
