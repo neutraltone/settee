@@ -136,6 +136,7 @@ class CatalogRepository(
     private val stalkerApi: StalkerApi,
     private val http: OkHttpClient,
     private val settings: AppSettings,
+    private val clock: () -> Long = System::currentTimeMillis,
 ) {
 
     /** Where work that outlives a sync runs, such as [LatestAirDates] and [MovieReleaseDates]. */
@@ -616,7 +617,8 @@ class CatalogRepository(
     /** How many of a title's genres are in the wanted set — the More-Like-This overlap. */
     private fun sharedGenreCount(genre: String?, wanted: Set<String>): Int = splitGenres(genre).count { it in wanted }
 
-    suspend fun setChannelHidden(id: Long, hidden: Boolean) = channelDao.setHidden(id, hidden)
+    /** The viewer hid or showed a channel, on the TV or the web manager; dated, so the change can travel. */
+    suspend fun setChannelHidden(id: Long, hidden: Boolean) = channelDao.setHidden(id, hidden, clock())
 
     /** Sets (or clears, on blank) a channel's manual rename. Trimmed; a blank name clears it. */
     suspend fun setChannelCustomName(id: Long, name: String?) =
@@ -643,13 +645,21 @@ class CatalogRepository(
     suspend fun channelsInCategoryForManager(sourceId: Long?, categoryId: String): List<Channel> =
         channelDao.channelsInCategoryIncludingHidden(sourceId, categoryId)
 
-    /** The channels hidden on this device, for sync. */
+    /** The channels a viewer hid or showed on this device, for sync. */
     suspend fun exportHiddenChannels(): List<SyncHiddenChannel> = channelDao.hiddenForSync()
 
-    /** Hides what another device hid; sync never un-hides. Returns how many were newly hidden here. */
+    /** Merges another device's hides and unhides, newest change wins. Returns how many it changed here. */
     suspend fun importHiddenChannels(items: List<SyncHiddenChannel>): Int {
         val sources = sourceDao.directory()
-        return items.sumOf { item -> sources.id(item.source)?.let { channelDao.markHidden(it, item.id) } ?: 0 }
+        return items.count { item ->
+            val sourceId = sources.id(item.source) ?: return@count false
+            val here = channelDao.hiddenState(sourceId, item.id) ?: return@count false
+            // Zero here means no viewer has changed it: a separator row the parser hid, say.
+            val changedHere = here.hiddenChangedAtMillis.takeIf { it > 0 }
+            if (!isNewerChange(item.changedAtMillis, changedHere)) return@count false
+            channelDao.setHidden(sourceId, item.id, item.hidden, item.changedAtMillis)
+            here.hidden != item.hidden
+        }
     }
 
     /**

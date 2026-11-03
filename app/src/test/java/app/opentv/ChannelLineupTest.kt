@@ -202,7 +202,7 @@ class ChannelLineupTest {
     fun `the management scopes show locked and hidden channels so they can be managed`() = runTest {
         category(sourceId = 1, id = "66", name = "UK| Adult")
         seed("UK| Late Night HD", "UK| Late Night", sourceId = 1, categoryId = "66")
-        db.channels().setHidden(row("UK| Late Night").id, true)
+        db.channels().setHidden(row("UK| Late Night").id, true, 1)
         lockedKeys.value = setOf("adult")
 
         val every = listOf("UK| Late Night HD", "UK| Late Night")
@@ -327,7 +327,7 @@ class ChannelLineupTest {
         seed("UK| BBC News", "UK| ITN", "UK| Sky News", sourceId = 1, categoryId = "10")
         seed("UK| Dave", sourceId = 1)
         lineup.zapFrom(LineupScope.Group("news"))
-        db.channels().setHidden(row("UK| ITN").id, true)
+        db.channels().setHidden(row("UK| ITN").id, true, 1)
 
         assertThat(zap("UK| ITN", +1)).isEqualTo("UK| BBC News")
         assertThat(zap("UK| ITN", -1)).isEqualTo("UK| Sky News")
@@ -362,7 +362,7 @@ class ChannelLineupTest {
     fun `a hidden row still counts when deciding which channel a row joins, so the manager agrees with the guide`() =
         runTest {
             seed("UK| ITV", "US| ITV", "ITV")
-            db.channels().setHidden(row("US| ITV").id, true)
+            db.channels().setHidden(row("US| ITV").id, true, 1)
 
             assertThat(all().names()).containsExactly(listOf("UK| ITV"), listOf("ITV"))
             assertThat(scope(LineupScope.ManageSearch("itv")).names())
@@ -387,7 +387,7 @@ class ChannelLineupTest {
 
         // Once to warm up Room and the JIT, which a slow CI machine would otherwise count against the fold.
         assertThat(all()).hasSize(20_000)
-        db.channels().setHidden(row("UK| Station0 HD").id, true)
+        db.channels().setHidden(row("UK| Station0 HD").id, true, 1)
 
         val start = System.nanoTime()
         val channels = all()

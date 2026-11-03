@@ -115,7 +115,7 @@ class SyncStoresTest {
     fun `Favourites land on the Profile with the same name, counted once`() = runTest {
         deviceB.graph.profiles.create("Spare")
         val onB = deviceB.alex()
-        deviceA.db.favourites().insert(Favourite(deviceA.alex(), StreamKind.LIVE, "Provider", "c1"))
+        deviceA.db.favourites().upsert(Favourite(deviceA.alex(), StreamKind.LIVE, "Provider", "c1"))
         val exported = deviceA.library.favourites.export()
 
         assertThat(deviceB.library.favourites.import(exported)).isEqualTo(1)
@@ -221,14 +221,37 @@ class SyncStoresTest {
     fun `hidden channels travel by source name and stream id, counted when newly hidden`() = runTest {
         deviceA.seedSource()
         deviceB.seedSource()
-        deviceA.seedChannel(hidden = true)
+        deviceA.seedChannel()
         deviceB.seedChannel()
+        deviceA.graph.catalogRepository.setChannelHidden(1, true)
         val exported = deviceA.graph.catalogRepository.exportHiddenChannels()
 
-        assertThat(exported).containsExactly(SyncHiddenChannel("Provider", "c1"))
+        assertThat(exported.map { it.source to it.id }).containsExactly("Provider" to "c1")
+        assertThat(exported.single().hidden).isTrue()
         assertThat(deviceB.graph.catalogRepository.importHiddenChannels(exported)).isEqualTo(1)
         assertThat(deviceB.graph.catalogRepository.importHiddenChannels(exported)).isEqualTo(0)
         assertThat(deviceB.db.channels().byId(101)?.hidden).isTrue()
+    }
+
+    @Test
+    fun `a separator row the parser hid doesn't travel as a viewer's change`() = runTest {
+        deviceA.seedSource()
+        deviceA.seedChannel(hidden = true)
+
+        assertThat(deviceA.graph.catalogRepository.exportHiddenChannels()).isEmpty()
+    }
+
+    @Test
+    fun `when a channel's hidden state changed survives a Catalogue Refresh`() = runTest {
+        deviceA.seedSource()
+        deviceA.seedChannel()
+        deviceA.graph.catalogRepository.setChannelHidden(1, true)
+        val before = deviceA.graph.catalogRepository.exportHiddenChannels().single()
+
+        val incoming = deviceA.db.channels().forSource(1).map { it.copy(hidden = false, hiddenChangedAtMillis = 0) }
+        deviceA.db.channels().replaceCatalogue(1, incoming, syncStamp = 2)
+
+        assertThat(deviceA.graph.catalogRepository.exportHiddenChannels()).containsExactly(before)
     }
 
     @Test

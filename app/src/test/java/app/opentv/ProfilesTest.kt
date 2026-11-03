@@ -250,7 +250,7 @@ class ProfilesTest {
         graph.viewerLibrary.recentSearches.save("bbc")
         graph.settings.setActiveProfile(Profiles.BASE_PROFILE_ID)
         db.seriesDismissals().upsert(SeriesDismissal(profileId, source, "s", 1, lastSeason = 1, lastEpisode = 1))
-        db.favourites().insert(Favourite(profileId, StreamKind.MOVIE, "Provider", "m1"))
+        db.favourites().upsert(Favourite(profileId, StreamKind.MOVIE, "Provider", "m1"))
         db.profileSettings().upsert(ProfileSetting(profileId, "other", "value", 1))
         graph.recordingRepository.insert(recording(profileId))
 

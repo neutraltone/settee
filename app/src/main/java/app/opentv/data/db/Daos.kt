@@ -185,8 +185,8 @@ interface ChannelDao {
     @Query("SELECT COUNT(*) FROM channels WHERE hidden = 0")
     fun observeVisibleCount(): Flow<Int>
 
-    @Query("UPDATE channels SET hidden = :hidden WHERE id = :id")
-    suspend fun setHidden(id: Long, hidden: Boolean)
+    @Query("UPDATE channels SET hidden = :hidden, hiddenChangedAtMillis = :changedAtMillis WHERE id = :id")
+    suspend fun setHidden(id: Long, hidden: Boolean, changedAtMillis: Long)
 
     @Query("UPDATE channels SET customName = :name WHERE id = :id")
     suspend fun setCustomName(id: Long, name: String?)
@@ -205,16 +205,24 @@ interface ChannelDao {
     // --- Sync: identify hidden channels by source name and stream id (ADR 0004) ---
     @Query(
         """
-        SELECT sources.name AS source, channels.streamId AS id FROM channels
-        JOIN sources ON sources.id = channels.sourceId
-        WHERE channels.hidden = 1
+        SELECT sources.name AS source, channels.streamId AS id, channels.hidden AS hidden,
+          channels.hiddenChangedAtMillis AS changedAtMillis
+        FROM channels JOIN sources ON sources.id = channels.sourceId
+        WHERE channels.hiddenChangedAtMillis > 0
         """,
     )
     suspend fun hiddenForSync(): List<SyncHiddenChannel>
 
-    /** Hides the channel if it isn't already; returns how many rows that changed. */
-    @Query("UPDATE channels SET hidden = 1 WHERE sourceId = :sourceId AND streamId = :streamId AND hidden = 0")
-    suspend fun markHidden(sourceId: Long, streamId: String): Int
+    @Query("SELECT hidden, hiddenChangedAtMillis FROM channels WHERE sourceId = :sourceId AND streamId = :streamId")
+    suspend fun hiddenState(sourceId: Long, streamId: String): ChannelHiddenState?
+
+    @Query(
+        """
+        UPDATE channels SET hidden = :hidden, hiddenChangedAtMillis = :changedAtMillis
+        WHERE sourceId = :sourceId AND streamId = :streamId
+        """,
+    )
+    suspend fun setHidden(sourceId: Long, streamId: String, hidden: Boolean, changedAtMillis: Long)
 
     @Query("UPDATE channels SET matchedEpgId = :epgId WHERE id = :id")
     suspend fun setMatchedEpgId(id: Long, epgId: String?)
@@ -272,6 +280,7 @@ interface ChannelDao {
                     // at parse time, and that decision must stick even for rows that
                     // predate the rule. User hides are preserved the same way.
                     hidden = previous.hidden || channel.hidden,
+                    hiddenChangedAtMillis = previous.hiddenChangedAtMillis,
                     sortIndex = previous.sortIndex,
                     // A user's rename must outlive the provider's fresh name on every refresh.
                     customName = previous.customName,
@@ -289,6 +298,9 @@ interface ChannelDao {
     @Query("SELECT * FROM channels WHERE sourceId = :sourceId")
     suspend fun userStateForSource(sourceId: Long): List<Channel>
 }
+
+/** Whether a channel is hidden and when a viewer last changed that, as newest-wins compares them. */
+data class ChannelHiddenState(val hidden: Boolean, val hiddenChangedAtMillis: Long)
 
 @Dao
 interface CategoryDao {
@@ -826,34 +838,40 @@ interface FavouriteDao {
     // Writes go by the row's source id and look up its name in SQL, so callers never handle names.
     @Query(
         """
-        INSERT OR IGNORE INTO favourites (profileId, kind, source, itemId)
-        SELECT :profileId, :kind, name, :itemId FROM sources WHERE id = :sourceId
+        INSERT OR REPLACE INTO favourites (profileId, kind, source, itemId, changedAtMillis, removed)
+        SELECT :profileId, :kind, name, :itemId, :changedAtMillis, 0 FROM sources WHERE id = :sourceId
         """,
     )
-    suspend fun add(profileId: Long, kind: StreamKind, sourceId: Long, itemId: String)
+    suspend fun add(profileId: Long, kind: StreamKind, sourceId: Long, itemId: String, changedAtMillis: Long)
 
     @Query(
         """
-        DELETE FROM favourites WHERE profileId = :profileId AND kind = :kind AND itemId = :itemId
+        UPDATE favourites SET removed = 1, changedAtMillis = :changedAtMillis
+        WHERE profileId = :profileId AND kind = :kind AND itemId = :itemId
           AND source = (SELECT name FROM sources WHERE id = :sourceId)
         """,
     )
-    suspend fun remove(profileId: Long, kind: StreamKind, sourceId: Long, itemId: String)
+    suspend fun remove(profileId: Long, kind: StreamKind, sourceId: Long, itemId: String, changedAtMillis: Long)
 
     @Query(
         """
         SELECT EXISTS(
           SELECT 1 FROM favourites WHERE profileId = :profileId AND kind = :kind AND itemId = :itemId
-            AND source = (SELECT name FROM sources WHERE id = :sourceId)
+            AND removed = 0 AND source = (SELECT name FROM sources WHERE id = :sourceId)
         )
         """,
     )
     suspend fun contains(profileId: Long, kind: StreamKind, sourceId: Long, itemId: String): Boolean
 
-    /** Adds [favourite] unless it is already there; returns whether it was new. */
-    @Insert(onConflict = OnConflictStrategy.IGNORE)
-    suspend fun insert(favourite: Favourite): Long
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsert(favourite: Favourite)
 
+    @Query(
+        "SELECT * FROM favourites WHERE profileId = :profileId AND kind = :kind AND source = :source AND itemId = :itemId",
+    )
+    suspend fun find(profileId: Long, kind: StreamKind, source: String, itemId: String): Favourite?
+
+    /** Every row, those marked removed included: what sync sends. Viewers see the queries below. */
     @Query("SELECT * FROM favourites")
     suspend fun all(): List<Favourite>
 
@@ -865,7 +883,7 @@ interface FavouriteDao {
         SELECT m.* FROM favourites f
         JOIN sources src ON src.name = f.source
         JOIN movies m ON m.sourceId = src.id AND m.streamId = f.itemId
-        WHERE f.profileId = :profileId AND f.kind = 'MOVIE' ORDER BY m.name
+        WHERE f.profileId = :profileId AND f.removed = 0 AND f.kind = 'MOVIE' ORDER BY m.name
         """,
     )
     fun observeMovies(profileId: Long): Flow<List<Movie>>
@@ -875,7 +893,7 @@ interface FavouriteDao {
         SELECT s.* FROM favourites f
         JOIN sources src ON src.name = f.source
         JOIN series s ON s.sourceId = src.id AND s.seriesId = f.itemId
-        WHERE f.profileId = :profileId AND f.kind = 'SERIES' ORDER BY s.name
+        WHERE f.profileId = :profileId AND f.removed = 0 AND f.kind = 'SERIES' ORDER BY s.name
         """,
     )
     fun observeSeries(profileId: Long): Flow<List<Series>>
@@ -885,7 +903,7 @@ interface FavouriteDao {
         SELECT c.* FROM favourites f
         JOIN sources src ON src.name = f.source
         JOIN channels c ON c.sourceId = src.id AND c.streamId = f.itemId
-        WHERE f.profileId = :profileId AND f.kind = 'LIVE' AND c.hidden = 0
+        WHERE f.profileId = :profileId AND f.removed = 0 AND f.kind = 'LIVE' AND c.hidden = 0
         ORDER BY c.sortIndex, c.displayName
         """,
     )
@@ -896,7 +914,7 @@ interface FavouriteDao {
         SELECT c.id FROM favourites f
         JOIN sources src ON src.name = f.source
         JOIN channels c ON c.sourceId = src.id AND c.streamId = f.itemId
-        WHERE f.profileId = :profileId AND f.kind = 'LIVE'
+        WHERE f.profileId = :profileId AND f.removed = 0 AND f.kind = 'LIVE'
         """,
     )
     fun observeChannelIds(profileId: Long): Flow<List<Long>>

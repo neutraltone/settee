@@ -51,12 +51,14 @@ object ServiceLocator {
      * [openDatabase] replaces the on-disk database, so a test can stand up two devices in one
      * process: every Graph built from the same context would otherwise share one database file.
      * [http] replaces the client that talks to providers, so such a device can reach a fake panel.
-     * [settingsFile] gives it settings of its own, which are otherwise one per process.
+     * [settingsFile] gives it settings of its own, which are otherwise one per process, and [clock]
+     * lets a test say which of two devices changed something last.
      */
     class Graph(
         context: Context,
         http: OkHttpClient? = null,
         settingsFile: String? = null,
+        private val clock: () -> Long = System::currentTimeMillis,
         openDatabase: (() -> OpenTvDatabase)? = null,
     ) {
         private val appContext = context.applicationContext
@@ -124,6 +126,7 @@ object ServiceLocator {
                 stalkerApi = stalkerApi,
                 http = httpClient,
                 settings = settings,
+                clock = clock,
             )
         }
 
@@ -164,7 +167,7 @@ object ServiceLocator {
         }
 
         val viewerLibrary: ViewerLibrary by lazy {
-            ViewerLibrary(database, settings.activeProfileId)
+            ViewerLibrary(database, settings.activeProfileId, clock)
         }
 
         /** Outlives every screen, so progress still arrives after the sync screen has closed. */
@@ -177,7 +180,7 @@ object ServiceLocator {
         }
 
         val profiles: Profiles by lazy {
-            Profiles(database, viewerLibrary, profileSettings, recordingRepository, settings)
+            Profiles(database, viewerLibrary, profileSettings, recordingRepository, settings, clock)
         }
 
         val recordingRepository: RecordingRepository by lazy {

@@ -87,7 +87,7 @@ class ViewerLibrary(
     private val dismissals = db.seriesDismissals()
 
     /** The active Profile's Favourites, and every Profile's for sync. */
-    val favourites = Favourites(db, activeProfileId)
+    val favourites = Favourites(db, activeProfileId, clock)
 
     private val cards = ContinueWatchingCards(positions, episodes, dismissals)
 

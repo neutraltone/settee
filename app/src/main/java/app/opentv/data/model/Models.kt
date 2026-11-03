@@ -139,6 +139,11 @@ data class Channel(
      */
     val cmd: String? = null,
     val hidden: Boolean = false,
+    /**
+     * When a viewer last hid or showed this channel, so the newest change wins across devices. Zero
+     * for one they never touched, including a separator row the parser hid, which doesn't travel.
+     */
+    val hiddenChangedAtMillis: Long = 0,
     val sortIndex: Int = 0,
     /**
      * The user's manual rename, `null` until they set one. Beats [displayName] in the UI (see
@@ -421,9 +426,20 @@ data class LivePlayback(
  * title a new row, and Xtream stream URLs change with the live format and the account password.
  * Provider ids alone repeat across providers, and a source's name is what another device knows
  * it by when syncing. Read and written only through ViewerLibrary.
+ *
+ * An unstarred one stays as a row marked [removed], for as long as its Profile exists. Dropping the
+ * row by age would let a dead device's NAS file bring the Favourite back (ADR 0005). Zero
+ * [changedAtMillis] means no time is known, as from a bundle that had none.
  */
 @Entity(tableName = "favourites", primaryKeys = ["profileId", "kind", "source", "itemId"])
-data class Favourite(val profileId: Long, val kind: StreamKind, val source: String, val itemId: String)
+data class Favourite(
+    val profileId: Long,
+    val kind: StreamKind,
+    val source: String,
+    val itemId: String,
+    val changedAtMillis: Long = 0,
+    val removed: Boolean = false,
+)
 
 /**
  * A search one Profile made and then opened a result from, kept on this device only: it says what

@@ -25,9 +25,9 @@ import kotlinx.serialization.Serializable
  *    [SyncProfileSetting.updatedAtMillis]; only settings a Profile actually chose travel (ADR 0002).
  *  - **Locked categories** spread by the time they were locked, and an unlock stays on its device:
  *    a lock only applies where it's newer than that device's last unlock (ADR 0005).
- *  - **Curation and recordings** are additive: favourites, hidden channels and
- *    NAS recordings from a peer are merged in without ever removing anything local. You tidy up on
- *    one device and the others adopt it, but a favourite set only on one box is never lost.
+ *  - **Favourites and hidden channels** are newest-wins per item, by the time each last changed, so
+ *    unstarring and unhiding spread too. A time of zero means the bundle had none, and counts as the oldest possible.
+ *  - **Recordings** are additive: NAS recordings from a peer are merged in without removing anything.
  *
  * Every field defaults to empty and the reader ignores unknown keys, so a positions-only device
  * and a full device interoperate without a flag day.
@@ -46,9 +46,9 @@ data class SyncBundle(
     val progress: List<SyncPosition> = emptyList(),
     /** Two-way, newest-wins series each Profile took out of Continue Watching. */
     val dismissals: List<SyncDismissal> = emptyList(),
-    /** Every Profile's Favourites, each landing on the Profile with the same name (additive). */
+    /** Every Profile's Favourites, unstarred ones too, each landing on the Profile with the same name. */
     val favourites: List<SyncFavourite> = emptyList(),
-    /** Additive device-wide curation, keyed by the stable identifiers noted above; a new key as [progress] is. */
+    /** Channels a viewer hid or showed, device-wide, by the stable identifiers noted above; a new key as [progress] is. */
     val hiddenStreams: List<SyncHiddenChannel> = emptyList(),
     /** The locked categories without their times, for older devices, which don't read [categoryLocks]. */
     val hiddenCategories: List<String> = emptyList(),
@@ -72,13 +72,31 @@ data class SyncCategoryLock(val key: String, val lockedAtMillis: Long)
 @Serializable
 data class SyncProfileSetting(val profile: String, val name: String, val value: String, val updatedAtMillis: Long)
 
-/** One Profile's Favourite: [kind] is a StreamKind name, [id] the provider's stream or series id within [source]. */
+/**
+ * One Profile's Favourite: [kind] is a StreamKind name, [id] the provider's stream or series id within
+ * [source]. [removed] when it was unstarred, which has to travel for the other side to unstar it.
+ */
 @Serializable
-data class SyncFavourite(val profile: String, val kind: String, val source: String, val id: String)
+data class SyncFavourite(
+    val profile: String,
+    val kind: String,
+    val source: String,
+    val id: String,
+    val changedAtMillis: Long = 0,
+    val removed: Boolean = false,
+)
 
-/** A channel hidden on the device: [id] is the provider's stream id within [source], by name. */
+/**
+ * A channel a viewer hid or showed on the device: [id] is the provider's stream id within [source],
+ * by name. An older device only ever sent hidden ones, with no time.
+ */
 @Serializable
-data class SyncHiddenChannel(val source: String, val id: String)
+data class SyncHiddenChannel(
+    val source: String,
+    val id: String,
+    val hidden: Boolean = true,
+    val changedAtMillis: Long = 0,
+)
 
 @Serializable
 data class SyncPosition(

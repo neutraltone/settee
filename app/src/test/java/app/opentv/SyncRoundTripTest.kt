@@ -50,11 +50,18 @@ class SyncRoundTripTest {
      * own row ids.
      */
     private inner class Device(private val rowIdOffset: Long) {
+        /** What this device's clock reads, once a test cares which device changed something last. */
+        var now: Long? = null
         val db: OpenTvDatabase = Room.inMemoryDatabaseBuilder(app, OpenTvDatabase::class.java)
             .allowMainThreadQueries()
             .build()
         val panel = FakePanel()
-        val graph = ServiceLocator.Graph(app, panel.http, settingsFile = "device_$rowIdOffset") { db }
+        val graph = ServiceLocator.Graph(
+            app,
+            panel.http,
+            settingsFile = "device_$rowIdOffset",
+            clock = { now ?: System.currentTimeMillis() },
+        ) { db }
         val sync = SyncEngine(graph)
         private val library get() = graph.viewerLibrary
 
@@ -145,7 +152,14 @@ class SyncRoundTripTest {
             channels.forEach { db.channels().updateStreamUrl(it.id, it.streamUrl.replace(".ts", ".m3u8")) }
         }
 
-        suspend fun hide(n: Int) = db.channels().upsertAll(listOf(channels[n - 1].copy(hidden = true)))
+        suspend fun hide(n: Int) = graph.catalogRepository.setChannelHidden(channels[n - 1].id, true)
+
+        suspend fun show(n: Int) = graph.catalogRepository.setChannelHidden(channels[n - 1].id, false)
+
+        suspend fun unfavourite(name: String, n: Int) {
+            asProfile(name)
+            library.favourites.set(movies[n - 1], favourite = false)
+        }
 
         suspend fun isHidden(n: Int): Boolean = checkNotNull(db.channels().byId(channels[n - 1].id)).hidden
 
@@ -804,6 +818,133 @@ class SyncRoundTripTest {
         deviceB.sync.apply(deviceB.sync.decode("""{"version": 6, "hiddenCategories": ["unlocked", "adult"]}"""))
 
         assertThat(deviceB.graph.settings.hiddenCategories.value).containsExactly("adult")
+    }
+
+    @Test
+    fun `unstarring a Favourite spreads to the other device`() = runTest {
+        deviceA.seed("Tom")
+        deviceB.seed("Tom")
+        deviceA.now = 1_000
+        deviceA.favourite("Tom", 1)
+        syncAToB()
+
+        deviceA.now = 2_000
+        deviceA.unfavourite("Tom", 1)
+        syncAToB()
+
+        assertThat(deviceB.favouriteNames("Tom")).containsExactly("Channel 1", "Series 1")
+    }
+
+    @Test
+    fun `a Favourite starred again after it was unstarred elsewhere stays, whichever way it syncs`() = runTest {
+        deviceA.seed("Tom")
+        deviceB.seed("Tom")
+        deviceA.now = 1_000
+        deviceA.favourite("Tom", 1)
+        syncAToB()
+        deviceA.now = 2_000
+        deviceA.unfavourite("Tom", 1)
+        val unstarred = bundleFromA()
+
+        deviceB.now = 3_000
+        deviceB.favourite("Tom", 1)
+        deviceB.sync.apply(unstarred)
+        deviceA.sync.apply(deviceA.sync.decode(deviceB.sync.encode(deviceB.sync.gather())))
+
+        assertThat(deviceB.favouriteNames("Tom")).contains("Movie 1")
+        assertThat(deviceA.favouriteNames("Tom")).contains("Movie 1")
+    }
+
+    @Test
+    fun `an old NAS file doesn't bring back an unstarred Favourite, however long ago it was`() = runTest {
+        deviceA.seed("Tom")
+        deviceB.seed("Tom")
+        deviceB.now = 1_000
+        deviceB.favourite("Tom", 1)
+        val oldFile = deviceB.sync.decode(deviceB.sync.encode(deviceB.sync.gather()))
+        deviceB.now = 2_000
+        deviceB.unfavourite("Tom", 1)
+
+        deviceB.now = 2_000 + 10L * 365 * 24 * 60 * 60 * 1_000
+        deviceB.sync.apply(oldFile)
+
+        assertThat(deviceB.favouriteNames("Tom")).containsExactly("Channel 1", "Series 1")
+    }
+
+    @Test
+    fun `a Favourite with no time applies only where this device has never changed it`() = runTest {
+        deviceB.seed("Tom")
+        deviceB.now = 1_000
+        deviceB.favourite("Tom", 1)
+        deviceB.unfavourite("Tom", 1)
+
+        deviceB.sync.apply(
+            deviceB.sync.decode(
+                """{"version": 6, "favourites": [
+                    {"profile": "Tom", "kind": "MOVIE", "source": "Provider", "id": "m1"},
+                    {"profile": "Tom", "kind": "MOVIE", "source": "Provider", "id": "m2"}
+                ]}""",
+            ),
+        )
+
+        assertThat(deviceB.favouriteNames("Tom")).containsExactly("Channel 1", "Series 1", "Movie 2")
+    }
+
+    @Test
+    fun `unhiding a channel spreads, and an old NAS file doesn't hide it again`() = runTest {
+        deviceA.seed()
+        deviceB.seed()
+        deviceA.now = 1_000
+        deviceA.hide(1)
+        val oldFile = bundleFromA()
+        syncAToB()
+        assertThat(deviceB.isHidden(1)).isTrue()
+
+        deviceA.now = 2_000
+        deviceA.show(1)
+        syncAToB()
+        assertThat(deviceB.isHidden(1)).isFalse()
+
+        deviceB.sync.apply(oldFile)
+        assertThat(deviceB.isHidden(1)).isFalse()
+    }
+
+    @Test
+    fun `the newer of two changes to a channel wins, and a tie keeps what's here`() = runTest {
+        deviceA.seed()
+        deviceB.seed()
+        deviceA.now = 2_000
+        deviceA.hide(1)
+        deviceA.hide(2)
+        deviceB.now = 3_000
+        deviceB.show(1)
+        deviceB.now = 2_000
+        deviceB.show(2)
+
+        syncAToB()
+
+        assertThat(deviceB.isHidden(1)).isFalse()
+        assertThat(deviceB.isHidden(2)).isFalse()
+    }
+
+    @Test
+    fun `a hidden channel with no time applies only where this device has never changed it`() = runTest {
+        deviceB.seed()
+        deviceB.now = 1_000
+        deviceB.hide(1)
+        deviceB.show(1)
+
+        deviceB.sync.apply(
+            deviceB.sync.decode(
+                """{"version": 6, "hiddenStreams": [
+                    {"source": "Provider", "id": "c1"},
+                    {"source": "Provider", "id": "c2"}
+                ]}""",
+            ),
+        )
+
+        assertThat(deviceB.isHidden(1)).isFalse()
+        assertThat(deviceB.isHidden(2)).isTrue()
     }
 
     private companion object {
