@@ -36,6 +36,7 @@ import app.opentv.player.PlayerController
 import app.opentv.ui.player.SubtitlePicks
 import app.opentv.ui.vod.VodPlayerContent
 import app.opentv.ui.vod.VodPlayerViewModel
+import app.opentv.ui.vod.vodPlayback
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.runBlocking
@@ -475,6 +476,29 @@ class VodPlayerContentTest {
 
         assertThat(barPosition()).isEqualTo(controller.player.currentPosition)
         assertThat(barPosition()).isLessThan(TEN_MINUTES)
+    }
+
+    @Test
+    fun `while the Next Episode's stream is being found, saving doesn't give it the old one's position`() {
+        runBlocking { graph.database.episodes().upsertAll((1..2).map { testEpisode(1, it) }) }
+        val loaded = CompletableDeferred<Unit>()
+        val slow = players.controller { key ->
+            if (key == testEpisode(1, 2).key) loaded.await()
+            Playable.Ready(key, "https://example.com/stream", userAgent = "", title = "Film", isLive = false)
+        }
+        runBlocking { viewModel.attach(testEpisode(1, 1).key, slow.vodPlayback()) }
+        players.untilReady(slow.player)
+        slow.player.seekTo(TEN_MINUTES)
+        players.untilReady(slow.player)
+
+        runBlocking {
+            viewModel.markWatched()
+            viewModel.saveProgress()
+        }
+
+        assertThat(runBlocking { graph.viewerLibrary.marks.statusOf("ep:12") }).isEqualTo(WatchStatus.Unwatched)
+        loaded.complete(Unit)
+        slow.release()
     }
 
     private fun inList(text: String) = compose.onNode(hasText(text) and hasAnyAncestor(isDialog()))

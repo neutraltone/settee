@@ -16,6 +16,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsDraggedAsState
 import androidx.compose.foundation.layout.Box
@@ -157,27 +158,7 @@ fun VodPlayerScreen(mediaKey: MediaKey, onBack: () -> Unit, viewModel: VodPlayer
         )
     }
 
-    val playback = remember {
-        object : VodPlayerViewModel.Playback {
-            override fun progress() = controller.player.let { p ->
-                NextEpisodeCountdown.Playback(
-                    positionMillis = p.currentPosition.coerceAtLeast(0),
-                    durationMillis = p.duration.takeIf { it > 0 } ?: 0,
-                    ended = p.playbackState == Player.STATE_ENDED,
-                )
-            }
-
-            // Swapping the media item in the same player, never a new one: see PlayerController.
-            override fun play(key: MediaKey, startPositionMillis: Long) =
-                controller.play(PlayerController.Request(key, startPositionMillis), debounce = false)
-
-            override fun pause() {
-                controller.player.playWhenReady = false
-            }
-
-            override fun stop() = controller.stop()
-        }
-    }
+    val playback = remember { controller.vodPlayback() }
 
     val subtitlePicks = rememberProfileSubtitles(controller, graph.profileSettings, scope)
 
@@ -227,6 +208,34 @@ fun VodPlayerScreen(mediaKey: MediaKey, onBack: () -> Unit, viewModel: VodPlayer
     }
 
     VodPlayerContent(controller, viewModel, growingRec, subtitlePicks, onBack)
+}
+
+/** [this] as the view model drives it. */
+@OptIn(UnstableApi::class)
+internal fun PlayerController.vodPlayback() = object : VodPlayerViewModel.Playback {
+    // Finding a stream can take a while on a portal, and until then the player still reports the
+    // last title: saved now, that position would land on the title moved on to.
+    override fun progress() = if (isSwitching) {
+        NextEpisodeCountdown.Playback(positionMillis = 0, durationMillis = 0)
+    } else {
+        player.let { p ->
+            NextEpisodeCountdown.Playback(
+                positionMillis = p.currentPosition.coerceAtLeast(0),
+                durationMillis = p.duration.takeIf { it > 0 } ?: 0,
+                ended = p.playbackState == Player.STATE_ENDED,
+            )
+        }
+    }
+
+    // Swapping the media item in the same player, never a new one: see PlayerController.
+    override fun play(key: MediaKey, startPositionMillis: Long) =
+        play(PlayerController.Request(key, startPositionMillis), debounce = false)
+
+    override fun pause() {
+        player.playWhenReady = false
+    }
+
+    override fun stop() = this@vodPlayback.stop()
 }
 
 /**
@@ -650,7 +659,8 @@ fun VodPlayerControls(
     onOptions: () -> Unit,
     playPauseFocus: FocusRequester? = null,
 ) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
+    // Fits a TV, but not a phone: scrolling keeps the last buttons reachable.
+    Row(Modifier.horizontalScroll(rememberScrollState()), verticalAlignment = Alignment.CenterVertically) {
         PlayerBackButton(onBack)
         Spacer(Modifier.width(20.dp))
         PlayerChip(Icons.Filled.FastRewind, stringResource(R.string.player_rewind), onClick = onRewind)

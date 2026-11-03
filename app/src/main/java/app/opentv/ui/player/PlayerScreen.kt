@@ -166,7 +166,7 @@ fun PlayerScreen(channelId: Long?, onBack: () -> Unit) {
     val tracks by controller.tracks.collectAsState()
     // What's recording right now, so the Record button can show as armed for this channel.
     val activeRecordings by graph.recordingRepository.observeActive().collectAsState(initial = emptyList())
-    val favouriteIds by graph.viewerLibrary.favourites.channelIds().collectAsState(initial = emptySet())
+    val favouriteIds by graph.viewerLibrary.favourites.channelIds().collectAsState(initial = null)
 
     // Hold the screen awake while the player is on screen. A view-level keepScreenOn flag isn't
     // reliable on every TV box, so we set the window flag on the Activity directly — that's what
@@ -254,8 +254,13 @@ fun PlayerScreen(channelId: Long?, onBack: () -> Unit) {
         }
     }
 
+    // Any Quality's: switching Quality mid-recording mustn't offer to record the Channel again.
+    fun activeRecording() = activeRecordings.firstOrNull { recording ->
+        recording.channelId == currentId || channel?.has(recording.channelId) == true
+    }
+
     fun toggleRecord() {
-        val active = activeRecordings.firstOrNull { it.channelId == currentId }
+        val active = activeRecording()
         if (active != null) {
             graph.recordingEngine.stop(active.id)
         } else {
@@ -270,7 +275,10 @@ fun PlayerScreen(channelId: Long?, onBack: () -> Unit) {
     }
 
     // By the Channel's Qualities, as it's starred: the one playing may not be the one that was.
-    val favourite = channel?.qualities.orEmpty().any { it.id in favouriteIds }
+    // Until the ids first arrive, what the lineup said when the Channel was found.
+    val favourite = channel?.let { playing ->
+        favouriteIds?.let { ids -> playing.qualities.any { it.id in ids } } ?: playing.favourite
+    } == true
 
     fun toggleFavourite() {
         val playing = channel ?: return
@@ -314,7 +322,7 @@ fun PlayerScreen(channelId: Long?, onBack: () -> Unit) {
         programmeOnNow = { now ->
             channel?.let { programmeTitleOnNow(graph.channelLineup, graph.epgRepository, it, now) }
         },
-        recordingThis = activeRecordings.any { it.channelId == currentId },
+        recordingThis = activeRecording() != null,
         livePause = livePause,
         pausePromptDismissed = pausePromptDismissed,
         onPlayChannel = ::playChannelId,
@@ -395,6 +403,8 @@ fun LivePlayerContent(
     // Picture-in-picture. While the player is on it is "eligible" to shrink to a floating window
     // (pressing Home does it, handled in MainActivity); [inPip] drives hiding all the chrome.
     val inPip by app.opentv.core.PipState.inPip.collectAsState()
+    // Not just hidden: it would come back unasked when the player returns to full screen.
+    LaunchedEffect(inPip) { if (inPip) optionsOpen = false }
     val pipSupported = remember {
         android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O &&
             context.packageManager.hasSystemFeature(
@@ -910,7 +920,7 @@ fun LivePlayerContent(
         }
     }
 
-    if (optionsOpen && !inPip) {
+    if (optionsOpen) {
         PlayerOptions(
             options = OptionsFor.LivePlayer(variants.size > 1, favourite, recordingThis).options(),
             onChoose = { option ->

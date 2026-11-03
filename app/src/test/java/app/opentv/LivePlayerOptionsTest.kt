@@ -285,6 +285,23 @@ class LivePlayerOptionsTest {
         }
     }
 
+    @Test
+    fun `going to picture-in-picture closes the list, and it stays closed coming back`() {
+        showChannel()
+        press(Key.Menu)
+        inList("Sleep timer").assertExists()
+
+        try {
+            PipState.setInPip(true)
+            compose.waitForIdle()
+        } finally {
+            PipState.setInPip(false)
+        }
+        compose.waitForIdle()
+
+        compose.onNodeWithText("Sleep timer").assertDoesNotExist()
+    }
+
     private companion object {
         const val FOCUS_MILLIS = 100L
         const val BANNER_TIMEOUT_MILLIS = 5_000L

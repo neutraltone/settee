@@ -76,6 +76,8 @@ class PlayerScreenOptionsTest {
                 row("10", "UK| ITV HD", "HD"),
                 row("20", "UK| ITV FHD", "FHD"),
                 row("30", "UK| Film HD", "HD"),
+                row("40", "UK| News HD", "HD"),
+                row("50", "UK| News FHD", "FHD"),
             ),
             syncStamp = 1,
         )
@@ -136,6 +138,28 @@ class PlayerScreenOptionsTest {
         compose.onNode(inListMatcher("Remove from Favourites")).performClick()
 
         compose.waitUntil(TIMEOUT_MILLIS) { favouriteIds().isEmpty() }
+    }
+
+    @Test
+    fun `a recording on another Quality of the Channel still offers stopping it`() {
+        runBlocking {
+            graph.database.recordings().insert(
+                Recording(
+                    channelId = idOf("40"),
+                    sourceId = 1,
+                    channelName = "News",
+                    title = "News",
+                    filePath = "/data/rec/news.ts",
+                    streamUrl = "http://example.com/live/u/p/40.ts",
+                    status = RecordingStatus.RECORDING,
+                ),
+            )
+        }
+        showPlaying("50", "News")
+
+        openList()
+
+        waitInList("■ Stop recording")
     }
 
     @Test

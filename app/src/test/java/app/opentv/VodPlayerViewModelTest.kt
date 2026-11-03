@@ -18,6 +18,7 @@ import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
@@ -339,6 +340,32 @@ class VodPlayerViewModelTest {
 
         vm.attach(MediaKey.Catchup(1, 1_000), playback)
         assertThat(vm.canMarkWatched.value).isFalse()
+    }
+
+    @Test
+    fun `leaving just as Mark watched is chosen doesn't lose the mark`() = runTest {
+        val vm = VodPlayerViewModel(app, graph)
+        vm.attach(MediaKey.Movie(7), playback)
+
+        val marking = launch(UnconfinedTestDispatcher(testScheduler)) { vm.markWatched() }
+        marking.cancel()
+        marking.join()
+
+        assertThat(graph.viewerLibrary.marks.statusOf("movie:7")).isEqualTo(WatchStatus.Watched)
+    }
+
+    @Test
+    fun `a title marked earlier saves progress again when it's opened anew`() = runTest {
+        val vm = VodPlayerViewModel(app, graph)
+        vm.attach(MediaKey.Movie(7), playback)
+        vm.markWatched()
+        vm.attach(MediaKey.Movie(8), playback)
+        vm.attach(MediaKey.Movie(7), playback)
+
+        playback.positionMillis = 600_000
+        vm.saveProgress()
+
+        assertThat(graph.viewerLibrary.resumeFrom("movie:7")).isEqualTo(600_000L)
     }
 
     private val show = Series(

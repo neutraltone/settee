@@ -16,10 +16,12 @@ import app.opentv.player.NextEpisodeCountdown
 import app.opentv.player.NextEpisodeCountdown.Decision
 import app.opentv.player.NextEpisodeCountdown.Overlay
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * What the movie and episode player is playing, and moving on to the Next Episode.
@@ -100,6 +102,7 @@ class VodPlayerViewModel @JvmOverloads constructor(
         when {
             current == null || route != this.route -> {
                 this.route = route
+                marked = null
                 start(route)
             }
             countdown.overlay is Overlay.StillWatching -> Unit
@@ -144,7 +147,8 @@ class VodPlayerViewModel @JvmOverloads constructor(
     suspend fun markWatched(): Boolean {
         val key = _current.value ?: return true
         marked = key
-        graph.viewerLibrary.marks.markWatched(key.stored)
+        // Must survive the screen closing: saving progress already leaves this title alone.
+        withContext(NonCancellable) { graph.viewerLibrary.marks.markWatched(key.stored) }
         val following = next
         if (following != null) start(MediaKey.Episode(following.id)) else _canMarkWatched.value = false
         return following == null

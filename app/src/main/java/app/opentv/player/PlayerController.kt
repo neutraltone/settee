@@ -383,6 +383,9 @@ class PlayerController(
         }
     }
 
+    /** Whether a [play] hasn't reached the player yet, so [player] still holds the last stream. */
+    val isSwitching: Boolean get() = switchJob?.isActive == true
+
     fun retry() {
         consecutiveFailures = 0
         current?.let { play(it, debounce = false) }
