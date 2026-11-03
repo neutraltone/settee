@@ -15,6 +15,7 @@ import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 import app.opentv.data.model.Category
 import app.opentv.data.model.Channel
+import app.opentv.data.model.ChannelHiddenChange
 import app.opentv.data.model.EpgChannelAlias
 import app.opentv.data.model.EpgFeed
 import app.opentv.data.model.Episode
@@ -64,6 +65,7 @@ class Converters {
         Source::class,
         Category::class,
         Channel::class,
+        ChannelHiddenChange::class,
         EpgFeed::class,
         EpgChannelAlias::class,
         Programme::class,

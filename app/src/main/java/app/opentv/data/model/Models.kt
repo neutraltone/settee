@@ -139,11 +139,6 @@ data class Channel(
      */
     val cmd: String? = null,
     val hidden: Boolean = false,
-    /**
-     * When a viewer last hid or showed this channel, so the newest change wins across devices. Zero
-     * for one they never touched, including a separator row the parser hid, which doesn't travel.
-     */
-    val hiddenChangedAtMillis: Long = 0,
     val sortIndex: Int = 0,
     /**
      * The user's manual rename, `null` until they set one. Beats [displayName] in the UI (see
@@ -457,9 +452,28 @@ data class RecentSearch(val profileId: Long, val text: String, val searchedAtMil
 @Entity(tableName = "profile_settings", primaryKeys = ["profileId", "name"])
 data class ProfileSetting(val profileId: Long, val name: String, val value: String, val updatedAtMillis: Long)
 
-/** A local viewing profile — just a name. No account, no password; it lives on this device. */
+/**
+ * A local viewing profile — just a name. No account, no password; it lives on this device.
+ * [namedAtMillis] is when it deliberately took that name, so a rename of an older Profile with the
+ * same name can tell this isn't the one it means. Zero for one that only arrived by sync.
+ */
 @Entity(tableName = "profiles")
-data class Profile(@PrimaryKey(autoGenerate = true) val id: Long = 0, val name: String, val createdAtMillis: Long = 0)
+data class Profile(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val name: String,
+    val createdAtMillis: Long = 0,
+    val namedAtMillis: Long = 0,
+)
+
+/**
+ * When a viewer last hid or showed a channel, so the newest change wins across devices. A table of
+ * its own, by source name and the provider's id (ADR 0004), not columns on `channels`: a Catalogue
+ * Refresh deletes a row the provider stopped listing, and with it the time, which would let an old
+ * NAS file undo the change when the channel returned. A separator row the parser hid has no row
+ * here, so it doesn't travel as a viewer's change.
+ */
+@Entity(tableName = "channel_hidden_changes", primaryKeys = ["source", "streamId"])
+data class ChannelHiddenChange(val source: String, val streamId: String, val hidden: Boolean, val changedAtMillis: Long)
 
 /** Where a recording is in its lifecycle. */
 enum class RecordingStatus {

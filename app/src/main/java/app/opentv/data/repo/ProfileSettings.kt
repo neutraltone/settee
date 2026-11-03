@@ -98,14 +98,15 @@ class ProfileSettings(
         }
     }
 
-    /** Merges another device's settings, newest wins. Returns how many were taken. */
-    suspend fun import(items: List<SyncProfileSetting>): Int {
+    /** Merges another device's settings, newest wins, labels going by [history]. Returns how many were taken. */
+    suspend fun import(items: List<SyncProfileSetting>, history: ProfileHistory = ProfileHistory.NONE): Int {
         val names = profiles.directory()
-        return items.count { item ->
-            val profileId = names.id(item.profile) ?: return@count false
-            val setting = ProfileSetting(profileId, item.name, item.value, item.updatedAtMillis)
-            db.ifProfileExists(profileId) { mergeSynced(setting) } == true
+        val placed = items.mapNotNull { item ->
+            names.id(history.currentName(item.profile, item.updatedAtMillis))?.let {
+                ProfileSetting(it, item.name, item.value, item.updatedAtMillis)
+            }
         }
+        return db.mergeForProfiles(placed, { it.profileId }) { mergeSynced(it) }
     }
 
     private companion object {

@@ -115,7 +115,7 @@ class LivePreviewTest {
         val bbc = stored("101", "BBC One")
         library.live.record(bbc)
 
-        db.channels().setHidden(bbc.id, true, 1)
+        db.channels().setHidden(bbc.id, true)
 
         assertThat(preview()).isNull()
     }

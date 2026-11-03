@@ -24,37 +24,38 @@ internal class ProfileRenames(
     suspend fun apply(rename: SyncProfileRename, profiles: List<Profile>) {
         val from = profiles.firstOrNull { Profiles.sameName(it.name, rename.from) }
         val to = profiles.firstOrNull { Profiles.sameName(it.name, rename.to) }
-        val history = ProfileHistory(settings.profileRenames(), settings.profileAdds())
+        val name = rename.to.trim()
         when {
             from == null -> {
                 // The same viewer under a new name, and they were removed here.
-                if (to == null && rename.from in removed) removed.add(rename.to)
+                if (to == null && rename.from in removed) removed.add(name)
             }
             // This device's Tom took the name after that Tom was renamed, so it's someone else.
-            history.namedSince(rename.from, rename.atMillis) -> Unit
+            from.namedAtMillis > rename.atMillis -> Unit
             to == null || to.id == from.id -> {
-                db.profiles().rename(from.id, rename.to)
-                removed.lift(rename.to)
+                db.profiles().rename(from.id, name, rename.atMillis)
+                removed.lift(name)
             }
-            else -> merge(from, to, rename.to)
+            else -> merge(from, to, rename.copy(to = name))
         }
     }
 
     /**
-     * Makes two Profiles one, called [name], newest wins wherever they conflict. The base Profile
+     * Makes two Profiles one, called what [rename] says, newest wins wherever they conflict. The base Profile
      * survives whichever side it's on, since it can't be removed and every install has one. One
      * transaction, for the reason [Profiles.remove] is.
      */
-    private suspend fun merge(from: Profile, to: Profile, name: String) {
+    private suspend fun merge(from: Profile, to: Profile, rename: SyncProfileRename) {
         val (gone, kept) = if (from.id == Profiles.BASE_PROFILE_ID) to to from else from to to
+        // Before its rows go, so progress the player is saving can't land under an id that's gone.
+        if (settings.activeProfileId.value == gone.id) settings.setActiveProfile(kept.id)
         db.withTransaction {
             viewerLibrary.profileMerge.merge(gone.id, kept.id)
             profileSettings.mergeProfile(gone.id, kept.id)
             recordings.moveProfile(gone.id, kept.id)
             db.profiles().delete(gone.id)
-            db.profiles().rename(kept.id, name)
+            db.profiles().rename(kept.id, rename.to, rename.atMillis)
         }
-        if (settings.activeProfileId.value == gone.id) settings.setActiveProfile(kept.id)
     }
 }
 
@@ -63,8 +64,8 @@ internal class ProfileRenames(
  * 0005). A new Tom added after Tom became Thomas keeps what's dated after it, and anything older
  * labelled Tom still goes to Thomas.
  */
-class ProfileHistory(renames: List<SyncProfileRename>, adds: List<SyncProfileAdd>) {
-    private val renames = renames.sortedBy { it.atMillis }
+class ProfileHistory(val renames: List<SyncProfileRename>, val adds: List<SyncProfileAdd>) {
+    private val inOrder = renames.sortedBy { it.atMillis }
     private val named = adds.map { it.name to it.atMillis } + renames.map { it.to to it.atMillis }
 
     /**
@@ -74,19 +75,21 @@ class ProfileHistory(renames: List<SyncProfileRename>, adds: List<SyncProfileAdd
     fun currentName(label: String, atMillis: Long): String {
         var name = label
         var moved = false
-        for (rename in renames) {
+        for (rename in inOrder) {
             val isThisOne = moved || !namedBetween(name, rename.atMillis, atMillis)
             if (Profiles.sameName(rename.from, name) && isThisOne) {
-                name = rename.to
+                name = rename.to.trim()
                 moved = true
             }
         }
         return name
     }
 
-    /** Whether a Profile took the name [name] after [atMillis], by being added or renamed onto it. */
-    internal fun namedSince(name: String, atMillis: Long) = namedBetween(name, atMillis, Long.MAX_VALUE)
-
     private fun namedBetween(name: String, after: Long, until: Long) =
         named.any { (other, at) -> Profiles.sameName(other, name) && at > after && at <= until }
+
+    companion object {
+        /** No renames or adds known: every label is the name it says. */
+        val NONE = ProfileHistory(emptyList(), emptyList())
+    }
 }

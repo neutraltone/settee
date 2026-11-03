@@ -14,6 +14,7 @@ import androidx.room.Update
 import androidx.room.Upsert
 import app.opentv.data.model.Category
 import app.opentv.data.model.Channel
+import app.opentv.data.model.ChannelHiddenChange
 import app.opentv.data.model.EpgChannelAlias
 import app.opentv.data.model.EpgFeed
 import app.opentv.data.model.Episode
@@ -185,8 +186,24 @@ interface ChannelDao {
     @Query("SELECT COUNT(*) FROM channels WHERE hidden = 0")
     fun observeVisibleCount(): Flow<Int>
 
-    @Query("UPDATE channels SET hidden = :hidden, hiddenChangedAtMillis = :changedAtMillis WHERE id = :id")
-    suspend fun setHidden(id: Long, hidden: Boolean, changedAtMillis: Long)
+    @Query("UPDATE channels SET hidden = :hidden WHERE id = :id")
+    suspend fun setHidden(id: Long, hidden: Boolean)
+
+    /** A viewer hid or showed a channel: its state and when, together. */
+    @Transaction
+    suspend fun changeHidden(id: Long, hidden: Boolean, changedAtMillis: Long) {
+        setHidden(id, hidden)
+        recordHiddenChange(id, hidden, changedAtMillis)
+    }
+
+    @Query(
+        """
+        INSERT OR REPLACE INTO channel_hidden_changes (source, streamId, hidden, changedAtMillis)
+        SELECT sources.name, channels.streamId, :hidden, :changedAtMillis
+        FROM channels JOIN sources ON sources.id = channels.sourceId WHERE channels.id = :id
+        """,
+    )
+    suspend fun recordHiddenChange(id: Long, hidden: Boolean, changedAtMillis: Long)
 
     @Query("UPDATE channels SET customName = :name WHERE id = :id")
     suspend fun setCustomName(id: Long, name: String?)
@@ -205,24 +222,31 @@ interface ChannelDao {
     // --- Sync: identify hidden channels by source name and stream id (ADR 0004) ---
     @Query(
         """
-        SELECT sources.name AS source, channels.streamId AS id, channels.hidden AS hidden,
-          channels.hiddenChangedAtMillis AS changedAtMillis
-        FROM channels JOIN sources ON sources.id = channels.sourceId
-        WHERE channels.hiddenChangedAtMillis > 0
+        SELECT source, streamId AS id, hidden, changedAtMillis FROM channel_hidden_changes
         """,
     )
     suspend fun hiddenForSync(): List<SyncHiddenChannel>
 
-    @Query("SELECT hidden, hiddenChangedAtMillis FROM channels WHERE sourceId = :sourceId AND streamId = :streamId")
-    suspend fun hiddenState(sourceId: Long, streamId: String): ChannelHiddenState?
+    @Query("SELECT * FROM channel_hidden_changes WHERE source = :source AND streamId = :streamId")
+    suspend fun hiddenChange(source: String, streamId: String): ChannelHiddenChange?
 
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertHiddenChange(change: ChannelHiddenChange)
+
+    @Query("SELECT hidden FROM channels WHERE sourceId = :sourceId AND streamId = :streamId")
+    suspend fun isHidden(sourceId: Long, streamId: String): Boolean?
+
+    @Query("UPDATE channels SET hidden = :hidden WHERE sourceId = :sourceId AND streamId = :streamId")
+    suspend fun setHidden(sourceId: Long, streamId: String, hidden: Boolean)
+
+    /** The last hide or show a viewer made of each channel from this source, listed or not right now. */
     @Query(
         """
-        UPDATE channels SET hidden = :hidden, hiddenChangedAtMillis = :changedAtMillis
-        WHERE sourceId = :sourceId AND streamId = :streamId
+        SELECT * FROM channel_hidden_changes
+        WHERE source = (SELECT name FROM sources WHERE id = :sourceId)
         """,
     )
-    suspend fun setHidden(sourceId: Long, streamId: String, hidden: Boolean, changedAtMillis: Long)
+    suspend fun hiddenChangesFor(sourceId: Long): List<ChannelHiddenChange>
 
     @Query("UPDATE channels SET matchedEpgId = :epgId WHERE id = :id")
     suspend fun setMatchedEpgId(id: Long, epgId: String?)
@@ -269,10 +293,15 @@ interface ChannelDao {
         if (incoming.isEmpty()) return
 
         val existing = userStateForSource(sourceId).associateBy { it.streamId }
+        val hiddenChanges = hiddenChangesFor(sourceId).associateBy { it.streamId }
         val merged = incoming.map { channel ->
             val previous = existing[channel.streamId]
             if (previous == null) {
-                channel.copy(lastSeenMillis = syncStamp)
+                // A channel the provider dropped for a while comes back as the viewer left it.
+                channel.copy(
+                    hidden = hiddenChanges[channel.streamId]?.hidden ?: channel.hidden,
+                    lastSeenMillis = syncStamp,
+                )
             } else {
                 channel.copy(
                     id = previous.id,
@@ -280,7 +309,6 @@ interface ChannelDao {
                     // at parse time, and that decision must stick even for rows that
                     // predate the rule. User hides are preserved the same way.
                     hidden = previous.hidden || channel.hidden,
-                    hiddenChangedAtMillis = previous.hiddenChangedAtMillis,
                     sortIndex = previous.sortIndex,
                     // A user's rename must outlive the provider's fresh name on every refresh.
                     customName = previous.customName,
@@ -298,9 +326,6 @@ interface ChannelDao {
     @Query("SELECT * FROM channels WHERE sourceId = :sourceId")
     suspend fun userStateForSource(sourceId: Long): List<Channel>
 }
-
-/** Whether a channel is hidden and when a viewer last changed that, as newest-wins compares them. */
-data class ChannelHiddenState(val hidden: Boolean, val hiddenChangedAtMillis: Long)
 
 @Dao
 interface CategoryDao {
@@ -925,8 +950,8 @@ interface ProfileDao {
     @Insert
     suspend fun insert(profile: Profile): Long
 
-    @Query("UPDATE profiles SET name = :name WHERE id = :id")
-    suspend fun rename(id: Long, name: String)
+    @Query("UPDATE profiles SET name = :name, namedAtMillis = :namedAtMillis WHERE id = :id")
+    suspend fun rename(id: Long, name: String, namedAtMillis: Long)
 
     @Query("DELETE FROM profiles WHERE id = :id")
     suspend fun delete(id: Long)

@@ -5,7 +5,6 @@
  */
 package app.opentv.sync
 
-import app.opentv.data.repo.ProfileHistory
 import kotlinx.serialization.Serializable
 
 /**
@@ -82,15 +81,6 @@ data class SyncProfileAdd(val name: String, val atMillis: Long)
 /** A locked category: [key] is its group key, [lockedAtMillis] when the lock was first made. */
 @Serializable
 data class SyncCategoryLock(val key: String, val lockedAtMillis: Long)
-
-/** This bundle with every Profile label moved to the name it has now, going by each item's own time. */
-internal fun SyncBundle.relabelled(history: ProfileHistory) = copy(
-    profiles = profiles.map { history.currentName(it, generatedAtMillis) }.distinct(),
-    progress = progress.map { it.copy(profile = history.currentName(it.profile, it.updatedAtMillis)) },
-    dismissals = dismissals.map { it.copy(profile = history.currentName(it.profile, it.dismissedAtMillis)) },
-    favourites = favourites.map { it.copy(profile = history.currentName(it.profile, it.changedAtMillis)) },
-    profileSettings = profileSettings.map { it.copy(profile = history.currentName(it.profile, it.updatedAtMillis)) },
-)
 
 /** One setting a Profile chose; [name] and [value] are as ProfileSettings stores them. */
 @Serializable

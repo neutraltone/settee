@@ -5,6 +5,7 @@
  */
 package app.opentv.data.repo
 
+import androidx.room.withTransaction
 import app.opentv.data.db.OpenTvDatabase
 import app.opentv.data.model.Channel
 import app.opentv.data.model.Favourite
@@ -86,22 +87,22 @@ class Favourites internal constructor(
         }
     }
 
-    /** Merges another device's Favourites, newest change wins. Returns how many it starred or unstarred here. */
-    suspend fun import(items: List<SyncFavourite>): Int {
+    /**
+     * Merges another device's Favourites, newest change wins, labels going by [history]. Returns how
+     * many it starred or unstarred here.
+     */
+    suspend fun import(items: List<SyncFavourite>, history: ProfileHistory = ProfileHistory.NONE): Int {
         val names = profiles.directory()
-        return items.count { item ->
-            val kind = runCatching { StreamKind.valueOf(item.kind) }.getOrNull() ?: return@count false
-            val profileId = names.id(item.profile) ?: return@count false
-            db.ifProfileExists(profileId) {
-                val here = dao.find(profileId, kind, item.source, item.id)
-                val newer = isNewerChange(item.changedAtMillis, here?.changedAtMillis)
-                if (newer) {
-                    dao.upsert(
-                        Favourite(profileId, kind, item.source, item.id, item.changedAtMillis, item.removed),
-                    )
-                }
-                newer && (here?.removed ?: true) != item.removed
-            } == true
+        val placed = items.mapNotNull { item ->
+            val kind = runCatching { StreamKind.valueOf(item.kind) }.getOrNull() ?: return@mapNotNull null
+            val profileId = names.id(history.currentName(item.profile, item.changedAtMillis)) ?: return@mapNotNull null
+            Favourite(profileId, kind, item.source, item.id, item.changedAtMillis, item.removed)
+        }
+        return db.mergeForProfiles(placed, { it.profileId }) { fav ->
+            val here = dao.find(fav.profileId, fav.kind, fav.source, fav.itemId)
+            val newer = isNewerChange(fav.changedAtMillis, here?.changedAtMillis)
+            if (newer) dao.upsert(fav)
+            newer && (here?.removed ?: true) != fav.removed
         }
     }
 }
@@ -116,13 +117,16 @@ private suspend fun OpenTvDatabase.setFavourite(
     favourite: Boolean,
     changedAtMillis: Long,
 ) {
-    val source = sources().directory().name(title.sourceId) ?: return
+    val source = sources().byId(title.sourceId)?.name ?: return
     val dao = favourites()
-    if (favourite) {
-        dao.upsert(Favourite(profileId, title.kind, source, title.itemId, changedAtMillis))
-    } else {
-        dao.find(profileId, title.kind, source, title.itemId)?.let {
-            dao.upsert(it.copy(removed = true, changedAtMillis = changedAtMillis))
+    // One transaction, so a sync's newer change to this row can't land between the read and the write.
+    withTransaction {
+        if (favourite) {
+            dao.upsert(Favourite(profileId, title.kind, source, title.itemId, changedAtMillis))
+        } else {
+            dao.find(profileId, title.kind, source, title.itemId)?.let {
+                dao.upsert(it.copy(removed = true, changedAtMillis = changedAtMillis))
+            }
         }
     }
 }

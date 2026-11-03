@@ -28,14 +28,29 @@ internal class ProfileDirectory(private val profiles: List<Profile>) {
 internal suspend fun ProfileDao.directory() = ProfileDirectory(all())
 
 /**
- * Runs [write] unless Profile [profileId] has been removed, returning null if it has. A sync looks its
- * Profiles up before it writes, and may then spend a while writing, so a Profile can go in between.
- * One transaction, because [Profiles.remove] is one too: SQLite orders the two, so this write either
- * sees the Profile gone or is deleted with it. Holding a lock for a whole sync instead would leave
- * Who's watching? waiting on a slow one, and wouldn't cover progress arriving after it has returned.
+ * Merges synced [items] under the Profile each belongs to, leaving out any Profile that has been
+ * removed, and returns how many [merge] took. A sync looks its Profiles up before it writes, and may
+ * then spend a while writing, so a Profile can go in between. Each batch is one transaction that
+ * starts by checking, and [Profiles.remove] is one too: SQLite orders them, so a write either sees
+ * the Profile gone or is deleted with it. Holding a lock for a whole sync instead would leave Who's
+ * watching? waiting on a slow one, and wouldn't cover progress arriving after it has returned.
+ * Batches rather than one transaction an item, which a slow TV would feel on every sync.
  */
-internal suspend fun <T> OpenTvDatabase.ifProfileExists(profileId: Long, write: suspend () -> T): T? =
-    withTransaction { if (profiles().exists(profileId)) write() else null }
+internal suspend fun <T> OpenTvDatabase.mergeForProfiles(
+    items: List<T>,
+    profileId: (T) -> Long,
+    merge: suspend (T) -> Boolean,
+): Int {
+    var taken = 0
+    for ((id, ofProfile) in items.groupBy(profileId)) {
+        for (batch in ofProfile.chunked(SYNC_BATCH)) {
+            taken += withTransaction { if (profiles().exists(id)) batch.count { merge(it) } else 0 }
+        }
+    }
+    return taken
+}
+
+private const val SYNC_BATCH = 200
 
 /**
  * Whether a change dated [incoming] from another device beats what's here, dated [here] (null when

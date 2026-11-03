@@ -143,18 +143,23 @@ class AppSettings private constructor(context: Context, fileName: String = "open
         _hiddenCategories.value = keys.toSet()
     }
 
+    // The viewer and a sync read, change and store these on different threads; a change lost between
+    // them would be an unlock silently undone.
+    private val lockChanges = Any()
+
     /**
      * The viewer locked or unlocked a category here. The only thing that records a time: a lock that
      * arrived from another device keeps the time it was first made, or an old lock passed around
      * would look new and re-lock a device that has since unlocked (ADR 0005).
      */
-    fun setCategoryLocked(key: String, locked: Boolean, now: Long = System.currentTimeMillis()) {
-        val times = categoryLockTimes()
-        val previous = times[key] ?: CategoryLockTimes()
-        val updated = if (locked) previous.copy(lockedAt = now) else previous.copy(unlockedAt = now)
-        storeCategoryLockTimes(times + (key to updated))
-        setHiddenCategories(if (locked) hiddenCategories.value + key else hiddenCategories.value - key)
-    }
+    fun setCategoryLocked(key: String, locked: Boolean, now: Long = System.currentTimeMillis()) =
+        synchronized(lockChanges) {
+            val times = categoryLockTimes()
+            val previous = times[key] ?: CategoryLockTimes()
+            val updated = if (locked) previous.copy(lockedAt = now) else previous.copy(unlockedAt = now)
+            storeCategoryLockTimes(times + (key to updated))
+            setHiddenCategories(if (locked) hiddenCategories.value + key else hiddenCategories.value - key)
+        }
 
     /** The locks in force here, each with the time it was made, as they travel to the other side. */
     fun exportCategoryLocks(): List<SyncCategoryLock> {
@@ -167,7 +172,7 @@ class AppSettings private constructor(context: Context, fileName: String = "open
      * category. An undated lock counts as the oldest possible, so only a category never unlocked
      * here takes one. Keeps the newest time, so a deliberate new lock travels on through this device.
      */
-    fun importCategoryLocks(locks: List<SyncCategoryLock>) {
+    fun importCategoryLocks(locks: List<SyncCategoryLock>) = synchronized(lockChanges) {
         val times = categoryLockTimes().toMutableMap()
         val taken = locks.filter { lock ->
             val previous = times[lock.key] ?: CategoryLockTimes()
@@ -176,7 +181,7 @@ class AppSettings private constructor(context: Context, fileName: String = "open
             if (takes) times[lock.key] = previous.copy(lockedAt = maxOf(previous.lockedAt, lock.lockedAtMillis))
             takes
         }
-        if (taken.isEmpty()) return
+        if (taken.isEmpty()) return@synchronized
         storeCategoryLockTimes(times)
         setHiddenCategories(hiddenCategories.value + taken.map { it.key })
     }

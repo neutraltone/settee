@@ -248,7 +248,7 @@ class SyncStoresTest {
         deviceA.graph.catalogRepository.setChannelHidden(1, true)
         val before = deviceA.graph.catalogRepository.exportHiddenChannels().single()
 
-        val incoming = deviceA.db.channels().forSource(1).map { it.copy(hidden = false, hiddenChangedAtMillis = 0) }
+        val incoming = deviceA.db.channels().forSource(1).map { it.copy(hidden = false) }
         deviceA.db.channels().replaceCatalogue(1, incoming, syncStamp = 2)
 
         assertThat(deviceA.graph.catalogRepository.exportHiddenChannels()).containsExactly(before)

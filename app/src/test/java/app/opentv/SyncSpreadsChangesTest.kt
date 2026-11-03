@@ -10,7 +10,12 @@ import androidx.test.core.app.ApplicationProvider
 import app.opentv.SyncDevice.Companion.EPISODE_MILLIS
 import app.opentv.SyncDevice.Companion.MOVIE_MILLIS
 import app.opentv.data.repo.Profiles
+import app.opentv.sync.SyncBundle
+import app.opentv.sync.SyncCategoryLock
+import app.opentv.sync.SyncDismissal
 import app.opentv.sync.SyncFavourite
+import app.opentv.sync.SyncPosition
+import app.opentv.sync.SyncProfileRename
 import app.opentv.sync.SyncProfileSetting
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.Dispatchers
@@ -94,23 +99,62 @@ class SyncSpreadsChangesTest {
         assertThat(deviceB.hasProfile("Tom")).isFalse()
     }
 
-    @Test
-    fun `a Profile removed while a sync is applying is left with no rows under its id`() = runBlocking {
-        deviceA.seed("Tom")
-        deviceB.seed("Tom")
+    /** Applies [bundle] and removes Tom part way through, once [started] says some of it has landed. */
+    private fun removeTomWhileApplying(bundle: SyncBundle, started: suspend () -> Boolean): Long = runBlocking {
         val tom = deviceB.profileId("Tom")
-        val bundle = bundleFromA().copy(
-            favourites = List(RACE_ITEMS) { SyncFavourite("Tom", "MOVIE", "Provider", "race$it") },
-            profileSettings = List(RACE_ITEMS) { SyncProfileSetting("Tom", "setting$it", "value", 1) },
-        )
-
         val applying = launch(Dispatchers.IO) { deviceB.sync.apply(bundle) }
-        while (deviceB.db.favourites().all().isEmpty()) delay(1)
+        while (!started()) delay(1)
         deviceB.graph.profiles.remove(tom)
         applying.join()
+        tom
+    }
+
+    @Test
+    fun `a Profile removed while Favourites are arriving is left with none under its id`() = runBlocking {
+        deviceB.seed("Tom")
+        val bundle = SyncBundle(favourites = List(RACE_ITEMS) { SyncFavourite("Tom", "MOVIE", "Provider", "race$it") })
+
+        val tom = removeTomWhileApplying(bundle) { deviceB.db.favourites().all().isNotEmpty() }
 
         assertThat(deviceB.db.favourites().all().filter { it.profileId == tom }).isEmpty()
+    }
+
+    @Test
+    fun `a Profile removed while settings are arriving is left with none under its id`() = runBlocking {
+        deviceB.seed("Tom")
+        val bundle =
+            SyncBundle(profileSettings = List(RACE_ITEMS) { SyncProfileSetting("Tom", "setting$it", "value", 1) })
+
+        val tom = removeTomWhileApplying(bundle) { deviceB.db.profileSettings().all().isNotEmpty() }
+
         assertThat(deviceB.db.profileSettings().all().filter { it.profileId == tom }).isEmpty()
+    }
+
+    @Test
+    fun `a Profile removed while series removals are arriving is left with none under its id`() = runBlocking {
+        deviceB.seed("Tom")
+        val bundle = SyncBundle(dismissals = List(RACE_ITEMS) { SyncDismissal("Tom", "Provider", "race$it", 1, 1, 1) })
+
+        val tom = removeTomWhileApplying(bundle) { deviceB.db.seriesDismissals().all().isNotEmpty() }
+
+        assertThat(deviceB.db.seriesDismissals().all().filter { it.profileId == tom }).isEmpty()
+    }
+
+    @Test
+    fun `a Profile removed while progress is arriving is left with none under its id`() = runBlocking {
+        deviceB.seed("Tom")
+        deviceB.db.movies().upsertAll(
+            List(RACE_ITEMS) {
+                deviceB.movies[0].copy(id = 1_000L + it, streamId = "race$it")
+            },
+        )
+        val bundle = SyncBundle(
+            progress = List(RACE_ITEMS) { SyncPosition("Tom", "Provider", "movie", "race$it", null, 1, 100, 1) },
+        )
+
+        val tom = removeTomWhileApplying(bundle) { deviceB.db.positions().all().isNotEmpty() }
+
+        assertThat(deviceB.db.positions().all().filter { it.profileId == tom }).isEmpty()
     }
 
     @Test
@@ -552,7 +596,101 @@ class SyncSpreadsChangesTest {
         assertThat(deviceB.favouriteNames("Mum")).containsExactly("Channel 1", "Movie 1", "Series 1")
     }
 
+    @Test
+    fun `a rename still reaches the old Profile after another device's newer add of that name arrives first`() =
+        runTest {
+            listOf(deviceA, deviceB, deviceC).forEach {
+                it.now = 1_000
+                it.seed("Tom")
+            }
+            deviceC.graph.profiles.remove(deviceC.profileId("Tom"))
+            deviceB.favourite("Tom", 1)
+            val oldTom = deviceB.profileId("Tom")
+            deviceA.now = 2_000
+            deviceA.rename("Tom", "Thomas")
+            deviceC.now = 3_000
+            checkNotNull(deviceC.graph.profiles.create("Tom"))
+
+            deviceB.syncFrom(deviceC)
+            deviceB.syncFrom(deviceA)
+
+            assertThat(deviceB.profileId("Thomas")).isEqualTo(oldTom)
+            assertThat(deviceB.favouriteNames("Thomas")).containsExactly("Channel 1", "Movie 1", "Series 1")
+            deviceB.syncFrom(deviceC)
+            assertThat(deviceB.profileNames()).containsExactly("Me", "Thomas", "Tom")
+        }
+
+    @Test
+    fun `a rename to a blank name is ignored and not passed on`() = runTest {
+        deviceB.seed("Tom")
+
+        deviceB.sync.apply(SyncBundle(profileRenames = listOf(SyncProfileRename("Tom", "  ", 5))))
+
+        assertThat(deviceB.profileNames()).containsExactly("Me", "Tom")
+        assertThat(deviceB.sync.gather().profileRenames).isEmpty()
+    }
+
+    @Test
+    fun `a rename's new name arrives without stray spaces`() = runTest {
+        deviceB.now = 1
+        deviceB.seed("Tom")
+
+        deviceB.sync.apply(SyncBundle(profileRenames = listOf(SyncProfileRename("Tom", " Thomas ", 5))))
+
+        assertThat(deviceB.profileNames()).containsExactly("Me", "Thomas")
+    }
+
+    @Test
+    fun `an old NAS file doesn't hide a channel again after the provider dropped it for a while`() = runTest {
+        deviceA.seed()
+        deviceB.seed()
+        deviceA.now = 1_000
+        deviceA.hide(1)
+        val oldFile = bundleFromA()
+        deviceB.now = 2_000
+        deviceB.hide(1)
+        deviceB.show(1)
+        val channels = deviceB.db.channels().forSource(deviceB.sourceId).sortedBy { it.streamId }
+
+        deviceB.db.channels().replaceCatalogue(deviceB.sourceId, listOf(channels[1]), syncStamp = 2)
+        deviceB.db.channels().replaceCatalogue(deviceB.sourceId, channels, syncStamp = 3)
+        deviceB.sync.apply(oldFile)
+
+        assertThat(deviceB.isHidden(1)).isFalse()
+    }
+
+    @Test
+    fun `a channel hidden before the provider dropped it is still hidden when it returns`() = runTest {
+        deviceB.seed()
+        deviceB.now = 2_000
+        deviceB.hide(1)
+        val channels = deviceB.db.channels().forSource(deviceB.sourceId).sortedBy { it.streamId }
+        val fresh = channels.map { it.copy(hidden = false) }
+
+        deviceB.db.channels().replaceCatalogue(deviceB.sourceId, listOf(fresh[1]), syncStamp = 2)
+        deviceB.db.channels().replaceCatalogue(deviceB.sourceId, fresh, syncStamp = 3)
+
+        assertThat(deviceB.db.channels().forSource(deviceB.sourceId).single { it.streamId == "c1" }.hidden).isTrue()
+    }
+
+    @Test
+    fun `an unlock isn't lost to a sync storing lock times at the same moment`() = runBlocking {
+        val settings = deviceB.graph.settings
+        val keys = List(LOCK_RACE_KEYS) { "category$it" }
+        val syncing = launch(Dispatchers.IO) {
+            keys.forEach { settings.importCategoryLocks(listOf(SyncCategoryLock("other$it", 1))) }
+        }
+        val viewer = launch(Dispatchers.IO) { keys.forEach { settings.setCategoryLocked(it, locked = false, now = 2) } }
+        syncing.join()
+        viewer.join()
+
+        settings.importCategoryLocks(keys.map { SyncCategoryLock(it, 1) })
+
+        assertThat(settings.hiddenCategories.value.intersect(keys.toSet())).isEmpty()
+    }
+
     private companion object {
         const val RACE_ITEMS = 3_000
+        const val LOCK_RACE_KEYS = 300
     }
 }

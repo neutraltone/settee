@@ -38,7 +38,7 @@ class Profiles(
 ) {
     private val dao = db.profiles()
     private val removed = RemovedProfiles(settings)
-    private val renames = ProfileRenames(db, viewerLibrary, profileSettings, recordings, settings, removed)
+    private val renamer = ProfileRenames(db, viewerLibrary, profileSettings, recordings, settings, removed)
 
     // Name checks and the first Profile's seeding read before they write; two at once would let a
     // duplicate name, or two "Me"s, through.
@@ -58,7 +58,7 @@ class Profiles(
         if (wanted.isEmpty() || isNameTaken(wanted, dao.seeded(clock()))) return null
         removed.lift(wanted)
         settings.setProfileAdds(settings.profileAdds() + SyncProfileAdd(wanted, clock()))
-        dao.insert(Profile(name = wanted, createdAtMillis = clock()))
+        dao.insert(Profile(name = wanted, createdAtMillis = clock(), namedAtMillis = clock()))
     }
 
     /** Renames a Profile; returns false when there's no such Profile, or the name is blank or taken. */
@@ -70,7 +70,7 @@ class Profiles(
         if (profile.name != wanted) {
             settings.setProfileRenames(settings.profileRenames() + SyncProfileRename(profile.name, wanted, clock()))
         }
-        dao.rename(id, wanted)
+        dao.rename(id, wanted, clock())
         removed.lift(wanted)
         true
     }
@@ -80,25 +80,29 @@ class Profiles(
 
     /**
      * Adds the Profiles another device has and this one doesn't, unless they were removed here. Never
-     * removes one: that would delete its history.
+     * removes one: that would delete its history. [atMillis] is when the other side listed them, which
+     * says who a reused name means.
      */
-    suspend fun import(names: List<String>) = names.forEach { findOrCreate(it) }
+    suspend fun import(names: List<String>, atMillis: Long = clock()) {
+        val history = history
+        names.map { history.currentName(it, atMillis) }.distinct().forEach { findOrCreate(it) }
+    }
 
     /**
      * The Profile another device calls [name], created here if there isn't one. Matches the way
      * [isNameTaken] does, so "tom" from the other side is this device's "Tom". Null for a blank name,
      * and for one removed on this device.
      */
-    suspend fun findOrCreate(name: String): Long? = writes.withLock { findOrCreateLocked(name) }
+    suspend fun findOrCreate(name: String): Long? = writes.withLock { findOrCreateLocked(name, namedAtMillis = 0) }
 
-    private suspend fun findOrCreateLocked(name: String): Long? {
+    private suspend fun findOrCreateLocked(name: String, namedAtMillis: Long): Long? {
         val wanted = name.trim()
         val existing = dao.seeded(clock()).firstOrNull { sameName(it.name, wanted) }
         return when {
             wanted.isEmpty() -> null
             existing != null -> existing.id
             wanted in removed -> null
-            else -> dao.insert(Profile(name = wanted, createdAtMillis = clock()))
+            else -> dao.insert(Profile(name = wanted, createdAtMillis = clock(), namedAtMillis = namedAtMillis))
         }
     }
 
@@ -108,16 +112,17 @@ class Profiles(
      * On the same millisecond a rename goes first, since adding its old name has to follow it.
      */
     suspend fun importChanges(renames: List<SyncProfileRename>, adds: List<SyncProfileAdd>) = writes.withLock {
-        val newRenames = renames.distinct() - settings.profileRenames().toSet()
+        // A blank name is no Profile's, so a record of one is neither applied nor passed on.
+        val newRenames = renames.filter { it.to.isNotBlank() }.distinct() - settings.profileRenames().toSet()
         val newAdds = adds.distinct() - settings.profileAdds().toSet()
         val steps = newRenames.map { rename ->
             rename.atMillis to suspend {
-                this.renames.apply(rename, dao.seeded(clock()))
+                renamer.apply(rename, dao.seeded(clock()))
                 settings.setProfileRenames(settings.profileRenames() + rename)
             }
         } + newAdds.map { add ->
             add.atMillis to suspend {
-                findOrCreateLocked(add.name)
+                findOrCreateLocked(add.name, add.atMillis)
                 settings.setProfileAdds(settings.profileAdds() + add)
             }
         }
@@ -128,19 +133,20 @@ class Profiles(
      * Removes a Profile and everything it owned; its recordings stay, for no one in particular.
      * Returns false for the base Profile, which can't be removed, and for one that isn't there.
      * Removing the active Profile makes the base Profile active. One transaction, which a sync's
-     * writes order themselves against (see [ifProfileExists]) so none lands under the old id.
+     * writes order themselves against (see [mergeForProfiles]) so none lands under the old id.
      */
     suspend fun remove(id: Long): Boolean = writes.withLock {
         val profile = dao.all().firstOrNull { it.id == id }
         if (id == BASE_PROFILE_ID || profile == null) return false
         removed.add(profile.name)
+        // Before its rows go, so progress the player is saving can't land under an id that's gone.
+        if (settings.activeProfileId.value == id) settings.setActiveProfile(BASE_PROFILE_ID)
         db.withTransaction {
             viewerLibrary.profileRemoval.forget(id)
             profileSettings.forgetProfile(id)
             recordings.forgetProfile(id)
             dao.delete(id)
         }
-        if (settings.activeProfileId.value == id) settings.setActiveProfile(BASE_PROFILE_ID)
         true
     }
 

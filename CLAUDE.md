@@ -110,7 +110,7 @@ catalogue refresh, playback or Xtream parsing. The big picture:
   itemId)` — the source's name and the provider's `streamId` (channels, movies) or `seriesId` (series) —
   never the stream URL, which Xtream changes with the live format and the account password. So they
   survive a catalogue refresh and match across devices. Hidden channels and channel order stay
-  device-wide columns on `channels`. Sync carries each Profile's Favourites under its name and positions, both
+  device-wide columns on `channels`, with when a viewer last hid or showed each in `channel_hidden_changes`. Sync carries each Profile's Favourites under its name and positions, both
   newest-wins (`sync/SyncData.kt`); an unstarred Favourite stays as a row marked removed, so every read leaves those out. A title travels as its source's name plus the
   provider's id, never a stream URL, so a bundle holds no credentials (ADR 0004). Each store exports
   and imports its own items, identity and merge included; `SyncEngine` only collects, encodes, carries

@@ -107,13 +107,13 @@ class ViewerLibrary(
     val catchUp = CatchUpMarks(positions, episodes, activeProfileId, clock) { db.withTransaction(it) }
 
     /** Every Profile's progress, as it travels between devices. */
-    val syncedProgress = SyncedProgress(positions, db.movies(), episodes, db.sources(), db.profiles()) {
-        db.ifProfileExists(it.profileId) { mergeSynced(it) } == true
+    val syncedProgress = SyncedProgress(positions, db.movies(), episodes, db.sources(), db.profiles()) { placed ->
+        db.mergeForProfiles(placed, { it.profileId }, ::mergeSynced)
     }
 
     /** Every Profile's Continue Watching removals, as they travel between devices. */
-    val syncedDismissals = SyncedDismissals(dismissals, db.sources(), db.profiles()) {
-        db.ifProfileExists(it.profileId) { marks.mergeSynced(it) } == true
+    val syncedDismissals = SyncedDismissals(dismissals, db.sources(), db.profiles()) { placed ->
+        db.mergeForProfiles(placed, { it.profileId }, marks::mergeSynced)
     }
 
     /** The active Profile's Recent Searches. */
