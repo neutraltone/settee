@@ -5,7 +5,6 @@
     <ID>ComplexCondition:CatalogRepository.kt$CatalogRepository$tmdb.isConfigured() &amp;&amp; (result.backdropUrl == null || result.plot == null || result.cast == null)</ID>
     <ID>ComplexCondition:LiveScreen.kt$!previewEnabled || !screenResumed || recordingActive || row == null</ID>
     <ID>ComplexCondition:OpenTvViewModels.kt$VodViewModel$prev != null &amp;&amp; prev.profileId == profileId &amp;&amp; prev.movieCount == movieCount &amp;&amp; prev.seriesCount == seriesCount</ID>
-    <ID>ComplexCondition:PlayerScreen.kt$controlsVisible &amp;&amp; !paused &amp;&amp; panel == PlayerPanel.NONE &amp;&amp; state is PlayerController.State.Playing</ID>
     <ID>ComposableParamOrder:GuideGrid.kt$ChannelList</ID>
     <ID>ComposableParamOrder:GuideGrid.kt$GuideGrid</ID>
     <ID>ComposableParamOrder:GuidePreview.kt$GuidePreview</ID>
@@ -22,7 +21,7 @@
     <ID>CyclomaticComplexMethod:PairingHttp.kt$PairingHttp$fun isPrivateAddress(host: String?): Boolean</ID>
     <ID>CyclomaticComplexMethod:PairingServer.kt$PairingServer$private fun handle(client: Socket)</ID>
     <ID>CyclomaticComplexMethod:PlayerScreen.kt$@OptIn(UnstableApi::class) @Composable fun PlayerScreen(channelId: Long?, onBack: () -&gt; Unit)</ID>
-    <ID>CyclomaticComplexMethod:PlayerScreen.kt$@OptIn(UnstableApi::class) @Composable fun LivePlayerContent( controller: PlayerController, settings: app.opentv.core.AppSettings, queue: List&lt;PlaybackQueue.Item&gt;, variants: List&lt;Channel&gt;, currentId: Long?, previousId: Long?, bannerChannel: BannerChannel?, programmeOnNow: suspend (Long) -&gt; String?, recordingThis: Boolean, livePause: Boolean, pausePromptDismissed: Boolean, onPlayChannel: (Long) -&gt; Unit, onZap: (delta: Int, atEnd: () -&gt; Unit) -&gt; Unit, onTune: (Channel) -&gt; Unit, onToggleRecord: () -&gt; Unit, onTurnOnLivePause: () -&gt; Unit, onDontAskAgain: () -&gt; Unit, subtitlePicks: SubtitlePicks, onBack: () -&gt; Unit, onChannelOptions: (PlaybackQueue.Item, onWatch: () -&gt; Unit) -&gt; Unit = { _, _ -&gt; }, )</ID>
+    <ID>CyclomaticComplexMethod:PlayerScreen.kt$@OptIn(UnstableApi::class) @Composable fun LivePlayerContent( controller: PlayerController, settings: app.opentv.core.AppSettings, queue: List&lt;PlaybackQueue.Item&gt;, variants: List&lt;Channel&gt;, currentId: Long?, previousId: Long?, bannerChannel: BannerChannel?, programmeOnNow: suspend (Long) -&gt; String?, recordingThis: Boolean, livePause: Boolean, pausePromptDismissed: Boolean, onPlayChannel: (Long) -&gt; Unit, onZap: (delta: Int, atEnd: () -&gt; Unit) -&gt; Unit, onTune: (Channel) -&gt; Unit, onToggleRecord: () -&gt; Unit, favourite: Boolean, onToggleFavourite: () -&gt; Unit, onTurnOnLivePause: () -&gt; Unit, onDontAskAgain: () -&gt; Unit, subtitlePicks: SubtitlePicks, onBack: () -&gt; Unit, onChannelOptions: (PlaybackQueue.Item, onWatch: () -&gt; Unit) -&gt; Unit = { _, _ -&gt; }, )</ID>
     <ID>CyclomaticComplexMethod:RecordingService.kt$RecordingService$private suspend fun runCapture(id: Long)</ID>
     <ID>CyclomaticComplexMethod:RecordingSettingsScreen.kt$@Composable fun RecordingSettingsScreen(onBack: () -&gt; Unit)</ID>
     <ID>CyclomaticComplexMethod:SyncEngine.kt$SyncEngine$suspend fun apply(bundle: SyncBundle): MergeResult</ID>

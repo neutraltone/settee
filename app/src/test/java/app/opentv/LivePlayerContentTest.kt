@@ -130,6 +130,8 @@ class LivePlayerContentTest {
                     },
                     onTune = {},
                     onToggleRecord = {},
+                    favourite = false,
+                    onToggleFavourite = {},
                     onTurnOnLivePause = { turnedOn++ },
                     onDontAskAgain = {
                         dontAskAgain++
@@ -440,10 +442,10 @@ class LivePlayerContentTest {
     fun `another key with nothing showing passes through and doesn't open the controls`() {
         showChannel()
 
-        press(Key.Menu)
+        press(Key.Info)
 
         compose.onNodeWithText("Pause").assertDoesNotExist()
-        assertThat(passedThrough).containsExactly(Key.Menu)
+        assertThat(passedThrough).containsExactly(Key.Info)
     }
 
     @Test

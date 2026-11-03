@@ -89,6 +89,8 @@ class PlayerChannelOptionsTest {
                     onDontAskAgain = {},
                     subtitlePicks = SubtitlePicks(onOff = {}, onPicked = {}),
                     onBack = {},
+                    favourite = false,
+                    onToggleFavourite = {},
                     onChannelOptions = { item, onWatch ->
                         optionsOpenedOn += item.name
                         watchFromOptions = onWatch
@@ -127,6 +129,7 @@ class PlayerChannelOptionsTest {
         press(Key.Menu)
 
         assertThat(optionsOpenedOn).containsExactly("Two")
+        compose.onNodeWithText("Subtitles").assertDoesNotExist()
     }
 
     @Test

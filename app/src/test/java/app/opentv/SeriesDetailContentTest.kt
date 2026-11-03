@@ -5,7 +5,12 @@
  */
 package app.opentv
 
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasScrollAction
@@ -13,12 +18,19 @@ import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.performScrollToNode
+import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.test.requestFocus
 import app.opentv.data.model.Series
 import app.opentv.data.repo.EpisodeStatuses
 import app.opentv.data.repo.MediaKey
 import app.opentv.data.repo.SeriesMainAction
+import app.opentv.data.repo.WatchStatus
+import app.opentv.ui.options.LocalOpenOptions
+import app.opentv.ui.options.OptionsFor
+import app.opentv.ui.options.OptionsPanel
+import app.opentv.ui.options.OptionsSubject
 import app.opentv.ui.vod.SeriesDetailContent
 import com.google.common.truth.Truth.assertThat
 import org.junit.Rule
@@ -32,6 +44,7 @@ import org.robolectric.annotation.GraphicsMode
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], qualifiers = TV_1080P, application = android.app.Application::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
+@OptIn(ExperimentalTestApi::class)
 class SeriesDetailContentTest {
 
     @get:Rule
@@ -169,6 +182,81 @@ class SeriesDetailContentTest {
         compose.onNodeWithText("Favourite").performClick()
 
         assertThat(favouriteRequests).containsExactly(true)
+    }
+
+    private val optionsAskedFor = mutableStateListOf<OptionsSubject>()
+
+    /** The page with its options panel stood in for, and the highlight on season [season]'s header. */
+    private fun showOnSeasonHeader(season: Int): SemanticsNodeInteraction {
+        compose.setTvContent {
+            CompositionLocalProvider(LocalOpenOptions provides { subject, _ -> optionsAskedFor += subject }) {
+                SeriesDetailContent(
+                    series = series,
+                    episodes = episodes,
+                    statuses = EpisodeStatuses(),
+                    mainAction = SeriesMainAction.Play(testEpisode(1, 1)),
+                    favourite = false,
+                    moreLike = emptyList(),
+                    onPlayEpisode = { played = it },
+                    onSetFavourite = {},
+                    onOpenSeries = {},
+                    onOpenPerson = {},
+                )
+            }
+            optionsAskedFor.lastOrNull()?.let { subject ->
+                val options = OptionsFor.Season(listOf(WatchStatus.Unwatched)).options()
+                OptionsPanel(subject.title, options, onChoose = {}, onDismiss = {})
+            }
+        }
+        settle()
+        val header = hasText("Season $season") and hasClickAction()
+        compose.onNode(hasScrollAction()).performScrollToNode(header)
+        return compose.onNode(header).also { it.requestFocus() }
+    }
+
+    private val seasonTwoOptions = OptionsSubject.OfSeason(
+        episodes = episodes.filter { it.season == 2 },
+        title = "Season 2",
+    )
+
+    @Test
+    fun `moving up from a season's first episode reaches its header, highlighted`() {
+        showOnSeasonHeader(season = 1)
+        val first = compose.onNode(hasText("S1E1") and hasClickAction())
+        first.requestFocus()
+
+        first.performKeyInput { pressKey(Key.DirectionUp) }
+        settle()
+
+        compose.onNode(hasText("Season 1") and hasClickAction()).assertIsFocused()
+        captureScreen("series_detail_season_header")
+    }
+
+    @Test
+    fun `Select on a season header opens its options`() {
+        showOnSeasonHeader(season = 2).performKeyInput { pressKey(Key.DirectionCenter) }
+
+        assertThat(optionsAskedFor).containsExactly(seasonTwoOptions)
+        compose.onNodeWithText("Mark season watched").assertExists()
+        captureScreen("series_detail_season_options")
+    }
+
+    @Test
+    fun `holding Select on a season header opens its options once`() {
+        showOnSeasonHeader(season = 2).performKeyInput {
+            keyDown(Key.DirectionCenter)
+            advanceEventTime(1_000)
+            keyUp(Key.DirectionCenter)
+        }
+
+        assertThat(optionsAskedFor).containsExactly(seasonTwoOptions)
+    }
+
+    @Test
+    fun `Menu on a season header opens its options`() {
+        showOnSeasonHeader(season = 2).performKeyInput { pressKey(Key.Menu) }
+
+        assertThat(optionsAskedFor).containsExactly(seasonTwoOptions)
     }
 
     @Test

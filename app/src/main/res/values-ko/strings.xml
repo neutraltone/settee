@@ -37,7 +37,6 @@
     <string name="guide_open_external">외부 플레이어로 열기</string>
     <string name="guide_play_channel_with">채널을 재생할 앱 선택</string>
     <string name="guide_no_external_player">설치된 외부 플레이어가 없습니다</string>
-    <string name="guide_record_now_playing">●  지금 방송 중인 프로그램 녹화</string>
     <string name="guide_no_info">편성표 정보 없음</string>
     <string name="guide_next_prefix">다음  %1$s  %2$s</string>
     <string name="guide_loading_channels">채널을 불러오는 중</string>

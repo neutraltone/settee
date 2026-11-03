@@ -16,6 +16,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -49,6 +50,7 @@ import androidx.compose.material.icons.filled.FastForward
 import androidx.compose.material.icons.filled.FastRewind
 import androidx.compose.material.icons.filled.FiberManualRecord
 import androidx.compose.material.icons.filled.HighQuality
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PictureInPictureAlt
 import androidx.compose.material.icons.filled.PlayArrow
@@ -109,10 +111,12 @@ import app.opentv.player.PlaybackQueue
 import app.opentv.player.PlayerController
 import app.opentv.player.SettledChannel
 import app.opentv.ui.formatPlaybackTime
+import app.opentv.ui.options.ItemOption
 import app.opentv.ui.options.LeaveDirectly
 import app.opentv.ui.options.LocalConfirmLive
 import app.opentv.ui.options.LocalOpenOptions
 import app.opentv.ui.options.LocalRecordingStarted
+import app.opentv.ui.options.OptionsFor
 import app.opentv.ui.options.OptionsSubject
 import app.opentv.ui.options.optionsClickable
 import app.opentv.ui.options.rememberRowHighlight
@@ -166,6 +170,7 @@ fun PlayerScreen(channelId: Long?, onBack: () -> Unit) {
     val tracks by controller.tracks.collectAsState()
     // What's recording right now, so the Record button can show as armed for this channel.
     val activeRecordings by graph.recordingRepository.observeActive().collectAsState(initial = emptyList())
+    val favouriteIds by graph.viewerLibrary.favourites.channelIds().collectAsState(initial = null)
 
     // Hold the screen awake while the player is on screen. A view-level keepScreenOn flag isn't
     // reliable on every TV box, so we set the window flag on the Activity directly — that's what
@@ -251,8 +256,13 @@ fun PlayerScreen(channelId: Long?, onBack: () -> Unit) {
         }
     }
 
+    // Any Quality's: switching Quality mid-recording mustn't offer to record the Channel again.
+    fun activeRecording() = activeRecordings.firstOrNull { recording ->
+        recording.channelId == currentId || channel?.has(recording.channelId) == true
+    }
+
     fun toggleRecord() {
-        val active = activeRecordings.firstOrNull { it.channelId == currentId }
+        val active = activeRecording()
         if (active != null) {
             graph.recordingEngine.stop(active.id)
         } else {
@@ -261,6 +271,17 @@ fun PlayerScreen(channelId: Long?, onBack: () -> Unit) {
             scope.launch { graph.recordingEngine.startChannel(playing) }
             recordingStarted()
         }
+    }
+
+    // By the Channel's Qualities, as it's starred: the one playing may not be the one that was.
+    // Until the ids first arrive, what the lineup said when the Channel was found.
+    val favourite = channel?.let { playing ->
+        favouriteIds?.let { ids -> playing.qualities.any { it.id in ids } } ?: playing.favourite
+    } == true
+
+    fun toggleFavourite() {
+        val playing = channel ?: return
+        scope.launch { graph.channelLineup.setFavourite(playing, !favourite) }
     }
 
     LaunchedEffect(channelId) {
@@ -301,13 +322,15 @@ fun PlayerScreen(channelId: Long?, onBack: () -> Unit) {
         programmeOnNow = { now ->
             channel?.let { programmeTitleOnNow(graph.channelLineup, graph.epgRepository, it, now) }
         },
-        recordingThis = activeRecordings.any { it.channelId == currentId },
+        recordingThis = activeRecording() != null,
         livePause = livePause,
         pausePromptDismissed = pausePromptDismissed,
         onPlayChannel = ::playChannelId,
         onZap = ::zap,
         onTune = ::tuneTo,
         onToggleRecord = ::toggleRecord,
+        favourite = favourite,
+        onToggleFavourite = ::toggleFavourite,
         onTurnOnLivePause = { settings.setLivePauseEnabled(true) },
         onDontAskAgain = { settings.setLivePausePromptDismissed(true) },
         subtitlePicks = subtitlePicks,
@@ -351,6 +374,8 @@ fun LivePlayerContent(
     onZap: (delta: Int, atEnd: () -> Unit) -> Unit,
     onTune: (Channel) -> Unit,
     onToggleRecord: () -> Unit,
+    favourite: Boolean,
+    onToggleFavourite: () -> Unit,
     onTurnOnLivePause: () -> Unit,
     onDontAskAgain: () -> Unit,
     subtitlePicks: SubtitlePicks,
@@ -374,11 +399,14 @@ fun LivePlayerContent(
     var openingPress by remember { mutableStateOf(false) }
     var panel by remember { mutableStateOf(PlayerPanel.NONE) }
     var channelListVisible by remember { mutableStateOf(false) }
+    var optionsOpen by remember { mutableStateOf(false) }
     var interaction by remember { mutableIntStateOf(0) }
 
     // Picture-in-picture. While the player is on it is "eligible" to shrink to a floating window
     // (pressing Home does it, handled in MainActivity); [inPip] drives hiding all the chrome.
     val inPip by app.opentv.core.PipState.inPip.collectAsState()
+    // Not just hidden: it would come back unasked when the player returns to full screen.
+    LaunchedEffect(inPip) { if (inPip) optionsOpen = false }
     val pipSupported = remember {
         android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O &&
             context.packageManager.hasSystemFeature(
@@ -488,12 +516,10 @@ fun LivePlayerContent(
     }
 
     // Auto-hide the bar after a few seconds — but never while paused or with a picker open.
-    LaunchedEffect(controlsVisible, interaction, state, paused, panel) {
-        if (controlsVisible &&
-            !paused &&
-            panel == PlayerPanel.NONE &&
-            state is PlayerController.State.Playing
-        ) {
+    LaunchedEffect(controlsVisible, interaction, state, paused, panel, optionsOpen) {
+        val inUse = panel != PlayerPanel.NONE || optionsOpen
+        val watching = !paused && state is PlayerController.State.Playing
+        if (controlsVisible && watching && !inUse) {
             delay(CONTROLS_TIMEOUT_MILLIS)
             controlsVisible = false
         }
@@ -596,6 +622,10 @@ fun LivePlayerContent(
                     channelListVisible || panel != PlayerPanel.NONE -> {
                         interaction++
                         false
+                    }
+                    event.key == Key.Menu -> {
+                        if (!inPip) optionsOpen = true
+                        true
                     }
                     // Channel up/down works whether or not the bar is showing — this remote has no
                     // CH+/CH- keys, so up/down IS the channel changer. Only announced if the zap finds
@@ -830,6 +860,7 @@ fun LivePlayerContent(
                         onToggleRecord()
                         interaction++
                     },
+                    onOptions = { optionsOpen = true },
                     canPopOut = pipSupported,
                     onPopOut = {
                         (context.findActivity() as? app.opentv.MainActivity)?.enterPipNow()
@@ -902,6 +933,32 @@ fun LivePlayerContent(
                 }
             }
         }
+    }
+
+    if (optionsOpen) {
+        PlayerOptions(
+            options = OptionsFor.LivePlayer(variants.size > 1, favourite, recordingThis).options(),
+            onChoose = { option ->
+                optionsOpen = false
+                val picker = when (option) {
+                    ItemOption.Subtitles -> PlayerPanel.SUBTITLES
+                    ItemOption.Audio -> PlayerPanel.AUDIO
+                    ItemOption.Quality -> PlayerPanel.QUALITY
+                    ItemOption.AspectRatio -> PlayerPanel.ASPECT
+                    else -> null
+                }
+                if (picker != null) {
+                    reveal()
+                    panel = picker
+                }
+                when (option) {
+                    ItemOption.AddFavourite, ItemOption.RemoveFavourite -> onToggleFavourite()
+                    ItemOption.RecordNow, ItemOption.StopRecording -> onToggleRecord()
+                    else -> Unit
+                }
+            },
+            onDismiss = { optionsOpen = false },
+        )
     }
 
     if (pausePrompt) {
@@ -1160,10 +1217,12 @@ internal fun LivePlayerControls(
     hasQuality: Boolean = false,
     recording: Boolean = false,
     onRecord: () -> Unit = {},
+    onOptions: () -> Unit = {},
     canPopOut: Boolean = false,
     onPopOut: () -> Unit = {},
 ) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
+    // Every button at once is wider than a 1080p TV: scrolling keeps the last ones reachable.
+    Row(Modifier.horizontalScroll(rememberScrollState()), verticalAlignment = Alignment.CenterVertically) {
         PlayerBackButton(onBack)
         Spacer(Modifier.width(20.dp))
         if (seekable) {
@@ -1184,6 +1243,8 @@ internal fun LivePlayerControls(
         }
 
         Spacer(Modifier.width(20.dp))
+        PlayerChip(Icons.Filled.MoreVert, stringResource(R.string.player_options), onClick = onOptions)
+        Spacer(Modifier.width(10.dp))
         PlayerChip(
             Icons.Filled.Subtitles,
             stringResource(R.string.player_subtitles),

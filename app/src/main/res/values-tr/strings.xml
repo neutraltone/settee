@@ -37,7 +37,6 @@
     <string name="guide_open_external">Harici oynatıcıda aç</string>
     <string name="guide_play_channel_with">Kanalı şununla oynat</string>
     <string name="guide_no_external_player">Harici oynatıcı yüklü değil</string>
-    <string name="guide_record_now_playing">●  Şu an oynananı kaydet</string>
     <string name="guide_no_info">Rehber bilgisi yok</string>
     <string name="guide_next_prefix">Sıradaki  %1$s  %2$s</string>
     <string name="guide_loading_channels">Kanallarınız yükleniyor</string>

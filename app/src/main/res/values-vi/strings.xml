@@ -37,7 +37,6 @@
     <string name="guide_open_external">Mở bằng trình phát khác</string>
     <string name="guide_play_channel_with">Phát kênh bằng</string>
     <string name="guide_no_external_player">Chưa cài trình phát ngoài</string>
-    <string name="guide_record_now_playing">●  Ghi lại chương trình đang chiếu</string>
     <string name="guide_no_info">Không có thông tin chương trình</string>
     <string name="guide_next_prefix">Tiếp theo  %1$s  %2$s</string>
     <string name="guide_loading_channels">Đang tải kênh của bạn</string>

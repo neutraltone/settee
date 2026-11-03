@@ -37,7 +37,6 @@
     <string name="guide_open_external">Apri in un player esterno</string>
     <string name="guide_play_channel_with">Riproduci il canale con</string>
     <string name="guide_no_external_player">Nessun player esterno installato</string>
-    <string name="guide_record_now_playing">●  Registra il programma in onda</string>
     <string name="guide_no_info">Nessuna informazione sul programma</string>
     <string name="guide_next_prefix">Poi  %1$s  %2$s</string>
     <string name="guide_loading_channels">Caricamento dei tuoi canali</string>

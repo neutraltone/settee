@@ -14,6 +14,7 @@ import app.opentv.data.parser.ChannelNameNormalizer
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -28,6 +29,7 @@ import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.flow.shareIn
+import kotlinx.coroutines.withContext
 
 /** Which Channels a viewer is looking at. Scope decides which Channels appear, never their Qualities. */
 sealed interface LineupScope {
@@ -226,7 +228,9 @@ class ChannelLineup(
      * playing. Storage stays per provider stream (ADR 0001).
      */
     suspend fun setFavourite(channel: LineupChannel, favourite: Boolean) {
-        channel.qualities.forEach { favourites.set(it, favourite) }
+        // All or nothing: leaving the screen part-way would leave the Channel half starred, and it
+        // reads as a Favourite while any Quality is.
+        withContext(NonCancellable) { channel.qualities.forEach { favourites.set(it, favourite) } }
     }
 
     /**

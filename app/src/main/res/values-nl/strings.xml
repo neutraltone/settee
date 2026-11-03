@@ -37,7 +37,6 @@
     <string name="guide_open_external">Openen in externe speler</string>
     <string name="guide_play_channel_with">Zender afspelen met</string>
     <string name="guide_no_external_player">Geen externe speler geïnstalleerd</string>
-    <string name="guide_record_now_playing">●  Opnemen wat er nu is</string>
     <string name="guide_no_info">Geen gidsinformatie</string>
     <string name="guide_next_prefix">Volgende  %1$s  %2$s</string>
     <string name="guide_loading_channels">Je zenders laden</string>

@@ -143,7 +143,7 @@ class HomeAndSearchChannelOptionsTest {
         waitFor("Add to Favourites")
         waitFor("Hide channel")
         waitFor("Open in external player")
-        waitFor("Record what's on now")
+        waitFor("Record now")
     }
 
     private fun holdSelectOn(name: String) {

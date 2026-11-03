@@ -37,7 +37,6 @@
     <string name="guide_open_external">Otwórz w zewnętrznym odtwarzaczu</string>
     <string name="guide_play_channel_with">Odtwórz kanał za pomocą</string>
     <string name="guide_no_external_player">Brak zainstalowanego odtwarzacza zewnętrznego</string>
-    <string name="guide_record_now_playing">●  Nagraj to, co jest teraz emitowane</string>
     <string name="guide_no_info">Brak informacji z przewodnika</string>
     <string name="guide_next_prefix">Następnie  %1$s  %2$s</string>
     <string name="guide_loading_channels">Wczytywanie Twoich kanałów</string>

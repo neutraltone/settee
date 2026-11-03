@@ -41,12 +41,65 @@ class ItemOptionsTest {
 
     @Test
     fun `an episode offers only how it is marked, as episodes aren't Favourites and it is on its series' page`() {
-        assertThat(OptionsFor.Episode(WatchStatus.Watched).options()).containsExactly(ItemOption.MarkUnwatched)
+        assertThat(OptionsFor.Episode(WatchStatus.Watched, earlierToMark = false).options())
+            .containsExactly(ItemOption.MarkUnwatched)
+    }
+
+    @Test
+    fun `an episode with an earlier one not Watched can be marked up to here`() {
+        assertThat(OptionsFor.Episode(WatchStatus.Unwatched, earlierToMark = true).options())
+            .containsExactly(ItemOption.MarkWatched, ItemOption.MarkWatchedUpToHere).inOrder()
+    }
+
+    @Test
+    fun `a Watched episode with an earlier one not Watched can still be marked up to here`() {
+        assertThat(OptionsFor.Episode(WatchStatus.Watched, earlierToMark = true).options())
+            .containsExactly(ItemOption.MarkWatchedUpToHere, ItemOption.MarkUnwatched).inOrder()
+    }
+
+    @Test
+    fun `an episode with every earlier one Watched doesn't repeat Mark watched as up to here`() {
+        assertThat(OptionsFor.Episode(WatchStatus.Unwatched, earlierToMark = false).options())
+            .containsExactly(ItemOption.MarkWatched)
+    }
+
+    @Test
+    fun `a season all Unwatched can only be marked Watched`() {
+        assertThat(OptionsFor.Season(listOf(WatchStatus.Unwatched, WatchStatus.Unwatched)).options())
+            .containsExactly(ItemOption.MarkSeasonWatched)
+    }
+
+    @Test
+    fun `a season all Watched can only be marked Unwatched`() {
+        assertThat(OptionsFor.Season(listOf(WatchStatus.Watched, WatchStatus.Watched)).options())
+            .containsExactly(ItemOption.MarkSeasonUnwatched)
+    }
+
+    @Test
+    fun `a mixed season offers both marks`() {
+        assertThat(OptionsFor.Season(listOf(WatchStatus.Watched, WatchStatus.Unwatched)).options())
+            .containsExactly(ItemOption.MarkSeasonWatched, ItemOption.MarkSeasonUnwatched).inOrder()
+    }
+
+    @Test
+    fun `a season of one In Progress episode offers both marks`() {
+        assertThat(OptionsFor.Season(listOf(WatchStatus.InProgress(0.5f, null))).options())
+            .containsExactly(ItemOption.MarkSeasonWatched, ItemOption.MarkSeasonUnwatched).inOrder()
+    }
+
+    @Test
+    fun `an In Progress episode with an earlier one not Watched offers to play from the start as well`() {
+        assertThat(OptionsFor.Episode(inProgress, earlierToMark = true).options()).containsExactly(
+            ItemOption.PlayFromStart,
+            ItemOption.MarkWatched,
+            ItemOption.MarkWatchedUpToHere,
+            ItemOption.MarkUnwatched,
+        ).inOrder()
     }
 
     @Test
     fun `an episode In Progress can play from the start, but offers no Show info`() {
-        assertThat(OptionsFor.Episode(inProgress).options())
+        assertThat(OptionsFor.Episode(inProgress, earlierToMark = false).options())
             .containsExactly(ItemOption.PlayFromStart, ItemOption.MarkWatched, ItemOption.MarkUnwatched).inOrder()
     }
 
@@ -117,6 +170,50 @@ class ItemOptionsTest {
     private companion object {
         val NEWS =
             Programme(feedId = 1, epgChannelId = "bbc1", startUtcMillis = 0, endUtcMillis = 1, title = "The News")
+    }
+
+    @Test
+    fun `the live player offers the pickers, sleep timer, Favourite and Record, in that order`() {
+        assertThat(
+            OptionsFor.LivePlayer(hasQualities = true, favourite = false, recording = false).options(),
+        ).containsExactly(
+            ItemOption.Subtitles,
+            ItemOption.Audio,
+            ItemOption.Quality,
+            ItemOption.AspectRatio,
+            ItemOption.SleepTimer,
+            ItemOption.AddFavourite,
+            ItemOption.RecordNow,
+        ).inOrder()
+    }
+
+    @Test
+    fun `the live player offers Quality only when the Channel has more than one`() {
+        assertThat(OptionsFor.LivePlayer(hasQualities = false, favourite = false, recording = false).options())
+            .doesNotContain(ItemOption.Quality)
+    }
+
+    @Test
+    fun `the live player's Favourite and Record follow the Channel's state`() {
+        val options = OptionsFor.LivePlayer(hasQualities = false, favourite = true, recording = true).options()
+
+        assertThat(options).containsAtLeast(ItemOption.RemoveFavourite, ItemOption.StopRecording)
+        assertThat(options).containsNoneOf(ItemOption.AddFavourite, ItemOption.RecordNow)
+    }
+
+    @Test
+    fun `the movie and episode player offers Mark watched last, only when it can be marked`() {
+        assertThat(OptionsFor.VodPlayer(canMarkWatched = true).options()).containsExactly(
+            ItemOption.Subtitles,
+            ItemOption.Audio,
+            ItemOption.SleepTimer,
+            ItemOption.MarkWatched,
+        ).inOrder()
+        assertThat(OptionsFor.VodPlayer(canMarkWatched = false).options()).containsExactly(
+            ItemOption.Subtitles,
+            ItemOption.Audio,
+            ItemOption.SleepTimer,
+        ).inOrder()
     }
 
     @Test

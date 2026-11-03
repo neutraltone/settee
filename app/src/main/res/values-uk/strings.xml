@@ -37,7 +37,6 @@
     <string name="guide_open_external">Відкрити в зовнішньому плеєрі</string>
     <string name="guide_play_channel_with">Відтворити канал у</string>
     <string name="guide_no_external_player">Зовнішній плеєр не встановлено</string>
-    <string name="guide_record_now_playing">●  Записати поточну передачу</string>
     <string name="guide_no_info">Немає інформації програми передач</string>
     <string name="guide_next_prefix">Далі  %1$s  %2$s</string>
     <string name="guide_loading_channels">Завантаження ваших каналів</string>

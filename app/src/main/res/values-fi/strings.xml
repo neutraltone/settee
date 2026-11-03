@@ -37,7 +37,6 @@
     <string name="guide_open_external">Avaa ulkoisessa soittimessa</string>
     <string name="guide_play_channel_with">Toista kanava sovelluksella</string>
     <string name="guide_no_external_player">Ulkoista soitinta ei ole asennettu</string>
-    <string name="guide_record_now_playing">●  Tallenna nyt käynnissä oleva</string>
     <string name="guide_no_info">Ei opastietoja</string>
     <string name="guide_next_prefix">Seuraavaksi  %1$s  %2$s</string>
     <string name="guide_loading_channels">Ladataan kanaviasi</string>

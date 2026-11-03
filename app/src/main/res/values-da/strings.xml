@@ -37,7 +37,6 @@
     <string name="guide_open_external">Åbn i ekstern afspiller</string>
     <string name="guide_play_channel_with">Afspil kanalen med</string>
     <string name="guide_no_external_player">Ingen ekstern afspiller installeret</string>
-    <string name="guide_record_now_playing">●  Optag det, der vises nu</string>
     <string name="guide_no_info">Ingen guideinformation</string>
     <string name="guide_next_prefix">Næste  %1$s  %2$s</string>
     <string name="guide_loading_channels">Indlæser dine kanaler</string>

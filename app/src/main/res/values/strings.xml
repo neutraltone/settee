@@ -48,7 +48,6 @@
     <string name="guide_open_external">Open in external player</string>
     <string name="guide_play_channel_with">Play channel with</string>
     <string name="guide_no_external_player">No external player installed</string>
-    <string name="guide_record_now_playing">●  Record what\'s on now</string>
     <string name="guide_no_info">No guide information</string>
     <string name="guide_next_prefix">Next  %1$s  %2$s</string>
     <string name="guide_loading_channels">Loading your channels</string>
@@ -131,6 +130,8 @@
     <string name="player_quality">Quality</string>
     <string name="player_aspect">Aspect</string>
     <string name="player_record">Record</string>
+    <string name="player_options">Options</string>
+    <string name="player_sleep_left">%1$d min left</string>
     <string name="player_pop_out">Pop out</string>
     <string name="player_last">Last</string>
     <string name="player_quality_standard">Standard</string>
@@ -499,6 +500,9 @@
     <string name="options_show_info">Show info</string>
     <string name="options_mark_watched">Mark watched</string>
     <string name="options_mark_unwatched">Mark unwatched</string>
+    <string name="options_mark_watched_up_to_here">Mark watched up to here</string>
+    <string name="options_mark_season_watched">Mark season watched</string>
+    <string name="options_mark_season_unwatched">Mark season unwatched</string>
     <string name="options_remove_continue_watching">Remove from Continue Watching</string>
     <string name="options_add_favourite">Add to Favourites</string>
     <string name="options_remove_favourite">Remove from Favourites</string>

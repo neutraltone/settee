@@ -37,7 +37,6 @@
     <string name="guide_open_external">In externem Player öffnen</string>
     <string name="guide_play_channel_with">Sender wiedergeben mit</string>
     <string name="guide_no_external_player">Kein externer Player installiert</string>
-    <string name="guide_record_now_playing">●  Aktuelle Sendung aufnehmen</string>
     <string name="guide_no_info">Keine Programminformationen</string>
     <string name="guide_next_prefix">Danach  %1$s  %2$s</string>
     <string name="guide_loading_channels">Deine Sender werden geladen</string>

@@ -37,7 +37,6 @@
     <string name="guide_open_external">Otvori u vanjskom playeru</string>
     <string name="guide_play_channel_with">Reproduciraj kanal pomoću</string>
     <string name="guide_no_external_player">Nije instaliran vanjski player</string>
-    <string name="guide_record_now_playing">●  Snimi ono što je sada na programu</string>
     <string name="guide_no_info">Nema podataka vodiča</string>
     <string name="guide_next_prefix">Sljedeće  %1$s  %2$s</string>
     <string name="guide_loading_channels">Učitavanje vaših kanala</string>

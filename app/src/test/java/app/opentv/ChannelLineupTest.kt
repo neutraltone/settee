@@ -25,6 +25,8 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Before
@@ -84,6 +86,22 @@ class ChannelLineupTest {
     private suspend fun all(): List<LineupChannel> = lineup.channels(LineupScope.All()).first()
 
     private suspend fun scope(scope: LineupScope): List<LineupChannel> = lineup.channels(scope).first()
+
+    @Test
+    fun `leaving as a Channel is starred still stars every Quality`() = runTest {
+        seed("UK| ITV HD")
+        seed("UK| ITV FHD", sourceId = 2)
+        val itv = all().single()
+
+        val starring = launch(UnconfinedTestDispatcher(testScheduler)) { lineup.setFavourite(itv, favourite = true) }
+        starring.cancel()
+        starring.join()
+
+        assertThat(all().single().favourite).isTrue()
+        val favourites = catalogue.viewerLibrary.favourites
+        assertThat(favourites.contains(StreamKind.LIVE, 1, row("UK| ITV HD").streamId)).isTrue()
+        assertThat(favourites.contains(StreamKind.LIVE, 2, row("UK| ITV FHD").streamId)).isTrue()
+    }
 
     private fun List<LineupChannel>.names(): List<List<String>> = map { channel -> channel.qualities.map { it.name } }
 

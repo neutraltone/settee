@@ -37,7 +37,6 @@
     <string name="guide_open_external">Ouvrir dans un lecteur externe</string>
     <string name="guide_play_channel_with">Lire la chaîne avec</string>
     <string name="guide_no_external_player">Aucun lecteur externe installé</string>
-    <string name="guide_record_now_playing">●  Enregistrer le programme en cours</string>
     <string name="guide_no_info">Aucune information de programme</string>
     <string name="guide_next_prefix">Ensuite  %1$s  %2$s</string>
     <string name="guide_loading_channels">Chargement de vos chaînes</string>

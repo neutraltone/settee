@@ -37,7 +37,6 @@
     <string name="guide_open_external">外部プレーヤーで開く</string>
     <string name="guide_play_channel_with">チャンネルの再生アプリを選択</string>
     <string name="guide_no_external_player">外部プレーヤーがインストールされていません</string>
-    <string name="guide_record_now_playing">●  現在の番組を録画</string>
     <string name="guide_no_info">番組表情報がありません</string>
     <string name="guide_next_prefix">次  %1$s  %2$s</string>
     <string name="guide_loading_channels">チャンネルを読み込み中</string>

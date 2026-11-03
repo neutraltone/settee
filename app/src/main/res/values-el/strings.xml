@@ -37,7 +37,6 @@
     <string name="guide_open_external">Άνοιγμα σε εξωτερικό player</string>
     <string name="guide_play_channel_with">Αναπαραγωγή καναλιού με</string>
     <string name="guide_no_external_player">Δεν έχει εγκατασταθεί εξωτερικός player</string>
-    <string name="guide_record_now_playing">●  Εγγραφή του τρέχοντος προγράμματος</string>
     <string name="guide_no_info">Δεν υπάρχουν πληροφορίες οδηγού</string>
     <string name="guide_next_prefix">Επόμενο  %1$s  %2$s</string>
     <string name="guide_loading_channels">Φόρτωση των καναλιών σας</string>
