@@ -7,6 +7,7 @@ package app.opentv.ui.vod
 
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import app.opentv.core.ServiceLocator
 import app.opentv.data.model.Episode
@@ -31,11 +32,16 @@ import kotlinx.coroutines.withContext
  * the episode it was showing. The screen keeps the [Playback] (its PlayerController) and hands it
  * over in [attach], so moving on swaps the media item in the same player instead of navigating.
  */
-class VodPlayerViewModel @JvmOverloads constructor(
+class VodPlayerViewModel(
     app: Application,
     private val graph: ServiceLocator.Graph = ServiceLocator.get(app),
     clock: () -> Long = System::currentTimeMillis,
+    private val savedState: SavedStateHandle? = null,
 ) : AndroidViewModel(app) {
+
+    /** The signature the default view model factory looks for to hand over the saved state. */
+    constructor(app: Application, savedState: SavedStateHandle) :
+        this(app, ServiceLocator.get(app), savedState = savedState)
 
     /** The screen's player, as far as moving between episodes needs it. */
     interface Playback {
@@ -93,20 +99,27 @@ class VodPlayerViewModel @JvmOverloads constructor(
     private var marked: MediaKey? = null
 
     /**
-     * Starts [playback] on what is playing, or on [route] when the screen was opened on something
-     * new. While "Are you still watching?" is up nothing plays until it is answered.
+     * Whether what's playing was started at 0 and hasn't saved a position yet. Until it does its
+     * old resume point is still the saved one, so a rebuilt screen mustn't look there.
      */
-    suspend fun attach(route: MediaKey, playback: Playback) {
+    private var startedAtZero = false
+
+    /**
+     * Starts [playback] on what is playing, or on [route] when the screen was opened on something
+     * new. While "Are you still watching?" is up nothing plays until it is answered. [fromStart]
+     * says the route's first start is at 0 rather than its resume point.
+     */
+    suspend fun attach(route: MediaKey, playback: Playback, fromStart: Boolean = false) {
         this.playback = playback
         val current = _current.value
         when {
             current == null || route != this.route -> {
                 this.route = route
                 marked = null
-                start(route)
+                start(route, fromMillis = if (fromStart && savedState.spendFromStart()) 0 else null)
             }
             countdown.overlay is Overlay.StillWatching -> Unit
-            else -> start(current, fromMillis = lastSeen?.positionMillis)
+            else -> start(current, fromMillis = lastSeen?.positionMillis ?: 0L.takeIf { startedAtZero })
         }
     }
 
@@ -128,6 +141,7 @@ class VodPlayerViewModel @JvmOverloads constructor(
         if (progress.durationMillis > 0 && progress.positionMillis > MIN_SAVED_MILLIS) {
             graph.viewerLibrary.recordProgress(key.stored, progress.positionMillis, progress.durationMillis)
             _canMarkWatched.value = graph.canMarkWatched(key)
+            startedAtZero = false
         }
     }
 
@@ -189,6 +203,7 @@ class VodPlayerViewModel @JvmOverloads constructor(
         }
 
         fetchingNext?.cancel()
+        startedAtZero = fromMillis == 0L || (startedAtZero && key == _current.value)
         _current.value = key
         lastSeen = null
         playback?.play(key, fromMillis ?: graph.viewerLibrary.resumeFrom(key.stored))
@@ -211,6 +226,17 @@ class VodPlayerViewModel @JvmOverloads constructor(
 private suspend fun ServiceLocator.Graph.canMarkWatched(key: MediaKey): Boolean {
     val hasWatchState = key is MediaKey.Movie || key is MediaKey.AddonStream || key is MediaKey.Episode
     return hasWatchState && viewerLibrary.marks.statusOf(key.stored) != WatchStatus.Watched
+}
+
+private const val FROM_START_SPENT = "fromStartSpent"
+
+// The route keeps saying from the start for as long as it's on the back stack, including after
+// Android restores the app. Only saved state outlives the process, to tell that from the first
+// start, and restarting at 0 then would lose the progress made since.
+private fun SavedStateHandle?.spendFromStart(): Boolean {
+    val unspent = this?.get<Boolean>(FROM_START_SPENT) != true
+    this?.set(FROM_START_SPENT, true)
+    return unspent
 }
 
 /** Finds a Next Episode the catalogue doesn't hold yet, and what its card shows. */

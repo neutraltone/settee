@@ -129,7 +129,12 @@ import kotlinx.coroutines.withContext
  */
 @OptIn(UnstableApi::class)
 @Composable
-fun VodPlayerScreen(mediaKey: MediaKey, onBack: () -> Unit, viewModel: VodPlayerViewModel = viewModel()) {
+fun VodPlayerScreen(
+    mediaKey: MediaKey,
+    onBack: () -> Unit,
+    fromStart: Boolean = false,
+    viewModel: VodPlayerViewModel = viewModel(),
+) {
     val context = LocalContext.current
     val view = LocalView.current
     val graph = remember { ServiceLocator.get(context) }
@@ -184,7 +189,7 @@ fun VodPlayerScreen(mediaKey: MediaKey, onBack: () -> Unit, viewModel: VodPlayer
     // model holds what is playing, and a rebuilt screen picks that up instead. Keyed on the route
     // so a reused entry (a single-top navigation) opened on something new plays that.
     LaunchedEffect(mediaKey) {
-        viewModel.attach(mediaKey, playback)
+        viewModel.attach(mediaKey, playback, fromStart)
         var sinceSaved = 0L
         while (isActive) {
             delay(POLL_MILLIS)

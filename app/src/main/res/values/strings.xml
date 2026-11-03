@@ -499,6 +499,8 @@
 
     <!-- ============================ Watch badge ============================ -->
     <string name="watch_badge_watched">Watched</string>
+    <string name="options_play_from_start">Play from start</string>
+    <string name="options_show_info">Show info</string>
     <string name="options_mark_watched">Mark watched</string>
     <string name="options_mark_unwatched">Mark unwatched</string>
     <string name="options_remove_continue_watching">Remove from Continue Watching</string>

@@ -6,6 +6,10 @@
 package app.opentv
 
 import android.app.Application
+import android.os.Bundle
+import androidx.activity.ComponentActivity
+import androidx.lifecycle.SavedStateHandle
+import androidx.lifecycle.ViewModelProvider
 import androidx.test.core.app.ApplicationProvider
 import app.opentv.core.ServiceLocator
 import app.opentv.data.model.Series
@@ -27,6 +31,7 @@ import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.robolectric.Robolectric
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
@@ -368,6 +373,131 @@ class VodPlayerViewModelTest {
         assertThat(graph.viewerLibrary.resumeFrom("movie:7")).isEqualTo(600_000L)
     }
 
+    /** Episode 1 of 3 with a resume point, opened from the start. */
+    private suspend fun playFromStart(vm: VodPlayerViewModel = VodPlayerViewModel(app, graph)): VodPlayerViewModel {
+        graph.database.episodes().upsertAll((1..3).map { testEpisode(1, it) })
+        graph.viewerLibrary.recordProgress("ep:11", positionMillis = OLD_RESUME_POINT, durationMillis = EPISODE_MILLIS)
+        vm.attach(testEpisode(1, 1).key, playback, fromStart = true)
+        return vm
+    }
+
+    @Test
+    fun `Play from start starts at 0 rather than the resume point`() = runTest {
+        playFromStart()
+
+        assertThat(playback.played).containsExactly(testEpisode(1, 1).key to 0L)
+    }
+
+    @Test
+    fun `stopping after the first 5 seconds of Play from start records the new position`() = runTest {
+        val vm = playFromStart()
+        playback.positionMillis = 60_000
+
+        vm.saveProgress()
+
+        assertThat(graph.viewerLibrary.resumeFrom("ep:11")).isEqualTo(60_000L)
+    }
+
+    @Test
+    fun `stopping within 5 seconds of Play from start leaves the old resume point`() = runTest {
+        val vm = playFromStart()
+        playback.positionMillis = 4_000
+
+        vm.saveProgress()
+
+        assertThat(graph.viewerLibrary.resumeFrom("ep:11")).isEqualTo(OLD_RESUME_POINT)
+    }
+
+    @Test
+    fun `a player rebuilt before Play from start knows its position stays at the start, however many times`() =
+        runTest {
+            val vm = playFromStart()
+            val route = testEpisode(1, 1).key
+
+            val rebuilt = FakePlayback()
+            vm.attach(route, rebuilt, fromStart = true)
+            val rebuiltAgain = FakePlayback()
+            vm.attach(route, rebuiltAgain, fromStart = true)
+
+            assertThat(rebuilt.played).containsExactly(route to 0L)
+            assertThat(rebuiltAgain.played).containsExactly(route to 0L)
+        }
+
+    @Test
+    fun `a second rebuild in the first seconds of Play from start still doesn't jump to the old resume point`() =
+        runTest {
+            val vm = playFromStart()
+            val route = testEpisode(1, 1).key
+            playback.positionMillis = 3_000
+            vm.poll()
+            vm.attach(route, FakePlayback(), fromStart = true)
+
+            // This player hasn't reported a position either, and 3 seconds was too early to save.
+            val rebuiltAgain = FakePlayback()
+            vm.attach(route, rebuiltAgain, fromStart = true)
+
+            assertThat(rebuiltAgain.played).containsExactly(route to 0L)
+        }
+
+    @Test
+    fun `once Play from start has saved a position, a rebuild that knows no position resumes from it`() = runTest {
+        val vm = playFromStart()
+        val route = testEpisode(1, 1).key
+        playback.positionMillis = 60_000
+        vm.saveProgress()
+        vm.attach(route, FakePlayback(), fromStart = true)
+
+        val rebuiltAgain = FakePlayback()
+        vm.attach(route, rebuiltAgain, fromStart = true)
+
+        assertThat(rebuiltAgain.played).containsExactly(route to 60_000L)
+    }
+
+    @Test
+    fun `the view model Android builds keeps Play from start spent across a restore`() = runTest {
+        val shared = ServiceLocator.get(app)
+        val movie = MediaKey.Movie(77)
+        shared.viewerLibrary.recordProgress(movie.stored, OLD_RESUME_POINT, EPISODE_MILLIS)
+        val first = Robolectric.buildActivity(ComponentActivity::class.java).setup()
+        val opened = FakePlayback()
+        ViewModelProvider(first.get())[VodPlayerViewModel::class.java].attach(movie, opened, fromStart = true)
+        val saved = Bundle().also(first::saveInstanceState)
+
+        val restored = FakePlayback()
+        val second = Robolectric.buildActivity(ComponentActivity::class.java).setup(saved)
+        ViewModelProvider(second.get())[VodPlayerViewModel::class.java].attach(movie, restored, fromStart = true)
+
+        assertThat(opened.played).containsExactly(movie to 0L)
+        assertThat(restored.played).containsExactly(movie to OLD_RESUME_POINT)
+    }
+
+    @Test
+    fun `Android restoring the app after Play from start resumes the progress made since`() = runTest {
+        val saved = SavedStateHandle()
+        val vm = playFromStart(VodPlayerViewModel(app, graph, savedState = saved))
+        playback.positionMillis = 60_000
+        vm.saveProgress()
+
+        // The route still says from the start, and only the saved state outlives the process.
+        val restored = FakePlayback()
+        VodPlayerViewModel(app, graph, savedState = saved).attach(testEpisode(1, 1).key, restored, fromStart = true)
+
+        assertThat(restored.played).containsExactly(testEpisode(1, 1).key to 60_000L)
+    }
+
+    @Test
+    fun `a Next Episode following Play from start resumes as normal, even if the player is then rebuilt`() = runTest {
+        val vm = playFromStart()
+        graph.viewerLibrary.recordProgress("ep:12", positionMillis = 600_000, durationMillis = EPISODE_MILLIS)
+
+        vm.playToEnd()
+        val rebuilt = FakePlayback()
+        vm.attach(testEpisode(1, 1).key, rebuilt, fromStart = true)
+
+        assertThat(playback.played.last()).isEqualTo(testEpisode(1, 2).key to 600_000L)
+        assertThat(rebuilt.played).containsExactly(testEpisode(1, 2).key to 600_000L)
+    }
+
     private val show = Series(
         sourceId = 1,
         seriesId = "s",
@@ -379,4 +509,8 @@ class VodPlayerViewModelTest {
         plot = null,
         backdropUrl = "https://example.com/backdrop.jpg",
     )
+
+    private companion object {
+        const val OLD_RESUME_POINT = 900_000L
+    }
 }
