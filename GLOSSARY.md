@@ -5,8 +5,16 @@ An IPTV player for TV boxes and phones: it plays live channels, movies and serie
 ## Viewers
 
 **Profile**:
-One viewer on a device: a name with its own Favourites, watch progress, Recent Searches and Subtitle Preference. No password, no account.
+One viewer, known across their devices by name: a name with its own Favourites, watch progress, Recent Searches and Subtitle Preference. No password, no account.
 _Avoid_: User, account
+
+**Removed Profile**:
+A Profile name taken off this device. It stays off, whatever other devices send, until the name is added here again. Other devices keep their Profile of that name.
+_Avoid_: Deleted profile
+
+**Profile Rename**:
+One Profile name becoming another at a known time. It spreads to the viewer's other devices, and anything still labelled with the old name lands on the new one. If the new name already exists there, the two Profiles merge.
+_Avoid_: Profile merge (that's only one outcome)
 
 **Who's watching?**:
 The question the app asks when it starts on a device with more than one Profile: the viewer picks which Profile they are before Home opens.
@@ -33,7 +41,7 @@ One provider's stream of a Channel, such as HD, FHD or 4K. A Channel's Qualities
 _Avoid_: Variant (in user-facing text), feed
 
 **Parental Lock**:
-Categories hidden on this device, for every Profile on it, from everywhere viewers browse and play, but not from the management screens. A PIN guards the setting; entering it shows them until the app closes.
+Categories hidden on this device, for every Profile on it, from everywhere viewers browse and play, but not from the management screens. A PIN guards the setting; entering it shows them until the app closes. A lock spreads to the viewer's other devices when they sync; an unlock stays on the device it was made on.
 _Avoid_: Hidden channels (that's the channel manager's per-channel hide), parental controls
 
 ## Watch progress

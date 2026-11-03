@@ -101,7 +101,7 @@ class ItemOptionsHostTest {
 
     // The graph is process-wide, so its database outlives each test.
     @Before
-    fun catalogue() = runBlocking {
+    fun catalogue(): Unit = runBlocking {
         if (graph.sourceRepository.byId(1) == null) {
             graph.database.sources().insert(
                 Source(id = 1, name = "Provider", kind = SourceKind.XTREAM, url = "http://example.com"),

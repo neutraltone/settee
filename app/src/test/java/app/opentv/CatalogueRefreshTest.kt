@@ -362,7 +362,7 @@ class CatalogueRefreshTest {
         openMoviesOrShows()
         test.catalog.ensureEpisodes(PANEL_SOURCE, "7", now)
         val pilot = db.episodes().forSeries(1, "7").single()
-        test.viewerLibrary.recordProgress("ep:${pilot.id}", positionMillis = 1_000, durationMillis = 1_000)
+        test.viewerLibrary.recordProgress("ep:${pilot.id}", positionMillis = 2_400_000, durationMillis = 2_400_000)
         test.awaitRefresh()
         test.catalog.awaitBackground()
         panel.replies["get_series"] = """[{"series_id": 7, "name": "Show", "last_modified": "200"}]"""

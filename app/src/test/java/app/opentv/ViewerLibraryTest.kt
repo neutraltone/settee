@@ -81,10 +81,53 @@ class ViewerLibraryTest {
     }
 
     @Test
-    fun `progress with no known duration is In Progress from the start with no idea how long is left`() = runTest {
-        library.recordProgress("ep:7", positionMillis = 600_000, durationMillis = 0)
+    fun `synced progress with no known duration is In Progress with no idea how long is left`() = runTest {
+        library.mergeSynced(
+            PlaybackPosition(
+                profileId = 1,
+                mediaKey = "ep:7",
+                positionMillis = 600_000,
+                durationMillis = 0,
+                updatedAtMillis = now,
+            ),
+        )
 
         assertThat(statusOf(7)).isEqualTo(WatchStatus.InProgress(progress = 0f, remainingMillis = null))
+    }
+
+    @Test
+    fun `the first 5 seconds of a title aren't saved, and an old resume point stands`() = runTest {
+        library.recordProgress("movie:3", positionMillis = 600_000, durationMillis = 2_400_000)
+
+        val saved = library.recordProgress("movie:3", positionMillis = 5_000, durationMillis = 2_400_000)
+
+        assertThat(saved).isFalse()
+        assertThat(library.resumeFrom("movie:3")).isEqualTo(600_000)
+    }
+
+    @Test
+    fun `a title played for only its first seconds stays Unwatched`() = runTest {
+        library.recordProgress("ep:7", positionMillis = 3_000, durationMillis = 2_400_000)
+
+        assertThat(statusOf(7)).isEqualTo(WatchStatus.Unwatched)
+    }
+
+    @Test
+    fun `progress with no known duration isn't saved`() = runTest {
+        library.recordProgress("movie:3", positionMillis = 600_000, durationMillis = 2_400_000)
+
+        val saved = library.recordProgress("movie:3", positionMillis = 900_000, durationMillis = 0)
+
+        assertThat(saved).isFalse()
+        assertThat(library.resumeFrom("movie:3")).isEqualTo(600_000)
+    }
+
+    @Test
+    fun `just past the first 5 seconds a title is saved`() = runTest {
+        val saved = library.recordProgress("movie:3", positionMillis = 5_001, durationMillis = 2_400_000)
+
+        assertThat(saved).isTrue()
+        assertThat(library.resumeFrom("movie:3")).isEqualTo(5_001)
     }
 
     @Test

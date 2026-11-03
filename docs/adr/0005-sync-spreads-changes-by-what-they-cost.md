@@ -1,0 +1,15 @@
+# Sync spreads a change according to what it costs, and names stay a Profile's identity
+
+Sync used to only add, so removing a Profile, unlocking a category, unstarring a Favourite or unhiding a channel was undone by the next sync. An old NAS file could undo it long after its device had gone, because nothing on the NAS is ever deleted. We didn't replace this with one rule for everything, because the same rule is wrong for different changes. A change that is destructive or reduces safety stays on the device it was made on: removing a Profile, unlocking a category. A change that belongs to the same viewer, or is plain tidying, spreads: renaming a Profile, locking a category, unstarring a Favourite, unhiding a channel. So removing Tom from the living room TV doesn't delete Tom's history everywhere, and unlocking a category on the adult bedroom TV leaves the child's bedroom TV locked.
+
+Profiles still match by name alone. A permanent Profile id would make renames simple, but it would need a schema change and a way to match Profiles that two devices created separately, and matching by name is what makes those Profiles one viewer. Instead a Profile Rename travels as a dated record, "Tom became Thomas at this time", and records apply once each, in time order, so Tom → Thomas → Tom ends on Tom and can't loop. Adding a Profile deliberately is a dated event too: a new Tom added after Tom became Thomas keeps what's dated after it, and anything older labelled Tom still goes to Thomas.
+
+A Removed Profile is a name on a list that stays on its device, and only adding that name on the same device lifts it. If another device renames a Profile this device removed, the new name joins the list, since it's the same viewer. If another device renames a Profile still here onto a name removed here, the rename happens and the name comes off the list, since that viewer is still in use here.
+
+An unstarred Favourite stays as a row marked removed, and that marker is kept for as long as the Profile exists. We considered dropping markers past a certain age, but a dead device's NAS file would then bring the Favourite back. Ignoring items older than that age as well would stop a long-standing Favourite reaching a new device. The markers are small and only exist for things someone unstarred. An item from a bundle with no time counts as the oldest possible, so it applies only where this device has never changed that item, and can't undo a change made here.
+
+The limits we accepted:
+
+- Adding a removed name back on a device brings that name's history back from the other devices, even if the new Profile is meant to be someone else. They'd need a different name.
+- A rename onto an existing name merges two Profiles, and that can't be undone. Names are the identity, so two people sharing a name are one viewer as far as sync can tell.
+- Times come from each device's own clock, as watch progress already does, so a device with a wrong clock can win or lose a newest-wins comparison it shouldn't.

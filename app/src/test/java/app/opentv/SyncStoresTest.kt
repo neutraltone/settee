@@ -22,6 +22,7 @@ import app.opentv.data.model.SeriesDismissal
 import app.opentv.data.model.Source
 import app.opentv.data.model.SourceKind
 import app.opentv.data.model.StreamKind
+import app.opentv.data.repo.WatchStatus
 import app.opentv.sync.SyncFavourite
 import app.opentv.sync.SyncHiddenChannel
 import com.google.common.truth.Truth.assertThat
@@ -198,6 +199,22 @@ class SyncStoresTest {
         assertThat(again.taken).isEqualTo(0)
         assertThat(deviceB.db.positions().all())
             .containsExactly(PlaybackPosition(onB, "movie:101", 1_000, 6_000, 2_000, HandMark.WATCHED))
+    }
+
+    @Test
+    fun `an episode moved on from at the Next Episode card reaches the other device as Watched`() = runTest {
+        deviceA.seedSource()
+        deviceB.seedSource()
+        deviceA.graph.profiles.all()
+        deviceB.graph.profiles.all()
+        deviceA.db.episodes().upsertAll(listOf(testEpisode(1, 1)))
+        deviceB.db.episodes().upsertAll(listOf(testEpisode(1, 1).copy(id = 111, sourceId = deviceB.sourceId)))
+        deviceA.library.nextEpisodes.movedOnFrom("ep:11", durationMillis = 60_000)
+
+        val imported = deviceB.library.syncedProgress.import(deviceA.library.syncedProgress.export())
+
+        assertThat(imported.taken).isEqualTo(1)
+        assertThat(deviceB.library.marks.statusOf("ep:111")).isEqualTo(WatchStatus.Watched)
     }
 
     @Test
