@@ -114,6 +114,50 @@ class ItemOptionsTest {
     }
 
     @Test
+    fun `the live player offers the pickers, sleep timer, Favourite and Record, in that order`() {
+        assertThat(
+            OptionsFor.LivePlayer(hasQualities = true, favourite = false, recording = false).options(),
+        ).containsExactly(
+            ItemOption.Subtitles,
+            ItemOption.Audio,
+            ItemOption.Quality,
+            ItemOption.AspectRatio,
+            ItemOption.SleepTimer,
+            ItemOption.AddFavourite,
+            ItemOption.RecordNow,
+        ).inOrder()
+    }
+
+    @Test
+    fun `the live player offers Quality only when the Channel has more than one`() {
+        assertThat(OptionsFor.LivePlayer(hasQualities = false, favourite = false, recording = false).options())
+            .doesNotContain(ItemOption.Quality)
+    }
+
+    @Test
+    fun `the live player's Favourite and Record follow the Channel's state`() {
+        val options = OptionsFor.LivePlayer(hasQualities = false, favourite = true, recording = true).options()
+
+        assertThat(options).containsAtLeast(ItemOption.RemoveFavourite, ItemOption.StopRecording)
+        assertThat(options).containsNoneOf(ItemOption.AddFavourite, ItemOption.RecordNow)
+    }
+
+    @Test
+    fun `the movie and episode player offers Mark watched last, only when it can be marked`() {
+        assertThat(OptionsFor.VodPlayer(canMarkWatched = true).options()).containsExactly(
+            ItemOption.Subtitles,
+            ItemOption.Audio,
+            ItemOption.SleepTimer,
+            ItemOption.MarkWatched,
+        ).inOrder()
+        assertThat(OptionsFor.VodPlayer(canMarkWatched = false).options()).containsExactly(
+            ItemOption.Subtitles,
+            ItemOption.Audio,
+            ItemOption.SleepTimer,
+        ).inOrder()
+    }
+
+    @Test
     fun `a Continue Watching card In Progress offers both actions before the existing options`() {
         val card = OptionsFor.ContinueWatching(inProgress, inCatalogue = true, favourite = false)
         assertThat(card.options()).containsExactly(

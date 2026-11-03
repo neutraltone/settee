@@ -12,23 +12,31 @@ import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertIsFocused
+import androidx.compose.ui.test.hasAnyAncestor
+import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.isDialog
 import androidx.compose.ui.test.isFocused
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
+import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.pressKey
 import androidx.media3.common.util.UnstableApi
 import androidx.test.core.app.ApplicationProvider
+import androidx.test.espresso.Espresso
 import app.opentv.core.ServiceLocator
+import app.opentv.core.SleepTimer
 import app.opentv.data.repo.MediaKey
 import app.opentv.data.repo.Playable
+import app.opentv.data.repo.WatchStatus
 import app.opentv.player.NextEpisodeCountdown
 import app.opentv.player.PlayerController
 import app.opentv.ui.player.SubtitlePicks
 import app.opentv.ui.vod.VodPlayerContent
 import app.opentv.ui.vod.VodPlayerViewModel
+import app.opentv.ui.vod.vodPlayback
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.runBlocking
@@ -470,7 +478,193 @@ class VodPlayerContentTest {
         assertThat(barPosition()).isLessThan(TEN_MINUTES)
     }
 
+    @Test
+    fun `while the Next Episode's stream is being found, saving doesn't give it the old one's position`() {
+        runBlocking { graph.database.episodes().upsertAll((1..2).map { testEpisode(1, it) }) }
+        val loaded = CompletableDeferred<Unit>()
+        val slow = players.controller { key ->
+            if (key == testEpisode(1, 2).key) loaded.await()
+            Playable.Ready(key, "https://example.com/stream", userAgent = "", title = "Film", isLive = false)
+        }
+        runBlocking { viewModel.attach(testEpisode(1, 1).key, slow.vodPlayback()) }
+        players.untilReady(slow.player)
+        slow.player.seekTo(TEN_MINUTES)
+        players.untilReady(slow.player)
+
+        runBlocking {
+            viewModel.markWatched()
+            viewModel.saveProgress()
+        }
+
+        assertThat(runBlocking { graph.viewerLibrary.marks.statusOf("ep:12") }).isEqualTo(WatchStatus.Unwatched)
+        loaded.complete(Unit)
+        slow.release()
+    }
+
+    private fun inList(text: String) = compose.onNode(hasText(text) and hasAnyAncestor(isDialog()))
+
+    private fun closeList() {
+        Espresso.pressBack()
+        compose.waitForIdle()
+    }
+
+    /** The player on [key], with a film the view model only knows as far as [fake] tells it. */
+    private fun showWatching(key: MediaKey, fake: VodPlayerViewModel.Playback = playback, onBack: () -> Unit = {}) {
+        compose.setTvContent { VodPlayerContent(controller, viewModel, false, noPicks, onBack) }
+        players.play(controller)
+        runBlocking { viewModel.attach(key, fake) }
+        compose.waitForIdle()
+    }
+
+    @Test
+    fun `Menu opens the options list over the film, with Mark watched for a movie`() {
+        showWatching(MediaKey.Movie(1))
+
+        press(Key.Menu)
+
+        inList("Subtitles").assertIsFocused()
+        inList("Audio").assertExists()
+        inList("Sleep timer").assertExists()
+        inList("Mark watched").assertExists()
+        captureScreen("vod_player_options")
+    }
+
+    @Test
+    fun `a recording's list has no Mark watched`() {
+        showWatching(MediaKey.Recording(1))
+
+        press(Key.Menu)
+
+        inList("Sleep timer").assertExists()
+        inList("Mark watched").assertDoesNotExist()
+    }
+
+    @Test
+    fun `Back returns the highlight to the bar's button, which hasn't timed out meanwhile`() {
+        showFilm()
+        settle()
+        compose.onNodeWithText("Pause").assertIsFocused()
+        press(Key.Menu)
+
+        compose.mainClock.advanceTimeBy(CONTROLS_TIMEOUT_MILLIS)
+        inList("Sleep timer").assertExists()
+        closeList()
+
+        compose.onNodeWithText("Pause").assertIsFocused()
+    }
+
+    @Test
+    fun `the bar's Options button opens the same list`() {
+        showFilm()
+
+        compose.onNodeWithText("Options").performClick()
+
+        inList("Sleep timer").assertExists()
+    }
+
+    @Test
+    fun `Subtitles opens the bar's picker with the bar hidden, and it stays up`() {
+        showFilm()
+        hideControls()
+        press(Key.Menu)
+
+        inList("Subtitles").performClick()
+        compose.mainClock.advanceTimeBy(CONTROLS_TIMEOUT_MILLIS)
+
+        compose.onNodeWithText("Off").assertExists()
+        compose.onNodeWithText("Pause").assertExists()
+    }
+
+    @Test
+    fun `Menu doesn't open the list over a picker`() {
+        showFilm()
+        compose.onNodeWithText("Audio").performClick()
+
+        press(Key.Menu)
+
+        compose.onNodeWithText("Sleep timer").assertDoesNotExist()
+    }
+
+    @Test
+    fun `the sleep timer offers Settings' durations, and shows the time left once set`() {
+        showFilm()
+        try {
+            press(Key.Menu)
+            inList("Sleep timer").performClick()
+            inList("Off").assertExists()
+            SleepTimer.presets.forEach { inList("$it minutes").assertExists() }
+            captureScreen("player_options_sleep_timer")
+
+            inList("30 minutes").performClick()
+            assertThat(SleepTimer.minutesRemaining()).isEqualTo(30)
+
+            press(Key.Menu)
+            inList("Sleep timer · 30 min left").performClick()
+            inList("Off").performClick()
+            assertThat(SleepTimer.deadline.value).isNull()
+        } finally {
+            SleepTimer.clear()
+        }
+    }
+
+    @Test
+    fun `Mark watched on a movie marks it and leaves the player`() {
+        var left = false
+        showWatching(MediaKey.Movie(1), onBack = { left = true })
+        press(Key.Menu)
+
+        inList("Mark watched").performClick()
+        compose.waitUntil(WAIT_MILLIS) { left }
+
+        assertThat(runBlocking { graph.viewerLibrary.marks.statusOf("movie:1") }).isEqualTo(WatchStatus.Watched)
+    }
+
+    @Test
+    fun `Mark watched on an episode moves on and stays in the player`() {
+        runBlocking { graph.database.episodes().upsertAll((1..2).map { testEpisode(1, it) }) }
+        var left = false
+        showWatching(testEpisode(1, 1).key, onBack = { left = true })
+        press(Key.Menu)
+
+        inList("Mark watched").performClick()
+        compose.waitUntil(WAIT_MILLIS) { viewModel.current.value == testEpisode(1, 2).key }
+
+        assertThat(left).isFalse()
+    }
+
+    @Test
+    fun `Menu doesn't open the list over the Next Episode card, and the card coming up closes it`() {
+        runBlocking { graph.database.episodes().upsertAll((1..2).map { testEpisode(1, it) }) }
+        val fake = FakePlayback()
+        showWatching(testEpisode(1, 1).key, fake)
+        press(Key.Menu)
+        inList("Sleep timer").assertExists()
+
+        fake.positionMillis = EPISODE_MILLIS - 10_000
+        runBlocking { viewModel.poll() }
+        compose.waitForIdle()
+        compose.onNodeWithText("Sleep timer").assertDoesNotExist()
+
+        press(Key.Menu)
+        compose.onNodeWithText("Sleep timer").assertDoesNotExist()
+    }
+
+    @Test
+    fun `Menu doesn't open the list over Are you still watching`() {
+        runBlocking { graph.database.episodes().upsertAll((1..6).map { testEpisode(1, it) }) }
+        val fake = FakePlayback()
+        showWatching(testEpisode(1, 1).key, fake)
+        runBlocking { repeat(4) { viewModel.playToEnd(fake) } }
+        compose.waitForIdle()
+        assertThat(viewModel.overlay.value).isInstanceOf(NextEpisodeCountdown.Overlay.StillWatching::class.java)
+
+        press(Key.Menu)
+
+        compose.onNodeWithText("Sleep timer").assertDoesNotExist()
+    }
+
     private companion object {
+        const val WAIT_MILLIS = 5_000L
         const val CONTROLS_TIMEOUT_MILLIS = 6_000L
         const val TEN_MINUTES = 600_000L
         const val SETTLE_MILLIS = 600L
