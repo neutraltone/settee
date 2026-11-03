@@ -11,9 +11,9 @@ import app.opentv.core.ServiceLocator
 import app.opentv.data.model.Series
 import app.opentv.data.repo.ContinueWatchingCard
 import app.opentv.data.repo.MediaKey
+import app.opentv.ui.ResumeItem
+import app.opentv.ui.SeasonEpisode
 import app.opentv.ui.VodViewModel
-import app.opentv.ui.VodViewModel.ResumeItem
-import app.opentv.ui.VodViewModel.SeasonEpisode
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi

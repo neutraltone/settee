@@ -40,7 +40,7 @@ import app.opentv.data.repo.mediaKey
 import app.opentv.ui.ChannelsViewModel
 import app.opentv.ui.RecordingBackgroundDialog
 import app.opentv.ui.RecordingBackgroundPrompt
-import app.opentv.ui.VodViewModel
+import app.opentv.ui.ResumeItem
 import app.opentv.ui.channels.ProgrammeDialog
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.first
@@ -64,7 +64,7 @@ sealed interface OptionsSubject {
     /** A season header on the series page: [episodes] are the season's, [title] how the header reads. */
     data class OfSeason(val episodes: List<Episode>, override val title: String) : OptionsSubject
 
-    data class OfContinueWatching(val item: VodViewModel.ResumeItem) : OptionsSubject {
+    data class OfContinueWatching(val item: ResumeItem) : OptionsSubject {
         override val title get() = item.title
     }
 
@@ -333,7 +333,7 @@ class ItemOptionsViewModel @JvmOverloads constructor(
         setFavourite(movie, option)
     }
 
-    private suspend fun chooseFor(item: VodViewModel.ResumeItem, option: ItemOption) {
+    private suspend fun chooseFor(item: ResumeItem, option: ItemOption) {
         val title = catalog.resolve(item) ?: return
         mark(item.key.stored, option)
         if (option == ItemOption.RemoveFromContinueWatching) library.marks.removeFromContinueWatching(title.card)
@@ -365,7 +365,7 @@ class ItemOptionsViewModel @JvmOverloads constructor(
 }
 
 /** The title behind a Continue Watching card, or null when it has left the catalogue. */
-private suspend fun CatalogRepository.resolve(item: VodViewModel.ResumeItem): Resolved? = when (val card = item.card) {
+private suspend fun CatalogRepository.resolve(item: ResumeItem): Resolved? = when (val card = item.card) {
     is ContinueWatchingCard.Movie -> movie(card.movieId)?.let { Resolved.MovieCard(it, card) }
     is ContinueWatchingCard.Series -> Resolved.SeriesCard(seriesOf(card.episode), card)
     null -> null

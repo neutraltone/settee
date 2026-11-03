@@ -168,8 +168,8 @@ class ViewerLibrary(
      * explicitly because the home feed computes it for whichever Profile it is building for.
      */
     suspend fun startedMovieIds(profileId: Long): Set<Long> = positions.forProfile(profileId)
-        .filter { it.mediaKey.startsWith(MOVIE_PREFIX) && it.mark != HandMark.UNWATCHED }
-        .mapNotNull { it.mediaKey.removePrefix(MOVIE_PREFIX).toLongOrNull() }
+        .filter { it.mark != HandMark.UNWATCHED }
+        .mapNotNull { it.movieId }
         .toSet()
 
     /** The active Profile's Continue Watching for movies: each In Progress one, most recently played first. */
@@ -359,10 +359,10 @@ class HandMarks internal constructor(
     suspend fun removeFromContinueWatching(card: ContinueWatchingCard) {
         when (card) {
             // Removing a movie is giving up on it, so it is not picked back up there either.
-            is ContinueWatchingCard.Movie -> markUnwatched("$MOVIE_PREFIX${card.movieId}")
+            is ContinueWatchingCard.Movie -> markUnwatched(MediaKey.Movie(card.movieId).stored)
             is ContinueWatchingCard.Series -> {
                 val ep = card.episode
-                if (card.progress != null) markUnwatched("$EPISODE_PREFIX${ep.id}")
+                if (card.progress != null) markUnwatched(ep.mediaKey)
                 val last = episodes.lastOfSeries(ep.sourceId, ep.seriesId) ?: ep
                 dismissals.upsert(
                     SeriesDismissal(
@@ -483,9 +483,8 @@ private class ContinueWatchingCards(
 ) {
     fun movies(pid: Long): Flow<List<Played>> = positions.observeNewestFirst(pid).map { list ->
         list.asSequence()
-            .filter { it.mediaKey.startsWith(MOVIE_PREFIX) }
             .mapNotNull { pos ->
-                val id = pos.mediaKey.removePrefix(MOVIE_PREFIX).toLongOrNull() ?: return@mapNotNull null
+                val id = pos.movieId ?: return@mapNotNull null
                 (statusOf(pos) as? WatchStatus.InProgress)?.let {
                     Played(ContinueWatchingCard.Movie(id, it.progress), pos.updatedAtMillis)
                 }
@@ -600,15 +599,17 @@ val Movie.mediaKey: String get() = MediaKey.Movie(id).stored
 val Episode.mediaKey: String get() = MediaKey.Episode(id).stored
 
 /** The local episode id this position is for; null for anything that isn't an episode. */
-private val PlaybackPosition.episodeId: Long? get() = mediaKey.removePrefix(EPISODE_PREFIX).toLongOrNull()
+private val PlaybackPosition.episodeId: Long? get() = (MediaKey.parse(mediaKey) as? MediaKey.Episode)?.episodeId
+
+/** The movie this row is about, or null when its key names an episode or nothing at all. */
+private val PlaybackPosition.movieId: Long? get() = (MediaKey.parse(mediaKey) as? MediaKey.Movie)?.movieId
 
 // The id settles episodes a provider numbers the same, which would otherwise fall in whatever order
 // the query returned them, so "the episode after this one" could change between reads.
 private val EPISODE_ORDER = compareBy<Episode>({ it.season }, { it.episodeNumber }, { it.id })
 
-// What each kind of stored key starts with, for matching in SQL and in bulk; MediaKey owns the form.
+// What an episode's stored key starts with, for matching in SQL and in bulk; MediaKey owns the form.
 private const val EPISODE_PREFIX = "${MediaKey.EPISODE}:"
-private const val MOVIE_PREFIX = "${MediaKey.MOVIE}:"
 private const val IN_PROGRESS_LIMIT = 30
 private const val TAG = "ViewerLibrary"
 
