@@ -38,6 +38,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -326,7 +329,10 @@ private fun Home(preview: Boolean) = WithRail(Bg, { Rail(0) }) {
             .padding(top = 27.dp, bottom = 27.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
-        if (preview) LivePreview()
+        // Geometry alone sends Down from this wide block to a card mid-row, and #87 allows one Down to
+        // the first Continue Watching card.
+        val firstCard = remember { FocusRequester() }
+        if (preview) LivePreview(firstCard)
         Column {
             Heading("Continue Watching")
             Row(
@@ -336,7 +342,9 @@ private fun Home(preview: Boolean) = WithRail(Bg, { Rail(0) }) {
             ) {
                 ProtoData.continueWatching.forEachIndexed { index, item ->
                     Tile(
-                        Modifier.width(if (index == 0 && !preview) 300.dp else 186.dp),
+                        Modifier
+                            .width(if (index == 0 && !preview) 300.dp else 186.dp)
+                            .then(if (index == 0) Modifier.focusRequester(firstCard) else Modifier),
                         initial = index == 0 && !preview,
                     ) { focused -> ArtCard(item, focused, STILL) }
                 }
@@ -368,9 +376,15 @@ private fun HomeRow(title: String, items: List<Item>) {
  * playback, so Home without it opens on Continue Watching.
  */
 @Composable
-private fun LivePreview() {
+private fun LivePreview(down: FocusRequester) {
     val channel = ProtoData.channels.first()
-    Tile(Modifier.padding(start = 5.dp, end = 48.dp).fillMaxWidth(), initial = true) { focused ->
+    Tile(
+        Modifier
+            .padding(start = 5.dp, end = 48.dp)
+            .fillMaxWidth()
+            .focusProperties { this.down = down },
+        initial = true,
+    ) { focused ->
         Row(
             Modifier
                 .fillMaxWidth()
