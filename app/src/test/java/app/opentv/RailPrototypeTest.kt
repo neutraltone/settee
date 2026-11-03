@@ -6,10 +6,15 @@
 package app.opentv
 
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertIsFocused
+import androidx.compose.ui.test.assertIsNotFocused
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onRoot
@@ -47,6 +52,7 @@ class RailPrototypeTest(private val variant: RailVariant) {
     val artwork = PlaceholderArtwork()
 
     private var focusedCard = ""
+    private var selected: Tab? = null
     private val name = variant.name.lowercase()
 
     @After
@@ -56,17 +62,22 @@ class RailPrototypeTest(private val variant: RailVariant) {
 
     private fun setShell() {
         RailPrototype.variant = variant
+        var current by mutableStateOf(Tab.SHOWS)
         compose.setTvContent {
             MainShell(
                 tabs = visibleTabs(liveEnabled = true, moviesEnabled = true, seriesEnabled = true),
-                current = Tab.SHOWS,
-                onSelect = {},
+                current = current,
+                onSelect = {
+                    selected = it
+                    current = it
+                },
                 onOpenSearch = {},
                 onOpenSettings = {},
                 onOpenProfiles = {},
                 activeProfileName = "Sam",
                 modifier = Modifier.fillMaxSize(),
-            ) { _, takeFocus, onNothingToShow ->
+            ) { tab, takeFocus, onNothingToShow ->
+                key(tab) {
                 HomeContent(
                     continueWatching = emptyList(),
                     favouriteShows = emptyList<Series>(),
@@ -83,6 +94,7 @@ class RailPrototypeTest(private val variant: RailVariant) {
                     takeFocus = takeFocus,
                     onNothingToShow = onNothingToShow,
                 )
+                }
             }
         }
     }
@@ -110,6 +122,38 @@ class RailPrototypeTest(private val variant: RailVariant) {
         captureScreen("rail_${name}_back_on_card")
         press(Key.DirectionCenter)
         assertThat(focusedCard).isEqualTo(left)
+    }
+
+    @Test
+    fun `OK on another tab opens it and moves the highlight onto its first card`() {
+        setShell()
+        press(Key.DirectionLeft)
+        press(Key.DirectionDown)
+        compose.onNodeWithContentDescription("Recordings").assertIsFocused()
+
+        press(Key.DirectionCenter)
+        assertThat(selected).isEqualTo(Tab.RECORDINGS)
+        compose.onNodeWithContentDescription("Recordings").assertIsNotFocused()
+        captureScreen("rail_${name}_after_pick")
+
+        press(Key.DirectionCenter)
+        assertThat(focusedCard).isEqualTo("Film 11")
+    }
+
+    @Test
+    fun `OK on the tab already open goes back to the row she left`() {
+        setShell()
+        press(Key.DirectionDown)
+        press(Key.DirectionLeft)
+
+        press(Key.DirectionCenter)
+        compose.mainClock.advanceTimeBy(300)
+        compose.waitForIdle()
+        compose.onNodeWithContentDescription("Shows").assertIsNotFocused()
+        captureScreen("rail_${name}_same_tab_pick")
+
+        press(Key.DirectionCenter)
+        assertThat(focusedCard).isEqualTo("Film 1")
     }
 
     @Test

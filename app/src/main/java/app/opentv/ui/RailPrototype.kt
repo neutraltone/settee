@@ -31,9 +31,11 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
@@ -61,6 +63,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import app.opentv.BuildConfig
 import app.opentv.R
+import kotlinx.coroutines.delay
 
 /*
  * PROTOTYPE for #90: how the left-hand navigation behaves with a remote. Throwaway, never merged.
@@ -68,7 +71,7 @@ import app.opentv.R
  * Three rails on the real main screen, cycled with the remote's rewind and fast-forward:
  * A snaps open over the content, B is always open, and Today is the rail on main, for comparison.
  * A and B share #90's rules: Left enters on the current tab, Right returns to the item left, Back is
- * unchanged, and the current tab stays marked when collapsed. Search, Profile and Settings stay in
+ * unchanged, OK on a tab moves the highlight into it, and the current tab stays marked when collapsed. Search, Profile and Settings stay in
  * the rail only because #90 hasn't settled where they go.
  */
 enum class RailVariant(val label: String) {
@@ -87,6 +90,8 @@ private val OVERSCAN_X = 48.dp
 private val OVERSCAN_Y = 27.dp
 private val COLLAPSED = 104.dp
 private val EXPANDED = 236.dp
+private const val ENTRY_RETRY_MILLIS = 100L
+private const val ENTRY_TRIES = 20
 
 /** Rewind and fast-forward cycle the rail; nothing else on the main screen uses them. */
 @Composable
@@ -142,15 +147,19 @@ internal fun SnapOverlayShell(
     var railFocused by remember { mutableStateOf(false) }
     val currentItem = remember { FocusRequester() }
     val railReturn = remember(current) { RailReturn() }
+    val contentFocus = remember { FocusRequester() }
+    val entry = remember { RailEntry() }
+    EnterContentAfterPick(entry, railFocused, railReturn, contentFocus)
     Box(Modifier.fillMaxSize()) {
-        ContentArea(railReturn, Modifier.padding(start = COLLAPSED)) {
-            content(current, !railFocused) { runCatching { currentItem.requestFocus() } }
+        ContentArea(railReturn, contentFocus, Modifier.padding(start = COLLAPSED)) {
+            content(current, !railFocused || entry.entering) { runCatching { currentItem.requestFocus() } }
         }
         PrototypeRail(
-            tabs, current, onSelect, onOpenSearch, onOpenSettings, onOpenProfiles, activeProfileName,
+            tabs, current, { tab -> entry.entering = true; onSelect(tab) }, onOpenSearch, onOpenSettings, onOpenProfiles, activeProfileName,
             expanded = railFocused,
             currentItem = currentItem,
             railReturn = railReturn,
+            entry = entry,
             // Drawn last so it covers the content. Opaque: #85 rules out alpha-dimmed layers.
             modifier = Modifier
                 .zIndex(1f)
@@ -175,17 +184,58 @@ internal fun AlwaysOpenShell(
     var railFocused by remember { mutableStateOf(false) }
     val currentItem = remember { FocusRequester() }
     val railReturn = remember(current) { RailReturn() }
+    val contentFocus = remember { FocusRequester() }
+    val entry = remember { RailEntry() }
+    EnterContentAfterPick(entry, railFocused, railReturn, contentFocus)
     Row(Modifier.fillMaxSize()) {
         PrototypeRail(
-            tabs, current, onSelect, onOpenSearch, onOpenSettings, onOpenProfiles, activeProfileName,
+            tabs, current, { tab -> entry.entering = true; onSelect(tab) }, onOpenSearch, onOpenSettings, onOpenProfiles, activeProfileName,
             expanded = true,
             currentItem = currentItem,
             railReturn = railReturn,
+            entry = entry,
             modifier = Modifier.width(EXPANDED).onFocusChanged { railFocused = it.hasFocus },
         )
-        ContentArea(railReturn, Modifier.weight(1f)) {
-            content(current, !railFocused) { runCatching { currentItem.requestFocus() } }
+        ContentArea(railReturn, contentFocus, Modifier.weight(1f)) {
+            content(current, !railFocused || entry.entering) { runCatching { currentItem.requestFocus() } }
         }
+    }
+}
+
+/** OK on a tab sends the highlight into that tab, until it gets there or she moves on in the rail. */
+internal class RailEntry {
+    var entering by mutableStateOf(false)
+}
+
+/**
+ * Home and the guide take the highlight themselves, on the card or channel they'd open on. This
+ * catches the tabs that don't and OK on the tab already open. It retries because a tab can still be
+ * loading, and gives up after two seconds, leaving the highlight in the rail.
+ */
+@Composable
+private fun EnterContentAfterPick(
+    entry: RailEntry,
+    railFocused: Boolean,
+    railReturn: RailReturn,
+    contentFocus: FocusRequester,
+) {
+    val stillInRail by rememberUpdatedState(railFocused)
+    LaunchedEffect(entry.entering, railReturn) {
+        if (!entry.entering) return@LaunchedEffect
+        repeat(ENTRY_TRIES) {
+            delay(ENTRY_RETRY_MILLIS)
+            if (!stillInRail) {
+                entry.entering = false
+                return@LaunchedEffect
+            }
+            val moved = runCatching { railReturn.target?.requestFocus() }.getOrDefault(false) == true ||
+                runCatching { contentFocus.requestFocus() }.getOrDefault(false)
+            if (moved) {
+                entry.entering = false
+                return@LaunchedEffect
+            }
+        }
+        entry.entering = false
     }
 }
 
@@ -208,9 +258,14 @@ internal fun Modifier.railReturnTarget(): Modifier {
 }
 
 @Composable
-private fun ContentArea(railReturn: RailReturn, modifier: Modifier, content: @Composable () -> Unit) {
+private fun ContentArea(
+    railReturn: RailReturn,
+    contentFocus: FocusRequester,
+    modifier: Modifier,
+    content: @Composable () -> Unit,
+) {
     CompositionLocalProvider(LocalRailReturn provides railReturn) {
-        Box(modifier.fillMaxHeight().focusGroup()) { content() }
+        Box(modifier.fillMaxHeight().focusRequester(contentFocus).focusGroup()) { content() }
     }
 }
 
@@ -226,6 +281,7 @@ private fun PrototypeRail(
     expanded: Boolean,
     currentItem: FocusRequester,
     railReturn: RailReturn,
+    entry: RailEntry,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -233,6 +289,13 @@ private fun PrototypeRail(
             .fillMaxHeight()
             .background(MaterialTheme.colorScheme.surface)
             .focusProperties { onEnter = { runCatching { currentItem.requestFocus() } } }
+            // Moving on in the rail while a tab loads mustn't have the highlight pulled away later.
+            .onPreviewKeyEvent { event ->
+                if (event.type == KeyEventType.KeyDown && event.key != Key.DirectionCenter && event.key != Key.Enter) {
+                    entry.entering = false
+                }
+                false
+            }
             // A key, not focusProperties' onExit: onExit never saw the Right press in the tests.
             .onKeyEvent { event ->
                 val target = railReturn.target
