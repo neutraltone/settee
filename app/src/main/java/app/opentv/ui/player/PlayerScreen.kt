@@ -109,6 +109,7 @@ import app.opentv.player.PlaybackQueue
 import app.opentv.player.PlayerController
 import app.opentv.player.SettledChannel
 import app.opentv.ui.formatPlaybackTime
+import app.opentv.ui.options.LeaveDirectly
 import app.opentv.ui.options.LocalConfirmLive
 import app.opentv.ui.options.LocalOpenOptions
 import app.opentv.ui.options.LocalRecordingStarted
@@ -318,7 +319,7 @@ fun PlayerScreen(channelId: Long?, onBack: () -> Unit) {
                 val picked = graph.channelLineup.channelOf(item.id)
                     ?: graph.catalogRepository.channel(item.id)?.let { LineupChannel(it, listOf(it)) }
                     ?: return@launch
-                openOptions?.invoke(OptionsSubject.OfChannel(picked, onWatch))
+                openOptions?.invoke(OptionsSubject.OfChannel(picked, onWatch), LeaveDirectly)
             }
         },
     )

@@ -88,6 +88,8 @@ fun OptionsPanel(title: String, options: List<ItemOption>, onChoose: (ItemOption
 
 @Composable
 private fun ItemOption.label(): String = when (this) {
+    ItemOption.PlayFromStart -> stringResource(R.string.options_play_from_start)
+    ItemOption.ShowInfo -> stringResource(R.string.options_show_info)
     ItemOption.MarkWatched -> stringResource(R.string.options_mark_watched)
     ItemOption.MarkUnwatched -> stringResource(R.string.options_mark_unwatched)
     ItemOption.RemoveFromContinueWatching -> stringResource(R.string.options_remove_continue_watching)

@@ -5,6 +5,7 @@
  */
 package app.opentv
 
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
@@ -24,6 +25,7 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.pressKey
+import androidx.compose.ui.test.requestFocus
 import androidx.media3.common.C
 import app.opentv.data.model.Channel
 import app.opentv.data.model.Movie
@@ -37,6 +39,8 @@ import app.opentv.ui.LivePreviewPlayer
 import app.opentv.ui.LiveTile
 import app.opentv.ui.RecentRows
 import app.opentv.ui.VodViewModel
+import app.opentv.ui.options.LeaveScreen
+import app.opentv.ui.options.LocalOpenOptions
 import app.opentv.ui.rememberLivePreviewPlayer
 import com.google.common.truth.Truth.assertThat
 import org.junit.Rule
@@ -167,31 +171,75 @@ class HomeContentTest {
         channels: List<LineupChannel> = listOf(favourite(3, "BBC One")),
         recent: RecentRows = RecentRows(),
     ) = compose.setTvContent {
-        HomeContent(
-            live = live,
-            onWatchLive = {
-                events += "watch"
-                watched = it
-            },
-            onOpenLive = { openedLive = true },
-            stopPreview = { events += "stop" },
-            continueWatching = resume,
-            favouriteShows = shows,
-            favouriteMovies = movies,
-            favouriteChannels = channels,
-            recent = recent,
-            onResume = { events += "resume" },
-            onOpenSeries = { events += "series" },
-            onOpenMovie = {
-                events += "movie"
-                opened = it
-            },
-            onPlayChannel = {
-                events += "channel"
-                played = it
-            },
-            takeFocus = takeFocus,
-        )
+        CompositionLocalProvider(LocalOpenOptions provides { _, leave -> leaveThroughOptions = leave }) {
+            HomeContent(
+                live = live,
+                onWatchLive = {
+                    events += "watch"
+                    watched = it
+                },
+                onOpenLive = { openedLive = true },
+                stopPreview = { events += "stop" },
+                continueWatching = resume,
+                favouriteShows = shows,
+                favouriteMovies = movies,
+                favouriteChannels = channels,
+                recent = recent,
+                onResume = { events += "resume" },
+                onOpenSeries = { events += "series" },
+                onOpenMovie = {
+                    events += "movie"
+                    opened = it
+                },
+                onPlayChannel = {
+                    events += "channel"
+                    played = it
+                },
+                takeFocus = takeFocus,
+            )
+        }
+    }
+
+    /** How the options panel last opened on Home would leave it. */
+    private var leaveThroughOptions: LeaveScreen? = null
+
+    private fun openOptionsOn(title: String) {
+        compose.onNodeWithText(title).requestFocus().performKeyInput { pressKey(Key.Menu) }
+        compose.waitForIdle()
+    }
+
+    private fun leavingThroughOptionsStopsThePreviewFirst(title: String) {
+        setHome()
+        openOptionsOn(title)
+
+        leaveThroughOptions!! { events += "left" }
+
+        assertThat(events).containsExactly("stop", "left").inOrder()
+    }
+
+    @Test
+    fun `leaving through a Continue Watching card's options stops the Live Preview first`() =
+        leavingThroughOptionsStopsThePreviewFirst("Collateral")
+
+    @Test
+    fun `leaving through a show's options stops the Live Preview first`() =
+        leavingThroughOptionsStopsThePreviewFirst("Severance")
+
+    @Test
+    fun `leaving through a movie's options stops the Live Preview first`() =
+        leavingThroughOptionsStopsThePreviewFirst("Heat")
+
+    @Test
+    fun `back from leaving through a card's options, Home highlights that card`() {
+        setHomeToLeave(movies = { listOf(movie(2, "Heat"), movie(4, "Ronin")) })
+        openOptionsOn("Ronin")
+
+        leaveThroughOptions!! { home = false }
+        compose.waitForIdle()
+        home = true
+        compose.waitForIdle()
+
+        compose.onNodeWithText("Ronin").assertIsFocused()
     }
 
     /** Whether a test's Home is on screen; false while the viewer is off in the player or on a title's page. */
@@ -209,20 +257,22 @@ class HomeContentTest {
         val saved = rememberSaveableStateHolder()
         if (home) {
             saved.SaveableStateProvider("home") {
-                HomeContent(
-                    live = live,
-                    onWatchLive = { watched = it },
-                    continueWatching = continueWatching(),
-                    favouriteShows = listOf(series(1, "Severance")),
-                    favouriteMovies = movies(),
-                    favouriteChannels = listOf(favourite(3, "BBC One"), favourite(5, "BBC Two")),
-                    recent = recent,
-                    onResume = {},
-                    onOpenSeries = {},
-                    onOpenMovie = { opened = it },
-                    onPlayChannel = { played = it },
-                    takeFocus = homeTakesFocus,
-                )
+                CompositionLocalProvider(LocalOpenOptions provides { _, leave -> leaveThroughOptions = leave }) {
+                    HomeContent(
+                        live = live,
+                        onWatchLive = { watched = it },
+                        continueWatching = continueWatching(),
+                        favouriteShows = listOf(series(1, "Severance")),
+                        favouriteMovies = movies(),
+                        favouriteChannels = listOf(favourite(3, "BBC One"), favourite(5, "BBC Two")),
+                        recent = recent,
+                        onResume = {},
+                        onOpenSeries = {},
+                        onOpenMovie = { opened = it },
+                        onPlayChannel = { played = it },
+                        takeFocus = homeTakesFocus,
+                    )
+                }
             }
         }
     }

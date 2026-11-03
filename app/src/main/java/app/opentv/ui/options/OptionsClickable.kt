@@ -33,9 +33,12 @@ fun Modifier.optionsClickable(onClick: () -> Unit, onOptions: (() -> Unit)?): Mo
     }.combinedClickable(onClick = onClick, onLongClick = onOptions)
 }
 
-/** Opens [subject]'s options panel; null where no [ItemOptionsHost] is above to show it. */
+/**
+ * Opens [subject]'s options panel, which leaves the screen through [leave]; null where no
+ * [ItemOptionsHost] is above to show it.
+ */
 @Composable
-fun openOptionsOn(subject: OptionsSubject): (() -> Unit)? {
+fun openOptionsOn(subject: OptionsSubject, leave: LeaveScreen = LeaveDirectly): (() -> Unit)? {
     val open = LocalOpenOptions.current ?: return null
-    return { open(subject) }
+    return { open(subject, leave) }
 }

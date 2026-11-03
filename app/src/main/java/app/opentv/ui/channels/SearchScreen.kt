@@ -63,6 +63,7 @@ import app.opentv.data.parser.displayTitle
 import app.opentv.ui.ChannelsViewModel
 import app.opentv.ui.RecentSearchesViewModel
 import app.opentv.ui.VodViewModel
+import app.opentv.ui.options.LeaveScreen
 import app.opentv.ui.options.LocalConfirmLive
 import app.opentv.ui.options.OptionsSubject
 import app.opentv.ui.options.openOptionsOn
@@ -225,6 +226,10 @@ internal fun SearchContent(
                         onResultOpened(typed)
                         onOpenSeries(it)
                     },
+                    onLeave = { go ->
+                        onResultOpened(typed)
+                        go()
+                    },
                 )
             }
         }
@@ -239,6 +244,7 @@ private fun SearchResults(
     onPlayChannel: (Channel) -> Unit,
     onPlayMovie: (Movie) -> Unit,
     onOpenSeries: (Series) -> Unit,
+    onLeave: LeaveScreen,
 ) {
     val listState = rememberLazyListState()
     // The rows start after the section's header.
@@ -257,7 +263,12 @@ private fun SearchResults(
         if (movieResults.isNotEmpty()) {
             item { SearchSectionHeader(stringResource(R.string.nav_movies)) }
             items(movieResults, key = { "m${it.id}" }) { movie ->
-                VodResultRow(movie.displayTitle, movie.posterUrl, movie.year?.toString()) {
+                VodResultRow(
+                    movie.displayTitle,
+                    movie.posterUrl,
+                    movie.year?.toString(),
+                    onOptions = openOptionsOn(OptionsSubject.OfMovie(movie), onLeave),
+                ) {
                     onPlayMovie(movie)
                 }
             }
@@ -265,7 +276,12 @@ private fun SearchResults(
         if (seriesResults.isNotEmpty()) {
             item { SearchSectionHeader(stringResource(R.string.nav_shows)) }
             items(seriesResults, key = { "s${it.id}" }) { show ->
-                VodResultRow(show.displayTitle, show.posterUrl, show.year?.toString()) {
+                VodResultRow(
+                    show.displayTitle,
+                    show.posterUrl,
+                    show.year?.toString(),
+                    onOptions = openOptionsOn(OptionsSubject.OfSeries(show), onLeave),
+                ) {
                     onOpenSeries(show)
                 }
             }
@@ -320,8 +336,14 @@ internal fun SearchSectionHeader(title: String) {
 }
 
 @Composable
-private fun VodResultRow(name: String, posterUrl: String?, subtitle: String?, onClick: () -> Unit) {
-    SearchRow(onClick = onClick) {
+private fun VodResultRow(
+    name: String,
+    posterUrl: String?,
+    subtitle: String?,
+    onOptions: (() -> Unit)?,
+    onClick: () -> Unit,
+) {
+    SearchRow(onClick = onClick, onOptions = onOptions) {
         AsyncImage(
             model = posterUrl,
             contentDescription = null,
