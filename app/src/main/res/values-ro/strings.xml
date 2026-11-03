@@ -33,13 +33,11 @@
     <string name="guide_auto_switch">📺  Comută automat la începere</string>
     <string name="guide_will_switch">📺 Va comuta la %1$s la începere</string>
     <string name="guide_watch_channel">Urmărește canalul</string>
-    <string name="guide_now_title">Acum: %1$s</string>
     <string name="guide_watch">▶  Urmărește</string>
     <string name="guide_open_external">Deschide într-un player extern</string>
     <string name="guide_play_channel_with">Redă canalul cu</string>
     <string name="guide_no_external_player">Nu este instalat niciun player extern</string>
     <string name="guide_record_now_playing">●  Înregistrează ce rulează acum</string>
-    <string name="guide_later_header">Mai târziu — înregistrare sau memento</string>
     <string name="guide_no_info">Nu există informații despre ghid</string>
     <string name="guide_next_prefix">Următorul  %1$s  %2$s</string>
     <string name="guide_loading_channels">Se încarcă canalele tale</string>

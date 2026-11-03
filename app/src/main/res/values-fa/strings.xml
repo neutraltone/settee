@@ -33,13 +33,11 @@
     <string name="guide_auto_switch">📺  تعویض خودکار هنگام شروع</string>
     <string name="guide_will_switch">📺 با شروع، به %1$s تغییر می‌کند</string>
     <string name="guide_watch_channel">تماشای کانال</string>
-    <string name="guide_now_title">اکنون: %1$s</string>
     <string name="guide_watch">▶  تماشا</string>
     <string name="guide_open_external">باز کردن در پخش‌کننده خارجی</string>
     <string name="guide_play_channel_with">پخش کانال با</string>
     <string name="guide_no_external_player">هیچ پخش‌کننده خارجی نصب نشده است</string>
     <string name="guide_record_now_playing">●  ضبط برنامه در حال پخش</string>
-    <string name="guide_later_header">بعداً — ضبط یا یادآوری</string>
     <string name="guide_no_info">اطلاعاتی از راهنما موجود نیست</string>
     <string name="guide_next_prefix">بعدی  %1$s  %2$s</string>
     <string name="guide_loading_channels">در حال بارگذاری کانال‌های شما</string>

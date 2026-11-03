@@ -255,18 +255,22 @@ class ChannelLineup(
     suspend fun zapChannels(around: Long? = null): List<LineupChannel> {
         val channels = zapped.first { it.first == zapScope.value }.second
         if (around == null || zapScope.value == LineupScope.All() || channels.any { it.has(around) }) return channels
-        zapFrom(LineupScope.All())
+        // Hidden or locked since it was picked: every Channel leaves it out as well, so stay on this list.
+        val unlisted = channelOf(around) == null
+        if (!unlisted) zapFrom(LineupScope.All())
         return zapped.first { it.first == zapScope.value }.second
     }
 
     /**
      * The Channel [delta] steps from the one [fromChannelId] is a Quality of, or null past either
-     * end. Any Quality zaps from its own Channel, not only the primary.
+     * end. Any Quality zaps from its own Channel, not only the primary. A channel no longer listed,
+     * as one hidden while it plays, has no place to step from, so it joins the list at an end.
      */
     suspend fun zap(fromChannelId: Long, delta: Int): LineupChannel? {
         val channels = zapChannels(around = fromChannelId)
         val from = channels.indexOfFirst { it.has(fromChannelId) }
-        return if (from < 0) null else channels.getOrNull(from + delta)
+        if (from < 0) return if (delta > 0) channels.firstOrNull() else channels.lastOrNull()
+        return channels.getOrNull(from + delta)
     }
 
     /** [channelOf] as it changes: null while the row is gone, hidden or locked. */

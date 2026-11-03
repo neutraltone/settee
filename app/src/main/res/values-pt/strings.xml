@@ -33,13 +33,11 @@
     <string name="guide_auto_switch">📺  Mudar automaticamente ao iniciar</string>
     <string name="guide_will_switch">📺 Vai mudar para %1$s ao iniciar</string>
     <string name="guide_watch_channel">Ver canal</string>
-    <string name="guide_now_title">Agora: %1$s</string>
     <string name="guide_watch">▶  Ver</string>
     <string name="guide_open_external">Abrir num leitor externo</string>
     <string name="guide_play_channel_with">Reproduzir canal com</string>
     <string name="guide_no_external_player">Nenhum leitor externo instalado</string>
     <string name="guide_record_now_playing">●  Gravar o que está a dar agora</string>
-    <string name="guide_later_header">Mais tarde — gravar ou lembrar</string>
     <string name="guide_no_info">Sem informação do guia</string>
     <string name="guide_next_prefix">A seguir  %1$s  %2$s</string>
     <string name="guide_loading_channels">A carregar os seus canais</string>

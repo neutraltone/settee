@@ -44,13 +44,11 @@
     <string name="guide_auto_switch">📺  Auto-switch when it starts</string>
     <string name="guide_will_switch">📺 Will switch to %1$s at start</string>
     <string name="guide_watch_channel">Watch channel</string>
-    <string name="guide_now_title">Now: %1$s</string>
     <string name="guide_watch">▶  Watch</string>
     <string name="guide_open_external">Open in external player</string>
     <string name="guide_play_channel_with">Play channel with</string>
     <string name="guide_no_external_player">No external player installed</string>
     <string name="guide_record_now_playing">●  Record what\'s on now</string>
-    <string name="guide_later_header">Later — record or remind</string>
     <string name="guide_no_info">No guide information</string>
     <string name="guide_next_prefix">Next  %1$s  %2$s</string>
     <string name="guide_loading_channels">Loading your channels</string>
@@ -502,6 +500,9 @@
     <string name="options_remove_continue_watching">Remove from Continue Watching</string>
     <string name="options_add_favourite">Add to Favourites</string>
     <string name="options_remove_favourite">Remove from Favourites</string>
+    <string name="options_hide_channel">Hide channel</string>
+    <string name="options_channel_hidden">%1$s hidden. Bring it back in Settings → Channel manager.</string>
+    <string name="options_schedule_later">Schedule a later programme</string>
     <string name="watch_badge_in_progress">In progress</string>
     <string name="watch_badge_new_episode">New episode</string>
     <plurals name="watch_badge_minutes_left">

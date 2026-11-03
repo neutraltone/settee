@@ -33,13 +33,11 @@
     <string name="guide_auto_switch">📺  开始时自动切换</string>
     <string name="guide_will_switch">📺 开始时将切换到 %1$s</string>
     <string name="guide_watch_channel">观看频道</string>
-    <string name="guide_now_title">正在播出：%1$s</string>
     <string name="guide_watch">▶  观看</string>
     <string name="guide_open_external">使用外部播放器打开</string>
     <string name="guide_play_channel_with">使用以下方式播放频道</string>
     <string name="guide_no_external_player">未安装外部播放器</string>
     <string name="guide_record_now_playing">●  录制正在播出的节目</string>
-    <string name="guide_later_header">稍后——录制或提醒</string>
     <string name="guide_no_info">暂无节目单信息</string>
     <string name="guide_next_prefix">接下来  %1$s  %2$s</string>
     <string name="guide_loading_channels">正在加载你的频道</string>

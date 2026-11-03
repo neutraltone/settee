@@ -33,13 +33,11 @@
     <string name="guide_auto_switch">📺  Bytt automatisk når det starter</string>
     <string name="guide_will_switch">📺 Bytter til %1$s ved start</string>
     <string name="guide_watch_channel">Se kanal</string>
-    <string name="guide_now_title">Nå: %1$s</string>
     <string name="guide_watch">▶  Se</string>
     <string name="guide_open_external">Åpne i ekstern spiller</string>
     <string name="guide_play_channel_with">Spill av kanal med</string>
     <string name="guide_no_external_player">Ingen ekstern spiller installert</string>
     <string name="guide_record_now_playing">●  Ta opp det som vises nå</string>
-    <string name="guide_later_header">Senere — ta opp eller påminn</string>
     <string name="guide_no_info">Ingen programinformasjon</string>
     <string name="guide_next_prefix">Neste  %1$s  %2$s</string>
     <string name="guide_loading_channels">Laster kanalene dine</string>

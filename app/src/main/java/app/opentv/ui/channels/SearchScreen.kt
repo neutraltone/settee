@@ -22,6 +22,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.text.input.rememberTextFieldState
@@ -61,7 +63,11 @@ import app.opentv.data.parser.displayTitle
 import app.opentv.ui.ChannelsViewModel
 import app.opentv.ui.RecentSearchesViewModel
 import app.opentv.ui.VodViewModel
+import app.opentv.ui.options.LocalConfirmLive
+import app.opentv.ui.options.OptionsSubject
+import app.opentv.ui.options.openOptionsOn
 import app.opentv.ui.options.optionsClickable
+import app.opentv.ui.options.rememberRowHighlight
 import coil.compose.AsyncImage
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -137,6 +143,7 @@ internal fun SearchContent(
     val anyResults = channelResults.isNotEmpty() || movieResults.isNotEmpty() || seriesResults.isNotEmpty()
     val searchBox = remember { FocusRequester() }
     val focusManager = LocalFocusManager.current
+    val confirmLive = LocalConfirmLive.current
     val typed = query.text.toString()
     // A chosen Recent Search whose results haven't arrived. They take a moment (the view models
     // debounce), so the highlight waits in the box, and stays there if the viewer does anything else.
@@ -205,8 +212,10 @@ internal fun SearchContent(
                     movieResults = movieResults,
                     seriesResults = seriesResults,
                     onPlayChannel = {
-                        onResultOpened(typed)
-                        onPlayChannel(it)
+                        confirmLive {
+                            onResultOpened(typed)
+                            onPlayChannel(it)
+                        }
                     },
                     onPlayMovie = {
                         onResultOpened(typed)
@@ -231,11 +240,18 @@ private fun SearchResults(
     onPlayMovie: (Movie) -> Unit,
     onOpenSeries: (Series) -> Unit,
 ) {
-    LazyColumn(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+    val listState = rememberLazyListState()
+    // The rows start after the section's header.
+    val highlight = rememberRowHighlight(channelResults, listState, firstRowItem = 1) { it.key }
+    LazyColumn(state = listState, verticalArrangement = Arrangement.spacedBy(6.dp)) {
         if (channelResults.isNotEmpty()) {
             item { SearchSectionHeader(stringResource(R.string.common_channels)) }
-            items(channelResults, key = { "c${it.key}" }) { row ->
-                SearchResultRow(row = row, onClick = { onPlayChannel(row.primary) })
+            itemsIndexed(channelResults, key = { _, row -> "c${row.key}" }) { index, row ->
+                SearchResultRow(
+                    row = row,
+                    onClick = { onPlayChannel(row.primary) },
+                    modifier = highlight.modifier(index, row.key),
+                )
             }
         }
         if (movieResults.isNotEmpty()) {
@@ -326,8 +342,12 @@ private fun VodResultRow(name: String, posterUrl: String?, subtitle: String?, on
 }
 
 @Composable
-private fun SearchResultRow(row: ChannelsViewModel.Row, onClick: () -> Unit) {
-    SearchRow(onClick = onClick) {
+private fun SearchResultRow(row: ChannelsViewModel.Row, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    SearchRow(
+        onClick = onClick,
+        modifier = modifier,
+        onOptions = openOptionsOn(OptionsSubject.OfChannel(row.channel, onWatch = onClick)),
+    ) {
         AsyncImage(
             model = row.primary.logoUrl,
             contentDescription = null,

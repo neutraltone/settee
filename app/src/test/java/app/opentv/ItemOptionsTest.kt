@@ -5,6 +5,7 @@
  */
 package app.opentv
 
+import app.opentv.data.model.Programme
 import app.opentv.data.repo.WatchStatus
 import app.opentv.ui.options.ItemOption
 import app.opentv.ui.options.OptionsFor
@@ -42,8 +43,66 @@ class ItemOptionsTest {
     }
 
     @Test
-    fun `a channel offers whether it is a Favourite`() {
-        assertThat(OptionsFor.Channel(favourite = true).options()).containsExactly(ItemOption.RemoveFavourite)
+    fun `a channel with nothing in the guide offers the actions that need no programme`() {
+        assertThat(channel().options()).containsExactly(
+            ItemOption.Watch,
+            ItemOption.AddFavourite,
+            ItemOption.HideChannel,
+            ItemOption.OpenInExternalPlayer,
+            ItemOption.RecordNow,
+        ).inOrder()
+    }
+
+    @Test
+    fun `a Favourite channel offers removing it instead of adding it`() {
+        val options = channel(favourite = true).options()
+
+        assertThat(options).contains(ItemOption.RemoveFavourite)
+        assertThat(options).doesNotContain(ItemOption.AddFavourite)
+    }
+
+    @Test
+    fun `a channel recording offers stopping it instead of starting one`() {
+        val options = channel(recording = true).options()
+
+        assertThat(options).contains(ItemOption.StopRecording)
+        assertThat(options).doesNotContain(ItemOption.RecordNow)
+    }
+
+    @Test
+    fun `a programme on now offers recording its whole series, by name`() {
+        assertThat(channel(onNow = NEWS).options()).contains(ItemOption.RecordWholeSeries(NEWS))
+    }
+
+    @Test
+    fun `upcoming programmes offer scheduling one`() {
+        assertThat(channel(hasUpcoming = true).options()).contains(ItemOption.ScheduleLater)
+    }
+
+    @Test
+    fun `everything applying comes in the panel's order`() {
+        assertThat(channel(favourite = true, recording = true, onNow = NEWS, hasUpcoming = true).options())
+            .containsExactly(
+                ItemOption.Watch,
+                ItemOption.RemoveFavourite,
+                ItemOption.HideChannel,
+                ItemOption.OpenInExternalPlayer,
+                ItemOption.StopRecording,
+                ItemOption.RecordWholeSeries(NEWS),
+                ItemOption.ScheduleLater,
+            ).inOrder()
+    }
+
+    private fun channel(
+        favourite: Boolean = false,
+        recording: Boolean = false,
+        onNow: Programme? = null,
+        hasUpcoming: Boolean = false,
+    ) = OptionsFor.Channel(favourite, recording, onNow, hasUpcoming)
+
+    private companion object {
+        val NEWS =
+            Programme(feedId = 1, epgChannelId = "bbc1", startUtcMillis = 0, endUtcMillis = 1, title = "The News")
     }
 
     @Test

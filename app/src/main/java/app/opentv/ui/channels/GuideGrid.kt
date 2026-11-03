@@ -61,6 +61,10 @@ import app.opentv.R
 import app.opentv.data.model.Programme
 import app.opentv.data.model.shownName
 import app.opentv.ui.ChannelsViewModel
+import app.opentv.ui.options.OptionsSubject
+import app.opentv.ui.options.openOptionsOn
+import app.opentv.ui.options.optionsClickable
+import app.opentv.ui.options.rememberRowHighlight
 import coil.compose.AsyncImage
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -101,6 +105,7 @@ fun GuideGrid(
     val scroll = rememberScrollState()
     val listState = rememberLazyListState()
     val returnTo = rememberReturnToChannel(returnToChannelId, takeFocus, rows, listState, onReturnToRow)
+    val highlight = rememberRowHighlight(rows, listState) { it.key }
     val now = System.currentTimeMillis()
     // Jumping to another day resets the horizontal scroll to that day's start; a within-day time
     // drift (dayOffset unchanged) leaves the user's scroll position untouched.
@@ -129,6 +134,7 @@ fun GuideGrid(
                     onToggleFavourite = { onToggleFavourite(row) },
                     onExitLeft = onExitLeftFromChannel,
                     focusRequester = returnTo.focusRequesterFor(index),
+                    highlight = highlight.modifier(index, row.key),
                 )
             }
         }
@@ -140,7 +146,7 @@ fun GuideGrid(
  * its logo, name, and now/next line. This is the "list mode instead of tiles" some users prefer on
  * a busy line-up. It keeps the exact same focus/key contract as [GuideGrid] so [LiveScreen] can
  * swap between the two with nothing else changing: focus follows the d-pad (updating the preview),
- * OK opens the channel menu, and LEFT from a row asks the host to reopen the category rail.
+ * OK plays the channel, and LEFT from a row asks the host to reopen the category rail.
  */
 @Composable
 fun ChannelList(
@@ -158,6 +164,7 @@ fun ChannelList(
     val now = System.currentTimeMillis()
     val listState = rememberLazyListState()
     val returnTo = rememberReturnToChannel(returnToChannelId, takeFocus, rows, listState, onReturnToRow)
+    val highlight = rememberRowHighlight(rows, listState) { it.key }
     LazyColumn(
         state = listState,
         modifier = modifier.fillMaxSize(),
@@ -174,6 +181,7 @@ fun ChannelList(
                 onToggleFavourite = { onToggleFavourite(row) },
                 onExitLeft = onExitLeftFromChannel,
                 focusRequester = returnTo.focusRequesterFor(index),
+                highlight = highlight.modifier(index, row.key),
             )
         }
     }
@@ -234,11 +242,13 @@ private fun ChannelListRow(
     onToggleFavourite: () -> Unit,
     onExitLeft: () -> Boolean,
     focusRequester: FocusRequester? = null,
+    highlight: Modifier = Modifier,
 ) {
     var focused by remember { mutableStateOf(false) }
     Row(
         Modifier
             .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
+            .then(highlight)
             .fillMaxWidth()
             .clip(RoundedCornerShape(8.dp))
             .background(
@@ -263,7 +273,7 @@ private fun ChannelListRow(
                 focused = it.isFocused
                 if (it.isFocused) onFocus()
             }
-            .clickable(onClick = onSelect)
+            .optionsClickable(onSelect, openOptionsOn(OptionsSubject.OfChannel(row.channel, onWatch = onSelect)))
             .padding(horizontal = 10.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -402,6 +412,7 @@ private fun GuideRow(
     onToggleFavourite: () -> Unit = {},
     onExitLeft: () -> Boolean = { false },
     focusRequester: FocusRequester? = null,
+    highlight: Modifier = Modifier,
 ) {
     // Focus (the d-pad border) just moves the highlight. Selection (the filled cell) is the
     // channel the preview is playing — it only changes when you press OK.
@@ -412,6 +423,7 @@ private fun GuideRow(
         Row(
             Modifier
                 .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
+                .then(highlight)
                 .width(CHANNEL_COLUMN)
                 .fillMaxSize()
                 .clip(RoundedCornerShape(8.dp))
@@ -447,7 +459,7 @@ private fun GuideRow(
                     focused = it.isFocused
                     if (it.isFocused) onFocus()
                 }
-                .clickable(onClick = onSelect)
+                .optionsClickable(onSelect, openOptionsOn(OptionsSubject.OfChannel(row.channel, onWatch = onSelect)))
                 .padding(horizontal = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {

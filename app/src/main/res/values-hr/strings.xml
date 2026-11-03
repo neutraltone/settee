@@ -33,13 +33,11 @@
     <string name="guide_auto_switch">📺  Automatski prijeđi kad počne</string>
     <string name="guide_will_switch">📺 Prijeći će na %1$s po početku</string>
     <string name="guide_watch_channel">Gledaj kanal</string>
-    <string name="guide_now_title">Sada: %1$s</string>
     <string name="guide_watch">▶  Gledaj</string>
     <string name="guide_open_external">Otvori u vanjskom playeru</string>
     <string name="guide_play_channel_with">Reproduciraj kanal pomoću</string>
     <string name="guide_no_external_player">Nije instaliran vanjski player</string>
     <string name="guide_record_now_playing">●  Snimi ono što je sada na programu</string>
-    <string name="guide_later_header">Kasnije — snimi ili postavi podsjetnik</string>
     <string name="guide_no_info">Nema podataka vodiča</string>
     <string name="guide_next_prefix">Sljedeće  %1$s  %2$s</string>
     <string name="guide_loading_channels">Učitavanje vaših kanala</string>

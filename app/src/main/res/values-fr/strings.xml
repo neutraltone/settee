@@ -33,13 +33,11 @@
     <string name="guide_auto_switch">📺  Basculer automatiquement au début</string>
     <string name="guide_will_switch">📺 Basculera sur %1$s au début</string>
     <string name="guide_watch_channel">Regarder la chaîne</string>
-    <string name="guide_now_title">Maintenant : %1$s</string>
     <string name="guide_watch">▶  Regarder</string>
     <string name="guide_open_external">Ouvrir dans un lecteur externe</string>
     <string name="guide_play_channel_with">Lire la chaîne avec</string>
     <string name="guide_no_external_player">Aucun lecteur externe installé</string>
     <string name="guide_record_now_playing">●  Enregistrer le programme en cours</string>
-    <string name="guide_later_header">Plus tard — enregistrer ou programmer un rappel</string>
     <string name="guide_no_info">Aucune information de programme</string>
     <string name="guide_next_prefix">Ensuite  %1$s  %2$s</string>
     <string name="guide_loading_channels">Chargement de vos chaînes</string>

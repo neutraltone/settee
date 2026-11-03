@@ -304,6 +304,19 @@ class ChannelLineupTest {
     }
 
     @Test
+    fun `after hiding the channel you're watching, channel up and down carry on in the same list`() = runTest {
+        category(sourceId = 1, id = "10", name = "UK| News")
+        seed("UK| BBC News", "UK| ITN", "UK| Sky News", sourceId = 1, categoryId = "10")
+        seed("UK| Dave", sourceId = 1)
+        lineup.zapFrom(LineupScope.Group("news"))
+        db.channels().setHidden(row("UK| ITN").id, true)
+
+        assertThat(zap("UK| ITN", +1)).isEqualTo("UK| BBC News")
+        assertThat(zap("UK| ITN", -1)).isEqualTo("UK| Sky News")
+        assertThat(lineup.zapChannels().map { it.primary.name }).containsExactly("UK| BBC News", "UK| Sky News")
+    }
+
+    @Test
     fun `zapping passes over locked categories`() = runTest {
         category(sourceId = 1, id = "66", name = "UK| Adult")
         seed("UK| BBC News", "UK| ITV", sourceId = 1)

@@ -101,7 +101,6 @@ import app.opentv.R
 import app.opentv.core.ServiceLocator
 import app.opentv.core.SleepTimer
 import app.opentv.core.findActivity
-import app.opentv.core.requestIgnoreBatteryOptimizations
 import app.opentv.data.model.Channel
 import app.opentv.data.model.shownName
 import app.opentv.data.repo.LineupChannel
@@ -109,9 +108,13 @@ import app.opentv.data.repo.MediaKey
 import app.opentv.player.PlaybackQueue
 import app.opentv.player.PlayerController
 import app.opentv.player.SettledChannel
-import app.opentv.ui.RecordingBackgroundDialog
-import app.opentv.ui.RecordingBackgroundPrompt
 import app.opentv.ui.formatPlaybackTime
+import app.opentv.ui.options.LocalConfirmLive
+import app.opentv.ui.options.LocalOpenOptions
+import app.opentv.ui.options.LocalRecordingStarted
+import app.opentv.ui.options.OptionsSubject
+import app.opentv.ui.options.optionsClickable
+import app.opentv.ui.options.rememberRowHighlight
 import coil.compose.AsyncImage
 import java.util.Locale
 import kotlinx.coroutines.CoroutineScope
@@ -196,9 +199,7 @@ fun PlayerScreen(channelId: Long?, onBack: () -> Unit) {
     var currentId by remember { mutableStateOf<Long?>(null) }
     // The channel we were on before this one — powers the "Last channel" recall in the list.
     var previousId by remember { mutableStateOf<Long?>(null) }
-    // Offered once per session the first time the user records here while OpenTV isn't exempt from
-    // battery optimisation, so the capture survives the screen sleeping. Never blocks recording.
-    var showBackgroundPrompt by remember { mutableStateOf(false) }
+    val recordingStarted = LocalRecordingStarted.current
 
     DisposableEffect(Unit) {
         app.opentv.core.PipState.eligible = true
@@ -257,10 +258,7 @@ fun PlayerScreen(channelId: Long?, onBack: () -> Unit) {
             // Every Quality, not just the switchable ones: the one playing is always among them.
             val playing = channel?.qualities?.firstOrNull { it.id == currentId } ?: return
             scope.launch { graph.recordingEngine.startChannel(playing) }
-            if (RecordingBackgroundPrompt.shouldShow(context)) {
-                RecordingBackgroundPrompt.markShown()
-                showBackgroundPrompt = true
-            }
+            recordingStarted()
         }
     }
 
@@ -289,6 +287,7 @@ fun PlayerScreen(channelId: Long?, onBack: () -> Unit) {
     }
 
     val subtitlePicks = rememberProfileSubtitles(controller, graph.profileSettings, scope)
+    val openOptions = LocalOpenOptions.current
 
     LivePlayerContent(
         controller = controller,
@@ -312,17 +311,17 @@ fun PlayerScreen(channelId: Long?, onBack: () -> Unit) {
         onDontAskAgain = { settings.setLivePausePromptDismissed(true) },
         subtitlePicks = subtitlePicks,
         onBack = onBack,
+        onChannelOptions = { item, onWatch ->
+            scope.launch {
+                // The list holds queue items, not Channels. As when playing, a channel hidden or
+                // locked since the list was built still answers, on its own.
+                val picked = graph.channelLineup.channelOf(item.id)
+                    ?: graph.catalogRepository.channel(item.id)?.let { LineupChannel(it, listOf(it)) }
+                    ?: return@launch
+                openOptions?.invoke(OptionsSubject.OfChannel(picked, onWatch))
+            }
+        },
     )
-
-    if (showBackgroundPrompt) {
-        RecordingBackgroundDialog(
-            onAllow = {
-                showBackgroundPrompt = false
-                context.requestIgnoreBatteryOptimizations()
-            },
-            onDismiss = { showBackgroundPrompt = false },
-        )
-    }
 }
 
 /** The Channel a banner names. [key] is what says it's a different Channel: see [LineupChannel.key]. */
@@ -355,8 +354,10 @@ fun LivePlayerContent(
     onDontAskAgain: () -> Unit,
     subtitlePicks: SubtitlePicks,
     onBack: () -> Unit,
+    onChannelOptions: (PlaybackQueue.Item, onWatch: () -> Unit) -> Unit = { _, _ -> },
 ) {
     val context = LocalContext.current
+    val confirmLive = LocalConfirmLive.current
     val state by controller.state.collectAsState()
     val tracks by controller.tracks.collectAsState()
     // Digits typed on the remote accumulate here, then jump to that channel number after a beat.
@@ -456,6 +457,21 @@ fun LivePlayerContent(
     fun playPicked(item: PlaybackQueue.Item) {
         onPlayChannel(item.id)
         if (currentId in item.qualityIds) announceChannel()
+    }
+
+    /** Select on a row of the channel list, and Watch in that channel's options. */
+    fun pickFromList(item: PlaybackQueue.Item) {
+        val pick = {
+            channelListVisible = false
+            playPicked(item)
+        }
+        // The Channel already on opens no new stream, so there's no recording to warn about.
+        if (currentId in item.qualityIds) pick() else confirmLive(pick)
+    }
+
+    // The list's last channel can leave it (hidden from its options), with the highlight.
+    LaunchedEffect(queue.isEmpty()) {
+        if (queue.isEmpty()) channelListVisible = false
     }
 
     // By the Channel, not currentId: a Quality switch changes currentId and stays on the Channel.
@@ -842,6 +858,7 @@ fun LivePlayerContent(
         ) {
             val currentIndex = queue.indexOfFirst { currentId in it.qualityIds }.coerceAtLeast(0)
             val listState = rememberLazyListState()
+            val highlight = rememberRowHighlight(queue, listState) { it.id }
             LaunchedEffect(Unit) { runCatching { listState.scrollToItem(currentIndex) } }
             Column(
                 Modifier
@@ -865,10 +882,8 @@ fun LivePlayerContent(
                         playing = false,
                         focusRequester = null,
                         leadingLabel = stringResource(R.string.player_last),
-                        onClick = {
-                            channelListVisible = false
-                            playPicked(lastItem)
-                        },
+                        onClick = { pickFromList(lastItem) },
+                        onOptions = { onChannelOptions(lastItem) { pickFromList(lastItem) } },
                     )
                     Spacer(Modifier.height(4.dp))
                 }
@@ -878,10 +893,9 @@ fun LivePlayerContent(
                             item = item,
                             playing = currentId in item.qualityIds,
                             focusRequester = if (index == currentIndex) listFocus else null,
-                            onClick = {
-                                channelListVisible = false
-                                playPicked(item)
-                            },
+                            onClick = { pickFromList(item) },
+                            onOptions = { onChannelOptions(item) { pickFromList(item) } },
+                            modifier = highlight.modifier(index, item.id),
                         )
                     }
                 }
@@ -911,7 +925,9 @@ private fun ChannelListRow(
     playing: Boolean,
     focusRequester: FocusRequester?,
     onClick: () -> Unit,
+    onOptions: () -> Unit,
     leadingLabel: String? = null,
+    modifier: Modifier = Modifier,
 ) {
     var focused by remember { mutableStateOf(false) }
     val bg = when {
@@ -921,12 +937,12 @@ private fun ChannelListRow(
     }
     val fg = if (focused) MaterialTheme.colorScheme.onPrimary else Color.White
     Row(
-        Modifier
+        modifier
             .fillMaxWidth()
             .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
             .onFocusChanged { focused = it.isFocused }
             .background(bg)
-            .clickable(onClick = onClick)
+            .optionsClickable(onClick, onOptions)
             .padding(horizontal = 16.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -1214,7 +1230,7 @@ private const val BANNER_TIMEOUT_MILLIS = 4_000L
 private const val NUMBER_ENTRY_TIMEOUT_MILLIS = 2_000L
 private const val COUNTDOWN_TICK_MILLIS = 1_000L
 private const val BACK_TO_LIVE_MESSAGE_MILLIS = 4_000L
-private val OK_KEYS = setOf(Key.DirectionCenter, Key.Enter, Key.NumPadEnter, Key.ButtonA)
+internal val OK_KEYS = setOf(Key.DirectionCenter, Key.Enter, Key.NumPadEnter, Key.ButtonA)
 private val MEDIA_KEYS =
     setOf(Key.MediaPlayPause, Key.MediaPlay, Key.MediaPause, Key.MediaRewind, Key.MediaFastForward)
 
