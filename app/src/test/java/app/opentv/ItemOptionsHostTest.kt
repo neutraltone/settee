@@ -26,7 +26,7 @@ import app.opentv.data.model.SourceKind
 import app.opentv.data.model.StreamKind
 import app.opentv.data.repo.ContinueWatchingCard
 import app.opentv.data.repo.MediaKey
-import app.opentv.ui.VodViewModel.ResumeItem
+import app.opentv.ui.ResumeItem
 import app.opentv.ui.options.ItemOptionsHost
 import app.opentv.ui.options.OptionsDestination
 import app.opentv.ui.vod.ContinueWatchingRow

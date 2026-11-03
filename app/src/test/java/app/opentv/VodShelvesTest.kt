@@ -11,7 +11,7 @@ import androidx.compose.ui.test.onNodeWithText
 import app.opentv.data.model.Movie
 import app.opentv.data.model.Series
 import app.opentv.data.repo.MediaKey
-import app.opentv.ui.VodViewModel
+import app.opentv.ui.ResumeItem
 import app.opentv.ui.vod.MovieShelves
 import app.opentv.ui.vod.SeriesShelves
 import com.google.common.truth.Truth.assertThat
@@ -35,7 +35,7 @@ class VodShelvesTest {
     val artwork = PlaceholderArtwork()
 
     private val resume = listOf(
-        VodViewModel.ResumeItem(
+        ResumeItem(
             MediaKey.Movie(9),
             "Collateral",
             posterUrl = null,

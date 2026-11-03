@@ -649,48 +649,46 @@ class EpgViewModel(app: Application) : AndroidViewModel(app) {
     }
 }
 
+/** Which episode a series card picks up at. */
+data class SeasonEpisode(val season: Int, val episode: Int)
+
+/**
+ * One card in the Continue Watching shelf: a movie, or a series at its In Progress episode or
+ * Up Next. A series card is titled with the series and carries the [episode] it plays.
+ */
+data class ResumeItem(
+    val key: MediaKey,
+    val title: String,
+    val posterUrl: String?,
+    /** How far through, 0..1; null when it has never been played, so the card shows no bar. */
+    val progress: Float?,
+    val episode: SeasonEpisode? = null,
+    /** Whether [episode] is a New Episode, which the card says on its thumbnail. */
+    val newEpisode: Boolean = false,
+    /** The Continue Watching card this was drawn from, for the options panel to act on. */
+    val card: ContinueWatchingCard? = null,
+)
+
 class VodViewModel @JvmOverloads constructor(
     app: Application,
     private val graph: ServiceLocator.Graph = ServiceLocator.get(app),
 ) : AndroidViewModel(app) {
     private val settings = graph.settings
 
-    /** Which episode a series card picks up at. */
-    data class SeasonEpisode(val season: Int, val episode: Int)
-
-    /**
-     * One card in the Continue Watching shelf: a movie, or a series at its In Progress episode or
-     * Up Next. A series card is titled with the series and carries the [episode] it plays.
-     */
-    data class ResumeItem(
-        val key: MediaKey,
-        val title: String,
-        val posterUrl: String?,
-        /** How far through, 0..1; null when it has never been played, so the card shows no bar. */
-        val progress: Float?,
-        val episode: SeasonEpisode? = null,
-        /** Whether [episode] is a New Episode, which the card says on its thumbnail. */
-        val newEpisode: Boolean = false,
-        /** The Continue Watching card this was drawn from, for the options panel to act on. */
-        val card: ContinueWatchingCard? = null,
-    )
-
     @OptIn(ExperimentalCoroutinesApi::class)
     val continueWatchingMovies: StateFlow<List<ResumeItem>> =
         graph.viewerLibrary.continueWatchingMovies()
-            .mapLatest { cards -> cards.mapNotNull { resolveResume(it) } }
+            .mapLatest { cards -> cards.mapNotNull { resumeItem(graph.catalogRepository, it) } }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val continueWatchingSeries: StateFlow<List<ResumeItem>> =
         graph.viewerLibrary.continueWatchingSeries()
-            .mapLatest { cards -> cards.mapNotNull { resolveResume(it) } }
+            .mapLatest { cards -> cards.mapNotNull { resumeItem(graph.catalogRepository, it) } }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     /** Each episode's Watched / In Progress / Unwatched status for the active Profile. */
     val episodeStatuses = graph.viewerLibrary.episodeStatuses()
-
-    private suspend fun resolveResume(card: ContinueWatchingCard) = resumeItem(graph.catalogRepository, card)
 
     private val movieCategory = MutableStateFlow<String?>(null)
     private val seriesCategory = MutableStateFlow<String?>(null)
@@ -982,40 +980,39 @@ class VodViewModel @JvmOverloads constructor(
 }
 
 /** [card] as Continue Watching draws it, or null when its title has left the catalogue. */
-private suspend fun resumeItem(catalog: CatalogRepository, card: ContinueWatchingCard): VodViewModel.ResumeItem? =
-    when (card) {
-        is ContinueWatchingCard.Movie -> catalog.movie(card.movieId)?.let {
-            VodViewModel.ResumeItem(
-                MediaKey.Movie(it.id),
-                it.displayTitle,
-                it.posterUrl,
-                card.progress,
+private suspend fun resumeItem(catalog: CatalogRepository, card: ContinueWatchingCard): ResumeItem? = when (card) {
+    is ContinueWatchingCard.Movie -> catalog.movie(card.movieId)?.let {
+        ResumeItem(
+            MediaKey.Movie(it.id),
+            it.displayTitle,
+            it.posterUrl,
+            card.progress,
+            card = card,
+        )
+    }
+    is ContinueWatchingCard.Series -> {
+        val ep = card.episode
+        catalog.seriesOf(ep)?.let {
+            ResumeItem(
+                key = MediaKey.Episode(ep.id),
+                title = it.name,
+                // The card is landscape: the wide backdrop fits it, a portrait poster only crops.
+                posterUrl = it.backdropUrl ?: it.posterUrl,
+                progress = card.progress,
+                episode = SeasonEpisode(ep.season, ep.episodeNumber),
+                newEpisode = card.newEpisode,
                 card = card,
             )
         }
-        is ContinueWatchingCard.Series -> {
-            val ep = card.episode
-            catalog.seriesOf(ep)?.let {
-                VodViewModel.ResumeItem(
-                    key = MediaKey.Episode(ep.id),
-                    title = it.name,
-                    // The card is landscape: the wide backdrop fits it, a portrait poster only crops.
-                    posterUrl = it.backdropUrl ?: it.posterUrl,
-                    progress = card.progress,
-                    episode = VodViewModel.SeasonEpisode(ep.season, ep.episodeNumber),
-                    newEpisode = card.newEpisode,
-                    card = card,
-                )
-            }
-        }
     }
+}
 
 /** Home's Live Preview and the titles on its channel now and next, when the guide has them. */
 data class LiveNow(val preview: LivePreview, val nowTitle: String?, val nextTitle: String?)
 
 /** What Home shows: the active Profile's Continue Watching and its Favourites, by kind, then [recent]. */
 data class HomeState(
-    val continueWatching: List<VodViewModel.ResumeItem>,
+    val continueWatching: List<ResumeItem>,
     val favouriteShows: List<Series>,
     val favouriteMovies: List<Movie>,
     val favouriteChannels: List<LineupChannel>,
@@ -1053,7 +1050,7 @@ class HomeViewModel @JvmOverloads constructor(
     private val lineup = graph.channelLineup
 
     @OptIn(ExperimentalCoroutinesApi::class)
-    private val continueWatching: Flow<List<VodViewModel.ResumeItem>> = combine(
+    private val continueWatching: Flow<List<ResumeItem>> = combine(
         graph.viewerLibrary.continueWatching()
             .mapLatest { cards -> cards.mapNotNull { resumeItem(graph.catalogRepository, it) } },
         settings.moviesEnabled,

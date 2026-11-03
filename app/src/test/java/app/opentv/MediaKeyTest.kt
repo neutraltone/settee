@@ -35,6 +35,16 @@ class MediaKeyTest {
     }
 
     @Test
+    fun `a key with ids left over reads back as nothing`() {
+        assertThat(listOf("movie:5:6", "ep:7:8", "rec:3:4", "catchup:9:1:2").map(MediaKey::parse)).containsExactly(
+            null,
+            null,
+            null,
+            null,
+        )
+    }
+
+    @Test
     fun `a string that isn't a key reads back as nothing`() {
         assertThat(listOf("", "movie:", "ep:x", "show:4", "catchup:9").map(MediaKey::parse)).containsExactly(
             null,
