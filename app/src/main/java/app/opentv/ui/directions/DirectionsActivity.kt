@@ -36,12 +36,16 @@ import androidx.compose.ui.unit.dp
  *
  * adb shell am start -n uk.neutraltone.settee.debug/app.opentv.ui.directions.DirectionsActivity
  *
- * Rewind and fast-forward change direction, play/pause shows or hides the Live Preview on Home, OK on
+ * Rewind and fast-forward change the highlight option (#151), play/pause shows or hides the Live Preview on Home, OK on
  * a rail tab changes screen, OK on a Shows title opens its details, and Back returns to Shows.
  */
 class DirectionsActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // What #151 settled.
+        ProtoLook.highlight = Highlight.KEYLINE
+        ProtoLook.lining = true
+        ProtoLook.floor = true
         setContent {
             var direction by remember { mutableStateOf(Direction.COMBINED) }
             var screen by remember { mutableStateOf(Screen.HOME) }
@@ -61,7 +65,7 @@ class DirectionsActivity : ComponentActivity() {
                             if (step == 0) {
                                 screen = if (screen == Screen.HOME) Screen.HOME_PREVIEW else Screen.HOME
                             } else {
-                                direction = directions[(direction.ordinal + step).mod(directions.size)]
+                                ProtoLook.highlight = Highlight.entries[(ProtoLook.highlight.ordinal + step).mod(Highlight.entries.size)]
                             }
                         }
                         true
@@ -71,7 +75,7 @@ class DirectionsActivity : ComponentActivity() {
                     key(direction, screen) { DirectionScreen(direction, screen) }
                 }
                 Text(
-                    "PROTOTYPE  ◀◀ ${direction.label} ▶▶",
+                    "PROTOTYPE  ◀◀ ${ProtoLook.highlight.label} ▶▶",
                     color = Color.Black,
                     modifier = Modifier
                         .align(Alignment.BottomCenter)

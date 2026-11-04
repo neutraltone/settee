@@ -7,6 +7,7 @@ package app.opentv.ui.directions
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -109,6 +110,24 @@ val Poppins = FontFamily(
     Font(R.font.proto_poppins_semibold, FontWeight.SemiBold),
 )
 
+/*
+ * PROTOTYPE for #151: how Direction E's highlight reads from across the room, and two type choices
+ * from the font research. Throwaway, never merged. Plain global state, so one line switches the lot.
+ */
+enum class Highlight(val key: String, val label: String) {
+    APPROVED("a_approved", "A: As approved, ring on cards, fill on rows"),
+    KEYLINE("b_keyline", "B: Thicker ring with a dark edge, fill on rows"),
+    FILL("c_fill", "C: Coral caption on cards, fill on rows"),
+    RING("d_ring", "D: Ring everywhere"),
+}
+
+object ProtoLook {
+    var highlight by mutableStateOf(Highlight.APPROVED)
+    var lining by mutableStateOf(false)
+    var floor by mutableStateOf(false)
+    var captionScrim by mutableStateOf(false)
+}
+
 sealed interface Watch {
     data object Unwatched : Watch
     data class InProgress(val fraction: Float, val left: String) : Watch
@@ -143,15 +162,15 @@ object ProtoData {
     const val LIVE_SEED = 23
 
     val continueWatching = listOf(
-        Item("Harbour Lights", "S2 E5", 11, Watch.InProgress(0.62f, "18 min left")),
+        Item("Harbour Lights", "S2 E5", 900, Watch.InProgress(0.62f, "18 min left")),
         Item("The Allotment", "S4 E2", 12, Watch.UpNext),
         Item("Night Ferry", "Film", 13, Watch.InProgress(0.55f, "41 min left")),
         Item("Copper Street", "S1 E8", 14, Watch.NewEpisode),
         Item("Kestrel Road", "S3 E1", null, Watch.InProgress(0.2f, "36 min left")),
     )
     val favourites = listOf(
-        Item("The Long Field", "Drama", 15, Watch.EpisodesLeft(3)),
-        Item("Low Tide", "Mystery", 16, Watch.Watched),
+        Item("The Long Field", "Drama", 901, Watch.EpisodesLeft(3)),
+        Item("Low Tide", "Mystery", 902, Watch.Watched),
         Item("Northern Line", "Crime", 17, Watch.EpisodesLeft(7)),
         Item("Kestrel Road", "Drama", null, Watch.EpisodesLeft(9)),
         Item("Copper Street", "Comedy", 14, Watch.EpisodesLeft(1)),
@@ -166,7 +185,7 @@ object ProtoData {
         Item("Fenwick", "Comedy", 22, Watch.Unwatched),
     )
     val drama = listOf(
-        Item("Harbour Lights", "2 series", 11, Watch.EpisodesLeft(5)),
+        Item("Harbour Lights", "2 series", 900, Watch.EpisodesLeft(5)),
         Item("The Long Field", "3 series", 15, Watch.EpisodesLeft(3)),
         Item("Salt Road", "1 series", 18, Watch.Unwatched),
         Item("Kestrel Road", "3 series", null, Watch.EpisodesLeft(9)),
@@ -254,6 +273,30 @@ private val palettes = listOf(
  */
 @Composable
 fun Art(seed: Int, modifier: Modifier = Modifier, label: String? = null) {
+    // The worst artwork for a coral ring: close to its colour, close to white, and a printed title.
+    if (seed >= 900) {
+        Box(
+            modifier.background(
+                when (seed) {
+                    900 -> Brush.verticalGradient(listOf(Color(0xFFFF9A6C), Color(0xFFE8663C)))
+                    901 -> Brush.verticalGradient(listOf(Color(0xFFFFFFFF), Color(0xFFF1EADF)))
+                    else -> Brush.verticalGradient(listOf(Color(0xFFF2C7A8), Color(0xFFD9784F)))
+                },
+            ),
+        ) {
+            if (seed == 902) {
+                Text(
+                    "LOW TIDE",
+                    color = Color(0xFF2B1A14),
+                    fontFamily = YoungSerif,
+                    fontSize = 26.sp,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 34.dp),
+                )
+            }
+        }
+        return
+    }
     Box(modifier) {
         Canvas(Modifier.fillMaxSize()) {
             val random = Random(seed * 7919)
@@ -384,13 +427,15 @@ fun PlainRail(
                     Modifier
                         .size(48.dp)
                         .clip(shape)
-                        .background(if (focused) focusFill else background),
+                        .background(if (focused && ProtoLook.highlight != Highlight.RING) focusFill else background)
+                        .then(if (focused && ProtoLook.highlight == Highlight.RING) Modifier.border(3.dp, focusFill, shape) else Modifier),
                     contentAlignment = Alignment.Center,
                 ) {
                     Icon(
                         entry.icon,
                         contentDescription = null,
                         tint = when {
+                            focused && ProtoLook.highlight == Highlight.RING -> focusFill
                             focused -> onFocusFill
                             index == current -> currentIcon
                             else -> icon
@@ -459,13 +504,15 @@ fun OneLine(
     weight: FontWeight = FontWeight.Normal,
     align: TextAlign? = null,
 ) {
+    val shown = if (ProtoLook.floor) maxOf(size, 16) else size
     Text(
         text,
         color = color,
         fontFamily = family,
-        fontWeight = weight,
-        fontSize = size.sp,
-        lineHeight = (size * 1.15f).sp,
+        fontWeight = if (ProtoLook.floor && weight == FontWeight.Normal && family == Alegreya) FontWeight.Medium else weight,
+        fontSize = shown.sp,
+        style = androidx.compose.ui.text.TextStyle(fontFeatureSettings = if (ProtoLook.lining) "lnum, tnum" else null),
+        lineHeight = (shown * 1.15f).sp,
         maxLines = 1,
         overflow = TextOverflow.Ellipsis,
         textAlign = align,

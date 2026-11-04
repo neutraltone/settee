@@ -1,0 +1,235 @@
+<title>Settee Highlight Round</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alegreya+Sans:wght@400;500;700&family=Young+Serif&display=swap">
+<style>
+/* Layout: a contact sheet for judging screens at about sofa size, in Settee's own Direction E values. */
+:root {
+  color-scheme: dark;
+  --bg: #1A1416;
+  --panel: #281F22;
+  --raised: #362A2E;
+  --rule: #45373B;
+  --ink: #F8EFEA;
+  --soft: #BDABA8;
+  --coral: #FF8F6B;
+  --on-coral: #2A130B;
+  --title: "Young Serif", Georgia, serif;
+  --body: "Alegreya Sans", "Trebuchet MS", sans-serif;
+}
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font: 18px/1.45 var(--body);
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 28px 72px;
+}
+.wrap { max-width: 1480px; margin: 0 auto; display: grid; gap: 44px; }
+section { display: grid; gap: 14px; min-width: 0; }
+h1, h2 { font-family: var(--title); font-weight: 400; margin: 0; text-wrap: balance; }
+h1 { font-size: 36px; line-height: 1.15; }
+h2 { font-size: 25px; line-height: 1.2; border-bottom: 1px solid var(--rule); padding-bottom: 8px; }
+p { margin: 0; max-width: 72ch; }
+.soft { color: var(--soft); }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+button.chip {
+  font: 500 17px/1 var(--body);
+  color: var(--ink);
+  background: var(--raised);
+  border: 0;
+  border-radius: 99px;
+  padding: 10px 15px;
+  cursor: pointer;
+}
+button.chip[aria-pressed="true"] { background: var(--coral); color: var(--on-coral); font-weight: 700; }
+button.chip:focus-visible { outline: 3px solid var(--ink); outline-offset: 2px; }
+.look { color: var(--soft); min-height: 1.45em; }
+.grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+@media (max-width: 760px) { .grid { grid-template-columns: minmax(0, 1fr); } }
+figure { margin: 0; display: grid; gap: 7px; min-width: 0; }
+figcaption { font-size: 17px; line-height: 1.3; }
+figcaption b { color: var(--coral); }
+figure.pick figcaption b::after { content: "  (my pick)"; font-weight: 500; color: var(--soft); }
+figure img { display: block; width: 100%; height: auto; background: var(--panel); }
+.note { background: var(--panel); padding: 14px 16px; display: grid; gap: 8px; }
+ul { margin: 0; padding-left: 20px; display: grid; gap: 6px; max-width: 80ch; }
+.tablewrap { overflow-x: auto; }
+table { border-collapse: collapse; font-variant-numeric: tabular-nums lining-nums; min-width: 560px; width: 100%; }
+th, td { text-align: left; padding: 7px 14px 7px 0; border-bottom: 1px solid var(--rule); vertical-align: middle; }
+th { font-weight: 500; color: var(--soft); }
+.swatch { display: inline-block; width: 22px; height: 22px; vertical-align: -5px; margin-right: 8px; border: 1px solid var(--rule); }
+.two { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 28px; }
+@media (max-width: 900px) { .two { grid-template-columns: minmax(0, 1fr); } }
+.two > div { min-width: 0; display: grid; gap: 8px; align-content: start; }
+h3 { font: 700 18px/1.2 var(--body); margin: 0; color: var(--coral); }
+</style>
+
+<div class="wrap">
+  <header style="display:grid;gap:10px">
+    <h1>Which highlight can she find from the sofa?</h1>
+    <p>Direction E on the hardest artwork I could make. Each picture is roughly sofa size if it's about 19 cm wide at arm's length (a 43 inch TV at ten feet). Click one for full size. All artwork is generated, and none of this has been on a real TV.</p>
+    <p><b>Settled:</b> B, lining figures with the 16 sp floor, and today's gradient on artwork. The notes below are the recommendations as they were made.</p>
+  </header>
+
+  <section>
+    <h2>The highlight</h2>
+    <div class="chips" id="hChips" role="group" aria-label="Which state to compare"></div>
+    <p class="look" id="hLook"></p>
+    <div class="grid" id="hGrid"></div>
+    <div class="note">
+      <p><b>My pick is C.</b> Coral fill then means "you are here" everywhere, on cards, rows and buttons alike, and it's the only option that holds up on warm artwork without adding a second idea. It's also a flat fill, so it costs no more than the rest. It covers the bottom of the art on the highlighted card, and it's the loudest of the four, so check it still feels calm. B is the runner-up if C feels like too much.</p>
+    </div>
+  </section>
+
+  <section>
+    <h2>Numbers and text size</h2>
+    <div class="chips" id="tChips" role="group" aria-label="Which screen to compare"></div>
+    <div class="grid" id="tGrid"></div>
+    <div class="note">
+      <p><b>My pick is lining figures with the 16 sp floor.</b> Old-style figures make S1 look like SI, and those labels are how she tells episodes apart. It changes what the viewer approved, so it's worth showing them both. In the floor version, everything under 16 sp goes up to 16, Regular text becomes Medium, and synopses go to 18. Nothing in these screens gets cut off mid-letter and the sidebar still fits, but synopses lose a few more words and real titles run longer than these.</p>
+    </div>
+  </section>
+
+  <section>
+    <h2>Text on artwork</h2>
+    <div class="grid">
+      <figure><figcaption><b>Today:</b> one gradient across most of the card</figcaption><a href="shots/type_today_home.png"><img src="shots/type_today_home.png" alt="Home with the gradient across most of each card" loading="lazy"></a></figure>
+      <figure><figcaption><b>Alternative:</b> a gradient only behind the text</figcaption><a href="shots/type_today_scrim.png"><img src="shots/type_today_scrim.png" alt="Home with a gradient only behind each card's text" loading="lazy"></a></figure>
+    </div>
+    <div class="note">
+      <p>Both are readable. Measured on the white cover, title text is 7.1:1 today and 13.1:1 with the alternative, and quiet text is 6.3:1 and 7.5:1. The alternative keeps more of the picture, because the art stays bright above the text, but the edge of the band is more visible. I'd keep today's gradient, since it's what was approved and it passes.</p>
+      <p>Neither fixes artwork with its own title printed on it: see Low Tide, where the printed title runs into ours. Only option C's caption covers it, and only while the card is highlighted.</p>
+    </div>
+  </section>
+
+  <section>
+    <h2>Proposed tokens</h2>
+    <p class="soft">Taken straight from Direction E, with the changes the renders called for. Contrast is calculated from these values.</p>
+    <div class="two">
+      <div>
+        <h3>Colour</h3>
+        <div class="tablewrap"><table>
+          <tr><th>Role</th><th>Value</th><th>Contrast</th></tr>
+          <tr><td><span class="swatch" style="background:#1A1416"></span>Background</td><td>#1A1416</td><td>Base</td></tr>
+          <tr><td><span class="swatch" style="background:#281F22"></span>Surface</td><td>#281F22</td><td>Text 14.2, quiet 7.3</td></tr>
+          <tr><td><span class="swatch" style="background:#362A2E"></span>Raised</td><td>#362A2E</td><td>Text 12.1, quiet 6.3</td></tr>
+          <tr><td><span class="swatch" style="background:#45373B"></span>Rule</td><td>#45373B</td><td>1.6, decoration only</td></tr>
+          <tr><td><span class="swatch" style="background:#F8EFEA"></span>Text</td><td>#F8EFEA</td><td>16.0 on background</td></tr>
+          <tr><td><span class="swatch" style="background:#BDABA8"></span>Quiet text</td><td>#BDABA8</td><td>8.3 on background</td></tr>
+          <tr><td><span class="swatch" style="background:#FF8F6B"></span>Accent</td><td>#FF8F6B</td><td>8.1 on background</td></tr>
+          <tr><td><span class="swatch" style="background:#2A130B"></span>On accent</td><td>#2A130B</td><td>7.9 on accent</td></tr>
+        </table></div>
+      </div>
+      <div>
+        <h3>Type</h3>
+        <div class="tablewrap"><table>
+          <tr><th>Role</th><th>Face</th><th>Size</th></tr>
+          <tr><td>Display</td><td>Young Serif</td><td>54 sp</td></tr>
+          <tr><td>Hero</td><td>Young Serif</td><td>32 sp</td></tr>
+          <tr><td>Screen title</td><td>Young Serif</td><td>28 sp</td></tr>
+          <tr><td>Section</td><td>Young Serif</td><td>18 sp</td></tr>
+          <tr><td>Synopsis</td><td>Alegreya Sans Medium</td><td>18 sp</td></tr>
+          <tr><td>Title on a card or row</td><td>Alegreya Sans Bold</td><td>16 to 17 sp</td></tr>
+          <tr><td>Body and labels</td><td>Alegreya Sans Medium</td><td>16 sp</td></tr>
+        </table></div>
+      </div>
+      <div>
+        <h3>Shape</h3>
+        <div class="tablewrap"><table>
+          <tr><th>Role</th><th>Corner</th></tr>
+          <tr><td>Guide cells, sidebar rows</td><td>2 dp</td></tr>
+          <tr><td>Episode thumbnails</td><td>7 dp</td></tr>
+          <tr><td>Cards, episode rows, rail items</td><td>10 dp</td></tr>
+          <tr><td>Buttons</td><td>Pill</td></tr>
+        </table></div>
+      </div>
+      <div>
+        <h3>Space and highlight</h3>
+        <div class="tablewrap"><table>
+          <tr><th>Role</th><th>Value</th></tr>
+          <tr><td>Screen margin</td><td>48 dp sides, 27 dp top and bottom</td></tr>
+          <tr><td>Gap between cards</td><td>12 dp</td></tr>
+          <tr><td>Gap between rows</td><td>14 dp</td></tr>
+          <tr><td>Card lift</td><td>1.05, or 1.03 on the large first card</td></tr>
+          <tr><td>Ring on cards</td><td>4 dp, with a 2 dp dark edge inside</td></tr>
+          <tr><td>Progress on a highlighted card</td><td>Inset 6 dp, inside the dark edge</td></tr>
+          <tr><td>Glow on the highlighted item</td><td>14 dp</td></tr>
+        </table></div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>What the renders turned up</h2>
+    <ul>
+      <li><b>The large card was being cut off.</b> Lifting it by 1.06 pushed its left edge past its row, so the ring lost a side. All four options here already use the smaller lifts in the table.</li>
+      <li><b>Text over a bright Shows backdrop fails when the sidebar is open.</b> The gradient stays put while the sidebar pushes the text right, onto the bright part. The category count drops to 1.5:1 and the coral status line to 2.8:1, where 4.5:1 is the usual minimum. The gradient needs to move with the text, whichever option wins. Open Numbers and text size, then Categories, to see it.</li>
+      <li><b>Coral progress disappears into a coral ring</b> on a highlighted card in A and D. C draws it dark on the caption. B now moves it inside the dark edge and lifts the text clear of it.</li>
+      <li><b>Down from the large card lands on the second Favourite,</b> not the first, because it goes by position on screen. That's outside this ticket, so I'd carry it to the Home screen work.</li>
+      <li><b>Not checked:</b> real posters, colour on a real TV, and whether a highlight this size is quick on a Stick.</li>
+    </ul>
+  </section>
+</div>
+
+<script>
+const OPTIONS = [
+  ["a_approved", "A: As approved", "ring and lift on cards, fill on rows"],
+  ["b_keyline", "B: Dark edge", "thicker ring with a dark edge inside, fill on rows"],
+  ["c_fill", "C: Coral caption", "the card's text area fills, as rows do"],
+  ["d_ring", "D: Ring everywhere", "no fills at all"],
+];
+const STATES = [
+  ["warm", "Warm art", "The hardest case for a coral ring. Look at the top of the card: can you still see its edge?"],
+  ["white", "White art", "A bright cover. Is the ring as easy to find as it is on dark art?"],
+  ["printed", "Printed title", "Real covers carry their own titles. Which handles the clash best?"],
+  ["dark", "Dark art", "The easy case, for comparison."],
+  ["shows", "Shows", "A poster on the Shows tab, with the backdrop behind it."],
+  ["guide", "Guide", "Where the highlight lands most on live TV. D is the only one that differs."],
+  ["sidebar", "Categories", "The sidebar's rows. D is the only one that differs."],
+  ["rail", "Rail", "The rail's icons. D is the only one that differs."],
+  ["button", "Buttons", "Resume and Favourite on a details page. D is the only one that differs."],
+  ["episode", "Episode", "A row in the episode list. D is the only one that differs."],
+];
+const TYPES = [
+  ["today", "Today", "old-style figures, sizes as approved"],
+  ["lining", "Lining figures", "same sizes"],
+  ["floor", "16 sp floor", "old-style figures"],
+  ["both", "Both", "lining figures and the 16 sp floor"],
+];
+const SCREENS = [["details", "Details"], ["guide", "Guide"], ["home", "Home"], ["sidebar", "Categories"]];
+
+function chip(host, label, pressed, onClick) {
+  const b = document.createElement("button");
+  b.type = "button"; b.className = "chip"; b.textContent = label;
+  b.setAttribute("aria-pressed", pressed);
+  b.addEventListener("click", () => {
+    host.querySelectorAll("button").forEach((x) => x.setAttribute("aria-pressed", x === b));
+    onClick();
+  });
+  host.append(b);
+}
+function figure(src, name, note, pick) {
+  const f = document.createElement("figure");
+  if (pick) f.className = "pick";
+  const c = document.createElement("figcaption");
+  const b = document.createElement("b"); b.textContent = name;
+  c.append(b, document.createTextNode(": " + note));
+  const a = document.createElement("a"); a.href = src;
+  const i = document.createElement("img"); i.src = src; i.alt = name + ": " + note;
+  a.append(i); f.append(c, a);
+  return f;
+}
+function showHighlight(state) {
+  document.getElementById("hLook").textContent = state[2];
+  document.getElementById("hGrid").replaceChildren(...OPTIONS.map(([k, n, d]) => figure(`shots/${k}_${state[0]}.png`, n, d, k === "c_fill")));
+}
+function showType(screen) {
+  document.getElementById("tGrid").replaceChildren(...TYPES.map(([k, n, d]) => figure(`shots/type_${k}_${screen}.png`, n, d, k === "both")));
+}
+const hChips = document.getElementById("hChips");
+STATES.forEach((s, i) => chip(hChips, s[1], i === 0, () => showHighlight(s)));
+const tChips = document.getElementById("tChips");
+SCREENS.forEach(([k, n], i) => chip(tChips, n, i === 0, () => showType(k)));
+showHighlight(STATES[0]);
+showType("details");
+</script>

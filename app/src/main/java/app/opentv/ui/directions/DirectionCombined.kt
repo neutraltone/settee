@@ -90,6 +90,17 @@ private const val COVER = 2f / 3f
 private const val STILL = 16f / 9f
 private val CoverWidth = 118.dp
 
+private val ringRows get() = ProtoLook.highlight == Highlight.RING
+
+/** Fills with coral, or under option D keeps its colour and takes a ring. */
+private fun Modifier.rowHighlight(focused: Boolean, shape: androidx.compose.ui.graphics.Shape, rest: Color): Modifier = when {
+    !focused -> background(rest)
+    ringRows -> background(rest).border(3.dp, Coral, shape)
+    else -> background(Coral)
+}
+
+private fun onRow(ringColour: Color): Color = if (ringRows) ringColour else OnCoral
+
 private data class Category(val name: String, val count: String)
 
 private val liveCategories = listOf(
@@ -184,18 +195,18 @@ private fun Sidebar(
                     .fillMaxWidth()
                     .height(36.dp)
                     .clip(Corner)
-                    .background(if (focused) Coral else Panel)
+                    .rowHighlight(focused, Corner, Panel)
                     .padding(horizontal = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Icon(
                     Icons.Filled.Search,
                     contentDescription = null,
-                    tint = if (focused) OnCoral else Soft,
+                    tint = if (focused) onRow(Soft) else Soft,
                     modifier = Modifier.size(18.dp),
                 )
                 Spacer(Modifier.width(6.dp))
-                OneLine("Find a category", if (focused) OnCoral else Soft, 15, Body)
+                OneLine("Find a category", if (focused) onRow(Ink) else Soft, 15, Body)
             }
         }
         Box(Modifier.fillMaxWidth().height(1.dp).background(Rule))
@@ -211,14 +222,14 @@ private fun Sidebar(
                         .fillMaxWidth()
                         .height(38.dp)
                         .clip(Corner)
-                        .background(if (focused) Coral else Panel)
+                        .rowHighlight(focused, Corner, Panel)
                         .padding(horizontal = 8.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     OneLine(
                         category.name,
                         when {
-                            focused -> OnCoral
+                            focused -> onRow(Ink)
                             current -> Coral
                             else -> Ink
                         },
@@ -227,7 +238,7 @@ private fun Sidebar(
                         Modifier.weight(1f),
                         if (current || focused) FontWeight.Bold else FontWeight.Normal,
                     )
-                    OneLine(category.count, if (focused) OnCoral else Soft, 14, Body)
+                    OneLine(category.count, if (focused) onRow(Soft) else Soft, 14, Body)
                 }
             }
         }
@@ -278,7 +289,7 @@ private fun statusText(item: Item): String = when (val watch = item.watch) {
     else -> "${item.sub}  ·  ${watch.label()}"
 }
 
-private fun Modifier.lifted(focused: Boolean, scale: Float = 1.06f): Modifier =
+private fun Modifier.lifted(focused: Boolean, scale: Float = 1.05f): Modifier =
     if (focused) {
         graphicsLayer {
             scaleX = scale
@@ -292,25 +303,44 @@ private fun Modifier.lifted(focused: Boolean, scale: Float = 1.06f): Modifier =
 
 /** Picture House's card: rounded, with the text on the art behind a gradient painted on the card. */
 @Composable
-private fun ArtCard(item: Item, focused: Boolean, ratio: Float) {
+private fun ArtCard(item: Item, focused: Boolean, ratio: Float, scale: Float = 1.05f) {
     Box(
         Modifier
             .fillMaxWidth()
             .aspectRatio(ratio)
-            .lifted(focused)
+            .lifted(focused, scale)
             .clip(Card)
             .background(Raised),
     ) {
         if (item.seed != null) Art(item.seed, Modifier.fillMaxSize())
-        Box(
-            Modifier.fillMaxSize().background(
-                Brush.verticalGradient(0.35f to Bg.copy(alpha = 0f), 0.95f to Bg),
-            ),
-        )
-        Column(Modifier.align(Alignment.BottomStart).padding(horizontal = 8.dp, vertical = 7.dp)) {
+        if (!ProtoLook.captionScrim) {
+            Box(
+                Modifier.fillMaxSize().background(
+                    Brush.verticalGradient(0.35f to Bg.copy(alpha = 0f), 0.95f to Bg),
+                ),
+            )
+        }
+        val caption = focused && ProtoLook.highlight == Highlight.FILL
+        Column(
+            Modifier
+                .align(Alignment.BottomStart)
+                .fillMaxWidth()
+                .then(
+                    when {
+                        caption -> Modifier.background(Coral)
+                        // Sized to the caption, so two-line titles and short landscape cards are covered too.
+                        ProtoLook.captionScrim -> Modifier.background(
+                            Brush.verticalGradient(0f to Bg.copy(alpha = 0f), 0.3f to Bg.copy(alpha = 0.9f), 1f to Bg),
+                        )
+                        else -> Modifier
+                    },
+                )
+                .padding(start = 8.dp, end = 8.dp, top = if (ProtoLook.captionScrim && !caption) 26.dp else 7.dp, bottom = if (focused && ProtoLook.highlight == Highlight.KEYLINE && item.watch is Watch.InProgress) 15.dp else 7.dp),
+        ) {
             Text(
                 item.title,
-                color = Ink,
+                style = androidx.compose.ui.text.TextStyle(fontFeatureSettings = if (ProtoLook.lining) "lnum, tnum" else null),
+                color = if (caption) OnCoral else Ink,
                 fontFamily = Body,
                 fontWeight = FontWeight.Bold,
                 fontSize = 16.sp,
@@ -318,13 +348,38 @@ private fun ArtCard(item: Item, focused: Boolean, ratio: Float) {
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
             )
-            OneLine(statusText(item), if (focused) Coral else Soft, 15, Body, weight = FontWeight.Medium)
+            OneLine(
+                statusText(item),
+                when {
+                    caption -> OnCoral
+                    focused -> Coral
+                    else -> Soft
+                },
+                15,
+                Body,
+                weight = FontWeight.Medium,
+            )
         }
         val watch = item.watch
         if (watch is Watch.InProgress) {
-            ProgressLine(watch.fraction, Raised, Coral, Modifier.align(Alignment.BottomCenter), 4.dp)
+            // Inside the dark edge when highlighted: at the card's foot the ring would cover it, and #87 wants status on the card.
+            val keyline = focused && ProtoLook.highlight == Highlight.KEYLINE
+            ProgressLine(
+                watch.fraction,
+                Raised,
+                if (caption) OnCoral else Coral,
+                Modifier.align(Alignment.BottomCenter).padding(if (keyline) 6.dp else 0.dp),
+                4.dp,
+            )
         }
-        if (focused) Box(Modifier.fillMaxSize().border(3.dp, Coral, Card))
+        if (focused) {
+            if (ProtoLook.highlight == Highlight.KEYLINE) {
+                Box(Modifier.fillMaxSize().border(4.dp, Coral, Card))
+                Box(Modifier.fillMaxSize().padding(4.dp).border(2.dp, Bg, RoundedCornerShape(6.dp)))
+            } else {
+                Box(Modifier.fillMaxSize().border(3.dp, Coral, Card))
+            }
+        }
     }
 }
 
@@ -354,7 +409,7 @@ private fun Home(preview: Boolean) = WithRail(Bg, { Rail(0) }) {
                             .width(if (index == 0 && !preview) 300.dp else 186.dp)
                             .then(if (index == 0) Modifier.focusRequester(firstCard) else Modifier),
                         initial = index == 0 && !preview,
-                    ) { focused -> ArtCard(item, focused, STILL) }
+                    ) { focused -> ArtCard(item, focused, STILL, if (index == 0 && !preview) 1.03f else 1.05f) }
                 }
             }
         }
@@ -398,6 +453,13 @@ private fun LivePreview(down: FocusRequester) {
                 .fillMaxWidth()
                 .height(138.dp)
                 .lifted(focused, 1.02f)
+                .then(
+                    if (focused && ProtoLook.highlight == Highlight.KEYLINE) {
+                        Modifier.border(4.dp, Coral, Card).padding(4.dp).border(2.dp, Bg, RoundedCornerShape(6.dp)).padding(2.dp)
+                    } else {
+                        Modifier
+                    },
+                )
                 .clip(Card)
                 .background(if (focused) Raised else Panel),
         ) {
@@ -418,8 +480,8 @@ private fun LivePreview(down: FocusRequester) {
                     ProtoData.liveBlurb,
                     color = Soft,
                     fontFamily = Body,
-                    fontSize = 16.sp,
-                    lineHeight = 21.sp,
+                    fontSize = if (ProtoLook.floor) 18.sp else 16.sp,
+                    lineHeight = if (ProtoLook.floor) 23.sp else 21.sp,
                     maxLines = 2,
                 )
             }
@@ -487,14 +549,14 @@ private fun GuideCell(programme: Programme, index: Int, firstRow: Boolean, modif
                 .fillMaxSize()
                 .padding(vertical = 3.dp)
                 .clip(Corner)
-                .background(if (focused) Coral else Bg)
+                .rowHighlight(focused, Corner, Bg)
                 .padding(horizontal = 8.dp),
             contentAlignment = Alignment.CenterStart,
         ) {
             OneLine(
                 programme.title,
                 when {
-                    focused -> OnCoral
+                    focused -> onRow(Ink)
                     index == 0 -> Ink
                     else -> Soft
                 },
@@ -560,8 +622,8 @@ private fun Browse(movies: Boolean, open: Boolean) {
                         ProtoData.detailBlurb,
                         color = Ink,
                         fontFamily = Body,
-                        fontSize = 16.sp,
-                        lineHeight = 20.sp,
+                        fontSize = if (ProtoLook.floor) 18.sp else 16.sp,
+                        lineHeight = if (ProtoLook.floor) 23.sp else 20.sp,
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.padding(start = 5.dp).width(470.dp),
@@ -733,7 +795,7 @@ private fun EpisodeRow(episode: Item, focused: Boolean) {
             .fillMaxWidth()
             .height(62.dp)
             .clip(Card)
-            .background(if (focused) Coral else Panel)
+            .rowHighlight(focused, Card, Panel)
             .padding(horizontal = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -741,7 +803,7 @@ private fun EpisodeRow(episode: Item, focused: Boolean) {
             if (episode.seed != null) Art(episode.seed, Modifier.fillMaxSize())
             val watch = episode.watch
             if (watch is Watch.InProgress) {
-                ProgressLine(watch.fraction, Raised, if (focused) Ink else Coral, Modifier.align(Alignment.BottomCenter), 4.dp)
+                ProgressLine(watch.fraction, Raised, if (focused && !ringRows) Ink else Coral, Modifier.align(Alignment.BottomCenter), 4.dp)
             }
         }
         Spacer(Modifier.width(12.dp))
@@ -750,7 +812,7 @@ private fun EpisodeRow(episode: Item, focused: Boolean) {
             OneLine(
                 episode.title,
                 when {
-                    focused -> OnCoral
+                    focused -> onRow(Ink)
                     episode.watch == Watch.Watched -> Soft
                     else -> Ink
                 },
@@ -758,7 +820,7 @@ private fun EpisodeRow(episode: Item, focused: Boolean) {
                 Body,
                 weight = FontWeight.Bold,
             )
-            OneLine(episode.sub, if (focused) OnCoral else Soft, 15, Body)
+            OneLine(episode.sub, if (focused) onRow(Soft) else Soft, 15, Body)
         }
         val status = when (val watch = episode.watch) {
             Watch.Watched -> "✓ Watched"
@@ -768,7 +830,7 @@ private fun EpisodeRow(episode: Item, focused: Boolean) {
         OneLine(
             status,
             when {
-                focused -> OnCoral
+                focused -> onRow(Coral)
                 episode.watch == Watch.Watched -> Soft
                 else -> Coral
             },
@@ -787,13 +849,13 @@ private fun Action(icon: ImageVector, text: String, primary: Boolean, down: Focu
             Modifier
                 .height(40.dp)
                 .clip(RoundedCornerShape(50))
-                .background(if (focused) Coral else Raised)
+                .rowHighlight(focused, RoundedCornerShape(50), Raised)
                 .padding(start = 14.dp, end = 18.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Icon(icon, contentDescription = null, tint = if (focused) OnCoral else Ink, modifier = Modifier.size(20.dp))
+            Icon(icon, contentDescription = null, tint = if (focused) onRow(Ink) else Ink, modifier = Modifier.size(20.dp))
             Spacer(Modifier.width(6.dp))
-            OneLine(text, if (focused) OnCoral else Ink, 17, Body, weight = FontWeight.Bold)
+            OneLine(text, if (focused) onRow(Ink) else Ink, 17, Body, weight = FontWeight.Bold)
         }
     }
 }
