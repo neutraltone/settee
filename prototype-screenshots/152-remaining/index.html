@@ -1,0 +1,114 @@
+<title>Settee Remaining Screens</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alegreya+Sans:wght@400;500;700&family=Young+Serif&display=swap">
+<style>
+/* Layout: one question per section, its options side by side, my pick marked, in Settee's own values. */
+:root {
+  color-scheme: dark;
+  --bg: #1A1416;
+  --panel: #281F22;
+  --rule: #45373B;
+  --ink: #F8EFEA;
+  --soft: #BDABA8;
+  --coral: #FF8F6B;
+  --title: "Young Serif", Georgia, serif;
+  --body: "Alegreya Sans", "Trebuchet MS", sans-serif;
+}
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font: 18px/1.45 var(--body);
+  font-variant-numeric: lining-nums;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 28px 72px;
+}
+.wrap { max-width: 1480px; margin: 0 auto; display: grid; gap: 44px; }
+section { display: grid; gap: 12px; min-width: 0; }
+h1, h2 { font-family: var(--title); font-weight: 400; margin: 0; text-wrap: balance; }
+h1 { font-size: 36px; line-height: 1.15; }
+h2 { font-size: 25px; line-height: 1.2; border-bottom: 1px solid var(--rule); padding-bottom: 8px; }
+p { margin: 0; max-width: 76ch; }
+.grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+.grid.three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+@media (max-width: 900px) { .grid.three { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 620px) { .grid, .grid.three { grid-template-columns: minmax(0, 1fr); } }
+figure { margin: 0; display: grid; gap: 7px; min-width: 0; align-content: start; }
+figcaption { font-size: 17px; line-height: 1.3; }
+figcaption b { color: var(--coral); }
+figure.pick figcaption b::after { content: "  (my pick)"; font-weight: 500; color: var(--soft); }
+figure img { display: block; width: 100%; height: auto; background: var(--panel); }
+.note { background: var(--panel); padding: 12px 16px; }
+ul { margin: 0; padding-left: 20px; display: grid; gap: 6px; max-width: 80ch; }
+</style>
+
+<div class="wrap">
+  <header style="display:grid;gap:10px">
+    <h1>Round two: your changes</h1>
+    <p>These are still pictures with invented content, and nothing has been pressed through with a remote or seen on a TV. The QR code is a stand-in that won't scan. Click a picture for full size.</p>
+    <p><b>Settled:</b> all the picks and changes here, except the rail's padding. Its panel stays at all times, so option A is out, and its padding is even and never changes. The notes below are the recommendations as they were made.</p>
+  </header>
+
+  <section>
+    <h2>Player, with your inline icons</h2>
+    <div class="grid three">
+      <figure><figcaption><b>First press.</b> Left and Right move through the video. OK plays and pauses.</figcaption><a href="shots/r_player2_seek.png"><img src="shots/r_player2_seek.png" alt="Player with pause icon, seek bar, and subtitle and audio icons" loading="lazy"></a></figure>
+      <figure><figcaption><b>Down.</b> The highlight moves to Subtitles and the pills appear. Right reaches Audio, and Down again reaches the pills.</figcaption><a href="shots/r_player2_down.png"><img src="shots/r_player2_down.png" alt="Subtitles highlighted with pill buttons below" loading="lazy"></a></figure>
+      <figure><figcaption><b>Up.</b> The highlight moves to close. OK or Back leaves the player.</figcaption><a href="shots/r_player2_up.png"><img src="shots/r_player2_up.png" alt="Close button highlighted at the top right" loading="lazy"></a></figure>
+      <figure><figcaption><b>Live TV, first press.</b> I've given it the same layout so the two players work alike.</figcaption><a href="shots/r_live2_seek.png"><img src="shots/r_live2_seek.png" alt="Live TV with the same controls" loading="lazy"></a></figure>
+      <figure><figcaption><b>Live TV, Down.</b> Record, Quality, Aspect ratio and Sleep timer.</figcaption><a href="shots/r_live2_down.png"><img src="shots/r_live2_down.png" alt="Live TV with pill buttons" loading="lazy"></a></figure>
+    </div>
+    <p class="note"><b>One catch with a remote:</b> Left and Right can't both move through the video and move along the row to the icons. So the pause icon shows the state and isn't a stop for the highlight on a remote, because OK on the seek bar does the same job. Subtitles and Audio are reached with Down. This is the part I'd most like you to try on the emulator. The rewind and forward pills have gone, since Left and Right do that.</p>
+  </section>
+
+  <section>
+    <h2>Small channel card, with what's next</h2>
+    <div class="grid">
+      <figure><figcaption><b>A third line under the progress bar.</b> It's slightly taller, and still covers little of the picture.</figcaption><a href="shots/r_banner_card.png"><img src="shots/r_banner_card.png" alt="Small channel card with the next programme" loading="lazy"></a></figure>
+    </div>
+  </section>
+
+  <section>
+    <h2>Setting up from your phone</h2>
+    <div class="grid">
+      <figure><figcaption><b>Your phone comes first.</b> It's the easy way with a remote, so it's where the highlight starts.</figcaption><a href="shots/r_one_page2.png"><img src="shots/r_one_page2.png" alt="Welcome page with Set up from your phone first" loading="lazy"></a></figure>
+      <figure><figcaption><b>The QR screen.</b> Today's flow in the new look: code, six digits, and an address if the camera won't scan.</figcaption><a href="shots/r_qr_setup.png"><img src="shots/r_qr_setup.png" alt="QR code with a six-digit code" loading="lazy"></a></figure>
+    </div>
+    <p class="note">The white behind the code stays, because phones need it to scan. The web page that opens on the phone isn't drawn here, and I'd give it the same colours and type when it's built.</p>
+  </section>
+
+  <section>
+    <h2>The rail: labels and padding</h2>
+    <div class="grid">
+      <figure><figcaption><b>Labels when the rail has the highlight.</b> It opens with names for everything and pushes the content along, then closes when you leave. This is the sliding rail you chose earlier.</figcaption><a href="shots/r_rail_labels.png"><img src="shots/r_rail_labels.png" alt="Open rail with labels, pushing the content" loading="lazy"></a></figure>
+      <figure><figcaption><b>Today's padding.</b> 48 dp on the left, 8 dp on the right, with the panel running to the edge of the screen.</figcaption><a href="shots/r_rail_today.png"><img src="shots/r_rail_today.png" alt="Closed rail with a wide left margin" loading="lazy"></a></figure>
+      <figure class="pick"><figcaption><b>A: Same space, no panel when closed.</b> The icons stay where they're safe, and the gap now looks like the screen's margin instead of padding.</figcaption><a href="shots/r_rail_no_panel.png"><img src="shots/r_rail_no_panel.png" alt="Closed rail with no panel behind it" loading="lazy"></a></figure>
+      <figure><figcaption><b>B: Even padding, 16 dp each side.</b> The coral line shows the safe margin. Every icon sits outside it, and some TVs could crop them.</figcaption><a href="shots/r_rail_tight.png"><img src="shots/r_rail_tight.png" alt="Closed rail with even padding and a line marking the safe margin" loading="lazy"></a></figure>
+    </div>
+    <p class="note"><b>Why the left side is so wide:</b> 48 dp is the 5% margin from the Fire TV research. Some TVs crop the edges of the picture, so anything you need to see stays inside it. Many modern TVs don't crop at all, so B may be fine on yours, but only a real TV can show that, and it wouldn't be safe for every TV.</p>
+  </section>
+
+  <section>
+    <h2>Still to settle from round one</h2>
+    <div class="grid three">
+      <figure class="pick"><figcaption><b>Settings: two panes,</b> or tiles as today.</figcaption><a href="shots/r_settings_panes_display.png"><img src="shots/r_settings_panes_display.png" alt="Settings in two panes" loading="lazy"></a></figure>
+      <figure class="pick"><figcaption><b>Recordings: one list,</b> or a sidebar.</figcaption><a href="shots/r_rec_list.png"><img src="shots/r_rec_list.png" alt="Recordings in one list" loading="lazy"></a></figure>
+      <figure class="pick"><figcaption><b>Seasons: a row of pills,</b> or a sidebar, or one long list.</figcaption><a href="shots/r_season_pills.png"><img src="shots/r_season_pills.png" alt="Season pills" loading="lazy"></a></figure>
+      <figure class="pick"><figcaption><b>Categories: build Find a category,</b> or jump by letter, or nothing.</figcaption><a href="shots/r_find_search.png"><img src="shots/r_find_search.png" alt="Searching categories" loading="lazy"></a></figure>
+      <figure><figcaption><b>The rest of the player:</b> channel list.</figcaption><a href="shots/r_live_list.png"><img src="shots/r_live_list.png" alt="Channel list" loading="lazy"></a></figure>
+      <figure><figcaption><b>The rest of the player:</b> Up Next.</figcaption><a href="shots/r_next_episode.png"><img src="shots/r_next_episode.png" alt="Up Next" loading="lazy"></a></figure>
+      <figure><figcaption><b>The rest of the player:</b> subtitles.</figcaption><a href="shots/r_tracks.png"><img src="shots/r_tracks.png" alt="Subtitles panel" loading="lazy"></a></figure>
+      <figure><figcaption><b>The rest of the player:</b> still watching.</figcaption><a href="shots/r_still_watching.png"><img src="shots/r_still_watching.png" alt="Still watching" loading="lazy"></a></figure>
+      <figure><figcaption><b>The rest of the player:</b> when something won't play.</figcaption><a href="shots/r_play_error.png"><img src="shots/r_play_error.png" alt="Playback error" loading="lazy"></a></figure>
+    </div>
+  </section>
+
+  <section>
+    <h2>Settled</h2>
+    <ul>
+      <li><b>Season,</b> everywhere, in place of Direction E's "Series 2" and "2 series".</li>
+      <li><b>Favourite channels</b> in their own row under Favourites, styled as drawn.</li>
+    </ul>
+    <div class="grid"><figure><a href="shots/r_fav_own_row.png"><img src="shots/r_fav_own_row.png" alt="Favourite channels in their own row" loading="lazy"></a></figure></div>
+  </section>
+</div>
