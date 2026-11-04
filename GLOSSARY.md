@@ -98,3 +98,9 @@ _Avoid_: Dashboard, start page
 **Live Preview**:
 A muted, playing tile on Home of the live channel the Profile last watched on this device, shown only when live TV was the Profile's most recent playback. Settling on a channel full screen counts as watching it; zapping past one or seeing it in the guide's preview does not. A channel that has since left the channel list still shows, as a reminder that can't play; a channel the viewer hid does not.
 _Avoid_: Last channel, boot channel
+
+## On screen
+
+**Highlight**:
+The one thing on screen the remote is currently on: what OK would press. There is always exactly one.
+_Avoid_: Focus, selection, cursor
