@@ -1,0 +1,297 @@
+<title>Settee Logo Round</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alegreya+Sans:wght@500;700&family=Young+Serif&display=swap">
+<style>
+/* Layout: one row per mark, each proved at the sizes it has to survive: large, launcher icon, TV banner, a launcher row. */
+:root {
+  color-scheme: dark;
+  --bg: #1A1416;
+  --panel: #281F22;
+  --rule: #45373B;
+  --ink: #F8EFEA;
+  --soft: #BDABA8;
+  --coral: #FF8F6B;
+  --plum: #1A1416;
+  --launcher: #101216;
+  --tile: #2A2E35;
+  --ground: var(--plum);
+  --mark: var(--coral);
+  --lit: #F8EFEA;
+  --grain: 1;
+  --title: "Young Serif", Georgia, serif;
+  --body: "Alegreya Sans", "Trebuchet MS", sans-serif;
+}
+:root.coral-ground { --ground: var(--coral); --mark: var(--plum); }
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font: 18px/1.45 var(--body);
+  font-weight: 500;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 28px 72px;
+}
+.wrap { max-width: 1360px; margin: 0 auto; display: grid; gap: 36px; }
+h1, h2 { font-family: var(--title); font-weight: 400; margin: 0; text-wrap: balance; }
+h1 { font-size: 36px; line-height: 1.15; }
+h2 { font-size: 25px; line-height: 1.2; }
+p { margin: 0; max-width: 72ch; }
+.soft { color: var(--soft); }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+button.chip { font: 700 17px/1 var(--body); color: var(--ink); background: #362A2E; border: 0; border-radius: 99px; padding: 10px 15px; cursor: pointer; }
+button.chip[aria-pressed="true"] { background: var(--coral); color: var(--plum); }
+button.chip:focus-visible { outline: 3px solid var(--ink); outline-offset: 2px; }
+article { display: grid; gap: 14px; border-top: 1px solid var(--rule); padding-top: 18px; min-width: 0; }
+.head { display: grid; gap: 4px; }
+.proofs { display: flex; flex-wrap: wrap; gap: 28px; align-items: flex-end; min-width: 0; }
+.proof { display: grid; gap: 7px; min-width: 0; max-width: 100%; }
+.proof > span { font-size: 16px; color: var(--soft); }
+.icons { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; }
+.icon { background: var(--ground); display: grid; place-items: center; overflow: hidden; flex: none; }
+.icon svg { width: 76%; height: 76%; display: block; }
+.big { width: 200px; height: 200px; border-radius: 44px; }
+.s96 { width: 96px; height: 96px; }
+.s48 { width: 48px; height: 48px; }
+.round { border-radius: 50%; }
+.squircle { border-radius: 22%; }
+.square { border-radius: 0; }
+.banner { background: var(--ground); color: var(--mark); display: flex; align-items: center; justify-content: center; gap: 4%; overflow: hidden; container-type: inline-size; aspect-ratio: 16 / 9; }
+.b320 { width: 320px; max-width: 100%; }
+.b160 { width: 160px; flex: none; }
+.banner svg { width: 30cqw; height: 30cqw; flex: none; }
+.banner .word { font: 400 18cqw/1 var(--title); }
+.launcher { background: var(--launcher); padding: 14px; display: flex; gap: 10px; overflow-x: auto; max-width: 100%; }
+.fake { width: 160px; aspect-ratio: 16 / 9; background: var(--tile); flex: none; }
+.launcher .banner { outline: 3px solid var(--ink); }
+.wordmark { color: var(--ink); font: 400 64px/1 var(--title); display: flex; align-items: center; gap: 14px; }
+.wordmark svg { width: 74px; height: 74px; }
+.wordmark.small { font-size: 28px; gap: 8px; }
+.wordmark.small svg { width: 36px; height: 36px; }
+.lone svg { width: 96px; height: 96px; display: block; }
+.note { background: var(--panel); padding: 12px 16px; }
+</style>
+
+<svg id="defs" width="0" height="0" style="position:absolute" aria-hidden="true">
+  <!-- A: a camelback settee, front on. -->
+  <symbol id="m-a" viewBox="0 0 100 100">
+    <path fill="var(--mark)" d="M20 64C20 46 28 41 36 39C43 37 44 28 50 28C56 28 57 37 64 39C72 41 80 46 80 64Z"/>
+    <rect x="9" y="47" width="17" height="30" rx="8.5" fill="var(--mark)" stroke="var(--ground)" stroke-width="2.5"/>
+    <rect x="74" y="47" width="17" height="30" rx="8.5" fill="var(--mark)" stroke="var(--ground)" stroke-width="2.5"/>
+    <rect x="25" y="59" width="25" height="18" rx="4" fill="var(--mark)" stroke="var(--ground)" stroke-width="2.5"/>
+    <rect x="50" y="59" width="25" height="18" rx="4" fill="var(--mark)" stroke="var(--ground)" stroke-width="2.5"/>
+    <rect x="17" y="76" width="7" height="9" rx="2" fill="var(--mark)"/>
+    <rect x="76" y="76" width="7" height="9" rx="2" fill="var(--mark)"/>
+  </symbol>
+  <!-- B: the initial in the display face. -->
+  <symbol id="m-b" viewBox="0 0 100 100">
+    <text x="50" y="79" text-anchor="middle" font-family="Young Serif, Georgia, serif" font-size="92" fill="var(--mark)">S</text>
+  </symbol>
+  <!-- C: a settee against a lit screen, the evening in. -->
+  <symbol id="m-c" viewBox="0 0 100 100">
+    <rect x="8" y="16" width="84" height="66" rx="11" fill="var(--mark)"/>
+    <path fill="var(--ground)" d="M31 72V50C31 44 35 41 41 41H59C65 41 69 44 69 50V72Z"/>
+    <rect x="22" y="53" width="13" height="23" rx="6.5" fill="var(--ground)"/>
+    <rect x="65" y="53" width="13" height="23" rx="6.5" fill="var(--ground)"/>
+    <rect x="31" y="62" width="38" height="14" rx="3" fill="var(--ground)"/>
+    <rect x="35" y="59.5" width="30" height="2.5" fill="var(--mark)"/>
+  </symbol>
+  <!-- Round three: F redrawn on one grid: lower and wider, with even 3-unit gaps and one corner family. -->
+  <symbol id="m-i" viewBox="0 0 100 100">
+    <path d="M50 30L37 11M50 30L63 11" stroke="var(--mark)" stroke-width="5.5" stroke-linecap="round" fill="none"/>
+    <rect x="16" y="76" width="7" height="12" rx="2" fill="var(--mark)"/>
+    <rect x="77" y="76" width="7" height="12" rx="2" fill="var(--mark)"/>
+    <rect x="24" y="29" width="52" height="34" rx="8" fill="var(--mark)"/>
+    <rect x="31" y="36" width="38" height="20" rx="3" fill="var(--ground)"/>
+    <rect x="4" y="46" width="17" height="35" rx="8.5" fill="var(--mark)"/>
+    <rect x="79" y="46" width="17" height="35" rx="8.5" fill="var(--mark)"/>
+    <rect x="24" y="66" width="24.5" height="15" rx="4" fill="var(--mark)"/>
+    <rect x="51.5" y="66" width="24.5" height="15" rx="4" fill="var(--mark)"/>
+  </symbol>
+  <symbol id="m-j" viewBox="0 0 100 100">
+    <g fill="none" stroke="var(--mark)" stroke-width="6" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M50 29L38 11M50 29L62 11"/>
+      <rect x="25" y="29" width="50" height="32" rx="8"/>
+      <path d="M25 61V80M75 61V80M25 80H75"/>
+      <rect x="7" y="47" width="18" height="33" rx="9"/>
+      <rect x="75" y="47" width="18" height="33" rx="9"/>
+      <path d="M16 80V88M84 80V88"/>
+    </g>
+  </symbol>
+  <symbol id="m-k" viewBox="0 0 100 100">
+    <path d="M50 32L38 11M50 32L62 11" stroke="var(--mark)" stroke-width="7" stroke-linecap="round" fill="none"/>
+    <rect x="15" y="74" width="9" height="14" rx="2.5" fill="var(--mark)"/>
+    <rect x="76" y="74" width="9" height="14" rx="2.5" fill="var(--mark)"/>
+    <rect x="21" y="28" width="58" height="50" rx="11" fill="var(--mark)"/>
+    <rect x="5" y="45" width="24" height="36" rx="12" fill="var(--mark)"/>
+    <rect x="71" y="45" width="24" height="36" rx="12" fill="var(--mark)"/>
+    <rect x="16" y="62" width="68" height="19" fill="var(--mark)"/>
+    <rect x="31" y="37" width="38" height="21" rx="3.5" fill="var(--ground)"/>
+    <rect x="31" y="66" width="38" height="3.5" rx="1.75" fill="var(--ground)"/>
+  </symbol>
+  <symbol id="m-l" viewBox="0 0 100 100">
+    <path d="M50 30L37 13M50 30L63 13" stroke="var(--mark)" stroke-width="4.5" stroke-linecap="round" fill="none"/>
+    <circle cx="36.5" cy="11.5" r="4" fill="var(--mark)"/>
+    <circle cx="63.5" cy="11.5" r="4" fill="var(--mark)"/>
+    <rect x="15" y="74" width="9" height="14" rx="2.5" fill="var(--mark)"/>
+    <rect x="76" y="74" width="9" height="14" rx="2.5" fill="var(--mark)"/>
+    <rect x="21" y="28" width="58" height="50" rx="11" fill="var(--mark)"/>
+    <rect x="5" y="45" width="24" height="36" rx="12" fill="var(--mark)"/>
+    <rect x="71" y="45" width="24" height="36" rx="12" fill="var(--mark)"/>
+    <rect x="16" y="62" width="68" height="19" fill="var(--mark)"/>
+    <rect x="30" y="36" width="40" height="23" rx="3.5" fill="var(--lit)"/>
+    <rect x="31" y="66" width="38" height="3.5" rx="1.75" fill="var(--ground)"/>
+  </symbol>
+  <!-- Round two: a settee that is also a TV. -->
+  <!-- E: the settee's back is the screen. -->
+  <symbol id="m-e" viewBox="0 0 100 100">
+    <path fill="var(--mark)" fill-rule="evenodd" d="M30 14H70C75 14 78 17 78 22V62H22V22C22 17 25 14 30 14ZM32 23C30 23 29 24 29 26V52C29 54 30 55 32 55H68C70 55 71 54 71 52V26C71 24 70 23 68 23Z"/>
+    <rect x="7" y="46" width="19" height="33" rx="9.5" fill="var(--mark)" stroke="var(--ground)" stroke-width="3"/>
+    <rect x="74" y="46" width="19" height="33" rx="9.5" fill="var(--mark)" stroke="var(--ground)" stroke-width="3"/>
+    <rect x="24" y="60" width="52" height="19" rx="4" fill="var(--mark)" stroke="var(--ground)" stroke-width="3"/>
+    <rect x="17" y="78" width="8" height="10" rx="2" fill="var(--mark)"/>
+    <rect x="75" y="78" width="8" height="10" rx="2" fill="var(--mark)"/>
+  </symbol>
+  <!-- F: the same settee with an old TV's aerials. -->
+  <symbol id="m-f" viewBox="0 0 100 100">
+    <path d="M50 38L34 13M50 38L66 13" stroke="var(--mark)" stroke-width="5.5" stroke-linecap="round" fill="none"/>
+    <path fill="var(--mark)" fill-rule="evenodd" d="M31 34H69C74 34 78 37 78 42V68H22V42C22 37 26 34 31 34ZM33 42C31 42 30 43 30 45V58C30 60 31 61 33 61H67C69 61 70 60 70 58V45C70 43 69 42 67 42Z"/>
+    <rect x="7" y="52" width="19" height="30" rx="9.5" fill="var(--mark)" stroke="var(--ground)" stroke-width="3"/>
+    <rect x="74" y="52" width="19" height="30" rx="9.5" fill="var(--mark)" stroke="var(--ground)" stroke-width="3"/>
+    <rect x="24" y="66" width="52" height="16" rx="4" fill="var(--mark)" stroke="var(--ground)" stroke-width="3"/>
+    <rect x="17" y="81" width="8" height="9" rx="2" fill="var(--mark)"/>
+    <rect x="75" y="81" width="8" height="9" rx="2" fill="var(--mark)"/>
+  </symbol>
+  <!-- G: a TV first: one screen with sofa arms and feet. -->
+  <symbol id="m-g" viewBox="0 0 100 100">
+    <path fill="var(--mark)" fill-rule="evenodd" d="M30 18H70C77 18 82 23 82 30V80H18V30C18 23 23 18 30 18ZM32 28C29 28 28 29 28 32V66C28 69 29 70 32 70H68C71 70 72 69 72 66V32C72 29 71 28 68 28Z"/>
+    <rect x="5" y="48" width="19" height="34" rx="9.5" fill="var(--mark)" stroke="var(--ground)" stroke-width="3"/>
+    <rect x="76" y="48" width="19" height="34" rx="9.5" fill="var(--mark)" stroke="var(--ground)" stroke-width="3"/>
+    <rect x="19" y="81" width="8" height="8" rx="2" fill="var(--mark)"/>
+    <rect x="73" y="81" width="8" height="8" rx="2" fill="var(--mark)"/>
+  </symbol>
+  <!-- H: a solid settee with a play button on its back. -->
+  <symbol id="m-h" viewBox="0 0 100 100">
+    <path fill="var(--mark)" d="M32 18H68C74 18 78 22 78 28V62H22V28C22 22 26 18 32 18Z"/>
+    <path fill="var(--ground)" d="M43 27C43 25 45 24 47 25L63 35C65 36 65 39 63 40L47 50C45 51 43 50 43 48Z"/>
+    <rect x="7" y="46" width="19" height="33" rx="9.5" fill="var(--mark)" stroke="var(--ground)" stroke-width="3"/>
+    <rect x="74" y="46" width="19" height="33" rx="9.5" fill="var(--mark)" stroke="var(--ground)" stroke-width="3"/>
+    <rect x="24" y="60" width="52" height="19" rx="4" fill="var(--mark)" stroke="var(--ground)" stroke-width="3"/>
+    <rect x="17" y="78" width="8" height="10" rx="2" fill="var(--mark)"/>
+    <rect x="75" y="78" width="8" height="10" rx="2" fill="var(--mark)"/>
+  </symbol>
+  <!-- D: the name's double t, with one crossbar for a seat. -->
+  <symbol id="m-d" viewBox="0 0 100 100">
+    <path fill="var(--mark)" d="M12 42H88V54H77V72C77 75 79 76 82 76H88V86H76C67 86 63 81 63 73V54H45V72C45 75 47 76 50 76H56V86H44C35 86 31 81 31 73V54H12Z"/>
+    <path fill="var(--mark)" d="M31 42C33 34 37 27 45 21V42ZM63 42C65 34 69 27 77 21V42Z"/>
+  </symbol>
+</svg>
+
+<div class="wrap">
+  <header style="display:grid;gap:12px">
+    <h1>Tiny and cute, on any background</h1>
+    <p><b>Settled:</b> the refined icon, and D1 on Settee's dark background, so the coral tile goes everywhere. The note at the foot is the recommendation as it was made.</p>
+    <p>Round nine: the face refined, then four ways to use it on Settee's own dark background. The icon is shown at the sizes it has to work at. The launcher row is roughly sofa size, if the row of tiles is about 19 cm wide at arm's length, and its grey tiles stand in for other apps. The word "Settee" is still set live in the font.</p>
+  </header>
+  <div id="marks" style="display:grid;gap:36px"></div>
+  <p class="note"><b>My pick is D3.</b> It keeps the part that works on coral, a dark face on a light screen, and the coral settee sits beside the cream name without competing with it. D1 is the runner-up: it's the safest, because it's exactly the app icon, but it looks like an app icon rather than a logo. D2 competes with the name, and D4's thin lines go at the small size. None of these has been seen on a real launcher.</p>
+</div>
+
+<script>
+const MARKS = [
+  ["f1", "L1: Dozing off", "Closed eyes and a small smile, in the style of a storybook. Someone completely comfortable on the sofa."],
+  ["f2", "L2: Old-time cartoon", "Tall oval eyes with a wedge cut out and a wide grin, in the style of 1930s animation. The most characterful."],
+  ["f3", "L3: Tiny and cute", "Eyes set wide apart and a very small mouth, in the style of Japanese kawaii. The simplest and sweetest."],
+  ["f4", "L4: Laid-back", "Half-closed eyes and a lopsided smile, in the style of a Saturday morning cartoon. Relaxed, with some attitude."],
+];
+// The screen's static is seeded, so the same specks come back on every load.
+const seeded = (seed) => () => (seed = (seed * 1664525 + 1013904223) >>> 0) / 4294967296;
+const body = `
+  <path d="M50 30L37 13M50 30L63 13" stroke="var(--mark)" stroke-width="4.5" stroke-linecap="round" fill="none"/>
+  <circle cx="36.5" cy="11.5" r="4" fill="var(--mark)"/><circle cx="63.5" cy="11.5" r="4" fill="var(--mark)"/>
+  <rect x="15" y="74" width="9" height="14" rx="2.5" fill="var(--mark)"/><rect x="76" y="74" width="9" height="14" rx="2.5" fill="var(--mark)"/>
+  <rect x="21" y="28" width="58" height="50" rx="11" fill="var(--mark)"/>
+  <rect x="5" y="45" width="24" height="36" rx="12" fill="var(--mark)"/><rect x="71" y="45" width="24" height="36" rx="12" fill="var(--mark)"/>
+  <rect x="16" y="62" width="68" height="19" fill="var(--mark)"/>
+  <rect x="30" y="36" width="40" height="23" rx="3.5" fill="var(--lit)"/>
+  <rect x="31" y="66" width="38" height="3.5" rx="1.75" fill="var(--ground)"/>`;
+const grains = (id, cell, chance, keep = () => true, tones = ["#8F7F7C", "#BDABA8", "#5E4F52"]) => {
+  const random = seeded(id.charCodeAt(1) * 7919);
+  let out = "";
+  for (let y = 36; y < 59; y += cell) {
+    for (let x = 30; x < 70; x += cell) {
+      const hit = random() < chance;
+      const tone = tones[Math.floor(random() * 3)];
+      if (hit && keep(y)) out += `<rect x="${x}" y="${y}" width="${cell}" height="${cell}" fill="${tone}"/>`;
+    }
+  }
+  return out;
+};
+// Only two colours, the mark and the background it sits on, so every version works on any background.
+const line = 'fill="none" stroke="var(--mark)" stroke-width="3" stroke-linecap="round"';
+const screens = {
+  f1: `<path d="M36 44Q41.5 50 47 44M53 44Q58.5 50 64 44" ${line}/><path d="M45.5 53Q50 56.5 54.5 53" ${line}/>`,
+  f2: `<ellipse cx="42.5" cy="44" rx="5.5" ry="7.5" fill="var(--mark)"/><ellipse cx="57.5" cy="44" rx="5.5" ry="7.5" fill="var(--mark)"/>
+    <path d="M43 45L47 37.5L49.5 41.5ZM58 45L62 37.5L64.5 41.5Z" fill="var(--ground)"/><path d="M39 53.5Q50 60 61 53.5" ${line}/>`,
+  f3: `<circle cx="37.5" cy="46" r="3.6" fill="var(--mark)"/><circle cx="62.5" cy="46" r="3.6" fill="var(--mark)"/><path d="M46.5 49Q50 52.5 53.5 49" ${line}/>`,
+  f4: `<path d="M35.5 43.5H48.5A6.5 6.5 0 0 1 35.5 43.5ZM51.5 43.5H64.5A6.5 6.5 0 0 1 51.5 43.5Z" fill="var(--mark)"/>
+    <circle cx="44" cy="46" r="2" fill="var(--ground)"/><circle cx="60" cy="46" r="2" fill="var(--ground)"/><path d="M43 55Q52 57.5 58 52.5" ${line}/>`,
+};
+// A slightly larger screen than before, since a face needs the room.
+document.getElementById("defs").innerHTML += Object.entries(screens).map(([id, art]) => `
+  <clipPath id="clip-${id}"><rect x="28" y="34" width="44" height="26" rx="4"/></clipPath>
+  <symbol id="m-${id}" viewBox="0 0 100 100"><g style="--lit:var(--ground)">${body}</g>
+    <rect x="28" y="34" width="44" height="26" rx="4" fill="var(--ground)"/>
+    <g clip-path="url(#clip-${id})">${art}</g></symbol>`).join("");
+const use = (id) => `<svg viewBox="0 0 100 100" aria-hidden="true"><use href="#m-${id}"/></svg>`;
+// The refined mark. Eyes and mouth are larger than L3's so they hold up small.
+const settee = ({ b, s, f, slit }) => `
+  <path d="M50 30L37 13M50 30L63 13" stroke="${b}" stroke-width="4.5" stroke-linecap="round" fill="none"/>
+  <circle cx="36.5" cy="11.5" r="4" fill="${b}"/><circle cx="63.5" cy="11.5" r="4" fill="${b}"/>
+  <rect x="15" y="74" width="9" height="14" rx="2.5" fill="${b}"/><rect x="76" y="74" width="9" height="14" rx="2.5" fill="${b}"/>
+  <rect x="21" y="26" width="58" height="52" rx="11" fill="${b}"/>
+  <rect x="5" y="45" width="24" height="36" rx="12" fill="${b}"/><rect x="71" y="45" width="24" height="36" rx="12" fill="${b}"/>
+  <rect x="16" y="62" width="68" height="19" fill="${b}"/>
+  <rect x="28" y="33" width="44" height="28" rx="5" fill="${s}"/>
+  <circle cx="38.5" cy="45" r="4.4" fill="${f}"/><circle cx="61.5" cy="45" r="4.4" fill="${f}"/>
+  <path d="M45 50Q50 55 55 50" fill="none" stroke="${f}" stroke-width="3.4" stroke-linecap="round"/>
+  <rect x="31" y="67" width="38" height="3.5" rx="1.75" fill="${slit}"/>`;
+const PLUM = "#1A1416", CORAL = "#FF8F6B", CREAM = "#F8EFEA", PALE = "#FFE3D8";
+const flat = settee({ b: PLUM, s: CORAL, f: PLUM, slit: CORAL });
+const outline = `<g fill="none" stroke="${CORAL}" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M50 28L38 11M50 28L62 11"/><rect x="25" y="28" width="50" height="33" rx="8"/><path d="M25 61V80M75 61V80M25 80H75"/>
+    <rect x="7" y="47" width="18" height="33" rx="9"/><rect x="75" y="47" width="18" height="33" rx="9"/><path d="M16 80V88M84 80V88"/></g>
+  <circle cx="39" cy="43" r="3.8" fill="${CORAL}"/><circle cx="61" cy="43" r="3.8" fill="${CORAL}"/>
+  <path d="M45.5 48Q50 52.5 54.5 48" fill="none" stroke="${CORAL}" stroke-width="3.2" stroke-linecap="round"/>`;
+const OPTIONS = [
+  ["D1: Keep the tile", "The app icon as it is, coral tile and all. Nothing changes between backgrounds.", `<rect width="100" height="100" rx="22" fill="${CORAL}"/><g transform="translate(13 13) scale(.74)">${flat}</g>`],
+  ["D2: Cream settee", "The settee takes the colour of the name, with a coral screen and the same dark face.", settee({ b: CREAM, s: CORAL, f: PLUM, slit: PLUM })],
+  ["D3: Coral with a pale screen", "A coral settee with a pale screen, so the face is still dark on light.", settee({ b: CORAL, s: PALE, f: PLUM, slit: PLUM })],
+  ["D4: Coral outline", "The settee as a line drawing, so it's less of a heavy block next to the name.", outline],
+];
+const raw = (art) => `<svg viewBox="0 0 100 100" aria-hidden="true">${art}</svg>`;
+const icon = raw(flat);
+document.getElementById("marks").innerHTML = `
+  <article>
+    <div class="head"><h2>The refined icon</h2><p class="soft">Larger eyes and mouth, a slightly bigger screen, and only two colours. This stays the same whichever you choose below.</p></div>
+    <div class="proofs">
+      <div class="proof"><div class="icon big" style="background:${CORAL}">${icon}</div><span>Large</span></div>
+      <div class="proof"><div class="icons">
+        <div class="icon s96 squircle" style="background:${CORAL}">${icon}</div><div class="icon s96 round" style="background:${CORAL}">${icon}</div><div class="icon s96 square" style="background:${CORAL}">${icon}</div>
+        <div class="icon s48 squircle" style="background:${CORAL}">${icon}</div><div class="icon s48 round" style="background:${CORAL}">${icon}</div>
+      </div><span>App icon: rounded, round and the square fallback, at 96 and 48</span></div>
+      <div class="proof"><div class="banner b320" style="background:${CORAL};color:${PLUM}">${icon}<span class="word">Settee</span></div><span>TV banner, 320 by 180</span></div>
+    </div>
+    <div class="proof"><div class="launcher">
+      <div class="fake"></div><div class="banner b160" style="background:${CORAL};color:${PLUM}">${icon}<span class="word">Settee</span></div><div class="fake"></div><div class="fake"></div><div class="fake"></div>
+    </div><span>In a launcher row, highlighted</span></div>
+  </article>
+  ${OPTIONS.map(([name, why, art]) => `
+  <article>
+    <div class="head"><h2>${name}</h2><p class="soft">${why}</p></div>
+    <div class="proofs">
+      <div class="proof"><div class="wordmark">${raw(art)}<span>Settee</span></div><span>With the name, on Settee's own background</span></div>
+      <div class="proof"><div class="wordmark small">${raw(art)}<span>Settee</span></div><span>Small, as in a screen's corner</span></div>
+      <div class="proof"><div class="lone">${raw(art)}</div><span>On its own</span></div>
+    </div>
+  </article>`).join("")}`;
+</script>
