@@ -104,3 +104,11 @@ _Avoid_: Last channel, boot channel
 **Highlight**:
 The one thing on screen the remote is currently on: what OK would press. There is always exactly one.
 _Avoid_: Focus, selection, cursor
+
+**Rail**:
+The left-hand navigation: Home, Live TV, Movies, Shows and Recordings, with Search, the Profile and Settings set apart from them. It shows icons until it has the Highlight, then opens with a label for each.
+_Avoid_: Sidebar (that's the Categories Sidebar), menu, nav
+
+**Categories Sidebar**:
+The list of a tab's categories on Live TV, Movies and Shows. It stays tucked away until Left from the leftmost item opens it on the current category.
+_Avoid_: Sidebar on its own, filter, chips
