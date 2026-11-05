@@ -7,6 +7,7 @@ package app.opentv
 
 import android.content.Context
 import androidx.media3.common.util.UnstableApi
+import androidx.media3.exoplayer.upstream.Loader
 import androidx.test.core.app.ApplicationProvider
 import app.opentv.data.model.Channel
 import app.opentv.data.remote.StalkerApi
@@ -81,6 +82,21 @@ class PlayerControllerTest {
         players.advance(10_000)
 
         assertThat(panel.asked.count { it == "create_link" }).isEqualTo(3)
+    }
+
+    @Test
+    fun `running out of memory isn't restarted on its own, but the viewer can still retry`() {
+        players.failure = { Loader.UnexpectedLoaderException(OutOfMemoryError("Failed to allocate")) }
+        val controller = players.controller(LIVE, failing = 100, resolve = sources::forWatching)
+
+        controller.play(PlayerController.Request(MediaKey.Live(channels.first())), debounce = false)
+        players.until { controller.state.value is PlayerController.State.Error }
+        players.advance(10_000)
+
+        val error = controller.state.value as PlayerController.State.Error
+        assertThat(error.message).startsWith("This stream needs more memory than this device has.")
+        assertThat(error.canRetry).isTrue()
+        assertThat(players.played).hasSize(1)
     }
 
     private fun stalkerChannel(n: Int) = Channel(

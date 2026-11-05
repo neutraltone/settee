@@ -112,12 +112,15 @@ class TestPlayers(private val context: Context) {
     /** What the streams of controllers made from now on carry. */
     var formats = listOf(ExoPlayerTestRunner.VIDEO_FORMAT)
 
+    /** How a controller's failing streams fail: by default, as a dropped connection does. */
+    var failure: () -> IOException = { IOException("Connection dropped") }
+
     /** Every stream the controllers were handed, in order. */
     val played = mutableListOf<String>()
 
     /**
      * A [PlayerController] whose every stream plays [window], resolved by [resolve] (by default a
-     * stream at a placeholder address). The first [failing] streams fail as a dropped connection does.
+     * stream at a placeholder address). The first [failing] streams fail with [failure].
      * [preview] makes it the controller a preview pane uses.
      */
     fun controller(
@@ -136,7 +139,7 @@ class TestPlayers(private val context: Context) {
         buildPlayer = {
             TestExoPlayerBuilder(context)
                 .setClock(clock)
-                .setMediaSourceFactory(FakeSources(window, played, failing, formats))
+                .setMediaSourceFactory(FakeSources(window, played, failing, formats, failure))
                 .build()
         },
     )
@@ -200,10 +203,11 @@ class TestPlayers(private val context: Context) {
         private val played: MutableList<String>,
         private var failing: Int,
         private val formats: List<Format>,
+        private val failure: () -> IOException = { IOException("Connection dropped") },
     ) : MediaSource.Factory {
         override fun createMediaSource(mediaItem: MediaItem): MediaSource {
             played += mediaItem.localConfiguration?.uri.toString()
-            if (failing-- > 0) return DroppedSource()
+            if (failing-- > 0) return FailingSource(failure)
             return FakeMediaSource(FakeTimeline(window), *formats.toTypedArray())
         }
 
@@ -214,9 +218,9 @@ class TestPlayers(private val context: Context) {
         override fun getSupportedTypes(): IntArray = intArrayOf(C.CONTENT_TYPE_OTHER)
     }
 
-    /** A stream whose connection drops before it ever starts. */
-    private class DroppedSource : FakeMediaSource(null) {
-        override fun maybeThrowSourceInfoRefreshError() = throw IOException("Connection dropped")
+    /** A stream that fails with [failure] before it ever starts. */
+    private class FailingSource(private val failure: () -> IOException) : FakeMediaSource(null) {
+        override fun maybeThrowSourceInfoRefreshError() = throw failure()
     }
 
     private companion object {

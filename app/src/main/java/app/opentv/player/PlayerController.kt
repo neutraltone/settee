@@ -242,13 +242,17 @@ class PlayerController(
                         else -> BUFFER_FOR_PLAYBACK_AFTER_REBUFFER_MILLIS
                     },
                 )
+                // Size wins over time: a high-bitrate stream buffers fewer seconds, and DVR rewinds
+                // less far back, rather than the app running out of memory.
+                .setTargetBufferBytes(bufferBytesFor(Runtime.getRuntime().maxMemory()))
+                .setPrioritizeTimeOverSizeThresholds(false)
                 // Retain the last few minutes so pause/rewind of live TV has something to seek into.
                 .apply { if (dvr) setBackBuffer(DVR_BACK_BUFFER_MILLIS, true) }
                 .build(),
         )
         .let(buildPlayer)
         .apply {
-            addAnalyticsListener(PlaybackErrors.decoderLog)
+            addAnalyticsListener(DecoderLog.listener)
             addListener(object : Player.Listener {
                 override fun onTracksChanged(tracks: Tracks) {
                     _tracks.value = tracks
@@ -273,16 +277,20 @@ class PlayerController(
 
                 override fun onPlayerError(error: PlaybackException) {
                     consecutiveFailures++
-                    PlaybackErrors.logDecoderFailure(error)
+                    DecoderLog.logFailure(error)
                     val request = current
                     // Restarting can't change what this device can decode, and on a portal it would
                     // only mint more links for a stream that will fail the same way.
-                    val canRestart = !PlaybackErrors.isUnplayableFormat(error) &&
+                    val canRetry = !PlaybackErrors.isUnplayableFormat(error) &&
                         consecutiveFailures < MAX_AUTO_RESTARTS
+                    // Running out of memory took the Stick over a minute (#180), so a silent
+                    // restart would hide the message for another minute. Retry stays on offer:
+                    // the memory may be free by the time the viewer asks.
+                    val canRestart = canRetry && !PlaybackErrors.isOutOfMemory(error)
                     _state.value = State.Error(
                         title = _title.value,
                         message = PlaybackErrors.describe(strings, error),
-                        canRetry = canRestart,
+                        canRetry = canRetry,
                     )
                     // One silent restart covers the common case of a provider dropping the
                     // connection when another device on the account starts streaming.
@@ -487,6 +495,22 @@ class PlayerController(
         private const val SWITCH_DEBOUNCE_MILLIS = 350L
         private const val INITIAL_BACKOFF_MILLIS = 500L
         private const val MAX_BACKOFF_MILLIS = 8_000L
+
+        /**
+         * The most this player buffers, in bytes, given the app's heap limit. The durations below
+         * are set in seconds, and left to itself Media3 caps them at about 144 MB. That's more than
+         * a Fire TV Stick lets an app have, so a 24 Mbps stream ran out of memory before it ever
+         * played (#180). A quarter of the heap leaves the rest for the decoders, the artwork
+         * cache and the screen around the player. It never goes above Media3's own limit, so
+         * devices with plenty of memory buffer as they did before.
+         */
+        fun bufferBytesFor(heapLimitBytes: Long): Int =
+            (heapLimitBytes / HEAP_SHARE_FOR_BUFFER).coerceAtMost(MEDIA3_BUFFER_BYTES.toLong()).toInt()
+
+        private const val HEAP_SHARE_FOR_BUFFER = 4
+        private const val MEDIA3_BUFFER_BYTES =
+            DefaultLoadControl.DEFAULT_VIDEO_BUFFER_SIZE + DefaultLoadControl.DEFAULT_AUDIO_BUFFER_SIZE
+
         private const val MAX_LOAD_RETRIES = 5
         private const val MAX_AUTO_RESTARTS = 3
         private const val AUTO_RESTART_DELAY_MILLIS = 1_500L
