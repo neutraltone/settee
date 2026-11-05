@@ -250,6 +250,18 @@ class PlaybackErrorsTest {
     }
 
     @Test
+    fun `a bitrate or frame rate the stream doesn't give is left out rather than logged as -1`() {
+        val format = Format.Builder().setSampleMimeType(MimeTypes.VIDEO_H264).setWidth(1920).setHeight(1080).build()
+
+        DecoderLog.listener.onVideoInputFormatChanged(EVENT_TIME, format, null)
+
+        val logged = ShadowLog.getLogsForTag("OpenTV").single().msg
+        assertThat(logged).contains("size=1920x1080")
+        assertThat(logged).doesNotContain("bitrate")
+        assertThat(logged).doesNotContain("frameRate")
+    }
+
+    @Test
     fun `the audio a decoder is given is logged with channels and sample rate`() {
         val format = Format.Builder()
             .setId("http://example.com/u/p/1.ts")

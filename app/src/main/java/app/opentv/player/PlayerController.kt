@@ -17,7 +17,6 @@ import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.DefaultDataSource
 import androidx.media3.datasource.HttpDataSource
 import androidx.media3.datasource.okhttp.OkHttpDataSource
-import androidx.media3.exoplayer.DefaultLoadControl
 import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
@@ -210,6 +209,17 @@ class PlayerController(
             .build()
     }
 
+    private val bufferPlan = BufferPlan.forPlayer(preview, dvr, liveRecording)
+
+    /** Says when the buffer is full, which is when a live pause has to end. */
+    internal val bufferWatch = BufferWatch(bufferPlan.loadControl())
+
+    /** Whether the player has stopped loading because its buffer is full. */
+    val bufferFull: StateFlow<Boolean> get() = bufferWatch.full
+
+    /** The longest live TV can stay paused on this device; 0 unless live pause is on. */
+    val livePauseMillis: Int get() = bufferPlan.backBufferMillis
+
     // Fallback is for the full-screen players: a muted preview that can't start says so on its tile
     // rather than spend a cheap box's time trying every decoder for each channel passed over.
     val player: ExoPlayer = ExoPlayer.Builder(
@@ -221,35 +231,7 @@ class PlayerController(
                 .setLoadErrorHandlingPolicy(loadErrorPolicy),
         )
         .setTrackSelector(trackSelector)
-        .setLoadControl(
-            DefaultLoadControl.Builder()
-                .setBufferDurationsMs(
-                    if (preview) PREVIEW_MIN_BUFFER_MILLIS else MIN_BUFFER_MILLIS,
-                    when {
-                        preview -> PREVIEW_MAX_BUFFER_MILLIS
-                        dvr -> DVR_MAX_BUFFER_MILLIS
-                        liveRecording -> LIVE_REC_MAX_BUFFER_MILLIS
-                        else -> MAX_BUFFER_MILLIS
-                    },
-                    when {
-                        preview -> PREVIEW_BUFFER_FOR_PLAYBACK_MILLIS
-                        liveRecording -> LIVE_REC_BUFFER_FOR_PLAYBACK_MILLIS
-                        else -> BUFFER_FOR_PLAYBACK_MILLIS
-                    },
-                    when {
-                        preview -> PREVIEW_BUFFER_AFTER_REBUFFER_MILLIS
-                        liveRecording -> LIVE_REC_BUFFER_AFTER_REBUFFER_MILLIS
-                        else -> BUFFER_FOR_PLAYBACK_AFTER_REBUFFER_MILLIS
-                    },
-                )
-                // Size wins over time: a high-bitrate stream buffers fewer seconds, and DVR rewinds
-                // less far back, rather than the app running out of memory.
-                .setTargetBufferBytes(bufferBytesFor(Runtime.getRuntime().maxMemory()))
-                .setPrioritizeTimeOverSizeThresholds(false)
-                // Retain the last few minutes so pause/rewind of live TV has something to seek into.
-                .apply { if (dvr) setBackBuffer(DVR_BACK_BUFFER_MILLIS, true) }
-                .build(),
-        )
+        .setLoadControl(bufferWatch)
         .let(buildPlayer)
         .apply {
             addAnalyticsListener(DecoderLog.listener)
@@ -260,6 +242,9 @@ class PlayerController(
 
                 override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
                     _playWhenReady.value = playWhenReady
+                    // Full before a pause says nothing about after it: the player asks again
+                    // within a second, and a pause only ends on an answer given while paused.
+                    bufferWatch.update(full = false)
                 }
 
                 override fun onPlaybackStateChanged(playbackState: Int) {
@@ -496,60 +481,12 @@ class PlayerController(
         private const val INITIAL_BACKOFF_MILLIS = 500L
         private const val MAX_BACKOFF_MILLIS = 8_000L
 
-        /**
-         * The most this player buffers, in bytes, given the app's heap limit. The durations below
-         * are set in seconds, and left to itself Media3 caps them at about 144 MB. That's more than
-         * a Fire TV Stick lets an app have, so a 24 Mbps stream ran out of memory before it ever
-         * played (#180). A quarter of the heap leaves the rest for the decoders, the artwork
-         * cache and the screen around the player. It never goes above Media3's own limit, so
-         * devices with plenty of memory buffer as they did before.
-         */
-        fun bufferBytesFor(heapLimitBytes: Long): Int =
-            (heapLimitBytes / HEAP_SHARE_FOR_BUFFER).coerceAtMost(MEDIA3_BUFFER_BYTES.toLong()).toInt()
-
-        private const val HEAP_SHARE_FOR_BUFFER = 4
-        private const val MEDIA3_BUFFER_BYTES =
-            DefaultLoadControl.DEFAULT_VIDEO_BUFFER_SIZE + DefaultLoadControl.DEFAULT_AUDIO_BUFFER_SIZE
-
         private const val MAX_LOAD_RETRIES = 5
         private const val MAX_AUTO_RESTARTS = 3
         private const val AUTO_RESTART_DELAY_MILLIS = 1_500L
 
-        /**
-         * Larger than ExoPlayer's defaults. IPTV sources are much twitchier than a CDN, and a
-         * deeper buffer is the difference between a momentary hiccup and a visible stall.
-         */
-        private const val MIN_BUFFER_MILLIS = 15_000
-        private const val MAX_BUFFER_MILLIS = 60_000
-        private const val BUFFER_FOR_PLAYBACK_MILLIS = 2_500
-        private const val BUFFER_FOR_PLAYBACK_AFTER_REBUFFER_MILLIS = 5_000
-
-        // DVR mode (pause & rewind live TV): keep a couple of minutes behind the live edge to seek
-        // into, and let the forward buffer grow to match so a pause of up to a couple of minutes
-        // resumes cleanly. Deliberately bounded — this is memory the box has to find.
-        private const val DVR_BACK_BUFFER_MILLIS = 120_000
-
-        /** Also how long live TV can stay paused: the forward buffer fills up after this long. */
-        const val DVR_MAX_BUFFER_MILLIS = 120_000
-
-        // Watch-while-recording: hold playback a cushion *behind* the file's growing edge rather than
-        // right on it. IPTV sources arrive in bursts, so a shallow buffer drains to nothing between
-        // bursts and the picture stalls every second or two — worst over SMB to a NAS, where every
-        // read is a network round-trip. Waiting for ~8s of reservoir before playback (and rebuilding
-        // it after any stall) rides straight over those gaps; because playback and the recorder both
-        // advance at 1x, that cushion holds without ever catching the edge again.
-        private const val LIVE_REC_MAX_BUFFER_MILLIS = 60_000
-        private const val LIVE_REC_BUFFER_FOR_PLAYBACK_MILLIS = 8_000
-        private const val LIVE_REC_BUFFER_AFTER_REBUFFER_MILLIS = 8_000
-
-        // Guide-preview tuning: start fast and don't hoard buffer (the preview is muted and
-        // low-stakes), and debounce channel-surfing harder so scrolling the list doesn't tune to
-        // every channel in passing. Kept within DefaultLoadControl's constraints: min >= both
-        // playback thresholds, max >= min.
-        private const val PREVIEW_MIN_BUFFER_MILLIS = 5_000
-        private const val PREVIEW_MAX_BUFFER_MILLIS = 15_000
-        private const val PREVIEW_BUFFER_FOR_PLAYBACK_MILLIS = 1_000
-        private const val PREVIEW_BUFFER_AFTER_REBUFFER_MILLIS = 1_500
+        // Debounce channel-surfing in the guide preview harder, so scrolling the list doesn't tune
+        // to every channel in passing.
         private const val PREVIEW_SWITCH_DEBOUNCE_MILLIS = 700L
 
         private const val LIVE_TARGET_OFFSET_MILLIS = 10_000L

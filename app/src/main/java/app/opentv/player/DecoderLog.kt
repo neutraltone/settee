@@ -78,10 +78,12 @@ object DecoderLog {
     }
 
     private fun logFormat(format: Format) {
-        val bitrate = format.averageBitrate.takeIf { it != Format.NO_VALUE } ?: format.peakBitrate
+        // MPEG-TS from a panel rarely says either, and "-1" would read as a measurement.
+        val bitrate = listOf(format.averageBitrate, format.peakBitrate).firstOrNull { it != Format.NO_VALUE }
         val frameRate = format.frameRate.takeIf { it != Format.NO_VALUE.toFloat() }
-        val timing = if (MimeTypes.isAudio(format.sampleMimeType)) "" else " frameRate=$frameRate"
-        Log.i(TAG, "Format: ${namedFields(format)} bitrate=$bitrate$timing")
+            ?.takeUnless { MimeTypes.isAudio(format.sampleMimeType) }
+        val rates = bitrate?.let { " bitrate=$it" }.orEmpty() + frameRate?.let { " frameRate=$it" }.orEmpty()
+        Log.i(TAG, "Format: ${namedFields(format)}$rates")
     }
 
     private fun logStarted(decoderName: String) {
