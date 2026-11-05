@@ -98,7 +98,7 @@ class StreamCaptureTest {
         )
         return db.recordings().insert(
             Recording(
-                channelId = db.channels().allForMatching().single().id,
+                channelId = db.channels().everyRow().single().id,
                 sourceId = STALKER_SOURCE.id,
                 channelName = "News",
                 title = "News",

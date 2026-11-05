@@ -164,6 +164,22 @@ data class Channel(
         get() = listOfNotNull(epgOverrideId, epgChannelId, matchedEpgId)
 }
 
+/** The part of a [Channel] the guide matcher reads. */
+data class ChannelMatchInput(
+    val id: Long,
+    val groupKey: String,
+    val epgChannelId: String?,
+    val matchedEpgId: String?,
+    val epgOverrideId: String?,
+) {
+    /** The same ids as [Channel.epgCandidates]. */
+    val epgCandidates: List<String>
+        get() = listOfNotNull(epgOverrideId, epgChannelId, matchedEpgId)
+}
+
+/** A guide match to save on the [Channel] with this [id]. */
+data class ChannelEpgMatch(val id: Long, val matchedEpgId: String?)
+
 /** What the UI should show for a channel: the user's rename if set, else the cleaned display name. */
 val Channel.shownName: String get() = customName?.takeIf { it.isNotBlank() } ?: displayName
 

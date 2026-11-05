@@ -42,7 +42,7 @@ class PlayerControllerTest {
         panel.replies["handshake"] = """{"js": {"token": "t"}}"""
         panel.replies["create_link"] = """{"js": {"cmd": "ffmpeg http://example.com/play.ts"}}"""
         test.db.channels().upsertAll((1..5).map(::stalkerChannel))
-        channels += test.db.channels().allForMatching().map { it.id }
+        channels += test.db.channels().everyRow().map { it.id }
     }
 
     @After

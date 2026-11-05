@@ -957,7 +957,7 @@ class CatalogRepository(
      * on the next launch instead of the next sync. Bump [NORMALIZER_VERSION] to trigger it.
      */
     suspend fun renormalizeAll(): Int = withContext(Dispatchers.IO) {
-        val existing = channelDao.allForMatching()
+        val existing = channelDao.everyRow()
         if (existing.isEmpty()) return@withContext 0
 
         val bySource = existing.groupBy { it.sourceId }

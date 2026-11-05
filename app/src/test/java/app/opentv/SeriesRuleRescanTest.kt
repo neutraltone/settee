@@ -84,7 +84,7 @@ class SeriesRuleRescanTest {
     fun `a rule set on any quality rescans the channel's own guide`() = runTest {
         db.sources().insert(PANEL_SOURCE)
         db.channels().upsertAll(listOf(itv("1", "UK| ITV FHD", 300, "itv.fhd"), itv("2", "UK| ITV HD", 200, "itv.hd")))
-        val hd = db.channels().allForMatching().single { it.streamId == "2" }
+        val hd = db.channels().everyRow().single { it.streamId == "2" }
         val tomorrow = System.currentTimeMillis() + DAY
         db.programmes().upsertAll(listOf(airing("itv.fhd", tomorrow), airing("itv.hd", tomorrow + HOUR)))
         db.seriesRules().insert(
@@ -107,7 +107,7 @@ class SeriesRuleRescanTest {
     fun `booking one rule from several places at once books each airing once`() = runTest {
         db.sources().insert(PANEL_SOURCE)
         db.channels().upsertAll(listOf(itv("2", "UK| ITV HD", 200, "itv.hd")))
-        val channel = db.channels().allForMatching().single()
+        val channel = db.channels().everyRow().single()
         val tomorrow = System.currentTimeMillis() + DAY
         val airings = List(20) { airing("itv.hd", tomorrow + it * HOUR) }
 
