@@ -82,7 +82,7 @@ Each of these must pass before a PR can merge. All but the title check run local
 | Android Lint | Android API misuse, resource problems | `./gradlew lintDebug` |
 | gitleaks | Provider URLs with credentials, MAC addresses, API keys | [gitleaks](https://github.com/gitleaks/gitleaks): `gitleaks git . --config .gitleaks.toml` |
 | PR title | The title convention above | `tools/check-message.sh "<title>"` |
-| Screenshot tools | The screenshot comparison's own tests | `python3 -m unittest discover -s tools/screenshots` |
+| Screenshot tools | The screenshot comparison's own tests | `python3 -m unittest discover -s tools/screenshots` and `-s tools/perf` |
 
 The **Screenshots** workflow also runs on each PR. It never fails one: it adds a before | after table
 of every screen your change altered to the PR description, so a reviewer can see a UI change without
