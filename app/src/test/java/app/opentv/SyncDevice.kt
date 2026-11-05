@@ -238,7 +238,7 @@ internal class SyncDevice(app: Application, private val rowIdOffset: Long) {
         return library.resumeFrom(mediaKey)
     }
 
-    suspend fun startedMovies(name: String): Set<Long> = library.startedMovieIds(profileId(name))
+    suspend fun startedMovies(name: String): Set<Long> = library.history.startedMovieIds(profileId(name))
 
     suspend fun statusOf(name: String, episode: Long): WatchStatus {
         asProfile(name)

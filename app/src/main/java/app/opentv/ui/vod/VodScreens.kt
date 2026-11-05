@@ -181,6 +181,7 @@ internal fun MovieShelves(
     onResume: (MediaKey) -> Unit,
     onOpenMovie: (Movie) -> Unit,
 ) {
+    val held = rememberHeldRow(recommended)
     LazyColumn(
         contentPadding = PaddingValues(vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp),
@@ -192,9 +193,11 @@ internal fun MovieShelves(
                 MoviePosterRow(stringResource(R.string.vod_favourites), favourites, onOpenMovie)
             }
         }
-        if (recommended.isNotEmpty()) {
+        if (held.titles.isNotEmpty()) {
             item(key = "rec") {
-                MoviePosterRow(stringResource(R.string.vod_recommended), recommended, onOpenMovie)
+                Box(held.modifier) {
+                    MoviePosterRow(stringResource(R.string.vod_recommended), held.titles, onOpenMovie)
+                }
             }
         }
         if (recentlyAdded.isNotEmpty()) {
@@ -209,10 +212,10 @@ internal fun MovieShelves(
 }
 
 /**
- * Shows: the same row-based home as Movies (Continue Watching, Recently added, genre rows) with the
- * category chip strip for whole-category browsing. A show opens its detail page — where episodes are
- * fetched on demand, since pulling every episode of every series up front is what makes a first sync
- * take forever.
+ * Shows: the same row-based home as Movies (Continue Watching, Favourites, Recommended, Recently
+ * added, genre rows) with the category chip strip for whole-category browsing. A show opens its
+ * detail page — where episodes are fetched on demand, since pulling every episode of every series up
+ * front is what makes a first sync take forever.
  */
 @Composable
 fun SeriesScreen(
@@ -226,6 +229,7 @@ fun SeriesScreen(
     val categories by viewModel.seriesCategories.collectAsState()
     val resume by viewModel.continueWatchingSeries.collectAsState()
     val favourites = viewModel.favouriteSeries.collectAsState().value.orEmpty()
+    val recommended by viewModel.recommendedSeries.collectAsState()
     val recentlyAdded by viewModel.recentlyAddedSeries.collectAsState()
     val genreRows by viewModel.seriesGenreRows.collectAsState()
     val categorySeries by viewModel.series.collectAsState()
@@ -242,6 +246,7 @@ fun SeriesScreen(
 
     val hasContent = resume.isNotEmpty() ||
         favourites.isNotEmpty() ||
+        recommended.isNotEmpty() ||
         recentlyAdded.isNotEmpty() ||
         genreRows.isNotEmpty()
 
@@ -281,7 +286,7 @@ fun SeriesScreen(
                     )
                     else -> EmptyVod(stringResource(R.string.vod_no_shows), stringResource(R.string.vod_no_shows_add))
                 }
-                else -> SeriesShelves(resume, favourites, recentlyAdded, genreRows, onResume, onOpenSeries)
+                else -> SeriesShelves(resume, favourites, recommended, recentlyAdded, genreRows, onResume, onOpenSeries)
             }
         }
     }
@@ -292,11 +297,13 @@ fun SeriesScreen(
 internal fun SeriesShelves(
     resume: List<ResumeItem>,
     favourites: List<Series>,
+    recommended: List<Series>,
     recentlyAdded: List<Series>,
     genreRows: List<GenreGroup<Series>>,
     onResume: (MediaKey) -> Unit,
     onOpenSeries: (Series) -> Unit,
 ) {
+    val held = rememberHeldRow(recommended)
     LazyColumn(
         contentPadding = PaddingValues(vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp),
@@ -306,6 +313,13 @@ internal fun SeriesShelves(
         if (favourites.isNotEmpty()) {
             item(key = "fav") {
                 SeriesPosterRow(stringResource(R.string.vod_favourites), favourites, onOpenSeries)
+            }
+        }
+        if (held.titles.isNotEmpty()) {
+            item(key = "rec") {
+                Box(held.modifier) {
+                    SeriesPosterRow(stringResource(R.string.vod_recommended), held.titles, onOpenSeries)
+                }
             }
         }
         if (recentlyAdded.isNotEmpty()) {
@@ -446,6 +460,22 @@ internal fun SeriesPosterRow(
             )
         }
     }
+}
+
+/** The titles a shelf draws for now, and the [modifier] around it that tells when it has the highlight. */
+internal class HeldRow<T>(val titles: List<T>, val modifier: Modifier)
+
+/**
+ * Keeps a shelf as it is while the highlight is on it, then catches up with [titles] once it leaves.
+ * A computed row can change just after a tab opens, and taking away the card under the highlight
+ * would drop the remote's focus, so the viewer's next press lands somewhere unrelated.
+ */
+@Composable
+internal fun <T> rememberHeldRow(titles: List<T>): HeldRow<T> {
+    var highlighted by remember { mutableStateOf(false) }
+    var shown by remember { mutableStateOf(titles) }
+    if (!highlighted && shown !== titles) shown = titles
+    return HeldRow(shown, Modifier.onFocusChanged { highlighted = it.hasFocus })
 }
 
 /**

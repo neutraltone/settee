@@ -18,6 +18,7 @@ import app.opentv.data.model.PlaybackPosition
 import app.opentv.data.model.RecentSearch
 import app.opentv.data.model.Series
 import app.opentv.data.model.SeriesDismissal
+import app.opentv.data.model.SeriesRef
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -119,6 +120,9 @@ class ViewerLibrary(
     /** The active Profile's Recent Searches. */
     val recentSearches = RecentSearches(db, activeProfileId, clock)
 
+    /** Which titles any Profile has started or given up on, for what the home feeds recommend. */
+    val history = TitleHistory(positions, episodes, dismissals)
+
     /** Removing a Profile's watch state and Favourites, for the Profiles module. */
     val profileRemoval = ProfileRemoval(db)
 
@@ -167,17 +171,6 @@ class ViewerLibrary(
         val pos = positions.get(activeProfileId.value, mediaKey) ?: return 0
         return if (statusOf(pos) is WatchStatus.InProgress) pos.positionMillis.coerceAtLeast(0) else 0
     }
-
-    /**
-     * Every movie [profileId] has started, Watched or not: genre-affinity recommendations count a
-     * film abandoned half way as a taste signal too, but not one marked Unwatched (taken out of
-     * Continue Watching, say), which was given up on deliberately or never seen. Takes the Profile
-     * explicitly because the home feed computes it for whichever Profile it is building for.
-     */
-    suspend fun startedMovieIds(profileId: Long): Set<Long> = positions.forProfile(profileId)
-        .filter { it.mark != HandMark.UNWATCHED }
-        .mapNotNull { it.movieId }
-        .toSet()
 
     /** The active Profile's Continue Watching for movies: each In Progress one, most recently played first. */
     @OptIn(ExperimentalCoroutinesApi::class)
@@ -393,6 +386,40 @@ class NextEpisodes internal constructor(
     suspend fun movedOnFrom(mediaKey: String, durationMillis: Long) {
         if (durationMillis > 0) savePosition(mediaKey, durationMillis, durationMillis)
     }
+}
+
+/**
+ * Which titles a Profile has started or given up on. Each takes the Profile explicitly because the
+ * home feed computes them for whichever Profile it is building for.
+ */
+class TitleHistory internal constructor(
+    private val positions: PlaybackPositionDao,
+    private val episodes: EpisodeDao,
+    private val dismissals: SeriesDismissalDao,
+) {
+    /**
+     * Every movie [profileId] has started, Watched or not: genre-affinity recommendations count a
+     * film abandoned half way as a taste signal too, but not one marked Unwatched (taken out of
+     * Continue Watching, say), which was given up on deliberately or never seen.
+     */
+    suspend fun startedMovieIds(profileId: Long): Set<Long> = positions.forProfile(profileId)
+        .filter { it.mark != HandMark.UNWATCHED }
+        .mapNotNull { it.movieId }
+        .toSet()
+
+    /**
+     * Every series [profileId] has started: it has progress on any episode that still exists, Watched
+     * or not, with the same exception as [startedMovieIds].
+     */
+    suspend fun startedSeries(profileId: Long): Set<SeriesRef> =
+        episodes.startedSeries(profileId, except = HandMark.UNWATCHED).toSet()
+
+    /**
+     * Every series [profileId] has removed from Continue Watching, even if its card has since come
+     * back: recommending a show someone dismissed would feel wrong.
+     */
+    suspend fun dismissedSeries(profileId: Long): Set<SeriesRef> = dismissals.forProfile(profileId)
+        .mapTo(HashSet()) { SeriesRef(it.sourceId, it.seriesId) }
 }
 
 /**

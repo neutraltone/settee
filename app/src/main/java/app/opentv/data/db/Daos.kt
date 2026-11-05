@@ -19,6 +19,7 @@ import app.opentv.data.model.EpgChannelAlias
 import app.opentv.data.model.EpgFeed
 import app.opentv.data.model.Episode
 import app.opentv.data.model.Favourite
+import app.opentv.data.model.HandMark
 import app.opentv.data.model.LivePlayback
 import app.opentv.data.model.Movie
 import app.opentv.data.model.PlaybackPosition
@@ -31,6 +32,7 @@ import app.opentv.data.model.RecordingStatus
 import app.opentv.data.model.Reminder
 import app.opentv.data.model.Series
 import app.opentv.data.model.SeriesDismissal
+import app.opentv.data.model.SeriesRef
 import app.opentv.data.model.SeriesRule
 import app.opentv.data.model.Source
 import app.opentv.data.model.StreamKind
@@ -507,10 +509,9 @@ interface MovieDao {
     @Query("SELECT * FROM movies ORDER BY addedMillis DESC")
     suspend fun all(): List<Movie>
 
-    /** How many movies are on disk. A cheap COUNT the home feeds use to tell "the library grew"
-     *  from "same as last time" without loading every row (see VodViewModel.loadHomeFeeds). */
-    @Query("SELECT COUNT(*) FROM movies")
-    suspend fun count(): Int
+    /** See [RANKED_FINGERPRINT]. */
+    @Query("$RANKED_FINGERPRINT FROM movies")
+    suspend fun fingerprint(): String
 
     @Query("SELECT * FROM movies WHERE sourceId = :sourceId")
     suspend fun forSource(sourceId: Long): List<Movie>
@@ -635,9 +636,9 @@ interface SeriesDao {
     @Query("SELECT * FROM series ORDER BY addedMillis DESC")
     suspend fun all(): List<Series>
 
-    /** How many series are on disk — the cheap "did the library grow" check for the home feeds. */
-    @Query("SELECT COUNT(*) FROM series")
-    suspend fun count(): Int
+    /** See [RANKED_FINGERPRINT]. */
+    @Query("$RANKED_FINGERPRINT FROM series")
+    suspend fun fingerprint(): String
 
     @Query("SELECT * FROM series WHERE sourceId = :sourceId")
     suspend fun forSource(sourceId: Long): List<Series>
@@ -710,6 +711,18 @@ interface EpisodeDao {
             "ON playback_positions.mediaKey = 'ep:' || episodes.id WHERE playback_positions.profileId = :profileId",
     )
     fun observePlayed(profileId: Long): Flow<List<Episode>>
+
+    /**
+     * The series [profileId] has progress on an episode of, not counting episodes marked [except], by
+     * a join for the same reason. Only the ids: a home feed reads this each time a tab opens, and a
+     * long watch history's plots and stream URLs would be felt on a Fire TV Stick.
+     */
+    @Query(
+        "SELECT DISTINCT episodes.sourceId, episodes.seriesId FROM episodes JOIN playback_positions " +
+            "ON playback_positions.mediaKey = 'ep:' || episodes.id WHERE playback_positions.profileId = :profileId " +
+            "AND (playback_positions.mark IS NULL OR playback_positions.mark != :except)",
+    )
+    suspend fun startedSeries(profileId: Long, except: HandMark): List<SeriesRef>
 
     /** Every episode of each series [profileId] has played any of, by a join for the same reason. */
     @Query(
@@ -823,6 +836,9 @@ interface SeriesDismissalDao {
     @Query("SELECT * FROM series_dismissals WHERE profileId = :profileId")
     fun observe(profileId: Long): Flow<List<SeriesDismissal>>
 
+    @Query("SELECT * FROM series_dismissals WHERE profileId = :profileId")
+    suspend fun forProfile(profileId: Long): List<SeriesDismissal>
+
     @Query(
         """
         SELECT * FROM series_dismissals
@@ -840,6 +856,15 @@ interface SeriesDismissalDao {
     @Query("DELETE FROM series_dismissals WHERE profileId = :profileId")
     suspend fun deleteFor(profileId: Long)
 }
+
+/**
+ * Changes when a catalogue's titles or anything the home feeds rank them by does, for telling "same as
+ * last time" without loading every row. Not a count: a refresh can swap titles at the same size, and
+ * ratings and genres are filled in later. Ids only ever grow, so a swapped-in title moves the MAX.
+ */
+private const val RANKED_FINGERPRINT =
+    "SELECT COUNT(*) || ':' || COALESCE(MAX(id), 0) || ':' || TOTAL(rating) || ':' || TOTAL(LENGTH(genre)) " +
+        "|| ':' || COALESCE(MAX(addedMillis), 0)"
 
 // By rowid, which only ever grows for a new row, not by time: a TV box's clock can go back (one that
 // hasn't synced since booting), and the newest search would sort last and be the one the cap removes.

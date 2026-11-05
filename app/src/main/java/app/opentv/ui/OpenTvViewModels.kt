@@ -20,10 +20,12 @@ import app.opentv.data.model.Movie
 import app.opentv.data.model.Profile
 import app.opentv.data.model.Programme
 import app.opentv.data.model.Series
+import app.opentv.data.model.SeriesRef
 import app.opentv.data.model.Source
 import app.opentv.data.model.SourceKind
 import app.opentv.data.model.StreamKind
 import app.opentv.data.model.StremioStream
+import app.opentv.data.model.ref
 import app.opentv.data.parser.displayTitle
 import app.opentv.data.repo.CatalogRepository
 import app.opentv.data.repo.CatalogueRefresh
@@ -47,6 +49,7 @@ import app.opentv.sync.SyncServer
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -770,7 +773,8 @@ class VodViewModel @JvmOverloads constructor(
     // "Recently added" is reactive: it fills in live as a VOD sync lands. The computed feeds
     // (recommended, by-genre) are held in the StateFlows below and (re)built by [loadHomeFeeds] from
     // one shared scan of the library — guarded so opening the tab twice, or recomposing, does not
-    // re-scan a 20k-title catalogue; it recomputes only on a profile change or catalogue growth.
+    // re-scan a 20k-title catalogue; it recomputes only when the profile, catalogue or started titles
+    // change.
 
     val recentlyAddedMovies: StateFlow<List<Movie>> =
         graph.catalogRepository.recentlyAddedMovies()
@@ -783,16 +787,26 @@ class VodViewModel @JvmOverloads constructor(
     private val _recommendedMovies = MutableStateFlow<List<Movie>>(emptyList())
     val recommendedMovies: StateFlow<List<Movie>> = _recommendedMovies.asStateFlow()
 
+    private val _recommendedSeries = MutableStateFlow<List<Series>>(emptyList())
+    val recommendedSeries: StateFlow<List<Series>> = _recommendedSeries.asStateFlow()
+
     private val _movieGenreRows = MutableStateFlow<List<GenreGroup<Movie>>>(emptyList())
     val movieGenreRows: StateFlow<List<GenreGroup<Movie>>> = _movieGenreRows.asStateFlow()
 
     private val _seriesGenreRows = MutableStateFlow<List<GenreGroup<Series>>>(emptyList())
     val seriesGenreRows: StateFlow<List<GenreGroup<Series>>> = _seriesGenreRows.asStateFlow()
 
-    /** The (profile, catalogue) the computed rows were last built for — the redundant-reload guard. */
-    private data class HomeFeedsKey(val profileId: Long, val movieCount: Int, val seriesCount: Int)
+    /** What one title type's computed rows were last built from — the redundant-reload guard. */
+    private data class HomeFeedsKey<T>(
+        val profileId: Long,
+        val catalogue: String?,
+        val started: Set<T>,
+        val dismissed: Set<T> = emptySet(),
+    )
 
-    @Volatile private var loadedHomeFeeds: HomeFeedsKey? = null
+    @Volatile private var loadedMovieFeeds: HomeFeedsKey<Long>? = null
+
+    @Volatile private var loadedSeriesFeeds: HomeFeedsKey<SeriesRef>? = null
 
     /** Serialises [loadHomeFeeds] so two near-simultaneous calls (screen open + the profile emit in
      *  `init`) can't both start the heavy scan — the second waits, sees the guard satisfied, returns.
@@ -805,7 +819,7 @@ class VodViewModel @JvmOverloads constructor(
         // The home feeds are per profile (Recommended) and per catalogue (the genre rows). Rebuild
         // them when the active profile changes — and once at start. Routed through the guarded
         // [loadHomeFeeds] so a profile switch triggers exactly one library scan, and re-opening the
-        // tab with the same profile and an unchanged catalogue triggers none. Reads an empty result
+        // tab with nothing changed triggers none. Reads an empty result
         // until a VOD sync has populated the catalogue; [ensureVodLoaded] re-runs it once one has.
         viewModelScope.launch {
             settings.activeProfileId.collect { loadHomeFeeds() }
@@ -813,52 +827,73 @@ class VodViewModel @JvmOverloads constructor(
     }
 
     /**
-     * Recomputes the computed home rows (Recommended + by-genre) from a SINGLE scan of the library.
+     * Recomputes the computed home rows (Recommended + by-genre) from a SINGLE scan of each library.
      *
      * The reactive rows (recently-added, continue-watching) keep themselves current, so this only
      * covers the computed feeds. On a 20k-title library the old version was the lag: it read the
      * whole movie table three times over (recommended + movie genres, plus a profile-change reload)
-     * and again on every tab re-open. Now [allMovies]/[allSeries] are read once and reused for the
-     * recommended row and every genre row, off the main thread, and a `(profile, movieCount,
-     * seriesCount)` guard skips the work entirely unless the profile changed or the catalogue grew —
-     * so re-opening Movies/Shows is free and a post-sync refresh still fills the rows in.
+     * and again on every tab re-open. Now each library is read once and reused for its rows, off the
+     * main thread, and only when a [HomeFeedsKey] says something they depend on changed — so
+     * re-opening Movies/Shows is free and a post-sync refresh still fills the rows in.
      */
-    fun loadHomeFeeds() {
-        viewModelScope.launch {
-            homeFeedsMutex.withLock {
-                val profileId = settings.activeProfileId.value
-                val movieCount = runCatching { graph.catalogRepository.movieCount() }.getOrDefault(0)
-                val seriesCount = runCatching { graph.catalogRepository.seriesCount() }.getOrDefault(0)
-
-                // Already built for this profile and this exact catalogue? Then a tab re-open or a
-                // recomposition must not trigger another full-library scan. Only a profile change or
-                // a catalogue whose size moved gets past here.
-                val prev = loadedHomeFeeds
-                if (prev != null &&
-                    prev.profileId == profileId &&
-                    prev.movieCount == movieCount &&
-                    prev.seriesCount == seriesCount
-                ) {
-                    return@withLock
-                }
-
-                // One scan of each library (repo switches to IO), reused across every computed row.
-                val allMovies = runCatching { graph.catalogRepository.allMovies() }.getOrDefault(emptyList())
-                val allSeries = runCatching { graph.catalogRepository.allSeries() }.getOrDefault(emptyList())
-
-                _recommendedMovies.value = runCatching {
-                    graph.catalogRepository.recommendedMoviesFrom(allMovies, profileId)
-                }.getOrDefault(emptyList())
-                _movieGenreRows.value = runCatching {
-                    graph.catalogRepository.moviesByGenreFrom(allMovies)
-                }.getOrDefault(emptyList())
-                _seriesGenreRows.value = runCatching {
-                    graph.catalogRepository.seriesByGenreFrom(allSeries)
-                }.getOrDefault(emptyList())
-
-                loadedHomeFeeds = HomeFeedsKey(profileId, movieCount, seriesCount)
-            }
+    fun loadHomeFeeds(): Job = viewModelScope.launch {
+        homeFeedsMutex.withLock {
+            val profileId = settings.activeProfileId.value
+            refreshMovieFeeds(profileId)
+            refreshSeriesFeeds(profileId)
         }
+    }
+
+    private suspend fun refreshMovieFeeds(profileId: Long) {
+        val key = HomeFeedsKey(
+            profileId,
+            catalogue = runCatching { graph.catalogRepository.movieFingerprint() }.getOrNull(),
+            started = runCatching { graph.viewerLibrary.history.startedMovieIds(profileId) }.getOrDefault(emptySet()),
+        )
+        val loaded = loadedMovieFeeds
+        if (key == loaded) return
+
+        // Now, not after the scan: that takes seconds on a big library, and in the meantime the
+        // viewer could move onto a title they have only just started.
+        _recommendedMovies.value = _recommendedMovies.value.filterNot { it.id in key.started }
+
+        val all = runCatching { graph.catalogRepository.allMovies() }.getOrDefault(emptyList())
+        _recommendedMovies.value = runCatching {
+            graph.catalogRepository.recommendedMoviesFrom(all, key.started)
+        }.getOrDefault(emptyList())
+        // Watching something doesn't move a title between genres, so only the catalogue regroups them.
+        if (key.catalogue != loaded?.catalogue) {
+            _movieGenreRows.value = runCatching {
+                graph.catalogRepository.moviesByGenreFrom(all)
+            }.getOrDefault(emptyList())
+        }
+        loadedMovieFeeds = key
+    }
+
+    private suspend fun refreshSeriesFeeds(profileId: Long) {
+        val key = HomeFeedsKey(
+            profileId,
+            catalogue = runCatching { graph.catalogRepository.seriesFingerprint() }.getOrNull(),
+            started = runCatching { graph.viewerLibrary.history.startedSeries(profileId) }.getOrDefault(emptySet()),
+            dismissed = runCatching { graph.viewerLibrary.history.dismissedSeries(profileId) }.getOrDefault(emptySet()),
+        )
+        val loaded = loadedSeriesFeeds
+        if (key == loaded) return
+
+        // As in [refreshMovieFeeds].
+        _recommendedSeries.value =
+            _recommendedSeries.value.filterNot { it.ref in key.started || it.ref in key.dismissed }
+
+        val all = runCatching { graph.catalogRepository.allSeries() }.getOrDefault(emptyList())
+        _recommendedSeries.value = runCatching {
+            graph.catalogRepository.recommendedSeriesFrom(all, key.started, key.dismissed)
+        }.getOrDefault(emptyList())
+        if (key.catalogue != loaded?.catalogue) {
+            _seriesGenreRows.value = runCatching {
+                graph.catalogRepository.seriesByGenreFrom(all)
+            }.getOrDefault(emptyList())
+        }
+        loadedSeriesFeeds = key
     }
 
     // Movies + series load on demand — the first time the user opens Movies or Shows — rather than

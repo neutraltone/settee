@@ -5,9 +5,18 @@
  */
 package app.opentv
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performKeyInput
+import androidx.compose.ui.test.pressKey
+import androidx.compose.ui.test.requestFocus
 import app.opentv.data.model.Movie
 import app.opentv.data.model.Series
 import app.opentv.data.repo.MediaKey
@@ -23,6 +32,7 @@ import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
 // Plain Application: OpenTvApp schedules WorkManager on start, which lone composables don't need.
+@OptIn(ExperimentalTestApi::class)
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], qualifiers = TV_1080P, application = android.app.Application::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
@@ -115,6 +125,7 @@ class VodShelvesTest {
             SeriesShelves(
                 resume = resume,
                 favourites = listOf(series(1, "Severance")),
+                recommended = emptyList(),
                 recentlyAdded = listOf(series(2, "Slow Horses")),
                 genreRows = emptyList(),
                 onResume = {},
@@ -134,6 +145,7 @@ class VodShelvesTest {
             SeriesShelves(
                 resume = resume,
                 favourites = emptyList(),
+                recommended = emptyList(),
                 recentlyAdded = listOf(series(2, "Slow Horses")),
                 genreRows = emptyList(),
                 onResume = {},
@@ -142,5 +154,188 @@ class VodShelvesTest {
         }
 
         compose.onNodeWithText("Favourites").assertDoesNotExist()
+    }
+
+    @Test
+    fun `Shows recommends series below Continue Watching and Favourites`() {
+        compose.setTvContent {
+            SeriesShelves(
+                resume = resume,
+                favourites = listOf(series(1, "Severance")),
+                recommended = listOf(series(3, "Ozark")),
+                recentlyAdded = emptyList(),
+                genreRows = emptyList(),
+                onResume = {},
+                onOpenSeries = {},
+            )
+        }
+
+        assertThat(topOf("Favourites")).isGreaterThan(topOf("Continue watching"))
+        assertThat(topOf("Recommended for you")).isGreaterThan(topOf("Favourites"))
+    }
+
+    // No Favourites: with them, Recently added is below the fold and never laid out.
+    @Test
+    fun `Shows recommends series above Recently added`() {
+        compose.setTvContent {
+            SeriesShelves(
+                resume = resume,
+                favourites = emptyList(),
+                recommended = listOf(series(3, "Ozark")),
+                recentlyAdded = listOf(series(2, "Slow Horses")),
+                genreRows = emptyList(),
+                onResume = {},
+                onOpenSeries = {},
+            )
+        }
+
+        assertThat(topOf("Recommended for you")).isLessThan(topOf("Recently added"))
+        compose.onNodeWithText("Ozark").requestFocus()
+        compose.waitForIdle()
+        captureScreen("shows_recommended")
+    }
+
+    @Test
+    fun `Shows has no Recommended row when there is nothing to recommend`() {
+        compose.setTvContent {
+            SeriesShelves(
+                resume = resume,
+                favourites = emptyList(),
+                recommended = emptyList(),
+                recentlyAdded = listOf(series(2, "Slow Horses")),
+                genreRows = emptyList(),
+                onResume = {},
+                onOpenSeries = {},
+            )
+        }
+
+        compose.onNodeWithText("Recommended for you").assertDoesNotExist()
+    }
+
+    @Test
+    fun `pressing select on a recommended series opens it`() {
+        var opened: Series? = null
+        val ozark = series(3, "Ozark")
+        compose.setTvContent {
+            SeriesShelves(
+                resume = emptyList(),
+                favourites = emptyList(),
+                recommended = listOf(ozark),
+                recentlyAdded = emptyList(),
+                genreRows = emptyList(),
+                onResume = {},
+                onOpenSeries = { opened = it },
+            )
+        }
+
+        compose.onNodeWithText("Ozark").requestFocus()
+        compose.onNodeWithText("Ozark").performKeyInput { pressKey(Key.DirectionCenter) }
+
+        assertThat(opened).isEqualTo(ozark)
+    }
+
+    @Test
+    fun `a recommended series the viewer is on stays under the highlight until they leave the row`() {
+        var recommended by mutableStateOf(listOf(series(3, "Ozark"), series(4, "Dark")))
+        compose.setTvContent {
+            SeriesShelves(
+                resume = emptyList(),
+                favourites = emptyList(),
+                recommended = recommended,
+                recentlyAdded = listOf(series(2, "Slow Horses")),
+                genreRows = emptyList(),
+                onResume = {},
+                onOpenSeries = {},
+            )
+        }
+        compose.onNodeWithText("Ozark").requestFocus()
+
+        recommended = listOf(series(4, "Dark"))
+        compose.waitForIdle()
+
+        compose.onNodeWithText("Ozark").assertIsFocused()
+
+        compose.onNodeWithText("Slow Horses").requestFocus()
+        compose.waitForIdle()
+
+        compose.onNodeWithText("Ozark").assertDoesNotExist()
+        compose.onNodeWithText("Dark").assertExists()
+    }
+
+    @Test
+    fun `a Recommended row left with nothing stays until the viewer leaves it`() {
+        var recommended by mutableStateOf(listOf(series(3, "Ozark")))
+        compose.setTvContent {
+            SeriesShelves(
+                resume = emptyList(),
+                favourites = emptyList(),
+                recommended = recommended,
+                recentlyAdded = listOf(series(2, "Slow Horses")),
+                genreRows = emptyList(),
+                onResume = {},
+                onOpenSeries = {},
+            )
+        }
+        compose.onNodeWithText("Ozark").requestFocus()
+
+        recommended = emptyList()
+        compose.waitForIdle()
+
+        compose.onNodeWithText("Ozark").assertIsFocused()
+
+        compose.onNodeWithText("Slow Horses").requestFocus()
+        compose.waitForIdle()
+
+        compose.onNodeWithText("Recommended for you").assertDoesNotExist()
+    }
+
+    @Test
+    fun `a Recommended row without the highlight changes straight away`() {
+        var recommended by mutableStateOf(listOf(series(3, "Ozark")))
+        compose.setTvContent {
+            SeriesShelves(
+                resume = emptyList(),
+                favourites = emptyList(),
+                recommended = recommended,
+                recentlyAdded = listOf(series(2, "Slow Horses")),
+                genreRows = emptyList(),
+                onResume = {},
+                onOpenSeries = {},
+            )
+        }
+        compose.onNodeWithText("Slow Horses").requestFocus()
+
+        recommended = listOf(series(4, "Dark"))
+        compose.waitForIdle()
+
+        compose.onNodeWithText("Ozark").assertDoesNotExist()
+        compose.onNodeWithText("Dark").assertExists()
+    }
+
+    @Test
+    fun `a recommended movie the viewer is on stays under the highlight until they leave the row`() {
+        var recommended by mutableStateOf(listOf(movie(3, "Heat"), movie(4, "Ronin")))
+        compose.setTvContent {
+            MovieShelves(
+                resume = emptyList(),
+                favourites = emptyList(),
+                recommended = recommended,
+                recentlyAdded = listOf(movie(2, "Collateral")),
+                genreRows = emptyList(),
+                onResume = {},
+                onOpenMovie = {},
+            )
+        }
+        compose.onNodeWithText("Heat").requestFocus()
+
+        recommended = listOf(movie(4, "Ronin"))
+        compose.waitForIdle()
+
+        compose.onNodeWithText("Heat").assertIsFocused()
+
+        compose.onNodeWithText("Collateral").requestFocus()
+        compose.waitForIdle()
+
+        compose.onNodeWithText("Heat").assertDoesNotExist()
     }
 }
