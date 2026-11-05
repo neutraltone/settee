@@ -9,9 +9,9 @@ import android.app.Application
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.SemanticsNodeInteraction
-import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.isFocused
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -107,8 +107,9 @@ class RecentSearchesScreenTest {
         waitFor("Remove").performClick()
 
         compose.waitUntil(TIMEOUT_MILLIS) { shown() == listOf("news") }
-        compose.waitForIdle()
-        waitFor("news").assertIsFocused()
+        // The database answers before the screen: the list reaches it through a flow on another
+        // thread, which waitForIdle doesn't know about, and only then does the row take the highlight.
+        compose.waitUntilAtLeastOneExists(hasText("news") and isFocused(), TIMEOUT_MILLIS)
     }
 
     @Test
