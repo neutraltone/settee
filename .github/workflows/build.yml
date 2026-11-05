@@ -171,6 +171,10 @@ jobs:
           pip install -r tools/screenshots/requirements.txt
           python3 -m unittest discover -s tools/screenshots
 
+      # Only ever run by hand against a Stick, so nothing else would notice it breaking.
+      - name: Stick measuring script tests
+        run: python3 -m unittest discover -s tools/perf
+
   gitleaks:
     name: gitleaks
     runs-on: ubuntu-latest
