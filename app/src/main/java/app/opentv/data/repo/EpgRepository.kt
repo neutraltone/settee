@@ -295,16 +295,22 @@ class EpgRepository(
 
         val channels = channelDao.allForMatching()
         var matched = 0
+        val changed = ArrayList<Pair<Long, String?>>(BATCH_SIZE)
 
         for (channel in channels) {
             val newMatch = index.match(ChannelNameNormalizer.nameKeyOf(channel.groupKey))
             if (newMatch != channel.matchedEpgId) {
-                channelDao.setMatchedEpgId(channel.id, newMatch)
+                changed += channel.id to newMatch
+                if (changed.size >= BATCH_SIZE) {
+                    channelDao.setMatchedEpgIds(changed)
+                    changed.clear()
+                }
             }
             val works = channel.epgCandidates.any { it in populated } ||
                 (newMatch != null && newMatch in populated)
             if (works) matched++
         }
+        if (changed.isNotEmpty()) channelDao.setMatchedEpgIds(changed)
 
         Log.i(
             TAG,

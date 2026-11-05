@@ -253,6 +253,16 @@ interface ChannelDao {
     @Query("UPDATE channels SET matchedEpgId = :epgId WHERE id = :id")
     suspend fun setMatchedEpgId(id: Long, epgId: String?)
 
+    /**
+     * Sets many matches, as (channel id, guide id), in one transaction. Written one at a time,
+     * each would invalidate `channels` and re-run everything observing it, including the whole
+     * lineup, thousands of times over on a large catalogue.
+     */
+    @Transaction
+    suspend fun setMatchedEpgIds(matches: List<Pair<Long, String?>>) {
+        matches.forEach { (id, epgId) -> setMatchedEpgId(id, epgId) }
+    }
+
     @Query("UPDATE channels SET epgOverrideId = :epgId WHERE id = :id")
     suspend fun setEpgOverride(id: Long, epgId: String?)
 
