@@ -10,6 +10,7 @@ import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import app.opentv.data.db.OpenTvDatabase
 import app.opentv.data.model.PlaybackPosition
+import app.opentv.data.model.SeriesRef
 import app.opentv.data.repo.ContinueWatchingCard
 import app.opentv.data.repo.SeriesMainAction
 import app.opentv.data.repo.ViewerLibrary
@@ -171,7 +172,7 @@ class ViewerLibraryTest {
         activeProfile.value = 2L
         library.recordProgress("movie:5", positionMillis = 6_000, durationMillis = 2_400_000)
 
-        assertThat(library.startedMovieIds(profileId = 1)).containsExactly(3L, 4L)
+        assertThat(library.history.startedMovieIds(profileId = 1)).containsExactly(3L, 4L)
     }
 
     @Test
@@ -181,8 +182,70 @@ class ViewerLibraryTest {
 
         library.marks.removeFromContinueWatching(ContinueWatchingCard.Movie(movieId = 3, progress = 0f))
 
-        assertThat(library.startedMovieIds(profileId = 1)).containsExactly(4L)
+        assertThat(library.history.startedMovieIds(profileId = 1)).containsExactly(4L)
     }
+
+    @Test
+    fun `the series a Profile has started are the ones it has progress on any episode of, Watched or not`() = runTest {
+        db.episodes().upsertAll(
+            listOf(
+                testEpisode(1, 1),
+                testEpisode(1, 2).copy(seriesId = "other"),
+                testEpisode(1, 3).copy(seriesId = "unplayed"),
+                testEpisode(1, 4).copy(seriesId = "another Profile's"),
+            ),
+        )
+        library.recordProgress("ep:11", positionMillis = 6_000, durationMillis = 2_400_000)
+        library.recordProgress("ep:12", positionMillis = 2_400_000, durationMillis = 2_400_000)
+        library.recordProgress("movie:3", positionMillis = 6_000, durationMillis = 2_400_000)
+        activeProfile.value = 2L
+        library.recordProgress("ep:14", positionMillis = 6_000, durationMillis = 2_400_000)
+
+        assertThat(
+            library.history.startedSeries(profileId = 1),
+        ).containsExactly(SeriesRef(1, "s"), SeriesRef(1, "other"))
+    }
+
+    @Test
+    fun `a series whose only progress was marked Unwatched by hand no longer counts as started`() = runTest {
+        db.episodes().upsertAll(listOf(testEpisode(1, 1), testEpisode(1, 2).copy(seriesId = "other")))
+        library.recordProgress("ep:11", positionMillis = 6_000, durationMillis = 2_400_000)
+        library.recordProgress("ep:12", positionMillis = 6_000, durationMillis = 2_400_000)
+
+        library.marks.markUnwatched("ep:11")
+
+        assertThat(library.history.startedSeries(profileId = 1)).containsExactly(SeriesRef(1, "other"))
+    }
+
+    @Test
+    fun `a series with one episode marked Unwatched and another played still counts as started`() = runTest {
+        db.episodes().upsertAll(listOf(testEpisode(1, 1), testEpisode(1, 2)))
+        library.recordProgress("ep:11", positionMillis = 6_000, durationMillis = 2_400_000)
+        library.recordProgress("ep:12", positionMillis = 6_000, durationMillis = 2_400_000)
+
+        library.marks.markUnwatched("ep:11")
+
+        assertThat(library.history.startedSeries(profileId = 1)).containsExactly(SeriesRef(1, "s"))
+    }
+
+    @Test
+    fun `progress on an episode that no longer exists starts no series`() = runTest {
+        library.recordProgress("ep:11", positionMillis = 6_000, durationMillis = 2_400_000)
+
+        assertThat(library.history.startedSeries(profileId = 1)).isEmpty()
+    }
+
+    @Test
+    fun `the series removed from a Profile's Continue Watching are the ones it dismissed, and only its own`() =
+        runTest {
+            db.episodes().upsertAll(listOf(testEpisode(1, 1)))
+            library.recordProgress("ep:11", positionMillis = 6_000, durationMillis = 2_400_000)
+
+            library.marks.removeFromContinueWatching(ContinueWatchingCard.Series(testEpisode(1, 1), progress = 0f))
+
+            assertThat(library.history.dismissedSeries(profileId = 1)).containsExactly(SeriesRef(1, "s"))
+            assertThat(library.history.dismissedSeries(profileId = 2)).isEmpty()
+        }
 
     @Test
     fun `a nonsense negative position from sync counts as the very start`() = runTest {
@@ -212,7 +275,7 @@ class ViewerLibraryTest {
             library.recordProgress(malformed, positionMillis = 600_000, durationMillis = 2_400_000)
         }
 
-        assertThat(library.startedMovieIds(profileId = 1)).containsExactly(3L)
+        assertThat(library.history.startedMovieIds(profileId = 1)).containsExactly(3L)
         assertThat(library.continueWatchingMovies().first())
             .containsExactly(ContinueWatchingCard.Movie(movieId = 3, progress = 0.25f))
         assertThat(statusOf(7)).isEqualTo(WatchStatus.InProgress(progress = 0.25f, remainingMillis = 1_800_000))

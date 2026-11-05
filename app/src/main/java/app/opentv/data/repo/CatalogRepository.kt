@@ -20,9 +20,11 @@ import app.opentv.data.model.Episode
 import app.opentv.data.model.LiveStreamFormat
 import app.opentv.data.model.Movie
 import app.opentv.data.model.Series
+import app.opentv.data.model.SeriesRef
 import app.opentv.data.model.Source
 import app.opentv.data.model.SourceKind
 import app.opentv.data.model.StreamKind
+import app.opentv.data.model.ref
 import app.opentv.data.parser.ChannelNameNormalizer
 import app.opentv.data.parser.M3uParser
 import app.opentv.data.parser.VodTitleCleaner
@@ -278,10 +280,11 @@ class CatalogRepository(
     /** Every series, newest first. */
     suspend fun allSeries(): List<Series> = withContext(Dispatchers.IO) { seriesDao.all() }
 
-    /** How many movies / series are on disk — a cheap COUNT the home screen uses to tell "the
-     *  library grew" from "unchanged since last open" without loading every row. */
-    suspend fun movieCount(): Int = withContext(Dispatchers.IO) { movieDao.count() }
-    suspend fun seriesCount(): Int = withContext(Dispatchers.IO) { seriesDao.count() }
+    /** Changes when the movies or what the home rows rank them by do; see [VodViewModel.loadHomeFeeds]. */
+    suspend fun movieFingerprint(): String = withContext(Dispatchers.IO) { movieDao.fingerprint() }
+
+    /** Changes when the series or what the home rows rank them by do; see [VodViewModel.loadHomeFeeds]. */
+    suspend fun seriesFingerprint(): String = withContext(Dispatchers.IO) { seriesDao.fingerprint() }
 
     /**
      * Movies grouped by genre for the by-genre home rows: the [maxGenres] biggest genres, each with
@@ -314,58 +317,34 @@ class CatalogRepository(
         withContext(Dispatchers.Default) { groupByGenre(all, Series::genre, maxGenres, perGenre) }
 
     /**
-     * "Recommended for you" — a simple, explainable genre-affinity heuristic, no ML.
-     *
-     * Tallies the genres of the movies this profile has watched or resumed, then returns the
-     * highest-scoring UNWATCHED movies, where a movie's score is how many of its genres the profile
-     * favours (ties broken by rating, then recency). With no usable history — a fresh profile, or
-     * only watched movies that carry no genre — it falls back to top-rated, then recently-added.
+     * "Recommended for you" from an ALREADY-LOADED movie list, so the home screen scans the
+     * (20k-title) table once for the whole home feed rather than once per row. See [recommendFrom].
+     * The [started] titles feed the tally and stay out of the row. A movie marked Unwatched isn't
+     * among them, so it can come back.
      */
-    suspend fun recommendedMovies(profileId: Long, limit: Int = 30): List<Movie> =
-        withContext(Dispatchers.IO) { recommendFrom(movieDao.all(), startedMovieIds(profileId), limit) }
-
-    /**
-     * "Recommended for you" from an ALREADY-LOADED movie list — the single-scan path (see
-     * [recommendedMovies]). Only the profile's watch history is read from disk here; the movie
-     * library is the caller's [allMovies] list, shared with the genre rows so the home screen scans
-     * the (20k-title) table once for the whole home feed rather than once per row.
-     */
-    suspend fun recommendedMoviesFrom(all: List<Movie>, profileId: Long, limit: Int = 30): List<Movie> =
-        withContext(Dispatchers.IO) { recommendFrom(all, startedMovieIds(profileId), limit) }
-
-    /** The movie ids this profile has started, Watched or not — the input to the affinity heuristic. */
-    private suspend fun startedMovieIds(profileId: Long): Set<Long> = viewerLibrary.startedMovieIds(profileId)
-
-    /** The pure genre-affinity ranking pass shared by [recommendedMovies] and [recommendedMoviesFrom]. */
-    private fun recommendFrom(all: List<Movie>, watchedMovieIds: Set<Long>, limit: Int): List<Movie> {
-        val byId = all.associateBy { it.id }
-
-        val affinity = HashMap<String, Int>()
-        for (id in watchedMovieIds) {
-            val watched = byId[id] ?: continue
-            for (genre in splitGenres(watched.genre)) affinity[genre] = (affinity[genre] ?: 0) + 1
+    suspend fun recommendedMoviesFrom(all: List<Movie>, started: Set<Long>, limit: Int = 30): List<Movie> =
+        withContext(Dispatchers.Default) {
+            recommendFrom(all, MOVIE_RANKING, limit, tallied = { it.id in started }, leftOut = { it.id in started })
         }
 
-        val unwatched = all.filter { it.id !in watchedMovieIds }
-
-        fun topRatedFallback(): List<Movie> = unwatched
-            .sortedWith(compareByDescending<Movie> { it.rating ?: -1.0 }.thenByDescending { it.addedMillis })
-            .take(limit)
-
-        if (affinity.isEmpty()) return topRatedFallback()
-
-        val ranked = unwatched
-            .map { it to genreScore(it.genre, affinity) }
-            .filter { it.second > 0 }
-            .sortedWith(
-                compareByDescending<Pair<Movie, Int>> { it.second }
-                    .thenByDescending { it.first.rating ?: -1.0 }
-                    .thenByDescending { it.first.addedMillis },
-            )
-            .map { it.first }
-            .take(limit)
-
-        return ranked.ifEmpty { topRatedFallback() }
+    /**
+     * "Recommended for you" for series, from an already-loaded list. A [dismissed] series, one removed
+     * from Continue Watching, is neither offered nor tallied, which is stricter than a movie marked
+     * Unwatched, since that one can come back.
+     */
+    suspend fun recommendedSeriesFrom(
+        all: List<Series>,
+        started: Set<SeriesRef>,
+        dismissed: Set<SeriesRef>,
+        limit: Int = 30,
+    ): List<Series> = withContext(Dispatchers.Default) {
+        recommendFrom(
+            all,
+            SERIES_RANKING,
+            limit,
+            tallied = { it.ref in started && it.ref !in dismissed },
+            leftOut = { it.ref in started || it.ref in dismissed },
+        )
     }
 
     /**
@@ -585,13 +564,6 @@ class CatalogRepository(
     private val Series.isEnriched: Boolean
         get() = backdropUrl != null || cast != null || genre != null
 
-    /** Splits a provider genre string ("Action, Thriller" / "Action|Thriller") into clean genres. */
-    private fun splitGenres(raw: String?): List<String> = raw?.split(',', '|')
-        ?.map { it.trim() }
-        ?.filter { it.isNotEmpty() }
-        ?.distinct()
-        .orEmpty()
-
     private fun <T> groupByGenre(
         items: List<T>,
         genreOf: (T) -> String?,
@@ -609,10 +581,6 @@ class CatalogRepository(
             .take(maxGenres)
             .map { GenreGroup(it.key, it.value.take(perGenre)) }
     }
-
-    /** How strongly a title matches a profile's genre affinity: sum of its genres' tallies. */
-    private fun genreScore(genre: String?, affinity: Map<String, Int>): Int =
-        splitGenres(genre).sumOf { affinity[it] ?: 0 }
 
     /** How many of a title's genres are in the wanted set — the More-Like-This overlap. */
     private fun sharedGenreCount(genre: String?, wanted: Set<String>): Int = splitGenres(genre).count { it in wanted }

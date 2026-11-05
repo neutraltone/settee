@@ -330,6 +330,11 @@ data class Series(
     val latestAirDate: Long? = null,
 )
 
+/** A series by what identifies it across a catalogue refresh: its source and the provider's id. */
+data class SeriesRef(val sourceId: Long, val seriesId: String)
+
+val Series.ref: SeriesRef get() = SeriesRef(sourceId, seriesId)
+
 @Entity(
     tableName = "episodes",
     indices = [
