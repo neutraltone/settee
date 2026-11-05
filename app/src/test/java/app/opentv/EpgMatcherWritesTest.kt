@@ -11,6 +11,7 @@ import androidx.test.core.app.ApplicationProvider
 import app.opentv.data.db.ChannelDao
 import app.opentv.data.db.OpenTvDatabase
 import app.opentv.data.model.Channel
+import app.opentv.data.model.ChannelEpgMatch
 import app.opentv.data.model.EpgChannelAlias
 import app.opentv.data.model.EpgFeed
 import app.opentv.data.model.Programme
@@ -98,18 +99,30 @@ class EpgMatcherWritesTest {
     }
 
     @Test
-    fun `every match reaches the database, in transactions of a batch each`() = runTest {
-        val size = EpgRepository.BATCH_SIZE
-        val numbers = 0..(size * 2)
+    fun `every match reaches the database in a single write`() = runTest {
+        val numbers = 0..1_000
         db.channels().upsertAll(numbers.map { channel(it) })
         guideFor(numbers)
 
         guide.runMatcher()
 
-        assertThat(channels.oneAtATime).isEqualTo(0)
-        assertThat(channels.batches).containsExactly(size, size, 1).inOrder()
-        val written = db.channels().allForMatching().associate { it.id to it.matchedEpgId }
+        assertThat(channels.writes).containsExactly(numbers.count())
+        val written = db.channels().matcherInputs().associate { it.id to it.matchedEpgId }
         assertThat(written).isEqualTo(numbers.associate { it + 1L to epgId(it) })
+    }
+
+    @Test
+    fun `matches that fail partway are saved as none, because they're one transaction`() = runTest {
+        db.channels().upsertAll((0..1).map { channel(it) })
+        val failsOnTheSecond = object : AbstractList<ChannelEpgMatch>() {
+            override val size = 2
+
+            override fun get(index: Int) = if (index == 0) ChannelEpgMatch(1, epgId(0)) else error("interrupted")
+        }
+
+        runCatching { db.channels().setMatchedEpgIds(failsOnTheSecond) }
+
+        assertThat(db.channels().matcherInputs().map { it.matchedEpgId }).containsExactly(null, null)
     }
 
     @Test
@@ -119,8 +132,7 @@ class EpgMatcherWritesTest {
 
         guide.runMatcher()
 
-        assertThat(channels.oneAtATime).isEqualTo(0)
-        assertThat(channels.batches).isEmpty()
+        assertThat(channels.writes).isEmpty()
     }
 
     @Test
@@ -130,7 +142,7 @@ class EpgMatcherWritesTest {
 
         guide.runMatcher()
 
-        val written = db.channels().allForMatching().associate { it.id to it.matchedEpgId }
+        val written = db.channels().matcherInputs().associate { it.id to it.matchedEpgId }
         assertThat(written).containsExactly(1L, epgId(0), 2L, epgId(1), 3L, null)
     }
 
@@ -142,18 +154,12 @@ class EpgMatcherWritesTest {
         assertThat(guide.runMatcher()).isEqualTo(3 to 10)
     }
 
-    /** Each call here is a transaction of its own, so these are what observers of `channels` see. */
+    /** How many matches each write to the database carried. */
     private class CountingChannels(private val real: ChannelDao) : ChannelDao by real {
-        var oneAtATime = 0
-        val batches = mutableListOf<Int>()
+        val writes = mutableListOf<Int>()
 
-        override suspend fun setMatchedEpgId(id: Long, epgId: String?) {
-            oneAtATime++
-            real.setMatchedEpgId(id, epgId)
-        }
-
-        override suspend fun setMatchedEpgIds(matches: List<Pair<Long, String?>>) {
-            batches += matches.size
+        override suspend fun setMatchedEpgIds(matches: List<ChannelEpgMatch>) {
+            writes += matches.size
             real.setMatchedEpgIds(matches)
         }
     }

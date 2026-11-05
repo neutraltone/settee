@@ -14,7 +14,9 @@ import androidx.room.Update
 import androidx.room.Upsert
 import app.opentv.data.model.Category
 import app.opentv.data.model.Channel
+import app.opentv.data.model.ChannelEpgMatch
 import app.opentv.data.model.ChannelHiddenChange
+import app.opentv.data.model.ChannelMatchInput
 import app.opentv.data.model.EpgChannelAlias
 import app.opentv.data.model.EpgFeed
 import app.opentv.data.model.Episode
@@ -250,18 +252,13 @@ interface ChannelDao {
     )
     suspend fun hiddenChangesFor(sourceId: Long): List<ChannelHiddenChange>
 
-    @Query("UPDATE channels SET matchedEpgId = :epgId WHERE id = :id")
-    suspend fun setMatchedEpgId(id: Long, epgId: String?)
-
     /**
-     * Sets many matches, as (channel id, guide id), in one transaction. Written one at a time,
-     * each would invalidate `channels` and re-run everything observing it, including the whole
-     * lineup, thousands of times over on a large catalogue.
+     * Saves many guide matches in one transaction, so what observes `channels`, including the whole
+     * lineup, re-reads it once rather than after every match or every batch. Each row is its own
+     * small statement, so this has no bound-variable limit to split around.
      */
-    @Transaction
-    suspend fun setMatchedEpgIds(matches: List<Pair<Long, String?>>) {
-        matches.forEach { (id, epgId) -> setMatchedEpgId(id, epgId) }
-    }
+    @Update(entity = Channel::class)
+    suspend fun setMatchedEpgIds(matches: List<ChannelEpgMatch>)
 
     @Query("UPDATE channels SET epgOverrideId = :epgId WHERE id = :id")
     suspend fun setEpgOverride(id: Long, epgId: String?)
@@ -270,9 +267,17 @@ interface ChannelDao {
     @Query("SELECT * FROM channels")
     fun observeEvery(): Flow<List<Channel>>
 
-    /** The matcher's working set: id, group key, and what is already known. */
+    /** Every row, whole, once. */
     @Query("SELECT * FROM channels")
-    suspend fun allForMatching(): List<Channel>
+    suspend fun everyRow(): List<Channel>
+
+    /** The matcher's working set: no URLs or names, which a large catalogue would allocate on every launch. */
+    @Query("SELECT id, groupKey, epgChannelId, matchedEpgId, epgOverrideId FROM channels")
+    suspend fun matcherInputs(): List<ChannelMatchInput>
+
+    /** Every channel's name as the provider wrote it, which is where a region prefix is. */
+    @Query("SELECT name FROM channels")
+    suspend fun providerNames(): List<String>
 
     @Upsert
     suspend fun upsertAll(channels: List<Channel>)

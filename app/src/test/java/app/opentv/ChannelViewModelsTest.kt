@@ -93,7 +93,7 @@ class ChannelViewModelsTest {
         graph.catalogRepository.renormalizeAll()
     }
 
-    private suspend fun row(name: String): Channel = db.channels().allForMatching().single { it.name == name }
+    private suspend fun row(name: String): Channel = db.channels().everyRow().single { it.name == name }
 
     @Test
     fun `search leaves out channels in a locked category`() = runTest {

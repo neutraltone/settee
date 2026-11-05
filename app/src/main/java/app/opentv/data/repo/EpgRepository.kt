@@ -11,6 +11,7 @@ import app.opentv.data.db.EpgChannelAliasDao
 import app.opentv.data.db.EpgFeedDao
 import app.opentv.data.db.ProgrammeDao
 import app.opentv.data.db.SourceDao
+import app.opentv.data.model.ChannelEpgMatch
 import app.opentv.data.model.EpgChannelAlias
 import app.opentv.data.model.EpgFeed
 import app.opentv.data.model.Programme
@@ -293,23 +294,19 @@ class EpgRepository(
         // channel the guide lists but never fills is a guide that looks broken.
         val populated = programmeDao.channelIdsWithProgrammes().toHashSet()
 
-        val channels = channelDao.allForMatching()
+        val channels = channelDao.matcherInputs()
         var matched = 0
-        val changed = ArrayList<Pair<Long, String?>>(BATCH_SIZE)
+        val changed = ArrayList<ChannelEpgMatch>()
 
         for (channel in channels) {
             val newMatch = index.match(ChannelNameNormalizer.nameKeyOf(channel.groupKey))
-            if (newMatch != channel.matchedEpgId) {
-                changed += channel.id to newMatch
-                if (changed.size >= BATCH_SIZE) {
-                    channelDao.setMatchedEpgIds(changed)
-                    changed.clear()
-                }
-            }
+            if (newMatch != channel.matchedEpgId) changed += ChannelEpgMatch(channel.id, newMatch)
             val works = channel.epgCandidates.any { it in populated } ||
                 (newMatch != null && newMatch in populated)
             if (works) matched++
         }
+        // All at once, unlike programmes: a match is cheap to work out again if this is interrupted,
+        // and each separate transaction would make the lineup re-read every channel.
         if (changed.isNotEmpty()) channelDao.setMatchedEpgIds(changed)
 
         Log.i(
@@ -343,8 +340,8 @@ class EpgRepository(
         if (!pristine) return
 
         val regionCounts = HashMap<String, Int>()
-        for (channel in channelDao.allForMatching()) {
-            val region = ChannelNameNormalizer.normalize(channel.name).region ?: continue
+        for (name in channelDao.providerNames()) {
+            val region = ChannelNameNormalizer.normalize(name).region ?: continue
             regionCounts.merge(region, 1, Int::plus)
         }
         val top = regionCounts.maxByOrNull { it.value } ?: return

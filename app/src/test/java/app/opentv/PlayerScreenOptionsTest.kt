@@ -94,7 +94,7 @@ class PlayerScreenOptionsTest {
     }
 
     private suspend fun idOf(streamId: String) =
-        graph.database.channels().allForMatching().single { it.streamId == streamId }.id
+        graph.database.channels().everyRow().single { it.streamId == streamId }.id
 
     /** The player on [streamId], once it has found its Channel: the banner names it. */
     private fun showPlaying(streamId: String, named: String) {

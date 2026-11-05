@@ -84,7 +84,7 @@ class ManagerFavouritesTest {
                 itv(2, "21", "UK| ITV FHD", 300, "FHD"),
             ),
         )
-        val hd = db.channels().allForMatching().single { it.sourceId == 1L }
+        val hd = db.channels().everyRow().single { it.sourceId == 1L }
         server.start()
         val session = (server.state.value as? ManagerServer.State.Listening)?.session
         assumeTrue("needs a private LAN address to serve on", session != null)
