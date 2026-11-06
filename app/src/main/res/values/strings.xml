@@ -124,6 +124,10 @@
         <item quantity="one">Live pause keeps the last minute of this channel in memory, so you can pause for up to a minute and rewind to when you turned it on. It uses more memory: on boxes like the Fire TV Stick, playback may stutter or the app may be closed. The picture will restart briefly to switch it on. You can turn it off in Settings › Recording.</item>
         <item quantity="other">Live pause keeps the last %1$d minutes of this channel in memory, so you can pause for up to %1$d minutes and rewind to when you turned it on. It uses more memory: on boxes like the Fire TV Stick, playback may stutter or the app may be closed. The picture will restart briefly to switch it on. You can turn it off in Settings › Recording.</item>
     </plurals>
+    <plurals name="live_pause_prompt_body_seconds">
+        <item quantity="one">Live pause keeps the last second of this channel in memory, so you can pause for up to a second and rewind to when you turned it on. This device has little memory to spare, so playback may stutter or the app may be closed. The picture will restart briefly to switch it on. You can turn it off in Settings › Recording.</item>
+        <item quantity="other">Live pause keeps the last %1$d seconds of this channel in memory, so you can pause for up to %1$d seconds and rewind to when you turned it on. This device has little memory to spare, so playback may stutter or the app may be closed. The picture will restart briefly to switch it on. You can turn it off in Settings › Recording.</item>
+    </plurals>
     <string name="player_forward">Forward</string>
     <string name="player_subtitles">Subtitles</string>
     <string name="player_audio">Audio</string>
@@ -575,6 +579,7 @@
     <string name="playback_other_format_unsupported">This device can\'t play this format (%1$s).</string>
     <string name="playback_format_unsupported">This device can\'t play this format.</string>
     <string name="playback_try_other_quality">A different quality may work.</string>
+    <string name="playback_out_of_memory">This stream needs more memory than this device has.</string>
     <!-- Catalogue Refresh -->
     <string name="refresh_saving_source">Saving source…</string>
     <string name="refresh_save_failed">Could not save source.</string>

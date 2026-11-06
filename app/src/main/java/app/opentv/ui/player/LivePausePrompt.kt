@@ -20,6 +20,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -29,13 +30,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import app.opentv.R
-import app.opentv.player.PlayerController
+import app.opentv.player.BufferPlan
 import app.opentv.update.startsFocused
 
 /** Offers to turn live pause on, explaining what it costs, when the viewer pauses without it. */
 @Composable
 internal fun LivePausePrompt(onTurnOn: () -> Unit, onDontAskAgain: () -> Unit, onDismiss: () -> Unit) {
-    val minutes = PlayerController.DVR_MAX_BUFFER_MILLIS / MILLIS_PER_MINUTE
+    val pauseMillis = remember { BufferPlan.livePauseMillis() }
     Dialog(onDismissRequest = onDismiss) {
         Column(
             Modifier
@@ -51,7 +52,14 @@ internal fun LivePausePrompt(onTurnOn: () -> Unit, onDontAskAgain: () -> Unit, o
             )
             Spacer(Modifier.height(12.dp))
             Text(
-                pluralStringResource(R.plurals.live_pause_prompt_body, minutes, minutes),
+                if (pauseMillis >= MILLIS_PER_MINUTE) {
+                    val minutes = pauseMillis / MILLIS_PER_MINUTE
+                    pluralStringResource(R.plurals.live_pause_prompt_body, minutes, minutes)
+                } else {
+                    // A device with little memory, such as a Fire TV Stick, gets under a minute.
+                    val seconds = pauseMillis / MILLIS_PER_SECOND
+                    pluralStringResource(R.plurals.live_pause_prompt_body_seconds, seconds, seconds)
+                },
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -78,3 +86,4 @@ internal fun LivePausePrompt(onTurnOn: () -> Unit, onDontAskAgain: () -> Unit, o
 }
 
 private const val MILLIS_PER_MINUTE = 60_000
+private const val MILLIS_PER_SECOND = 1_000

@@ -11,9 +11,13 @@ import androidx.media3.common.ColorInfo
 import androidx.media3.common.Format
 import androidx.media3.common.MimeTypes
 import androidx.media3.common.PlaybackException
+import androidx.media3.common.Timeline
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlaybackException
+import androidx.media3.exoplayer.analytics.AnalyticsListener
+import androidx.media3.exoplayer.upstream.Loader
 import androidx.test.core.app.ApplicationProvider
+import app.opentv.player.DecoderLog
 import app.opentv.player.PlaybackErrors
 import com.google.common.truth.Truth.assertThat
 import org.junit.Test
@@ -171,6 +175,19 @@ class PlaybackErrorsTest {
     }
 
     @Test
+    fun `running out of memory while loading says the stream is too big for this device, not an IO code`() {
+        // How Media3 reports it: the loader wraps the error, and the player calls it a source error.
+        val error = ExoPlaybackException.createForSource(
+            Loader.UnexpectedLoaderException(OutOfMemoryError("Failed to allocate")),
+            PlaybackException.ERROR_CODE_IO_UNSPECIFIED,
+        )
+
+        assertThat(PlaybackErrors.describe(context, error)).isEqualTo(
+            "This stream needs more memory than this device has. A different quality may work.",
+        )
+    }
+
+    @Test
     fun `the failure is logged with the codec details and nothing that identifies the provider`() {
         val format = Format.Builder()
             .setId("http://example.com/u/p/1.ts")
@@ -181,7 +198,7 @@ class PlaybackErrorsTest {
             .build()
         val cause = IllegalStateException("Failed to open http://example.com/u/p/1.ts")
 
-        PlaybackErrors.logDecoderFailure(decoderFailure(format, cause = cause))
+        DecoderLog.logFailure(decoderFailure(format, cause = cause))
 
         val logged = ShadowLog.getLogsForTag("OpenTV").single()
         assertThat(logged.msg).contains("video/hevc")
@@ -199,7 +216,7 @@ class PlaybackErrorsTest {
             .setSampleRate(48_000)
             .build()
 
-        PlaybackErrors.logDecoderFailure(decoderFailure(format))
+        DecoderLog.logFailure(decoderFailure(format))
 
         val logged = ShadowLog.getLogsForTag("OpenTV").single().msg
         assertThat(logged).contains("channels=6")
@@ -208,10 +225,66 @@ class PlaybackErrorsTest {
     }
 
     @Test
+    fun `the video a decoder is given is logged by its named fields, even when nothing fails`() {
+        val format = Format.Builder()
+            .setId("http://example.com/u/p/1.ts")
+            .setLabel("http://example.com/u/p/1.ts")
+            .setSampleMimeType(MimeTypes.VIDEO_H265)
+            .setCodecs("hvc1.2.4.L153.B0")
+            .setWidth(3840)
+            .setHeight(2160)
+            .setAverageBitrate(23_800_000)
+            .setFrameRate(25f)
+            .build()
+
+        DecoderLog.listener.onVideoInputFormatChanged(EVENT_TIME, format, null)
+
+        val logged = ShadowLog.getLogsForTag("OpenTV").single().msg
+        assertThat(logged).contains("video/hevc")
+        assertThat(logged).contains("hvc1.2.4.L153.B0")
+        assertThat(logged).contains("size=3840x2160")
+        assertThat(logged).contains("bitDepth=10")
+        assertThat(logged).contains("bitrate=23800000")
+        assertThat(logged).contains("frameRate=25.0")
+        assertThat(logged).doesNotContain("example.com")
+    }
+
+    @Test
+    fun `a bitrate or frame rate the stream doesn't give is left out rather than logged as -1`() {
+        val format = Format.Builder().setSampleMimeType(MimeTypes.VIDEO_H264).setWidth(1920).setHeight(1080).build()
+
+        DecoderLog.listener.onVideoInputFormatChanged(EVENT_TIME, format, null)
+
+        val logged = ShadowLog.getLogsForTag("OpenTV").single().msg
+        assertThat(logged).contains("size=1920x1080")
+        assertThat(logged).doesNotContain("bitrate")
+        assertThat(logged).doesNotContain("frameRate")
+    }
+
+    @Test
+    fun `the audio a decoder is given is logged with channels and sample rate`() {
+        val format = Format.Builder()
+            .setId("http://example.com/u/p/1.ts")
+            .setSampleMimeType(MimeTypes.AUDIO_AAC)
+            .setChannelCount(2)
+            .setSampleRate(48_000)
+            .build()
+
+        DecoderLog.listener.onAudioInputFormatChanged(EVENT_TIME, format, null)
+
+        val logged = ShadowLog.getLogsForTag("OpenTV").single().msg
+        assertThat(logged).contains("audio/mp4a-latm")
+        assertThat(logged).contains("channels=2")
+        assertThat(logged).contains("sampleRate=48000")
+        assertThat(logged).doesNotContain("size=")
+        assertThat(logged).doesNotContain("example.com")
+    }
+
+    @Test
     fun `a failure that isn't the decoder's logs nothing`() {
         val error = PlaybackException("gone", null, PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_FAILED)
 
-        PlaybackErrors.logDecoderFailure(error)
+        DecoderLog.logFailure(error)
 
         assertThat(ShadowLog.getLogsForTag("OpenTV")).isEmpty()
     }
@@ -229,4 +302,8 @@ class PlaybackErrorsTest {
         false,
         errorCode,
     )
+
+    private companion object {
+        val EVENT_TIME = AnalyticsListener.EventTime(0, Timeline.EMPTY, 0, null, 0, Timeline.EMPTY, 0, null, 0, 0)
+    }
 }

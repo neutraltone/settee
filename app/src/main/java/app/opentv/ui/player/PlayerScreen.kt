@@ -449,11 +449,7 @@ fun LivePlayerContent(
     fun togglePause() = setPaused(!paused)
     LaunchedEffect(paused, livePause) {
         if (!paused || !livePause) return@LaunchedEffect
-        pauseLeftMillis = PlayerController.DVR_MAX_BUFFER_MILLIS.toLong()
-        while (pauseLeftMillis > 0) {
-            delay(COUNTDOWN_TICK_MILLIS)
-            pauseLeftMillis -= COUNTDOWN_TICK_MILLIS
-        }
+        countDownLivePause(controller.livePauseMillis.toLong(), controller.bufferFull) { pauseLeftMillis = it }
         // Past the buffer the provider stalls or drops the connection unpredictably, so rather than
         // leave the stream sitting there, pick it back up at the live edge.
         backToLive = true
@@ -1290,7 +1286,6 @@ internal fun LivePlayerControls(
 private const val CONTROLS_TIMEOUT_MILLIS = 5_000L
 private const val BANNER_TIMEOUT_MILLIS = 4_000L
 private const val NUMBER_ENTRY_TIMEOUT_MILLIS = 2_000L
-private const val COUNTDOWN_TICK_MILLIS = 1_000L
 private const val BACK_TO_LIVE_MESSAGE_MILLIS = 4_000L
 internal val OK_KEYS = setOf(Key.DirectionCenter, Key.Enter, Key.NumPadEnter, Key.ButtonA)
 private val MEDIA_KEYS =
