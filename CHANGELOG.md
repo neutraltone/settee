@@ -2,6 +2,38 @@
 
 Settee is based on OpenTV 0.11.8; everything before this is in [OpenTV's changelog](https://github.com/opentvproject/opentv/blob/v0.11.8/CHANGELOG.md).
 
+## [0.5.0](https://github.com/neutraltone/settee/compare/v0.4.0...v0.5.0) (2026-11-06)
+
+
+### ⚠ BREAKING CHANGES
+
+* **#101:** removing, renaming, unlocking, unstarring and unhiding behave properly across your devices (add your providers and Favourites again) ([#144](https://github.com/neutraltone/settee/issues/144))
+
+### Features
+
+* **#109:** changing channel shows a brief banner instead of the player controls ([#125](https://github.com/neutraltone/settee/issues/125)) ([daa2163](https://github.com/neutraltone/settee/commit/daa2163a17678e0d51ec39a3521ebd7ef3323b88))
+* **#131:** Shows recommends series based on what you've watched ([#174](https://github.com/neutraltone/settee/issues/174)) ([244a3f9](https://github.com/neutraltone/settee/commit/244a3f9498811342228c7cb66d429d25d69de984))
+* **#52:** episodes you've watched fade back so the ones still to watch stand out ([#138](https://github.com/neutraltone/settee/issues/138)) ([de0ceee](https://github.com/neutraltone/settee/commit/de0ceeee6e7ed76ee0294d72d0c9d19c1ce2ed55))
+* **#76:** channels have the same options wherever they appear ([#136](https://github.com/neutraltone/settee/issues/136)) ([be144ff](https://github.com/neutraltone/settee/commit/be144ff5dca4175345c82bb7170c62c34ff73364))
+* **#77:** catch up on a series by marking episodes watched up to here, or a whole season ([#134](https://github.com/neutraltone/settee/issues/134)) ([2047186](https://github.com/neutraltone/settee/commit/20471866b058e20d05e7afbac8e3ce627298b829))
+* **#78:** the Menu button opens options while watching ([#135](https://github.com/neutraltone/settee/issues/135)) ([444162e](https://github.com/neutraltone/settee/commit/444162ea3e0f65bd587904575ec25a83e5750ce3))
+* **#79:** play from the start or show a title's info from its options ([#133](https://github.com/neutraltone/settee/issues/133)) ([5dafde0](https://github.com/neutraltone/settee/commit/5dafde07d3f5609258ef749e8721c8b6637d6f3c))
+
+
+### Bug fixes
+
+* **#101:** removing, renaming, unlocking, unstarring and unhiding behave properly across your devices (add your providers and Favourites again) ([#144](https://github.com/neutraltone/settee/issues/144)) ([d18710b](https://github.com/neutraltone/settee/commit/d18710b719a1c9c25bbcae1f6fbf978589d58fe8))
+* **#102:** watch progress keeps syncing after you change your provider password, and reaches a show you haven't opened ([#123](https://github.com/neutraltone/settee/issues/123)) ([ab0962f](https://github.com/neutraltone/settee/commit/ab0962f58f883bb872394917f95288a7dde3f195))
+* **#132:** the season and episode marker is easy to read on the episode you're highlighting ([#137](https://github.com/neutraltone/settee/issues/137)) ([4c1e706](https://github.com/neutraltone/settee/commit/4c1e706c123582f818be21db7f7ba786b8e3fb11))
+* **#175:** the Stick is less busy after building the TV guide ([#179](https://github.com/neutraltone/settee/issues/179)) ([3751d92](https://github.com/neutraltone/settee/commit/3751d92559fc8d356a00506ea3ae6634f235f8f0))
+* **#182:** a stream too big for this device's memory says so, instead of failing with an error code after a minute ([#183](https://github.com/neutraltone/settee/issues/183)) ([6b0fbbb](https://github.com/neutraltone/settee/commit/6b0fbbb55e33425de7852bb4e403014ea04ed769))
+* **#91:** Settee shows its icon and name on older Fire TV Sticks ([#124](https://github.com/neutraltone/settee/issues/124)) ([ff16095](https://github.com/neutraltone/settee/commit/ff1609566b74fca940e715cfae6bfc1f7cf01276))
+
+
+### Performance
+
+* **#177:** Settee settles much sooner after you open it on a Fire TV Stick ([#178](https://github.com/neutraltone/settee/issues/178)) ([3b8b3cd](https://github.com/neutraltone/settee/commit/3b8b3cdef8a92941708c7fcc54d0c6b24c12bbfb))
+
 ## [0.4.0](https://github.com/neutraltone/settee/compare/v0.3.0...v0.4.0) (2026-11-02)
 
 
