@@ -51,6 +51,8 @@ class EpgSettingsScreenTest {
         compose.waitForIdle()
         compose.onNode(hasScrollToNodeAction()).performScrollToNode(hasText("Add your own guide (XMLTV URL)"))
         compose.onNodeWithText("Add your own guide (XMLTV URL)").performClick()
+        // The form opens below the fold: bring all of it, address box included, into the screenshot.
+        compose.onNode(hasScrollToNodeAction()).performScrollToNode(hasText("Add guide"))
         val (info, _) = device.connection(device.box(URL))
         captureScreen("epg_settings_add_own")
 
