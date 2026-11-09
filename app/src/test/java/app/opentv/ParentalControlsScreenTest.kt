@@ -5,10 +5,14 @@
  */
 package app.opentv
 
+import android.text.InputType
+import android.view.View
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performScrollTo
 import app.opentv.ui.settings.ParentalControlsScreen
+import com.google.common.truth.Truth.assertThat
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -24,6 +28,25 @@ class ParentalControlsScreenTest {
 
     @get:Rule
     val compose = createComposeRule()
+
+    private lateinit var view: View
+    private val device = DeviceKeyboard(compose) { view }
+
+    @Test
+    fun `a new PIN is typed on a number keyboard that hides it, and keeps four digits`() {
+        compose.setTvContent {
+            view = LocalView.current
+            ParentalControlsScreen(onBack = {})
+        }
+        val newPin = device.box(0)
+
+        val (info, _) = device.connection(newPin)
+        "12a345".forEach { device.type(it.toString(), newPin) }
+
+        assertThat(info.inputType).isEqualTo(InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_VARIATION_PASSWORD)
+        assertThat(device.textShownBy(newPin)).isEqualTo("1234")
+        captureScreen("parental_controls_new_pin")
+    }
 
     @Test
     fun `it explains how a lock travels between devices`() {

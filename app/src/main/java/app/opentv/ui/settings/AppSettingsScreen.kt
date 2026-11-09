@@ -28,7 +28,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -50,6 +49,7 @@ import app.opentv.core.ServiceLocator
 import app.opentv.core.SleepTimer
 import app.opentv.core.findActivity
 import app.opentv.data.work.SyncWorker
+import app.opentv.ui.channels.DeviceTextField
 import kotlinx.coroutines.launch
 
 /**
@@ -267,11 +267,10 @@ private fun TmdbKeySection(settings: AppSettings) {
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Spacer(Modifier.height(8.dp))
-        OutlinedTextField(
+        DeviceTextField(
             value = field,
             onValueChange = { field = it.trim() },
-            singleLine = true,
-            label = { Text(stringResource(R.string.settings_tmdb_key_label)) },
+            label = stringResource(R.string.settings_tmdb_key_label),
             modifier = Modifier.fillMaxWidth(),
         )
         Spacer(Modifier.height(8.dp))

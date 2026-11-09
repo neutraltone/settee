@@ -21,7 +21,6 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -34,11 +33,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import app.opentv.R
 import app.opentv.data.model.EpgFeed
 import app.opentv.ui.EpgViewModel
+import app.opentv.ui.channels.DeviceTextField
 
 /**
  * Guide settings: where guide data comes from.
@@ -105,19 +106,18 @@ fun EpgSettingsScreen(onBack: () -> Unit, viewModel: EpgViewModel = viewModel())
                 } else {
                     Card {
                         Column(Modifier.padding(16.dp)) {
-                            OutlinedTextField(
+                            DeviceTextField(
                                 value = newName,
                                 onValueChange = { newName = it },
-                                label = { Text(stringResource(R.string.epg_name_optional)) },
-                                singleLine = true,
+                                label = stringResource(R.string.epg_name_optional),
                                 modifier = Modifier.fillMaxWidth(),
                             )
                             Spacer(Modifier.height(8.dp))
-                            OutlinedTextField(
+                            DeviceTextField(
                                 value = newUrl,
                                 onValueChange = { newUrl = it },
-                                label = { Text(stringResource(R.string.epg_xmltv_url)) },
-                                singleLine = true,
+                                label = stringResource(R.string.epg_xmltv_url),
+                                keyboardType = KeyboardType.Uri,
                                 modifier = Modifier.fillMaxWidth(),
                             )
                             Spacer(Modifier.height(12.dp))

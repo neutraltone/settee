@@ -7,6 +7,8 @@
     -->
     <style name="Theme.OpenTV" parent="android:Theme.Material.NoActionBar">
         <item name="android:windowBackground">@color/window_background</item>
+        <!-- The text boxes are Android EditTexts, which take their cursor and selection colour from here. -->
+        <item name="android:colorAccent">@color/accent</item>
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:navigationBarColor">@android:color/transparent</item>
     </style>

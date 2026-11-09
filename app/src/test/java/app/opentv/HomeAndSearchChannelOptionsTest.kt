@@ -13,7 +13,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.assertIsFocused
-import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
@@ -110,8 +109,12 @@ class HomeAndSearchChannelOptionsTest {
         )
     }
 
+    private lateinit var view: android.view.View
+    private val device = DeviceKeyboard(compose) { view }
+
     private fun searchContent() {
         compose.setTvContent {
+            view = androidx.compose.ui.platform.LocalView.current
             ItemOptionsHost { SearchBody() }
         }
     }
@@ -240,7 +243,7 @@ class HomeAndSearchChannelOptionsTest {
         results = emptyList()
         compose.waitForIdle()
 
-        compose.onNode(hasSetTextAction()).assertIsFocused()
+        assertThat(device.highlighted()).isTrue()
     }
 
     @Test

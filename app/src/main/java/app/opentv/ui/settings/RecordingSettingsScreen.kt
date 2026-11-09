@@ -42,7 +42,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -62,8 +61,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.documentfile.provider.DocumentFile
 import androidx.lifecycle.Lifecycle
@@ -77,6 +75,7 @@ import app.opentv.core.requestIgnoreBatteryOptimizations
 import app.opentv.recording.RecordingStorage
 import app.opentv.recording.SmbClient
 import app.opentv.recording.SmbConfig
+import app.opentv.ui.channels.DeviceTextField
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -624,21 +623,15 @@ private fun Field(
     onChange: (String) -> Unit,
 ) {
     var revealed by remember { mutableStateOf(false) }
-    OutlinedTextField(
+    // A recording password is a real credential (a NAS login) — don't paint it on a living-room
+    // screen. Masked by default, with an eye to reveal it if you need to check what you typed.
+    DeviceTextField(
         value = value,
         onValueChange = onChange,
-        label = { Text(label) },
-        placeholder = { if (placeholder.isNotEmpty()) Text(placeholder) },
-        singleLine = true,
-        // A recording password is a real credential (a NAS login) — don't paint it on a living-room
-        // screen. Masked by default, with an eye to reveal it if you need to check what you typed.
-        visualTransformation = if (isPassword &&
-            !revealed
-        ) {
-            PasswordVisualTransformation()
-        } else {
-            VisualTransformation.None
-        },
+        label = label,
+        placeholder = placeholder.ifEmpty { null },
+        keyboardType = if (isPassword) KeyboardType.Password else KeyboardType.Text,
+        revealed = revealed,
         trailingIcon = if (!isPassword) {
             null
         } else {

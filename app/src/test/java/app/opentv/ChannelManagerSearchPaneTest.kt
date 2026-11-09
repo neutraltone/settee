@@ -5,17 +5,14 @@
  */
 package app.opentv
 
+import android.view.KeyEvent
+import android.view.View
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
-import androidx.compose.ui.input.key.Key
-import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.test.assertIsFocused
-import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithContentDescription
-import androidx.compose.ui.test.performKeyInput
-import androidx.compose.ui.test.performTextInput
-import androidx.compose.ui.test.pressKey
 import app.opentv.data.model.Channel
 import app.opentv.data.repo.LineupChannel
 import app.opentv.ui.ChannelsViewModel
@@ -32,7 +29,6 @@ import org.robolectric.annotation.GraphicsMode
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], qualifiers = TV_1080P, application = android.app.Application::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
-@OptIn(ExperimentalTestApi::class)
 class ChannelManagerSearchPaneTest {
 
     @get:Rule
@@ -44,9 +40,12 @@ class ChannelManagerSearchPaneTest {
     private val query = TextFieldState()
 
     private var leftToRail = false
+    private lateinit var view: View
+    private val device = DeviceKeyboard(compose) { view }
 
     private fun show(results: List<ChannelsViewModel.Row> = emptyList()) {
         compose.setTvContent {
+            view = LocalView.current
             ChannelManagerSearchPane(
                 query = query,
                 results = results,
@@ -61,14 +60,12 @@ class ChannelManagerSearchPaneTest {
         compose.waitForIdle()
     }
 
-    private val searchBox get() = compose.onNode(hasSetTextAction())
-
     @Test
     fun `what the device keyboard types becomes the search`() {
         show()
-        searchBox.assertIsFocused()
+        assertThat(device.highlighted()).isTrue()
 
-        searchBox.performTextInput("news")
+        device.type("news")
 
         assertThat(query.text.toString()).isEqualTo("news")
         captureScreen("channel_manager_search")
@@ -79,7 +76,7 @@ class ChannelManagerSearchPaneTest {
         query.setTextAndPlaceCursorAtEnd("news")
         show(results = listOf(channelRow("Sky News"), channelRow("BBC News")))
 
-        searchBox.performKeyInput { pressKey(Key.DirectionDown) }
+        device.remote(KeyEvent.KEYCODE_DPAD_DOWN)
 
         compose.onAllNodesWithContentDescription("Favourite")[0].assertIsFocused()
         captureScreen("channel_manager_search_results")
@@ -89,7 +86,19 @@ class ChannelManagerSearchPaneTest {
     fun `Left from the start of the search box goes back to the categories`() {
         show()
 
-        searchBox.performKeyInput { pressKey(Key.DirectionLeft) }
+        device.remote(KeyEvent.KEYCODE_DPAD_LEFT)
+
+        assertThat(leftToRail).isTrue()
+    }
+
+    @Test
+    fun `Left goes back to the categories once the cursor has been moved to the start`() {
+        show()
+        device.type("news")
+        repeat(4) { device.remote(KeyEvent.KEYCODE_DPAD_LEFT) }
+        assertThat(leftToRail).isFalse()
+
+        device.remote(KeyEvent.KEYCODE_DPAD_LEFT)
 
         assertThat(leftToRail).isTrue()
     }
@@ -99,10 +108,10 @@ class ChannelManagerSearchPaneTest {
         query.setTextAndPlaceCursorAtEnd("news")
         show()
 
-        searchBox.performKeyInput { pressKey(Key.DirectionLeft) }
+        device.remote(KeyEvent.KEYCODE_DPAD_LEFT)
 
         assertThat(leftToRail).isFalse()
-        searchBox.assertIsFocused()
+        assertThat(device.highlighted()).isTrue()
     }
 
     private fun channelRow(name: String): ChannelsViewModel.Row {

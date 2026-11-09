@@ -18,7 +18,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ContentPaste
@@ -30,7 +29,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -44,13 +42,13 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import app.opentv.R
 import app.opentv.data.model.Source
 import app.opentv.data.model.SourceKind
 import app.opentv.isRunningOnTelevision
 import app.opentv.ui.SourcesViewModel
+import app.opentv.ui.channels.DeviceTextField
 
 /**
  * First-run setup.
@@ -179,74 +177,60 @@ fun AddSourceScreen(viewModel: SourcesViewModel, onFinished: () -> Unit, editing
 
             Spacer(Modifier.height(20.dp))
 
-            OutlinedTextField(
+            DeviceTextField(
                 value = name,
                 onValueChange = { name = it },
-                label = { Text(stringResource(R.string.epg_name_optional)) },
-                singleLine = true,
+                label = stringResource(R.string.epg_name_optional),
                 modifier = Modifier.fillMaxWidth(),
             )
             Spacer(Modifier.height(12.dp))
 
-            OutlinedTextField(
+            DeviceTextField(
                 value = url,
                 onValueChange = { url = it },
-                label = {
-                    Text(
-                        when (kind) {
-                            SourceKind.XTREAM -> stringResource(R.string.onboarding_server_address)
-                            SourceKind.M3U -> stringResource(R.string.onboarding_playlist_url)
-                            SourceKind.STALKER -> stringResource(R.string.onboarding_portal_url)
-                        },
-                    )
+                label = when (kind) {
+                    SourceKind.XTREAM -> stringResource(R.string.onboarding_server_address)
+                    SourceKind.M3U -> stringResource(R.string.onboarding_playlist_url)
+                    SourceKind.STALKER -> stringResource(R.string.onboarding_portal_url)
                 },
-                supportingText = {
-                    Text(
-                        when (kind) {
-                            SourceKind.XTREAM -> stringResource(R.string.onboarding_server_help)
-                            SourceKind.M3U -> stringResource(R.string.onboarding_playlist_help)
-                            SourceKind.STALKER -> stringResource(R.string.onboarding_portal_help)
-                        },
-                    )
+                supportingText = when (kind) {
+                    SourceKind.XTREAM -> stringResource(R.string.onboarding_server_help)
+                    SourceKind.M3U -> stringResource(R.string.onboarding_playlist_help)
+                    SourceKind.STALKER -> stringResource(R.string.onboarding_portal_help)
                 },
                 trailingIcon = { PasteButton { url += it } },
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
+                keyboardType = KeyboardType.Uri,
                 modifier = Modifier.fillMaxWidth(),
             )
 
             if (kind == SourceKind.XTREAM) {
                 Spacer(Modifier.height(12.dp))
-                OutlinedTextField(
+                DeviceTextField(
                     value = username,
                     onValueChange = { username = it },
-                    label = { Text(stringResource(R.string.recset_field_username)) },
+                    label = stringResource(R.string.recset_field_username),
                     trailingIcon = { PasteButton { username += it } },
-                    singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
                 Spacer(Modifier.height(12.dp))
-                OutlinedTextField(
+                DeviceTextField(
                     value = password,
                     onValueChange = { password = it },
-                    label = { Text(stringResource(R.string.recset_field_password)) },
+                    label = stringResource(R.string.recset_field_password),
                     trailingIcon = { PasteButton { password += it } },
-                    singleLine = true,
-                    visualTransformation = PasswordVisualTransformation(),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                    keyboardType = KeyboardType.Password,
                     modifier = Modifier.fillMaxWidth(),
                 )
             }
 
             if (kind == SourceKind.STALKER) {
                 Spacer(Modifier.height(12.dp))
-                OutlinedTextField(
+                DeviceTextField(
                     value = mac,
                     onValueChange = { mac = it },
-                    label = { Text(stringResource(R.string.onboarding_mac_address)) },
-                    supportingText = { Text(stringResource(R.string.onboarding_mac_help)) },
+                    label = stringResource(R.string.onboarding_mac_address),
+                    supportingText = stringResource(R.string.onboarding_mac_help),
                     trailingIcon = { PasteButton { mac += it } },
-                    singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
             }
@@ -266,25 +250,20 @@ fun AddSourceScreen(viewModel: SourcesViewModel, onFinished: () -> Unit, editing
 
             if (showAdvanced) {
                 Spacer(Modifier.height(12.dp))
-                OutlinedTextField(
+                DeviceTextField(
                     value = epgUrl,
                     onValueChange = { epgUrl = it },
-                    label = { Text(stringResource(R.string.onboarding_guide_url_optional)) },
-                    supportingText = {
-                        Text(stringResource(R.string.onboarding_guide_blank_help))
-                    },
-                    singleLine = true,
+                    label = stringResource(R.string.onboarding_guide_url_optional),
+                    supportingText = stringResource(R.string.onboarding_guide_blank_help),
+                    keyboardType = KeyboardType.Uri,
                     modifier = Modifier.fillMaxWidth(),
                 )
                 Spacer(Modifier.height(12.dp))
-                OutlinedTextField(
+                DeviceTextField(
                     value = userAgent,
                     onValueChange = { userAgent = it },
-                    label = { Text("User-Agent") },
-                    supportingText = {
-                        Text(stringResource(R.string.onboarding_user_agent_help))
-                    },
-                    singleLine = true,
+                    label = "User-Agent",
+                    supportingText = stringResource(R.string.onboarding_user_agent_help),
                     modifier = Modifier.fillMaxWidth(),
                 )
             }
