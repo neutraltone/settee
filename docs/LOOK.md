@@ -4,7 +4,7 @@ What Settee looks like and how it behaves on a TV. Build tickets point here, so 
 
 Designed for a Fire TV Stick at ten feet with a remote, on a 960 x 540 dp screen. Dark only. Phones and tablets are kept possible, but get no design of their own.
 
-**Provisional:** anything that moves or costs frames waits on the performance budget, which comes from measurements on a Stick. See [Motion and cost](#motion-and-cost).
+Anything that moves has to pass the performance budget in [Motion and cost](#motion-and-cost).
 
 ## Feel
 
@@ -129,8 +129,8 @@ Home, Live TV, Movies, Shows and Recordings, with Search at the top, and the Pro
 - **Closed:** icons only, 48 dp from the screen's edge with no panel behind them, on a 104 dp rail. The current tab stays marked.
 - **Open:** when the rail has the Highlight, the panel appears with a label for every item, and pushes the content along. The icons stay where they were. It closes when the Highlight leaves.
 - **Keys:** Left enters on the current tab, Right returns to the item left, OK on a tab moves the Highlight into it, and Back is unchanged.
-
-On a Stick, the push felt right but the slide stuttered. The performance budget decides whether the slide can be made smooth. If it can't, the fallback is the same push with no animation.
+- **Slides open and shut.** The panel slides while it draws, and the content beside it changes size only once, never on every frame. Animating the rail's width made the slide stutter on a Stick. Drawn this way, it ran at 8-12 ms a frame.
+- **Already open when a screen appears with the Highlight on it,** however it got there. Only the viewer's own move into the rail slides it open.
 
 ## Home
 
@@ -147,15 +147,17 @@ From the top: Live Preview only when live TV was the Profile's last playback, Co
 A backdrop with the highlighted title's name, status and synopsis over it, then rows of portrait covers.
 
 - **Opens:** on the first cover of the first row, which is where OK on the tab in the rail lands. There's no search bar, because Search is on the rail.
-- **Backdrop:** provisional. It changes on each press, and the budget decides whether it can. The fallback is one that doesn't change on each press.
+- **Backdrop:** changes once the Highlight has rested on a title for about 400 ms, not on each press, so moving quickly along a row doesn't load a backdrop for every title. Changing on each press cost a few frames on a Stick. Loading the new backdrop still costs something, and can land on the next press, so measure it again when it's built, including a press just after it changes.
 - **Gradient:** must move with the text. With the sidebar open, text today lands on the bright part of the backdrop and drops as low as 1.5:1, so this is a required fix.
 - **Rows:** "For you" keeps the tab's rows. There's no Popular row, because the app has no popularity data.
 - **Grids:** any other category opens its whole grid. Grids of thousands of titles haven't been measured, so measure them on a Stick.
 
 ## Categories Sidebar
 
-On Live TV, Movies and Shows. Tucked away until Left from the leftmost item opens it on the current category, so it adds no press on the way to a card. It pushes the content, and Right closes it.
+On Live TV, Movies and Shows. Tucked away until Left from the leftmost item opens it on the current category, so it adds no press on the way to a card. It slides open and pushes the content (on the guide, it may slide over it instead: see Sliding), and Right closes it.
 
+- **Picking a category** leaves the Highlight on it. Right then moves into the content and closes the sidebar.
+- **Sliding:** each tab has to pass the budget when it's built. Movies and Shows are built like Home, so a push should pass. Today's guide can't: moving it costs about 25 ms a frame. If the rebuilt guide still can't, the sidebar slides over the guide there instead of pushing it.
 - **Size:** 214 dp, with solid coral rows when highlighted and the current category in coral otherwise.
 - **Find a category:** a text field at the top. Typing a few letters narrows the list, and it shows how many of how many are showing.
 - **To fix:** Right lands on the nearest row, not the one the viewer left.
@@ -168,6 +170,7 @@ A hero with a full backdrop, title, status, synopsis, Resume and Favourite. A fi
 - **Season pills:** a row under the hero. Up from the episodes reaches them, and Down from the buttons passes them.
 - **Episodes:** a vertical list with the thumbnail on the left, showing status. Going into the list moves the hero away in one step, and going back up returns it.
 - **Season, never "series"** for part of a show. That includes "2 seasons" on cards.
+- **Artwork fades in** when it loads, rather than popping in, as long as that passes the budget.
 
 ## Player
 
@@ -211,17 +214,28 @@ One list, with Coming up, Recorded and Series links as headings. Recordings have
 
 ## Motion and cost
 
-Set by the performance budget ticket, from measurements on a Stick. Until then:
+Set from measurements on a Fire TV Stick (`AFTSS`) in [#156](https://github.com/neutraltone/settee/issues/156). The Stick is the device the budget is set on. Slower Android TV boxes aren't a target.
 
-- **Never:** blur, alpha-dimmed shelves or more than one glow.
+- **While anything moves,** its frames take under 16.7 ms, so 60 fps, on a release build.
+- **The first two frames after a press** may each take up to 50 ms: that's where the app reacts, such as the Highlight moving or a panel's labels appearing.
+- **One frame where the layout changes size** may also take up to 50 ms, such as the content resizing once at the end of the rail's slide.
+- **How to measure a movement:** time it frame by frame with `dumpsys gfxinfo <package> framestats`, one movement at a time, from the press until the last frame. Leave out the first two frames and the one resize frame, and the rest must all be under 16.7 ms. The app-wide summary in [PERFORMANCE.md](PERFORMANCE.md) mixes in press responses and idle frames, so it isn't the test. The rail passes this way: its slide frames took 8-12 ms.
+- **A new screen's first frame** comes within 300 ms.
+- **Anything that can't pass doesn't animate.** It goes straight to where it ends up. There's no slower animation as a middle ground.
+- **No limit on how many things move at once.** The budget applies to the whole screen while they move.
+- **Screen changes** dip through the background in about 300 ms: the old screen darkens, the screen swaps, and the new one comes up. Only one screen is drawn at a time, so it should cost about what drawing that screen does, but it hasn't been measured: measure it when it's built. Today's 700 ms crossfade drew both screens see-through and cost 21-45 ms a frame on the way back to Home.
+- **Presses during a dip go through.** They act on the new screen as soon as it's there, and are never dropped, so the dip doesn't make the viewer wait.
+- **Every screen draws a solid background,** so nothing behind it shows through. The one exception is where video plays (the players, the Live Preview): the picture sits behind the screen, so that area stays clear.
+- **Never:** blur, alpha-dimmed shelves, more than one glow, or two screens drawn see-through at once.
 - **Images:** decoded at tile size.
-- **Under review:** the screen fade, the rail's slide, the sidebar's slide, the changing backdrop, and the gradient on every card.
+- **The gradient on every card** costs nothing measurable.
 
 ## Known risks
 
 - **Printed titles:** real covers often carry their own title, which runs into ours. Nothing here fixes it yet, so try it with real artwork when `ArtCard` is built.
 - **Rows at the edge:** rows run to the screen's edge, so partly hidden text sits outside the margin.
 - **Colour:** everything so far was judged on a monitor. Check colour and legibility on a real TV.
+- **Back to Home is slow:** rebuilding Home takes 330-510 ms on a Stick, over the 300 ms budget for a new screen.
 
 ## What done means
 
@@ -250,3 +264,4 @@ Every screen ticket is done when:
 | [The remaining screens](https://github.com/neutraltone/settee/issues/152) | [`prototype/152-remaining`](https://github.com/neutraltone/settee/tree/prototype/152-remaining) |
 | [The logo](https://github.com/neutraltone/settee/issues/153) | [`prototype/153-identity`](https://github.com/neutraltone/settee/tree/prototype/153-identity) |
 | [How the build splits](https://github.com/neutraltone/settee/issues/155) | |
+| [The performance budget](https://github.com/neutraltone/settee/issues/156) | [`prototype/90-left-rail`](https://github.com/neutraltone/settee/tree/prototype/90-left-rail) |
