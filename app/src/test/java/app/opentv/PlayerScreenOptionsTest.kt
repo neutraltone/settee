@@ -120,7 +120,7 @@ class PlayerScreenOptionsTest {
     private fun waitInList(text: String) = compose.waitUntilAtLeastOneExists(inListMatcher(text), TIMEOUT_MILLIS)
 
     @Test
-    fun `Record now records the Channel's best Quality, whichever one is playing`() {
+    fun `Record now records the Quality that's playing`() {
         showPlaying("10", "ITV")
         openList()
         waitInList("● Record now")
@@ -132,7 +132,7 @@ class PlayerScreenOptionsTest {
             runBlocking { graph.recordingRepository.active() }.isNotEmpty()
         }
         val recording = runBlocking { graph.recordingRepository.active().single() }
-        assertThat(recording.channelId).isEqualTo(runBlocking { idOf("20") })
+        assertThat(recording.channelId).isEqualTo(runBlocking { idOf("10") })
     }
 
     @Test

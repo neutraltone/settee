@@ -44,6 +44,8 @@ import app.opentv.data.model.Reminder
 import app.opentv.data.model.Source
 import app.opentv.data.model.shownName
 import app.opentv.data.repo.MediaKey
+import app.opentv.data.repo.recordable
+import app.opentv.data.repo.toRecord
 import app.opentv.reminders.ReminderScheduler
 import app.opentv.ui.ChannelsViewModel
 import app.opentv.ui.options.LocalRecordingStarted
@@ -71,15 +73,21 @@ internal fun ProgrammeDialog(
     val graph = remember { ServiceLocator.get(context) }
     val recordingStarted = LocalRecordingStarted.current
     val channel = targetRow.primary
-    // Which quality actually gets recorded. Defaults to the best variant, but the user can pick
-    // (Sky Q's "record HD or SD"). Each variant channel carries its own stream URL, so the pick
-    // flows straight through to the capture. Only surfaced when the channel has more than one.
-    var chosenVariant by remember(targetRow.primary.id) { mutableStateOf(targetRow.channel.best) }
+    // Which quality actually gets recorded. Defaults to what plays here, but the user can pick from
+    // whatever else does (Sky Q's "record HD or SD"), so what's recorded can always be watched here.
+    // Each variant channel carries its own stream URL, so the pick flows straight through to the
+    // capture. Only surfaced when the channel has more than one.
+    var chosenVariant by remember(targetRow.primary.id) {
+        mutableStateOf(graph.channelLineup.toRecord(targetRow.channel))
+    }
     // Which provider records it, when this channel exists on more than one. Recording from a
     // second provider's account is what lets you keep watching on the first — the only real way
     // around a single-connection provider (something even TiviMate can't do).
     var sourceOptions by remember(channel.id) { mutableStateOf<List<Channel>>(emptyList()) }
-    LaunchedEffect(channel.id) { sourceOptions = targetRow.channel.bestPerSource(firstSourceId = channel.sourceId) }
+    val recordable = remember(targetRow.channel) { graph.channelLineup.recordable(targetRow.channel) }
+    LaunchedEffect(channel.id) {
+        sourceOptions = targetRow.channel.bestPerSource(firstSourceId = channel.sourceId, among = recordable)
+    }
     LaunchedEffect(sourceOptions) {
         if (sourceOptions.size > 1) {
             chosenVariant = sourceOptions.firstOrNull { it.sourceId == channel.sourceId } ?: sourceOptions.first()
@@ -113,7 +121,7 @@ internal fun ProgrammeDialog(
             Spacer(Modifier.height(16.dp))
 
             RecordFromChoice(
-                targetRow = targetRow,
+                qualities = targetRow.switchable.filter { it in recordable },
                 sourceOptions = sourceOptions,
                 sources = sources,
                 chosen = chosenVariant,
@@ -168,7 +176,11 @@ internal fun ProgrammeDialog(
             if (!isPast) ReminderActions(channel, programme, scope, onDismiss)
             RecordActionRow(stringResource(R.string.rec_record_series)) {
                 scope.launch {
-                    graph.recordingEngine.recordSeries(targetRow.channel.best, programme, targetRow.programmes)
+                    graph.recordingEngine.recordSeries(
+                        graph.channelLineup.toRecord(targetRow.channel),
+                        programme,
+                        targetRow.programmes,
+                    )
                 }
                 Toast.makeText(
                     context,
@@ -190,7 +202,7 @@ internal fun ProgrammeDialog(
 /** Which provider or Quality records it, when there's a choice. */
 @Composable
 private fun RecordFromChoice(
-    targetRow: ChannelsViewModel.Row,
+    qualities: List<Channel>,
     sourceOptions: List<Channel>,
     sources: List<Source>,
     chosen: Channel,
@@ -215,7 +227,7 @@ private fun RecordFromChoice(
             }
         }
         Spacer(Modifier.height(16.dp))
-    } else if (targetRow.switchable.size > 1) {
+    } else if (qualities.size > 1) {
         Text(
             stringResource(R.string.rec_quality_label),
             style = MaterialTheme.typography.labelMedium,
@@ -223,7 +235,7 @@ private fun RecordFromChoice(
         )
         Spacer(Modifier.height(6.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            targetRow.switchable.forEach { variant ->
+            qualities.forEach { variant ->
                 QualityChip(
                     label = variant.qualityLabel.ifBlank { stringResource(R.string.rec_quality_sd) },
                     selected = variant.id == chosen.id,

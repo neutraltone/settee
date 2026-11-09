@@ -30,7 +30,7 @@ import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
 /**
- * The guide's record button records a Channel's best Quality, though its preview plays the next one.
+ * The guide's record button records what this device can play, so it can always be watched here.
  * Robolectric lists no decoders, so here as on a 1080p Stick a Quality tagged 4K doesn't play by default.
  */
 @RunWith(RobolectricTestRunner::class)
@@ -55,8 +55,8 @@ class LiveScreenRecordTest {
     }
 
     @Test
-    fun `the record button records the best Quality and then offers to stop it`() {
-        val best = runBlocking { seedChannel() }
+    fun `the record button records the Quality this device plays and then offers to stop it`() {
+        val playable = runBlocking { seedChannel() }
         graph.settings.setGuidePreviewVideo(false)
 
         compose.setTvContent {
@@ -79,10 +79,10 @@ class LiveScreenRecordTest {
         }
 
         val recording = runBlocking { graph.recordingRepository.observeActive().first().single() }
-        assertThat(recording.channelId).isEqualTo(best)
+        assertThat(recording.channelId).isEqualTo(playable)
     }
 
-    /** One Channel with a 4K and an HD Quality; answers the 4K row's id. */
+    /** One Channel with a 4K and an HD Quality; answers the HD row's id. */
     private suspend fun seedChannel(): Long {
         val db = graph.database
         db.sources().insert(Source(id = 1, name = "Provider", kind = SourceKind.XTREAM, url = "http://example.com"))
@@ -101,7 +101,7 @@ class LiveScreenRecordTest {
         }
         db.channels().replaceCatalogue(1, rows, syncStamp = 1)
         graph.catalogRepository.renormalizeAll()
-        return db.channels().everyRow().single { it.name == "News 4K" }.id
+        return db.channels().everyRow().single { it.name == "News HD" }.id
     }
 
     private companion object {

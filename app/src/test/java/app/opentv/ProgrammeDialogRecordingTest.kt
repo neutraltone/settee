@@ -24,7 +24,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
-/** A Channel records its best Quality while it plays another, and the dialog has to see that recording (#184). */
+/** The dialog sees a recording on any of a Channel's Qualities, and only offers to record what plays here (#184). */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], qualifiers = TV_1080P, application = Application::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
@@ -33,7 +33,7 @@ class ProgrammeDialogRecordingTest {
     @get:Rule
     val compose = createComposeRule()
 
-    private fun quality(id: Long, name: String) = Channel(
+    private fun quality(id: Long, name: String, label: String = "") = Channel(
         id = id,
         sourceId = 1,
         streamId = "$id",
@@ -43,44 +43,67 @@ class ProgrammeDialogRecordingTest {
         epgChannelId = null,
         number = null,
         streamUrl = "https://example.com/$id.ts",
+        qualityLabel = label,
+        // A tag above what every device plays; Robolectric lists no decoders, as a low-end box lists few.
+        qualityRank = if (label == "4K") 400 else 0,
     )
 
-    @Test
-    fun `it offers to stop a recording of the best Quality, though another Quality plays`() {
-        val best = quality(4, "News 4K")
-        val playing = quality(2, "News HD")
-        val now = 1_000_000L
-        val recording = Recording(
-            id = 1,
-            channelId = best.id,
-            sourceId = 1,
-            channelName = "News",
-            title = "The News",
-            filePath = "/tmp/1.ts",
-            streamUrl = best.streamUrl,
-            status = RecordingStatus.RECORDING,
-        )
-
+    private fun show(row: ChannelsViewModel.Row, activeRecordings: List<Recording> = emptyList()) {
         compose.setTvContent {
             ProgrammeDialog(
-                targetRow = ChannelsViewModel.Row(LineupChannel(playing, listOf(best, playing))),
+                targetRow = row,
                 programme = Programme(
                     feedId = 1,
                     epgChannelId = "news",
-                    startUtcMillis = now - 1_000,
-                    endUtcMillis = now + 1_000,
+                    startUtcMillis = NOW - 1_000,
+                    endUtcMillis = NOW + 1_000,
                     title = "The News",
                 ),
-                nowMillis = now,
+                nowMillis = NOW,
                 sources = emptyList(),
-                activeRecordings = listOf(recording),
+                activeRecordings = activeRecordings,
                 scope = CoroutineScope(Dispatchers.Main.immediate),
                 onWatch = {},
                 onPlayCatchup = {},
                 onDismiss = {},
             )
         }
+    }
+
+    @Test
+    fun `it offers to stop a recording on another Quality than the one playing`() {
+        val other = quality(4, "News 4K")
+        val playing = quality(2, "News HD")
+        val recording = Recording(
+            id = 1,
+            channelId = other.id,
+            sourceId = 1,
+            channelName = "News",
+            title = "The News",
+            filePath = "/tmp/1.ts",
+            streamUrl = other.streamUrl,
+            status = RecordingStatus.RECORDING,
+        )
+
+        show(ChannelsViewModel.Row(LineupChannel(playing, listOf(other, playing))), listOf(recording))
 
         compose.onNodeWithText("■ Stop recording").assertExists()
+    }
+
+    @Test
+    fun `its Quality choice leaves out what's too big to play here`() {
+        val uhd = quality(4, "News 4K", "4K")
+        val fhd = quality(3, "News FHD", "FHD")
+        val hd = quality(2, "News HD", "HD")
+
+        show(ChannelsViewModel.Row(LineupChannel(fhd, listOf(uhd, fhd, hd))))
+
+        compose.onNodeWithText("FHD").assertExists()
+        compose.onNodeWithText("HD").assertExists()
+        compose.onNodeWithText("4K").assertDoesNotExist()
+    }
+
+    private companion object {
+        const val NOW = 1_000_000L
     }
 }

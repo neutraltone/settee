@@ -69,10 +69,7 @@ data class LineupChannel(
     /** Stable while the catalogue is: what a list keys this Channel by. */
     val key: String = primary.groupKey.ifEmpty { "#${primary.id}" },
 ) {
-    /**
-     * The best Quality whatever this device can play: what's recorded, since a recording may be
-     * watched elsewhere and nothing is decoded while it's made, and what another app is handed.
-     */
+    /** The best Quality whatever this device can play: what another app is handed, unlimited by its decoders. */
     val best: Channel get() = qualities.first()
 
     /**
@@ -93,8 +90,8 @@ data class LineupChannel(
      * [firstSourceId]'s first. With two providers a recording can run on one account while the
      * viewer keeps watching on the other, the only real way around a single-connection limit.
      */
-    fun bestPerSource(firstSourceId: Long): List<Channel> =
-        qualities.groupBy { it.sourceId }.values.map { it.first() }.sortedByDescending { it.sourceId == firstSourceId }
+    fun bestPerSource(firstSourceId: Long, among: List<Channel> = qualities): List<Channel> =
+        among.groupBy { it.sourceId }.values.map { it.first() }.sortedByDescending { it.sourceId == firstSourceId }
 
     /**
      * Every Quality's guide ids, best Quality's first, each most trustworthy first. Not [primary]'s
@@ -153,7 +150,7 @@ class ChannelLineup(
     private val favourites: Favourites,
     private val lockedKeys: StateFlow<Set<String>>,
     private val unlocked: StateFlow<Boolean>,
-    private val decoders: DecoderList,
+    internal val decoders: DecoderList,
     private val sharing: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default),
 ) {
     private val channelDao = db.channels()

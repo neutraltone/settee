@@ -249,7 +249,7 @@ class PlaybackSources(
 private suspend fun ChannelLineup.capturedFor(recording: Recording, db: OpenTvDatabase): Channel? {
     val picked = db.channels().byId(recording.channelId)
     if (picked == null || picked.sourceId == recording.sourceId) return picked
-    return channelOf(picked.id)?.qualities
+    return channelOf(picked.id)?.let { recordable(it) }
         ?.filter { it.sourceId == recording.sourceId }
         ?.maxByOrNull { it.qualityRank }
         // That copy has gone since: the channel the viewer picked is still worth recording.

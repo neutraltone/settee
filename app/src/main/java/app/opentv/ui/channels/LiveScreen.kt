@@ -66,6 +66,7 @@ import app.opentv.data.model.Channel
 import app.opentv.data.model.Programme
 import app.opentv.data.model.shownName
 import app.opentv.data.repo.MediaKey
+import app.opentv.data.repo.toRecord
 import app.opentv.player.PlayerController
 import app.opentv.ui.ChannelsViewModel
 import app.opentv.ui.options.LocalConfirmLive
@@ -356,7 +357,9 @@ fun LiveScreen(
                             Toast.LENGTH_SHORT,
                         ).show()
                     } else {
-                        recordScope.launch { graph.recordingEngine.startChannel(row.channel.best, row.now) }
+                        recordScope.launch {
+                            graph.recordingEngine.startChannel(graph.channelLineup.toRecord(row.channel), row.now)
+                        }
                         Toast.makeText(
                             context,
                             resources.getString(R.string.rec_recording_started_see_tab, row.primary.shownName),

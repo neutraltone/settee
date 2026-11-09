@@ -107,6 +107,7 @@ import app.opentv.data.model.Channel
 import app.opentv.data.model.shownName
 import app.opentv.data.repo.LineupChannel
 import app.opentv.data.repo.MediaKey
+import app.opentv.data.repo.toRecord
 import app.opentv.player.PlaybackQueue
 import app.opentv.player.PlayerController
 import app.opentv.player.SettledChannel
@@ -279,9 +280,10 @@ fun PlayerScreen(channelId: Long?, onBack: () -> Unit) {
         if (active != null) {
             graph.recordingEngine.stop(active.id)
         } else {
-            // Its best, not the one playing: nothing is decoded while recording, and it may be watched elsewhere.
-            val best = channel?.best ?: return
-            scope.launch { graph.recordingEngine.startChannel(best) }
+            // Every Quality, not just the switchable ones: the one playing is always among them.
+            val watching = channel ?: return
+            val playing = watching.qualities.firstOrNull { it.id == currentId } ?: return
+            scope.launch { graph.recordingEngine.startChannel(graph.channelLineup.toRecord(watching, playing)) }
             recordingStarted()
         }
     }
