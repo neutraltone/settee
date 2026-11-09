@@ -38,6 +38,11 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
@@ -61,6 +66,8 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import app.opentv.ui.CostPrototype
+import app.opentv.ui.CostVariant
 import app.opentv.core.AppSettings
 import app.opentv.core.ServiceLocator
 import app.opentv.data.repo.MediaKey
@@ -349,7 +356,17 @@ private fun OpenTvApp(isTelevision: Boolean, launchedToPlay: Boolean) {
 
     ItemOptionsHost(navigate = { destination -> navController.navigate(Routes.of(destination)) }) {
         Box(Modifier.fillMaxSize()) {
-            NavHost(navController = navController, startDestination = start) {
+            NavHost(
+                navController = navController,
+                startDestination = start,
+                // PROTOTYPE #156: Navigation's default is this 700 ms fade; NO_FADE measures without it.
+                enterTransition = {
+                    if (CostPrototype.variant == CostVariant.NO_FADE) EnterTransition.None else fadeIn(tween(700))
+                },
+                exitTransition = {
+                    if (CostPrototype.variant == CostVariant.NO_FADE) ExitTransition.None else fadeOut(tween(700))
+                },
+            ) {
                 composable(Routes.ADD_SOURCE) {
                     AddSourceScreen(
                         viewModel = sourcesViewModel,

@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -58,6 +59,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.graphicsLayer
@@ -67,6 +69,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import app.opentv.ui.CostPrototype
+import app.opentv.ui.CostVariant
 import app.opentv.R
 import app.opentv.data.model.Movie
 import app.opentv.data.model.Series
@@ -253,6 +257,15 @@ fun SeriesScreen(
         recentlyAdded.isNotEmpty() ||
         genreRows.isNotEmpty()
 
+    // PROTOTYPE #156: a full-size backdrop that follows the highlight, to measure what it costs.
+    if (CostPrototype.variant == CostVariant.BACKDROP) {
+        AsyncImage(
+            model = CostPrototype.backdropUrl,
+            contentDescription = null,
+            contentScale = ContentScale.Crop,
+            modifier = Modifier.fillMaxSize(),
+        )
+    }
     Column(Modifier.fillMaxSize()) {
         SearchAffordance(onOpenSearch)
         if (sources.size > 1) {
@@ -568,6 +581,9 @@ internal fun PosterCard(
     onOptions: (() -> Unit)? = null,
 ) {
     val cue = rememberFocusCue()
+    if (cue.focused && CostPrototype.variant == CostVariant.BACKDROP) { // PROTOTYPE #156
+        LaunchedEffect(posterUrl) { CostPrototype.backdropUrl = posterUrl }
+    }
     Column(
         modifier
             .width(POSTER_WIDTH)
@@ -590,6 +606,15 @@ internal fun PosterCard(
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.fillMaxSize(),
             )
+            if (CostPrototype.variant == CostVariant.GRADIENT) { // PROTOTYPE #156
+                Box(
+                    Modifier
+                        .align(Alignment.BottomCenter)
+                        .fillMaxWidth()
+                        .fillMaxHeight(0.45f)
+                        .background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.85f)))),
+                )
+            }
             rating?.takeIf { it > 0.0 }?.let {
                 Badge(
                     text = "★ ${formatRating(it)}",

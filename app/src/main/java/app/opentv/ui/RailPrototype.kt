@@ -88,6 +88,27 @@ enum class RailVariant(val label: String) {
     TODAY("Today: animated, pushes content"),
 }
 
+/**
+ * PROTOTYPE for #156: what the redesign's effects cost on a Stick, cycled with the remote's Play/Pause.
+ * Each is compared with TODAY. The gradient and backdrop are rough stand-ins for LOOK.md's, built only
+ * to be measured: the backdrop uses the poster when a title has no backdrop yet, since decoding a new
+ * full-screen image on each press is the cost in question either way.
+ */
+enum class CostVariant(val label: String) {
+    TODAY("today"),
+    GRADIENT("gradient on every card"),
+    BACKDROP("backdrop on Shows"),
+    NO_FADE("no screen fade"),
+}
+
+internal object CostPrototype {
+    // In memory only, so a restart is always TODAY.
+    var variant by mutableStateOf(CostVariant.TODAY)
+
+    /** The highlighted card's art, for the backdrop. */
+    var backdropUrl by mutableStateOf<String?>(null)
+}
+
 internal object RailPrototype {
     // In memory only, so a restart always opens on D, the one #156 is measuring.
     var variant by mutableStateOf(RailVariant.D)
@@ -110,6 +131,13 @@ internal fun RailPrototypeSwitcher(modifier: Modifier = Modifier, rail: @Composa
         modifier
             .fillMaxWidth()
             .onPreviewKeyEvent { event ->
+                if (event.key == Key.MediaPlayPause) {
+                    if (event.type == KeyEventType.KeyDown) {
+                        val costs = CostVariant.entries
+                        CostPrototype.variant = costs[(CostPrototype.variant.ordinal + 1) % costs.size]
+                    }
+                    return@onPreviewKeyEvent true
+                }
                 val step = when (event.key) {
                     Key.MediaFastForward -> 1
                     Key.MediaRewind -> -1
@@ -126,7 +154,7 @@ internal fun RailPrototypeSwitcher(modifier: Modifier = Modifier, rail: @Composa
         rail(RailPrototype.variant)
         if (BuildConfig.DEBUG) {
             Text(
-                "PROTOTYPE  ◀◀ ${RailPrototype.variant.label} ▶▶  focus in $focusIn",
+                "PROTOTYPE  ◀◀ ${RailPrototype.variant.label} ▶▶  ⏯ ${CostPrototype.variant.label}  focus in $focusIn",
                 color = Color.Black,
                 style = MaterialTheme.typography.labelLarge,
                 modifier = Modifier
