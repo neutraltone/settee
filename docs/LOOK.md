@@ -130,7 +130,7 @@ Home, Live TV, Movies, Shows and Recordings, with Search at the top, and the Pro
 - **Open:** when the rail has the Highlight, the panel appears with a label for every item, and pushes the content along. The icons stay where they were. It closes when the Highlight leaves.
 - **Keys:** Left enters on the current tab, Right returns to the item left, OK on a tab moves the Highlight into it, and Back is unchanged.
 
-Whether it slides or snaps open waits on the performance budget. If the slide costs too much, the fallback is the same push with no animation.
+On a Stick, the push felt right but the slide stuttered. The performance budget decides whether the slide can be made smooth. If it can't, the fallback is the same push with no animation.
 
 ## Home
 
@@ -146,6 +146,7 @@ From the top: Live Preview only when live TV was the Profile's last playback, Co
 
 A backdrop with the highlighted title's name, status and synopsis over it, then rows of portrait covers.
 
+- **Opens:** on the first cover of the first row, which is where OK on the tab in the rail lands. There's no search bar, because Search is on the rail.
 - **Backdrop:** provisional. It changes on each press, and the budget decides whether it can. The fallback is one that doesn't change on each press.
 - **Gradient:** must move with the text. With the sidebar open, text today lands on the bright part of the backdrop and drops as low as 1.5:1, so this is a required fix.
 - **Rows:** "For you" keeps the tab's rows. There's no Popular row, because the app has no popularity data.
