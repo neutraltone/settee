@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Notification small icon, written by tools/launcher-art/mark.py. Android draws only its alpha, so a
+  full-colour tile would be a blank square: this is the mark in one colour with the screen cut out.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <group
+        android:scaleX="0.222"
+        android:scaleY="0.222"
+        android:translateX="0.889"
+        android:translateY="1.389">
+        <path
+            android:strokeColor="#FFFFFFFF"
+            android:strokeWidth="4.5"
+            android:strokeLineCap="round"
+            android:pathData="M50,30L37,13M50,30L63,13" />
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:pathData="M32.5,11.5a4,4 0 1 0 8,0a4,4 0 1 0 -8,0z" />
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:pathData="M59.5,11.5a4,4 0 1 0 8,0a4,4 0 1 0 -8,0z" />
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:pathData="M17.5,74h4a2.5,2.5 0 0 1 2.5,2.5v9a2.5,2.5 0 0 1 -2.5,2.5h-4
+                              a2.5,2.5 0 0 1 -2.5,-2.5v-9a2.5,2.5 0 0 1 2.5,-2.5z" />
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:pathData="M78.5,74h4a2.5,2.5 0 0 1 2.5,2.5v9a2.5,2.5 0 0 1 -2.5,2.5h-4
+                              a2.5,2.5 0 0 1 -2.5,-2.5v-9a2.5,2.5 0 0 1 2.5,-2.5z" />
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:pathData="M17,45a12,12 0 0 0 -12,12v12a12,12 0 0 0 12,12a12,12 0 0 0 4,-0.686
+                              v-34.627a12,12 0 0 0 -4,-0.686z" />
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:pathData="M83,45a12,12 0 0 1 12,12v12a12,12 0 0 1 -12,12a12,12 0 0 1 -4,-0.686
+                              v-34.627a12,12 0 0 1 4,-0.686z" />
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:fillType="evenOdd"
+            android:pathData="M32,26h36a11,11 0 0 1 11,11v26h-58v-26a11,11 0 0 1 11,-11zM33,33h34
+                              a5,5 0 0 1 5,5v18a5,5 0 0 1 -5,5h-34a5,5 0 0 1 -5,-5v-18
+                              a5,5 0 0 1 5,-5z" />
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:fillType="evenOdd"
+            android:pathData="M16,62h68v19h-68zM32.75,67h34.5a1.75,1.75 0 0 1 1.75,1.75v0
+                              a1.75,1.75 0 0 1 -1.75,1.75h-34.5a1.75,1.75 0 0 1 -1.75,-1.75v0
+                              a1.75,1.75 0 0 1 1.75,-1.75z" />
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:pathData="M34.1,45a4.4,4.4 0 1 0 8.8,0a4.4,4.4 0 1 0 -8.8,0z" />
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:pathData="M57.1,45a4.4,4.4 0 1 0 8.8,0a4.4,4.4 0 1 0 -8.8,0z" />
+        <path
+            android:strokeColor="#FFFFFFFF"
+            android:strokeWidth="3.4"
+            android:strokeLineCap="round"
+            android:pathData="M45,50Q50,55 55,50" />
+    </group>
+</vector>

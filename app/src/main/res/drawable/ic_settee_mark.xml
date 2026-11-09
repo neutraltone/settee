@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Settee's mark in its coral tile at 74%, as the app icon draws it, written by
+  tools/launcher-art/mark.py.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="48dp"
+    android:height="48dp"
+    android:viewportWidth="100"
+    android:viewportHeight="100">
+    <path
+        android:fillColor="@color/settee_coral"
+        android:pathData="M22,0h56a22,22 0 0 1 22,22v56a22,22 0 0 1 -22,22h-56a22,22 0 0 1 -22,-22
+                          v-56a22,22 0 0 1 22,-22z" />
+    <group
+        android:scaleX="0.74"
+        android:scaleY="0.74"
+        android:translateX="13"
+        android:translateY="13">
+        <path
+            android:strokeColor="@color/settee_plum"
+            android:strokeWidth="4.5"
+            android:strokeLineCap="round"
+            android:pathData="M50,30L37,13M50,30L63,13" />
+        <path
+            android:fillColor="@color/settee_plum"
+            android:pathData="M32.5,11.5a4,4 0 1 0 8,0a4,4 0 1 0 -8,0z" />
+        <path
+            android:fillColor="@color/settee_plum"
+            android:pathData="M59.5,11.5a4,4 0 1 0 8,0a4,4 0 1 0 -8,0z" />
+        <path
+            android:fillColor="@color/settee_plum"
+            android:pathData="M17.5,74h4a2.5,2.5 0 0 1 2.5,2.5v9a2.5,2.5 0 0 1 -2.5,2.5h-4
+                              a2.5,2.5 0 0 1 -2.5,-2.5v-9a2.5,2.5 0 0 1 2.5,-2.5z" />
+        <path
+            android:fillColor="@color/settee_plum"
+            android:pathData="M78.5,74h4a2.5,2.5 0 0 1 2.5,2.5v9a2.5,2.5 0 0 1 -2.5,2.5h-4
+                              a2.5,2.5 0 0 1 -2.5,-2.5v-9a2.5,2.5 0 0 1 2.5,-2.5z" />
+        <path
+            android:fillColor="@color/settee_plum"
+            android:pathData="M32,26h36a11,11 0 0 1 11,11v30a11,11 0 0 1 -11,11h-36
+                              a11,11 0 0 1 -11,-11v-30a11,11 0 0 1 11,-11z" />
+        <path
+            android:fillColor="@color/settee_plum"
+            android:pathData="M17,45h0a12,12 0 0 1 12,12v12a12,12 0 0 1 -12,12h0a12,12 0 0 1 -12,-12
+                              v-12a12,12 0 0 1 12,-12z" />
+        <path
+            android:fillColor="@color/settee_plum"
+            android:pathData="M83,45h0a12,12 0 0 1 12,12v12a12,12 0 0 1 -12,12h0a12,12 0 0 1 -12,-12
+                              v-12a12,12 0 0 1 12,-12z" />
+        <path
+            android:fillColor="@color/settee_plum"
+            android:pathData="M16,62h68v19h-68z" />
+        <path
+            android:fillColor="@color/settee_coral"
+            android:pathData="M33,33h34a5,5 0 0 1 5,5v18a5,5 0 0 1 -5,5h-34a5,5 0 0 1 -5,-5v-18
+                              a5,5 0 0 1 5,-5z" />
+        <path
+            android:fillColor="@color/settee_plum"
+            android:pathData="M34.1,45a4.4,4.4 0 1 0 8.8,0a4.4,4.4 0 1 0 -8.8,0z" />
+        <path
+            android:fillColor="@color/settee_plum"
+            android:pathData="M57.1,45a4.4,4.4 0 1 0 8.8,0a4.4,4.4 0 1 0 -8.8,0z" />
+        <path
+            android:strokeColor="@color/settee_plum"
+            android:strokeWidth="3.4"
+            android:strokeLineCap="round"
+            android:pathData="M45,50Q50,55 55,50" />
+        <path
+            android:fillColor="@color/settee_coral"
+            android:pathData="M32.75,67h34.5a1.75,1.75 0 0 1 1.75,1.75v0a1.75,1.75 0 0 1 -1.75,1.75
+                              h-34.5a1.75,1.75 0 0 1 -1.75,-1.75v0a1.75,1.75 0 0 1 1.75,-1.75z" />
+    </group>
+</vector>

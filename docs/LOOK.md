@@ -57,10 +57,10 @@ Check each against what the app can actually tell.
 
 A settee that's also a TV: its back is the screen, with an old TV's aerials on top and a tiny, cute face on the screen. It always sits in its coral tile, in plum on coral, including on Settee's own dark background.
 
-- **App icon:** the mark on coral, for rounded, round and square launchers. API 24-25 has no adaptive icons, so it needs a PNG fallback.
-- **TV banner:** 320 x 180 on coral, the mark beside "Settee" in Young Serif. It must carry the name. Use a PNG, since whether the Fire OS launcher renders a vector banner is unchecked.
+- **App icon:** the mark on coral, for rounded, round and square launchers. API 24-25 has no adaptive icons, so it needs a PNG fallback. On a Fire TV this is the tile people see: Fire TV Home draws a sideloaded app's icon on a grey tile and ignores its banner (checked on the Stick against TiviMate; Appstore apps such as Downloader get full tiles from Amazon's listing).
+- **TV banner:** 320 x 180 on coral, the mark beside "Settee" in Young Serif. It must carry the name. It's a PNG, for the Android TV and Google TV launchers that show banners.
 - **With the name on a dark screen:** the tile beside the name in cream.
-- **Artwork:** start from [the SVG on the prototype branch](https://github.com/neutraltone/settee/blob/prototype/153-identity/prototype-screenshots/153-identity/settee-icon.svg). Draw "Settee" as shapes, not live text.
+- **Artwork:** `tools/launcher-art/mark.py` writes every copy of the mark from [the prototype's SVG](https://github.com/neutraltone/settee/blob/prototype/153-identity/prototype-screenshots/153-identity/settee-icon.svg), and "Settee" is drawn as shapes, not live text (`outline_wordmark.py`). Change the artwork there and run `tools/render-launcher-art.sh`.
 
 ## Tokens
 
