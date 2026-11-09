@@ -38,15 +38,15 @@ _Avoid_: Source on its own, feed
 Fetching a provider's channels, movies, shows and guide again and merging them into what's on the device. It never wipes what the viewer set: hidden channels, custom names, Favourites and progress all carry across. Runs every six hours, when the viewer asks, when a provider is added, and when Movies or Shows is opened and that provider's titles are more than 12 hours old.
 _Avoid_: Sync (that's between the viewer's devices), reload, update
 
+**Quality**:
+One provider's stream of a Channel or Movie, such as HD, FHD or 4K. The highest one this device can play is the one that plays by default. A Channel's Qualities are the same wherever it's shown.
+_Avoid_: Variant (in user-facing text), feed
+
 ## Live TV
 
 **Channel**:
 A live station the viewer can watch, however many qualities or providers carry it. Rows with the same name and region fold into one Channel. A row with no region joins the one regional Channel of its name, if there's only one.
 _Avoid_: Stream, row
-
-**Quality**:
-One provider's stream of a Channel, such as HD, FHD or 4K. A Channel's Qualities are the same wherever it's shown.
-_Avoid_: Variant (in user-facing text), feed
 
 **Parental Lock**:
 Categories hidden on this device, for every Profile on it, from everywhere viewers browse and play, but not from the management screens. A PIN guards the setting; entering it shows them until the app closes. A lock spreads to the viewer's other devices when they sync; an unlock stays on the device it was made on.
