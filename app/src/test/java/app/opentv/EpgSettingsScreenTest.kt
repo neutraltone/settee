@@ -8,10 +8,14 @@ package app.opentv
 import android.text.InputType
 import android.view.View
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.test.hasScrollToNodeAction
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
-import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performScrollToNode
+import app.opentv.data.repo.EpgRepository
 import app.opentv.ui.settings.EpgSettingsScreen
 import com.google.common.truth.Truth.assertThat
 import org.junit.Rule
@@ -40,7 +44,13 @@ class EpgSettingsScreenTest {
             EpgSettingsScreen(onBack = {})
         }
 
-        compose.onNodeWithText("Add your own guide (XMLTV URL)").performScrollTo().performClick()
+        // The free guides arrive one at a time after the first frame, each pushing the form further
+        // down the list. Opened before they're all in, it ends up off screen with nothing to type into.
+        val lastGuide = EpgRepository.BUILT_IN_FEEDS.last().first
+        compose.waitUntil { compose.onAllNodesWithText(lastGuide).fetchSemanticsNodes().isNotEmpty() }
+        compose.waitForIdle()
+        compose.onNode(hasScrollToNodeAction()).performScrollToNode(hasText("Add your own guide (XMLTV URL)"))
+        compose.onNodeWithText("Add your own guide (XMLTV URL)").performClick()
         val (info, _) = device.connection(device.box(URL))
         captureScreen("epg_settings_add_own")
 
