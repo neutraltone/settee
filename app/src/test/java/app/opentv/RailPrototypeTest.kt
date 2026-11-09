@@ -49,7 +49,7 @@ import org.robolectric.ParameterizedRobolectricTestRunner
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
-// PROTOTYPE for #90: checks that A and B keep the focus rules, and renders them for comparison.
+// PROTOTYPE for #90: checks that A, B, C and D keep the focus rules, and renders them for comparison.
 @RunWith(ParameterizedRobolectricTestRunner::class)
 @Config(sdk = [34], qualifiers = TV_1080P, application = android.app.Application::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
@@ -68,7 +68,7 @@ class RailPrototypeTest(private val variant: RailVariant) {
 
     @After
     fun resetVariant() {
-        RailPrototype.variant = RailVariant.C
+        RailPrototype.variant = RailVariant.D
     }
 
     private fun setShell() {
@@ -240,6 +240,6 @@ class RailPrototypeTest(private val variant: RailVariant) {
     companion object {
         @JvmStatic
         @ParameterizedRobolectricTestRunner.Parameters(name = "{0}")
-        fun variants() = listOf(arrayOf(RailVariant.A), arrayOf(RailVariant.B), arrayOf(RailVariant.C))
+        fun variants() = listOf(RailVariant.A, RailVariant.B, RailVariant.C, RailVariant.D).map { arrayOf(it) }
     }
 }

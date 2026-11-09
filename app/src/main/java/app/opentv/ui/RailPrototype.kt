@@ -6,6 +6,7 @@
 package app.opentv.ui
 
 import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -33,6 +34,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -43,12 +45,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.clipRect
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
@@ -79,12 +84,13 @@ enum class RailVariant(val label: String) {
     A("A: snaps open over content"),
     B("B: always open"),
     C("C: slides open, pushes content"),
+    D("D: C's push, slid without re-measuring"),
     TODAY("Today: animated, pushes content"),
 }
 
 internal object RailPrototype {
-    // In memory only, so a restart always opens on C.
-    var variant by mutableStateOf(RailVariant.C)
+    // In memory only, so a restart always opens on D, the one #156 is measuring.
+    var variant by mutableStateOf(RailVariant.D)
 }
 
 // #86 keeps focused items inside a 5% overscan margin: 48dp across and 27dp down at 960x540dp.
@@ -248,6 +254,78 @@ internal fun SlidingPushShell(
         ContentArea(railReturn, contentFocus, Modifier.weight(1f)) {
             content(current, !railFocused || entry.entering) { runCatching { currentItem.requestFocus() } }
         }
+    }
+}
+
+/**
+ * D, for #156: C's push, but nothing re-measures while it slides. C animates the rail's width, so the
+ * content beside it (the guide, Home's rows) is measured again on every frame of the slide.
+ *
+ * Here the rail lays out at its full width the moment the highlight enters and is clipped to the
+ * sliding edge as it draws. The content keeps its width for the whole slide and is moved by
+ * translationX, which only redraws. It resizes once: at the end of opening, and at the start of closing.
+ * Either way its right edge stays at or beyond the screen's, so the slide never shows a gap there.
+ * Only the rail's own few items re-measure, once, when it opens or finishes closing.
+ */
+@Composable
+internal fun DrawnPushShell(
+    tabs: List<Tab>,
+    current: Tab,
+    onSelect: (Tab) -> Unit,
+    onOpenSearch: () -> Unit,
+    onOpenSettings: () -> Unit,
+    onOpenProfiles: () -> Unit,
+    activeProfileName: String,
+    content: @Composable (tab: Tab, takeFocus: Boolean, onNothingToShow: () -> Unit) -> Unit,
+) {
+    var railFocused by remember { mutableStateOf(false) }
+    val currentItem = remember { FocusRequester() }
+    val railReturn = remember(current) { RailReturn() }
+    val contentFocus = remember { FocusRequester() }
+    val entry = remember { RailEntry() }
+    EnterContentAfterPick(entry, railFocused, railReturn, contentFocus)
+    // 0 closed, 1 open. Read only in draw and layer blocks and through derivedStateOf, so a frame of the
+    // slide never recomposes or re-measures anything.
+    val open by animateFloatAsState(if (railFocused) 1f else 0f, label = "railSlide")
+    val fullyOpen by remember { derivedStateOf { open >= 1f } }
+    val partlyOpen by remember { derivedStateOf { open > 0f } }
+    // Opening, the content keeps the closed layout until the rail is all the way out; closing, it takes
+    // the closed layout straight away.
+    val contentLaidOutOpen = railFocused && fullyOpen
+    // Kept open while closing so the panel and labels slide away instead of vanishing first.
+    val railLaidOutOpen = railFocused || partlyOpen
+    val travel = EXPANDED - COLLAPSED
+    Box(Modifier.fillMaxSize()) {
+        ContentArea(
+            railReturn,
+            contentFocus,
+            Modifier
+                .padding(start = if (contentLaidOutOpen) EXPANDED else COLLAPSED)
+                .graphicsLayer {
+                    val settled = if (contentLaidOutOpen) travel.toPx() else 0f
+                    translationX = open * travel.toPx() - settled
+                },
+        ) {
+            content(current, !railFocused || entry.entering) { runCatching { currentItem.requestFocus() } }
+        }
+        PrototypeRail(
+            tabs, current, { tab ->
+                entry.pick(tab, current)
+                onSelect(tab)
+            }, onOpenSearch, onOpenSettings, onOpenProfiles, activeProfileName,
+            expanded = railLaidOutOpen,
+            currentItem = currentItem,
+            railReturn = railReturn,
+            entry = entry,
+            // Drawn last, over the content's left edge while it slides. Opaque, as #85 requires.
+            modifier = Modifier
+                .zIndex(1f)
+                .width(if (railLaidOutOpen) EXPANDED else COLLAPSED)
+                .drawWithContent {
+                    clipRect(right = (COLLAPSED + travel * open).toPx()) { this@drawWithContent.drawContent() }
+                }
+                .onFocusChanged { railFocused = it.hasFocus },
+        )
     }
 }
 
