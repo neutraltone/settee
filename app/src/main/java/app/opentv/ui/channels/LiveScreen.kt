@@ -8,6 +8,7 @@ package app.opentv.ui.channels
 import android.view.WindowManager
 import android.widget.Toast
 import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -35,6 +36,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -45,6 +47,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.graphics.drawscope.clipRect
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.zIndex
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalContext
@@ -68,6 +74,8 @@ import app.opentv.data.model.shownName
 import app.opentv.data.repo.MediaKey
 import app.opentv.data.repo.toRecord
 import app.opentv.player.PlayerController
+import app.opentv.ui.RailPrototype
+import app.opentv.ui.RailVariant
 import app.opentv.ui.railReturnTarget
 import app.opentv.ui.ChannelsViewModel
 import app.opentv.ui.options.LocalConfirmLive
@@ -142,7 +150,7 @@ fun LiveScreen(
     // leftmost (channel) column slides it back and drops focus on the selected category.
     var railExpanded by remember { mutableStateOf(true) }
     val railWidth by animateDpAsState(
-        targetValue = if (railExpanded) 240.dp else 0.dp,
+        targetValue = if (railExpanded) SIDEBAR_WIDTH else 0.dp,
         label = "railWidth",
     )
     val railFocusRequester = remember { FocusRequester() }
@@ -245,16 +253,45 @@ fun LiveScreen(
         previewController.play(PlayerController.Request(MediaKey.Live(row.primary.id)), debounce = true)
     }
 
-    Row(Modifier.fillMaxSize()) {
+    // PROTOTYPE #156: with rail D, the sidebar slides the same way, without re-measuring. Animating
+    // its width (the other rails) re-measures the guide and resizes the preview on every frame. Here
+    // the sidebar is laid out at full width and clipped as it draws, and the guide keeps its width and
+    // is moved by translationX, resizing once: at the end of opening and the start of closing.
+    val drawnSlide = RailPrototype.variant == RailVariant.D
+    val open by animateFloatAsState(if (railExpanded) 1f else 0f, label = "sidebarSlide")
+    val fullyOpen by remember { derivedStateOf { open >= 1f } }
+    val partlyOpen by remember { derivedStateOf { open > 0f } }
+    val guideLaidOutOpen = railExpanded && fullyOpen
+    val sidebarLaidOutOpen = railExpanded || partlyOpen
+    val guideModifier = if (drawnSlide) {
+        Modifier
+            .padding(start = if (guideLaidOutOpen) SIDEBAR_WIDTH else 0.dp)
+            .graphicsLayer {
+                val settled = if (guideLaidOutOpen) SIDEBAR_WIDTH.toPx() else 0f
+                translationX = open * SIDEBAR_WIDTH.toPx() - settled
+                // Drawing the guide into one offscreen image while it slides was tried (#156) and
+                // made no difference on a Stick: about 25 ms a frame either way.
+            }
+    } else {
+        Modifier.padding(start = railWidth)
+    }
+    val sidebarModifier = if (drawnSlide) {
+        Modifier
+            .zIndex(1f)
+            .width(if (sidebarLaidOutOpen) SIDEBAR_WIDTH else 0.dp)
+            .drawWithContent { clipRect(right = (SIDEBAR_WIDTH * open).toPx()) { this@drawWithContent.drawContent() } }
+    } else {
+        Modifier.width(railWidth).clipToBounds()
+    }
+
+    Box(Modifier.fillMaxSize()) {
         // ---- Category rail -----------------------------------------------------------------
-        // Width animates to 0 while focus is in the guide (see onFocusRow) so the grid gets the
-        // whole screen; d-pad LEFT from the guide's channel column slides it back (onExitLeft…).
+        // Slides shut while focus is in the guide (see onFocusRow) so the grid gets the whole
+        // screen; d-pad LEFT from the guide's channel column slides it back (onExitLeft…).
         Column(
-            Modifier
-                .width(railWidth)
+            sidebarModifier
                 .fillMaxHeight()
                 .background(MaterialTheme.colorScheme.surface)
-                .clipToBounds()
                 .padding(vertical = 16.dp),
         ) {
             Text(
@@ -328,7 +365,7 @@ fun LiveScreen(
         }
 
         // ---- Preview + guide ---------------------------------------------------------------
-        Column(Modifier.weight(1f)) {
+        Column(Modifier.fillMaxSize().then(guideModifier)) {
             if (rows.isEmpty()) {
                 when {
                     favouritesOnly -> NoFavouritesState()
@@ -600,6 +637,8 @@ private fun EmptyState(onAddSource: () -> Unit) {
 }
 
 /** UTC in the database, device zone on screen. Converted here and nowhere else. */
+private val SIDEBAR_WIDTH = 240.dp
+
 private val timeFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
 
 internal fun formatTime(utcMillis: Long): String = timeFormat.format(Date(utcMillis))
