@@ -164,6 +164,22 @@ data class Channel(
         get() = listOfNotNull(epgOverrideId, epgChannelId, matchedEpgId)
 }
 
+/** The part of a [Channel] the guide matcher reads. */
+data class ChannelMatchInput(
+    val id: Long,
+    val groupKey: String,
+    val epgChannelId: String?,
+    val matchedEpgId: String?,
+    val epgOverrideId: String?,
+) {
+    /** The same ids as [Channel.epgCandidates]. */
+    val epgCandidates: List<String>
+        get() = listOfNotNull(epgOverrideId, epgChannelId, matchedEpgId)
+}
+
+/** A guide match to save on the [Channel] with this [id]. */
+data class ChannelEpgMatch(val id: Long, val matchedEpgId: String?)
+
 /** What the UI should show for a channel: the user's rename if set, else the cleaned display name. */
 val Channel.shownName: String get() = customName?.takeIf { it.isNotBlank() } ?: displayName
 
@@ -330,6 +346,11 @@ data class Series(
     val latestAirDate: Long? = null,
 )
 
+/** A series by what identifies it across a catalogue refresh: its source and the provider's id. */
+data class SeriesRef(val sourceId: Long, val seriesId: String)
+
+val Series.ref: SeriesRef get() = SeriesRef(sourceId, seriesId)
+
 @Entity(
     tableName = "episodes",
     indices = [
@@ -421,9 +442,20 @@ data class LivePlayback(
  * title a new row, and Xtream stream URLs change with the live format and the account password.
  * Provider ids alone repeat across providers, and a source's name is what another device knows
  * it by when syncing. Read and written only through ViewerLibrary.
+ *
+ * An unstarred one stays as a row marked [removed], for as long as its Profile exists. Dropping the
+ * row by age would let a dead device's NAS file bring the Favourite back (ADR 0005). Zero
+ * [changedAtMillis] means no time is known, as from a bundle that had none.
  */
 @Entity(tableName = "favourites", primaryKeys = ["profileId", "kind", "source", "itemId"])
-data class Favourite(val profileId: Long, val kind: StreamKind, val source: String, val itemId: String)
+data class Favourite(
+    val profileId: Long,
+    val kind: StreamKind,
+    val source: String,
+    val itemId: String,
+    val changedAtMillis: Long = 0,
+    val removed: Boolean = false,
+)
 
 /**
  * A search one Profile made and then opened a result from, kept on this device only: it says what
@@ -441,9 +473,28 @@ data class RecentSearch(val profileId: Long, val text: String, val searchedAtMil
 @Entity(tableName = "profile_settings", primaryKeys = ["profileId", "name"])
 data class ProfileSetting(val profileId: Long, val name: String, val value: String, val updatedAtMillis: Long)
 
-/** A local viewing profile — just a name. No account, no password; it lives on this device. */
+/**
+ * A local viewing profile — just a name. No account, no password; it lives on this device.
+ * [namedAtMillis] is when it deliberately took that name, so a rename of an older Profile with the
+ * same name can tell this isn't the one it means. Zero for one that only arrived by sync.
+ */
 @Entity(tableName = "profiles")
-data class Profile(@PrimaryKey(autoGenerate = true) val id: Long = 0, val name: String, val createdAtMillis: Long = 0)
+data class Profile(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val name: String,
+    val createdAtMillis: Long = 0,
+    val namedAtMillis: Long = 0,
+)
+
+/**
+ * When a viewer last hid or showed a channel, so the newest change wins across devices. A table of
+ * its own, by source name and the provider's id (ADR 0004), not columns on `channels`: a Catalogue
+ * Refresh deletes a row the provider stopped listing, and with it the time, which would let an old
+ * NAS file undo the change when the channel returned. A separator row the parser hid has no row
+ * here, so it doesn't travel as a viewer's change.
+ */
+@Entity(tableName = "channel_hidden_changes", primaryKeys = ["source", "streamId"])
+data class ChannelHiddenChange(val source: String, val streamId: String, val hidden: Boolean, val changedAtMillis: Long)
 
 /** Where a recording is in its lifecycle. */
 enum class RecordingStatus {

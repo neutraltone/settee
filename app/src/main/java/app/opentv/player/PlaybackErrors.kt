@@ -6,7 +6,6 @@
 package app.opentv.player
 
 import android.content.Context
-import android.util.Log
 import androidx.annotation.OptIn
 import androidx.annotation.StringRes
 import androidx.media3.common.Format
@@ -15,8 +14,6 @@ import androidx.media3.common.PlaybackException
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.HttpDataSource
 import androidx.media3.exoplayer.ExoPlaybackException
-import androidx.media3.exoplayer.analytics.AnalyticsListener
-import androidx.media3.exoplayer.mediacodec.MediaCodecRenderer
 import app.opentv.R
 import app.opentv.data.repo.Playable
 import java.net.SocketTimeoutException
@@ -37,6 +34,12 @@ object PlaybackErrors {
         is HttpDataSource.InvalidResponseCodeException -> describeHttpStatus(cause.responseCode)
         is UnknownHostException -> "Can't reach the server. Check this device is online and the address is right."
         is SocketTimeoutException -> "The server stopped responding. It may be overloaded — try again in a moment."
+        // Checked before the error code: Media3 reports it as a source error with an IO code,
+        // which would read as a network fault when the stream is simply too big for this device.
+        else if isOutOfMemory(error) ->
+            context.getString(R.string.playback_out_of_memory) + " " +
+                context.getString(R.string.playback_try_other_quality)
+
         else -> describeErrorCode(context, error)
     }
 
@@ -71,66 +74,25 @@ object PlaybackErrors {
         else -> "Playback failed (${error.errorCodeName})."
     }
 
+    /** Why a video that [DecoderList.refuses] won't play: no other quality or Retry is on offer here. */
+    fun tooBig(context: Context, format: Format): String =
+        context.getString(R.string.playback_video_too_big, format.displayNameAndSize)
+
+    /** Why a video whose decoder started and showed nothing has stopped; [format] is null if it never said. */
+    fun noFirstFrame(context: Context, format: Format?): String = context.getString(
+        R.string.playback_no_first_frame,
+        format?.displayNameAndSize ?: context.getString(R.string.player_unknown_format),
+    )
+
     /**
      * Whether this stream's format is the problem, so trying it again can't help. A decoder failing
      * partway through isn't counted: one bad frame in a stream is worth a restart.
      */
     fun isUnplayableFormat(error: PlaybackException): Boolean = error.errorCode in UNPLAYABLE_FORMATS
 
-    /**
-     * Logs what a decoder failed on. Built from named fields rather than the exception or
-     * [Format.toString], either of which can carry the stream's address, and with it the credentials.
-     */
-    fun logDecoderFailure(error: PlaybackException) {
-        if (error.errorCode !in DECODER_FAILURES) return
-        val failure = error as? ExoPlaybackException
-        val format = failure?.rendererFormat
-        val details = format?.takeIf { MimeTypes.isAudio(it.sampleMimeType) }
-            ?.let { "channels=${it.channelCount} sampleRate=${it.sampleRate}" }
-            ?: "size=${format?.width}x${format?.height} bitDepth=${format?.bitDepth}"
-        Log.w(
-            TAG,
-            "${error.errorCodeName}: ${format?.sampleMimeType} codecs=${format?.codecs} $details " +
-                "renderer=${failure?.rendererName} decoder=${decoderNameOf(error.cause)}",
-        )
-    }
-
-    /**
-     * Logs each decoder as it starts or fails to. Fallback recovers without an error reaching the
-     * player, so this is the only record of which decoder ended up playing.
-     */
-    val decoderLog = object : AnalyticsListener {
-        override fun onVideoDecoderInitialized(
-            eventTime: AnalyticsListener.EventTime,
-            decoderName: String,
-            initializedTimestampMs: Long,
-            initializationDurationMs: Long,
-        ) = logStarted(decoderName)
-
-        override fun onAudioDecoderInitialized(
-            eventTime: AnalyticsListener.EventTime,
-            decoderName: String,
-            initializedTimestampMs: Long,
-            initializationDurationMs: Long,
-        ) = logStarted(decoderName)
-
-        override fun onVideoCodecError(eventTime: AnalyticsListener.EventTime, videoCodecError: Exception) =
-            logWontStart(videoCodecError)
-
-        override fun onAudioCodecError(eventTime: AnalyticsListener.EventTime, audioCodecError: Exception) =
-            logWontStart(audioCodecError)
-    }
-
-    private fun logStarted(decoderName: String) {
-        Log.i(TAG, "Decoder started: $decoderName")
-    }
-
-    private fun logWontStart(error: Exception) {
-        decoderNameOf(error)?.let { Log.w(TAG, "Decoder wouldn't start: $it") }
-    }
-
-    private fun decoderNameOf(error: Throwable?): String? =
-        (error as? MediaCodecRenderer.DecoderInitializationException)?.codecInfo?.name
+    /** Whether the app ran out of memory, however deep the loader and player wrapped it. */
+    fun isOutOfMemory(error: PlaybackException): Boolean =
+        generateSequence<Throwable>(error) { it.cause }.take(MAX_CAUSE_DEPTH).any { it is OutOfMemoryError }
 
     private fun describeUnplayable(context: Context, format: Format?, suggestQuality: Boolean = false): String {
         val mimeType = format?.sampleMimeType ?: return context.getString(R.string.playback_format_unsupported)
@@ -174,14 +136,13 @@ object PlaybackErrors {
         else -> "The server returned HTTP $code."
     }
 
-    private const val TAG = "OpenTV"
+    /** Far deeper than Media3 wraps anything, and stops a cause that loops back on itself. */
+    private const val MAX_CAUSE_DEPTH = 10
 
-    private val UNPLAYABLE_FORMATS = setOf(
+    internal val UNPLAYABLE_FORMATS = setOf(
         PlaybackException.ERROR_CODE_DECODER_INIT_FAILED,
         PlaybackException.ERROR_CODE_DECODER_QUERY_FAILED,
         PlaybackException.ERROR_CODE_DECODING_FORMAT_EXCEEDS_CAPABILITIES,
         PlaybackException.ERROR_CODE_DECODING_FORMAT_UNSUPPORTED,
     )
-
-    private val DECODER_FAILURES = UNPLAYABLE_FORMATS + PlaybackException.ERROR_CODE_DECODING_FAILED
 }

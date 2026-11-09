@@ -25,8 +25,8 @@ import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.test.requestFocus
 import app.opentv.data.repo.MediaKey
-import app.opentv.ui.VodViewModel.ResumeItem
-import app.opentv.ui.VodViewModel.SeasonEpisode
+import app.opentv.ui.ResumeItem
+import app.opentv.ui.SeasonEpisode
 import app.opentv.ui.vod.ContinueWatchingRow
 import com.google.common.truth.Truth.assertThat
 import org.junit.Rule

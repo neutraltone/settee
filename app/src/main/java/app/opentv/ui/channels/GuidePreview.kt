@@ -78,8 +78,7 @@ internal fun rememberGuidePreviewController(): PlayerController {
             scope,
             graph.httpClient,
             resolve = graph.playbackSources::forWatching,
-            subtitlesEnabled = false,
-            preview = true,
+            PlayerController.Options(subtitlesEnabled = false, preview = true),
         )
     }
     DisposableEffect(Unit) {

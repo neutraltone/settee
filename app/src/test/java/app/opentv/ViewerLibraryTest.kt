@@ -10,7 +10,9 @@ import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import app.opentv.data.db.OpenTvDatabase
 import app.opentv.data.model.PlaybackPosition
+import app.opentv.data.model.SeriesRef
 import app.opentv.data.repo.ContinueWatchingCard
+import app.opentv.data.repo.SeriesMainAction
 import app.opentv.data.repo.ViewerLibrary
 import app.opentv.data.repo.WatchStatus
 import com.google.common.truth.Truth.assertThat
@@ -80,10 +82,53 @@ class ViewerLibraryTest {
     }
 
     @Test
-    fun `progress with no known duration is In Progress from the start with no idea how long is left`() = runTest {
-        library.recordProgress("ep:7", positionMillis = 600_000, durationMillis = 0)
+    fun `synced progress with no known duration is In Progress with no idea how long is left`() = runTest {
+        library.mergeSynced(
+            PlaybackPosition(
+                profileId = 1,
+                mediaKey = "ep:7",
+                positionMillis = 600_000,
+                durationMillis = 0,
+                updatedAtMillis = now,
+            ),
+        )
 
         assertThat(statusOf(7)).isEqualTo(WatchStatus.InProgress(progress = 0f, remainingMillis = null))
+    }
+
+    @Test
+    fun `the first 5 seconds of a title aren't saved, and an old resume point stands`() = runTest {
+        library.recordProgress("movie:3", positionMillis = 600_000, durationMillis = 2_400_000)
+
+        val saved = library.recordProgress("movie:3", positionMillis = 5_000, durationMillis = 2_400_000)
+
+        assertThat(saved).isFalse()
+        assertThat(library.resumeFrom("movie:3")).isEqualTo(600_000)
+    }
+
+    @Test
+    fun `a title played for only its first seconds stays Unwatched`() = runTest {
+        library.recordProgress("ep:7", positionMillis = 3_000, durationMillis = 2_400_000)
+
+        assertThat(statusOf(7)).isEqualTo(WatchStatus.Unwatched)
+    }
+
+    @Test
+    fun `progress with no known duration isn't saved`() = runTest {
+        library.recordProgress("movie:3", positionMillis = 600_000, durationMillis = 2_400_000)
+
+        val saved = library.recordProgress("movie:3", positionMillis = 900_000, durationMillis = 0)
+
+        assertThat(saved).isFalse()
+        assertThat(library.resumeFrom("movie:3")).isEqualTo(600_000)
+    }
+
+    @Test
+    fun `just past the first 5 seconds a title is saved`() = runTest {
+        val saved = library.recordProgress("movie:3", positionMillis = 5_001, durationMillis = 2_400_000)
+
+        assertThat(saved).isTrue()
+        assertThat(library.resumeFrom("movie:3")).isEqualTo(5_001)
     }
 
     @Test
@@ -127,7 +172,7 @@ class ViewerLibraryTest {
         activeProfile.value = 2L
         library.recordProgress("movie:5", positionMillis = 6_000, durationMillis = 2_400_000)
 
-        assertThat(library.startedMovieIds(profileId = 1)).containsExactly(3L, 4L)
+        assertThat(library.history.startedMovieIds(profileId = 1)).containsExactly(3L, 4L)
     }
 
     @Test
@@ -137,8 +182,70 @@ class ViewerLibraryTest {
 
         library.marks.removeFromContinueWatching(ContinueWatchingCard.Movie(movieId = 3, progress = 0f))
 
-        assertThat(library.startedMovieIds(profileId = 1)).containsExactly(4L)
+        assertThat(library.history.startedMovieIds(profileId = 1)).containsExactly(4L)
     }
+
+    @Test
+    fun `the series a Profile has started are the ones it has progress on any episode of, Watched or not`() = runTest {
+        db.episodes().upsertAll(
+            listOf(
+                testEpisode(1, 1),
+                testEpisode(1, 2).copy(seriesId = "other"),
+                testEpisode(1, 3).copy(seriesId = "unplayed"),
+                testEpisode(1, 4).copy(seriesId = "another Profile's"),
+            ),
+        )
+        library.recordProgress("ep:11", positionMillis = 6_000, durationMillis = 2_400_000)
+        library.recordProgress("ep:12", positionMillis = 2_400_000, durationMillis = 2_400_000)
+        library.recordProgress("movie:3", positionMillis = 6_000, durationMillis = 2_400_000)
+        activeProfile.value = 2L
+        library.recordProgress("ep:14", positionMillis = 6_000, durationMillis = 2_400_000)
+
+        assertThat(
+            library.history.startedSeries(profileId = 1),
+        ).containsExactly(SeriesRef(1, "s"), SeriesRef(1, "other"))
+    }
+
+    @Test
+    fun `a series whose only progress was marked Unwatched by hand no longer counts as started`() = runTest {
+        db.episodes().upsertAll(listOf(testEpisode(1, 1), testEpisode(1, 2).copy(seriesId = "other")))
+        library.recordProgress("ep:11", positionMillis = 6_000, durationMillis = 2_400_000)
+        library.recordProgress("ep:12", positionMillis = 6_000, durationMillis = 2_400_000)
+
+        library.marks.markUnwatched("ep:11")
+
+        assertThat(library.history.startedSeries(profileId = 1)).containsExactly(SeriesRef(1, "other"))
+    }
+
+    @Test
+    fun `a series with one episode marked Unwatched and another played still counts as started`() = runTest {
+        db.episodes().upsertAll(listOf(testEpisode(1, 1), testEpisode(1, 2)))
+        library.recordProgress("ep:11", positionMillis = 6_000, durationMillis = 2_400_000)
+        library.recordProgress("ep:12", positionMillis = 6_000, durationMillis = 2_400_000)
+
+        library.marks.markUnwatched("ep:11")
+
+        assertThat(library.history.startedSeries(profileId = 1)).containsExactly(SeriesRef(1, "s"))
+    }
+
+    @Test
+    fun `progress on an episode that no longer exists starts no series`() = runTest {
+        library.recordProgress("ep:11", positionMillis = 6_000, durationMillis = 2_400_000)
+
+        assertThat(library.history.startedSeries(profileId = 1)).isEmpty()
+    }
+
+    @Test
+    fun `the series removed from a Profile's Continue Watching are the ones it dismissed, and only its own`() =
+        runTest {
+            db.episodes().upsertAll(listOf(testEpisode(1, 1)))
+            library.recordProgress("ep:11", positionMillis = 6_000, durationMillis = 2_400_000)
+
+            library.marks.removeFromContinueWatching(ContinueWatchingCard.Series(testEpisode(1, 1), progress = 0f))
+
+            assertThat(library.history.dismissedSeries(profileId = 1)).containsExactly(SeriesRef(1, "s"))
+            assertThat(library.history.dismissedSeries(profileId = 2)).isEmpty()
+        }
 
     @Test
     fun `a nonsense negative position from sync counts as the very start`() = runTest {
@@ -158,6 +265,35 @@ class ViewerLibraryTest {
 
         assertThat(library.continueWatchingMovies().first())
             .containsExactly(ContinueWatchingCard.Movie(movieId = 3, progress = 0.25f))
+    }
+
+    @Test
+    fun `a stored key that names no title is skipped`() = runTest {
+        library.recordProgress("movie:3", positionMillis = 600_000, durationMillis = 2_400_000)
+        library.recordProgress("ep:7", positionMillis = 600_000, durationMillis = 2_400_000)
+        for (malformed in listOf("movie:", "movie:x", "movie:3:4", "ep:", "ep:x", "ep:7:8")) {
+            library.recordProgress(malformed, positionMillis = 600_000, durationMillis = 2_400_000)
+        }
+
+        assertThat(library.history.startedMovieIds(profileId = 1)).containsExactly(3L)
+        assertThat(library.continueWatchingMovies().first())
+            .containsExactly(ContinueWatchingCard.Movie(movieId = 3, progress = 0.25f))
+        assertThat(statusOf(7)).isEqualTo(WatchStatus.InProgress(progress = 0.25f, remainingMillis = 1_800_000))
+    }
+
+    @Test
+    fun `a stored key that names no episode leaves a series' card and main action alone`() = runTest {
+        val episode = testEpisode(1, 1)
+        db.episodes().upsertAll(listOf(episode))
+        library.recordProgress("ep:${episode.id}", positionMillis = 600_000, durationMillis = 2_400_000)
+        now += 60_000
+        for (malformed in listOf("ep:", "ep:x", "ep:11:12")) {
+            library.recordProgress(malformed, positionMillis = 600_000, durationMillis = 2_400_000)
+        }
+
+        assertThat(library.continueWatchingSeries().first())
+            .containsExactly(ContinueWatchingCard.Series(episode, progress = 0.25f))
+        assertThat(library.seriesMainAction(listOf(episode)).first()).isEqualTo(SeriesMainAction.Resume(episode))
     }
 
     private fun synced(profileId: Long, positionMillis: Long, updatedAtMillis: Long) = PlaybackPosition(

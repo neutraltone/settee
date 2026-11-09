@@ -153,19 +153,21 @@ fun ParentalControlsScreen(onBack: () -> Unit, channelsViewModel: ChannelsViewMo
                             )
                             Switch(
                                 checked = group.key in hidden,
-                                onCheckedChange = { on ->
-                                    val next = hidden.toMutableSet().apply {
-                                        if (on) add(group.key) else remove(group.key)
-                                    }
-                                    settings.setHiddenCategories(next)
-                                },
+                                onCheckedChange = { on -> settings.setCategoryLocked(group.key, on) },
                             )
                         }
                     }
                 }
             }
-            Spacer(Modifier.height(24.dp))
         }
+        Spacer(Modifier.height(16.dp))
+        Text(
+            stringResource(R.string.parental_lock_sync_note),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.widthIn(max = 720.dp),
+        )
+        Spacer(Modifier.height(24.dp))
     }
 }
 

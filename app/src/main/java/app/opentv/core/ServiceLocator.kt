@@ -22,7 +22,10 @@ import app.opentv.data.repo.RefreshMessages
 import app.opentv.data.repo.ReminderRepository
 import app.opentv.data.repo.SourceRepository
 import app.opentv.data.repo.ViewerLibrary
+import app.opentv.data.repo.VodQualities
 import app.opentv.data.repo.WaitingProgress
+import app.opentv.player.DecoderList
+import app.opentv.player.DeviceDecoders
 import app.opentv.recording.RecordingEngine
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.CoroutineScope
@@ -51,11 +54,22 @@ object ServiceLocator {
      * [openDatabase] replaces the on-disk database, so a test can stand up two devices in one
      * process: every Graph built from the same context would otherwise share one database file.
      * [http] replaces the client that talks to providers, so such a device can reach a fake panel.
+     * [settingsFile] gives it settings of its own, which are otherwise one per process, and [clock]
+     * lets a test say which of two devices changed something last.
      */
-    class Graph(context: Context, http: OkHttpClient? = null, openDatabase: (() -> OpenTvDatabase)? = null) {
+    class Graph(
+        context: Context,
+        http: OkHttpClient? = null,
+        settingsFile: String? = null,
+        val clock: () -> Long = System::currentTimeMillis,
+        val decoders: DecoderList = DeviceDecoders(),
+        openDatabase: (() -> OpenTvDatabase)? = null,
+    ) {
         private val appContext = context.applicationContext
 
-        val settings: AppSettings by lazy { AppSettings.get(appContext) }
+        val settings: AppSettings by lazy {
+            settingsFile?.let { AppSettings.separate(appContext, it) } ?: AppSettings.get(appContext)
+        }
 
         val database: OpenTvDatabase by lazy {
             openDatabase?.invoke() ?: OpenTvDatabase.build(context, onWiped = settings::forgetDatabaseRows)
@@ -122,8 +136,16 @@ object ServiceLocator {
         /** The one place a title becomes something playable (see [PlaybackSources]). */
         /** The Channels a viewer may see, with the Parental Lock applied; see [ChannelLineup]. */
         val channelLineup: ChannelLineup by lazy {
-            ChannelLineup(database, viewerLibrary.favourites, settings.hiddenCategories, settings.hiddenUnlocked)
+            ChannelLineup(
+                database,
+                viewerLibrary.favourites,
+                settings.hiddenCategories,
+                settings.hiddenUnlocked,
+                decoders,
+            )
         }
+
+        val vodQualities: VodQualities by lazy { VodQualities(database, catalogRepository, decoders) }
 
         val playbackSources: PlaybackSources by lazy { PlaybackSources(database, xtreamApi, stalkerApi, channelLineup) }
 
@@ -156,7 +178,7 @@ object ServiceLocator {
         }
 
         val viewerLibrary: ViewerLibrary by lazy {
-            ViewerLibrary(database, settings.activeProfileId)
+            ViewerLibrary(database, settings.activeProfileId, clock)
         }
 
         /** Outlives every screen, so progress still arrives after the sync screen has closed. */
@@ -165,11 +187,11 @@ object ServiceLocator {
         }
 
         val profileSettings: ProfileSettings by lazy {
-            ProfileSettings(database.profileSettings(), database.profiles(), settings.activeProfileId)
+            ProfileSettings(database, settings.activeProfileId)
         }
 
         val profiles: Profiles by lazy {
-            Profiles(database.profiles(), viewerLibrary, profileSettings, recordingRepository, settings)
+            Profiles(database, viewerLibrary, profileSettings, recordingRepository, settings, clock)
         }
 
         val recordingRepository: RecordingRepository by lazy {

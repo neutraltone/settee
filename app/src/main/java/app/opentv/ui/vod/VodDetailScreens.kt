@@ -109,7 +109,7 @@ fun MovieDetailScreen(
         val loaded = viewModel.movieDetail(movieId)
         movie = loaded
         if (loaded != null) {
-            resumeExists = viewModel.resumeFrom(MediaKey.Movie(loaded.id).stored) > 0
+            resumeExists = viewModel.resumesPartway(loaded)
             moreLike = viewModel.moreLikeThis(loaded)
         }
     }

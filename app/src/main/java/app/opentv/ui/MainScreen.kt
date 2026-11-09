@@ -132,23 +132,22 @@ fun MainScreen(
     val visibleTabs = remember(liveEnabled, moviesEnabled, seriesEnabled) {
         visibleTabs(liveEnabled, moviesEnabled, seriesEnabled)
     }
-    val homeTab = Tab.HOME
 
     // If the selected tab gets hidden (its type toggled off while it's open), drop back to the
     // home tab so the content area never tries to show a tab that's no longer there.
     // Keyed on the tab too: the player can ask for Live on its way in, after Live was switched off.
     LaunchedEffect(visibleTabs, tab) {
-        if (tab !in visibleTabs) onSelectTab(homeTab)
+        if (tab !in visibleTabs) onSelectTab(Tab.HOME)
     }
 
     // Back from a non-home tab returns to the home tab rather than dropping out of the app.
-    BackHandler(enabled = tab != homeTab) { onSelectTab(homeTab) }
+    BackHandler(enabled = tab != Tab.HOME) { onSelectTab(Tab.HOME) }
 
     // On the home tab, Back would otherwise drop straight out to the TV launcher — one stray press
     // and you've closed the app. Ask first. (A dialog or panel open in a child screen swallows Back
     // before this, so this only fires at the true root.)
     var showExit by remember { mutableStateOf(false) }
-    BackHandler(enabled = tab == homeTab) { showExit = true }
+    BackHandler(enabled = tab == Tab.HOME) { showExit = true }
     if (showExit) {
         AlertDialog(
             onDismissRequest = { showExit = false },

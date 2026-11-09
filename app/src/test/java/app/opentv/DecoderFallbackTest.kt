@@ -8,15 +8,12 @@ package app.opentv
 import android.content.Context
 import android.graphics.SurfaceTexture
 import android.media.MediaCodec
-import android.media.MediaCodecInfo
-import android.media.MediaFormat
 import android.view.Surface
 import androidx.media3.common.MimeTypes
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.analytics.AnalyticsListener
-import androidx.media3.exoplayer.mediacodec.MediaCodecUtil
 import androidx.test.core.app.ApplicationProvider
 import app.opentv.data.repo.MediaKey
 import app.opentv.player.PlayerController
@@ -30,10 +27,8 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.Implementation
 import org.robolectric.annotation.Implements
-import org.robolectric.shadows.MediaCodecInfoBuilder
 import org.robolectric.shadows.ShadowLog
 import org.robolectric.shadows.ShadowMediaCodec
-import org.robolectric.shadows.ShadowMediaCodecList
 
 /**
  * A device can list a decoder that then won't start. The full-screen players try the next one rather
@@ -72,30 +67,15 @@ class DecoderFallbackTest {
     @Before
     fun decoders() {
         FirstDecoderWontStart.startsToFail = 1
-        MediaCodecUtil.clearDecoderInfoCache()
-        ShadowMediaCodecList.reset()
-        listOf(FIRST, SECOND).forEach { name ->
-            ShadowMediaCodecList.addCodec(
-                MediaCodecInfoBuilder.newBuilder()
-                    .setName(name)
-                    .setCapabilities(
-                        MediaCodecInfoBuilder.CodecCapabilitiesBuilder.newBuilder()
-                            .setMediaFormat(MediaFormat.createVideoFormat(MimeTypes.VIDEO_H264, 1920, 1080))
-                            .setColorFormats(intArrayOf(MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420Flexible))
-                            .build(),
-                    )
-                    .build(),
-            )
-        }
+        forgetVideoDecoders()
+        listOf(FIRST, SECOND).forEach { listVideoDecoder(it, MimeTypes.VIDEO_H264, 1920, 1080) }
     }
 
     @After
     fun close() {
         players.close()
         surface.release()
-        ShadowMediaCodec.clearCodecs()
-        ShadowMediaCodecList.reset()
-        MediaCodecUtil.clearDecoderInfoCache()
+        forgetVideoDecoders()
     }
 
     @Test

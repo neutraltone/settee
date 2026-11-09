@@ -66,7 +66,14 @@ class TestCatalog(context: Context, private val clock: () -> Long = { 0L }) {
 
     /** The catalogue's Channels, with no Parental Lock set. */
     val lineup =
-        ChannelLineup(db, viewerLibrary.favourites, MutableStateFlow(emptySet()), MutableStateFlow(false), sharing)
+        ChannelLineup(
+            db,
+            viewerLibrary.favourites,
+            MutableStateFlow(emptySet()),
+            MutableStateFlow(false),
+            ANY_SIZE_DECODERS,
+            sharing,
+        )
 
     private val refreshing = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 

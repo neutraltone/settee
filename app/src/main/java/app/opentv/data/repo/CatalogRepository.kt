@@ -15,19 +15,24 @@ import app.opentv.data.db.SeriesDao
 import app.opentv.data.db.SourceDao
 import app.opentv.data.model.Category
 import app.opentv.data.model.Channel
+import app.opentv.data.model.ChannelHiddenChange
 import app.opentv.data.model.Episode
 import app.opentv.data.model.LiveStreamFormat
 import app.opentv.data.model.Movie
 import app.opentv.data.model.Series
+import app.opentv.data.model.SeriesRef
 import app.opentv.data.model.Source
 import app.opentv.data.model.SourceKind
 import app.opentv.data.model.StreamKind
+import app.opentv.data.model.ref
 import app.opentv.data.parser.ChannelNameNormalizer
 import app.opentv.data.parser.M3uParser
 import app.opentv.data.parser.VodTitleCleaner
 import app.opentv.data.remote.StalkerApi
 import app.opentv.data.remote.TmdbClient
 import app.opentv.data.remote.XtreamApi
+import app.opentv.player.DecoderList
+import app.opentv.player.playsQualityRanked
 import app.opentv.sync.SyncHiddenChannel
 import java.time.Instant
 import java.time.ZoneOffset
@@ -76,7 +81,7 @@ data class MovieVariant(val movie: Movie, val qualityLabel: String, val qualityR
 /** One logical film with its switchable quality tiers, best first — the VOD analogue of a channel group. */
 @androidx.compose.runtime.Immutable
 data class MovieVariantGroup(
-    /** Best-quality variant: what a row shows and plays by default. */
+    /** The highest Quality this device can play: what a row shows and plays by default. */
     val primary: Movie,
     /** Every variant (including [primary]), best quality first. */
     val variants: List<MovieVariant>,
@@ -98,7 +103,7 @@ private val VOD_YEAR = Regex("""\b(19|20)\d{2}\b""")
  * (IMAX, EXTENDED, 3D) stay in the name and keep those cuts separate — intended. Two same-named
  * films that both lack any year will merge, an accepted edge for a best-effort collapse.
  */
-internal fun collapseMovieVariants(movies: List<Movie>): List<MovieVariantGroup> {
+internal fun collapseMovieVariants(movies: List<Movie>, decoders: DecoderList): List<MovieVariantGroup> {
     val groups = LinkedHashMap<String, MutableList<MovieVariant>>()
     for (movie in movies) {
         val embeddedYear = VOD_YEAR.find(movie.name)?.value?.toIntOrNull()
@@ -113,7 +118,8 @@ internal fun collapseMovieVariants(movies: List<Movie>): List<MovieVariantGroup>
         val ordered = variants.sortedWith(
             compareByDescending<MovieVariant> { it.qualityRank }.thenBy { it.movie.name },
         )
-        MovieVariantGroup(primary = ordered.first().movie, variants = ordered)
+        val primary = ordered.firstOrNull { decoders.playsQualityRanked(it.qualityRank) } ?: ordered.first()
+        MovieVariantGroup(primary = primary.movie, variants = ordered)
     }
 }
 
@@ -277,10 +283,11 @@ class CatalogRepository(
     /** Every series, newest first. */
     suspend fun allSeries(): List<Series> = withContext(Dispatchers.IO) { seriesDao.all() }
 
-    /** How many movies / series are on disk — a cheap COUNT the home screen uses to tell "the
-     *  library grew" from "unchanged since last open" without loading every row. */
-    suspend fun movieCount(): Int = withContext(Dispatchers.IO) { movieDao.count() }
-    suspend fun seriesCount(): Int = withContext(Dispatchers.IO) { seriesDao.count() }
+    /** Changes when the movies or what the home rows rank them by do; see [VodViewModel.loadHomeFeeds]. */
+    suspend fun movieFingerprint(): String = withContext(Dispatchers.IO) { movieDao.fingerprint() }
+
+    /** Changes when the series or what the home rows rank them by do; see [VodViewModel.loadHomeFeeds]. */
+    suspend fun seriesFingerprint(): String = withContext(Dispatchers.IO) { seriesDao.fingerprint() }
 
     /**
      * Movies grouped by genre for the by-genre home rows: the [maxGenres] biggest genres, each with
@@ -313,58 +320,34 @@ class CatalogRepository(
         withContext(Dispatchers.Default) { groupByGenre(all, Series::genre, maxGenres, perGenre) }
 
     /**
-     * "Recommended for you" — a simple, explainable genre-affinity heuristic, no ML.
-     *
-     * Tallies the genres of the movies this profile has watched or resumed, then returns the
-     * highest-scoring UNWATCHED movies, where a movie's score is how many of its genres the profile
-     * favours (ties broken by rating, then recency). With no usable history — a fresh profile, or
-     * only watched movies that carry no genre — it falls back to top-rated, then recently-added.
+     * "Recommended for you" from an ALREADY-LOADED movie list, so the home screen scans the
+     * (20k-title) table once for the whole home feed rather than once per row. See [recommendFrom].
+     * The [started] titles feed the tally and stay out of the row. A movie marked Unwatched isn't
+     * among them, so it can come back.
      */
-    suspend fun recommendedMovies(profileId: Long, limit: Int = 30): List<Movie> =
-        withContext(Dispatchers.IO) { recommendFrom(movieDao.all(), startedMovieIds(profileId), limit) }
-
-    /**
-     * "Recommended for you" from an ALREADY-LOADED movie list — the single-scan path (see
-     * [recommendedMovies]). Only the profile's watch history is read from disk here; the movie
-     * library is the caller's [allMovies] list, shared with the genre rows so the home screen scans
-     * the (20k-title) table once for the whole home feed rather than once per row.
-     */
-    suspend fun recommendedMoviesFrom(all: List<Movie>, profileId: Long, limit: Int = 30): List<Movie> =
-        withContext(Dispatchers.IO) { recommendFrom(all, startedMovieIds(profileId), limit) }
-
-    /** The movie ids this profile has started, Watched or not — the input to the affinity heuristic. */
-    private suspend fun startedMovieIds(profileId: Long): Set<Long> = viewerLibrary.startedMovieIds(profileId)
-
-    /** The pure genre-affinity ranking pass shared by [recommendedMovies] and [recommendedMoviesFrom]. */
-    private fun recommendFrom(all: List<Movie>, watchedMovieIds: Set<Long>, limit: Int): List<Movie> {
-        val byId = all.associateBy { it.id }
-
-        val affinity = HashMap<String, Int>()
-        for (id in watchedMovieIds) {
-            val watched = byId[id] ?: continue
-            for (genre in splitGenres(watched.genre)) affinity[genre] = (affinity[genre] ?: 0) + 1
+    suspend fun recommendedMoviesFrom(all: List<Movie>, started: Set<Long>, limit: Int = 30): List<Movie> =
+        withContext(Dispatchers.Default) {
+            recommendFrom(all, MOVIE_RANKING, limit, tallied = { it.id in started }, leftOut = { it.id in started })
         }
 
-        val unwatched = all.filter { it.id !in watchedMovieIds }
-
-        fun topRatedFallback(): List<Movie> = unwatched
-            .sortedWith(compareByDescending<Movie> { it.rating ?: -1.0 }.thenByDescending { it.addedMillis })
-            .take(limit)
-
-        if (affinity.isEmpty()) return topRatedFallback()
-
-        val ranked = unwatched
-            .map { it to genreScore(it.genre, affinity) }
-            .filter { it.second > 0 }
-            .sortedWith(
-                compareByDescending<Pair<Movie, Int>> { it.second }
-                    .thenByDescending { it.first.rating ?: -1.0 }
-                    .thenByDescending { it.first.addedMillis },
-            )
-            .map { it.first }
-            .take(limit)
-
-        return ranked.ifEmpty { topRatedFallback() }
+    /**
+     * "Recommended for you" for series, from an already-loaded list. A [dismissed] series, one removed
+     * from Continue Watching, is neither offered nor tallied, which is stricter than a movie marked
+     * Unwatched, since that one can come back.
+     */
+    suspend fun recommendedSeriesFrom(
+        all: List<Series>,
+        started: Set<SeriesRef>,
+        dismissed: Set<SeriesRef>,
+        limit: Int = 30,
+    ): List<Series> = withContext(Dispatchers.Default) {
+        recommendFrom(
+            all,
+            SERIES_RANKING,
+            limit,
+            tallied = { it.ref in started && it.ref !in dismissed },
+            leftOut = { it.ref in started || it.ref in dismissed },
+        )
     }
 
     /**
@@ -562,13 +545,6 @@ class CatalogRepository(
         result
     }
 
-    /**
-     * Collapses a list of movies (e.g. one category's titles) into logical films with switchable
-     * quality tiers — see [collapseMovieVariants]. Pure; hand it whatever list the UI is about to
-     * show. Kept here as the discoverable entry point for the VOD UI.
-     */
-    fun collapseVariants(movies: List<Movie>): List<MovieVariantGroup> = collapseMovieVariants(movies)
-
     // -- feed helpers --
 
     /** A movie counts as "already enriched" once any headline detail field is set, so [movieDetail]
@@ -583,13 +559,6 @@ class CatalogRepository(
 
     private val Series.isEnriched: Boolean
         get() = backdropUrl != null || cast != null || genre != null
-
-    /** Splits a provider genre string ("Action, Thriller" / "Action|Thriller") into clean genres. */
-    private fun splitGenres(raw: String?): List<String> = raw?.split(',', '|')
-        ?.map { it.trim() }
-        ?.filter { it.isNotEmpty() }
-        ?.distinct()
-        .orEmpty()
 
     private fun <T> groupByGenre(
         items: List<T>,
@@ -609,14 +578,12 @@ class CatalogRepository(
             .map { GenreGroup(it.key, it.value.take(perGenre)) }
     }
 
-    /** How strongly a title matches a profile's genre affinity: sum of its genres' tallies. */
-    private fun genreScore(genre: String?, affinity: Map<String, Int>): Int =
-        splitGenres(genre).sumOf { affinity[it] ?: 0 }
-
     /** How many of a title's genres are in the wanted set — the More-Like-This overlap. */
     private fun sharedGenreCount(genre: String?, wanted: Set<String>): Int = splitGenres(genre).count { it in wanted }
 
-    suspend fun setChannelHidden(id: Long, hidden: Boolean) = channelDao.setHidden(id, hidden)
+    /** The viewer hid or showed a channel, on the TV or the web manager; dated, so the change can travel. */
+    suspend fun setChannelHidden(id: Long, hidden: Boolean, now: Long = System.currentTimeMillis()) =
+        channelDao.changeHidden(id, hidden, now)
 
     /** Sets (or clears, on blank) a channel's manual rename. Trimmed; a blank name clears it. */
     suspend fun setChannelCustomName(id: Long, name: String?) =
@@ -643,13 +610,28 @@ class CatalogRepository(
     suspend fun channelsInCategoryForManager(sourceId: Long?, categoryId: String): List<Channel> =
         channelDao.channelsInCategoryIncludingHidden(sourceId, categoryId)
 
-    /** The channels hidden on this device, for sync. */
+    /** The channels a viewer hid or showed on this device, for sync. */
     suspend fun exportHiddenChannels(): List<SyncHiddenChannel> = channelDao.hiddenForSync()
 
-    /** Hides what another device hid; sync never un-hides. Returns how many were newly hidden here. */
+    /**
+     * Merges another device's hides and unhides, newest change wins. A dated change is kept even if
+     * the provider isn't listing that channel right now. Returns how many channels it changed here.
+     */
     suspend fun importHiddenChannels(items: List<SyncHiddenChannel>): Int {
         val sources = sourceDao.directory()
-        return items.sumOf { item -> sources.id(item.source)?.let { channelDao.markHidden(it, item.id) } ?: 0 }
+        return items.count { item ->
+            val sourceId = sources.id(item.source) ?: return@count false
+            val here = channelDao.hiddenChange(item.source, item.id)?.changedAtMillis
+            if (!isNewerChange(item.changedAtMillis, here)) return@count false
+            if (item.changedAtMillis > 0) {
+                channelDao.upsertHiddenChange(
+                    ChannelHiddenChange(item.source, item.id, item.hidden, item.changedAtMillis),
+                )
+            }
+            val wasHidden = channelDao.isHidden(sourceId, item.id)
+            channelDao.setHidden(sourceId, item.id, item.hidden)
+            wasHidden != null && wasHidden != item.hidden
+        }
     }
 
     /**
@@ -971,7 +953,7 @@ class CatalogRepository(
      * on the next launch instead of the next sync. Bump [NORMALIZER_VERSION] to trigger it.
      */
     suspend fun renormalizeAll(): Int = withContext(Dispatchers.IO) {
-        val existing = channelDao.allForMatching()
+        val existing = channelDao.everyRow()
         if (existing.isEmpty()) return@withContext 0
 
         val bySource = existing.groupBy { it.sourceId }

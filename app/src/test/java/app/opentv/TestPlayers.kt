@@ -12,19 +12,25 @@ import androidx.media3.common.C
 import androidx.media3.common.Format
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
+import androidx.media3.common.util.HandlerWrapper
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.drm.DrmSessionManagerProvider
 import androidx.media3.exoplayer.source.MediaSource
 import androidx.media3.exoplayer.upstream.LoadErrorHandlingPolicy
+import androidx.media3.exoplayer.video.VideoRendererEventListener
 import androidx.media3.test.utils.ExoPlayerTestRunner
+import androidx.media3.test.utils.FakeAudioRenderer
 import androidx.media3.test.utils.FakeClock
 import androidx.media3.test.utils.FakeMediaSource
 import androidx.media3.test.utils.FakeTimeline
+import androidx.media3.test.utils.FakeVideoRenderer
 import androidx.media3.test.utils.TestExoPlayerBuilder
 import androidx.media3.test.utils.robolectric.TestPlayerRunHelper
 import app.opentv.data.repo.MediaKey
 import app.opentv.data.repo.Playable
+import app.opentv.player.DecoderList
+import app.opentv.player.DeviceDecoders
 import app.opentv.player.PlayerController
 import java.io.IOException
 import java.time.Duration
@@ -112,12 +118,24 @@ class TestPlayers(private val context: Context) {
     /** What the streams of controllers made from now on carry. */
     var formats = listOf(ExoPlayerTestRunner.VIDEO_FORMAT)
 
+    /** What the streams at particular addresses carry instead of [formats]. */
+    val formatsAt = mutableMapOf<String, List<Format>>()
+
+    /** What the controllers made from now on believe this device can decode. */
+    var decoders: DecoderList = DeviceDecoders()
+
+    /** Whether the fake decoder shows anything. Without, it starts and never shows a frame. */
+    var showPictures = true
+
+    /** How a controller's failing streams fail: by default, as a dropped connection does. */
+    var failure: () -> IOException = { IOException("Connection dropped") }
+
     /** Every stream the controllers were handed, in order. */
     val played = mutableListOf<String>()
 
     /**
      * A [PlayerController] whose every stream plays [window], resolved by [resolve] (by default a
-     * stream at a placeholder address). The first [failing] streams fail as a dropped connection does.
+     * stream at a placeholder address). The first [failing] streams fail with [failure].
      * [preview] makes it the controller a preview pane uses.
      */
     fun controller(
@@ -131,33 +149,46 @@ class TestPlayers(private val context: Context) {
         scope,
         OkHttpClient(),
         resolve = resolve,
-        preview = preview,
-        dvr = dvr,
-        buildPlayer = {
-            TestExoPlayerBuilder(context)
-                .setClock(clock)
-                .setMediaSourceFactory(FakeSources(window, played, failing, formats))
-                .build()
-        },
+        PlayerController.Options(
+            preview = preview,
+            dvr = dvr,
+            buildPlayer = {
+                TestExoPlayerBuilder(context)
+                    .setClock(clock)
+                    .setRenderersFactory { handler, video, audio, _, _ ->
+                        val events = clock.createHandler(handler.looper, null)
+                        arrayOf(PicturingRenderer(events, video) { showPictures }, FakeAudioRenderer(events, audio))
+                    }
+                    .setMediaSourceFactory(FakeSources(window, played, failing, formats, formatsAt, failure))
+                    .build()
+            },
+            decoders = decoders,
+        ),
     )
 
     /**
      * A [PlayerController] on the renderers it has in the app, so real decoders are chosen from the
      * device's codec list. Plays fake H.264 video to [surface]; a decoder only starts when it has one.
      */
-    fun realDecoderController(preview: Boolean = false, surface: Surface) = PlayerController(
+    fun realDecoderController(
+        preview: Boolean = false,
+        surface: Surface,
+        resolve: suspend (MediaKey) -> Playable = ::placeholder,
+    ) = PlayerController(
         context,
         scope,
         OkHttpClient(),
-        resolve = ::placeholder,
-        preview = preview,
-        buildPlayer = { builder ->
-            builder
-                .setClock(FakeClock(true))
-                .setMediaSourceFactory(FakeSources(FILM, played, failing = 0, formats))
-                .build()
-                .apply { setVideoSurface(surface) }
-        },
+        resolve = resolve,
+        PlayerController.Options(
+            preview = preview,
+            buildPlayer = { builder ->
+                builder
+                    .setClock(FakeClock(true))
+                    .setMediaSourceFactory(FakeSources(FILM, played, failing = 0, formats, formatsAt))
+                    .build()
+                    .apply { setVideoSurface(surface) }
+            },
+        ),
     )
 
     /** Cancels what the controllers left running, such as an automatic restart, so it can't outlive the test. */
@@ -195,16 +226,34 @@ class TestPlayers(private val context: Context) {
     /** Moves the main thread's clock on by [millis], running whatever was waiting on it. */
     fun advance(millis: Long) = shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(millis))
 
+    /**
+     * The fake decoder reports its first frame only on a surface, and a [androidx.media3.ui.PlayerView]
+     * has none under Robolectric. So this one reports it by itself, as soon as it has a format.
+     */
+    private class PicturingRenderer(
+        private val events: HandlerWrapper,
+        private val listener: VideoRendererEventListener,
+        private val showsPictures: () -> Boolean,
+    ) : FakeVideoRenderer(events, listener) {
+        override fun onFormatChanged(format: Format) {
+            super.onFormatChanged(format)
+            if (showsPictures()) events.post { listener.onRenderedFirstFrame(Any(), 0L) }
+        }
+    }
+
     private class FakeSources(
         private val window: FakeTimeline.TimelineWindowDefinition,
         private val played: MutableList<String>,
         private var failing: Int,
         private val formats: List<Format>,
+        private val formatsAt: Map<String, List<Format>>,
+        private val failure: () -> IOException = { IOException("Connection dropped") },
     ) : MediaSource.Factory {
         override fun createMediaSource(mediaItem: MediaItem): MediaSource {
-            played += mediaItem.localConfiguration?.uri.toString()
-            if (failing-- > 0) return DroppedSource()
-            return FakeMediaSource(FakeTimeline(window), *formats.toTypedArray())
+            val address = mediaItem.localConfiguration?.uri.toString()
+            played += address
+            if (failing-- > 0) return FailingSource(failure)
+            return FakeMediaSource(FakeTimeline(window), *formatsAt.getOrDefault(address, formats).toTypedArray())
         }
 
         override fun setDrmSessionManagerProvider(provider: DrmSessionManagerProvider) = this
@@ -214,9 +263,9 @@ class TestPlayers(private val context: Context) {
         override fun getSupportedTypes(): IntArray = intArrayOf(C.CONTENT_TYPE_OTHER)
     }
 
-    /** A stream whose connection drops before it ever starts. */
-    private class DroppedSource : FakeMediaSource(null) {
-        override fun maybeThrowSourceInfoRefreshError() = throw IOException("Connection dropped")
+    /** A stream that fails with [failure] before it ever starts. */
+    private class FailingSource(private val failure: () -> IOException) : FakeMediaSource(null) {
+        override fun maybeThrowSourceInfoRefreshError() = throw failure()
     }
 
     private companion object {

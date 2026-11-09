@@ -20,10 +20,12 @@ import app.opentv.data.model.Movie
 import app.opentv.data.model.Profile
 import app.opentv.data.model.Programme
 import app.opentv.data.model.Series
+import app.opentv.data.model.SeriesRef
 import app.opentv.data.model.Source
 import app.opentv.data.model.SourceKind
 import app.opentv.data.model.StreamKind
 import app.opentv.data.model.StremioStream
+import app.opentv.data.model.ref
 import app.opentv.data.parser.displayTitle
 import app.opentv.data.repo.CatalogRepository
 import app.opentv.data.repo.CatalogueRefresh
@@ -37,9 +39,11 @@ import app.opentv.data.repo.MediaKey
 import app.opentv.data.repo.MovieVariantGroup
 import app.opentv.data.repo.PersonTitle
 import app.opentv.data.repo.RefreshMessages
+import app.opentv.data.repo.collapseMovieVariants
 import app.opentv.data.repo.onNowAt
 import app.opentv.data.work.SyncWorker
 import app.opentv.pairing.ManagerServer
+import app.opentv.player.playsQualityRanked
 import app.opentv.sync.NasSync
 import app.opentv.sync.SyncClient
 import app.opentv.sync.SyncEngine
@@ -47,6 +51,7 @@ import app.opentv.sync.SyncServer
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -649,48 +654,54 @@ class EpgViewModel(app: Application) : AndroidViewModel(app) {
     }
 }
 
+/** Which episode a series card picks up at. */
+data class SeasonEpisode(val season: Int, val episode: Int)
+
+/**
+ * One card in the Continue Watching shelf: a movie, or a series at its In Progress episode or
+ * Up Next. A series card is titled with the series and carries the [episode] it plays.
+ */
+data class ResumeItem(
+    val key: MediaKey,
+    val title: String,
+    val posterUrl: String?,
+    /** How far through, 0..1; null when it has never been played, so the card shows no bar. */
+    val progress: Float?,
+    val episode: SeasonEpisode? = null,
+    /** Whether [episode] is a New Episode, which the card says on its thumbnail. */
+    val newEpisode: Boolean = false,
+    /** The Continue Watching card this was drawn from, for the options panel to act on. */
+    val card: ContinueWatchingCard? = null,
+    /** The provider's name for the title, which is where its Quality is written. */
+    val name: String = title,
+)
+
 class VodViewModel @JvmOverloads constructor(
     app: Application,
     private val graph: ServiceLocator.Graph = ServiceLocator.get(app),
 ) : AndroidViewModel(app) {
     private val settings = graph.settings
 
-    /** Which episode a series card picks up at. */
-    data class SeasonEpisode(val season: Int, val episode: Int)
-
-    /**
-     * One card in the Continue Watching shelf: a movie, or a series at its In Progress episode or
-     * Up Next. A series card is titled with the series and carries the [episode] it plays.
-     */
-    data class ResumeItem(
-        val key: MediaKey,
-        val title: String,
-        val posterUrl: String?,
-        /** How far through, 0..1; null when it has never been played, so the card shows no bar. */
-        val progress: Float?,
-        val episode: SeasonEpisode? = null,
-        /** Whether [episode] is a New Episode, which the card says on its thumbnail. */
-        val newEpisode: Boolean = false,
-        /** The Continue Watching card this was drawn from, for the options panel to act on. */
-        val card: ContinueWatchingCard? = null,
-    )
+    init {
+        // Asked here, off the main thread: the grid collapses its movies while composing, and listing a
+        // cheap box's decoders the first time is slow enough to drop frames.
+        viewModelScope.launch(Dispatchers.Default) { graph.decoders.tallestListed }
+    }
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val continueWatchingMovies: StateFlow<List<ResumeItem>> =
         graph.viewerLibrary.continueWatchingMovies()
-            .mapLatest { cards -> cards.mapNotNull { resolveResume(it) } }
+            .mapLatest { cards -> cards.mapNotNull { resumeItem(graph.catalogRepository, it) } }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val continueWatchingSeries: StateFlow<List<ResumeItem>> =
         graph.viewerLibrary.continueWatchingSeries()
-            .mapLatest { cards -> cards.mapNotNull { resolveResume(it) } }
+            .mapLatest { cards -> cards.mapNotNull { resumeItem(graph.catalogRepository, it) } }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     /** Each episode's Watched / In Progress / Unwatched status for the active Profile. */
     val episodeStatuses = graph.viewerLibrary.episodeStatuses()
-
-    private suspend fun resolveResume(card: ContinueWatchingCard) = resumeItem(graph.catalogRepository, card)
 
     private val movieCategory = MutableStateFlow<String?>(null)
     private val seriesCategory = MutableStateFlow<String?>(null)
@@ -720,14 +731,16 @@ class VodViewModel @JvmOverloads constructor(
         ) { raw, sourceId -> if (sourceId == null) raw else raw.filter { it.sourceId == sourceId } }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
+    // No category means the home rows, which don't read these. Observing every row for nothing would
+    // hold the whole catalogue in memory and load it again on each write during a refresh (#180).
     @OptIn(ExperimentalCoroutinesApi::class)
     val movies: StateFlow<List<Movie>> = movieCategory
-        .flatMapLatest { graph.catalogRepository.observeMovies(it) }
+        .flatMapLatest { id -> id?.let(graph.catalogRepository::observeMovies) ?: flowOf(emptyList()) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val series: StateFlow<List<Series>> = seriesCategory
-        .flatMapLatest { graph.catalogRepository.observeSeries(it) }
+        .flatMapLatest { id -> id?.let(graph.catalogRepository::observeSeries) ?: flowOf(emptyList()) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     fun selectMovieCategory(id: String?) {
@@ -772,7 +785,8 @@ class VodViewModel @JvmOverloads constructor(
     // "Recently added" is reactive: it fills in live as a VOD sync lands. The computed feeds
     // (recommended, by-genre) are held in the StateFlows below and (re)built by [loadHomeFeeds] from
     // one shared scan of the library — guarded so opening the tab twice, or recomposing, does not
-    // re-scan a 20k-title catalogue; it recomputes only on a profile change or catalogue growth.
+    // re-scan a 20k-title catalogue; it recomputes only when the profile, catalogue or started titles
+    // change.
 
     val recentlyAddedMovies: StateFlow<List<Movie>> =
         graph.catalogRepository.recentlyAddedMovies()
@@ -785,16 +799,26 @@ class VodViewModel @JvmOverloads constructor(
     private val _recommendedMovies = MutableStateFlow<List<Movie>>(emptyList())
     val recommendedMovies: StateFlow<List<Movie>> = _recommendedMovies.asStateFlow()
 
+    private val _recommendedSeries = MutableStateFlow<List<Series>>(emptyList())
+    val recommendedSeries: StateFlow<List<Series>> = _recommendedSeries.asStateFlow()
+
     private val _movieGenreRows = MutableStateFlow<List<GenreGroup<Movie>>>(emptyList())
     val movieGenreRows: StateFlow<List<GenreGroup<Movie>>> = _movieGenreRows.asStateFlow()
 
     private val _seriesGenreRows = MutableStateFlow<List<GenreGroup<Series>>>(emptyList())
     val seriesGenreRows: StateFlow<List<GenreGroup<Series>>> = _seriesGenreRows.asStateFlow()
 
-    /** The (profile, catalogue) the computed rows were last built for — the redundant-reload guard. */
-    private data class HomeFeedsKey(val profileId: Long, val movieCount: Int, val seriesCount: Int)
+    /** What one title type's computed rows were last built from — the redundant-reload guard. */
+    private data class HomeFeedsKey<T>(
+        val profileId: Long,
+        val catalogue: String?,
+        val started: Set<T>,
+        val dismissed: Set<T> = emptySet(),
+    )
 
-    @Volatile private var loadedHomeFeeds: HomeFeedsKey? = null
+    @Volatile private var loadedMovieFeeds: HomeFeedsKey<Long>? = null
+
+    @Volatile private var loadedSeriesFeeds: HomeFeedsKey<SeriesRef>? = null
 
     /** Serialises [loadHomeFeeds] so two near-simultaneous calls (screen open + the profile emit in
      *  `init`) can't both start the heavy scan — the second waits, sees the guard satisfied, returns.
@@ -807,7 +831,7 @@ class VodViewModel @JvmOverloads constructor(
         // The home feeds are per profile (Recommended) and per catalogue (the genre rows). Rebuild
         // them when the active profile changes — and once at start. Routed through the guarded
         // [loadHomeFeeds] so a profile switch triggers exactly one library scan, and re-opening the
-        // tab with the same profile and an unchanged catalogue triggers none. Reads an empty result
+        // tab with nothing changed triggers none. Reads an empty result
         // until a VOD sync has populated the catalogue; [ensureVodLoaded] re-runs it once one has.
         viewModelScope.launch {
             settings.activeProfileId.collect { loadHomeFeeds() }
@@ -815,52 +839,73 @@ class VodViewModel @JvmOverloads constructor(
     }
 
     /**
-     * Recomputes the computed home rows (Recommended + by-genre) from a SINGLE scan of the library.
+     * Recomputes the computed home rows (Recommended + by-genre) from a SINGLE scan of each library.
      *
      * The reactive rows (recently-added, continue-watching) keep themselves current, so this only
      * covers the computed feeds. On a 20k-title library the old version was the lag: it read the
      * whole movie table three times over (recommended + movie genres, plus a profile-change reload)
-     * and again on every tab re-open. Now [allMovies]/[allSeries] are read once and reused for the
-     * recommended row and every genre row, off the main thread, and a `(profile, movieCount,
-     * seriesCount)` guard skips the work entirely unless the profile changed or the catalogue grew —
-     * so re-opening Movies/Shows is free and a post-sync refresh still fills the rows in.
+     * and again on every tab re-open. Now each library is read once and reused for its rows, off the
+     * main thread, and only when a [HomeFeedsKey] says something they depend on changed — so
+     * re-opening Movies/Shows is free and a post-sync refresh still fills the rows in.
      */
-    fun loadHomeFeeds() {
-        viewModelScope.launch {
-            homeFeedsMutex.withLock {
-                val profileId = settings.activeProfileId.value
-                val movieCount = runCatching { graph.catalogRepository.movieCount() }.getOrDefault(0)
-                val seriesCount = runCatching { graph.catalogRepository.seriesCount() }.getOrDefault(0)
-
-                // Already built for this profile and this exact catalogue? Then a tab re-open or a
-                // recomposition must not trigger another full-library scan. Only a profile change or
-                // a catalogue whose size moved gets past here.
-                val prev = loadedHomeFeeds
-                if (prev != null &&
-                    prev.profileId == profileId &&
-                    prev.movieCount == movieCount &&
-                    prev.seriesCount == seriesCount
-                ) {
-                    return@withLock
-                }
-
-                // One scan of each library (repo switches to IO), reused across every computed row.
-                val allMovies = runCatching { graph.catalogRepository.allMovies() }.getOrDefault(emptyList())
-                val allSeries = runCatching { graph.catalogRepository.allSeries() }.getOrDefault(emptyList())
-
-                _recommendedMovies.value = runCatching {
-                    graph.catalogRepository.recommendedMoviesFrom(allMovies, profileId)
-                }.getOrDefault(emptyList())
-                _movieGenreRows.value = runCatching {
-                    graph.catalogRepository.moviesByGenreFrom(allMovies)
-                }.getOrDefault(emptyList())
-                _seriesGenreRows.value = runCatching {
-                    graph.catalogRepository.seriesByGenreFrom(allSeries)
-                }.getOrDefault(emptyList())
-
-                loadedHomeFeeds = HomeFeedsKey(profileId, movieCount, seriesCount)
-            }
+    fun loadHomeFeeds(): Job = viewModelScope.launch {
+        homeFeedsMutex.withLock {
+            val profileId = settings.activeProfileId.value
+            refreshMovieFeeds(profileId)
+            refreshSeriesFeeds(profileId)
         }
+    }
+
+    private suspend fun refreshMovieFeeds(profileId: Long) {
+        val key = HomeFeedsKey(
+            profileId,
+            catalogue = runCatching { graph.catalogRepository.movieFingerprint() }.getOrNull(),
+            started = runCatching { graph.viewerLibrary.history.startedMovieIds(profileId) }.getOrDefault(emptySet()),
+        )
+        val loaded = loadedMovieFeeds
+        if (key == loaded) return
+
+        // Now, not after the scan: that takes seconds on a big library, and in the meantime the
+        // viewer could move onto a title they have only just started.
+        _recommendedMovies.value = _recommendedMovies.value.filterNot { it.id in key.started }
+
+        val all = runCatching { graph.catalogRepository.allMovies() }.getOrDefault(emptyList())
+        _recommendedMovies.value = runCatching {
+            graph.catalogRepository.recommendedMoviesFrom(all, key.started)
+        }.getOrDefault(emptyList())
+        // Watching something doesn't move a title between genres, so only the catalogue regroups them.
+        if (key.catalogue != loaded?.catalogue) {
+            _movieGenreRows.value = runCatching {
+                graph.catalogRepository.moviesByGenreFrom(all)
+            }.getOrDefault(emptyList())
+        }
+        loadedMovieFeeds = key
+    }
+
+    private suspend fun refreshSeriesFeeds(profileId: Long) {
+        val key = HomeFeedsKey(
+            profileId,
+            catalogue = runCatching { graph.catalogRepository.seriesFingerprint() }.getOrNull(),
+            started = runCatching { graph.viewerLibrary.history.startedSeries(profileId) }.getOrDefault(emptySet()),
+            dismissed = runCatching { graph.viewerLibrary.history.dismissedSeries(profileId) }.getOrDefault(emptySet()),
+        )
+        val loaded = loadedSeriesFeeds
+        if (key == loaded) return
+
+        // As in [refreshMovieFeeds].
+        _recommendedSeries.value =
+            _recommendedSeries.value.filterNot { it.ref in key.started || it.ref in key.dismissed }
+
+        val all = runCatching { graph.catalogRepository.allSeries() }.getOrDefault(emptyList())
+        _recommendedSeries.value = runCatching {
+            graph.catalogRepository.recommendedSeriesFrom(all, key.started, key.dismissed)
+        }.getOrDefault(emptyList())
+        if (key.catalogue != loaded?.catalogue) {
+            _seriesGenreRows.value = runCatching {
+                graph.catalogRepository.seriesByGenreFrom(all)
+            }.getOrDefault(emptyList())
+        }
+        loadedSeriesFeeds = key
     }
 
     // Movies + series load on demand — the first time the user opens Movies or Shows — rather than
@@ -970,11 +1015,22 @@ class VodViewModel @JvmOverloads constructor(
     suspend fun titlesWithPerson(name: String): List<PersonTitle> = graph.catalogRepository.titlesWithPerson(name)
 
     /** Where the active Profile would resume a movie/episode, 0 for the start — drives Resume vs Watch now. */
-    suspend fun resumeFrom(mediaKey: String): Long = graph.viewerLibrary.resumeFrom(mediaKey)
+    /** Whether playing [movie] would pick up partway: the Quality that plays keeps the resume point. */
+    suspend fun resumesPartway(movie: Movie): Boolean {
+        val playing = graph.vodQualities.planFor(MediaKey.Movie(movie.id)).start.key
+        return graph.viewerLibrary.resumeFrom(playing.stored) > 0
+    }
 
-    /** Collapses quality variants of a movie list for a browse grid. See CatalogRepository.collapseVariants. */
-    fun collapseVariants(movies: List<Movie>): List<MovieVariantGroup> =
-        graph.catalogRepository.collapseVariants(movies)
+    /**
+     * The category's films for its browse grid, each one's Qualities collapsed: see [collapseMovieVariants].
+     * Off the main thread: that parses every name, again each time a refresh touches the movies table, and
+     * done while composing it froze a Fire TV Stick long enough for Android to close the app (#180).
+     */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val movieGroups: StateFlow<List<MovieVariantGroup>> = movies
+        .mapLatest { collapseMovieVariants(it, graph.decoders) }
+        .flowOn(Dispatchers.Default)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     fun setSeriesFavourite(series: Series, favourite: Boolean) {
         viewModelScope.launch { graph.viewerLibrary.favourites.set(series, favourite) }
@@ -982,40 +1038,40 @@ class VodViewModel @JvmOverloads constructor(
 }
 
 /** [card] as Continue Watching draws it, or null when its title has left the catalogue. */
-private suspend fun resumeItem(catalog: CatalogRepository, card: ContinueWatchingCard): VodViewModel.ResumeItem? =
-    when (card) {
-        is ContinueWatchingCard.Movie -> catalog.movie(card.movieId)?.let {
-            VodViewModel.ResumeItem(
-                MediaKey.Movie(it.id),
-                it.displayTitle,
-                it.posterUrl,
-                card.progress,
+private suspend fun resumeItem(catalog: CatalogRepository, card: ContinueWatchingCard): ResumeItem? = when (card) {
+    is ContinueWatchingCard.Movie -> catalog.movie(card.movieId)?.let {
+        ResumeItem(
+            MediaKey.Movie(it.id),
+            it.displayTitle,
+            it.posterUrl,
+            card.progress,
+            card = card,
+            name = it.name,
+        )
+    }
+    is ContinueWatchingCard.Series -> {
+        val ep = card.episode
+        catalog.seriesOf(ep)?.let {
+            ResumeItem(
+                key = MediaKey.Episode(ep.id),
+                title = it.name,
+                // The card is landscape: the wide backdrop fits it, a portrait poster only crops.
+                posterUrl = it.backdropUrl ?: it.posterUrl,
+                progress = card.progress,
+                episode = SeasonEpisode(ep.season, ep.episodeNumber),
+                newEpisode = card.newEpisode,
                 card = card,
             )
         }
-        is ContinueWatchingCard.Series -> {
-            val ep = card.episode
-            catalog.seriesOf(ep)?.let {
-                VodViewModel.ResumeItem(
-                    key = MediaKey.Episode(ep.id),
-                    title = it.name,
-                    // The card is landscape: the wide backdrop fits it, a portrait poster only crops.
-                    posterUrl = it.backdropUrl ?: it.posterUrl,
-                    progress = card.progress,
-                    episode = VodViewModel.SeasonEpisode(ep.season, ep.episodeNumber),
-                    newEpisode = card.newEpisode,
-                    card = card,
-                )
-            }
-        }
     }
+}
 
 /** Home's Live Preview and the titles on its channel now and next, when the guide has them. */
 data class LiveNow(val preview: LivePreview, val nowTitle: String?, val nextTitle: String?)
 
 /** What Home shows: the active Profile's Continue Watching and its Favourites, by kind, then [recent]. */
 data class HomeState(
-    val continueWatching: List<VodViewModel.ResumeItem>,
+    val continueWatching: List<ResumeItem>,
     val favouriteShows: List<Series>,
     val favouriteMovies: List<Movie>,
     val favouriteChannels: List<LineupChannel>,
@@ -1053,7 +1109,7 @@ class HomeViewModel @JvmOverloads constructor(
     private val lineup = graph.channelLineup
 
     @OptIn(ExperimentalCoroutinesApi::class)
-    private val continueWatching: Flow<List<VodViewModel.ResumeItem>> = combine(
+    private val continueWatching: Flow<List<ResumeItem>> = combine(
         graph.viewerLibrary.continueWatching()
             .mapLatest { cards -> cards.mapNotNull { resumeItem(graph.catalogRepository, it) } },
         settings.moviesEnabled,
@@ -1102,7 +1158,9 @@ class HomeViewModel @JvmOverloads constructor(
             when {
                 preview == null -> flowOf(null)
                 channelId == null -> flowOf(preview to null)
-                else -> lineup.channel(channelId).map { channel -> channel?.let { preview to it } }
+                else -> lineup.channel(channelId).map { channel ->
+                    channel?.let { shownQuality(preview, it) to it }
+                }
             }
         }
         .distinctUntilChanged()
@@ -1113,6 +1171,19 @@ class HomeViewModel @JvmOverloads constructor(
                 minute.map { now -> liveNow(shown.first, shown.second, now) }.distinctUntilChanged()
             }
         }
+
+    /**
+     * The Quality last settled on, which may have been picked from the list, unless this device can't
+     * play it: then the one its Channel plays by default, not a tile that only says it can't.
+     */
+    private fun shownQuality(preview: LivePreview, channel: LineupChannel): LivePreview {
+        val settled = preview.channel ?: return preview
+        return if (graph.decoders.playsQualityRanked(settled.qualityRank)) {
+            preview
+        } else {
+            LivePreview.Playable(channel.primary)
+        }
+    }
 
     private suspend fun liveNow(preview: LivePreview, channel: LineupChannel?, now: Long): LiveNow {
         // The Channel's guide, as the guide itself picks it.

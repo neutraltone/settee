@@ -69,7 +69,7 @@ class NewEpisodeRefreshTest {
         panel.replies["get_series_info:$id"] = seriesInfo("$id-1" to "Pilot")
         test.catalog.ensureEpisodes(PANEL_SOURCE, id, now)
         val pilot = db.episodes().forSeries(1, id).single()
-        test.viewerLibrary.recordProgress("ep:${pilot.id}", positionMillis = 1_000, durationMillis = 1_000)
+        test.viewerLibrary.recordProgress("ep:${pilot.id}", positionMillis = 2_400_000, durationMillis = 2_400_000)
         now += 60_000
         panel.replies["get_series_info:$id"] = seriesInfo("$id-1" to "Pilot", "$id-2" to "Second")
     }

@@ -46,7 +46,8 @@ class ChannelLineupTest {
     private val lockedKeys = MutableStateFlow(emptySet<String>())
     private val unlocked = MutableStateFlow(false)
     private val sharing = CoroutineScope(SupervisorJob() + Dispatchers.Default)
-    private val lineup = ChannelLineup(db, catalogue.viewerLibrary.favourites, lockedKeys, unlocked, sharing)
+    private val lineup =
+        ChannelLineup(db, catalogue.viewerLibrary.favourites, lockedKeys, unlocked, ANY_SIZE_DECODERS, sharing)
 
     @Before
     fun twoProviders() = runTest {
@@ -81,7 +82,7 @@ class ChannelLineupTest {
     private suspend fun category(sourceId: Long, id: String, name: String) =
         db.categories().upsertAll(listOf(Category(id = id, sourceId = sourceId, name = name, kind = StreamKind.LIVE)))
 
-    private suspend fun row(name: String): Channel = db.channels().allForMatching().single { it.name == name }
+    private suspend fun row(name: String): Channel = db.channels().everyRow().single { it.name == name }
 
     private suspend fun all(): List<LineupChannel> = lineup.channels(LineupScope.All()).first()
 

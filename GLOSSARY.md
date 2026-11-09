@@ -26,19 +26,27 @@ _Avoid_: Captions setting, CC, subtitle default
 
 ## Providers
 
+**Provider**:
+The IPTV service the viewer already pays for, connected by an Xtream Codes login, an M3U playlist or a Stalker portal. It supplies the channels, movies and shows; Settee only plays them.
+_Avoid_: Source, playlist (that's only one way to connect)
+
+**EPG Source**:
+Where a provider's guide data comes from, such as an XMLTV link. The term is for setup; everywhere else the viewer just sees the guide.
+_Avoid_: Source on its own, feed
+
 **Catalogue Refresh**:
 Fetching a provider's channels, movies, shows and guide again and merging them into what's on the device. It never wipes what the viewer set: hidden channels, custom names, Favourites and progress all carry across. Runs every six hours, when the viewer asks, when a provider is added, and when Movies or Shows is opened and that provider's titles are more than 12 hours old.
 _Avoid_: Sync (that's between the viewer's devices), reload, update
+
+**Quality**:
+One provider's stream of a Channel or Movie, such as HD, FHD or 4K. The highest one this device can play is the one that plays by default. A Channel's Qualities are the same wherever it's shown.
+_Avoid_: Variant (in user-facing text), feed
 
 ## Live TV
 
 **Channel**:
 A live station the viewer can watch, however many qualities or providers carry it. Rows with the same name and region fold into one Channel. A row with no region joins the one regional Channel of its name, if there's only one.
 _Avoid_: Stream, row
-
-**Quality**:
-One provider's stream of a Channel, such as HD, FHD or 4K. A Channel's Qualities are the same wherever it's shown.
-_Avoid_: Variant (in user-facing text), feed
 
 **Parental Lock**:
 Categories hidden on this device, for every Profile on it, from everywhere viewers browse and play, but not from the management screens. A PIN guards the setting; entering it shows them until the app closes. A lock spreads to the viewer's other devices when they sync; an unlock stays on the device it was made on.
@@ -90,3 +98,17 @@ _Avoid_: Dashboard, start page
 **Live Preview**:
 A muted, playing tile on Home of the live channel the Profile last watched on this device, shown only when live TV was the Profile's most recent playback. Settling on a channel full screen counts as watching it; zapping past one or seeing it in the guide's preview does not. A channel that has since left the channel list still shows, as a reminder that can't play; a channel the viewer hid does not.
 _Avoid_: Last channel, boot channel
+
+## On screen
+
+**Highlight**:
+The one thing on screen the remote is currently on: what OK would press. There is always exactly one.
+_Avoid_: Focus, selection, cursor
+
+**Rail**:
+The left-hand navigation: Home, Live TV, Movies, Shows and Recordings, with Search, the Profile and Settings set apart from them. It shows icons until it has the Highlight, then opens with a label for each.
+_Avoid_: Sidebar (that's the Categories Sidebar), menu, nav
+
+**Categories Sidebar**:
+The list of a tab's categories on Live TV, Movies and Shows. It stays tucked away until Left from the leftmost item opens it on the current category.
+_Avoid_: Sidebar on its own, filter, chips

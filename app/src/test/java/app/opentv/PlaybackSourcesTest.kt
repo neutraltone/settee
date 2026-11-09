@@ -190,7 +190,7 @@ class PlaybackSourcesTest {
                 ),
             ),
         )
-        db.channels().allForMatching().forEach { db.channels().upsertAll(listOf(it.copy(groupKey = "uk:bbc1"))) }
+        db.channels().everyRow().forEach { db.channels().upsertAll(listOf(it.copy(groupKey = "uk:bbc1"))) }
         db.programmes().upsertAll(listOf(news(), news().copy(epgChannelId = "bbc1.fhd", title = "Breakfast")))
 
         val playable = inUtc { sources.forWatching(MediaKey.Catchup(hd, NEWS_START)) } as Playable.Ready
@@ -283,7 +283,7 @@ class PlaybackSourcesTest {
                     bbcOne(sourceId = 3, streamUrl = "http://example.com/bbc1.ts"),
                 ),
             )
-            val picked = db.channels().allForMatching().single { it.sourceId == PANEL_SOURCE.id }.id
+            val picked = db.channels().everyRow().single { it.sourceId == PANEL_SOURCE.id }.id
             val id = db.recordings().insert(
                 recording("/data/rec/news.ts", RecordingStatus.SCHEDULED, picked).copy(sourceId = 3),
             )
@@ -301,7 +301,7 @@ class PlaybackSourcesTest {
         db.channels().upsertAll(
             listOf(bbcOne(sourceId = PANEL_SOURCE.id, streamUrl = "http://example.com/live/u/p/9.m3u8")),
         )
-        val picked = db.channels().allForMatching().single().id
+        val picked = db.channels().everyRow().single().id
         val id = db.recordings().insert(
             recording("/data/rec/news.ts", RecordingStatus.SCHEDULED, picked).copy(sourceId = STALKER_SOURCE.id),
         )
@@ -491,7 +491,7 @@ class PlaybackSourcesTest {
                 ),
             ),
         )
-        return db.channels().allForMatching().single().id
+        return db.channels().everyRow().single().id
     }
 }
 

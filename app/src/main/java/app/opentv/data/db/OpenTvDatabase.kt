@@ -15,6 +15,7 @@ import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 import app.opentv.data.model.Category
 import app.opentv.data.model.Channel
+import app.opentv.data.model.ChannelHiddenChange
 import app.opentv.data.model.EpgChannelAlias
 import app.opentv.data.model.EpgFeed
 import app.opentv.data.model.Episode
@@ -64,6 +65,7 @@ class Converters {
         Source::class,
         Category::class,
         Channel::class,
+        ChannelHiddenChange::class,
         EpgFeed::class,
         EpgChannelAlias::class,
         Programme::class,
@@ -81,7 +83,7 @@ class Converters {
         SeriesRule::class,
         Reminder::class,
     ],
-    version = 8,
+    version = 9,
     exportSchema = true,
 )
 @TypeConverters(Converters::class)
@@ -110,31 +112,10 @@ abstract class OpenTvDatabase : RoomDatabase() {
         const val FILE_NAME = "opentv.db"
 
         /**
-         * Every migration, in order. Shared with the migration test so neither list can lag. The
-         * pre-1.0 wipe policy below means a change *may* skip one, but a change that only adds a
-         * table costs one CREATE TABLE, so it keeps everyone's Favourites rather than wiping them.
+         * Every migration, in order. Shared with the migration test so neither list can lag. Empty
+         * because version 9 wiped under the pre-1.0 policy below; its older schemas went with it.
          */
-        internal val MIGRATIONS: Array<Migration> = arrayOf(
-            object : Migration(6, 7) {
-                override fun migrate(db: SupportSQLiteDatabase) {
-                    db.execSQL(
-                        "CREATE TABLE IF NOT EXISTS `live_playback` (`profileId` INTEGER NOT NULL, " +
-                            "`source` TEXT NOT NULL, `streamId` TEXT NOT NULL, `name` TEXT NOT NULL, " +
-                            "`logoUrl` TEXT, `playedAtMillis` INTEGER NOT NULL, `otherPlayedAtMillis` INTEGER, " +
-                            "PRIMARY KEY(`profileId`))",
-                    )
-                }
-            },
-            object : Migration(7, 8) {
-                override fun migrate(db: SupportSQLiteDatabase) {
-                    db.execSQL(
-                        "CREATE TABLE IF NOT EXISTS `recent_searches` (`profileId` INTEGER NOT NULL, " +
-                            "`text` TEXT NOT NULL, `searchedAtMillis` INTEGER NOT NULL, " +
-                            "PRIMARY KEY(`profileId`, `text`))",
-                    )
-                }
-            },
-        )
+        internal val MIGRATIONS: Array<Migration> = emptyArray()
 
         /**
          * [onWiped] runs when the destructive fallback below rebuilds the database. Settings that

@@ -38,7 +38,8 @@ import app.opentv.ui.LiveNow
 import app.opentv.ui.LivePreviewPlayer
 import app.opentv.ui.LiveTile
 import app.opentv.ui.RecentRows
-import app.opentv.ui.VodViewModel
+import app.opentv.ui.ResumeItem
+import app.opentv.ui.SeasonEpisode
 import app.opentv.ui.options.LeaveScreen
 import app.opentv.ui.options.LocalOpenOptions
 import app.opentv.ui.rememberLivePreviewPlayer
@@ -64,7 +65,7 @@ class HomeContentTest {
     val artwork = PlaceholderArtwork()
 
     private val resume = listOf(
-        VodViewModel.ResumeItem(
+        ResumeItem(
             MediaKey.Movie(9),
             "Collateral",
             posterUrl = "https://example.com/9.jpg",
@@ -165,7 +166,7 @@ class HomeContentTest {
     }
 
     private fun setHome(
-        resume: List<VodViewModel.ResumeItem> = this.resume,
+        resume: List<ResumeItem> = this.resume,
         shows: List<Series> = listOf(series(1, "Severance")),
         movies: List<Movie> = listOf(movie(2, "Heat")),
         channels: List<LineupChannel> = listOf(favourite(3, "BBC One")),
@@ -250,7 +251,7 @@ class HomeContentTest {
      * saved state, which comes back when Home does.
      */
     private fun setHomeToLeave(
-        continueWatching: () -> List<VodViewModel.ResumeItem> = { resume },
+        continueWatching: () -> List<ResumeItem> = { resume },
         movies: () -> List<Movie> = { listOf(movie(2, "Heat")) },
         recent: RecentRows = RecentRows(),
     ) = compose.setTvContent {
@@ -280,7 +281,7 @@ class HomeContentTest {
     /** False when a test's Home comes back while the side menu has the highlight. */
     private var homeTakesFocus by mutableStateOf(true)
 
-    private fun resumeItem(id: Long, title: String) = VodViewModel.ResumeItem(
+    private fun resumeItem(id: Long, title: String) = ResumeItem(
         MediaKey.Movie(id),
         title,
         posterUrl = "https://example.com/$id.jpg",
@@ -488,12 +489,12 @@ class HomeContentTest {
 
     @Test
     fun `a show with a New Episode is labelled in Home's Continue Watching`() {
-        val newEpisode = VodViewModel.ResumeItem(
+        val newEpisode = ResumeItem(
             MediaKey.Episode(31),
             "Severance",
             posterUrl = "https://example.com/31.jpg",
             progress = null,
-            episode = VodViewModel.SeasonEpisode(season = 3, episode = 1),
+            episode = SeasonEpisode(season = 3, episode = 1),
             newEpisode = true,
         )
         setHome(resume = listOf(newEpisode) + resume)

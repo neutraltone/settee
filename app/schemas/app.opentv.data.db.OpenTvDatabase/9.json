@@ -1,8 +1,8 @@
 {
   "formatVersion": 1,
   "database": {
-    "version": 6,
-    "identityHash": "f9af74ebfdddafc9a7243da569543895",
+    "version": 9,
+    "identityHash": "a8c9e9889540c7fb01cb12ff4a239e3f",
     "entities": [
       {
         "tableName": "sources",
@@ -296,6 +296,43 @@
             "createSql": "CREATE INDEX IF NOT EXISTS `index_channels_groupKey` ON `${TABLE_NAME}` (`groupKey`)"
           }
         ]
+      },
+      {
+        "tableName": "channel_hidden_changes",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`source` TEXT NOT NULL, `streamId` TEXT NOT NULL, `hidden` INTEGER NOT NULL, `changedAtMillis` INTEGER NOT NULL, PRIMARY KEY(`source`, `streamId`))",
+        "fields": [
+          {
+            "fieldPath": "source",
+            "columnName": "source",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "streamId",
+            "columnName": "streamId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "hidden",
+            "columnName": "hidden",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "changedAtMillis",
+            "columnName": "changedAtMillis",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "source",
+            "streamId"
+          ]
+        }
       },
       {
         "tableName": "epg_feeds",
@@ -959,7 +996,7 @@
       },
       {
         "tableName": "favourites",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`profileId` INTEGER NOT NULL, `kind` TEXT NOT NULL, `source` TEXT NOT NULL, `itemId` TEXT NOT NULL, PRIMARY KEY(`profileId`, `kind`, `source`, `itemId`))",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`profileId` INTEGER NOT NULL, `kind` TEXT NOT NULL, `source` TEXT NOT NULL, `itemId` TEXT NOT NULL, `changedAtMillis` INTEGER NOT NULL, `removed` INTEGER NOT NULL, PRIMARY KEY(`profileId`, `kind`, `source`, `itemId`))",
         "fields": [
           {
             "fieldPath": "profileId",
@@ -984,6 +1021,18 @@
             "columnName": "itemId",
             "affinity": "TEXT",
             "notNull": true
+          },
+          {
+            "fieldPath": "changedAtMillis",
+            "columnName": "changedAtMillis",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "removed",
+            "columnName": "removed",
+            "affinity": "INTEGER",
+            "notNull": true
           }
         ],
         "primaryKey": {
@@ -997,8 +1046,91 @@
         }
       },
       {
+        "tableName": "live_playback",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`profileId` INTEGER NOT NULL, `source` TEXT NOT NULL, `streamId` TEXT NOT NULL, `name` TEXT NOT NULL, `logoUrl` TEXT, `playedAtMillis` INTEGER NOT NULL, `otherPlayedAtMillis` INTEGER, PRIMARY KEY(`profileId`))",
+        "fields": [
+          {
+            "fieldPath": "profileId",
+            "columnName": "profileId",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "source",
+            "columnName": "source",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "streamId",
+            "columnName": "streamId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "name",
+            "columnName": "name",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "logoUrl",
+            "columnName": "logoUrl",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "playedAtMillis",
+            "columnName": "playedAtMillis",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "otherPlayedAtMillis",
+            "columnName": "otherPlayedAtMillis",
+            "affinity": "INTEGER"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "profileId"
+          ]
+        }
+      },
+      {
+        "tableName": "recent_searches",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`profileId` INTEGER NOT NULL, `text` TEXT NOT NULL, `searchedAtMillis` INTEGER NOT NULL, PRIMARY KEY(`profileId`, `text`))",
+        "fields": [
+          {
+            "fieldPath": "profileId",
+            "columnName": "profileId",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "text",
+            "columnName": "text",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "searchedAtMillis",
+            "columnName": "searchedAtMillis",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "profileId",
+            "text"
+          ]
+        }
+      },
+      {
         "tableName": "profiles",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `name` TEXT NOT NULL, `createdAtMillis` INTEGER NOT NULL)",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `name` TEXT NOT NULL, `createdAtMillis` INTEGER NOT NULL, `namedAtMillis` INTEGER NOT NULL)",
         "fields": [
           {
             "fieldPath": "id",
@@ -1015,6 +1147,12 @@
           {
             "fieldPath": "createdAtMillis",
             "columnName": "createdAtMillis",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "namedAtMillis",
+            "columnName": "namedAtMillis",
             "affinity": "INTEGER",
             "notNull": true
           }
@@ -1363,7 +1501,7 @@
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'f9af74ebfdddafc9a7243da569543895')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'a8c9e9889540c7fb01cb12ff4a239e3f')"
     ]
   }
 }

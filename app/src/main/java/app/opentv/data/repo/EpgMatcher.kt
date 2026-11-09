@@ -25,33 +25,43 @@ import app.opentv.data.parser.ChannelNameNormalizer
  */
 object EpgMatcher {
 
-    /** One guide channel, pre-normalised. */
-    data class Alias(
-        val epgId: String,
-        /** Normalised display-name or id: `bbcone`, `bbc1uk`. */
-        val key: String,
-    )
+    /**
+     * @param guideIdByKey Every guide key and the one guide channel it names, or null when two
+     *   channels share it.
+     */
+    class Index internal constructor(private val guideIdByKey: Map<String, String?>) {
+        /** In order, because keys extending a name sit next to each other. */
+        private val sortedKeys = guideIdByKey.keys.sorted().toTypedArray()
 
-    class Index internal constructor(private val exact: Map<String, String>, private val sortedKeys: List<Alias>) {
         /** Returns the epg id for a provider channel's group key, or null. */
         fun match(groupKey: String): String? {
             if (groupKey.length < MIN_KEY_LENGTH) return null
 
-            exact[groupKey]?.let { return it }
+            // A shared key is refused outright: both its channels would be candidates below.
+            if (groupKey in guideIdByKey) return guideIdByKey[groupKey]
 
             // Prefix tier: the provider name extends the guide name or vice versa
             // ("skysportsmainevent" vs "skysportsmainevt"; "bbcone" vs "bbconelondon").
             // Only accepted when every candidate agrees on a single epg id.
+            //
+            // Not by checking each guide key in turn: that's channels x aliases, and it took most of
+            // the matcher's time on a Fire TV Stick (#177).
             var found: String? = null
-            for (alias in sortedKeys) {
-                val hit = (alias.key.length >= MIN_KEY_LENGTH) &&
-                    (alias.key.startsWith(groupKey) || groupKey.startsWith(alias.key))
-                if (!hit) continue
-                if (found == null) {
-                    found = alias.epgId
-                } else if (found != alias.epgId) {
-                    return null // ambiguous — refuse to guess
-                }
+            for (end in MIN_KEY_LENGTH until groupKey.length) {
+                val shorter = groupKey.substring(0, end)
+                if (shorter !in guideIdByKey) continue
+                val id = guideIdByKey[shorter] ?: return null
+                if (found != null && found != id) return null
+                found = id
+            }
+            // The key isn't present, so binarySearch gives -(where it would go) - 1. Refusing at the
+            // first disagreement keeps this run short, however common the name's start is.
+            var i = -sortedKeys.binarySearch(groupKey) - 1
+            while (i < sortedKeys.size && sortedKeys[i].startsWith(groupKey)) {
+                val id = guideIdByKey[sortedKeys[i]] ?: return null
+                if (found != null && found != id) return null
+                found = id
+                i++
             }
             return found
         }
@@ -65,9 +75,7 @@ object EpgMatcher {
      * accept either.
      */
     fun buildIndex(aliases: Iterable<Pair<String, String>>): Index {
-        val exact = HashMap<String, String>()
-        val ambiguous = HashSet<String>()
-        val all = ArrayList<Alias>()
+        val guideIdByKey = HashMap<String, String?>()
 
         for ((epgId, name) in aliases) {
             for (candidate in listOf(name, epgId)) {
@@ -76,18 +84,17 @@ object EpgMatcher {
                 // provider's 'BBC ONE EAST'. normalize() strips the quality token.
                 val key = ChannelNameNormalizer.normalize(candidate).groupKey
                 if (key.length < MIN_KEY_LENGTH) continue
-                all += Alias(epgId, key)
-                val existing = exact.putIfAbsent(key, epgId)
-                if (existing != null && existing != epgId) {
-                    // Two different guide channels normalise to the same key. Neither can
-                    // be trusted for exact matching; drop the key rather than pick a side.
-                    ambiguous += key
+                // Two different guide channels normalising to the same key can't be trusted for
+                // matching; drop the key rather than pick a side, and it stays dropped.
+                if (key !in guideIdByKey) {
+                    guideIdByKey[key] = epgId
+                } else if (guideIdByKey[key] != epgId) {
+                    guideIdByKey[key] = null
                 }
             }
         }
-        ambiguous.forEach(exact::remove)
 
-        return Index(exact, all)
+        return Index(guideIdByKey)
     }
 
     /**

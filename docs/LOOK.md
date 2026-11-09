@@ -1,0 +1,251 @@
+# Settee's look
+
+What Settee looks like and how it behaves on a TV. Build tickets point here, so nobody has to dig through closed decision tickets, and the prototypes never merge. The reasons behind each decision are on the tickets linked at the end.
+
+Designed for a Fire TV Stick at ten feet with a remote, on a 960 x 540 dp screen. Dark only. Phones and tablets are kept possible, but get no design of their own.
+
+**Provisional:** anything that moves or costs frames waits on the performance budget, which comes from measurements on a Stick. See [Motion and cost](#motion-and-cost).
+
+## Feel
+
+Warm and calm: a comfortable room that stays out of the way. Live TV, the guide and Home are quiet, dense and quick. Movies, Shows and details pages are big on artwork and space. Calm describes the look, never the pace, so no transition ever makes the viewer wait to press the next button.
+
+Never a sideloaded IPTV box, a stretched phone app or a storefront.
+
+## Press limits
+
+No design may exceed these on a Daily route.
+
+| Route | Limit | Tier |
+|---|---|---|
+| Pick up the first Continue Watching card | 1 | Daily |
+| Favourite show to playing | 3 plus moves along the row | Daily |
+| Next episode | 0, it plays on its own | Daily |
+| Channel list during live playback | 1, or 2 if the bar is showing | Occasional |
+| Home to the Live tab | About 3 | Occasional |
+
+A Live Preview adds one Down to the Home routes. It must always be obvious where the Highlight is, and watch status must show on the cards the viewer chooses from.
+
+## Voice
+
+A calm, capable friend, writing for the viewer as "you". Technical terms appear only in setup, with a plain line explaining them. British English, sentence case, short sentences and contractions. Exclamation marks only when really warranted, and no em dashes.
+
+- **Terms:** "provider" for the service, "EPG source" for guide data in setup only, "Movies", and "Season" for part of a series.
+- **Errors:** a friendly sentence saying what happened and what to do next, and whose end it's on when known. No apologies or jokes. A small, quiet line under it always shows the code, status and format, and never a provider URL, username, password or MAC.
+- **Empty states:** what will appear here, plus the one thing to do about it if there is one.
+- **Wordplay:** one or two lines at most, on the welcome and setup screens only.
+- **Settee itself:** no subject where the sentence works without one, then "Settee", and "we" only where it reads warmer. Never "I".
+
+### Example wording
+
+Check each against what the app can actually tell.
+
+- **Welcome:** "Welcome to Settee. Let's get you settled in."
+- **Add your provider:** "Settee plays the TV you already pay for. It doesn't supply channels, so start by adding your provider."
+- **Privacy:** "Your provider details stay on this device. Settee has no accounts and no server of its own."
+- **Home, empty:** "What you watch and favourite will show up here."
+- **Recordings, empty:** "No recordings yet. Press Record while you're watching, or pick a programme in the guide."
+- **Providers, empty:** "No providers yet. Add the service you already pay for to get started."
+- **Category, empty:** "No channels in this category."
+- **Can't connect:** "Can't reach your provider. Check this TV is online and the address is right." Phones say "this device".
+- **Timed out:** "Your provider stopped responding. It may be busy, so try again in a moment."
+- **Web page instead of video:** "Your provider sent a web page instead of video. The link may have expired, so try refreshing your provider in Settings."
+- **Bad stream:** "This channel's video is damaged and won't play. That's at your provider's end, so try another channel."
+- **Anything else:** "This didn't play. Try again, or pick something else."
+
+## Identity
+
+A settee that's also a TV: its back is the screen, with an old TV's aerials on top and a tiny, cute face on the screen. It always sits in its coral tile, in plum on coral, including on Settee's own dark background.
+
+- **App icon:** the mark on coral, for rounded, round and square launchers. API 24-25 has no adaptive icons, so it needs a PNG fallback.
+- **TV banner:** 320 x 180 on coral, the mark beside "Settee" in Young Serif. It must carry the name. Use a PNG, since whether the Fire OS launcher renders a vector banner is unchecked.
+- **With the name on a dark screen:** the tile beside the name in cream.
+- **Artwork:** start from [the SVG on the prototype branch](https://github.com/neutraltone/settee/blob/prototype/153-identity/prototype-screenshots/153-identity/settee-icon.svg). Draw "Settee" as shapes, not live text.
+
+## Tokens
+
+Plain constants in `ui/design`.
+
+### Colour
+
+| Role | Value | Notes |
+|---|---|---|
+| Background | `#1A1416` | |
+| Surface | `#281F22` | Text 14.2:1, quiet text 7.3:1 |
+| Raised | `#362A2E` | Text 12.1:1, quiet text 6.3:1 |
+| Rule | `#45373B` | Decoration only |
+| Text | `#F8EFEA` | 16.0:1 on Background |
+| Quiet text | `#BDABA8` | 8.3:1 on Background |
+| Accent | `#FF8F6B` | 8.1:1 on Background |
+| On accent | `#2A130B` | 7.9:1 on Accent |
+
+Watched episodes step back by colour, never alpha. On-video colours for the players are set with the player tickets.
+
+### Type
+
+| Role | Face | Size |
+|---|---|---|
+| Display | Young Serif | 54 sp |
+| Hero | Young Serif | 32 sp |
+| Screen title | Young Serif | 28 sp |
+| Section | Young Serif | 18 sp |
+| Synopsis | Alegreya Sans Medium | 18 sp |
+| Title on a card or row | Alegreya Sans Bold | 16 to 17 sp |
+| Body and labels | Alegreya Sans Medium | 16 sp |
+
+- **Size floor:** 16 sp for all text, checked by a test on the type tokens.
+- **Figures:** lining, with `fontFeatureSettings = "lnum, tnum"`, wherever a number appears.
+- **Shipping the fonts:** the exact Google Fonts files, Young Serif 3.003 and Alegreya Sans 2.004, unmodified, not subset and never turned into code. Young Serif on upstream `master` has been redrawn much thinner, so pin 3.003. Ship Young Serif Regular and Alegreya Sans Medium and Bold.
+- **Licences:** rely on the fonts being an aggregate alongside the app, not on the OFL being compatible with the GPL. Ship each upstream `OFL.txt` in the APK and the repo with its version, source commit and hash, and add a row on the About screen.
+- **Other languages:** Young Serif doesn't cover Russian, Ukrainian, Bulgarian, Greek or Vietnamese, so titles in those locales use Alegreya Sans Bold, chosen by locale. Arabic, Persian, Hindi, Thai, Chinese, Japanese and Korean stay on the system fallback.
+
+### Shape and space
+
+| Role | Value |
+|---|---|
+| Guide cells, sidebar rows | 2 dp corners |
+| Episode thumbnails | 7 dp corners |
+| Cards, episode rows, rail items | 10 dp corners |
+| Buttons | Pill |
+| Screen margin | 48 dp at the sides, 27 dp top and bottom |
+| Gap between cards | 12 dp |
+| Gap between rows | 14 dp |
+
+## Highlight
+
+Two treatments, because they suit different surfaces.
+
+- **Cards and the Live Preview:** a 4 dp coral ring with a 2 dp dark edge inside it, plus a lift. The dark edge keeps the ring visible on warm, white and printed artwork.
+- **Lift:** 1.05, or 1.03 on Home's large first card. Anything bigger cuts the ring off at the row's edge. Leave room for it in the row's padding.
+- **Glow:** one, 14 dp, on the highlighted item only.
+- **Progress on a highlighted card:** inset 6 dp, inside the dark edge, with the text moved up clear of it.
+- **Guide cells, sidebar rows, rail items, buttons and episode rows:** a solid coral fill with dark text.
+- **Text on artwork:** a gradient across the lower part of the card.
+
+## Rail
+
+Home, Live TV, Movies, Shows and Recordings, with Search at the top, and the Profile and Settings at the foot. Home is always where the app opens.
+
+- **Closed:** icons only, 48 dp from the screen's edge with no panel behind them, on a 104 dp rail. The current tab stays marked.
+- **Open:** when the rail has the Highlight, the panel appears with a label for every item, and pushes the content along. The icons stay where they were. It closes when the Highlight leaves.
+- **Keys:** Left enters on the current tab, Right returns to the item left, OK on a tab moves the Highlight into it, and Back is unchanged.
+
+Whether it slides or snaps open waits on the performance budget. If the slide costs too much, the fallback is the same push with no animation.
+
+## Home
+
+From the top: Live Preview only when live TV was the Profile's last playback, Continue Watching, Favourites, Favourite channels, New. No hero, and no Favourites item on the rail.
+
+- **Continue Watching:** landscape cards, 186 dp wide, with the first 300 dp wide when there's no Live Preview. Home opens on the first card.
+- **Favourites and New:** portrait covers, 118 dp wide, with text on the art.
+- **Favourite channels:** their own row of wide tiles, with the logo, name and what's on. Channels aren't mixed into Favourites, so they add no moves on the way to a favourite show.
+- **Live Preview:** one selectable block, with one Down to the first Continue Watching card. It takes about 140 dp, which pushes Favourites' status text off the screen until the viewer scrolls, so check this.
+- **To fix:** Down from the large first card lands on the second Favourite, because focus goes by position. Decide where it should land.
+
+## Shows and Movies
+
+A backdrop with the highlighted title's name, status and synopsis over it, then rows of portrait covers.
+
+- **Backdrop:** provisional. It changes on each press, and the budget decides whether it can. The fallback is one that doesn't change on each press.
+- **Gradient:** must move with the text. With the sidebar open, text today lands on the bright part of the backdrop and drops as low as 1.5:1, so this is a required fix.
+- **Rows:** "For you" keeps the tab's rows. There's no Popular row, because the app has no popularity data.
+- **Grids:** any other category opens its whole grid. Grids of thousands of titles haven't been measured, so measure them on a Stick.
+
+## Categories Sidebar
+
+On Live TV, Movies and Shows. Tucked away until Left from the leftmost item opens it on the current category, so it adds no press on the way to a card. It pushes the content, and Right closes it.
+
+- **Size:** 214 dp, with solid coral rows when highlighted and the current category in coral otherwise.
+- **Find a category:** a text field at the top. Typing a few letters narrows the list, and it shows how many of how many are showing.
+- **To fix:** Right lands on the nearest row, not the one the viewer left.
+
+## Details
+
+A hero with a full backdrop, title, status, synopsis, Resume and Favourite. A film's page is the same hero with nothing beneath.
+
+- **Opens on Resume.** One Down reaches the episode in progress.
+- **Season pills:** a row under the hero. Up from the episodes reaches them, and Down from the buttons passes them.
+- **Episodes:** a vertical list with the thumbnail on the left, showing status. Going into the list moves the hero away in one step, and going back up returns it.
+- **Season, never "series"** for part of a show. That includes "2 seasons" on cards.
+
+## Player
+
+Movies, episodes and live TV share one layout.
+
+- **First press:** the title and one row: a pause or play icon, the seek bar, then Subtitles and Audio as icon buttons. A close button sits at the top right. The Highlight starts on the seek bar.
+- **On the seek bar:** Left and Right move through the video, and OK plays and pauses. They can't also move along the row, so the play icon only shows the state, and is a target for touch.
+- **Down** moves the Highlight to Subtitles and brings up the less-used buttons as pills. Right reaches Audio, and Down again reaches the pills. **Up** reaches close.
+- **Pills:** on movies and episodes, Mark as watched, Sleep timer and Options. On live TV, Record, Quality, Aspect ratio and Sleep timer. Check these against today's options.
+- **Subtitles and audio:** a panel on the right, with the current choice ticked.
+- **Up Next:** a card in the bottom right with a still, the episode, a countdown, Play now and Watch credits.
+- **Still watching:** centred over a dimmed picture, with Keep watching and Stop.
+
+This focus design has never been tried with a remote, so try it first and change it if it doesn't work.
+
+## Live TV
+
+- **Changing channel:** a small card in the corner with the logo, channel, programme, progress and a line for what's next. It can't take the Highlight, so the remote carries on as it would with the picture alone.
+- **Channel list:** a left panel with the last channel pinned at the top, and rows with the logo, name and what's on.
+- **Guide:** ruled and square, with the times in a header above a strong rule. The current programme is bold, and later ones are quiet. Left from the first column opens the Categories Sidebar.
+
+Up and Down still zap, with no number entry.
+
+## Settings
+
+Two panes: sections on the left, their settings beside them, so nothing has to be opened to see what's inside.
+
+Sections are Providers, TV guide, Channels, Display and playback, Recording, Parental lock, Your devices, Add-ons, Manage on phone or laptop, and About. There's no Light theme.
+
+## Onboarding
+
+One page: the welcome and the choice of provider together.
+
+- **Set up from your phone comes first,** where the Highlight starts. The three ways of typing it on the TV sit under it.
+- **The QR screen** keeps today's flow: the code, six digits, and an address for when the camera won't scan.
+- **The page on the phone** isn't designed yet. Give it the same colours and type.
+
+## Recordings
+
+One list, with Coming up, Recorded and Series links as headings. Recordings have a channel logo but no artwork, so they're rows, not cards.
+
+## Motion and cost
+
+Set by the performance budget ticket, from measurements on a Stick. Until then:
+
+- **Never:** blur, alpha-dimmed shelves or more than one glow.
+- **Images:** decoded at tile size.
+- **Under review:** the screen fade, the rail's slide, the sidebar's slide, the changing backdrop, and the gradient on every card.
+
+## Known risks
+
+- **Printed titles:** real covers often carry their own title, which runs into ours. Nothing here fixes it yet, so try it with real artwork when `ArtCard` is built.
+- **Rows at the edge:** rows run to the screen's edge, so partly hidden text sits outside the margin.
+- **Colour:** everything so far was judged on a monitor. Check colour and legibility on a real TV.
+
+## What done means
+
+Every screen ticket is done when:
+
+- It's fully usable with a remote, with focus tests for the routes that have press limits.
+- It has a screenshot of the screen with its first Highlight, plus any existing states.
+- Its copy follows [Voice](#voice).
+- Its old code is gone, along with its entries in the detekt baseline.
+- It has been tried on a Stick before merging.
+
+## Decisions and prototypes
+
+| Decision | Prototype |
+|---|---|
+| [What Compose for TV gives over Material 3](https://github.com/neutraltone/settee/issues/85) | |
+| [What Fire TV requires](https://github.com/neutraltone/settee/issues/86) | |
+| [What the viewer relies on](https://github.com/neutraltone/settee/issues/87) | |
+| [What Settee should feel like](https://github.com/neutraltone/settee/issues/88) | |
+| [The visual direction](https://github.com/neutraltone/settee/issues/89) | [`prototype/89-directions`](https://github.com/neutraltone/settee/tree/prototype/89-directions) |
+| [The left-hand navigation](https://github.com/neutraltone/settee/issues/90) | [`prototype/90-left-rail`](https://github.com/neutraltone/settee/tree/prototype/90-left-rail) |
+| [How Settee talks](https://github.com/neutraltone/settee/issues/145) | |
+| [How the design system is built](https://github.com/neutraltone/settee/issues/147) | |
+| [The typefaces](https://github.com/neutraltone/settee/issues/150) | [`research/150-typefaces`](https://github.com/neutraltone/settee/tree/research/150-typefaces) |
+| [The highlight and tokens](https://github.com/neutraltone/settee/issues/151) | [`prototype/151-highlight`](https://github.com/neutraltone/settee/tree/prototype/151-highlight) |
+| [The remaining screens](https://github.com/neutraltone/settee/issues/152) | [`prototype/152-remaining`](https://github.com/neutraltone/settee/tree/prototype/152-remaining) |
+| [The logo](https://github.com/neutraltone/settee/issues/153) | [`prototype/153-identity`](https://github.com/neutraltone/settee/tree/prototype/153-identity) |
+| [How the build splits](https://github.com/neutraltone/settee/issues/155) | |

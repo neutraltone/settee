@@ -26,6 +26,7 @@ import app.opentv.data.model.RecordingStatus
 import app.opentv.data.model.Source
 import app.opentv.data.model.SourceKind
 import app.opentv.ui.player.PlayerScreen
+import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.After
@@ -94,7 +95,7 @@ class PlayerScreenOptionsTest {
     }
 
     private suspend fun idOf(streamId: String) =
-        graph.database.channels().allForMatching().single { it.streamId == streamId }.id
+        graph.database.channels().everyRow().single { it.streamId == streamId }.id
 
     /** The player on [streamId], once it has found its Channel: the banner names it. */
     private fun showPlaying(streamId: String, named: String) {
@@ -117,6 +118,22 @@ class PlayerScreenOptionsTest {
     private fun inListMatcher(text: String) = hasText(text) and hasAnyAncestor(isDialog())
 
     private fun waitInList(text: String) = compose.waitUntilAtLeastOneExists(inListMatcher(text), TIMEOUT_MILLIS)
+
+    @Test
+    fun `Record now records the Quality that's playing`() {
+        showPlaying("10", "ITV")
+        openList()
+        waitInList("● Record now")
+
+        compose.onNode(inListMatcher("● Record now")).performClick()
+
+        compose.waitUntil(TIMEOUT_MILLIS) {
+            shadowOf(Looper.getMainLooper()).idle()
+            runBlocking { graph.recordingRepository.active() }.isNotEmpty()
+        }
+        val recording = runBlocking { graph.recordingRepository.active().single() }
+        assertThat(recording.channelId).isEqualTo(runBlocking { idOf("10") })
+    }
 
     @Test
     fun `Add to Favourites stars every Quality of the Channel, and the list then offers removing it`() {

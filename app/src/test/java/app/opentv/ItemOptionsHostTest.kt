@@ -26,7 +26,7 @@ import app.opentv.data.model.SourceKind
 import app.opentv.data.model.StreamKind
 import app.opentv.data.repo.ContinueWatchingCard
 import app.opentv.data.repo.MediaKey
-import app.opentv.ui.VodViewModel.ResumeItem
+import app.opentv.ui.ResumeItem
 import app.opentv.ui.options.ItemOptionsHost
 import app.opentv.ui.options.OptionsDestination
 import app.opentv.ui.vod.ContinueWatchingRow
@@ -101,7 +101,7 @@ class ItemOptionsHostTest {
 
     // The graph is process-wide, so its database outlives each test.
     @Before
-    fun catalogue() = runBlocking {
+    fun catalogue(): Unit = runBlocking {
         if (graph.sourceRepository.byId(1) == null) {
             graph.database.sources().insert(
                 Source(id = 1, name = "Provider", kind = SourceKind.XTREAM, url = "http://example.com"),

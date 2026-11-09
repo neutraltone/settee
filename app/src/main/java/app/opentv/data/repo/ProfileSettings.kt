@@ -7,8 +7,7 @@ package app.opentv.data.repo
 
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.common.util.Util
-import app.opentv.data.db.ProfileDao
-import app.opentv.data.db.ProfileSettingDao
+import app.opentv.data.db.OpenTvDatabase
 import app.opentv.data.model.ProfileSetting
 import app.opentv.sync.SyncProfileSetting
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -37,11 +36,13 @@ fun baseLanguage(code: String?): String? =
  * `profile_settings` table. Screens, players and sync ask it, never the DAO.
  */
 class ProfileSettings(
-    private val dao: ProfileSettingDao,
-    private val profiles: ProfileDao,
+    private val db: OpenTvDatabase,
     private val activeProfileId: StateFlow<Long>,
     private val clock: () -> Long = System::currentTimeMillis,
 ) {
+    private val dao = db.profileSettings()
+    private val profiles = db.profiles()
+
     /** The active Profile's Subtitle Preference; follows Profile switches. */
     @OptIn(ExperimentalCoroutinesApi::class)
     val subtitlePreference: Flow<SubtitlePreference> = activeProfileId
@@ -73,6 +74,12 @@ class ProfileSettings(
     /** The Profile is being deleted: its settings go with it. */
     suspend fun forgetProfile(profileId: Long) = dao.deleteFor(profileId)
 
+    /** Profile [from] is merging into [into]: its settings follow, the newer choice winning. */
+    suspend fun mergeProfile(from: Long, into: Long) {
+        dao.all().filter { it.profileId == from }.forEach { mergeSynced(it.copy(profileId = into)) }
+        dao.deleteFor(from)
+    }
+
     /** A setting from another device: the newer choice wins. Returns whether it was taken. */
     internal suspend fun mergeSynced(setting: ProfileSetting): Boolean {
         val local = dao.find(setting.profileId, setting.name)
@@ -91,13 +98,15 @@ class ProfileSettings(
         }
     }
 
-    /** Merges another device's settings, newest wins. Returns how many were taken. */
-    suspend fun import(items: List<SyncProfileSetting>): Int {
+    /** Merges another device's settings, newest wins, labels going by [history]. Returns how many were taken. */
+    suspend fun import(items: List<SyncProfileSetting>, history: ProfileHistory = ProfileHistory.NONE): Int {
         val names = profiles.directory()
-        return items.count { item ->
-            val profileId = names.id(item.profile) ?: return@count false
-            mergeSynced(ProfileSetting(profileId, item.name, item.value, item.updatedAtMillis))
+        val placed = items.mapNotNull { item ->
+            names.id(history.currentName(item.profile, item.updatedAtMillis))?.let {
+                ProfileSetting(it, item.name, item.value, item.updatedAtMillis)
+            }
         }
+        return db.mergeForProfiles(placed, { it.profileId }) { mergeSynced(it) }
     }
 
     private companion object {

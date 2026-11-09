@@ -37,6 +37,8 @@ git config core.hooksPath .githooks         # once per clone: enables the commit
 tools/check-message-test.sh                 # tests for the commit/PR-title convention
 ./gradlew recordRoborazziDebug              # screenshots → app/build/outputs/roborazzi/
 python3 -m unittest discover -s tools/screenshots  # screenshot comparison tests (needs Pillow)
+tools/perf/stick_baseline.py --help         # measure performance on a Fire TV Stick (docs/PERFORMANCE.md)
+python3 -m unittest discover -s tools/perf  # tests for that script
 ```
 
 Tests live in `app/src/test` (JUnit4, Truth, Robolectric, Room testing, coroutines-test, Roborazzi for screenshots); there are no
@@ -46,7 +48,7 @@ instrumented tests.
 
 `.github/workflows/build.yml` runs one job per required check: **Test and assemble** (unit tests, debug
 APK, and a fail if the build changed `app/schemas/`), **Android Lint**, **ktlint**, **detekt**,
-**Screenshot tools** (the Python tests in `tools/screenshots/`) and **gitleaks**. `pr-hygiene.yml` runs `tools/check-message-test.sh` and checks the PR title with
+**Screenshot tools** (the Python tests in `tools/screenshots/` and `tools/perf/`) and **gitleaks**. `pr-hygiene.yml` runs `tools/check-message-test.sh` and checks the PR title with
 `tools/check-message.sh`. Lint and detekt fail only on findings missing from `app/lint-baseline.xml` /
 `app/detekt-baseline.xml`: fix a new finding, don't regenerate a baseline to hide it. `.gitleaks.toml`
 adds rules for Xtream credentials in URLs and MAG MACs; use placeholders such as `u`/`p`, `example.com` or `00:1A:79:00:00:01` in tests.
@@ -110,8 +112,8 @@ catalogue refresh, playback or Xtream parsing. The big picture:
   itemId)` — the source's name and the provider's `streamId` (channels, movies) or `seriesId` (series) —
   never the stream URL, which Xtream changes with the live format and the account password. So they
   survive a catalogue refresh and match across devices. Hidden channels and channel order stay
-  device-wide columns on `channels`. Sync carries each Profile's Favourites under its name (additive)
-  and positions newest-wins (`sync/SyncData.kt`). A title travels as its source's name plus the
+  device-wide columns on `channels`, with when a viewer last hid or showed each in `channel_hidden_changes`. Sync carries each Profile's Favourites under its name and positions, both
+  newest-wins (`sync/SyncData.kt`); an unstarred Favourite stays as a row marked removed, so every read leaves those out. A title travels as its source's name plus the
   provider's id, never a stream URL, so a bundle holds no credentials (ADR 0004). Each store exports
   and imports its own items, identity and merge included; `SyncEngine` only collects, encodes, carries
   and counts. Keep new watch/favourite state syncable the same way.

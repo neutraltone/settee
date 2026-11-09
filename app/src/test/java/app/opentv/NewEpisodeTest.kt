@@ -89,6 +89,28 @@ class NewEpisodeTest {
     }
 
     @Test
+    fun `marking an old episode Unwatched doesn't stop a new one coming back as a New Episode`() = runTest {
+        db.episodes().upsertAll(episodes)
+        for (ep in episodes) {
+            watch(ep)
+            now += 1_000
+        }
+        library.marks.markUnwatched("ep:${testEpisode(1, 3).id}")
+        added["s"] = listOf(testEpisode(3, 1))
+        now += 60_000
+
+        seriesUpdated(series)
+
+        assertThat(library.continueWatchingSeries().first()).containsExactly(
+            ContinueWatchingCard.Series(
+                testEpisode(3, 1).copy(firstSeenMillis = now),
+                progress = null,
+                newEpisode = true,
+            ),
+        )
+    }
+
+    @Test
     fun `a series the Profile is part way through is not fetched`() = runTest {
         db.episodes().upsertAll(episodes)
         watch(testEpisode(1, 2))

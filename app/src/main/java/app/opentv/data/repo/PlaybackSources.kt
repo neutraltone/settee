@@ -71,13 +71,15 @@ sealed interface MediaKey {
         /** The key [stored] names, or null when it names none. */
         fun parse(stored: String): MediaKey? {
             val kind = stored.substringBefore(':')
-            val ids = stored.substringAfter(':', missingDelimiterValue = "").split(':').map { it.toLongOrNull() }
-            val id = ids.first() ?: return null
+            val rest = stored.substringAfter(':', missingDelimiterValue = "")
             return when (kind) {
-                MOVIE -> Movie(id).takeIf { ids.size == 1 }
-                EPISODE -> Episode(id).takeIf { ids.size == 1 }
-                RECORDING -> Recording(id).takeIf { ids.size == 1 }
-                CATCHUP -> ids.getOrNull(1)?.takeIf { ids.size == 2 }?.let { Catchup(id, it) }
+                MOVIE -> rest.toLongOrNull()?.let(::Movie)
+                EPISODE -> rest.toLongOrNull()?.let(::Episode)
+                RECORDING -> rest.toLongOrNull()?.let(::Recording)
+                CATCHUP -> {
+                    val channelId = rest.substringBefore(':').toLongOrNull() ?: return null
+                    rest.substringAfter(':', missingDelimiterValue = "").toLongOrNull()?.let { Catchup(channelId, it) }
+                }
                 else -> null
             }
         }
@@ -247,7 +249,7 @@ class PlaybackSources(
 private suspend fun ChannelLineup.capturedFor(recording: Recording, db: OpenTvDatabase): Channel? {
     val picked = db.channels().byId(recording.channelId)
     if (picked == null || picked.sourceId == recording.sourceId) return picked
-    return channelOf(picked.id)?.qualities
+    return channelOf(picked.id)?.let { recordable(it) }
         ?.filter { it.sourceId == recording.sourceId }
         ?.maxByOrNull { it.qualityRank }
         // That copy has gone since: the channel the viewer picked is still worth recording.

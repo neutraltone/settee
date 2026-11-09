@@ -40,14 +40,17 @@ class SyncEngine(private val graph: ServiceLocator.Graph) {
     }
 
     suspend fun gather(): SyncBundle = SyncBundle(
-        generatedAtMillis = System.currentTimeMillis(),
+        generatedAtMillis = graph.clock(),
         // First: asking for them is what seeds a fresh install's Profile, which the rest belongs to.
         profiles = graph.profiles.export(),
+        profileRenames = graph.profiles.history.renames,
+        profileAdds = graph.profiles.history.adds,
         progress = graph.viewerLibrary.syncedProgress.export(),
         dismissals = graph.viewerLibrary.syncedDismissals.export(),
         favourites = graph.viewerLibrary.favourites.export(),
         hiddenStreams = graph.catalogRepository.exportHiddenChannels(),
         hiddenCategories = graph.settings.hiddenCategories.value.toList(),
+        categoryLocks = graph.settings.exportCategoryLocks(),
         recordings = graph.recordingRepository.export(),
         profileSettings = graph.profileSettings.export(),
     )
@@ -68,20 +71,22 @@ class SyncEngine(private val graph: ServiceLocator.Graph) {
     }
 
     private suspend fun applyOne(bundle: SyncBundle, waiting: MutableList<SyncPosition>): MergeResult {
-        // First: everything else lands on a Profile by name.
-        graph.profiles.import(bundle.profiles)
-        if (bundle.hiddenCategories.isNotEmpty()) {
-            graph.settings.setHiddenCategories(graph.settings.hiddenCategories.value + bundle.hiddenCategories)
-        }
-        val progress = graph.viewerLibrary.syncedProgress.import(bundle.progress)
+        // First: everything else lands on a Profile by name, and these decide what the names are now.
+        graph.profiles.importChanges(bundle.profileRenames, bundle.profileAdds)
+        val history = graph.profiles.history
+        graph.profiles.import(bundle.profiles, bundle.generatedAtMillis)
+        graph.settings.importCategoryLocks(
+            bundle.categoryLocks + bundle.hiddenCategories.map { SyncCategoryLock(it, 0) },
+        )
+        val progress = graph.viewerLibrary.syncedProgress.import(bundle.progress, history)
         waiting += progress.waiting
         return MergeResult(
             // Counted with positions: both are where a Profile is with its titles.
-            positions = progress.taken + graph.viewerLibrary.syncedDismissals.import(bundle.dismissals),
-            favourites = graph.viewerLibrary.favourites.import(bundle.favourites),
+            positions = progress.taken + graph.viewerLibrary.syncedDismissals.import(bundle.dismissals, history),
+            favourites = graph.viewerLibrary.favourites.import(bundle.favourites, history),
             hidden = graph.catalogRepository.importHiddenChannels(bundle.hiddenStreams),
             recordings = graph.recordingRepository.import(bundle.recordings),
-            settings = graph.profileSettings.import(bundle.profileSettings),
+            settings = graph.profileSettings.import(bundle.profileSettings, history),
         )
     }
 }

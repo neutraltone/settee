@@ -115,6 +115,9 @@ android {
         unitTests {
             isIncludeAndroidResources = true
             isReturnDefaultValues = true
+            // Live pause's length follows the heap (BufferPlan), so the screen tests fix it at a
+            // device with plenty of memory: two minutes, whatever machine runs them.
+            all { it.maxHeapSize = "4g" }
         }
     }
 }

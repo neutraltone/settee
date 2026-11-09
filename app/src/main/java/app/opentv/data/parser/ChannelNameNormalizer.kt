@@ -51,9 +51,14 @@ object ChannelNameNormalizer {
     }
 
     /** Quality/codec tokens, matched as whole words, case-insensitively. */
+    private const val RANK_8K = 500
+    private const val RANK_4K = 400
+    private const val HEIGHT_8K = 4320
+    private const val HEIGHT_4K = 2160
+
     private val QUALITY_RANKS = mapOf(
-        "8K" to 500,
-        "4K" to 400, "UHD" to 400, "FUHD" to 400, "2160P" to 400,
+        "8K" to RANK_8K,
+        "4K" to RANK_4K, "UHD" to RANK_4K, "FUHD" to RANK_4K, "2160P" to RANK_4K,
         "FHD" to 300, "1080" to 300, "1080P" to 300, "FULLHD" to 300,
         "HD" to 200, "720P" to 200, "720" to 200,
         "SD" to 100, "LQ" to 100, "480P" to 100, "576P" to 100,
@@ -133,6 +138,13 @@ object ChannelNameNormalizer {
      */
     fun qualityRankOfToken(token: String): Int? = QUALITY_RANKS[token.uppercase()]
 
+    /** The height a Quality ranked [qualityRank] says it has, when that's more than every device plays. */
+    fun heightPromisedBy(qualityRank: Int): Int? = when {
+        qualityRank >= RANK_8K -> HEIGHT_8K
+        qualityRank >= RANK_4K -> HEIGHT_4K
+        else -> null
+    }
+
     /** Whether a single token is a non-resolution stream marker (`RAW`, `HEVC`, `60FPS`, `HDR`…). */
     fun isStreamMarker(token: String): Boolean = token.uppercase() in EXTRA_TOKENS
 
@@ -161,7 +173,15 @@ object ChannelNameNormalizer {
             val upper = bare.uppercase()
 
             val rank = QUALITY_RANKS[upper]
+            // `4K-TOP - Superbad`: a provider's 4K shelf, glued to its name. Only these tags, as `Hd-1`
+            // or `Fuhd-1` are as likely to be a name.
+            val glued = upper.substringBefore('-', "").takeIf { it == "4K" || it == "8K" }?.let(QUALITY_RANKS::get)
             when {
+                glued != null -> {
+                    if (glued > bestRank) bestRank = glued
+                    labelParts += upper.substringBefore('-')
+                    keptTokens += bare.substringAfter('-')
+                }
                 rank != null -> {
                     if (rank > bestRank) bestRank = rank
                     labelParts += upper

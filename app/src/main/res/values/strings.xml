@@ -115,6 +115,11 @@
     <string name="player_rewind">Rewind</string>
     <string name="player_pause">Pause</string>
     <string name="player_paused_left">Paused · %1$s left</string>
+    <string name="player_no_sound">This device can\'t play this audio format (%1$s). If your TV or soundbar supports it, turning on surround sound in the device\'s settings may help.</string>
+    <string name="player_stepped_down">This device can\'t play %1$s. Playing %2$s instead.</string>
+    <string name="player_stepped_down_lower">This device can\'t play %1$s. Playing a lower quality instead.</string>
+    <string name="player_stepped_down_for_sound">This device can\'t play this audio format (%1$s), so another version is playing. If your TV or soundbar supports it, turning on surround sound in the device\'s settings may help.</string>
+    <string name="player_stepped_down_unnamed">This device can\'t play that quality. Playing another instead.</string>
     <string name="player_back_to_live">Paused too long — back to live</string>
     <string name="live_pause_prompt_title">Pause live TV?</string>
     <string name="live_pause_prompt_turn_on">Turn on and pause</string>
@@ -123,6 +128,10 @@
     <plurals name="live_pause_prompt_body">
         <item quantity="one">Live pause keeps the last minute of this channel in memory, so you can pause for up to a minute and rewind to when you turned it on. It uses more memory: on boxes like the Fire TV Stick, playback may stutter or the app may be closed. The picture will restart briefly to switch it on. You can turn it off in Settings › Recording.</item>
         <item quantity="other">Live pause keeps the last %1$d minutes of this channel in memory, so you can pause for up to %1$d minutes and rewind to when you turned it on. It uses more memory: on boxes like the Fire TV Stick, playback may stutter or the app may be closed. The picture will restart briefly to switch it on. You can turn it off in Settings › Recording.</item>
+    </plurals>
+    <plurals name="live_pause_prompt_body_seconds">
+        <item quantity="one">Live pause keeps the last second of this channel in memory, so you can pause for up to a second and rewind to when you turned it on. This device has little memory to spare, so playback may stutter or the app may be closed. The picture will restart briefly to switch it on. You can turn it off in Settings › Recording.</item>
+        <item quantity="other">Live pause keeps the last %1$d seconds of this channel in memory, so you can pause for up to %1$d seconds and rewind to when you turned it on. This device has little memory to spare, so playback may stutter or the app may be closed. The picture will restart briefly to switch it on. You can turn it off in Settings › Recording.</item>
     </plurals>
     <string name="player_forward">Forward</string>
     <string name="player_subtitles">Subtitles</string>
@@ -223,6 +232,7 @@
     <string name="parental_hidden_desc">Anything switched on here is removed from Live TV until you turn on “Show hidden now” below. With a PIN set, this screen stays locked, so hidden stays hidden.</string>
     <string name="parental_show_hidden_title">Show hidden now (this session)</string>
     <string name="parental_show_hidden_subtitle">Reveals hidden categories until the app is restarted.</string>
+    <string name="parental_lock_sync_note">Categories you lock here are also locked on your other devices when they sync. Unlocking one only unlocks it on this device.</string>
     <string name="parental_no_categories">No categories yet — add a provider first.</string>
     <string name="parental_pin">PIN</string>
     <string name="parental_pin_is_set">A PIN is set.</string>
@@ -249,6 +259,7 @@
     <string name="profiles_use">Use</string>
     <string name="profiles_rename">Rename</string>
     <string name="profiles_name_placeholder">Name</string>
+    <string name="profiles_remove_confirm">Remove %1$s from this TV? Their progress and Favourites here will be deleted. Other devices keep %1$s.</string>
     <string name="profiles_name_taken">Another profile is already called %1$s.</string>
 
     <!-- ============================ Providers ============================ -->
@@ -569,10 +580,14 @@
     <string name="playback_no_catchup">This provider doesn\'t offer catch-up. Only Xtream providers can play past programmes.</string>
     <string name="playback_gone">This is no longer in the provider\'s list. Refresh the channel list and try again.</string>
     <string name="playback_video_format_unsupported">This device can\'t play this video format (%1$s).</string>
+    <string name="playback_video_too_big">This device can\'t play this video (%1$s).</string>
+    <string name="playback_no_first_frame">This device couldn\'t show this video (%1$s).</string>
+    <string name="player_unknown_format">unknown format</string>
     <string name="playback_audio_format_unsupported">This device can\'t play this audio format (%1$s).</string>
     <string name="playback_other_format_unsupported">This device can\'t play this format (%1$s).</string>
     <string name="playback_format_unsupported">This device can\'t play this format.</string>
     <string name="playback_try_other_quality">A different quality may work.</string>
+    <string name="playback_out_of_memory">This stream needs more memory than this device has.</string>
     <!-- Catalogue Refresh -->
     <string name="refresh_saving_source">Saving source…</string>
     <string name="refresh_save_failed">Could not save source.</string>

@@ -12,6 +12,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModelProvider
 import androidx.test.core.app.ApplicationProvider
 import app.opentv.core.ServiceLocator
+import app.opentv.data.model.Movie
 import app.opentv.data.model.Series
 import app.opentv.data.repo.MediaKey
 import app.opentv.data.repo.WatchStatus
@@ -72,6 +73,82 @@ class VodPlayerViewModelTest {
             testEpisode(1, 2).key to 600_000L,
         ).inOrder()
         assertThat(vm.current.value).isEqualTo(MediaKey.Episode(12))
+    }
+
+    private fun film(id: Long, name: String) = Movie(
+        id = id,
+        sourceId = 1,
+        streamId = "$id",
+        name = name,
+        categoryId = null,
+        posterUrl = null,
+        rating = null,
+        year = null,
+        plot = null,
+        durationSeconds = null,
+        containerExtension = "mkv",
+        streamUrl = "https://example.com/$id",
+        tmdbId = "8363",
+    )
+
+    @Test
+    fun `a film opened on a Quality this device can't play plays the copy it can, from that copy's own point`() =
+        runTest {
+            // Robolectric lists no decoders, so here as on a 1080p Stick a row tagged 4K doesn't play.
+            graph.database.movies().upsertAll(
+                listOf(film(1, "4K-TOP - Superbad (2007)"), film(2, "EN - Superbad (2007)")),
+            )
+            graph.viewerLibrary.recordProgress("movie:2", positionMillis = 600_000, durationMillis = EPISODE_MILLIS)
+            val vm = VodPlayerViewModel(app, graph)
+
+            vm.attach(MediaKey.Movie(1), playback)
+
+            assertThat(playback.played).containsExactly(MediaKey.Movie(2) to 600_000L)
+            assertThat(vm.current.value).isEqualTo(MediaKey.Movie(2))
+        }
+
+    @Test
+    fun `progress after stepping down belongs to the Quality now playing`() = runTest {
+        graph.database.movies().upsertAll(listOf(film(1, "HD - Superbad (2007)"), film(2, "SD - Superbad (2007)")))
+        val vm = VodPlayerViewModel(app, graph)
+        vm.attach(MediaKey.Movie(1), playback)
+
+        playback.steppedDownTo = MediaKey.Movie(2)
+        vm.poll()
+        playback.positionMillis = 300_000
+        vm.saveProgress()
+
+        assertThat(vm.current.value).isEqualTo(MediaKey.Movie(2))
+        assertThat(graph.viewerLibrary.resumeFrom("movie:2")).isEqualTo(300_000L)
+        assertThat(graph.viewerLibrary.resumeFrom("movie:1")).isEqualTo(0L)
+    }
+
+    @Test
+    fun `a film that reaches its end is finished`() = runTest {
+        graph.database.movies().upsertAll(listOf(film(1, "EN - Superbad (2007)")))
+        val vm = VodPlayerViewModel(app, graph)
+        vm.attach(MediaKey.Movie(1), playback)
+
+        vm.poll()
+        assertThat(vm.finished.value).isFalse()
+
+        playback.ended = true
+        vm.poll()
+        assertThat(vm.finished.value).isTrue()
+    }
+
+    @Test
+    fun `an episode that reaches its end moves on rather than finishing`() = runTest {
+        graph.database.episodes().upsertAll((1..2).map { testEpisode(1, it) })
+        val vm = VodPlayerViewModel(app, graph)
+        vm.attach(testEpisode(1, 1).key, playback)
+
+        playback.positionMillis = playback.durationMillis
+        playback.ended = true
+        vm.poll()
+
+        assertThat(vm.finished.value).isFalse()
+        assertThat(vm.current.value).isEqualTo(testEpisode(1, 2).key)
     }
 
     @Test

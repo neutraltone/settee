@@ -6,9 +6,7 @@
 package app.opentv.ui
 
 import androidx.annotation.StringRes
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -22,7 +20,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -43,8 +40,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
@@ -65,8 +60,11 @@ import app.opentv.ui.options.rememberRowHighlight
 import app.opentv.ui.vod.CardFocus
 import app.opentv.ui.vod.ContinueWatchingRow
 import app.opentv.ui.vod.MoviePosterRow
-import app.opentv.ui.vod.SectionHeader
 import app.opentv.ui.vod.SeriesPosterRow
+import app.opentv.ui.vod.ShelfRow
+import app.opentv.ui.vod.focusCueBorder
+import app.opentv.ui.vod.focusCueScale
+import app.opentv.ui.vod.rememberFocusCue
 import app.opentv.ui.vod.rememberRowState
 import app.opentv.ui.vod.takesFocus
 import coil.compose.AsyncImage
@@ -120,7 +118,7 @@ internal fun HomeScreen(
  */
 @Composable
 internal fun HomeContent(
-    continueWatching: List<VodViewModel.ResumeItem>,
+    continueWatching: List<ResumeItem>,
     favouriteShows: List<Series>,
     favouriteMovies: List<Movie>,
     favouriteChannels: List<LineupChannel>,
@@ -265,7 +263,7 @@ private sealed class Shelf(key: String, items: List<String>) {
 
     class Live(val tile: LiveTile) : Shelf("live", listOf(LIVE_PICK))
 
-    class Resume(val cards: List<VodViewModel.ResumeItem>) : Shelf("cw", cards.map { it.key.stored })
+    class Resume(val cards: List<ResumeItem>) : Shelf("cw", cards.map { it.key.stored })
 
     class Shows(key: String, @StringRes val title: Int, val shows: List<Series>) :
         Shelf(key, shows.map { it.pickKey })
@@ -281,7 +279,7 @@ private fun liveShelf(tile: LiveTile?): List<Shelf> = listOfNotNull(tile?.let(Sh
 
 /** Home's rows that have something in them, top to bottom. */
 private fun homeShelves(
-    continueWatching: List<VodViewModel.ResumeItem>,
+    continueWatching: List<ResumeItem>,
     favouriteShows: List<Series>,
     favouriteMovies: List<Movie>,
     favouriteChannels: List<LineupChannel>,
@@ -344,17 +342,10 @@ internal fun restoreTarget(rows: List<HomeRow>, pick: HomePick): HomePick? {
 private fun ChannelRow(channels: List<LineupChannel>, onPlayChannel: (Channel) -> Unit, focus: CardFocus?) {
     val rowState = rememberRowState(focus)
     val highlight = rememberRowHighlight(channels, rowState) { it.key }
-    Column(Modifier.fillMaxWidth()) {
-        SectionHeader(stringResource(R.string.home_favourite_channels))
-        LazyRow(
-            state = rowState,
-            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            itemsIndexed(channels, key = { _, channel -> channel.key }) { index, channel ->
-                ChannelCard(channel, Modifier.takesFocus(index, focus).then(highlight.modifier(index, channel.key))) {
-                    onPlayChannel(channel.primary)
-                }
+    ShelfRow(stringResource(R.string.home_favourite_channels), rowState) {
+        itemsIndexed(channels, key = { _, channel -> channel.key }) { index, channel ->
+            ChannelCard(channel, Modifier.takesFocus(index, focus).then(highlight.modifier(index, channel.key))) {
+                onPlayChannel(channel.primary)
             }
         }
     }
@@ -364,16 +355,11 @@ private fun ChannelRow(channels: List<LineupChannel>, onPlayChannel: (Channel) -
 @Composable
 private fun ChannelCard(lineupChannel: LineupChannel, modifier: Modifier, onClick: () -> Unit) {
     val channel = lineupChannel.primary
-    var focused by remember { mutableStateOf(false) }
-    val scale by animateFloatAsState(if (focused) 1.06f else 1f, label = "channelScale")
+    val cue = rememberFocusCue()
     Column(
         modifier
             .width(CHANNEL_WIDTH)
-            .graphicsLayer {
-                scaleX = scale
-                scaleY = scale
-            }
-            .onFocusChanged { focused = it.isFocused }
+            .focusCueScale(cue)
             .clip(RoundedCornerShape(10.dp))
             .optionsClickable(onClick, openOptionsOn(OptionsSubject.OfChannel(lineupChannel, onWatch = onClick)))
             .padding(4.dp),
@@ -384,13 +370,7 @@ private fun ChannelCard(lineupChannel: LineupChannel, modifier: Modifier, onClic
                 .aspectRatio(16f / 9f)
                 .clip(RoundedCornerShape(8.dp))
                 .background(MaterialTheme.colorScheme.surfaceVariant)
-                .then(
-                    if (focused) {
-                        Modifier.border(3.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(8.dp))
-                    } else {
-                        Modifier
-                    },
-                ),
+                .focusCueBorder(cue, RoundedCornerShape(8.dp)),
         ) {
             // Logos come in every shape; fitted with a margin they never lose their edges to a crop.
             AsyncImage(
@@ -404,7 +384,11 @@ private fun ChannelCard(lineupChannel: LineupChannel, modifier: Modifier, onClic
         Text(
             channel.shownName,
             style = MaterialTheme.typography.bodyMedium,
-            color = if (focused) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
+            color = if (cue.focused) {
+                MaterialTheme.colorScheme.onSurface
+            } else {
+                MaterialTheme.colorScheme.onSurfaceVariant
+            },
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )

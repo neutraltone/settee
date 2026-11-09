@@ -16,6 +16,7 @@ import app.opentv.data.repo.WatchStatus
 import app.opentv.player.NextEpisodeCountdown
 import app.opentv.player.NextEpisodeCountdown.Decision
 import app.opentv.player.NextEpisodeCountdown.Overlay
+import app.opentv.player.PlayerController
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -47,7 +48,11 @@ class VodPlayerViewModel(
     interface Playback {
         fun progress(): NextEpisodeCountdown.Playback
 
-        fun play(key: MediaKey, startPositionMillis: Long)
+        /** Plays [request], saying it's in place of the Quality called [skipped] if there is one. */
+        fun play(request: PlayerController.Request, skipped: String? = null)
+
+        /** The lower Quality playback moved to by itself, if it has. */
+        fun steppedDownTo(): MediaKey? = null
 
         fun pause()
 
@@ -81,6 +86,11 @@ class VodPlayerViewModel(
 
     /** Whether the options list offers Mark watched: a movie or episode not already Watched. */
     val canMarkWatched: StateFlow<Boolean> = _canMarkWatched.asStateFlow()
+
+    private val _finished = MutableStateFlow(false)
+
+    /** What was playing reached its end, with nothing to move on to: the player has nothing left to show. */
+    val finished: StateFlow<Boolean> = _finished.asStateFlow()
 
     private var playback: Playback? = null
     private var route: MediaKey? = null
@@ -125,9 +135,17 @@ class VodPlayerViewModel(
 
     /** Polled while the screen shows: moves on when the countdown says so. */
     suspend fun poll() {
+        // Progress and the Next Episode now belong to the row playback moved to.
+        playback?.steppedDownTo()?.takeIf { it != _current.value }?.let { start(it, alreadyPlaying = true) }
         val progress = playback?.progress() ?: return
         if (progress.durationMillis > 0) lastSeen = progress
-        act(countdown.update(progress))
+        val decision = countdown.update(progress)
+        act(decision)
+        // Not while the card, the question or the search for a Next Episode could still move on from here.
+        _finished.value = decision == null &&
+            progress.ended &&
+            _overlay.value is Overlay.None &&
+            fetchingNext?.isActive != true
     }
 
     /** Records how far through what's playing is, for resuming it and for its Watched status. */
@@ -137,9 +155,7 @@ class VodPlayerViewModel(
         // recordProgress clears a hand mark, and the player saves again as it closes.
         if (key == null || progress == null || key == marked) return
         if (progress.durationMillis > 0) lastSeen = progress
-        // The first seconds say nothing about wanting to come back to it.
-        if (progress.durationMillis > 0 && progress.positionMillis > MIN_SAVED_MILLIS) {
-            graph.viewerLibrary.recordProgress(key.stored, progress.positionMillis, progress.durationMillis)
+        if (graph.viewerLibrary.recordProgress(key.stored, progress.positionMillis, progress.durationMillis)) {
             _canMarkWatched.value = graph.canMarkWatched(key)
             startedAtZero = false
         }
@@ -178,12 +194,8 @@ class VodPlayerViewModel(
         _overlay.value = countdown.overlay
         when (decision) {
             Decision.PlayNext -> next?.let { next ->
-                val finishing = _current.value
-                val duration = lastSeen?.durationMillis ?: 0
-                // Moving on from the card counts as finishing: on a short episode the last 15
-                // seconds can fall short of 93% through, so it is recorded at its whole length.
-                if (finishing != null && duration > 0) {
-                    graph.viewerLibrary.recordProgress(finishing.stored, duration, durationMillis = duration)
+                _current.value?.let {
+                    graph.viewerLibrary.nextEpisodes.movedOnFrom(it.stored, lastSeen?.durationMillis ?: 0)
                 }
                 start(MediaKey.Episode(next.id))
             }
@@ -193,8 +205,11 @@ class VodPlayerViewModel(
         }
     }
 
-    /** Plays [key] from [fromMillis], or from its resume point, and works out its Next Episode. */
-    private suspend fun start(key: MediaKey, fromMillis: Long? = null) {
+    /**
+     * Plays the highest Quality of [opened] this device can play, from [fromMillis] or else that
+     * Quality's own resume point, and works out its Next Episode. [alreadyPlaying] leaves the player be.
+     */
+    private suspend fun start(opened: MediaKey, fromMillis: Long? = null, alreadyPlaying: Boolean = false) {
         suspend fun offer(episode: Episode?) {
             next = episode
             _nextEpisode.value = episode?.let { lookup.card(it) }
@@ -203,10 +218,14 @@ class VodPlayerViewModel(
         }
 
         fetchingNext?.cancel()
+        val planned = if (alreadyPlaying) null else graph.playRequestFor(opened, fromMillis)
+        val key = planned?.first?.key ?: opened
+        // Nothing suspends between here and play: a poll in between would see the last stream's step
+        // down, take it for news and undo this. So what to play is read above, before anything moves.
         startedAtZero = fromMillis == 0L || (startedAtZero && key == _current.value)
         _current.value = key
         lastSeen = null
-        playback?.play(key, fromMillis ?: graph.viewerLibrary.resumeFrom(key.stored))
+        planned?.let { (request, skipped) -> playback?.play(request, skipped) }
         _canMarkWatched.value = graph.canMarkWatched(key)
         val episode = (key as? MediaKey.Episode)?.let { graph.catalogRepository.episode(it.episodeId) }
         offer(episode?.let { graph.viewerLibrary.nextEpisodes.after(it) })
@@ -216,10 +235,27 @@ class VodPlayerViewModel(
             }
         }
     }
+}
 
-    private companion object {
-        const val MIN_SAVED_MILLIS = 5_000L
-    }
+/**
+ * What to play for [opened], and what the Quality it's in place of is called, if it is. Each Quality starts
+ * from [fromMillis] or else its own resume point.
+ */
+private suspend fun ServiceLocator.Graph.playRequestFor(
+    opened: MediaKey,
+    fromMillis: Long?,
+): Pair<PlayerController.Request, String?> {
+    val plan = vodQualities.planFor(opened)
+    val request = PlayerController.Request(
+        key = plan.start.key,
+        startPositionMillis = fromMillis ?: viewerLibrary.resumeFrom(plan.start.key.stored),
+        label = plan.start.label,
+        lower = plan.lower.map {
+            PlayerController.Quality(it.key, it.label, fromMillis ?: viewerLibrary.resumeFrom(it.key.stored))
+        },
+        stepsForSound = true,
+    )
+    return request to plan.skipped
 }
 
 /** Recordings and catch-up have no watch state to mark. */

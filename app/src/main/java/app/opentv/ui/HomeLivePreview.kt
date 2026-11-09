@@ -101,8 +101,7 @@ internal fun rememberLivePreviewPlayer(channel: Channel?): LivePreviewPlayer {
             scope,
             graph.httpClient,
             resolve = graph.playbackSources::forWatching,
-            subtitlesEnabled = false,
-            preview = true,
+            PlayerController.Options(subtitlesEnabled = false, preview = true),
         ) to scope
     }
     DisposableEffect(controller) {

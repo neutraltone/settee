@@ -14,10 +14,14 @@ import androidx.room.Update
 import androidx.room.Upsert
 import app.opentv.data.model.Category
 import app.opentv.data.model.Channel
+import app.opentv.data.model.ChannelEpgMatch
+import app.opentv.data.model.ChannelHiddenChange
+import app.opentv.data.model.ChannelMatchInput
 import app.opentv.data.model.EpgChannelAlias
 import app.opentv.data.model.EpgFeed
 import app.opentv.data.model.Episode
 import app.opentv.data.model.Favourite
+import app.opentv.data.model.HandMark
 import app.opentv.data.model.LivePlayback
 import app.opentv.data.model.Movie
 import app.opentv.data.model.PlaybackPosition
@@ -30,6 +34,7 @@ import app.opentv.data.model.RecordingStatus
 import app.opentv.data.model.Reminder
 import app.opentv.data.model.Series
 import app.opentv.data.model.SeriesDismissal
+import app.opentv.data.model.SeriesRef
 import app.opentv.data.model.SeriesRule
 import app.opentv.data.model.Source
 import app.opentv.data.model.StreamKind
@@ -188,6 +193,22 @@ interface ChannelDao {
     @Query("UPDATE channels SET hidden = :hidden WHERE id = :id")
     suspend fun setHidden(id: Long, hidden: Boolean)
 
+    /** A viewer hid or showed a channel: its state and when, together. */
+    @Transaction
+    suspend fun changeHidden(id: Long, hidden: Boolean, changedAtMillis: Long) {
+        setHidden(id, hidden)
+        recordHiddenChange(id, hidden, changedAtMillis)
+    }
+
+    @Query(
+        """
+        INSERT OR REPLACE INTO channel_hidden_changes (source, streamId, hidden, changedAtMillis)
+        SELECT sources.name, channels.streamId, :hidden, :changedAtMillis
+        FROM channels JOIN sources ON sources.id = channels.sourceId WHERE channels.id = :id
+        """,
+    )
+    suspend fun recordHiddenChange(id: Long, hidden: Boolean, changedAtMillis: Long)
+
     @Query("UPDATE channels SET customName = :name WHERE id = :id")
     suspend fun setCustomName(id: Long, name: String?)
 
@@ -205,19 +226,39 @@ interface ChannelDao {
     // --- Sync: identify hidden channels by source name and stream id (ADR 0004) ---
     @Query(
         """
-        SELECT sources.name AS source, channels.streamId AS id FROM channels
-        JOIN sources ON sources.id = channels.sourceId
-        WHERE channels.hidden = 1
+        SELECT source, streamId AS id, hidden, changedAtMillis FROM channel_hidden_changes
         """,
     )
     suspend fun hiddenForSync(): List<SyncHiddenChannel>
 
-    /** Hides the channel if it isn't already; returns how many rows that changed. */
-    @Query("UPDATE channels SET hidden = 1 WHERE sourceId = :sourceId AND streamId = :streamId AND hidden = 0")
-    suspend fun markHidden(sourceId: Long, streamId: String): Int
+    @Query("SELECT * FROM channel_hidden_changes WHERE source = :source AND streamId = :streamId")
+    suspend fun hiddenChange(source: String, streamId: String): ChannelHiddenChange?
 
-    @Query("UPDATE channels SET matchedEpgId = :epgId WHERE id = :id")
-    suspend fun setMatchedEpgId(id: Long, epgId: String?)
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertHiddenChange(change: ChannelHiddenChange)
+
+    @Query("SELECT hidden FROM channels WHERE sourceId = :sourceId AND streamId = :streamId")
+    suspend fun isHidden(sourceId: Long, streamId: String): Boolean?
+
+    @Query("UPDATE channels SET hidden = :hidden WHERE sourceId = :sourceId AND streamId = :streamId")
+    suspend fun setHidden(sourceId: Long, streamId: String, hidden: Boolean)
+
+    /** The last hide or show a viewer made of each channel from this source, listed or not right now. */
+    @Query(
+        """
+        SELECT * FROM channel_hidden_changes
+        WHERE source = (SELECT name FROM sources WHERE id = :sourceId)
+        """,
+    )
+    suspend fun hiddenChangesFor(sourceId: Long): List<ChannelHiddenChange>
+
+    /**
+     * Saves many guide matches in one transaction, so what observes `channels`, including the whole
+     * lineup, re-reads it once rather than after every match or every batch. Each row is its own
+     * small statement, so this has no bound-variable limit to split around.
+     */
+    @Update(entity = Channel::class)
+    suspend fun setMatchedEpgIds(matches: List<ChannelEpgMatch>)
 
     @Query("UPDATE channels SET epgOverrideId = :epgId WHERE id = :id")
     suspend fun setEpgOverride(id: Long, epgId: String?)
@@ -226,9 +267,17 @@ interface ChannelDao {
     @Query("SELECT * FROM channels")
     fun observeEvery(): Flow<List<Channel>>
 
-    /** The matcher's working set: id, group key, and what is already known. */
+    /** Every row, whole, once. */
     @Query("SELECT * FROM channels")
-    suspend fun allForMatching(): List<Channel>
+    suspend fun everyRow(): List<Channel>
+
+    /** The matcher's working set: no URLs or names, which a large catalogue would allocate on every launch. */
+    @Query("SELECT id, groupKey, epgChannelId, matchedEpgId, epgOverrideId FROM channels")
+    suspend fun matcherInputs(): List<ChannelMatchInput>
+
+    /** Every channel's name as the provider wrote it, which is where a region prefix is. */
+    @Query("SELECT name FROM channels")
+    suspend fun providerNames(): List<String>
 
     @Upsert
     suspend fun upsertAll(channels: List<Channel>)
@@ -261,10 +310,15 @@ interface ChannelDao {
         if (incoming.isEmpty()) return
 
         val existing = userStateForSource(sourceId).associateBy { it.streamId }
+        val hiddenChanges = hiddenChangesFor(sourceId).associateBy { it.streamId }
         val merged = incoming.map { channel ->
             val previous = existing[channel.streamId]
             if (previous == null) {
-                channel.copy(lastSeenMillis = syncStamp)
+                // A channel the provider dropped for a while comes back as the viewer left it.
+                channel.copy(
+                    hidden = hiddenChanges[channel.streamId]?.hidden ?: channel.hidden,
+                    lastSeenMillis = syncStamp,
+                )
             } else {
                 channel.copy(
                     id = previous.id,
@@ -470,10 +524,9 @@ interface MovieDao {
     @Query("SELECT * FROM movies ORDER BY addedMillis DESC")
     suspend fun all(): List<Movie>
 
-    /** How many movies are on disk. A cheap COUNT the home feeds use to tell "the library grew"
-     *  from "same as last time" without loading every row (see VodViewModel.loadHomeFeeds). */
-    @Query("SELECT COUNT(*) FROM movies")
-    suspend fun count(): Int
+    /** See [RANKED_FINGERPRINT]. */
+    @Query("$RANKED_FINGERPRINT FROM movies")
+    suspend fun fingerprint(): String
 
     @Query("SELECT * FROM movies WHERE sourceId = :sourceId")
     suspend fun forSource(sourceId: Long): List<Movie>
@@ -553,6 +606,10 @@ interface MovieDao {
     @Query("SELECT * FROM movies WHERE id = :id")
     suspend fun byId(id: Long): Movie?
 
+    /** Every copy of one film: providers list each Quality as its own row, in its own category. */
+    @Query("SELECT * FROM movies WHERE tmdbId = :tmdbId ORDER BY id")
+    suspend fun byTmdbId(tmdbId: String): List<Movie>
+
     @Query("SELECT * FROM movies WHERE sourceId = :sourceId AND streamId = :streamId")
     suspend fun byProviderId(sourceId: Long, streamId: String): Movie?
 
@@ -598,9 +655,9 @@ interface SeriesDao {
     @Query("SELECT * FROM series ORDER BY addedMillis DESC")
     suspend fun all(): List<Series>
 
-    /** How many series are on disk — the cheap "did the library grow" check for the home feeds. */
-    @Query("SELECT COUNT(*) FROM series")
-    suspend fun count(): Int
+    /** See [RANKED_FINGERPRINT]. */
+    @Query("$RANKED_FINGERPRINT FROM series")
+    suspend fun fingerprint(): String
 
     @Query("SELECT * FROM series WHERE sourceId = :sourceId")
     suspend fun forSource(sourceId: Long): List<Series>
@@ -617,6 +674,13 @@ interface SeriesDao {
     suspend fun setLatestAirDates(dates: List<Pair<Long, Long>>) {
         dates.forEach { (id, date) -> setLatestAirDate(id, date) }
     }
+
+    @Query("SELECT * FROM series WHERE sourceId = :sourceId AND seriesId = :seriesId")
+    suspend fun bySeriesId(sourceId: Long, seriesId: String): Series?
+
+    /** Every copy of one show: providers list each Quality as its own row, in its own category. */
+    @Query("SELECT * FROM series WHERE tmdbId = :tmdbId ORDER BY id")
+    suspend fun byTmdbId(tmdbId: String): List<Series>
 
     /** Fallback for More-Like-This when a series has no genre: same source/category, best-rated first. */
     @Query(
@@ -673,6 +737,18 @@ interface EpisodeDao {
             "ON playback_positions.mediaKey = 'ep:' || episodes.id WHERE playback_positions.profileId = :profileId",
     )
     fun observePlayed(profileId: Long): Flow<List<Episode>>
+
+    /**
+     * The series [profileId] has progress on an episode of, not counting episodes marked [except], by
+     * a join for the same reason. Only the ids: a home feed reads this each time a tab opens, and a
+     * long watch history's plots and stream URLs would be felt on a Fire TV Stick.
+     */
+    @Query(
+        "SELECT DISTINCT episodes.sourceId, episodes.seriesId FROM episodes JOIN playback_positions " +
+            "ON playback_positions.mediaKey = 'ep:' || episodes.id WHERE playback_positions.profileId = :profileId " +
+            "AND (playback_positions.mark IS NULL OR playback_positions.mark != :except)",
+    )
+    suspend fun startedSeries(profileId: Long, except: HandMark): List<SeriesRef>
 
     /** Every episode of each series [profileId] has played any of, by a join for the same reason. */
     @Query(
@@ -757,6 +833,12 @@ interface LivePlaybackDao {
     )
     suspend fun record(profileId: Long, channelId: Long, playedAtMillis: Long)
 
+    @Query("SELECT * FROM live_playback WHERE profileId = :profileId")
+    suspend fun get(profileId: Long): LivePlayback?
+
+    @Upsert
+    suspend fun upsert(playback: LivePlayback)
+
     @Query("UPDATE live_playback SET otherPlayedAtMillis = :playedAtMillis WHERE profileId = :profileId")
     suspend fun playedOther(profileId: Long, playedAtMillis: Long)
 
@@ -780,6 +862,9 @@ interface SeriesDismissalDao {
     @Query("SELECT * FROM series_dismissals WHERE profileId = :profileId")
     fun observe(profileId: Long): Flow<List<SeriesDismissal>>
 
+    @Query("SELECT * FROM series_dismissals WHERE profileId = :profileId")
+    suspend fun forProfile(profileId: Long): List<SeriesDismissal>
+
     @Query(
         """
         SELECT * FROM series_dismissals
@@ -798,6 +883,15 @@ interface SeriesDismissalDao {
     suspend fun deleteFor(profileId: Long)
 }
 
+/**
+ * Changes when a catalogue's titles or anything the home feeds rank them by does, for telling "same as
+ * last time" without loading every row. Not a count: a refresh can swap titles at the same size, and
+ * ratings and genres are filled in later. Ids only ever grow, so a swapped-in title moves the MAX.
+ */
+private const val RANKED_FINGERPRINT =
+    "SELECT COUNT(*) || ':' || COALESCE(MAX(id), 0) || ':' || TOTAL(rating) || ':' || TOTAL(LENGTH(genre)) " +
+        "|| ':' || COALESCE(MAX(addedMillis), 0)"
+
 // By rowid, which only ever grows for a new row, not by time: a TV box's clock can go back (one that
 // hasn't synced since booting), and the newest search would sort last and be the one the cap removes.
 private const val RECENT_SEARCHES_NEWEST_FIRST =
@@ -811,6 +905,9 @@ interface RecentSearchDao {
     @Query(RECENT_SEARCHES_NEWEST_FIRST)
     suspend fun forProfile(profileId: Long): List<String>
 
+    @Query("SELECT * FROM recent_searches WHERE profileId = :profileId")
+    suspend fun rowsFor(profileId: Long): List<RecentSearch>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(search: RecentSearch)
 
@@ -823,37 +920,28 @@ interface RecentSearchDao {
 
 @Dao
 interface FavouriteDao {
-    // Writes go by the row's source id and look up its name in SQL, so callers never handle names.
-    @Query(
-        """
-        INSERT OR IGNORE INTO favourites (profileId, kind, source, itemId)
-        SELECT :profileId, :kind, name, :itemId FROM sources WHERE id = :sourceId
-        """,
-    )
-    suspend fun add(profileId: Long, kind: StreamKind, sourceId: Long, itemId: String)
-
-    @Query(
-        """
-        DELETE FROM favourites WHERE profileId = :profileId AND kind = :kind AND itemId = :itemId
-          AND source = (SELECT name FROM sources WHERE id = :sourceId)
-        """,
-    )
-    suspend fun remove(profileId: Long, kind: StreamKind, sourceId: Long, itemId: String)
-
     @Query(
         """
         SELECT EXISTS(
           SELECT 1 FROM favourites WHERE profileId = :profileId AND kind = :kind AND itemId = :itemId
-            AND source = (SELECT name FROM sources WHERE id = :sourceId)
+            AND removed = 0 AND source = (SELECT name FROM sources WHERE id = :sourceId)
         )
         """,
     )
     suspend fun contains(profileId: Long, kind: StreamKind, sourceId: Long, itemId: String): Boolean
 
-    /** Adds [favourite] unless it is already there; returns whether it was new. */
-    @Insert(onConflict = OnConflictStrategy.IGNORE)
-    suspend fun insert(favourite: Favourite): Long
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsert(favourite: Favourite)
 
+    @Query(
+        """
+        SELECT * FROM favourites
+        WHERE profileId = :profileId AND kind = :kind AND source = :source AND itemId = :itemId
+        """,
+    )
+    suspend fun find(profileId: Long, kind: StreamKind, source: String, itemId: String): Favourite?
+
+    /** Every row, those marked removed included: what sync sends. Viewers see the queries below. */
     @Query("SELECT * FROM favourites")
     suspend fun all(): List<Favourite>
 
@@ -865,7 +953,7 @@ interface FavouriteDao {
         SELECT m.* FROM favourites f
         JOIN sources src ON src.name = f.source
         JOIN movies m ON m.sourceId = src.id AND m.streamId = f.itemId
-        WHERE f.profileId = :profileId AND f.kind = 'MOVIE' ORDER BY m.name
+        WHERE f.profileId = :profileId AND f.removed = 0 AND f.kind = 'MOVIE' ORDER BY m.name
         """,
     )
     fun observeMovies(profileId: Long): Flow<List<Movie>>
@@ -875,7 +963,7 @@ interface FavouriteDao {
         SELECT s.* FROM favourites f
         JOIN sources src ON src.name = f.source
         JOIN series s ON s.sourceId = src.id AND s.seriesId = f.itemId
-        WHERE f.profileId = :profileId AND f.kind = 'SERIES' ORDER BY s.name
+        WHERE f.profileId = :profileId AND f.removed = 0 AND f.kind = 'SERIES' ORDER BY s.name
         """,
     )
     fun observeSeries(profileId: Long): Flow<List<Series>>
@@ -885,7 +973,7 @@ interface FavouriteDao {
         SELECT c.* FROM favourites f
         JOIN sources src ON src.name = f.source
         JOIN channels c ON c.sourceId = src.id AND c.streamId = f.itemId
-        WHERE f.profileId = :profileId AND f.kind = 'LIVE' AND c.hidden = 0
+        WHERE f.profileId = :profileId AND f.removed = 0 AND f.kind = 'LIVE' AND c.hidden = 0
         ORDER BY c.sortIndex, c.displayName
         """,
     )
@@ -896,7 +984,7 @@ interface FavouriteDao {
         SELECT c.id FROM favourites f
         JOIN sources src ON src.name = f.source
         JOIN channels c ON c.sourceId = src.id AND c.streamId = f.itemId
-        WHERE f.profileId = :profileId AND f.kind = 'LIVE'
+        WHERE f.profileId = :profileId AND f.removed = 0 AND f.kind = 'LIVE'
         """,
     )
     fun observeChannelIds(profileId: Long): Flow<List<Long>>
@@ -913,11 +1001,14 @@ interface ProfileDao {
     @Insert
     suspend fun insert(profile: Profile): Long
 
-    @Query("UPDATE profiles SET name = :name WHERE id = :id")
-    suspend fun rename(id: Long, name: String)
+    @Query("UPDATE profiles SET name = :name, namedAtMillis = :namedAtMillis WHERE id = :id")
+    suspend fun rename(id: Long, name: String, namedAtMillis: Long)
 
     @Query("DELETE FROM profiles WHERE id = :id")
     suspend fun delete(id: Long)
+
+    @Query("SELECT EXISTS(SELECT 1 FROM profiles WHERE id = :id)")
+    suspend fun exists(id: Long): Boolean
 }
 
 @Dao
@@ -964,6 +1055,9 @@ interface RecordingDao {
     /** The Profile is being removed: its recordings stay, for everyone. */
     @Query("UPDATE recordings SET profileId = NULL WHERE profileId = :profileId")
     suspend fun clearProfile(profileId: Long)
+
+    @Query("UPDATE recordings SET profileId = :into WHERE profileId = :from")
+    suspend fun moveProfile(from: Long, into: Long)
 
     /** De-dup for NAS sync: a recording's smb:// locator is its stable cross-device identity. */
     @Query("SELECT * FROM recordings WHERE filePath = :filePath LIMIT 1")
