@@ -347,7 +347,8 @@ private fun PrototypeRail(
     Column(
         modifier
             .fillMaxHeight()
-            .background(MaterialTheme.colorScheme.surface)
+            // LOOK.md: closed, the icons sit on the screen itself with no panel behind them.
+            .background(if (expanded) MaterialTheme.colorScheme.surface else Color.Transparent)
             .focusProperties { onEnter = { runCatching { currentItem.requestFocus() } } }
             // Moving on in the rail while a tab loads mustn't have the highlight pulled away later.
             .onPreviewKeyEvent { event ->
@@ -386,6 +387,7 @@ private fun PrototypeRail(
             }
         }
         Spacer(Modifier.height(4.dp))
+        PrototypeRailItem(Icons.Filled.Search, stringResource(R.string.nav_search), expanded, false, onClick = onOpenSearch)
         tabs.forEach { t ->
             PrototypeRailItem(
                 t.icon,
@@ -396,7 +398,6 @@ private fun PrototypeRail(
             ) { onSelect(t) }
         }
         Spacer(Modifier.weight(1f))
-        PrototypeRailItem(Icons.Filled.Search, stringResource(R.string.nav_search), expanded, false, onClick = onOpenSearch)
         PrototypeRailItem(Icons.Filled.Person, activeProfileName, expanded, false, onClick = onOpenProfiles)
         PrototypeRailItem(Icons.Filled.Settings, stringResource(R.string.nav_settings), expanded, false, onClick = onOpenSettings)
     }
@@ -423,7 +424,7 @@ private fun PrototypeRailItem(
         modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(10.dp))
-            .background(if (focused) colors.primary else if (current) colors.surfaceVariant else colors.surface)
+            .background(if (focused) colors.primary else if (current) colors.surfaceVariant else Color.Transparent)
             // The mark tells the current tab from the highlight, which fills the whole item.
             .drawBehind { if (current && !focused) drawRect(mark, size = Size(4.dp.toPx(), size.height)) }
             .onFocusChanged { focused = it.isFocused }
