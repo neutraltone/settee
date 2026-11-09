@@ -115,6 +115,9 @@
     <string name="player_rewind">Rewind</string>
     <string name="player_pause">Pause</string>
     <string name="player_paused_left">Paused · %1$s left</string>
+    <string name="player_no_sound">This device can\'t play this audio format (%1$s). If your TV or soundbar supports it, turning on surround sound in the device\'s settings may help.</string>
+    <string name="player_stepped_down">This device can\'t play %1$s. Playing %2$s instead.</string>
+    <string name="player_stepped_down_unnamed">This device can\'t play that quality. Playing another instead.</string>
     <string name="player_back_to_live">Paused too long — back to live</string>
     <string name="live_pause_prompt_title">Pause live TV?</string>
     <string name="live_pause_prompt_turn_on">Turn on and pause</string>
@@ -575,6 +578,9 @@
     <string name="playback_no_catchup">This provider doesn\'t offer catch-up. Only Xtream providers can play past programmes.</string>
     <string name="playback_gone">This is no longer in the provider\'s list. Refresh the channel list and try again.</string>
     <string name="playback_video_format_unsupported">This device can\'t play this video format (%1$s).</string>
+    <string name="playback_video_too_big">This device can\'t play this video (%1$s).</string>
+    <string name="playback_no_first_frame">This device couldn\'t show this video (%1$s).</string>
+    <string name="player_unknown_format">unknown format</string>
     <string name="playback_audio_format_unsupported">This device can\'t play this audio format (%1$s).</string>
     <string name="playback_other_format_unsupported">This device can\'t play this format (%1$s).</string>
     <string name="playback_format_unsupported">This device can\'t play this format.</string>

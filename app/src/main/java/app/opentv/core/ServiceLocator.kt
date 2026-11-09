@@ -23,6 +23,8 @@ import app.opentv.data.repo.ReminderRepository
 import app.opentv.data.repo.SourceRepository
 import app.opentv.data.repo.ViewerLibrary
 import app.opentv.data.repo.WaitingProgress
+import app.opentv.player.DecoderList
+import app.opentv.player.DeviceDecoders
 import app.opentv.recording.RecordingEngine
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.CoroutineScope
@@ -59,6 +61,7 @@ object ServiceLocator {
         http: OkHttpClient? = null,
         settingsFile: String? = null,
         val clock: () -> Long = System::currentTimeMillis,
+        val decoders: DecoderList = DeviceDecoders(),
         openDatabase: (() -> OpenTvDatabase)? = null,
     ) {
         private val appContext = context.applicationContext
@@ -132,7 +135,13 @@ object ServiceLocator {
         /** The one place a title becomes something playable (see [PlaybackSources]). */
         /** The Channels a viewer may see, with the Parental Lock applied; see [ChannelLineup]. */
         val channelLineup: ChannelLineup by lazy {
-            ChannelLineup(database, viewerLibrary.favourites, settings.hiddenCategories, settings.hiddenUnlocked)
+            ChannelLineup(
+                database,
+                viewerLibrary.favourites,
+                settings.hiddenCategories,
+                settings.hiddenUnlocked,
+                decoders,
+            )
         }
 
         val playbackSources: PlaybackSources by lazy { PlaybackSources(database, xtreamApi, stalkerApi, channelLineup) }

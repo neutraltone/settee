@@ -32,6 +32,7 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import app.opentv.R
 
@@ -83,4 +84,20 @@ internal fun PlayerChip(
         Spacer(Modifier.width(6.dp))
         Text(label, style = MaterialTheme.typography.labelLarge, color = content)
     }
+}
+
+/** A short message over the picture. It can't take focus, so it leaves the D-pad as it was. */
+@Composable
+internal fun PlayerNotice(message: String, modifier: Modifier = Modifier) {
+    Text(
+        message,
+        color = Color.White,
+        style = MaterialTheme.typography.titleMedium,
+        textAlign = TextAlign.Center,
+        modifier = modifier
+            .padding(32.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .background(Color.Black.copy(alpha = 0.82f))
+            .padding(horizontal = 24.dp, vertical = 12.dp),
+    )
 }

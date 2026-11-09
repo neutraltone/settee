@@ -106,6 +106,7 @@ import app.opentv.ui.options.ItemOption
 import app.opentv.ui.options.OptionsFor
 import app.opentv.ui.player.PlayerBackButton
 import app.opentv.ui.player.PlayerChip
+import app.opentv.ui.player.PlayerNotice
 import app.opentv.ui.player.PlayerOptions
 import app.opentv.ui.player.SubtitlePicks
 import app.opentv.ui.player.rememberProfileSubtitles
@@ -153,13 +154,15 @@ fun VodPlayerScreen(
             scope,
             graph.streamingHttpClient,
             resolve = graph.playbackSources::forWatching,
-            // Text starts off; the Profile's Subtitle Preference turns it on once tracks arrive.
-            subtitlesEnabled = false,
-            smbDataSourceFactory = app.opentv.player.SmbDataSource.Factory(graph.settings),
-            // Lets an `optvrec://<id>` recording play while it's still being written.
-            growingDataSourceFactory =
-            app.opentv.player.GrowingRecordingDataSource.Factory(context.applicationContext),
-            liveRecording = growingRec,
+            PlayerController.Options(
+                // Text starts off; the Profile's Subtitle Preference turns it on once tracks arrive.
+                subtitlesEnabled = false,
+                smbDataSourceFactory = app.opentv.player.SmbDataSource.Factory(graph.settings),
+                // Lets an `optvrec://<id>` recording play while it's still being written.
+                growingDataSourceFactory =
+                app.opentv.player.GrowingRecordingDataSource.Factory(context.applicationContext),
+                liveRecording = growingRec,
+            ),
         )
     }
 
@@ -458,6 +461,9 @@ fun VodPlayerContent(
                 }
             },
         )
+
+        val notice by controller.notice.collectAsState()
+        notice?.let { PlayerNotice(it, Modifier.align(Alignment.TopCenter)) }
 
         when (val current = state) {
             is PlayerController.State.Buffering ->

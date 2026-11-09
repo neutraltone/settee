@@ -31,6 +31,8 @@ import app.opentv.data.parser.VodTitleCleaner
 import app.opentv.data.remote.StalkerApi
 import app.opentv.data.remote.TmdbClient
 import app.opentv.data.remote.XtreamApi
+import app.opentv.player.DecoderList
+import app.opentv.player.playsQualityRanked
 import app.opentv.sync.SyncHiddenChannel
 import java.time.Instant
 import java.time.ZoneOffset
@@ -79,7 +81,7 @@ data class MovieVariant(val movie: Movie, val qualityLabel: String, val qualityR
 /** One logical film with its switchable quality tiers, best first — the VOD analogue of a channel group. */
 @androidx.compose.runtime.Immutable
 data class MovieVariantGroup(
-    /** Best-quality variant: what a row shows and plays by default. */
+    /** The highest Quality this device can play: what a row shows and plays by default. */
     val primary: Movie,
     /** Every variant (including [primary]), best quality first. */
     val variants: List<MovieVariant>,
@@ -101,7 +103,7 @@ private val VOD_YEAR = Regex("""\b(19|20)\d{2}\b""")
  * (IMAX, EXTENDED, 3D) stay in the name and keep those cuts separate — intended. Two same-named
  * films that both lack any year will merge, an accepted edge for a best-effort collapse.
  */
-internal fun collapseMovieVariants(movies: List<Movie>): List<MovieVariantGroup> {
+internal fun collapseMovieVariants(movies: List<Movie>, decoders: DecoderList): List<MovieVariantGroup> {
     val groups = LinkedHashMap<String, MutableList<MovieVariant>>()
     for (movie in movies) {
         val embeddedYear = VOD_YEAR.find(movie.name)?.value?.toIntOrNull()
@@ -116,7 +118,8 @@ internal fun collapseMovieVariants(movies: List<Movie>): List<MovieVariantGroup>
         val ordered = variants.sortedWith(
             compareByDescending<MovieVariant> { it.qualityRank }.thenBy { it.movie.name },
         )
-        MovieVariantGroup(primary = ordered.first().movie, variants = ordered)
+        val primary = ordered.firstOrNull { decoders.playsQualityRanked(it.qualityRank) } ?: ordered.first()
+        MovieVariantGroup(primary = primary.movie, variants = ordered)
     }
 }
 
@@ -541,13 +544,6 @@ class CatalogRepository(
         if (result != series) seriesDao.upsertAll(listOf(result))
         result
     }
-
-    /**
-     * Collapses a list of movies (e.g. one category's titles) into logical films with switchable
-     * quality tiers — see [collapseMovieVariants]. Pure; hand it whatever list the UI is about to
-     * show. Kept here as the discoverable entry point for the VOD UI.
-     */
-    fun collapseVariants(movies: List<Movie>): List<MovieVariantGroup> = collapseMovieVariants(movies)
 
     // -- feed helpers --
 

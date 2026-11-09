@@ -66,6 +66,7 @@ import app.opentv.data.model.Channel
 import app.opentv.data.model.Programme
 import app.opentv.data.model.shownName
 import app.opentv.data.repo.MediaKey
+import app.opentv.data.repo.toRecord
 import app.opentv.player.PlayerController
 import app.opentv.ui.ChannelsViewModel
 import app.opentv.ui.options.LocalConfirmLive
@@ -347,7 +348,7 @@ fun LiveScreen(
                 // if it's already recording. Powers the preview pane's quick record dot.
                 fun recordSelected() {
                     val row = highlightedRow ?: return
-                    val active = activeRecordings.firstOrNull { it.channelId == row.primary.id }
+                    val active = activeRecordings.firstOrNull { row.channel.has(it.channelId) }
                     if (active != null) {
                         graph.recordingEngine.stop(active.id)
                         Toast.makeText(
@@ -356,7 +357,9 @@ fun LiveScreen(
                             Toast.LENGTH_SHORT,
                         ).show()
                     } else {
-                        recordScope.launch { graph.recordingEngine.startChannel(row.primary, row.now) }
+                        recordScope.launch {
+                            graph.recordingEngine.startChannel(graph.channelLineup.toRecord(row.channel), row.now)
+                        }
                         Toast.makeText(
                             context,
                             resources.getString(R.string.rec_recording_started_see_tab, row.primary.shownName),
@@ -380,8 +383,8 @@ fun LiveScreen(
                     onRefresh = onRefresh,
                     onAddSource = onAddSource,
                     previewPlayer = if (previewEnabled && !recordingActive) previewController.player else null,
-                    isRecording = highlightedRow?.primary?.id?.let { id ->
-                        activeRecordings.any { it.channelId == id }
+                    isRecording = highlightedRow?.channel?.let { channel ->
+                        activeRecordings.any { channel.has(it.channelId) }
                     } == true,
                     onRecord = { recordSelected() },
                     dayLabel = dayLabel,

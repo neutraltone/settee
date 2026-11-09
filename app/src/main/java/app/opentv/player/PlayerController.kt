@@ -20,7 +20,6 @@ import androidx.media3.datasource.okhttp.OkHttpDataSource
 import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
-import androidx.media3.exoplayer.trackselection.DefaultTrackSelector
 import androidx.media3.exoplayer.upstream.DefaultLoadErrorHandlingPolicy
 import androidx.media3.exoplayer.upstream.LoadErrorHandlingPolicy
 import app.opentv.data.model.Source
@@ -63,47 +62,11 @@ class PlayerController(
      * not one per press, and again on each restart, so a link that has expired is minted anew.
      */
     private val resolve: suspend (MediaKey) -> Playable,
-    subtitlesEnabled: Boolean = true,
-    /**
-     * Tunes the player for the guide's muted preview pane: a shallow start buffer so a highlighted
-     * channel shows a frame quickly, and a longer switch debounce so scrolling the channel list
-     * does not tune to every channel passed over. The full-screen players leave this false and keep
-     * the deep buffer that rides out a twitchy IPTV source.
-     */
-    private val preview: Boolean = false,
-    /**
-     * Turns the live player into a shallow DVR: a retained back-buffer so the viewer can pause and
-     * rewind live TV within the last few minutes. Off by default because holding minutes of video
-     * in memory is a real cost on a cheap box; the recording player and preview never set it.
-     */
-    private val dvr: Boolean = false,
-    /**
-     * When set, `smb://` media (a recording on a NAS) is read through this source so it plays and
-     * seeks in-app. Null for the live/VOD players, which never see an smb URI.
-     */
-    smbDataSourceFactory: androidx.media3.datasource.DataSource.Factory? = null,
-    /**
-     * When set, `optvrec://<id>` media (a recording still being written) is read through this
-     * tail-following source so it can be watched while it records. Null everywhere except the
-     * recording player.
-     */
-    growingDataSourceFactory: androidx.media3.datasource.DataSource.Factory? = null,
-    /**
-     * Playing a recording that is still being written (watch-while-recording). Playback is held a
-     * cushion *behind* the file's growing edge (see the LIVE_REC_* constants) so the bursty arrival
-     * of an IPTV source — worst when the recording is read back over SMB from a NAS, where each read
-     * is a network round-trip — rides over the gaps instead of stalling on every one.
-     */
-    private val liveRecording: Boolean = false,
-    /**
-     * Builds the player from the configured builder. Tests swap in a player with fake media sources
-     * and a fake clock; everything else keeps the default.
-     */
-    buildPlayer: (ExoPlayer.Builder) -> ExoPlayer = ExoPlayer.Builder::build,
+    private val options: Options = Options(),
 ) {
 
     /** Channel-surf debounce for this controller — longer for the preview so browsing is calm. */
-    private val switchDebounceMillis = if (preview) PREVIEW_SWITCH_DEBOUNCE_MILLIS else SWITCH_DEBOUNCE_MILLIS
+    private val switchDebounceMillis = if (options.preview) PREVIEW_SWITCH_DEBOUNCE_MILLIS else SWITCH_DEBOUNCE_MILLIS
 
     sealed interface State {
         data object Idle : State
@@ -114,8 +77,63 @@ class PlayerController(
         data class Error(val title: String, val message: String, val canRetry: Boolean) : State
     }
 
-    /** [startPositionMillis] is ignored for live streams, which are never resumed. */
-    data class Request(val key: MediaKey, val startPositionMillis: Long = 0L)
+    /** How this controller's player is set up, for what it will be asked to play. */
+    data class Options(
+        val subtitlesEnabled: Boolean = true,
+        /**
+         * Tunes the player for the guide's muted preview pane: a shallow start buffer so a highlighted
+         * channel shows a frame quickly, and a longer switch debounce so scrolling the channel list
+         * does not tune to every channel passed over. The full-screen players leave this false and keep
+         * the deep buffer that rides out a twitchy IPTV source.
+         */
+        val preview: Boolean = false,
+        /**
+         * Turns the live player into a shallow DVR: a retained back-buffer so the viewer can pause and
+         * rewind live TV within the last few minutes. Off by default because holding minutes of video
+         * in memory is a real cost on a cheap box; the recording player and preview never set it.
+         */
+        val dvr: Boolean = false,
+        /**
+         * When set, `smb://` media (a recording on a NAS) is read through this source so it plays and
+         * seeks in-app. Null for the live/VOD players, which never see an smb URI.
+         */
+        val smbDataSourceFactory: androidx.media3.datasource.DataSource.Factory? = null,
+        /**
+         * When set, `optvrec://<id>` media (a recording still being written) is read through this
+         * tail-following source so it can be watched while it records. Null everywhere except the
+         * recording player.
+         */
+        val growingDataSourceFactory: androidx.media3.datasource.DataSource.Factory? = null,
+        /**
+         * Playing a recording that is still being written (watch-while-recording). Playback is held a
+         * cushion *behind* the file's growing edge (see the LIVE_REC_* constants) so the bursty arrival
+         * of an IPTV source — worst when the recording is read back over SMB from a NAS, where each read
+         * is a network round-trip — rides over the gaps instead of stalling on every one.
+         */
+        val liveRecording: Boolean = false,
+        /**
+         * Builds the player from the configured builder. Tests swap in a player with fake media sources
+         * and a fake clock; everything else keeps the default.
+         */
+        val buildPlayer: (ExoPlayer.Builder) -> ExoPlayer = ExoPlayer.Builder::build,
+        /** What this device can decode, which decides the tracks it refuses. */
+        val decoders: DecoderList = DeviceDecoders(),
+    )
+
+    /** A Channel's Quality that playback may step down to: what plays it, and what a viewer calls it. */
+    data class Quality(val key: MediaKey, val label: String)
+
+    /**
+     * [startPositionMillis] is ignored for live streams, which are never resumed. [lower] are the
+     * Qualities to step down to, best first, should this device turn out not to play this one, which
+     * [label] names; none for a Quality the viewer picked themselves.
+     */
+    data class Request(
+        val key: MediaKey,
+        val startPositionMillis: Long = 0L,
+        val label: String = "",
+        val lower: List<Quality> = emptyList(),
+    )
 
     private val _state = MutableStateFlow<State>(State.Idle)
     val state: StateFlow<State> = _state.asStateFlow()
@@ -134,6 +152,28 @@ class PlayerController(
 
     private val strings = context.applicationContext
 
+    private val guard: StreamGuard = StreamGuard(strings, scope, options.decoders) { sentence, canRetry ->
+        // Before anything reports an error, so none flashes up on the way down. The player's stopped
+        // and marked so first, so a state it's already reporting can't cover the sentence.
+        gaveUp = true
+        player.stop()
+        val playing = current
+        val next = playing?.lower?.firstOrNull()
+        if (next == null) {
+            guard.stopSaying()
+            _state.value = State.Error(_title.value, sentence, canRetry)
+        } else {
+            play(Request(next.key, label = next.label, lower = playing.lower.drop(1)), debounce = false)
+            guard.steppedDown(playing.label, next)
+        }
+    }
+
+    /** A short message for the viewer, up for about 5 seconds. It takes no focus. */
+    val notice: StateFlow<String?> get() = guard.notice
+
+    /** The Quality this stream stepped down to by itself, so a screen can show it as the one playing. */
+    val steppedDownTo: StateFlow<MediaKey?> get() = guard.steppedDownTo
+
     private var switchJob: Job? = null
     private val streamSubtitles = StreamSubtitles()
     private var current: Request? = null
@@ -144,6 +184,9 @@ class PlayerController(
     private var titled: MediaKey? = null
     private var loaded: MediaKey? = null
     private var consecutiveFailures = 0
+
+    /** Whether the controller itself has stopped this stream, until the next one starts. */
+    private var gaveUp = false
 
     /**
      * Held so the User-Agent can be swapped per source before each tune.
@@ -160,8 +203,8 @@ class PlayerController(
     private val dataSourceFactory: androidx.media3.datasource.DataSource.Factory =
         DefaultDataSource.Factory(context, httpFactory).let { default ->
             val custom = buildMap<String, androidx.media3.datasource.DataSource.Factory> {
-                if (smbDataSourceFactory != null) put("smb", smbDataSourceFactory)
-                if (growingDataSourceFactory != null) put("optvrec", growingDataSourceFactory)
+                options.smbDataSourceFactory?.let { put("smb", it) }
+                options.growingDataSourceFactory?.let { put("optvrec", it) }
             }
             if (custom.isEmpty()) default else RoutingDataSourceFactory(default, custom)
         }
@@ -201,15 +244,15 @@ class PlayerController(
      * Held so captions can be turned on and off at runtime. Prefer the device language when
      * captions are on; [setSubtitlesEnabled] flips the text renderer off entirely.
      */
-    private val trackSelector = DefaultTrackSelector(context).apply {
+    private val trackSelector = SizeLimitedTrackSelector(context, options.decoders).apply {
         parameters = buildUponParameters()
             .setPreferredTextLanguage(Locale.getDefault().language)
             .setSelectUndeterminedTextLanguage(true)
-            .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, !subtitlesEnabled)
+            .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, !options.subtitlesEnabled)
             .build()
     }
 
-    private val bufferPlan = BufferPlan.forPlayer(preview, dvr, liveRecording)
+    private val bufferPlan = BufferPlan.forPlayer(options.preview, options.dvr, options.liveRecording)
 
     /** Says when the buffer is full, which is when a live pause has to end. */
     internal val bufferWatch = BufferWatch(bufferPlan.loadControl())
@@ -224,7 +267,7 @@ class PlayerController(
     // rather than spend a cheap box's time trying every decoder for each channel passed over.
     val player: ExoPlayer = ExoPlayer.Builder(
         context,
-        DefaultRenderersFactory(context).setEnableDecoderFallback(!preview),
+        DefaultRenderersFactory(context).setEnableDecoderFallback(!options.preview),
     )
         .setMediaSourceFactory(
             DefaultMediaSourceFactory(dataSourceFactory)
@@ -232,12 +275,15 @@ class PlayerController(
         )
         .setTrackSelector(trackSelector)
         .setLoadControl(bufferWatch)
-        .let(buildPlayer)
+        .let(options.buildPlayer)
         .apply {
             addAnalyticsListener(DecoderLog.listener)
+            addAnalyticsListener(guard.firstFrameListener)
             addListener(object : Player.Listener {
                 override fun onTracksChanged(tracks: Tracks) {
                     _tracks.value = tracks
+                    // What's left of the last stream says nothing about the one on its way.
+                    if (!isSwitching) guard.tracksChanged(tracks, soundWanted = audioEnabled)
                 }
 
                 override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
@@ -248,6 +294,7 @@ class PlayerController(
                 }
 
                 override fun onPlaybackStateChanged(playbackState: Int) {
+                    if (gaveUp) return
                     _state.value = when (playbackState) {
                         Player.STATE_BUFFERING -> State.Buffering(_title.value)
                         Player.STATE_READY -> {
@@ -262,6 +309,7 @@ class PlayerController(
 
                 override fun onPlayerError(error: PlaybackException) {
                     consecutiveFailures++
+                    guard.leaving()
                     DecoderLog.logFailure(error)
                     val request = current
                     // Restarting can't change what this device can decode, and on a portal it would
@@ -303,7 +351,7 @@ class PlayerController(
         }
 
     init {
-        if (preview) audioEnabled = false
+        if (options.preview) audioEnabled = false
     }
 
     /**
@@ -320,7 +368,9 @@ class PlayerController(
         // keeps dropping stops after MAX_AUTO_RESTARTS rather than retrying (and, on a portal,
         // minting a link) forever.
         if (request != current) consecutiveFailures = 0
+        if (request.key != current?.key) guard.forgetNotices()
         current = request
+        guard.leaving()
 
         switchJob = scope.launch {
             if (debounce) delay(switchDebounceMillis)
@@ -359,6 +409,8 @@ class PlayerController(
             with(player) {
                 // stop() rather than release(): keeps the codec and the surface alive.
                 stop()
+                gaveUp = false
+                guard.started()
                 clearMediaItems()
                 // Each stream starts with text off, then applySubtitlePreference picks its track.
                 // Left on from the last stream, the selector would choose a track itself, in the
@@ -458,6 +510,8 @@ class PlayerController(
 
     fun stop() {
         switchJob?.cancel()
+        guard.leaving()
+        guard.forgetNotices()
         current = null
         loaded = null
         player.stop()
@@ -467,6 +521,7 @@ class PlayerController(
 
     fun release() {
         switchJob?.cancel()
+        guard.release()
         player.release()
     }
 

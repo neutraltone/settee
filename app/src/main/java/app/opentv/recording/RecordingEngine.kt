@@ -17,6 +17,7 @@ import app.opentv.data.repo.ChannelLineup
 import app.opentv.data.repo.EpgRepository
 import app.opentv.data.repo.RecordingRepository
 import app.opentv.data.repo.SourceRepository
+import app.opentv.data.repo.recordable
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
@@ -256,7 +257,8 @@ class RecordingEngine(
         // Our provider is free this window, or nothing else is booked — no need to move.
         if (channel.sourceId !in busy) return channel
 
-        val variants = lineup.channelOf(channel.id)?.qualities.orEmpty()
+        // Only what plays here: a clash mustn't move a capture up to something it can't be watched in.
+        val variants = lineup.channelOf(channel.id)?.let { lineup.recordable(it) }.orEmpty()
             .groupBy { it.sourceId }
             .mapNotNull { (_, chans) -> chans.maxByOrNull { it.qualityRank } }
 
