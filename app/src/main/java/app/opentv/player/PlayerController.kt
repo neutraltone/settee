@@ -120,19 +120,24 @@ class PlayerController(
         val decoders: DecoderList = DeviceDecoders(),
     )
 
-    /** A Channel's Quality that playback may step down to: what plays it, and what a viewer calls it. */
-    data class Quality(val key: MediaKey, val label: String)
+    /**
+     * A Quality that playback may step down to: what plays it, what a viewer calls it, and where to
+     * start, since a Movie's or Episode's Qualities each keep their own resume point.
+     */
+    data class Quality(val key: MediaKey, val label: String, val startPositionMillis: Long = 0L)
 
     /**
      * [startPositionMillis] is ignored for live streams, which are never resumed. [lower] are the
      * Qualities to step down to, best first, should this device turn out not to play this one, which
-     * [label] names; none for a Quality the viewer picked themselves.
+     * [label] names; none for a Quality the viewer picked themselves. [stepsForSound] also steps down
+     * when none of the sound can play: a film is worth nothing silent, where a Channel's picture may be.
      */
     data class Request(
         val key: MediaKey,
         val startPositionMillis: Long = 0L,
         val label: String = "",
         val lower: List<Quality> = emptyList(),
+        val stepsForSound: Boolean = false,
     )
 
     private val _state = MutableStateFlow<State>(State.Idle)
@@ -152,20 +157,34 @@ class PlayerController(
 
     private val strings = context.applicationContext
 
-    private val guard: StreamGuard = StreamGuard(strings, scope, options.decoders) { sentence, canRetry ->
-        // Before anything reports an error, so none flashes up on the way down. The player's stopped
-        // and marked so first, so a state it's already reporting can't cover the sentence.
+    private val guard: StreamGuard = StreamGuard(
+        strings,
+        scope,
+        options.decoders,
+        moveDown = { forSound ->
+            val playing = current?.takeIf { !forSound || it.stepsForSound }
+            playing?.lower?.firstOrNull()?.let { next ->
+                gaveUp = true
+                player.stop()
+                play(
+                    Request(
+                        next.key,
+                        next.startPositionMillis,
+                        next.label,
+                        playing.lower.drop(1),
+                        playing.stepsForSound,
+                    ),
+                    debounce = false,
+                )
+                StreamGuard.Step(playing.label, next)
+            }
+        },
+    ) { sentence, canRetry ->
+        // Before anything reports an error, so none flashes up. The player's stopped and marked so
+        // first, so a state it's already reporting can't cover the sentence.
         gaveUp = true
         player.stop()
-        val playing = current
-        val next = playing?.lower?.firstOrNull()
-        if (next == null) {
-            guard.stopSaying()
-            _state.value = State.Error(_title.value, sentence, canRetry)
-        } else {
-            play(Request(next.key, label = next.label, lower = playing.lower.drop(1)), debounce = false)
-            guard.steppedDown(playing.label, next)
-        }
+        _state.value = State.Error(_title.value, sentence, canRetry)
     }
 
     /** A short message for the viewer, up for about 5 seconds. It takes no focus. */
@@ -359,8 +378,9 @@ class PlayerController(
      *
      * @param debounce when true (the default for channel surfing) the switch waits briefly so
      * that rapid presses collapse into a single tune. Pass false for a deliberate selection.
+     * @param skipped what the Quality this device isn't going to try is called, if this plays in its place.
      */
-    fun play(request: Request, debounce: Boolean = true) {
+    fun play(request: Request, debounce: Boolean = true, skipped: String? = null) {
         // Cancelling here is what makes fast channel-changing safe: the previous switch never
         // reaches the player, so we never stack prepares.
         switchJob?.cancel()
@@ -426,6 +446,7 @@ class PlayerController(
                 prepare()
             }
         }
+        skipped?.let { guard.steppedDown(it, Quality(request.key, request.label)) }
     }
 
     /** Whether a [play] hasn't reached the player yet, so [player] still holds the last stream. */

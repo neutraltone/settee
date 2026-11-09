@@ -761,8 +761,12 @@ fun LivePlayerContent(
                             color = Color.White.copy(alpha = 0.85f),
                             textAlign = TextAlign.Center,
                         )
-                        Spacer(Modifier.height(24.dp))
-                        Button(onClick = { controller.retry() }) { Text(stringResource(R.string.common_try_again)) }
+                        if (current.canRetry) {
+                            Spacer(Modifier.height(24.dp))
+                            Button(onClick = { controller.retry() }) {
+                                Text(stringResource(R.string.common_try_again))
+                            }
+                        }
                     }
                 }
             }

@@ -606,6 +606,10 @@ interface MovieDao {
     @Query("SELECT * FROM movies WHERE id = :id")
     suspend fun byId(id: Long): Movie?
 
+    /** Every copy of one film: providers list each Quality as its own row, in its own category. */
+    @Query("SELECT * FROM movies WHERE tmdbId = :tmdbId ORDER BY id")
+    suspend fun byTmdbId(tmdbId: String): List<Movie>
+
     @Query("SELECT * FROM movies WHERE sourceId = :sourceId AND streamId = :streamId")
     suspend fun byProviderId(sourceId: Long, streamId: String): Movie?
 
@@ -670,6 +674,13 @@ interface SeriesDao {
     suspend fun setLatestAirDates(dates: List<Pair<Long, Long>>) {
         dates.forEach { (id, date) -> setLatestAirDate(id, date) }
     }
+
+    @Query("SELECT * FROM series WHERE sourceId = :sourceId AND seriesId = :seriesId")
+    suspend fun bySeriesId(sourceId: Long, seriesId: String): Series?
+
+    /** Every copy of one show: providers list each Quality as its own row, in its own category. */
+    @Query("SELECT * FROM series WHERE tmdbId = :tmdbId ORDER BY id")
+    suspend fun byTmdbId(tmdbId: String): List<Series>
 
     /** Fallback for More-Like-This when a series has no genre: same source/category, best-rated first. */
     @Query(

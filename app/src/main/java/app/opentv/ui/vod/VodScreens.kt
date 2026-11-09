@@ -49,6 +49,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
@@ -70,9 +71,11 @@ import app.opentv.R
 import app.opentv.data.model.Movie
 import app.opentv.data.model.Series
 import app.opentv.data.model.Source
+import app.opentv.data.parser.ChannelNameNormalizer
 import app.opentv.data.parser.displayTitle
 import app.opentv.data.repo.GenreGroup
 import app.opentv.data.repo.MediaKey
+import app.opentv.data.repo.MovieVariantGroup
 import app.opentv.ui.NewEpisodeBadge
 import app.opentv.ui.ResumeItem
 import app.opentv.ui.VodViewModel
@@ -105,7 +108,7 @@ fun MoviesScreen(
     val recommended by viewModel.recommendedMovies.collectAsState()
     val recentlyAdded by viewModel.recentlyAddedMovies.collectAsState()
     val genreRows by viewModel.movieGenreRows.collectAsState()
-    val categoryMovies by viewModel.movies.collectAsState()
+    val categoryMovies by viewModel.movieGroups.collectAsState()
     val vodLoading by viewModel.vodLoading.collectAsState()
     val sources by viewModel.sources.collectAsState()
     val selectedSource by viewModel.selectedVodSource.collectAsState()
@@ -117,8 +120,10 @@ fun MoviesScreen(
         viewModel.loadHomeFeeds()
     }
 
-    // null = the curated home rows; a category id = that category's full grid.
-    var browseCategory by remember { mutableStateOf<String?>(null) }
+    // null = the curated home rows; a category id = that category's full grid. Saved, since opening a
+    // title disposes this screen and Back should land on the grid it was opened from.
+    var browseCategory by rememberSaveable { mutableStateOf<String?>(null) }
+    LaunchedEffect(browseCategory) { viewModel.selectMovieCategory(browseCategory) }
 
     val hasContent = resume.isNotEmpty() ||
         favourites.isNotEmpty() ||
@@ -146,16 +151,13 @@ fun MoviesScreen(
             entries = categories.map { it.id to it.name },
             selected = browseCategory,
             onSelectHome = { browseCategory = null },
-            onSelectCategory = { id ->
-                browseCategory = id
-                viewModel.selectMovieCategory(id)
-            },
+            onSelectCategory = { id -> browseCategory = id },
         )
         // Weighted so the shelves fill the space under the fixed search + chips header, exactly and
         // unambiguously — the same reason Live TV weights its guide grid.
         Box(Modifier.weight(1f).fillMaxWidth()) {
             when {
-                browseCategory != null -> MovieCategoryGrid(categoryMovies, viewModel, onOpenMovie)
+                browseCategory != null -> MovieCategoryGrid(categoryMovies, onOpenMovie)
                 !hasContent -> when {
                     vodLoading || isSyncing -> LoadingVod(stringResource(R.string.vod_loading_movies))
                     hasSources -> EmptyVod(
@@ -242,7 +244,8 @@ fun SeriesScreen(
         viewModel.loadHomeFeeds()
     }
 
-    var browseCategory by remember { mutableStateOf<String?>(null) }
+    var browseCategory by rememberSaveable { mutableStateOf<String?>(null) }
+    LaunchedEffect(browseCategory) { viewModel.selectSeriesCategory(browseCategory) }
 
     val hasContent = resume.isNotEmpty() ||
         favourites.isNotEmpty() ||
@@ -270,10 +273,7 @@ fun SeriesScreen(
             entries = categories.map { it.id to it.name },
             selected = browseCategory,
             onSelectHome = { browseCategory = null },
-            onSelectCategory = { id ->
-                browseCategory = id
-                viewModel.selectSeriesCategory(id)
-            },
+            onSelectCategory = { id -> browseCategory = id },
         )
         Box(Modifier.weight(1f).fillMaxWidth()) {
             when {
@@ -337,12 +337,11 @@ internal fun SeriesShelves(
 
 /** One category's films as a poster grid. Quality variants collapse to one card, badged. */
 @Composable
-private fun MovieCategoryGrid(movies: List<Movie>, viewModel: VodViewModel, onOpenMovie: (Movie) -> Unit) {
-    if (movies.isEmpty()) {
+private fun MovieCategoryGrid(groups: List<MovieVariantGroup>, onOpenMovie: (Movie) -> Unit) {
+    if (groups.isEmpty()) {
         LoadingVod(stringResource(R.string.vod_loading_movies))
         return
     }
-    val groups = remember(movies) { viewModel.collapseVariants(movies) }
     LazyVerticalGrid(
         columns = GridCells.Adaptive(minSize = 140.dp),
         contentPadding = PaddingValues(16.dp),
@@ -391,6 +390,7 @@ private fun SeriesCategoryGrid(series: List<Series>, onOpenSeries: (Series) -> U
                 posterUrl = item.posterUrl,
                 subtitle = item.year?.toString(),
                 rating = item.rating,
+                qualityBadge = rememberQualityBadge(item.name),
                 onClick = { onOpenSeries(item) },
                 onOptions = openOptionsOn(OptionsSubject.OfSeries(item)),
             )
@@ -430,6 +430,7 @@ internal fun MoviePosterRow(
                 posterUrl = movie.posterUrl,
                 subtitle = movie.year?.toString(),
                 rating = movie.rating,
+                qualityBadge = rememberQualityBadge(movie.name),
                 onClick = { onOpenMovie(movie) },
                 onOptions = openOptionsOn(OptionsSubject.OfMovie(movie), onLeave(movie)),
                 modifier = Modifier.takesFocus(index, focus),
@@ -454,6 +455,7 @@ internal fun SeriesPosterRow(
                 posterUrl = item.posterUrl,
                 subtitle = item.year?.toString(),
                 rating = item.rating,
+                qualityBadge = rememberQualityBadge(item.name),
                 onClick = { onOpenSeries(item) },
                 onOptions = openOptionsOn(OptionsSubject.OfSeries(item), onLeave(item)),
                 modifier = Modifier.takesFocus(index, focus),
@@ -631,6 +633,11 @@ internal fun PosterCard(
     }
 }
 
+/** What a title's name says its Quality is, for the chip on its card; null when it doesn't say. */
+@Composable
+internal fun rememberQualityBadge(name: String): String? =
+    remember(name) { ChannelNameNormalizer.normalize(name).qualityLabel.takeIf { it.isNotBlank() } }
+
 /** A small rounded chip drawn over poster art — a rating or a quality label. */
 @Composable
 private fun Badge(text: String, modifier: Modifier = Modifier, highlight: Boolean = false) {
@@ -703,6 +710,9 @@ private fun ResumeCard(item: ResumeItem, modifier: Modifier, onClick: () -> Unit
                 modifier = Modifier.fillMaxSize(),
             )
             if (item.newEpisode) NewEpisodeBadge(Modifier.align(Alignment.TopStart).padding(6.dp))
+            rememberQualityBadge(item.name)?.let {
+                Badge(text = it, highlight = true, modifier = Modifier.align(Alignment.TopEnd).padding(6.dp))
+            }
             item.progress?.let { progress ->
                 LinearProgressIndicator(
                     progress = { progress },

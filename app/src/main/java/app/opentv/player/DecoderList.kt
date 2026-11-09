@@ -51,11 +51,17 @@ internal fun DecoderList.refuses(format: Format): Boolean {
     return sized && sizes.isNotEmpty() && sizes.none { format.width <= it.width && format.height <= it.height }
 }
 
-/** The first of these video tracks, when every one of them is refused; a smaller one can still play. */
+/**
+ * The first of these video tracks, when none of them can play: each above every decoder's size, or with
+ * no decoder for it at all. Either way the player leaves video unselected and raises no error, so its
+ * clock runs over a blank screen (#180, a Dolby Vision profile 5 stream has no fallback codec).
+ */
 internal fun DecoderList.refusedVideoOf(tracks: Tracks): Format? {
     val video = tracks.groups.filter { it.type == C.TRACK_TYPE_VIDEO }
-        .flatMap { group -> (0 until group.length).map(group::getTrackFormat) }
-    return video.firstOrNull().takeIf { video.all(::refuses) }
+    val playable = video.any { group ->
+        (0 until group.length).any { group.isTrackSupported(it, true) && !refuses(group.getTrackFormat(it)) }
+    }
+    return if (playable) null else video.firstOrNull()?.getTrackFormat(0)
 }
 
 /**

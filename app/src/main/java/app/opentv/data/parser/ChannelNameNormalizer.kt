@@ -173,7 +173,15 @@ object ChannelNameNormalizer {
             val upper = bare.uppercase()
 
             val rank = QUALITY_RANKS[upper]
+            // `4K-TOP - Superbad`: a provider's 4K shelf, glued to its name. Only these tags, as `Hd-1`
+            // or `Fuhd-1` are as likely to be a name.
+            val glued = upper.substringBefore('-', "").takeIf { it == "4K" || it == "8K" }?.let(QUALITY_RANKS::get)
             when {
+                glued != null -> {
+                    if (glued > bestRank) bestRank = glued
+                    labelParts += upper.substringBefore('-')
+                    keptTokens += bare.substringAfter('-')
+                }
                 rank != null -> {
                     if (rank > bestRank) bestRank = rank
                     labelParts += upper

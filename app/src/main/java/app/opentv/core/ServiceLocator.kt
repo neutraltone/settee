@@ -22,6 +22,7 @@ import app.opentv.data.repo.RefreshMessages
 import app.opentv.data.repo.ReminderRepository
 import app.opentv.data.repo.SourceRepository
 import app.opentv.data.repo.ViewerLibrary
+import app.opentv.data.repo.VodQualities
 import app.opentv.data.repo.WaitingProgress
 import app.opentv.player.DecoderList
 import app.opentv.player.DeviceDecoders
@@ -143,6 +144,8 @@ object ServiceLocator {
                 decoders,
             )
         }
+
+        val vodQualities: VodQualities by lazy { VodQualities(database, catalogRepository, decoders) }
 
         val playbackSources: PlaybackSources by lazy { PlaybackSources(database, xtreamApi, stalkerApi, channelLineup) }
 

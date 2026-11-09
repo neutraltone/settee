@@ -128,6 +128,24 @@ class OversizeTrackTest {
         assertThat(started).isEmpty()
     }
 
+    @Test
+    fun `video with no decoder here at all says so, rather than a clock counting over a blank screen`() {
+        decoder("hardware.hevc", 1920, 1088)
+        // Profile 5 has no HEVC base layer to fall back on, and the Dolby sound can't play either.
+        players.formats = listOf(
+            Format.Builder()
+                .setSampleMimeType(MimeTypes.VIDEO_DOLBY_VISION)
+                .setCodecs("dvhe.05.06")
+                .setWidth(3840)
+                .setHeight(2160)
+                .build(),
+            Format.Builder().setSampleMimeType(MimeTypes.AUDIO_E_AC3).setChannelCount(6).setSampleRate(48_000).build(),
+        )
+
+        assertThat((playUntilSettled() as PlayerController.State.Error).message)
+            .isEqualTo("This device can't play this video (Dolby Vision, 3840x2160).")
+    }
+
     private fun hevc(width: Int, height: Int): Format =
         Format.Builder().setSampleMimeType(MimeTypes.VIDEO_H265).setWidth(width).setHeight(height).build()
 

@@ -170,11 +170,15 @@ class TestPlayers(private val context: Context) {
      * A [PlayerController] on the renderers it has in the app, so real decoders are chosen from the
      * device's codec list. Plays fake H.264 video to [surface]; a decoder only starts when it has one.
      */
-    fun realDecoderController(preview: Boolean = false, surface: Surface) = PlayerController(
+    fun realDecoderController(
+        preview: Boolean = false,
+        surface: Surface,
+        resolve: suspend (MediaKey) -> Playable = ::placeholder,
+    ) = PlayerController(
         context,
         scope,
         OkHttpClient(),
-        resolve = ::placeholder,
+        resolve = resolve,
         PlayerController.Options(
             preview = preview,
             buildPlayer = { builder ->

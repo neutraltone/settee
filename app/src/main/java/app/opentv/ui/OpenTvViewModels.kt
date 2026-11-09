@@ -672,6 +672,8 @@ data class ResumeItem(
     val newEpisode: Boolean = false,
     /** The Continue Watching card this was drawn from, for the options panel to act on. */
     val card: ContinueWatchingCard? = null,
+    /** The provider's name for the title, which is where its Quality is written. */
+    val name: String = title,
 )
 
 class VodViewModel @JvmOverloads constructor(
@@ -729,14 +731,16 @@ class VodViewModel @JvmOverloads constructor(
         ) { raw, sourceId -> if (sourceId == null) raw else raw.filter { it.sourceId == sourceId } }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
+    // No category means the home rows, which don't read these. Observing every row for nothing would
+    // hold the whole catalogue in memory and load it again on each write during a refresh (#180).
     @OptIn(ExperimentalCoroutinesApi::class)
     val movies: StateFlow<List<Movie>> = movieCategory
-        .flatMapLatest { graph.catalogRepository.observeMovies(it) }
+        .flatMapLatest { id -> id?.let(graph.catalogRepository::observeMovies) ?: flowOf(emptyList()) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val series: StateFlow<List<Series>> = seriesCategory
-        .flatMapLatest { graph.catalogRepository.observeSeries(it) }
+        .flatMapLatest { id -> id?.let(graph.catalogRepository::observeSeries) ?: flowOf(emptyList()) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     fun selectMovieCategory(id: String?) {
@@ -1011,10 +1015,22 @@ class VodViewModel @JvmOverloads constructor(
     suspend fun titlesWithPerson(name: String): List<PersonTitle> = graph.catalogRepository.titlesWithPerson(name)
 
     /** Where the active Profile would resume a movie/episode, 0 for the start — drives Resume vs Watch now. */
-    suspend fun resumeFrom(mediaKey: String): Long = graph.viewerLibrary.resumeFrom(mediaKey)
+    /** Whether playing [movie] would pick up partway: the Quality that plays keeps the resume point. */
+    suspend fun resumesPartway(movie: Movie): Boolean {
+        val playing = graph.vodQualities.planFor(MediaKey.Movie(movie.id)).start.key
+        return graph.viewerLibrary.resumeFrom(playing.stored) > 0
+    }
 
-    /** Collapses a movie list's Qualities for a browse grid. See [collapseMovieVariants]. */
-    fun collapseVariants(movies: List<Movie>): List<MovieVariantGroup> = collapseMovieVariants(movies, graph.decoders)
+    /**
+     * The category's films for its browse grid, each one's Qualities collapsed: see [collapseMovieVariants].
+     * Off the main thread: that parses every name, again each time a refresh touches the movies table, and
+     * done while composing it froze a Fire TV Stick long enough for Android to close the app (#180).
+     */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val movieGroups: StateFlow<List<MovieVariantGroup>> = movies
+        .mapLatest { collapseMovieVariants(it, graph.decoders) }
+        .flowOn(Dispatchers.Default)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     fun setSeriesFavourite(series: Series, favourite: Boolean) {
         viewModelScope.launch { graph.viewerLibrary.favourites.set(series, favourite) }
@@ -1030,6 +1046,7 @@ private suspend fun resumeItem(catalog: CatalogRepository, card: ContinueWatchin
             it.posterUrl,
             card.progress,
             card = card,
+            name = it.name,
         )
     }
     is ContinueWatchingCard.Series -> {
