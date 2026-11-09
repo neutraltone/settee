@@ -39,6 +39,8 @@ tools/check-message-test.sh                 # tests for the commit/PR-title conv
 python3 -m unittest discover -s tools/screenshots  # screenshot comparison tests (needs Pillow)
 tools/perf/stick_baseline.py --help         # measure performance on a Fire TV Stick (docs/PERFORMANCE.md)
 python3 -m unittest discover -s tools/perf  # tests for that script
+tools/render-launcher-art.sh                # regenerate the mark's drawables, SVGs and launcher PNGs
+python3 -m unittest discover -s tools/launcher-art  # every copy of the mark matches its generator
 ```
 
 Tests live in `app/src/test` (JUnit4, Truth, Robolectric, Room testing, coroutines-test, Roborazzi for screenshots); there are no
@@ -48,7 +50,7 @@ instrumented tests.
 
 `.github/workflows/build.yml` runs one job per required check: **Test and assemble** (unit tests, debug
 APK, and a fail if the build changed `app/schemas/`), **Android Lint**, **ktlint**, **detekt**,
-**Screenshot tools** (the Python tests in `tools/screenshots/` and `tools/perf/`) and **gitleaks**. `pr-hygiene.yml` runs `tools/check-message-test.sh` and checks the PR title with
+**Screenshot tools** (the Python tests in `tools/screenshots/`, `tools/perf/` and `tools/launcher-art/`) and **gitleaks**. `pr-hygiene.yml` runs `tools/check-message-test.sh` and checks the PR title with
 `tools/check-message.sh`. Lint and detekt fail only on findings missing from `app/lint-baseline.xml` /
 `app/detekt-baseline.xml`: fix a new finding, don't regenerate a baseline to hide it. `.gitleaks.toml`
 adds rules for Xtream credentials in URLs and MAG MACs; use placeholders such as `u`/`p`, `example.com` or `00:1A:79:00:00:01` in tests.
