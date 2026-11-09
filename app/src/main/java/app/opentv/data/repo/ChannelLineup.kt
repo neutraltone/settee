@@ -11,6 +11,8 @@ import app.opentv.data.model.Category
 import app.opentv.data.model.Channel
 import app.opentv.data.model.StreamKind
 import app.opentv.data.parser.ChannelNameNormalizer
+import app.opentv.player.DecoderList
+import app.opentv.player.playsQualityRanked
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -56,8 +58,8 @@ sealed interface LineupScope {
 }
 
 /**
- * One Channel: every Quality of it, best first, [primary] the one that plays by default. It's a
- * [favourite] of the active Profile when any of its Qualities is.
+ * One Channel: every Quality of it, best first, [primary] the one that plays by default: the
+ * highest this device can play. It's a [favourite] of the active Profile when any of its Qualities is.
  */
 @androidx.compose.runtime.Immutable
 data class LineupChannel(
@@ -68,10 +70,23 @@ data class LineupChannel(
     val key: String = primary.groupKey.ifEmpty { "#${primary.id}" },
 ) {
     /**
+     * The best Quality whatever this device can play: what's recorded, since a recording may be
+     * watched elsewhere and nothing is decoded while it's made, and what another app is handed.
+     */
+    val best: Channel get() = qualities.first()
+
+    /**
      * The Qualities worth offering as a switch, one per distinct quality: the same stream listed in
      * two categories isn't a choice. Starring, hiding and recording still cover every Quality.
      */
     val switchable: List<Channel> get() = distinctByQuality(qualities)
+
+    /**
+     * What [playing] can step down to, best first: every lower Quality once. Not the ones above it,
+     * which this device has already been judged not to play, nor the same stream listed elsewhere.
+     */
+    fun qualitiesBelow(playing: Channel): List<Channel> =
+        distinctByQuality(qualities.dropWhile { it.id != playing.id }).drop(1)
 
     /**
      * The record menu's "record from which provider" options: each provider's best Quality,
@@ -138,6 +153,7 @@ class ChannelLineup(
     private val favourites: Favourites,
     private val lockedKeys: StateFlow<Set<String>>,
     private val unlocked: StateFlow<Boolean>,
+    private val decoders: DecoderList,
     private val sharing: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default),
 ) {
     private val channelDao = db.channels()
@@ -161,13 +177,13 @@ class ChannelLineup(
      * scope, because which Channel a row joins depends on rows outside it.
      */
     private val browsable: Flow<Catalogue> =
-        combine(channelDao.observeEvery(), locked) { rows, locked -> Catalogue(rows) { it.isShown(locked) } }
+        combine(channelDao.observeEvery(), locked) { rows, locked -> Catalogue(rows, decoders) { it.isShown(locked) } }
             // One fold for every screen open at once, off the main thread.
             .flowOn(Dispatchers.Default)
             .shareIn(sharing, SharingStarted.WhileSubscribed(SHARE_MILLIS), replay = 1)
 
     /** Every row, hidden and locked ones too: what the channel manager folds. */
-    private val manageable: Flow<Catalogue> = channelDao.observeEvery().map { Catalogue(it) }
+    private val manageable: Flow<Catalogue> = channelDao.observeEvery().map { Catalogue(it, decoders) }
         .flowOn(Dispatchers.Default)
         .shareIn(sharing, SharingStarted.WhileSubscribed(SHARE_MILLIS), replay = 1)
 
@@ -205,8 +221,8 @@ class ChannelLineup(
             return combine(favourites.channels(), locked, favourites.channelIds(), ::Triple)
                 .mapLatest { (rows, locked, starred) ->
                     val named = rows.flatMap { channelDao.sameNamed(it) }.distinctBy { it.id }
-                    Catalogue(named) { it.isShown(locked) }
-                        .channelsOf(rows.from(scope.sourceId))
+                    Catalogue(named, decoders) { it.isShown(locked) }
+                        .channelsOf(rows.from(scope.sourceId), scope)
                         .map { it.starredBy(starred) }
                 }
         }
@@ -219,7 +235,7 @@ class ChannelLineup(
                 catalogue,
                 starred,
             ->
-            catalogue.channelsOf(rows).map { it.starredBy(starred) }
+            catalogue.channelsOf(rows, scope).map { it.starredBy(starred) }
         }
     }
 
@@ -292,7 +308,7 @@ class ChannelLineup(
         val row = channelDao.byId(channelId) ?: return null
         val locked = if (manage) emptySet() else locked.first()
         // Only rows of the same name can share its Channel, so the fold needn't see the catalogue.
-        return Catalogue(channelDao.sameNamed(row)) { manage || it.isShown(locked) }
+        return Catalogue(channelDao.sameNamed(row), decoders) { manage || it.isShown(locked) }
             .channelContaining(row.id)
             ?.starredBy(favourites.channelIds().first())
     }
@@ -302,7 +318,11 @@ class ChannelLineup(
      * locked ones too, so the guide and the channel manager agree on it; only [shown] rows are
      * Qualities.
      */
-    private class Catalogue(rows: List<Channel>, shown: (Channel) -> Boolean = { true }) {
+    private class Catalogue(
+        rows: List<Channel>,
+        private val decoders: DecoderList,
+        shown: (Channel) -> Boolean = { true },
+    ) {
         private val keyOf = channelKeys(rows)
         private val shownIds = rows.filter(shown).mapTo(HashSet()) { it.id }
         private val qualities: Map<String, List<Channel>> = rows.filter { it.id in shownIds }
@@ -313,20 +333,30 @@ class ChannelLineup(
             if (rowId !in shownIds) return null
             val key = keyOf.getValue(rowId)
             val qualities = qualities.getValue(key)
-            return LineupChannel(qualities.first(), qualities, key = key)
+            return LineupChannel(qualities.firstOrNull(::playable) ?: qualities.first(), qualities, key = key)
         }
 
         /** One Channel per [rows]' Channel, in the order they first appear, each played from the first of them. */
-        fun channelsOf(rows: List<Channel>): List<LineupChannel> {
+        fun channelsOf(rows: List<Channel>, scope: LineupScope): List<LineupChannel> {
             val firstRow = LinkedHashMap<String, Channel>()
             for (row in rows) {
                 if (row.id !in shownIds) continue
                 val key = keyOf.getValue(row.id)
                 val best = firstRow[key]
-                if (best == null || BEST_FIRST.compare(row, best) < 0) firstRow[key] = row
+                if (best == null || scopeOrder.compare(row, best) < 0) firstRow[key] = row
             }
-            return firstRow.map { (key, primary) -> LineupChannel(primary, qualities.getValue(key), key = key) }
+            return firstRow.map { (key, best) ->
+                val qualities = qualities.getValue(key)
+                // Outside the rows in scope if it must: a Channel's Qualities are the same wherever it's
+                // shown, and a category of 4K channels shouldn't play what this device can't when HD exists.
+                val fallback = qualities.firstOrNull { playable(it) && scope.mayPlayFromOutside(it) }
+                LineupChannel(if (playable(best)) best else fallback ?: best, qualities, key = key)
+            }
         }
+
+        private fun playable(row: Channel) = decoders.playsQualityRanked(row.qualityRank)
+
+        private val scopeOrder = compareBy<Channel> { !playable(it) }.then(BEST_FIRST)
     }
 
     private companion object {
@@ -378,6 +408,19 @@ private fun rowsIn(scope: LineupScope, channelDao: ChannelDao, categories: Flow<
 /** Every row, hidden ones too, that could share a Channel with [row]. */
 private suspend fun ChannelDao.sameNamed(row: Channel): List<Channel> =
     if (row.groupKey.isEmpty()) listOf(row) else sameName(ChannelNameNormalizer.nameKeyOf(row.groupKey))
+
+/**
+ * Whether a Channel shown in this scope may default to [row] when it isn't among the scope's own rows.
+ * A provider filter holds, since it's choosing whose account to use, and the channel manager lists the
+ * rows themselves, for managing rather than playing.
+ */
+private fun LineupScope.mayPlayFromOutside(row: Channel): Boolean = when (this) {
+    is LineupScope.All -> sourceId == null || row.sourceId == sourceId
+    is LineupScope.Group -> sourceId == null || row.sourceId == sourceId
+    is LineupScope.Favourites -> sourceId == null || row.sourceId == sourceId
+    is LineupScope.Search -> true
+    is LineupScope.ManageSearch, is LineupScope.ManageGroup -> false
+}
 
 private fun List<Channel>.from(sourceId: Long?): List<Channel> =
     if (sourceId == null) this else filter { it.sourceId == sourceId }

@@ -160,10 +160,12 @@ fun PlayerScreen(channelId: Long?, onBack: () -> Unit) {
             scope,
             graph.streamingHttpClient,
             resolve = graph.playbackSources::forWatching,
-            // Text starts off; the Profile's Subtitle Preference turns it on once tracks arrive.
-            subtitlesEnabled = false,
-            // Opt-in shallow DVR so the transport's pause/rewind actually holds on a live stream.
-            dvr = livePause,
+            PlayerController.Options(
+                // Text starts off; the Profile's Subtitle Preference turns it on once tracks arrive.
+                subtitlesEnabled = false,
+                // Opt-in shallow DVR so the transport's pause/rewind actually holds on a live stream.
+                dvr = livePause,
+            ),
         )
     }
     DisposableEffect(controller) { onDispose { controller.release() } }
@@ -223,11 +225,21 @@ fun PlayerScreen(channelId: Long?, onBack: () -> Unit) {
     val playerState by controller.state.collectAsState()
     LaunchedEffect(playerState, inFront) { settled.playing(inFront && playerState is PlayerController.State.Playing) }
 
-    fun tuneTo(channel: Channel) {
+    fun showPlaying(channel: Channel) {
         currentId = channel.id
         settings.lastChannelId = channel.id
         settled.tunedTo(channel)
-        controller.play(PlayerController.Request(MediaKey.Live(channel.id)), debounce = false)
+    }
+
+    /** [lower] are what it may step down to: none for a Quality the viewer picked from the list. */
+    fun tuneTo(channel: Channel, lower: List<Channel> = emptyList()) {
+        showPlaying(channel)
+        val request = PlayerController.Request(
+            MediaKey.Live(channel.id),
+            label = channel.qualityLabel,
+            lower = lower.map { PlayerController.Quality(MediaKey.Live(it.id), it.qualityLabel) },
+        )
+        controller.play(request, debounce = false)
     }
 
     /** Plays row [id] as one Quality of its Channel, so the switch and Record cover the Channel's. */
@@ -237,7 +249,8 @@ fun PlayerScreen(channelId: Long?, onBack: () -> Unit) {
             ?: graph.catalogRepository.channel(id)?.let { LineupChannel(it, listOf(it)) }
             ?: return
         channel = playing
-        tuneTo(playing.qualities.first { it.id == id })
+        val quality = playing.qualities.first { it.id == id }
+        tuneTo(quality, lower = playing.qualitiesBelow(quality))
     }
 
     fun playChannelId(id: Long) {
@@ -266,9 +279,9 @@ fun PlayerScreen(channelId: Long?, onBack: () -> Unit) {
         if (active != null) {
             graph.recordingEngine.stop(active.id)
         } else {
-            // Every Quality, not just the switchable ones: the one playing is always among them.
-            val playing = channel?.qualities?.firstOrNull { it.id == currentId } ?: return
-            scope.launch { graph.recordingEngine.startChannel(playing) }
+            // Its best, not the one playing: nothing is decoded while recording, and it may be watched elsewhere.
+            val best = channel?.best ?: return
+            scope.launch { graph.recordingEngine.startChannel(best) }
             recordingStarted()
         }
     }
@@ -291,6 +304,14 @@ fun PlayerScreen(channelId: Long?, onBack: () -> Unit) {
     LaunchedEffect(controller) {
         if (controller.state.value == PlayerController.State.Idle) {
             channel?.qualities?.firstOrNull { it.id == currentId }?.let { tuneTo(it) }
+        }
+    }
+
+    // The controller steps down by itself, so a picked Quality's list and the last channel follow it.
+    LaunchedEffect(controller) {
+        controller.steppedDownTo.collect { key ->
+            val id = (key as? MediaKey.Live)?.channelId
+            channel?.qualities?.firstOrNull { it.id == id }?.let(::showPlaying)
         }
     }
 
@@ -327,7 +348,7 @@ fun PlayerScreen(channelId: Long?, onBack: () -> Unit) {
         pausePromptDismissed = pausePromptDismissed,
         onPlayChannel = ::playChannelId,
         onZap = ::zap,
-        onTune = ::tuneTo,
+        onTune = { tuneTo(it) },
         onToggleRecord = ::toggleRecord,
         favourite = favourite,
         onToggleFavourite = ::toggleFavourite,
@@ -690,18 +711,10 @@ fun LivePlayerContent(
         )
 
         if (backToLive && !inPip) {
-            Text(
-                stringResource(R.string.player_back_to_live),
-                color = Color.White,
-                style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier
-                    .align(Alignment.TopCenter)
-                    .padding(32.dp)
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(Color.Black.copy(alpha = 0.82f))
-                    .padding(horizontal = 24.dp, vertical = 12.dp),
-            )
+            PlayerNotice(stringResource(R.string.player_back_to_live), Modifier.align(Alignment.TopCenter))
         }
+        val notice by controller.notice.collectAsState()
+        notice?.takeUnless { inPip }?.let { PlayerNotice(it, Modifier.align(Alignment.TopCenter)) }
 
         // The channel number as you type it, top-right, until it resolves.
         if (numberEntry.isNotEmpty() && !inPip) {

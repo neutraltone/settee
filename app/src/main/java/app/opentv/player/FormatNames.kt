@@ -20,6 +20,11 @@ internal val Format.displayName: String
         return name + bitDepth?.takeIf { it > EIGHT_BIT }?.let { " $it-bit" }.orEmpty()
     }
 
+/** [displayName] with the picture's size, when the stream has said what it is: "HEVC, 3840x1600". */
+@get:OptIn(UnstableApi::class)
+internal val Format.displayNameAndSize: String
+    get() = displayName + if (width > 0 && height > 0) ", ${width}x$height" else ""
+
 /**
  * Containers fill in the colour info or the codec string, rarely both, and a high bit depth is
  * usually what a cheap box's decoder can't do, so both are read. Null when neither says.

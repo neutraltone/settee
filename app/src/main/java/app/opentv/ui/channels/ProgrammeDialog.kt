@@ -74,7 +74,7 @@ internal fun ProgrammeDialog(
     // Which quality actually gets recorded. Defaults to the best variant, but the user can pick
     // (Sky Q's "record HD or SD"). Each variant channel carries its own stream URL, so the pick
     // flows straight through to the capture. Only surfaced when the channel has more than one.
-    var chosenVariant by remember(targetRow.primary.id) { mutableStateOf(targetRow.primary) }
+    var chosenVariant by remember(targetRow.primary.id) { mutableStateOf(targetRow.channel.best) }
     // Which provider records it, when this channel exists on more than one. Recording from a
     // second provider's account is what lets you keep watching on the first — the only real way
     // around a single-connection provider (something even TiviMate can't do).
@@ -86,7 +86,7 @@ internal fun ProgrammeDialog(
         }
     }
     val liveNow = nowMillis in programme.startUtcMillis until programme.endUtcMillis
-    val recordingThis = activeRecordings.firstOrNull { it.channelId == channel.id }
+    val recordingThis = activeRecordings.firstOrNull { targetRow.channel.has(it.channelId) }
     Dialog(onDismissRequest = onDismiss) {
         Column(
             Modifier
@@ -168,7 +168,7 @@ internal fun ProgrammeDialog(
             if (!isPast) ReminderActions(channel, programme, scope, onDismiss)
             RecordActionRow(stringResource(R.string.rec_record_series)) {
                 scope.launch {
-                    graph.recordingEngine.recordSeries(channel, programme, targetRow.programmes)
+                    graph.recordingEngine.recordSeries(targetRow.channel.best, programme, targetRow.programmes)
                 }
                 Toast.makeText(
                     context,

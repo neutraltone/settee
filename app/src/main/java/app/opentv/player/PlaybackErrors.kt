@@ -74,6 +74,16 @@ object PlaybackErrors {
         else -> "Playback failed (${error.errorCodeName})."
     }
 
+    /** Why a video that [DecoderList.refuses] won't play: no other quality or Retry is on offer here. */
+    fun tooBig(context: Context, format: Format): String =
+        context.getString(R.string.playback_video_too_big, format.displayNameAndSize)
+
+    /** Why a video whose decoder started and showed nothing has stopped; [format] is null if it never said. */
+    fun noFirstFrame(context: Context, format: Format?): String = context.getString(
+        R.string.playback_no_first_frame,
+        format?.displayNameAndSize ?: context.getString(R.string.player_unknown_format),
+    )
+
     /**
      * Whether this stream's format is the problem, so trying it again can't help. A decoder failing
      * partway through isn't counted: one bad frame in a stream is worth a restart.

@@ -7,9 +7,11 @@ package app.opentv.player
 
 import android.util.Log
 import androidx.annotation.OptIn
+import androidx.media3.common.C
 import androidx.media3.common.Format
 import androidx.media3.common.MimeTypes
 import androidx.media3.common.PlaybackException
+import androidx.media3.common.Tracks
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.DecoderReuseEvaluation
 import androidx.media3.exoplayer.ExoPlaybackException
@@ -77,13 +79,34 @@ object DecoderLog {
             logWontStart(audioCodecError)
     }
 
+    /**
+     * Logs every audio and video track a stream offers, chosen or not, since a track nobody plays never
+     * reaches a decoder. What [alreadyLogged] holds for this stream isn't logged again: tracks are
+     * reported again whenever a subtitle or audio track changes.
+     */
+    fun logTracks(tracks: Tracks, decoders: DecoderList, alreadyLogged: MutableSet<String>) {
+        for (group in tracks.groups) {
+            if (group.type != C.TRACK_TYPE_AUDIO && group.type != C.TRACK_TYPE_VIDEO) continue
+            for (i in 0 until group.length) {
+                val format = group.getTrackFormat(i)
+                val supported = group.isTrackSupported(i, true) && !decoders.refuses(format)
+                val track = "${namedFields(format)}${rates(format)} selected=${group.isTrackSelected(i)} " +
+                    "supported=$supported"
+                if (alreadyLogged.add(track)) Log.i(TAG, "Track: $track")
+            }
+        }
+    }
+
     private fun logFormat(format: Format) {
+        Log.i(TAG, "Format: ${namedFields(format)}${rates(format)}")
+    }
+
+    private fun rates(format: Format): String {
         // MPEG-TS from a panel rarely says either, and "-1" would read as a measurement.
         val bitrate = listOf(format.averageBitrate, format.peakBitrate).firstOrNull { it != Format.NO_VALUE }
         val frameRate = format.frameRate.takeIf { it != Format.NO_VALUE.toFloat() }
             ?.takeUnless { MimeTypes.isAudio(format.sampleMimeType) }
-        val rates = bitrate?.let { " bitrate=$it" }.orEmpty() + frameRate?.let { " frameRate=$it" }.orEmpty()
-        Log.i(TAG, "Format: ${namedFields(format)}$rates")
+        return bitrate?.let { " bitrate=$it" }.orEmpty() + frameRate?.let { " frameRate=$it" }.orEmpty()
     }
 
     private fun logStarted(decoderName: String) {

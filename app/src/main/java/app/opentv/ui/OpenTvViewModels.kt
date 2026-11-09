@@ -39,9 +39,11 @@ import app.opentv.data.repo.MediaKey
 import app.opentv.data.repo.MovieVariantGroup
 import app.opentv.data.repo.PersonTitle
 import app.opentv.data.repo.RefreshMessages
+import app.opentv.data.repo.collapseMovieVariants
 import app.opentv.data.repo.onNowAt
 import app.opentv.data.work.SyncWorker
 import app.opentv.pairing.ManagerServer
+import app.opentv.player.playsQualityRanked
 import app.opentv.sync.NasSync
 import app.opentv.sync.SyncClient
 import app.opentv.sync.SyncEngine
@@ -678,6 +680,12 @@ class VodViewModel @JvmOverloads constructor(
 ) : AndroidViewModel(app) {
     private val settings = graph.settings
 
+    init {
+        // Asked here, off the main thread: the grid collapses its movies while composing, and listing a
+        // cheap box's decoders the first time is slow enough to drop frames.
+        viewModelScope.launch(Dispatchers.Default) { graph.decoders.tallestListed }
+    }
+
     @OptIn(ExperimentalCoroutinesApi::class)
     val continueWatchingMovies: StateFlow<List<ResumeItem>> =
         graph.viewerLibrary.continueWatchingMovies()
@@ -1005,9 +1013,8 @@ class VodViewModel @JvmOverloads constructor(
     /** Where the active Profile would resume a movie/episode, 0 for the start — drives Resume vs Watch now. */
     suspend fun resumeFrom(mediaKey: String): Long = graph.viewerLibrary.resumeFrom(mediaKey)
 
-    /** Collapses quality variants of a movie list for a browse grid. See CatalogRepository.collapseVariants. */
-    fun collapseVariants(movies: List<Movie>): List<MovieVariantGroup> =
-        graph.catalogRepository.collapseVariants(movies)
+    /** Collapses a movie list's Qualities for a browse grid. See [collapseMovieVariants]. */
+    fun collapseVariants(movies: List<Movie>): List<MovieVariantGroup> = collapseMovieVariants(movies, graph.decoders)
 
     fun setSeriesFavourite(series: Series, favourite: Boolean) {
         viewModelScope.launch { graph.viewerLibrary.favourites.set(series, favourite) }
@@ -1134,7 +1141,9 @@ class HomeViewModel @JvmOverloads constructor(
             when {
                 preview == null -> flowOf(null)
                 channelId == null -> flowOf(preview to null)
-                else -> lineup.channel(channelId).map { channel -> channel?.let { preview to it } }
+                else -> lineup.channel(channelId).map { channel ->
+                    channel?.let { shownQuality(preview, it) to it }
+                }
             }
         }
         .distinctUntilChanged()
@@ -1145,6 +1154,19 @@ class HomeViewModel @JvmOverloads constructor(
                 minute.map { now -> liveNow(shown.first, shown.second, now) }.distinctUntilChanged()
             }
         }
+
+    /**
+     * The Quality last settled on, which may have been picked from the list, unless this device can't
+     * play it: then the one its Channel plays by default, not a tile that only says it can't.
+     */
+    private fun shownQuality(preview: LivePreview, channel: LineupChannel): LivePreview {
+        val settled = preview.channel ?: return preview
+        return if (graph.decoders.playsQualityRanked(settled.qualityRank)) {
+            preview
+        } else {
+            LivePreview.Playable(channel.primary)
+        }
+    }
 
     private suspend fun liveNow(preview: LivePreview, channel: LineupChannel?, now: Long): LiveNow {
         // The Channel's guide, as the guide itself picks it.
