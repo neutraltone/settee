@@ -6,17 +6,17 @@
 package app.opentv
 
 import android.app.Application
+import android.view.View
 import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.SemanticsNodeInteraction
-import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isFocused
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performKeyInput
-import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.test.requestFocus
 import androidx.test.core.app.ApplicationProvider
@@ -60,8 +60,12 @@ class RecentSearchesScreenTest {
     @Before
     fun startEmpty() = runBlocking { recent.clear() }
 
+    private lateinit var view: View
+    private val device = DeviceKeyboard(compose) { view }
+
     private fun show() {
         compose.setTvContent {
+            view = LocalView.current
             ItemOptionsHost {
                 SearchScreen(onPlayChannel = {}, onPlayMovie = {}, onOpenSeries = {}, onBack = {})
             }
@@ -86,7 +90,7 @@ class RecentSearchesScreenTest {
         }
         show()
 
-        compose.onNode(hasSetTextAction()).performTextInput("bbc")
+        device.type("bbc")
         val result = waitFor("BBC One")
         assertThat(shown()).isEmpty()
 

@@ -5,6 +5,9 @@
  */
 package app.opentv
 
+import android.view.KeyEvent
+import android.view.View
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -36,6 +39,33 @@ class AppSettingsScreenTest {
     fun restore() {
         settings.setPlayNextAutomatically(true)
         settings.setLivePreviewOnHome(true)
+        settings.setTmdbApiKey("")
+    }
+
+    private lateinit var view: View
+    private val device = DeviceKeyboard(compose) { view }
+
+    private fun show() = compose.setTvContent {
+        view = LocalView.current
+        AppSettingsScreen(onBack = {})
+    }
+
+    @Test
+    fun `the TMDB key box waits for OK before opening the keyboard, and Save keeps what was typed`() {
+        show()
+        compose.onNodeWithText(TMDB_SAVE).performScrollTo()
+        compose.runOnIdle { device.box().requestFocus() }
+        assertThat(device.showing).isFalse()
+        captureScreen("app_settings_tmdb_key")
+
+        device.remote(KeyEvent.KEYCODE_DPAD_CENTER)
+        assertThat(device.showing).isTrue()
+        device.type(" key123 ")
+        device.pressAction()
+        compose.onNodeWithText(TMDB_SAVE).performClick()
+        captureScreen("app_settings_tmdb_key_saved")
+
+        assertThat(settings.tmdbApiKey.value).isEqualTo("key123")
     }
 
     @Test
@@ -67,3 +97,5 @@ class AppSettingsScreenTest {
         compose.onNodeWithText("Resume last channel on startup").assertDoesNotExist()
     }
 }
+
+private const val TMDB_SAVE = "Save key"

@@ -5,12 +5,12 @@
  */
 package app.opentv
 
-import android.content.Context
+import android.os.Looper
+import android.view.KeyEvent
 import android.view.View
 import android.view.inputmethod.EditorInfo
-import android.view.inputmethod.InputConnection
-import android.view.inputmethod.InputMethodManager
 import androidx.compose.foundation.text.input.TextFieldState
+import androidx.compose.foundation.text.input.clearText
 import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
@@ -21,16 +21,12 @@ import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
-import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
-import androidx.compose.ui.test.performImeAction
 import androidx.compose.ui.test.performKeyInput
-import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.test.requestFocus
-import androidx.test.core.app.ApplicationProvider
 import app.opentv.data.model.Channel
 import app.opentv.data.model.Movie
 import app.opentv.data.model.Series
@@ -103,13 +99,13 @@ class SearchContentTest {
         compose.waitForIdle()
     }
 
-    private val searchBox get() = compose.onNode(hasSetTextAction())
+    private val device = DeviceKeyboard(compose) { view }
 
     @Test
     fun `search opens with the highlight in the search box`() {
         show()
 
-        searchBox.assertIsFocused()
+        assertThat(device.highlighted()).isTrue()
         captureScreen("search_empty")
     }
 
@@ -117,9 +113,31 @@ class SearchContentTest {
     fun `what the device keyboard types becomes the search`() {
         show()
 
-        searchBox.performTextInput("bbc")
+        device.type("bbc")
 
         assertThat(query.text.toString()).isEqualTo("bbc")
+    }
+
+    // The bug on a Fire TV: the box showed the Recent Search but the keyboard's own input stayed
+    // empty, and later showed text the box no longer had.
+    @Test
+    fun `the keyboard reads the text a chosen Recent Search puts in the box`() {
+        recentSearches = listOf("bbc")
+        show()
+
+        compose.onNodeWithText("bbc").requestFocus().performKeyInput { pressKey(Key.DirectionCenter) }
+
+        assertThat(device.textShownBy()).isEqualTo("bbc")
+    }
+
+    @Test
+    fun `the keyboard sees the box emptied when the search is cleared`() {
+        show()
+        device.type("bbc")
+
+        query.clearText()
+
+        assertThat(device.textShownBy()).isEmpty()
     }
 
     @Test
@@ -127,7 +145,7 @@ class SearchContentTest {
         query.setTextAndPlaceCursorAtEnd("bbc")
         show(channels = listOf(channelRow("BBC One"), channelRow("BBC Two")))
 
-        searchBox.performKeyInput { pressKey(Key.DirectionDown) }
+        device.remote(KeyEvent.KEYCODE_DPAD_DOWN)
 
         compose.onNodeWithText("BBC One").assertIsFocused()
         captureScreen("search_results")
@@ -136,72 +154,67 @@ class SearchContentTest {
     @Test
     fun `the keyboard opens when the box is chosen, not when the highlight arrives`() {
         show()
-        assertThat(keyboardShowing()).isFalse()
+        assertThat(device.showing).isFalse()
 
-        searchBox.performClick()
+        device.remote(KeyEvent.KEYCODE_DPAD_CENTER)
 
-        assertThat(keyboardShowing()).isTrue()
-    }
-
-    // The shadow's "showing" flag goes up for any show() call, even with nothing to type into, and
-    // that is what a Fire TV ignored: a real keyboard also needs the input connection.
-    @Test
-    fun `OK on the highlighted box opens a keyboard that can type into it`() {
-        show()
-        assertThat(inputConnection()).isNull()
-
-        searchBox.performKeyInput { pressKey(Key.DirectionCenter) }
-
-        assertThat(keyboardShowing()).isTrue()
-        assertThat(inputConnection()).isNotNull()
+        assertThat(device.showing).isTrue()
+        assertThat(device.highlighted()).isTrue()
     }
 
     @Test
     fun `OK from a remote that sends Enter opens the keyboard too`() {
         show()
 
-        searchBox.performKeyInput { pressKey(Key.Enter) }
+        device.remote(KeyEvent.KEYCODE_ENTER)
 
-        assertThat(keyboardShowing()).isTrue()
-        assertThat(inputConnection()).isNotNull()
+        assertThat(device.showing).isTrue()
     }
 
     @Test
     fun `OK opens the keyboard again after Back closed it`() {
         show()
-        searchBox.performKeyInput { pressKey(Key.DirectionCenter) }
-        compose.waitForIdle()
-        keyboard().hideSoftInputFromWindow(view.windowToken, 0)
-        assertThat(keyboardShowing()).isFalse()
+        device.remote(KeyEvent.KEYCODE_DPAD_CENTER)
+        device.close()
+        assertThat(device.showing).isFalse()
 
-        searchBox.performKeyInput { pressKey(Key.DirectionCenter) }
+        device.remote(KeyEvent.KEYCODE_DPAD_CENTER)
 
-        assertThat(keyboardShowing()).isTrue()
+        assertThat(device.showing).isTrue()
     }
 
     @Test
     fun `coming back to the box after using the keyboard leaves it shut`() {
         query.setTextAndPlaceCursorAtEnd("bbc")
         show(channels = listOf(channelRow("BBC One")))
-        searchBox.performKeyInput { pressKey(Key.DirectionCenter) }
-        searchBox.performImeAction()
+        device.remote(KeyEvent.KEYCODE_DPAD_CENTER)
+        device.pressAction()
         compose.onNodeWithText("BBC One").assertIsFocused()
 
-        compose.onNodeWithText("BBC One").performKeyInput { pressKey(Key.DirectionUp) }
+        device.remote(KeyEvent.KEYCODE_DPAD_UP)
 
-        searchBox.assertIsFocused()
-        assertThat(keyboardShowing()).isFalse()
+        assertThat(device.highlighted()).isTrue()
+        assertThat(device.showing).isFalse()
+    }
+
+    @Test
+    fun `the keyboard's action key is Search`() {
+        show()
+
+        val (info, _) = device.connection()
+
+        assertThat(info.imeOptions and EditorInfo.IME_MASK_ACTION).isEqualTo(EditorInfo.IME_ACTION_SEARCH)
     }
 
     @Test
     fun `the keyboard's Search key closes it and highlights the first result`() {
         query.setTextAndPlaceCursorAtEnd("bbc")
         show(channels = listOf(channelRow("BBC One"), channelRow("BBC Two")))
-        searchBox.performClick()
+        device.remote(KeyEvent.KEYCODE_DPAD_CENTER)
 
-        searchBox.performImeAction()
+        device.pressAction()
 
-        assertThat(keyboardShowing()).isFalse()
+        assertThat(device.showing).isFalse()
         compose.onNodeWithText("BBC One").assertIsFocused()
     }
 
@@ -213,10 +226,10 @@ class SearchContentTest {
         compose.onNodeWithText("bbc").assertIsDisplayed()
         compose.onNodeWithText("news").assertIsDisplayed()
         compose.onNodeWithText(CLEAR).assertIsDisplayed()
-        searchBox.assertIsFocused()
+        assertThat(device.highlighted()).isTrue()
         captureScreen("search_recent")
 
-        searchBox.performKeyInput { pressKey(Key.DirectionDown) }
+        device.remote(KeyEvent.KEYCODE_DPAD_DOWN)
         compose.onNodeWithText("bbc").assertIsFocused()
         captureScreen("search_recent_highlighted")
     }
@@ -247,7 +260,7 @@ class SearchContentTest {
         recentSearches = listOf("bbc")
         show()
 
-        searchBox.performTextInput("n")
+        device.type("n")
 
         compose.onNodeWithText("bbc").assertDoesNotExist()
     }
@@ -260,9 +273,9 @@ class SearchContentTest {
 
         compose.waitForIdle()
         assertThat(query.text.toString()).isEqualTo("bbc")
-        searchBox.assertIsFocused()
+        assertThat(device.highlighted()).isTrue()
         assertThat(opened).isEmpty()
-        assertThat(keyboardShowing()).isFalse()
+        assertThat(device.showing).isFalse()
 
         liveChannels = listOf(channelRow("BBC One"))
 
@@ -276,12 +289,12 @@ class SearchContentTest {
         show()
         compose.onNodeWithText("bbc").requestFocus().performKeyInput { pressKey(Key.DirectionCenter) }
         compose.waitForIdle()
-        searchBox.performKeyInput { pressKey(Key.DirectionCenter) }
+        device.remote(KeyEvent.KEYCODE_DPAD_CENTER)
 
         liveChannels = listOf(channelRow("BBC One"))
 
         waitForResultsToSettle()
-        searchBox.assertIsFocused()
+        assertThat(device.highlighted()).isTrue()
     }
 
     @Test
@@ -307,8 +320,10 @@ class SearchContentTest {
         compose.mainClock.autoAdvance = false
 
         liveMovies = listOf(movie("Film"))
+        runMainLooper()
         compose.mainClock.advanceTimeBy(50)
         liveChannels = listOf(channelRow("BBC One"))
+        runMainLooper()
         compose.mainClock.advanceTimeBy(500)
         compose.mainClock.autoAdvance = true
 
@@ -323,13 +338,13 @@ class SearchContentTest {
         compose.onNodeWithText("gone").requestFocus().performKeyInput { pressKey(Key.DirectionCenter) }
 
         compose.waitForIdle()
-        searchBox.assertIsFocused()
+        assertThat(device.highlighted()).isTrue()
     }
 
     @Test
     fun `typing alone saves nothing, and opening a result saves what was typed`() {
         show(channels = listOf(channelRow("BBC One")))
-        searchBox.performTextInput("bbc")
+        device.type("bbc")
         compose.waitForIdle()
         assertThat(opened).isEmpty()
 
@@ -432,12 +447,14 @@ class SearchContentTest {
         recentSearches = listOf("bbc", "news")
         show()
         compose.onNodeWithText("news").requestFocus()
-        searchBox.requestFocus()
+        device.remote(KeyEvent.KEYCODE_DPAD_UP)
+        device.remote(KeyEvent.KEYCODE_DPAD_UP)
+        assertThat(device.highlighted()).isTrue()
 
         recentSearches = listOf("bbc")
 
         compose.waitForIdle()
-        searchBox.assertIsFocused()
+        assertThat(device.highlighted()).isTrue()
     }
 
     @Test
@@ -449,7 +466,7 @@ class SearchContentTest {
         recentSearches = emptyList()
 
         compose.waitForIdle()
-        searchBox.assertIsFocused()
+        assertThat(device.highlighted()).isTrue()
         compose.onNodeWithText(HINT).assertIsDisplayed()
     }
 
@@ -463,27 +480,18 @@ class SearchContentTest {
         recentSearches = emptyList()
 
         compose.waitForIdle()
-        searchBox.assertIsFocused()
+        assertThat(device.highlighted()).isTrue()
     }
+
+    // With the clock stopped, the box's EditText holds frames back until Android's own main
+    // looper has run, so a change wouldn't be composed by advancing the clock alone.
+    private fun runMainLooper() = shadowOf(Looper.getMainLooper()).idle()
 
     // waitForIdle doesn't wait out a delay with nothing else pending.
     private fun waitForResultsToSettle() {
         compose.waitForIdle()
         compose.mainClock.advanceTimeBy(500)
         compose.waitForIdle()
-    }
-
-    private fun keyboardShowing(): Boolean {
-        compose.waitForIdle()
-        return shadowOf(keyboard()).isSoftInputVisible
-    }
-
-    private fun keyboard() =
-        ApplicationProvider.getApplicationContext<Context>().getSystemService(InputMethodManager::class.java)
-
-    private fun inputConnection(): InputConnection? {
-        compose.waitForIdle()
-        return compose.runOnIdle { view.onCreateInputConnection(EditorInfo()) }
     }
 
     private fun movie(name: String) = Movie(

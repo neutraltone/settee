@@ -23,7 +23,6 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -37,6 +36,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
@@ -44,6 +44,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import app.opentv.R
 import app.opentv.core.ServiceLocator
 import app.opentv.data.model.StremioAddon
+import app.opentv.ui.channels.DeviceTextField
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -128,14 +129,14 @@ fun StremioAddonsScreen(onBack: () -> Unit) {
 
         Spacer(Modifier.height(16.dp))
 
-        OutlinedTextField(
+        DeviceTextField(
             value = input,
             onValueChange = {
                 input = it
                 if (status !is StremioAddonsViewModel.Status.Idle) viewModel.clearStatus()
             },
-            label = { Text(stringResource(R.string.addons_url_label)) },
-            singleLine = true,
+            label = stringResource(R.string.addons_url_label),
+            keyboardType = KeyboardType.Uri,
             modifier = Modifier.fillMaxWidth().widthIn(max = 760.dp),
         )
 
