@@ -27,6 +27,31 @@ class ChannelNameNormalizerTest {
     }
 
     @Test
+    fun `a 4K tag glued to a provider's shelf still says 4K`() {
+        val glued = ChannelNameNormalizer.normalize("4K-TOP - Superbad (2007)")
+
+        assertThat(glued.qualityRank).isEqualTo(ChannelNameNormalizer.normalize("Superbad 4K").qualityRank)
+        assertThat(glued.qualityLabel).isEqualTo("4K")
+        assertThat(glued.baseName).doesNotContain("4K")
+    }
+
+    @Test
+    fun `a 4K-sized tag other than 4K or 8K at the front of a hyphenated name is part of the name`() {
+        val name = ChannelNameNormalizer.normalize("Fuhd-1")
+
+        assertThat(name.qualityRank).isEqualTo(0)
+        assertThat(name.baseName).isEqualTo("Fuhd-1")
+    }
+
+    @Test
+    fun `a lower tag at the front of a hyphenated name is part of the name`() {
+        val name = ChannelNameNormalizer.normalize("Sd-Sport")
+
+        assertThat(name.qualityRank).isEqualTo(0)
+        assertThat(name.baseName).isEqualTo("Sd-Sport")
+    }
+
+    @Test
     fun `quality variants of one channel share a group key`() {
         val variants = listOf(
             "UK| BBC ONE SD",

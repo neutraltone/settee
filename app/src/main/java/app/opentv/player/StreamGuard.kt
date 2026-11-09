@@ -23,16 +23,21 @@ import kotlinx.coroutines.launch
 
 /**
  * Watches one [PlayerController]'s streams for what no error would ever report: a video this device
- * can't take, a decoder that shows nothing, sound nobody will hear. Calls [onCantPlay] with the
- * sentence for a video that can't go on, and whether a Retry could help.
+ * can't take, a decoder that shows nothing, sound nobody will hear. Asks [moveDown] for another Quality
+ * first; without one, calls [onCantPlay] with the sentence and whether a Retry could help.
  */
 @OptIn(UnstableApi::class)
 internal class StreamGuard(
     private val context: Context,
     private val scope: CoroutineScope,
     private val decoders: DecoderList,
+    /** Moves to the next Quality, if there is one, and says what from and to. [forSound]: only sound is wrong. */
+    private val moveDown: (forSound: Boolean) -> Step?,
     private val onCantPlay: (sentence: String, canRetry: Boolean) -> Unit,
 ) {
+    /** A move from the Quality called [from] to [to]. */
+    data class Step(val from: String, val to: PlayerController.Quality)
+
     private val _notice = MutableStateFlow<String?>(null)
     val notice: StateFlow<String?> = _notice.asStateFlow()
     private var noticeJob: Job? = null
@@ -44,7 +49,7 @@ internal class StreamGuard(
     private val loggedTracks = HashSet<String>()
 
     private val firstFrame = FirstFrameWatch(scope) { format ->
-        onCantPlay(PlaybackErrors.noFirstFrame(context, format), true)
+        cantPlay(PlaybackErrors.noFirstFrame(context, format), canRetry = true)
     }
 
     /** What the player reports its decoders to, for the first-frame limit. */
@@ -63,7 +68,7 @@ internal class StreamGuard(
         DecoderLog.logTracks(tracks, decoders, loggedTracks)
         val refused = decoders.refusedVideoOf(tracks)
         if (refused != null) {
-            onCantPlay(PlaybackErrors.tooBig(context, refused), false)
+            cantPlay(PlaybackErrors.tooBig(context, refused), canRetry = false)
         } else if (soundWanted) {
             sayIfNoSound(tracks)
         }
@@ -73,18 +78,12 @@ internal class StreamGuard(
     fun steppedDown(from: String, to: PlayerController.Quality) {
         _steppedDownTo.value = to.key
         say(
-            if (from.isEmpty() || to.label.isEmpty()) {
-                context.getString(R.string.player_stepped_down_unnamed)
-            } else {
-                context.getString(R.string.player_stepped_down, from, to.label)
+            when {
+                from.isEmpty() -> context.getString(R.string.player_stepped_down_unnamed)
+                to.label.isEmpty() -> context.getString(R.string.player_stepped_down_lower, from)
+                else -> context.getString(R.string.player_stepped_down, from, to.label)
             },
         )
-    }
-
-    /** Takes down what's showing: it would only contradict what's about to be said. */
-    fun stopSaying() {
-        noticeJob?.cancel()
-        _notice.value = null
     }
 
     /** The viewer has moved on to something else, so what was said about the last one no longer holds. */
@@ -101,11 +100,33 @@ internal class StreamGuard(
 
     /** Once a stream, when none of its sound can play or pass through. No audio at all isn't a fault. */
     private fun sayIfNoSound(tracks: Tracks) {
-        if (saidNoSound) return
         val audio = tracks.groups.filter { it.type == C.TRACK_TYPE_AUDIO }
-        if (audio.isEmpty() || audio.any { it.isSupported(true) }) return
-        saidNoSound = true
-        say(context.getString(R.string.player_no_sound, audio.first().getTrackFormat(0).displayName))
+        if (saidNoSound || audio.isEmpty() || audio.any { it.isSupported(true) }) return
+        val format = audio.first().getTrackFormat(0).displayName
+        val step = moveDown(true)
+        if (step == null) {
+            saidNoSound = true
+            say(context.getString(R.string.player_no_sound, format))
+        } else {
+            _steppedDownTo.value = step.to.key
+            say(context.getString(R.string.player_stepped_down_for_sound, format))
+        }
+    }
+
+    private fun cantPlay(sentence: String, canRetry: Boolean) {
+        val step = moveDown(false)
+        if (step == null) {
+            stopSaying()
+            onCantPlay(sentence, canRetry)
+        } else {
+            steppedDown(step.from, step.to)
+        }
+    }
+
+    /** Takes down what's showing: it would only contradict what's about to be said. */
+    private fun stopSaying() {
+        noticeJob?.cancel()
+        _notice.value = null
     }
 
     private fun say(message: String) {

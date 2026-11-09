@@ -117,6 +117,8 @@
     <string name="player_paused_left">Paused · %1$s left</string>
     <string name="player_no_sound">This device can\'t play this audio format (%1$s). If your TV or soundbar supports it, turning on surround sound in the device\'s settings may help.</string>
     <string name="player_stepped_down">This device can\'t play %1$s. Playing %2$s instead.</string>
+    <string name="player_stepped_down_lower">This device can\'t play %1$s. Playing a lower quality instead.</string>
+    <string name="player_stepped_down_for_sound">This device can\'t play this audio format (%1$s), so another version is playing. If your TV or soundbar supports it, turning on surround sound in the device\'s settings may help.</string>
     <string name="player_stepped_down_unnamed">This device can\'t play that quality. Playing another instead.</string>
     <string name="player_back_to_live">Paused too long — back to live</string>
     <string name="live_pause_prompt_title">Pause live TV?</string>

@@ -98,6 +98,7 @@ fun PersonScreen(
                                     posterUrl = item.movie.posterUrl,
                                     subtitle = item.movie.year?.toString(),
                                     rating = item.movie.rating,
+                                    qualityBadge = rememberQualityBadge(item.movie.name),
                                     onClick = { onOpenMovie(item.movie) },
                                     onOptions = openOptionsOn(OptionsSubject.OfMovie(item.movie)),
                                 )
@@ -106,6 +107,7 @@ fun PersonScreen(
                                     posterUrl = item.series.posterUrl,
                                     subtitle = item.series.year?.toString(),
                                     rating = item.series.rating,
+                                    qualityBadge = rememberQualityBadge(item.series.name),
                                     onClick = { onOpenSeries(item.series) },
                                     onOptions = openOptionsOn(OptionsSubject.OfSeries(item.series)),
                                 )

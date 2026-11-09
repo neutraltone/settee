@@ -49,7 +49,6 @@ import androidx.compose.material.icons.filled.FiberManualRecord
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -85,7 +84,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -215,6 +213,9 @@ fun VodPlayerScreen(
         onBack()
     }
 
+    val finished by viewModel.finished.collectAsState()
+    LaunchedEffect(finished) { if (finished) onBack() }
+
     VodPlayerContent(controller, viewModel, growingRec, subtitlePicks, onBack)
 }
 
@@ -236,8 +237,10 @@ internal fun PlayerController.vodPlayback() = object : VodPlayerViewModel.Playba
     }
 
     // Swapping the media item in the same player, never a new one: see PlayerController.
-    override fun play(key: MediaKey, startPositionMillis: Long) =
-        play(PlayerController.Request(key, startPositionMillis), debounce = false)
+    override fun play(request: PlayerController.Request, skipped: String?) =
+        this@vodPlayback.play(request, debounce = false, skipped = skipped)
+
+    override fun steppedDownTo() = this@vodPlayback.steppedDownTo.value
 
     override fun pause() {
         player.playWhenReady = false
@@ -285,6 +288,7 @@ fun VodPlayerContent(
     val tracks by controller.tracks.collectAsState()
     val title by controller.title.collectAsState()
     val overlay by viewModel.overlay.collectAsState()
+    val playingKey by viewModel.current.collectAsState()
     // Whether the card or the question is up, not which second it shows: effects keyed on this
     // run when one appears or goes, rather than on every tick of the countdown.
     val overlayShowing = overlay !is NextEpisodeCountdown.Overlay.None
@@ -375,8 +379,12 @@ fun VodPlayerContent(
         }
     }
 
-    LaunchedEffect(controlsVisible, vodPanel, overlayShowing) {
+    val failed = state is PlayerController.State.Error
+
+    LaunchedEffect(controlsVisible, vodPanel, overlayShowing, failed) {
         when {
+            // The sentence's own buttons take focus, and there's nothing under them to control.
+            failed -> Unit
             controlsVisible -> {
                 delay(40)
                 runCatching { if (vodPanel != VodPanel.NONE) panelFocus.requestFocus() else barFocus.requestFocus() }
@@ -389,6 +397,8 @@ fun VodPlayerContent(
         val activelyPlaying = state is PlayerController.State.Playing ||
             (growingRec && state is PlayerController.State.Buffering)
         when {
+            // The bar and any picker on it are hidden behind the sentence, so Back can't mean them.
+            failed -> onBack()
             vodPanel != VodPanel.NONE -> vodPanel = VodPanel.NONE
             controlsVisible && activelyPlaying && !paused -> controlsVisible = false
             else -> onBack()
@@ -405,6 +415,7 @@ fun VodPlayerContent(
                     event.key == Key.Back || event.key == Key.Escape -> false
                     // Keys belong to the card or the question while one is up, OK above all.
                     overlayShowing -> false
+                    failed -> false
                     // Media keys act whether or not the bar is up, so they come before "reveal".
                     event.key == Key.MediaPlayPause || event.key == Key.MediaPlay || event.key == Key.MediaPause -> {
                         // A held key repeats; acting on each repeat would flick between paused and playing.
@@ -466,6 +477,12 @@ fun VodPlayerContent(
         notice?.let { PlayerNotice(it, Modifier.align(Alignment.TopCenter)) }
 
         when (val current = state) {
+            // Which Quality to play is still being worked out, which may mean asking the provider. Idle
+            // once something has played means it finished or was stopped, with nothing to wait for.
+            PlayerController.State.Idle -> if (playingKey == null) {
+                CircularProgressIndicator(Modifier.align(Alignment.Center))
+            }
+
             is PlayerController.State.Buffering ->
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -475,28 +492,13 @@ fun VodPlayerContent(
                     }
                 }
 
-            is PlayerController.State.Error ->
-                Box(
-                    Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.85f)),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        modifier = Modifier.padding(48.dp),
-                    ) {
-                        Text(current.title, style = MaterialTheme.typography.headlineSmall, color = Color.White)
-                        Spacer(Modifier.height(12.dp))
-                        Text(current.message, color = Color.White.copy(alpha = 0.85f), textAlign = TextAlign.Center)
-                        Spacer(Modifier.height(24.dp))
-                        Button(onClick = { controller.retry() }) { Text(stringResource(R.string.common_try_again)) }
-                    }
-                }
+            is PlayerController.State.Error -> PlayerErrorPanel(current, onRetry = controller::retry, onBack = onBack)
 
             else -> Unit
         }
 
         AnimatedVisibility(
-            visible = controlsVisible,
+            visible = controlsVisible && !failed,
             enter = fadeIn(),
             exit = fadeOut(),
             modifier = Modifier.align(Alignment.BottomCenter),

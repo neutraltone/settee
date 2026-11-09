@@ -78,6 +78,29 @@ class QualityStepDownTest {
     }
 
     @Test
+    fun `a Quality with no name steps down from a named one by saying it's lower`() {
+        streams(UHD to 2160, HD to 1080)
+        val controller = controller()
+
+        controller.startAt(UHD, "4K", Quality(MediaKey.Live(HD), ""))
+        players.until { controller.notice.value != null }
+
+        assertThat(controller.notice.value).isEqualTo("This device can't play 4K. Playing a lower quality instead.")
+    }
+
+    @Test
+    fun `playing in place of a Quality this device won't try says so, without trying it`() {
+        streams(HD to 1080)
+        val controller = controller()
+
+        controller.play(PlayerController.Request(MediaKey.Live(HD), label = "HD"), debounce = false, skipped = "4K")
+        players.until { controller.player.playbackState == Player.STATE_READY }
+
+        assertThat(players.played).containsExactly(urlOf(HD))
+        assertThat(controller.notice.value).isEqualTo("This device can't play 4K. Playing HD instead.")
+    }
+
+    @Test
     fun `the message goes after about 5 seconds`() {
         streams(UHD to 2160, HD to 1080)
         val controller = controller()

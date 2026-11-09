@@ -15,9 +15,12 @@ import androidx.media3.common.util.UnstableApi
 import androidx.media3.test.utils.ExoPlayerTestRunner
 import androidx.test.core.app.ApplicationProvider
 import app.opentv.data.repo.MediaKey
+import app.opentv.data.repo.Playable
 import app.opentv.player.DecoderSize
 import app.opentv.player.PlayerController
 import com.google.common.truth.Truth.assertThat
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.launch
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -79,6 +82,41 @@ class StreamTracksTest {
             "This device can't play this audio format (E-AC-3). If your TV or soundbar supports it, " +
                 "turning on surround sound in the device's settings may help.",
         )
+    }
+
+    @Test
+    fun `a film with no sound that can play moves on to its next Quality, from that Quality's own point`() {
+        fun url(key: MediaKey) = "https://example.com/${(key as MediaKey.Movie).movieId}"
+        players.formatsAt["https://example.com/1"] = listOf(ExoPlayerTestRunner.VIDEO_FORMAT, eac3)
+        players.formatsAt["https://example.com/2"] = listOf(ExoPlayerTestRunner.VIDEO_FORMAT)
+        val controller = players.realDecoderController(surface = surface) { key ->
+            Playable.Ready(key, url(key), userAgent = "", title = "Film", isLive = false)
+        }
+
+        // Collected, since reaching the next stream can use up the message's 5 seconds on the test's clock.
+        val notices = mutableListOf<String>()
+        players.scope.launch { controller.notice.filterNotNull().collect { notices += it } }
+
+        controller.play(
+            PlayerController.Request(
+                MediaKey.Movie(1),
+                lower = listOf(PlayerController.Quality(MediaKey.Movie(2), "", startPositionMillis = 2_000)),
+                stepsForSound = true,
+            ),
+            debounce = false,
+        )
+        players.until {
+            controller.steppedDownTo.value != null && controller.player.playbackState == Player.STATE_READY
+        }
+
+        assertThat(players.played).containsExactly("https://example.com/1", "https://example.com/2").inOrder()
+        assertThat(controller.steppedDownTo.value).isEqualTo(MediaKey.Movie(2))
+        assertThat(controller.player.currentPosition).isAtLeast(2_000L)
+        assertThat(notices)
+            .contains(
+                "This device can't play this audio format (E-AC-3), so another version is playing. " +
+                    "If your TV or soundbar supports it, turning on surround sound in the device's settings may help.",
+            )
     }
 
     @Test
