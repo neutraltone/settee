@@ -51,7 +51,8 @@ instrumented tests.
 
 `.github/workflows/build.yml` runs one job per required check: **Test and assemble** (unit tests, debug
 APK, and a fail if the build changed `app/schemas/`), **Android Lint**, **ktlint**, **detekt**,
-**Screenshot tools** (the Python tests in `tools/screenshots/`, `tools/perf/` and `tools/launcher-art/`) and **gitleaks**. `pr-hygiene.yml` runs `tools/check-message-test.sh` and checks the PR title with
+**Screenshot tools** (the Python tests in `tools/screenshots/`, `tools/perf/` and `tools/launcher-art/`) and **gitleaks** (every commit
+a PR adds, reverted ones included, not other branches; pushes to `main` scan its whole history). `pr-hygiene.yml` runs `tools/check-message-test.sh` and checks the PR title with
 `tools/check-message.sh`. Lint and detekt fail only on findings missing from `app/lint-baseline.xml` /
 `app/detekt-baseline.xml`: fix a new finding, don't regenerate a baseline to hide it. The one deliberate
 use is detekt's `ForbiddenImport`, which bans Material's interactive widgets and `RoundedCornerShape`
