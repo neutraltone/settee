@@ -105,7 +105,7 @@ object ServiceLocator {
                 .build()
         }
 
-        val xtreamApi: XtreamApi by lazy { XtreamApi(httpClient) }
+        val xtreamApi: XtreamApi by lazy { XtreamApi(httpClient, downloads = appContext.cacheDir) }
 
         /** Stalker / Ministra portal client (MAC handshake + create_link). */
         val stalkerApi: StalkerApi by lazy { StalkerApi(httpClient) }

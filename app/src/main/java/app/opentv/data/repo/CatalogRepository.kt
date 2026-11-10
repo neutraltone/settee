@@ -729,6 +729,7 @@ class CatalogRepository(
     suspend fun fetchVod(source: Source, nowUtcMillis: Long): VodFetch = withContext(Dispatchers.IO) {
         if (source.kind != SourceKind.XTREAM) return@withContext VodFetch(emptyList(), complete = true)
         runCatching { syncXtreamVod(source, nowUtcMillis) }
+            .onFailure { if (it is CancellationException) throw it }
             .onFailure { Log.w(TAG, "VOD sync failed for source ${source.id}", it) }
             .getOrDefault(VodFetch(emptyList(), complete = false))
     }
@@ -791,39 +792,32 @@ class CatalogRepository(
 
         // A failed list still leaves the others to be saved, but it must not count as fetched.
         var complete = true
-        suspend fun <T> list(wanted: Boolean, fetch: suspend () -> List<T>): List<T> {
-            if (!wanted) return emptyList()
+        suspend fun <T> attempt(wanted: Boolean, empty: T, fetch: suspend () -> T): T {
+            if (!wanted) return empty
             return runCatching { fetch() }.getOrElse {
+                if (it is CancellationException) throw it
                 complete = false
-                emptyList()
+                empty
             }
         }
-        val movieCategories = list(moviesOn) { api.movieCategories(source) }
-        val movies = list(moviesOn) { api.movies(source) }
-        val seriesCategories = list(seriesOn) { api.seriesCategories(source) }
-        val series = list(seriesOn) { api.series(source) }
+        suspend fun categories(wanted: Boolean, fetch: suspend () -> List<Category>) {
+            val categories = attempt(wanted, emptyList(), fetch)
+            if (categories.isNotEmpty()) categoryDao.upsertAll(categories)
+        }
 
-        if (movieCategories.isNotEmpty() || seriesCategories.isNotEmpty()) {
-            categoryDao.upsertAll(movieCategories + seriesCategories)
-        }
-        // Fresh rows carry no local id, and an upsert without one hits the unique (source, provider
-        // id) index and then updates nothing, so a title's last_modified would never move after
-        // its first sync. Matching each to the row it replaces fixes that, keeps the local id that
-        // resume points hang off, and keeps what detail opens and the air-date step filled in.
-        if (movies.isNotEmpty()) {
-            val stored = movieDao.forSource(source.id).associateBy { it.streamId }
-            movieDao.upsertKeepingDates(source.id, movies.map { it.over(stored[it.streamId]) })
-        }
-        val stored = seriesDao.forSource(source.id).associateBy { it.seriesId }
-        val merged = series.map { it.over(stored[it.seriesId]) }
-        if (merged.isNotEmpty()) seriesDao.upsertAll(merged)
-        dateInBackground(source, movies = movies.isNotEmpty(), series = merged.isNotEmpty())
-        // A show seen for the first time has nobody caught up on it, so only ones that moved.
+        // See VodLists for how each list is saved.
+        var movies = 0
+        categories(moviesOn) { api.movieCategories(source) }
+        attempt(moviesOn, Unit) { movies = api.movies(source).use { movieDao.save(source.id, it) } }
+        var series = SavedSeries(0, emptyList())
+        categories(seriesOn) { api.seriesCategories(source) }
+        attempt(seriesOn, Unit) { series = api.series(source).use { seriesDao.save(source.id, it) } }
+        dateInBackground(source, movies = movies > 0, series = series.count > 0)
         return VodFetch(
-            merged.filter { it.addedMillis > (stored[it.seriesId]?.addedMillis ?: Long.MAX_VALUE) },
+            series.moved,
             // Nothing at all may be a struggling panel's empty reply, so it isn't worth trusting for
             // 12 hours; an account with no VOD just asks again, which is a quick request.
-            complete && (movies.isNotEmpty() || series.isNotEmpty()),
+            complete && (movies > 0 || series.count > 0),
         )
     }
 
@@ -848,44 +842,6 @@ class CatalogRepository(
 
     private suspend fun dateOrLog(source: Source, what: String, lookup: suspend () -> Unit) {
         runCatching { lookup() }.onFailure { Log.w(TAG, "$what failed for source ${source.id}", it) }
-    }
-
-    /** This freshly fetched movie in place of [old], keeping whatever it lacks that [old] had. */
-    private fun Movie.over(old: Movie?): Movie = if (old == null) {
-        this
-    } else {
-        copy(
-            id = old.id,
-            posterUrl = posterUrl ?: old.posterUrl,
-            rating = rating ?: old.rating,
-            year = year ?: old.year,
-            plot = plot ?: old.plot,
-            durationSeconds = durationSeconds ?: old.durationSeconds,
-            backdropUrl = backdropUrl ?: old.backdropUrl,
-            cast = cast ?: old.cast,
-            genre = genre ?: old.genre,
-            tmdbId = tmdbId ?: old.tmdbId,
-            director = director ?: old.director,
-            releaseDate = releaseDate ?: old.releaseDate,
-        )
-    }
-
-    /** This freshly fetched series in place of [old]; see the [Movie] version. */
-    private fun Series.over(old: Series?): Series = if (old == null) {
-        this
-    } else {
-        copy(
-            id = old.id,
-            posterUrl = posterUrl ?: old.posterUrl,
-            rating = rating ?: old.rating,
-            year = year ?: old.year,
-            plot = plot ?: old.plot,
-            backdropUrl = backdropUrl ?: old.backdropUrl,
-            cast = cast ?: old.cast,
-            genre = genre ?: old.genre,
-            tmdbId = tmdbId ?: old.tmdbId,
-            latestAirDate = old.latestAirDate,
-        )
     }
 
     private suspend fun syncM3u(source: Source, nowUtcMillis: Long): SyncResult {

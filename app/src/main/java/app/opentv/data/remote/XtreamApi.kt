@@ -13,20 +13,27 @@ import app.opentv.data.model.Series
 import app.opentv.data.model.Source
 import app.opentv.data.model.StreamKind
 import app.opentv.data.parser.parseReleaseDate
+import java.io.Closeable
+import java.io.File
 import java.io.InputStream
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.json.DecodeSequenceMode
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.decodeToSequence
 import kotlinx.serialization.json.jsonObject
 import okhttp3.HttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import okhttp3.Response
+import okio.buffer
+import okio.source
 
 /**
  * Client for the Xtream Codes "player API".
@@ -44,6 +51,8 @@ import okhttp3.Request
  */
 class XtreamApi(
     private val http: OkHttpClient,
+    /** Where [movies] and [series] download to; null is the JVM's temp folder, the app's cache on Android. */
+    private val downloads: File? = null,
     private val json: Json = Json {
         ignoreUnknownKeys = true
         isLenient = true
@@ -51,6 +60,14 @@ class XtreamApi(
 ) {
 
     class XtreamException(message: String, cause: Throwable? = null) : Exception(message, cause)
+
+    companion object {
+        /**
+         * Titles saved at a time while a list downloads: few enough to hold on a 1 GB stick, and
+         * under SQLite's 999 bound variables for looking up the rows they replace.
+         */
+        const val CATALOGUE_BATCH = 500
+    }
 
     /** Verifies credentials and returns the account's expiry, if the panel reports one. */
     suspend fun authenticate(source: Source): AccountInfo = withContext(Dispatchers.IO) {
@@ -122,11 +139,15 @@ class XtreamApi(
         }
     }
 
-    suspend fun movies(source: Source): List<Movie> = withContext(Dispatchers.IO) {
-        getJson(source, "get_vod_streams").arrayOrEmpty.mapNotNull { element ->
-            val obj = element.jsonObjectOrNull ?: return@mapNotNull null
-            val streamId = obj["stream_id"].asStringOrNull ?: return@mapNotNull null
-            val name = obj["name"].asStringOrNull ?: return@mapNotNull null
+    /**
+     * The movie list, downloaded to a file for reading a batch at a time; see [CatalogueList]. A big
+     * panel's list is tens of megabytes, and holding it as one string plus a [JsonElement] tree plus
+     * the movies ran a Fire TV Stick's 128 MB heap out.
+     */
+    suspend fun movies(source: Source): CatalogueList<Movie> = withContext(Dispatchers.IO) {
+        download(source, "get_vod_streams") { obj ->
+            val streamId = obj["stream_id"].asStringOrNull ?: return@download null
+            val name = obj["name"].asStringOrNull ?: return@download null
             val extension = obj["container_extension"].asStringOrNull?.takeIf { it.isNotBlank() }
             Movie(
                 sourceId = source.id,
@@ -154,11 +175,11 @@ class XtreamApi(
         }
     }
 
-    suspend fun series(source: Source): List<Series> = withContext(Dispatchers.IO) {
-        getJson(source, "get_series").arrayOrEmpty.mapNotNull { element ->
-            val obj = element.jsonObjectOrNull ?: return@mapNotNull null
-            val seriesId = obj["series_id"].asStringOrNull ?: return@mapNotNull null
-            val name = obj["name"].asStringOrNull ?: return@mapNotNull null
+    /** The series list, downloaded for reading a batch at a time; see [movies]. */
+    suspend fun series(source: Source): CatalogueList<Series> = withContext(Dispatchers.IO) {
+        download(source, "get_series") { obj ->
+            val seriesId = obj["series_id"].asStringOrNull ?: return@download null
+            val name = obj["name"].asStringOrNull ?: return@download null
             Series(
                 sourceId = source.id,
                 seriesId = seriesId,
@@ -302,7 +323,10 @@ class XtreamApi(
 
     // ---- Plumbing ------------------------------------------------------------------------
 
-    private fun getJson(source: Source, action: String?, extra: (HttpUrl.Builder) -> Unit = {}): JsonElement {
+    private fun getJson(source: Source, action: String?, extra: (HttpUrl.Builder) -> Unit = {}): JsonElement =
+        open(source, action, extra).use { parsed(json, it.body.string()) }
+
+    private fun open(source: Source, action: String?, extra: (HttpUrl.Builder) -> Unit = {}): Response {
         val builder = baseUrl(source).newBuilder()
             .encodedPath("/player_api.php")
             .addQueryParameter("username", source.username.orEmpty())
@@ -310,25 +334,81 @@ class XtreamApi(
         if (action != null) builder.addQueryParameter("action", action)
         extra(builder)
 
-        http.newCall(request(source, builder.build())).execute().use { response ->
-            if (!response.isSuccessful) {
-                throw XtreamException(describeHttpFailure(response.code))
+        val response = http.newCall(request(source, builder.build())).execute()
+        if (!response.isSuccessful) {
+            response.close()
+            throw XtreamException(describeHttpFailure(response.code))
+        }
+        return response
+    }
+
+    /**
+     * [action]'s reply, saved to a file as it arrives, for [CatalogueList.forEachBatch] to read.
+     *
+     * Not handed over a batch at a time straight off the socket: the call would then stay open
+     * while each batch was saved, so the client's five-minute call timeout would cover a slow
+     * stick's database writes too, and the caller couldn't save the whole list in one transaction
+     * without holding the database through the download. Decoded as the reply's charset says, as
+     * [okhttp3.ResponseBody.string] would, and written back as UTF-8, which is all the reader takes.
+     */
+    private fun <T : Any> download(source: Source, action: String, parse: (JsonObject) -> T?): CatalogueList<T> {
+        val file = File.createTempFile("xtream-$action-", ".json", downloads)
+        try {
+            open(source, action).use { it.saveTo(file) }
+        } catch (e: Exception) {
+            file.delete()
+            throw e
+        }
+        return CatalogueList(file, json, parse)
+    }
+
+    /**
+     * A movie or series list on disk, read one array element at a time, so nothing ever holds more
+     * than a batch of it. Close it to delete the file.
+     */
+    class CatalogueList<T : Any> internal constructor(
+        private val file: File,
+        private val json: Json,
+        private val parse: (JsonObject) -> T?,
+    ) : Closeable {
+        /**
+         * Each parsed title, handed to [save] [CATALOGUE_BATCH] at a time. A reply that isn't an
+         * array (an error object, an HTML page) is small, so it's parsed whole as before: an object
+         * is an empty list, HTML the "not a valid catalogue" message, which can come after some
+         * batches if a list is cut off.
+         */
+        suspend fun forEachBatch(save: suspend (List<T>) -> Unit) = withContext(Dispatchers.IO) {
+            val batch = ArrayList<T>(CATALOGUE_BATCH)
+            suspend fun each(element: JsonElement) {
+                batch += element.jsonObjectOrNull?.let(parse) ?: return
+                if (batch.size == CATALOGUE_BATCH) {
+                    save(batch.toList())
+                    batch.clear()
+                }
             }
-            val text = response.body.string()
-            if (text.isBlank()) throw XtreamException("The server returned an empty response.")
-            return try {
-                json.parseToJsonElement(text)
-            } catch (e: Exception) {
-                // Panels behind a captive portal or Cloudflare return HTML here. Saying
-                // "not valid JSON" is useless to a user; say what it probably means.
-                throw XtreamException(
-                    "The server replied with something that is not a valid catalogue. " +
-                        "Check the address and port are correct.",
-                    e,
-                )
+            file.source().buffer().use { body ->
+                while (body.request(1) && body.buffer[0].toInt().toChar().isWhitespace()) body.skip(1)
+                if (body.request(1) && body.buffer[0] == '['.code.toByte()) {
+                    val elements = json.decodeToSequence<JsonElement>(
+                        body.inputStream(),
+                        DecodeSequenceMode.ARRAY_WRAPPED,
+                    )
+                        .iterator()
+                    while (readingCatalogue { elements.hasNext() }) each(readingCatalogue { elements.next() })
+                } else {
+                    parsed(json, body.readUtf8()).arrayOrEmpty.forEach { each(it) }
+                }
             }
+            if (batch.isNotEmpty()) save(batch.toList())
+        }
+
+        override fun close() {
+            file.delete()
         }
     }
+
+    private fun Response.saveTo(file: File) =
+        body.charStream().use { reply -> file.bufferedWriter().use { reply.copyTo(it) } }
 
     private fun request(source: Source, url: HttpUrl): Request = Request.Builder()
         .url(url)
@@ -388,6 +468,23 @@ class XtreamApi(
         val releaseDate: Long? = null,
         /** The newest episode's air date, from the same `get_series_info` reply. */
         val latestAirDate: Long? = null,
+    )
+}
+
+private fun parsed(json: Json, text: String): JsonElement {
+    if (text.isBlank()) throw XtreamApi.XtreamException("The server returned an empty response.")
+    return readingCatalogue { json.parseToJsonElement(text) }
+}
+
+/** Panels behind a captive portal or Cloudflare return HTML; "not valid JSON" means nothing to a viewer. */
+private inline fun <T> readingCatalogue(read: () -> T): T = try {
+    read()
+} catch (e: IllegalArgumentException) {
+    // kotlinx.serialization's decoding failures are all IllegalArgumentExceptions.
+    throw XtreamApi.XtreamException(
+        "The server replied with something that is not a valid catalogue. " +
+            "Check the address and port are correct.",
+        e,
     )
 }
 
