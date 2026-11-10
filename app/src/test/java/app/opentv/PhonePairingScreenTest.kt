@@ -38,7 +38,7 @@ class PhonePairingScreenTest {
         confirmCode = "482913",
         host = "192.168.0.14",
         port = 41234,
-        shortToken = "k7m2qx",
+        shortToken = "k7mx4ht",
     )
 
     @Test
@@ -50,7 +50,7 @@ class PhonePairingScreenTest {
             }
         }
 
-        compose.onNodeWithText("192.168.0.14:41234/k7m2qx").assertIsDisplayed()
+        compose.onNodeWithText("192.168.0.14:41234/k7mx4ht").assertIsDisplayed()
         captureScreen("phone_pairing_listening")
     }
 }
