@@ -273,7 +273,7 @@ fun LiveScreen(
                 // Provider switch — only when there's more than one source. Lets the user keep
                 // several playlists and flip between them (cardiodoc's request); "All" folds them.
                 if (sources.size > 1) {
-                    item(key = "provider-header") {
+                    item(key = "provider-header", contentType = "header") {
                         Text(
                             stringResource(R.string.channels_manager_source_header),
                             style = MaterialTheme.typography.labelMedium,
@@ -281,25 +281,25 @@ fun LiveScreen(
                             modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
                         )
                     }
-                    item(key = "provider-all") {
+                    item(key = "provider-all", contentType = "entry") {
                         RailEntry(
                             label = stringResource(R.string.channels_manager_all_sources),
                             selected = selectedSource == null,
                             onClick = { viewModel.selectSource(null) },
                         )
                     }
-                    items(sources, key = { "src-${it.id}" }) { source ->
+                    items(sources, key = { "src-${it.id}" }, contentType = { "entry" }) { source ->
                         RailEntry(
                             label = source.name,
                             selected = selectedSource == source.id,
                             onClick = { viewModel.selectSource(source.id) },
                         )
                     }
-                    item(key = "provider-divider") { Spacer(Modifier.height(10.dp)) }
+                    item(key = "provider-divider", contentType = "divider") { Spacer(Modifier.height(10.dp)) }
                 }
                 // The currently-selected entry carries the rail's FocusRequester, so reopening the
                 // rail (d-pad LEFT in the guide) lands focus straight back on the current category.
-                item {
+                item(contentType = "entry") {
                     RailEntry(
                         label = stringResource(R.string.guide_favourites),
                         selected = favouritesOnly,
@@ -307,7 +307,7 @@ fun LiveScreen(
                         modifier = if (favouritesOnly) Modifier.focusRequester(railFocusRequester) else Modifier,
                     )
                 }
-                item {
+                item(contentType = "entry") {
                     val allSelected = !favouritesOnly && selectedCategory == null
                     RailEntry(
                         label = stringResource(R.string.guide_all_channels),
@@ -316,7 +316,7 @@ fun LiveScreen(
                         modifier = if (allSelected) Modifier.focusRequester(railFocusRequester) else Modifier,
                     )
                 }
-                items(categories, key = { it.key }) { group ->
+                items(categories, key = { it.key }, contentType = { "entry" }) { group ->
                     val groupSelected = !favouritesOnly && selectedCategory == group.key
                     RailEntry(
                         label = group.label,

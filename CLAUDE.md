@@ -39,6 +39,7 @@ tools/check-message-test.sh                 # tests for the commit/PR-title conv
 python3 -m unittest discover -s tools/screenshots  # screenshot comparison tests (needs Pillow)
 tools/perf/stick_baseline.py --help         # measure performance on a Fire TV Stick (docs/PERFORMANCE.md)
 python3 -m unittest discover -s tools/perf  # tests for that script
+ANDROID_SERIAL=emulator-5554 ./gradlew :app:generateBaselineProfile  # regenerate the baseline profile on an Android 13+ TV emulator; commit it (docs/PERFORMANCE.md)
 tools/render-launcher-art.sh                # regenerate the mark's drawables, SVGs and launcher PNGs
 python3 -m unittest discover -s tools/launcher-art  # every copy of the mark matches its generator
 ```
@@ -50,7 +51,8 @@ instrumented tests.
 
 `.github/workflows/build.yml` runs one job per required check: **Test and assemble** (unit tests, debug
 APK, and a fail if the build changed `app/schemas/`), **Android Lint**, **ktlint**, **detekt**,
-**Screenshot tools** (the Python tests in `tools/screenshots/`, `tools/perf/` and `tools/launcher-art/`) and **gitleaks**. `pr-hygiene.yml` runs `tools/check-message-test.sh` and checks the PR title with
+**Screenshot tools** (the Python tests in `tools/screenshots/`, `tools/perf/` and `tools/launcher-art/`) and **gitleaks** (every commit
+a PR adds, reverted ones included, not other branches; pushes to `main` scan its whole history). `pr-hygiene.yml` runs `tools/check-message-test.sh` and checks the PR title with
 `tools/check-message.sh`. Lint and detekt fail only on findings missing from `app/lint-baseline.xml` /
 `app/detekt-baseline.xml`: fix a new finding, don't regenerate a baseline to hide it. The one deliberate
 use is detekt's `ForbiddenImport`, which bans Material's interactive widgets and `RoundedCornerShape`
@@ -186,6 +188,10 @@ never release/rebuild on channel change). Retries 403/429/5xx with backoff; not 
   versioned `settee-<tag>.apk`; the release workflow also publishes a fixed-name `settee.apk` for the
   Downloader short code. Keep both names in step with `GitHubRelease.apkAsset`.
 - Never put provider URLs, usernames, passwords or MACs in logs, tests or fixtures.
+- **Baseline profile** (`docs/PERFORMANCE.md`): don't suggest regenerating it on ordinary PRs. Raise it only
+  when `BaselineProfileTest` fails, or when preparing a release whose changes reworked the screens the
+  journeys walk (check with the `git diff` in that doc). When regenerating, follow that doc's steps for
+  fixing a journey before doing full runs.
 - Before opening a PR, ask the user whether to run `/code-review` against `main` first.
 
 ## Agent skills

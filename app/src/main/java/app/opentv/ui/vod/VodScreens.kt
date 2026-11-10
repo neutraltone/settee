@@ -190,26 +190,33 @@ internal fun MovieShelves(
         verticalArrangement = Arrangement.spacedBy(14.dp),
         modifier = Modifier.fillMaxSize(),
     ) {
-        if (resume.isNotEmpty()) railReturnItem(key = "cw") { ContinueWatchingRow(resume, onResume = onResume) }
+        if (resume.isNotEmpty()) {
+            railReturnItem(key = "cw", contentType = "continue-watching") {
+                ContinueWatchingRow(resume, onResume = onResume)
+            }
+        }
         if (favourites.isNotEmpty()) {
-            railReturnItem(key = "fav") {
+            railReturnItem(key = "fav", contentType = "movies") {
                 MoviePosterRow(stringResource(R.string.vod_favourites), favourites, onOpenMovie)
             }
         }
         if (held.titles.isNotEmpty()) {
-            railReturnItem(key = "rec") {
+            // Its own type: the Box around it makes it a different shape from the other rows.
+            railReturnItem(key = "rec", contentType = "movies-recommended") {
                 Box(held.modifier) {
                     MoviePosterRow(stringResource(R.string.vod_recommended), held.titles, onOpenMovie)
                 }
             }
         }
         if (recentlyAdded.isNotEmpty()) {
-            railReturnItem(key = "recent") {
+            railReturnItem(key = "recent", contentType = "movies") {
                 MoviePosterRow(stringResource(R.string.vod_recently_added), recentlyAdded, onOpenMovie)
             }
         }
         genreRows.forEach { group ->
-            railReturnItem(key = "g:${group.genre}") { MoviePosterRow(group.genre, group.items, onOpenMovie) }
+            railReturnItem(key = "g:${group.genre}", contentType = "movies") {
+                MoviePosterRow(group.genre, group.items, onOpenMovie)
+            }
         }
     }
 }
@@ -310,26 +317,33 @@ internal fun SeriesShelves(
         verticalArrangement = Arrangement.spacedBy(14.dp),
         modifier = Modifier.fillMaxSize(),
     ) {
-        if (resume.isNotEmpty()) railReturnItem(key = "cw") { ContinueWatchingRow(resume, onResume = onResume) }
+        if (resume.isNotEmpty()) {
+            railReturnItem(key = "cw", contentType = "continue-watching") {
+                ContinueWatchingRow(resume, onResume = onResume)
+            }
+        }
         if (favourites.isNotEmpty()) {
-            railReturnItem(key = "fav") {
+            railReturnItem(key = "fav", contentType = "shows") {
                 SeriesPosterRow(stringResource(R.string.vod_favourites), favourites, onOpenSeries)
             }
         }
         if (held.titles.isNotEmpty()) {
-            railReturnItem(key = "rec") {
+            // Its own type: the Box around it makes it a different shape from the other rows.
+            railReturnItem(key = "rec", contentType = "shows-recommended") {
                 Box(held.modifier) {
                     SeriesPosterRow(stringResource(R.string.vod_recommended), held.titles, onOpenSeries)
                 }
             }
         }
         if (recentlyAdded.isNotEmpty()) {
-            railReturnItem(key = "recent") {
+            railReturnItem(key = "recent", contentType = "shows") {
                 SeriesPosterRow(stringResource(R.string.vod_recently_added), recentlyAdded, onOpenSeries)
             }
         }
         genreRows.forEach { group ->
-            railReturnItem(key = "g:${group.genre}") { SeriesPosterRow(group.genre, group.items, onOpenSeries) }
+            railReturnItem(key = "g:${group.genre}", contentType = "shows") {
+                SeriesPosterRow(group.genre, group.items, onOpenSeries)
+            }
         }
     }
 }
@@ -763,7 +777,7 @@ private fun CategoryChips(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        item(key = "label") {
+        item(key = "label", contentType = "label") {
             Text(
                 stringResource(R.string.vod_categories),
                 style = MaterialTheme.typography.labelLarge,
@@ -771,8 +785,10 @@ private fun CategoryChips(
                 modifier = Modifier.padding(end = 4.dp),
             )
         }
-        item(key = "all") { Chip(stringResource(R.string.vod_all), selected == null, onSelectHome) }
-        items(entries, key = { it.first }) { (id, name) ->
+        item(key = "all", contentType = "chip") {
+            Chip(stringResource(R.string.vod_all), selected == null, onSelectHome)
+        }
+        items(entries, key = { it.first }, contentType = { "chip" }) { (id, name) ->
             Chip(name, selected == id) { onSelectCategory(id) }
         }
     }
@@ -794,7 +810,7 @@ private fun ProviderChips(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        item(key = "plabel") {
+        item(key = "plabel", contentType = "label") {
             Text(
                 stringResource(R.string.channels_manager_source_header),
                 style = MaterialTheme.typography.labelLarge,
@@ -802,10 +818,10 @@ private fun ProviderChips(
                 modifier = Modifier.padding(end = 4.dp),
             )
         }
-        item(key = "pall") {
+        item(key = "pall", contentType = "chip") {
             Chip(stringResource(R.string.channels_manager_all_sources), selected == null, onSelectAll)
         }
-        items(sources, key = { it.id }) { source ->
+        items(sources, key = { it.id }, contentType = { "chip" }) { source ->
             Chip(source.name, selected == source.id) { onSelectSource(source.id) }
         }
     }

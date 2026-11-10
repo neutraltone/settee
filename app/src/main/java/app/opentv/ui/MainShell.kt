@@ -308,8 +308,8 @@ internal fun Modifier.railReturnTarget(): Modifier {
 }
 
 /** A lazy list row that Right out of the rail comes back to ([railReturnTarget]). */
-internal fun LazyListScope.railReturnItem(key: Any, content: @Composable () -> Unit) {
-    item(key = key) { Box(Modifier.railReturnTarget()) { content() } }
+internal fun LazyListScope.railReturnItem(key: Any, contentType: Any? = null, content: @Composable () -> Unit) {
+    item(key = key, contentType = contentType) { Box(Modifier.railReturnTarget()) { content() } }
 }
 
 @Composable

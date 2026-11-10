@@ -30,6 +30,14 @@ regex = '''(?i)\b00:1A:79(?::[0-9A-F]{2}){3}\b'''
 [[rules.allowlists]]
 regexes = ['''(?i)00:1A:79:00:00:0[0-9A-F]''']
 
-[allowlist]
+[[allowlists]]
 description = "Mock Stalker portal that serves free test streams"
 paths = ['''tools/stalker_mock\.py''']
+
+[[allowlists]]
+# The characters the pairing screen's short token is drawn from, not a token: its name says
+# "token" and the string is high-entropy, which is all generic-api-key looks for (#196).
+description = "PairingServer's short-token alphabet"
+targetRules = ["generic-api-key"]
+regexTarget = "line"
+regexes = ['''SHORT_TOKEN_ALPHABET = "[a-z0-9]+"''']

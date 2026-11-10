@@ -147,7 +147,7 @@ fun ChannelManagerScreen(onBack: () -> Unit, viewModel: ChannelsViewModel = view
                 contentPadding = PaddingValues(horizontal = 10.dp, vertical = 12.dp),
                 verticalArrangement = Arrangement.spacedBy(2.dp),
             ) {
-                item {
+                item(contentType = "entry") {
                     RailEntry(
                         label = stringResource(R.string.nav_search),
                         selected = searchMode,
@@ -159,8 +159,10 @@ fun ChannelManagerScreen(onBack: () -> Unit, viewModel: ChannelsViewModel = view
                 // Source filter — only when there's more than one provider, so a second source can
                 // be viewed on its own instead of merged into everything else.
                 if (sources.size > 1) {
-                    item { SectionLabel(stringResource(R.string.channels_manager_source_header)) }
-                    item {
+                    item(contentType = "label") {
+                        SectionLabel(stringResource(R.string.channels_manager_source_header))
+                    }
+                    item(contentType = "entry") {
                         RailEntry(
                             label = stringResource(R.string.channels_manager_all_sources),
                             selected = selectedSource == null,
@@ -170,7 +172,7 @@ fun ChannelManagerScreen(onBack: () -> Unit, viewModel: ChannelsViewModel = view
                             },
                         )
                     }
-                    items(sources, key = { "src-${it.id}" }) { source ->
+                    items(sources, key = { "src-${it.id}" }, contentType = { "entry" }) { source ->
                         RailEntry(
                             label = source.name,
                             selected = selectedSource == source.id,
@@ -182,8 +184,10 @@ fun ChannelManagerScreen(onBack: () -> Unit, viewModel: ChannelsViewModel = view
                     }
                 }
 
-                item { SectionLabel(stringResource(R.string.channels_manager_categories_header)) }
-                items(categoryGroups, key = { "cat-${it.key}" }) { group ->
+                item(contentType = "label") {
+                    SectionLabel(stringResource(R.string.channels_manager_categories_header))
+                }
+                items(categoryGroups, key = { "cat-${it.key}" }, contentType = { "entry" }) { group ->
                     val groupSelected = !searchMode && selectedCategory == group.key
                     RailEntry(
                         label = group.label,

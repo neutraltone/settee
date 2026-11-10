@@ -186,16 +186,30 @@ jobs:
       GITLEAKS_VERSION: 8.30.1
 
     steps:
+      # Full history: the PR range below needs the base branch, and pushes scan everything.
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
       # The binary rather than gitleaks-action, which needs a licence key for organisation repos.
-      # The whole history scans in about a second, so there's no need to narrow it to the PR.
       - name: Install gitleaks
         run: |
           curl -sSfL "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" \
             | tar xz -C "$RUNNER_TEMP" gitleaks
 
+      # Without --log-opts gitleaks scans `git log --all`, which after a full-depth checkout is every
+      # branch on the remote, so a secret on one open PR's branch failed every other PR (#198 failed
+      # on commits only #197 had). A PR scans base..HEAD instead: HEAD is the merge commit, so that is
+      # every commit the PR adds, each one's own patch, so a secret added and reverted inside the PR
+      # still fails. Pushes and manual runs scan everything reachable from HEAD, which is about a second.
       - name: Scan for credentials
-        run: '"$RUNNER_TEMP/gitleaks" git . --config .gitleaks.toml --redact --verbose'
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          if [ -n "$BASE_REF" ]; then
+            range="origin/$BASE_REF..HEAD"
+          else
+            range="HEAD"
+          fi
+          echo "Scanning $range"
+          "$RUNNER_TEMP/gitleaks" git . --config .gitleaks.toml --redact --verbose --log-opts="$range"

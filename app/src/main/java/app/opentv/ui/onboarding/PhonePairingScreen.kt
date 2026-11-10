@@ -109,7 +109,7 @@ fun PhonePairingScreen(onReceived: (Source) -> Unit, onCancel: () -> Unit) {
 }
 
 @Composable
-private fun Listening(session: PairingServer.Session, onCancel: () -> Unit) {
+internal fun Listening(session: PairingServer.Session, onCancel: () -> Unit) {
     // Generated once per session rather than on every recomposition — encoding is not free
     // and the content does not change.
     val qr = remember(session.url) { QrCodes.render(session.url, QR_SIZE_PX) }

@@ -173,14 +173,18 @@ fun RecordingsScreen(onPlay: (Recording) -> Unit) {
         } else {
             LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 if (upcomingReminders.isNotEmpty()) {
-                    item(key = "reminders-header") { SectionHeader(stringResource(R.string.rec_upcoming_reminders)) }
-                    items(upcomingReminders, key = { "rem-${it.id}" }) { rem ->
+                    item(key = "reminders-header", contentType = "header") {
+                        SectionHeader(stringResource(R.string.rec_upcoming_reminders))
+                    }
+                    items(upcomingReminders, key = { "rem-${it.id}" }, contentType = { "reminder" }) { rem ->
                         ReminderRow(reminder = rem, onCancel = { viewModel.cancelReminder(rem) })
                     }
                 }
                 if (seriesRules.isNotEmpty()) {
-                    item(key = "series-header") { SectionHeader(stringResource(R.string.rec_section_series_links)) }
-                    items(seriesRules, key = { "series-${it.id}" }) { rule ->
+                    item(key = "series-header", contentType = "header") {
+                        SectionHeader(stringResource(R.string.rec_section_series_links))
+                    }
+                    items(seriesRules, key = { "series-${it.id}" }, contentType = { "series-rule" }) { rule ->
                         val ruleEpisodes = scheduled.filter { it.seriesRuleId == rule.id }
                         SeriesRuleRow(
                             rule = rule,
@@ -191,8 +195,10 @@ fun RecordingsScreen(onPlay: (Recording) -> Unit) {
                     }
                 }
                 if (scheduled.isNotEmpty()) {
-                    item(key = "scheduled-header") { SectionHeader(stringResource(R.string.rec_section_scheduled)) }
-                    items(scheduled, key = { "sch-${it.id}" }) { rec ->
+                    item(key = "scheduled-header", contentType = "header") {
+                        SectionHeader(stringResource(R.string.rec_section_scheduled))
+                    }
+                    items(scheduled, key = { "sch-${it.id}" }, contentType = { "recording" }) { rec ->
                         RecordingRow(
                             recording = rec,
                             profileNames = profileNames,
@@ -206,8 +212,10 @@ fun RecordingsScreen(onPlay: (Recording) -> Unit) {
                     }
                 }
                 if (recorded.isNotEmpty()) {
-                    item(key = "recorded-header") { SectionHeader(stringResource(R.string.rec_section_recorded)) }
-                    items(recorded, key = { it.id }) { rec ->
+                    item(key = "recorded-header", contentType = "header") {
+                        SectionHeader(stringResource(R.string.rec_section_recorded))
+                    }
+                    items(recorded, key = { it.id }, contentType = { "recording" }) { rec ->
                         RecordingRow(
                             recording = rec,
                             profileNames = profileNames,

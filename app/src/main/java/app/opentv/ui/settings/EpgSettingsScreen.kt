@@ -91,7 +91,7 @@ fun EpgSettingsScreen(onBack: () -> Unit, viewModel: EpgViewModel = viewModel())
         Spacer(Modifier.height(16.dp))
 
         LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            items(ui.feeds, key = { it.id }) { feed ->
+            items(ui.feeds, key = { it.id }, contentType = { "feed" }) { feed ->
                 FeedRow(
                     feed = feed,
                     onToggle = { enabled -> viewModel.setEnabled(feed, enabled) },
@@ -99,7 +99,7 @@ fun EpgSettingsScreen(onBack: () -> Unit, viewModel: EpgViewModel = viewModel())
                 )
             }
 
-            item {
+            item(contentType = "add-feed") {
                 Spacer(Modifier.height(8.dp))
                 if (!showAdd) {
                     OutlinedButton(onClick = { showAdd = true }) { Text(stringResource(R.string.epg_add_own)) }
