@@ -101,10 +101,14 @@ class PairingServerTest {
 
     @Test
     fun `the typed address never uses characters that look alike across a room`() {
-        val session = listening()
+        // Many sessions, since one token is only seven of the characters it could have used.
+        val tokens = (1..30).joinToString("") {
+            server.stop()
+            listening().shortToken
+        }
 
-        // 0/o, 1/l/i, 2/z, 5/s, 6/b, 9/g/q and u/v/y.
-        assertThat(session.shortToken).containsMatch("""^[^012569bgilioqsuvyz]+$""")
+        // One of each look-alike group is dropped: 0/o, 1/l/i, 2/z, 5/s, 6/b, 9/g/q, u/v/y.
+        assertThat(tokens).doesNotContainMatch("""[01ilo2z5sbgquvy]""")
     }
 
     @Test
