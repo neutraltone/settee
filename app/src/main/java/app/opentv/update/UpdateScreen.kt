@@ -150,9 +150,11 @@ class UpdateViewModel(app: Application) : AndroidViewModel(app) {
             val now = System.currentTimeMillis()
             if (now - prefs.getLong(KEY_LAST_CHECK, 0L) < CHECK_INTERVAL_MS) return@launch
 
-            val update = checker.check()
-            prefs.edit { putLong(KEY_LAST_CHECK, now) }
-            if (update != null) _state.value = UpdateUiState.Available(update)
+            val outcome = checker.check()
+            // A failed check (offline, or a release still missing its APK) mustn't hold the next
+            // one off for 6 hours: the APK usually turns up minutes later when the job is re-run.
+            if (outcome != UpdateChecker.Outcome.CouldNotCheck) prefs.edit { putLong(KEY_LAST_CHECK, now) }
+            if (outcome is UpdateChecker.Outcome.Available) _state.value = UpdateUiState.Available(outcome.update)
         }
     }
 

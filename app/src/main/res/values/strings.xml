@@ -362,6 +362,7 @@
     <string name="about_based_on">Based on OpenTV</string>
     <string name="about_update_available">Update available: %1$s — see the prompt to install.</string>
     <string name="about_up_to_date">You\'re on the latest version.</string>
+    <string name="about_check_failed">Couldn\'t check for updates. Try again later.</string>
     <string name="about_checking">Checking…</string>
     <string name="about_check_updates">Check for updates</string>
     <string name="about_whats_new">What\'s new</string>
