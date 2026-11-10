@@ -32,6 +32,12 @@ detekt = "1.23.8"
 # Compose rules run under detekt only, so findings are not reported twice. 0.4.x is the last
 # line built against detekt 1.23; 0.5+ needs detekt 2.
 composeRules = "0.6.8"
+# The baseline profile plugin reads AGP's variant API, so it moves with AGP in Dependabot's
+# toolchain group; Macrobenchmark shares its version.
+benchmark = "1.5.0"
+uiautomator = "2.3.0"
+profileinstaller = "1.4.1"
+androidxTestRunner = "1.7.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -97,10 +103,17 @@ roborazzi = { group = "io.github.takahirom.roborazzi", name = "roborazzi", versi
 roborazzi-compose = { group = "io.github.takahirom.roborazzi", name = "roborazzi-compose", version.ref = "roborazzi" }
 coil-test = { group = "io.coil-kt", name = "coil-test", version.ref = "coil" }
 
+androidx-profileinstaller = { group = "androidx.profileinstaller", name = "profileinstaller", version.ref = "profileinstaller" }
+androidx-benchmark-macro-junit4 = { group = "androidx.benchmark", name = "benchmark-macro-junit4", version.ref = "benchmark" }
+androidx-uiautomator = { group = "androidx.test.uiautomator", name = "uiautomator", version.ref = "uiautomator" }
+androidx-test-runner = { group = "androidx.test", name = "runner", version.ref = "androidxTestRunner" }
+
 compose-rules-detekt = { group = "io.nlopez.compose.rules", name = "detekt", version.ref = "composeRules" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
+android-test = { id = "com.android.test", version.ref = "agp" }
+baselineprofile = { id = "androidx.baselineprofile", version.ref = "benchmark" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }

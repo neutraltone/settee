@@ -16,9 +16,10 @@ updates:
       # AGP, the Gradle wrapper, Kotlin and KSP can't move independently: AGP 9 brings its own
       # Kotlin, new KSP needs new AGP, and new AGP needs new Gradle. Apart, each PR fails (#34).
       # The wrapper is matched by its "gradle-wrapper" name. Not org.jetbrains.kotlin*, which
-      # would also swallow kotlinx-coroutines-test.
+      # would also swallow kotlinx-coroutines-test. The baseline profile plugin reads AGP's variant
+      # API, so it and Macrobenchmark (which shares its version) move with AGP too (#148).
       toolchain:
-        patterns: ['com.android.application*', 'com.android.tools.build:*', 'gradle-wrapper', 'org.jetbrains.kotlin:*', 'org.jetbrains.kotlin.*', 'com.google.devtools.ksp*']
+        patterns: ['com.android.application*', 'com.android.test*', 'androidx.baselineprofile*', 'androidx.benchmark:*', 'com.android.tools.build:*', 'gradle-wrapper', 'org.jetbrains.kotlin:*', 'org.jetbrains.kotlin.*', 'com.google.devtools.ksp*']
       media3:
         patterns: ['androidx.media3:*']
       androidx:

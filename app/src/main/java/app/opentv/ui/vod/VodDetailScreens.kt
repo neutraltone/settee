@@ -129,7 +129,7 @@ fun MovieDetailScreen(
     }
 
     LazyColumn(Modifier.fillMaxSize()) {
-        item(key = "header") {
+        item(key = "header", contentType = "header") {
             DetailBackdrop(
                 title = m.displayTitle,
                 backdropUrl = m.backdropUrl,
@@ -163,7 +163,7 @@ fun MovieDetailScreen(
                 }
             }
         }
-        item(key = "info") {
+        item(key = "info", contentType = "info") {
             DetailInfo(
                 plot = m.plot,
                 cast = m.cast,
@@ -173,7 +173,7 @@ fun MovieDetailScreen(
             )
         }
         if (moreLike.isNotEmpty()) {
-            item(key = "more") {
+            item(key = "more", contentType = "more-like-this") {
                 Spacer(Modifier.height(4.dp))
                 MoviePosterRow(stringResource(R.string.vod_more_like_this), moreLike, onOpenMovie)
             }
@@ -372,7 +372,7 @@ internal fun SeriesDetailContent(
     }
 
     LazyColumn(Modifier.fillMaxSize()) {
-        item(key = "header") {
+        item(key = "header", contentType = "header") {
             DetailBackdrop(
                 title = series.displayTitle,
                 backdropUrl = series.backdropUrl,
@@ -408,7 +408,7 @@ internal fun SeriesDetailContent(
                 )
             }
         }
-        item(key = "info") {
+        item(key = "info", contentType = "info") {
             DetailInfo(
                 plot = series.plot,
                 cast = series.cast,
@@ -419,7 +419,7 @@ internal fun SeriesDetailContent(
         }
 
         if (episodes.isEmpty()) {
-            item(key = "eploading") {
+            item(key = "eploading", contentType = "loading") {
                 Text(
                     stringResource(R.string.vod_loading_episodes),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -428,18 +428,18 @@ internal fun SeriesDetailContent(
             }
         } else {
             seasons.forEach { (season, eps) ->
-                item(key = "season:$season") {
+                item(key = "season:$season", contentType = "season") {
                     Spacer(Modifier.height(8.dp))
                     SeasonHeader(stringResource(R.string.vod_season, season), eps)
                 }
-                items(eps, key = { it.id }) { ep ->
+                items(eps, key = { it.id }, contentType = { "episode" }) { ep ->
                     EpisodeRow(ep, statuses[ep.id], series.posterUrl, onPlayEpisode)
                 }
             }
         }
 
         if (moreLike.isNotEmpty()) {
-            item(key = "more") {
+            item(key = "more", contentType = "more-like-this") {
                 Spacer(Modifier.height(12.dp))
                 SeriesPosterRow(stringResource(R.string.vod_more_like_this), moreLike, onOpenSeries)
             }

@@ -39,6 +39,7 @@ tools/check-message-test.sh                 # tests for the commit/PR-title conv
 python3 -m unittest discover -s tools/screenshots  # screenshot comparison tests (needs Pillow)
 tools/perf/stick_baseline.py --help         # measure performance on a Fire TV Stick (docs/PERFORMANCE.md)
 python3 -m unittest discover -s tools/perf  # tests for that script
+ANDROID_SERIAL=emulator-5554 ./gradlew :app:generateBaselineProfile  # regenerate the baseline profile on an Android 13+ TV emulator; commit it (docs/PERFORMANCE.md)
 ```
 
 Tests live in `app/src/test` (JUnit4, Truth, Robolectric, Room testing, coroutines-test, Roborazzi for screenshots); there are no
@@ -176,6 +177,10 @@ never release/rebuild on channel change). Retries 403/429/5xx with backoff; not 
   versioned `settee-<tag>.apk`; the release workflow also publishes a fixed-name `settee.apk` for the
   Downloader short code. Keep both names in step with `GitHubRelease.apkAsset`.
 - Never put provider URLs, usernames, passwords or MACs in logs, tests or fixtures.
+- **Baseline profile** (`docs/PERFORMANCE.md`): don't suggest regenerating it on ordinary PRs. Raise it only
+  when `BaselineProfileTest` fails, or when preparing a release whose changes reworked the screens the
+  journeys walk (check with the `git diff` in that doc). When regenerating, follow that doc's steps for
+  fixing a journey before doing full runs.
 - Before opening a PR, ask the user whether to run `/code-review` against `main` first.
 
 ## Agent skills
