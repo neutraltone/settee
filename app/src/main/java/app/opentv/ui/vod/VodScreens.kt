@@ -85,6 +85,7 @@ import app.opentv.ui.options.LocalOpenOptions
 import app.opentv.ui.options.OptionsSubject
 import app.opentv.ui.options.openOptionsOn
 import app.opentv.ui.options.optionsClickable
+import app.opentv.ui.railReturnItem
 import coil.compose.AsyncImage
 
 /**
@@ -189,26 +190,26 @@ internal fun MovieShelves(
         verticalArrangement = Arrangement.spacedBy(14.dp),
         modifier = Modifier.fillMaxSize(),
     ) {
-        if (resume.isNotEmpty()) item(key = "cw") { ContinueWatchingRow(resume, onResume = onResume) }
+        if (resume.isNotEmpty()) railReturnItem(key = "cw") { ContinueWatchingRow(resume, onResume = onResume) }
         if (favourites.isNotEmpty()) {
-            item(key = "fav") {
+            railReturnItem(key = "fav") {
                 MoviePosterRow(stringResource(R.string.vod_favourites), favourites, onOpenMovie)
             }
         }
         if (held.titles.isNotEmpty()) {
-            item(key = "rec") {
+            railReturnItem(key = "rec") {
                 Box(held.modifier) {
                     MoviePosterRow(stringResource(R.string.vod_recommended), held.titles, onOpenMovie)
                 }
             }
         }
         if (recentlyAdded.isNotEmpty()) {
-            item(key = "recent") {
+            railReturnItem(key = "recent") {
                 MoviePosterRow(stringResource(R.string.vod_recently_added), recentlyAdded, onOpenMovie)
             }
         }
-        items(genreRows, key = { "g:${it.genre}" }) { group ->
-            MoviePosterRow(group.genre, group.items, onOpenMovie)
+        genreRows.forEach { group ->
+            railReturnItem(key = "g:${group.genre}") { MoviePosterRow(group.genre, group.items, onOpenMovie) }
         }
     }
 }
@@ -309,26 +310,26 @@ internal fun SeriesShelves(
         verticalArrangement = Arrangement.spacedBy(14.dp),
         modifier = Modifier.fillMaxSize(),
     ) {
-        if (resume.isNotEmpty()) item(key = "cw") { ContinueWatchingRow(resume, onResume = onResume) }
+        if (resume.isNotEmpty()) railReturnItem(key = "cw") { ContinueWatchingRow(resume, onResume = onResume) }
         if (favourites.isNotEmpty()) {
-            item(key = "fav") {
+            railReturnItem(key = "fav") {
                 SeriesPosterRow(stringResource(R.string.vod_favourites), favourites, onOpenSeries)
             }
         }
         if (held.titles.isNotEmpty()) {
-            item(key = "rec") {
+            railReturnItem(key = "rec") {
                 Box(held.modifier) {
                     SeriesPosterRow(stringResource(R.string.vod_recommended), held.titles, onOpenSeries)
                 }
             }
         }
         if (recentlyAdded.isNotEmpty()) {
-            item(key = "recent") {
+            railReturnItem(key = "recent") {
                 SeriesPosterRow(stringResource(R.string.vod_recently_added), recentlyAdded, onOpenSeries)
             }
         }
-        items(genreRows, key = { "g:${it.genre}" }) { group ->
-            SeriesPosterRow(group.genre, group.items, onOpenSeries)
+        genreRows.forEach { group ->
+            railReturnItem(key = "g:${group.genre}") { SeriesPosterRow(group.genre, group.items, onOpenSeries) }
         }
     }
 }

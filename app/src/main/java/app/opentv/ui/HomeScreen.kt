@@ -187,7 +187,7 @@ internal fun HomeContent(
         modifier = Modifier.fillMaxSize().focusRequester(start).focusGroup(),
     ) {
         shelves.forEachIndexed { rowIndex, shelf ->
-            item(key = shelf.row.key) {
+            railReturnItem(key = shelf.row.key) {
                 val rowFocus = focus?.takeIf { target?.row == shelf.row.key }
                 fun pick(item: String, open: () -> Unit) {
                     picked = HomePick(shelf.row.key, rowIndex, item, shelf.row.items.indexOf(item))
