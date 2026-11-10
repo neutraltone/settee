@@ -51,11 +51,7 @@ class CatalogueRefreshTest {
 
     private fun vodDownloads() = panel.asked.count { it == "get_vod_streams" }
 
-    /** Clears the log, once a sync's background date lookups can no longer land in what comes next. */
-    private suspend fun forgetAsked() {
-        test.catalog.awaitBackground()
-        panel.asked.clear()
-    }
+    private fun forgetAsked() = panel.asked.clear()
 
     private suspend fun openMoviesOrShows() = refresh.refresh(CatalogueRefresh.Trigger.OpenedMoviesOrShows)
 
@@ -401,7 +397,6 @@ class CatalogueRefreshTest {
         val pilot = db.episodes().forSeries(1, "7").single()
         test.viewerLibrary.recordProgress("ep:${pilot.id}", positionMillis = 2_400_000, durationMillis = 2_400_000)
         test.awaitRefresh()
-        test.catalog.awaitBackground()
         panel.replies["get_series"] = """[{"series_id": 7, "name": "Show", "last_modified": "200"}]"""
         now += TWELVE_HOURS
     }
