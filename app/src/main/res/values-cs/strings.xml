@@ -140,11 +140,6 @@
     <string name="settings_sync_subtitle">Zkopírujte rozkoukané pořady do jiného zařízení přes wifi</string>
     <string name="settings_about_title">O aplikaci</string>
     <string name="settings_about_subtitle">Verze, aktualizace, licence a odkazy</string>
-    <string name="settings_appearance">Vzhled</string>
-    <string name="settings_theme_system">Podle systému</string>
-    <string name="settings_theme_dark">Tmavý</string>
-    <string name="settings_theme_light">Světlý</string>
-    <string name="settings_theme_note">TV zařízení zůstávají u volby \"Podle systému\" tmavá. Vynuťte režim volbou Tmavý nebo Světlý.</string>
     <string name="settings_section_content">Obsah</string>
     <string name="settings_content_note">Vypněte to, co nepoužíváte, pro rychlejší synchronizaci. Kdykoli to můžete zase zapnout.</string>
     <string name="settings_content_live_subtitle">Kanály a TV program.</string>

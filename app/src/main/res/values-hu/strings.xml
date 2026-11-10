@@ -140,11 +140,6 @@
     <string name="settings_sync_subtitle">A folytatás adatainak másolása másik eszközre Wi-Fi-n keresztül</string>
     <string name="settings_about_title">Névjegy</string>
     <string name="settings_about_subtitle">Verzió, frissítések, licenc és hivatkozások</string>
-    <string name="settings_appearance">Megjelenés</string>
-    <string name="settings_theme_system">Rendszer követése</string>
-    <string name="settings_theme_dark">Sötét</string>
-    <string name="settings_theme_light">Világos</string>
-    <string name="settings_theme_note">A TV-eszközök sötét témában maradnak a „Rendszer követése” beállításnál. Válassza a Sötét vagy Világos lehetőséget a kényszerítéséhez.</string>
     <string name="settings_section_content">Tartalom</string>
     <string name="settings_content_note">Kapcsolja ki, amit nem használ, a gyorsabb szinkronizálásért. Bármikor visszakapcsolhatja.</string>
     <string name="settings_content_live_subtitle">Csatornák és a műsorújság.</string>

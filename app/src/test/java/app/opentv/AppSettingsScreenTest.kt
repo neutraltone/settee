@@ -51,6 +51,16 @@ class AppSettingsScreenTest {
     }
 
     @Test
+    fun `Settings opens on content, with no theme to choose because Settee is always dark`() {
+        show()
+        captureScreen("app_settings_initial")
+
+        compose.onNodeWithText("Appearance").assertDoesNotExist()
+        compose.onNodeWithText("Follow system").assertDoesNotExist()
+        compose.onNodeWithText("Light").assertDoesNotExist()
+    }
+
+    @Test
     fun `the TMDB key box waits for OK before opening the keyboard, and Save keeps what was typed`() {
         show()
         compose.onNodeWithText(TMDB_SAVE).performScrollTo()

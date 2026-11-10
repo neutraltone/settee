@@ -140,11 +140,6 @@
     <string name="settings_sync_subtitle">Kopirajte nastavak gledanja na drugi uređaj putem Wi-Fi-ja</string>
     <string name="settings_about_title">O aplikaciji</string>
     <string name="settings_about_subtitle">Verzija, ažuriranja, licenca i poveznice</string>
-    <string name="settings_appearance">Izgled</string>
-    <string name="settings_theme_system">Prati sustav</string>
-    <string name="settings_theme_dark">Tamna</string>
-    <string name="settings_theme_light">Svijetla</string>
-    <string name="settings_theme_note">TV uređaji ostaju u tamnoj temi kod postavke \"Prati sustav\". Odaberite Tamna ili Svijetla da to prisilite.</string>
     <string name="settings_section_content">Sadržaj</string>
     <string name="settings_content_note">Isključite ono što ne koristite za bržu sinkronizaciju. Uključite ponovno u bilo kojem trenutku.</string>
     <string name="settings_content_live_subtitle">Kanali i TV vodič.</string>

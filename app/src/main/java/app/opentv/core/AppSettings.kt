@@ -34,12 +34,6 @@ class AppSettings private constructor(context: Context, fileName: String = "open
 
     private val addonJson = Json { ignoreUnknownKeys = true }
 
-    /** How the app chooses light vs dark. TV defaults to dark under [ThemeMode.SYSTEM]. */
-    enum class ThemeMode { SYSTEM, DARK, LIGHT }
-
-    private val _themeMode = MutableStateFlow(readThemeMode())
-    val themeMode: StateFlow<ThemeMode> = _themeMode.asStateFlow()
-
     /**
      * How the live-TV channel list is laid out: the scrolling EPG time-[ChannelLayout.GRID], or a
      * compact one-channel-per-row [ChannelLayout.LIST] (logo, name, now/next) for people who find
@@ -206,11 +200,6 @@ class AppSettings private constructor(context: Context, fileName: String = "open
         val digest = java.security.MessageDigest.getInstance("SHA-256")
         val bytes = digest.digest("opentv-pin::$pin".toByteArray())
         return bytes.joinToString("") { "%02x".format(it) }
-    }
-
-    fun setThemeMode(mode: ThemeMode) {
-        prefs.edit { putString(KEY_THEME, mode.name) }
-        _themeMode.value = mode
     }
 
     fun setChannelLayout(layout: ChannelLayout) {
@@ -387,9 +376,6 @@ class AppSettings private constructor(context: Context, fileName: String = "open
         _playerResizeMode.value = mode
     }
 
-    private fun readThemeMode(): ThemeMode = runCatching { ThemeMode.valueOf(prefs.getString(KEY_THEME, null) ?: "") }
-        .getOrDefault(ThemeMode.SYSTEM)
-
     private fun readChannelLayout(): ChannelLayout =
         runCatching { ChannelLayout.valueOf(prefs.getString(KEY_CHANNEL_LAYOUT, null) ?: "") }
             .getOrDefault(ChannelLayout.GRID)
@@ -559,7 +545,6 @@ class AppSettings private constructor(context: Context, fileName: String = "open
     }.getOrNull() ?: emptyList()
 
     companion object {
-        private const val KEY_THEME = "theme_mode"
         private const val KEY_CHANNEL_LAYOUT = "channel_layout"
         private const val KEY_PREVIEW_VIDEO = "guide_preview_video"
         private const val KEY_PREVIEW_SOUND = "guide_preview_sound"

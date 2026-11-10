@@ -19,7 +19,7 @@ import app.opentv.data.model.Movie
 import app.opentv.data.model.Series
 import app.opentv.data.model.StreamKind
 import app.opentv.ui.VodViewModel
-import app.opentv.ui.theme.OpenTvTheme
+import app.opentv.ui.design.SetteeTheme
 import app.opentv.ui.vod.MoviesScreen
 import app.opentv.ui.vod.SeriesScreen
 import kotlinx.coroutines.runBlocking
@@ -75,7 +75,7 @@ class MovieCategoryMemoryTest {
         }
         val restoration = StateRestorationTester(compose)
         restoration.setContent {
-            OpenTvTheme(darkTheme = true) {
+            SetteeTheme {
                 MoviesScreen(
                     onOpenMovie = {},
                     onResume = {},
@@ -118,7 +118,7 @@ class MovieCategoryMemoryTest {
         }
         val restoration = StateRestorationTester(compose)
         restoration.setContent {
-            OpenTvTheme(darkTheme = true) {
+            SetteeTheme {
                 SeriesScreen(
                     onOpenSeries = {},
                     onResume = {},

@@ -98,6 +98,10 @@ catch-up tags) and from how other apps *behave*, never from their source.
 
 [GPL-3.0-or-later](LICENSE), inherited from OpenTV.
 
+The app bundles two typefaces, Young Serif and Alegreya Sans, unmodified. They aren't covered by the
+GPL: they're under the [SIL Open Font License 1.1](app/src/main/assets/licences/FONTS.md), and their
+licences ship in the app, where About shows them.
+
 ## Legal
 
 Settee is a media player, comparable to VLC. It ships with no channels, no playlists, and no

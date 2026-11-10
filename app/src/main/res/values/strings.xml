@@ -181,11 +181,6 @@
     <string name="settings_about_subtitle">Version, updates, licence and links</string>
 
     <!-- ============================ Display & playback settings ============================ -->
-    <string name="settings_appearance">Appearance</string>
-    <string name="settings_theme_system">Follow system</string>
-    <string name="settings_theme_dark">Dark</string>
-    <string name="settings_theme_light">Light</string>
-    <string name="settings_theme_note">TV boxes stay dark on \"Follow system\". Pick Dark or Light to force it.</string>
     <string name="settings_section_content">Content</string>
     <string name="settings_content_note">Turn off what you don\'t use to sync faster. Turn back on anytime.</string>
     <string name="settings_content_live_subtitle">Channels and the TV guide.</string>
@@ -384,6 +379,9 @@
     <string name="about_licence_links_title">Licence &amp; links</string>
     <string name="about_licence_label">Licence</string>
     <string name="about_source_code">Source code</string>
+    <string name="about_fonts_label">Fonts</string>
+    <string name="about_fonts_value">Young Serif and Alegreya Sans, under the SIL Open Font License</string>
+    <string name="about_fonts_title">Font licences</string>
 
     <!-- ============================ Onboarding / add source ============================ -->
     <string name="onboarding_default_provider_name">My provider</string>

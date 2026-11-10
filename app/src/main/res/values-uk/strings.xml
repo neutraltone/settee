@@ -140,11 +140,6 @@
     <string name="settings_sync_subtitle">Копіювання «продовжити перегляд» на інший пристрій через Wi-Fi</string>
     <string name="settings_about_title">Про застосунок</string>
     <string name="settings_about_subtitle">Версія, оновлення, ліцензія та посилання</string>
-    <string name="settings_appearance">Вигляд</string>
-    <string name="settings_theme_system">Як у системі</string>
-    <string name="settings_theme_dark">Темна</string>
-    <string name="settings_theme_light">Світла</string>
-    <string name="settings_theme_note">На ТВ-приставках тема залишається темною при виборі «Як у системі». Виберіть «Темна» або «Світла», щоб задати примусово.</string>
     <string name="settings_section_content">Вміст</string>
     <string name="settings_content_note">Вимкніть те, чим не користуєтеся, щоб синхронізація йшла швидше. Увімкнути можна будь-коли.</string>
     <string name="settings_content_live_subtitle">Канали та програма передач.</string>

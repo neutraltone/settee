@@ -140,11 +140,6 @@
     <string name="settings_sync_subtitle">Salin lanjutkan-menonton ke perangkat lain lewat wifi</string>
     <string name="settings_about_title">Tentang</string>
     <string name="settings_about_subtitle">Versi, pembaruan, lisensi, dan tautan</string>
-    <string name="settings_appearance">Tampilan</string>
-    <string name="settings_theme_system">Ikuti sistem</string>
-    <string name="settings_theme_dark">Gelap</string>
-    <string name="settings_theme_light">Terang</string>
-    <string name="settings_theme_note">Perangkat TV tetap gelap pada \"Ikuti sistem\". Pilih Gelap atau Terang untuk memaksanya.</string>
     <string name="settings_section_content">Konten</string>
     <string name="settings_content_note">Matikan yang tidak Anda pakai agar sinkronisasi lebih cepat. Bisa dinyalakan lagi kapan saja.</string>
     <string name="settings_content_live_subtitle">Saluran dan panduan TV.</string>

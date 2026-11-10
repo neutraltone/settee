@@ -140,11 +140,6 @@
     <string name="settings_sync_subtitle">Copiază progresul de vizionare pe alt dispozitiv prin wifi</string>
     <string name="settings_about_title">Despre</string>
     <string name="settings_about_subtitle">Versiune, actualizări, licență și linkuri</string>
-    <string name="settings_appearance">Aspect</string>
-    <string name="settings_theme_system">Urmează sistemul</string>
-    <string name="settings_theme_dark">Întunecat</string>
-    <string name="settings_theme_light">Luminos</string>
-    <string name="settings_theme_note">Dispozitivele TV rămân în temă întunecată la „Urmează sistemul”. Alege Întunecat sau Luminos pentru a forța tema.</string>
     <string name="settings_section_content">Conținut</string>
     <string name="settings_content_note">Dezactivează ce nu folosești pentru o sincronizare mai rapidă. Poți reactiva oricând.</string>
     <string name="settings_content_live_subtitle">Canale și ghidul TV.</string>

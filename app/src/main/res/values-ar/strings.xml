@@ -140,11 +140,6 @@
     <string name="settings_sync_subtitle">انسخ \"متابعة المشاهدة\" إلى جهاز آخر عبر Wi-Fi</string>
     <string name="settings_about_title">حول التطبيق</string>
     <string name="settings_about_subtitle">الإصدار والتحديثات والترخيص والروابط</string>
-    <string name="settings_appearance">المظهر</string>
-    <string name="settings_theme_system">اتباع النظام</string>
-    <string name="settings_theme_dark">داكن</string>
-    <string name="settings_theme_light">فاتح</string>
-    <string name="settings_theme_note">تبقى أجهزة التلفاز داكنة عند اختيار «اتباع النظام». اختر داكن أو فاتح لفرض أحدهما.</string>
     <string name="settings_section_content">المحتوى</string>
     <string name="settings_content_note">أوقف تشغيل ما لا تستخدمه لتسريع المزامنة. يمكنك إعادة تشغيله في أي وقت.</string>
     <string name="settings_content_live_subtitle">القنوات ودليل البرامج.</string>

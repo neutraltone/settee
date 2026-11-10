@@ -13,6 +13,67 @@ style:
     ignorePropertyDeclaration: true
     ignoreCompanionObjectPropertyDeclaration: true
 
+  ForbiddenImport:
+    # Material's interactive widgets show focus as a faint state layer you can't see from the sofa,
+    # and corners come from SetteeShapes so they stay on docs/LOOK.md's scale: use ui/design instead
+    # (ADR 0006). Screens move over one ticket at a time. Today's uses are in app/detekt-baseline.xml
+    # on purpose: each screen ticket deletes its own entries, so the list only shrinks. Never add to it.
+    # A wildcard import can't get round the list: detekt's WildcardImport rule already fails it.
+    active: true
+    excludes: ['**/ui/design/**', '**/test/**']
+    imports:
+      - 'androidx.compose.material3.Button'
+      - 'androidx.compose.material3.OutlinedButton'
+      - 'androidx.compose.material3.TextButton'
+      - 'androidx.compose.material3.FilledTonalButton'
+      - 'androidx.compose.material3.ElevatedButton'
+      - 'androidx.compose.material3.IconButton'
+      - 'androidx.compose.material3.FilledIconButton'
+      - 'androidx.compose.material3.FilledTonalIconButton'
+      - 'androidx.compose.material3.OutlinedIconButton'
+      - 'androidx.compose.material3.IconToggleButton'
+      - 'androidx.compose.material3.FilledIconToggleButton'
+      - 'androidx.compose.material3.OutlinedIconToggleButton'
+      - 'androidx.compose.material3.FloatingActionButton'
+      - 'androidx.compose.material3.SmallFloatingActionButton'
+      - 'androidx.compose.material3.LargeFloatingActionButton'
+      - 'androidx.compose.material3.ExtendedFloatingActionButton'
+      - 'androidx.compose.material3.AssistChip'
+      - 'androidx.compose.material3.ElevatedAssistChip'
+      - 'androidx.compose.material3.FilterChip'
+      - 'androidx.compose.material3.ElevatedFilterChip'
+      - 'androidx.compose.material3.InputChip'
+      - 'androidx.compose.material3.SuggestionChip'
+      - 'androidx.compose.material3.ElevatedSuggestionChip'
+      - 'androidx.compose.material3.Switch'
+      - 'androidx.compose.material3.Checkbox'
+      - 'androidx.compose.material3.TriStateCheckbox'
+      - 'androidx.compose.material3.RadioButton'
+      - 'androidx.compose.material3.Slider'
+      - 'androidx.compose.material3.RangeSlider'
+      - 'androidx.compose.material3.TextField'
+      - 'androidx.compose.material3.OutlinedTextField'
+      - 'androidx.compose.material3.Tab'
+      - 'androidx.compose.material3.LeadingIconTab'
+      - 'androidx.compose.material3.TabRow'
+      - 'androidx.compose.material3.PrimaryTabRow'
+      - 'androidx.compose.material3.SecondaryTabRow'
+      - 'androidx.compose.material3.ScrollableTabRow'
+      - 'androidx.compose.material3.NavigationBarItem'
+      - 'androidx.compose.material3.NavigationRailItem'
+      - 'androidx.compose.material3.NavigationDrawerItem'
+      - 'androidx.compose.material3.DropdownMenu'
+      - 'androidx.compose.material3.DropdownMenuItem'
+      - 'androidx.compose.material3.ExposedDropdownMenuBox'
+      - 'androidx.compose.material3.AlertDialog'
+      - 'androidx.compose.material3.BasicAlertDialog'
+      - 'androidx.compose.material3.SegmentedButton'
+      - 'androidx.compose.material3.SingleChoiceSegmentedButtonRow'
+      - 'androidx.compose.material3.MultiChoiceSegmentedButtonRow'
+      - 'androidx.compose.material3.SearchBar'
+      - 'androidx.compose.material3.DockedSearchBar'
+      - 'androidx.compose.foundation.shape.RoundedCornerShape'
+
 performance:
   SpreadOperator:
     # Flags an array copy per call; every spread here runs once (e.g. per database build).

@@ -140,11 +140,6 @@
     <string name="settings_sync_subtitle">Передавайте «Продолжить просмотр» на другое устройство по Wi-Fi</string>
     <string name="settings_about_title">О приложении</string>
     <string name="settings_about_subtitle">Версия, обновления, лицензия и ссылки</string>
-    <string name="settings_appearance">Внешний вид</string>
-    <string name="settings_theme_system">Как в системе</string>
-    <string name="settings_theme_dark">Тёмная</string>
-    <string name="settings_theme_light">Светлая</string>
-    <string name="settings_theme_note">ТВ-приставки остаются тёмными при выборе «Как в системе». Выберите «Тёмная» или «Светлая», чтобы задать тему принудительно.</string>
     <string name="settings_section_content">Контент</string>
     <string name="settings_content_note">Отключите то, чем не пользуетесь, чтобы синхронизация проходила быстрее. Включить можно в любой момент.</string>
     <string name="settings_content_live_subtitle">Каналы и телегид.</string>

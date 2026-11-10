@@ -140,11 +140,6 @@
     <string name="settings_sync_subtitle">Копиране на продължи-гледането на друго устройство през wifi</string>
     <string name="settings_about_title">Относно</string>
     <string name="settings_about_subtitle">Версия, актуализации, лиценз и връзки</string>
-    <string name="settings_appearance">Изглед</string>
-    <string name="settings_theme_system">Според системата</string>
-    <string name="settings_theme_dark">Тъмна</string>
-    <string name="settings_theme_light">Светла</string>
-    <string name="settings_theme_note">Телевизионните приставки остават тъмни при „Според системата“. Изберете Тъмна или Светла, за да я зададете принудително.</string>
     <string name="settings_section_content">Съдържание</string>
     <string name="settings_content_note">Изключете това, което не използвате, за да синхронизирате по-бързо. Можете да го включите обратно по всяко време.</string>
     <string name="settings_content_live_subtitle">Канали и телевизионна програма.</string>

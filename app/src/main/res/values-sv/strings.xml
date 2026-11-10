@@ -140,11 +140,6 @@
     <string name="settings_sync_subtitle">Kopiera Fortsätt titta till en annan enhet via wifi</string>
     <string name="settings_about_title">Om appen</string>
     <string name="settings_about_subtitle">Version, uppdateringar, licens och länkar</string>
-    <string name="settings_appearance">Utseende</string>
-    <string name="settings_theme_system">Följ systemet</string>
-    <string name="settings_theme_dark">Mörkt</string>
-    <string name="settings_theme_light">Ljust</string>
-    <string name="settings_theme_note">TV-boxar förblir mörka vid \"Följ systemet\". Välj Mörkt eller Ljust för att tvinga fram det.</string>
     <string name="settings_section_content">Innehåll</string>
     <string name="settings_content_note">Stäng av det du inte använder för att synka snabbare. Slå på det igen när som helst.</string>
     <string name="settings_content_live_subtitle">Kanaler och TV-guiden.</string>
