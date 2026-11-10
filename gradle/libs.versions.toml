@@ -9,7 +9,6 @@ coreKtx = "1.19.1"
 lifecycle = "2.8.7"
 activityCompose = "1.9.3"
 composeBom = "2026.09.00"
-tvCompose = "1.1.0"
 media3 = "1.5.0"
 room = "2.8.5"
 okhttp = "5.5.1"
@@ -52,7 +51,6 @@ androidx-compose-ui-test-junit4 = { group = "androidx.compose.ui", name = "ui-te
 androidx-compose-ui-test-manifest = { group = "androidx.compose.ui", name = "ui-test-manifest" }
 
 androidx-tv-foundation = { group = "androidx.tv", name = "tv-foundation", version = "1.0.0" }
-androidx-tv-material = { group = "androidx.tv", name = "tv-material", version.ref = "tvCompose" }
 
 androidx-navigation-compose = { group = "androidx.navigation", name = "navigation-compose", version.ref = "navigation" }
 

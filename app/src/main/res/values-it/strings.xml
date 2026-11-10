@@ -140,11 +140,6 @@
     <string name="settings_sync_subtitle">Copia l\'elenco Continua a guardare su un altro dispositivo via wifi</string>
     <string name="settings_about_title">Informazioni</string>
     <string name="settings_about_subtitle">Versione, aggiornamenti, licenza e link</string>
-    <string name="settings_appearance">Aspetto</string>
-    <string name="settings_theme_system">Segui sistema</string>
-    <string name="settings_theme_dark">Scuro</string>
-    <string name="settings_theme_light">Chiaro</string>
-    <string name="settings_theme_note">Con “Segui sistema” i box TV restano scuri. Scegli Scuro o Chiaro per forzarlo.</string>
     <string name="settings_section_content">Contenuti</string>
     <string name="settings_content_note">Disattiva ciò che non usi per sincronizzare più velocemente. Puoi riattivarlo in qualsiasi momento.</string>
     <string name="settings_content_live_subtitle">Canali e guida TV.</string>

@@ -140,11 +140,6 @@
     <string name="settings_sync_subtitle">Sao chép mục đang xem sang thiết bị khác qua wifi</string>
     <string name="settings_about_title">Giới thiệu</string>
     <string name="settings_about_subtitle">Phiên bản, cập nhật, giấy phép và liên kết</string>
-    <string name="settings_appearance">Giao diện</string>
-    <string name="settings_theme_system">Theo hệ thống</string>
-    <string name="settings_theme_dark">Tối</string>
-    <string name="settings_theme_light">Sáng</string>
-    <string name="settings_theme_note">Đầu thu TV luôn ở giao diện tối khi chọn “Theo hệ thống”. Chọn Tối hoặc Sáng để đặt cố định.</string>
     <string name="settings_section_content">Nội dung</string>
     <string name="settings_content_note">Tắt những nội dung bạn không dùng để đồng bộ nhanh hơn. Có thể bật lại bất cứ lúc nào.</string>
     <string name="settings_content_live_subtitle">Kênh và lịch phát TV.</string>

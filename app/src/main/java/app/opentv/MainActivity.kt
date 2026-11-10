@@ -15,13 +15,13 @@ import android.os.Build
 import android.os.Bundle
 import android.util.Rational
 import androidx.activity.ComponentActivity
+import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.annotation.ChecksSdkIntAtLeast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusable
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -61,7 +61,6 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import app.opentv.core.AppSettings
 import app.opentv.core.ServiceLocator
 import app.opentv.data.repo.MediaKey
 import app.opentv.ui.FirstScreen
@@ -73,6 +72,7 @@ import app.opentv.ui.WhosWatchingAsked
 import app.opentv.ui.WhosWatchingScreen
 import app.opentv.ui.channels.ChannelManagerScreen
 import app.opentv.ui.channels.SearchScreen
+import app.opentv.ui.design.SetteeTheme
 import app.opentv.ui.firstScreen
 import app.opentv.ui.onboarding.AddSourceScreen
 import app.opentv.ui.options.ItemOptionsHost
@@ -89,7 +89,6 @@ import app.opentv.ui.settings.SettingsHubScreen
 import app.opentv.ui.settings.StremioAddonsScreen
 import app.opentv.ui.settings.SyncScreen
 import app.opentv.ui.settings.WebManagerScreen
-import app.opentv.ui.theme.OpenTvTheme
 import app.opentv.ui.vod.MovieDetailScreen
 import app.opentv.ui.vod.PersonScreen
 import app.opentv.ui.vod.SeriesDetailScreen
@@ -108,21 +107,21 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
+        // Settee is always dark, so the bars' icons are always light. The default follows the
+        // system's light or dark mode, which on a phone in light mode drew dark icons on our background.
+        enableEdgeToEdge(
+            statusBarStyle = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT),
+            navigationBarStyle = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT),
+        )
         handlePlayIntent(intent)
         val isTelevision = isRunningOnTelevision(this)
         val toPlay = launchedToPlay(intent, restored = savedInstanceState != null)
 
         setContent {
-            val settings = remember { ServiceLocator.get(this).settings }
-            val themeMode by settings.themeMode.collectAsState()
-            val darkTheme = when (themeMode) {
-                AppSettings.ThemeMode.DARK -> true
-                AppSettings.ThemeMode.LIGHT -> false
-                // A living-room screen defaults to dark; a phone/tablet follows the system.
-                AppSettings.ThemeMode.SYSTEM -> isTelevision || isSystemInDarkTheme()
-            }
-            OpenTvTheme(darkTheme = darkTheme) {
+            SetteeTheme {
+                // Paints the background for screens not yet on ScreenFrame. Once every screen draws
+                // its own, this fill goes, and only then is a ScreenFrame's VideoArea truly clear
+                // (SurfaceView playback punches through it regardless).
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background,

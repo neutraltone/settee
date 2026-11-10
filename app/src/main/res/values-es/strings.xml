@@ -140,11 +140,6 @@
     <string name="settings_sync_subtitle">Copia el contenido en curso a otro dispositivo por wifi</string>
     <string name="settings_about_title">Acerca de</string>
     <string name="settings_about_subtitle">Versión, actualizaciones, licencia y enlaces</string>
-    <string name="settings_appearance">Apariencia</string>
-    <string name="settings_theme_system">Igual que el sistema</string>
-    <string name="settings_theme_dark">Oscuro</string>
-    <string name="settings_theme_light">Claro</string>
-    <string name="settings_theme_note">Los dispositivos de TV permanecen en modo oscuro con \"Igual que el sistema\". Elige Oscuro o Claro para forzarlo.</string>
     <string name="settings_section_content">Contenido</string>
     <string name="settings_content_note">Desactiva lo que no uses para sincronizar más rápido. Vuelve a activarlo cuando quieras.</string>
     <string name="settings_content_live_subtitle">Canales y la guía de TV.</string>

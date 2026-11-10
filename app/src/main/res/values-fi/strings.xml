@@ -140,11 +140,6 @@
     <string name="settings_sync_subtitle">Kopioi jatka katselua -tiedot toiselle laitteelle wifin kautta</string>
     <string name="settings_about_title">Tietoja</string>
     <string name="settings_about_subtitle">Versio, päivitykset, lisenssi ja linkit</string>
-    <string name="settings_appearance">Ulkoasu</string>
-    <string name="settings_theme_system">Järjestelmän mukaan</string>
-    <string name="settings_theme_dark">Tumma</string>
-    <string name="settings_theme_light">Vaalea</string>
-    <string name="settings_theme_note">TV-laitteet pysyvät tummina asetuksella \"Järjestelmän mukaan\". Valitse Tumma tai Vaalea pakottaaksesi sen.</string>
     <string name="settings_section_content">Sisältö</string>
     <string name="settings_content_note">Poista käytöstä se, mitä et käytä, niin synkronointi on nopeampaa. Ota takaisin käyttöön milloin tahansa.</string>
     <string name="settings_content_live_subtitle">Kanavat ja TV-opas.</string>

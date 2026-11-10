@@ -140,11 +140,6 @@
     <string name="settings_sync_subtitle">คัดลอกรายการที่ดูค้างไว้ไปยังอุปกรณ์อื่นผ่าน Wi-Fi</string>
     <string name="settings_about_title">เกี่ยวกับ</string>
     <string name="settings_about_subtitle">เวอร์ชัน การอัปเดต ใบอนุญาต และลิงก์</string>
-    <string name="settings_appearance">ลักษณะที่ปรากฏ</string>
-    <string name="settings_theme_system">ตามระบบ</string>
-    <string name="settings_theme_dark">มืด</string>
-    <string name="settings_theme_light">สว่าง</string>
-    <string name="settings_theme_note">กล่องทีวีจะยังคงเป็นธีมมืดเมื่อเลือก \"ตามระบบ\" เลือกมืดหรือสว่างเพื่อบังคับใช้ธีมนั้น</string>
     <string name="settings_section_content">เนื้อหา</string>
     <string name="settings_content_note">ปิดสิ่งที่คุณไม่ได้ใช้เพื่อให้ซิงค์เร็วขึ้น เปิดกลับมาได้ทุกเมื่อ</string>
     <string name="settings_content_live_subtitle">ช่องต่าง ๆ และผังรายการทีวี</string>

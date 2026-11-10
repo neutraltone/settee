@@ -18,7 +18,7 @@ import androidx.compose.ui.platform.LocalInputModeManager
 import androidx.compose.ui.test.junit4.ComposeContentTestRule
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.platform.app.InstrumentationRegistry
-import app.opentv.ui.theme.OpenTvTheme
+import app.opentv.ui.design.SetteeTheme
 import coil.Coil
 import coil.EventListener
 import coil.ImageLoader
@@ -67,7 +67,7 @@ fun ComposeContentTestRule.setTvContent(content: @Composable () -> Unit) {
 private fun ComposeContentTestRule.setTvScreen(content: @Composable () -> Unit) = setContent {
     val inputMode = LocalInputModeManager.current
     SideEffect { inputMode.requestInputMode(InputMode.Keyboard) }
-    OpenTvTheme(darkTheme = true) {
+    SetteeTheme {
         Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
             // Surface stretches its child to fill it; the Box lets content keep its own size.
             Box { content() }

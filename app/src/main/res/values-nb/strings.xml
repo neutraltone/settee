@@ -140,11 +140,6 @@
     <string name="settings_sync_subtitle">Kopier fortsett å se-data til en annen enhet over wifi</string>
     <string name="settings_about_title">Om</string>
     <string name="settings_about_subtitle">Versjon, oppdateringer, lisens og lenker</string>
-    <string name="settings_appearance">Utseende</string>
-    <string name="settings_theme_system">Følg systemet</string>
-    <string name="settings_theme_dark">Mørk</string>
-    <string name="settings_theme_light">Lys</string>
-    <string name="settings_theme_note">TV-bokser forblir mørke ved \"Følg systemet\". Velg Mørk eller Lys for å tvinge det.</string>
     <string name="settings_section_content">Innhold</string>
     <string name="settings_content_note">Slå av det du ikke bruker for raskere synkronisering. Slå det på igjen når som helst.</string>
     <string name="settings_content_live_subtitle">Kanaler og TV-guiden.</string>

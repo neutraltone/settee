@@ -140,11 +140,6 @@
     <string name="settings_sync_subtitle">\"İzlemeye devam et\" listesini Wi-Fi üzerinden başka bir cihaza kopyalayın</string>
     <string name="settings_about_title">Hakkında</string>
     <string name="settings_about_subtitle">Sürüm, güncellemeler, lisans ve bağlantılar</string>
-    <string name="settings_appearance">Görünüm</string>
-    <string name="settings_theme_system">Sistemi izle</string>
-    <string name="settings_theme_dark">Koyu</string>
-    <string name="settings_theme_light">Açık</string>
-    <string name="settings_theme_note">TV kutuları \"Sistemi izle\" seçeneğinde koyu kalır. Zorlamak için Koyu veya Açık\'ı seçin.</string>
     <string name="settings_section_content">İçerik</string>
     <string name="settings_content_note">Kullanmadıklarınızı kapatarak senkronizasyonu hızlandırın. İstediğiniz zaman tekrar açabilirsiniz.</string>
     <string name="settings_content_live_subtitle">Kanallar ve TV rehberi.</string>
