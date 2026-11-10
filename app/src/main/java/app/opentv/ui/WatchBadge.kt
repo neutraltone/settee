@@ -31,6 +31,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import app.opentv.R
+import app.opentv.data.repo.CoverStatus
 import app.opentv.data.repo.WatchStatus
 
 /**
@@ -80,4 +81,23 @@ private fun Label(icon: ImageVector, text: String, modifier: Modifier) {
         Spacer(Modifier.width(4.dp))
         Text(text, color = Color.White, style = MaterialTheme.typography.labelMedium.copy(fontSize = 12.sp))
     }
+}
+
+/**
+ * The quiet lines on a cover: `S4 E3` over `22 min left`, or one of `22 min left`, `S4 E4`,
+ * `New episode` or `Watched`.
+ */
+@Composable
+internal fun coverStatusText(status: CoverStatus?): List<String> = when (status) {
+    null -> emptyList()
+    is CoverStatus.InProgress -> {
+        val episode = status.episode?.let { stringResource(R.string.home_cover_episode, it.season, it.episodeNumber) }
+        val left = status.remainingMillis?.let { minutesLeftText(it) }
+        listOfNotNull(episode, left).ifEmpty { listOf(stringResource(R.string.watch_badge_in_progress)) }
+    }
+    is CoverStatus.UpNext -> listOf(
+        stringResource(R.string.home_cover_episode, status.episode.season, status.episode.episodeNumber),
+    )
+    CoverStatus.NewEpisode -> listOf(stringResource(R.string.watch_badge_new_episode))
+    CoverStatus.Watched -> listOf(stringResource(R.string.watch_badge_watched))
 }

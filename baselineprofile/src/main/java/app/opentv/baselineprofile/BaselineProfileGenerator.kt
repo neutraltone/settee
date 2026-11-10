@@ -123,7 +123,7 @@ class BaselineProfileGenerator {
         openTab("Movies")
         check(wait(Until.hasObject(By.text("Movie 1")), LOAD_TIMEOUT)) { "Movies never showed its rows" }
         walkRows("Movies", card = "Movie ")
-        openDetails(By.text("Watch now"), "movie")
+        openDetails(By.text("Play"), "movie")
     }
 
     /** Shows the same way, into a series, whose episodes load as it opens. */

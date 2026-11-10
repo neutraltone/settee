@@ -67,16 +67,6 @@ internal fun distinctByQuality(channels: List<app.opentv.data.model.Channel>): L
 @androidx.compose.runtime.Immutable
 data class GenreGroup<T>(val genre: String, val items: List<T>)
 
-/**
- * One library entry a person is credited in — a movie or a series — for the Person screen's mixed
- * poster grid. A thin wrapper so the screen can render one grid yet still route a click to the right
- * detail page (movie vs series) without a second lookup.
- */
-sealed interface PersonTitle {
-    data class MovieItem(val movie: Movie) : PersonTitle
-    data class SeriesItem(val series: Series) : PersonTitle
-}
-
 /** A movie or a show, for the rows that mix them: Home's Favourites and Recently Added. */
 sealed interface VodTitle {
     val name: String
@@ -391,91 +381,6 @@ class CatalogRepository(
     }
 
     /**
-     * "More Like This" for a movie: other titles sharing a genre, most genres in common first,
-     * same-source titles preferred, the film itself excluded. Falls back to other titles in the
-     * same source/category when the movie has no genre metadata to match on.
-     */
-    suspend fun moreLikeThis(movie: Movie, limit: Int = 20): List<Movie> = withContext(Dispatchers.IO) {
-        val genres = splitGenres(movie.genre).toSet()
-        if (genres.isEmpty()) {
-            return@withContext movieDao.similarByCategory(movie.sourceId, movie.categoryId, movie.id, limit)
-        }
-        movieDao.all().asSequence()
-            .filter { it.id != movie.id }
-            .map { it to sharedGenreCount(it.genre, genres) }
-            .filter { it.second > 0 }
-            .sortedWith(
-                compareByDescending<Pair<Movie, Int>> { it.second }
-                    .thenByDescending { it.first.sourceId == movie.sourceId }
-                    .thenByDescending { it.first.rating ?: -1.0 },
-            )
-            .map { it.first }
-            .take(limit)
-            .toList()
-    }
-
-    // ---- Related by person (Plex-style "click an actor / director") ----------------------------
-
-    /** Movies a person is billed in, best-rated first. Blank query yields nothing. */
-    suspend fun moviesWithActor(name: String, limit: Int = 40): List<Movie> = withContext(Dispatchers.IO) {
-        name.trim().takeIf { it.isNotEmpty() }?.let { movieDao.moviesWithActor(it, limit) }.orEmpty()
-    }
-
-    /** Movies a person directed, best-rated first. */
-    suspend fun moviesByDirector(name: String, limit: Int = 40): List<Movie> = withContext(Dispatchers.IO) {
-        name.trim().takeIf { it.isNotEmpty() }?.let { movieDao.moviesByDirector(it, limit) }.orEmpty()
-    }
-
-    /** Series a person is billed in, best-rated first. */
-    suspend fun seriesWithActor(name: String, limit: Int = 40): List<Series> = withContext(Dispatchers.IO) {
-        name.trim().takeIf { it.isNotEmpty() }?.let { seriesDao.seriesWithActor(it, limit) }.orEmpty()
-    }
-
-    /**
-     * Everything in the library featuring a person — the data behind the Person screen. Merges movies
-     * they act in, movies they directed and series they act in, de-duplicating movies that credit the
-     * same person as both actor and director. Movies (best-rated first) lead, then series.
-     */
-    suspend fun titlesWithPerson(name: String, perKind: Int = 40): List<PersonTitle> = withContext(Dispatchers.IO) {
-        val query = name.trim()
-        if (query.isEmpty()) return@withContext emptyList()
-
-        val movies = LinkedHashMap<Long, Movie>()
-        for (m in movieDao.moviesWithActor(query, perKind)) movies[m.id] = m
-        for (m in movieDao.moviesByDirector(query, perKind)) movies.putIfAbsent(m.id, m)
-
-        val orderedMovies = movies.values.sortedWith(
-            compareByDescending<Movie> { it.rating ?: -1.0 }.thenByDescending { it.addedMillis },
-        )
-        val series = seriesDao.seriesWithActor(query, perKind)
-
-        buildList(orderedMovies.size + series.size) {
-            orderedMovies.forEach { add(PersonTitle.MovieItem(it)) }
-            series.forEach { add(PersonTitle.SeriesItem(it)) }
-        }
-    }
-
-    /** "More Like This" for a series. See [moreLikeThis]. */
-    suspend fun moreLikeThisSeries(series: Series, limit: Int = 20): List<Series> = withContext(Dispatchers.IO) {
-        val genres = splitGenres(series.genre).toSet()
-        if (genres.isEmpty()) {
-            return@withContext seriesDao.similarByCategory(series.sourceId, series.categoryId, series.id, limit)
-        }
-        seriesDao.all().asSequence()
-            .filter { it.id != series.id }
-            .map { it to sharedGenreCount(it.genre, genres) }
-            .filter { it.second > 0 }
-            .sortedWith(
-                compareByDescending<Pair<Series, Int>> { it.second }
-                    .thenByDescending { it.first.sourceId == series.sourceId }
-                    .thenByDescending { it.first.rating ?: -1.0 },
-            )
-            .map { it.first }
-            .take(limit)
-            .toList()
-    }
-
-    /**
      * Loads a movie and, if its detail fields are still bare, back-fills them from the provider's
      * `get_vod_info` and persists the merged row before returning it. Safe to call whenever a detail
      * screen opens: it runs off the main thread, only touches the network when something is missing,
@@ -617,9 +522,6 @@ class CatalogRepository(
             .take(maxGenres)
             .map { GenreGroup(it.key, it.value.take(perGenre)) }
     }
-
-    /** How many of a title's genres are in the wanted set — the More-Like-This overlap. */
-    private fun sharedGenreCount(genre: String?, wanted: Set<String>): Int = splitGenres(genre).count { it in wanted }
 
     /** The viewer hid or showed a channel, on the TV or the web manager; dated, so the change can travel. */
     suspend fun setChannelHidden(id: Long, hidden: Boolean, now: Long = System.currentTimeMillis()) =

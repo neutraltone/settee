@@ -30,22 +30,31 @@ import androidx.compose.ui.layout.positionInRoot
 
 /**
  * A screen: Settee's background, with [content] inside the screen margin (48 dp at the sides, 27 dp
- * top and bottom), clear of a TV's overscan.
+ * top and bottom), clear of a TV's overscan. A [backdrop] fills the whole screen behind the content,
+ * margins included, as a details page's artwork does.
  *
  * The background is solid, so nothing behind the screen shows through (docs/LOOK.md, Motion and
  * cost), except under a [ScreenFrameScope.VideoArea], where the video plays behind the window.
  */
 @Composable
-fun ScreenFrame(modifier: Modifier = Modifier, content: @Composable ScreenFrameScope.() -> Unit) {
+fun ScreenFrame(
+    modifier: Modifier = Modifier,
+    backdrop: (@Composable BoxScope.() -> Unit)? = null,
+    content: @Composable ScreenFrameScope.() -> Unit,
+) {
     val frame = remember { FrameGeometry() }
     Box(
         modifier
             .fillMaxSize()
             .onGloballyPositioned { frame.origin = it.positionInRoot() }
-            .drawBehind { drawBackground(frame.video?.translate(-frame.origin)) }
-            .padding(horizontal = SetteeSpace.ScreenSide, vertical = SetteeSpace.ScreenTopBottom),
+            .drawBehind { drawBackground(frame.video?.translate(-frame.origin)) },
     ) {
-        remember(frame) { ScreenFrameScope(frame) }.content()
+        if (backdrop != null) Box(Modifier.matchParentSize(), content = backdrop)
+        Box(
+            Modifier.fillMaxSize().padding(horizontal = SetteeSpace.ScreenSide, vertical = SetteeSpace.ScreenTopBottom),
+        ) {
+            remember(frame) { ScreenFrameScope(frame) }.content()
+        }
     }
 }
 

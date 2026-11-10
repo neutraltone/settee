@@ -153,6 +153,9 @@ class ViewerLibrary(
     /** Which titles any Profile has started or given up on, for what the home feeds recommend. */
     val history = TitleHistory(positions, episodes, dismissals)
 
+    /** Where the Profile is with one title, for its details page. */
+    val titleStatus = TitleStatus(positions, activeProfileId)
+
     /** Removing a Profile's watch state and Favourites, for the Profiles module. */
     val profileRemoval = ProfileRemoval(db)
 
@@ -263,6 +266,38 @@ class ViewerLibrary(
                     // No Up Next after the last episode: offer the series from the start.
                     else -> SeriesMainAction.Play(progress.upNext ?: start)
                 }
+            }
+            .distinctUntilChanged()
+    }
+}
+
+/**
+ * Where the active Profile is with one title, worded as a cover would be, for its details page's
+ * hero. Reads only that title's positions, rather than every cover status Home works out.
+ * Reached as `viewerLibrary.titleStatus`.
+ */
+class TitleStatus internal constructor(
+    private val positions: PlaybackPositionDao,
+    private val activeProfileId: StateFlow<Long>,
+) {
+    @OptIn(ExperimentalCoroutinesApi::class)
+    fun movie(movieId: Long): Flow<CoverStatus?> {
+        val key = MediaKey.Movie(movieId).stored
+        return activeProfileId
+            // A prefix match, so "movie:7" also finds "movie:70": the exact key is picked out below.
+            .flatMapLatest { pid -> positions.observeKind(pid, key) }
+            .map { list -> list.firstOrNull { it.mediaKey == key }?.let { coverStatusOf(statusOf(it)) } }
+            .distinctUntilChanged()
+    }
+
+    /** The series of [episodes] (one series', any order). */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    fun series(episodes: List<Episode>): Flow<CoverStatus?> {
+        val series = SeriesEpisodes(episodes)
+        return activeProfileId
+            .flatMapLatest { pid -> positions.observeKind(pid, EPISODE_PREFIX) }
+            .map { list ->
+                series.progressIn(list)?.let { seriesCoverStatus(it, list.associateBy { pos -> pos.mediaKey }) }
             }
             .distinctUntilChanged()
     }

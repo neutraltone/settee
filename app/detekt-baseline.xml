@@ -103,7 +103,6 @@
     <ID>ForbiddenImport:SyncScreen.kt$import androidx.compose.material3.Switch</ID>
     <ID>ForbiddenImport:UpdateScreen.kt$import androidx.compose.material3.AlertDialog</ID>
     <ID>ForbiddenImport:UpdateScreen.kt$import androidx.compose.material3.TextButton</ID>
-    <ID>ForbiddenImport:VodDetailScreens.kt$import androidx.compose.foundation.shape.RoundedCornerShape</ID>
     <ID>ForbiddenImport:VodPlayerScreen.kt$import androidx.compose.foundation.shape.RoundedCornerShape</ID>
     <ID>ForbiddenImport:VodPlayerScreen.kt$import androidx.compose.material3.Slider</ID>
     <ID>ForbiddenImport:VodScreens.kt$import androidx.compose.foundation.shape.RoundedCornerShape</ID>
@@ -119,7 +118,6 @@
     <ID>ImplicitDefaultLocale:RecordingsScreen.kt$String.format("%.0f MB", mb)</ID>
     <ID>ImplicitDefaultLocale:RecordingsScreen.kt$String.format("%.1f GB", mb / 1024.0)</ID>
     <ID>InstanceOfCheckForException:RecordingService.kt$RecordingService$t is kotlinx.coroutines.CancellationException</ID>
-    <ID>LambdaParameterEventTrailing:VodDetailScreens.kt$onClick</ID>
     <ID>LambdaParameterInRestartableEffect:PhonePairingScreen.kt$onReceived</ID>
     <ID>LambdaParameterInRestartableEffect:PlayerScreen.kt$onBack</ID>
     <ID>LambdaParameterInRestartableEffect:VodPlayerScreen.kt$onBack</ID>
@@ -210,7 +208,6 @@
     <ID>MagicNumber:SyncWorker.kt$SyncWorker.Companion$6</ID>
     <ID>MagicNumber:TmdbClient.kt$TmdbClient$4</ID>
     <ID>MagicNumber:UpdateChecker.kt$UpdateChecker.Companion$1200</ID>
-    <ID>MagicNumber:VodDetailScreens.kt$60</ID>
     <ID>MagicNumber:VodPlayerScreen.kt$1000</ID>
     <ID>MagicNumber:VodPlayerScreen.kt$3600</ID>
     <ID>MagicNumber:VodPlayerScreen.kt$60</ID>
@@ -244,7 +241,6 @@
     <ID>ModifierMissing:LiveScreen.kt$LiveScreen</ID>
     <ID>ModifierMissing:MainScreen.kt$MainScreen</ID>
     <ID>ModifierMissing:ParentalControlsScreen.kt$ParentalControlsScreen</ID>
-    <ID>ModifierMissing:PersonScreen.kt$PersonScreen</ID>
     <ID>ModifierMissing:PhonePairingScreen.kt$PhonePairingScreen</ID>
     <ID>ModifierMissing:PlayerScreen.kt$PlayerScreen</ID>
     <ID>ModifierMissing:ProfilesScreen.kt$ProfilesScreen</ID>
@@ -255,8 +251,6 @@
     <ID>ModifierMissing:SettingsHubScreen.kt$SettingsHubScreen</ID>
     <ID>ModifierMissing:StremioAddonsScreen.kt$StremioAddonsScreen</ID>
     <ID>ModifierMissing:SyncScreen.kt$SyncScreen</ID>
-    <ID>ModifierMissing:VodDetailScreens.kt$MovieDetailScreen</ID>
-    <ID>ModifierMissing:VodDetailScreens.kt$SeriesDetailScreen</ID>
     <ID>ModifierMissing:VodPlayerScreen.kt$VodPlayerScreen</ID>
     <ID>ModifierMissing:VodScreens.kt$MoviesScreen</ID>
     <ID>ModifierMissing:VodScreens.kt$SeriesScreen</ID>
@@ -267,7 +261,6 @@
     <ID>MultipleEmitters:AppSettingsScreen.kt$SleepTimerSection</ID>
     <ID>MultipleEmitters:ParentalControlsScreen.kt$PinSection</ID>
     <ID>MultipleEmitters:RecordingSettingsScreen.kt$StorageInfo</ID>
-    <ID>MutableStateAutoboxing:VodDetailScreens.kt$mutableStateOf(0)</ID>
     <ID>NestedBlockDepth:EpgRepository.kt$EpgRepository$private suspend fun syncFeed(feed: EpgFeed, nowUtcMillis: Long): FeedResult</ID>
     <ID>NestedBlockDepth:RecordingService.kt$RecordingService$private suspend fun runCapture(id: Long)</ID>
     <ID>NestedBlockDepth:XmltvParser.kt$XmltvParser$private fun readProgramme(parser: XmlPullParser, feedId: Long): Programme?</ID>
@@ -347,7 +340,6 @@
     <ID>TooManyFunctions:RecordingsScreen.kt$app.opentv.ui.recordings.RecordingsScreen.kt</ID>
     <ID>TooManyFunctions:SmbClient.kt$SmbClient</ID>
     <ID>TooManyFunctions:StalkerApi.kt$StalkerApi</ID>
-    <ID>TooManyFunctions:VodDetailScreens.kt$app.opentv.ui.vod.VodDetailScreens.kt</ID>
     <ID>TooManyFunctions:VodScreens.kt$app.opentv.ui.vod.VodScreens.kt</ID>
     <ID>TooManyFunctions:XtreamApi.kt$XtreamApi</ID>
     <ID>UnstableCollections:ChannelManagerScreen.kt$List&lt;ChannelsViewModel.Row&gt;</ID>
@@ -355,7 +347,6 @@
     <ID>UnstableCollections:MainScreen.kt$List&lt;Tab&gt;</ID>
     <ID>UnstableCollections:PlayerScreen.kt$List&lt;Channel&gt;</ID>
     <ID>UnstableCollections:RecordingsScreen.kt$Map&lt;Long, String&gt;</ID>
-    <ID>UnstableCollections:VodDetailScreens.kt$List&lt;StremioStream&gt;</ID>
     <ID>UnstableCollections:VodScreens.kt$List&lt;Movie&gt;</ID>
     <ID>UnstableCollections:VodScreens.kt$List&lt;Pair&lt;String, String&gt;&gt;</ID>
     <ID>UnstableCollections:VodScreens.kt$List&lt;Series&gt;</ID>

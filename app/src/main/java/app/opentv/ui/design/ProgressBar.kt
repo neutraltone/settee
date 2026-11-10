@@ -12,6 +12,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.ProgressBarRangeInfo
+import androidx.compose.ui.semantics.progressBarRangeInfo
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 
 /** How tall a [ProgressBar] is, for laying text out clear of it. */
@@ -20,11 +23,15 @@ val ProgressBarHeight = 4.dp
 /** How far through something the viewer is, [progress] from 0 to 1, as a thin coral bar on a dark track. */
 @Composable
 fun ProgressBar(progress: Float, modifier: Modifier = Modifier) {
-    Box(modifier.height(ProgressBarHeight).background(Track)) {
+    val shown = if (progress.isNaN()) 0f else progress.coerceIn(0f, 1f)
+    Box(
+        modifier.height(ProgressBarHeight).background(Track).semantics {
+            progressBarRangeInfo =
+                ProgressBarRangeInfo(shown, 0f..1f)
+        },
+    ) {
         Box(
-            Modifier.fillMaxHeight().fillMaxWidth(
-                if (progress.isNaN()) 0f else progress.coerceIn(0f, 1f),
-            ).background(SetteeColors.Accent),
+            Modifier.fillMaxHeight().fillMaxWidth(shown).background(SetteeColors.Accent),
         )
     }
 }

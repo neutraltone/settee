@@ -172,8 +172,11 @@ On Live TV, Movies and Shows. Tucked away until Left from the leftmost item open
 A hero with a full backdrop, title, status, synopsis, Resume and Favourite. A film's page is the same hero with nothing beneath.
 
 - **Opens on Resume.** One Down reaches the episode in progress.
-- **Season pills:** a row under the hero. Up from the episodes reaches them, and Down from the buttons passes them.
-- **Episodes:** a vertical list with the thumbnail on the left, showing status. Going into the list moves the hero away in one step, and going back up returns it.
+- **Season pills:** a row under the hero. Up from the episodes reaches them, and Down from the buttons passes them. Moving the Highlight onto a pill selects that season at once, with no OK. The row scrolls sideways to keep the highlighted or selected pill in view, with a cut-off pill at the edge showing there are more, and follows when Down carries on into another season. Options on a pill marks the season watched or unwatched.
+- **Specials:** Season 0 is labelled "Specials" and comes after the last season.
+- **One season:** a show with only one season has no pill row, and Up from its first episode reaches the buttons.
+- **Episodes:** a vertical list of one season at a time, with the thumbnail on the left, showing status. Going into the list moves the hero away in one step, leaving the title and the pills, and going back up past the pills returns it. Down from a season's last episode carries on to the next season's first; Up from a first episode never goes back a season, which is Up to the pills, Left, then Down.
+- **Back** from anywhere in the episodes moves the Highlight to the selected season's pill. Back from the pills or the hero leaves the page.
 - **Season, never "series"** for part of a show. That includes "2 seasons" on cards.
 - **Artwork fades in** when it loads, rather than popping in, as long as that passes the budget.
 
