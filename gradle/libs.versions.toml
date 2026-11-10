@@ -34,7 +34,7 @@ composeRules = "0.6.8"
 # The baseline profile plugin reads AGP's variant API, so it moves with AGP in Dependabot's
 # toolchain group; Macrobenchmark shares its version.
 benchmark = "1.5.0"
-uiautomator = "2.3.0"
+uiautomator = "2.4.1"
 profileinstaller = "1.4.1"
 androidxTestRunner = "1.7.0"
 
