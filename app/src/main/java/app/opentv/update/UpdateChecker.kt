@@ -6,6 +6,7 @@
 package app.opentv.update
 
 import app.opentv.data.remote.GitHubRelease
+import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
@@ -22,9 +23,10 @@ import okhttp3.Request
  * you; the Downloader-app install route we ship through does not, so the app has to do it.
  *
  * ## Design
- * - **Silent on failure.** No network, rate-limited, a 404 because the release does not exist
- *   yet — all of it returns "no update" and never surfaces an error. An update check is a
- *   nicety; it must never be a thing that breaks or nags at launch.
+ * - **Quiet on failure, but honest.** No network, rate-limited, a 404, or a newer release whose
+ *   APK hasn't been attached (its release job failed) all come back as [Outcome.CouldNotCheck].
+ *   The launch-time gate ignores that, so it never nags; the manual check says it couldn't
+ *   check rather than claim the viewer is up to date, which hid a release missing its APK.
  * - **Compares the tag, not a build number.** GitHub gives us a tag like `v0.2.0`. We parse it
  *   as a dotted version and compare it to our own [currentVersionName]. A release whose tag is
  *   not strictly newer is ignored, so re-tagging or a same-version hotfix will not prompt.
@@ -45,10 +47,15 @@ class UpdateChecker(
         val releaseUrl: String,
     )
 
+    sealed interface Outcome {
+        data object UpToDate : Outcome
+        data class Available(val update: Update) : Outcome
+        data object CouldNotCheck : Outcome
+    }
+
     private val json = Json { ignoreUnknownKeys = true }
 
-    /** Returns the newer release, or null if we are current / could not tell. */
-    suspend fun check(): Update? = withContext(Dispatchers.IO) {
+    suspend fun check(): Outcome = withContext(Dispatchers.IO) {
         runCatching {
             val request = Request.Builder()
                 .url("https://api.github.com/repos/$repoSlug/releases/latest")
@@ -57,26 +64,30 @@ class UpdateChecker(
                 .build()
 
             http.newCall(request).execute().use { response ->
-                if (!response.isSuccessful) return@withContext null
+                if (!response.isSuccessful) return@withContext Outcome.CouldNotCheck
                 val body = response.body.string()
-                if (body.isBlank()) return@withContext null
+                if (body.isBlank()) return@withContext Outcome.CouldNotCheck
 
                 val release = json.decodeFromString<GitHubRelease>(body)
-                if (release.draft || release.prerelease) return@withContext null
+                if (release.draft || release.prerelease) return@withContext Outcome.UpToDate
+                if (!isNewer(release.tagName, currentVersionName)) return@withContext Outcome.UpToDate
 
-                val asset = release.apkAsset() ?: return@withContext null
-                if (!isNewer(release.tagName, currentVersionName)) return@withContext null
-
-                Update(
-                    versionName = release.tagName.trimStart('v', 'V'),
-                    title = release.name.ifBlank { release.tagName },
-                    notes = ReleaseNotes.fromReleaseBody(release.body, release.tagName.trimStart('v', 'V')),
-                    apkUrl = asset.browserDownloadUrl,
-                    apkSizeBytes = asset.size,
-                    releaseUrl = release.htmlUrl,
+                val asset = release.apkAsset() ?: return@withContext Outcome.CouldNotCheck
+                Outcome.Available(
+                    Update(
+                        versionName = release.tagName.trimStart('v', 'V'),
+                        title = release.name.ifBlank { release.tagName },
+                        notes = ReleaseNotes.fromReleaseBody(release.body, release.tagName.trimStart('v', 'V')),
+                        apkUrl = asset.browserDownloadUrl,
+                        apkSizeBytes = asset.size,
+                        releaseUrl = release.htmlUrl,
+                    ),
                 )
             }
-        }.getOrNull()
+        }.getOrElse {
+            if (it is CancellationException) throw it
+            Outcome.CouldNotCheck
+        }
     }
 
     companion object {

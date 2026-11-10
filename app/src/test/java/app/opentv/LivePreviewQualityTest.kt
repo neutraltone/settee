@@ -65,8 +65,13 @@ class LivePreviewQualityTest {
         graph.settings.setLivePreviewOnHome(true)
         graph.viewerLibrary.live.record(db.channels().everyRow().single { it.name == settledOn })
 
-        val state = HomeViewModel(app, graph).state.first { it?.live != null }
-        db.close()
+        val viewModels = ViewModelsInTest()
+        val state = try {
+            viewModels.track(HomeViewModel(app, graph)).state.first { it?.live != null }
+        } finally {
+            viewModels.stopAll()
+            db.close()
+        }
         return state?.live?.preview?.channel?.name
     }
 

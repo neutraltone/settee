@@ -152,16 +152,19 @@ A backdrop with the highlighted title's name, status and synopsis over it, then 
 - **Backdrop:** changes once the Highlight has rested on a title for about 400 ms, not on each press, so moving quickly along a row doesn't load a backdrop for every title. Changing on each press cost a few frames on a Stick. Loading the new backdrop still costs something, and can land on the next press, so measure it again when it's built, including a press just after it changes.
 - **Gradient:** must move with the text. With the sidebar open, text today lands on the bright part of the backdrop and drops as low as 1.5:1, so this is a required fix.
 - **Rows:** "For you" keeps the tab's rows. There's no Popular row, because the app has no popularity data.
-- **Grids:** any other category opens its whole grid. Grids of thousands of titles haven't been measured, so measure them on a Stick.
+- **Grids:** any other category opens its whole grid, with the same covers as the rows. A grid reads only what its cards show, not each title's full details, so a category of thousands opens quickly and stays light on a 1 GB Stick.
+- **No blank covers while scrolling:** covers are fetched about four rows ahead in the direction the viewer is moving, so a normal pace of scrolling never shows a blank card. Holding Down as fast as the remote repeats may still outrun it.
+- **Measure** the largest category on a real provider on a Stick: frame times while scrolling, and memory. If it misses the budget, stop before merging and decide with the numbers whether to page from the database now or in a follow-up. Don't fall back to not animating.
 
 ## Categories Sidebar
 
 On Live TV, Movies and Shows. Tucked away until Left from the leftmost item opens it on the current category, so it adds no press on the way to a card. It slides open and pushes the content (on the guide, it may slide over it instead: see Sliding), and Right closes it.
 
+- **Rows:** For you first, which is the tab's rows and where the sidebar opens when no category is picked, then the provider's categories in their own order. Categories hidden on this device are left out.
 - **Picking a category** leaves the Highlight on it. Right then moves into the content and closes the sidebar.
 - **Sliding:** each tab has to pass the budget when it's built. Movies and Shows are built like Home, so a push should pass. Today's guide can't: moving it costs about 25 ms a frame. If the rebuilt guide still can't, the sidebar slides over the guide there instead of pushing it.
 - **Size:** 214 dp, with solid coral rows when highlighted and the current category in coral otherwise.
-- **Find a category:** a text field at the top. Typing a few letters narrows the list, and it shows how many of how many are showing.
+- **Find a category:** a text field at the top. Up from the first row reaches it, and Down returns to the list. Like every text box, the keyboard stays shut until OK. Typing a few letters narrows the list, and it shows how many of how many are showing, counting only categories the viewer can see.
 - **To fix:** Right lands on the nearest row, not the one the viewer left.
 
 ## Details

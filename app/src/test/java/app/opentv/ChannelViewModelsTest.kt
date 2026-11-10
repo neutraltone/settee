@@ -24,6 +24,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.mapNotNull
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
@@ -53,6 +54,7 @@ class ChannelViewModelsTest {
     private val app: Application = ApplicationProvider.getApplicationContext()
     private val graph = ServiceLocator.Graph(app)
     private val db = graph.database
+    private val viewModels = ViewModelsInTest()
 
     @Before
     fun setUp() = runTest {
@@ -71,6 +73,7 @@ class ChannelViewModelsTest {
     fun close() {
         // The settings outlive the test; the lock mustn't leak into the next one.
         graph.settings.setHiddenCategories(emptySet())
+        runBlocking { viewModels.stopAll() }
         db.close()
         Dispatchers.resetMain()
     }
@@ -100,7 +103,7 @@ class ChannelViewModelsTest {
         seed(1, "10", "UK| Night News")
         seed(2, "66", "UK| Late Night")
         graph.settings.setHiddenCategories(setOf("adult"))
-        val viewModel = ChannelsViewModel(app, graph)
+        val viewModel = viewModels.track(ChannelsViewModel(app, graph))
 
         viewModel.setSearchQuery("night")
 
@@ -119,7 +122,9 @@ class ChannelViewModelsTest {
         graph.viewerLibrary.favourites.set(row("UK| ITV HD"), true)
         graph.viewerLibrary.favourites.set(row("UK| ITV FHD"), true)
 
-        val shelf = HomeViewModel(app, graph).state.mapNotNull { it?.favouriteChannels }.first { it.isNotEmpty() }
+        val shelf = viewModels.track(HomeViewModel(app, graph)).state.mapNotNull {
+            it?.favouriteChannels
+        }.first { it.isNotEmpty() }
 
         assertThat(shelf.map { home -> home.channel.qualities.map { it.name } })
             .containsExactly(listOf("UK| ITV FHD", "UK| ITV HD"))
@@ -137,7 +142,9 @@ class ChannelViewModelsTest {
         graph.viewerLibrary.favourites.set(row("UK| Late Night"), true)
         graph.settings.setHiddenCategories(setOf("adult"))
 
-        val shelf = HomeViewModel(app, graph).state.mapNotNull { it?.favouriteChannels }.first { it.isNotEmpty() }
+        val shelf = viewModels.track(HomeViewModel(app, graph)).state.mapNotNull {
+            it?.favouriteChannels
+        }.first { it.isNotEmpty() }
 
         assertThat(shelf.map { it.channel.primary.name }).containsExactly("UK| ITV HD")
     }
