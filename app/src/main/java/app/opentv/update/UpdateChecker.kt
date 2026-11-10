@@ -6,6 +6,7 @@
 package app.opentv.update
 
 import app.opentv.data.remote.GitHubRelease
+import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
@@ -83,7 +84,10 @@ class UpdateChecker(
                     ),
                 )
             }
-        }.getOrDefault(Outcome.CouldNotCheck)
+        }.getOrElse {
+            if (it is CancellationException) throw it
+            Outcome.CouldNotCheck
+        }
     }
 
     companion object {
