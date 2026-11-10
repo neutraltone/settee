@@ -71,6 +71,7 @@ import app.opentv.player.PlayerController
 import app.opentv.ui.ChannelsViewModel
 import app.opentv.ui.options.LocalConfirmLive
 import app.opentv.ui.options.LocalRecordingStarted
+import app.opentv.ui.railReturnTarget
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -254,7 +255,8 @@ fun LiveScreen(
                 .fillMaxHeight()
                 .background(MaterialTheme.colorScheme.surface)
                 .clipToBounds()
-                .padding(vertical = 16.dp),
+                .padding(vertical = 16.dp)
+                .railReturnTarget(),
         ) {
             Text(
                 stringResource(R.string.nav_live_tv),
@@ -407,6 +409,7 @@ fun LiveScreen(
                         false
                     }
                 }
+                val guideModifier = Modifier.weight(1f).padding(start = 12.dp, end = 12.dp).railReturnTarget()
                 if (channelLayout == AppSettings.ChannelLayout.LIST) {
                     ChannelList(
                         rows = rows,
@@ -418,7 +421,7 @@ fun LiveScreen(
                         returnToChannelId = returnToChannelId,
                         takeFocus = takeFocus,
                         onReturnToRow = onReturnToRow,
-                        modifier = Modifier.weight(1f).padding(start = 12.dp, end = 12.dp),
+                        modifier = guideModifier,
                     )
                 } else {
                     GuideGrid(
@@ -434,7 +437,7 @@ fun LiveScreen(
                         returnToChannelId = returnToChannelId,
                         takeFocus = takeFocus,
                         onReturnToRow = onReturnToRow,
-                        modifier = Modifier.weight(1f).padding(start = 12.dp, end = 12.dp),
+                        modifier = guideModifier,
                     )
                 }
             }

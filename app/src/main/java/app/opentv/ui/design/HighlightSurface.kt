@@ -76,6 +76,12 @@ class HighlightStyle(val resting: HighlightLook, val highlighted: HighlightLook)
         /** Episode rows and rail items. */
         val Row = fill(SetteeShapes.Card)
 
+        /**
+         * The rail item for the tab that's open. It rests on a Raised fill, so the rail still shows
+         * where the viewer is while it's closed and the Highlight is elsewhere.
+         */
+        val CurrentRow = fill(SetteeShapes.Card, resting = SetteeColors.Raised)
+
         /** Guide cells and sidebar rows. */
         val Cell = fill(SetteeShapes.Cell)
 

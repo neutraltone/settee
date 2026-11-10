@@ -5,37 +5,24 @@
  */
 package app.opentv.ui
 
-import androidx.activity.compose.BackHandler
-import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.focusGroup
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.FiberManualRecord
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.LiveTv
 import androidx.compose.material.icons.filled.Movie
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Tv
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -49,16 +36,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import app.opentv.R
 import app.opentv.core.AppSettings
@@ -74,12 +54,7 @@ import app.opentv.ui.recordings.RecordingsScreen
 import app.opentv.ui.vod.MoviesScreen
 import app.opentv.ui.vod.SeriesScreen
 
-/**
- * The shell: a slim navigation rail down the left over a content area. The rail sits collapsed as
- * an icon strip and expands to show labels the moment focus lands in it — the TiviMate-style side
- * menu people asked for, instead of a top bar that ate a row of the guide. It overlays the content
- * rather than pushing it, so expanding the menu never reflows the guide underneath.
- */
+/** The main screen's tabs, each an item in the rail ([MainShell]). */
 enum class Tab(val labelRes: Int, val icon: ImageVector) {
     HOME(R.string.nav_home, Icons.Filled.Home),
     LIVE(R.string.nav_live_tv, Icons.Filled.LiveTv),
@@ -100,9 +75,6 @@ internal fun visibleTabs(liveEnabled: Boolean, moviesEnabled: Boolean, seriesEna
     if (seriesEnabled) add(Tab.SHOWS)
     add(Tab.RECORDINGS)
 }
-
-private val RAIL_COLLAPSED = 76.dp
-private val RAIL_EXPANDED = 236.dp
 
 @Composable
 fun MainScreen(
@@ -140,14 +112,7 @@ fun MainScreen(
         if (tab !in visibleTabs) onSelectTab(Tab.HOME)
     }
 
-    // Back from a non-home tab returns to the home tab rather than dropping out of the app.
-    BackHandler(enabled = tab != Tab.HOME) { onSelectTab(Tab.HOME) }
-
-    // On the home tab, Back would otherwise drop straight out to the TV launcher — one stray press
-    // and you've closed the app. Ask first. (A dialog or panel open in a child screen swallows Back
-    // before this, so this only fires at the true root.)
     var showExit by remember { mutableStateOf(false) }
-    BackHandler(enabled = tab == Tab.HOME) { showExit = true }
     if (showExit) {
         AlertDialog(
             onDismissRequest = { showExit = false },
@@ -176,6 +141,7 @@ fun MainScreen(
             onOpenSettings = onOpenSettings,
             onOpenProfiles = onOpenProfiles,
             activeProfileName = activeProfileName,
+            onExit = { showExit = true },
             modifier = Modifier.weight(1f),
         ) { shown, takeFocus, onNothingToShow ->
             when (shown) {
@@ -216,50 +182,6 @@ fun MainScreen(
             }
         }
         StatusBar()
-    }
-}
-
-/**
- * The side menu beside the [current] tab's [content]. The rail sits beside the content and pushes
- * it, rather than floating over it. The Live TV screen has its own category rail down its left
- * edge, and an overlaying menu would land on top of it and leave a sliver poking out — so they
- * live side by side and never collide.
- *
- * [content] gets `takeFocus`: Home and the Live guide take the highlight when they appear (the guide
- * on the channel last watched), except when picked in the rail, where moving the highlight out of
- * the menu would be odd. It also gets `onNothingToShow`, which a tab with nothing to highlight calls
- * to put the highlight on its own item in the menu.
- */
-@Composable
-internal fun MainShell(
-    tabs: List<Tab>,
-    current: Tab,
-    onSelect: (Tab) -> Unit,
-    onOpenSearch: () -> Unit,
-    onOpenSettings: () -> Unit,
-    onOpenProfiles: () -> Unit,
-    activeProfileName: String,
-    modifier: Modifier = Modifier,
-    content: @Composable (tab: Tab, takeFocus: Boolean, onNothingToShow: () -> Unit) -> Unit,
-) {
-    var railFocused by remember { mutableStateOf(false) }
-    val currentItem = remember { FocusRequester() }
-    Row(modifier.fillMaxWidth()) {
-        NavRail(
-            tabs = tabs,
-            current = current,
-            onSelect = onSelect,
-            onOpenSearch = onOpenSearch,
-            onOpenSettings = onOpenSettings,
-            onOpenProfiles = onOpenProfiles,
-            activeProfileName = activeProfileName,
-            currentItem = currentItem,
-            modifier = Modifier.onFocusChanged { railFocused = it.hasFocus },
-        )
-
-        Box(Modifier.weight(1f).fillMaxHeight()) {
-            content(current, !railFocused) { runCatching { currentItem.requestFocus() } }
-        }
     }
 }
 
@@ -307,134 +229,6 @@ private fun StatusBar() {
                 progress = { p },
                 modifier = Modifier.fillMaxWidth().height(3.dp),
                 color = MaterialTheme.colorScheme.primary,
-            )
-        }
-    }
-}
-
-@Composable
-private fun NavRail(
-    tabs: List<Tab>,
-    current: Tab,
-    onSelect: (Tab) -> Unit,
-    onOpenSearch: () -> Unit,
-    onOpenSettings: () -> Unit,
-    onOpenProfiles: () -> Unit,
-    activeProfileName: String,
-    currentItem: FocusRequester,
-    modifier: Modifier = Modifier,
-) {
-    // Expand whenever focus is anywhere inside the rail; collapse back to icons when it leaves.
-    var expanded by remember { mutableStateOf(false) }
-    val width by animateDpAsState(
-        targetValue = if (expanded) RAIL_EXPANDED else RAIL_COLLAPSED,
-        label = "railWidth",
-    )
-
-    Column(
-        modifier
-            .width(width)
-            .fillMaxHeight()
-            .background(MaterialTheme.colorScheme.surface)
-            .focusGroup()
-            .onFocusChanged { expanded = it.hasFocus }
-            .padding(vertical = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(4.dp),
-    ) {
-        // Brand: the logo mark alone when collapsed, the mark + app-name wordmark when open. The
-        // name stays on purpose — it's what people search for.
-        Row(
-            Modifier.padding(horizontal = 18.dp, vertical = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Image(
-                painter = painterResource(R.drawable.ic_settee_mark),
-                contentDescription = stringResource(R.string.app_name),
-                modifier = Modifier.size(34.dp),
-            )
-            if (expanded) {
-                Spacer(Modifier.width(12.dp))
-                Text(
-                    stringResource(R.string.app_name),
-                    style = MaterialTheme.typography.titleLarge,
-                    color = MaterialTheme.colorScheme.primary,
-                    fontWeight = FontWeight.Bold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
-        }
-        Spacer(Modifier.height(8.dp))
-
-        tabs.forEach { t ->
-            RailItem(
-                t.icon,
-                stringResource(t.labelRes),
-                expanded,
-                current == t,
-                if (current == t) Modifier.focusRequester(currentItem) else Modifier,
-            ) { onSelect(t) }
-        }
-
-        Spacer(Modifier.height(1.dp).fillMaxWidth())
-        Spacer(Modifier.weight(1f))
-
-        RailItem(Icons.Filled.Search, stringResource(R.string.nav_search), expanded, false, onClick = onOpenSearch)
-        RailItem(Icons.Filled.Person, activeProfileName, expanded, false, onClick = onOpenProfiles)
-        RailItem(
-            Icons.Filled.Settings,
-            stringResource(R.string.nav_settings),
-            expanded,
-            false,
-            onClick = onOpenSettings,
-        )
-    }
-}
-
-@Composable
-private fun RailItem(
-    icon: ImageVector,
-    label: String,
-    expanded: Boolean,
-    selected: Boolean,
-    modifier: Modifier = Modifier,
-    onClick: () -> Unit,
-) {
-    var focused by remember { mutableStateOf(false) }
-    val bg = when {
-        focused -> MaterialTheme.colorScheme.primary
-        selected -> MaterialTheme.colorScheme.surfaceVariant
-        else -> MaterialTheme.colorScheme.surface
-    }
-    val tint = if (focused) {
-        MaterialTheme.colorScheme.onPrimary
-    } else if (selected) {
-        MaterialTheme.colorScheme.onSurface
-    } else {
-        MaterialTheme.colorScheme.onSurfaceVariant
-    }
-
-    Row(
-        modifier
-            .fillMaxWidth()
-            .padding(horizontal = 12.dp)
-            .clip(RoundedCornerShape(10.dp))
-            .background(bg)
-            .onFocusChanged { focused = it.isFocused }
-            .clickable(onClick = onClick)
-            .padding(horizontal = 14.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Icon(icon, contentDescription = label, tint = tint)
-        if (expanded) {
-            Spacer(Modifier.width(14.dp))
-            Text(
-                label,
-                style = MaterialTheme.typography.titleMedium,
-                color = tint,
-                fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
             )
         }
     }

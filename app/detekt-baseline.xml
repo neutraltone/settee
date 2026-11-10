@@ -63,7 +63,6 @@
     <ID>ForbiddenImport:LivePausePrompt.kt$import androidx.compose.material3.TextButton</ID>
     <ID>ForbiddenImport:LiveScreen.kt$import androidx.compose.foundation.shape.RoundedCornerShape</ID>
     <ID>ForbiddenImport:MainActivity.kt$import androidx.compose.foundation.shape.RoundedCornerShape</ID>
-    <ID>ForbiddenImport:MainScreen.kt$import androidx.compose.foundation.shape.RoundedCornerShape</ID>
     <ID>ForbiddenImport:MainScreen.kt$import androidx.compose.material3.AlertDialog</ID>
     <ID>ForbiddenImport:MainScreen.kt$import androidx.compose.material3.TextButton</ID>
     <ID>ForbiddenImport:NextEpisodeOverlay.kt$import androidx.compose.foundation.shape.RoundedCornerShape</ID>
