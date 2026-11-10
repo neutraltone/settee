@@ -150,9 +150,9 @@ class UpdateViewModel(app: Application) : AndroidViewModel(app) {
             val now = System.currentTimeMillis()
             if (now - prefs.getLong(KEY_LAST_CHECK, 0L) < CHECK_INTERVAL_MS) return@launch
 
-            val update = checker.check()
+            val outcome = checker.check()
             prefs.edit { putLong(KEY_LAST_CHECK, now) }
-            if (update != null) _state.value = UpdateUiState.Available(update)
+            if (outcome is UpdateChecker.Outcome.Available) _state.value = UpdateUiState.Available(outcome.update)
         }
     }
 

@@ -6,6 +6,9 @@
 package app.opentv
 
 import android.app.Application
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.ViewModelStore
 import androidx.media3.common.MimeTypes
 import androidx.test.core.app.ApplicationProvider
 import app.opentv.core.ServiceLocator
@@ -65,7 +68,17 @@ class LivePreviewQualityTest {
         graph.settings.setLivePreviewOnHome(true)
         graph.viewerLibrary.live.record(db.channels().everyRow().single { it.name == settledOn })
 
-        val state = HomeViewModel(app, graph).state.first { it?.live != null }
+        // Home keeps its flows running for 5 s after the last collector leaves, so closing the database
+        // under a live view model let a late Room query throw into the next test. Clearing the store
+        // cancels viewModelScope first.
+        val store = ViewModelStore()
+        val factory = object : ViewModelProvider.Factory {
+            @Suppress("UNCHECKED_CAST")
+            override fun <T : ViewModel> create(modelClass: Class<T>): T = HomeViewModel(app, graph) as T
+        }
+        val home = ViewModelProvider(store, factory)[HomeViewModel::class.java]
+        val state = home.state.first { it?.live != null }
+        store.clear()
         db.close()
         return state?.live?.preview?.channel?.name
     }

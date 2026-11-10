@@ -60,6 +60,36 @@ class UpdateCheckerTest {
         }
     """.trimIndent()
 
+    private fun availableFrom(json: String, installed: String) = (
+        runBlocking {
+            UpdateChecker(githubReplying(json), installed).check()
+        } as? UpdateChecker.Outcome.Available
+        )?.update
+
+    private val releaseWithoutApks = """
+        {
+          "tag_name": "v0.2.0",
+          "name": "Settee 0.2.0",
+          "html_url": "https://github.com/neutraltone/settee/releases/tag/v0.2.0",
+          "body": "",
+          "assets": []
+        }
+    """.trimIndent()
+
+    @Test
+    fun `a newer release without its apk can't be checked, rather than looking up to date`() {
+        val outcome = runBlocking { UpdateChecker(githubReplying(releaseWithoutApks), "0.1.0").check() }
+
+        assertThat(outcome).isEqualTo(UpdateChecker.Outcome.CouldNotCheck)
+    }
+
+    @Test
+    fun `the installed version being the latest release is up to date`() {
+        val outcome = runBlocking { UpdateChecker(githubReplying(releaseWithBothApks), "0.2.0").check() }
+
+        assertThat(outcome).isEqualTo(UpdateChecker.Outcome.UpToDate)
+    }
+
     @Test
     fun `checks Settee's own releases`() {
         runBlocking { UpdateChecker(githubReplying(releaseWithBothApks), "0.1.0").check() }
@@ -70,7 +100,7 @@ class UpdateCheckerTest {
 
     @Test
     fun `offers the versioned apk when the release also carries the fixed-name one`() {
-        val update = runBlocking { UpdateChecker(githubReplying(releaseWithBothApks), "0.1.0").check() }
+        val update = availableFrom(releaseWithBothApks, installed = "0.1.0")
 
         assertThat(update?.apkUrl)
             .isEqualTo("https://github.com/neutraltone/settee/releases/download/v0.2.0/settee-v0.2.0.apk")
@@ -78,7 +108,7 @@ class UpdateCheckerTest {
 
     @Test
     fun `offers the release's viewer-facing notes`() {
-        val update = runBlocking { UpdateChecker(githubReplying(releaseWithBothApks), "0.1.0").check() }
+        val update = availableFrom(releaseWithBothApks, installed = "0.1.0")
 
         assertThat(update?.notes).isEqualTo(
             VersionNotes(

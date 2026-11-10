@@ -103,19 +103,18 @@ fun AboutScreen(onBack: () -> Unit) {
                         updateLine = null
                         scope.launch {
                             val graph = ServiceLocator.get(context)
-                            val update = runCatching {
-                                UpdateChecker(graph.httpClient, BuildConfig.VERSION_NAME).check()
-                            }.getOrNull()
-                            updateLine = when {
-                                update != null ->
-                                    resources.getString(R.string.about_update_available, update.versionName)
-                                else -> resources.getString(R.string.about_up_to_date)
+                            val outcome = UpdateChecker(graph.httpClient, BuildConfig.VERSION_NAME).check()
+                            updateLine = when (outcome) {
+                                is UpdateChecker.Outcome.Available ->
+                                    resources.getString(R.string.about_update_available, outcome.update.versionName)
+                                UpdateChecker.Outcome.UpToDate -> resources.getString(R.string.about_up_to_date)
+                                UpdateChecker.Outcome.CouldNotCheck -> resources.getString(R.string.about_check_failed)
                             }
                             // Raise the shared update prompt right here — UpdateGate overlays every
                             // screen, so the install dialog appears over About immediately.
-                            if (update != null) {
+                            if (outcome is UpdateChecker.Outcome.Available) {
                                 app.opentv.update.UpdateHub.state.value =
-                                    app.opentv.update.UpdateUiState.Available(update)
+                                    app.opentv.update.UpdateUiState.Available(outcome.update)
                             }
                             checking = false
                         }
