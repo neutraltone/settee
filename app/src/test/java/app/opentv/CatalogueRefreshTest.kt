@@ -235,6 +235,27 @@ class CatalogueRefreshTest {
     }
 
     @Test
+    fun `a movie list longer than a batch is all saved, and the next fetch updates the same rows`() = runTest {
+        db.sources().insert(PANEL_SOURCE)
+        fun films(added: Int) = (1..1_200).joinToString(",", "[", "]") {
+            """{"stream_id": $it, "name": "Film $it", "added": "$added"}"""
+        }
+        panel.replies["get_vod_streams"] = films(added = 100)
+        openMoviesOrShows()
+        val ids = db.movies().forSource(1).associate { it.streamId to it.id }
+        forgetAsked()
+
+        now += TWELVE_HOURS
+        panel.replies["get_vod_streams"] = films(added = 200)
+        openMoviesOrShows()
+
+        val movies = db.movies().forSource(1)
+        assertThat(movies.associate { it.streamId to it.id }).isEqualTo(ids)
+        assertThat(ids).hasSize(1_200)
+        assertThat(movies.map { it.addedMillis }.toSet()).containsExactly(200_000L)
+    }
+
+    @Test
     fun `a failed movie list isn't remembered as fresh, so the next open tries again`() = runTest {
         db.sources().insert(PANEL_SOURCE)
         panel.replies["get_vod_streams"] = "!"

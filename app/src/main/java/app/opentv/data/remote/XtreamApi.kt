@@ -16,17 +16,21 @@ import app.opentv.data.parser.parseReleaseDate
 import java.io.InputStream
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.json.DecodeSequenceMode
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.decodeToSequence
 import kotlinx.serialization.json.jsonObject
 import okhttp3.HttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import okhttp3.Response
+import okio.ByteString.Companion.encodeUtf8
 
 /**
  * Client for the Xtream Codes "player API".
@@ -51,6 +55,16 @@ class XtreamApi(
 ) {
 
     class XtreamException(message: String, cause: Throwable? = null) : Exception(message, cause)
+
+    companion object {
+        /**
+         * Titles saved at a time while a list downloads: few enough to hold on a 1 GB stick, and
+         * under SQLite's 999 bound variables for looking up the rows they replace.
+         */
+        const val CATALOGUE_BATCH = 500
+
+        private val UTF8_BOM = "\uFEFF".encodeUtf8()
+    }
 
     /** Verifies credentials and returns the account's expiry, if the panel reports one. */
     suspend fun authenticate(source: Source): AccountInfo = withContext(Dispatchers.IO) {
@@ -122,11 +136,15 @@ class XtreamApi(
         }
     }
 
-    suspend fun movies(source: Source): List<Movie> = withContext(Dispatchers.IO) {
-        getJson(source, "get_vod_streams").arrayOrEmpty.mapNotNull { element ->
-            val obj = element.jsonObjectOrNull ?: return@mapNotNull null
-            val streamId = obj["stream_id"].asStringOrNull ?: return@mapNotNull null
-            val name = obj["name"].asStringOrNull ?: return@mapNotNull null
+    /**
+     * The movie list, handed to [save] [CATALOGUE_BATCH] at a time as it downloads. A big panel's
+     * list is tens of megabytes; holding it as one string plus a [JsonElement] tree plus the movies
+     * ran a Fire TV Stick's 128 MB heap out, so nothing here ever holds more than a batch.
+     */
+    suspend fun movies(source: Source, save: suspend (List<Movie>) -> Unit) = withContext(Dispatchers.IO) {
+        streamList(source, "get_vod_streams", save) { obj ->
+            val streamId = obj["stream_id"].asStringOrNull ?: return@streamList null
+            val name = obj["name"].asStringOrNull ?: return@streamList null
             val extension = obj["container_extension"].asStringOrNull?.takeIf { it.isNotBlank() }
             Movie(
                 sourceId = source.id,
@@ -154,11 +172,11 @@ class XtreamApi(
         }
     }
 
-    suspend fun series(source: Source): List<Series> = withContext(Dispatchers.IO) {
-        getJson(source, "get_series").arrayOrEmpty.mapNotNull { element ->
-            val obj = element.jsonObjectOrNull ?: return@mapNotNull null
-            val seriesId = obj["series_id"].asStringOrNull ?: return@mapNotNull null
-            val name = obj["name"].asStringOrNull ?: return@mapNotNull null
+    /** The series list, handed to [save] a batch at a time; see [movies]. */
+    suspend fun series(source: Source, save: suspend (List<Series>) -> Unit) = withContext(Dispatchers.IO) {
+        streamList(source, "get_series", save) { obj ->
+            val seriesId = obj["series_id"].asStringOrNull ?: return@streamList null
+            val name = obj["name"].asStringOrNull ?: return@streamList null
             Series(
                 sourceId = source.id,
                 seriesId = seriesId,
@@ -302,7 +320,10 @@ class XtreamApi(
 
     // ---- Plumbing ------------------------------------------------------------------------
 
-    private fun getJson(source: Source, action: String?, extra: (HttpUrl.Builder) -> Unit = {}): JsonElement {
+    private fun getJson(source: Source, action: String?, extra: (HttpUrl.Builder) -> Unit = {}): JsonElement =
+        open(source, action, extra).use { parsed(it.body.string()) }
+
+    private fun open(source: Source, action: String?, extra: (HttpUrl.Builder) -> Unit = {}): Response {
         val builder = baseUrl(source).newBuilder()
             .encodedPath("/player_api.php")
             .addQueryParameter("username", source.username.orEmpty())
@@ -310,24 +331,64 @@ class XtreamApi(
         if (action != null) builder.addQueryParameter("action", action)
         extra(builder)
 
-        http.newCall(request(source, builder.build())).execute().use { response ->
-            if (!response.isSuccessful) {
-                throw XtreamException(describeHttpFailure(response.code))
-            }
-            val text = response.body.string()
-            if (text.isBlank()) throw XtreamException("The server returned an empty response.")
-            return try {
-                json.parseToJsonElement(text)
-            } catch (e: Exception) {
-                // Panels behind a captive portal or Cloudflare return HTML here. Saying
-                // "not valid JSON" is useless to a user; say what it probably means.
-                throw XtreamException(
-                    "The server replied with something that is not a valid catalogue. " +
-                        "Check the address and port are correct.",
-                    e,
-                )
+        val response = http.newCall(request(source, builder.build())).execute()
+        if (!response.isSuccessful) {
+            response.close()
+            throw XtreamException(describeHttpFailure(response.code))
+        }
+        return response
+    }
+
+    private fun parsed(text: String): JsonElement {
+        if (text.isBlank()) throw XtreamException("The server returned an empty response.")
+        return readingCatalogue { json.parseToJsonElement(text) }
+    }
+
+    /**
+     * Each [parse]d object of [action]'s array, handed to [save] [CATALOGUE_BATCH] at a time, read
+     * one element at a time off the wire. A reply that isn't an array (an error object, an HTML
+     * page) is small, so it goes through [parsed] as before: an object is an empty list, HTML the
+     * "not a valid catalogue" message.
+     */
+    private suspend fun <T : Any> streamList(
+        source: Source,
+        action: String,
+        save: suspend (List<T>) -> Unit,
+        parse: (JsonObject) -> T?,
+    ) {
+        val batch = ArrayList<T>(CATALOGUE_BATCH)
+        suspend fun each(element: JsonElement) {
+            batch += element.jsonObjectOrNull?.let(parse) ?: return
+            if (batch.size == CATALOGUE_BATCH) {
+                save(batch.toList())
+                batch.clear()
             }
         }
+        open(source, action).use { response ->
+            val body = response.body.source()
+            if (body.rangeEquals(0, UTF8_BOM)) body.skip(UTF8_BOM.size.toLong())
+            while (body.request(1) && body.buffer[0].toInt().toChar().isWhitespace()) body.skip(1)
+            if (body.request(1) && body.buffer[0] == '['.code.toByte()) {
+                val elements = json.decodeToSequence<JsonElement>(body.inputStream(), DecodeSequenceMode.ARRAY_WRAPPED)
+                    .iterator()
+                while (readingCatalogue { elements.hasNext() }) each(readingCatalogue { elements.next() })
+            } else {
+                parsed(body.readUtf8()).arrayOrEmpty.forEach { each(it) }
+            }
+        }
+        if (batch.isNotEmpty()) save(batch.toList())
+    }
+
+    /** Panels behind a captive portal or Cloudflare return HTML; "not valid JSON" means nothing to a viewer. */
+    private inline fun <T> readingCatalogue(read: () -> T): T = try {
+        read()
+    } catch (e: IllegalArgumentException) {
+        // kotlinx.serialization's decoding failures are all IllegalArgumentExceptions.
+        throw XtreamException(
+            "The server replied with something that is not a valid catalogue. " +
+                "Check the address and port are correct.",
+            e,
+        )
     }
 
     private fun request(source: Source, url: HttpUrl): Request = Request.Builder()

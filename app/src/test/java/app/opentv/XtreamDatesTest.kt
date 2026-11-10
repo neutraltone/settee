@@ -29,7 +29,7 @@ class XtreamDatesTest {
             """,
         )
 
-        val movies = api.movies(source).associate { it.name to it.releaseDate }
+        val movies = buildList { api.movies(source) { addAll(it) } }.associate { it.name to it.releaseDate }
 
         assertThat(movies).containsExactly("Dune", 1_710_460_800_000L, "Drive", 1_314_921_600_000L, "Heat", null)
     }

@@ -751,39 +751,52 @@ class CatalogRepository(
 
         // A failed list still leaves the others to be saved, but it must not count as fetched.
         var complete = true
-        suspend fun <T> list(wanted: Boolean, fetch: suspend () -> List<T>): List<T> {
-            if (!wanted) return emptyList()
+        suspend fun <T> attempt(wanted: Boolean, empty: T, fetch: suspend () -> T): T {
+            if (!wanted) return empty
             return runCatching { fetch() }.getOrElse {
                 complete = false
-                emptyList()
+                empty
             }
         }
-        val movieCategories = list(moviesOn) { api.movieCategories(source) }
-        val movies = list(moviesOn) { api.movies(source) }
-        val seriesCategories = list(seriesOn) { api.seriesCategories(source) }
-        val series = list(seriesOn) { api.series(source) }
-
-        if (movieCategories.isNotEmpty() || seriesCategories.isNotEmpty()) {
-            categoryDao.upsertAll(movieCategories + seriesCategories)
+        suspend fun categories(wanted: Boolean, fetch: suspend () -> List<Category>) {
+            val categories = attempt(wanted, emptyList(), fetch)
+            if (categories.isNotEmpty()) categoryDao.upsertAll(categories)
         }
+
+        // The lists are saved a batch at a time as they download (see XtreamApi.movies), so a list
+        // that fails halfway keeps the batches before it, which only adds or updates titles.
         // Fresh rows carry no local id, and an upsert without one hits the unique (source, provider
         // id) index and then updates nothing, so a title's last_modified would never move after
         // its first sync. Matching each to the row it replaces fixes that, keeps the local id that
         // resume points hang off, and keeps what detail opens and the air-date step filled in.
-        if (movies.isNotEmpty()) {
-            val stored = movieDao.forSource(source.id).associateBy { it.streamId }
-            movieDao.upsertKeepingDates(source.id, movies.map { it.over(stored[it.streamId]) })
+        var movies = 0
+        categories(moviesOn) { api.movieCategories(source) }
+        attempt(moviesOn, Unit) {
+            api.movies(source) { batch ->
+                val stored = movieDao.byProviderIds(source.id, batch.map { it.streamId }).associateBy { it.streamId }
+                movieDao.upsertKeepingDates(source.id, batch.map { it.over(stored[it.streamId]) })
+                movies += batch.size
+            }
         }
-        val stored = seriesDao.forSource(source.id).associateBy { it.seriesId }
-        val merged = series.map { it.over(stored[it.seriesId]) }
-        if (merged.isNotEmpty()) seriesDao.upsertAll(merged)
-        dateInBackground(source, movies = movies.isNotEmpty(), series = merged.isNotEmpty())
-        // A show seen for the first time has nobody caught up on it, so only ones that moved.
+        var series = 0
+        val updated = mutableListOf<Series>()
+        categories(seriesOn) { api.seriesCategories(source) }
+        attempt(seriesOn, Unit) {
+            api.series(source) { batch ->
+                val stored = seriesDao.byProviderIds(source.id, batch.map { it.seriesId }).associateBy { it.seriesId }
+                val merged = batch.map { it.over(stored[it.seriesId]) }
+                seriesDao.upsertAll(merged)
+                series += merged.size
+                // A show seen for the first time has nobody caught up on it, so only ones that moved.
+                merged.filterTo(updated) { it.addedMillis > (stored[it.seriesId]?.addedMillis ?: Long.MAX_VALUE) }
+            }
+        }
+        dateInBackground(source, movies = movies > 0, series = series > 0)
         return VodFetch(
-            merged.filter { it.addedMillis > (stored[it.seriesId]?.addedMillis ?: Long.MAX_VALUE) },
+            updated,
             // Nothing at all may be a struggling panel's empty reply, so it isn't worth trusting for
             // 12 hours; an account with no VOD just asks again, which is a quick request.
-            complete && (movies.isNotEmpty() || series.isNotEmpty()),
+            complete && (movies > 0 || series > 0),
         )
     }
 

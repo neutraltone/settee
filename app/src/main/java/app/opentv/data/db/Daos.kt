@@ -547,17 +547,24 @@ interface MovieDao {
         dates.forEach { (id, date) -> setReleaseDate(id, date) }
     }
 
-    @Query("SELECT id, releaseDate FROM movies WHERE sourceId = :sourceId AND releaseDate IS NOT NULL")
-    suspend fun releaseDates(sourceId: Long): List<MovieReleaseDate>
+    /** At most a batch of [ids]: see [upsertKeepingDates]. */
+    @Query("SELECT id, releaseDate FROM movies WHERE sourceId = :sourceId AND id IN (:ids) AND releaseDate IS NOT NULL")
+    suspend fun releaseDates(sourceId: Long, ids: List<Long>): List<MovieReleaseDate>
 
     /**
      * Saves rows read before some slow work, keeping a release date found since. Sync and detail
      * opens hold a row across network calls while the date lookup writes to it, and a plain upsert
-     * would put the null they read back.
+     * would put the null they read back. Takes at most a sync batch of movies (500), since
+     * it looks their dates up by id.
      */
     @Transaction
     suspend fun upsertKeepingDates(sourceId: Long, movies: List<Movie>) {
-        val dates = releaseDates(sourceId).associate { it.id to it.releaseDate }
+        val dates = releaseDates(
+            sourceId,
+            movies.map {
+                it.id
+            }.filter { it != 0L },
+        ).associate { it.id to it.releaseDate }
         upsertAll(movies.map { it.copy(releaseDate = it.releaseDate ?: dates[it.id]) })
     }
 
@@ -612,6 +619,10 @@ interface MovieDao {
 
     @Query("SELECT * FROM movies WHERE sourceId = :sourceId AND streamId = :streamId")
     suspend fun byProviderId(sourceId: Long, streamId: String): Movie?
+
+    /** The stored rows for one sync batch (at most 500) of [streamIds]. */
+    @Query("SELECT * FROM movies WHERE sourceId = :sourceId AND streamId IN (:streamIds)")
+    suspend fun byProviderIds(sourceId: Long, streamIds: List<String>): List<Movie>
 
     @Upsert
     suspend fun upsertAll(movies: List<Movie>)
@@ -711,6 +722,10 @@ interface SeriesDao {
 
     @Query("SELECT * FROM series WHERE sourceId = :sourceId AND seriesId = :seriesId LIMIT 1")
     suspend fun byProviderId(sourceId: Long, seriesId: String): Series?
+
+    /** The stored rows for one sync batch (at most 500) of [seriesIds]. */
+    @Query("SELECT * FROM series WHERE sourceId = :sourceId AND seriesId IN (:seriesIds)")
+    suspend fun byProviderIds(sourceId: Long, seriesIds: List<String>): List<Series>
 
     @Upsert
     suspend fun upsertAll(items: List<Series>)
