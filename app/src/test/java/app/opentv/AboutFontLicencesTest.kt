@@ -16,6 +16,7 @@ import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.test.requestFocus
 import app.opentv.ui.settings.AboutScreen
+import app.opentv.update.UpdateChecker
 import com.google.common.truth.Truth.assertThat
 import org.junit.Rule
 import org.junit.Test
@@ -49,5 +50,18 @@ class AboutFontLicencesTest {
             compose.onAllNodes(hasText("SIL OPEN FONT LICENSE", substring = true)).fetchSemanticsNodes(),
         ).hasSize(2)
         captureScreen("about_font_licences")
+    }
+
+    @Test
+    fun `a check that couldn't reach a release says so, rather than claiming you're up to date`() {
+        compose.setTvContent { AboutScreen(onBack = {}, checkForUpdate = { UpdateChecker.Outcome.CouldNotCheck }) }
+
+        val button = compose.onNodeWithText("Check for updates")
+        button.performScrollTo().requestFocus()
+        button.performKeyInput { pressKey(Key.DirectionCenter) }
+
+        compose.onNodeWithText("Couldn't check for updates. Try again later.").assertExists()
+        compose.onNode(hasText("You're on the latest version.")).assertDoesNotExist()
+        captureScreen("about_check_failed")
     }
 }

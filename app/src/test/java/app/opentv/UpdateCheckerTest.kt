@@ -26,14 +26,14 @@ class UpdateCheckerTest {
 
     private val requestedUrls = mutableListOf<String>()
 
-    private fun githubReplying(json: String) = OkHttpClient.Builder()
+    private fun githubReplying(json: String, code: Int = 200) = OkHttpClient.Builder()
         .addInterceptor { chain ->
             requestedUrls += chain.request().url.toString()
             Response.Builder()
                 .request(chain.request())
                 .protocol(Protocol.HTTP_1_1)
-                .code(200)
-                .message("OK")
+                .code(code)
+                .message(if (code == 200) "OK" else "Error")
                 .body(json.toResponseBody("application/json".toMediaType()))
                 .build()
         }
@@ -60,11 +60,11 @@ class UpdateCheckerTest {
         }
     """.trimIndent()
 
-    private fun availableFrom(json: String, installed: String) = (
-        runBlocking {
-            UpdateChecker(githubReplying(json), installed).check()
-        } as? UpdateChecker.Outcome.Available
-        )?.update
+    /** What the app concludes when GitHub replies [json] (with [code]) to a build of [installed]. */
+    private fun check(json: String, installed: String = "0.1.0", code: Int = 200) =
+        runBlocking { UpdateChecker(githubReplying(json, code), installed).check() }
+
+    private fun availableFrom(json: String) = (check(json) as? UpdateChecker.Outcome.Available)?.update
 
     private val releaseWithoutApks = """
         {
@@ -78,21 +78,32 @@ class UpdateCheckerTest {
 
     @Test
     fun `a newer release without its apk can't be checked, rather than looking up to date`() {
-        val outcome = runBlocking { UpdateChecker(githubReplying(releaseWithoutApks), "0.1.0").check() }
-
-        assertThat(outcome).isEqualTo(UpdateChecker.Outcome.CouldNotCheck)
+        assertThat(check(releaseWithoutApks)).isEqualTo(UpdateChecker.Outcome.CouldNotCheck)
     }
 
     @Test
     fun `the installed version being the latest release is up to date`() {
-        val outcome = runBlocking { UpdateChecker(githubReplying(releaseWithBothApks), "0.2.0").check() }
+        assertThat(check(releaseWithBothApks, installed = "0.2.0")).isEqualTo(UpdateChecker.Outcome.UpToDate)
+    }
 
-        assertThat(outcome).isEqualTo(UpdateChecker.Outcome.UpToDate)
+    @Test
+    fun `an error from GitHub, such as a rate limit, can't be checked`() {
+        assertThat(check(releaseWithBothApks, code = 403)).isEqualTo(UpdateChecker.Outcome.CouldNotCheck)
+    }
+
+    @Test
+    fun `an empty reply can't be checked`() {
+        assertThat(check("")).isEqualTo(UpdateChecker.Outcome.CouldNotCheck)
+    }
+
+    @Test
+    fun `a reply that isn't a release can't be checked`() {
+        assertThat(check("<html>Service unavailable</html>")).isEqualTo(UpdateChecker.Outcome.CouldNotCheck)
     }
 
     @Test
     fun `checks Settee's own releases`() {
-        runBlocking { UpdateChecker(githubReplying(releaseWithBothApks), "0.1.0").check() }
+        check(releaseWithBothApks)
 
         assertThat(requestedUrls)
             .containsExactly("https://api.github.com/repos/neutraltone/settee/releases/latest")
@@ -100,7 +111,7 @@ class UpdateCheckerTest {
 
     @Test
     fun `offers the versioned apk when the release also carries the fixed-name one`() {
-        val update = availableFrom(releaseWithBothApks, installed = "0.1.0")
+        val update = availableFrom(releaseWithBothApks)
 
         assertThat(update?.apkUrl)
             .isEqualTo("https://github.com/neutraltone/settee/releases/download/v0.2.0/settee-v0.2.0.apk")
@@ -108,7 +119,7 @@ class UpdateCheckerTest {
 
     @Test
     fun `offers the release's viewer-facing notes`() {
-        val update = availableFrom(releaseWithBothApks, installed = "0.1.0")
+        val update = availableFrom(releaseWithBothApks)
 
         assertThat(update?.notes).isEqualTo(
             VersionNotes(

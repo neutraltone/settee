@@ -5,6 +5,7 @@
  */
 package app.opentv.ui.settings
 
+import android.content.Context
 import android.content.Intent
 import android.widget.Toast
 import androidx.compose.foundation.background
@@ -58,7 +59,13 @@ import kotlinx.coroutines.withContext
  * instead of waiting for the periodic check.
  */
 @Composable
-fun AboutScreen(onBack: () -> Unit) {
+fun AboutScreen(
+    onBack: () -> Unit,
+    // A seam so tests can show each answer without reaching GitHub.
+    checkForUpdate: suspend (Context) -> UpdateChecker.Outcome = { context ->
+        UpdateChecker(ServiceLocator.get(context).httpClient, BuildConfig.VERSION_NAME).check()
+    },
+) {
     val context = LocalContext.current
     val resources = LocalResources.current
     val scope = rememberCoroutineScope()
@@ -102,8 +109,7 @@ fun AboutScreen(onBack: () -> Unit) {
                         checking = true
                         updateLine = null
                         scope.launch {
-                            val graph = ServiceLocator.get(context)
-                            val outcome = UpdateChecker(graph.httpClient, BuildConfig.VERSION_NAME).check()
+                            val outcome = checkForUpdate(context)
                             updateLine = when (outcome) {
                                 is UpdateChecker.Outcome.Available ->
                                     resources.getString(R.string.about_update_available, outcome.update.versionName)
