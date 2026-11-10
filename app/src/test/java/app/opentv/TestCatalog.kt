@@ -95,7 +95,7 @@ class TestCatalog(context: Context, private val clock: () -> Long = { 0L }) {
         } while (running.isNotEmpty())
     }
 
-    /** Closes the database once the catalogue's background work is done with it. */
+    /** Closes the database once the refreshes [awaitRefresh] waits for are done with it. */
     fun close() = runBlocking {
         awaitRefresh()
         sharing.cancel()

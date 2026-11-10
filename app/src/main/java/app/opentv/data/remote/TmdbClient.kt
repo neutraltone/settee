@@ -36,8 +36,6 @@ data class TmdbMeta(
     val year: Int? = null,
     /** Release day (a film) or first air day (a show), UTC epoch millis at midnight. */
     val releaseDate: Long? = null,
-    /** When a show's latest episode aired, UTC epoch millis at midnight. Null for films. */
-    val lastAirDate: Long? = null,
 )
 
 /**
@@ -169,7 +167,6 @@ class TmdbClient(
             rating = rating,
             year = year,
             releaseDate = parseReleaseDate(dateStr),
-            lastAirDate = parseReleaseDate(o["last_air_date"]?.jsonPrimitive?.contentOrNull),
         )
     }
 

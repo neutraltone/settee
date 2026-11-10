@@ -340,7 +340,8 @@ data class Series(
     val tmdbId: String? = null,
     /**
      * When its newest episode aired (UTC epoch millis at midnight). Was looked up for Home's Recently
-     * Released row, which is gone, so nothing fills it any more; kept until a schema change can drop it.
+     * Released row, which is gone: nothing fills it any more, and a sync clears what's left. The column
+     * stays only to avoid a schema bump; drop it with the next one.
      */
     val latestAirDate: Long? = null,
 )
