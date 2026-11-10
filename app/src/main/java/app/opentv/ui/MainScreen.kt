@@ -348,7 +348,7 @@ private fun NavRail(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Image(
-                painter = painterResource(R.drawable.ic_opentv_logo),
+                painter = painterResource(R.drawable.ic_settee_mark),
                 contentDescription = stringResource(R.string.app_name),
                 modifier = Modifier.size(34.dp),
             )

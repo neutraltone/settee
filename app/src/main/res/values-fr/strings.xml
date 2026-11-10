@@ -140,11 +140,6 @@
     <string name="settings_sync_subtitle">Copie la liste Continuer à regarder vers un autre appareil via le wifi</string>
     <string name="settings_about_title">À propos</string>
     <string name="settings_about_subtitle">Version, mises à jour, licence et liens</string>
-    <string name="settings_appearance">Apparence</string>
-    <string name="settings_theme_system">Suivre le système</string>
-    <string name="settings_theme_dark">Sombre</string>
-    <string name="settings_theme_light">Clair</string>
-    <string name="settings_theme_note">Les boîtiers TV restent en mode sombre avec « Suivre le système ». Choisissez Sombre ou Clair pour forcer un mode.</string>
     <string name="settings_section_content">Contenu</string>
     <string name="settings_content_note">Désactivez ce que vous n\'utilisez pas pour synchroniser plus vite. Réactivez à tout moment.</string>
     <string name="settings_content_live_subtitle">Chaînes et guide TV.</string>

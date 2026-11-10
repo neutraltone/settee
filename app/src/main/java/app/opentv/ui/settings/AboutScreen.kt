@@ -65,8 +65,10 @@ fun AboutScreen(onBack: () -> Unit) {
     var updateLine by remember { mutableStateOf<String?>(null) }
     var checking by remember { mutableStateOf(false) }
     var whatsNew by remember { mutableStateOf<List<VersionNotes>?>(null) }
+    var fontLicences by remember { mutableStateOf(false) }
 
     whatsNew?.let { WhatsNewDialog(BuildConfig.VERSION_NAME, it) { whatsNew = null } }
+    if (fontLicences) FontLicencesDialog(onDismiss = { fontLicences = false })
 
     Column(
         Modifier
@@ -173,6 +175,11 @@ fun AboutScreen(onBack: () -> Unit) {
                 url = "https://www.gnu.org/licenses/gpl-3.0.html",
             )
             LinkLine(stringResource(R.string.about_source_code), "github.com/neutraltone/settee")
+            LinkLine(
+                stringResource(R.string.about_fonts_label),
+                stringResource(R.string.about_fonts_value),
+                onClick = { fontLicences = true },
+            )
         }
     }
 }
@@ -187,10 +194,11 @@ private fun Section(title: String, content: @Composable () -> Unit) {
 /**
  * A tappable link row. Focusable on purpose: on a TV this is what lets the d-pad travel down the
  * About screen (and so scroll it) — a screen of plain Text has nothing to carry the scroll. Clicking
- * opens the URL in a browser, or shows it as a toast where there is no browser (some TV boxes).
+ * opens the URL in a browser, or shows it as a toast where there is no browser (some TV boxes), or
+ * runs [onClick] instead where there is one.
  */
 @Composable
-private fun LinkLine(label: String, value: String, url: String = "https://$value") {
+private fun LinkLine(label: String, value: String, url: String = "https://$value", onClick: (() -> Unit)? = null) {
     val context = LocalContext.current
     var focused by remember { mutableStateOf(false) }
     Row(
@@ -205,6 +213,7 @@ private fun LinkLine(label: String, value: String, url: String = "https://$value
                 },
             )
             .clickable {
+                if (onClick != null) return@clickable onClick()
                 runCatching {
                     context.startActivity(
                         Intent(Intent.ACTION_VIEW, url.toUri()).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),

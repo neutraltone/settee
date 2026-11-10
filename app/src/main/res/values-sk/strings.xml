@@ -140,11 +140,6 @@
     <string name="settings_sync_subtitle">Skopírovať históriu sledovania do iného zariadenia cez wifi</string>
     <string name="settings_about_title">O aplikácii</string>
     <string name="settings_about_subtitle">Verzia, aktualizácie, licencia a odkazy</string>
-    <string name="settings_appearance">Vzhľad</string>
-    <string name="settings_theme_system">Podľa systému</string>
-    <string name="settings_theme_dark">Tmavý</string>
-    <string name="settings_theme_light">Svetlý</string>
-    <string name="settings_theme_note">TV zariadenia zostávajú pri nastavení „Podľa systému“ tmavé. Ak to chcete vynútiť, vyberte Tmavý alebo Svetlý.</string>
     <string name="settings_section_content">Obsah</string>
     <string name="settings_content_note">Vypnite to, čo nepoužívate, a synchronizácia bude rýchlejšia. Kedykoľvek to môžete znova zapnúť.</string>
     <string name="settings_content_live_subtitle">Kanály a TV program.</string>

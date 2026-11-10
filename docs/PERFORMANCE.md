@@ -1,6 +1,6 @@
 # Performance on the Fire TV Stick
 
-The baseline every later visual decision is checked against (#84). It says how Settee performs today; what it can afford is decided in #156. Rerun the method after a change and compare it with the tables below.
+The baseline every later visual decision is checked against (#84). It says how Settee performs today; what it can afford is the budget in [LOOK.md](LOOK.md#motion-and-cost), set in #156. Rerun the method after a change and compare it with the tables below.
 
 ## What was measured
 

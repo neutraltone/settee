@@ -140,11 +140,6 @@
     <string name="settings_sync_subtitle">Wi-Fi経由で「続きから再生」を別のデバイスにコピー</string>
     <string name="settings_about_title">アプリについて</string>
     <string name="settings_about_subtitle">バージョン、アップデート、ライセンス、リンク</string>
-    <string name="settings_appearance">外観</string>
-    <string name="settings_theme_system">システムに従う</string>
-    <string name="settings_theme_dark">ダーク</string>
-    <string name="settings_theme_light">ライト</string>
-    <string name="settings_theme_note">テレビ機器では「システムに従う」を選んでもダークのままです。強制するには「ダーク」または「ライト」を選んでください。</string>
     <string name="settings_section_content">コンテンツ</string>
     <string name="settings_content_note">使わない項目をオフにすると同期が速くなります。いつでも再度オンにできます。</string>
     <string name="settings_content_live_subtitle">チャンネルと番組表。</string>

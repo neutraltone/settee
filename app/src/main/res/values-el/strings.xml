@@ -140,11 +140,6 @@
     <string name="settings_sync_subtitle">Αντιγραφή της συνέχειας παρακολούθησης σε άλλη συσκευή μέσω Wi-Fi</string>
     <string name="settings_about_title">Σχετικά</string>
     <string name="settings_about_subtitle">Έκδοση, ενημερώσεις, άδεια χρήσης και σύνδεσμοι</string>
-    <string name="settings_appearance">Εμφάνιση</string>
-    <string name="settings_theme_system">Ακολούθηση συστήματος</string>
-    <string name="settings_theme_dark">Σκούρο</string>
-    <string name="settings_theme_light">Φωτεινό</string>
-    <string name="settings_theme_note">Οι συσκευές τηλεόρασης παραμένουν σκούρες στην επιλογή «Ακολούθηση συστήματος». Επιλέξτε Σκούρο ή Φωτεινό για να το ορίσετε.</string>
     <string name="settings_section_content">Περιεχόμενο</string>
     <string name="settings_content_note">Απενεργοποιήστε ό,τι δεν χρησιμοποιείτε για ταχύτερο συγχρονισμό. Ενεργοποιήστε το ξανά όποτε θέλετε.</string>
     <string name="settings_content_live_subtitle">Κανάλια και οδηγός τηλεόρασης.</string>

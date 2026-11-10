@@ -140,11 +140,6 @@
     <string name="settings_sync_subtitle">通过 Wi-Fi 将“继续观看”复制到另一台设备</string>
     <string name="settings_about_title">关于</string>
     <string name="settings_about_subtitle">版本、更新、许可与链接</string>
-    <string name="settings_appearance">外观</string>
-    <string name="settings_theme_system">跟随系统</string>
-    <string name="settings_theme_dark">深色</string>
-    <string name="settings_theme_light">浅色</string>
-    <string name="settings_theme_note">电视盒子在“跟随系统”下会保持深色。选择“深色”或“浅色”可强制指定。</string>
     <string name="settings_section_content">内容</string>
     <string name="settings_content_note">关闭不需要的内容可加快同步速度，随时可以重新开启。</string>
     <string name="settings_content_live_subtitle">频道与节目单。</string>

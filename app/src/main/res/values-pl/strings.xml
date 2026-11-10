@@ -140,11 +140,6 @@
     <string name="settings_sync_subtitle">Skopiuj listę kontynuacji oglądania na inne urządzenie przez wifi</string>
     <string name="settings_about_title">Informacje</string>
     <string name="settings_about_subtitle">Wersja, aktualizacje, licencja i linki</string>
-    <string name="settings_appearance">Wygląd</string>
-    <string name="settings_theme_system">Zgodnie z systemem</string>
-    <string name="settings_theme_dark">Ciemny</string>
-    <string name="settings_theme_light">Jasny</string>
-    <string name="settings_theme_note">Dekodery TV pozostają ciemne przy opcji \"Zgodnie z systemem\". Wybierz Ciemny lub Jasny, aby to wymusić.</string>
     <string name="settings_section_content">Zawartość</string>
     <string name="settings_content_note">Wyłącz to, czego nie używasz, aby przyspieszyć synchronizację. Możesz włączyć ponownie w dowolnym momencie.</string>
     <string name="settings_content_live_subtitle">Kanały i przewodnik TV.</string>

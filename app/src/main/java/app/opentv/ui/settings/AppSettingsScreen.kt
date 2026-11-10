@@ -61,7 +61,6 @@ import kotlinx.coroutines.launch
 fun AppSettingsScreen(onBack: () -> Unit) {
     val context = LocalContext.current
     val settings = remember { AppSettings.get(context) }
-    val themeMode by settings.themeMode.collectAsState()
     val channelLayout by settings.channelLayout.collectAsState()
     val previewVideo by settings.guidePreviewVideo.collectAsState()
     val previewSound by settings.guidePreviewSound.collectAsState()
@@ -98,26 +97,6 @@ fun AppSettingsScreen(onBack: () -> Unit) {
 
         Spacer(Modifier.height(20.dp))
 
-        SettingsSection(stringResource(R.string.settings_appearance)) {
-            ThemeOption(stringResource(R.string.settings_theme_system), themeMode == AppSettings.ThemeMode.SYSTEM) {
-                settings.setThemeMode(AppSettings.ThemeMode.SYSTEM)
-            }
-            ThemeOption(stringResource(R.string.settings_theme_dark), themeMode == AppSettings.ThemeMode.DARK) {
-                settings.setThemeMode(AppSettings.ThemeMode.DARK)
-            }
-            ThemeOption(stringResource(R.string.settings_theme_light), themeMode == AppSettings.ThemeMode.LIGHT) {
-                settings.setThemeMode(AppSettings.ThemeMode.LIGHT)
-            }
-            Spacer(Modifier.height(4.dp))
-            Text(
-                stringResource(R.string.settings_theme_note),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-
-        Spacer(Modifier.height(16.dp))
-
         SettingsSection(stringResource(R.string.settings_section_content)) {
             Text(
                 stringResource(R.string.settings_content_note),
@@ -151,12 +130,12 @@ fun AppSettingsScreen(onBack: () -> Unit) {
         Spacer(Modifier.height(16.dp))
 
         SettingsSection(stringResource(R.string.settings_section_language)) {
-            ThemeOption(stringResource(R.string.settings_language_system), language.isBlank()) {
+            RadioOption(stringResource(R.string.settings_language_system), language.isBlank()) {
                 changeLanguage(context, settings, "")
             }
             // Each language is listed in its own name (endonym), the convention users expect.
             OpenTvLanguages.forEach { (tag, name) ->
-                ThemeOption(name, language == tag) { changeLanguage(context, settings, tag) }
+                RadioOption(name, language == tag) { changeLanguage(context, settings, tag) }
             }
             Spacer(Modifier.height(4.dp))
             Text(
@@ -173,11 +152,11 @@ fun AppSettingsScreen(onBack: () -> Unit) {
                 stringResource(R.string.settings_channel_layout_title),
                 style = MaterialTheme.typography.titleMedium,
             )
-            ThemeOption(
+            RadioOption(
                 stringResource(R.string.settings_channel_layout_grid),
                 channelLayout == AppSettings.ChannelLayout.GRID,
             ) { settings.setChannelLayout(AppSettings.ChannelLayout.GRID) }
-            ThemeOption(
+            RadioOption(
                 stringResource(R.string.settings_channel_layout_list),
                 channelLayout == AppSettings.ChannelLayout.LIST,
             ) { settings.setChannelLayout(AppSettings.ChannelLayout.LIST) }
@@ -414,7 +393,7 @@ private fun SettingsSection(title: String, content: @Composable () -> Unit) {
 }
 
 @Composable
-private fun ThemeOption(label: String, selected: Boolean, onSelect: () -> Unit) {
+private fun RadioOption(label: String, selected: Boolean, onSelect: () -> Unit) {
     Row(
         Modifier
             .fillMaxWidth()

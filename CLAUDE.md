@@ -40,6 +40,8 @@ python3 -m unittest discover -s tools/screenshots  # screenshot comparison tests
 tools/perf/stick_baseline.py --help         # measure performance on a Fire TV Stick (docs/PERFORMANCE.md)
 python3 -m unittest discover -s tools/perf  # tests for that script
 ANDROID_SERIAL=emulator-5554 ./gradlew :app:generateBaselineProfile  # regenerate the baseline profile on an Android 13+ TV emulator; commit it (docs/PERFORMANCE.md)
+tools/render-launcher-art.sh                # regenerate the mark's drawables, SVGs and launcher PNGs
+python3 -m unittest discover -s tools/launcher-art  # every copy of the mark matches its generator
 ```
 
 Tests live in `app/src/test` (JUnit4, Truth, Robolectric, Room testing, coroutines-test, Roborazzi for screenshots); there are no
@@ -49,9 +51,12 @@ instrumented tests.
 
 `.github/workflows/build.yml` runs one job per required check: **Test and assemble** (unit tests, debug
 APK, and a fail if the build changed `app/schemas/`), **Android Lint**, **ktlint**, **detekt**,
-**Screenshot tools** (the Python tests in `tools/screenshots/` and `tools/perf/`) and **gitleaks**. `pr-hygiene.yml` runs `tools/check-message-test.sh` and checks the PR title with
+**Screenshot tools** (the Python tests in `tools/screenshots/`, `tools/perf/` and `tools/launcher-art/`) and **gitleaks**. `pr-hygiene.yml` runs `tools/check-message-test.sh` and checks the PR title with
 `tools/check-message.sh`. Lint and detekt fail only on findings missing from `app/lint-baseline.xml` /
-`app/detekt-baseline.xml`: fix a new finding, don't regenerate a baseline to hide it. `.gitleaks.toml`
+`app/detekt-baseline.xml`: fix a new finding, don't regenerate a baseline to hide it. The one deliberate
+use is detekt's `ForbiddenImport`, which bans Material's interactive widgets and `RoundedCornerShape`
+outside `ui/design`: today's uses are in the baseline on purpose, and each screen ticket deletes its own
+entries as it moves onto `ui/design`. Never add one. `.gitleaks.toml`
 adds rules for Xtream credentials in URLs and MAG MACs; use placeholders such as `u`/`p`, `example.com` or `00:1A:79:00:00:01` in tests.
 `RoomMigrationTest` walks every exported schema to the latest with `OpenTvDatabase.MIGRATIONS`.
 
@@ -84,6 +89,11 @@ catalogue refresh, playback or Xtream parsing. The big picture:
   opened over it, and Android restoring the app comes back on the tab it was on. Where Back goes
   from the players is decided there too.
 - **Settings** are in `core/AppSettings.kt` (exposed as `StateFlow`s, e.g. `activeProfileId`).
+- **Look:** `ui/design` is Settee's design system (ADR 0006, values from `docs/LOOK.md`): tokens
+  (`SetteeColors`, `SetteeType`, `SetteeShapes`, `SetteeSpace`), `SetteeTheme`, `HighlightSurface`, `Text`
+  and `ScreenFrame`. Settee is always dark. Screens not yet moved onto it use Material 3, which
+  `SetteeTheme` feeds from the tokens. `ui/design` never imports `app.opentv.data` (`DesignBoundaryTest`).
+  The fonts ship unmodified, recorded in `app/src/main/assets/licences/FONTS.md`.
 
 ### Data rules that are easy to break
 

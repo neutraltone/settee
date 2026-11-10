@@ -175,6 +175,10 @@ jobs:
       - name: Stick measuring script tests
         run: python3 -m unittest discover -s tools/perf
 
+      # The mark's drawables and SVGs are generated, and a hand edit to one copy would drift.
+      - name: Launcher artwork tests
+        run: python3 -m unittest discover -s tools/launcher-art
+
   gitleaks:
     name: gitleaks
     runs-on: ubuntu-latest

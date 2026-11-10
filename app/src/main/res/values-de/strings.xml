@@ -140,11 +140,6 @@
     <string name="settings_sync_subtitle">Überträgt deine Weiterschauen-Liste per WLAN auf ein anderes Gerät</string>
     <string name="settings_about_title">Über</string>
     <string name="settings_about_subtitle">Version, Updates, Lizenz und Links</string>
-    <string name="settings_appearance">Erscheinungsbild</string>
-    <string name="settings_theme_system">Systemeinstellung folgen</string>
-    <string name="settings_theme_dark">Dunkel</string>
-    <string name="settings_theme_light">Hell</string>
-    <string name="settings_theme_note">TV-Boxen bleiben bei „Systemeinstellung folgen” dunkel. Wähle Dunkel oder Hell, um es zu erzwingen.</string>
     <string name="settings_section_content">Inhalt</string>
     <string name="settings_content_note">Schalte aus, was du nicht brauchst, um schneller zu synchronisieren. Du kannst es jederzeit wieder einschalten.</string>
     <string name="settings_content_live_subtitle">Sender und TV-Guide.</string>

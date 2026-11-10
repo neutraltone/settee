@@ -140,11 +140,6 @@
     <string name="settings_sync_subtitle">Wi-Fi를 통해 이어보기 기록을 다른 기기로 복사</string>
     <string name="settings_about_title">정보</string>
     <string name="settings_about_subtitle">버전, 업데이트, 라이선스 및 링크</string>
-    <string name="settings_appearance">외관</string>
-    <string name="settings_theme_system">시스템 설정 따르기</string>
-    <string name="settings_theme_dark">다크</string>
-    <string name="settings_theme_light">라이트</string>
-    <string name="settings_theme_note">TV 셋톱박스는 \'시스템 설정 따르기\'를 선택해도 다크 모드로 유지됩니다. 강제로 지정하려면 다크 또는 라이트를 선택하세요.</string>
     <string name="settings_section_content">콘텐츠</string>
     <string name="settings_content_note">사용하지 않는 항목을 꺼두면 동기화 속도가 빨라집니다. 언제든지 다시 켤 수 있습니다.</string>
     <string name="settings_content_live_subtitle">채널 및 편성표.</string>

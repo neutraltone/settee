@@ -140,11 +140,6 @@
     <string name="settings_sync_subtitle">Kopieer verdergaan met kijken naar een ander apparaat via wifi</string>
     <string name="settings_about_title">Over</string>
     <string name="settings_about_subtitle">Versie, updates, licentie en links</string>
-    <string name="settings_appearance">Weergave</string>
-    <string name="settings_theme_system">Systeem volgen</string>
-    <string name="settings_theme_dark">Donker</string>
-    <string name="settings_theme_light">Licht</string>
-    <string name="settings_theme_note">Tv-boxen blijven donker bij \"Systeem volgen\". Kies Donker of Licht om het te forceren.</string>
     <string name="settings_section_content">Inhoud</string>
     <string name="settings_content_note">Schakel uit wat je niet gebruikt om sneller te synchroniseren. Zet het altijd weer aan.</string>
     <string name="settings_content_live_subtitle">Zenders en de tv-gids.</string>
