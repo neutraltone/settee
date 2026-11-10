@@ -22,3 +22,6 @@ dependencyResolutionManagement {
 
 rootProject.name = "OpenTV"
 include(":app")
+// Generates app/src/main/generated/baselineProfiles on an emulator (docs/PERFORMANCE.md). CI never
+// runs it: it needs a device, and the committed profile is what builds use.
+include(":baselineprofile")

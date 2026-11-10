@@ -187,7 +187,8 @@ internal fun HomeContent(
         modifier = Modifier.fillMaxSize().focusRequester(start).focusGroup(),
     ) {
         shelves.forEachIndexed { rowIndex, shelf ->
-            item(key = shelf.row.key) {
+            // Each kind of shelf draws its own composable, so its class is its content type.
+            item(key = shelf.row.key, contentType = shelf::class) {
                 val rowFocus = focus?.takeIf { target?.row == shelf.row.key }
                 fun pick(item: String, open: () -> Unit) {
                     picked = HomePick(shelf.row.key, rowIndex, item, shelf.row.items.indexOf(item))

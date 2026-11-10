@@ -251,8 +251,12 @@ private fun SearchResults(
     val highlight = rememberRowHighlight(channelResults, listState, firstRowItem = 1) { it.key }
     LazyColumn(state = listState, verticalArrangement = Arrangement.spacedBy(6.dp)) {
         if (channelResults.isNotEmpty()) {
-            item { SearchSectionHeader(stringResource(R.string.common_channels)) }
-            itemsIndexed(channelResults, key = { _, row -> "c${row.key}" }) { index, row ->
+            item(contentType = "header") { SearchSectionHeader(stringResource(R.string.common_channels)) }
+            itemsIndexed(
+                channelResults,
+                key = { _, row -> "c${row.key}" },
+                contentType = { _, _ -> "channel" },
+            ) { index, row ->
                 SearchResultRow(
                     row = row,
                     onClick = { onPlayChannel(row.primary) },
@@ -261,8 +265,8 @@ private fun SearchResults(
             }
         }
         if (movieResults.isNotEmpty()) {
-            item { SearchSectionHeader(stringResource(R.string.nav_movies)) }
-            items(movieResults, key = { "m${it.id}" }) { movie ->
+            item(contentType = "header") { SearchSectionHeader(stringResource(R.string.nav_movies)) }
+            items(movieResults, key = { "m${it.id}" }, contentType = { "title" }) { movie ->
                 VodResultRow(
                     movie.displayTitle,
                     movie.posterUrl,
@@ -274,8 +278,8 @@ private fun SearchResults(
             }
         }
         if (seriesResults.isNotEmpty()) {
-            item { SearchSectionHeader(stringResource(R.string.nav_shows)) }
-            items(seriesResults, key = { "s${it.id}" }) { show ->
+            item(contentType = "header") { SearchSectionHeader(stringResource(R.string.nav_shows)) }
+            items(seriesResults, key = { "s${it.id}" }, contentType = { "title" }) { show ->
                 VodResultRow(
                     show.displayTitle,
                     show.posterUrl,

@@ -9,7 +9,7 @@ The baseline every later visual decision is checked against (#84). It says how S
 | Stick | Model code `AFTSS` (`sheldon`). Amazon lists this code for both the Fire TV Stick Lite (2020) and the Stick HD (2024), so it doesn't say which one this is |
 | Hardware | MT8695, PowerVR GE8300, 922 MB usable RAM, 1920x1080, 60 Hz |
 | Software | Fire OS 7.7.1.7, API 28 |
-| Build | Release, not debuggable, version 0.4.0, from `244a3f9`, compiled `speed-profile`. The APK's baseline profile comes only from its libraries: Settee has no profile of its own |
+| Build | Release, not debuggable, version 0.4.0, from `244a3f9`, compiled `speed-profile`. The APK's baseline profile came only from its libraries: Settee had no profile of its own until #148 (see Baseline profile below) |
 | Catalogue | 16,830 channels, with a guide for 3,034 of them. Movie and series counts weren't recorded |
 | Date | 2026-11-05 |
 
@@ -99,6 +99,69 @@ The slowest of both was the first run. Memory at Home after a cold start was 86 
 6. Check that `dexopt` in each result matches the baseline's, as it affects cold start and early scrolling. The tables take the median of each column across a command's `runs`, which the script doesn't do for you except for jank and p95. The worst frame is the worst of any run.
 
 The script doesn't produce the 320 ms row movement, the memory figures or the debug comparison, which were one-off checks: `dumpsys gfxinfo <package> framestats` after a press, `dumpsys meminfo <package>` and `/proc/meminfo`, and Android's `Displayed` log line.
+
+## Baseline profile
+
+Since #148 the APK carries a baseline profile of Settee's own code, not just its libraries'. It lists the classes and methods that cold start and the main journeys run, so Android can compile them ahead of time instead of interpreting them and compiling them as they go. The profile is `app/src/main/generated/baselineProfiles/baseline-prof.txt`; every build compiles it into the APK's `assets/dexopt/baseline.prof`, and R8 maps its names onto the minified release.
+
+### How a sideloaded install picks it up
+
+An app store hands the profile to Android at install time. A sideloaded APK, which is how Settee reaches a Fire TV, gets nothing at install, so `profileinstaller` does that job:
+
+1. **The first run is still interpreted.** A few seconds after it starts, `profileinstaller` writes the profile where Android looks for it. `adb logcat -s ProfileInstaller` says `Installing profile for uk.neutraltone.settee`.
+2. **Android compiles it at the next background dexopt**, which runs when the device is idle, usually overnight. The run after that is the first to benefit.
+3. To skip the wait, compile it now, as the measurement in step 6 above expects:
+
+   ```bash
+   adb shell cmd package compile -m speed-profile -f uk.neutraltone.settee
+   ```
+
+   `adb shell dumpsys package dexopt | grep -A2 uk.neutraltone.settee` then shows `speed-profile`.
+
+An upgrade installs the new version's profile the same way, and until the next dexopt the new code runs interpreted.
+
+### Regenerating it
+
+It needs an Android 13 or newer emulator: an Android TV system image at 1920x1080, such as an AVD made from `system-images;android-34;android-tv;arm64-v8a`. A Gradle managed device won't do, because there's no TV image for one. CI never runs this.
+
+```bash
+ANDROID_SERIAL=emulator-5554 ./gradlew :app:generateBaselineProfile
+```
+
+`ANDROID_SERIAL` keeps it off any Fire TV Stick that's also connected. Even without it, the generator profiles its own build of the app, `uk.neutraltone.settee.profiling`, so it can't replace or uninstall Settee on a device. It takes about 15 minutes. The generator (`baselineprofile/`) adds a made-up Xtream provider that it serves itself on the emulator, so no real provider is involved, and loads its catalogue. That setup stays out of the profile. It then walks these with the remote's keys: cold start into Home, Movies and Shows (along and between their rows, into a details page and back), along and between Home's rows, and down and along the Live TV guide. Commit the new `baseline-prof.txt`. `BaselineProfileTest` fails if the committed profile is missing a journey's screen.
+
+**When.** At most once a release, and only when it's due:
+
+- **`BaselineProfileTest` fails.** A journey's screen moved or was renamed: regenerate in that PR, and update the class names the test looks for.
+- **Before a release**, if the screens the journeys walk have changed a lot since the profile was made. Find the commit that last changed it, then see what has changed since:
+
+  ```bash
+  git log -1 --format=%h -- app/src/main/generated/baselineProfiles/
+  git diff --stat <that commit> -- app/src/main/java/app/opentv/ui/HomeScreen.kt app/src/main/java/app/opentv/ui/channels/ app/src/main/java/app/opentv/ui/vod/
+  ```
+
+- **Never on an ordinary PR**, and never during a redesign that's still moving. A stale profile does no harm: Android ignores entries that no longer match, and new code is compiled as it's used, as it would be with no profile.
+
+**Fixing a journey that fails.** A full run takes about 15 minutes, so don't use full runs to find out what's on screen:
+
+1. Read what the failed run left first: the run names the journey that broke, `baselineprofile/build/outputs/connected_android_test_additional_output` has `failure.png` and `failure.xml` (the window hierarchy) of where it stopped, and `adb logcat -s ProfileGen` has each key press and where the highlight landed.
+2. Explore by hand. Run once with `-Pandroid.injected.androidTest.leaveApksInstalledAfterRun=true`: `uk.neutraltone.settee.profiling` stays installed with its made-up catalogue in its database, so drive it with `adb shell input keyevent` and read the screen with `uiautomator dump`. That only crashes while a test is running, because the test holds UiAutomator.
+3. While fixing, move the broken journey to straight after `reachHome()` in `BaselineProfileGenerator.generate()`, and set `ITERATIONS` and `STABLE_ITERATIONS` to 1, so a failing run comes back in a minute or two. Put both back before generating the profile you commit.
+4. The generator finds screens by their on-screen text and the rail's labels ("Watch now", "Episode 1", "Live TV"…), so a renamed label or button is the usual cause. The accessibility tree trails the screen, and presses drop while a row scrolls in, which is why it checks where the highlight is rather than counting presses.
+
+### Against the baseline
+
+To be filled in by a rerun on the Stick with the method above, after compiling with `speed-profile`, to compare with the tables from #84:
+
+| | Before (#84) | With the profile |
+|---|---:|---:|
+| Cold start, first frame (median) | 651 ms | |
+| Cold start, Home stops drawing (median) | 2.85 s | |
+| Home along a row, janky / p95 | 1.7% / 14 ms | |
+| Home between rows, janky / p95 | 43% / 44 ms | |
+| Guide between channels, janky / p95 | 79% / 40 ms | |
+| Highlight response, Home along a row (median) | 27 ms | |
+| Highlight response, guide (median) | 54 ms | |
 
 ## Reading the numbers
 
