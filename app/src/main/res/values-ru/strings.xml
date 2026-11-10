@@ -360,13 +360,10 @@
     <string name="vod_no_shows_provider">Этот провайдер не предоставил ни одного сериала.</string>
     <string name="vod_no_shows_add">Добавьте провайдера, чтобы увидеть его сериалы здесь.</string>
     <string name="vod_loading_episodes">Загрузка эпизодов…</string>
-    <string name="vod_all">Все</string>
-    <string name="vod_search_hint">Поиск фильмов и сериалов</string>
     <string name="vod_continue_watching">Продолжить просмотр</string>
     <string name="vod_large_provider_note">У крупных провайдеров первая загрузка может занять пару минут.</string>
     <string name="vod_recommended">Рекомендуем вам</string>
     <string name="vod_recently_added">Недавно добавленные</string>
-    <string name="vod_categories">Категории</string>
     <string name="vod_watch_now">Смотреть сейчас</string>
     <string name="vod_resume">Продолжить</string>
     <string name="vod_addon_sources">Источники дополнений</string>

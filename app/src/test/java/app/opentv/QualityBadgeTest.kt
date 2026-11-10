@@ -13,7 +13,6 @@ import app.opentv.data.model.Movie
 import app.opentv.data.model.Series
 import app.opentv.data.repo.MediaKey
 import app.opentv.ui.ResumeItem
-import app.opentv.ui.vod.ContinueWatchingRow
 import app.opentv.ui.vod.MoviePosterRow
 import app.opentv.ui.vod.SeriesPosterRow
 import org.junit.Rule
@@ -67,7 +66,7 @@ class QualityBadgeTest {
     fun `shelves and Continue Watching show a 4K title's badge, and none on a title with no tag`() {
         compose.setTvContent {
             Column {
-                ContinueWatchingRow(
+                ContinueWatching(
                     listOf(
                         ResumeItem(
                             MediaKey.Movie(5),

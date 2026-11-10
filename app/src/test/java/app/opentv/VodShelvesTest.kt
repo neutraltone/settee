@@ -21,6 +21,7 @@ import app.opentv.data.model.Movie
 import app.opentv.data.model.Series
 import app.opentv.data.repo.MediaKey
 import app.opentv.ui.ResumeItem
+import app.opentv.ui.design.ScreenFrame
 import app.opentv.ui.vod.MovieShelves
 import app.opentv.ui.vod.SeriesShelves
 import com.google.common.truth.Truth.assertThat
@@ -85,15 +86,17 @@ class VodShelvesTest {
     @Test
     fun `Movies shows Favourite movies in a row under Continue Watching`() {
         compose.setTvContent {
-            MovieShelves(
-                resume = resume,
-                favourites = listOf(movie(1, "Heat")),
-                recommended = emptyList(),
-                recentlyAdded = listOf(movie(2, "Ronin")),
-                genreRows = emptyList(),
-                onResume = {},
-                onOpenMovie = {},
-            )
+            ScreenFrame {
+                MovieShelves(
+                    resume = resume,
+                    favourites = listOf(movie(1, "Heat")),
+                    recommended = emptyList(),
+                    recentlyAdded = listOf(movie(2, "Ronin")),
+                    genreRows = emptyList(),
+                    onResume = {},
+                    onOpenMovie = {},
+                )
+            }
         }
 
         compose.onNodeWithText("Heat").assertExists()
@@ -105,15 +108,17 @@ class VodShelvesTest {
     @Test
     fun `Movies has no Favourites row when the Profile has none`() {
         compose.setTvContent {
-            MovieShelves(
-                resume = resume,
-                favourites = emptyList(),
-                recommended = emptyList(),
-                recentlyAdded = listOf(movie(2, "Ronin")),
-                genreRows = emptyList(),
-                onResume = {},
-                onOpenMovie = {},
-            )
+            ScreenFrame {
+                MovieShelves(
+                    resume = resume,
+                    favourites = emptyList(),
+                    recommended = emptyList(),
+                    recentlyAdded = listOf(movie(2, "Ronin")),
+                    genreRows = emptyList(),
+                    onResume = {},
+                    onOpenMovie = {},
+                )
+            }
         }
 
         compose.onNodeWithText("Favourites").assertDoesNotExist()
@@ -122,15 +127,17 @@ class VodShelvesTest {
     @Test
     fun `Shows shows Favourite series in a row under Continue Watching`() {
         compose.setTvContent {
-            SeriesShelves(
-                resume = resume,
-                favourites = listOf(series(1, "Severance")),
-                recommended = emptyList(),
-                recentlyAdded = listOf(series(2, "Slow Horses")),
-                genreRows = emptyList(),
-                onResume = {},
-                onOpenSeries = {},
-            )
+            ScreenFrame {
+                SeriesShelves(
+                    resume = resume,
+                    favourites = listOf(series(1, "Severance")),
+                    recommended = emptyList(),
+                    recentlyAdded = listOf(series(2, "Slow Horses")),
+                    genreRows = emptyList(),
+                    onResume = {},
+                    onOpenSeries = {},
+                )
+            }
         }
 
         compose.onNodeWithText("Severance").assertExists()
@@ -142,15 +149,17 @@ class VodShelvesTest {
     @Test
     fun `Shows has no Favourites row when the Profile has none`() {
         compose.setTvContent {
-            SeriesShelves(
-                resume = resume,
-                favourites = emptyList(),
-                recommended = emptyList(),
-                recentlyAdded = listOf(series(2, "Slow Horses")),
-                genreRows = emptyList(),
-                onResume = {},
-                onOpenSeries = {},
-            )
+            ScreenFrame {
+                SeriesShelves(
+                    resume = resume,
+                    favourites = emptyList(),
+                    recommended = emptyList(),
+                    recentlyAdded = listOf(series(2, "Slow Horses")),
+                    genreRows = emptyList(),
+                    onResume = {},
+                    onOpenSeries = {},
+                )
+            }
         }
 
         compose.onNodeWithText("Favourites").assertDoesNotExist()
@@ -159,15 +168,17 @@ class VodShelvesTest {
     @Test
     fun `Shows recommends series below Continue Watching and Favourites`() {
         compose.setTvContent {
-            SeriesShelves(
-                resume = resume,
-                favourites = listOf(series(1, "Severance")),
-                recommended = listOf(series(3, "Ozark")),
-                recentlyAdded = emptyList(),
-                genreRows = emptyList(),
-                onResume = {},
-                onOpenSeries = {},
-            )
+            ScreenFrame {
+                SeriesShelves(
+                    resume = resume,
+                    favourites = listOf(series(1, "Severance")),
+                    recommended = listOf(series(3, "Ozark")),
+                    recentlyAdded = emptyList(),
+                    genreRows = emptyList(),
+                    onResume = {},
+                    onOpenSeries = {},
+                )
+            }
         }
 
         assertThat(topOf("Favourites")).isGreaterThan(topOf("Continue watching"))
@@ -178,15 +189,17 @@ class VodShelvesTest {
     @Test
     fun `Shows recommends series above Recently added`() {
         compose.setTvContent {
-            SeriesShelves(
-                resume = resume,
-                favourites = emptyList(),
-                recommended = listOf(series(3, "Ozark")),
-                recentlyAdded = listOf(series(2, "Slow Horses")),
-                genreRows = emptyList(),
-                onResume = {},
-                onOpenSeries = {},
-            )
+            ScreenFrame {
+                SeriesShelves(
+                    resume = resume,
+                    favourites = emptyList(),
+                    recommended = listOf(series(3, "Ozark")),
+                    recentlyAdded = listOf(series(2, "Slow Horses")),
+                    genreRows = emptyList(),
+                    onResume = {},
+                    onOpenSeries = {},
+                )
+            }
         }
 
         assertThat(topOf("Recommended for you")).isLessThan(topOf("Recently added"))
@@ -198,15 +211,17 @@ class VodShelvesTest {
     @Test
     fun `Shows has no Recommended row when there is nothing to recommend`() {
         compose.setTvContent {
-            SeriesShelves(
-                resume = resume,
-                favourites = emptyList(),
-                recommended = emptyList(),
-                recentlyAdded = listOf(series(2, "Slow Horses")),
-                genreRows = emptyList(),
-                onResume = {},
-                onOpenSeries = {},
-            )
+            ScreenFrame {
+                SeriesShelves(
+                    resume = resume,
+                    favourites = emptyList(),
+                    recommended = emptyList(),
+                    recentlyAdded = listOf(series(2, "Slow Horses")),
+                    genreRows = emptyList(),
+                    onResume = {},
+                    onOpenSeries = {},
+                )
+            }
         }
 
         compose.onNodeWithText("Recommended for you").assertDoesNotExist()
@@ -217,15 +232,17 @@ class VodShelvesTest {
         var opened: Series? = null
         val ozark = series(3, "Ozark")
         compose.setTvContent {
-            SeriesShelves(
-                resume = emptyList(),
-                favourites = emptyList(),
-                recommended = listOf(ozark),
-                recentlyAdded = emptyList(),
-                genreRows = emptyList(),
-                onResume = {},
-                onOpenSeries = { opened = it },
-            )
+            ScreenFrame {
+                SeriesShelves(
+                    resume = emptyList(),
+                    favourites = emptyList(),
+                    recommended = listOf(ozark),
+                    recentlyAdded = emptyList(),
+                    genreRows = emptyList(),
+                    onResume = {},
+                    onOpenSeries = { opened = it },
+                )
+            }
         }
 
         compose.onNodeWithText("Ozark").requestFocus()
@@ -238,15 +255,17 @@ class VodShelvesTest {
     fun `a recommended series the viewer is on stays under the highlight until they leave the row`() {
         var recommended by mutableStateOf(listOf(series(3, "Ozark"), series(4, "Dark")))
         compose.setTvContent {
-            SeriesShelves(
-                resume = emptyList(),
-                favourites = emptyList(),
-                recommended = recommended,
-                recentlyAdded = listOf(series(2, "Slow Horses")),
-                genreRows = emptyList(),
-                onResume = {},
-                onOpenSeries = {},
-            )
+            ScreenFrame {
+                SeriesShelves(
+                    resume = emptyList(),
+                    favourites = emptyList(),
+                    recommended = recommended,
+                    recentlyAdded = listOf(series(2, "Slow Horses")),
+                    genreRows = emptyList(),
+                    onResume = {},
+                    onOpenSeries = {},
+                )
+            }
         }
         compose.onNodeWithText("Ozark").requestFocus()
 
@@ -266,15 +285,17 @@ class VodShelvesTest {
     fun `a Recommended row left with nothing stays until the viewer leaves it`() {
         var recommended by mutableStateOf(listOf(series(3, "Ozark")))
         compose.setTvContent {
-            SeriesShelves(
-                resume = emptyList(),
-                favourites = emptyList(),
-                recommended = recommended,
-                recentlyAdded = listOf(series(2, "Slow Horses")),
-                genreRows = emptyList(),
-                onResume = {},
-                onOpenSeries = {},
-            )
+            ScreenFrame {
+                SeriesShelves(
+                    resume = emptyList(),
+                    favourites = emptyList(),
+                    recommended = recommended,
+                    recentlyAdded = listOf(series(2, "Slow Horses")),
+                    genreRows = emptyList(),
+                    onResume = {},
+                    onOpenSeries = {},
+                )
+            }
         }
         compose.onNodeWithText("Ozark").requestFocus()
 
@@ -293,15 +314,17 @@ class VodShelvesTest {
     fun `a Recommended row without the highlight changes straight away`() {
         var recommended by mutableStateOf(listOf(series(3, "Ozark")))
         compose.setTvContent {
-            SeriesShelves(
-                resume = emptyList(),
-                favourites = emptyList(),
-                recommended = recommended,
-                recentlyAdded = listOf(series(2, "Slow Horses")),
-                genreRows = emptyList(),
-                onResume = {},
-                onOpenSeries = {},
-            )
+            ScreenFrame {
+                SeriesShelves(
+                    resume = emptyList(),
+                    favourites = emptyList(),
+                    recommended = recommended,
+                    recentlyAdded = listOf(series(2, "Slow Horses")),
+                    genreRows = emptyList(),
+                    onResume = {},
+                    onOpenSeries = {},
+                )
+            }
         }
         compose.onNodeWithText("Slow Horses").requestFocus()
 
@@ -316,15 +339,17 @@ class VodShelvesTest {
     fun `a recommended movie the viewer is on stays under the highlight until they leave the row`() {
         var recommended by mutableStateOf(listOf(movie(3, "Heat"), movie(4, "Ronin")))
         compose.setTvContent {
-            MovieShelves(
-                resume = emptyList(),
-                favourites = emptyList(),
-                recommended = recommended,
-                recentlyAdded = listOf(movie(2, "Collateral")),
-                genreRows = emptyList(),
-                onResume = {},
-                onOpenMovie = {},
-            )
+            ScreenFrame {
+                MovieShelves(
+                    resume = emptyList(),
+                    favourites = emptyList(),
+                    recommended = recommended,
+                    recentlyAdded = listOf(movie(2, "Collateral")),
+                    genreRows = emptyList(),
+                    onResume = {},
+                    onOpenMovie = {},
+                )
+            }
         }
         compose.onNodeWithText("Heat").requestFocus()
 

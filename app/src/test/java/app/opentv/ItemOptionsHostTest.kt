@@ -29,7 +29,6 @@ import app.opentv.data.repo.MediaKey
 import app.opentv.ui.ResumeItem
 import app.opentv.ui.options.ItemOptionsHost
 import app.opentv.ui.options.OptionsDestination
-import app.opentv.ui.vod.ContinueWatchingRow
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.runBlocking
 import org.junit.Before
@@ -119,7 +118,7 @@ class ItemOptionsHostTest {
     private fun openOptionsOn(card: ResumeItem) {
         compose.setTvContent {
             ItemOptionsHost(navigate = { events += it }) {
-                ContinueWatchingRow(
+                ContinueWatching(
                     listOf(card),
                     onResume = { events += "resume" },
                     onLeave = {

@@ -360,13 +360,10 @@
     <string name="vod_no_shows_provider">Αυτός ο πάροχος δεν επέστρεψε καμία σειρά.</string>
     <string name="vod_no_shows_add">Προσθέστε έναν πάροχο για να δείτε τις σειρές του εδώ.</string>
     <string name="vod_loading_episodes">Φόρτωση επεισοδίων…</string>
-    <string name="vod_all">Όλα</string>
-    <string name="vod_search_hint">Αναζήτηση ταινιών &amp; σειρών</string>
     <string name="vod_continue_watching">Συνέχιση παρακολούθησης</string>
     <string name="vod_large_provider_note">Ένας μεγάλος πάροχος μπορεί να χρειαστεί μερικά λεπτά την πρώτη φορά.</string>
     <string name="vod_recommended">Προτεινόμενα για εσάς</string>
     <string name="vod_recently_added">Πρόσφατα προστέθηκαν</string>
-    <string name="vod_categories">Κατηγορίες</string>
     <string name="vod_watch_now">Παρακολούθηση τώρα</string>
     <string name="vod_resume">Συνέχιση</string>
     <string name="vod_addon_sources">Πηγές πρόσθετων</string>

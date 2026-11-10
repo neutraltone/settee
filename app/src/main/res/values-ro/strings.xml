@@ -360,13 +360,10 @@
     <string name="vod_no_shows_provider">Acest furnizor nu a returnat niciun serial.</string>
     <string name="vod_no_shows_add">Adaugă un furnizor pentru a-i vedea serialele aici.</string>
     <string name="vod_loading_episodes">Se încarcă episoadele…</string>
-    <string name="vod_all">Toate</string>
-    <string name="vod_search_hint">Caută filme &amp; seriale</string>
     <string name="vod_continue_watching">Continuă vizionarea</string>
     <string name="vod_large_provider_note">Un furnizor mare poate dura câteva minute prima dată.</string>
     <string name="vod_recommended">Recomandate pentru tine</string>
     <string name="vod_recently_added">Adăugate recent</string>
-    <string name="vod_categories">Categorii</string>
     <string name="vod_watch_now">Urmărește acum</string>
     <string name="vod_resume">Reia</string>
     <string name="vod_addon_sources">Surse din suplimente</string>

@@ -374,7 +374,7 @@ internal fun restoreTarget(rows: List<HomeRow>, pick: HomePick): HomePick? {
 }
 
 @Composable
-private fun ScreenFrameScope.ContinueWatchingShelf(
+internal fun ScreenFrameScope.ContinueWatchingShelf(
     cards: List<ResumeItem>,
     large: Boolean,
     focus: CardFocus?,

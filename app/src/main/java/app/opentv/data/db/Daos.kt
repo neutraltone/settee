@@ -18,6 +18,7 @@ import app.opentv.data.model.Channel
 import app.opentv.data.model.ChannelEpgMatch
 import app.opentv.data.model.ChannelHiddenChange
 import app.opentv.data.model.ChannelMatchInput
+import app.opentv.data.model.CoverRow
 import app.opentv.data.model.EpgChannelAlias
 import app.opentv.data.model.EpgFeed
 import app.opentv.data.model.Episode
@@ -497,6 +498,12 @@ interface MovieDao {
     )
     fun observe(categoryId: String?): Flow<List<Movie>>
 
+    /** A category's covers for its grid: only what the cards show, in [observe]'s order. */
+    @Query(
+        "SELECT id, name, posterUrl, year FROM movies WHERE categoryId = :categoryId ORDER BY addedMillis DESC, name",
+    )
+    fun observeCovers(categoryId: String): Flow<List<CoverRow>>
+
     @Query("SELECT * FROM movies WHERE name LIKE '%' || :query || '%' ORDER BY name LIMIT :limit")
     fun search(query: String, limit: Int = 200): Flow<List<Movie>>
 
@@ -642,6 +649,12 @@ interface SeriesDao {
         """,
     )
     fun observe(categoryId: String?): Flow<List<Series>>
+
+    /** A category's covers for its grid: only what the cards show, in [observe]'s order. */
+    @Query(
+        "SELECT id, name, posterUrl, year FROM series WHERE categoryId = :categoryId ORDER BY addedMillis DESC, name",
+    )
+    fun observeCovers(categoryId: String): Flow<List<CoverRow>>
 
     @Query("SELECT * FROM series WHERE name LIKE '%' || :query || '%' ORDER BY name LIMIT :limit")
     fun search(query: String, limit: Int = 200): Flow<List<Series>>

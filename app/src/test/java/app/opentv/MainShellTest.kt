@@ -46,6 +46,7 @@ import app.opentv.ui.Cover
 import app.opentv.ui.HomeContent
 import app.opentv.ui.MainShell
 import app.opentv.ui.Tab
+import app.opentv.ui.design.ScreenFrame
 import app.opentv.ui.visibleTabs
 import app.opentv.ui.vod.MovieShelves
 import com.google.common.truth.Truth.assertThat
@@ -195,15 +196,17 @@ class MainShellTest {
                 onExit = {},
                 modifier = Modifier.fillMaxSize(),
             ) { _, _, _ ->
-                MovieShelves(
-                    resume = emptyList(),
-                    favourites = (1L..8L).map { movie(it, "Favourite $it") },
-                    recommended = emptyList(),
-                    recentlyAdded = (11L..18L).map { movie(it, "Added $it") },
-                    genreRows = listOf(GenreGroup("Drama", (21L..28L).map { movie(it, "Drama $it") })),
-                    onResume = {},
-                    onOpenMovie = { opened = it.name },
-                )
+                ScreenFrame {
+                    MovieShelves(
+                        resume = emptyList(),
+                        favourites = (1L..8L).map { movie(it, "Favourite $it") },
+                        recommended = emptyList(),
+                        recentlyAdded = (11L..18L).map { movie(it, "Added $it") },
+                        genreRows = listOf(GenreGroup("Drama", (21L..28L).map { movie(it, "Drama $it") })),
+                        onResume = {},
+                        onOpenMovie = { opened = it.name },
+                    )
+                }
             }
         }
         compose.onNodeWithText("Favourite 1").requestFocus()

@@ -16,6 +16,7 @@ import app.opentv.data.db.SourceDao
 import app.opentv.data.model.Category
 import app.opentv.data.model.Channel
 import app.opentv.data.model.ChannelHiddenChange
+import app.opentv.data.model.CoverRow
 import app.opentv.data.model.Episode
 import app.opentv.data.model.LiveStreamFormat
 import app.opentv.data.model.Movie
@@ -118,23 +119,55 @@ private val VOD_YEAR = Regex("""\b(19|20)\d{2}\b""")
  * (IMAX, EXTENDED, 3D) stay in the name and keep those cuts separate — intended. Two same-named
  * films that both lack any year will merge, an accepted edge for a best-effort collapse.
  */
-internal fun collapseMovieVariants(movies: List<Movie>, decoders: DecoderList): List<MovieVariantGroup> {
-    val groups = LinkedHashMap<String, MutableList<MovieVariant>>()
-    for (movie in movies) {
-        val embeddedYear = VOD_YEAR.find(movie.name)?.value?.toIntOrNull()
-        val bareName = VOD_YEAR.replace(movie.name, " ")
-        val normalized = ChannelNameNormalizer.normalize(bareName)
-        val year = movie.year ?: embeddedYear
+internal fun collapseMovieVariants(movies: List<Movie>, decoders: DecoderList): List<MovieVariantGroup> =
+    foldQualities(movies, Movie::name, Movie::year, decoders).map { (primary, variants) ->
+        MovieVariantGroup(primary = primary, variants = variants.map { MovieVariant(it.item, it.label, it.rank) })
+    }
+
+/**
+ * One cover on Movies or Shows, in a row or a category's grid: a show, or a film with its Qualities
+ * folded into the one this device plays by default ([qualities] says how many there are). [name] is
+ * the provider's, where a Quality is written, and [title] the cleaned one the card shows.
+ */
+@androidx.compose.runtime.Immutable
+data class TitleCover(val id: Long, val name: String, val title: String, val posterUrl: String?, val qualities: Int = 1)
+
+/** A category's films as grid covers, each film's Qualities folded as [collapseMovieVariants] does. */
+internal fun movieCovers(rows: List<CoverRow>, decoders: DecoderList): List<TitleCover> =
+    foldQualities(rows, CoverRow::name, CoverRow::year, decoders).map { (primary, variants) ->
+        primary.toCover(qualities = variants.size)
+    }
+
+/** A category's shows as grid covers. */
+internal fun seriesCovers(rows: List<CoverRow>): List<TitleCover> = rows.map { it.toCover() }
+
+private fun CoverRow.toCover(qualities: Int = 1) =
+    TitleCover(id, name, VodTitleCleaner.clean(name), posterUrl, qualities)
+
+private class RankedVariant<T>(val item: T, val label: String, val rank: Int)
+
+/** See [collapseMovieVariants]: each film's primary, and all its variants best first. */
+private fun <T> foldQualities(
+    items: List<T>,
+    nameOf: (T) -> String,
+    yearOf: (T) -> Int?,
+    decoders: DecoderList,
+): List<Pair<T, List<RankedVariant<T>>>> {
+    val groups = LinkedHashMap<String, MutableList<RankedVariant<T>>>()
+    for (item in items) {
+        val name = nameOf(item)
+        val embeddedYear = VOD_YEAR.find(name)?.value?.toIntOrNull()
+        val normalized = ChannelNameNormalizer.normalize(VOD_YEAR.replace(name, " "))
+        val year = yearOf(item) ?: embeddedYear
         val key = normalized.groupKey + "|" + (year?.toString() ?: "")
-        groups.getOrPut(key) { mutableListOf() }
-            .add(MovieVariant(movie, normalized.qualityLabel, normalized.qualityRank))
+        groups.getOrPut(key) {
+            mutableListOf()
+        }.add(RankedVariant(item, normalized.qualityLabel, normalized.qualityRank))
     }
     return groups.values.map { variants ->
-        val ordered = variants.sortedWith(
-            compareByDescending<MovieVariant> { it.qualityRank }.thenBy { it.movie.name },
-        )
-        val primary = ordered.firstOrNull { decoders.playsQualityRanked(it.qualityRank) } ?: ordered.first()
-        MovieVariantGroup(primary = primary.movie, variants = ordered)
+        val ordered = variants.sortedWith(compareByDescending<RankedVariant<T>> { it.rank }.thenBy { nameOf(it.item) })
+        val primary = ordered.firstOrNull { decoders.playsQualityRanked(it.rank) } ?: ordered.first()
+        primary.item to ordered
     }
 }
 
@@ -224,6 +257,10 @@ class CatalogRepository(
     fun observeMovies(categoryId: String? = null): Flow<List<Movie>> = movieDao.observe(categoryId)
 
     fun observeSeries(categoryId: String? = null): Flow<List<Series>> = seriesDao.observe(categoryId)
+
+    fun observeMovieCovers(categoryId: String): Flow<List<CoverRow>> = movieDao.observeCovers(categoryId)
+
+    fun observeSeriesCovers(categoryId: String): Flow<List<CoverRow>> = seriesDao.observeCovers(categoryId)
 
     fun observeEpisodes(sourceId: Long, seriesId: String): Flow<List<Episode>> =
         episodeDao.observeForSeries(sourceId, seriesId)

@@ -360,13 +360,10 @@
     <string name="vod_no_shows_provider">Deze provider heeft geen series teruggegeven.</string>
     <string name="vod_no_shows_add">Voeg een provider toe om hier de series te zien.</string>
     <string name="vod_loading_episodes">Afleveringen laden…</string>
-    <string name="vod_all">Alle</string>
-    <string name="vod_search_hint">Films en series zoeken</string>
     <string name="vod_continue_watching">Verdergaan met kijken</string>
     <string name="vod_large_provider_note">Bij een grote provider kan dit de eerste keer een paar minuten duren.</string>
     <string name="vod_recommended">Aanbevolen voor jou</string>
     <string name="vod_recently_added">Onlangs toegevoegd</string>
-    <string name="vod_categories">Categorieën</string>
     <string name="vod_watch_now">Nu kijken</string>
     <string name="vod_resume">Hervatten</string>
     <string name="vod_addon_sources">Add-onbronnen</string>

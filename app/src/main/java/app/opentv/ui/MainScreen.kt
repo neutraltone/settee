@@ -167,14 +167,12 @@ fun MainScreen(
                 Tab.MOVIES -> MoviesScreen(
                     onOpenMovie = onOpenMovie,
                     onResume = onResume,
-                    onOpenSearch = onOpenSearch,
                     hasSources = hasSources,
                     isSyncing = isSyncing,
                 )
                 Tab.SHOWS -> SeriesScreen(
                     onOpenSeries = onOpenSeries,
                     onResume = onResume,
-                    onOpenSearch = onOpenSearch,
                     hasSources = hasSources,
                     isSyncing = isSyncing,
                 )

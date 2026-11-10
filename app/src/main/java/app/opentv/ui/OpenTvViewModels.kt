@@ -41,12 +41,17 @@ import app.opentv.data.repo.MediaKey
 import app.opentv.data.repo.MovieVariantGroup
 import app.opentv.data.repo.PersonTitle
 import app.opentv.data.repo.RefreshMessages
+import app.opentv.data.repo.TitleCover
 import app.opentv.data.repo.VodTitle
+import app.opentv.data.repo.WatchStatus
+import app.opentv.data.repo.categoryGroupKey
 import app.opentv.data.repo.collapseMovieVariants
+import app.opentv.data.repo.movieCovers
 import app.opentv.data.repo.movies
 import app.opentv.data.repo.nowOn
 import app.opentv.data.repo.onNowAt
 import app.opentv.data.repo.series
+import app.opentv.data.repo.seriesCovers
 import app.opentv.data.work.SyncWorker
 import app.opentv.pairing.ManagerServer
 import app.opentv.player.playsQualityRanked
@@ -682,6 +687,13 @@ data class ResumeItem(
     val name: String = title,
 )
 
+/**
+ * What Movies' and Shows' backdrop shows for the highlighted title: its name, where the Profile is
+ * with it ([status], movies only for now), its synopsis and its wide art.
+ */
+@androidx.compose.runtime.Immutable
+data class Backdrop(val title: String, val imageUrl: String?, val status: WatchStatus?, val synopsis: String?)
+
 class VodViewModel @JvmOverloads constructor(
     app: Application,
     private val graph: ServiceLocator.Graph = ServiceLocator.get(app),
@@ -723,19 +735,26 @@ class VodViewModel @JvmOverloads constructor(
     // Category chips scoped to the chosen provider: pick a provider and you see only its categories,
     // and since a category id belongs to one provider, the grid you then open is already that
     // provider's titles. null folds categories across every provider ("All sources").
-    val movieCategories: StateFlow<List<Category>> =
-        combine(
-            graph.catalogRepository.observeCategories(StreamKind.MOVIE),
-            selectedVodSource,
-        ) { raw, sourceId -> if (sourceId == null) raw else raw.filter { it.sourceId == sourceId } }
-            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+    // The Parental Lock's categories are left out too, until the viewer unlocks them for the session.
+    val movieCategories: StateFlow<List<Category>> = viewableCategories(StreamKind.MOVIE)
 
-    val seriesCategories: StateFlow<List<Category>> =
-        combine(
-            graph.catalogRepository.observeCategories(StreamKind.SERIES),
-            selectedVodSource,
-        ) { raw, sourceId -> if (sourceId == null) raw else raw.filter { it.sourceId == sourceId } }
-            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+    val seriesCategories: StateFlow<List<Category>> = viewableCategories(StreamKind.SERIES)
+
+    private fun viewableCategories(kind: StreamKind): StateFlow<List<Category>> = combine(
+        graph.catalogRepository.observeCategories(kind),
+        selectedVodSource,
+        settings.hiddenCategories,
+        settings.hiddenUnlocked,
+    ) { raw, sourceId, locked, unlocked ->
+        raw.filter {
+            (sourceId == null || it.sourceId == sourceId) && (unlocked || categoryGroupKey(it) !in locked)
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(KEEP_CATEGORIES_MILLIS), emptyList())
+
+    private companion object {
+        /** As long as the tab's other flows: through a quick trip to a title's page and back. */
+        const val KEEP_CATEGORIES_MILLIS = 5_000L
+    }
 
     // No category means the home rows, which don't read these. Observing every row for nothing would
     // hold the whole catalogue in memory and load it again on each write during a refresh (#180).
@@ -748,6 +767,23 @@ class VodViewModel @JvmOverloads constructor(
     val series: StateFlow<List<Series>> = seriesCategory
         .flatMapLatest { id -> id?.let(graph.catalogRepository::observeSeries) ?: flowOf(emptyList()) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    suspend fun movie(id: Long): Movie? = graph.catalogRepository.movie(id)
+
+    suspend fun series(id: Long): Series? = graph.catalogRepository.series(id)
+
+    suspend fun movieBackdrop(id: Long): Backdrop? = movie(id)?.let {
+        Backdrop(
+            it.displayTitle,
+            it.backdropUrl ?: it.posterUrl,
+            graph.viewerLibrary.marks.statusOf(MediaKey.Movie(it.id).stored),
+            it.plot,
+        )
+    }
+
+    suspend fun seriesBackdrop(id: Long): Backdrop? = series(id)?.let {
+        Backdrop(it.displayTitle, it.backdropUrl ?: it.posterUrl, status = null, it.plot)
+    }
 
     fun selectMovieCategory(id: String?) {
         movieCategory.value = id
@@ -1035,6 +1071,28 @@ class VodViewModel @JvmOverloads constructor(
     @OptIn(ExperimentalCoroutinesApi::class)
     val movieGroups: StateFlow<List<MovieVariantGroup>> = movies
         .mapLatest { collapseMovieVariants(it, graph.decoders) }
+        .flowOn(Dispatchers.Default)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    /**
+     * The picked category's grid as covers, each film's Qualities folded into one ([movieCovers]).
+     * Off the main thread for the same reason as [movieGroups].
+     */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val movieGrid: StateFlow<List<TitleCover>> = movieCategory
+        .flatMapLatest { id ->
+            id?.let { graph.catalogRepository.observeMovieCovers(it).map { rows -> movieCovers(rows, graph.decoders) } }
+                ?: flowOf(emptyList())
+        }
+        .flowOn(Dispatchers.Default)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    /** The picked category's shows as covers. */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val seriesGrid: StateFlow<List<TitleCover>> = seriesCategory
+        .flatMapLatest { id ->
+            id?.let { graph.catalogRepository.observeSeriesCovers(it).map(::seriesCovers) } ?: flowOf(emptyList())
+        }
         .flowOn(Dispatchers.Default)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
