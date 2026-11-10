@@ -56,12 +56,48 @@ class PairingServerTest {
     }
 
     @Test
-    fun `the address typed from the screen without the QR's token is refused`() {
+    fun `the address typed from the screen opens the form`() {
         val session = listening()
 
-        val (code, page) = get("http://${session.shortUrl}/")
+        val (code, page) = get("http://${session.shortUrl}")
+
+        assertThat(code).isEqualTo(200)
+        assertThat(page).contains("<form")
+    }
+
+    @Test
+    fun `the typed address still opens the form if the phone capitalises it or adds a slash`() {
+        val session = listening()
+
+        val (code, _) = get("http://${session.shortUrl.uppercase()}/")
+
+        assertThat(code).isEqualTo(200)
+    }
+
+    @Test
+    fun `the TV's address and port alone are not enough`() {
+        val session = listening()
+
+        val (code, page) = get("http://${session.host}:${session.port}/")
 
         assertThat(code).isEqualTo(404)
         assertThat(page).isEqualTo("Not found.")
+    }
+
+    @Test
+    fun `a guessed short code is refused`() {
+        val session = listening()
+        val wrong = session.shortUrl.substringAfterLast('/').map { if (it == '2') '3' else '2' }.joinToString("")
+
+        val (code, _) = get("http://${session.host}:${session.port}/$wrong")
+
+        assertThat(code).isEqualTo(404)
+    }
+
+    @Test
+    fun `the typed address is short enough to read off a TV`() {
+        val session = listening()
+
+        assertThat(session.shortUrl).matches("""[0-9.]+:[0-9]+/[a-z2-9]{6}""")
     }
 }

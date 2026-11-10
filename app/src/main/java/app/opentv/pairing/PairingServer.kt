@@ -45,7 +45,11 @@ import kotlinx.coroutines.launch
  * ## What stops the neighbours using it
  *
  * - It binds to the LAN on a **random high port**, and only while the pairing screen is open.
- * - The URL carries a **192-bit random token**. Knowing the IP and port is not enough.
+ * - The QR code's URL carries a **192-bit random token**. Knowing the IP and port is not enough.
+ * - For a phone whose camera won't scan, the screen also shows a typeable address with a
+ *   **six-character short token** instead (31 symbols, about 30 bits). It is weaker than the QR's,
+ *   but guessing it over HTTP in the five minutes the session lasts is still a long shot, and it
+ *   only reaches the form: the code below is still needed to send anything.
  * - The phone must also enter a **six-digit code shown on the TV**. That is the part the user
  *   sees, and it is what defends against someone who somehow obtained the link.
  * - Requests from non-private addresses are refused outright.
@@ -61,9 +65,14 @@ class PairingServer(private val scope: CoroutineScope) {
         val confirmCode: String,
         val host: String,
         val port: Int,
+        /** The path of [shortUrl]: six characters that can't be misread for each other. */
+        val shortToken: String,
     ) {
-        /** The address to read out if the QR will not scan. */
-        val shortUrl: String get() = "$host:$port"
+        /**
+         * The address to type if the QR will not scan, e.g. `192.168.0.14:41234/k7m2qx`. No
+         * `http://`: every phone browser adds it, and it is one more thing to read off a TV.
+         */
+        val shortUrl: String get() = "$host:$port/$shortToken"
     }
 
     sealed interface State {
@@ -80,6 +89,7 @@ class PairingServer(private val scope: CoroutineScope) {
 
     private var serverSocket: ServerSocket? = null
     private var token: String = ""
+    private var shortToken: String = ""
     private var confirmCode: String = ""
     private var wrongCodeAttempts = 0
 
@@ -97,6 +107,10 @@ class PairingServer(private val scope: CoroutineScope) {
 
         val random = SecureRandom()
         token = ByteArray(24).also(random::nextBytes).joinToString("") { "%02x".format(it) }
+        // Not just a shorter hex token: no 0/o, 1/l/i to confuse when read across a room.
+        shortToken = (1..SHORT_TOKEN_LENGTH)
+            .map { SHORT_TOKEN_ALPHABET[random.nextInt(SHORT_TOKEN_ALPHABET.length)] }
+            .joinToString("")
         confirmCode = "%06d".format(random.nextInt(1_000_000))
         wrongCodeAttempts = 0
 
@@ -118,6 +132,7 @@ class PairingServer(private val scope: CoroutineScope) {
             confirmCode = confirmCode,
             host = host,
             port = socket.localPort,
+            shortToken = shortToken,
         )
         _state.value = State.Listening(session)
 
@@ -150,6 +165,7 @@ class PairingServer(private val scope: CoroutineScope) {
         runCatching { serverSocket?.close() }
         serverSocket = null
         token = ""
+        shortToken = ""
         confirmCode = ""
         if (_state.value is State.Listening) _state.value = State.Idle
     }
@@ -189,9 +205,16 @@ class PairingServer(private val scope: CoroutineScope) {
 
         val output = client.getOutputStream()
 
-        // Every route checks the token. Without it the page does not exist.
+        // Every route checks a token. Without one the page does not exist. The short token
+        // only opens the form, which carries the full token for the submit.
         val supplied = query["t"] ?: PairingHttp.parseFormEncoded(body)["t"] ?: ""
-        if (token.isEmpty() || !PairingHttp.secretsMatch(supplied, token)) {
+        val typed = path.trim('/').lowercase()
+        val authorised = token.isNotEmpty() &&
+            (
+                PairingHttp.secretsMatch(supplied, token) ||
+                    (method == "GET" && PairingHttp.secretsMatch(typed, shortToken))
+                )
+        if (!authorised) {
             output.write(PairingHttp.httpResponse("404 Not Found", "text/plain", "Not found."))
             return
         }
@@ -287,6 +310,7 @@ class PairingServer(private val scope: CoroutineScope) {
         runCatching { serverSocket?.close() }
         serverSocket = null
         token = ""
+        shortToken = ""
     }
 
     // ---- Finding our own address -----------------------------------------------------------
@@ -325,5 +349,7 @@ class PairingServer(private val scope: CoroutineScope) {
         const val SOCKET_TIMEOUT_MILLIS = 15_000
         const val MAX_BODY_BYTES = 16 * 1024
         const val MAX_CODE_ATTEMPTS = 5
+        const val SHORT_TOKEN_LENGTH = 6
+        const val SHORT_TOKEN_ALPHABET = "23456789abcdefghjkmnpqrstuvwxyz"
     }
 }
