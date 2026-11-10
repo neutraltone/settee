@@ -53,7 +53,14 @@ class ArtCardTest {
             horizontalArrangement = Arrangement.spacedBy(SetteeSpace.CardGap),
             verticalAlignment = Alignment.Bottom,
         ) {
-            ArtCard("Collateral", "https://example.com/1.jpg", {}, ArtCardSize.Large, progress = 0.4f)
+            ArtCard(
+                "Collateral: the director's cut, with an introduction",
+                "https://example.com/1.jpg",
+                {},
+                ArtCardSize.Large,
+                progress = 0.4f,
+                scrollsTitle = true,
+            )
             ArtCard("Severance", "https://example.com/2.jpg", {
             }, ArtCardSize.Landscape, status = listOf("S2 E4"), badge = "FHD")
             ArtCard(
@@ -72,7 +79,11 @@ class ArtCardTest {
     fun `art cards come in their three sizes, with only an unstarted title's name on it`() {
         setCards()
 
-        assertThat(compose.onNode(hasText("Collateral") and hasClickAction()).getUnclippedBoundsInRoot().width)
+        assertThat(
+            compose.onNode(
+                hasText("Collateral", substring = true) and hasClickAction(),
+            ).getUnclippedBoundsInRoot().width,
+        )
             .isEqualTo(300.dp)
         assertThat(compose.onNode(hasText("Severance") and hasClickAction()).getUnclippedBoundsInRoot().width)
             .isEqualTo(186.dp)
@@ -88,7 +99,7 @@ class ArtCardTest {
 
         compose.onNode(hasText("22 min left") and hasClickAction()).requestFocus().assertIsFocused()
         captureScreen("ds_art_card_highlighted")
-        compose.onNode(hasText("Collateral") and hasClickAction()).requestFocus().assertIsFocused()
+        compose.onNode(hasText("Collateral", substring = true) and hasClickAction()).requestFocus().assertIsFocused()
         captureScreen("ds_art_card_large_highlighted")
     }
 

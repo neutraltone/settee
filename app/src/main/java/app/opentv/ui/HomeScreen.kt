@@ -84,14 +84,16 @@ internal fun HomeScreen(
     }
     HomeContent(
         state.continueWatching,
-        state.favourites,
+        state.favouriteShows,
+        state.favouriteMovies,
         state.favouriteChannels,
         onResume,
         onOpenSeries,
         onOpenMovie,
         play,
         takeFocus,
-        state.recentlyAdded,
+        state.recentShows,
+        state.recentMovies,
         onNothingToShow,
         live = live?.let { LiveTile(it, preview.player, preview.error) },
         onWatchLive = play,
@@ -101,29 +103,46 @@ internal fun HomeScreen(
 }
 
 /**
- * Home's rows, top to bottom: the Live Preview, what the Profile can pick back up, its Favourites,
- * its Favourite channels, then [recentlyAdded]. An empty row is left out rather than shown blank.
+ * Home's rows, top to bottom: the Live Preview, what the Profile can pick back up, what's Recently
+ * Added ([recentShows], [recentMovies]), then its Favourite shows, movies and channels. An empty row
+ * is left out rather than shown blank.
  */
 @Composable
 internal fun HomeContent(
     continueWatching: List<ResumeItem>,
-    favourites: List<Cover>,
+    favouriteShows: List<Cover>,
+    favouriteMovies: List<Cover>,
     favouriteChannels: List<HomeChannel>,
     onResume: (MediaKey) -> Unit,
     onOpenSeries: (Series) -> Unit,
     onOpenMovie: (Movie) -> Unit,
     onPlayChannel: (Channel) -> Unit,
     takeFocus: Boolean,
-    recentlyAdded: List<Cover> = emptyList(),
+    recentShows: List<Cover> = emptyList(),
+    recentMovies: List<Cover> = emptyList(),
     onNothingToShow: () -> Unit = {},
     live: LiveTile? = null,
     onWatchLive: (Channel) -> Unit = {},
     onOpenLive: () -> Unit = {},
     stopPreview: () -> Unit = {},
 ) {
-    val shelves = remember(live, continueWatching, favourites, favouriteChannels, recentlyAdded) {
-        homeShelves(live, continueWatching, favourites, favouriteChannels, recentlyAdded)
-    }
+    val shelves =
+        remember(
+            live,
+            continueWatching,
+            favouriteShows,
+            favouriteMovies,
+            favouriteChannels,
+            recentShows,
+            recentMovies,
+        ) {
+            homeShelves(
+                live,
+                continueWatching,
+                HomeTitles(recentShows, recentMovies, favouriteShows, favouriteMovies),
+                favouriteChannels,
+            )
+        }
     ScreenFrame {
         if (shelves.isEmpty()) {
             // A hint can't take the highlight, so hand it to the side menu rather than leave the remote
@@ -231,6 +250,7 @@ private fun ScreenFrameScope.HomeRows(shelves: List<HomeShelf>, takeFocus: Boole
                     is HomeShelf.Covers -> CoverShelf(
                         stringResource(shelf.title),
                         shelf.covers,
+                        shelf.showsStatus,
                         rowFocus,
                         onOpen = { title -> pick(title.pickKey) { actions.onOpenTitle(title) } },
                         leave = { title -> leave(title.pickKey) },
@@ -275,25 +295,36 @@ private sealed class HomeShelf(key: String, items: List<String>) {
 
     class Resume(val cards: List<ResumeItem>) : HomeShelf("cw", cards.map { it.key.stored })
 
-    class Covers(key: String, val title: Int, val covers: List<Cover>) :
+    /** A row of covers; [showsStatus] when each says where the Profile is with its title. */
+    class Covers(key: String, val title: Int, val covers: List<Cover>, val showsStatus: Boolean) :
         HomeShelf(key, covers.map { it.title.pickKey })
 
     class Channels(val channels: List<HomeChannel>) : HomeShelf("channels", channels.map { it.channel.primary.pickKey })
 }
 
+/** Home's rows of covers, by kind. */
+private class HomeTitles(
+    val recentShows: List<Cover>,
+    val recentMovies: List<Cover>,
+    val favouriteShows: List<Cover>,
+    val favouriteMovies: List<Cover>,
+)
+
 /** Home's rows that have something in them, top to bottom. */
 private fun homeShelves(
     live: LiveTile?,
     continueWatching: List<ResumeItem>,
-    favourites: List<Cover>,
+    titles: HomeTitles,
     favouriteChannels: List<HomeChannel>,
-    recentlyAdded: List<Cover>,
 ) = listOfNotNull(
     live?.let(HomeShelf::Live),
     HomeShelf.Resume(continueWatching),
-    HomeShelf.Covers("favourites", R.string.vod_favourites, favourites),
+    HomeShelf.Covers("recentShows", R.string.home_recently_added_shows, titles.recentShows, showsStatus = true),
+    HomeShelf.Covers("recentMovies", R.string.home_recently_added_movies, titles.recentMovies, showsStatus = true),
+    // A Favourite shows only its title: where the Profile is with it is Continue Watching's job.
+    HomeShelf.Covers("favouriteShows", R.string.home_favourite_shows, titles.favouriteShows, showsStatus = false),
+    HomeShelf.Covers("favouriteMovies", R.string.home_favourite_movies, titles.favouriteMovies, showsStatus = false),
     HomeShelf.Channels(favouriteChannels),
-    HomeShelf.Covers("recent", R.string.vod_recently_added, recentlyAdded),
 ).filter { it.row.items.isNotEmpty() }
 
 private const val LIVE_PICK = "live"
@@ -363,6 +394,7 @@ private fun ScreenFrameScope.ContinueWatchingShelf(
                 status = resumeStatusText(card),
                 progress = card.progress,
                 badge = rememberQualityBadge(card.name),
+                scrollsTitle = true,
                 onOptions = openOptions?.let { open -> { open(OptionsSubject.OfContinueWatching(card), leave(card)) } },
             )
         }
@@ -381,6 +413,7 @@ private fun resumeStatusText(card: ResumeItem): List<String> = listOfNotNull(
 private fun ScreenFrameScope.CoverShelf(
     title: String,
     covers: List<Cover>,
+    showsStatus: Boolean,
     focus: CardFocus?,
     onOpen: (VodTitle) -> Unit,
     leave: (VodTitle) -> LeaveScreen,
@@ -398,8 +431,8 @@ private fun ScreenFrameScope.CoverShelf(
                 onClick = { onOpen(cover.title) },
                 size = ArtCardSize.Portrait,
                 modifier = Modifier.takesFocus(index, focus).shelfCard(memory, cover.title.pickKey),
-                status = coverStatusText(cover.status),
-                progress = (cover.status as? CoverStatus.InProgress)?.progress,
+                status = if (showsStatus) coverStatusText(cover.status) else emptyList(),
+                progress = (cover.status as? CoverStatus.InProgress)?.progress?.takeIf { showsStatus },
                 badge = rememberQualityBadge(cover.title.name),
                 onOptions = openOptionsOn(subject, leave(cover.title)),
             )

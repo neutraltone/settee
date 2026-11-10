@@ -98,7 +98,8 @@ class HomeAndSearchChannelOptionsTest {
     private fun HomeBody() {
         HomeContent(
             continueWatching = emptyList(),
-            favourites = emptyList(),
+            favouriteShows = emptyList(),
+            favouriteMovies = emptyList(),
             favouriteChannels = favourites.map { HomeChannel(it) },
             onResume = {},
             onOpenSeries = {},
@@ -212,7 +213,8 @@ class HomeAndSearchChannelOptionsTest {
             ConfirmLiveHost(listOf(running), onStopRecording = {}) {
                 HomeContent(
                     continueWatching = emptyList(),
-                    favourites = emptyList(),
+                    favouriteShows = emptyList(),
+                    favouriteMovies = emptyList(),
                     favouriteChannels = emptyList(),
                     onResume = {},
                     onOpenSeries = {},

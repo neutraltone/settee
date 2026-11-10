@@ -6,6 +6,7 @@
 package app.opentv.ui.design
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -26,7 +27,8 @@ import coil.compose.AsyncImage
  * A card that is its artwork: [title] and, when there is one, up to two quiet [status] lines on a dark fade
  * at the foot of the art, and a [progress] bar along its bottom edge for anything part-watched.
  * Missing or slow artwork leaves the Raised fill, so the title still reads. An optional [badge],
- * such as the title's Quality, sits in the top corner.
+ * such as the title's Quality, sits in the top corner. With [scrollsTitle], the title keeps to one
+ * line and scrolls while the card is highlighted.
  *
  * Highlighted, the bar moves in clear of the ring and the text moves up clear of the bar
  * (docs/LOOK.md, Highlight).
@@ -41,6 +43,7 @@ fun ArtCard(
     status: List<String> = emptyList(),
     progress: Float? = null,
     badge: String? = null,
+    scrollsTitle: Boolean = false,
     onOptions: (() -> Unit)? = null,
 ) {
     HighlightSurface(onClick, size.style, modifier, onOptions) { highlighted ->
@@ -66,7 +69,18 @@ fun ArtCard(
                     Alignment.BottomStart,
                 ).padding(start = TEXT_INSET, end = TEXT_INSET, bottom = textBottom),
             ) {
-                Text(title, style = SetteeType.CardTitle, maxLines = 2)
+                if (scrollsTitle) {
+                    // One line, cut off at rest. Highlighted, it scrolls so the whole title can be
+                    // read. The marquee moves the drawn text only, so it costs no layout per frame.
+                    Text(
+                        title,
+                        style = SetteeType.CardTitle,
+                        maxLines = 1,
+                        modifier = if (highlighted) Modifier.basicMarquee(iterations = Int.MAX_VALUE) else Modifier,
+                    )
+                } else {
+                    Text(title, style = SetteeType.CardTitle, maxLines = 2)
+                }
                 // A line each, not one phrase: "S4 E3 · 22 min left" is wider than a cover at the
                 // smallest text size, and wrapped wherever it ran out it looked accidental.
                 status.forEach { QuietLabel(it) }

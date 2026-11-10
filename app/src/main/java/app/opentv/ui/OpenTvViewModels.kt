@@ -1044,12 +1044,14 @@ class VodViewModel @JvmOverloads constructor(
 }
 
 /** [card] as Continue Watching draws it, or null when its title has left the catalogue. */
-private suspend fun resumeItem(catalog: CatalogRepository, card: ContinueWatchingCard): ResumeItem? = when (card) {
+internal suspend fun resumeItem(catalog: CatalogRepository, card: ContinueWatchingCard): ResumeItem? = when (card) {
     is ContinueWatchingCard.Movie -> catalog.movie(card.movieId)?.let {
         ResumeItem(
             MediaKey.Movie(it.id),
             it.displayTitle,
-            it.posterUrl,
+            // The card is landscape: the wide backdrop, a frame from the film, fits it; a portrait
+            // cover only crops.
+            it.backdropUrl ?: it.posterUrl,
             card.progress,
             card = card,
             name = it.name,
@@ -1061,8 +1063,9 @@ private suspend fun resumeItem(catalog: CatalogRepository, card: ContinueWatchin
             ResumeItem(
                 key = MediaKey.Episode(ep.id),
                 title = it.name,
-                // The card is landscape: the wide backdrop fits it, a portrait poster only crops.
-                posterUrl = it.backdropUrl ?: it.posterUrl,
+                // The episode's own still says which episode it is; the show's wide backdrop fits the
+                // landscape card next best, and a portrait poster only crops.
+                posterUrl = ep.stillUrl ?: it.backdropUrl ?: it.posterUrl,
                 progress = card.progress,
                 episode = SeasonEpisode(ep.season, ep.episodeNumber),
                 newEpisode = card.newEpisode,
@@ -1076,14 +1079,16 @@ private suspend fun resumeItem(catalog: CatalogRepository, card: ContinueWatchin
 data class LiveNow(val preview: LivePreview, val nowTitle: String?, val nextTitle: String?)
 
 /**
- * What Home shows, top to bottom: the Live Preview, the active Profile's Continue Watching, its
- * Favourites (shows and movies together), its Favourite channels, then [recentlyAdded].
+ * What Home shows, top to bottom: the Live Preview, the active Profile's Continue Watching, what the
+ * providers have Recently Added (shows, then movies), then its Favourite shows, movies and channels.
  */
 data class HomeState(
     val continueWatching: List<ResumeItem>,
-    val favourites: List<Cover>,
+    val favouriteShows: List<Cover>,
+    val favouriteMovies: List<Cover>,
     val favouriteChannels: List<HomeChannel>,
-    val recentlyAdded: List<Cover>,
+    val recentShows: List<Cover>,
+    val recentMovies: List<Cover>,
     val live: LiveNow? = null,
 )
 
@@ -1117,9 +1122,12 @@ class HomeViewModel @JvmOverloads constructor(
     ) { (items, covers), movies, series -> items.filter { if (it.episode == null) movies else series } to covers }
 
     @OptIn(ExperimentalCoroutinesApi::class)
-    private val recentlyAdded: Flow<List<VodTitle>> =
-        combine(settings.moviesEnabled, settings.seriesEnabled, ::Pair)
-            .flatMapLatest { (movies, shows) -> graph.catalogRepository.recentlyAdded(movies, shows) }
+    private val recentShows: Flow<List<VodTitle>> =
+        settings.seriesEnabled.flatMapLatest { on -> graph.catalogRepository.recentlyAdded(movies = false, shows = on) }
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    private val recentMovies: Flow<List<VodTitle>> =
+        settings.moviesEnabled.flatMapLatest { on -> graph.catalogRepository.recentlyAdded(movies = on, shows = false) }
 
     private val favourites: Flow<List<VodTitle>> = combine(
         graph.viewerLibrary.favourites.titles(),
@@ -1214,13 +1222,23 @@ class HomeViewModel @JvmOverloads constructor(
     }
 
     val state: StateFlow<HomeState?> = combine(
-        combine(watching, favourites, favouriteChannels, recentlyAdded) {
+        combine(watching, favourites, favouriteChannels, recentShows, recentMovies) {
                 (continueWatching, statuses),
                 favourites,
                 channels,
-                recent,
+                shows,
+                movies,
             ->
-            HomeState(continueWatching, favourites.withStatuses(statuses), channels, recent.withStatuses(statuses))
+            // Favourites carry no status: Home shows only their titles.
+            val (favouriteMovies, favouriteShows) = favourites.map(::Cover).partition { it.title is VodTitle.OfMovie }
+            HomeState(
+                continueWatching,
+                favouriteShows,
+                favouriteMovies,
+                channels,
+                shows.withStatuses(statuses),
+                movies.withStatuses(statuses),
+            )
         },
         // In the same state as the rows, so Home is first drawn with it and highlights it.
         live,

@@ -125,6 +125,12 @@ class HomeContentTest {
         HomeChannel(LineupChannel(it, listOf(it), favourite = true), nowOn)
     }
 
+    /** The shows in a test's mixed list of covers, for their own row. */
+    private fun List<Cover>.shows() = filter { it.title is VodTitle.OfSeries }
+
+    /** The movies in a test's mixed list of covers, for their own row. */
+    private fun List<Cover>.movies() = filter { it.title is VodTitle.OfMovie }
+
     private fun cover(movie: Movie, status: CoverStatus? = null) = Cover(VodTitle.OfMovie(movie), status)
 
     private fun cover(series: Series, status: CoverStatus? = null) = Cover(VodTitle.OfSeries(series), status)
@@ -201,9 +207,11 @@ class HomeContentTest {
                 onOpenLive = { openedLive = true },
                 stopPreview = { events += "stop" },
                 continueWatching = resume,
-                favourites = favouritesNow(),
+                favouriteShows = favouritesNow().shows(),
+                favouriteMovies = favouritesNow().movies(),
                 favouriteChannels = channels,
-                recentlyAdded = recent,
+                recentShows = recent.shows(),
+                recentMovies = recent.movies(),
                 onResume = { events += "resume" },
                 onOpenSeries = { events += "series" },
                 onOpenMovie = {
@@ -281,9 +289,11 @@ class HomeContentTest {
                         live = live,
                         onWatchLive = { watched = it },
                         continueWatching = continueWatching(),
-                        favourites = listOf(cover(series(1, "Severance"))) + movies().map(::cover),
+                        favouriteShows = listOf(cover(series(1, "Severance"))),
+                        favouriteMovies = movies().map(::cover),
                         favouriteChannels = listOf(favourite(3, "BBC One"), favourite(5, "BBC Two")),
-                        recentlyAdded = recent,
+                        recentShows = recent.shows(),
+                        recentMovies = recent.movies(),
                         onResume = {},
                         onOpenSeries = {},
                         onOpenMovie = { opened = it },
@@ -315,6 +325,7 @@ class HomeContentTest {
 
     /** Picks [title] on Home, leaves for the screen it opens, and comes back. */
     private fun pickAndComeBack(title: String, whileAway: () -> Unit = {}) {
+        scrollTo(title)
         compose.onNodeWithText(title).performClick()
         home = false
         compose.waitForIdle()
@@ -325,27 +336,31 @@ class HomeContentTest {
 
     private fun topOf(text: String) = compose.onNodeWithText(text).getUnclippedBoundsInRoot().top
 
-    private fun leftOf(text: String) = compose.onNodeWithText(text).getUnclippedBoundsInRoot().left
-
     @Test
-    fun `rows run Continue Watching, Favourites, Favourite channels, Recently Added`() {
+    fun `rows run Continue Watching, Recently Added by kind, then Favourites by kind, then channels`() {
         setHome(recent = recent)
 
-        val order = listOf("Continue watching", "Favourites", "Favourite channels", "Recently added")
-        // Four rows overflow a TV screen: bring each in under the one before it.
+        val order = listOf(
+            "Continue watching",
+            "Recently added shows",
+            "Recently added movies",
+            "Favourite shows",
+            "Favourite movies",
+            "Favourite channels",
+        )
+        // Six rows overflow a TV screen: bring each in under the one before it.
         order.zipWithNext { above, below ->
             scrollTo(below)
             assertThat(topOf(above)).isLessThan(topOf(below))
         }
-        compose.onNodeWithText("Shogun").assertExists()
+        compose.onNodeWithText("BBC One").assertExists()
     }
 
     @Test
-    fun `Favourites is one row, its shows and movies in the order given`() {
+    fun `Favourite shows and Favourite movies are rows of their own`() {
         setHome(favourites = listOf(cover(movie(2, "Heat")), cover(series(1, "Severance"))))
 
-        assertThat(leftOf("Heat")).isLessThan(leftOf("Severance"))
-        assertThat(topOf("Heat")).isEqualTo(topOf("Severance"))
+        assertThat(topOf("Severance")).isLessThan(topOf("Heat"))
     }
 
     @Test
@@ -363,14 +378,15 @@ class HomeContentTest {
         setHome(resume = emptyList(), favourites = emptyList(), channels = emptyList(), recent = recent)
 
         compose.onNodeWithText("Things you watch and favourite will show up here").assertDoesNotExist()
-        compose.onNodeWithText("Drive").assertIsFocused()
+        compose.onNodeWithText("Shogun").assertIsFocused()
     }
 
     @Test
     fun `a row with nothing in it is left out`() {
         setHome(favourites = emptyList())
 
-        compose.onNodeWithText("Favourites").assertDoesNotExist()
+        compose.onNodeWithText("Favourite shows").assertDoesNotExist()
+        compose.onNodeWithText("Favourite movies").assertDoesNotExist()
         assertThat(topOf("Continue watching")).isLessThan(topOf("Favourite channels"))
         captureScreen("home_empty_rows_hidden")
     }
@@ -602,11 +618,12 @@ class HomeContentTest {
     }
 
     @Test
-    fun `covers say where the Profile is, and an unstarted title shows only its name`() {
+    fun `Recently Added covers say where the Profile is, and an unstarted title shows only its name`() {
         val episode = testEpisode(4, 3)
         setHome(
             resume = emptyList(),
-            favourites = listOf(
+            favourites = emptyList(),
+            recent = listOf(
                 cover(series(1, "Severance"), CoverStatus.InProgress(0.5f, remainingMillis = 1_320_000, episode)),
                 cover(movie(2, "Heat"), CoverStatus.InProgress(0.8f, remainingMillis = 1_320_000)),
                 cover(series(4, "Slow Horses"), CoverStatus.UpNext(testEpisode(2, 1))),
@@ -628,11 +645,29 @@ class HomeContentTest {
         captureScreen("home_cover_status")
     }
 
+    @Test
+    fun `a Favourite shows only its title, however far through it the Profile is`() {
+        setHome(
+            resume = emptyList(),
+            favourites = listOf(
+                cover(
+                    series(1, "Severance"),
+                    CoverStatus.InProgress(0.5f, remainingMillis = 1_320_000, testEpisode(4, 3)),
+                ),
+                cover(movie(7, "Ronin"), CoverStatus.Watched),
+            ),
+            channels = emptyList(),
+        )
+
+        compose.onNode(hasText("Severance") and hasClickAction()).assertTextEquals("Severance")
+        compose.onNode(hasText("Ronin") and hasClickAction()).assertTextEquals("Ronin")
+    }
+
     private val threeToContinue =
         listOf(resumeItem(9, "Collateral"), resumeItem(7, "Insomnia"), resumeItem(8, "Memento"))
 
     private val threeFavourites =
-        listOf(cover(series(1, "Severance")), cover(movie(2, "Heat")), cover(movie(4, "Ronin")))
+        listOf(cover(movie(1, "Sicario")), cover(movie(2, "Heat")), cover(movie(4, "Ronin")))
 
     private fun press(key: Key) {
         compose.onRoot().performKeyInput { pressKey(key) }
@@ -646,7 +681,7 @@ class HomeContentTest {
 
         press(Key.DirectionDown)
 
-        compose.onNodeWithText("Severance").assertIsFocused()
+        compose.onNodeWithText("Sicario").assertIsFocused()
     }
 
     @Test
@@ -743,7 +778,8 @@ class HomeContentTest {
         compose.setTvContent {
             HomeContent(
                 continueWatching = resume,
-                favourites = listOf(cover(series(1, "Severance"))),
+                favouriteShows = listOf(cover(series(1, "Severance"))),
+                favouriteMovies = emptyList(),
                 favouriteChannels = emptyList(),
                 onResume = {},
                 onOpenSeries = {},
@@ -765,7 +801,8 @@ class HomeContentTest {
         compose.setTvContent {
             HomeContent(
                 continueWatching = continueWatching,
-                favourites = listOf(cover(series(1, "Severance"))),
+                favouriteShows = listOf(cover(series(1, "Severance"))),
+                favouriteMovies = emptyList(),
                 favouriteChannels = emptyList(),
                 onResume = {},
                 onOpenSeries = {},

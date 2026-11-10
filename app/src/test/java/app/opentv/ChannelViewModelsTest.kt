@@ -124,7 +124,7 @@ class ChannelViewModelsTest {
         assertThat(shelf.map { home -> home.channel.qualities.map { it.name } })
             .containsExactly(listOf("UK| ITV FHD", "UK| ITV HD"))
         compose.setTvContent {
-            HomeContent(emptyList(), emptyList(), shelf, {}, {}, {}, {}, takeFocus = true)
+            HomeContent(emptyList(), emptyList(), emptyList(), shelf, {}, {}, {}, {}, takeFocus = true)
         }
         captureScreen("home_favourite_channels_once")
     }

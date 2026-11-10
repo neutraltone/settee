@@ -86,9 +86,10 @@ class MainShellTest {
         ) { _, takeFocus, onNothingToShow ->
             HomeContent(
                 continueWatching = emptyList(),
-                favourites = emptyList(),
+                favouriteShows = emptyList(),
+                favouriteMovies = emptyList(),
                 favouriteChannels = emptyList(),
-                recentlyAdded = recent(),
+                recentMovies = recent(),
                 onResume = {},
                 onOpenSeries = {},
                 onOpenMovie = {},
@@ -130,9 +131,10 @@ class MainShellTest {
                     val name = compose.activity.getString(tab.labelRes)
                     HomeContent(
                         continueWatching = emptyList(),
-                        favourites = (1L..8L).map { Cover(VodTitle.OfMovie(movie(it, "$name $it"))) },
+                        favouriteShows = emptyList(),
+                        favouriteMovies = (11L..18L).map { Cover(VodTitle.OfMovie(movie(it, "$name $it"))) },
                         favouriteChannels = emptyList(),
-                        recentlyAdded = (11L..18L).map { Cover(VodTitle.OfMovie(movie(it, "$name $it"))) },
+                        recentMovies = (1L..8L).map { Cover(VodTitle.OfMovie(movie(it, "$name $it"))) },
                         onResume = {},
                         onOpenSeries = {},
                         onOpenMovie = { opened = it.name },

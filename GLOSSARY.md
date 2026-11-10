@@ -92,7 +92,7 @@ A search a Profile made and then opened a result from. Each Profile keeps its la
 _Avoid_: Search history
 
 **Home**:
-The screen the app always opens on, gathering the Live Preview, Continue Watching, the Profile's Favourites and what's Recently Added.
+The screen the app always opens on, gathering the Live Preview, Continue Watching, what's Recently Added and the Profile's Favourites.
 _Avoid_: Dashboard, start page
 
 **Recently Added**:
