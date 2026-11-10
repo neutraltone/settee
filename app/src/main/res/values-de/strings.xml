@@ -97,13 +97,10 @@
     <string name="rec_background_prompt_body">Android kann diese Aufnahme stoppen, wenn der Bildschirm in den Ruhezustand wechselt oder du Settee verlässt. Erlaube Settee, die Akku-Optimierung zu ignorieren, damit Aufnahmen auch im Standby weiterlaufen — so wie bei einer Set-Top-Box.</string>
     <string name="rec_background_prompt_allow">Erlauben</string>
     <string name="rec_background_prompt_not_now">Nicht jetzt</string>
-    <string name="player_rewind">Zurückspulen</string>
     <string name="player_pause">Pause</string>
-    <string name="player_forward">Vorspulen</string>
     <string name="player_subtitles">Untertitel</string>
     <string name="player_audio">Audio</string>
     <string name="player_quality">Qualität</string>
-    <string name="player_aspect">Format</string>
     <string name="player_record">Aufnehmen</string>
     <string name="player_pop_out">Bild-im-Bild</string>
     <string name="player_last">Zuletzt</string>

@@ -97,13 +97,10 @@
     <string name="rec_background_prompt_body">Android saattaa pysäyttää tämän tallennuksen, kun näyttö sammuu tai poistut Settee:stä. Salli Settee:n ohittaa akun optimointi, jotta tallennukset jatkuvat myös valmiustilassa — samaan tapaan kuin digiboksissa.</string>
     <string name="rec_background_prompt_allow">Salli</string>
     <string name="rec_background_prompt_not_now">Ei nyt</string>
-    <string name="player_rewind">Kelaa taakse</string>
     <string name="player_pause">Tauko</string>
-    <string name="player_forward">Kelaa eteen</string>
     <string name="player_subtitles">Tekstitys</string>
     <string name="player_audio">Ääni</string>
     <string name="player_quality">Laatu</string>
-    <string name="player_aspect">Kuvasuhde</string>
     <string name="player_record">Tallenna</string>
     <string name="player_pop_out">Ponnauta ulos</string>
     <string name="player_last">Edellinen</string>

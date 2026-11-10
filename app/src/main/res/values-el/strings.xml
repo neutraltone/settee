@@ -97,13 +97,10 @@
     <string name="rec_background_prompt_body">Το Android ενδέχεται να διακόψει αυτή την εγγραφή όταν η οθόνη κλειδώνει ή όταν βγαίνετε από το Settee. Επιτρέψτε στο Settee να αγνοήσει τη βελτιστοποίηση μπαταρίας, ώστε οι εγγραφές να συνεχίζονται ακόμη και σε αναμονή — όπως ακριβώς κάνει ένα set-top box.</string>
     <string name="rec_background_prompt_allow">Αποδοχή</string>
     <string name="rec_background_prompt_not_now">Όχι τώρα</string>
-    <string name="player_rewind">Πίσω</string>
     <string name="player_pause">Παύση</string>
-    <string name="player_forward">Εμπρός</string>
     <string name="player_subtitles">Υπότιτλοι</string>
     <string name="player_audio">Ήχος</string>
     <string name="player_quality">Ποιότητα</string>
-    <string name="player_aspect">Αναλογία</string>
     <string name="player_record">Εγγραφή</string>
     <string name="player_pop_out">Αναδυόμενο παράθυρο</string>
     <string name="player_last">Τελευταίο</string>

@@ -50,7 +50,7 @@ internal fun PlayerOptions(options: List<ItemOption>, onChoose: (ItemOption) -> 
 
 /** The durations Settings offers, and off: null. */
 @Composable
-private fun SleepTimerPanel(onDone: () -> Unit) {
+internal fun SleepTimerPanel(onDone: () -> Unit) {
     ChoicePanel<Int?>(
         title = stringResource(R.string.settings_sleep_timer),
         choices = listOf(null) + SleepTimer.presets,

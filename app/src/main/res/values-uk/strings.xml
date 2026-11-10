@@ -97,13 +97,10 @@
     <string name="rec_background_prompt_body">Android може зупинити цей запис, коли екран засинає або ви виходите з Settee. Дозвольте Settee ігнорувати оптимізацію батареї, щоб записи тривали навіть у режимі очікування — як у ТВ-приставці.</string>
     <string name="rec_background_prompt_allow">Дозволити</string>
     <string name="rec_background_prompt_not_now">Не зараз</string>
-    <string name="player_rewind">Перемотка назад</string>
     <string name="player_pause">Пауза</string>
-    <string name="player_forward">Перемотка вперед</string>
     <string name="player_subtitles">Субтитри</string>
     <string name="player_audio">Аудіо</string>
     <string name="player_quality">Якість</string>
-    <string name="player_aspect">Формат</string>
     <string name="player_record">Запис</string>
     <string name="player_pop_out">Спливаюче вікно</string>
     <string name="player_last">Останній</string>

@@ -97,13 +97,10 @@
     <string name="rec_background_prompt_body">Android kan deze opname stoppen als het scherm in slaapstand gaat of je Settee verlaat. Sta toe dat Settee batterijoptimalisatie negeert, zodat opnames blijven doorlopen, zelfs in stand-by — zoals een set-topbox dat doet.</string>
     <string name="rec_background_prompt_allow">Toestaan</string>
     <string name="rec_background_prompt_not_now">Niet nu</string>
-    <string name="player_rewind">Terugspoelen</string>
     <string name="player_pause">Pauze</string>
-    <string name="player_forward">Vooruitspoelen</string>
     <string name="player_subtitles">Ondertitels</string>
     <string name="player_audio">Audio</string>
     <string name="player_quality">Kwaliteit</string>
-    <string name="player_aspect">Beeldverhouding</string>
     <string name="player_record">Opnemen</string>
     <string name="player_pop_out">Loskoppelen</string>
     <string name="player_last">Vorige</string>

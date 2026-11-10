@@ -112,8 +112,8 @@
     <string name="rec_background_prompt_not_now">Not now</string>
 
     <!-- ============================ Player controls ============================ -->
-    <string name="player_rewind">Rewind</string>
     <string name="player_pause">Pause</string>
+    <string name="player_close">Close</string>
     <string name="player_paused_left">Paused · %1$s left</string>
     <string name="player_no_sound">This device can\'t play this audio format (%1$s). If your TV or soundbar supports it, turning on surround sound in the device\'s settings may help.</string>
     <string name="player_stepped_down">This device can\'t play %1$s. Playing %2$s instead.</string>
@@ -133,11 +133,9 @@
         <item quantity="one">Live pause keeps the last second of this channel in memory, so you can pause for up to a second and rewind to when you turned it on. This device has little memory to spare, so playback may stutter or the app may be closed. The picture will restart briefly to switch it on. You can turn it off in Settings › Recording.</item>
         <item quantity="other">Live pause keeps the last %1$d seconds of this channel in memory, so you can pause for up to %1$d seconds and rewind to when you turned it on. This device has little memory to spare, so playback may stutter or the app may be closed. The picture will restart briefly to switch it on. You can turn it off in Settings › Recording.</item>
     </plurals>
-    <string name="player_forward">Forward</string>
     <string name="player_subtitles">Subtitles</string>
     <string name="player_audio">Audio</string>
     <string name="player_quality">Quality</string>
-    <string name="player_aspect">Aspect</string>
     <string name="player_record">Record</string>
     <string name="player_options">Options</string>
     <string name="player_sleep_left">%1$d min left</string>
@@ -211,8 +209,9 @@
     <string name="player_next_episode_in">Next episode in %1$d</string>
     <string name="player_next_episode_press_ok">Press OK to play</string>
     <string name="player_watch_credits">Watch credits</string>
+    <string name="player_play_now">Play now</string>
     <string name="player_still_watching">Are you still watching?</string>
-    <string name="player_continue_watching">Continue watching</string>
+    <string name="player_continue_watching">Keep watching</string>
     <string name="player_stop">Stop</string>
     <string name="settings_play_next_title">Play next episode automatically</string>
     <string name="settings_play_next_subtitle">As an episode\'s credits start, count down and play the next one. Off, the next episode waits for you to press OK.</string>

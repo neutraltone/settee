@@ -97,13 +97,10 @@
     <string name="rec_background_prompt_body">Android có thể dừng bản ghi này khi màn hình tắt hoặc bạn rời khỏi Settee. Cho phép Settee bỏ qua tối ưu hóa pin để việc ghi hình tiếp tục, kể cả ở chế độ chờ — giống như một đầu thu kỹ thuật số.</string>
     <string name="rec_background_prompt_allow">Cho phép</string>
     <string name="rec_background_prompt_not_now">Để sau</string>
-    <string name="player_rewind">Tua lại</string>
     <string name="player_pause">Tạm dừng</string>
-    <string name="player_forward">Tua tới</string>
     <string name="player_subtitles">Phụ đề</string>
     <string name="player_audio">Âm thanh</string>
     <string name="player_quality">Chất lượng</string>
-    <string name="player_aspect">Tỷ lệ khung hình</string>
     <string name="player_record">Ghi hình</string>
     <string name="player_pop_out">Thu nhỏ</string>
     <string name="player_last">Kênh trước</string>

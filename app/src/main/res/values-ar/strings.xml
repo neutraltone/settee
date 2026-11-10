@@ -97,13 +97,10 @@
     <string name="rec_background_prompt_body">قد يوقف Android هذا التسجيل عند إطفاء الشاشة أو مغادرة Settee. اسمح لتطبيق Settee بتجاهل تحسين البطارية حتى تستمر التسجيلات حتى في وضع الاستعداد — تمامًا مثل جهاز استقبال تلفزيوني تقليدي.</string>
     <string name="rec_background_prompt_allow">سماح</string>
     <string name="rec_background_prompt_not_now">ليس الآن</string>
-    <string name="player_rewind">إرجاع</string>
     <string name="player_pause">إيقاف مؤقت</string>
-    <string name="player_forward">تقديم</string>
     <string name="player_subtitles">الترجمة</string>
     <string name="player_audio">الصوت</string>
     <string name="player_quality">الجودة</string>
-    <string name="player_aspect">نسبة العرض</string>
     <string name="player_record">تسجيل</string>
     <string name="player_pop_out">مشغّل مصغّر</string>
     <string name="player_last">الأخيرة</string>

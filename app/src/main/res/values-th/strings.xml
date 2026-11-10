@@ -97,13 +97,10 @@
     <string name="rec_background_prompt_body">Android อาจหยุดการบันทึกนี้เมื่อหน้าจอพัก หรือเมื่อคุณออกจาก Settee อนุญาตให้ Settee ไม่ใช้การจำกัดการใช้พลังงานแบตเตอรี่ เพื่อให้การบันทึกทำงานต่อแม้ในโหมดสแตนด์บาย เหมือนกล่องรับสัญญาณทีวี</string>
     <string name="rec_background_prompt_allow">อนุญาต</string>
     <string name="rec_background_prompt_not_now">ไว้ทีหลัง</string>
-    <string name="player_rewind">ถอยกลับ</string>
     <string name="player_pause">หยุดชั่วคราว</string>
-    <string name="player_forward">กรอไปข้างหน้า</string>
     <string name="player_subtitles">คำบรรยาย</string>
     <string name="player_audio">เสียง</string>
     <string name="player_quality">คุณภาพ</string>
-    <string name="player_aspect">สัดส่วนภาพ</string>
     <string name="player_record">บันทึก</string>
     <string name="player_pop_out">หน้าต่างลอย</string>
     <string name="player_last">ล่าสุด</string>

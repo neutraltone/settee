@@ -97,13 +97,10 @@
     <string name="rec_background_prompt_body">Ekran kapandığında veya Settee\'den çıktığınızda Android bu kaydı durdurabilir. Kayıtların bekleme modunda bile devam etmesi için Settee\'nin pil optimizasyonunu yok saymasına izin verin — tıpkı bir set üstü kutu gibi.</string>
     <string name="rec_background_prompt_allow">İzin ver</string>
     <string name="rec_background_prompt_not_now">Şimdi değil</string>
-    <string name="player_rewind">Geri sar</string>
     <string name="player_pause">Duraklat</string>
-    <string name="player_forward">İleri sar</string>
     <string name="player_subtitles">Altyazılar</string>
     <string name="player_audio">Ses</string>
     <string name="player_quality">Kalite</string>
-    <string name="player_aspect">En-boy oranı</string>
     <string name="player_record">Kaydet</string>
     <string name="player_pop_out">Mini oynatıcı</string>
     <string name="player_last">Son</string>

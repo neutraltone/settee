@@ -97,13 +97,10 @@
     <string name="rec_background_prompt_body">Android puede detener esta grabación cuando la pantalla se apaga o sales de Settee. Permite que Settee ignore la optimización de batería para que las grabaciones sigan en marcha, incluso en reposo, tal como lo haría un decodificador.</string>
     <string name="rec_background_prompt_allow">Permitir</string>
     <string name="rec_background_prompt_not_now">Ahora no</string>
-    <string name="player_rewind">Retroceder</string>
     <string name="player_pause">Pausa</string>
-    <string name="player_forward">Avanzar</string>
     <string name="player_subtitles">Subtítulos</string>
     <string name="player_audio">Audio</string>
     <string name="player_quality">Calidad</string>
-    <string name="player_aspect">Aspecto</string>
     <string name="player_record">Grabar</string>
     <string name="player_pop_out">Ventana flotante</string>
     <string name="player_last">Anterior</string>

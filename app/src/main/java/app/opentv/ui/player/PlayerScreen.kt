@@ -13,51 +13,34 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AspectRatio
-import androidx.compose.material.icons.filled.Audiotrack
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.FastForward
-import androidx.compose.material.icons.filled.FastRewind
+import androidx.compose.material.icons.filled.Bedtime
 import androidx.compose.material.icons.filled.FiberManualRecord
 import androidx.compose.material.icons.filled.HighQuality
-import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material.icons.filled.MoreHoriz
 import androidx.compose.material.icons.filled.PictureInPictureAlt
-import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.filled.Subtitles
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -77,7 +60,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
@@ -111,6 +93,8 @@ import app.opentv.data.repo.toRecord
 import app.opentv.player.PlaybackQueue
 import app.opentv.player.PlayerController
 import app.opentv.player.SettledChannel
+import app.opentv.ui.design.SetteeType
+import app.opentv.ui.design.Text as SetteeText
 import app.opentv.ui.formatPlaybackTime
 import app.opentv.ui.options.ItemOption
 import app.opentv.ui.options.LeaveDirectly
@@ -423,7 +407,13 @@ fun LivePlayerContent(
     var panel by remember { mutableStateOf(PlayerPanel.NONE) }
     var channelListVisible by remember { mutableStateOf(false) }
     var optionsOpen by remember { mutableStateOf(false) }
+    var choosingSleep by remember { mutableStateOf(false) }
     var interaction by remember { mutableIntStateOf(0) }
+    // The seek bar, on a stream that can rewind: where playback is in what's buffered, and where a
+    // Left or Right held on the bar has got to, which it shows until the key comes up.
+    var livePositionMs by remember { mutableLongStateOf(0L) }
+    var liveDurationMs by remember { mutableLongStateOf(0L) }
+    var scrubTo by remember { mutableStateOf<Long?>(null) }
 
     // Picture-in-picture. While the player is on it is "eligible" to shrink to a floating window
     // (pressing Home does it, handled in MainActivity); [inPip] drives hiding all the chrome.
@@ -534,9 +524,19 @@ fun LivePlayerContent(
         bannerVisible = false
     }
 
+    // Only while there's a bar to show it on.
+    val pollPosition = controlsVisible && !inPip && controller.isSeekable
+    LaunchedEffect(pollPosition) {
+        while (pollPosition) {
+            livePositionMs = controller.player.currentPosition.coerceAtLeast(0L)
+            liveDurationMs = controller.player.duration.takeIf { it > 0 } ?: 0L
+            delay(LIVE_POLL_MILLIS)
+        }
+    }
+
     // Auto-hide the bar after a few seconds — but never while paused or with a picker open.
-    LaunchedEffect(controlsVisible, interaction, state, paused, panel, optionsOpen) {
-        val inUse = panel != PlayerPanel.NONE || optionsOpen
+    LaunchedEffect(controlsVisible, interaction, state, paused, panel, optionsOpen, choosingSleep) {
+        val inUse = panel != PlayerPanel.NONE || optionsOpen || choosingSleep
         val watching = !paused && state is PlayerController.State.Playing
         if (controlsVisible && watching && !inUse) {
             delay(CONTROLS_TIMEOUT_MILLIS)
@@ -646,8 +646,14 @@ fun LivePlayerContent(
                         if (!inPip) optionsOpen = true
                         true
                     }
-                    // Channel up/down works whether or not the bar is showing — this remote has no
-                    // CH+/CH- keys, so up/down IS the channel changer. Only announced if the zap finds
+                    // With the controls up, the d-pad moves around them: Down reaches Subtitles and the
+                    // pills, and Up reaches close (docs/LOOK.md, Player). The channel keys still zap.
+                    controlsVisible && event.key != Key.ChannelUp && event.key != Key.ChannelDown -> {
+                        interaction++
+                        false
+                    }
+                    // Channel up/down with nothing showing: this remote has no CH+/CH- keys, so
+                    // up/down IS the channel changer. Only announced if the zap finds
                     // nothing, at either end of the list: otherwise the Channel changing announces it,
                     // and announcing now would show the old one until the new one is found.
                     event.key == Key.DirectionUp || event.key == Key.ChannelUp -> {
@@ -657,11 +663,6 @@ fun LivePlayerContent(
                     event.key == Key.DirectionDown || event.key == Key.ChannelDown -> {
                         onZap(1, ::announceChannel)
                         true
-                    }
-                    // With the bar up, left/right drive its buttons; let them through.
-                    controlsVisible -> {
-                        interaction++
-                        false
                     }
                     // Immersive: left opens the channel list, right the quality picker.
                     event.key == Key.DirectionLeft -> {
@@ -781,108 +782,98 @@ fun LivePlayerContent(
             else -> ""
         }
 
-        AnimatedVisibility(
-            visible = controlsVisible && !inPip,
-            enter = fadeIn(),
-            exit = fadeOut(),
-            modifier = Modifier.align(Alignment.BottomCenter),
-        ) {
-            Column(
-                Modifier
-                    .fillMaxWidth()
-                    .background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.9f))))
-                    // Keep the controls clear of the phone/tablet system nav bar (and the side nav
-                    // bar / display cutout in landscape). Zero on a TV, so the 10-foot layout is
-                    // unchanged; the gradient above stays full-bleed to the screen edge.
-                    .windowInsetsPadding(
-                        WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom),
-                    )
-                    .padding(horizontal = 28.dp, vertical = 20.dp),
-            ) {
-                // The open picker sits above the transport row.
-                if (panel != PlayerPanel.NONE) {
-                    OptionPanel(
-                        panel = panel,
-                        controller = controller,
-                        subtitlePicks = subtitlePicks,
-                        tracks = tracks,
-                        variants = variants,
-                        currentId = currentId,
-                        resizeMode = resizeMode,
-                        onResize = {
-                            resizeMode = it
-                            settings.setPlayerResizeMode(it)
-                        },
-                        onTune = onTune,
-                        firstFocus = panelFocus,
-                        onDone = {
-                            panel = PlayerPanel.NONE
-                            interaction++
-                        },
-                    )
-                    Spacer(Modifier.height(16.dp))
-                }
-
-                if (paused && livePause) {
-                    Text(
-                        stringResource(R.string.player_paused_left, formatPlaybackTime(pauseLeftMillis)),
-                        style = MaterialTheme.typography.titleMedium,
-                        color = Color.White,
-                    )
-                    Spacer(Modifier.height(8.dp))
-                }
-
-                if (channelTitle.isNotEmpty()) {
-                    Text(
-                        channelTitle,
-                        style = MaterialTheme.typography.headlineSmall,
-                        color = Color.White,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                    Spacer(Modifier.height(12.dp))
-                }
-
-                LivePlayerControls(
-                    paused = paused,
-                    onBack = {
-                        controller.stop()
-                        onBack()
-                    },
-                    onPlayPause = {
-                        togglePause()
-                        interaction++
-                    },
-                    playPauseFocus = barFocus,
-                    canPause = canPause,
-                    seekable = controller.isSeekable,
-                    onRewind = {
-                        controller.seekBackward()
-                        interaction++
-                    },
-                    onForward = {
-                        controller.seekForward()
-                        interaction++
-                    },
-                    panel = panel,
-                    onPanel = {
-                        panel = if (panel == it) PlayerPanel.NONE else it
-                        interaction++
-                    },
-                    hasQuality = variants.size > 1,
-                    recording = recordingThis,
+        AnimatedVisibility(visible = controlsVisible && !inPip, enter = fadeIn(), exit = fadeOut()) {
+            PlayerControlBar(
+                title = channelTitle,
+                paused = paused,
+                positionMs = scrubTo ?: livePositionMs,
+                durationMs = liveDurationMs,
+                onScrub = { to ->
+                    scrubTo = to
+                    interaction++
+                },
+                onScrubEnd = {
+                    scrubTo?.let { controller.player.seekTo(it) }
+                    livePositionMs = scrubTo ?: livePositionMs
+                    scrubTo = null
+                    interaction++
+                },
+                onPlayPause = {
+                    togglePause()
+                    interaction++
+                },
+                onSubtitles = {
+                    panel = PlayerPanel.SUBTITLES
+                    interaction++
+                },
+                onAudio = {
+                    panel = PlayerPanel.AUDIO
+                    interaction++
+                },
+                onClose = {
+                    controller.stop()
+                    onBack()
+                },
+                pills = livePills(
+                    options = OptionsFor.LivePlayer(variants.size > 1, favourite, recordingThis).options(),
                     onRecord = {
                         onToggleRecord()
                         interaction++
                     },
-                    onOptions = { optionsOpen = true },
-                    canPopOut = pipSupported,
-                    onPopOut = {
-                        (context.findActivity() as? app.opentv.MainActivity)?.enterPipNow()
+                    onPanel = {
+                        panel = it
                         interaction++
                     },
-                )
-            }
+                    onSleepTimer = { choosingSleep = true },
+                    onPopOut = if (pipSupported) {
+                        {
+                            (context.findActivity() as? app.opentv.MainActivity)?.enterPipNow()
+                            interaction++
+                        }
+                    } else {
+                        null
+                    },
+                    onOptions = { optionsOpen = true },
+                ),
+                startFocus = barFocus,
+                seekable = controller.isSeekable,
+                showPlayPause = canPause,
+                onBarFocusChanged = { onBar -> if (!onBar) scrubTo = null },
+                badge = if (paused && livePause) {
+                    {
+                        SetteeText(
+                            stringResource(R.string.player_paused_left, formatPlaybackTime(pauseLeftMillis)),
+                            SetteeType.Body,
+                            modifier = Modifier.padding(bottom = 6.dp),
+                        )
+                    }
+                } else {
+                    null
+                },
+            )
+        }
+
+        if (panel != PlayerPanel.NONE && controlsVisible && !inPip) {
+            OptionPanel(
+                panel = panel,
+                controller = controller,
+                subtitlePicks = subtitlePicks,
+                tracks = tracks,
+                variants = variants,
+                currentId = currentId,
+                resizeMode = resizeMode,
+                onResize = {
+                    resizeMode = it
+                    settings.setPlayerResizeMode(it)
+                },
+                onTune = onTune,
+                firstFocus = panelFocus,
+                onDone = {
+                    panel = PlayerPanel.NONE
+                    interaction++
+                },
+                modifier = Modifier.align(Alignment.CenterEnd),
+            )
         }
 
         if (bannerChannel != null) {
@@ -976,6 +967,8 @@ fun LivePlayerContent(
         )
     }
 
+    if (choosingSleep) SleepTimerPanel(onDone = { choosingSleep = false })
+
     if (pausePrompt) {
         LivePausePrompt(
             onTurnOn = {
@@ -1060,6 +1053,7 @@ private fun OptionPanel(
     onTune: (Channel) -> Unit,
     firstFocus: FocusRequester,
     onDone: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val offLabel = stringResource(R.string.player_subtitles_off)
     val standardLabel = stringResource(R.string.player_quality_standard)
@@ -1100,36 +1094,13 @@ private fun OptionPanel(
         PlayerPanel.NONE -> ""
     }
 
-    Column(
-        Modifier
-            .widthIn(max = 460.dp)
-            .clip(RoundedCornerShape(14.dp))
-            .background(Color.Black.copy(alpha = 0.92f))
-            .padding(16.dp),
-    ) {
-        Text(title, style = MaterialTheme.typography.titleMedium, color = Color.White.copy(alpha = 0.7f))
-        Spacer(Modifier.height(8.dp))
-        Column(
-            Modifier.heightIn(max = 260.dp).verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
-        ) {
-            if (options.isEmpty()) {
-                Text(
-                    stringResource(R.string.player_none_available),
-                    color = Color.White.copy(alpha = 0.6f),
-                    modifier = Modifier.padding(8.dp),
-                )
-            }
-            options.forEachIndexed { index, option ->
-                OptionRow(
-                    label = option.label,
-                    selected = option.selected,
-                    onClick = option.onClick,
-                    focusRequester = if (index == 0) firstFocus else null,
-                )
-            }
-        }
-    }
+    PlayerChoicePanel(
+        title = title,
+        choices = options.map { PlayerChoice(it.label, it.selected, it.onClick) },
+        startFocus = firstFocus,
+        onClose = onDone,
+        modifier = modifier,
+    )
 }
 
 private data class Option(val label: String, val selected: Boolean, val onClick: () -> Unit)
@@ -1189,119 +1160,52 @@ private fun trackLabel(label: String?, language: String?, index: Int): String {
     return "Track ${index + 1}"
 }
 
-@Composable
-private fun OptionRow(label: String, selected: Boolean, onClick: () -> Unit, focusRequester: FocusRequester?) {
-    var focused by remember { mutableStateOf(false) }
-    val bg = if (focused) MaterialTheme.colorScheme.primary else Color.White.copy(alpha = 0.08f)
-    val fg = if (focused) MaterialTheme.colorScheme.onPrimary else Color.White
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
-            .onFocusChanged { focused = it.isFocused }
-            .clip(RoundedCornerShape(10.dp))
-            .background(bg)
-            .clickable(onClick = onClick)
-            .padding(horizontal = 14.dp, vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(label, style = MaterialTheme.typography.titleMedium, color = fg, modifier = Modifier.weight(1f))
-        if (selected) {
-            Icon(Icons.Filled.Check, contentDescription = stringResource(R.string.common_selected), tint = fg)
-        }
-    }
-}
-
 /**
- * The live player's control row: Back, then the transport (rewind and forward only on a stream
- * that can seek), the pickers, Record and, where the device has it, pop-out.
+ * The live player's pills: Record, Quality, Aspect ratio and Sleep timer from
+ * [OptionsFor.LivePlayer] (Subtitles and Audio have their own buttons on the row, and Favourite
+ * stays in Options), then Pop out where the device has it, and Options for the whole list.
  */
 @Composable
-internal fun LivePlayerControls(
-    paused: Boolean,
-    onBack: () -> Unit,
-    onPlayPause: () -> Unit,
-    playPauseFocus: FocusRequester? = null,
-    // False once the viewer chose "Don't ask again" with live pause off: there's nothing to pause.
-    canPause: Boolean = true,
-    seekable: Boolean = false,
-    onRewind: () -> Unit = {},
-    onForward: () -> Unit = {},
-    panel: PlayerPanel = PlayerPanel.NONE,
-    onPanel: (PlayerPanel) -> Unit = {},
-    hasQuality: Boolean = false,
-    recording: Boolean = false,
-    onRecord: () -> Unit = {},
-    onOptions: () -> Unit = {},
-    canPopOut: Boolean = false,
-    onPopOut: () -> Unit = {},
-) {
-    // Every button at once is wider than a 1080p TV: scrolling keeps the last ones reachable.
-    Row(Modifier.horizontalScroll(rememberScrollState()), verticalAlignment = Alignment.CenterVertically) {
-        PlayerBackButton(onBack)
-        Spacer(Modifier.width(20.dp))
-        if (seekable) {
-            PlayerChip(Icons.Filled.FastRewind, stringResource(R.string.player_rewind), onClick = onRewind)
-            Spacer(Modifier.width(10.dp))
-        }
-        if (canPause) {
-            PlayerChip(
-                icon = if (paused) Icons.Filled.PlayArrow else Icons.Filled.Pause,
-                label = stringResource(if (paused) R.string.common_play else R.string.player_pause),
-                focusRequester = playPauseFocus,
-                onClick = onPlayPause,
-            )
-        }
-        if (seekable) {
-            Spacer(Modifier.width(10.dp))
-            PlayerChip(Icons.Filled.FastForward, stringResource(R.string.player_forward), onClick = onForward)
-        }
-
-        Spacer(Modifier.width(20.dp))
-        PlayerChip(Icons.Filled.MoreVert, stringResource(R.string.player_options), onClick = onOptions)
-        Spacer(Modifier.width(10.dp))
-        PlayerChip(
-            Icons.Filled.Subtitles,
-            stringResource(R.string.player_subtitles),
-            panel == PlayerPanel.SUBTITLES,
-            // With Pause hidden, the bar opens on the next button along.
-            focusRequester = if (canPause) null else playPauseFocus,
-        ) {
-            onPanel(PlayerPanel.SUBTITLES)
-        }
-        Spacer(Modifier.width(10.dp))
-        PlayerChip(Icons.Filled.Audiotrack, stringResource(R.string.player_audio), panel == PlayerPanel.AUDIO) {
-            onPanel(PlayerPanel.AUDIO)
-        }
-        if (hasQuality) {
-            Spacer(Modifier.width(10.dp))
-            PlayerChip(
-                Icons.Filled.HighQuality,
-                stringResource(R.string.player_quality),
-                panel == PlayerPanel.QUALITY,
-            ) {
-                onPanel(PlayerPanel.QUALITY)
-            }
-        }
-        Spacer(Modifier.width(10.dp))
-        PlayerChip(Icons.Filled.AspectRatio, stringResource(R.string.player_aspect), panel == PlayerPanel.ASPECT) {
-            onPanel(PlayerPanel.ASPECT)
-        }
-        Spacer(Modifier.width(10.dp))
-        PlayerChip(
-            icon = Icons.Filled.FiberManualRecord,
-            label = stringResource(if (recording) R.string.common_stop else R.string.player_record),
-            selected = recording,
-            iconTint = Color(0xFFE53935),
-            onClick = onRecord,
+private fun livePills(
+    options: List<ItemOption>,
+    onRecord: () -> Unit,
+    onPanel: (PlayerPanel) -> Unit,
+    onSleepTimer: () -> Unit,
+    onPopOut: (() -> Unit)?,
+    onOptions: () -> Unit,
+): List<PlayerPill> = buildList {
+    options.firstOrNull { it == ItemOption.RecordNow || it == ItemOption.StopRecording }?.let { record ->
+        val recording = record == ItemOption.StopRecording
+        add(
+            PlayerPill(
+                stringResource(if (recording) R.string.common_stop else R.string.player_record),
+                if (recording) Icons.Filled.Stop else Icons.Filled.FiberManualRecord,
+                onRecord,
+            ),
         )
-        if (canPopOut) {
-            Spacer(Modifier.width(10.dp))
-            PlayerChip(Icons.Filled.PictureInPictureAlt, stringResource(R.string.player_pop_out), onClick = onPopOut)
-        }
     }
+    if (ItemOption.Quality in options) {
+        add(
+            PlayerPill(stringResource(R.string.player_quality), Icons.Filled.HighQuality) {
+                onPanel(PlayerPanel.QUALITY)
+            },
+        )
+    }
+    if (ItemOption.AspectRatio in options) {
+        add(
+            PlayerPill(stringResource(R.string.player_aspect_ratio_title), Icons.Filled.AspectRatio) {
+                onPanel(PlayerPanel.ASPECT)
+            },
+        )
+    }
+    if (ItemOption.SleepTimer in options) {
+        add(PlayerPill(stringResource(R.string.settings_sleep_timer), Icons.Filled.Bedtime, onSleepTimer))
+    }
+    onPopOut?.let { add(PlayerPill(stringResource(R.string.player_pop_out), Icons.Filled.PictureInPictureAlt, it)) }
+    add(PlayerPill(stringResource(R.string.player_options), Icons.Filled.MoreHoriz, onOptions))
 }
 
+private const val LIVE_POLL_MILLIS = 500L
 private const val CONTROLS_TIMEOUT_MILLIS = 5_000L
 private const val BANNER_TIMEOUT_MILLIS = 4_000L
 private const val NUMBER_ENTRY_TIMEOUT_MILLIS = 2_000L

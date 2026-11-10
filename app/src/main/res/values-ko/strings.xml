@@ -97,13 +97,10 @@
     <string name="rec_background_prompt_body">화면이 꺼지거나 Settee를 벗어나면 Android가 이 녹화를 중지할 수 있습니다. Settee가 배터리 최적화를 무시하도록 허용하면 셋톱박스처럼 대기 상태에서도 녹화가 계속됩니다.</string>
     <string name="rec_background_prompt_allow">허용</string>
     <string name="rec_background_prompt_not_now">나중에</string>
-    <string name="player_rewind">되감기</string>
     <string name="player_pause">일시정지</string>
-    <string name="player_forward">빨리 감기</string>
     <string name="player_subtitles">자막</string>
     <string name="player_audio">오디오</string>
     <string name="player_quality">화질</string>
-    <string name="player_aspect">화면비</string>
     <string name="player_record">녹화</string>
     <string name="player_pop_out">팝업 재생</string>
     <string name="player_last">이전 채널</string>
