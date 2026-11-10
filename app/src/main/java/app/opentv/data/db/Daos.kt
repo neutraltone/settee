@@ -559,12 +559,8 @@ interface MovieDao {
      */
     @Transaction
     suspend fun upsertKeepingDates(sourceId: Long, movies: List<Movie>) {
-        val dates = releaseDates(
-            sourceId,
-            movies.map {
-                it.id
-            }.filter { it != 0L },
-        ).associate { it.id to it.releaseDate }
+        val ids = movies.map { it.id }.filter { it != 0L }
+        val dates = releaseDates(sourceId, ids).associate { it.id to it.releaseDate }
         upsertAll(movies.map { it.copy(releaseDate = it.releaseDate ?: dates[it.id]) })
     }
 
@@ -619,6 +615,10 @@ interface MovieDao {
 
     @Query("SELECT * FROM movies WHERE sourceId = :sourceId AND streamId = :streamId")
     suspend fun byProviderId(sourceId: Long, streamId: String): Movie?
+
+    /** Runs [block] as one transaction, so a whole list's batches land, and reload screens, together. */
+    @Transaction
+    suspend fun inTransaction(block: suspend () -> Unit) = block()
 
     /** The stored rows for one sync batch (at most 500) of [streamIds]. */
     @Query("SELECT * FROM movies WHERE sourceId = :sourceId AND streamId IN (:streamIds)")
@@ -722,6 +722,10 @@ interface SeriesDao {
 
     @Query("SELECT * FROM series WHERE sourceId = :sourceId AND seriesId = :seriesId LIMIT 1")
     suspend fun byProviderId(sourceId: Long, seriesId: String): Series?
+
+    /** Runs [block] as one transaction; see [MovieDao.inTransaction]. */
+    @Transaction
+    suspend fun inTransaction(block: suspend () -> Unit) = block()
 
     /** The stored rows for one sync batch (at most 500) of [seriesIds]. */
     @Query("SELECT * FROM series WHERE sourceId = :sourceId AND seriesId IN (:seriesIds)")

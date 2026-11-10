@@ -13,6 +13,8 @@ import app.opentv.data.model.Series
 import app.opentv.data.model.Source
 import app.opentv.data.model.StreamKind
 import app.opentv.data.parser.parseReleaseDate
+import java.io.Closeable
+import java.io.File
 import java.io.InputStream
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -30,7 +32,8 @@ import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.Response
-import okio.ByteString.Companion.encodeUtf8
+import okio.buffer
+import okio.source
 
 /**
  * Client for the Xtream Codes "player API".
@@ -48,6 +51,8 @@ import okio.ByteString.Companion.encodeUtf8
  */
 class XtreamApi(
     private val http: OkHttpClient,
+    /** Where [movies] and [series] download to; null is the JVM's temp folder, the app's cache on Android. */
+    private val downloads: File? = null,
     private val json: Json = Json {
         ignoreUnknownKeys = true
         isLenient = true
@@ -62,8 +67,6 @@ class XtreamApi(
          * under SQLite's 999 bound variables for looking up the rows they replace.
          */
         const val CATALOGUE_BATCH = 500
-
-        private val UTF8_BOM = "\uFEFF".encodeUtf8()
     }
 
     /** Verifies credentials and returns the account's expiry, if the panel reports one. */
@@ -137,14 +140,14 @@ class XtreamApi(
     }
 
     /**
-     * The movie list, handed to [save] [CATALOGUE_BATCH] at a time as it downloads. A big panel's
-     * list is tens of megabytes; holding it as one string plus a [JsonElement] tree plus the movies
-     * ran a Fire TV Stick's 128 MB heap out, so nothing here ever holds more than a batch.
+     * The movie list, downloaded to a file for reading a batch at a time; see [CatalogueList]. A big
+     * panel's list is tens of megabytes, and holding it as one string plus a [JsonElement] tree plus
+     * the movies ran a Fire TV Stick's 128 MB heap out.
      */
-    suspend fun movies(source: Source, save: suspend (List<Movie>) -> Unit) = withContext(Dispatchers.IO) {
-        streamList(source, "get_vod_streams", save) { obj ->
-            val streamId = obj["stream_id"].asStringOrNull ?: return@streamList null
-            val name = obj["name"].asStringOrNull ?: return@streamList null
+    suspend fun movies(source: Source): CatalogueList<Movie> = withContext(Dispatchers.IO) {
+        download(source, "get_vod_streams") { obj ->
+            val streamId = obj["stream_id"].asStringOrNull ?: return@download null
+            val name = obj["name"].asStringOrNull ?: return@download null
             val extension = obj["container_extension"].asStringOrNull?.takeIf { it.isNotBlank() }
             Movie(
                 sourceId = source.id,
@@ -172,11 +175,11 @@ class XtreamApi(
         }
     }
 
-    /** The series list, handed to [save] a batch at a time; see [movies]. */
-    suspend fun series(source: Source, save: suspend (List<Series>) -> Unit) = withContext(Dispatchers.IO) {
-        streamList(source, "get_series", save) { obj ->
-            val seriesId = obj["series_id"].asStringOrNull ?: return@streamList null
-            val name = obj["name"].asStringOrNull ?: return@streamList null
+    /** The series list, downloaded for reading a batch at a time; see [movies]. */
+    suspend fun series(source: Source): CatalogueList<Series> = withContext(Dispatchers.IO) {
+        download(source, "get_series") { obj ->
+            val seriesId = obj["series_id"].asStringOrNull ?: return@download null
+            val name = obj["name"].asStringOrNull ?: return@download null
             Series(
                 sourceId = source.id,
                 seriesId = seriesId,
@@ -321,7 +324,7 @@ class XtreamApi(
     // ---- Plumbing ------------------------------------------------------------------------
 
     private fun getJson(source: Source, action: String?, extra: (HttpUrl.Builder) -> Unit = {}): JsonElement =
-        open(source, action, extra).use { parsed(it.body.string()) }
+        open(source, action, extra).use { parsed(json, it.body.string()) }
 
     private fun open(source: Source, action: String?, extra: (HttpUrl.Builder) -> Unit = {}): Response {
         val builder = baseUrl(source).newBuilder()
@@ -339,57 +342,73 @@ class XtreamApi(
         return response
     }
 
-    private fun parsed(text: String): JsonElement {
-        if (text.isBlank()) throw XtreamException("The server returned an empty response.")
-        return readingCatalogue { json.parseToJsonElement(text) }
+    /**
+     * [action]'s reply, saved to a file as it arrives, for [CatalogueList.forEachBatch] to read.
+     *
+     * Not handed over a batch at a time straight off the socket: the call would then stay open
+     * while each batch was saved, so the client's five-minute call timeout would cover a slow
+     * stick's database writes too, and the caller couldn't save the whole list in one transaction
+     * without holding the database through the download. Decoded as the reply's charset says, as
+     * [okhttp3.ResponseBody.string] would, and written back as UTF-8, which is all the reader takes.
+     */
+    private fun <T : Any> download(source: Source, action: String, parse: (JsonObject) -> T?): CatalogueList<T> {
+        val file = File.createTempFile("xtream-$action-", ".json", downloads)
+        try {
+            open(source, action).use { it.saveTo(file) }
+        } catch (e: Exception) {
+            file.delete()
+            throw e
+        }
+        return CatalogueList(file, json, parse)
     }
 
     /**
-     * Each [parse]d object of [action]'s array, handed to [save] [CATALOGUE_BATCH] at a time, read
-     * one element at a time off the wire. A reply that isn't an array (an error object, an HTML
-     * page) is small, so it goes through [parsed] as before: an object is an empty list, HTML the
-     * "not a valid catalogue" message.
+     * A movie or series list on disk, read one array element at a time, so nothing ever holds more
+     * than a batch of it. Close it to delete the file.
      */
-    private suspend fun <T : Any> streamList(
-        source: Source,
-        action: String,
-        save: suspend (List<T>) -> Unit,
-        parse: (JsonObject) -> T?,
-    ) {
-        val batch = ArrayList<T>(CATALOGUE_BATCH)
-        suspend fun each(element: JsonElement) {
-            batch += element.jsonObjectOrNull?.let(parse) ?: return
-            if (batch.size == CATALOGUE_BATCH) {
-                save(batch.toList())
-                batch.clear()
+    class CatalogueList<T : Any> internal constructor(
+        private val file: File,
+        private val json: Json,
+        private val parse: (JsonObject) -> T?,
+    ) : Closeable {
+        /**
+         * Each parsed title, handed to [save] [CATALOGUE_BATCH] at a time. A reply that isn't an
+         * array (an error object, an HTML page) is small, so it's parsed whole as before: an object
+         * is an empty list, HTML the "not a valid catalogue" message, which can come after some
+         * batches if a list is cut off.
+         */
+        suspend fun forEachBatch(save: suspend (List<T>) -> Unit) = withContext(Dispatchers.IO) {
+            val batch = ArrayList<T>(CATALOGUE_BATCH)
+            suspend fun each(element: JsonElement) {
+                batch += element.jsonObjectOrNull?.let(parse) ?: return
+                if (batch.size == CATALOGUE_BATCH) {
+                    save(batch.toList())
+                    batch.clear()
+                }
             }
-        }
-        open(source, action).use { response ->
-            val body = response.body.source()
-            if (body.rangeEquals(0, UTF8_BOM)) body.skip(UTF8_BOM.size.toLong())
-            while (body.request(1) && body.buffer[0].toInt().toChar().isWhitespace()) body.skip(1)
-            if (body.request(1) && body.buffer[0] == '['.code.toByte()) {
-                val elements = json.decodeToSequence<JsonElement>(body.inputStream(), DecodeSequenceMode.ARRAY_WRAPPED)
-                    .iterator()
-                while (readingCatalogue { elements.hasNext() }) each(readingCatalogue { elements.next() })
-            } else {
-                parsed(body.readUtf8()).arrayOrEmpty.forEach { each(it) }
+            file.source().buffer().use { body ->
+                while (body.request(1) && body.buffer[0].toInt().toChar().isWhitespace()) body.skip(1)
+                if (body.request(1) && body.buffer[0] == '['.code.toByte()) {
+                    val elements = json.decodeToSequence<JsonElement>(
+                        body.inputStream(),
+                        DecodeSequenceMode.ARRAY_WRAPPED,
+                    )
+                        .iterator()
+                    while (readingCatalogue { elements.hasNext() }) each(readingCatalogue { elements.next() })
+                } else {
+                    parsed(json, body.readUtf8()).arrayOrEmpty.forEach { each(it) }
+                }
             }
+            if (batch.isNotEmpty()) save(batch.toList())
         }
-        if (batch.isNotEmpty()) save(batch.toList())
+
+        override fun close() {
+            file.delete()
+        }
     }
 
-    /** Panels behind a captive portal or Cloudflare return HTML; "not valid JSON" means nothing to a viewer. */
-    private inline fun <T> readingCatalogue(read: () -> T): T = try {
-        read()
-    } catch (e: IllegalArgumentException) {
-        // kotlinx.serialization's decoding failures are all IllegalArgumentExceptions.
-        throw XtreamException(
-            "The server replied with something that is not a valid catalogue. " +
-                "Check the address and port are correct.",
-            e,
-        )
-    }
+    private fun Response.saveTo(file: File) =
+        body.charStream().use { reply -> file.bufferedWriter().use { reply.copyTo(it) } }
 
     private fun request(source: Source, url: HttpUrl): Request = Request.Builder()
         .url(url)
@@ -449,6 +468,23 @@ class XtreamApi(
         val releaseDate: Long? = null,
         /** The newest episode's air date, from the same `get_series_info` reply. */
         val latestAirDate: Long? = null,
+    )
+}
+
+private fun parsed(json: Json, text: String): JsonElement {
+    if (text.isBlank()) throw XtreamApi.XtreamException("The server returned an empty response.")
+    return readingCatalogue { json.parseToJsonElement(text) }
+}
+
+/** Panels behind a captive portal or Cloudflare return HTML; "not valid JSON" means nothing to a viewer. */
+private inline fun <T> readingCatalogue(read: () -> T): T = try {
+    read()
+} catch (e: IllegalArgumentException) {
+    // kotlinx.serialization's decoding failures are all IllegalArgumentExceptions.
+    throw XtreamApi.XtreamException(
+        "The server replied with something that is not a valid catalogue. " +
+            "Check the address and port are correct.",
+        e,
     )
 }
 

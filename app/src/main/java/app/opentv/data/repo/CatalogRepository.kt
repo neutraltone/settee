@@ -689,6 +689,7 @@ class CatalogRepository(
     suspend fun fetchVod(source: Source, nowUtcMillis: Long): VodFetch = withContext(Dispatchers.IO) {
         if (source.kind != SourceKind.XTREAM) return@withContext VodFetch(emptyList(), complete = true)
         runCatching { syncXtreamVod(source, nowUtcMillis) }
+            .onFailure { if (it is CancellationException) throw it }
             .onFailure { Log.w(TAG, "VOD sync failed for source ${source.id}", it) }
             .getOrDefault(VodFetch(emptyList(), complete = false))
     }
@@ -754,6 +755,7 @@ class CatalogRepository(
         suspend fun <T> attempt(wanted: Boolean, empty: T, fetch: suspend () -> T): T {
             if (!wanted) return empty
             return runCatching { fetch() }.getOrElse {
+                if (it is CancellationException) throw it
                 complete = false
                 empty
             }
@@ -763,40 +765,19 @@ class CatalogRepository(
             if (categories.isNotEmpty()) categoryDao.upsertAll(categories)
         }
 
-        // The lists are saved a batch at a time as they download (see XtreamApi.movies), so a list
-        // that fails halfway keeps the batches before it, which only adds or updates titles.
-        // Fresh rows carry no local id, and an upsert without one hits the unique (source, provider
-        // id) index and then updates nothing, so a title's last_modified would never move after
-        // its first sync. Matching each to the row it replaces fixes that, keeps the local id that
-        // resume points hang off, and keeps what detail opens and the air-date step filled in.
+        // See VodLists for how each list is saved.
         var movies = 0
         categories(moviesOn) { api.movieCategories(source) }
-        attempt(moviesOn, Unit) {
-            api.movies(source) { batch ->
-                val stored = movieDao.byProviderIds(source.id, batch.map { it.streamId }).associateBy { it.streamId }
-                movieDao.upsertKeepingDates(source.id, batch.map { it.over(stored[it.streamId]) })
-                movies += batch.size
-            }
-        }
-        var series = 0
-        val updated = mutableListOf<Series>()
+        attempt(moviesOn, Unit) { movies = api.movies(source).use { movieDao.save(source.id, it) } }
+        var series = SavedSeries(0, emptyList())
         categories(seriesOn) { api.seriesCategories(source) }
-        attempt(seriesOn, Unit) {
-            api.series(source) { batch ->
-                val stored = seriesDao.byProviderIds(source.id, batch.map { it.seriesId }).associateBy { it.seriesId }
-                val merged = batch.map { it.over(stored[it.seriesId]) }
-                seriesDao.upsertAll(merged)
-                series += merged.size
-                // A show seen for the first time has nobody caught up on it, so only ones that moved.
-                merged.filterTo(updated) { it.addedMillis > (stored[it.seriesId]?.addedMillis ?: Long.MAX_VALUE) }
-            }
-        }
-        dateInBackground(source, movies = movies > 0, series = series > 0)
+        attempt(seriesOn, Unit) { series = api.series(source).use { seriesDao.save(source.id, it) } }
+        dateInBackground(source, movies = movies > 0, series = series.count > 0)
         return VodFetch(
-            updated,
+            series.moved,
             // Nothing at all may be a struggling panel's empty reply, so it isn't worth trusting for
             // 12 hours; an account with no VOD just asks again, which is a quick request.
-            complete && (movies > 0 || series > 0),
+            complete && (movies > 0 || series.count > 0),
         )
     }
 
@@ -821,44 +802,6 @@ class CatalogRepository(
 
     private suspend fun dateOrLog(source: Source, what: String, lookup: suspend () -> Unit) {
         runCatching { lookup() }.onFailure { Log.w(TAG, "$what failed for source ${source.id}", it) }
-    }
-
-    /** This freshly fetched movie in place of [old], keeping whatever it lacks that [old] had. */
-    private fun Movie.over(old: Movie?): Movie = if (old == null) {
-        this
-    } else {
-        copy(
-            id = old.id,
-            posterUrl = posterUrl ?: old.posterUrl,
-            rating = rating ?: old.rating,
-            year = year ?: old.year,
-            plot = plot ?: old.plot,
-            durationSeconds = durationSeconds ?: old.durationSeconds,
-            backdropUrl = backdropUrl ?: old.backdropUrl,
-            cast = cast ?: old.cast,
-            genre = genre ?: old.genre,
-            tmdbId = tmdbId ?: old.tmdbId,
-            director = director ?: old.director,
-            releaseDate = releaseDate ?: old.releaseDate,
-        )
-    }
-
-    /** This freshly fetched series in place of [old]; see the [Movie] version. */
-    private fun Series.over(old: Series?): Series = if (old == null) {
-        this
-    } else {
-        copy(
-            id = old.id,
-            posterUrl = posterUrl ?: old.posterUrl,
-            rating = rating ?: old.rating,
-            year = year ?: old.year,
-            plot = plot ?: old.plot,
-            backdropUrl = backdropUrl ?: old.backdropUrl,
-            cast = cast ?: old.cast,
-            genre = genre ?: old.genre,
-            tmdbId = tmdbId ?: old.tmdbId,
-            latestAirDate = old.latestAirDate,
-        )
     }
 
     private suspend fun syncM3u(source: Source, nowUtcMillis: Long): SyncResult {

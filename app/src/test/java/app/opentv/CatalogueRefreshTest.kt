@@ -256,6 +256,22 @@ class CatalogueRefreshTest {
     }
 
     @Test
+    fun `a movie list cut off halfway changes nothing that was saved`() = runTest {
+        db.sources().insert(PANEL_SOURCE)
+        openMoviesOrShows()
+        forgetAsked()
+
+        now += TWELVE_HOURS
+        val films = (1..700).joinToString(",", "[", "]") {
+            """{"stream_id": $it, "name": "Film $it", "added": "200"}"""
+        }
+        panel.replies["get_vod_streams"] = films.dropLast(40)
+        openMoviesOrShows()
+
+        assertThat(db.movies().all().map { it.name to it.addedMillis }).containsExactly("Drive" to 100_000L)
+    }
+
+    @Test
     fun `a failed movie list isn't remembered as fresh, so the next open tries again`() = runTest {
         db.sources().insert(PANEL_SOURCE)
         panel.replies["get_vod_streams"] = "!"
