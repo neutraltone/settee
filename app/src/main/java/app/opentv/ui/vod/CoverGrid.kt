@@ -40,19 +40,20 @@ import kotlinx.coroutines.flow.filterNotNull
 
 /**
  * A category's whole grid, with the same covers as the rows. Right out of the sidebar or the rail
- * comes back to it ([railReturnTarget]).
+ * comes back to it ([railReturnTarget]). [covers] is null while they load.
  */
 @Composable
 internal fun ScreenFrameScope.CoverGrid(
-    covers: List<TitleCover>,
+    covers: List<TitleCover>?,
     loading: String,
+    empty: String,
     onHighlight: (Long) -> Unit,
     onOpen: (Long) -> Unit,
     onOptions: ((Long) -> Unit)?,
 ) {
-    if (covers.isEmpty()) {
-        EmptyBrowse(VodEmpty.Loading(loading))
-        return
+    when {
+        covers == null -> return EmptyBrowse(VodEmpty.Loading(loading))
+        covers.isEmpty() -> return EmptyBrowse(VodEmpty.Hint(empty, body = null))
     }
     val state = rememberLazyGridState()
     PrefetchCovers(state, covers)
@@ -95,8 +96,9 @@ private fun PrefetchCovers(state: LazyGridState, covers: List<TitleCover>) {
             val ahead = PREFETCH_ROWS * shown.columns
             val upwards = shown.first < previousFirst
             previousFirst = shown.first
+            // Clamped both ways: just after the covers change, the layout can still be the old one's.
             val range = if (upwards) {
-                (shown.first - ahead).coerceAtLeast(0) until shown.first
+                (shown.first - ahead).coerceAtLeast(0) until shown.first.coerceAtMost(covers.size)
             } else {
                 shown.last + 1..(shown.last + ahead).coerceAtMost(covers.lastIndex)
             }

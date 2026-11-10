@@ -57,6 +57,7 @@ import app.opentv.ui.ContinueWatchingShelf
 import app.opentv.ui.LocalRailReturn
 import app.opentv.ui.ResumeItem
 import app.opentv.ui.VodViewModel
+import app.opentv.ui.browseKey
 import app.opentv.ui.channels.DeviceTextField
 import app.opentv.ui.design.CategoriesSidebar
 import app.opentv.ui.design.CategoriesSidebarWidth
@@ -109,8 +110,8 @@ fun MoviesScreen(
         recentlyAdded.isNotEmpty() ||
         genreRows.isNotEmpty()
     val categories by viewModel.movieCategories.collectAsState()
-    // null is For you. Saved, since opening a title disposes this screen and Back should land on the
-    // category it was opened from.
+    // null is For you, else a category's browseKey. Saved, since opening a title disposes this screen
+    // and Back should land on the category it was opened from.
     var category by rememberSaveable { mutableStateOf<String?>(null) }
     LaunchedEffect(category) { viewModel.selectMovieCategory(category) }
     val covers by viewModel.movieGrid.collectAsState()
@@ -125,6 +126,7 @@ fun MoviesScreen(
             CoverGrid(
                 covers,
                 loading = stringResource(R.string.vod_loading_movies),
+                empty = stringResource(R.string.vod_empty_category_movies),
                 onHighlight = onHighlight,
                 onOpen = { id -> scope.launch { viewModel.movie(id)?.let(onOpenMovie) } },
                 onOptions = openOptions?.let { open ->
@@ -175,8 +177,8 @@ fun SeriesScreen(
         recentlyAdded.isNotEmpty() ||
         genreRows.isNotEmpty()
     val categories by viewModel.seriesCategories.collectAsState()
-    // null is For you. Saved, since opening a title disposes this screen and Back should land on the
-    // category it was opened from.
+    // null is For you, else a category's browseKey. Saved, since opening a title disposes this screen
+    // and Back should land on the category it was opened from.
     var category by rememberSaveable { mutableStateOf<String?>(null) }
     LaunchedEffect(category) { viewModel.selectSeriesCategory(category) }
     val covers by viewModel.seriesGrid.collectAsState()
@@ -191,6 +193,7 @@ fun SeriesScreen(
             CoverGrid(
                 covers,
                 loading = stringResource(R.string.vod_loading_shows),
+                empty = stringResource(R.string.vod_empty_category_shows),
                 onHighlight = onHighlight,
                 onOpen = { id -> scope.launch { viewModel.series(id)?.let(onOpenSeries) } },
                 onOptions = openOptions?.let { open ->
@@ -283,7 +286,7 @@ private class TitleRow<T>(val key: String, val title: String, val titles: List<T
 internal sealed interface VodEmpty {
     class Loading(val message: String) : VodEmpty
 
-    class Hint(val title: String, val body: String) : VodEmpty
+    class Hint(val title: String, val body: String?) : VodEmpty
 }
 
 /**
@@ -388,7 +391,7 @@ private fun BrowseSidebar(
     val findHint = stringResource(R.string.categories_find)
     CategoriesSidebar(
         pinned = listOf(SidebarEntry(FOR_YOU, stringResource(R.string.vod_for_you))),
-        entries = remember(categories) { categories.map { SidebarEntry(it.id, it.name) } },
+        entries = remember(categories) { categories.map { SidebarEntry(it.browseKey, it.name) } },
         current = category ?: FOR_YOU,
         onPick = { key ->
             // The row the viewer left belongs to what's being replaced, so Right finds the new content.
@@ -476,7 +479,7 @@ internal fun EmptyBrowse(empty: VodEmpty) {
                 }
                 is VodEmpty.Hint -> {
                     Text(empty.title, SetteeType.Section)
-                    Text(empty.body, SetteeType.Body, color = SetteeColors.QuietText)
+                    empty.body?.let { Text(it, SetteeType.Body, color = SetteeColors.QuietText) }
                 }
             }
         }

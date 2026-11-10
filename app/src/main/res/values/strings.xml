@@ -439,6 +439,8 @@
     <string name="channels_manager_categories_header">Categories</string>
     <string name="channels_manager_pick_category">Pick a category on the left to see its channels.</string>
     <string name="channels_manager_empty_category">No channels in this category.</string>
+    <string name="vod_empty_category_movies">No films in this category.</string>
+    <string name="vod_empty_category_shows">No shows in this category.</string>
     <string name="channels_manager_no_channels">No channels yet. Add a provider first.</string>
     <string name="channels_hidden">Hidden</string>
     <string name="channels_showing">Showing</string>

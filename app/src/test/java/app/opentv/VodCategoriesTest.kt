@@ -12,8 +12,10 @@ import app.opentv.data.model.Category
 import app.opentv.data.model.Movie
 import app.opentv.data.model.Series
 import app.opentv.data.model.StreamKind
+import app.opentv.data.repo.TitleCover
 import app.opentv.data.repo.categoryGroupKey
 import app.opentv.ui.VodViewModel
+import app.opentv.ui.browseKey
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -50,16 +52,20 @@ class VodCategoriesTest {
 
     @After
     fun close() {
-        watching.cancel()
-        graph.database.close()
+        // The settings first: changing them wakes the grid's flow, which mustn't find the database closed.
         graph.settings.setHiddenCategories(emptySet())
         graph.settings.setHiddenUnlocked(false)
+        watching.cancel()
+        graph.database.close()
     }
 
-    private fun <T> StateFlow<List<T>>.names(name: (T) -> String, until: (List<String>) -> Boolean) = runBlocking {
+    private fun <T> StateFlow<List<T>?>.names(name: (T) -> String, until: (List<String>) -> Boolean) = runBlocking {
         watching.launch { collect {} }
-        withTimeout(5_000) { first { until(it.map(name)) } }.map(name)
+        withTimeout(5_000) { first { it != null && until(it.map(name)) } }.orEmpty().map(name)
     }
+
+    private val films = Category("c", 1, "Films", StreamKind.MOVIE)
+    private val shows = Category("c", 1, "Shows", StreamKind.SERIES)
 
     @Test
     fun `a Parental-Locked category is left out of the sidebar until the lock is lifted`() = runBlocking {
@@ -84,9 +90,9 @@ class VodCategoriesTest {
             .containsExactly("Action", "XXX | Adult").inOrder()
     }
 
-    private fun movie(id: Long, name: String) = Movie(
+    private fun movie(id: Long, name: String, sourceId: Long = 1) = Movie(
         id = id,
-        sourceId = 1,
+        sourceId = sourceId,
         streamId = "$id",
         name = name,
         categoryId = "c",
@@ -102,11 +108,12 @@ class VodCategoriesTest {
     @Test
     fun `a category's grid has a cover per film, its Qualities folded into one`() {
         runBlocking {
+            graph.database.categories().upsertAll(listOf(films))
             graph.database.movies().upsertAll(
                 listOf(movie(1, "Superbad 2007 4K"), movie(2, "Superbad 2007 HD"), movie(3, "Ronin 1998 HD")),
             )
         }
-        viewModel.selectMovieCategory("c")
+        viewModel.selectMovieCategory(films.browseKey)
 
         val covers = viewModel.movieGrid.names({ "${it.id} ${it.title} ${it.qualities} ${it.posterUrl}" }) {
             it.size ==
@@ -130,10 +137,42 @@ class VodCategoriesTest {
                 ),
             )
         }
-        viewModel.selectSeriesCategory("c")
+        runBlocking { graph.database.categories().upsertAll(listOf(shows)) }
+        viewModel.selectSeriesCategory(shows.browseKey)
 
         // Shows aren't folded by Quality: each is its own series, with its own episodes.
         assertThat(viewModel.seriesGrid.names({ "${it.id} ${it.posterUrl}" }) { it.size == 2 })
             .containsExactly("1 https://example.com/s.jpg", "2 null")
+    }
+
+    @Test
+    fun `a category's grid has only its own provider's films, when another provider uses the same id`() {
+        runBlocking {
+            graph.database.categories().upsertAll(listOf(films, Category("c", 2, "Films", StreamKind.MOVIE)))
+            graph.database.movies().upsertAll(listOf(movie(1, "Heat 1995", sourceId = 1), movie(2, "Ronin 1998", 2)))
+        }
+        viewModel.selectMovieCategory(films.browseKey)
+
+        assertThat(viewModel.movieGrid.names(TitleCover::title) { it.isNotEmpty() }).containsExactly("Heat 1995")
+    }
+
+    @Test
+    fun `an empty category's grid is empty once it has loaded, not loading for ever`() {
+        runBlocking { graph.database.categories().upsertAll(listOf(films)) }
+        viewModel.selectMovieCategory(films.browseKey)
+
+        assertThat(viewModel.movieGrid.names(TitleCover::title) { true }).isEmpty()
+    }
+
+    @Test
+    fun `a Parental-Locked category saved from before the lock came back shows nothing`() {
+        runBlocking {
+            graph.database.categories().upsertAll(listOf(films))
+            graph.database.movies().upsertAll(listOf(movie(1, "Heat 1995")))
+        }
+        graph.settings.setCategoryLocked(categoryGroupKey(films), locked = true)
+        viewModel.selectMovieCategory(films.browseKey)
+
+        assertThat(viewModel.movieGrid.names(TitleCover::title) { true }).isEmpty()
     }
 }

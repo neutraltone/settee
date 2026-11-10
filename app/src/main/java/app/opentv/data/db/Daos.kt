@@ -498,11 +498,15 @@ interface MovieDao {
     )
     fun observe(categoryId: String?): Flow<List<Movie>>
 
-    /** A category's covers for its grid: only what the cards show, in [observe]'s order. */
+    /**
+     * A provider's category's covers for its grid: only what the cards show, in [observe]'s order.
+     * By provider too, since another provider can use the same category id.
+     */
     @Query(
-        "SELECT id, name, posterUrl, year FROM movies WHERE categoryId = :categoryId ORDER BY addedMillis DESC, name",
+        "SELECT id, name, posterUrl, year FROM movies WHERE sourceId = :sourceId AND categoryId = :categoryId " +
+            "ORDER BY addedMillis DESC, name",
     )
-    fun observeCovers(categoryId: String): Flow<List<CoverRow>>
+    fun observeCovers(sourceId: Long, categoryId: String): Flow<List<CoverRow>>
 
     @Query("SELECT * FROM movies WHERE name LIKE '%' || :query || '%' ORDER BY name LIMIT :limit")
     fun search(query: String, limit: Int = 200): Flow<List<Movie>>
@@ -650,11 +654,15 @@ interface SeriesDao {
     )
     fun observe(categoryId: String?): Flow<List<Series>>
 
-    /** A category's covers for its grid: only what the cards show, in [observe]'s order. */
+    /**
+     * A provider's category's covers for its grid: only what the cards show, in [observe]'s order.
+     * By provider too, since another provider can use the same category id.
+     */
     @Query(
-        "SELECT id, name, posterUrl, year FROM series WHERE categoryId = :categoryId ORDER BY addedMillis DESC, name",
+        "SELECT id, name, posterUrl, year FROM series WHERE sourceId = :sourceId AND categoryId = :categoryId " +
+            "ORDER BY addedMillis DESC, name",
     )
-    fun observeCovers(categoryId: String): Flow<List<CoverRow>>
+    fun observeCovers(sourceId: Long, categoryId: String): Flow<List<CoverRow>>
 
     @Query("SELECT * FROM series WHERE name LIKE '%' || :query || '%' ORDER BY name LIMIT :limit")
     fun search(query: String, limit: Int = 200): Flow<List<Series>>

@@ -192,6 +192,20 @@ class VodBrowseTest {
     }
 
     @Test
+    fun `two providers' categories with the same id are both listed`() {
+        runBlocking {
+            graph.database.categories().upsertAll(listOf(Category("action", 2, "Action too", StreamKind.MOVIE, 2)))
+        }
+        setMovies()
+        pressOkOnMoviesInTheRail()
+
+        press(Key.DirectionLeft)
+
+        compose.onNodeWithText("Action").assertExists()
+        compose.onNodeWithText("Action too").assertExists()
+    }
+
+    @Test
     fun `Left from any other cover moves along the row, with the sidebar still tucked away`() {
         setMovies()
         pressOkOnMoviesInTheRail()

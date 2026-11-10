@@ -8,9 +8,12 @@ package app.opentv
 import android.app.Application
 import androidx.test.core.app.ApplicationProvider
 import app.opentv.core.ServiceLocator
+import app.opentv.data.model.Category
 import app.opentv.data.model.Movie
 import app.opentv.data.model.Series
+import app.opentv.data.model.StreamKind
 import app.opentv.ui.VodViewModel
+import app.opentv.ui.browseKey
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -72,19 +75,23 @@ class VodViewModelCatalogueTest {
 
     @Test
     fun `movies are loaded for a category, and none are held for the home rows`() = runBlocking {
+        val films = Category("c", 1, "Films", StreamKind.MOVIE)
+        graph.database.categories().upsertAll(listOf(films))
         graph.database.movies().upsertAll(listOf(movie(1, "One")))
-        watching.launch { viewModel.movieGroups.collect {} }
+        watching.launch { viewModel.movieGrid.collect {} }
 
-        viewModel.selectMovieCategory("c")
-        withTimeout(5_000) { viewModel.movieGroups.first { it.size == 1 } }
+        viewModel.selectMovieCategory(films.browseKey)
+        withTimeout(5_000) { viewModel.movieGrid.first { it?.size == 1 } }
 
         viewModel.selectMovieCategory(null)
-        withTimeout(5_000) { viewModel.movies.first { it.isEmpty() } }
-        assertThat(viewModel.movies.value).isEmpty()
+        withTimeout(5_000) { viewModel.movieGrid.first { it == null } }
+        Unit
     }
 
     @Test
     fun `shows are loaded for a category, and none are held for the home rows`() = runBlocking {
+        val shows = Category("c", 1, "Shows", StreamKind.SERIES)
+        graph.database.categories().upsertAll(listOf(shows))
         graph.database.series().upsertAll(
             listOf(
                 Series(
@@ -100,14 +107,14 @@ class VodViewModelCatalogueTest {
                 ),
             ),
         )
-        watching.launch { viewModel.series.collect {} }
+        watching.launch { viewModel.seriesGrid.collect {} }
 
-        viewModel.selectSeriesCategory("c")
-        withTimeout(5_000) { viewModel.series.first { it.size == 1 } }
+        viewModel.selectSeriesCategory(shows.browseKey)
+        withTimeout(5_000) { viewModel.seriesGrid.first { it?.size == 1 } }
 
         viewModel.selectSeriesCategory(null)
-        withTimeout(5_000) { viewModel.series.first { it.isEmpty() } }
-        assertThat(viewModel.series.value).isEmpty()
+        withTimeout(5_000) { viewModel.seriesGrid.first { it == null } }
+        Unit
     }
 
     @Test

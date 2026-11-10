@@ -127,9 +127,9 @@ internal fun collapseMovieVariants(movies: List<Movie>, decoders: DecoderList): 
 /**
  * One cover on Movies or Shows, in a row or a category's grid: a show, or a film with its Qualities
  * folded into the one this device plays by default ([qualities] says how many there are). [name] is
- * the provider's, where a Quality is written, and [title] the cleaned one the card shows.
+ * the provider's, where a Quality is written, and [title] the cleaned one the card shows. Compose
+ * infers it's stable from its fields, so the data layer needs no Compose annotation.
  */
-@androidx.compose.runtime.Immutable
 data class TitleCover(val id: Long, val name: String, val title: String, val posterUrl: String?, val qualities: Int = 1)
 
 /** A category's films as grid covers, each film's Qualities folded as [collapseMovieVariants] does. */
@@ -258,9 +258,11 @@ class CatalogRepository(
 
     fun observeSeries(categoryId: String? = null): Flow<List<Series>> = seriesDao.observe(categoryId)
 
-    fun observeMovieCovers(categoryId: String): Flow<List<CoverRow>> = movieDao.observeCovers(categoryId)
+    fun observeMovieCovers(sourceId: Long, categoryId: String): Flow<List<CoverRow>> =
+        movieDao.observeCovers(sourceId, categoryId)
 
-    fun observeSeriesCovers(categoryId: String): Flow<List<CoverRow>> = seriesDao.observeCovers(categoryId)
+    fun observeSeriesCovers(sourceId: Long, categoryId: String): Flow<List<CoverRow>> =
+        seriesDao.observeCovers(sourceId, categoryId)
 
     fun observeEpisodes(sourceId: Long, seriesId: String): Flow<List<Episode>> =
         episodeDao.observeForSeries(sourceId, seriesId)

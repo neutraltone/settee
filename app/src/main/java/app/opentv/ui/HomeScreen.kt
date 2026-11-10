@@ -457,7 +457,7 @@ private val VodTitle.posterUrl
  * `New episode` or `Watched`.
  */
 @Composable
-private fun coverStatusText(status: CoverStatus?): List<String> = when (status) {
+internal fun coverStatusText(status: CoverStatus?): List<String> = when (status) {
     null -> emptyList()
     is CoverStatus.InProgress -> {
         val episode = status.episode?.let { stringResource(R.string.home_cover_episode, it.season, it.episodeNumber) }

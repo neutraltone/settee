@@ -22,16 +22,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import app.opentv.R
-import app.opentv.data.repo.WatchStatus
 import app.opentv.ui.Backdrop
+import app.opentv.ui.coverStatusText
 import app.opentv.ui.design.QuietLabel
 import app.opentv.ui.design.SetteeColors
 import app.opentv.ui.design.SetteeType
 import app.opentv.ui.design.Text
-import app.opentv.ui.minutesLeftText
 import coil.compose.AsyncImage
 import kotlinx.coroutines.delay
 
@@ -83,17 +80,10 @@ internal fun BackdropText(backdrop: Backdrop?) {
     Column(Modifier.fillMaxWidth(BACKDROP_TEXT_WIDTH).height(BACKDROP_TEXT_HEIGHT)) {
         backdrop ?: return@Column
         Text(backdrop.title, SetteeType.Hero, maxLines = 1)
-        backdropStatusText(backdrop.status)?.let { QuietLabel(it) }
+        // Home's words for a cover's status, on one line: `S4 E3 · 22 min left`.
+        coverStatusText(backdrop.status).takeIf { it.isNotEmpty() }?.let { QuietLabel(it.joinToString(" · ")) }
         backdrop.synopsis?.takeIf { it.isNotBlank() }?.let { Text(it, SetteeType.Synopsis, maxLines = 3) }
     }
-}
-
-@Composable
-private fun backdropStatusText(status: WatchStatus?): String? = when (status) {
-    null, WatchStatus.Unwatched -> null
-    is WatchStatus.InProgress -> status.remainingMillis?.let { minutesLeftText(it) }
-        ?: stringResource(R.string.watch_badge_in_progress)
-    WatchStatus.Watched -> stringResource(R.string.watch_badge_watched)
 }
 
 private val BACKDROP_HEIGHT = 260.dp
