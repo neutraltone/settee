@@ -56,8 +56,6 @@
     <ID>ForbiddenImport:GuideGrid.kt$import androidx.compose.material3.IconButton</ID>
     <ID>ForbiddenImport:GuidePreview.kt$import androidx.compose.foundation.shape.RoundedCornerShape</ID>
     <ID>ForbiddenImport:GuidePreview.kt$import androidx.compose.material3.IconButton</ID>
-    <ID>ForbiddenImport:HomeLivePreview.kt$import androidx.compose.foundation.shape.RoundedCornerShape</ID>
-    <ID>ForbiddenImport:HomeScreen.kt$import androidx.compose.foundation.shape.RoundedCornerShape</ID>
     <ID>ForbiddenImport:LivePausePrompt.kt$import androidx.compose.foundation.shape.RoundedCornerShape</ID>
     <ID>ForbiddenImport:LivePausePrompt.kt$import androidx.compose.material3.Button</ID>
     <ID>ForbiddenImport:LivePausePrompt.kt$import androidx.compose.material3.TextButton</ID>

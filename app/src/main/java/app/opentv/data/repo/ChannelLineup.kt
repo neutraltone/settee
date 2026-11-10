@@ -251,7 +251,10 @@ class ChannelLineup(
      * rescans and catch-up, which don't draw the guide's window.
      */
     suspend fun guideId(channel: LineupChannel): String? =
-        channel.guideCandidates.firstOrNull { db.programmes().hasProgrammes(it) }
+        channel.guideCandidates.firstOrNull { programmes.hasProgrammes(it) }
+
+    /** The guide stored on the device, for [guideId] and [nowOn]. */
+    internal val programmes = db.programmes()
 
     /**
      * Channel up and down follow [scope] from now on: the guide's current scope, or All from

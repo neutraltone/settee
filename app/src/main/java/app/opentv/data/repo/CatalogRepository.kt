@@ -41,6 +41,8 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.job
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
@@ -73,6 +75,19 @@ data class GenreGroup<T>(val genre: String, val items: List<T>)
 sealed interface PersonTitle {
     data class MovieItem(val movie: Movie) : PersonTitle
     data class SeriesItem(val series: Series) : PersonTitle
+}
+
+/** A movie or a show, for the rows that mix them: Home's Favourites and Recently Added. */
+sealed interface VodTitle {
+    val name: String
+
+    data class OfMovie(val movie: Movie) : VodTitle {
+        override val name get() = movie.name
+    }
+
+    data class OfSeries(val series: Series) : VodTitle {
+        override val name get() = series.name
+    }
 }
 
 /** One quality variant of a film, with the quality parsed from its name by [ChannelNameNormalizer]. */
@@ -252,6 +267,31 @@ class CatalogRepository(
 
     /** "Recently Added" movies, newest first. Reactive. */
     fun recentlyAddedMovies(limit: Int = 30): Flow<List<Movie>> = movieDao.observeRecentlyAdded(limit)
+
+    /**
+     * Home's Recently Added: the [limit] movies and shows the providers added or last updated most
+     * recently, newest first, leaving out a kind that's switched off and titles never dated. Reactive.
+     */
+    fun recentlyAdded(
+        movies: Boolean = true,
+        shows: Boolean = true,
+        limit: Int = RECENTLY_ADDED,
+    ): Flow<List<VodTitle>> = combine(
+        if (movies) movieDao.observeRecentlyAdded(limit) else flowOf(emptyList()),
+        if (shows) seriesDao.observeRecentlyAdded(limit) else flowOf(emptyList()),
+    ) { movieRows, seriesRows ->
+        (
+            movieRows.map { it.addedMillis to VodTitle.OfMovie(it) } +
+                seriesRows.map { it.addedMillis to VodTitle.OfSeries(it) }
+            )
+            // A title the provider never dated says nothing about when it arrived, so it isn't
+            // recent. Providers stamp a whole import alike, so the name settles the order there,
+            // rather than every movie of the batch coming before every show.
+            .filter { it.first > 0 }
+            .sortedWith(compareByDescending<Pair<Long, VodTitle>> { it.first }.thenBy { it.second.name })
+            .take(limit)
+            .map { it.second }
+    }
 
     /** "Recently Added" series, newest first. Reactive. */
     fun recentlyAddedSeries(limit: Int = 30): Flow<List<Series>> = seriesDao.observeRecentlyAdded(limit)
@@ -1029,3 +1069,6 @@ class CatalogRepository(
         private const val RELEASED_WITHIN_MONTHS = 12L
     }
 }
+
+/** About as many as fit across Home twice: enough to browse, few enough to stay recent. */
+private const val RECENTLY_ADDED = 20

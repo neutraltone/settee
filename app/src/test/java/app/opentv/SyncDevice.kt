@@ -19,6 +19,8 @@ import app.opentv.data.model.Source
 import app.opentv.data.model.SourceKind
 import app.opentv.data.repo.ContinueWatchingCard
 import app.opentv.data.repo.WatchStatus
+import app.opentv.data.repo.movies
+import app.opentv.data.repo.series
 import app.opentv.sync.SyncEngine
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.flow.first

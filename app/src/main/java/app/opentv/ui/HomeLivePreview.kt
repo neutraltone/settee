@@ -6,8 +6,6 @@
 package app.opentv.ui
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -19,28 +17,23 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.text
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -51,6 +44,13 @@ import app.opentv.data.model.Channel
 import app.opentv.data.repo.MediaKey
 import app.opentv.player.PlayerController
 import app.opentv.ui.channels.PreviewVideo
+import app.opentv.ui.design.HighlightStyle
+import app.opentv.ui.design.HighlightSurface
+import app.opentv.ui.design.QuietLabel
+import app.opentv.ui.design.ScreenFrameScope
+import app.opentv.ui.design.SetteeColors
+import app.opentv.ui.design.SetteeType
+import app.opentv.ui.design.Text
 import app.opentv.ui.vod.CardFocus
 import app.opentv.ui.vod.takesFocus
 import coil.compose.AsyncImage
@@ -145,76 +145,56 @@ internal fun LiveTile.open(onWatch: (Channel) -> Unit, onOpenLive: () -> Unit) {
     live.preview.channel?.let(onWatch) ?: onOpenLive()
 }
 
-/** Home's lead tile: the Live Preview's picture on the left, its channel and what's on beside it. */
+/**
+ * Home's lead tile: the Live Preview's picture on the left, its channel and what's on beside it. One
+ * selectable block, so a single Down leaves it for Continue Watching.
+ */
 @Composable
-internal fun LivePreviewTile(tile: LiveTile, focus: CardFocus?, onClick: () -> Unit) {
+internal fun ScreenFrameScope.LivePreviewTile(tile: LiveTile, focus: CardFocus?, onClick: () -> Unit) {
     val preview = tile.live.preview
-    var focused by remember { mutableStateOf(false) }
     // A row of one, so it highlights itself on coming back rather than through a row's scroll state.
     LaunchedEffect(focus) {
         if (focus == null) return@LaunchedEffect
         withFrameNanos {}
         focus.done(runCatching { focus.requester.requestFocus() }.isSuccess)
     }
-    val shape = RoundedCornerShape(12.dp)
     Row(
-        Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp)
-            .height(LIVE_HEIGHT)
-            .takesFocus(0, focus)
-            .onFocusChanged { focused = it.isFocused }
-            .clip(shape)
-            .clickable(onClick = onClick)
-            .padding(4.dp),
+        Modifier.fillMaxWidth().padding(vertical = LIFT_ROOM).height(LIVE_HEIGHT),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Box(
-            Modifier
-                .fillMaxHeight()
-                .aspectRatio(16f / 9f)
-                .clip(shape)
-                .background(Color.Black)
-                .then(if (focused) Modifier.border(3.dp, MaterialTheme.colorScheme.primary, shape) else Modifier),
-            contentAlignment = Alignment.Center,
-        ) {
-            AsyncImage(
-                model = preview.logoUrl,
-                contentDescription = null,
-                contentScale = ContentScale.Fit,
-                modifier = Modifier.fillMaxSize(0.6f),
-            )
-            if (tile.player != null && tile.error == null) PreviewVideo(tile.player, Modifier.fillMaxSize())
-            tile.error?.let { error ->
-                Text(
-                    error,
-                    color = Color.White,
-                    style = MaterialTheme.typography.bodyMedium,
-                    maxLines = 3,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(Color.Black.copy(alpha = 0.7f))
-                        .padding(16.dp),
+        // The channel's name is drawn beside the picture but belongs to it, for TalkBack and for tests.
+        val label = Modifier.semantics { text = AnnotatedString(preview.name) }
+        HighlightSurface(onClick, HighlightStyle.Card, Modifier.takesFocus(0, focus).then(label)) {
+            Box(
+                Modifier.fillMaxHeight().aspectRatio(16f / 9f).background(Color.Black),
+                contentAlignment = Alignment.Center,
+            ) {
+                AsyncImage(
+                    model = preview.logoUrl,
+                    contentDescription = null,
+                    contentScale = ContentScale.Fit,
+                    modifier = Modifier.fillMaxSize(0.6f),
                 )
+                if (tile.player != null && tile.error == null) {
+                    VideoArea(Modifier.fillMaxSize()) { PreviewVideo(tile.player, Modifier.fillMaxSize()) }
+                }
+                tile.error?.let { error ->
+                    Text(
+                        error,
+                        style = SetteeType.Body,
+                        maxLines = 3,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(SetteeColors.Background.copy(alpha = 0.8f))
+                            .padding(12.dp),
+                    )
+                }
             }
         }
         Spacer(Modifier.width(18.dp))
         Column(Modifier.weight(1f)) {
-            Text(
-                preview.name,
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.SemiBold,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-            if (preview.channel == null) {
-                Text(
-                    stringResource(R.string.home_live_gone),
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
+            Text(preview.name, style = SetteeType.Section, modifier = Modifier.clearAndSetSemantics {}, maxLines = 1)
+            if (preview.channel == null) DetailLine(stringResource(R.string.home_live_gone))
             tile.live.nowTitle?.let { DetailLine(stringResource(R.string.home_live_now, it)) }
             tile.live.nextTitle?.let { DetailLine(stringResource(R.string.home_live_next, it)) }
         }
@@ -223,14 +203,10 @@ internal fun LivePreviewTile(tile: LiveTile, focus: CardFocus?, onClick: () -> U
 
 @Composable
 private fun DetailLine(text: String) {
-    Spacer(Modifier.height(6.dp))
-    Text(
-        text,
-        style = MaterialTheme.typography.bodyLarge,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        maxLines = 1,
-        overflow = TextOverflow.Ellipsis,
-    )
+    Spacer(Modifier.height(4.dp))
+    QuietLabel(text)
 }
 
-private val LIVE_HEIGHT = 220.dp
+/** About 140 dp in all with the room for its lift, as docs/LOOK.md allows the Live Preview. */
+private val LIVE_HEIGHT = 116.dp
+private val LIFT_ROOM = 12.dp

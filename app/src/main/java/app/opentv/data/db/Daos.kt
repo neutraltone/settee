@@ -6,6 +6,7 @@
 package app.opentv.data.db
 
 import androidx.room.Dao
+import androidx.room.Embedded
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
@@ -950,23 +951,23 @@ interface FavouriteDao {
 
     @Query(
         """
-        SELECT m.* FROM favourites f
+        SELECT m.*, f.changedAtMillis AS starredAtMillis FROM favourites f
         JOIN sources src ON src.name = f.source
         JOIN movies m ON m.sourceId = src.id AND m.streamId = f.itemId
-        WHERE f.profileId = :profileId AND f.removed = 0 AND f.kind = 'MOVIE' ORDER BY m.name
+        WHERE f.profileId = :profileId AND f.removed = 0 AND f.kind = 'MOVIE'
         """,
     )
-    fun observeMovies(profileId: Long): Flow<List<Movie>>
+    fun observeStarredMovies(profileId: Long): Flow<List<StarredMovie>>
 
     @Query(
         """
-        SELECT s.* FROM favourites f
+        SELECT s.*, f.changedAtMillis AS starredAtMillis FROM favourites f
         JOIN sources src ON src.name = f.source
         JOIN series s ON s.sourceId = src.id AND s.seriesId = f.itemId
-        WHERE f.profileId = :profileId AND f.removed = 0 AND f.kind = 'SERIES' ORDER BY s.name
+        WHERE f.profileId = :profileId AND f.removed = 0 AND f.kind = 'SERIES'
         """,
     )
-    fun observeSeries(profileId: Long): Flow<List<Series>>
+    fun observeStarredSeries(profileId: Long): Flow<List<StarredSeries>>
 
     @Query(
         """
@@ -1174,3 +1175,9 @@ interface ReminderDao {
     @Query("DELETE FROM reminders WHERE endUtcMillis < :beforeMillis")
     suspend fun deleteEndedBefore(beforeMillis: Long)
 }
+
+/** A Favourite movie and when the Profile last starred it. */
+data class StarredMovie(@Embedded val movie: Movie, val starredAtMillis: Long)
+
+/** A Favourite series and when the Profile last starred it. */
+data class StarredSeries(@Embedded val series: Series, val starredAtMillis: Long)

@@ -11,9 +11,11 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsNotFocused
+import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasScrollToNodeAction
@@ -24,20 +26,27 @@ import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.performScrollToNode
+import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.test.requestFocus
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.height
+import androidx.compose.ui.unit.width
 import androidx.media3.common.C
 import app.opentv.data.model.Channel
 import app.opentv.data.model.Movie
 import app.opentv.data.model.Series
+import app.opentv.data.repo.CoverStatus
 import app.opentv.data.repo.LineupChannel
 import app.opentv.data.repo.LivePreview
 import app.opentv.data.repo.MediaKey
+import app.opentv.data.repo.VodTitle
+import app.opentv.ui.Cover
+import app.opentv.ui.HomeChannel
 import app.opentv.ui.HomeContent
 import app.opentv.ui.LiveNow
 import app.opentv.ui.LivePreviewPlayer
 import app.opentv.ui.LiveTile
-import app.opentv.ui.RecentRows
 import app.opentv.ui.ResumeItem
 import app.opentv.ui.SeasonEpisode
 import app.opentv.ui.options.LeaveScreen
@@ -112,9 +121,19 @@ class HomeContentTest {
         number = null,
     )
 
-    private fun favourite(id: Long, name: String) = channel(id, name).let {
-        LineupChannel(it, listOf(it), favourite = true)
+    private fun favourite(id: Long, name: String, nowOn: String? = null) = channel(id, name).let {
+        HomeChannel(LineupChannel(it, listOf(it), favourite = true), nowOn)
     }
+
+    /** The shows in a test's mixed list of covers, for their own row. */
+    private fun List<Cover>.shows() = filter { it.title is VodTitle.OfSeries }
+
+    /** The movies in a test's mixed list of covers, for their own row. */
+    private fun List<Cover>.movies() = filter { it.title is VodTitle.OfMovie }
+
+    private fun cover(movie: Movie, status: CoverStatus? = null) = Cover(VodTitle.OfMovie(movie), status)
+
+    private fun cover(series: Series, status: CoverStatus? = null) = Cover(VodTitle.OfSeries(series), status)
 
     /** The Live Preview a test's Home leads with, if any. */
     private var live by mutableStateOf<LiveTile?>(null)
@@ -154,23 +173,29 @@ class HomeContentTest {
     /** The movie a test's Home last opened. */
     private var opened: Movie? = null
 
-    private val recent = RecentRows(
-        releasedMovies = listOf(movie(10, "Dune: Part Two")),
-        addedMovies = listOf(movie(11, "Drive")),
-        releasedShows = listOf(series(12, "Slow Horses")),
-        addedShows = listOf(series(13, "Shogun")),
-    )
+    private val recent = listOf(cover(movie(11, "Drive")), cover(series(13, "Shogun")))
 
+    /**
+     * Brings [text] fully onto the screen: the list composes its row, then scrolls on by however far
+     * the card still hangs below it, since a row whose title peeks in counts as shown.
+     */
     private fun scrollTo(text: String) {
-        compose.onAllNodes(hasScrollToNodeAction())[0].performScrollToNode(hasText(text))
+        val list = compose.onAllNodes(hasScrollToNodeAction())[0]
+        list.performScrollToNode(hasText(text))
+        val below =
+            compose.onNodeWithText(text).getUnclippedBoundsInRoot().bottom - list.getUnclippedBoundsInRoot().bottom
+        if (below > 0.dp) {
+            val by = with(compose.density) { below.toPx() }
+            list.performSemanticsAction(SemanticsActions.ScrollBy) { it(0f, by) }
+        }
     }
 
     private fun setHome(
         resume: List<ResumeItem> = this.resume,
-        shows: List<Series> = listOf(series(1, "Severance")),
-        movies: List<Movie> = listOf(movie(2, "Heat")),
-        channels: List<LineupChannel> = listOf(favourite(3, "BBC One")),
-        recent: RecentRows = RecentRows(),
+        favourites: List<Cover> = listOf(cover(series(1, "Severance")), cover(movie(2, "Heat"))),
+        channels: List<HomeChannel> = listOf(favourite(3, "BBC One")),
+        recent: List<Cover> = emptyList(),
+        favouritesNow: () -> List<Cover> = { favourites },
     ) = compose.setTvContent {
         CompositionLocalProvider(LocalOpenOptions provides { _, leave -> leaveThroughOptions = leave }) {
             HomeContent(
@@ -182,10 +207,11 @@ class HomeContentTest {
                 onOpenLive = { openedLive = true },
                 stopPreview = { events += "stop" },
                 continueWatching = resume,
-                favouriteShows = shows,
-                favouriteMovies = movies,
+                favouriteShows = favouritesNow().shows(),
+                favouriteMovies = favouritesNow().movies(),
                 favouriteChannels = channels,
-                recent = recent,
+                recentShows = recent.shows(),
+                recentMovies = recent.movies(),
                 onResume = { events += "resume" },
                 onOpenSeries = { events += "series" },
                 onOpenMovie = {
@@ -253,7 +279,7 @@ class HomeContentTest {
     private fun setHomeToLeave(
         continueWatching: () -> List<ResumeItem> = { resume },
         movies: () -> List<Movie> = { listOf(movie(2, "Heat")) },
-        recent: RecentRows = RecentRows(),
+        recent: List<Cover> = emptyList(),
     ) = compose.setTvContent {
         val saved = rememberSaveableStateHolder()
         if (home) {
@@ -263,10 +289,11 @@ class HomeContentTest {
                         live = live,
                         onWatchLive = { watched = it },
                         continueWatching = continueWatching(),
-                        favouriteShows = listOf(series(1, "Severance")),
-                        favouriteMovies = movies(),
+                        favouriteShows = listOf(cover(series(1, "Severance"))),
+                        favouriteMovies = movies().map(::cover),
                         favouriteChannels = listOf(favourite(3, "BBC One"), favourite(5, "BBC Two")),
-                        recent = recent,
+                        recentShows = recent.shows(),
+                        recentMovies = recent.movies(),
                         onResume = {},
                         onOpenSeries = {},
                         onOpenMovie = { opened = it },
@@ -298,6 +325,7 @@ class HomeContentTest {
 
     /** Picks [title] on Home, leaves for the screen it opens, and comes back. */
     private fun pickAndComeBack(title: String, whileAway: () -> Unit = {}) {
+        scrollTo(title)
         compose.onNodeWithText(title).performClick()
         home = false
         compose.waitForIdle()
@@ -309,81 +337,53 @@ class HomeContentTest {
     private fun topOf(text: String) = compose.onNodeWithText(text).getUnclippedBoundsInRoot().top
 
     @Test
-    fun `rows run Continue Watching, Favourite Shows, Favourite Movies, Favourite Channels`() {
-        setHome()
-
-        assertThat(topOf("Continue watching")).isLessThan(topOf("Favourite shows"))
-        assertThat(topOf("Favourite shows")).isLessThan(topOf("Favourite movies"))
-        // Four rows overflow a TV screen; scrolling down brings the last one in under Movies.
-        compose.onAllNodes(hasScrollToNodeAction())[0].performScrollToNode(hasText("Favourite channels"))
-        assertThat(topOf("Favourite movies")).isLessThan(topOf("Favourite channels"))
-        compose.onNodeWithText("BBC One").assertExists()
-    }
-
-    @Test
-    fun `after Favourite Channels come recently released and added movies, then shows`() {
+    fun `rows run Continue Watching, Recently Added by kind, then Favourites by kind, then channels`() {
         setHome(recent = recent)
 
         val order = listOf(
-            "Favourite channels",
-            "Recently released movies",
-            "Recently added movies",
-            "Recently released shows",
+            "Continue watching",
             "Recently added shows",
+            "Recently added movies",
+            "Favourite shows",
+            "Favourite movies",
+            "Favourite channels",
         )
-        // Nine rows are far taller than a TV screen: bring each in under the one before it.
+        // Six rows overflow a TV screen: bring each in under the one before it.
         order.zipWithNext { above, below ->
             scrollTo(below)
             assertThat(topOf(above)).isLessThan(topOf(below))
         }
-        compose.onNodeWithText("Shogun").assertExists()
+        compose.onNodeWithText("BBC One").assertExists()
     }
 
     @Test
-    fun `the remote's down button reaches the last of the recent rows`() {
-        setHome(
-            resume = emptyList(),
-            shows = emptyList(),
-            movies = emptyList(),
-            channels = emptyList(),
-            recent = recent,
-        )
-        compose.onNodeWithText("Dune: Part Two").assertIsFocused()
-        captureScreen("home_recent_rows")
+    fun `Favourite shows and Favourite movies are rows of their own`() {
+        setHome(favourites = listOf(cover(movie(2, "Heat")), cover(series(1, "Severance"))))
 
-        repeat(3) { compose.onRoot().performKeyInput { pressKey(Key.DirectionDown) } }
+        assertThat(topOf("Severance")).isLessThan(topOf("Heat"))
+    }
 
+    @Test
+    fun `selecting a Recently Added movie opens it`() {
+        setHome(recent = recent)
+        scrollTo("Drive")
+
+        compose.onNodeWithText("Drive").performClick()
+
+        assertThat(opened).isEqualTo(movie(11, "Drive"))
+    }
+
+    @Test
+    fun `with only Recently Added to show, Home shows it rather than the hint`() {
+        setHome(resume = emptyList(), favourites = emptyList(), channels = emptyList(), recent = recent)
+
+        compose.onNodeWithText("Things you watch and favourite will show up here").assertDoesNotExist()
         compose.onNodeWithText("Shogun").assertIsFocused()
     }
 
     @Test
-    fun `selecting a recently released movie opens it`() {
-        setHome(recent = recent)
-        scrollTo("Dune: Part Two")
-
-        compose.onNodeWithText("Dune: Part Two").performClick()
-
-        assertThat(opened).isEqualTo(movie(10, "Dune: Part Two"))
-    }
-
-    @Test
-    fun `with only recent titles to show, Home shows them rather than the hint`() {
-        setHome(
-            resume = emptyList(),
-            shows = emptyList(),
-            movies = emptyList(),
-            channels = emptyList(),
-            recent = RecentRows(addedMovies = listOf(movie(11, "Drive"))),
-        )
-
-        compose.onNodeWithText("Things you watch and favourite will show up here").assertDoesNotExist()
-        compose.onNodeWithText("Recently released movies").assertDoesNotExist()
-        compose.onNodeWithText("Drive").assertIsFocused()
-    }
-
-    @Test
     fun `a row with nothing in it is left out`() {
-        setHome(shows = emptyList(), movies = emptyList())
+        setHome(favourites = emptyList())
 
         compose.onNodeWithText("Favourite shows").assertDoesNotExist()
         compose.onNodeWithText("Favourite movies").assertDoesNotExist()
@@ -392,22 +392,8 @@ class HomeContentTest {
     }
 
     @Test
-    fun `with no titles recent enough, both Recently Released rows are left out and the added ones stay`() {
-        setHome(
-            recent = RecentRows(
-                addedMovies = listOf(movie(11, "Drive")),
-                addedShows = listOf(series(13, "Shogun")),
-            ),
-        )
-
-        scrollTo("Recently added shows")
-        compose.onNodeWithText("Recently released movies").assertDoesNotExist()
-        compose.onNodeWithText("Recently released shows").assertDoesNotExist()
-    }
-
-    @Test
     fun `a Profile with nothing watched or favourited gets a hint instead of rows`() {
-        setHome(resume = emptyList(), shows = emptyList(), movies = emptyList(), channels = emptyList())
+        setHome(resume = emptyList(), favourites = emptyList(), channels = emptyList())
 
         compose.onNodeWithText("Things you watch and favourite will show up here").assertExists()
         captureScreen("home_hint")
@@ -450,7 +436,7 @@ class HomeContentTest {
         assertThat(selecting("Severance")).containsExactly("stop", "series").inOrder()
         assertThat(selecting("Heat")).containsExactly("stop", "movie").inOrder()
         assertThat(selecting("BBC One")).containsExactly("stop", "channel").inOrder()
-        assertThat(selecting("Dune: Part Two")).containsExactly("stop", "movie").inOrder()
+        assertThat(selecting("Drive")).containsExactly("stop", "movie").inOrder()
         assertThat(selecting("Shogun")).containsExactly("stop", "series").inOrder()
     }
 
@@ -601,7 +587,7 @@ class HomeContentTest {
     }
 
     @Test
-    fun `back from a show's page, Home highlights it even far down the recent rows`() {
+    fun `back from a show's page, Home highlights it even far down in Recently Added`() {
         setHomeToLeave(recent = recent)
         scrollTo("Shogun")
 
@@ -612,8 +598,165 @@ class HomeContentTest {
     }
 
     @Test
+    fun `a Favourite channel is a square tile with what's on now underneath, or just its name`() {
+        // Nothing highlighted: a highlighted tile's lift moves where it's reported to be.
+        takeFocus = false
+        setHome(
+            resume = emptyList(),
+            favourites = emptyList(),
+            channels = listOf(favourite(3, "BBC One", nowOn = "Pointless"), favourite(5, "BBC Two")),
+        )
+
+        val tile = compose.onNodeWithText("BBC One").getUnclippedBoundsInRoot()
+        assertThat(tile.width).isEqualTo(118.dp)
+        assertThat(tile.height).isEqualTo(118.dp)
+        assertThat(topOf("Pointless")).isGreaterThan(tile.bottom)
+        // Lined up by their squares, though only one has a second line underneath.
+        assertThat(topOf("BBC Two")).isEqualTo(tile.top)
+        assertThat(compose.onAllNodes(hasText("Pointless")).fetchSemanticsNodes()).hasSize(1)
+        captureScreen("home_favourite_channels")
+    }
+
+    @Test
+    fun `Recently Added covers say where the Profile is, and an unstarted title shows only its name`() {
+        val episode = testEpisode(4, 3)
+        setHome(
+            resume = emptyList(),
+            favourites = emptyList(),
+            recent = listOf(
+                cover(series(1, "Severance"), CoverStatus.InProgress(0.5f, remainingMillis = 1_320_000, episode)),
+                cover(movie(2, "Heat"), CoverStatus.InProgress(0.8f, remainingMillis = 1_320_000)),
+                cover(series(4, "Slow Horses"), CoverStatus.UpNext(testEpisode(2, 1))),
+                cover(series(6, "Taskmaster"), CoverStatus.NewEpisode),
+                cover(movie(7, "Ronin"), CoverStatus.Watched),
+                cover(movie(8, "Thief")),
+            ),
+            channels = emptyList(),
+        )
+
+        // An episode and the time left are two lines, split where they meet rather than wherever
+        // a narrow cover happens to wrap them.
+        compose.onNodeWithText("S4 E3", useUnmergedTree = true).assertExists()
+        assertThat(compose.onAllNodes(hasText("22 min left"), useUnmergedTree = true).fetchSemanticsNodes()).hasSize(2)
+        compose.onNodeWithText("S2 E1", useUnmergedTree = true).assertExists()
+        compose.onNodeWithText("New episode", useUnmergedTree = true).assertExists()
+        compose.onNodeWithText("Watched", useUnmergedTree = true).assertExists()
+        compose.onNode(hasText("Thief") and hasClickAction()).assertTextEquals("Thief")
+        captureScreen("home_cover_status")
+    }
+
+    @Test
+    fun `a Favourite shows only its title, however far through it the Profile is`() {
+        setHome(
+            resume = emptyList(),
+            favourites = listOf(
+                cover(
+                    series(1, "Severance"),
+                    CoverStatus.InProgress(0.5f, remainingMillis = 1_320_000, testEpisode(4, 3)),
+                ),
+                cover(movie(7, "Ronin"), CoverStatus.Watched),
+            ),
+            channels = emptyList(),
+        )
+
+        compose.onNode(hasText("Severance") and hasClickAction()).assertTextEquals("Severance")
+        compose.onNode(hasText("Ronin") and hasClickAction()).assertTextEquals("Ronin")
+    }
+
+    private val threeToContinue =
+        listOf(resumeItem(9, "Collateral"), resumeItem(7, "Insomnia"), resumeItem(8, "Memento"))
+
+    private val threeFavourites =
+        listOf(cover(movie(1, "Sicario")), cover(movie(2, "Heat")), cover(movie(4, "Ronin")))
+
+    private fun press(key: Key) {
+        compose.onRoot().performKeyInput { pressKey(key) }
+        compose.waitForIdle()
+    }
+
+    @Test
+    fun `Down from the large first card lands on the first Favourite`() {
+        setHome(resume = threeToContinue, favourites = threeFavourites)
+        assertThat(compose.onNodeWithText("Collateral").getUnclippedBoundsInRoot().width).isEqualTo(300.dp)
+
+        press(Key.DirectionDown)
+
+        compose.onNodeWithText("Sicario").assertIsFocused()
+    }
+
+    @Test
+    fun `coming back into a row with Up or Down lands on the card last highlighted there`() {
+        setHome(resume = threeToContinue, favourites = threeFavourites)
+        press(Key.DirectionRight)
+        press(Key.DirectionRight)
+        press(Key.DirectionDown)
+        press(Key.DirectionRight)
+        press(Key.DirectionRight)
+        compose.onNodeWithText("Ronin").assertIsFocused()
+
+        press(Key.DirectionDown)
+        press(Key.DirectionUp)
+        compose.onNodeWithText("Ronin").assertIsFocused()
+
+        press(Key.DirectionUp)
+        compose.onNodeWithText("Memento").assertIsFocused()
+    }
+
+    @Test
+    fun `coming back into a row lands on the same card even after the row has moved round`() {
+        var favourites by mutableStateOf(threeFavourites)
+        setHome(resume = threeToContinue, favouritesNow = { favourites })
+        press(Key.DirectionDown)
+        press(Key.DirectionRight)
+        press(Key.DirectionRight)
+        press(Key.DirectionDown)
+
+        favourites = listOf(cover(movie(6, "Thief"))) + threeFavourites
+        compose.waitForIdle()
+        press(Key.DirectionUp)
+
+        compose.onNodeWithText("Ronin").assertIsFocused()
+    }
+
+    @Test
+    fun `Up from a small card in the top row stays where it is`() {
+        setHome(resume = threeToContinue, favourites = threeFavourites)
+        press(Key.DirectionRight)
+        press(Key.DirectionRight)
+
+        press(Key.DirectionUp)
+
+        compose.onNodeWithText("Memento").assertIsFocused()
+    }
+
+    @Test
+    fun `Down from the Live Preview lands on the first Continue Watching card, which is no longer large`() {
+        live = playable()
+        setHome(resume = threeToContinue, favourites = threeFavourites)
+        assertThat(compose.onNodeWithText("Collateral").getUnclippedBoundsInRoot().width).isEqualTo(186.dp)
+
+        press(Key.DirectionDown)
+
+        compose.onNodeWithText("Collateral").assertIsFocused()
+        captureScreen("home_live_preview_with_favourites")
+    }
+
+    @Test
+    fun `a title's Quality from its provider's name shows on its cover and its Continue Watching card`() {
+        setHome(
+            resume = listOf(resumeItem(9, "Dune").copy(name = "4K-EN - Dune")),
+            favourites = listOf(cover(movie(2, "EN - Dragons FHD")), cover(movie(4, "Ronin"))),
+            channels = emptyList(),
+        )
+
+        compose.onNodeWithText("4K", useUnmergedTree = true).assertExists()
+        compose.onNodeWithText("FHD", useUnmergedTree = true).assertExists()
+        compose.onNode(hasText("Ronin") and hasClickAction()).assertTextEquals("Ronin")
+    }
+
+    @Test
     fun `selecting a Favourite channel plays it`() {
-        setHome(resume = emptyList(), shows = emptyList(), movies = emptyList())
+        setHome(resume = emptyList(), favourites = emptyList())
 
         compose.onNodeWithText("BBC One").performClick()
 
@@ -635,7 +778,7 @@ class HomeContentTest {
         compose.setTvContent {
             HomeContent(
                 continueWatching = resume,
-                favouriteShows = listOf(series(1, "Severance")),
+                favouriteShows = listOf(cover(series(1, "Severance"))),
                 favouriteMovies = emptyList(),
                 favouriteChannels = emptyList(),
                 onResume = {},
@@ -658,7 +801,7 @@ class HomeContentTest {
         compose.setTvContent {
             HomeContent(
                 continueWatching = continueWatching,
-                favouriteShows = listOf(series(1, "Severance")),
+                favouriteShows = listOf(cover(series(1, "Severance"))),
                 favouriteMovies = emptyList(),
                 favouriteChannels = emptyList(),
                 onResume = {},

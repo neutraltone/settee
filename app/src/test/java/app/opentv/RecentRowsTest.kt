@@ -167,6 +167,46 @@ class RecentRowsTest {
             .containsExactly("Updated last", "Updated first").inOrder()
     }
 
+    @Test
+    fun `Recently Added mixes movies and shows, the latest the provider added first`() = runTest {
+        db.movies().upsertAll(listOf(movie("Heat", added = 1), movie("Alien", added = 3)))
+        db.series().upsertAll(listOf(series("The Wire", added = 2), series("Taskmaster", added = 4)))
+
+        val row = test.catalog.recentlyAdded().first()
+
+        assertThat(row.map { it.name }).containsExactly("Taskmaster", "Alien", "The Wire", "Heat").inOrder()
+    }
+
+    @Test
+    fun `Recently Added stops at 20 titles`() = runTest {
+        db.movies().upsertAll((1..15).map { movie("M$it", added = it * 2L) })
+        db.series().upsertAll((1..15).map { series("S$it", added = it * 2L + 1) })
+
+        val row = test.catalog.recentlyAdded().first()
+
+        assertThat(row).hasSize(20)
+        assertThat(row.first().name).isEqualTo("S15")
+    }
+
+    @Test
+    fun `Recently Added leaves out a kind that's switched off`() = runTest {
+        db.movies().upsertAll(listOf(movie("Heat", added = 1)))
+        db.series().upsertAll(listOf(series("The Wire", added = 2)))
+
+        assertThat(test.catalog.recentlyAdded(shows = false).first().map { it.name }).containsExactly("Heat")
+        assertThat(test.catalog.recentlyAdded(movies = false).first().map { it.name }).containsExactly("The Wire")
+    }
+
+    @Test
+    fun `Recently Added leaves out titles the provider never dated, and breaks ties by name`() = runTest {
+        db.movies().upsertAll(listOf(movie("Undated"), movie("Zodiac", added = 5), movie("Alien", added = 5)))
+        db.series().upsertAll(listOf(series("Also undated"), series("Monk", added = 5)))
+
+        val row = test.catalog.recentlyAdded().first()
+
+        assertThat(row.map { it.name }).containsExactly("Alien", "Monk", "Zodiac").inOrder()
+    }
+
     private companion object {
         const val NOW = 1_800_000_000_000L
     }

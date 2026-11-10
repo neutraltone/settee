@@ -31,6 +31,8 @@ import app.opentv.data.repo.CatalogRepository
 import app.opentv.data.repo.CatalogueRefresh
 import app.opentv.data.repo.CategoryGroup
 import app.opentv.data.repo.ContinueWatchingCard
+import app.opentv.data.repo.CoverStatus
+import app.opentv.data.repo.CoverStatuses
 import app.opentv.data.repo.GenreGroup
 import app.opentv.data.repo.LineupChannel
 import app.opentv.data.repo.LineupScope
@@ -39,8 +41,12 @@ import app.opentv.data.repo.MediaKey
 import app.opentv.data.repo.MovieVariantGroup
 import app.opentv.data.repo.PersonTitle
 import app.opentv.data.repo.RefreshMessages
+import app.opentv.data.repo.VodTitle
 import app.opentv.data.repo.collapseMovieVariants
+import app.opentv.data.repo.movies
+import app.opentv.data.repo.nowOn
 import app.opentv.data.repo.onNowAt
+import app.opentv.data.repo.series
 import app.opentv.data.work.SyncWorker
 import app.opentv.pairing.ManagerServer
 import app.opentv.player.playsQualityRanked
@@ -1038,12 +1044,14 @@ class VodViewModel @JvmOverloads constructor(
 }
 
 /** [card] as Continue Watching draws it, or null when its title has left the catalogue. */
-private suspend fun resumeItem(catalog: CatalogRepository, card: ContinueWatchingCard): ResumeItem? = when (card) {
+internal suspend fun resumeItem(catalog: CatalogRepository, card: ContinueWatchingCard): ResumeItem? = when (card) {
     is ContinueWatchingCard.Movie -> catalog.movie(card.movieId)?.let {
         ResumeItem(
             MediaKey.Movie(it.id),
             it.displayTitle,
-            it.posterUrl,
+            // The card is landscape: the wide backdrop, a frame from the film, fits it; a portrait
+            // cover only crops.
+            it.backdropUrl ?: it.posterUrl,
             card.progress,
             card = card,
             name = it.name,
@@ -1055,8 +1063,9 @@ private suspend fun resumeItem(catalog: CatalogRepository, card: ContinueWatchin
             ResumeItem(
                 key = MediaKey.Episode(ep.id),
                 title = it.name,
-                // The card is landscape: the wide backdrop fits it, a portrait poster only crops.
-                posterUrl = it.backdropUrl ?: it.posterUrl,
+                // The episode's own still says which episode it is; the show's wide backdrop fits the
+                // landscape card next best, and a portrait poster only crops.
+                posterUrl = ep.stillUrl ?: it.backdropUrl ?: it.posterUrl,
                 progress = card.progress,
                 episode = SeasonEpisode(ep.season, ep.episodeNumber),
                 newEpisode = card.newEpisode,
@@ -1069,37 +1078,31 @@ private suspend fun resumeItem(catalog: CatalogRepository, card: ContinueWatchin
 /** Home's Live Preview and the titles on its channel now and next, when the guide has them. */
 data class LiveNow(val preview: LivePreview, val nowTitle: String?, val nextTitle: String?)
 
-/** What Home shows: the active Profile's Continue Watching and its Favourites, by kind, then [recent]. */
+/**
+ * What Home shows, top to bottom: the Live Preview, the active Profile's Continue Watching, what the
+ * providers have Recently Added (shows, then movies), then its Favourite shows, movies and channels.
+ */
 data class HomeState(
     val continueWatching: List<ResumeItem>,
-    val favouriteShows: List<Series>,
-    val favouriteMovies: List<Movie>,
-    val favouriteChannels: List<LineupChannel>,
-    val recent: RecentRows,
+    val favouriteShows: List<Cover>,
+    val favouriteMovies: List<Cover>,
+    val favouriteChannels: List<HomeChannel>,
+    val recentShows: List<Cover>,
+    val recentMovies: List<Cover>,
     val live: LiveNow? = null,
 )
 
-/**
- * Home's discovery rows, the same for every Profile because the catalogue is device-wide.
- * Released goes by release date (shows: their newest episode); added by when the provider added or
- * last updated the title. A title can be in more than one.
- */
-data class RecentRows(
-    val releasedMovies: List<Movie> = emptyList(),
-    val addedMovies: List<Movie> = emptyList(),
-    val releasedShows: List<Series> = emptyList(),
-    val addedShows: List<Series> = emptyList(),
-) {
-    fun isEmpty(): Boolean =
-        releasedMovies.isEmpty() && addedMovies.isEmpty() && releasedShows.isEmpty() && addedShows.isEmpty()
-}
+/** A show's or movie's cover on Home, with where the active Profile is with it; null when never started. */
+data class Cover(val title: VodTitle, val status: CoverStatus? = null)
+
+/** A Favourite channel on Home, with the title of what's on it now when the guide on the device has it. */
+data class HomeChannel(val channel: LineupChannel, val nowOn: String? = null)
 
 /**
- * Home: the active Profile's Continue Watching across movies and series, its Favourites, and the
- * catalogue's recently released and added titles ([RecentRows]). The
- * state is null until all of it has loaded, so Home never flashes its nothing-here hint at a
- * Profile that has rows. A content type switched off in settings is left off Home too, as its tab
- * is from the side menu.
+ * Home: the active Profile's Continue Watching across movies and series, its Favourites, and what
+ * the providers have Recently Added. The state is null until all of it has loaded, so Home never
+ * flashes its nothing-here hint at a Profile that has rows. A content type switched off in settings
+ * is left off Home too, as its tab is from the side menu.
  */
 class HomeViewModel @JvmOverloads constructor(
     app: Application,
@@ -1108,30 +1111,39 @@ class HomeViewModel @JvmOverloads constructor(
     private val settings = graph.settings
     private val lineup = graph.channelLineup
 
+    // Continue Watching and the covers' statuses come from one read of what the Profile has played.
     @OptIn(ExperimentalCoroutinesApi::class)
-    private val continueWatching: Flow<List<ResumeItem>> = combine(
-        graph.viewerLibrary.continueWatching()
-            .mapLatest { cards -> cards.mapNotNull { resumeItem(graph.catalogRepository, it) } },
+    private val watching: Flow<Pair<List<ResumeItem>, CoverStatuses>> = combine(
+        graph.viewerLibrary.home().mapLatest { home ->
+            home.continueWatching.mapNotNull { resumeItem(graph.catalogRepository, it) } to home.covers
+        },
         settings.moviesEnabled,
         settings.seriesEnabled,
-    ) { items, movies, series -> items.filter { if (it.episode == null) movies else series } }
-
-    /** The time now, again every hour, so a title comes out on Home without Home being reopened. */
-    private val clock: Flow<Long> = flow {
-        while (true) {
-            emit(System.currentTimeMillis())
-            delay(CLOCK_TICK_MILLIS)
-        }
-    }
+    ) { (items, covers), movies, series -> items.filter { if (it.episode == null) movies else series } to covers }
 
     @OptIn(ExperimentalCoroutinesApi::class)
-    private val recent: Flow<RecentRows> = clock.flatMapLatest { now ->
-        combine(
-            graph.catalogRepository.recentlyReleasedMovies(now).onlyWhen(settings.moviesEnabled),
-            graph.catalogRepository.recentlyAddedMovies().onlyWhen(settings.moviesEnabled),
-            graph.catalogRepository.recentlyReleasedSeries(now).onlyWhen(settings.seriesEnabled),
-            graph.catalogRepository.recentlyAddedSeries().onlyWhen(settings.seriesEnabled),
-            ::RecentRows,
+    private val recentShows: Flow<List<VodTitle>> =
+        settings.seriesEnabled.flatMapLatest { on -> graph.catalogRepository.recentlyAdded(movies = false, shows = on) }
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    private val recentMovies: Flow<List<VodTitle>> =
+        settings.moviesEnabled.flatMapLatest { on -> graph.catalogRepository.recentlyAdded(movies = on, shows = false) }
+
+    private val favourites: Flow<List<VodTitle>> = combine(
+        graph.viewerLibrary.favourites.titles(),
+        settings.moviesEnabled,
+        settings.seriesEnabled,
+    ) { titles, movies, shows ->
+        titles.filter { if (it is VodTitle.OfMovie) movies else shows }
+    }
+
+    private fun List<VodTitle>.withStatuses(statuses: CoverStatuses) = map { title ->
+        Cover(
+            title,
+            when (title) {
+                is VodTitle.OfMovie -> statuses.ofMovie(title.movie.id)
+                is VodTitle.OfSeries -> statuses.ofSeries(title.series.ref)
+            },
         )
     }
 
@@ -1142,6 +1154,21 @@ class HomeViewModel @JvmOverloads constructor(
             delay(MINUTE_MILLIS)
         }
     }
+
+    // Read from the guide already on the device, a minute at a time: Home never fetches one.
+    @OptIn(ExperimentalCoroutinesApi::class)
+    private val favouriteChannels: Flow<List<HomeChannel>> =
+        lineup.channels(LineupScope.Favourites()).onlyWhen(settings.liveEnabled)
+            .flatMapLatest { channels ->
+                if (channels.isEmpty()) {
+                    flowOf(emptyList())
+                } else {
+                    minute.map { now ->
+                        val nowOn = lineup.nowOn(channels, now)
+                        channels.map { HomeChannel(it, nowOn[it.key]) }
+                    }.distinctUntilChanged()
+                }
+            }
 
     // A channel in a locked category would otherwise play on Home, unasked, for whoever is in the
     // room next: the guide hides it until the session is unlocked, and so does Home. One that has
@@ -1195,14 +1222,24 @@ class HomeViewModel @JvmOverloads constructor(
     }
 
     val state: StateFlow<HomeState?> = combine(
-        combine(
-            continueWatching,
-            graph.viewerLibrary.favourites.series().onlyWhen(settings.seriesEnabled),
-            graph.viewerLibrary.favourites.movies().onlyWhen(settings.moviesEnabled),
-            lineup.channels(LineupScope.Favourites()).onlyWhen(settings.liveEnabled),
-            recent,
-            ::HomeState,
-        ),
+        combine(watching, favourites, favouriteChannels, recentShows, recentMovies) {
+                (continueWatching, statuses),
+                favourites,
+                channels,
+                shows,
+                movies,
+            ->
+            // Favourites carry no status: Home shows only their titles.
+            val (favouriteMovies, favouriteShows) = favourites.map(::Cover).partition { it.title is VodTitle.OfMovie }
+            HomeState(
+                continueWatching,
+                favouriteShows,
+                favouriteMovies,
+                channels,
+                shows.withStatuses(statuses),
+                movies.withStatuses(statuses),
+            )
+        },
         // In the same state as the rows, so Home is first drawn with it and highlights it.
         live,
     ) { rows, live -> rows.copy(live = live) }
@@ -1218,8 +1255,6 @@ class HomeViewModel @JvmOverloads constructor(
         combine(this, enabled) { list, on -> if (on) list else emptyList() }
 
     private companion object {
-        // Release dates are whole days, so an hour late is soon enough.
-        const val CLOCK_TICK_MILLIS = 60L * 60 * 1000
         const val MINUTE_MILLIS = 60L * 1000
     }
 }

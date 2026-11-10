@@ -17,6 +17,9 @@ import app.opentv.data.model.Source
 import app.opentv.data.model.SourceKind
 import app.opentv.data.model.StreamKind
 import app.opentv.data.repo.ViewerLibrary
+import app.opentv.data.repo.VodTitle
+import app.opentv.data.repo.movies
+import app.opentv.data.repo.series
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
@@ -38,8 +41,9 @@ class ViewerLibraryFavouritesTest {
         .allowMainThreadQueries()
         .build()
     private val activeProfile = MutableStateFlow(1L)
+    private var now = 1_000L
     private val library =
-        ViewerLibrary(db, activeProfile)
+        ViewerLibrary(db, activeProfile, clock = { now })
 
     @Before
     fun twoProviders() = runTest {
@@ -81,6 +85,38 @@ class ViewerLibraryFavouritesTest {
         library.favourites.set(film, favourite = true)
 
         assertThat(library.favourites.movies().first().map { it.name }).containsExactly("Film")
+    }
+
+    @Test
+    fun `Favourite titles mix shows and movies, the most recently starred first`() = runTest {
+        val heat = movie("m1", "Heat")
+        val wire = series("s1", "The Wire")
+        val alien = movie("m2", "Alien")
+        library.favourites.set(heat, favourite = true)
+        now += 1_000
+        library.favourites.set(wire, favourite = true)
+        now += 1_000
+        library.favourites.set(alien, favourite = true)
+
+        assertThat(library.favourites.titles().first().map(VodTitle::name))
+            .containsExactly("Alien", "The Wire", "Heat").inOrder()
+    }
+
+    @Test
+    fun `starring a Favourite again moves it to the front of Favourite titles`() = runTest {
+        val heat = movie("m1", "Heat")
+        val wire = series("s1", "The Wire")
+        library.favourites.set(heat, favourite = true)
+        now += 1_000
+        library.favourites.set(wire, favourite = true)
+        now += 1_000
+        library.favourites.set(heat, favourite = false)
+        now += 1_000
+
+        library.favourites.set(heat, favourite = true)
+
+        assertThat(library.favourites.titles().first().map(VodTitle::name))
+            .containsExactly("Heat", "The Wire").inOrder()
     }
 
     private fun channel(streamId: String, name: String, hidden: Boolean = false, format: String = "ts") = Channel(

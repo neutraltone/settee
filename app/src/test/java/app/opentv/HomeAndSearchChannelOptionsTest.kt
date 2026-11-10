@@ -26,6 +26,7 @@ import app.opentv.data.model.RecordingStatus
 import app.opentv.data.repo.LineupChannel
 import app.opentv.data.repo.LivePreview
 import app.opentv.ui.ChannelsViewModel
+import app.opentv.ui.HomeChannel
 import app.opentv.ui.HomeContent
 import app.opentv.ui.LiveNow
 import app.opentv.ui.LiveTile
@@ -99,7 +100,7 @@ class HomeAndSearchChannelOptionsTest {
             continueWatching = emptyList(),
             favouriteShows = emptyList(),
             favouriteMovies = emptyList(),
-            favouriteChannels = favourites,
+            favouriteChannels = favourites.map { HomeChannel(it) },
             onResume = {},
             onOpenSeries = {},
             onOpenMovie = {},
@@ -227,7 +228,7 @@ class HomeAndSearchChannelOptionsTest {
             }
         }
 
-        compose.onNodeWithText("Countdown", substring = true).performClick()
+        compose.onNodeWithText("Channel 4").performClick()
         waitFor("Keep recording").performClick()
         compose.waitForIdle()
 

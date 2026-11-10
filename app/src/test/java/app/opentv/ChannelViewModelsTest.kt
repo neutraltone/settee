@@ -126,7 +126,7 @@ class ChannelViewModelsTest {
             it?.favouriteChannels
         }.first { it.isNotEmpty() }
 
-        assertThat(shelf.map { channel -> channel.qualities.map { it.name } })
+        assertThat(shelf.map { home -> home.channel.qualities.map { it.name } })
             .containsExactly(listOf("UK| ITV FHD", "UK| ITV HD"))
         compose.setTvContent {
             HomeContent(emptyList(), emptyList(), emptyList(), shelf, {}, {}, {}, {}, takeFocus = true)
@@ -146,6 +146,6 @@ class ChannelViewModelsTest {
             it?.favouriteChannels
         }.first { it.isNotEmpty() }
 
-        assertThat(shelf.map { it.primary.name }).containsExactly("UK| ITV HD")
+        assertThat(shelf.map { it.channel.primary.name }).containsExactly("UK| ITV HD")
     }
 }

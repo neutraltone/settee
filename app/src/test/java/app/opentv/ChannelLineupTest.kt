@@ -17,6 +17,7 @@ import app.opentv.data.repo.ChannelLineup
 import app.opentv.data.repo.LineupChannel
 import app.opentv.data.repo.LineupScope
 import app.opentv.data.repo.migratedLockKeys
+import app.opentv.data.repo.nowOn
 import app.opentv.ui.player.programmeTitleOnNow
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.CoroutineScope
@@ -264,6 +265,47 @@ class ChannelLineupTest {
         programmesOn("itv.hd")
 
         assertThat(programmeTitleOnNow(lineup, catalogue.guide, all().single(), nowMillis = 500)).isEqualTo("News")
+    }
+
+    @Test
+    fun `a channel whose last programme has ended has nothing on now`() = runTest {
+        seed("UK| ITV HD")
+        guide("UK| ITV HD", "itv.hd")
+        programmesOn("itv.hd")
+
+        assertThat(programmeTitleOnNow(lineup, catalogue.guide, all().single(), nowMillis = 60_000)).isNull()
+    }
+
+    @Test
+    fun `what's on now for many channels comes from each one's guide, nothing where there's none`() = runTest {
+        seed("UK| ITV FHD", "UK| ITV HD", "UK| BBC One", "UK| Dave")
+        guide("UK| ITV FHD", "itv.empty")
+        guide("UK| ITV HD", "itv.hd")
+        guide("UK| BBC One", "bbc1")
+        programmesOn("itv.hd")
+        db.programmes().upsertAll(
+            listOf(
+                Programme(
+                    feedId = 1,
+                    epgChannelId = "bbc1",
+                    startUtcMillis = 0,
+                    endUtcMillis = 400,
+                    title = "Breakfast",
+                ),
+            ),
+        )
+        val channels = all()
+
+        val nowOn = lineup.nowOn(channels, nowMillis = 500)
+
+        assertThat(channels.associate { it.primary.name to nowOn[it.key] }).containsExactly(
+            "UK| ITV FHD",
+            "News",
+            "UK| BBC One",
+            null,
+            "UK| Dave",
+            null,
+        )
     }
 
     @Test
