@@ -92,8 +92,12 @@ A search a Profile made and then opened a result from. Each Profile keeps its la
 _Avoid_: Search history
 
 **Home**:
-The screen the app always opens on, gathering the Live Preview, Continue Watching and the Profile's Favourites.
+The screen the app always opens on, gathering the Live Preview, Continue Watching, the Profile's Favourites and what's Recently Added.
 _Avoid_: Dashboard, start page
+
+**Recently Added**:
+The movies and shows the providers added most recently, newest first, whoever is watching. It says when a title reached the provider, not when it was released.
+_Avoid_: New, new releases
 
 **Live Preview**:
 A muted, playing tile on Home of the live channel the Profile last watched on this device, shown only when live TV was the Profile's most recent playback. Settling on a channel full screen counts as watching it; zapping past one or seeing it in the guide's preview does not. A channel that has since left the channel list still shows, as a reminder that can't play; a channel the viewer hid does not.

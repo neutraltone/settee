@@ -134,13 +134,13 @@ Home, Live TV, Movies, Shows and Recordings, with Search at the top, and the Pro
 
 ## Home
 
-From the top: Live Preview only when live TV was the Profile's last playback, Continue Watching, Favourites, Favourite channels, New. No hero, and no Favourites item on the rail.
+From the top: Live Preview only when live TV was the Profile's last playback, Continue Watching, Favourites, Favourite channels, Recently Added. No hero, and no Favourites item on the rail.
 
 - **Continue Watching:** landscape cards, 186 dp wide, with the first 300 dp wide when there's no Live Preview. Home opens on the first card.
-- **Favourites and New:** portrait covers, 118 dp wide, with text on the art.
-- **Favourite channels:** their own row of wide tiles, with the logo, name and what's on. Channels aren't mixed into Favourites, so they add no moves on the way to a favourite show.
+- **Favourites and Recently Added:** portrait covers, 118 dp wide. The title and, when there is one, a quiet status line sit on a dark fade at the foot of the art: `S4 E3 · 22 min left`, `22 min left`, `New episode` or `Watched`. An unstarted title shows only its name. Anything part-watched also has a thin progress bar along the bottom edge. Favourites is one row of shows and movies together, the most recently favourited first. Recently Added is one row of the movies and shows the providers added most recently, newest first, about 20 of them. Release dates are left out because providers fill them unreliably. The row isn't called New, so it can't be confused with a New Episode.
+- **Favourite channels:** their own row of 118 dp square tiles, the same width as the covers and square like Live TV's logos. The logo is fitted with a margin on a plain surface, with no text over it, since logos are busy and often white. The channel's name and what's on now sit underneath, and the second line is left out when the guide has nothing. Channels aren't mixed into Favourites, so they add no moves on the way to a favourite show.
 - **Live Preview:** one selectable block, with one Down to the first Continue Watching card. It takes about 140 dp, which pushes Favourites' status text off the screen until the viewer scrolls, so check this.
-- **To fix:** Down from the large first card lands on the second Favourite, because focus goes by position. Decide where it should land.
+- **Moving between rows:** Up or Down into a row lands on the card the viewer was last on in that row, or on its first card if they haven't been there yet. It never goes by position, which took Down from the large first card to the second Favourite.
 
 ## Shows and Movies
 
