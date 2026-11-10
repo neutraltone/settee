@@ -269,11 +269,6 @@ class XtreamApi(
             plot = info["plot"].asStringOrNull ?: info["description"].asStringOrNull,
             rating = info["rating"].asDoubleOrNull,
             year = info["year"].asIntOrNull ?: info["releaseDate"].asStringOrNull?.take(4)?.toIntOrNull(),
-            releaseDate = info.releaseDate,
-            latestAirDate = body.jsonObjectOrNull?.get("episodes").seasonEpisodes().mapNotNull { (_, episode) ->
-                val episodeInfo = episode["info"].jsonObjectOrNull
-                parseReleaseDate((episodeInfo?.get("air_date") ?: episodeInfo?.get("releasedate")).asStringOrNull)
-            }.maxOrNull(),
         )
     }
 
@@ -465,9 +460,6 @@ class XtreamApi(
         val plot: String?,
         val rating: Double?,
         val year: Int?,
-        val releaseDate: Long? = null,
-        /** The newest episode's air date, from the same `get_series_info` reply. */
-        val latestAirDate: Long? = null,
     )
 }
 
