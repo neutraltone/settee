@@ -40,11 +40,11 @@ import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.test.requestFocus
 import androidx.compose.ui.unit.dp
 import app.opentv.data.model.Movie
-import app.opentv.data.model.Series
 import app.opentv.data.repo.GenreGroup
+import app.opentv.data.repo.VodTitle
+import app.opentv.ui.Cover
 import app.opentv.ui.HomeContent
 import app.opentv.ui.MainShell
-import app.opentv.ui.RecentRows
 import app.opentv.ui.Tab
 import app.opentv.ui.visibleTabs
 import app.opentv.ui.vod.MovieShelves
@@ -73,7 +73,7 @@ class MainShellTest {
     private var selected: Tab? = null
 
     /** The rail with Home open, showing [recent] and nothing watched or favourited. */
-    private fun setShell(recent: () -> RecentRows = { RecentRows() }) = compose.setTvContent {
+    private fun setShell(recent: () -> List<Cover> = { emptyList() }) = compose.setTvContent {
         MainShell(
             tabs = visibleTabs(liveEnabled = true, moviesEnabled = true, seriesEnabled = true),
             current = Tab.HOME,
@@ -86,10 +86,9 @@ class MainShellTest {
         ) { _, takeFocus, onNothingToShow ->
             HomeContent(
                 continueWatching = emptyList(),
-                favouriteShows = emptyList<Series>(),
-                favouriteMovies = emptyList<Movie>(),
+                favourites = emptyList(),
                 favouriteChannels = emptyList(),
-                recent = recent(),
+                recentlyAdded = recent(),
                 onResume = {},
                 onOpenSeries = {},
                 onOpenMovie = {},
@@ -131,13 +130,9 @@ class MainShellTest {
                     val name = compose.activity.getString(tab.labelRes)
                     HomeContent(
                         continueWatching = emptyList(),
-                        favouriteShows = emptyList<Series>(),
-                        favouriteMovies = emptyList<Movie>(),
+                        favourites = (1L..8L).map { Cover(VodTitle.OfMovie(movie(it, "$name $it"))) },
                         favouriteChannels = emptyList(),
-                        recent = RecentRows(
-                            releasedMovies = (1L..8L).map { movie(it, "$name $it") },
-                            addedMovies = (11L..18L).map { movie(it, "$name $it") },
-                        ),
+                        recentlyAdded = (11L..18L).map { Cover(VodTitle.OfMovie(movie(it, "$name $it"))) },
                         onResume = {},
                         onOpenSeries = {},
                         onOpenMovie = { opened = it.name },
@@ -515,11 +510,11 @@ class MainShellTest {
 
     @Test
     fun `when titles arrive while the rail is highlighted, the highlight stays there`() {
-        var recent by mutableStateOf(RecentRows())
+        var recent by mutableStateOf(emptyList<Cover>())
         setShell { recent }
         railItem("Home").assertIsFocused()
 
-        recent = RecentRows(addedMovies = listOf(movie(11, "Drive")))
+        recent = listOf(Cover(VodTitle.OfMovie(movie(11, "Drive"))))
 
         compose.onNodeWithText("Drive").assertIsNotFocused()
         railItem("Home").assertIsFocused()

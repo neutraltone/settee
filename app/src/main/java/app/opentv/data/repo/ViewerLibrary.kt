@@ -47,6 +47,36 @@ data class EpisodeStatuses(private val byEpisodeId: Map<Long, WatchStatus> = emp
     operator fun get(episodeId: Long): WatchStatus = byEpisodeId[episodeId] ?: WatchStatus.Unwatched
 }
 
+/**
+ * What a Favourites or Recently Added cover says about where the active Profile is with its title;
+ * a title it has never started has none.
+ */
+sealed interface CoverStatus {
+    /** Part way through [episode] (null for a movie), with [remainingMillis] left when the duration is known. */
+    data class InProgress(val progress: Float, val remainingMillis: Long?, val episode: Episode? = null) : CoverStatus
+
+    /** Between episodes of a show the Profile is following: [episode] is its Up Next, not yet started. */
+    data class UpNext(val episode: Episode) : CoverStatus
+
+    /** A show's Up Next arrived after the Profile had Watched everything else. */
+    data object NewEpisode : CoverStatus
+
+    data object Watched : CoverStatus
+}
+
+/** The active Profile's [CoverStatus] for each title it has started. */
+data class CoverStatuses internal constructor(
+    private val movies: Map<Long, CoverStatus> = emptyMap(),
+    private val series: Map<SeriesRef, CoverStatus> = emptyMap(),
+) {
+    fun ofMovie(movieId: Long): CoverStatus? = movies[movieId]
+
+    fun ofSeries(ref: SeriesRef): CoverStatus? = series[ref]
+}
+
+/** What Home shows of the active Profile's watching: its Continue Watching and each cover's status. */
+data class HomeLibrary(val continueWatching: List<ContinueWatchingCard>, val covers: CoverStatuses)
+
 /** One card in Continue Watching. */
 sealed interface ContinueWatchingCard {
     /** A movie the Profile stopped part way through; [progress] is how far, 0..1. */
@@ -188,12 +218,21 @@ class ViewerLibrary(
         .map { list -> list.map { it.card } }
 
     /** Home's Continue Watching: movies and series together, most recently played first. */
+    fun continueWatching(): Flow<List<ContinueWatchingCard>> = home().map { it.continueWatching }
+
+    /**
+     * Home's Continue Watching and its covers' statuses together, from one read of what the active
+     * Profile has played: apart, every position saved would read every played series twice.
+     */
     @OptIn(ExperimentalCoroutinesApi::class)
-    fun continueWatching(): Flow<List<ContinueWatchingCard>> = activeProfileId
-        .flatMapLatest { pid ->
-            combine(cards.movies(pid), cards.series(pid)) { movies, series ->
-                (movies + series).sortedByDescending { it.playedAtMillis }.take(IN_PROGRESS_LIMIT).map { it.card }
-            }
+    fun home(): Flow<HomeLibrary> = activeProfileId
+        .flatMapLatest { pid -> cards.played(pid) }
+        .map { played ->
+            val continueWatching = (cards.moviesFrom(played.positions) + cards.seriesFrom(played))
+                .sortedByDescending { it.playedAtMillis }
+                .take(IN_PROGRESS_LIMIT)
+                .map { it.card }
+            HomeLibrary(continueWatching, coverStatusesIn(played))
         }
 
     /** Every episode's status for the active Profile; re-emits only when a status actually changes. */
@@ -558,6 +597,13 @@ class CatchUpMarks internal constructor(
     }
 }
 
+/** One Profile's positions (newest first), every episode of each series it has played, and its removals. */
+private class PlayedSnapshot(
+    val positions: List<PlaybackPosition>,
+    val ofPlayedSeries: List<Episode>,
+    val dismissals: List<SeriesDismissal>,
+)
+
 /** A card with when the Profile last played what it stands for, so movies and series can be interleaved. */
 private data class Played(val card: ContinueWatchingCard, val playedAtMillis: Long)
 
@@ -570,29 +616,42 @@ private class ContinueWatchingCards(
     private val episodes: EpisodeDao,
     private val dismissals: SeriesDismissalDao,
 ) {
-    fun movies(pid: Long): Flow<List<Played>> = positions.observeNewestFirst(pid).map { list ->
-        list.asSequence()
-            .mapNotNull { pos ->
-                val id = pos.movieId ?: return@mapNotNull null
-                (statusOf(pos) as? WatchStatus.InProgress)?.let {
-                    Played(ContinueWatchingCard.Movie(id, it.progress), pos.updatedAtMillis)
-                }
-            }
-            .take(IN_PROGRESS_LIMIT)
-            .toList()
-    }
+    fun movies(pid: Long): Flow<List<Played>> = positions.observeNewestFirst(pid).map(::moviesFrom)
 
-    // Played episodes are observed as well as positions so a newly added Up Next shows up.
-    fun series(pid: Long): Flow<List<Played>> = combine(
+    /** [list] (one Profile's positions, newest first) as Continue Watching's movie cards. */
+    fun moviesFrom(list: List<PlaybackPosition>): List<Played> = list.asSequence()
+        .mapNotNull { pos ->
+            val id = pos.movieId ?: return@mapNotNull null
+            (statusOf(pos) as? WatchStatus.InProgress)?.let {
+                Played(ContinueWatchingCard.Movie(id, it.progress), pos.updatedAtMillis)
+            }
+        }
+        .take(IN_PROGRESS_LIMIT)
+        .toList()
+
+    /**
+     * Everything one Profile has played, read again whenever it changes: what Continue Watching and
+     * the covers on Home are both worked out from, so Home reads it once for both. Played episodes
+     * are observed as well as positions so a newly added Up Next shows up.
+     */
+    fun played(pid: Long): Flow<PlayedSnapshot> = combine(
         positions.observeNewestFirst(pid),
         episodes.observePlayed(pid),
         dismissals.observe(pid),
     ) { list, _, dismissed ->
-        val dismissalOf = dismissed.associateBy { it.sourceId to it.seriesId }
-        val positionOf = list.associateBy { it.mediaKey }
         // One query for every played series' episodes: each card is built before the cap, and
         // a query per series on every position written would be felt on a Fire TV Stick.
-        val ofPlayedSeries = episodes.ofPlayedSeries(pid)
+        PlayedSnapshot(list, episodes.ofPlayedSeries(pid), dismissed)
+    }
+
+    fun series(pid: Long): Flow<List<Played>> = played(pid).map { seriesFrom(it) }
+
+    /** Continue Watching's series cards in [played]. */
+    suspend fun seriesFrom(played: PlayedSnapshot): List<Played> {
+        val list = played.positions
+        val dismissalOf = played.dismissals.associateBy { it.sourceId to it.seriesId }
+        val positionOf = list.associateBy { it.mediaKey }
+        val ofPlayedSeries = played.ofPlayedSeries
         val episodesOf = ofPlayedSeries.groupBy { it.sourceId to it.seriesId }
         val episodeById = ofPlayedSeries.associateBy { it.id }
         // Still newest first within each series.
@@ -601,7 +660,7 @@ private class ContinueWatchingCards(
             .groupBy({ it.first }, { it.second })
         // Capped on cards, not series: a series with nothing left to watch takes no slot. Every
         // series is built before the cap, since a New Episode can lift one long unplayed to the top.
-        positionsOf
+        return positionsOf
             .mapNotNull { (series, mine) ->
                 val progress = SeriesEpisodes(episodesOf[series].orEmpty()).progressIn(mine)
                     ?: return@mapNotNull null
@@ -737,4 +796,45 @@ private fun playedStatusOf(pos: PlaybackPosition): WatchStatus {
     val progress = if (known) position.toDouble() / pos.durationMillis else 0.0
     if (progress > WATCHED_FRACTION) return WatchStatus.Watched
     return WatchStatus.InProgress(progress.toFloat(), if (known) pos.durationMillis - position else null)
+}
+
+private fun coverStatusOf(status: WatchStatus, episode: Episode? = null): CoverStatus? = when (status) {
+    is WatchStatus.InProgress -> CoverStatus.InProgress(status.progress, status.remainingMillis, episode)
+    WatchStatus.Watched -> CoverStatus.Watched
+    WatchStatus.Unwatched -> null
+}
+
+/** Read as Continue Watching reads a series ([ContinueWatchingCards.seriesCard]), plus Watched once caught up. */
+private fun seriesCoverStatus(progress: SeriesProgress, positionOf: Map<String, PlaybackPosition>): CoverStatus? {
+    val status = progress.status
+    val next = progress.upNext
+    return when {
+        status is WatchStatus.InProgress -> coverStatusOf(status, progress.latest)
+        next == null -> if (progress.caughtUp) CoverStatus.Watched else null
+        else -> {
+            val started = positionOf[next.mediaKey]?.let(::statusOf) as? WatchStatus.InProgress
+            when {
+                started != null -> coverStatusOf(started, next)
+                next.firstSeenMillis > progress.position.updatedAtMillis -> CoverStatus.NewEpisode
+                else -> CoverStatus.UpNext(next)
+            }
+        }
+    }
+}
+
+/** Each started title's [CoverStatus] for the active Profile, for the covers on Home. */
+fun ViewerLibrary.coverStatuses(): Flow<CoverStatuses> = home().map { it.covers }.distinctUntilChanged()
+
+/** Each title's [CoverStatus] in [played]. */
+private fun coverStatusesIn(played: PlayedSnapshot): CoverStatuses {
+    val list = played.positions
+    val movies = list.mapNotNull { pos ->
+        val id = pos.movieId ?: return@mapNotNull null
+        coverStatusOf(statusOf(pos))?.let { id to it }
+    }.toMap()
+    val positionOf = list.associateBy { it.mediaKey }
+    val series = played.ofPlayedSeries.groupBy { SeriesRef(it.sourceId, it.seriesId) }.mapNotNull { (ref, theirs) ->
+        SeriesEpisodes(theirs).progressIn(list)?.let { seriesCoverStatus(it, positionOf) }?.let { ref to it }
+    }.toMap()
+    return CoverStatuses(movies, series)
 }

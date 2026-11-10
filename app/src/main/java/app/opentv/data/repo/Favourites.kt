@@ -16,6 +16,8 @@ import app.opentv.sync.SyncFavourite
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 
@@ -69,13 +71,21 @@ class Favourites internal constructor(
         .flatMapLatest { dao.observeChannelIds(it) }
         .map { it.toSet() }
 
-    /** The active Profile's Favourite movies, by name. */
+    /**
+     * The active Profile's Favourite movies and series together, the most recently starred first, so
+     * starring a title again brings it to the front.
+     */
     @OptIn(ExperimentalCoroutinesApi::class)
-    fun movies(): Flow<List<Movie>> = activeProfileId.flatMapLatest { dao.observeMovies(it) }
-
-    /** The active Profile's Favourite series, by name. */
-    @OptIn(ExperimentalCoroutinesApi::class)
-    fun series(): Flow<List<Series>> = activeProfileId.flatMapLatest { dao.observeSeries(it) }
+    fun titles(): Flow<List<VodTitle>> = activeProfileId.flatMapLatest { profileId ->
+        combine(dao.observeStarredMovies(profileId), dao.observeStarredSeries(profileId)) { movies, series ->
+            (
+                movies.map { it.starredAtMillis to VodTitle.OfMovie(it.movie) } +
+                    series.map { it.starredAtMillis to VodTitle.OfSeries(it.series) }
+                )
+                .sortedByDescending { it.first }
+                .map { it.second }
+        }
+    }
 
     /** Every Profile's Favourites on this device, unstarred ones included, as they travel to the other side. */
     suspend fun export(): List<SyncFavourite> {
@@ -106,6 +116,16 @@ class Favourites internal constructor(
         }
     }
 }
+
+/** The active Profile's Favourite movies, by name: [Favourites.titles] as the Movies tab lists them. */
+fun Favourites.movies(): Flow<List<Movie>> =
+    titles().map { titles -> titles.mapNotNull { (it as? VodTitle.OfMovie)?.movie }.sortedBy { it.name } }
+        .distinctUntilChanged()
+
+/** The active Profile's Favourite series, by name: [Favourites.titles] as the Shows tab lists them. */
+fun Favourites.series(): Flow<List<Series>> =
+    titles().map { titles -> titles.mapNotNull { (it as? VodTitle.OfSeries)?.series }.sortedBy { it.name } }
+        .distinctUntilChanged()
 
 /** A title as a screen knows it: the provider's stream or series id within the source's row. */
 private class FavouriteTitle(val kind: StreamKind, val sourceId: Long, val itemId: String)

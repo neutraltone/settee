@@ -53,8 +53,12 @@ fun NewEpisodeBadge(modifier: Modifier = Modifier) {
 }
 
 @Composable
-private fun inProgressText(remainingMillis: Long?): String {
-    if (remainingMillis == null) return stringResource(R.string.watch_badge_in_progress)
+private fun inProgressText(remainingMillis: Long?): String =
+    remainingMillis?.let { minutesLeftText(it) } ?: stringResource(R.string.watch_badge_in_progress)
+
+/** How long is left, as "22 min left". */
+@Composable
+internal fun minutesLeftText(remainingMillis: Long): String {
     // Nearest minute, not up like the sleep timer: this is a rough "how much is left", not a countdown.
     // Never 0, which would read as finished.
     val minutes = ((remainingMillis + 30_000) / 60_000).toInt().coerceAtLeast(1)

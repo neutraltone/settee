@@ -121,10 +121,10 @@ class ChannelViewModelsTest {
 
         val shelf = HomeViewModel(app, graph).state.mapNotNull { it?.favouriteChannels }.first { it.isNotEmpty() }
 
-        assertThat(shelf.map { channel -> channel.qualities.map { it.name } })
+        assertThat(shelf.map { home -> home.channel.qualities.map { it.name } })
             .containsExactly(listOf("UK| ITV FHD", "UK| ITV HD"))
         compose.setTvContent {
-            HomeContent(emptyList(), emptyList(), emptyList(), shelf, {}, {}, {}, {}, takeFocus = true)
+            HomeContent(emptyList(), emptyList(), shelf, {}, {}, {}, {}, takeFocus = true)
         }
         captureScreen("home_favourite_channels_once")
     }
@@ -139,6 +139,6 @@ class ChannelViewModelsTest {
 
         val shelf = HomeViewModel(app, graph).state.mapNotNull { it?.favouriteChannels }.first { it.isNotEmpty() }
 
-        assertThat(shelf.map { it.primary.name }).containsExactly("UK| ITV HD")
+        assertThat(shelf.map { it.channel.primary.name }).containsExactly("UK| ITV HD")
     }
 }

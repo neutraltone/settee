@@ -5,26 +5,14 @@
  */
 package app.opentv.ui
 
-import androidx.annotation.StringRes
-import androidx.compose.foundation.background
 import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -37,42 +25,43 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import app.opentv.R
 import app.opentv.data.model.Channel
 import app.opentv.data.model.Movie
 import app.opentv.data.model.Series
-import app.opentv.data.model.shownName
-import app.opentv.data.repo.LineupChannel
+import app.opentv.data.parser.displayTitle
+import app.opentv.data.repo.CoverStatus
 import app.opentv.data.repo.MediaKey
+import app.opentv.data.repo.VodTitle
+import app.opentv.ui.design.ArtCard
+import app.opentv.ui.design.ArtCardSize
+import app.opentv.ui.design.ScreenFrame
+import app.opentv.ui.design.ScreenFrameScope
+import app.opentv.ui.design.SetteeColors
+import app.opentv.ui.design.SetteeSpace
+import app.opentv.ui.design.SetteeType
+import app.opentv.ui.design.Shelf
+import app.opentv.ui.design.Text
+import app.opentv.ui.design.rememberShelfMemory
+import app.opentv.ui.design.shelfCard
+import app.opentv.ui.options.LeaveScreen
 import app.opentv.ui.options.LocalConfirmLive
+import app.opentv.ui.options.LocalOpenOptions
 import app.opentv.ui.options.OptionsSubject
 import app.opentv.ui.options.openOptionsOn
-import app.opentv.ui.options.optionsClickable
-import app.opentv.ui.options.rememberRowHighlight
 import app.opentv.ui.vod.CardFocus
-import app.opentv.ui.vod.ContinueWatchingRow
-import app.opentv.ui.vod.MoviePosterRow
-import app.opentv.ui.vod.SeriesPosterRow
-import app.opentv.ui.vod.ShelfRow
-import app.opentv.ui.vod.focusCueBorder
-import app.opentv.ui.vod.focusCueScale
-import app.opentv.ui.vod.rememberFocusCue
+import app.opentv.ui.vod.rememberQualityBadge
 import app.opentv.ui.vod.rememberRowState
 import app.opentv.ui.vod.takesFocus
-import coil.compose.AsyncImage
 
 /**
- * Home: the tab the app opens on, gathering what the active Profile can pick back up and its
- * Favourites. Cards do what they do on the other tabs: Continue Watching plays, a show or movie
- * opens its page, a channel plays.
+ * Home: the tab the app opens on, gathering what the active Profile can pick back up, its
+ * Favourites and what's Recently Added. Cards do what they do on the other tabs: Continue Watching
+ * plays, a show or movie opens its page, a channel plays.
  */
 @Composable
 internal fun HomeScreen(
@@ -95,15 +84,14 @@ internal fun HomeScreen(
     }
     HomeContent(
         state.continueWatching,
-        state.favouriteShows,
-        state.favouriteMovies,
+        state.favourites,
         state.favouriteChannels,
         onResume,
         onOpenSeries,
         onOpenMovie,
         play,
         takeFocus,
-        state.recent,
+        state.recentlyAdded,
         onNothingToShow,
         live = live?.let { LiveTile(it, preview.player, preview.error) },
         onWatchLive = play,
@@ -113,47 +101,75 @@ internal fun HomeScreen(
 }
 
 /**
- * Home's rows, top to bottom: what the Profile can pick back up, its Favourites by kind, then the
- * [recent] titles. An empty row is left out rather than shown blank.
+ * Home's rows, top to bottom: the Live Preview, what the Profile can pick back up, its Favourites,
+ * its Favourite channels, then [recentlyAdded]. An empty row is left out rather than shown blank.
  */
 @Composable
 internal fun HomeContent(
     continueWatching: List<ResumeItem>,
-    favouriteShows: List<Series>,
-    favouriteMovies: List<Movie>,
-    favouriteChannels: List<LineupChannel>,
+    favourites: List<Cover>,
+    favouriteChannels: List<HomeChannel>,
     onResume: (MediaKey) -> Unit,
     onOpenSeries: (Series) -> Unit,
     onOpenMovie: (Movie) -> Unit,
     onPlayChannel: (Channel) -> Unit,
     takeFocus: Boolean,
-    recent: RecentRows = RecentRows(),
+    recentlyAdded: List<Cover> = emptyList(),
     onNothingToShow: () -> Unit = {},
     live: LiveTile? = null,
     onWatchLive: (Channel) -> Unit = {},
     onOpenLive: () -> Unit = {},
     stopPreview: () -> Unit = {},
 ) {
-    val shelves = remember(live, continueWatching, favouriteShows, favouriteMovies, favouriteChannels, recent) {
-        liveShelf(live) + homeShelves(continueWatching, favouriteShows, favouriteMovies, favouriteChannels, recent)
+    val shelves = remember(live, continueWatching, favourites, favouriteChannels, recentlyAdded) {
+        homeShelves(live, continueWatching, favourites, favouriteChannels, recentlyAdded)
     }
-    if (shelves.isEmpty()) {
-        // A hint can't take the highlight, so hand it to the side menu rather than leave the remote
-        // with nothing to move. It waits a frame, as the request for the first card does below.
-        LaunchedEffect(Unit) {
-            if (!takeFocus) return@LaunchedEffect
-            withFrameNanos {}
-            onNothingToShow()
+    ScreenFrame {
+        if (shelves.isEmpty()) {
+            // A hint can't take the highlight, so hand it to the side menu rather than leave the remote
+            // with nothing to move. It waits a frame, as the request for the first card does below.
+            LaunchedEffect(Unit) {
+                if (!takeFocus) return@LaunchedEffect
+                withFrameNanos {}
+                onNothingToShow()
+            }
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Text(stringResource(R.string.home_empty_hint), style = SetteeType.Body, color = SetteeColors.QuietText)
+            }
+            return@ScreenFrame
         }
-        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Text(
-                stringResource(R.string.home_empty_hint),
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-        return
+        HomeRows(
+            shelves,
+            takeFocus,
+            HomeActions(
+                onResume,
+                onOpenTitle = { title ->
+                    when (title) {
+                        is VodTitle.OfMovie -> onOpenMovie(title.movie)
+                        is VodTitle.OfSeries -> onOpenSeries(title.series)
+                    }
+                },
+                onPlayChannel,
+                onWatchLive,
+                onOpenLive,
+                stopPreview,
+            ),
+        )
     }
+}
+
+/** What Home's cards do when they're picked. */
+private class HomeActions(
+    val onResume: (MediaKey) -> Unit,
+    val onOpenTitle: (VodTitle) -> Unit,
+    val onPlayChannel: (Channel) -> Unit,
+    val onWatchLive: (Channel) -> Unit,
+    val onOpenLive: () -> Unit,
+    val stopPreview: () -> Unit,
+)
+
+@Composable
+private fun ScreenFrameScope.HomeRows(shelves: List<HomeShelf>, takeFocus: Boolean, actions: HomeActions) {
     // The card picked last, kept while the viewer is off in the player or on a title's page so the
     // highlight can go back to it. It's spent the first time Home comes back, highlight or not:
     // Home reached any other way opens on its first card, as it always has.
@@ -161,7 +177,7 @@ internal fun HomeContent(
     // Until its card has the highlight, the pick being restored follows the rows as they change, so
     // it lands on the card itself rather than on where the card stood.
     var restoring by remember { mutableStateOf(picked?.takeIf { takeFocus }) }
-    val target = restoring?.let { restoreTarget(shelves.map(Shelf::row), it) }
+    val target = restoring?.let { restoreTarget(shelves.map(HomeShelf::row), it) }
     val start = remember { FocusRequester() }
     val focus = rememberRestoreFocus(target, start) { restoring = null }
 
@@ -182,8 +198,7 @@ internal fun HomeContent(
     LaunchedEffect(target?.rowIndex) { target?.let { column.scrollToItem(it.rowIndex) } }
     LazyColumn(
         state = column,
-        contentPadding = PaddingValues(vertical = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp),
+        verticalArrangement = Arrangement.spacedBy(SetteeSpace.RowGap),
         modifier = Modifier.fillMaxSize().focusRequester(start).focusGroup(),
     ) {
         shelves.forEachIndexed { rowIndex, shelf ->
@@ -194,41 +209,37 @@ internal fun HomeContent(
                     picked = HomePick(shelf.row.key, rowIndex, item, shelf.row.items.indexOf(item))
                     // Before the next screen starts: a second stream can cut off a single-connection
                     // line, and waiting for the lifecycle change leaves both running for a moment.
-                    stopPreview()
+                    actions.stopPreview()
                     open()
                 }
+                val leave: (String) -> LeaveScreen = { item -> { go -> pick(item, go) } }
                 when (shelf) {
-                    is Shelf.Live -> LivePreviewTile(shelf.tile, rowFocus) {
+                    is HomeShelf.Live -> LivePreviewTile(shelf.tile, rowFocus) {
                         shelf.tile.open(
-                            { channel -> confirmLive { pick(LIVE_PICK) { onWatchLive(channel) } } },
-                            { pick(LIVE_PICK, onOpenLive) },
+                            { channel -> confirmLive { pick(LIVE_PICK) { actions.onWatchLive(channel) } } },
+                            { pick(LIVE_PICK, actions.onOpenLive) },
                         )
                     }
-                    is Shelf.Resume -> ContinueWatchingRow(
+                    is HomeShelf.Resume -> ContinueWatchingShelf(
                         shelf.cards,
+                        // The large first card is only for when nothing sits above it.
+                        large = shelves.first() === shelf,
                         rowFocus,
-                        onResume = { key -> pick(key.stored) { onResume(key) } },
-                        onLeave = { card -> { go -> pick(card.key.stored, go) } },
+                        onResume = { key -> pick(key.stored) { actions.onResume(key) } },
+                        leave = { card -> leave(card.key.stored) },
                     )
-                    is Shelf.Shows -> SeriesPosterRow(
+                    is HomeShelf.Covers -> CoverShelf(
                         stringResource(shelf.title),
-                        shelf.shows,
-                        { show -> pick(show.pickKey) { onOpenSeries(show) } },
+                        shelf.covers,
                         rowFocus,
-                        onLeave = { show -> { go -> pick(show.pickKey, go) } },
+                        onOpen = { title -> pick(title.pickKey) { actions.onOpenTitle(title) } },
+                        leave = { title -> leave(title.pickKey) },
                     )
-                    is Shelf.Movies -> MoviePosterRow(
-                        stringResource(shelf.title),
-                        shelf.movies,
-                        { movie -> pick(movie.pickKey) { onOpenMovie(movie) } },
-                        rowFocus,
-                        onLeave = { movie -> { go -> pick(movie.pickKey, go) } },
-                    )
-                    is Shelf.Channels -> ChannelRow(
+                    is HomeShelf.Channels -> ChannelShelf(
                         shelf.channels,
                         // Asked before the pick, which stops the preview: choosing to keep recording
                         // leaves Home just as it was.
-                        { channel -> confirmLive { pick(channel.pickKey) { onPlayChannel(channel) } } },
+                        { channel -> confirmLive { pick(channel.pickKey) { actions.onPlayChannel(channel) } } },
                         rowFocus,
                     )
                 }
@@ -257,49 +268,43 @@ private fun rememberRestoreFocus(target: HomePick?, fallback: FocusRequester, on
 internal class HomeRow(val key: String, val items: List<String>)
 
 /** One of Home's rows and what it shows; the one list both draws Home and places its highlight. */
-private sealed class Shelf(key: String, items: List<String>) {
+private sealed class HomeShelf(key: String, items: List<String>) {
     val row = HomeRow(key, items)
 
-    class Live(val tile: LiveTile) : Shelf("live", listOf(LIVE_PICK))
+    class Live(val tile: LiveTile) : HomeShelf("live", listOf(LIVE_PICK))
 
-    class Resume(val cards: List<ResumeItem>) : Shelf("cw", cards.map { it.key.stored })
+    class Resume(val cards: List<ResumeItem>) : HomeShelf("cw", cards.map { it.key.stored })
 
-    class Shows(key: String, @StringRes val title: Int, val shows: List<Series>) :
-        Shelf(key, shows.map { it.pickKey })
+    class Covers(key: String, val title: Int, val covers: List<Cover>) :
+        HomeShelf(key, covers.map { it.title.pickKey })
 
-    class Movies(key: String, @StringRes val title: Int, val movies: List<Movie>) :
-        Shelf(key, movies.map { it.pickKey })
-
-    class Channels(val channels: List<LineupChannel>) : Shelf("channels", channels.map { it.primary.pickKey })
+    class Channels(val channels: List<HomeChannel>) : HomeShelf("channels", channels.map { it.channel.primary.pickKey })
 }
-
-/** The Live Preview's row, which leads Home when there is one. */
-private fun liveShelf(tile: LiveTile?): List<Shelf> = listOfNotNull(tile?.let(Shelf::Live))
 
 /** Home's rows that have something in them, top to bottom. */
 private fun homeShelves(
+    live: LiveTile?,
     continueWatching: List<ResumeItem>,
-    favouriteShows: List<Series>,
-    favouriteMovies: List<Movie>,
-    favouriteChannels: List<LineupChannel>,
-    recent: RecentRows,
-) = listOf(
-    Shelf.Resume(continueWatching),
-    Shelf.Shows("shows", R.string.home_favourite_shows, favouriteShows),
-    Shelf.Movies("movies", R.string.home_favourite_movies, favouriteMovies),
-    Shelf.Channels(favouriteChannels),
-    Shelf.Movies("releasedMovies", R.string.home_recently_released_movies, recent.releasedMovies),
-    Shelf.Movies("addedMovies", R.string.home_recently_added_movies, recent.addedMovies),
-    Shelf.Shows("releasedShows", R.string.home_recently_released_shows, recent.releasedShows),
-    Shelf.Shows("addedShows", R.string.home_recently_added_shows, recent.addedShows),
+    favourites: List<Cover>,
+    favouriteChannels: List<HomeChannel>,
+    recentlyAdded: List<Cover>,
+) = listOfNotNull(
+    live?.let(HomeShelf::Live),
+    HomeShelf.Resume(continueWatching),
+    HomeShelf.Covers("favourites", R.string.vod_favourites, favourites),
+    HomeShelf.Channels(favouriteChannels),
+    HomeShelf.Covers("recent", R.string.vod_recently_added, recentlyAdded),
 ).filter { it.row.items.isNotEmpty() }
 
 private const val LIVE_PICK = "live"
 
 // A pick is kept by the provider's ids rather than the local row id, which a catalogue refresh can
-// change while the viewer is away.
-private val Movie.pickKey get() = "$sourceId:$streamId"
-private val Series.pickKey get() = "$sourceId:$seriesId"
+// change while the viewer is away. Movies and shows share a row, so each says which it is.
+private val VodTitle.pickKey
+    get() = when (this) {
+        is VodTitle.OfMovie -> "movie:${movie.sourceId}:${movie.streamId}"
+        is VodTitle.OfSeries -> "series:${series.sourceId}:${series.seriesId}"
+    }
 private val Channel.pickKey get() = "$sourceId:$streamId"
 
 /**
@@ -338,60 +343,97 @@ internal fun restoreTarget(rows: List<HomeRow>, pick: HomePick): HomePick? {
 }
 
 @Composable
-private fun ChannelRow(channels: List<LineupChannel>, onPlayChannel: (Channel) -> Unit, focus: CardFocus?) {
-    val rowState = rememberRowState(focus)
-    val highlight = rememberRowHighlight(channels, rowState) { it.key }
-    ShelfRow(stringResource(R.string.home_favourite_channels), rowState) {
-        itemsIndexed(channels, key = { _, channel -> channel.key }) { index, channel ->
-            ChannelCard(channel, Modifier.takesFocus(index, focus).then(highlight.modifier(index, channel.key))) {
-                onPlayChannel(channel.primary)
-            }
-        }
-    }
-}
-
-/** A channel's logo on a landscape tile, its name underneath; focus scales it and draws the primary border. */
-@Composable
-private fun ChannelCard(lineupChannel: LineupChannel, modifier: Modifier, onClick: () -> Unit) {
-    val channel = lineupChannel.primary
-    val cue = rememberFocusCue()
-    Column(
-        modifier
-            .width(CHANNEL_WIDTH)
-            .focusCueScale(cue)
-            .clip(RoundedCornerShape(10.dp))
-            .optionsClickable(onClick, openOptionsOn(OptionsSubject.OfChannel(lineupChannel, onWatch = onClick)))
-            .padding(4.dp),
-    ) {
-        Box(
-            Modifier
-                .fillMaxWidth()
-                .aspectRatio(16f / 9f)
-                .clip(RoundedCornerShape(8.dp))
-                .background(MaterialTheme.colorScheme.surfaceVariant)
-                .focusCueBorder(cue, RoundedCornerShape(8.dp)),
-        ) {
-            // Logos come in every shape; fitted with a margin they never lose their edges to a crop.
-            AsyncImage(
-                model = channel.logoUrl,
-                contentDescription = null,
-                contentScale = ContentScale.Fit,
-                modifier = Modifier.fillMaxSize().padding(16.dp),
+private fun ScreenFrameScope.ContinueWatchingShelf(
+    cards: List<ResumeItem>,
+    large: Boolean,
+    focus: CardFocus?,
+    onResume: (MediaKey) -> Unit,
+    leave: (ResumeItem) -> LeaveScreen,
+) {
+    val memory = rememberShelfMemory(remember(cards) { cards.map { it.key.stored } })
+    val openOptions = LocalOpenOptions.current
+    Shelf(stringResource(R.string.vod_continue_watching), memory, state = rememberRowState(focus)) {
+        itemsIndexed(cards, key = { _, card -> card.key.stored }) { index, card ->
+            ArtCard(
+                title = card.title,
+                artworkUrl = card.posterUrl,
+                onClick = { onResume(card.key) },
+                size = if (large && index == 0) ArtCardSize.Large else ArtCardSize.Landscape,
+                modifier = Modifier.takesFocus(index, focus).shelfCard(memory, card.key.stored),
+                status = resumeStatusText(card),
+                progress = card.progress,
+                badge = rememberQualityBadge(card.name),
+                onOptions = openOptions?.let { open -> { open(OptionsSubject.OfContinueWatching(card), leave(card)) } },
             )
         }
-        Spacer(Modifier.height(6.dp))
-        Text(
-            channel.shownName,
-            style = MaterialTheme.typography.bodyMedium,
-            color = if (cue.focused) {
-                MaterialTheme.colorScheme.onSurface
-            } else {
-                MaterialTheme.colorScheme.onSurfaceVariant
-            },
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
     }
 }
 
-private val CHANNEL_WIDTH = 200.dp
+@Composable
+private fun resumeStatusText(card: ResumeItem): List<String> = listOfNotNull(
+    when {
+        card.newEpisode -> stringResource(R.string.watch_badge_new_episode)
+        else -> card.episode?.let { stringResource(R.string.home_cover_episode, it.season, it.episode) }
+    },
+)
+
+@Composable
+private fun ScreenFrameScope.CoverShelf(
+    title: String,
+    covers: List<Cover>,
+    focus: CardFocus?,
+    onOpen: (VodTitle) -> Unit,
+    leave: (VodTitle) -> LeaveScreen,
+) {
+    val memory = rememberShelfMemory(remember(covers) { covers.map { it.title.pickKey } })
+    Shelf(title, memory, state = rememberRowState(focus)) {
+        itemsIndexed(covers, key = { _, cover -> cover.title.pickKey }) { index, cover ->
+            val subject = when (val t = cover.title) {
+                is VodTitle.OfMovie -> OptionsSubject.OfMovie(t.movie)
+                is VodTitle.OfSeries -> OptionsSubject.OfSeries(t.series)
+            }
+            ArtCard(
+                title = cover.title.shownTitle,
+                artworkUrl = cover.title.posterUrl,
+                onClick = { onOpen(cover.title) },
+                size = ArtCardSize.Portrait,
+                modifier = Modifier.takesFocus(index, focus).shelfCard(memory, cover.title.pickKey),
+                status = coverStatusText(cover.status),
+                progress = (cover.status as? CoverStatus.InProgress)?.progress,
+                badge = rememberQualityBadge(cover.title.name),
+                onOptions = openOptionsOn(subject, leave(cover.title)),
+            )
+        }
+    }
+}
+
+private val VodTitle.shownTitle
+    get() = when (this) {
+        is VodTitle.OfMovie -> movie.displayTitle
+        is VodTitle.OfSeries -> series.displayTitle
+    }
+
+private val VodTitle.posterUrl
+    get() = when (this) {
+        is VodTitle.OfMovie -> movie.posterUrl
+        is VodTitle.OfSeries -> series.posterUrl
+    }
+
+/**
+ * The quiet lines on a cover: `S4 E3` over `22 min left`, or one of `22 min left`, `S4 E4`,
+ * `New episode` or `Watched`.
+ */
+@Composable
+private fun coverStatusText(status: CoverStatus?): List<String> = when (status) {
+    null -> emptyList()
+    is CoverStatus.InProgress -> {
+        val episode = status.episode?.let { stringResource(R.string.home_cover_episode, it.season, it.episodeNumber) }
+        val left = status.remainingMillis?.let { minutesLeftText(it) }
+        listOfNotNull(episode, left).ifEmpty { listOf(stringResource(R.string.watch_badge_in_progress)) }
+    }
+    is CoverStatus.UpNext -> listOf(
+        stringResource(R.string.home_cover_episode, status.episode.season, status.episode.episodeNumber),
+    )
+    CoverStatus.NewEpisode -> listOf(stringResource(R.string.watch_badge_new_episode))
+    CoverStatus.Watched -> listOf(stringResource(R.string.watch_badge_watched))
+}
