@@ -688,7 +688,7 @@ data class ResumeItem(
 
 /**
  * What Movies' and Shows' backdrop shows for the highlighted title: its name, where the Profile is
- * with it ([status], movies only for now), its synopsis and its wide art.
+ * with it ([status]), its synopsis and its wide art, if it has any.
  */
 @androidx.compose.runtime.Immutable
 data class Backdrop(val title: String, val imageUrl: String?, val status: CoverStatus?, val synopsis: String?)
@@ -708,17 +708,19 @@ class VodViewModel @JvmOverloads constructor(
         viewModelScope.launch(Dispatchers.Default) { graph.decoders.tallestListed }
     }
 
+    // null until loaded, so Movies and Shows can wait for the rows at the top before drawing any:
+    // arriving after the Highlight, they pushed the row it was on down off the screen.
     @OptIn(ExperimentalCoroutinesApi::class)
-    val continueWatchingMovies: StateFlow<List<ResumeItem>> =
+    val continueWatchingMovies: StateFlow<List<ResumeItem>?> =
         graph.viewerLibrary.continueWatchingMovies()
             .mapLatest { cards -> cards.mapNotNull { resumeItem(graph.catalogRepository, it) } }
-            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
     @OptIn(ExperimentalCoroutinesApi::class)
-    val continueWatchingSeries: StateFlow<List<ResumeItem>> =
+    val continueWatchingSeries: StateFlow<List<ResumeItem>?> =
         graph.viewerLibrary.continueWatchingSeries()
             .mapLatest { cards -> cards.mapNotNull { resumeItem(graph.catalogRepository, it) } }
-            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
     /** Each episode's Watched / In Progress / Unwatched status for the active Profile. */
     val episodeStatuses = graph.viewerLibrary.episodeStatuses()
@@ -755,15 +757,31 @@ class VodViewModel @JvmOverloads constructor(
 
     suspend fun series(id: Long): Series? = graph.catalogRepository.series(id)
 
-    // The same statuses as Home's covers, so a title says the same thing on both.
-    suspend fun movieBackdrop(id: Long): Backdrop? = movie(id)?.let {
-        val status = graph.viewerLibrary.coverStatuses().first().ofMovie(it.id)
-        Backdrop(it.displayTitle, it.backdropUrl ?: it.posterUrl, status, it.plot)
+    /**
+     * What Movies' backdrop shows for movie [id]: at once what's stored, then again with the wide art
+     * and synopsis the provider (or TMDB, with the viewer's key) has, when the stored row lacks them.
+     * Only wide art, never the cover: a portrait poster cropped across the top of the screen looked
+     * wrong. The statuses are Home's covers', so a title says the same thing on both.
+     */
+    fun movieBackdrop(id: Long): Flow<Backdrop?> = flow {
+        val movie = movie(id) ?: return@flow emit(null)
+        val status = graph.viewerLibrary.coverStatuses().first().ofMovie(movie.id)
+        emit(Backdrop(movie.displayTitle, movie.backdropUrl, status, movie.plot))
+        if (movie.backdropUrl != null && movie.plot != null) return@flow
+        graph.catalogRepository.movieDetail(id)?.takeIf { it != movie }?.let {
+            emit(Backdrop(it.displayTitle, it.backdropUrl, status, it.plot))
+        }
     }
 
-    suspend fun seriesBackdrop(id: Long): Backdrop? = series(id)?.let {
-        val status = graph.viewerLibrary.coverStatuses().first().ofSeries(it.ref)
-        Backdrop(it.displayTitle, it.backdropUrl ?: it.posterUrl, status, it.plot)
+    /** As [movieBackdrop], for Shows. */
+    fun seriesBackdrop(id: Long): Flow<Backdrop?> = flow {
+        val series = series(id) ?: return@flow emit(null)
+        val status = graph.viewerLibrary.coverStatuses().first().ofSeries(series.ref)
+        emit(Backdrop(series.displayTitle, series.backdropUrl, status, series.plot))
+        if (series.backdropUrl != null && series.plot != null) return@flow
+        graph.catalogRepository.seriesDetail(id)?.takeIf { it != series }?.let {
+            emit(Backdrop(it.displayTitle, it.backdropUrl, status, it.plot))
+        }
     }
 
     /** Shows [key]'s grid ([browseKey]), or none for For you. */
@@ -813,6 +831,14 @@ class VodViewModel @JvmOverloads constructor(
     val recentlyAddedSeries: StateFlow<List<Series>> =
         graph.catalogRepository.recentlyAddedSeries()
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    // True while Recommended is being worked out, which takes seconds on a big library, so the
+    // screen can keep its place with a placeholder row rather than have it land above the others.
+    private val _recommendingMovies = MutableStateFlow(true)
+    val recommendingMovies: StateFlow<Boolean> = _recommendingMovies.asStateFlow()
+
+    private val _recommendingSeries = MutableStateFlow(true)
+    val recommendingSeries: StateFlow<Boolean> = _recommendingSeries.asStateFlow()
 
     private val _recommendedMovies = MutableStateFlow<List<Movie>>(emptyList())
     val recommendedMovies: StateFlow<List<Movie>> = _recommendedMovies.asStateFlow()
@@ -882,6 +908,7 @@ class VodViewModel @JvmOverloads constructor(
         )
         val loaded = loadedMovieFeeds
         if (key == loaded) return
+        _recommendingMovies.value = true
 
         // Now, not after the scan: that takes seconds on a big library, and in the meantime the
         // viewer could move onto a title they have only just started.
@@ -891,6 +918,7 @@ class VodViewModel @JvmOverloads constructor(
         _recommendedMovies.value = runCatching {
             graph.catalogRepository.recommendedMoviesFrom(all, key.started)
         }.getOrDefault(emptyList())
+        _recommendingMovies.value = false
         // Watching something doesn't move a title between genres, so only the catalogue regroups them.
         if (key.catalogue != loaded?.catalogue) {
             _movieGenreRows.value = runCatching {
@@ -909,6 +937,7 @@ class VodViewModel @JvmOverloads constructor(
         )
         val loaded = loadedSeriesFeeds
         if (key == loaded) return
+        _recommendingSeries.value = true
 
         // As in [refreshMovieFeeds].
         _recommendedSeries.value =
@@ -918,6 +947,7 @@ class VodViewModel @JvmOverloads constructor(
         _recommendedSeries.value = runCatching {
             graph.catalogRepository.recommendedSeriesFrom(all, key.started, key.dismissed)
         }.getOrDefault(emptyList())
+        _recommendingSeries.value = false
         if (key.catalogue != loaded?.catalogue) {
             _seriesGenreRows.value = runCatching {
                 graph.catalogRepository.seriesByGenreFrom(all)

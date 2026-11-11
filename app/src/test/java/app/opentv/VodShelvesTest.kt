@@ -276,9 +276,17 @@ class VodShelvesTest {
 
         compose.onNodeWithText("Slow Horses").requestFocus()
         compose.waitForIdle()
+        // Back up, since the row below goes to the top and takes Recommended off the screen.
+        backUpToRecommended("Slow Horses")
 
         compose.onNodeWithText("Ozark").assertDoesNotExist()
         compose.onNodeWithText("Dark").assertExists()
+    }
+
+    private fun backUpToRecommended(from: String) {
+        compose.onNodeWithText(from).performKeyInput { pressKey(Key.DirectionUp) }
+        compose.mainClock.advanceTimeBy(1_000)
+        compose.waitForIdle()
     }
 
     @Test
@@ -330,6 +338,7 @@ class VodShelvesTest {
 
         recommended = listOf(series(4, "Dark"))
         compose.waitForIdle()
+        backUpToRecommended("Slow Horses")
 
         compose.onNodeWithText("Ozark").assertDoesNotExist()
         compose.onNodeWithText("Dark").assertExists()

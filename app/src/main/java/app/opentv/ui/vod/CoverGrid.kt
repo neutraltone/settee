@@ -5,6 +5,8 @@
  */
 package app.opentv.ui.vod
 
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.gestures.LocalBringIntoViewSpec
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
@@ -15,8 +17,10 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items as gridItems
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
@@ -42,6 +46,7 @@ import kotlinx.coroutines.flow.filterNotNull
  * A category's whole grid, with the same covers as the rows. Right out of the sidebar or the rail
  * comes back to it ([railReturnTarget]). [covers] is null while they load.
  */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 internal fun ScreenFrameScope.CoverGrid(
     covers: List<TitleCover>?,
@@ -57,6 +62,20 @@ internal fun ScreenFrameScope.CoverGrid(
     }
     val state = rememberLazyGridState()
     PrefetchCovers(state, covers)
+    val room = with(LocalDensity.current) { GRID_LIFT_ROOM.toPx() }
+    CompositionLocalProvider(LocalBringIntoViewSpec provides remember(room) { RowToTheTop(room) }) {
+        CoverRows(state, covers, onHighlight, onOpen, onOptions)
+    }
+}
+
+@Composable
+private fun ScreenFrameScope.CoverRows(
+    state: LazyGridState,
+    covers: List<TitleCover>,
+    onHighlight: (Long) -> Unit,
+    onOpen: (Long) -> Unit,
+    onOptions: ((Long) -> Unit)?,
+) {
     LazyVerticalGrid(
         state = state,
         columns = GridCells.Adaptive(ArtCardSize.Portrait.width),

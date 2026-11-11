@@ -39,7 +39,6 @@ import app.opentv.data.model.StreamKind
 import app.opentv.data.parser.displayTitle
 import app.opentv.ui.MainShell
 import app.opentv.ui.Tab
-import app.opentv.ui.VodViewModel
 import app.opentv.ui.visibleTabs
 import app.opentv.ui.vod.MoviesScreen
 import app.opentv.ui.vod.SeriesScreen
@@ -69,13 +68,17 @@ class VodBrowseTest {
 
     private val app: Application = ApplicationProvider.getApplicationContext()
     private val graph = ServiceLocator.Graph(app)
-    private val viewModel = VodViewModel(app, graph)
+    private val viewModels = TestViewModels()
+    private val viewModel = viewModels.vod(app, graph)
 
     private lateinit var view: View
     private val device = DeviceKeyboard(compose) { view }
 
     @After
-    fun close() = graph.database.close()
+    fun close() {
+        viewModels.clear()
+        graph.database.close()
+    }
 
     private fun movie(id: Long, name: String, category: String = "action", added: Long = id) = Movie(
         id = id,
@@ -234,6 +237,22 @@ class VodBrowseTest {
 
         assertThat(highlight()).isEqualTo(left)
         compose.onNodeWithText("For you").assertDoesNotExist()
+    }
+
+    @Test
+    fun `Down moves the next row to the top, with nothing of the row above left showing under the backdrop`() {
+        setMovies()
+        pressOkOnMoviesInTheRail()
+
+        press(Key.DirectionDown)
+        compose.mainClock.advanceTimeBy(1_000)
+        compose.waitForIdle()
+
+        val rowTop = compose.onNodeWithText(compose.activity.getString(R.string.vod_recently_added))
+            .fetchSemanticsNode().boundsInRoot.top
+        val showing = compose.onAllNodes(hasClickAction() and hasText("", substring = true)).fetchSemanticsNodes()
+            .map { it.boundsInRoot }.filter { it.height > 0f && it.width > 0f }
+        assertThat(showing.map { it.top }.filter { it < rowTop }).isEmpty()
     }
 
     @Test

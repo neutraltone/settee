@@ -34,7 +34,6 @@ import app.opentv.data.model.Category
 import app.opentv.data.model.Movie
 import app.opentv.data.model.Series
 import app.opentv.data.model.StreamKind
-import app.opentv.ui.VodViewModel
 import app.opentv.ui.design.SetteeTheme
 import app.opentv.ui.vod.MoviesScreen
 import app.opentv.ui.vod.SeriesScreen
@@ -59,10 +58,14 @@ class MovieCategoryMemoryTest {
 
     private val app: Application = ApplicationProvider.getApplicationContext()
     private val graph = ServiceLocator.Graph(app)
-    private val viewModel = VodViewModel(app, graph)
+    private val viewModels = TestViewModels()
+    private val viewModel = viewModels.vod(app, graph)
 
     @After
-    fun close() = graph.database.close()
+    fun close() {
+        viewModels.clear()
+        graph.database.close()
+    }
 
     private fun waitFor(text: String) = compose.waitUntilAtLeastOneExists(hasText(text), 5_000)
 

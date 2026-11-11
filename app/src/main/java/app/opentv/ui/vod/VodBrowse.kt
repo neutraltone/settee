@@ -7,12 +7,10 @@ package app.opentv.ui.vod
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.focusGroup
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -53,7 +51,6 @@ import app.opentv.data.repo.GenreGroup
 import app.opentv.data.repo.MediaKey
 import app.opentv.data.repo.TitleCover
 import app.opentv.ui.Backdrop
-import app.opentv.ui.ContinueWatchingShelf
 import app.opentv.ui.LocalRailReturn
 import app.opentv.ui.ResumeItem
 import app.opentv.ui.VodViewModel
@@ -64,18 +61,14 @@ import app.opentv.ui.design.CategoriesSidebarWidth
 import app.opentv.ui.design.ScreenFrame
 import app.opentv.ui.design.ScreenFrameScope
 import app.opentv.ui.design.SetteeColors
-import app.opentv.ui.design.SetteeSpace
 import app.opentv.ui.design.SetteeType
-import app.opentv.ui.design.Shelf
 import app.opentv.ui.design.SidebarEntry
 import app.opentv.ui.design.Text
-import app.opentv.ui.design.rememberShelfMemory
-import app.opentv.ui.design.shelfCard
 import app.opentv.ui.options.LeaveDirectly
 import app.opentv.ui.options.LocalOpenOptions
 import app.opentv.ui.options.OptionsSubject
 import app.opentv.ui.options.openOptionsOn
-import app.opentv.ui.railReturnItem
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.launch
 
 /**
@@ -90,9 +83,10 @@ fun MoviesScreen(
     isSyncing: Boolean,
     viewModel: VodViewModel = viewModel(),
 ) {
-    val resume by viewModel.continueWatchingMovies.collectAsState()
-    val favourites = viewModel.favouriteMovies.collectAsState().value.orEmpty()
+    val resume = viewModel.continueWatchingMovies.collectAsState().value
+    val favourites = viewModel.favouriteMovies.collectAsState().value
     val recommended by viewModel.recommendedMovies.collectAsState()
+    val recommending by viewModel.recommendingMovies.collectAsState()
     val recentlyAdded by viewModel.recentlyAddedMovies.collectAsState()
     val genreRows by viewModel.movieGenreRows.collectAsState()
     val vodLoading by viewModel.vodLoading.collectAsState()
@@ -104,8 +98,8 @@ fun MoviesScreen(
         viewModel.loadHomeFeeds()
     }
 
-    val hasForYou = resume.isNotEmpty() ||
-        favourites.isNotEmpty() ||
+    val hasForYou = !resume.isNullOrEmpty() ||
+        !favourites.isNullOrEmpty() ||
         recommended.isNotEmpty() ||
         recentlyAdded.isNotEmpty() ||
         genreRows.isNotEmpty()
@@ -137,6 +131,7 @@ fun MoviesScreen(
             )
         },
         hasForYou = hasForYou,
+        forYouLoaded = resume != null && favourites != null,
         empty = when {
             vodLoading || isSyncing -> VodEmpty.Loading(stringResource(R.string.vod_loading_movies))
             hasSources -> VodEmpty.Hint(
@@ -146,7 +141,17 @@ fun MoviesScreen(
             else -> VodEmpty.Hint(stringResource(R.string.vod_no_movies), stringResource(R.string.vod_no_movies_add))
         },
     ) { onHighlight ->
-        MovieShelves(resume, favourites, recommended, recentlyAdded, genreRows, onResume, onOpenMovie, onHighlight)
+        MovieShelves(
+            resume.orEmpty(),
+            favourites.orEmpty(),
+            recommended,
+            recentlyAdded,
+            genreRows,
+            onResume,
+            onOpenMovie,
+            onHighlight,
+            recommending,
+        )
     }
 }
 
@@ -159,9 +164,10 @@ fun SeriesScreen(
     isSyncing: Boolean,
     viewModel: VodViewModel = viewModel(),
 ) {
-    val resume by viewModel.continueWatchingSeries.collectAsState()
-    val favourites = viewModel.favouriteSeries.collectAsState().value.orEmpty()
+    val resume = viewModel.continueWatchingSeries.collectAsState().value
+    val favourites = viewModel.favouriteSeries.collectAsState().value
     val recommended by viewModel.recommendedSeries.collectAsState()
+    val recommending by viewModel.recommendingSeries.collectAsState()
     val recentlyAdded by viewModel.recentlyAddedSeries.collectAsState()
     val genreRows by viewModel.seriesGenreRows.collectAsState()
     val vodLoading by viewModel.vodLoading.collectAsState()
@@ -171,8 +177,8 @@ fun SeriesScreen(
         viewModel.loadHomeFeeds()
     }
 
-    val hasForYou = resume.isNotEmpty() ||
-        favourites.isNotEmpty() ||
+    val hasForYou = !resume.isNullOrEmpty() ||
+        !favourites.isNullOrEmpty() ||
         recommended.isNotEmpty() ||
         recentlyAdded.isNotEmpty() ||
         genreRows.isNotEmpty()
@@ -204,6 +210,7 @@ fun SeriesScreen(
             )
         },
         hasForYou = hasForYou,
+        forYouLoaded = resume != null && favourites != null,
         empty = when {
             vodLoading || isSyncing -> VodEmpty.Loading(stringResource(R.string.vod_loading_shows))
             hasSources -> VodEmpty.Hint(
@@ -213,7 +220,17 @@ fun SeriesScreen(
             else -> VodEmpty.Hint(stringResource(R.string.vod_no_shows), stringResource(R.string.vod_no_shows_add))
         },
     ) { onHighlight ->
-        SeriesShelves(resume, favourites, recommended, recentlyAdded, genreRows, onResume, onOpenSeries, onHighlight)
+        SeriesShelves(
+            resume.orEmpty(),
+            favourites.orEmpty(),
+            recommended,
+            recentlyAdded,
+            genreRows,
+            onResume,
+            onOpenSeries,
+            onHighlight,
+            recommending,
+        )
     }
 }
 
@@ -228,16 +245,17 @@ internal fun ScreenFrameScope.MovieShelves(
     onResume: (MediaKey) -> Unit,
     onOpenMovie: (Movie) -> Unit,
     onHighlight: (Long) -> Unit = {},
+    recommending: Boolean = false,
 ) {
     val held = rememberHeldRow(recommended)
     val rows = listOf(
         TitleRow("fav", stringResource(R.string.vod_favourites), favourites),
-        TitleRow("rec", stringResource(R.string.vod_recommended), held.titles, held.modifier),
+        TitleRow("rec", stringResource(R.string.vod_recommended), held.titles, held.modifier, recommending),
         TitleRow("recent", stringResource(R.string.vod_recently_added), recentlyAdded),
     ) + genreRows.map { TitleRow("g:${it.genre}", it.genre, it.items) }
     ForYou(
         resume,
-        rows.filter { it.titles.isNotEmpty() },
+        rows.filter { it.titles.isNotEmpty() || it.pending },
         onResume,
         cover = Movie::cover,
         onOpen = onOpenMovie,
@@ -257,16 +275,17 @@ internal fun ScreenFrameScope.SeriesShelves(
     onResume: (MediaKey) -> Unit,
     onOpenSeries: (Series) -> Unit,
     onHighlight: (Long) -> Unit = {},
+    recommending: Boolean = false,
 ) {
     val held = rememberHeldRow(recommended)
     val rows = listOf(
         TitleRow("fav", stringResource(R.string.vod_favourites), favourites),
-        TitleRow("rec", stringResource(R.string.vod_recommended), held.titles, held.modifier),
+        TitleRow("rec", stringResource(R.string.vod_recommended), held.titles, held.modifier, recommending),
         TitleRow("recent", stringResource(R.string.vod_recently_added), recentlyAdded),
     ) + genreRows.map { TitleRow("g:${it.genre}", it.genre, it.items) }
     ForYou(
         resume,
-        rows.filter { it.titles.isNotEmpty() },
+        rows.filter { it.titles.isNotEmpty() || it.pending },
         onResume,
         cover = Series::cover,
         onOpen = onOpenSeries,
@@ -279,8 +298,18 @@ private fun Movie.cover() = TitleCover(id, name, displayTitle, posterUrl)
 
 private fun Series.cover() = TitleCover(id, name, displayTitle, posterUrl)
 
-/** One of For you's rows; [modifier] goes around it (a held row's, see [rememberHeldRow]). */
-private class TitleRow<T>(val key: String, val title: String, val titles: List<T>, val modifier: Modifier = Modifier)
+/**
+ * One of For you's rows; [modifier] goes around it (a held row's, see [rememberHeldRow]). A [pending]
+ * row with no titles yet shows as a placeholder, holding its place so the rows below don't move
+ * when it lands.
+ */
+internal class TitleRow<T>(
+    val key: String,
+    val title: String,
+    val titles: List<T>,
+    val modifier: Modifier = Modifier,
+    val pending: Boolean = false,
+)
 
 /** What Movies or Shows says when For you has nothing in it. */
 internal sealed interface VodEmpty {
@@ -290,7 +319,8 @@ internal sealed interface VodEmpty {
 }
 
 /**
- * Movies' or Shows' screen: For you's rows ([forYou]), or [empty] when it has none, with the
+ * Movies' or Shows' screen: For you's rows ([forYou]) once its top rows have loaded ([forYouLoaded]),
+ * or [empty] when it has none, with the
  * Categories Sidebar tucked away to their left. It slides open and pushes the screen along, and
  * slides shut ([SidebarSlide]).
  *
@@ -307,9 +337,10 @@ private fun VodBrowse(
     categories: List<Category>,
     category: String?,
     onPickCategory: (String?) -> Unit,
-    backdropFor: suspend (Long) -> Backdrop?,
+    backdropFor: (Long) -> Flow<Backdrop?>,
     grid: @Composable ScreenFrameScope.(onHighlight: (Long) -> Unit) -> Unit,
     hasForYou: Boolean,
+    forYouLoaded: Boolean,
     empty: VodEmpty,
     forYou: @Composable ScreenFrameScope.(onHighlight: (Long) -> Unit) -> Unit,
 ) {
@@ -351,6 +382,9 @@ private fun VodBrowse(
                 Box(Modifier.weight(1f)) {
                     when {
                         category != null -> grid(backdrop.onHighlight)
+                        // Nothing until the rows at the top have loaded: arriving after the
+                        // Highlight, they pushed the row it was on off the screen.
+                        !forYouLoaded -> Unit
                         hasForYou -> forYou(backdrop.onHighlight)
                         else -> EmptyBrowse(empty)
                     }
@@ -420,49 +454,6 @@ private fun BrowseSidebar(
 
 private const val FOR_YOU = "for-you"
 private const val FIND_MAX_LENGTH = 40
-
-@Composable
-private fun <T> ScreenFrameScope.ForYou(
-    resume: List<ResumeItem>,
-    rows: List<TitleRow<T>>,
-    onResume: (MediaKey) -> Unit,
-    cover: (T) -> TitleCover,
-    onOpen: (T) -> Unit,
-    onHighlight: (Long) -> Unit,
-    options: @Composable (T) -> (() -> Unit)?,
-) {
-    LazyColumn(
-        verticalArrangement = Arrangement.spacedBy(SetteeSpace.RowGap),
-        modifier = Modifier.fillMaxSize().focusGroup(),
-    ) {
-        if (resume.isNotEmpty()) {
-            railReturnItem(key = "cw", contentType = "continue-watching") {
-                ContinueWatchingShelf(resume, large = false, focus = null, onResume = onResume, leave = {
-                    LeaveDirectly
-                })
-            }
-        }
-        rows.forEach { row ->
-            railReturnItem(key = row.key, contentType = "covers") {
-                Box(row.modifier) {
-                    val covers = remember(row.titles) { row.titles.map { it to cover(it) } }
-                    val memory = rememberShelfMemory(remember(covers) { covers.map { "${it.second.id}" } })
-                    Shelf(row.title, memory) {
-                        items(covers, key = { it.second.id }) { (title, art) ->
-                            TitleArt(
-                                art,
-                                Modifier.shelfCard(memory, "${art.id}"),
-                                onHighlight,
-                                { onOpen(title) },
-                                options(title),
-                            )
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
 
 @Composable
 internal fun EmptyBrowse(empty: VodEmpty) {

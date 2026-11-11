@@ -22,15 +22,18 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.unit.dp
 import app.opentv.ui.Backdrop
 import app.opentv.ui.coverStatusText
 import app.opentv.ui.design.QuietLabel
 import app.opentv.ui.design.SetteeColors
+import app.opentv.ui.design.SetteeSpace
 import app.opentv.ui.design.SetteeType
 import app.opentv.ui.design.Text
 import coil.compose.AsyncImage
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
 
 /** The backdrop shown, and what a cover calls when it takes the Highlight. */
 internal class RestingBackdrop(val shown: Backdrop?, val onHighlight: (Long) -> Unit)
@@ -41,13 +44,13 @@ internal class RestingBackdrop(val shown: Backdrop?, val onHighlight: (Long) -> 
  * Movies). Changing on each press cost a few frames on a Stick.
  */
 @Composable
-internal fun rememberRestingBackdrop(backdropFor: suspend (Long) -> Backdrop?): RestingBackdrop {
+internal fun rememberRestingBackdrop(backdropFor: (Long) -> Flow<Backdrop?>): RestingBackdrop {
     var highlighted by remember { mutableStateOf<Long?>(null) }
     var shown by remember { mutableStateOf<Backdrop?>(null) }
     LaunchedEffect(highlighted) {
         val id = highlighted ?: return@LaunchedEffect
         delay(BACKDROP_REST_MILLIS)
-        shown = backdropFor(id)
+        backdropFor(id).collect { shown = it }
     }
     return RestingBackdrop(shown) { highlighted = it }
 }
@@ -55,14 +58,18 @@ internal fun rememberRestingBackdrop(backdropFor: suspend (Long) -> Backdrop?): 
 private const val BACKDROP_REST_MILLIS = 400L
 
 /**
- * The highlighted title's wide art, in the top corner of the screen and behind the text. The fades
- * are in the same layout as the text, so they move with it when the sidebar pushes the screen
- * along, and the text never lands on the bright part of the art.
+ * The highlighted title's wide art, in the top corner of the screen and behind the text, out to
+ * the screen's top and right edges rather than stopping at the margin. The fades are in the same
+ * layout as the text, so they move with it when the sidebar pushes the screen along, and the text
+ * never lands on the bright part of the art.
  */
 @Composable
 internal fun BackdropArt(backdrop: Backdrop?) {
     val url = backdrop?.imageUrl ?: return
-    Box(Modifier.fillMaxWidth().height(BACKDROP_HEIGHT), contentAlignment = Alignment.TopEnd) {
+    Box(
+        Modifier.fillMaxWidth().height(BACKDROP_HEIGHT).toTheEdges(),
+        contentAlignment = Alignment.TopEnd,
+    ) {
         AsyncImage(
             model = url,
             contentDescription = null,
@@ -84,6 +91,24 @@ internal fun BackdropText(backdrop: Backdrop?) {
         coverStatusText(backdrop.status).takeIf { it.isNotEmpty() }?.let { QuietLabel(it.joinToString(" · ")) }
         backdrop.synopsis?.takeIf { it.isNotBlank() }?.let { Text(it, SetteeType.Synopsis, maxLines = 3) }
     }
+}
+
+/**
+ * Out past the frame's margin at the top and right, as rows run out past it at the sides, taking
+ * up only the space inside it. Held to the margin, the art stopped short of the screen's corner.
+ */
+private fun Modifier.toTheEdges() = layout { measurable, constraints ->
+    val side = SetteeSpace.ScreenSide.roundToPx()
+    val top = SetteeSpace.ScreenTopBottom.roundToPx()
+    val placeable = measurable.measure(
+        constraints.copy(
+            minWidth = constraints.minWidth + side,
+            maxWidth = constraints.maxWidth + side,
+            minHeight = constraints.minHeight + top,
+            maxHeight = constraints.maxHeight + top,
+        ),
+    )
+    layout(placeable.width - side, placeable.height - top) { placeable.place(0, -top) }
 }
 
 private val BACKDROP_HEIGHT = 260.dp

@@ -65,7 +65,7 @@ class VodContinueWatchingTest {
         graph.database.episodes().upsertAll(listOf(testEpisode(2, 4)))
         graph.viewerLibrary.recordProgress("ep:24", positionMillis = 600_000, durationMillis = 2_400_000)
 
-        val cards = VodViewModel(app, graph).continueWatchingSeries.first { it.isNotEmpty() }
+        val cards = VodViewModel(app, graph).continueWatchingSeries.first { !it.isNullOrEmpty() }
 
         assertThat(cards).containsExactly(
             ResumeItem(

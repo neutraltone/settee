@@ -14,7 +14,6 @@ import app.opentv.data.model.Series
 import app.opentv.data.model.StreamKind
 import app.opentv.data.repo.TitleCover
 import app.opentv.data.repo.categoryGroupKey
-import app.opentv.ui.VodViewModel
 import app.opentv.ui.browseKey
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.CoroutineScope
@@ -44,7 +43,8 @@ class VodCategoriesTest {
 
     private val app: Application = ApplicationProvider.getApplicationContext()
     private val graph = ServiceLocator.Graph(app)
-    private val viewModel by lazy { VodViewModel(app, graph) }
+    private val viewModels = TestViewModels()
+    private val viewModel by lazy { viewModels.vod(app, graph) }
     private val watching = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     @Before
@@ -56,6 +56,7 @@ class VodCategoriesTest {
         graph.settings.setHiddenCategories(emptySet())
         graph.settings.setHiddenUnlocked(false)
         watching.cancel()
+        viewModels.clear()
         graph.database.close()
     }
 
