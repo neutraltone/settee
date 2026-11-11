@@ -370,6 +370,9 @@ interface CategoryDao {
 /** Projection for [CategoryDao.namesFor]. */
 data class CategoryName(val id: String, val name: String)
 
+/** What More like this ranks a film by, without the rest of its row. */
+data class MoviePick(val id: Long, val sourceId: Long, val genre: String?, val rating: Double?, val addedMillis: Long)
+
 /** Projection for [ChannelDao.channelCountsByCategory]. */
 data class CategoryChannelCount(val sourceId: Long, val categoryId: String, val count: Int)
 
@@ -564,48 +567,6 @@ interface MovieDao {
         genres.forEach { (id, genre) -> fillBlankGenre(id, genre) }
     }
 
-    /**
-     * Fallback for More-Like-This when a movie has no genre to match on: other titles from the same
-     * source (and category, when it has one), best-rated first. Never returns the movie itself.
-     */
-    @Query(
-        """
-        SELECT * FROM movies
-        WHERE sourceId = :sourceId AND id != :excludeId
-          AND (:categoryId IS NULL OR categoryId = :categoryId)
-        ORDER BY rating DESC, addedMillis DESC
-        LIMIT :limit
-        """,
-    )
-    suspend fun similarByCategory(sourceId: Long, categoryId: String?, excludeId: Long, limit: Int): List<Movie>
-
-    /**
-     * Movies a person is billed in — the Plex-style "click an actor, see everything with them".
-     * A substring `LIKE` over the comma-separated `cast` string: cheap and correct enough for a few
-     * thousand VOD rows, where a full credits table would be over-engineering. Blank/absent cast is
-     * excluded so an empty name never matches every row. Best-rated, then newest, first.
-     */
-    @Query(
-        """
-        SELECT * FROM movies
-        WHERE `cast` IS NOT NULL AND `cast` != '' AND `cast` LIKE '%' || :name || '%'
-        ORDER BY rating DESC, addedMillis DESC
-        LIMIT :limit
-        """,
-    )
-    suspend fun moviesWithActor(name: String, limit: Int): List<Movie>
-
-    /** Movies a person directed. See [moviesWithActor]; same shape over the `director` field. */
-    @Query(
-        """
-        SELECT * FROM movies
-        WHERE director IS NOT NULL AND director != '' AND director LIKE '%' || :name || '%'
-        ORDER BY rating DESC, addedMillis DESC
-        LIMIT :limit
-        """,
-    )
-    suspend fun moviesByDirector(name: String, limit: Int): List<Movie>
-
     @Query("SELECT * FROM movies WHERE id = :id")
     suspend fun byId(id: Long): Movie?
 
@@ -623,6 +584,32 @@ interface MovieDao {
     /** The stored rows for one sync batch (at most 500) of [streamIds]. */
     @Query("SELECT * FROM movies WHERE sourceId = :sourceId AND streamId IN (:streamIds)")
     suspend fun byProviderIds(sourceId: Long, streamIds: List<String>): List<Movie>
+
+    /**
+     * The candidates for a film's More like this whose genre string contains [genre], as just what
+     * the ranking reads: a big provider's Drama is thousands of films, too many to load whole on a
+     * Fire TV Stick. A substring match, so [CatalogRepository.moreLikeThis] checks the genre is whole.
+     */
+    @Query(
+        """
+        SELECT id, sourceId, genre, rating, addedMillis FROM movies
+        WHERE id != :excludeId AND genre LIKE '%' || :genre || '%'
+        """,
+    )
+    suspend fun picksSharingGenre(genre: String, excludeId: Long): List<MoviePick>
+
+    /** More like this's candidates for a film with no genre: others from its provider and category. */
+    @Query(
+        """
+        SELECT id, sourceId, genre, rating, addedMillis FROM movies
+        WHERE sourceId = :sourceId AND id != :excludeId AND (:categoryId IS NULL OR categoryId = :categoryId)
+        """,
+    )
+    suspend fun picksInCategory(sourceId: Long, categoryId: String?, excludeId: Long): List<MoviePick>
+
+    /** At most a row's worth of films, in no particular order. */
+    @Query("SELECT * FROM movies WHERE id IN (:ids)")
+    suspend fun byIds(ids: List<Long>): List<Movie>
 
     @Upsert
     suspend fun upsertAll(movies: List<Movie>)
@@ -676,30 +663,6 @@ interface SeriesDao {
     /** Every copy of one show: providers list each Quality as its own row, in its own category. */
     @Query("SELECT * FROM series WHERE tmdbId = :tmdbId ORDER BY id")
     suspend fun byTmdbId(tmdbId: String): List<Series>
-
-    /** Fallback for More-Like-This when a series has no genre: same source/category, best-rated first. */
-    @Query(
-        """
-        SELECT * FROM series
-        WHERE sourceId = :sourceId AND id != :excludeId
-          AND (:categoryId IS NULL OR categoryId = :categoryId)
-        ORDER BY rating DESC, addedMillis DESC
-        LIMIT :limit
-        """,
-    )
-    suspend fun similarByCategory(sourceId: Long, categoryId: String?, excludeId: Long, limit: Int): List<Series>
-
-    /** Series a person is billed in — the show half of "click an actor, see everything". See
-     *  [MovieDao.moviesWithActor]. */
-    @Query(
-        """
-        SELECT * FROM series
-        WHERE `cast` IS NOT NULL AND `cast` != '' AND `cast` LIKE '%' || :name || '%'
-        ORDER BY rating DESC, addedMillis DESC
-        LIMIT :limit
-        """,
-    )
-    suspend fun seriesWithActor(name: String, limit: Int): List<Series>
 
     @Query("SELECT * FROM series WHERE id = :id")
     suspend fun byId(id: Long): Series?

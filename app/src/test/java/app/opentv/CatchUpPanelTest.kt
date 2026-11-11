@@ -10,13 +10,11 @@ import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.hasClickAction
-import androidx.compose.ui.test.hasScrollAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performKeyInput
-import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.test.requestFocus
 import androidx.test.core.app.ApplicationProvider
@@ -94,12 +92,10 @@ class CatchUpPanelTest {
                     episodes = episodes,
                     statuses = EpisodeStatuses(),
                     mainAction = null,
+                    status = null,
                     favourite = false,
-                    moreLike = emptyList(),
                     onPlayEpisode = {},
                     onSetFavourite = {},
-                    onOpenSeries = {},
-                    onOpenPerson = {},
                 )
             }
         }
@@ -109,11 +105,9 @@ class CatchUpPanelTest {
         compose.mainClock.advanceTimeBy(500)
     }
 
-    private fun row(text: String): SemanticsNodeInteraction {
-        val row = hasText(text) and hasClickAction()
-        compose.onNode(hasScrollAction()).performScrollToNode(row)
-        return compose.onNode(row).requestFocus()
-    }
+    /** Highlights the row or pill reading [text]; a season's episodes are listed once its pill has the Highlight. */
+    private fun row(text: String): SemanticsNodeInteraction =
+        compose.onNode(hasText(text) and hasClickAction()).requestFocus()
 
     private fun waitFor(text: String): SemanticsNodeInteraction {
         compose.waitUntilAtLeastOneExists(hasText(text), TIMEOUT_MILLIS)
@@ -136,7 +130,8 @@ class CatchUpPanelTest {
     fun `Mark watched up to here in an episode's panel marks it and the ones before it`() {
         show()
 
-        row("S2E1").performKeyInput { pressKey(Key.Menu) }
+        row("Season 2")
+        row("S2 E1").performKeyInput { pressKey(Key.Menu) }
         waitFor("Mark watched up to here").performClick()
 
         waitUntil(testEpisode(2, 1), WatchStatus.Watched)
@@ -148,14 +143,14 @@ class CatchUpPanelTest {
     fun `an episode with nothing unwatched before it doesn't offer Mark watched up to here`() {
         show()
 
-        row("S1E1").performKeyInput { pressKey(Key.Menu) }
+        row("S1 E1").performKeyInput { pressKey(Key.Menu) }
 
         waitFor("Mark watched")
         compose.onNodeWithText("Mark watched up to here").assertDoesNotExist()
     }
 
     @Test
-    fun `a season header's panel marks the season Watched, then offers only to mark it Unwatched`() {
+    fun `a season pill's panel marks the season Watched, then offers only to mark it Unwatched`() {
         show()
 
         row("Season 1").performKeyInput { pressKey(Key.DirectionCenter) }

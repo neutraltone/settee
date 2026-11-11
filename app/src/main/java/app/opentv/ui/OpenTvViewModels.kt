@@ -38,7 +38,6 @@ import app.opentv.data.repo.LineupChannel
 import app.opentv.data.repo.LineupScope
 import app.opentv.data.repo.LivePreview
 import app.opentv.data.repo.MediaKey
-import app.opentv.data.repo.PersonTitle
 import app.opentv.data.repo.RefreshMessages
 import app.opentv.data.repo.TitleCover
 import app.opentv.data.repo.VodTitle
@@ -1056,6 +1055,12 @@ class VodViewModel @JvmOverloads constructor(
         }
     }
 
+    /** Where the active Profile is with the series of [episodes], for its page's hero. */
+    fun seriesStatus(episodes: List<Episode>): Flow<CoverStatus?> = graph.viewerLibrary.titleStatus.series(episodes)
+
+    /** Where the active Profile is with [movie], for its page's hero. */
+    fun movieStatus(movie: Movie): Flow<CoverStatus?> = graph.viewerLibrary.titleStatus.movie(movie.id)
+
     /** The series page's main button over that series' [episodes]: Resume, Up Next or the first episode. */
     fun seriesMainAction(episodes: List<Episode>) = graph.viewerLibrary.seriesMainAction(episodes)
 
@@ -1082,17 +1087,10 @@ class VodViewModel @JvmOverloads constructor(
     /** Loads a series, lazily enriching backdrop/cast/genre on first open. See CatalogRepository.seriesDetail. */
     suspend fun seriesDetail(id: Long): Series? = graph.catalogRepository.seriesDetail(id)
 
-    /** "More like this" for the movie detail screen. */
+    /** Whether playing [movie] would pick up partway: the Quality that plays keeps the resume point. */
+    /** A film's More like this. */
     suspend fun moreLikeThis(movie: Movie): List<Movie> = graph.catalogRepository.moreLikeThis(movie)
 
-    /** "More like this" for the series detail screen. */
-    suspend fun moreLikeThisSeries(series: Series): List<Series> = graph.catalogRepository.moreLikeThisSeries(series)
-
-    /** Every library title (movies + series) featuring a person — the Person screen's grid. */
-    suspend fun titlesWithPerson(name: String): List<PersonTitle> = graph.catalogRepository.titlesWithPerson(name)
-
-    /** Where the active Profile would resume a movie/episode, 0 for the start — drives Resume vs Watch now. */
-    /** Whether playing [movie] would pick up partway: the Quality that plays keeps the resume point. */
     suspend fun resumesPartway(movie: Movie): Boolean {
         val playing = graph.vodQualities.planFor(MediaKey.Movie(movie.id)).start.key
         return graph.viewerLibrary.resumeFrom(playing.stored) > 0

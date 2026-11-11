@@ -54,6 +54,14 @@ _Avoid_: Hidden channels (that's the channel manager's per-channel hide), parent
 
 ## Watch progress
 
+**Series**:
+A whole show from the provider, made up of its seasons and their episodes.
+_Avoid_: Show (in the app's own wording, though the tab is called Shows), programme (that's a live TV listing)
+
+**Season**:
+One numbered part of a series, holding its episodes in order. On screen it is always "Season", including counts such as "2 seasons".
+_Avoid_: Series (for this meaning), series 2
+
 **Watched**:
 A movie or episode the Profile has played past 93% of its length, or marked watched by hand.
 _Avoid_: Finished, seen, completed

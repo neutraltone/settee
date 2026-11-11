@@ -146,7 +146,7 @@ internal fun <T> ScreenFrameScope.ForYou(
 
 /** A row still being worked out: its title over blank covers, which can't take the Highlight. */
 @Composable
-private fun ScreenFrameScope.PlaceholderShelf(title: String) {
+internal fun ScreenFrameScope.PlaceholderShelf(title: String) {
     Column {
         Text(title, SetteeType.Section, maxLines = 1)
         Row(

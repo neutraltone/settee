@@ -272,16 +272,6 @@
             column="30"/>
     </issue>
 
-    <issue
-        id="AutoboxingStateCreation"
-        message="Prefer `mutableIntStateOf` instead of `mutableStateOf`"
-        errorLine1="        var bgIndex by remember(bgCandidates) { mutableStateOf(0) }"
-        errorLine2="                                                ~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/app/opentv/ui/vod/VodDetailScreens.kt"
-            line="409"
-            column="49"/>
-    </issue>
 
     <issue
         id="UnusedResources"

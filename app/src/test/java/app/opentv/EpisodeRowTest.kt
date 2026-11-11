@@ -9,9 +9,6 @@ import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.size
-import androidx.compose.material3.ColorScheme
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
@@ -20,15 +17,9 @@ import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.ProgressBarRangeInfo
 import androidx.compose.ui.semantics.SemanticsActions
-import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertCountEquals
-import androidx.compose.ui.test.assertHeightIsEqualTo
 import androidx.compose.ui.test.assertIsFocused
-import androidx.compose.ui.test.assertIsNotFocused
-import androidx.compose.ui.test.assertWidthIsEqualTo
 import androidx.compose.ui.test.captureToImage
-import androidx.compose.ui.test.getUnclippedBoundsInRoot
-import androidx.compose.ui.test.hasAnyChild
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasProgressBarRangeInfo
@@ -43,6 +34,7 @@ import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.unit.dp
 import app.opentv.data.model.Episode
 import app.opentv.data.repo.WatchStatus
+import app.opentv.ui.design.SetteeColors
 import app.opentv.ui.vod.EpisodeRow
 import com.google.common.truth.Truth.assertThat
 import org.junit.Rule
@@ -78,10 +70,17 @@ class EpisodeRowTest {
         streamUrl = "https://example.com/e.mkv",
     )
 
-    private lateinit var colours: ColorScheme
-
-    private fun show(status: WatchStatus, ep: Episode = episode) {
-        showChangeable(status, ep)
+    private fun show(status: WatchStatus, ep: Episode = episode): MutableState<WatchStatus> {
+        val state = mutableStateOf(status)
+        compose.setTvContent {
+            Column {
+                EpisodeRow(ep, state.value, seriesArt = listOf(BACKDROP, POSTER), onPlay = {})
+                // Somewhere else for the Highlight to go.
+                Box(Modifier.size(10.dp).testTag("elsewhere").focusable())
+            }
+        }
+        compose.waitUntil { artwork.hasLoaded }
+        return state
     }
 
     @Test
@@ -107,11 +106,10 @@ class EpisodeRowTest {
         show(WatchStatus.InProgress(progress = 0f, remainingMillis = null))
 
         compose.onNodeWithText("In progress", useUnmergedTree = true).assertExists()
-        captureScreen("episode_row_in_progress_unknown_duration")
     }
 
     @Test
-    fun `an Unwatched episode shows no badge and no progress`() {
+    fun `an Unwatched episode shows no status and no progress`() {
         show(WatchStatus.Unwatched)
 
         compose.onNode(hasText("Watched"), useUnmergedTree = true).assertDoesNotExist()
@@ -123,267 +121,87 @@ class EpisodeRowTest {
     }
 
     @Test
-    fun `the badge sits in the top-right corner of a 16 by 9 thumbnail big enough to read from the sofa`() {
+    fun `the row is one stop for the D-pad`() {
         show(WatchStatus.Watched)
 
-        val thumbnail = compose.onNode(hasContentDescription("Thumbnail for episode 3"), useUnmergedTree = true)
-            .assertWidthIsEqualTo(160.dp)
-            .assertHeightIsEqualTo(90.dp)
-            .getUnclippedBoundsInRoot()
-        val badge = compose.onNodeWithText("Watched", useUnmergedTree = true).getUnclippedBoundsInRoot()
-        val badgeBox = compose.onNode(hasAnyChild(hasText("Watched")), useUnmergedTree = true)
-            .getUnclippedBoundsInRoot()
-
-        assertThat(badgeBox.right).isAtMost(thumbnail.right)
-        assertThat(badgeBox.top).isAtLeast(thumbnail.top)
-        assertThat(thumbnail.right - badgeBox.right).isLessThan(8.dp)
-        assertThat(badgeBox.top - thumbnail.top).isLessThan(8.dp)
-        assertThat(badge.left).isAtLeast(thumbnail.left)
+        compose.onAllNodes(isFocusable() and hasText("S1 E3"), useUnmergedTree = false).assertCountEquals(1)
+        compose.onAllNodes(isFocusable(), useUnmergedTree = true).assertCountEquals(2)
     }
 
     @Test
-    fun `the badge doesn't cover the episode number on the series artwork`() {
-        show(WatchStatus.InProgress(progress = 0.425f, remainingMillis = 23 * 60_000L), episode.copy(stillUrl = null))
-
-        val number = compose.onNode(hasText("3"), useUnmergedTree = true).getUnclippedBoundsInRoot()
-        val badge = compose.onNode(hasAnyChild(hasText("23 min left")), useUnmergedTree = true)
-            .getUnclippedBoundsInRoot()
-
-        assertThat(badge.bottom).isAtMost(number.top)
-        captureScreen("episode_row_series_artwork_in_progress")
-    }
-
-    @Test
-    fun `the badge can't take focus, so the row is still one stop for the D-pad`() {
-        show(WatchStatus.Watched)
-
-        compose.onAllNodes(isFocusable(), useUnmergedTree = true).assertCountEquals(1)
-    }
-
-    @Test
-    fun `an episode with its own thumbnail shows it without the episode number on top`() {
-        show(WatchStatus.Unwatched)
-
-        compose.onNode(hasContentDescription("Thumbnail for episode 3"), useUnmergedTree = true).assertExists()
-        compose.onNode(hasText("3"), useUnmergedTree = true).assertDoesNotExist()
-    }
-
-    @Test
-    fun `an episode with no thumbnail shows the series artwork with its episode number on top`() {
+    fun `an episode with no still shows the show's artwork instead`() {
         show(WatchStatus.Unwatched, episode.copy(stillUrl = null))
 
         compose.onNode(hasContentDescription("Thumbnail for episode 3"), useUnmergedTree = true).assertExists()
-        compose.onNode(hasText("3"), useUnmergedTree = true).assertExists()
         captureScreen("episode_row_series_artwork")
     }
 
     @Test
-    fun `a focused episode is highlighted`() {
+    fun `with no still and a dead backdrop, the thumbnail falls back to the poster rather than going blank`() {
+        artwork.failingUrls += BACKDROP
+        show(WatchStatus.Unwatched, episode.copy(stillUrl = null))
+
+        val image = compose.onNode(hasContentDescription("Thumbnail for episode 3"), useUnmergedTree = true)
+            .captureToImage()
+            .toPixelMap()
+        assertThat(image[image.width / 2, image.height / 2]).isNotEqualTo(SetteeColors.Raised)
+    }
+
+    @Test
+    fun `a focused episode is highlighted, with its text dark on the coral`() {
         show(WatchStatus.InProgress(progress = 0.6f, remainingMillis = 960_000))
 
         compose.onNode(hasClickAction()).requestFocus()
 
         compose.onNode(hasClickAction()).assertIsFocused()
+        assertThat(colourOf("The one with the badge")).isEqualTo(SetteeColors.OnAccent)
+        assertThat(colourOf("S1 E3")).isEqualTo(SetteeColors.OnAccent)
         captureScreen("episode_row_focused")
     }
 
     @Test
-    fun `the season and episode marker is easy to read on the focus highlight`() {
+    fun `a Watched episode's title steps back to quiet text, by colour rather than fading`() {
+        show(WatchStatus.Watched)
+
+        assertThat(colourOf("The one with the badge")).isEqualTo(SetteeColors.QuietText)
+    }
+
+    @Test
+    fun `an Unwatched episode's title is in full text colour`() {
         show(WatchStatus.Unwatched)
 
+        assertThat(colourOf("The one with the badge")).isEqualTo(SetteeColors.Text)
+    }
+
+    @Test
+    fun `a Watched episode steps back again when the Highlight moves on`() {
+        show(WatchStatus.Watched)
         compose.onNode(hasClickAction()).requestFocus()
 
-        assertThat(markerColour()).isEqualTo(colours.onPrimaryContainer)
+        compose.onNodeWithTag("elsewhere").requestFocus()
+
+        assertThat(colourOf("The one with the badge")).isEqualTo(SetteeColors.QuietText)
     }
 
     @Test
-    fun `the season and episode marker stays the accent colour on an unfocused row`() {
-        show(WatchStatus.Unwatched)
-
-        assertThat(markerColour()).isEqualTo(colours.primary)
-    }
-
-    @Test
-    fun `the season and episode marker goes back to the accent colour when focus moves to the next episode`() {
-        compose.setTvContent {
-            colours = MaterialTheme.colorScheme
-            Column {
-                EpisodeRow(episode, WatchStatus.Unwatched, seriesArtUrl = null, onPlay = {})
-                val next = episode.copy(id = 8, episodeNumber = 4)
-                EpisodeRow(next, WatchStatus.Unwatched, seriesArtUrl = null, onPlay = {})
-            }
-        }
-        compose.onNodeWithText("S1E3").requestFocus()
-
-        compose.onNodeWithText("S1E4").requestFocus()
-
-        compose.onNodeWithText("S1E3").assertIsNotFocused()
-        assertThat(markerColour("S1E3")).isEqualTo(colours.primary)
-        assertThat(markerColour("S1E4")).isEqualTo(colours.onPrimaryContainer)
-    }
-
-    @Test
-    fun `an unfocused Watched episode's thumbnail is half as bright as an Unwatched one's`() {
-        val status = showChangeable(WatchStatus.Unwatched)
-        val fullStrength = thumbnailImagePixel()
-
-        status.value = WatchStatus.Watched
-
-        assertHalfAsBright(thumbnailImagePixel(), fullStrength)
-    }
-
-    // Against a focused Unwatched row, not an unfocused one: the focus ripple tints the whole row.
-    @Test
-    fun `a focused Watched episode's thumbnail is at full strength`() {
-        val status = showChangeable(WatchStatus.Unwatched)
-        compose.onNode(hasClickAction()).requestFocus()
-        val fullStrength = thumbnailImagePixel()
-
-        status.value = WatchStatus.Watched
-
-        assertThat(thumbnailImagePixel()).isEqualTo(fullStrength)
-        captureScreen("episode_row_watched_focused")
-    }
-
-    @Test
-    fun `an In Progress episode's thumbnail is never dimmed`() {
-        val inProgress = WatchStatus.InProgress(progress = 0.425f, remainingMillis = 23 * 60_000L)
-        val status = showChangeable(WatchStatus.Unwatched)
-        val unfocused = thumbnailImagePixel()
-
-        status.value = inProgress
-        assertThat(thumbnailImagePixel()).isEqualTo(unfocused)
+    fun `marking a Watched episode unwatched brings its title back to full colour`() {
+        val status = show(WatchStatus.Watched)
 
         status.value = WatchStatus.Unwatched
-        compose.onNode(hasClickAction()).requestFocus()
-        val focused = thumbnailImagePixel()
+        compose.waitForIdle()
 
-        status.value = inProgress
-        assertThat(thumbnailImagePixel()).isEqualTo(focused)
+        assertThat(colourOf("The one with the badge")).isEqualTo(SetteeColors.Text)
     }
 
-    @Test
-    fun `a Watched episode on the series artwork is dimmed on top of the artwork's own scrim`() {
-        val status = showChangeable(WatchStatus.Unwatched, episode.copy(stillUrl = null))
-        val undimmed = thumbnailImagePixel()
-
-        status.value = WatchStatus.Watched
-
-        assertHalfAsBright(thumbnailImagePixel(), undimmed)
-        captureScreen("episode_row_watched_series_artwork")
-    }
-
-    @Test
-    fun `a focused Watched episode on the series artwork isn't dimmed`() {
-        val status = showChangeable(WatchStatus.Unwatched, episode.copy(stillUrl = null))
-        compose.onNode(hasClickAction()).requestFocus()
-        val undimmed = thumbnailImagePixel()
-
-        status.value = WatchStatus.Watched
-
-        assertThat(thumbnailImagePixel()).isEqualTo(undimmed)
-    }
-
-    @Test
-    fun `marking a Watched episode unwatched brings its thumbnail back to full strength`() {
-        val status = showChangeable(WatchStatus.Watched)
-        val dimmed = thumbnailImagePixel()
-
-        status.value = WatchStatus.Unwatched
-
-        assertHalfAsBright(dimmed, thumbnailImagePixel())
-    }
-
-    @Test
-    fun `the badge and episode number stay bright over a dimmed thumbnail`() {
-        showChangeable(WatchStatus.Watched, episode.copy(stillUrl = null))
-
-        assertThat(brightestChannel(hasText("Watched"))).isAtLeast(WHITE_TEXT)
-        assertThat(brightestChannel(hasText("3"))).isAtLeast(WHITE_TEXT)
-    }
-
-    // Moves focus to a second item, as the D-pad does: with nothing else to focus, clearFocus hands it back.
-    @Test
-    fun `a Watched episode dims again when it loses focus`() {
-        val status = showChangeable(WatchStatus.Unwatched) {
-            Box(Modifier.testTag("next").size(1.dp).focusable())
-        }
-        val fullStrength = thumbnailImagePixel()
-
-        status.value = WatchStatus.Watched
-        compose.onNode(hasClickAction()).requestFocus()
-        compose.onNode(hasClickAction()).assertIsFocused()
-        compose.onNodeWithTag("next").requestFocus()
-
-        assertHalfAsBright(thumbnailImagePixel(), fullStrength)
-    }
-
-    @Test
-    fun `a Watched episode whose still fails to load is dimmed on the series artwork`() {
-        val brokenStill = "https://example.com/broken.jpg"
-        artwork.failingUrls += brokenStill
-        val status = showChangeable(WatchStatus.Unwatched, episode.copy(stillUrl = brokenStill))
-        val undimmed = thumbnailImagePixel()
-
-        status.value = WatchStatus.Watched
-
-        assertHalfAsBright(thumbnailImagePixel(), undimmed)
-        assertThat(brightestChannel(hasText("3"))).isAtLeast(WHITE_TEXT)
-    }
-
-    private fun markerColour(marker: String = "S1E3"): Color {
+    private fun colourOf(text: String): Color {
         val layouts = mutableListOf<TextLayoutResult>()
-        compose.onNodeWithText(marker, useUnmergedTree = true)
+        compose.onNodeWithText(text, useUnmergedTree = true)
             .performSemanticsAction(SemanticsActions.GetTextLayoutResult) { it(layouts) }
         return layouts.single().layoutInput.style.color
     }
 
-    private fun showChangeable(
-        initial: WatchStatus,
-        ep: Episode = episode,
-        below: @Composable () -> Unit = {},
-    ): MutableState<WatchStatus> {
-        val status = mutableStateOf(initial)
-        compose.setTvContent {
-            colours = MaterialTheme.colorScheme
-            Column {
-                EpisodeRow(ep, status.value, seriesArtUrl = "https://example.com/poster.jpg", onPlay = {})
-                below()
-            }
-        }
-        compose.waitUntil { artwork.hasLoaded }
-        return status
-    }
-
-    // Left of the episode number, below the badge and above the progress bar: only image and scrims.
-    private fun thumbnailImagePixel(): Color {
-        val image = compose.onNode(hasContentDescription("Thumbnail for episode 3"), useUnmergedTree = true)
-            .captureToImage()
-            .toPixelMap()
-        return image[image.width / 4, image.height * 3 / 4]
-    }
-
-    // The brightest pixel is the inside of the glyphs; their edges and the background are all dimmer.
-    private fun brightestChannel(text: SemanticsMatcher): Float {
-        val image = compose.onNode(text, useUnmergedTree = true).captureToImage().toPixelMap()
-        return (0 until image.width).maxOf { x ->
-            (0 until image.height).maxOf { y ->
-                val pixel = image[x, y]
-                maxOf(pixel.red, pixel.green, pixel.blue)
-            }
-        }
-    }
-
-    private fun assertHalfAsBright(actual: Color, fullStrength: Color) {
-        assertThat(actual.red).isWithin(PIXEL_TOLERANCE).of(fullStrength.red / 2)
-        assertThat(actual.green).isWithin(PIXEL_TOLERANCE).of(fullStrength.green / 2)
-        assertThat(actual.blue).isWithin(PIXEL_TOLERANCE).of(fullStrength.blue / 2)
-    }
-
     private companion object {
-        const val PIXEL_TOLERANCE = 0.01f
-
-        // Under the 50% scrim, white text couldn't get past about 0.5.
-        const val WHITE_TEXT = 0.9f
+        const val BACKDROP = "https://example.com/backdrop.jpg"
+        const val POSTER = "https://example.com/poster.jpg"
     }
 }

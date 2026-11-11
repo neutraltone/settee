@@ -90,7 +90,6 @@ import app.opentv.ui.settings.StremioAddonsScreen
 import app.opentv.ui.settings.SyncScreen
 import app.opentv.ui.settings.WebManagerScreen
 import app.opentv.ui.vod.MovieDetailScreen
-import app.opentv.ui.vod.PersonScreen
 import app.opentv.ui.vod.SeriesDetailScreen
 import app.opentv.ui.vod.VodPlayerScreen
 import app.opentv.update.UpdateGate
@@ -215,10 +214,6 @@ object Routes {
     const val MOVIE_DETAIL = "movie/{movieId}"
     const val EDIT_SOURCE = "edit-source/{sourceId}"
 
-    // A person's name goes in a query arg, URL-encoded, so spaces and punctuation survive the round
-    // trip — the same inline-encode/decode approach as the VOD player below.
-    const val PERSON = "person?name={name}"
-
     // Only the key: the player asks PlaybackSources for the stream, so no URL (an Xtream one holds
     // the account password), title or user agent sits in the back stack. An add-on's stream isn't in
     // the catalogue, so its URL is the one thing carried besides. Whether to start at 0 can't be
@@ -229,7 +224,6 @@ object Routes {
     fun seriesDetail(seriesId: Long) = "series/$seriesId"
     fun movieDetail(movieId: Long) = "movie/$movieId"
     fun editSource(sourceId: Long) = "edit-source/$sourceId"
-    fun person(name: String) = "person?name=${java.net.URLEncoder.encode(name, "UTF-8")}"
     fun vodPlayer(key: MediaKey, fromStart: Boolean = false): String {
         fun e(v: String) = java.net.URLEncoder.encode(v, "UTF-8")
         val addon = (key as? MediaKey.AddonStream)?.url.orEmpty()
@@ -491,8 +485,6 @@ private fun OpenTvApp(isTelevision: Boolean, launchedToPlay: Boolean) {
                         seriesId = seriesId,
                         viewModel = vodViewModel,
                         onPlayEpisode = { key -> navController.navigate(Routes.vodPlayer(key)) },
-                        onOpenSeries = { series -> navController.navigate(Routes.seriesDetail(series.id)) },
-                        onOpenPerson = { name -> navController.navigate(Routes.person(name)) },
                     )
                 }
 
@@ -504,19 +496,6 @@ private fun OpenTvApp(isTelevision: Boolean, launchedToPlay: Boolean) {
                         onPlay = { movie -> navController.navigate(Routes.vodPlayer(MediaKey.Movie(movie.id))) },
                         onPlayAddonStream = { key -> navController.navigate(Routes.vodPlayer(key)) },
                         onOpenMovie = { movie -> navController.navigate(Routes.movieDetail(movie.id)) },
-                        onOpenPerson = { name -> navController.navigate(Routes.person(name)) },
-                    )
-                }
-
-                composable(Routes.PERSON) { entry ->
-                    val name = entry.arguments?.getString("name")
-                        ?.let { java.net.URLDecoder.decode(it, "UTF-8") }.orEmpty()
-                    PersonScreen(
-                        name = name,
-                        viewModel = vodViewModel,
-                        onOpenMovie = { movie -> navController.navigate(Routes.movieDetail(movie.id)) },
-                        onOpenSeries = { series -> navController.navigate(Routes.seriesDetail(series.id)) },
-                        onBack = { navController.popBackStack() },
                     )
                 }
 

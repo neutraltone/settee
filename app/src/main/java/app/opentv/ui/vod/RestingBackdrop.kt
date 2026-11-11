@@ -114,10 +114,11 @@ private const val ART_FADE_MILLIS = 200
 private val FACTS_GAP = 10.dp
 
 /** A title's year, genres and, for a film, running time. */
+@Composable
 private fun factsOf(backdrop: Backdrop): List<String> = listOfNotNull(
     backdrop.year?.toString(),
     backdrop.genres.takeIf { it.isNotEmpty() }?.joinToString(", "),
-    backdrop.runtimeSeconds?.let(::formatRuntime),
+    backdrop.runtimeSeconds?.let { runtimeText(it) },
 )
 
 /**
