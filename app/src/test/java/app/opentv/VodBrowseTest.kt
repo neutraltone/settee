@@ -6,6 +6,7 @@
 package app.opentv
 
 import android.app.Application
+import android.content.pm.PackageManager
 import android.view.KeyEvent
 import android.view.View
 import androidx.activity.ComponentActivity
@@ -50,6 +51,7 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
@@ -241,6 +243,8 @@ class VodBrowseTest {
 
     @Test
     fun `Down moves the next row to the top, with nothing of the row above left showing under the backdrop`() {
+        // As on a Fire TV, where Compose otherwise keeps a highlighted item a third of the way down.
+        shadowOf(compose.activity.packageManager).setSystemFeature(PackageManager.FEATURE_LEANBACK, true)
         setMovies()
         pressOkOnMoviesInTheRail()
 

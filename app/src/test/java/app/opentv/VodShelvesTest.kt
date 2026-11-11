@@ -15,6 +15,7 @@ import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.test.requestFocus
@@ -376,29 +377,98 @@ class VodShelvesTest {
     }
 
     @Test
-    fun `with Recommended still being worked out, Down past its placeholder leaves nothing above the row showing`() {
+    fun `Down past Recommended's placeholder leaves nothing above the row showing, even once it lands`() {
+        var recommended by mutableStateOf(emptyList<Movie>())
+        var recommending by mutableStateOf(true)
         compose.setTvContent {
             ScreenFrame {
                 MovieShelves(
                     resume = emptyList(),
                     favourites = listOf(movie(1, "Heat"), movie(2, "Ronin")),
-                    recommended = emptyList(),
+                    recommended = recommended,
                     recentlyAdded = listOf(movie(3, "Alien"), movie(4, "Brazil")),
                     genreRows = listOf(GenreGroup("Comedy", listOf(movie(5, "Airplane")))),
                     onResume = {},
                     onOpenMovie = {},
-                    recommending = true,
+                    recommending = recommending,
                 )
             }
         }
         compose.onNodeWithText("Heat").requestFocus()
-
         compose.onNodeWithText("Heat").performKeyInput { pressKey(Key.DirectionDown) }
+        compose.mainClock.advanceTimeBy(1_000)
+        compose.waitForIdle()
+        assertNothingAbove("Recently added")
+
+        recommended = listOf(movie(6, "Casino"), movie(7, "Fargo"))
+        recommending = false
         compose.mainClock.advanceTimeBy(1_000)
         compose.waitForIdle()
 
         compose.onNodeWithText("Alien").assertIsFocused()
-        val rowTop = compose.onNodeWithText("Recently added").fetchSemanticsNode().boundsInRoot.top
+        assertNothingAbove("Recently added")
+    }
+
+    @Test
+    fun `with no Favourites, the row under Recommended's placeholder stays at the top once it lands`() {
+        var recommended by mutableStateOf(emptyList<Movie>())
+        var recommending by mutableStateOf(true)
+        compose.setTvContent {
+            ScreenFrame {
+                MovieShelves(
+                    resume = emptyList(),
+                    favourites = emptyList(),
+                    recommended = recommended,
+                    recentlyAdded = listOf(movie(3, "Alien"), movie(4, "Brazil")),
+                    genreRows = listOf(GenreGroup("Comedy", listOf(movie(5, "Airplane")))),
+                    onResume = {},
+                    onOpenMovie = {},
+                    recommending = recommending,
+                )
+            }
+        }
+        compose.onNodeWithText("Alien").requestFocus()
+        compose.mainClock.advanceTimeBy(1_000)
+        compose.waitForIdle()
+        assertNothingAbove("Recently added")
+
+        recommended = listOf(movie(6, "Casino"), movie(7, "Fargo"))
+        recommending = false
+        compose.mainClock.advanceTimeBy(1_000)
+        compose.waitForIdle()
+
+        compose.onNodeWithText("Alien").assertIsFocused()
+        assertNothingAbove("Recently added")
+    }
+
+    @Test
+    fun `Down to the last row brings it to the top, even when it started off the screen`() {
+        compose.setTvContent {
+            ScreenFrame {
+                MovieShelves(
+                    resume = emptyList(),
+                    favourites = listOf(movie(1, "Heat")),
+                    recommended = listOf(movie(2, "Ronin")),
+                    recentlyAdded = listOf(movie(3, "Alien")),
+                    genreRows = listOf(GenreGroup("Comedy", listOf(movie(5, "Airplane")))),
+                    onResume = {},
+                    onOpenMovie = {},
+                )
+            }
+        }
+        compose.onNodeWithText("Heat").requestFocus()
+        repeat(3) {
+            compose.onRoot().performKeyInput { pressKey(Key.DirectionDown) }
+            compose.mainClock.advanceTimeBy(1_000)
+            compose.waitForIdle()
+        }
+
+        compose.onNodeWithText("Airplane").assertIsFocused()
+        assertNothingAbove("Comedy")
+    }
+
+    private fun assertNothingAbove(row: String) {
+        val rowTop = compose.onNodeWithText(row).fetchSemanticsNode().boundsInRoot.top
         val above = compose.onAllNodes(hasText("", substring = true)).fetchSemanticsNodes()
             .map { it.boundsInRoot }
             .filter { it.height > 0f && it.top < rowTop }

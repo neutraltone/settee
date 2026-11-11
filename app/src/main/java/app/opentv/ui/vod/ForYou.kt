@@ -75,11 +75,10 @@ internal fun <T> ScreenFrameScope.ForYou(
     val sideways = LocalBringIntoViewSpec.current
     val titles = rememberTextMeasurer()
     val density = LocalDensity.current
-    val toTheTop = remember(density) {
-        val room = titles.measure("Ag", SetteeType.Section, maxLines = 1).size.height +
-            with(density) { SHELF_LIFT_ROOM.toPx() }
-        RowToTheTop(room)
+    val coverTop = remember(density) {
+        titles.measure("Ag", SetteeType.Section, maxLines = 1).size.height + with(density) { SHELF_LIFT_ROOM.toPx() }
     }
+    val toTheTop = remember(coverTop) { RowToTheTop(coverTop) }
 
     @Composable
     fun RowAtTop(index: Int, modifier: Modifier = Modifier, content: @Composable () -> Unit) =
@@ -87,14 +86,13 @@ internal fun <T> ScreenFrameScope.ForYou(
             Box(modifier.onFocusChanged { if (it.hasFocus) atTheTop = index == 0 }) { content() }
         }
 
-    // Room under the last row for it to come to the top too, rather than stopping at the bottom
-    // with the row above it part-shown.
-    val roomUnderLast by remember(column) {
-        derivedStateOf {
-            val info = column.layoutInfo
-            val last = info.visibleItemsInfo.lastOrNull()?.takeIf { it.index == info.totalItemsCount - 1 }
-            (info.viewportSize.height - (last?.size ?: info.viewportSize.height)).coerceAtLeast(0)
-        }
+    // Room under the last row for it to come to the top too, rather than the list stopping at its
+    // end with the row above part-shown. Always there, sized for a row of covers: worked out from
+    // the last row once it was on screen, it came too late for the press that brought it on, which
+    // stopped short on a Stick.
+    val rowHeight = coverTop + with(density) { (ArtCardSize.Portrait.height + SHELF_LIFT_ROOM).toPx() }
+    val roomUnderLast by remember(column, rowHeight) {
+        derivedStateOf { (column.layoutInfo.viewportSize.height - rowHeight).coerceAtLeast(0f) }
     }
     CompositionLocalProvider(LocalBringIntoViewSpec provides toTheTop) {
         LazyColumn(
