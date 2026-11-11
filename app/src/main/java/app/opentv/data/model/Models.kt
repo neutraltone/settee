@@ -306,9 +306,9 @@ data class Movie(
     /** Director(s), provider-formatted. Movies only. */
     val director: String? = null,
     /**
-     * The day it was released, as UTC epoch millis at midnight, for Home's Recently Released row.
-     * From the provider, else TMDB, found on detail open or after a sync for the most recently added
-     * movies (see MovieReleaseDates). Null when only a year is known (see [year]).
+     * The day it was released, as UTC epoch millis at midnight, when the provider's list or details
+     * (or TMDB, on a detail open) happen to carry it. Nothing shows it since Home dropped its
+     * Recently Released row, so nothing goes looking for it either. Null when only a year is known.
      */
     val releaseDate: Long? = null,
 )
@@ -345,9 +345,9 @@ data class Series(
     /** TMDB id, stored only — resolved/used by a later agent. Coerced to String (panels vary). */
     val tmdbId: String? = null,
     /**
-     * When its newest episode aired (UTC epoch millis at midnight), so a long-running show with an
-     * episode out yesterday counts as recently released. Filled in the background after a sync for
-     * the most recently updated series only (see LatestAirDates); null for the rest.
+     * When its newest episode aired (UTC epoch millis at midnight). Was looked up for Home's Recently
+     * Released row, which is gone: nothing fills it any more, and a sync clears what's left. The column
+     * stays only to avoid a schema bump; drop it with the next one.
      */
     val latestAirDate: Long? = null,
 )

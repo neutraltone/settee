@@ -20,7 +20,7 @@ import app.opentv.data.remote.XtreamApi
 // Fresh rows carry no local id, and an upsert without one hits the unique (source, provider id) index
 // and then updates nothing, so a title's last_modified would never move after its first sync.
 // Matching each to the row it replaces fixes that, keeps the local id that resume points hang off,
-// and keeps what detail opens and the air-date step filled in. The rows are looked up a batch at a
+// and keeps what detail opens filled in. The rows are looked up a batch at a
 // time too, since loading every stored title to match against costs as much memory as the list.
 
 /** Saves [list] as [sourceId]'s movies, returning how many there were. */
@@ -29,7 +29,7 @@ internal suspend fun MovieDao.save(sourceId: Long, list: XtreamApi.CatalogueList
     inTransaction {
         list.forEachBatch { batch ->
             val stored = byProviderIds(sourceId, batch.map { it.streamId }).associateBy { it.streamId }
-            upsertKeepingDates(sourceId, batch.map { it.over(stored[it.streamId]) })
+            upsertAll(batch.map { it.over(stored[it.streamId]) })
             saved += batch.size
         }
     }
@@ -90,6 +90,5 @@ internal fun Series.over(old: Series?): Series = if (old == null) {
         cast = cast ?: old.cast,
         genre = genre ?: old.genre,
         tmdbId = tmdbId ?: old.tmdbId,
-        latestAirDate = old.latestAirDate,
     )
 }

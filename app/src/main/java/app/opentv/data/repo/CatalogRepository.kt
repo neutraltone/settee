@@ -35,8 +35,6 @@ import app.opentv.data.remote.XtreamApi
 import app.opentv.player.DecoderList
 import app.opentv.player.playsQualityRanked
 import app.opentv.sync.SyncHiddenChannel
-import java.time.Instant
-import java.time.ZoneOffset
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -192,7 +190,7 @@ class CatalogRepository(
     private val settings: AppSettings,
 ) {
 
-    /** Where work that outlives a sync runs, such as [LatestAirDates], [MovieReleaseDates] and [MovieGenres]. */
+    /** Where work that outlives a sync runs, such as [MovieGenres]. */
     private val background = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     /**
@@ -204,29 +202,10 @@ class CatalogRepository(
     /** TMDB back-fill for VOD detail pages, gated on a user-supplied key. See [TmdbClient]. */
     private val tmdb = TmdbClient(http, settings)
 
-    /** Movies [movieDetail] has already looked for a release date this run. */
-    private val datesSought: MutableSet<Long> = java.util.concurrent.ConcurrentHashMap.newKeySet()
-
-    /** Sources with a [dateInBackground] job running. */
-    private val sourcesBeingDated: MutableSet<Long> = java.util.concurrent.ConcurrentHashMap.newKeySet()
-
-    private val latestAirDates = LatestAirDates(seriesDao, api) { series ->
-        if (tmdb.isConfigured()) {
-            tmdb.seriesMeta(VodTitleCleaner.clean(series.name), series.year, series.tmdbId)?.lastAirDate
-        } else {
-            null
-        }
-    }
+    /** Sources with a [genresInBackground] job running. */
+    private val sourcesGettingGenres: MutableSet<Long> = java.util.concurrent.ConcurrentHashMap.newKeySet()
 
     private val movieGenres = MovieGenres(movieDao, api)
-
-    private val movieReleaseDates = MovieReleaseDates(movieDao, api) { movie ->
-        if (tmdb.isConfigured()) {
-            tmdb.movieMeta(VodTitleCleaner.clean(movie.name), movie.year, movie.tmdbId)?.releaseDate
-        } else {
-            null
-        }
-    }
 
     sealed interface SyncResult {
         data class Success(val channelCount: Int, val movieCount: Int, val seriesCount: Int) : SyncResult
@@ -336,27 +315,6 @@ class CatalogRepository(
 
     /** "Recently Added" series, newest first. Reactive. */
     fun recentlyAddedSeries(limit: Int = 30): Flow<List<Series>> = seriesDao.observeRecentlyAdded(limit)
-
-    /**
-     * Home's "Recently Released" movies, newest first, out in the 12 months up to [nowMillis].
-     * Reactive.
-     */
-    fun recentlyReleasedMovies(nowMillis: Long, limit: Int = 30): Flow<List<Movie>> =
-        movieDao.observeRecentlyReleased(releasedSince(nowMillis), nowMillis, limit)
-
-    /** Home's "Recently Released" shows, by their newest episode (see [LatestAirDates]). Reactive. */
-    fun recentlyReleasedSeries(nowMillis: Long, limit: Int = 30): Flow<List<Series>> =
-        seriesDao.observeRecentlyReleased(releasedSince(nowMillis), nowMillis, limit)
-
-    /**
-     * How far back Home's Recently Released rows go, so an old film isn't "recent" on a sparse
-     * catalogue: 12 calendar months, in UTC like the dates themselves.
-     */
-    private fun releasedSince(nowMillis: Long): Long = Instant.ofEpochMilli(nowMillis)
-        .atZone(ZoneOffset.UTC)
-        .minusMonths(RELEASED_WITHIN_MONTHS)
-        .toInstant()
-        .toEpochMilli()
 
     /** Every movie, newest first — for a caller that wants to build its own groupings. */
     suspend fun allMovies(): List<Movie> = withContext(Dispatchers.IO) { movieDao.all() }
@@ -539,12 +497,9 @@ class CatalogRepository(
         val movie = movieDao.byId(id) ?: return@withContext null
         var result = movie
         val source = sourceDao.byId(movie.sourceId)
-        // The list rarely carries a full release date, and Recently Released needs one. Most movies
-        // have one nowhere, though, so each is asked about once per run, not on every open.
-        val seekDate = movie.releaseDate == null && datesSought.add(movie.id)
 
-        // 1) Provider back-fill from get_vod_info, for a still-bare or undated row on an Xtream source.
-        if ((!result.isEnriched || seekDate) && source?.kind == SourceKind.XTREAM) {
+        // 1) Provider back-fill from get_vod_info, for a still-bare row on an Xtream source.
+        if (!result.isEnriched && source?.kind == SourceKind.XTREAM) {
             val info = runCatching { api.movieInfo(source, result.streamId) }.getOrNull()
             if (info != null) {
                 result = result.copy(
@@ -564,12 +519,10 @@ class CatalogRepository(
 
         // 2) TMDB fallback for whatever the provider still left blank — only when the user set a
         //    key, and only while a headline visual field is missing (so it stops re-fetching once
-        //    filled). This is the "match Plex" back-fill for posters, backdrops, synopsis and cast,
-        //    and the release date when the provider gave none. Only here, on open, apart from
-        //    [MovieReleaseDates], which asks about at most 50 titles per sync for their date: a bulk
-        //    lookup across the catalogue would spend the user's TMDB quota on titles nobody looks at.
-        val wantsTmdb = result.lacksTmdbFields || seekDate && result.releaseDate == null
-        if (tmdb.isConfigured() && wantsTmdb) {
+        //    filled). This is the "match Plex" back-fill for posters, backdrops, synopsis and cast.
+        //    Only here, on open: a bulk lookup across the catalogue would spend the user's TMDB quota
+        //    on titles nobody looks at.
+        if (tmdb.isConfigured() && result.lacksTmdbFields) {
             val meta = runCatching {
                 tmdb.movieMeta(VodTitleCleaner.clean(result.name), result.year, result.tmdbId)
             }.getOrNull()
@@ -589,7 +542,7 @@ class CatalogRepository(
             }
         }
 
-        if (result != movie) movieDao.upsertKeepingDates(result.sourceId, listOf(result))
+        if (result != movie) movieDao.upsertAll(listOf(result))
         result
     }
 
@@ -852,7 +805,7 @@ class CatalogRepository(
         var series = SavedSeries(0, emptyList())
         categories(seriesOn) { api.seriesCategories(source) }
         attempt(seriesOn, Unit) { series = api.series(source).use { seriesDao.save(source.id, it) } }
-        dateInBackground(source, movies = movies > 0, series = series.count > 0)
+        if (movies > 0) genresInBackground(source)
         return VodFetch(
             series.moved,
             // Nothing at all may be a struggling panel's empty reply, so it isn't worth trusting for
@@ -862,31 +815,21 @@ class CatalogRepository(
     }
 
     /**
-     * Fifty calls each (two hundred for films' genres) would hold a sync up for a while; the catalogue
-     * is saved by now, so the titles are dated and films given genres afterwards, and the Recently
-     * Released and genre rows fill in as it goes. One job, one lookup after the other, so a struggling
-     * panel doesn't get hundreds of calls at once. For the same reason a sync during a source's job
-     * adds no second one; what it saved waits for the next sync.
+     * Two hundred calls would hold a sync up for a while; the catalogue is saved by now, so films are
+     * given genres afterwards, and the genre rows fill in as it goes. One job, one lookup after the
+     * other, so a struggling panel doesn't get hundreds of calls at once. For the same reason a sync
+     * during a source's job adds no second one; what it saved waits for the next sync.
      */
-    private fun dateInBackground(source: Source, movies: Boolean, series: Boolean) {
-        if (!movies && !series) return
-        if (!sourcesBeingDated.add(source.id)) return
+    private fun genresInBackground(source: Source) {
+        if (!sourcesGettingGenres.add(source.id)) return
         background.launch {
             try {
-                var answering = true
-                if (movies) dateOrLog(source, "Release dates") { answering = movieReleaseDates.refresh(source) }
-                // After the dates, whose answers carry a genre too, so those films cost no second call;
-                // and not at all once the panel has stopped answering, which would only cost more waits.
-                if (movies && answering) dateOrLog(source, "Movie genres") { movieGenres.refresh(source) }
-                if (series) dateOrLog(source, "Air dates") { latestAirDates.refresh(source) }
+                runCatching { movieGenres.refresh(source) }
+                    .onFailure { Log.w(TAG, "Movie genres failed for source ${source.id}", it) }
             } finally {
-                sourcesBeingDated.remove(source.id)
+                sourcesGettingGenres.remove(source.id)
             }
         }
-    }
-
-    private suspend fun dateOrLog(source: Source, what: String, lookup: suspend () -> Unit) {
-        runCatching { lookup() }.onFailure { Log.w(TAG, "$what failed for source ${source.id}", it) }
     }
 
     private suspend fun syncM3u(source: Source, nowUtcMillis: Long): SyncResult {
@@ -1066,8 +1009,6 @@ class CatalogRepository(
          * and runs [renormalizeAll] once when it moves.
          */
         const val NORMALIZER_VERSION = 3
-
-        private const val RELEASED_WITHIN_MONTHS = 12L
     }
 }
 
