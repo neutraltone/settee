@@ -98,13 +98,19 @@ class TestCatalog(context: Context, private val clock: () -> Long = { 0L }) {
     /** Closes the database once the refreshes [awaitRefresh] waits for are done with it. */
     fun close() = runBlocking {
         awaitRefresh()
+        catalog.awaitBackground()
         sharing.cancel()
         db.close()
     }
 
-    /** Saves [PANEL_SOURCE] and syncs its movies and shows from the panel's current replies. */
+    /**
+     * Saves [PANEL_SOURCE] and syncs its movies and shows from the panel's current replies, then
+     * waits for the films' genres the sync looks up afterwards, so what a test asks the panel next
+     * isn't mixed up with those lookups.
+     */
     suspend fun syncVod() {
         db.sources().insert(PANEL_SOURCE)
         catalog.detectNewEpisodes(PANEL_SOURCE, catalog.fetchVod(PANEL_SOURCE, nowUtcMillis = 0).updated, 0)
+        catalog.awaitBackground()
     }
 }
