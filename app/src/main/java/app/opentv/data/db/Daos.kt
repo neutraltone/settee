@@ -370,6 +370,9 @@ interface CategoryDao {
 /** Projection for [CategoryDao.namesFor]. */
 data class CategoryName(val id: String, val name: String)
 
+/** What More like this ranks a film by, without the rest of its row. */
+data class MoviePick(val id: Long, val sourceId: Long, val genre: String?, val rating: Double?, val addedMillis: Long)
+
 /** Projection for [ChannelDao.channelCountsByCategory]. */
 data class CategoryChannelCount(val sourceId: Long, val categoryId: String, val count: Int)
 
@@ -583,31 +586,30 @@ interface MovieDao {
     suspend fun byProviderIds(sourceId: Long, streamIds: List<String>): List<Movie>
 
     /**
-     * Films whose genres include [genre], for a film's More like this: the film's own provider first,
-     * then best-rated. A substring match over the provider's genre string, so the rows are picked in
-     * SQL rather than every film being loaded to compare genre lists, which a big catalogue can't afford.
+     * The candidates for a film's More like this whose genre string contains [genre], as just what
+     * the ranking reads: a big provider's Drama is thousands of films, too many to load whole on a
+     * Fire TV Stick. A substring match, so [CatalogRepository.moreLikeThis] checks the genre is whole.
      */
     @Query(
         """
-        SELECT * FROM movies
+        SELECT id, sourceId, genre, rating, addedMillis FROM movies
         WHERE id != :excludeId AND genre LIKE '%' || :genre || '%'
-        ORDER BY sourceId = :sourceId DESC, rating IS NULL, rating DESC, addedMillis DESC
-        LIMIT :limit
         """,
     )
-    suspend fun sharingGenre(genre: String, sourceId: Long, excludeId: Long, limit: Int): List<Movie>
+    suspend fun picksSharingGenre(genre: String, excludeId: Long): List<MoviePick>
 
-    /** More like this for a film with no genre: others from its provider and category, best-rated first. */
+    /** More like this's candidates for a film with no genre: others from its provider and category. */
     @Query(
         """
-        SELECT * FROM movies
-        WHERE sourceId = :sourceId AND id != :excludeId
-          AND (:categoryId IS NULL OR categoryId = :categoryId)
-        ORDER BY rating IS NULL, rating DESC, addedMillis DESC
-        LIMIT :limit
+        SELECT id, sourceId, genre, rating, addedMillis FROM movies
+        WHERE sourceId = :sourceId AND id != :excludeId AND (:categoryId IS NULL OR categoryId = :categoryId)
         """,
     )
-    suspend fun sameCategory(sourceId: Long, categoryId: String?, excludeId: Long, limit: Int): List<Movie>
+    suspend fun picksInCategory(sourceId: Long, categoryId: String?, excludeId: Long): List<MoviePick>
+
+    /** At most a row's worth of films, in no particular order. */
+    @Query("SELECT * FROM movies WHERE id IN (:ids)")
+    suspend fun byIds(ids: List<Long>): List<Movie>
 
     @Upsert
     suspend fun upsertAll(movies: List<Movie>)

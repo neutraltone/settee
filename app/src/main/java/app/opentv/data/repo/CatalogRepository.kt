@@ -11,6 +11,7 @@ import app.opentv.data.db.CategoryDao
 import app.opentv.data.db.ChannelDao
 import app.opentv.data.db.EpisodeDao
 import app.opentv.data.db.MovieDao
+import app.opentv.data.db.MoviePick
 import app.opentv.data.db.SeriesDao
 import app.opentv.data.db.SourceDao
 import app.opentv.data.model.Category
@@ -523,18 +524,35 @@ class CatalogRepository(
         get() = backdropUrl != null || cast != null || genre != null
 
     /**
-     * A film's More like this: films sharing its first genre, the one its page shows, or with no
-     * genre, others from its category.
+     * A film's More like this, ranked by the rules For you uses ([score]), after two things that
+     * matter more for "like this": its own provider's films first, since another's may not play the
+     * same, then the films sharing the most of its genres. With no genre, others from its category.
      */
-    suspend fun moreLikeThis(movie: Movie, limit: Int = MORE_LIKE_THIS_LIMIT): List<Movie> =
-        withContext(Dispatchers.IO) {
-            val genre = splitGenres(movie.genre).firstOrNull()
-            if (genre == null) {
-                movieDao.sameCategory(movie.sourceId, movie.categoryId, movie.id, limit)
-            } else {
-                movieDao.sharingGenre(genre, movie.sourceId, movie.id, limit)
-            }
+    suspend fun moreLikeThis(
+        movie: Movie,
+        limit: Int = MORE_LIKE_THIS_LIMIT,
+        now: Long = System.currentTimeMillis(),
+    ): List<Movie> = withContext(Dispatchers.IO) {
+        val genres = splitGenres(movie.genre)
+        val candidates = if (genres.isEmpty()) {
+            movieDao.picksInCategory(movie.sourceId, movie.categoryId, movie.id)
+        } else {
+            genres.flatMap { movieDao.picksSharingGenre(it, movie.id) }.distinctBy { it.id }
         }
+        val ranking = Ranking(MoviePick::genre, MoviePick::rating, MoviePick::addedMillis, now)
+        val shared = candidates.associate { it.id to splitGenres(it.genre).count(genres::contains) }
+        val picked = candidates
+            .filter { genres.isEmpty() || shared.getValue(it.id) > 0 }
+            .sortedWith(
+                compareByDescending<MoviePick> { it.sourceId == movie.sourceId }
+                    .thenByDescending { shared.getValue(it.id) }
+                    .then(ranking.byScore),
+            )
+            .take(limit)
+            .map { it.id }
+        val byId = movieDao.byIds(picked).associateBy { it.id }
+        picked.mapNotNull(byId::get)
+    }
 
     /** The viewer hid or showed a channel, on the TV or the web manager; dated, so the change can travel. */
     suspend fun setChannelHidden(id: Long, hidden: Boolean, now: Long = System.currentTimeMillis()) =

@@ -96,4 +96,68 @@ class MoreLikeThisTest {
 
         assertThat(similar.map { it.name }).containsExactly("Same shelf, better", "Same shelf").inOrder()
     }
+
+    @Test
+    fun `a 10 out of 10 counts as average, since it's nearly always a handful of votes`() = runTest {
+        db.movies().upsertAll(
+            listOf(
+                movie("The Quiet Road", genre = "Drama"),
+                movie("Perfect Ten", genre = "Drama", rating = 10.0),
+                movie("Solid", genre = "Drama", rating = 7.5),
+                movie("Unrated", genre = "Drama"),
+            ),
+        )
+
+        val similar = test.catalog.moreLikeThis(stored("The Quiet Road"))
+
+        assertThat(similar.first().name).isEqualTo("Solid")
+    }
+
+    @Test
+    fun `a film the provider added lately gets a lift over an older, slightly better-rated one`() = runTest {
+        val now = 365 * 86_400_000L
+        db.movies().upsertAll(
+            listOf(
+                movie("The Quiet Road", genre = "Drama"),
+                movie("Older", genre = "Drama", rating = 7.5),
+                movie("Fresh", genre = "Drama", rating = 6.5).copy(addedMillis = now),
+            ),
+        )
+
+        val similar = test.catalog.moreLikeThis(stored("The Quiet Road"), now = now)
+
+        assertThat(similar.map { it.name }).containsExactly("Fresh", "Older").inOrder()
+    }
+
+    @Test
+    fun `a film sharing more of the film's genres comes before one sharing fewer`() = runTest {
+        db.movies().upsertAll(
+            listOf(
+                movie("The Quiet Road", genre = "Drama, Crime"),
+                movie("Just drama", genre = "Drama", rating = 8.0),
+                movie("Crime drama", genre = "Crime|Drama", rating = 6.0),
+                movie("Just crime", genre = "Crime", rating = 9.0),
+            ),
+        )
+
+        val similar = test.catalog.moreLikeThis(stored("The Quiet Road"))
+
+        assertThat(similar.first().name).isEqualTo("Crime drama")
+        assertThat(similar.map { it.name }).containsAtLeast("Just drama", "Just crime")
+    }
+
+    @Test
+    fun `a genre only matches whole, so Drama doesn't bring in Melodrama`() = runTest {
+        db.movies().upsertAll(
+            listOf(
+                movie("The Quiet Road", genre = "Drama"),
+                movie("Weepie", genre = "Melodrama", rating = 8.0),
+                movie("Long Night", genre = "Drama", rating = 6.0),
+            ),
+        )
+
+        val similar = test.catalog.moreLikeThis(stored("The Quiet Road"))
+
+        assertThat(similar.map { it.name }).containsExactly("Long Night")
+    }
 }

@@ -76,6 +76,9 @@ class MovieDetailContentTest {
 
     private var opened: Movie? = null
 
+    // Null while the row is still being worked out.
+    private val similarFilms = mutableStateOf<List<Movie>?>(emptyList())
+
     private fun similarFilm(id: Long, name: String) = film.copy(id = id, streamId = "m$id", name = name)
 
     private var findStreams: (suspend () -> List<StremioStream>) = { streams }
@@ -84,8 +87,9 @@ class MovieDetailContentTest {
         resumes: Boolean = false,
         status: CoverStatus? = null,
         addons: Boolean = false,
-        similar: List<Movie> = emptyList(),
+        similar: List<Movie>? = emptyList(),
     ) {
+        similarFilms.value = similar
         compose.setTvContent {
             MovieDetailContent(
                 movie = film,
@@ -93,7 +97,7 @@ class MovieDetailContentTest {
                 status = status,
                 favourite = favourite.value,
                 findAddonStreams = if (addons) findStreams else null,
-                similar = similar,
+                similar = similarFilms.value,
                 onOpenMovie = { opened = it },
                 onPlay = { plays++ },
                 onPlayAddonStream = { playedStream = it },
@@ -178,6 +182,27 @@ class MovieDetailContentTest {
         press(Key.DirectionUp)
 
         compose.onNodeWithText("Play").assertIsFocused()
+    }
+
+    @Test
+    fun `while films like this one load, the row holds its place, so nothing moves when they arrive`() {
+        show(similar = null)
+        val playTop = { compose.onNodeWithText("Play").fetchSemanticsNode().boundsInRoot.top }
+        val loadingTop = playTop()
+
+        compose.onNodeWithText("More like this").assertIsDisplayed()
+        captureScreen("movie_detail_more_like_this_loading")
+        press(Key.DirectionDown)
+        compose.onNodeWithText("Play").assertIsFocused()
+
+        similarFilms.value = listOf(similarFilm(8, "Harbour Lights"))
+        settle()
+        assertThat(playTop()).isEqualTo(loadingTop)
+
+        similarFilms.value = emptyList()
+        settle()
+        assertThat(playTop()).isEqualTo(loadingTop)
+        compose.onNodeWithText("More like this").assertDoesNotExist()
     }
 
     @Test

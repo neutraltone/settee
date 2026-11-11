@@ -84,7 +84,7 @@ fun MovieDetailScreen(
     viewModel: VodViewModel = viewModel(),
 ) {
     var movie by remember(movieId) { mutableStateOf<Movie?>(null) }
-    var similar by remember(movieId) { mutableStateOf(emptyList<Movie>()) }
+    var similar by remember(movieId) { mutableStateOf<List<Movie>?>(null) }
     var resumes by remember(movieId) { mutableStateOf(false) }
     val hasAddons by viewModel.hasAddons.collectAsState()
 
@@ -121,7 +121,7 @@ fun MovieDetailScreen(
 
 /**
  * A film's page once the film is known: the hero, and beneath it [similar] films as More like this,
- * whose covers call [onOpenMovie]. The main button resumes
+ * whose covers call [onOpenMovie]; [similar] is null while they're still being picked. The main button resumes
  * when [resumes], else plays. [findAddonStreams] is null unless add-ons are set up, and then adds an
  * Add-on sources button, last, whose picker plays the stream chosen. [favourite] is null until the
  * Profile's Favourites have loaded, and the toggle does nothing till then.
@@ -133,7 +133,7 @@ internal fun MovieDetailContent(
     status: CoverStatus?,
     favourite: Boolean?,
     findAddonStreams: (suspend () -> List<StremioStream>)?,
-    similar: List<Movie>,
+    similar: List<Movie>?,
     onOpenMovie: (Movie) -> Unit,
     onPlay: () -> Unit,
     onPlayAddonStream: (StremioStream) -> Unit,
@@ -154,8 +154,10 @@ internal fun MovieDetailContent(
     val page = rememberScrollState()
     ScreenFrame(backdrop = { HeroBackdrop(movie.backdropUrl, movie.posterUrl) }) {
         // The hero fills the screen but for the top of More like this, which shows there's more below.
+        // It leaves that room even before the row has loaded, and when there turns out to be none, so
+        // the hero never moves under the viewer.
         BoxWithConstraints(Modifier.fillMaxSize()) {
-            val heroHeight = if (similar.isEmpty()) maxHeight else maxHeight - ROW_PEEK
+            val heroHeight = maxHeight - ROW_PEEK
             Column(Modifier.fillMaxSize().verticalScroll(page)) {
                 Column(Modifier.fillMaxWidth().height(heroHeight), verticalArrangement = Arrangement.Bottom) {
                     MovieHero(movie, status)
@@ -187,7 +189,10 @@ internal fun MovieDetailContent(
                         }
                     }
                 }
-                if (similar.isNotEmpty()) {
+                if (similar == null) {
+                    Spacer(Modifier.height(SetteeSpace.RowGap))
+                    PlaceholderShelf(stringResource(R.string.vod_more_like_this))
+                } else if (similar.isNotEmpty()) {
                     Spacer(Modifier.height(SetteeSpace.RowGap))
                     MoreLikeThis(
                         similar,
