@@ -26,6 +26,7 @@ import app.opentv.data.model.SeriesRef
 import app.opentv.data.model.Source
 import app.opentv.data.model.SourceKind
 import app.opentv.data.model.StreamKind
+import app.opentv.data.model.personKey
 import app.opentv.data.model.ref
 import app.opentv.data.parser.ChannelNameNormalizer
 import app.opentv.data.parser.M3uParser
@@ -67,7 +68,7 @@ internal fun distinctByQuality(channels: List<app.opentv.data.model.Channel>): L
 @androidx.compose.runtime.Immutable
 data class GenreGroup<T>(val genre: String, val items: List<T>)
 
-/** A movie or a show, for the rows that mix them: Home's Favourites and Recently Added. */
+/** A movie or a show, for what mixes them: Home's Favourites and Recently Added, and a person's page. */
 sealed interface VodTitle {
     val name: String
 
@@ -396,6 +397,22 @@ class CatalogRepository(
             tallied = { it.ref in started && it.ref !in dismissed },
             leftOut = { it.ref in started || it.ref in dismissed },
         )
+    }
+
+    // ---- Related by person (Plex-style "click an actor / director") ----------------------------
+
+    /**
+     * Everything in the library featuring a person — the data behind the Person screen: movies they
+     * act in or directed (once each, though a film may credit them as both), then series they act
+     * in, each best-rated first. Matched on their [personKey], so only that person, however a
+     * provider spells the accents.
+     */
+    suspend fun titlesWithPerson(name: String, perKind: Int = 40): List<VodTitle> = withContext(Dispatchers.IO) {
+        val key = personKey(name)
+        if (key.isEmpty()) return@withContext emptyList()
+        val movies = movieDao.moviesWithPerson(key, perKind)
+        val series = seriesDao.seriesWithPerson(key, perKind)
+        movies.map(VodTitle::OfMovie) + series.map(VodTitle::OfSeries)
     }
 
     /**
@@ -761,6 +778,30 @@ class CatalogRepository(
      * source, one lookup after another, so a struggling panel doesn't get hundreds of calls at once;
      * asked again while it's running, it adds no second one.
      */
+    /**
+     * Files the credits of titles saved before credits were kept (database version 9), so they're on
+     * people's pages without the viewer adding their providers again. In the background at launch;
+     * once they're done, it's one quick query that finds nothing.
+     */
+    fun creditEarlierTitles() {
+        background.launch {
+            runCatching {
+                var after = 0L
+                while (true) {
+                    val titles = movieDao.uncredited(after, CREDIT_BATCH).ifEmpty { break }
+                    movieDao.inTransaction { movieDao.recreditChanged(emptyMap(), titles) }
+                    after = titles.last().id
+                }
+                after = 0L
+                while (true) {
+                    val titles = seriesDao.uncredited(after, CREDIT_BATCH).ifEmpty { break }
+                    seriesDao.inTransaction { seriesDao.recreditChanged(emptyMap(), titles) }
+                    after = titles.last().id
+                }
+            }.onFailure { Log.w(TAG, "Filing earlier titles' credits failed", it) }
+        }
+    }
+
     /** [fillGenresInBackground] for every provider that has films: Xtream's. */
     suspend fun fillEveryProvidersGenres() =
         enabledSources().filter { it.kind == SourceKind.XTREAM }.forEach(::fillGenresInBackground)
@@ -960,6 +1001,9 @@ class CatalogRepository(
 
     companion object {
         private const val TAG = "CatalogRepository"
+
+        /** Titles [creditEarlierTitles] files at a time, each batch one transaction. */
+        private const val CREDIT_BATCH = 500
         val SEPARATOR_CHARS = setOf('#', '*', '=', '~', '-', '_', '•', '█', '▓', '|')
 
         /**

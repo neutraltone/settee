@@ -97,6 +97,7 @@ class MovieGenres(
                     rating = info.rating,
                     year = info.year,
                     durationSeconds = info.durationSeconds,
+                    releaseDate = info.releaseDate,
                 )
             },
             save = { found -> movieDao.fillDetails(found.map { (_, details) -> details }) },

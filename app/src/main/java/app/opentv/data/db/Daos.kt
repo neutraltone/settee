@@ -19,6 +19,7 @@ import app.opentv.data.model.ChannelEpgMatch
 import app.opentv.data.model.ChannelHiddenChange
 import app.opentv.data.model.ChannelMatchInput
 import app.opentv.data.model.CoverRow
+import app.opentv.data.model.CreditedTitle
 import app.opentv.data.model.EpgChannelAlias
 import app.opentv.data.model.EpgFeed
 import app.opentv.data.model.Episode
@@ -26,6 +27,7 @@ import app.opentv.data.model.Favourite
 import app.opentv.data.model.HandMark
 import app.opentv.data.model.LivePlayback
 import app.opentv.data.model.Movie
+import app.opentv.data.model.MovieCredit
 import app.opentv.data.model.PlaybackPosition
 import app.opentv.data.model.Profile
 import app.opentv.data.model.ProfileSetting
@@ -35,11 +37,14 @@ import app.opentv.data.model.Recording
 import app.opentv.data.model.RecordingStatus
 import app.opentv.data.model.Reminder
 import app.opentv.data.model.Series
+import app.opentv.data.model.SeriesCredit
 import app.opentv.data.model.SeriesDismissal
 import app.opentv.data.model.SeriesRef
 import app.opentv.data.model.SeriesRule
 import app.opentv.data.model.Source
 import app.opentv.data.model.StreamKind
+import app.opentv.data.model.movieCredits
+import app.opentv.data.model.seriesCredits
 import app.opentv.sync.SyncHiddenChannel
 import kotlinx.coroutines.flow.Flow
 
@@ -543,7 +548,8 @@ interface MovieDao {
     /**
      * Fills whichever of a movie's details are still empty from what [MovieGenres] looked up, so a
      * film nobody has opened has its cast and director for a person's page. Never overwrites: opening
-     * the movie may have found better ones meanwhile.
+     * the movie may have found better ones meanwhile. Every field `CatalogRepository.movieDetail`
+     * takes from the provider, since a film this fills counts as enriched and opening it won't ask.
      */
     @Query(
         """
@@ -556,7 +562,8 @@ interface MovieDao {
             tmdbId = COALESCE(tmdbId, :tmdbId),
             rating = COALESCE(rating, :rating),
             year = COALESCE(year, :year),
-            durationSeconds = COALESCE(durationSeconds, :durationSeconds)
+            durationSeconds = COALESCE(durationSeconds, :durationSeconds),
+            releaseDate = COALESCE(releaseDate, :releaseDate)
         WHERE id = :id
         """,
     )
@@ -572,6 +579,7 @@ interface MovieDao {
         rating: Double?,
         year: Int?,
         durationSeconds: Int?,
+        releaseDate: Long?,
     )
 
     /**
@@ -580,6 +588,7 @@ interface MovieDao {
      */
     @Transaction
     suspend fun fillDetails(found: List<Movie>) {
+        val before = credited(found.map { it.id })
         found.forEach {
             fillDetails(
                 id = it.id,
@@ -592,8 +601,10 @@ interface MovieDao {
                 rating = it.rating,
                 year = it.year,
                 durationSeconds = it.durationSeconds,
+                releaseDate = it.releaseDate,
             )
         }
+        recreditChanged(before.associateBy { it.id }, credited(found.map { it.id }))
     }
 
     /** The [limit] movies a source most recently added whose genre was saved blank, for [MovieGenres]. */
@@ -612,6 +623,13 @@ interface MovieDao {
     suspend fun fillBlankGenres(genres: List<Pair<Long, String>>) {
         genres.forEach { (id, genre) -> fillBlankGenre(id, genre) }
     }
+
+    /**
+     * Movies that act or direct credit the person filed under [nameKey] (see `personKey`), best-rated
+     * first: a person's page. An index lookup on [MovieCredit.nameKey], whatever the catalogue's size.
+     */
+    @Query(MOVIES_WITH_PERSON)
+    suspend fun moviesWithPerson(nameKey: String, limit: Int): List<Movie>
 
     @Query("SELECT * FROM movies WHERE id = :id")
     suspend fun byId(id: Long): Movie?
@@ -657,8 +675,59 @@ interface MovieDao {
     @Query("SELECT * FROM movies WHERE id IN (:ids)")
     suspend fun byIds(ids: List<Long>): List<Movie>
 
+    /** Saves these rows as they are. Use [upsertAll], which keeps their credits in step. */
     @Upsert
-    suspend fun upsertAll(movies: List<Movie>)
+    suspend fun upsertRows(movies: List<Movie>): List<Long>
+
+    /**
+     * Saves these movies, rewriting the [MovieCredit]s of those whose cast or director changed. At
+     * most a catalogue batch (500) at a time: their ids are bound in one query.
+     */
+    @Transaction
+    suspend fun upsertAll(movies: List<Movie>) {
+        val before = credited(movies.map { it.id }.filter { it > 0 }).associateBy { it.id }
+        val rowIds = upsertRows(movies)
+        // A new row's id is its insert's; an update's comes back as -1, but it carried its id.
+        val after = movies.mapIndexedNotNull { i, movie ->
+            val id = if (movie.id > 0) movie.id else rowIds[i]
+            if (id > 0) CreditedTitle(id, movie.cast, movie.director) else null
+        }
+        recreditChanged(before, after)
+    }
+
+    /** Rewrites the credits of each of [after] whose cast or director isn't what [before] had. */
+    suspend fun recreditChanged(before: Map<Long, CreditedTitle>, after: List<CreditedTitle>) {
+        for (now in after) {
+            val was = before[now.id]
+            if (was?.cast == now.cast && was?.director == now.director) continue
+            deleteCredits(now.id)
+            insertCredits(movieCredits(now.id, now.cast, now.director))
+        }
+    }
+
+    @Query("SELECT id, `cast`, director FROM movies WHERE id IN (:ids)")
+    suspend fun credited(ids: List<Long>): List<CreditedTitle>
+
+    /**
+     * The next [limit] movies after [afterId] that credit someone but have no [MovieCredit]s: those
+     * saved before credits were kept. Ones whose names all fold to nothing come back each time, so
+     * callers page by id rather than asking until none are left.
+     */
+    @Query(
+        """
+        SELECT id, `cast`, director FROM movies
+        WHERE id > :afterId AND (`cast` != '' OR director != '')
+          AND id NOT IN (SELECT movieId FROM movie_credits)
+        ORDER BY id LIMIT :limit
+        """,
+    )
+    suspend fun uncredited(afterId: Long, limit: Int): List<CreditedTitle>
+
+    @Query("DELETE FROM movie_credits WHERE movieId = :movieId")
+    suspend fun deleteCredits(movieId: Long)
+
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertCredits(credits: List<MovieCredit>)
 
     @Query("DELETE FROM movies WHERE sourceId = :sourceId")
     suspend fun deleteForSource(sourceId: Long)
@@ -710,6 +779,13 @@ interface SeriesDao {
     @Query("SELECT * FROM series WHERE tmdbId = :tmdbId ORDER BY id")
     suspend fun byTmdbId(tmdbId: String): List<Series>
 
+    /**
+     * Series whose cast credits the person filed under [nameKey], best-rated first. See
+     * [MovieDao.moviesWithPerson].
+     */
+    @Query(SERIES_WITH_PERSON)
+    suspend fun seriesWithPerson(nameKey: String, limit: Int): List<Series>
+
     @Query("SELECT * FROM series WHERE id = :id")
     suspend fun byId(id: Long): Series?
 
@@ -724,8 +800,49 @@ interface SeriesDao {
     @Query("SELECT * FROM series WHERE sourceId = :sourceId AND seriesId IN (:seriesIds)")
     suspend fun byProviderIds(sourceId: Long, seriesIds: List<String>): List<Series>
 
+    /** Saves these rows as they are. Use [upsertAll], which keeps their credits in step. */
     @Upsert
-    suspend fun upsertAll(items: List<Series>)
+    suspend fun upsertRows(items: List<Series>): List<Long>
+
+    /** Saves these series, rewriting the [SeriesCredit]s of those whose cast changed. See [MovieDao.upsertAll]. */
+    @Transaction
+    suspend fun upsertAll(items: List<Series>) {
+        val before = credited(items.map { it.id }.filter { it > 0 }).associateBy { it.id }
+        val rowIds = upsertRows(items)
+        val after = items.mapIndexedNotNull { i, series ->
+            val id = if (series.id > 0) series.id else rowIds[i]
+            if (id > 0) CreditedTitle(id, series.cast, director = null) else null
+        }
+        recreditChanged(before, after)
+    }
+
+    /** Rewrites the credits of each of [after] whose cast isn't what [before] had. */
+    suspend fun recreditChanged(before: Map<Long, CreditedTitle>, after: List<CreditedTitle>) {
+        for (now in after) {
+            if (before[now.id]?.cast == now.cast) continue
+            deleteCredits(now.id)
+            insertCredits(seriesCredits(now.id, now.cast))
+        }
+    }
+
+    @Query("SELECT id, `cast`, NULL AS director FROM series WHERE id IN (:ids)")
+    suspend fun credited(ids: List<Long>): List<CreditedTitle>
+
+    /** The next [limit] series after [afterId] with a cast but no [SeriesCredit]s. See [MovieDao.uncredited]. */
+    @Query(
+        """
+        SELECT id, `cast`, NULL AS director FROM series
+        WHERE id > :afterId AND `cast` != '' AND id NOT IN (SELECT seriesId FROM series_credits)
+        ORDER BY id LIMIT :limit
+        """,
+    )
+    suspend fun uncredited(afterId: Long, limit: Int): List<CreditedTitle>
+
+    @Query("DELETE FROM series_credits WHERE seriesId = :seriesId")
+    suspend fun deleteCredits(seriesId: Long)
+
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertCredits(credits: List<SeriesCredit>)
 
     @Query("DELETE FROM series WHERE sourceId = :sourceId")
     suspend fun deleteForSource(sourceId: Long)
@@ -1194,3 +1311,19 @@ data class StarredMovie(@Embedded val movie: Movie, val starredAtMillis: Long)
 
 /** A Favourite series and when the Profile last starred it. */
 data class StarredSeries(@Embedded val series: Series, val starredAtMillis: Long)
+
+/** A person's films, by an index lookup on their credits. A const so the query-plan test reads it. */
+internal const val MOVIES_WITH_PERSON = """
+    SELECT * FROM movies
+    WHERE id IN (SELECT movieId FROM movie_credits WHERE nameKey = :nameKey)
+    ORDER BY rating DESC, addedMillis DESC
+    LIMIT :limit
+"""
+
+/** A person's shows. See [MOVIES_WITH_PERSON]. */
+internal const val SERIES_WITH_PERSON = """
+    SELECT * FROM series
+    WHERE id IN (SELECT seriesId FROM series_credits WHERE nameKey = :nameKey)
+    ORDER BY rating DESC, addedMillis DESC
+    LIMIT :limit
+"""

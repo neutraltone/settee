@@ -29,10 +29,13 @@ import kotlinx.coroutines.runBlocking
  * A [CatalogRepository] over an in-memory database, talking to a [FakePanel]. Close [db] after.
  * [viewerLibrary] records progress at [clock]; [lineup] folds its channels.
  */
-class TestCatalog(context: Context, private val clock: () -> Long = { 0L }) {
+class TestCatalog(
+    context: Context,
     val db: OpenTvDatabase = Room.inMemoryDatabaseBuilder(context, OpenTvDatabase::class.java)
         .allowMainThreadQueries()
-        .build()
+        .build(),
+    private val clock: () -> Long = { 0L },
+) {
     val panel = FakePanel()
     val viewerLibrary = ViewerLibrary(db, MutableStateFlow(1L), clock = clock)
     val catalog: CatalogRepository = CatalogRepository(

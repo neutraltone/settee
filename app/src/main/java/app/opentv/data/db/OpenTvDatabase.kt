@@ -23,6 +23,7 @@ import app.opentv.data.model.Favourite
 import app.opentv.data.model.LivePlayback
 import app.opentv.data.model.LiveStreamFormat
 import app.opentv.data.model.Movie
+import app.opentv.data.model.MovieCredit
 import app.opentv.data.model.PlaybackPosition
 import app.opentv.data.model.Profile
 import app.opentv.data.model.ProfileSetting
@@ -32,6 +33,7 @@ import app.opentv.data.model.Recording
 import app.opentv.data.model.RecordingStatus
 import app.opentv.data.model.Reminder
 import app.opentv.data.model.Series
+import app.opentv.data.model.SeriesCredit
 import app.opentv.data.model.SeriesDismissal
 import app.opentv.data.model.SeriesRule
 import app.opentv.data.model.Source
@@ -70,7 +72,9 @@ class Converters {
         EpgChannelAlias::class,
         Programme::class,
         Movie::class,
+        MovieCredit::class,
         Series::class,
+        SeriesCredit::class,
         Episode::class,
         PlaybackPosition::class,
         SeriesDismissal::class,
@@ -83,7 +87,7 @@ class Converters {
         SeriesRule::class,
         Reminder::class,
     ],
-    version = 9,
+    version = 10,
     exportSchema = true,
 )
 @TypeConverters(Converters::class)
@@ -112,10 +116,33 @@ abstract class OpenTvDatabase : RoomDatabase() {
         const val FILE_NAME = "opentv.db"
 
         /**
-         * Every migration, in order. Shared with the migration test so neither list can lag. Empty
-         * because version 9 wiped under the pre-1.0 policy below; its older schemas went with it.
+         * 9 → 10: adds the credits a person's page looks people up in. Only new tables, so it's
+         * worth not wiping providers for. They start empty: `CatalogRepository.creditEarlierTitles`
+         * fills them in for the titles already saved, which needs Kotlin to fold the names.
          */
-        internal val MIGRATIONS: Array<Migration> = emptyArray()
+        private val CREDITS = object : Migration(9, 10) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `movie_credits` (`movieId` INTEGER NOT NULL, " +
+                        "`directed` INTEGER NOT NULL, `nameKey` TEXT NOT NULL, " +
+                        "PRIMARY KEY(`movieId`, `directed`, `nameKey`), FOREIGN KEY(`movieId`) " +
+                        "REFERENCES `movies`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+                )
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_movie_credits_nameKey` ON `movie_credits` (`nameKey`)")
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `series_credits` (`seriesId` INTEGER NOT NULL, " +
+                        "`nameKey` TEXT NOT NULL, PRIMARY KEY(`seriesId`, `nameKey`), FOREIGN KEY(`seriesId`) " +
+                        "REFERENCES `series`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+                )
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_series_credits_nameKey` ON `series_credits` (`nameKey`)")
+            }
+        }
+
+        /**
+         * Every migration, in order. Shared with the migration test so neither list can lag. None
+         * before 9, which wiped under the pre-1.0 policy below; its older schemas went with it.
+         */
+        internal val MIGRATIONS: Array<Migration> = arrayOf(CREDITS)
 
         /**
          * [onWiped] runs when the destructive fallback below rebuilds the database. Settings that
