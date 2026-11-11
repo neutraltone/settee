@@ -385,4 +385,5 @@
     <string name="settings_tmdb_save">कुंजी सेव करें</string>
     <string name="settings_tmdb_saved">TMDB कुंजी सेव की गई</string>
     <string name="settings_tmdb_active">सक्रिय</string>
+    <string name="guide_next_prefix">अगला  %1$s  %2$s</string>
 </resources>

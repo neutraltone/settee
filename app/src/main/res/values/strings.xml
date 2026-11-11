@@ -617,4 +617,5 @@
         <item quantity="one">%d feed failed</item>
         <item quantity="other">%d feeds failed</item>
     </plurals>
+    <string name="guide_next_prefix">Next  %1$s  %2$s</string>
 </resources>

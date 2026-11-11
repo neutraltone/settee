@@ -34,11 +34,13 @@ import androidx.test.espresso.Espresso
 import app.opentv.core.AppSettings
 import app.opentv.core.PipState
 import app.opentv.data.model.Channel
+import app.opentv.data.model.Programme
 import app.opentv.data.repo.MediaKey
 import app.opentv.player.PlaybackQueue
 import app.opentv.player.PlayerController
 import app.opentv.ui.player.BannerChannel
 import app.opentv.ui.player.LivePlayerContent
+import app.opentv.ui.player.NowAndNext
 import app.opentv.ui.player.SubtitlePicks
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.awaitCancellation
@@ -113,12 +115,13 @@ class LivePlayerContentTest {
                     variants = variants,
                     currentId = playing,
                     previousId = null,
+                    onNow = { emptyMap() },
                     bannerChannel = playingChannel ?: queue.firstOrNull { playing in it.qualityIds }?.let {
                         BannerChannel("#${it.id}", it.number, it.name)
                     },
-                    programmeOnNow = {
+                    nowAndNext = { now ->
                         programmeLookups++
-                        programme
+                        cardShowing(programme, now)
                     },
                     recordingThis = false,
                     livePause = this@LivePlayerContentTest.livePause,
@@ -829,4 +832,12 @@ class LivePlayerContentTest {
             PlaybackQueue.Item(12L, "Twelve", logoUrl = null, number = 12),
         )
     }
+}
+
+/** The guide with [title] on now, as the card is handed it, or no guide at all. */
+private fun cardShowing(title: String?, now: Long): NowAndNext? = title?.let {
+    NowAndNext(
+        Programme(feedId = 1, epgChannelId = "g", startUtcMillis = now, endUtcMillis = now + 1, title = it),
+        next = null,
+    )
 }

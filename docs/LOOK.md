@@ -199,8 +199,8 @@ This focus design has never been tried with a remote, so try it first and change
 
 ## Live TV
 
-- **Changing channel:** a small card in the corner with the logo, channel, programme, progress and a line for what's next. It can't take the Highlight, so the remote carries on as it would with the picture alone.
-- **Channel list:** a left panel with the last channel pinned at the top, and rows with the logo, name and what's on.
+- **Changing channel:** a small card in the corner with the logo, channel, programme, how far through it is and a line for what's next. It can't take the Highlight, so the remote carries on as it would with the picture alone. A channel with no guide just loses those lines.
+- **Channel list:** a solid left panel with the last channel pinned at the top, and rows with the logo, name and what's on. Moving through it never changes channel; OK does. Left opens it in one press while the controls are hidden. While they're up, Left belongs to them, so it's Back and then Left.
 - **Guide:** ruled and square, with the times in a header above a strong rule and the day in its corner. The current programme is bold, and later ones are quiet. Left from the first column opens the Categories Sidebar, except when the guide has moved on from now: then Left goes back to now first, and the next Left opens it. A category picked there starts at its first channel and the day's start. It's Live TV's only layout.
 - **Where OK on Live TV lands:** the channel last watched, or the first channel of the current category when there's none (All channels on a fresh start). While the channels load, nothing on the tab can take the Highlight, so it stays on Live TV in the rail and moves once, when they arrive. Any press before then wins.
 - **Preview band:** above the guide, the highlighted channel playing muted (when Live Preview is on in settings) beside the highlighted programme's title, time and synopsis, or what's on now while the Highlight is on the channel. Nothing in it can take the Highlight: OK on a channel watches it, and OK on a programme opens Programme Details.
@@ -209,7 +209,7 @@ This focus design has never been tried with a remote, so try it first and change
 - **Programme Details:** a panel on the right, in the same family as the player's subtitles panel. The programme's title, channel, time and synopsis sit at the top, with its actions beneath as rows: record or stop, watch from the start on catch-up, remind me or switch automatically, record the series, watch the channel. Record from and Quality (the chosen provider's) are rows showing the current choice, and OK swaps the panel for that choice with the current one ticked. There's no Cancel: Back closes it.
 - **Channel manager:** the Categories Sidebar always open on the left, and the category's channels beside it. Each row has the logo, name, and Showing or Hidden, and OK switches between them. Favourite is in the row's options (hold Select), so each row has one target. There's no Done button: Back leaves.
 
-Up and Down still zap, with no number entry.
+Up and Down still zap while nothing is showing, and Right opens the Quality picker when the channel has more than one. Typing a channel number still works on remotes with number keys, but nothing on screen is designed around it: there's no on-screen number pad.
 
 ## Settings
 

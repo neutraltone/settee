@@ -385,4 +385,5 @@
     <string name="settings_tmdb_save">Simpan kunci</string>
     <string name="settings_tmdb_saved">Kunci TMDB disimpan</string>
     <string name="settings_tmdb_active">Aktif</string>
+    <string name="guide_next_prefix">Berikutnya  %1$s  %2$s</string>
 </resources>

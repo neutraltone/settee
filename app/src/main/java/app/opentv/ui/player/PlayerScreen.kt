@@ -17,19 +17,11 @@ import androidx.compose.foundation.focusable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AspectRatio
 import androidx.compose.material.icons.filled.Bedtime
@@ -56,10 +48,8 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
@@ -71,7 +61,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.Lifecycle
@@ -89,10 +78,14 @@ import app.opentv.data.model.Channel
 import app.opentv.data.model.shownName
 import app.opentv.data.repo.LineupChannel
 import app.opentv.data.repo.MediaKey
+import app.opentv.data.repo.nowOn
 import app.opentv.data.repo.toRecord
 import app.opentv.player.PlaybackQueue
 import app.opentv.player.PlayerController
 import app.opentv.player.SettledChannel
+import app.opentv.ui.design.SetteeColors
+import app.opentv.ui.design.SetteeShapes
+import app.opentv.ui.design.SetteeSpace
 import app.opentv.ui.design.SetteeType
 import app.opentv.ui.design.Text as SetteeText
 import app.opentv.ui.formatPlaybackTime
@@ -103,9 +96,6 @@ import app.opentv.ui.options.LocalOpenOptions
 import app.opentv.ui.options.LocalRecordingStarted
 import app.opentv.ui.options.OptionsFor
 import app.opentv.ui.options.OptionsSubject
-import app.opentv.ui.options.optionsClickable
-import app.opentv.ui.options.rememberRowHighlight
-import coil.compose.AsyncImage
 import java.util.Locale
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -120,7 +110,7 @@ import kotlinx.coroutines.launch
  * The video fills the screen with no chrome. A single control bar slides up from the bottom and
  * holds everything — transport (play/pause, rewind, forward), and pickers for subtitles, audio,
  * quality and aspect ratio. It hides after a few seconds and OK brings it back. Changing channel
- * shows a brief [ChannelBanner] instead, which has no buttons and never takes focus. Nothing is ever
+ * shows a brief [ChannelCard] instead, which has no buttons and never takes focus. Nothing is ever
  * left permanently painted over the picture.
  *
  * Subtitles and audio come from the actual tracks in the stream ([PlayerController.tracks]) and
@@ -177,11 +167,13 @@ fun PlayerScreen(channelId: Long?, onBack: () -> Unit) {
     // The Channel playing: its Qualities are the same as wherever it was picked from.
     var channel by remember { mutableStateOf<LineupChannel?>(null) }
     var queue by remember { mutableStateOf<List<PlaybackQueue.Item>>(emptyList()) }
+    var lineupChannels by remember { mutableStateOf<List<LineupChannel>>(emptyList()) }
     LaunchedEffect(Unit) {
         // Settled before watching, so a channel outside the list zaps through every Channel instead.
         channelId?.let { graph.channelLineup.zapChannels(around = it) }
         // Watched for as long as the player is open, which keeps the list ready for each zap.
         graph.channelLineup.zapList.collect { channels ->
+            lineupChannels = channels
             queue = channels.map { channel ->
                 val primary = channel.primary
                 val qualityIds = channel.qualities.mapTo(HashSet()) { it.id }
@@ -325,9 +317,17 @@ fun PlayerScreen(channelId: Long?, onBack: () -> Unit) {
         variants = channel?.switchable.orEmpty(),
         currentId = currentId,
         previousId = previousId,
-        bannerChannel = channel?.let { BannerChannel(it.key, it.primary.number, it.primary.shownName) },
-        programmeOnNow = { now ->
-            channel?.let { programmeTitleOnNow(graph.channelLineup, graph.epgRepository, it, now) }
+        onNow = { now ->
+            // Keyed by the row each Channel plays, which is what the list's items are.
+            val channels = lineupChannels
+            val byKey = graph.channelLineup.nowOn(channels, now)
+            channels.mapNotNull { c -> byKey[c.key]?.let { c.primary.id to it } }.toMap()
+        },
+        bannerChannel = channel?.let {
+            BannerChannel(it.key, it.primary.number, it.primary.shownName, it.primary.logoUrl)
+        },
+        nowAndNext = { now ->
+            channel?.let { nowAndNext(graph.channelLineup, graph.epgRepository, it, now) }
         },
         recordingThis = activeRecording() != null,
         livePause = livePause,
@@ -356,7 +356,7 @@ fun PlayerScreen(channelId: Long?, onBack: () -> Unit) {
 }
 
 /** The Channel a banner names. [key] is what says it's a different Channel: see [LineupChannel.key]. */
-data class BannerChannel(val key: String, val number: Int?, val name: String)
+data class BannerChannel(val key: String, val number: Int?, val name: String, val logoUrl: String? = null)
 
 /**
  * The live picture and its control bar, channel list and pickers, with everything the remote drives.
@@ -372,8 +372,9 @@ fun LivePlayerContent(
     variants: List<Channel>,
     currentId: Long?,
     previousId: Long?,
+    onNow: suspend (Long) -> Map<Long, String>,
     bannerChannel: BannerChannel?,
-    programmeOnNow: suspend (Long) -> String?,
+    nowAndNext: suspend (Long) -> NowAndNext?,
     recordingThis: Boolean,
     livePause: Boolean,
     pausePromptDismissed: Boolean,
@@ -724,12 +725,11 @@ fun LivePlayerContent(
             Box(
                 Modifier
                     .align(Alignment.TopEnd)
-                    .padding(32.dp)
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(Color.Black.copy(alpha = 0.82f))
-                    .padding(horizontal = 28.dp, vertical = 16.dp),
+                    .padding(horizontal = SetteeSpace.ScreenSide, vertical = SetteeSpace.ScreenTopBottom)
+                    .background(SetteeColors.Surface, SetteeShapes.Card)
+                    .padding(horizontal = 28.dp, vertical = 12.dp),
             ) {
-                Text(numberEntry, color = Color.White, style = MaterialTheme.typography.displaySmall)
+                SetteeText(numberEntry, SetteeType.Display)
             }
         }
 
@@ -883,61 +883,22 @@ fun LivePlayerContent(
                 exit = fadeOut(),
                 modifier = Modifier.align(Alignment.BottomStart),
             ) {
-                ChannelBanner(bannerChannel, programmeOnNow)
+                ChannelCard(bannerChannel, nowAndNext)
             }
         }
 
-        // Left-side transparent channel list — d-pad Left opens it, pick a channel to switch.
-        AnimatedVisibility(
-            visible = channelListVisible && !inPip,
-            enter = fadeIn(),
-            exit = fadeOut(),
-            modifier = Modifier.align(Alignment.CenterStart),
-        ) {
-            val currentIndex = queue.indexOfFirst { currentId in it.qualityIds }.coerceAtLeast(0)
-            val listState = rememberLazyListState()
-            val highlight = rememberRowHighlight(queue, listState) { it.id }
-            LaunchedEffect(Unit) { runCatching { listState.scrollToItem(currentIndex) } }
-            Column(
-                Modifier
-                    .fillMaxHeight()
-                    .width(380.dp)
-                    .background(Color.Black.copy(alpha = 0.72f))
-                    .padding(vertical = 16.dp),
-            ) {
-                Text(
-                    stringResource(R.string.common_channels),
-                    style = MaterialTheme.typography.titleMedium,
-                    color = Color.White.copy(alpha = 0.7f),
-                    modifier = Modifier.padding(horizontal = 16.dp),
-                )
-                Spacer(Modifier.height(8.dp))
-                // A quick "jump back to the channel you just left" pin, TiviMate-style.
-                val lastItem = previousId?.let { pid -> queue.firstOrNull { pid in it.qualityIds } }
-                if (lastItem != null && currentId !in lastItem.qualityIds) {
-                    ChannelListRow(
-                        item = lastItem,
-                        playing = false,
-                        focusRequester = null,
-                        leadingLabel = stringResource(R.string.player_last),
-                        onClick = { pickFromList(lastItem) },
-                        onOptions = { onChannelOptions(lastItem) { pickFromList(lastItem) } },
-                    )
-                    Spacer(Modifier.height(4.dp))
-                }
-                LazyColumn(state = listState) {
-                    itemsIndexed(queue, key = { _, item -> item.id }) { index, item ->
-                        ChannelListRow(
-                            item = item,
-                            playing = currentId in item.qualityIds,
-                            focusRequester = if (index == currentIndex) listFocus else null,
-                            onClick = { pickFromList(item) },
-                            onOptions = { onChannelOptions(item) { pickFromList(item) } },
-                            modifier = highlight.modifier(index, item.id),
-                        )
-                    }
-                }
-            }
+        // The channel list: Left opens it while nothing else is showing.
+        if (channelListVisible && !inPip) {
+            ChannelList(
+                queue = queue,
+                currentId = currentId,
+                previousId = previousId,
+                onNow = onNow,
+                firstFocus = listFocus,
+                onPick = ::pickFromList,
+                onOptions = { item -> onChannelOptions(item) { pickFromList(item) } },
+                modifier = Modifier.align(Alignment.CenterStart),
+            )
         }
     }
 
@@ -981,58 +942,6 @@ fun LivePlayerContent(
                 onDontAskAgain()
             },
             onDismiss = { pausePrompt = false },
-        )
-    }
-}
-
-@Composable
-private fun ChannelListRow(
-    item: PlaybackQueue.Item,
-    playing: Boolean,
-    focusRequester: FocusRequester?,
-    onClick: () -> Unit,
-    onOptions: () -> Unit,
-    leadingLabel: String? = null,
-    modifier: Modifier = Modifier,
-) {
-    var focused by remember { mutableStateOf(false) }
-    val bg = when {
-        focused -> MaterialTheme.colorScheme.primary
-        playing -> MaterialTheme.colorScheme.primary.copy(alpha = 0.4f)
-        else -> Color.Transparent
-    }
-    val fg = if (focused) MaterialTheme.colorScheme.onPrimary else Color.White
-    Row(
-        modifier
-            .fillMaxWidth()
-            .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
-            .onFocusChanged { focused = it.isFocused }
-            .background(bg)
-            .optionsClickable(onClick, onOptions)
-            .padding(horizontal = 16.dp, vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        // A "Last" tag, or the channel number if the provider gives one — a fixed-width slot so
-        // the logos and names line up down the list.
-        Text(
-            leadingLabel ?: item.number?.toString().orEmpty(),
-            style = MaterialTheme.typography.labelMedium,
-            color = fg.copy(alpha = 0.7f),
-            maxLines = 1,
-            modifier = Modifier.width(40.dp),
-        )
-        AsyncImage(
-            model = item.logoUrl,
-            contentDescription = null,
-            modifier = Modifier.size(32.dp).clip(RoundedCornerShape(4.dp)),
-        )
-        Spacer(Modifier.width(12.dp))
-        Text(
-            item.name,
-            style = MaterialTheme.typography.titleMedium,
-            color = fg,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
         )
     }
 }

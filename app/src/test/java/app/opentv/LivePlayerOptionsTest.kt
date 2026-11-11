@@ -85,7 +85,8 @@ class LivePlayerOptionsTest {
                 bannerChannel = queue.firstOrNull { currentId in it.qualityIds }?.let {
                     BannerChannel("#${it.id}", it.number, it.name)
                 },
-                programmeOnNow = { null },
+                nowAndNext = { null },
+                onNow = { emptyMap() },
                 recordingThis = recording,
                 livePause = true,
                 pausePromptDismissed = false,

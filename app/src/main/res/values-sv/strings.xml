@@ -385,4 +385,5 @@
     <string name="settings_tmdb_save">Spara nyckel</string>
     <string name="settings_tmdb_saved">TMDB-nyckel sparad</string>
     <string name="settings_tmdb_active">Aktiv</string>
+    <string name="guide_next_prefix">Nästa  %1$s  %2$s</string>
 </resources>

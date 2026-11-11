@@ -385,4 +385,5 @@
     <string name="settings_tmdb_save">키 저장</string>
     <string name="settings_tmdb_saved">TMDB 키가 저장되었습니다</string>
     <string name="settings_tmdb_active">활성</string>
+    <string name="guide_next_prefix">다음  %1$s  %2$s</string>
 </resources>

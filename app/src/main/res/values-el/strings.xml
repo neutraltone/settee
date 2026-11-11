@@ -385,4 +385,5 @@
     <string name="settings_tmdb_save">Αποθήκευση κλειδιού</string>
     <string name="settings_tmdb_saved">Το κλειδί TMDB αποθηκεύτηκε</string>
     <string name="settings_tmdb_active">Ενεργό</string>
+    <string name="guide_next_prefix">Επόμενο  %1$s  %2$s</string>
 </resources>

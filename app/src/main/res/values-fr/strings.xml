@@ -385,4 +385,5 @@
     <string name="settings_tmdb_save">Enregistrer la clé</string>
     <string name="settings_tmdb_saved">Clé TMDB enregistrée</string>
     <string name="settings_tmdb_active">Active</string>
+    <string name="guide_next_prefix">Ensuite  %1$s  %2$s</string>
 </resources>

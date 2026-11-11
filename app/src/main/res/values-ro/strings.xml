@@ -385,4 +385,5 @@
     <string name="settings_tmdb_save">Salvează cheia</string>
     <string name="settings_tmdb_saved">Cheia TMDB a fost salvată</string>
     <string name="settings_tmdb_active">Activ</string>
+    <string name="guide_next_prefix">Următorul  %1$s  %2$s</string>
 </resources>

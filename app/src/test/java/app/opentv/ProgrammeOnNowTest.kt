@@ -9,7 +9,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.junit4.createComposeRule
-import app.opentv.ui.player.rememberProgrammeOnNow
+import app.opentv.ui.player.rememberGuideFor
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.CompletableDeferred
 import org.junit.Rule
@@ -40,7 +40,7 @@ class ProgrammeOnNowTest {
         compose.setContent {
             if (onScreen) {
                 val asked = channel
-                shown = rememberProgrammeOnNow(asked) {
+                shown = rememberGuideFor(asked) {
                     lookups++
                     answers.getOrPut(asked) { CompletableDeferred() }.await()
                 }
