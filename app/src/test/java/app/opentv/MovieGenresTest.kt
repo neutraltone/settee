@@ -227,4 +227,39 @@ class MovieGenresTest {
         assertThat(panel.asked).doesNotContain("get_vod_streams")
         assertThat(genre("7")).isEqualTo("Western")
     }
+
+    @Test
+    fun `a film saved blank gets TMDB's genre on the pass over blanks, without asking the provider again`() = runTest {
+        test.db.movies().upsertAll(listOf(movie("7", added = 1, genre = ""), movie("8", added = 2, genre = "Drama")))
+        val withTmdb = MovieGenres(test.db.movies(), XtreamApi(panel.http), tmdbGenre = { "Western" })
+
+        assertThat(withTmdb.retryBlanks(PANEL_SOURCE)).isTrue()
+
+        assertThat(genre("7")).isEqualTo("Western")
+        assertThat(genre("8")).isEqualTo("Drama")
+        assertThat(panel.asked).isEmpty()
+    }
+
+    @Test
+    fun `the pass over blanks finishes even when TMDB knows none of them`() = runTest {
+        test.db.movies().upsertAll((1..7).map { movie("$it", added = it.toLong(), genre = "") })
+        var asked = 0
+        val noMatches = MovieGenres(test.db.movies(), XtreamApi(panel.http), count = 2, pauseMillis = 0) {
+            asked++
+            null
+        }
+
+        assertThat(noMatches.retryBlanks(PANEL_SOURCE)).isTrue()
+
+        assertThat(asked).isEqualTo(7)
+        assertThat(test.db.movies().forSource(1).map { it.genre }.toSet()).containsExactly("")
+    }
+
+    @Test
+    fun `the pass over blanks gives up, unfinished, when TMDB can't be reached`() = runTest {
+        test.db.movies().upsertAll((1..7).map { movie("$it", added = it.toLong(), genre = "") })
+        val offline = MovieGenres(test.db.movies(), XtreamApi(panel.http), tmdbGenre = { error("offline") })
+
+        assertThat(offline.retryBlanks(PANEL_SOURCE)).isFalse()
+    }
 }

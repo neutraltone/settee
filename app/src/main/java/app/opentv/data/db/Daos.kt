@@ -547,6 +547,23 @@ interface MovieDao {
         genres.forEach { (id, genre) -> fillGenre(id, genre) }
     }
 
+    /** The [limit] movies a source most recently added whose genre was saved blank, for [MovieGenres]. */
+    @Query(
+        "SELECT * FROM movies WHERE sourceId = :sourceId AND genre = '' " +
+            "ORDER BY addedMillis DESC, id DESC LIMIT :limit",
+    )
+    suspend fun newestWithBlankGenre(sourceId: Long, limit: Int): List<Movie>
+
+    /** Only while it's still blank, since opening the movie may have found one meanwhile. */
+    @Query("UPDATE movies SET genre = :genre WHERE id = :id AND genre = ''")
+    suspend fun fillBlankGenre(id: Long, genre: String)
+
+    /** As [fillGenres], for genres saved blank. */
+    @Transaction
+    suspend fun fillBlankGenres(genres: List<Pair<Long, String>>) {
+        genres.forEach { (id, genre) -> fillBlankGenre(id, genre) }
+    }
+
     /**
      * Fallback for More-Like-This when a movie has no genre to match on: other titles from the same
      * source (and category, when it has one), best-rated first. Never returns the movie itself.

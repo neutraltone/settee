@@ -835,12 +835,26 @@ class CatalogRepository(
         if (!sourcesGettingGenres.add(source.id)) return
         background.launch {
             try {
-                runCatching { movieGenres.fillAll(source) }
-                    .onFailure { Log.w(TAG, "Movie genres failed for source ${source.id}", it) }
+                runCatching {
+                    retryBlanksWithTmdb(source)
+                    movieGenres.fillAll(source)
+                }.onFailure { Log.w(TAG, "Movie genres failed for source ${source.id}", it) }
             } finally {
                 sourcesGettingGenres.remove(source.id)
             }
         }
+    }
+
+    /**
+     * Once per provider for each TMDB key: asks TMDB about the films saved blank, which were looked up
+     * before there was a key (or with another one), so they aren't left without a genre for good.
+     * Remembered by a hash of the key, never the key itself.
+     */
+    private suspend fun retryBlanksWithTmdb(source: Source) {
+        if (!tmdb.isConfigured()) return
+        val key = settings.tmdbApiKey.value.hashCode().toString()
+        if (settings.tmdbBlanksRetriedWith(source.id) == key) return
+        if (movieGenres.retryBlanks(source)) settings.setTmdbBlanksRetriedWith(source.id, key)
     }
 
     private suspend fun syncM3u(source: Source, nowUtcMillis: Long): SyncResult {

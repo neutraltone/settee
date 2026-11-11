@@ -49,11 +49,37 @@ class MovieGenres(
         }
     }
 
+    /**
+     * Asks TMDB about the films saved blank, which the provider had no genre for, for when the viewer
+     * has added a key since they were looked up. The provider isn't asked again. True once every one
+     * has been asked about; false if TMDB stopped answering, so the pass should run again.
+     */
+    suspend fun retryBlanks(source: Source): Boolean {
+        val tried = mutableSetOf<Long>()
+        while (true) {
+            val titles = next(tried) { movieDao.newestWithBlankGenre(source.id, it) }
+            val answering = lookUpEach(
+                titles = titles,
+                tag = TAG,
+                // "" for no match, so that counts as an answer rather than TMDB not answering.
+                ask = { tmdbGenre(it).orEmpty() },
+                found = { _, genre -> genre.takeIf { it.isNotBlank() } },
+                save = { found -> movieDao.fillBlankGenres(found.map { (movie, genre) -> movie.id to genre }) },
+            )
+            if (!answering) return false
+            if (titles.size < count) return true
+            delay(pauseMillis)
+        }
+    }
+
+    /** The next [count] films [select] picks that aren't in [tried], added to it. */
+    private suspend fun next(tried: MutableSet<Long>, select: suspend (Int) -> List<Movie>): List<Movie> =
+        select(count + tried.size).filterNot { it.id in tried }.take(count).also { tried += it.map(Movie::id) }
+
     private class Batch(val asked: Int, val answering: Boolean)
 
     private suspend fun batch(source: Source, tried: MutableSet<Long>): Batch {
-        val titles = movieDao.newestWithoutGenre(source.id, count + tried.size).filterNot { it.id in tried }.take(count)
-        tried += titles.map { it.id }
+        val titles = next(tried) { movieDao.newestWithoutGenre(source.id, it) }
         val answering = lookUpEach(
             titles = titles,
             tag = TAG,
