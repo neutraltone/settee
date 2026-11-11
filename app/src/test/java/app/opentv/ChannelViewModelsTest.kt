@@ -167,4 +167,16 @@ class ChannelViewModelsTest {
 
         assertThat(categories.map { it.label }).containsExactly("News", "Films", "Sport", "Kids").inOrder()
     }
+
+    @Test
+    fun `today's page in the guide ends where tomorrow's starts, at midnight`() = runTest {
+        val viewModel = viewModels.track(ChannelsViewModel(app, graph))
+        val todayStarts = viewModel.windowStartMillis.first()
+        val todayEnds = viewModel.windowEndMillis.first()
+
+        viewModel.nudgeGuideDay(1)
+        val tomorrowStarts = viewModel.windowStartMillis.first { it != todayStarts }
+
+        assertThat(tomorrowStarts).isEqualTo(todayEnds)
+    }
 }

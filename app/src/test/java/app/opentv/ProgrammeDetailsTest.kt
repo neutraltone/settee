@@ -182,6 +182,41 @@ class ProgrammeDetailsTest {
     }
 
     @Test
+    fun `a channel on two providers offers Record from and that provider's Quality`() {
+        val sources = listOf(
+            Source(id = 1, name = "Provider A", kind = SourceKind.XTREAM, url = "https://example.com"),
+            Source(id = 2, name = "Provider B", kind = SourceKind.XTREAM, url = "https://example.org"),
+        )
+        show(
+            row(quality(3, "News FHD", "FHD"), quality(2, "News HD", "HD"), quality(5, "News HD", "HD", source = 2)),
+            sources = sources,
+        )
+        compose.waitUntilAtLeastOneExists(hasText("Record from") and hasClickAction(), 5_000)
+        compose.waitForIdle()
+
+        press(Key.DirectionDown)
+        compose.onNode(hasText("Quality") and hasClickAction()).assertIsFocused()
+        press(Key.DirectionCenter)
+
+        compose.onNode(hasText("FHD") and hasClickAction()).assertIsSelected()
+        compose.onNode(hasText("HD") and hasClickAction()).assertExists()
+    }
+
+    @Test
+    fun `the Quality choice starts on the current Quality when it's listed under another stream of it`() {
+        val fhd = quality(3, "News FHD", "FHD")
+        val hdOne = quality(2, "News HD", "HD")
+        val hdTwo = quality(6, "News HD 2", "HD")
+        show(row(fhd, hdOne, hdTwo, primary = hdTwo))
+
+        compose.onNode(hasText("Quality") and hasClickAction()).performKeyInput { pressKey(Key.DirectionCenter) }
+        compose.waitForIdle()
+
+        compose.onNode(hasText("HD") and hasClickAction()).assertIsSelected()
+        compose.onNode(hasText("HD") and hasClickAction()).assertIsFocused()
+    }
+
+    @Test
     fun `it offers to stop a recording on another Quality than the one playing`() {
         val other = quality(4, "News 4K")
         val playing = quality(2, "News HD")

@@ -431,6 +431,90 @@ class LiveBrowseTest {
     }
 
     @Test
+    fun `with no Favourites, Right reaches Choose a category, which opens the sidebar again`() {
+        library()
+        setLive()
+        pressOkOnLiveInTheRail()
+        awaitRows()
+        press(Key.DirectionLeft)
+        press(Key.DirectionUp)
+        press(Key.DirectionCenter)
+        compose.waitUntilAtLeastOneExists(hasText("No favourites yet"), 5_000)
+
+        press(Key.DirectionRight)
+        compose.onNode(hasText("Choose a category") and hasClickAction()).assertIsFocused()
+        press(Key.DirectionCenter)
+
+        compose.onNode(hasText("Favourites") and hasClickAction()).assertIsFocused()
+    }
+
+    @Test
+    fun `a category whose channels are all hidden says so, rather than loading, and offers the sidebar`() {
+        library()
+        runBlocking { graph.database.channels().setHidden(4, true) }
+        setLive()
+        pressOkOnLiveInTheRail()
+        awaitRows()
+
+        viewModel.selectCategory(viewModel.visibleCategoryGroups.value.first { it.label == "Sport" }.key)
+        compose.waitUntilAtLeastOneExists(hasText("Nothing to show here"), 5_000)
+
+        compose.onNode(hasText("Loading channels", substring = true)).assertDoesNotExist()
+        compose.onNode(hasText("Choose a category") and hasClickAction()).assertExists()
+        captureScreen("live_empty_category")
+    }
+
+    @Test
+    fun `the day's landing happens once, so a row coming back later doesn't take the Highlight`() {
+        onTomorrowsLastProgramme()
+        press(Key.DirectionRight)
+        compose.waitUntilAtLeastOneExists(programme("Day after on 1"), 5_000)
+        compose.waitForIdle()
+        press(Key.DirectionDown, times = 3)
+        programmeCell("Day after on 4").assertIsFocused()
+
+        val sport = viewModel.visibleCategoryGroups.value.first { it.label == "Sport" }.key
+        viewModel.selectCategory(sport)
+        compose.waitUntil(5_000) { compose.onAllNodes(hasText("Channel One")).fetchSemanticsNodes().isEmpty() }
+        viewModel.selectCategory(null)
+        compose.waitUntilAtLeastOneExists(hasText("Channel One") and hasClickAction(), 5_000)
+        compose.waitForIdle()
+
+        programmeCell("Day after on 4").assertIsFocused()
+    }
+
+    @Test
+    fun `paging to a day with nothing on a row lands on its channel, and Right from there goes on a day`() {
+        onTomorrowsLastProgramme()
+        press(Key.DirectionRight)
+        compose.waitUntilAtLeastOneExists(programme("Day after on 1"), 5_000)
+        compose.waitForIdle()
+
+        press(Key.DirectionRight)
+        compose.waitUntil(5_000) { viewModel.guideDayOffset.value == 3 }
+        compose.waitUntilDoesNotExist(programme("Day after on 1"), 5_000)
+        compose.waitForIdle()
+        channelCell("Channel One").assertIsFocused()
+
+        press(Key.DirectionRight)
+        compose.waitUntil(5_000) { viewModel.guideDayOffset.value == 4 }
+        compose.waitForIdle()
+        channelCell("Channel One").assertIsFocused()
+    }
+
+    @Test
+    fun `leaving Live TV and coming back opens the guide on today`() {
+        onTomorrowsLastProgramme()
+
+        tab = Tab.HOME
+        compose.waitForIdle()
+        tab = Tab.LIVE
+        compose.waitForIdle()
+
+        assertThat(viewModel.guideDayOffset.value).isEqualTo(0)
+    }
+
+    @Test
     fun `picking a category shows only its channels, and Right moves into them`() {
         library()
         setLive()

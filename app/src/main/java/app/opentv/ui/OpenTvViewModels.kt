@@ -288,17 +288,33 @@ class ChannelsViewModel @JvmOverloads constructor(
         _guideDayOffset.value = 0
     }
 
-    val windowStartMillis: StateFlow<Long> =
-        combine(nowTick.map { it - it % HALF_HOUR_MILLIS }, _guideDayOffset) { base, day ->
-            // Today tracks the current half-hour so live is always on screen; a future day starts
-            // at that day's local midnight, so the whole day's schedule is browsable and drifts
-            // with real time only on the "today" page.
-            if (day <= 0) base else startOfLocalDay(base) + day * DAY_MILLIS
-        }.stateIn(
-            viewModelScope,
-            SharingStarted.WhileSubscribed(5_000),
-            System.currentTimeMillis().let { it - it % HALF_HOUR_MILLIS },
-        )
+    /**
+     * The day the guide shows, as start and end. Today starts at the current half-hour so live is
+     * always on screen; a later day starts at its local midnight, so its whole schedule is there.
+     * Each day ends where the next starts, so paging Right past today's last programme carries on
+     * from midnight rather than going back over the morning. One flow, so the two never disagree.
+     */
+    private val guideWindow: StateFlow<Pair<Long, Long>> =
+        combine(nowTick.map { it - it % HALF_HOUR_MILLIS }, _guideDayOffset, ::guideWindowOf)
+            .stateIn(
+                viewModelScope,
+                SharingStarted.WhileSubscribed(5_000),
+                guideWindowOf(System.currentTimeMillis().let { it - it % HALF_HOUR_MILLIS }, 0),
+            )
+
+    private fun guideWindowOf(halfHour: Long, day: Int): Pair<Long, Long> {
+        val midnight = startOfLocalDay(halfHour)
+        val start = if (day <= 0) halfHour else midnight + day * DAY_MILLIS
+        return start to midnight + (day.coerceAtLeast(0) + 1) * DAY_MILLIS
+    }
+
+    /** The guide's left edge, where programme cells are measured from. */
+    val windowStartMillis: StateFlow<Long> = guideWindow.map { it.first }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), guideWindow.value.first)
+
+    /** Where the guide's day ends: today's at midnight, where tomorrow's starts. */
+    val windowEndMillis: StateFlow<Long> = guideWindow.map { it.second }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), guideWindow.value.second)
 
     private fun startOfLocalDay(millis: Long): Long {
         val cal = java.util.Calendar.getInstance()
@@ -342,12 +358,12 @@ class ChannelsViewModel @JvmOverloads constructor(
      */
     @OptIn(ExperimentalCoroutinesApi::class)
     private val programmeIndex: StateFlow<Map<String, List<Programme>>> =
-        // windowStartMillis is a StateFlow, which already conflates equal values — an explicit
+        // guideWindow is a StateFlow, which already conflates equal values — an explicit
         // distinctUntilChanged() on it is a no-op (and a build error under our warnings-as-errors).
-        windowStartMillis
-            .flatMapLatest { windowStart ->
+        guideWindow
+            .flatMapLatest { (windowStart, windowEnd) ->
                 graph.epgRepository
-                    .observeWindow(windowStart, windowStart + GUIDE_LOOKAHEAD_MILLIS)
+                    .observeWindow(windowStart, windowEnd)
                     .map { programmes -> programmes.groupBy { it.epgChannelId } }
             }
             .flowOn(Dispatchers.Default)
@@ -356,6 +372,14 @@ class ChannelsViewModel @JvmOverloads constructor(
     /** Guards the start-up loading bar so it shows once, on the first build, not on every tap. */
     @Volatile
     private var guideBuilt = false
+
+    private val _rowsBuilt = MutableStateFlow(false)
+
+    /**
+     * Whether [rows] has been built at least once. Until then an empty list means still loading;
+     * after it, that the Favourites or category on show has nothing in it (every channel hidden).
+     */
+    val rowsBuilt: StateFlow<Boolean> = _rowsBuilt.asStateFlow()
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val rows: StateFlow<List<Row>> =
@@ -390,6 +414,7 @@ class ChannelsViewModel @JvmOverloads constructor(
                     guideBuilt = true
                     StatusBus.set(null)
                 }
+                _rowsBuilt.value = true
             }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
@@ -580,7 +605,6 @@ class ChannelsViewModel @JvmOverloads constructor(
     companion object {
         /** How many days ahead the guide goes: up to a week out, matching typical XMLTV depth. */
         const val GUIDE_MAX_DAYS = 6
-        private const val GUIDE_LOOKAHEAD_MILLIS = 24 * 60 * 60 * 1000L // a full day fits the grid
         private const val DAY_MILLIS = 24 * 60 * 60 * 1000L
         private const val HALF_HOUR_MILLIS = 30 * 60 * 1000L
     }

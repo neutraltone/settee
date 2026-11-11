@@ -76,8 +76,11 @@ import java.util.Locale
  * opens its options, which is where Favourite is, so each cell has one target. Wherever the
  * Highlight lands, [onHighlight] says on what: the channel and, on a programme, which one.
  *
- * Right past a row's last programme calls [onNextDay] and Left before its first calls [onPrevDay],
- * when there's a day that way: the guide pages through days rather than running into them.
+ * The day runs from [windowStartMillis] to [windowEndMillis]. Right past a row's last programme
+ * calls [onNextDay] and Left before its first calls [onPrevDay], when there's a day that way: the
+ * guide pages through days rather than running into them. A row with nothing on that day pages on
+ * from its channel. On the new day the Highlight lands on [landOnRow]'s first programme, or its last
+ * with [landAtEnd], or its channel when it has none, then [onLanded] says it's done.
  *
  * ## How it lays out without a custom Layout
  *
@@ -92,6 +95,7 @@ fun GuideGrid(
     windowStartMillis: Long,
     onWatch: (ChannelsViewModel.Row) -> Unit,
     modifier: Modifier = Modifier,
+    windowEndMillis: Long = windowStartMillis + HOURS_IN_DAY * HOUR_MS,
     onHighlight: (ChannelsViewModel.Row, Programme?) -> Unit = { _, _ -> },
     onProgramme: (ChannelsViewModel.Row, Programme) -> Unit = { _, _ -> },
     dayLabel: String = "",
@@ -103,6 +107,7 @@ fun GuideGrid(
     onReturnToRow: (ChannelsViewModel.Row) -> Unit = {},
     landOnRow: Any? = null,
     landAtEnd: Boolean = false,
+    onLanded: () -> Unit = {},
 ) {
     val scroll = rememberScrollState()
     val listState = rememberLazyListState()
@@ -114,12 +119,12 @@ fun GuideGrid(
     LaunchedEffect(dayOffset) { if (landAtEnd) scroll.scrollTo(scroll.maxValue) else scroll.scrollTo(0) }
 
     Column(modifier.fillMaxSize()) {
-        TimeHeader(windowStartMillis, dayLabel, scroll)
+        TimeHeader(windowStartMillis, windowEndMillis, dayLabel, scroll)
         LazyColumn(state = listState) {
             itemsIndexed(rows, key = { _, row -> row.key }) { index, row ->
                 GuideRow(
                     row = row,
-                    windowStartMillis = windowStartMillis,
+                    window = windowStartMillis..windowEndMillis,
                     nowMillis = now,
                     scroll = scroll,
                     onWatch = { onWatch(row) },
@@ -135,7 +140,7 @@ fun GuideGrid(
                         landAtEnd -> Land.Last
                         else -> Land.First
                     },
-                    dayOffset = dayOffset,
+                    onLanded = onLanded,
                 )
             }
         }
@@ -191,7 +196,7 @@ private fun rememberReturnToChannel(
 private enum class Land { First, Last }
 
 @Composable
-private fun TimeHeader(windowStartMillis: Long, dayLabel: String, scroll: ScrollState) {
+private fun TimeHeader(windowStartMillis: Long, windowEndMillis: Long, dayLabel: String, scroll: ScrollState) {
     Row(
         Modifier
             .fillMaxWidth()
@@ -213,7 +218,7 @@ private fun TimeHeader(windowStartMillis: Long, dayLabel: String, scroll: Scroll
             Text(dayLabel, SetteeType.Body, color = SetteeColors.Text, maxLines = 1)
         }
         Row(Modifier.horizontalScroll(scroll, enabled = false)) {
-            repeat(HOURS_IN_WINDOW * 2) { i ->
+            repeat(((windowEndMillis - windowStartMillis + HALF_HOUR_MS - 1) / HALF_HOUR_MS).toInt()) { i ->
                 Box(
                     Modifier.width(HALF_HOUR_WIDTH).fillMaxHeight().padding(start = CELL_PADDING),
                     contentAlignment = Alignment.CenterStart,
@@ -232,7 +237,7 @@ private fun TimeHeader(windowStartMillis: Long, dayLabel: String, scroll: Scroll
 @Composable
 private fun GuideRow(
     row: ChannelsViewModel.Row,
-    windowStartMillis: Long,
+    window: LongRange,
     nowMillis: Long,
     scroll: ScrollState,
     onWatch: () -> Unit,
@@ -244,8 +249,30 @@ private fun GuideRow(
     highlight: RowHighlight,
     index: Int,
     land: Land?,
-    dayOffset: Int,
+    onLanded: () -> Unit,
 ) {
+    val shown = remember(row.programmes, window) {
+        row.programmes.filter { it.endUtcMillis > window.first && it.startUtcMillis < window.last }
+    }
+    val channel = remember { FocusRequester() }
+    val first = remember { FocusRequester() }
+    val last = remember { FocusRequester() }
+    // Paging a day, the window moves first and the programmes follow: land only once they're the new
+    // day's, or the Highlight goes to a cell about to be replaced. A row with nothing on that day
+    // lands on its channel, rather than losing the Highlight with the cell it was on.
+    val forThisDay = row.programmes.all { it.endUtcMillis > window.first && it.startUtcMillis < window.last }
+    if (land != null && forThisDay) {
+        LaunchedEffect(land, shown) {
+            withFrameNanos {}
+            val target = when {
+                shown.isEmpty() -> channel
+                land == Land.Last -> last
+                else -> first
+            }
+            runCatching { target.requestFocus() }
+            onLanded()
+        }
+    }
     Row(
         Modifier
             .fillMaxWidth()
@@ -259,12 +286,21 @@ private fun GuideRow(
                 )
             },
     ) {
-        ChannelCell(row, onWatch, { onHighlight(null) }, focusRequester, highlight, index)
+        ChannelCell(
+            row = row,
+            onWatch = onWatch,
+            onHighlight = { onHighlight(null) },
+            focusRequester = focusRequester,
+            self = channel,
+            // With nothing on this day there's no last programme to page on from, so the channel does.
+            onRight = onNextDay.takeIf { shown.isEmpty() },
+            highlight = highlight,
+            index = index,
+        )
         Row(Modifier.horizontalScroll(scroll)) {
-            val programmes = row.programmes
-            if (programmes.isEmpty()) {
+            if (shown.isEmpty()) {
                 Box(
-                    Modifier.width(HALF_HOUR_WIDTH * HOURS_IN_WINDOW * 2).fillMaxHeight(),
+                    Modifier.width(widthFor(window.first, window.last)).fillMaxHeight(),
                     contentAlignment = Alignment.CenterStart,
                 ) {
                     Text(
@@ -275,17 +311,7 @@ private fun GuideRow(
                     )
                 }
             } else {
-                ProgrammeCells(
-                    programmes,
-                    windowStartMillis,
-                    nowMillis,
-                    onHighlight,
-                    onProgramme,
-                    onNextDay,
-                    onPrevDay,
-                    land,
-                    dayOffset,
-                )
+                ProgrammeCells(shown, window, nowMillis, onHighlight, onProgramme, onNextDay, onPrevDay, first, last)
             }
         }
     }
@@ -297,11 +323,12 @@ private fun ChannelCell(
     onWatch: () -> Unit,
     onHighlight: () -> Unit,
     focusRequester: FocusRequester?,
+    self: FocusRequester,
+    onRight: (() -> Unit)?,
     highlight: RowHighlight,
     index: Int,
 ) {
     val railReturn = LocalRailReturn.current
-    val self = remember { FocusRequester() }
     HighlightSurface(
         onClick = onWatch,
         style = HighlightStyle.Cell,
@@ -315,6 +342,11 @@ private fun ChannelCell(
                     railReturn.target = self
                     onHighlight()
                 }
+            }
+            .onPreviewKeyEvent { event ->
+                val next = onRight.takeIf { event.type == KeyEventType.KeyDown && event.key == Key.DirectionRight }
+                next?.invoke()
+                next != null
             }
             .width(CHANNEL_COLUMN)
             .fillMaxHeight(),
@@ -336,20 +368,21 @@ private fun ChannelCell(
     }
 }
 
+/** [shown], the row's programmes in the window, each a cell; [first] and [last] for landing on. */
 @Composable
 private fun ProgrammeCells(
-    programmes: List<Programme>,
-    windowStartMillis: Long,
+    shown: List<Programme>,
+    window: LongRange,
     nowMillis: Long,
     onHighlight: (Programme?) -> Unit,
     onProgramme: (Programme) -> Unit,
     onNextDay: (() -> Unit)?,
     onPrevDay: (() -> Unit)?,
-    land: Land?,
-    dayOffset: Int,
+    first: FocusRequester,
+    last: FocusRequester,
 ) {
-    val windowEnd = windowStartMillis + HOURS_IN_WINDOW * 60 * 60 * 1000L
-    val shown = programmes.filter { it.endUtcMillis > windowStartMillis && it.startUtcMillis < windowEnd }
+    val windowStartMillis = window.first
+    val windowEnd = window.last
     var cursor = windowStartMillis
     // A programme almost over (or a very short one) would otherwise be a sliver too thin to read.
     // Each cell is floored at [MIN_CELL_WIDTH], and the borrowed width is repaid out of the gaps
@@ -373,8 +406,7 @@ private fun ProgrammeCells(
             onClick = { onProgramme(programme) },
             onPastEnd = onNextDay.takeIf { i == shown.lastIndex },
             onBeforeStart = onPrevDay.takeIf { i == 0 },
-            landHere = (land == Land.First && i == 0) || (land == Land.Last && i == shown.lastIndex),
-            dayOffset = dayOffset,
+            landing = listOfNotNull(first.takeIf { i == 0 }, last.takeIf { i == shown.lastIndex }),
         )
         cursor = end
     }
@@ -389,21 +421,15 @@ private fun ProgrammeCell(
     onClick: () -> Unit,
     onPastEnd: (() -> Unit)?,
     onBeforeStart: (() -> Unit)?,
-    landHere: Boolean,
-    dayOffset: Int,
+    landing: List<FocusRequester>,
 ) {
     val railReturn = LocalRailReturn.current
     val self = remember { FocusRequester() }
-    if (landHere) {
-        LaunchedEffect(dayOffset) {
-            withFrameNanos {}
-            runCatching { self.requestFocus() }
-        }
-    }
     HighlightSurface(
         onClick = onClick,
         style = HighlightStyle.Cell,
         modifier = Modifier
+            .then(landing.fold(Modifier as Modifier) { m, requester -> m.focusRequester(requester) })
             .focusRequester(self)
             .onFocusChanged {
                 if (it.isFocused) {
@@ -447,7 +473,8 @@ private fun widthFor(fromMillis: Long, toMillis: Long): Dp {
 
 // A day across at 4 dp a minute is about 5800 dp of strip, which a Stick scrolls happily.
 private const val MINUTE_DP = 4f
-private const val HOURS_IN_WINDOW = 24
+private const val HOURS_IN_DAY = 24
+private const val HOUR_MS = 60 * 60 * 1000L
 private const val HALF_HOUR_MS = 30 * 60 * 1000L
 private val CHANNEL_COLUMN = 220.dp
 private val ROW_HEIGHT = 56.dp

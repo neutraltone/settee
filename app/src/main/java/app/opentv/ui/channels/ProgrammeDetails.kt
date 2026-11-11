@@ -88,7 +88,9 @@ internal fun ProgrammeDetails(
             chosenVariant = sourceOptions.firstOrNull { it.sourceId == channel.sourceId } ?: sourceOptions.first()
         }
     }
-    val qualities = targetRow.switchable.filter { it in recordable }
+    // The chosen provider's Qualities: picking a provider and then another provider's Quality
+    // would quietly undo the first choice.
+    val qualities = targetRow.switchable.filter { it in recordable && it.sourceId == chosenVariant.sourceId }
     val sourceName: @Composable (Channel) -> String = { option ->
         sources.firstOrNull { it.id == option.sourceId }?.name ?: stringResource(R.string.rec_source_unknown)
     }
@@ -98,10 +100,15 @@ internal fun ProgrammeDetails(
 
     var choosing by remember { mutableStateOf<Choosing?>(null) }
     // The row a choice was opened from, which the Highlight goes back to when it's made.
-    val choiceRow = remember { FocusRequester() }
-    var backToChoiceRow by remember { mutableStateOf(false) }
+    val sourceRow = remember { FocusRequester() }
+    val qualityRow = remember { FocusRequester() }
+    var backTo by remember { mutableStateOf<Choosing?>(null) }
+    fun closeChoice() {
+        backTo = choosing
+        choosing = null
+    }
 
-    SidePanel(onBack = { if (choosing != null) choosing = null.also { backToChoiceRow = true } else onDismiss() }) {
+    SidePanel(onBack = { if (choosing != null) closeChoice() else onDismiss() }) {
         when (choosing) {
             Choosing.SOURCE -> Choice(
                 title = stringResource(R.string.rec_record_from),
@@ -110,8 +117,7 @@ internal fun ProgrammeDetails(
                 labelOf = sourceName,
             ) {
                 chosenVariant = it
-                choosing = null
-                backToChoiceRow = true
+                closeChoice()
             }
             Choosing.QUALITY -> Choice(
                 title = stringResource(R.string.programme_quality),
@@ -120,8 +126,7 @@ internal fun ProgrammeDetails(
                 labelOf = qualityName,
             ) {
                 chosenVariant = it
-                choosing = null
-                backToChoiceRow = true
+                closeChoice()
             }
             null -> {
                 Heading(programme, channel)
@@ -130,21 +135,22 @@ internal fun ProgrammeDetails(
                         stringResource(R.string.rec_record_from),
                         onClick = { choosing = Choosing.SOURCE },
                         value = sourceName(chosenVariant),
-                        modifier = Modifier.focusRequester(choiceRow),
+                        modifier = Modifier.focusRequester(sourceRow),
                     )
-                } else if (qualities.size > 1) {
+                }
+                if (qualities.size > 1) {
                     PanelRow(
                         stringResource(R.string.programme_quality),
                         onClick = { choosing = Choosing.QUALITY },
                         value = qualityName(chosenVariant),
-                        modifier = Modifier.focusRequester(choiceRow),
+                        modifier = Modifier.focusRequester(qualityRow),
                     )
                 }
-                if (backToChoiceRow) {
-                    LaunchedEffect(Unit) {
+                backTo?.let { from ->
+                    LaunchedEffect(from) {
                         withFrameNanos {}
-                        runCatching { choiceRow.requestFocus() }
-                        backToChoiceRow = false
+                        runCatching { (if (from == Choosing.SOURCE) sourceRow else qualityRow).requestFocus() }
+                        backTo = null
                     }
                 }
                 Actions(
@@ -178,7 +184,10 @@ private fun ColumnScope.Heading(programme: Programme, channel: Channel) {
     Spacer(Modifier.height(HEADING_GAP))
 }
 
-/** A choice of [options], [chosen] ticked and the Highlight starting on it. */
+/**
+ * A choice of [options], [chosen] ticked and the Highlight starting on it. [chosen] can be another
+ * stream of a listed Quality (the list has each Quality once), so that one stands in for it.
+ */
 @Composable
 private fun Choice(
     title: String,
@@ -188,18 +197,20 @@ private fun Choice(
     onChoose: (Channel) -> Unit,
 ) {
     val current = remember { FocusRequester() }
+    val currentIndex = options.indexOfFirst { it.id == chosen.id }
+        .takeIf { it >= 0 } ?: options.indexOfFirst { it.qualityLabel == chosen.qualityLabel }.coerceAtLeast(0)
     LaunchedEffect(Unit) {
         withFrameNanos {}
         runCatching { current.requestFocus() }
     }
     Text(title, SetteeType.Section)
     Spacer(Modifier.height(HEADING_GAP))
-    options.forEach { option ->
+    options.forEachIndexed { i, option ->
         PanelRow(
             labelOf(option),
             onClick = { onChoose(option) },
-            ticked = option.id == chosen.id,
-            modifier = if (option.id == chosen.id) Modifier.focusRequester(current) else Modifier,
+            ticked = i == currentIndex,
+            modifier = if (i == currentIndex) Modifier.focusRequester(current) else Modifier,
         )
     }
 }

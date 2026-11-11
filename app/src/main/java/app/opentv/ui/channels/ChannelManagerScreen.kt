@@ -8,7 +8,6 @@ package app.opentv.ui.channels
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -53,6 +52,7 @@ import app.opentv.ui.ChannelsViewModel
 import app.opentv.ui.design.CategoriesSidebar
 import app.opentv.ui.design.HighlightStyle
 import app.opentv.ui.design.HighlightSurface
+import app.opentv.ui.design.Message
 import app.opentv.ui.design.SetteeColors
 import app.opentv.ui.design.SetteeShapes
 import app.opentv.ui.design.SetteeSpace
@@ -176,9 +176,9 @@ private fun CategoryPane(
     onOptions: (ChannelsViewModel.Row) -> Unit,
 ) {
     when {
-        noCategories -> Hint(stringResource(R.string.channels_manager_no_channels))
+        noCategories -> Message(stringResource(R.string.channels_manager_no_channels))
         !picked -> Unit
-        rows.isEmpty() -> Hint(stringResource(R.string.channels_manager_empty_category))
+        rows.isEmpty() -> Message(stringResource(R.string.channels_manager_empty_category))
         else -> ManagerRows(rows, onToggle, onOptions)
     }
 }
@@ -218,9 +218,9 @@ internal fun ChannelManagerSearchPane(
         )
         Spacer(Modifier.height(SetteeSpace.RowGap))
         when {
-            typed.isBlank() -> Hint(stringResource(R.string.channels_manager_search_hint))
-            typed.trim().length < 2 -> Hint(stringResource(R.string.common_keep_typing))
-            results.isEmpty() -> Hint(stringResource(R.string.channels_manager_no_match, typed))
+            typed.isBlank() -> Message(stringResource(R.string.channels_manager_search_hint))
+            typed.trim().length < 2 -> Message(stringResource(R.string.common_keep_typing))
+            results.isEmpty() -> Message(stringResource(R.string.channels_manager_no_match, typed))
             else -> ManagerRows(results, onToggle, onOptions)
         }
     }
@@ -275,13 +275,6 @@ private fun ManagerRow(row: ChannelsViewModel.Row, onToggle: () -> Unit, onOptio
                 },
             )
         }
-    }
-}
-
-@Composable
-private fun Hint(text: String) {
-    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Text(text, SetteeType.Body, color = SetteeColors.QuietText)
     }
 }
 

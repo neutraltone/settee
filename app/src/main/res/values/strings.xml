@@ -54,6 +54,9 @@
     <string name="guide_building_desc">Building your guide from the channels saved on this device. On a big provider this takes a moment.</string>
     <string name="guide_no_favourites_title">No favourites yet</string>
     <string name="guide_no_favourites_hint">Your favourite channels will show up here. Hold Select on a channel to add it.</string>
+    <string name="guide_choose_category">Choose a category</string>
+    <string name="guide_empty_category_title">Nothing to show here</string>
+    <string name="guide_empty_category_hint">Every channel here is hidden. You can show them again in the Channel manager, in Settings.</string>
     <string name="guide_no_channels_title">No channels yet</string>
     <string name="guide_add_provider_desc">Add a provider to get started.</string>
     <string name="guide_add_provider_button">Add a provider</string>

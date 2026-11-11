@@ -17,7 +17,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -29,7 +28,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.focus.FocusDirection
@@ -47,7 +45,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import androidx.lifecycle.Lifecycle
@@ -65,17 +62,15 @@ import app.opentv.data.repo.MediaKey
 import app.opentv.player.PlayerController
 import app.opentv.ui.ChannelsViewModel
 import app.opentv.ui.LocalRailReturn
+import app.opentv.ui.design.ActionButton
 import app.opentv.ui.design.CategoriesSidebar
 import app.opentv.ui.design.CategoriesSidebarWidth
-import app.opentv.ui.design.HighlightStyle
-import app.opentv.ui.design.HighlightSurface
+import app.opentv.ui.design.Message
 import app.opentv.ui.design.ProgressBar
 import app.opentv.ui.design.ScreenFrame
 import app.opentv.ui.design.ScreenFrameScope
 import app.opentv.ui.design.SetteeColors
-import app.opentv.ui.design.SetteeType
 import app.opentv.ui.design.SidebarEntry
-import app.opentv.ui.design.Text
 import app.opentv.ui.options.LocalConfirmLive
 import app.opentv.ui.vod.rememberSidebarSlide
 import java.text.SimpleDateFormat
@@ -116,6 +111,8 @@ fun LiveScreen(
     val favouritesOnly by viewModel.favouritesOnly.collectAsState()
     val sources by viewModel.sources.collectAsState()
     val windowStart by viewModel.windowStartMillis.collectAsState()
+    val windowEnd by viewModel.windowEndMillis.collectAsState()
+    val rowsBuilt by viewModel.rowsBuilt.collectAsState()
     val guideDayOffset by viewModel.guideDayOffset.collectAsState()
     // Tri-state: null = still checking the catalogue, true = channels on disk, false = confirmed
     // empty. Drives the choice between the loading message and a recoverable error below.
@@ -145,6 +142,10 @@ fun LiveScreen(
         val row = rows.firstOrNull { it.key == highlighted?.first?.key } ?: rows.firstOrNull()
         highlighted = row?.let { it to highlighted?.second?.takeIf { _ -> it.key == highlighted?.first?.key } }
     }
+
+    // Live TV opens on today: a later day browsed last time isn't where anyone expects to come
+    // back to, from the player or another tab, and getting back from it is a Left per day.
+    DisposableEffect(viewModel) { onDispose { viewModel.guideToNow() } }
 
     // The guide opens on the channel last watched, so Back from the player lands where you were and
     // shows what's on it next. The guide is disposed under the player, so this is the way back in.
@@ -207,6 +208,7 @@ fun LiveScreen(
     }
 
     // The guide's day pages: where the Highlight lands on the new day, a row's first or last cell.
+    // Cleared once it has, so the row coming back into view later doesn't take the Highlight again.
     var landOn by remember { mutableStateOf<Pair<Any, Boolean>?>(null) }
 
     val current = when {
@@ -223,7 +225,7 @@ fun LiveScreen(
                 else -> viewModel.selectCategory(key)
             }
         },
-    ) {
+    ) { openSidebar ->
         Column(Modifier.fillMaxSize()) {
             GuideBand(
                 row = highlighted?.first,
@@ -234,11 +236,14 @@ fun LiveScreen(
             Box(Modifier.weight(1f)) {
                 if (rows.isEmpty()) {
                     when {
-                        favouritesOnly -> NoFavourites()
+                        favouritesOnly -> NoFavourites(openSidebar)
                         // Work genuinely in progress: a sync is running, the catalogue check hasn't
                         // returned yet, or channels are on disk and the guide is still building. A big
                         // provider takes a while, and "No channels" during it reads as failure.
-                        isSyncing || channelsPresent == null || channelsPresent == true -> Loading(isSyncing)
+                        isSyncing || channelsPresent == null -> Loading(isSyncing)
+                        // Built, with channels on the device, and nothing here: every one is hidden.
+                        channelsPresent == true && rowsBuilt -> NothingToShow(openSidebar)
+                        channelsPresent == true -> Loading(isSyncing)
                         // Nothing is syncing and the catalogue is confirmed empty: with a provider set
                         // up, the last load failed or returned nothing.
                         hasSources -> LoadFailed(onRetry = onRefresh, onEditProvider = onAddSource)
@@ -255,6 +260,7 @@ fun LiveScreen(
                     GuideGrid(
                         rows = rows,
                         windowStartMillis = windowStart,
+                        windowEndMillis = windowEnd,
                         onWatch = { row -> requestLive(row.primary) },
                         onHighlight = { row, programme -> highlighted = row to programme },
                         onProgramme = { row, programme -> details = row to programme },
@@ -273,6 +279,7 @@ fun LiveScreen(
                         onReturnToRow = { highlighted = it to null },
                         landOnRow = landOn?.first,
                         landAtEnd = landOn?.second == true,
+                        onLanded = { landOn = null },
                     )
                 }
             }
@@ -308,7 +315,7 @@ private fun LiveBrowse(
     categories: List<CategoryGroup>,
     current: String,
     onPick: (String) -> Unit,
-    content: @Composable ScreenFrameScope.() -> Unit,
+    content: @Composable ScreenFrameScope.(openSidebar: () -> Unit) -> Unit,
 ) {
     val slide = rememberSidebarSlide()
     val sidebar = remember { FocusRequester() }
@@ -341,7 +348,7 @@ private fun LiveBrowse(
                 }
                 .focusGroup(),
         ) {
-            content()
+            content { slide.open = true }
         }
         if (slide.sidebarShown) {
             LiveSidebar(
@@ -421,9 +428,25 @@ private fun Loading(isSyncing: Boolean) {
     }
 }
 
+/** Favourites with none in them: how to add one, and a way to another category. */
 @Composable
-private fun NoFavourites() {
-    Message(stringResource(R.string.guide_no_favourites_title), stringResource(R.string.guide_no_favourites_hint))
+private fun NoFavourites(openSidebar: () -> Unit) {
+    Message(
+        stringResource(R.string.guide_no_favourites_hint),
+        title = stringResource(R.string.guide_no_favourites_title),
+    ) { ActionButton(stringResource(R.string.guide_choose_category), openSidebar) }
+}
+
+/**
+ * A category, or All channels, whose every channel is hidden. Without a button there'd be nothing
+ * here to take the Highlight, and so no way to Left and the sidebar.
+ */
+@Composable
+private fun NothingToShow(openSidebar: () -> Unit) {
+    Message(
+        stringResource(R.string.guide_empty_category_hint),
+        title = stringResource(R.string.guide_empty_category_title),
+    ) { ActionButton(stringResource(R.string.guide_choose_category), openSidebar) }
 }
 
 /**
@@ -432,44 +455,23 @@ private fun NoFavourites() {
  */
 @Composable
 private fun LoadFailed(onRetry: () -> Unit, onEditProvider: () -> Unit) {
-    Message(stringResource(R.string.guide_load_failed_title), stringResource(R.string.guide_load_failed_desc)) {
+    Message(
+        stringResource(R.string.guide_load_failed_desc),
+        title = stringResource(R.string.guide_load_failed_title),
+    ) {
         Row(horizontalArrangement = Arrangement.spacedBy(BUTTON_GAP)) {
-            MessageButton(stringResource(R.string.common_try_again), onRetry)
-            MessageButton(stringResource(R.string.guide_edit_provider), onEditProvider)
+            ActionButton(stringResource(R.string.common_try_again), onRetry)
+            ActionButton(stringResource(R.string.guide_edit_provider), onEditProvider)
         }
     }
 }
 
 @Composable
 private fun NoChannels(onAddSource: () -> Unit) {
-    Message(stringResource(R.string.guide_no_channels_title), stringResource(R.string.guide_add_provider_desc)) {
-        MessageButton(stringResource(R.string.guide_add_provider_button), onAddSource)
-    }
-}
-
-@Composable
-private fun Message(title: String, body: String, below: @Composable () -> Unit = {}) {
-    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.widthIn(max = MESSAGE_WIDTH)) {
-            Text(title, SetteeType.Section, textAlign = TextAlign.Center)
-            Spacer(Modifier.height(MESSAGE_GAP))
-            Text(body, SetteeType.Body, color = SetteeColors.QuietText, textAlign = TextAlign.Center)
-            Spacer(Modifier.height(MESSAGE_GAP * 2))
-            below()
-        }
-    }
-}
-
-@Composable
-private fun MessageButton(label: String, onClick: () -> Unit) {
-    HighlightSurface(onClick = onClick, style = HighlightStyle.Button) { highlighted ->
-        Text(
-            label,
-            SetteeType.Body,
-            color = if (highlighted) SetteeColors.OnAccent else SetteeColors.Text,
-            modifier = Modifier.padding(horizontal = BUTTON_PADDING_SIDE, vertical = BUTTON_PADDING_TOP),
-        )
-    }
+    Message(
+        stringResource(R.string.guide_add_provider_desc),
+        title = stringResource(R.string.guide_no_channels_title),
+    ) { ActionButton(stringResource(R.string.guide_add_provider_button), onAddSource) }
 }
 
 // Never a category's key: those are normalised names, or a provider's number and category id.
@@ -477,8 +479,4 @@ private const val FAVOURITES = "pinned:favourites"
 private const val ALL_CHANNELS = "pinned:all"
 private const val FIND_MAX_LENGTH = 40
 private val GUIDE_GAP = 14.dp
-private val MESSAGE_WIDTH = 460.dp
-private val MESSAGE_GAP = 8.dp
 private val BUTTON_GAP = 12.dp
-private val BUTTON_PADDING_SIDE = 20.dp
-private val BUTTON_PADDING_TOP = 8.dp

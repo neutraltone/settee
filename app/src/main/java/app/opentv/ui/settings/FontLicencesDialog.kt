@@ -23,8 +23,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import app.opentv.R
-import app.opentv.ui.design.HighlightStyle
-import app.opentv.ui.design.HighlightSurface
+import app.opentv.ui.design.ActionButton
 import app.opentv.ui.design.SetteeColors
 import app.opentv.ui.design.SetteeShapes
 import app.opentv.ui.design.SetteeType
@@ -73,18 +72,11 @@ internal fun FontLicencesDialog(onDismiss: () -> Unit) {
                     Text(licences[index], style = SetteeType.Body)
                 }
             }
-            HighlightSurface(
+            ActionButton(
+                stringResource(R.string.common_done),
                 onClick = onDismiss,
-                style = HighlightStyle.Button,
                 modifier = rememberDpadScroll(scroll).startsFocused(),
-            ) { highlighted ->
-                Text(
-                    stringResource(R.string.common_done),
-                    style = SetteeType.Body,
-                    color = if (highlighted) SetteeColors.OnAccent else SetteeColors.Text,
-                    modifier = Modifier.padding(horizontal = 24.dp, vertical = 10.dp),
-                )
-            }
+            )
         }
     }
 }
