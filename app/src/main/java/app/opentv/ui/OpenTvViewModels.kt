@@ -50,6 +50,7 @@ import app.opentv.data.repo.nowOn
 import app.opentv.data.repo.onNowAt
 import app.opentv.data.repo.series
 import app.opentv.data.repo.seriesCovers
+import app.opentv.data.repo.splitGenres
 import app.opentv.data.work.SyncWorker
 import app.opentv.pairing.ManagerServer
 import app.opentv.player.playsQualityRanked
@@ -690,10 +691,19 @@ data class ResumeItem(
 
 /**
  * What Movies' and Shows' backdrop shows for the highlighted title: its name, where the Profile is
- * with it ([status]), its synopsis and its wide art, if it has any.
+ * with it ([status]), a line of facts about it, its synopsis and its wide art, if it has any.
  */
 @androidx.compose.runtime.Immutable
-data class Backdrop(val title: String, val imageUrl: String?, val status: CoverStatus?, val synopsis: String?)
+data class Backdrop(
+    val title: String,
+    val imageUrl: String?,
+    val status: CoverStatus?,
+    val synopsis: String?,
+    val year: Int? = null,
+    val genres: List<String> = emptyList(),
+    /** Films only: shows have no single running time. */
+    val runtimeSeconds: Int? = null,
+)
 
 /** What Movies and Shows know a category by: its id is only unique within its provider. */
 val Category.browseKey: String get() = "$sourceId:$id"
@@ -753,6 +763,9 @@ class VodViewModel @JvmOverloads constructor(
     private companion object {
         /** As long as the tab's other flows: through a quick trip to a title's page and back. */
         const val KEEP_CATEGORIES_MILLIS = 5_000L
+
+        /** Two genres keep the backdrop's line of facts to one line. */
+        const val BACKDROP_GENRES = 2
     }
 
     suspend fun movie(id: Long): Movie? = graph.catalogRepository.movie(id)
@@ -768,23 +781,38 @@ class VodViewModel @JvmOverloads constructor(
     fun movieBackdrop(id: Long): Flow<Backdrop?> = flow {
         val movie = movie(id) ?: return@flow emit(null)
         val status = graph.viewerLibrary.coverStatuses().first().ofMovie(movie.id)
-        emit(Backdrop(movie.displayTitle, movie.backdropUrl, status, movie.plot))
+        emit(movie.backdrop(status))
         if (movie.backdropUrl != null && movie.plot != null) return@flow
-        graph.catalogRepository.movieDetail(id)?.takeIf { it != movie }?.let {
-            emit(Backdrop(it.displayTitle, it.backdropUrl, status, it.plot))
-        }
+        graph.catalogRepository.movieDetail(id)?.takeIf { it != movie }?.let { emit(it.backdrop(status)) }
     }
 
     /** As [movieBackdrop], for Shows. */
     fun seriesBackdrop(id: Long): Flow<Backdrop?> = flow {
         val series = series(id) ?: return@flow emit(null)
         val status = graph.viewerLibrary.coverStatuses().first().ofSeries(series.ref)
-        emit(Backdrop(series.displayTitle, series.backdropUrl, status, series.plot))
+        emit(series.backdrop(status))
         if (series.backdropUrl != null && series.plot != null) return@flow
-        graph.catalogRepository.seriesDetail(id)?.takeIf { it != series }?.let {
-            emit(Backdrop(it.displayTitle, it.backdropUrl, status, it.plot))
-        }
+        graph.catalogRepository.seriesDetail(id)?.takeIf { it != series }?.let { emit(it.backdrop(status)) }
     }
+
+    private fun Movie.backdrop(status: CoverStatus?) = Backdrop(
+        displayTitle,
+        backdropUrl,
+        status,
+        plot,
+        year = year,
+        genres = splitGenres(genre).take(BACKDROP_GENRES),
+        runtimeSeconds = durationSeconds?.takeIf { it > 0 },
+    )
+
+    private fun Series.backdrop(status: CoverStatus?) = Backdrop(
+        displayTitle,
+        backdropUrl,
+        status,
+        plot,
+        year = year,
+        genres = splitGenres(genre).take(BACKDROP_GENRES),
+    )
 
     /** Shows [key]'s grid ([browseKey]), or none for For you. */
     fun selectMovieCategory(key: String?) {

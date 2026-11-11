@@ -91,4 +91,19 @@ class VodBackdropTest {
 
         assertThat(status).isInstanceOf(CoverStatus.InProgress::class.java)
     }
+
+    @Test
+    fun `a film's backdrop carries its year, its first two genres and its running time`() = runBlocking {
+        graph.database.movies().upsertAll(
+            listOf(
+                movie(backdrop = null).copy(year = 1995, genre = "Crime, Drama, Thriller", durationSeconds = 10_200),
+            ),
+        )
+
+        val shown = viewModel.movieBackdrop(1).toList().last()
+
+        assertThat(shown?.year).isEqualTo(1995)
+        assertThat(shown?.genres).containsExactly("Crime", "Drama").inOrder()
+        assertThat(shown?.runtimeSeconds).isEqualTo(10_200)
+    }
 }

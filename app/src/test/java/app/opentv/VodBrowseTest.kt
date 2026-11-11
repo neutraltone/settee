@@ -353,6 +353,24 @@ class VodBrowseTest {
     }
 
     @Test
+    fun `the synopsis starts in the same place whether or not the title has a status`() {
+        library()
+        runBlocking {
+            graph.viewerLibrary.recordProgress("movie:4", positionMillis = 600_000, durationMillis = 6_000_000)
+        }
+        setMovies()
+        pressOkOnMoviesInTheRail()
+        compose.waitUntilAtLeastOneExists(hasText(synopsisOf("Heat")), 5_000)
+        val withStatus = compose.onNodeWithText(synopsisOf("Heat")).getUnclippedBoundsInRoot().top
+
+        press(Key.DirectionDown)
+        compose.waitUntilAtLeastOneExists(hasText(synopsisOf(firstTitle)), 5_000)
+        val without = compose.onNodeWithText(synopsisOf(firstTitle)).getUnclippedBoundsInRoot().top
+
+        assertThat(without).isEqualTo(withStatus)
+    }
+
+    @Test
     fun `a show in Continue Watching shows its backdrop when highlighted, as covers do`() {
         runBlocking {
             graph.database.categories().upsertAll(listOf(Category("drama", 1, "Drama", StreamKind.SERIES)))

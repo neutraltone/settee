@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -109,6 +110,16 @@ internal fun BackdropArt(backdrop: Backdrop?) {
 
 private const val ART_FADE_MILLIS = 200
 
+/** Between the line of facts and the synopsis, so the synopsis doesn't sit tight against it. */
+private val FACTS_GAP = 10.dp
+
+/** A title's year, genres and, for a film, running time. */
+private fun factsOf(backdrop: Backdrop): List<String> = listOfNotNull(
+    backdrop.year?.toString(),
+    backdrop.genres.takeIf { it.isNotEmpty() }?.joinToString(", "),
+    backdrop.runtimeSeconds?.let(::formatRuntime),
+)
+
 /**
  * The highlighted title's name, where the Profile is with it, and its synopsis. Each line fades
  * as the art does ([Fading]), on its own, so a synopsis fetched after the rest fades in by itself.
@@ -117,9 +128,15 @@ private const val ART_FADE_MILLIS = 200
 internal fun BackdropText(backdrop: Backdrop?) {
     Column(Modifier.fillMaxWidth(BACKDROP_TEXT_WIDTH).height(BACKDROP_TEXT_HEIGHT)) {
         Fading(backdrop?.title) { Text(it, SetteeType.Hero, maxLines = 1) }
-        // Home's words for a cover's status, on one line: `S4 E3 · 22 min left`.
-        val status = coverStatusText(backdrop?.status).takeIf { it.isNotEmpty() }?.joinToString(" · ")
-        Fading(status) { QuietLabel(it) }
+        // One line, always there even when empty, so the synopsis starts in the same place for every
+        // title: a status line only some titles had moved it down and back up as the Highlight moved.
+        // Home's words for the status first, then the facts: `S4 E3 · 22 min left · 2010 · Drama`.
+        val facts = backdrop?.let { (coverStatusText(it.status) + factsOf(it)).joinToString(" · ") }?.ifEmpty { null }
+        Box(Modifier.padding(bottom = FACTS_GAP)) {
+            // Holds the line's height while it has nothing to say.
+            QuietLabel(" ")
+            Fading(facts) { QuietLabel(it) }
+        }
         Fading(backdrop?.synopsis?.takeIf { it.isNotBlank() }) { Text(it, SetteeType.Synopsis, maxLines = 3) }
     }
 }
