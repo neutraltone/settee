@@ -100,6 +100,23 @@ val LIVE = FakeTimeline.TimelineWindowDefinition(
         .build(),
 )
 
+/** A live channel that can't be sought, like most providers' live TS: the player has no seek bar. */
+@UnstableApi
+val UNSEEKABLE_LIVE = FakeTimeline.TimelineWindowDefinition(
+    1,
+    "live",
+    /* isSeekable= */
+    false,
+    true,
+    true,
+    false,
+    120L * C.MICROS_PER_SECOND,
+    110L * C.MICROS_PER_SECOND,
+    0L,
+    listOf(androidx.media3.common.AdPlaybackState.NONE),
+    LIVE.mediaItem,
+)
+
 /** What a stream carries, for the tests that care about its sound. */
 @UnstableApi
 val PICTURE_AND_SOUND = listOf(ExoPlayerTestRunner.VIDEO_FORMAT, ExoPlayerTestRunner.AUDIO_FORMAT)

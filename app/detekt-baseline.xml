@@ -62,7 +62,6 @@
     <ID>ForbiddenImport:MainActivity.kt$import androidx.compose.foundation.shape.RoundedCornerShape</ID>
     <ID>ForbiddenImport:MainScreen.kt$import androidx.compose.material3.AlertDialog</ID>
     <ID>ForbiddenImport:MainScreen.kt$import androidx.compose.material3.TextButton</ID>
-    <ID>ForbiddenImport:NextEpisodeOverlay.kt$import androidx.compose.foundation.shape.RoundedCornerShape</ID>
     <ID>ForbiddenImport:OptionsPanel.kt$import androidx.compose.material3.AlertDialog</ID>
     <ID>ForbiddenImport:OptionsPanel.kt$import androidx.compose.material3.TextButton</ID>
     <ID>ForbiddenImport:ParentalControlsScreen.kt$import androidx.compose.material3.Button</ID>
@@ -71,7 +70,6 @@
     <ID>ForbiddenImport:PhonePairingScreen.kt$import androidx.compose.foundation.shape.RoundedCornerShape</ID>
     <ID>ForbiddenImport:PhonePairingScreen.kt$import androidx.compose.material3.Button</ID>
     <ID>ForbiddenImport:PhonePairingScreen.kt$import androidx.compose.material3.OutlinedButton</ID>
-    <ID>ForbiddenImport:PlayerControls.kt$import androidx.compose.foundation.shape.RoundedCornerShape</ID>
     <ID>ForbiddenImport:PlayerErrorPanel.kt$import androidx.compose.material3.Button</ID>
     <ID>ForbiddenImport:PlayerScreen.kt$import androidx.compose.foundation.shape.RoundedCornerShape</ID>
     <ID>ForbiddenImport:PlayerScreen.kt$import androidx.compose.material3.Button</ID>
@@ -102,8 +100,6 @@
     <ID>ForbiddenImport:SyncScreen.kt$import androidx.compose.material3.Switch</ID>
     <ID>ForbiddenImport:UpdateScreen.kt$import androidx.compose.material3.AlertDialog</ID>
     <ID>ForbiddenImport:UpdateScreen.kt$import androidx.compose.material3.TextButton</ID>
-    <ID>ForbiddenImport:VodPlayerScreen.kt$import androidx.compose.foundation.shape.RoundedCornerShape</ID>
-    <ID>ForbiddenImport:VodPlayerScreen.kt$import androidx.compose.material3.Slider</ID>
     <ID>ForbiddenImport:VodScreens.kt$import androidx.compose.foundation.shape.RoundedCornerShape</ID>
     <ID>ForbiddenImport:WatchBadge.kt$import androidx.compose.foundation.shape.RoundedCornerShape</ID>
     <ID>ForbiddenImport:WebManagerScreen.kt$import androidx.compose.foundation.shape.RoundedCornerShape</ID>

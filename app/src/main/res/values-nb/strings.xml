@@ -97,13 +97,10 @@
     <string name="rec_background_prompt_body">Android kan stoppe dette opptaket når skjermen sovner eller du forlater Settee. Tillat Settee å ignorere batterioptimalisering slik at opptak fortsetter, selv i standby — på samme måte som en TV-boks.</string>
     <string name="rec_background_prompt_allow">Tillat</string>
     <string name="rec_background_prompt_not_now">Ikke nå</string>
-    <string name="player_rewind">Spol tilbake</string>
     <string name="player_pause">Pause</string>
-    <string name="player_forward">Spol fram</string>
     <string name="player_subtitles">Undertekster</string>
     <string name="player_audio">Lyd</string>
     <string name="player_quality">Kvalitet</string>
-    <string name="player_aspect">Bildeforhold</string>
     <string name="player_record">Ta opp</string>
     <string name="player_pop_out">Løsne</string>
     <string name="player_last">Forrige</string>

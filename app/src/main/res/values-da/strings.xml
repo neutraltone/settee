@@ -97,13 +97,10 @@
     <string name="rec_background_prompt_body">Android kan stoppe denne optagelse, når skærmen går i dvale, eller du forlader Settee. Tillad, at Settee ignorerer batterioptimering, så optagelser fortsætter, selv i standby – ligesom en set-top-boks gør.</string>
     <string name="rec_background_prompt_allow">Tillad</string>
     <string name="rec_background_prompt_not_now">Ikke nu</string>
-    <string name="player_rewind">Spol tilbage</string>
     <string name="player_pause">Pause</string>
-    <string name="player_forward">Spol frem</string>
     <string name="player_subtitles">Undertekster</string>
     <string name="player_audio">Lyd</string>
     <string name="player_quality">Kvalitet</string>
-    <string name="player_aspect">Billedformat</string>
     <string name="player_record">Optag</string>
     <string name="player_pop_out">Pop ud</string>
     <string name="player_last">Sidste</string>

@@ -95,12 +95,13 @@ class NextEpisodeOverlayTest {
         secondsLeft(12)
 
         compose.onNodeWithText("Next episode in 12").assertExists()
-        compose.onNodeWithText("Episode 2").assertIsFocused()
+        compose.onNodeWithText("Episode 2").assertExists()
+        compose.onNodeWithText("Play now").assertIsFocused()
         captureScreen("vod_player_next_episode_card")
     }
 
     @Test
-    fun `OK on the card plays the Next Episode`() {
+    fun `OK on Play now plays the Next Episode`() {
         showPlayer()
         secondsLeft(12)
 
@@ -116,8 +117,8 @@ class NextEpisodeOverlayTest {
         showPlayer()
         secondsLeft(12)
 
-        // The card sits in the corner, so Watch credits is beside it on the left.
-        press(Key.DirectionLeft)
+        // Play now, then Watch credits on its right.
+        press(Key.DirectionRight)
         compose.onNodeWithText("Watch credits").assertIsFocused()
         captureScreen("vod_player_next_episode_card_watch_credits")
         press(Key.DirectionCenter)
@@ -147,7 +148,8 @@ class NextEpisodeOverlayTest {
         secondsLeft(12)
 
         compose.onNodeWithText("Press OK to play").assertExists()
-        compose.onNodeWithText("Episode 2").assertIsFocused()
+        compose.onNodeWithText("Episode 2").assertExists()
+        compose.onNodeWithText("Play now").assertIsFocused()
         captureScreen("vod_player_next_episode_card_waiting")
     }
 
@@ -164,7 +166,7 @@ class NextEpisodeOverlayTest {
 
         assertThat(playback.paused).isTrue()
         compose.onNodeWithText("Are you still watching?").assertExists()
-        compose.onNodeWithText("Continue watching").assertIsFocused()
+        compose.onNodeWithText("Keep watching").assertIsFocused()
         captureScreen("vod_player_still_watching")
     }
 
@@ -181,7 +183,7 @@ class NextEpisodeOverlayTest {
     }
 
     @Test
-    fun `Continue watching plays the Next Episode`() {
+    fun `Keep watching plays the Next Episode`() {
         showPlayer()
         runUnattended(4)
 

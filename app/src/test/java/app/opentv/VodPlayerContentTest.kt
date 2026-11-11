@@ -8,15 +8,15 @@ package app.opentv
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.semantics.SemanticsProperties
-import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.ExperimentalTestApi
-import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.hasAnyAncestor
+import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isDialog
-import androidx.compose.ui.test.isFocused
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
@@ -84,7 +84,7 @@ class VodPlayerContentTest {
 
     private fun hideControls() {
         compose.mainClock.advanceTimeBy(CONTROLS_TIMEOUT_MILLIS)
-        compose.onNodeWithText("Pause").assertDoesNotExist()
+        compose.onNodeWithContentDescription("Pause").assertDoesNotExist()
     }
 
     private fun press(key: Key) {
@@ -100,7 +100,7 @@ class VodPlayerContentTest {
         press(Key.MediaPlayPause)
 
         assertThat(controller.player.playWhenReady).isFalse()
-        compose.onNodeWithText("Play").assertExists()
+        compose.onNodeWithContentDescription("Play").assertExists()
         captureScreen("vod_player_paused")
     }
 
@@ -115,7 +115,7 @@ class VodPlayerContentTest {
         press(Key.MediaPlay)
         press(Key.MediaPlay)
         assertThat(controller.player.playWhenReady).isTrue()
-        compose.onNodeWithText("Pause").assertExists()
+        compose.onNodeWithContentDescription("Pause").assertExists()
     }
 
     @Test
@@ -163,7 +163,7 @@ class VodPlayerContentTest {
 
         controller.player.playWhenReady = true
         compose.waitForIdle()
-        compose.onNodeWithText("Pause").assertExists()
+        compose.onNodeWithContentDescription("Pause").assertExists()
 
         press(Key.MediaPlayPause)
         assertThat(controller.player.playWhenReady).isFalse()
@@ -183,11 +183,6 @@ class VodPlayerContentTest {
         compose.waitForIdle()
     }
 
-    // The buffering spinner is a progress node too, but one with no range.
-    private val seekBar = SemanticsMatcher("is the seek bar") { node ->
-        node.config.getOrNull(SemanticsProperties.ProgressBarRangeInfo)?.range?.endInclusive?.let { it > 0 } == true
-    }
-
     private fun barPosition() = compose
         .onNode(seekBar)
         .fetchSemanticsNode()
@@ -195,17 +190,17 @@ class VodPlayerContentTest {
         .current
         .toLong()
 
-    private fun barIsFocused() = compose
-        .onAllNodes(isFocused() and seekBar)
-        .fetchSemanticsNodes()
-        .isNotEmpty()
-
     @Test
-    fun `reaching the bar shows where the film is and leaves it playing from there`() {
+    fun `the controls open with the Highlight on the seek bar`() {
         showFilmPartWay()
 
-        press(Key.DirectionUp)
-        settle()
+        assertThat(compose.seekBarIsFocused()).isTrue()
+        captureScreen("vod_player_controls")
+    }
+
+    @Test
+    fun `the bar shows where the film is and leaves it playing from there`() {
+        showFilmPartWay()
 
         assertThat(controller.player.currentPosition).isEqualTo(TEN_MINUTES)
         assertThat(barPosition()).isEqualTo(TEN_MINUTES)
@@ -213,29 +208,86 @@ class VodPlayerContentTest {
     }
 
     @Test
-    fun `down from the bar goes to the buttons without seeking, and up comes back`() {
+    fun `Down from the bar goes to Subtitles without seeking and brings up the pills, and Left comes back`() {
         showFilmPartWay()
-        press(Key.DirectionUp)
-        settle()
+        compose.onNodeWithText("Sleep timer").assertDoesNotExist()
 
         press(Key.DirectionDown)
         settle()
 
         assertThat(controller.player.currentPosition).isEqualTo(TEN_MINUTES)
-        assertThat(barIsFocused()).isFalse()
-        compose.onNodeWithText("Pause").assertIsFocused()
+        compose.onNodeWithContentDescription("Subtitles").assertIsFocused()
+        compose.onNodeWithText("Sleep timer").assertIsDisplayed()
+        captureScreen("vod_player_pills")
 
-        press(Key.DirectionUp)
+        press(Key.DirectionLeft)
         settle()
 
         assertThat(controller.player.currentPosition).isEqualTo(TEN_MINUTES)
-        assertThat(barIsFocused()).isTrue()
+        assertThat(compose.seekBarIsFocused()).isTrue()
     }
 
-    /** On the bar, with right held down and not yet let go: a seek 1% of the film on from [TEN_MINUTES]. */
-    private fun startSeekingOnTheBar() {
+    @Test
+    fun `Right from Subtitles reaches Audio, Down from there reaches the pills, and Up from the row reaches close`() {
+        showFilmPartWay()
+        press(Key.DirectionDown)
+
+        press(Key.DirectionRight)
+        compose.onNodeWithContentDescription("Audio").assertIsFocused()
+
+        press(Key.DirectionDown)
+        compose.onNodeWithText("Sleep timer").assertIsFocused()
+        press(Key.DirectionRight)
+        compose.onNodeWithText("Options").assertIsFocused()
+
         press(Key.DirectionUp)
+        compose.onNodeWithContentDescription("Subtitles").assertIsFocused()
+        press(Key.DirectionUp)
+        compose.onNodeWithContentDescription("Close").assertIsFocused()
+        compose.onNodeWithText("Sleep timer").assertDoesNotExist()
+
+        press(Key.DirectionDown)
+        assertThat(compose.seekBarIsFocused()).isTrue()
+        press(Key.DirectionUp)
+        compose.onNodeWithContentDescription("Close").assertIsFocused()
+        assertThat(controller.player.currentPosition).isEqualTo(TEN_MINUTES)
+    }
+
+    @Test
+    fun `Subtitles opens a panel down the right, with the Highlight on the ticked choice`() {
+        showFilmPartWay()
+        press(Key.DirectionDown)
+
+        press(Key.DirectionCenter)
         settle()
+
+        val off = compose.onNode(hasText("Off") and hasContentDescription("Selected"))
+        off.assertIsFocused()
+        val screenWidth = compose.onRoot().fetchSemanticsNode().size.width
+        assertThat(off.fetchSemanticsNode().boundsInRoot.left).isGreaterThan(screenWidth / 2f)
+        captureScreen("vod_player_subtitles")
+
+        Espresso.pressBack()
+        settle()
+        compose.onNodeWithText("Off").assertDoesNotExist()
+        assertThat(compose.seekBarIsFocused()).isTrue()
+    }
+
+    @Test
+    fun `close leaves the player`() {
+        var left = false
+        compose.setTvContent { VodPlayerContent(controller, viewModel, false, noPicks, onBack = { left = true }) }
+        players.play(controller)
+        settle()
+
+        press(Key.DirectionUp)
+        press(Key.DirectionCenter)
+
+        assertThat(left).isTrue()
+    }
+
+    /** On the bar, with right held down and not yet let go: a seek one [STEP] on from [TEN_MINUTES]. */
+    private fun startSeekingOnTheBar() {
         compose.onRoot().performKeyInput { keyDown(Key.DirectionRight) }
         settle()
     }
@@ -249,21 +301,21 @@ class VodPlayerContentTest {
     fun `leaving the bar mid-seek and returning in time carries on from where the seek had got to`() {
         showFilmPartWay()
         startSeekingOnTheBar()
-        assertThat(barPosition()).isEqualTo(TEN_MINUTES + ONE_PERCENT)
+        assertThat(barPosition()).isEqualTo(TEN_MINUTES + STEP)
         captureScreen("vod_player_seek_bar_seeking")
 
         press(Key.DirectionDown)
         letGoOfRight()
         compose.mainClock.advanceTimeBy(WITHIN_GRACE_MILLIS)
-        press(Key.DirectionUp)
+        press(Key.DirectionLeft)
         compose.waitForIdle()
 
-        assertThat(barPosition()).isEqualTo(TEN_MINUTES + ONE_PERCENT)
+        assertThat(barPosition()).isEqualTo(TEN_MINUTES + STEP)
         assertThat(controller.player.currentPosition).isEqualTo(TEN_MINUTES)
 
         press(Key.DirectionRight)
 
-        assertThat(controller.player.currentPosition).isEqualTo(TEN_MINUTES + 2 * ONE_PERCENT)
+        assertThat(controller.player.currentPosition).isEqualTo(TEN_MINUTES + 2 * STEP)
     }
 
     @Test
@@ -283,14 +335,12 @@ class VodPlayerContentTest {
     @Test
     fun `a finished seek moves playback, and the bar goes on following it`() {
         showFilmPartWay()
-        press(Key.DirectionUp)
-        settle()
 
         press(Key.DirectionRight)
         players.untilReady(controller.player)
         settle()
-        assertThat(controller.player.currentPosition).isEqualTo(TEN_MINUTES + ONE_PERCENT)
-        assertThat(barPosition()).isEqualTo(TEN_MINUTES + ONE_PERCENT)
+        assertThat(controller.player.currentPosition).isEqualTo(TEN_MINUTES + STEP)
+        assertThat(barPosition()).isEqualTo(TEN_MINUTES + STEP)
 
         controller.player.seekTo(TEN_MINUTES * 2)
         players.untilReady(controller.player)
@@ -308,7 +358,7 @@ class VodPlayerContentTest {
         assertThat(barPosition()).isEqualTo(TEN_MINUTES)
 
         compose.mainClock.advanceTimeBy(CONTROLS_TIMEOUT_MILLIS)
-        compose.onNodeWithText("Pause").assertDoesNotExist()
+        compose.onNodeWithContentDescription("Pause").assertDoesNotExist()
         press(Key.DirectionCenter)
         settle()
 
@@ -324,7 +374,7 @@ class VodPlayerContentTest {
         assertThat(target).isNotEqualTo(TEN_MINUTES)
 
         compose.mainClock.advanceTimeBy(CONTROLS_TIMEOUT_MILLIS + PAST_GRACE_MILLIS)
-        compose.onNodeWithText("Pause").assertExists()
+        compose.onNodeWithContentDescription("Pause").assertExists()
         assertThat(barPosition()).isEqualTo(target)
 
         compose.onNode(seekBar).performTouchInput { up() }
@@ -350,7 +400,7 @@ class VodPlayerContentTest {
         compose.mainClock.advanceTimeBy(PAST_GRACE_MILLIS)
         compose.waitForIdle()
 
-        compose.onNodeWithText("Play").assertExists()
+        compose.onNodeWithContentDescription("Play").assertExists()
         assertThat(barPosition()).isEqualTo(TEN_MINUTES)
         assertThat(controller.player.currentPosition).isEqualTo(TEN_MINUTES)
     }
@@ -399,7 +449,7 @@ class VodPlayerContentTest {
 
         runBlocking { viewModel.poll() }
         compose.waitForIdle()
-        compose.onNodeWithText("Pause").assertDoesNotExist()
+        compose.onNodeWithContentDescription("Pause").assertDoesNotExist()
         viewModel.cancel()
         compose.mainClock.advanceTimeBy(PAST_GRACE_MILLIS)
         press(Key.DirectionCenter)
@@ -467,7 +517,7 @@ class VodPlayerContentTest {
         players.untilReady(controller.player)
         settle()
         startSeekingOnTheBar()
-        assertThat(barPosition()).isEqualTo(TEN_MINUTES + ONE_PERCENT)
+        assertThat(barPosition()).isEqualTo(TEN_MINUTES + STEP)
 
         runBlocking { viewModel.attach(MediaKey.Movie(2), playback) }
         players.untilReady(controller.player)
@@ -539,22 +589,24 @@ class VodPlayerContentTest {
     }
 
     @Test
-    fun `Back returns the highlight to the bar's button, which hasn't timed out meanwhile`() {
+    fun `Back returns the highlight to the seek bar, which hasn't timed out meanwhile`() {
         showFilm()
         settle()
-        compose.onNodeWithText("Pause").assertIsFocused()
+        assertThat(compose.seekBarIsFocused()).isTrue()
         press(Key.Menu)
 
         compose.mainClock.advanceTimeBy(CONTROLS_TIMEOUT_MILLIS)
         inList("Sleep timer").assertExists()
         closeList()
 
-        compose.onNodeWithText("Pause").assertIsFocused()
+        assertThat(compose.seekBarIsFocused()).isTrue()
     }
 
     @Test
-    fun `the bar's Options button opens the same list`() {
+    fun `the Options pill opens the same list`() {
         showFilm()
+        settle()
+        press(Key.DirectionDown)
 
         compose.onNodeWithText("Options").performClick()
 
@@ -571,17 +623,17 @@ class VodPlayerContentTest {
         compose.mainClock.advanceTimeBy(CONTROLS_TIMEOUT_MILLIS)
 
         compose.onNodeWithText("Off").assertExists()
-        compose.onNodeWithText("Pause").assertExists()
+        compose.onNodeWithContentDescription("Pause").assertExists()
     }
 
     @Test
     fun `Menu doesn't open the list over a picker`() {
         showFilm()
-        compose.onNodeWithText("Audio").performClick()
+        compose.onNodeWithContentDescription("Audio").performClick()
 
         press(Key.Menu)
 
-        compose.onNodeWithText("Sleep timer").assertDoesNotExist()
+        inList("Sleep timer").assertDoesNotExist()
     }
 
     @Test
@@ -642,10 +694,10 @@ class VodPlayerContentTest {
         fake.positionMillis = EPISODE_MILLIS - 10_000
         runBlocking { viewModel.poll() }
         compose.waitForIdle()
-        compose.onNodeWithText("Sleep timer").assertDoesNotExist()
+        inList("Sleep timer").assertDoesNotExist()
 
         press(Key.Menu)
-        compose.onNodeWithText("Sleep timer").assertDoesNotExist()
+        inList("Sleep timer").assertDoesNotExist()
     }
 
     @Test
@@ -659,7 +711,7 @@ class VodPlayerContentTest {
 
         press(Key.Menu)
 
-        compose.onNodeWithText("Sleep timer").assertDoesNotExist()
+        inList("Sleep timer").assertDoesNotExist()
     }
 
     private companion object {
@@ -667,7 +719,7 @@ class VodPlayerContentTest {
         const val CONTROLS_TIMEOUT_MILLIS = 6_000L
         const val TEN_MINUTES = 600_000L
         const val SETTLE_MILLIS = 600L
-        const val ONE_PERCENT = 36_000L
+        const val STEP = 10_000L
         const val WITHIN_GRACE_MILLIS = 2_800L
         const val PAST_GRACE_MILLIS = 3_200L
     }

@@ -97,13 +97,10 @@
     <string name="rec_background_prompt_body">当屏幕休眠或你离开 Settee 时，Android 可能会停止此次录制。允许 Settee 忽略电池优化，即可让录制像机顶盒一样，在待机状态下也能持续进行。</string>
     <string name="rec_background_prompt_allow">允许</string>
     <string name="rec_background_prompt_not_now">暂不</string>
-    <string name="player_rewind">快退</string>
     <string name="player_pause">暂停</string>
-    <string name="player_forward">快进</string>
     <string name="player_subtitles">字幕</string>
     <string name="player_audio">音频</string>
     <string name="player_quality">画质</string>
-    <string name="player_aspect">比例</string>
     <string name="player_record">录制</string>
     <string name="player_pop_out">弹出播放</string>
     <string name="player_last">上一台</string>

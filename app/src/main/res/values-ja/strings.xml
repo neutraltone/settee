@@ -97,13 +97,10 @@
     <string name="rec_background_prompt_body">画面がスリープしたりSetteeから離れたりすると、Androidがこの録画を停止することがあります。Setteeにバッテリー最適化を無視することを許可すると、セットトップボックスのようにスタンバイ中でも録画を継続できます。</string>
     <string name="rec_background_prompt_allow">許可</string>
     <string name="rec_background_prompt_not_now">今はしない</string>
-    <string name="player_rewind">早戻し</string>
     <string name="player_pause">一時停止</string>
-    <string name="player_forward">早送り</string>
     <string name="player_subtitles">字幕</string>
     <string name="player_audio">音声</string>
     <string name="player_quality">画質</string>
-    <string name="player_aspect">アスペクト</string>
     <string name="player_record">録画</string>
     <string name="player_pop_out">ポップアウト</string>
     <string name="player_last">前のチャンネル</string>
