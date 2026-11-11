@@ -540,14 +540,60 @@ interface MovieDao {
     )
     suspend fun newestWithoutGenre(sourceId: Long, limit: Int): List<Movie>
 
-    /** Only where there is none yet, since opening the movie may have found one meanwhile. */
-    @Query("UPDATE movies SET genre = :genre WHERE id = :id AND genre IS NULL")
-    suspend fun fillGenre(id: Long, genre: String)
+    /**
+     * Fills whichever of a movie's details are still empty from what [MovieGenres] looked up, so a
+     * film nobody has opened has its cast and director for a person's page. Never overwrites: opening
+     * the movie may have found better ones meanwhile.
+     */
+    @Query(
+        """
+        UPDATE movies SET
+            genre = COALESCE(genre, :genre),
+            `cast` = COALESCE(`cast`, :cast),
+            director = COALESCE(director, :director),
+            plot = COALESCE(plot, :plot),
+            backdropUrl = COALESCE(backdropUrl, :backdropUrl),
+            tmdbId = COALESCE(tmdbId, :tmdbId),
+            rating = COALESCE(rating, :rating),
+            year = COALESCE(year, :year),
+            durationSeconds = COALESCE(durationSeconds, :durationSeconds)
+        WHERE id = :id
+        """,
+    )
+    @Suppress("LongParameterList") // One per column; Room binds no objects.
+    suspend fun fillDetails(
+        id: Long,
+        genre: String,
+        cast: String?,
+        director: String?,
+        plot: String?,
+        backdropUrl: String?,
+        tmdbId: String?,
+        rating: Double?,
+        year: Int?,
+        durationSeconds: Int?,
+    )
 
-    /** Saves these (local id, genre) pairs in one go, so everything observing movies reloads once. */
+    /**
+     * [fillDetails] for each of these in one go, so everything observing movies reloads once. Each is
+     * a movie carrying what was looked up for it, which only lands where the stored row has nothing.
+     */
     @Transaction
-    suspend fun fillGenres(genres: List<Pair<Long, String>>) {
-        genres.forEach { (id, genre) -> fillGenre(id, genre) }
+    suspend fun fillDetails(found: List<Movie>) {
+        found.forEach {
+            fillDetails(
+                id = it.id,
+                genre = it.genre.orEmpty(),
+                cast = it.cast,
+                director = it.director,
+                plot = it.plot,
+                backdropUrl = it.backdropUrl,
+                tmdbId = it.tmdbId,
+                rating = it.rating,
+                year = it.year,
+                durationSeconds = it.durationSeconds,
+            )
+        }
     }
 
     /** The [limit] movies a source most recently added whose genre was saved blank, for [MovieGenres]. */
@@ -561,7 +607,7 @@ interface MovieDao {
     @Query("UPDATE movies SET genre = :genre WHERE id = :id AND genre = ''")
     suspend fun fillBlankGenre(id: Long, genre: String)
 
-    /** As [fillGenres], for genres saved blank. */
+    /** As [fillDetails], for genres saved blank. */
     @Transaction
     suspend fun fillBlankGenres(genres: List<Pair<Long, String>>) {
         genres.forEach { (id, genre) -> fillBlankGenre(id, genre) }

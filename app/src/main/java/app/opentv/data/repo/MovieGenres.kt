@@ -84,8 +84,22 @@ class MovieGenres(
             titles = titles,
             tag = TAG,
             ask = { api.movieInfo(source, it.streamId) },
-            found = { movie, info -> info.genre?.takeIf { it.isNotBlank() } ?: tmdbGenre(movie).orEmpty() },
-            save = { found -> movieDao.fillGenres(found.map { (movie, genre) -> movie.id to genre }) },
+            found = { movie, info ->
+                // The rest of the answer is kept too: it's the only way films nobody opens get the
+                // cast and director a person's page lists them by.
+                movie.copy(
+                    genre = info.genre?.takeIf { it.isNotBlank() } ?: tmdbGenre(movie).orEmpty(),
+                    cast = info.cast,
+                    director = info.director,
+                    plot = info.plot,
+                    backdropUrl = info.backdropUrl,
+                    tmdbId = info.tmdbId,
+                    rating = info.rating,
+                    year = info.year,
+                    durationSeconds = info.durationSeconds,
+                )
+            },
+            save = { found -> movieDao.fillDetails(found.map { (_, details) -> details }) },
         )
         return Batch(titles.size, answering)
     }
