@@ -97,13 +97,10 @@
     <string name="rec_background_prompt_body">Android может остановить эту запись, когда экран гаснет или вы закрываете Settee. Разрешите Settee игнорировать оптимизацию батареи, чтобы запись продолжалась даже в режиме ожидания — как у обычной ТВ-приставки.</string>
     <string name="rec_background_prompt_allow">Разрешить</string>
     <string name="rec_background_prompt_not_now">Не сейчас</string>
-    <string name="player_rewind">Перемотка назад</string>
     <string name="player_pause">Пауза</string>
-    <string name="player_forward">Перемотка вперёд</string>
     <string name="player_subtitles">Субтитры</string>
     <string name="player_audio">Аудио</string>
     <string name="player_quality">Качество</string>
-    <string name="player_aspect">Формат кадра</string>
     <string name="player_record">Запись</string>
     <string name="player_pop_out">Мини-плеер</string>
     <string name="player_last">Предыдущий</string>

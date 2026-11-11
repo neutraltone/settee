@@ -15,6 +15,7 @@ import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isDialog
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
@@ -27,6 +28,7 @@ import app.opentv.core.AppSettings
 import app.opentv.core.PipState
 import app.opentv.data.model.Channel
 import app.opentv.player.PlaybackQueue
+import app.opentv.player.PlayerController
 import app.opentv.ui.player.BannerChannel
 import app.opentv.ui.player.LivePlayerContent
 import app.opentv.ui.player.SubtitlePicks
@@ -67,7 +69,11 @@ class LivePlayerOptionsTest {
         players.close()
     }
 
-    private fun showChannel(queue: List<PlaybackQueue.Item> = emptyList(), currentId: Long = 1L) {
+    private fun showChannel(
+        queue: List<PlaybackQueue.Item> = emptyList(),
+        currentId: Long = 1L,
+        controller: PlayerController = this.controller,
+    ) {
         compose.setTvContent {
             LivePlayerContent(
                 controller = controller,
@@ -156,25 +162,83 @@ class LivePlayerOptionsTest {
         assertThat(zapped).containsExactly(-1)
     }
 
+    private fun openControls() {
+        press(Key.DirectionCenter)
+        compose.mainClock.advanceTimeBy(FOCUS_MILLIS)
+    }
+
     @Test
-    fun `Back returns the highlight to the bar's button, which hasn't timed out meanwhile`() {
+    fun `with the controls up, Down reaches Subtitles then the pills rather than zapping, and Record records`() {
+        showChannel()
+        openControls()
+        captureScreen("live_player_controls")
+
+        press(Key.DirectionDown)
+        compose.onNodeWithContentDescription("Subtitles").assertIsFocused()
+        press(Key.DirectionDown)
+        compose.onNodeWithText("Record").assertIsFocused()
+        compose.onNodeWithText("Aspect ratio").assertExists()
+        compose.onNodeWithText("Sleep timer").assertExists()
+        captureScreen("live_player_pills")
+
+        assertThat(zapped).isEmpty()
+        press(Key.DirectionCenter)
+        assertThat(recordToggles).isEqualTo(1)
+    }
+
+    @Test
+    fun `a channel that can't seek has no bar, so the controls open on Pause, with Subtitles to its right`() {
+        val unseekable = players.controller(UNSEEKABLE_LIVE, dvr = true)
+        try {
+            showChannel(controller = unseekable)
+            openControls()
+
+            assertThat(compose.seekBarIsFocused()).isFalse()
+            compose.onNodeWithContentDescription("Pause").assertIsFocused()
+            press(Key.DirectionRight)
+            compose.onNodeWithContentDescription("Subtitles").assertIsFocused()
+            press(Key.DirectionLeft)
+            press(Key.DirectionCenter)
+
+            assertThat(unseekable.player.playWhenReady).isFalse()
+        } finally {
+            unseekable.release()
+        }
+    }
+
+    @Test
+    fun `Up from the seek bar reaches close, which leaves the player`() {
+        showChannel()
+        openControls()
+
+        press(Key.DirectionUp)
+        compose.onNodeWithContentDescription("Close").assertIsFocused()
+        press(Key.DirectionCenter)
+
+        assertThat(backs).isEqualTo(1)
+    }
+
+    @Test
+    fun `Back returns the highlight to the seek bar, which hasn't timed out meanwhile`() {
         showChannel()
         press(Key.DirectionCenter)
         compose.mainClock.advanceTimeBy(FOCUS_MILLIS)
-        compose.onNodeWithText("Pause").assertIsFocused()
+        assertThat(compose.seekBarIsFocused()).isTrue()
         press(Key.Menu)
 
         compose.mainClock.advanceTimeBy(CONTROLS_TIMEOUT_MILLIS)
         inList("Sleep timer").assertExists()
         closeList()
 
-        compose.onNodeWithText("Pause").assertIsFocused()
+        assertThat(compose.seekBarIsFocused()).isTrue()
     }
 
     @Test
-    fun `the bar's Options button opens the same list`() {
+    fun `the Options pill opens the same list`() {
         showChannel()
         press(Key.DirectionCenter)
+        compose.mainClock.advanceTimeBy(FOCUS_MILLIS)
+        press(Key.DirectionDown)
 
         compose.onNodeWithText("Options").performClick()
 
@@ -264,11 +328,14 @@ class LivePlayerOptionsTest {
     fun `Menu doesn't open the list over a picker`() {
         showChannel()
         press(Key.DirectionCenter)
-        compose.onNodeWithText("Aspect").performClick()
+        compose.mainClock.advanceTimeBy(FOCUS_MILLIS)
+        press(Key.DirectionDown)
+        compose.onNodeWithText("Aspect ratio", useUnmergedTree = true).performClick()
+        compose.onNodeWithText("Fit").assertExists()
 
         press(Key.Menu)
 
-        compose.onNodeWithText("Sleep timer").assertDoesNotExist()
+        inList("Sleep timer").assertDoesNotExist()
     }
 
     @Test

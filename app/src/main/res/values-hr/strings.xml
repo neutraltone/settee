@@ -97,13 +97,10 @@
     <string name="rec_background_prompt_body">Android može zaustaviti ovo snimanje kad se zaslon isključi ili napustite Settee. Dopustite Settee-u da zanemari optimizaciju baterije kako bi snimanja nastavila raditi, čak i u stanju mirovanja — baš kao kod set-top box uređaja.</string>
     <string name="rec_background_prompt_allow">Dopusti</string>
     <string name="rec_background_prompt_not_now">Ne sada</string>
-    <string name="player_rewind">Premotaj natrag</string>
     <string name="player_pause">Pauza</string>
-    <string name="player_forward">Premotaj naprijed</string>
     <string name="player_subtitles">Titlovi</string>
     <string name="player_audio">Zvuk</string>
     <string name="player_quality">Kvaliteta</string>
-    <string name="player_aspect">Format slike</string>
     <string name="player_record">Snimaj</string>
     <string name="player_pop_out">Izdvoji</string>
     <string name="player_last">Prethodni</string>

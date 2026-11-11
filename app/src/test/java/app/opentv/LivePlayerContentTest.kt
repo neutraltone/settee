@@ -21,6 +21,7 @@ import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.click
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
@@ -148,7 +149,7 @@ class LivePlayerContentTest {
 
     private fun hideControls() {
         compose.mainClock.advanceTimeBy(CONTROLS_TIMEOUT_MILLIS)
-        compose.onNodeWithText("Pause").assertDoesNotExist()
+        compose.onNodeWithContentDescription("Pause").assertDoesNotExist()
     }
 
     private fun row(id: Long, quality: String) = Channel(
@@ -252,7 +253,7 @@ class LivePlayerContentTest {
         showChannel(livePause = false)
         press(Key.DirectionCenter)
 
-        compose.onNodeWithText("Pause").performClick()
+        compose.onNodeWithContentDescription("Pause").performClick()
 
         compose.onNodeWithText("Pause live TV?").assertExists()
         assertThat(controller.player.playWhenReady).isTrue()
@@ -284,7 +285,7 @@ class LivePlayerContentTest {
         compose.onNodeWithText("Don't ask again").performClick()
         compose.onNodeWithText("Pause live TV?").assertDoesNotExist()
         assertThat(dontAskAgain).isEqualTo(1)
-        compose.onNodeWithText("Pause").assertDoesNotExist()
+        compose.onNodeWithContentDescription("Pause").assertDoesNotExist()
 
         press(Key.MediaPlayPause)
         compose.onNodeWithText("Pause live TV?").assertDoesNotExist()
@@ -292,7 +293,7 @@ class LivePlayerContentTest {
 
         livePause = true
         compose.waitForIdle()
-        compose.onNodeWithText("Pause").assertExists()
+        compose.onNodeWithContentDescription("Pause").assertExists()
         press(Key.MediaPlayPause)
         assertThat(controller.player.playWhenReady).isFalse()
     }
@@ -394,19 +395,19 @@ class LivePlayerContentTest {
         compose.onNodeWithText("2").assertExists()
         compose.onNodeWithText("Two").assertExists()
         compose.onNodeWithText("News").assertExists()
-        compose.onNodeWithText("Pause").assertDoesNotExist()
+        compose.onNodeWithContentDescription("Pause").assertDoesNotExist()
         captureScreen("live_player_banner")
     }
 
     @Test
-    fun `OK opens the controls, with focus on Pause`() {
+    fun `OK opens the controls, with the Highlight on the seek bar`() {
         showChannel()
 
         for (ok in listOf(Key.DirectionCenter, Key.Enter, Key.NumPadEnter, Key.ButtonA)) {
             press(ok)
             compose.mainClock.advanceTimeBy(FOCUS_MILLIS)
 
-            compose.onNodeWithText("Pause").assertIsFocused()
+            assertThat(compose.seekBarIsFocused()).isTrue()
             hideControls()
         }
     }
@@ -423,7 +424,7 @@ class LivePlayerContentTest {
         }
         compose.waitForIdle()
 
-        compose.onNodeWithText("Pause").assertIsFocused()
+        assertThat(compose.seekBarIsFocused()).isTrue()
         compose.onNodeWithText("Pause live TV?").assertDoesNotExist()
     }
 
@@ -444,7 +445,7 @@ class LivePlayerContentTest {
 
         press(Key.Info)
 
-        compose.onNodeWithText("Pause").assertDoesNotExist()
+        compose.onNodeWithContentDescription("Pause").assertDoesNotExist()
         assertThat(passedThrough).containsExactly(Key.Info)
     }
 
@@ -463,7 +464,7 @@ class LivePlayerContentTest {
             tuneTo(id)
 
             compose.onNodeWithText(name).assertExists()
-            compose.onNodeWithText("Pause").assertDoesNotExist()
+            compose.onNodeWithContentDescription("Pause").assertDoesNotExist()
         }
     }
 
@@ -538,7 +539,7 @@ class LivePlayerContentTest {
         press(Key.DirectionDown)
 
         compose.onNodeWithText("Twelve").assertExists()
-        compose.onNodeWithText("Pause").assertDoesNotExist()
+        compose.onNodeWithContentDescription("Pause").assertDoesNotExist()
     }
 
     @Test
@@ -548,15 +549,16 @@ class LivePlayerContentTest {
         press(Key.DirectionCenter)
         compose.mainClock.advanceTimeBy(PART_OF_A_TIMEOUT_MILLIS)
 
-        press(Key.DirectionDown)
+        // The channel key: with the controls up, the d-pad's Down moves to Subtitles instead.
+        press(Key.ChannelDown)
         tuneTo(11L)
         compose.mainClock.advanceTimeBy(PART_OF_A_TIMEOUT_MILLIS)
 
         assertThat(zapped).containsExactly(1)
-        compose.onNodeWithText("Pause").assertExists()
+        compose.onNodeWithContentDescription("Pause").assertExists()
         compose.onNodeWithText("Two").assertDoesNotExist()
         compose.mainClock.advanceTimeBy(PART_OF_A_TIMEOUT_MILLIS)
-        compose.onNodeWithText("Pause").assertDoesNotExist()
+        compose.onNodeWithContentDescription("Pause").assertDoesNotExist()
     }
 
     @Test
@@ -567,7 +569,7 @@ class LivePlayerContentTest {
 
         press(Key.DirectionDown)
 
-        compose.onNodeWithText("Pause").assertExists()
+        compose.onNodeWithContentDescription("Pause").assertExists()
         compose.onNodeWithText("Twelve").assertDoesNotExist()
     }
 
@@ -631,14 +633,14 @@ class LivePlayerContentTest {
         press(Key.Two)
 
         compose.onNodeWithText("12").assertExists()
-        compose.onNodeWithText("Pause").assertDoesNotExist()
+        compose.onNodeWithContentDescription("Pause").assertDoesNotExist()
         compose.onNodeWithText("Twelve").assertDoesNotExist()
 
         compose.mainClock.advanceTimeBy(NUMBER_ENTRY_MILLIS)
         tuneTo(12L)
 
         compose.onNodeWithText("Twelve").assertExists()
-        compose.onNodeWithText("Pause").assertDoesNotExist()
+        compose.onNodeWithContentDescription("Pause").assertDoesNotExist()
     }
 
     @Test
@@ -695,7 +697,7 @@ class LivePlayerContentTest {
         compose.mainClock.advanceTimeBy(FOCUS_MILLIS)
         compose.onNodeWithText("Channels").assertDoesNotExist()
         compose.onNodeWithText("Twelve").assertExists()
-        compose.onNodeWithText("Pause").assertDoesNotExist()
+        compose.onNodeWithContentDescription("Pause").assertDoesNotExist()
     }
 
     @Test
@@ -745,7 +747,7 @@ class LivePlayerContentTest {
         press(Key.DirectionCenter)
         compose.mainClock.advanceTimeBy(FOCUS_MILLIS * 5)
 
-        compose.onNodeWithText("Pause").assertIsFocused()
+        assertThat(compose.seekBarIsFocused()).isTrue()
         compose.onNodeWithText("Two").assertDoesNotExist()
     }
 
@@ -756,7 +758,7 @@ class LivePlayerContentTest {
 
         press(Key.MediaPlayPause)
 
-        compose.onNodeWithText("Play").assertExists()
+        compose.onNodeWithContentDescription("Play").assertExists()
     }
 
     @Test
@@ -767,8 +769,9 @@ class LivePlayerContentTest {
 
         press(Key.DirectionRight)
 
-        compose.onNodeWithText("Pause").assertExists()
-        compose.onAllNodesWithText("Quality").assertCountEquals(2)
+        compose.onNodeWithContentDescription("Pause").assertExists()
+        compose.onNodeWithText("Quality").assertExists()
+        compose.onNodeWithText("FHD").assertExists()
     }
 
     @Test
@@ -778,11 +781,11 @@ class LivePlayerContentTest {
 
         compose.onRoot().performTouchInput { click() }
         compose.mainClock.advanceTimeBy(TAP_MILLIS)
-        compose.onNodeWithText("Pause").assertExists()
+        compose.onNodeWithContentDescription("Pause").assertExists()
 
         compose.onRoot().performTouchInput { click() }
         compose.mainClock.advanceTimeBy(TAP_MILLIS)
-        compose.onNodeWithText("Pause").assertDoesNotExist()
+        compose.onNodeWithContentDescription("Pause").assertDoesNotExist()
     }
 
     @Test

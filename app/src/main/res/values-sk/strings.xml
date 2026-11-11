@@ -97,13 +97,10 @@
     <string name="rec_background_prompt_body">Android môže toto nahrávanie zastaviť, keď obrazovka zaspí alebo opustíte Settee. Povoľte Settee ignorovať optimalizáciu batérie, aby nahrávanie pokračovalo aj v pohotovostnom režime — tak, ako to robí set-top box.</string>
     <string name="rec_background_prompt_allow">Povoliť</string>
     <string name="rec_background_prompt_not_now">Teraz nie</string>
-    <string name="player_rewind">Pretočiť späť</string>
     <string name="player_pause">Pozastaviť</string>
-    <string name="player_forward">Pretočiť vpred</string>
     <string name="player_subtitles">Titulky</string>
     <string name="player_audio">Zvuk</string>
     <string name="player_quality">Kvalita</string>
-    <string name="player_aspect">Pomer strán</string>
     <string name="player_record">Nahrať</string>
     <string name="player_pop_out">Plávajúce okno</string>
     <string name="player_last">Posledný</string>

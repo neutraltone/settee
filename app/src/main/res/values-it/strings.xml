@@ -97,13 +97,10 @@
     <string name="rec_background_prompt_body">Android potrebbe interrompere questa registrazione quando lo schermo va in standby o esci da Settee. Consenti a Settee di ignorare l\'ottimizzazione della batteria in modo che le registrazioni continuino anche in standby, come farebbe un decoder.</string>
     <string name="rec_background_prompt_allow">Consenti</string>
     <string name="rec_background_prompt_not_now">Non ora</string>
-    <string name="player_rewind">Riavvolgi</string>
     <string name="player_pause">Pausa</string>
-    <string name="player_forward">Avanza</string>
     <string name="player_subtitles">Sottotitoli</string>
     <string name="player_audio">Audio</string>
     <string name="player_quality">Qualità</string>
-    <string name="player_aspect">Formato</string>
     <string name="player_record">Registra</string>
     <string name="player_pop_out">Finestra mobile</string>
     <string name="player_last">Ultimo</string>

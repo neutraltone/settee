@@ -13,47 +13,26 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsDraggedAsState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.layout.windowInsetsPadding
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Audiotrack
+import androidx.compose.material.icons.filled.Bedtime
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.ClosedCaption
-import androidx.compose.material.icons.filled.FastForward
-import androidx.compose.material.icons.filled.FastRewind
 import androidx.compose.material.icons.filled.FiberManualRecord
-import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.Pause
-import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.MoreHoriz
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Slider
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -67,12 +46,8 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
@@ -81,7 +56,6 @@ import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -99,13 +73,18 @@ import app.opentv.core.findActivity
 import app.opentv.data.repo.MediaKey
 import app.opentv.player.NextEpisodeCountdown
 import app.opentv.player.PlayerController
-import app.opentv.ui.formatPlaybackTime
+import app.opentv.ui.design.SetteeType
+import app.opentv.ui.design.Text
 import app.opentv.ui.options.ItemOption
 import app.opentv.ui.options.OptionsFor
-import app.opentv.ui.player.PlayerBackButton
-import app.opentv.ui.player.PlayerChip
+import app.opentv.ui.options.label
+import app.opentv.ui.player.PlayerChoice
+import app.opentv.ui.player.PlayerChoicePanel
+import app.opentv.ui.player.PlayerControlBar
 import app.opentv.ui.player.PlayerNotice
 import app.opentv.ui.player.PlayerOptions
+import app.opentv.ui.player.PlayerPill
+import app.opentv.ui.player.SleepTimerPanel
 import app.opentv.ui.player.SubtitlePicks
 import app.opentv.ui.player.rememberProfileSubtitles
 import kotlinx.coroutines.CoroutineScope
@@ -300,12 +279,17 @@ fun VodPlayerContent(
     val paused = state != PlayerController.State.Idle && !playWhenReady
     var vodPanel by remember { mutableStateOf(VodPanel.NONE) }
     var optionsOpen by remember { mutableStateOf(false) }
+    var choosingSleep by remember { mutableStateOf(false) }
     val canMarkWatched by viewModel.canMarkWatched.collectAsState()
     val marking = rememberCoroutineScope()
+
+    // The pill and the options list both mark it; marking it leaves the player.
+    fun markWatched() {
+        marking.launch { if (viewModel.markWatched()) onBack() }
+    }
     val panelFocus = remember { FocusRequester() }
     var positionMs by remember { mutableLongStateOf(0L) }
     var durationMs by remember { mutableLongStateOf(0L) }
-    val focusManager = LocalFocusManager.current
     val barInteractions = remember { MutableInteractionSource() }
     val dragging by barInteractions.collectIsDraggedAsState()
 
@@ -368,11 +352,11 @@ fun VodPlayerContent(
     // recording dips in and out of Buffering as it rides the write head, so for that case Buffering
     // counts as "playing" here — otherwise a single hiccup would pin the transport bar on screen for
     // the rest of the watch.
-    LaunchedEffect(controlsVisible, interaction, state, paused, vodPanel, dragging, optionsOpen) {
+    LaunchedEffect(controlsVisible, interaction, state, paused, vodPanel, dragging, optionsOpen, choosingSleep) {
         val activelyPlaying = state is PlayerController.State.Playing ||
             (growingRec && state is PlayerController.State.Buffering)
         val watching = activelyPlaying && !paused && !dragging
-        val inUse = vodPanel != VodPanel.NONE || optionsOpen
+        val inUse = vodPanel != VodPanel.NONE || optionsOpen || choosingSleep
         if (controlsVisible && watching && !inUse) {
             delay(5_000)
             controlsVisible = false
@@ -488,7 +472,7 @@ fun VodPlayerContent(
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         CircularProgressIndicator()
                         Spacer(Modifier.height(16.dp))
-                        Text(current.title, color = Color.White)
+                        Text(current.title, SetteeType.Body)
                     }
                 }
 
@@ -497,136 +481,68 @@ fun VodPlayerContent(
             else -> Unit
         }
 
-        AnimatedVisibility(
-            visible = controlsVisible && !failed,
-            enter = fadeIn(),
-            exit = fadeOut(),
-            modifier = Modifier.align(Alignment.BottomCenter),
-        ) {
-            Column(
-                Modifier
-                    .fillMaxWidth()
-                    .background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.9f))))
-                    // Keep the controls clear of the phone/tablet system nav bar (and the side nav
-                    // bar / display cutout in landscape). Zero on a TV, so the 10-foot layout is
-                    // unchanged; the gradient above stays full-bleed to the screen edge.
-                    .windowInsetsPadding(
-                        WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom),
-                    )
-                    .padding(horizontal = 28.dp, vertical = 20.dp),
-            ) {
-                if (vodPanel != VodPanel.NONE) {
-                    TrackPanel(
-                        panel = vodPanel,
-                        controller = controller,
-                        tracks = tracks,
-                        subtitlePicks = subtitlePicks,
-                        firstFocus = panelFocus,
-                        onDone = {
-                            vodPanel = VodPanel.NONE
-                            interaction++
-                        },
-                    )
-                    Spacer(Modifier.height(16.dp))
-                }
-
-                if (growingRec) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            Icons.Filled.FiberManualRecord,
-                            contentDescription = null,
-                            tint = Color(0xFFE53935),
-                            modifier = Modifier.size(14.dp),
-                        )
-                        Spacer(Modifier.width(6.dp))
-                        Text(
-                            stringResource(R.string.rec_watching_live_badge),
-                            style = MaterialTheme.typography.labelLarge,
-                            color = Color(0xFFE53935),
-                        )
+        AnimatedVisibility(visible = controlsVisible && !failed, enter = fadeIn(), exit = fadeOut()) {
+            PlayerControlBar(
+                title = title,
+                paused = paused,
+                positionMs = seek.position?.toLong() ?: positionMs,
+                durationMs = durationMs,
+                onScrub = { to ->
+                    seek.pressed(to = to.toFloat())
+                    interaction++
+                },
+                onScrubEnd = {
+                    seek.released()?.let { target ->
+                        controller.player.seekTo(target)
+                        positionMs = target
                     }
-                    Spacer(Modifier.height(4.dp))
-                }
-                Text(title, style = MaterialTheme.typography.headlineSmall, color = Color.White)
-                Spacer(Modifier.height(8.dp))
-
-                // Seek bar with times either side. Left/right on the remote scrubs.
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(formatPlaybackTime(seek.position?.toLong() ?: positionMs), color = Color.White)
-                    Spacer(Modifier.width(12.dp))
-                    Slider(
-                        value = seek.position ?: positionMs.toFloat(),
-                        valueRange = 0f..(durationMs.takeIf { it > 0 }?.toFloat() ?: 1f),
-                        onValueChange = {
-                            seek.pressed(to = it)
-                            interaction++
-                        },
-                        onValueChangeFinished = {
-                            seek.released()?.let { target ->
-                                controller.player.seekTo(target)
-                                positionMs = target
-                            }
-                            interaction++
-                        },
-                        interactionSource = barInteractions,
-                        modifier = Modifier
-                            .weight(1f)
-                            .onFocusChanged { if (it.hasFocus) seek.reached() else seek.left() }
-                            // The slider would seek on these too, and focus could never leave the bar.
-                            // Down goes to play/pause by name: the row is searched from the whole
-                            // width of the bar, and the nearest button could be Back.
-                            .onPreviewKeyEvent { event ->
-                                val pressed = event.type == KeyEventType.KeyDown
-                                when (event.key) {
-                                    Key.DirectionUp -> {
-                                        if (pressed) focusManager.moveFocus(FocusDirection.Up)
-                                        true
-                                    }
-                                    Key.DirectionDown -> {
-                                        if (pressed) barFocus.requestFocus()
-                                        true
-                                    }
-                                    else -> false
-                                }
-                            },
-                    )
-                    Spacer(Modifier.width(12.dp))
-                    Text(formatPlaybackTime(durationMs), color = Color.White)
-                }
-
-                Spacer(Modifier.height(10.dp))
-
-                VodPlayerControls(
-                    paused = paused,
-                    onBack = onBack,
-                    onRewind = {
-                        skip(forward = false)
-                        interaction++
-                    },
-                    onPlayPause = {
-                        controller.player.playWhenReady = paused
-                        interaction++
-                    },
-                    onForward = {
-                        skip(forward = true)
-                        interaction++
-                    },
-                    onSubtitles = {
-                        vodPanel = if (vodPanel == VodPanel.SUBTITLES) VodPanel.NONE else VodPanel.SUBTITLES
-                        interaction++
-                    },
-                    onAudio = {
-                        vodPanel = if (vodPanel == VodPanel.AUDIO) VodPanel.NONE else VodPanel.AUDIO
-                        interaction++
-                    },
+                    interaction++
+                },
+                onPlayPause = {
+                    controller.player.playWhenReady = paused
+                    interaction++
+                },
+                onSubtitles = {
+                    vodPanel = VodPanel.SUBTITLES
+                    interaction++
+                },
+                onAudio = {
+                    vodPanel = VodPanel.AUDIO
+                    interaction++
+                },
+                onClose = onBack,
+                pills = vodPills(
+                    options = OptionsFor.VodPlayer(canMarkWatched).options(),
+                    onMarkWatched = ::markWatched,
+                    onSleepTimer = { choosingSleep = true },
                     onOptions = { optionsOpen = true },
-                    playPauseFocus = barFocus,
-                )
-            }
+                ),
+                startFocus = barFocus,
+                barInteractions = barInteractions,
+                onBarFocusChanged = { onBar -> if (onBar) seek.reached() else seek.left() },
+                badge = if (growingRec) ({ RecordingBadge() }) else null,
+            )
+        }
+
+        if (vodPanel != VodPanel.NONE && controlsVisible && !failed) {
+            TrackPanel(
+                panel = vodPanel,
+                controller = controller,
+                tracks = tracks,
+                subtitlePicks = subtitlePicks,
+                firstFocus = panelFocus,
+                onDone = {
+                    vodPanel = VodPanel.NONE
+                    interaction++
+                },
+                modifier = Modifier.align(Alignment.CenterEnd),
+            )
         }
 
         NextEpisodeOverlay(viewModel, onStop = onBack)
     }
+
+    if (choosingSleep) SleepTimerPanel(onDone = { choosingSleep = false })
 
     if (optionsOpen) {
         PlayerOptions(
@@ -642,7 +558,7 @@ fun VodPlayerContent(
                         reveal()
                         vodPanel = VodPanel.AUDIO
                     }
-                    ItemOption.MarkWatched -> marking.launch { if (viewModel.markWatched()) onBack() }
+                    ItemOption.MarkWatched -> markWatched()
                     else -> Unit
                 }
             },
@@ -659,44 +575,47 @@ private const val UNFINISHED_SEEK_GRACE_MILLIS = 3_000L
 /** How often progress is written while playing, so a crash or power cut loses little. */
 private const val SAVE_EVERY_MILLIS = 15_000L
 
-/** The movie and episode player's transport row: Back, then rewind, play/pause, forward and the pickers. */
+/**
+ * The pills under the row: [OptionsFor.VodPlayer]'s options, less Subtitles and Audio, which have
+ * their own buttons on the row, then Options for the whole list (what Menu opens).
+ */
 @Composable
-fun VodPlayerControls(
-    paused: Boolean,
-    onBack: () -> Unit,
-    onRewind: () -> Unit,
-    onPlayPause: () -> Unit,
-    onForward: () -> Unit,
-    onSubtitles: () -> Unit,
-    onAudio: () -> Unit,
+private fun vodPills(
+    options: List<ItemOption>,
+    onMarkWatched: () -> Unit,
+    onSleepTimer: () -> Unit,
     onOptions: () -> Unit,
-    playPauseFocus: FocusRequester? = null,
-) {
-    // Fits a TV, but not a phone: scrolling keeps the last buttons reachable.
-    Row(Modifier.horizontalScroll(rememberScrollState()), verticalAlignment = Alignment.CenterVertically) {
-        PlayerBackButton(onBack)
-        Spacer(Modifier.width(20.dp))
-        PlayerChip(Icons.Filled.FastRewind, stringResource(R.string.player_rewind), onClick = onRewind)
-        Spacer(Modifier.width(10.dp))
-        PlayerChip(
-            icon = if (paused) Icons.Filled.PlayArrow else Icons.Filled.Pause,
-            label = stringResource(if (paused) R.string.common_play else R.string.player_pause),
-            focusRequester = playPauseFocus,
-            onClick = onPlayPause,
+): List<PlayerPill> = buildList {
+    options.forEach { option ->
+        when (option) {
+            ItemOption.MarkWatched -> add(PlayerPill(option.label(), Icons.Filled.Check, onMarkWatched))
+            ItemOption.SleepTimer -> add(PlayerPill(option.label(), Icons.Filled.Bedtime, onSleepTimer))
+            else -> Unit
+        }
+    }
+    add(PlayerPill(stringResource(R.string.player_options), Icons.Filled.MoreHoriz, onOptions))
+}
+
+/** Shown over the title while the recording being watched is still being written. */
+@Composable
+private fun RecordingBadge() {
+    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(bottom = 4.dp)) {
+        Icon(
+            Icons.Filled.FiberManualRecord,
+            contentDescription = null,
+            tint = RecordingRed,
+            modifier = Modifier.size(14.dp),
         )
-        Spacer(Modifier.width(10.dp))
-        PlayerChip(Icons.Filled.FastForward, stringResource(R.string.player_forward), onClick = onForward)
-        Spacer(Modifier.width(20.dp))
-        PlayerChip(Icons.Filled.ClosedCaption, stringResource(R.string.player_subtitles), onClick = onSubtitles)
-        Spacer(Modifier.width(10.dp))
-        PlayerChip(Icons.Filled.Audiotrack, stringResource(R.string.player_audio), onClick = onAudio)
-        Spacer(Modifier.width(10.dp))
-        PlayerChip(Icons.Filled.MoreVert, stringResource(R.string.player_options), onClick = onOptions)
+        Spacer(Modifier.width(6.dp))
+        Text(stringResource(R.string.rec_watching_live_badge), SetteeType.Body, color = RecordingRed)
     }
 }
 
+private val RecordingRed = Color(0xFFE53935)
+
 private enum class VodPanel { NONE, SUBTITLES, AUDIO }
 
+/** Subtitles or audio, in the player's choice panel. */
 @OptIn(UnstableApi::class)
 @Composable
 private fun TrackPanel(
@@ -706,6 +625,7 @@ private fun TrackPanel(
     subtitlePicks: SubtitlePicks,
     firstFocus: FocusRequester,
     onDone: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val trackType = if (panel == VodPanel.SUBTITLES) C.TRACK_TYPE_TEXT else C.TRACK_TYPE_AUDIO
     val groups = tracks.groups.filter { it.type == trackType }
@@ -731,60 +651,13 @@ private fun TrackPanel(
             }
         }
     }
-
-    Column(
-        Modifier
-            .widthIn(max = 420.dp)
-            .clip(RoundedCornerShape(14.dp))
-            .background(Color.Black.copy(alpha = 0.92f))
-            .padding(16.dp),
-    ) {
-        Text(
-            if (panel ==
-                VodPanel.SUBTITLES
-            ) {
-                stringResource(R.string.player_subtitles)
-            } else {
-                stringResource(R.string.player_audio)
-            },
-            style = MaterialTheme.typography.titleMedium,
-            color = Color.White.copy(alpha = 0.7f),
-        )
-        Spacer(Modifier.height(8.dp))
-        Column(Modifier.heightIn(max = 220.dp).verticalScroll(rememberScrollState())) {
-            if (options.isEmpty()) {
-                Text(
-                    stringResource(R.string.player_none_available),
-                    color = Color.White.copy(alpha = 0.6f),
-                    modifier = Modifier.padding(8.dp),
-                )
-            }
-            options.forEachIndexed { index, (label, selected, onClick) ->
-                TrackRow(label, selected, onClick, if (index == 0) firstFocus else null)
-            }
-        }
-    }
-}
-
-@Composable
-private fun TrackRow(label: String, selected: Boolean, onClick: () -> Unit, focusRequester: FocusRequester?) {
-    var focused by remember { mutableStateOf(false) }
-    val bg = if (focused) MaterialTheme.colorScheme.primary else Color.White.copy(alpha = 0.08f)
-    val fg = if (focused) MaterialTheme.colorScheme.onPrimary else Color.White
-    Row(
-        Modifier
-            .fillMaxWidth()
-            .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
-            .onFocusChanged { focused = it.isFocused }
-            .clip(RoundedCornerShape(10.dp))
-            .background(bg)
-            .clickable(onClick = onClick)
-            .padding(horizontal = 14.dp, vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(label, style = MaterialTheme.typography.titleMedium, color = fg, modifier = Modifier.weight(1f))
-        if (selected) Icon(Icons.Filled.Check, contentDescription = stringResource(R.string.common_selected), tint = fg)
-    }
+    PlayerChoicePanel(
+        title = stringResource(if (panel == VodPanel.SUBTITLES) R.string.player_subtitles else R.string.player_audio),
+        choices = options.map { (label, selected, onClick) -> PlayerChoice(label, selected, onClick) },
+        startFocus = firstFocus,
+        onClose = onDone,
+        modifier = modifier,
+    )
 }
 
 private fun vodTrackLabel(label: String?, language: String?, index: Int): String {

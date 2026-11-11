@@ -10,6 +10,7 @@ import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
@@ -115,7 +116,7 @@ class PlayerErrorPanelTest {
         compose.setTvContent { VodPlayerContent(controller, viewModel, false, noPicks, onBack = { backs++ }) }
         players.play(controller)
         compose.waitForIdle()
-        compose.onNodeWithText("Audio").performClick()
+        compose.onNodeWithContentDescription("Audio").performClick()
         compose.waitForIdle()
 
         controller.play(PlayerController.Request(MediaKey.Movie(2)), debounce = false)

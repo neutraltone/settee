@@ -97,13 +97,10 @@
     <string name="rec_background_prompt_body">Android może zatrzymać to nagrywanie, gdy ekran przejdzie w tryb uśpienia lub opuścisz Settee. Zezwól Settee na ignorowanie optymalizacji baterii, aby nagrywanie trwało nadal, nawet w trybie gotowości — tak jak w dekoderze telewizyjnym.</string>
     <string name="rec_background_prompt_allow">Zezwól</string>
     <string name="rec_background_prompt_not_now">Nie teraz</string>
-    <string name="player_rewind">Przewiń do tyłu</string>
     <string name="player_pause">Pauza</string>
-    <string name="player_forward">Przewiń do przodu</string>
     <string name="player_subtitles">Napisy</string>
     <string name="player_audio">Audio</string>
     <string name="player_quality">Jakość</string>
-    <string name="player_aspect">Proporcje</string>
     <string name="player_record">Nagrywaj</string>
     <string name="player_pop_out">Odłącz</string>
     <string name="player_last">Poprzedni</string>

@@ -97,13 +97,10 @@
     <string name="rec_background_prompt_body">O Android pode interromper esta gravação quando o ecrã adormece ou sai do Settee. Permita que o Settee ignore a otimização de bateria para que as gravações continuem, mesmo em standby — tal como uma set-top box.</string>
     <string name="rec_background_prompt_allow">Permitir</string>
     <string name="rec_background_prompt_not_now">Agora não</string>
-    <string name="player_rewind">Retroceder</string>
     <string name="player_pause">Pausa</string>
-    <string name="player_forward">Avançar</string>
     <string name="player_subtitles">Legendas</string>
     <string name="player_audio">Áudio</string>
     <string name="player_quality">Qualidade</string>
-    <string name="player_aspect">Proporção</string>
     <string name="player_record">Gravar</string>
     <string name="player_pop_out">Destacar</string>
     <string name="player_last">Anterior</string>

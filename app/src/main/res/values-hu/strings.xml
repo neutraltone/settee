@@ -97,13 +97,10 @@
     <string name="rec_background_prompt_body">Előfordulhat, hogy az Android leállítja ezt a felvételt, amikor a képernyő elalszik, vagy kilép az Settee-ből. Engedélyezze, hogy az Settee figyelmen kívül hagyja az akkumulátor-optimalizálást, hogy a felvételek készenléti módban is folytatódjanak — ahogyan egy set-top boxnál.</string>
     <string name="rec_background_prompt_allow">Engedélyezés</string>
     <string name="rec_background_prompt_not_now">Most nem</string>
-    <string name="player_rewind">Visszatekerés</string>
     <string name="player_pause">Szünet</string>
-    <string name="player_forward">Előretekerés</string>
     <string name="player_subtitles">Feliratok</string>
     <string name="player_audio">Hang</string>
     <string name="player_quality">Minőség</string>
-    <string name="player_aspect">Képarány</string>
     <string name="player_record">Felvétel</string>
     <string name="player_pop_out">Kiugró ablak</string>
     <string name="player_last">Utolsó</string>

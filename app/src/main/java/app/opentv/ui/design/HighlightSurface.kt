@@ -88,6 +88,15 @@ class HighlightStyle(val resting: HighlightLook, val highlighted: HighlightLook)
         /** Buttons, which also need a resting fill to read as buttons. */
         val Button = fill(SetteeShapes.Pill, resting = SetteeColors.Raised)
 
+        /**
+         * The player's seek bar. A coral fill would hide the coral progress, so it takes a Raised
+         * fill and the bar grows its thumb.
+         */
+        val Bar = HighlightStyle(
+            resting = HighlightLook(SetteeShapes.Pill),
+            highlighted = HighlightLook(SetteeShapes.Pill, fill = SetteeColors.Raised),
+        )
+
         private fun ring(shape: Shape, lift: Float) = HighlightStyle(
             resting = HighlightLook(shape),
             highlighted = HighlightLook(shape, ring = HighlightRing(), scale = lift, glow = 14.dp),

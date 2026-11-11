@@ -97,13 +97,10 @@
     <string name="rec_background_prompt_body">Android poate opri această înregistrare atunci când ecranul se blochează sau ieși din Settee. Permite aplicației Settee să ignore optimizarea bateriei, astfel încât înregistrările să continue chiar și în standby — la fel ca un set-top box.</string>
     <string name="rec_background_prompt_allow">Permite</string>
     <string name="rec_background_prompt_not_now">Nu acum</string>
-    <string name="player_rewind">Derulare înapoi</string>
     <string name="player_pause">Pauză</string>
-    <string name="player_forward">Derulare înainte</string>
     <string name="player_subtitles">Subtitrări</string>
     <string name="player_audio">Audio</string>
     <string name="player_quality">Calitate</string>
-    <string name="player_aspect">Raport aspect</string>
     <string name="player_record">Înregistrare</string>
     <string name="player_pop_out">Fereastră flotantă</string>
     <string name="player_last">Ultimul</string>

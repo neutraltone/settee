@@ -97,13 +97,10 @@
     <string name="rec_background_prompt_body">स्क्रीन स्लीप होने या Settee छोड़ने पर Android इस रिकॉर्डिंग को रोक सकता है। रिकॉर्डिंग को स्टैंडबाय में भी चालू रखने के लिए Settee को बैटरी ऑप्टिमाइज़ेशन नज़रअंदाज़ करने की अनुमति दें — ठीक वैसे ही जैसे सेट-टॉप बॉक्स करता है।</string>
     <string name="rec_background_prompt_allow">अनुमति दें</string>
     <string name="rec_background_prompt_not_now">अभी नहीं</string>
-    <string name="player_rewind">रिवाइंड</string>
     <string name="player_pause">पॉज़</string>
-    <string name="player_forward">फॉरवर्ड</string>
     <string name="player_subtitles">सबटाइटल</string>
     <string name="player_audio">ऑडियो</string>
     <string name="player_quality">क्वालिटी</string>
-    <string name="player_aspect">अनुपात</string>
     <string name="player_record">रिकॉर्ड</string>
     <string name="player_pop_out">पॉप-आउट</string>
     <string name="player_last">पिछला</string>

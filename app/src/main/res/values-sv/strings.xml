@@ -97,13 +97,10 @@
     <string name="rec_background_prompt_body">Android kan stoppa den här inspelningen när skärmen försätts i vila eller du lämnar Settee. Tillåt Settee att ignorera batterioptimering så att inspelningar fortsätter, även i standbyläge – precis som en digitalbox gör.</string>
     <string name="rec_background_prompt_allow">Tillåt</string>
     <string name="rec_background_prompt_not_now">Inte nu</string>
-    <string name="player_rewind">Spola tillbaka</string>
     <string name="player_pause">Pausa</string>
-    <string name="player_forward">Spola fram</string>
     <string name="player_subtitles">Undertexter</string>
     <string name="player_audio">Ljud</string>
     <string name="player_quality">Kvalitet</string>
-    <string name="player_aspect">Bildformat</string>
     <string name="player_record">Spela in</string>
     <string name="player_pop_out">Poppa ut</string>
     <string name="player_last">Senast</string>

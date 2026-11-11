@@ -97,13 +97,10 @@
     <string name="rec_background_prompt_body">Android peut arrêter cet enregistrement lorsque l\'écran se met en veille ou que vous quittez Settee. Autorisez Settee à ignorer l\'optimisation de la batterie afin que les enregistrements continuent, même en veille — comme le ferait un décodeur TV.</string>
     <string name="rec_background_prompt_allow">Autoriser</string>
     <string name="rec_background_prompt_not_now">Pas maintenant</string>
-    <string name="player_rewind">Reculer</string>
     <string name="player_pause">Pause</string>
-    <string name="player_forward">Avancer</string>
     <string name="player_subtitles">Sous-titres</string>
     <string name="player_audio">Audio</string>
     <string name="player_quality">Qualité</string>
-    <string name="player_aspect">Format</string>
     <string name="player_record">Enregistrer</string>
     <string name="player_pop_out">Fenêtre flottante</string>
     <string name="player_last">Dernier</string>
