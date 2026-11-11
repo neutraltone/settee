@@ -162,6 +162,8 @@ class CatalogueRefresh(
     @Suppress("UnusedParameter") // The trigger is how a caller says what it is, as with the others.
     suspend fun refresh(trigger: Trigger.OpenedMoviesOrShows): Outcome.VodChecked {
         val wanted = settings.moviesEnabled.value || settings.seriesEnabled.value
+        // Whether or not the list is due a fetch: tied to the fetch alone, it ran at most twice a day.
+        if (settings.moviesEnabled.value) catalog.fillEveryProvidersGenres()
         // Only Xtream has movies and shows; the others would flash "Loading" over nothing.
         val stale = catalog.enabledSources().filter { wanted && it.kind == SourceKind.XTREAM && vodIsStale(it) }
         if (stale.isEmpty()) return Outcome.VodChecked(0)
@@ -178,8 +180,10 @@ class CatalogueRefresh(
         }
     }
 
-    suspend fun refresh(trigger: Trigger.GuideOnly): Outcome.GuideRefreshed =
-        Outcome.GuideRefreshed(syncGuide(force = trigger == Trigger.GuideSettings))
+    suspend fun refresh(trigger: Trigger.GuideOnly): Outcome.GuideRefreshed {
+        if (trigger == Trigger.AppLaunch && settings.moviesEnabled.value) catalog.fillEveryProvidersGenres()
+        return Outcome.GuideRefreshed(syncGuide(force = trigger == Trigger.GuideSettings))
+    }
 
     /**
      * Marks something as running in [state] while [block] runs. The count is changed outside

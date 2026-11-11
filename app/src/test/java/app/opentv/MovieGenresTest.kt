@@ -8,6 +8,7 @@ package app.opentv
 import androidx.test.core.app.ApplicationProvider
 import app.opentv.data.model.Movie
 import app.opentv.data.remote.XtreamApi
+import app.opentv.data.repo.CatalogueRefresh
 import app.opentv.data.repo.MovieGenres
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.test.runTest
@@ -18,8 +19,8 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
 /**
- * The step after a sync that asks the provider for films' genres, which its film list leaves out, so
- * the genre rows have films to show.
+ * The background job that asks the provider (and TMDB, with the viewer's key) for films' genres,
+ * which the provider's film list leaves out, so the genre rows have films to show.
  */
 // Plain Application: OpenTvApp schedules WorkManager on start, which the database doesn't need.
 @RunWith(RobolectricTestRunner::class)
@@ -133,7 +134,7 @@ class MovieGenresTest {
     }
 
     @Test
-    fun `the release date lookup's answer gives the film its genre too, without asking again`() = runTest {
+    fun `a sync asks the provider about each film's genre once`() = runTest {
         panel.replies["get_vod_streams"] = """[{"stream_id": 3, "name": "Drive"}]"""
         panel.replies["get_vod_info"] = """{"info": {"genre": "Crime, Drama", "releasedate": "2011-09-02"}}"""
 
@@ -146,7 +147,6 @@ class MovieGenresTest {
 
     @Test
     fun `a film given its genre afterwards still gets its artwork from the provider when opened`() = runTest {
-        // Dated too, so opening it has no date left to ask the provider for.
         panel.replies["get_vod_streams"] = """[{"stream_id": 3, "name": "Drive"}]"""
         panel.replies["get_vod_info"] = """{"info": {"genre": "Crime, Drama", "releasedate": "2011-09-02"}}"""
         test.syncVod()
@@ -156,5 +156,75 @@ class MovieGenresTest {
         val opened = test.catalog.movieDetail(test.db.movies().all().single().id)
 
         assertThat(opened?.backdropUrl).isEqualTo("https://example.com/b.jpg")
+    }
+
+    @Test
+    fun `a film the provider has no genre for gets TMDB's, with the viewer's key`() = runTest {
+        test.db.movies().upsertAll(listOf(movie("7", added = 1)))
+        panel.replies["get_vod_info"] = """{"info": {"year": "2011"}}"""
+        val withTmdb = MovieGenres(test.db.movies(), XtreamApi(panel.http), tmdbGenre = { "Crime, Drama" })
+
+        withTmdb.refresh(PANEL_SOURCE)
+
+        assertThat(genre("7")).isEqualTo("Crime, Drama")
+    }
+
+    @Test
+    fun `a film TMDB couldn't be reached about is left to ask about next time`() = runTest {
+        test.db.movies().upsertAll(listOf(movie("7", added = 1)))
+        panel.replies["get_vod_info"] = """{"info": {"year": "2011"}}"""
+        val unreachable = MovieGenres(test.db.movies(), XtreamApi(panel.http), tmdbGenre = { error("offline") })
+
+        unreachable.refresh(PANEL_SOURCE)
+
+        assertThat(genre("7")).isNull()
+    }
+
+    @Test
+    fun `filling in keeps going a batch at a time until every film has been asked about`() = runTest {
+        test.db.movies().upsertAll((1..5).map { movie("$it", added = it.toLong()) })
+        panel.replies["get_vod_info"] = """{"info": {"genre": "Comedy"}}"""
+        val inTwos = MovieGenres(test.db.movies(), XtreamApi(panel.http), count = 2, pauseMillis = 0)
+
+        inTwos.fillAll(PANEL_SOURCE)
+
+        assertThat(test.db.movies().forSource(1).map { it.genre }).containsExactly(
+            "Comedy",
+            "Comedy",
+            "Comedy",
+            "Comedy",
+            "Comedy",
+        )
+    }
+
+    @Test
+    fun `filling in asks about a film whose lookup failed only once`() = runTest {
+        test.db.movies().upsertAll((1..3).map { movie("$it", added = it.toLong()) })
+        panel.replies["get_vod_info"] = """{"info": {"year": "2011"}}"""
+        val unreachable = MovieGenres(
+            test.db.movies(),
+            XtreamApi(panel.http),
+            count = 2,
+            pauseMillis = 0,
+            tmdbGenre = { error("offline") },
+        )
+
+        unreachable.fillAll(PANEL_SOURCE)
+
+        assertThat(panel.asked).containsExactly("get_vod_info:1", "get_vod_info:2", "get_vod_info:3")
+    }
+
+    @Test
+    fun `opening Movies fills genres in even when the film list is fresh`() = runTest {
+        test.db.sources().insert(PANEL_SOURCE)
+        test.db.movies().upsertAll(listOf(movie("7", added = 1)))
+        test.settings.setVodFetchedAtMillis(PANEL_SOURCE.id, 0L)
+        panel.replies["get_vod_info"] = """{"info": {"genre": "Western"}}"""
+
+        test.refresh().refresh(CatalogueRefresh.Trigger.OpenedMoviesOrShows)
+        test.catalog.awaitBackground()
+
+        assertThat(panel.asked).doesNotContain("get_vod_streams")
+        assertThat(genre("7")).isEqualTo("Western")
     }
 }

@@ -202,10 +202,16 @@ class CatalogRepository(
     /** TMDB back-fill for VOD detail pages, gated on a user-supplied key. See [TmdbClient]. */
     private val tmdb = TmdbClient(http, settings)
 
-    /** Sources with a [genresInBackground] job running. */
+    /** Sources with a [fillGenresInBackground] job running. */
     private val sourcesGettingGenres: MutableSet<Long> = java.util.concurrent.ConcurrentHashMap.newKeySet()
 
-    private val movieGenres = MovieGenres(movieDao, api)
+    // TMDB only with the viewer's own key, and only for a film the provider had no genre for.
+    private val movieGenres = MovieGenres(movieDao, api) { movie ->
+        if (!tmdb.isConfigured()) return@MovieGenres null
+        withContext(Dispatchers.IO) {
+            tmdb.movieMeta(VodTitleCleaner.clean(movie.name), movie.year, movie.tmdbId)?.genre
+        }
+    }
 
     sealed interface SyncResult {
         data class Success(val channelCount: Int, val movieCount: Int, val seriesCount: Int) : SyncResult
@@ -805,7 +811,7 @@ class CatalogRepository(
         var series = SavedSeries(0, emptyList())
         categories(seriesOn) { api.seriesCategories(source) }
         attempt(seriesOn, Unit) { series = api.series(source).use { seriesDao.save(source.id, it) } }
-        if (movies > 0) genresInBackground(source)
+        if (movies > 0) fillGenresInBackground(source)
         return VodFetch(
             series.moved,
             // Nothing at all may be a struggling panel's empty reply, so it isn't worth trusting for
@@ -815,16 +821,21 @@ class CatalogRepository(
     }
 
     /**
-     * Two hundred calls would hold a sync up for a while; the catalogue is saved by now, so films are
-     * given genres afterwards, and the genre rows fill in as it goes. One job, one lookup after the
-     * other, so a struggling panel doesn't get hundreds of calls at once. For the same reason a sync
-     * during a source's job adds no second one; what it saved waits for the next sync.
+     * Works through [source]'s films without a genre in the background ([MovieGenres.fillAll]): the
+     * catalogue is saved by now, and the genre rows fill in as it goes. After a sync, and whenever
+     * Movies or Shows opens or the app starts, so it carries on where it left off. One job per
+     * source, one lookup after another, so a struggling panel doesn't get hundreds of calls at once;
+     * asked again while it's running, it adds no second one.
      */
-    private fun genresInBackground(source: Source) {
+    /** [fillGenresInBackground] for every provider that has films: Xtream's. */
+    suspend fun fillEveryProvidersGenres() =
+        enabledSources().filter { it.kind == SourceKind.XTREAM }.forEach(::fillGenresInBackground)
+
+    fun fillGenresInBackground(source: Source) {
         if (!sourcesGettingGenres.add(source.id)) return
         background.launch {
             try {
-                runCatching { movieGenres.refresh(source) }
+                runCatching { movieGenres.fillAll(source) }
                     .onFailure { Log.w(TAG, "Movie genres failed for source ${source.id}", it) }
             } finally {
                 sourcesGettingGenres.remove(source.id)

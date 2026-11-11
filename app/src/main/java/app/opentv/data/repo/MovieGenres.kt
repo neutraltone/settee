@@ -6,34 +6,71 @@
 package app.opentv.data.repo
 
 import app.opentv.data.db.MovieDao
+import app.opentv.data.model.Movie
 import app.opentv.data.model.Source
 import app.opentv.data.remote.XtreamApi
+import kotlinx.coroutines.delay
 
 /**
- * Asks the provider for the genres of a source's films, for For you's genre rows: most providers
- * leave the genre out of their film list, and file films by service ("NETFLIX MOVIES") rather than
- * genre, so without this only the films someone opened would have one.
+ * Asks for the genres of a source's films, for For you's genre rows: most providers leave the genre
+ * out of their film list, and file films by service ("NETFLIX MOVIES") rather than genre, so without
+ * this only the films someone opened would have one.
  *
- * Only the [count] newest films with no genre are asked about each sync, so a catalogue of 30,000
- * fills in over the weeks rather than holding one sync up for hours, newest first since they are
- * the ones most worth finding. Only the provider is asked, never TMDB: that would spend the user's
- * quota on titles nobody looks at. A film the provider has no genre for is saved with a blank one,
- * so the next sync moves on to older films instead of asking about it for ever; one the provider
- * couldn't answer for is asked about again next sync.
+ * The provider is asked first; when it has no genre and the viewer has set a TMDB key, [tmdbGenre]
+ * asks TMDB. A film neither has a genre for is saved with a blank one, so it isn't asked about again;
+ * one that couldn't be looked up is left for next time.
+ *
+ * [fillAll] works through every film without a genre, newest first, [count] at a time with
+ * [pauseMillis] between batches, so a struggling panel never gets a flood of calls and a provider
+ * that blocks busy accounts sees a steady trickle. Tied to the film list's 12-hourly fetch, 200 at a
+ * time, a 30,000-film catalogue took months.
  */
-class MovieGenres(private val movieDao: MovieDao, private val api: XtreamApi, private val count: Int = CANDIDATES) {
-    suspend fun refresh(source: Source) = lookUpEach(
-        titles = movieDao.newestWithoutGenre(source.id, count),
-        tag = TAG,
-        ask = { api.movieInfo(source, it.streamId) },
-        found = { _, info -> info.genre.orEmpty() },
-        save = { found -> movieDao.fillGenres(found.map { (movie, genre) -> movie.id to genre }) },
-    )
+class MovieGenres(
+    private val movieDao: MovieDao,
+    private val api: XtreamApi,
+    private val count: Int = CANDIDATES,
+    private val pauseMillis: Long = BATCH_PAUSE_MILLIS,
+    private val tmdbGenre: suspend (Movie) -> String? = { null },
+) {
+    /** One batch of the newest films without a genre. False if the provider stopped answering. */
+    suspend fun refresh(source: Source): Boolean = batch(source, mutableSetOf()).answering
+
+    /**
+     * Every film without a genre, a batch at a time, until none is left to ask about or the provider
+     * stops answering. A film whose lookup failed isn't asked about again in this run, which would
+     * otherwise go round it for ever.
+     */
+    suspend fun fillAll(source: Source) {
+        val tried = mutableSetOf<Long>()
+        while (true) {
+            val done = batch(source, tried)
+            if (!done.answering || done.asked < count) return
+            delay(pauseMillis)
+        }
+    }
+
+    private class Batch(val asked: Int, val answering: Boolean)
+
+    private suspend fun batch(source: Source, tried: MutableSet<Long>): Batch {
+        val titles = movieDao.newestWithoutGenre(source.id, count + tried.size).filterNot { it.id in tried }.take(count)
+        tried += titles.map { it.id }
+        val answering = lookUpEach(
+            titles = titles,
+            tag = TAG,
+            ask = { api.movieInfo(source, it.streamId) },
+            found = { movie, info -> info.genre?.takeIf { it.isNotBlank() } ?: tmdbGenre(movie).orEmpty() },
+            save = { found -> movieDao.fillGenres(found.map { (movie, genre) -> movie.id to genre }) },
+        )
+        return Batch(titles.size, answering)
+    }
 
     companion object {
         private const val TAG = "MovieGenres"
 
-        /** How many of a source's newest films without a genre are asked about after each sync. */
+        /** How many films without a genre each batch asks about. */
         const val CANDIDATES = 200
+
+        /** Between batches: a minute's rest after each 200. */
+        const val BATCH_PAUSE_MILLIS = 60_000L
     }
 }
