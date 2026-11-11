@@ -7,6 +7,7 @@ package app.opentv.ui.vod
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -17,7 +18,10 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Extension
 import androidx.compose.material.icons.filled.PlayArrow
@@ -33,6 +37,7 @@ import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
@@ -44,15 +49,23 @@ import app.opentv.data.parser.displayTitle
 import app.opentv.data.repo.CoverStatus
 import app.opentv.data.repo.MediaKey
 import app.opentv.ui.VodViewModel
+import app.opentv.ui.design.ArtCard
+import app.opentv.ui.design.ArtCardSize
 import app.opentv.ui.design.HighlightStyle
 import app.opentv.ui.design.HighlightSurface
 import app.opentv.ui.design.PillButton
 import app.opentv.ui.design.ScreenFrame
+import app.opentv.ui.design.ScreenFrameScope
 import app.opentv.ui.design.SetteeColors
 import app.opentv.ui.design.SetteeShapes
 import app.opentv.ui.design.SetteeSpace
 import app.opentv.ui.design.SetteeType
+import app.opentv.ui.design.Shelf
 import app.opentv.ui.design.Text
+import app.opentv.ui.design.rememberShelfMemory
+import app.opentv.ui.design.shelfCard
+import app.opentv.ui.options.OptionsSubject
+import app.opentv.ui.options.openOptionsOn
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.flowOf
@@ -67,9 +80,11 @@ fun MovieDetailScreen(
     movieId: Long,
     onPlay: (Movie) -> Unit,
     onPlayAddonStream: (MediaKey.AddonStream) -> Unit,
+    onOpenMovie: (Movie) -> Unit,
     viewModel: VodViewModel = viewModel(),
 ) {
     var movie by remember(movieId) { mutableStateOf<Movie?>(null) }
+    var similar by remember(movieId) { mutableStateOf(emptyList<Movie>()) }
     var resumes by remember(movieId) { mutableStateOf(false) }
     val hasAddons by viewModel.hasAddons.collectAsState()
 
@@ -78,6 +93,8 @@ fun MovieDetailScreen(
         movie = loaded
         if (loaded != null) resumes = viewModel.resumesPartway(loaded)
     }
+    // Apart from the film's own load, so the hero never waits on the row.
+    LaunchedEffect(movie?.id) { movie?.let { similar = viewModel.moreLikeThis(it) } }
 
     val m = movie
     val status by remember(m) { m?.let { viewModel.movieStatus(it) } ?: flowOf(null) }.collectAsState(initial = null)
@@ -94,6 +111,8 @@ fun MovieDetailScreen(
         status = status,
         favourite = favouriteMovies?.any { it.id == m.id },
         findAddonStreams = if (hasAddons) ({ viewModel.addonStreams(m) }) else null,
+        similar = similar,
+        onOpenMovie = onOpenMovie,
         onPlay = { onPlay(m) },
         onPlayAddonStream = { onPlayAddonStream(MediaKey.AddonStream(m.id, it.url)) },
         onSetFavourite = { viewModel.setMovieFavourite(m, it) },
@@ -101,7 +120,8 @@ fun MovieDetailScreen(
 }
 
 /**
- * A film's page once the film is known: the hero and nothing beneath it. The main button resumes
+ * A film's page once the film is known: the hero, and beneath it [similar] films as More like this,
+ * whose covers call [onOpenMovie]. The main button resumes
  * when [resumes], else plays. [findAddonStreams] is null unless add-ons are set up, and then adds an
  * Add-on sources button, last, whose picker plays the stream chosen. [favourite] is null until the
  * Profile's Favourites have loaded, and the toggle does nothing till then.
@@ -113,6 +133,8 @@ internal fun MovieDetailContent(
     status: CoverStatus?,
     favourite: Boolean?,
     findAddonStreams: (suspend () -> List<StremioStream>)?,
+    similar: List<Movie>,
+    onOpenMovie: (Movie) -> Unit,
     onPlay: () -> Unit,
     onPlayAddonStream: (StremioStream) -> Unit,
     onSetFavourite: (Boolean) -> Unit,
@@ -129,39 +151,49 @@ internal fun MovieDetailContent(
         runCatching { playFocus.requestFocus() }
     }
 
+    val page = rememberScrollState()
     ScreenFrame(backdrop = { HeroBackdrop(movie.backdropUrl, movie.posterUrl) }) {
-        Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.Bottom) {
-            Text(movie.displayTitle, style = SetteeType.Hero, maxLines = 2)
-            Spacer(Modifier.height(8.dp))
-            HeroMetaLine(
-                heroMeta(
-                    firstGenre(movie.genre),
-                    movie.year?.toString(),
-                    movie.durationSeconds?.takeIf { it > 0 }?.let { runtimeText(it) },
-                    heroStatusText(status),
-                ),
-            )
-            movie.plot?.takeIf { it.isNotBlank() }?.let {
-                Spacer(Modifier.height(10.dp))
-                Text(it, style = SetteeType.Synopsis, maxLines = 4, modifier = Modifier.fillMaxWidth(0.6f))
-            }
-            Spacer(Modifier.height(18.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(SetteeSpace.CardGap)) {
-                PillButton(
-                    label = stringResource(if (resumes) R.string.vod_resume else R.string.vod_play),
-                    icon = Icons.Filled.PlayArrow,
-                    onClick = onPlay,
-                    modifier = Modifier.focusRequester(playFocus),
-                )
-                FavouriteButton(favourite, onSetFavourite)
-                if (findAddonStreams != null) {
-                    PillButton(
-                        label = stringResource(R.string.vod_addon_sources),
-                        icon = Icons.Filled.Extension,
-                        onClick = {
-                            picker = AddonPicker.Loading
-                            lookup?.cancel()
-                            lookup = scope.launch { picker = AddonPicker.Found(findAddonStreams()) }
+        // The hero fills the screen but for the top of More like this, which shows there's more below.
+        BoxWithConstraints(Modifier.fillMaxSize()) {
+            val heroHeight = if (similar.isEmpty()) maxHeight else maxHeight - ROW_PEEK
+            Column(Modifier.fillMaxSize().verticalScroll(page)) {
+                Column(Modifier.fillMaxWidth().height(heroHeight), verticalArrangement = Arrangement.Bottom) {
+                    MovieHero(movie, status)
+                    Spacer(Modifier.height(18.dp))
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(SetteeSpace.CardGap),
+                        // Back on the buttons, the whole hero comes back, not just as much as shows them.
+                        modifier = Modifier.onFocusChanged {
+                            if (it.hasFocus) scope.launch { page.animateScrollTo(0) }
+                        },
+                    ) {
+                        PillButton(
+                            label = stringResource(if (resumes) R.string.vod_resume else R.string.vod_play),
+                            icon = Icons.Filled.PlayArrow,
+                            onClick = onPlay,
+                            modifier = Modifier.focusRequester(playFocus),
+                        )
+                        FavouriteButton(favourite, onSetFavourite)
+                        if (findAddonStreams != null) {
+                            PillButton(
+                                label = stringResource(R.string.vod_addon_sources),
+                                icon = Icons.Filled.Extension,
+                                onClick = {
+                                    picker = AddonPicker.Loading
+                                    lookup?.cancel()
+                                    lookup = scope.launch { picker = AddonPicker.Found(findAddonStreams()) }
+                                },
+                            )
+                        }
+                    }
+                }
+                if (similar.isNotEmpty()) {
+                    Spacer(Modifier.height(SetteeSpace.RowGap))
+                    MoreLikeThis(
+                        similar,
+                        onOpenMovie,
+                        Modifier.onFocusChanged {
+                            if (it.hasFocus) scope.launch { page.animateScrollTo(page.maxValue) }
                         },
                     )
                 }
@@ -184,6 +216,57 @@ internal fun MovieDetailContent(
         )
     }
 }
+
+/** The film's title, meta line, synopsis and credits. */
+@Composable
+private fun MovieHero(movie: Movie, status: CoverStatus?) {
+    Text(movie.displayTitle, style = SetteeType.Hero, maxLines = 2)
+    Spacer(Modifier.height(8.dp))
+    HeroMetaLine(
+        heroMeta(
+            firstGenre(movie.genre),
+            movie.year?.toString(),
+            movie.durationSeconds?.takeIf { it > 0 }?.let { runtimeText(it) },
+            heroStatusText(status),
+        ),
+    )
+    movie.plot?.takeIf { it.isNotBlank() }?.let {
+        Spacer(Modifier.height(10.dp))
+        Text(it, style = SetteeType.Synopsis, maxLines = 4, modifier = Modifier.fillMaxWidth(SYNOPSIS_WIDTH))
+    }
+    heroCredits(movie.cast, movie.director)?.let {
+        Spacer(Modifier.height(10.dp))
+        Text(
+            it,
+            style = SetteeType.Body,
+            color = SetteeColors.QuietText,
+            maxLines = 1,
+            modifier = Modifier.fillMaxWidth(SYNOPSIS_WIDTH),
+        )
+    }
+}
+
+/** Films like this one, as covers that open their own page. */
+@Composable
+private fun ScreenFrameScope.MoreLikeThis(similar: List<Movie>, onOpenMovie: (Movie) -> Unit, modifier: Modifier) {
+    val memory = rememberShelfMemory(remember(similar) { similar.map { "movie:${it.id}" } })
+    Shelf(stringResource(R.string.vod_more_like_this), memory, modifier) {
+        items(similar, key = { it.id }) { film ->
+            ArtCard(
+                title = film.displayTitle,
+                artworkUrl = film.posterUrl,
+                onClick = { onOpenMovie(film) },
+                size = ArtCardSize.Portrait,
+                modifier = Modifier.shelfCard(memory, "movie:${film.id}"),
+                onOptions = openOptionsOn(OptionsSubject.OfMovie(film)),
+            )
+        }
+    }
+}
+
+/** The top of More like this showing under the hero: its title and the tops of its covers. */
+private val ROW_PEEK = 84.dp
+private const val SYNOPSIS_WIDTH = 0.6f
 
 /** What the add-on picker shows. */
 private sealed interface AddonPicker {

@@ -1017,6 +1017,9 @@ class VodViewModel @JvmOverloads constructor(
     suspend fun seriesDetail(id: Long): Series? = graph.catalogRepository.seriesDetail(id)
 
     /** Whether playing [movie] would pick up partway: the Quality that plays keeps the resume point. */
+    /** A film's More like this. */
+    suspend fun moreLikeThis(movie: Movie): List<Movie> = graph.catalogRepository.moreLikeThis(movie)
+
     suspend fun resumesPartway(movie: Movie): Boolean {
         val playing = graph.vodQualities.planFor(MediaKey.Movie(movie.id)).start.key
         return graph.viewerLibrary.resumeFrom(playing.stored) > 0

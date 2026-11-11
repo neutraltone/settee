@@ -495,6 +495,9 @@
     <string name="vod_addon_loading">Finding streams from your add-ons…</string>
     <string name="vod_addon_none">No streams found from your add-ons for this title. It needs a TMDB key set (for the IMDb match) and an add-on that has it.</string>
     <string name="vod_season">Season %1$d</string>
+    <string name="vod_more_like_this">More like this</string>
+    <string name="vod_credits_cast">With %1$s</string>
+    <string name="vod_credits_director">Directed by %1$s</string>
     <string name="vod_specials">Specials</string>
     <!-- A film's running time on its page: hours and minutes, or minutes alone. -->
     <string name="vod_runtime_hours_minutes">%1$dh %2$dm</string>

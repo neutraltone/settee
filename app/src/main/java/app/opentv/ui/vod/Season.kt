@@ -5,6 +5,9 @@
  */
 package app.opentv.ui.vod
 
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.res.stringResource
+import app.opentv.R
 import app.opentv.data.model.Episode
 import app.opentv.data.repo.SeriesMainAction
 
@@ -27,3 +30,8 @@ fun seasonsOf(episodes: List<Episode>): List<Season> = episodes
  */
 fun openingSeason(seasons: List<Season>, mainAction: SeriesMainAction?): Int? =
     mainAction?.episode?.season ?: seasons.firstOrNull()?.number
+
+/** A season's pill: "Season 2", or "Specials" for Season 0. */
+@Composable
+internal fun seasonLabel(number: Int): String =
+    if (number == 0) stringResource(R.string.vod_specials) else stringResource(R.string.vod_season, number)

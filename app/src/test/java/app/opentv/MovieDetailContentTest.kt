@@ -60,7 +60,7 @@ class MovieDetailContentTest {
         streamUrl = "https://example.com/m.mkv",
         backdropUrl = "https://example.com/backdrop.jpg",
         genre = "Drama, Road",
-        cast = "Somebody Famous",
+        cast = "Somebody Famous, Second Billing, Third Billing, Fourth Billing",
         director = "Someone Else",
     )
 
@@ -74,9 +74,18 @@ class MovieDetailContentTest {
     private val favouriteRequests = mutableListOf<Boolean>()
     private val favourite = mutableStateOf<Boolean?>(false)
 
+    private var opened: Movie? = null
+
+    private fun similarFilm(id: Long, name: String) = film.copy(id = id, streamId = "m$id", name = name)
+
     private var findStreams: (suspend () -> List<StremioStream>) = { streams }
 
-    private fun show(resumes: Boolean = false, status: CoverStatus? = null, addons: Boolean = false) {
+    private fun show(
+        resumes: Boolean = false,
+        status: CoverStatus? = null,
+        addons: Boolean = false,
+        similar: List<Movie> = emptyList(),
+    ) {
         compose.setTvContent {
             MovieDetailContent(
                 movie = film,
@@ -84,6 +93,8 @@ class MovieDetailContentTest {
                 status = status,
                 favourite = favourite.value,
                 findAddonStreams = if (addons) findStreams else null,
+                similar = similar,
+                onOpenMovie = { opened = it },
                 onPlay = { plays++ },
                 onPlayAddonStream = { playedStream = it },
                 onSetFavourite = { favouriteRequests += it },
@@ -110,9 +121,70 @@ class MovieDetailContentTest {
         compose.onNodeWithText("Play").assertIsFocused()
         compose.onNodeWithText("Drama · 2021 · 1h 52m").assertIsDisplayed()
         compose.onNodeWithText("A long drive home, and everything said on the way.").assertIsDisplayed()
-        compose.onNodeWithText("Somebody Famous").assertDoesNotExist()
         compose.onNodeWithText("More like this").assertDoesNotExist()
         captureScreen("movie_detail")
+    }
+
+    @Test
+    fun `the hero says who is in the film, its first three billed, and who directed it`() {
+        show()
+
+        compose.onNodeWithText("With Somebody Famous, Second Billing, Third Billing · Directed by Someone Else")
+            .assertIsDisplayed()
+    }
+
+    @Test
+    fun `a film with no credits has no credits line`() {
+        compose.setTvContent {
+            MovieDetailContent(
+                movie = film.copy(cast = null, director = " "),
+                resumes = false,
+                status = null,
+                favourite = false,
+                findAddonStreams = null,
+                similar = emptyList(),
+                onOpenMovie = {},
+                onPlay = {},
+                onPlayAddonStream = {},
+                onSetFavourite = {},
+            )
+        }
+        settle()
+
+        compose.onNode(hasText("Directed by", substring = true)).assertDoesNotExist()
+        compose.onNode(hasText("With ", substring = true)).assertDoesNotExist()
+    }
+
+    @Test
+    fun `films like this one are in a row beneath the hero, and Down then OK opens one`() {
+        val harbour = similarFilm(8, "Harbour Lights")
+        show(similar = listOf(harbour, similarFilm(9, "Long Night")))
+
+        compose.onNodeWithText("More like this").assertExists()
+        press(Key.DirectionDown)
+        compose.onNode(hasText("Harbour Lights") and hasClickAction()).assertIsFocused()
+        captureScreen("movie_detail_more_like_this")
+
+        press(Key.DirectionCenter)
+
+        assertThat(opened).isEqualTo(harbour)
+    }
+
+    @Test
+    fun `Up from the row goes back to the buttons`() {
+        show(similar = listOf(similarFilm(8, "Harbour Lights")))
+        press(Key.DirectionDown)
+
+        press(Key.DirectionUp)
+
+        compose.onNodeWithText("Play").assertIsFocused()
+    }
+
+    @Test
+    fun `a film page opens with the start of the row showing beneath the hero`() {
+        show(similar = listOf(similarFilm(8, "Harbour Lights")))
+
+        compose.onNodeWithText("More like this").assertIsDisplayed()
     }
 
     @Test

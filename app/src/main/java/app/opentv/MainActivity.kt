@@ -495,6 +495,7 @@ private fun OpenTvApp(isTelevision: Boolean, launchedToPlay: Boolean) {
                         viewModel = vodViewModel,
                         onPlay = { movie -> navController.navigate(Routes.vodPlayer(MediaKey.Movie(movie.id))) },
                         onPlayAddonStream = { key -> navController.navigate(Routes.vodPlayer(key)) },
+                        onOpenMovie = { movie -> navController.navigate(Routes.movieDetail(movie.id)) },
                     )
                 }
 

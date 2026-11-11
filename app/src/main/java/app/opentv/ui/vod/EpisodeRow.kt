@@ -24,8 +24,16 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.testTag
 import androidx.compose.ui.unit.dp
 import app.opentv.R
 import app.opentv.data.model.Episode
@@ -61,36 +69,63 @@ internal fun EpisodeRow(
         style = HighlightStyle.Row,
         modifier = modifier.fillMaxWidth(),
         onOptions = openOptionsOn(OptionsSubject.OfEpisode(ep, ep.playerTitle)),
-    ) { highlighted ->
-        // Watched steps back by colour, never alpha (docs/LOOK.md, Colour).
-        val main = when {
-            highlighted -> SetteeColors.OnAccent
-            status == WatchStatus.Watched -> SetteeColors.QuietText
-            else -> SetteeColors.Text
+    ) { highlighted -> EpisodeRowBody(ep, status, seriesArt, highlighted) }
+}
+
+/**
+ * The next season's first episode under a season's last, fading out downwards: it says Down carries
+ * on into that season, without being somewhere the Highlight can stop. Hidden from the semantics
+ * tree but for its test tag, as it repeats the row Down leads to.
+ */
+@Composable
+internal fun EpisodePeek(ep: Episode, status: WatchStatus, seriesArt: List<String>) {
+    Box(
+        Modifier
+            .fillMaxWidth()
+            .clearAndSetSemantics { testTag = NEXT_SEASON_PEEK }
+            // Offscreen, so the fade masks the row's own pixels rather than darkening what's behind.
+            .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
+            .drawWithContent {
+                drawContent()
+                drawRect(PeekFade, blendMode = BlendMode.DstIn)
+            },
+    ) {
+        EpisodeRowBody(ep, status, seriesArt, highlighted = false)
+    }
+}
+
+private val PeekFade = Brush.verticalGradient(0f to Color.Black.copy(alpha = 0.55f), 1f to Color.Transparent)
+
+@Composable
+private fun EpisodeRowBody(ep: Episode, status: WatchStatus, seriesArt: List<String>, highlighted: Boolean) {
+    // Watched steps back by colour, never alpha (docs/LOOK.md, Colour).
+    val main = when {
+        highlighted -> SetteeColors.OnAccent
+        status == WatchStatus.Watched -> SetteeColors.QuietText
+        else -> SetteeColors.Text
+    }
+    val quiet = if (highlighted) SetteeColors.OnAccent else SetteeColors.QuietText
+    Row(
+        Modifier.padding(8.dp),
+        horizontalArrangement = Arrangement.spacedBy(16.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        EpisodeThumbnail(ep, status, seriesArt)
+        Column(Modifier.weight(1f)) {
+            Text(ep.title, style = SetteeType.RowTitle, color = main, maxLines = 1)
+            Text(
+                stringResource(R.string.home_cover_episode, ep.season, ep.episodeNumber),
+                style = SetteeType.Body,
+                color = quiet,
+                maxLines = 1,
+            )
         }
-        val quiet = if (highlighted) SetteeColors.OnAccent else SetteeColors.QuietText
-        Row(
-            Modifier.padding(8.dp),
-            horizontalArrangement = Arrangement.spacedBy(16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            EpisodeThumbnail(ep, status, seriesArt)
-            Column(Modifier.weight(1f)) {
-                Text(ep.title, style = SetteeType.RowTitle, color = main, maxLines = 1)
-                Text(
-                    stringResource(R.string.home_cover_episode, ep.season, ep.episodeNumber),
-                    style = SetteeType.Body,
-                    color = quiet,
-                    maxLines = 1,
-                )
-            }
-            EpisodeStatus(status, quiet)
-        }
+        EpisodeStatus(status, quiet)
     }
 }
 
 @Composable
-private fun EpisodeStatus(status: WatchStatus, colour: androidx.compose.ui.graphics.Color) {
+private fun EpisodeStatus(status: WatchStatus, colour: Color) {
     when (status) {
         WatchStatus.Unwatched -> Unit
         WatchStatus.Watched -> Row(verticalAlignment = Alignment.CenterVertically) {

@@ -534,6 +534,33 @@ interface MovieDao {
     @Query("SELECT * FROM movies WHERE sourceId = :sourceId AND streamId IN (:streamIds)")
     suspend fun byProviderIds(sourceId: Long, streamIds: List<String>): List<Movie>
 
+    /**
+     * Films whose genres include [genre], for a film's More like this: the film's own provider first,
+     * then best-rated. A substring match over the provider's genre string, so the rows are picked in
+     * SQL rather than every film being loaded to compare genre lists, which a big catalogue can't afford.
+     */
+    @Query(
+        """
+        SELECT * FROM movies
+        WHERE id != :excludeId AND genre LIKE '%' || :genre || '%'
+        ORDER BY sourceId = :sourceId DESC, rating IS NULL, rating DESC, addedMillis DESC
+        LIMIT :limit
+        """,
+    )
+    suspend fun sharingGenre(genre: String, sourceId: Long, excludeId: Long, limit: Int): List<Movie>
+
+    /** More like this for a film with no genre: others from its provider and category, best-rated first. */
+    @Query(
+        """
+        SELECT * FROM movies
+        WHERE sourceId = :sourceId AND id != :excludeId
+          AND (:categoryId IS NULL OR categoryId = :categoryId)
+        ORDER BY rating IS NULL, rating DESC, addedMillis DESC
+        LIMIT :limit
+        """,
+    )
+    suspend fun sameCategory(sourceId: Long, categoryId: String?, excludeId: Long, limit: Int): List<Movie>
+
     @Upsert
     suspend fun upsertAll(movies: List<Movie>)
 

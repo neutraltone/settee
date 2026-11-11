@@ -80,6 +80,21 @@ internal fun heroStatusText(status: CoverStatus?): String? = when (status) {
 internal fun firstGenre(genre: String?): String? =
     genre?.split(',', '|', '/')?.map { it.trim() }?.firstOrNull { it.isNotEmpty() }
 
+/**
+ * Who is in a title and who made it, for the hero: the first [CREDITED_CAST] billed and the director,
+ * or null when the provider gave neither.
+ */
+@Composable
+internal fun heroCredits(cast: String?, director: String?): String? {
+    val names = cast?.split(',')?.map { it.trim() }?.filter { it.isNotEmpty() }?.take(CREDITED_CAST).orEmpty()
+    return heroMeta(
+        names.takeIf { it.isNotEmpty() }?.let { stringResource(R.string.vod_credits_cast, it.joinToString(", ")) },
+        director?.trim()?.takeIf { it.isNotEmpty() }?.let { stringResource(R.string.vod_credits_director, it) },
+    ).takeIf { it.isNotEmpty() }
+}
+
+private const val CREDITED_CAST = 3
+
 /** A film's running time, as "1h 52m" or "45m". */
 @Composable
 internal fun runtimeText(seconds: Int): String = seconds.seconds.toComponents { hours, minutes, _, _ ->

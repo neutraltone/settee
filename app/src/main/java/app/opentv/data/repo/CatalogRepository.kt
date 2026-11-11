@@ -459,6 +459,20 @@ class CatalogRepository(
             .map { GenreGroup(it.key, it.value.take(perGenre)) }
     }
 
+    /**
+     * A film's More like this: films sharing its first genre, the one its page shows, or with no
+     * genre, others from its category.
+     */
+    suspend fun moreLikeThis(movie: Movie, limit: Int = MORE_LIKE_THIS_LIMIT): List<Movie> =
+        withContext(Dispatchers.IO) {
+            val genre = splitGenres(movie.genre).firstOrNull()
+            if (genre == null) {
+                movieDao.sameCategory(movie.sourceId, movie.categoryId, movie.id, limit)
+            } else {
+                movieDao.sharingGenre(genre, movie.sourceId, movie.id, limit)
+            }
+        }
+
     /** The viewer hid or showed a channel, on the TV or the web manager; dated, so the change can travel. */
     suspend fun setChannelHidden(id: Long, hidden: Boolean, now: Long = System.currentTimeMillis()) =
         channelDao.changeHidden(id, hidden, now)
@@ -840,3 +854,4 @@ class CatalogRepository(
 
 /** About as many as fit across Home twice: enough to browse, few enough to stay recent. */
 private const val RECENTLY_ADDED = 20
+private const val MORE_LIKE_THIS_LIMIT = 20

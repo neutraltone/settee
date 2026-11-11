@@ -17,6 +17,7 @@ import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.hasClickAction
+import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isFocused
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -37,6 +38,7 @@ import app.opentv.ui.options.LocalOpenOptions
 import app.opentv.ui.options.OptionsFor
 import app.opentv.ui.options.OptionsPanel
 import app.opentv.ui.options.OptionsSubject
+import app.opentv.ui.vod.NEXT_SEASON_PEEK
 import app.opentv.ui.vod.SeriesDetailContent
 import com.google.common.truth.Truth.assertThat
 import com.google.common.truth.Truth.assertWithMessage
@@ -164,6 +166,67 @@ class SeriesDetailContentTest {
     )
 
     private fun pill(label: String) = compose.onNode(hasText(label) and hasClickAction())
+
+    private fun SemanticsNodeInteraction.assertNotShown() {
+        val shown = runCatching { assertIsDisplayed() }.isSuccess
+        assertWithMessage("still on screen").that(shown).isFalse()
+    }
+
+    @Test
+    fun `the list opens already at the main button's episode, so Down moves onto it without a jump`() {
+        episodes = (1..10).map { testEpisode(1, it) } + (1..3).map { testEpisode(2, it) }
+        show(SeriesMainAction.Resume(testEpisode(1, 7)))
+
+        episodeRow(1, 7).assertIsDisplayed()
+        episodeRow(1, 1).assertNotShown()
+
+        press(Key.DirectionDown)
+
+        episodeRow(1, 7).assertIsFocused()
+        episodeRow(1, 1).assertNotShown()
+    }
+
+    @Test
+    fun `under a season's last episode the next season's first shows faded, to say Down goes on`() {
+        show(SeriesMainAction.Resume(testEpisode(1, 4)))
+        press(Key.DirectionDown)
+
+        press(Key.DirectionDown)
+
+        episodeRow(1, 5).assertIsFocused()
+        compose.onNode(hasTestTag(NEXT_SEASON_PEEK)).assertIsDisplayed()
+        captureScreen("series_detail_next_season_peek")
+
+        press(Key.DirectionDown)
+
+        episodeRow(2, 1).assertIsFocused()
+        pill("Season 2").assertIsSelected()
+    }
+
+    @Test
+    fun `walking down a long season, the faded next episode comes into view under its last`() {
+        episodes = (1..12).map { testEpisode(1, it) } + (1..3).map { testEpisode(2, it) }
+        show(SeriesMainAction.Play(testEpisode(1, 1)))
+        press(Key.DirectionDown)
+
+        repeat(11) { press(Key.DirectionDown) }
+
+        episodeRow(1, 12).assertIsFocused()
+        // Wholly in view, not a sliver at the foot of the list: the list clips what's outside it.
+        val peek = compose.onNode(hasTestTag(NEXT_SEASON_PEEK)).fetchSemanticsNode()
+        assertWithMessage("peek clipped to ${peek.boundsInRoot}, though ${peek.size} tall")
+            .that(peek.boundsInRoot.height).isEqualTo(peek.size.height.toFloat())
+    }
+
+    @Test
+    fun `the last season's last episode has nothing faded under it`() {
+        show(SeriesMainAction.Resume(testEpisode(2, 5)))
+
+        press(Key.DirectionDown)
+
+        episodeRow(2, 5).assertIsFocused()
+        compose.onNode(hasTestTag(NEXT_SEASON_PEEK)).assertDoesNotExist()
+    }
 
     @Test
     fun `Up from a season's first episode highlights its pill`() {
@@ -368,7 +431,8 @@ class SeriesDetailContentTest {
                 testEpisode(1, 2).id to WatchStatus.InProgress(progress = 0.5f, remainingMillis = 18 * 60_000L),
             ),
         )
-        show(SeriesMainAction.Resume(testEpisode(1, 2)))
+        // No main button, so the list starts at the top rather than at the episode to resume.
+        show(initial = null)
 
         compose.onNode(hasText("S1 E1") and hasText("Watched")).assertExists()
         compose.onNode(hasText("S1 E2") and hasText("18 min left")).assertExists()

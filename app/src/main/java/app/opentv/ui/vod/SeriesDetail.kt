@@ -129,6 +129,7 @@ internal fun SeriesDetailContent(
     val pillRow = rememberLazyListState()
     val episodeList = rememberLazyListState()
     ShowPageFocusEffects(nav, shown, pillRow, episodeList)
+    EpisodeListScrollEffects(nav, shown, episodeList)
     // Back from anywhere in the list goes to the pills first. Without pills, Back leaves as it
     // always has: there's nowhere nearer to go.
     BackHandler(enabled = nav.inList && seasons.size > 1) { nav.pillTarget = PillTarget() }
@@ -277,6 +278,12 @@ private fun EpisodeList(
                     .onFocusChanged { if (it.isFocused) nav.focusedEpisode = ep.id },
             )
         }
+        // The next season's first episode, faded and out of the Highlight's reach, says Down carries on.
+        shown.after(season)?.episodes?.firstOrNull()?.let { next ->
+            item(key = PEEK_KEY) {
+                EpisodePeek(next, statuses[next.id], listOfNotNull(series.backdropUrl, series.posterUrl))
+            }
+        }
     }
 }
 
@@ -332,6 +339,27 @@ private fun ShowPageFocusEffects(
         nav.buttonTarget ?: return@LaunchedEffect
         withFrameNanos {}
         runCatching { nav.focus.button(latest.mainAction != null).requestFocus() }
+    }
+}
+
+/** Where the episode list scrolls by itself, apart from following the Highlight. */
+@Composable
+private fun EpisodeListScrollEffects(nav: ShowPageNav, shown: ShowSeasons, episodeList: LazyListState) {
+    val latest by rememberUpdatedState(shown)
+    // Opens with the main button's episode at the top of the list, so the Down that reaches it
+    // doesn't also scroll the list under the viewer. Only until they've chosen a season themselves.
+    val opening = shown.mainAction?.episode
+    LaunchedEffect(opening?.id, shown.selected?.number) {
+        if (nav.inList || nav.pickedSeason != null) return@LaunchedEffect
+        val index = shown.selected?.episodes?.indexOfFirst { it.id == opening?.id } ?: -1
+        if (index >= 0) episodeList.scrollToItem(index)
+    }
+    // On a season's last episode, bring the faded next one into view beneath it. Asking for the
+    // last item scrolls only as far as the end of the list.
+    LaunchedEffect(nav.focusedEpisode) {
+        val season = latest.selected ?: return@LaunchedEffect
+        val onLast = nav.focusedEpisode == season.episodes.lastOrNull()?.id
+        if (onLast && latest.after(season) != null) episodeList.animateScrollToItem(season.episodes.size)
     }
 }
 
@@ -437,13 +465,13 @@ private class EpisodeTarget(val episode: Episode)
 
 private fun KeyEvent.isPress(key: Key) = type == KeyEventType.KeyDown && this.key == key
 
+/** Test tag on the faded next-season episode under a season's last. */
+internal const val NEXT_SEASON_PEEK = "next_season_peek"
+
+private const val PEEK_KEY = "next-season-peek"
+
 private const val FIRST_HIGHLIGHT_DELAY_MILLIS = 60L
 private const val SYNOPSIS_WIDTH = 0.6f
-
-/** A season's pill: "Season 2", or "Specials" for Season 0. */
-@Composable
-private fun seasonLabel(number: Int): String =
-    if (number == 0) stringResource(R.string.vod_specials) else stringResource(R.string.vod_season, number)
 
 /**
  * Scrolls the pill row so pill [index] is wholly in view, leaving the one before it showing where
