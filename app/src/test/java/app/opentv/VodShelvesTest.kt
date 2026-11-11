@@ -12,6 +12,7 @@ import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performKeyInput
@@ -19,6 +20,7 @@ import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.test.requestFocus
 import app.opentv.data.model.Movie
 import app.opentv.data.model.Series
+import app.opentv.data.repo.GenreGroup
 import app.opentv.data.repo.MediaKey
 import app.opentv.ui.ResumeItem
 import app.opentv.ui.design.ScreenFrame
@@ -371,5 +373,35 @@ class VodShelvesTest {
         compose.waitForIdle()
 
         compose.onNodeWithText("Heat").assertDoesNotExist()
+    }
+
+    @Test
+    fun `with Recommended still being worked out, Down past its placeholder leaves nothing above the row showing`() {
+        compose.setTvContent {
+            ScreenFrame {
+                MovieShelves(
+                    resume = emptyList(),
+                    favourites = listOf(movie(1, "Heat"), movie(2, "Ronin")),
+                    recommended = emptyList(),
+                    recentlyAdded = listOf(movie(3, "Alien"), movie(4, "Brazil")),
+                    genreRows = listOf(GenreGroup("Comedy", listOf(movie(5, "Airplane")))),
+                    onResume = {},
+                    onOpenMovie = {},
+                    recommending = true,
+                )
+            }
+        }
+        compose.onNodeWithText("Heat").requestFocus()
+
+        compose.onNodeWithText("Heat").performKeyInput { pressKey(Key.DirectionDown) }
+        compose.mainClock.advanceTimeBy(1_000)
+        compose.waitForIdle()
+
+        compose.onNodeWithText("Alien").assertIsFocused()
+        val rowTop = compose.onNodeWithText("Recently added").fetchSemanticsNode().boundsInRoot.top
+        val above = compose.onAllNodes(hasText("", substring = true)).fetchSemanticsNodes()
+            .map { it.boundsInRoot }
+            .filter { it.height > 0f && it.top < rowTop }
+        assertThat(above).isEmpty()
     }
 }

@@ -78,7 +78,9 @@ private fun ScreenFrameScope.CoverRows(
 ) {
     LazyVerticalGrid(
         state = state,
-        columns = GridCells.Adaptive(ArtCardSize.Portrait.width),
+        // Columns as wide as a cover, so it's the size it is in a row. Adaptive ones share out the
+        // width left over, which stretched each cover wider than For you's.
+        columns = GridCells.FixedSize(ArtCardSize.Portrait.width),
         contentPadding = PaddingValues(vertical = GRID_LIFT_ROOM),
         horizontalArrangement = Arrangement.spacedBy(SetteeSpace.CardGap),
         verticalArrangement = Arrangement.spacedBy(SetteeSpace.RowGap),

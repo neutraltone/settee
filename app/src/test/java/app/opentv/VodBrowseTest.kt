@@ -275,6 +275,23 @@ class VodBrowseTest {
         captureScreen("movies_category_grid")
     }
 
+    @Test
+    fun `a category's covers are the same size as For you's`() {
+        setMovies()
+        pressOkOnMoviesInTheRail()
+        val forYou = firstCover(firstTitle).getUnclippedBoundsInRoot()
+        press(Key.DirectionLeft)
+        press(Key.DirectionDown)
+
+        press(Key.DirectionCenter)
+        compose.waitUntilDoesNotExist(hasText("Brazil"), 5_000)
+        compose.waitUntilAtLeastOneExists(cover("Heat"), 5_000)
+
+        val grid = compose.onNode(cover("Heat")).getUnclippedBoundsInRoot()
+        assertThat((grid.right - grid.left).value).isWithin(0.5f).of((forYou.right - forYou.left).value)
+        assertThat((grid.bottom - grid.top).value).isWithin(0.5f).of((forYou.bottom - forYou.top).value)
+    }
+
     private fun synopsisOf(title: String) = "What happens in $title."
 
     @Test

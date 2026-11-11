@@ -5,6 +5,8 @@
  */
 package app.opentv.ui.vod
 
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -21,6 +23,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.unit.dp
@@ -62,10 +66,25 @@ private const val BACKDROP_REST_MILLIS = 400L
  * the screen's top and right edges rather than stopping at the margin. The fades are in the same
  * layout as the text, so they move with it when the sidebar pushes the screen along, and the text
  * never lands on the bright part of the art.
+ *
+ * A new title's art dips in: the old art fades out, then the new fades in once it has loaded. Only
+ * one picture is drawn at a time, its alpha applied as it draws rather than through an offscreen
+ * layer. Crossfading two see-through screens cost 21-45 ms a frame on a Stick (docs/LOOK.md).
  */
 @Composable
 internal fun BackdropArt(backdrop: Backdrop?) {
-    val url = backdrop?.imageUrl ?: return
+    val wanted = backdrop?.imageUrl
+    var drawn by remember { mutableStateOf(wanted) }
+    var loaded by remember { mutableStateOf(false) }
+    val alpha = remember { Animatable(0f) }
+    LaunchedEffect(wanted) {
+        if (wanted == drawn) return@LaunchedEffect
+        if (drawn != null) alpha.animateTo(0f, tween(ART_FADE_MILLIS))
+        loaded = false
+        drawn = wanted
+    }
+    LaunchedEffect(drawn, loaded) { if (drawn != null && loaded) alpha.animateTo(1f, tween(ART_FADE_MILLIS)) }
+    val url = drawn ?: return
     Box(
         Modifier.fillMaxWidth().height(BACKDROP_HEIGHT).toTheEdges(),
         contentAlignment = Alignment.TopEnd,
@@ -74,12 +93,21 @@ internal fun BackdropArt(backdrop: Backdrop?) {
             model = url,
             contentDescription = null,
             contentScale = ContentScale.Crop,
-            modifier = Modifier.fillMaxWidth(BACKDROP_WIDTH).fillMaxHeight(),
+            onSuccess = { loaded = true },
+            modifier = Modifier
+                .fillMaxWidth(BACKDROP_WIDTH)
+                .fillMaxHeight()
+                .graphicsLayer {
+                    this.alpha = alpha.value
+                    compositingStrategy = CompositingStrategy.ModulateAlpha
+                },
         )
         Box(Modifier.matchParentSize().background(AcrossFade))
         Box(Modifier.matchParentSize().background(DownFade))
     }
 }
+
+private const val ART_FADE_MILLIS = 200
 
 /** The highlighted title's name, where the Profile is with it, and its synopsis. */
 @Composable
