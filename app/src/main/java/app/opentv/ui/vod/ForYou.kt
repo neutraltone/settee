@@ -105,9 +105,15 @@ internal fun <T> ScreenFrameScope.ForYou(
             if (resume.isNotEmpty()) {
                 railReturnItem(key = "cw", contentType = "continue-watching") {
                     RowAtTop(0) {
-                        ContinueWatchingShelf(resume, large = false, focus = null, onResume = onResume, leave = {
-                            LeaveDirectly
-                        })
+                        ContinueWatchingShelf(
+                            resume,
+                            large = false,
+                            focus = null,
+                            onResume = onResume,
+                            leave = { LeaveDirectly },
+                            // The film or show the card plays, so it shows in the backdrop as a cover's does.
+                            onHighlight = { card -> card.titleId?.let(onHighlight) },
+                        )
                     }
                 }
             }

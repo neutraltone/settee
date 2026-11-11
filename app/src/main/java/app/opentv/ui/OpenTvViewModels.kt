@@ -684,6 +684,8 @@ data class ResumeItem(
     val card: ContinueWatchingCard? = null,
     /** The provider's name for the title, which is where its Quality is written. */
     val name: String = title,
+    /** The film's or the show's local id, which Movies' and Shows' backdrop looks it up by. */
+    val titleId: Long? = null,
 )
 
 /**
@@ -1130,6 +1132,7 @@ internal suspend fun resumeItem(catalog: CatalogRepository, card: ContinueWatchi
             card.progress,
             card = card,
             name = it.name,
+            titleId = it.id,
         )
     }
     is ContinueWatchingCard.Series -> {
@@ -1145,6 +1148,7 @@ internal suspend fun resumeItem(catalog: CatalogRepository, card: ContinueWatchi
                 episode = SeasonEpisode(ep.season, ep.episodeNumber),
                 newEpisode = card.newEpisode,
                 card = card,
+                titleId = it.id,
             )
         }
     }

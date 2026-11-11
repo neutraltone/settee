@@ -75,6 +75,8 @@ class VodContinueWatchingTest {
                 progress = 0.25f,
                 episode = SeasonEpisode(season = 2, episode = 4),
                 card = ContinueWatchingCard.Series(testEpisode(2, 4), progress = 0.25f),
+                // So the backdrop on Shows can look the show up, as it does for a show's cover.
+                titleId = graph.database.series().bySeriesId(1, "s")?.id,
             ),
         )
     }

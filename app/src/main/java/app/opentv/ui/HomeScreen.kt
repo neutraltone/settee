@@ -27,6 +27,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.viewmodel.compose.viewModel
 import app.opentv.R
@@ -380,6 +381,7 @@ internal fun ScreenFrameScope.ContinueWatchingShelf(
     focus: CardFocus?,
     onResume: (MediaKey) -> Unit,
     leave: (ResumeItem) -> LeaveScreen,
+    onHighlight: (ResumeItem) -> Unit = {},
 ) {
     val memory = rememberShelfMemory(remember(cards) { cards.map { it.key.stored } })
     val openOptions = LocalOpenOptions.current
@@ -390,7 +392,10 @@ internal fun ScreenFrameScope.ContinueWatchingShelf(
                 artworkUrl = card.posterUrl,
                 onClick = { onResume(card.key) },
                 size = if (large && index == 0) ArtCardSize.Large else ArtCardSize.Landscape,
-                modifier = Modifier.takesFocus(index, focus).shelfCard(memory, card.key.stored),
+                modifier = Modifier
+                    .takesFocus(index, focus)
+                    .shelfCard(memory, card.key.stored)
+                    .onFocusChanged { if (it.isFocused) onHighlight(card) },
                 status = resumeStatusText(card),
                 progress = card.progress,
                 badge = rememberQualityBadge(card.name),

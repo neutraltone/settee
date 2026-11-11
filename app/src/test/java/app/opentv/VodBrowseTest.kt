@@ -339,6 +339,59 @@ class VodBrowseTest {
     }
 
     @Test
+    fun `a film in Continue Watching shows its backdrop when highlighted, as covers do`() {
+        library()
+        runBlocking {
+            graph.viewerLibrary.recordProgress("movie:4", positionMillis = 600_000, durationMillis = 6_000_000)
+        }
+        setMovies()
+        pressOkOnMoviesInTheRail()
+
+        compose.onNode(isFocused() and hasText("Heat", substring = true)).assertExists()
+        compose.waitUntilAtLeastOneExists(hasText(synopsisOf("Heat")), 5_000)
+        captureScreen("movies_continue_watching_highlight")
+    }
+
+    @Test
+    fun `a show in Continue Watching shows its backdrop when highlighted, as covers do`() {
+        runBlocking {
+            graph.database.categories().upsertAll(listOf(Category("drama", 1, "Drama", StreamKind.SERIES)))
+            graph.database.series().upsertAll(
+                listOf(
+                    Series(1, 1, "s", "Slow Horses", "drama", null, null, null, "Spies.", addedMillis = 2),
+                    Series(2, 1, "2", "Severance", "drama", null, null, null, "Work.", addedMillis = 1),
+                ),
+            )
+            graph.database.episodes().upsertAll(listOf(testEpisode(2, 4)))
+            graph.viewerLibrary.recordProgress("ep:24", positionMillis = 600_000, durationMillis = 2_400_000)
+        }
+        compose.setTvContent {
+            MainShell(
+                tabs = visibleTabs(liveEnabled = true, moviesEnabled = true, seriesEnabled = true),
+                current = Tab.SHOWS,
+                onSelect = {},
+                onOpenSearch = {},
+                onOpenSettings = {},
+                onOpenProfiles = {},
+                activeProfileName = "Sam",
+                onExit = {},
+                modifier = Modifier.fillMaxSize(),
+            ) { _, _, _ ->
+                SeriesScreen(onOpenSeries = {
+                }, onResume = {}, hasSources = false, isSyncing = false, viewModel = viewModel)
+            }
+        }
+        awaitRecommended { !viewModel.recommendingSeries.value && viewModel.recommendedSeries.value.isNotEmpty() }
+        compose.onNode(hasContentDescription("Shows") or hasText("Shows")).requestFocus()
+        press(Key.DirectionCenter)
+        compose.mainClock.advanceTimeBy(500)
+        compose.waitForIdle()
+
+        compose.onNode(isFocused() and hasText("Slow Horses", substring = true)).assertExists()
+        compose.waitUntilAtLeastOneExists(hasText("Spies."), 5_000)
+    }
+
+    @Test
     fun `scrolling a grid fetches covers about four rows ahead, at the size they're drawn`() {
         library()
         runBlocking {
