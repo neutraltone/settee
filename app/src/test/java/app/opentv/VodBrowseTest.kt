@@ -7,6 +7,7 @@ package app.opentv
 
 import android.app.Application
 import android.content.pm.PackageManager
+import android.os.Looper
 import android.view.KeyEvent
 import android.view.View
 import androidx.activity.ComponentActivity
@@ -71,7 +72,10 @@ class VodBrowseTest {
     private val app: Application = ApplicationProvider.getApplicationContext()
     private val graph = ServiceLocator.Graph(app)
     private val viewModels = TestViewModels()
-    private val viewModel = viewModels.vod(app, graph)
+
+    // Made once a test has saved its library, as the app makes it once a sync has: made first, it
+    // works out its rows from an empty library, and the screen's reload waits behind that.
+    private val viewModel by lazy { viewModels.vod(app, graph) }
 
     private lateinit var view: View
     private val device = DeviceKeyboard(compose) { view }
@@ -142,10 +146,22 @@ class VodBrowseTest {
             }
         }
         compose.waitUntilAtLeastOneExists(hasText("Heat"), 5_000)
-        // Recommended is worked out in the background and lands above Recently added: wait for it,
-        // so the rows don't move under the Highlight partway through a test.
-        compose.waitUntilAtLeastOneExists(hasText(compose.activity.getString(R.string.vod_recommended)), 5_000)
+        // Recommended is worked out in the background and lands above Recently added: wait for its
+        // covers, not its title, which its placeholder shows from the start, so the rows don't move
+        // under the Highlight partway through a test.
+        awaitRecommended { !viewModel.recommendingMovies.value && viewModel.recommendedMovies.value.isNotEmpty() }
+        compose.waitUntilAtLeastOneExists(cover(firstTitle), 5_000)
         compose.waitForIdle()
+    }
+
+    /**
+     * Waits for Recommended, worked out in the background and handed back on the main thread. The
+     * main looper is run on each check: Compose's own wait doesn't always run it, which left the
+     * view model's work unfinished until the wait gave up.
+     */
+    private fun awaitRecommended(done: () -> Boolean) = compose.waitUntil(10_000) {
+        shadowOf(Looper.getMainLooper()).idle()
+        done()
     }
 
     /** The title on the first cover of the first row, Recommended's. */
@@ -416,7 +432,9 @@ class VodBrowseTest {
             }
         }
         compose.waitUntilAtLeastOneExists(cover("Slow Horses"), 5_000)
-        compose.waitUntilAtLeastOneExists(hasText(compose.activity.getString(R.string.vod_recommended)), 5_000)
+        // Recommended's covers, not its title, which its placeholder shows from the start.
+        awaitRecommended { !viewModel.recommendingSeries.value && viewModel.recommendedSeries.value.isNotEmpty() }
+        compose.waitUntilAtLeastOneExists(cover(viewModel.recommendedSeries.value.first().displayTitle), 5_000)
         compose.waitForIdle()
 
         compose.onNode(hasContentDescription("Shows") or hasText("Shows")).requestFocus()
