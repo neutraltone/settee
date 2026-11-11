@@ -27,7 +27,6 @@ import androidx.compose.ui.test.requestFocus
 import app.opentv.data.repo.MediaKey
 import app.opentv.ui.ResumeItem
 import app.opentv.ui.SeasonEpisode
-import app.opentv.ui.vod.ContinueWatchingRow
 import com.google.common.truth.Truth.assertThat
 import org.junit.Rule
 import org.junit.Test
@@ -61,7 +60,7 @@ class ContinueWatchingRowTest {
     private var optionsAsked = 0
 
     private fun show(vararg items: ResumeItem) = compose.setTvContent {
-        ContinueWatchingRow(
+        ContinueWatching(
             items.toList(),
             onResume = { played = it },
             onOptions = {
@@ -76,7 +75,7 @@ class ContinueWatchingRowTest {
         show(inProgress)
 
         compose.onNodeWithText("The Show", useUnmergedTree = true).assertExists()
-        compose.onNodeWithText("S2 · E4", useUnmergedTree = true).assertExists()
+        compose.onNodeWithText("S2 E4", useUnmergedTree = true).assertExists()
         compose.onNode(hasProgressBarRangeInfo(ProgressBarRangeInfo(0.25f, 0f..1f)), useUnmergedTree = true)
             .assertExists()
         captureScreen("continue_watching_series")
@@ -92,7 +91,7 @@ class ContinueWatchingRowTest {
             ),
         )
 
-        compose.onNodeWithText("S2 · E5", useUnmergedTree = true).assertExists()
+        compose.onNodeWithText("S2 E5", useUnmergedTree = true).assertExists()
         compose.onNode(SemanticsMatcher.keyIsDefined(SemanticsProperties.ProgressBarRangeInfo), useUnmergedTree = true)
             .assertDoesNotExist()
         captureScreen("continue_watching_up_next")
@@ -186,7 +185,7 @@ class ContinueWatchingRowTest {
     fun `when the highlighted card is removed the highlight moves to the one taking its place`() {
         val other = inProgress.copy(key = MediaKey.Movie(5), title = "A Film", episode = null)
         var items by mutableStateOf(listOf(inProgress, other))
-        compose.setTvContent { ContinueWatchingRow(items, onResume = {}, onOptions = {}) }
+        compose.setTvContent { ContinueWatching(items, onResume = {}, onOptions = {}) }
         compose.onNode(hasText("The Show") and hasClickAction()).requestFocus()
 
         items = listOf(other)

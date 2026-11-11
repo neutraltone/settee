@@ -16,6 +16,7 @@ import app.opentv.data.db.SourceDao
 import app.opentv.data.model.Category
 import app.opentv.data.model.Channel
 import app.opentv.data.model.ChannelHiddenChange
+import app.opentv.data.model.CoverRow
 import app.opentv.data.model.Episode
 import app.opentv.data.model.LiveStreamFormat
 import app.opentv.data.model.Movie
@@ -35,10 +36,15 @@ import app.opentv.player.DecoderList
 import app.opentv.player.playsQualityRanked
 import app.opentv.sync.SyncHiddenChannel
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.job
+import kotlinx.coroutines.joinAll
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -111,23 +117,55 @@ private val VOD_YEAR = Regex("""\b(19|20)\d{2}\b""")
  * (IMAX, EXTENDED, 3D) stay in the name and keep those cuts separate — intended. Two same-named
  * films that both lack any year will merge, an accepted edge for a best-effort collapse.
  */
-internal fun collapseMovieVariants(movies: List<Movie>, decoders: DecoderList): List<MovieVariantGroup> {
-    val groups = LinkedHashMap<String, MutableList<MovieVariant>>()
-    for (movie in movies) {
-        val embeddedYear = VOD_YEAR.find(movie.name)?.value?.toIntOrNull()
-        val bareName = VOD_YEAR.replace(movie.name, " ")
-        val normalized = ChannelNameNormalizer.normalize(bareName)
-        val year = movie.year ?: embeddedYear
+internal fun collapseMovieVariants(movies: List<Movie>, decoders: DecoderList): List<MovieVariantGroup> =
+    foldQualities(movies, Movie::name, Movie::year, decoders).map { (primary, variants) ->
+        MovieVariantGroup(primary = primary, variants = variants.map { MovieVariant(it.item, it.label, it.rank) })
+    }
+
+/**
+ * One cover on Movies or Shows, in a row or a category's grid: a show, or a film with its Qualities
+ * folded into the one this device plays by default ([qualities] says how many there are). [name] is
+ * the provider's, where a Quality is written, and [title] the cleaned one the card shows. Compose
+ * infers it's stable from its fields, so the data layer needs no Compose annotation.
+ */
+data class TitleCover(val id: Long, val name: String, val title: String, val posterUrl: String?, val qualities: Int = 1)
+
+/** A category's films as grid covers, each film's Qualities folded as [collapseMovieVariants] does. */
+internal fun movieCovers(rows: List<CoverRow>, decoders: DecoderList): List<TitleCover> =
+    foldQualities(rows, CoverRow::name, CoverRow::year, decoders).map { (primary, variants) ->
+        primary.toCover(qualities = variants.size)
+    }
+
+/** A category's shows as grid covers. */
+internal fun seriesCovers(rows: List<CoverRow>): List<TitleCover> = rows.map { it.toCover() }
+
+private fun CoverRow.toCover(qualities: Int = 1) =
+    TitleCover(id, name, VodTitleCleaner.clean(name), posterUrl, qualities)
+
+private class RankedVariant<T>(val item: T, val label: String, val rank: Int)
+
+/** See [collapseMovieVariants]: each film's primary, and all its variants best first. */
+private fun <T> foldQualities(
+    items: List<T>,
+    nameOf: (T) -> String,
+    yearOf: (T) -> Int?,
+    decoders: DecoderList,
+): List<Pair<T, List<RankedVariant<T>>>> {
+    val groups = LinkedHashMap<String, MutableList<RankedVariant<T>>>()
+    for (item in items) {
+        val name = nameOf(item)
+        val embeddedYear = VOD_YEAR.find(name)?.value?.toIntOrNull()
+        val normalized = ChannelNameNormalizer.normalize(VOD_YEAR.replace(name, " "))
+        val year = yearOf(item) ?: embeddedYear
         val key = normalized.groupKey + "|" + (year?.toString() ?: "")
-        groups.getOrPut(key) { mutableListOf() }
-            .add(MovieVariant(movie, normalized.qualityLabel, normalized.qualityRank))
+        groups.getOrPut(key) {
+            mutableListOf()
+        }.add(RankedVariant(item, normalized.qualityLabel, normalized.qualityRank))
     }
     return groups.values.map { variants ->
-        val ordered = variants.sortedWith(
-            compareByDescending<MovieVariant> { it.qualityRank }.thenBy { it.movie.name },
-        )
-        val primary = ordered.firstOrNull { decoders.playsQualityRanked(it.qualityRank) } ?: ordered.first()
-        MovieVariantGroup(primary = primary.movie, variants = ordered)
+        val ordered = variants.sortedWith(compareByDescending<RankedVariant<T>> { it.rank }.thenBy { nameOf(it.item) })
+        val primary = ordered.firstOrNull { decoders.playsQualityRanked(it.rank) } ?: ordered.first()
+        primary.item to ordered
     }
 }
 
@@ -152,8 +190,28 @@ class CatalogRepository(
     private val settings: AppSettings,
 ) {
 
+    /** Where work that outlives a sync runs, such as [MovieGenres]. */
+    private val background = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
+    /**
+     * Waits for the work [background] is still doing. Tests close their database straight after a
+     * sync, and work still reading it then fails into whichever test runs next.
+     */
+    internal suspend fun awaitBackground() = background.coroutineContext.job.children.toList().joinAll()
+
     /** TMDB back-fill for VOD detail pages, gated on a user-supplied key. See [TmdbClient]. */
     private val tmdb = TmdbClient(http, settings)
+
+    /** Sources with a [fillGenresInBackground] job running. */
+    private val sourcesGettingGenres: MutableSet<Long> = java.util.concurrent.ConcurrentHashMap.newKeySet()
+
+    // TMDB only with the viewer's own key, and only for a film the provider had no genre for.
+    private val movieGenres = MovieGenres(movieDao, api) { movie ->
+        if (!tmdb.isConfigured()) return@MovieGenres null
+        withContext(Dispatchers.IO) {
+            tmdb.movieMeta(VodTitleCleaner.clean(movie.name), movie.year, movie.tmdbId)?.genre
+        }
+    }
 
     sealed interface SyncResult {
         data class Success(val channelCount: Int, val movieCount: Int, val seriesCount: Int) : SyncResult
@@ -186,6 +244,12 @@ class CatalogRepository(
     fun observeMovies(categoryId: String? = null): Flow<List<Movie>> = movieDao.observe(categoryId)
 
     fun observeSeries(categoryId: String? = null): Flow<List<Series>> = seriesDao.observe(categoryId)
+
+    fun observeMovieCovers(sourceId: Long, categoryId: String): Flow<List<CoverRow>> =
+        movieDao.observeCovers(sourceId, categoryId)
+
+    fun observeSeriesCovers(sourceId: Long, categoryId: String): Flow<List<CoverRow>> =
+        seriesDao.observeCovers(sourceId, categoryId)
 
     fun observeEpisodes(sourceId: Long, seriesId: String): Flow<List<Episode>> =
         episodeDao.observeForSeries(sourceId, seriesId)
@@ -271,34 +335,41 @@ class CatalogRepository(
     suspend fun seriesFingerprint(): String = withContext(Dispatchers.IO) { seriesDao.fingerprint() }
 
     /**
-     * Movies grouped by genre for the by-genre home rows: the [maxGenres] biggest genres, each with
-     * up to [perGenre] titles (newest first). A movie appears under every genre it lists — provider
-     * genre strings are frequently multi-valued ("Action, Thriller" / "Action|Thriller"), so they
-     * are split on comma and pipe (see [splitGenres]).
+     * For you's genre rows for movies, from an ALREADY-LOADED list: [VodViewModel.loadHomeFeeds] reads
+     * [allMovies] once and hands that one list to this and [recommendedMoviesFrom], so opening Movies
+     * scans the (20k-title) table once instead of once per row. Every genre with enough movies the
+     * Profile hasn't [started], the genres of its [recent] ones (local ids, newest first) leading. See
+     * [genreRowsFrom].
      */
-    suspend fun moviesByGenre(maxGenres: Int = 12, perGenre: Int = 30): List<GenreGroup<Movie>> =
-        withContext(Dispatchers.IO) { groupByGenre(movieDao.all(), Movie::genre, maxGenres, perGenre) }
-
-    /** Series grouped by genre for the by-genre home rows. See [moviesByGenre]. */
-    suspend fun seriesByGenre(maxGenres: Int = 12, perGenre: Int = 30): List<GenreGroup<Series>> =
-        withContext(Dispatchers.IO) { groupByGenre(seriesDao.all(), Series::genre, maxGenres, perGenre) }
+    suspend fun moviesByGenreFrom(
+        all: List<Movie>,
+        started: Set<Long>,
+        recent: List<Long>,
+        now: Long = System.currentTimeMillis(),
+    ): List<GenreGroup<Movie>> = withContext(Dispatchers.Default) {
+        val byId = all.associateBy { it.id }
+        genreRowsFrom(all, movieRanking(now), recent.mapNotNull(byId::get), leftOut = { it.id in started })
+    }
 
     /**
-     * Movies grouped by genre from an ALREADY-LOADED list — the single-scan path the home screen
-     * uses. [VodViewModel.loadHomeFeeds] reads [allMovies] once and hands that one list to this, to
-     * [recommendedMoviesFrom], etc., so opening Movies scans the (20k-title) table once instead of
-     * once per row. Pure grouping, off the main thread. See [moviesByGenre] for the scanning variant.
+     * For you's genre rows for series. See [moviesByGenreFrom]. A [dismissed] series is left out and
+     * doesn't lead, as in [recommendedSeriesFrom].
      */
-    suspend fun moviesByGenreFrom(all: List<Movie>, maxGenres: Int = 12, perGenre: Int = 30): List<GenreGroup<Movie>> =
-        withContext(Dispatchers.Default) { groupByGenre(all, Movie::genre, maxGenres, perGenre) }
-
-    /** Series grouped by genre from an already-loaded list — the single-scan path. See [moviesByGenreFrom]. */
     suspend fun seriesByGenreFrom(
         all: List<Series>,
-        maxGenres: Int = 12,
-        perGenre: Int = 30,
-    ): List<GenreGroup<Series>> =
-        withContext(Dispatchers.Default) { groupByGenre(all, Series::genre, maxGenres, perGenre) }
+        started: Set<SeriesRef>,
+        dismissed: Set<SeriesRef>,
+        recent: List<SeriesRef>,
+        now: Long = System.currentTimeMillis(),
+    ): List<GenreGroup<Series>> = withContext(Dispatchers.Default) {
+        val byRef = all.associateBy { it.ref }
+        genreRowsFrom(
+            all,
+            seriesRanking(now),
+            recent.filterNot { it in dismissed }.mapNotNull(byRef::get),
+            leftOut = { it.ref in started || it.ref in dismissed },
+        )
+    }
 
     /**
      * "Recommended for you" from an ALREADY-LOADED movie list, so the home screen scans the
@@ -306,10 +377,14 @@ class CatalogRepository(
      * The [started] titles feed the tally and stay out of the row. A movie marked Unwatched isn't
      * among them, so it can come back.
      */
-    suspend fun recommendedMoviesFrom(all: List<Movie>, started: Set<Long>, limit: Int = 30): List<Movie> =
-        withContext(Dispatchers.Default) {
-            recommendFrom(all, MOVIE_RANKING, limit, tallied = { it.id in started }, leftOut = { it.id in started })
-        }
+    suspend fun recommendedMoviesFrom(
+        all: List<Movie>,
+        started: Set<Long>,
+        limit: Int = 30,
+        now: Long = System.currentTimeMillis(),
+    ): List<Movie> = withContext(Dispatchers.Default) {
+        recommendFrom(all, movieRanking(now), limit, tallied = { it.id in started }, leftOut = { it.id in started })
+    }
 
     /**
      * "Recommended for you" for series, from an already-loaded list. A [dismissed] series, one removed
@@ -321,10 +396,11 @@ class CatalogRepository(
         started: Set<SeriesRef>,
         dismissed: Set<SeriesRef>,
         limit: Int = 30,
+        now: Long = System.currentTimeMillis(),
     ): List<Series> = withContext(Dispatchers.Default) {
         recommendFrom(
             all,
-            SERIES_RANKING,
+            seriesRanking(now),
             limit,
             tallied = { it.ref in started && it.ref !in dismissed },
             leftOut = { it.ref in started || it.ref in dismissed },
@@ -436,7 +512,7 @@ class CatalogRepository(
                     backdropUrl = result.backdropUrl ?: info.backdropUrl,
                     cast = result.cast ?: info.cast,
                     director = result.director ?: info.director,
-                    genre = result.genre ?: info.genre,
+                    genre = result.genre.ifUnknown() ?: info.genre,
                     tmdbId = result.tmdbId ?: info.tmdbId,
                     plot = result.plot ?: info.plot,
                     rating = result.rating ?: info.rating,
@@ -463,7 +539,7 @@ class CatalogRepository(
                     plot = result.plot ?: meta.overview,
                     cast = result.cast ?: meta.cast,
                     director = result.director ?: meta.director,
-                    genre = result.genre ?: meta.genre,
+                    genre = result.genre.ifUnknown() ?: meta.genre,
                     tmdbId = result.tmdbId ?: meta.tmdbId,
                     rating = result.rating ?: meta.rating,
                     year = result.year ?: meta.year,
@@ -526,8 +602,13 @@ class CatalogRepository(
     /** A movie counts as "already enriched" once any headline detail field is set, so [movieDetail]
      *  re-fetches only truly-bare rows. A movie the provider has no metadata for re-fetches each open;
      *  acceptable, and it self-limits the moment anything comes back. */
+    // Not by genre: [MovieGenres] fills that in for films nobody has opened, which would leave them
+    // without the provider's artwork and cast when they are.
     private val Movie.isEnriched: Boolean
-        get() = backdropUrl != null || cast != null || genre != null || director != null
+        get() = backdropUrl != null || cast != null || director != null
+
+    /** Null for a genre [MovieGenres] found the provider has none for, so another source can fill it. */
+    private fun String?.ifUnknown(): String? = this?.ifBlank { null }
 
     /** Whether a headline field TMDB can fill on detail open is still blank. */
     private val Movie.lacksTmdbFields: Boolean
@@ -535,24 +616,6 @@ class CatalogRepository(
 
     private val Series.isEnriched: Boolean
         get() = backdropUrl != null || cast != null || genre != null
-
-    private fun <T> groupByGenre(
-        items: List<T>,
-        genreOf: (T) -> String?,
-        maxGenres: Int,
-        perGenre: Int,
-    ): List<GenreGroup<T>> {
-        val buckets = LinkedHashMap<String, MutableList<T>>()
-        for (item in items) {
-            for (genre in splitGenres(genreOf(item))) {
-                buckets.getOrPut(genre) { mutableListOf() }.add(item)
-            }
-        }
-        return buckets.entries
-            .sortedByDescending { it.value.size }
-            .take(maxGenres)
-            .map { GenreGroup(it.key, it.value.take(perGenre)) }
-    }
 
     /** How many of a title's genres are in the wanted set — the More-Like-This overlap. */
     private fun sharedGenreCount(genre: String?, wanted: Set<String>): Int = splitGenres(genre).count { it in wanted }
@@ -748,12 +811,50 @@ class CatalogRepository(
         var series = SavedSeries(0, emptyList())
         categories(seriesOn) { api.seriesCategories(source) }
         attempt(seriesOn, Unit) { series = api.series(source).use { seriesDao.save(source.id, it) } }
+        if (movies > 0) fillGenresInBackground(source)
         return VodFetch(
             series.moved,
             // Nothing at all may be a struggling panel's empty reply, so it isn't worth trusting for
             // 12 hours; an account with no VOD just asks again, which is a quick request.
             complete && (movies > 0 || series.count > 0),
         )
+    }
+
+    /**
+     * Works through [source]'s films without a genre in the background ([MovieGenres.fillAll]): the
+     * catalogue is saved by now, and the genre rows fill in as it goes. After a sync, and whenever
+     * Movies or Shows opens or the app starts, so it carries on where it left off. One job per
+     * source, one lookup after another, so a struggling panel doesn't get hundreds of calls at once;
+     * asked again while it's running, it adds no second one.
+     */
+    /** [fillGenresInBackground] for every provider that has films: Xtream's. */
+    suspend fun fillEveryProvidersGenres() =
+        enabledSources().filter { it.kind == SourceKind.XTREAM }.forEach(::fillGenresInBackground)
+
+    fun fillGenresInBackground(source: Source) {
+        if (!sourcesGettingGenres.add(source.id)) return
+        background.launch {
+            try {
+                runCatching {
+                    retryBlanksWithTmdb(source)
+                    movieGenres.fillAll(source)
+                }.onFailure { Log.w(TAG, "Movie genres failed for source ${source.id}", it) }
+            } finally {
+                sourcesGettingGenres.remove(source.id)
+            }
+        }
+    }
+
+    /**
+     * Once per provider for each TMDB key: asks TMDB about the films saved blank, which were looked up
+     * before there was a key (or with another one), so they aren't left without a genre for good.
+     * Remembered by a hash of the key, never the key itself.
+     */
+    private suspend fun retryBlanksWithTmdb(source: Source) {
+        if (!tmdb.isConfigured()) return
+        val key = settings.tmdbApiKey.value.hashCode().toString()
+        if (settings.tmdbBlanksRetriedWith(source.id) == key) return
+        if (movieGenres.retryBlanks(source)) settings.setTmdbBlanksRetriedWith(source.id, key)
     }
 
     private suspend fun syncM3u(source: Source, nowUtcMillis: Long): SyncResult {

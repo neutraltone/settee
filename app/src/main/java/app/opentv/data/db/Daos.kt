@@ -18,6 +18,7 @@ import app.opentv.data.model.Channel
 import app.opentv.data.model.ChannelEpgMatch
 import app.opentv.data.model.ChannelHiddenChange
 import app.opentv.data.model.ChannelMatchInput
+import app.opentv.data.model.CoverRow
 import app.opentv.data.model.EpgChannelAlias
 import app.opentv.data.model.EpgFeed
 import app.opentv.data.model.Episode
@@ -494,6 +495,16 @@ interface MovieDao {
     )
     fun observe(categoryId: String?): Flow<List<Movie>>
 
+    /**
+     * A provider's category's covers for its grid: only what the cards show, in [observe]'s order.
+     * By provider too, since another provider can use the same category id.
+     */
+    @Query(
+        "SELECT id, name, posterUrl, year FROM movies WHERE sourceId = :sourceId AND categoryId = :categoryId " +
+            "ORDER BY addedMillis DESC, name",
+    )
+    fun observeCovers(sourceId: Long, categoryId: String): Flow<List<CoverRow>>
+
     @Query("SELECT * FROM movies WHERE name LIKE '%' || :query || '%' ORDER BY name LIMIT :limit")
     fun search(query: String, limit: Int = 200): Flow<List<Movie>>
 
@@ -515,6 +526,43 @@ interface MovieDao {
 
     @Query("SELECT * FROM movies WHERE sourceId = :sourceId")
     suspend fun forSource(sourceId: Long): List<Movie>
+
+    /**
+     * The [limit] movies a source most recently added that have no genre yet, for [MovieGenres]. Not
+     * ones with a blank genre: those the provider was asked about and had none for.
+     */
+    @Query(
+        "SELECT * FROM movies WHERE sourceId = :sourceId AND genre IS NULL " +
+            "ORDER BY addedMillis DESC, id DESC LIMIT :limit",
+    )
+    suspend fun newestWithoutGenre(sourceId: Long, limit: Int): List<Movie>
+
+    /** Only where there is none yet, since opening the movie may have found one meanwhile. */
+    @Query("UPDATE movies SET genre = :genre WHERE id = :id AND genre IS NULL")
+    suspend fun fillGenre(id: Long, genre: String)
+
+    /** Saves these (local id, genre) pairs in one go, so everything observing movies reloads once. */
+    @Transaction
+    suspend fun fillGenres(genres: List<Pair<Long, String>>) {
+        genres.forEach { (id, genre) -> fillGenre(id, genre) }
+    }
+
+    /** The [limit] movies a source most recently added whose genre was saved blank, for [MovieGenres]. */
+    @Query(
+        "SELECT * FROM movies WHERE sourceId = :sourceId AND genre = '' " +
+            "ORDER BY addedMillis DESC, id DESC LIMIT :limit",
+    )
+    suspend fun newestWithBlankGenre(sourceId: Long, limit: Int): List<Movie>
+
+    /** Only while it's still blank, since opening the movie may have found one meanwhile. */
+    @Query("UPDATE movies SET genre = :genre WHERE id = :id AND genre = ''")
+    suspend fun fillBlankGenre(id: Long, genre: String)
+
+    /** As [fillGenres], for genres saved blank. */
+    @Transaction
+    suspend fun fillBlankGenres(genres: List<Pair<Long, String>>) {
+        genres.forEach { (id, genre) -> fillBlankGenre(id, genre) }
+    }
 
     /**
      * Fallback for More-Like-This when a movie has no genre to match on: other titles from the same
@@ -593,6 +641,16 @@ interface SeriesDao {
         """,
     )
     fun observe(categoryId: String?): Flow<List<Series>>
+
+    /**
+     * A provider's category's covers for its grid: only what the cards show, in [observe]'s order.
+     * By provider too, since another provider can use the same category id.
+     */
+    @Query(
+        "SELECT id, name, posterUrl, year FROM series WHERE sourceId = :sourceId AND categoryId = :categoryId " +
+            "ORDER BY addedMillis DESC, name",
+    )
+    fun observeCovers(sourceId: Long, categoryId: String): Flow<List<CoverRow>>
 
     @Query("SELECT * FROM series WHERE name LIKE '%' || :query || '%' ORDER BY name LIMIT :limit")
     fun search(query: String, limit: Int = 200): Flow<List<Series>>
@@ -685,13 +743,15 @@ interface EpisodeDao {
 
     /**
      * The series [profileId] has progress on an episode of, not counting episodes marked [except], by
-     * a join for the same reason. Only the ids: a home feed reads this each time a tab opens, and a
-     * long watch history's plots and stream URLs would be felt on a Fire TV Stick.
+     * a join for the same reason, the one with an episode played most recently first. Only the ids: a
+     * home feed reads this each time a tab opens, and a long watch history's plots and stream URLs
+     * would be felt on a Fire TV Stick.
      */
     @Query(
-        "SELECT DISTINCT episodes.sourceId, episodes.seriesId FROM episodes JOIN playback_positions " +
+        "SELECT episodes.sourceId, episodes.seriesId FROM episodes JOIN playback_positions " +
             "ON playback_positions.mediaKey = 'ep:' || episodes.id WHERE playback_positions.profileId = :profileId " +
-            "AND (playback_positions.mark IS NULL OR playback_positions.mark != :except)",
+            "AND (playback_positions.mark IS NULL OR playback_positions.mark != :except) " +
+            "GROUP BY episodes.sourceId, episodes.seriesId ORDER BY MAX(playback_positions.updatedAtMillis) DESC",
     )
     suspend fun startedSeries(profileId: Long, except: HandMark): List<SeriesRef>
 

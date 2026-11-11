@@ -905,7 +905,7 @@ private fun seriesMeta(s: Series): String = listOfNotNull(
 ).joinToString("  ·  ")
 
 /** Seconds to a compact "1h 52m" / "45m". */
-private fun formatRuntime(seconds: Int): String {
+internal fun formatRuntime(seconds: Int): String {
     val totalMinutes = seconds / 60
     val hours = totalMinutes / 60
     val minutes = totalMinutes % 60

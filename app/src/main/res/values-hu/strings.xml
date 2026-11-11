@@ -360,13 +360,10 @@
     <string name="vod_no_shows_provider">Ez a szolgáltató nem adott vissza sorozatokat.</string>
     <string name="vod_no_shows_add">Adjon hozzá egy szolgáltatót, hogy itt lássa a sorozatait.</string>
     <string name="vod_loading_episodes">Epizódok betöltése…</string>
-    <string name="vod_all">Összes</string>
-    <string name="vod_search_hint">Filmek &amp; sorozatok keresése</string>
     <string name="vod_continue_watching">Nézés folytatása</string>
     <string name="vod_large_provider_note">Nagyobb szolgáltató esetén ez első alkalommal néhány percet is igénybe vehet.</string>
     <string name="vod_recommended">Ajánlott Önnek</string>
     <string name="vod_recently_added">Nemrég hozzáadva</string>
-    <string name="vod_categories">Kategóriák</string>
     <string name="vod_watch_now">Nézze most</string>
     <string name="vod_resume">Folytatás</string>
     <string name="vod_addon_sources">Bővítményforrások</string>

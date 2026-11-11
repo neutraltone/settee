@@ -360,13 +360,10 @@
     <string name="vod_no_shows_provider">Ten dostawca nie zwrócił żadnych seriali.</string>
     <string name="vod_no_shows_add">Dodaj dostawcę, aby zobaczyć tutaj jego seriale.</string>
     <string name="vod_loading_episodes">Wczytywanie odcinków…</string>
-    <string name="vod_all">Wszystkie</string>
-    <string name="vod_search_hint">Szukaj filmów i seriali</string>
     <string name="vod_continue_watching">Kontynuuj oglądanie</string>
     <string name="vod_large_provider_note">W przypadku dużego dostawcy może to potrwać kilka minut za pierwszym razem.</string>
     <string name="vod_recommended">Polecane dla Ciebie</string>
     <string name="vod_recently_added">Ostatnio dodane</string>
-    <string name="vod_categories">Kategorie</string>
     <string name="vod_watch_now">Oglądaj teraz</string>
     <string name="vod_resume">Wznów</string>
     <string name="vod_addon_sources">Źródła dodatków</string>

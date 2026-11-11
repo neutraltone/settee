@@ -360,13 +360,10 @@
     <string name="vod_no_shows_provider">Bu sağlayıcı hiç dizi döndürmedi.</string>
     <string name="vod_no_shows_add">Dizilerini burada görmek için bir sağlayıcı ekleyin.</string>
     <string name="vod_loading_episodes">Bölümler yükleniyor…</string>
-    <string name="vod_all">Tümü</string>
-    <string name="vod_search_hint">Film ve dizilerde ara</string>
     <string name="vod_continue_watching">İzlemeye devam et</string>
     <string name="vod_large_provider_note">Büyük bir sağlayıcıda ilk seferde bu birkaç dakika sürebilir.</string>
     <string name="vod_recommended">Size özel öneriler</string>
     <string name="vod_recently_added">Son eklenenler</string>
-    <string name="vod_categories">Kategoriler</string>
     <string name="vod_watch_now">Şimdi izle</string>
     <string name="vod_resume">Devam et</string>
     <string name="vod_addon_sources">Eklenti kaynakları</string>

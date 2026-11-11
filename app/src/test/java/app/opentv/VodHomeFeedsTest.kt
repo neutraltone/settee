@@ -160,7 +160,7 @@ class VodHomeFeedsTest {
     fun `Recommended follows a rating filled in later`() = runTest {
         val vod = openWithTwoSeries()
 
-        graph.database.series().upsertAll(listOf(series(2, rating = 10.0)))
+        graph.database.series().upsertAll(listOf(series(2, rating = 9.4)))
         vod.loadHomeFeeds().join()
 
         assertThat(vod.recommendedSeriesIds()).containsExactly(2L, 1L).inOrder()
@@ -170,7 +170,7 @@ class VodHomeFeedsTest {
     fun `the genre rows follow a genre filled in later`() = runTest {
         val vod = openWithTwoSeries()
 
-        graph.database.series().upsertAll(listOf(series(2, rating = 8.0, genre = "Drama")))
+        graph.database.series().upsertAll((3L..10L).map { series(it, rating = 8.0, genre = "Drama") })
         vod.loadHomeFeeds().join()
 
         assertThat(vod.seriesGenreRows.value.map { it.genre }).containsExactly("Drama")
@@ -190,20 +190,49 @@ class VodHomeFeedsTest {
         assertThat(vod.recommendedSeries.value.map { it.name }).containsExactly("Series 1", "Series 2").inOrder()
     }
 
+    /** [count] movies of [genre], their ids from [from]. */
+    private fun movies(genre: String, from: Long, count: Int = 9) =
+        (from until from + count).map { movie(it, rating = 7.0, genre = genre) }
+
     @Test
-    fun `starting a movie re-ranks Recommended without regrouping the genre rows`() = runTest {
+    fun `a movie the Profile has started is gone from its genre row the next time Movies opens`() = runTest {
         val vod = VodViewModel(app, graph)
-        graph.database.movies().upsertAll(
-            listOf(movie(1, rating = 9.0, genre = "Drama"), movie(2, rating = 8.0, genre = "Drama")),
-        )
+        graph.database.movies().upsertAll(movies("Drama", from = 1))
         vod.loadHomeFeeds().join()
 
-        graph.database.movies().upsertAll(listOf(movie(2, rating = 8.0, genre = "Drama").copy(name = "Renamed")))
         graph.viewerLibrary.recordProgress("movie:1", positionMillis = 600_000, durationMillis = 2_400_000)
         vod.loadHomeFeeds().join()
 
-        assertThat(vod.recommendedMovies.value.map { it.name }).containsExactly("Renamed")
-        assertThat(vod.movieGenreRows.value.single().items.map { it.name }).containsExactly("Movie 1", "Movie 2")
+        assertThat(vod.movieGenreRows.value.single().items.map { it.id }).doesNotContain(1L)
+    }
+
+    @Test
+    fun `the genre of the movie watched last moves to the top of the genre rows`() = runTest {
+        val vod = VodViewModel(app, graph)
+        graph.database.movies().upsertAll(movies("Drama", from = 100, count = 10) + movies("Comedy", from = 1))
+        vod.loadHomeFeeds().join()
+        assertThat(vod.movieGenreRows.value.map { it.genre }).containsExactly("Drama", "Comedy").inOrder()
+
+        graph.viewerLibrary.recordProgress("movie:1", positionMillis = 600_000, durationMillis = 2_400_000)
+        vod.loadHomeFeeds().join()
+
+        assertThat(vod.movieGenreRows.value.map { it.genre }).containsExactly("Comedy", "Drama").inOrder()
+    }
+
+    @Test
+    fun `the genre of the show watched last moves to the top of the genre rows`() = runTest {
+        val vod = VodViewModel(app, graph)
+        graph.database.series().upsertAll(
+            (100L..109L).map { series(it, rating = 7.0, genre = "Drama") } +
+                (1L..9L).map { series(it, rating = 7.0, genre = "Comedy") },
+        )
+        graph.database.episodes().upsertAll(listOf(episodeOf(1)))
+        vod.loadHomeFeeds().join()
+
+        graph.viewerLibrary.recordProgress("ep:1", positionMillis = 600_000, durationMillis = 2_400_000)
+        vod.loadHomeFeeds().join()
+
+        assertThat(vod.seriesGenreRows.value.map { it.genre }).containsExactly("Comedy", "Drama").inOrder()
     }
 
     // The new rating only arrives with the scan, so the row seen without the title and in its old
@@ -218,7 +247,7 @@ class VodHomeFeedsTest {
             vod.recommendedSeries.collect { row -> seen += row.map { it.id } }
         }
 
-        graph.database.series().upsertAll(listOf(series(3, rating = 9.5)))
+        graph.database.series().upsertAll(listOf(series(3, rating = 9.4)))
         graph.viewerLibrary.recordProgress("ep:1", positionMillis = 600_000, durationMillis = 2_400_000)
         vod.loadHomeFeeds().join()
 
@@ -229,7 +258,7 @@ class VodHomeFeedsTest {
     fun `Recommended follows the catalogue when its size changes`() = runTest {
         val vod = openWithTwoSeries()
 
-        graph.database.series().upsertAll(listOf(series(3, rating = 10.0)))
+        graph.database.series().upsertAll(listOf(series(3, rating = 9.4)))
         vod.loadHomeFeeds().join()
 
         assertThat(vod.recommendedSeriesIds()).containsExactly(3L, 1L, 2L).inOrder()

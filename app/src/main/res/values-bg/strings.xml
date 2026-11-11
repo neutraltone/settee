@@ -360,13 +360,10 @@
     <string name="vod_no_shows_provider">Този доставчик не върна никакви сериали.</string>
     <string name="vod_no_shows_add">Добавете доставчик, за да видите сериалите му тук.</string>
     <string name="vod_loading_episodes">Зареждане на епизоди…</string>
-    <string name="vod_all">Всички</string>
-    <string name="vod_search_hint">Търсене на филми &amp; сериали</string>
     <string name="vod_continue_watching">Продължи гледането</string>
     <string name="vod_large_provider_note">При голям доставчик първия път може да отнеме няколко минути.</string>
     <string name="vod_recommended">Препоръчано за вас</string>
     <string name="vod_recently_added">Наскоро добавени</string>
-    <string name="vod_categories">Категории</string>
     <string name="vod_watch_now">Гледай сега</string>
     <string name="vod_resume">Продължи</string>
     <string name="vod_addon_sources">Източници от добавки</string>

@@ -360,13 +360,10 @@
     <string name="vod_no_shows_provider">Nhà cung cấp này không trả về phim bộ nào.</string>
     <string name="vod_no_shows_add">Thêm nhà cung cấp để xem phim bộ của họ ở đây.</string>
     <string name="vod_loading_episodes">Đang tải tập phim…</string>
-    <string name="vod_all">Tất cả</string>
-    <string name="vod_search_hint">Tìm phim &amp; phim bộ</string>
     <string name="vod_continue_watching">Tiếp tục xem</string>
     <string name="vod_large_provider_note">Với nhà cung cấp lớn, lần đầu có thể mất vài phút.</string>
     <string name="vod_recommended">Đề xuất cho bạn</string>
     <string name="vod_recently_added">Mới thêm gần đây</string>
-    <string name="vod_categories">Danh mục</string>
     <string name="vod_watch_now">Xem ngay</string>
     <string name="vod_resume">Tiếp tục</string>
     <string name="vod_addon_sources">Nguồn tiện ích</string>

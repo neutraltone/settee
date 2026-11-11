@@ -82,8 +82,8 @@ class RecommendationsTest {
         start(profileId, "ep:$seriesId")
     }
 
-    private suspend fun recommendedMovies(all: List<Movie>, profileId: Long = 1, limit: Int = 30) =
-        catalog.recommendedMoviesFrom(all, library.history.startedMovieIds(profileId), limit).map { it.id }
+    private suspend fun recommendedMovies(all: List<Movie>, profileId: Long = 1, limit: Int = 30, now: Long = 0) =
+        catalog.recommendedMoviesFrom(all, library.history.startedMovieIds(profileId), limit, now).map { it.id }
 
     private suspend fun recommendedSeries(all: List<Series>, profileId: Long = 1, limit: Int = 30) =
         catalog.recommendedSeriesFrom(
@@ -145,6 +145,36 @@ class RecommendationsTest {
         library.marks.removeFromContinueWatching(ContinueWatchingCard.Movie(movieId = 1, progress = 0f))
 
         assertThat(recommendedMovies(all)).containsExactly(2L, 1L).inOrder()
+    }
+
+    // A provider's 10s are almost all titles with a handful of votes; nothing it sends says how many.
+    @Test
+    fun `a rating of ten or of nothing counts as average, so it doesn't beat a well rated movie`() = runTest {
+        val all = listOf(
+            movie(1, rating = 10.0),
+            movie(2, rating = 7.0),
+            movie(3, rating = 0.0),
+            movie(4, rating = 5.0),
+        )
+
+        assertThat(recommendedMovies(all)).containsExactly(2L, 1L, 3L, 4L).inOrder()
+    }
+
+    @Test
+    fun `a movie added this week beats a better rated one added years ago`() = runTest {
+        val all = listOf(movie(1, rating = 8.5, added = NOW - 2 * YEAR), movie(2, rating = 7.5, added = NOW - DAY))
+
+        assertThat(recommendedMovies(all, now = NOW)).containsExactly(2L, 1L).inOrder()
+    }
+
+    @Test
+    fun `the bonus for being new is gone once a movie has been in the catalogue a year`() = runTest {
+        val all = listOf(
+            movie(1, rating = 7.5, added = NOW - YEAR - DAY),
+            movie(2, rating = 7.6, added = NOW - 3 * YEAR),
+        )
+
+        assertThat(recommendedMovies(all, now = NOW)).containsExactly(2L, 1L).inOrder()
     }
 
     @Test
@@ -242,7 +272,19 @@ class RecommendationsTest {
     }
 
     @Test
+    fun `a series rated ten doesn't come before a well rated one`() = runTest {
+        assertThat(recommendedSeries(listOf(series(1, rating = 10.0), series(2, rating = 8.0))))
+            .containsExactly(2L, 1L).inOrder()
+    }
+
+    @Test
     fun `an empty library recommends nothing`() = runTest {
         assertThat(recommendedSeries(emptyList())).isEmpty()
+    }
+
+    private companion object {
+        const val DAY = 86_400_000L
+        const val YEAR = 365 * DAY
+        const val NOW = 10 * YEAR
     }
 }
