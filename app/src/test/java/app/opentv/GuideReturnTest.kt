@@ -5,22 +5,17 @@
  */
 package app.opentv
 
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsNotFocused
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
-import androidx.compose.ui.unit.dp
 import app.opentv.data.model.Channel
 import app.opentv.data.repo.LineupChannel
 import app.opentv.ui.ChannelsViewModel
-import app.opentv.ui.channels.ChannelList
 import app.opentv.ui.channels.GuideGrid
 import com.google.common.truth.Truth.assertThat
 import org.junit.Rule
@@ -74,9 +69,7 @@ class GuideReturnTest {
         GuideGrid(
             rows = shownRows,
             windowStartMillis = 0,
-            selectedKey = null,
-            onSelectRow = {},
-            onFocusRow = {},
+            onWatch = {},
             returnToChannelId = channelId,
             takeFocus = takeFocus,
             onReturnToRow = { returnedTo += it.primary.name },
@@ -110,24 +103,6 @@ class GuideReturnTest {
         setGuide(channelId = 30, takeFocus = false)
 
         compose.onNodeWithText("Channel 30").assertIsDisplayed().assertIsNotFocused()
-    }
-
-    @Test
-    fun `the list layout comes back highlighting the channel too`() {
-        compose.setTvContent {
-            Box(Modifier.width(600.dp)) {
-                ChannelList(
-                    rows = rows,
-                    selectedKey = null,
-                    onSelectRow = {},
-                    onFocusRow = {},
-                    returnToChannelId = 30,
-                    takeFocus = true,
-                )
-            }
-        }
-
-        compose.onNodeWithText("Channel 30").assertIsDisplayed().assertIsFocused()
     }
 
     @Test

@@ -11,8 +11,9 @@ import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.test.assertIsFocused
+import androidx.compose.ui.test.hasClickAction
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
-import androidx.compose.ui.test.onAllNodesWithContentDescription
 import app.opentv.data.model.Channel
 import app.opentv.data.repo.LineupChannel
 import app.opentv.ui.ChannelsViewModel
@@ -49,8 +50,8 @@ class ChannelManagerSearchPaneTest {
             ChannelManagerSearchPane(
                 query = query,
                 results = results,
-                onToggleHidden = { _, _ -> },
-                onToggleFavourite = {},
+                onToggle = {},
+                onOptions = {},
                 onExitLeft = {
                     leftToRail = true
                     true
@@ -78,7 +79,7 @@ class ChannelManagerSearchPaneTest {
 
         device.remote(KeyEvent.KEYCODE_DPAD_DOWN)
 
-        compose.onAllNodesWithContentDescription("Favourite")[0].assertIsFocused()
+        compose.onNode(hasText("Sky News", substring = true) and hasClickAction()).assertIsFocused()
         captureScreen("channel_manager_search_results")
     }
 

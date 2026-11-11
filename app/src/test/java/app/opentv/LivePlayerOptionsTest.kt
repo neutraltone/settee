@@ -137,7 +137,7 @@ class LivePlayerOptionsTest {
         inList("Aspect ratio").assertExists()
         inList("Sleep timer").assertExists()
         inList("Add to Favourites").assertExists()
-        inList("● Record now").assertExists()
+        inList("Record now").assertExists()
         inList("Quality").assertDoesNotExist()
         captureScreen("live_player_options")
     }
@@ -239,14 +239,14 @@ class LivePlayerOptionsTest {
         assertThat(favouriteToggles).isEqualTo(1)
 
         press(Key.Menu)
-        inList("● Record now").performClick()
+        inList("Record now").performClick()
         assertThat(recordToggles).isEqualTo(1)
 
         favourite = true
         recording = true
         press(Key.Menu)
         inList("Remove from Favourites").assertExists()
-        inList("■ Stop recording").assertExists()
+        inList("Stop recording").assertExists()
     }
 
     @Test

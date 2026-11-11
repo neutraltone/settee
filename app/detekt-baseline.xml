@@ -3,18 +3,11 @@
   <ManuallySuppressedIssues/>
   <CurrentIssues>
     <ID>ComplexCondition:CatalogRepository.kt$CatalogRepository$tmdb.isConfigured() &amp;&amp; (result.backdropUrl == null || result.plot == null || result.cast == null)</ID>
-    <ID>ComplexCondition:LiveScreen.kt$!previewEnabled || !screenResumed || recordingActive || row == null</ID>
     <ID>ComplexCondition:OpenTvViewModels.kt$VodViewModel$prev != null &amp;&amp; prev.profileId == profileId &amp;&amp; prev.movieCount == movieCount &amp;&amp; prev.seriesCount == seriesCount</ID>
-    <ID>ComposableParamOrder:GuideGrid.kt$ChannelList</ID>
-    <ID>ComposableParamOrder:GuideGrid.kt$GuideGrid</ID>
-    <ID>ComposableParamOrder:GuidePreview.kt$GuidePreview</ID>
     <ID>ComposableParamOrder:RecordingsScreen.kt$RecordingRow</ID>
     <ID>CyclomaticComplexMethod:AddSourceScreen.kt$@Composable fun AddSourceScreen(viewModel: SourcesViewModel, onFinished: () -&gt; Unit, editingSourceId: Long? = null)</ID>
     <ID>CyclomaticComplexMethod:CatalogRepository.kt$CatalogRepository$suspend fun movieDetail(id: Long): Movie?</ID>
     <ID>CyclomaticComplexMethod:CatalogRepository.kt$CatalogRepository$suspend fun seriesDetail(id: Long): Series?</ID>
-    <ID>CyclomaticComplexMethod:GuideGrid.kt$@Composable private fun ChannelListRow( row: ChannelsViewModel.Row, nowMillis: Long, isSelected: Boolean, onSelect: () -&gt; Unit, onFocus: () -&gt; Unit, onToggleFavourite: () -&gt; Unit, onExitLeft: () -&gt; Boolean, focusRequester: FocusRequester? = null, highlight: Modifier = Modifier, )</ID>
-    <ID>CyclomaticComplexMethod:GuideGrid.kt$@Composable private fun GuideRow( row: ChannelsViewModel.Row, windowStartMillis: Long, nowMillis: Long, scroll: androidx.compose.foundation.ScrollState, isSelected: Boolean, onSelect: () -&gt; Unit, onFocus: () -&gt; Unit, onProgramme: (Programme) -&gt; Unit, onToggleFavourite: () -&gt; Unit = {}, onExitLeft: () -&gt; Boolean = { false }, focusRequester: FocusRequester? = null, highlight: Modifier = Modifier, )</ID>
-    <ID>CyclomaticComplexMethod:GuidePreview.kt$@OptIn(UnstableApi::class) @Composable fun GuidePreview( row: ChannelsViewModel.Row?, nowMillis: Long, onWatch: () -&gt; Unit, onRefresh: () -&gt; Unit, onAddSource: () -&gt; Unit, previewPlayer: ExoPlayer?, isRecording: Boolean = false, onRecord: () -&gt; Unit = {}, dayLabel: String = "", canGoPrevDay: Boolean = false, onPrevDay: () -&gt; Unit = {}, onNextDay: () -&gt; Unit = {}, modifier: Modifier = Modifier, )</ID>
     <ID>CyclomaticComplexMethod:LiveScreen.kt$@Composable fun LiveScreen( isTelevision: Boolean, hasSources: Boolean, isSyncing: Boolean, onPlayChannel: (Channel) -&gt; Unit, onAddSource: () -&gt; Unit, onRefresh: () -&gt; Unit, onPlayCatchup: (MediaKey.Catchup) -&gt; Unit = {}, takeFocus: Boolean = true, viewModel: ChannelsViewModel = viewModel(), )</ID>
     <ID>CyclomaticComplexMethod:MainActivity.kt$@Composable private fun OpenTvApp(isTelevision: Boolean, launchedToPlay: Boolean)</ID>
     <ID>CyclomaticComplexMethod:ManagerServer.kt$ManagerServer$private fun handle(client: Socket)</ID>
@@ -42,23 +35,14 @@
     <ID>ForbiddenImport:BatteryOptimizationPrompt.kt$import androidx.compose.material3.Button</ID>
     <ID>ForbiddenImport:BatteryOptimizationPrompt.kt$import androidx.compose.material3.TextButton</ID>
     <ID>ForbiddenImport:ChannelBanner.kt$import androidx.compose.foundation.shape.RoundedCornerShape</ID>
-    <ID>ForbiddenImport:ChannelManagerScreen.kt$import androidx.compose.foundation.shape.RoundedCornerShape</ID>
-    <ID>ForbiddenImport:ChannelManagerScreen.kt$import androidx.compose.material3.IconButton</ID>
-    <ID>ForbiddenImport:ChannelManagerScreen.kt$import androidx.compose.material3.OutlinedButton</ID>
-    <ID>ForbiddenImport:ChannelManagerScreen.kt$import androidx.compose.material3.Switch</ID>
     <ID>ForbiddenImport:ConfirmLive.kt$import androidx.compose.foundation.shape.RoundedCornerShape</ID>
     <ID>ForbiddenImport:EpgSettingsScreen.kt$import androidx.compose.material3.Button</ID>
     <ID>ForbiddenImport:EpgSettingsScreen.kt$import androidx.compose.material3.OutlinedButton</ID>
     <ID>ForbiddenImport:EpgSettingsScreen.kt$import androidx.compose.material3.Switch</ID>
     <ID>ForbiddenImport:EpgSettingsScreen.kt$import androidx.compose.material3.TextButton</ID>
-    <ID>ForbiddenImport:GuideGrid.kt$import androidx.compose.foundation.shape.RoundedCornerShape</ID>
-    <ID>ForbiddenImport:GuideGrid.kt$import androidx.compose.material3.IconButton</ID>
-    <ID>ForbiddenImport:GuidePreview.kt$import androidx.compose.foundation.shape.RoundedCornerShape</ID>
-    <ID>ForbiddenImport:GuidePreview.kt$import androidx.compose.material3.IconButton</ID>
     <ID>ForbiddenImport:LivePausePrompt.kt$import androidx.compose.foundation.shape.RoundedCornerShape</ID>
     <ID>ForbiddenImport:LivePausePrompt.kt$import androidx.compose.material3.Button</ID>
     <ID>ForbiddenImport:LivePausePrompt.kt$import androidx.compose.material3.TextButton</ID>
-    <ID>ForbiddenImport:LiveScreen.kt$import androidx.compose.foundation.shape.RoundedCornerShape</ID>
     <ID>ForbiddenImport:MainActivity.kt$import androidx.compose.foundation.shape.RoundedCornerShape</ID>
     <ID>ForbiddenImport:MainScreen.kt$import androidx.compose.material3.AlertDialog</ID>
     <ID>ForbiddenImport:MainScreen.kt$import androidx.compose.material3.TextButton</ID>
@@ -79,7 +63,6 @@
     <ID>ForbiddenImport:ProfilesScreen.kt$import androidx.compose.material3.Button</ID>
     <ID>ForbiddenImport:ProfilesScreen.kt$import androidx.compose.material3.OutlinedButton</ID>
     <ID>ForbiddenImport:ProfilesScreen.kt$import androidx.compose.material3.TextButton</ID>
-    <ID>ForbiddenImport:ProgrammeDialog.kt$import androidx.compose.foundation.shape.RoundedCornerShape</ID>
     <ID>ForbiddenImport:ProvidersScreen.kt$import androidx.compose.material3.Button</ID>
     <ID>ForbiddenImport:ProvidersScreen.kt$import androidx.compose.material3.OutlinedButton</ID>
     <ID>ForbiddenImport:ProvidersScreen.kt$import androidx.compose.material3.TextButton</ID>
@@ -238,9 +221,7 @@
     <ID>ModifierMissing:AboutScreen.kt$AboutScreen</ID>
     <ID>ModifierMissing:AddSourceScreen.kt$AddSourceScreen</ID>
     <ID>ModifierMissing:AppSettingsScreen.kt$AppSettingsScreen</ID>
-    <ID>ModifierMissing:ChannelManagerScreen.kt$ChannelManagerScreen</ID>
     <ID>ModifierMissing:EpgSettingsScreen.kt$EpgSettingsScreen</ID>
-    <ID>ModifierMissing:LiveScreen.kt$LiveScreen</ID>
     <ID>ModifierMissing:MainScreen.kt$MainScreen</ID>
     <ID>ModifierMissing:ParentalControlsScreen.kt$ParentalControlsScreen</ID>
     <ID>ModifierMissing:PersonScreen.kt$PersonScreen</ID>
@@ -258,7 +239,6 @@
     <ID>ModifierMissing:VodDetailScreens.kt$SeriesDetailScreen</ID>
     <ID>ModifierMissing:VodPlayerScreen.kt$VodPlayerScreen</ID>
     <ID>ModifierMissing:WebManagerScreen.kt$WebManagerScreen</ID>
-    <ID>ModifierNaming:ChannelManagerScreen.kt$leftEdgeModifier</ID>
     <ID>MultipleEmitters:AboutScreen.kt$Section</ID>
     <ID>MultipleEmitters:AppSettingsScreen.kt$SettingsSection</ID>
     <ID>MultipleEmitters:AppSettingsScreen.kt$SleepTimerSection</ID>
@@ -270,7 +250,6 @@
     <ID>NestedBlockDepth:XmltvParser.kt$XmltvParser$private fun readProgramme(parser: XmlPullParser, feedId: Long): Programme?</ID>
     <ID>NestedBlockDepth:XmltvParser.kt$XmltvParser$suspend fun parse( input: InputStream, feedId: Long, onChannelAlias: (id: String, displayName: String?) -&gt; Unit = { _, _ -&gt; }, onProgramme: suspend (Programme) -&gt; Unit, ): Stats</ID>
     <ID>ParameterNaming:AddSourceScreen.kt$onFinished</ID>
-    <ID>ParameterNaming:ChannelManagerScreen.kt$onToggleHidden</ID>
     <ID>ParameterNaming:PhonePairingScreen.kt$onReceived</ID>
     <ID>ParameterNaming:PlayerScreen.kt$onDone</ID>
     <ID>ParameterNaming:VodPlayerScreen.kt$onDone</ID>
@@ -332,7 +311,6 @@
     <ID>TooManyFunctions:Daos.kt$RecordingDao</ID>
     <ID>TooManyFunctions:Daos.kt$SeriesDao</ID>
     <ID>TooManyFunctions:EpgRepository.kt$EpgRepository</ID>
-    <ID>TooManyFunctions:LiveScreen.kt$app.opentv.ui.channels.LiveScreen.kt</ID>
     <ID>TooManyFunctions:ManagerServer.kt$ManagerServer</ID>
     <ID>TooManyFunctions:OpenTvDatabase.kt$OpenTvDatabase : RoomDatabase</ID>
     <ID>TooManyFunctions:OpenTvViewModels.kt$ChannelsViewModel : AndroidViewModel</ID>
@@ -347,8 +325,6 @@
     <ID>TooManyFunctions:VodDetailScreens.kt$app.opentv.ui.vod.VodDetailScreens.kt</ID>
     <ID>TooManyFunctions:VodScreens.kt$app.opentv.ui.vod.VodScreens.kt</ID>
     <ID>TooManyFunctions:XtreamApi.kt$XtreamApi</ID>
-    <ID>UnstableCollections:ChannelManagerScreen.kt$List&lt;ChannelsViewModel.Row&gt;</ID>
-    <ID>UnstableCollections:GuideGrid.kt$List&lt;ChannelsViewModel.Row&gt;</ID>
     <ID>UnstableCollections:MainScreen.kt$List&lt;Tab&gt;</ID>
     <ID>UnstableCollections:PlayerScreen.kt$List&lt;Channel&gt;</ID>
     <ID>UnstableCollections:RecordingsScreen.kt$Map&lt;Long, String&gt;</ID>

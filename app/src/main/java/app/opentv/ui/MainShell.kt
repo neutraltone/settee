@@ -244,7 +244,10 @@ private fun rememberRailSlide(): RailSlide {
 private class RailEntry {
     var entering by mutableStateOf(false)
 
-    /** Home and the guide take the Highlight once they've loaded, so they get first go at it. */
+    /**
+     * Home and the guide take the Highlight once they've loaded, so they get first go at it, for as
+     * long as they take: a big provider's guide can take far longer than the rail's retries.
+     */
     var tabTakesItself = false
 
     fun pick(tab: Tab, current: Tab) {
@@ -256,7 +259,8 @@ private class RailEntry {
 /**
  * Home and the guide take the Highlight themselves, on the card or channel they'd open on. This
  * catches the tabs that don't, and OK on the tab already open. It retries because a tab can still be
- * loading, and gives up after two seconds, leaving the Highlight in the rail. It mustn't act early on
+ * loading, and gives up after two seconds, leaving the Highlight in the rail (but see
+ * [RailEntry.tabTakesItself]). It mustn't act early on
  * a tab that takes the Highlight itself: in the prototype that landed on the guide's Watch tile and
  * ended [RailEntry.entering] before the channels had loaded, so the guide never took the Highlight.
  */
@@ -268,6 +272,8 @@ private fun EnterContentAfterPick(
     contentFocus: FocusRequester,
 ) {
     val stillInRail by rememberUpdatedState(railFocused)
+    // The tab took the Highlight (or the viewer left the rail some other way): the entry is over.
+    LaunchedEffect(railFocused) { if (!railFocused) entry.entering = false }
     LaunchedEffect(entry.entering, railReturn) {
         if (!entry.entering) return@LaunchedEffect
         repeat(ENTRY_TRIES) { attempt ->
@@ -284,7 +290,10 @@ private fun EnterContentAfterPick(
                 return@LaunchedEffect
             }
         }
-        entry.entering = false
+        // A tab that takes the Highlight itself keeps its go until it does or the viewer moves on
+        // in the rail: a guide still loading has nothing to take it yet, and giving up here left
+        // the Highlight in the rail when the channels arrived.
+        if (!entry.tabTakesItself) entry.entering = false
     }
 }
 

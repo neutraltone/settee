@@ -61,7 +61,6 @@ import kotlinx.coroutines.launch
 fun AppSettingsScreen(onBack: () -> Unit) {
     val context = LocalContext.current
     val settings = remember { AppSettings.get(context) }
-    val channelLayout by settings.channelLayout.collectAsState()
     val previewVideo by settings.guidePreviewVideo.collectAsState()
     val previewSound by settings.guidePreviewSound.collectAsState()
     val profileSettings = remember { ServiceLocator.get(context).profileSettings }
@@ -148,19 +147,6 @@ fun AppSettingsScreen(onBack: () -> Unit) {
         Spacer(Modifier.height(16.dp))
 
         SettingsSection(stringResource(R.string.settings_section_guide)) {
-            Text(
-                stringResource(R.string.settings_channel_layout_title),
-                style = MaterialTheme.typography.titleMedium,
-            )
-            RadioOption(
-                stringResource(R.string.settings_channel_layout_grid),
-                channelLayout == AppSettings.ChannelLayout.GRID,
-            ) { settings.setChannelLayout(AppSettings.ChannelLayout.GRID) }
-            RadioOption(
-                stringResource(R.string.settings_channel_layout_list),
-                channelLayout == AppSettings.ChannelLayout.LIST,
-            ) { settings.setChannelLayout(AppSettings.ChannelLayout.LIST) }
-            Spacer(Modifier.height(8.dp))
             ToggleRow(
                 title = stringResource(R.string.settings_live_preview_title),
                 subtitle = stringResource(R.string.settings_live_preview_subtitle),

@@ -226,24 +226,21 @@ class ChannelsViewModel @JvmOverloads constructor(
     val selectedCategory = MutableStateFlow<String?>(null)
     val favouritesOnly = MutableStateFlow(false)
 
-    /** Provider filter for the live guide. null = every source. Only surfaced when there's >1 source. */
-    val selectedSource = MutableStateFlow<Long?>(null)
     private val nowTick = MutableStateFlow(System.currentTimeMillis())
 
     /**
-     * Every category of the chosen provider, folded into one entry per logical category, locked
-     * ones included: the Parental screen lists them all so they can be locked and unlocked.
+     * Every provider's categories, folded into one entry per logical category, locked ones
+     * included: the Parental screen lists them all so they can be locked and unlocked.
      */
-    @OptIn(ExperimentalCoroutinesApi::class)
-    val categoryGroups: StateFlow<List<CategoryGroup>> =
-        selectedSource.flatMapLatest { lineup.categoryGroups(it, includeLocked = true) }
-            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+    val categoryGroups: StateFlow<List<CategoryGroup>> = lineup.categoryGroups(includeLocked = true)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
-    /** The rail's view of categories: locked ones drop out until the session is unlocked. */
-    @OptIn(ExperimentalCoroutinesApi::class)
-    val visibleCategoryGroups: StateFlow<List<CategoryGroup>> =
-        selectedSource.flatMapLatest { lineup.categoryGroups(it) }
-            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+    /**
+     * Live TV's Categories Sidebar: every provider's categories in one list, with no provider
+     * switch. Locked ones drop out until the session is unlocked.
+     */
+    val visibleCategoryGroups: StateFlow<List<CategoryGroup>> = lineup.categoryGroups()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     /**
      * One row on screen = one *logical* channel.
@@ -315,12 +312,12 @@ class ChannelsViewModel @JvmOverloads constructor(
 
     /** Which Channels the guide shows now; channel up and down follow it from the guide. */
     private val guideScope: Flow<LineupScope> =
-        combine(selectedCategory, favouritesOnly, selectedSource, ::guideScopeOf).distinctUntilChanged()
+        combine(selectedCategory, favouritesOnly, ::guideScopeOf).distinctUntilChanged()
 
-    private fun guideScopeOf(category: String?, favs: Boolean, source: Long?): LineupScope = when {
-        favs -> LineupScope.Favourites(source)
-        category != null -> LineupScope.Group(category, source)
-        else -> LineupScope.All(source)
+    private fun guideScopeOf(category: String?, favs: Boolean): LineupScope = when {
+        favs -> LineupScope.Favourites()
+        category != null -> LineupScope.Group(category)
+        else -> LineupScope.All()
     }
 
     /** From Search, channel up and down go through every Channel rather than the results. */
@@ -329,7 +326,7 @@ class ChannelsViewModel @JvmOverloads constructor(
     /** Channel up and down follow the guide's current scope once you play from it. */
     fun zapFromGuide() {
         // Set before the player opens, not in a coroutine that might land after it reads the scope.
-        lineup.zapFrom(guideScopeOf(selectedCategory.value, favouritesOnly.value, selectedSource.value))
+        lineup.zapFrom(guideScopeOf(selectedCategory.value, favouritesOnly.value))
     }
 
     /**
@@ -463,13 +460,6 @@ class ChannelsViewModel @JvmOverloads constructor(
         selectedCategory.value = null
     }
 
-    /** Switch the live guide's provider filter; the category resets since categories differ per source. */
-    fun selectSource(sourceId: Long?) {
-        selectedSource.value = sourceId
-        selectedCategory.value = null
-        favouritesOnly.value = false
-    }
-
     // ---- Dedicated channel search --------------------------------------------------------------
     // Kept separate from the guide's `rows` on purpose: `rows` loads the entire 12-hour EPG
     // window, which is far too heavy to run on every keystroke (that was the ~30s search lag).
@@ -529,58 +519,41 @@ class ChannelsViewModel @JvmOverloads constructor(
 
     // ---- Channel manager: browse by category ---------------------------------------------------
     // Deliberately independent of the guide's `selectedCategory`/`rows`: browsing here never moves
-    // what Live TV is showing. Two differences from the guide feed — it can be scoped to a single
-    // provider (cardiodoc's "keep sources separate"), and it includes HIDDEN channels so they can
-    // be brought back. Always scoped to one category, never the whole catalogue, so the right pane
-    // stays a size a remote can scroll (no flat 20k-row list).
+    // what Live TV is showing. It includes HIDDEN channels so they can be brought back, and is
+    // always scoped to one category, never the whole catalogue, so the list stays a size a remote
+    // can scroll (no flat 20k-row list).
 
-    /** Provider filter for the manager. null = every source ("All sources"). */
-    val managerSelectedSource = MutableStateFlow<Long?>(null)
-
-    /** The [CategoryGroup.key] whose channels fill the manager's right pane; null = none picked. */
+    /** The [CategoryGroup.key] whose channels fill the manager's list; null = none picked. */
     val managerSelectedCategory = MutableStateFlow<String?>(null)
 
-    /** Providers, so the manager can offer a source filter (shown only when there's more than one). */
+    /** Providers, for naming who records a programme in its details. */
     val sources: StateFlow<List<Source>> =
         graph.sourceRepository.observeAll()
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     /**
-     * The manager's category rail: like [categoryGroups] but scoped to [managerSelectedSource], and
-     * NOT filtered by the adult/hidden-category setting — the manager shows every category so a
-     * hidden one's channels can still be reached and un-hidden.
+     * The manager's Categories Sidebar: every provider's categories, Parental-Locked ones too. The
+     * lock hides them from browsing, not from the screens that manage channels (GLOSSARY).
      */
-    @OptIn(ExperimentalCoroutinesApi::class)
-    val managerCategoryGroups: StateFlow<List<CategoryGroup>> =
-        managerSelectedSource.flatMapLatest { lineup.categoryGroups(it, includeLocked = true) }
-            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+    val managerCategoryGroups: StateFlow<List<CategoryGroup>> get() = categoryGroups
 
     /**
-     * Channels in the selected manager category (and source), grouped into [Row]s exactly like the
-     * guide — but including hidden channels. Empty until a category is picked. Reuses [buildRows]
-     * with no EPG window (the manager needs logo/name/state, not now/next).
+     * Channels in the selected manager category, grouped into [Row]s exactly like the guide, but
+     * including hidden channels. Empty until a category is picked. No guide window: the manager
+     * needs logo, name and state, not now and next.
      */
     @OptIn(ExperimentalCoroutinesApi::class)
     val managerRows: StateFlow<List<Row>> =
-        combine(managerSelectedSource, managerSelectedCategory) { source, key -> source to key }
-            .distinctUntilChanged()
-            .flatMapLatest { (source, key) ->
+        managerSelectedCategory
+            .flatMapLatest { key ->
                 if (key == null) {
                     flowOf(emptyList())
                 } else {
-                    lineup.channels(LineupScope.ManageGroup(key, source)).map { channels ->
-                        channels.map { Row(it) }
-                    }
+                    lineup.channels(LineupScope.ManageGroup(key)).map { channels -> channels.map { Row(it) } }
                 }
             }
             .flowOn(Dispatchers.Default)
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
-
-    /** Switch the manager's provider filter; the category resets since categories differ per source. */
-    fun selectManagerSource(sourceId: Long?) {
-        managerSelectedSource.value = sourceId
-        managerSelectedCategory.value = null
-    }
 
     fun selectManagerCategory(key: String?) {
         managerSelectedCategory.value = key
@@ -604,11 +577,12 @@ class ChannelsViewModel @JvmOverloads constructor(
         }
     }
 
-    private companion object {
-        const val GUIDE_LOOKAHEAD_MILLIS = 24 * 60 * 60 * 1000L // a full day fits the grid
-        const val DAY_MILLIS = 24 * 60 * 60 * 1000L
-        const val GUIDE_MAX_DAYS = 6 // browse up to a week out, matching typical XMLTV depth
-        const val HALF_HOUR_MILLIS = 30 * 60 * 1000L
+    companion object {
+        /** How many days ahead the guide goes: up to a week out, matching typical XMLTV depth. */
+        const val GUIDE_MAX_DAYS = 6
+        private const val GUIDE_LOOKAHEAD_MILLIS = 24 * 60 * 60 * 1000L // a full day fits the grid
+        private const val DAY_MILLIS = 24 * 60 * 60 * 1000L
+        private const val HALF_HOUR_MILLIS = 30 * 60 * 1000L
     }
 }
 

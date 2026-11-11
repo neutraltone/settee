@@ -96,49 +96,9 @@
             column="6"/>
     </issue>
 
-    <issue
-        id="ModifierParameter"
-        message="Modifier parameter should be named modifier"
-        errorLine1="    leftEdgeModifier: Modifier = Modifier,"
-        errorLine2="    ~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/app/opentv/ui/channels/ChannelManagerScreen.kt"
-            line="356"
-            column="5"/>
-    </issue>
 
-    <issue
-        id="ModifierParameter"
-        message="Modifier parameter should be the first optional parameter"
-        errorLine1="    modifier: Modifier = Modifier,"
-        errorLine2="    ~~~~~~~~">
-        <location
-            file="src/main/java/app/opentv/ui/channels/GuideGrid.kt"
-            line="90"
-            column="5"/>
-    </issue>
 
-    <issue
-        id="ModifierParameter"
-        message="Modifier parameter should be the first optional parameter"
-        errorLine1="    modifier: Modifier = Modifier,"
-        errorLine2="    ~~~~~~~~">
-        <location
-            file="src/main/java/app/opentv/ui/channels/GuideGrid.kt"
-            line="140"
-            column="5"/>
-    </issue>
 
-    <issue
-        id="ModifierParameter"
-        message="Modifier parameter should be the first optional parameter"
-        errorLine1="    modifier: Modifier = Modifier,"
-        errorLine2="    ~~~~~~~~">
-        <location
-            file="src/main/java/app/opentv/ui/channels/GuidePreview.kt"
-            line="93"
-            column="5"/>
-    </issue>
 
     <issue
         id="DiscouragedApi"
@@ -459,38 +419,8 @@
             column="20"/>
     </issue>
 
-    <issue
-        id="ConstantLocale"
-        message="Assigning `Locale.getDefault()` to a final static field is suspicious; this code will not work correctly if the user changes locale while the app is running"
-        errorLine1="private val clockFormat = SimpleDateFormat(&quot;HH:mm&quot;, Locale.getDefault())"
-        errorLine2="                                                    ~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/app/opentv/ui/channels/GuideGrid.kt"
-            line="573"
-            column="53"/>
-    </issue>
 
-    <issue
-        id="ConstantLocale"
-        message="Assigning `Locale.getDefault()` to a final static field is suspicious; this code will not work correctly if the user changes locale while the app is running"
-        errorLine1="private val previewTimeFormat = SimpleDateFormat(&quot;HH:mm&quot;, Locale.getDefault())"
-        errorLine2="                                                          ~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/app/opentv/ui/channels/GuidePreview.kt"
-            line="301"
-            column="59"/>
-    </issue>
 
-    <issue
-        id="ConstantLocale"
-        message="Assigning `Locale.getDefault()` to a final static field is suspicious; this code will not work correctly if the user changes locale while the app is running"
-        errorLine1="private val timeFormat = SimpleDateFormat(&quot;HH:mm&quot;, Locale.getDefault())"
-        errorLine2="                                                   ~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/app/opentv/ui/channels/LiveScreen.kt"
-            line="1190"
-            column="52"/>
-    </issue>
 
     <issue
         id="ConstantLocale"
@@ -503,4 +433,14 @@
             column="58"/>
     </issue>
 
+    <issue
+        id="ConstantLocale"
+        message="Assigning `Locale.getDefault()` to a final static field is suspicious; this code will not work correctly if the user changes locale while the app is running"
+        errorLine1="private val clockFormat = SimpleDateFormat(&quot;HH:mm&quot;, Locale.getDefault())"
+        errorLine2="                                                    ~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/app/opentv/ui/channels/GuideGrid.kt"
+            line="573"
+            column="53"/>
+    </issue>
 </issues>
