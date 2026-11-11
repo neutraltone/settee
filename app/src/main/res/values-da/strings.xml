@@ -360,13 +360,10 @@
     <string name="vod_no_shows_provider">Denne udbyder returnerede ingen serier.</string>
     <string name="vod_no_shows_add">Tilføj en udbyder for at se dens serier her.</string>
     <string name="vod_loading_episodes">Indlæser episoder…</string>
-    <string name="vod_all">Alle</string>
-    <string name="vod_search_hint">Søg i film &amp; serier</string>
     <string name="vod_continue_watching">Fortsæt visning</string>
     <string name="vod_large_provider_note">En stor udbyder kan tage et par minutter første gang.</string>
     <string name="vod_recommended">Anbefalet til dig</string>
     <string name="vod_recently_added">Senest tilføjet</string>
-    <string name="vod_categories">Kategorier</string>
     <string name="vod_resume">Genoptag</string>
     <string name="vod_addon_sources">Tilføjelseskilder</string>
     <string name="vod_addon_pick_title">Vælg en stream</string>

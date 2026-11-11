@@ -498,8 +498,21 @@ class AppSettings private constructor(context: Context, fileName: String = "open
     }
 
     private fun forgetVodFetches() {
-        val stamps = prefs.all.keys.filter { it.startsWith(KEY_VOD_FETCHED_AT) }
+        val stamps = prefs.all.keys.filter {
+            it.startsWith(KEY_VOD_FETCHED_AT) || it.startsWith(KEY_TMDB_BLANKS_RETRIED)
+        }
         prefs.edit { stamps.forEach(::remove) }
+    }
+
+    /**
+     * Which TMDB key (a hash of it, not the key) this provider's films saved with a blank genre were
+     * last asked about with, or null if never; see CatalogRepository's retry. Per provider, as
+     * [vodFetchedAtMillis] is, and cleared with it.
+     */
+    fun tmdbBlanksRetriedWith(sourceId: Long): String? = prefs.getString(KEY_TMDB_BLANKS_RETRIED + sourceId, null)
+
+    fun setTmdbBlanksRetriedWith(sourceId: Long, keyHash: String) {
+        prefs.edit { putString(KEY_TMDB_BLANKS_RETRIED + sourceId, keyHash) }
     }
 
     /**
@@ -584,6 +597,7 @@ class AppSettings private constructor(context: Context, fileName: String = "open
         private const val KEY_SYNC_EPISODES_NOT_FOUND = "sync_episodes_not_found"
         private const val KEY_NAS_AUTO_SYNC = "nas_auto_sync"
         private const val KEY_VOD_FETCHED_AT = "vod_fetched_at_"
+        private const val KEY_TMDB_BLANKS_RETRIED = "tmdb_blanks_retried_"
         private const val KEY_TMDB_KEY = "tmdb_api_key"
         private const val KEY_STREMIO_ADDONS = "stremio_addons"
         private const val KEY_PAD_START = "rec_pad_start_min"

@@ -360,13 +360,10 @@
     <string name="vod_no_shows_provider">Tento poskytovatel nevrátil žádné seriály.</string>
     <string name="vod_no_shows_add">Přidejte poskytovatele a zobrazte zde jeho seriály.</string>
     <string name="vod_loading_episodes">Načítání epizod…</string>
-    <string name="vod_all">Vše</string>
-    <string name="vod_search_hint">Hledat filmy a seriály</string>
     <string name="vod_continue_watching">Rozkoukané</string>
     <string name="vod_large_provider_note">U velkého poskytovatele to může poprvé trvat několik minut.</string>
     <string name="vod_recommended">Doporučené pro vás</string>
     <string name="vod_recently_added">Nedávno přidané</string>
-    <string name="vod_categories">Kategorie</string>
     <string name="vod_resume">Pokračovat</string>
     <string name="vod_addon_sources">Zdroje z doplňků</string>
     <string name="vod_addon_pick_title">Vyberte zdroj</string>

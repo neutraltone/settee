@@ -6,19 +6,34 @@
 package app.opentv
 
 import android.app.Application
+import androidx.compose.foundation.focusable
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.size
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.SideEffect
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.InputMode
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.platform.LocalInputModeManager
 import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.StateRestorationTester
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performKeyInput
+import androidx.compose.ui.test.pressKey
+import androidx.compose.ui.test.requestFocus
+import androidx.compose.ui.unit.dp
 import androidx.test.core.app.ApplicationProvider
 import app.opentv.core.ServiceLocator
 import app.opentv.data.model.Category
 import app.opentv.data.model.Movie
 import app.opentv.data.model.Series
 import app.opentv.data.model.StreamKind
-import app.opentv.ui.VodViewModel
 import app.opentv.ui.design.SetteeTheme
 import app.opentv.ui.vod.MoviesScreen
 import app.opentv.ui.vod.SeriesScreen
@@ -43,12 +58,47 @@ class MovieCategoryMemoryTest {
 
     private val app: Application = ApplicationProvider.getApplicationContext()
     private val graph = ServiceLocator.Graph(app)
-    private val viewModel = VodViewModel(app, graph)
+    private val viewModels = TestViewModels()
+    private val viewModel = viewModels.vod(app, graph)
 
     @After
-    fun close() = graph.database.close()
+    fun close() {
+        viewModels.clear()
+        graph.database.close()
+    }
 
     private fun waitFor(text: String) = compose.waitUntilAtLeastOneExists(hasText(text), 5_000)
+
+    /** Opens the Categories Sidebar from [fromCover]'s cover in For you, and picks [category]. */
+    private fun pick(category: String, fromCover: String) {
+        waitFor(fromCover)
+        compose.onAllNodes(hasText(fromCover) and hasClickAction())[0].requestFocus()
+        compose.onRoot().performKeyInput { pressKey(Key.DirectionLeft) }
+        waitFor(category)
+        compose.onNodeWithText(category).performClick()
+        compose.waitUntilDoesNotExist(hasText(recentlyAdded), 5_000)
+    }
+
+    /** As a remote drives it: in touch mode nothing can take the Highlight. */
+    @Composable
+    private fun RemoteInput() {
+        val inputMode = LocalInputModeManager.current
+        SideEffect { inputMode.requestInputMode(InputMode.Keyboard) }
+    }
+
+    /** Where the rail is: the Highlight has to have somewhere to go to the left for Left to open the sidebar. */
+    @Composable
+    private fun RailStandIn() {
+        Box(Modifier.size(48.dp).focusable())
+    }
+
+    private val recentlyAdded get() = app.getString(R.string.vod_recently_added)
+
+    /** On the category's grid, not back on For you, whose rows would show the same title. */
+    private fun assertOnGridOf(title: String) {
+        compose.waitUntilAtLeastOneExists(hasText(title) and hasClickAction(), 5_000)
+        compose.onNodeWithText(recentlyAdded).assertDoesNotExist()
+    }
 
     @Test
     fun `Movies comes back on the category it was left on`() {
@@ -69,6 +119,7 @@ class MovieCategoryMemoryTest {
                         durationSeconds = null,
                         containerExtension = "mkv",
                         streamUrl = "https://example.com/1",
+                        addedMillis = 1,
                     ),
                 ),
             )
@@ -76,24 +127,26 @@ class MovieCategoryMemoryTest {
         val restoration = StateRestorationTester(compose)
         restoration.setContent {
             SetteeTheme {
-                MoviesScreen(
-                    onOpenMovie = {},
-                    onResume = {},
-                    onOpenSearch = {},
-                    hasSources = false,
-                    isSyncing = false,
-                    viewModel = viewModel,
-                )
+                RemoteInput()
+                Row {
+                    RailStandIn()
+                    MoviesScreen(
+                        onOpenMovie = {},
+                        onResume = {},
+                        hasSources = false,
+                        isSyncing = false,
+                        viewModel = viewModel,
+                    )
+                }
             }
         }
-        waitFor("Movies 4K")
-        compose.onNodeWithText("Movies 4K").performClick()
-        waitFor("Superbad")
+        pick("Movies 4K", fromCover = "Superbad")
+        assertOnGridOf("Superbad")
         captureScreen("movies_category")
 
         restoration.emulateSavedInstanceStateRestore()
 
-        waitFor("Superbad")
+        assertOnGridOf("Superbad")
     }
 
     @Test
@@ -112,6 +165,7 @@ class MovieCategoryMemoryTest {
                         rating = null,
                         year = null,
                         plot = null,
+                        addedMillis = 1,
                     ),
                 ),
             )
@@ -119,22 +173,24 @@ class MovieCategoryMemoryTest {
         val restoration = StateRestorationTester(compose)
         restoration.setContent {
             SetteeTheme {
-                SeriesScreen(
-                    onOpenSeries = {},
-                    onResume = {},
-                    onOpenSearch = {},
-                    hasSources = false,
-                    isSyncing = false,
-                    viewModel = viewModel,
-                )
+                RemoteInput()
+                Row {
+                    RailStandIn()
+                    SeriesScreen(
+                        onOpenSeries = {},
+                        onResume = {},
+                        hasSources = false,
+                        isSyncing = false,
+                        viewModel = viewModel,
+                    )
+                }
             }
         }
-        waitFor("Shows 4K")
-        compose.onNodeWithText("Shows 4K").performClick()
-        waitFor("House of the Dragon")
+        pick("Shows 4K", fromCover = "House of the Dragon")
+        assertOnGridOf("House of the Dragon")
 
         restoration.emulateSavedInstanceStateRestore()
 
-        waitFor("House of the Dragon")
+        assertOnGridOf("House of the Dragon")
     }
 }

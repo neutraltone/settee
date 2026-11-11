@@ -489,6 +489,21 @@ class TitleHistory internal constructor(
         episodes.startedSeries(profileId, except = HandMark.UNWATCHED).toSet()
 
     /**
+     * The last [limit] movies [profileId] played, newest first, as local ids: what puts a genre at the
+     * top of For you's genre rows. The same movies as [startedMovieIds].
+     */
+    suspend fun recentMovieIds(profileId: Long, limit: Int = RECENT_TITLES): List<Long> =
+        positions.forProfile(profileId)
+            .filter { it.mark != HandMark.UNWATCHED }
+            .sortedByDescending { it.updatedAtMillis }
+            .mapNotNull { it.movieId }
+            .take(limit)
+
+    /** The last [limit] series [profileId] played an episode of, newest first. See [recentMovieIds]. */
+    suspend fun recentSeries(profileId: Long, limit: Int = RECENT_TITLES): List<SeriesRef> =
+        episodes.startedSeries(profileId, except = HandMark.UNWATCHED).take(limit)
+
+    /**
      * Every series [profileId] has removed from Continue Watching, even if its card has since come
      * back: recommending a show someone dismissed would feel wrong.
      */
@@ -794,6 +809,9 @@ private val EPISODE_ORDER = compareBy<Episode>({ it.season }, { it.episodeNumber
 // What an episode's stored key starts with, for matching in SQL and in bulk; MediaKey owns the form.
 private const val EPISODE_PREFIX = "${MediaKey.EPISODE}:"
 private const val IN_PROGRESS_LIMIT = 30
+
+/** How many of the titles a Profile played last decide which genre rows lead. */
+private const val RECENT_TITLES = 20
 private const val TAG = "ViewerLibrary"
 
 /** Past this, the credits are rolling: the title counts as Watched and is not resumed. */

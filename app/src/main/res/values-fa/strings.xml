@@ -360,13 +360,10 @@
     <string name="vod_no_shows_provider">این ارائه‌دهنده هیچ سریالی برنگرداند.</string>
     <string name="vod_no_shows_add">برای دیدن سریال‌های آن در اینجا، یک ارائه‌دهنده اضافه کنید.</string>
     <string name="vod_loading_episodes">در حال بارگذاری قسمت‌ها…</string>
-    <string name="vod_all">همه</string>
-    <string name="vod_search_hint">جستجوی فیلم‌ها و سریال‌ها</string>
     <string name="vod_continue_watching">ادامه تماشا</string>
     <string name="vod_large_provider_note">برای ارائه‌دهنده‌های بزرگ، بار اول ممکن است چند دقیقه طول بکشد.</string>
     <string name="vod_recommended">پیشنهادشده برای شما</string>
     <string name="vod_recently_added">به‌تازگی افزوده‌شده</string>
-    <string name="vod_categories">دسته‌ها</string>
     <string name="vod_resume">ادامه</string>
     <string name="vod_addon_sources">منابع افزونه</string>
     <string name="vod_addon_pick_title">یک جریان را انتخاب کنید</string>

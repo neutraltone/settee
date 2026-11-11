@@ -360,13 +360,10 @@
     <string name="vod_no_shows_provider">इस प्रदाता ने कोई शोज़ नहीं दिए।</string>
     <string name="vod_no_shows_add">यहां उसके शोज़ देखने के लिए एक प्रदाता जोड़ें।</string>
     <string name="vod_loading_episodes">एपिसोड लोड हो रहे हैं…</string>
-    <string name="vod_all">सभी</string>
-    <string name="vod_search_hint">फ़िल्में &amp; शोज़ खोजें</string>
     <string name="vod_continue_watching">देखना जारी रखें</string>
     <string name="vod_large_provider_note">बड़े प्रदाता के लिए पहली बार में कुछ मिनट लग सकते हैं।</string>
     <string name="vod_recommended">आपके लिए अनुशंसित</string>
     <string name="vod_recently_added">हाल ही में जोड़े गए</string>
-    <string name="vod_categories">श्रेणियां</string>
     <string name="vod_resume">फिर से शुरू करें</string>
     <string name="vod_addon_sources">ऐड-ऑन स्रोत</string>
     <string name="vod_addon_pick_title">एक स्ट्रीम चुनें</string>

@@ -360,13 +360,10 @@
     <string name="vod_no_shows_provider">Ovaj pružatelj usluge nije vratio nijednu seriju.</string>
     <string name="vod_no_shows_add">Dodajte pružatelja usluge da vidite njegove serije ovdje.</string>
     <string name="vod_loading_episodes">Učitavanje epizoda…</string>
-    <string name="vod_all">Sve</string>
-    <string name="vod_search_hint">Pretraži filmove i serije</string>
     <string name="vod_continue_watching">Nastavi gledati</string>
     <string name="vod_large_provider_note">Kod velikog pružatelja usluge prvi put može potrajati nekoliko minuta.</string>
     <string name="vod_recommended">Preporučeno za vas</string>
     <string name="vod_recently_added">Nedavno dodano</string>
-    <string name="vod_categories">Kategorije</string>
     <string name="vod_resume">Nastavi</string>
     <string name="vod_addon_sources">Izvori dodataka</string>
     <string name="vod_addon_pick_title">Odaberite stream</string>

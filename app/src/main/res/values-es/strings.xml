@@ -360,13 +360,10 @@
     <string name="vod_no_shows_provider">Este proveedor no devolvió ninguna serie.</string>
     <string name="vod_no_shows_add">Agrega un proveedor para ver sus series aquí.</string>
     <string name="vod_loading_episodes">Cargando episodios…</string>
-    <string name="vod_all">Todo</string>
-    <string name="vod_search_hint">Buscar películas y series</string>
     <string name="vod_continue_watching">Continuar viendo</string>
     <string name="vod_large_provider_note">Con un proveedor grande, la primera vez puede tardar un par de minutos.</string>
     <string name="vod_recommended">Recomendado para ti</string>
     <string name="vod_recently_added">Agregado recientemente</string>
-    <string name="vod_categories">Categorías</string>
     <string name="vod_resume">Reanudar</string>
     <string name="vod_addon_sources">Fuentes de complementos</string>
     <string name="vod_addon_pick_title">Elige una transmisión</string>

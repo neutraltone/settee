@@ -439,6 +439,8 @@
     <string name="channels_manager_categories_header">Categories</string>
     <string name="channels_manager_pick_category">Pick a category on the left to see its channels.</string>
     <string name="channels_manager_empty_category">No channels in this category.</string>
+    <string name="vod_empty_category_movies">No films in this category.</string>
+    <string name="vod_empty_category_shows">No shows in this category.</string>
     <string name="channels_manager_no_channels">No channels yet. Add a provider first.</string>
     <string name="channels_hidden">Hidden</string>
     <string name="channels_showing">Showing</string>
@@ -465,8 +467,6 @@
     <string name="vod_no_shows_provider">This provider didn\'t return any shows.</string>
     <string name="vod_no_shows_add">Add a provider to see its shows here.</string>
     <string name="vod_loading_episodes">Loading episodes…</string>
-    <string name="vod_all">All</string>
-    <string name="vod_search_hint">Search movies &amp; shows</string>
     <string name="vod_continue_watching">Continue watching</string>
     <string name="vod_large_provider_note">A large provider can take a couple of minutes the first time.</string>
     <string name="vod_favourites">Favourites</string>
@@ -483,13 +483,14 @@
     <string name="home_empty_hint">Things you watch and favourite will show up here</string>
     <string name="vod_recommended">Recommended for you</string>
     <string name="vod_recently_added">Recently added</string>
-    <string name="vod_categories">Categories</string>
+    <string name="vod_for_you">For you</string>
+    <string name="categories_find">Find a category</string>
+    <string name="categories_find_count">%1$d of %2$d</string>
     <string name="vod_resume">Resume</string>
     <string name="vod_play">Play</string>
     <!-- The series page's main button: season and episode numbers. -->
     <string name="vod_resume_episode">Resume S%1$d E%2$d</string>
     <string name="vod_play_episode">Play S%1$d E%2$d</string>
-    <string name="vod_season_episode">S%1$d · E%2$d</string>
     <string name="vod_addon_sources">Add-on sources</string>
     <string name="vod_addon_pick_title">Choose a stream</string>
     <string name="vod_addon_loading">Finding streams from your add-ons…</string>

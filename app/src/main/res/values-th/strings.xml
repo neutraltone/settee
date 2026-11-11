@@ -360,13 +360,10 @@
     <string name="vod_no_shows_provider">ผู้ให้บริการนี้ไม่มีซีรีส์ส่งกลับมา</string>
     <string name="vod_no_shows_add">เพิ่มผู้ให้บริการเพื่อดูซีรีส์ที่นี่</string>
     <string name="vod_loading_episodes">กำลังโหลดตอน…</string>
-    <string name="vod_all">ทั้งหมด</string>
-    <string name="vod_search_hint">ค้นหาภาพยนตร์และซีรีส์</string>
     <string name="vod_continue_watching">ดูต่อ</string>
     <string name="vod_large_provider_note">ผู้ให้บริการรายใหญ่อาจใช้เวลาสองสามนาทีในครั้งแรก</string>
     <string name="vod_recommended">แนะนำสำหรับคุณ</string>
     <string name="vod_recently_added">เพิ่มล่าสุด</string>
-    <string name="vod_categories">หมวดหมู่</string>
     <string name="vod_resume">ดูต่อ</string>
     <string name="vod_addon_sources">แหล่งที่มาจากแอดออน</string>
     <string name="vod_addon_pick_title">เลือกสตรีม</string>

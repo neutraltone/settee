@@ -360,13 +360,10 @@
     <string name="vod_no_shows_provider">لم يقدّم هذا المزوّد أي مسلسلات.</string>
     <string name="vod_no_shows_add">أضف مزوّد خدمة لعرض مسلسلاته هنا.</string>
     <string name="vod_loading_episodes">جارٍ تحميل الحلقات…</string>
-    <string name="vod_all">الكل</string>
-    <string name="vod_search_hint">البحث عن الأفلام والمسلسلات</string>
     <string name="vod_continue_watching">متابعة المشاهدة</string>
     <string name="vod_large_provider_note">قد يستغرق ذلك بضع دقائق في المرة الأولى مع مزوّد كبير.</string>
     <string name="vod_recommended">موصى به لك</string>
     <string name="vod_recently_added">أضيف مؤخرًا</string>
-    <string name="vod_categories">الفئات</string>
     <string name="vod_resume">استئناف</string>
     <string name="vod_addon_sources">مصادر الإضافات</string>
     <string name="vod_addon_pick_title">اختر بثًا</string>

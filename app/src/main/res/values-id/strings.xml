@@ -360,13 +360,10 @@
     <string name="vod_no_shows_provider">Penyedia ini tidak mengembalikan acara TV apa pun.</string>
     <string name="vod_no_shows_add">Tambahkan penyedia untuk melihat acara TV-nya di sini.</string>
     <string name="vod_loading_episodes">Memuat episode…</string>
-    <string name="vod_all">Semua</string>
-    <string name="vod_search_hint">Cari film &amp; acara TV</string>
     <string name="vod_continue_watching">Lanjutkan menonton</string>
     <string name="vod_large_provider_note">Penyedia besar bisa memakan waktu beberapa menit pada percobaan pertama.</string>
     <string name="vod_recommended">Direkomendasikan untuk Anda</string>
     <string name="vod_recently_added">Baru ditambahkan</string>
-    <string name="vod_categories">Kategori</string>
     <string name="vod_resume">Lanjutkan</string>
     <string name="vod_addon_sources">Sumber add-on</string>
     <string name="vod_addon_pick_title">Pilih stream</string>

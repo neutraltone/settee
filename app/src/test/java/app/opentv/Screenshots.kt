@@ -92,6 +92,9 @@ class PlaceholderArtwork : ExternalResource() {
     /** URLs that fail to load, for a test of what a screen falls back to. */
     val failingUrls = mutableSetOf<String>()
 
+    /** Every image asked for, with the size it was asked for at, in order. */
+    val requests: MutableList<Pair<String, coil.size.Size>> = java.util.concurrent.CopyOnWriteArrayList()
+
     /** Whether an image has reached its target; Compose's idling doesn't wait for Coil. */
     @Volatile
     var hasLoaded = false
@@ -100,6 +103,7 @@ class PlaceholderArtwork : ExternalResource() {
     override fun before() {
         val engine = FakeImageLoaderEngine.Builder()
             .default { chain ->
+                requests += chain.request.data.toString() to chain.size
                 if (chain.request.data.toString() in failingUrls) {
                     ErrorResult(null, chain.request, IllegalStateException("Failing on purpose"))
                 } else {

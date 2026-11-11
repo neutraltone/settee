@@ -360,13 +360,10 @@
     <string name="vod_no_shows_provider">Tämä palveluntarjoaja ei palauttanut yhtään sarjaa.</string>
     <string name="vod_no_shows_add">Lisää palveluntarjoaja nähdäksesi sen sarjat täällä.</string>
     <string name="vod_loading_episodes">Ladataan jaksoja…</string>
-    <string name="vod_all">Kaikki</string>
-    <string name="vod_search_hint">Hae elokuvia ja sarjoja</string>
     <string name="vod_continue_watching">Jatka katselua</string>
     <string name="vod_large_provider_note">Suurella palveluntarjoajalla tämä voi kestää pari minuuttia ensimmäisellä kerralla.</string>
     <string name="vod_recommended">Suositellut sinulle</string>
     <string name="vod_recently_added">Äskettäin lisätyt</string>
-    <string name="vod_categories">Kategoriat</string>
     <string name="vod_resume">Jatka</string>
     <string name="vod_addon_sources">Lisäosalähteet</string>
     <string name="vod_addon_pick_title">Valitse suoratoisto</string>

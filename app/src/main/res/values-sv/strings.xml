@@ -360,13 +360,10 @@
     <string name="vod_no_shows_provider">Den här leverantören returnerade inga serier.</string>
     <string name="vod_no_shows_add">Lägg till en leverantör för att se dess serier här.</string>
     <string name="vod_loading_episodes">Läser in avsnitt…</string>
-    <string name="vod_all">Alla</string>
-    <string name="vod_search_hint">Sök filmer &amp; serier</string>
     <string name="vod_continue_watching">Fortsätt titta</string>
     <string name="vod_large_provider_note">En stor leverantör kan ta ett par minuter första gången.</string>
     <string name="vod_recommended">Rekommenderat för dig</string>
     <string name="vod_recently_added">Nyligen tillagda</string>
-    <string name="vod_categories">Kategorier</string>
     <string name="vod_resume">Återuppta</string>
     <string name="vod_addon_sources">Tilläggskällor</string>
     <string name="vod_addon_pick_title">Välj en ström</string>
