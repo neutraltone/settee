@@ -311,6 +311,13 @@ data class Movie(
      * Recently Released row, so nothing goes looking for it either. Null when only a year is known.
      */
     val releaseDate: Long? = null,
+    /**
+     * Whether the provider has been asked for this film's details (`get_vod_info`), in the background
+     * or on opening it. What the background pass works through: not a missing genre, since a film
+     * whose list carried one would never get its cast, and a person's page needs that.
+     */
+    @ColumnInfo(defaultValue = "0")
+    val detailsLookedUp: Boolean = false,
 )
 
 @Entity(

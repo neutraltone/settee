@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 10,
-    "identityHash": "fd45fecf075a31c57c80c43ae1081a06",
+    "identityHash": "e898973a47be7981d97c5ece899db4e4",
     "entities": [
       {
         "tableName": "sources",
@@ -546,7 +546,7 @@
       },
       {
         "tableName": "movies",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `sourceId` INTEGER NOT NULL, `streamId` TEXT NOT NULL, `name` TEXT NOT NULL, `categoryId` TEXT, `posterUrl` TEXT, `rating` REAL, `year` INTEGER, `plot` TEXT, `durationSeconds` INTEGER, `containerExtension` TEXT, `streamUrl` TEXT NOT NULL, `addedMillis` INTEGER NOT NULL, `backdropUrl` TEXT, `cast` TEXT, `genre` TEXT, `tmdbId` TEXT, `director` TEXT, `releaseDate` INTEGER)",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `sourceId` INTEGER NOT NULL, `streamId` TEXT NOT NULL, `name` TEXT NOT NULL, `categoryId` TEXT, `posterUrl` TEXT, `rating` REAL, `year` INTEGER, `plot` TEXT, `durationSeconds` INTEGER, `containerExtension` TEXT, `streamUrl` TEXT NOT NULL, `addedMillis` INTEGER NOT NULL, `backdropUrl` TEXT, `cast` TEXT, `genre` TEXT, `tmdbId` TEXT, `director` TEXT, `releaseDate` INTEGER, `detailsLookedUp` INTEGER NOT NULL DEFAULT 0)",
         "fields": [
           {
             "fieldPath": "id",
@@ -648,6 +648,13 @@
             "fieldPath": "releaseDate",
             "columnName": "releaseDate",
             "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "detailsLookedUp",
+            "columnName": "detailsLookedUp",
+            "affinity": "INTEGER",
+            "notNull": true,
+            "defaultValue": "0"
           }
         ],
         "primaryKey": {
@@ -1606,7 +1613,7 @@
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'fd45fecf075a31c57c80c43ae1081a06')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'e898973a47be7981d97c5ece899db4e4')"
     ]
   }
 }

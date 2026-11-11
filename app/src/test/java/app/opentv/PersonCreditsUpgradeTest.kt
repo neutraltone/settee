@@ -10,7 +10,6 @@ import androidx.room.testing.MigrationTestHelper
 import androidx.test.platform.app.InstrumentationRegistry
 import app.opentv.data.db.OpenTvDatabase
 import app.opentv.data.repo.CatalogueRefresh
-import app.opentv.data.repo.VodTitle
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.test.runTest
 import org.junit.After
@@ -54,25 +53,39 @@ class PersonCreditsUpgradeTest {
             )
             close()
         }
-        val upgraded = Room.databaseBuilder(context, OpenTvDatabase::class.java, NAME)
-            .addMigrations(*OpenTvDatabase.MIGRATIONS)
-            .allowMainThreadQueries()
-            .build()
-        val test = TestCatalog(context, db = upgraded).also { test = it }
+        val test = TestCatalog(context, db = upgrade()).also { test = it }
 
         test.refresh().refresh(CatalogueRefresh.Trigger.AppLaunch)
         test.catalog.awaitBackground()
 
-        assertThat(titlesWith(test, "Nicolas Winding Refn")).containsExactly("Drive")
-        assertThat(titlesWith(test, "Olivia Colman")).containsExactly("Broadchurch")
+        assertThat(test.titlesWith("Nicolas Winding Refn")).containsExactly("Drive")
+        assertThat(test.titlesWith("Olivia Colman")).containsExactly("Broadchurch")
     }
 
-    private suspend fun titlesWith(test: TestCatalog, name: String) = test.catalog.titlesWithPerson(name).map {
-        when (it) {
-            is VodTitle.OfMovie -> it.movie.name
-            is VodTitle.OfSeries -> it.series.name
+    @Test
+    fun `films given a genre before cast was kept are looked up again for it`() = runTest {
+        helper.createDatabase(NAME, 9).apply {
+            execSQL(
+                "INSERT INTO movies (id, sourceId, streamId, name, streamUrl, addedMillis, genre) " +
+                    "VALUES (1, 1, '3', 'Drive', 'http://example.com/3.mp4', 0, 'Crime')",
+            )
+            close()
         }
+        val test = TestCatalog(context, db = upgrade()).also { test = it }
+        test.db.sources().insert(PANEL_SOURCE)
+        test.panel.replies["get_vod_info"] = """{"info": {"genre": "Thriller", "cast": "Ryan Gosling"}}"""
+
+        test.refresh().refresh(CatalogueRefresh.Trigger.AppLaunch)
+        test.catalog.awaitBackground()
+
+        assertThat(test.titlesWith("Ryan Gosling")).containsExactly("Drive")
+        assertThat(test.db.movies().all().single().genre).isEqualTo("Crime")
     }
+
+    private fun upgrade() = Room.databaseBuilder(context, OpenTvDatabase::class.java, NAME)
+        .addMigrations(*OpenTvDatabase.MIGRATIONS)
+        .allowMainThreadQueries()
+        .build()
 
     private companion object {
         const val NAME = "before-credits.db"

@@ -34,21 +34,23 @@ class MovieGenresTest {
     @After
     fun close() = test.close()
 
-    private fun movie(id: String, added: Long, sourceId: Long = 1, genre: String? = null) = Movie(
-        sourceId = sourceId,
-        streamId = id,
-        name = "Movie $id",
-        categoryId = null,
-        posterUrl = null,
-        rating = null,
-        year = null,
-        plot = null,
-        durationSeconds = null,
-        containerExtension = "mp4",
-        streamUrl = "http://example.com/$sourceId/$id.mp4",
-        addedMillis = added,
-        genre = genre,
-    )
+    private fun movie(id: String, added: Long, sourceId: Long = 1, genre: String? = null, lookedUp: Boolean = false) =
+        Movie(
+            sourceId = sourceId,
+            streamId = id,
+            name = "Movie $id",
+            categoryId = null,
+            posterUrl = null,
+            rating = null,
+            year = null,
+            plot = null,
+            durationSeconds = null,
+            containerExtension = "mp4",
+            streamUrl = "http://example.com/$sourceId/$id.mp4",
+            addedMillis = added,
+            genre = genre,
+            detailsLookedUp = lookedUp,
+        )
 
     private suspend fun genre(id: String): String? = test.db.movies().forSource(1).single { it.streamId == id }.genre
 
@@ -63,8 +65,10 @@ class MovieGenresTest {
     }
 
     @Test
-    fun `a film that already has a genre costs no call`() = runTest {
-        test.db.movies().upsertAll(listOf(movie("known", added = 2, genre = "Drama"), movie("unknown", added = 1)))
+    fun `a film already looked up costs no call`() = runTest {
+        test.db.movies().upsertAll(
+            listOf(movie("known", added = 2, genre = "Drama", lookedUp = true), movie("unknown", added = 1)),
+        )
         panel.replies["get_vod_info"] = """{"info": {"genre": "Comedy"}}"""
 
         step.refresh(PANEL_SOURCE)
@@ -97,10 +101,21 @@ class MovieGenresTest {
     }
 
     @Test
-    fun `only the 200 newest films without a genre from the synced provider are asked about`() = runTest {
+    fun `a film whose genre came with the list is asked for its details but keeps that genre`() = runTest {
+        test.db.movies().upsertAll(listOf(movie("7", added = 1, genre = "Drama")))
+        panel.replies["get_vod_info"] = """{"info": {"genre": "Comedy", "director": "Agnès Varda"}}"""
+
+        step.refresh(PANEL_SOURCE)
+
+        assertThat(panel.asked).containsExactly("get_vod_info:7")
+        assertThat(genre("7")).isEqualTo("Drama")
+    }
+
+    @Test
+    fun `only the 200 newest films not looked up from the synced provider are asked about`() = runTest {
         test.db.movies().upsertAll(
             (1..202).map { movie("$it", added = it.toLong()) } +
-                movie("known", added = 999, genre = "Drama") +
+                movie("known", added = 999, genre = "Drama", lookedUp = true) +
                 movie("other", added = 999, sourceId = 2),
         )
         panel.replies["get_vod_info"] = """{"info": {"genre": "Comedy"}}"""

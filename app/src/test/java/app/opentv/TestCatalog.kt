@@ -15,6 +15,7 @@ import app.opentv.data.repo.CatalogRepository
 import app.opentv.data.repo.CatalogueRefresh
 import app.opentv.data.repo.ChannelLineup
 import app.opentv.data.repo.EpgRepository
+import app.opentv.data.repo.VodTitle
 import app.opentv.data.repo.ViewerLibrary
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -115,5 +116,13 @@ class TestCatalog(
         db.sources().insert(PANEL_SOURCE)
         catalog.detectNewEpisodes(PANEL_SOURCE, catalog.fetchVod(PANEL_SOURCE, nowUtcMillis = 0).updated, 0)
         catalog.awaitBackground()
+    }
+
+    /** The names of the titles on [name]'s person page, in its order. */
+    suspend fun titlesWith(name: String): List<String> = catalog.titlesWithPerson(name).map {
+        when (it) {
+            is VodTitle.OfMovie -> it.movie.name
+            is VodTitle.OfSeries -> it.series.name
+        }
     }
 }

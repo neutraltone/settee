@@ -535,26 +535,24 @@ interface MovieDao {
     @Query("SELECT * FROM movies WHERE sourceId = :sourceId")
     suspend fun forSource(sourceId: Long): List<Movie>
 
-    /**
-     * The [limit] movies a source most recently added that have no genre yet, for [MovieGenres]. Not
-     * ones with a blank genre: those the provider was asked about and had none for.
-     */
+    /** The [limit] movies a source most recently added whose details nobody has asked for, for [MovieGenres]. */
     @Query(
-        "SELECT * FROM movies WHERE sourceId = :sourceId AND genre IS NULL " +
+        "SELECT * FROM movies WHERE sourceId = :sourceId AND detailsLookedUp = 0 " +
             "ORDER BY addedMillis DESC, id DESC LIMIT :limit",
     )
-    suspend fun newestWithoutGenre(sourceId: Long, limit: Int): List<Movie>
+    suspend fun newestNotLookedUp(sourceId: Long, limit: Int): List<Movie>
 
     /**
-     * Fills whichever of a movie's details are still empty from what [MovieGenres] looked up, so a
-     * film nobody has opened has its cast and director for a person's page. Never overwrites: opening
-     * the movie may have found better ones meanwhile. Every field `CatalogRepository.movieDetail`
-     * takes from the provider, since a film this fills counts as enriched and opening it won't ask.
+     * Fills whichever of a movie's details are still empty from what [MovieGenres] looked up, and marks
+     * it looked up, so a film nobody has opened has its cast and director for a person's page. Never
+     * overwrites, since opening the movie may have found better ones meanwhile, except a blank genre
+     * (the provider had none) with one found since. Every field `Movie.filledFrom` fills, since a film
+     * this fills counts as enriched and opening it won't ask the provider again.
      */
     @Query(
         """
         UPDATE movies SET
-            genre = COALESCE(genre, :genre),
+            genre = COALESCE(NULLIF(genre, ''), NULLIF(:genre, ''), genre, :genre),
             `cast` = COALESCE(`cast`, :cast),
             director = COALESCE(director, :director),
             plot = COALESCE(plot, :plot),
@@ -563,14 +561,15 @@ interface MovieDao {
             rating = COALESCE(rating, :rating),
             year = COALESCE(year, :year),
             durationSeconds = COALESCE(durationSeconds, :durationSeconds),
-            releaseDate = COALESCE(releaseDate, :releaseDate)
+            releaseDate = COALESCE(releaseDate, :releaseDate),
+            detailsLookedUp = 1
         WHERE id = :id
         """,
     )
     @Suppress("LongParameterList") // One per column; Room binds no objects.
     suspend fun fillDetails(
         id: Long,
-        genre: String,
+        genre: String?,
         cast: String?,
         director: String?,
         plot: String?,
@@ -592,7 +591,7 @@ interface MovieDao {
         found.forEach {
             fillDetails(
                 id = it.id,
-                genre = it.genre.orEmpty(),
+                genre = it.genre,
                 cast = it.cast,
                 director = it.director,
                 plot = it.plot,
@@ -618,7 +617,7 @@ interface MovieDao {
     @Query("UPDATE movies SET genre = :genre WHERE id = :id AND genre = ''")
     suspend fun fillBlankGenre(id: Long, genre: String)
 
-    /** As [fillDetails], for genres saved blank. */
+    /** As [fillBlankGenre], for many in one go, so everything observing movies reloads once. */
     @Transaction
     suspend fun fillBlankGenres(genres: List<Pair<Long, String>>) {
         genres.forEach { (id, genre) -> fillBlankGenre(id, genre) }
@@ -722,6 +721,18 @@ interface MovieDao {
         """,
     )
     suspend fun uncredited(afterId: Long, limit: Int): List<CreditedTitle>
+
+    /**
+     * Credits the next [limit] [uncredited] titles after [afterId], returning the last one's id, or
+     * null when none are left. Read and written in one transaction, so a refresh changing a cast in
+     * between can't have its credits replaced with the old names.
+     */
+    @Transaction
+    suspend fun creditNextUncredited(afterId: Long, limit: Int): Long? {
+        val titles = uncredited(afterId, limit).ifEmpty { return null }
+        recreditChanged(emptyMap(), titles)
+        return titles.last().id
+    }
 
     @Query("DELETE FROM movie_credits WHERE movieId = :movieId")
     suspend fun deleteCredits(movieId: Long)
@@ -837,6 +848,18 @@ interface SeriesDao {
         """,
     )
     suspend fun uncredited(afterId: Long, limit: Int): List<CreditedTitle>
+
+    /**
+     * Credits the next [limit] [uncredited] titles after [afterId], returning the last one's id, or
+     * null when none are left. Read and written in one transaction, so a refresh changing a cast in
+     * between can't have its credits replaced with the old names.
+     */
+    @Transaction
+    suspend fun creditNextUncredited(afterId: Long, limit: Int): Long? {
+        val titles = uncredited(afterId, limit).ifEmpty { return null }
+        recreditChanged(emptyMap(), titles)
+        return titles.last().id
+    }
 
     @Query("DELETE FROM series_credits WHERE seriesId = :seriesId")
     suspend fun deleteCredits(seriesId: Long)

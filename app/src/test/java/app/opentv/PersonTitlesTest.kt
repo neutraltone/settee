@@ -9,7 +9,6 @@ import androidx.sqlite.db.SimpleSQLiteQuery
 import androidx.test.core.app.ApplicationProvider
 import app.opentv.data.db.MOVIES_WITH_PERSON
 import app.opentv.data.db.SERIES_WITH_PERSON
-import app.opentv.data.repo.VodTitle
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.test.runTest
 import org.junit.After
@@ -33,12 +32,7 @@ class PersonTitlesTest {
     @After
     fun close() = test.close()
 
-    private suspend fun titlesWith(name: String): List<String> = test.catalog.titlesWithPerson(name).map {
-        when (it) {
-            is VodTitle.OfMovie -> it.movie.name
-            is VodTitle.OfSeries -> it.series.name
-        }
-    }
+    private suspend fun titlesWith(name: String) = test.titlesWith(name)
 
     @Test
     fun `a film nobody has opened is on its actor's and director's pages after a sync`() = runTest {
@@ -51,6 +45,16 @@ class PersonTitlesTest {
 
         assertThat(titlesWith("Carey Mulligan")).containsExactly("Drive")
         assertThat(titlesWith("Nicolas Winding Refn")).containsExactly("Drive")
+    }
+
+    @Test
+    fun `a film whose genre came with the provider's list is still looked up for its cast`() = runTest {
+        panel.replies["get_vod_streams"] = """[{"stream_id": 3, "name": "Drive", "genre": "Crime"}]"""
+        panel.replies["get_vod_info"] = """{"info": {"cast": "Ryan Gosling"}}"""
+
+        test.syncVod()
+
+        assertThat(titlesWith("Ryan Gosling")).containsExactly("Drive")
     }
 
     @Test

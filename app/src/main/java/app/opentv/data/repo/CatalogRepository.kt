@@ -430,20 +430,7 @@ class CatalogRepository(
         // 1) Provider back-fill from get_vod_info, for a still-bare row on an Xtream source.
         if (!result.isEnriched && source?.kind == SourceKind.XTREAM) {
             val info = runCatching { api.movieInfo(source, result.streamId) }.getOrNull()
-            if (info != null) {
-                result = result.copy(
-                    backdropUrl = result.backdropUrl ?: info.backdropUrl,
-                    cast = result.cast ?: info.cast,
-                    director = result.director ?: info.director,
-                    genre = result.genre.ifUnknown() ?: info.genre,
-                    tmdbId = result.tmdbId ?: info.tmdbId,
-                    plot = result.plot ?: info.plot,
-                    rating = result.rating ?: info.rating,
-                    year = result.year ?: info.year,
-                    durationSeconds = result.durationSeconds ?: info.durationSeconds,
-                    releaseDate = result.releaseDate ?: info.releaseDate,
-                )
-            }
+            if (info != null) result = result.filledFrom(info)
         }
 
         // 2) TMDB fallback for whatever the provider still left blank — only when the user set a
@@ -772,13 +759,6 @@ class CatalogRepository(
     }
 
     /**
-     * Works through [source]'s films without a genre in the background ([MovieGenres.fillAll]): the
-     * catalogue is saved by now, and the genre rows fill in as it goes. After a sync, and whenever
-     * Movies or Shows opens or the app starts, so it carries on where it left off. One job per
-     * source, one lookup after another, so a struggling panel doesn't get hundreds of calls at once;
-     * asked again while it's running, it adds no second one.
-     */
-    /**
      * Files the credits of titles saved before credits were kept (database version 9), so they're on
      * people's pages without the viewer adding their providers again. In the background at launch;
      * once they're done, it's one quick query that finds nothing.
@@ -786,26 +766,29 @@ class CatalogRepository(
     fun creditEarlierTitles() {
         background.launch {
             runCatching {
-                var after = 0L
-                while (true) {
-                    val titles = movieDao.uncredited(after, CREDIT_BATCH).ifEmpty { break }
-                    movieDao.inTransaction { movieDao.recreditChanged(emptyMap(), titles) }
-                    after = titles.last().id
-                }
-                after = 0L
-                while (true) {
-                    val titles = seriesDao.uncredited(after, CREDIT_BATCH).ifEmpty { break }
-                    seriesDao.inTransaction { seriesDao.recreditChanged(emptyMap(), titles) }
-                    after = titles.last().id
-                }
+                pageThrough { after -> movieDao.creditNextUncredited(after, CREDIT_BATCH) }
+                pageThrough { after -> seriesDao.creditNextUncredited(after, CREDIT_BATCH) }
             }.onFailure { Log.w(TAG, "Filing earlier titles' credits failed", it) }
         }
+    }
+
+    /** Calls [next] with the last id it returned (0 at first) until it returns null. */
+    private suspend fun pageThrough(next: suspend (afterId: Long) -> Long?) {
+        var after = 0L
+        while (true) after = next(after) ?: return
     }
 
     /** [fillGenresInBackground] for every provider that has films: Xtream's. */
     suspend fun fillEveryProvidersGenres() =
         enabledSources().filter { it.kind == SourceKind.XTREAM }.forEach(::fillGenresInBackground)
 
+    /**
+     * Works through [source]'s films not looked up in the background ([MovieGenres.fillAll]): the
+     * catalogue is saved by now, and the genre rows and people's pages fill in as it goes. After a
+     * sync, and whenever Movies or Shows opens or the app starts, so it carries on where it left off.
+     * One job per source, one lookup after another, so a struggling panel doesn't get hundreds of
+     * calls at once; asked again while it's running, it adds no second one.
+     */
     fun fillGenresInBackground(source: Source) {
         if (!sourcesGettingGenres.add(source.id)) return
         background.launch {

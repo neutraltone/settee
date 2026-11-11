@@ -116,9 +116,11 @@ abstract class OpenTvDatabase : RoomDatabase() {
         const val FILE_NAME = "opentv.db"
 
         /**
-         * 9 → 10: adds the credits a person's page looks people up in. Only new tables, so it's
-         * worth not wiping providers for. They start empty: `CatalogRepository.creditEarlierTitles`
-         * fills them in for the titles already saved, which needs Kotlin to fold the names.
+         * 9 → 10: adds the credits a person's page looks people up in, and marks every film as not
+         * yet looked up, so the background pass asks each once for the cast version 9 threw away.
+         * Nothing is dropped, so it's worth not wiping providers for. The credits start empty:
+         * `CatalogRepository.creditEarlierTitles` fills them in for the titles already saved, which
+         * needs Kotlin to fold the names.
          */
         private val CREDITS = object : Migration(9, 10) {
             override fun migrate(db: SupportSQLiteDatabase) {
@@ -135,6 +137,7 @@ abstract class OpenTvDatabase : RoomDatabase() {
                         "REFERENCES `series`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
                 )
                 db.execSQL("CREATE INDEX IF NOT EXISTS `index_series_credits_nameKey` ON `series_credits` (`nameKey`)")
+                db.execSQL("ALTER TABLE `movies` ADD COLUMN `detailsLookedUp` INTEGER NOT NULL DEFAULT 0")
             }
         }
 

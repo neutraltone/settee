@@ -73,6 +73,7 @@ internal fun Movie.over(old: Movie?): Movie = if (old == null) {
         tmdbId = tmdbId ?: old.tmdbId,
         director = director ?: old.director,
         releaseDate = releaseDate ?: old.releaseDate,
+        detailsLookedUp = detailsLookedUp || old.detailsLookedUp,
     )
 }
 
@@ -92,3 +93,22 @@ internal fun Series.over(old: Series?): Series = if (old == null) {
         tmdbId = tmdbId ?: old.tmdbId,
     )
 }
+
+/**
+ * This movie with its empty details filled from the provider's `get_vod_info` [info], and marked
+ * looked up. Shared by opening a film and the background pass, so neither leaves out a field the
+ * other fills. A blank genre (the provider had none before) takes one if [info] has it now.
+ */
+internal fun Movie.filledFrom(info: XtreamApi.VodInfo): Movie = copy(
+    backdropUrl = backdropUrl ?: info.backdropUrl,
+    cast = cast ?: info.cast,
+    director = director ?: info.director,
+    genre = genre?.ifBlank { null } ?: info.genre?.ifBlank { null } ?: genre,
+    tmdbId = tmdbId ?: info.tmdbId,
+    plot = plot ?: info.plot,
+    rating = rating ?: info.rating,
+    year = year ?: info.year,
+    durationSeconds = durationSeconds ?: info.durationSeconds,
+    releaseDate = releaseDate ?: info.releaseDate,
+    detailsLookedUp = true,
+)
