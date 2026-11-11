@@ -376,13 +376,21 @@ class ChannelsViewModel @JvmOverloads constructor(
     private val _rowsBuilt = MutableStateFlow(false)
 
     /**
-     * Whether [rows] has been built at least once. Until then an empty list means still loading;
+     * Whether [guideRows] has been built at least once. Until then an empty list means still loading;
      * after it, that the Favourites or category on show has nothing in it (every channel hidden).
      */
     val rowsBuilt: StateFlow<Boolean> = _rowsBuilt.asStateFlow()
 
+    /**
+     * The guide's rows with the scope (All channels, Favourites, a category) they were built for,
+     * in one value, so the guide can tell a new category's rows from the old one's and start it
+     * at the top: a list kept by key would otherwise open it wherever the old channel was.
+     */
+    @androidx.compose.runtime.Immutable
+    data class GuideRows(val scope: LineupScope? = null, val rows: List<Row> = emptyList())
+
     @OptIn(ExperimentalCoroutinesApi::class)
-    val rows: StateFlow<List<Row>> =
+    val guideRows: StateFlow<GuideRows> =
         guideScope
             .flatMapLatest { scope ->
                 // Combine the scope's Channels with the shared, already-grouped programme index.
@@ -400,7 +408,7 @@ class ChannelsViewModel @JvmOverloads constructor(
                     // the one-time heavy load, and leaking it per-category read as a stuck "100%".
                     val firstBuild = !guideBuilt
                     if (firstBuild) StatusBus.set(sizeMessage(channels.size), 0f)
-                    buildRows(channels, byEpgChannel, now, reportProgress = firstBuild)
+                    GuideRows(scope, buildRows(channels, byEpgChannel, now, reportProgress = firstBuild))
                 }
             }
             // Grouping thousands of channels against a 12-hour, all-feeds programme window is heavy
@@ -416,7 +424,7 @@ class ChannelsViewModel @JvmOverloads constructor(
                 }
                 _rowsBuilt.value = true
             }
-            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), GuideRows())
 
     private fun buildRows(
         channels: List<LineupChannel>,
@@ -466,7 +474,7 @@ class ChannelsViewModel @JvmOverloads constructor(
      * Whether the catalogue has any channels yet, as a tri-state that stops the home screen
      * spinning forever when a provider fails to load:
      *  - null  → the count query hasn't returned; still checking, keep showing the loader.
-     *  - true  → channels are on disk, so an empty [rows] just means the guide is still building.
+     *  - true  → channels are on disk, so an empty [guideRows] just means the guide is still building.
      *  - false → confirmed empty; if a provider is configured the last sync failed or returned
      *            nothing, so the screen shows a recoverable error instead of an endless spinner.
      */

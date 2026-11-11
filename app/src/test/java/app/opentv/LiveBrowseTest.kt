@@ -221,7 +221,7 @@ class LiveBrowseTest {
     private fun awaitRows() {
         compose.waitUntil(10_000) {
             shadowOf(Looper.getMainLooper()).idle()
-            viewModel.rows.value.isNotEmpty()
+            viewModel.guideRows.value.rows.isNotEmpty()
         }
         compose.waitForIdle()
     }
@@ -512,6 +512,61 @@ class LiveBrowseTest {
         compose.waitForIdle()
 
         assertThat(viewModel.guideDayOffset.value).isEqualTo(0)
+    }
+
+    /** News with forty more channels, so the guide scrolls well past its first screen. */
+    private fun longNews() = runBlocking {
+        graph.database.channels().replaceCatalogue(
+            1,
+            listOf(
+                channel(1, "Channel One", 1, "10"),
+                channel(2, "Channel Two", 1, "10"),
+                channel(3, "Channel Three", 1, "10"),
+            ) + (10L..49L).map { channel(it, "Extra $it", 1, "10") },
+            syncStamp = 2,
+        )
+        graph.catalogRepository.renormalizeAll()
+    }
+
+    @Test
+    fun `picking a category starts at its first channel, even from far down a channel that's in it`() {
+        library()
+        longNews()
+        setLive()
+        pressOkOnLiveInTheRail()
+        awaitRows()
+        press(Key.DirectionDown, times = 30)
+        channelCell("Extra 37").assertIsFocused()
+        press(Key.DirectionLeft)
+        press(Key.DirectionDown)
+        compose.onNode(hasText("News") and hasClickAction()).assertIsFocused()
+
+        press(Key.DirectionCenter)
+        compose.waitUntil(5_000) {
+            shadowOf(Looper.getMainLooper()).idle()
+            viewModel.guideRows.value.rows.none { it.primary.name == "Sport Four" }
+        }
+        compose.waitForIdle()
+        press(Key.DirectionRight)
+
+        channelCell("Channel One").assertIsFocused()
+    }
+
+    @Test
+    fun `Left from a channel on a later day goes back to now, and Left again opens the sidebar`() {
+        onTomorrowsLastProgramme()
+        channelCell("Channel One").requestFocus()
+        compose.waitForIdle()
+
+        press(Key.DirectionLeft)
+        compose.waitUntil(5_000) { viewModel.guideDayOffset.value == 0 }
+        compose.waitUntilAtLeastOneExists(programme("Now on 1"), 5_000)
+        compose.waitForIdle()
+        channelCell("Channel One").assertIsFocused()
+        compose.onNode(hasText("All channels")).assertDoesNotExist()
+
+        press(Key.DirectionLeft)
+        compose.onNode(hasText("All channels") and hasClickAction()).assertIsFocused()
     }
 
     @Test

@@ -106,7 +106,8 @@ fun LiveScreen(
     val previewEnabled by settings.guidePreviewVideo.collectAsState()
 
     val categories by viewModel.visibleCategoryGroups.collectAsState()
-    val rows by viewModel.rows.collectAsState()
+    val guideRows by viewModel.guideRows.collectAsState()
+    val rows = guideRows.rows
     val selectedCategory by viewModel.selectedCategory.collectAsState()
     val favouritesOnly by viewModel.favouritesOnly.collectAsState()
     val sources by viewModel.sources.collectAsState()
@@ -261,6 +262,8 @@ fun LiveScreen(
                         rows = rows,
                         windowStartMillis = windowStart,
                         windowEndMillis = windowEnd,
+                        rowsFor = guideRows.scope,
+                        onToNow = { viewModel.guideToNow() },
                         onWatch = { row -> requestLive(row.primary) },
                         onHighlight = { row, programme -> highlighted = row to programme },
                         onProgramme = { row, programme -> details = row to programme },

@@ -21,13 +21,13 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
@@ -66,6 +66,7 @@ import coil.compose.AsyncImage
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import kotlinx.coroutines.launch
 
 /**
  * The guide (docs/LOOK.md, Live TV): channels down the left, a scrolling timeline to the right, each
@@ -81,6 +82,10 @@ import java.util.Locale
  * guide pages through days rather than running into them. A row with nothing on that day pages on
  * from its channel. On the new day the Highlight lands on [landOnRow]'s first programme, or its last
  * with [landAtEnd], or its channel when it has none, then [onLanded] says it's done.
+ *
+ * Left from a channel goes back to now first, when the guide is on a later day ([onToNow]) or
+ * scrolled on from now, and only opens the sidebar from there. A new [rowsFor] (a category picked)
+ * starts at the top and at the day's start.
  *
  * ## How it lays out without a custom Layout
  *
@@ -108,9 +113,33 @@ fun GuideGrid(
     landOnRow: Any? = null,
     landAtEnd: Boolean = false,
     onLanded: () -> Unit = {},
+    rowsFor: Any? = null,
+    onToNow: (() -> Unit)? = null,
 ) {
     val scroll = rememberScrollState()
-    val listState = rememberLazyListState()
+    // A fresh list for each category: one kept across them holds on to the old channel by key, and
+    // opens the new category wherever it falls in it, often halfway down.
+    val listState = remember(rowsFor) { LazyListState() }
+    var lastRowsFor by remember { mutableStateOf(rowsFor) }
+    LaunchedEffect(rowsFor) {
+        if (rowsFor != lastRowsFor) scroll.scrollTo(0)
+        lastRowsFor = rowsFor
+    }
+    val scope = rememberCoroutineScope()
+    // Left from a channel: back to now when the guide has moved on from it, else on to the sidebar.
+    val backToNow: () -> Boolean = {
+        when {
+            dayOffset > 0 && onToNow != null -> {
+                onToNow()
+                true
+            }
+            scroll.value > 0 -> {
+                scope.launch { scroll.animateScrollTo(0) }
+                true
+            }
+            else -> false
+        }
+    }
     val returnTo = rememberReturnToChannel(returnToChannelId, takeFocus, rows, listState, onReturnToRow)
     val highlight = rememberRowHighlight(rows, listState) { it.key }
     val now = System.currentTimeMillis()
@@ -133,6 +162,7 @@ fun GuideGrid(
                     onNextDay = onNextDay?.let { { it(row) } },
                     onPrevDay = onPrevDay?.let { { it(row) } },
                     focusRequester = returnTo.focusRequesterFor(index),
+                    onLeft = backToNow,
                     highlight = highlight,
                     index = index,
                     land = when {
@@ -246,6 +276,7 @@ private fun GuideRow(
     onNextDay: (() -> Unit)?,
     onPrevDay: (() -> Unit)?,
     focusRequester: FocusRequester?,
+    onLeft: () -> Boolean,
     highlight: RowHighlight,
     index: Int,
     land: Land?,
@@ -294,6 +325,7 @@ private fun GuideRow(
             self = channel,
             // With nothing on this day there's no last programme to page on from, so the channel does.
             onRight = onNextDay.takeIf { shown.isEmpty() },
+            onLeft = onLeft,
             highlight = highlight,
             index = index,
         )
@@ -325,6 +357,7 @@ private fun ChannelCell(
     focusRequester: FocusRequester?,
     self: FocusRequester,
     onRight: (() -> Unit)?,
+    onLeft: () -> Boolean,
     highlight: RowHighlight,
     index: Int,
 ) {
@@ -344,9 +377,12 @@ private fun ChannelCell(
                 }
             }
             .onPreviewKeyEvent { event ->
-                val next = onRight.takeIf { event.type == KeyEventType.KeyDown && event.key == Key.DirectionRight }
-                next?.invoke()
-                next != null
+                if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
+                when (event.key) {
+                    Key.DirectionRight -> onRight?.invoke() != null
+                    Key.DirectionLeft -> onLeft()
+                    else -> false
+                }
             }
             .width(CHANNEL_COLUMN)
             .fillMaxHeight(),
