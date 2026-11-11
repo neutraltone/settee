@@ -6,12 +6,9 @@
 package app.opentv
 
 import android.app.Application
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.assertIsFocused
@@ -22,7 +19,6 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.test.requestFocus
-import androidx.compose.ui.unit.dp
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.espresso.Espresso
 import app.opentv.core.ServiceLocator
@@ -31,7 +27,6 @@ import app.opentv.data.model.EpgFeed
 import app.opentv.data.model.Programme
 import app.opentv.data.repo.LineupChannel
 import app.opentv.ui.ChannelsViewModel
-import app.opentv.ui.channels.ChannelList
 import app.opentv.ui.channels.GuideGrid
 import app.opentv.ui.options.ItemOptionsHost
 import com.google.common.truth.Truth.assertThat
@@ -43,7 +38,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
-/** The channel options panel from the guide, in both its layouts, and Select playing from it. */
+/** The channel options panel from the guide, and Select playing from it. */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], qualifiers = TV_1080P, application = Application::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
@@ -80,23 +75,8 @@ class GuideChannelOptionsTest {
             GuideGrid(
                 rows = rows,
                 windowStartMillis = 0,
-                selectedKey = null,
-                onSelectRow = { played += it.primary.name },
-                onFocusRow = {},
+                onWatch = { played += it.primary.name },
             )
-        }
-    }
-
-    private fun showList() = compose.setTvContent {
-        ItemOptionsHost {
-            Box(Modifier.width(600.dp)) {
-                ChannelList(
-                    rows = rows,
-                    selectedKey = null,
-                    onSelectRow = { played += it.primary.name },
-                    onFocusRow = {},
-                )
-            }
         }
     }
 
@@ -148,38 +128,8 @@ class GuideChannelOptionsTest {
     }
 
     @Test
-    fun `Menu on a channel in the list opens its options`() {
-        showList()
-
-        pressMenuOn("BBC One")
-
-        assertChannelActionsShown()
-    }
-
-    @Test
-    fun `holding Select on a channel in the list opens its options, without playing it`() {
-        showList()
-
-        holdSelectOn("BBC One")
-
-        assertChannelActionsShown()
-        assertThat(played).isEmpty()
-    }
-
-    @Test
     fun `Select on a channel plays it, with no dialog, in the grid`() {
         showGrid()
-
-        compose.onNodeWithText("BBC Two").requestFocus().performKeyInput { pressKey(Key.DirectionCenter) }
-        compose.waitForIdle()
-
-        assertThat(played).containsExactly("BBC Two")
-        compose.onNodeWithText("Hide channel").assertDoesNotExist()
-    }
-
-    @Test
-    fun `Select on a channel plays it, with no dialog, in the list`() {
-        showList()
 
         compose.onNodeWithText("BBC Two").requestFocus().performKeyInput { pressKey(Key.DirectionCenter) }
         compose.waitForIdle()
@@ -222,17 +172,6 @@ class GuideChannelOptionsTest {
         compose.waitForIdle()
 
         compose.onNodeWithText("ITV").assertIsFocused()
-    }
-
-    @Test
-    fun `when the last channel in the list leaves it, the highlight moves up to its neighbour`() {
-        showList()
-        compose.onNodeWithText("ITV").requestFocus()
-
-        rows = rows.filterNot { it.primary.name == "ITV" }
-        compose.waitForIdle()
-
-        compose.onNodeWithText("BBC Two").assertIsFocused()
     }
 
     @Test

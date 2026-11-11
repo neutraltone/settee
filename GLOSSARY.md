@@ -48,6 +48,18 @@ _Avoid_: Variant (in user-facing text), feed
 A live station the viewer can watch, however many qualities or providers carry it. Rows with the same name and region fold into one Channel. A row with no region joins the one regional Channel of its name, if there's only one.
 _Avoid_: Stream, row
 
+**Guide**:
+Live TV's grid of Channels against time, with the Categories Sidebar to its left.
+_Avoid_: EPG (in user-facing text), grid, channel list
+
+**Channel List**:
+The panel over live TV listing Channels with what's on, for browsing without leaving the picture. The guide once had a one-channel-per-row layout; it's gone, and was never a Channel List.
+_Avoid_: List layout, mini guide
+
+**Programme Details**:
+What OK on a programme in the guide opens, with its time, synopsis and what can be done with it (watch, record, remind).
+_Avoid_: Record dialog, programme dialog
+
 **Parental Lock**:
 Categories hidden on this device, for every Profile on it, from everywhere viewers browse and play, but not from the management screens. A PIN guards the setting; entering it shows them until the app closes. A lock spreads to the viewer's other devices when they sync; an unlock stays on the device it was made on.
 _Avoid_: Hidden channels (that's the channel manager's per-channel hide), parental controls
@@ -122,5 +134,5 @@ The left-hand navigation: Home, Live TV, Movies, Shows and Recordings, with Sear
 _Avoid_: Sidebar (that's the Categories Sidebar), menu, nav
 
 **Categories Sidebar**:
-The list of a tab's categories on Live TV, Movies and Shows. It stays tucked away until Left from the leftmost item opens it on the current category.
+The list of a tab's categories on Live TV, Movies and Shows. It stays tucked away until Left from the leftmost item opens it on the current category. The channel manager shows it always open.
 _Avoid_: Sidebar on its own, filter, chips

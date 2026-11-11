@@ -41,7 +41,7 @@ import app.opentv.ui.ChannelsViewModel
 import app.opentv.ui.RecordingBackgroundDialog
 import app.opentv.ui.RecordingBackgroundPrompt
 import app.opentv.ui.ResumeItem
-import app.opentv.ui.channels.ProgrammeDialog
+import app.opentv.ui.channels.ProgrammeDetails
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -171,7 +171,7 @@ fun ItemOptionsHost(
         ) {
             content()
             scheduling?.let { (row, programme, subject) ->
-                ProgrammeDialog(
+                ProgrammeDetails(
                     targetRow = row,
                     programme = programme,
                     nowMillis = System.currentTimeMillis(),

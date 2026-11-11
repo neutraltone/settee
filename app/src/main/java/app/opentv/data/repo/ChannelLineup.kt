@@ -207,7 +207,11 @@ class ChannelLineup(
     /** The categories' rail, folded by [categoryGroupKey]; locked ones are left out unless [includeLocked]. */
     fun categoryGroups(sourceId: Long? = null, includeLocked: Boolean = false): Flow<List<CategoryGroup>> =
         combine(categories, lockedKeys, unlocked) { categories, keys, unlocked ->
-            val groups = foldCategories(categories.filter { sourceId == null || it.sourceId == sourceId })
+            // Provider by provider, as providers are listed: the categories come ordered by each
+            // provider's own index, which interleaves two providers' lists row by row.
+            val groups = foldCategories(
+                categories.filter { sourceId == null || it.sourceId == sourceId }.sortedBy { it.sourceId },
+            )
             if (includeLocked || unlocked) groups else groups.filter { it.key !in keys }
         }
 

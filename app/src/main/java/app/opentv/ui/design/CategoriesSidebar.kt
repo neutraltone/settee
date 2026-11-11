@@ -34,7 +34,8 @@ import app.opentv.R
  * Find a category narrows [entries] to those whose label has what's typed, and says how many of
  * them are showing. [pinned] rows aren't categories, so they always show and aren't counted.
  * [findBox] draws its text box over the state it's given, so the screen can use the text box the
- * rest of the app types with.
+ * rest of the app types with. [currentRow] is for a screen that puts the Highlight on the current
+ * row itself, as one where the sidebar is always open does when it appears.
  */
 @Composable
 fun CategoriesSidebar(
@@ -44,9 +45,9 @@ fun CategoriesSidebar(
     onPick: (String) -> Unit,
     findBox: @Composable (state: TextFieldState, modifier: Modifier) -> Unit,
     modifier: Modifier = Modifier,
+    currentRow: FocusRequester = remember { FocusRequester() },
 ) {
     val find = rememberTextFieldState()
-    val currentRow = remember { FocusRequester() }
     val list = rememberLazyListState(
         initialFirstVisibleItemIndex = (pinned + entries).indexOfFirst { it.key == current }.coerceAtLeast(0),
     )

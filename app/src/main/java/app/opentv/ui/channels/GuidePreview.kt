@@ -8,8 +8,6 @@ package app.opentv.ui.channels
 import android.view.ViewGroup
 import androidx.annotation.OptIn
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -18,23 +16,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.FiberManualRecord
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.Stop
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -47,8 +29,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.media3.common.util.UnstableApi
@@ -57,9 +37,15 @@ import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
 import app.opentv.R
 import app.opentv.core.ServiceLocator
+import app.opentv.data.model.Programme
 import app.opentv.data.model.shownName
 import app.opentv.player.PlayerController
 import app.opentv.ui.ChannelsViewModel
+import app.opentv.ui.design.ScreenFrameScope
+import app.opentv.ui.design.SetteeColors
+import app.opentv.ui.design.SetteeShapes
+import app.opentv.ui.design.SetteeType
+import app.opentv.ui.design.Text
 import coil.compose.AsyncImage
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -93,227 +79,64 @@ internal fun rememberGuidePreviewController(): PlayerController {
 }
 
 /**
- * The detail pane at the top of the guide.
+ * The preview band above the guide: the [row]'s channel playing muted, when [previewPlayer] is
+ * given, beside [programme]'s title, time and synopsis (what's on now while the Highlight is on the
+ * channel itself). Nothing in it can take the Highlight: OK on a channel watches it, and OK on a
+ * programme opens its details, so the band only says where the Highlight is.
  *
- * As focus moves down the channel list, [row] follows it and the pane shows that channel's
- * logo alongside what's on now, how far through it is, what's next, and a synopsis when the
- * guide carries one — the "info on the EPG" people ask for before they'll judge a guide.
- * Pressing it plays the channel full-screen.
- *
- * ## Inline video
- * When [previewPlayer] is non-null the highlighted channel plays, muted, inside the card. The
- * earlier version of this that locked up cheap boxes ran a *second* decoder behind the
- * full-screen one; here there is only ever this single, muted, debounced player — and the
- * caller ([LiveScreen]) stops it before handing off to full-screen and whenever the screen is
- * backgrounded, so the device never has two decoders alive at once. Low-end boxes can turn the
- * whole thing off in settings, in which case [previewPlayer] is null and this falls back to the
- * logo. The logo stays behind the video as the shutter, so a buffering or failed stream still
- * shows something rather than a black hole.
+ * The earlier version of the guide preview that locked up cheap boxes ran a second decoder behind
+ * the full-screen one. Here there is only ever this one muted, debounced player, and [LiveScreen]
+ * stops it before handing off to full screen and whenever the screen is backgrounded. The logo
+ * stays behind the video as its shutter, so a buffering or failed stream still shows something.
  */
 @OptIn(UnstableApi::class)
 @Composable
-fun GuidePreview(
+internal fun ScreenFrameScope.GuideBand(
     row: ChannelsViewModel.Row?,
-    nowMillis: Long,
-    onWatch: () -> Unit,
-    onRefresh: () -> Unit,
-    onAddSource: () -> Unit,
+    programme: Programme?,
     previewPlayer: ExoPlayer?,
-    isRecording: Boolean = false,
-    onRecord: () -> Unit = {},
-    dayLabel: String = "",
-    canGoPrevDay: Boolean = false,
-    onPrevDay: () -> Unit = {},
-    onNextDay: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
-    Row(
-        modifier
-            .fillMaxWidth()
-            .height(212.dp)
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-    ) {
-        // ---- Logo / "watch" card ----------------------------------------------------------
-        Box(
-            Modifier
-                .fillMaxHeight()
-                .aspectRatio(16f / 9f)
-                .clip(RoundedCornerShape(12.dp))
-                .background(Color.Black)
-                .clickable(onClick = onWatch),
-            contentAlignment = Alignment.Center,
-        ) {
-            // Logo sits behind everything as the fallback / shutter.
-            if (row != null) {
-                AsyncImage(
-                    model = row.primary.logoUrl,
-                    contentDescription = null,
-                    modifier = Modifier.fillMaxSize(0.6f),
-                )
-            }
-
-            // Live video on top of the logo when preview playback is on. The transparent
-            // shutter means the logo behind shows through until the first frame arrives.
-            if (previewPlayer != null && row != null) PreviewVideo(previewPlayer, Modifier.fillMaxSize())
-
-            Row(
-                Modifier
-                    .align(Alignment.BottomStart)
-                    .padding(10.dp)
-                    .background(Color.Black.copy(alpha = 0.55f), RoundedCornerShape(8.dp))
-                    .padding(horizontal = 8.dp, vertical = 4.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Icon(
-                    Icons.Default.PlayArrow,
-                    contentDescription = null,
-                    tint = Color.White,
-                    modifier = Modifier.size(16.dp),
-                )
-                Spacer(Modifier.width(4.dp))
-                Text(
-                    stringResource(R.string.guide_watch_label),
-                    color = Color.White,
-                    style = MaterialTheme.typography.labelMedium,
-                )
-            }
+    Row(modifier.fillMaxWidth().height(BAND_HEIGHT)) {
+        // Nothing highlighted (no Favourites yet, say): an empty band, not an empty black box.
+        if (row == null) return@Row
+        VideoArea(Modifier.fillMaxHeight().aspectRatio(16f / 9f).clip(SetteeShapes.Cell).background(Color.Black)) {
+            AsyncImage(
+                model = row.primary.logoUrl,
+                contentDescription = null,
+                modifier = Modifier.fillMaxSize(LOGO_FRACTION).align(Alignment.Center),
+            )
+            if (previewPlayer != null) PreviewVideo(previewPlayer, Modifier.fillMaxSize())
         }
-
-        Spacer(Modifier.width(18.dp))
-
-        // ---- Now / next detail ------------------------------------------------------------
+        Spacer(Modifier.width(BAND_GAP))
         Column(Modifier.weight(1f).fillMaxHeight()) {
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                // ---- Day navigation (Sky Q-style): ‹ Today › ----------------------------
-                // Only shown once the caller wires a label in; keeps older callers unchanged.
-                if (dayLabel.isNotEmpty()) {
-                    IconButton(onClick = onPrevDay, enabled = canGoPrevDay) {
-                        Icon(
-                            Icons.AutoMirrored.Filled.KeyboardArrowLeft,
-                            contentDescription = stringResource(R.string.guide_prev_day),
-                            tint = if (canGoPrevDay) {
-                                MaterialTheme.colorScheme.onSurface
-                            } else {
-                                MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
-                            },
-                        )
-                    }
-                    Text(
-                        dayLabel,
-                        style = MaterialTheme.typography.labelLarge,
-                        fontWeight = FontWeight.SemiBold,
-                        maxLines = 1,
-                    )
-                    IconButton(onClick = onNextDay) {
-                        Icon(
-                            Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                            contentDescription = stringResource(R.string.guide_next_day),
-                        )
-                    }
-                }
-                Spacer(Modifier.weight(1f))
-                if (row != null) {
-                    IconButton(onClick = onRecord) {
-                        // Red throughout — the record convention — but the glyph switches to a
-                        // stop square while a recording is running, so a press visibly does
-                        // something (● start → ■ stop) rather than looking inert.
-                        Icon(
-                            if (isRecording) Icons.Default.Stop else Icons.Default.FiberManualRecord,
-                            contentDescription = if (isRecording) {
-                                stringResource(
-                                    R.string.guide_cd_stop_recording,
-                                )
-                            } else {
-                                stringResource(R.string.guide_cd_record_now)
-                            },
-                            tint = Color(0xFFE53935),
-                        )
-                    }
-                }
-                IconButton(onClick = onRefresh) {
-                    Icon(Icons.Default.Refresh, contentDescription = stringResource(R.string.guide_cd_refresh))
-                }
-                IconButton(onClick = onAddSource) {
-                    Icon(Icons.Default.Add, contentDescription = stringResource(R.string.guide_cd_add_source))
-                }
-            }
-
-            if (row == null) {
-                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.CenterStart) {
-                    Text(
-                        stringResource(R.string.guide_highlight_hint),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        style = MaterialTheme.typography.titleMedium,
-                    )
-                }
+            if (programme == null) {
+                Text(row.primary.shownName, SetteeType.Section, maxLines = 1)
+                Text(stringResource(R.string.guide_no_info_channel), SetteeType.Body, color = SetteeColors.QuietText)
                 return@Column
             }
-
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    row.primary.shownName,
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.SemiBold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f),
-                )
-                if (row.switchable.size > 1) {
-                    Text(
-                        stringResource(R.string.guide_qualities_count, row.switchable.size),
-                        style = MaterialTheme.typography.labelLarge,
-                        color = MaterialTheme.colorScheme.primary,
-                    )
-                }
-            }
-
-            Spacer(Modifier.height(10.dp))
-
-            val nowProg = row.now
-            if (nowProg != null) {
-                Text(
-                    "${formatTime(nowProg.startUtcMillis)}–${formatTime(nowProg.endUtcMillis)}   ${nowProg.title}",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                Spacer(Modifier.height(6.dp))
-                LinearProgressIndicator(
-                    progress = { nowProg.progressAt(nowMillis) },
-                    modifier = Modifier.fillMaxWidth().height(4.dp).clip(RoundedCornerShape(2.dp)),
-                )
-                nowProg.description?.takeIf { it.isNotBlank() }?.let { synopsis ->
-                    Spacer(Modifier.height(8.dp))
-                    Text(
-                        synopsis,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                }
-            } else {
-                Text(
-                    stringResource(R.string.guide_no_info_channel),
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-
-            row.next?.let { next ->
-                Spacer(Modifier.weight(1f))
-                Text(
-                    stringResource(R.string.guide_next_prefix, formatTime(next.startUtcMillis), next.title),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
+            Text(programme.title, SetteeType.Section, maxLines = 2)
+            Text(
+                "${formatTime(
+                    programme.startUtcMillis,
+                )}–${formatTime(programme.endUtcMillis)}  ·  ${row.primary.shownName}",
+                SetteeType.Body,
+                color = SetteeColors.QuietText,
+                maxLines = 1,
+            )
+            programme.description?.takeIf { it.isNotBlank() }?.let { synopsis ->
+                Spacer(Modifier.height(BAND_LINE_GAP))
+                Text(synopsis, SetteeType.Synopsis, color = SetteeColors.Text, maxLines = SYNOPSIS_LINES)
             }
         }
     }
 }
+
+private val BAND_HEIGHT = 150.dp
+private val BAND_GAP = 18.dp
+private val BAND_LINE_GAP = 6.dp
+private const val SYNOPSIS_LINES = 3
+private const val LOGO_FRACTION = 0.6f
 
 /**
  * [player]'s picture with no controls, letterboxed. Its shutter is transparent, so whatever is drawn

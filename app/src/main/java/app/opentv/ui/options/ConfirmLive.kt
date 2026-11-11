@@ -6,8 +6,10 @@
 package app.opentv.ui.options
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
@@ -24,13 +26,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import app.opentv.R
 import app.opentv.data.model.Recording
-import app.opentv.ui.channels.RecordActionRow
 
 /**
  * Runs what starts a live stream, asking first if that would fight a recording. With nothing above
@@ -76,13 +78,31 @@ fun ConfirmLiveHost(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Spacer(Modifier.height(16.dp))
-                RecordActionRow(stringResource(R.string.rec_live_warn_watch)) {
+                ConfirmRow(stringResource(R.string.rec_live_warn_watch)) {
                     pending = null
                     recordings.forEach(onStopRecording)
                     start()
                 }
-                RecordActionRow(stringResource(R.string.rec_live_warn_keep)) { pending = null }
+                ConfirmRow(stringResource(R.string.rec_live_warn_keep)) { pending = null }
             }
         }
     }
+}
+
+@Composable
+private fun ConfirmRow(label: String, onClick: () -> Unit) {
+    var focused by remember { mutableStateOf(false) }
+    Text(
+        label,
+        style = MaterialTheme.typography.titleMedium,
+        color = if (focused) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 3.dp)
+            .onFocusChanged { focused = it.isFocused }
+            .clip(RoundedCornerShape(10.dp))
+            .background(if (focused) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+    )
 }
