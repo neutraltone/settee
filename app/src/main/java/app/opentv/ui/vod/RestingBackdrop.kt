@@ -109,16 +109,42 @@ internal fun BackdropArt(backdrop: Backdrop?) {
 
 private const val ART_FADE_MILLIS = 200
 
-/** The highlighted title's name, where the Profile is with it, and its synopsis. */
+/**
+ * The highlighted title's name, where the Profile is with it, and its synopsis. Each line fades
+ * as the art does ([Fading]), on its own, so a synopsis fetched after the rest fades in by itself.
+ */
 @Composable
 internal fun BackdropText(backdrop: Backdrop?) {
     Column(Modifier.fillMaxWidth(BACKDROP_TEXT_WIDTH).height(BACKDROP_TEXT_HEIGHT)) {
-        backdrop ?: return@Column
-        Text(backdrop.title, SetteeType.Hero, maxLines = 1)
+        Fading(backdrop?.title) { Text(it, SetteeType.Hero, maxLines = 1) }
         // Home's words for a cover's status, on one line: `S4 E3 · 22 min left`.
-        coverStatusText(backdrop.status).takeIf { it.isNotEmpty() }?.let { QuietLabel(it.joinToString(" · ")) }
-        backdrop.synopsis?.takeIf { it.isNotBlank() }?.let { Text(it, SetteeType.Synopsis, maxLines = 3) }
+        val status = coverStatusText(backdrop?.status).takeIf { it.isNotEmpty() }?.joinToString(" · ")
+        Fading(status) { QuietLabel(it) }
+        Fading(backdrop?.synopsis?.takeIf { it.isNotBlank() }) { Text(it, SetteeType.Synopsis, maxLines = 3) }
     }
+}
+
+/**
+ * Shows [value] the way the art changes: the old one fades out, then the new one fades in. The
+ * alpha is read only while drawing, and applied as each line draws, so a fade measures and
+ * recomposes nothing.
+ */
+@Composable
+private fun Fading(value: String?, content: @Composable (String) -> Unit) {
+    var drawn by remember { mutableStateOf(value) }
+    val alpha = remember { Animatable(0f) }
+    LaunchedEffect(value) {
+        if (value != drawn && drawn != null) alpha.animateTo(0f, tween(ART_FADE_MILLIS))
+        drawn = value
+        if (value != null) alpha.animateTo(1f, tween(ART_FADE_MILLIS))
+    }
+    val shown = drawn ?: return
+    Box(
+        Modifier.graphicsLayer {
+            this.alpha = alpha.value
+            compositingStrategy = CompositingStrategy.ModulateAlpha
+        },
+    ) { content(shown) }
 }
 
 /**
