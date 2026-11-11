@@ -192,7 +192,7 @@ class CatalogRepository(
     private val settings: AppSettings,
 ) {
 
-    /** Where work that outlives a sync runs, such as [LatestAirDates] and [MovieReleaseDates]. */
+    /** Where work that outlives a sync runs, such as [LatestAirDates], [MovieReleaseDates] and [MovieGenres]. */
     private val background = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     /**
@@ -217,6 +217,8 @@ class CatalogRepository(
             null
         }
     }
+
+    private val movieGenres = MovieGenres(movieDao, api)
 
     private val movieReleaseDates = MovieReleaseDates(movieDao, api) { movie ->
         if (tmdb.isConfigured()) {
@@ -369,34 +371,41 @@ class CatalogRepository(
     suspend fun seriesFingerprint(): String = withContext(Dispatchers.IO) { seriesDao.fingerprint() }
 
     /**
-     * Movies grouped by genre for the by-genre home rows: the [maxGenres] biggest genres, each with
-     * up to [perGenre] titles (newest first). A movie appears under every genre it lists — provider
-     * genre strings are frequently multi-valued ("Action, Thriller" / "Action|Thriller"), so they
-     * are split on comma and pipe (see [splitGenres]).
+     * For you's genre rows for movies, from an ALREADY-LOADED list: [VodViewModel.loadHomeFeeds] reads
+     * [allMovies] once and hands that one list to this and [recommendedMoviesFrom], so opening Movies
+     * scans the (20k-title) table once instead of once per row. Every genre with enough movies the
+     * Profile hasn't [started], the genres of its [recent] ones (local ids, newest first) leading. See
+     * [genreRowsFrom].
      */
-    suspend fun moviesByGenre(maxGenres: Int = 12, perGenre: Int = 30): List<GenreGroup<Movie>> =
-        withContext(Dispatchers.IO) { groupByGenre(movieDao.all(), Movie::genre, maxGenres, perGenre) }
-
-    /** Series grouped by genre for the by-genre home rows. See [moviesByGenre]. */
-    suspend fun seriesByGenre(maxGenres: Int = 12, perGenre: Int = 30): List<GenreGroup<Series>> =
-        withContext(Dispatchers.IO) { groupByGenre(seriesDao.all(), Series::genre, maxGenres, perGenre) }
+    suspend fun moviesByGenreFrom(
+        all: List<Movie>,
+        started: Set<Long>,
+        recent: List<Long>,
+        now: Long = System.currentTimeMillis(),
+    ): List<GenreGroup<Movie>> = withContext(Dispatchers.Default) {
+        val byId = all.associateBy { it.id }
+        genreRowsFrom(all, movieRanking(now), recent.mapNotNull(byId::get), leftOut = { it.id in started })
+    }
 
     /**
-     * Movies grouped by genre from an ALREADY-LOADED list — the single-scan path the home screen
-     * uses. [VodViewModel.loadHomeFeeds] reads [allMovies] once and hands that one list to this, to
-     * [recommendedMoviesFrom], etc., so opening Movies scans the (20k-title) table once instead of
-     * once per row. Pure grouping, off the main thread. See [moviesByGenre] for the scanning variant.
+     * For you's genre rows for series. See [moviesByGenreFrom]. A [dismissed] series is left out and
+     * doesn't lead, as in [recommendedSeriesFrom].
      */
-    suspend fun moviesByGenreFrom(all: List<Movie>, maxGenres: Int = 12, perGenre: Int = 30): List<GenreGroup<Movie>> =
-        withContext(Dispatchers.Default) { groupByGenre(all, Movie::genre, maxGenres, perGenre) }
-
-    /** Series grouped by genre from an already-loaded list — the single-scan path. See [moviesByGenreFrom]. */
     suspend fun seriesByGenreFrom(
         all: List<Series>,
-        maxGenres: Int = 12,
-        perGenre: Int = 30,
-    ): List<GenreGroup<Series>> =
-        withContext(Dispatchers.Default) { groupByGenre(all, Series::genre, maxGenres, perGenre) }
+        started: Set<SeriesRef>,
+        dismissed: Set<SeriesRef>,
+        recent: List<SeriesRef>,
+        now: Long = System.currentTimeMillis(),
+    ): List<GenreGroup<Series>> = withContext(Dispatchers.Default) {
+        val byRef = all.associateBy { it.ref }
+        genreRowsFrom(
+            all,
+            seriesRanking(now),
+            recent.filterNot { it in dismissed }.mapNotNull(byRef::get),
+            leftOut = { it.ref in started || it.ref in dismissed },
+        )
+    }
 
     /**
      * "Recommended for you" from an ALREADY-LOADED movie list, so the home screen scans the
@@ -404,10 +413,14 @@ class CatalogRepository(
      * The [started] titles feed the tally and stay out of the row. A movie marked Unwatched isn't
      * among them, so it can come back.
      */
-    suspend fun recommendedMoviesFrom(all: List<Movie>, started: Set<Long>, limit: Int = 30): List<Movie> =
-        withContext(Dispatchers.Default) {
-            recommendFrom(all, MOVIE_RANKING, limit, tallied = { it.id in started }, leftOut = { it.id in started })
-        }
+    suspend fun recommendedMoviesFrom(
+        all: List<Movie>,
+        started: Set<Long>,
+        limit: Int = 30,
+        now: Long = System.currentTimeMillis(),
+    ): List<Movie> = withContext(Dispatchers.Default) {
+        recommendFrom(all, movieRanking(now), limit, tallied = { it.id in started }, leftOut = { it.id in started })
+    }
 
     /**
      * "Recommended for you" for series, from an already-loaded list. A [dismissed] series, one removed
@@ -419,10 +432,11 @@ class CatalogRepository(
         started: Set<SeriesRef>,
         dismissed: Set<SeriesRef>,
         limit: Int = 30,
+        now: Long = System.currentTimeMillis(),
     ): List<Series> = withContext(Dispatchers.Default) {
         recommendFrom(
             all,
-            SERIES_RANKING,
+            seriesRanking(now),
             limit,
             tallied = { it.ref in started && it.ref !in dismissed },
             leftOut = { it.ref in started || it.ref in dismissed },
@@ -537,7 +551,7 @@ class CatalogRepository(
                     backdropUrl = result.backdropUrl ?: info.backdropUrl,
                     cast = result.cast ?: info.cast,
                     director = result.director ?: info.director,
-                    genre = result.genre ?: info.genre,
+                    genre = result.genre.ifUnknown() ?: info.genre,
                     tmdbId = result.tmdbId ?: info.tmdbId,
                     plot = result.plot ?: info.plot,
                     rating = result.rating ?: info.rating,
@@ -566,7 +580,7 @@ class CatalogRepository(
                     plot = result.plot ?: meta.overview,
                     cast = result.cast ?: meta.cast,
                     director = result.director ?: meta.director,
-                    genre = result.genre ?: meta.genre,
+                    genre = result.genre.ifUnknown() ?: meta.genre,
                     tmdbId = result.tmdbId ?: meta.tmdbId,
                     rating = result.rating ?: meta.rating,
                     year = result.year ?: meta.year,
@@ -629,8 +643,13 @@ class CatalogRepository(
     /** A movie counts as "already enriched" once any headline detail field is set, so [movieDetail]
      *  re-fetches only truly-bare rows. A movie the provider has no metadata for re-fetches each open;
      *  acceptable, and it self-limits the moment anything comes back. */
+    // Not by genre: [MovieGenres] fills that in for films nobody has opened, which would leave them
+    // without the provider's artwork and cast when they are.
     private val Movie.isEnriched: Boolean
-        get() = backdropUrl != null || cast != null || genre != null || director != null
+        get() = backdropUrl != null || cast != null || director != null
+
+    /** Null for a genre [MovieGenres] found the provider has none for, so another source can fill it. */
+    private fun String?.ifUnknown(): String? = this?.ifBlank { null }
 
     /** Whether a headline field TMDB can fill on detail open is still blank. */
     private val Movie.lacksTmdbFields: Boolean
@@ -638,24 +657,6 @@ class CatalogRepository(
 
     private val Series.isEnriched: Boolean
         get() = backdropUrl != null || cast != null || genre != null
-
-    private fun <T> groupByGenre(
-        items: List<T>,
-        genreOf: (T) -> String?,
-        maxGenres: Int,
-        perGenre: Int,
-    ): List<GenreGroup<T>> {
-        val buckets = LinkedHashMap<String, MutableList<T>>()
-        for (item in items) {
-            for (genre in splitGenres(genreOf(item))) {
-                buckets.getOrPut(genre) { mutableListOf() }.add(item)
-            }
-        }
-        return buckets.entries
-            .sortedByDescending { it.value.size }
-            .take(maxGenres)
-            .map { GenreGroup(it.key, it.value.take(perGenre)) }
-    }
 
     /** How many of a title's genres are in the wanted set — the More-Like-This overlap. */
     private fun sharedGenreCount(genre: String?, wanted: Set<String>): Int = splitGenres(genre).count { it in wanted }
@@ -861,17 +862,22 @@ class CatalogRepository(
     }
 
     /**
-     * Fifty calls each would hold a sync up for a while; the catalogue is saved by now, so the titles
-     * are dated afterwards, and the Recently Released rows fill in as it goes. One job, one lookup
-     * after the other, so a struggling panel doesn't get a hundred calls at once. For the same reason
-     * a sync during a source's job adds no second one; what it saved waits for the next sync.
+     * Fifty calls each (two hundred for films' genres) would hold a sync up for a while; the catalogue
+     * is saved by now, so the titles are dated and films given genres afterwards, and the Recently
+     * Released and genre rows fill in as it goes. One job, one lookup after the other, so a struggling
+     * panel doesn't get hundreds of calls at once. For the same reason a sync during a source's job
+     * adds no second one; what it saved waits for the next sync.
      */
     private fun dateInBackground(source: Source, movies: Boolean, series: Boolean) {
         if (!movies && !series) return
         if (!sourcesBeingDated.add(source.id)) return
         background.launch {
             try {
-                if (movies) dateOrLog(source, "Release dates") { movieReleaseDates.refresh(source) }
+                var answering = true
+                if (movies) dateOrLog(source, "Release dates") { answering = movieReleaseDates.refresh(source) }
+                // After the dates, whose answers carry a genre too, so those films cost no second call;
+                // and not at all once the panel has stopped answering, which would only cost more waits.
+                if (movies && answering) dateOrLog(source, "Movie genres") { movieGenres.refresh(source) }
                 if (series) dateOrLog(source, "Air dates") { latestAirDates.refresh(source) }
             } finally {
                 sourcesBeingDated.remove(source.id)

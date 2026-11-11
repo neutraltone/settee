@@ -550,6 +550,26 @@ interface MovieDao {
     @Query("SELECT * FROM movies WHERE sourceId = :sourceId ORDER BY addedMillis DESC, id DESC LIMIT :limit")
     suspend fun mostRecentlyAdded(sourceId: Long, limit: Int): List<Movie>
 
+    /**
+     * The [limit] movies a source most recently added that have no genre yet, for [MovieGenres]. Not
+     * ones with a blank genre: those the provider was asked about and had none for.
+     */
+    @Query(
+        "SELECT * FROM movies WHERE sourceId = :sourceId AND genre IS NULL " +
+            "ORDER BY addedMillis DESC, id DESC LIMIT :limit",
+    )
+    suspend fun newestWithoutGenre(sourceId: Long, limit: Int): List<Movie>
+
+    /** Only where there is none yet, since opening the movie may have found one meanwhile. */
+    @Query("UPDATE movies SET genre = :genre WHERE id = :id AND genre IS NULL")
+    suspend fun fillGenre(id: Long, genre: String)
+
+    /** Saves these (local id, genre) pairs in one go, so everything observing movies reloads once. */
+    @Transaction
+    suspend fun fillGenres(genres: List<Pair<Long, String>>) {
+        genres.forEach { (id, genre) -> fillGenre(id, genre) }
+    }
+
     @Query("UPDATE movies SET releaseDate = :releaseDate WHERE id = :id")
     suspend fun setReleaseDate(id: Long, releaseDate: Long)
 
@@ -781,13 +801,15 @@ interface EpisodeDao {
 
     /**
      * The series [profileId] has progress on an episode of, not counting episodes marked [except], by
-     * a join for the same reason. Only the ids: a home feed reads this each time a tab opens, and a
-     * long watch history's plots and stream URLs would be felt on a Fire TV Stick.
+     * a join for the same reason, the one with an episode played most recently first. Only the ids: a
+     * home feed reads this each time a tab opens, and a long watch history's plots and stream URLs
+     * would be felt on a Fire TV Stick.
      */
     @Query(
-        "SELECT DISTINCT episodes.sourceId, episodes.seriesId FROM episodes JOIN playback_positions " +
+        "SELECT episodes.sourceId, episodes.seriesId FROM episodes JOIN playback_positions " +
             "ON playback_positions.mediaKey = 'ep:' || episodes.id WHERE playback_positions.profileId = :profileId " +
-            "AND (playback_positions.mark IS NULL OR playback_positions.mark != :except)",
+            "AND (playback_positions.mark IS NULL OR playback_positions.mark != :except) " +
+            "GROUP BY episodes.sourceId, episodes.seriesId ORDER BY MAX(playback_positions.updatedAtMillis) DESC",
     )
     suspend fun startedSeries(profileId: Long, except: HandMark): List<SeriesRef>
 

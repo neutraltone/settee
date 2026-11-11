@@ -26,11 +26,11 @@ class LatestAirDates(
     /** TMDB's `last_air_date` for a show, or null without a key or a match. */
     private val tmdbLastAirDate: suspend (Series) -> Long?,
 ) {
-    suspend fun refresh(source: Source) = lookUpDates(
+    suspend fun refresh(source: Source) = lookUpEach(
         titles = seriesDao.mostRecentlyUpdated(source.id, count),
         tag = TAG,
         ask = { api.seriesInfo(source, it.seriesId) },
-        date = { series, info -> info.latestAirDate ?: info.releaseDate ?: tmdbLastAirDate(series) },
+        found = { series, info -> info.latestAirDate ?: info.releaseDate ?: tmdbLastAirDate(series) },
         save = { found -> seriesDao.setLatestAirDates(found.map { (series, date) -> series.id to date }) },
     )
 

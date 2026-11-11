@@ -857,6 +857,7 @@ class VodViewModel @JvmOverloads constructor(
         val profileId: Long,
         val catalogue: String?,
         val started: Set<T>,
+        val recent: List<T>,
         val dismissed: Set<T> = emptySet(),
     )
 
@@ -872,7 +873,7 @@ class VodViewModel @JvmOverloads constructor(
     private val homeFeedsMutex = Mutex()
 
     init {
-        // The home feeds are per profile (Recommended) and per catalogue (the genre rows). Rebuild
+        // The home feeds are per profile and per catalogue (Recommended and the genre rows). Rebuild
         // them when the active profile changes — and once at start. Routed through the guarded
         // [loadHomeFeeds] so a profile switch triggers exactly one library scan, and re-opening the
         // tab with nothing changed triggers none. Reads an empty result
@@ -905,6 +906,7 @@ class VodViewModel @JvmOverloads constructor(
             profileId,
             catalogue = runCatching { graph.catalogRepository.movieFingerprint() }.getOrNull(),
             started = runCatching { graph.viewerLibrary.history.startedMovieIds(profileId) }.getOrDefault(emptySet()),
+            recent = runCatching { graph.viewerLibrary.history.recentMovieIds(profileId) }.getOrDefault(emptyList()),
         )
         val loaded = loadedMovieFeeds
         if (key == loaded) return
@@ -919,12 +921,10 @@ class VodViewModel @JvmOverloads constructor(
             graph.catalogRepository.recommendedMoviesFrom(all, key.started)
         }.getOrDefault(emptyList())
         _recommendingMovies.value = false
-        // Watching something doesn't move a title between genres, so only the catalogue regroups them.
-        if (key.catalogue != loaded?.catalogue) {
-            _movieGenreRows.value = runCatching {
-                graph.catalogRepository.moviesByGenreFrom(all)
-            }.getOrDefault(emptyList())
-        }
+        // Watching something takes it out of its rows and can move its genres to the top.
+        _movieGenreRows.value = runCatching {
+            graph.catalogRepository.moviesByGenreFrom(all, key.started, key.recent)
+        }.getOrDefault(emptyList())
         loadedMovieFeeds = key
     }
 
@@ -933,6 +933,7 @@ class VodViewModel @JvmOverloads constructor(
             profileId,
             catalogue = runCatching { graph.catalogRepository.seriesFingerprint() }.getOrNull(),
             started = runCatching { graph.viewerLibrary.history.startedSeries(profileId) }.getOrDefault(emptySet()),
+            recent = runCatching { graph.viewerLibrary.history.recentSeries(profileId) }.getOrDefault(emptyList()),
             dismissed = runCatching { graph.viewerLibrary.history.dismissedSeries(profileId) }.getOrDefault(emptySet()),
         )
         val loaded = loadedSeriesFeeds
@@ -948,11 +949,9 @@ class VodViewModel @JvmOverloads constructor(
             graph.catalogRepository.recommendedSeriesFrom(all, key.started, key.dismissed)
         }.getOrDefault(emptyList())
         _recommendingSeries.value = false
-        if (key.catalogue != loaded?.catalogue) {
-            _seriesGenreRows.value = runCatching {
-                graph.catalogRepository.seriesByGenreFrom(all)
-            }.getOrDefault(emptyList())
-        }
+        _seriesGenreRows.value = runCatching {
+            graph.catalogRepository.seriesByGenreFrom(all, key.started, key.dismissed, key.recent)
+        }.getOrDefault(emptyList())
         loadedSeriesFeeds = key
     }
 
