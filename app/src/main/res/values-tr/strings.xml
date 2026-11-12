@@ -300,7 +300,6 @@
     <string name="onboarding_user_agent_help">Bazı sağlayıcılar tanımadıkları uygulamaları 403 hatasıyla engeller. Tüm kanallar başarısız oluyorsa burada yaygın bir oynatıcının User-Agent\'ını deneyin.</string>
     <string name="onboarding_working">İşleniyor…</string>
     <string name="onboarding_save_load">Kaydet ve yükle</string>
-    <string name="onboarding_use_phone">Telefonumu kullan</string>
     <string name="onboarding_privacy_note">Sağlayıcı bilgileriniz yalnızca bu cihazda saklanır. Settee\'nin hesap sistemi ve kendi sunucusu yoktur — buraya yazdığınız hiçbir şey sağlayıcınız dışında hiçbir yere gönderilmez.</string>
     <string name="pairing_stopped">Eşleştirme durduruldu</string>
     <string name="pairing_type_here">Bunun yerine burada yazın</string>

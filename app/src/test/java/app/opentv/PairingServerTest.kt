@@ -5,11 +5,15 @@
  */
 package app.opentv
 
+import androidx.test.core.app.ApplicationProvider
+import app.opentv.pairing.PairingFonts
 import app.opentv.pairing.PairingServer
 import com.google.common.truth.Truth.assertThat
+import java.io.File
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.cancel
+import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.junit.After
@@ -28,7 +32,7 @@ import org.robolectric.annotation.Config
 class PairingServerTest {
 
     private val scope = CoroutineScope(Dispatchers.Default)
-    private val server = PairingServer(scope)
+    private val server = PairingServer(scope, PairingFonts(ApplicationProvider.getApplicationContext()))
 
     @After
     fun close() {
@@ -85,5 +89,52 @@ class PairingServerTest {
 
         assertThat(code).isEqualTo(404)
         assertThat(page).isEqualTo("Not found.")
+    }
+
+    @Test
+    fun `the form fetches Settee's own fonts from the TV and asks nothing of the outside world`() {
+        val session = listening()
+        val (_, page) = get(session.url)
+
+        val fetched = Regex("""(?:src|href|action)\s*=\s*"([^"]*)"|url\(\s*['"]?([^'")\s]+)""")
+            .findAll(page)
+            .map { it.groupValues[1].ifEmpty { it.groupValues[2] } }
+            .toList()
+        assertThat(fetched.filter { it.startsWith("//") || it.contains("://") }).isEmpty()
+
+        val fonts = fetched.filter { it.contains(".ttf") }
+        assertThat(fonts).hasSize(3)
+        val bundled = File("src/main/res/font").listFiles()!!.map { it.readBytes().toList() }
+        fonts.forEach { path ->
+            val response = OkHttpClient().newCall(
+                Request.Builder().url(session.url.toHttpUrl().resolve(path)!!).build(),
+            ).execute()
+            response.use {
+                assertThat(it.code).isEqualTo(200)
+                assertThat(it.header("Content-Type")).startsWith("font/ttf")
+                assertThat(bundled).contains(it.body.bytes().toList())
+            }
+        }
+    }
+
+    @Test
+    fun `a font asked for without the token is not served`() {
+        val session = listening()
+
+        val (code, _) = get("http://${session.host}:${session.port}/fonts/young-serif.ttf")
+
+        assertThat(code).isEqualTo(404)
+    }
+
+    @Test
+    fun `the form says Settee, in Settee's colours`() {
+        val session = listening()
+
+        val (_, page) = get(session.url)
+
+        assertThat(page).contains("Settee")
+        assertThat(page.lowercase()).doesNotContain("opentv")
+        // docs/LOOK.md's background, surface, text and coral.
+        listOf("#1a1416", "#281f22", "#f8efea", "#ff8f6b").forEach { assertThat(page.lowercase()).contains(it) }
     }
 }

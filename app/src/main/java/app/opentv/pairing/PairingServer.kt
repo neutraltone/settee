@@ -53,7 +53,7 @@ import kotlinx.coroutines.launch
  * - After [SESSION_TIMEOUT_MINUTES], or on success, the socket closes and the token is void.
  * - Five wrong codes and the session is burned.
  */
-class PairingServer(private val scope: CoroutineScope) {
+class PairingServer(private val scope: CoroutineScope, private val fonts: PairingFonts) {
 
     data class Session(
         /** What the QR code encodes, e.g. `http://192.168.0.14:41234/?t=…` */
@@ -203,6 +203,8 @@ class PairingServer(private val scope: CoroutineScope) {
         val token = address.token
 
         when {
+            method == "GET" && path.startsWith(FONTS_PATH) -> output.write(font(path.removePrefix(FONTS_PATH)))
+
             method == "GET" -> output.write(
                 PairingHttp.httpResponse("200 OK", "text/html", PairingPage.form(token, null)),
             )
@@ -213,6 +215,11 @@ class PairingServer(private val scope: CoroutineScope) {
                 PairingHttp.httpResponse("405 Method Not Allowed", "text/plain", "No."),
             )
         }
+    }
+
+    private fun font(name: String): ByteArray {
+        val bytes = fonts.open(name) ?: return PairingHttp.httpResponse("404 Not Found", "text/plain", "Not found.")
+        return PairingHttp.httpResponse("200 OK", "font/ttf", bytes)
     }
 
     private fun handleSubmit(output: java.io.OutputStream, body: String, token: String) {
@@ -300,5 +307,8 @@ class PairingServer(private val scope: CoroutineScope) {
         const val SOCKET_TIMEOUT_MILLIS = 15_000
         const val MAX_BODY_BYTES = 16 * 1024
         const val MAX_CODE_ATTEMPTS = 5
+
+        // Fonts take the full token too, as every route does, so they only load for the form.
+        const val FONTS_PATH = "/fonts/"
     }
 }

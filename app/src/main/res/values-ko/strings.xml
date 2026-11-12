@@ -300,7 +300,6 @@
     <string name="onboarding_user_agent_help">일부 공급자는 낯선 앱을 403 오류로 차단합니다. 모든 채널이 재생되지 않는다면 여기에 일반적인 플레이어의 User-Agent를 입력해 보세요.</string>
     <string name="onboarding_working">처리 중…</string>
     <string name="onboarding_save_load">저장 후 불러오기</string>
-    <string name="onboarding_use_phone">대신 휴대폰 사용</string>
     <string name="onboarding_privacy_note">공급자 정보는 이 기기에만 저장됩니다. Settee에는 계정 시스템도 자체 서버도 없습니다 - 여기에 입력한 내용은 공급자 외에는 어디로도 전송되지 않습니다.</string>
     <string name="pairing_stopped">페어링이 중지되었습니다</string>
     <string name="pairing_type_here">대신 여기에 입력</string>

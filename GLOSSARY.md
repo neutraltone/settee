@@ -35,8 +35,12 @@ Where a provider's guide data comes from, such as an XMLTV link. The term is for
 _Avoid_: Source on its own, feed
 
 **Catalogue Refresh**:
-Fetching a provider's channels, movies, shows and guide again and merging them into what's on the device. It never wipes what the viewer set: hidden channels, custom names, Favourites and progress all carry across. Runs every six hours, when the viewer asks, when a provider is added, and when Movies or Shows is opened and that provider's titles are more than 12 hours old.
+Fetching a provider's channels, movies, shows and guide again and merging them into what's on the device. It never wipes what the viewer set: hidden channels, custom names, Favourites and progress all carry across. Runs every six hours, when the viewer asks, when a provider is added, and when Movies or Shows is opened and that provider's titles are more than 12 hours old. Adding a provider fetches its movies and shows too only during Setup; otherwise they wait until Movies or Shows is opened.
 _Avoid_: Sync (that's between the viewer's devices), reload, update
+
+**Setup**:
+What follows saving a Provider when none was saved before: its first Catalogue Refresh, shown with its progress until the library is ready to browse. It comes after Onboarding, the page where the viewer chooses how to add the Provider, and isn't part of it.
+_Avoid_: Onboarding (that's the page before), sync, first run
 
 **Quality**:
 One provider's stream of a Channel or Movie, such as HD, FHD or 4K. The highest one this device can play is the one that plays by default. A Channel's Qualities are the same wherever it's shown.
