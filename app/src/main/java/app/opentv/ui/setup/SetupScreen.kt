@@ -81,7 +81,7 @@ fun SetupScreen(setup: Setup, onWatchLive: (() -> Unit)?, onFinish: () -> Unit) 
                     val line = justDone?.let { countLine(it) } ?: setup.running?.let { runningLine(it, setup.found) }
                     if (line != null) Text(line, SetteeType.Synopsis, color = SetteeColors.QuietText)
                     Spacer(Modifier.height(20.dp))
-                    ProgressBar(setup.bar, Modifier.width(480.dp), working = stillFor(setup.bar))
+                    ProgressBar(setup.bar, Modifier.width(480.dp), working = true)
                 }
                 // One button that changes, not two: on a Stick, the Highlight asked for by a new
                 // Take me to Settee was lost as the focused Watch live TV now left the screen.
@@ -151,29 +151,20 @@ private val SetupStep.failure: Int?
 
 /** The running step's name, with what it has found so far where it counts as it goes. */
 @Composable
-private fun runningLine(step: SetupStep, found: Int): String = if (step == SetupStep.GUIDE && found > 0) {
-    pluralStringResource(R.plurals.setup_step_guide_count, found, number(found))
-} else {
-    stringResource(step.label)
-}
-
-/**
- * Whether [bar] has stood still for [STILL_MILLIS]: a step that can't measure itself (a guide
- * whose size the server doesn't give, the channels' save) held it there long enough on a Stick to
- * look frozen.
- */
-@Composable
-private fun stillFor(bar: Float): Boolean {
-    var still by remember { mutableStateOf(false) }
-    LaunchedEffect(bar) {
-        still = false
-        delay(STILL_MILLIS)
-        still = true
+private fun runningLine(step: SetupStep, found: Int): String {
+    val counting = when (step) {
+        SetupStep.GUIDE -> R.plurals.setup_step_guide_count
+        SetupStep.MOVIES -> R.plurals.setup_step_movies_count
+        SetupStep.SHOWS -> R.plurals.setup_step_shows_count
+        // The channels are saved in one go, with nothing to count until they're all in.
+        SetupStep.CHANNELS -> null
     }
-    return still
+    return if (counting != null && found > 0) {
+        pluralStringResource(counting, found, number(found))
+    } else {
+        stringResource(step.label)
+    }
 }
-
-private const val STILL_MILLIS = 2_000L
 
 /** How long a step's count stays up once it's done. */
 private const val COUNT_MILLIS = 2_000L

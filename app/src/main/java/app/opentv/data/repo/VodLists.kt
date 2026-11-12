@@ -28,11 +28,11 @@ import app.opentv.data.remote.XtreamApi
 internal suspend fun MovieDao.save(
     sourceId: Long,
     list: XtreamApi.CatalogueList<Movie>,
-    progress: (Float) -> Unit = {},
+    progress: (CatalogRepository.SaveProgress) -> Unit = {},
 ): Int {
     var saved = 0
     inTransaction {
-        list.forEachBatch(progress) { batch ->
+        list.forEachBatch({ progress(CatalogRepository.SaveProgress(it, saved)) }) { batch ->
             val stored = byProviderIds(sourceId, batch.map { it.streamId }).associateBy { it.streamId }
             upsertAll(batch.map { it.over(stored[it.streamId]) })
             saved += batch.size
@@ -48,12 +48,12 @@ internal data class SavedSeries(val count: Int, val moved: List<Series>)
 internal suspend fun SeriesDao.save(
     sourceId: Long,
     list: XtreamApi.CatalogueList<Series>,
-    progress: (Float) -> Unit = {},
+    progress: (CatalogRepository.SaveProgress) -> Unit = {},
 ): SavedSeries {
     var saved = 0
     val moved = mutableListOf<Series>()
     inTransaction {
-        list.forEachBatch(progress) { batch ->
+        list.forEachBatch({ progress(CatalogRepository.SaveProgress(it, saved)) }) { batch ->
             val stored = byProviderIds(sourceId, batch.map { it.seriesId }).associateBy { it.seriesId }
             val merged = batch.map { it.over(stored[it.seriesId]) }
             upsertAll(merged)

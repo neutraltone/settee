@@ -313,14 +313,18 @@ class CatalogueRefresh(
             )
         }
 
-        private suspend fun list(step: SetupStep, fetch: suspend ((Float) -> Unit) -> CatalogRepository.ListFetch) =
-            if (step in steps) {
-                running(step)
-                fetch { saved -> update { copy(bar = this@SetupRun.bar.saving(step, saved)) } }
-                    .also { stepDone(StepDone(step, it.count, failed = !it.complete)) }
-            } else {
-                CatalogRepository.ListFetch.SKIPPED
+        private suspend fun list(
+            step: SetupStep,
+            fetch: suspend ((CatalogRepository.SaveProgress) -> Unit) -> CatalogRepository.ListFetch,
+        ) = if (step in steps) {
+            running(step)
+            fetch { saving ->
+                update { copy(bar = this@SetupRun.bar.saving(step, saving.share), found = saving.saved) }
             }
+                .also { stepDone(StepDone(step, it.count, failed = !it.complete)) }
+        } else {
+            CatalogRepository.ListFetch.SKIPPED
+        }
     }
 
     @Suppress("UnusedParameter") // The trigger is how a caller says what it is, as with the others.

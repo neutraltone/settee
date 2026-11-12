@@ -36,7 +36,7 @@ class ListProgressTest {
             (1..3_000).joinToString(",", "[", "]") { """{"stream_id": $it, "name": "Film $it", "genre": "Drama"}""" }
         val reported = mutableListOf<Float>()
 
-        catalogue.catalog.fetchMovies(PANEL_SOURCE, progress = { reported += it })
+        catalogue.catalog.fetchMovies(PANEL_SOURCE, progress = { reported += it.share })
 
         assertThat(reported.filter { it > 0.2f && it < 0.8f }).isNotEmpty()
         assertThat(reported).isInOrder()
@@ -50,9 +50,23 @@ class ListProgressTest {
             (1..3_000).joinToString(",", "[", "]") { """{"series_id": $it, "name": "Show $it"}""" }
         val reported = mutableListOf<Float>()
 
-        catalogue.catalog.fetchShows(PANEL_SOURCE, progress = { reported += it })
+        catalogue.catalog.fetchShows(PANEL_SOURCE, progress = { reported += it.share })
 
         assertThat(reported.filter { it > 0.2f && it < 0.8f }).isNotEmpty()
         assertThat(reported.last()).isEqualTo(1f)
+    }
+
+    @Test
+    fun `saving a movie list counts the films saved so far, as it goes`() = runTest {
+        catalogue.db.sources().insert(PANEL_SOURCE)
+        catalogue.panel.replies["get_vod_streams"] =
+            (1..3_000).joinToString(",", "[", "]") { """{"stream_id": $it, "name": "Film $it", "genre": "Drama"}""" }
+        val counts = mutableListOf<Int>()
+
+        catalogue.catalog.fetchMovies(PANEL_SOURCE, progress = { counts += it.saved })
+
+        assertThat(counts.filter { it in 1..2_999 }).isNotEmpty()
+        assertThat(counts).isInOrder()
+        assertThat(counts.last()).isEqualTo(3_000)
     }
 }

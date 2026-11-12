@@ -458,6 +458,15 @@
     </plurals>
     <string name="setup_step_movies">Fetching movies</string>
     <string name="setup_step_shows">Fetching shows</string>
+    <!-- While a list saves: "Fetching movies: 6,400 found so far". -->
+    <plurals name="setup_step_movies_count">
+        <item quantity="one">Fetching movies: %s found so far</item>
+        <item quantity="other">Fetching movies: %s found so far</item>
+    </plurals>
+    <plurals name="setup_step_shows_count">
+        <item quantity="one">Fetching shows: %s found so far</item>
+        <item quantity="other">Fetching shows: %s found so far</item>
+    </plurals>
     <plurals name="setup_done_channels">
         <item quantity="one">%s channel added</item>
         <item quantity="other">%s channels added</item>

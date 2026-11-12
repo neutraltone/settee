@@ -742,25 +742,30 @@ class CatalogRepository(
         }
     }
 
+    /** How far through saving a list: its [share], 0 to 1, and how many titles are [saved] so far. */
+    data class SaveProgress(val share: Float, val saved: Int)
+
     /**
      * [source]'s movies, saved as in VodLists; the films' details then fill in in the background.
-     * [progress] hears how far through saving the downloaded list it is, 0 to 1.
+     * [progress] hears how far through saving the downloaded list it is.
      */
-    suspend fun fetchMovies(source: Source, progress: (Float) -> Unit = {}): ListFetch = withContext(Dispatchers.IO) {
-        val categories = fetchList { categoryDao.upsertAll(api.movieCategories(source)) }
-        var count = 0
-        val list = fetchList { count = api.movies(source).use { movieDao.save(source.id, it, progress) } }
-        if (count > 0) fillGenresInBackground(source)
-        ListFetch(count, categories && list)
-    }
+    suspend fun fetchMovies(source: Source, progress: (SaveProgress) -> Unit = {}): ListFetch =
+        withContext(Dispatchers.IO) {
+            val categories = fetchList { categoryDao.upsertAll(api.movieCategories(source)) }
+            var count = 0
+            val list = fetchList { count = api.movies(source).use { movieDao.save(source.id, it, progress) } }
+            if (count > 0) fillGenresInBackground(source)
+            ListFetch(count, categories && list)
+        }
 
     /** [source]'s shows, saved as in VodLists, with [progress] as for [fetchMovies]. */
-    suspend fun fetchShows(source: Source, progress: (Float) -> Unit = {}): ListFetch = withContext(Dispatchers.IO) {
-        val categories = fetchList { categoryDao.upsertAll(api.seriesCategories(source)) }
-        var saved = SavedSeries(0, emptyList())
-        val list = fetchList { saved = api.series(source).use { seriesDao.save(source.id, it, progress) } }
-        ListFetch(saved.count, categories && list, saved.moved)
-    }
+    suspend fun fetchShows(source: Source, progress: (SaveProgress) -> Unit = {}): ListFetch =
+        withContext(Dispatchers.IO) {
+            val categories = fetchList { categoryDao.upsertAll(api.seriesCategories(source)) }
+            var saved = SavedSeries(0, emptyList())
+            val list = fetchList { saved = api.series(source).use { seriesDao.save(source.id, it, progress) } }
+            ListFetch(saved.count, categories && list, saved.moved)
+        }
 
     /** How many of [step]'s titles (movies or shows) [sourceId] has stored. */
     suspend fun storedCount(sourceId: Long, step: SetupStep): Int = when (step) {

@@ -12,7 +12,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshots.Snapshot
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.test.ExperimentalTestApi
-import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.hasStateDescription
@@ -127,13 +126,20 @@ class SetupScreenTest {
     }
 
     @Test
-    fun `a bar that hasn't moved for a couple of seconds shows it's still working`() {
-        compose.mainClock.autoAdvance = false
-        setScreen(channelsIn)
-        compose.mainClock.advanceTimeBy(500)
-        compose.onAllNodes(hasStateDescription("Still working")).assertCountEquals(0)
+    fun `while movies and shows are saved, their lines count them so far`() {
+        setScreen(channelsIn.copy(running = SetupStep.MOVIES, found = 6_400))
+        compose.onNodeWithText("Fetching movies: 6,400 found so far").assertIsDisplayed()
+    }
 
-        compose.mainClock.advanceTimeBy(2_500)
+    @Test
+    fun `while shows are saved, their line counts them so far`() {
+        setScreen(channelsIn.copy(running = SetupStep.SHOWS, found = 1_100))
+        compose.onNodeWithText("Fetching shows: 1,100 found so far").assertIsDisplayed()
+    }
+
+    @Test
+    fun `while setup runs, its bar beats to show it's still working`() {
+        setScreen(Setup(SetupStep.entries))
 
         compose.onNode(hasStateDescription("Still working")).assertExists()
     }
