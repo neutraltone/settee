@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 10,
-    "identityHash": "e898973a47be7981d97c5ece899db4e4",
+    "identityHash": "51491b35d6a440a0e6eb9734b07270d9",
     "entities": [
       {
         "tableName": "sources",
@@ -546,7 +546,7 @@
       },
       {
         "tableName": "movies",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `sourceId` INTEGER NOT NULL, `streamId` TEXT NOT NULL, `name` TEXT NOT NULL, `categoryId` TEXT, `posterUrl` TEXT, `rating` REAL, `year` INTEGER, `plot` TEXT, `durationSeconds` INTEGER, `containerExtension` TEXT, `streamUrl` TEXT NOT NULL, `addedMillis` INTEGER NOT NULL, `backdropUrl` TEXT, `cast` TEXT, `genre` TEXT, `tmdbId` TEXT, `director` TEXT, `releaseDate` INTEGER, `detailsLookedUp` INTEGER NOT NULL DEFAULT 0)",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `sourceId` INTEGER NOT NULL, `streamId` TEXT NOT NULL, `name` TEXT NOT NULL, `categoryId` TEXT, `posterUrl` TEXT, `rating` REAL, `year` INTEGER, `plot` TEXT, `durationSeconds` INTEGER, `containerExtension` TEXT, `streamUrl` TEXT NOT NULL, `addedMillis` INTEGER NOT NULL, `backdropUrl` TEXT, `cast` TEXT, `genre` TEXT, `tmdbId` TEXT, `director` TEXT, `writer` TEXT, `studio` TEXT, `releaseDate` INTEGER, `detailsLookedUp` INTEGER NOT NULL DEFAULT 0, `tmdbLookedUp` INTEGER NOT NULL DEFAULT 0)",
         "fields": [
           {
             "fieldPath": "id",
@@ -645,6 +645,16 @@
             "affinity": "TEXT"
           },
           {
+            "fieldPath": "writer",
+            "columnName": "writer",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "studio",
+            "columnName": "studio",
+            "affinity": "TEXT"
+          },
+          {
             "fieldPath": "releaseDate",
             "columnName": "releaseDate",
             "affinity": "INTEGER"
@@ -652,6 +662,13 @@
           {
             "fieldPath": "detailsLookedUp",
             "columnName": "detailsLookedUp",
+            "affinity": "INTEGER",
+            "notNull": true,
+            "defaultValue": "0"
+          },
+          {
+            "fieldPath": "tmdbLookedUp",
+            "columnName": "tmdbLookedUp",
             "affinity": "INTEGER",
             "notNull": true,
             "defaultValue": "0"
@@ -688,7 +705,7 @@
       },
       {
         "tableName": "movie_credits",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`movieId` INTEGER NOT NULL, `directed` INTEGER NOT NULL, `nameKey` TEXT NOT NULL, PRIMARY KEY(`movieId`, `directed`, `nameKey`), FOREIGN KEY(`movieId`) REFERENCES `movies`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`movieId` INTEGER NOT NULL, `role` TEXT NOT NULL, `nameKey` TEXT NOT NULL, PRIMARY KEY(`movieId`, `role`, `nameKey`), FOREIGN KEY(`movieId`) REFERENCES `movies`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
         "fields": [
           {
             "fieldPath": "movieId",
@@ -697,9 +714,9 @@
             "notNull": true
           },
           {
-            "fieldPath": "directed",
-            "columnName": "directed",
-            "affinity": "INTEGER",
+            "fieldPath": "role",
+            "columnName": "role",
+            "affinity": "TEXT",
             "notNull": true
           },
           {
@@ -713,7 +730,7 @@
           "autoGenerate": false,
           "columnNames": [
             "movieId",
-            "directed",
+            "role",
             "nameKey"
           ]
         },
@@ -1613,7 +1630,7 @@
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'e898973a47be7981d97c5ece899db4e4')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '51491b35d6a440a0e6eb9734b07270d9')"
     ]
   }
 }

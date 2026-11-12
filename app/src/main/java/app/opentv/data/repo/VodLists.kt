@@ -9,6 +9,7 @@ import app.opentv.data.db.MovieDao
 import app.opentv.data.db.SeriesDao
 import app.opentv.data.model.Movie
 import app.opentv.data.model.Series
+import app.opentv.data.remote.TmdbMeta
 import app.opentv.data.remote.XtreamApi
 
 // How a downloaded movie or series list is saved.
@@ -71,9 +72,13 @@ internal fun Movie.over(old: Movie?): Movie = if (old == null) {
         cast = cast ?: old.cast,
         genre = genre ?: old.genre,
         tmdbId = tmdbId ?: old.tmdbId,
-        director = director ?: old.director,
+        // TMDB's people outrank the provider's, which would otherwise come back with every refresh.
+        director = if (old.tmdbLookedUp) old.director ?: director else director ?: old.director,
+        writer = old.writer ?: writer,
+        studio = old.studio ?: studio,
         releaseDate = releaseDate ?: old.releaseDate,
         detailsLookedUp = detailsLookedUp || old.detailsLookedUp,
+        tmdbLookedUp = tmdbLookedUp || old.tmdbLookedUp,
     )
 }
 
@@ -112,3 +117,28 @@ internal fun Movie.filledFrom(info: XtreamApi.VodInfo): Movie = copy(
     releaseDate = releaseDate ?: info.releaseDate,
     detailsLookedUp = true,
 )
+
+/**
+ * This movie with what TMDB said about it ([meta], null for no match) and marked TMDB-looked-up.
+ * TMDB fills what's empty, and its directors, writers and studios replace whatever was there: a
+ * provider's director is only the first name of its crew, and providers have no writers or studios.
+ */
+internal fun Movie.withTmdb(meta: TmdbMeta?): Movie = if (meta == null) {
+    copy(tmdbLookedUp = true)
+} else {
+    copy(
+        posterUrl = posterUrl ?: meta.posterUrl,
+        backdropUrl = backdropUrl ?: meta.backdropUrl,
+        plot = plot ?: meta.overview,
+        cast = cast ?: meta.cast,
+        director = meta.director ?: director,
+        writer = meta.writers ?: writer,
+        studio = meta.studios ?: studio,
+        genre = genre?.ifBlank { null } ?: meta.genre ?: genre,
+        tmdbId = tmdbId ?: meta.tmdbId,
+        rating = rating ?: meta.rating,
+        year = year ?: meta.year,
+        releaseDate = releaseDate ?: meta.releaseDate,
+        tmdbLookedUp = true,
+    )
+}

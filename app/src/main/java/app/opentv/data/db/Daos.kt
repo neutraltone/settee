@@ -535,26 +535,33 @@ interface MovieDao {
     @Query("SELECT * FROM movies WHERE sourceId = :sourceId")
     suspend fun forSource(sourceId: Long): List<Movie>
 
-    /** The [limit] movies a source most recently added whose details nobody has asked for, for [MovieGenres]. */
+    /**
+     * The [limit] movies a source most recently added that the provider hasn't been asked about, or,
+     * [withTmdb], that TMDB hasn't answered about, for [MovieGenres].
+     */
     @Query(
-        "SELECT * FROM movies WHERE sourceId = :sourceId AND detailsLookedUp = 0 " +
+        "SELECT * FROM movies WHERE sourceId = :sourceId " +
+            "AND (detailsLookedUp = 0 OR (:withTmdb AND tmdbLookedUp = 0)) " +
             "ORDER BY addedMillis DESC, id DESC LIMIT :limit",
     )
-    suspend fun newestNotLookedUp(sourceId: Long, limit: Int): List<Movie>
+    suspend fun newestNotLookedUp(sourceId: Long, withTmdb: Boolean, limit: Int): List<Movie>
 
     /**
      * Fills whichever of a movie's details are still empty from what [MovieGenres] looked up, and marks
-     * it looked up, so a film nobody has opened has its cast and director for a person's page. Never
-     * overwrites, since opening the movie may have found better ones meanwhile, except a blank genre
-     * (the provider had none) with one found since. Every field `Movie.filledFrom` fills, since a film
-     * this fills counts as enriched and opening it won't ask the provider again.
+     * what it asked, so a film nobody has opened has its people for a person's page. Never overwrites,
+     * since opening the movie may have found better ones meanwhile, except a blank genre (the provider
+     * had none) with one found since, and the director, writers and studios, which TMDB's replace.
+     * Every field `Movie.filledFrom` fills, since a film this fills counts as enriched and opening it
+     * won't ask the provider again.
      */
     @Query(
         """
         UPDATE movies SET
             genre = COALESCE(NULLIF(genre, ''), NULLIF(:genre, ''), genre, :genre),
             `cast` = COALESCE(`cast`, :cast),
-            director = COALESCE(director, :director),
+            director = COALESCE(:director, director),
+            writer = COALESCE(:writer, writer),
+            studio = COALESCE(:studio, studio),
             plot = COALESCE(plot, :plot),
             backdropUrl = COALESCE(backdropUrl, :backdropUrl),
             tmdbId = COALESCE(tmdbId, :tmdbId),
@@ -562,7 +569,8 @@ interface MovieDao {
             year = COALESCE(year, :year),
             durationSeconds = COALESCE(durationSeconds, :durationSeconds),
             releaseDate = COALESCE(releaseDate, :releaseDate),
-            detailsLookedUp = 1
+            detailsLookedUp = MAX(detailsLookedUp, :detailsLookedUp),
+            tmdbLookedUp = MAX(tmdbLookedUp, :tmdbLookedUp)
         WHERE id = :id
         """,
     )
@@ -572,6 +580,8 @@ interface MovieDao {
         genre: String?,
         cast: String?,
         director: String?,
+        writer: String?,
+        studio: String?,
         plot: String?,
         backdropUrl: String?,
         tmdbId: String?,
@@ -579,6 +589,8 @@ interface MovieDao {
         year: Int?,
         durationSeconds: Int?,
         releaseDate: Long?,
+        detailsLookedUp: Boolean,
+        tmdbLookedUp: Boolean,
     )
 
     /**
@@ -594,6 +606,8 @@ interface MovieDao {
                 genre = it.genre,
                 cast = it.cast,
                 director = it.director,
+                writer = it.writer,
+                studio = it.studio,
                 plot = it.plot,
                 backdropUrl = it.backdropUrl,
                 tmdbId = it.tmdbId,
@@ -601,26 +615,11 @@ interface MovieDao {
                 year = it.year,
                 durationSeconds = it.durationSeconds,
                 releaseDate = it.releaseDate,
+                detailsLookedUp = it.detailsLookedUp,
+                tmdbLookedUp = it.tmdbLookedUp,
             )
         }
         recreditChanged(before.associateBy { it.id }, credited(found.map { it.id }))
-    }
-
-    /** The [limit] movies a source most recently added whose genre was saved blank, for [MovieGenres]. */
-    @Query(
-        "SELECT * FROM movies WHERE sourceId = :sourceId AND genre = '' " +
-            "ORDER BY addedMillis DESC, id DESC LIMIT :limit",
-    )
-    suspend fun newestWithBlankGenre(sourceId: Long, limit: Int): List<Movie>
-
-    /** Only while it's still blank, since opening the movie may have found one meanwhile. */
-    @Query("UPDATE movies SET genre = :genre WHERE id = :id AND genre = ''")
-    suspend fun fillBlankGenre(id: Long, genre: String)
-
-    /** As [fillBlankGenre], for many in one go, so everything observing movies reloads once. */
-    @Transaction
-    suspend fun fillBlankGenres(genres: List<Pair<Long, String>>) {
-        genres.forEach { (id, genre) -> fillBlankGenre(id, genre) }
     }
 
     /**
@@ -679,7 +678,7 @@ interface MovieDao {
     suspend fun upsertRows(movies: List<Movie>): List<Long>
 
     /**
-     * Saves these movies, rewriting the [MovieCredit]s of those whose cast or director changed. At
+     * Saves these movies, rewriting the [MovieCredit]s of those whose people changed. At
      * most a catalogue batch (500) at a time: their ids are bound in one query.
      */
     @Transaction
@@ -689,22 +688,21 @@ interface MovieDao {
         // A new row's id is its insert's; an update's comes back as -1, but it carried its id.
         val after = movies.mapIndexedNotNull { i, movie ->
             val id = if (movie.id > 0) movie.id else rowIds[i]
-            if (id > 0) CreditedTitle(id, movie.cast, movie.director) else null
+            if (id > 0) CreditedTitle(id, movie.cast, movie.director, movie.writer, movie.studio) else null
         }
         recreditChanged(before, after)
     }
 
-    /** Rewrites the credits of each of [after] whose cast or director isn't what [before] had. */
+    /** Rewrites the credits of each of [after] whose people aren't what [before] had. */
     suspend fun recreditChanged(before: Map<Long, CreditedTitle>, after: List<CreditedTitle>) {
         for (now in after) {
-            val was = before[now.id]
-            if (was?.cast == now.cast && was?.director == now.director) continue
+            if (before[now.id] == now || (before[now.id] == null && now.isEmpty)) continue
             deleteCredits(now.id)
-            insertCredits(movieCredits(now.id, now.cast, now.director))
+            insertCredits(movieCredits(now))
         }
     }
 
-    @Query("SELECT id, `cast`, director FROM movies WHERE id IN (:ids)")
+    @Query("SELECT id, `cast`, director, writer, studio FROM movies WHERE id IN (:ids)")
     suspend fun credited(ids: List<Long>): List<CreditedTitle>
 
     /**
@@ -714,8 +712,8 @@ interface MovieDao {
      */
     @Query(
         """
-        SELECT id, `cast`, director FROM movies
-        WHERE id > :afterId AND (`cast` != '' OR director != '')
+        SELECT id, `cast`, director, writer, studio FROM movies
+        WHERE id > :afterId AND (`cast` != '' OR director != '' OR writer != '' OR studio != '')
           AND id NOT IN (SELECT movieId FROM movie_credits)
         ORDER BY id LIMIT :limit
         """,
@@ -822,7 +820,7 @@ interface SeriesDao {
         val rowIds = upsertRows(items)
         val after = items.mapIndexedNotNull { i, series ->
             val id = if (series.id > 0) series.id else rowIds[i]
-            if (id > 0) CreditedTitle(id, series.cast, director = null) else null
+            if (id > 0) CreditedTitle(id, series.cast) else null
         }
         recreditChanged(before, after)
     }
@@ -836,13 +834,13 @@ interface SeriesDao {
         }
     }
 
-    @Query("SELECT id, `cast`, NULL AS director FROM series WHERE id IN (:ids)")
+    @Query("SELECT id, `cast`, NULL AS director, NULL AS writer, NULL AS studio FROM series WHERE id IN (:ids)")
     suspend fun credited(ids: List<Long>): List<CreditedTitle>
 
     /** The next [limit] series after [afterId] with a cast but no [SeriesCredit]s. See [MovieDao.uncredited]. */
     @Query(
         """
-        SELECT id, `cast`, NULL AS director FROM series
+        SELECT id, `cast`, NULL AS director, NULL AS writer, NULL AS studio FROM series
         WHERE id > :afterId AND `cast` != '' AND id NOT IN (SELECT seriesId FROM series_credits)
         ORDER BY id LIMIT :limit
         """,

@@ -45,7 +45,7 @@ class PersonCreditsUpgradeTest {
             execSQL(
                 "INSERT INTO movies (id, sourceId, streamId, name, streamUrl, addedMillis, `cast`, director) " +
                     "VALUES (1, 1, '3', 'Drive', 'http://example.com/3.mp4', 0, " +
-                    "'Ryan Gosling', 'Nicolas Winding Refn')",
+                    "'Ryan Gosling', 'Nicolas Winding Refn, Some Assistant')",
             )
             execSQL(
                 "INSERT INTO series (id, sourceId, seriesId, name, addedMillis, `cast`) " +
@@ -59,6 +59,7 @@ class PersonCreditsUpgradeTest {
         test.catalog.awaitBackground()
 
         assertThat(test.titlesWith("Nicolas Winding Refn")).containsExactly("Drive")
+        assertThat(test.titlesWith("Some Assistant")).isEmpty()
         assertThat(test.titlesWith("Olivia Colman")).containsExactly("Broadchurch")
     }
 

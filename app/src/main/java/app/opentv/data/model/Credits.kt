@@ -18,10 +18,13 @@ import java.text.Normalizer
 // director changes. Not an FTS table: Room keeps those in step with triggers on every write, and a
 // catalogue refresh rewrites every title each time, so a 30,000-film list would reindex them all.
 
-/** Someone a movie credits: [directed] it, or acts in it. [nameKey] is their name, [personKey]ed. */
+/** What a [MovieCredit] credits someone as. A studio isn't a person, but has a page just the same. */
+enum class CreditRole { ACTOR, DIRECTOR, WRITER, STUDIO }
+
+/** Someone a movie credits, as [role]. [nameKey] is their name, [personKey]ed. */
 @Entity(
     tableName = "movie_credits",
-    primaryKeys = ["movieId", "directed", "nameKey"],
+    primaryKeys = ["movieId", "role", "nameKey"],
     foreignKeys = [
         ForeignKey(
             entity = Movie::class,
@@ -32,7 +35,7 @@ import java.text.Normalizer
     ],
     indices = [Index("nameKey")],
 )
-data class MovieCredit(val movieId: Long, val directed: Boolean, val nameKey: String)
+data class MovieCredit(val movieId: Long, val role: CreditRole, val nameKey: String)
 
 /** Someone a series' cast lists. Series have no director. See [MovieCredit]. */
 @Entity(
@@ -67,18 +70,40 @@ fun personKey(name: String): String = Normalizer.normalize(name, Normalizer.Form
     .trim()
     .lowercase()
 
-/** Every person in a provider's cast or director [names], [personKey]ed. */
-fun personKeys(names: String?): Set<String> =
-    names?.split(NAME_SEPARATORS)?.map(::personKey)?.filterTo(LinkedHashSet()) { it.isNotEmpty() }.orEmpty()
+/** Every person in a provider's cast or director [names], as written, once each, in billing order. */
+fun personNames(names: String?): List<String> =
+    names?.split(NAME_SEPARATORS)?.map { it.trim() }?.filter { it.isNotEmpty() }?.distinctBy(::personKey).orEmpty()
 
-/** The [MovieCredit] rows for a movie with this [cast] and [director]. */
-fun movieCredits(movieId: Long, cast: String?, director: String?): List<MovieCredit> =
-    personKeys(cast).map { MovieCredit(movieId, directed = false, nameKey = it) } +
-        personKeys(director).map { MovieCredit(movieId, directed = true, nameKey = it) }
+/** Every person in a provider's cast or director [names], [personKey]ed. */
+fun personKeys(names: String?): Set<String> = personNames(names).mapTo(LinkedHashSet(), ::personKey)
+
+/** The [MovieCredit] rows for a movie crediting these people. */
+fun movieCredits(title: CreditedTitle): List<MovieCredit> = listOf(
+    CreditRole.ACTOR to title.cast,
+    CreditRole.DIRECTOR to title.director,
+    CreditRole.WRITER to title.writer,
+    CreditRole.STUDIO to title.studio,
+).flatMap { (role, names) -> personKeys(names).map { MovieCredit(title.id, role, it) } }
 
 /** The [SeriesCredit] rows for a series with this [cast]. */
 fun seriesCredits(seriesId: Long, cast: String?): List<SeriesCredit> =
     personKeys(cast).map { SeriesCredit(seriesId, nameKey = it) }
 
-/** Who a title credits, as last saved: what [MovieCredit]s are rewritten from when it changes. */
-data class CreditedTitle(val id: Long, val cast: String?, val director: String?)
+/** Who a title credits, as last saved: what its credits are rewritten from when it changes. */
+data class CreditedTitle(
+    val id: Long,
+    val cast: String?,
+    val director: String? = null,
+    val writer: String? = null,
+    val studio: String? = null,
+) {
+    /** Whether it credits nobody, so there's nothing to write for a title seen for the first time. */
+    val isEmpty: Boolean get() = listOf(cast, director, writer, studio).all { it.isNullOrBlank() }
+}
+
+/**
+ * The director in a provider's director field: its first name. Providers fill it from the whole
+ * directing department, so "Andrew Stanton, Adam Bronstein, Dan Jeup" is Stanton and his assistant
+ * directors. A real co-director is lost too; TMDB, with the viewer's key, puts them back.
+ */
+fun providerDirector(field: String?): String? = personNames(field).firstOrNull()

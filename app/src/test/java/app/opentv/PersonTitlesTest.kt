@@ -9,6 +9,11 @@ import androidx.sqlite.db.SimpleSQLiteQuery
 import androidx.test.core.app.ApplicationProvider
 import app.opentv.data.db.MOVIES_WITH_PERSON
 import app.opentv.data.db.SERIES_WITH_PERSON
+import app.opentv.data.model.Movie
+import app.opentv.data.remote.TmdbMeta
+import app.opentv.data.remote.XtreamApi
+import app.opentv.data.repo.MovieGenres
+import app.opentv.data.repo.MovieTmdb
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.test.runTest
 import org.junit.After
@@ -127,5 +132,60 @@ class PersonTitlesTest {
 
             assertThat(plan.filter { it.startsWith("SCAN") }).isEmpty()
         }
+    }
+
+    @Test
+    fun `a provider's director field counts only its first name, the rest being the directing crew`() = runTest {
+        panel.replies["get_vod_streams"] = """[{"stream_id": 1, "name": "WALL-E", "genre": "Animation",
+            "director": "Andrew Stanton, Adam Bronstein, Dan Jeup"}]"""
+        panel.replies["get_vod_info"] = """{"info": {"director": "Andrew Stanton, Adam Bronstein, Dan Jeup"}}"""
+
+        test.syncVod()
+
+        assertThat(titlesWith("Andrew Stanton")).containsExactly("WALL-E")
+        assertThat(titlesWith("Adam Bronstein")).isEmpty()
+    }
+
+    /** The background pass with the viewer's TMDB key, TMDB answering every film with [meta]. */
+    private fun passWithTmdb(meta: TmdbMeta) = MovieGenres(
+        test.db.movies(),
+        XtreamApi(panel.http),
+        tmdb = object : MovieTmdb {
+            override val ready = true
+
+            override suspend fun lookUp(movie: Movie) = Result.success<TmdbMeta?>(meta)
+        },
+    )
+
+    private val tmdbCredits = TmdbMeta(
+        director = "Will Speck, Josh Gordon",
+        writers = "Jeff Morris",
+        studios = "A24, Plan B",
+    )
+
+    @Test
+    fun `with a TMDB key, every director, the writers and the studios come from TMDB and have pages`() = runTest {
+        panel.replies["get_vod_streams"] =
+            """[{"stream_id": 1, "name": "Blades", "director": "Will Speck, Peter Kohn"}]"""
+        test.syncVod()
+
+        passWithTmdb(tmdbCredits).refresh(PANEL_SOURCE)
+
+        assertThat(titlesWith("Josh Gordon")).containsExactly("Blades")
+        assertThat(titlesWith("Jeff Morris")).containsExactly("Blades")
+        assertThat(titlesWith("A24")).containsExactly("Blades")
+        assertThat(titlesWith("Peter Kohn")).isEmpty()
+    }
+
+    @Test
+    fun `a refresh keeps TMDB's directors rather than the provider's`() = runTest {
+        panel.replies["get_vod_streams"] = """[{"stream_id": 1, "name": "Blades", "director": "Peter Kohn"}]"""
+        test.syncVod()
+        passWithTmdb(tmdbCredits).refresh(PANEL_SOURCE)
+
+        test.syncVod()
+
+        assertThat(titlesWith("Josh Gordon")).containsExactly("Blades")
+        assertThat(titlesWith("Peter Kohn")).isEmpty()
     }
 }

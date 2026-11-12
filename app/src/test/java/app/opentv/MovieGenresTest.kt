@@ -7,9 +7,11 @@ package app.opentv
 
 import androidx.test.core.app.ApplicationProvider
 import app.opentv.data.model.Movie
+import app.opentv.data.remote.TmdbMeta
 import app.opentv.data.remote.XtreamApi
 import app.opentv.data.repo.CatalogueRefresh
 import app.opentv.data.repo.MovieGenres
+import app.opentv.data.repo.MovieTmdb
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.test.runTest
 import org.junit.After
@@ -174,28 +176,6 @@ class MovieGenresTest {
     }
 
     @Test
-    fun `a film the provider has no genre for gets TMDB's, with the viewer's key`() = runTest {
-        test.db.movies().upsertAll(listOf(movie("7", added = 1)))
-        panel.replies["get_vod_info"] = """{"info": {"year": "2011"}}"""
-        val withTmdb = MovieGenres(test.db.movies(), XtreamApi(panel.http), tmdbGenre = { "Crime, Drama" })
-
-        withTmdb.refresh(PANEL_SOURCE)
-
-        assertThat(genre("7")).isEqualTo("Crime, Drama")
-    }
-
-    @Test
-    fun `a film TMDB couldn't be reached about is left to ask about next time`() = runTest {
-        test.db.movies().upsertAll(listOf(movie("7", added = 1)))
-        panel.replies["get_vod_info"] = """{"info": {"year": "2011"}}"""
-        val unreachable = MovieGenres(test.db.movies(), XtreamApi(panel.http), tmdbGenre = { error("offline") })
-
-        unreachable.refresh(PANEL_SOURCE)
-
-        assertThat(genre("7")).isNull()
-    }
-
-    @Test
     fun `filling in keeps going a batch at a time until every film has been asked about`() = runTest {
         test.db.movies().upsertAll((1..5).map { movie("$it", added = it.toLong()) })
         panel.replies["get_vod_info"] = """{"info": {"genre": "Comedy"}}"""
@@ -221,7 +201,7 @@ class MovieGenresTest {
             XtreamApi(panel.http),
             count = 2,
             pauseMillis = 0,
-            tmdbGenre = { error("offline") },
+            tmdb = tmdb { Result.failure(Exception("offline")) },
         )
 
         unreachable.fillAll(PANEL_SOURCE)
@@ -243,38 +223,64 @@ class MovieGenresTest {
         assertThat(genre("7")).isEqualTo("Western")
     }
 
-    @Test
-    fun `a film saved blank gets TMDB's genre on the pass over blanks, without asking the provider again`() = runTest {
-        test.db.movies().upsertAll(listOf(movie("7", added = 1, genre = ""), movie("8", added = 2, genre = "Drama")))
-        val withTmdb = MovieGenres(test.db.movies(), XtreamApi(panel.http), tmdbGenre = { "Western" })
+    /** TMDB with the viewer's key set, answering each film with [answer]; counts what it's asked. */
+    private var tmdbAsked = 0
 
-        assertThat(withTmdb.retryBlanks(PANEL_SOURCE)).isTrue()
+    private fun tmdb(answer: (Movie) -> Result<TmdbMeta?>) = object : MovieTmdb {
+        override val ready = true
+
+        override suspend fun lookUp(movie: Movie): Result<TmdbMeta?> {
+            tmdbAsked++
+            return answer(movie)
+        }
+    }
+
+    private fun withTmdb(answer: (Movie) -> Result<TmdbMeta?>) =
+        MovieGenres(test.db.movies(), XtreamApi(panel.http), tmdb = tmdb(answer))
+
+    @Test
+    fun `a film the provider has no genre for gets TMDB's, with the viewer's key`() = runTest {
+        test.db.movies().upsertAll(listOf(movie("7", added = 1)))
+        panel.replies["get_vod_info"] = """{"info": {"year": "2011"}}"""
+
+        withTmdb { Result.success(TmdbMeta(genre = "Crime, Drama")) }.refresh(PANEL_SOURCE)
+
+        assertThat(genre("7")).isEqualTo("Crime, Drama")
+    }
+
+    @Test
+    fun `a film TMDB couldn't be reached about is asked TMDB again next time, but not the provider`() = runTest {
+        test.db.movies().upsertAll(listOf(movie("7", added = 1)))
+        panel.replies["get_vod_info"] = """{"info": {"year": "2011"}}"""
+        val offline = withTmdb { Result.failure(Exception("offline")) }
+
+        offline.refresh(PANEL_SOURCE)
+        offline.refresh(PANEL_SOURCE)
+
+        assertThat(panel.asked).containsExactly("get_vod_info:7")
+        assertThat(tmdbAsked).isEqualTo(2)
+    }
+
+    @Test
+    fun `a film TMDB has no match for isn't asked about again`() = runTest {
+        test.db.movies().upsertAll(listOf(movie("7", added = 1)))
+        panel.replies["get_vod_info"] = """{"info": {"year": "2011"}}"""
+        val noMatch = withTmdb { Result.success(null) }
+
+        noMatch.refresh(PANEL_SOURCE)
+        noMatch.refresh(PANEL_SOURCE)
+
+        assertThat(tmdbAsked).isEqualTo(1)
+        assertThat(genre("7")).isEqualTo("")
+    }
+
+    @Test
+    fun `a film looked up before there was a key is asked TMDB once one is added, not the provider`() = runTest {
+        test.db.movies().upsertAll(listOf(movie("7", added = 1, genre = "", lookedUp = true)))
+
+        withTmdb { Result.success(TmdbMeta(genre = "Western")) }.refresh(PANEL_SOURCE)
 
         assertThat(genre("7")).isEqualTo("Western")
-        assertThat(genre("8")).isEqualTo("Drama")
         assertThat(panel.asked).isEmpty()
-    }
-
-    @Test
-    fun `the pass over blanks finishes even when TMDB knows none of them`() = runTest {
-        test.db.movies().upsertAll((1..7).map { movie("$it", added = it.toLong(), genre = "") })
-        var asked = 0
-        val noMatches = MovieGenres(test.db.movies(), XtreamApi(panel.http), count = 2, pauseMillis = 0) {
-            asked++
-            null
-        }
-
-        assertThat(noMatches.retryBlanks(PANEL_SOURCE)).isTrue()
-
-        assertThat(asked).isEqualTo(7)
-        assertThat(test.db.movies().forSource(1).map { it.genre }.toSet()).containsExactly("")
-    }
-
-    @Test
-    fun `the pass over blanks gives up, unfinished, when TMDB can't be reached`() = runTest {
-        test.db.movies().upsertAll((1..7).map { movie("$it", added = it.toLong(), genre = "") })
-        val offline = MovieGenres(test.db.movies(), XtreamApi(panel.http), tmdbGenre = { error("offline") })
-
-        assertThat(offline.retryBlanks(PANEL_SOURCE)).isFalse()
     }
 }

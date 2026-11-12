@@ -88,6 +88,7 @@ import app.opentv.ui.settings.StremioAddonsScreen
 import app.opentv.ui.settings.SyncScreen
 import app.opentv.ui.settings.WebManagerScreen
 import app.opentv.ui.vod.MovieDetailScreen
+import app.opentv.ui.vod.PersonScreen
 import app.opentv.ui.vod.SeriesDetailScreen
 import app.opentv.ui.vod.VodPlayerScreen
 import app.opentv.update.UpdateGate
@@ -210,6 +211,7 @@ object Routes {
     const val ABOUT = "about"
     const val SERIES_DETAIL = "series/{seriesId}"
     const val MOVIE_DETAIL = "movie/{movieId}"
+    const val PERSON = "person/{name}"
     const val EDIT_SOURCE = "edit-source/{sourceId}"
 
     // Only the key: the player asks PlaybackSources for the stream, so no URL (an Xtream one holds
@@ -221,6 +223,9 @@ object Routes {
     fun player(channelId: Long) = "player/$channelId"
     fun seriesDetail(seriesId: Long) = "series/$seriesId"
     fun movieDetail(movieId: Long) = "movie/$movieId"
+
+    /** A person's page. Uri.encode, not URLEncoder, whose + for a space Navigation doesn't decode. */
+    fun person(name: String) = "person/${android.net.Uri.encode(name)}"
     fun editSource(sourceId: Long) = "edit-source/$sourceId"
     fun vodPlayer(key: MediaKey, fromStart: Boolean = false): String {
         fun e(v: String) = java.net.URLEncoder.encode(v, "UTF-8")
@@ -456,6 +461,7 @@ private fun OpenTvApp(isTelevision: Boolean, launchedToPlay: Boolean) {
                         seriesId = seriesId,
                         viewModel = vodViewModel,
                         onPlayEpisode = { key -> navController.navigate(Routes.vodPlayer(key)) },
+                        onOpenPerson = { name -> navController.navigate(Routes.person(name)) },
                     )
                 }
 
@@ -467,6 +473,17 @@ private fun OpenTvApp(isTelevision: Boolean, launchedToPlay: Boolean) {
                         onPlay = { movie -> navController.navigate(Routes.vodPlayer(MediaKey.Movie(movie.id))) },
                         onPlayAddonStream = { key -> navController.navigate(Routes.vodPlayer(key)) },
                         onOpenMovie = { movie -> navController.navigate(Routes.movieDetail(movie.id)) },
+                        onOpenPerson = { name -> navController.navigate(Routes.person(name)) },
+                    )
+                }
+
+                composable(Routes.PERSON) { entry ->
+                    val name = entry.arguments?.getString("name")?.takeIf { it.isNotBlank() } ?: return@composable
+                    PersonScreen(
+                        name = name,
+                        viewModel = vodViewModel,
+                        onOpenMovie = { movie -> navController.navigate(Routes.movieDetail(movie.id)) },
+                        onOpenSeries = { series -> navController.navigate(Routes.seriesDetail(series.id)) },
                     )
                 }
 

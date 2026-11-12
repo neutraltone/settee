@@ -8,6 +8,7 @@ package app.opentv.data.remote
 import android.util.Log
 import app.opentv.core.AppSettings
 import app.opentv.data.parser.parseReleaseDate
+import java.io.IOException
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.contentOrNull
@@ -30,7 +31,12 @@ data class TmdbMeta(
     val backdropUrl: String? = null,
     val overview: String? = null,
     val cast: String? = null,
+    /** Every director, comma-separated: TMDB credits co-directors, where a provider's field is the whole crew. */
     val director: String? = null,
+    /** Who wrote it (screenplay, story, novel), comma-separated. Films only. */
+    val writers: String? = null,
+    /** The production companies, comma-separated. Films only. */
+    val studios: String? = null,
     val genre: String? = null,
     val rating: Double? = null,
     val year: Int? = null,
@@ -70,6 +76,18 @@ class TmdbClient(
     fun movieMeta(title: String, year: Int?, tmdbId: String?): TmdbMeta? =
         lookup(isMovie = true, title = title, year = year, tmdbId = tmdbId)
 
+    /**
+     * As [movieMeta], for the background pass, which needs to tell no match (success with null), not
+     * to be asked about again, from TMDB not answering (a failure), to be asked again next time.
+     */
+    fun movieMetaOrFailure(title: String, year: Int?, tmdbId: String?): Result<TmdbMeta?> = runCatching {
+        val key = settings.tmdbApiKey.value.trim()
+        val query = searchTitle(title)
+        if (key.isEmpty() || (query.isBlank() && tmdbId.isNullOrBlank())) return@runCatching null
+        val id = tmdbId?.takeIf { it.isNotBlank() } ?: searchId(true, query, year, key, ::fetch)
+        id?.let { details(true, it, key, ::fetch) }
+    }
+
     /** Metadata for a show. Same strategy as [movieMeta]; TMDB has no director for TV, so that stays null. */
     fun seriesMeta(title: String, year: Int?, tmdbId: String?): TmdbMeta? =
         lookup(isMovie = false, title = title, year = year, tmdbId = tmdbId)
@@ -83,7 +101,7 @@ class TmdbClient(
         val key = settings.tmdbApiKey.value.trim()
         if (key.isEmpty()) return null
         val id = tmdbId?.takeIf { it.isNotBlank() }
-            ?: searchId(isMovie, searchTitle(title), year, key)
+            ?: searchId(isMovie, searchTitle(title), year, key, ::get)
             ?: return null
         val builder = TMDB_BASE.newBuilder()
             .addPathSegment(if (isMovie) "movie" else "tv")
@@ -99,14 +117,20 @@ class TmdbClient(
         if (key.isEmpty()) return null
         val query = searchTitle(title)
         if (query.isBlank() && tmdbId.isNullOrBlank()) return null
-        val id = tmdbId?.takeIf { it.isNotBlank() } ?: searchId(isMovie, query, year, key) ?: return null
-        return runCatching { details(isMovie, id, key) }
+        val id = tmdbId?.takeIf { it.isNotBlank() } ?: searchId(isMovie, query, year, key, ::get) ?: return null
+        return runCatching { details(isMovie, id, key, ::get) }
             .onFailure { Log.w(TAG, "TMDB details failed for $id", it) }
             .getOrNull()
     }
 
     /** Finds the best-matching TMDB id, retrying without the year filter if a year search comes back empty. */
-    private fun searchId(isMovie: Boolean, query: String, year: Int?, key: String): String? {
+    private fun searchId(
+        isMovie: Boolean,
+        query: String,
+        year: Int?,
+        key: String,
+        read: (HttpUrl) -> JsonElement?,
+    ): String? {
         fun run(withYear: Boolean): String? {
             val b = TMDB_BASE.newBuilder()
                 .addPathSegment("search")
@@ -117,20 +141,20 @@ class TmdbClient(
             if (withYear && year != null) {
                 b.addQueryParameter(if (isMovie) "year" else "first_air_date_year", year.toString())
             }
-            val results = get(b.build())?.jsonObject?.get("results")?.jsonArray ?: return null
+            val results = read(b.build())?.jsonObject?.get("results")?.jsonArray ?: return null
             return results.firstOrNull()?.jsonObject?.get("id")?.jsonPrimitive?.contentOrNull
         }
         return run(withYear = year != null) ?: if (year != null) run(withYear = false) else null
     }
 
-    private fun details(isMovie: Boolean, id: String, key: String): TmdbMeta? {
+    private fun details(isMovie: Boolean, id: String, key: String, read: (HttpUrl) -> JsonElement?): TmdbMeta? {
         val url = TMDB_BASE.newBuilder()
             .addPathSegment(if (isMovie) "movie" else "tv")
             .addPathSegment(id)
             .addQueryParameter("api_key", key)
             .addQueryParameter("append_to_response", "credits")
             .build()
-        val o = get(url)?.jsonObject ?: return null
+        val o = read(url)?.jsonObject ?: return null
 
         val poster = o["poster_path"]?.jsonPrimitive?.contentOrNull
         val backdrop = o["backdrop_path"]?.jsonPrimitive?.contentOrNull
@@ -144,13 +168,19 @@ class TmdbClient(
             ?.take(TOP_CAST)
             ?.mapNotNull { it.jsonObject["name"]?.jsonPrimitive?.contentOrNull }
             ?.joinToString(", ")?.takeIf { it.isNotBlank() }
-        val director = if (!isMovie) {
-            null
-        } else {
-            credits?.get("crew")?.jsonArray
-                ?.firstOrNull { it.jsonObject["job"]?.jsonPrimitive?.contentOrNull == "Director" }
-                ?.jsonObject?.get("name")?.jsonPrimitive?.contentOrNull
-        }
+        val crew = credits?.get("crew")?.jsonArray?.map { it.jsonObject }.orEmpty().takeIf { isMovie }.orEmpty()
+        fun crewNamed(jobs: Set<String>) = crew
+            .filter { it["job"]?.jsonPrimitive?.contentOrNull in jobs }
+            .mapNotNull { it["name"]?.jsonPrimitive?.contentOrNull }
+            .distinct()
+            .joinToString(", ")
+            .takeIf { it.isNotBlank() }
+        val director = crewNamed(setOf("Director"))
+        val writers = crewNamed(WRITING_JOBS)
+        val studios = o["production_companies"]?.jsonArray.takeIf { isMovie }
+            ?.mapNotNull { it.jsonObject["name"]?.jsonPrimitive?.contentOrNull }
+            ?.take(TOP_STUDIOS)
+            ?.joinToString(", ")?.takeIf { it.isNotBlank() }
 
         val rating = o["vote_average"]?.jsonPrimitive?.doubleOrNull?.takeIf { it > 0.0 }
         val dateStr = (o["release_date"] ?: o["first_air_date"])?.jsonPrimitive?.contentOrNull
@@ -163,6 +193,8 @@ class TmdbClient(
             overview = overview,
             cast = cast,
             director = director,
+            writers = writers,
+            studios = studios,
             genre = genre,
             rating = rating,
             year = year,
@@ -170,15 +202,19 @@ class TmdbClient(
         )
     }
 
-    private fun get(url: HttpUrl): JsonElement? {
+    private fun get(url: HttpUrl): JsonElement? =
+        runCatching { fetch(url) }.onFailure { Log.w(TAG, "TMDB request failed", it) }.getOrNull()
+
+    /** The answer to [url]; null for a 404, which is TMDB saying there's nothing. Throws if TMDB didn't answer. */
+    private fun fetch(url: HttpUrl): JsonElement? {
         val request = Request.Builder().url(url).header("User-Agent", "OpenTV").build()
-        return runCatching {
-            http.newCall(request).execute().use { response ->
-                if (!response.isSuccessful) return null
-                val body = response.body.string()
-                json.parseToJsonElement(body)
+        return http.newCall(request).execute().use { response ->
+            when {
+                response.code == HTTP_NOT_FOUND -> null
+                !response.isSuccessful -> throw IOException("TMDB answered ${response.code}")
+                else -> json.parseToJsonElement(response.body.string())
             }
-        }.onFailure { Log.w(TAG, "TMDB request failed", it) }.getOrNull()
+        }
     }
 
     /** Strips a trailing "(2023)"/year and collapses whitespace so the title searches cleanly. */
@@ -192,5 +228,10 @@ class TmdbClient(
         const val IMG_POSTER = "https://image.tmdb.org/t/p/w500"
         const val IMG_BACKDROP = "https://image.tmdb.org/t/p/w1280"
         const val TOP_CAST = 12
+        const val TOP_STUDIOS = 4
+        const val HTTP_NOT_FOUND = 404
+
+        /** The crew jobs that count as writing it: TMDB files writers under several. */
+        val WRITING_JOBS = setOf("Screenplay", "Writer", "Story", "Novel", "Author")
     }
 }

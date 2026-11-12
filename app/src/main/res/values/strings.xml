@@ -488,6 +488,16 @@
     <string name="vod_more_like_this">More like this</string>
     <string name="vod_credits_cast">With %1$s</string>
     <string name="vod_credits_director">Directed by %1$s</string>
+    <!-- Over a film's row of who is in it; a show page's button, and the heading of the panel it opens. -->
+    <string name="vod_cast">Cast</string>
+    <!-- A person's page when the library has nothing with them in it; %1$s is their name. -->
+    <string name="vod_person_empty">Nothing in your library has %1$s in it yet.</string>
+    <!-- Over a film's column of who directed it. -->
+    <string name="vod_director">Director</string>
+    <!-- Over a film's column of who wrote it. -->
+    <string name="vod_writer">Writer</string>
+    <!-- Over a film's column of the companies that made it. -->
+    <string name="vod_studio">Studio</string>
     <string name="vod_specials">Specials</string>
     <!-- A film's running time on its page: hours and minutes, or minutes alone. -->
     <string name="vod_runtime_hours_minutes">%1$dh %2$dm</string>

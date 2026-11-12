@@ -116,8 +116,9 @@ abstract class OpenTvDatabase : RoomDatabase() {
         const val FILE_NAME = "opentv.db"
 
         /**
-         * 9 → 10: adds the credits a person's page looks people up in, and marks every film as not
-         * yet looked up, so the background pass asks each once for the cast version 9 threw away.
+         * 9 → 10: adds the credits a person's page looks people up in, a film's writers and studios,
+         * and marks every film as not yet looked up, so the background pass asks each once for the cast
+         * version 9 threw away, and TMDB for the rest.
          * Nothing is dropped, so it's worth not wiping providers for. The credits start empty:
          * `CatalogRepository.creditEarlierTitles` fills them in for the titles already saved, which
          * needs Kotlin to fold the names.
@@ -126,8 +127,8 @@ abstract class OpenTvDatabase : RoomDatabase() {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL(
                     "CREATE TABLE IF NOT EXISTS `movie_credits` (`movieId` INTEGER NOT NULL, " +
-                        "`directed` INTEGER NOT NULL, `nameKey` TEXT NOT NULL, " +
-                        "PRIMARY KEY(`movieId`, `directed`, `nameKey`), FOREIGN KEY(`movieId`) " +
+                        "`role` TEXT NOT NULL, `nameKey` TEXT NOT NULL, " +
+                        "PRIMARY KEY(`movieId`, `role`, `nameKey`), FOREIGN KEY(`movieId`) " +
                         "REFERENCES `movies`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
                 )
                 db.execSQL("CREATE INDEX IF NOT EXISTS `index_movie_credits_nameKey` ON `movie_credits` (`nameKey`)")
@@ -138,6 +139,15 @@ abstract class OpenTvDatabase : RoomDatabase() {
                 )
                 db.execSQL("CREATE INDEX IF NOT EXISTS `index_series_credits_nameKey` ON `series_credits` (`nameKey`)")
                 db.execSQL("ALTER TABLE `movies` ADD COLUMN `detailsLookedUp` INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("ALTER TABLE `movies` ADD COLUMN `tmdbLookedUp` INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("ALTER TABLE `movies` ADD COLUMN `writer` TEXT")
+                db.execSQL("ALTER TABLE `movies` ADD COLUMN `studio` TEXT")
+                // A provider's director field is its whole directing crew; only the first is the
+                // director (see `providerDirector`). Commas only: no panel has been seen using | or ;.
+                db.execSQL(
+                    "UPDATE `movies` SET `director` = TRIM(SUBSTR(`director`, 1, INSTR(`director`, ',') - 1)) " +
+                        "WHERE INSTR(`director`, ',') > 1",
+                )
             }
         }
 

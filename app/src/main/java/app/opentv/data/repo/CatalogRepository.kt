@@ -197,13 +197,20 @@ class CatalogRepository(
     /** Sources with a [fillGenresInBackground] job running. */
     private val sourcesGettingGenres: MutableSet<Long> = java.util.concurrent.ConcurrentHashMap.newKeySet()
 
-    // TMDB only with the viewer's own key, and only for a film the provider had no genre for.
-    private val movieGenres = MovieGenres(movieDao, api) { movie ->
-        if (!tmdb.isConfigured()) return@MovieGenres null
-        withContext(Dispatchers.IO) {
-            tmdb.movieMeta(VodTitleCleaner.clean(movie.name), movie.year, movie.tmdbId)?.genre
-        }
-    }
+    // TMDB only with the viewer's own key. Every film once: its directors, writers and studios are
+    // worth the calls, and TMDB's free key allows far more than a batch of 200 a minute.
+    private val movieGenres = MovieGenres(
+        movieDao,
+        api,
+        tmdb = object : MovieTmdb {
+            override val ready get() = tmdb.isConfigured()
+
+            override suspend fun lookUp(movie: Movie) = withContext(Dispatchers.IO) { tmdbMetaOf(movie) }
+        },
+    )
+
+    private fun tmdbMetaOf(movie: Movie) =
+        tmdb.movieMetaOrFailure(VodTitleCleaner.clean(movie.name), movie.year, movie.tmdbId)
 
     sealed interface SyncResult {
         data class Success(val channelCount: Int, val movieCount: Int, val seriesCount: Int) : SyncResult
@@ -433,29 +440,11 @@ class CatalogRepository(
             if (info != null) result = result.filledFrom(info)
         }
 
-        // 2) TMDB fallback for whatever the provider still left blank — only when the user set a
-        //    key, and only while a headline visual field is missing (so it stops re-fetching once
-        //    filled). This is the "match Plex" back-fill for posters, backdrops, synopsis and cast.
-        //    Only here, on open: a bulk lookup across the catalogue would spend the user's TMDB quota
-        //    on titles nobody looks at.
-        if (tmdb.isConfigured() && result.lacksTmdbFields) {
-            val meta = runCatching {
-                tmdb.movieMeta(VodTitleCleaner.clean(result.name), result.year, result.tmdbId)
-            }.getOrNull()
-            if (meta != null) {
-                result = result.copy(
-                    posterUrl = result.posterUrl ?: meta.posterUrl,
-                    backdropUrl = result.backdropUrl ?: meta.backdropUrl,
-                    plot = result.plot ?: meta.overview,
-                    cast = result.cast ?: meta.cast,
-                    director = result.director ?: meta.director,
-                    genre = result.genre.ifUnknown() ?: meta.genre,
-                    tmdbId = result.tmdbId ?: meta.tmdbId,
-                    rating = result.rating ?: meta.rating,
-                    year = result.year ?: meta.year,
-                    releaseDate = result.releaseDate ?: meta.releaseDate,
-                )
-            }
+        // 2) TMDB, with the viewer's key, once per film: for what the provider left blank and for
+        //    the directors, writers and studios. Usually the background pass has asked already; this
+        //    is for a film opened before the pass reached it.
+        if (tmdb.isConfigured() && !result.tmdbLookedUp) {
+            tmdbMetaOf(result).onSuccess { result = result.withTmdb(it) }
         }
 
         if (result != movie) movieDao.upsertAll(listOf(result))
@@ -519,10 +508,6 @@ class CatalogRepository(
 
     /** Null for a genre [MovieGenres] found the provider has none for, so another source can fill it. */
     private fun String?.ifUnknown(): String? = this?.ifBlank { null }
-
-    /** Whether a headline field TMDB can fill on detail open is still blank. */
-    private val Movie.lacksTmdbFields: Boolean
-        get() = backdropUrl == null || plot == null || cast == null
 
     private val Series.isEnriched: Boolean
         get() = backdropUrl != null || cast != null || genre != null
@@ -794,25 +779,12 @@ class CatalogRepository(
         background.launch {
             try {
                 runCatching {
-                    retryBlanksWithTmdb(source)
                     movieGenres.fillAll(source)
                 }.onFailure { Log.w(TAG, "Movie genres failed for source ${source.id}", it) }
             } finally {
                 sourcesGettingGenres.remove(source.id)
             }
         }
-    }
-
-    /**
-     * Once per provider for each TMDB key: asks TMDB about the films saved blank, which were looked up
-     * before there was a key (or with another one), so they aren't left without a genre for good.
-     * Remembered by a hash of the key, never the key itself.
-     */
-    private suspend fun retryBlanksWithTmdb(source: Source) {
-        if (!tmdb.isConfigured()) return
-        val key = settings.tmdbApiKey.value.hashCode().toString()
-        if (settings.tmdbBlanksRetriedWith(source.id) == key) return
-        if (movieGenres.retryBlanks(source)) settings.setTmdbBlanksRetriedWith(source.id, key)
     }
 
     private suspend fun syncM3u(source: Source, nowUtcMillis: Long): SyncResult {

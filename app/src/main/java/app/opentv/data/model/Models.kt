@@ -303,8 +303,16 @@ data class Movie(
     val genre: String? = null,
     /** TMDB id, stored only — resolved/used by a later agent. Coerced to String (panels vary). */
     val tmdbId: String? = null,
-    /** Director(s), provider-formatted. Movies only. */
+    /**
+     * Who directed it, comma-separated. From a provider, only the first name of its field, which lists
+     * the whole directing crew (assistant directors and so on) after the director; from TMDB, every
+     * director. Movies only.
+     */
     val director: String? = null,
+    /** Who wrote it, comma-separated. Only TMDB says; providers don't. */
+    val writer: String? = null,
+    /** The production companies, comma-separated. Only TMDB says. */
+    val studio: String? = null,
     /**
      * The day it was released, as UTC epoch millis at midnight, when the provider's list or details
      * (or TMDB, on a detail open) happen to carry it. Nothing shows it since Home dropped its
@@ -318,6 +326,12 @@ data class Movie(
      */
     @ColumnInfo(defaultValue = "0")
     val detailsLookedUp: Boolean = false,
+    /**
+     * Whether TMDB has answered about this film, a match or not, with the viewer's key. Once it has,
+     * its directors, writers and studios are kept over the provider's, a refresh included.
+     */
+    @ColumnInfo(defaultValue = "0")
+    val tmdbLookedUp: Boolean = false,
 )
 
 @Entity(
