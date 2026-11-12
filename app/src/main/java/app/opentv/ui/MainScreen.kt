@@ -230,4 +230,3 @@ internal fun StatusLine(message: String, progress: Float?, modifier: Modifier = 
         if (progress != null) ProgressBar(progress, Modifier.fillMaxWidth().padding(top = 4.dp))
     }
 }
-

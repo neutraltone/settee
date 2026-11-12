@@ -21,7 +21,9 @@ fun SemanticsNodeInteraction.assertIsInSidePanel(): SemanticsNodeInteraction = a
 
 /** Presses Back on the window on top, which is the open Side Panel's. */
 fun ComposeContentTestRule.pressBackOnPanel() {
-    val panel = ShadowDialog.getLatestDialog()
+    // A panel opened by a press is only composed once things settle; until then there's no window.
+    waitForIdle()
+    val panel = checkNotNull(ShadowDialog.getLatestDialog()) { "No Side Panel is open" }
     runOnUiThread {
         panel.dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_BACK))
         panel.dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_BACK))

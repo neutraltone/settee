@@ -25,19 +25,8 @@ import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.dp
 import app.opentv.R
 import kotlin.math.abs
-
-/** How big an [AerialTv] is drawn. */
-enum class AerialTvSize(internal val side: Dp) {
-    /** Over a player that's buffering, or a screen that's waiting on something, with the reason under it. */
-    Full(FullSide),
-
-    /** At text height, beside a line of text: no face, thicker aerials and one arc. */
-    Small(SmallSide),
-}
 
 /**
  * Settee waiting: the TV from the mark, with coral arcs rising from its aerials and fading as they
@@ -148,8 +137,6 @@ private fun eyesOpen(millis: Long): Float {
 // Made once: the arcs redraw every frame for as long as anything waits.
 private val FullArc = Stroke(AerialTvShape.ARC_WIDTH, cap = StrokeCap.Round)
 private val SmallArc = Stroke(AerialTvShape.SMALL_ARC_WIDTH, cap = StrokeCap.Round)
-private val FullSide = 64.dp
-private val SmallSide = 22.dp
 private const val ARC_CYCLE_MILLIS = 1_800L
 private const val ARC_STAGGER_MILLIS = 400L
 private const val ARC_LIFE_MILLIS = 1_000L
