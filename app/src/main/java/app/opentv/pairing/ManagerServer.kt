@@ -20,11 +20,7 @@ import app.opentv.recording.SmbConfig
 import java.io.BufferedReader
 import java.io.InputStreamReader
 import java.io.OutputStream
-import java.net.InetAddress
-import java.net.NetworkInterface
-import java.net.ServerSocket
 import java.net.Socket
-import java.security.SecureRandom
 import java.util.concurrent.TimeUnit
 import kotlin.concurrent.thread
 import kotlinx.coroutines.CoroutineScope
@@ -51,13 +47,14 @@ import kotlinx.serialization.json.Json
  *
  * ## What stops the neighbours using it
  *
- * - Binds to the LAN on a **random high port**, and only while the manage screen is open.
- * - The URL carries a **random token**; every route checks it. Knowing the IP and port is not
- *   enough. The token is only ever shown on the TV (QR + link), so only someone who can see the
- *   telly can connect — which is the whole security model. It is kept short enough to type, because
- *   the TV shows the full URL (with the token) as a fallback for when the QR won't scan; a LAN-only,
- *   private-IP-only, idle-closing server on a random port doesn't need more. Unlike pairing there is
- *   no six-digit code, because this handles no credentials and the point is to be frictionless.
+ * - The address comes from [PhoneAddress], the same as setup's: a **random high port** on the LAN,
+ *   open only while the manage screen is, a QR code carrying a **192-bit random token** that every
+ *   data route checks, and a typeable address with a **seven-character short token** that only
+ *   opens the page (which carries the long token) and switches itself off after
+ *   [PhoneAddress.MAX_SHORT_TOKEN_GUESSES] wrong guesses, while the QR keeps working. Both are
+ *   only ever shown on the TV, so only someone who can see the telly can connect, which is the
+ *   whole security model. Unlike pairing there is no six-digit code, because this handles no
+ *   credentials and the point is to be frictionless.
  * - Requests from non-private addresses are refused outright.
  * - Request bodies are capped ([MAX_BODY_BYTES]).
  * - Unlike pairing (which closes after the first submit) this keeps serving while the screen is
@@ -77,9 +74,11 @@ class ManagerServer(
         val url: String,
         val host: String,
         val port: Int,
+        /** The path of [shortUrl]: seven characters that can't be misread for each other. */
+        val shortToken: String,
     ) {
-        /** The address to type if the QR will not scan. */
-        val shortUrl: String get() = "$host:$port"
+        /** The address to type if the QR will not scan, e.g. `192.168.0.14:41234/k7mx4ht`. */
+        val shortUrl: String get() = "$host:$port/$shortToken"
     }
 
     sealed interface State {
@@ -91,8 +90,8 @@ class ManagerServer(
     private val _state = MutableStateFlow<State>(State.Idle)
     val state: StateFlow<State> = _state.asStateFlow()
 
-    private var serverSocket: ServerSocket? = null
-    private var token: String = ""
+    // Written by start()/stop() on the main thread, read by the accept thread.
+    @Volatile private var address: PhoneAddress? = null
 
     @Volatile private var running = false
 
@@ -105,42 +104,26 @@ class ManagerServer(
 
     fun start() {
         if (running) return
-        val host = lanAddress()
-        if (host == null) {
-            _state.value = State.Failed(
-                "This device doesn't appear to be on a network, so a phone or laptop can't reach it.",
-            )
-            return
+        val opened = when (val opening = PhoneAddress.open()) {
+            is PhoneAddress.Opening.Opened -> opening.address
+            PhoneAddress.Opening.NoNetwork -> {
+                _state.value = State.Failed(
+                    "This device doesn't appear to be on a network, so a phone or laptop can't reach it.",
+                )
+                return
+            }
+            PhoneAddress.Opening.NoSocket -> {
+                _state.value = State.Failed("Could not start the channel manager on this device.")
+                return
+            }
         }
 
-        val random = SecureRandom()
-        // A short token, not a long one, so the "camera won't scan the QR?" fallback URL the TV
-        // shows is actually typeable into a laptop browser. It only gates a LAN-only, private-IP-only
-        // server on a random high port that closes on idle and is shown solely on this TV screen, so
-        // ~40 bits is ample — brute-forcing it on the local network inside the session window isn't
-        // realistic.
-        token = ByteArray(5).also(random::nextBytes).joinToString("") { "%02x".format(it) }
-
-        val socket = try {
-            // Port 0 asks the OS for a free one. A fixed port would be predictable and would
-            // clash with whatever else the user runs at home.
-            ServerSocket(0)
-        } catch (e: Exception) {
-            Log.w(TAG, "Could not open a socket", e)
-            _state.value = State.Failed("Could not start the channel manager on this device.")
-            return
-        }
-
-        serverSocket = socket
+        address = opened
         running = true
         lastActivityMillis = System.currentTimeMillis()
 
         _state.value = State.Listening(
-            Session(
-                url = "http://$host:${socket.localPort}/?t=$token",
-                host = host,
-                port = socket.localPort,
-            ),
+            Session(url = opened.url, host = opened.host, port = opened.port, shortToken = opened.shortToken),
         )
 
         // A plain thread rather than a coroutine: ServerSocket.accept() blocks uninterruptibly,
@@ -148,7 +131,7 @@ class ManagerServer(
         thread(name = "opentv-manager", isDaemon = true) {
             while (running) {
                 val client = try {
-                    socket.accept()
+                    opened.accept()
                 } catch (_: Exception) {
                     break // socket closed, which is how we stop
                 }
@@ -177,9 +160,8 @@ class ManagerServer(
 
     fun stop() {
         running = false
-        runCatching { serverSocket?.close() }
-        serverSocket = null
-        token = ""
+        address?.close()
+        address = null
         if (_state.value is State.Listening) _state.value = State.Idle
     }
 
@@ -208,12 +190,15 @@ class ManagerServer(
 
         val output = client.getOutputStream()
 
-        // Every route checks the token. Without it, none of this exists.
-        val supplied = query["t"] ?: ""
-        if (token.isEmpty() || !PairingHttp.secretsMatch(supplied, token)) {
-            output.write(PairingHttp.httpResponse("404 Not Found", "text/plain", "Not found."))
+        // Every route checks a token. Without one, none of this exists. The typed address only
+        // opens the page, which carries the long token for everything after.
+        val address = address ?: return
+        val check = address.check(method, path, query["t"])
+        if (check is PhoneAddress.Check.Refused) {
+            output.write(check.response())
             return
         }
+        val token = address.token
 
         // A valid request counts as activity; the idle watchdog measures from here.
         lastActivityMillis = System.currentTimeMillis()
@@ -221,7 +206,7 @@ class ManagerServer(
         val body = if (method == "POST") readBody(reader, headers) else ""
 
         when {
-            method == "GET" && path == "/" ->
+            check == PhoneAddress.Check.Typed || (method == "GET" && path == "/") ->
                 output.write(PairingHttp.httpResponse("200 OK", "text/html", ManagerPage.page(token)))
 
             method == "GET" && path == "/meta" ->
@@ -475,37 +460,6 @@ class ManagerServer(
         logo = logoUrl,
         number = number,
     )
-
-    // ---- Finding our own address ---------------------------------------------------------------
-
-    /**
-     * The device's address on the LAN.
-     *
-     * Deliberately the same enumeration as [PairingServer.lanAddress] and [app.opentv.sync.SyncServer]
-     * (duplicated, not shared, to keep the servers independent): asks the interfaces rather than
-     * ConnectivityManager, because TV boxes are frequently on ethernet and the wifi-shaped API
-     * returns nothing useful when the box is wired.
-     */
-    private fun lanAddress(): String? {
-        val candidates = mutableListOf<InetAddress>()
-        runCatching {
-            for (nic in NetworkInterface.getNetworkInterfaces()) {
-                if (!nic.isUp || nic.isLoopback) continue
-                for (address in nic.inetAddresses) {
-                    if (address.isLoopbackAddress) continue
-                    if (address.hostAddress?.contains(':') == true) continue // IPv4 only
-                    if (PairingHttp.isPrivateAddress(address.hostAddress)) candidates += address
-                }
-            }
-        }.onFailure { Log.w(TAG, "Could not enumerate interfaces", it) }
-
-        // Prefer a real private range over a 169.254 self-assigned address, which means DHCP
-        // failed and nothing will be able to reach us anyway.
-        return candidates
-            .sortedBy { it.hostAddress?.startsWith("169.254") == true }
-            .firstOrNull()
-            ?.hostAddress
-    }
 
     private companion object {
         const val TAG = "ManagerServer"
