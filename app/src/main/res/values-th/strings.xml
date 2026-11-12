@@ -385,4 +385,5 @@
     <string name="settings_tmdb_save">บันทึกคีย์</string>
     <string name="settings_tmdb_saved">บันทึกคีย์ TMDB แล้ว</string>
     <string name="settings_tmdb_active">ใช้งานอยู่</string>
+    <string name="guide_next_prefix">ถัดไป  %1$s  %2$s</string>
 </resources>

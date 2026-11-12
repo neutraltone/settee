@@ -385,4 +385,5 @@
     <string name="settings_tmdb_save">Spremi ključ</string>
     <string name="settings_tmdb_saved">TMDB ključ spremljen</string>
     <string name="settings_tmdb_active">Aktivan</string>
+    <string name="guide_next_prefix">Sljedeće  %1$s  %2$s</string>
 </resources>

@@ -385,4 +385,5 @@
     <string name="settings_tmdb_save">Lưu khóa</string>
     <string name="settings_tmdb_saved">Đã lưu khóa TMDB</string>
     <string name="settings_tmdb_active">Đang hoạt động</string>
+    <string name="guide_next_prefix">Tiếp theo  %1$s  %2$s</string>
 </resources>

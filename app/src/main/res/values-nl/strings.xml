@@ -385,4 +385,5 @@
     <string name="settings_tmdb_save">Sleutel opslaan</string>
     <string name="settings_tmdb_saved">TMDB-sleutel opgeslagen</string>
     <string name="settings_tmdb_active">Actief</string>
+    <string name="guide_next_prefix">Volgende  %1$s  %2$s</string>
 </resources>

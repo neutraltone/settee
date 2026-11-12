@@ -14,7 +14,7 @@
     <ID>CyclomaticComplexMethod:PairingHttp.kt$PairingHttp$fun isPrivateAddress(host: String?): Boolean</ID>
     <ID>CyclomaticComplexMethod:PairingServer.kt$PairingServer$private fun handle(client: Socket)</ID>
     <ID>CyclomaticComplexMethod:PlayerScreen.kt$@OptIn(UnstableApi::class) @Composable fun PlayerScreen(channelId: Long?, onBack: () -&gt; Unit)</ID>
-    <ID>CyclomaticComplexMethod:PlayerScreen.kt$@OptIn(UnstableApi::class) @Composable fun LivePlayerContent( controller: PlayerController, settings: app.opentv.core.AppSettings, queue: List&lt;PlaybackQueue.Item&gt;, variants: List&lt;Channel&gt;, currentId: Long?, previousId: Long?, bannerChannel: BannerChannel?, programmeOnNow: suspend (Long) -&gt; String?, recordingThis: Boolean, livePause: Boolean, pausePromptDismissed: Boolean, onPlayChannel: (Long) -&gt; Unit, onZap: (delta: Int, atEnd: () -&gt; Unit) -&gt; Unit, onTune: (Channel) -&gt; Unit, onToggleRecord: () -&gt; Unit, favourite: Boolean, onToggleFavourite: () -&gt; Unit, onTurnOnLivePause: () -&gt; Unit, onDontAskAgain: () -&gt; Unit, subtitlePicks: SubtitlePicks, onBack: () -&gt; Unit, onChannelOptions: (PlaybackQueue.Item, onWatch: () -&gt; Unit) -&gt; Unit = { _, _ -&gt; }, )</ID>
+    <ID>CyclomaticComplexMethod:PlayerScreen.kt$@OptIn(UnstableApi::class) @Composable fun LivePlayerContent( controller: PlayerController, settings: app.opentv.core.AppSettings, queue: List&lt;PlaybackQueue.Item&gt;, variants: List&lt;Channel&gt;, currentId: Long?, previousId: Long?, onNow: suspend (Long) -&gt; Map&lt;Long, String&gt;, cardChannel: CardChannel?, nowAndNext: suspend (Long) -&gt; NowAndNext?, recordingThis: Boolean, livePause: Boolean, pausePromptDismissed: Boolean, onPlayChannel: (Long) -&gt; Unit, onZap: (delta: Int, atEnd: () -&gt; Unit) -&gt; Unit, onTune: (Channel) -&gt; Unit, onToggleRecord: () -&gt; Unit, favourite: Boolean, onToggleFavourite: () -&gt; Unit, onTurnOnLivePause: () -&gt; Unit, onDontAskAgain: () -&gt; Unit, subtitlePicks: SubtitlePicks, onBack: () -&gt; Unit, onChannelOptions: (PlaybackQueue.Item, onWatch: () -&gt; Unit) -&gt; Unit = { _, _ -&gt; }, )</ID>
     <ID>CyclomaticComplexMethod:RecordingService.kt$RecordingService$private suspend fun runCapture(id: Long)</ID>
     <ID>CyclomaticComplexMethod:RecordingSettingsScreen.kt$@Composable fun RecordingSettingsScreen(onBack: () -&gt; Unit)</ID>
     <ID>CyclomaticComplexMethod:SyncEngine.kt$SyncEngine$suspend fun apply(bundle: SyncBundle): MergeResult</ID>
@@ -34,7 +34,6 @@
     <ID>ForbiddenImport:BatteryOptimizationPrompt.kt$import androidx.compose.foundation.shape.RoundedCornerShape</ID>
     <ID>ForbiddenImport:BatteryOptimizationPrompt.kt$import androidx.compose.material3.Button</ID>
     <ID>ForbiddenImport:BatteryOptimizationPrompt.kt$import androidx.compose.material3.TextButton</ID>
-    <ID>ForbiddenImport:ChannelBanner.kt$import androidx.compose.foundation.shape.RoundedCornerShape</ID>
     <ID>ForbiddenImport:ConfirmLive.kt$import androidx.compose.foundation.shape.RoundedCornerShape</ID>
     <ID>ForbiddenImport:EpgSettingsScreen.kt$import androidx.compose.material3.Button</ID>
     <ID>ForbiddenImport:EpgSettingsScreen.kt$import androidx.compose.material3.OutlinedButton</ID>
@@ -55,7 +54,6 @@
     <ID>ForbiddenImport:PhonePairingScreen.kt$import androidx.compose.material3.Button</ID>
     <ID>ForbiddenImport:PhonePairingScreen.kt$import androidx.compose.material3.OutlinedButton</ID>
     <ID>ForbiddenImport:PlayerErrorPanel.kt$import androidx.compose.material3.Button</ID>
-    <ID>ForbiddenImport:PlayerScreen.kt$import androidx.compose.foundation.shape.RoundedCornerShape</ID>
     <ID>ForbiddenImport:PlayerScreen.kt$import androidx.compose.material3.Button</ID>
     <ID>ForbiddenImport:ProfilesScreen.kt$import androidx.compose.material3.AlertDialog</ID>
     <ID>ForbiddenImport:ProfilesScreen.kt$import androidx.compose.material3.Button</ID>

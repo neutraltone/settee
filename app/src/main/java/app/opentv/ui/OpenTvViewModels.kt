@@ -46,7 +46,6 @@ import app.opentv.data.repo.coverStatuses
 import app.opentv.data.repo.movieCovers
 import app.opentv.data.repo.movies
 import app.opentv.data.repo.nowOn
-import app.opentv.data.repo.onNowAt
 import app.opentv.data.repo.series
 import app.opentv.data.repo.seriesCovers
 import app.opentv.data.repo.splitGenres
@@ -1326,10 +1325,8 @@ class HomeViewModel @JvmOverloads constructor(
     private suspend fun liveNow(preview: LivePreview, channel: LineupChannel?, now: Long): LiveNow {
         // The Channel's guide, as the guide itself picks it.
         val guideId = channel?.let { lineup.guideId(it) } ?: return LiveNow(preview, null, null)
-        val shows = graph.epgRepository.upcoming(guideId, now, limit = 2)
-        val onNow = shows.onNowAt(now)
-        val next = if (onNow != null) shows.getOrNull(1) else shows.firstOrNull()
-        return LiveNow(preview, onNow?.title, next?.title)
+        val shows = graph.epgRepository.nowAndNext(guideId, now)
+        return LiveNow(preview, shows.now?.title, shows.next?.title)
     }
 
     val state: StateFlow<HomeState?> = combine(

@@ -385,4 +385,5 @@
     <string name="settings_tmdb_save">保存密钥</string>
     <string name="settings_tmdb_saved">TMDB 密钥已保存</string>
     <string name="settings_tmdb_active">已启用</string>
+    <string name="guide_next_prefix">接下来  %1$s  %2$s</string>
 </resources>

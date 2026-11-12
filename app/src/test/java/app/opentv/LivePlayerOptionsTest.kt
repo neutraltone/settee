@@ -29,7 +29,7 @@ import app.opentv.core.PipState
 import app.opentv.data.model.Channel
 import app.opentv.player.PlaybackQueue
 import app.opentv.player.PlayerController
-import app.opentv.ui.player.BannerChannel
+import app.opentv.ui.player.CardChannel
 import app.opentv.ui.player.LivePlayerContent
 import app.opentv.ui.player.SubtitlePicks
 import com.google.common.truth.Truth.assertThat
@@ -82,10 +82,11 @@ class LivePlayerOptionsTest {
                 variants = variants,
                 currentId = currentId,
                 previousId = null,
-                bannerChannel = queue.firstOrNull { currentId in it.qualityIds }?.let {
-                    BannerChannel("#${it.id}", it.number, it.name)
+                cardChannel = queue.firstOrNull { currentId in it.qualityIds }?.let {
+                    CardChannel("#${it.id}", it.number, it.name)
                 },
-                programmeOnNow = { null },
+                nowAndNext = { null },
+                onNow = { emptyMap() },
                 recordingThis = recording,
                 livePause = true,
                 pausePromptDismissed = false,
@@ -118,7 +119,7 @@ class LivePlayerOptionsTest {
         qualityLabel = quality,
     )
 
-    private fun hideBanner() = compose.mainClock.advanceTimeBy(BANNER_TIMEOUT_MILLIS)
+    private fun hideBanner() = compose.mainClock.advanceTimeBy(CARD_TIMEOUT_MILLIS)
 
     private fun press(key: Key) {
         compose.onRoot().performKeyInput { pressKey(key) }
@@ -371,7 +372,7 @@ class LivePlayerOptionsTest {
 
     private companion object {
         const val FOCUS_MILLIS = 100L
-        const val BANNER_TIMEOUT_MILLIS = 5_000L
+        const val CARD_TIMEOUT_MILLIS = 5_000L
         const val CONTROLS_TIMEOUT_MILLIS = 6_000L
 
         val CHANNELS = listOf(
