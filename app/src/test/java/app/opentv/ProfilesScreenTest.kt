@@ -11,6 +11,7 @@ import android.view.View
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isDialog
@@ -75,11 +76,22 @@ class ProfilesScreenTest {
     private lateinit var viewModel: ProfilesViewModel
 
     /**
-     * The Profile called [name], as the screen's list has it. Never asked of Profiles itself with
-     * runBlocking: a rename or removal holds its lock while it waits for this, the main thread, so
-     * blocking here waits for that and it for this, and the run never ends.
+     * The Profile called [name], read from the database itself, once the screen shows it's done.
+     * Never through Profiles with runBlocking: a rename or removal holds Profiles' lock while it
+     * waits for this, the main thread, so blocking on that lock here waits for it and it for this,
+     * and the run never ends.
+     * A plain query takes no lock and needs nothing from the main thread.
      */
-    private fun profile(name: String) = viewModel.profiles.value.firstOrNull { it.name == name }
+    private fun profile(name: String) = stored().firstOrNull { it.name == name }
+
+    private fun stored() = runBlocking { graph.database.profiles().all() }
+
+    /**
+     * Waits on the screen rather than the database: a read that blocks the main thread while a
+     * write is finishing can hold that write up, so a wait polling the database could time out.
+     */
+    private fun waitForRow(row: SemanticsMatcher) =
+        compose.waitUntil(5_000) { compose.onAllNodes(row).fetchSemanticsNodes().isNotEmpty() }
 
     private fun show(vararg names: String) {
         // A name already there is refused, which leaves it as it is.
@@ -90,15 +102,17 @@ class ProfilesScreenTest {
             view = LocalView.current
             ProfilesScreen(onBack = {}, viewModel = viewModel)
         }
+        // "Watching now" marks the first Profile, the active one: it's there once the list is.
         compose.waitUntil(5_000) {
-            viewModel.profiles.value.any { it.id == Profiles.BASE_PROFILE_ID } &&
-                (names.toList() + baseName()).all { compose.onAllNodes(hasText(it)).fetchSemanticsNodes().isNotEmpty() }
+            (names.toList() + "Watching now").all {
+                compose.onAllNodes(hasText(it, substring = true)).fetchSemanticsNodes().isNotEmpty()
+            }
         }
         // The list's first Highlight lands a frame after it loads.
         compose.waitUntil(5_000) { compose.onAllNodes(isFocused()).fetchSemanticsNodes().isNotEmpty() }
     }
 
-    private fun baseName() = viewModel.profiles.value.first { it.id == Profiles.BASE_PROFILE_ID }.name
+    private fun baseName() = stored().first { it.id == Profiles.BASE_PROFILE_ID }.name
 
     private fun press(vararg keys: Int) = keys.forEach(device::remote)
 
@@ -158,7 +172,8 @@ class ProfilesScreenTest {
             pressAction()
         }
 
-        compose.waitUntil(5_000) { profile("Renamed 168") != null }
+        waitForRow(hasText("Renamed 168"))
+        assertThat(profile("Renamed 168")).isNotNull()
         assertThat(profile("Rename me 168")).isNull()
     }
 
@@ -170,11 +185,14 @@ class ProfilesScreenTest {
         press(KeyEvent.KEYCODE_DPAD_CENTER)
         entryKeyboard().run {
             type("New one 168")
+            // As a viewer's keyboard does, Done comes once the name is in the box.
+            compose.waitUntil(5_000) { textShownBy() == "New one 168" }
             pressAction()
         }
 
-        compose.waitUntil(5_000) { profile("New one 168") != null }
-        compose.waitUntil(5_000) { graph.settings.activeProfileId.value == profile("New one 168")?.id }
+        // Added and switched to: its row says it's the one watching.
+        waitForRow(hasText("New one 168") and hasText("Watching now"))
+        assertThat(graph.settings.activeProfileId.value).isEqualTo(profile("New one 168")?.id)
     }
 
     @Test
@@ -199,7 +217,8 @@ class ProfilesScreenTest {
         captureScreen("profiles_remove_question")
         pressInPanel("Keep it", Key.DirectionUp)
         pressInPanel("Yes, remove Remove me 168", Key.DirectionCenter)
-        compose.waitUntil(5_000) { profile("Remove me 168") == null }
+        compose.waitUntil(5_000) { compose.onAllNodes(hasText("Remove me 168")).fetchSemanticsNodes().isEmpty() }
+        assertThat(profile("Remove me 168")).isNull()
         // Its row has gone, and the Highlight goes back into the list rather than vanishing.
         compose.waitUntil(5_000) { compose.onAllNodes(isFocused()).fetchSemanticsNodes().isNotEmpty() }
 

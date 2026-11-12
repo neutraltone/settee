@@ -93,6 +93,26 @@ class SettingsMemory(section: SettingsSection = SettingsSection.Providers) {
     internal var openedRow: String? = null
 }
 
+/**
+ * Where the Highlight goes when Compose starts again from the top of Settings: into the pane if it
+ * was there, else to the open section. A row taking the Highlight back from its own screen
+ * (screenRow) is let through. Returns true when the pane couldn't take it yet and is worth trying
+ * again a frame later: it can be empty for that moment, as when Enter your PIN goes just as the
+ * settings arrive.
+ */
+private fun reenter(
+    memory: SettingsMemory,
+    lastIn: LastHighlight,
+    pane: FocusRequester,
+    current: FocusRequester,
+): Boolean {
+    if (memory.openedRow != null) return false
+    val wasInPane = lastIn.pane
+    val intoPane = wasInPane && runCatching { pane.requestFocus() }.getOrNull() == true
+    if (!intoPane) runCatching { current.requestFocus() }
+    return wasInPane && !intoPane
+}
+
 /** Whether the Highlight was last in the pane or the sections. Not state: nothing draws from it. */
 private class LastHighlight {
     var pane = false
@@ -156,20 +176,7 @@ fun SettingsScreen(
             // pane, or to the open section, keeps the viewer where they were. One rule for every
             // pane, rather than each pane moving the Highlight after its own removals. A row taking
             // the Highlight back from its own screen (screenRow) is let through.
-            .focusProperties {
-                onEnter = {
-                    if (memory.openedRow == null) {
-                        val wasInPane = lastIn.pane
-                        val intoPane = wasInPane && runCatching { pane.requestFocus() }.getOrNull() == true
-                        if (!intoPane) {
-                            runCatching { current.requestFocus() }
-                            // The pane can be empty for that moment, as when Enter your PIN goes
-                            // just as the settings arrive: so the pane again, once they're in.
-                            if (wasInPane) paneRetries++
-                        }
-                    }
-                }
-            }
+            .focusProperties { onEnter = { if (reenter(memory, lastIn, pane, current)) paneRetries++ } }
             .focusGroup(),
     ) {
         Column(

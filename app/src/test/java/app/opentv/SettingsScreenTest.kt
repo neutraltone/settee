@@ -115,6 +115,21 @@ class SettingsScreenTest {
         compose.waitForIdle()
     }
 
+    /**
+     * Waits for what a press saved. A condition that only reads the database never lets the main
+     * thread run, and the save resumes there between its steps, so on its own it would never finish:
+     * each check here lets it catch up first.
+     */
+    private fun waitUntilSaved(saved: () -> Boolean) {
+        val until = System.currentTimeMillis() + 5_000
+        while (true) {
+            compose.waitForIdle()
+            if (saved()) return
+            check(System.currentTimeMillis() < until) { "what was saved still isn't there after 5 seconds" }
+            Thread.sleep(10)
+        }
+    }
+
     private fun feed(url: String) =
         runBlocking { graph.epgRepository.observeFeeds().first() }.firstOrNull { it.url == url }
 
@@ -264,7 +279,7 @@ class SettingsScreenTest {
         pressInPanel("Keep it", Key.DirectionUp)
         compose.onNode(hasText("Yes, remove Old films on 168") and isFocused()).assertExists()
         pressInPanel("Yes, remove Old films on 168", Key.DirectionCenter)
-        compose.waitUntil(5_000) { runBlocking { graph.sourceRepository.byId(id) } == null }
+        waitUntilSaved { runBlocking { graph.sourceRepository.byId(id) } == null }
         compose.waitUntil(5_000) { compose.onAllNodes(hasText("Old films on 168")).fetchSemanticsNodes().isEmpty() }
         // The row that had the Highlight has gone, so it moves on rather than vanishing with it.
         highlighted().assertExists()
@@ -287,7 +302,7 @@ class SettingsScreenTest {
         entry.type("http://127.0.0.1:9/guide168.xml")
         entry.pressAction()
 
-        compose.waitUntil(5_000) { feed("http://127.0.0.1:9/guide168.xml") != null }
+        waitUntilSaved { feed("http://127.0.0.1:9/guide168.xml") != null }
         // Named by its host: a provider's guide link can carry the login.
         assertThat(feed("http://127.0.0.1:9/guide168.xml")?.name).isEqualTo("127.0.0.1")
         compose.onNode(hasText("guide168", substring = true)).assertDoesNotExist()
@@ -307,13 +322,13 @@ class SettingsScreenTest {
         compose.onNode(hasText("Own guide 168") and hasAnyAncestor(isDialog())).assertExists()
         captureScreen("settings_guide_details")
         pressInPanel("Use this guide", Key.DirectionCenter)
-        compose.waitUntil(5_000) { feed("http://127.0.0.1:9/own168.xml")?.enabled == false }
+        waitUntilSaved { feed("http://127.0.0.1:9/own168.xml")?.enabled == false }
 
         pressInPanel("Use this guide", Key.DirectionDown)
         pressInPanel("Remove", Key.DirectionCenter)
         pressInPanel("Keep it", Key.DirectionUp)
         pressInPanel("Yes, remove Own guide 168", Key.DirectionCenter)
-        compose.waitUntil(5_000) { feed("http://127.0.0.1:9/own168.xml") == null }
+        waitUntilSaved { feed("http://127.0.0.1:9/own168.xml") == null }
         // Its row has gone, so the Highlight goes back into the pane rather than to the sections.
         compose.waitUntil(5_000) {
             compose.onAllNodes(hasText("Update the guide now") and isFocused()).fetchSemanticsNodes().isNotEmpty()
@@ -616,7 +631,7 @@ class SettingsScreenTest {
         pressInPanel("On", Key.DirectionUp)
         pressInPanel("Off", Key.DirectionCenter)
 
-        compose.waitUntil(5_000) { runBlocking { graph.profileSettings.subtitlePreference.first() }?.enabled == false }
+        waitUntilSaved { runBlocking { graph.profileSettings.subtitlePreference.first() }?.enabled == false }
     }
 
     @Test

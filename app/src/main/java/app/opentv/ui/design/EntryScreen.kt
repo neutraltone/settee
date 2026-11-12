@@ -59,7 +59,12 @@ fun EntryScreen(
     }
     val typed = text.text.toString()
     val refused = refusal(typed)
-    val save = { if ((allowBlank || typed.isNotBlank()) && refused == null) onSave(typed) }
+    // The text as it is when Save or Done is pressed, not as it was when last drawn: a Done straight
+    // after typing comes before the screen has redrawn, and would save what was there before.
+    val save = {
+        val now = text.text.toString()
+        if ((allowBlank || now.isNotBlank()) && refusal(now) == null) onSave(now)
+    }
     Column(
         Modifier
             .fillMaxSize()
