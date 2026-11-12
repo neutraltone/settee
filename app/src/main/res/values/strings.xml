@@ -406,6 +406,53 @@
     <!-- ============================ Phone pairing ============================ -->
     <string name="pairing_stopped">Pairing stopped</string>
     <string name="pairing_type_here">Type it here instead</string>
+    <!-- Setup: after the first provider is saved (docs/LOOK.md, Setting up). -->
+    <string name="setup_wordplay">Plumping the cushions.</string>
+    <string name="setup_step_channels">Adding your channels</string>
+    <string name="setup_step_guide">Loading the TV guide</string>
+    <string name="setup_step_movies">Fetching movies</string>
+    <string name="setup_step_shows">Fetching shows</string>
+    <plurals name="setup_done_channels">
+        <item quantity="one">%s channel added</item>
+        <item quantity="other">%s channels added</item>
+    </plurals>
+    <plurals name="setup_done_guide">
+        <item quantity="one">Guide found for %1$s of your %2$s channel</item>
+        <item quantity="other">Guide found for %1$s of your %2$s channels</item>
+    </plurals>
+    <plurals name="setup_done_movies">
+        <item quantity="one">%s movie found</item>
+        <item quantity="other">%s movies found</item>
+    </plurals>
+    <plurals name="setup_done_shows">
+        <item quantity="one">%s show found</item>
+        <item quantity="other">%s shows found</item>
+    </plurals>
+    <string name="setup_watch_live">Watch live TV now</string>
+    <string name="setup_finished_title">You\'re all set.</string>
+    <plurals name="setup_summary_channels">
+        <item quantity="one">%s channel</item>
+        <item quantity="other">%s channels</item>
+    </plurals>
+    <plurals name="setup_summary_movies">
+        <item quantity="one">%s movie</item>
+        <item quantity="other">%s movies</item>
+    </plurals>
+    <plurals name="setup_summary_shows">
+        <item quantity="one">%s show</item>
+        <item quantity="other">%s shows</item>
+    </plurals>
+    <!-- Joins the summary's parts: "1,204 channels and 6,400 movies". -->
+    <string name="setup_summary_two">%1$s and %2$s.</string>
+    <string name="setup_summary_three">%1$s, %2$s and %3$s.</string>
+    <string name="setup_summary_one">%1$s.</string>
+    <string name="setup_summary_film_details">Film details will keep filling in while you watch.</string>
+    <string name="setup_failed_guide">The TV guide didn\'t load. Settee will try again on the next refresh.</string>
+    <string name="setup_failed_movies">Movies didn\'t load. Settee will try again on the next refresh, or when you open Movies.</string>
+    <string name="setup_failed_shows">Shows didn\'t load. Settee will try again on the next refresh, or when you open Shows.</string>
+    <string name="setup_take_me_in">Take me to Settee</string>
+    <string name="pairing_all_done_title">All done</string>
+    <string name="pairing_all_done_body">Carry on on your TV.</string>
     <string name="pairing_got_it">Got it — connecting to your provider…</string>
     <string name="pairing_qr_desc">QR code linking to the setup page on this device</string>
     <string name="pairing_setup_title">Set up from your phone</string>
