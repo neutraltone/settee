@@ -43,6 +43,7 @@ import androidx.compose.ui.unit.dp
 import app.opentv.R
 import app.opentv.core.AppSettings
 import app.opentv.core.StatusBus
+import app.opentv.core.ViewerError
 import app.opentv.core.findActivity
 import app.opentv.data.model.Channel
 import app.opentv.data.model.Movie
@@ -81,6 +82,7 @@ fun MainScreen(
     isTelevision: Boolean,
     hasSources: Boolean,
     isSyncing: Boolean,
+    loadFailure: ViewerError? = null,
     onPlayChannel: (Channel) -> Unit,
     onOpenMovie: (Movie) -> Unit,
     onOpenSeries: (Series) -> Unit,
@@ -158,6 +160,7 @@ fun MainScreen(
                     isTelevision = isTelevision,
                     hasSources = hasSources,
                     isSyncing = isSyncing,
+                    loadFailure = loadFailure,
                     onPlayChannel = onPlayChannel,
                     onAddSource = onAddSource,
                     onRefresh = onRefresh,

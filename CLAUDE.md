@@ -171,7 +171,10 @@ pre-restart test in `OpenTvDatabaseTest`) is deleted.
 
 `player/PlayerController` keeps one `ExoPlayer` per screen and swaps media items (debounced 350 ms;
 never release/rebuild on channel change). Retries 403/429/5xx with backoff; not 401/404/410.
-`PlaybackErrors` turns failures into actionable sentences — don't hide them.
+`PlaybackErrors` turns failures into actionable sentences — don't hide them. Every error, in playback
+or not, is a sentence plus a detail line (code · status · format) drawn by `ui/design`'s
+`ErrorMessage`; `ErrorWording` words failures outside playback. `docs/ERRORS.md` lists them all:
+keep it up to date whenever a mapping changes or a new failure can reach the screen.
 
 ## Conventions
 

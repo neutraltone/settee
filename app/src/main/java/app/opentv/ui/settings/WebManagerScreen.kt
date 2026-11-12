@@ -33,14 +33,19 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import app.opentv.R
+import app.opentv.core.ErrorWording
+import app.opentv.core.ServerProblem
+import app.opentv.core.ServiceLocator
+import app.opentv.core.ViewerError
 import app.opentv.pairing.ManagerServer
 import app.opentv.pairing.QrCodes
 import app.opentv.ui.WebManagerViewModel
+import app.opentv.ui.design.ErrorMessage
 
 /**
  * "Manage your channels from your phone or laptop."
@@ -75,11 +80,9 @@ fun WebManagerScreen(onBack: () -> Unit, viewModel: WebManagerViewModel = viewMo
                     style = MaterialTheme.typography.headlineSmall,
                 )
                 Spacer(Modifier.height(10.dp))
-                Text(
-                    current.reason,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    textAlign = TextAlign.Center,
-                )
+                val wording = ServiceLocator.get(LocalContext.current).errorWording
+                val reason = remember(current) { describe(wording, current) }
+                ErrorMessage(reason.sentence, reason.detail)
                 Spacer(Modifier.height(24.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     Button(onClick = { viewModel.start() }) { Text(stringResource(R.string.common_try_again)) }
@@ -131,7 +134,7 @@ private fun Listening(session: ManagerServer.Session, onBack: () -> Unit) {
             Spacer(Modifier.height(4.dp))
             // The FULL url, token and all — this is the address that actually works when typed. The
             // bare host:port would 404, because every route on the server requires the token.
-            Text(session.url, style = MaterialTheme.typography.titleLarge)
+            Text(session.shortUrl, style = MaterialTheme.typography.titleLarge)
 
             Spacer(Modifier.height(20.dp))
             Text(
@@ -147,3 +150,15 @@ private fun Listening(session: ManagerServer.Session, onBack: () -> Unit) {
 }
 
 private const val QR_SIZE_PX = 600
+
+/** What [failed] says to the viewer (docs/ERRORS.md). */
+private fun describe(wording: ErrorWording, failed: ManagerServer.State.Failed): ViewerError = when (failed.problem) {
+    ServerProblem.NO_NETWORK -> wording.ofHardware(
+        R.string.manager_no_network_tv,
+        R.string.manager_no_network_device,
+    )
+    ServerProblem.COULDNT_START ->
+        wording.ofHardware(R.string.manager_failed_tv, R.string.manager_failed_device, failed.code)
+    ServerProblem.TIMED_OUT -> wording.of(R.string.manager_timed_out)
+    ServerProblem.TOO_MANY_CODES -> wording.of(R.string.manager_too_many_codes)
+}

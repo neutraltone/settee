@@ -6,6 +6,8 @@
 package app.opentv.sync
 
 import android.util.Log
+import app.opentv.core.ErrorWording
+import app.opentv.core.ServerProblem
 import app.opentv.pairing.PairingHttp
 import java.io.BufferedReader
 import java.io.InputStreamReader
@@ -40,7 +42,9 @@ class SyncServer(private val scope: CoroutineScope) {
     sealed interface State {
         data object Idle : State
         data class Sharing(val session: Session) : State
-        data class Failed(val reason: String) : State
+
+        /** [code] is the exception's type, for the detail line, when one was behind it. */
+        data class Failed(val problem: ServerProblem, val code: String? = null) : State
     }
 
     private val _state = MutableStateFlow<State>(State.Idle)
@@ -56,7 +60,7 @@ class SyncServer(private val scope: CoroutineScope) {
     fun start(bundleJson: String) {
         if (running) return
         val host = lanAddress() ?: run {
-            _state.value = State.Failed("This device isn't on a network, so it can't share.")
+            _state.value = State.Failed(ServerProblem.NO_NETWORK)
             return
         }
         val random = SecureRandom()
@@ -68,7 +72,7 @@ class SyncServer(private val scope: CoroutineScope) {
             ServerSocket(0)
         } catch (e: Exception) {
             Log.w(TAG, "Could not open a socket", e)
-            _state.value = State.Failed("Could not start sharing on this device.")
+            _state.value = State.Failed(ServerProblem.COULDNT_START, ErrorWording.codeOf(e))
             return
         }
         serverSocket = socket
@@ -91,7 +95,7 @@ class SyncServer(private val scope: CoroutineScope) {
             delay(TimeUnit.MINUTES.toMillis(TIMEOUT_MINUTES))
             if (running) {
                 stop()
-                _state.value = State.Failed("Sharing timed out. Start again when you're ready.")
+                _state.value = State.Failed(ServerProblem.TIMED_OUT)
             }
         }
     }
@@ -134,7 +138,7 @@ class SyncServer(private val scope: CoroutineScope) {
             if (wrongAttempts >= MAX_ATTEMPTS) {
                 output.write(PairingHttp.httpResponse("403 Forbidden", "text/plain", "Too many attempts."))
                 stop()
-                _state.value = State.Failed("Too many incorrect codes. Sharing cancelled.")
+                _state.value = State.Failed(ServerProblem.TOO_MANY_CODES)
                 return
             }
             output.write(PairingHttp.httpResponse("401 Unauthorized", "text/plain", "Wrong code."))

@@ -53,14 +53,17 @@ class AboutFontLicencesTest {
     }
 
     @Test
-    fun `a check that couldn't reach a release says so, rather than claiming you're up to date`() {
-        compose.setTvContent { AboutScreen(onBack = {}, checkForUpdate = { UpdateChecker.Outcome.CouldNotCheck }) }
+    fun `a check that couldn't reach a release says so with its detail line, rather than claiming you're up to date`() {
+        compose.setTvContent {
+            AboutScreen(onBack = {}, checkForUpdate = { UpdateChecker.Outcome.CouldNotCheck("HTTP 503") })
+        }
 
         val button = compose.onNodeWithText("Check for updates")
         button.performScrollTo().requestFocus()
         button.performKeyInput { pressKey(Key.DirectionCenter) }
 
         compose.onNodeWithText("Couldn't check for updates. Try again later.").assertExists()
+        compose.onNodeWithText("HTTP 503").assertExists()
         compose.onNode(hasText("You're on the latest version.")).assertDoesNotExist()
         captureScreen("about_check_failed")
     }

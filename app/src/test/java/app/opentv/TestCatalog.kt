@@ -8,6 +8,7 @@ package app.opentv
 import android.content.Context
 import androidx.room.Room
 import app.opentv.core.AppSettings
+import app.opentv.core.ErrorWording
 import app.opentv.data.db.OpenTvDatabase
 import app.opentv.data.remote.StalkerApi
 import app.opentv.data.remote.XtreamApi
@@ -16,6 +17,7 @@ import app.opentv.data.repo.CatalogueRefresh
 import app.opentv.data.repo.ChannelLineup
 import app.opentv.data.repo.EpgRepository
 import app.opentv.data.repo.ViewerLibrary
+import app.opentv.data.repo.VodTitle
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -29,10 +31,13 @@ import kotlinx.coroutines.runBlocking
  * A [CatalogRepository] over an in-memory database, talking to a [FakePanel]. Close [db] after.
  * [viewerLibrary] records progress at [clock]; [lineup] folds its channels.
  */
-class TestCatalog(context: Context, private val clock: () -> Long = { 0L }) {
+class TestCatalog(
+    context: Context,
     val db: OpenTvDatabase = Room.inMemoryDatabaseBuilder(context, OpenTvDatabase::class.java)
         .allowMainThreadQueries()
-        .build()
+        .build(),
+    private val clock: () -> Long = { 0L },
+) {
     val panel = FakePanel()
     val viewerLibrary = ViewerLibrary(db, MutableStateFlow(1L), clock = clock)
     val catalog: CatalogRepository = CatalogRepository(
@@ -47,8 +52,8 @@ class TestCatalog(context: Context, private val clock: () -> Long = { 0L }) {
         stalkerApi = StalkerApi(panel.http),
         http = panel.http,
         settings = AppSettings.get(context),
-        genrePauseMillis = 0,
-    )
+        wording = ErrorWording(context, onTelevision = false),
+    ).apply { genrePauseMillis = 0 }
 
     val settings: AppSettings = AppSettings.get(context)
 
@@ -60,6 +65,8 @@ class TestCatalog(context: Context, private val clock: () -> Long = { 0L }) {
         sourceDao = db.sources(),
         api = XtreamApi(panel.http),
         http = panel.http,
+        wording = ErrorWording(context, onTelevision = false),
+        selfEnabledGuide = EpgRepository.SelfEnabledGuide.InMemory(),
     )
 
     /** Where [lineup] keeps its folds; cancelled with the database. */
@@ -113,5 +120,13 @@ class TestCatalog(context: Context, private val clock: () -> Long = { 0L }) {
         db.sources().insert(PANEL_SOURCE)
         catalog.detectNewEpisodes(PANEL_SOURCE, catalog.fetchVod(PANEL_SOURCE, nowUtcMillis = 0).updated, 0)
         catalog.awaitBackground()
+    }
+
+    /** The names of the titles on [name]'s person page, in its order. */
+    suspend fun titlesWith(name: String): List<String> = catalog.titlesWithPerson(name).map {
+        when (it) {
+            is VodTitle.OfMovie -> it.movie.name
+            is VodTitle.OfSeries -> it.series.name
+        }
     }
 }

@@ -86,6 +86,7 @@ class AppSettings private constructor(context: Context, fileName: String = "open
         lastChannelId = 0L
         forgetVodFetches()
         prefs.edit { remove(KEY_SYNC_EPISODES_NOT_FOUND) }
+        selfEnabledGuide = null
     }
 
     // ---- Parental controls -------------------------------------------------------------------
@@ -348,6 +349,13 @@ class AppSettings private constructor(context: Context, fileName: String = "open
             prefs.edit { putString(KEY_LAST_SEEN_VERSION, value) }
         }
 
+    /** The built-in guide Settee switched on by itself ([app.opentv.data.repo.EpgRepository.SelfEnabledGuide]). */
+    var selfEnabledGuide: String?
+        get() = prefs.getString(KEY_SELF_ENABLED_GUIDE, null)
+        set(value) {
+            prefs.edit { putString(KEY_SELF_ENABLED_GUIDE, value) }
+        }
+
     /**
      * Video scaling in the player, as an [androidx.media3.ui.AspectRatioFrameLayout] RESIZE_MODE_*
      * constant (0 = Fit). Persisted so the choice survives leaving the player, which testers asked
@@ -486,17 +494,6 @@ class AppSettings private constructor(context: Context, fileName: String = "open
     }
 
     /**
-     * Which TMDB key (a hash of it, not the key) this provider's films saved with a blank genre were
-     * last asked about with, or null if never; see CatalogRepository's retry. Per provider, as
-     * [vodFetchedAtMillis] is, and cleared with it.
-     */
-    fun tmdbBlanksRetriedWith(sourceId: Long): String? = prefs.getString(KEY_TMDB_BLANKS_RETRIED + sourceId, null)
-
-    fun setTmdbBlanksRetriedWith(sourceId: Long, keyHash: String) {
-        prefs.edit { putString(KEY_TMDB_BLANKS_RETRIED + sourceId, keyHash) }
-    }
-
-    /**
      * The user's own TMDB API key (v3 auth), stored on-device only exactly like provider
      * credentials, used to fill in artwork/metadata a provider left blank. Blank = the TMDB
      * fallback is off. Each user brings their own key, so no single key carries everyone's traffic.
@@ -555,6 +552,7 @@ class AppSettings private constructor(context: Context, fileName: String = "open
         private const val KEY_CONTENT_SERIES = "content_series"
         private const val KEY_LAST_CHANNEL = "last_channel_id"
         private const val KEY_LAST_SEEN_VERSION = "last_seen_version"
+        private const val KEY_SELF_ENABLED_GUIDE = "self_enabled_guide"
         private const val KEY_RESIZE_MODE = "player_resize_mode"
         private const val KEY_LANGUAGE = "language_tag"
 
@@ -577,6 +575,9 @@ class AppSettings private constructor(context: Context, fileName: String = "open
         private const val KEY_SYNC_EPISODES_NOT_FOUND = "sync_episodes_not_found"
         private const val KEY_NAS_AUTO_SYNC = "nas_auto_sync"
         private const val KEY_VOD_FETCHED_AT = "vod_fetched_at_"
+
+        // No longer written: the background pass asks TMDB about each film once a key is set. Still
+        // cleared with a provider's other stamps, so it doesn't linger on devices that had it.
         private const val KEY_TMDB_BLANKS_RETRIED = "tmdb_blanks_retried_"
         private const val KEY_TMDB_KEY = "tmdb_api_key"
         private const val KEY_STREMIO_ADDONS = "stremio_addons"

@@ -33,6 +33,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.height
 import androidx.compose.ui.unit.width
 import androidx.media3.common.C
+import app.opentv.core.ViewerError
 import app.opentv.data.model.Channel
 import app.opentv.data.model.Movie
 import app.opentv.data.model.Series
@@ -146,7 +147,7 @@ class HomeContentTest {
 
     private val channel4 = channel(40, "Channel 4")
 
-    private fun playable(error: String? = null) = LiveTile(
+    private fun playable(error: ViewerError? = null) = LiveTile(
         LiveNow(LivePreview.Playable(channel4), nowTitle = "Countdown", nextTitle = "A Place in the Sun"),
         player = null,
         error = error,
@@ -377,7 +378,7 @@ class HomeContentTest {
     fun `with only Recently Added to show, Home shows it rather than the hint`() {
         setHome(resume = emptyList(), favourites = emptyList(), channels = emptyList(), recent = recent)
 
-        compose.onNodeWithText("Things you watch and favourite will show up here").assertDoesNotExist()
+        compose.onNodeWithText("What you watch and favourite will show up here.").assertDoesNotExist()
         compose.onNodeWithText("Shogun").assertIsFocused()
     }
 
@@ -395,7 +396,7 @@ class HomeContentTest {
     fun `a Profile with nothing watched or favourited gets a hint instead of rows`() {
         setHome(resume = emptyList(), favourites = emptyList(), channels = emptyList())
 
-        compose.onNodeWithText("Things you watch and favourite will show up here").assertExists()
+        compose.onNodeWithText("What you watch and favourite will show up here.").assertExists()
         captureScreen("home_hint")
     }
 
@@ -464,11 +465,18 @@ class HomeContentTest {
     }
 
     @Test
-    fun `a Live Preview that can't play says why, keeping what's on`() {
-        live = playable(error = "The provider refused the stream (403). Check your subscription.")
+    fun `a Live Preview that can't play says why, with the detail line, keeping what's on`() {
+        live = playable(
+            error = ViewerError(
+                "Your provider refused this. Your account may be in use on another device, " +
+                    "so stop it there and try again.",
+                "IO bad HTTP status · HTTP 403",
+            ),
+        )
         setHome()
 
-        compose.onNodeWithText("The provider refused the stream", substring = true).assertExists()
+        compose.onNodeWithText("Your provider refused this.", substring = true).assertExists()
+        compose.onNodeWithText("IO bad HTTP status · HTTP 403").assertExists()
         compose.onNodeWithText("Countdown", substring = true).assertExists()
         captureScreen("home_live_preview_error")
     }

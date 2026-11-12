@@ -56,3 +56,7 @@
 -dontwarn org.slf4j.**
 -dontwarn org.ietf.jgss.**
 -dontwarn javax.security.**
+
+# The detail line under an error names the exception's type (ErrorWording.codeOf, docs/ERRORS.md),
+# so throwables keep their class names; renamed, "UnknownHost" would read as "c".
+-keepnames class * extends java.lang.Throwable

@@ -11,6 +11,7 @@ import androidx.media3.common.MimeTypes
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.test.core.app.ApplicationProvider
+import app.opentv.core.ViewerError
 import app.opentv.data.repo.MediaKey
 import app.opentv.data.repo.Playable
 import app.opentv.player.DecoderSize
@@ -148,7 +149,9 @@ class QualityStepDownTest {
         players.until { controller.state.value is PlayerController.State.Error }
 
         val error = controller.state.value as PlayerController.State.Error
-        assertThat(error.message).isEqualTo("This device can't play this video (H.264, 3840x2160).")
+        assertThat(
+            error.reason,
+        ).isEqualTo(ViewerError("This video is too big for this device to play.", "H.264, 3840x2160"))
         assertThat(error.canRetry).isFalse()
         assertThat(players.played).hasSize(2)
         // "Playing 4K instead" would contradict the sentence just shown.

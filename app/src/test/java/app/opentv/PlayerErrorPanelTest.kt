@@ -11,6 +11,7 @@ import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
@@ -26,6 +27,7 @@ import app.opentv.data.repo.MediaKey
 import app.opentv.data.repo.Playable
 import app.opentv.player.DecoderSize
 import app.opentv.player.PlayerController
+import app.opentv.ui.design.ERROR_DETAIL_TAG
 import app.opentv.ui.player.SubtitlePicks
 import app.opentv.ui.vod.VodPlayerContent
 import app.opentv.ui.vod.VodPlayerViewModel
@@ -87,11 +89,12 @@ class PlayerErrorPanelTest {
     fun `a video this device can't play offers Back alone, with focus on it, and OK goes back`() {
         var wentBack = false
         show(refused()) { wentBack = true }
-        waitForSentence("can't play this video")
+        waitForSentence("too big for this device")
 
         compose.onNodeWithText("Back").assertIsFocused()
         compose.onNodeWithText("Try again").assertDoesNotExist()
         compose.onNodeWithText("Pause").assertDoesNotExist()
+        compose.onNodeWithTag(ERROR_DETAIL_TAG).assertExists()
         captureScreen("vod_player_cant_play")
 
         compose.onRoot().performKeyInput { pressKey(Key.DirectionCenter) }
@@ -120,7 +123,7 @@ class PlayerErrorPanelTest {
         compose.waitForIdle()
 
         controller.play(PlayerController.Request(MediaKey.Movie(2)), debounce = false)
-        waitForSentence("can't play this video")
+        waitForSentence("too big for this device")
         Espresso.pressBack()
         compose.waitForIdle()
 
@@ -134,7 +137,7 @@ class PlayerErrorPanelTest {
         toRelease += controller
         compose.setTvContent { VodPlayerContent(controller, viewModel, false, noPicks, onBack = { backs++ }) }
         controller.play(PlayerController.Request(MediaKey.Movie(1)), debounce = false)
-        waitForSentence("can't play this video")
+        waitForSentence("too big for this device")
 
         Espresso.pressBack()
         compose.waitForIdle()

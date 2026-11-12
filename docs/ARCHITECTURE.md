@@ -192,14 +192,17 @@ fix themselves.
 
 ### Errors say what to do
 
-`PlaybackErrors` turns exceptions into sentences. `ERROR_CODE_IO_BAD_HTTP_STATUS` tells a user
-nothing; "the account may already be streaming on another device, or the provider may be
-blocking this app's User-Agent — you can change it in the source's advanced settings" tells them
-what to try.
+`PlaybackErrors` turns playback failures into a sentence and a detail line, and `ErrorWording`
+does the same for everything else. `ERROR_CODE_IO_BAD_HTTP_STATUS` tells a viewer nothing; "your
+account may be in use on another device, so stop it there and try again" tells them what to try.
 
 This matters more than it sounds. The alternative habit — hiding the error code because users
 complained about seeing it — treats the symptom while the stream still fails, and removes the
-only diagnostic the user had.
+only diagnostic the user had. So the code isn't hidden, it moves: `ErrorMessage` draws it, with
+the HTTP status and the stream's format, in a quiet line under the sentence. Both are built from
+the failure's type, never an exception's message, which can carry a provider URL, login or MAC.
+
+[`docs/ERRORS.md`](ERRORS.md) lists every failure, its string and its detail line.
 
 ## Defensive parsing of Xtream responses
 
