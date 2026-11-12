@@ -300,7 +300,6 @@
     <string name="onboarding_user_agent_help">Jotkin palveluntarjoajat estävät tuntemattomat sovellukset 403-virheellä. Jos jokainen kanava epäonnistuu, kokeile tähän yleisen soittimen User-Agentia.</string>
     <string name="onboarding_working">Työskennellään…</string>
     <string name="onboarding_save_load">Tallenna ja lataa</string>
-    <string name="onboarding_use_phone">Käytä puhelintani sen sijaan</string>
     <string name="onboarding_privacy_note">Palveluntarjoajasi tiedot tallennetaan vain tähän laitteeseen. Settee:llä ei ole omaa tilijärjestelmää eikä omaa palvelinta — mikään tähän kirjoittamasi ei lähde minnekään muualle kuin palveluntarjoajallesi.</string>
     <string name="pairing_stopped">Pariliitos pysäytetty</string>
     <string name="pairing_type_here">Kirjoita se sen sijaan tähän</string>

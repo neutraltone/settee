@@ -127,6 +127,7 @@ fun HighlightSurface(
     style: HighlightStyle,
     modifier: Modifier = Modifier,
     onOptions: (() -> Unit)? = null,
+    enabled: Boolean = true,
     content: @Composable BoxScope.(highlighted: Boolean) -> Unit,
 ) {
     val interactions = remember { MutableInteractionSource() }
@@ -149,7 +150,7 @@ fun HighlightSurface(
                 clip = clips
             }
             .background(look.fill, look.shape)
-            .pressable(interactions, onClick, onOptions)
+            .pressable(interactions, onClick, onOptions, enabled)
             .ring(look),
     ) {
         content(highlighted)
@@ -166,10 +167,11 @@ private fun Modifier.pressable(
     interactions: MutableInteractionSource,
     onClick: () -> Unit,
     onOptions: (() -> Unit)?,
+    enabled: Boolean,
 ): Modifier {
     // The Highlight is drawn by HighlightSurface itself, so no ripple or state layer.
     if (onOptions == null) {
-        return clickable(interactions, indication = null, role = Role.Button, onClick = onClick)
+        return clickable(interactions, indication = null, enabled = enabled, role = Role.Button, onClick = onClick)
     }
     return onPreviewKeyEvent { event ->
         if (event.key != Key.Menu) return@onPreviewKeyEvent false
@@ -178,6 +180,7 @@ private fun Modifier.pressable(
     }.combinedClickable(
         interactionSource = interactions,
         indication = null,
+        enabled = enabled,
         role = Role.Button,
         onLongClick = onOptions,
         onClick = onClick,

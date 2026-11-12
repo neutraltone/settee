@@ -12,4 +12,5 @@ The limits we accepted:
 
 - We own every component we need, including the fiddly ones: the seek bar's scrubbing, the text field's decoration around `BasicTextField`, and the screen reader roles Material used to set for us.
 - Text field keyboard behaviour should match, because Material's field is built on `BasicTextField`, but that needs checking on a Fire TV Stick.
+  - Checking it on the Stick (#112) showed it doesn't. Compose's fields never told the Fire TV keyboard when Settee changed the text, so it went on showing the old words after a clear or a Recent Search, and the String field opened the keyboard as soon as the Highlight landed. So `ui/design`'s `TextField` (#167) is the exception: an Android `EditText` inside Settee's own decoration, which keeps the keyboard in step and takes dictation.
 - Until the migration finishes, both systems are in the app. The last migration ticket removes Material, and a detekt baseline that only shrinks stops new uses in the meantime.

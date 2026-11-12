@@ -40,7 +40,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import app.opentv.R
 import app.opentv.core.ServiceLocator
 import app.opentv.ui.ChannelsViewModel
-import app.opentv.ui.channels.DeviceTextField
+import app.opentv.ui.design.TextField
 
 /**
  * Parental controls: a PIN, and a list of categories to keep out of the guide.
@@ -264,7 +264,7 @@ private fun PinSection(pinIsSet: Boolean, onSetPin: (String) -> Unit, onClearPin
 
 @Composable
 private fun PinField(label: String, value: String, onChange: (String) -> Unit) {
-    DeviceTextField(
+    TextField(
         value = value,
         onValueChange = onChange,
         label = label,

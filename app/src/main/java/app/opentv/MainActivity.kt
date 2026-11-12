@@ -74,7 +74,6 @@ import app.opentv.ui.channels.ChannelManagerScreen
 import app.opentv.ui.channels.SearchScreen
 import app.opentv.ui.design.SetteeTheme
 import app.opentv.ui.firstScreen
-import app.opentv.ui.onboarding.AddSourceScreen
 import app.opentv.ui.options.ItemOptionsHost
 import app.opentv.ui.options.OptionsDestination
 import app.opentv.ui.player.PlayerScreen
@@ -83,7 +82,6 @@ import app.opentv.ui.settings.AppSettingsScreen
 import app.opentv.ui.settings.EpgSettingsScreen
 import app.opentv.ui.settings.ParentalControlsScreen
 import app.opentv.ui.settings.ProfilesScreen
-import app.opentv.ui.settings.ProvidersScreen
 import app.opentv.ui.settings.RecordingSettingsScreen
 import app.opentv.ui.settings.SettingsHubScreen
 import app.opentv.ui.settings.StremioAddonsScreen
@@ -343,25 +341,7 @@ private fun OpenTvApp(isTelevision: Boolean, launchedToPlay: Boolean) {
     ItemOptionsHost(navigate = { destination -> navController.navigate(Routes.of(destination)) }) {
         Box(Modifier.fillMaxSize()) {
             NavHost(navController = navController, startDestination = start) {
-                composable(Routes.ADD_SOURCE) {
-                    AddSourceScreen(
-                        viewModel = sourcesViewModel,
-                        onFinished = {
-                            navController.navigate(Routes.MAIN) {
-                                popUpTo(Routes.ADD_SOURCE) { inclusive = true }
-                            }
-                        },
-                    )
-                }
-
-                composable(Routes.EDIT_SOURCE) { entry ->
-                    val sourceId = entry.arguments?.getString("sourceId")?.toLongOrNull() ?: return@composable
-                    AddSourceScreen(
-                        viewModel = sourcesViewModel,
-                        editingSourceId = sourceId,
-                        onFinished = { navController.popBackStack() },
-                    )
-                }
+                providerRoutes(navController, sourcesViewModel)
 
                 composable(Routes.MAIN) { entry ->
                     val tab by entry.shellTab()
@@ -377,7 +357,7 @@ private fun OpenTvApp(isTelevision: Boolean, launchedToPlay: Boolean) {
                             navController.navigate(Routes.seriesDetail(series.id))
                         },
                         onResume = { key -> navController.navigate(Routes.vodPlayer(key)) },
-                        onAddSource = { navController.navigate(Routes.ADD_SOURCE) },
+                        onAddSource = { navController.openAddProvider() },
                         onRefresh = sourcesViewModel::refreshAll,
                         onOpenSearch = { navController.navigate(Routes.SEARCH) },
                         onOpenSettings = { navController.navigate(Routes.SETTINGS_HUB) },
@@ -444,15 +424,6 @@ private fun OpenTvApp(isTelevision: Boolean, launchedToPlay: Boolean) {
 
                 composable(Routes.PARENTAL) {
                     ParentalControlsScreen(onBack = { navController.popBackStack() })
-                }
-
-                composable(Routes.PROVIDERS) {
-                    ProvidersScreen(
-                        viewModel = sourcesViewModel,
-                        onAddSource = { navController.navigate(Routes.ADD_SOURCE) },
-                        onEditSource = { src -> navController.navigate(Routes.editSource(src.id)) },
-                        onBack = { navController.popBackStack() },
-                    )
                 }
 
                 composable(Routes.ADDONS) {

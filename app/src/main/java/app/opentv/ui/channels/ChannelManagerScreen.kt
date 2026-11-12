@@ -59,6 +59,7 @@ import app.opentv.ui.design.SetteeSpace
 import app.opentv.ui.design.SetteeType
 import app.opentv.ui.design.SidebarEntry
 import app.opentv.ui.design.Text
+import app.opentv.ui.design.TextField
 import app.opentv.ui.options.ItemOption
 import app.opentv.ui.options.OptionsPanel
 import coil.compose.AsyncImage
@@ -123,7 +124,7 @@ fun ChannelManagerScreen(onBack: () -> Unit, viewModel: ChannelsViewModel = view
                 searching = key == SEARCH
                 if (!searching) viewModel.selectManagerCategory(key)
             },
-            findBox = { state, box -> DeviceTextField(state, findHint, FIND_MAX_LENGTH, box) },
+            findBox = { state, box -> TextField(state, findHint, FIND_MAX_LENGTH, box) },
             modifier = Modifier
                 .background(SetteeColors.Surface)
                 .padding(start = SetteeSpace.ScreenSide / 2)
@@ -199,7 +200,7 @@ internal fun ChannelManagerSearchPane(
     }
     val typed = query.text.toString()
     Column(Modifier.fillMaxSize()) {
-        DeviceTextField(
+        TextField(
             state = query,
             placeholder = stringResource(R.string.search_type_name),
             maxLength = MAX_SEARCH_LENGTH,

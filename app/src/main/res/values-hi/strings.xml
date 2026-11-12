@@ -300,7 +300,6 @@
     <string name="onboarding_user_agent_help">कुछ प्रदाता अपरिचित ऐप को 403 से ब्लॉक कर देते हैं। अगर हर चैनल फ़ेल हो रहा है, तो यहां किसी आम प्लेयर का User-Agent आज़माएं।</string>
     <string name="onboarding_working">काम हो रहा है…</string>
     <string name="onboarding_save_load">सेव करें और लोड करें</string>
-    <string name="onboarding_use_phone">इसके बजाय मेरा फ़ोन इस्तेमाल करें</string>
     <string name="onboarding_privacy_note">आपके प्रदाता का विवरण सिर्फ़ इस डिवाइस पर सेव होता है। Settee के पास कोई अकाउंट सिस्टम नहीं है और न ही इसका अपना कोई सर्वर है — यहां आप जो कुछ भी टाइप करते हैं वह आपके प्रदाता के अलावा कहीं और नहीं भेजा जाता।</string>
     <string name="pairing_stopped">पेयरिंग रोक दी गई</string>
     <string name="pairing_type_here">इसके बजाय इसे यहां टाइप करें</string>

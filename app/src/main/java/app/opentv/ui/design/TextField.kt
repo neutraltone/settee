@@ -3,9 +3,10 @@
  * Copyright (C) 2026 The OpenTV Contributors
  * Licensed under the GNU General Public License v3.0 or later.
  */
-package app.opentv.ui.channels
+package app.opentv.ui.design
 
 import android.content.Context
+import android.graphics.drawable.GradientDrawable
 import android.os.Build
 import android.text.InputFilter
 import android.text.InputType
@@ -16,16 +17,16 @@ import android.view.accessibility.AccessibilityNodeInfo
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
 import android.widget.EditText
-import androidx.compose.foundation.interaction.FocusInteraction
-import androidx.compose.foundation.interaction.Interaction
-import androidx.compose.foundation.interaction.InteractionSource
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextFieldDefaults
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
@@ -35,6 +36,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusManager
@@ -49,12 +51,12 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.core.content.res.ResourcesCompat
 import androidx.core.view.accessibility.AccessibilityNodeInfoCompat
 import androidx.core.widget.doAfterTextChanged
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.flow
+import app.opentv.R
 
 /**
  * A one-line text box that types with the device's own keyboard, so a Fire TV's mic dictation and
@@ -69,14 +71,14 @@ import kotlinx.coroutines.flow.flow
  * So the keyboard waits for OK: the box never opens it on focus, and OK opens it here.
  */
 @Composable
-internal fun DeviceTextField(
+fun TextField(
     state: TextFieldState,
     placeholder: String,
     maxLength: Int,
     modifier: Modifier = Modifier,
     imeAction: ImeAction = ImeAction.Done,
     onSubmit: (() -> Unit)? = null,
-) = DeviceTextBox(
+) = TextBox(
     state = state,
     look = BoxLook(placeholder = placeholder),
     maxLength = maxLength,
@@ -90,7 +92,7 @@ internal fun DeviceTextField(
  * change what it's given (the TMDB key trims it), and the box and keyboard then show the change.
  */
 @Composable
-internal fun DeviceTextField(
+fun TextField(
     value: String,
     onValueChange: (String) -> Unit,
     modifier: Modifier = Modifier,
@@ -126,7 +128,7 @@ internal fun DeviceTextField(
             if (state.text.toString() != value) state.setTextAndPlaceCursorAtEnd(value)
         }
     }
-    DeviceTextBox(
+    TextBox(
         state = state,
         look = BoxLook(
             label = label,
@@ -142,7 +144,7 @@ internal fun DeviceTextField(
     )
 }
 
-/** What's drawn around the text: Material's outlined box, as the app's other boxes have. */
+/** What's drawn around the text: a label above, a placeholder inside and a note below. */
 private class BoxLook(
     val label: String? = null,
     val placeholder: String? = null,
@@ -165,7 +167,7 @@ private fun KeyboardType.toInputType(revealed: Boolean = false): Int = when (thi
 }
 
 @Composable
-private fun DeviceTextBox(
+private fun TextBox(
     state: TextFieldState,
     look: BoxLook,
     maxLength: Int?,
@@ -176,20 +178,37 @@ private fun DeviceTextBox(
     val holder = remember { BoxHolder() }
     val focusManager = LocalFocusManager.current
     val submit by rememberUpdatedState(onSubmit)
-    val highlight = remember { BoxHighlight() }
+    var highlighted by remember { mutableStateOf(false) }
     val settings = BoxSettings(
         inputType = look.inputType,
         imeOptions = imeAction.toEditorAction(),
         maxLength = maxLength,
-        textColor = MaterialTheme.colorScheme.onSurface.toArgb(),
-        textSize = MaterialTheme.typography.bodyLarge.fontSize.value,
+        textColor = SetteeColors.Text.toArgb(),
+        textSize = SetteeType.Body.fontSize.value,
         spokenLabel = look.label ?: look.placeholder,
     )
     val textHighlighted = { holder.box?.isFocused == true }
-    Box(modifier.remoteKeys(focusManager, textHighlighted) { holder.box?.openKeyboard() }) {
-        OutlinedTextFieldDefaults.DecorationBox(
-            value = state.text.toString(),
-            innerTextField = {
+    Column(modifier, verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        look.label?.let { Text(it, SetteeType.Body, color = SetteeColors.QuietText) }
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .background(SetteeColors.Surface, SetteeShapes.Card)
+                // The Highlight is a thick coral edge, as a card's ring is: Material's outline only
+                // thickened by a hair, which couldn't be seen from the sofa.
+                .border(
+                    width = if (highlighted) 3.dp else 1.dp,
+                    color = if (highlighted) SetteeColors.Accent else SetteeColors.Rule,
+                    shape = SetteeShapes.Card,
+                )
+                .padding(horizontal = 16.dp, vertical = 4.dp)
+                .remoteKeys(focusManager, textHighlighted) { holder.box?.openKeyboard() },
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Box(Modifier.weight(1f).padding(vertical = 10.dp), contentAlignment = Alignment.CenterStart) {
+                if (state.text.isEmpty() && look.placeholder != null) {
+                    Text(look.placeholder, SetteeType.Body, color = SetteeColors.QuietText, maxLines = 1)
+                }
                 AndroidView(
                     factory = { context ->
                         DeviceEditText(context).apply {
@@ -197,6 +216,15 @@ private fun DeviceTextBox(
                             setSingleLine()
                             background = null
                             setPadding(0, 0, 0, 0)
+                            typeface = ResourcesCompat.getFont(context, R.font.alegreya_sans_medium)
+                            // Android's own cursor is the theme's teal. Older versions keep it:
+                            // there's no way to set a cursor's colour before Android 10.
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                                textCursorDrawable = GradientDrawable().apply {
+                                    setColor(SetteeColors.Accent.toArgb())
+                                    setSize((2 * resources.displayMetrics.density).toInt(), 0)
+                                }
+                            }
                             showSoftInputOnFocus = false
                             setOnFocusChangeListener { box, has ->
                                 // Compose sometimes asks its root view for focus while a layout is
@@ -205,7 +233,7 @@ private fun DeviceTextBox(
                                 // from this box. Being the default while highlighted makes the
                                 // restore land back here.
                                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) box.isFocusedByDefault = has
-                                highlight.highlighted = has
+                                highlighted = has
                             }
                             doAfterTextChanged { copyTo(state) }
                             // The cursor too: the Channel manager sends Left to the categories only
@@ -222,26 +250,17 @@ private fun DeviceTextBox(
                     },
                     modifier = Modifier.fillMaxWidth(),
                     // Runs straight after the factory as well, so this is the one place the box
-                    // takes its settings and text, and a change to either (a theme switch, a
-                    // revealed password) reaches it.
+                    // takes its settings and text, and a change to either (a revealed password)
+                    // reaches it.
                     update = { box ->
                         box.apply(settings)
                         box.show(state)
                     },
                 )
-            },
-            enabled = true,
-            singleLine = true,
-            visualTransformation = VisualTransformation.None,
-            interactionSource = highlight,
-            label = look.label?.let { { Text(it) } },
-            placeholder = look.placeholder?.let { { Text(it) } },
-            supportingText = look.supportingText?.let { { Text(it) } },
-            trailingIcon = look.trailingIcon,
-            container = {
-                OutlinedTextFieldDefaults.Container(enabled = true, isError = false, interactionSource = highlight)
-            },
-        )
+            }
+            look.trailingIcon?.invoke()
+        }
+        look.supportingText?.let { Text(it, SetteeType.Body, color = SetteeColors.QuietText) }
     }
 }
 
@@ -254,30 +273,6 @@ private data class BoxSettings(
     val textSize: Float,
     val spokenLabel: String?,
 )
-
-/**
- * Tells Material's outline whether the box has the highlight. It's state rather than events
- * because the box can be highlighted before the outline starts listening, and an event sent
- * then would be lost, leaving a highlighted box drawn as if it weren't.
- */
-private class BoxHighlight : InteractionSource {
-    var highlighted by mutableStateOf(false)
-
-    // Each listener gets its own Focus to end: the outline and the label listen separately, and
-    // an Unfocus ending another listener's Focus would leave that one drawn highlighted.
-    override val interactions: Flow<Interaction> = flow {
-        var focus: FocusInteraction.Focus? = null
-        snapshotFlow { highlighted }.collect { now ->
-            val started = focus
-            if (now && started == null) {
-                emit(FocusInteraction.Focus().also { focus = it })
-            } else if (!now && started != null) {
-                emit(FocusInteraction.Unfocus(started))
-                focus = null
-            }
-        }
-    }
-}
 
 /**
  * Up and Down leave the box and OK opens the keyboard. An open keyboard takes the D-pad itself, so
@@ -408,6 +403,3 @@ private val KeyEvent.isRemoteOk: Boolean
                 nativeKeyEvent.device?.keyboardType != InputDevice.KEYBOARD_TYPE_ALPHABETIC
         else -> false
     }
-
-/** The longest search either search box takes, the Search screen's or the Channel manager's. */
-internal const val MAX_SEARCH_LENGTH = 40

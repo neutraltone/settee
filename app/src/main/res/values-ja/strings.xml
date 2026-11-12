@@ -300,7 +300,6 @@
     <string name="onboarding_user_agent_help">一部のプロバイダーは見慣れないアプリを403エラーでブロックします。すべてのチャンネルが失敗する場合は、ここに一般的なプレーヤーのUser-Agentを試してください。</string>
     <string name="onboarding_working">処理中…</string>
     <string name="onboarding_save_load">保存して読み込み</string>
-    <string name="onboarding_use_phone">代わりにスマホを使う</string>
     <string name="onboarding_privacy_note">プロバイダーの情報はこの端末にのみ保存されます。Setteeにはアカウントシステムも独自のサーバーもありません——ここで入力した内容は、プロバイダー宛て以外どこにも送信されません。</string>
     <string name="pairing_stopped">ペアリングを停止しました</string>
     <string name="pairing_type_here">代わりにここに入力</string>

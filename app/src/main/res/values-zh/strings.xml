@@ -300,7 +300,6 @@
     <string name="onboarding_user_agent_help">部分提供商会以 403 错误屏蔽不熟悉的应用。如果所有频道都无法播放，可以在此尝试填入常见播放器的 User-Agent。</string>
     <string name="onboarding_working">处理中…</string>
     <string name="onboarding_save_load">保存并加载</string>
-    <string name="onboarding_use_phone">改用手机</string>
     <string name="onboarding_privacy_note">你的提供商信息仅保存在本设备上。Settee 没有账户系统，也没有自己的服务器——你在此输入的内容不会发送到任何地方，除了你的提供商。</string>
     <string name="pairing_stopped">配对已停止</string>
     <string name="pairing_type_here">改为在此输入</string>

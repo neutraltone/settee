@@ -300,7 +300,6 @@
     <string name="onboarding_user_agent_help">Sommige providers blokkeren onbekende apps met een 403. Als elke zender mislukt, probeer hier dan de User-Agent van een bekende speler.</string>
     <string name="onboarding_working">Bezig…</string>
     <string name="onboarding_save_load">Opslaan en laden</string>
-    <string name="onboarding_use_phone">Mijn telefoon gebruiken in plaats daarvan</string>
     <string name="onboarding_privacy_note">Je providergegevens worden alleen op dit apparaat opgeslagen. Settee heeft geen accountsysteem en geen eigen server — niets wat je hier typt wordt ergens naartoe gestuurd, behalve naar je provider.</string>
     <string name="pairing_stopped">Koppelen gestopt</string>
     <string name="pairing_type_here">Typ het hier in plaats daarvan</string>
