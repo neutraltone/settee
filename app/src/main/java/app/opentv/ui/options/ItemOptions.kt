@@ -6,6 +6,7 @@
 package app.opentv.ui.options
 
 import app.opentv.data.model.Programme
+import app.opentv.data.model.RecordingStatus
 import app.opentv.data.repo.WatchStatus
 
 /** One thing the options panel can do to the highlighted item. */
@@ -14,15 +15,18 @@ sealed interface ItemOption {
 
     data object ShowInfo : ItemOption
 
-    data object MarkWatched : ItemOption
+    /** Marking watched or unwatched, kept apart so their labels are checked like the other groups'. */
+    sealed interface MarkAction : ItemOption
 
-    data object MarkUnwatched : ItemOption
+    data object MarkWatched : MarkAction
 
-    data object MarkWatchedUpToHere : ItemOption
+    data object MarkUnwatched : MarkAction
 
-    data object MarkSeasonWatched : ItemOption
+    data object MarkWatchedUpToHere : MarkAction
 
-    data object MarkSeasonUnwatched : ItemOption
+    data object MarkSeasonWatched : MarkAction
+
+    data object MarkSeasonUnwatched : MarkAction
 
     data object RemoveFromContinueWatching : ItemOption
 
@@ -56,7 +60,8 @@ sealed interface ItemOption {
 
     data object RecordNow : ChannelAction
 
-    data object StopRecording : ChannelAction
+    /** Stops a channel's recording from the guide, or one Recording from the Recordings screen. */
+    data object StopRecording : ChannelAction, RecordingAction
 
     /**
      * The [programme] on now when the panel opened. Carried rather than looked up again, so the series
@@ -68,6 +73,18 @@ sealed interface ItemOption {
 
     /** One of the programmes Schedule a later programme lists. */
     data class LaterProgramme(val programme: Programme) : ChannelAction
+
+    /** What's done to a row on the Recordings screen, kept apart like [ChannelAction]. */
+    sealed interface RecordingAction : ItemOption
+
+    /** Removes the recording and its file; asks first, as it can't be undone. */
+    data object DeleteRecording : RecordingAction
+
+    data object CancelRecording : RecordingAction
+
+    data object CancelReminder : RecordingAction
+
+    data object RemoveSeriesLink : RecordingAction
 }
 
 /**
@@ -141,6 +158,23 @@ sealed interface OptionsFor {
             programmeOnNow?.let { add(ItemOption.RecordWholeSeries(it)) }
             if (hasUpcoming) add(ItemOption.ScheduleLater)
         }
+    }
+
+    /** A row under Coming up or Recorded on the Recordings screen, by its [status]. */
+    data class OfRecording(val status: RecordingStatus) : OptionsFor {
+        override fun options() = when (status) {
+            RecordingStatus.SCHEDULED -> listOf(ItemOption.CancelRecording)
+            RecordingStatus.RECORDING -> listOf(ItemOption.StopRecording, ItemOption.DeleteRecording)
+            RecordingStatus.COMPLETED, RecordingStatus.FAILED -> listOf(ItemOption.DeleteRecording)
+        }
+    }
+
+    data object OfReminder : OptionsFor {
+        override fun options() = listOf(ItemOption.CancelReminder)
+    }
+
+    data object OfSeriesLink : OptionsFor {
+        override fun options() = listOf(ItemOption.RemoveSeriesLink)
     }
 
     data object RecentSearch : OptionsFor {

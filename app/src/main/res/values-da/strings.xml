@@ -65,14 +65,9 @@
     <string name="rec_record_series_named">Optag hele serien – %1$s</string>
     <string name="rec_series_recording_set">Serieoptagelse indstillet for “%1$s”</string>
     <string name="rec_screen_title">Optagelser &amp; påmindelser</string>
-    <string name="rec_screen_desc">Optag live-tv til denne boks eller din NAS, og indstil påmindelser for det, der er på vej.</string>
     <string name="rec_empty_state">Ingen optagelser endnu. Tryk på Optag, mens du ser, eller vælg et program i guiden.</string>
-    <string name="rec_upcoming_reminders">Kommende påmindelser</string>
     <string name="rec_reminder_autoswitch">Autoskift</string>
-    <string name="rec_reminder_plain">Påmindelse</string>
     <string name="rec_cancel_reminder">Annuller påmindelse</string>
-    <string name="rec_status_scheduled">Planlagt · %1$s</string>
-    <string name="rec_status_recording">● Optager · %1$s · %2$s</string>
     <string name="rec_status_failed">Mislykkedes · %1$s</string>
     <string name="rec_notification_one">Optager 1 program</string>
     <string name="rec_notification_many">Optager %1$d programmer</string>
@@ -224,17 +219,12 @@
     <string name="rec_quality_sd">SD</string>
     <string name="rec_clashes">Overlapper en anden optagelse</string>
     <string name="rec_section_series_links">Serielinks</string>
-    <string name="rec_series_upcoming">%1$s · %2$d planlagt</string>
     <string name="rec_series_waiting">%1$s · venter på næste udsendelse</string>
     <string name="rec_series_next_at">%1$s · optager %2$s</string>
     <string name="rec_series_next_more">Næste optager %1$s · +%2$d mere</string>
     <string name="rec_series_remove">Fjern serielink</string>
-    <string name="rec_section_scheduled">Planlagt</string>
     <string name="rec_section_recorded">Optaget</string>
-    <string name="rec_status_scheduled_at">Optager %1$s · %2$s</string>
     <string name="rec_for_profile">For %1$s</string>
-    <string name="rec_retry">Prøv igen</string>
-    <string name="rec_watch_live">Se</string>
     <string name="rec_switch_now_title">Optager %1$s</string>
     <string name="rec_switch_now_text">Optager nu på %1$s – tryk for at se</string>
     <string name="rec_switch_soon_title">Optages snart: %1$s</string>
@@ -311,4 +301,6 @@
     <string name="error_out_of_memory_tv">Denne stream kræver mere hukommelse, end dette tv har.</string>
     <string name="error_out_of_memory_device">Denne stream kræver mere hukommelse, end denne enhed har.</string>
     <string name="onboarding_xtream_or_playlist_help">Hvis din udbyder gav dig ét langt link i stedet for et login, så tilføj det som en playliste i stedet.</string>
+    <string name="providers_empty">Ingen udbydere endnu. Tilføj den tjeneste, du allerede betaler for, for at komme i gang.</string>
+    <string name="addons_empty">Ingen tilføjelser endnu. Indsæt linket til en tilføjelse ovenfor for at tilføje den.</string>
 </resources>

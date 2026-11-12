@@ -65,14 +65,9 @@
     <string name="rec_record_series_named">Nahrať celý seriál — %1$s</string>
     <string name="rec_series_recording_set">Nahrávanie seriálu nastavené pre „%1$s“</string>
     <string name="rec_screen_title">Nahrávky &amp; pripomienky</string>
-    <string name="rec_screen_desc">Nahrávajte živé vysielanie do tohto zariadenia alebo na svoj NAS a nastavte si pripomienky na to, čo sa chystá.</string>
     <string name="rec_empty_state">Zatiaľ žiadne nahrávky. Počas sledovania stlačte Nahrať alebo vyberte reláciu v programe.</string>
-    <string name="rec_upcoming_reminders">Nadchádzajúce pripomienky</string>
     <string name="rec_reminder_autoswitch">Automatické prepnutie</string>
-    <string name="rec_reminder_plain">Pripomienka</string>
     <string name="rec_cancel_reminder">Zrušiť pripomienku</string>
-    <string name="rec_status_scheduled">Naplánované · %1$s</string>
-    <string name="rec_status_recording">● Nahráva sa · %1$s · %2$s</string>
     <string name="rec_status_failed">Zlyhalo · %1$s</string>
     <string name="rec_notification_one">Nahráva sa 1 program</string>
     <string name="rec_notification_many">Nahráva sa %1$d programov</string>
@@ -224,17 +219,12 @@
     <string name="rec_quality_sd">SD</string>
     <string name="rec_clashes">Prekrýva sa s iným nahrávaním</string>
     <string name="rec_section_series_links">Prepojenia seriálov</string>
-    <string name="rec_series_upcoming">%1$s · %2$d naplánovaných</string>
     <string name="rec_series_waiting">%1$s · čaká sa na ďalšie vysielanie</string>
     <string name="rec_series_next_at">%1$s · nahráva %2$s</string>
     <string name="rec_series_next_more">Ďalšie nahráva %1$s · +%2$d ďalších</string>
     <string name="rec_series_remove">Odstrániť prepojenie seriálu</string>
-    <string name="rec_section_scheduled">Naplánované</string>
     <string name="rec_section_recorded">Nahrané</string>
-    <string name="rec_status_scheduled_at">Nahráva %1$s · %2$s</string>
     <string name="rec_for_profile">Pre %1$s</string>
-    <string name="rec_retry">Skúsiť znova</string>
-    <string name="rec_watch_live">Sledovať</string>
     <string name="rec_switch_now_title">Nahráva sa %1$s</string>
     <string name="rec_switch_now_text">Práve sa nahráva na %1$s — klepnutím sledujte</string>
     <string name="rec_switch_soon_title">Čoskoro nahrávanie: %1$s</string>
@@ -311,4 +301,6 @@
     <string name="error_out_of_memory_tv">Tento stream potrebuje viac pamäte, než má tento televízor.</string>
     <string name="error_out_of_memory_device">Tento stream potrebuje viac pamäte, než má toto zariadenie.</string>
     <string name="onboarding_xtream_or_playlist_help">Ak vám poskytovateľ dal jeden dlhý odkaz namiesto prihlasovacích údajov, pridajte ho radšej ako playlist.</string>
+    <string name="providers_empty">Zatiaľ žiadni poskytovatelia. Ak chcete začať, pridajte službu, za ktorú už platíte.</string>
+    <string name="addons_empty">Zatiaľ žiadne doplnky. Doplnok pridáte vložením jeho odkazu vyššie.</string>
 </resources>

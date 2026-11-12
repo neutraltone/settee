@@ -71,24 +71,27 @@
 
     <!-- ============================ Recordings & reminders ============================ -->
     <string name="rec_recording_stopped">Recording stopped</string>
-    <string name="rec_recording_started_see_tab">● Recording %1$s — see the Recordings tab</string>
+    <string name="rec_recording_started_see_tab">● Recording %1$s. See the Recordings tab.</string>
     <string name="rec_stop_recording">Stop recording</string>
     <string name="rec_record_now">Record now</string>
     <string name="rec_schedule_recording">Schedule recording</string>
     <string name="rec_scheduled_title">Scheduled: %1$s</string>
     <string name="rec_recording_channel">● Recording %1$s</string>
     <string name="rec_record_series">Record whole series</string>
-    <string name="rec_record_series_named">Record whole series — %1$s</string>
+    <string name="rec_record_series_named">Record whole series: %1$s</string>
     <string name="rec_series_recording_set">Series recording set for \"%1$s\"</string>
     <string name="rec_screen_title">Recordings &amp; reminders</string>
-    <string name="rec_screen_desc">Record live TV to this box or your NAS, and set reminders for what\'s coming up.</string>
     <string name="rec_empty_state">No recordings yet. Press Record while you\'re watching, or pick a programme in the guide.</string>
-    <string name="rec_upcoming_reminders">Upcoming reminders</string>
     <string name="rec_reminder_autoswitch">Auto-switch</string>
-    <string name="rec_reminder_plain">Reminder</string>
     <string name="rec_cancel_reminder">Cancel reminder</string>
-    <string name="rec_status_scheduled">Scheduled · %1$s</string>
-    <string name="rec_status_recording">● Recording · %1$s · %2$s</string>
+    <string name="rec_cancel_recording">Cancel recording</string>
+    <string name="rec_heading_coming_up">Coming up</string>
+    <string name="rec_in_progress">Recording</string>
+    <string name="rec_delete_confirm">Delete “%1$s”? It can\'t be undone.</string>
+    <string name="rec_delete_keep">Keep it</string>
+    <string name="rec_cancel_recording_confirm">Cancel the recording of “%1$s”?</string>
+    <string name="rec_cancel_reminder_confirm">Cancel the reminder for “%1$s”?</string>
+    <string name="rec_series_remove_confirm">Remove the series link for “%1$s”? Its bookings are cancelled too.</string>
     <string name="rec_status_failed">Failed · %1$s</string>
     <string name="rec_notification_one">Recording 1 programme</string>
     <string name="rec_notification_many">Recording %1$d programmes</string>
@@ -98,7 +101,7 @@
     <string name="rec_error_usb_no_folder">There\'s no folder to record to. Pick one on your USB drive in Recording settings.</string>
     <string name="rec_error_usb_unavailable">Can\'t find your USB drive. Plug it back in, then pick its folder again in Recording settings.</string>
     <string name="rec_background_prompt_title">Keep recording when you leave?</string>
-    <string name="rec_background_prompt_body">Android may stop this recording when the screen sleeps or you leave Settee. Allow Settee to ignore battery optimisation so recordings keep running, even in standby — the way a set-top box does.</string>
+    <string name="rec_background_prompt_body">Android may stop this recording when the screen sleeps or you leave Settee. Allow Settee to ignore battery optimisation so recordings keep running in standby, as they would on a set-top box.</string>
     <string name="rec_background_prompt_allow">Allow</string>
     <string name="rec_background_prompt_not_now">Not now</string>
 
@@ -113,7 +116,7 @@
     <string name="player_stepped_down_for_sound_tv">This TV can\'t play this audio format (%1$s), so another version is playing. If your TV or soundbar supports it, turning on surround sound in its settings may help.</string>
     <string name="player_stepped_down_for_sound_device">This device can\'t play this audio format (%1$s), so another version is playing. If your TV or soundbar supports it, turning on surround sound in this device\'s settings may help.</string>
     <string name="player_stepped_down_unnamed">This device can\'t play that quality. Playing another instead.</string>
-    <string name="player_back_to_live">Paused too long — back to live</string>
+    <string name="player_back_to_live">Paused too long. Back to live.</string>
     <string name="live_pause_prompt_title">Pause live TV?</string>
     <string name="live_pause_prompt_turn_on">Turn on and pause</string>
     <string name="live_pause_prompt_not_now">Not now</string>
@@ -230,7 +233,6 @@
     <string name="settings_addons_address">Your add-on\'s address</string>
     <string name="settings_addons_address_hint">The link to its manifest, ending in manifest.json</string>
     <string name="settings_addons_invalid">That isn\'t an add-on\'s address. Check it ends in manifest.json and try again.</string>
-    <string name="settings_addons_empty">No add-ons yet. Settee comes with none, so add your own.</string>
     <string name="settings_manager_scan">Scan this with your phone\'s camera, or type the address into a browser on the same wifi:</string>
     <string name="settings_manager_new_address">Get a new address</string>
     <string name="settings_manager_new_address_note">If the typed address has stopped working after a few wrong tries</string>
@@ -283,7 +285,7 @@
     <string name="recset_field_username">Username</string>
     <string name="recset_field_password">Password</string>
     <string name="recset_status_testing">Testing…</string>
-    <string name="recset_status_connected">Connected — the share is reachable and writable.</string>
+    <string name="recset_status_connected">Connected. The share is reachable and writable.</string>
     <string name="recset_status_failed">Couldn\'t connect to your NAS. Check it\'s on and these details are right.</string>
     <string name="recset_test_connection">Test connection</string>
     <!-- Recording behaviour -->
@@ -295,8 +297,9 @@
     <string name="recset_background_title">Recording in the background</string>
     <string name="recset_background_allowed">Allowed</string>
     <string name="recset_background_not_allowed">Not allowed</string>
+    <string name="recset_background_no_setting">Android may stop recordings when the device sleeps or you leave Settee. This device has no setting to prevent that.</string>
     <string name="recset_background_on_desc">Recordings will keep running when you leave Settee or the TV goes to sleep.</string>
-    <string name="recset_background_toast">Background recording enabled — recordings will keep going in the background.</string>
+    <string name="recset_background_toast">Background recording is on. Recordings will keep going in the background.</string>
 
     <!-- ============================ TV guide (EPG) settings ============================ -->
     <string name="epg_name_optional">Name (optional)</string>
@@ -313,7 +316,7 @@
 
     <!-- ============================ About ============================ -->
     <string name="about_based_on">Based on OpenTV</string>
-    <string name="about_update_available">Update available: %1$s — see the prompt to install.</string>
+    <string name="about_update_available">Update available: %1$s. See the prompt to install.</string>
     <string name="about_up_to_date">You\'re on the latest version.</string>
     <string name="about_check_failed">Couldn\'t check for updates. Try again later.</string>
     <string name="about_checking">Checking…</string>
@@ -326,8 +329,8 @@
     <string name="whats_new_bug_fixes">Bug Fixes</string>
     <string name="whats_new_performance">Performance Improvements</string>
     <string name="whats_new_nothing">Nothing in this version changes what you see.</string>
-    <string name="about_what_is_body">A free, open-source IPTV player for Android TV, Fire TV and phones. It\'s a player only — it doesn\'t supply channels; you connect the service you already pay for. Nothing you enter leaves your device except to talk to your own provider.</string>
-    <string name="about_built_open_body">Settee is developed openly, with AI doing a large share of the coding under human direction — that\'s stated plainly, not hidden. Because it\'s open source, no single person going away can take it down: anyone can read every line, build it, and carry it on.</string>
+    <string name="about_what_is_body">A free, open-source IPTV player for Android TV, Fire TV and phones. It\'s only a player. It doesn\'t supply channels: you connect the service you already pay for. Nothing you enter leaves your device except to talk to your own provider.</string>
+    <string name="about_built_open_body">Settee is developed openly, with AI doing a large share of the coding under human direction. That\'s stated plainly, not hidden. Because it\'s open source, no single person going away can take it down: anyone can read every line, build it, and carry it on.</string>
     <string name="about_licence_label">Licence</string>
     <string name="about_source_code">Source code</string>
     <string name="about_fonts_label">Fonts</string>
@@ -377,7 +380,7 @@
 
     <!-- ============================ Manage on phone / laptop (web) ============================ -->
     <string name="webmanager_qr_desc">QR code linking to the channel manager on this device</string>
-    <string name="webmanager_local_only">This page is served by this television, over your own network — it never leaves your home.</string>
+    <string name="webmanager_local_only">This page is served by this television, over your own network. It never leaves your home.</string>
 
     <!-- ============================ Channel manager ============================ -->
     <string name="channels_manager_title">Channel manager</string>
@@ -502,24 +505,19 @@
 
     <!-- Recordings: sections, scheduling detail, retry, profile -->
     <string name="rec_section_series_links">Series links</string>
-    <string name="rec_series_upcoming">%1$s · %2$d scheduled</string>
     <string name="rec_series_waiting">%1$s · waiting for next airing</string>
     <string name="rec_series_next_at">%1$s · records %2$s</string>
     <string name="rec_series_next_more">Next records %1$s · +%2$d more</string>
     <string name="rec_series_remove">Remove series link</string>
-    <string name="rec_section_scheduled">Scheduled</string>
     <string name="rec_section_recorded">Recorded</string>
-    <string name="rec_status_scheduled_at">Records %1$s · %2$s</string>
     <string name="rec_for_profile">For %1$s</string>
-    <string name="rec_retry">Retry</string>
-    <string name="rec_watch_live">Watch</string>
-    <string name="rec_watching_live_badge">Recording — live</string>
+    <string name="rec_watching_live_badge">Recording · live</string>
     <!-- Single-connection auto-switch -->
     <string name="rec_switch_now_title">Recording %1$s</string>
-    <string name="rec_switch_now_text">Now recording on %1$s — tap to watch</string>
+    <string name="rec_switch_now_text">Now recording on %1$s. Tap to watch.</string>
     <string name="rec_switch_soon_title">Recording soon: %1$s</string>
-    <string name="rec_switch_soon_text">Starts on %1$s in 30s — this screen will switch to it</string>
-    <string name="rec_switch_banner">“%1$s” records on %2$s — this screen will switch</string>
+    <string name="rec_switch_soon_text">Starts on %1$s in 30s. This screen will switch to it.</string>
+    <string name="rec_switch_banner">“%1$s” records on %2$s. This screen will switch.</string>
     <string name="rec_switch_keep_watching">Keep watching</string>
     <!-- Guard before opening live TV while a recording runs (single connection) -->
     <string name="rec_live_warn_title">Recording in progress</string>
@@ -603,15 +601,15 @@
     <string name="refresh_building_guide">Building the TV guide…</string>
     <string name="refresh_loading_vod">Loading movies &amp; shows…</string>
     <string name="refresh_downloading_guides">Downloading guides…</string>
-    <string name="refresh_guide_unmatched">Channels ready. No guide data matched yet — add a free guide under Guide settings.</string>
+    <string name="refresh_guide_unmatched">Channels ready. No guide data matched yet. Add a free guide in Guide settings.</string>
     <string name="refresh_guide_and_failures">%1$s · %2$s</string>
     <plurals name="refresh_done">
         <item quantity="one">Refreshed %1$d channel, guide matched %2$d of %3$d.</item>
         <item quantity="other">Refreshed %1$d channels, guide matched %2$d of %3$d.</item>
     </plurals>
     <plurals name="refresh_done_with_problems">
-        <item quantity="one">Refreshed %1$d channel, %2$s — see Guide settings.</item>
-        <item quantity="other">Refreshed %1$d channels, %2$s — see Guide settings.</item>
+        <item quantity="one">Refreshed %1$d channel, %2$s. See Guide settings.</item>
+        <item quantity="other">Refreshed %1$d channels, %2$s. See Guide settings.</item>
     </plurals>
     <plurals name="refresh_problems">
         <item quantity="one">%d problem</item>
@@ -622,8 +620,8 @@
         <item quantity="other">Loaded %d channels. The guide is loading in the background; Movies and Shows load when you open them.</item>
     </plurals>
     <plurals name="refresh_guide_ready">
-        <item quantity="one">Guide ready — matched %1$d of %2$d channel.</item>
-        <item quantity="other">Guide ready — matched %1$d of %2$d channels.</item>
+        <item quantity="one">Guide ready. Matched %1$d of %2$d channel.</item>
+        <item quantity="other">Guide ready. Matched %1$d of %2$d channels.</item>
     </plurals>
     <plurals name="refresh_guide_matched">
         <item quantity="one">Guide matched %1$d of %2$d channel</item>
@@ -634,4 +632,6 @@
         <item quantity="other">%d feeds failed</item>
     </plurals>
     <string name="guide_next_prefix">Next  %1$s  %2$s</string>
+    <string name="providers_empty">No providers yet. Add the service you already pay for to get started.</string>
+    <string name="addons_empty">No add-ons yet. Paste an add-on\'s link above to add one.</string>
 </resources>

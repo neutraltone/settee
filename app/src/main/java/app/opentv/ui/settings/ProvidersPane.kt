@@ -5,6 +5,7 @@
  */
 package app.opentv.ui.settings
 
+import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -12,8 +13,10 @@ import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModelStoreOwner
 import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -24,7 +27,10 @@ import app.opentv.ui.SourcesViewModel
 import app.opentv.ui.design.ListRow
 import app.opentv.ui.design.PanelRow
 import app.opentv.ui.design.PanelTitle
+import app.opentv.ui.design.SetteeColors
+import app.opentv.ui.design.SetteeType
 import app.opentv.ui.design.SidePanel
+import app.opentv.ui.design.Text
 
 /**
  * Providers: a row per provider, which OK edits, and a row to add one. A provider's other actions
@@ -56,6 +62,15 @@ internal fun ProvidersPane(
     }
     val add = screenRow("add-provider", onAddProvider)
     ListRow(stringResource(R.string.settings_row_add_provider), onClick = add.open, modifier = add.modifier, opens = true)
+    // Only once the list has loaded, so it doesn't flash up before the providers do.
+    if (ui.loaded && ui.sources.isEmpty()) {
+        Text(
+            stringResource(R.string.providers_empty),
+            SetteeType.Body,
+            color = SetteeColors.QuietText,
+            modifier = Modifier.padding(top = 12.dp),
+        )
+    }
 
     options?.let { source ->
         SidePanel(onBack = { options = null }) {

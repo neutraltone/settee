@@ -24,28 +24,6 @@
     </issue>
 
     <issue
-        id="DefaultLocale"
-        message="Implicitly using the default locale is a common source of bugs: Use `String.format(Locale, ...)` instead"
-        errorLine1="    return if (mb >= 1024) String.format(&quot;%.1f GB&quot;, mb / 1024.0) else String.format(&quot;%.0f MB&quot;, mb)"
-        errorLine2="                           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/app/opentv/ui/recordings/RecordingsScreen.kt"
-            line="482"
-            column="28"/>
-    </issue>
-
-    <issue
-        id="DefaultLocale"
-        message="Implicitly using the default locale is a common source of bugs: Use `String.format(Locale, ...)` instead"
-        errorLine1="    return if (mb >= 1024) String.format(&quot;%.1f GB&quot;, mb / 1024.0) else String.format(&quot;%.0f MB&quot;, mb)"
-        errorLine2="                                                                      ~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/app/opentv/ui/recordings/RecordingsScreen.kt"
-            line="482"
-            column="71"/>
-    </issue>
-
-    <issue
         id="LocaleFolder"
         message="The locale folder &quot;`id`&quot; should be called &quot;`in`&quot; instead; see the `java.util.Locale` documentation">
         <location

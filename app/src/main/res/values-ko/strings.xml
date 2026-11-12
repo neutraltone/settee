@@ -65,14 +65,9 @@
     <string name="rec_record_series_named">시리즈 전체 녹화 — %1$s</string>
     <string name="rec_series_recording_set">\'%1$s\'의 시리즈 녹화가 설정되었습니다</string>
     <string name="rec_screen_title">녹화 및 알림</string>
-    <string name="rec_screen_desc">실시간 TV를 이 기기나 NAS에 녹화하고, 방영 예정 프로그램에 알림을 설정하세요.</string>
     <string name="rec_empty_state">아직 녹화가 없습니다. 시청 중에 녹화를 누르거나 편성표에서 프로그램을 선택하세요.</string>
-    <string name="rec_upcoming_reminders">예정된 알림</string>
     <string name="rec_reminder_autoswitch">자동 전환</string>
-    <string name="rec_reminder_plain">알림</string>
     <string name="rec_cancel_reminder">알림 취소</string>
-    <string name="rec_status_scheduled">예약됨 · %1$s</string>
-    <string name="rec_status_recording">● 녹화 중 · %1$s · %2$s</string>
     <string name="rec_status_failed">실패 · %1$s</string>
     <string name="rec_notification_one">프로그램 1개 녹화 중</string>
     <string name="rec_notification_many">프로그램 %1$d개 녹화 중</string>
@@ -224,17 +219,12 @@
     <string name="rec_quality_sd">SD</string>
     <string name="rec_clashes">다른 녹화와 겹칩니다</string>
     <string name="rec_section_series_links">시리즈 녹화</string>
-    <string name="rec_series_upcoming">%1$s · %2$d개 예약됨</string>
     <string name="rec_series_waiting">%1$s · 다음 방영 대기 중</string>
     <string name="rec_series_next_at">%1$s · %2$s 녹화</string>
     <string name="rec_series_next_more">다음 녹화 %1$s · +%2$d개 더</string>
     <string name="rec_series_remove">시리즈 녹화 해제</string>
-    <string name="rec_section_scheduled">예약됨</string>
     <string name="rec_section_recorded">녹화됨</string>
-    <string name="rec_status_scheduled_at">%1$s 녹화 · %2$s</string>
     <string name="rec_for_profile">%1$s용</string>
-    <string name="rec_retry">다시 시도</string>
-    <string name="rec_watch_live">시청</string>
     <string name="rec_switch_now_title">%1$s 녹화 중</string>
     <string name="rec_switch_now_text">%1$s에서 녹화 중 - 탭하여 시청</string>
     <string name="rec_switch_soon_title">곧 녹화 시작: %1$s</string>
@@ -311,4 +301,6 @@
     <string name="error_out_of_memory_tv">이 스트림에는 이 TV의 메모리보다 더 많은 메모리가 필요합니다.</string>
     <string name="error_out_of_memory_device">이 스트림에는 이 기기의 메모리보다 더 많은 메모리가 필요합니다.</string>
     <string name="onboarding_xtream_or_playlist_help">제공업체가 로그인 정보 대신 긴 링크 하나를 주었다면 재생목록으로 추가하세요.</string>
+    <string name="providers_empty">아직 공급자가 없습니다. 이미 이용 중인 서비스를 추가하여 시작하세요.</string>
+    <string name="addons_empty">아직 애드온이 없습니다. 위에 애드온 링크를 붙여넣어 추가하세요.</string>
 </resources>

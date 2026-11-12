@@ -65,14 +65,9 @@
     <string name="rec_record_series_named">Ganze Serie aufnehmen — %1$s</string>
     <string name="rec_series_recording_set">Serienaufnahme eingerichtet für „%1$s”</string>
     <string name="rec_screen_title">Aufnahmen &amp; Erinnerungen</string>
-    <string name="rec_screen_desc">Nimm Live-TV auf dieser Box oder deinem NAS auf und richte Erinnerungen für Kommendes ein.</string>
     <string name="rec_empty_state">Noch keine Aufnahmen. Drücke beim Ansehen auf Aufnehmen, oder wähle eine Sendung im Guide aus.</string>
-    <string name="rec_upcoming_reminders">Anstehende Erinnerungen</string>
     <string name="rec_reminder_autoswitch">Automatischer Wechsel</string>
-    <string name="rec_reminder_plain">Erinnerung</string>
     <string name="rec_cancel_reminder">Erinnerung abbrechen</string>
-    <string name="rec_status_scheduled">Geplant · %1$s</string>
-    <string name="rec_status_recording">● Aufnahme · %1$s · %2$s</string>
     <string name="rec_status_failed">Fehlgeschlagen · %1$s</string>
     <string name="rec_notification_one">1 Sendung wird aufgenommen</string>
     <string name="rec_notification_many">%1$d Sendungen werden aufgenommen</string>
@@ -224,17 +219,12 @@
     <string name="rec_quality_sd">SD</string>
     <string name="rec_clashes">Überschneidet sich mit einer anderen Aufnahme</string>
     <string name="rec_section_series_links">Serienverknüpfungen</string>
-    <string name="rec_series_upcoming">%1$s · %2$d geplant</string>
     <string name="rec_series_waiting">%1$s · wartet auf die nächste Ausstrahlung</string>
     <string name="rec_series_next_at">%1$s · nimmt auf: %2$s</string>
     <string name="rec_series_next_more">Nächste Aufnahme %1$s · +%2$d weitere</string>
     <string name="rec_series_remove">Serienverknüpfung entfernen</string>
-    <string name="rec_section_scheduled">Geplant</string>
     <string name="rec_section_recorded">Aufgenommen</string>
-    <string name="rec_status_scheduled_at">Nimmt auf: %1$s · %2$s</string>
     <string name="rec_for_profile">Für %1$s</string>
-    <string name="rec_retry">Erneut versuchen</string>
-    <string name="rec_watch_live">Ansehen</string>
     <string name="rec_switch_now_title">%1$s wird aufgenommen</string>
     <string name="rec_switch_now_text">Aufnahme läuft auf %1$s — tippen zum Ansehen</string>
     <string name="rec_switch_soon_title">Aufnahme startet bald: %1$s</string>
@@ -311,4 +301,6 @@
     <string name="error_out_of_memory_tv">Dieser Stream braucht mehr Speicher, als dieser Fernseher hat.</string>
     <string name="error_out_of_memory_device">Dieser Stream braucht mehr Speicher, als dieses Gerät hat.</string>
     <string name="onboarding_xtream_or_playlist_help">Wenn dein Anbieter dir statt Zugangsdaten einen einzigen langen Link gegeben hat, füge ihn stattdessen als Playlist hinzu.</string>
+    <string name="providers_empty">Noch keine Anbieter. Füge den Dienst hinzu, für den du schon bezahlst, um loszulegen.</string>
+    <string name="addons_empty">Noch keine Add-ons. Füge oben den Link eines Add-ons ein, um eines hinzuzufügen.</string>
 </resources>

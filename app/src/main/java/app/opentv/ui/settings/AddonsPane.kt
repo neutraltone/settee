@@ -66,7 +66,7 @@ internal fun AddonsPane(viewModel: AddonsViewModel = viewModel()) {
     )
     if (addons.isEmpty()) {
         Text(
-            stringResource(R.string.settings_addons_empty),
+            stringResource(R.string.addons_empty),
             SetteeType.Body,
             color = SetteeColors.QuietText,
             modifier = Modifier.padding(top = 12.dp),

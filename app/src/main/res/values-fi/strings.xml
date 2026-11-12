@@ -65,14 +65,9 @@
     <string name="rec_record_series_named">Tallenna koko sarja — %1$s</string>
     <string name="rec_series_recording_set">Sarjatallennus asetettu ohjelmalle \"%1$s\"</string>
     <string name="rec_screen_title">Tallenteet ja muistutukset</string>
-    <string name="rec_screen_desc">Tallenna live-TV:tä tälle laitteelle tai NAS-laitteellesi, ja aseta muistutuksia tulevista ohjelmista.</string>
     <string name="rec_empty_state">Ei vielä tallenteita. Paina Tallenna katsoessasi tai valitse ohjelma oppaasta.</string>
-    <string name="rec_upcoming_reminders">Tulevat muistutukset</string>
     <string name="rec_reminder_autoswitch">Automaattinen vaihto</string>
-    <string name="rec_reminder_plain">Muistutus</string>
     <string name="rec_cancel_reminder">Peruuta muistutus</string>
-    <string name="rec_status_scheduled">Ajastettu · %1$s</string>
-    <string name="rec_status_recording">● Tallennetaan · %1$s · %2$s</string>
     <string name="rec_status_failed">Epäonnistui · %1$s</string>
     <string name="rec_notification_one">Tallennetaan 1 ohjelma</string>
     <string name="rec_notification_many">Tallennetaan %1$d ohjelmaa</string>
@@ -224,17 +219,12 @@
     <string name="rec_quality_sd">SD</string>
     <string name="rec_clashes">Menee päällekkäin toisen tallennuksen kanssa</string>
     <string name="rec_section_series_links">Sarjalinkit</string>
-    <string name="rec_series_upcoming">%1$s · %2$d ajastettu</string>
     <string name="rec_series_waiting">%1$s · odottaa seuraavaa lähetystä</string>
     <string name="rec_series_next_at">%1$s · tallentaa %2$s</string>
     <string name="rec_series_next_more">Seuraavaksi tallentaa %1$s · +%2$d lisää</string>
     <string name="rec_series_remove">Poista sarjalinkki</string>
-    <string name="rec_section_scheduled">Ajastettu</string>
     <string name="rec_section_recorded">Tallennettu</string>
-    <string name="rec_status_scheduled_at">Tallentaa %1$s · %2$s</string>
     <string name="rec_for_profile">Profiilille %1$s</string>
-    <string name="rec_retry">Yritä uudelleen</string>
-    <string name="rec_watch_live">Katso</string>
     <string name="rec_switch_now_title">Tallennetaan %1$s</string>
     <string name="rec_switch_now_text">Tallennetaan nyt kanavalla %1$s — napauta katsoaksesi</string>
     <string name="rec_switch_soon_title">Tallennus pian: %1$s</string>
@@ -311,4 +301,6 @@
     <string name="error_out_of_memory_tv">Tämä lähetys tarvitsee enemmän muistia kuin tässä televisiossa on.</string>
     <string name="error_out_of_memory_device">Tämä lähetys tarvitsee enemmän muistia kuin tässä laitteessa on.</string>
     <string name="onboarding_xtream_or_playlist_help">Jos palveluntarjoajasi antoi sinulle yhden pitkän linkin kirjautumistietojen sijaan, lisää se soittolistana.</string>
+    <string name="providers_empty">Ei vielä palveluntarjoajia. Aloita lisäämällä palvelu, josta jo maksat.</string>
+    <string name="addons_empty">Ei vielä lisäosia. Lisää lisäosa liittämällä sen linkki yllä olevaan kenttään.</string>
 </resources>

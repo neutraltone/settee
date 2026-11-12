@@ -65,14 +65,9 @@
     <string name="rec_record_series_named">Spela in hela serien – %1$s</string>
     <string name="rec_series_recording_set">Serieinspelning inställd för ”%1$s”</string>
     <string name="rec_screen_title">Inspelningar &amp; påminnelser</string>
-    <string name="rec_screen_desc">Spela in live-tv till den här boxen eller din NAS, och ställ in påminnelser för vad som är på gång.</string>
     <string name="rec_empty_state">Inga inspelningar än. Tryck på Spela in medan du tittar, eller välj ett program i guiden.</string>
-    <string name="rec_upcoming_reminders">Kommande påminnelser</string>
     <string name="rec_reminder_autoswitch">Autobyte</string>
-    <string name="rec_reminder_plain">Påminnelse</string>
     <string name="rec_cancel_reminder">Avbryt påminnelse</string>
-    <string name="rec_status_scheduled">Schemalagd · %1$s</string>
-    <string name="rec_status_recording">● Spelar in · %1$s · %2$s</string>
     <string name="rec_status_failed">Misslyckades · %1$s</string>
     <string name="rec_notification_one">Spelar in 1 program</string>
     <string name="rec_notification_many">Spelar in %1$d program</string>
@@ -224,17 +219,12 @@
     <string name="rec_quality_sd">SD</string>
     <string name="rec_clashes">Överlappar en annan inspelning</string>
     <string name="rec_section_series_links">Serielänkar</string>
-    <string name="rec_series_upcoming">%1$s · %2$d schemalagda</string>
     <string name="rec_series_waiting">%1$s · väntar på nästa sändning</string>
     <string name="rec_series_next_at">%1$s · spelar in %2$s</string>
     <string name="rec_series_next_more">Nästa spelar in %1$s · +%2$d till</string>
     <string name="rec_series_remove">Ta bort serielänk</string>
-    <string name="rec_section_scheduled">Schemalagt</string>
     <string name="rec_section_recorded">Inspelat</string>
-    <string name="rec_status_scheduled_at">Spelar in %1$s · %2$s</string>
     <string name="rec_for_profile">För %1$s</string>
-    <string name="rec_retry">Försök igen</string>
-    <string name="rec_watch_live">Titta</string>
     <string name="rec_switch_now_title">Spelar in %1$s</string>
     <string name="rec_switch_now_text">Spelar nu in på %1$s – tryck för att titta</string>
     <string name="rec_switch_soon_title">Spelas in snart: %1$s</string>
@@ -311,4 +301,6 @@
     <string name="error_out_of_memory_tv">Den här strömmen behöver mer minne än den här TV:n har.</string>
     <string name="error_out_of_memory_device">Den här strömmen behöver mer minne än den här enheten har.</string>
     <string name="onboarding_xtream_or_playlist_help">Om din leverantör gav dig en lång länk i stället för inloggningsuppgifter, lägg till den som spellista i stället.</string>
+    <string name="providers_empty">Inga leverantörer än. Lägg till tjänsten du redan betalar för att komma igång.</string>
+    <string name="addons_empty">Inga tillägg än. Klistra in länken till ett tillägg ovan för att lägga till det.</string>
 </resources>

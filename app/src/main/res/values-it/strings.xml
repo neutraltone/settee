@@ -65,14 +65,9 @@
     <string name="rec_record_series_named">Registra l\'intera serie — %1$s</string>
     <string name="rec_series_recording_set">Registrazione della serie impostata per “%1$s”</string>
     <string name="rec_screen_title">Registrazioni e promemoria</string>
-    <string name="rec_screen_desc">Registra la TV in diretta su questo box o sul tuo NAS e imposta promemoria per i prossimi programmi.</string>
     <string name="rec_empty_state">Ancora nessuna registrazione. Premi Registra mentre guardi, oppure scegli un programma nella guida.</string>
-    <string name="rec_upcoming_reminders">Promemoria in arrivo</string>
     <string name="rec_reminder_autoswitch">Cambio automatico</string>
-    <string name="rec_reminder_plain">Promemoria</string>
     <string name="rec_cancel_reminder">Annulla promemoria</string>
-    <string name="rec_status_scheduled">Programmato · %1$s</string>
-    <string name="rec_status_recording">● Registrazione · %1$s · %2$s</string>
     <string name="rec_status_failed">Non riuscita · %1$s</string>
     <string name="rec_notification_one">Registrazione di 1 programma</string>
     <string name="rec_notification_many">Registrazione di %1$d programmi</string>
@@ -224,17 +219,12 @@
     <string name="rec_quality_sd">SD</string>
     <string name="rec_clashes">Si sovrappone a un\'altra registrazione</string>
     <string name="rec_section_series_links">Collegamenti serie</string>
-    <string name="rec_series_upcoming">%1$s · %2$d programmati</string>
     <string name="rec_series_waiting">%1$s · in attesa della prossima messa in onda</string>
     <string name="rec_series_next_at">%1$s · registra %2$s</string>
     <string name="rec_series_next_more">Prossima registrazione %1$s · +%2$d altri</string>
     <string name="rec_series_remove">Rimuovi collegamento serie</string>
-    <string name="rec_section_scheduled">Programmate</string>
     <string name="rec_section_recorded">Registrate</string>
-    <string name="rec_status_scheduled_at">Registra %1$s · %2$s</string>
     <string name="rec_for_profile">Per %1$s</string>
-    <string name="rec_retry">Riprova</string>
-    <string name="rec_watch_live">Guarda</string>
     <string name="rec_switch_now_title">Registrazione di %1$s</string>
     <string name="rec_switch_now_text">Registrazione in corso su %1$s — tocca per guardare</string>
     <string name="rec_switch_soon_title">Registrazione a breve: %1$s</string>
@@ -311,4 +301,6 @@
     <string name="error_out_of_memory_tv">Questo stream richiede più memoria di quella che ha questo televisore.</string>
     <string name="error_out_of_memory_device">Questo stream richiede più memoria di quella che ha questo dispositivo.</string>
     <string name="onboarding_xtream_or_playlist_help">Se il tuo provider ti ha dato un unico link lungo invece di un login, aggiungilo come playlist.</string>
+    <string name="providers_empty">Ancora nessun provider. Aggiungi il servizio che paghi già per iniziare.</string>
+    <string name="addons_empty">Ancora nessun add-on. Incolla qui sopra il link di un add-on per aggiungerlo.</string>
 </resources>

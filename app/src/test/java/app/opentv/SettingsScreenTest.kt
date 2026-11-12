@@ -6,6 +6,7 @@
 package app.opentv
 
 import android.app.Application
+import android.provider.Settings
 import android.text.InputType
 import android.view.KeyEvent
 import android.view.View
@@ -55,6 +56,7 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
@@ -610,6 +612,38 @@ class SettingsScreenTest {
         pressInPanel("Off", Key.DirectionCenter)
 
         compose.waitUntil(5_000) { runBlocking { graph.profileSettings.subtitlePreference.first() }?.enabled == false }
+    }
+
+    @Test
+    fun `where nothing can allow background recording, its row says so and opens nothing`() {
+        val app: Application = ApplicationProvider.getApplicationContext()
+        BatteryScreens.fireTvStub(app)
+        show(SettingsMemory(SettingsSection.Recording))
+        press(KeyEvent.KEYCODE_DPAD_RIGHT)
+
+        compose.onNodeWithText("Recording in the background").requestFocus()
+        compose.onNode(
+            hasText("Recording in the background") and hasText("Not allowed") and
+                hasText("This device has no setting to prevent that.", substring = true),
+        ).assertExists()
+        captureScreen("settings_recording_background_no_setting")
+        press(KeyEvent.KEYCODE_DPAD_CENTER)
+
+        assertThat(shadowOf(app).nextStartedActivity).isNull()
+    }
+
+    @Test
+    fun `where the system can allow background recording, OK on its row opens that screen`() {
+        val app: Application = ApplicationProvider.getApplicationContext()
+        BatteryScreens.both(app)
+        show(SettingsMemory(SettingsSection.Recording))
+        press(KeyEvent.KEYCODE_DPAD_RIGHT)
+
+        compose.onNodeWithText("Recording in the background").requestFocus()
+        press(KeyEvent.KEYCODE_DPAD_CENTER)
+
+        assertThat(shadowOf(app).nextStartedActivity.action)
+            .isEqualTo(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS)
     }
 
     @Test

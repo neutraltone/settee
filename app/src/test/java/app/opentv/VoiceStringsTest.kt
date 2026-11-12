@@ -93,6 +93,28 @@ class VoiceStringsTest {
     }
 
     @Test
+    fun `no English string has an em dash`() {
+        // pairing_got_it is reworded by the Setup ticket's branch (#224), so this one leaves it to that change.
+        val offenders = english.filterKeys { it != "pairing_got_it" }.filterValues { '—' in it }
+            .map { (key, text) -> "$key: $text" } +
+            plurals("values").filterValues { '—' in it }.map { (key, text) -> "$key: $text" }
+
+        assertWithMessage("English strings with an em dash").that(offenders).isEmpty()
+    }
+
+    /** Each plural item of one locale, keyed "name/quantity". */
+    private fun plurals(locale: String): Map<String, String> {
+        val items = DocumentBuilderFactory.newInstance().newDocumentBuilder()
+            .parse(File(resDir, "$locale/strings.xml")).getElementsByTagName("item")
+        return (0 until items.length).map { items.item(it) as Element }
+            .filter { (it.parentNode as Element).tagName == "plurals" }
+            .associate { item ->
+                val name = (item.parentNode as Element).getAttribute("name")
+                "$name/${item.getAttribute("quantity")}" to item.textContent
+            }
+    }
+
+    @Test
     fun `no English error sentence carries a code, a status or a setup term`() {
         val offenders = errorKeys.mapNotNull { key ->
             english.getValue(key).takeIf {

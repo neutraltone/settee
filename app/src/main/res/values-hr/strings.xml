@@ -65,14 +65,9 @@
     <string name="rec_record_series_named">Snimi cijelu seriju — %1$s</string>
     <string name="rec_series_recording_set">Snimanje serije postavljeno za \"%1$s\"</string>
     <string name="rec_screen_title">Snimke i podsjetnici</string>
-    <string name="rec_screen_desc">Snimajte TV uživo na ovaj uređaj ili svoj NAS te postavite podsjetnike za ono što dolazi.</string>
     <string name="rec_empty_state">Još nema snimki. Pritisnite Snimaj dok gledate ili odaberite emisiju u vodiču.</string>
-    <string name="rec_upcoming_reminders">Nadolazeći podsjetnici</string>
     <string name="rec_reminder_autoswitch">Automatski prijelaz</string>
-    <string name="rec_reminder_plain">Podsjetnik</string>
     <string name="rec_cancel_reminder">Otkaži podsjetnik</string>
-    <string name="rec_status_scheduled">Zakazano · %1$s</string>
-    <string name="rec_status_recording">● Snimanje · %1$s · %2$s</string>
     <string name="rec_status_failed">Neuspjelo · %1$s</string>
     <string name="rec_notification_one">Snimanje 1 programa</string>
     <string name="rec_notification_many">Snimanje %1$d programa</string>
@@ -224,17 +219,12 @@
     <string name="rec_quality_sd">SD</string>
     <string name="rec_clashes">Preklapa se s drugim snimanjem</string>
     <string name="rec_section_series_links">Poveznice serija</string>
-    <string name="rec_series_upcoming">%1$s · %2$d zakazano</string>
     <string name="rec_series_waiting">%1$s · čeka sljedeće emitiranje</string>
     <string name="rec_series_next_at">%1$s · snima %2$s</string>
     <string name="rec_series_next_more">Sljedeće snima %1$s · +%2$d više</string>
     <string name="rec_series_remove">Ukloni poveznicu serije</string>
-    <string name="rec_section_scheduled">Zakazano</string>
     <string name="rec_section_recorded">Snimljeno</string>
-    <string name="rec_status_scheduled_at">Snima %1$s · %2$s</string>
     <string name="rec_for_profile">Za %1$s</string>
-    <string name="rec_retry">Pokušaj ponovno</string>
-    <string name="rec_watch_live">Gledaj</string>
     <string name="rec_switch_now_title">Snimanje %1$s</string>
     <string name="rec_switch_now_text">Trenutno snima na %1$s — dodirnite za gledanje</string>
     <string name="rec_switch_soon_title">Snimanje uskoro: %1$s</string>
@@ -311,4 +301,6 @@
     <string name="error_out_of_memory_tv">Ovaj stream treba više memorije nego što ovaj TV ima.</string>
     <string name="error_out_of_memory_device">Ovaj stream treba više memorije nego što ovaj uređaj ima.</string>
     <string name="onboarding_xtream_or_playlist_help">Ako vam je pružatelj dao jednu dugu poveznicu umjesto podataka za prijavu, dodajte je kao popis za reprodukciju.</string>
+    <string name="providers_empty">Još nema pružatelja usluga. Dodajte uslugu koju već plaćate za početak.</string>
+    <string name="addons_empty">Još nema dodataka. Zalijepite poveznicu dodatka iznad da ga dodate.</string>
 </resources>

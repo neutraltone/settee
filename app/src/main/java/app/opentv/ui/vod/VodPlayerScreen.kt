@@ -73,6 +73,7 @@ import app.opentv.core.findActivity
 import app.opentv.data.repo.MediaKey
 import app.opentv.player.NextEpisodeCountdown
 import app.opentv.player.PlayerController
+import app.opentv.ui.design.SetteeColors
 import app.opentv.ui.design.SetteeType
 import app.opentv.ui.design.Text
 import app.opentv.ui.options.ItemOption
@@ -603,15 +604,13 @@ private fun RecordingBadge() {
         Icon(
             Icons.Filled.FiberManualRecord,
             contentDescription = null,
-            tint = RecordingRed,
+            tint = SetteeColors.Recording,
             modifier = Modifier.size(14.dp),
         )
         Spacer(Modifier.width(6.dp))
-        Text(stringResource(R.string.rec_watching_live_badge), SetteeType.Body, color = RecordingRed)
+        Text(stringResource(R.string.rec_watching_live_badge), SetteeType.Body, color = SetteeColors.Recording)
     }
 }
-
-private val RecordingRed = Color(0xFFE53935)
 
 private enum class VodPanel { NONE, SUBTITLES, AUDIO }
 

@@ -65,14 +65,9 @@
     <string name="rec_record_series_named">Ta opp hele serien — %1$s</string>
     <string name="rec_series_recording_set">Serieopptak satt for \"%1$s\"</string>
     <string name="rec_screen_title">Opptak og påminnelser</string>
-    <string name="rec_screen_desc">Ta opp direktesendt TV til denne boksen eller NAS-en din, og sett påminnelser for det som kommer.</string>
     <string name="rec_empty_state">Ingen opptak ennå. Trykk Ta opp mens du ser, eller velg et program i guiden.</string>
-    <string name="rec_upcoming_reminders">Kommende påminnelser</string>
     <string name="rec_reminder_autoswitch">Automatisk bytte</string>
-    <string name="rec_reminder_plain">Påminnelse</string>
     <string name="rec_cancel_reminder">Avbryt påminnelse</string>
-    <string name="rec_status_scheduled">Planlagt · %1$s</string>
-    <string name="rec_status_recording">● Tar opp · %1$s · %2$s</string>
     <string name="rec_status_failed">Mislyktes · %1$s</string>
     <string name="rec_notification_one">Tar opp 1 program</string>
     <string name="rec_notification_many">Tar opp %1$d programmer</string>
@@ -224,17 +219,12 @@
     <string name="rec_quality_sd">SD</string>
     <string name="rec_clashes">Overlapper et annet opptak</string>
     <string name="rec_section_series_links">Serielenker</string>
-    <string name="rec_series_upcoming">%1$s · %2$d planlagt</string>
     <string name="rec_series_waiting">%1$s · venter på neste sending</string>
     <string name="rec_series_next_at">%1$s · tar opp %2$s</string>
     <string name="rec_series_next_more">Neste tar opp %1$s · +%2$d til</string>
     <string name="rec_series_remove">Fjern serielenke</string>
-    <string name="rec_section_scheduled">Planlagt</string>
     <string name="rec_section_recorded">Tatt opp</string>
-    <string name="rec_status_scheduled_at">Tar opp %1$s · %2$s</string>
     <string name="rec_for_profile">For %1$s</string>
-    <string name="rec_retry">Prøv igjen</string>
-    <string name="rec_watch_live">Se</string>
     <string name="rec_switch_now_title">Tar opp %1$s</string>
     <string name="rec_switch_now_text">Tar nå opp på %1$s — trykk for å se</string>
     <string name="rec_switch_soon_title">Opptak snart: %1$s</string>
@@ -311,4 +301,6 @@
     <string name="error_out_of_memory_tv">Denne strømmen trenger mer minne enn denne TV-en har.</string>
     <string name="error_out_of_memory_device">Denne strømmen trenger mer minne enn denne enheten har.</string>
     <string name="onboarding_xtream_or_playlist_help">Hvis leverandøren din ga deg én lang lenke i stedet for innlogging, legg den til som spilleliste i stedet.</string>
+    <string name="providers_empty">Ingen leverandører ennå. Legg til tjenesten du allerede betaler for, for å komme i gang.</string>
+    <string name="addons_empty">Ingen tillegg ennå. Lim inn lenken til et tillegg ovenfor for å legge det til.</string>
 </resources>

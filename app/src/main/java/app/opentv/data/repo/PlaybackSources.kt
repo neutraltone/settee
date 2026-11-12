@@ -222,7 +222,7 @@ class PlaybackSources(
             key,
             url,
             userAgentOf(source),
-            "${channel.shownName} — ${programme.title}",
+            "${channel.shownName} · ${programme.title}",
             isLive = false,
         )
     }

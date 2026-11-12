@@ -32,6 +32,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import app.opentv.R
 import app.opentv.core.AppSettings.RecordingTarget
 import app.opentv.core.ServiceLocator
+import app.opentv.core.batteryOptimizationRequests
 import app.opentv.core.isIgnoringBatteryOptimizations
 import app.opentv.core.requestIgnoreBatteryOptimizations
 import app.opentv.recording.RecordingStorage
@@ -239,6 +240,11 @@ private fun BackgroundRow() {
     val resources = LocalResources.current
     val lifecycleOwner = LocalLifecycleOwner.current
     var allowed by remember { mutableStateOf(context.isIgnoringBatteryOptimizations()) }
+    // A device with no screen that can allow it, a Fire TV Stick for one, gets no OK to press and is
+    // told there's no setting for it, rather than a row that does nothing (#233).
+    val canAsk = remember(context) {
+        batteryOptimizationRequests(context.packageManager, context.packageName).isNotEmpty()
+    }
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
@@ -254,10 +260,16 @@ private fun BackgroundRow() {
     }
     ListRow(
         stringResource(R.string.recset_background_title),
-        onClick = { if (!allowed) context.requestIgnoreBatteryOptimizations() },
+        onClick = { if (!allowed && canAsk) context.requestIgnoreBatteryOptimizations() },
         value = stringResource(if (allowed) R.string.recset_background_allowed else R.string.recset_background_not_allowed),
-        note = stringResource(if (allowed) R.string.recset_background_on_desc else R.string.settings_rec_background_note),
-        opens = !allowed,
+        note = stringResource(
+            when {
+                allowed -> R.string.recset_background_on_desc
+                canAsk -> R.string.settings_rec_background_note
+                else -> R.string.recset_background_no_setting
+            },
+        ),
+        opens = !allowed && canAsk,
     )
 }
 

@@ -504,13 +504,13 @@ class ChannelsViewModel @JvmOverloads constructor(
         }
     }
 
-    /** A friendly, size-aware line for the load — a small provider gets a quick word, a huge one
-     * gets a "bear with me". Used at start-up so the wait always says what it's doing. */
+    /** A friendly, size-aware line for the load: a small provider gets a quick word, a huge one
+     * gets a "bear with us". Used at start-up so the wait always says what it's doing. */
     private fun sizeMessage(count: Int): String = when {
         count <= 0 -> "Building the guide…"
-        count < 2000 -> "Loading $count channels — a small one, this'll be quick."
-        count < 8000 -> "Loading $count channels — a fair few, give me a moment…"
-        else -> "Loading $count channels — a big one, bear with me, I'm on it…"
+        count < 2000 -> "Loading $count channels. It's a small one, so this'll be quick."
+        count < 8000 -> "Loading $count channels. That's a fair few, so give it a moment…"
+        else -> "Loading $count channels. It's a big one, so bear with us…"
     }
 
     /**

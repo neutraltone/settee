@@ -65,14 +65,9 @@
     <string name="rec_record_series_named">Запис на целия сериал — %1$s</string>
     <string name="rec_series_recording_set">Записът на сериала е зададен за „%1$s“</string>
     <string name="rec_screen_title">Записи &amp; напомняния</string>
-    <string name="rec_screen_desc">Записвайте телевизия на живо на това устройство или на вашия NAS и задавайте напомняния за предстоящи предавания.</string>
     <string name="rec_empty_state">Все още няма записи. Натиснете Запис, докато гледате, или изберете предаване в програмата.</string>
-    <string name="rec_upcoming_reminders">Предстоящи напомняния</string>
     <string name="rec_reminder_autoswitch">Автоматично превключване</string>
-    <string name="rec_reminder_plain">Напомняне</string>
     <string name="rec_cancel_reminder">Отказ от напомняне</string>
-    <string name="rec_status_scheduled">Насрочено · %1$s</string>
-    <string name="rec_status_recording">● Записва се · %1$s · %2$s</string>
     <string name="rec_status_failed">Неуспешно · %1$s</string>
     <string name="rec_notification_one">Записва се 1 предаване</string>
     <string name="rec_notification_many">Записват се %1$d предавания</string>
@@ -224,17 +219,12 @@
     <string name="rec_quality_sd">SD</string>
     <string name="rec_clashes">Припокрива се с друг запис</string>
     <string name="rec_section_series_links">Връзки към сериали</string>
-    <string name="rec_series_upcoming">%1$s · %2$d насрочени</string>
     <string name="rec_series_waiting">%1$s · изчаква следващото излъчване</string>
     <string name="rec_series_next_at">%1$s · записва %2$s</string>
     <string name="rec_series_next_more">Следващ запис %1$s · +%2$d още</string>
     <string name="rec_series_remove">Премахване на връзка към сериал</string>
-    <string name="rec_section_scheduled">Насрочени</string>
     <string name="rec_section_recorded">Записани</string>
-    <string name="rec_status_scheduled_at">Записва %1$s · %2$s</string>
     <string name="rec_for_profile">За %1$s</string>
-    <string name="rec_retry">Опитай отново</string>
-    <string name="rec_watch_live">Гледай</string>
     <string name="rec_switch_now_title">Записва се %1$s</string>
     <string name="rec_switch_now_text">В момента се записва на %1$s — докоснете, за да гледате</string>
     <string name="rec_switch_soon_title">Скоро запис: %1$s</string>
@@ -311,4 +301,6 @@
     <string name="error_out_of_memory_tv">Този поток се нуждае от повече памет, отколкото има този телевизор.</string>
     <string name="error_out_of_memory_device">Този поток се нуждае от повече памет, отколкото има това устройство.</string>
     <string name="onboarding_xtream_or_playlist_help">Ако доставчикът ви е дал една дълга връзка вместо данни за вход, добавете я като плейлист.</string>
+    <string name="providers_empty">Все още няма доставчици. Добавете услугата, за която вече плащате, за да започнете.</string>
+    <string name="addons_empty">Все още няма добавки. Поставете връзката към добавка по-горе, за да я добавите.</string>
 </resources>

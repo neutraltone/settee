@@ -65,14 +65,9 @@
     <string name="rec_record_series_named">Teljes sorozat rögzítése — %1$s</string>
     <string name="rec_series_recording_set">Sorozatfelvétel beállítva ehhez: „%1$s”</string>
     <string name="rec_screen_title">Felvételek &amp; emlékeztetők</string>
-    <string name="rec_screen_desc">Rögzítsen élő adást erre a készülékre vagy a NAS-ára, és állítson be emlékeztetőket a következő műsorokhoz.</string>
     <string name="rec_empty_state">Még nincsenek felvételek. Nyomja meg a Felvétel gombot nézés közben, vagy válasszon egy műsort a műsorújságban.</string>
-    <string name="rec_upcoming_reminders">Közelgő emlékeztetők</string>
     <string name="rec_reminder_autoswitch">Automatikus váltás</string>
-    <string name="rec_reminder_plain">Emlékeztető</string>
     <string name="rec_cancel_reminder">Emlékeztető törlése</string>
-    <string name="rec_status_scheduled">Ütemezve · %1$s</string>
-    <string name="rec_status_recording">● Felvétel · %1$s · %2$s</string>
     <string name="rec_status_failed">Sikertelen · %1$s</string>
     <string name="rec_notification_one">1 műsor rögzítése</string>
     <string name="rec_notification_many">%1$d műsor rögzítése</string>
@@ -224,17 +219,12 @@
     <string name="rec_quality_sd">SD</string>
     <string name="rec_clashes">Ütközik egy másik felvétellel</string>
     <string name="rec_section_series_links">Sorozatfelvételek</string>
-    <string name="rec_series_upcoming">%1$s · %2$d ütemezve</string>
     <string name="rec_series_waiting">%1$s · várakozás a következő adásra</string>
     <string name="rec_series_next_at">%1$s · felvétel: %2$s</string>
     <string name="rec_series_next_more">Következő felvétel: %1$s · +%2$d további</string>
     <string name="rec_series_remove">Sorozatfelvétel eltávolítása</string>
-    <string name="rec_section_scheduled">Ütemezve</string>
     <string name="rec_section_recorded">Rögzítve</string>
-    <string name="rec_status_scheduled_at">Felvétel: %1$s · %2$s</string>
     <string name="rec_for_profile">%1$s részére</string>
-    <string name="rec_retry">Újrapróbálkozás</string>
-    <string name="rec_watch_live">Nézés</string>
     <string name="rec_switch_now_title">Felvétel: %1$s</string>
     <string name="rec_switch_now_text">Most rögzítve: %1$s — koppintson a megtekintéshez</string>
     <string name="rec_switch_soon_title">Hamarosan felvétel: %1$s</string>
@@ -311,4 +301,6 @@
     <string name="error_out_of_memory_tv">Ehhez az adáshoz több memória kell, mint amennyi ebben a TV-ben van.</string>
     <string name="error_out_of_memory_device">Ehhez az adáshoz több memória kell, mint amennyi ebben az eszközben van.</string>
     <string name="onboarding_xtream_or_playlist_help">Ha a szolgáltatója bejelentkezési adatok helyett egyetlen hosszú hivatkozást adott, adja hozzá lejátszási listaként.</string>
+    <string name="providers_empty">Még nincsenek szolgáltatók. Kezdéshez adja hozzá azt a szolgáltatást, amelyért már fizet.</string>
+    <string name="addons_empty">Még nincsenek bővítmények. Hozzáadáshoz illessze be fent egy bővítmény linkjét.</string>
 </resources>

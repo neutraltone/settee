@@ -65,14 +65,9 @@
     <string name="rec_record_series_named">Nahrát celý seriál — %1$s</string>
     <string name="rec_series_recording_set">Nahrávání seriálu nastaveno pro \"%1$s\"</string>
     <string name="rec_screen_title">Nahrávky a připomenutí</string>
-    <string name="rec_screen_desc">Nahrávejte živé vysílání do tohoto zařízení nebo na NAS a nastavte si připomenutí na to, co vás čeká.</string>
     <string name="rec_empty_state">Zatím žádné nahrávky. Při sledování stiskněte Nahrát, nebo vyberte pořad v průvodci.</string>
-    <string name="rec_upcoming_reminders">Nadcházející připomenutí</string>
     <string name="rec_reminder_autoswitch">Automatické přepnutí</string>
-    <string name="rec_reminder_plain">Připomenutí</string>
     <string name="rec_cancel_reminder">Zrušit připomenutí</string>
-    <string name="rec_status_scheduled">Naplánováno · %1$s</string>
-    <string name="rec_status_recording">● Nahrává se · %1$s · %2$s</string>
     <string name="rec_status_failed">Selhalo · %1$s</string>
     <string name="rec_notification_one">Nahrává se 1 pořad</string>
     <string name="rec_notification_many">Nahrává se %1$d pořadů</string>
@@ -224,17 +219,12 @@
     <string name="rec_quality_sd">SD</string>
     <string name="rec_clashes">Překrývá se s jiným nahráváním</string>
     <string name="rec_section_series_links">Propojení seriálů</string>
-    <string name="rec_series_upcoming">%1$s · naplánováno: %2$d</string>
     <string name="rec_series_waiting">%1$s · čeká na další vysílání</string>
     <string name="rec_series_next_at">%1$s · nahrává %2$s</string>
     <string name="rec_series_next_more">Další nahrávka %1$s · +%2$d další</string>
     <string name="rec_series_remove">Odebrat propojení seriálu</string>
-    <string name="rec_section_scheduled">Naplánováno</string>
     <string name="rec_section_recorded">Nahráno</string>
-    <string name="rec_status_scheduled_at">Nahrává %1$s · %2$s</string>
     <string name="rec_for_profile">Pro profil %1$s</string>
-    <string name="rec_retry">Zkusit znovu</string>
-    <string name="rec_watch_live">Sledovat</string>
     <string name="rec_switch_now_title">Nahrává se %1$s</string>
     <string name="rec_switch_now_text">Nyní se nahrává na %1$s — klepnutím zobrazíte</string>
     <string name="rec_switch_soon_title">Nahrávání brzy: %1$s</string>
@@ -311,4 +301,6 @@
     <string name="error_out_of_memory_tv">Tento stream potřebuje víc paměti, než má tato televize.</string>
     <string name="error_out_of_memory_device">Tento stream potřebuje víc paměti, než má toto zařízení.</string>
     <string name="onboarding_xtream_or_playlist_help">Pokud vám poskytovatel dal jeden dlouhý odkaz místo přihlašovacích údajů, přidejte ho raději jako playlist.</string>
+    <string name="providers_empty">Zatím žádní poskytovatelé. Pro začátek přidejte službu, kterou už platíte.</string>
+    <string name="addons_empty">Zatím žádné doplňky. Doplněk přidáte vložením jeho odkazu výše.</string>
 </resources>

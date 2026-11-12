@@ -6,6 +6,7 @@
 package app.opentv
 
 import app.opentv.data.model.Programme
+import app.opentv.data.model.RecordingStatus
 import app.opentv.data.repo.WatchStatus
 import app.opentv.ui.options.ItemOption
 import app.opentv.ui.options.OptionsFor
@@ -251,5 +252,31 @@ class ItemOptionsTest {
     @Test
     fun `a Recent Search can only be removed`() {
         assertThat(OptionsFor.RecentSearch.options()).containsExactly(ItemOption.RemoveRecentSearch)
+    }
+
+    @Test
+    fun `a recording in progress can be stopped or deleted`() {
+        assertThat(OptionsFor.OfRecording(RecordingStatus.RECORDING).options())
+            .containsExactly(ItemOption.StopRecording, ItemOption.DeleteRecording).inOrder()
+    }
+
+    @Test
+    fun `a booking can only be cancelled, as it has nothing to delete yet`() {
+        assertThat(OptionsFor.OfRecording(RecordingStatus.SCHEDULED).options())
+            .containsExactly(ItemOption.CancelRecording)
+    }
+
+    @Test
+    fun `a finished or failed recording can only be deleted, as OK already plays or retries it`() {
+        assertThat(
+            OptionsFor.OfRecording(RecordingStatus.COMPLETED).options(),
+        ).containsExactly(ItemOption.DeleteRecording)
+        assertThat(OptionsFor.OfRecording(RecordingStatus.FAILED).options()).containsExactly(ItemOption.DeleteRecording)
+    }
+
+    @Test
+    fun `a Reminder can only be cancelled, and a series link only removed`() {
+        assertThat(OptionsFor.OfReminder.options()).containsExactly(ItemOption.CancelReminder)
+        assertThat(OptionsFor.OfSeriesLink.options()).containsExactly(ItemOption.RemoveSeriesLink)
     }
 }

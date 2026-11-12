@@ -65,14 +65,9 @@
     <string name="rec_record_series_named">录制整个剧集——%1$s</string>
     <string name="rec_series_recording_set">已为“%1$s”设置系列录制</string>
     <string name="rec_screen_title">录制与提醒</string>
-    <string name="rec_screen_desc">将直播电视录制到本机或 NAS，并为即将播出的节目设置提醒。</string>
     <string name="rec_empty_state">还没有录制内容。观看时按“录制”，或在节目单中选择一个节目。</string>
-    <string name="rec_upcoming_reminders">即将到来的提醒</string>
     <string name="rec_reminder_autoswitch">自动切换</string>
-    <string name="rec_reminder_plain">提醒</string>
     <string name="rec_cancel_reminder">取消提醒</string>
-    <string name="rec_status_scheduled">已预约 · %1$s</string>
-    <string name="rec_status_recording">● 录制中 · %1$s · %2$s</string>
     <string name="rec_status_failed">失败 · %1$s</string>
     <string name="rec_notification_one">正在录制 1 个节目</string>
     <string name="rec_notification_many">正在录制 %1$d 个节目</string>
@@ -224,17 +219,12 @@
     <string name="rec_quality_sd">SD</string>
     <string name="rec_clashes">与另一项录制冲突</string>
     <string name="rec_section_series_links">系列录制</string>
-    <string name="rec_series_upcoming">%1$s · 已预约 %2$d 个</string>
     <string name="rec_series_waiting">%1$s · 等待下一次播出</string>
     <string name="rec_series_next_at">%1$s · 录制 %2$s</string>
     <string name="rec_series_next_more">下一次录制 %1$s · 另有 %2$d 个</string>
     <string name="rec_series_remove">移除系列录制</string>
-    <string name="rec_section_scheduled">已预约</string>
     <string name="rec_section_recorded">已录制</string>
-    <string name="rec_status_scheduled_at">录制 %1$s · %2$s</string>
     <string name="rec_for_profile">适用于 %1$s</string>
-    <string name="rec_retry">重试</string>
-    <string name="rec_watch_live">观看</string>
     <string name="rec_switch_now_title">正在录制 %1$s</string>
     <string name="rec_switch_now_text">正在 %1$s 上录制——点按观看</string>
     <string name="rec_switch_soon_title">即将开始录制：%1$s</string>
@@ -311,4 +301,6 @@
     <string name="error_out_of_memory_tv">此直播流所需的内存超出了这台电视的内存。</string>
     <string name="error_out_of_memory_device">此直播流所需的内存超出了本设备的内存。</string>
     <string name="onboarding_xtream_or_playlist_help">如果你的提供商给你的是一个长链接而不是登录信息，请改为将其添加为播放列表。</string>
+    <string name="providers_empty">还没有提供商。添加你已经付费的服务以开始使用。</string>
+    <string name="addons_empty">还没有插件。在上方粘贴插件链接即可添加。</string>
 </resources>
