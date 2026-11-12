@@ -47,6 +47,7 @@ class TestCatalog(context: Context, private val clock: () -> Long = { 0L }) {
         stalkerApi = StalkerApi(panel.http),
         http = panel.http,
         settings = AppSettings.get(context),
+        genrePauseMillis = 0,
     )
 
     val settings: AppSettings = AppSettings.get(context)

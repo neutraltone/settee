@@ -15,6 +15,29 @@ tools/check-apk-signer.sh settee.apk settee-release.jks settee
 It needs `keytool` (any JDK) and `apksigner` (Android build-tools). Set `APKSIGNER` to the
 binary, or `ANDROID_HOME` for the newest one under `build-tools/`.
 
+## check/check.py
+
+Runs Gradle's tests and checks and prints only the result: each failed test with its message and
+the line it failed on, each compiler, ktlint, detekt and lint finding, and any test that took over
+30 seconds. Gradle's full output goes to `app/build/check-<mode>.log`. It exits with Gradle's own
+result, and works from any checkout or worktree.
+
+```sh
+tools/check/check.py test RecordingsContentTest   # the named test classes, while working
+tools/check/check.py quick                        # ktlintFormat and detekt, after each change
+tools/check/check.py all                          # what a PR's checks run, without stopping at the first failure
+tools/check/check.py sweep                        # kill test processes left running over half an hour, anywhere
+python3 -m unittest discover -s tools/check       # its own tests
+```
+
+A run in which no test finishes for two minutes is reported as `FROZEN`, and one that outlasts its time
+(8 minutes, 25 for `all`, or `--timeout MINUTES`) as `TIMED OUT`. Either way the test process is killed
+and the last test to finish is named. A frozen test JVM ignores every signal but SIGKILL, Gradle's
+request to stop included, and otherwise spins for hours; CLAUDE.md says why it freezes.
+
+`all` is for when CI can't be used: day to day the full checks are CI's (see CLAUDE.md). It runs the debug
+unit tests only; CI's `./gradlew test` runs the release variant's as well.
+
 ## check-message.sh
 
 The commit convention, `type(#issue): description`, as one POSIX `sh` script. The

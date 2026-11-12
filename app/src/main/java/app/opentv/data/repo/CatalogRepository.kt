@@ -179,6 +179,11 @@ class CatalogRepository(
     private val stalkerApi: StalkerApi,
     private val http: OkHttpClient,
     private val settings: AppSettings,
+    /**
+     * [MovieGenres]' rest between batches. It runs in real time on [background], which tests wait
+     * for, so they pass 0: a 1,200-film test otherwise sleeps six minutes.
+     */
+    genrePauseMillis: Long = MovieGenres.BATCH_PAUSE_MILLIS,
 ) {
 
     /** Where work that outlives a sync runs, such as [MovieGenres]. */
@@ -197,7 +202,7 @@ class CatalogRepository(
     private val sourcesGettingGenres: MutableSet<Long> = java.util.concurrent.ConcurrentHashMap.newKeySet()
 
     // TMDB only with the viewer's own key, and only for a film the provider had no genre for.
-    private val movieGenres = MovieGenres(movieDao, api) { movie ->
+    private val movieGenres = MovieGenres(movieDao, api, pauseMillis = genrePauseMillis) { movie ->
         if (!tmdb.isConfigured()) return@MovieGenres null
         withContext(Dispatchers.IO) {
             tmdb.movieMeta(VodTitleCleaner.clean(movie.name), movie.year, movie.tmdbId)?.genre
