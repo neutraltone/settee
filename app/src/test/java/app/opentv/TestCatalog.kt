@@ -66,6 +66,7 @@ class TestCatalog(
         api = XtreamApi(panel.http),
         http = panel.http,
         wording = ErrorWording(context, onTelevision = false),
+        selfEnabledGuide = EpgRepository.SelfEnabledGuide.InMemory(),
     )
 
     /** Where [lineup] keeps its folds; cancelled with the database. */

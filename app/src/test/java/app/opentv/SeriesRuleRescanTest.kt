@@ -53,6 +53,7 @@ class SeriesRuleRescanTest {
             api = XtreamApi(test.panel.http),
             http = test.panel.http,
             wording = ErrorWording(ApplicationProvider.getApplicationContext(), onTelevision = false),
+            selfEnabledGuide = EpgRepository.SelfEnabledGuide.InMemory(),
         ),
         test.lineup,
     )

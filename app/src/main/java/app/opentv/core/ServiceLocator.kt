@@ -161,6 +161,9 @@ object ServiceLocator {
                 api = xtreamApi,
                 http = httpClient,
                 wording = errorWording,
+                selfEnabledGuide = object : EpgRepository.SelfEnabledGuide {
+                    override var name by settings::selfEnabledGuide
+                },
             )
         }
 

@@ -50,6 +50,7 @@ class EpgMatcherWritesTest {
         api = XtreamApi(http),
         http = http,
         wording = ErrorWording(ApplicationProvider.getApplicationContext(), onTelevision = false),
+        selfEnabledGuide = EpgRepository.SelfEnabledGuide.InMemory(),
     )
 
     @After
