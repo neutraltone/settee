@@ -61,7 +61,12 @@ internal fun ProvidersPane(
         }
     }
     val add = screenRow("add-provider", onAddProvider)
-    ListRow(stringResource(R.string.settings_row_add_provider), onClick = add.open, modifier = add.modifier, opens = true)
+    ListRow(
+        stringResource(R.string.settings_row_add_provider),
+        onClick = add.open,
+        modifier = add.modifier,
+        opens = true,
+    )
     // Only once the list has loaded, so it doesn't flash up before the providers do.
     if (ui.loaded && ui.sources.isEmpty()) {
         Text(

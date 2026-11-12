@@ -30,6 +30,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import app.opentv.R
+import app.opentv.core.AppSettings
 import app.opentv.core.AppSettings.RecordingTarget
 import app.opentv.core.ServiceLocator
 import app.opentv.core.batteryOptimizationRequests
@@ -55,23 +56,9 @@ internal fun RecordingPane() {
     val resources = LocalResources.current
     val settings = remember { ServiceLocator.get(context).settings }
     val target by settings.recordingTarget.collectAsState()
-    val host by settings.smbHost.collectAsState()
-    val share by settings.smbShare.collectAsState()
-    val folder by settings.smbFolder.collectAsState()
-    val user by settings.smbUser.collectAsState()
-    val password by settings.smbPassword.collectAsState()
     val usbTree by settings.usbTreeUri.collectAsState()
     val usbLabel by settings.usbFolderLabel.collectAsState()
-    val padStart by settings.recordPadStartMinutes.collectAsState()
-    val padEnd by settings.recordPadEndMinutes.collectAsState()
-    val autoSwitch by settings.recordAutoSwitch.collectAsState()
-    val livePause by settings.livePauseEnabled.collectAsState()
     var choosing by remember { mutableStateOf<RecordingChoice?>(null) }
-    var typing by remember { mutableStateOf<NasField?>(null) }
-    var testNote by remember { mutableStateOf<String?>(null) }
-    var testDetail by remember { mutableStateOf<String?>(null) }
-    var testing by remember { mutableStateOf(false) }
-    val scope = rememberCoroutineScope()
 
     // The system's folder picker. On a granted folder, a persistable permission keeps the grant (and
     // playback of what's recorded there) across restarts.
@@ -98,49 +85,7 @@ internal fun RecordingPane() {
         note = if (target == RecordingTarget.INTERNAL) storageNote() else null,
     )
     when (target) {
-        RecordingTarget.SMB -> {
-            val fromPhone = stringResource(R.string.settings_row_from_phone)
-            val notSet = stringResource(R.string.settings_row_not_set)
-            NasField.entries.forEach { field ->
-                val current = field.of(host, share, folder, user, password)
-                ListRow(
-                    stringResource(field.label),
-                    onClick = { typing = field },
-                    value = when {
-                        current.isBlank() -> notSet
-                        field == NasField.Password -> stringResource(R.string.settings_row_saved)
-                        else -> current
-                    },
-                    note = fromPhone,
-                )
-            }
-            ListRow(
-                stringResource(if (testing) R.string.recset_status_testing else R.string.recset_test_connection),
-                onClick = {
-                    if (testing) return@ListRow
-                    testDetail = null
-                    if (host.isBlank() || share.isBlank()) {
-                        testNote = resources.getString(R.string.settings_rec_test_needs_details)
-                        return@ListRow
-                    }
-                    testing = true
-                    testNote = null
-                    scope.launch {
-                        val result = withContext(Dispatchers.IO) {
-                            runCatching { SmbClient.test(SmbConfig(host.trim(), share.trim(), folder.trim(), user, password)) }
-                        }
-                        testing = false
-                        val failure = result.exceptionOrNull()?.let {
-                            ServiceLocator.get(context).errorWording.of(it, R.string.recset_status_failed)
-                        }
-                        testNote = failure?.sentence ?: resources.getString(R.string.recset_status_connected)
-                        testDetail = failure?.detail
-                    }
-                },
-                note = testNote,
-                detail = testDetail,
-            )
-        }
+        RecordingTarget.SMB -> NasRows(settings)
         RecordingTarget.USB -> ListRow(
             stringResource(R.string.settings_rec_usb_folder),
             onClick = { pickFolder() },
@@ -148,17 +93,123 @@ internal fun RecordingPane() {
         )
         RecordingTarget.INTERNAL -> Unit
     }
-    val minutes = { value: Int -> resources.getString(R.string.settings_minutes, value) }
+    BehaviourRows(settings, onChoose = { choosing = it })
+    BackgroundRow()
+
+    choosing?.let { choice ->
+        RecordingChoicePanel(
+            choice = choice,
+            settings = settings,
+            // USB only counts once a folder is granted, so recordings are never left with nowhere
+            // to go.
+            onChooseUsb = {
+                if (usbTree == null) pickFolder() else settings.setRecordingTarget(RecordingTarget.USB)
+            },
+            close = { choosing = null },
+        )
+    }
+}
+
+/** The network drive's details, each typed on an entry screen, and a test of them. */
+@Composable
+private fun NasRows(settings: AppSettings) {
+    val host by settings.smbHost.collectAsState()
+    val share by settings.smbShare.collectAsState()
+    val folder by settings.smbFolder.collectAsState()
+    val user by settings.smbUser.collectAsState()
+    val password by settings.smbPassword.collectAsState()
+    var typing by remember { mutableStateOf<NasField?>(null) }
+    val nas = NasDetails(host, share, folder, user, password)
+    val fromPhone = stringResource(R.string.settings_row_from_phone)
+    val notSet = stringResource(R.string.settings_row_not_set)
+    val saved = stringResource(R.string.settings_row_saved)
+
+    NasField.entries.forEach { field ->
+        val current = field.of(nas)
+        ListRow(
+            stringResource(field.label),
+            onClick = { typing = field },
+            value = when {
+                current.isBlank() -> notSet
+                field == NasField.Password -> saved
+                else -> current
+            },
+            note = fromPhone,
+        )
+    }
+    TestConnectionRow(nas)
+
+    typing?.let { field ->
+        EntryWindow(
+            title = stringResource(field.label),
+            initial = field.of(nas),
+            keyboardType = if (field == NasField.Password) KeyboardType.Password else KeyboardType.Text,
+            hint = fromPhone,
+            // A guest share has no login, and an empty folder means the share itself.
+            allowBlank = field.optional,
+            onSave = { typed ->
+                typing = null
+                val updated = nas.with(field, if (field == NasField.Password) typed else typed.trim())
+                settings.setSmbConfig(updated.host, updated.share, updated.folder, updated.user, updated.password)
+            },
+            onCancel = { typing = null },
+        )
+    }
+}
+
+/** Tries the network drive's details, and says how it went, or what's missing first. */
+@Composable
+private fun TestConnectionRow(nas: NasDetails) {
+    val context = LocalContext.current
+    val resources = LocalResources.current
+    val scope = rememberCoroutineScope()
+    var note by remember { mutableStateOf<String?>(null) }
+    var detail by remember { mutableStateOf<String?>(null) }
+    var testing by remember { mutableStateOf(false) }
+    ListRow(
+        stringResource(if (testing) R.string.recset_status_testing else R.string.recset_test_connection),
+        onClick = {
+            if (testing) return@ListRow
+            detail = null
+            if (nas.host.isBlank() || nas.share.isBlank()) {
+                note = resources.getString(R.string.settings_rec_test_needs_details)
+                return@ListRow
+            }
+            testing = true
+            note = null
+            scope.launch {
+                val result = withContext(Dispatchers.IO) { runCatching { SmbClient.test(nas.config()) } }
+                testing = false
+                val failure = result.exceptionOrNull()?.let {
+                    ServiceLocator.get(context).errorWording.of(it, R.string.recset_status_failed)
+                }
+                note = failure?.sentence ?: resources.getString(R.string.recset_status_connected)
+                detail = failure?.detail
+            }
+        },
+        note = note,
+        detail = detail,
+    )
+}
+
+/** How early and late to record, and how recording behaves. */
+@Composable
+private fun BehaviourRows(settings: AppSettings, onChoose: (RecordingChoice) -> Unit) {
+    val resources = LocalResources.current
+    val padStart by settings.recordPadStartMinutes.collectAsState()
+    val padEnd by settings.recordPadEndMinutes.collectAsState()
+    val autoSwitch by settings.recordAutoSwitch.collectAsState()
+    val livePause by settings.livePauseEnabled.collectAsState()
     ListRow(
         stringResource(R.string.recset_pad_start),
-        onClick = { choosing = RecordingChoice.Start },
-        value = minutes(padStart),
+        onClick = { onChoose(RecordingChoice.Start) },
+        value = resources.getString(R.string.settings_minutes, padStart),
         note = stringResource(R.string.recset_pad_start_desc),
     )
     ListRow(
         stringResource(R.string.recset_pad_end),
-        onClick = { choosing = RecordingChoice.End },
-        value = minutes(padEnd),
+        onClick = { onChoose(RecordingChoice.End) },
+        value = resources.getString(R.string.settings_minutes, padEnd),
         note = stringResource(R.string.recset_pad_end_desc),
     )
     ListRow(
@@ -173,51 +224,38 @@ internal fun RecordingPane() {
         switch = livePause,
         note = stringResource(R.string.settings_rec_livepause_note),
     )
-    BackgroundRow()
+}
 
-    choosing?.let { choice ->
-        SidePanel(onBack = { choosing = null }) {
-            when (choice) {
-                RecordingChoice.Target -> RecordingTarget.entries.forEach { option ->
-                    PanelRow(stringResource(option.label), ticked = option == target, onClick = {
-                        choosing = null
-                        // USB only counts once a folder is granted, so recordings are never left
-                        // with nowhere to go.
-                        if (option == RecordingTarget.USB && usbTree == null) pickFolder() else settings.setRecordingTarget(option)
-                    })
-                }
-                RecordingChoice.Start -> MinuteChoices(START_MINUTES, padStart, minutes) {
-                    choosing = null
-                    settings.setRecordPadding(it, padEnd)
-                }
-                RecordingChoice.End -> MinuteChoices(END_MINUTES, padEnd, minutes) {
-                    choosing = null
-                    settings.setRecordPadding(padStart, it)
-                }
+/** The panel a Recording value opens, with the current choice ticked. Choosing closes it. */
+@Composable
+private fun RecordingChoicePanel(
+    choice: RecordingChoice,
+    settings: AppSettings,
+    onChooseUsb: () -> Unit,
+    close: () -> Unit,
+) {
+    val resources = LocalResources.current
+    val target by settings.recordingTarget.collectAsState()
+    val padStart by settings.recordPadStartMinutes.collectAsState()
+    val padEnd by settings.recordPadEndMinutes.collectAsState()
+    val minutes = { value: Int -> resources.getString(R.string.settings_minutes, value) }
+    SidePanel(onBack = close) {
+        when (choice) {
+            RecordingChoice.Target -> RecordingTarget.entries.forEach { option ->
+                PanelRow(stringResource(option.label), ticked = option == target, onClick = {
+                    close()
+                    if (option == RecordingTarget.USB) onChooseUsb() else settings.setRecordingTarget(option)
+                })
+            }
+            RecordingChoice.Start -> MinuteChoices(START_MINUTES, padStart, minutes) {
+                close()
+                settings.setRecordPadding(it, padEnd)
+            }
+            RecordingChoice.End -> MinuteChoices(END_MINUTES, padEnd, minutes) {
+                close()
+                settings.setRecordPadding(padStart, it)
             }
         }
-    }
-    typing?.let { field ->
-        EntryWindow(
-            title = stringResource(field.label),
-            initial = field.of(host, share, folder, user, password),
-            keyboardType = if (field == NasField.Password) KeyboardType.Password else KeyboardType.Text,
-            hint = stringResource(R.string.settings_row_from_phone),
-            // A guest share has no login, and an empty folder means the share itself.
-            allowBlank = field.optional,
-            onSave = { typed ->
-                typing = null
-                val value = if (field == NasField.Password) typed else typed.trim()
-                settings.setSmbConfig(
-                    host = if (field == NasField.Server) value else host,
-                    share = if (field == NasField.Share) value else share,
-                    folder = if (field == NasField.Folder) value else folder,
-                    user = if (field == NasField.Username) value else user,
-                    password = if (field == NasField.Password) value else password,
-                )
-            },
-            onCancel = { typing = null },
-        )
     }
 }
 
@@ -250,7 +288,8 @@ private fun BackgroundRow() {
             if (event == Lifecycle.Event.ON_RESUME) {
                 val now = context.isIgnoringBatteryOptimizations()
                 if (now && !allowed) {
-                    Toast.makeText(context, resources.getString(R.string.recset_background_toast), Toast.LENGTH_LONG).show()
+                    val message = resources.getString(R.string.recset_background_toast)
+                    Toast.makeText(context, message, Toast.LENGTH_LONG).show()
                 }
                 allowed = now
             }
@@ -261,7 +300,9 @@ private fun BackgroundRow() {
     ListRow(
         stringResource(R.string.recset_background_title),
         onClick = { if (!allowed && canAsk) context.requestIgnoreBatteryOptimizations() },
-        value = stringResource(if (allowed) R.string.recset_background_allowed else R.string.recset_background_not_allowed),
+        value = stringResource(
+            if (allowed) R.string.recset_background_allowed else R.string.recset_background_not_allowed,
+        ),
         note = stringResource(
             when {
                 allowed -> R.string.recset_background_on_desc
@@ -321,13 +362,32 @@ private enum class NasField(val label: Int, val optional: Boolean = false) {
     Password(R.string.recset_field_password, optional = true),
     ;
 
-    fun of(host: String, share: String, folder: String, user: String, password: String) = when (this) {
-        Server -> host
-        Share -> share
-        Folder -> folder
-        Username -> user
-        Password -> password
+    fun of(nas: NasDetails) = when (this) {
+        Server -> nas.host
+        Share -> nas.share
+        Folder -> nas.folder
+        Username -> nas.user
+        Password -> nas.password
     }
+}
+
+/** The network drive's details as saved. */
+private data class NasDetails(
+    val host: String,
+    val share: String,
+    val folder: String,
+    val user: String,
+    val password: String,
+) {
+    fun with(field: NasField, value: String) = when (field) {
+        NasField.Server -> copy(host = value)
+        NasField.Share -> copy(share = value)
+        NasField.Folder -> copy(folder = value)
+        NasField.Username -> copy(user = value)
+        NasField.Password -> copy(password = value)
+    }
+
+    fun config() = SmbConfig(host.trim(), share.trim(), folder.trim(), user, password)
 }
 
 private const val BYTES_PER_UNIT = 1024.0

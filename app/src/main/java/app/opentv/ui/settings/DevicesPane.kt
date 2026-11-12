@@ -44,7 +44,9 @@ internal fun DevicesPane(viewModel: SyncViewModel = viewModel()) {
     // One row whose words change, rather than one per state: pressing it swaps Share for Stop
     // sharing, and a new row in its place wouldn't keep the Highlight.
     ListRow(
-        stringResource(if (state is SyncServer.State.Sharing) R.string.sync_stop_sharing else R.string.settings_devices_share),
+        stringResource(
+            if (state is SyncServer.State.Sharing) R.string.sync_stop_sharing else R.string.settings_devices_share,
+        ),
         onClick = if (state is SyncServer.State.Sharing) viewModel::stopSharing else viewModel::startSharing,
         note = when (state) {
             is SyncServer.State.Sharing -> null
@@ -60,12 +62,7 @@ internal fun DevicesPane(viewModel: SyncViewModel = viewModel()) {
             typing = true
         },
         opens = true,
-        note = when (val state = receiving) {
-            SyncViewModel.ReceiveState.Idle -> null
-            SyncViewModel.ReceiveState.Connecting -> stringResource(R.string.sync_connecting)
-            is SyncViewModel.ReceiveState.Done -> stringResource(R.string.sync_synced_items, state.merged)
-            is SyncViewModel.ReceiveState.Failed -> state.reason.sentence
-        },
+        note = receiveNote(receiving),
         detail = (receiving as? SyncViewModel.ReceiveState.Failed)?.reason?.detail,
     )
     val nasReady = smbHost.isNotBlank()
@@ -91,6 +88,14 @@ internal fun DevicesPane(viewModel: SyncViewModel = viewModel()) {
             viewModel.receive(address, code)
         }
     }
+}
+
+@Composable
+private fun receiveNote(state: SyncViewModel.ReceiveState): String? = when (state) {
+    SyncViewModel.ReceiveState.Idle -> null
+    SyncViewModel.ReceiveState.Connecting -> stringResource(R.string.sync_connecting)
+    is SyncViewModel.ReceiveState.Done -> stringResource(R.string.sync_synced_items, state.merged)
+    is SyncViewModel.ReceiveState.Failed -> state.reason.sentence
 }
 
 @Composable

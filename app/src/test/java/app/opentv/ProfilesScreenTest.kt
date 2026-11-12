@@ -54,8 +54,7 @@ class ProfilesScreenTest {
     private val app: Application = ApplicationProvider.getApplicationContext()
     private val graph get() = ServiceLocator.get(app)
 
-    private fun profile(name: String) =
-        runBlocking { graph.profiles.all() }.firstOrNull { it.name == name }
+    private fun profile(name: String) = runBlocking { graph.profiles.all() }.firstOrNull { it.name == name }
 
     private fun show(vararg names: String) {
         runBlocking { names.forEach { if (profile(it) == null) graph.profiles.create(it) } }
@@ -186,9 +185,10 @@ class ProfilesScreenTest {
     @Test
     fun `Back leaves Profiles`() {
         var left = 0
+        val viewModel = ProfilesViewModel(app)
         compose.setTvContent {
             view = LocalView.current
-            ProfilesScreen(onBack = { left++ }, viewModel = ProfilesViewModel(app))
+            ProfilesScreen(onBack = { left++ }, viewModel = viewModel)
         }
         compose.waitUntil(5_000) { compose.onAllNodes(isFocused()).fetchSemanticsNodes().isNotEmpty() }
 

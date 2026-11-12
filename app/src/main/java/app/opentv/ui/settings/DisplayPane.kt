@@ -100,7 +100,9 @@ internal fun DisplayPane() {
     ListRow(
         stringResource(R.string.settings_row_tmdb),
         onClick = { choosing = Choice.TmdbKey },
-        value = stringResource(if (tmdbKey.isBlank()) R.string.settings_row_tmdb_none else R.string.settings_row_tmdb_set),
+        value = stringResource(
+            if (tmdbKey.isBlank()) R.string.settings_row_tmdb_none else R.string.settings_row_tmdb_set,
+        ),
         note = stringResource(R.string.settings_tmdb_note),
     )
     val refreshing = stringResource(R.string.settings_content_refreshing)

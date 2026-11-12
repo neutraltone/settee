@@ -124,7 +124,9 @@ fun ProfilesScreen(onBack: () -> Unit, modifier: Modifier = Modifier, viewModel:
     naming?.let { target ->
         val resources = LocalResources.current
         EntryWindow(
-            title = stringResource(if (target == NEW) R.string.profiles_new_heading else R.string.profiles_rename_heading),
+            title = stringResource(
+                if (target == NEW) R.string.profiles_new_heading else R.string.profiles_rename_heading,
+            ),
             initial = if (target == NEW) "" else profiles.firstOrNull { it.id == target }?.name.orEmpty(),
             maxLength = MAX_NAME,
             refusal = { name ->

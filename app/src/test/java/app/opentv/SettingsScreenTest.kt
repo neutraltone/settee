@@ -39,15 +39,15 @@ import androidx.test.espresso.matcher.RootMatchers
 import androidx.test.espresso.matcher.ViewMatchers
 import app.opentv.core.AppSettings
 import app.opentv.core.ServiceLocator
-import app.opentv.data.repo.EpgRepository
 import app.opentv.data.model.Source
 import app.opentv.data.model.SourceKind
 import app.opentv.data.model.StremioAddon
+import app.opentv.data.repo.EpgRepository
 import app.opentv.ui.settings.SettingsMemory
-import app.opentv.update.UpdateChecker
 import app.opentv.ui.settings.SettingsScreen
 import app.opentv.ui.settings.SettingsSection
 import app.opentv.ui.settings.SettingsTags
+import app.opentv.update.UpdateChecker
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
@@ -103,8 +103,8 @@ class SettingsScreenTest {
     }
 
     /**
-     * A press inside a side panel, on its row showing [text], once that row has the Highlight. The panel is a window of its own, which
-     * [device] can't reach: it presses keys on the screen's window.
+     * A press inside a side panel, on its row showing [text], once that row has the Highlight. The
+     * panel is a window of its own, which [device] can't reach: it presses keys on the screen's window.
      */
     private fun pressInPanel(text: String, key: Key) {
         // A key goes to whatever has the Highlight, so wait for it to reach the row first: a panel
@@ -115,7 +115,8 @@ class SettingsScreenTest {
         compose.waitForIdle()
     }
 
-    private fun feed(url: String) = runBlocking { graph.epgRepository.observeFeeds().first() }.firstOrNull { it.url == url }
+    private fun feed(url: String) =
+        runBlocking { graph.epgRepository.observeFeeds().first() }.firstOrNull { it.url == url }
 
     /** The keyboard over an entry screen, which is a window of its own over Settings. */
     private fun entryKeyboard(): DeviceKeyboard {
@@ -314,7 +315,9 @@ class SettingsScreenTest {
         pressInPanel("Yes, remove Own guide 168", Key.DirectionCenter)
         compose.waitUntil(5_000) { feed("http://127.0.0.1:9/own168.xml") == null }
         // Its row has gone, so the Highlight goes back into the pane rather than to the sections.
-        compose.waitUntil(5_000) { compose.onAllNodes(hasText("Update the guide now") and isFocused()).fetchSemanticsNodes().isNotEmpty() }
+        compose.waitUntil(5_000) {
+            compose.onAllNodes(hasText("Update the guide now") and isFocused()).fetchSemanticsNodes().isNotEmpty()
+        }
         paneTitle().assertTextContains("TV guide")
     }
 
@@ -334,8 +337,8 @@ class SettingsScreenTest {
         assertThat(graph.settings.recordingTarget.value).isEqualTo(AppSettings.RecordingTarget.SMB)
 
         compose.onNodeWithText("Server").requestFocus()
-        compose.onNode(hasText("Server") and hasText("You can also set this from your phone, in Manage on phone or laptop"))
-            .assertExists()
+        val fromPhone = "You can also set this from your phone, in Manage on phone or laptop"
+        compose.onNode(hasText("Server") and hasText(fromPhone)).assertExists()
         press(KeyEvent.KEYCODE_DPAD_CENTER)
         entryKeyboard().run {
             type("nas.example.com")
@@ -347,7 +350,8 @@ class SettingsScreenTest {
         // Without a shared folder there's nothing to test, and it says so.
         compose.onNodeWithText("Test connection").requestFocus()
         press(KeyEvent.KEYCODE_DPAD_CENTER)
-        compose.onNode(hasText("Test connection") and hasText("Type the server and shared folder first.")).assertExists()
+        compose.onNode(hasText("Test connection") and hasText("Type the server and shared folder first."))
+            .assertExists()
 
         compose.onNodeWithText("Password").requestFocus()
         press(KeyEvent.KEYCODE_DPAD_CENTER)
@@ -464,8 +468,8 @@ class SettingsScreenTest {
         }
 
         compose.waitUntil(10_000) {
-            compose.onAllNodes(hasText("Get from another device") and hasText("Couldn't get anything", substring = true))
-                .fetchSemanticsNodes().isNotEmpty()
+            val failed = hasText("Get from another device") and hasText("Couldn't get anything", substring = true)
+            compose.onAllNodes(failed).fetchSemanticsNodes().isNotEmpty()
         }
         compose.onNode(hasText("Get from another device") and isFocused()).assertExists()
     }
@@ -604,7 +608,8 @@ class SettingsScreenTest {
         runBlocking { graph.profileSettings.setSubtitlesOn(true) }
         show(SettingsMemory(SettingsSection.Display))
         compose.waitUntil(5_000) {
-            compose.onAllNodes(hasText("Subtitles") and hasText("For $active") and hasText("On")).fetchSemanticsNodes().isNotEmpty()
+            val row = hasText("Subtitles") and hasText("For $active") and hasText("On")
+            compose.onAllNodes(row).fetchSemanticsNodes().isNotEmpty()
         }
 
         press(KeyEvent.KEYCODE_DPAD_RIGHT, KeyEvent.KEYCODE_DPAD_CENTER)

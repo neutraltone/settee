@@ -114,8 +114,10 @@ private fun LastResult(feed: EpgFeed) {
     val failure = ViewerError.fromStored(feed.lastResult)
     val padding = Modifier.padding(top = 12.dp)
     when {
-        failure != null -> ErrorMessage(failure.sentence, failure.detail, modifier = padding, textAlign = TextAlign.Start)
-        feed.lastResult.isNotBlank() -> Text(feed.lastResult, SetteeType.Body, color = SetteeColors.QuietText, modifier = padding)
+        failure != null ->
+            ErrorMessage(failure.sentence, failure.detail, modifier = padding, textAlign = TextAlign.Start)
+        feed.lastResult.isNotBlank() ->
+            Text(feed.lastResult, SetteeType.Body, color = SetteeColors.QuietText, modifier = padding)
     }
 }
 

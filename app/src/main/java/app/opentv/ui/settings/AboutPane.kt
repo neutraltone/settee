@@ -85,12 +85,17 @@ internal fun AboutPane(onOpenFontLicences: () -> Unit, checkForUpdate: UpdateChe
                 }
                 checkDetail = (outcome as? UpdateChecker.Outcome.CouldNotCheck)?.detail
                 // UpdateGate draws over every screen, so the install prompt appears over Settings.
-                if (outcome is UpdateChecker.Outcome.Available) UpdateHub.state.value = UpdateUiState.Available(outcome.update)
+                if (outcome is UpdateChecker.Outcome.Available) {
+                    UpdateHub.state.value = UpdateUiState.Available(outcome.update)
+                }
                 checking = false
             }
         },
         value = "${stringResource(R.string.app_name)} ${BuildConfig.VERSION_NAME}",
-        note = if (checking) stringResource(R.string.about_checking) else checkNote ?: stringResource(R.string.about_based_on),
+        note = when {
+            checking -> stringResource(R.string.about_checking)
+            else -> checkNote ?: stringResource(R.string.about_based_on)
+        },
         detail = checkDetail.takeUnless { checking },
     )
     ListRow(
