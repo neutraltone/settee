@@ -26,7 +26,7 @@ object ManagerPage {
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
         <meta name="robots" content="noindex, nofollow">
-        <title>OpenTV — manage channels</title>
+        <title>OpenTV: manage channels</title>
         <style>
           :root { --bg:#07080c; --surface:#12141d; --surface2:#181b26; --line:#2a2f3d;
                   --text:#e8eaf0; --muted:#a8aec0; --accent:#7c93ff; --accent2:#3a447a;
@@ -113,14 +113,14 @@ object ManagerPage {
         <body>
           <div class="wrap">
             <header>
-              <h1>OpenTV — manage channels</h1>
+              <h1>OpenTV: manage channels</h1>
               <p class="hint">Changes apply to your TV the moment you make them.</p>
             </header>
 
             <details class="rec" id="provCard">
               <summary>Add a provider</summary>
               <div class="body">
-                <p class="hint">Add an Xtream, M3U or Stalker portal from here — a real keyboard beats the TV remote. Your login stays on the TV.</p>
+                <p class="hint">Add an Xtream, M3U or Stalker portal from here. A real keyboard beats the TV remote. Your login stays on the TV.</p>
                 <label class="field"><span>Type</span>
                   <select id="provKind">
                     <option value="xtream">Xtream Codes login</option>
@@ -145,7 +145,7 @@ object ManagerPage {
             <details class="rec" id="recCard">
               <summary>Recording to NAS (SMB)</summary>
               <div class="body">
-                <p class="hint">Point recordings at a network drive. Saved straight to your TV — the password stays on the TV.</p>
+                <p class="hint">Point recordings at a network drive. It's saved straight to your TV, and the password stays there.</p>
                 <label class="field"><span>Server (IP address)</span>
                   <input id="recHost" placeholder="192.168.0.214" autocapitalize="off" autocorrect="off" spellcheck="false"></label>
                 <label class="field"><span>Share</span>
@@ -178,7 +178,7 @@ object ManagerPage {
             </section>
 
             <p class="privacy">
-              This page is served by your television, over your own network — there is no OpenTV
+              This page is served by your television, over your own network. There is no OpenTV
               account and no OpenTV server. Nothing you change here leaves your home.
             </p>
           </div>
@@ -225,7 +225,7 @@ object ManagerPage {
             if (!r.ok) throw new Error('HTTP ' + r.status);
             return r.json();
           }
-          var UNREACH = "Couldn't reach the TV — still on the same wifi?";
+          var UNREACH = "Couldn't reach the TV. Is it still on the same wifi?";
 
           // ---- Categories --------------------------------------------------------------------
           async function loadMeta(){
@@ -267,7 +267,7 @@ object ManagerPage {
             var empty = el('catEmpty');
             if (cats.length === 0) {
               empty.hidden = false;
-              empty.textContent = (meta.categories && meta.categories.length) ? 'No categories match that.' : 'No channels yet — add a provider above to get started.';
+              empty.textContent = (meta.categories && meta.categories.length) ? 'No categories match that.' : 'No channels yet. Add a provider above to get started.';
               return;
             }
             empty.hidden = true;
@@ -360,7 +360,7 @@ object ManagerPage {
             var eye = document.createElement('div');
             eye.className = 'btn eye' + (c.hidden ? '' : ' on');
             eye.innerHTML = c.hidden ? '&#128584;' : '&#128065;';
-            eye.title = c.hidden ? 'Hidden — tap to show' : 'Showing — tap to hide';
+            eye.title = c.hidden ? 'Hidden. Tap to show' : 'Showing. Tap to hide';
             eye.onclick = function(){
               var target = !c.hidden;
               post('/channel', { id: c.id, hidden: target })
@@ -369,7 +369,7 @@ object ManagerPage {
                   row.className = 'row' + (target ? ' hidden' : '');
                   eye.className = 'btn eye' + (target ? '' : ' on');
                   eye.innerHTML = target ? '&#128584;' : '&#128065;';
-                  eye.title = target ? 'Hidden — tap to show' : 'Showing — tap to hide';
+                  eye.title = target ? 'Hidden. Tap to show' : 'Showing. Tap to hide';
                   refreshSub();
                   setStatus(target ? 'Hidden from the guide' : 'Showing in the guide', 'ok');
                 })
@@ -449,7 +449,7 @@ object ManagerPage {
             };
           }
           function showTest(r){
-            if (r && r.ok) setStatus('Connected to the NAS — recordings will save there. ✓', 'ok');
+            if (r && r.ok) setStatus('Connected to the NAS. Recordings will save there. ✓', 'ok');
             else setStatus((r && r.error) || "Couldn't connect to your NAS. Check it's on and these details are right.", 'err', r && r.detail);
           }
           el('recSave').onclick = function(){
@@ -509,7 +509,7 @@ object ManagerPage {
             post('/source', b)
               .then(function(r){
                 if (r && r.ok){
-                  setStatus('Added — ' + (r.channels || 0) + ' channels loaded.', 'ok');
+                  setStatus('Added. ' + (r.channels || 0) + ' channels loaded.', 'ok');
                   el('provUrl').value = ''; el('provUser').value = ''; el('provPass').value = '';
                   el('provMac').value = ''; el('provName').value = '';
                   loadMeta();

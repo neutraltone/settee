@@ -162,7 +162,7 @@ class PlaybackSourcesTest {
                 key = key,
                 url = "http://example.com/timeshift/u/p/30/2023-11-14:21-00/9.ts",
                 userAgent = "Panel/1",
-                title = "BBC One — News",
+                title = "BBC One · News",
                 isLive = false,
             ),
         )
@@ -194,7 +194,7 @@ class PlaybackSourcesTest {
 
         val playable = inUtc { sources.forWatching(MediaKey.Catchup(hd, NEWS_START)) } as Playable.Ready
 
-        assertThat(playable.title).isEqualTo("BBC One — Breakfast")
+        assertThat(playable.title).isEqualTo("BBC One · Breakfast")
     }
 
     @Test
@@ -395,7 +395,7 @@ class PlaybackSourcesTest {
 
         val playable = inUtc { sources.forWatching(MediaKey.Catchup(id, NEWS_START)) } as Playable.Ready
 
-        assertThat(playable.title).isEqualTo("BBC One — News")
+        assertThat(playable.title).isEqualTo("BBC One · News")
     }
 
     @Test
