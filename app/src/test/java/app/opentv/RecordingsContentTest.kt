@@ -222,7 +222,7 @@ class RecordingsContentTest {
     }
 
     @Test
-    fun `OK on a booking opens its options panel, where it can be cancelled`() {
+    fun `OK on a booking opens its options panel, where it can be cancelled once it's confirmed`() {
         val booked = booking(1)
         show(recordings = listOf(booked))
 
@@ -230,8 +230,79 @@ class RecordingsContentTest {
         compose.waitUntilAtLeastOneExists(hasText("Cancel recording"), TIMEOUT_MILLIS)
         captureScreen("recordings_options")
         compose.onNode(hasText("Cancel recording") and hasClickAction()).performClick()
+        compose.waitUntilAtLeastOneExists(hasText("Keep it"), TIMEOUT_MILLIS)
+        assertThat(chosen).isEmpty()
+        compose.onNode(hasText("Cancel recording") and hasClickAction()).performClick()
 
         assertThat(chosen).containsExactly(RecordingsRow.Booking(booked, clashes = false) to ItemOption.CancelRecording)
+    }
+
+    @Test
+    fun `cancelling a Reminder asks first, and Keep it keeps it`() {
+        show(reminders = listOf(reminder(1, autoTune = false)))
+
+        press(Key.DirectionCenter)
+        compose.waitUntilAtLeastOneExists(hasText("Cancel reminder"), TIMEOUT_MILLIS)
+        compose.onNode(hasText("Cancel reminder") and hasClickAction()).performClick()
+        compose.waitUntilAtLeastOneExists(hasText("Keep it"), TIMEOUT_MILLIS)
+        compose.waitForIdle()
+        compose.onNode(hasText("Keep it") and hasClickAction()).assertIsFocused()
+        compose.onNode(hasText("Keep it") and hasClickAction()).performClick()
+        compose.waitForIdle()
+
+        compose.onNode(hasText("Keep it")).assertDoesNotExist()
+        assertThat(chosen).isEmpty()
+    }
+
+    @Test
+    fun `confirming cancels the Reminder`() {
+        val set = reminder(1, autoTune = false)
+        show(reminders = listOf(set))
+
+        press(Key.DirectionCenter)
+        compose.waitUntilAtLeastOneExists(hasText("Cancel reminder"), TIMEOUT_MILLIS)
+        compose.onNode(hasText("Cancel reminder") and hasClickAction()).performClick()
+        compose.waitUntilAtLeastOneExists(hasText("Keep it"), TIMEOUT_MILLIS)
+        compose.onNode(hasText("Cancel reminder") and hasClickAction()).performClick()
+
+        assertThat(chosen).containsExactly(RecordingsRow.OfReminder(set) to ItemOption.CancelReminder)
+    }
+
+    @Test
+    fun `removing a series link asks first, and says its bookings go with it`() {
+        show(seriesRules = listOf(seriesLink(1)))
+
+        press(Key.DirectionCenter)
+        compose.waitUntilAtLeastOneExists(hasText("Remove series link"), TIMEOUT_MILLIS)
+        compose.onNode(hasText("Remove series link") and hasClickAction()).performClick()
+
+        compose.waitUntilAtLeastOneExists(hasText("bookings are cancelled", substring = true), TIMEOUT_MILLIS)
+        assertThat(chosen).isEmpty()
+    }
+
+    @Test
+    fun `stopping a recording doesn't ask, as nothing is lost`() {
+        val recording = completed(1, RecordingStatus.RECORDING)
+        show(recordings = listOf(recording))
+
+        press(Key.Menu)
+        compose.waitUntilAtLeastOneExists(hasText("Stop recording"), TIMEOUT_MILLIS)
+        compose.onNode(hasText("Stop recording") and hasClickAction()).performClick()
+
+        assertThat(chosen).containsExactly(RecordingsRow.Recorded(recording) to ItemOption.StopRecording)
+    }
+
+    @Test
+    fun `a booking that starts while it's being asked about is no longer asked about`() {
+        show(recordings = listOf(booking(1)))
+        press(Key.DirectionCenter)
+        compose.waitUntilAtLeastOneExists(hasText("Cancel recording"), TIMEOUT_MILLIS)
+        compose.onNode(hasText("Cancel recording") and hasClickAction()).performClick()
+        compose.waitUntilAtLeastOneExists(hasText("Keep it"), TIMEOUT_MILLIS)
+
+        shown = listOf(booking(1).copy(status = RecordingStatus.RECORDING))
+
+        compose.waitUntilDoesNotExist(hasText("Keep it"), TIMEOUT_MILLIS)
     }
 
     @Test

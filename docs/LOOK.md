@@ -263,7 +263,7 @@ One list, with Coming up, Recorded and Series links as headings, and a heading w
 - **Coming up:** bookings and reminders together, soonest first. A reminder shows a bell instead of a logo, and says so if it will switch to its channel by itself.
 - **Recorded:** a recording in progress first, then newest first. Failed ones stay here and say what went wrong.
 - **Series links:** A to Z.
-- **Rows:** OK plays, watches live or retries. Everything else is in the options panel, and Delete asks first because it can't be undone.
+- **Rows:** OK plays, watches live or retries. Everything else is in the options panel. Anything there that removes the row asks first, starting on "Keep it": Delete because it can't be undone, and cancelling a booking, a reminder or a series link because it's gone until it's set up again from the guide.
 
 ## Motion and cost
 

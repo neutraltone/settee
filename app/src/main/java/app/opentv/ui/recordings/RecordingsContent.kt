@@ -54,6 +54,7 @@ import app.opentv.ui.design.Text
 import app.opentv.ui.options.ChoicePanel
 import app.opentv.ui.options.ItemOption
 import app.opentv.ui.options.OptionsPanel
+import app.opentv.ui.options.label
 import coil.compose.AsyncImage
 
 /**
@@ -77,8 +78,7 @@ fun RecordingsContent(
 ) {
     // By key, not the row: the list can change under an open panel (a booking starts, a recording
     // ends), and the panel must act on the row as it is now, or close if it has gone.
-    var optionsOn by remember { mutableStateOf<String?>(null) }
-    var deleting by remember { mutableStateOf<String?>(null) }
+    val panels = remember { Panels() }
     val rows = remember(sections) { sections.flatMap { it.rows } }
     val heir = rememberHeir(remember(rows) { rows.map { it.key } })
     val room = with(LocalDensity.current) { HEADING_ROOM.toPx() }
@@ -108,10 +108,10 @@ fun RecordingsContent(
                                             when (val ok = row.okAction(now())) {
                                                 is OkAction.Play -> onPlay(ok.recording)
                                                 is OkAction.Retry -> onRetry(ok.recording)
-                                                null -> optionsOn = row.key
+                                                null -> panels.optionsOn = row.key
                                             }
                                         },
-                                        onOptions = { optionsOn = row.key },
+                                        onOptions = { panels.optionsOn = row.key },
                                         modifier = heir.modifierFor(row.key),
                                     )
                                 }
@@ -122,47 +122,76 @@ fun RecordingsContent(
             }
         }
     }
-    rows.firstOrNull { it.key == optionsOn }?.let { row ->
+    RowPanels(panels, rows, heir, onChoose)
+}
+
+/** Which row's options are open, by key, and what it's being asked about. */
+private class Panels {
+    var optionsOn by mutableStateOf<String?>(null)
+    var asking by mutableStateOf<Asking?>(null)
+}
+
+/** A row's options panel, and the question before an option that removes the row. */
+@Composable
+private fun RowPanels(
+    panels: Panels,
+    rows: List<RecordingsRow>,
+    heir: Heir,
+    onChoose: (RecordingsRow, ItemOption) -> Unit,
+) {
+    rows.firstOrNull { it.key == panels.optionsOn }?.let { row ->
         OptionsPanel(
             title = row.title,
             options = row.options().options(),
             onChoose = { option ->
-                optionsOn = null
-                when (option) {
-                    ItemOption.DeleteRecording -> deleting = row.key
-                    else -> {
-                        // Stopping keeps the row, as a finished recording; everything else removes it.
-                        if (option != ItemOption.StopRecording) heir.expectToLose(row.key)
-                        onChoose(row, option)
-                    }
-                }
+                panels.optionsOn = null
+                val question = (option as? ItemOption.RecordingAction)?.question
+                if (question == null) onChoose(row, option) else panels.asking = Asking(row.key, option, question)
             },
-            onDismiss = { optionsOn = null },
+            onDismiss = { panels.optionsOn = null },
         )
     }
-    // Delete removes the file from this device, the NAS or USB, and nothing can bring it back.
-    rows.firstOrNull { it.key == deleting }?.let { row ->
+    // Asked only while the row still offers it: a booking that has started can't be cancelled.
+    val ask = panels.asking ?: return
+    rows.firstOrNull { it.key == ask.row && ask.option in it.options().options() }?.let { row ->
         ChoicePanel(
-            title = stringResource(R.string.rec_delete_confirm, row.title),
-            choices = DeleteChoice.entries,
-            labelOf = { stringResource(it.label) },
-            onChoose = { choice ->
-                deleting = null
-                if (choice == DeleteChoice.Delete) {
+            title = stringResource(ask.question, row.title),
+            choices = Answer.entries,
+            labelOf = { if (it == Answer.Keep) stringResource(R.string.rec_delete_keep) else ask.option.label() },
+            onChoose = { answer ->
+                panels.asking = null
+                if (answer == Answer.Go) {
                     heir.expectToLose(row.key)
-                    onChoose(row, ItemOption.DeleteRecording)
+                    onChoose(row, ask.option)
                 }
             },
-            onDismiss = { deleting = null },
+            onDismiss = { panels.asking = null },
         )
     }
 }
 
-private enum class DeleteChoice(@StringRes val label: Int) {
-    // First, so it's where the Highlight starts: a second press of OK must not delete.
-    Keep(R.string.rec_delete_keep),
-    Delete(R.string.common_delete),
+/** A row's option waiting on the viewer's answer to [question]. */
+private class Asking(val row: String, val option: ItemOption, @StringRes val question: Int)
+
+private enum class Answer {
+    // First, so it's where the Highlight starts: a second press of OK must not remove anything.
+    Keep,
+    Go,
 }
+
+/**
+ * What's asked before an option that removes its row, or null for one that doesn't: stopping leaves
+ * the recording, finished. A deleted file can't be brought back, and a booking, Reminder or series
+ * link is gone until it's set up again from the guide.
+ */
+private val ItemOption.RecordingAction.question: Int?
+    get() = when (this) {
+        ItemOption.StopRecording -> null
+        ItemOption.DeleteRecording -> R.string.rec_delete_confirm
+        ItemOption.CancelRecording -> R.string.rec_cancel_recording_confirm
+        ItemOption.CancelReminder -> R.string.rec_cancel_reminder_confirm
+        ItemOption.RemoveSeriesLink -> R.string.rec_series_remove_confirm
+    }
 
 private val RecordingsHeading.label
     get() = when (this) {
