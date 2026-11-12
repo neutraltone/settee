@@ -54,11 +54,15 @@ class VoiceStringsTest {
     private val voiceKeys get() = errorKeys + emptyStateKeys
 
     /**
-     * Untranslated in every language before #166, and unchanged by it: the ticket leaves translation
-     * gaps it didn't make to their own work, so these fall back to English for now.
+     * Untranslated in every language by the change that added them, and unchanged by #166: the ticket
+     * leaves translation gaps it didn't make to their own work, so these fall back to English for now.
      */
-    private val untranslatedBefore =
-        setOf("about_check_failed", "playback_try_other_quality", "vod_empty_category_shows")
+    private val untranslatedBefore = setOf(
+        "about_check_failed",
+        "playback_try_other_quality",
+        "vod_empty_category_shows",
+        "guide_no_favourites_hint",
+    )
 
     @Test
     fun `docs ERRORS md names only strings that exist, and lists the playback and provider sentences`() {

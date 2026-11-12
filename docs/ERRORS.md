@@ -16,7 +16,7 @@ nor does the sentence: both come from the failure's type, never its text (see
 `PlaybackErrorsTest`, `CatalogueRefreshTest`).
 
 Sentences that mention the hardware have a `_tv` and a `_device` string: "this TV" when the app runs on
-a television (`isRunningOnTelevision`, decided as at launch), "this device" on phones and tablets.
+a television (`isRunningOnTelevision`), "this device" on phones and tablets.
 
 Who builds them: `PlaybackErrors` for playback, `ErrorWording` (`core/`) for everything else, through
 `ServiceLocator.errorWording`. Change a mapping here and in the code together.

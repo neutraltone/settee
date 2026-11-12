@@ -571,15 +571,9 @@ private fun RecordingSwitchBanner() {
  * Checked at runtime rather than by shipping a separate leanback build: one APK for phone,
  * tablet, Android TV and Fire TV means one thing to release and one thing to test.
  */
-fun isRunningOnTelevision(context: Context): Boolean =
-    onTelevision ?: checkTelevision(context).also { onTelevision = it }
-
-/**
- * Decided once per process, so every "this TV" or "this device" sentence (ErrorWording, the players)
- * agrees with what was decided at launch, and the package manager is asked only once.
- */
-@Volatile
-private var onTelevision: Boolean? = null
+// Not memoised for the process: tests switch between a TV and a phone in one run, and the check is
+// two cheap lookups.
+fun isRunningOnTelevision(context: Context): Boolean = checkTelevision(context)
 
 private fun checkTelevision(context: Context): Boolean {
     val uiModeManager = context.getSystemService(Context.UI_MODE_SERVICE) as? UiModeManager
