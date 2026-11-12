@@ -53,7 +53,7 @@ class TestCatalog(
         http = panel.http,
         settings = AppSettings.get(context),
         wording = ErrorWording(context, onTelevision = false),
-    )
+    ).apply { genrePauseMillis = 0 }
 
     val settings: AppSettings = AppSettings.get(context)
 

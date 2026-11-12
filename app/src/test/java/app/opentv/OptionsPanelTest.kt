@@ -91,7 +91,7 @@ class OptionsPanelTest {
     fun `Record whole series names the programme`() {
         show(ItemOption.RecordWholeSeries(programme("The News")))
 
-        compose.onNodeWithText("Record whole series — The News").assertIsFocused()
+        compose.onNodeWithText("Record whole series: The News").assertIsFocused()
     }
 
     @Test
