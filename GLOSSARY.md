@@ -159,6 +159,10 @@ _Avoid_: Sidebar (that's the Categories Sidebar), menu, nav
 Where the box is set up: its sections down the left, and the highlighted section's settings beside them, so nothing has to be opened to see what's inside.
 _Avoid_: Preferences, options (that's an item's options), menu
 
+**Side Panel**:
+The panel down the right of the screen, over what's there, for a choice, an item's details, or a question before acting. Back closes it.
+_Avoid_: Dialog, popup, modal
+
 **Categories Sidebar**:
 The list of a tab's categories on Live TV, Movies and Shows. It stays tucked away until Left from the leftmost item opens it on the current category. The channel manager shows it always open.
 _Avoid_: Sidebar on its own, filter, chips
