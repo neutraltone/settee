@@ -24,4 +24,7 @@ object SetteeColors {
     val QuietText = Color(0xFFBDABA8)
     val Accent = Color(0xFFFF8F6B)
     val OnAccent = Color(0xFF2A130B)
+
+    /** Only for something being captured right now: never failures, series links or clashes. */
+    val Recording = Color(0xFFFF5A5F)
 }

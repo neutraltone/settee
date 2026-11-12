@@ -72,6 +72,7 @@ import app.opentv.ui.WhosWatchingAsked
 import app.opentv.ui.WhosWatchingScreen
 import app.opentv.ui.channels.ChannelManagerScreen
 import app.opentv.ui.channels.SearchScreen
+import app.opentv.ui.design.SetteeColors
 import app.opentv.ui.design.SetteeTheme
 import app.opentv.ui.firstScreen
 import app.opentv.ui.options.ItemOptionsHost
@@ -555,7 +556,7 @@ private fun RecordingSwitchBanner() {
             Icon(
                 Icons.Filled.FiberManualRecord,
                 contentDescription = null,
-                tint = Color(0xFFE53935),
+                tint = SetteeColors.Recording,
                 modifier = Modifier.size(18.dp),
             )
             Spacer(Modifier.width(10.dp))
