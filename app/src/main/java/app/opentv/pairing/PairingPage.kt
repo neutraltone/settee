@@ -27,7 +27,7 @@ object PairingPage {
 
         ${if (error != null) "<div class=\"error\">${escape(error)}</div>" else ""}
 
-        <form method="post" action="/submit" autocomplete="off">
+        <form id="form" method="post" action="/submit" autocomplete="off">
           <input type="hidden" name="t" value="${escape(token)}">
 
           <div class="seg">
@@ -74,13 +74,8 @@ object PairingPage {
                  autocomplete="one-time-code">
           <p class="hint">This is what proves it's you standing in front of the telly.</p>
 
-          <button type="submit">Send to TV</button>
+          <button id="send" type="submit">Send to TV</button>
         </form>
-
-        <p class="privacy">
-          This page is served by your TV, over your own network. What you type goes straight to
-          it and nowhere else. Settee has no accounts and no server of its own.
-        </p>
 
         <script>
           function toggle() {
@@ -95,6 +90,13 @@ object PairingPage {
             document.getElementById('password').required = !isM3u;
           }
           toggle();
+          // The TV loads the channels before it answers, which takes a while on a big provider, so
+          // the button says it's working and can't be pressed twice.
+          document.getElementById('form').addEventListener('submit', function () {
+            var send = document.getElementById('send');
+            send.disabled = true;
+            send.innerHTML = '<span class="spin" aria-hidden="true"></span>Sending to your TV\u2026';
+          });
         </script>
         """.trimIndent(),
     )
@@ -125,6 +127,22 @@ object PairingPage {
                   --raised:${SetteeColors.Raised.hex}; --line:${SetteeColors.Rule.hex};
                   --text:${SetteeColors.Text.hex}; --muted:${SetteeColors.QuietText.hex};
                   --accent:${SetteeColors.Accent.hex}; --on-accent:${SetteeColors.OnAccent.hex}; }
+          $STYLES
+        </style>
+        </head>
+        <body><div class="wrap">
+        <header class="brand">@@LOCKUP@@</header>
+        $content
+        <footer class="privacy">
+          This page is served by your TV, over your own network. What you type goes straight to
+          it and nowhere else. Settee has no accounts and no server of its own.
+        </footer>
+        </div></body>
+        </html>
+    """.trimIndent().replace("@@LOCKUP@@", PAIRING_LOCKUP.trim())
+
+    /** Every page's layout; the colours are set on :root beside it, from Settee's own. */
+    private const val STYLES = """
           * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
           body { margin:0; background:var(--bg); color:var(--text); padding:28px 20px 64px;
                  font:500 17px/1.5 "Alegreya Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; }
@@ -150,17 +168,20 @@ object PairingPage {
           button { width:100%; margin-top:26px; padding:17px; font:inherit; font-size:17px; font-weight:700;
             background:var(--accent); color:var(--on-accent); border:0; border-radius:999px; }
           button:active { opacity:.85; }
+          button:disabled { opacity:.85; }
+          .spin { display:inline-block; width:1em; height:1em; margin-right:.6em; vertical-align:-.15em;
+            border:2px solid currentColor; border-right-color:transparent; border-radius:50%;
+            animation:spin .8s linear infinite; }
+          @keyframes spin { to { transform:rotate(360deg); } }
+          @media (prefers-reduced-motion: reduce) { .spin { animation:none; } }
           hr { border:0; border-top:1px solid var(--line); margin:28px 0 4px; }
           .error { background:var(--surface); border:1px solid var(--accent); color:var(--text);
             padding:12px 14px; border-radius:10px; margin-bottom:18px; font-size:.92rem; }
-          .privacy { color:var(--muted); font-size:.82rem; margin-top:30px; }
-        </style>
-        </head>
-        <body><div class="wrap">
-        $content
-        </div></body>
-        </html>
-    """.trimIndent()
+          .brand { margin:0 0 28px; }
+          .brand svg { display:block; height:40px; width:auto; }
+          .privacy { color:var(--muted); font-size:.82rem; margin-top:36px; padding-top:18px;
+            border-top:1px solid var(--line); }
+    """
 
     /** Settee's fonts, fetched from the TV's own server. */
     private fun fontFaces(token: String): String {

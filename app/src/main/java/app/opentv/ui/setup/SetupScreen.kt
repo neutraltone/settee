@@ -74,18 +74,25 @@ fun SetupScreen(setup: Setup, onWatchLive: (() -> Unit)?, onFinish: () -> Unit) 
                 Image(painterResource(R.drawable.ic_settee_mark), contentDescription = null, Modifier.size(96.dp))
                 Spacer(Modifier.height(24.dp))
                 if (setup.finished) {
-                    Finished(setup, onFinish)
-                    return@Column
+                    Finished(setup)
+                } else {
+                    Text(stringResource(R.string.setup_wordplay), SetteeType.Hero)
+                    Spacer(Modifier.height(12.dp))
+                    val line = justDone?.let { countLine(it) } ?: setup.running?.let { stringResource(it.label) }
+                    if (line != null) Text(line, SetteeType.Synopsis, color = SetteeColors.QuietText)
+                    Spacer(Modifier.height(20.dp))
+                    ProgressBar(setup.bar, Modifier.width(480.dp))
                 }
-                Text(stringResource(R.string.setup_wordplay), SetteeType.Hero)
-                Spacer(Modifier.height(12.dp))
-                val line = justDone?.let { countLine(it) } ?: setup.running?.let { stringResource(it.label) }
-                if (line != null) Text(line, SetteeType.Synopsis, color = SetteeColors.QuietText)
-                Spacer(Modifier.height(20.dp))
-                ProgressBar(setup.bar, Modifier.width(480.dp))
-                if (watchLive != null) {
+                // One button that changes, not two: on a Stick, the Highlight asked for by a new
+                // Take me to Settee was lost as the focused Watch live TV now left the screen.
+                val action = if (setup.finished) onFinish else watchLive
+                if (action != null) {
                     Spacer(Modifier.height(32.dp))
-                    PillButton(stringResource(R.string.setup_watch_live), onClick = watchLive, Modifier.startsFocused())
+                    PillButton(
+                        stringResource(if (setup.finished) R.string.setup_take_me_in else R.string.setup_watch_live),
+                        onClick = action,
+                        modifier = Modifier.startsFocused(),
+                    )
                 }
             }
         }
@@ -93,7 +100,7 @@ fun SetupScreen(setup: Setup, onWatchLive: (() -> Unit)?, onFinish: () -> Unit) 
 }
 
 @Composable
-private fun Finished(setup: Setup, onFinish: () -> Unit) {
+private fun Finished(setup: Setup) {
     Text(stringResource(R.string.setup_finished_title), SetteeType.Hero)
     Spacer(Modifier.height(12.dp))
     Text(summary(setup), SetteeType.Synopsis, color = SetteeColors.QuietText, textAlign = TextAlign.Center)
@@ -106,8 +113,6 @@ private fun Finished(setup: Setup, onFinish: () -> Unit) {
             textAlign = TextAlign.Center,
         )
     }
-    Spacer(Modifier.height(32.dp))
-    PillButton(stringResource(R.string.setup_take_me_in), onClick = onFinish, Modifier.startsFocused())
 }
 
 /** "1,204 channels, 6,400 movies and 1,100 shows.", counting only what loaded, and film details if any did. */

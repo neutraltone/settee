@@ -495,7 +495,7 @@
     <string name="pairing_phone_all_done_body">Carry on on your TV.</string>
     <string name="pairing_phone_stopped_title">Setup stopped on your TV</string>
     <string name="pairing_phone_stopped_body">Start setting up from your phone again on the TV to send your details.</string>
-    <string name="pairing_got_it">Got it — connecting to your provider…</string>
+    <string name="pairing_got_it">Got it. Connecting to your provider…</string>
     <string name="pairing_qr_desc">QR code linking to the setup page on this device</string>
     <string name="pairing_setup_title">Set up from your phone</string>
     <string name="pairing_setup_desc">Point your phone\'s camera at the code. It opens a page served by this TV, so nothing you type leaves your home network.</string>

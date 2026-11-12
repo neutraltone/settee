@@ -157,6 +157,17 @@ class SetupScreenTest {
     }
 
     @Test
+    fun `when setup finishes while Watch live TV now has the highlight, Take me to Settee takes it`() {
+        var setup by mutableStateOf(channelsIn)
+        compose.setTvContent { SetupScreen(setup, onWatchLive = {}, onFinish = {}) }
+        compose.onNodeWithText("Watch live TV now").assertIsFocused()
+
+        setup = finished()
+
+        compose.onNodeWithText("Take me to Settee").assertIsFocused()
+    }
+
+    @Test
     fun `once finished, Back takes you in too`() {
         setScreen(finished())
 

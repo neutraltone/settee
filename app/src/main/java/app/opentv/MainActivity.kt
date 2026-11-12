@@ -313,7 +313,13 @@ private fun OpenTvApp(isTelevision: Boolean, launchedToPlay: Boolean) {
 
     // First run goes straight to setup — an empty channel list with no explanation is the
     // worst possible first impression.
-    val start = if (first == FirstScreen.ADD_SOURCE) Routes.ADD_SOURCE else Routes.MAIN
+    // Decided once: a NavHost whose start destination changes rebuilds its graph, which throws the
+    // back stack away. Saving the first provider flips it mid-Setup (once the channels are in), so
+    // without this Setup vanished into Home halfway through. Saved so a restored back stack keeps
+    // the start it was built on; a new Profile chosen above starts a new navigation, and a new one.
+    val start = rememberSaveable(navGeneration) {
+        if (first == FirstScreen.ADD_SOURCE) Routes.ADD_SOURCE else Routes.MAIN
+    }
 
     val bootContext = androidx.compose.ui.platform.LocalContext.current
 
