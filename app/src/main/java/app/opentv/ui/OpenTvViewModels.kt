@@ -1141,6 +1141,9 @@ class VodViewModel @JvmOverloads constructor(
     /** A film's More like this. */
     suspend fun moreLikeThis(movie: Movie): List<Movie> = graph.catalogRepository.moreLikeThis(movie)
 
+    /** Everything in the library with this person in it, for their page. */
+    suspend fun titlesWithPerson(name: String): List<VodTitle> = graph.catalogRepository.titlesWithPerson(name)
+
     suspend fun resumesPartway(movie: Movie): Boolean {
         val playing = graph.vodQualities.planFor(MediaKey.Movie(movie.id)).start.key
         return graph.viewerLibrary.resumeFrom(playing.stored) > 0

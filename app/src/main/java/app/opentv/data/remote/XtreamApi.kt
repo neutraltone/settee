@@ -12,6 +12,7 @@ import app.opentv.data.model.Movie
 import app.opentv.data.model.Series
 import app.opentv.data.model.Source
 import app.opentv.data.model.StreamKind
+import app.opentv.data.model.providerDirector
 import app.opentv.data.parser.parseReleaseDate
 import app.opentv.data.remote.ProviderException.Problem
 import java.io.Closeable
@@ -173,7 +174,7 @@ class XtreamApi(
                 // first detail open. See asBackdropUrl for the array-or-string handling.
                 backdropUrl = obj.asBackdropUrl("movie_image", "cover_big"),
                 cast = obj["cast"].asStringOrNull ?: obj["actors"].asStringOrNull,
-                director = obj["director"].asStringOrNull,
+                director = providerDirector(obj["director"].asStringOrNull),
                 genre = obj["genre"].asStringOrNull,
                 tmdbId = obj["tmdb_id"].asStringOrNull ?: obj["tmdb"].asStringOrNull,
                 releaseDate = obj.releaseDate,
@@ -245,7 +246,7 @@ class XtreamApi(
         VodInfo(
             backdropUrl = info.asBackdropUrl("movie_image", "cover_big"),
             cast = info["cast"].asStringOrNull ?: info["actors"].asStringOrNull,
-            director = info["director"].asStringOrNull,
+            director = providerDirector(info["director"].asStringOrNull),
             genre = info["genre"].asStringOrNull,
             tmdbId = info["tmdb_id"].asStringOrNull ?: info["tmdb"].asStringOrNull,
             plot = info["plot"].asStringOrNull ?: info["description"].asStringOrNull,

@@ -16,9 +16,11 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.assertIsSelected
+import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.isDialog
 import androidx.compose.ui.test.isFocused
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
@@ -79,6 +81,8 @@ class SeriesDetailContentTest {
 
     private var played: MediaKey? = null
 
+    private var openedPerson: String? = null
+
     private var leaves = 0
 
     private var heroStatus: CoverStatus? = null
@@ -105,6 +109,7 @@ class SeriesDetailContentTest {
                 favourite = favourite.value,
                 onPlayEpisode = { played = it },
                 onSetFavourite = { favouriteRequests += it },
+                onOpenPerson = { openedPerson = it },
             )
         }
         settle()
@@ -158,6 +163,12 @@ class SeriesDetailContentTest {
     /** Presses [key] on whatever has the Highlight, and lets the page settle. */
     private fun press(key: Key) {
         compose.onNode(isFocused()).performKeyInput { pressKey(key) }
+        settle()
+    }
+
+    /** [press] in a side panel, a window of its own with its own highlight beside the page's. */
+    private fun pressInPanel(key: Key) {
+        compose.onNode(isFocused() and hasAnyAncestor(isDialog())).performKeyInput { pressKey(key) }
         settle()
     }
 
@@ -490,6 +501,31 @@ class SeriesDetailContentTest {
     }
 
     @Test
+    fun `Cast comes after Favourite and lists who is in the show, and OK on a name opens their page`() {
+        series = series.copy(cast = "Lead Actor, Second Lead")
+        show(SeriesMainAction.Play(testEpisode(2, 5)))
+
+        press(Key.DirectionRight)
+        press(Key.DirectionRight)
+        compose.onNodeWithText("Cast").assertIsFocused()
+        press(Key.DirectionCenter)
+
+        compose.onNode(hasText("Lead Actor") and hasAnyAncestor(isDialog())).assertIsFocused()
+        captureScreen("series_detail_cast")
+        pressInPanel(Key.DirectionDown)
+        pressInPanel(Key.DirectionCenter)
+
+        assertThat(openedPerson).isEqualTo("Second Lead")
+    }
+
+    @Test
+    fun `a show with no cast has no Cast button`() {
+        show(SeriesMainAction.Play(testEpisode(2, 5)))
+
+        compose.onNodeWithText("Cast").assertDoesNotExist()
+    }
+
+    @Test
     fun `a Favourite series offers to remove it`() {
         favourite.value = true
         show(SeriesMainAction.Play(testEpisode(2, 5)))
@@ -524,6 +560,7 @@ class SeriesDetailContentTest {
                     favourite = false,
                     onPlayEpisode = { played = it },
                     onSetFavourite = {},
+                    onOpenPerson = {},
                 )
             }
             optionsAskedFor.lastOrNull()?.let { subject ->

@@ -20,6 +20,7 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
@@ -50,6 +51,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import app.opentv.R
 import app.opentv.data.model.Episode
 import app.opentv.data.model.Series
+import app.opentv.data.model.personNames
 import app.opentv.data.parser.displayTitle
 import app.opentv.data.repo.CoverStatus
 import app.opentv.data.repo.EpisodeStatuses
@@ -73,7 +75,12 @@ import kotlinx.coroutines.delay
  * provider, and most of it is never looked at.
  */
 @Composable
-fun SeriesDetailScreen(seriesId: Long, onPlayEpisode: (MediaKey) -> Unit, viewModel: VodViewModel = viewModel()) {
+fun SeriesDetailScreen(
+    seriesId: Long,
+    onPlayEpisode: (MediaKey) -> Unit,
+    onOpenPerson: (String) -> Unit,
+    viewModel: VodViewModel = viewModel(),
+) {
     var series by remember(seriesId) { mutableStateOf<Series?>(null) }
 
     LaunchedEffect(seriesId) {
@@ -103,13 +110,15 @@ fun SeriesDetailScreen(seriesId: Long, onPlayEpisode: (MediaKey) -> Unit, viewMo
         favourite = favouriteSeries?.any { it.id == s.id },
         onPlayEpisode = onPlayEpisode,
         onSetFavourite = { viewModel.setSeriesFavourite(s, it) },
+        onOpenPerson = onOpenPerson,
     )
 }
 
 /**
  * A show's page once the show is known: the hero with its main button (Resume or Play the right
  * episode, from [mainAction]) and the Favourite toggle, the season pills, and the selected season's
- * episodes. [status] is where the Profile is with the show, for the meta line. [favourite] is null
+ * episodes. Cast, when the show lists any, opens a panel of them, and a name picked there calls
+ * [onOpenPerson]. [status] is where the Profile is with the show, for the meta line. [favourite] is null
  * until the Profile's Favourites have loaded, and the toggle does nothing till then.
  */
 @Composable
@@ -122,7 +131,10 @@ internal fun SeriesDetailContent(
     favourite: Boolean?,
     onPlayEpisode: (MediaKey) -> Unit,
     onSetFavourite: (Boolean) -> Unit,
+    onOpenPerson: (String) -> Unit,
 ) {
+    val cast = remember(series.cast) { personNames(series.cast) }
+    var castShown by remember(series.id) { mutableStateOf(false) }
     val seasons = remember(episodes) { seasonsOf(episodes) }
     val nav = remember(series.id) { ShowPageNav() }
     val shown = remember(seasons, mainAction, nav.pickedSeason) { ShowSeasons(seasons, mainAction, nav.pickedSeason) }
@@ -139,7 +151,17 @@ internal fun SeriesDetailContent(
     ScreenFrame(backdrop = backdrop) {
         Column(Modifier.fillMaxWidth()) {
             Text(series.displayTitle, style = SetteeType.Hero, maxLines = 2)
-            if (!nav.heroAway) ShowHero(series, nav, shown, status, favourite, onPlayEpisode, onSetFavourite)
+            if (!nav.heroAway) {
+                ShowHero(series, nav, shown, status, favourite, onPlayEpisode, onSetFavourite) {
+                    if (cast.isNotEmpty()) {
+                        PillButton(
+                            label = stringResource(R.string.vod_cast),
+                            icon = Icons.Filled.People,
+                            onClick = { castShown = true },
+                        )
+                    }
+                }
+            }
             Spacer(Modifier.height(SetteeSpace.RowGap))
             if (seasons.size > 1) {
                 SeasonPills(nav, shown, pillRow)
@@ -148,9 +170,21 @@ internal fun SeriesDetailContent(
             EpisodeList(series, nav, shown, statuses, episodeList, onPlayEpisode)
         }
     }
+
+    if (castShown) {
+        CastPanel(
+            title = stringResource(R.string.vod_cast),
+            cast = cast,
+            onPick = {
+                castShown = false
+                onOpenPerson(it)
+            },
+            onBack = { castShown = false },
+        )
+    }
 }
 
-/** The hero beneath the title: the meta line, the synopsis and the buttons. */
+/** The hero beneath the title: the meta line, the synopsis and the buttons, [moreButtons] last. */
 @Composable
 private fun ShowHero(
     series: Series,
@@ -160,6 +194,7 @@ private fun ShowHero(
     favourite: Boolean?,
     onPlayEpisode: (MediaKey) -> Unit,
     onSetFavourite: (Boolean) -> Unit,
+    moreButtons: @Composable () -> Unit,
 ) {
     Spacer(Modifier.height(8.dp))
     val seasonCount = shown.all.count { it.number > 0 }
@@ -195,6 +230,7 @@ private fun ShowHero(
                 .focusRequester(nav.focus.favourite)
                 .onFocusChanged { nav.favouriteFocused = it.isFocused },
         )
+        moreButtons()
     }
 }
 

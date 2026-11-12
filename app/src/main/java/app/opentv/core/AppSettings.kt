@@ -486,17 +486,6 @@ class AppSettings private constructor(context: Context, fileName: String = "open
     }
 
     /**
-     * Which TMDB key (a hash of it, not the key) this provider's films saved with a blank genre were
-     * last asked about with, or null if never; see CatalogRepository's retry. Per provider, as
-     * [vodFetchedAtMillis] is, and cleared with it.
-     */
-    fun tmdbBlanksRetriedWith(sourceId: Long): String? = prefs.getString(KEY_TMDB_BLANKS_RETRIED + sourceId, null)
-
-    fun setTmdbBlanksRetriedWith(sourceId: Long, keyHash: String) {
-        prefs.edit { putString(KEY_TMDB_BLANKS_RETRIED + sourceId, keyHash) }
-    }
-
-    /**
      * The user's own TMDB API key (v3 auth), stored on-device only exactly like provider
      * credentials, used to fill in artwork/metadata a provider left blank. Blank = the TMDB
      * fallback is off. Each user brings their own key, so no single key carries everyone's traffic.
@@ -577,6 +566,9 @@ class AppSettings private constructor(context: Context, fileName: String = "open
         private const val KEY_SYNC_EPISODES_NOT_FOUND = "sync_episodes_not_found"
         private const val KEY_NAS_AUTO_SYNC = "nas_auto_sync"
         private const val KEY_VOD_FETCHED_AT = "vod_fetched_at_"
+
+        // No longer written: the background pass asks TMDB about each film once a key is set. Still
+        // cleared with a provider's other stamps, so it doesn't linger on devices that had it.
         private const val KEY_TMDB_BLANKS_RETRIED = "tmdb_blanks_retried_"
         private const val KEY_TMDB_KEY = "tmdb_api_key"
         private const val KEY_STREMIO_ADDONS = "stremio_addons"
