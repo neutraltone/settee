@@ -6,7 +6,7 @@
 package app.opentv.pairing
 
 import android.util.Log
-import java.net.InetAddress
+import java.io.IOException
 import java.net.NetworkInterface
 import java.net.ServerSocket
 import java.net.Socket
@@ -62,13 +62,18 @@ class PhoneAddress private constructor(
     }
 
     fun check(method: String, path: String, suppliedToken: String?): Check {
-        if (closed) return NOT_FOUND
-        if (suppliedToken != null && PairingHttp.secretsMatch(suppliedToken, token)) return Check.Scanned
         val typed = if (method == "GET") path.trim('/').lowercase() else ""
-        if (shortToken.isNotEmpty() && PairingHttp.secretsMatch(typed, shortToken)) return Check.Typed
-        // Same length and letters-and-digits, so a look-alike mistype still counts.
-        val looksTyped = typed.length == SHORT_TOKEN_LENGTH && typed.all { it.isLetterOrDigit() }
-        if (!looksTyped) return NOT_FOUND
+        return when {
+            closed -> NOT_FOUND
+            suppliedToken != null && PairingHttp.secretsMatch(suppliedToken, token) -> Check.Scanned
+            shortToken.isNotEmpty() && PairingHttp.secretsMatch(typed, shortToken) -> Check.Typed
+            // Same length and letters-and-digits, so a look-alike mistype still counts.
+            typed.length == SHORT_TOKEN_LENGTH && typed.all { it.isLetterOrDigit() } -> wrongGuess()
+            else -> NOT_FOUND
+        }
+    }
+
+    private fun wrongGuess(): Check.Refused {
         if (shortToken.isNotEmpty() && ++wrongShortTokenGuesses >= MAX_SHORT_TOKEN_GUESSES) {
             shortToken = ""
         }
@@ -102,30 +107,37 @@ class PhoneAddress private constructor(
         private const val TAG = "PhoneAddress"
         private val NOT_FOUND = Check.Refused("404 Not Found", "text/plain", "Not found.")
         private const val SHORT_TOKEN_LENGTH = 7
+        private const val TOKEN_BYTES = 24 // 192 bits
         private const val SHORT_TOKEN_ALPHABET = "346789acdefhjkmnprtwx"
 
         fun open(): Opening {
-            val host = lanAddress() ?: return Opening.NoNetwork
-            val socket = try {
-                // Port 0 asks the OS for a free one. A fixed port would be predictable and would
-                // clash with whatever else the user runs at home.
-                ServerSocket(0)
-            } catch (e: Exception) {
-                Log.w(TAG, "Could not open a socket", e)
-                return Opening.NoSocket
+            val host = lanAddress()
+            val socket = host?.let { openSocket() }
+            return when {
+                host == null -> Opening.NoNetwork
+                socket == null -> Opening.NoSocket
+                else -> Opening.Opened(PhoneAddress(host, socket, newToken()).apply { shortToken = newShortToken() })
             }
-            val random = SecureRandom()
-            val token = ByteArray(24).also(random::nextBytes).joinToString("") { "%02x".format(it) }
-            return Opening.Opened(
-                PhoneAddress(host, socket, token).apply {
-                    // Not just a shorter hex token: nothing that looks like another character
-                    // across a room in the TV's serif face (0/o, 1/l/i, 2/z, 5/s, 6/b, 9/g/q, u/v/y).
-                    shortToken = (1..SHORT_TOKEN_LENGTH)
-                        .map { SHORT_TOKEN_ALPHABET[random.nextInt(SHORT_TOKEN_ALPHABET.length)] }
-                        .joinToString("")
-                },
-            )
         }
+
+        private fun openSocket(): ServerSocket? = try {
+            // Port 0 asks the OS for a free one. A fixed port would be predictable and would
+            // clash with whatever else the user runs at home.
+            ServerSocket(0)
+        } catch (e: IOException) {
+            Log.w(TAG, "Could not open a socket", e)
+            null
+        }
+
+        private val random = SecureRandom()
+
+        private fun newToken() = ByteArray(TOKEN_BYTES).also(random::nextBytes).joinToString("") { "%02x".format(it) }
+
+        // Not just a shorter hex token: nothing that looks like another character across a room
+        // in the TV's serif face (0/o, 1/l/i, 2/z, 5/s, 6/b, 9/g/q, u/v/y).
+        private fun newShortToken() = (1..SHORT_TOKEN_LENGTH)
+            .map { SHORT_TOKEN_ALPHABET[random.nextInt(SHORT_TOKEN_ALPHABET.length)] }
+            .joinToString("")
 
         /**
          * The device's address on the LAN.
@@ -135,17 +147,14 @@ class PhoneAddress private constructor(
          * useful when the box is wired.
          */
         private fun lanAddress(): String? {
-            val candidates = mutableListOf<InetAddress>()
-            runCatching {
-                for (nic in NetworkInterface.getNetworkInterfaces()) {
-                    if (!nic.isUp || nic.isLoopback) continue
-                    for (address in nic.inetAddresses) {
-                        if (address.isLoopbackAddress) continue
-                        if (address.hostAddress?.contains(':') == true) continue // IPv4 only
-                        if (PairingHttp.isPrivateAddress(address.hostAddress)) candidates += address
-                    }
-                }
-            }.onFailure { Log.w(TAG, "Could not enumerate interfaces", it) }
+            val candidates = runCatching {
+                NetworkInterface.getNetworkInterfaces().asSequence()
+                    .filter { it.isUp && !it.isLoopback }
+                    .flatMap { it.inetAddresses.asSequence() }
+                    .filter { !it.isLoopbackAddress && it.hostAddress?.contains(':') != true } // IPv4 only
+                    .filter { PairingHttp.isPrivateAddress(it.hostAddress) }
+                    .toList()
+            }.onFailure { Log.w(TAG, "Could not enumerate interfaces", it) }.getOrDefault(emptyList())
 
             // Prefer a real private range over a 169.254 self-assigned address, which means
             // DHCP failed and nothing will be able to reach us anyway.

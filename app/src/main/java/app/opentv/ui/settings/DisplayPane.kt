@@ -33,7 +33,6 @@ internal fun DisplayPane() {
     val context = LocalContext.current
     val settings = remember { AppSettings.get(context) }
     val graph = remember { ServiceLocator.get(context) }
-    val scope = rememberCoroutineScope()
     val subtitles by graph.profileSettings.subtitlePreference.collectAsState(initial = null)
     val profileName = activeProfileName()
     val deadline by SleepTimer.deadline.collectAsState()
@@ -107,41 +106,56 @@ internal fun DisplayPane() {
         },
     )
 
-    when (choosing) {
-        Choice.Subtitles -> SidePanel(onBack = { choosing = null }) {
-            listOf(false to off, true to on).forEach { (value, label) ->
+    choosing?.let { choice ->
+        ChoicePanel(choice, subtitlesOn = subtitlesOn, sleeping = deadline != null, language = language) {
+            choosing = null
+        }
+    }
+}
+
+/** The panel a value row opens, with the current choice ticked. Choosing closes it, as Back does. */
+@Composable
+private fun ChoicePanel(choice: Choice, subtitlesOn: Boolean, sleeping: Boolean, language: String, close: () -> Unit) {
+    val context = LocalContext.current
+    val settings = remember { AppSettings.get(context) }
+    val graph = remember { ServiceLocator.get(context) }
+    val scope = rememberCoroutineScope()
+    val on = stringResource(R.string.settings_row_on)
+    val off = stringResource(R.string.settings_row_off)
+    SidePanel(onBack = close) {
+        when (choice) {
+            Choice.Subtitles -> listOf(false to off, true to on).forEach { (value, label) ->
                 PanelRow(label, ticked = value == subtitlesOn, onClick = {
                     scope.launch { graph.profileSettings.setSubtitlesOn(value) }
-                    choosing = null
+                    close()
                 })
             }
-        }
-        Choice.Sleep -> SidePanel(onBack = { choosing = null }) {
-            PanelRow(off, ticked = deadline == null, onClick = {
-                SleepTimer.clear()
-                choosing = null
-            })
-            SleepTimer.presets.forEach { minutes ->
-                PanelRow(stringResource(R.string.settings_sleep_minutes, minutes), onClick = {
-                    SleepTimer.armMinutes(minutes)
-                    choosing = null
+            Choice.Sleep -> {
+                PanelRow(off, ticked = !sleeping, onClick = {
+                    SleepTimer.clear()
+                    close()
                 })
+                SleepTimer.presets.forEach { minutes ->
+                    PanelRow(stringResource(R.string.settings_sleep_minutes, minutes), onClick = {
+                        SleepTimer.armMinutes(minutes)
+                        close()
+                    })
+                }
+            }
+            Choice.Language -> {
+                PanelRow(stringResource(R.string.settings_language_system), ticked = language.isBlank(), onClick = {
+                    close()
+                    changeLanguage(context, settings, "")
+                })
+                // Each language is listed in its own name (endonym), the convention users expect.
+                OpenTvLanguages.forEach { (tag, name) ->
+                    PanelRow(name, ticked = language == tag, onClick = {
+                        close()
+                        changeLanguage(context, settings, tag)
+                    })
+                }
             }
         }
-        Choice.Language -> SidePanel(onBack = { choosing = null }) {
-            PanelRow(stringResource(R.string.settings_language_system), ticked = language.isBlank(), onClick = {
-                choosing = null
-                changeLanguage(context, settings, "")
-            })
-            // Each language is listed in its own name (endonym), the convention users expect.
-            OpenTvLanguages.forEach { (tag, name) ->
-                PanelRow(name, ticked = language == tag, onClick = {
-                    choosing = null
-                    changeLanguage(context, settings, tag)
-                })
-            }
-        }
-        null -> Unit
     }
 }
 

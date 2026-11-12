@@ -209,7 +209,7 @@ class PairingServer(private val scope: CoroutineScope, private val fonts: Pairin
                 PairingHttp.httpResponse("200 OK", "text/html", PairingPage.form(token, null)),
             )
 
-            method == "POST" && path.startsWith("/submit") -> handleSubmit(output, body, token)
+            method == "POST" && path.startsWith("/submit") -> handleSubmit(output, body)
 
             else -> output.write(
                 PairingHttp.httpResponse("405 Method Not Allowed", "text/plain", "No."),
@@ -222,7 +222,8 @@ class PairingServer(private val scope: CoroutineScope, private val fonts: Pairin
         return PairingHttp.httpResponse("200 OK", "font/ttf", bytes)
     }
 
-    private fun handleSubmit(output: java.io.OutputStream, body: String, token: String) {
+    private fun handleSubmit(output: java.io.OutputStream, body: String) {
+        val token = address?.token.orEmpty()
         val form = PairingHttp.parseFormEncoded(body)
 
         val code = form["code"].orEmpty().filter { it.isDigit() }
