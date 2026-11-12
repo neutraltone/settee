@@ -8,6 +8,7 @@ package app.opentv
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import app.opentv.core.AppSettings
+import app.opentv.core.ErrorWording
 import app.opentv.data.model.Channel
 import app.opentv.data.model.Programme
 import app.opentv.data.model.SeriesRule
@@ -51,6 +52,8 @@ class SeriesRuleRescanTest {
             sourceDao = db.sources(),
             api = XtreamApi(test.panel.http),
             http = test.panel.http,
+            wording = ErrorWording(ApplicationProvider.getApplicationContext(), onTelevision = false),
+            selfEnabledGuide = EpgRepository.SelfEnabledGuide.InMemory(),
         ),
         test.lineup,
     )

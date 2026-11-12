@@ -33,6 +33,9 @@ import java.io.OutputStream
  */
 object RecordingStorage {
 
+    /** Where recordings go isn't there to write to; [sentence] says what the viewer can do about it. */
+    class Unavailable(@androidx.annotation.StringRes val sentence: Int) : IOException("Recording storage unavailable")
+
     /** Marker locator for a USB recording that hasn't been created (and given a URI) yet. */
     private const val USB_PLACEHOLDER_PREFIX = "usb://"
 
@@ -101,7 +104,7 @@ object RecordingStorage {
             // A USB recording whose document already exists (e.g. re-opened): write into it.
             val uri = locator.toUri()
             val out = context.contentResolver.openOutputStream(uri, "w")
-                ?: throw IOException(context.getString(R.string.rec_error_usb_unavailable))
+                ?: throw Unavailable(R.string.rec_error_usb_unavailable)
             Sink(out, resolvedLocator = locator) {
                 runCatching {
                     out.flush()
@@ -124,15 +127,15 @@ object RecordingStorage {
      */
     private fun openUsbSink(context: Context, settings: AppSettings, filename: String): Sink {
         val treeUriString = settings.usbTreeUri.value
-            ?: throw IOException(context.getString(R.string.rec_error_usb_no_folder))
+            ?: throw Unavailable(R.string.rec_error_usb_no_folder)
         val tree = DocumentFile.fromTreeUri(context, treeUriString.toUri())
         if (tree == null || !tree.canWrite()) {
-            throw IOException(context.getString(R.string.rec_error_usb_unavailable))
+            throw Unavailable(R.string.rec_error_usb_unavailable)
         }
         val doc = tree.createFile(mimeForFilename(filename), filename)
-            ?: throw IOException(context.getString(R.string.rec_error_usb_unavailable))
+            ?: throw Unavailable(R.string.rec_error_usb_unavailable)
         val out = context.contentResolver.openOutputStream(doc.uri)
-            ?: throw IOException(context.getString(R.string.rec_error_usb_unavailable))
+            ?: throw Unavailable(R.string.rec_error_usb_unavailable)
         return Sink(out, resolvedLocator = doc.uri.toString()) {
             runCatching {
                 out.flush()

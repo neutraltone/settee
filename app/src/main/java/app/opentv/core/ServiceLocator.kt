@@ -24,6 +24,7 @@ import app.opentv.data.repo.SourceRepository
 import app.opentv.data.repo.ViewerLibrary
 import app.opentv.data.repo.VodQualities
 import app.opentv.data.repo.WaitingProgress
+import app.opentv.isRunningOnTelevision
 import app.opentv.player.DecoderList
 import app.opentv.player.DeviceDecoders
 import app.opentv.recording.RecordingEngine
@@ -130,6 +131,7 @@ object ServiceLocator {
                 stalkerApi = stalkerApi,
                 http = httpClient,
                 settings = settings,
+                wording = errorWording,
             )
         }
 
@@ -158,6 +160,10 @@ object ServiceLocator {
                 sourceDao = database.sources(),
                 api = xtreamApi,
                 http = httpClient,
+                wording = errorWording,
+                selfEnabledGuide = object : EpgRepository.SelfEnabledGuide {
+                    override var name by settings::selfEnabledGuide
+                },
             )
         }
 
@@ -165,6 +171,9 @@ object ServiceLocator {
         private val refreshScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
         val refreshMessages: RefreshMessages by lazy { RefreshMessages(appContext) }
+
+        /** Says "this TV" or "this device" as the app decided at launch, with [isRunningOnTelevision]. */
+        val errorWording: ErrorWording by lazy { ErrorWording(appContext, isRunningOnTelevision(appContext)) }
 
         val catalogueRefresh: CatalogueRefresh by lazy {
             CatalogueRefresh(

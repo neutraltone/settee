@@ -8,6 +8,7 @@ package app.opentv
 import android.content.Context
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
+import app.opentv.core.ErrorWording
 import app.opentv.data.db.ChannelDao
 import app.opentv.data.db.OpenTvDatabase
 import app.opentv.data.model.Channel
@@ -48,6 +49,8 @@ class EpgMatcherWritesTest {
         sourceDao = db.sources(),
         api = XtreamApi(http),
         http = http,
+        wording = ErrorWording(ApplicationProvider.getApplicationContext(), onTelevision = false),
+        selfEnabledGuide = EpgRepository.SelfEnabledGuide.InMemory(),
     )
 
     @After

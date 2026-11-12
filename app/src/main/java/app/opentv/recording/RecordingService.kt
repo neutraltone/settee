@@ -18,6 +18,7 @@ import android.util.Log
 import androidx.core.app.NotificationCompat
 import app.opentv.R
 import app.opentv.core.ServiceLocator
+import app.opentv.core.ViewerError
 import app.opentv.data.repo.MediaKey
 import app.opentv.player.PlaybackErrors
 import java.util.concurrent.ConcurrentHashMap
@@ -108,13 +109,16 @@ class RecordingService : Service() {
                 endAtMillis = recording.scheduledEndMillis,
                 onCall = { captures[id]?.call = it },
                 onProgress = { repo.setSize(id, it) },
-            ).failure?.let { getString(PlaybackErrors.messageOf(it)) }
+            ).failure?.let { PlaybackErrors.describe(this@RecordingService, it).stored() }
         } catch (t: Throwable) {
             // A cancelled stop is a clean finish, not an error.
             if (t is kotlinx.coroutines.CancellationException) {
                 Log.i(TAG, "Recording $id stopped by user")
             } else {
-                error = t.message ?: t.javaClass.simpleName
+                error = when (t) {
+                    is RecordingStorage.Unavailable -> graph.errorWording.of(t.sentence, "StorageUnavailable")
+                    else -> graph.errorWording.of(t, R.string.rec_error_failed)
+                }.stored()
                 Log.w(TAG, "Recording $id failed", t)
             }
         } finally {
@@ -130,7 +134,7 @@ class RecordingService : Service() {
                     ok = ok,
                     atMillis = System.currentTimeMillis(),
                     bytes = total,
-                    error = if (ok) null else (error ?: getString(R.string.rec_error_nothing)),
+                    error = if (ok) null else (error ?: ViewerError(getString(R.string.rec_error_nothing)).stored()),
                 )
             }
             finish(id)

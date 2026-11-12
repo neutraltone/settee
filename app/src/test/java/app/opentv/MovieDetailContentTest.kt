@@ -62,6 +62,8 @@ class MovieDetailContentTest {
         genre = "Drama, Road",
         cast = "Somebody Famous, Second Billing, Third Billing, Fourth Billing",
         director = "Someone Else",
+        writer = "A Writer, Second Writer",
+        studio = "Big Studio",
     )
 
     private val streams = listOf(
@@ -75,15 +77,20 @@ class MovieDetailContentTest {
     private val favourite = mutableStateOf<Boolean?>(false)
 
     private var opened: Movie? = null
+    private var openedPerson: String? = null
 
     // Null while the row is still being worked out.
     private val similarFilms = mutableStateOf<List<Movie>?>(emptyList())
+
+    /** The film without credits, for tests of what's beneath them. */
+    private val uncredited get() = film.copy(cast = null, director = null, writer = null, studio = null)
 
     private fun similarFilm(id: Long, name: String) = film.copy(id = id, streamId = "m$id", name = name)
 
     private var findStreams: (suspend () -> List<StremioStream>) = { streams }
 
     private fun show(
+        movie: Movie = film,
         resumes: Boolean = false,
         status: CoverStatus? = null,
         addons: Boolean = false,
@@ -92,13 +99,14 @@ class MovieDetailContentTest {
         similarFilms.value = similar
         compose.setTvContent {
             MovieDetailContent(
-                movie = film,
+                movie = movie,
                 resumes = resumes,
                 status = status,
                 favourite = favourite.value,
                 findAddonStreams = if (addons) findStreams else null,
                 similar = similarFilms.value,
                 onOpenMovie = { opened = it },
+                onOpenPerson = { openedPerson = it },
                 onPlay = { plays++ },
                 onPlayAddonStream = { playedStream = it },
                 onSetFavourite = { favouriteRequests += it },
@@ -141,13 +149,14 @@ class MovieDetailContentTest {
     fun `a film with no credits has no credits line`() {
         compose.setTvContent {
             MovieDetailContent(
-                movie = film.copy(cast = null, director = " "),
+                movie = film.copy(cast = null, director = " ", writer = null, studio = null),
                 resumes = false,
                 status = null,
                 favourite = false,
                 findAddonStreams = null,
                 similar = emptyList(),
                 onOpenMovie = {},
+                onOpenPerson = {},
                 onPlay = {},
                 onPlayAddonStream = {},
                 onSetFavourite = {},
@@ -157,12 +166,75 @@ class MovieDetailContentTest {
 
         compose.onNode(hasText("Directed by", substring = true)).assertDoesNotExist()
         compose.onNode(hasText("With ", substring = true)).assertDoesNotExist()
+        compose.onNodeWithText("Cast").assertDoesNotExist()
+        compose.onNodeWithText("Director").assertDoesNotExist()
+        compose.onNodeWithText("Writer").assertDoesNotExist()
+    }
+
+    @Test
+    fun `the cast is a row of names beneath the buttons, and OK on one opens their page`() {
+        show()
+
+        compose.onNodeWithText("Cast").assertIsDisplayed()
+        press(Key.DirectionDown)
+        compose.onNode(hasText("Somebody Famous") and hasClickAction()).assertIsFocused()
+        press(Key.DirectionRight)
+        compose.onNode(hasText("Second Billing") and hasClickAction()).assertIsFocused()
+        press(Key.DirectionCenter)
+
+        assertThat(openedPerson).isEqualTo("Second Billing")
+    }
+
+    @Test
+    fun `beneath the cast, who directed, wrote and made it are columns side by side`() {
+        show()
+        press(Key.DirectionDown)
+
+        press(Key.DirectionDown)
+        compose.onNode(hasText("Someone Else") and hasClickAction()).assertIsFocused()
+        compose.onNodeWithText("Writer").assertIsDisplayed()
+        compose.onNodeWithText("Studio").assertIsDisplayed()
+        captureScreen("movie_detail_people")
+        press(Key.DirectionRight)
+        compose.onNode(hasText("A Writer") and hasClickAction()).assertIsFocused()
+        press(Key.DirectionDown)
+        compose.onNode(hasText("Second Writer") and hasClickAction()).assertIsFocused()
+        press(Key.DirectionRight)
+        compose.onNode(hasText("Big Studio") and hasClickAction()).assertIsFocused()
+        press(Key.DirectionCenter)
+
+        assertThat(openedPerson).isEqualTo("Big Studio")
+    }
+
+    @Test
+    fun `a film with only a director has just that column`() {
+        show(movie = film.copy(writer = null, studio = null))
+
+        compose.onNodeWithText("Director").assertExists()
+        compose.onNodeWithText("Writer").assertDoesNotExist()
+        compose.onNodeWithText("Studio").assertDoesNotExist()
+    }
+
+    @Test
+    fun `Down from the director reaches More like this, and Up from the cast comes back to the buttons`() {
+        show(movie = film.copy(writer = null, studio = null), similar = listOf(similarFilm(8, "Harbour Lights")))
+
+        press(Key.DirectionDown)
+        press(Key.DirectionDown)
+        press(Key.DirectionDown)
+        compose.onNode(hasText("Harbour Lights") and hasClickAction()).assertIsFocused()
+
+        press(Key.DirectionUp)
+        press(Key.DirectionUp)
+        compose.onNode(hasText("Somebody Famous") and hasClickAction()).assertIsFocused()
+        press(Key.DirectionUp)
+        compose.onNodeWithText("Play").assertIsFocused()
     }
 
     @Test
     fun `films like this one are in a row beneath the hero, and Down then OK opens one`() {
         val harbour = similarFilm(8, "Harbour Lights")
-        show(similar = listOf(harbour, similarFilm(9, "Long Night")))
+        show(movie = uncredited, similar = listOf(harbour, similarFilm(9, "Long Night")))
 
         compose.onNodeWithText("More like this").assertExists()
         press(Key.DirectionDown)
@@ -176,7 +248,7 @@ class MovieDetailContentTest {
 
     @Test
     fun `Up from the row goes back to the buttons`() {
-        show(similar = listOf(similarFilm(8, "Harbour Lights")))
+        show(movie = uncredited, similar = listOf(similarFilm(8, "Harbour Lights")))
         press(Key.DirectionDown)
 
         press(Key.DirectionUp)
@@ -186,7 +258,7 @@ class MovieDetailContentTest {
 
     @Test
     fun `while films like this one load, the row holds its place, so nothing moves when they arrive`() {
-        show(similar = null)
+        show(movie = uncredited, similar = null)
         val playTop = { compose.onNodeWithText("Play").fetchSemanticsNode().boundsInRoot.top }
         val loadingTop = playTop()
 
@@ -207,7 +279,7 @@ class MovieDetailContentTest {
 
     @Test
     fun `a film page opens with the start of the row showing beneath the hero`() {
-        show(similar = listOf(similarFilm(8, "Harbour Lights")))
+        show(movie = uncredited, similar = listOf(similarFilm(8, "Harbour Lights")))
 
         compose.onNodeWithText("More like this").assertIsDisplayed()
     }

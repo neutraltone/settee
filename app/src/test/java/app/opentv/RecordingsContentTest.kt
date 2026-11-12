@@ -20,6 +20,7 @@ import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
+import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasText
@@ -31,10 +32,12 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
 import androidx.test.espresso.Espresso
+import app.opentv.core.ViewerError
 import app.opentv.data.model.Recording
 import app.opentv.data.model.RecordingStatus
 import app.opentv.data.model.Reminder
 import app.opentv.data.model.SeriesRule
+import app.opentv.ui.design.ERROR_DETAIL_TAG
 import app.opentv.ui.design.SetteeColors
 import app.opentv.ui.options.ItemOption
 import app.opentv.ui.recordings.RecordingsContent
@@ -296,6 +299,16 @@ class RecordingsContentTest {
     }
 
     @Test
+    fun `a failed recording says what went wrong, with the detail underneath`() {
+        val failed = completed(1, RecordingStatus.FAILED)
+            .copy(error = ViewerError("The channel stopped.", "HTTP 404").stored())
+        show(recordings = listOf(failed))
+
+        row("Recorded 1").assert(hasText("The channel stopped.", substring = true))
+        compose.onNodeWithTag(ERROR_DETAIL_TAG, useUnmergedTree = true).assertTextEquals("HTTP 404")
+    }
+
+    @Test
     fun `a recording says whose it is only when there's more than one Profile`() {
         val mine = completed(1).copy(profileId = 7)
         show(recordings = listOf(mine), profileNames = mapOf(7L to "Sam"))
@@ -320,7 +333,7 @@ class RecordingsContentTest {
     @Test
     fun `with nothing booked, recorded or linked the screen says how to record`() {
         show()
-        compose.onNodeWithText("Nothing here yet", substring = true).assertExists()
+        compose.onNodeWithText("No recordings yet", substring = true).assertExists()
         captureScreen("recordings_empty")
     }
 

@@ -47,6 +47,11 @@ python3 -m unittest discover -s tools/launcher-art  # every copy of the mark mat
 Tests live in `app/src/test` (JUnit4, Truth, Robolectric, Room testing, coroutines-test, Roborazzi for screenshots); there are no
 instrumented tests.
 
+**CI runs the full checks, not your machine.** The developer's Mac is shared by several agent sessions'
+Gradle builds, and a full local run of the suite, ktlint, detekt and lint can swap it for hours. Locally,
+run only the test class you're working on and `ktlintFormat`; when the work is ready, push, open the PR
+with Auto-fix on, and let the PR checks below decide. Never start a second Gradle run while one is still going.
+
 ### PR checks
 
 `.github/workflows/build.yml` runs one job per required check: **Test and assemble** (unit tests, debug
@@ -148,7 +153,10 @@ pre-restart test in `OpenTvDatabaseTest`) is deleted.
 
 `player/PlayerController` keeps one `ExoPlayer` per screen and swaps media items (debounced 350 ms;
 never release/rebuild on channel change). Retries 403/429/5xx with backoff; not 401/404/410.
-`PlaybackErrors` turns failures into actionable sentences — don't hide them.
+`PlaybackErrors` turns failures into actionable sentences — don't hide them. Every error, in playback
+or not, is a sentence plus a detail line (code · status · format) drawn by `ui/design`'s
+`ErrorMessage`; `ErrorWording` words failures outside playback. `docs/ERRORS.md` lists them all:
+keep it up to date whenever a mapping changes or a new failure can reach the screen.
 
 ## Conventions
 

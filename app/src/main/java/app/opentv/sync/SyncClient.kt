@@ -5,6 +5,7 @@
  */
 package app.opentv.sync
 
+import app.opentv.core.HttpStatus
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
@@ -20,6 +21,11 @@ import okhttp3.Request
  */
 class SyncClient(private val httpClient: OkHttpClient) {
 
+    /** The other device answered [status]: 401 when the code didn't match. */
+    class Refused(override val status: Int) :
+        java.io.IOException("The other device answered HTTP $status"),
+        HttpStatus
+
     private val json = Json { ignoreUnknownKeys = true }
 
     suspend fun pull(address: String, code: String): Result<SyncBundle> = withContext(Dispatchers.IO) {
@@ -29,14 +35,7 @@ class SyncClient(private val httpClient: OkHttpClient) {
             val url = "http://$cleanAddress/export?c=$cleanCode"
             val request = Request.Builder().url(url).get().build()
             httpClient.newCall(request).execute().use { response ->
-                if (!response.isSuccessful) {
-                    error(
-                        when (response.code) {
-                            401 -> "That code doesn't match the one on the other device."
-                            else -> "The other device didn't accept the connection (HTTP ${response.code})."
-                        },
-                    )
-                }
+                if (!response.isSuccessful) throw Refused(response.code)
                 val body = response.body.string()
                 json.decodeFromString(SyncBundle.serializer(), body)
             }

@@ -5,6 +5,7 @@
  */
 package app.opentv.update
 
+import app.opentv.core.ErrorWording
 import app.opentv.data.remote.GitHubRelease
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -50,7 +51,9 @@ class UpdateChecker(
     sealed interface Outcome {
         data object UpToDate : Outcome
         data class Available(val update: Update) : Outcome
-        data object CouldNotCheck : Outcome
+
+        /** [detail] is what went wrong, for the detail line under the sentence. */
+        data class CouldNotCheck(val detail: String) : Outcome
     }
 
     private val json = Json { ignoreUnknownKeys = true }
@@ -64,15 +67,15 @@ class UpdateChecker(
                 .build()
 
             http.newCall(request).execute().use { response ->
-                if (!response.isSuccessful) return@withContext Outcome.CouldNotCheck
+                if (!response.isSuccessful) return@withContext Outcome.CouldNotCheck("HTTP ${response.code}")
                 val body = response.body.string()
-                if (body.isBlank()) return@withContext Outcome.CouldNotCheck
+                if (body.isBlank()) return@withContext Outcome.CouldNotCheck(EMPTY_REPLY)
 
                 val release = json.decodeFromString<GitHubRelease>(body)
                 if (release.draft || release.prerelease) return@withContext Outcome.UpToDate
                 if (!isNewer(release.tagName, currentVersionName)) return@withContext Outcome.UpToDate
 
-                val asset = release.apkAsset() ?: return@withContext Outcome.CouldNotCheck
+                val asset = release.apkAsset() ?: return@withContext Outcome.CouldNotCheck(NO_APK)
                 Outcome.Available(
                     Update(
                         versionName = release.tagName.trimStart('v', 'V'),
@@ -86,11 +89,16 @@ class UpdateChecker(
             }
         }.getOrElse {
             if (it is CancellationException) throw it
-            Outcome.CouldNotCheck
+            Outcome.CouldNotCheck(ErrorWording.codeOf(it))
         }
     }
 
     companion object {
+        const val EMPTY_REPLY = "EmptyReply"
+
+        /** The latest release has no APK attached, as when its release job failed. */
+        const val NO_APK = "NoApk"
+
         /** The single place the project's GitHub location is written down. */
         const val REPO_SLUG = "neutraltone/settee"
 

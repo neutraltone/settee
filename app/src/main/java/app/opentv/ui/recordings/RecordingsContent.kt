@@ -5,7 +5,6 @@
  */
 package app.opentv.ui.recordings
 
-import android.text.format.Formatter
 import androidx.annotation.StringRes
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
@@ -36,14 +35,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import app.opentv.R
+import app.opentv.core.ViewerError
 import app.opentv.data.model.Recording
-import app.opentv.data.model.RecordingStatus
+import app.opentv.ui.design.ERROR_DETAIL_TAG
 import app.opentv.ui.design.HighlightStyle
 import app.opentv.ui.design.HighlightSurface
 import app.opentv.ui.design.Message
@@ -56,10 +55,6 @@ import app.opentv.ui.options.ChoicePanel
 import app.opentv.ui.options.ItemOption
 import app.opentv.ui.options.OptionsPanel
 import coil.compose.AsyncImage
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
-import java.util.concurrent.TimeUnit
 
 /**
  * The Recordings screen's list (docs/LOOK.md, Recordings): [sections] as rows under their headings,
@@ -210,6 +205,7 @@ private fun RecordingsRowItem(
                 Text(row.title, SetteeType.RowTitle, color = text, maxLines = 1)
                 if (row.inProgress) RecordingNow(highlighted, text)
                 Text(row.line(profileNames), SetteeType.Body, color = quiet, maxLines = 2)
+                row.failure()?.let { Failure(it, text, quiet) }
                 if (row is RecordingsRow.Booking && row.clashes) {
                     Text(
                         stringResource(R.string.rec_clashes),
@@ -242,6 +238,24 @@ private fun Leading(row: RecordingsRow, tint: Color) {
 }
 
 /**
+ * What went wrong and its detail line, as `ErrorMessage` lays them out, but in the row's own colours:
+ * `ErrorMessage`'s are for the Background, and a highlighted row is coral.
+ */
+@Composable
+private fun Failure(failure: ViewerError, text: Color, quiet: Color) {
+    Text(failure.sentence, SetteeType.Body, color = text, maxLines = 2)
+    if (failure.detail.isNotBlank()) {
+        Text(
+            failure.detail,
+            SetteeType.Body,
+            color = quiet,
+            maxLines = 1,
+            modifier = Modifier.testTag(ERROR_DETAIL_TAG),
+        )
+    }
+}
+
+/**
  * The dot and the word that say a recording is capturing now. Recording red on coral is about
  * 1.4:1, so on a highlighted row the dot takes the row's text colour instead.
  */
@@ -257,79 +271,6 @@ private fun RecordingNow(highlighted: Boolean, text: Color) {
         Spacer(Modifier.width(DOT_GAP))
         Text(stringResource(R.string.rec_in_progress), SetteeType.Body, color = text, maxLines = 1)
     }
-}
-
-private val RecordingsRow.title: String
-    get() = when (this) {
-        is RecordingsRow.Booking -> recording.title
-        is RecordingsRow.Recorded -> recording.title
-        is RecordingsRow.OfReminder -> reminder.title
-        is RecordingsRow.SeriesLink -> rule.title
-    }
-
-private val RecordingsRow.inProgress
-    get() = this is RecordingsRow.Recorded && recording.status == RecordingStatus.RECORDING
-
-/** The quiet line under a row's title, saying whose it is when there's more than one Profile. */
-@Composable
-private fun RecordingsRow.line(profileNames: Map<Long, String>): String {
-    val parts = when (this) {
-        is RecordingsRow.Booking -> listOf(formatWhen(recording.scheduledStartMillis), recording.channelName)
-        is RecordingsRow.OfReminder -> listOf(formatWhen(reminder.startUtcMillis), reminder.channelName)
-        is RecordingsRow.SeriesLink -> listOf(nextAiring())
-        is RecordingsRow.Recorded -> recording.details()
-    }
-    val profile = recording?.profileId?.let { profileNames[it] }?.let { stringResource(R.string.rec_for_profile, it) }
-    return (parts + listOfNotNull(profile)).filter { it.isNotBlank() }.joinToString(" · ")
-}
-
-@Composable
-private fun RecordingsRow.SeriesLink.nextAiring(): String = when {
-    nextAtMillis != null && booked > 1 -> stringResource(
-        R.string.rec_series_next_more,
-        formatWhen(nextAtMillis),
-        booked - 1,
-    )
-    nextAtMillis != null -> stringResource(R.string.rec_series_next_at, rule.channelName, formatWhen(nextAtMillis))
-    else -> stringResource(R.string.rec_series_waiting, rule.channelName)
-}
-
-/** When · channel · length · size; what went wrong, for a failed one; channel · size so far, while recording. */
-@Composable
-private fun Recording.details(): List<String> {
-    val size = Formatter.formatShortFileSize(LocalContext.current, sizeBytes)
-    return when (status) {
-        RecordingStatus.FAILED -> listOf(
-            stringResource(
-                R.string.rec_status_failed_at,
-                formatWhen(whenMillis),
-                error ?: stringResource(R.string.rec_error_unknown),
-            ),
-        )
-        RecordingStatus.RECORDING -> listOf(channelName, size)
-        else -> listOf(formatWhen(whenMillis), channelName, formatLength(durationMillis), size)
-    }
-}
-
-/** The Recording behind a row; a Reminder and a series link have none. */
-private val RecordingsRow.recording: Recording?
-    get() = when (this) {
-        is RecordingsRow.Booking -> recording
-        is RecordingsRow.Recorded -> recording
-        else -> null
-    }
-
-// Built once, as GuideGrid's clock is: every visible row formats a time each time it's drawn.
-private val whenFormat = SimpleDateFormat("EEE d MMM, HH:mm", Locale.getDefault())
-
-private fun formatWhen(utcMillis: Long): String = if (utcMillis <= 0) "" else whenFormat.format(Date(utcMillis))
-
-private fun formatLength(millis: Long): String {
-    if (millis <= 0) return ""
-    val minutes = TimeUnit.MILLISECONDS.toMinutes(millis)
-    val hours = TimeUnit.MINUTES.toHours(minutes)
-    val rest = minutes - TimeUnit.HOURS.toMinutes(hours)
-    return if (hours > 0) "${hours}h ${rest}m" else "${rest}m"
 }
 
 private val HEADING_GAP = 12.dp

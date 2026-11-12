@@ -176,6 +176,9 @@ On Live TV, Movies and Shows. Tucked away until Left from the leftmost item open
 A hero with a full backdrop, title, status, synopsis, Resume and Favourite.
 
 - **A film's page** is the same hero, with a credits line of the first three billed and the director, and More like this beneath it. The row's title and the tops of its covers show under the hero, saying there's more. Down reaches the row and scrolls the hero up; Up brings the whole hero back. While the row is being picked it shows as For you's placeholder row, and the hero leaves its room whether or not any films turn up, so nothing moves. The row is films sharing the film's genres: its own provider's first, then those sharing the most genres, then by For you's score, where a rating of 9.5 or more counts as average and a recent addition gets a lift. A film with no genre gets others from its category.
+- **A film's people:** beneath the buttons, a Cast row of pills, everyone billed. Beneath that, Director, Writer and Studio side by side as columns, each a heading over its names as pills, one under another; a column only when the film has someone for it. They come between the hero and More like this, so it's the Cast row's heading and the tops of its pills that show under the hero. Down from the buttons reaches the Cast row and brings it all into view; Down again reaches the columns, Left and Right move between them, and Down from a column's last name reaches More like this. OK on a name opens their page; a studio's page is its films. Only TMDB knows writers and studios, so a film has those columns only with a TMDB key; without one, the director is the first name of the provider's field, which lists the whole directing crew.
+- **A show's cast:** a Cast button after Favourite opens a side panel listing everyone billed, and OK on a name opens their page. Not a row of pills as on a film's page: a row beneath the buttons would take the Down that reaches the episode in progress.
+- **A person's page:** their name, then a grid of everything in the library with them in it, the same covers as a category's grid: films they're in or directed, then shows they're in, each best-rated first. The Highlight starts on the first cover, and OK opens that title's page. With nothing in the library, it says so.
 
 - **Opens on Resume.** One Down reaches the episode in progress. The list opens already scrolled to that episode, so the Down moves the Highlight onto it without the list jumping.
 - **Season pills:** a row under the hero. Up from the episodes reaches them, and Down from the buttons passes them. Moving the Highlight onto a pill selects that season at once, with no OK. The row scrolls sideways to keep the highlighted or selected pill in view, with a cut-off pill at the edge showing there are more, and follows when Down carries on into another season. Options on a pill marks the season watched or unwatched.
@@ -228,6 +231,31 @@ One page: the welcome and the choice of provider together.
 - **The QR screen** keeps today's flow: the code, six digits, and an address for when the camera won't scan.
 - **The page on the phone** isn't designed yet. Give it the same colours and type.
 
+### Setting up
+
+Once a provider is saved while none was saved before (a fresh install, or after every provider was deleted), on the TV or from the phone, a setup screen comes up instead of Home, and stays until the library is ready to browse. Adding another provider later from Settings works as it does today, in the background.
+
+- **The screen:** the mark in its tile, a line of wordplay ("Plumping the cushions."), a line saying what's happening now, and a progress bar beneath it. Nothing else.
+- **The steps,** in order, each named only while it runs:
+  1. "Adding your channels", which also proves the login works. It always runs.
+  2. "Loading the TV guide", only when Live TV is switched on: the guide is only for live channels. If Live TV is switched on later, the guide arrives with the next refresh.
+  3. "Fetching movies", only for a provider that has them (Xtream) and only when Movies is switched on.
+  4. "Fetching shows", the same, for Shows.
+
+  Today movies and shows wait until someone opens their tab, so setup fetches them up front. The guide comes before them because the one viewer the order reaches is the one who leaves for Live TV once the channels are in: everyone else waits for every step, so the order doesn't change when setup finishes.
+- **A count once a step is done** replaces its line for a moment, where the app knows one: "1,204 channels added", "Guide found for 980 of your channels", "6,400 movies found", "1,100 shows found".
+- **Film details aren't waited for.** Genres, cast and directors are looked up one film at a time, which takes far too long on a big library. They carry on in the background, as they do today, and the finished screen says so.
+- **The bar covers the whole setup,** shared between the steps that apply to this provider. Within a step it moves only on real progress, such as guide feeds downloaded; a step that can't tell fills its share when it finishes. It never goes backwards, and never shows full before setup is done.
+- **The steps run one after another,** never two at once: two big downloads compete for a Stick's 1 GB and its network, and the bar's shares would mean less.
+- **Nothing to press while the channels load.** There's no Highlight, and OK, the arrows and Back do nothing; there's nothing to watch yet. The Home button still leaves, as Android always allows.
+- **Watch live TV now** appears once the channels are in, unless Live TV is switched off, when there's no button and setup holds until it's finished, with the Highlight on it: by then live TV really works, while movies and shows don't yet. It and Back go to Live TV, with the guide and the movies and shows carrying on in the background and channels filling in their programmes as the guide arrives. A big provider's guide can take minutes on a Stick, so nobody is held there. No button promises more than is ready, so there's no way to Home before setup is done. Once someone leaves, they hear how it went the way adding a provider in the background tells them today, and nothing new.
+- **If Settee is closed partway,** it doesn't come back to setup. With the channels in, it opens on Home, the guide arrives with the refresh at launch, and movies and shows when their tab is opened, as for any provider. Before the channels are in there's no provider yet, so it opens on the provider choice again.
+- **If the login fails,** it goes back to the form with the error, as today.
+- **If the guide or the movies fail,** setup still finishes. The finished screen says which part didn't load and that Settee will try again on the next refresh, worded as in [Voice](#voice). Movies and shows also load when their tab is first opened, as they do today, so a failed or skipped fetch, or Movies or Shows switched on later, still gets them.
+- **Finished:** "You're all set." with a summary line ("1,204 channels, 6,400 movies and 1,100 shows. Film details will keep filling in while you watch."), and one button, **Take me to Settee**, with the Highlight on it. OK leaves through the usual screen-change dip, onto Home with its first Highlight. Back does the same.
+- **The phone page** says "All done. Carry on on your TV." once the channels are in and the login is proven, so the viewer looks up at the setup screen. A failed login shows its error on the phone, as today.
+- **Motion:** the bar's fill may slide between values if it passes [Motion and cost](#motion-and-cost) on the Stick; otherwise it jumps.
+
 ## Recordings
 
 One list, with Coming up, Recorded and Series links as headings, and a heading with no rows hidden. Recordings have a channel logo but no artwork, so they're rows, not cards.
@@ -261,6 +289,7 @@ Set from measurements on a Fire TV Stick (`AFTSS`) in [#156](https://github.com/
 - **Rows at the edge:** rows run to the screen's edge, so partly hidden text sits outside the margin.
 - **Colour:** everything so far was judged on a monitor. Check colour and legibility on a real TV.
 - **Back to Home is slow:** rebuilding Home takes 330-510 ms on a Stick, over the 300 ms budget for a new screen.
+- **Setup's bar can't tell much yet:** no step reports how far through it is today, so without new reporting the bar moves in three jumps. Measure how long each step takes on a Stick with a big provider before sharing the bar out.
 
 ## What done means
 
