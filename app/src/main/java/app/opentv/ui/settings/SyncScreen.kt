@@ -37,11 +37,13 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import app.opentv.R
 import app.opentv.sync.SyncServer
 import app.opentv.ui.SyncViewModel
+import app.opentv.ui.design.ErrorMessage
 
 /**
  * Local watch-history sync between two OpenTV devices on the same wifi. No servers of ours: one
@@ -113,7 +115,8 @@ private fun SharePane(viewModel: SyncViewModel) {
                     }) { Text(stringResource(R.string.sync_stop_sharing)) }
                 }
                 is SyncServer.State.Failed -> {
-                    Text(s.reason, color = MaterialTheme.colorScheme.error)
+                    val reason = remember(s) { viewModel.describe(s) }
+                    ErrorMessage(reason.sentence, reason.detail, textAlign = TextAlign.Start)
                     Spacer(Modifier.height(12.dp))
                     Button(onClick = { viewModel.startSharing() }) { Text(stringResource(R.string.common_try_again)) }
                 }
@@ -171,10 +174,8 @@ private fun ReceivePane(viewModel: SyncViewModel) {
                             stringResource(R.string.sync_synced_items, s.merged),
                             color = MaterialTheme.colorScheme.primary,
                         )
-                        is SyncViewModel.ReceiveState.Failed -> Text(
-                            s.message,
-                            color = MaterialTheme.colorScheme.error,
-                        )
+                        is SyncViewModel.ReceiveState.Failed ->
+                            ErrorMessage(s.reason.sentence, s.reason.detail, textAlign = TextAlign.Start)
                         else -> Unit
                     }
                 }
@@ -227,7 +228,7 @@ private fun NasPane(viewModel: SyncViewModel) {
                         is SyncViewModel.NasState.Done ->
                             Text(s.message, color = MaterialTheme.colorScheme.primary)
                         is SyncViewModel.NasState.Failed ->
-                            Text(s.message, color = MaterialTheme.colorScheme.error)
+                            ErrorMessage(s.reason.sentence, s.reason.detail, textAlign = TextAlign.Start)
                         else -> Unit
                     }
                 }

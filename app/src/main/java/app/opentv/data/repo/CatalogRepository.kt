@@ -6,7 +6,10 @@
 package app.opentv.data.repo
 
 import android.util.Log
+import app.opentv.R
 import app.opentv.core.AppSettings
+import app.opentv.core.ErrorWording
+import app.opentv.core.ViewerError
 import app.opentv.data.db.CategoryDao
 import app.opentv.data.db.ChannelDao
 import app.opentv.data.db.EpisodeDao
@@ -26,6 +29,7 @@ import app.opentv.data.model.SeriesRef
 import app.opentv.data.model.Source
 import app.opentv.data.model.SourceKind
 import app.opentv.data.model.StreamKind
+import app.opentv.data.model.personKey
 import app.opentv.data.model.ref
 import app.opentv.data.parser.ChannelNameNormalizer
 import app.opentv.data.parser.M3uParser
@@ -67,7 +71,7 @@ internal fun distinctByQuality(channels: List<app.opentv.data.model.Channel>): L
 @androidx.compose.runtime.Immutable
 data class GenreGroup<T>(val genre: String, val items: List<T>)
 
-/** A movie or a show, for the rows that mix them: Home's Favourites and Recently Added. */
+/** A movie or a show, for what mixes them: Home's Favourites and Recently Added, and a person's page. */
 sealed interface VodTitle {
     val name: String
 
@@ -179,6 +183,11 @@ class CatalogRepository(
     private val stalkerApi: StalkerApi,
     private val http: OkHttpClient,
     private val settings: AppSettings,
+    /**
+     * Words a failed download for the viewer; nothing here shows an exception's own message. Public
+     * so the channel manager, which adds and tests providers through this module, words them the same.
+     */
+    val wording: ErrorWording,
 ) {
 
     /** Where work that outlives a sync runs, such as [MovieGenres]. */
@@ -196,18 +205,36 @@ class CatalogRepository(
     /** Sources with a [fillGenresInBackground] job running. */
     private val sourcesGettingGenres: MutableSet<Long> = java.util.concurrent.ConcurrentHashMap.newKeySet()
 
-    // TMDB only with the viewer's own key, and only for a film the provider had no genre for.
-    private val movieGenres = MovieGenres(movieDao, api) { movie ->
-        if (!tmdb.isConfigured()) return@MovieGenres null
-        withContext(Dispatchers.IO) {
-            tmdb.movieMeta(VodTitleCleaner.clean(movie.name), movie.year, movie.tmdbId)?.genre
-        }
+    // TMDB only with the viewer's own key. Every film once: its directors, writers and studios are
+    // worth the calls, and TMDB's free key allows far more than a batch of 200 a minute.
+    private val movieGenres by lazy {
+        MovieGenres(
+            movieDao,
+            api,
+            pauseMillis = genrePauseMillis,
+            tmdb = object : MovieTmdb {
+                override val ready get() = tmdb.isConfigured()
+
+                override suspend fun lookUp(movie: Movie) = withContext(Dispatchers.IO) { tmdbMetaOf(movie) }
+            },
+        )
     }
+
+    /**
+     * [MovieGenres]' rest between batches. It runs in real time on [background], which tests wait
+     * for, so they set 0 before their first sync: a 1,200-film test otherwise sleeps six minutes.
+     * A property and not a constructor parameter, as the constructor has more than enough.
+     */
+    internal var genrePauseMillis: Long = MovieGenres.BATCH_PAUSE_MILLIS
+
+    private fun tmdbMetaOf(movie: Movie) =
+        tmdb.movieMetaOrFailure(VodTitleCleaner.clean(movie.name), movie.year, movie.tmdbId)
 
     sealed interface SyncResult {
         data class Success(val channelCount: Int, val movieCount: Int, val seriesCount: Int) : SyncResult
 
-        data class Failed(val reason: String, val cause: Throwable?) : SyncResult
+        /** [reason] is what the viewer sees; [cause] is for the log only. */
+        data class Failed(val reason: ViewerError, val cause: Throwable?) : SyncResult
     }
 
     /** Series the provider updated, for New Episode detection, and whether every list came back. */
@@ -398,6 +425,22 @@ class CatalogRepository(
         )
     }
 
+    // ---- Related by person (Plex-style "click an actor / director") ----------------------------
+
+    /**
+     * Everything in the library featuring a person — the data behind the Person screen: movies they
+     * act in or directed (once each, though a film may credit them as both), then series they act
+     * in, each best-rated first. Matched on their [personKey], so only that person, however a
+     * provider spells the accents.
+     */
+    suspend fun titlesWithPerson(name: String, perKind: Int = 40): List<VodTitle> = withContext(Dispatchers.IO) {
+        val key = personKey(name)
+        if (key.isEmpty()) return@withContext emptyList()
+        val movies = movieDao.moviesWithPerson(key, perKind)
+        val series = seriesDao.seriesWithPerson(key, perKind)
+        movies.map(VodTitle::OfMovie) + series.map(VodTitle::OfSeries)
+    }
+
     /**
      * Loads a movie and, if its detail fields are still bare, back-fills them from the provider's
      * `get_vod_info` and persists the merged row before returning it. Safe to call whenever a detail
@@ -413,45 +456,14 @@ class CatalogRepository(
         // 1) Provider back-fill from get_vod_info, for a still-bare row on an Xtream source.
         if (!result.isEnriched && source?.kind == SourceKind.XTREAM) {
             val info = runCatching { api.movieInfo(source, result.streamId) }.getOrNull()
-            if (info != null) {
-                result = result.copy(
-                    backdropUrl = result.backdropUrl ?: info.backdropUrl,
-                    cast = result.cast ?: info.cast,
-                    director = result.director ?: info.director,
-                    genre = result.genre.ifUnknown() ?: info.genre,
-                    tmdbId = result.tmdbId ?: info.tmdbId,
-                    plot = result.plot ?: info.plot,
-                    rating = result.rating ?: info.rating,
-                    year = result.year ?: info.year,
-                    durationSeconds = result.durationSeconds ?: info.durationSeconds,
-                    releaseDate = result.releaseDate ?: info.releaseDate,
-                )
-            }
+            if (info != null) result = result.filledFrom(info)
         }
 
-        // 2) TMDB fallback for whatever the provider still left blank — only when the user set a
-        //    key, and only while a headline visual field is missing (so it stops re-fetching once
-        //    filled). This is the "match Plex" back-fill for posters, backdrops, synopsis and cast.
-        //    Only here, on open: a bulk lookup across the catalogue would spend the user's TMDB quota
-        //    on titles nobody looks at.
-        if (tmdb.isConfigured() && result.lacksTmdbFields) {
-            val meta = runCatching {
-                tmdb.movieMeta(VodTitleCleaner.clean(result.name), result.year, result.tmdbId)
-            }.getOrNull()
-            if (meta != null) {
-                result = result.copy(
-                    posterUrl = result.posterUrl ?: meta.posterUrl,
-                    backdropUrl = result.backdropUrl ?: meta.backdropUrl,
-                    plot = result.plot ?: meta.overview,
-                    cast = result.cast ?: meta.cast,
-                    director = result.director ?: meta.director,
-                    genre = result.genre.ifUnknown() ?: meta.genre,
-                    tmdbId = result.tmdbId ?: meta.tmdbId,
-                    rating = result.rating ?: meta.rating,
-                    year = result.year ?: meta.year,
-                    releaseDate = result.releaseDate ?: meta.releaseDate,
-                )
-            }
+        // 2) TMDB, with the viewer's key, once per film: for what the provider left blank and for
+        //    the directors, writers and studios. Usually the background pass has asked already; this
+        //    is for a film opened before the pass reached it.
+        if (tmdb.isConfigured() && !result.tmdbLookedUp) {
+            tmdbMetaOf(result).onSuccess { result = result.withTmdb(it) }
         }
 
         if (result != movie) movieDao.upsertAll(listOf(result))
@@ -512,13 +524,6 @@ class CatalogRepository(
     // without the provider's artwork and cast when they are.
     private val Movie.isEnriched: Boolean
         get() = backdropUrl != null || cast != null || director != null
-
-    /** Null for a genre [MovieGenres] found the provider has none for, so another source can fill it. */
-    private fun String?.ifUnknown(): String? = this?.ifBlank { null }
-
-    /** Whether a headline field TMDB can fill on detail open is still blank. */
-    private val Movie.lacksTmdbFields: Boolean
-        get() = backdropUrl == null || plot == null || cast == null
 
     private val Series.isEnriched: Boolean
         get() = backdropUrl != null || cast != null || genre != null
@@ -648,7 +653,7 @@ class CatalogRepository(
             throw e
         } catch (e: Exception) {
             Log.w(TAG, "Catalogue sync failed for source ${source.id}", e)
-            SyncResult.Failed(e.message ?: "The catalogue could not be downloaded.", e)
+            SyncResult.Failed(wording.ofProvider(e, R.string.error_catalogue), e)
         }
     }
 
@@ -680,10 +685,7 @@ class CatalogRepository(
         val liveCategories = api.liveCategories(source)
         val channels = api.liveStreams(source)
         if (channels.isEmpty()) {
-            return SyncResult.Failed(
-                "The server returned no channels. The account may have no package assigned.",
-                null,
-            )
+            return SyncResult.Failed(wording.of(R.string.error_no_channels, NO_CHANNELS), null)
         }
 
         categoryDao.upsertAll(liveCategories)
@@ -703,10 +705,7 @@ class CatalogRepository(
         val liveCategories = stalkerApi.liveCategories(source)
         val channels = stalkerApi.liveChannels(source)
         if (channels.isEmpty()) {
-            return SyncResult.Failed(
-                "The portal returned no channels. The MAC may not be authorised, or its package is empty.",
-                null,
-            )
+            return SyncResult.Failed(wording.of(R.string.error_no_channels, NO_CHANNELS), null)
         }
         categoryDao.upsertAll(liveCategories)
         val categoryNames = liveCategories.associate { it.id to it.name }
@@ -777,40 +776,47 @@ class CatalogRepository(
         .isSuccess
 
     /**
-     * Works through [source]'s films without a genre in the background ([MovieGenres.fillAll]): the
-     * catalogue is saved by now, and the genre rows fill in as it goes. After a sync, and whenever
-     * Movies or Shows opens or the app starts, so it carries on where it left off. One job per
-     * source, one lookup after another, so a struggling panel doesn't get hundreds of calls at once;
-     * asked again while it's running, it adds no second one.
+     * Files the credits of titles saved before credits were kept (database version 9), so they're on
+     * people's pages without the viewer adding their providers again. In the background at launch;
+     * once they're done, it's one quick query that finds nothing.
      */
+    fun creditEarlierTitles() {
+        background.launch {
+            runCatching {
+                pageThrough { after -> movieDao.creditNextUncredited(after, CREDIT_BATCH) }
+                pageThrough { after -> seriesDao.creditNextUncredited(after, CREDIT_BATCH) }
+            }.onFailure { Log.w(TAG, "Filing earlier titles' credits failed", it) }
+        }
+    }
+
+    /** Calls [next] with the last id it returned (0 at first) until it returns null. */
+    private suspend fun pageThrough(next: suspend (afterId: Long) -> Long?) {
+        var after = 0L
+        while (true) after = next(after) ?: return
+    }
+
     /** [fillGenresInBackground] for every provider that has films: Xtream's. */
     suspend fun fillEveryProvidersGenres() =
         enabledSources().filter { it.kind == SourceKind.XTREAM }.forEach(::fillGenresInBackground)
 
+    /**
+     * Works through [source]'s films not looked up in the background ([MovieGenres.fillAll]): the
+     * catalogue is saved by now, and the genre rows and people's pages fill in as it goes. After a
+     * sync, and whenever Movies or Shows opens or the app starts, so it carries on where it left off.
+     * One job per source, one lookup after another, so a struggling panel doesn't get hundreds of
+     * calls at once; asked again while it's running, it adds no second one.
+     */
     fun fillGenresInBackground(source: Source) {
         if (!sourcesGettingGenres.add(source.id)) return
         background.launch {
             try {
                 runCatching {
-                    retryBlanksWithTmdb(source)
                     movieGenres.fillAll(source)
                 }.onFailure { Log.w(TAG, "Movie genres failed for source ${source.id}", it) }
             } finally {
                 sourcesGettingGenres.remove(source.id)
             }
         }
-    }
-
-    /**
-     * Once per provider for each TMDB key: asks TMDB about the films saved blank, which were looked up
-     * before there was a key (or with another one), so they aren't left without a genre for good.
-     * Remembered by a hash of the key, never the key itself.
-     */
-    private suspend fun retryBlanksWithTmdb(source: Source) {
-        if (!tmdb.isConfigured()) return
-        val key = settings.tmdbApiKey.value.hashCode().toString()
-        if (settings.tmdbBlanksRetriedWith(source.id) == key) return
-        if (movieGenres.retryBlanks(source)) settings.setTmdbBlanksRetriedWith(source.id, key)
     }
 
     private suspend fun syncM3u(source: Source, nowUtcMillis: Long): SyncResult {
@@ -821,17 +827,14 @@ class CatalogRepository(
 
         val parsed = http.newCall(request).execute().use { response ->
             if (!response.isSuccessful) {
-                return SyncResult.Failed("Playlist download failed (HTTP ${response.code}).", null)
+                return SyncResult.Failed(wording.ofHttpStatus(response.code, R.string.error_catalogue), null)
             }
             val stream = response.body.byteStream()
             M3uParser.parse(stream, source.id)
         }
 
         if (parsed.channels.isEmpty()) {
-            return SyncResult.Failed(
-                "No channels found in that playlist. Check the URL points at an M3U file.",
-                null,
-            )
+            return SyncResult.Failed(wording.of(R.string.error_playlist_empty, NO_CHANNELS), null)
         }
 
         // Synthesise categories from group-title so the UI has something to group by.
@@ -982,6 +985,12 @@ class CatalogRepository(
 
     companion object {
         private const val TAG = "CatalogRepository"
+
+        /** The detail line's code for a provider that answered with no channels at all. */
+        private const val NO_CHANNELS = "NoChannels"
+
+        /** Titles [creditEarlierTitles] files at a time, each batch one transaction. */
+        private const val CREDIT_BATCH = 500
         val SEPARATOR_CHARS = setOf('#', '*', '=', '~', '-', '_', '•', '█', '▓', '|')
 
         /**

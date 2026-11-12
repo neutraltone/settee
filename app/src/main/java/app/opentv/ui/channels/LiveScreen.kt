@@ -54,6 +54,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import app.opentv.R
 import app.opentv.core.ServiceLocator
 import app.opentv.core.StatusBus
+import app.opentv.core.ViewerError
 import app.opentv.core.findActivity
 import app.opentv.data.model.Channel
 import app.opentv.data.model.Programme
@@ -94,6 +95,8 @@ fun LiveScreen(
     isTelevision: Boolean,
     hasSources: Boolean,
     isSyncing: Boolean,
+    /** Why the last Catalogue Refresh couldn't download the channels, for the guide's empty state. */
+    loadFailure: ViewerError? = null,
     onPlayChannel: (Channel) -> Unit,
     onAddSource: () -> Unit,
     onRefresh: () -> Unit,
@@ -248,7 +251,7 @@ fun LiveScreen(
                         channelsPresent == true -> Loading(isSyncing)
                         // Nothing is syncing and the catalogue is confirmed empty: with a provider set
                         // up, the last load failed or returned nothing.
-                        hasSources -> LoadFailed(onRetry = onRefresh, onEditProvider = onAddSource)
+                        hasSources -> LoadFailed(loadFailure, onRetry = onRefresh, onEditProvider = onAddSource)
                         else -> NoChannels(onAddSource)
                     }
                 } else {
@@ -458,10 +461,12 @@ private fun NothingToShow(openSidebar: () -> Unit) {
  * came back empty. Something to act on, rather than an endless loading message.
  */
 @Composable
-private fun LoadFailed(onRetry: () -> Unit, onEditProvider: () -> Unit) {
+private fun LoadFailed(failure: ViewerError?, onRetry: () -> Unit, onEditProvider: () -> Unit) {
+    // With no refresh this session to say why, the generic sentence; it has no detail to show.
     Message(
-        stringResource(R.string.guide_load_failed_desc),
+        failure?.sentence ?: stringResource(R.string.guide_load_failed_desc),
         title = stringResource(R.string.guide_load_failed_title),
+        detail = failure?.detail.orEmpty(),
     ) {
         Row(horizontalArrangement = Arrangement.spacedBy(BUTTON_GAP)) {
             ActionButton(stringResource(R.string.common_try_again), onRetry)

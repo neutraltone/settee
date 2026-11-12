@@ -31,12 +31,16 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import app.opentv.R
+import app.opentv.core.ErrorWording
+import app.opentv.core.ServerProblem
+import app.opentv.core.ServiceLocator
+import app.opentv.core.ViewerError
 import app.opentv.pairing.PairingFonts
 import app.opentv.pairing.PairingServer
 import app.opentv.pairing.QrCodes
+import app.opentv.ui.design.ErrorMessage
 import app.opentv.ui.design.PillButton
 import app.opentv.ui.design.ScreenFrame
 import app.opentv.ui.design.SetteeColors
@@ -90,7 +94,9 @@ fun PhonePairingScreen(onReceived: (PairingServer.State.Received) -> Unit, onCan
                 ) {
                     Text(stringResource(R.string.pairing_stopped), SetteeType.Section)
                     Spacer(Modifier.height(10.dp))
-                    Text(current.reason, SetteeType.Body, color = SetteeColors.QuietText, textAlign = TextAlign.Center)
+                    val wording = ServiceLocator.get(LocalContext.current).errorWording
+                    val reason = remember(current) { describe(wording, current) }
+                    ErrorMessage(reason.sentence, reason.detail)
                     Spacer(Modifier.height(24.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         PillButton(
@@ -169,3 +175,15 @@ internal fun Listening(session: PairingServer.Session, onCancel: () -> Unit) {
 }
 
 private const val QR_SIZE_PX = 600
+
+/** What [failed] says to the viewer (docs/ERRORS.md). */
+private fun describe(wording: ErrorWording, failed: PairingServer.State.Failed): ViewerError = when (failed.problem) {
+    ServerProblem.NO_NETWORK -> wording.ofHardware(
+        R.string.pairing_no_network_tv,
+        R.string.pairing_no_network_device,
+    )
+    ServerProblem.COULDNT_START ->
+        wording.ofHardware(R.string.pairing_failed_tv, R.string.pairing_failed_device, failed.code)
+    ServerProblem.TIMED_OUT -> wording.of(R.string.pairing_timed_out)
+    ServerProblem.TOO_MANY_CODES -> wording.of(R.string.pairing_too_many_codes)
+}

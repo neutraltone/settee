@@ -9,6 +9,7 @@ import app.opentv.data.db.MovieDao
 import app.opentv.data.db.SeriesDao
 import app.opentv.data.model.Movie
 import app.opentv.data.model.Series
+import app.opentv.data.remote.TmdbMeta
 import app.opentv.data.remote.XtreamApi
 
 // How a downloaded movie or series list is saved.
@@ -79,10 +80,19 @@ internal fun Movie.over(old: Movie?): Movie = if (old == null) {
         cast = cast ?: old.cast,
         genre = genre ?: old.genre,
         tmdbId = tmdbId ?: old.tmdbId,
-        director = director ?: old.director,
         releaseDate = releaseDate ?: old.releaseDate,
-    )
+    ).keepingLookUpsOf(old)
 }
+
+/** [old]'s people and looked-up markers, which a list refresh knows nothing of. */
+private fun Movie.keepingLookUpsOf(old: Movie): Movie = copy(
+    // TMDB's people outrank the provider's, which would otherwise come back with every refresh.
+    director = if (old.tmdbLookedUp) old.director ?: director else director ?: old.director,
+    writer = old.writer ?: writer,
+    studio = old.studio ?: studio,
+    detailsLookedUp = detailsLookedUp || old.detailsLookedUp,
+    tmdbLookedUp = tmdbLookedUp || old.tmdbLookedUp,
+)
 
 /** This freshly fetched series in place of [old]; see the [Movie] version. */
 internal fun Series.over(old: Series?): Series = if (old == null) {
@@ -100,3 +110,50 @@ internal fun Series.over(old: Series?): Series = if (old == null) {
         tmdbId = tmdbId ?: old.tmdbId,
     )
 }
+
+/**
+ * This movie with its empty details filled from the provider's `get_vod_info` [info], and marked
+ * looked up. Shared by opening a film and the background pass, so neither leaves out a field the
+ * other fills. A blank genre (the provider had none before) takes one if [info] has it now.
+ */
+internal fun Movie.filledFrom(info: XtreamApi.VodInfo): Movie = copy(
+    backdropUrl = backdropUrl ?: info.backdropUrl,
+    cast = cast ?: info.cast,
+    director = director ?: info.director,
+    genre = genre?.ifBlank { null } ?: info.genre?.ifBlank { null } ?: genre,
+    tmdbId = tmdbId ?: info.tmdbId,
+    plot = plot ?: info.plot,
+    rating = rating ?: info.rating,
+    year = year ?: info.year,
+    durationSeconds = durationSeconds ?: info.durationSeconds,
+    releaseDate = releaseDate ?: info.releaseDate,
+    detailsLookedUp = true,
+)
+
+/**
+ * This movie with what TMDB said about it ([meta], null for no match) and marked TMDB-looked-up.
+ * TMDB fills what's empty, and its directors, writers and studios replace whatever was there: a
+ * provider's director is only the first name of its crew, and providers have no writers or studios.
+ */
+internal fun Movie.withTmdb(meta: TmdbMeta?): Movie = if (meta == null) {
+    copy(tmdbLookedUp = true)
+} else {
+    copy(
+        posterUrl = posterUrl ?: meta.posterUrl,
+        backdropUrl = backdropUrl ?: meta.backdropUrl,
+        plot = plot ?: meta.overview,
+        cast = cast ?: meta.cast,
+        genre = genre?.ifBlank { null } ?: meta.genre ?: genre,
+        tmdbId = tmdbId ?: meta.tmdbId,
+        rating = rating ?: meta.rating,
+        year = year ?: meta.year,
+        releaseDate = releaseDate ?: meta.releaseDate,
+        tmdbLookedUp = true,
+    ).withPeopleFrom(meta)
+}
+
+private fun Movie.withPeopleFrom(meta: TmdbMeta): Movie = copy(
+    director = meta.director ?: director,
+    writer = meta.writers ?: writer,
+    studio = meta.studios ?: studio,
+)

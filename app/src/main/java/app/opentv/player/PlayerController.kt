@@ -22,10 +22,12 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.exoplayer.upstream.DefaultLoadErrorHandlingPolicy
 import androidx.media3.exoplayer.upstream.LoadErrorHandlingPolicy
+import app.opentv.core.ViewerError
 import app.opentv.data.model.Source
 import app.opentv.data.repo.MediaKey
 import app.opentv.data.repo.Playable
 import app.opentv.data.repo.SubtitlePreference
+import app.opentv.isRunningOnTelevision
 import java.util.Locale
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -73,8 +75,8 @@ class PlayerController(
         data class Buffering(val title: String) : State
         data class Playing(val title: String) : State
 
-        /** Playback stopped and retries are exhausted. [message] is written for humans. */
-        data class Error(val title: String, val message: String, val canRetry: Boolean) : State
+        /** Playback stopped and retries are exhausted. [reason] is the sentence and detail line to show. */
+        data class Error(val title: String, val reason: ViewerError, val canRetry: Boolean) : State
     }
 
     /** How this controller's player is set up, for what it will be asked to play. */
@@ -157,6 +159,9 @@ class PlayerController(
 
     private val strings = context.applicationContext
 
+    /** Decided once, as the app does at launch, so sentences say "this TV" or "this device". */
+    private val onTelevision = isRunningOnTelevision(context)
+
     private val guard: StreamGuard = StreamGuard(
         strings,
         scope,
@@ -179,12 +184,13 @@ class PlayerController(
                 StreamGuard.Step(playing.label, next)
             }
         },
-    ) { sentence, canRetry ->
+        onTelevision = onTelevision,
+    ) { reason, canRetry ->
         // Before anything reports an error, so none flashes up. The player's stopped and marked so
         // first, so a state it's already reporting can't cover the sentence.
         gaveUp = true
         player.stop()
-        _state.value = State.Error(_title.value, sentence, canRetry)
+        _state.value = State.Error(_title.value, reason, canRetry)
     }
 
     /** A short message for the viewer, up for about 5 seconds. It takes no focus. */
@@ -341,7 +347,14 @@ class PlayerController(
                     val canRestart = canRetry && !PlaybackErrors.isOutOfMemory(error)
                     _state.value = State.Error(
                         title = _title.value,
-                        message = PlaybackErrors.describe(strings, error),
+                        // The last stream's format lingers until this one's tracks are known, so only a
+                        // selected video track's counts.
+                        reason = PlaybackErrors.describe(
+                            strings,
+                            error,
+                            onTelevision,
+                            player.videoFormat.takeIf { player.currentTracks.isTypeSelected(C.TRACK_TYPE_VIDEO) },
+                        ),
                         canRetry = canRetry,
                     )
                     // One silent restart covers the common case of a provider dropping the
@@ -402,8 +415,7 @@ class PlayerController(
                 is Playable.Ready -> resolved
                 is Playable.Failed -> {
                     val title = resolved.title.ifEmpty { _title.value }
-                    _state.value =
-                        State.Error(title, strings.getString(PlaybackErrors.messageOf(resolved.failure)), true)
+                    _state.value = State.Error(title, PlaybackErrors.describe(strings, resolved.failure), true)
                     return@launch
                 }
             }

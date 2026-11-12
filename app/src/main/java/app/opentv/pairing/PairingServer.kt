@@ -7,13 +7,11 @@ package app.opentv.pairing
 
 import android.util.Log
 import app.opentv.R
+import app.opentv.core.ServerProblem
 import app.opentv.data.model.Source
 import app.opentv.data.model.SourceKind
 import java.io.BufferedReader
 import java.io.InputStreamReader
-import java.net.InetAddress
-import java.net.NetworkInterface
-import java.net.ServerSocket
 import java.net.Socket
 import java.security.SecureRandom
 import java.util.concurrent.TimeUnit
@@ -48,16 +46,12 @@ import kotlinx.coroutines.withTimeoutOrNull
  *
  * ## What stops the neighbours using it
  *
- * - It binds to the LAN on a **random high port**, and only while the pairing screen is open.
- * - The QR code's URL carries a **192-bit random token**. Knowing the IP and port is not enough.
- * - For a phone whose camera won't scan, the screen also shows a typeable address with a
- *   **seven-character short token** instead (21 symbols, about 30 bits). It is weaker than the
- *   QR's, so after [MAX_SHORT_TOKEN_GUESSES] wrong ones the typed address is switched off for the
- *   session (the QR keeps working): guessing it is then hopeless, not merely unlikely. It only
- *   reaches the form; the code below is still needed to send anything.
- * - A wrong token gets a bare 404, so a scan of the network learns nothing. The exception is a
- *   path shaped like a short token, which gets a page telling the viewer to check what they typed;
- *   by then whoever sent it already knows the server is there.
+ * - The address, its port and both tokens come from [PhoneAddress], shared with [ManagerServer]:
+ *   a **random high port** on the LAN, open only while the pairing screen is, a QR code carrying
+ *   a **192-bit random token**, and a typeable address with a **seven-character short token**
+ *   that switches itself off after [PhoneAddress.MAX_SHORT_TOKEN_GUESSES] wrong guesses. Its
+ *   comments say why each is enough. Here the typed address only reaches the form; the code
+ *   below is still needed to send anything.
  * - The phone must also enter a **six-digit code shown on the TV**. That is the part the user
  *   sees, and it is what defends against someone who somehow obtained the link.
  * - Requests from non-private addresses are refused outright.
@@ -103,7 +97,9 @@ class PairingServer(
                 reply.complete(answered)
             }
         }
-        data class Failed(val reason: String) : State
+
+        /** [code] is the exception's type, for the detail line, when one was behind it. */
+        data class Failed(val problem: ServerProblem, val code: String? = null) : State
     }
 
     /** What the phone waiting on the TV is told. */
@@ -119,20 +115,13 @@ class PairingServer(
     private val _state = MutableStateFlow<State>(State.Idle)
     val state: StateFlow<State> = _state.asStateFlow()
 
-    private var serverSocket: ServerSocket? = null
-
     // Written by start()/stop() on the main thread, read by the accept thread.
-    @Volatile private var token: String = ""
-
-    /** Empty once [MAX_SHORT_TOKEN_GUESSES] wrong ones have switched the typed address off. */
-    @Volatile private var shortToken: String = ""
+    @Volatile private var address: PhoneAddress? = null
 
     @Volatile private var confirmCode: String = ""
 
     // Only the accept thread changes these after start(), one request at a time.
     @Volatile private var wrongCodeAttempts = 0
-
-    @Volatile private var wrongShortTokenGuesses = 0
 
     @Volatile private var running = false
 
@@ -144,44 +133,29 @@ class PairingServer(
 
     fun start() {
         if (running) return
-        val host = lanAddress()
-        if (host == null) {
-            _state.value = State.Failed(
-                "This device doesn't appear to be on a network, so it can't talk to your phone.",
-            )
-            return
+        val opened = when (val opening = PhoneAddress.open()) {
+            is PhoneAddress.Opening.Opened -> opening.address
+            PhoneAddress.Opening.NoNetwork -> {
+                _state.value = State.Failed(ServerProblem.NO_NETWORK)
+                return
+            }
+            is PhoneAddress.Opening.NoSocket -> {
+                _state.value = State.Failed(ServerProblem.COULDNT_START, opening.code)
+                return
+            }
         }
 
-        val random = SecureRandom()
-        token = ByteArray(24).also(random::nextBytes).joinToString("") { "%02x".format(it) }
-        // Not just a shorter hex token: nothing that looks like another character across a
-        // room in the TV's serif face (0/o, 1/l/i, 2/z, 5/s, 6/b, 9/g/q, u/v/y).
-        shortToken = (1..SHORT_TOKEN_LENGTH)
-            .map { SHORT_TOKEN_ALPHABET[random.nextInt(SHORT_TOKEN_ALPHABET.length)] }
-            .joinToString("")
-        confirmCode = "%06d".format(random.nextInt(1_000_000))
+        confirmCode = "%06d".format(SecureRandom().nextInt(1_000_000))
         wrongCodeAttempts = 0
-        wrongShortTokenGuesses = 0
-
-        val socket = try {
-            // Port 0 asks the OS for a free one. A fixed port would be predictable and would
-            // clash with whatever else the user runs at home.
-            ServerSocket(0)
-        } catch (e: Exception) {
-            Log.w(TAG, "Could not open a socket", e)
-            _state.value = State.Failed("Could not start the pairing server on this device.")
-            return
-        }
-
-        serverSocket = socket
+        address = opened
         running = true
 
         val session = Session(
-            url = "http://$host:${socket.localPort}/?t=$token",
+            url = opened.url,
             confirmCode = confirmCode,
-            host = host,
-            port = socket.localPort,
-            shortToken = shortToken,
+            host = opened.host,
+            port = opened.port,
+            shortToken = opened.shortToken,
         )
         this.session = session
         _state.value = State.Listening(session)
@@ -191,7 +165,7 @@ class PairingServer(
         thread(name = "opentv-pairing", isDaemon = true) {
             while (running) {
                 val client = try {
-                    socket.accept()
+                    opened.accept()
                 } catch (_: Exception) {
                     break // socket closed, which is how we stop
                 }
@@ -205,7 +179,7 @@ class PairingServer(
             kotlinx.coroutines.delay(TimeUnit.MINUTES.toMillis(SESSION_TIMEOUT_MINUTES))
             if (running && _state.value is State.Listening) {
                 stop()
-                _state.value = State.Failed("Pairing timed out. Start again when you're ready.")
+                _state.value = State.Failed(ServerProblem.TIMED_OUT)
             }
         }
     }
@@ -214,10 +188,8 @@ class PairingServer(
         // A phone still waiting on the TV is told now, not when its wait runs out.
         pending?.complete(Reply.Stopped)
         running = false
-        runCatching { serverSocket?.close() }
-        serverSocket = null
-        token = ""
-        shortToken = ""
+        address?.close()
+        address = null
         confirmCode = ""
         if (_state.value is State.Listening) _state.value = State.Idle
     }
@@ -259,14 +231,14 @@ class PairingServer(
 
         // Every route checks a token. Without one the page does not exist. The short token
         // only opens the form, which carries the full token for the submit.
-        val supplied = query["t"] ?: PairingHttp.parseFormEncoded(body)["t"] ?: ""
-        val hasFullToken = token.isNotEmpty() && PairingHttp.secretsMatch(supplied, token)
-        val typed = if (method == "GET") path.trim('/').lowercase() else ""
-        val hasShortToken = shortToken.isNotEmpty() && PairingHttp.secretsMatch(typed, shortToken)
-        if (!hasFullToken && !hasShortToken) {
-            output.write(refusal(typed))
+        val address = address ?: return
+        val supplied = query["t"] ?: PairingHttp.parseFormEncoded(body)["t"]
+        val check = address.check(method, path, supplied)
+        if (check is PhoneAddress.Check.Refused) {
+            output.write(check.response())
             return
         }
+        val token = address.token
 
         when {
             method == "GET" && path.startsWith(FONTS_PATH) -> output.write(font(path.removePrefix(FONTS_PATH)))
@@ -288,33 +260,8 @@ class PairingServer(
         return PairingHttp.httpResponse("200 OK", "font/ttf", bytes)
     }
 
-    private fun refusal(typed: String): ByteArray {
-        // Same length and letters-and-digits, so a look-alike mistype still counts as a try.
-        val looksTyped = token.isNotEmpty() &&
-            typed.length == SHORT_TOKEN_LENGTH &&
-            typed.all { it.isLetterOrDigit() }
-        if (!looksTyped) {
-            return PairingHttp.httpResponse("404 Not Found", "text/plain", "Not found.")
-        }
-        if (shortToken.isNotEmpty() && ++wrongShortTokenGuesses >= MAX_SHORT_TOKEN_GUESSES) {
-            shortToken = ""
-        }
-        val page = if (shortToken.isEmpty()) {
-            PairingPage.message(
-                "That address has stopped working",
-                "Too many wrong addresses were tried, so it's switched off. " +
-                    "Use the camera to scan the QR code, or start again on the TV.",
-            )
-        } else {
-            PairingPage.message(
-                "That address didn't work",
-                "Check the address against the one on the TV and try again.",
-            )
-        }
-        return PairingHttp.httpResponse("404 Not Found", "text/html", page)
-    }
-
     private fun handleSubmit(output: java.io.OutputStream, body: String) {
+        val token = address?.token.orEmpty()
         val form = PairingHttp.parseFormEncoded(body)
 
         val code = form["code"].orEmpty().filter { it.isDigit() }
@@ -332,7 +279,7 @@ class PairingServer(
                     ),
                 )
                 stop()
-                _state.value = State.Failed("Too many incorrect codes. Pairing cancelled.")
+                _state.value = State.Failed(ServerProblem.TOO_MANY_CODES)
                 return
             }
             output.write(
@@ -406,56 +353,19 @@ class PairingServer(
         // Nothing more to receive. Shut the door immediately rather than leaving a socket
         // open on the user's network for the rest of the timeout.
         running = false
-        runCatching { serverSocket?.close() }
-        serverSocket = null
-        token = ""
-        shortToken = ""
+        address?.close()
+        address = null
     }
 
-    // ---- Finding our own address -----------------------------------------------------------
-
-    /**
-     * The device's address on the LAN.
-     *
-     * Enumerating interfaces rather than asking ConnectivityManager, because TV boxes are
-     * frequently on ethernet, sometimes on both, and the wifi-shaped API returns nothing
-     * useful when the box is wired.
-     */
-    private fun lanAddress(): String? {
-        val candidates = mutableListOf<InetAddress>()
-        runCatching {
-            for (nic in NetworkInterface.getNetworkInterfaces()) {
-                if (!nic.isUp || nic.isLoopback) continue
-                for (address in nic.inetAddresses) {
-                    if (address.isLoopbackAddress) continue
-                    if (address.hostAddress?.contains(':') == true) continue // IPv4 only
-                    if (PairingHttp.isPrivateAddress(address.hostAddress)) candidates += address
-                }
-            }
-        }.onFailure { Log.w(TAG, "Could not enumerate interfaces", it) }
-
-        // Prefer a real private range over a 169.254 self-assigned address, which means
-        // DHCP failed and nothing will be able to reach us anyway.
-        return candidates
-            .sortedBy { it.hostAddress?.startsWith("169.254") == true }
-            .firstOrNull()
-            ?.hostAddress
-    }
-
-    companion object {
-        /** Wrong typed addresses before the typed address is switched off for the session. */
-        const val MAX_SHORT_TOKEN_GUESSES = 10
-
-        private const val TAG = "PairingServer"
-        private const val SESSION_TIMEOUT_MINUTES = 5L
-        private const val SOCKET_TIMEOUT_MILLIS = 15_000
-        private const val REPLY_TIMEOUT_MILLIS = 5L * 60 * 1000
-        private const val MAX_BODY_BYTES = 16 * 1024
-        private const val MAX_CODE_ATTEMPTS = 5
-        private const val SHORT_TOKEN_LENGTH = 7
+    private companion object {
+        const val TAG = "PairingServer"
+        const val SESSION_TIMEOUT_MINUTES = 5L
+        const val SOCKET_TIMEOUT_MILLIS = 15_000
+        const val REPLY_TIMEOUT_MILLIS = 5L * 60 * 1000
+        const val MAX_BODY_BYTES = 16 * 1024
+        const val MAX_CODE_ATTEMPTS = 5
 
         // Fonts take the full token too, as every route does, so they only load for the form.
-        private const val FONTS_PATH = "/fonts/"
-        private const val SHORT_TOKEN_ALPHABET = "346789acdefhjkmnprtwx"
+        const val FONTS_PATH = "/fonts/"
     }
 }

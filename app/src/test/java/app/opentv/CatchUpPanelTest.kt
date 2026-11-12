@@ -96,6 +96,7 @@ class CatchUpPanelTest {
                     favourite = false,
                     onPlayEpisode = {},
                     onSetFavourite = {},
+                    onOpenPerson = {},
                 )
             }
         }

@@ -25,7 +25,10 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
-/** What a phone reaches at the addresses the "Set up from your phone" screen shows. */
+/**
+ * What a phone reaches at the addresses the "Set up from your phone" screen shows. How those
+ * addresses refuse wrong ones is [app.opentv.pairing.PhoneAddress]'s, tested in PhoneAddressTest.
+ */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], application = android.app.Application::class)
 class PairingServerTest {
@@ -159,58 +162,6 @@ class PairingServerTest {
     }
 
     @Test
-    fun `a guessed short code is refused`() {
-        val session = listening()
-        val (code, _) = get("http://${session.host}:${session.port}/${wrongShortToken(session)}")
-
-        assertThat(code).isEqualTo(404)
-    }
-
-    @Test
-    fun `the typed address is short enough to read off a TV`() {
-        val session = listening()
-
-        assertThat(session.shortUrl).matches("""[0-9.]+:[0-9]+/[a-z3-9]{7}""")
-    }
-
-    @Test
-    fun `the typed address never uses characters that look alike across a room`() {
-        // Many sessions, since one token is only seven of the characters it could have used.
-        val tokens = (1..30).joinToString("") {
-            server.stop()
-            listening().shortToken
-        }
-
-        // One of each look-alike group is dropped: 0/o, 1/l/i, 2/z, 5/s, 6/b, 9/g/q, u/v/y.
-        assertThat(tokens).doesNotContainMatch("""[01ilo2z5sbgquvy]""")
-    }
-
-    @Test
-    fun `a mistyped address tells the viewer to check it against the TV`() {
-        val session = listening()
-
-        val (code, page) = get("http://${session.host}:${session.port}/${wrongShortToken(session)}")
-
-        assertThat(code).isEqualTo(404)
-        assertThat(page).contains("Check the address")
-    }
-
-    @Test
-    fun `after too many wrong addresses the typed address stops working but the QR code still does`() {
-        val session = listening()
-        repeat(PairingServer.MAX_SHORT_TOKEN_GUESSES) {
-            get("http://${session.host}:${session.port}/${wrongShortToken(session)}")
-        }
-
-        val (typed, page) = get("http://${session.shortUrl}")
-        val (scanned, _) = get(session.url)
-
-        assertThat(typed).isEqualTo(404)
-        assertThat(page).contains("scan the QR code")
-        assertThat(scanned).isEqualTo(200)
-    }
-
-    @Test
     fun `the form fetches Settee's own fonts from the TV and asks nothing of the outside world`() {
         val session = listening()
         val (_, page) = get(session.url)
@@ -256,7 +207,4 @@ class PairingServerTest {
         // docs/LOOK.md's background, surface, text and coral.
         listOf("#1a1416", "#281f22", "#f8efea", "#ff8f6b").forEach { assertThat(page.lowercase()).contains(it) }
     }
-
-    private fun wrongShortToken(session: PairingServer.Session) =
-        session.shortToken.map { if (it == '3') '4' else '3' }.joinToString("")
 }

@@ -8,19 +8,23 @@ package app.opentv.data.repo
 import app.opentv.data.db.MovieDao
 import app.opentv.data.model.Movie
 import app.opentv.data.model.Source
+import app.opentv.data.remote.TmdbMeta
 import app.opentv.data.remote.XtreamApi
 import kotlinx.coroutines.delay
 
 /**
- * Asks for the genres of a source's films, for For you's genre rows: most providers leave the genre
- * out of their film list, and file films by service ("NETFLIX MOVIES") rather than genre, so without
- * this only the films someone opened would have one.
+ * Asks the provider, and TMDB when the viewer has set a key, about each film neither has answered
+ * about yet, for For you's genre rows and people's pages: most providers leave the genre, cast and
+ * director out of their film list, and file films by service ("NETFLIX MOVIES") rather than genre,
+ * so without this only the films someone opened would have them.
  *
- * The provider is asked first; when it has no genre and the viewer has set a TMDB key, [tmdbGenre]
- * asks TMDB. A film neither has a genre for is saved with a blank one, so it isn't asked about again;
- * one that couldn't be looked up is left for next time.
+ * Everything `get_vod_info` answers fills what the film lacks ([Movie.filledFrom]). TMDB ([tmdb])
+ * fills what's still missing and replaces the director, which from a provider is only a guess, and
+ * adds the writers and studios, which only it has ([Movie.withTmdb]). A film nobody has a genre for
+ * is saved with a blank one. Each is marked once it has answered, a match or not, so it isn't asked
+ * again; one that couldn't be reached is asked again next time, the other not.
  *
- * [fillAll] works through every film without a genre, newest first, [count] at a time with
+ * [fillAll] works through every film not looked up, newest first, [count] at a time with
  * [pauseMillis] between batches, so a struggling panel never gets a flood of calls and a provider
  * that blocks busy accounts sees a steady trickle. Tied to the film list's 12-hourly fetch, 200 at a
  * time, a 30,000-film catalogue took months.
@@ -30,13 +34,13 @@ class MovieGenres(
     private val api: XtreamApi,
     private val count: Int = CANDIDATES,
     private val pauseMillis: Long = BATCH_PAUSE_MILLIS,
-    private val tmdbGenre: suspend (Movie) -> String? = { null },
+    private val tmdb: MovieTmdb = MovieTmdb.None,
 ) {
-    /** One batch of the newest films without a genre. False if the provider stopped answering. */
+    /** One batch of the newest films not looked up. False if the provider stopped answering. */
     suspend fun refresh(source: Source): Boolean = batch(source, mutableSetOf()).answering
 
     /**
-     * Every film without a genre, a batch at a time, until none is left to ask about or the provider
+     * Every film not looked up, a batch at a time, until none is left to ask about or the provider
      * stops answering. A film whose lookup failed isn't asked about again in this run, which would
      * otherwise go round it for ever.
      */
@@ -49,29 +53,6 @@ class MovieGenres(
         }
     }
 
-    /**
-     * Asks TMDB about the films saved blank, which the provider had no genre for, for when the viewer
-     * has added a key since they were looked up. The provider isn't asked again. True once every one
-     * has been asked about; false if TMDB stopped answering, so the pass should run again.
-     */
-    suspend fun retryBlanks(source: Source): Boolean {
-        val tried = mutableSetOf<Long>()
-        while (true) {
-            val titles = next(tried) { movieDao.newestWithBlankGenre(source.id, it) }
-            val answering = lookUpEach(
-                titles = titles,
-                tag = TAG,
-                // "" for no match, so that counts as an answer rather than TMDB not answering.
-                ask = { tmdbGenre(it).orEmpty() },
-                found = { _, genre -> genre.takeIf { it.isNotBlank() } },
-                save = { found -> movieDao.fillBlankGenres(found.map { (movie, genre) -> movie.id to genre }) },
-            )
-            if (!answering) return false
-            if (titles.size < count) return true
-            delay(pauseMillis)
-        }
-    }
-
     /** The next [count] films [select] picks that aren't in [tried], added to it. */
     private suspend fun next(tried: MutableSet<Long>, select: suspend (Int) -> List<Movie>): List<Movie> =
         select(count + tried.size).filterNot { it.id in tried }.take(count).also { tried += it.map(Movie::id) }
@@ -79,24 +60,69 @@ class MovieGenres(
     private class Batch(val asked: Int, val answering: Boolean)
 
     private suspend fun batch(source: Source, tried: MutableSet<Long>): Batch {
-        val titles = next(tried) { movieDao.newestWithoutGenre(source.id, it) }
+        val withTmdb = tmdb.ready
+        val titles = next(tried) { movieDao.newestNotLookedUp(source.id, withTmdb, it) }
         val answering = lookUpEach(
             titles = titles,
             tag = TAG,
-            ask = { api.movieInfo(source, it.streamId) },
-            found = { movie, info -> info.genre?.takeIf { it.isNotBlank() } ?: tmdbGenre(movie).orEmpty() },
-            save = { found -> movieDao.fillGenres(found.map { (movie, genre) -> movie.id to genre }) },
+            ask = { lookUp(source, it, withTmdb) },
+            found = { _, found -> found },
+            save = { found -> movieDao.fillDetails(found.map { (_, details) -> details }) },
         )
         return Batch(titles.size, answering)
+    }
+
+    /**
+     * [movie] with what the provider and, [withTmdb], TMDB say about it, each asked only if it hasn't
+     * answered before; null if neither answered. All of the provider's answer is kept, not just the
+     * genre: it's the only way films nobody opens get the people a person's page lists them by.
+     */
+    private suspend fun lookUp(source: Source, movie: Movie, withTmdb: Boolean): Movie? {
+        var found = movie
+        var answered = false
+        if (!movie.detailsLookedUp) {
+            api.movieInfo(source, movie.streamId)?.let {
+                found = found.filledFrom(it)
+                answered = true
+            }
+        }
+        if (withTmdb && !movie.tmdbLookedUp) {
+            tmdb.lookUp(found).onSuccess {
+                found = found.withTmdb(it)
+                answered = true
+            }
+        }
+        // Blank, not missing, once everyone there is to ask has said they have none.
+        val everyoneAsked = found.detailsLookedUp && (!withTmdb || found.tmdbLookedUp)
+        if (found.genre == null && everyoneAsked) {
+            found = found.copy(genre = "")
+        }
+        return found.takeIf { answered }
     }
 
     companion object {
         private const val TAG = "MovieGenres"
 
-        /** How many films without a genre each batch asks about. */
+        /** How many films not looked up each batch asks about. */
         const val CANDIDATES = 200
 
         /** Between batches: a minute's rest after each 200. */
         const val BATCH_PAUSE_MILLIS = 60_000L
+    }
+}
+
+/** TMDB as the background pass asks it. */
+interface MovieTmdb {
+    /** Whether the viewer has set a key. */
+    val ready: Boolean
+
+    /** What TMDB has for [movie]: null for no match, or a failure when TMDB couldn't be reached. */
+    suspend fun lookUp(movie: Movie): Result<TmdbMeta?>
+
+    /** No key: the pass asks only the provider. */
+    object None : MovieTmdb {
+        override val ready = false
+
+        override suspend fun lookUp(movie: Movie): Result<TmdbMeta?> = Result.success(null)
     }
 }

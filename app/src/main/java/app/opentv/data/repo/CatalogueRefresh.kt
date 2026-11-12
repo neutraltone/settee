@@ -7,6 +7,7 @@ package app.opentv.data.repo
 
 import android.util.Log
 import app.opentv.core.AppSettings
+import app.opentv.core.ViewerError
 import app.opentv.data.model.Source
 import app.opentv.data.model.SourceKind
 import java.util.concurrent.ConcurrentHashMap
@@ -68,13 +69,19 @@ class CatalogueRefresh(
     }
 
     sealed interface Outcome {
-        data class Refreshed(val channels: Int, val problems: Int, val guide: EpgRepository.SyncSummary) : Outcome
+        /** [failure] is the first provider's that couldn't be downloaded, for the guide to show. */
+        data class Refreshed(
+            val channels: Int,
+            val problems: Int,
+            val guide: EpgRepository.SyncSummary,
+            val failure: ViewerError? = null,
+        ) : Outcome
 
         sealed interface Added : Outcome
 
         data class ChannelsLoaded(val channels: Int) : Added
 
-        data class AddFailed(val reason: String) : Added
+        data class AddFailed(val reason: ViewerError) : Added
 
         /** The background half of adding a provider. */
         data class GuideLoaded(val guide: EpgRepository.SyncSummary) : Outcome
@@ -140,6 +147,7 @@ class CatalogueRefresh(
         return marking(refreshes, { copy(refreshing = it, last = outcome ?: last) }) {
             var channels = 0
             var problems = 0
+            var failure: ViewerError? = null
             for (source in catalog.enabledSources()) {
                 // Already-fetched rows are left untouched by a switch that's off: turning the type
                 // back on and refreshing restores it.
@@ -151,7 +159,10 @@ class CatalogueRefresh(
                     CatalogRepository.SyncResult.Success(0, 0, 0)
                 }
                 when (live) {
-                    is CatalogRepository.SyncResult.Failed -> problems++
+                    is CatalogRepository.SyncResult.Failed -> {
+                        problems++
+                        if (failure == null) failure = live.reason
+                    }
                     is CatalogRepository.SyncResult.Success -> {
                         channels += live.channelCount
                         // Nobody is watching this one, and waiting lets providers take turns.
@@ -161,7 +172,7 @@ class CatalogueRefresh(
             }
             val summary = syncGuide(force = trigger == Trigger.Manual)
             rescan()
-            Outcome.Refreshed(channels, problems + summary.feedsFailed, summary).also { outcome = it }
+            Outcome.Refreshed(channels, problems + summary.feedsFailed, summary, failure).also { outcome = it }
         }
     }
 
@@ -325,6 +336,7 @@ class CatalogueRefresh(
 
     suspend fun refresh(trigger: Trigger.GuideOnly): Outcome.GuideRefreshed {
         if (trigger == Trigger.AppLaunch && settings.moviesEnabled.value) catalog.fillEveryProvidersGenres()
+        if (trigger == Trigger.AppLaunch) catalog.creditEarlierTitles()
         return Outcome.GuideRefreshed(syncGuide(force = trigger == Trigger.GuideSettings))
     }
 

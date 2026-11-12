@@ -67,7 +67,7 @@ class SourcesSaveTest {
             )
 
             val reason = withContext(Dispatchers.Default) { withTimeout(5_000) { failure.await() } }
-            assertThat(reason).contains("No channels found")
+            assertThat(reason).contains("There are no channels at that address")
             assertThat(graph.sourceRepository.all().map { it.kind }).containsExactly(SourceKind.XTREAM)
         }
     }

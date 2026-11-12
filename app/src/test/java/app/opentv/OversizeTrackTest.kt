@@ -14,6 +14,7 @@ import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.analytics.AnalyticsListener
 import androidx.test.core.app.ApplicationProvider
+import app.opentv.core.ViewerError
 import app.opentv.data.repo.MediaKey
 import app.opentv.player.PlayerController
 import com.google.common.truth.Truth.assertThat
@@ -62,7 +63,7 @@ class OversizeTrackTest {
         assertThat(state).isEqualTo(
             PlayerController.State.Error(
                 title = "Film",
-                message = "This device can't play this video (HEVC, 3840x1600).",
+                reason = ViewerError("This video is too big for this device to play.", "HEVC, 3840x1600"),
                 canRetry = false,
             ),
         )
@@ -106,8 +107,8 @@ class OversizeTrackTest {
         decoder("big.avc", 3840, 2160, MimeTypes.VIDEO_H264)
         players.formats = listOf(hevc(3840, 1600))
 
-        assertThat((playUntilSettled() as PlayerController.State.Error).message)
-            .isEqualTo("This device can't play this video (HEVC, 3840x1600).")
+        assertThat((playUntilSettled() as PlayerController.State.Error).reason)
+            .isEqualTo(ViewerError("This video is too big for this device to play.", "HEVC, 3840x1600"))
         assertThat(started).isEmpty()
     }
 
@@ -123,8 +124,8 @@ class OversizeTrackTest {
                 .build(),
         )
 
-        assertThat((playUntilSettled() as PlayerController.State.Error).message)
-            .isEqualTo("This device can't play this video (Dolby Vision, 3840x2160).")
+        assertThat((playUntilSettled() as PlayerController.State.Error).reason)
+            .isEqualTo(ViewerError("This video is too big for this device to play.", "Dolby Vision, 3840x2160"))
         assertThat(started).isEmpty()
     }
 
@@ -142,8 +143,8 @@ class OversizeTrackTest {
             Format.Builder().setSampleMimeType(MimeTypes.AUDIO_E_AC3).setChannelCount(6).setSampleRate(48_000).build(),
         )
 
-        assertThat((playUntilSettled() as PlayerController.State.Error).message)
-            .isEqualTo("This device can't play this video (Dolby Vision, 3840x2160).")
+        assertThat((playUntilSettled() as PlayerController.State.Error).reason)
+            .isEqualTo(ViewerError("This video is too big for this device to play.", "Dolby Vision, 3840x2160"))
     }
 
     private fun hevc(width: Int, height: Int): Format =

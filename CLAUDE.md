@@ -23,9 +23,11 @@ minSdk is 24 (Android 7.0), which WorkManager 2.12 requires. Fire OS 6+ (API 25)
 OS 5 (API 22) was already unsupported.
 
 ```bash
-./gradlew test                              # all unit tests (what CI runs)
-./gradlew testDebugUnitTest --tests 'app.opentv.M3uParserTest'                # one class
-./gradlew testDebugUnitTest --tests 'app.opentv.M3uParserTest.some test name' # one test (backticked names)
+tools/check/check.py test M3uParserTest     # named test classes; prints each failure's message and line
+tools/check/check.py test 'M3uParserTest.some test name'  # one test (backticked names)
+tools/check/check.py quick                  # ktlintFormat + detekt, after each change
+tools/check/check.py sweep                  # kill test processes an abandoned run left spinning, in any checkout of this project
+./gradlew test                              # all unit tests (what CI runs; not on this Mac, see below)
 ./gradlew assembleDebug                     # APK → app/build/outputs/apk/debug/
 ./gradlew installDebug                      # install on the connected emulator/device
 adb connect <firestick-ip>:5555             # Fire TV over wifi (enable ADB debugging on the stick)
@@ -39,6 +41,7 @@ tools/check-message-test.sh                 # tests for the commit/PR-title conv
 python3 -m unittest discover -s tools/screenshots  # screenshot comparison tests (needs Pillow)
 tools/perf/stick_baseline.py --help         # measure performance on a Fire TV Stick (docs/PERFORMANCE.md)
 python3 -m unittest discover -s tools/perf  # tests for that script
+python3 -m unittest discover -s tools/check # tests for check.py
 ANDROID_SERIAL=emulator-5554 ./gradlew :app:generateBaselineProfile  # regenerate the baseline profile on an Android 13+ TV emulator; commit it (docs/PERFORMANCE.md)
 tools/render-launcher-art.sh                # regenerate the mark's drawables, SVGs and launcher PNGs
 python3 -m unittest discover -s tools/launcher-art  # every copy of the mark matches its generator
@@ -52,11 +55,26 @@ Gradle builds, and a full local run of the suite, ktlint, detekt and lint can sw
 run only the test class you're working on and `ktlintFormat`; when the work is ready, push, open the PR
 with Auto-fix on, and let the PR checks below decide. Never start a second Gradle run while one is still going.
 
+**Run Gradle through `tools/check/check.py`, not `./gradlew … -q | grep`.** Filtering Gradle's output hides
+why a test failed, and a command ending in `; echo` or `| tail` reports success whatever Gradle did. The
+script prints the reason and exits with Gradle's result. It also deals with a test JVM freezing, which
+happens on this Mac when it's short of memory (swap nearly full, several sessions building): one thread
+sticks in the kernel re-faulting a page of compiled code, the JVM waits on it for ever, and nothing but
+SIGKILL stops it, so a run cut off by a timeout leaves it spinning for hours and makes the next freeze
+likelier. The script reports `FROZEN` after two minutes without a test finishing and kills the process.
+Give the call that runs it more than its own eight minutes (25 for `all`), or run it in the background:
+terminated, it stops its Gradle run first, but killed outright it can't.
+`FROZEN` is the machine, not the test it stopped in (it has always been somewhere in a long run, most
+often as `LiveBrowseTest` starts): run it again, and don't go looking for a bug in the test. If runs are
+slow or UI tests time out, run `tools/check/check.py sweep` and check `sysctl vm.swapusage` before
+suspecting the change. A test it lists as `SLOW` is waiting on real time and needs fixing, not a longer
+timeout.
+
 ### PR checks
 
 `.github/workflows/build.yml` runs one job per required check: **Test and assemble** (unit tests, debug
 APK, and a fail if the build changed `app/schemas/`), **Android Lint**, **ktlint**, **detekt**,
-**Screenshot tools** (the Python tests in `tools/screenshots/`, `tools/perf/` and `tools/launcher-art/`) and **gitleaks** (every commit
+**Screenshot tools** (the Python tests in `tools/screenshots/`, `tools/perf/`, `tools/check/` and `tools/launcher-art/`) and **gitleaks** (every commit
 a PR adds, reverted ones included, not other branches; pushes to `main` scan its whole history). `pr-hygiene.yml` runs `tools/check-message-test.sh` and checks the PR title with
 `tools/check-message.sh`. Lint and detekt fail only on findings missing from `app/lint-baseline.xml` /
 `app/detekt-baseline.xml`: fix a new finding, don't regenerate a baseline to hide it. The one deliberate
@@ -153,7 +171,10 @@ pre-restart test in `OpenTvDatabaseTest`) is deleted.
 
 `player/PlayerController` keeps one `ExoPlayer` per screen and swaps media items (debounced 350 ms;
 never release/rebuild on channel change). Retries 403/429/5xx with backoff; not 401/404/410.
-`PlaybackErrors` turns failures into actionable sentences — don't hide them.
+`PlaybackErrors` turns failures into actionable sentences — don't hide them. Every error, in playback
+or not, is a sentence plus a detail line (code · status · format) drawn by `ui/design`'s
+`ErrorMessage`; `ErrorWording` words failures outside playback. `docs/ERRORS.md` lists them all:
+keep it up to date whenever a mapping changes or a new failure can reach the screen.
 
 ## Conventions
 

@@ -37,7 +37,8 @@ class NasSync(private val graph: ServiceLocator.Graph) {
         data object NotConfigured : Result
 
         /** Anything went wrong reaching or reading the NAS. [message] is best-effort, may be null. */
-        data class Failed(val message: String?) : Result
+        /** [cause] is for the detail line and the log; its message is never shown. */
+        data class Failed(val cause: Throwable) : Result
     }
 
     /**
@@ -68,7 +69,7 @@ class NasSync(private val graph: ServiceLocator.Graph) {
             }
             // Together, so a series several peers name is fetched once.
             Result.Success(engine.apply(*bundles.toTypedArray()).total, bundles.size)
-        }.getOrElse { Result.Failed(it.message) }
+        }.getOrElse { Result.Failed(it) }
     }
 
     /** `<folder>/OpenTV/sync` within the share — the shared rendezvous every device agrees on. */

@@ -21,13 +21,19 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.core.content.edit
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import app.opentv.BuildConfig
+import app.opentv.R
+import app.opentv.core.ErrorWording
 import app.opentv.core.ServiceLocator
+import app.opentv.ui.design.ErrorMessage
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
@@ -72,10 +78,18 @@ fun UpdateGate(viewModel: UpdateViewModel = viewModel()) {
 
         is UpdateUiState.Failed -> AlertDialog(
             onDismissRequest = viewModel::dismiss,
-            confirmButton = { TextButton(onClick = viewModel::install) { Text("Retry") } },
-            dismissButton = { TextButton(onClick = viewModel::dismiss) { Text("Close") } },
-            title = { Text("Update failed") },
-            text = { Text("Could not download the update. Check the connection and try again.") },
+            confirmButton = {
+                TextButton(onClick = viewModel::install) { Text(stringResource(R.string.common_try_again)) }
+            },
+            dismissButton = {
+                TextButton(onClick = viewModel::dismiss) { Text(stringResource(R.string.update_close)) }
+            },
+            title = { Text(stringResource(R.string.update_failed_title)) },
+            text = {
+                val wording = ServiceLocator.get(LocalContext.current).errorWording
+                val reason = wording.ofHardware(R.string.update_failed_tv, R.string.update_failed_device, s.detail)
+                ErrorMessage(reason.sentence, reason.detail, textAlign = TextAlign.Start)
+            },
         )
     }
 }
@@ -112,7 +126,9 @@ sealed interface UpdateUiState {
     data object Idle : UpdateUiState
     data class Available(val update: UpdateChecker.Update) : UpdateUiState
     data class Downloading(val update: UpdateChecker.Update, val fraction: Float) : UpdateUiState
-    data class Failed(val update: UpdateChecker.Update) : UpdateUiState
+
+    /** [detail] is the download's failure, for the detail line. */
+    data class Failed(val update: UpdateChecker.Update, val detail: String) : UpdateUiState
 }
 
 /**
@@ -153,7 +169,7 @@ class UpdateViewModel(app: Application) : AndroidViewModel(app) {
             val outcome = checker.check()
             // A failed check (offline, or a release still missing its APK) mustn't hold the next
             // one off for 6 hours: the APK usually turns up minutes later when the job is re-run.
-            if (outcome != UpdateChecker.Outcome.CouldNotCheck) prefs.edit { putLong(KEY_LAST_CHECK, now) }
+            if (outcome !is UpdateChecker.Outcome.CouldNotCheck) prefs.edit { putLong(KEY_LAST_CHECK, now) }
             if (outcome is UpdateChecker.Outcome.Available) _state.value = UpdateUiState.Available(outcome.update)
         }
     }
@@ -177,7 +193,7 @@ class UpdateViewModel(app: Application) : AndroidViewModel(app) {
                 // The system installer is now front-and-centre; step our dialog aside.
                 _state.value = UpdateUiState.Idle
             }.onFailure {
-                _state.value = UpdateUiState.Failed(update)
+                _state.value = UpdateUiState.Failed(update, ErrorWording.codeOf(it))
             }
         }
     }

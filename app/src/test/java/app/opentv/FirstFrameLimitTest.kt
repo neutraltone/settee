@@ -10,6 +10,7 @@ import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.analytics.AnalyticsListener
 import androidx.test.core.app.ApplicationProvider
+import app.opentv.core.ViewerError
 import app.opentv.data.repo.MediaKey
 import app.opentv.player.PlayerController
 import com.google.common.truth.Truth.assertThat
@@ -47,7 +48,10 @@ class FirstFrameLimitTest {
         assertThat(controller.state.value).isEqualTo(
             PlayerController.State.Error(
                 title = "Film",
-                message = "This device couldn't show this video (H.264, 1280x720).",
+                reason = ViewerError(
+                    "This device couldn't show this video. Try again, or pick something else.",
+                    "H.264, 1280x720",
+                ),
                 canRetry = true,
             ),
         )
