@@ -171,6 +171,23 @@ class SourcesViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    /**
+     * Forgets the last test and save, so a form doesn't open showing another's. A refresh still
+     * running keeps its progress: that's news about now, not about another form.
+     */
+    fun clearFormMessages() {
+        _ui.update {
+            it.copy(
+                testResult = null,
+                testError = null,
+                addFailure = null,
+                syncMessage = it.syncMessage.takeIf { _ ->
+                    it.syncing
+                },
+            )
+        }
+    }
+
     private fun failureOf(outcome: CatalogueRefresh.Outcome?): ViewerError? = when (outcome) {
         is CatalogueRefresh.Outcome.Refreshed -> outcome.failure
         is CatalogueRefresh.Outcome.AddFailed -> outcome.reason

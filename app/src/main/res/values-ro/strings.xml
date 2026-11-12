@@ -299,7 +299,6 @@
     <string name="onboarding_user_agent_help">Unii furnizori blochează aplicațiile necunoscute cu o eroare 403. Dacă toate canalele eșuează, încearcă aici User-Agent-ul unui player popular.</string>
     <string name="onboarding_working">Se procesează…</string>
     <string name="onboarding_save_load">Salvează și încarcă</string>
-    <string name="onboarding_use_phone">Folosește telefonul în schimb</string>
     <string name="onboarding_privacy_note">Detaliile furnizorului tău sunt stocate doar pe acest dispozitiv. Settee nu are sistem de cont și niciun server propriu — nimic din ce tastezi aici nu este trimis nicăieri, în afară de furnizorul tău.</string>
     <string name="pairing_stopped">Asociere oprită</string>
     <string name="pairing_type_here">Introdu-l aici în schimb</string>

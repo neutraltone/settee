@@ -299,7 +299,6 @@
     <string name="onboarding_user_agent_help">Alcuni provider bloccano le app sconosciute con un errore 403. Se tutti i canali falliscono, prova qui lo User-Agent di un player comune.</string>
     <string name="onboarding_working">Elaborazione in corso…</string>
     <string name="onboarding_save_load">Salva e carica</string>
-    <string name="onboarding_use_phone">Usa il mio telefono invece</string>
     <string name="onboarding_privacy_note">I dati del tuo provider vengono salvati solo su questo dispositivo. Settee non ha alcun sistema di account né un proprio server — nulla di ciò che digiti qui viene inviato altrove se non al tuo provider.</string>
     <string name="pairing_stopped">Associazione interrotta</string>
     <string name="pairing_type_here">Inseriscilo qui invece</string>

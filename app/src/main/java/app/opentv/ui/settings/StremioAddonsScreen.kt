@@ -44,7 +44,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import app.opentv.R
 import app.opentv.core.ServiceLocator
 import app.opentv.data.model.StremioAddon
-import app.opentv.ui.channels.DeviceTextField
+import app.opentv.ui.design.TextField
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -129,7 +129,7 @@ fun StremioAddonsScreen(onBack: () -> Unit) {
 
         Spacer(Modifier.height(16.dp))
 
-        DeviceTextField(
+        TextField(
             value = input,
             onValueChange = {
                 input = it

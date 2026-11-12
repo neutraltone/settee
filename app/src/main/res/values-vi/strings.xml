@@ -299,7 +299,6 @@
     <string name="onboarding_user_agent_help">Một số nhà cung cấp chặn ứng dụng lạ bằng lỗi 403. Nếu mọi kênh đều lỗi, hãy thử User-Agent của một trình phát phổ biến ở đây.</string>
     <string name="onboarding_working">Đang xử lý…</string>
     <string name="onboarding_save_load">Lưu và tải</string>
-    <string name="onboarding_use_phone">Dùng điện thoại của tôi thay thế</string>
     <string name="onboarding_privacy_note">Thông tin nhà cung cấp của bạn chỉ được lưu trên thiết bị này. Settee không có hệ thống tài khoản và không có máy chủ riêng — không có gì bạn nhập vào đây được gửi đi đâu ngoại trừ đến nhà cung cấp của bạn.</string>
     <string name="pairing_stopped">Đã dừng ghép nối</string>
     <string name="pairing_type_here">Nhập ở đây thay thế</string>

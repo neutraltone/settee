@@ -47,6 +47,11 @@ python3 -m unittest discover -s tools/launcher-art  # every copy of the mark mat
 Tests live in `app/src/test` (JUnit4, Truth, Robolectric, Room testing, coroutines-test, Roborazzi for screenshots); there are no
 instrumented tests.
 
+**CI runs the full checks, not your machine.** The developer's Mac is shared by several agent sessions'
+Gradle builds, and a full local run of the suite, ktlint, detekt and lint can swap it for hours. Locally,
+run only the test class you're working on and `ktlintFormat`; when the work is ready, push, open the PR
+with Auto-fix on, and let the PR checks below decide. Never start a second Gradle run while one is still going.
+
 ### PR checks
 
 `.github/workflows/build.yml` runs one job per required check: **Test and assemble** (unit tests, debug

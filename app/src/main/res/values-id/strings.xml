@@ -299,7 +299,6 @@
     <string name="onboarding_user_agent_help">Beberapa penyedia memblokir aplikasi yang tidak dikenal dengan error 403. Jika semua saluran gagal, coba User-Agent pemutar umum di sini.</string>
     <string name="onboarding_working">Memproses…</string>
     <string name="onboarding_save_load">Simpan dan muat</string>
-    <string name="onboarding_use_phone">Gunakan ponsel saya sebagai gantinya</string>
     <string name="onboarding_privacy_note">Detail penyedia Anda hanya disimpan di perangkat ini. Settee tidak memiliki sistem akun dan server sendiri — tidak ada yang Anda ketik di sini yang dikirim ke mana pun kecuali ke penyedia Anda.</string>
     <string name="pairing_stopped">Pemasangan dihentikan</string>
     <string name="pairing_type_here">Ketik di sini sebagai gantinya</string>

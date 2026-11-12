@@ -112,11 +112,14 @@ object PairingHttp {
         }
     }
 
-    fun httpResponse(status: String, contentType: String, body: String): ByteArray {
-        val bytes = body.toByteArray(Charsets.UTF_8)
+    fun httpResponse(status: String, contentType: String, body: String): ByteArray =
+        httpResponse(status, "$contentType; charset=utf-8", body.toByteArray(Charsets.UTF_8))
+
+    /** A response of raw [bytes], such as a font file. */
+    fun httpResponse(status: String, contentType: String, bytes: ByteArray): ByteArray {
         val head = buildString {
             append("HTTP/1.1 ").append(status).append("\r\n")
-            append("Content-Type: ").append(contentType).append("; charset=utf-8\r\n")
+            append("Content-Type: ").append(contentType).append("\r\n")
             append("Content-Length: ").append(bytes.size).append("\r\n")
             append("Connection: close\r\n")
             // This page exists for a few minutes on a private network and handles

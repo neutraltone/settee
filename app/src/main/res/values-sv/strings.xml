@@ -299,7 +299,6 @@
     <string name="onboarding_user_agent_help">Vissa leverantörer blockerar okända appar med en 403. Om alla kanaler misslyckas, prova en vanlig spelares User-Agent här.</string>
     <string name="onboarding_working">Arbetar…</string>
     <string name="onboarding_save_load">Spara och läs in</string>
-    <string name="onboarding_use_phone">Använd min mobil istället</string>
     <string name="onboarding_privacy_note">Dina leverantörsuppgifter sparas endast på den här enheten. Settee har inget kontosystem och ingen egen server – inget du skriver här skickas någonstans utom till din leverantör.</string>
     <string name="pairing_stopped">Parkopplingen stoppades</string>
     <string name="pairing_type_here">Skriv det här istället</string>

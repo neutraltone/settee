@@ -299,7 +299,6 @@
     <string name="onboarding_user_agent_help">برخی ارائه‌دهندگان برنامه‌های ناآشنا را با خطای 403 مسدود می‌کنند. اگر همه کانال‌ها با شکست مواجه می‌شوند، اینجا User-Agent یک پخش‌کننده رایج را امتحان کنید.</string>
     <string name="onboarding_working">در حال پردازش…</string>
     <string name="onboarding_save_load">ذخیره و بارگذاری</string>
-    <string name="onboarding_use_phone">در عوض از گوشی من استفاده کنید</string>
     <string name="onboarding_privacy_note">اطلاعات ارائه‌دهنده شما فقط روی همین دستگاه ذخیره می‌شود. Settee هیچ سامانه حساب کاربری یا سرور مخصوص به خود ندارد — هیچ‌چیزی که اینجا تایپ می‌کنید به‌جایی جز ارائه‌دهنده شما ارسال نمی‌شود.</string>
     <string name="pairing_stopped">جفت‌سازی متوقف شد</string>
     <string name="pairing_type_here">در عوض اینجا تایپ کنید</string>

@@ -299,7 +299,6 @@
     <string name="onboarding_user_agent_help">Manche Anbieter blockieren unbekannte Apps mit einem 403-Fehler. Wenn jeder Sender fehlschlägt, versuche es hier mit dem User-Agent eines gängigen Players.</string>
     <string name="onboarding_working">Wird verarbeitet…</string>
     <string name="onboarding_save_load">Speichern und laden</string>
-    <string name="onboarding_use_phone">Stattdessen mein Smartphone verwenden</string>
     <string name="onboarding_privacy_note">Deine Anbieterdaten werden ausschließlich auf diesem Gerät gespeichert. Settee hat kein Kontosystem und keinen eigenen Server — nichts, was du hier eingibst, wird irgendwohin gesendet außer an deinen Anbieter.</string>
     <string name="pairing_stopped">Kopplung gestoppt</string>
     <string name="pairing_type_here">Stattdessen hier eingeben</string>

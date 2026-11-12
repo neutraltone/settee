@@ -55,7 +55,6 @@ import app.opentv.ui.LocalRailReturn
 import app.opentv.ui.ResumeItem
 import app.opentv.ui.VodViewModel
 import app.opentv.ui.browseKey
-import app.opentv.ui.channels.DeviceTextField
 import app.opentv.ui.design.CategoriesSidebar
 import app.opentv.ui.design.CategoriesSidebarWidth
 import app.opentv.ui.design.ScreenFrame
@@ -64,6 +63,7 @@ import app.opentv.ui.design.SetteeColors
 import app.opentv.ui.design.SetteeType
 import app.opentv.ui.design.SidebarEntry
 import app.opentv.ui.design.Text
+import app.opentv.ui.design.TextField
 import app.opentv.ui.options.LeaveDirectly
 import app.opentv.ui.options.LocalOpenOptions
 import app.opentv.ui.options.OptionsSubject
@@ -432,7 +432,7 @@ private fun BrowseSidebar(
             if (key != (category ?: FOR_YOU)) railReturn.target = null
             onPickCategory(key.takeUnless { it == FOR_YOU })
         },
-        findBox = { state, box -> DeviceTextField(state, findHint, FIND_MAX_LENGTH, box) },
+        findBox = { state, box -> TextField(state, findHint, FIND_MAX_LENGTH, box) },
         modifier = modifier
             .background(SetteeColors.Surface)
             .onKeyEvent { event ->

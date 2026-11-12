@@ -41,8 +41,8 @@ import app.opentv.R
 import app.opentv.core.ViewerError
 import app.opentv.data.model.EpgFeed
 import app.opentv.ui.EpgViewModel
-import app.opentv.ui.channels.DeviceTextField
 import app.opentv.ui.design.ErrorMessage
+import app.opentv.ui.design.TextField
 
 /**
  * Guide settings: where guide data comes from.
@@ -109,14 +109,14 @@ fun EpgSettingsScreen(onBack: () -> Unit, viewModel: EpgViewModel = viewModel())
                 } else {
                     Card {
                         Column(Modifier.padding(16.dp)) {
-                            DeviceTextField(
+                            TextField(
                                 value = newName,
                                 onValueChange = { newName = it },
                                 label = stringResource(R.string.epg_name_optional),
                                 modifier = Modifier.fillMaxWidth(),
                             )
                             Spacer(Modifier.height(8.dp))
-                            DeviceTextField(
+                            TextField(
                                 value = newUrl,
                                 onValueChange = { newUrl = it },
                                 label = stringResource(R.string.epg_xmltv_url),

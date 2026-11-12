@@ -299,7 +299,6 @@
     <string name="onboarding_user_agent_help">بعض المزوّدين يحظرون التطبيقات غير المألوفة برمز خطأ 403. إذا فشلت جميع القنوات، جرّب هنا User-Agent الخاص بمشغّل شائع.</string>
     <string name="onboarding_working">جارٍ العمل…</string>
     <string name="onboarding_save_load">حفظ وتحميل</string>
-    <string name="onboarding_use_phone">استخدام هاتفي</string>
     <string name="onboarding_privacy_note">تُخزَّن بيانات مزوّدك على هذا الجهاز فقط. لا يمتلك Settee نظام حسابات ولا خادمًا خاصًا به — لا يُرسل أي شيء تكتبه هنا إلى أي جهة سوى مزوّدك.</string>
     <string name="pairing_stopped">تم إيقاف الإقران</string>
     <string name="pairing_type_here">أدخله هنا بدلًا من ذلك</string>

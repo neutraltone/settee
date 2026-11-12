@@ -77,8 +77,8 @@ import app.opentv.core.requestIgnoreBatteryOptimizations
 import app.opentv.recording.RecordingStorage
 import app.opentv.recording.SmbClient
 import app.opentv.recording.SmbConfig
-import app.opentv.ui.channels.DeviceTextField
 import app.opentv.ui.design.ErrorMessage
+import app.opentv.ui.design.TextField
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -631,7 +631,7 @@ private fun Field(
     var revealed by remember { mutableStateOf(false) }
     // A recording password is a real credential (a NAS login) — don't paint it on a living-room
     // screen. Masked by default, with an eye to reveal it if you need to check what you typed.
-    DeviceTextField(
+    TextField(
         value = value,
         onValueChange = onChange,
         label = label,

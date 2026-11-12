@@ -49,7 +49,7 @@ import app.opentv.core.ServiceLocator
 import app.opentv.core.SleepTimer
 import app.opentv.core.findActivity
 import app.opentv.data.work.SyncWorker
-import app.opentv.ui.channels.DeviceTextField
+import app.opentv.ui.design.TextField
 import kotlinx.coroutines.launch
 
 /**
@@ -232,7 +232,7 @@ private fun TmdbKeySection(settings: AppSettings) {
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Spacer(Modifier.height(8.dp))
-        DeviceTextField(
+        TextField(
             value = field,
             onValueChange = { field = it.trim() },
             label = stringResource(R.string.settings_tmdb_key_label),

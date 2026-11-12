@@ -5,7 +5,6 @@
     <ID>ComplexCondition:CatalogRepository.kt$CatalogRepository$tmdb.isConfigured() &amp;&amp; (result.backdropUrl == null || result.plot == null || result.cast == null)</ID>
     <ID>ComplexCondition:OpenTvViewModels.kt$VodViewModel$prev != null &amp;&amp; prev.profileId == profileId &amp;&amp; prev.movieCount == movieCount &amp;&amp; prev.seriesCount == seriesCount</ID>
     <ID>ComposableParamOrder:RecordingsScreen.kt$RecordingRow</ID>
-    <ID>CyclomaticComplexMethod:AddSourceScreen.kt$@Composable fun AddSourceScreen(viewModel: SourcesViewModel, onFinished: () -&gt; Unit, editingSourceId: Long? = null)</ID>
     <ID>CyclomaticComplexMethod:CatalogRepository.kt$CatalogRepository$suspend fun movieDetail(id: Long): Movie?</ID>
     <ID>CyclomaticComplexMethod:CatalogRepository.kt$CatalogRepository$suspend fun seriesDetail(id: Long): Series?</ID>
     <ID>CyclomaticComplexMethod:LiveScreen.kt$@Composable fun LiveScreen( isTelevision: Boolean, hasSources: Boolean, isSyncing: Boolean, /** Why the last Catalogue Refresh couldn't download the channels, for the guide's empty state. */ loadFailure: ViewerError? = null, onPlayChannel: (Channel) -&gt; Unit, onAddSource: () -&gt; Unit, onRefresh: () -&gt; Unit, onPlayCatchup: (MediaKey.Catchup) -&gt; Unit = {}, takeFocus: Boolean = true, viewModel: ChannelsViewModel = viewModel(), )</ID>
@@ -23,10 +22,6 @@
     <ID>CyclomaticComplexMethod:XmltvParser.kt$XmltvParser$private fun readProgramme(parser: XmlPullParser, feedId: Long): Programme?</ID>
     <ID>ForbiddenImport:AboutScreen.kt$import androidx.compose.foundation.shape.RoundedCornerShape</ID>
     <ID>ForbiddenImport:AboutScreen.kt$import androidx.compose.material3.OutlinedButton</ID>
-    <ID>ForbiddenImport:AddSourceScreen.kt$import androidx.compose.material3.Button</ID>
-    <ID>ForbiddenImport:AddSourceScreen.kt$import androidx.compose.material3.FilterChip</ID>
-    <ID>ForbiddenImport:AddSourceScreen.kt$import androidx.compose.material3.IconButton</ID>
-    <ID>ForbiddenImport:AddSourceScreen.kt$import androidx.compose.material3.OutlinedButton</ID>
     <ID>ForbiddenImport:AppSettingsScreen.kt$import androidx.compose.material3.IconButton</ID>
     <ID>ForbiddenImport:AppSettingsScreen.kt$import androidx.compose.material3.OutlinedButton</ID>
     <ID>ForbiddenImport:AppSettingsScreen.kt$import androidx.compose.material3.RadioButton</ID>
@@ -50,9 +45,6 @@
     <ID>ForbiddenImport:ParentalControlsScreen.kt$import androidx.compose.material3.Button</ID>
     <ID>ForbiddenImport:ParentalControlsScreen.kt$import androidx.compose.material3.OutlinedButton</ID>
     <ID>ForbiddenImport:ParentalControlsScreen.kt$import androidx.compose.material3.Switch</ID>
-    <ID>ForbiddenImport:PhonePairingScreen.kt$import androidx.compose.foundation.shape.RoundedCornerShape</ID>
-    <ID>ForbiddenImport:PhonePairingScreen.kt$import androidx.compose.material3.Button</ID>
-    <ID>ForbiddenImport:PhonePairingScreen.kt$import androidx.compose.material3.OutlinedButton</ID>
     <ID>ForbiddenImport:PlayerErrorPanel.kt$import androidx.compose.material3.Button</ID>
     <ID>ForbiddenImport:PlayerScreen.kt$import androidx.compose.material3.Button</ID>
     <ID>ForbiddenImport:ProfilesScreen.kt$import androidx.compose.material3.AlertDialog</ID>
@@ -94,7 +86,6 @@
     <ID>ImplicitDefaultLocale:RecordingsScreen.kt$String.format("%.0f MB", mb)</ID>
     <ID>ImplicitDefaultLocale:RecordingsScreen.kt$String.format("%.1f GB", mb / 1024.0)</ID>
     <ID>InstanceOfCheckForException:RecordingService.kt$RecordingService$t is kotlinx.coroutines.CancellationException</ID>
-    <ID>LambdaParameterInRestartableEffect:PhonePairingScreen.kt$onReceived</ID>
     <ID>LambdaParameterInRestartableEffect:PlayerScreen.kt$onBack</ID>
     <ID>LambdaParameterInRestartableEffect:VodPlayerScreen.kt$onBack</ID>
     <ID>LongMethod:ManagerPage.kt$ManagerPage$fun page(token: String): String</ID>
@@ -210,12 +201,10 @@
     <ID>MatchingDeclarationName:StremioAddonsScreen.kt$StremioAddonsViewModel : AndroidViewModel</ID>
     <ID>MaxLineLength:Daos.kt$RecordingDao$"UPDATE recordings SET status = :status, endedAtMillis = :endedAt, sizeBytes = :bytes, error = :error WHERE id = :id"</ID>
     <ID>ModifierMissing:AboutScreen.kt$AboutScreen</ID>
-    <ID>ModifierMissing:AddSourceScreen.kt$AddSourceScreen</ID>
     <ID>ModifierMissing:AppSettingsScreen.kt$AppSettingsScreen</ID>
     <ID>ModifierMissing:EpgSettingsScreen.kt$EpgSettingsScreen</ID>
     <ID>ModifierMissing:MainScreen.kt$MainScreen</ID>
     <ID>ModifierMissing:ParentalControlsScreen.kt$ParentalControlsScreen</ID>
-    <ID>ModifierMissing:PhonePairingScreen.kt$PhonePairingScreen</ID>
     <ID>ModifierMissing:PlayerScreen.kt$PlayerScreen</ID>
     <ID>ModifierMissing:ProfilesScreen.kt$ProfilesScreen</ID>
     <ID>ModifierMissing:ProvidersScreen.kt$ProvidersScreen</ID>
@@ -236,8 +225,6 @@
     <ID>NestedBlockDepth:RecordingService.kt$RecordingService$private suspend fun runCapture(id: Long)</ID>
     <ID>NestedBlockDepth:XmltvParser.kt$XmltvParser$private fun readProgramme(parser: XmlPullParser, feedId: Long): Programme?</ID>
     <ID>NestedBlockDepth:XmltvParser.kt$XmltvParser$suspend fun parse( input: InputStream, feedId: Long, onChannelAlias: (id: String, displayName: String?) -&gt; Unit = { _, _ -&gt; }, onProgramme: suspend (Programme) -&gt; Unit, ): Stats</ID>
-    <ID>ParameterNaming:AddSourceScreen.kt$onFinished</ID>
-    <ID>ParameterNaming:PhonePairingScreen.kt$onReceived</ID>
     <ID>ParameterNaming:PlayerScreen.kt$onDone</ID>
     <ID>ParameterNaming:VodPlayerScreen.kt$onDone</ID>
     <ID>ReturnCount:AndroidExt.kt$fun Context.isIgnoringBatteryOptimizations(): Boolean</ID>

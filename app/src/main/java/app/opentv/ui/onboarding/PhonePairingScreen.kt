@@ -17,12 +17,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -37,16 +32,23 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import app.opentv.R
 import app.opentv.core.ErrorWording
 import app.opentv.core.ServerProblem
 import app.opentv.core.ServiceLocator
 import app.opentv.core.ViewerError
 import app.opentv.data.model.Source
+import app.opentv.pairing.PairingFonts
 import app.opentv.pairing.PairingServer
 import app.opentv.pairing.QrCodes
 import app.opentv.ui.design.ErrorMessage
+import app.opentv.ui.design.PillButton
+import app.opentv.ui.design.ScreenFrame
+import app.opentv.ui.design.SetteeColors
+import app.opentv.ui.design.SetteeShapes
+import app.opentv.ui.design.SetteeType
+import app.opentv.ui.design.Text
+import app.opentv.update.startsFocused
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -62,7 +64,8 @@ import kotlinx.coroutines.cancel
 @Composable
 fun PhonePairingScreen(onReceived: (Source) -> Unit, onCancel: () -> Unit) {
     val scope = remember { CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate) }
-    val server = remember { PairingServer(scope) }
+    val context = LocalContext.current
+    val server = remember { PairingServer(scope, PairingFonts(context.applicationContext)) }
     val state by server.state.collectAsState()
 
     DisposableEffect(Unit) {
@@ -79,34 +82,40 @@ fun PhonePairingScreen(onReceived: (Source) -> Unit, onCancel: () -> Unit) {
         (state as? PairingServer.State.Received)?.let { onReceived(it.draft) }
     }
 
-    Box(Modifier.fillMaxSize().padding(32.dp), contentAlignment = Alignment.Center) {
-        when (val current = state) {
-            is PairingServer.State.Listening -> Listening(current.session, onCancel)
+    ScreenFrame {
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            when (val current = state) {
+                is PairingServer.State.Listening -> Listening(current.session, onCancel)
 
-            is PairingServer.State.Failed -> Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
-                Text(stringResource(R.string.pairing_stopped), style = MaterialTheme.typography.headlineSmall)
-                Spacer(Modifier.height(10.dp))
-                val wording = ServiceLocator.get(LocalContext.current).errorWording
-                val reason = remember(current) { describe(wording, current) }
-                ErrorMessage(reason.sentence, reason.detail)
-                Spacer(Modifier.height(24.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Button(onClick = { server.start() }) { Text(stringResource(R.string.common_try_again)) }
-                    OutlinedButton(onClick = onCancel) { Text(stringResource(R.string.pairing_type_here)) }
+                is PairingServer.State.Failed -> Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    Text(stringResource(R.string.pairing_stopped), SetteeType.Section)
+                    Spacer(Modifier.height(10.dp))
+                    val wording = ServiceLocator.get(LocalContext.current).errorWording
+                    val reason = remember(current) { describe(wording, current) }
+                    ErrorMessage(reason.sentence, reason.detail)
+                    Spacer(Modifier.height(24.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        PillButton(
+                            stringResource(R.string.common_try_again),
+                            onClick = { server.start() },
+                            modifier = Modifier.startsFocused(),
+                        )
+                        PillButton(stringResource(R.string.pairing_type_here), onClick = onCancel)
+                    }
                 }
-            }
 
-            is PairingServer.State.Received -> Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
-                CircularProgressIndicator()
-                Spacer(Modifier.height(16.dp))
-                Text(stringResource(R.string.pairing_got_it))
-            }
+                is PairingServer.State.Received -> Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    CircularProgressIndicator(color = SetteeColors.Accent)
+                    Spacer(Modifier.height(16.dp))
+                    Text(stringResource(R.string.pairing_got_it), SetteeType.Body)
+                }
 
-            PairingServer.State.Idle -> CircularProgressIndicator()
+                PairingServer.State.Idle -> CircularProgressIndicator(color = SetteeColors.Accent)
+            }
         }
     }
 }
@@ -127,47 +136,38 @@ internal fun Listening(session: PairingServer.Session, onCancel: () -> Unit) {
                 contentDescription = stringResource(R.string.pairing_qr_desc),
                 modifier = Modifier
                     .size(300.dp)
-                    .clip(RoundedCornerShape(16.dp))
+                    .clip(SetteeShapes.Card)
                     .background(Color.White)
                     .padding(12.dp),
             )
         }
 
         Column(Modifier.widthIn(max = 520.dp)) {
-            Text(stringResource(R.string.pairing_setup_title), style = MaterialTheme.typography.displaySmall)
+            Text(stringResource(R.string.pairing_setup_title), SetteeType.ScreenTitle)
             Spacer(Modifier.height(12.dp))
-            Text(
-                stringResource(R.string.pairing_setup_desc),
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            Text(stringResource(R.string.pairing_setup_desc), SetteeType.Synopsis, color = SetteeColors.QuietText)
 
             Spacer(Modifier.height(28.dp))
-            Text(
-                stringResource(R.string.pairing_enter_code),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            Text(stringResource(R.string.pairing_enter_code), SetteeType.Body, color = SetteeColors.QuietText)
             Spacer(Modifier.height(6.dp))
             Text(
                 // Spaced out because it is being read across a room and typed into a phone.
                 text = session.confirmCode.toCharArray().joinToString("  "),
-                fontSize = 52.sp,
-                style = MaterialTheme.typography.displaySmall,
-                color = MaterialTheme.colorScheme.primary,
+                style = SetteeType.Display,
+                color = SetteeColors.Accent,
             )
 
             Spacer(Modifier.height(24.dp))
-            Text(
-                stringResource(R.string.pairing_camera_fail),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            Text(stringResource(R.string.pairing_camera_fail), SetteeType.Body, color = SetteeColors.QuietText)
             Spacer(Modifier.height(4.dp))
-            Text(session.shortUrl, style = MaterialTheme.typography.titleLarge)
+            Text(session.shortUrl, SetteeType.Section)
 
             Spacer(Modifier.height(32.dp))
-            OutlinedButton(onClick = onCancel) { Text(stringResource(R.string.pairing_type_on_tv)) }
+            PillButton(
+                stringResource(R.string.pairing_type_on_tv),
+                onClick = onCancel,
+                modifier = Modifier.startsFocused(),
+            )
         }
     }
 }

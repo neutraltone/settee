@@ -299,7 +299,6 @@
     <string name="onboarding_user_agent_help">Enkelte leverandører blokkerer ukjente apper med en 403-feil. Hvis alle kanaler feiler, prøv en vanlig spillers User-Agent her.</string>
     <string name="onboarding_working">Arbeider…</string>
     <string name="onboarding_save_load">Lagre og last inn</string>
-    <string name="onboarding_use_phone">Bruk mobilen min i stedet</string>
     <string name="onboarding_privacy_note">Leverandørdetaljene dine lagres kun på denne enheten. Settee har ikke noe kontosystem og ingen egen server — ingenting du skriver her, sendes noe sted, bortsett fra til leverandøren din.</string>
     <string name="pairing_stopped">Parkobling stoppet</string>
     <string name="pairing_type_here">Skriv det inn her i stedet</string>

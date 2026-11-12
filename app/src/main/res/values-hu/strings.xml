@@ -299,7 +299,6 @@
     <string name="onboarding_user_agent_help">Egyes szolgáltatók 403-as hibával blokkolják az ismeretlen alkalmazásokat. Ha minden csatorna hibázik, próbálja meg itt egy elterjedt lejátszó User-Agent-jét.</string>
     <string name="onboarding_working">Feldolgozás…</string>
     <string name="onboarding_save_load">Mentés és betöltés</string>
-    <string name="onboarding_use_phone">Inkább a telefonomat használom</string>
     <string name="onboarding_privacy_note">A szolgáltatói adatai kizárólag ezen az eszközön tárolódnak. Az Settee-nek nincs fiókrendszere és saját szervere sem — amit itt beír, sehova nem kerül elküldésre, kivéve a szolgáltatójához.</string>
     <string name="pairing_stopped">Párosítás leállítva</string>
     <string name="pairing_type_here">Inkább írja be itt</string>

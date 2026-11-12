@@ -299,7 +299,6 @@
     <string name="onboarding_user_agent_help">Nogle udbydere blokerer ukendte apps med en 403. Hvis alle kanaler fejler, så prøv en almindelig afspillers User-Agent her.</string>
     <string name="onboarding_working">Arbejder…</string>
     <string name="onboarding_save_load">Gem og indlæs</string>
-    <string name="onboarding_use_phone">Brug min telefon i stedet</string>
     <string name="onboarding_privacy_note">Dine udbyderoplysninger gemmes kun på denne enhed. Settee har ikke noget kontosystem og ingen egen server – intet, du skriver her, sendes nogen steder hen bortset fra til din udbyder.</string>
     <string name="pairing_stopped">Parring stoppet</string>
     <string name="pairing_type_here">Indtast det her i stedet</string>

@@ -299,7 +299,6 @@
     <string name="onboarding_user_agent_help">Некоторые провайдеры блокируют незнакомые приложения с ошибкой 403. Если ни один канал не воспроизводится, попробуйте указать здесь User-Agent популярного плеера.</string>
     <string name="onboarding_working">Выполняется…</string>
     <string name="onboarding_save_load">Сохранить и загрузить</string>
-    <string name="onboarding_use_phone">Использовать телефон</string>
     <string name="onboarding_privacy_note">Данные вашего провайдера хранятся только на этом устройстве. У Settee нет системы учётных записей и собственного сервера — всё введённое здесь отправляется только вашему провайдеру.</string>
     <string name="pairing_stopped">Сопряжение остановлено</string>
     <string name="pairing_type_here">Ввести здесь вместо этого</string>

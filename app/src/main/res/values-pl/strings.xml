@@ -299,7 +299,6 @@
     <string name="onboarding_user_agent_help">Niektórzy dostawcy blokują nieznane aplikacje błędem 403. Jeśli żaden kanał nie działa, spróbuj tutaj wpisać User-Agent popularnego odtwarzacza.</string>
     <string name="onboarding_working">Przetwarzanie…</string>
     <string name="onboarding_save_load">Zapisz i wczytaj</string>
-    <string name="onboarding_use_phone">Użyj telefonu zamiast tego</string>
     <string name="onboarding_privacy_note">Dane Twojego dostawcy są przechowywane wyłącznie na tym urządzeniu. Settee nie ma systemu kont ani własnego serwera — nic, co tu wpiszesz, nie jest wysyłane nigdzie poza Twoim dostawcą.</string>
     <string name="pairing_stopped">Parowanie zatrzymane</string>
     <string name="pairing_type_here">Wpisz to tutaj zamiast tego</string>

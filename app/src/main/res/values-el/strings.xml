@@ -299,7 +299,6 @@
     <string name="onboarding_user_agent_help">Ορισμένοι πάροχοι αποκλείουν άγνωστες εφαρμογές με σφάλμα 403. Αν αποτυγχάνουν όλα τα κανάλια, δοκιμάστε εδώ το User-Agent ενός δημοφιλούς player.</string>
     <string name="onboarding_working">Επεξεργασία…</string>
     <string name="onboarding_save_load">Αποθήκευση και φόρτωση</string>
-    <string name="onboarding_use_phone">Χρήση κινητού αντ\' αυτού</string>
     <string name="onboarding_privacy_note">Τα στοιχεία του παρόχου σας αποθηκεύονται μόνο σε αυτή τη συσκευή. Το Settee δεν διαθέτει σύστημα λογαριασμών ούτε δικό του διακομιστή — τίποτα από όσα πληκτρολογείτε εδώ δεν αποστέλλεται πουθενά, εκτός από τον πάροχό σας.</string>
     <string name="pairing_stopped">Η σύζευξη διακόπηκε</string>
     <string name="pairing_type_here">Πληκτρολογήστε το εδώ αντ\' αυτού</string>

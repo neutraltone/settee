@@ -299,7 +299,6 @@
     <string name="onboarding_user_agent_help">Някои доставчици блокират непознати приложения с грешка 403. Ако всички канали не работят, опитайте с User-Agent на популярен плейър тук.</string>
     <string name="onboarding_working">Обработка…</string>
     <string name="onboarding_save_load">Запазване и зареждане</string>
-    <string name="onboarding_use_phone">Използвай моя телефон вместо това</string>
     <string name="onboarding_privacy_note">Данните на вашия доставчик се съхраняват само на това устройство. Settee няма система за акаунти и собствен сървър — нищо, което въвеждате тук, не се изпраща никъде освен до вашия доставчик.</string>
     <string name="pairing_stopped">Свързването е спряно</string>
     <string name="pairing_type_here">Въведете го тук вместо това</string>
