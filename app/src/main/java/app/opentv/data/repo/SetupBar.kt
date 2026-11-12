@@ -1,0 +1,50 @@
+/*
+ * This file is part of OpenTV.
+ * Copyright (C) 2026 The OpenTV Contributors
+ * Licensed under the GNU General Public License v3.0 or later.
+ */
+package app.opentv.data.repo
+
+/**
+ * Setup's steps, in the order they run, each with its share of the bar. The shares are how long
+ * each took on a Fire TV Stick with a big Xtream provider (#224: 16,830 channels, 90,000 guide
+ * programmes, 29,729 movies, 9,261 shows; about 89 seconds in all), not equal parts: the guide
+ * alone took 61% of the time, and equal parts would hold the bar still for most of setup.
+ */
+enum class SetupStep(internal val share: Float) {
+    CHANNELS(15f),
+    GUIDE(61f),
+    MOVIES(16f),
+    SHOWS(8f),
+}
+
+/** Where Setup's bar stands, shared between the [steps] that run for this provider. */
+class SetupBar(private val steps: List<SetupStep>) {
+    private val total = steps.sumOf { it.share.toDouble() }.toFloat()
+
+    /** The bar once [step] is [done] (0 to 1) of the way through. */
+    fun reached(step: SetupStep, done: Float): Float {
+        val before = steps.takeWhile { it != step }.sumOf { it.share.toDouble() }.toFloat()
+        return (before + step.share * done) / total
+    }
+
+    private var position = 0f
+
+    /**
+     * Moves the bar to [step], [done] of the way through, and returns where it stands. It never
+     * goes back, and stops short of full: the last step finishing isn't setup finishing.
+     */
+    fun advance(step: SetupStep, done: Float): Float {
+        position = maxOf(position, minOf(reached(step, done.coerceIn(0f, 1f)), ALMOST_FULL))
+        return position
+    }
+
+    fun finish(): Float {
+        position = 1f
+        return position
+    }
+
+    private companion object {
+        const val ALMOST_FULL = 0.99f
+    }
+}
