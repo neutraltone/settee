@@ -20,6 +20,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import app.opentv.core.ServiceLocator
+import app.opentv.data.model.SourceKind
 import app.opentv.data.db.OpenTvDatabase
 import app.opentv.ui.SourcesViewModel
 import app.opentv.ui.design.SetteeType
@@ -157,8 +158,21 @@ class ProviderRoutesTest {
     }
 
     @Test
+    fun `a provider left by Setup closed before its channels came in doesn't stop the next being the first`() {
+        runBlocking { graph.sourceRepository.save(PANEL_SOURCE.copy(id = 0, lastCatalogSyncMillis = 0)) }
+        setApp(start = Routes.ADD_SOURCE, sources = SourcesViewModel(app, graph))
+
+        savePlaylist()
+
+        compose.waitUntil(5_000) { route() == Routes.SETUP }
+        compose.waitUntil(5_000) { compose.onAllNodesWithText("Take me to Settee").fetchSemanticsNodes().isNotEmpty() }
+        assertThat(runBlocking { graph.sourceRepository.observeAll().first() }.map { it.kind })
+            .containsExactly(SourceKind.M3U)
+    }
+
+    @Test
     fun `a provider added while there's one already doesn't open Setup`() {
-        runBlocking { graph.sourceRepository.save(PANEL_SOURCE.copy(id = 0)) }
+        runBlocking { graph.sourceRepository.save(PANEL_SOURCE.copy(id = 0, lastCatalogSyncMillis = 1)) }
         setApp(start = Routes.ADD_SOURCE, sources = SourcesViewModel(app, graph))
 
         savePlaylist()

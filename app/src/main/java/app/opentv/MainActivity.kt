@@ -64,6 +64,7 @@ import androidx.navigation.compose.rememberNavController
 import app.opentv.core.ServiceLocator
 import app.opentv.data.repo.MediaKey
 import app.opentv.ui.FirstScreen
+import app.opentv.ui.hasProvider
 import app.opentv.ui.MainScreen
 import app.opentv.ui.ProfilesViewModel
 import app.opentv.ui.SourcesViewModel
@@ -286,7 +287,7 @@ private fun OpenTvApp(isTelevision: Boolean, launchedToPlay: Boolean) {
     }
 
     val first = firstScreen(
-        hasProvider = sourcesUi.sources.isNotEmpty(),
+        hasProvider = hasProvider(sourcesUi.sources),
         profileCount = knownProfiles.size,
         askedThisProcess = WhosWatchingAsked.settled,
         launchedToPlay = launchedToPlay,

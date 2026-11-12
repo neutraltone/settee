@@ -201,7 +201,10 @@ class SourcesViewModel @JvmOverloads constructor(
     fun saveAndSync(draft: Source, onSetup: () -> Unit = {}, onDone: (Boolean) -> Unit = {}) {
         viewModelScope.launch {
             _ui.update { it.copy(adding = true, syncMessage = messages.of(RefreshMessages.Step.SavingSource)) }
-            val first = draft.id == 0L && graph.sourceRepository.observeAll().first().isEmpty()
+            val existing = graph.sourceRepository.observeAll().first()
+            val first = draft.id == 0L && !hasProvider(existing)
+            // What a Setup closed before its channels came in left behind; it never was a provider.
+            if (first) existing.forEach { graph.catalogRepository.deleteSource(it.id) }
             val id = graph.sourceRepository.save(draft)
             val saved = graph.sourceRepository.byId(id)
             if (saved == null) {
