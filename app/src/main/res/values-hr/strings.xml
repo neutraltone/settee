@@ -302,4 +302,8 @@
     <string name="onboarding_xtream_or_playlist_help">Ako vam je pružatelj dao jednu dugu poveznicu umjesto podataka za prijavu, dodajte je kao popis za reprodukciju.</string>
     <string name="providers_empty">Još nema pružatelja usluga. Dodajte uslugu koju već plaćate za početak.</string>
     <string name="addons_empty">Još nema dodataka. Zalijepite poveznicu dodatka iznad da ga dodate.</string>
+    <string name="error_tmdb_key_rejected">TMDB nije prihvatio taj ključ. Provjerite jeste li kopirali cijeli API Key pa pokušajte ponovno.</string>
+    <string name="error_tmdb_unreachable_tv">Nije moguće doći do TMDB-a. Provjerite je li ovaj televizor na mreži pa pokušajte ponovno.</string>
+    <string name="error_tmdb_unreachable_device">Nije moguće doći do TMDB-a. Provjerite je li ovaj uređaj na mreži pa pokušajte ponovno.</string>
+    <string name="error_tmdb_trouble">TMDB ima problema. Do njih je, pa pokušajte ponovno kasnije.</string>
 </resources>

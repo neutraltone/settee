@@ -302,4 +302,8 @@
     <string name="onboarding_xtream_or_playlist_help">Якщо провайдер дав вам одне довге посилання замість логіна, додайте його як плейлист.</string>
     <string name="providers_empty">Провайдерів поки немає. Додайте сервіс, за який ви вже платите, щоб почати.</string>
     <string name="addons_empty">Додатків поки немає. Вставте посилання на додаток вище, щоб додати його.</string>
+    <string name="error_tmdb_key_rejected">TMDB не прийняв цей ключ. Перевірте, що скопіювали API Key повністю, і спробуйте ще раз.</string>
+    <string name="error_tmdb_unreachable_tv">Не вдається зв\'язатися з TMDB. Перевірте, що цей телевізор у мережі, і спробуйте ще раз.</string>
+    <string name="error_tmdb_unreachable_device">Не вдається зв\'язатися з TMDB. Перевірте, що цей пристрій у мережі, і спробуйте ще раз.</string>
+    <string name="error_tmdb_trouble">У TMDB проблеми. Вони на їхньому боці, тож спробуйте пізніше.</string>
 </resources>

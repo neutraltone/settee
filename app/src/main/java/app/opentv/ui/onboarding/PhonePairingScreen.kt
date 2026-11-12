@@ -184,16 +184,14 @@ internal fun Listening(session: PairingServer.Session, onCancel: () -> Unit) {
 private const val QR_SIZE_PX = 600
 
 /** What [failed] says to the viewer (docs/ERRORS.md). */
-internal fun describePairingFailure(
-    wording: ErrorWording,
-    failed: PairingServer.State.Failed,
-): ViewerError = when (failed.problem) {
-    ServerProblem.NO_NETWORK -> wording.ofHardware(
-        R.string.pairing_no_network_tv,
-        R.string.pairing_no_network_device,
-    )
-    ServerProblem.COULDNT_START ->
-        wording.ofHardware(R.string.pairing_failed_tv, R.string.pairing_failed_device, failed.code)
-    ServerProblem.TIMED_OUT -> wording.of(R.string.pairing_timed_out)
-    ServerProblem.TOO_MANY_CODES -> wording.of(R.string.pairing_too_many_codes)
-}
+internal fun describePairingFailure(wording: ErrorWording, failed: PairingServer.State.Failed): ViewerError =
+    when (failed.problem) {
+        ServerProblem.NO_NETWORK -> wording.ofHardware(
+            R.string.pairing_no_network_tv,
+            R.string.pairing_no_network_device,
+        )
+        ServerProblem.COULDNT_START ->
+            wording.ofHardware(R.string.pairing_failed_tv, R.string.pairing_failed_device, failed.code)
+        ServerProblem.TIMED_OUT -> wording.of(R.string.pairing_timed_out)
+        ServerProblem.TOO_MANY_CODES -> wording.of(R.string.pairing_too_many_codes)
+    }

@@ -20,6 +20,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -68,7 +69,10 @@ fun TmdbStepScreen(graph: ServiceLocator.Graph, onDone: () -> Unit) {
             if (why != null) {
                 ErrorMessage(why.sentence, why.detail, textAlign = TextAlign.Start)
             }
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.padding(top = 12.dp)) {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                modifier = Modifier.padding(top = 12.dp).testTag(TMDB_STEP_ACTIONS),
+            ) {
                 if (why != null) {
                     PillButton(stringResource(R.string.common_try_again), onClick = { turnedDown = null })
                 }
@@ -84,3 +88,6 @@ fun TmdbStepScreen(graph: ServiceLocator.Graph, onDone: () -> Unit) {
 }
 
 private val STEP_WIDTH = 900.dp
+
+/** The step's own Try again and Skip for now, apart from a Try again for the phone's server. */
+const val TMDB_STEP_ACTIONS = "tmdb_step_actions"

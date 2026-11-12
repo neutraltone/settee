@@ -302,4 +302,8 @@
     <string name="onboarding_xtream_or_playlist_help">Om din leverantör gav dig en lång länk i stället för inloggningsuppgifter, lägg till den som spellista i stället.</string>
     <string name="providers_empty">Inga leverantörer än. Lägg till tjänsten du redan betalar för att komma igång.</string>
     <string name="addons_empty">Inga tillägg än. Klistra in länken till ett tillägg ovan för att lägga till det.</string>
+    <string name="error_tmdb_key_rejected">TMDB godtog inte den nyckeln. Kontrollera att du kopierade hela API Key och försök igen.</string>
+    <string name="error_tmdb_unreachable_tv">Det går inte att nå TMDB. Kontrollera att den här tv:n är online och försök igen.</string>
+    <string name="error_tmdb_unreachable_device">Det går inte att nå TMDB. Kontrollera att den här enheten är online och försök igen.</string>
+    <string name="error_tmdb_trouble">TMDB har problem. Det är hos dem, så försök igen senare.</string>
 </resources>

@@ -302,4 +302,8 @@
     <string name="onboarding_xtream_or_playlist_help">Si votre fournisseur vous a donné un seul long lien plutôt qu’un identifiant, ajoutez-le plutôt comme playlist.</string>
     <string name="providers_empty">Aucun fournisseur pour l\'instant. Ajoutez le service pour lequel vous payez déjà pour commencer.</string>
     <string name="addons_empty">Aucune extension pour l\'instant. Collez le lien d\'une extension ci-dessus pour en ajouter une.</string>
+    <string name="error_tmdb_key_rejected">TMDB n\'a pas accepté cette clé. Vérifiez que vous avez copié toute l\'API Key, puis réessayez.</string>
+    <string name="error_tmdb_unreachable_tv">Impossible de joindre TMDB. Vérifiez que ce téléviseur est connecté, puis réessayez.</string>
+    <string name="error_tmdb_unreachable_device">Impossible de joindre TMDB. Vérifiez que cet appareil est connecté, puis réessayez.</string>
+    <string name="error_tmdb_trouble">TMDB rencontre des problèmes. Cela vient de chez eux, réessayez plus tard.</string>
 </resources>

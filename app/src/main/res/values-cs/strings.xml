@@ -302,4 +302,8 @@
     <string name="onboarding_xtream_or_playlist_help">Pokud vám poskytovatel dal jeden dlouhý odkaz místo přihlašovacích údajů, přidejte ho raději jako playlist.</string>
     <string name="providers_empty">Zatím žádní poskytovatelé. Pro začátek přidejte službu, kterou už platíte.</string>
     <string name="addons_empty">Zatím žádné doplňky. Doplněk přidáte vložením jeho odkazu výše.</string>
+    <string name="error_tmdb_key_rejected">TMDB tento klíč nepřijal. Zkontrolujte, že jste zkopírovali celý API Key, a zkuste to znovu.</string>
+    <string name="error_tmdb_unreachable_tv">TMDB není dostupné. Zkontrolujte, že je tato televize online, a zkuste to znovu.</string>
+    <string name="error_tmdb_unreachable_device">TMDB není dostupné. Zkontrolujte, že je toto zařízení online, a zkuste to znovu.</string>
+    <string name="error_tmdb_trouble">TMDB má potíže. Jsou na jejich straně, zkuste to tedy později.</string>
 </resources>

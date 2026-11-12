@@ -9,6 +9,8 @@ import android.app.Application
 import android.view.View
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.test.hasAnyAncestor
+import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isFocused
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -32,6 +34,7 @@ import app.opentv.data.model.SourceKind
 import app.opentv.ui.SourcesViewModel
 import app.opentv.ui.design.SetteeType
 import app.opentv.ui.design.Text
+import app.opentv.ui.onboarding.TMDB_STEP_ACTIONS
 import app.opentv.ui.settings.SettingsMemory
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.flow.first
@@ -96,6 +99,11 @@ class ProviderRoutesTest {
         )
         return DeviceKeyboard(compose) { checkNotNull(root) }
     }
+
+    /** The TMDB step's own button, not the Try again of a phone server that couldn't start. */
+    private fun stepButton(text: String) = compose.onNode(
+        hasText(text) and hasAnyAncestor(hasTestTag(TMDB_STEP_ACTIONS)),
+    )
 
     /** Types [key] on the TMDB step's Type it instead and saves it. */
     private fun typeTmdbKey(key: String) {
@@ -294,15 +302,15 @@ class ProviderRoutesTest {
         compose.waitUntil(5_000) {
             compose.onAllNodesWithText("TMDB didn't accept", substring = true).fetchSemanticsNodes().isNotEmpty()
         }
-        compose.onNodeWithText("Try again").assertExists()
-        compose.onNodeWithText("Skip for now").assertExists()
+        stepButton("Try again").assertExists()
+        stepButton("Skip for now").assertExists()
         assertThat(route()).isEqualTo(Routes.TMDB_STEP)
         assertThat(graph.settings.tmdbApiKey.value).isEmpty()
         assertThat(runBlocking { graph.sourceRepository.all() }.map { it.kind }).containsExactly(SourceKind.M3U)
 
-        compose.onNodeWithText("Try again").performClick()
+        stepButton("Try again").performClick()
         compose.onNode(hasText("TMDB didn't accept", substring = true)).assertDoesNotExist()
-        compose.onNodeWithText("Skip for now").performClick()
+        stepButton("Skip for now").performClick()
         compose.waitUntil(5_000) { route() == Routes.SETUP }
     }
 

@@ -302,4 +302,8 @@
     <string name="onboarding_xtream_or_playlist_help">Heeft je provider je één lange link gegeven in plaats van inloggegevens? Voeg hem dan toe als afspeellijst.</string>
     <string name="providers_empty">Nog geen providers. Voeg de dienst toe waar je al voor betaalt om te beginnen.</string>
     <string name="addons_empty">Nog geen add-ons. Plak hierboven de link van een add-on om er een toe te voegen.</string>
+    <string name="error_tmdb_key_rejected">TMDB accepteerde die sleutel niet. Controleer of je de hele API Key hebt gekopieerd en probeer het opnieuw.</string>
+    <string name="error_tmdb_unreachable_tv">Kan TMDB niet bereiken. Controleer of deze tv online is en probeer het opnieuw.</string>
+    <string name="error_tmdb_unreachable_device">Kan TMDB niet bereiken. Controleer of dit apparaat online is en probeer het opnieuw.</string>
+    <string name="error_tmdb_trouble">TMDB heeft problemen. Dat ligt bij hen, dus probeer het later opnieuw.</string>
 </resources>

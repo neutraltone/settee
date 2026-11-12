@@ -211,6 +211,10 @@ class PairingServerTest {
 
     // ---- The TMDB Key --------------------------------------------------------------------------
 
+    /** [page]'s text as the phone shows it: the page escapes what it puts in, apostrophes included. */
+    private fun shown(page: String) = page.replace("&#39;", "'").replace("&quot;", "\"")
+        .replace("&lt;", "<").replace("&gt;", ">").replace("&amp;", "&")
+
     /** What the phone says once the TV has saved its key. */
     private val saved get() = context.getString(R.string.pairing_phone_tmdb_saved_title)
 
@@ -272,7 +276,7 @@ class PairingServerTest {
         receivedKey().answer(ViewerError("TMDB didn't accept that key.", "KeyRejected · HTTP 401"))
         val (_, page) = runBlocking { first.await() }
 
-        assertThat(page).contains("TMDB didn't accept that key.")
+        assertThat(shown(page)).contains("TMDB didn't accept that key.")
         assertThat(page).contains("KeyRejected · HTTP 401")
         assertThat(page).contains("action=\"/key\"")
         assertThat(server.state.value).isInstanceOf(PairingServer.State.Listening::class.java)
@@ -323,8 +327,8 @@ class PairingServerTest {
         received().answer(error = null)
         val (_, page) = runBlocking { reply.await() }
 
-        assertThat(page).contains(context.getString(R.string.pairing_phone_tmdb_optional))
-        assertThat(page).contains(context.getString(R.string.pairing_phone_tmdb_how))
+        assertThat(shown(page)).contains(context.getString(R.string.pairing_phone_tmdb_optional))
+        assertThat(shown(page)).contains(context.getString(R.string.pairing_phone_tmdb_how))
     }
 
     private companion object {

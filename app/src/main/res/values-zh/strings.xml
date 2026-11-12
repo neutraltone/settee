@@ -302,4 +302,8 @@
     <string name="onboarding_xtream_or_playlist_help">如果你的提供商给你的是一个长链接而不是登录信息，请改为将其添加为播放列表。</string>
     <string name="providers_empty">还没有提供商。添加你已经付费的服务以开始使用。</string>
     <string name="addons_empty">还没有插件。在上方粘贴插件链接即可添加。</string>
+    <string name="error_tmdb_key_rejected">TMDB 未接受该密钥。请确认已复制完整的 API Key，然后重试。</string>
+    <string name="error_tmdb_unreachable_tv">无法连接 TMDB。请确认这台电视已联网，然后重试。</string>
+    <string name="error_tmdb_unreachable_device">无法连接 TMDB。请确认此设备已联网，然后重试。</string>
+    <string name="error_tmdb_trouble">TMDB 出现问题。问题在他们那边，请稍后重试。</string>
 </resources>

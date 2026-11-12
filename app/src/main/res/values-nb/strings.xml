@@ -302,4 +302,8 @@
     <string name="onboarding_xtream_or_playlist_help">Hvis leverandøren din ga deg én lang lenke i stedet for innlogging, legg den til som spilleliste i stedet.</string>
     <string name="providers_empty">Ingen leverandører ennå. Legg til tjenesten du allerede betaler for, for å komme i gang.</string>
     <string name="addons_empty">Ingen tillegg ennå. Lim inn lenken til et tillegg ovenfor for å legge det til.</string>
+    <string name="error_tmdb_key_rejected">TMDB godtok ikke den nøkkelen. Sjekk at du kopierte hele API Key, og prøv igjen.</string>
+    <string name="error_tmdb_unreachable_tv">Får ikke kontakt med TMDB. Sjekk at denne TV-en er på nett, og prøv igjen.</string>
+    <string name="error_tmdb_unreachable_device">Får ikke kontakt med TMDB. Sjekk at denne enheten er på nett, og prøv igjen.</string>
+    <string name="error_tmdb_trouble">TMDB har problemer. Det er hos dem, så prøv igjen senere.</string>
 </resources>

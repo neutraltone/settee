@@ -302,4 +302,8 @@
     <string name="onboarding_xtream_or_playlist_help">Ha a szolgáltatója bejelentkezési adatok helyett egyetlen hosszú hivatkozást adott, adja hozzá lejátszási listaként.</string>
     <string name="providers_empty">Még nincsenek szolgáltatók. Kezdéshez adja hozzá azt a szolgáltatást, amelyért már fizet.</string>
     <string name="addons_empty">Még nincsenek bővítmények. Hozzáadáshoz illessze be fent egy bővítmény linkjét.</string>
+    <string name="error_tmdb_key_rejected">A TMDB nem fogadta el ezt a kulcsot. Ellenőrizd, hogy a teljes API Key-t másoltad-e, majd próbáld újra.</string>
+    <string name="error_tmdb_unreachable_tv">A TMDB nem érhető el. Ellenőrizd, hogy ez a tévé online van-e, majd próbáld újra.</string>
+    <string name="error_tmdb_unreachable_device">A TMDB nem érhető el. Ellenőrizd, hogy ez az eszköz online van-e, majd próbáld újra.</string>
+    <string name="error_tmdb_trouble">A TMDB-nél gondok vannak. Ez az ő oldalukon van, ezért próbáld újra később.</string>
 </resources>

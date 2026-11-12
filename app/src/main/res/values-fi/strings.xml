@@ -302,4 +302,8 @@
     <string name="onboarding_xtream_or_playlist_help">Jos palveluntarjoajasi antoi sinulle yhden pitkän linkin kirjautumistietojen sijaan, lisää se soittolistana.</string>
     <string name="providers_empty">Ei vielä palveluntarjoajia. Aloita lisäämällä palvelu, josta jo maksat.</string>
     <string name="addons_empty">Ei vielä lisäosia. Lisää lisäosa liittämällä sen linkki yllä olevaan kenttään.</string>
+    <string name="error_tmdb_key_rejected">TMDB ei hyväksynyt avainta. Tarkista, että kopioit koko API Keyn, ja yritä uudelleen.</string>
+    <string name="error_tmdb_unreachable_tv">TMDB:hen ei saada yhteyttä. Tarkista, että tämä televisio on verkossa, ja yritä uudelleen.</string>
+    <string name="error_tmdb_unreachable_device">TMDB:hen ei saada yhteyttä. Tarkista, että tämä laite on verkossa, ja yritä uudelleen.</string>
+    <string name="error_tmdb_trouble">TMDB:llä on ongelmia. Vika on heidän päässään, joten yritä myöhemmin uudelleen.</string>
 </resources>

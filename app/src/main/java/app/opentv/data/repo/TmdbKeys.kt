@@ -32,9 +32,10 @@ class TmdbKeys(private val settings: AppSettings, private val check: suspend (St
     /** Stops every call to TMDB. What TMDB filled in stays: nothing is cleared or aged out without a key. */
     fun remove() = settings.removeTmdbApiKey()
 
-    private companion object {
-        const val ENDING = 4
+    companion object {
+        private const val ENDING = 4
 
+        /** The last four characters of [key], enough to recognise it by; null for no key. */
         fun endingOf(key: String): String? = key.takeIf { it.isNotBlank() }?.takeLast(ENDING)
     }
 }

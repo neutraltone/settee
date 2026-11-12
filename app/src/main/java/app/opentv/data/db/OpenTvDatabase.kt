@@ -155,8 +155,9 @@ abstract class OpenTvDatabase : RoomDatabase() {
          * 10 → 12: when TMDB last answered about each film and series, so the background pass asks
          * again six months on. Not 11: that's upstream OpenTV's last version, which a device that ran a
          * build from before the restart still holds, and it must stay a stranger with no migration
-         * from it, so the fallback below wipes it rather than Room opening it as Settee's own. Films TMDB has already answered about are dated now, the best guess
-         * there is, so they come round in six months rather than all being asked again at once.
+         * from it, so the fallback below wipes it rather than Room opening it as Settee's own. Films
+         * TMDB has already answered about are dated now, the best guess there is, so they come round
+         * in six months rather than all being asked again at once.
          */
         private val TMDB_ANSWERED_AT = object : Migration(10, 12) {
             override fun migrate(db: SupportSQLiteDatabase) {

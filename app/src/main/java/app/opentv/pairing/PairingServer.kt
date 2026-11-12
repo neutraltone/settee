@@ -185,7 +185,10 @@ class PairingServer(
      */
     fun start(mode: Mode = Mode.PROVIDER, onboarding: Boolean = false) {
         this.mode = mode
-        if (running) return
+        if (!running) open(mode, onboarding)
+    }
+
+    private fun open(mode: Mode, onboarding: Boolean) {
         startedAs = mode
         onboardingPage = onboarding || mode == Mode.PROVIDER_THEN_TMDB_KEY
         val opened = when (val opening = PhoneAddress.open()) {

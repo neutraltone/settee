@@ -302,4 +302,8 @@
     <string name="onboarding_xtream_or_playlist_help">제공업체가 로그인 정보 대신 긴 링크 하나를 주었다면 재생목록으로 추가하세요.</string>
     <string name="providers_empty">아직 공급자가 없습니다. 이미 이용 중인 서비스를 추가하여 시작하세요.</string>
     <string name="addons_empty">아직 애드온이 없습니다. 위에 애드온 링크를 붙여넣어 추가하세요.</string>
+    <string name="error_tmdb_key_rejected">TMDB가 이 키를 받아들이지 않았습니다. API Key 전체를 복사했는지 확인한 다음 다시 시도하세요.</string>
+    <string name="error_tmdb_unreachable_tv">TMDB에 연결할 수 없습니다. 이 TV가 온라인인지 확인한 다음 다시 시도하세요.</string>
+    <string name="error_tmdb_unreachable_device">TMDB에 연결할 수 없습니다. 이 기기가 온라인인지 확인한 다음 다시 시도하세요.</string>
+    <string name="error_tmdb_trouble">TMDB에 문제가 있습니다. 그쪽 문제이니 나중에 다시 시도하세요.</string>
 </resources>

@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.Stable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -35,6 +36,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import app.opentv.R
+import app.opentv.core.ErrorWording
 import app.opentv.core.ServiceLocator
 import app.opentv.core.ViewerError
 import app.opentv.data.remote.TmdbCheck
@@ -64,10 +66,47 @@ internal fun TmdbPane(check: TmdbKeyCheck) {
 }
 
 /**
+ * Where adding the TMDB Key has got to: checking a key, why the last one was turned down, and whether
+ * the viewer chose Replace key. Saving and removing go through [keys], so only a key TMDB accepts is kept.
+ */
+@Stable
+private class TmdbKeyEntry(private val keys: TmdbKeys, private val wording: ErrorWording) {
+    var replacing by mutableStateOf(false)
+    var checking by mutableStateOf(false)
+        private set
+    var problem by mutableStateOf<ViewerError?>(null)
+        private set
+
+    /** Set when the rows the Highlight was on have gone: a key saved or removed swaps them all. */
+    var moveHighlight by mutableStateOf(false)
+
+    /** Checks [key] with TMDB, saving it if TMDB accepts it; why not, or null once it's saved. */
+    suspend fun save(key: String): ViewerError? {
+        checking = true
+        problem = null
+        val why = wording.ofTmdb(keys.save(key))
+        checking = false
+        problem = why
+        if (why == null) {
+            replacing = false
+            moveHighlight = true
+        }
+        return why
+    }
+
+    fun remove() {
+        keys.remove()
+        problem = null
+        moveHighlight = true
+    }
+}
+
+/**
  * What adding the TMDB Key takes, shared by Settings › TMDB and Onboarding's TMDB step. With no key
  * (or Replace key chosen) it's the QR code for the phone's paste box and Type it instead; with one,
  * its last four characters, Replace key and Remove key. The phone's server runs only while the QR
- * code is up. [onSaved] hears each key TMDB accepts; [onTurnedDown] each one it doesn't, with why.
+ * code is up. [onSaved] hears each key TMDB accepts; [onTurnedDown] each one it doesn't, with why,
+ * which the rows show themselves unless [showProblem] is false.
  */
 @Composable
 internal fun TmdbKeyRows(
@@ -79,42 +118,22 @@ internal fun TmdbKeyRows(
     graph: ServiceLocator.Graph = ServiceLocator.get(LocalContext.current),
 ) {
     val context = LocalContext.current
-    val keys = remember(check, graph) { TmdbKeys(graph.settings) { key -> check(context, key) } }
+    val entry = remember(check, graph) {
+        TmdbKeyEntry(TmdbKeys(graph.settings) { key -> check(context, key) }, graph.errorWording)
+    }
+    val savedKey by graph.settings.tmdbApiKey.collectAsState()
+    val ending = TmdbKeys.endingOf(savedKey)
     val server = graph.pairingServer
-    // Started on what's saved, so a saved key never flashes the QR code up first.
-    val saved = graph.settings.tmdbApiKey.value.takeLast(ENDING_LENGTH).ifEmpty { null }
-    val ending by keys.savedEnding.collectAsState(initial = saved)
     val phone by server.state.collectAsState()
     val scope = rememberCoroutineScope()
-
-    var replacing by remember { mutableStateOf(false) }
-    var checking by remember { mutableStateOf(false) }
-    var problem by remember { mutableStateOf<ViewerError?>(null) }
     var typing by remember { mutableStateOf(false) }
     var removing by remember { mutableStateOf(false) }
-    // Where the Highlight goes when the rows it was on go: a key saved or removed swaps them all.
-    var moveHighlight by remember { mutableStateOf(false) }
     val replaceRow = remember { FocusRequester() }
     val typeRow = remember { FocusRequester() }
+    val asking = ending == null || entry.replacing
 
-    val asking = ending == null || replacing
-
-    /** Checks [key] with TMDB, saving it if TMDB accepts it; why not, or null once it's saved. */
-    suspend fun save(key: String): ViewerError? {
-        checking = true
-        problem = null
-        val answer = keys.save(key)
-        val why = graph.errorWording.ofTmdb(answer)
-        checking = false
-        problem = why
-        if (why == null) {
-            replacing = false
-            moveHighlight = true
-            onSaved()
-        } else {
-            onTurnedDown(why)
-        }
-        return why
+    suspend fun save(key: String): ViewerError? = entry.save(key).also { why ->
+        if (why == null) onSaved() else onTurnedDown(why)
     }
 
     // Outside the rows that come and go, so a key arriving from the phone is answered whatever shows.
@@ -122,65 +141,16 @@ internal fun TmdbKeyRows(
         val received = phone as? PairingServer.State.KeyReceived ?: return@LaunchedEffect
         received.answer(save(received.key))
     }
-    // The QR code's server, only while the QR code is up: never a socket left listening on the
-    // network once it's gone. A moment's wait first, so passing through Settings opens nothing. A
-    // server already listening (the first provider's, from the phone) carries on, now for the key.
-    DisposableEffect(asking) {
-        val starting = if (asking) {
-            scope.launch {
-                delay(START_DELAY_MS)
-                server.start(PairingServer.Mode.TMDB_KEY, onboarding = onboarding)
-            }
-        } else {
-            null
-        }
-        onDispose {
-            starting?.cancel()
-            if (asking) server.stop()
-        }
-    }
-    LaunchedEffect(moveHighlight, asking) {
-        if (!moveHighlight) return@LaunchedEffect
+    PhoneServerWhile(asking, server, onboarding)
+    LaunchedEffect(entry.moveHighlight, asking) {
+        if (!entry.moveHighlight) return@LaunchedEffect
         withFrameNanos {}
         runCatching { (if (asking) typeRow else replaceRow).requestFocus() }
-        moveHighlight = false
+        entry.moveHighlight = false
     }
 
     if (asking) {
-        when (val current = phone) {
-            is PairingServer.State.Listening -> {
-                val session = current.session
-                // Drawn once per address: encoding isn't free, and the content doesn't change.
-                val qr = remember(session.url) { QrCodes.render(session.url, QR_SIZE_PX) }
-                CodeBlock(
-                    lead = stringResource(R.string.settings_tmdb_scan),
-                    code = session.shortUrl,
-                    note = stringResource(R.string.webmanager_local_only),
-                    beside = {
-                        qr?.let {
-                            Image(
-                                it.asImageBitmap(),
-                                contentDescription = stringResource(R.string.settings_tmdb_qr_desc),
-                                modifier = Modifier
-                                    .size(QR_SIZE)
-                                    .background(Color.White, SetteeShapes.Card)
-                                    .padding(QR_PADDING),
-                            )
-                        }
-                    },
-                )
-            }
-            is PairingServer.State.Failed -> {
-                val reason = remember(current) { describePairingFailure(graph.errorWording, current) }
-                ListRow(
-                    stringResource(R.string.common_try_again),
-                    onClick = { server.start(PairingServer.Mode.TMDB_KEY, onboarding = onboarding) },
-                    note = reason.sentence,
-                    detail = reason.detail,
-                )
-            }
-            else -> Unit
-        }
+        AskingRows(phone, onRetry = { server.start(PairingServer.Mode.TMDB_KEY, onboarding) }, graph.errorWording)
         ListRow(
             stringResource(R.string.settings_tmdb_type),
             onClick = { typing = true },
@@ -188,30 +158,9 @@ internal fun TmdbKeyRows(
             opens = true,
         )
     } else {
-        CodeBlock(
-            lead = stringResource(R.string.settings_row_tmdb_set),
-            code = stringResource(R.string.settings_tmdb_ending, ending.orEmpty()),
-        )
-        ListRow(
-            stringResource(R.string.settings_tmdb_replace),
-            onClick = { replacing = true },
-            modifier = Modifier.focusRequester(replaceRow),
-        )
-        ListRow(stringResource(R.string.settings_tmdb_remove), onClick = { removing = true })
+        SavedRows(ending.orEmpty(), replaceRow, onReplace = { entry.replacing = true }, onRemove = { removing = true })
     }
-
-    if (checking) {
-        Text(
-            stringResource(R.string.settings_tmdb_checking),
-            SetteeType.Body,
-            color = SetteeColors.QuietText,
-            modifier = Modifier.padding(top = 12.dp),
-        )
-    }
-    val why = problem
-    if (why != null && showProblem && !checking) {
-        ErrorMessage(why.sentence, why.detail, Modifier.padding(top = 12.dp), textAlign = TextAlign.Start)
-    }
+    KeyStatus(entry.checking, entry.problem.takeIf { showProblem })
 
     if (typing) {
         // Never filled in with the saved key: the pane only ever shows its last four characters.
@@ -232,11 +181,102 @@ internal fun TmdbKeyRows(
             onKeep = { removing = false },
             onRemove = {
                 removing = false
-                keys.remove()
-                problem = null
-                moveHighlight = true
+                entry.remove()
             },
         )
+    }
+}
+
+/**
+ * The phone's server, only while [asking] shows the QR code: never a socket left listening on the
+ * network once it's gone. A moment's wait first, so passing through Settings opens nothing. A server
+ * already listening (the first provider's, from the phone) carries on, now for the key.
+ */
+@Composable
+private fun PhoneServerWhile(asking: Boolean, server: PairingServer, onboarding: Boolean) {
+    val scope = rememberCoroutineScope()
+    DisposableEffect(asking) {
+        val starting = if (asking) {
+            scope.launch {
+                delay(START_DELAY_MS)
+                server.start(PairingServer.Mode.TMDB_KEY, onboarding)
+            }
+        } else {
+            null
+        }
+        onDispose {
+            starting?.cancel()
+            if (asking) server.stop()
+        }
+    }
+}
+
+/** The QR code for the phone's paste box, or why the server couldn't listen, with Try again. */
+@Composable
+private fun AskingRows(phone: PairingServer.State, onRetry: () -> Unit, wording: ErrorWording) {
+    when (phone) {
+        is PairingServer.State.Listening -> {
+            val session = phone.session
+            // Drawn once per address: encoding isn't free, and the content doesn't change.
+            val qr = remember(session.url) { QrCodes.render(session.url, QR_SIZE_PX) }
+            CodeBlock(
+                lead = stringResource(R.string.settings_tmdb_scan),
+                code = session.shortUrl,
+                note = stringResource(R.string.webmanager_local_only),
+                beside = {
+                    qr?.let {
+                        Image(
+                            it.asImageBitmap(),
+                            contentDescription = stringResource(R.string.settings_tmdb_qr_desc),
+                            modifier = Modifier
+                                .size(QR_SIZE)
+                                .background(Color.White, SetteeShapes.Card)
+                                .padding(QR_PADDING),
+                        )
+                    }
+                },
+            )
+        }
+        is PairingServer.State.Failed -> {
+            val reason = remember(phone) { describePairingFailure(wording, phone) }
+            ListRow(
+                stringResource(R.string.common_try_again),
+                onClick = onRetry,
+                note = reason.sentence,
+                detail = reason.detail,
+            )
+        }
+        else -> Unit
+    }
+}
+
+/** A saved key: its last four characters, then Replace key and Remove key. */
+@Composable
+private fun SavedRows(ending: String, replaceRow: FocusRequester, onReplace: () -> Unit, onRemove: () -> Unit) {
+    CodeBlock(
+        lead = stringResource(R.string.settings_row_tmdb_set),
+        code = stringResource(R.string.settings_tmdb_ending, ending),
+    )
+    ListRow(
+        stringResource(R.string.settings_tmdb_replace),
+        onClick = onReplace,
+        modifier = Modifier.focusRequester(replaceRow),
+    )
+    ListRow(stringResource(R.string.settings_tmdb_remove), onClick = onRemove)
+}
+
+/** Checking a key with TMDB, or why TMDB turned the last one down. */
+@Composable
+private fun KeyStatus(checking: Boolean, problem: ViewerError?) {
+    when {
+        checking -> Text(
+            stringResource(R.string.settings_tmdb_checking),
+            SetteeType.Body,
+            color = SetteeColors.QuietText,
+            modifier = Modifier.padding(top = 12.dp),
+        )
+        problem != null ->
+            ErrorMessage(problem.sentence, problem.detail, Modifier.padding(top = 12.dp), textAlign = TextAlign.Start)
     }
 }
 
@@ -257,7 +297,6 @@ internal fun TmdbAttribution(modifier: Modifier = Modifier) {
 }
 
 private const val START_DELAY_MS = 400L
-private const val ENDING_LENGTH = 4
 private const val QR_SIZE_PX = 600
 private val QR_SIZE = 200.dp
 private val QR_PADDING = 10.dp
