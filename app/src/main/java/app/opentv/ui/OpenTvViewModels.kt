@@ -1497,8 +1497,10 @@ class RecentSearchesViewModel(app: Application) : AndroidViewModel(app) {
  * Local viewing profiles. No accounts — just names on this device — with the active one stored in
  * [app.opentv.core.AppSettings] so the whole app agrees on whose watch history is in play.
  */
-class ProfilesViewModel(app: Application) : AndroidViewModel(app) {
-    private val graph = ServiceLocator.get(app)
+class ProfilesViewModel @JvmOverloads constructor(
+    app: Application,
+    private val graph: ServiceLocator.Graph = ServiceLocator.get(app),
+) : AndroidViewModel(app) {
     private val settings = graph.settings
 
     val profiles: StateFlow<List<Profile>> =

@@ -39,6 +39,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -125,6 +126,12 @@ fun SettingsScreen(
     var inPane by remember { mutableStateOf(false) }
     // Where the Highlight last was, which outlives the row it was on (inPane goes false with it).
     val lastIn = remember { LastHighlight() }
+    var paneRetries by remember { mutableIntStateOf(0) }
+    LaunchedEffect(paneRetries) {
+        if (paneRetries == 0) return@LaunchedEffect
+        withFrameNanos {}
+        runCatching { pane.requestFocus() }
+    }
     BackHandler { if (inPane) runCatching { current.requestFocus() } else onBack() }
     LaunchedEffect(Unit) {
         // A frame first: until the input mode has gone to keyboard, nothing can take focus.
@@ -151,7 +158,16 @@ fun SettingsScreen(
             // the Highlight back from its own screen (screenRow) is let through.
             .focusProperties {
                 onEnter = {
-                    if (memory.openedRow == null) runCatching { (if (lastIn.pane) pane else current).requestFocus() }
+                    if (memory.openedRow == null) {
+                        val wasInPane = lastIn.pane
+                        val intoPane = wasInPane && runCatching { pane.requestFocus() }.getOrNull() == true
+                        if (!intoPane) {
+                            runCatching { current.requestFocus() }
+                            // The pane can be empty for that moment, as when Enter your PIN goes
+                            // just as the settings arrive: so the pane again, once they're in.
+                            if (wasInPane) paneRetries++
+                        }
+                    }
                 }
             }
             .focusGroup(),

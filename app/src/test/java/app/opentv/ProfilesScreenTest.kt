@@ -20,6 +20,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.test.requestFocus
+import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.espresso.Espresso
 import androidx.test.espresso.UiController
@@ -27,11 +28,13 @@ import androidx.test.espresso.ViewAction
 import androidx.test.espresso.matcher.RootMatchers
 import androidx.test.espresso.matcher.ViewMatchers
 import app.opentv.core.ServiceLocator
+import app.opentv.data.db.OpenTvDatabase
 import app.opentv.data.repo.Profiles
 import app.opentv.ui.ProfilesViewModel
 import app.opentv.ui.settings.ProfilesScreen
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.runBlocking
+import org.junit.After
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -52,7 +55,22 @@ class ProfilesScreenTest {
     private lateinit var view: View
     private val device = DeviceKeyboard(compose) { view }
     private val app: Application = ApplicationProvider.getApplicationContext()
-    private val graph get() = ServiceLocator.get(app)
+
+    /**
+     * A graph of its own, with its own database, rather than the app's: a test that ends while a
+     * Profile write is under way leaves that write holding Profiles' lock for good, which would stop
+     * every test after it in the app's shared one.
+     */
+    private val graph = ServiceLocator.Graph(
+        app,
+        settingsFile = "profiles-screen-test",
+        openDatabase = {
+            Room.inMemoryDatabaseBuilder(app, OpenTvDatabase::class.java).allowMainThreadQueries().build()
+        },
+    )
+
+    @After
+    fun close() = graph.database.close()
 
     private lateinit var viewModel: ProfilesViewModel
 
@@ -67,7 +85,7 @@ class ProfilesScreenTest {
         // A name already there is refused, which leaves it as it is.
         runBlocking { names.forEach { graph.profiles.create(it) } }
         graph.settings.setActiveProfile(Profiles.BASE_PROFILE_ID)
-        viewModel = ProfilesViewModel(app)
+        viewModel = ProfilesViewModel(app, graph)
         compose.setTvContent {
             view = LocalView.current
             ProfilesScreen(onBack = {}, viewModel = viewModel)
@@ -194,7 +212,7 @@ class ProfilesScreenTest {
     @Test
     fun `Back leaves Profiles`() {
         var left = 0
-        viewModel = ProfilesViewModel(app)
+        viewModel = ProfilesViewModel(app, graph)
         compose.setTvContent {
             view = LocalView.current
             ProfilesScreen(onBack = { left++ }, viewModel = viewModel)
