@@ -50,6 +50,12 @@ class CatalogueRefresh(
         /** On the TV or from a phone: channels now, to show the login works, the guide afterwards. */
         data class ProviderAdded(val source: Source) : Trigger
 
+        /**
+         * The first provider, saved while none was: [ProviderAdded], with movies and shows fetched
+         * straight after the guide and each step's progress in [State.setup].
+         */
+        data class Setup(val source: Source) : Trigger
+
         data object OpenedMoviesOrShows : Trigger
 
         sealed interface GuideOnly : Trigger
@@ -87,6 +93,15 @@ class CatalogueRefresh(
         val loadingVod: Boolean = false,
         val buildingGuide: Boolean = false,
         val last: Outcome? = null,
+        /** The running or latest [Trigger.Setup]; null until one starts. */
+        val setup: Setup? = null,
+    )
+
+    /** Where a [Trigger.Setup] has got to. [steps] are the ones that apply, in the order they run. */
+    data class Setup(
+        val steps: List<SetupStep>,
+        val running: SetupStep? = steps.first(),
+        val finished: Boolean = false,
     )
 
     private val _state = MutableStateFlow(State())
@@ -159,6 +174,44 @@ class CatalogueRefresh(
         outcome
     }.await()
 
+    suspend fun refresh(trigger: Trigger.Setup): Outcome.Added = scope.async {
+        val source = trigger.source
+        settings.setVodFetchedAtMillis(source.id, 0L)
+        // The channels always run: they're what proves the login works.
+        val steps = buildList {
+            add(SetupStep.CHANNELS)
+            // The guide is only for live channels.
+            if (settings.liveEnabled.value) add(SetupStep.GUIDE)
+            // Only Xtream has movies and shows.
+            if (source.kind == SourceKind.XTREAM) {
+                if (settings.moviesEnabled.value) add(SetupStep.MOVIES)
+                if (settings.seriesEnabled.value) add(SetupStep.SHOWS)
+            }
+        }
+        _state.update { it.copy(setup = Setup(steps)) }
+        val outcome = when (val result = live(source)) {
+            is CatalogRepository.SyncResult.Failed -> Outcome.AddFailed(result.reason)
+            is CatalogRepository.SyncResult.Success -> Outcome.ChannelsLoaded(result.channelCount)
+        }
+        _state.update { it.copy(last = outcome) }
+        if (outcome is Outcome.ChannelsLoaded) {
+            scope.launch {
+                // One step after another, never two at once: two big downloads compete for a
+                // Stick's 1 GB and its network.
+                if (SetupStep.GUIDE in steps) {
+                    setup { copy(running = SetupStep.GUIDE) }
+                    runCatching { syncGuide(force = false) }
+                }
+                vod(source, waitForNewEpisodes = false, setupSteps = steps)
+                setup { copy(running = null, finished = true) }
+                rescan()
+            }
+        }
+        outcome
+    }.await()
+
+    private fun setup(change: Setup.() -> Setup) = _state.update { it.copy(setup = it.setup?.change()) }
+
     @Suppress("UnusedParameter") // The trigger is how a caller says what it is, as with the others.
     suspend fun refresh(trigger: Trigger.OpenedMoviesOrShows): Outcome.VodChecked {
         val wanted = settings.moviesEnabled.value || settings.seriesEnabled.value
@@ -206,14 +259,15 @@ class CatalogueRefresh(
     private suspend fun live(source: Source): CatalogRepository.SyncResult =
         liveDownloads.share(source) { catalog.fetchLive(source, clock()) }
 
-    private suspend fun vod(source: Source, waitForNewEpisodes: Boolean) {
+    /** With [setupSteps], movies and shows are fetched as Setup's steps, those in the list only. */
+    private suspend fun vod(source: Source, waitForNewEpisodes: Boolean, setupSteps: List<SetupStep>? = null) {
         val detecting = vodDownloads.share(source) {
             val now = clock()
             val vod = runCatching {
                 // A refresh's list of providers can be minutes old by the time this one's turn comes,
                 // and the old account's titles would overwrite the new one's.
                 if (!catalog.holdsAccountOf(source)) return@share null
-                catalog.fetchVod(source, now)
+                if (setupSteps == null) catalog.fetchVod(source, now) else setupVod(source, setupSteps)
             }.getOrElse { e ->
                 if (e is CancellationException) throw e
                 Log.w(TAG, "Movies and shows failed for source ${source.id}", e)
@@ -243,6 +297,25 @@ class CatalogueRefresh(
         }
         // Each caller's own rule, whoever started the download they're sharing.
         if (waitForNewEpisodes) detecting?.join()
+    }
+
+    private suspend fun setupVod(source: Source, steps: List<SetupStep>): CatalogRepository.VodFetch {
+        val movies = if (SetupStep.MOVIES in steps) {
+            setup { copy(running = SetupStep.MOVIES) }
+            catalog.fetchMovies(source)
+        } else {
+            CatalogRepository.ListFetch.SKIPPED
+        }
+        val shows = if (SetupStep.SHOWS in steps) {
+            setup { copy(running = SetupStep.SHOWS) }
+            catalog.fetchShows(source)
+        } else {
+            CatalogRepository.ListFetch.SKIPPED
+        }
+        return CatalogRepository.VodFetch(
+            shows.updated,
+            movies.complete && shows.complete && (movies.count > 0 || shows.count > 0),
+        )
     }
 
     /**
