@@ -5,83 +5,39 @@
  */
 package app.opentv.ui.player
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Dialog
 import app.opentv.R
 import app.opentv.player.BufferPlan
-import app.opentv.update.startsFocused
+import app.opentv.ui.design.PanelBody
+import app.opentv.ui.design.PanelRow
+import app.opentv.ui.design.PanelTitle
+import app.opentv.ui.design.SidePanel
 
-/** Offers to turn live pause on, explaining what it costs, when the viewer pauses without it. */
+/**
+ * Offers to turn live pause on, explaining what it costs, when the viewer pauses without it. The
+ * Highlight starts on turning it on; Back is Not now.
+ */
 @Composable
 internal fun LivePausePrompt(onTurnOn: () -> Unit, onDontAskAgain: () -> Unit, onDismiss: () -> Unit) {
     val pauseMillis = remember { BufferPlan.livePauseMillis() }
-    Dialog(onDismissRequest = onDismiss) {
-        Column(
-            Modifier
-                .width(520.dp)
-                .clip(RoundedCornerShape(16.dp))
-                .background(MaterialTheme.colorScheme.surface)
-                .padding(24.dp),
-        ) {
-            Text(
-                stringResource(R.string.live_pause_prompt_title),
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.SemiBold,
-            )
-            Spacer(Modifier.height(12.dp))
-            Text(
-                if (pauseMillis >= MILLIS_PER_MINUTE) {
-                    val minutes = pauseMillis / MILLIS_PER_MINUTE
-                    pluralStringResource(R.plurals.live_pause_prompt_body, minutes, minutes)
-                } else {
-                    // A device with little memory, such as a Fire TV Stick, gets under a minute.
-                    val seconds = pauseMillis / MILLIS_PER_SECOND
-                    pluralStringResource(R.plurals.live_pause_prompt_body_seconds, seconds, seconds)
-                },
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Spacer(Modifier.height(20.dp))
-            Row(
-                Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                TextButton(onClick = onDontAskAgain) {
-                    Text(stringResource(R.string.live_pause_prompt_dont_ask))
-                }
-                Spacer(Modifier.width(8.dp))
-                TextButton(onClick = onDismiss) {
-                    Text(stringResource(R.string.live_pause_prompt_not_now))
-                }
-                Spacer(Modifier.width(8.dp))
-                Button(onClick = onTurnOn, modifier = Modifier.startsFocused()) {
-                    Text(stringResource(R.string.live_pause_prompt_turn_on))
-                }
-            }
-        }
+    SidePanel(onBack = onDismiss) {
+        PanelTitle(stringResource(R.string.live_pause_prompt_title))
+        PanelBody(
+            if (pauseMillis >= MILLIS_PER_MINUTE) {
+                val minutes = pauseMillis / MILLIS_PER_MINUTE
+                pluralStringResource(R.plurals.live_pause_prompt_body, minutes, minutes)
+            } else {
+                // A device with little memory, such as a Fire TV Stick, gets under a minute.
+                val seconds = pauseMillis / MILLIS_PER_SECOND
+                pluralStringResource(R.plurals.live_pause_prompt_body_seconds, seconds, seconds)
+            },
+        )
+        PanelRow(stringResource(R.string.live_pause_prompt_turn_on), onClick = onTurnOn)
+        PanelRow(stringResource(R.string.live_pause_prompt_not_now), onClick = onDismiss)
+        PanelRow(stringResource(R.string.live_pause_prompt_dont_ask), onClick = onDontAskAgain)
     }
 }
 
