@@ -50,6 +50,14 @@ _Avoid_: Onboarding (that's the page before), sync, first run
 One provider's stream of a Channel or Movie, such as HD, FHD or 4K. The highest one this device can play is the one that plays by default. A Channel's Qualities are the same wherever it's shown.
 _Avoid_: Variant (in user-facing text), feed
 
+**TMDB**:
+The free online film and TV database Settee asks for what a Provider left out: posters, backdrops, synopses, cast and the IMDb match add-ons need. It never supplies anything to play, and it has its own section in Settings. Settee only asks it once the viewer has saved a TMDB Key.
+_Avoid_: Provider, metadata provider, scraper
+
+**TMDB Key**:
+The viewer's own free key from their TMDB account, which lets this box ask TMDB for details. Each viewer gets their own; Settee never ships one. It stays on the box it was entered on and isn't synced.
+_Avoid_: Token, API key (except when pointing at the field of that name on TMDB's site), connecting your TMDB account
+
 ## Live TV
 
 **Channel**:

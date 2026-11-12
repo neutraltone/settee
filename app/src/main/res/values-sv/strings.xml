@@ -233,7 +233,6 @@
     <string name="rec_switch_keep_watching">Fortsätt titta</string>
     <string name="rec_switch_channel_name">Automatiskt inspelningsbyte</string>
     <string name="rec_switch_channel_desc">Varnar innan skärmen byter till en schemalagd inspelning</string>
-    <string name="settings_tmdb_note">Klistra in din egen gratis TMDB API-nyckel för att fylla i saknade affischer, bakgrundsbilder, skådespelare och sammanfattningar för Filmer och Serier. Den stannar på den här enheten.</string>
     <string name="settings_tmdb_key_label">TMDB API-nyckel</string>
     <string name="guide_next_prefix">Nästa  %1$s  %2$s</string>
     <string name="vod_empty_category_movies">Inga filmer i den här kategorin.</string>

@@ -58,7 +58,7 @@ class RoomMigrationTest {
     }
 
     @Test
-    fun `films TMDB answered about before 11 are dated then, so they aren't all asked again at once`() {
+    fun `films TMDB answered about before 12 are dated then, so they aren't all asked again at once`() {
         val name = "tmdb-dates.db"
         helper.createDatabase(name, 10).use { db ->
             db.execSQL(
@@ -70,7 +70,7 @@ class RoomMigrationTest {
         }
         val before = System.currentTimeMillis()
 
-        val db = helper.runMigrationsAndValidate(name, 11, true, *OpenTvDatabase.MIGRATIONS)
+        val db = helper.runMigrationsAndValidate(name, 12, true, *OpenTvDatabase.MIGRATIONS)
         val after = System.currentTimeMillis()
 
         db.use {

@@ -11,6 +11,7 @@ import app.opentv.data.remote.TmdbCheck
 import app.opentv.data.remote.TmdbClient
 import app.opentv.data.repo.TmdbKeys
 import com.google.common.truth.Truth.assertThat
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Test
@@ -29,7 +30,7 @@ class TmdbKeysTest {
     private val settings = AppSettings.get(ApplicationProvider.getApplicationContext())
     private val panel = FakePanel()
     private val tmdb = TmdbClient(panel.http, settings)
-    private val keys = TmdbKeys(settings, tmdb)
+    private val keys = TmdbKeys(settings) { tmdb.check(it) }
 
     @After
     fun forgetKey() = settings.setTmdbApiKey("")
@@ -82,12 +83,12 @@ class TmdbKeysTest {
 
     @Test
     fun `the saved key shows only its last four characters`() = runTest {
-        assertThat(keys.savedEnding.value).isNull()
+        assertThat(keys.savedEnding.first()).isNull()
         panel.replies["/3/authentication"] = """{"success": true}"""
 
         keys.save(KEY)
 
-        assertThat(keys.savedEnding.value).isEqualTo("wxyz")
+        assertThat(keys.savedEnding.first()).isEqualTo("wxyz")
     }
 
     @Test
@@ -102,7 +103,7 @@ class TmdbKeysTest {
         tmdb.imdbId("A Film", year = null, isMovie = true, tmdbId = null)
 
         assertThat(tmdb.isConfigured()).isFalse()
-        assertThat(keys.savedEnding.value).isNull()
+        assertThat(keys.savedEnding.first()).isNull()
         assertThat(panel.requests).isEmpty()
     }
 

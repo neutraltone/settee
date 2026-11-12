@@ -233,7 +233,6 @@
     <string name="rec_switch_keep_watching">Continuă vizionarea</string>
     <string name="rec_switch_channel_name">Comutare automată la înregistrare</string>
     <string name="rec_switch_channel_desc">Avertizează înainte de a comuta ecranul la o înregistrare programată</string>
-    <string name="settings_tmdb_note">Lipește propria cheie API TMDB gratuită pentru a completa posterele, fundalurile, distribuția și sinopsisurile lipsă la Filme &amp; Seriale. Rămâne pe acest dispozitiv.</string>
     <string name="settings_tmdb_key_label">Cheie API TMDB</string>
     <string name="guide_next_prefix">Următorul  %1$s  %2$s</string>
     <string name="vod_empty_category_movies">Nu există filme în această categorie.</string>

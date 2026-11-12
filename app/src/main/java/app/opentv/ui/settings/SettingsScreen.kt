@@ -29,6 +29,7 @@ import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.LiveTv
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Movie
 import androidx.compose.material.icons.filled.PhoneAndroid
 import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material.icons.filled.Sync
@@ -77,6 +78,7 @@ enum class SettingsSection(@StringRes val title: Int, @StringRes val hint: Int, 
     Parental(R.string.settings_pane_parental, R.string.settings_pane_parental_hint, Icons.Filled.Lock),
     Devices(R.string.settings_pane_devices, R.string.settings_pane_devices_hint, Icons.Filled.Sync),
     Addons(R.string.settings_pane_addons, R.string.settings_pane_addons_hint, Icons.Filled.Extension),
+    Tmdb(R.string.settings_pane_tmdb, R.string.settings_pane_tmdb_hint, Icons.Filled.Movie),
     Manager(R.string.settings_pane_manager, R.string.settings_pane_manager_hint, Icons.Filled.PhoneAndroid),
     About(R.string.settings_pane_about, R.string.settings_pane_about_hint, Icons.Filled.Info),
 }
@@ -140,6 +142,8 @@ fun SettingsScreen(
     onOpenFontLicences: () -> Unit = {},
     // A seam so tests can show each answer without reaching GitHub.
     checkForUpdate: UpdateCheck = CheckGitHub,
+    // Likewise, so tests can give TMDB's answer to a key without reaching TMDB.
+    checkTmdbKey: TmdbKeyCheck = CheckTmdb,
 ) {
     val current = remember { FocusRequester() }
     val pane = remember { FocusRequester() }
@@ -228,7 +232,15 @@ fun SettingsScreen(
                 verticalArrangement = Arrangement.spacedBy(ROW_GAP),
             ) {
                 CompositionLocalProvider(LocalSettingsMemory provides memory) {
-                    Pane(section, onAddProvider, onEditProvider, onOpenChannels, onOpenFontLicences, checkForUpdate)
+                    Pane(
+                        section,
+                        onAddProvider,
+                        onEditProvider,
+                        onOpenChannels,
+                        onOpenFontLicences,
+                        checkForUpdate,
+                        checkTmdbKey,
+                    )
                 }
             }
         }
@@ -243,6 +255,7 @@ private fun Pane(
     onOpenChannels: () -> Unit,
     onOpenFontLicences: () -> Unit,
     checkForUpdate: UpdateCheck,
+    checkTmdbKey: TmdbKeyCheck,
 ) {
     when (section) {
         SettingsSection.Providers -> ProvidersPane(onAddProvider, onEditProvider)
@@ -253,6 +266,7 @@ private fun Pane(
         SettingsSection.Parental -> ParentalPane()
         SettingsSection.Devices -> DevicesPane()
         SettingsSection.Addons -> AddonsPane()
+        SettingsSection.Tmdb -> TmdbPane(checkTmdbKey)
         SettingsSection.Manager -> ManagerPane()
         SettingsSection.About -> AboutPane(onOpenFontLicences, checkForUpdate)
     }

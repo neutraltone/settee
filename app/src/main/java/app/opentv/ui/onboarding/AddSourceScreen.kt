@@ -45,6 +45,7 @@ import app.opentv.R
 import app.opentv.data.model.Source
 import app.opentv.data.model.SourceKind
 import app.opentv.isRunningOnTelevision
+import app.opentv.pairing.PairingServer
 import app.opentv.ui.SourcesViewModel
 import app.opentv.ui.design.ErrorMessage
 import app.opentv.ui.design.HighlightStyle
@@ -56,6 +57,7 @@ import app.opentv.ui.design.SetteeColors
 import app.opentv.ui.design.SetteeType
 import app.opentv.ui.design.Text
 import app.opentv.ui.design.TextField
+import app.opentv.ui.hasProvider
 import app.opentv.update.startsFocused
 
 /**
@@ -75,6 +77,8 @@ fun AddSourceScreen(
     onFinished: () -> Unit,
     editingSourceId: Long? = null,
     onSetup: () -> Unit = {},
+    /** Whether a first provider goes on to Onboarding's TMDB step, so the phone carries on to it too. */
+    offerTmdbKey: Boolean = false,
 ) {
     val context = LocalContext.current
     // The QR flow serves a setup page FROM this device for a phone to fill in, so only a TV offers
@@ -95,28 +99,55 @@ fun AddSourceScreen(
             cameFrom = option
             opened = option
         }
-        AddOption.PHONE -> PhonePairingScreen(
-            // The TV stays on "Got it" while the channels load, and the phone waits with it: a
-            // failed login is put right on the phone, which shows why, and the TV listens again.
-            // Once the channels are in, a first provider carries on in Setup, already past its
-            // first step; a later one goes to Home as before.
-            onReceived = { received ->
-                var setup = false
-                viewModel.saveAndSync(
-                    received.draft,
-                    keepIfFails = false,
-                    onSetup = { setup = true },
-                    onChannels = { failure ->
-                        received.answer(failure)
-                        if (failure == null) if (setup) onSetup() else onFinished()
-                    },
-                )
-            },
-            onCancel = { opened = null },
-        )
+        AddOption.PHONE -> PhoneProvider(viewModel, offerTmdbKey, onSetup, onFinished, onCancel = { opened = null })
         else -> ProviderForm(viewModel, onFinished, onSetup, editingSourceId = null, kind = open.kind)
     }
     if (opened != null) BackHandler { opened = null }
+}
+
+/**
+ * A provider sent from the phone. A first one, with no TMDB Key yet, carries straight on to the TMDB
+ * Key on the phone, as the TV goes to its TMDB step: the address stays open for it.
+ */
+@Composable
+private fun PhoneProvider(
+    viewModel: SourcesViewModel,
+    offerTmdbKey: Boolean,
+    onSetup: () -> Unit,
+    onFinished: () -> Unit,
+    onCancel: () -> Unit,
+) {
+    val ui by viewModel.ui.collectAsState()
+    // Until the providers have loaded, it can't be known to be the first, so it isn't offered.
+    val first = ui.loaded && !hasProvider(ui.sources)
+    var handedOn by remember { mutableStateOf(false) }
+    PhonePairingScreen(
+        mode = if (offerTmdbKey && first) {
+            PairingServer.Mode.PROVIDER_THEN_TMDB_KEY
+        } else {
+            PairingServer.Mode.PROVIDER
+        },
+        keepListening = { handedOn },
+        // The TV stays on "Got it" while the channels load, and the phone waits with it: a
+        // failed login is put right on the phone, which shows why, and the TV listens again.
+        // Once the channels are in, a first provider carries on in Setup, already past its
+        // first step; a later one goes to Home as before.
+        onReceived = { received ->
+            var setup = false
+            viewModel.saveAndSync(
+                received.draft,
+                keepIfFails = false,
+                onSetup = { setup = true },
+                onChannels = { failure ->
+                    // Before the answer, so leaving for the TMDB step doesn't close the address.
+                    if (failure == null && setup && offerTmdbKey) handedOn = true
+                    received.answer(failure)
+                    if (failure == null) if (setup) onSetup() else onFinished()
+                },
+            )
+        },
+        onCancel = onCancel,
+    )
 }
 
 /** The ways onto the page, in the order it lists them. */

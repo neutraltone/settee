@@ -239,8 +239,10 @@ class MovieGenresTest {
         MovieGenres(test.db.movies(), XtreamApi(panel.http), tmdb = tmdb(answer), clock = { NOW })
 
     /** A film the provider and TMDB have both answered about, TMDB at [tmdbAt]. */
-    private fun answered(id: String, tmdbAt: Long, plot: String? = null) = movie(id, added = 1, genre = "Drama", lookedUp = true)
-        .copy(tmdbLookedUp = true, tmdbAnsweredAt = tmdbAt, plot = plot)
+    private fun answered(id: String, tmdbAt: Long, plot: String? = null): Movie {
+        val film = movie(id, added = 1, genre = "Drama", lookedUp = true)
+        return film.copy(tmdbLookedUp = true, tmdbAnsweredAt = tmdbAt, plot = plot)
+    }
 
     private suspend fun stored(id: String): Movie = test.db.movies().forSource(1).single { it.streamId == id }
 

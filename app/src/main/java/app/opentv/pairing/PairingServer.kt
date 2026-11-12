@@ -166,22 +166,28 @@ class PairingServer(
     /** What the phone is filling in; [Mode.PROVIDER_THEN_TMDB_KEY] becomes [Mode.TMDB_KEY] once the provider's in. */
     @Volatile private var mode: Mode = Mode.PROVIDER
 
-    /** Whether this session started with a provider, so its TMDB Key page is Onboarding's. */
-    private val cameThroughProvider get() = startedAs == Mode.PROVIDER_THEN_TMDB_KEY
-
+    /**
+     * What this session was started for. Whether a provider carries on to the TMDB Key goes by this,
+     * not [mode]: the TV's TMDB step may switch [mode] before this thread gets there.
+     */
     @Volatile private var startedAs: Mode = Mode.PROVIDER
+
+    /** Whether the TMDB Key's page is Onboarding's. */
+    @Volatile private var onboardingPage = false
 
     /** What the phone waiting on the TV will be told; null when none is waiting. */
     @Volatile private var pending: CompletableDeferred<Reply>? = null
 
     /**
      * Starts listening for [mode]. Already listening, it carries on with the same address, now for
-     * [mode]: the TMDB step takes over the server the first provider came through.
+     * [mode]: the TMDB step takes over the server the first provider came through. [onboarding] gives
+     * the TMDB Key's page Onboarding's wording: optional, with how to get one folded away.
      */
-    fun start(mode: Mode = Mode.PROVIDER) {
+    fun start(mode: Mode = Mode.PROVIDER, onboarding: Boolean = false) {
         this.mode = mode
         if (running) return
         startedAs = mode
+        onboardingPage = onboarding || mode == Mode.PROVIDER_THEN_TMDB_KEY
         val opened = when (val opening = PhoneAddress.open()) {
             is PhoneAddress.Opening.Opened -> opening.address
             PhoneAddress.Opening.NoNetwork -> {
@@ -389,7 +395,7 @@ class PairingServer(
             session?.let { _state.value = State.Listening(it) }
             return
         }
-        if (answer == Reply.AllDone && mode == Mode.PROVIDER_THEN_TMDB_KEY) {
+        if (answer == Reply.AllDone && startedAs == Mode.PROVIDER_THEN_TMDB_KEY) {
             // Straight on to the TMDB Key, on the same address, as the TV moves to its TMDB step.
             mode = Mode.TMDB_KEY
             output.write(PairingHttp.httpResponse("200 OK", "text/html", keyPage(token, null)))
@@ -472,7 +478,7 @@ class PairingServer(
             step4 = text(R.string.pairing_phone_tmdb_step4),
         ),
         error = problem?.let { PairingPage.Error(it.sentence, it.detail) },
-        onboarding = cameThroughProvider,
+        onboarding = onboardingPage,
     )
 
     private companion object {

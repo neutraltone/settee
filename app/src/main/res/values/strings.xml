@@ -180,8 +180,6 @@
     <string name="settings_row_guide_preview_sound">Guide preview sound</string>
     <string name="settings_row_language">Language</string>
     <string name="settings_row_refresh_content">Fetch your providers\' lists again</string>
-    <string name="settings_row_tmdb">Artwork from TMDB</string>
-    <string name="settings_row_tmdb_none">Not set</string>
     <string name="settings_row_tmdb_set">Key saved</string>
     <string name="settings_row_add_provider">Add a provider</string>
     <string name="settings_guide_update">Update the guide now</string>
@@ -596,14 +594,13 @@
     <string name="rec_switch_channel_desc">Warns before switching the screen to a scheduled recording</string>
 
     <!-- Metadata / TMDB back-fill -->
-    <string name="settings_tmdb_note">Paste your own free TMDB API key to fill in missing posters, backdrops, cast and synopses on Movies &amp; Shows. It stays on this device.</string>
     <string name="settings_tmdb_key_label">Your TMDB Key</string>
     <string name="settings_pane_tmdb">TMDB</string>
     <string name="settings_pane_tmdb_hint">Posters, synopses and cast your provider left out</string>
     <string name="settings_tmdb_scan">Scan with your phone to add your TMDB Key</string>
     <string name="settings_tmdb_qr_desc">QR code for adding your TMDB Key from your phone</string>
     <string name="settings_tmdb_type">Type it instead</string>
-    <string name="settings_tmdb_type_hint">Paste the API Key from your TMDB account's settings. Settee checks it with TMDB before saving it.</string>
+    <string name="settings_tmdb_type_hint">Paste the API Key from your TMDB account\'s settings. Settee checks it with TMDB before saving it.</string>
     <string name="settings_tmdb_checking">Checking your key with TMDB…</string>
     <string name="settings_tmdb_ending">Ends in %1$s</string>
     <string name="settings_tmdb_replace">Replace key</string>
@@ -613,24 +610,24 @@
     <string name="tmdb_attribution">This product uses the TMDB API but is not endorsed or certified by TMDB.</string>
     <string name="tmdb_logo_desc">TMDB</string>
     <string name="onboarding_tmdb_title">Add your TMDB Key</string>
-    <string name="onboarding_tmdb_help">It's optional. It fills in missing posters, synopses and cast, and you can add it later in Settings › TMDB.</string>
+    <string name="onboarding_tmdb_help">It\'s optional. It fills in missing posters, synopses and cast, and you can add it later in Settings › TMDB.</string>
     <string name="onboarding_tmdb_skip">Skip for now</string>
     <string name="pairing_phone_tmdb_title">Add your TMDB Key</string>
     <string name="pairing_phone_tmdb_sub">Paste it here and your TV checks it with TMDB.</string>
-    <string name="pairing_phone_tmdb_optional">It's optional. It fills in missing posters, synopses and cast, and you can add it later in Settings › TMDB.</string>
+    <string name="pairing_phone_tmdb_optional">It\'s optional. It fills in missing posters, synopses and cast, and you can add it later in Settings › TMDB.</string>
     <string name="pairing_phone_tmdb_label">TMDB Key</string>
     <string name="pairing_phone_tmdb_send">Send to TV</string>
     <string name="pairing_phone_tmdb_how">How do I get one?</string>
     <string name="pairing_phone_tmdb_step1">Create a free TMDB account.</string>
     <string name="pairing_phone_tmdb_step2">Open the API page in your account settings.</string>
-    <string name="pairing_phone_tmdb_step3">Fill in TMDB's form: personal use, with Settee as the app name.</string>
-    <string name="pairing_phone_tmdb_step4">Copy the "API Key" and paste it here.</string>
+    <string name="pairing_phone_tmdb_step3">Fill in TMDB\'s form: personal use, with Settee as the app name.</string>
+    <string name="pairing_phone_tmdb_step4">Copy the \"API Key\" and paste it here.</string>
     <string name="pairing_phone_tmdb_saved_title">Key saved</string>
     <string name="pairing_phone_tmdb_saved_body">Your TV can fill in posters, synopses and cast now. You can put your phone down.</string>
-    <string name="error_tmdb_key_rejected">TMDB didn't accept that key. Check you copied the whole API Key, then try again.</string>
-    <string name="error_tmdb_unreachable_tv">Can't reach TMDB. Check this TV is online, then try again.</string>
-    <string name="error_tmdb_unreachable_device">Can't reach TMDB. Check this device is online, then try again.</string>
-    <string name="error_tmdb_trouble">TMDB is having problems. That's at their end, so try again later.</string>
+    <string name="error_tmdb_key_rejected">TMDB didn\'t accept that key. Check you copied the whole API Key, then try again.</string>
+    <string name="error_tmdb_unreachable_tv">Can\'t reach TMDB. Check this TV is online, then try again.</string>
+    <string name="error_tmdb_unreachable_device">Can\'t reach TMDB. Check this device is online, then try again.</string>
+    <string name="error_tmdb_trouble">TMDB is having problems. That\'s at their end, so try again later.</string>
     <string name="error_http_401">Your provider didn\'t accept your login. Check the username and password in Settings.</string>
     <string name="error_http_403">Your provider refused this. Your account may be in use on another device, so stop it there and try again.</string>
     <string name="error_http_429">Your provider is getting too many requests from this device. Wait a minute, then try again.</string>

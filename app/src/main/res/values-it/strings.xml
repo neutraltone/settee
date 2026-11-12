@@ -233,7 +233,6 @@
     <string name="rec_switch_keep_watching">Resta qui</string>
     <string name="rec_switch_channel_name">Cambio automatico registrazione</string>
     <string name="rec_switch_channel_desc">Avvisa prima di passare a una registrazione programmata</string>
-    <string name="settings_tmdb_note">Incolla la tua chiave API TMDB gratuita per completare poster, sfondi, cast e trame mancanti su Film e Serie. Rimane su questo dispositivo.</string>
     <string name="settings_tmdb_key_label">Chiave API TMDB</string>
     <string name="guide_next_prefix">Poi  %1$s  %2$s</string>
     <string name="vod_empty_category_movies">Nessun film in questa categoria.</string>

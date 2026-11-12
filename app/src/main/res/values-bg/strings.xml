@@ -233,7 +233,6 @@
     <string name="rec_switch_keep_watching">Продължи да гледаш</string>
     <string name="rec_switch_channel_name">Автоматично превключване при запис</string>
     <string name="rec_switch_channel_desc">Предупреждава преди превключване на екрана към насрочен запис</string>
-    <string name="settings_tmdb_note">Поставете своя безплатен TMDB API ключ, за да попълните липсващи постери, фонови изображения, актьорски състав и синопсиси за Филми &amp; Сериали. Той остава на това устройство.</string>
     <string name="settings_tmdb_key_label">TMDB API ключ</string>
     <string name="guide_next_prefix">Следва  %1$s  %2$s</string>
     <string name="vod_empty_category_movies">Няма филми в тази категория.</string>

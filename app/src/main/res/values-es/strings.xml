@@ -233,7 +233,6 @@
     <string name="rec_switch_keep_watching">Seguir viendo</string>
     <string name="rec_switch_channel_name">Cambio automático de grabación</string>
     <string name="rec_switch_channel_desc">Avisa antes de cambiar la pantalla a una grabación programada</string>
-    <string name="settings_tmdb_note">Pega tu propia clave gratuita de la API de TMDB para completar carátulas, fondos, reparto y sinopsis que falten en Películas y Series. Permanece en este dispositivo.</string>
     <string name="settings_tmdb_key_label">Clave de la API de TMDB</string>
     <string name="guide_next_prefix">Siguiente  %1$s  %2$s</string>
     <string name="vod_empty_category_movies">No hay películas en esta categoría.</string>

@@ -9,6 +9,8 @@ import android.app.Application
 import android.view.View
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.isFocused
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
@@ -19,6 +21,11 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
+import androidx.test.espresso.Espresso
+import androidx.test.espresso.UiController
+import androidx.test.espresso.ViewAction
+import androidx.test.espresso.matcher.RootMatchers
+import androidx.test.espresso.matcher.ViewMatchers
 import app.opentv.core.ServiceLocator
 import app.opentv.data.db.OpenTvDatabase
 import app.opentv.data.model.SourceKind
@@ -30,6 +37,7 @@ import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.After
+import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -66,8 +74,38 @@ class ProviderRoutesTest {
         },
     )
 
+    // Most tests here are about Setup, so they have a TMDB Key already and see no TMDB step.
+    @Before
+    fun haveTmdbKey() = graph.settings.setTmdbApiKey(TMDB_KEY)
+
     @After
     fun close() = graph.database.close()
+
+    /** The keyboard over an entry screen, which is a window of its own. */
+    private fun entryKeyboard(): DeviceKeyboard {
+        compose.waitForIdle()
+        var root: View? = null
+        Espresso.onView(ViewMatchers.isRoot()).inRoot(RootMatchers.isDialog()).perform(
+            object : ViewAction {
+                override fun getConstraints() = ViewMatchers.isRoot()
+                override fun getDescription() = "find the entry screen's window"
+                override fun perform(controller: UiController, view: View) {
+                    root = view
+                }
+            },
+        )
+        return DeviceKeyboard(compose) { checkNotNull(root) }
+    }
+
+    /** Types [key] on the TMDB step's Type it instead and saves it. */
+    private fun typeTmdbKey(key: String) {
+        compose.waitUntil(5_000) { compose.onAllNodesWithText("Type it instead").fetchSemanticsNodes().isNotEmpty() }
+        compose.onNodeWithText("Type it instead").performClick()
+        entryKeyboard().run {
+            type(key)
+            pressAction()
+        }
+    }
 
     private fun setApp(start: String, sources: SourcesViewModel = SourcesViewModel(app)) {
         compose.setTvContent {
@@ -204,7 +242,73 @@ class ProviderRoutesTest {
     }
 
     @Test
-    fun `a provider added while there's one already doesn't open Setup`() {
+    fun `saving the first provider with no TMDB Key asks for one, with Setup loading behind it`() {
+        graph.settings.removeTmdbApiKey()
+        setApp(start = Routes.ADD_SOURCE, sources = SourcesViewModel(app, graph))
+
+        savePlaylist()
+
+        compose.waitUntil(5_000) { route() == Routes.TMDB_STEP }
+        compose.onNodeWithText("Add your TMDB Key").assertExists()
+        compose.onNodeWithText("It's optional", substring = true).assertExists()
+        compose.onNodeWithText("Type it instead").assertExists()
+        compose.onNodeWithText(TMDB_ATTRIBUTION).assertExists()
+        compose.onNode(hasText("Skip for now") and isFocused()).assertExists()
+        // The first Catalogue Refresh didn't wait for the step.
+        compose.waitUntil(5_000) { runBlocking { graph.sourceRepository.all() }.any { it.lastCatalogSyncMillis > 0 } }
+        captureScreen("onboarding_tmdb_step")
+
+        compose.onNodeWithText("Skip for now").performClick()
+
+        compose.waitUntil(5_000) { route() == Routes.SETUP }
+        compose.waitUntil(5_000) { compose.onAllNodesWithText("Take me to Settee").fetchSemanticsNodes().isNotEmpty() }
+        assertThat(graph.settings.tmdbApiKey.value).isEmpty()
+        // Back from Setup doesn't return to the step.
+        assertThat(compose.runOnIdle { nav.previousBackStackEntry?.destination?.route }).isNotEqualTo(Routes.TMDB_STEP)
+    }
+
+    @Test
+    fun `a key TMDB accepts on the TMDB step is saved, and Setup follows`() {
+        graph.settings.removeTmdbApiKey()
+        panel.replies["/3/authentication"] = """{"success": true}"""
+        setApp(start = Routes.ADD_SOURCE, sources = SourcesViewModel(app, graph))
+        savePlaylist()
+        compose.waitUntil(5_000) { route() == Routes.TMDB_STEP }
+
+        typeTmdbKey(OTHER_TMDB_KEY)
+
+        compose.waitUntil(5_000) { route() == Routes.SETUP }
+        assertThat(graph.settings.tmdbApiKey.value).isEqualTo(OTHER_TMDB_KEY)
+    }
+
+    @Test
+    fun `a key TMDB turns down on the TMDB step offers Try again and Skip for now, and keeps the provider`() {
+        graph.settings.removeTmdbApiKey()
+        panel.replies["/3/authentication"] = "!401"
+        setApp(start = Routes.ADD_SOURCE, sources = SourcesViewModel(app, graph))
+        savePlaylist()
+        compose.waitUntil(5_000) { route() == Routes.TMDB_STEP }
+
+        typeTmdbKey(OTHER_TMDB_KEY)
+
+        compose.waitUntil(5_000) {
+            compose.onAllNodesWithText("TMDB didn't accept", substring = true).fetchSemanticsNodes().isNotEmpty()
+        }
+        compose.onNodeWithText("Try again").assertExists()
+        compose.onNodeWithText("Skip for now").assertExists()
+        assertThat(route()).isEqualTo(Routes.TMDB_STEP)
+        assertThat(graph.settings.tmdbApiKey.value).isEmpty()
+        assertThat(runBlocking { graph.sourceRepository.all() }.map { it.kind }).containsExactly(SourceKind.M3U)
+
+        compose.onNodeWithText("Try again").performClick()
+        compose.onNode(hasText("TMDB didn't accept", substring = true)).assertDoesNotExist()
+        compose.onNodeWithText("Skip for now").performClick()
+        compose.waitUntil(5_000) { route() == Routes.SETUP }
+    }
+
+    @Test
+    fun `a provider added while there's one already doesn't open Setup, or the TMDB step`() {
+        graph.settings.removeTmdbApiKey()
         runBlocking { graph.sourceRepository.save(PANEL_SOURCE.copy(id = 0, lastCatalogSyncMillis = 1)) }
         setApp(start = Routes.ADD_SOURCE, sources = SourcesViewModel(app, graph))
 
@@ -242,3 +346,9 @@ class ProviderRoutesTest {
 
 /** The start of what a playlist with no channels says (core/ErrorWording). */
 private const val NO_CHANNELS = "There are no channels at that address"
+
+/** Placeholder TMDB Keys, low-entropy so gitleaks sees no secret. */
+private val TMDB_KEY = "a".repeat(32)
+private val OTHER_TMDB_KEY = "b".repeat(32)
+
+private const val TMDB_ATTRIBUTION = "This product uses the TMDB API but is not endorsed or certified by TMDB."

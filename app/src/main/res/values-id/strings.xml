@@ -233,7 +233,6 @@
     <string name="rec_switch_keep_watching">Tetap menonton</string>
     <string name="rec_switch_channel_name">Alih otomatis rekaman</string>
     <string name="rec_switch_channel_desc">Memperingatkan sebelum mengalihkan layar ke rekaman terjadwal</string>
-    <string name="settings_tmdb_note">Tempelkan kunci API TMDB gratis Anda sendiri untuk melengkapi poster, backdrop, pemeran, dan sinopsis yang hilang pada Film &amp; Acara TV. Kunci ini tetap di perangkat ini.</string>
     <string name="settings_tmdb_key_label">Kunci API TMDB</string>
     <string name="guide_next_prefix">Berikutnya  %1$s  %2$s</string>
     <string name="vod_empty_category_movies">Tidak ada film di kategori ini.</string>

@@ -233,7 +233,6 @@
     <string name="rec_switch_keep_watching">そのまま視聴を続ける</string>
     <string name="rec_switch_channel_name">録画の自動切り替え</string>
     <string name="rec_switch_channel_desc">予約録画に画面を切り替える前に通知します</string>
-    <string name="settings_tmdb_note">ご自身の無料TMDB APIキーを貼り付けると、映画やTV番組の不足しているポスター、背景画像、出演者、あらすじを補完できます。キーはこの端末にのみ保存されます。</string>
     <string name="settings_tmdb_key_label">TMDB APIキー</string>
     <string name="guide_next_prefix">次  %1$s  %2$s</string>
     <string name="vod_empty_category_movies">このカテゴリには映画がありません。</string>

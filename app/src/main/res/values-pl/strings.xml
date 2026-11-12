@@ -233,7 +233,6 @@
     <string name="rec_switch_keep_watching">Oglądaj dalej</string>
     <string name="rec_switch_channel_name">Automatyczne przełączanie nagrywania</string>
     <string name="rec_switch_channel_desc">Ostrzega przed przełączeniem ekranu na zaplanowane nagranie</string>
-    <string name="settings_tmdb_note">Wklej własny bezpłatny klucz API TMDB, aby uzupełnić brakujące plakaty, grafiki tła, obsadę i opisy w sekcji Filmy i Seriale. Pozostaje on tylko na tym urządzeniu.</string>
     <string name="settings_tmdb_key_label">Klucz API TMDB</string>
     <string name="guide_next_prefix">Następnie  %1$s  %2$s</string>
     <string name="vod_empty_category_movies">Brak filmów w tej kategorii.</string>

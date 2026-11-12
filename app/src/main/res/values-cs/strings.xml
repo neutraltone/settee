@@ -233,7 +233,6 @@
     <string name="rec_switch_keep_watching">Pokračovat ve sledování</string>
     <string name="rec_switch_channel_name">Automatické přepnutí při nahrávání</string>
     <string name="rec_switch_channel_desc">Upozorní před přepnutím obrazovky na naplánované nahrávání</string>
-    <string name="settings_tmdb_note">Vložte svůj vlastní bezplatný API klíč TMDB pro doplnění chybějících plakátů, pozadí, obsazení a synopsí u filmů a seriálů. Zůstává pouze v tomto zařízení.</string>
     <string name="settings_tmdb_key_label">API klíč TMDB</string>
     <string name="guide_next_prefix">Další  %1$s  %2$s</string>
     <string name="vod_empty_category_movies">V této kategorii nejsou žádné filmy.</string>

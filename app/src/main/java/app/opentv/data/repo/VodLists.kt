@@ -184,3 +184,14 @@ internal fun Series.withTmdb(meta: TmdbMeta?, at: Long): Series = if (meta == nu
         tmdbAnsweredAt = at,
     )
 }
+
+/** This series with its empty details filled from the provider's `get_series_info` [info]. */
+internal fun Series.filledFrom(info: XtreamApi.SeriesInfo): Series = copy(
+    backdropUrl = backdropUrl ?: info.backdropUrl,
+    cast = cast ?: info.cast,
+    genre = genre ?: info.genre,
+    tmdbId = tmdbId ?: info.tmdbId,
+    plot = plot ?: info.plot,
+    rating = rating ?: info.rating,
+    year = year ?: info.year,
+)

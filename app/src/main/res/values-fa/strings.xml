@@ -233,7 +233,6 @@
     <string name="rec_switch_keep_watching">ادامه تماشا</string>
     <string name="rec_switch_channel_name">تعویض خودکار ضبط</string>
     <string name="rec_switch_channel_desc">پیش از تغییر صفحه به یک ضبط زمان‌بندی‌شده هشدار می‌دهد</string>
-    <string name="settings_tmdb_note">کلید رایگان API از TMDB خود را بچسبانید تا پوسترها، تصاویر پس‌زمینه، بازیگران و خلاصه داستان‌های ناقص در فیلم‌ها و سریال‌ها تکمیل شوند. این کلید روی همین دستگاه باقی می‌ماند.</string>
     <string name="settings_tmdb_key_label">کلید API از TMDB</string>
     <string name="guide_next_prefix">بعدی  %1$s  %2$s</string>
     <string name="vod_empty_category_movies">در این دسته فیلمی وجود ندارد.</string>

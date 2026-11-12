@@ -233,7 +233,6 @@
     <string name="rec_switch_keep_watching">Fortsett å se</string>
     <string name="rec_switch_channel_name">Automatisk bytte ved opptak</string>
     <string name="rec_switch_channel_desc">Varsler før skjermen bytter til et planlagt opptak</string>
-    <string name="settings_tmdb_note">Lim inn din egen gratis TMDB API-nøkkel for å fylle inn manglende plakater, bakgrunnsbilder, skuespillere og sammendrag for Filmer og Serier. Den blir værende på denne enheten.</string>
     <string name="settings_tmdb_key_label">TMDB API-nøkkel</string>
     <string name="guide_next_prefix">Neste  %1$s  %2$s</string>
     <string name="vod_empty_category_movies">Ingen filmer i denne kategorien.</string>

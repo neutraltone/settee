@@ -233,7 +233,6 @@
     <string name="rec_switch_keep_watching">Blijven kijken</string>
     <string name="rec_switch_channel_name">Automatisch wisselen bij opname</string>
     <string name="rec_switch_channel_desc">Waarschuwt voordat het scherm overschakelt naar een geplande opname</string>
-    <string name="settings_tmdb_note">Plak je eigen gratis TMDB API-sleutel om ontbrekende posters, achtergronden, cast en synopsissen bij Films en Series aan te vullen. Deze blijft op dit apparaat.</string>
     <string name="settings_tmdb_key_label">TMDB API-sleutel</string>
     <string name="guide_next_prefix">Volgende  %1$s  %2$s</string>
     <string name="vod_empty_category_movies">Geen films in deze categorie.</string>

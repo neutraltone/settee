@@ -233,7 +233,6 @@
     <string name="rec_switch_keep_watching">Pokračovať v sledovaní</string>
     <string name="rec_switch_channel_name">Automatické prepnutie pri nahrávaní</string>
     <string name="rec_switch_channel_desc">Upozorní pred prepnutím obrazovky na naplánované nahrávanie</string>
-    <string name="settings_tmdb_note">Vložte svoj vlastný bezplatný API kľúč TMDB a doplňte chýbajúce plagáty, pozadia, obsadenie a synopsy pre Filmy &amp; Seriály. Zostáva iba na tomto zariadení.</string>
     <string name="settings_tmdb_key_label">API kľúč TMDB</string>
     <string name="guide_next_prefix">Ďalej  %1$s  %2$s</string>
     <string name="vod_empty_category_movies">V tejto kategórii nie sú žiadne filmy.</string>

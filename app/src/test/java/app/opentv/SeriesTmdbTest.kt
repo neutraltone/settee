@@ -36,14 +36,7 @@ class SeriesTmdbTest {
         test.close()
     }
 
-    private fun series(
-        id: String,
-        added: Long = 1,
-        plot: String? = null,
-        tmdbAt: Long? = null,
-        backdrop: String? = null,
-        cast: String? = null,
-    ) = Series(
+    private fun series(id: String, added: Long = 1, plot: String? = null, tmdbAt: Long? = null) = Series(
         sourceId = PANEL_SOURCE.id,
         seriesId = id,
         name = "Show $id",
@@ -53,8 +46,6 @@ class SeriesTmdbTest {
         year = null,
         plot = plot,
         addedMillis = added,
-        backdropUrl = backdrop,
-        cast = cast,
         // A genre counts as the provider having answered, so opening it doesn't ask the panel.
         genre = "Drama",
         tmdbAnsweredAt = tmdbAt,
@@ -62,7 +53,7 @@ class SeriesTmdbTest {
 
     /** A series with everything TMDB would fill already there. */
     private fun complete(id: String, tmdbAt: Long?) =
-        series(id, plot = "A show.", tmdbAt = tmdbAt, backdrop = "http://example.com/b.jpg", cast = "Someone")
+        series(id, plot = "A show.", tmdbAt = tmdbAt).copy(backdropUrl = "http://example.com/b.jpg", cast = "Someone")
 
     private suspend fun save(vararg series: Series) {
         test.db.sources().insert(PANEL_SOURCE)

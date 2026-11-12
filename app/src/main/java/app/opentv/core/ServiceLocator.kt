@@ -9,6 +9,8 @@ import android.content.Context
 import app.opentv.data.db.OpenTvDatabase
 import app.opentv.data.remote.StalkerApi
 import app.opentv.data.remote.StremioClient
+import app.opentv.data.remote.TmdbCheck
+import app.opentv.data.remote.TmdbClient
 import app.opentv.data.remote.XtreamApi
 import app.opentv.data.repo.CatalogRepository
 import app.opentv.data.repo.CatalogueRefresh
@@ -25,6 +27,8 @@ import app.opentv.data.repo.ViewerLibrary
 import app.opentv.data.repo.VodQualities
 import app.opentv.data.repo.WaitingProgress
 import app.opentv.isRunningOnTelevision
+import app.opentv.pairing.PairingFonts
+import app.opentv.pairing.PairingServer
 import app.opentv.player.DecoderList
 import app.opentv.player.DeviceDecoders
 import app.opentv.recording.RecordingEngine
@@ -32,6 +36,7 @@ import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 
 /**
@@ -171,6 +176,20 @@ object ServiceLocator {
         private val refreshScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
         val refreshMessages: RefreshMessages by lazy { RefreshMessages(appContext) }
+
+        /** TMDB for checking a TMDB Key before it's saved; the catalogue has its own for look-ups. */
+        private val tmdbClient: TmdbClient by lazy { TmdbClient(httpClient, settings) }
+
+        /** Asks TMDB whether it takes [key], off the main thread. */
+        suspend fun checkTmdbKey(key: String): TmdbCheck = withContext(Dispatchers.IO) { tmdbClient.check(key) }
+
+        /**
+         * The phone's way in, for providers and the TMDB Key. One for the app, so Onboarding's TMDB step
+         * carries on with the address the phone sent the first provider through.
+         */
+        val pairingServer: PairingServer by lazy {
+            PairingServer(refreshScope, PairingFonts(appContext), appContext::getString)
+        }
 
         /** Says "this TV" or "this device" as the app decided at launch, with [isRunningOnTelevision]. */
         val errorWording: ErrorWording by lazy { ErrorWording(appContext, isRunningOnTelevision(appContext)) }

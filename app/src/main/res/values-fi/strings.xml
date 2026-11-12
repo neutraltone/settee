@@ -233,7 +233,6 @@
     <string name="rec_switch_keep_watching">Jatka katselua</string>
     <string name="rec_switch_channel_name">Tallennuksen automaattinen vaihto</string>
     <string name="rec_switch_channel_desc">Varoittaa ennen näytön vaihtamista ajastettuun tallennukseen</string>
-    <string name="settings_tmdb_note">Liitä oma ilmainen TMDB API -avaimesi täyttääksesi puuttuvat julisteet, taustakuvat, näyttelijät ja juonikuvaukset Elokuvat- ja Sarjat-osioihin. Se pysyy tässä laitteessa.</string>
     <string name="settings_tmdb_key_label">TMDB API -avain</string>
     <string name="guide_next_prefix">Seuraavaksi  %1$s  %2$s</string>
     <string name="vod_empty_category_movies">Tässä kategoriassa ei ole elokuvia.</string>

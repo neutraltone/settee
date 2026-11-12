@@ -233,7 +233,6 @@
     <string name="rec_switch_keep_watching">Συνέχιση παρακολούθησης</string>
     <string name="rec_switch_channel_name">Αυτόματη εναλλαγή εγγραφής</string>
     <string name="rec_switch_channel_desc">Προειδοποιεί πριν από τη μετάβαση της οθόνης σε μια προγραμματισμένη εγγραφή</string>
-    <string name="settings_tmdb_note">Επικολλήστε το δικό σας δωρεάν κλειδί API TMDB για να συμπληρωθούν οι αφίσες, τα φόντα, οι ηθοποιοί και οι συνόψεις που λείπουν στις Ταινίες &amp; Σειρές. Παραμένει σε αυτή τη συσκευή.</string>
     <string name="settings_tmdb_key_label">Κλειδί API TMDB</string>
     <string name="guide_next_prefix">Επόμενο  %1$s  %2$s</string>
     <string name="vod_empty_category_movies">Δεν υπάρχουν ταινίες σε αυτή την κατηγορία.</string>

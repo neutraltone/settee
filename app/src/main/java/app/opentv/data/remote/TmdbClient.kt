@@ -234,20 +234,6 @@ class TmdbClient(
             }
         }
 
-    /**
-     * The one place a request gets the viewer's [key], so every call sends it the same way: a Read
-     * Access Token (v4) as a Bearer header, which TMDB rejects as an `api_key`, and an API Key (v3)
-     * as that parameter, which TMDB rejects as a Bearer.
-     */
-    private fun authorised(url: HttpUrl, key: String): Request {
-        val builder = Request.Builder().header("User-Agent", "OpenTV")
-        return if (isReadAccessToken(key)) {
-            builder.url(url).header("Authorization", "Bearer $key").build()
-        } else {
-            builder.url(url.newBuilder().addQueryParameter("api_key", key).build()).build()
-        }
-    }
-
     private companion object {
         const val TAG = "TmdbClient"
         val TMDB_BASE: HttpUrl = "https://api.themoviedb.org/3".toHttpUrl()
@@ -278,3 +264,17 @@ internal fun isReadAccessToken(key: String): Boolean {
 }
 
 private const val JWT_PARTS = 3
+
+/**
+ * The one place a request gets the viewer's [key], so every call sends it the same way: a Read
+ * Access Token (v4) as a Bearer header, which TMDB rejects as an `api_key`, and an API Key (v3)
+ * as that parameter, which TMDB rejects as a Bearer.
+ */
+private fun authorised(url: HttpUrl, key: String): Request {
+    val builder = Request.Builder().header("User-Agent", "OpenTV")
+    return if (isReadAccessToken(key)) {
+        builder.url(url).header("Authorization", "Bearer $key").build()
+    } else {
+        builder.url(url.newBuilder().addQueryParameter("api_key", key).build()).build()
+    }
+}

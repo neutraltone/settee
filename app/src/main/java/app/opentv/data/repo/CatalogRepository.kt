@@ -495,23 +495,12 @@ class CatalogRepository(
         // 1) Provider back-fill from get_series_info, for a still-bare row on an Xtream source.
         if (!result.isEnriched && source?.kind == SourceKind.XTREAM) {
             val info = runCatching { api.seriesInfo(source, result.seriesId) }.getOrNull()
-            if (info != null) {
-                result = result.copy(
-                    backdropUrl = result.backdropUrl ?: info.backdropUrl,
-                    cast = result.cast ?: info.cast,
-                    genre = result.genre ?: info.genre,
-                    tmdbId = result.tmdbId ?: info.tmdbId,
-                    plot = result.plot ?: info.plot,
-                    rating = result.rating ?: info.rating,
-                    year = result.year ?: info.year,
-                )
-            }
+            if (info != null) result = result.filledFrom(info)
         }
 
         // 2) TMDB, with the viewer's key, at once when something is still missing or TMDB's answer
         //    is six months old, so a series the background pass hasn't reached still fills in.
-        val missing = result.backdropUrl == null || result.plot == null || result.cast == null
-        if (tmdb.isConfigured() && (missing || tmdbDue(result.tmdbAnsweredAt, now))) {
+        if (tmdb.isConfigured() && result.wantsTmdb(now)) {
             tmdbMetaOf(result).onSuccess { result = result.withTmdb(it, now) }
         }
 
@@ -531,6 +520,10 @@ class CatalogRepository(
 
     private val Series.isEnriched: Boolean
         get() = backdropUrl != null || cast != null || genre != null
+
+    /** Whether opening this series asks TMDB: something TMDB fills is missing, or its answer is six months old. */
+    private fun Series.wantsTmdb(now: Long): Boolean =
+        backdropUrl == null || plot == null || cast == null || tmdbDue(tmdbAnsweredAt, now)
 
     /**
      * A film's More like this, ranked by the rules For you uses ([score]), after two things that

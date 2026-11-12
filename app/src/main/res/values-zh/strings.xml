@@ -233,7 +233,6 @@
     <string name="rec_switch_keep_watching">继续观看</string>
     <string name="rec_switch_channel_name">录制自动切换</string>
     <string name="rec_switch_channel_desc">在画面切换到预约录制前发出提醒</string>
-    <string name="settings_tmdb_note">粘贴你自己的免费 TMDB API 密钥，为电影和剧集补全缺失的海报、背景图、演员和简介。密钥仅保存在本设备上。</string>
     <string name="settings_tmdb_key_label">TMDB API 密钥</string>
     <string name="guide_next_prefix">接下来  %1$s  %2$s</string>
     <string name="vod_empty_category_movies">此分类中没有电影。</string>

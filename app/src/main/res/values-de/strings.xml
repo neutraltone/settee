@@ -233,7 +233,6 @@
     <string name="rec_switch_keep_watching">Hier bleiben</string>
     <string name="rec_switch_channel_name">Automatischer Aufnahmewechsel</string>
     <string name="rec_switch_channel_desc">Warnt, bevor der Bildschirm zu einer geplanten Aufnahme wechselt</string>
-    <string name="settings_tmdb_note">Füge deinen eigenen kostenlosen TMDB-API-Schlüssel ein, um fehlende Poster, Hintergrundbilder, Besetzungen und Zusammenfassungen bei Filmen &amp; Serien zu ergänzen. Er bleibt auf diesem Gerät.</string>
     <string name="settings_tmdb_key_label">TMDB-API-Schlüssel</string>
     <string name="guide_next_prefix">Danach  %1$s  %2$s</string>
     <string name="vod_empty_category_movies">Keine Filme in dieser Kategorie.</string>
