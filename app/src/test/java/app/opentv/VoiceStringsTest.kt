@@ -94,8 +94,7 @@ class VoiceStringsTest {
 
     @Test
     fun `no English string has an em dash`() {
-        // pairing_got_it is reworded by the Setup ticket's branch (#224), so this one leaves it to that change.
-        val offenders = english.filterKeys { it != "pairing_got_it" }.filterValues { '—' in it }
+        val offenders = english.filterValues { '—' in it }
             .map { (key, text) -> "$key: $text" } +
             plurals("values").filterValues { '—' in it }.map { (key, text) -> "$key: $text" }
 
