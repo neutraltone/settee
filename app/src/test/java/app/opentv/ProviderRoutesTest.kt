@@ -17,6 +17,7 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -308,9 +309,10 @@ class ProviderRoutesTest {
         assertThat(graph.settings.tmdbApiKey.value).isEmpty()
         assertThat(runBlocking { graph.sourceRepository.all() }.map { it.kind }).containsExactly(SourceKind.M3U)
 
-        stepButton("Try again").performClick()
+        // Below the message, near the foot of the screen, where a tap would miss it unscrolled.
+        stepButton("Try again").performScrollTo().performClick()
         compose.onNode(hasText("TMDB didn't accept", substring = true)).assertDoesNotExist()
-        stepButton("Skip for now").performClick()
+        stepButton("Skip for now").performScrollTo().performClick()
         compose.waitUntil(5_000) { route() == Routes.SETUP }
     }
 
