@@ -23,6 +23,8 @@ from pathlib import Path
 # Kept in step with @color/settee_coral and @color/settee_plum, which test_mark.py checks. The
 # drawables use those resources; the SVGs can't, so they carry the hex.
 CORAL, PLUM = "#FF8F6B", "#1A1416"
+# SetteeColors.Text: "the tile beside the name in cream" on a dark screen (docs/LOOK.md, Identity).
+CREAM = "#F8EFEA"
 CORAL_RES, PLUM_RES = "@color/settee_coral", "@color/settee_plum"
 
 # The mark, in the #153 prototype's own 100-unit space.
@@ -249,7 +251,49 @@ def outputs(root):
          f'  <g transform="translate({fmt(left)} 42) scale(.96)">'] + svg_paths(colour_mark(PLUM, CORAL), "    ")
         + ["  </g>", f'  <path transform="translate({fmt(word_x)} {fmt(word_y)})" d="{word}" fill="{PLUM}"/>',
            "</svg>"]) + "\n"
+
+    # The phone page's lockup, for a dark screen: the tile beside the name in cream, the word's ink
+    # centred on the tile. A Kotlin constant rather than an asset, so every page can include it
+    # without a Context, and inline because the page's server stops listening once it has replied.
+    scale = 1.25
+    lock_x = 100 + 24
+    lock_y = 50 - (top + bottom) * scale / 2
+    width = lock_x + advance * scale
+    lockup = "\n".join(
+        [f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {fmt(width)} 100" role="img" aria-label="Settee">',
+         f'<rect width="100" height="100" rx="22" fill="{CORAL}"/>',
+         '<g transform="translate(13 13) scale(.74)">']
+        + [line.strip() for line in svg_paths(colour_mark(PLUM, CORAL), "")]
+        + ["</g>", f'<path transform="translate({fmt(lock_x)} {fmt(lock_y)}) scale({fmt(scale)})" fill="{CREAM}" d="'
+           + wrap_path(word, "") + '"/>', "</svg>"])
+    files[root / "app/src/main/java/app/opentv/pairing/PairingLockup.kt"] = "\n".join([
+        "/*",
+        " * This file is part of OpenTV.",
+        " * Copyright (C) 2026 The OpenTV Contributors",
+        " * Licensed under the GNU General Public License v3.0 or later.",
+        " */",
+        "package app.opentv.pairing",
+        "",
+        "/** Settee's mark beside its name, for the phone page. Written by tools/launcher-art/mark.py. */",
+        'internal const val PAIRING_LOCKUP = """',
+        wrap_long(lockup),
+        '"""',
+        ""])
     return files
+
+
+def wrap_long(text):
+    """Breaks any line over WRAP at a space, which SVG treats as any other space."""
+    out = []
+    for line in text.split("\n"):
+        while len(line) > WRAP:
+            cut = line.rfind(" ", 0, WRAP)
+            if cut <= 0:
+                break
+            out.append(line[:cut])
+            line = line[cut + 1:]
+        out.append(line)
+    return "\n".join(out)
 
 
 def main():

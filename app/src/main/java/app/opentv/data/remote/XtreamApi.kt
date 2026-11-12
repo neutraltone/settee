@@ -17,7 +17,6 @@ import app.opentv.data.parser.parseReleaseDate
 import app.opentv.data.remote.ProviderException.Problem
 import java.io.Closeable
 import java.io.File
-import java.io.InputStream
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.DecodeSequenceMode
@@ -34,6 +33,7 @@ import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.Response
+import okhttp3.ResponseBody
 import okio.buffer
 import okio.source
 
@@ -279,8 +279,11 @@ class XtreamApi(
         )
     }
 
-    /** Opens the XMLTV guide as a stream. The caller must close it. */
-    suspend fun openEpgStream(source: Source): InputStream = withContext(Dispatchers.IO) {
+    /**
+     * The provider's guide, with its size where the server gives one (Setup's bar moves on it). The
+     * caller must close it.
+     */
+    suspend fun openEpg(source: Source): ResponseBody = withContext(Dispatchers.IO) {
         val url = source.epgUrl?.toHttpUrlOrNull() ?: xmltvUrl(source)
         val response = http.newCall(request(source, url)).execute()
         if (!response.isSuccessful) {
@@ -291,7 +294,7 @@ class XtreamApi(
                 status = response.code,
             )
         }
-        response.body.byteStream()
+        response.body
     }
 
     // ---- URL construction ----------------------------------------------------------------
@@ -387,16 +390,22 @@ class XtreamApi(
          * is an empty list, HTML the "not a valid catalogue" message, which can come after some
          * batches if a list is cut off.
          */
-        suspend fun forEachBatch(save: suspend (List<T>) -> Unit) = withContext(Dispatchers.IO) {
+        suspend fun forEachBatch(progress: (Float) -> Unit = {}, save: suspend (List<T>) -> Unit) = withContext(
+            Dispatchers.IO,
+        ) {
+            // The file's size is known even when the panel didn't say how big its reply was.
+            val size = file.length().coerceAtLeast(1)
+            var read = 0L
             val batch = ArrayList<T>(CATALOGUE_BATCH)
             suspend fun each(element: JsonElement) {
                 batch += element.jsonObjectOrNull?.let(parse) ?: return
                 if (batch.size == CATALOGUE_BATCH) {
                     save(batch.toList())
                     batch.clear()
+                    progress((read.toFloat() / size).coerceAtMost(1f))
                 }
             }
-            file.source().buffer().use { body ->
+            CountingInputStream(file.inputStream()) { read = it }.source().buffer().use { body ->
                 while (body.request(1) && body.buffer[0].toInt().toChar().isWhitespace()) body.skip(1)
                 if (body.request(1) && body.buffer[0] == '['.code.toByte()) {
                     val elements = json.decodeToSequence<JsonElement>(
@@ -410,6 +419,7 @@ class XtreamApi(
                 }
             }
             if (batch.isNotEmpty()) save(batch.toList())
+            progress(1f)
         }
 
         override fun close() {

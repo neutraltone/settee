@@ -721,37 +721,64 @@ class CatalogRepository(
         val moviesOn = settings.moviesEnabled.value
         val seriesOn = settings.seriesEnabled.value
         if (!moviesOn && !seriesOn) return VodFetch(emptyList(), complete = false)
-
-        // A failed list still leaves the others to be saved, but it must not count as fetched.
-        var complete = true
-        suspend fun <T> attempt(wanted: Boolean, empty: T, fetch: suspend () -> T): T {
-            if (!wanted) return empty
-            return runCatching { fetch() }.getOrElse {
-                if (it is CancellationException) throw it
-                complete = false
-                empty
-            }
-        }
-        suspend fun categories(wanted: Boolean, fetch: suspend () -> List<Category>) {
-            val categories = attempt(wanted, emptyList(), fetch)
-            if (categories.isNotEmpty()) categoryDao.upsertAll(categories)
-        }
-
-        // See VodLists for how each list is saved.
-        var movies = 0
-        categories(moviesOn) { api.movieCategories(source) }
-        attempt(moviesOn, Unit) { movies = api.movies(source).use { movieDao.save(source.id, it) } }
-        var series = SavedSeries(0, emptyList())
-        categories(seriesOn) { api.seriesCategories(source) }
-        attempt(seriesOn, Unit) { series = api.series(source).use { seriesDao.save(source.id, it) } }
-        if (movies > 0) fillGenresInBackground(source)
+        val movies = if (moviesOn) fetchMovies(source) else ListFetch.SKIPPED
+        val series = if (seriesOn) fetchShows(source) else ListFetch.SKIPPED
         return VodFetch(
-            series.moved,
+            series.updated,
             // Nothing at all may be a struggling panel's empty reply, so it isn't worth trusting for
             // 12 hours; an account with no VOD just asks again, which is a quick request.
-            complete && (movies > 0 || series.count > 0),
+            movies.complete && series.complete && (movies.count > 0 || series.count > 0),
         )
     }
+
+    /**
+     * One of an Xtream provider's lists, movies or shows: how many titles it had, whether it came
+     * back (a failed list still leaves the other to be saved, but mustn't count as fetched), and for
+     * shows, the ones updated since they were last saved.
+     */
+    data class ListFetch(val count: Int, val complete: Boolean, val updated: List<Series> = emptyList()) {
+        companion object {
+            val SKIPPED = ListFetch(0, complete = true)
+        }
+    }
+
+    /** How far through saving a list: its [share], 0 to 1, and how many titles are [saved] so far. */
+    data class SaveProgress(val share: Float, val saved: Int)
+
+    /**
+     * [source]'s movies, saved as in VodLists; the films' details then fill in in the background.
+     * [progress] hears how far through saving the downloaded list it is.
+     */
+    suspend fun fetchMovies(source: Source, progress: (SaveProgress) -> Unit = {}): ListFetch =
+        withContext(Dispatchers.IO) {
+            val categories = fetchList { categoryDao.upsertAll(api.movieCategories(source)) }
+            var count = 0
+            val list = fetchList { count = api.movies(source).use { movieDao.save(source.id, it, progress) } }
+            if (count > 0) fillGenresInBackground(source)
+            ListFetch(count, categories && list)
+        }
+
+    /** [source]'s shows, saved as in VodLists, with [progress] as for [fetchMovies]. */
+    suspend fun fetchShows(source: Source, progress: (SaveProgress) -> Unit = {}): ListFetch =
+        withContext(Dispatchers.IO) {
+            val categories = fetchList { categoryDao.upsertAll(api.seriesCategories(source)) }
+            var saved = SavedSeries(0, emptyList())
+            val list = fetchList { saved = api.series(source).use { seriesDao.save(source.id, it, progress) } }
+            ListFetch(saved.count, categories && list, saved.moved)
+        }
+
+    /** How many of [step]'s titles (movies or shows) [sourceId] has stored. */
+    suspend fun storedCount(sourceId: Long, step: SetupStep): Int = when (step) {
+        SetupStep.MOVIES -> movieDao.countForSource(sourceId)
+        SetupStep.SHOWS -> seriesDao.countForSource(sourceId)
+        SetupStep.CHANNELS, SetupStep.GUIDE -> 0
+    }
+
+    /** Whether [fetch] worked; anything but cancelling counts as a list that didn't come back. */
+    private suspend fun fetchList(fetch: suspend () -> Unit): Boolean = runCatching { fetch() }
+        .onFailure { if (it is CancellationException) throw it }
+        .onFailure { Log.w(TAG, "A movie or show list failed", it) }
+        .isSuccess
 
     /**
      * Files the credits of titles saved before credits were kept (database version 9), so they're on

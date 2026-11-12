@@ -12,7 +12,9 @@ import com.google.common.truth.Truth.assertThat
 import java.io.File
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.runBlocking
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -32,7 +34,8 @@ import org.robolectric.annotation.Config
 class PairingServerTest {
 
     private val scope = CoroutineScope(Dispatchers.Default)
-    private val server = PairingServer(scope, PairingFonts(ApplicationProvider.getApplicationContext()))
+    private val context = ApplicationProvider.getApplicationContext<android.content.Context>()
+    private val server = PairingServer(scope, PairingFonts(context), context::getString)
 
     @After
     fun close() {
@@ -50,6 +53,73 @@ class PairingServerTest {
     private fun get(url: String): Pair<Int, String> {
         val request = Request.Builder().url(url).build()
         return OkHttpClient().newCall(request).execute().use { it.code to it.body.string() }
+    }
+
+    /** Sends a playlist from the phone's form, as the viewer would. */
+    private fun submit(session: PairingServer.Session): Pair<Int, String> {
+        val form = okhttp3.FormBody.Builder()
+            .add("t", session.url.substringAfter("t="))
+            .add("code", session.confirmCode)
+            .add("kind", "m3u")
+            .add("url", "http://example.com/list.m3u")
+            .build()
+        val request = Request.Builder().url("http://${session.host}:${session.port}/submit").post(form).build()
+        return OkHttpClient.Builder().readTimeout(30, java.util.concurrent.TimeUnit.SECONDS).build()
+            .newCall(request).execute().use { it.code to it.body.string() }
+    }
+
+    /** The details the TV got, once it has them. */
+    private fun received(): PairingServer.State.Received {
+        val deadline = System.currentTimeMillis() + 10_000
+        while (System.currentTimeMillis() < deadline) {
+            (server.state.value as? PairingServer.State.Received)?.let { return it }
+            Thread.sleep(20)
+        }
+        error("the TV never got the details")
+    }
+
+    @Test
+    fun `the phone waits until the channels are in, then says it's all done`() {
+        val session = listening()
+
+        val reply = scope.async(Dispatchers.IO) { submit(session) }
+        val got = received()
+        assertThat(reply.isCompleted).isFalse()
+        got.answer(error = null)
+
+        val (_, page) = runBlocking { reply.await() }
+        assertThat(page).contains("All done")
+        assertThat(page).contains("Carry on on your TV.")
+    }
+
+    @Test
+    fun `a phone waiting when the TV leaves pairing is told at once, not left hanging`() {
+        val session = listening()
+
+        val reply = scope.async(Dispatchers.IO) { submit(session) }
+        received()
+        val started = System.currentTimeMillis()
+        server.stop()
+
+        val (_, page) = runBlocking { reply.await() }
+        assertThat(System.currentTimeMillis() - started).isLessThan(5_000L)
+        assertThat(page).contains("Setup stopped on your TV")
+    }
+
+    @Test
+    fun `a login that fails shows why on the phone, which can try again`() {
+        val session = listening()
+
+        val first = scope.async(Dispatchers.IO) { submit(session) }
+        received().answer(error = "Wrong username or password.")
+        val (_, page) = runBlocking { first.await() }
+
+        assertThat(page).contains("<form")
+        assertThat(page).contains("Wrong username or password.")
+        assertThat(server.state.value).isInstanceOf(PairingServer.State.Listening::class.java)
+        val second = scope.async(Dispatchers.IO) { submit(session) }
+        received().answer(error = null)
+        assertThat(runBlocking { second.await() }.second).contains("All done")
     }
 
     @Test

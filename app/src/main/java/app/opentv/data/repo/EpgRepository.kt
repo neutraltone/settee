@@ -21,6 +21,7 @@ import app.opentv.data.model.Programme
 import app.opentv.data.model.Source
 import app.opentv.data.parser.ChannelNameNormalizer
 import app.opentv.data.parser.XmltvParser
+import app.opentv.data.remote.CountingInputStream
 import app.opentv.data.remote.XtreamApi
 import java.io.BufferedInputStream
 import java.io.InputStream
@@ -32,6 +33,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import okhttp3.ResponseBody
 
 /**
  * Owns the electronic programme guide, end to end: feeds in, matched channels out.
@@ -190,65 +192,142 @@ class EpgRepository(
 
     /**
      * Downloads every enabled feed, merges, prunes, and re-runs the matcher. [skipFetchedSince] leaves
-     * out feeds already downloaded at or after that time, even when [force]d.
+     * out feeds already downloaded at or after that time, even when [force]d. [progress] hears how far
+     * through it is, 0 to 1, never backwards; see [GuideProgress].
      */
-    suspend fun syncAll(nowUtcMillis: Long, force: Boolean = false, skipFetchedSince: Long? = null): SyncSummary =
-        withContext(Dispatchers.IO) {
-            ensureFeeds()
-            maybeAutoEnableRegionalFeed()
+    suspend fun syncAll(
+        nowUtcMillis: Long,
+        force: Boolean = false,
+        skipFetchedSince: Long? = null,
+        progress: (SyncProgress) -> Unit = {},
+    ): SyncSummary = withContext(Dispatchers.IO) {
+        ensureFeeds()
+        maybeAutoEnableRegionalFeed()
 
-            var succeeded = 0
-            var failed = 0
-            var written = 0
+        var succeeded = 0
+        var failed = 0
+        var written = 0
 
-            for (feed in feedDao.enabled()) {
-                val inWindow = !force && nowUtcMillis - feed.lastSyncMillis < REFRESH_INTERVAL_MILLIS
-                if (inWindow || (skipFetchedSince != null && feed.lastSyncMillis >= skipFetchedSince)) {
-                    succeeded++
-                    continue
-                }
-                when (val result = syncFeed(feed, nowUtcMillis)) {
-                    is FeedResult.Success -> {
-                        succeeded++
-                        written += result.programmes
-                        feedDao.markSynced(
-                            feed.id,
-                            nowUtcMillis,
-                            "${result.programmes} programmes, ${result.channels} channels",
-                        )
-                    }
-                    is FeedResult.Failed -> {
-                        // A guide the viewer never asked for doesn't make the refresh a failure (Setup
-                        // would say the guide didn't load); Guide settings still shows why it failed.
-                        if (!feed.isSelfEnabled(selfEnabledGuide.name)) failed++
-                        // The stamp is NOT advanced on failure, so the next sync retries
-                        // rather than waiting out the interval on a feed that never landed.
-                        feedDao.markSynced(feed.id, feed.lastSyncMillis, result.reason.stored())
-                        Log.w(TAG, "Feed '${feed.name}' failed: ${result.reason.detail}")
-                    }
-                }
-            }
-
-            if (succeeded > 0) {
-                programmeDao.deleteEndedBefore(nowUtcMillis - RETENTION_PAST_MILLIS)
-            }
-
-            val (matched, total) = runMatcher()
-            SyncSummary(succeeded, failed, written, matched, total)
+        val (due, fresh) = feedDao.enabled().partition { feed ->
+            val inWindow = !force && nowUtcMillis - feed.lastSyncMillis < REFRESH_INTERVAL_MILLIS
+            !(inWindow || (skipFetchedSince != null && feed.lastSyncMillis >= skipFetchedSince))
         }
+        succeeded += fresh.size
+        val reporting = GuideProgress(feeds = due.size, progress)
+        reporting.feedsReady()
+
+        for ((index, feed) in due.withIndex()) {
+            val result = syncFeed(
+                feed,
+                nowUtcMillis,
+                read = { read -> reporting.reading(index, read) },
+                counted = reporting::programme,
+            )
+            reporting.feedDone(index)
+            when (result) {
+                is FeedResult.Success -> {
+                    succeeded++
+                    written += result.programmes
+                    feedDao.markSynced(
+                        feed.id,
+                        nowUtcMillis,
+                        "${result.programmes} programmes, ${result.channels} channels",
+                    )
+                }
+                is FeedResult.Failed -> {
+                    // A guide the viewer never asked for doesn't make the refresh a failure (Setup
+                    // would say the guide didn't load); Guide settings still shows why it failed.
+                    if (!feed.isSelfEnabled(selfEnabledGuide.name)) failed++
+                    // The stamp is NOT advanced on failure, so the next sync retries
+                    // rather than waiting out the interval on a feed that never landed.
+                    feedDao.markSynced(feed.id, feed.lastSyncMillis, result.reason.stored())
+                    Log.w(TAG, "Feed '${feed.name}' failed: ${result.reason.detail}")
+                }
+            }
+        }
+
+        if (succeeded > 0) {
+            programmeDao.deleteEndedBefore(nowUtcMillis - RETENTION_PAST_MILLIS)
+        }
+
+        val (matched, total) = runMatcher()
+        reporting.done()
+        SyncSummary(succeeded, failed, written, matched, total)
+    }
+
+    /**
+     * How far through [syncAll] a pass is. Shared as it went on a Fire TV Stick with a big provider
+     * (#224): setting up the feeds about 7% of the time, downloading them 85%, matching them to the
+     * channels 8%. A feed's slice moves with the bytes read where the server says how many there
+     * are; otherwise it fills when the feed is done.
+     */
+    private class GuideProgress(private val feeds: Int, private val report: (SyncProgress) -> Unit) {
+        private var last = -1f
+        private var programmes = 0
+        private var reportedProgrammes = 0
+
+        private fun at(value: Float) {
+            // Every whole half-percent, not every read: a big guide is thousands of reads.
+            if (value >= 1f || value - last >= STEP) {
+                last = value
+                tell()
+            }
+        }
+
+        private fun tell() {
+            reportedProgrammes = programmes
+            report(SyncProgress(last.coerceAtLeast(0f), programmes))
+        }
+
+        /**
+         * Another programme read. A guide whose size the server doesn't give can't move the share,
+         * but a count going up still shows it's arriving, so that's told every [PROGRAMMES] too.
+         */
+        fun programme() {
+            programmes++
+            if (programmes - reportedProgrammes >= PROGRAMMES) tell()
+        }
+
+        fun feedsReady() = at(SETUP)
+
+        /** [read] is the share of feed [index] read so far, 0 to 1. */
+        fun reading(index: Int, read: Float) = at(SETUP + FEEDS * (index + read.coerceIn(0f, 1f)) / feeds)
+
+        fun feedDone(index: Int) = at(SETUP + FEEDS * (index + 1) / feeds)
+
+        fun done() {
+            last = 1f
+            tell()
+        }
+
+        companion object {
+            const val SETUP = 0.07f
+            const val FEEDS = 0.85f
+            const val STEP = 0.005f
+            const val PROGRAMMES = 500
+        }
+    }
+
+    /** How far through [syncAll] a pass is: its [share], 0 to 1, and the [programmes] read so far. */
+    data class SyncProgress(val share: Float, val programmes: Int)
 
     private sealed interface FeedResult {
         data class Success(val programmes: Int, val channels: Int) : FeedResult
         data class Failed(val reason: ViewerError) : FeedResult
     }
 
-    private suspend fun syncFeed(feed: EpgFeed, nowUtcMillis: Long): FeedResult {
+    private suspend fun syncFeed(
+        feed: EpgFeed,
+        nowUtcMillis: Long,
+        read: (Float) -> Unit,
+        counted: () -> Unit,
+    ): FeedResult {
         val batch = ArrayList<Programme>(BATCH_SIZE)
         val aliases = ArrayList<EpgChannelAlias>(256)
         var written = 0
 
         try {
-            openFeedStream(feed).use { stream ->
+            openFeedStream(feed, read).use { stream ->
                 val stats = XmltvParser.parse(
                     input = stream,
                     feedId = feed.id,
@@ -261,6 +340,7 @@ class EpgRepository(
                         )
                     },
                     onProgramme = { programme ->
+                        counted()
                         // Skip anything that finished before the retention cut-off; no point
                         // writing rows we are about to prune.
                         if (programme.endUtcMillis >= nowUtcMillis - RETENTION_PAST_MILLIS) {
@@ -304,12 +384,12 @@ class EpgRepository(
      * the first two bytes for the gzip magic number handles both, regardless of what the
      * URL or the headers claim.
      */
-    private suspend fun openFeedStream(feed: EpgFeed): InputStream {
-        val raw: InputStream = when {
+    private suspend fun openFeedStream(feed: EpgFeed, read: (Float) -> Unit): InputStream {
+        val body: ResponseBody = when {
             feed.providerSourceId != null -> {
                 val source: Source = sourceDao.byId(feed.providerSourceId)
                     ?: throw IllegalStateException("Provider for this guide no longer exists.")
-                api.openEpgStream(source)
+                api.openEpg(source)
             }
             feed.url != null -> {
                 val response = http.newCall(Request.Builder().url(feed.url).build()).execute()
@@ -317,9 +397,13 @@ class EpgRepository(
                     response.close()
                     throw IllegalStateException("Guide download failed (HTTP ${response.code}).")
                 }
-                response.body.byteStream()
+                response.body
             }
             else -> throw IllegalStateException("Feed has no URL and no provider.")
+        }
+        // Counted before decompressing: the size the server gives is of what it sends.
+        val raw = body.contentLength().let { size ->
+            if (size > 0) CountingInputStream(body.byteStream()) { read(it.toFloat() / size) } else body.byteStream()
         }
 
         val buffered = BufferedInputStream(raw, 8 * 1024)

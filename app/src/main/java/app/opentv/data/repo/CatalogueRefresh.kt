@@ -31,6 +31,8 @@ import kotlinx.coroutines.sync.withLock
  * are; what to fetch, in what order and how fresh is fresh enough is decided here, so the triggers
  * can't drift apart. [CatalogRepository] still does each provider's fetching and merging.
  */
+// One refresh() per trigger is the point of the module, so its count grows with the triggers.
+@Suppress("TooManyFunctions")
 class CatalogueRefresh(
     private val catalog: CatalogRepository,
     private val guide: EpgRepository,
@@ -50,6 +52,12 @@ class CatalogueRefresh(
 
         /** On the TV or from a phone: channels now, to show the login works, the guide afterwards. */
         data class ProviderAdded(val source: Source) : Trigger
+
+        /**
+         * The first provider, saved while none was: [ProviderAdded], with movies and shows fetched
+         * straight after the guide and each step's progress in [State.setup].
+         */
+        data class Setup(val source: Source) : Trigger
 
         data object OpenedMoviesOrShows : Trigger
 
@@ -94,7 +102,32 @@ class CatalogueRefresh(
         val loadingVod: Boolean = false,
         val buildingGuide: Boolean = false,
         val last: Outcome? = null,
+        /** The running or latest [Trigger.Setup]; null until one starts. */
+        val setup: Setup? = null,
     )
+
+    /** Where a [Trigger.Setup] has got to. [steps] are the ones that apply, in the order they run. */
+    data class Setup(
+        val steps: List<SetupStep>,
+        val running: SetupStep? = steps.first(),
+        /** How full the bar is, 0 to 1; see [SetupBar]. */
+        val bar: Float = 0f,
+        /**
+         * How many the running step has found so far, where it can tell: the guide's programmes. A
+         * guide can't always move the bar, and a count going up still shows it's arriving.
+         */
+        val found: Int = 0,
+        val done: List<StepDone> = emptyList(),
+        val finished: Boolean = false,
+        /** The login failed, so setup stopped: the provider is gone, and the form says why. */
+        val loginFailed: Boolean = false,
+    ) {
+        /** The steps that didn't load, for the finished screen to say so. */
+        val failed: List<SetupStep> get() = done.filter { it.failed }.map { it.step }
+    }
+
+    /** A finished Setup step: how many it found ([of] how many, for the guide's channels), or that it failed. */
+    data class StepDone(val step: SetupStep, val count: Int, val of: Int? = null, val failed: Boolean = false)
 
     private val _state = MutableStateFlow(State())
     val state: StateFlow<State> = _state.asStateFlow()
@@ -170,6 +203,130 @@ class CatalogueRefresh(
         outcome
     }.await()
 
+    suspend fun refresh(trigger: Trigger.Setup): Outcome.Added {
+        val source = trigger.source
+        // The channels always run: they're what proves the login works.
+        val steps = buildList {
+            add(SetupStep.CHANNELS)
+            // The guide is only for live channels.
+            if (settings.liveEnabled.value) add(SetupStep.GUIDE)
+            // Only Xtream has movies and shows.
+            if (source.kind == SourceKind.XTREAM) {
+                if (settings.moviesEnabled.value) add(SetupStep.MOVIES)
+                if (settings.seriesEnabled.value) add(SetupStep.SHOWS)
+            }
+        }
+        // Before anything suspends, so the screen opening next never sees the last try's state.
+        val run = SetupRun(steps)
+        return scope.async { setUp(source, steps, run) }.await()
+    }
+
+    private suspend fun setUp(source: Source, steps: List<SetupStep>, run: SetupRun): Outcome.Added {
+        settings.setVodFetchedAtMillis(source.id, 0L)
+        settings.setSetupSourceId(source.id)
+        val outcome = when (val result = live(source)) {
+            is CatalogRepository.SyncResult.Failed -> Outcome.AddFailed(result.reason)
+            is CatalogRepository.SyncResult.Success -> Outcome.ChannelsLoaded(result.channelCount)
+        }
+        _state.update { it.copy(last = outcome) }
+        if (outcome is Outcome.AddFailed) {
+            // A provider that never loaded isn't there yet: the form's next try is the first provider
+            // again, and a restart opens on the provider choice rather than an empty Home.
+            catalog.deleteSource(source.id)
+            run.update { copy(running = null, loginFailed = true) }
+        }
+        // Gone or a provider now, either way not a leftover.
+        settings.setSetupSourceId(0L)
+        if (outcome is Outcome.ChannelsLoaded) {
+            run.stepDone(StepDone(SetupStep.CHANNELS, outcome.channels))
+            scope.launch {
+                // One step after another, never two at once: two big downloads compete for a
+                // Stick's 1 GB and its network.
+                if (SetupStep.GUIDE in steps) {
+                    run.running(SetupStep.GUIDE)
+                    // Marked and reported as adding a provider does, so whoever left for Live TV
+                    // hears how the guide went the way they would have without Setup.
+                    val guide = marking(guideBuilds, { copy(buildingGuide = it) }) {
+                        runCatching {
+                            syncGuide(force = false) { done ->
+                                run.update {
+                                    copy(bar = run.bar.advance(SetupStep.GUIDE, done.share), found = done.programmes)
+                                }
+                            }
+                        }
+                            .onSuccess { summary -> _state.update { it.copy(last = Outcome.GuideLoaded(summary)) } }
+                            .onFailure { Log.w(TAG, "Guide failed to load during setup", it) }
+                            .getOrNull()
+                    }
+                    // Only when nothing came through: one dead feed among good ones still gives a guide.
+                    val failed = guide == null || (guide.feedsSucceeded == 0 && guide.feedsFailed > 0)
+                    val step = StepDone(SetupStep.GUIDE, guide?.channelsMatched ?: 0, guide?.channelsTotal, failed)
+                    run.stepDone(step)
+                }
+                vod(source, waitForNewEpisodes = false, setup = run)
+                run.sharedListsDone(source)
+                run.update { copy(running = null, finished = true, bar = run.bar.finish()) }
+                rescan()
+            }
+        }
+        return outcome
+    }
+
+    /** One [Trigger.Setup]'s steps and bar, kept in [State.setup] as they move. */
+    private inner class SetupRun(steps: List<SetupStep>) {
+        val bar = SetupBar(steps)
+        private val steps = steps
+
+        init {
+            _state.update { it.copy(setup = Setup(steps)) }
+        }
+
+        fun update(change: Setup.() -> Setup) = _state.update { it.copy(setup = it.setup?.change()) }
+
+        /** [step] starts, with nothing found yet. */
+        fun running(step: SetupStep) = update { copy(running = step, found = 0) }
+
+        fun stepDone(step: StepDone) = update {
+            copy(done = done + step, bar = this@SetupRun.bar.advance(step.step, 1f))
+        }
+
+        /**
+         * Movies and shows this setup didn't fetch itself: another refresh's download was running
+         * (Movies opened during the guide) and setup shared it. They count what's stored now, and
+         * failed only if that download didn't leave them fresh.
+         */
+        suspend fun sharedListsDone(source: Source) {
+            val missing = listOf(SetupStep.MOVIES, SetupStep.SHOWS)
+                .filter { step -> step in steps && _state.value.setup?.done?.none { it.step == step } == true }
+            for (step in missing) {
+                stepDone(StepDone(step, catalog.storedCount(source.id, step), failed = vodIsStale(source)))
+            }
+        }
+
+        /** Movies then shows, those of them in this setup, as one shared download's worth. */
+        suspend fun fetchLists(source: Source): CatalogRepository.VodFetch {
+            val movies = list(SetupStep.MOVIES) { catalog.fetchMovies(source, it) }
+            val shows = list(SetupStep.SHOWS) { catalog.fetchShows(source, it) }
+            return CatalogRepository.VodFetch(
+                shows.updated,
+                movies.complete && shows.complete && (movies.count > 0 || shows.count > 0),
+            )
+        }
+
+        private suspend fun list(
+            step: SetupStep,
+            fetch: suspend ((CatalogRepository.SaveProgress) -> Unit) -> CatalogRepository.ListFetch,
+        ) = if (step in steps) {
+            running(step)
+            fetch { saving ->
+                update { copy(bar = this@SetupRun.bar.saving(step, saving.share), found = saving.saved) }
+            }
+                .also { stepDone(StepDone(step, it.count, failed = !it.complete)) }
+        } else {
+            CatalogRepository.ListFetch.SKIPPED
+        }
+    }
+
     @Suppress("UnusedParameter") // The trigger is how a caller says what it is, as with the others.
     suspend fun refresh(trigger: Trigger.OpenedMoviesOrShows): Outcome.VodChecked {
         val wanted = settings.moviesEnabled.value || settings.seriesEnabled.value
@@ -218,14 +375,15 @@ class CatalogueRefresh(
     private suspend fun live(source: Source): CatalogRepository.SyncResult =
         liveDownloads.share(source) { catalog.fetchLive(source, clock()) }
 
-    private suspend fun vod(source: Source, waitForNewEpisodes: Boolean) {
+    /** With [setup], movies and shows are fetched as its steps, those it has only. */
+    private suspend fun vod(source: Source, waitForNewEpisodes: Boolean, setup: SetupRun? = null) {
         val detecting = vodDownloads.share(source) {
             val now = clock()
             val vod = runCatching {
                 // A refresh's list of providers can be minutes old by the time this one's turn comes,
                 // and the old account's titles would overwrite the new one's.
                 if (!catalog.holdsAccountOf(source)) return@share null
-                catalog.fetchVod(source, now)
+                setup?.fetchLists(source) ?: catalog.fetchVod(source, now)
             }.getOrElse { e ->
                 if (e is CancellationException) throw e
                 Log.w(TAG, "Movies and shows failed for source ${source.id}", e)
@@ -261,13 +419,16 @@ class CatalogueRefresh(
      * Guide passes take turns. One forced while another runs leaves out the feeds that pass has just
      * downloaded, since they're as fresh as the viewer could ask, but still downloads any it skipped.
      */
-    private suspend fun syncGuide(force: Boolean): EpgRepository.SyncSummary {
+    private suspend fun syncGuide(
+        force: Boolean,
+        progress: (EpgRepository.SyncProgress) -> Unit = {},
+    ): EpgRepository.SyncSummary {
         val runningSince = guidePassStarted.get()
         return guideLock.withLock {
             val now = clock()
             guidePassStarted.set(now)
             try {
-                guide.syncAll(now, force, skipFetchedSince = runningSince.takeIf { force && it > 0 })
+                guide.syncAll(now, force, skipFetchedSince = runningSince.takeIf { force && it > 0 }, progress)
             } finally {
                 guidePassStarted.set(0)
             }

@@ -43,9 +43,16 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import app.opentv.R
 import app.opentv.data.model.Profile
+import app.opentv.data.model.Source
 
 /** The screen the app opens on. */
 enum class FirstScreen { ADD_SOURCE, WHOS_WATCHING, HOME }
+
+/**
+ * Whether any of [sources] is a provider yet. One whose channels never loaded isn't: Settee closed
+ * during Setup's first step leaves one, and it should open on the provider choice, not an empty Home.
+ */
+fun hasProvider(sources: List<Source>): Boolean = sources.any { it.lastCatalogSyncMillis > 0 }
 
 /**
  * Who's watching? is asked once per process, not per activity: rotating, or coming back from the

@@ -46,6 +46,9 @@ class FakePanel(vararg initial: Pair<String, String>) {
 
     private val holds = java.util.concurrent.ConcurrentHashMap<String, Hold>()
 
+    /** Actions whose replies don't say how big they are, as a server streaming them wouldn't. */
+    val unsized: MutableSet<String> = java.util.Collections.synchronizedSet(mutableSetOf())
+
     /** Keeps requests for [action] waiting until [Hold.release], so a test can act during a download. */
     fun hold(action: String) = Hold().also { holds[action] = it }
 
@@ -88,7 +91,21 @@ class FakePanel(vararg initial: Pair<String, String>) {
             .protocol(Protocol.HTTP_1_1)
             .code(status ?: 200)
             .message(if (status == null) "OK" else "Error")
-            .body(body.toResponseBody("application/json".toMediaType()))
+            .body(
+                body.toResponseBody("application/json".toMediaType()).let { sized ->
+                    if (action !in unsized) {
+                        sized
+                    } else {
+                        object : okhttp3.ResponseBody() {
+                            override fun contentType() = sized.contentType()
+
+                            override fun contentLength() = -1L
+
+                            override fun source() = sized.source()
+                        }
+                    }
+                },
+            )
             .build()
     }.build()
 }

@@ -5,11 +5,17 @@
  */
 package app.opentv
 
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.navigation.NavController
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
 import app.opentv.ui.SourcesViewModel
+import app.opentv.ui.Tab
+import app.opentv.ui.hasProvider
 import app.opentv.ui.onboarding.AddSourceScreen
+import app.opentv.ui.setup.SetupScreen
 
 /**
  * Opens the page for adding a provider. Every way in (Settings' Providers, Live TV's empty state)
@@ -30,6 +36,34 @@ fun NavGraphBuilder.providerRoutes(nav: NavController, sources: SourcesViewModel
                     popUpTo(Routes.ADD_SOURCE) { inclusive = true }
                 }
             },
+            onSetup = { nav.navigate(Routes.SETUP) },
+        )
+    }
+
+    composable(Routes.SETUP) {
+        val setup by sources.setup.collectAsState()
+        val liveTv by sources.liveEnabled.collectAsState()
+        val ui by sources.ui.collectAsState()
+        val current = setup
+        if (current == null) {
+            // Android restored the app onto Setup after killing it, so nothing is running: Setup
+            // doesn't resume. With the channels in it's Home, otherwise the provider choice again.
+            LaunchedEffect(ui.loaded) {
+                if (!ui.loaded) return@LaunchedEffect
+                if (hasProvider(ui.sources)) {
+                    nav.leaveSetup(Tab.HOME)
+                } else {
+                    nav.navigate(Routes.ADD_SOURCE) { popUpTo(nav.graph.id) { inclusive = true } }
+                }
+            }
+            return@composable
+        }
+        // Back to the form, which says why the login failed.
+        LaunchedEffect(current.loginFailed) { if (current.loginFailed) nav.popBackStack() }
+        SetupScreen(
+            setup = current,
+            onWatchLive = if (liveTv) ({ nav.leaveSetup(Tab.LIVE) }) else null,
+            onFinish = { nav.leaveSetup(Tab.HOME) },
         )
     }
 
