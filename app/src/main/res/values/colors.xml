@@ -6,4 +6,6 @@
     <!-- Settee's mark: plum on coral. tools/launcher-art/mark.py uses the same values. -->
     <color name="settee_coral">#FFFF8F6B</color>
     <color name="settee_plum">#FF1A1416</color>
+    <!-- The aerial TV's body on the dark screen: SetteeColors.Text. -->
+    <color name="settee_cream">#FFF8EFEA</color>
 </resources>
