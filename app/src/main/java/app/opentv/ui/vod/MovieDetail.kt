@@ -81,6 +81,7 @@ fun MovieDetailScreen(
     onPlay: (Movie) -> Unit,
     onPlayAddonStream: (MediaKey.AddonStream) -> Unit,
     onOpenMovie: (Movie) -> Unit,
+    onOpenPerson: (String) -> Unit,
     viewModel: VodViewModel = viewModel(),
 ) {
     var movie by remember(movieId) { mutableStateOf<Movie?>(null) }
@@ -113,6 +114,7 @@ fun MovieDetailScreen(
         findAddonStreams = if (hasAddons) ({ viewModel.addonStreams(m) }) else null,
         similar = similar,
         onOpenMovie = onOpenMovie,
+        onOpenPerson = onOpenPerson,
         onPlay = { onPlay(m) },
         onPlayAddonStream = { onPlayAddonStream(MediaKey.AddonStream(m.id, it.url)) },
         onSetFavourite = { viewModel.setMovieFavourite(m, it) },
@@ -121,7 +123,8 @@ fun MovieDetailScreen(
 
 /**
  * A film's page once the film is known: the hero, and beneath it [similar] films as More like this,
- * whose covers call [onOpenMovie]; [similar] is null while they're still being picked. The main button resumes
+ * whose covers call [onOpenMovie]; [similar] is null while they're still being picked. Between them
+ * are the film's people as rows of names ([PeopleRows]), which call [onOpenPerson]. The main button resumes
  * when [resumes], else plays. [findAddonStreams] is null unless add-ons are set up, and then adds an
  * Add-on sources button, last, whose picker plays the stream chosen. [favourite] is null until the
  * Profile's Favourites have loaded, and the toggle does nothing till then.
@@ -135,6 +138,7 @@ internal fun MovieDetailContent(
     findAddonStreams: (suspend () -> List<StremioStream>)?,
     similar: List<Movie>?,
     onOpenMovie: (Movie) -> Unit,
+    onOpenPerson: (String) -> Unit,
     onPlay: () -> Unit,
     onPlayAddonStream: (StremioStream) -> Unit,
     onSetFavourite: (Boolean) -> Unit,
@@ -189,6 +193,7 @@ internal fun MovieDetailContent(
                         }
                     }
                 }
+                PeopleRows(movie, onOpenPerson, Modifier.padding(top = SetteeSpace.RowGap))
                 if (similar == null) {
                     Spacer(Modifier.height(SetteeSpace.RowGap))
                     PlaceholderShelf(stringResource(R.string.vod_more_like_this))

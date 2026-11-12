@@ -39,11 +39,13 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import app.opentv.BuildConfig
 import app.opentv.R
 import app.opentv.core.ServiceLocator
+import app.opentv.ui.design.ErrorMessage
 import app.opentv.update.UpdateChecker
 import app.opentv.update.VersionNotes
 import app.opentv.update.WhatsNew
@@ -70,6 +72,7 @@ fun AboutScreen(
     val resources = LocalResources.current
     val scope = rememberCoroutineScope()
     var updateLine by remember { mutableStateOf<String?>(null) }
+    var checkFailure by remember { mutableStateOf<String?>(null) }
     var checking by remember { mutableStateOf(false) }
     var whatsNew by remember { mutableStateOf<List<VersionNotes>?>(null) }
     var fontLicences by remember { mutableStateOf(false) }
@@ -108,14 +111,16 @@ fun AboutScreen(
                     onClick = {
                         checking = true
                         updateLine = null
+                        checkFailure = null
                         scope.launch {
                             val outcome = checkForUpdate(context)
                             updateLine = when (outcome) {
                                 is UpdateChecker.Outcome.Available ->
                                     resources.getString(R.string.about_update_available, outcome.update.versionName)
                                 UpdateChecker.Outcome.UpToDate -> resources.getString(R.string.about_up_to_date)
-                                UpdateChecker.Outcome.CouldNotCheck -> resources.getString(R.string.about_check_failed)
+                                is UpdateChecker.Outcome.CouldNotCheck -> null
                             }
+                            checkFailure = (outcome as? UpdateChecker.Outcome.CouldNotCheck)?.detail
                             // Raise the shared update prompt right here — UpdateGate overlays every
                             // screen, so the install dialog appears over About immediately.
                             if (outcome is UpdateChecker.Outcome.Available) {
@@ -147,6 +152,10 @@ fun AboutScreen(
                 updateLine?.let {
                     Spacer(Modifier.width(16.dp))
                     Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary)
+                }
+                checkFailure?.let {
+                    Spacer(Modifier.width(16.dp))
+                    ErrorMessage(stringResource(R.string.about_check_failed), it, textAlign = TextAlign.Start)
                 }
             }
         }

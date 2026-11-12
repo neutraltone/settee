@@ -12,7 +12,9 @@ import app.opentv.data.model.Movie
 import app.opentv.data.model.Series
 import app.opentv.data.model.Source
 import app.opentv.data.model.StreamKind
+import app.opentv.data.model.providerDirector
 import app.opentv.data.parser.parseReleaseDate
+import app.opentv.data.remote.ProviderException.Problem
 import java.io.Closeable
 import java.io.File
 import java.io.InputStream
@@ -59,7 +61,12 @@ class XtreamApi(
     },
 ) {
 
-    class XtreamException(message: String, cause: Throwable? = null) : Exception(message, cause)
+    class XtreamException(
+        message: String,
+        cause: Throwable? = null,
+        problem: Problem = Problem.BAD_REPLY,
+        status: Int? = null,
+    ) : ProviderException(message, cause, problem, status)
 
     companion object {
         /**
@@ -77,10 +84,10 @@ class XtreamApi(
 
         val status = userInfo["status"].asStringOrNull
         if (status != null && !status.equals("Active", ignoreCase = true)) {
-            throw XtreamException("This account is $status.")
+            throw XtreamException("This account is $status.", problem = Problem.ACCOUNT_INACTIVE)
         }
         if (userInfo["auth"].asIntOrNull == 0) {
-            throw XtreamException("Username or password rejected by the server.")
+            throw XtreamException("Username or password rejected by the server.", problem = Problem.LOGIN_REJECTED)
         }
 
         AccountInfo(
@@ -167,7 +174,7 @@ class XtreamApi(
                 // first detail open. See asBackdropUrl for the array-or-string handling.
                 backdropUrl = obj.asBackdropUrl("movie_image", "cover_big"),
                 cast = obj["cast"].asStringOrNull ?: obj["actors"].asStringOrNull,
-                director = obj["director"].asStringOrNull,
+                director = providerDirector(obj["director"].asStringOrNull),
                 genre = obj["genre"].asStringOrNull,
                 tmdbId = obj["tmdb_id"].asStringOrNull ?: obj["tmdb"].asStringOrNull,
                 releaseDate = obj.releaseDate,
@@ -239,7 +246,7 @@ class XtreamApi(
         VodInfo(
             backdropUrl = info.asBackdropUrl("movie_image", "cover_big"),
             cast = info["cast"].asStringOrNull ?: info["actors"].asStringOrNull,
-            director = info["director"].asStringOrNull,
+            director = providerDirector(info["director"].asStringOrNull),
             genre = info["genre"].asStringOrNull,
             tmdbId = info["tmdb_id"].asStringOrNull ?: info["tmdb"].asStringOrNull,
             plot = info["plot"].asStringOrNull ?: info["description"].asStringOrNull,
@@ -278,7 +285,11 @@ class XtreamApi(
         val response = http.newCall(request(source, url)).execute()
         if (!response.isSuccessful) {
             response.close()
-            throw XtreamException("Guide download failed (HTTP ${response.code}).")
+            throw XtreamException(
+                "Guide download failed (HTTP ${response.code}).",
+                problem = Problem.HTTP_STATUS,
+                status = response.code,
+            )
         }
         response.body.byteStream()
     }
@@ -314,7 +325,7 @@ class XtreamApi(
         .build()
 
     private fun baseUrl(source: Source): HttpUrl = source.url.toHttpUrlOrNull()
-        ?: throw XtreamException("\"${source.url}\" is not a valid server address.")
+        ?: throw XtreamException("Not a valid server address.", problem = Problem.BAD_ADDRESS)
 
     // ---- Plumbing ------------------------------------------------------------------------
 
@@ -332,7 +343,11 @@ class XtreamApi(
         val response = http.newCall(request(source, builder.build())).execute()
         if (!response.isSuccessful) {
             response.close()
-            throw XtreamException(describeHttpFailure(response.code))
+            throw XtreamException(
+                "The panel answered HTTP ${response.code}.",
+                problem = Problem.HTTP_STATUS,
+                status = response.code,
+            )
         }
         return response
     }
@@ -409,20 +424,6 @@ class XtreamApi(
         .url(url)
         .header("User-Agent", source.userAgent)
         .build()
-
-    private fun describeHttpFailure(code: Int): String = when (code) {
-        401, 403 ->
-            "The server refused the request (HTTP $code). The username or password " +
-                "may be wrong, or the provider may be blocking this app's User-Agent — try " +
-                "changing it in the source's advanced settings."
-        404 -> "No Xtream API at that address (HTTP 404). Check the URL and port."
-        405 ->
-            "The server rejected the request method (HTTP 405). This usually means the " +
-                "address points at a plain playlist rather than an Xtream panel."
-        429 -> "The server is rate-limiting this device (HTTP 429). Try again shortly."
-        in 500..599 -> "The provider's server is having problems (HTTP $code)."
-        else -> "The server returned HTTP $code."
-    }
 
     data class AccountInfo(
         val username: String?,

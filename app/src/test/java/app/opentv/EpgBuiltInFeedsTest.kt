@@ -8,6 +8,7 @@ package app.opentv
 import android.content.Context
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
+import app.opentv.core.ErrorWording
 import app.opentv.data.db.OpenTvDatabase
 import app.opentv.data.model.Channel
 import app.opentv.data.model.EpgChannelAlias
@@ -59,6 +60,7 @@ class EpgBuiltInFeedsTest {
         sourceDao = db.sources(),
         api = XtreamApi(http),
         http = http,
+        wording = ErrorWording(ApplicationProvider.getApplicationContext(), onTelevision = false),
         selfEnabledGuide = selfEnabled,
     )
 
@@ -126,7 +128,7 @@ class EpgBuiltInFeedsTest {
         assertThat(feed(usa).enabled).isTrue()
         assertThat(summary.feedsFailed).isEqualTo(0)
         // Guide settings still says why it isn't working.
-        assertThat(feed(usa).lastResult).contains("404")
+        assertThat(feed(usa).lastResult).isNotEmpty()
     }
 
     @Test

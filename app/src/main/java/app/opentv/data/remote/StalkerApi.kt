@@ -10,6 +10,7 @@ import app.opentv.data.model.Category
 import app.opentv.data.model.Channel
 import app.opentv.data.model.Source
 import app.opentv.data.model.StreamKind
+import app.opentv.data.remote.ProviderException.Problem
 import java.net.URLEncoder
 import java.util.concurrent.ConcurrentHashMap
 import kotlinx.coroutines.Dispatchers
@@ -50,7 +51,8 @@ class StalkerApi(
     },
 ) {
 
-    class StalkerException(message: String, cause: Throwable? = null) : Exception(message, cause)
+    class StalkerException(message: String, cause: Throwable? = null, problem: Problem = Problem.BAD_REPLY) :
+        ProviderException(message, cause, problem)
 
     private data class Session(val token: String, val endpoint: HttpUrl, val expiresAt: Long)
 
@@ -129,7 +131,9 @@ class StalkerApi(
         val now = System.currentTimeMillis()
         if (!force) sessions[source.id]?.let { if (it.expiresAt > now) return it }
         val mac = source.macAddress?.trim().orEmpty()
-        if (mac.isEmpty()) throw StalkerException("This portal needs a MAC address (e.g. 00:1A:79:xx:xx:xx).")
+        if (mac.isEmpty()) {
+            throw StalkerException("This portal needs a MAC address.", problem = Problem.DEVICE_REFUSED)
+        }
         var lastError: Throwable? = null
         for (endpoint in endpoints(source)) {
             val hs = runCatching { handshake(source, endpoint) }
@@ -146,6 +150,7 @@ class StalkerApi(
         throw StalkerException(
             "The portal didn't accept this MAC address, or the URL is wrong.",
             lastError,
+            Problem.DEVICE_REFUSED,
         )
     }
 

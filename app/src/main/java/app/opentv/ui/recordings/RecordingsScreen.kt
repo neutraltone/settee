@@ -46,6 +46,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.AndroidViewModel
@@ -53,6 +54,7 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import app.opentv.R
 import app.opentv.core.ServiceLocator
+import app.opentv.core.ViewerError
 import app.opentv.data.model.Profile
 import app.opentv.data.model.Recording
 import app.opentv.data.model.RecordingStatus
@@ -60,6 +62,7 @@ import app.opentv.data.model.Reminder
 import app.opentv.data.model.SeriesRule
 import app.opentv.recording.RecordingStorage
 import app.opentv.reminders.ReminderScheduler
+import app.opentv.ui.design.ErrorMessage
 import coil.compose.AsyncImage
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -394,6 +397,7 @@ private fun RecordingRow(
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
             )
+            if (recording.status == RecordingStatus.FAILED) RecordingFailure(recording)
             if (showProfiles && profileName != null) {
                 Spacer(Modifier.height(2.dp))
                 Text(
@@ -467,12 +471,7 @@ private fun statusLine(rec: Recording): String {
         RecordingStatus.COMPLETED ->
             listOf(whenStr, rec.channelName, formatDuration(rec.durationMillis), formatSize(rec.sizeBytes))
                 .filter { it.isNotBlank() }.joinToString(" · ")
-        RecordingStatus.FAILED ->
-            stringResource(
-                R.string.rec_status_failed_at,
-                whenStr,
-                rec.error ?: stringResource(R.string.rec_error_unknown),
-            )
+        RecordingStatus.FAILED -> stringResource(R.string.rec_status_failed, whenStr)
     }
 }
 
@@ -495,4 +494,14 @@ private fun formatDuration(millis: Long): String {
     val h = totalMinutes / 60
     val m = totalMinutes % 60
     return if (h > 0) "${h}h ${m}m" else "${m}m"
+}
+
+/** Why [recording] failed, with its detail line. */
+@Composable
+private fun RecordingFailure(recording: Recording) {
+    // Recordings from before #166 stored a plain sentence, which shows with no detail line.
+    val failure = recording.error?.let { ViewerError.fromStored(it) ?: ViewerError(it) }
+        ?: ViewerError(stringResource(R.string.rec_error_nothing))
+    Spacer(Modifier.height(2.dp))
+    ErrorMessage(failure.sentence, failure.detail, textAlign = TextAlign.Start)
 }

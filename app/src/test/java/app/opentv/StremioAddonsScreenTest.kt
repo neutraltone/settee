@@ -9,6 +9,7 @@ import android.text.InputType
 import android.view.View
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onNodeWithText
 import app.opentv.ui.settings.StremioAddonsScreen
 import com.google.common.truth.Truth.assertThat
 import org.junit.Rule
@@ -38,6 +39,7 @@ class StremioAddonsScreenTest {
         }
 
         val (info, _) = device.connection()
+        compose.onNodeWithText("No add-ons yet. Paste an add-on's link above to add one.").assertExists()
         captureScreen("stremio_addons")
 
         assertThat(info.inputType).isEqualTo(InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_URI)

@@ -13,6 +13,7 @@ import app.opentv.data.model.Channel
 import app.opentv.data.remote.StalkerApi
 import app.opentv.data.remote.XtreamApi
 import app.opentv.data.repo.MediaKey
+import app.opentv.data.repo.Playable
 import app.opentv.data.repo.PlaybackSources
 import app.opentv.player.PlayerController
 import com.google.common.truth.Truth.assertThat
@@ -94,9 +95,24 @@ class PlayerControllerTest {
         players.advance(10_000)
 
         val error = controller.state.value as PlayerController.State.Error
-        assertThat(error.message).startsWith("This stream needs more memory than this device has.")
+        assertThat(error.reason.sentence)
+            .isEqualTo("This stream needs more memory than this device has. A different quality may work.")
+        assertThat(error.reason.detail).isEqualTo("IO unspecified")
         assertThat(error.canRetry).isTrue()
         assertThat(players.played).hasSize(1)
+    }
+
+    @Test
+    fun `a channel the provider gives no link for says so, with what went wrong on the detail line`() {
+        val controller = players.controller(LIVE) { key -> Playable.Failed(key, Playable.Failure.LINK_REFUSED) }
+
+        controller.play(PlayerController.Request(MediaKey.Live(channels.first())), debounce = false)
+        players.until { controller.state.value is PlayerController.State.Error }
+
+        val error = controller.state.value as PlayerController.State.Error
+        assertThat(error.reason.sentence)
+            .isEqualTo("Your provider didn't give a link for this channel. Try refreshing your provider in Settings.")
+        assertThat(error.reason.detail).isEqualTo("LinkRefused")
     }
 
     private fun stalkerChannel(n: Int) = Channel(

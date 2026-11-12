@@ -97,8 +97,9 @@ class DecoderFallbackTest {
 
         assertThat(controller.player.playerError?.errorCode)
             .isEqualTo(PlaybackException.ERROR_CODE_DECODER_INIT_FAILED)
-        assertThat((state as PlayerController.State.Error).message)
-            .isEqualTo("This device can't play this video format (H.264).")
+        assertThat((state as PlayerController.State.Error).reason.sentence)
+            .isEqualTo("This device can't play this video format.")
+        assertThat(state.reason.detail).isEqualTo("Decoder init failed · H.264, 1280x720")
         assertThat(logged()).comparingElementsUsing(CONTAINS).contains(FIRST)
         assertThat(started).isEmpty()
     }

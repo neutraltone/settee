@@ -34,11 +34,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import app.opentv.R
+import app.opentv.core.ViewerError
 import app.opentv.data.model.EpgFeed
 import app.opentv.ui.EpgViewModel
+import app.opentv.ui.design.ErrorMessage
 import app.opentv.ui.design.TextField
 
 /**
@@ -154,9 +157,12 @@ private fun FeedRow(feed: EpgFeed, onToggle: (Boolean) -> Unit, onRemove: () -> 
         ) {
             Column(Modifier.weight(1f)) {
                 Text(feed.name, style = MaterialTheme.typography.titleMedium)
-                // The last sync outcome, verbatim — success counts or the actual error.
+                // The last sync outcome: success counts, or why it failed with its detail line.
                 // A guide that fails must say so where the user can see it.
-                if (feed.lastResult.isNotEmpty()) {
+                val failure = ViewerError.fromStored(feed.lastResult)
+                if (failure != null) {
+                    ErrorMessage(failure.sentence, failure.detail, textAlign = TextAlign.Start)
+                } else if (feed.lastResult.isNotEmpty()) {
                     Text(
                         feed.lastResult,
                         style = MaterialTheme.typography.bodyMedium,

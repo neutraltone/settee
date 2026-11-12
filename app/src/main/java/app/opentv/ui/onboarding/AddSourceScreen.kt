@@ -40,12 +40,14 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import app.opentv.R
 import app.opentv.data.model.Source
 import app.opentv.data.model.SourceKind
 import app.opentv.isRunningOnTelevision
 import app.opentv.ui.SourcesViewModel
+import app.opentv.ui.design.ErrorMessage
 import app.opentv.ui.design.HighlightStyle
 import app.opentv.ui.design.HighlightSurface
 import app.opentv.ui.design.PillButton
@@ -209,7 +211,8 @@ private fun ProviderForm(
         KindFields(details, Modifier.startsFocused())
 
         ui.testResult?.let { Text(it, SetteeType.Body) }
-        ui.testError?.let { Text(it, SetteeType.Body, color = SetteeColors.Accent) }
+        ui.testError?.let { ErrorMessage(it.sentence, it.detail, textAlign = TextAlign.Start) }
+        ui.addFailure?.let { ErrorMessage(it.sentence, it.detail, textAlign = TextAlign.Start) }
         ui.syncMessage?.let { Text(it, SetteeType.Body) }
 
         FormButtons(viewModel, details, defaultName, onFinished)
@@ -351,6 +354,12 @@ private fun KindFields(details: ProviderDetails, modifier: Modifier = Modifier) 
             trailingIcon = { PasteButton { details.password += it } },
             keyboardType = KeyboardType.Password,
             modifier = Modifier.fillMaxWidth(),
+        )
+        // Setup advice an error sentence can't give (docs/ERRORS.md, HTTP 405).
+        Text(
+            stringResource(R.string.onboarding_xtream_or_playlist_help),
+            SetteeType.Body,
+            color = SetteeColors.QuietText,
         )
     }
     if (details.kind == SourceKind.STALKER) {

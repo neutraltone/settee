@@ -6,6 +6,7 @@
 package app.opentv
 
 import androidx.test.core.app.ApplicationProvider
+import app.opentv.core.ViewerError
 import app.opentv.data.repo.CatalogueRefresh.Outcome
 import app.opentv.data.repo.EpgRepository
 import app.opentv.data.repo.RefreshMessages
@@ -53,8 +54,10 @@ class RefreshMessagesTest {
     }
 
     @Test
-    fun `a failed add passes on the reason`() {
-        assertThat(messages.of(Outcome.AddFailed("Wrong password."))).isEqualTo("Wrong password.")
+    fun `a failed add has no status line, since its reason is shown with its detail line`() {
+        assertThat(
+            messages.of(Outcome.AddFailed(ViewerError("Wrong password.", "HTTP 401"))),
+        ).isNull()
     }
 
     @Test
