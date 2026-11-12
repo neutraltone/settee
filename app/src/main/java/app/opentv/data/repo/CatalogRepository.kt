@@ -6,7 +6,10 @@
 package app.opentv.data.repo
 
 import android.util.Log
+import app.opentv.R
 import app.opentv.core.AppSettings
+import app.opentv.core.ErrorWording
+import app.opentv.core.ViewerError
 import app.opentv.data.db.CategoryDao
 import app.opentv.data.db.ChannelDao
 import app.opentv.data.db.EpisodeDao
@@ -180,6 +183,11 @@ class CatalogRepository(
     private val stalkerApi: StalkerApi,
     private val http: OkHttpClient,
     private val settings: AppSettings,
+    /**
+     * Words a failed download for the viewer; nothing here shows an exception's own message. Public
+     * so the channel manager, which adds and tests providers through this module, words them the same.
+     */
+    val wording: ErrorWording,
 ) {
 
     /** Where work that outlives a sync runs, such as [MovieGenres]. */
@@ -215,7 +223,8 @@ class CatalogRepository(
     sealed interface SyncResult {
         data class Success(val channelCount: Int, val movieCount: Int, val seriesCount: Int) : SyncResult
 
-        data class Failed(val reason: String, val cause: Throwable?) : SyncResult
+        /** [reason] is what the viewer sees; [cause] is for the log only. */
+        data class Failed(val reason: ViewerError, val cause: Throwable?) : SyncResult
     }
 
     /** Series the provider updated, for New Episode detection, and whether every list came back. */
@@ -634,7 +643,7 @@ class CatalogRepository(
             throw e
         } catch (e: Exception) {
             Log.w(TAG, "Catalogue sync failed for source ${source.id}", e)
-            SyncResult.Failed(e.message ?: "The catalogue could not be downloaded.", e)
+            SyncResult.Failed(wording.ofProvider(e, R.string.error_catalogue), e)
         }
     }
 
@@ -666,10 +675,7 @@ class CatalogRepository(
         val liveCategories = api.liveCategories(source)
         val channels = api.liveStreams(source)
         if (channels.isEmpty()) {
-            return SyncResult.Failed(
-                "The server returned no channels. The account may have no package assigned.",
-                null,
-            )
+            return SyncResult.Failed(wording.of(R.string.error_no_channels, NO_CHANNELS), null)
         }
 
         categoryDao.upsertAll(liveCategories)
@@ -689,10 +695,7 @@ class CatalogRepository(
         val liveCategories = stalkerApi.liveCategories(source)
         val channels = stalkerApi.liveChannels(source)
         if (channels.isEmpty()) {
-            return SyncResult.Failed(
-                "The portal returned no channels. The MAC may not be authorised, or its package is empty.",
-                null,
-            )
+            return SyncResult.Failed(wording.of(R.string.error_no_channels, NO_CHANNELS), null)
         }
         categoryDao.upsertAll(liveCategories)
         val categoryNames = liveCategories.associate { it.id to it.name }
@@ -792,17 +795,14 @@ class CatalogRepository(
 
         val parsed = http.newCall(request).execute().use { response ->
             if (!response.isSuccessful) {
-                return SyncResult.Failed("Playlist download failed (HTTP ${response.code}).", null)
+                return SyncResult.Failed(wording.ofHttpStatus(response.code, R.string.error_catalogue), null)
             }
             val stream = response.body.byteStream()
             M3uParser.parse(stream, source.id)
         }
 
         if (parsed.channels.isEmpty()) {
-            return SyncResult.Failed(
-                "No channels found in that playlist. Check the URL points at an M3U file.",
-                null,
-            )
+            return SyncResult.Failed(wording.of(R.string.error_playlist_empty, NO_CHANNELS), null)
         }
 
         // Synthesise categories from group-title so the UI has something to group by.
@@ -953,6 +953,9 @@ class CatalogRepository(
 
     companion object {
         private const val TAG = "CatalogRepository"
+
+        /** The detail line's code for a provider that answered with no channels at all. */
+        private const val NO_CHANNELS = "NoChannels"
 
         /** Titles [creditEarlierTitles] files at a time, each batch one transaction. */
         private const val CREDIT_BATCH = 500

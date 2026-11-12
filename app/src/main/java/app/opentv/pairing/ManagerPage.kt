@@ -84,6 +84,7 @@ object ManagerPage {
                     background:var(--surface2); border:1px solid var(--line); color:var(--text);
                     transition:transform .25s ease; z-index:20; box-shadow:0 8px 24px rgba(0,0,0,.4); }
           #status.show { transform:translateX(-50%) translateY(0); }
+          #status .detail { display:block; margin-top:4px; font-size:.85em; opacity:.75; }
           #status.ok { border-color:var(--ok); color:var(--ok); }
           #status.err { border-color:var(--err); color:#ffc9c9; }
           .privacy { color:var(--muted); font-size:.8rem; margin-top:28px; line-height:1.5; }
@@ -195,9 +196,16 @@ object ManagerPage {
 
           var el = function(id){ return document.getElementById(id); };
           var statusTimer = null;
-          function setStatus(msg, kind){
+          // An error's detail line (code · status) goes quietly under its sentence, as in the app.
+          function setStatus(msg, kind, detail){
             var s = el('status');
             s.textContent = msg;
+            if (detail){
+              var d = document.createElement('span');
+              d.className = 'detail';
+              d.textContent = detail;
+              s.appendChild(d);
+            }
             s.className = 'show ' + (kind || '');
             if (statusTimer) clearTimeout(statusTimer);
             statusTimer = setTimeout(function(){ s.className = kind || ''; }, 2600);
@@ -442,7 +450,7 @@ object ManagerPage {
           }
           function showTest(r){
             if (r && r.ok) setStatus('Connected to the NAS — recordings will save there. ✓', 'ok');
-            else setStatus("Couldn't reach the NAS: " + ((r && r.error) || 'check the details') , 'err');
+            else setStatus((r && r.error) || "Couldn't connect to your NAS. Check it's on and these details are right.", 'err', r && r.detail);
           }
           el('recSave').onclick = function(){
             var body = smbBody();
@@ -492,7 +500,7 @@ object ManagerPage {
             var b = provBody(); var bad = provInvalid(b); if (bad){ setStatus(bad, 'err'); return; }
             setStatus('Testing…');
             post('/source/test', b)
-              .then(function(r){ if (r && r.ok) setStatus(r.message || 'Looks good.', 'ok'); else setStatus((r && r.error) || 'Test failed', 'err'); })
+              .then(function(r){ if (r && r.ok) setStatus(r.message || 'Looks good.', 'ok'); else setStatus((r && r.error) || "Couldn't connect to your provider with these details. Check them and try again.", 'err', r && r.detail); })
               .catch(function(){ setStatus(UNREACH, 'err'); });
           };
           el('provSave').onclick = function(){
@@ -505,7 +513,7 @@ object ManagerPage {
                   el('provUrl').value = ''; el('provUser').value = ''; el('provPass').value = '';
                   el('provMac').value = ''; el('provName').value = '';
                   loadMeta();
-                } else setStatus((r && r.error) || 'Could not add the provider', 'err');
+                } else setStatus((r && r.error) || "Couldn't add your provider. Try again in a moment.", 'err', r && r.detail);
               })
               .catch(function(){ setStatus(UNREACH, 'err'); });
           };

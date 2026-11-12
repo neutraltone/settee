@@ -80,7 +80,7 @@ class StreamTracksTest {
         assertThat(controller.state.value).isInstanceOf(PlayerController.State.Playing::class.java)
         assertThat(controller.notice.value).isEqualTo(
             "This device can't play this audio format (E-AC-3). If your TV or soundbar supports it, " +
-                "turning on surround sound in the device's settings may help.",
+                "turning on surround sound in this device's settings may help.",
         )
     }
 
@@ -115,7 +115,7 @@ class StreamTracksTest {
         assertThat(notices)
             .contains(
                 "This device can't play this audio format (E-AC-3), so another version is playing. " +
-                    "If your TV or soundbar supports it, turning on surround sound in the device's settings may help.",
+                    "If your TV or soundbar supports it, turning on surround sound in this device's settings may help.",
             )
     }
 

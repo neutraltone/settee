@@ -21,16 +21,27 @@ import androidx.compose.ui.unit.dp
 /**
  * What a screen says in its middle when it has nothing else to show: an optional [title], the
  * [body] in quiet text, and [below] for what can be done about it, usually an [ActionButton].
+ * An error passes its [detail] too, and the body is then drawn as an [ErrorMessage].
  */
 @Composable
-fun Message(body: String, modifier: Modifier = Modifier, title: String? = null, below: @Composable () -> Unit = {}) {
+fun Message(
+    body: String,
+    modifier: Modifier = Modifier,
+    title: String? = null,
+    detail: String = "",
+    below: @Composable () -> Unit = {},
+) {
     Box(modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.widthIn(max = MESSAGE_WIDTH)) {
             title?.let {
                 Text(it, SetteeType.Section, textAlign = TextAlign.Center)
                 Spacer(Modifier.height(MESSAGE_GAP))
             }
-            Text(body, SetteeType.Body, color = SetteeColors.QuietText, textAlign = TextAlign.Center)
+            if (detail.isBlank()) {
+                Text(body, SetteeType.Body, color = SetteeColors.QuietText, textAlign = TextAlign.Center)
+            } else {
+                ErrorMessage(body, detail)
+            }
             Spacer(Modifier.height(MESSAGE_GAP * 2))
             below()
         }

@@ -12,6 +12,8 @@ import androidx.media3.common.Tracks
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.analytics.AnalyticsListener
 import app.opentv.R
+import app.opentv.core.ViewerError
+import app.opentv.core.hardware
 import app.opentv.data.repo.MediaKey
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -24,7 +26,7 @@ import kotlinx.coroutines.launch
 /**
  * Watches one [PlayerController]'s streams for what no error would ever report: a video this device
  * can't take, a decoder that shows nothing, sound nobody will hear. Asks [moveDown] for another Quality
- * first; without one, calls [onCantPlay] with the sentence and whether a Retry could help.
+ * first; without one, calls [onCantPlay] with the reason and whether a Retry could help.
  */
 @OptIn(UnstableApi::class)
 internal class StreamGuard(
@@ -33,7 +35,9 @@ internal class StreamGuard(
     private val decoders: DecoderList,
     /** Moves to the next Quality, if there is one, and says what from and to. [forSound]: only sound is wrong. */
     private val moveDown: (forSound: Boolean) -> Step?,
-    private val onCantPlay: (sentence: String, canRetry: Boolean) -> Unit,
+    /** Picks "this TV" over "this device" in what [onCantPlay] is given. */
+    private val onTelevision: Boolean,
+    private val onCantPlay: (reason: ViewerError, canRetry: Boolean) -> Unit,
 ) {
     /** A move from the Quality called [from] to [to]. */
     data class Step(val from: String, val to: PlayerController.Quality)
@@ -49,7 +53,7 @@ internal class StreamGuard(
     private val loggedTracks = HashSet<String>()
 
     private val firstFrame = FirstFrameWatch(scope) { format ->
-        cantPlay(PlaybackErrors.noFirstFrame(context, format), canRetry = true)
+        cantPlay(PlaybackErrors.noFirstFrame(context, format, onTelevision), canRetry = true)
     }
 
     /** What the player reports its decoders to, for the first-frame limit. */
@@ -68,7 +72,7 @@ internal class StreamGuard(
         DecoderLog.logTracks(tracks, decoders, loggedTracks)
         val refused = decoders.refusedVideoOf(tracks)
         if (refused != null) {
-            cantPlay(PlaybackErrors.tooBig(context, refused), canRetry = false)
+            cantPlay(PlaybackErrors.tooBig(context, refused, onTelevision), canRetry = false)
         } else if (soundWanted) {
             sayIfNoSound(tracks)
         }
@@ -106,18 +110,28 @@ internal class StreamGuard(
         val step = moveDown(true)
         if (step == null) {
             saidNoSound = true
-            say(context.getString(R.string.player_no_sound, format))
+            say(
+                context.getString(
+                    hardware(onTelevision, R.string.player_no_sound_tv, R.string.player_no_sound_device),
+                    format,
+                ),
+            )
         } else {
             _steppedDownTo.value = step.to.key
-            say(context.getString(R.string.player_stepped_down_for_sound, format))
+            val sentence = hardware(
+                onTelevision,
+                R.string.player_stepped_down_for_sound_tv,
+                R.string.player_stepped_down_for_sound_device,
+            )
+            say(context.getString(sentence, format))
         }
     }
 
-    private fun cantPlay(sentence: String, canRetry: Boolean) {
+    private fun cantPlay(reason: ViewerError, canRetry: Boolean) {
         val step = moveDown(false)
         if (step == null) {
             stopSaying()
-            onCantPlay(sentence, canRetry)
+            onCantPlay(reason, canRetry)
         } else {
             steppedDown(step.from, step.to)
         }

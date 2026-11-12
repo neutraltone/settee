@@ -34,16 +34,19 @@ import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.text
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.media3.exoplayer.ExoPlayer
 import app.opentv.R
 import app.opentv.core.ServiceLocator
+import app.opentv.core.ViewerError
 import app.opentv.data.model.Channel
 import app.opentv.data.repo.MediaKey
 import app.opentv.player.PlayerController
 import app.opentv.ui.channels.PreviewVideo
+import app.opentv.ui.design.ErrorMessage
 import app.opentv.ui.design.HighlightStyle
 import app.opentv.ui.design.HighlightSurface
 import app.opentv.ui.design.QuietLabel
@@ -77,7 +80,7 @@ internal class LivePreviewGate {
 }
 
 /** Home's muted player for the Live Preview: [player] is null while nothing should play. */
-internal class LivePreviewPlayer(val player: ExoPlayer?, val error: String?, val stop: () -> Unit)
+internal class LivePreviewPlayer(val player: ExoPlayer?, val error: ViewerError?, val stop: () -> Unit)
 
 /**
  * Plays [channel] muted for the Live Preview, the way the guide's preview does: one player, only while
@@ -125,7 +128,7 @@ internal fun rememberLivePreviewPlayer(channel: Channel?): LivePreviewPlayer {
     val state = playing?.state?.collectAsState()?.value
     return LivePreviewPlayer(
         player = playing?.player,
-        error = (state as? PlayerController.State.Error)?.message,
+        error = (state as? PlayerController.State.Error)?.reason,
         stop = {
             gate.leave()
             playing?.stop()
@@ -138,7 +141,7 @@ internal fun rememberLivePreviewPlayer(channel: Channel?): LivePreviewPlayer {
  * when preview video is off or the channel has gone), or [error], the sentence saying why it can't
  * play.
  */
-internal data class LiveTile(val live: LiveNow, val player: ExoPlayer?, val error: String?)
+internal data class LiveTile(val live: LiveNow, val player: ExoPlayer?, val error: ViewerError?)
 
 /** Select on the tile: its channel full screen, or the Live tab when the channel has gone. */
 internal fun LiveTile.open(onWatch: (Channel) -> Unit, onOpenLive: () -> Unit) {
@@ -179,9 +182,10 @@ internal fun ScreenFrameScope.LivePreviewTile(tile: LiveTile, focus: CardFocus?,
                     VideoArea(Modifier.fillMaxSize()) { PreviewVideo(tile.player, Modifier.fillMaxSize()) }
                 }
                 tile.error?.let { error ->
-                    Text(
-                        error,
-                        style = SetteeType.Body,
+                    ErrorMessage(
+                        error.sentence,
+                        error.detail,
+                        textAlign = TextAlign.Start,
                         maxLines = 3,
                         modifier = Modifier
                             .fillMaxSize()

@@ -62,6 +62,7 @@ import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.documentfile.provider.DocumentFile
 import androidx.lifecycle.Lifecycle
@@ -70,11 +71,13 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import app.opentv.R
 import app.opentv.core.AppSettings
 import app.opentv.core.ServiceLocator
+import app.opentv.core.ViewerError
 import app.opentv.core.isIgnoringBatteryOptimizations
 import app.opentv.core.requestIgnoreBatteryOptimizations
 import app.opentv.recording.RecordingStorage
 import app.opentv.recording.SmbClient
 import app.opentv.recording.SmbConfig
+import app.opentv.ui.design.ErrorMessage
 import app.opentv.ui.design.TextField
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -102,6 +105,8 @@ fun RecordingSettingsScreen(onBack: () -> Unit) {
     var usbTree by remember { mutableStateOf(settings.usbTreeUri.value) }
     var usbLabel by remember { mutableStateOf(settings.usbFolderLabel.value) }
     var status by remember { mutableStateOf<String?>(null) }
+    // Apart from status, so a failed test shows its detail line under the sentence.
+    var testFailure by remember { mutableStateOf<ViewerError?>(null) }
     var testing by remember { mutableStateOf(false) }
 
     // Recording behaviour. These apply the moment they're changed so they hold whether the user
@@ -248,21 +253,18 @@ fun RecordingSettingsScreen(onBack: () -> Unit) {
                         onClick = {
                             testing = true
                             status = resources.getString(R.string.recset_status_testing)
+                            testFailure = null
                             val cfg = SmbConfig(host.trim(), share.trim(), folder.trim(), user, password)
                             scope.launch {
                                 val result = withContext(Dispatchers.IO) {
                                     runCatching { SmbClient.test(cfg) }
                                 }
                                 testing = false
-                                status = result.fold(
-                                    onSuccess = { resources.getString(R.string.recset_status_connected) },
-                                    onFailure = {
-                                        resources.getString(
-                                            R.string.recset_status_failed,
-                                            it.message ?: it.javaClass.simpleName,
-                                        )
-                                    },
-                                )
+                                status =
+                                    result.getOrNull()?.let { resources.getString(R.string.recset_status_connected) }
+                                testFailure = result.exceptionOrNull()?.let {
+                                    ServiceLocator.get(context).errorWording.of(it, R.string.recset_status_failed)
+                                }
                             }
                         },
                     ) {
@@ -280,6 +282,10 @@ fun RecordingSettingsScreen(onBack: () -> Unit) {
                 status?.let {
                     Spacer(Modifier.height(10.dp))
                     Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary)
+                }
+                testFailure?.let {
+                    Spacer(Modifier.height(10.dp))
+                    ErrorMessage(it.sentence, it.detail, textAlign = TextAlign.Start)
                 }
             }
         }

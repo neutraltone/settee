@@ -48,7 +48,7 @@
     <string name="guide_open_external">Open in external player</string>
     <string name="guide_play_channel_with">Play channel with</string>
     <string name="guide_no_external_player">No external player installed</string>
-    <string name="guide_no_info">No guide information</string>
+    <string name="guide_no_info">No guide information yet</string>
     <string name="guide_loading_channels">Loading your channels</string>
     <string name="guide_fetching_desc">Fetching the channel list and guide from your provider. A large provider can take a couple of minutes the first time.</string>
     <string name="guide_building_desc">Building your guide from the channels saved on this device. On a big provider this takes a moment.</string>
@@ -58,15 +58,15 @@
     <string name="guide_empty_category_title">Nothing to show here</string>
     <string name="guide_empty_category_hint">Every channel here is hidden. You can show them again in the Channel manager, in Settings.</string>
     <string name="guide_no_channels_title">No channels yet</string>
-    <string name="guide_add_provider_desc">Add a provider to get started.</string>
+    <string name="guide_add_provider_desc">Your provider\'s channels will show up here. Add your provider to get started.</string>
     <string name="guide_add_provider_button">Add a provider</string>
     <string name="guide_load_failed_title">Couldn\'t load your channels</string>
-    <string name="guide_load_failed_desc">Check your provider details and your connection, then try again.</string>
+    <string name="guide_load_failed_desc">Try again in a moment, or check your provider\'s details in Settings.</string>
     <string name="guide_edit_provider">Provider setup</string>
     <string name="guide_today">Today</string>
     <string name="guide_tomorrow">Tomorrow</string>
     <string name="guide_qualities_count">%1$d qualities</string>
-    <string name="guide_no_info_channel">No guide information for this channel</string>
+    <string name="guide_no_info_channel">No guide information for this channel yet</string>
     <string name="guide_pager_earlier">Earlier</string>
     <string name="guide_pager_now">Now</string>
     <string name="guide_pager_later">Later</string>
@@ -84,7 +84,7 @@
     <string name="rec_series_recording_set">Series recording set for \"%1$s\"</string>
     <string name="rec_screen_title">Recordings &amp; reminders</string>
     <string name="rec_screen_desc">Record live TV to this box or your NAS, and set reminders for what\'s coming up.</string>
-    <string name="rec_empty_state">Nothing here yet. Press Record in the player, or open a channel in the guide to schedule a recording or set a reminder.</string>
+    <string name="rec_empty_state">No recordings yet. Press Record while you\'re watching, or pick a programme in the guide.</string>
     <string name="rec_upcoming_reminders">Upcoming reminders</string>
     <string name="rec_reminder_autoswitch">Auto-switch</string>
     <string name="rec_reminder_plain">Reminder</string>
@@ -92,14 +92,13 @@
     <string name="rec_status_scheduled">Scheduled · %1$s</string>
     <string name="rec_status_recording">● Recording · %1$s · %2$s</string>
     <string name="rec_status_failed">Failed · %1$s</string>
-    <string name="rec_error_unknown">unknown error</string>
     <string name="rec_notification_one">Recording 1 programme</string>
     <string name="rec_notification_many">Recording %1$d programmes</string>
     <string name="rec_channel_name">Recording</string>
     <string name="rec_channel_desc">Shown while Settee is recording</string>
-    <string name="rec_error_nothing">Nothing was recorded</string>
-    <string name="rec_error_usb_no_folder">No USB folder chosen. Open Recording settings and pick a folder on your drive.</string>
-    <string name="rec_error_usb_unavailable">USB drive not available. Re-plug the drive and choose the folder again in Recording settings.</string>
+    <string name="rec_error_nothing">Nothing was recorded. The channel may have stopped, so try recording it again.</string>
+    <string name="rec_error_usb_no_folder">There\'s no folder to record to. Pick one on your USB drive in Recording settings.</string>
+    <string name="rec_error_usb_unavailable">Can\'t find your USB drive. Plug it back in, then pick its folder again in Recording settings.</string>
     <string name="rec_background_prompt_title">Keep recording when you leave?</string>
     <string name="rec_background_prompt_body">Android may stop this recording when the screen sleeps or you leave Settee. Allow Settee to ignore battery optimisation so recordings keep running, even in standby — the way a set-top box does.</string>
     <string name="rec_background_prompt_allow">Allow</string>
@@ -109,10 +108,12 @@
     <string name="player_pause">Pause</string>
     <string name="player_close">Close</string>
     <string name="player_paused_left">Paused · %1$s left</string>
-    <string name="player_no_sound">This device can\'t play this audio format (%1$s). If your TV or soundbar supports it, turning on surround sound in the device\'s settings may help.</string>
+    <string name="player_no_sound_tv">This TV can\'t play this audio format (%1$s). If your TV or soundbar supports it, turning on surround sound in its settings may help.</string>
+    <string name="player_no_sound_device">This device can\'t play this audio format (%1$s). If your TV or soundbar supports it, turning on surround sound in this device\'s settings may help.</string>
     <string name="player_stepped_down">This device can\'t play %1$s. Playing %2$s instead.</string>
     <string name="player_stepped_down_lower">This device can\'t play %1$s. Playing a lower quality instead.</string>
-    <string name="player_stepped_down_for_sound">This device can\'t play this audio format (%1$s), so another version is playing. If your TV or soundbar supports it, turning on surround sound in the device\'s settings may help.</string>
+    <string name="player_stepped_down_for_sound_tv">This TV can\'t play this audio format (%1$s), so another version is playing. If your TV or soundbar supports it, turning on surround sound in its settings may help.</string>
+    <string name="player_stepped_down_for_sound_device">This device can\'t play this audio format (%1$s), so another version is playing. If your TV or soundbar supports it, turning on surround sound in this device\'s settings may help.</string>
     <string name="player_stepped_down_unnamed">This device can\'t play that quality. Playing another instead.</string>
     <string name="player_back_to_live">Paused too long — back to live</string>
     <string name="live_pause_prompt_title">Pause live TV?</string>
@@ -192,7 +193,7 @@
     <string name="addons_checking">Checking…</string>
     <string name="addons_invalid">That doesn\'t look like a valid add-on manifest URL.</string>
     <string name="addons_added">Added %1$s</string>
-    <string name="addons_empty">No add-ons yet. Paste a manifest URL above to add one.</string>
+    <string name="addons_empty">No add-ons yet. Paste an add-on\'s link above to add one.</string>
     <string name="settings_guide_title">TV guide</string>
     <string name="settings_guide_subtitle">Guide sources and free XMLTV feeds</string>
     <string name="settings_channels_subtitle">Hide or favourite individual channels</string>
@@ -255,7 +256,7 @@
     <string name="parental_show_hidden_title">Show hidden now (this session)</string>
     <string name="parental_show_hidden_subtitle">Reveals hidden categories until the app is restarted.</string>
     <string name="parental_lock_sync_note">Categories you lock here are also locked on your other devices when they sync. Unlocking one only unlocks it on this device.</string>
-    <string name="parental_no_categories">No categories yet — add a provider first.</string>
+    <string name="parental_no_categories">No categories yet. Add a provider and its categories will show up here.</string>
     <string name="parental_pin">PIN</string>
     <string name="parental_pin_is_set">A PIN is set.</string>
     <string name="parental_change_pin">Change PIN</string>
@@ -286,7 +287,7 @@
 
     <!-- ============================ Providers ============================ -->
     <string name="providers_add">Add provider</string>
-    <string name="providers_empty">No providers yet. Add the IPTV service you already pay for to get started.</string>
+    <string name="providers_empty">No providers yet. Add the service you already pay for to get started.</string>
     <string name="providers_remove_confirm">Remove?</string>
     <string name="providers_yes_remove">Yes, remove</string>
     <string name="provider_stream_format">Stream format</string>
@@ -318,7 +319,7 @@
     <string name="recset_field_password">Password</string>
     <string name="recset_status_testing">Testing…</string>
     <string name="recset_status_connected">Connected — the share is reachable and writable.</string>
-    <string name="recset_status_failed">Couldn\'t connect: %1$s</string>
+    <string name="recset_status_failed">Couldn\'t connect to your NAS. Check it\'s on and these details are right.</string>
     <string name="recset_test_connection">Test connection</string>
     <string name="recset_status_saved">Saved.</string>
     <!-- Recording behaviour -->
@@ -427,6 +428,7 @@
     <string name="onboarding_playlist_url">Playlist URL</string>
     <string name="onboarding_portal_url">Portal URL</string>
     <string name="onboarding_server_help">For example http://example.com:8080. You can paste the whole line from your provider, and the extra bits get trimmed.</string>
+    <string name="onboarding_xtream_or_playlist_help">If your provider gave you one long link rather than a login, add it as a playlist instead.</string>
     <string name="onboarding_playlist_help">The full http link to your .m3u or .m3u8 file.</string>
     <string name="onboarding_portal_help">The portal address from your provider, such as http://host:port/c/. Extra bits get trimmed.</string>
     <string name="onboarding_mac_address">MAC address</string>
@@ -464,34 +466,34 @@
     <string name="channels_manager_search">Search for channels</string>
     <string name="channels_manager_hint">Search to hide or favourite channels</string>
     <string name="channels_manager_search_hint">Search for a channel, then hide it from the guide or star it.</string>
-    <string name="channels_manager_no_match">No channels match “%1$s”.</string>
+    <string name="channels_manager_no_match">No channels match “%1$s”. Try fewer or different words.</string>
     <string name="channels_manager_empty_category">No channels in this category.</string>
-    <string name="vod_empty_category_movies">No films in this category.</string>
+    <string name="vod_empty_category_movies">No movies in this category.</string>
     <string name="vod_empty_category_shows">No shows in this category.</string>
-    <string name="channels_manager_no_channels">No channels yet. Add a provider first.</string>
+    <string name="channels_manager_no_channels">No channels yet. Add a provider and its channels will show up here.</string>
     <string name="channels_hidden">Hidden</string>
     <string name="channels_showing">Showing</string>
 
     <!-- ============================ Search ============================ -->
     <string name="search_type_name">Type a name</string>
     <string name="search_start_hint">Start typing to search channels, movies and shows.</string>
-    <string name="search_no_results">No results for “%1$s”.</string>
+    <string name="search_no_results">Nothing matches “%1$s”. Try fewer or different words.</string>
     <string name="search_recent_title">Recent searches</string>
     <string name="search_clear_recent">Clear recent searches</string>
 
     <!-- ============================ On-screen keyboard ============================ -->
     <string name="kbd_paste">Paste</string>
-    <string name="kbd_clipboard_empty">Nothing to paste</string>
+    <string name="kbd_clipboard_empty">Nothing to paste. Copy something first.</string>
 
     <!-- ============================ Movies & shows (VOD) ============================ -->
     <string name="vod_loading_movies">Loading movies</string>
     <string name="vod_no_movies">No movies</string>
-    <string name="vod_no_movies_provider">This provider didn\'t return any movies.</string>
-    <string name="vod_no_movies_add">Add a provider to see its movies here.</string>
+    <string name="vod_no_movies_provider">Your provider hasn\'t sent any movies yet.</string>
+    <string name="vod_no_movies_add">Your provider\'s movies will show up here. Add a provider to get started.</string>
     <string name="vod_loading_shows">Loading shows</string>
     <string name="vod_no_shows">No shows</string>
-    <string name="vod_no_shows_provider">This provider didn\'t return any shows.</string>
-    <string name="vod_no_shows_add">Add a provider to see its shows here.</string>
+    <string name="vod_no_shows_provider">Your provider hasn\'t sent any shows yet.</string>
+    <string name="vod_no_shows_add">Your provider\'s shows will show up here. Add a provider to get started.</string>
     <string name="vod_loading_episodes">Loading episodes…</string>
     <string name="vod_continue_watching">Continue watching</string>
     <string name="vod_large_provider_note">A large provider can take a couple of minutes the first time.</string>
@@ -506,7 +508,7 @@
     <!-- A show's season and episode on a cover's status line, e.g. "S4 E3". -->
     <string name="home_cover_episode">S%1$d E%2$d</string>
     <string name="home_live_gone">No longer in your channel list</string>
-    <string name="home_empty_hint">Things you watch and favourite will show up here</string>
+    <string name="home_empty_hint">What you watch and favourite will show up here.</string>
     <string name="vod_recommended">Recommended for you</string>
     <string name="vod_recently_added">Recently added</string>
     <string name="vod_for_you">For you</string>
@@ -590,7 +592,6 @@
     <string name="rec_section_scheduled">Scheduled</string>
     <string name="rec_section_recorded">Recorded</string>
     <string name="rec_status_scheduled_at">Records %1$s · %2$s</string>
-    <string name="rec_status_failed_at">Failed · %1$s · %2$s</string>
     <string name="rec_for_profile">For %1$s</string>
     <string name="rec_retry">Retry</string>
     <string name="rec_watch_live">Watch</string>
@@ -617,18 +618,69 @@
     <string name="settings_tmdb_save">Save key</string>
     <string name="settings_tmdb_saved">TMDB key saved</string>
     <string name="settings_tmdb_active">Active</string>
-    <string name="playback_link_refused">The portal didn\'t give a link for this channel. Refresh the channel list, or check the MAC address is still authorised.</string>
-    <string name="playback_no_catchup">This provider doesn\'t offer catch-up. Only Xtream providers can play past programmes.</string>
-    <string name="playback_gone">This is no longer in the provider\'s list. Refresh the channel list and try again.</string>
-    <string name="playback_video_format_unsupported">This device can\'t play this video format (%1$s).</string>
-    <string name="playback_video_too_big">This device can\'t play this video (%1$s).</string>
-    <string name="playback_no_first_frame">This device couldn\'t show this video (%1$s).</string>
-    <string name="player_unknown_format">unknown format</string>
-    <string name="playback_audio_format_unsupported">This device can\'t play this audio format (%1$s).</string>
-    <string name="playback_other_format_unsupported">This device can\'t play this format (%1$s).</string>
-    <string name="playback_format_unsupported">This device can\'t play this format.</string>
+    <string name="error_http_401">Your provider didn\'t accept your login. Check the username and password in Settings.</string>
+    <string name="error_http_403">Your provider refused this. Your account may be in use on another device, so stop it there and try again.</string>
+    <string name="error_http_429">Your provider is getting too many requests from this device. Wait a minute, then try again.</string>
+    <string name="error_http_451">Your provider can\'t show this where you are.</string>
+    <string name="error_http_5xx">Your provider is having problems. That\'s at their end, so try again later.</string>
+    <string name="error_anything_else">This didn\'t play. Try again, or pick something else.</string>
+    <string name="error_cant_reach_tv">Can\'t reach your provider. Check this TV is online and the address is right.</string>
+    <string name="error_cant_reach_device">Can\'t reach your provider. Check this device is online and the address is right.</string>
+    <string name="error_timed_out">Your provider stopped responding. It may be busy, so try again in a moment.</string>
+    <string name="error_web_page">Your provider sent a web page instead of video. The link may have expired, so try refreshing your provider in Settings.</string>
+    <string name="error_damaged">This video is damaged and won\'t play. That\'s at your provider\'s end, so try something else.</string>
+    <string name="error_behind_live">This channel fell too far behind live. Try again to catch up.</string>
+    <string name="error_gone">This isn\'t on your provider any more. Try refreshing your provider in Settings.</string>
+    <string name="error_too_big_tv">This video is too big for this TV to play.</string>
+    <string name="error_too_big_device">This video is too big for this device to play.</string>
+    <string name="error_no_first_frame_tv">This TV couldn\'t show this video. Try again, or pick something else.</string>
+    <string name="error_no_first_frame_device">This device couldn\'t show this video. Try again, or pick something else.</string>
+    <string name="error_login">Your provider didn\'t accept your login. Check your provider\'s details in Settings.</string>
+    <string name="error_catalogue">Couldn\'t load your provider\'s channels. Try again in a moment.</string>
+    <string name="error_no_channels">Your provider sent no channels. Your account may not have any yet, so check with them.</string>
+    <string name="error_playlist_empty">There are no channels at that address. Check it\'s the link your provider gave you.</string>
+    <string name="error_account_inactive">Your provider says this account isn\'t active. Check with them, then try again.</string>
+    <string name="error_bad_address">That address doesn\'t look right. Check your provider\'s details in Settings.</string>
+    <string name="error_device_refused">Your provider didn\'t accept these details. Check your provider\'s details in Settings.</string>
+    <string name="error_guide">Couldn\'t download this guide. Try again in a moment.</string>
+    <string name="error_guide_empty">This guide downloaded, but had no programmes in it. Check it\'s the right link.</string>
+    <string name="error_test_failed">Couldn\'t connect to your provider with these details. Check them and try again.</string>
+    <string name="sync_wrong_code">That code doesn\'t match the one on the other device. Check it and try again.</string>
+    <string name="sync_receive_failed">Couldn\'t get anything from the other device. Check it\'s still sharing, then try again.</string>
+    <string name="sync_share_no_network_tv">This TV isn\'t on a network, so it can\'t share. Connect it, then try again.</string>
+    <string name="sync_share_no_network_device">This device isn\'t on a network, so it can\'t share. Connect it, then try again.</string>
+    <string name="sync_share_failed_tv">Couldn\'t start sharing on this TV. Try again in a moment.</string>
+    <string name="sync_share_failed_device">Couldn\'t start sharing on this device. Try again in a moment.</string>
+    <string name="sync_share_timed_out">Sharing stopped after waiting a while. Start again when you\'re ready.</string>
+    <string name="sync_share_too_many_codes">Sharing stopped after too many wrong codes. Start again to get a new one.</string>
+    <string name="rec_error_failed">This recording stopped. Try recording it again.</string>
+    <string name="manager_no_network_tv">This TV isn\'t on a network, so your phone or laptop can\'t reach it. Connect it, then try again.</string>
+    <string name="manager_no_network_device">This device isn\'t on a network, so your phone or laptop can\'t reach it. Connect it, then try again.</string>
+    <string name="manager_failed_tv">Couldn\'t start the channel manager on this TV. Try again in a moment.</string>
+    <string name="manager_failed_device">Couldn\'t start the channel manager on this device. Try again in a moment.</string>
+    <string name="manager_timed_out">The channel manager closed after a while unused. Open it again when you need it.</string>
+    <string name="manager_too_many_codes">The channel manager closed after too many wrong codes. Open it again to start over.</string>
+    <string name="pairing_no_network_tv">This TV isn\'t on a network, so your phone can\'t reach it. Connect it, then try again.</string>
+    <string name="pairing_no_network_device">This device isn\'t on a network, so your phone can\'t reach it. Connect it, then try again.</string>
+    <string name="pairing_failed_tv">Couldn\'t start pairing on this TV. Try again in a moment.</string>
+    <string name="pairing_failed_device">Couldn\'t start pairing on this device. Try again in a moment.</string>
+    <string name="pairing_timed_out">Pairing stopped after waiting a while. Start again when you\'re ready.</string>
+    <string name="pairing_too_many_codes">Pairing stopped after too many wrong codes. Start again to get a new one.</string>
+    <string name="update_failed_title">Update didn\'t download</string>
+    <string name="update_failed_tv">Couldn\'t download the update. Check this TV is online, then try again.</string>
+    <string name="update_failed_device">Couldn\'t download the update. Check this device is online, then try again.</string>
+    <string name="update_close">Close</string>
+    <string name="playback_link_refused">Your provider didn\'t give a link for this channel. Try refreshing your provider in Settings.</string>
+    <string name="playback_no_catchup">Your provider doesn\'t offer catch-up, so past programmes can\'t be played.</string>
+    <string name="error_video_format_tv">This TV can\'t play this video format.</string>
+    <string name="error_video_format_device">This device can\'t play this video format.</string>
+    <string name="error_audio_format_tv">This TV can\'t play this audio format.</string>
+    <string name="error_audio_format_device">This device can\'t play this audio format.</string>
+    <string name="error_format_tv">This TV can\'t play this format.</string>
+    <string name="error_format_device">This device can\'t play this format.</string>
+    <string name="error_out_of_memory_tv">This stream needs more memory than this TV has.</string>
+    <string name="error_out_of_memory_device">This stream needs more memory than this device has.</string>
     <string name="playback_try_other_quality">A different quality may work.</string>
-    <string name="playback_out_of_memory">This stream needs more memory than this device has.</string>
     <!-- Catalogue Refresh -->
     <string name="refresh_saving_source">Saving source…</string>
     <string name="refresh_save_failed">Could not save source.</string>

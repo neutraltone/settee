@@ -94,8 +94,7 @@ class PlaybackSourcesTest {
 
         assertThat(playable).isEqualTo(Playable.Failed(key, Playable.Failure.LINK_REFUSED, title = "BBC One"))
         assertThat(message(Playable.Failure.LINK_REFUSED)).isEqualTo(
-            "The portal didn't give a link for this channel. Refresh the channel list, or check the " +
-                "MAC address is still authorised.",
+            "Your provider didn't give a link for this channel. Try refreshing your provider in Settings.",
         )
     }
 
@@ -209,7 +208,7 @@ class PlaybackSourcesTest {
 
         assertThat(playable).isEqualTo(Playable.Failed(key, Playable.Failure.NO_CATCHUP))
         assertThat(message(Playable.Failure.NO_CATCHUP))
-            .isEqualTo("This provider doesn't offer catch-up. Only Xtream providers can play past programmes.")
+            .isEqualTo("Your provider doesn't offer catch-up, so past programmes can't be played.")
     }
 
     @Test
@@ -357,7 +356,7 @@ class PlaybackSourcesTest {
 
         assertThat(sources.forRecording(key)).isEqualTo(Playable.Failed(key, Playable.Failure.GONE))
         assertThat(message(Playable.Failure.GONE))
-            .isEqualTo("This is no longer in the provider's list. Refresh the channel list and try again.")
+            .isEqualTo("This isn't on your provider any more. Try refreshing your provider in Settings.")
     }
 
     private fun recording(filePath: String, status: RecordingStatus, channelId: Long = 1) = Recording(
@@ -427,7 +426,7 @@ class PlaybackSourcesTest {
         assertThat(sources.isGrowing(MediaKey.Recording(finished))).isFalse()
     }
 
-    private fun message(failure: Playable.Failure) = context.getString(PlaybackErrors.messageOf(failure))
+    private fun message(failure: Playable.Failure) = PlaybackErrors.describe(context, failure).sentence
 
     private fun news() = Programme(
         feedId = 1,

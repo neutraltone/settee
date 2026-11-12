@@ -6,6 +6,9 @@
 package app.opentv.data.repo
 
 import android.util.Log
+import app.opentv.R
+import app.opentv.core.ErrorWording
+import app.opentv.core.ViewerError
 import app.opentv.data.db.ChannelDao
 import app.opentv.data.db.EpgChannelAliasDao
 import app.opentv.data.db.EpgFeedDao
@@ -71,6 +74,8 @@ class EpgRepository(
     private val sourceDao: SourceDao,
     private val api: XtreamApi,
     private val http: OkHttpClient,
+    /** Words a feed that failed: its last result is shown in Guide settings. */
+    private val wording: ErrorWording,
 ) {
 
     data class SyncSummary(
@@ -188,8 +193,8 @@ class EpgRepository(
                         failed++
                         // The stamp is NOT advanced on failure, so the next sync retries
                         // rather than waiting out the interval on a feed that never landed.
-                        feedDao.markSynced(feed.id, feed.lastSyncMillis, result.reason)
-                        Log.w(TAG, "Feed '${feed.name}' failed: ${result.reason}")
+                        feedDao.markSynced(feed.id, feed.lastSyncMillis, result.reason.stored())
+                        Log.w(TAG, "Feed '${feed.name}' failed: ${result.reason.detail}")
                     }
                 }
             }
@@ -204,7 +209,7 @@ class EpgRepository(
 
     private sealed interface FeedResult {
         data class Success(val programmes: Int, val channels: Int) : FeedResult
-        data class Failed(val reason: String) : FeedResult
+        data class Failed(val reason: ViewerError) : FeedResult
     }
 
     private suspend fun syncFeed(feed: EpgFeed, nowUtcMillis: Long): FeedResult {
@@ -247,7 +252,7 @@ class EpgRepository(
                 }
 
                 if (written == 0 && stats.programmeCount == 0) {
-                    return FeedResult.Failed("Downloaded, but contained no programmes.")
+                    return FeedResult.Failed(wording.of(R.string.error_guide_empty, "NoProgrammes"))
                 }
                 return FeedResult.Success(written, stats.channelCount)
             }
@@ -256,7 +261,8 @@ class EpgRepository(
         } catch (e: Exception) {
             // Deliberately no cleanup. Whatever was written is newer than what was there,
             // and what was there is still there.
-            return FeedResult.Failed(e.message ?: "Download failed.")
+            Log.w(TAG, "Feed '${feed.name}' download failed", e)
+            return FeedResult.Failed(wording.of(e, R.string.error_guide))
         }
     }
 

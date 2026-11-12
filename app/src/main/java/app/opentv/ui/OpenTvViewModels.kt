@@ -9,8 +9,10 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import app.opentv.R
+import app.opentv.core.ServerProblem
 import app.opentv.core.ServiceLocator
 import app.opentv.core.StatusBus
+import app.opentv.core.ViewerError
 import app.opentv.data.model.Category
 import app.opentv.data.model.Channel
 import app.opentv.data.model.EpgFeed
@@ -56,6 +58,7 @@ import app.opentv.sync.NasSync
 import app.opentv.sync.SyncClient
 import app.opentv.sync.SyncEngine
 import app.opentv.sync.SyncServer
+import java.net.HttpURLConnection
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
@@ -106,10 +109,14 @@ class SourcesViewModel(app: Application) : AndroidViewModel(app) {
         val loaded: Boolean = false,
         val testing: Boolean = false,
         val testResult: String? = null,
-        val testError: String? = null,
+        val testError: ViewerError? = null,
         val adding: Boolean = false,
         val refreshing: Boolean = false,
         val syncMessage: String? = null,
+        /** Why adding this provider just failed, shown in place of [syncMessage]. */
+        val addFailure: ViewerError? = null,
+        /** Why the latest refresh or add couldn't download a provider's channels; null once one works. */
+        val loadFailure: ViewerError? = null,
     ) {
         val syncing: Boolean get() = adding || refreshing
     }
@@ -147,6 +154,7 @@ class SourcesViewModel(app: Application) : AndroidViewModel(app) {
                     announced = status
                     _ui.update {
                         it.copy(
+                            loadFailure = failureOf(state.last) ?: it.loadFailure.takeUnless { state.last.worked() },
                             refreshing = state.refreshing,
                             syncMessage = when {
                                 state.refreshing -> messages.of(RefreshMessages.Step.Refreshing)
@@ -169,9 +177,25 @@ class SourcesViewModel(app: Application) : AndroidViewModel(app) {
      */
     fun clearFormMessages() {
         _ui.update {
-            it.copy(testResult = null, testError = null, syncMessage = it.syncMessage.takeIf { _ -> it.syncing })
+            it.copy(
+                testResult = null,
+                testError = null,
+                addFailure = null,
+                syncMessage = it.syncMessage.takeIf { _ ->
+                    it.syncing
+                },
+            )
         }
     }
+
+    private fun failureOf(outcome: CatalogueRefresh.Outcome?): ViewerError? = when (outcome) {
+        is CatalogueRefresh.Outcome.Refreshed -> outcome.failure
+        is CatalogueRefresh.Outcome.AddFailed -> outcome.reason
+        else -> null
+    }
+
+    private fun CatalogueRefresh.Outcome?.worked() = this is CatalogueRefresh.Outcome.ChannelsLoaded ||
+        (this is CatalogueRefresh.Outcome.Refreshed && failure == null)
 
     fun test(draft: Source) {
         viewModelScope.launch {
@@ -180,7 +204,9 @@ class SourcesViewModel(app: Application) : AndroidViewModel(app) {
             _ui.value = _ui.value.copy(
                 testing = false,
                 testResult = result.getOrNull(),
-                testError = result.exceptionOrNull()?.message,
+                testError = result.exceptionOrNull()?.let {
+                    graph.errorWording.ofProvider(it, R.string.error_test_failed)
+                },
             )
         }
     }
@@ -188,7 +214,9 @@ class SourcesViewModel(app: Application) : AndroidViewModel(app) {
     /** Saves, then immediately pulls the channels so the viewer sees them, not a spinner. */
     fun saveAndSync(draft: Source, onDone: (Boolean) -> Unit = {}) {
         viewModelScope.launch {
-            _ui.update { it.copy(adding = true, syncMessage = messages.of(RefreshMessages.Step.SavingSource)) }
+            _ui.update {
+                it.copy(adding = true, addFailure = null, syncMessage = messages.of(RefreshMessages.Step.SavingSource))
+            }
             val id = graph.sourceRepository.save(draft)
             val saved = graph.sourceRepository.byId(id)
             if (saved == null) {
@@ -199,7 +227,14 @@ class SourcesViewModel(app: Application) : AndroidViewModel(app) {
 
             _ui.update { it.copy(syncMessage = messages.of(RefreshMessages.Step.LoadingChannels)) }
             val outcome = refresh.refresh(CatalogueRefresh.Trigger.ProviderAdded(saved))
-            _ui.update { it.copy(adding = false, syncMessage = messages.of(outcome)) }
+            val failure = (outcome as? CatalogueRefresh.Outcome.AddFailed)?.reason
+            _ui.update {
+                it.copy(
+                    adding = false,
+                    addFailure = failure,
+                    syncMessage = messages.of(outcome),
+                )
+            }
             onDone(outcome is CatalogueRefresh.Outcome.ChannelsLoaded)
         }
     }
@@ -1462,7 +1497,7 @@ class SyncViewModel(app: Application) : AndroidViewModel(app) {
         data object Idle : ReceiveState
         data object Connecting : ReceiveState
         data class Done(val merged: Int) : ReceiveState
-        data class Failed(val message: String) : ReceiveState
+        data class Failed(val reason: ViewerError) : ReceiveState
     }
 
     private val _receiveState = MutableStateFlow<ReceiveState>(ReceiveState.Idle)
@@ -1480,7 +1515,7 @@ class SyncViewModel(app: Application) : AndroidViewModel(app) {
         data object Idle : NasState
         data object Syncing : NasState
         data class Done(val message: String) : NasState
-        data class Failed(val message: String) : NasState
+        data class Failed(val reason: ViewerError) : NasState
     }
 
     private val _nasState = MutableStateFlow<NasState>(NasState.Idle)
@@ -1501,9 +1536,9 @@ class SyncViewModel(app: Application) : AndroidViewModel(app) {
                         NasState.Done(ctx.getString(R.string.sync_nas_done, result.merged, result.peers))
                     }
                 is NasSync.Result.NotConfigured ->
-                    NasState.Failed(ctx.getString(R.string.sync_nas_needs_setup))
+                    NasState.Failed(ViewerError(ctx.getString(R.string.sync_nas_needs_setup)))
                 is NasSync.Result.Failed ->
-                    NasState.Failed(ctx.getString(R.string.sync_nas_failed))
+                    NasState.Failed(graph.errorWording.of(result.cause, R.string.sync_nas_failed))
             }
         }
     }
@@ -1519,8 +1554,26 @@ class SyncViewModel(app: Application) : AndroidViewModel(app) {
             _receiveState.value = ReceiveState.Connecting
             client.pull(address, code)
                 .onSuccess { _receiveState.value = ReceiveState.Done(engine.apply(it).total) }
-                .onFailure { _receiveState.value = ReceiveState.Failed(it.message ?: "Sync failed.") }
+                .onFailure { _receiveState.value = ReceiveState.Failed(receiveFailure(it)) }
         }
+    }
+
+    /** The code not matching is the one failure the viewer can fix from here, so it says so. */
+    private fun receiveFailure(error: Throwable): ViewerError =
+        if (error is SyncClient.Refused && error.status == HttpURLConnection.HTTP_UNAUTHORIZED) {
+            graph.errorWording.of(error, R.string.sync_wrong_code)
+        } else {
+            graph.errorWording.of(error, R.string.sync_receive_failed)
+        }
+
+    /** What sharing's failure says to the viewer. */
+    fun describe(failed: SyncServer.State.Failed): ViewerError = when (failed.problem) {
+        ServerProblem.NO_NETWORK ->
+            graph.errorWording.ofHardware(R.string.sync_share_no_network_tv, R.string.sync_share_no_network_device)
+        ServerProblem.COULDNT_START ->
+            graph.errorWording.ofHardware(R.string.sync_share_failed_tv, R.string.sync_share_failed_device, failed.code)
+        ServerProblem.TIMED_OUT -> graph.errorWording.of(R.string.sync_share_timed_out)
+        ServerProblem.TOO_MANY_CODES -> graph.errorWording.of(R.string.sync_share_too_many_codes)
     }
 
     fun resetReceive() {

@@ -78,7 +78,7 @@ class UpdateCheckerTest {
 
     @Test
     fun `a newer release without its apk can't be checked, rather than looking up to date`() {
-        assertThat(check(releaseWithoutApks)).isEqualTo(UpdateChecker.Outcome.CouldNotCheck)
+        assertThat(check(releaseWithoutApks)).isEqualTo(UpdateChecker.Outcome.CouldNotCheck("NoApk"))
     }
 
     @Test
@@ -88,17 +88,19 @@ class UpdateCheckerTest {
 
     @Test
     fun `an error from GitHub, such as a rate limit, can't be checked`() {
-        assertThat(check(releaseWithBothApks, code = 403)).isEqualTo(UpdateChecker.Outcome.CouldNotCheck)
+        assertThat(check(releaseWithBothApks, code = 403)).isEqualTo(UpdateChecker.Outcome.CouldNotCheck("HTTP 403"))
     }
 
     @Test
     fun `an empty reply can't be checked`() {
-        assertThat(check("")).isEqualTo(UpdateChecker.Outcome.CouldNotCheck)
+        assertThat(check("")).isEqualTo(UpdateChecker.Outcome.CouldNotCheck("EmptyReply"))
     }
 
     @Test
     fun `a reply that isn't a release can't be checked`() {
-        assertThat(check("<html>Service unavailable</html>")).isEqualTo(UpdateChecker.Outcome.CouldNotCheck)
+        assertThat(
+            check("<html>Service unavailable</html>"),
+        ).isInstanceOf(UpdateChecker.Outcome.CouldNotCheck::class.java)
     }
 
     @Test

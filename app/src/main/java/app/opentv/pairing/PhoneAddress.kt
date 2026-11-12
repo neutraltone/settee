@@ -6,6 +6,7 @@
 package app.opentv.pairing
 
 import android.util.Log
+import app.opentv.core.ErrorWording
 import java.io.IOException
 import java.net.NetworkInterface
 import java.net.ServerSocket
@@ -47,7 +48,9 @@ class PhoneAddress private constructor(
     sealed interface Opening {
         data class Opened(val address: PhoneAddress) : Opening
         data object NoNetwork : Opening
-        data object NoSocket : Opening
+
+        /** [code] is the exception's type, for the detail line under the failure. */
+        data class NoSocket(val code: String) : Opening
     }
 
     sealed interface Check {
@@ -111,22 +114,16 @@ class PhoneAddress private constructor(
         private const val SHORT_TOKEN_ALPHABET = "346789acdefhjkmnprtwx"
 
         fun open(): Opening {
-            val host = lanAddress()
-            val socket = host?.let { openSocket() }
-            return when {
-                host == null -> Opening.NoNetwork
-                socket == null -> Opening.NoSocket
-                else -> Opening.Opened(PhoneAddress(host, socket, newToken()).apply { shortToken = newShortToken() })
+            val host = lanAddress() ?: return Opening.NoNetwork
+            return try {
+                // Port 0 asks the OS for a free one. A fixed port would be predictable and would
+                // clash with whatever else the user runs at home.
+                val socket = ServerSocket(0)
+                Opening.Opened(PhoneAddress(host, socket, newToken()).apply { shortToken = newShortToken() })
+            } catch (e: IOException) {
+                Log.w(TAG, "Could not open a socket", e)
+                Opening.NoSocket(ErrorWording.codeOf(e))
             }
-        }
-
-        private fun openSocket(): ServerSocket? = try {
-            // Port 0 asks the OS for a free one. A fixed port would be predictable and would
-            // clash with whatever else the user runs at home.
-            ServerSocket(0)
-        } catch (e: IOException) {
-            Log.w(TAG, "Could not open a socket", e)
-            null
         }
 
         private val random = SecureRandom()

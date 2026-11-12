@@ -6,6 +6,7 @@
 package app.opentv.pairing
 
 import android.util.Log
+import app.opentv.core.ServerProblem
 import app.opentv.data.model.Source
 import app.opentv.data.model.SourceKind
 import java.io.BufferedReader
@@ -78,7 +79,9 @@ class PairingServer(private val scope: CoroutineScope, private val fonts: Pairin
 
         /** The phone submitted details. The UI takes it from here. */
         data class Received(val draft: Source) : State
-        data class Failed(val reason: String) : State
+
+        /** [code] is the exception's type, for the detail line, when one was behind it. */
+        data class Failed(val problem: ServerProblem, val code: String? = null) : State
     }
 
     private val _state = MutableStateFlow<State>(State.Idle)
@@ -99,13 +102,11 @@ class PairingServer(private val scope: CoroutineScope, private val fonts: Pairin
         val opened = when (val opening = PhoneAddress.open()) {
             is PhoneAddress.Opening.Opened -> opening.address
             PhoneAddress.Opening.NoNetwork -> {
-                _state.value = State.Failed(
-                    "This device doesn't appear to be on a network, so it can't talk to your phone.",
-                )
+                _state.value = State.Failed(ServerProblem.NO_NETWORK)
                 return
             }
-            PhoneAddress.Opening.NoSocket -> {
-                _state.value = State.Failed("Could not start the pairing server on this device.")
+            is PhoneAddress.Opening.NoSocket -> {
+                _state.value = State.Failed(ServerProblem.COULDNT_START, opening.code)
                 return
             }
         }
@@ -143,7 +144,7 @@ class PairingServer(private val scope: CoroutineScope, private val fonts: Pairin
             kotlinx.coroutines.delay(TimeUnit.MINUTES.toMillis(SESSION_TIMEOUT_MINUTES))
             if (running && _state.value is State.Listening) {
                 stop()
-                _state.value = State.Failed("Pairing timed out. Start again when you're ready.")
+                _state.value = State.Failed(ServerProblem.TIMED_OUT)
             }
         }
     }
@@ -241,7 +242,7 @@ class PairingServer(private val scope: CoroutineScope, private val fonts: Pairin
                     ),
                 )
                 stop()
-                _state.value = State.Failed("Too many incorrect codes. Pairing cancelled.")
+                _state.value = State.Failed(ServerProblem.TOO_MANY_CODES)
                 return
             }
             output.write(
