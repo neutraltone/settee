@@ -24,10 +24,6 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.LinearProgressIndicator
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
@@ -49,13 +45,17 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import app.opentv.data.model.Movie
 import app.opentv.data.model.Series
 import app.opentv.data.parser.ChannelNameNormalizer
 import app.opentv.data.parser.displayTitle
+import app.opentv.ui.design.ProgressBar
+import app.opentv.ui.design.SetteeColors
+import app.opentv.ui.design.SetteeShapes
+import app.opentv.ui.design.SetteeType
+import app.opentv.ui.design.Text
 import app.opentv.ui.options.LeaveDirectly
 import app.opentv.ui.options.LeaveScreen
 import app.opentv.ui.options.OptionsSubject
@@ -176,9 +176,8 @@ internal fun Modifier.takesFocus(index: Int, focus: CardFocus?): Modifier =
 internal fun SectionHeader(title: String) {
     Text(
         title,
-        style = MaterialTheme.typography.titleMedium,
-        fontWeight = FontWeight.SemiBold,
-        color = MaterialTheme.colorScheme.onSurface,
+        style = SetteeType.RowTitle,
+        color = SetteeColors.Text,
         maxLines = 1,
         overflow = TextOverflow.Ellipsis,
         modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 4.dp),
@@ -210,7 +209,7 @@ internal fun Modifier.focusCueBorder(cue: FocusCue, shape: Shape): Modifier =
 internal fun rememberFocusCue(): FocusCue {
     val focused = remember { mutableStateOf(false) }
     val scale = animateFloatAsState(if (focused.value) 1.06f else 1f, label = "cardScale")
-    val color = rememberUpdatedState(MaterialTheme.colorScheme.primary)
+    val color = rememberUpdatedState(SetteeColors.Accent)
     return remember(scale) { FocusCue(focused, scale, color) }
 }
 
@@ -237,7 +236,7 @@ internal fun PosterCard(
         modifier
             .width(POSTER_WIDTH)
             .focusCueScale(cue)
-            .clip(RoundedCornerShape(10.dp))
+            .clip(SetteeShapes.Card)
             .optionsClickable(onClick, onOptions)
             .padding(4.dp),
     ) {
@@ -245,9 +244,9 @@ internal fun PosterCard(
             Modifier
                 .fillMaxWidth()
                 .aspectRatio(2f / 3f)
-                .clip(RoundedCornerShape(8.dp))
-                .background(MaterialTheme.colorScheme.surfaceVariant)
-                .focusCueBorder(cue, RoundedCornerShape(8.dp)),
+                .clip(SetteeShapes.Thumbnail)
+                .background(SetteeColors.Raised)
+                .focusCueBorder(cue, SetteeShapes.Thumbnail),
         ) {
             AsyncImage(
                 model = posterUrl,
@@ -269,20 +268,17 @@ internal fun PosterCard(
                 )
             }
             progress?.let {
-                LinearProgressIndicator(
-                    progress = { it },
-                    modifier = Modifier.fillMaxWidth().height(4.dp).align(Alignment.BottomCenter),
-                )
+                ProgressBar(it, Modifier.fillMaxWidth().align(Alignment.BottomCenter))
             }
         }
         Spacer(Modifier.height(6.dp))
         Text(
             title,
-            style = MaterialTheme.typography.bodyMedium,
+            style = SetteeType.Body,
             color = if (cue.focused) {
-                MaterialTheme.colorScheme.onSurface
+                SetteeColors.Text
             } else {
-                MaterialTheme.colorScheme.onSurfaceVariant
+                SetteeColors.QuietText
             },
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
@@ -290,8 +286,8 @@ internal fun PosterCard(
         subtitle?.let {
             Text(
                 it,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                style = SetteeType.Body,
+                color = SetteeColors.QuietText,
                 maxLines = 1,
             )
         }
@@ -307,19 +303,18 @@ internal fun rememberQualityBadge(name: String): String? =
 @Composable
 private fun Badge(text: String, modifier: Modifier = Modifier, highlight: Boolean = false) {
     val bg = if (highlight) {
-        MaterialTheme.colorScheme.primary
+        SetteeColors.Accent
     } else {
         androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.66f)
     }
-    val fg = if (highlight) MaterialTheme.colorScheme.onPrimary else androidx.compose.ui.graphics.Color.White
+    val fg = if (highlight) SetteeColors.OnAccent else androidx.compose.ui.graphics.Color.White
     Text(
         text,
-        style = MaterialTheme.typography.labelSmall,
-        fontWeight = FontWeight.SemiBold,
+        style = SetteeType.CardTitle,
         color = fg,
         maxLines = 1,
         modifier = modifier
-            .clip(RoundedCornerShape(6.dp))
+            .clip(SetteeShapes.Thumbnail)
             .background(bg)
             .padding(horizontal = 6.dp, vertical = 2.dp),
     )

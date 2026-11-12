@@ -610,6 +610,8 @@ class LivePlayerContentTest {
         compose.mainClock.advanceTimeBy(CARD_TIMEOUT_MILLIS)
 
         compose.onAllNodesWithText("Two").assertCountEquals(0)
+        compose.onNodeWithContentDescription("Loading").assertExists()
+        captureScreen("live_player_buffering")
         stuck.release()
     }
 

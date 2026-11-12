@@ -9,6 +9,7 @@ import androidx.compose.ui.semantics.ProgressBarRangeInfo
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.hasProgressBarRangeInfo
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.test.core.app.ApplicationProvider
@@ -55,15 +56,17 @@ class VodPlayerLoadingTest {
     }
 
     @Test
-    fun `a spinner shows while nothing has started yet`() {
+    fun `the aerial TV shows while nothing has started yet`() {
         show()
         compose.waitForIdle()
 
         compose.onNode(spinner).assertExists()
+        compose.onNodeWithContentDescription("Loading").assertExists()
+        captureScreen("vod_player_waiting")
     }
 
     @Test
-    fun `no spinner once a film has finished`() {
+    fun `nothing waits once a film has finished`() {
         show()
         runBlocking { viewModel.attach(MediaKey.Movie(1), FakePlayback()) }
         players.play(controller)

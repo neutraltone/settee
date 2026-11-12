@@ -6,10 +6,9 @@
 package app.opentv
 
 import android.graphics.drawable.ColorDrawable
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.Modifier
@@ -18,6 +17,7 @@ import androidx.compose.ui.platform.LocalInputModeManager
 import androidx.compose.ui.test.junit4.ComposeContentTestRule
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.platform.app.InstrumentationRegistry
+import app.opentv.ui.design.SetteeColors
 import app.opentv.ui.design.SetteeTheme
 import coil.Coil
 import coil.EventListener
@@ -68,8 +68,8 @@ private fun ComposeContentTestRule.setTvScreen(content: @Composable () -> Unit) 
     val inputMode = LocalInputModeManager.current
     SideEffect { inputMode.requestInputMode(InputMode.Keyboard) }
     SetteeTheme {
-        Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-            // Surface stretches its child to fill it; the Box lets content keep its own size.
+        // The outer Box fills the screen with the background; the inner one lets content keep its own size.
+        Box(Modifier.fillMaxSize().background(SetteeColors.Background), propagateMinConstraints = true) {
             Box { content() }
         }
     }

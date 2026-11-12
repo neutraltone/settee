@@ -77,10 +77,8 @@ APK, and a fail if the build changed `app/schemas/`), **Android Lint**, **ktlint
 **Screenshot tools** (the Python tests in `tools/screenshots/`, `tools/perf/`, `tools/check/` and `tools/launcher-art/`) and **gitleaks** (every commit
 a PR adds, reverted ones included, not other branches; pushes to `main` scan its whole history). `pr-hygiene.yml` runs `tools/check-message-test.sh` and checks the PR title with
 `tools/check-message.sh`. Lint and detekt fail only on findings missing from `app/lint-baseline.xml` /
-`app/detekt-baseline.xml`: fix a new finding, don't regenerate a baseline to hide it. The one deliberate
-use is detekt's `ForbiddenImport`, which bans Material's interactive widgets and `RoundedCornerShape`
-outside `ui/design`: today's uses are in the baseline on purpose, and each screen ticket deletes its own
-entries as it moves onto `ui/design`. Never add one. `.gitleaks.toml`
+`app/detekt-baseline.xml`: fix a new finding, don't regenerate a baseline to hide it. detekt's
+`ForbiddenImport` bans `RoundedCornerShape` outside `ui/design`, where `SetteeShapes` lives. `.gitleaks.toml`
 adds rules for Xtream credentials in URLs and MAG MACs; use placeholders such as `u`/`p`, `example.com` or `00:1A:79:00:00:01` in tests.
 `RoomMigrationTest` walks every exported schema to the latest with `OpenTvDatabase.MIGRATIONS`.
 
@@ -114,9 +112,10 @@ catalogue refresh, playback or Xtream parsing. The big picture:
   from the players is decided there too.
 - **Settings** are in `core/AppSettings.kt` (exposed as `StateFlow`s, e.g. `activeProfileId`).
 - **Look:** `ui/design` is Settee's design system (ADR 0006, values from `docs/LOOK.md`): tokens
-  (`SetteeColors`, `SetteeType`, `SetteeShapes`, `SetteeSpace`), `SetteeTheme`, `HighlightSurface`, `Text`
-  and `ScreenFrame`. Settee is always dark. Screens not yet moved onto it use Material 3, which
-  `SetteeTheme` feeds from the tokens. `ui/design` never imports `app.opentv.data` (`DesignBoundaryTest`).
+  (`SetteeColors`, `SetteeType`, `SetteeShapes`, `SetteeSpace`), `SetteeTheme`, `HighlightSurface`, `Text`,
+  `Icon`, `ScreenFrame`, the Side Panel family (`SidePanel`, `ConfirmPanel`, `NotesPanel`) and `AerialTv`
+  for waiting. Settee is always dark, and has no Material 3: build from `ui/design` and Compose foundation
+  (`material-icons-extended` is only icons). `ui/design` never imports `app.opentv.data` (`DesignBoundaryTest`).
   The fonts ship unmodified, recorded in `app/src/main/assets/licences/FONTS.md`.
 
 ### Data rules that are easy to break

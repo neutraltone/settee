@@ -6,12 +6,6 @@
 package app.opentv.ui.options
 
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -29,11 +23,14 @@ import androidx.compose.ui.input.key.type
 import androidx.compose.ui.res.stringResource
 import app.opentv.R
 import app.opentv.ui.channels.formatTime
+import app.opentv.ui.design.PanelRow
+import app.opentv.ui.design.PanelTitle
+import app.opentv.ui.design.SidePanel
 import app.opentv.ui.player.OK_KEYS
 
 /**
- * The options panel for one item, headed [title]: a button per option, the first highlighted so
- * Select straight away does the likeliest thing. Back or choosing an option closes it. [labelOf]
+ * The options for one item, headed [title], in a Side Panel: a row per option, the first highlighted
+ * so Select straight away does the likeliest thing. Back or choosing an option closes it. [labelOf]
  * is for an option that says more than its name.
  */
 @Composable
@@ -60,43 +57,32 @@ internal fun <T> ChoicePanel(
     // Holding Select is one way to open this, and the highlight lands on the first option with the key
     // still down. Its repeats and release would press that option, so only a new press counts.
     var newPress by remember { mutableStateOf(false) }
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        confirmButton = {},
-        title = { Text(title) },
-        text = {
-            // Scrolls because a list can outgrow the screen: focus moving down it brings each row in.
-            Column(
-                Modifier
-                    .onPreviewKeyEvent { event ->
-                        if (event.key !in OK_KEYS) return@onPreviewKeyEvent false
-                        if (event.type == KeyEventType.KeyDown && event.nativeKeyEvent.repeatCount == 0) {
-                            newPress = true
-                        }
-                        !newPress
-                    }
-                    .verticalScroll(rememberScrollState()),
-            ) {
-                // Requested from inside the dialog: its window composes after the caller's, and
-                // a FocusRequester asked before it is attached throws. Asked again for each list, as
-                // the row that had the highlight may be gone from the next.
-                LaunchedEffect(choices) {
-                    withFrameNanos {}
-                    runCatching { first.requestFocus() }
+    SidePanel(onBack = onDismiss) {
+        PanelTitle(title)
+        Column(
+            Modifier.onPreviewKeyEvent { event ->
+                if (event.key !in OK_KEYS) return@onPreviewKeyEvent false
+                if (event.type == KeyEventType.KeyDown && event.nativeKeyEvent.repeatCount == 0) {
+                    newPress = true
                 }
-                choices.forEachIndexed { i, choice ->
-                    TextButton(
-                        onClick = { onChoose(choice) },
-                        modifier = Modifier.fillMaxWidth().then(
-                            if (i == 0) Modifier.focusRequester(first) else Modifier,
-                        ),
-                    ) {
-                        Text(labelOf(choice))
-                    }
-                }
+                !newPress
+            },
+        ) {
+            // The one place the Highlight is placed: on opening, and again for each new list, as the
+            // row that had it may be gone from the next.
+            LaunchedEffect(choices) {
+                withFrameNanos {}
+                runCatching { first.requestFocus() }
             }
-        },
-    )
+            choices.forEachIndexed { i, choice ->
+                PanelRow(
+                    labelOf(choice),
+                    onClick = { onChoose(choice) },
+                    modifier = if (i == 0) Modifier.focusRequester(first) else Modifier,
+                )
+            }
+        }
+    }
 }
 
 @Composable

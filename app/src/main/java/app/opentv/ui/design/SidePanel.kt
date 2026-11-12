@@ -38,8 +38,9 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.window.DialogWindowProvider
 
 /**
- * A panel down the right of the screen, over what's there, for a choice or an item's details: the
- * same family as the player's subtitles and audio panels. Back calls [onBack]; there's no Cancel.
+ * A Side Panel: down the right of the screen, over what's there, for a choice, an item's details, or
+ * a question before acting. Every question, choice and notice in Settee opens in one (docs/LOOK.md,
+ * Side Panel). Back calls [onBack]; there's no Cancel.
  * The Highlight starts on [startOn] when given, or else on the ticked [PanelRow] of a choice, or
  * else on the first row.
  *
@@ -49,6 +50,16 @@ import androidx.compose.ui.window.DialogWindowProvider
  */
 @Composable
 fun SidePanel(onBack: () -> Unit, startOn: FocusRequester? = null, content: @Composable ColumnScope.() -> Unit) {
+    SidePanelWindow(onBack, startOn, scrolls = true, content)
+}
+
+@Composable
+private fun SidePanelWindow(
+    onBack: () -> Unit,
+    startOn: FocusRequester?,
+    scrolls: Boolean,
+    content: @Composable ColumnScope.() -> Unit,
+) {
     Dialog(
         onDismissRequest = onBack,
         properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false),
@@ -69,20 +80,20 @@ fun SidePanel(onBack: () -> Unit, startOn: FocusRequester? = null, content: @Com
         }
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.CenterEnd) {
             CompositionLocalProvider(LocalTickedRow provides ticked) {
-                PanelColumn(rows, content)
+                PanelColumn(rows, scrolls, content)
             }
         }
     }
 }
 
 @Composable
-private fun PanelColumn(rows: FocusRequester, content: @Composable ColumnScope.() -> Unit) {
+private fun PanelColumn(rows: FocusRequester, scrolls: Boolean, content: @Composable ColumnScope.() -> Unit) {
     Column(
         Modifier
             .width(SidePanelWidth)
             .fillMaxHeight()
             .background(SetteeColors.Surface)
-            .verticalScroll(rememberScrollState())
+            .then(if (scrolls) Modifier.verticalScroll(rememberScrollState()) else Modifier)
             .padding(horizontal = PANEL_PADDING, vertical = SetteeSpace.ScreenTopBottom)
             .focusRequester(rows)
             .focusGroup(),
@@ -117,11 +128,11 @@ fun PanelRow(
     ) { highlighted ->
         val quiet = if (highlighted) SetteeColors.OnAccent else SetteeColors.QuietText
         Row(Modifier.fillMaxWidth().padding(ROW_PADDING), verticalAlignment = Alignment.CenterVertically) {
+            // Wraps: a label can name a programme or series, and cutting it off hides which one.
             Text(
                 label,
                 SetteeType.Body,
                 color = if (highlighted) SetteeColors.OnAccent else SetteeColors.Text,
-                maxLines = 1,
                 modifier = Modifier.weight(1f),
             )
             value?.let { Text(it, SetteeType.Body, color = quiet, maxLines = 1) }
@@ -142,14 +153,64 @@ fun PanelTitle(text: String, modifier: Modifier = Modifier) {
     Text(text, SetteeType.Section, maxLines = 2, modifier = modifier.padding(bottom = ROW_PADDING))
 }
 
+/** A prompt's short explanation, under its [PanelTitle] and above its choices. */
+@Composable
+fun PanelBody(text: String, modifier: Modifier = Modifier) {
+    Text(text, SetteeType.Body, modifier = modifier.padding(bottom = ROW_PADDING))
+}
+
 /**
- * Asks before something that can't be undone, such as removing a provider: [confirm] above [keep],
- * with the Highlight starting on [keep], so a stray OK changes nothing. Back keeps it too.
+ * A [SidePanel] for a notice whose [notes] can be long, such as release notes: [title], then [body]
+ * if there is one, the notes, and the choices under them, [main] first and then [others].
+ *
+ * The notes never take the Highlight. It starts on [main], where Up and Down scroll the notes, so
+ * the main choice is always one press away however far the viewer has read. Once the notes reach
+ * their end, Down carries on to [others] as in any panel, and Up from there comes back to [main].
  */
 @Composable
-fun ConfirmPanel(confirm: String, keep: String, onConfirm: () -> Unit, onKeep: () -> Unit) {
+fun NotesPanel(
+    title: String,
+    main: String,
+    onMain: () -> Unit,
+    onBack: () -> Unit,
+    body: String? = null,
+    others: @Composable ColumnScope.() -> Unit = {},
+    notes: @Composable ColumnScope.() -> Unit,
+) {
+    val scroll = rememberScrollState()
+    val mainRow = remember { FocusRequester() }
+    SidePanelWindow(onBack, startOn = mainRow, scrolls = false) {
+        PanelTitle(title)
+        body?.let { PanelBody(it) }
+        // Not filling: short notes leave the choices right under them, long ones stop where the
+        // choices begin and scroll.
+        Column(
+            Modifier.weight(1f, fill = false).fillMaxWidth().verticalScroll(scroll).padding(bottom = ROW_PADDING),
+            content = notes,
+        )
+        PanelRow(main, onClick = onMain, modifier = Modifier.focusRequester(mainRow).dpadScrolls(scroll))
+        others()
+    }
+}
+
+/**
+ * Asks before something that can't be undone, such as removing a provider: [confirm] above [keep],
+ * with the Highlight starting on [keep], so a stray OK changes nothing. Back keeps it too. A prompt
+ * that needs explaining has a [title] and a short [body] above the choices.
+ */
+@Composable
+fun ConfirmPanel(
+    confirm: String,
+    keep: String,
+    onConfirm: () -> Unit,
+    onKeep: () -> Unit,
+    title: String? = null,
+    body: String? = null,
+) {
     val keepRow = remember { FocusRequester() }
     SidePanel(onBack = onKeep, startOn = keepRow) {
+        title?.let { PanelTitle(it) }
+        body?.let { PanelBody(it) }
         PanelRow(confirm, onClick = onConfirm)
         PanelRow(keep, onClick = onKeep, modifier = Modifier.focusRequester(keepRow))
     }

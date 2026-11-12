@@ -20,9 +20,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -37,13 +34,16 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import app.opentv.R
 import app.opentv.data.model.Profile
 import app.opentv.data.model.Source
+import app.opentv.ui.design.SetteeColors
+import app.opentv.ui.design.SetteeShapes
+import app.opentv.ui.design.SetteeType
+import app.opentv.ui.design.Text
 
 /** The screen the app opens on. */
 enum class FirstScreen { ADD_SOURCE, WHOS_WATCHING, HOME }
@@ -102,7 +102,7 @@ fun WhosWatchingScreen(profiles: List<Profile>, lastActiveId: Long, onChoose: (L
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
-        Text(stringResource(R.string.whos_watching_heading), style = MaterialTheme.typography.headlineMedium)
+        Text(stringResource(R.string.whos_watching_heading), style = SetteeType.ScreenTitle)
         Spacer(Modifier.height(40.dp))
         LazyRow(
             state = row,
@@ -125,7 +125,7 @@ fun WhosWatchingScreen(profiles: List<Profile>, lastActiveId: Long, onChoose: (L
 private fun ProfileCard(profile: Profile, modifier: Modifier, onClick: () -> Unit) {
     var focused by remember { mutableStateOf(false) }
     val scale by animateFloatAsState(if (focused) 1.06f else 1f, label = "profileScale")
-    val shape = RoundedCornerShape(12.dp)
+    val shape = SetteeShapes.Card
     Column(
         modifier
             .graphicsLayer {
@@ -139,21 +139,20 @@ private fun ProfileCard(profile: Profile, modifier: Modifier, onClick: () -> Uni
         Box(
             Modifier
                 .size(140.dp)
-                .background(MaterialTheme.colorScheme.surfaceVariant, shape)
-                .then(if (focused) Modifier.border(3.dp, MaterialTheme.colorScheme.primary, shape) else Modifier),
+                .background(SetteeColors.Raised, shape)
+                .then(if (focused) Modifier.border(3.dp, SetteeColors.Accent, shape) else Modifier),
             contentAlignment = Alignment.Center,
         ) {
             Text(
                 profile.name.take(1).uppercase(),
-                style = MaterialTheme.typography.displayMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                style = SetteeType.Display,
+                color = SetteeColors.QuietText,
             )
         }
         Spacer(Modifier.height(12.dp))
         Text(
             profile.name,
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = if (focused) FontWeight.SemiBold else FontWeight.Normal,
+            style = SetteeType.RowTitle,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
             textAlign = TextAlign.Center,

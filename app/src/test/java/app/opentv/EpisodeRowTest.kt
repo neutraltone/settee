@@ -102,6 +102,20 @@ class EpisodeRowTest {
     }
 
     @Test
+    fun `the minutes left are rounded to the nearest minute`() {
+        show(WatchStatus.InProgress(progress = 0.4f, remainingMillis = 22 * 60_000L + 40_000))
+
+        compose.onNodeWithText("23 min left", useUnmergedTree = true).assertExists()
+    }
+
+    @Test
+    fun `seconds left still count as a minute, never none`() {
+        show(WatchStatus.InProgress(progress = 0.9f, remainingMillis = 20_000))
+
+        compose.onNodeWithText("1 min left", useUnmergedTree = true).assertExists()
+    }
+
+    @Test
     fun `an In Progress episode with no known duration is labelled In progress`() {
         show(WatchStatus.InProgress(progress = 0f, remainingMillis = null))
 

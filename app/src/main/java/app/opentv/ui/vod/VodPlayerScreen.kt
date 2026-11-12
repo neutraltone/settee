@@ -31,8 +31,6 @@ import androidx.compose.material.icons.filled.Bedtime
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.FiberManualRecord
 import androidx.compose.material.icons.filled.MoreHoriz
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -73,6 +71,8 @@ import app.opentv.core.findActivity
 import app.opentv.data.repo.MediaKey
 import app.opentv.player.NextEpisodeCountdown
 import app.opentv.player.PlayerController
+import app.opentv.ui.design.AerialTv
+import app.opentv.ui.design.Icon
 import app.opentv.ui.design.SetteeColors
 import app.opentv.ui.design.SetteeType
 import app.opentv.ui.design.Text
@@ -465,13 +465,13 @@ fun VodPlayerContent(
             // Which Quality to play is still being worked out, which may mean asking the provider. Idle
             // once something has played means it finished or was stopped, with nothing to wait for.
             PlayerController.State.Idle -> if (playingKey == null) {
-                CircularProgressIndicator(Modifier.align(Alignment.Center))
+                AerialTv(stringResource(R.string.player_loading), Modifier.align(Alignment.Center))
             }
 
             is PlayerController.State.Buffering ->
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        CircularProgressIndicator()
+                        AerialTv(stringResource(R.string.player_loading))
                         Spacer(Modifier.height(16.dp))
                         Text(current.title, SetteeType.Body)
                     }

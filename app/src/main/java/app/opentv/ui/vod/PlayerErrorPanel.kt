@@ -5,10 +5,7 @@
  */
 package app.opentv.ui.vod
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -17,12 +14,8 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Button
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -39,6 +32,9 @@ import androidx.compose.ui.unit.dp
 import app.opentv.R
 import app.opentv.player.PlayerController
 import app.opentv.ui.design.ErrorMessage
+import app.opentv.ui.design.PillButton
+import app.opentv.ui.design.SetteeType
+import app.opentv.ui.design.Text
 
 /**
  * Why a film or episode can't go on, with somewhere to go. Takes focus itself: a remote has no other way
@@ -62,7 +58,7 @@ internal fun PlayerErrorPanel(error: PlayerController.State.Error, onRetry: () -
         contentAlignment = Alignment.Center,
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(48.dp)) {
-            Text(error.title, style = MaterialTheme.typography.headlineSmall, color = Color.White)
+            Text(error.title, SetteeType.ScreenTitle)
             Spacer(Modifier.height(12.dp))
             ErrorMessage(error.reason.sentence, error.reason.detail)
             Spacer(Modifier.height(24.dp))
@@ -80,14 +76,5 @@ internal fun PlayerErrorPanel(error: PlayerController.State.Error, onRetry: () -
 
 @Composable
 private fun PanelButton(label: Int, onClick: () -> Unit, modifier: Modifier = Modifier) {
-    val interactions = remember { MutableInteractionSource() }
-    val focused by interactions.collectIsFocusedAsState()
-    Button(
-        onClick = onClick,
-        modifier = modifier,
-        interactionSource = interactions,
-        border = if (focused) BorderStroke(3.dp, Color.White) else null,
-    ) {
-        Text(stringResource(label))
-    }
+    PillButton(stringResource(label), onClick = onClick, modifier = modifier)
 }

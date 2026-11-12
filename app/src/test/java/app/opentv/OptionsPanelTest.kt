@@ -11,6 +11,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEvent
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.hasText
@@ -20,7 +21,9 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.performKeyPress
+import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.pressKey
+import androidx.compose.ui.text.TextLayoutResult
 import app.opentv.data.model.Programme
 import app.opentv.ui.options.ItemOption
 import app.opentv.ui.options.OptionsPanel
@@ -42,21 +45,37 @@ class OptionsPanelTest {
     val compose = createComposeRule()
 
     private var chosen: ItemOption? = null
+    private var dismissed = 0
 
     private fun show(vararg options: ItemOption) = compose.setTvContent {
-        OptionsPanel(title = "The Show", options = options.toList(), onChoose = { chosen = it }, onDismiss = {})
+        OptionsPanel(
+            title = "The Show",
+            options = options.toList(),
+            onChoose = { chosen = it },
+            onDismiss = { dismissed++ },
+        )
     }
 
     @Test
     fun `the panel shows only the options it is given, the first highlighted`() {
         show(ItemOption.MarkWatched, ItemOption.RemoveFromContinueWatching, ItemOption.AddFavourite)
 
-        compose.onNodeWithText("Mark watched").assertIsFocused()
+        compose.onNodeWithText("Mark watched").assertIsFocused().assertIsInSidePanel()
         compose.onNodeWithText("Remove from Continue Watching").assertExists()
         compose.onNodeWithText("Add to Favourites").assertExists()
         compose.onNodeWithText("Mark unwatched").assertDoesNotExist()
         compose.onNodeWithText("Remove from Favourites").assertDoesNotExist()
         captureScreen("options_panel")
+    }
+
+    @Test
+    fun `back closes the panel without choosing`() {
+        show(ItemOption.MarkWatched, ItemOption.AddFavourite)
+
+        compose.pressBackOnPanel()
+
+        assertThat(dismissed).isEqualTo(1)
+        assertThat(chosen).isNull()
     }
 
     @Test
@@ -92,6 +111,18 @@ class OptionsPanelTest {
         show(ItemOption.RecordWholeSeries(programme("The News")))
 
         compose.onNodeWithText("Record whole series: The News").assertIsFocused()
+    }
+
+    @Test
+    fun `a long label wraps rather than losing its end`() {
+        val title = "The Great British Sewing Bee: The Christmas Special Extended Edition"
+        show(ItemOption.RecordWholeSeries(programme(title)))
+
+        val layout = mutableListOf<TextLayoutResult>()
+        compose.onNodeWithText("Record whole series: $title", useUnmergedTree = true)
+            .performSemanticsAction(SemanticsActions.GetTextLayoutResult) { it(layout) }
+
+        assertThat(layout.single().hasVisualOverflow).isFalse()
     }
 
     @Test

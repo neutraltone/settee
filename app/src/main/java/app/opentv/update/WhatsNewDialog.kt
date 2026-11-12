@@ -6,42 +6,30 @@
 package app.opentv.update
 
 import android.content.Context
-import androidx.compose.foundation.ScrollState
-import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.input.key.Key
-import androidx.compose.ui.input.key.KeyEventType
-import androidx.compose.ui.input.key.key
-import androidx.compose.ui.input.key.onPreviewKeyEvent
-import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import app.opentv.BuildConfig
 import app.opentv.R
 import app.opentv.core.ServiceLocator
+import app.opentv.ui.design.NotesPanel
+import app.opentv.ui.design.SetteeColors
+import app.opentv.ui.design.SetteeType
+import app.opentv.ui.design.Text
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 /**
@@ -81,52 +69,23 @@ fun Context.bundledChangelog(): String =
 /** "What's new in x.y.z": the notes for every version since the last one this device saw. */
 @Composable
 fun WhatsNewDialog(installedVersion: String, notes: List<VersionNotes>, onDismiss: () -> Unit) {
-    val scroll = rememberScrollState()
-    val dpadScroll = rememberDpadScroll(scroll)
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        confirmButton = {
-            TextButton(onClick = onDismiss, modifier = dpadScroll) {
-                Text(stringResource(R.string.whats_new_dismiss))
-            }
-        },
-        title = { Text(stringResource(R.string.whats_new_title, installedVersion)) },
-        text = {
-            Column(Modifier.verticalScroll(scroll)) {
-                if (notes.isEmpty()) Text(stringResource(R.string.whats_new_nothing)) else ReleaseNotesBody(notes)
-            }
-        },
-    )
-}
-
-/**
- * A modifier for a dialog's buttons that turns D-pad Up and Down into scrolling [scroll]. The buttons
- * are a notes dialog's only focusables, so the notes have nothing for the D-pad to move onto; scrolling
- * from the buttons keeps Select one press from done. Left and Right still move between buttons.
- */
-@Composable
-fun rememberDpadScroll(scroll: ScrollState): Modifier {
-    val scope = rememberCoroutineScope()
-    val step = with(LocalDensity.current) { SCROLL_STEP.toPx() }
-    return remember(scroll, scope, step) {
-        Modifier.onPreviewKeyEvent { event ->
-            val direction = when (event.key) {
-                Key.DirectionDown -> 1
-                Key.DirectionUp -> -1
-                else -> return@onPreviewKeyEvent false
-            }
-            if (event.type == KeyEventType.KeyDown) scope.launch { scroll.animateScrollBy(direction * step) }
-            true
+    NotesPanel(
+        title = stringResource(R.string.whats_new_title, installedVersion),
+        main = stringResource(R.string.whats_new_dismiss),
+        onMain = onDismiss,
+        onBack = onDismiss,
+    ) {
+        if (notes.isEmpty()) {
+            Text(stringResource(R.string.whats_new_nothing), SetteeType.Body)
+        } else {
+            ReleaseNotesBody(notes)
         }
     }
 }
 
-private val SCROLL_STEP = 96.dp
-
 /**
- * Takes focus when it first appears. Out of touch mode, Compose highlights a dialog's first button in
- * focus order, which for an AlertDialog is the dismiss button; this starts the highlight elsewhere.
- * It waits a frame first, as Home does: on a full screen the item isn't placed yet on the frame it
+ * Takes focus when it first appears, where Compose would otherwise highlight the first thing in focus
+ * order. It waits a frame first, as Home does: on a full screen the item isn't placed yet on the frame it
  * first composes, and asking then is refused.
  */
 @Composable
@@ -139,27 +98,23 @@ fun Modifier.startsFocused(): Modifier {
     return focusRequester(focus)
 }
 
-/** Release notes as a viewer reads them; shared by the What's new and Update available dialogs. */
+/** Release notes as a viewer reads them; shared by the What's new and Update available panels. */
 @Composable
 fun ReleaseNotesBody(notes: List<VersionNotes>) {
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         notes.forEach { version ->
-            // One version needs no label: the dialog's title already names it.
+            // One version needs no label: the panel's title already names it.
             if (notes.size > 1) {
-                Text(
-                    version.version,
-                    style = MaterialTheme.typography.titleMedium,
-                    modifier = Modifier.padding(top = 8.dp),
-                )
+                Text(version.version, SetteeType.Section, modifier = Modifier.padding(top = 8.dp))
             }
             version.sections.forEach { section ->
                 Text(
                     stringResource(section.heading.label),
-                    style = MaterialTheme.typography.titleSmall,
-                    color = MaterialTheme.colorScheme.primary,
+                    SetteeType.CardTitle,
+                    color = SetteeColors.Accent,
                     modifier = Modifier.padding(top = 4.dp),
                 )
-                section.entries.forEach { Text("• $it", style = MaterialTheme.typography.bodyMedium) }
+                section.entries.forEach { Text("• $it", SetteeType.Body) }
             }
         }
     }

@@ -5,13 +5,13 @@
  */
 package app.opentv
 
-import androidx.compose.material3.Button
-import androidx.compose.material3.Text
+import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import app.opentv.data.model.Recording
 import app.opentv.data.model.RecordingStatus
+import app.opentv.ui.design.PillButton
 import app.opentv.ui.options.ConfirmLiveHost
 import app.opentv.ui.options.LocalConfirmLive
 import com.google.common.truth.Truth.assertThat
@@ -48,7 +48,7 @@ class ConfirmLiveTest {
         compose.setTvContent {
             ConfirmLiveHost(active.toList(), onStopRecording = { stopped += it.id }) {
                 val confirmLive = LocalConfirmLive.current
-                Button(onClick = { confirmLive { started++ } }) { Text("Play") }
+                PillButton("Play", onClick = { confirmLive { started++ } })
             }
         }
         compose.onNodeWithText("Play").performClick()
@@ -70,6 +70,24 @@ class ConfirmLiveTest {
         compose.onNodeWithText("Recording in progress").assertExists()
         compose.onNodeWithText("The News", substring = true).assertExists()
         captureScreen("confirm_live_recording_running")
+    }
+
+    @Test
+    fun `it asks in a Side Panel with the highlight on keeping the recording`() {
+        show(recording(1, "The News"))
+
+        compose.onNodeWithText("Keep recording").assertIsFocused().assertIsInSidePanel()
+    }
+
+    @Test
+    fun `back keeps recording and plays nothing`() {
+        show(recording(1, "The News"))
+
+        compose.pressBackOnPanel()
+
+        assertThat(stopped).isEmpty()
+        assertThat(started).isEqualTo(0)
+        compose.onNodeWithText("Recording in progress").assertDoesNotExist()
     }
 
     @Test

@@ -23,7 +23,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
@@ -59,6 +58,7 @@ import androidx.compose.ui.zIndex
 import app.opentv.R
 import app.opentv.ui.design.HighlightStyle
 import app.opentv.ui.design.HighlightSurface
+import app.opentv.ui.design.Icon
 import app.opentv.ui.design.SetteeColors
 import app.opentv.ui.design.SetteeSpace
 import app.opentv.ui.design.SetteeType

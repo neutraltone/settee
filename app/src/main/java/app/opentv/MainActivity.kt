@@ -29,14 +29,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.FiberManualRecord
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
@@ -72,8 +66,12 @@ import app.opentv.ui.WhosWatchingAsked
 import app.opentv.ui.WhosWatchingScreen
 import app.opentv.ui.channels.ChannelManagerScreen
 import app.opentv.ui.channels.SearchScreen
+import app.opentv.ui.design.Icon
 import app.opentv.ui.design.SetteeColors
+import app.opentv.ui.design.SetteeShapes
 import app.opentv.ui.design.SetteeTheme
+import app.opentv.ui.design.SetteeType
+import app.opentv.ui.design.Text
 import app.opentv.ui.firstScreen
 import app.opentv.ui.hasProvider
 import app.opentv.ui.options.ItemOptionsHost
@@ -114,10 +112,7 @@ class MainActivity : ComponentActivity() {
                 // Paints the background for screens not yet on ScreenFrame. Once every screen draws
                 // its own, this fill goes, and only then is a ScreenFrame's VideoArea truly clear
                 // (SurfaceView playback punches through it regardless).
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colorScheme.background,
-                ) {
+                Box(Modifier.fillMaxSize().background(SetteeColors.Background)) {
                     OpenTvApp(isTelevision = isTelevision, launchedToPlay = toPlay)
                 }
             }
@@ -271,10 +266,9 @@ private fun OpenTvApp(isTelevision: Boolean, launchedToPlay: Boolean) {
     // composition, so wait for that first load before building it. The Profiles are waited for
     // too, or a household would see Home flash up before being asked who's watching.
     val knownProfiles = loadedProfiles
+    // Only the background: this is usually a frame or two, and anything drawn here would flicker.
     if (!sourcesUi.loaded || knownProfiles == null) {
-        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            CircularProgressIndicator()
-        }
+        Box(Modifier.fillMaxSize().background(SetteeColors.Background))
         return
     }
 
@@ -496,8 +490,8 @@ private fun RecordingSwitchBanner() {
     Box(Modifier.fillMaxSize().padding(20.dp), contentAlignment = Alignment.TopCenter) {
         Row(
             Modifier
-                .clip(RoundedCornerShape(14.dp))
-                .background(MaterialTheme.colorScheme.primaryContainer)
+                .clip(SetteeShapes.Card)
+                .background(SetteeColors.Raised)
                 .padding(horizontal = 18.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -510,18 +504,18 @@ private fun RecordingSwitchBanner() {
             Spacer(Modifier.width(10.dp))
             Text(
                 stringResource(R.string.rec_switch_banner, current.title, current.channelName),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                style = SetteeType.Body,
+                color = SetteeColors.Text,
             )
             Spacer(Modifier.width(14.dp))
             var focused by remember { mutableStateOf(false) }
             Text(
                 stringResource(R.string.rec_switch_keep_watching),
-                style = MaterialTheme.typography.labelLarge,
-                color = if (focused) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.primary,
+                style = SetteeType.Body,
+                color = if (focused) SetteeColors.OnAccent else SetteeColors.Accent,
                 modifier = Modifier
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(if (focused) MaterialTheme.colorScheme.primary else Color.Transparent)
+                    .clip(SetteeShapes.Thumbnail)
+                    .background(if (focused) SetteeColors.Accent else Color.Transparent)
                     .onFocusChanged { focused = it.isFocused }
                     .focusable()
                     .clickable { app.opentv.core.RecordingSignals.suppress(current.recordingId) }

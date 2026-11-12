@@ -6,35 +6,15 @@
 package app.opentv.ui
 
 import android.content.Context
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.remember
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Dialog
 import app.opentv.R
 import app.opentv.core.batteryOptimizationRequests
 import app.opentv.core.isIgnoringBatteryOptimizations
+import app.opentv.ui.design.PanelBody
+import app.opentv.ui.design.PanelRow
+import app.opentv.ui.design.PanelTitle
+import app.opentv.ui.design.SidePanel
 
 /**
  * A once-per-session nudge shown the first time the user records or schedules while OpenTV still
@@ -61,46 +41,15 @@ object RecordingBackgroundPrompt {
 }
 
 /**
- * The dialog itself. [onAllow] should fire the system battery-optimisation request; [onDismiss] is
- * "Not now". Focus lands on Allow so a single OK press on the remote grants it.
+ * The nudge itself, in a Side Panel. [onAllow] should fire the system battery-optimisation request;
+ * [onDismiss] is "Not now", and Back. The Highlight starts on Allow so one OK press grants it.
  */
 @Composable
 fun RecordingBackgroundDialog(onAllow: () -> Unit, onDismiss: () -> Unit) {
-    val allowFocus = remember { FocusRequester() }
-    Dialog(onDismissRequest = onDismiss) {
-        Column(
-            Modifier
-                .width(460.dp)
-                .clip(RoundedCornerShape(16.dp))
-                .background(MaterialTheme.colorScheme.surface)
-                .padding(24.dp),
-        ) {
-            Text(
-                stringResource(R.string.rec_background_prompt_title),
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.SemiBold,
-            )
-            Spacer(Modifier.height(12.dp))
-            Text(
-                stringResource(R.string.rec_background_prompt_body),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Spacer(Modifier.height(20.dp))
-            Row(
-                Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                TextButton(onClick = onDismiss) {
-                    Text(stringResource(R.string.rec_background_prompt_not_now))
-                }
-                Spacer(Modifier.width(8.dp))
-                Button(onClick = onAllow, modifier = Modifier.focusRequester(allowFocus)) {
-                    Text(stringResource(R.string.rec_background_prompt_allow))
-                }
-            }
-        }
+    SidePanel(onBack = onDismiss) {
+        PanelTitle(stringResource(R.string.rec_background_prompt_title))
+        PanelBody(stringResource(R.string.rec_background_prompt_body))
+        PanelRow(stringResource(R.string.rec_background_prompt_allow), onClick = onAllow)
+        PanelRow(stringResource(R.string.rec_background_prompt_not_now), onClick = onDismiss)
     }
-    LaunchedEffect(Unit) { runCatching { allowFocus.requestFocus() } }
 }

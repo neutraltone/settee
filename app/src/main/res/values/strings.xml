@@ -20,6 +20,7 @@
     <string name="common_keep_typing">Keep typing…</string>
     <string name="common_channels">Channels</string>
     <string name="common_try_again">Try again</string>
+    <string name="common_percent">%1$d%%</string>
 
     <!-- ============================ Navigation rail ============================ -->
     <string name="nav_home">Home</string>
@@ -436,6 +437,7 @@
     <string name="pairing_phone_all_done_body">Carry on on your TV.</string>
     <string name="pairing_phone_stopped_title">Setup stopped on your TV</string>
     <string name="pairing_phone_stopped_body">Start setting up from your phone again on the TV to send your details.</string>
+    <string name="pairing_starting">Getting pairing ready</string>
     <string name="pairing_got_it">Got it. Connecting to your provider…</string>
     <string name="pairing_qr_desc">QR code linking to the setup page on this device</string>
     <string name="pairing_setup_title">Set up from your phone</string>
@@ -648,6 +650,12 @@
     <string name="update_failed_tv">Couldn\'t download the update. Check this TV is online, then try again.</string>
     <string name="update_failed_device">Couldn\'t download the update. Check this device is online, then try again.</string>
     <string name="update_close">Close</string>
+    <string name="update_available_title">Update available</string>
+    <string name="update_available_body">Settee %1$s is available. You have %2$s.</string>
+    <string name="update_install">Update</string>
+    <string name="update_later">Later</string>
+    <string name="player_loading">Loading</string>
+    <string name="update_downloading">Downloading the update</string>
     <string name="playback_link_refused">Your provider didn\'t give a link for this channel. Try refreshing your provider in Settings.</string>
     <string name="playback_no_catchup">Your provider doesn\'t offer catch-up, so past programmes can\'t be played.</string>
     <string name="error_video_format_tv">This TV can\'t play this video format.</string>

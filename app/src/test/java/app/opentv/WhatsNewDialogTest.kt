@@ -5,7 +5,6 @@
  */
 package app.opentv
 
-import android.view.KeyEvent
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
@@ -26,7 +25,6 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
-import org.robolectric.shadows.ShadowDialog
 
 // Plain Application: OpenTvApp schedules WorkManager on start, which a lone composable doesn't need.
 @RunWith(RobolectricTestRunner::class)
@@ -75,10 +73,10 @@ class WhatsNewDialogTest {
     }
 
     @Test
-    fun `the highlight starts on the dismiss button`() {
+    fun `it opens as a Side Panel with the highlight on the dismiss button`() {
         show()
 
-        compose.onNodeWithText("Got it").assertIsFocused()
+        compose.onNodeWithText("Got it").assertIsFocused().assertIsInSidePanel()
     }
 
     @Test
@@ -94,12 +92,7 @@ class WhatsNewDialogTest {
     fun `back dismisses it`() {
         show()
 
-        val dialog = ShadowDialog.getLatestDialog()
-        compose.runOnUiThread {
-            dialog.dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_BACK))
-            dialog.dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_BACK))
-        }
-        compose.waitForIdle()
+        compose.pressBackOnPanel()
 
         assertThat(dismissed).isEqualTo(1)
     }

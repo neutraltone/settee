@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The aerial TV at text height, written by tools/launcher-art/mark.py: no face and thicker aerials,
+  so it still reads that small. AerialTv draws its one arc over it.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="78"
+    android:viewportHeight="78">
+    <group
+        android:scaleX="1"
+        android:scaleY="1"
+        android:translateX="-11"
+        android:translateY="8">
+        <path
+            android:strokeColor="@color/settee_cream"
+            android:strokeWidth="7"
+            android:strokeLineCap="round"
+            android:pathData="M50,30L37,13M50,30L63,13" />
+        <path
+            android:fillColor="@color/settee_cream"
+            android:pathData="M31,11.5a5.5,5.5 0 1 0 11,0a5.5,5.5 0 1 0 -11,0z" />
+        <path
+            android:fillColor="@color/settee_cream"
+            android:pathData="M58,11.5a5.5,5.5 0 1 0 11,0a5.5,5.5 0 1 0 -11,0z" />
+        <path
+            android:fillColor="@color/settee_cream"
+            android:pathData="M32,26h36a11,11 0 0 1 11,11v20a11,11 0 0 1 -11,11h-36
+                              a11,11 0 0 1 -11,-11v-20a11,11 0 0 1 11,-11z" />
+        <path
+            android:fillColor="@color/settee_coral"
+            android:pathData="M33,33h34a5,5 0 0 1 5,5v18a5,5 0 0 1 -5,5h-34a5,5 0 0 1 -5,-5v-18
+                              a5,5 0 0 1 5,-5z" />
+    </group>
+</vector>

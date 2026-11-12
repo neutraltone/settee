@@ -23,7 +23,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ContentPaste
-import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
@@ -50,6 +49,7 @@ import app.opentv.ui.SourcesViewModel
 import app.opentv.ui.design.ErrorMessage
 import app.opentv.ui.design.HighlightStyle
 import app.opentv.ui.design.HighlightSurface
+import app.opentv.ui.design.Icon
 import app.opentv.ui.design.PillButton
 import app.opentv.ui.design.ScreenFrame
 import app.opentv.ui.design.SetteeColors

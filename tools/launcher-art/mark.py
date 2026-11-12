@@ -8,6 +8,9 @@ Outputs, relative to the repo root:
   app/src/main/res/drawable/ic_launcher_monochrome.xml   themed-icon layer: the silhouette
   app/src/main/res/drawable/ic_notification.xml          notification small icon: the silhouette
   app/src/main/res/drawable/ic_settee_mark.xml           the tile and mark, for screens
+  app/src/main/res/drawable/ic_waiting_tv.xml            the aerial TV's still parts, full size
+  app/src/main/res/drawable/ic_waiting_tv_small.xml      the aerial TV's still parts, at text height
+  app/src/main/java/app/opentv/ui/design/AerialTvShape.kt  where Compose draws its moving parts
 
 The wordmark comes from settee-wordmark.svg (see outline_wordmark.py), so this needs no font and
 only the standard library. tools/render-launcher-art.sh runs it before rendering the PNGs, and
@@ -26,6 +29,7 @@ CORAL, PLUM = "#FF8F6B", "#1A1416"
 # SetteeColors.Text: "the tile beside the name in cream" on a dark screen (docs/LOOK.md, Identity).
 CREAM = "#F8EFEA"
 CORAL_RES, PLUM_RES = "@color/settee_coral", "@color/settee_plum"
+CREAM_RES = "@color/settee_cream"
 
 # The mark, in the #153 prototype's own 100-unit space.
 AERIAL_ENDS = [((50, 30), (37, 13)), ((50, 30), (63, 13))]
@@ -39,6 +43,16 @@ SCREEN = (28, 33, 44, 28, 5)
 EYES = [(38.5, 45, 4.4), (61.5, 45, 4.4)]
 SMILE, SMILE_WIDTH = "M45,50Q50,55 55,50", 3.4
 SLIT = (31, 67, 38, 3.5, 1.75)
+
+# The aerial TV that shows Settee is waiting (#170): the mark's back on its own, as a little TV,
+# in cream so it reads on the dark screen. It stops just under the screen, where the seat begins.
+# Coral arcs rise from each knob along its aerial, so the view reaches above the mark's top.
+WAIT_BODY = (21, 26, 58, 42, 11)
+WAIT_ORIGIN, WAIT_VIEW = (11, -8), 78
+WAIT_ARC_RADII, WAIT_ARC_WIDTH, WAIT_ARC_SWEEP = (8, 12, 16), 3, 70
+# At text height the face would be a smudge and thin aerials vanish: no face, thicker aerials, one arc.
+WAIT_SMALL_AERIAL_WIDTH, WAIT_SMALL_KNOB = 7, 5.5
+WAIT_SMALL_ARC_RADIUS, WAIT_SMALL_ARC_WIDTH = 11, 5
 
 SAFE_RADIUS = 32  # a unit inside the adaptive icon's 33 (of 108), so antialiasing never meets the mask
 WRAP = 100
@@ -102,6 +116,61 @@ def silhouette(colour):
             + [fill(rrect(*r), colour) for r in LEGS] + [fill(arm_l, colour), fill(arm_r, colour)]
             + [fill(tv, colour, True), fill(base, colour, True)]
             + [fill(circle(*e), colour) for e in EYES] + [stroke(SMILE, colour, SMILE_WIDTH)])
+
+
+def waiting_tv(small):
+    """The aerial TV's still parts. Compose draws the eyes (they blink) and the arcs on top."""
+    if small:
+        return ([stroke(AERIALS, CREAM_RES, WAIT_SMALL_AERIAL_WIDTH)]
+                + [fill(circle(x, y, WAIT_SMALL_KNOB), CREAM_RES) for x, y, _ in KNOBS]
+                + [fill(rrect(*WAIT_BODY), CREAM_RES), fill(rrect(*SCREEN), CORAL_RES)])
+    return ([stroke(AERIALS, CREAM_RES, AERIAL_WIDTH)] + [fill(circle(*k), CREAM_RES) for k in KNOBS]
+            + [fill(rrect(*WAIT_BODY), CREAM_RES), fill(rrect(*SCREEN), CORAL_RES),
+               stroke(SMILE, PLUM_RES, SMILE_WIDTH)])
+
+
+def aerial_tv_kotlin():
+    """The moving parts' places, in the drawables' viewport, for ui/design/AerialTv.kt."""
+    ox, oy = WAIT_ORIGIN
+
+    def offset(x, y):
+        return f"Offset({fmt(x - ox)}f, {fmt(y - oy)}f)"
+
+    def angle(a, b):
+        return fmt(math.degrees(math.atan2(b[1] - a[1], b[0] - a[0])))
+
+    def floats(values):
+        return ", ".join(f"{fmt(v)}f" for v in values)
+
+    return "\n".join([
+        "/*",
+        " * This file is part of OpenTV.",
+        " * Copyright (C) 2026 The OpenTV Contributors",
+        " * Licensed under the GNU General Public License v3.0 or later.",
+        " */",
+        "package app.opentv.ui.design",
+        "",
+        "import androidx.compose.ui.geometry.Offset",
+        "",
+        "/**",
+        " * Where the aerial TV's moving parts go, in the viewport of ic_waiting_tv and ic_waiting_tv_small,",
+        " * so Compose draws them where the mark has them. Written by tools/launcher-art/mark.py.",
+        " */",
+        "internal object AerialTvShape {",
+        f"    const val VIEWPORT = {fmt(WAIT_VIEW)}f",
+        f"    val knobs = listOf({', '.join(offset(x, y) for x, y, _ in KNOBS)})",
+        "",
+        "    /** The way each knob's arcs face: along its aerial, in degrees clockwise from three o'clock. */",
+        f"    val arcFacing = floatArrayOf({', '.join(angle(a, b) + 'f' for a, b in AERIAL_ENDS)})",
+        f"    const val ARC_SWEEP = {fmt(WAIT_ARC_SWEEP)}f",
+        f"    val arcRadii = floatArrayOf({floats(WAIT_ARC_RADII)})",
+        f"    const val ARC_WIDTH = {fmt(WAIT_ARC_WIDTH)}f",
+        f"    const val SMALL_ARC_RADIUS = {fmt(WAIT_SMALL_ARC_RADIUS)}f",
+        f"    const val SMALL_ARC_WIDTH = {fmt(WAIT_SMALL_ARC_WIDTH)}f",
+        f"    val eyes = listOf({', '.join(offset(x, y) for x, y, _ in EYES)})",
+        f"    const val EYE_RADIUS = {fmt(EYES[0][2])}f",
+        "}",
+        ""])
 
 
 def extent():
@@ -230,6 +299,17 @@ def outputs(root):
     files[res / "ic_settee_mark.xml"] = vector(48, 100, (
         "Settee's mark in its coral tile at 74%, as the app icon draws it, written by "
         "tools/launcher-art/mark.py."), [(None, tile), ((0.74, 13, 13), colour_mark(PLUM_RES, CORAL_RES))])
+
+    wait = (None, -WAIT_ORIGIN[0], -WAIT_ORIGIN[1])
+    files[res / "ic_waiting_tv.xml"] = vector(48, WAIT_VIEW, (
+        "The aerial TV's still parts, written by tools/launcher-art/mark.py: the mark's back as a "
+        "little TV, with its face on the screen. AerialTv draws the eyes and the arcs over it."),
+        [((1, *wait[1:]), waiting_tv(small=False))])
+    files[res / "ic_waiting_tv_small.xml"] = vector(24, WAIT_VIEW, (
+        "The aerial TV at text height, written by tools/launcher-art/mark.py: no face and thicker "
+        "aerials, so it still reads that small. AerialTv draws its one arc over it."),
+        [((1, *wait[1:]), waiting_tv(small=True))])
+    files[root / "app/src/main/java/app/opentv/ui/design/AerialTvShape.kt"] = aerial_tv_kotlin()
 
     files[art / "settee-icon.svg"] = "\n".join(
         ['<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">',

@@ -24,6 +24,7 @@ class MarkTest(unittest.TestCase):
 
         self.assertEqual(resource("settee_coral"), mark.CORAL)
         self.assertEqual(resource("settee_plum"), mark.PLUM)
+        self.assertEqual(resource("settee_cream"), mark.CREAM)
 
 
 if __name__ == "__main__":

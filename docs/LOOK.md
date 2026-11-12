@@ -171,6 +171,18 @@ On Live TV, Movies and Shows. Tucked away until Left from the leftmost item open
 - **Find a category:** a text field at the top. Up from the first row reaches it, and Down returns to the list. Like every text box, the keyboard stays shut until OK. Typing a few letters narrows the list, and it shows how many of how many are showing, counting only categories the viewer can see.
 - **To fix:** Right lands on the nearest row, not the one the viewer left.
 
+## Side Panel
+
+Every question, choice and notice opens in a Side Panel: down the right of the screen, 400 dp wide, solid Surface over what's there, with nothing dimmed behind it. Back closes it. There are no dialogs in the middle of the screen.
+
+- **Choices** are the panel's rows. A list of options starts on its first row, or on the ticked one when it picks a setting.
+- **Prompts** that need explaining have a title, then a short body paragraph, then their choices as rows.
+- **Confirmations start on the safe choice,** such as Stay or Keep recording, and Back takes it too, so a stray OK changes nothing.
+- **Offers** start on what they offer, such as Turn on and pause or Allow.
+- **Long notes,** such as release notes, scroll inside the panel and never take the Highlight. It starts on the main choice, such as Got it or Update, where Up and Down scroll the notes. Once they reach their end, Down carries on to the other choices.
+- **Progress** in a panel shows real progress only, as a percentage and a bar.
+- **Errors** in a panel follow Voice: the sentence, then the quiet detail line, then the way on, such as Try again.
+
 ## Details
 
 A hero with a full backdrop, title, status, synopsis, Resume and Favourite.
@@ -279,6 +291,18 @@ One list, with Coming up, Recorded and Series links as headings, and a heading w
 - **Recorded:** a recording in progress first, then newest first. Failed ones stay here and say what went wrong.
 - **Series links:** A to Z.
 - **Rows:** OK plays, watches live or retries. Everything else is in the options panel. Anything there that removes the row asks first, starting on "Keep it": Delete because it can't be undone, and cancelling a booking, a reminder or a series link because it's gone until it's set up again from the guide.
+
+## Waiting
+
+Waiting is the aerial TV: the TV from the mark, with its face on the screen and coral arcs rising from its aerials, fading as they spread. It's drawn in cream rather than in its tile, because the arcs need the dark screen behind them.
+
+- **Full size,** about 48-64 dp, centred with what's loading named under it: the players while they buffer, live and on demand, and phone pairing's two waits. Three arcs rise in turn over about 1.8 s, and the eyes blink about every 4 s.
+- **Small size,** at text height, in the status line at the foot of the main screen: no face, thicker aerials, one arc.
+- **Always animated,** even when the system's animations are removed. It's the one exception in Settee: the motion is the only sign that the app isn't frozen, and WCAG counts a loading indicator as essential motion.
+- **Drawn, not laid out:** a frame redraws only the indicator, so it stays within the budget below.
+- **Nothing at app start.** The wait before the saved providers and Profiles have loaded shows only the background: it's usually a frame or two, and anything drawn there would flicker.
+- **A bar only for real progress.** When the work knows how far through it is, it shows the percentage and a bar instead of the TV. A bar never stands in for a spinner.
+- **The still parts come from the mark:** `tools/launcher-art/mark.py` writes them as drawables, and only the arcs and eyes are drawn in code, in the mark's coordinates.
 
 ## Motion and cost
 

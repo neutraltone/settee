@@ -7,16 +7,8 @@ package app.opentv.update
 
 import android.app.Application
 import android.content.Context
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.LinearProgressIndicator
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -33,9 +25,20 @@ import app.opentv.BuildConfig
 import app.opentv.R
 import app.opentv.core.ErrorWording
 import app.opentv.core.ServiceLocator
+import app.opentv.core.ViewerError
+import app.opentv.ui.design.AerialTv
 import app.opentv.ui.design.ErrorMessage
+import app.opentv.ui.design.NotesPanel
+import app.opentv.ui.design.PanelRow
+import app.opentv.ui.design.PanelTitle
+import app.opentv.ui.design.ProgressBar
+import app.opentv.ui.design.SetteeType
+import app.opentv.ui.design.SidePanel
+import app.opentv.ui.design.Text
+import app.opentv.ui.design.percentText
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 /**
@@ -57,40 +60,18 @@ fun UpdateGate(viewModel: UpdateViewModel = viewModel()) {
             onLater = viewModel::dismiss,
         )
 
-        is UpdateUiState.Downloading -> AlertDialog(
-            onDismissRequest = {}, // a download in flight should not be dismissed by a stray click
-            confirmButton = {},
-            title = { Text("Downloading update…") },
-            text = {
-                Column {
-                    if (s.fraction >= 0f) {
-                        LinearProgressIndicator(
-                            progress = { s.fraction },
-                            modifier = Modifier.fillMaxWidth(),
-                        )
-                        Text("${(s.fraction * 100).toInt()}%", Modifier.padding(top = 8.dp))
-                    } else {
-                        LinearProgressIndicator(Modifier.fillMaxWidth())
-                    }
-                }
-            },
-        )
+        // Back only hides it: the download carries on (withProgress keeps it hidden), and the installer
+        // still opens when it's done.
+        is UpdateUiState.Downloading -> UpdateDownloadingPanel(s.fraction, onBack = viewModel::dismiss)
 
-        is UpdateUiState.Failed -> AlertDialog(
-            onDismissRequest = viewModel::dismiss,
-            confirmButton = {
-                TextButton(onClick = viewModel::install) { Text(stringResource(R.string.common_try_again)) }
-            },
-            dismissButton = {
-                TextButton(onClick = viewModel::dismiss) { Text(stringResource(R.string.update_close)) }
-            },
-            title = { Text(stringResource(R.string.update_failed_title)) },
-            text = {
-                val wording = ServiceLocator.get(LocalContext.current).errorWording
-                val reason = wording.ofHardware(R.string.update_failed_tv, R.string.update_failed_device, s.detail)
-                ErrorMessage(reason.sentence, reason.detail, textAlign = TextAlign.Start)
-            },
-        )
+        is UpdateUiState.Failed -> {
+            val wording = ServiceLocator.get(LocalContext.current).errorWording
+            UpdateFailedPanel(
+                reason = wording.ofHardware(R.string.update_failed_tv, R.string.update_failed_device, s.detail),
+                onTryAgain = viewModel::install,
+                onClose = viewModel::dismiss,
+            )
+        }
     }
 }
 
@@ -102,24 +83,51 @@ fun UpdateAvailableDialog(
     onInstall: () -> Unit,
     onLater: () -> Unit,
 ) {
-    val scroll = rememberScrollState()
-    val dpadScroll = rememberDpadScroll(scroll)
-    AlertDialog(
-        onDismissRequest = onLater,
-        confirmButton = {
-            TextButton(onClick = onInstall, modifier = Modifier.startsFocused().then(dpadScroll)) { Text("Update") }
-        },
-        dismissButton = { TextButton(onClick = onLater, modifier = dpadScroll) { Text("Later") } },
-        title = { Text("Update available") },
-        text = {
-            Column(Modifier.verticalScroll(scroll)) {
-                Text("Settee ${update.versionName} is available. You have $installedVersion.")
-                update.notes?.let { notes ->
-                    Box(Modifier.padding(top = 12.dp)) { ReleaseNotesBody(listOf(notes)) }
-                }
-            }
-        },
-    )
+    NotesPanel(
+        title = stringResource(R.string.update_available_title),
+        body = stringResource(R.string.update_available_body, update.versionName, installedVersion),
+        main = stringResource(R.string.update_install),
+        onMain = onInstall,
+        onBack = onLater,
+        others = { PanelRow(stringResource(R.string.update_later), onClick = onLater) },
+    ) {
+        update.notes?.let { ReleaseNotesBody(listOf(it)) }
+    }
+}
+
+/**
+ * The update downloading: how far through it is, when the download knows its size ([fraction] from
+ * 0 to 1, or below 0 when it doesn't). A bar only ever shows real progress, so an unknown size waits
+ * with the aerial TV instead.
+ */
+@Composable
+fun UpdateDownloadingPanel(fraction: Float, onBack: () -> Unit) {
+    SidePanel(onBack = onBack) {
+        val title = stringResource(R.string.update_downloading)
+        PanelTitle(title)
+        if (fraction >= 0f) {
+            Text(percentText(fraction), SetteeType.Body)
+            ProgressBar(fraction, Modifier.fillMaxWidth().padding(top = 8.dp))
+        } else {
+            AerialTv(title)
+        }
+    }
+}
+
+/** The update didn't download: why, as every error says it, and the chance to try again. */
+@Composable
+fun UpdateFailedPanel(reason: ViewerError, onTryAgain: () -> Unit, onClose: () -> Unit) {
+    SidePanel(onBack = onClose) {
+        PanelTitle(stringResource(R.string.update_failed_title))
+        ErrorMessage(
+            reason.sentence,
+            reason.detail,
+            textAlign = TextAlign.Start,
+            modifier = Modifier.padding(bottom = 12.dp),
+        )
+        PanelRow(stringResource(R.string.common_try_again), onClick = onTryAgain)
+        PanelRow(stringResource(R.string.update_close), onClick = onClose)
+    }
 }
 
 sealed interface UpdateUiState {
@@ -130,6 +138,13 @@ sealed interface UpdateUiState {
     /** [detail] is the download's failure, for the detail line. */
     data class Failed(val update: UpdateChecker.Update, val detail: String) : UpdateUiState
 }
+
+/**
+ * The state once the download is [fraction] through: the Downloading panel moves on, and anything
+ * else stays as it is. Back sets Idle mid-download, and progress mustn't bring the panel back.
+ */
+fun UpdateUiState.withProgress(fraction: Float): UpdateUiState =
+    if (this is UpdateUiState.Downloading) copy(fraction = fraction) else this
 
 /**
  * One shared update state so the manual "check for updates" (About) and the automatic gate speak
@@ -188,7 +203,7 @@ class UpdateViewModel(app: Application) : AndroidViewModel(app) {
                     context = getApplication(),
                     url = update.apkUrl,
                     expectedBytes = update.apkSizeBytes,
-                ) { fraction -> _state.value = UpdateUiState.Downloading(update, fraction) }
+                ) { fraction -> _state.update { it.withProgress(fraction) } }
             }.onSuccess {
                 // The system installer is now front-and-centre; step our dialog aside.
                 _state.value = UpdateUiState.Idle

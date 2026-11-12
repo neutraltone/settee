@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The aerial TV's still parts, written by tools/launcher-art/mark.py: the mark's back as a little
+  TV, with its face on the screen. AerialTv draws the eyes and the arcs over it.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="48dp"
+    android:height="48dp"
+    android:viewportWidth="78"
+    android:viewportHeight="78">
+    <group
+        android:scaleX="1"
+        android:scaleY="1"
+        android:translateX="-11"
+        android:translateY="8">
+        <path
+            android:strokeColor="@color/settee_cream"
+            android:strokeWidth="4.5"
+            android:strokeLineCap="round"
+            android:pathData="M50,30L37,13M50,30L63,13" />
+        <path
+            android:fillColor="@color/settee_cream"
+            android:pathData="M32.5,11.5a4,4 0 1 0 8,0a4,4 0 1 0 -8,0z" />
+        <path
+            android:fillColor="@color/settee_cream"
+            android:pathData="M59.5,11.5a4,4 0 1 0 8,0a4,4 0 1 0 -8,0z" />
+        <path
+            android:fillColor="@color/settee_cream"
+            android:pathData="M32,26h36a11,11 0 0 1 11,11v20a11,11 0 0 1 -11,11h-36
+                              a11,11 0 0 1 -11,-11v-20a11,11 0 0 1 11,-11z" />
+        <path
+            android:fillColor="@color/settee_coral"
+            android:pathData="M33,33h34a5,5 0 0 1 5,5v18a5,5 0 0 1 -5,5h-34a5,5 0 0 1 -5,-5v-18
+                              a5,5 0 0 1 5,-5z" />
+        <path
+            android:strokeColor="@color/settee_plum"
+            android:strokeWidth="3.4"
+            android:strokeLineCap="round"
+            android:pathData="M45,50Q50,55 55,50" />
+    </group>
+</vector>

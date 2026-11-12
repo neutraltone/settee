@@ -11,9 +11,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -31,6 +28,9 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import app.opentv.R
+import app.opentv.ui.design.PillButton
+import app.opentv.ui.design.SetteeType
+import app.opentv.ui.design.Text
 import app.opentv.ui.options.OptionsSubject
 import app.opentv.ui.options.openOptionsOn
 
@@ -89,9 +89,11 @@ private fun RecentSearchList(recentSearches: List<String>, onChoose: (String) ->
                 )
             }
         }
-        OutlinedButton(onClick = onClear, modifier = Modifier.padding(top = 8.dp)) {
-            Text(stringResource(R.string.search_clear_recent))
-        }
+        PillButton(
+            stringResource(R.string.search_clear_recent),
+            onClick = onClear,
+            modifier = Modifier.padding(top = 8.dp),
+        )
     }
 }
 
@@ -102,6 +104,6 @@ private fun RecentSearchRow(text: String, onClick: () -> Unit, modifier: Modifie
         onOptions = openOptionsOn(OptionsSubject.OfRecentSearch(text)),
         modifier = modifier,
     ) {
-        Text(text, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Text(text, SetteeType.RowTitle, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }

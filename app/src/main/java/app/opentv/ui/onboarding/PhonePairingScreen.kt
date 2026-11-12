@@ -17,7 +17,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -40,6 +39,7 @@ import app.opentv.core.ViewerError
 import app.opentv.pairing.PairingFonts
 import app.opentv.pairing.PairingServer
 import app.opentv.pairing.QrCodes
+import app.opentv.ui.design.AerialTv
 import app.opentv.ui.design.ErrorMessage
 import app.opentv.ui.design.PillButton
 import app.opentv.ui.design.ScreenFrame
@@ -108,17 +108,27 @@ fun PhonePairingScreen(onReceived: (PairingServer.State.Received) -> Unit, onCan
                     }
                 }
 
-                is PairingServer.State.Received -> Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                ) {
-                    CircularProgressIndicator(color = SetteeColors.Accent)
-                    Spacer(Modifier.height(16.dp))
-                    Text(stringResource(R.string.pairing_got_it), SetteeType.Body)
-                }
+                is PairingServer.State.Received -> PairingConnecting()
 
-                PairingServer.State.Idle -> CircularProgressIndicator(color = SetteeColors.Accent)
+                PairingServer.State.Idle -> PairingStarting()
             }
         }
+    }
+}
+
+/** Waiting for this TV's pairing server to start listening. */
+@Composable
+internal fun PairingStarting(modifier: Modifier = Modifier) {
+    AerialTv(stringResource(R.string.pairing_starting), modifier)
+}
+
+/** The phone has sent its details, and the provider is being tried with them. */
+@Composable
+internal fun PairingConnecting(modifier: Modifier = Modifier) {
+    Column(modifier, horizontalAlignment = Alignment.CenterHorizontally) {
+        AerialTv(stringResource(R.string.progress_still_working))
+        Spacer(Modifier.height(16.dp))
+        Text(stringResource(R.string.pairing_got_it), SetteeType.Body)
     }
 }
 
