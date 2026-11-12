@@ -6,10 +6,8 @@
 package app.opentv
 
 import android.app.Application
-import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
-import android.content.IntentFilter
 import android.os.PowerManager
 import android.provider.Settings
 import androidx.test.core.app.ApplicationProvider
@@ -36,8 +34,7 @@ class BatteryOptimizationRequestTest {
 
     @Test
     fun `a device with the request screen is asked for Settee itself, then for the list of apps`() {
-        REQUEST_SCREEN.answers(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, scheme = "package")
-        LIST_SCREEN.answers(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
+        BatteryScreens.both(app)
 
         val requests = batteryOptimizationRequests(app.packageManager, app.packageName)
 
@@ -50,7 +47,7 @@ class BatteryOptimizationRequestTest {
 
     @Test
     fun `a device with only the list of apps is sent to the list`() {
-        LIST_SCREEN.answers(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
+        BatteryScreens.listOnly(app)
 
         val requests = batteryOptimizationRequests(app.packageManager, app.packageName)
 
@@ -65,15 +62,14 @@ class BatteryOptimizationRequestTest {
 
     @Test
     fun `one activity answering both requests is a stub, not a screen`() {
-        fireTvStick()
+        BatteryScreens.fireTvStub(app)
 
         assertThat(batteryOptimizationRequests(app.packageManager, app.packageName)).isEmpty()
     }
 
     @Test
     fun `the dialog is offered where the request screen exists, until Settee is allowed`() {
-        REQUEST_SCREEN.answers(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, scheme = "package")
-        LIST_SCREEN.answers(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
+        BatteryScreens.both(app)
 
         assertThat(RecordingBackgroundPrompt.shouldShow(app)).isTrue()
 
@@ -84,15 +80,14 @@ class BatteryOptimizationRequestTest {
 
     @Test
     fun `the dialog is never offered where Allow would have nowhere to go`() {
-        fireTvStick()
+        BatteryScreens.fireTvStub(app)
 
         assertThat(RecordingBackgroundPrompt.shouldShow(app)).isFalse()
     }
 
     @Test
     fun `asking opens the request screen without telling Settee the viewer has left`() {
-        REQUEST_SCREEN.answers(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, scheme = "package")
-        LIST_SCREEN.answers(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
+        BatteryScreens.both(app)
 
         app.requestIgnoreBatteryOptimizations()
 
@@ -106,39 +101,10 @@ class BatteryOptimizationRequestTest {
 
     @Test
     fun `asking opens nothing where there's only a stub`() {
-        fireTvStick()
+        BatteryScreens.fireTvStub(app)
 
         app.requestIgnoreBatteryOptimizations()
 
         assertThat(shadowOf(app).nextStartedActivity).isNull()
-    }
-
-    /** As the Stick resolves them: `adb shell cmd package resolve-activity` names this for both. */
-    private fun fireTvStick() {
-        AMAZON_STUB.answers(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, scheme = "package")
-        AMAZON_STUB.answers(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
-    }
-
-    private fun ComponentName.answers(action: String, scheme: String? = null) {
-        val packages = shadowOf(app.packageManager)
-        packages.addActivityIfNotPresent(this)
-        packages.addIntentFilterForActivity(
-            this,
-            IntentFilter(action).apply {
-                addCategory(Intent.CATEGORY_DEFAULT)
-                scheme?.let(::addDataScheme)
-            },
-        )
-    }
-
-    private companion object {
-        val REQUEST_SCREEN =
-            ComponentName("com.android.settings", "com.android.settings.fuelgauge.RequestIgnoreBatteryOptimizations")
-        val LIST_SCREEN =
-            ComponentName("com.android.settings", "com.android.settings.Settings\$HighPowerApplicationsActivity")
-        val AMAZON_STUB = ComponentName(
-            "com.amazon.tv.settings.v2",
-            "com.amazon.tv.settings.v2.compliance.CTSDummyIntentHandler",
-        )
     }
 }

@@ -72,6 +72,7 @@ import app.opentv.R
 import app.opentv.core.AppSettings
 import app.opentv.core.ServiceLocator
 import app.opentv.core.ViewerError
+import app.opentv.core.batteryOptimizationRequests
 import app.opentv.core.isIgnoringBatteryOptimizations
 import app.opentv.core.requestIgnoreBatteryOptimizations
 import app.opentv.recording.RecordingStorage
@@ -487,7 +488,8 @@ private fun StepButton(icon: androidx.compose.ui.graphics.vector.ImageVector, en
  * Whether OpenTV is allowed to keep recording in the background (exempt from battery optimisation).
  * Reads *Allowed* or *Not allowed — Fix*; tapping Fix opens the system dialog to grant it. The
  * status is re-read every time the screen resumes, so it flips to Allowed the moment the user
- * comes back from granting it.
+ * comes back from granting it. A device with no such dialog, a Fire TV Stick for one, gets no Fix
+ * and is told there's no setting for it, rather than a button that does nothing.
  */
 @Composable
 private fun BackgroundStatus() {
@@ -495,6 +497,9 @@ private fun BackgroundStatus() {
     val resources = LocalResources.current
     val lifecycleOwner = LocalLifecycleOwner.current
     var allowed by remember { mutableStateOf(context.isIgnoringBatteryOptimizations()) }
+    val canAsk = remember(context) {
+        batteryOptimizationRequests(context.packageManager, context.packageName).isNotEmpty()
+    }
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
@@ -558,13 +563,17 @@ private fun BackgroundStatus() {
                     fontWeight = FontWeight.Medium,
                     modifier = Modifier.weight(1f),
                 )
-                Button(onClick = { context.requestIgnoreBatteryOptimizations() }) {
-                    Text(stringResource(R.string.recset_background_fix))
+                if (canAsk) {
+                    Button(onClick = { context.requestIgnoreBatteryOptimizations() }) {
+                        Text(stringResource(R.string.recset_background_fix))
+                    }
                 }
             }
             Spacer(Modifier.height(10.dp))
             Text(
-                stringResource(R.string.recset_background_desc),
+                stringResource(
+                    if (canAsk) R.string.recset_background_desc else R.string.recset_background_no_setting,
+                ),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
