@@ -26,7 +26,7 @@ result, and works from any checkout or worktree.
 tools/check/check.py test RecordingsContentTest   # the named test classes, while working
 tools/check/check.py quick                        # ktlintFormat and detekt, after each change
 tools/check/check.py all                          # what a PR's checks run, without stopping at the first failure
-tools/check/check.py sweep                        # kill test processes left running over half an hour, anywhere
+tools/check/check.py sweep                        # kill test processes left running over half an hour, in any checkout of this project
 python3 -m unittest discover -s tools/check       # its own tests
 ```
 
@@ -34,6 +34,10 @@ A run in which no test finishes for two minutes is reported as `FROZEN`, and one
 (8 minutes, 25 for `all`, or `--timeout MINUTES`) as `TIMED OUT`. Either way the test process is killed
 and the last test to finish is named. A frozen test JVM ignores every signal but SIGKILL, Gradle's
 request to stop included, and otherwise spins for hours; CLAUDE.md says why it freezes.
+
+Terminated (SIGTERM, SIGHUP or Ctrl-C), the script stops the Gradle run it started before it exits.
+Killed outright it can't, so whatever runs it needs to allow longer than the script's own time.
+After a run is cut off the Gradle daemon may take a little while to notice and stop the task it was on.
 
 `all` is for when CI can't be used: day to day the full checks are CI's (see CLAUDE.md). It runs the debug
 unit tests only; CI's `./gradlew test` runs the release variant's as well.

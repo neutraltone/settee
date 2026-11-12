@@ -1,7 +1,10 @@
 """Tests for check.py: what it reads out of Gradle's results, and the result it reports."""
 
 import os
+import subprocess
+import sys
 import tempfile
+import time
 import unittest
 from pathlib import Path
 
@@ -72,6 +75,14 @@ class ResultsTest(unittest.TestCase):
         results = check.read_results(self.dir / "never-ran", since=0)
 
         self.assertEqual(results.tests, 0)
+
+    def test_a_result_file_cut_off_mid_write_is_skipped_rather_than_losing_the_report(self):
+        self.write("TEST-app.opentv.QuickTest.xml", PASSING)
+        self.write("TEST-app.opentv.RowTest.xml", FAILING[:200])
+
+        results = check.read_results(self.dir, since=0)
+
+        self.assertEqual(results.tests, 2)
 
 
 class FindingsTest(unittest.TestCase):
@@ -295,6 +306,70 @@ class WorkersTest(unittest.TestCase):
 
         self.assertEqual(check.leftover(workers, root="/work/settee", minutes=0), [])
 
+    def test_a_sweep_leaves_other_projects_test_processes_alone(self):
+        workers = self.workers() + [check.Worker(900, 300.0, "/work/other/app")]
+
+        stale = check.leftover(workers, root=None, minutes=30, ours=lambda cwd: "/settee" in cwd)
+
+        self.assertEqual([worker.pid for worker in stale], [102, 54904])
+
+    def test_this_projects_checkouts_are_known_by_their_sources(self):
+        work = Path(tempfile.mkdtemp())
+        (work / "settee-168/app/src/main/java/app/opentv").mkdir(parents=True)
+        (work / "other/app/src/main/java/com/example").mkdir(parents=True)
+
+        self.assertTrue(check.is_ours(str(work / "settee-168/app")))
+        self.assertFalse(check.is_ours(str(work / "other/app")))
+        self.assertFalse(check.is_ours(""))
+
+
+class RecordTest(unittest.TestCase):
+    def setUp(self):
+        self.record = Path(tempfile.mkdtemp()) / "in-progress-results-generic.bin"
+
+    def test_says_when_gradle_last_recorded_a_test(self):
+        self.record.write_bytes(b"app.opentv.QuickTest")
+        os.utime(self.record, (1_234, 1_234))
+
+        self.assertEqual(check.modified(self.record), 1_234)
+        self.assertEqual(check.read_record(self.record), b"app.opentv.QuickTest")
+
+    def test_a_record_gradle_has_moved_away_is_no_progress_rather_than_a_crash(self):
+        self.assertIsNone(check.modified(self.record))
+        self.assertEqual(check.read_record(self.record), b"")
+
+
+def _kill(pid):
+    try:
+        os.kill(pid, 9)
+    except OSError:
+        pass
+
+
+class InterruptedTest(unittest.TestCase):
+    def test_a_check_that_is_terminated_stops_the_gradle_run_it_started(self):
+        root = Path(tempfile.mkdtemp())
+        subprocess.run(["git", "init", "-q", str(root)], check=True)
+        gradlew = root / "gradlew"
+        gradlew.write_text("#!/bin/sh\necho $$ > started\nexec sleep 60\n")
+        gradlew.chmod(0o755)
+        script = Path(check.__file__).resolve()
+        run = subprocess.Popen(
+            [sys.executable, str(script), "quick"], cwd=root, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+        )
+        started = root / "started"
+        deadline = time.time() + 10
+        while not (started.is_file() and started.read_text().strip()) and time.time() < deadline:
+            time.sleep(0.05)
+        gradle = int(started.read_text())
+        self.addCleanup(_kill, gradle)
+
+        run.terminate()
+        run.wait(timeout=10)
+
+        with self.assertRaises(ProcessLookupError):
+            os.kill(gradle, 0)
+
 
 class LastFinishedTest(unittest.TestCase):
     def test_reads_the_last_test_gradle_recorded_finishing(self):
@@ -349,6 +424,9 @@ class CommandTest(unittest.TestCase):
 
     def test_rerun_is_only_for_tests(self):
         self.assertIsNone(check.parse_args(["quick", "--rerun"]))
+
+    def test_a_run_allowed_no_time_at_all_is_refused(self):
+        self.assertIsNone(check.parse_args(["quick", "--timeout", "0"]))
 
     def test_a_mode_it_doesnt_know_or_a_test_run_with_no_tests_is_refused(self):
         self.assertIsNone(check.parse_args(["everything"]))

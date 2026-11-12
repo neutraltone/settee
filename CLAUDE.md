@@ -24,11 +24,10 @@ OS 5 (API 22) was already unsupported.
 
 ```bash
 tools/check/check.py test M3uParserTest     # named test classes; prints each failure's message and line
+tools/check/check.py test 'M3uParserTest.some test name'  # one test (backticked names)
 tools/check/check.py quick                  # ktlintFormat + detekt, after each change
-tools/check/check.py sweep                  # kill test processes an abandoned run left spinning, in any checkout
-./gradlew test                              # all unit tests (what CI runs)
-./gradlew testDebugUnitTest --tests 'app.opentv.M3uParserTest'                # one class
-./gradlew testDebugUnitTest --tests 'app.opentv.M3uParserTest.some test name' # one test (backticked names)
+tools/check/check.py sweep                  # kill test processes an abandoned run left spinning, in any checkout of this project
+./gradlew test                              # all unit tests (what CI runs; not on this Mac, see below)
 ./gradlew assembleDebug                     # APK → app/build/outputs/apk/debug/
 ./gradlew installDebug                      # install on the connected emulator/device
 adb connect <firestick-ip>:5555             # Fire TV over wifi (enable ADB debugging on the stick)
@@ -63,6 +62,8 @@ happens on this Mac when it's short of memory (swap nearly full, several session
 sticks in the kernel re-faulting a page of compiled code, the JVM waits on it for ever, and nothing but
 SIGKILL stops it, so a run cut off by a timeout leaves it spinning for hours and makes the next freeze
 likelier. The script reports `FROZEN` after two minutes without a test finishing and kills the process.
+Give the call that runs it more than its own eight minutes (25 for `all`), or run it in the background:
+terminated, it stops its Gradle run first, but killed outright it can't.
 `FROZEN` is the machine, not the test it stopped in (it has always been somewhere in a long run, most
 often as `LiveBrowseTest` starts): run it again, and don't go looking for a bug in the test. If runs are
 slow or UI tests time out, run `tools/check/check.py sweep` and check `sysctl vm.swapusage` before

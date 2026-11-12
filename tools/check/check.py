@@ -8,13 +8,15 @@ its message and the line it failed on, each compiler, ktlint, detekt and lint fi
 tests slow enough to be worth a look. It exits with Gradle's own result, so nothing reading the
 exit code can take a failed run for a passed one.
 
-It also never leaves a test process behind. On a Mac short of memory, a test JVM can freeze: one
+It also leaves no test process behind. On a Mac short of memory, a test JVM can freeze: one
 thread gets stuck in the kernel re-faulting a page of compiled code, the rest of the JVM waits on
 it for ever, and it ignores every signal but SIGKILL, Gradle's request to stop included. Left
 alone it spins for hours, taking a core and its memory, which makes the next freeze likelier. So
 a run in which no test finishes for two minutes is reported as FROZEN and killed, as is one that
 outlasts its time, and test processes left in this checkout by an abandoned earlier run are killed
 before the next starts. A freeze is the machine, not the test it happened to stop in: run it again.
+If the script itself is terminated, it stops the Gradle run it started first. It can't when it is
+killed outright, so give whatever runs it longer than its own time, or run it in the background.
 
 Usage, from anywhere in a checkout (a worktree included):
   tools/check/check.py test RecordingsContentTest [OtherTest ...]   the named test classes
@@ -22,7 +24,7 @@ Usage, from anywhere in a checkout (a worktree included):
   tools/check/check.py all        what a PR's checks run, in one pass that doesn't stop at the first failure
   tools/check/check.py sweep      kill test processes left running for over half an hour, in any checkout
 
---timeout MINUTES changes how long a run may take (test and quick: 8, all: 25).
+--timeout MINUTES changes how long a run may take (test and quick: 8, all: 25); at least 1.
 --rerun, with test, runs the tests even if nothing has changed since they last passed.
 `all` runs the debug unit tests only; CI's `./gradlew test` runs the release variant's as well.
 Run one Gradle command per checkout at a time: a run treats any other test process there as left over.
@@ -102,7 +104,11 @@ def read_results(directory, since):
     for path in sorted(directory.glob("TEST-*.xml")):
         if path.stat().st_mtime < since:
             continue
-        suite = ET.parse(path).getroot()
+        try:
+            suite = ET.parse(path).getroot()
+        except ET.ParseError:
+            # Cut off as Gradle wrote it. The rest of the report matters more than this file.
+            continue
         short = suite.get("name", "").rsplit(".", 1)[-1]
         for case in suite.iter("testcase"):
             name = f"{short} > {case.get('name')}"
@@ -173,6 +179,22 @@ def last_finished(recorded):
     return ""
 
 
+def modified(record):
+    """When Gradle last recorded a test in `record`, or None if it isn't there: Gradle renames the
+    record away as the tests end, which can happen between looking for it and reading it."""
+    try:
+        return record.stat().st_mtime
+    except OSError:
+        return None
+
+
+def read_record(record):
+    try:
+        return record.read_bytes()
+    except OSError:
+        return b""
+
+
 def frozen(last_progress, started, now):
     """Whether a run has frozen: its tests have started (`last_progress` is when one last finished,
     None before any has) and none has finished since. Progress from before `started` is an earlier
@@ -200,11 +222,18 @@ def _minutes(elapsed):
     return round(int(days or 0) * 1440 + hours * 60 + minutes + seconds / 60, 1)
 
 
-def leftover(workers, root, minutes):
-    """The test processes to kill: those in `root`'s checkout (any checkout, if None) that have run
-    for at least `minutes`. One whose directory can't be read is never taken for this checkout's."""
-    app = f"{root}/app" if root else None
-    return [w for w in workers if w.minutes >= minutes and (app is None or w.cwd == app)]
+def leftover(workers, root, minutes, ours=lambda cwd: True):
+    """The test processes to kill: those in `root`'s checkout that have run for at least `minutes`.
+    With no `root`, those in any checkout `ours` says is this project's, so a sweep never kills
+    another project's tests. One whose directory can't be read is never taken for a checkout's."""
+    if root:
+        return [w for w in workers if w.minutes >= minutes and w.cwd == f"{root}/app"]
+    return [w for w in workers if w.minutes >= minutes and ours(w.cwd)]
+
+
+def is_ours(cwd):
+    """Whether a test process's directory is the `app` module of a checkout of this project."""
+    return bool(cwd) and Path(cwd, "src", "main", "java", *PACKAGE.split(".")).is_dir()
 
 
 def _cwd_of(pid):
@@ -221,7 +250,7 @@ def stop_leftover(root, minutes):
     asked a hung one to stop and it didn't."""
     listed = subprocess.run(["ps", "-axo", "pid=,etime=,command="], capture_output=True, text=True).stdout
     stopped = []
-    for worker in leftover(test_workers(listed, _cwd_of), root, minutes):
+    for worker in leftover(test_workers(listed, _cwd_of), root, minutes, is_ours):
         try:
             os.kill(worker.pid, signal.SIGKILL)
             stopped.append(worker)
@@ -248,7 +277,7 @@ def parse_args(args):
         args.remove("--rerun")
     if "--timeout" in args:
         at = args.index("--timeout")
-        if at + 1 >= len(args) or not args[at + 1].isdigit():
+        if at + 1 >= len(args) or not args[at + 1].isdigit() or int(args[at + 1]) == 0:
             return None
         minutes = int(args[at + 1])
         del args[at : at + 2]
@@ -303,6 +332,10 @@ def _sweep():
     return 0
 
 
+def _terminated(signum, _frame):
+    raise SystemExit(128 + signum)
+
+
 def main(argv):
     parsed = parse_args(argv[1:])
     if parsed is None:
@@ -321,21 +354,29 @@ def main(argv):
     started = time.time()
     cut_off, last, gradle_exit = "", "", None
     in_progress = Path(root) / IN_PROGRESS
+    for stop in (signal.SIGTERM, signal.SIGHUP):
+        signal.signal(stop, _terminated)
     with open(log_path, "w") as log:
         gradle = subprocess.Popen(command, cwd=root, stdout=log, stderr=subprocess.STDOUT)
-        while cut_off == "":
-            try:
-                gradle_exit = gradle.wait(timeout=POLL_SECONDS)
-                break
-            except subprocess.TimeoutExpired:
-                now = time.time()
-                progress = in_progress.stat().st_mtime if in_progress.is_file() else None
-                if frozen(progress, started, now):
-                    cut_off = CutOff.FROZEN
-                elif now - started > minutes * 60:
-                    cut_off = CutOff.TIMED_OUT
+        try:
+            while cut_off == "":
+                try:
+                    gradle_exit = gradle.wait(timeout=POLL_SECONDS)
+                    break
+                except subprocess.TimeoutExpired:
+                    now = time.time()
+                    if frozen(modified(in_progress), started, now):
+                        cut_off = CutOff.FROZEN
+                    elif now - started > minutes * 60:
+                        cut_off = CutOff.TIMED_OUT
+        except BaseException:
+            # Terminated or interrupted: after this nothing is left to stop what this started.
+            gradle.kill()
+            gradle.wait()
+            stop_leftover(root, minutes=0)
+            raise
         if cut_off:
-            last = last_finished(in_progress.read_bytes()) if in_progress.is_file() else ""
+            last = last_finished(read_record(in_progress))
             gradle.kill()
             gradle.wait()
     # The run is over, so any test process still in this checkout is one that didn't stop.
