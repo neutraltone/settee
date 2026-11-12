@@ -56,6 +56,9 @@ import okhttp3.Request
  * - A failed feed leaves that feed's previous data intact and records the reason on the
  *   feed row, where the settings screen shows it — no silent failure.
  */
+/** What a channel has on [now], if anything, and [next]: the card in the player, the Live Preview on Home. */
+data class NowAndNext(val now: Programme?, val next: Programme?)
+
 /** What's showing at [nowUtcMillis], from [EpgRepository.upcoming]: its first may not have started yet. */
 internal fun List<Programme>.onNowAt(nowUtcMillis: Long): Programme? =
     firstOrNull()?.takeIf { it.startUtcMillis <= nowUtcMillis }
@@ -89,6 +92,16 @@ class EpgRepository(
 
     suspend fun upcoming(epgChannelId: String, nowUtcMillis: Long, limit: Int = 12): List<Programme> =
         programmeDao.upcoming(epgChannelId, nowUtcMillis, limit)
+
+    /**
+     * What's on [epgChannelId] at [nowUtcMillis] and what starts after it. Next is the first programme
+     * starting after now rather than the second row: rows are unique per feed, so two feeds carrying
+     * one channel list each programme twice, and the second row would repeat what's on now.
+     */
+    suspend fun nowAndNext(epgChannelId: String, nowUtcMillis: Long): NowAndNext {
+        val shows = upcoming(epgChannelId, nowUtcMillis, limit = NOW_AND_NEXT_ROWS)
+        return NowAndNext(shows.onNowAt(nowUtcMillis), shows.firstOrNull { it.startUtcMillis > nowUtcMillis })
+    }
 
     /** What's showing at [nowUtcMillis]. */
     suspend fun programmeOnNow(epgChannelId: String, nowUtcMillis: Long): Programme? =
@@ -401,3 +414,6 @@ class EpgRepository(
         )
     }
 }
+
+/** Enough rows for what's on now and next with a few feeds carrying the same channel. */
+private const val NOW_AND_NEXT_ROWS = 8

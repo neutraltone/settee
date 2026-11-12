@@ -78,7 +78,7 @@ class PlayerNoticeTest {
                 variants = emptyList(),
                 currentId = 4L,
                 previousId = null,
-                bannerChannel = null,
+                cardChannel = null,
                 nowAndNext = { null },
                 onNow = { emptyMap() },
                 recordingThis = false,

@@ -76,7 +76,7 @@ class PlayerChannelOptionsTest {
                     variants = emptyList(),
                     currentId = playing,
                     previousId = previous,
-                    bannerChannel = null,
+                    cardChannel = null,
                     nowAndNext = { null },
                     onNow = { emptyMap() },
                     recordingThis = false,

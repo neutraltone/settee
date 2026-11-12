@@ -33,10 +33,10 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import app.opentv.R
-import app.opentv.data.model.Programme
 import app.opentv.data.repo.ChannelLineup
 import app.opentv.data.repo.EpgRepository
 import app.opentv.data.repo.LineupChannel
+import app.opentv.data.repo.NowAndNext
 import app.opentv.ui.channels.formatTime
 import app.opentv.ui.design.ProgressBar
 import app.opentv.ui.design.QuietLabel
@@ -54,7 +54,7 @@ import kotlinx.coroutines.ensureActive
  * remote carries on doing what it would with the picture alone.
  */
 @Composable
-internal fun ChannelCard(channel: BannerChannel, nowAndNext: suspend (Long) -> NowAndNext?) {
+internal fun ChannelCard(channel: CardChannel, nowAndNext: suspend (Long) -> NowAndNext?) {
     val guide = rememberGuideFor(channel.key, nowAndNext)
     Row(
         Modifier
@@ -94,9 +94,6 @@ internal fun ChannelCard(channel: BannerChannel, nowAndNext: suspend (Long) -> N
     }
 }
 
-private fun Programme.progressAt(nowMillis: Long): Float =
-    if (durationMillis <= 0) 0f else (nowMillis - startUtcMillis).toFloat() / durationMillis
-
 private val CARD_WIDTH = 420.dp
 private val LOGO_SIZE = 64.dp
 
@@ -119,18 +116,10 @@ internal fun <T : Any> rememberGuideFor(key: String, lookup: suspend (Long) -> T
     return found
 }
 
-/** What a Channel's card says: the programme [now] on, if any, and the one [next]. */
-data class NowAndNext(val now: Programme?, val next: Programme?)
-
 /** What's on [channel] at [nowMillis] and what follows, from the guide it uses; null with no guide. */
 internal suspend fun nowAndNext(
     lineup: ChannelLineup,
     guide: EpgRepository,
     channel: LineupChannel,
     nowMillis: Long,
-): NowAndNext? {
-    val guideId = lineup.guideId(channel) ?: return null
-    val (first, second) = guide.upcoming(guideId, nowMillis, limit = 2).let { it.getOrNull(0) to it.getOrNull(1) }
-    val onNow = first?.takeIf { it.startUtcMillis <= nowMillis }
-    return NowAndNext(now = onNow, next = if (onNow != null) second else first)
-}
+): NowAndNext? = lineup.guideId(channel)?.let { guide.nowAndNext(it, nowMillis) }

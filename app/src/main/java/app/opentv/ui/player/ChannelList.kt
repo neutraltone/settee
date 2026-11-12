@@ -21,6 +21,11 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -39,12 +44,14 @@ import app.opentv.ui.design.SetteeType
 import app.opentv.ui.design.Text
 import app.opentv.ui.options.rememberRowHighlight
 import coil.compose.AsyncImage
+import kotlinx.coroutines.delay
 
 /**
  * The live player's channel list (docs/LOOK.md, Live TV): a solid panel down the left, with the
  * channel the viewer was last on pinned at the top. Moving through it never changes channel; OK on
- * a row does, through [onPick]. What's on each channel is asked for once, as the list opens, by
- * [onNow]: one read for the whole list, keyed by [PlaybackQueue.Item.id], rather than one per row.
+ * a row does, through [onPick]. What's on each channel is asked for as the list opens and each
+ * minute while it stays open, by [onNow]: one read for the whole list, keyed by
+ * [PlaybackQueue.Item.id], rather than one per row.
  */
 @Composable
 internal fun ChannelList(
@@ -57,8 +64,15 @@ internal fun ChannelList(
     onOptions: (PlaybackQueue.Item) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    // Keyed by nothing that changes while it's open: the list is composed afresh each time it opens.
-    val whatsOn = rememberGuideFor(LIST_KEY, onNow).orEmpty()
+    var whatsOn by remember { mutableStateOf(emptyMap<Long, String>()) }
+    val currentOnNow by rememberUpdatedState(onNow)
+    LaunchedEffect(Unit) {
+        while (true) {
+            // A guide that can't be read costs the rows a line, not the viewer the list.
+            runCatching { currentOnNow(System.currentTimeMillis()) }.onSuccess { whatsOn = it }
+            delay(REFRESH_MILLIS)
+        }
+    }
     val currentIndex = queue.indexOfFirst { currentId in it.qualityIds }.coerceAtLeast(0)
     val listState = rememberLazyListState()
     val highlight = rememberRowHighlight(queue, listState) { it.id }
@@ -152,6 +166,6 @@ private fun ChannelListRow(
     }
 }
 
-private const val LIST_KEY = "channel-list"
+private const val REFRESH_MILLIS = 60_000L
 private val PANEL_WIDTH = 400.dp
 private val LOGO_SIZE = 40.dp

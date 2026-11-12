@@ -73,7 +73,7 @@ class LiveChannelListTest {
                 currentId = current,
                 previousId = previous,
                 onNow = { onNow },
-                bannerChannel = null,
+                cardChannel = null,
                 nowAndNext = { null },
                 recordingThis = false,
                 livePause = true,
@@ -166,7 +166,23 @@ class LiveChannelListTest {
         captureScreen("live_player_channel_list")
     }
 
+    @Test
+    fun `what's on in the channel list moves on while the list stays open`() {
+        onNow = mapOf(12L to "Darts")
+        showPlayer(current = 11L)
+        press(Key.DirectionLeft)
+        compose.mainClock.advanceTimeBy(FOCUS_MILLIS)
+        compose.onNodeWithText("Darts").assertExists()
+
+        onNow = mapOf(12L to "Snooker")
+        compose.mainClock.advanceTimeBy(MINUTE_MILLIS)
+
+        compose.onNodeWithText("Snooker").assertExists()
+        compose.onNodeWithText("Darts").assertDoesNotExist()
+    }
+
     private companion object {
+        const val MINUTE_MILLIS = 60_000L
         const val FOCUS_MILLIS = 100L
         val CHANNELS = listOf(
             PlaybackQueue.Item(10L, "One", logoUrl = "https://example.com/logo/10.png", number = 1),

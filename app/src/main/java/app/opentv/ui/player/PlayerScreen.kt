@@ -78,6 +78,7 @@ import app.opentv.data.model.Channel
 import app.opentv.data.model.shownName
 import app.opentv.data.repo.LineupChannel
 import app.opentv.data.repo.MediaKey
+import app.opentv.data.repo.NowAndNext
 import app.opentv.data.repo.nowOn
 import app.opentv.data.repo.toRecord
 import app.opentv.player.PlaybackQueue
@@ -166,20 +167,20 @@ fun PlayerScreen(channelId: Long?, onBack: () -> Unit) {
 
     // The Channel playing: its Qualities are the same as wherever it was picked from.
     var channel by remember { mutableStateOf<LineupChannel?>(null) }
-    var queue by remember { mutableStateOf<List<PlaybackQueue.Item>>(emptyList()) }
+    // The zap list, and the channel list's rows made from it: one state, so they can't drift apart.
     var lineupChannels by remember { mutableStateOf<List<LineupChannel>>(emptyList()) }
+    val queue = remember(lineupChannels) {
+        lineupChannels.map { channel ->
+            val primary = channel.primary
+            val qualityIds = channel.qualities.mapTo(HashSet()) { it.id }
+            PlaybackQueue.Item(primary.id, primary.shownName, primary.logoUrl, primary.number, qualityIds)
+        }
+    }
     LaunchedEffect(Unit) {
         // Settled before watching, so a channel outside the list zaps through every Channel instead.
         channelId?.let { graph.channelLineup.zapChannels(around = it) }
         // Watched for as long as the player is open, which keeps the list ready for each zap.
-        graph.channelLineup.zapList.collect { channels ->
-            lineupChannels = channels
-            queue = channels.map { channel ->
-                val primary = channel.primary
-                val qualityIds = channel.qualities.mapTo(HashSet()) { it.id }
-                PlaybackQueue.Item(primary.id, primary.shownName, primary.logoUrl, primary.number, qualityIds)
-            }
-        }
+        graph.channelLineup.zapList.collect { lineupChannels = it }
     }
     var currentId by remember { mutableStateOf<Long?>(null) }
     // The channel we were on before this one — powers the "Last channel" recall in the list.
@@ -323,8 +324,8 @@ fun PlayerScreen(channelId: Long?, onBack: () -> Unit) {
             val byKey = graph.channelLineup.nowOn(channels, now)
             channels.mapNotNull { c -> byKey[c.key]?.let { c.primary.id to it } }.toMap()
         },
-        bannerChannel = channel?.let {
-            BannerChannel(it.key, it.primary.number, it.primary.shownName, it.primary.logoUrl)
+        cardChannel = channel?.let {
+            CardChannel(it.key, it.primary.number, it.primary.shownName, it.primary.logoUrl)
         },
         nowAndNext = { now ->
             channel?.let { nowAndNext(graph.channelLineup, graph.epgRepository, it, now) }
@@ -355,8 +356,8 @@ fun PlayerScreen(channelId: Long?, onBack: () -> Unit) {
     )
 }
 
-/** The Channel a banner names. [key] is what says it's a different Channel: see [LineupChannel.key]. */
-data class BannerChannel(val key: String, val number: Int?, val name: String, val logoUrl: String? = null)
+/** The Channel a [ChannelCard] names. [key] is what says it's a different Channel: see [LineupChannel.key]. */
+data class CardChannel(val key: String, val number: Int?, val name: String, val logoUrl: String? = null)
 
 /**
  * The live picture and its control bar, channel list and pickers, with everything the remote drives.
@@ -373,7 +374,7 @@ fun LivePlayerContent(
     currentId: Long?,
     previousId: Long?,
     onNow: suspend (Long) -> Map<Long, String>,
-    bannerChannel: BannerChannel?,
+    cardChannel: CardChannel?,
     nowAndNext: suspend (Long) -> NowAndNext?,
     recordingThis: Boolean,
     livePause: Boolean,
@@ -402,8 +403,8 @@ fun LivePlayerContent(
     var resizeMode by remember { mutableIntStateOf(settings.playerResizeMode.value) }
 
     var controlsVisible by remember { mutableStateOf(false) }
-    var bannerVisible by remember { mutableStateOf(false) }
-    var bannerShows by remember { mutableIntStateOf(0) }
+    var cardVisible by remember { mutableStateOf(false) }
+    var cardShows by remember { mutableIntStateOf(0) }
     var openingPress by remember { mutableStateOf(false) }
     var panel by remember { mutableStateOf(PlayerPanel.NONE) }
     var channelListVisible by remember { mutableStateOf(false) }
@@ -478,17 +479,17 @@ fun LivePlayerContent(
 
     fun reveal() {
         controlsVisible = true
-        bannerVisible = false
+        cardVisible = false
         interaction++
     }
 
-    /** Says which Channel is on: the banner, or the bar's title if the bar's already up. */
+    /** Says which Channel is on: the card, or the bar's title if the bar's already up. */
     fun announceChannel() {
         if (controlsVisible) {
             interaction++
         } else if (!channelListVisible) {
-            bannerVisible = true
-            bannerShows++
+            cardVisible = true
+            cardShows++
         }
     }
 
@@ -514,15 +515,15 @@ fun LivePlayerContent(
     }
 
     // By the Channel, not currentId: a Quality switch changes currentId and stays on the Channel.
-    LaunchedEffect(bannerChannel?.key) {
-        if (bannerChannel != null) announceChannel()
+    LaunchedEffect(cardChannel?.key) {
+        if (cardChannel != null) announceChannel()
     }
 
     // Not the bar's auto-hide, which waits for Playing: nothing here needs the viewer to act on it, so
     // it shouldn't outstay a channel that's still buffering or has failed.
-    LaunchedEffect(bannerShows) {
-        delay(BANNER_TIMEOUT_MILLIS)
-        bannerVisible = false
+    LaunchedEffect(cardShows) {
+        delay(CARD_TIMEOUT_MILLIS)
+        cardVisible = false
     }
 
     // Only while there's a bar to show it on.
@@ -669,7 +670,7 @@ fun LivePlayerContent(
                     event.key == Key.DirectionLeft -> {
                         if (queue.isNotEmpty()) {
                             channelListVisible = true
-                            bannerVisible = false
+                            cardVisible = false
                         }
                         true
                     }
@@ -876,14 +877,14 @@ fun LivePlayerContent(
             )
         }
 
-        if (bannerChannel != null) {
+        if (cardChannel != null) {
             AnimatedVisibility(
-                visible = bannerVisible && !inPip,
+                visible = cardVisible && !inPip,
                 enter = fadeIn(),
                 exit = fadeOut(),
                 modifier = Modifier.align(Alignment.BottomStart),
             ) {
-                ChannelCard(bannerChannel, nowAndNext)
+                ChannelCard(cardChannel, nowAndNext)
             }
         }
 
@@ -1116,7 +1117,7 @@ private fun livePills(
 
 private const val LIVE_POLL_MILLIS = 500L
 private const val CONTROLS_TIMEOUT_MILLIS = 5_000L
-private const val BANNER_TIMEOUT_MILLIS = 4_000L
+private const val CARD_TIMEOUT_MILLIS = 4_000L
 private const val NUMBER_ENTRY_TIMEOUT_MILLIS = 2_000L
 private const val BACK_TO_LIVE_MESSAGE_MILLIS = 4_000L
 internal val OK_KEYS = setOf(Key.DirectionCenter, Key.Enter, Key.NumPadEnter, Key.ButtonA)

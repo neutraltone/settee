@@ -24,10 +24,10 @@ import androidx.media3.common.util.UnstableApi
 import androidx.test.core.app.ApplicationProvider
 import app.opentv.core.AppSettings
 import app.opentv.data.model.Programme
+import app.opentv.data.repo.NowAndNext
 import app.opentv.player.PlaybackQueue
-import app.opentv.ui.player.BannerChannel
+import app.opentv.ui.player.CardChannel
 import app.opentv.ui.player.LivePlayerContent
-import app.opentv.ui.player.NowAndNext
 import app.opentv.ui.player.SubtitlePicks
 import com.google.common.truth.Truth.assertThat
 import org.junit.After
@@ -75,7 +75,7 @@ class LiveChannelCardTest {
                 currentId = TWO.id,
                 previousId = null,
                 onNow = { emptyMap() },
-                bannerChannel = BannerChannel("#${TWO.id}", TWO.number, TWO.name, TWO.logoUrl),
+                cardChannel = CardChannel("#${TWO.id}", TWO.number, TWO.name, TWO.logoUrl),
                 nowAndNext = ::guide,
                 recordingThis = false,
                 livePause = true,

@@ -311,6 +311,37 @@ class ChannelLineupTest {
     }
 
     @Test
+    fun `two guide feeds for one channel don't make what's next repeat what's on now`() = runTest {
+        seed("UK| ITV HD")
+        guide("UK| ITV HD", "itv.hd")
+        db.programmes().upsertAll(
+            listOf(1L, 2L).flatMap { feed ->
+                listOf(
+                    Programme(
+                        feedId = feed,
+                        epgChannelId = "itv.hd",
+                        startUtcMillis = 0,
+                        endUtcMillis = 1_000,
+                        title = "News",
+                    ),
+                    Programme(
+                        feedId = feed,
+                        epgChannelId = "itv.hd",
+                        startUtcMillis = 1_000,
+                        endUtcMillis = 2_000,
+                        title = "Quiz",
+                    ),
+                )
+            },
+        )
+
+        val card = nowAndNext(lineup, catalogue.guide, all().single(), nowMillis = 500)
+
+        assertThat(card?.now?.title).isEqualTo("News")
+        assertThat(card?.next?.title).isEqualTo("Quiz")
+    }
+
+    @Test
     fun `between programmes the card has nothing on now, only what's next`() = runTest {
         seed("UK| ITV HD")
         guide("UK| ITV HD", "itv.hd")

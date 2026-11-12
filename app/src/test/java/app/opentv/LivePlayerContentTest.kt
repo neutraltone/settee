@@ -36,11 +36,11 @@ import app.opentv.core.PipState
 import app.opentv.data.model.Channel
 import app.opentv.data.model.Programme
 import app.opentv.data.repo.MediaKey
+import app.opentv.data.repo.NowAndNext
 import app.opentv.player.PlaybackQueue
 import app.opentv.player.PlayerController
-import app.opentv.ui.player.BannerChannel
+import app.opentv.ui.player.CardChannel
 import app.opentv.ui.player.LivePlayerContent
-import app.opentv.ui.player.NowAndNext
 import app.opentv.ui.player.SubtitlePicks
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.awaitCancellation
@@ -83,7 +83,7 @@ class LivePlayerContentTest {
     private var programmeLookups = 0
 
     // PlayerScreen's Channel, when a test wants it to differ from the one queue and playing give.
-    private var playingChannel by mutableStateOf<BannerChannel?>(null)
+    private var playingChannel by mutableStateOf<CardChannel?>(null)
 
     @After
     fun release() {
@@ -116,8 +116,8 @@ class LivePlayerContentTest {
                     currentId = playing,
                     previousId = null,
                     onNow = { emptyMap() },
-                    bannerChannel = playingChannel ?: queue.firstOrNull { playing in it.qualityIds }?.let {
-                        BannerChannel("#${it.id}", it.number, it.name)
+                    cardChannel = playingChannel ?: queue.firstOrNull { playing in it.qualityIds }?.let {
+                        CardChannel("#${it.id}", it.number, it.name)
                     },
                     nowAndNext = { now ->
                         programmeLookups++
@@ -168,7 +168,7 @@ class LivePlayerContentTest {
         qualityLabel = quality,
     )
 
-    private fun hideBanner() = compose.mainClock.advanceTimeBy(BANNER_TIMEOUT_MILLIS)
+    private fun hideBanner() = compose.mainClock.advanceTimeBy(CARD_TIMEOUT_MILLIS)
 
     /** What PlayerScreen does once a zap or a pick has found its Channel. */
     private fun tuneTo(id: Long) {
@@ -496,7 +496,7 @@ class LivePlayerContentTest {
 
     @Test
     fun `a channel that isn't in the list still gets a banner`() {
-        playingChannel = BannerChannel("hidden", number = null, name = "Hidden")
+        playingChannel = CardChannel("hidden", number = null, name = "Hidden")
 
         showChannel(queue = CHANNELS, currentId = 99L)
 
@@ -505,12 +505,12 @@ class LivePlayerContentTest {
 
     @Test
     fun `the channel's details changing doesn't show the banner`() {
-        playingChannel = BannerChannel("sport", number = null, name = "Sport")
+        playingChannel = CardChannel("sport", number = null, name = "Sport")
         showChannel(queue = CHANNELS, currentId = 99L)
         hideBanner()
 
         // What a Catalogue Refresh can do while it's on: same Channel, another primary Quality.
-        playingChannel = BannerChannel("sport", number = 7, name = "Sport HD")
+        playingChannel = CardChannel("sport", number = 7, name = "Sport HD")
         compose.waitForIdle()
 
         compose.onNodeWithText("Sport HD").assertDoesNotExist()
@@ -581,7 +581,7 @@ class LivePlayerContentTest {
         showChannel(queue = CHANNELS, currentId = 11L)
         compose.onNodeWithText("Two").assertExists()
 
-        compose.mainClock.advanceTimeBy(BANNER_TIMEOUT_MILLIS)
+        compose.mainClock.advanceTimeBy(CARD_TIMEOUT_MILLIS)
 
         compose.onNodeWithText("Two").assertDoesNotExist()
     }
@@ -605,7 +605,7 @@ class LivePlayerContentTest {
         assertThat(stuck.state.value).isInstanceOf(PlayerController.State.Buffering::class.java)
         compose.onAllNodesWithText("Two").assertCountEquals(1)
 
-        compose.mainClock.advanceTimeBy(BANNER_TIMEOUT_MILLIS)
+        compose.mainClock.advanceTimeBy(CARD_TIMEOUT_MILLIS)
 
         compose.onAllNodesWithText("Two").assertCountEquals(0)
         stuck.release()
@@ -621,7 +621,7 @@ class LivePlayerContentTest {
         // The rule's clock hasn't moved while the controller gave up, so the banner's still in time.
         compose.onNodeWithText("Two").assertExists()
 
-        compose.mainClock.advanceTimeBy(BANNER_TIMEOUT_MILLIS)
+        compose.mainClock.advanceTimeBy(CARD_TIMEOUT_MILLIS)
 
         compose.onNodeWithText("Two").assertDoesNotExist()
         failing.release()
@@ -818,7 +818,7 @@ class LivePlayerContentTest {
         const val FOCUS_MILLIS = 100L
         const val LONG_WHILE_MILLIS = 300_000L
         const val TAP_MILLIS = 1_000L
-        const val BANNER_TIMEOUT_MILLIS = 5_000L
+        const val CARD_TIMEOUT_MILLIS = 5_000L
 
         // Shorter than the banner's and the controls' timeouts, and twice it is longer than either.
         const val PART_OF_A_TIMEOUT_MILLIS = 3_000L
