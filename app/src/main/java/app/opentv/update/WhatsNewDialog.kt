@@ -6,8 +6,6 @@
 package app.opentv.update
 
 import android.content.Context
-import androidx.compose.foundation.ScrollState
-import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
@@ -16,19 +14,12 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.input.key.Key
-import androidx.compose.ui.input.key.KeyEventType
-import androidx.compose.ui.input.key.key
-import androidx.compose.ui.input.key.onPreviewKeyEvent
-import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import app.opentv.BuildConfig
@@ -92,30 +83,6 @@ fun WhatsNewDialog(installedVersion: String, notes: List<VersionNotes>, onDismis
         }
     }
 }
-
-/**
- * A modifier for a screen's only button that turns D-pad Up and Down into scrolling [scroll]. The
- * text it scrolls has nothing for the D-pad to move onto; scrolling from the button keeps Select one
- * press from done.
- */
-@Composable
-fun rememberDpadScroll(scroll: ScrollState): Modifier {
-    val scope = rememberCoroutineScope()
-    val step = with(LocalDensity.current) { SCROLL_STEP.toPx() }
-    return remember(scroll, scope, step) {
-        Modifier.onPreviewKeyEvent { event ->
-            val direction = when (event.key) {
-                Key.DirectionDown -> 1
-                Key.DirectionUp -> -1
-                else -> return@onPreviewKeyEvent false
-            }
-            if (event.type == KeyEventType.KeyDown) scope.launch { scroll.animateScrollBy(direction * step) }
-            true
-        }
-    }
-}
-
-private val SCROLL_STEP = 96.dp
 
 /**
  * Takes focus when it first appears, where Compose would otherwise highlight the first thing in focus

@@ -11,6 +11,7 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsNotDisplayed
 import androidx.compose.ui.test.hasProgressBarRangeInfo
+import androidx.compose.ui.test.isFocused
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -94,7 +95,11 @@ class UpdateAvailableDialogTest {
         show(longUpdate)
         compose.onNodeWithText("• change number 40").assertIsNotDisplayed()
 
-        compose.onNodeWithText("Update").performKeyInput { repeat(40) { pressKey(Key.DirectionDown) } }
+        // Each press goes to whatever has the Highlight, as the remote's would.
+        repeat(40) {
+            compose.onNode(isFocused()).performKeyInput { pressKey(Key.DirectionDown) }
+            compose.waitForIdle()
+        }
 
         compose.onNodeWithText("• change number 40").assertIsDisplayed()
         compose.onNodeWithText("Later").assertIsFocused()

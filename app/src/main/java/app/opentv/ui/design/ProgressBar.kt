@@ -28,6 +28,12 @@ import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
 import app.opentv.R
 
+/** [fraction] from 0 to 1 as the percentage shown with a [ProgressBar], such as "40%". */
+@Composable
+fun percentText(fraction: Float): String = stringResource(R.string.common_percent, (fraction * PERCENT).toInt())
+
+private const val PERCENT = 100
+
 /** How tall a [ProgressBar] is, for laying text out clear of it. */
 val ProgressBarHeight = 4.dp
 

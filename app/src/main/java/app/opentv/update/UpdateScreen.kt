@@ -35,8 +35,10 @@ import app.opentv.ui.design.ProgressBar
 import app.opentv.ui.design.SetteeType
 import app.opentv.ui.design.SidePanel
 import app.opentv.ui.design.Text
+import app.opentv.ui.design.percentText
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 /**
@@ -58,7 +60,8 @@ fun UpdateGate(viewModel: UpdateViewModel = viewModel()) {
             onLater = viewModel::dismiss,
         )
 
-        // Back only hides it: the download carries on, and the installer still opens when it's done.
+        // Back only hides it: the download carries on (withProgress keeps it hidden), and the installer
+        // still opens when it's done.
         is UpdateUiState.Downloading -> UpdateDownloadingPanel(s.fraction, onBack = viewModel::dismiss)
 
         is UpdateUiState.Failed -> {
@@ -103,7 +106,7 @@ fun UpdateDownloadingPanel(fraction: Float, onBack: () -> Unit) {
         val title = stringResource(R.string.update_downloading)
         PanelTitle(title)
         if (fraction >= 0f) {
-            Text(stringResource(R.string.update_percent, (fraction * PERCENT).toInt()), SetteeType.Body)
+            Text(percentText(fraction), SetteeType.Body)
             ProgressBar(fraction, Modifier.fillMaxWidth().padding(top = 8.dp))
         } else {
             AerialTv(title)
@@ -127,8 +130,6 @@ fun UpdateFailedPanel(reason: ViewerError, onTryAgain: () -> Unit, onClose: () -
     }
 }
 
-private const val PERCENT = 100
-
 sealed interface UpdateUiState {
     data object Idle : UpdateUiState
     data class Available(val update: UpdateChecker.Update) : UpdateUiState
@@ -137,6 +138,13 @@ sealed interface UpdateUiState {
     /** [detail] is the download's failure, for the detail line. */
     data class Failed(val update: UpdateChecker.Update, val detail: String) : UpdateUiState
 }
+
+/**
+ * The state once the download is [fraction] through: the Downloading panel moves on, and anything
+ * else stays as it is. Back sets Idle mid-download, and progress mustn't bring the panel back.
+ */
+fun UpdateUiState.withProgress(fraction: Float): UpdateUiState =
+    if (this is UpdateUiState.Downloading) copy(fraction = fraction) else this
 
 /**
  * One shared update state so the manual "check for updates" (About) and the automatic gate speak
@@ -195,7 +203,7 @@ class UpdateViewModel(app: Application) : AndroidViewModel(app) {
                     context = getApplication(),
                     url = update.apkUrl,
                     expectedBytes = update.apkSizeBytes,
-                ) { fraction -> _state.value = UpdateUiState.Downloading(update, fraction) }
+                ) { fraction -> _state.update { it.withProgress(fraction) } }
             }.onSuccess {
                 // The system installer is now front-and-centre; step our dialog aside.
                 _state.value = UpdateUiState.Idle

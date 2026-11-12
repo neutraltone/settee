@@ -50,6 +50,7 @@ import app.opentv.ui.design.ProgressBar
 import app.opentv.ui.design.SetteeColors
 import app.opentv.ui.design.SetteeType
 import app.opentv.ui.design.Text
+import app.opentv.ui.design.percentText
 import app.opentv.ui.recordings.RecordingsScreen
 import app.opentv.ui.vod.MoviesScreen
 import app.opentv.ui.vod.SeriesScreen
@@ -218,7 +219,7 @@ internal fun StatusLine(message: String, progress: Float?, modifier: Modifier = 
                 AerialTv(stringResource(R.string.progress_still_working), size = AerialTvSize.Small)
             } else {
                 Text(
-                    stringResource(R.string.update_percent, (progress * PERCENT).toInt()),
+                    percentText(progress),
                     SetteeType.Body,
                     color = SetteeColors.Accent,
                 )
@@ -230,4 +231,3 @@ internal fun StatusLine(message: String, progress: Float?, modifier: Modifier = 
     }
 }
 
-private const val PERCENT = 100

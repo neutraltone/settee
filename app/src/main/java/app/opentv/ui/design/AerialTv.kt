@@ -101,7 +101,7 @@ private fun DrawScope.drawFull(millis: Long) {
         val fading = sinceLit.toFloat() / ARC_LIFE_MILLIS
         if (fading < 1f) {
             val fartherFainter = 1f - arc * FAINTER_PER_ARC
-            drawArcs(radius, AerialTvShape.ARC_WIDTH, alpha = (1f - fading) * fartherFainter)
+            drawArcs(radius, FullArc, alpha = (1f - fading) * fartherFainter)
         }
     }
     val open = eyesOpen(millis)
@@ -120,10 +120,10 @@ private fun DrawScope.drawFull(millis: Long) {
 private fun DrawScope.drawSmall(millis: Long) {
     val fading = millis.mod(SMALL_CYCLE_MILLIS).toFloat() / SMALL_CYCLE_MILLIS
     val radius = AerialTvShape.SMALL_ARC_RADIUS * (SMALL_START + (1f - SMALL_START) * fading)
-    drawArcs(radius, AerialTvShape.SMALL_ARC_WIDTH, alpha = 1f - fading)
+    drawArcs(radius, SmallArc, alpha = 1f - fading)
 }
 
-private fun DrawScope.drawArcs(radius: Float, width: Float, alpha: Float) {
+private fun DrawScope.drawArcs(radius: Float, stroke: Stroke, alpha: Float) {
     AerialTvShape.knobs.forEachIndexed { i, knob ->
         drawArc(
             SetteeColors.Accent,
@@ -133,7 +133,7 @@ private fun DrawScope.drawArcs(radius: Float, width: Float, alpha: Float) {
             topLeft = Offset(knob.x - radius, knob.y - radius),
             size = Size(2 * radius, 2 * radius),
             alpha = alpha,
-            style = Stroke(width, cap = StrokeCap.Round),
+            style = stroke,
         )
     }
 }
@@ -145,6 +145,9 @@ private fun eyesOpen(millis: Long): Float {
     return abs(1f - 2f * intoBlink / BLINK_MILLIS).coerceAtLeast(SHUT)
 }
 
+// Made once: the arcs redraw every frame for as long as anything waits.
+private val FullArc = Stroke(AerialTvShape.ARC_WIDTH, cap = StrokeCap.Round)
+private val SmallArc = Stroke(AerialTvShape.SMALL_ARC_WIDTH, cap = StrokeCap.Round)
 private val FullSide = 64.dp
 private val SmallSide = 22.dp
 private const val ARC_CYCLE_MILLIS = 1_800L

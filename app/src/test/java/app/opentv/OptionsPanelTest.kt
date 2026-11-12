@@ -11,6 +11,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEvent
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.hasText
@@ -20,7 +21,9 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.performKeyPress
+import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.pressKey
+import androidx.compose.ui.text.TextLayoutResult
 import app.opentv.data.model.Programme
 import app.opentv.ui.options.ItemOption
 import app.opentv.ui.options.OptionsPanel
@@ -108,6 +111,18 @@ class OptionsPanelTest {
         show(ItemOption.RecordWholeSeries(programme("The News")))
 
         compose.onNodeWithText("Record whole series: The News").assertIsFocused()
+    }
+
+    @Test
+    fun `a long label wraps rather than losing its end`() {
+        val title = "The Great British Sewing Bee: The Christmas Special Extended Edition"
+        show(ItemOption.RecordWholeSeries(programme(title)))
+
+        val layout = mutableListOf<TextLayoutResult>()
+        compose.onNodeWithText("Record whole series: $title", useUnmergedTree = true)
+            .performSemanticsAction(SemanticsActions.GetTextLayoutResult) { it(layout) }
+
+        assertThat(layout.single().hasVisualOverflow).isFalse()
     }
 
     @Test

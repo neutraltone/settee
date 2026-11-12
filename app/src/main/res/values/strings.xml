@@ -20,6 +20,7 @@
     <string name="common_keep_typing">Keep typing…</string>
     <string name="common_channels">Channels</string>
     <string name="common_try_again">Try again</string>
+    <string name="common_percent">%1$d%%</string>
 
     <!-- ============================ Navigation rail ============================ -->
     <string name="nav_home">Home</string>
@@ -655,7 +656,6 @@
     <string name="update_later">Later</string>
     <string name="player_loading">Loading</string>
     <string name="update_downloading">Downloading the update</string>
-    <string name="update_percent">%1$d%%</string>
     <string name="playback_link_refused">Your provider didn\'t give a link for this channel. Try refreshing your provider in Settings.</string>
     <string name="playback_no_catchup">Your provider doesn\'t offer catch-up, so past programmes can\'t be played.</string>
     <string name="error_video_format_tv">This TV can\'t play this video format.</string>

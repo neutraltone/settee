@@ -27,7 +27,7 @@ import app.opentv.ui.design.SetteeColors
 import app.opentv.ui.design.SetteeSpace
 import app.opentv.ui.design.SetteeType
 import app.opentv.ui.design.Text
-import app.opentv.update.rememberDpadScroll
+import app.opentv.ui.design.dpadScrolls
 import app.opentv.update.startsFocused
 
 /** A bundled font, its upstream source, and its OFL.txt in assets (assets/licences/FONTS.md). */
@@ -73,7 +73,7 @@ fun FontLicencesScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
         ActionButton(
             stringResource(R.string.common_done),
             onClick = onBack,
-            modifier = rememberDpadScroll(scroll).startsFocused(),
+            modifier = Modifier.dpadScrolls(scroll).startsFocused(),
         )
     }
 }

@@ -57,7 +57,7 @@ internal fun <T> ChoicePanel(
     // Holding Select is one way to open this, and the highlight lands on the first option with the key
     // still down. Its repeats and release would press that option, so only a new press counts.
     var newPress by remember { mutableStateOf(false) }
-    SidePanel(onBack = onDismiss, startOn = first) {
+    SidePanel(onBack = onDismiss) {
         PanelTitle(title)
         Column(
             Modifier.onPreviewKeyEvent { event ->
@@ -68,7 +68,8 @@ internal fun <T> ChoicePanel(
                 !newPress
             },
         ) {
-            // Asked again for each list, as the row that had the highlight may be gone from the next.
+            // The one place the Highlight is placed: on opening, and again for each new list, as the
+            // row that had it may be gone from the next.
             LaunchedEffect(choices) {
                 withFrameNanos {}
                 runCatching { first.requestFocus() }

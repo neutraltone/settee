@@ -5,10 +5,8 @@
  */
 package app.opentv.ui.design
 
-import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.focusGroup
-import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -25,19 +23,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.input.key.Key
-import androidx.compose.ui.input.key.KeyEventType
-import androidx.compose.ui.input.key.key
-import androidx.compose.ui.input.key.onPreviewKeyEvent
-import androidx.compose.ui.input.key.type
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
@@ -45,7 +36,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.window.DialogWindowProvider
-import kotlinx.coroutines.launch
 
 /**
  * A Side Panel: down the right of the screen, over what's there, for a choice, an item's details, or
@@ -138,11 +128,11 @@ fun PanelRow(
     ) { highlighted ->
         val quiet = if (highlighted) SetteeColors.OnAccent else SetteeColors.QuietText
         Row(Modifier.fillMaxWidth().padding(ROW_PADDING), verticalAlignment = Alignment.CenterVertically) {
+            // Wraps: a label can name a programme or series, and cutting it off hides which one.
             Text(
                 label,
                 SetteeType.Body,
                 color = if (highlighted) SetteeColors.OnAccent else SetteeColors.Text,
-                maxLines = 1,
                 modifier = Modifier.weight(1f),
             )
             value?.let { Text(it, SetteeType.Body, color = quiet, maxLines = 1) }
@@ -198,26 +188,8 @@ fun NotesPanel(
             Modifier.weight(1f, fill = false).fillMaxWidth().verticalScroll(scroll).padding(bottom = ROW_PADDING),
             content = notes,
         )
-        PanelRow(main, onClick = onMain, modifier = Modifier.focusRequester(mainRow).scrollsNotes(scroll))
+        PanelRow(main, onClick = onMain, modifier = Modifier.focusRequester(mainRow).dpadScrolls(scroll))
         others()
-    }
-}
-
-/** Turns Up and Down into scrolling [notes] while they have further to go that way. */
-@Composable
-private fun Modifier.scrollsNotes(notes: ScrollState): Modifier {
-    val scope = rememberCoroutineScope()
-    val step = with(LocalDensity.current) { NotesStep.toPx() }
-    return onPreviewKeyEvent { event ->
-        val direction = when (event.key) {
-            Key.DirectionDown -> 1
-            Key.DirectionUp -> -1
-            else -> return@onPreviewKeyEvent false
-        }
-        val further = if (direction > 0) notes.canScrollForward else notes.canScrollBackward
-        if (!further) return@onPreviewKeyEvent false
-        if (event.type == KeyEventType.KeyDown) scope.launch { notes.animateScrollBy(direction * step) }
-        true
     }
 }
 
@@ -247,7 +219,6 @@ fun ConfirmPanel(
 /** How wide a [SidePanel] is. */
 val SidePanelWidth = 400.dp
 
-private val NotesStep = 96.dp
 private val PANEL_PADDING = 24.dp
 private val ROW_GAP = 2.dp
 private val ROW_PADDING = 12.dp
