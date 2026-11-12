@@ -229,11 +229,18 @@ class SetupRefreshTest {
     fun `the bar moves while the guide downloads, not only when it's done`() = runTest {
         panel.replies["xmltv.php"] = buildString {
             append("<tv>")
-            repeat(3_000) { append("""<programme start="20260101000000 +0000" stop="20260101010000 +0000" channel="c$it"><title>P</title></programme>""") }
+            repeat(3_000) {
+                append(
+                    """<programme start="20260101000000 +0000" stop="20260101010000 +0000" channel="c$it">""" +
+                        "<title>P</title></programme>",
+                )
+            }
             append("</tv>")
         }
         val bars = java.util.Collections.synchronizedList(mutableListOf<Float>())
-        backgroundScope.launch(Dispatchers.Unconfined) { refresh.state.collect { it.setup?.let { s -> bars += s.bar } } }
+        backgroundScope.launch(Dispatchers.Unconfined) {
+            refresh.state.collect { it.setup?.let { s -> bars += s.bar } }
+        }
 
         setUp()
 
@@ -246,7 +253,9 @@ class SetupRefreshTest {
         panel.replies["get_vod_streams"] =
             (1..3_000).joinToString(",", "[", "]") { """{"stream_id": $it, "name": "Film $it", "genre": "Drama"}""" }
         val bars = java.util.Collections.synchronizedList(mutableListOf<Float>())
-        backgroundScope.launch(Dispatchers.Unconfined) { refresh.state.collect { it.setup?.let { s -> bars += s.bar } } }
+        backgroundScope.launch(Dispatchers.Unconfined) {
+            refresh.state.collect { it.setup?.let { s -> bars += s.bar } }
+        }
 
         setUp()
 

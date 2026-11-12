@@ -56,10 +56,12 @@ import app.opentv.sync.NasSync
 import app.opentv.sync.SyncClient
 import app.opentv.sync.SyncEngine
 import app.opentv.sync.SyncServer
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -222,8 +224,13 @@ class SourcesViewModel @JvmOverloads constructor(
                 return@launch
             }
             if (first) {
+                // Started before Setup's screen opens, so the screen never sees the last try's state
+                // (a failed login would send it straight back to the form).
+                val setup = async(start = CoroutineStart.UNDISPATCHED) {
+                    refresh.refresh(CatalogueRefresh.Trigger.Setup(saved))
+                }
                 onSetup()
-                val outcome = refresh.refresh(CatalogueRefresh.Trigger.Setup(saved))
+                val outcome = setup.await()
                 // A failed login is back on the form, with why.
                 _ui.update { it.copy(adding = false, syncMessage = messages.of(outcome)) }
                 onChannels((outcome as? CatalogueRefresh.Outcome.AddFailed)?.reason)

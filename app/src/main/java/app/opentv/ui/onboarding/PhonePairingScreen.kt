@@ -34,7 +34,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import app.opentv.R
-import app.opentv.data.model.Source
 import app.opentv.pairing.PairingFonts
 import app.opentv.pairing.PairingServer
 import app.opentv.pairing.QrCodes

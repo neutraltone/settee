@@ -12,18 +12,26 @@ package app.opentv.data.repo
  * alone took 61% of the time, and equal parts would hold the bar still for most of setup.
  */
 enum class SetupStep(internal val share: Float, internal val savingFrom: Float = 0f) {
-    CHANNELS(15f),
-    GUIDE(61f),
+    CHANNELS(CHANNELS_SHARE),
+    GUIDE(GUIDE_SHARE),
 
     /**
      * The categories and the download come first, and can't tell how far they've got (panels don't
      * say how big the list is): on the Stick they were 30% of the step, so saving moves the rest.
      */
-    MOVIES(16f, savingFrom = 0.3f),
+    MOVIES(MOVIES_SHARE, savingFrom = MOVIES_DOWNLOAD),
 
     /** As [MOVIES]; the show list's download was half of its step. */
-    SHOWS(8f, savingFrom = 0.5f),
+    SHOWS(SHOWS_SHARE, savingFrom = SHOWS_DOWNLOAD),
 }
+
+// Percentages of setup's time on the Stick, and the share of a list's step its download took.
+private const val CHANNELS_SHARE = 15f
+private const val GUIDE_SHARE = 61f
+private const val MOVIES_SHARE = 16f
+private const val SHOWS_SHARE = 8f
+private const val MOVIES_DOWNLOAD = 0.3f
+private const val SHOWS_DOWNLOAD = 0.5f
 
 /** Where Setup's bar stands, shared between the [steps] that run for this provider. */
 class SetupBar(private val steps: List<SetupStep>) {

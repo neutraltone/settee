@@ -64,7 +64,6 @@ import androidx.navigation.compose.rememberNavController
 import app.opentv.core.ServiceLocator
 import app.opentv.data.repo.MediaKey
 import app.opentv.ui.FirstScreen
-import app.opentv.ui.hasProvider
 import app.opentv.ui.MainScreen
 import app.opentv.ui.ProfilesViewModel
 import app.opentv.ui.SourcesViewModel
@@ -75,6 +74,7 @@ import app.opentv.ui.channels.ChannelManagerScreen
 import app.opentv.ui.channels.SearchScreen
 import app.opentv.ui.design.SetteeTheme
 import app.opentv.ui.firstScreen
+import app.opentv.ui.hasProvider
 import app.opentv.ui.options.ItemOptionsHost
 import app.opentv.ui.options.OptionsDestination
 import app.opentv.ui.player.PlayerScreen

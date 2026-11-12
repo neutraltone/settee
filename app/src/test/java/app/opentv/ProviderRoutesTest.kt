@@ -20,8 +20,8 @@ import androidx.navigation.compose.rememberNavController
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import app.opentv.core.ServiceLocator
-import app.opentv.data.model.SourceKind
 import app.opentv.data.db.OpenTvDatabase
+import app.opentv.data.model.SourceKind
 import app.opentv.ui.SourcesViewModel
 import app.opentv.ui.design.SetteeType
 import app.opentv.ui.design.Text
@@ -155,6 +155,22 @@ class ProviderRoutesTest {
         assertThat(route()).isEqualTo(Routes.ADD_SOURCE)
         compose.onNodeWithText("Playlist URL").assertExists()
         assertThat(runBlocking { graph.sourceRepository.observeAll().first() }).isEmpty()
+    }
+
+    @Test
+    fun `after a failed login, trying again from the form opens Setup and stays there`() {
+        panel.replies[""] = "#EXTM3U\n"
+        setApp(start = Routes.ADD_SOURCE, sources = SourcesViewModel(app, graph))
+        savePlaylist()
+        compose.waitUntil(5_000) {
+            compose.onAllNodesWithText("No channels found", substring = true).fetchSemanticsNodes().isNotEmpty()
+        }
+
+        panel.replies[""] = "#EXTM3U\n#EXTINF:-1,BBC One\nhttp://example.com/1.ts\n"
+        compose.onNodeWithText("Save and load").performClick()
+
+        compose.waitUntil(5_000) { compose.onAllNodesWithText("Take me to Settee").fetchSemanticsNodes().isNotEmpty() }
+        assertThat(route()).isEqualTo(Routes.SETUP)
     }
 
     @Test

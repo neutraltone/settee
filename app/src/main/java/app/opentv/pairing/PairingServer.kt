@@ -371,7 +371,10 @@ class PairingServer(private val scope: CoroutineScope, private val fonts: Pairin
                 if (answer != null) {
                     PairingPage.message("All done", "Carry on on your TV.")
                 } else {
-                    PairingPage.message("Sent to your TV", "You can put your phone down. The rest happens on the telly.")
+                    PairingPage.message(
+                        "Sent to your TV",
+                        "You can put your phone down. The rest happens on the telly.",
+                    )
                 },
             ),
         )

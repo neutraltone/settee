@@ -5,8 +5,6 @@
  */
 package app.opentv.ui
 
-import app.opentv.data.model.Source
-
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -45,6 +43,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import app.opentv.R
 import app.opentv.data.model.Profile
+import app.opentv.data.model.Source
 
 /** The screen the app opens on. */
 enum class FirstScreen { ADD_SOURCE, WHOS_WATCHING, HOME }

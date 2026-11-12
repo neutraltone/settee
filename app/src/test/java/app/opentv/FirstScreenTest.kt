@@ -7,8 +7,8 @@ package app.opentv
 
 import app.opentv.ui.FirstScreen
 import app.opentv.ui.firstScreen
-import com.google.common.truth.Truth.assertThat
 import app.opentv.ui.hasProvider
+import com.google.common.truth.Truth.assertThat
 import org.junit.Test
 
 /** Which screen the app opens on: setup, Who's watching? or Home. */

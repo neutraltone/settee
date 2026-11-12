@@ -98,7 +98,12 @@ private fun Finished(setup: Setup, onFinish: () -> Unit) {
     Text(summary(setup), SetteeType.Synopsis, color = SetteeColors.QuietText, textAlign = TextAlign.Center)
     setup.failed.forEach { step ->
         Spacer(Modifier.height(8.dp))
-        Text(stringResource(step.failure), SetteeType.Body, color = SetteeColors.QuietText, textAlign = TextAlign.Center)
+        Text(
+            stringResource(step.failure),
+            SetteeType.Body,
+            color = SetteeColors.QuietText,
+            textAlign = TextAlign.Center,
+        )
     }
     Spacer(Modifier.height(32.dp))
     PillButton(stringResource(R.string.setup_take_me_in), onClick = onFinish, Modifier.startsFocused())
@@ -156,8 +161,7 @@ private fun countLine(done: StepDone): String? {
 
 /** With the viewer's thousands separator: "1,204". */
 @Composable
-private fun number(n: Int): String =
-    NumberFormat.getIntegerInstance(LocalConfiguration.current.locales[0]).format(n)
+private fun number(n: Int): String = NumberFormat.getIntegerInstance(LocalConfiguration.current.locales[0]).format(n)
 
 private val SetupStep.label: Int
     get() = when (this) {

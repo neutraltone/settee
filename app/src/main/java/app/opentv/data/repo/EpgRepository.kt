@@ -166,54 +166,53 @@ class EpgRepository(
         force: Boolean = false,
         skipFetchedSince: Long? = null,
         progress: (Float) -> Unit = {},
-    ): SyncSummary =
-        withContext(Dispatchers.IO) {
-            ensureFeeds()
-            maybeAutoEnableRegionalFeed()
+    ): SyncSummary = withContext(Dispatchers.IO) {
+        ensureFeeds()
+        maybeAutoEnableRegionalFeed()
 
-            var succeeded = 0
-            var failed = 0
-            var written = 0
+        var succeeded = 0
+        var failed = 0
+        var written = 0
 
-            val (due, fresh) = feedDao.enabled().partition { feed ->
-                val inWindow = !force && nowUtcMillis - feed.lastSyncMillis < REFRESH_INTERVAL_MILLIS
-                !(inWindow || (skipFetchedSince != null && feed.lastSyncMillis >= skipFetchedSince))
-            }
-            succeeded += fresh.size
-            val reporting = GuideProgress(feeds = due.size, progress)
-            reporting.feedsReady()
+        val (due, fresh) = feedDao.enabled().partition { feed ->
+            val inWindow = !force && nowUtcMillis - feed.lastSyncMillis < REFRESH_INTERVAL_MILLIS
+            !(inWindow || (skipFetchedSince != null && feed.lastSyncMillis >= skipFetchedSince))
+        }
+        succeeded += fresh.size
+        val reporting = GuideProgress(feeds = due.size, progress)
+        reporting.feedsReady()
 
-            for ((index, feed) in due.withIndex()) {
-                val result = syncFeed(feed, nowUtcMillis) { read -> reporting.reading(index, read) }
-                reporting.feedDone(index)
-                when (result) {
-                    is FeedResult.Success -> {
-                        succeeded++
-                        written += result.programmes
-                        feedDao.markSynced(
-                            feed.id,
-                            nowUtcMillis,
-                            "${result.programmes} programmes, ${result.channels} channels",
-                        )
-                    }
-                    is FeedResult.Failed -> {
-                        failed++
-                        // The stamp is NOT advanced on failure, so the next sync retries
-                        // rather than waiting out the interval on a feed that never landed.
-                        feedDao.markSynced(feed.id, feed.lastSyncMillis, result.reason)
-                        Log.w(TAG, "Feed '${feed.name}' failed: ${result.reason}")
-                    }
+        for ((index, feed) in due.withIndex()) {
+            val result = syncFeed(feed, nowUtcMillis) { read -> reporting.reading(index, read) }
+            reporting.feedDone(index)
+            when (result) {
+                is FeedResult.Success -> {
+                    succeeded++
+                    written += result.programmes
+                    feedDao.markSynced(
+                        feed.id,
+                        nowUtcMillis,
+                        "${result.programmes} programmes, ${result.channels} channels",
+                    )
+                }
+                is FeedResult.Failed -> {
+                    failed++
+                    // The stamp is NOT advanced on failure, so the next sync retries
+                    // rather than waiting out the interval on a feed that never landed.
+                    feedDao.markSynced(feed.id, feed.lastSyncMillis, result.reason)
+                    Log.w(TAG, "Feed '${feed.name}' failed: ${result.reason}")
                 }
             }
-
-            if (succeeded > 0) {
-                programmeDao.deleteEndedBefore(nowUtcMillis - RETENTION_PAST_MILLIS)
-            }
-
-            val (matched, total) = runMatcher()
-            reporting.done()
-            SyncSummary(succeeded, failed, written, matched, total)
         }
+
+        if (succeeded > 0) {
+            programmeDao.deleteEndedBefore(nowUtcMillis - RETENTION_PAST_MILLIS)
+        }
+
+        val (matched, total) = runMatcher()
+        reporting.done()
+        SyncSummary(succeeded, failed, written, matched, total)
+    }
 
     /**
      * How far through [syncAll] a pass is. Shared as it went on a Fire TV Stick with a big provider
