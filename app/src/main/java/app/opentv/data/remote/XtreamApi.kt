@@ -15,7 +15,6 @@ import app.opentv.data.model.StreamKind
 import app.opentv.data.parser.parseReleaseDate
 import java.io.Closeable
 import java.io.File
-import java.io.InputStream
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.DecodeSequenceMode
@@ -32,6 +31,7 @@ import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.Response
+import okhttp3.ResponseBody
 import okio.buffer
 import okio.source
 
@@ -273,14 +273,15 @@ class XtreamApi(
     }
 
     /** Opens the XMLTV guide as a stream. The caller must close it. */
-    suspend fun openEpgStream(source: Source): InputStream = withContext(Dispatchers.IO) {
+    /** The provider's guide, with its size where the server gives one (a Setup bar moves on it). */
+    suspend fun openEpg(source: Source): ResponseBody = withContext(Dispatchers.IO) {
         val url = source.epgUrl?.toHttpUrlOrNull() ?: xmltvUrl(source)
         val response = http.newCall(request(source, url)).execute()
         if (!response.isSuccessful) {
             response.close()
             throw XtreamException("Guide download failed (HTTP ${response.code}).")
         }
-        response.body.byteStream()
+        response.body
     }
 
     // ---- URL construction ----------------------------------------------------------------

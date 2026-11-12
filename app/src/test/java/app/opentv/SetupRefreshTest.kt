@@ -6,11 +6,13 @@
 package app.opentv
 
 import androidx.test.core.app.ApplicationProvider
-import app.opentv.data.repo.CatalogueRefresh
 import app.opentv.data.model.Source
 import app.opentv.data.model.SourceKind
+import app.opentv.data.repo.CatalogueRefresh
 import app.opentv.data.repo.SetupStep
 import com.google.common.truth.Truth.assertThat
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Test
@@ -210,7 +212,8 @@ class SetupRefreshTest {
         refresh.refresh(CatalogueRefresh.Trigger.Setup(PANEL_SOURCE))
 
         during(guide) {
-            assertThat(refresh.state.value.setup?.bar).isWithin(0.001f).of(0.15f)
+            // The channels' 15%, and the guide's feeds set up: 7% of its 61%.
+            assertThat(refresh.state.value.setup?.bar).isWithin(0.001f).of(0.15f + 0.61f * 0.07f)
             guide.release()
         }
         during(movies) {
@@ -220,6 +223,22 @@ class SetupRefreshTest {
         test.awaitRefresh()
 
         assertThat(refresh.state.value.setup?.bar).isEqualTo(1f)
+    }
+
+    @Test
+    fun `the bar moves while the guide downloads, not only when it's done`() = runTest {
+        panel.replies["xmltv.php"] = buildString {
+            append("<tv>")
+            repeat(3_000) { append("""<programme start="20260101000000 +0000" stop="20260101010000 +0000" channel="c$it"><title>P</title></programme>""") }
+            append("</tv>")
+        }
+        val bars = java.util.Collections.synchronizedList(mutableListOf<Float>())
+        backgroundScope.launch(Dispatchers.Unconfined) { refresh.state.collect { it.setup?.let { s -> bars += s.bar } } }
+
+        setUp()
+
+        assertThat(bars.filter { it > 0.2f && it < 0.7f }).isNotEmpty()
+        assertThat(bars).isInOrder()
     }
 
     private companion object {

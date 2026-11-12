@@ -29,6 +29,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import okhttp3.ResponseBody
 
 /**
  * Owns the electronic programme guide, end to end: feeds in, matched channels out.
@@ -157,9 +158,15 @@ class EpgRepository(
 
     /**
      * Downloads every enabled feed, merges, prunes, and re-runs the matcher. [skipFetchedSince] leaves
-     * out feeds already downloaded at or after that time, even when [force]d.
+     * out feeds already downloaded at or after that time, even when [force]d. [progress] hears how far
+     * through it is, 0 to 1, never backwards; see [GuideProgress].
      */
-    suspend fun syncAll(nowUtcMillis: Long, force: Boolean = false, skipFetchedSince: Long? = null): SyncSummary =
+    suspend fun syncAll(
+        nowUtcMillis: Long,
+        force: Boolean = false,
+        skipFetchedSince: Long? = null,
+        progress: (Float) -> Unit = {},
+    ): SyncSummary =
         withContext(Dispatchers.IO) {
             ensureFeeds()
             maybeAutoEnableRegionalFeed()
@@ -168,13 +175,18 @@ class EpgRepository(
             var failed = 0
             var written = 0
 
-            for (feed in feedDao.enabled()) {
+            val (due, fresh) = feedDao.enabled().partition { feed ->
                 val inWindow = !force && nowUtcMillis - feed.lastSyncMillis < REFRESH_INTERVAL_MILLIS
-                if (inWindow || (skipFetchedSince != null && feed.lastSyncMillis >= skipFetchedSince)) {
-                    succeeded++
-                    continue
-                }
-                when (val result = syncFeed(feed, nowUtcMillis)) {
+                !(inWindow || (skipFetchedSince != null && feed.lastSyncMillis >= skipFetchedSince))
+            }
+            succeeded += fresh.size
+            val reporting = GuideProgress(feeds = due.size, progress)
+            reporting.feedsReady()
+
+            for ((index, feed) in due.withIndex()) {
+                val result = syncFeed(feed, nowUtcMillis) { read -> reporting.reading(index, read) }
+                reporting.feedDone(index)
+                when (result) {
                     is FeedResult.Success -> {
                         succeeded++
                         written += result.programmes
@@ -199,21 +211,55 @@ class EpgRepository(
             }
 
             val (matched, total) = runMatcher()
+            reporting.done()
             SyncSummary(succeeded, failed, written, matched, total)
         }
+
+    /**
+     * How far through [syncAll] a pass is. Shared as it went on a Fire TV Stick with a big provider
+     * (#224): setting up the feeds about 7% of the time, downloading them 85%, matching them to the
+     * channels 8%. A feed's slice moves with the bytes read where the server says how many there
+     * are; otherwise it fills when the feed is done.
+     */
+    private class GuideProgress(private val feeds: Int, private val report: (Float) -> Unit) {
+        private var last = -1f
+
+        private fun at(value: Float) {
+            // Every whole half-percent, not every read: a big guide is thousands of reads.
+            if (value >= 1f || value - last >= STEP) {
+                last = value
+                report(value)
+            }
+        }
+
+        fun feedsReady() = at(SETUP)
+
+        /** [read] is the share of feed [index] read so far, 0 to 1. */
+        fun reading(index: Int, read: Float) = at(SETUP + FEEDS * (index + read.coerceIn(0f, 1f)) / feeds)
+
+        fun feedDone(index: Int) = at(SETUP + FEEDS * (index + 1) / feeds)
+
+        fun done() = at(1f)
+
+        companion object {
+            const val SETUP = 0.07f
+            const val FEEDS = 0.85f
+            const val STEP = 0.005f
+        }
+    }
 
     private sealed interface FeedResult {
         data class Success(val programmes: Int, val channels: Int) : FeedResult
         data class Failed(val reason: String) : FeedResult
     }
 
-    private suspend fun syncFeed(feed: EpgFeed, nowUtcMillis: Long): FeedResult {
+    private suspend fun syncFeed(feed: EpgFeed, nowUtcMillis: Long, read: (Float) -> Unit): FeedResult {
         val batch = ArrayList<Programme>(BATCH_SIZE)
         val aliases = ArrayList<EpgChannelAlias>(256)
         var written = 0
 
         try {
-            openFeedStream(feed).use { stream ->
+            openFeedStream(feed, read).use { stream ->
                 val stats = XmltvParser.parse(
                     input = stream,
                     feedId = feed.id,
@@ -268,12 +314,12 @@ class EpgRepository(
      * the first two bytes for the gzip magic number handles both, regardless of what the
      * URL or the headers claim.
      */
-    private suspend fun openFeedStream(feed: EpgFeed): InputStream {
-        val raw: InputStream = when {
+    private suspend fun openFeedStream(feed: EpgFeed, read: (Float) -> Unit): InputStream {
+        val body: ResponseBody = when {
             feed.providerSourceId != null -> {
                 val source: Source = sourceDao.byId(feed.providerSourceId)
                     ?: throw IllegalStateException("Provider for this guide no longer exists.")
-                api.openEpgStream(source)
+                api.openEpg(source)
             }
             feed.url != null -> {
                 val response = http.newCall(Request.Builder().url(feed.url).build()).execute()
@@ -281,9 +327,13 @@ class EpgRepository(
                     response.close()
                     throw IllegalStateException("Guide download failed (HTTP ${response.code}).")
                 }
-                response.body.byteStream()
+                response.body
             }
             else -> throw IllegalStateException("Feed has no URL and no provider.")
+        }
+        // Counted before decompressing: the size the server gives is of what it sends.
+        val raw = body.contentLength().let { size ->
+            if (size > 0) CountingStream(body.byteStream()) { read(it.toFloat() / size) } else body.byteStream()
         }
 
         val buffered = BufferedInputStream(raw, 8 * 1024)
@@ -292,6 +342,21 @@ class EpgRepository(
         val b2 = buffered.read()
         buffered.reset()
         return if (b1 == 0x1f && b2 == 0x8b) GZIPInputStream(buffered) else buffered
+    }
+
+    /** Tells [counted] how many bytes have been read through it so far. */
+    private class CountingStream(stream: InputStream, private val counted: (Long) -> Unit) :
+        java.io.FilterInputStream(stream) {
+        private var total = 0L
+
+        override fun read(): Int = super.read().also { if (it >= 0) counted(++total) }
+
+        override fun read(b: ByteArray, off: Int, len: Int): Int = super.read(b, off, len).also {
+            if (it > 0) {
+                total += it
+                counted(total)
+            }
+        }
     }
 
     // ---- Matching --------------------------------------------------------------------------

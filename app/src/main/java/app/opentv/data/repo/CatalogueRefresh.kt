@@ -217,7 +217,12 @@ class CatalogueRefresh(
                 // Stick's 1 GB and its network.
                 if (SetupStep.GUIDE in steps) {
                     setup { copy(running = SetupStep.GUIDE) }
-                    val guide = runCatching { syncGuide(force = false) }
+                    val guide = runCatching {
+                        syncGuide(force = false) { done ->
+                            val bar = setupBar.advance(SetupStep.GUIDE, done)
+                            setup { copy(bar = bar) }
+                        }
+                    }
                         .onFailure { Log.w(TAG, "Guide failed to load during setup", it) }
                         .getOrNull()
                     // Only when nothing came through: one dead feed among good ones still gives a guide.
@@ -350,13 +355,13 @@ class CatalogueRefresh(
      * Guide passes take turns. One forced while another runs leaves out the feeds that pass has just
      * downloaded, since they're as fresh as the viewer could ask, but still downloads any it skipped.
      */
-    private suspend fun syncGuide(force: Boolean): EpgRepository.SyncSummary {
+    private suspend fun syncGuide(force: Boolean, progress: (Float) -> Unit = {}): EpgRepository.SyncSummary {
         val runningSince = guidePassStarted.get()
         return guideLock.withLock {
             val now = clock()
             guidePassStarted.set(now)
             try {
-                guide.syncAll(now, force, skipFetchedSince = runningSince.takeIf { force && it > 0 })
+                guide.syncAll(now, force, skipFetchedSince = runningSince.takeIf { force && it > 0 }, progress)
             } finally {
                 guidePassStarted.set(0)
             }
