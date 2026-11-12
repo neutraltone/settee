@@ -15,6 +15,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import org.robolectric.shadows.ShadowLog
 
 /**
  * TMDB takes the viewer's TMDB Key in either of the two forms its site hands out: the "API Key"
@@ -120,6 +121,22 @@ class TmdbClientTest {
         tmdb.imdbId("A Film", year = null, isMovie = true, tmdbId = null)
 
         assertThat(toTmdb()).isEmpty()
+    }
+
+    @Test
+    fun `a TMDB request that fails logs nothing of the key`() {
+        settings.setTmdbApiKey(API_KEY)
+        // As a client whose exception message holds the request's URL, api_key and all.
+        panel.replies["/3/search/movie"] = "!host"
+
+        tmdb.imdbId("A Film", year = null, isMovie = true, tmdbId = null)
+
+        val logged = ShadowLog.getLogsForTag("TmdbClient")
+        assertThat(logged).isNotEmpty()
+        logged.forEach {
+            assertThat(it.msg).doesNotContain(API_KEY)
+            assertThat(it.throwable?.message.orEmpty()).doesNotContain(API_KEY)
+        }
     }
 
     @Test
