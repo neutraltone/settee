@@ -4,11 +4,9 @@
 
     <!-- ============================ Common / reused ============================ -->
     <string name="common_done">Done</string>
-    <string name="common_cancel">Cancel</string>
     <string name="common_back">Back</string>
     <string name="common_save">Save</string>
     <string name="common_remove">Remove</string>
-    <string name="common_edit">Edit</string>
     <string name="common_play">Play</string>
     <string name="common_stop">Stop</string>
     <string name="common_delete">Delete</string>
@@ -181,58 +179,72 @@
     <string name="settings_row_tmdb">Artwork from TMDB</string>
     <string name="settings_row_tmdb_none">Not set</string>
     <string name="settings_row_tmdb_set">Key saved</string>
+    <string name="settings_row_add_provider">Add a provider</string>
+    <string name="settings_guide_update">Update the guide now</string>
+    <string name="settings_guide_updating">Updating the guide…</string>
+    <string name="settings_guide_add_own">Add your own guide</string>
+    <string name="settings_guide_own_address">Your guide\'s address</string>
+    <string name="settings_guide_use">Use this guide</string>
+    <string name="settings_row_channels">Show, hide and star channels</string>
+    <string name="settings_row_not_set">Not set</string>
+    <string name="settings_row_saved">Saved</string>
+    <string name="settings_minutes">%1$d min</string>
+    <string name="settings_rec_internal">This TV</string>
+    <string name="settings_rec_nas">Your network drive</string>
+    <string name="settings_rec_usb">A USB drive</string>
+    <string name="settings_rec_usb_folder">Folder on the USB drive</string>
+    <string name="settings_rec_server">Server</string>
+    <string name="settings_rec_share">Shared folder</string>
+    <string name="settings_rec_folder">Folder inside it</string>
+    <string name="settings_rec_storage">%1$s used by %2$d recordings · %3$s free</string>
+    <string name="settings_rec_autoswitch">Switch to a recording as it starts</string>
+    <string name="settings_rec_autoswitch_note">With only one connection to your provider, the screen moves onto a recording as it starts, after a 30-second warning, so it isn\'t cut off</string>
+    <string name="settings_rec_livepause_note">Keeps a couple of minutes of live TV, so you can pause and rewind it. It uses more memory.</string>
+    <string name="settings_rec_background_note">Android may stop a recording when the TV sleeps or you leave Settee. Press OK to let it keep going.</string>
+    <string name="settings_parental_enter_pin">Enter your PIN</string>
+    <string name="settings_parental_wrong_pin">That isn\'t the PIN. Try again.</string>
+    <string name="settings_parental_set_pin">Set a PIN</string>
+    <string name="settings_parental_change_pin">Change the PIN</string>
+    <string name="settings_parental_choose_pin">Choose a 4-digit PIN</string>
+    <string name="settings_parental_confirm_pin">Type the PIN again</string>
+    <string name="settings_parental_pin_mismatch">That doesn\'t match the first one.</string>
+    <string name="settings_parental_show_hidden">Show hidden categories now</string>
+    <string name="settings_parental_show_hidden_note">Until Settee closes. Switch a category on below to hide it.</string>
+    <string name="settings_devices_share">Share from this device</string>
+    <string name="settings_devices_share_note">For a few minutes, behind a code, over your own wifi. Nothing leaves the house.</string>
+    <string name="settings_devices_type_this">On the other device, go to Your devices, choose Get from another device and type:</string>
+    <string name="settings_devices_get">Get from another device</string>
+    <string name="settings_devices_get_title">What the other device shows</string>
+    <string name="settings_devices_get_hint">Its address and code, such as 192.168.1.20:41234#123456</string>
+    <string name="settings_devices_nas_now">Sync through your network drive now</string>
+    <string name="settings_devices_nas_note">Every device you set up with the same drive keeps the same Favourites and watch history.</string>
+    <string name="settings_devices_nas_needs_setup">Set up your network drive in Recording first.</string>
+    <string name="settings_devices_nas_auto">Sync through your network drive when Settee opens</string>
+    <string name="settings_addons_add">Add an add-on</string>
+    <string name="settings_addons_add_note">By the address of its manifest. If it uses a debrid service, set your key up on the add-on\'s own site first.</string>
+    <string name="settings_addons_address">Your add-on\'s address</string>
+    <string name="settings_addons_address_hint">The link to its manifest, ending in manifest.json</string>
+    <string name="settings_addons_invalid">That isn\'t an add-on\'s address. Check it ends in manifest.json and try again.</string>
+    <string name="settings_addons_empty">No add-ons yet. Settee comes with none, so add your own.</string>
+    <string name="settings_manager_scan">Scan this with your phone\'s camera, or type the address into a browser on the same wifi:</string>
+    <string name="settings_manager_new_address">Get a new address</string>
+    <string name="settings_manager_new_address_note">If the typed address has stopped working after a few wrong tries</string>
+    <string name="profiles_hint">Everyone who watches on this TV keeps their own place in what they\'re watching, and their own Favourites.</string>
+    <string name="profiles_watching_now">Watching now</string>
+    <string name="profiles_add_row">Add a profile</string>
+    <string name="profiles_watch_as">Watch as %1$s</string>
+    <string name="settings_remove_yes">Yes, remove %1$s</string>
+    <string name="settings_remove_keep">Keep it</string>
     <string name="settings_row_from_phone">You can also set this from your phone, in Manage on phone or laptop</string>
-    <string name="settings_providers_title">Providers</string>
     <string name="settings_edit_provider_title">Edit provider</string>
-    <string name="settings_providers_subtitle">Add, remove and re-test your IPTV sources</string>
-    <string name="settings_addons_title">Add-ons (Stremio)</string>
-    <string name="settings_addons_subtitle">Play from Stremio add-ons you set up yourself</string>
-    <string name="addons_note">Add a Stremio add-on by pasting its manifest URL. Settee ships with none — you bring your own. If the add-on is debrid-backed, set your debrid key up on the add-on\'s own site and paste the personalised URL it gives you; your key stays there, never in Settee.</string>
-    <string name="addons_url_label">Add-on manifest URL</string>
-    <string name="addons_add">Add</string>
     <string name="addons_checking">Checking…</string>
-    <string name="addons_invalid">That doesn\'t look like a valid add-on manifest URL.</string>
     <string name="addons_added">Added %1$s</string>
-    <string name="addons_empty">No add-ons yet. Paste an add-on\'s link above to add one.</string>
-    <string name="settings_guide_title">TV guide</string>
-    <string name="settings_guide_subtitle">Guide sources and free XMLTV feeds</string>
-    <string name="settings_channels_subtitle">Hide or favourite individual channels</string>
-    <string name="settings_webmanager_title">Manage on phone or laptop</string>
-    <string name="settings_webmanager_subtitle">Organise channels in a browser, with a keyboard and mouse</string>
-    <string name="settings_display_title">Display &amp; playback</string>
-    <string name="settings_display_subtitle">Theme, subtitles, live guide preview</string>
-    <string name="settings_recording_title">Recording</string>
-    <string name="settings_recording_subtitle">Where recordings are saved — this box or a NAS</string>
-    <string name="settings_parental_title">Parental controls</string>
-    <string name="settings_parental_subtitle">PIN lock and hide adult categories</string>
-    <string name="settings_sync_title">Sync watch history</string>
-    <string name="settings_sync_subtitle">Copy continue-watching to another device over wifi</string>
-    <string name="settings_about_title">About</string>
-    <string name="settings_about_subtitle">Version, updates, licence and links</string>
 
     <!-- ============================ Display & playback settings ============================ -->
-    <string name="settings_section_content">Content</string>
-    <string name="settings_content_note">Turn off what you don\'t use to sync faster. Turn back on anytime.</string>
-    <string name="settings_content_live_subtitle">Channels and the TV guide.</string>
-    <string name="settings_content_movies_subtitle">The movie library.</string>
-    <string name="settings_content_series_subtitle">The series library.</string>
-    <string name="settings_content_refresh">Refresh</string>
     <string name="settings_content_refreshing">Refreshing…</string>
-    <string name="settings_section_language">Language</string>
     <string name="settings_language_system">System default</string>
     <string name="settings_language_english">English</string>
     <string name="settings_language_spanish">Español</string>
-    <string name="settings_language_note">Sets the app\'s language. The screen reloads when you change it.</string>
-    <string name="settings_section_guide">Guide</string>
-    <string name="settings_live_preview_title">Live preview in the guide</string>
-    <string name="settings_live_preview_subtitle">Play the selected channel in the preview pane. Turn this off if the guide stutters on an older box.</string>
-    <string name="settings_preview_sound_title">Preview sound</string>
-    <string name="settings_preview_sound_subtitle">Play the preview channel\'s audio too, not just the picture.</string>
-    <string name="settings_live_preview_home_title">Live preview on Home</string>
-    <string name="settings_live_preview_home_subtitle">When live TV was the last thing you watched, Home opens with that channel playing silently. Turn this off to save bandwidth or if Home stutters on an older box.</string>
-    <string name="settings_section_playback">Playback</string>
-    <string name="settings_subtitles_title">Show subtitles when available</string>
-    <string name="settings_subtitles_subtitle">For this profile, on channels, movies and shows. Picking a subtitle track or turning them off in the player changes this too, and the language you pick is used next time.</string>
     <string name="player_next_episode_label">Up Next</string>
     <string name="player_next_episode_number">S%1$d E%2$d</string>
     <string name="player_next_episode_in">Next episode in %1$d</string>
@@ -242,151 +254,59 @@
     <string name="player_still_watching">Are you still watching?</string>
     <string name="player_continue_watching">Keep watching</string>
     <string name="player_stop">Stop</string>
-    <string name="settings_play_next_title">Play next episode automatically</string>
-    <string name="settings_play_next_subtitle">As an episode\'s credits start, count down and play the next one. Off, the next episode waits for you to press OK.</string>
     <string name="settings_sleep_timer">Sleep timer</string>
-    <string name="settings_sleep_off_desc">Off — playback keeps going until you stop it.</string>
-    <string name="settings_sleep_on_desc">On — playback will stop in about %1$d min.</string>
     <string name="settings_sleep_off">Off</string>
     <string name="settings_sleep_minutes">%1$d minutes</string>
 
     <!-- ============================ Parental controls ============================ -->
-    <string name="parental_hidden_categories">Hidden categories</string>
-    <string name="parental_hidden_desc">Anything switched on here is removed from Live TV until you turn on “Show hidden now” below. With a PIN set, this screen stays locked, so hidden stays hidden.</string>
-    <string name="parental_show_hidden_title">Show hidden now (this session)</string>
-    <string name="parental_show_hidden_subtitle">Reveals hidden categories until the app is restarted.</string>
     <string name="parental_lock_sync_note">Categories you lock here are also locked on your other devices when they sync. Unlocking one only unlocks it on this device.</string>
     <string name="parental_no_categories">No categories yet. Add a provider and its categories will show up here.</string>
-    <string name="parental_pin">PIN</string>
-    <string name="parental_pin_is_set">A PIN is set.</string>
-    <string name="parental_change_pin">Change PIN</string>
     <string name="parental_remove_pin">Remove PIN</string>
-    <string name="parental_pin_enter_new">Enter a new 4-digit PIN.</string>
-    <string name="parental_pin_set">Set a 4-digit PIN.</string>
-    <string name="parental_pin_new">New PIN</string>
-    <string name="parental_pin_confirm">Confirm</string>
-    <string name="parental_pin_len_error">PIN must be 4 digits.</string>
-    <string name="parental_pin_mismatch">PINs don\'t match.</string>
-    <string name="parental_save_pin">Save PIN</string>
-    <string name="parental_enter_pin">Enter PIN</string>
-    <string name="parental_wrong_pin">Wrong PIN.</string>
-    <string name="parental_unlock">Unlock</string>
 
     <!-- ============================ Profiles ============================ -->
     <string name="profiles_new_heading">New profile name</string>
     <string name="profiles_rename_heading">Rename profile</string>
     <string name="profiles_title">Who\'s watching?</string>
     <string name="whos_watching_heading">Who\'s watching?</string>
-    <string name="profiles_add">Add profile</string>
-    <string name="profiles_active">Active</string>
-    <string name="profiles_use">Use</string>
-    <string name="profiles_rename">Rename</string>
-    <string name="profiles_name_placeholder">Name</string>
-    <string name="profiles_remove_confirm">Remove %1$s from this TV? Their progress and Favourites here will be deleted. Other devices keep %1$s.</string>
     <string name="profiles_name_taken">Another profile is already called %1$s.</string>
 
     <!-- ============================ Providers ============================ -->
-    <string name="providers_add">Add provider</string>
-    <string name="providers_empty">No providers yet. Add the service you already pay for to get started.</string>
-    <string name="providers_remove_confirm">Remove?</string>
-    <string name="providers_yes_remove">Yes, remove</string>
-    <string name="provider_stream_format">Stream format</string>
-    <string name="provider_stream_format_hls">HLS (.m3u8)</string>
-    <string name="provider_stream_format_ts">MPEG-TS (.ts)</string>
-    <string name="provider_stream_format_hint">HLS is the default. If channels won\'t play, try MPEG-TS — some providers only offer .ts.</string>
 
     <!-- ============================ Recording settings ============================ -->
-    <string name="recset_desc">Choose where recordings are saved. Internal keeps them on this device; a USB drive stores them on removable storage; NAS saves them to a shared folder on your network. All still play back here.</string>
     <string name="recset_save_to">Save recordings to</string>
-    <string name="recset_internal_label">This device (internal storage)</string>
-    <string name="recset_smb_label">NAS / network share (SMB)</string>
-    <string name="recset_smb_subtitle">Synology, a shared Windows folder, or any SMB2/3 server</string>
-    <string name="recset_usb_label">USB / external drive</string>
-    <string name="recset_usb_subtitle">A drive plugged into this device (formatted exFAT or FAT32)</string>
-    <string name="recset_usb_section">USB folder</string>
-    <string name="recset_usb_choose">Choose folder</string>
-    <string name="recset_usb_change">Change folder</string>
-    <string name="recset_usb_saving_to">Saving to: %1$s</string>
-    <string name="recset_usb_none">No folder chosen yet</string>
-    <string name="recset_usb_hint">Plug in a USB drive or external storage formatted exFAT or FAT32, then choose a folder on it. Recordings are written straight to that folder and still play back and delete inside Settee.</string>
-    <string name="recset_usb_need_folder">Choose a folder before saving to USB.</string>
     <string name="recset_usb_no_picker">No folder picker is available on this device.</string>
-    <string name="recset_nas_connection">NAS connection</string>
-    <string name="recset_field_server">Server (IP or hostname)</string>
-    <string name="recset_field_share">Share name</string>
-    <string name="recset_field_folder">Folder (within the share)</string>
     <string name="recset_field_username">Username</string>
     <string name="recset_field_password">Password</string>
     <string name="recset_status_testing">Testing…</string>
     <string name="recset_status_connected">Connected — the share is reachable and writable.</string>
     <string name="recset_status_failed">Couldn\'t connect to your NAS. Check it\'s on and these details are right.</string>
     <string name="recset_test_connection">Test connection</string>
-    <string name="recset_status_saved">Saved.</string>
     <!-- Recording behaviour -->
-    <string name="recset_behaviour_title">Recording behaviour</string>
     <string name="recset_pad_start">Start early</string>
     <string name="recset_pad_start_desc">Begin recording this many minutes before the listed start time</string>
     <string name="recset_pad_end">End late</string>
     <string name="recset_pad_end_desc">Keep recording this many minutes after the listed end, so overruns aren\'t cut</string>
-    <string name="recset_minutes_short">min</string>
-    <string name="recset_autoswitch">Auto-switch when recording starts</string>
-    <string name="recset_autoswitch_desc">On a single-connection provider, move the screen onto a recording as it starts (with a 30-second warning) so your live stream isn\'t cut off</string>
     <string name="recset_livepause">Pause &amp; rewind live TV</string>
-    <string name="recset_livepause_desc">Hold a couple of minutes of live TV in memory so you can pause and rewind it (experimental — uses more memory)</string>
-    <string name="recset_pw_show">Show password</string>
-    <string name="recset_pw_hide">Hide password</string>
-    <string name="recset_storage_title">Storage</string>
-    <string name="recset_storage_reading">Reading…</string>
-    <string name="recset_storage_used">%1$s used · %2$d recordings</string>
-    <string name="recset_storage_free">%1$s free on this device</string>
     <string name="recset_background_title">Recording in the background</string>
     <string name="recset_background_allowed">Allowed</string>
     <string name="recset_background_not_allowed">Not allowed</string>
-    <string name="recset_background_fix">Fix</string>
-    <string name="recset_background_desc">Android may stop recordings when the device sleeps or you leave Settee, unless Settee is allowed to ignore battery optimisation. Allowing it keeps recordings running even in standby, like a set-top box.</string>
-    <string name="recset_background_on_title">Background recording is on</string>
     <string name="recset_background_on_desc">Recordings will keep running when you leave Settee or the TV goes to sleep.</string>
     <string name="recset_background_toast">Background recording enabled — recordings will keep going in the background.</string>
 
     <!-- ============================ TV guide (EPG) settings ============================ -->
-    <string name="epg_updating">Updating…</string>
-    <string name="epg_update_now">Update guide now</string>
-    <string name="epg_desc">Your provider\'s guide is used automatically. If it\'s empty — many are — turn on a free guide for your country and channels are matched to it by name.</string>
-    <string name="epg_add_own">Add your own guide (XMLTV URL)</string>
     <string name="epg_name_optional">Name (optional)</string>
-    <string name="epg_xmltv_url">XMLTV URL (.xml or .xml.gz)</string>
-    <string name="epg_add_guide">Add guide</string>
 
     <!-- ============================ Sync watch history ============================ -->
-    <string name="sync_desc">Copy your continue-watching between two Settee devices over your own wifi — nothing leaves the house, and no account is involved.</string>
-    <string name="sync_share_from_here">Share from here</string>
-    <string name="sync_receive">Receive</string>
-    <string name="sync_ready_to_share">Ready to share</string>
-    <string name="sync_on_other_device">On the other device: Settings → Sync → Receive, and enter:</string>
-    <string name="sync_address">Address</string>
-    <string name="sync_code">Code</string>
-    <string name="sync_type_in_one_go">Or type it in one go:  %1$s#%2$s</string>
     <string name="sync_stop_sharing">Stop sharing</string>
-    <string name="sync_will_share">This device will share its watch history for a few minutes, behind a code.</string>
-    <string name="sync_start_sharing">Start sharing</string>
-    <string name="sync_type_what_shows">Type what the other device shows</string>
-    <string name="sync_connect">Connect</string>
     <string name="sync_connecting">Connecting…</string>
     <string name="sync_synced_items">Synced %1$d item(s).</string>
-    <string name="sync_nas">NAS (cloud)</string>
-    <string name="sync_nas_title">Sync through your NAS</string>
-    <string name="sync_nas_desc">Sync favourites, watch history and NAS recordings between all your devices through your own NAS. No server, no account.</string>
     <string name="sync_nas_needs_setup">Set up your NAS under Settings → Recording first, then come back here.</string>
-    <string name="sync_nas_sync_now">Sync now</string>
     <string name="sync_nas_syncing">Syncing…</string>
     <string name="sync_nas_done">Synced %1$d item(s) from %2$d device(s).</string>
     <string name="sync_nas_uploaded">Saved this device to the NAS. No other devices have synced here yet.</string>
     <string name="sync_nas_failed">Couldn\'t reach your NAS. Check it\'s on and the details in Recording settings are right.</string>
-    <string name="sync_nas_auto">Auto-sync when the app opens</string>
 
     <!-- ============================ About ============================ -->
-    <string name="about_title">About Settee</string>
-    <string name="about_version">Version</string>
     <string name="about_based_on">Based on OpenTV</string>
     <string name="about_update_available">Update available: %1$s — see the prompt to install.</string>
     <string name="about_up_to_date">You\'re on the latest version.</string>
@@ -401,11 +321,8 @@
     <string name="whats_new_bug_fixes">Bug Fixes</string>
     <string name="whats_new_performance">Performance Improvements</string>
     <string name="whats_new_nothing">Nothing in this version changes what you see.</string>
-    <string name="about_what_is_title">What it is</string>
     <string name="about_what_is_body">A free, open-source IPTV player for Android TV, Fire TV and phones. It\'s a player only — it doesn\'t supply channels; you connect the service you already pay for. Nothing you enter leaves your device except to talk to your own provider.</string>
-    <string name="about_built_open_title">Built in the open</string>
     <string name="about_built_open_body">Settee is developed openly, with AI doing a large share of the coding under human direction — that\'s stated plainly, not hidden. Because it\'s open source, no single person going away can take it down: anyone can read every line, build it, and carry it on.</string>
-    <string name="about_licence_links_title">Licence &amp; links</string>
     <string name="about_licence_label">Licence</string>
     <string name="about_source_code">Source code</string>
     <string name="about_fonts_label">Fonts</string>
@@ -454,12 +371,8 @@
     <string name="pairing_type_on_tv">Type it on the TV instead</string>
 
     <!-- ============================ Manage on phone / laptop (web) ============================ -->
-    <string name="webmanager_title">Manage on your phone or laptop</string>
-    <string name="webmanager_desc">Open this on a phone or laptop on the same wifi to browse, hide, favourite, rename and reorder your channels — with a real keyboard and mouse. Changes apply to this TV straight away.</string>
     <string name="webmanager_qr_desc">QR code linking to the channel manager on this device</string>
-    <string name="webmanager_open_browser">Camera won\'t scan it? Open this in any browser on the same wifi:</string>
     <string name="webmanager_local_only">This page is served by this television, over your own network — it never leaves your home.</string>
-    <string name="webmanager_stopped">Manager closed</string>
 
     <!-- ============================ Channel manager ============================ -->
     <string name="channels_manager_title">Channel manager</string>
@@ -612,12 +525,8 @@
     <string name="rec_switch_channel_desc">Warns before switching the screen to a scheduled recording</string>
 
     <!-- Metadata / TMDB back-fill -->
-    <string name="settings_section_metadata">Metadata</string>
     <string name="settings_tmdb_note">Paste your own free TMDB API key to fill in missing posters, backdrops, cast and synopses on Movies &amp; Shows. It stays on this device.</string>
     <string name="settings_tmdb_key_label">TMDB API key</string>
-    <string name="settings_tmdb_save">Save key</string>
-    <string name="settings_tmdb_saved">TMDB key saved</string>
-    <string name="settings_tmdb_active">Active</string>
     <string name="error_http_401">Your provider didn\'t accept your login. Check the username and password in Settings.</string>
     <string name="error_http_403">Your provider refused this. Your account may be in use on another device, so stop it there and try again.</string>
     <string name="error_http_429">Your provider is getting too many requests from this device. Wait a minute, then try again.</string>

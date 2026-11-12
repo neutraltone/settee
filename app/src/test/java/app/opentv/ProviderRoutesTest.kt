@@ -17,6 +17,7 @@ import androidx.test.core.app.ApplicationProvider
 import app.opentv.ui.SourcesViewModel
 import app.opentv.ui.design.SetteeType
 import app.opentv.ui.design.Text
+import app.opentv.ui.settings.SettingsMemory
 import com.google.common.truth.Truth.assertThat
 import org.junit.Rule
 import org.junit.Test
@@ -46,6 +47,7 @@ class ProviderRoutesTest {
             nav = rememberNavController()
             NavHost(nav, startDestination = start) {
                 providerRoutes(nav, sources)
+                settingsRoutes(nav, SettingsMemory())
                 composable(Routes.MAIN) { Text("Main", SetteeType.Body) }
             }
         }
@@ -65,14 +67,14 @@ class ProviderRoutesTest {
     }
 
     @Test
-    fun `Add provider in Settings opens the same page, and Back returns to Providers`() {
-        setApp(start = Routes.PROVIDERS)
+    fun `Add a provider in Settings opens the same page, and Back returns to Settings`() {
+        setApp(start = Routes.SETTINGS)
 
-        compose.onNodeWithText("Add provider").performClick()
+        compose.onNodeWithText("Add a provider").performClick()
 
         onThePage()
         compose.runOnIdle { nav.popBackStack() }
-        assertThat(compose.runOnIdle { nav.currentDestination?.route }).isEqualTo(Routes.PROVIDERS)
+        assertThat(compose.runOnIdle { nav.currentDestination?.route }).isEqualTo(Routes.SETTINGS)
     }
 
     @Test

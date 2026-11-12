@@ -6,10 +6,11 @@
 package app.opentv.ui.settings
 
 import android.content.Context
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
@@ -20,12 +21,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
 import app.opentv.R
 import app.opentv.ui.design.ActionButton
 import app.opentv.ui.design.SetteeColors
-import app.opentv.ui.design.SetteeShapes
+import app.opentv.ui.design.SetteeSpace
 import app.opentv.ui.design.SetteeType
 import app.opentv.ui.design.Text
 import app.opentv.update.rememberDpadScroll
@@ -40,44 +39,42 @@ private val BundledFonts = listOf(
 )
 
 /**
- * The fonts' licences in full. The OFL asks for its text to travel with the fonts, and the fonts
- * ship beside the app rather than under the GPL, so this is where a viewer can read it.
+ * The fonts' licences in full, as a screen of its own opened from About. The OFL asks for its text
+ * to travel with the fonts, and the fonts ship beside the app rather than under the GPL, so this is
+ * where a viewer can read it. Back returns to About.
  *
- * Plain text can't take the Highlight, so Up and Down on the close button scroll the text, as in
- * What's new.
+ * Plain text can't take the Highlight, so Up and Down on Done scroll the text, as in What's new.
  */
 @Composable
-internal fun FontLicencesDialog(onDismiss: () -> Unit) {
+fun FontLicencesScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
     val context = LocalContext.current
-    // Two 4 KB assets: read as the dialog opens, so it never shows up empty and fills in a moment later.
+    // Two 4 KB assets: read as the screen opens, so it never shows up empty and fills in a moment later.
     val licences = remember { BundledFonts.map { context.readAsset(it.licence) } }
     val scroll = rememberScrollState()
-    Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+    BackHandler(onBack = onBack)
+    Column(
+        modifier
+            .fillMaxSize()
+            .background(SetteeColors.Background)
+            .padding(horizontal = SetteeSpace.ScreenSide, vertical = SetteeSpace.ScreenTopBottom),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
+        Text(stringResource(R.string.about_fonts_title), style = SetteeType.ScreenTitle)
         Column(
-            Modifier
-                .widthIn(max = 720.dp)
-                .fillMaxHeight(0.85f)
-                .background(SetteeColors.Surface, SetteeShapes.Card)
-                .padding(24.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
+            Modifier.weight(1f).widthIn(max = 900.dp).verticalScroll(scroll),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            Text(stringResource(R.string.about_fonts_title), style = SetteeType.ScreenTitle)
-            Column(
-                Modifier.weight(1f).verticalScroll(scroll),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                BundledFonts.forEachIndexed { index, font ->
-                    Text(font.name, style = SetteeType.Section, modifier = Modifier.padding(top = 8.dp))
-                    Text(font.source, style = SetteeType.Body, color = SetteeColors.QuietText)
-                    Text(licences[index], style = SetteeType.Body)
-                }
+            BundledFonts.forEachIndexed { index, font ->
+                Text(font.name, style = SetteeType.Section, modifier = Modifier.padding(top = 8.dp))
+                Text(font.source, style = SetteeType.Body, color = SetteeColors.QuietText)
+                Text(licences[index], style = SetteeType.Body)
             }
-            ActionButton(
-                stringResource(R.string.common_done),
-                onClick = onDismiss,
-                modifier = rememberDpadScroll(scroll).startsFocused(),
-            )
         }
+        ActionButton(
+            stringResource(R.string.common_done),
+            onClick = onBack,
+            modifier = rememberDpadScroll(scroll).startsFocused(),
+        )
     }
 }
 

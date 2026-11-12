@@ -20,8 +20,10 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -38,14 +40,15 @@ import androidx.compose.ui.window.DialogWindowProvider
 /**
  * A panel down the right of the screen, over what's there, for a choice or an item's details: the
  * same family as the player's subtitles and audio panels. Back calls [onBack]; there's no Cancel.
- * The Highlight starts on its first row.
+ * The Highlight starts on [startOn] when given, or else on the ticked [PanelRow] of a choice, or
+ * else on the first row.
  *
  * It's a window of its own, so it takes Back and the remote before the screen under it does. That
  * window isn't dimmed: LOOK.md has no see-through shades, and the panel's solid background is
  * enough to set it apart.
  */
 @Composable
-fun SidePanel(onBack: () -> Unit, content: @Composable ColumnScope.() -> Unit) {
+fun SidePanel(onBack: () -> Unit, startOn: FocusRequester? = null, content: @Composable ColumnScope.() -> Unit) {
     Dialog(
         onDismissRequest = onBack,
         properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false),
@@ -53,28 +56,43 @@ fun SidePanel(onBack: () -> Unit, content: @Composable ColumnScope.() -> Unit) {
         val window = (LocalView.current.parent as? DialogWindowProvider)?.window
         LaunchedEffect(window) { window?.setDimAmount(0f) }
         val rows = remember { FocusRequester() }
+        val ticked = remember { FocusRequester() }
         // Asked from inside the dialog: its window composes after the caller's, and a FocusRequester
         // asked before it's attached throws.
         LaunchedEffect(Unit) {
             withFrameNanos {}
-            runCatching { rows.requestFocus() }
+            if (startOn != null) {
+                runCatching { startOn.requestFocus() }
+            } else if (runCatching { ticked.requestFocus() }.getOrNull() != true) {
+                runCatching { rows.requestFocus() }
+            }
         }
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.CenterEnd) {
-            Column(
-                Modifier
-                    .width(SidePanelWidth)
-                    .fillMaxHeight()
-                    .background(SetteeColors.Surface)
-                    .verticalScroll(rememberScrollState())
-                    .padding(horizontal = PANEL_PADDING, vertical = SetteeSpace.ScreenTopBottom)
-                    .focusRequester(rows)
-                    .focusGroup(),
-                verticalArrangement = Arrangement.spacedBy(ROW_GAP),
-                content = content,
-            )
+            CompositionLocalProvider(LocalTickedRow provides ticked) {
+                PanelColumn(rows, content)
+            }
         }
     }
 }
+
+@Composable
+private fun PanelColumn(rows: FocusRequester, content: @Composable ColumnScope.() -> Unit) {
+    Column(
+        Modifier
+            .width(SidePanelWidth)
+            .fillMaxHeight()
+            .background(SetteeColors.Surface)
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = PANEL_PADDING, vertical = SetteeSpace.ScreenTopBottom)
+            .focusRequester(rows)
+            .focusGroup(),
+        verticalArrangement = Arrangement.spacedBy(ROW_GAP),
+        content = content,
+    )
+}
+
+/** The ticked row of the open [SidePanel], where a choice's Highlight starts. */
+private val LocalTickedRow = staticCompositionLocalOf<FocusRequester?> { null }
 
 /**
  * One row of a [SidePanel]: [label], with the current [value] beside it when the row opens a
@@ -88,10 +106,14 @@ fun PanelRow(
     value: String? = null,
     ticked: Boolean = false,
 ) {
+    val startHere = LocalTickedRow.current?.takeIf { ticked }
     HighlightSurface(
         onClick = onClick,
         style = HighlightStyle.Cell,
-        modifier = modifier.fillMaxWidth().semantics { selected = ticked },
+        modifier = modifier
+            .fillMaxWidth()
+            .semantics { selected = ticked }
+            .then(if (startHere != null) Modifier.focusRequester(startHere) else Modifier),
     ) { highlighted ->
         val quiet = if (highlighted) SetteeColors.OnAccent else SetteeColors.QuietText
         Row(Modifier.fillMaxWidth().padding(ROW_PADDING), verticalAlignment = Alignment.CenterVertically) {
@@ -111,6 +133,25 @@ fun PanelRow(
                 )
             }
         }
+    }
+}
+
+/** What a [SidePanel] is about, such as the item whose details or options it holds. */
+@Composable
+fun PanelTitle(text: String, modifier: Modifier = Modifier) {
+    Text(text, SetteeType.Section, maxLines = 2, modifier = modifier.padding(bottom = ROW_PADDING))
+}
+
+/**
+ * Asks before something that can't be undone, such as removing a provider: [confirm] above [keep],
+ * with the Highlight starting on [keep], so a stray OK changes nothing. Back keeps it too.
+ */
+@Composable
+fun ConfirmPanel(confirm: String, keep: String, onConfirm: () -> Unit, onKeep: () -> Unit) {
+    val keepRow = remember { FocusRequester() }
+    SidePanel(onBack = onKeep, startOn = keepRow) {
+        PanelRow(confirm, onClick = onConfirm)
+        PanelRow(keep, onClick = onKeep, modifier = Modifier.focusRequester(keepRow))
     }
 }
 

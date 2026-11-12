@@ -35,6 +35,7 @@ import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
@@ -86,12 +87,16 @@ enum class SettingsSection(@StringRes val title: Int, @StringRes val hint: Int, 
 @Stable
 class SettingsMemory(section: SettingsSection = SettingsSection.Providers) {
     var section by mutableStateOf(section)
+
+    /** The row that opened a screen of its own, which takes the Highlight back on return. */
+    internal var openedRow: String? = null
 }
 
 /** Test tags for what a test can't find by its text alone. */
 object SettingsTags {
     const val SECTION = "settings-section"
     const val PANE_TITLE = "settings-pane-title"
+    const val CODE_BLOCK = "settings-code-block"
 }
 
 /**
@@ -99,17 +104,46 @@ object SettingsTags {
  * settings beside them, with no OK needed to see what's inside.
  */
 @Composable
-fun SettingsScreen(memory: SettingsMemory, onBack: () -> Unit) {
+fun SettingsScreen(
+    memory: SettingsMemory,
+    onBack: () -> Unit,
+    modifier: Modifier = Modifier,
+    onAddProvider: () -> Unit = {},
+    onEditProvider: (sourceId: Long) -> Unit = {},
+    onOpenChannels: () -> Unit = {},
+    onOpenFontLicences: () -> Unit = {},
+    // A seam so tests can show each answer without reaching GitHub.
+    checkForUpdate: UpdateCheck = CheckGitHub,
+) {
     val current = remember { FocusRequester() }
     val pane = remember { FocusRequester() }
     var inPane by remember { mutableStateOf(false) }
+    val focusPane: () -> Unit = { runCatching { pane.requestFocus() } }
     BackHandler { if (inPane) runCatching { current.requestFocus() } else onBack() }
     LaunchedEffect(Unit) {
         // A frame first: until the input mode has gone to keyboard, nothing can take focus.
         withFrameNanos {}
+        if (memory.openedRow != null) {
+            // Coming back from a row's own screen: the row takes the Highlight itself (screenRow).
+            // If it's gone, such as a provider removed meanwhile, start on the section instead.
+            withFrameNanos {}
+            withFrameNanos {}
+            if (memory.openedRow == null) return@LaunchedEffect
+            memory.openedRow = null
+        }
         runCatching { current.requestFocus() }
     }
-    Row(Modifier.fillMaxSize().background(SetteeColors.Background)) {
+    Row(
+        modifier
+            .fillMaxSize()
+            .background(SetteeColors.Background)
+            // When the row with the Highlight goes (Enter your PIN, once the PIN is in), Compose
+            // starts again from the first thing on screen, and highlighting a section opens it: so
+            // Settings jumped to Providers. Starting on the open section keeps the viewer where
+            // they were.
+            .focusProperties { onEnter = { runCatching { current.requestFocus() } } }
+            .focusGroup(),
+    ) {
         Column(
             Modifier
                 .width(SECTIONS_WIDTH)
@@ -154,12 +188,35 @@ fun SettingsScreen(memory: SettingsMemory, onBack: () -> Unit) {
                 Modifier.focusRequester(pane).focusGroup(),
                 verticalArrangement = Arrangement.spacedBy(ROW_GAP),
             ) {
-                when (section) {
-                    SettingsSection.Display -> DisplayPane()
-                    else -> Unit
+                CompositionLocalProvider(LocalSettingsMemory provides memory) {
+                    Pane(section, focusPane, onAddProvider, onEditProvider, onOpenChannels, onOpenFontLicences, checkForUpdate)
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun Pane(
+    section: SettingsSection,
+    focusPane: () -> Unit,
+    onAddProvider: () -> Unit,
+    onEditProvider: (sourceId: Long) -> Unit,
+    onOpenChannels: () -> Unit,
+    onOpenFontLicences: () -> Unit,
+    checkForUpdate: UpdateCheck,
+) {
+    when (section) {
+        SettingsSection.Providers -> ProvidersPane(onAddProvider, onEditProvider, onRowGone = focusPane)
+        SettingsSection.Guide -> GuidePane()
+        SettingsSection.Channels -> ChannelsPane(onOpenChannels)
+        SettingsSection.Display -> DisplayPane()
+        SettingsSection.Recording -> RecordingPane()
+        SettingsSection.Parental -> ParentalPane(onUnlocked = focusPane)
+        SettingsSection.Devices -> DevicesPane()
+        SettingsSection.Addons -> AddonsPane()
+        SettingsSection.Manager -> ManagerPane()
+        SettingsSection.About -> AboutPane(onOpenFontLicences, checkForUpdate)
     }
 }
 

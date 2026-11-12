@@ -10,7 +10,6 @@ import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
 import app.opentv.ui.SourcesViewModel
 import app.opentv.ui.onboarding.AddSourceScreen
-import app.opentv.ui.settings.ProvidersScreen
 
 /**
  * Opens the page for adding a provider. Every way in (Settings' Providers, Live TV's empty state)
@@ -19,7 +18,7 @@ import app.opentv.ui.settings.ProvidersScreen
 fun NavController.openAddProvider() = navigate(Routes.ADD_SOURCE)
 
 /**
- * The screens for adding, editing and listing providers. Kept apart from the rest of the graph so
+ * The screens for adding and editing providers. Kept apart from the rest of the graph so
  * a test can build them with the real screens and check where each Add leads.
  */
 fun NavGraphBuilder.providerRoutes(nav: NavController, sources: SourcesViewModel) {
@@ -40,15 +39,6 @@ fun NavGraphBuilder.providerRoutes(nav: NavController, sources: SourcesViewModel
             viewModel = sources,
             editingSourceId = sourceId,
             onFinished = { nav.popBackStack() },
-        )
-    }
-
-    composable(Routes.PROVIDERS) {
-        ProvidersScreen(
-            viewModel = sources,
-            onAddSource = { nav.openAddProvider() },
-            onEditSource = { src -> nav.navigate(Routes.editSource(src.id)) },
-            onBack = { nav.popBackStack() },
         )
     }
 }

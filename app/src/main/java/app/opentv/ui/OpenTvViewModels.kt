@@ -1586,12 +1586,13 @@ class SyncViewModel(app: Application) : AndroidViewModel(app) {
 }
 
 /**
- * Owns the "manage channels from your phone or laptop" web server for the manage screen.
+ * Owns the "manage channels from your phone or laptop" web server for Settings' Manage on phone or
+ * laptop.
  *
  * Same ownership shape as [SyncViewModel]: the server is bound to [viewModelScope] (so its idle
- * watchdog is torn down with the screen) and stopped in [onCleared]. The screen also starts it on
- * open and stops it on leave, mirroring the phone-pairing lifecycle — so no socket is ever left
- * listening on the user's network once they navigate away.
+ * watchdog is torn down with Settings) and stopped in [onCleared]. The pane also starts it when its
+ * section is open and stops it when the section changes, mirroring the phone-pairing lifecycle, so
+ * no socket is ever left listening on the user's network once they move on.
  */
 class WebManagerViewModel(app: Application) : AndroidViewModel(app) {
     private val graph = ServiceLocator.get(app)
