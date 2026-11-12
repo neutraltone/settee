@@ -112,6 +112,11 @@ class CatalogueRefresh(
         val running: SetupStep? = steps.first(),
         /** How full the bar is, 0 to 1; see [SetupBar]. */
         val bar: Float = 0f,
+        /**
+         * How many the running step has found so far, where it can tell: the guide's programmes. A
+         * guide can't always move the bar, and a count going up still shows it's arriving.
+         */
+        val found: Int = 0,
         val done: List<StepDone> = emptyList(),
         val finished: Boolean = false,
         /** The login failed, so setup stopped: the provider is gone, and the form says why. */
@@ -238,13 +243,15 @@ class CatalogueRefresh(
                 // One step after another, never two at once: two big downloads compete for a
                 // Stick's 1 GB and its network.
                 if (SetupStep.GUIDE in steps) {
-                    run.update { copy(running = SetupStep.GUIDE) }
+                    run.running(SetupStep.GUIDE)
                     // Marked and reported as adding a provider does, so whoever left for Live TV
                     // hears how the guide went the way they would have without Setup.
                     val guide = marking(guideBuilds, { copy(buildingGuide = it) }) {
                         runCatching {
                             syncGuide(force = false) { done ->
-                                run.update { copy(bar = run.bar.advance(SetupStep.GUIDE, done)) }
+                                run.update {
+                                    copy(bar = run.bar.advance(SetupStep.GUIDE, done.share), found = done.programmes)
+                                }
                             }
                         }
                             .onSuccess { summary -> _state.update { it.copy(last = Outcome.GuideLoaded(summary)) } }
@@ -276,6 +283,9 @@ class CatalogueRefresh(
 
         fun update(change: Setup.() -> Setup) = _state.update { it.copy(setup = it.setup?.change()) }
 
+        /** [step] starts, with nothing found yet. */
+        fun running(step: SetupStep) = update { copy(running = step, found = 0) }
+
         fun stepDone(step: StepDone) = update {
             copy(done = done + step, bar = this@SetupRun.bar.advance(step.step, 1f))
         }
@@ -305,7 +315,7 @@ class CatalogueRefresh(
 
         private suspend fun list(step: SetupStep, fetch: suspend ((Float) -> Unit) -> CatalogRepository.ListFetch) =
             if (step in steps) {
-                update { copy(running = step) }
+                running(step)
                 fetch { saved -> update { copy(bar = this@SetupRun.bar.saving(step, saved)) } }
                     .also { stepDone(StepDone(step, it.count, failed = !it.complete)) }
             } else {
@@ -405,7 +415,10 @@ class CatalogueRefresh(
      * Guide passes take turns. One forced while another runs leaves out the feeds that pass has just
      * downloaded, since they're as fresh as the viewer could ask, but still downloads any it skipped.
      */
-    private suspend fun syncGuide(force: Boolean, progress: (Float) -> Unit = {}): EpgRepository.SyncSummary {
+    private suspend fun syncGuide(
+        force: Boolean,
+        progress: (EpgRepository.SyncProgress) -> Unit = {},
+    ): EpgRepository.SyncSummary {
         val runningSince = guidePassStarted.get()
         return guideLock.withLock {
             val now = clock()

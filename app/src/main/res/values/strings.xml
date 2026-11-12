@@ -445,10 +445,17 @@
     <!-- ============================ Phone pairing ============================ -->
     <string name="pairing_stopped">Pairing stopped</string>
     <string name="pairing_type_here">Type it here instead</string>
+    <!-- A screen reader hears this on a progress bar that can't move but is still busy. -->
+    <string name="progress_still_working">Still working</string>
     <!-- Setup: after the first provider is saved (docs/LOOK.md, Setting up). -->
     <string name="setup_wordplay">Plumping the cushions.</string>
     <string name="setup_step_channels">Adding your channels</string>
     <string name="setup_step_guide">Loading the TV guide</string>
+    <!-- While the guide arrives: "Loading the TV guide: 41,200 programmes so far". -->
+    <plurals name="setup_step_guide_count">
+        <item quantity="one">Loading the TV guide: %s programme so far</item>
+        <item quantity="other">Loading the TV guide: %s programmes so far</item>
+    </plurals>
     <string name="setup_step_movies">Fetching movies</string>
     <string name="setup_step_shows">Fetching shows</string>
     <plurals name="setup_done_channels">

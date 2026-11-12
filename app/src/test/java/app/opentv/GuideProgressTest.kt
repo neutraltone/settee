@@ -34,7 +34,7 @@ class GuideProgressTest {
         catalogue.panel.replies["xmltv.php"] = bigGuide(programmes = 3_000)
         val reported = mutableListOf<Float>()
 
-        guide.syncAll(nowUtcMillis = NOW, progress = { reported += it })
+        guide.syncAll(nowUtcMillis = NOW, progress = { reported += it.share })
 
         // Somewhere in the middle of reading the one feed, not only at its ends.
         assertThat(reported.filter { it > 0.2f && it < 0.8f }).isNotEmpty()
@@ -49,10 +49,24 @@ class GuideProgressTest {
         catalogue.panel.unsized += "xmltv.php"
         val reported = mutableListOf<Float>()
 
-        guide.syncAll(nowUtcMillis = NOW, progress = { reported += it })
+        guide.syncAll(nowUtcMillis = NOW, progress = { reported += it.share })
 
         // Setting up the feeds, the one feed, matching: the shares measured on a Stick.
-        assertThat(reported).containsExactly(0.07f, 0.92f, 1f).inOrder()
+        assertThat(reported.distinct()).containsExactly(0.07f, 0.92f, 1f).inOrder()
+    }
+
+    @Test
+    fun `a feed whose size isn't known still says how many programmes it has read, as it reads them`() = runTest {
+        catalogue.db.sources().insert(PANEL_SOURCE)
+        catalogue.panel.replies["xmltv.php"] = bigGuide(programmes = 3_000)
+        catalogue.panel.unsized += "xmltv.php"
+        val counts = mutableListOf<Int>()
+
+        guide.syncAll(nowUtcMillis = NOW, progress = { counts += it.programmes })
+
+        assertThat(counts.filter { it in 1..2_999 }).isNotEmpty()
+        assertThat(counts).isInOrder()
+        assertThat(counts.last()).isEqualTo(3_000)
     }
 
     private fun bigGuide(programmes: Int) = buildString {

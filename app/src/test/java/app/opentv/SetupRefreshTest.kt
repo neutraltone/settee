@@ -334,6 +334,33 @@ class SetupRefreshTest {
         assertThat(setup.failed).isEmpty()
     }
 
+    @Test
+    fun `while the guide arrives, setup counts its programmes so far`() = runTest {
+        panel.unsized += "xmltv.php"
+        panel.replies["xmltv.php"] = buildString {
+            append("<tv>")
+            repeat(3_000) {
+                append("""<programme start="20260101000000 +0000" stop="20260101010000 +0000" channel="c$it">""")
+                append("<title>P</title></programme>")
+            }
+            append("</tv>")
+        }
+        val counts = java.util.Collections.synchronizedList(mutableListOf<Int>())
+        backgroundScope.launch(Dispatchers.Unconfined) {
+            refresh.state.collect { state ->
+                state.setup?.takeIf { it.running == SetupStep.GUIDE }?.let {
+                    counts +=
+                        it.found
+                }
+            }
+        }
+
+        setUp()
+
+        assertThat(counts.filter { it in 1..2_999 }).isNotEmpty()
+        assertThat(counts).isInOrder()
+    }
+
     private companion object {
         val GUIDE = """
             <tv><programme start="20260101000000 +0000" stop="20260101010000 +0000" channel="bbc1">

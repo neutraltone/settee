@@ -12,8 +12,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshots.Snapshot
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
+import androidx.compose.ui.test.hasStateDescription
 import androidx.compose.ui.test.isFocused
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithText
@@ -114,6 +116,26 @@ class SetupScreenTest {
         compose.mainClock.advanceTimeBy(3_000)
         compose.onNodeWithText("Loading the TV guide").assertIsDisplayed()
         compose.onNodeWithText("1,204 channels added").assertDoesNotExist()
+    }
+
+    @Test
+    fun `while the guide arrives, its line counts the programmes so far`() {
+        setScreen(channelsIn.copy(found = 41_200))
+
+        compose.onNodeWithText("Loading the TV guide: 41,200 programmes so far").assertIsDisplayed()
+        captureScreen("setup_guide_counting")
+    }
+
+    @Test
+    fun `a bar that hasn't moved for a couple of seconds shows it's still working`() {
+        compose.mainClock.autoAdvance = false
+        setScreen(channelsIn)
+        compose.mainClock.advanceTimeBy(500)
+        compose.onAllNodes(hasStateDescription("Still working")).assertCountEquals(0)
+
+        compose.mainClock.advanceTimeBy(2_500)
+
+        compose.onNode(hasStateDescription("Still working")).assertExists()
     }
 
     @Test

@@ -199,7 +199,7 @@ class EpgRepository(
         nowUtcMillis: Long,
         force: Boolean = false,
         skipFetchedSince: Long? = null,
-        progress: (Float) -> Unit = {},
+        progress: (SyncProgress) -> Unit = {},
     ): SyncSummary = withContext(Dispatchers.IO) {
         ensureFeeds()
         maybeAutoEnableRegionalFeed()
@@ -217,7 +217,12 @@ class EpgRepository(
         reporting.feedsReady()
 
         for ((index, feed) in due.withIndex()) {
-            val result = syncFeed(feed, nowUtcMillis) { read -> reporting.reading(index, read) }
+            val result = syncFeed(
+                feed,
+                nowUtcMillis,
+                read = { read -> reporting.reading(index, read) },
+                counted = reporting::programme,
+            )
             reporting.feedDone(index)
             when (result) {
                 is FeedResult.Success -> {
@@ -256,15 +261,31 @@ class EpgRepository(
      * channels 8%. A feed's slice moves with the bytes read where the server says how many there
      * are; otherwise it fills when the feed is done.
      */
-    private class GuideProgress(private val feeds: Int, private val report: (Float) -> Unit) {
+    private class GuideProgress(private val feeds: Int, private val report: (SyncProgress) -> Unit) {
         private var last = -1f
+        private var programmes = 0
+        private var reportedProgrammes = 0
 
         private fun at(value: Float) {
             // Every whole half-percent, not every read: a big guide is thousands of reads.
             if (value >= 1f || value - last >= STEP) {
                 last = value
-                report(value)
+                tell()
             }
+        }
+
+        private fun tell() {
+            reportedProgrammes = programmes
+            report(SyncProgress(last.coerceAtLeast(0f), programmes))
+        }
+
+        /**
+         * Another programme read. A guide whose size the server doesn't give can't move the share,
+         * but a count going up still shows it's arriving, so that's told every [PROGRAMMES] too.
+         */
+        fun programme() {
+            programmes++
+            if (programmes - reportedProgrammes >= PROGRAMMES) tell()
         }
 
         fun feedsReady() = at(SETUP)
@@ -274,21 +295,33 @@ class EpgRepository(
 
         fun feedDone(index: Int) = at(SETUP + FEEDS * (index + 1) / feeds)
 
-        fun done() = at(1f)
+        fun done() {
+            last = 1f
+            tell()
+        }
 
         companion object {
             const val SETUP = 0.07f
             const val FEEDS = 0.85f
             const val STEP = 0.005f
+            const val PROGRAMMES = 500
         }
     }
+
+    /** How far through [syncAll] a pass is: its [share], 0 to 1, and the [programmes] read so far. */
+    data class SyncProgress(val share: Float, val programmes: Int)
 
     private sealed interface FeedResult {
         data class Success(val programmes: Int, val channels: Int) : FeedResult
         data class Failed(val reason: ViewerError) : FeedResult
     }
 
-    private suspend fun syncFeed(feed: EpgFeed, nowUtcMillis: Long, read: (Float) -> Unit): FeedResult {
+    private suspend fun syncFeed(
+        feed: EpgFeed,
+        nowUtcMillis: Long,
+        read: (Float) -> Unit,
+        counted: () -> Unit,
+    ): FeedResult {
         val batch = ArrayList<Programme>(BATCH_SIZE)
         val aliases = ArrayList<EpgChannelAlias>(256)
         var written = 0
@@ -307,6 +340,7 @@ class EpgRepository(
                         )
                     },
                     onProgramme = { programme ->
+                        counted()
                         // Skip anything that finished before the retention cut-off; no point
                         // writing rows we are about to prune.
                         if (programme.endUtcMillis >= nowUtcMillis - RETENTION_PAST_MILLIS) {
