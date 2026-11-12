@@ -67,6 +67,7 @@
     <string name="rec_series_recording_set">Nahrávání seriálu nastaveno pro \"%1$s\"</string>
     <string name="rec_screen_title">Nahrávky a připomenutí</string>
     <string name="rec_empty_state">Zatím žádné nahrávky. Při sledování stiskněte Nahrát, nebo vyberte pořad v průvodci.</string>
+    <string name="rec_reminder_autoswitch">Automatické přepnutí</string>
     <string name="rec_cancel_reminder">Zrušit připomenutí</string>
     <string name="rec_status_failed">Selhalo · %1$s</string>
     <string name="rec_notification_one">Nahrává se 1 pořad</string>

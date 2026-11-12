@@ -67,6 +67,7 @@
     <string name="rec_series_recording_set">Serieoptagelse indstillet for “%1$s”</string>
     <string name="rec_screen_title">Optagelser &amp; påmindelser</string>
     <string name="rec_empty_state">Ingen optagelser endnu. Tryk på Optag, mens du ser, eller vælg et program i guiden.</string>
+    <string name="rec_reminder_autoswitch">Autoskift</string>
     <string name="rec_cancel_reminder">Annuller påmindelse</string>
     <string name="rec_status_failed">Mislykkedes · %1$s</string>
     <string name="rec_notification_one">Optager 1 program</string>

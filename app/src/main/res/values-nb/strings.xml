@@ -67,6 +67,7 @@
     <string name="rec_series_recording_set">Serieopptak satt for \"%1$s\"</string>
     <string name="rec_screen_title">Opptak og påminnelser</string>
     <string name="rec_empty_state">Ingen opptak ennå. Trykk Ta opp mens du ser, eller velg et program i guiden.</string>
+    <string name="rec_reminder_autoswitch">Automatisk bytte</string>
     <string name="rec_cancel_reminder">Avbryt påminnelse</string>
     <string name="rec_status_failed">Mislyktes · %1$s</string>
     <string name="rec_notification_one">Tar opp 1 program</string>

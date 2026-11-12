@@ -67,6 +67,7 @@
     <string name="rec_series_recording_set">Enregistrement de série programmé pour « %1$s »</string>
     <string name="rec_screen_title">Enregistrements et rappels</string>
     <string name="rec_empty_state">Aucun enregistrement pour l\'instant. Appuyez sur Enregistrer pendant que vous regardez, ou choisissez un programme dans le guide.</string>
+    <string name="rec_reminder_autoswitch">Bascule automatique</string>
     <string name="rec_cancel_reminder">Annuler le rappel</string>
     <string name="rec_status_failed">Échec · %1$s</string>
     <string name="rec_notification_one">Enregistrement d\'1 programme</string>

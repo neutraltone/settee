@@ -84,6 +84,7 @@
     <string name="rec_series_recording_set">Series recording set for \"%1$s\"</string>
     <string name="rec_screen_title">Recordings &amp; reminders</string>
     <string name="rec_empty_state">No recordings yet. Press Record while you\'re watching, or pick a programme in the guide.</string>
+    <string name="rec_reminder_autoswitch">Auto-switch</string>
     <string name="rec_cancel_reminder">Cancel reminder</string>
     <string name="rec_cancel_recording">Cancel recording</string>
     <string name="rec_heading_coming_up">Coming up</string>

@@ -67,6 +67,7 @@
     <string name="rec_series_recording_set">「%1$s」のシリーズ録画を設定しました</string>
     <string name="rec_screen_title">録画とリマインダー</string>
     <string name="rec_empty_state">まだ録画がありません。視聴中に「録画」を押すか、番組表で番組を選んでください。</string>
+    <string name="rec_reminder_autoswitch">自動切り替え</string>
     <string name="rec_cancel_reminder">リマインダーを取消</string>
     <string name="rec_status_failed">失敗・%1$s</string>
     <string name="rec_notification_one">1件の番組を録画中</string>

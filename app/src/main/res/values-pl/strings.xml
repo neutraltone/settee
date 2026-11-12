@@ -67,6 +67,7 @@
     <string name="rec_series_recording_set">Ustawiono nagrywanie serialu \"%1$s\"</string>
     <string name="rec_screen_title">Nagrania i przypomnienia</string>
     <string name="rec_empty_state">Nie masz jeszcze nagrań. Naciśnij Nagrywaj podczas oglądania lub wybierz program w przewodniku.</string>
+    <string name="rec_reminder_autoswitch">Automatyczne przełączanie</string>
     <string name="rec_cancel_reminder">Anuluj przypomnienie</string>
     <string name="rec_status_failed">Niepowodzenie · %1$s</string>
     <string name="rec_notification_one">Nagrywanie 1 programu</string>

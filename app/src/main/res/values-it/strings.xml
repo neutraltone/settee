@@ -67,6 +67,7 @@
     <string name="rec_series_recording_set">Registrazione della serie impostata per “%1$s”</string>
     <string name="rec_screen_title">Registrazioni e promemoria</string>
     <string name="rec_empty_state">Ancora nessuna registrazione. Premi Registra mentre guardi, oppure scegli un programma nella guida.</string>
+    <string name="rec_reminder_autoswitch">Cambio automatico</string>
     <string name="rec_cancel_reminder">Annulla promemoria</string>
     <string name="rec_status_failed">Non riuscita · %1$s</string>
     <string name="rec_notification_one">Registrazione di 1 programma</string>

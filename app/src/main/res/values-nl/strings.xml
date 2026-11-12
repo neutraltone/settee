@@ -67,6 +67,7 @@
     <string name="rec_series_recording_set">Serieopname ingesteld voor \"%1$s\"</string>
     <string name="rec_screen_title">Opnames en herinneringen</string>
     <string name="rec_empty_state">Nog geen opnames. Druk op Opnemen terwijl je kijkt, of kies een programma in de gids.</string>
+    <string name="rec_reminder_autoswitch">Automatisch wisselen</string>
     <string name="rec_cancel_reminder">Herinnering annuleren</string>
     <string name="rec_status_failed">Mislukt · %1$s</string>
     <string name="rec_notification_one">1 programma wordt opgenomen</string>

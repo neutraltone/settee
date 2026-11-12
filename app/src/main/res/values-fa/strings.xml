@@ -67,6 +67,7 @@
     <string name="rec_series_recording_set">ضبط مجموعه برای \"%1$s\" تنظیم شد</string>
     <string name="rec_screen_title">ضبط‌ها و یادآورها</string>
     <string name="rec_empty_state">هنوز ضبطی وجود ندارد. هنگام تماشا روی ضبط بزنید، یا یک برنامه را در راهنما انتخاب کنید.</string>
+    <string name="rec_reminder_autoswitch">تعویض خودکار</string>
     <string name="rec_cancel_reminder">لغو یادآور</string>
     <string name="rec_status_failed">ناموفق · %1$s</string>
     <string name="rec_notification_one">در حال ضبط ۱ برنامه</string>

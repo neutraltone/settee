@@ -67,6 +67,7 @@
     <string name="rec_series_recording_set">Dizi kaydı ayarlandı: “%1$s”</string>
     <string name="rec_screen_title">Kayıtlar ve hatırlatmalar</string>
     <string name="rec_empty_state">Henüz kayıt yok. İzlerken Kaydet\'e basın veya rehberden bir program seçin.</string>
+    <string name="rec_reminder_autoswitch">Otomatik geçiş</string>
     <string name="rec_cancel_reminder">Hatırlatmayı iptal et</string>
     <string name="rec_status_failed">Başarısız · %1$s</string>
     <string name="rec_notification_one">1 program kaydediliyor</string>

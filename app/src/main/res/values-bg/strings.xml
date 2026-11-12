@@ -67,6 +67,7 @@
     <string name="rec_series_recording_set">Записът на сериала е зададен за „%1$s“</string>
     <string name="rec_screen_title">Записи &amp; напомняния</string>
     <string name="rec_empty_state">Все още няма записи. Натиснете Запис, докато гледате, или изберете предаване в програмата.</string>
+    <string name="rec_reminder_autoswitch">Автоматично превключване</string>
     <string name="rec_cancel_reminder">Отказ от напомняне</string>
     <string name="rec_status_failed">Неуспешно · %1$s</string>
     <string name="rec_notification_one">Записва се 1 предаване</string>

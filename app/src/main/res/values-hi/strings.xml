@@ -67,6 +67,7 @@
     <string name="rec_series_recording_set">\"%1$s\" के लिए सीरीज़ रिकॉर्डिंग सेट की गई</string>
     <string name="rec_screen_title">रिकॉर्डिंग्स &amp; रिमाइंडर</string>
     <string name="rec_empty_state">अभी तक कोई रिकॉर्डिंग नहीं। देखते समय रिकॉर्ड दबाएं, या गाइड में कोई प्रोग्राम चुनें।</string>
+    <string name="rec_reminder_autoswitch">ऑटो-स्विच</string>
     <string name="rec_cancel_reminder">रिमाइंडर रद्द करें</string>
     <string name="rec_status_failed">विफल · %1$s</string>
     <string name="rec_notification_one">1 प्रोग्राम रिकॉर्ड हो रहा है</string>

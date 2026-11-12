@@ -67,6 +67,7 @@
     <string name="rec_series_recording_set">Sorozatfelvétel beállítva ehhez: „%1$s”</string>
     <string name="rec_screen_title">Felvételek &amp; emlékeztetők</string>
     <string name="rec_empty_state">Még nincsenek felvételek. Nyomja meg a Felvétel gombot nézés közben, vagy válasszon egy műsort a műsorújságban.</string>
+    <string name="rec_reminder_autoswitch">Automatikus váltás</string>
     <string name="rec_cancel_reminder">Emlékeztető törlése</string>
     <string name="rec_status_failed">Sikertelen · %1$s</string>
     <string name="rec_notification_one">1 műsor rögzítése</string>

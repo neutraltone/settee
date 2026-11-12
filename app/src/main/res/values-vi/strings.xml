@@ -67,6 +67,7 @@
     <string name="rec_series_recording_set">Đã đặt ghi trọn bộ cho “%1$s”</string>
     <string name="rec_screen_title">Bản ghi &amp; nhắc hẹn</string>
     <string name="rec_empty_state">Chưa có bản ghi nào. Nhấn Ghi hình khi bạn đang xem, hoặc chọn một chương trình trong lịch phát.</string>
+    <string name="rec_reminder_autoswitch">Tự động chuyển</string>
     <string name="rec_cancel_reminder">Hủy nhắc hẹn</string>
     <string name="rec_status_failed">Thất bại · %1$s</string>
     <string name="rec_notification_one">Đang ghi 1 chương trình</string>

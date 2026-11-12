@@ -67,6 +67,7 @@
     <string name="rec_series_recording_set">تم ضبط تسجيل المسلسل لـ «%1$s»</string>
     <string name="rec_screen_title">التسجيلات والتذكيرات</string>
     <string name="rec_empty_state">لا توجد تسجيلات بعد. اضغط على «تسجيل» أثناء المشاهدة، أو اختر برنامجًا في دليل البرامج.</string>
+    <string name="rec_reminder_autoswitch">التبديل التلقائي</string>
     <string name="rec_cancel_reminder">إلغاء التذكير</string>
     <string name="rec_status_failed">فشل · %1$s</string>
     <string name="rec_notification_one">جارٍ تسجيل برنامج واحد</string>

@@ -67,6 +67,7 @@
     <string name="rec_series_recording_set">Ορίστηκε εγγραφή σειράς για «%1$s»</string>
     <string name="rec_screen_title">Εγγραφές &amp; υπενθυμίσεις</string>
     <string name="rec_empty_state">Δεν υπάρχουν ακόμη εγγραφές. Πατήστε Εγγραφή ενώ παρακολουθείτε ή επιλέξτε ένα πρόγραμμα στον οδηγό.</string>
+    <string name="rec_reminder_autoswitch">Αυτόματη εναλλαγή</string>
     <string name="rec_cancel_reminder">Ακύρωση υπενθύμισης</string>
     <string name="rec_status_failed">Απέτυχε · %1$s</string>
     <string name="rec_notification_one">Εγγραφή 1 προγράμματος</string>

@@ -67,6 +67,7 @@
     <string name="rec_series_recording_set">Serienaufnahme eingerichtet für „%1$s”</string>
     <string name="rec_screen_title">Aufnahmen &amp; Erinnerungen</string>
     <string name="rec_empty_state">Noch keine Aufnahmen. Drücke beim Ansehen auf Aufnehmen, oder wähle eine Sendung im Guide aus.</string>
+    <string name="rec_reminder_autoswitch">Automatischer Wechsel</string>
     <string name="rec_cancel_reminder">Erinnerung abbrechen</string>
     <string name="rec_status_failed">Fehlgeschlagen · %1$s</string>
     <string name="rec_notification_one">1 Sendung wird aufgenommen</string>

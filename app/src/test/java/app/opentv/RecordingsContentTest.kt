@@ -309,6 +309,14 @@ class RecordingsContentTest {
     }
 
     @Test
+    fun `a Reminder that will switch to its channel by itself says so, and one that only reminds doesn't`() {
+        show(reminders = listOf(reminder(1, autoTune = true), reminder(2, autoTune = false)))
+
+        row("Reminder 1").assert(hasText("Auto-switch", substring = true))
+        row("Reminder 2").assert(hasText("Auto-switch", substring = true).not())
+    }
+
+    @Test
     fun `a recording says whose it is only when there's more than one Profile`() {
         val mine = completed(1).copy(profileId = 7)
         show(recordings = listOf(mine), profileNames = mapOf(7L to "Sam"))
@@ -378,6 +386,16 @@ class RecordingsContentTest {
         endedAtMillis = NOW - id * HOUR + 45 * MINUTE,
         sizeBytes = 1_500_000_000L,
         status = status,
+    )
+
+    private fun reminder(id: Long, autoTune: Boolean) = Reminder(
+        id = id,
+        channelId = id,
+        channelName = "Channel $id",
+        title = "Reminder $id",
+        startUtcMillis = NOW + id * HOUR,
+        endUtcMillis = NOW + (id + 1) * HOUR,
+        autoTune = autoTune,
     )
 
     private fun seriesLink(id: Long) =

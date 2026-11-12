@@ -67,6 +67,7 @@
     <string name="rec_series_recording_set">Запись сериала настроена для «%1$s»</string>
     <string name="rec_screen_title">Записи и напоминания</string>
     <string name="rec_empty_state">Записей пока нет. Нажмите «Запись» во время просмотра или выберите передачу в телегиде.</string>
+    <string name="rec_reminder_autoswitch">Автопереключение</string>
     <string name="rec_cancel_reminder">Отменить напоминание</string>
     <string name="rec_status_failed">Ошибка · %1$s</string>
     <string name="rec_notification_one">Запись: 1 передача</string>

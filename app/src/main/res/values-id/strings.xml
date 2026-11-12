@@ -67,6 +67,7 @@
     <string name="rec_series_recording_set">Rekaman series diatur untuk \"%1$s\"</string>
     <string name="rec_screen_title">Rekaman &amp; pengingat</string>
     <string name="rec_empty_state">Belum ada rekaman. Tekan Rekam saat Anda menonton, atau pilih acara di panduan.</string>
+    <string name="rec_reminder_autoswitch">Alih otomatis</string>
     <string name="rec_cancel_reminder">Batalkan pengingat</string>
     <string name="rec_status_failed">Gagal · %1$s</string>
     <string name="rec_notification_one">Merekam 1 acara</string>

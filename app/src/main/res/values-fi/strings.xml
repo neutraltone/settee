@@ -67,6 +67,7 @@
     <string name="rec_series_recording_set">Sarjatallennus asetettu ohjelmalle \"%1$s\"</string>
     <string name="rec_screen_title">Tallenteet ja muistutukset</string>
     <string name="rec_empty_state">Ei vielä tallenteita. Paina Tallenna katsoessasi tai valitse ohjelma oppaasta.</string>
+    <string name="rec_reminder_autoswitch">Automaattinen vaihto</string>
     <string name="rec_cancel_reminder">Peruuta muistutus</string>
     <string name="rec_status_failed">Epäonnistui · %1$s</string>
     <string name="rec_notification_one">Tallennetaan 1 ohjelma</string>

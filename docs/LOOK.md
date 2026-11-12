@@ -260,7 +260,7 @@ Once a provider is saved while none was saved before (a fresh install, or after 
 
 One list, with Coming up, Recorded and Series links as headings, and a heading with no rows hidden. Recordings have a channel logo but no artwork, so they're rows, not cards.
 
-- **Coming up:** bookings and reminders together, soonest first. A reminder shows a bell instead of a logo.
+- **Coming up:** bookings and reminders together, soonest first. A reminder shows a bell instead of a logo, and says so if it will switch to its channel by itself.
 - **Recorded:** a recording in progress first, then newest first. Failed ones stay here and say what went wrong.
 - **Series links:** A to Z.
 - **Rows:** OK plays, watches live or retries. Everything else is in the options panel, and Delete asks first because it can't be undone.

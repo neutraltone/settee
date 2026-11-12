@@ -67,6 +67,7 @@
     <string name="rec_series_recording_set">Înregistrare de serial setată pentru „%1$s”</string>
     <string name="rec_screen_title">Înregistrări &amp; mementouri</string>
     <string name="rec_empty_state">Încă nu ai înregistrări. Apasă Înregistrare în timp ce te uiți sau alege o emisiune din ghid.</string>
+    <string name="rec_reminder_autoswitch">Comutare automată</string>
     <string name="rec_cancel_reminder">Anulează memento-ul</string>
     <string name="rec_status_failed">Eșuată · %1$s</string>
     <string name="rec_notification_one">Se înregistrează 1 program</string>

@@ -67,6 +67,7 @@
     <string name="rec_series_recording_set">Gravação de série definida para \"%1$s\"</string>
     <string name="rec_screen_title">Gravações e lembretes</string>
     <string name="rec_empty_state">Ainda sem gravações. Prima Gravar enquanto está a ver, ou escolha um programa no guia.</string>
+    <string name="rec_reminder_autoswitch">Mudança automática</string>
     <string name="rec_cancel_reminder">Cancelar lembrete</string>
     <string name="rec_status_failed">Falhou · %1$s</string>
     <string name="rec_notification_one">A gravar 1 programa</string>

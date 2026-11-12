@@ -67,6 +67,7 @@
     <string name="rec_series_recording_set">Snimanje serije postavljeno za \"%1$s\"</string>
     <string name="rec_screen_title">Snimke i podsjetnici</string>
     <string name="rec_empty_state">Još nema snimki. Pritisnite Snimaj dok gledate ili odaberite emisiju u vodiču.</string>
+    <string name="rec_reminder_autoswitch">Automatski prijelaz</string>
     <string name="rec_cancel_reminder">Otkaži podsjetnik</string>
     <string name="rec_status_failed">Neuspjelo · %1$s</string>
     <string name="rec_notification_one">Snimanje 1 programa</string>

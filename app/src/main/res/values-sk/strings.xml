@@ -67,6 +67,7 @@
     <string name="rec_series_recording_set">Nahrávanie seriálu nastavené pre „%1$s“</string>
     <string name="rec_screen_title">Nahrávky &amp; pripomienky</string>
     <string name="rec_empty_state">Zatiaľ žiadne nahrávky. Počas sledovania stlačte Nahrať alebo vyberte reláciu v programe.</string>
+    <string name="rec_reminder_autoswitch">Automatické prepnutie</string>
     <string name="rec_cancel_reminder">Zrušiť pripomienku</string>
     <string name="rec_status_failed">Zlyhalo · %1$s</string>
     <string name="rec_notification_one">Nahráva sa 1 program</string>

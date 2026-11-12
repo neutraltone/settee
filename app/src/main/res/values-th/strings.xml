@@ -67,6 +67,7 @@
     <string name="rec_series_recording_set">ตั้งการบันทึกซีรีส์สำหรับ \"%1$s\" แล้ว</string>
     <string name="rec_screen_title">การบันทึกและการแจ้งเตือน</string>
     <string name="rec_empty_state">ยังไม่มีการบันทึก กดบันทึกขณะที่คุณกำลังดู หรือเลือกรายการในผังรายการ</string>
+    <string name="rec_reminder_autoswitch">สลับอัตโนมัติ</string>
     <string name="rec_cancel_reminder">ยกเลิกการแจ้งเตือน</string>
     <string name="rec_status_failed">ล้มเหลว · %1$s</string>
     <string name="rec_notification_one">กำลังบันทึก 1 รายการ</string>

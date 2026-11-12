@@ -67,6 +67,7 @@
     <string name="rec_series_recording_set">Serieinspelning inställd för ”%1$s”</string>
     <string name="rec_screen_title">Inspelningar &amp; påminnelser</string>
     <string name="rec_empty_state">Inga inspelningar än. Tryck på Spela in medan du tittar, eller välj ett program i guiden.</string>
+    <string name="rec_reminder_autoswitch">Autobyte</string>
     <string name="rec_cancel_reminder">Avbryt påminnelse</string>
     <string name="rec_status_failed">Misslyckades · %1$s</string>
     <string name="rec_notification_one">Spelar in 1 program</string>

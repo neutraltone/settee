@@ -36,7 +36,12 @@ internal val RecordingsRow.inProgress
 internal fun RecordingsRow.line(profileNames: Map<Long, String>): String {
     val parts = when (this) {
         is RecordingsRow.Booking -> listOf(formatWhen(recording.scheduledStartMillis), recording.channelName)
-        is RecordingsRow.OfReminder -> listOf(formatWhen(reminder.startUtcMillis), reminder.channelName)
+        // Only the ones that will change the channel by themselves say so: the bell already says Reminder.
+        is RecordingsRow.OfReminder -> listOfNotNull(
+            formatWhen(reminder.startUtcMillis),
+            reminder.channelName,
+            stringResource(R.string.rec_reminder_autoswitch).takeIf { reminder.autoTune },
+        )
         is RecordingsRow.SeriesLink -> listOf(nextAiring())
         is RecordingsRow.Recorded -> recording.details()
     }
