@@ -5,7 +5,9 @@
  */
 package app.opentv.ui.design
 
+import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -23,12 +25,19 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
@@ -36,6 +45,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.window.DialogWindowProvider
+import kotlinx.coroutines.launch
 
 /**
  * A panel down the right of the screen, over what's there, for a choice or an item's details: the
@@ -49,6 +59,16 @@ import androidx.compose.ui.window.DialogWindowProvider
  */
 @Composable
 fun SidePanel(onBack: () -> Unit, startOn: FocusRequester? = null, content: @Composable ColumnScope.() -> Unit) {
+    SidePanelWindow(onBack, startOn, scrolls = true, content)
+}
+
+@Composable
+private fun SidePanelWindow(
+    onBack: () -> Unit,
+    startOn: FocusRequester?,
+    scrolls: Boolean,
+    content: @Composable ColumnScope.() -> Unit,
+) {
     Dialog(
         onDismissRequest = onBack,
         properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false),
@@ -69,20 +89,20 @@ fun SidePanel(onBack: () -> Unit, startOn: FocusRequester? = null, content: @Com
         }
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.CenterEnd) {
             CompositionLocalProvider(LocalTickedRow provides ticked) {
-                PanelColumn(rows, content)
+                PanelColumn(rows, scrolls, content)
             }
         }
     }
 }
 
 @Composable
-private fun PanelColumn(rows: FocusRequester, content: @Composable ColumnScope.() -> Unit) {
+private fun PanelColumn(rows: FocusRequester, scrolls: Boolean, content: @Composable ColumnScope.() -> Unit) {
     Column(
         Modifier
             .width(SidePanelWidth)
             .fillMaxHeight()
             .background(SetteeColors.Surface)
-            .verticalScroll(rememberScrollState())
+            .then(if (scrolls) Modifier.verticalScroll(rememberScrollState()) else Modifier)
             .padding(horizontal = PANEL_PADDING, vertical = SetteeSpace.ScreenTopBottom)
             .focusRequester(rows)
             .focusGroup(),
@@ -142,6 +162,64 @@ fun PanelTitle(text: String, modifier: Modifier = Modifier) {
     Text(text, SetteeType.Section, maxLines = 2, modifier = modifier.padding(bottom = ROW_PADDING))
 }
 
+/** A prompt's short explanation, under its [PanelTitle] and above its choices. */
+@Composable
+fun PanelBody(text: String, modifier: Modifier = Modifier) {
+    Text(text, SetteeType.Body, modifier = modifier.padding(bottom = ROW_PADDING))
+}
+
+/**
+ * A [SidePanel] for a notice whose [notes] can be long, such as release notes: [title], then [body]
+ * if there is one, the notes, and the choices under them, [main] first and then [others].
+ *
+ * The notes never take the Highlight. It starts on [main], where Up and Down scroll the notes, so
+ * the main choice is always one press away however far the viewer has read. Once the notes reach
+ * their end, Down carries on to [others] as in any panel, and Up from there comes back to [main].
+ */
+@Composable
+fun NotesPanel(
+    title: String,
+    main: String,
+    onMain: () -> Unit,
+    onBack: () -> Unit,
+    body: String? = null,
+    others: @Composable ColumnScope.() -> Unit = {},
+    notes: @Composable ColumnScope.() -> Unit,
+) {
+    val scroll = rememberScrollState()
+    val mainRow = remember { FocusRequester() }
+    SidePanelWindow(onBack, startOn = mainRow, scrolls = false) {
+        PanelTitle(title)
+        body?.let { PanelBody(it) }
+        // Not filling: short notes leave the choices right under them, long ones stop where the
+        // choices begin and scroll.
+        Column(
+            Modifier.weight(1f, fill = false).fillMaxWidth().verticalScroll(scroll).padding(bottom = ROW_PADDING),
+            content = notes,
+        )
+        PanelRow(main, onClick = onMain, modifier = Modifier.focusRequester(mainRow).scrollsNotes(scroll))
+        others()
+    }
+}
+
+/** Turns Up and Down into scrolling [notes] while they have further to go that way. */
+@Composable
+private fun Modifier.scrollsNotes(notes: ScrollState): Modifier {
+    val scope = rememberCoroutineScope()
+    val step = with(LocalDensity.current) { NotesStep.toPx() }
+    return onPreviewKeyEvent { event ->
+        val direction = when (event.key) {
+            Key.DirectionDown -> 1
+            Key.DirectionUp -> -1
+            else -> return@onPreviewKeyEvent false
+        }
+        val further = if (direction > 0) notes.canScrollForward else notes.canScrollBackward
+        if (!further) return@onPreviewKeyEvent false
+        if (event.type == KeyEventType.KeyDown) scope.launch { notes.animateScrollBy(direction * step) }
+        true
+    }
+}
+
 /**
  * Asks before something that can't be undone, such as removing a provider: [confirm] above [keep],
  * with the Highlight starting on [keep], so a stray OK changes nothing. Back keeps it too.
@@ -158,6 +236,7 @@ fun ConfirmPanel(confirm: String, keep: String, onConfirm: () -> Unit, onKeep: (
 /** How wide a [SidePanel] is. */
 val SidePanelWidth = 400.dp
 
+private val NotesStep = 96.dp
 private val PANEL_PADDING = 24.dp
 private val ROW_GAP = 2.dp
 private val ROW_PADDING = 12.dp

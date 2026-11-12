@@ -648,6 +648,12 @@
     <string name="update_failed_tv">Couldn\'t download the update. Check this TV is online, then try again.</string>
     <string name="update_failed_device">Couldn\'t download the update. Check this device is online, then try again.</string>
     <string name="update_close">Close</string>
+    <string name="update_available_title">Update available</string>
+    <string name="update_available_body">Settee %1$s is available. You have %2$s.</string>
+    <string name="update_install">Update</string>
+    <string name="update_later">Later</string>
+    <string name="update_downloading">Downloading the update</string>
+    <string name="update_percent">%1$d%%</string>
     <string name="playback_link_refused">Your provider didn\'t give a link for this channel. Try refreshing your provider in Settings.</string>
     <string name="playback_no_catchup">Your provider doesn\'t offer catch-up, so past programmes can\'t be played.</string>
     <string name="error_video_format_tv">This TV can\'t play this video format.</string>
