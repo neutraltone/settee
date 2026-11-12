@@ -58,7 +58,7 @@ import kotlinx.coroutines.cancel
  * a website.
  */
 @Composable
-fun PhonePairingScreen(onReceived: (Source) -> Unit, onCancel: () -> Unit) {
+fun PhonePairingScreen(onReceived: (PairingServer.State.Received) -> Unit, onCancel: () -> Unit) {
     val scope = remember { CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate) }
     val context = LocalContext.current
     val server = remember { PairingServer(scope, PairingFonts(context.applicationContext)) }
@@ -75,7 +75,7 @@ fun PhonePairingScreen(onReceived: (Source) -> Unit, onCancel: () -> Unit) {
     }
 
     LaunchedEffect(state) {
-        (state as? PairingServer.State.Received)?.let { onReceived(it.draft) }
+        (state as? PairingServer.State.Received)?.let(onReceived)
     }
 
     ScreenFrame {

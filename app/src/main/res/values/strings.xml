@@ -451,8 +451,6 @@
     <string name="setup_failed_movies">Movies didn\'t load. Settee will try again on the next refresh, or when you open Movies.</string>
     <string name="setup_failed_shows">Shows didn\'t load. Settee will try again on the next refresh, or when you open Shows.</string>
     <string name="setup_take_me_in">Take me to Settee</string>
-    <string name="pairing_all_done_title">All done</string>
-    <string name="pairing_all_done_body">Carry on on your TV.</string>
     <string name="pairing_got_it">Got it — connecting to your provider…</string>
     <string name="pairing_qr_desc">QR code linking to the setup page on this device</string>
     <string name="pairing_setup_title">Set up from your phone</string>

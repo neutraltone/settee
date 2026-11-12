@@ -17,12 +17,15 @@ import java.net.Socket
 import java.security.SecureRandom
 import java.util.concurrent.TimeUnit
 import kotlin.concurrent.thread
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeoutOrNull
 
 /**
  * Lets someone fill in their provider details from a phone instead of a TV remote.
@@ -83,8 +86,16 @@ class PairingServer(private val scope: CoroutineScope, private val fonts: Pairin
         data object Idle : State
         data class Listening(val session: Session) : State
 
-        /** The phone submitted details. The UI takes it from here. */
-        data class Received(val draft: Source) : State
+        /**
+         * The phone submitted details. The UI takes it from here, and [answer]s once the login is
+         * proven or has failed: the phone waits for that, so it can say "All done" or show why.
+         */
+        class Received(val draft: Source, private val reply: CompletableDeferred<String?>) : State {
+            /** [error] is why the login failed, or null once the channels are in. */
+            fun answer(error: String?) {
+                reply.complete(error)
+            }
+        }
         data class Failed(val reason: String) : State
     }
 
@@ -107,6 +118,9 @@ class PairingServer(private val scope: CoroutineScope, private val fonts: Pairin
     @Volatile private var wrongShortTokenGuesses = 0
 
     @Volatile private var running = false
+
+    /** The session listening, to go back to when a login from the phone fails. */
+    @Volatile private var session: Session? = null
 
     fun start() {
         if (running) return
@@ -149,6 +163,7 @@ class PairingServer(private val scope: CoroutineScope, private val fonts: Pairin
             port = socket.localPort,
             shortToken = shortToken,
         )
+        this.session = session
         _state.value = State.Listening(session)
 
         // A plain thread rather than a coroutine: ServerSocket.accept() blocks
@@ -336,19 +351,31 @@ class PairingServer(private val scope: CoroutineScope, private val fonts: Pairin
             epgUrl = form["epg"]?.trim()?.takeIf { it.isNotEmpty() },
         )
 
+        val reply = CompletableDeferred<String?>()
+        _state.value = State.Received(draft, reply)
+        // The phone waits on the channels loading, so it can say whether the login worked: a big
+        // provider's took about 13 seconds on a Fire TV Stick. The TV answering nothing (it left the
+        // screen) falls back to what the phone was told before it waited.
+        val answer = runBlocking { withTimeoutOrNull(REPLY_TIMEOUT_MILLIS) { Answered(reply.await()) } }
+        val error = answer?.error
+        if (error != null) {
+            output.write(PairingHttp.httpResponse("200 OK", "text/html", PairingPage.form(token, error)))
+            // Still listening, with the same code and address, so the phone can put it right.
+            session?.let { _state.value = State.Listening(it) }
+            return
+        }
         output.write(
             PairingHttp.httpResponse(
                 "200 OK",
                 "text/html",
-                PairingPage.message(
-                    "Sent to your TV",
-                    "You can put your phone down — the rest happens on the telly.",
-                ),
+                if (answer != null) {
+                    PairingPage.message("All done", "Carry on on your TV.")
+                } else {
+                    PairingPage.message("Sent to your TV", "You can put your phone down. The rest happens on the telly.")
+                },
             ),
         )
         output.flush()
-
-        _state.value = State.Received(draft)
         // Nothing more to receive. Shut the door immediately rather than leaving a socket
         // open on the user's network for the rest of the timeout.
         running = false
@@ -357,6 +384,9 @@ class PairingServer(private val scope: CoroutineScope, private val fonts: Pairin
         token = ""
         shortToken = ""
     }
+
+    /** What the TV answered: a login failure's reason, or null for all done. */
+    private class Answered(val error: String?)
 
     // ---- Finding our own address -----------------------------------------------------------
 
@@ -395,6 +425,7 @@ class PairingServer(private val scope: CoroutineScope, private val fonts: Pairin
         private const val TAG = "PairingServer"
         private const val SESSION_TIMEOUT_MINUTES = 5L
         private const val SOCKET_TIMEOUT_MILLIS = 15_000
+        private const val REPLY_TIMEOUT_MILLIS = 5L * 60 * 1000
         private const val MAX_BODY_BYTES = 16 * 1024
         private const val MAX_CODE_ATTEMPTS = 5
         private const val SHORT_TOKEN_LENGTH = 7

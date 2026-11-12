@@ -197,18 +197,27 @@ class SourcesViewModel @JvmOverloads constructor(
      * Saves, then immediately pulls the channels so the viewer sees them, not a spinner. The first
      * provider, saved while none was, goes through Setup instead: [onSetup] opens its screen as soon
      * as it's saved, and [onDone] isn't called, since Setup's screen decides where to go next.
+     * [onChannels] hears either way once the channels are in (null) or why they didn't load.
      */
-    fun saveAndSync(draft: Source, onSetup: () -> Unit = {}, onDone: (Boolean) -> Unit = {}) {
+    fun saveAndSync(
+        draft: Source,
+        onSetup: () -> Unit = {},
+        onChannels: (failure: String?) -> Unit = {},
+        onDone: (Boolean) -> Unit = {},
+    ) {
         viewModelScope.launch {
             _ui.update { it.copy(adding = true, syncMessage = messages.of(RefreshMessages.Step.SavingSource)) }
-            val existing = graph.sourceRepository.observeAll().first()
-            val first = draft.id == 0L && !hasProvider(existing)
+            // Editing a provider is never the first.
+            val existing = if (draft.id == 0L) graph.sourceRepository.all() else null
+            val first = existing != null && !hasProvider(existing)
             // What a Setup closed before its channels came in left behind; it never was a provider.
             if (first) existing.forEach { graph.catalogRepository.deleteSource(it.id) }
             val id = graph.sourceRepository.save(draft)
             val saved = graph.sourceRepository.byId(id)
             if (saved == null) {
-                _ui.update { it.copy(adding = false, syncMessage = messages.of(RefreshMessages.Step.SaveFailed)) }
+                val failed = messages.of(RefreshMessages.Step.SaveFailed)
+                _ui.update { it.copy(adding = false, syncMessage = failed) }
+                onChannels(failed)
                 onDone(false)
                 return@launch
             }
@@ -217,12 +226,14 @@ class SourcesViewModel @JvmOverloads constructor(
                 val outcome = refresh.refresh(CatalogueRefresh.Trigger.Setup(saved))
                 // A failed login is back on the form, with why.
                 _ui.update { it.copy(adding = false, syncMessage = messages.of(outcome)) }
+                onChannels((outcome as? CatalogueRefresh.Outcome.AddFailed)?.reason)
                 return@launch
             }
 
             _ui.update { it.copy(syncMessage = messages.of(RefreshMessages.Step.LoadingChannels)) }
             val outcome = refresh.refresh(CatalogueRefresh.Trigger.ProviderAdded(saved))
             _ui.update { it.copy(adding = false, syncMessage = messages.of(outcome)) }
+            onChannels((outcome as? CatalogueRefresh.Outcome.AddFailed)?.reason)
             onDone(outcome is CatalogueRefresh.Outcome.ChannelsLoaded)
         }
     }

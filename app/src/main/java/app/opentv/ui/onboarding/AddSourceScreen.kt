@@ -94,10 +94,21 @@ fun AddSourceScreen(
             opened = option
         }
         AddOption.PHONE -> PhonePairingScreen(
-            // Even on a failed sync, leave the pairing screen: the source is already saved, so the
-            // home screen shows either the guide (success) or a recoverable error (failure) rather
-            // than stranding the user on an endless "Got it, connecting" spinner.
-            onReceived = { draft -> viewModel.saveAndSync(draft) { onFinished() } },
+            // The TV stays on "Got it" while the channels load, and the phone waits with it: a
+            // failed login is put right on the phone, which shows why, and the TV listens again.
+            // Once the channels are in, a first provider carries on in Setup, already past its
+            // first step; a later one goes to Home as before.
+            onReceived = { received ->
+                var setup = false
+                viewModel.saveAndSync(
+                    received.draft,
+                    onSetup = { setup = true },
+                    onChannels = { failure ->
+                        received.answer(failure)
+                        if (failure == null) if (setup) onSetup() else onFinished()
+                    },
+                )
+            },
             onCancel = { opened = null },
         )
         else -> ProviderForm(viewModel, onFinished, onSetup, editingSourceId = null, kind = open.kind)
