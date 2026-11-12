@@ -16,6 +16,7 @@ import app.opentv.data.repo.CatalogueRefresh
 import app.opentv.data.repo.ChannelLineup
 import app.opentv.data.repo.EpgRepository
 import app.opentv.data.repo.ViewerLibrary
+import app.opentv.data.repo.VodTitle
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -29,10 +30,13 @@ import kotlinx.coroutines.runBlocking
  * A [CatalogRepository] over an in-memory database, talking to a [FakePanel]. Close [db] after.
  * [viewerLibrary] records progress at [clock]; [lineup] folds its channels.
  */
-class TestCatalog(context: Context, private val clock: () -> Long = { 0L }) {
+class TestCatalog(
+    context: Context,
     val db: OpenTvDatabase = Room.inMemoryDatabaseBuilder(context, OpenTvDatabase::class.java)
         .allowMainThreadQueries()
-        .build()
+        .build(),
+    private val clock: () -> Long = { 0L },
+) {
     val panel = FakePanel()
     val viewerLibrary = ViewerLibrary(db, MutableStateFlow(1L), clock = clock)
     val catalog: CatalogRepository = CatalogRepository(
@@ -112,5 +116,13 @@ class TestCatalog(context: Context, private val clock: () -> Long = { 0L }) {
         db.sources().insert(PANEL_SOURCE)
         catalog.detectNewEpisodes(PANEL_SOURCE, catalog.fetchVod(PANEL_SOURCE, nowUtcMillis = 0).updated, 0)
         catalog.awaitBackground()
+    }
+
+    /** The names of the titles on [name]'s person page, in its order. */
+    suspend fun titlesWith(name: String): List<String> = catalog.titlesWithPerson(name).map {
+        when (it) {
+            is VodTitle.OfMovie -> it.movie.name
+            is VodTitle.OfSeries -> it.series.name
+        }
     }
 }
