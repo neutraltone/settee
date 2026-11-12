@@ -6,18 +6,28 @@
 package app.opentv
 
 import android.app.Application
+import android.view.View
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
+import app.opentv.core.ServiceLocator
+import app.opentv.data.db.OpenTvDatabase
 import app.opentv.ui.SourcesViewModel
 import app.opentv.ui.design.SetteeType
 import app.opentv.ui.design.Text
 import com.google.common.truth.Truth.assertThat
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.runBlocking
+import org.junit.After
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -39,16 +49,45 @@ class ProviderRoutesTest {
     val compose = createComposeRule()
 
     private lateinit var nav: NavHostController
+    private lateinit var view: View
+    private val device = DeviceKeyboard(compose) { view }
+    private val app = ApplicationProvider.getApplicationContext<Application>()
 
-    private fun setApp(start: String) {
-        val sources = SourcesViewModel(ApplicationProvider.getApplicationContext<Application>())
+    /** A panel answering a playlist, for the tests that save a provider. */
+    private val panel = FakePanel("" to "#EXTM3U\n#EXTINF:-1,BBC One\nhttp://example.com/1.ts\n")
+    private val graph = ServiceLocator.Graph(
+        app,
+        http = panel.http,
+        settingsFile = "provider-routes-test",
+        openDatabase = {
+            Room.inMemoryDatabaseBuilder(app, OpenTvDatabase::class.java).allowMainThreadQueries().build()
+        },
+    )
+
+    @After
+    fun close() = graph.database.close()
+
+    private fun setApp(start: String, sources: SourcesViewModel = SourcesViewModel(app)) {
         compose.setTvContent {
+            view = LocalView.current
             nav = rememberNavController()
             NavHost(nav, startDestination = start) {
                 providerRoutes(nav, sources)
-                composable(Routes.MAIN) { Text("Main", SetteeType.Body) }
+                composable(Routes.MAIN) { entry ->
+                    val tab by entry.shellTab()
+                    Text("Main on $tab", SetteeType.Body)
+                }
             }
         }
+    }
+
+    private fun route() = compose.runOnIdle { nav.currentDestination?.route }
+
+    /** Saves a playlist from its form, as the viewer would on the TV. */
+    private fun savePlaylist() {
+        compose.onNodeWithText("M3U playlist").performClick()
+        device.type("http://example.com/list.m3u", device.box(1))
+        compose.onNodeWithText("Save and load").performClick()
     }
 
     private fun onThePage() {
@@ -73,6 +112,58 @@ class ProviderRoutesTest {
         onThePage()
         compose.runOnIdle { nav.popBackStack() }
         assertThat(compose.runOnIdle { nav.currentDestination?.route }).isEqualTo(Routes.PROVIDERS)
+    }
+
+    @Test
+    fun `saving the first provider opens Setup, and Take me to Settee goes to Home`() {
+        setApp(start = Routes.ADD_SOURCE, sources = SourcesViewModel(app, graph))
+
+        savePlaylist()
+
+        compose.waitUntil(5_000) { route() == Routes.SETUP }
+        compose.waitUntil(5_000) { compose.onAllNodesWithText("Take me to Settee").fetchSemanticsNodes().isNotEmpty() }
+        compose.onNodeWithText("Take me to Settee").performClick()
+        compose.onNodeWithText("Main on HOME").assertExists()
+        // Nothing to go back to: Setup and the page are gone.
+        assertThat(compose.runOnIdle { nav.previousBackStackEntry }).isNull()
+    }
+
+    @Test
+    fun `Watch live TV now goes to Live TV with setup carrying on`() {
+        val guide = panel.hold("xmltv.php")
+        setApp(start = Routes.ADD_SOURCE, sources = SourcesViewModel(app, graph))
+
+        savePlaylist()
+        compose.waitUntil(5_000) { compose.onAllNodesWithText("Watch live TV now").fetchSemanticsNodes().isNotEmpty() }
+        compose.onNodeWithText("Watch live TV now").performClick()
+
+        compose.onNodeWithText("Main on LIVE").assertExists()
+        guide.release()
+    }
+
+    @Test
+    fun `a first provider whose login fails goes back to its form, which says why`() {
+        panel.replies[""] = "#EXTM3U\n"
+        setApp(start = Routes.ADD_SOURCE, sources = SourcesViewModel(app, graph))
+
+        savePlaylist()
+
+        compose.waitUntil(5_000) {
+            compose.onAllNodesWithText("No channels found", substring = true).fetchSemanticsNodes().isNotEmpty()
+        }
+        assertThat(route()).isEqualTo(Routes.ADD_SOURCE)
+        compose.onNodeWithText("Playlist URL").assertExists()
+        assertThat(runBlocking { graph.sourceRepository.observeAll().first() }).isEmpty()
+    }
+
+    @Test
+    fun `a provider added while there's one already doesn't open Setup`() {
+        runBlocking { graph.sourceRepository.save(PANEL_SOURCE.copy(id = 0)) }
+        setApp(start = Routes.ADD_SOURCE, sources = SourcesViewModel(app, graph))
+
+        savePlaylist()
+
+        compose.waitUntil(5_000) { route() == Routes.MAIN }
     }
 
     @Test

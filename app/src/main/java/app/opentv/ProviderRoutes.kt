@@ -5,12 +5,17 @@
  */
 package app.opentv
 
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.navigation.NavController
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
 import app.opentv.ui.SourcesViewModel
+import app.opentv.ui.Tab
 import app.opentv.ui.onboarding.AddSourceScreen
 import app.opentv.ui.settings.ProvidersScreen
+import app.opentv.ui.setup.SetupScreen
 
 /**
  * Opens the page for adding a provider. Every way in (Settings' Providers, Live TV's empty state)
@@ -31,6 +36,20 @@ fun NavGraphBuilder.providerRoutes(nav: NavController, sources: SourcesViewModel
                     popUpTo(Routes.ADD_SOURCE) { inclusive = true }
                 }
             },
+            onSetup = { nav.navigate(Routes.SETUP) },
+        )
+    }
+
+    composable(Routes.SETUP) {
+        val setup by sources.setup.collectAsState()
+        val liveTv by sources.liveEnabled.collectAsState()
+        val current = setup ?: return@composable
+        // Back to the form, which says why the login failed.
+        LaunchedEffect(current.loginFailed) { if (current.loginFailed) nav.popBackStack() }
+        SetupScreen(
+            setup = current,
+            onWatchLive = if (liveTv) ({ nav.leaveSetup(Tab.LIVE) }) else null,
+            onFinish = { nav.leaveSetup(Tab.HOME) },
         )
     }
 

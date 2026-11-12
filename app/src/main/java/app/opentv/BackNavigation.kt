@@ -39,6 +39,17 @@ fun NavController.selectShellTab(tab: Tab) {
 }
 
 /**
+ * Leaves Setup for the main screen on [tab], with nothing behind it: the provider page and Setup
+ * are done with, so Back from there leaves the app as it does from Home.
+ */
+fun NavController.leaveSetup(tab: Tab) {
+    navigate(Routes.MAIN) {
+        popUpTo(graph.id) { inclusive = true }
+    }
+    selectShellTab(tab)
+}
+
+/**
  * Opens the live player with the Live guide under it, for a channel that didn't start from the
  * guide (resume last channel on launch, a reminder), so Back lands somewhere you can pick the next.
  * A reminder can arrive on any screen; whatever was over the guide is closed.

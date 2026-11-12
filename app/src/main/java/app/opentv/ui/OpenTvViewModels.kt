@@ -92,8 +92,10 @@ import kotlinx.coroutines.withContext
  * a contributor tracking down "where does the channel list come from" finds it in one place.
  */
 
-class SourcesViewModel(app: Application) : AndroidViewModel(app) {
-    private val graph = ServiceLocator.get(app)
+class SourcesViewModel @JvmOverloads constructor(
+    app: Application,
+    private val graph: ServiceLocator.Graph = ServiceLocator.get(app),
+) : AndroidViewModel(app) {
 
     data class UiState(
         val sources: List<Source> = emptyList(),
@@ -185,15 +187,33 @@ class SourcesViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    /** Saves, then immediately pulls the channels so the viewer sees them, not a spinner. */
-    fun saveAndSync(draft: Source, onDone: (Boolean) -> Unit = {}) {
+    /** The running or latest Setup, for its screen. */
+    val setup: StateFlow<CatalogueRefresh.Setup?> = refresh.state.map { it.setup }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, refresh.state.value.setup)
+
+    val liveEnabled: StateFlow<Boolean> = graph.settings.liveEnabled
+
+    /**
+     * Saves, then immediately pulls the channels so the viewer sees them, not a spinner. The first
+     * provider, saved while none was, goes through Setup instead: [onSetup] opens its screen as soon
+     * as it's saved, and [onDone] isn't called, since Setup's screen decides where to go next.
+     */
+    fun saveAndSync(draft: Source, onSetup: () -> Unit = {}, onDone: (Boolean) -> Unit = {}) {
         viewModelScope.launch {
             _ui.update { it.copy(adding = true, syncMessage = messages.of(RefreshMessages.Step.SavingSource)) }
+            val first = draft.id == 0L && graph.sourceRepository.observeAll().first().isEmpty()
             val id = graph.sourceRepository.save(draft)
             val saved = graph.sourceRepository.byId(id)
             if (saved == null) {
                 _ui.update { it.copy(adding = false, syncMessage = messages.of(RefreshMessages.Step.SaveFailed)) }
                 onDone(false)
+                return@launch
+            }
+            if (first) {
+                onSetup()
+                val outcome = refresh.refresh(CatalogueRefresh.Trigger.Setup(saved))
+                // A failed login is back on the form, with why.
+                _ui.update { it.copy(adding = false, syncMessage = messages.of(outcome)) }
                 return@launch
             }
 

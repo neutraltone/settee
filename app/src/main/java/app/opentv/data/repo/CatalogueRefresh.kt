@@ -105,6 +105,8 @@ class CatalogueRefresh(
         val bar: Float = 0f,
         val done: List<StepDone> = emptyList(),
         val finished: Boolean = false,
+        /** The login failed, so setup stopped: the provider is gone, and the form says why. */
+        val loginFailed: Boolean = false,
     ) {
         /** The steps that didn't load, for the finished screen to say so. */
         val failed: List<SetupStep> get() = done.filter { it.failed }.map { it.step }
@@ -208,7 +210,7 @@ class CatalogueRefresh(
             // A provider that never loaded isn't there yet: the form's next try is the first provider
             // again, and a restart opens on the provider choice rather than an empty Home.
             catalog.deleteSource(source.id)
-            setup { copy(running = null) }
+            setup { copy(running = null, loginFailed = true) }
         }
         if (outcome is Outcome.ChannelsLoaded) {
             stepDone(StepDone(SetupStep.CHANNELS, outcome.channels))

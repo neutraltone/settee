@@ -194,6 +194,7 @@ class MainActivity : ComponentActivity() {
 object Routes {
     const val MAIN = "main"
     const val ADD_SOURCE = "add-source"
+    const val SETUP = "setup"
     const val PLAYER = "player/{channelId}"
     const val SEARCH = "search"
     const val EPG_SETTINGS = "epg-settings"
