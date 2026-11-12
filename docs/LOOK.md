@@ -225,6 +225,31 @@ One page: the welcome and the choice of provider together.
 - **The QR screen** keeps today's flow: the code, six digits, and an address for when the camera won't scan.
 - **The page on the phone** isn't designed yet. Give it the same colours and type.
 
+### Setting up
+
+Once a provider is saved while none was saved before (a fresh install, or after every provider was deleted), on the TV or from the phone, a setup screen comes up instead of Home, and stays until the library is ready to browse. Adding another provider later from Settings works as it does today, in the background.
+
+- **The screen:** the mark in its tile, a line of wordplay ("Plumping the cushions."), a line saying what's happening now, and a progress bar beneath it. Nothing else.
+- **The steps,** in order, each named only while it runs:
+  1. "Adding your channels", which also proves the login works. It always runs.
+  2. "Loading the TV guide", only when Live TV is switched on: the guide is only for live channels. If Live TV is switched on later, the guide arrives with the next refresh.
+  3. "Fetching movies", only for a provider that has them (Xtream) and only when Movies is switched on.
+  4. "Fetching shows", the same, for Shows.
+
+  Today movies and shows wait until someone opens their tab, so setup fetches them up front. The guide comes before them because the one viewer the order reaches is the one who leaves for Live TV once the channels are in: everyone else waits for every step, so the order doesn't change when setup finishes.
+- **A count once a step is done** replaces its line for a moment, where the app knows one: "1,204 channels added", "Guide found for 980 of your channels", "6,400 movies found", "1,100 shows found".
+- **Film details aren't waited for.** Genres, cast and directors are looked up one film at a time, which takes far too long on a big library. They carry on in the background, as they do today, and the finished screen says so.
+- **The bar covers the whole setup,** shared between the steps that apply to this provider. Within a step it moves only on real progress, such as guide feeds downloaded; a step that can't tell fills its share when it finishes. It never goes backwards, and never shows full before setup is done.
+- **The steps run one after another,** never two at once: two big downloads compete for a Stick's 1 GB and its network, and the bar's shares would mean less.
+- **Nothing to press while the channels load.** There's no Highlight, and OK, the arrows and Back do nothing; there's nothing to watch yet. The Home button still leaves, as Android always allows.
+- **Watch live TV now** appears once the channels are in, unless Live TV is switched off, when there's no button and setup holds until it's finished, with the Highlight on it: by then live TV really works, while movies and shows don't yet. It and Back go to Live TV, with the guide and the movies and shows carrying on in the background and channels filling in their programmes as the guide arrives. A big provider's guide can take minutes on a Stick, so nobody is held there. No button promises more than is ready, so there's no way to Home before setup is done. Once someone leaves, they hear how it went the way adding a provider in the background tells them today, and nothing new.
+- **If Settee is closed partway,** it doesn't come back to setup. With the channels in, it opens on Home, the guide arrives with the refresh at launch, and movies and shows when their tab is opened, as for any provider. Before the channels are in there's no provider yet, so it opens on the provider choice again.
+- **If the login fails,** it goes back to the form with the error, as today.
+- **If the guide or the movies fail,** setup still finishes. The finished screen says which part didn't load and that Settee will try again on the next refresh, worded as in [Voice](#voice). Movies and shows also load when their tab is first opened, as they do today, so a failed or skipped fetch, or Movies or Shows switched on later, still gets them.
+- **Finished:** "You're all set." with a summary line ("1,204 channels, 6,400 movies and 1,100 shows. Film details will keep filling in while you watch."), and one button, **Take me to Settee**, with the Highlight on it. OK leaves through the usual screen-change dip, onto Home with its first Highlight. Back does the same.
+- **The phone page** says "All done. Carry on on your TV." once the channels are in and the login is proven, so the viewer looks up at the setup screen. A failed login shows its error on the phone, as today.
+- **Motion:** the bar's fill may slide between values if it passes [Motion and cost](#motion-and-cost) on the Stick; otherwise it jumps.
+
 ## Recordings
 
 One list, with Coming up, Recorded and Series links as headings. Recordings have a channel logo but no artwork, so they're rows, not cards.
@@ -253,6 +278,7 @@ Set from measurements on a Fire TV Stick (`AFTSS`) in [#156](https://github.com/
 - **Rows at the edge:** rows run to the screen's edge, so partly hidden text sits outside the margin.
 - **Colour:** everything so far was judged on a monitor. Check colour and legibility on a real TV.
 - **Back to Home is slow:** rebuilding Home takes 330-510 ms on a Stick, over the 300 ms budget for a new screen.
+- **Setup's bar can't tell much yet:** no step reports how far through it is today, so without new reporting the bar moves in three jumps. Measure how long each step takes on a Stick with a big provider before sharing the bar out.
 
 ## What done means
 
