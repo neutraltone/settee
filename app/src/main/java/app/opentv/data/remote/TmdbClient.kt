@@ -52,8 +52,11 @@ sealed interface TmdbCheck {
     /** TMDB turned it down: a wrong or mistyped key. */
     data object Rejected : TmdbCheck
 
-    /** TMDB didn't answer, or answered with trouble of its own, so nothing is known about the key. */
-    data class Unreachable(val cause: Throwable) : TmdbCheck
+    /**
+     * TMDB didn't answer ([status] null), or answered [status] for trouble of its own, so nothing is
+     * known about the key.
+     */
+    data class Unreachable(val cause: Throwable, val status: Int? = null) : TmdbCheck
 }
 
 /**
@@ -210,7 +213,7 @@ class TmdbClient(
                 when {
                     response.isSuccessful -> TmdbCheck.Accepted
                     response.code == HTTP_UNAUTHORISED -> TmdbCheck.Rejected
-                    else -> TmdbCheck.Unreachable(IOException("TMDB answered ${response.code}"))
+                    else -> TmdbCheck.Unreachable(IOException("TMDB answered ${response.code}"), response.code)
                 }
             }
         } catch (e: IOException) {

@@ -8,6 +8,7 @@ package app.opentv.pairing
 import android.util.Log
 import app.opentv.R
 import app.opentv.core.ServerProblem
+import app.opentv.core.ViewerError
 import app.opentv.data.model.Source
 import app.opentv.data.model.SourceKind
 import java.io.BufferedReader
@@ -57,6 +58,13 @@ import kotlinx.coroutines.withTimeoutOrNull
  * - Requests from non-private addresses are refused outright.
  * - After [SESSION_TIMEOUT_MINUTES], or on success, the socket closes and the token is void.
  * - Five wrong codes and the session is burned.
+ *
+ * ## The TMDB Key
+ *
+ * The same server takes the viewer's TMDB Key ([Mode.TMDB_KEY]), from Settings › TMDB, Onboarding's
+ * TMDB step, or straight on from the first provider ([Mode.PROVIDER_THEN_TMDB_KEY]). The key asks
+ * for no code from the TV: the token in the QR code is enough to reach the paste box, and the worst a
+ * stolen link could do is save someone else's key, which the TV checks with TMDB first anyway.
  */
 class PairingServer(
     private val scope: CoroutineScope,
@@ -64,6 +72,18 @@ class PairingServer(
     /** The app's strings, for what the phone is told once the TV answers. */
     private val text: (Int) -> String,
 ) {
+
+    /** What the phone is sent to fill in. */
+    enum class Mode {
+        /** A provider's details. */
+        PROVIDER,
+
+        /** A provider's details, then, once its channels are in, the TMDB Key: Onboarding's first provider. */
+        PROVIDER_THEN_TMDB_KEY,
+
+        /** The TMDB Key alone. */
+        TMDB_KEY,
+    }
 
     data class Session(
         /** What the QR code encodes, e.g. `http://192.168.0.14:41234/?t=…` */
@@ -98,6 +118,17 @@ class PairingServer(
             }
         }
 
+        /**
+         * The phone sent a TMDB Key. The UI checks it with TMDB and [answer]s: the phone waits for
+         * that, so it can say whether the key was saved or why not.
+         */
+        class KeyReceived(val key: String, private val reply: CompletableDeferred<Reply>) : State {
+            /** [problem] is why the key wasn't saved, or null once it has been. */
+            fun answer(problem: ViewerError?) {
+                reply.complete(if (problem == null) Reply.KeySaved else Reply.KeyTurnedDown(problem))
+            }
+        }
+
         /** [code] is the exception's type, for the detail line, when one was behind it. */
         data class Failed(val problem: ServerProblem, val code: String? = null) : State
     }
@@ -110,6 +141,10 @@ class PairingServer(
 
         /** The TV left pairing before it answered. */
         data object Stopped : Reply
+
+        data object KeySaved : Reply
+
+        data class KeyTurnedDown(val problem: ViewerError) : Reply
     }
 
     private val _state = MutableStateFlow<State>(State.Idle)
@@ -128,11 +163,25 @@ class PairingServer(
     /** The session listening, to go back to when a login from the phone fails. */
     @Volatile private var session: Session? = null
 
+    /** What the phone is filling in; [Mode.PROVIDER_THEN_TMDB_KEY] becomes [Mode.TMDB_KEY] once the provider's in. */
+    @Volatile private var mode: Mode = Mode.PROVIDER
+
+    /** Whether this session started with a provider, so its TMDB Key page is Onboarding's. */
+    private val cameThroughProvider get() = startedAs == Mode.PROVIDER_THEN_TMDB_KEY
+
+    @Volatile private var startedAs: Mode = Mode.PROVIDER
+
     /** What the phone waiting on the TV will be told; null when none is waiting. */
     @Volatile private var pending: CompletableDeferred<Reply>? = null
 
-    fun start() {
+    /**
+     * Starts listening for [mode]. Already listening, it carries on with the same address, now for
+     * [mode]: the TMDB step takes over the server the first provider came through.
+     */
+    fun start(mode: Mode = Mode.PROVIDER) {
+        this.mode = mode
         if (running) return
+        startedAs = mode
         val opened = when (val opening = PhoneAddress.open()) {
             is PhoneAddress.Opening.Opened -> opening.address
             PhoneAddress.Opening.NoNetwork -> {
@@ -243,11 +292,17 @@ class PairingServer(
         when {
             method == "GET" && path.startsWith(FONTS_PATH) -> output.write(font(path.removePrefix(FONTS_PATH)))
 
+            method == "GET" && mode == Mode.TMDB_KEY -> output.write(
+                PairingHttp.httpResponse("200 OK", "text/html", keyPage(token, null)),
+            )
+
             method == "GET" -> output.write(
                 PairingHttp.httpResponse("200 OK", "text/html", PairingPage.form(token, null)),
             )
 
-            method == "POST" && path.startsWith("/submit") -> handleSubmit(output, body)
+            method == "POST" && path.startsWith("/submit") && mode != Mode.TMDB_KEY -> handleSubmit(output, body)
+
+            method == "POST" && path.startsWith("/key") && mode == Mode.TMDB_KEY -> handleKey(output, body)
 
             else -> output.write(
                 PairingHttp.httpResponse("405 Method Not Allowed", "text/plain", "No."),
@@ -334,6 +389,13 @@ class PairingServer(
             session?.let { _state.value = State.Listening(it) }
             return
         }
+        if (answer == Reply.AllDone && mode == Mode.PROVIDER_THEN_TMDB_KEY) {
+            // Straight on to the TMDB Key, on the same address, as the TV moves to its TMDB step.
+            mode = Mode.TMDB_KEY
+            output.write(PairingHttp.httpResponse("200 OK", "text/html", keyPage(token, null)))
+            session?.let { _state.value = State.Listening(it) }
+            return
+        }
         val page = when (answer) {
             Reply.AllDone -> PairingPage.message(
                 text(R.string.pairing_phone_all_done_title),
@@ -350,12 +412,68 @@ class PairingServer(
         }
         output.write(PairingHttp.httpResponse("200 OK", "text/html", page))
         output.flush()
-        // Nothing more to receive. Shut the door immediately rather than leaving a socket
-        // open on the user's network for the rest of the timeout.
+        closeDoor()
+    }
+
+    /** Nothing more to receive: shut it now, not leave a socket open on the network for the rest of the timeout. */
+    private fun closeDoor() {
         running = false
         address?.close()
         address = null
     }
+
+    private fun handleKey(output: java.io.OutputStream, body: String) {
+        val token = address?.token.orEmpty()
+        val key = PairingHttp.parseFormEncoded(body)["key"].orEmpty().trim()
+        if (key.isEmpty()) {
+            output.write(PairingHttp.httpResponse("200 OK", "text/html", keyPage(token, null)))
+            return
+        }
+        val reply = CompletableDeferred<Reply>()
+        pending = reply
+        _state.value = State.KeyReceived(key, reply)
+        // TMDB answers a check in a second or two; the wait is only for a TV that never answers.
+        val answer = runBlocking { withTimeoutOrNull(REPLY_TIMEOUT_MILLIS) { reply.await() } }
+        pending = null
+        val page = when (answer) {
+            Reply.KeySaved -> PairingPage.message(
+                text(R.string.pairing_phone_tmdb_saved_title),
+                text(R.string.pairing_phone_tmdb_saved_body),
+            )
+            is Reply.KeyTurnedDown -> {
+                output.write(PairingHttp.httpResponse("200 OK", "text/html", keyPage(token, answer.problem)))
+                // Still listening, with the same address, so the phone can paste another.
+                session?.let { _state.value = State.Listening(it) }
+                return
+            }
+            else -> PairingPage.message(
+                text(R.string.pairing_phone_stopped_title),
+                text(R.string.pairing_phone_stopped_body),
+            )
+        }
+        output.write(PairingHttp.httpResponse("200 OK", "text/html", page))
+        output.flush()
+        closeDoor()
+    }
+
+    /** The TMDB Key's page, the Onboarding version once a provider has come through first. */
+    private fun keyPage(token: String, problem: ViewerError?): String = PairingPage.tmdbKey(
+        token = token,
+        words = PairingPage.TmdbKeyWords(
+            title = text(R.string.pairing_phone_tmdb_title),
+            sub = text(R.string.pairing_phone_tmdb_sub),
+            optional = text(R.string.pairing_phone_tmdb_optional),
+            label = text(R.string.pairing_phone_tmdb_label),
+            send = text(R.string.pairing_phone_tmdb_send),
+            how = text(R.string.pairing_phone_tmdb_how),
+            step1 = text(R.string.pairing_phone_tmdb_step1),
+            step2 = text(R.string.pairing_phone_tmdb_step2),
+            step3 = text(R.string.pairing_phone_tmdb_step3),
+            step4 = text(R.string.pairing_phone_tmdb_step4),
+        ),
+        error = problem?.let { PairingPage.Error(it.sentence, it.detail) },
+        onboarding = cameThroughProvider,
+    )
 
     private companion object {
         const val TAG = "PairingServer"
