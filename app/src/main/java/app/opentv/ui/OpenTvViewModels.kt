@@ -48,7 +48,6 @@ import app.opentv.data.repo.coverStatuses
 import app.opentv.data.repo.movieCovers
 import app.opentv.data.repo.movies
 import app.opentv.data.repo.nowOn
-import app.opentv.data.repo.onNowAt
 import app.opentv.data.repo.series
 import app.opentv.data.repo.seriesCovers
 import app.opentv.data.repo.splitGenres
@@ -253,24 +252,21 @@ class ChannelsViewModel @JvmOverloads constructor(
     val selectedCategory = MutableStateFlow<String?>(null)
     val favouritesOnly = MutableStateFlow(false)
 
-    /** Provider filter for the live guide. null = every source. Only surfaced when there's >1 source. */
-    val selectedSource = MutableStateFlow<Long?>(null)
     private val nowTick = MutableStateFlow(System.currentTimeMillis())
 
     /**
-     * Every category of the chosen provider, folded into one entry per logical category, locked
-     * ones included: the Parental screen lists them all so they can be locked and unlocked.
+     * Every provider's categories, folded into one entry per logical category, locked ones
+     * included: the Parental screen lists them all so they can be locked and unlocked.
      */
-    @OptIn(ExperimentalCoroutinesApi::class)
-    val categoryGroups: StateFlow<List<CategoryGroup>> =
-        selectedSource.flatMapLatest { lineup.categoryGroups(it, includeLocked = true) }
-            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+    val categoryGroups: StateFlow<List<CategoryGroup>> = lineup.categoryGroups(includeLocked = true)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
-    /** The rail's view of categories: locked ones drop out until the session is unlocked. */
-    @OptIn(ExperimentalCoroutinesApi::class)
-    val visibleCategoryGroups: StateFlow<List<CategoryGroup>> =
-        selectedSource.flatMapLatest { lineup.categoryGroups(it) }
-            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+    /**
+     * Live TV's Categories Sidebar: every provider's categories in one list, with no provider
+     * switch. Locked ones drop out until the session is unlocked.
+     */
+    val visibleCategoryGroups: StateFlow<List<CategoryGroup>> = lineup.categoryGroups()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     /**
      * One row on screen = one *logical* channel.
@@ -318,17 +314,33 @@ class ChannelsViewModel @JvmOverloads constructor(
         _guideDayOffset.value = 0
     }
 
-    val windowStartMillis: StateFlow<Long> =
-        combine(nowTick.map { it - it % HALF_HOUR_MILLIS }, _guideDayOffset) { base, day ->
-            // Today tracks the current half-hour so live is always on screen; a future day starts
-            // at that day's local midnight, so the whole day's schedule is browsable and drifts
-            // with real time only on the "today" page.
-            if (day <= 0) base else startOfLocalDay(base) + day * DAY_MILLIS
-        }.stateIn(
-            viewModelScope,
-            SharingStarted.WhileSubscribed(5_000),
-            System.currentTimeMillis().let { it - it % HALF_HOUR_MILLIS },
-        )
+    /**
+     * The day the guide shows, as start and end. Today starts at the current half-hour so live is
+     * always on screen; a later day starts at its local midnight, so its whole schedule is there.
+     * Each day ends where the next starts, so paging Right past today's last programme carries on
+     * from midnight rather than going back over the morning. One flow, so the two never disagree.
+     */
+    private val guideWindow: StateFlow<Pair<Long, Long>> =
+        combine(nowTick.map { it - it % HALF_HOUR_MILLIS }, _guideDayOffset, ::guideWindowOf)
+            .stateIn(
+                viewModelScope,
+                SharingStarted.WhileSubscribed(5_000),
+                guideWindowOf(System.currentTimeMillis().let { it - it % HALF_HOUR_MILLIS }, 0),
+            )
+
+    private fun guideWindowOf(halfHour: Long, day: Int): Pair<Long, Long> {
+        val midnight = startOfLocalDay(halfHour)
+        val start = if (day <= 0) halfHour else midnight + day * DAY_MILLIS
+        return start to midnight + (day.coerceAtLeast(0) + 1) * DAY_MILLIS
+    }
+
+    /** The guide's left edge, where programme cells are measured from. */
+    val windowStartMillis: StateFlow<Long> = guideWindow.map { it.first }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), guideWindow.value.first)
+
+    /** Where the guide's day ends: today's at midnight, where tomorrow's starts. */
+    val windowEndMillis: StateFlow<Long> = guideWindow.map { it.second }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), guideWindow.value.second)
 
     private fun startOfLocalDay(millis: Long): Long {
         val cal = java.util.Calendar.getInstance()
@@ -342,12 +354,12 @@ class ChannelsViewModel @JvmOverloads constructor(
 
     /** Which Channels the guide shows now; channel up and down follow it from the guide. */
     private val guideScope: Flow<LineupScope> =
-        combine(selectedCategory, favouritesOnly, selectedSource, ::guideScopeOf).distinctUntilChanged()
+        combine(selectedCategory, favouritesOnly, ::guideScopeOf).distinctUntilChanged()
 
-    private fun guideScopeOf(category: String?, favs: Boolean, source: Long?): LineupScope = when {
-        favs -> LineupScope.Favourites(source)
-        category != null -> LineupScope.Group(category, source)
-        else -> LineupScope.All(source)
+    private fun guideScopeOf(category: String?, favs: Boolean): LineupScope = when {
+        favs -> LineupScope.Favourites()
+        category != null -> LineupScope.Group(category)
+        else -> LineupScope.All()
     }
 
     /** From Search, channel up and down go through every Channel rather than the results. */
@@ -356,7 +368,7 @@ class ChannelsViewModel @JvmOverloads constructor(
     /** Channel up and down follow the guide's current scope once you play from it. */
     fun zapFromGuide() {
         // Set before the player opens, not in a coroutine that might land after it reads the scope.
-        lineup.zapFrom(guideScopeOf(selectedCategory.value, favouritesOnly.value, selectedSource.value))
+        lineup.zapFrom(guideScopeOf(selectedCategory.value, favouritesOnly.value))
     }
 
     /**
@@ -372,12 +384,12 @@ class ChannelsViewModel @JvmOverloads constructor(
      */
     @OptIn(ExperimentalCoroutinesApi::class)
     private val programmeIndex: StateFlow<Map<String, List<Programme>>> =
-        // windowStartMillis is a StateFlow, which already conflates equal values — an explicit
+        // guideWindow is a StateFlow, which already conflates equal values — an explicit
         // distinctUntilChanged() on it is a no-op (and a build error under our warnings-as-errors).
-        windowStartMillis
-            .flatMapLatest { windowStart ->
+        guideWindow
+            .flatMapLatest { (windowStart, windowEnd) ->
                 graph.epgRepository
-                    .observeWindow(windowStart, windowStart + GUIDE_LOOKAHEAD_MILLIS)
+                    .observeWindow(windowStart, windowEnd)
                     .map { programmes -> programmes.groupBy { it.epgChannelId } }
             }
             .flowOn(Dispatchers.Default)
@@ -387,8 +399,24 @@ class ChannelsViewModel @JvmOverloads constructor(
     @Volatile
     private var guideBuilt = false
 
+    private val _rowsBuilt = MutableStateFlow(false)
+
+    /**
+     * Whether [guideRows] has been built at least once. Until then an empty list means still loading;
+     * after it, that the Favourites or category on show has nothing in it (every channel hidden).
+     */
+    val rowsBuilt: StateFlow<Boolean> = _rowsBuilt.asStateFlow()
+
+    /**
+     * The guide's rows with the scope (All channels, Favourites, a category) they were built for,
+     * in one value, so the guide can tell a new category's rows from the old one's and start it
+     * at the top: a list kept by key would otherwise open it wherever the old channel was.
+     */
+    @androidx.compose.runtime.Immutable
+    data class GuideRows(val scope: LineupScope? = null, val rows: List<Row> = emptyList())
+
     @OptIn(ExperimentalCoroutinesApi::class)
-    val rows: StateFlow<List<Row>> =
+    val guideRows: StateFlow<GuideRows> =
         guideScope
             .flatMapLatest { scope ->
                 // Combine the scope's Channels with the shared, already-grouped programme index.
@@ -406,7 +434,7 @@ class ChannelsViewModel @JvmOverloads constructor(
                     // the one-time heavy load, and leaking it per-category read as a stuck "100%".
                     val firstBuild = !guideBuilt
                     if (firstBuild) StatusBus.set(sizeMessage(channels.size), 0f)
-                    buildRows(channels, byEpgChannel, now, reportProgress = firstBuild)
+                    GuideRows(scope, buildRows(channels, byEpgChannel, now, reportProgress = firstBuild))
                 }
             }
             // Grouping thousands of channels against a 12-hour, all-feeds programme window is heavy
@@ -420,8 +448,9 @@ class ChannelsViewModel @JvmOverloads constructor(
                     guideBuilt = true
                     StatusBus.set(null)
                 }
+                _rowsBuilt.value = true
             }
-            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), GuideRows())
 
     private fun buildRows(
         channels: List<LineupChannel>,
@@ -471,7 +500,7 @@ class ChannelsViewModel @JvmOverloads constructor(
      * Whether the catalogue has any channels yet, as a tri-state that stops the home screen
      * spinning forever when a provider fails to load:
      *  - null  → the count query hasn't returned; still checking, keep showing the loader.
-     *  - true  → channels are on disk, so an empty [rows] just means the guide is still building.
+     *  - true  → channels are on disk, so an empty [guideRows] just means the guide is still building.
      *  - false → confirmed empty; if a provider is configured the last sync failed or returned
      *            nothing, so the screen shows a recoverable error instead of an endless spinner.
      */
@@ -488,13 +517,6 @@ class ChannelsViewModel @JvmOverloads constructor(
     fun selectFavourites() {
         favouritesOnly.value = true
         selectedCategory.value = null
-    }
-
-    /** Switch the live guide's provider filter; the category resets since categories differ per source. */
-    fun selectSource(sourceId: Long?) {
-        selectedSource.value = sourceId
-        selectedCategory.value = null
-        favouritesOnly.value = false
     }
 
     // ---- Dedicated channel search --------------------------------------------------------------
@@ -556,58 +578,41 @@ class ChannelsViewModel @JvmOverloads constructor(
 
     // ---- Channel manager: browse by category ---------------------------------------------------
     // Deliberately independent of the guide's `selectedCategory`/`rows`: browsing here never moves
-    // what Live TV is showing. Two differences from the guide feed — it can be scoped to a single
-    // provider (cardiodoc's "keep sources separate"), and it includes HIDDEN channels so they can
-    // be brought back. Always scoped to one category, never the whole catalogue, so the right pane
-    // stays a size a remote can scroll (no flat 20k-row list).
+    // what Live TV is showing. It includes HIDDEN channels so they can be brought back, and is
+    // always scoped to one category, never the whole catalogue, so the list stays a size a remote
+    // can scroll (no flat 20k-row list).
 
-    /** Provider filter for the manager. null = every source ("All sources"). */
-    val managerSelectedSource = MutableStateFlow<Long?>(null)
-
-    /** The [CategoryGroup.key] whose channels fill the manager's right pane; null = none picked. */
+    /** The [CategoryGroup.key] whose channels fill the manager's list; null = none picked. */
     val managerSelectedCategory = MutableStateFlow<String?>(null)
 
-    /** Providers, so the manager can offer a source filter (shown only when there's more than one). */
+    /** Providers, for naming who records a programme in its details. */
     val sources: StateFlow<List<Source>> =
         graph.sourceRepository.observeAll()
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     /**
-     * The manager's category rail: like [categoryGroups] but scoped to [managerSelectedSource], and
-     * NOT filtered by the adult/hidden-category setting — the manager shows every category so a
-     * hidden one's channels can still be reached and un-hidden.
+     * The manager's Categories Sidebar: every provider's categories, Parental-Locked ones too. The
+     * lock hides them from browsing, not from the screens that manage channels (GLOSSARY).
      */
-    @OptIn(ExperimentalCoroutinesApi::class)
-    val managerCategoryGroups: StateFlow<List<CategoryGroup>> =
-        managerSelectedSource.flatMapLatest { lineup.categoryGroups(it, includeLocked = true) }
-            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+    val managerCategoryGroups: StateFlow<List<CategoryGroup>> get() = categoryGroups
 
     /**
-     * Channels in the selected manager category (and source), grouped into [Row]s exactly like the
-     * guide — but including hidden channels. Empty until a category is picked. Reuses [buildRows]
-     * with no EPG window (the manager needs logo/name/state, not now/next).
+     * Channels in the selected manager category, grouped into [Row]s exactly like the guide, but
+     * including hidden channels. Empty until a category is picked. No guide window: the manager
+     * needs logo, name and state, not now and next.
      */
     @OptIn(ExperimentalCoroutinesApi::class)
     val managerRows: StateFlow<List<Row>> =
-        combine(managerSelectedSource, managerSelectedCategory) { source, key -> source to key }
-            .distinctUntilChanged()
-            .flatMapLatest { (source, key) ->
+        managerSelectedCategory
+            .flatMapLatest { key ->
                 if (key == null) {
                     flowOf(emptyList())
                 } else {
-                    lineup.channels(LineupScope.ManageGroup(key, source)).map { channels ->
-                        channels.map { Row(it) }
-                    }
+                    lineup.channels(LineupScope.ManageGroup(key)).map { channels -> channels.map { Row(it) } }
                 }
             }
             .flowOn(Dispatchers.Default)
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
-
-    /** Switch the manager's provider filter; the category resets since categories differ per source. */
-    fun selectManagerSource(sourceId: Long?) {
-        managerSelectedSource.value = sourceId
-        managerSelectedCategory.value = null
-    }
 
     fun selectManagerCategory(key: String?) {
         managerSelectedCategory.value = key
@@ -631,11 +636,11 @@ class ChannelsViewModel @JvmOverloads constructor(
         }
     }
 
-    private companion object {
-        const val GUIDE_LOOKAHEAD_MILLIS = 24 * 60 * 60 * 1000L // a full day fits the grid
-        const val DAY_MILLIS = 24 * 60 * 60 * 1000L
-        const val GUIDE_MAX_DAYS = 6 // browse up to a week out, matching typical XMLTV depth
-        const val HALF_HOUR_MILLIS = 30 * 60 * 1000L
+    companion object {
+        /** How many days ahead the guide goes: up to a week out, matching typical XMLTV depth. */
+        const val GUIDE_MAX_DAYS = 6
+        private const val DAY_MILLIS = 24 * 60 * 60 * 1000L
+        private const val HALF_HOUR_MILLIS = 30 * 60 * 1000L
     }
 }
 
@@ -1348,10 +1353,8 @@ class HomeViewModel @JvmOverloads constructor(
     private suspend fun liveNow(preview: LivePreview, channel: LineupChannel?, now: Long): LiveNow {
         // The Channel's guide, as the guide itself picks it.
         val guideId = channel?.let { lineup.guideId(it) } ?: return LiveNow(preview, null, null)
-        val shows = graph.epgRepository.upcoming(guideId, now, limit = 2)
-        val onNow = shows.onNowAt(now)
-        val next = if (onNow != null) shows.getOrNull(1) else shows.firstOrNull()
-        return LiveNow(preview, onNow?.title, next?.title)
+        val shows = graph.epgRepository.nowAndNext(guideId, now)
+        return LiveNow(preview, shows.now?.title, shows.next?.title)
     }
 
     val state: StateFlow<HomeState?> = combine(

@@ -34,16 +34,6 @@ class AppSettings private constructor(context: Context, fileName: String = "open
 
     private val addonJson = Json { ignoreUnknownKeys = true }
 
-    /**
-     * How the live-TV channel list is laid out: the scrolling EPG time-[ChannelLayout.GRID], or a
-     * compact one-channel-per-row [ChannelLayout.LIST] (logo, name, now/next) for people who find
-     * the full grid busy. Defaults to the grid.
-     */
-    enum class ChannelLayout { GRID, LIST }
-
-    private val _channelLayout = MutableStateFlow(readChannelLayout())
-    val channelLayout: StateFlow<ChannelLayout> = _channelLayout.asStateFlow()
-
     /** Whether the selected channel plays live inside the guide's preview pane. */
     private val _guidePreviewVideo = MutableStateFlow(prefs.getBoolean(KEY_PREVIEW_VIDEO, true))
     val guidePreviewVideo: StateFlow<Boolean> = _guidePreviewVideo.asStateFlow()
@@ -200,11 +190,6 @@ class AppSettings private constructor(context: Context, fileName: String = "open
         val digest = java.security.MessageDigest.getInstance("SHA-256")
         val bytes = digest.digest("opentv-pin::$pin".toByteArray())
         return bytes.joinToString("") { "%02x".format(it) }
-    }
-
-    fun setChannelLayout(layout: ChannelLayout) {
-        prefs.edit { putString(KEY_CHANNEL_LAYOUT, layout.name) }
-        _channelLayout.value = layout
     }
 
     fun setGuidePreviewVideo(enabled: Boolean) {
@@ -375,10 +360,6 @@ class AppSettings private constructor(context: Context, fileName: String = "open
         prefs.edit { putInt(KEY_RESIZE_MODE, mode) }
         _playerResizeMode.value = mode
     }
-
-    private fun readChannelLayout(): ChannelLayout =
-        runCatching { ChannelLayout.valueOf(prefs.getString(KEY_CHANNEL_LAYOUT, null) ?: "") }
-            .getOrDefault(ChannelLayout.GRID)
 
     // ---- Recording ---------------------------------------------------------------------------
 
@@ -558,7 +539,6 @@ class AppSettings private constructor(context: Context, fileName: String = "open
     }.getOrNull() ?: emptyList()
 
     companion object {
-        private const val KEY_CHANNEL_LAYOUT = "channel_layout"
         private const val KEY_PREVIEW_VIDEO = "guide_preview_video"
         private const val KEY_PREVIEW_SOUND = "guide_preview_sound"
         private const val KEY_PIN_HASH = "parental_pin_hash"

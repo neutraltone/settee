@@ -123,9 +123,9 @@ class PlayerScreenOptionsTest {
     fun `Record now records the Quality that's playing`() {
         showPlaying("10", "ITV")
         openList()
-        waitInList("● Record now")
+        waitInList("Record now")
 
-        compose.onNode(inListMatcher("● Record now")).performClick()
+        compose.onNode(inListMatcher("Record now")).performClick()
 
         compose.waitUntil(TIMEOUT_MILLIS) {
             shadowOf(Looper.getMainLooper()).idle()
@@ -183,7 +183,7 @@ class PlayerScreenOptionsTest {
 
         openList()
 
-        waitInList("■ Stop recording")
+        waitInList("Stop recording")
     }
 
     @Test
@@ -205,7 +205,7 @@ class PlayerScreenOptionsTest {
 
         openList()
 
-        waitInList("■ Stop recording")
+        waitInList("Stop recording")
     }
 
     private companion object {

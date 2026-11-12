@@ -43,7 +43,7 @@ class VoiceStringsTest {
     }
 
     private val emptyStateKeys = setOf(
-        "home_empty_hint", "guide_no_channels_title", "guide_add_provider_desc", "guide_no_favourites_desc",
+        "home_empty_hint", "guide_no_channels_title", "guide_add_provider_desc", "guide_no_favourites_hint",
         "guide_no_info", "guide_no_info_channel", "vod_no_movies_provider", "vod_no_movies_add",
         "vod_no_shows_provider", "vod_no_shows_add", "vod_empty_category_movies", "vod_empty_category_shows",
         "channels_manager_empty_category", "channels_manager_no_channels", "channels_manager_no_match",

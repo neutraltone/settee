@@ -7,11 +7,8 @@ package app.opentv.ui.channels
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -23,18 +20,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.text.input.rememberTextFieldState
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Star
-import androidx.compose.material.icons.outlined.StarOutline
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Switch
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -43,12 +30,12 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
@@ -56,192 +43,160 @@ import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextRange
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import app.opentv.R
 import app.opentv.data.model.shownName
 import app.opentv.ui.ChannelsViewModel
+import app.opentv.ui.design.CategoriesSidebar
+import app.opentv.ui.design.HighlightStyle
+import app.opentv.ui.design.HighlightSurface
+import app.opentv.ui.design.Message
+import app.opentv.ui.design.SetteeColors
+import app.opentv.ui.design.SetteeShapes
+import app.opentv.ui.design.SetteeSpace
+import app.opentv.ui.design.SetteeType
+import app.opentv.ui.design.SidebarEntry
+import app.opentv.ui.design.Text
+import app.opentv.ui.options.ItemOption
+import app.opentv.ui.options.OptionsPanel
 import coil.compose.AsyncImage
-import kotlinx.coroutines.delay
 
 /**
- * Channel manager: browse your channels by category and, for each, favourite it or hide it from
- * the guide.
+ * The channel manager (docs/LOOK.md, Live TV): which channels show in the guide.
  *
- * Two panes. LEFT is Search plus a scrollable category list (with a source filter when more than
- * one provider is configured, so a second source can be kept separate rather than merged). RIGHT
- * is the channels in the selected category — each a logo, name, favourite star and a show/hide
- * switch. Hidden channels appear here too, greyed, so they can be brought back; the guide never
- * shows them, but the manager shows everything.
+ * The Categories Sidebar is always open on the left, with Search for channels at the top and every
+ * category under it, Parental-Locked ones included: the lock hides categories from browsing, not
+ * from managing (GLOSSARY). Beside it, the picked category's channels, hidden ones too, so they
+ * can be brought back. Each row is one target: OK switches it between Showing and Hidden, and
+ * holding Select opens its options, which is where Favourite is. Back leaves.
  *
- * The right pane is always scoped to one category (and optionally one source): a flat list of a
- * 20,000-channel provider is unscrollable on a remote, so browsing is by category by design.
+ * The list is always one category's (or a search's): a flat list of a 20,000-channel provider is
+ * unscrollable on a remote, so browsing is by category by design.
  */
 @Composable
 fun ChannelManagerScreen(onBack: () -> Unit, viewModel: ChannelsViewModel = viewModel()) {
-    val sources by viewModel.sources.collectAsState()
     val categoryGroups by viewModel.managerCategoryGroups.collectAsState()
-    val selectedSource by viewModel.managerSelectedSource.collectAsState()
     val selectedCategory by viewModel.managerSelectedCategory.collectAsState()
     val browseRows by viewModel.managerRows.collectAsState()
 
-    // Search is one option among browse-by-category: the "Search" rail entry flips the right pane
-    // to a search box in place of the channel list.
-    var searchMode by remember { mutableStateOf(false) }
+    var searching by remember { mutableStateOf(false) }
     val query = rememberTextFieldState()
     val searchResults by viewModel.managerResults.collectAsState()
     LaunchedEffect(query) { snapshotFlow { query.text.toString() }.collect { viewModel.setManagerQuery(it) } }
 
-    // Focus handoff between the panes, mirroring LiveScreen's rail: the active left entry (the
-    // selected category, or Search) carries this requester, so LEFT from a channel row lands
-    // straight back on it. The rail is always visible, so if the requester's node is scrolled out
-    // this returns false and ordinary left-navigation still reaches a visible entry.
-    val railFocusRequester = remember { FocusRequester() }
-    val onExitLeftToRail: () -> Boolean = {
-        runCatching { railFocusRequester.requestFocus() }.isSuccess
-    }
+    val sidebar = remember { FocusRequester() }
+    val currentRow = remember { FocusRequester() }
+    // The row whose options are open, for Favourite.
+    var optionsFor by remember { mutableStateOf<ChannelsViewModel.Row?>(null) }
 
     BackHandler { onBack() }
 
-    // Open on the first category so channels show straight away — the whole complaint was that the
-    // manager never displayed any. Re-runs when the category set changes (e.g. after switching
-    // source, which clears the selection) so a newly-chosen source immediately shows its channels.
-    LaunchedEffect(categoryGroups, searchMode) {
-        if (!searchMode && selectedCategory == null && categoryGroups.isNotEmpty()) {
+    // Open on the first category, so channels show straight away.
+    LaunchedEffect(categoryGroups) {
+        if (selectedCategory == null && categoryGroups.isNotEmpty()) {
             viewModel.selectManagerCategory(categoryGroups.first().key)
         }
     }
-    // One-time: drop focus onto the rail once there is something to focus. Guarded so an incidental
-    // category re-emit later (a background sync) never yanks focus out of the channel list.
-    var initialFocusDone by remember { mutableStateOf(false) }
-    LaunchedEffect(categoryGroups, searchMode) {
-        if (!initialFocusDone && !searchMode && categoryGroups.isNotEmpty()) {
-            delay(80)
-            runCatching { railFocusRequester.requestFocus() }
-            initialFocusDone = true
+    // Once there's something to highlight, the sidebar takes it, on the current category. Only once,
+    // so a background sync re-listing the categories never pulls the Highlight out of the list.
+    var landed by remember { mutableStateOf(false) }
+    LaunchedEffect(categoryGroups.isNotEmpty(), selectedCategory != null) {
+        if (landed || categoryGroups.isEmpty() || selectedCategory == null) return@LaunchedEffect
+        // A frame resumes this before it recomposes, so the current row only wears its requester
+        // a frame later; asked sooner, the sidebar falls back to its first item, Find a category.
+        repeat(2) { withFrameNanos {} }
+        // The row itself, not the sidebar: Android hands a window's first focus to its first view,
+        // Find a category's text box, which already counts as being in the sidebar.
+        runCatching { currentRow.requestFocus() }
+        landed = true
+    }
+
+    val findHint = stringResource(R.string.categories_find)
+    Row(Modifier.fillMaxSize().background(SetteeColors.Background)) {
+        CategoriesSidebar(
+            pinned = listOf(SidebarEntry(SEARCH, stringResource(R.string.channels_manager_search))),
+            entries = remember(categoryGroups) { categoryGroups.map { SidebarEntry(it.key, it.label) } },
+            current = if (searching) SEARCH else selectedCategory ?: SEARCH,
+            onPick = { key ->
+                searching = key == SEARCH
+                if (!searching) viewModel.selectManagerCategory(key)
+            },
+            findBox = { state, box -> DeviceTextField(state, findHint, FIND_MAX_LENGTH, box) },
+            modifier = Modifier
+                .background(SetteeColors.Surface)
+                .padding(start = SetteeSpace.ScreenSide / 2)
+                .focusRequester(sidebar),
+            currentRow = currentRow,
+        )
+        Column(
+            Modifier
+                .weight(1f)
+                .fillMaxHeight()
+                .padding(horizontal = SetteeSpace.ScreenSide, vertical = SetteeSpace.ScreenTopBottom),
+        ) {
+            Text(stringResource(R.string.channels_manager_title), SetteeType.ScreenTitle)
+            Spacer(Modifier.height(SetteeSpace.RowGap))
+            val toggle: (ChannelsViewModel.Row) -> Unit = { row -> viewModel.setRowHidden(row, !row.hidden) }
+            if (searching) {
+                ChannelManagerSearchPane(
+                    query = query,
+                    results = searchResults,
+                    onToggle = toggle,
+                    onOptions = { optionsFor = it },
+                    onExitLeft = { runCatching { sidebar.requestFocus() }.isSuccess },
+                )
+            } else {
+                CategoryPane(categoryGroups.isEmpty(), selectedCategory != null, browseRows, toggle) { optionsFor = it }
+            }
         }
     }
 
-    Column(Modifier.fillMaxSize()) {
-        // Top bar: title + Done (Back also exits via BackHandler). Kept out of the two panes so
-        // pressing RIGHT from a category lands in the channel list, not on this button.
-        Row(
-            Modifier.fillMaxWidth().padding(horizontal = 28.dp, vertical = 16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(stringResource(R.string.channels_manager_title), style = MaterialTheme.typography.headlineMedium)
-            Spacer(Modifier.weight(1f))
-            OutlinedButton(onClick = onBack) { Text(stringResource(R.string.common_done)) }
-        }
-
-        Row(Modifier.weight(1f).fillMaxWidth()) {
-            // ---- LEFT pane: Search, an optional source filter, and the category list ----------
-            LazyColumn(
-                modifier = Modifier
-                    .width(280.dp)
-                    .fillMaxHeight()
-                    .background(MaterialTheme.colorScheme.surface),
-                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 12.dp),
-                verticalArrangement = Arrangement.spacedBy(2.dp),
-            ) {
-                item(contentType = "entry") {
-                    RailEntry(
-                        label = stringResource(R.string.nav_search),
-                        selected = searchMode,
-                        onClick = { searchMode = true },
-                        modifier = if (searchMode) Modifier.focusRequester(railFocusRequester) else Modifier,
-                    )
-                }
-
-                // Source filter — only when there's more than one provider, so a second source can
-                // be viewed on its own instead of merged into everything else.
-                if (sources.size > 1) {
-                    item(contentType = "label") {
-                        SectionLabel(stringResource(R.string.channels_manager_source_header))
-                    }
-                    item(contentType = "entry") {
-                        RailEntry(
-                            label = stringResource(R.string.channels_manager_all_sources),
-                            selected = selectedSource == null,
-                            onClick = {
-                                searchMode = false
-                                viewModel.selectManagerSource(null)
-                            },
-                        )
-                    }
-                    items(sources, key = { "src-${it.id}" }, contentType = { "entry" }) { source ->
-                        RailEntry(
-                            label = source.name,
-                            selected = selectedSource == source.id,
-                            onClick = {
-                                searchMode = false
-                                viewModel.selectManagerSource(source.id)
-                            },
-                        )
-                    }
-                }
-
-                item(contentType = "label") {
-                    SectionLabel(stringResource(R.string.channels_manager_categories_header))
-                }
-                items(categoryGroups, key = { "cat-${it.key}" }, contentType = { "entry" }) { group ->
-                    val groupSelected = !searchMode && selectedCategory == group.key
-                    RailEntry(
-                        label = group.label,
-                        selected = groupSelected,
-                        onClick = {
-                            searchMode = false
-                            viewModel.selectManagerCategory(group.key)
-                        },
-                        modifier = if (groupSelected) Modifier.focusRequester(railFocusRequester) else Modifier,
-                    )
-                }
-            }
-
-            // ---- RIGHT pane: the search UI, or the selected category's channels ---------------
-            Column(
-                Modifier
-                    .weight(1f)
-                    .fillMaxHeight()
-                    .padding(horizontal = 24.dp, vertical = 12.dp),
-            ) {
-                if (searchMode) {
-                    ChannelManagerSearchPane(
-                        query = query,
-                        results = searchResults,
-                        onToggleHidden = { row, hidden -> viewModel.setRowHidden(row, !hidden) },
-                        onToggleFavourite = { viewModel.toggleFavourite(it) },
-                        onExitLeft = onExitLeftToRail,
-                    )
-                } else {
-                    BrowsePane(
-                        hasCategories = categoryGroups.isNotEmpty(),
-                        categorySelected = selectedCategory != null,
-                        rows = browseRows,
-                        onExitLeft = onExitLeftToRail,
-                        onToggleHidden = { row, hidden -> viewModel.setRowHidden(row, !hidden) },
-                        onToggleFavourite = { viewModel.toggleFavourite(it) },
-                    )
-                }
-            }
-        }
+    optionsFor?.let { row ->
+        OptionsPanel(
+            title = row.primary.shownName,
+            options = listOf(if (row.favourite) ItemOption.RemoveFavourite else ItemOption.AddFavourite),
+            onChoose = {
+                viewModel.toggleFavourite(row)
+                optionsFor = null
+            },
+            onDismiss = { optionsFor = null },
+        )
     }
 }
 
-/** Search: a box at the top, its matches below it, each with the same star and switch. */
+/** The picked category's channels, hidden ones included, so they can be shown again. */
+@Composable
+private fun CategoryPane(
+    noCategories: Boolean,
+    picked: Boolean,
+    rows: List<ChannelsViewModel.Row>,
+    onToggle: (ChannelsViewModel.Row) -> Unit,
+    onOptions: (ChannelsViewModel.Row) -> Unit,
+) {
+    when {
+        noCategories -> Message(stringResource(R.string.channels_manager_no_channels))
+        !picked -> Unit
+        rows.isEmpty() -> Message(stringResource(R.string.channels_manager_empty_category))
+        else -> ManagerRows(rows, onToggle, onOptions)
+    }
+}
+
+/** Search: a box at the top, its matches below it, each the same one-target row. */
 @Composable
 internal fun ChannelManagerSearchPane(
     query: TextFieldState,
     results: List<ChannelsViewModel.Row>,
-    onToggleHidden: (ChannelsViewModel.Row, Boolean) -> Unit,
-    onToggleFavourite: (ChannelsViewModel.Row) -> Unit,
+    onToggle: (ChannelsViewModel.Row) -> Unit,
+    onOptions: (ChannelsViewModel.Row) -> Unit,
     onExitLeft: () -> Boolean,
 ) {
     val searchBox = remember { FocusRequester() }
-    LaunchedEffect(Unit) { runCatching { searchBox.requestFocus() } }
+    LaunchedEffect(Unit) {
+        withFrameNanos {}
+        runCatching { searchBox.requestFocus() }
+    }
     val typed = query.text.toString()
     Column(Modifier.fillMaxSize()) {
         DeviceTextField(
@@ -249,8 +204,8 @@ internal fun ChannelManagerSearchPane(
             placeholder = stringResource(R.string.search_type_name),
             maxLength = MAX_SEARCH_LENGTH,
             imeAction = ImeAction.Search,
-            // Left with the cursor at the start has nothing to move over, so it goes to the rail,
-            // as it does from a channel row; anywhere else it still moves the cursor.
+            // Left with the cursor at the start has nothing to move over, so it goes to the sidebar;
+            // anywhere else it still moves the cursor.
             modifier = Modifier
                 .fillMaxWidth()
                 .focusRequester(searchBox)
@@ -261,177 +216,74 @@ internal fun ChannelManagerSearchPane(
                         onExitLeft()
                 },
         )
-        Spacer(Modifier.height(16.dp))
+        Spacer(Modifier.height(SetteeSpace.RowGap))
         when {
-            typed.isBlank() -> Hint(stringResource(R.string.channels_manager_search_hint))
-            typed.trim().length < 2 -> Hint(stringResource(R.string.common_keep_typing))
-            results.isEmpty() -> Hint(stringResource(R.string.channels_manager_no_match, typed))
-            else -> LazyColumn(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                items(results, key = { it.key }) { row ->
-                    val hidden = row.variants.all { it.hidden }
-                    ManagerRow(
-                        row = row,
-                        hidden = hidden,
-                        onToggleHidden = { onToggleHidden(row, hidden) },
-                        onToggleFavourite = { onToggleFavourite(row) },
-                    )
-                }
-            }
+            typed.isBlank() -> Message(stringResource(R.string.channels_manager_search_hint))
+            typed.trim().length < 2 -> Message(stringResource(R.string.common_keep_typing))
+            results.isEmpty() -> Message(stringResource(R.string.channels_manager_no_match, typed))
+            else -> ManagerRows(results, onToggle, onOptions)
         }
     }
 }
 
-/** The selected category's channels — hidden ones included, greyed, so they can be un-hidden. */
 @Composable
-private fun BrowsePane(
-    hasCategories: Boolean,
-    categorySelected: Boolean,
+private fun ManagerRows(
     rows: List<ChannelsViewModel.Row>,
-    onExitLeft: () -> Boolean,
-    onToggleHidden: (ChannelsViewModel.Row, Boolean) -> Unit,
-    onToggleFavourite: (ChannelsViewModel.Row) -> Unit,
+    onToggle: (ChannelsViewModel.Row) -> Unit,
+    onOptions: (ChannelsViewModel.Row) -> Unit,
 ) {
-    when {
-        !hasCategories -> Hint(stringResource(R.string.channels_manager_no_channels))
-        !categorySelected -> Hint(stringResource(R.string.channels_manager_pick_category))
-        rows.isEmpty() -> Hint(stringResource(R.string.channels_manager_empty_category))
-        else -> LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            verticalArrangement = Arrangement.spacedBy(6.dp),
-        ) {
-            items(rows, key = { it.key }) { row ->
-                val hidden = row.variants.all { it.hidden }
-                ManagerRow(
-                    row = row,
-                    hidden = hidden,
-                    onToggleHidden = { onToggleHidden(row, hidden) },
-                    onToggleFavourite = { onToggleFavourite(row) },
-                    // LEFT from the row's leftmost control (the star) hops back to the category
-                    // rail; from the switch it first steps left to the star, as usual.
-                    leftEdgeModifier = Modifier.onPreviewKeyEvent { e ->
-                        if (e.type == KeyEventType.KeyDown && e.key == Key.DirectionLeft) {
-                            onExitLeft()
-                        } else {
-                            false
-                        }
-                    },
-                )
-            }
-        }
+    LazyColumn(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(ROW_GAP)) {
+        items(rows, key = { it.key }) { row -> ManagerRow(row, { onToggle(row) }, { onOptions(row) }) }
     }
 }
 
+/** A channel: its logo and name, and whether the guide shows it. OK switches that. */
 @Composable
-private fun RailEntry(label: String, selected: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
-    var focused by remember { mutableStateOf(false) }
-    val bg = when {
-        focused -> MaterialTheme.colorScheme.primary
-        selected -> MaterialTheme.colorScheme.primaryContainer
-        else -> MaterialTheme.colorScheme.surface
-    }
-    val fg = when {
-        focused -> MaterialTheme.colorScheme.onPrimary
-        selected -> MaterialTheme.colorScheme.onPrimaryContainer
-        else -> MaterialTheme.colorScheme.onSurfaceVariant
-    }
-    Text(
-        text = label,
-        style = MaterialTheme.typography.titleMedium,
-        fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
-        color = fg,
-        maxLines = 1,
-        overflow = TextOverflow.Ellipsis,
-        modifier = modifier
-            .fillMaxWidth()
-            .onFocusChanged { focused = it.isFocused }
-            .clip(RoundedCornerShape(8.dp))
-            .background(bg)
-            .clickable(onClick = onClick)
-            .padding(horizontal = 12.dp, vertical = 10.dp),
-    )
-}
-
-@Composable
-private fun SectionLabel(text: String) {
-    Text(
-        text = text.uppercase(),
-        style = MaterialTheme.typography.labelMedium,
-        color = MaterialTheme.colorScheme.primary,
-        modifier = Modifier.padding(start = 12.dp, top = 12.dp, bottom = 4.dp),
-    )
-}
-
-@Composable
-private fun Hint(text: String) {
-    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Text(text, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-    }
-}
-
-@Composable
-private fun ManagerRow(
-    row: ChannelsViewModel.Row,
-    hidden: Boolean,
-    onToggleHidden: () -> Unit,
-    onToggleFavourite: () -> Unit,
-    leftEdgeModifier: Modifier = Modifier,
-) {
-    val alpha = if (hidden) 0.5f else 1f
-    Row(
-        Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(10.dp))
-            .background(MaterialTheme.colorScheme.surface)
-            .padding(horizontal = 12.dp, vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        AsyncImage(
-            model = row.primary.logoUrl,
-            contentDescription = null,
-            modifier = Modifier.size(40.dp).clip(RoundedCornerShape(6.dp)),
-        )
-        Spacer(Modifier.width(12.dp))
-        Column(Modifier.weight(1f)) {
+private fun ManagerRow(row: ChannelsViewModel.Row, onToggle: () -> Unit, onOptions: () -> Unit) {
+    val hidden = row.hidden
+    HighlightSurface(
+        onClick = onToggle,
+        style = HighlightStyle.Cell,
+        onOptions = onOptions,
+        modifier = Modifier.fillMaxWidth(),
+    ) { highlighted ->
+        Row(Modifier.fillMaxWidth().padding(ROW_PADDING), verticalAlignment = Alignment.CenterVertically) {
+            AsyncImage(
+                model = row.primary.logoUrl,
+                contentDescription = null,
+                modifier = Modifier.size(LOGO).clip(SetteeShapes.Cell),
+            )
+            Spacer(Modifier.width(ROW_PADDING))
             Text(
                 row.primary.shownName,
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = alpha),
+                SetteeType.RowTitle,
+                color = when {
+                    highlighted -> SetteeColors.OnAccent
+                    hidden -> SetteeColors.QuietText
+                    else -> SetteeColors.Text
+                },
                 maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f),
             )
             Text(
-                if (hidden) stringResource(R.string.channels_hidden) else stringResource(R.string.channels_showing),
-                style = MaterialTheme.typography.bodyMedium,
-                color = if (hidden) {
-                    MaterialTheme.colorScheme.onSurfaceVariant
-                } else {
-                    MaterialTheme.colorScheme.primary
+                stringResource(if (hidden) R.string.channels_hidden else R.string.channels_showing),
+                SetteeType.Body,
+                color = when {
+                    highlighted -> SetteeColors.OnAccent
+                    hidden -> SetteeColors.QuietText
+                    else -> SetteeColors.Accent
                 },
             )
-        }
-
-        // The star is the row's leftmost focusable, so it carries the LEFT-to-rail handler.
-        IconButton(onClick = onToggleFavourite, modifier = leftEdgeModifier) {
-            Icon(
-                imageVector = if (row.favourite) Icons.Filled.Star else Icons.Outlined.StarOutline,
-                contentDescription = if (row.favourite) {
-                    stringResource(
-                        R.string.common_remove_favourite,
-                    )
-                } else {
-                    stringResource(R.string.common_favourite)
-                },
-            )
-        }
-        Spacer(Modifier.width(8.dp))
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(
-                stringResource(R.string.channels_show),
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.Medium,
-            )
-            // Checked = visible; off = hidden. Reads the natural way: switch it off to hide.
-            Switch(checked = !hidden, onCheckedChange = { onToggleHidden() })
         }
     }
 }
+
+/** A row is hidden when every one of its Qualities is. */
+private val ChannelsViewModel.Row.hidden get() = variants.all { it.hidden }
+
+// Never a category's key: those are normalised names, or a provider's number and category id.
+private const val SEARCH = "pinned:search"
+private const val FIND_MAX_LENGTH = 40
+private val ROW_GAP = 2.dp
+private val ROW_PADDING = 10.dp
+private val LOGO = 32.dp

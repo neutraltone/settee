@@ -7,7 +7,8 @@ package app.opentv
 
 import android.app.Application
 import androidx.compose.ui.test.assertTextEquals
-import androidx.compose.ui.test.hasContentDescription
+import androidx.compose.ui.test.hasClickAction
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
@@ -18,6 +19,8 @@ import app.opentv.core.ServiceLocator
 import app.opentv.core.ViewerError
 import app.opentv.data.model.Category
 import app.opentv.data.model.Channel
+import app.opentv.data.model.EpgFeed
+import app.opentv.data.model.Programme
 import app.opentv.data.model.Source
 import app.opentv.data.model.SourceKind
 import app.opentv.data.model.StreamKind
@@ -36,7 +39,8 @@ import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
 /**
- * The guide's record button records what this device can play, so it can always be watched here.
+ * Recording from the guide, through programme details, records what this device can play, so it
+ * can always be watched here.
  * Robolectric lists no decoders, so here as on a 1080p Stick a Quality tagged 4K doesn't play by default.
  */
 @RunWith(RobolectricTestRunner::class)
@@ -61,7 +65,7 @@ class LiveScreenRecordTest {
     }
 
     @Test
-    fun `the record button records the Quality this device plays and then offers to stop it`() {
+    fun `Record now on what's on records the Quality this device plays, and then offers to stop it`() {
         val playable = runBlocking { seedChannel() }
         graph.settings.setGuidePreviewVideo(false)
 
@@ -76,12 +80,17 @@ class LiveScreenRecordTest {
             )
         }
         compose.waitUntil(TIMEOUT_MILLIS) {
-            compose.onAllNodes(hasContentDescription("Record what's on now")).fetchSemanticsNodes().isNotEmpty()
+            compose.onAllNodes(hasText("The News") and hasClickAction()).fetchSemanticsNodes().isNotEmpty()
         }
-        compose.onNode(hasContentDescription("Record what's on now")).performClick()
+        compose.onNode(hasText("The News") and hasClickAction()).performClick()
         compose.waitUntil(TIMEOUT_MILLIS) {
-            compose.onAllNodes(hasContentDescription("Stop recording", substring = true))
-                .fetchSemanticsNodes().isNotEmpty()
+            compose.onAllNodes(hasText("Record now") and hasClickAction()).fetchSemanticsNodes().isNotEmpty()
+        }
+        compose.onNode(hasText("Record now") and hasClickAction()).performClick()
+        compose.waitUntil(TIMEOUT_MILLIS) { runBlocking { graph.recordingRepository.active().isNotEmpty() } }
+        compose.onNode(hasText("The News") and hasClickAction()).performClick()
+        compose.waitUntil(TIMEOUT_MILLIS) {
+            compose.onAllNodes(hasText("Stop recording") and hasClickAction()).fetchSemanticsNodes().isNotEmpty()
         }
 
         val recording = runBlocking { graph.recordingRepository.observeActive().first().single() }
@@ -132,17 +141,32 @@ class LiveScreenRecordTest {
                 name = name,
                 categoryId = "10",
                 logoUrl = null,
-                epgChannelId = null,
+                epgChannelId = "news",
                 number = null,
                 streamUrl = "http://example.com/live/u/p/$i.ts",
             )
         }
         db.channels().replaceCatalogue(1, rows, syncStamp = 1)
         graph.catalogRepository.renormalizeAll()
+        val feed = db.epgFeeds().insert(EpgFeed(name = "Feed"))
+        val now = System.currentTimeMillis()
+        db.programmes().upsertAll(
+            listOf(
+                Programme(
+                    feedId = feed,
+                    epgChannelId = "news",
+                    startUtcMillis = now - HOUR,
+                    endUtcMillis =
+                    now + HOUR,
+                    title = "The News",
+                ),
+            ),
+        )
         return db.channels().everyRow().single { it.name == "News HD" }.id
     }
 
     private companion object {
         const val TIMEOUT_MILLIS = 10_000L
+        const val HOUR = 60 * 60 * 1000L
     }
 }

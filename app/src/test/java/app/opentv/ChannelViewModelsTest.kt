@@ -148,4 +148,35 @@ class ChannelViewModelsTest {
 
         assertThat(shelf.map { it.channel.primary.name }).containsExactly("UK| ITV HD")
     }
+
+    @Test
+    fun `Live TV's sidebar lists every provider's categories in its own order, without locked ones`() = runTest {
+        db.categories().upsertAll(
+            listOf(
+                Category(id = "10", sourceId = 1, name = "UK| News", kind = StreamKind.LIVE, sortIndex = 0),
+                Category(id = "11", sourceId = 1, name = "Films", kind = StreamKind.LIVE, sortIndex = 1),
+                Category(id = "20", sourceId = 2, name = "Sport", kind = StreamKind.LIVE, sortIndex = 0),
+                Category(id = "66", sourceId = 2, name = "UK| Adult", kind = StreamKind.LIVE, sortIndex = 1),
+                Category(id = "21", sourceId = 2, name = "Kids", kind = StreamKind.LIVE, sortIndex = 2),
+            ),
+        )
+        graph.settings.setHiddenCategories(setOf("adult"))
+        val viewModel = viewModels.track(ChannelsViewModel(app, graph))
+
+        val categories = viewModel.visibleCategoryGroups.first { it.isNotEmpty() }
+
+        assertThat(categories.map { it.label }).containsExactly("News", "Films", "Sport", "Kids").inOrder()
+    }
+
+    @Test
+    fun `today's page in the guide ends where tomorrow's starts, at midnight`() = runTest {
+        val viewModel = viewModels.track(ChannelsViewModel(app, graph))
+        val todayStarts = viewModel.windowStartMillis.first()
+        val todayEnds = viewModel.windowEndMillis.first()
+
+        viewModel.nudgeGuideDay(1)
+        val tomorrowStarts = viewModel.windowStartMillis.first { it != todayStarts }
+
+        assertThat(tomorrowStarts).isEqualTo(todayEnds)
+    }
 }

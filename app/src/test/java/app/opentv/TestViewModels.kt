@@ -10,6 +10,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.ViewModelStore
 import app.opentv.core.ServiceLocator
+import app.opentv.ui.ChannelsViewModel
 import app.opentv.ui.VodViewModel
 
 /**
@@ -27,6 +28,14 @@ class TestViewModels {
             override fun <T : ViewModel> create(modelClass: Class<T>): T = VodViewModel(app, graph) as T
         },
     )[VodViewModel::class.java]
+
+    fun channels(app: Application, graph: ServiceLocator.Graph): ChannelsViewModel = ViewModelProvider(
+        store,
+        object : ViewModelProvider.Factory {
+            @Suppress("UNCHECKED_CAST")
+            override fun <T : ViewModel> create(modelClass: Class<T>): T = ChannelsViewModel(app, graph) as T
+        },
+    )[ChannelsViewModel::class.java]
 
     fun clear() = store.clear()
 }
