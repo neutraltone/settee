@@ -82,6 +82,12 @@ class HighlightStyle(val resting: HighlightLook, val highlighted: HighlightLook)
          */
         val CurrentRow = fill(SetteeShapes.Card, resting = SetteeColors.Raised)
 
+        /**
+         * Settings' rows. They rest on a Surface fill, so a pane reads as a list of things to
+         * press even before the Highlight reaches it.
+         */
+        val ListRow = fill(SetteeShapes.Card, resting = SetteeColors.Surface)
+
         /** Guide cells and sidebar rows. */
         val Cell = fill(SetteeShapes.Cell)
 
