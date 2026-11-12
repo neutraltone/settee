@@ -241,6 +241,22 @@ class SetupRefreshTest {
         assertThat(bars).isInOrder()
     }
 
+    @Test
+    fun `the bar moves while movies are saved, from where their download leaves it`() = runTest {
+        panel.replies["get_vod_streams"] =
+            (1..3_000).joinToString(",", "[", "]") { """{"stream_id": $it, "name": "Film $it", "genre": "Drama"}""" }
+        val bars = java.util.Collections.synchronizedList(mutableListOf<Float>())
+        backgroundScope.launch(Dispatchers.Unconfined) { refresh.state.collect { it.setup?.let { s -> bars += s.bar } } }
+
+        setUp()
+
+        // Movies run from 76% to 92%; their download, which can't tell how far it's got, is the
+        // first 30% of that, as on a Stick.
+        val saving = 0.76f + 0.16f * 0.3f
+        assertThat(bars.filter { it > saving + 0.01f && it < 0.91f }).isNotEmpty()
+        assertThat(bars.filter { it > 0.765f && it < saving - 0.001f }).isEmpty()
+    }
+
     private companion object {
         val GUIDE = """
             <tv><programme start="20260101000000 +0000" stop="20260101010000 +0000" channel="bbc1">

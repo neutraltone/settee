@@ -743,20 +743,23 @@ class CatalogRepository(
         }
     }
 
-    /** [source]'s movies, saved as in VodLists; the films' details then fill in in the background. */
-    suspend fun fetchMovies(source: Source): ListFetch = withContext(Dispatchers.IO) {
+    /**
+     * [source]'s movies, saved as in VodLists; the films' details then fill in in the background.
+     * [progress] hears how far through saving the downloaded list it is, 0 to 1.
+     */
+    suspend fun fetchMovies(source: Source, progress: (Float) -> Unit = {}): ListFetch = withContext(Dispatchers.IO) {
         val categories = fetchList { categoryDao.upsertAll(api.movieCategories(source)) }
         var count = 0
-        val list = fetchList { count = api.movies(source).use { movieDao.save(source.id, it) } }
+        val list = fetchList { count = api.movies(source).use { movieDao.save(source.id, it, progress) } }
         if (count > 0) fillGenresInBackground(source)
         ListFetch(count, categories && list)
     }
 
-    /** [source]'s shows, saved as in VodLists. */
-    suspend fun fetchShows(source: Source): ListFetch = withContext(Dispatchers.IO) {
+    /** [source]'s shows, saved as in VodLists, with [progress] as for [fetchMovies]. */
+    suspend fun fetchShows(source: Source, progress: (Float) -> Unit = {}): ListFetch = withContext(Dispatchers.IO) {
         val categories = fetchList { categoryDao.upsertAll(api.seriesCategories(source)) }
         var saved = SavedSeries(0, emptyList())
-        val list = fetchList { saved = api.series(source).use { seriesDao.save(source.id, it) } }
+        val list = fetchList { saved = api.series(source).use { seriesDao.save(source.id, it, progress) } }
         ListFetch(saved.count, categories && list, saved.moved)
     }
 

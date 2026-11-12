@@ -336,15 +336,18 @@ class CatalogueRefresh(
     }
 
     private suspend fun setupVod(source: Source, steps: List<SetupStep>): CatalogRepository.VodFetch {
-        suspend fun list(step: SetupStep, fetch: suspend () -> CatalogRepository.ListFetch) =
+        suspend fun list(step: SetupStep, fetch: suspend ((Float) -> Unit) -> CatalogRepository.ListFetch) =
             if (step in steps) {
                 setup { copy(running = step) }
-                fetch().also { stepDone(StepDone(step, it.count, failed = !it.complete)) }
+                fetch { saved ->
+                    val bar = setupBar.saving(step, saved)
+                    setup { copy(bar = bar) }
+                }.also { stepDone(StepDone(step, it.count, failed = !it.complete)) }
             } else {
                 CatalogRepository.ListFetch.SKIPPED
             }
-        val movies = list(SetupStep.MOVIES) { catalog.fetchMovies(source) }
-        val shows = list(SetupStep.SHOWS) { catalog.fetchShows(source) }
+        val movies = list(SetupStep.MOVIES) { catalog.fetchMovies(source, it) }
+        val shows = list(SetupStep.SHOWS) { catalog.fetchShows(source, it) }
         return CatalogRepository.VodFetch(
             shows.updated,
             movies.complete && shows.complete && (movies.count > 0 || shows.count > 0),

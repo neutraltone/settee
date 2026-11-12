@@ -373,16 +373,28 @@ class XtreamApi(
          * is an empty list, HTML the "not a valid catalogue" message, which can come after some
          * batches if a list is cut off.
          */
-        suspend fun forEachBatch(save: suspend (List<T>) -> Unit) = withContext(Dispatchers.IO) {
+        suspend fun forEachBatch(progress: (Float) -> Unit = {}, save: suspend (List<T>) -> Unit) = withContext(
+            Dispatchers.IO,
+        ) {
+            // The file's size is known even when the panel didn't say how big its reply was.
+            val size = file.length().coerceAtLeast(1)
+            var read = 0L
             val batch = ArrayList<T>(CATALOGUE_BATCH)
             suspend fun each(element: JsonElement) {
                 batch += element.jsonObjectOrNull?.let(parse) ?: return
                 if (batch.size == CATALOGUE_BATCH) {
                     save(batch.toList())
                     batch.clear()
+                    progress((read.toFloat() / size).coerceAtMost(1f))
                 }
             }
-            file.source().buffer().use { body ->
+            val counted = object : java.io.FilterInputStream(file.inputStream()) {
+                override fun read(): Int = super.read().also { if (it >= 0) read++ }
+
+                override fun read(b: ByteArray, off: Int, len: Int): Int =
+                    super.read(b, off, len).also { if (it > 0) read += it }
+            }
+            counted.source().buffer().use { body ->
                 while (body.request(1) && body.buffer[0].toInt().toChar().isWhitespace()) body.skip(1)
                 if (body.request(1) && body.buffer[0] == '['.code.toByte()) {
                     val elements = json.decodeToSequence<JsonElement>(
@@ -396,6 +408,7 @@ class XtreamApi(
                 }
             }
             if (batch.isNotEmpty()) save(batch.toList())
+            progress(1f)
         }
 
         override fun close() {

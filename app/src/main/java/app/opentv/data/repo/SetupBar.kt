@@ -11,11 +11,18 @@ package app.opentv.data.repo
  * programmes, 29,729 movies, 9,261 shows; about 89 seconds in all), not equal parts: the guide
  * alone took 61% of the time, and equal parts would hold the bar still for most of setup.
  */
-enum class SetupStep(internal val share: Float) {
+enum class SetupStep(internal val share: Float, internal val savingFrom: Float = 0f) {
     CHANNELS(15f),
     GUIDE(61f),
-    MOVIES(16f),
-    SHOWS(8f),
+
+    /**
+     * The categories and the download come first, and can't tell how far they've got (panels don't
+     * say how big the list is): on the Stick they were 30% of the step, so saving moves the rest.
+     */
+    MOVIES(16f, savingFrom = 0.3f),
+
+    /** As [MOVIES]; the show list's download was half of its step. */
+    SHOWS(8f, savingFrom = 0.5f),
 }
 
 /** Where Setup's bar stands, shared between the [steps] that run for this provider. */
@@ -38,6 +45,10 @@ class SetupBar(private val steps: List<SetupStep>) {
         position = maxOf(position, minOf(reached(step, done.coerceIn(0f, 1f)), ALMOST_FULL))
         return position
     }
+
+    /** Moves the bar to [step] with its list [saved] (0 to 1) of the way through saving. */
+    fun saving(step: SetupStep, saved: Float): Float =
+        advance(step, step.savingFrom + (1 - step.savingFrom) * saved.coerceIn(0f, 1f))
 
     fun finish(): Float {
         position = 1f
