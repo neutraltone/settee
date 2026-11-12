@@ -238,7 +238,7 @@ class LivePlayerContentTest {
         assertThat(controller.player.playWhenReady).isTrue()
         // The live edge: where the fake channel starts playing.
         assertThat(controller.player.currentPosition).isEqualTo(110_000)
-        compose.onNodeWithText("Paused too long — back to live").assertExists()
+        compose.onNodeWithText("Paused too long. Back to live.").assertExists()
     }
 
     @Test
