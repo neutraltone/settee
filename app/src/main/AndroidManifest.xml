@@ -51,6 +51,18 @@
         android:name="android.hardware.touchscreen"
         android:required="false" />
 
+    <!-- Settee looks up what answers these before offering "Allow" on the recording prompt: a Fire TV
+         Stick answers both with a stub. Declared so Android 11+ always shows it the answer. -->
+    <queries>
+        <intent>
+            <action android:name="android.settings.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+            <data android:scheme="package" />
+        </intent>
+        <intent>
+            <action android:name="android.settings.IGNORE_BATTERY_OPTIMIZATION_SETTINGS" />
+        </intent>
+    </queries>
+
     <application
         android:name=".OpenTvApp"
         android:allowBackup="true"
