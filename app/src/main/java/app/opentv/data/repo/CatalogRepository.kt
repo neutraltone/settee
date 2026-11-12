@@ -207,15 +207,25 @@ class CatalogRepository(
 
     // TMDB only with the viewer's own key. Every film once: its directors, writers and studios are
     // worth the calls, and TMDB's free key allows far more than a batch of 200 a minute.
-    private val movieGenres = MovieGenres(
-        movieDao,
-        api,
-        tmdb = object : MovieTmdb {
-            override val ready get() = tmdb.isConfigured()
+    private val movieGenres by lazy {
+        MovieGenres(
+            movieDao,
+            api,
+            pauseMillis = genrePauseMillis,
+            tmdb = object : MovieTmdb {
+                override val ready get() = tmdb.isConfigured()
 
-            override suspend fun lookUp(movie: Movie) = withContext(Dispatchers.IO) { tmdbMetaOf(movie) }
-        },
-    )
+                override suspend fun lookUp(movie: Movie) = withContext(Dispatchers.IO) { tmdbMetaOf(movie) }
+            },
+        )
+    }
+
+    /**
+     * [MovieGenres]' rest between batches. It runs in real time on [background], which tests wait
+     * for, so they set 0 before their first sync: a 1,200-film test otherwise sleeps six minutes.
+     * A property and not a constructor parameter, as the constructor has more than enough.
+     */
+    internal var genrePauseMillis: Long = MovieGenres.BATCH_PAUSE_MILLIS
 
     private fun tmdbMetaOf(movie: Movie) =
         tmdb.movieMetaOrFailure(VodTitleCleaner.clean(movie.name), movie.year, movie.tmdbId)
