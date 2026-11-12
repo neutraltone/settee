@@ -11,9 +11,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.FiberManualRecord
@@ -21,12 +19,6 @@ import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.LiveTv
 import androidx.compose.material.icons.filled.Movie
 import androidx.compose.material.icons.filled.Tv
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.LinearProgressIndicator
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -51,6 +43,13 @@ import app.opentv.data.model.Recording
 import app.opentv.data.model.Series
 import app.opentv.data.repo.MediaKey
 import app.opentv.ui.channels.LiveScreen
+import app.opentv.ui.design.AerialTv
+import app.opentv.ui.design.AerialTvSize
+import app.opentv.ui.design.ConfirmPanel
+import app.opentv.ui.design.ProgressBar
+import app.opentv.ui.design.SetteeColors
+import app.opentv.ui.design.SetteeType
+import app.opentv.ui.design.Text
 import app.opentv.ui.recordings.RecordingsScreen
 import app.opentv.ui.vod.MoviesScreen
 import app.opentv.ui.vod.SeriesScreen
@@ -116,21 +115,12 @@ fun MainScreen(
 
     var showExit by remember { mutableStateOf(false) }
     if (showExit) {
-        AlertDialog(
-            onDismissRequest = { showExit = false },
-            title = { Text(stringResource(R.string.exit_title)) },
-            text = { Text(stringResource(R.string.exit_body)) },
-            confirmButton = {
-                TextButton(onClick = {
-                    showExit = false
-                    context.findActivity()?.finish()
-                }) {
-                    Text(stringResource(R.string.exit_confirm))
-                }
+        ExitPrompt(
+            onLeave = {
+                showExit = false
+                context.findActivity()?.finish()
             },
-            dismissButton = {
-                TextButton(onClick = { showExit = false }) { Text(stringResource(R.string.exit_cancel)) }
-            },
+            onStay = { showExit = false },
         )
     }
 
@@ -186,51 +176,58 @@ fun MainScreen(
     }
 }
 
+/** "Leave Settee?", asked before Back leaves the app from Home. The Highlight starts on Stay. */
+@Composable
+internal fun ExitPrompt(onLeave: () -> Unit, onStay: () -> Unit) {
+    ConfirmPanel(
+        title = stringResource(R.string.exit_title),
+        body = stringResource(R.string.exit_body),
+        confirm = stringResource(R.string.exit_confirm),
+        keep = stringResource(R.string.exit_cancel),
+        onConfirm = onLeave,
+        onKeep = onStay,
+    )
+}
+
 /**
- * A slim line along the bottom that says what the app is doing in the background — loading
- * channels, building the guide, loading movies — so a slow moment on a big provider reads as work
- * in progress, not a frozen screen. Invisible when there's nothing to report.
+ * A slim line along the bottom that says what the app is doing in the background, such as loading
+ * channels or building the guide, so a slow moment on a big provider reads as work in progress, not
+ * a frozen screen. Invisible when there's nothing to report.
  */
 @Composable
 private fun StatusBar() {
     val message by StatusBus.message.collectAsState()
     val progress by StatusBus.progress.collectAsState()
-    val text = message ?: return
-    val p = progress
+    message?.let { StatusLine(it, progress) }
+}
+
+/**
+ * The status line itself: quiet text on Surface. Work that knows how far through it is shows the
+ * percentage and a bar ([progress] from 0 to 1); work that doesn't shows the small aerial TV.
+ */
+@Composable
+internal fun StatusLine(message: String, progress: Float?, modifier: Modifier = Modifier) {
     Column(
-        Modifier
+        modifier
             .fillMaxWidth()
-            .background(MaterialTheme.colorScheme.surfaceVariant)
+            .background(SetteeColors.Surface)
             .padding(horizontal = 16.dp, vertical = 6.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            if (p == null) {
-                CircularProgressIndicator(
-                    modifier = Modifier.size(14.dp),
-                    strokeWidth = 2.dp,
-                    color = MaterialTheme.colorScheme.primary,
-                )
+            if (progress == null) {
+                AerialTv(stringResource(R.string.progress_still_working), size = AerialTvSize.Small)
             } else {
                 Text(
-                    "${(p * 100).toInt()}%",
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.primary,
+                    stringResource(R.string.update_percent, (progress * PERCENT).toInt()),
+                    SetteeType.Body,
+                    color = SetteeColors.Accent,
                 )
             }
             Spacer(Modifier.width(12.dp))
-            Text(
-                text,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            Text(message, SetteeType.Body, color = SetteeColors.QuietText, maxLines = 1)
         }
-        if (p != null) {
-            Spacer(Modifier.height(4.dp))
-            LinearProgressIndicator(
-                progress = { p },
-                modifier = Modifier.fillMaxWidth().height(3.dp),
-                color = MaterialTheme.colorScheme.primary,
-            )
-        }
+        if (progress != null) ProgressBar(progress, Modifier.fillMaxWidth().padding(top = 4.dp))
     }
 }
+
+private const val PERCENT = 100

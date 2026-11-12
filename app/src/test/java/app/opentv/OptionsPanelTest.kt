@@ -42,21 +42,37 @@ class OptionsPanelTest {
     val compose = createComposeRule()
 
     private var chosen: ItemOption? = null
+    private var dismissed = 0
 
     private fun show(vararg options: ItemOption) = compose.setTvContent {
-        OptionsPanel(title = "The Show", options = options.toList(), onChoose = { chosen = it }, onDismiss = {})
+        OptionsPanel(
+            title = "The Show",
+            options = options.toList(),
+            onChoose = { chosen = it },
+            onDismiss = { dismissed++ },
+        )
     }
 
     @Test
     fun `the panel shows only the options it is given, the first highlighted`() {
         show(ItemOption.MarkWatched, ItemOption.RemoveFromContinueWatching, ItemOption.AddFavourite)
 
-        compose.onNodeWithText("Mark watched").assertIsFocused()
+        compose.onNodeWithText("Mark watched").assertIsFocused().assertIsInSidePanel()
         compose.onNodeWithText("Remove from Continue Watching").assertExists()
         compose.onNodeWithText("Add to Favourites").assertExists()
         compose.onNodeWithText("Mark unwatched").assertDoesNotExist()
         compose.onNodeWithText("Remove from Favourites").assertDoesNotExist()
         captureScreen("options_panel")
+    }
+
+    @Test
+    fun `back closes the panel without choosing`() {
+        show(ItemOption.MarkWatched, ItemOption.AddFavourite)
+
+        compose.pressBackOnPanel()
+
+        assertThat(dismissed).isEqualTo(1)
+        assertThat(chosen).isNull()
     }
 
     @Test

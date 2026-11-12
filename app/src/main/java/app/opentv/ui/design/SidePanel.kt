@@ -48,8 +48,9 @@ import androidx.compose.ui.window.DialogWindowProvider
 import kotlinx.coroutines.launch
 
 /**
- * A panel down the right of the screen, over what's there, for a choice or an item's details: the
- * same family as the player's subtitles and audio panels. Back calls [onBack]; there's no Cancel.
+ * A Side Panel: down the right of the screen, over what's there, for a choice, an item's details, or
+ * a question before acting. Every question, choice and notice in Settee opens in one (docs/LOOK.md,
+ * Side Panel). Back calls [onBack]; there's no Cancel.
  * The Highlight starts on [startOn] when given, or else on the ticked [PanelRow] of a choice, or
  * else on the first row.
  *
@@ -222,12 +223,22 @@ private fun Modifier.scrollsNotes(notes: ScrollState): Modifier {
 
 /**
  * Asks before something that can't be undone, such as removing a provider: [confirm] above [keep],
- * with the Highlight starting on [keep], so a stray OK changes nothing. Back keeps it too.
+ * with the Highlight starting on [keep], so a stray OK changes nothing. Back keeps it too. A prompt
+ * that needs explaining has a [title] and a short [body] above the choices.
  */
 @Composable
-fun ConfirmPanel(confirm: String, keep: String, onConfirm: () -> Unit, onKeep: () -> Unit) {
+fun ConfirmPanel(
+    confirm: String,
+    keep: String,
+    onConfirm: () -> Unit,
+    onKeep: () -> Unit,
+    title: String? = null,
+    body: String? = null,
+) {
     val keepRow = remember { FocusRequester() }
     SidePanel(onBack = onKeep, startOn = keepRow) {
+        title?.let { PanelTitle(it) }
+        body?.let { PanelBody(it) }
         PanelRow(confirm, onClick = onConfirm)
         PanelRow(keep, onClick = onKeep, modifier = Modifier.focusRequester(keepRow))
     }
