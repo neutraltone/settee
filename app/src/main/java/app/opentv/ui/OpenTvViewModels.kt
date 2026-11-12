@@ -200,9 +200,12 @@ class SourcesViewModel @JvmOverloads constructor(
      * provider, saved while none was, goes through Setup instead: [onSetup] opens its screen as soon
      * as it's saved, and [onDone] isn't called, since Setup's screen decides where to go next.
      * [onChannels] hears either way once the channels are in (null) or why they didn't load.
+     * Without [keepIfFails], a new provider whose channels don't load is removed again: the phone
+     * puts the login right and sends it again, which would otherwise save a second one.
      */
     fun saveAndSync(
         draft: Source,
+        keepIfFails: Boolean = true,
         onSetup: () -> Unit = {},
         onChannels: (failure: String?) -> Unit = {},
         onDone: (Boolean) -> Unit = {},
@@ -213,7 +216,11 @@ class SourcesViewModel @JvmOverloads constructor(
             val existing = if (draft.id == 0L) graph.sourceRepository.all() else null
             val first = existing != null && !hasProvider(existing)
             // What a Setup closed before its channels came in left behind; it never was a provider.
-            if (first) existing.forEach { graph.catalogRepository.deleteSource(it.id) }
+            // Only that one: another that never loaded was still added on purpose.
+            val leftover = graph.settings.setupSourceId
+            if (first && existing.any { it.id == leftover && it.lastCatalogSyncMillis == 0L }) {
+                graph.catalogRepository.deleteSource(leftover)
+            }
             val id = graph.sourceRepository.save(draft)
             val saved = graph.sourceRepository.byId(id)
             if (saved == null) {
@@ -239,6 +246,9 @@ class SourcesViewModel @JvmOverloads constructor(
 
             _ui.update { it.copy(syncMessage = messages.of(RefreshMessages.Step.LoadingChannels)) }
             val outcome = refresh.refresh(CatalogueRefresh.Trigger.ProviderAdded(saved))
+            if (outcome is CatalogueRefresh.Outcome.AddFailed && !keepIfFails && draft.id == 0L) {
+                graph.catalogRepository.deleteSource(saved.id)
+            }
             _ui.update { it.copy(adding = false, syncMessage = messages.of(outcome)) }
             onChannels((outcome as? CatalogueRefresh.Outcome.AddFailed)?.reason)
             onDone(outcome is CatalogueRefresh.Outcome.ChannelsLoaded)

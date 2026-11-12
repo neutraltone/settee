@@ -13,6 +13,7 @@ import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
 import app.opentv.ui.SourcesViewModel
 import app.opentv.ui.Tab
+import app.opentv.ui.hasProvider
 import app.opentv.ui.onboarding.AddSourceScreen
 import app.opentv.ui.settings.ProvidersScreen
 import app.opentv.ui.setup.SetupScreen
@@ -43,7 +44,21 @@ fun NavGraphBuilder.providerRoutes(nav: NavController, sources: SourcesViewModel
     composable(Routes.SETUP) {
         val setup by sources.setup.collectAsState()
         val liveTv by sources.liveEnabled.collectAsState()
-        val current = setup ?: return@composable
+        val ui by sources.ui.collectAsState()
+        val current = setup
+        if (current == null) {
+            // Android restored the app onto Setup after killing it, so nothing is running: Setup
+            // doesn't resume. With the channels in it's Home, otherwise the provider choice again.
+            LaunchedEffect(ui.loaded) {
+                if (!ui.loaded) return@LaunchedEffect
+                if (hasProvider(ui.sources)) {
+                    nav.leaveSetup(Tab.HOME)
+                } else {
+                    nav.navigate(Routes.ADD_SOURCE) { popUpTo(nav.graph.id) { inclusive = true } }
+                }
+            }
+            return@composable
+        }
         // Back to the form, which says why the login failed.
         LaunchedEffect(current.loginFailed) { if (current.loginFailed) nav.popBackStack() }
         SetupScreen(

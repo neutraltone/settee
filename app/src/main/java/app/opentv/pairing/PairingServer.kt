@@ -6,6 +6,7 @@
 package app.opentv.pairing
 
 import android.util.Log
+import app.opentv.R
 import app.opentv.data.model.Source
 import app.opentv.data.model.SourceKind
 import java.io.BufferedReader
@@ -63,7 +64,12 @@ import kotlinx.coroutines.withTimeoutOrNull
  * - After [SESSION_TIMEOUT_MINUTES], or on success, the socket closes and the token is void.
  * - Five wrong codes and the session is burned.
  */
-class PairingServer(private val scope: CoroutineScope, private val fonts: PairingFonts) {
+class PairingServer(
+    private val scope: CoroutineScope,
+    private val fonts: PairingFonts,
+    /** The app's strings, for what the phone is told once the TV answers. */
+    private val text: (Int) -> String,
+) {
 
     data class Session(
         /** What the QR code encodes, e.g. `http://192.168.0.14:41234/?t=…` */
@@ -90,13 +96,24 @@ class PairingServer(private val scope: CoroutineScope, private val fonts: Pairin
          * The phone submitted details. The UI takes it from here, and [answer]s once the login is
          * proven or has failed: the phone waits for that, so it can say "All done" or show why.
          */
-        class Received(val draft: Source, private val reply: CompletableDeferred<String?>) : State {
+        class Received(val draft: Source, private val reply: CompletableDeferred<Reply>) : State {
             /** [error] is why the login failed, or null once the channels are in. */
             fun answer(error: String?) {
-                reply.complete(error)
+                val answered = if (error == null) Reply.AllDone else Reply.LoginFailed(error)
+                reply.complete(answered)
             }
         }
         data class Failed(val reason: String) : State
+    }
+
+    /** What the phone waiting on the TV is told. */
+    sealed interface Reply {
+        data object AllDone : Reply
+
+        data class LoginFailed(val reason: String) : Reply
+
+        /** The TV left pairing before it answered. */
+        data object Stopped : Reply
     }
 
     private val _state = MutableStateFlow<State>(State.Idle)
@@ -121,6 +138,9 @@ class PairingServer(private val scope: CoroutineScope, private val fonts: Pairin
 
     /** The session listening, to go back to when a login from the phone fails. */
     @Volatile private var session: Session? = null
+
+    /** What the phone waiting on the TV will be told; null when none is waiting. */
+    @Volatile private var pending: CompletableDeferred<Reply>? = null
 
     fun start() {
         if (running) return
@@ -191,6 +211,8 @@ class PairingServer(private val scope: CoroutineScope, private val fonts: Pairin
     }
 
     fun stop() {
+        // A phone still waiting on the TV is told now, not when its wait runs out.
+        pending?.complete(Reply.Stopped)
         running = false
         runCatching { serverSocket?.close() }
         serverSocket = null
@@ -351,33 +373,35 @@ class PairingServer(private val scope: CoroutineScope, private val fonts: Pairin
             epgUrl = form["epg"]?.trim()?.takeIf { it.isNotEmpty() },
         )
 
-        val reply = CompletableDeferred<String?>()
+        val reply = CompletableDeferred<Reply>()
+        pending = reply
         _state.value = State.Received(draft, reply)
         // The phone waits on the channels loading, so it can say whether the login worked: a big
-        // provider's took about 13 seconds on a Fire TV Stick. The TV answering nothing (it left the
-        // screen) falls back to what the phone was told before it waited.
-        val answer = runBlocking { withTimeoutOrNull(REPLY_TIMEOUT_MILLIS) { Answered(reply.await()) } }
-        val error = answer?.error
-        if (error != null) {
-            output.write(PairingHttp.httpResponse("200 OK", "text/html", PairingPage.form(token, error)))
+        // provider's took about 13 seconds on a Fire TV Stick. The TV answering nothing at all falls
+        // back to what the phone was told before it waited.
+        val answer = runBlocking { withTimeoutOrNull(REPLY_TIMEOUT_MILLIS) { reply.await() } }
+        pending = null
+        if (answer is Reply.LoginFailed) {
+            output.write(PairingHttp.httpResponse("200 OK", "text/html", PairingPage.form(token, answer.reason)))
             // Still listening, with the same code and address, so the phone can put it right.
             session?.let { _state.value = State.Listening(it) }
             return
         }
-        output.write(
-            PairingHttp.httpResponse(
-                "200 OK",
-                "text/html",
-                if (answer != null) {
-                    PairingPage.message("All done", "Carry on on your TV.")
-                } else {
-                    PairingPage.message(
-                        "Sent to your TV",
-                        "You can put your phone down. The rest happens on the telly.",
-                    )
-                },
-            ),
-        )
+        val page = when (answer) {
+            Reply.AllDone -> PairingPage.message(
+                text(R.string.pairing_phone_all_done_title),
+                text(R.string.pairing_phone_all_done_body),
+            )
+            Reply.Stopped -> PairingPage.message(
+                text(R.string.pairing_phone_stopped_title),
+                text(R.string.pairing_phone_stopped_body),
+            )
+            else -> PairingPage.message(
+                "Sent to your TV",
+                "You can put your phone down. The rest happens on the telly.",
+            )
+        }
+        output.write(PairingHttp.httpResponse("200 OK", "text/html", page))
         output.flush()
         // Nothing more to receive. Shut the door immediately rather than leaving a socket
         // open on the user's network for the rest of the timeout.
@@ -387,9 +411,6 @@ class PairingServer(private val scope: CoroutineScope, private val fonts: Pairin
         token = ""
         shortToken = ""
     }
-
-    /** What the TV answered: a login failure's reason, or null for all done. */
-    private class Answered(val error: String?)
 
     // ---- Finding our own address -----------------------------------------------------------
 

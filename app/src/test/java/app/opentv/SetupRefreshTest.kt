@@ -12,8 +12,10 @@ import app.opentv.data.repo.CatalogueRefresh
 import app.opentv.data.repo.SetupStep
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.withContext
 import org.junit.After
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -194,6 +196,25 @@ class SetupRefreshTest {
     }
 
     @Test
+    fun `setup remembers which provider it's adding only until the channels are in`() = runTest {
+        val channels = panel.hold("get_live_streams")
+        test.db.sources().insert(PANEL_SOURCE)
+        // In the background: it returns once the channels are in, which this test is holding up.
+        val started = backgroundScope.async(Dispatchers.Default) {
+            refresh.refresh(CatalogueRefresh.Trigger.Setup(PANEL_SOURCE))
+        }
+
+        during(channels) {
+            assertThat(test.settings.setupSourceId).isEqualTo(PANEL_SOURCE.id)
+            channels.release()
+        }
+        started.await()
+        test.awaitRefresh()
+
+        assertThat(test.settings.setupSourceId).isEqualTo(0L)
+    }
+
+    @Test
     fun `opening Movies or Shows after setup doesn't fetch them a second time`() = runTest {
         setUp()
         panel.asked.clear()
@@ -286,6 +307,31 @@ class SetupRefreshTest {
         test.awaitRefresh()
 
         assertThat(refresh.state.value.buildingGuide).isFalse()
+    }
+
+    @Test
+    fun `movies and shows another refresh is already fetching are still counted when setup shares them`() = runTest {
+        val guide = panel.hold("xmltv.php")
+        val vod = panel.hold("get_vod_streams")
+        test.db.sources().insert(PANEL_SOURCE)
+        withContext(Dispatchers.Default) {
+            refresh.refresh(CatalogueRefresh.Trigger.Setup(PANEL_SOURCE))
+            // Left for Live TV once the channels were in, then opened Movies while the guide loads.
+            val opened = during(guide) { async { refresh.refresh(CatalogueRefresh.Trigger.OpenedMoviesOrShows) } }
+            during(vod) {
+                guide.release()
+                // Long enough for setup to reach movies and share the download that's running.
+                Thread.sleep(500)
+                vod.release()
+            }
+            opened.await()
+        }
+        test.awaitRefresh()
+
+        val setup = refresh.state.value.setup!!
+        assertThat(setup.done.map { it.step }).containsAtLeast(SetupStep.MOVIES, SetupStep.SHOWS)
+        assertThat(setup.done.first { it.step == SetupStep.MOVIES }.count).isEqualTo(1)
+        assertThat(setup.failed).isEmpty()
     }
 
     private companion object {

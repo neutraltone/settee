@@ -18,6 +18,7 @@ import app.opentv.data.model.Programme
 import app.opentv.data.model.Source
 import app.opentv.data.parser.ChannelNameNormalizer
 import app.opentv.data.parser.XmltvParser
+import app.opentv.data.remote.CountingInputStream
 import app.opentv.data.remote.XtreamApi
 import java.io.BufferedInputStream
 import java.io.InputStream
@@ -332,7 +333,7 @@ class EpgRepository(
         }
         // Counted before decompressing: the size the server gives is of what it sends.
         val raw = body.contentLength().let { size ->
-            if (size > 0) CountingStream(body.byteStream()) { read(it.toFloat() / size) } else body.byteStream()
+            if (size > 0) CountingInputStream(body.byteStream()) { read(it.toFloat() / size) } else body.byteStream()
         }
 
         val buffered = BufferedInputStream(raw, 8 * 1024)
@@ -341,21 +342,6 @@ class EpgRepository(
         val b2 = buffered.read()
         buffered.reset()
         return if (b1 == 0x1f && b2 == 0x8b) GZIPInputStream(buffered) else buffered
-    }
-
-    /** Tells [counted] how many bytes have been read through it so far. */
-    private class CountingStream(stream: InputStream, private val counted: (Long) -> Unit) :
-        java.io.FilterInputStream(stream) {
-        private var total = 0L
-
-        override fun read(): Int = super.read().also { if (it >= 0) counted(++total) }
-
-        override fun read(b: ByteArray, off: Int, len: Int): Int = super.read(b, off, len).also {
-            if (it > 0) {
-                total += it
-                counted(total)
-            }
-        }
     }
 
     // ---- Matching --------------------------------------------------------------------------

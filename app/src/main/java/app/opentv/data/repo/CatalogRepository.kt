@@ -763,6 +763,13 @@ class CatalogRepository(
         ListFetch(saved.count, categories && list, saved.moved)
     }
 
+    /** How many of [step]'s titles (movies or shows) [sourceId] has stored. */
+    suspend fun storedCount(sourceId: Long, step: SetupStep): Int = when (step) {
+        SetupStep.MOVIES -> movieDao.countForSource(sourceId)
+        SetupStep.SHOWS -> seriesDao.countForSource(sourceId)
+        SetupStep.CHANNELS, SetupStep.GUIDE -> 0
+    }
+
     /** Whether [fetch] worked; anything but cancelling counts as a list that didn't come back. */
     private suspend fun fetchList(fetch: suspend () -> Unit): Boolean = runCatching { fetch() }
         .onFailure { if (it is CancellationException) throw it }

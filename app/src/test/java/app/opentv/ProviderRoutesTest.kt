@@ -175,7 +175,9 @@ class ProviderRoutesTest {
 
     @Test
     fun `a provider left by Setup closed before its channels came in doesn't stop the next being the first`() {
-        runBlocking { graph.sourceRepository.save(PANEL_SOURCE.copy(id = 0, lastCatalogSyncMillis = 0)) }
+        // As Setup leaves it when Settee closes during its first step.
+        val left = runBlocking { graph.sourceRepository.save(PANEL_SOURCE.copy(id = 0, lastCatalogSyncMillis = 0)) }
+        graph.settings.setSetupSourceId(left)
         setApp(start = Routes.ADD_SOURCE, sources = SourcesViewModel(app, graph))
 
         savePlaylist()
@@ -187,6 +189,19 @@ class ProviderRoutesTest {
     }
 
     @Test
+    fun `a provider that never loaded but wasn't left by Setup is kept when the next is saved`() {
+        // Added before Setup existed, while its panel was down, say.
+        runBlocking { graph.sourceRepository.save(PANEL_SOURCE.copy(id = 0, lastCatalogSyncMillis = 0)) }
+        setApp(start = Routes.ADD_SOURCE, sources = SourcesViewModel(app, graph))
+
+        savePlaylist()
+
+        compose.waitUntil(5_000) { compose.onAllNodesWithText("Take me to Settee").fetchSemanticsNodes().isNotEmpty() }
+        assertThat(runBlocking { graph.sourceRepository.all() }.map { it.kind })
+            .containsExactly(SourceKind.XTREAM, SourceKind.M3U)
+    }
+
+    @Test
     fun `a provider added while there's one already doesn't open Setup`() {
         runBlocking { graph.sourceRepository.save(PANEL_SOURCE.copy(id = 0, lastCatalogSyncMillis = 1)) }
         setApp(start = Routes.ADD_SOURCE, sources = SourcesViewModel(app, graph))
@@ -194,6 +209,23 @@ class ProviderRoutesTest {
         savePlaylist()
 
         compose.waitUntil(5_000) { route() == Routes.MAIN }
+    }
+
+    @Test
+    fun `Setup restored by Android with nothing running opens on the provider choice when there's no provider`() {
+        setApp(start = Routes.SETUP, sources = SourcesViewModel(app, graph))
+
+        compose.waitUntil(5_000) { route() == Routes.ADD_SOURCE }
+        compose.onNodeWithText("Add your provider").assertExists()
+    }
+
+    @Test
+    fun `Setup restored by Android with nothing running opens on Home once the channels were in`() {
+        runBlocking { graph.sourceRepository.save(PANEL_SOURCE.copy(id = 0, lastCatalogSyncMillis = 1)) }
+        setApp(start = Routes.SETUP, sources = SourcesViewModel(app, graph))
+
+        compose.waitUntil(5_000) { route() == Routes.MAIN }
+        compose.onNodeWithText("Main on HOME").assertExists()
     }
 
     @Test

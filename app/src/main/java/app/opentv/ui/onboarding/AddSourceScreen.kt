@@ -102,6 +102,7 @@ fun AddSourceScreen(
                 var setup = false
                 viewModel.saveAndSync(
                     received.draft,
+                    keepIfFails = false,
                     onSetup = { setup = true },
                     onChannels = { failure ->
                         received.answer(failure)
@@ -268,7 +269,7 @@ private fun FormButtons(
             label = stringResource(if (ui.adding) R.string.onboarding_working else R.string.onboarding_save_load),
             onClick = {
                 if (!working) {
-                    viewModel.saveAndSync(details.draft(defaultName), onSetup) { ok -> if (ok) onFinished() }
+                    viewModel.saveAndSync(details.draft(defaultName), onSetup = onSetup) { ok -> if (ok) onFinished() }
                 }
             },
             enabled = details.canSubmit,

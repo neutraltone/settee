@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -59,10 +60,10 @@ fun SetupScreen(setup: Setup, onWatchLive: (() -> Unit)?, onFinish: () -> Unit) 
     // A step just done says what it found for a moment, in place of the next step's name. Not on
     // opening: only a step finishing while the screen is up.
     var justDone by remember { mutableStateOf<StepDone?>(null) }
-    val seen = remember { intArrayOf(setup.done.size) }
+    var seen by remember { mutableIntStateOf(setup.done.size) }
     LaunchedEffect(setup.done.size) {
-        if (setup.done.size <= seen[0]) return@LaunchedEffect
-        seen[0] = setup.done.size
+        if (setup.done.size <= seen) return@LaunchedEffect
+        seen = setup.done.size
         justDone = setup.done.last()
         delay(COUNT_MILLIS)
         justDone = null
@@ -96,10 +97,10 @@ private fun Finished(setup: Setup, onFinish: () -> Unit) {
     Text(stringResource(R.string.setup_finished_title), SetteeType.Hero)
     Spacer(Modifier.height(12.dp))
     Text(summary(setup), SetteeType.Synopsis, color = SetteeColors.QuietText, textAlign = TextAlign.Center)
-    setup.failed.forEach { step ->
+    setup.failed.mapNotNull { it.failure }.forEach { failure ->
         Spacer(Modifier.height(8.dp))
         Text(
-            stringResource(step.failure),
+            stringResource(failure),
             SetteeType.Body,
             color = SetteeColors.QuietText,
             textAlign = TextAlign.Center,
@@ -133,13 +134,14 @@ private fun summary(setup: Setup): String {
     return if (films) "$sentence ${stringResource(R.string.setup_summary_film_details)}" else sentence
 }
 
-private val SetupStep.failure: Int
+/** What the finished screen says when this step didn't load; the channels never get that far. */
+private val SetupStep.failure: Int?
     get() = when (this) {
         SetupStep.GUIDE -> R.string.setup_failed_guide
         SetupStep.MOVIES -> R.string.setup_failed_movies
         SetupStep.SHOWS -> R.string.setup_failed_shows
-        // A login that fails goes back to the form; Setup never finishes with it.
-        SetupStep.CHANNELS -> R.string.setup_step_channels
+        // A login that fails goes back to the form, so Setup never finishes with it.
+        SetupStep.CHANNELS -> null
     }
 
 /** How long a step's count stays up once it's done. */

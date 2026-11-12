@@ -492,6 +492,9 @@ interface ProgrammeDao {
 
 @Dao
 interface MovieDao {
+    @Query("SELECT COUNT(*) FROM movies WHERE sourceId = :sourceId")
+    suspend fun countForSource(sourceId: Long): Int
+
     @Query(
         """
         SELECT * FROM movies
@@ -623,6 +626,9 @@ interface MovieDao {
 
 @Dao
 interface SeriesDao {
+    @Query("SELECT COUNT(*) FROM series WHERE sourceId = :sourceId")
+    suspend fun countForSource(sourceId: Long): Int
+
     @Query(
         """
         SELECT * FROM series

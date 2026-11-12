@@ -272,8 +272,10 @@ class XtreamApi(
         )
     }
 
-    /** Opens the XMLTV guide as a stream. The caller must close it. */
-    /** The provider's guide, with its size where the server gives one (a Setup bar moves on it). */
+    /**
+     * The provider's guide, with its size where the server gives one (Setup's bar moves on it). The
+     * caller must close it.
+     */
     suspend fun openEpg(source: Source): ResponseBody = withContext(Dispatchers.IO) {
         val url = source.epgUrl?.toHttpUrlOrNull() ?: xmltvUrl(source)
         val response = http.newCall(request(source, url)).execute()
@@ -388,13 +390,7 @@ class XtreamApi(
                     progress((read.toFloat() / size).coerceAtMost(1f))
                 }
             }
-            val counted = object : java.io.FilterInputStream(file.inputStream()) {
-                override fun read(): Int = super.read().also { if (it >= 0) read++ }
-
-                override fun read(b: ByteArray, off: Int, len: Int): Int =
-                    super.read(b, off, len).also { if (it > 0) read += it }
-            }
-            counted.source().buffer().use { body ->
+            CountingInputStream(file.inputStream()) { read = it }.source().buffer().use { body ->
                 while (body.request(1) && body.buffer[0].toInt().toChar().isWhitespace()) body.skip(1)
                 if (body.request(1) && body.buffer[0] == '['.code.toByte()) {
                     val elements = json.decodeToSequence<JsonElement>(

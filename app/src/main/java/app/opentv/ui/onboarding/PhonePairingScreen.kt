@@ -60,7 +60,10 @@ import kotlinx.coroutines.cancel
 fun PhonePairingScreen(onReceived: (PairingServer.State.Received) -> Unit, onCancel: () -> Unit) {
     val scope = remember { CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate) }
     val context = LocalContext.current
-    val server = remember { PairingServer(scope, PairingFonts(context.applicationContext)) }
+    val server = remember {
+        val app = context.applicationContext
+        PairingServer(scope, PairingFonts(app), app::getString)
+    }
     val state by server.state.collectAsState()
 
     DisposableEffect(Unit) {

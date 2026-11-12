@@ -31,7 +31,8 @@ import org.robolectric.annotation.Config
 class PairingServerTest {
 
     private val scope = CoroutineScope(Dispatchers.Default)
-    private val server = PairingServer(scope, PairingFonts(ApplicationProvider.getApplicationContext()))
+    private val context = ApplicationProvider.getApplicationContext<android.content.Context>()
+    private val server = PairingServer(scope, PairingFonts(context), context::getString)
 
     @After
     fun close() {
@@ -86,6 +87,20 @@ class PairingServerTest {
         val (_, page) = runBlocking { reply.await() }
         assertThat(page).contains("All done")
         assertThat(page).contains("Carry on on your TV.")
+    }
+
+    @Test
+    fun `a phone waiting when the TV leaves pairing is told at once, not left hanging`() {
+        val session = listening()
+
+        val reply = scope.async(Dispatchers.IO) { submit(session) }
+        received()
+        val started = System.currentTimeMillis()
+        server.stop()
+
+        val (_, page) = runBlocking { reply.await() }
+        assertThat(System.currentTimeMillis() - started).isLessThan(5_000L)
+        assertThat(page).contains("Setup stopped on your TV")
     }
 
     @Test

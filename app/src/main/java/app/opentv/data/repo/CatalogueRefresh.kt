@@ -207,6 +207,7 @@ class CatalogueRefresh(
 
     private suspend fun setUp(source: Source, steps: List<SetupStep>, run: SetupRun): Outcome.Added {
         settings.setVodFetchedAtMillis(source.id, 0L)
+        settings.setSetupSourceId(source.id)
         val outcome = when (val result = live(source)) {
             is CatalogRepository.SyncResult.Failed -> Outcome.AddFailed(result.reason)
             is CatalogRepository.SyncResult.Success -> Outcome.ChannelsLoaded(result.channelCount)
@@ -218,6 +219,8 @@ class CatalogueRefresh(
             catalog.deleteSource(source.id)
             run.update { copy(running = null, loginFailed = true) }
         }
+        // Gone or a provider now, either way not a leftover.
+        settings.setSetupSourceId(0L)
         if (outcome is Outcome.ChannelsLoaded) {
             run.stepDone(StepDone(SetupStep.CHANNELS, outcome.channels))
             scope.launch {
@@ -243,6 +246,7 @@ class CatalogueRefresh(
                     run.stepDone(step)
                 }
                 vod(source, waitForNewEpisodes = false, setup = run)
+                run.sharedListsDone(source)
                 run.update { copy(running = null, finished = true, bar = run.bar.finish()) }
                 rescan()
             }
@@ -263,6 +267,19 @@ class CatalogueRefresh(
 
         fun stepDone(step: StepDone) = update {
             copy(done = done + step, bar = this@SetupRun.bar.advance(step.step, 1f))
+        }
+
+        /**
+         * Movies and shows this setup didn't fetch itself: another refresh's download was running
+         * (Movies opened during the guide) and setup shared it. They count what's stored now, and
+         * failed only if that download didn't leave them fresh.
+         */
+        suspend fun sharedListsDone(source: Source) {
+            val missing = listOf(SetupStep.MOVIES, SetupStep.SHOWS)
+                .filter { step -> step in steps && _state.value.setup?.done?.none { it.step == step } == true }
+            for (step in missing) {
+                stepDone(StepDone(step, catalog.storedCount(source.id, step), failed = vodIsStale(source)))
+            }
         }
 
         /** Movies then shows, those of them in this setup, as one shared download's worth. */
