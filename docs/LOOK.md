@@ -252,7 +252,7 @@ Once a provider is saved while none was saved before (a fresh install, or after 
 - **If the guide or the movies fail,** setup still finishes. The finished screen says which part didn't load and that Settee will try again on the next refresh, worded as in [Voice](#voice). Movies and shows also load when their tab is first opened, as they do today, so a failed or skipped fetch, or Movies or Shows switched on later, still gets them.
 - **Finished:** "You're all set." with a summary line ("1,204 channels, 6,400 movies and 1,100 shows. Film details will keep filling in while you watch."), and one button, **Take me to Settee**, with the Highlight on it. OK leaves through the usual screen-change dip, onto Home with its first Highlight. Back does the same.
 - **The phone page** says "All done. Carry on on your TV." once the channels are in and the login is proven, so the viewer looks up at the setup screen. A failed login shows its error on the phone, as today.
-- **Motion:** the bar's fill may slide between values if it passes [Motion and cost](#motion-and-cost) on the Stick; otherwise it jumps. The heartbeat is drawn, not laid out, so a beat redraws only the bar, and it was measured against Motion and cost on the Stick.
+- **Motion:** the bar's fill may slide between values if it passes [Motion and cost](#motion-and-cost) on the Stick; otherwise it jumps. The heartbeat is drawn, not laid out, so a beat redraws only the bar. On the Stick it looked smooth when watched through a whole Setup, but it hasn't been frame-timed; the simpler pulse it replaced was (5 ms median, worst frame 15.5 ms).
 
 ## Recordings
 
