@@ -96,6 +96,15 @@ internal fun DisplayPane() {
     ListRow(stringResource(R.string.nav_shows), onClick = {
         settings.setSeriesEnabled(!seriesEnabled)
     }, switch = seriesEnabled)
+    val tmdbKey by settings.tmdbApiKey.collectAsState()
+    ListRow(
+        stringResource(R.string.settings_row_tmdb),
+        onClick = { choosing = Choice.TmdbKey },
+        value = stringResource(
+            if (tmdbKey.isBlank()) R.string.settings_row_tmdb_none else R.string.settings_row_tmdb_set,
+        ),
+        note = stringResource(R.string.settings_tmdb_note),
+    )
     val refreshing = stringResource(R.string.settings_content_refreshing)
     ListRow(
         stringResource(R.string.settings_row_refresh_content),
@@ -106,8 +115,22 @@ internal fun DisplayPane() {
         },
     )
 
-    choosing?.let { choice ->
-        ChoicePanel(choice, subtitlesOn = subtitlesOn, sleeping = deadline != null, language = language) {
+    when (val choice = choosing) {
+        // Never shown once saved: the row only says there is one.
+        Choice.TmdbKey -> EntryWindow(
+            title = stringResource(R.string.settings_tmdb_key_label),
+            initial = "",
+            hint = stringResource(R.string.settings_tmdb_note),
+            // Saving it empty is how TMDB is switched off again.
+            allowBlank = true,
+            onSave = {
+                choosing = null
+                settings.setTmdbApiKey(it)
+            },
+            onCancel = { choosing = null },
+        )
+        null -> Unit
+        else -> ChoicePanel(choice, subtitlesOn = subtitlesOn, sleeping = deadline != null, language = language) {
             choosing = null
         }
     }
@@ -142,6 +165,7 @@ private fun ChoicePanel(choice: Choice, subtitlesOn: Boolean, sleeping: Boolean,
                     })
                 }
             }
+            Choice.TmdbKey -> Unit
             Choice.Language -> {
                 PanelRow(stringResource(R.string.settings_language_system), ticked = language.isBlank(), onClick = {
                     close()
@@ -159,7 +183,7 @@ private fun ChoicePanel(choice: Choice, subtitlesOn: Boolean, sleeping: Boolean,
     }
 }
 
-private enum class Choice { Subtitles, Sleep, Language }
+private enum class Choice { Subtitles, Sleep, Language, TmdbKey }
 
 /** The active Profile's name, for the line under a setting that belongs to it (ADR 0002). */
 @Composable

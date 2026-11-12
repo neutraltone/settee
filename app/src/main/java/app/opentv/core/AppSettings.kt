@@ -6,6 +6,7 @@
 package app.opentv.core
 
 import android.content.Context
+import androidx.annotation.VisibleForTesting
 import androidx.core.content.edit
 import app.opentv.data.model.StremioAddon
 import app.opentv.data.repo.Profiles
@@ -124,6 +125,22 @@ class AppSettings private constructor(context: Context, fileName: String = "open
     fun verifyPin(pin: String): Boolean {
         val stored = prefs.getString(KEY_PIN_HASH, null) ?: return true
         return stored == hashPin(pin)
+    }
+
+    /**
+     * Whether the PIN has been entered since the app started, which opens Parental lock's settings.
+     * Not persisted, like [hiddenUnlocked], so closing the app locks them again.
+     */
+    private val _pinEntered = MutableStateFlow(false)
+    val pinEntered: StateFlow<Boolean> = _pinEntered.asStateFlow()
+
+    /** Opens Parental lock's settings until the app closes, if [pin] is the PIN. */
+    fun enterPin(pin: String): Boolean = verifyPin(pin).also { if (it) _pinEntered.value = true }
+
+    /** Locks Parental lock's settings again, as closing the app does. */
+    @VisibleForTesting
+    fun forgetPinEntry() {
+        _pinEntered.value = false
     }
 
     fun setHiddenCategories(keys: Set<String>) {

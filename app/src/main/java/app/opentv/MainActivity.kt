@@ -79,16 +79,8 @@ import app.opentv.ui.hasProvider
 import app.opentv.ui.options.ItemOptionsHost
 import app.opentv.ui.options.OptionsDestination
 import app.opentv.ui.player.PlayerScreen
-import app.opentv.ui.settings.AboutScreen
-import app.opentv.ui.settings.AppSettingsScreen
-import app.opentv.ui.settings.EpgSettingsScreen
-import app.opentv.ui.settings.ParentalControlsScreen
 import app.opentv.ui.settings.ProfilesScreen
-import app.opentv.ui.settings.RecordingSettingsScreen
-import app.opentv.ui.settings.SettingsHubScreen
-import app.opentv.ui.settings.StremioAddonsScreen
-import app.opentv.ui.settings.SyncScreen
-import app.opentv.ui.settings.WebManagerScreen
+import app.opentv.ui.settings.SettingsMemory
 import app.opentv.ui.vod.MovieDetailScreen
 import app.opentv.ui.vod.PersonScreen
 import app.opentv.ui.vod.SeriesDetailScreen
@@ -200,18 +192,10 @@ object Routes {
     const val SETUP = "setup"
     const val PLAYER = "player/{channelId}"
     const val SEARCH = "search"
-    const val EPG_SETTINGS = "epg-settings"
-    const val APP_SETTINGS = "app-settings"
-    const val SETTINGS_HUB = "settings"
-    const val PROVIDERS = "providers"
-    const val ADDONS = "addons"
+    const val SETTINGS = "settings"
+    const val FONT_LICENCES = "font-licences"
     const val CHANNELS = "channels"
-    const val WEB_MANAGER = "web-manager"
     const val PROFILES = "profiles"
-    const val PARENTAL = "parental"
-    const val SYNC = "sync"
-    const val REC_SETTINGS = "recording-settings"
-    const val ABOUT = "about"
     const val SERIES_DETAIL = "series/{seriesId}"
     const val MOVIE_DETAIL = "movie/{movieId}"
     const val PERSON = "person/{name}"
@@ -273,6 +257,8 @@ private fun OpenTvApp(isTelevision: Boolean, launchedToPlay: Boolean) {
     val sourcesViewModel: SourcesViewModel = viewModel()
     val vodViewModel: VodViewModel = viewModel()
     val profilesViewModel: ProfilesViewModel = viewModel()
+    // Which Settings section was open, kept while the app runs, as the tabs keep theirs.
+    val settingsMemory = remember { SettingsMemory() }
     val sourcesUi by sourcesViewModel.ui.collectAsState()
     val profiles by profilesViewModel.profiles.collectAsState()
     val activeProfileId by profilesViewModel.activeProfileId.collectAsState()
@@ -375,7 +361,7 @@ private fun OpenTvApp(isTelevision: Boolean, launchedToPlay: Boolean) {
                         onAddSource = { navController.openAddProvider() },
                         onRefresh = sourcesViewModel::refreshAll,
                         onOpenSearch = { navController.navigate(Routes.SEARCH) },
-                        onOpenSettings = { navController.navigate(Routes.SETTINGS_HUB) },
+                        onOpenSettings = { navController.navigate(Routes.SETTINGS) },
                         onOpenProfiles = { navController.navigate(Routes.PROFILES) },
                         // The player works out where the recording is stored, and follows one still capturing.
                         onPlayRecording = { rec ->
@@ -405,56 +391,10 @@ private fun OpenTvApp(isTelevision: Boolean, launchedToPlay: Boolean) {
                     )
                 }
 
-                composable(Routes.SETTINGS_HUB) {
-                    SettingsHubScreen(
-                        onOpenProviders = { navController.navigate(Routes.PROVIDERS) },
-                        onOpenAddons = { navController.navigate(Routes.ADDONS) },
-                        onOpenGuide = { navController.navigate(Routes.EPG_SETTINGS) },
-                        onOpenChannels = { navController.navigate(Routes.CHANNELS) },
-                        onOpenWebManager = { navController.navigate(Routes.WEB_MANAGER) },
-                        onOpenDisplay = { navController.navigate(Routes.APP_SETTINGS) },
-                        onOpenParental = { navController.navigate(Routes.PARENTAL) },
-                        onOpenSync = { navController.navigate(Routes.SYNC) },
-                        onOpenRecordings = { navController.navigate(Routes.REC_SETTINGS) },
-                        onOpenAbout = { navController.navigate(Routes.ABOUT) },
-                        onBack = { navController.popBackStack() },
-                    )
-                }
-
-                composable(Routes.SYNC) {
-                    SyncScreen(onBack = { navController.popBackStack() })
-                }
-
-                composable(Routes.REC_SETTINGS) {
-                    RecordingSettingsScreen(onBack = { navController.popBackStack() })
-                }
+                settingsRoutes(navController, settingsMemory)
 
                 composable(Routes.CHANNELS) {
                     ChannelManagerScreen(onBack = { navController.popBackStack() })
-                }
-
-                composable(Routes.WEB_MANAGER) {
-                    WebManagerScreen(onBack = { navController.popBackStack() })
-                }
-
-                composable(Routes.PARENTAL) {
-                    ParentalControlsScreen(onBack = { navController.popBackStack() })
-                }
-
-                composable(Routes.ADDONS) {
-                    StremioAddonsScreen(onBack = { navController.popBackStack() })
-                }
-
-                composable(Routes.ABOUT) {
-                    AboutScreen(onBack = { navController.popBackStack() })
-                }
-
-                composable(Routes.EPG_SETTINGS) {
-                    EpgSettingsScreen(onBack = { navController.popBackStack() })
-                }
-
-                composable(Routes.APP_SETTINGS) {
-                    AppSettingsScreen(onBack = { navController.popBackStack() })
                 }
 
                 composable(Routes.PLAYER) { entry ->

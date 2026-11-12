@@ -20,6 +20,10 @@ _Avoid_: Profile merge (that's only one outcome)
 The question the app asks when it starts on a device with more than one Profile: the viewer picks which Profile they are before Home opens.
 _Avoid_: Profile picker, profile chooser, profile select
 
+**Profiles**:
+The screen behind the Rail's Profile, listing every Profile on this device: where they're added, renamed, removed and switched between.
+_Avoid_: Profile settings, accounts
+
 **Subtitle Preference**:
 Whether a Profile wants subtitles shown, and in which language. Belongs to one Profile and follows it from one title to the next, whatever kind of title it is.
 _Avoid_: Captions setting, CC, subtitle default
@@ -150,6 +154,10 @@ _Avoid_: Focus, selection, cursor
 **Rail**:
 The left-hand navigation: Home, Live TV, Movies, Shows and Recordings, with Search, the Profile and Settings set apart from them. It shows icons until it has the Highlight, then opens with a label for each.
 _Avoid_: Sidebar (that's the Categories Sidebar), menu, nav
+
+**Settings**:
+Where the box is set up: its sections down the left, and the highlighted section's settings beside them, so nothing has to be opened to see what's inside.
+_Avoid_: Preferences, options (that's an item's options), menu
 
 **Categories Sidebar**:
 The list of a tab's categories on Live TV, Movies and Shows. It stays tucked away until Left from the leftmost item opens it on the current category. The channel manager shows it always open.

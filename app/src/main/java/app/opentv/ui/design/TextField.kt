@@ -74,13 +74,14 @@ import app.opentv.R
 fun TextField(
     state: TextFieldState,
     placeholder: String,
-    maxLength: Int,
+    maxLength: Int?,
     modifier: Modifier = Modifier,
     imeAction: ImeAction = ImeAction.Done,
+    keyboardType: KeyboardType = KeyboardType.Text,
     onSubmit: (() -> Unit)? = null,
 ) = TextBox(
     state = state,
-    look = BoxLook(placeholder = placeholder),
+    look = BoxLook(placeholder = placeholder, inputType = keyboardType.toInputType()),
     maxLength = maxLength,
     modifier = modifier,
     imeAction = imeAction,

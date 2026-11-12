@@ -14,25 +14,14 @@
     <ID>CyclomaticComplexMethod:PlayerScreen.kt$@OptIn(UnstableApi::class) @Composable fun PlayerScreen(channelId: Long?, onBack: () -&gt; Unit)</ID>
     <ID>CyclomaticComplexMethod:PlayerScreen.kt$@OptIn(UnstableApi::class) @Composable fun LivePlayerContent( controller: PlayerController, settings: app.opentv.core.AppSettings, queue: List&lt;PlaybackQueue.Item&gt;, variants: List&lt;Channel&gt;, currentId: Long?, previousId: Long?, onNow: suspend (Long) -&gt; Map&lt;Long, String&gt;, cardChannel: CardChannel?, nowAndNext: suspend (Long) -&gt; NowAndNext?, recordingThis: Boolean, livePause: Boolean, pausePromptDismissed: Boolean, onPlayChannel: (Long) -&gt; Unit, onZap: (delta: Int, atEnd: () -&gt; Unit) -&gt; Unit, onTune: (Channel) -&gt; Unit, onToggleRecord: () -&gt; Unit, favourite: Boolean, onToggleFavourite: () -&gt; Unit, onTurnOnLivePause: () -&gt; Unit, onDontAskAgain: () -&gt; Unit, subtitlePicks: SubtitlePicks, onBack: () -&gt; Unit, onChannelOptions: (PlaybackQueue.Item, onWatch: () -&gt; Unit) -&gt; Unit = { _, _ -&gt; }, )</ID>
     <ID>CyclomaticComplexMethod:RecordingService.kt$RecordingService$private suspend fun runCapture(id: Long)</ID>
-    <ID>CyclomaticComplexMethod:RecordingSettingsScreen.kt$@Composable fun RecordingSettingsScreen(onBack: () -&gt; Unit)</ID>
     <ID>CyclomaticComplexMethod:SyncEngine.kt$SyncEngine$suspend fun apply(bundle: SyncBundle): MergeResult</ID>
     <ID>CyclomaticComplexMethod:VodPlayerScreen.kt$@OptIn(UnstableApi::class) @Composable fun VodPlayerScreen( mediaKey: String, streamUrl: String, title: String, userAgent: String, onBack: () -&gt; Unit, viewModel: VodPlayerViewModel = viewModel(), )</ID>
     <ID>CyclomaticComplexMethod:VodPlayerScreen.kt$@OptIn(UnstableApi::class) @Composable fun VodPlayerContent( controller: PlayerController, viewModel: VodPlayerViewModel, growingRec: Boolean, subtitlePicks: SubtitlePicks, onBack: () -&gt; Unit, )</ID>
     <ID>CyclomaticComplexMethod:XmltvParser.kt$XmltvParser$private fun readProgramme(parser: XmlPullParser, feedId: Long): Programme?</ID>
-    <ID>ForbiddenImport:AboutScreen.kt$import androidx.compose.foundation.shape.RoundedCornerShape</ID>
-    <ID>ForbiddenImport:AboutScreen.kt$import androidx.compose.material3.OutlinedButton</ID>
-    <ID>ForbiddenImport:AppSettingsScreen.kt$import androidx.compose.material3.IconButton</ID>
-    <ID>ForbiddenImport:AppSettingsScreen.kt$import androidx.compose.material3.OutlinedButton</ID>
-    <ID>ForbiddenImport:AppSettingsScreen.kt$import androidx.compose.material3.RadioButton</ID>
-    <ID>ForbiddenImport:AppSettingsScreen.kt$import androidx.compose.material3.Switch</ID>
     <ID>ForbiddenImport:BatteryOptimizationPrompt.kt$import androidx.compose.foundation.shape.RoundedCornerShape</ID>
     <ID>ForbiddenImport:BatteryOptimizationPrompt.kt$import androidx.compose.material3.Button</ID>
     <ID>ForbiddenImport:BatteryOptimizationPrompt.kt$import androidx.compose.material3.TextButton</ID>
     <ID>ForbiddenImport:ConfirmLive.kt$import androidx.compose.foundation.shape.RoundedCornerShape</ID>
-    <ID>ForbiddenImport:EpgSettingsScreen.kt$import androidx.compose.material3.Button</ID>
-    <ID>ForbiddenImport:EpgSettingsScreen.kt$import androidx.compose.material3.OutlinedButton</ID>
-    <ID>ForbiddenImport:EpgSettingsScreen.kt$import androidx.compose.material3.Switch</ID>
-    <ID>ForbiddenImport:EpgSettingsScreen.kt$import androidx.compose.material3.TextButton</ID>
     <ID>ForbiddenImport:LivePausePrompt.kt$import androidx.compose.foundation.shape.RoundedCornerShape</ID>
     <ID>ForbiddenImport:LivePausePrompt.kt$import androidx.compose.material3.Button</ID>
     <ID>ForbiddenImport:LivePausePrompt.kt$import androidx.compose.material3.TextButton</ID>
@@ -41,46 +30,18 @@
     <ID>ForbiddenImport:MainScreen.kt$import androidx.compose.material3.TextButton</ID>
     <ID>ForbiddenImport:OptionsPanel.kt$import androidx.compose.material3.AlertDialog</ID>
     <ID>ForbiddenImport:OptionsPanel.kt$import androidx.compose.material3.TextButton</ID>
-    <ID>ForbiddenImport:ParentalControlsScreen.kt$import androidx.compose.material3.Button</ID>
-    <ID>ForbiddenImport:ParentalControlsScreen.kt$import androidx.compose.material3.OutlinedButton</ID>
-    <ID>ForbiddenImport:ParentalControlsScreen.kt$import androidx.compose.material3.Switch</ID>
     <ID>ForbiddenImport:PlayerErrorPanel.kt$import androidx.compose.material3.Button</ID>
     <ID>ForbiddenImport:PlayerScreen.kt$import androidx.compose.material3.Button</ID>
-    <ID>ForbiddenImport:ProfilesScreen.kt$import androidx.compose.material3.AlertDialog</ID>
-    <ID>ForbiddenImport:ProfilesScreen.kt$import androidx.compose.material3.Button</ID>
-    <ID>ForbiddenImport:ProfilesScreen.kt$import androidx.compose.material3.OutlinedButton</ID>
-    <ID>ForbiddenImport:ProfilesScreen.kt$import androidx.compose.material3.TextButton</ID>
-    <ID>ForbiddenImport:ProvidersScreen.kt$import androidx.compose.material3.Button</ID>
-    <ID>ForbiddenImport:ProvidersScreen.kt$import androidx.compose.material3.OutlinedButton</ID>
-    <ID>ForbiddenImport:ProvidersScreen.kt$import androidx.compose.material3.TextButton</ID>
     <ID>ForbiddenImport:RecentSearchList.kt$import androidx.compose.material3.OutlinedButton</ID>
-    <ID>ForbiddenImport:RecordingSettingsScreen.kt$import androidx.compose.foundation.shape.RoundedCornerShape</ID>
-    <ID>ForbiddenImport:RecordingSettingsScreen.kt$import androidx.compose.material3.Button</ID>
-    <ID>ForbiddenImport:RecordingSettingsScreen.kt$import androidx.compose.material3.IconButton</ID>
-    <ID>ForbiddenImport:RecordingSettingsScreen.kt$import androidx.compose.material3.OutlinedButton</ID>
-    <ID>ForbiddenImport:RecordingSettingsScreen.kt$import androidx.compose.material3.Switch</ID>
     <ID>ForbiddenImport:SearchScreen.kt$import androidx.compose.foundation.shape.RoundedCornerShape</ID>
     <ID>ForbiddenImport:SearchScreen.kt$import androidx.compose.material3.OutlinedButton</ID>
-    <ID>ForbiddenImport:SettingsHubScreen.kt$import androidx.compose.foundation.shape.RoundedCornerShape</ID>
-    <ID>ForbiddenImport:StremioAddonsScreen.kt$import androidx.compose.material3.Button</ID>
-    <ID>ForbiddenImport:StremioAddonsScreen.kt$import androidx.compose.material3.OutlinedButton</ID>
-    <ID>ForbiddenImport:StremioAddonsScreen.kt$import androidx.compose.material3.TextButton</ID>
-    <ID>ForbiddenImport:SyncScreen.kt$import androidx.compose.foundation.shape.RoundedCornerShape</ID>
-    <ID>ForbiddenImport:SyncScreen.kt$import androidx.compose.material3.Button</ID>
-    <ID>ForbiddenImport:SyncScreen.kt$import androidx.compose.material3.OutlinedButton</ID>
-    <ID>ForbiddenImport:SyncScreen.kt$import androidx.compose.material3.Switch</ID>
     <ID>ForbiddenImport:UpdateScreen.kt$import androidx.compose.material3.AlertDialog</ID>
     <ID>ForbiddenImport:UpdateScreen.kt$import androidx.compose.material3.TextButton</ID>
     <ID>ForbiddenImport:VodScreens.kt$import androidx.compose.foundation.shape.RoundedCornerShape</ID>
     <ID>ForbiddenImport:WatchBadge.kt$import androidx.compose.foundation.shape.RoundedCornerShape</ID>
-    <ID>ForbiddenImport:WebManagerScreen.kt$import androidx.compose.foundation.shape.RoundedCornerShape</ID>
-    <ID>ForbiddenImport:WebManagerScreen.kt$import androidx.compose.material3.Button</ID>
-    <ID>ForbiddenImport:WebManagerScreen.kt$import androidx.compose.material3.OutlinedButton</ID>
     <ID>ForbiddenImport:WhatsNewDialog.kt$import androidx.compose.material3.AlertDialog</ID>
     <ID>ForbiddenImport:WhatsNewDialog.kt$import androidx.compose.material3.TextButton</ID>
     <ID>ForbiddenImport:WhosWatching.kt$import androidx.compose.foundation.shape.RoundedCornerShape</ID>
-    <ID>ImplicitDefaultLocale:RecordingSettingsScreen.kt$String.format("%.0f MB", mb)</ID>
-    <ID>ImplicitDefaultLocale:RecordingSettingsScreen.kt$String.format("%.1f GB", mb / 1024.0)</ID>
     <ID>InstanceOfCheckForException:RecordingService.kt$RecordingService$t is kotlinx.coroutines.CancellationException</ID>
     <ID>LambdaParameterInRestartableEffect:PlayerScreen.kt$onBack</ID>
     <ID>LambdaParameterInRestartableEffect:VodPlayerScreen.kt$onBack</ID>
@@ -154,8 +115,6 @@
     <ID>MagicNumber:RecordingEngine.kt$RecordingEngine$1_000L</ID>
     <ID>MagicNumber:RecordingEngine.kt$RecordingEngine$200</ID>
     <ID>MagicNumber:RecordingEngine.kt$RecordingEngine$60_000L</ID>
-    <ID>MagicNumber:RecordingSettingsScreen.kt$1024</ID>
-    <ID>MagicNumber:RecordingSettingsScreen.kt$1024.0</ID>
     <ID>MagicNumber:RecordingStorage.kt$RecordingStorage$80</ID>
     <ID>MagicNumber:SleepTimer.kt$SleepTimer$59_999L</ID>
     <ID>MagicNumber:SleepTimer.kt$SleepTimer$60_000L</ID>
@@ -189,28 +148,11 @@
     <ID>MagicNumber:XtreamApi.kt$XtreamApi$599</ID>
     <ID>MatchingDeclarationName:BatteryOptimizationPrompt.kt$RecordingBackgroundPrompt</ID>
     <ID>MatchingDeclarationName:MainScreen.kt$Tab</ID>
-    <ID>MatchingDeclarationName:StremioAddonsScreen.kt$StremioAddonsViewModel : AndroidViewModel</ID>
     <ID>MaxLineLength:Daos.kt$RecordingDao$"UPDATE recordings SET status = :status, endedAtMillis = :endedAt, sizeBytes = :bytes, error = :error WHERE id = :id"</ID>
-    <ID>ModifierMissing:AboutScreen.kt$AboutScreen</ID>
-    <ID>ModifierMissing:AppSettingsScreen.kt$AppSettingsScreen</ID>
-    <ID>ModifierMissing:EpgSettingsScreen.kt$EpgSettingsScreen</ID>
     <ID>ModifierMissing:MainScreen.kt$MainScreen</ID>
-    <ID>ModifierMissing:ParentalControlsScreen.kt$ParentalControlsScreen</ID>
     <ID>ModifierMissing:PlayerScreen.kt$PlayerScreen</ID>
-    <ID>ModifierMissing:ProfilesScreen.kt$ProfilesScreen</ID>
-    <ID>ModifierMissing:ProvidersScreen.kt$ProvidersScreen</ID>
-    <ID>ModifierMissing:RecordingSettingsScreen.kt$RecordingSettingsScreen</ID>
     <ID>ModifierMissing:SearchScreen.kt$SearchScreen</ID>
-    <ID>ModifierMissing:SettingsHubScreen.kt$SettingsHubScreen</ID>
-    <ID>ModifierMissing:StremioAddonsScreen.kt$StremioAddonsScreen</ID>
-    <ID>ModifierMissing:SyncScreen.kt$SyncScreen</ID>
     <ID>ModifierMissing:VodPlayerScreen.kt$VodPlayerScreen</ID>
-    <ID>ModifierMissing:WebManagerScreen.kt$WebManagerScreen</ID>
-    <ID>MultipleEmitters:AboutScreen.kt$Section</ID>
-    <ID>MultipleEmitters:AppSettingsScreen.kt$SettingsSection</ID>
-    <ID>MultipleEmitters:AppSettingsScreen.kt$SleepTimerSection</ID>
-    <ID>MultipleEmitters:ParentalControlsScreen.kt$PinSection</ID>
-    <ID>MultipleEmitters:RecordingSettingsScreen.kt$StorageInfo</ID>
     <ID>NestedBlockDepth:EpgRepository.kt$EpgRepository$private suspend fun syncFeed( feed: EpgFeed, nowUtcMillis: Long, read: (Float) -&gt; Unit, counted: () -&gt; Unit, ): FeedResult</ID>
     <ID>NestedBlockDepth:RecordingService.kt$RecordingService$private suspend fun runCapture(id: Long)</ID>
     <ID>NestedBlockDepth:XmltvParser.kt$XmltvParser$private fun readProgramme(parser: XmlPullParser, feedId: Long): Programme?</ID>
@@ -297,12 +239,8 @@
     <ID>UseCheckOrError:EpgRepository.kt$EpgRepository$throw IllegalStateException("Guide download failed (HTTP ${response.code}).")</ID>
     <ID>UseCheckOrError:EpgRepository.kt$EpgRepository$throw IllegalStateException("Provider for this guide no longer exists.")</ID>
     <ID>UseCheckOrError:EpgRepository.kt$EpgRepository$throw IllegalStateException("The server returned an empty guide.")</ID>
-    <ID>ViewModelForwarding:SyncScreen.kt$NasPane(viewModel)</ID>
-    <ID>ViewModelForwarding:SyncScreen.kt$ReceivePane(viewModel)</ID>
-    <ID>ViewModelForwarding:SyncScreen.kt$SharePane(viewModel)</ID>
     <ID>ViewModelInjection:MainActivity.kt$profilesViewModel</ID>
     <ID>ViewModelInjection:MainActivity.kt$sourcesViewModel</ID>
     <ID>ViewModelInjection:MainActivity.kt$vodViewModel</ID>
-    <ID>ViewModelInjection:StremioAddonsScreen.kt$viewModel</ID>
   </CurrentIssues>
 </SmellBaseline>
