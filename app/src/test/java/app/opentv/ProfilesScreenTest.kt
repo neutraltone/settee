@@ -54,24 +54,33 @@ class ProfilesScreenTest {
     private val app: Application = ApplicationProvider.getApplicationContext()
     private val graph get() = ServiceLocator.get(app)
 
-    private fun profile(name: String) = runBlocking { graph.profiles.all() }.firstOrNull { it.name == name }
+    private lateinit var viewModel: ProfilesViewModel
+
+    /**
+     * The Profile called [name], as the screen's list has it. Never asked of Profiles itself with
+     * runBlocking: a rename or removal holds its lock while it waits for this, the main thread, so
+     * blocking here waits for that and it for this, and the run never ends.
+     */
+    private fun profile(name: String) = viewModel.profiles.value.firstOrNull { it.name == name }
 
     private fun show(vararg names: String) {
-        runBlocking { names.forEach { if (profile(it) == null) graph.profiles.create(it) } }
+        // A name already there is refused, which leaves it as it is.
+        runBlocking { names.forEach { graph.profiles.create(it) } }
         graph.settings.setActiveProfile(Profiles.BASE_PROFILE_ID)
-        val viewModel = ProfilesViewModel(app)
+        viewModel = ProfilesViewModel(app)
         compose.setTvContent {
             view = LocalView.current
             ProfilesScreen(onBack = {}, viewModel = viewModel)
         }
         compose.waitUntil(5_000) {
-            (names.toList() + baseName()).all { compose.onAllNodes(hasText(it)).fetchSemanticsNodes().isNotEmpty() }
+            viewModel.profiles.value.any { it.id == Profiles.BASE_PROFILE_ID } &&
+                (names.toList() + baseName()).all { compose.onAllNodes(hasText(it)).fetchSemanticsNodes().isNotEmpty() }
         }
         // The list's first Highlight lands a frame after it loads.
         compose.waitUntil(5_000) { compose.onAllNodes(isFocused()).fetchSemanticsNodes().isNotEmpty() }
     }
 
-    private fun baseName() = runBlocking { graph.profiles.all() }.first { it.id == Profiles.BASE_PROFILE_ID }.name
+    private fun baseName() = viewModel.profiles.value.first { it.id == Profiles.BASE_PROFILE_ID }.name
 
     private fun press(vararg keys: Int) = keys.forEach(device::remote)
 
@@ -185,7 +194,7 @@ class ProfilesScreenTest {
     @Test
     fun `Back leaves Profiles`() {
         var left = 0
-        val viewModel = ProfilesViewModel(app)
+        viewModel = ProfilesViewModel(app)
         compose.setTvContent {
             view = LocalView.current
             ProfilesScreen(onBack = { left++ }, viewModel = viewModel)

