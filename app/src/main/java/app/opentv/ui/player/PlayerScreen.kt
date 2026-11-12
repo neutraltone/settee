@@ -32,7 +32,6 @@ import androidx.compose.material.icons.filled.PictureInPictureAlt
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.filled.Subtitles
 import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -83,6 +82,7 @@ import app.opentv.data.repo.toRecord
 import app.opentv.player.PlaybackQueue
 import app.opentv.player.PlayerController
 import app.opentv.player.SettledChannel
+import app.opentv.ui.design.AerialTv
 import app.opentv.ui.design.ErrorMessage
 import app.opentv.ui.design.SetteeColors
 import app.opentv.ui.design.SetteeShapes
@@ -97,13 +97,13 @@ import app.opentv.ui.options.LocalOpenOptions
 import app.opentv.ui.options.LocalRecordingStarted
 import app.opentv.ui.options.OptionsFor
 import app.opentv.ui.options.OptionsSubject
-import java.util.Locale
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import java.util.Locale
 
 /**
  * Full-screen live playback.
@@ -738,9 +738,9 @@ fun LivePlayerContent(
             is PlayerController.State.Buffering -> {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        CircularProgressIndicator()
+                        AerialTv(stringResource(R.string.player_loading))
                         Spacer(Modifier.height(16.dp))
-                        Text(current.title, color = Color.White)
+                        SetteeText(current.title, SetteeType.Body)
                     }
                 }
             }

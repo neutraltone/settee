@@ -32,7 +32,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.FiberManualRecord
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -271,10 +270,9 @@ private fun OpenTvApp(isTelevision: Boolean, launchedToPlay: Boolean) {
     // composition, so wait for that first load before building it. The Profiles are waited for
     // too, or a household would see Home flash up before being asked who's watching.
     val knownProfiles = loadedProfiles
+    // Only the background: this is usually a frame or two, and anything drawn here would flicker.
     if (!sourcesUi.loaded || knownProfiles == null) {
-        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            CircularProgressIndicator()
-        }
+        Box(Modifier.fillMaxSize().background(SetteeColors.Background))
         return
     }
 

@@ -12,10 +12,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.unit.dp
 import app.opentv.pairing.PairingServer
 import app.opentv.ui.onboarding.Listening
+import app.opentv.ui.onboarding.PairingConnecting
+import app.opentv.ui.onboarding.PairingStarting
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -52,5 +55,22 @@ class PhonePairingScreenTest {
 
         compose.onNodeWithText("192.168.0.14:41234/k7mx4ht").assertIsDisplayed()
         captureScreen("phone_pairing_listening")
+    }
+
+    @Test
+    fun `while pairing gets ready, the aerial TV waits`() {
+        compose.setTvContent { PairingStarting() }
+
+        compose.onNodeWithContentDescription("Getting pairing ready").assertIsDisplayed()
+        captureScreen("phone_pairing_starting")
+    }
+
+    @Test
+    fun `once the phone has sent the details, the aerial TV waits over what's happening`() {
+        compose.setTvContent { PairingConnecting() }
+
+        compose.onNodeWithContentDescription("Still working").assertIsDisplayed()
+        compose.onNodeWithText("Got it. Connecting to your provider…").assertIsDisplayed()
+        captureScreen("phone_pairing_connecting")
     }
 }
