@@ -59,10 +59,12 @@ import app.opentv.sync.SyncClient
 import app.opentv.sync.SyncEngine
 import app.opentv.sync.SyncServer
 import java.net.HttpURLConnection
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -95,8 +97,10 @@ import kotlinx.coroutines.withContext
  * a contributor tracking down "where does the channel list come from" finds it in one place.
  */
 
-class SourcesViewModel(app: Application) : AndroidViewModel(app) {
-    private val graph = ServiceLocator.get(app)
+class SourcesViewModel @JvmOverloads constructor(
+    app: Application,
+    private val graph: ServiceLocator.Graph = ServiceLocator.get(app),
+) : AndroidViewModel(app) {
 
     data class UiState(
         val sources: List<Source> = emptyList(),
@@ -211,23 +215,68 @@ class SourcesViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    /** Saves, then immediately pulls the channels so the viewer sees them, not a spinner. */
-    fun saveAndSync(draft: Source, onDone: (Boolean) -> Unit = {}) {
+    /** The running or latest Setup, for its screen. */
+    val setup: StateFlow<CatalogueRefresh.Setup?> = refresh.state.map { it.setup }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, refresh.state.value.setup)
+
+    val liveEnabled: StateFlow<Boolean> = graph.settings.liveEnabled
+
+    /**
+     * Saves, then immediately pulls the channels so the viewer sees them, not a spinner. The first
+     * provider, saved while none was, goes through Setup instead: [onSetup] opens its screen as soon
+     * as it's saved, and [onDone] isn't called, since Setup's screen decides where to go next.
+     * [onChannels] hears either way once the channels are in (null) or why they didn't load.
+     * Without [keepIfFails], a new provider whose channels don't load is removed again: the phone
+     * puts the login right and sends it again, which would otherwise save a second one.
+     */
+    fun saveAndSync(
+        draft: Source,
+        keepIfFails: Boolean = true,
+        onSetup: () -> Unit = {},
+        onChannels: (failure: String?) -> Unit = {},
+        onDone: (Boolean) -> Unit = {},
+    ) {
         viewModelScope.launch {
             _ui.update {
                 it.copy(adding = true, addFailure = null, syncMessage = messages.of(RefreshMessages.Step.SavingSource))
             }
+            // Editing a provider is never the first.
+            val existing = if (draft.id == 0L) graph.sourceRepository.all() else null
+            val first = existing != null && !hasProvider(existing)
+            // What a Setup closed before its channels came in left behind; it never was a provider.
+            // Only that one: another that never loaded was still added on purpose.
+            val leftover = graph.settings.setupSourceId
+            if (first && existing.any { it.id == leftover && it.lastCatalogSyncMillis == 0L }) {
+                graph.catalogRepository.deleteSource(leftover)
+            }
             val id = graph.sourceRepository.save(draft)
             val saved = graph.sourceRepository.byId(id)
             if (saved == null) {
-                _ui.update { it.copy(adding = false, syncMessage = messages.of(RefreshMessages.Step.SaveFailed)) }
+                val failed = messages.of(RefreshMessages.Step.SaveFailed)
+                _ui.update { it.copy(adding = false, syncMessage = failed) }
+                onChannels(failed)
                 onDone(false)
+                return@launch
+            }
+            if (first) {
+                // Started before Setup's screen opens, so the screen never sees the last try's state
+                // (a failed login would send it straight back to the form).
+                val setup = async(start = CoroutineStart.UNDISPATCHED) {
+                    refresh.refresh(CatalogueRefresh.Trigger.Setup(saved))
+                }
+                onSetup()
+                val outcome = setup.await()
+                // A failed login is back on the form, with why.
+                val failure = (outcome as? CatalogueRefresh.Outcome.AddFailed)?.reason
+                _ui.update { it.copy(adding = false, addFailure = failure, syncMessage = messages.of(outcome)) }
+                onChannels(failure?.sentence)
                 return@launch
             }
 
             _ui.update { it.copy(syncMessage = messages.of(RefreshMessages.Step.LoadingChannels)) }
             val outcome = refresh.refresh(CatalogueRefresh.Trigger.ProviderAdded(saved))
             val failure = (outcome as? CatalogueRefresh.Outcome.AddFailed)?.reason
+            if (failure != null && !keepIfFails && draft.id == 0L) graph.catalogRepository.deleteSource(saved.id)
             _ui.update {
                 it.copy(
                     adding = false,
@@ -235,6 +284,7 @@ class SourcesViewModel(app: Application) : AndroidViewModel(app) {
                     syncMessage = messages.of(outcome),
                 )
             }
+            onChannels(failure?.sentence)
             onDone(outcome is CatalogueRefresh.Outcome.ChannelsLoaded)
         }
     }
@@ -1034,9 +1084,11 @@ class VodViewModel @JvmOverloads constructor(
         loadedSeriesFeeds = key
     }
 
-    // Movies + series load on demand — the first time the user opens Movies or Shows — rather than
-    // up front at login. A provider's 40,000-title VOD list is exactly what makes a first sync
-    // crawl, and most sessions only ever watch live TV. Loaded once per app run.
+    // The first provider's movies and shows are fetched during Setup, while the viewer is waiting
+    // anyway. This is the backup: the first time Movies or Shows opens in an app run, any list more
+    // than 12 hours old is fetched, which covers a Setup step that failed or was left, a provider
+    // added later from Settings (no Setup), and Movies or Shows switched on afterwards. A list Setup
+    // has just fetched is fresh, so opening the tab doesn't fetch it again.
     val vodLoading: StateFlow<Boolean> = graph.catalogueRefresh.state
         .map { it.loadingVod }
         .stateIn(viewModelScope, SharingStarted.Eagerly, false)

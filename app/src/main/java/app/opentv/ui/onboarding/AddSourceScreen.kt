@@ -70,7 +70,12 @@ import app.opentv.update.startsFocused
  *    looking for a privacy policy.
  */
 @Composable
-fun AddSourceScreen(viewModel: SourcesViewModel, onFinished: () -> Unit, editingSourceId: Long? = null) {
+fun AddSourceScreen(
+    viewModel: SourcesViewModel,
+    onFinished: () -> Unit,
+    editingSourceId: Long? = null,
+    onSetup: () -> Unit = {},
+) {
     val context = LocalContext.current
     // The QR flow serves a setup page FROM this device for a phone to fill in, so only a TV offers
     // it. There it comes first, because typing a server address and password with a D-pad is the
@@ -82,7 +87,7 @@ fun AddSourceScreen(viewModel: SourcesViewModel, onFinished: () -> Unit, editing
     var cameFrom by rememberSaveable { mutableStateOf(options.first()) }
 
     if (editingSourceId != null) {
-        ProviderForm(viewModel, onFinished, editingSourceId, kind = null)
+        ProviderForm(viewModel, onFinished, onSetup, editingSourceId, kind = null)
         return
     }
     when (val open = opened) {
@@ -91,13 +96,25 @@ fun AddSourceScreen(viewModel: SourcesViewModel, onFinished: () -> Unit, editing
             opened = option
         }
         AddOption.PHONE -> PhonePairingScreen(
-            // Even on a failed sync, leave the pairing screen: the source is already saved, so the
-            // home screen shows either the guide (success) or a recoverable error (failure) rather
-            // than stranding the user on an endless "Got it, connecting" spinner.
-            onReceived = { draft -> viewModel.saveAndSync(draft) { onFinished() } },
+            // The TV stays on "Got it" while the channels load, and the phone waits with it: a
+            // failed login is put right on the phone, which shows why, and the TV listens again.
+            // Once the channels are in, a first provider carries on in Setup, already past its
+            // first step; a later one goes to Home as before.
+            onReceived = { received ->
+                var setup = false
+                viewModel.saveAndSync(
+                    received.draft,
+                    keepIfFails = false,
+                    onSetup = { setup = true },
+                    onChannels = { failure ->
+                        received.answer(failure)
+                        if (failure == null) if (setup) onSetup() else onFinished()
+                    },
+                )
+            },
             onCancel = { opened = null },
         )
-        else -> ProviderForm(viewModel, onFinished, editingSourceId = null, kind = open.kind)
+        else -> ProviderForm(viewModel, onFinished, onSetup, editingSourceId = null, kind = open.kind)
     }
     if (opened != null) BackHandler { opened = null }
 }
@@ -179,12 +196,18 @@ private fun Centred(content: @Composable () -> Unit) = ScreenFrame {
 private fun ProviderForm(
     viewModel: SourcesViewModel,
     onFinished: () -> Unit,
+    onSetup: () -> Unit,
     editingSourceId: Long?,
     kind: SourceKind?,
 ) {
     val ui by viewModel.ui.collectAsState()
     // The view model outlives the form, so without this one form would open on another's test result.
-    LaunchedEffect(Unit) { viewModel.clearFormMessages() }
+    // Only when it opens, not when it comes back from Setup: that's where a failed login says why.
+    var opened by rememberSaveable { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        if (!opened) viewModel.clearFormMessages()
+        opened = true
+    }
 
     // When editing, find the source being edited and fill every field from it. Keyed on its id so
     // the fields fill once the list has loaded; a fresh add leaves everything blank.
@@ -215,7 +238,7 @@ private fun ProviderForm(
         ui.addFailure?.let { ErrorMessage(it.sentence, it.detail, textAlign = TextAlign.Start) }
         ui.syncMessage?.let { Text(it, SetteeType.Body) }
 
-        FormButtons(viewModel, details, defaultName, onFinished)
+        FormButtons(viewModel, details, defaultName, onFinished, onSetup)
 
         AdvancedFields(details)
 
@@ -231,6 +254,7 @@ private fun FormButtons(
     details: ProviderDetails,
     defaultName: String,
     onFinished: () -> Unit,
+    onSetup: () -> Unit,
 ) {
     val ui by viewModel.ui.collectAsState()
     // Working ignores presses rather than disabling the buttons: one that isn't enabled can't
@@ -247,7 +271,9 @@ private fun FormButtons(
         PillButton(
             label = stringResource(if (ui.adding) R.string.onboarding_working else R.string.onboarding_save_load),
             onClick = {
-                if (!working) viewModel.saveAndSync(details.draft(defaultName)) { ok -> if (ok) onFinished() }
+                if (!working) {
+                    viewModel.saveAndSync(details.draft(defaultName), onSetup = onSetup) { ok -> if (ok) onFinished() }
+                }
             },
             enabled = details.canSubmit,
         )

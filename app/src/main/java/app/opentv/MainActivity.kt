@@ -75,6 +75,7 @@ import app.opentv.ui.channels.SearchScreen
 import app.opentv.ui.design.SetteeColors
 import app.opentv.ui.design.SetteeTheme
 import app.opentv.ui.firstScreen
+import app.opentv.ui.hasProvider
 import app.opentv.ui.options.ItemOptionsHost
 import app.opentv.ui.options.OptionsDestination
 import app.opentv.ui.player.PlayerScreen
@@ -196,6 +197,7 @@ class MainActivity : ComponentActivity() {
 object Routes {
     const val MAIN = "main"
     const val ADD_SOURCE = "add-source"
+    const val SETUP = "setup"
     const val PLAYER = "player/{channelId}"
     const val SEARCH = "search"
     const val EPG_SETTINGS = "epg-settings"
@@ -291,7 +293,7 @@ private fun OpenTvApp(isTelevision: Boolean, launchedToPlay: Boolean) {
     }
 
     val first = firstScreen(
-        hasProvider = sourcesUi.sources.isNotEmpty(),
+        hasProvider = hasProvider(sourcesUi.sources),
         profileCount = knownProfiles.size,
         askedThisProcess = WhosWatchingAsked.settled,
         launchedToPlay = launchedToPlay,
@@ -312,7 +314,13 @@ private fun OpenTvApp(isTelevision: Boolean, launchedToPlay: Boolean) {
 
     // First run goes straight to setup — an empty channel list with no explanation is the
     // worst possible first impression.
-    val start = if (first == FirstScreen.ADD_SOURCE) Routes.ADD_SOURCE else Routes.MAIN
+    // Decided once: a NavHost whose start destination changes rebuilds its graph, which throws the
+    // back stack away. Saving the first provider flips it mid-Setup (once the channels are in), so
+    // without this Setup vanished into Home halfway through. Saved so a restored back stack keeps
+    // the start it was built on; a new Profile chosen above starts a new navigation, and a new one.
+    val start = rememberSaveable(navGeneration) {
+        if (first == FirstScreen.ADD_SOURCE) Routes.ADD_SOURCE else Routes.MAIN
+    }
 
     val bootContext = androidx.compose.ui.platform.LocalContext.current
 

@@ -211,7 +211,7 @@
     <ID>MultipleEmitters:AppSettingsScreen.kt$SleepTimerSection</ID>
     <ID>MultipleEmitters:ParentalControlsScreen.kt$PinSection</ID>
     <ID>MultipleEmitters:RecordingSettingsScreen.kt$StorageInfo</ID>
-    <ID>NestedBlockDepth:EpgRepository.kt$EpgRepository$private suspend fun syncFeed(feed: EpgFeed, nowUtcMillis: Long): FeedResult</ID>
+    <ID>NestedBlockDepth:EpgRepository.kt$EpgRepository$private suspend fun syncFeed( feed: EpgFeed, nowUtcMillis: Long, read: (Float) -&gt; Unit, counted: () -&gt; Unit, ): FeedResult</ID>
     <ID>NestedBlockDepth:RecordingService.kt$RecordingService$private suspend fun runCapture(id: Long)</ID>
     <ID>NestedBlockDepth:XmltvParser.kt$XmltvParser$private fun readProgramme(parser: XmlPullParser, feedId: Long): Programme?</ID>
     <ID>NestedBlockDepth:XmltvParser.kt$XmltvParser$suspend fun parse( input: InputStream, feedId: Long, onChannelAlias: (id: String, displayName: String?) -&gt; Unit = { _, _ -&gt; }, onProgramme: suspend (Programme) -&gt; Unit, ): Stats</ID>
@@ -222,7 +222,7 @@
     <ID>ReturnCount:CatalogRepository.kt$CatalogRepository$suspend fun resolvePlaybackUrl(channel: Channel, source: Source?): String</ID>
     <ID>ReturnCount:EpgMatcher.kt$EpgMatcher.Index$fun match(groupKey: String): String?</ID>
     <ID>ReturnCount:EpgRepository.kt$EpgRepository$private suspend fun maybeAutoEnableRegionalFeed()</ID>
-    <ID>ReturnCount:EpgRepository.kt$EpgRepository$private suspend fun syncFeed(feed: EpgFeed, nowUtcMillis: Long): FeedResult</ID>
+    <ID>ReturnCount:EpgRepository.kt$EpgRepository$private suspend fun syncFeed( feed: EpgFeed, nowUtcMillis: Long, read: (Float) -&gt; Unit, counted: () -&gt; Unit, ): FeedResult</ID>
     <ID>ReturnCount:GrowingRecordingDataSource.kt$GrowingRecordingDataSource$private fun readLocal(buffer: ByteArray, offset: Int, length: Int): Int</ID>
     <ID>ReturnCount:GrowingRecordingDataSource.kt$GrowingRecordingDataSource$private fun readSmb(buffer: ByteArray, offset: Int, length: Int): Int</ID>
     <ID>ReturnCount:ManagerServer.kt$ManagerServer$fun start()</ID>
@@ -256,7 +256,7 @@
     <ID>ReturnCount:XmltvParser.kt$XmltvParser$private fun readProgramme(parser: XmlPullParser, feedId: Long): Programme?</ID>
     <ID>ReturnCount:XtreamApi.kt$private fun JsonObject.asBackdropUrl(vararg fallbackKeys: String): String?</ID>
     <ID>SpreadOperator:VodTitleCleaner.kt$VodTitleCleaner$(*EDGE_JUNK)</ID>
-    <ID>ThrowsCount:EpgRepository.kt$EpgRepository$private suspend fun openFeedStream(feed: EpgFeed): InputStream</ID>
+    <ID>ThrowsCount:EpgRepository.kt$EpgRepository$private suspend fun openFeedStream(feed: EpgFeed, read: (Float) -&gt; Unit): InputStream</ID>
     <ID>ThrowsCount:RecordingService.kt$RecordingService$private suspend fun runCapture(id: Long)</ID>
     <ID>ThrowsCount:RecordingStorage.kt$RecordingStorage$private fun openUsbSink(context: Context, settings: AppSettings, filename: String): Sink</ID>
     <ID>ThrowsCount:XtreamApi.kt$XtreamApi$private fun getJson(source: Source, action: String?, extra: (HttpUrl.Builder) -&gt; Unit = {}): JsonElement</ID>

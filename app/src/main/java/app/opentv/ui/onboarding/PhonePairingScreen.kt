@@ -37,7 +37,6 @@ import app.opentv.core.ErrorWording
 import app.opentv.core.ServerProblem
 import app.opentv.core.ServiceLocator
 import app.opentv.core.ViewerError
-import app.opentv.data.model.Source
 import app.opentv.pairing.PairingFonts
 import app.opentv.pairing.PairingServer
 import app.opentv.pairing.QrCodes
@@ -62,10 +61,13 @@ import kotlinx.coroutines.cancel
  * a website.
  */
 @Composable
-fun PhonePairingScreen(onReceived: (Source) -> Unit, onCancel: () -> Unit) {
+fun PhonePairingScreen(onReceived: (PairingServer.State.Received) -> Unit, onCancel: () -> Unit) {
     val scope = remember { CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate) }
     val context = LocalContext.current
-    val server = remember { PairingServer(scope, PairingFonts(context.applicationContext)) }
+    val server = remember {
+        val app = context.applicationContext
+        PairingServer(scope, PairingFonts(app), app::getString)
+    }
     val state by server.state.collectAsState()
 
     DisposableEffect(Unit) {
@@ -79,7 +81,7 @@ fun PhonePairingScreen(onReceived: (Source) -> Unit, onCancel: () -> Unit) {
     }
 
     LaunchedEffect(state) {
-        (state as? PairingServer.State.Received)?.let { onReceived(it.draft) }
+        (state as? PairingServer.State.Received)?.let(onReceived)
     }
 
     ScreenFrame {

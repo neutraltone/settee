@@ -85,7 +85,10 @@ class AppSettings private constructor(context: Context, fileName: String = "open
         setActiveProfile(Profiles.BASE_PROFILE_ID)
         lastChannelId = 0L
         forgetVodFetches()
-        prefs.edit { remove(KEY_SYNC_EPISODES_NOT_FOUND) }
+        prefs.edit {
+            remove(KEY_SYNC_EPISODES_NOT_FOUND)
+            remove(KEY_SETUP_SOURCE)
+        }
         selfEnabledGuide = null
     }
 
@@ -480,6 +483,16 @@ class AppSettings private constructor(context: Context, fileName: String = "open
      * id, so this needs no schema change; ids aren't reused until the database is rebuilt, which
      * clears these through [forgetDatabaseRows].
      */
+    /**
+     * The provider Setup is adding, until its channels are in; 0 otherwise. One still set at the next
+     * save was left by Settee closing during Setup's first step, and never was a provider.
+     */
+    val setupSourceId: Long get() = prefs.getLong(KEY_SETUP_SOURCE, 0L)
+
+    fun setSetupSourceId(sourceId: Long) {
+        prefs.edit { putLong(KEY_SETUP_SOURCE, sourceId) }
+    }
+
     fun vodFetchedAtMillis(sourceId: Long): Long = prefs.getLong(KEY_VOD_FETCHED_AT + sourceId, 0L)
 
     fun setVodFetchedAtMillis(sourceId: Long, millis: Long) {
@@ -575,6 +588,7 @@ class AppSettings private constructor(context: Context, fileName: String = "open
         private const val KEY_SYNC_EPISODES_NOT_FOUND = "sync_episodes_not_found"
         private const val KEY_NAS_AUTO_SYNC = "nas_auto_sync"
         private const val KEY_VOD_FETCHED_AT = "vod_fetched_at_"
+        private const val KEY_SETUP_SOURCE = "setup_source_id"
 
         // No longer written: the background pass asks TMDB about each film once a key is set. Still
         // cleared with a provider's other stamps, so it doesn't linger on devices that had it.

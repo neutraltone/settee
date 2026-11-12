@@ -20,6 +20,8 @@ class SourceRepository(private val dao: SourceDao, private val api: XtreamApi, p
 
     suspend fun enabled(): List<Source> = dao.enabled()
 
+    suspend fun all(): List<Source> = dao.all()
+
     suspend fun byId(id: Long): Source? = dao.byId(id)
 
     suspend fun save(source: Source): Long = withContext(Dispatchers.IO) {

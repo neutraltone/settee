@@ -59,6 +59,9 @@ interface SourceDao {
     @Query("SELECT * FROM sources WHERE enabled = 1 ORDER BY id")
     suspend fun enabled(): List<Source>
 
+    @Query("SELECT * FROM sources ORDER BY id")
+    suspend fun all(): List<Source>
+
     @Query("SELECT * FROM sources WHERE id = :id")
     suspend fun byId(id: Long): Source?
 
@@ -494,6 +497,9 @@ interface ProgrammeDao {
 
 @Dao
 interface MovieDao {
+    @Query("SELECT COUNT(*) FROM movies WHERE sourceId = :sourceId")
+    suspend fun countForSource(sourceId: Long): Int
+
     @Query(
         """
         SELECT * FROM movies
@@ -744,6 +750,9 @@ interface MovieDao {
 
 @Dao
 interface SeriesDao {
+    @Query("SELECT COUNT(*) FROM series WHERE sourceId = :sourceId")
+    suspend fun countForSource(sourceId: Long): Int
+
     @Query(
         """
         SELECT * FROM series

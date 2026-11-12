@@ -7,6 +7,7 @@ package app.opentv
 
 import app.opentv.ui.FirstScreen
 import app.opentv.ui.firstScreen
+import app.opentv.ui.hasProvider
 import com.google.common.truth.Truth.assertThat
 import org.junit.Test
 
@@ -33,6 +34,15 @@ class FirstScreenTest {
             firstScreen(hasProvider = false, profileCount = 2, askedThisProcess = false, launchedToPlay = false)
 
         assertThat(screen).isEqualTo(FirstScreen.ADD_SOURCE)
+    }
+
+    @Test
+    fun `a provider whose channels never loaded isn't there yet, so it opens on the provider choice`() {
+        // As Settee closed partway through Setup's first step leaves it.
+        val unfinished = PANEL_SOURCE.copy(lastCatalogSyncMillis = 0)
+
+        assertThat(hasProvider(listOf(unfinished))).isFalse()
+        assertThat(hasProvider(listOf(unfinished, PANEL_SOURCE.copy(id = 9, lastCatalogSyncMillis = 1)))).isTrue()
     }
 
     @Test
