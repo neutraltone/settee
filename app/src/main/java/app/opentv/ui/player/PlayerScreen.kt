@@ -31,9 +31,6 @@ import androidx.compose.material.icons.filled.MoreHoriz
 import androidx.compose.material.icons.filled.PictureInPictureAlt
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.filled.Subtitles
-import androidx.compose.material3.Button
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -84,6 +81,7 @@ import app.opentv.player.PlayerController
 import app.opentv.player.SettledChannel
 import app.opentv.ui.design.AerialTv
 import app.opentv.ui.design.ErrorMessage
+import app.opentv.ui.design.PillButton
 import app.opentv.ui.design.SetteeColors
 import app.opentv.ui.design.SetteeShapes
 import app.opentv.ui.design.SetteeSpace
@@ -756,14 +754,12 @@ fun LivePlayerContent(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         modifier = Modifier.padding(48.dp),
                     ) {
-                        Text(current.title, style = MaterialTheme.typography.headlineSmall, color = Color.White)
+                        SetteeText(current.title, SetteeType.ScreenTitle)
                         Spacer(Modifier.height(12.dp))
                         ErrorMessage(current.reason.sentence, current.reason.detail)
                         if (current.canRetry) {
                             Spacer(Modifier.height(24.dp))
-                            Button(onClick = { controller.retry() }) {
-                                Text(stringResource(R.string.common_try_again))
-                            }
+                            PillButton(stringResource(R.string.common_try_again), onClick = { controller.retry() })
                         }
                     }
                 }

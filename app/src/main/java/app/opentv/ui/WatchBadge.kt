@@ -12,14 +12,10 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.NewReleases
 import androidx.compose.material.icons.outlined.Timelapse
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -29,10 +25,14 @@ import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import app.opentv.R
 import app.opentv.data.repo.CoverStatus
 import app.opentv.data.repo.WatchStatus
+import app.opentv.ui.design.Icon
+import app.opentv.ui.design.SetteeColors
+import app.opentv.ui.design.SetteeShapes
+import app.opentv.ui.design.SetteeType
+import app.opentv.ui.design.Text
 
 /**
  * A quiet label saying where the Profile is with a title, for drawing on its artwork. Deliberately
@@ -68,18 +68,18 @@ internal fun minutesLeftText(remainingMillis: Long): String {
 
 @Composable
 private fun Label(icon: ImageVector, text: String, modifier: Modifier) {
-    val shape = RoundedCornerShape(4.dp)
+    val shape = SetteeShapes.Cell
     Row(
         modifier
             .semantics(mergeDescendants = true) {}
             .background(Color.Black.copy(alpha = 0.6f), shape)
-            .border(1.dp, Color.White.copy(alpha = 0.5f), shape)
+            .border(1.dp, SetteeColors.Text.copy(alpha = 0.5f), shape)
             .padding(horizontal = 6.dp, vertical = 2.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Icon(icon, contentDescription = null, tint = Color.White, modifier = Modifier.size(14.dp))
+        Icon(icon, contentDescription = null, tint = SetteeColors.Text, modifier = Modifier.size(16.dp))
         Spacer(Modifier.width(4.dp))
-        Text(text, color = Color.White, style = MaterialTheme.typography.labelMedium.copy(fontSize = 12.sp))
+        Text(text, SetteeType.Body)
     }
 }
 

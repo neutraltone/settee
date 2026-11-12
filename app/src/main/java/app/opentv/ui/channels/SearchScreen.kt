@@ -24,13 +24,9 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -63,6 +59,11 @@ import app.opentv.data.parser.displayTitle
 import app.opentv.ui.ChannelsViewModel
 import app.opentv.ui.RecentSearchesViewModel
 import app.opentv.ui.VodViewModel
+import app.opentv.ui.design.PillButton
+import app.opentv.ui.design.SetteeColors
+import app.opentv.ui.design.SetteeShapes
+import app.opentv.ui.design.SetteeType
+import app.opentv.ui.design.Text
 import app.opentv.ui.design.TextField
 import app.opentv.ui.options.LeaveScreen
 import app.opentv.ui.options.LocalConfirmLive
@@ -71,10 +72,10 @@ import app.opentv.ui.options.openOptionsOn
 import app.opentv.ui.options.optionsClickable
 import app.opentv.ui.options.rememberRowHighlight
 import coil.compose.AsyncImage
+import kotlinx.coroutines.delay
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-import kotlinx.coroutines.delay
 
 /**
  * Search across channels, movies and shows, with matches shown live as you type.
@@ -174,7 +175,7 @@ internal fun SearchContent(
             .padding(horizontal = 28.dp, vertical = 20.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(stringResource(R.string.nav_search), style = MaterialTheme.typography.headlineMedium)
+            Text(stringResource(R.string.nav_search), style = SetteeType.ScreenTitle)
             Spacer(Modifier.width(20.dp))
             TextField(
                 state = query,
@@ -191,7 +192,7 @@ internal fun SearchContent(
                     },
             )
             Spacer(Modifier.width(20.dp))
-            OutlinedButton(onClick = onBack) { Text(stringResource(R.string.common_done)) }
+            PillButton(stringResource(R.string.common_done), onClick = onBack)
         }
 
         Spacer(Modifier.height(20.dp))
@@ -307,11 +308,11 @@ internal fun SearchRow(
         modifier
             .fillMaxWidth()
             .onFocusChanged { focused = it.isFocused }
-            .clip(RoundedCornerShape(10.dp))
-            .background(if (focused) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface)
+            .clip(SetteeShapes.Card)
+            .background(if (focused) SetteeColors.Raised else SetteeColors.Surface)
             .then(
                 if (focused) {
-                    Modifier.border(2.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(10.dp))
+                    Modifier.border(2.dp, SetteeColors.Accent, SetteeShapes.Card)
                 } else {
                     Modifier
                 },
@@ -326,7 +327,7 @@ internal fun SearchRow(
 @Composable
 internal fun SearchHint(text: String) {
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Text(text, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(text, style = SetteeType.RowTitle, color = SetteeColors.QuietText)
     }
 }
 
@@ -334,8 +335,8 @@ internal fun SearchHint(text: String) {
 internal fun SearchSectionHeader(title: String) {
     Text(
         title,
-        style = MaterialTheme.typography.titleMedium,
-        color = MaterialTheme.colorScheme.primary,
+        style = SetteeType.RowTitle,
+        color = SetteeColors.Accent,
         modifier = Modifier.padding(top = 8.dp, bottom = 2.dp),
     )
 }
@@ -352,16 +353,16 @@ private fun VodResultRow(
         AsyncImage(
             model = posterUrl,
             contentDescription = null,
-            modifier = Modifier.size(width = 34.dp, height = 48.dp).clip(RoundedCornerShape(6.dp)),
+            modifier = Modifier.size(width = 34.dp, height = 48.dp).clip(SetteeShapes.Thumbnail),
         )
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
-            Text(name, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(name, style = SetteeType.RowTitle, maxLines = 1, overflow = TextOverflow.Ellipsis)
             if (!subtitle.isNullOrBlank()) {
                 Text(
                     subtitle,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = SetteeType.Body,
+                    color = SetteeColors.QuietText,
                 )
             }
         }
@@ -378,21 +379,21 @@ private fun SearchResultRow(row: ChannelsViewModel.Row, onClick: () -> Unit, mod
         AsyncImage(
             model = row.primary.logoUrl,
             contentDescription = null,
-            modifier = Modifier.size(40.dp).clip(RoundedCornerShape(6.dp)),
+            modifier = Modifier.size(40.dp).clip(SetteeShapes.Thumbnail),
         )
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
             Text(
                 row.primary.shownName,
-                style = MaterialTheme.typography.titleMedium,
+                style = SetteeType.RowTitle,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
             Text(
                 row.now?.let { "${searchTime(it.startUtcMillis)}  ${it.title}" }
                     ?: stringResource(R.string.guide_no_info),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                style = SetteeType.Body,
+                color = SetteeColors.QuietText,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )

@@ -9,7 +9,7 @@ import androidx.activity.ComponentActivity
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.Text
+import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
@@ -277,7 +277,7 @@ class MainShellTest {
                 if (takeFocus) title.requestFocus()
             }
             Box(Modifier.fillMaxSize().testTag("content")) {
-                Text("Title", Modifier.focusRequester(title).clickable {})
+                BasicText("Title", Modifier.focusRequester(title).clickable {})
             }
         }
     }
@@ -334,7 +334,7 @@ class MainShellTest {
                         layout(placeable.width, placeable.height) { placeable.place(0, 0) }
                     },
                 ) {
-                    Text("Title", Modifier.testTag("title").clickable {})
+                    BasicText("Title", Modifier.testTag("title").clickable {})
                 }
             }
         }
@@ -401,7 +401,7 @@ class MainShellTest {
             ) { _, _, onNothingToShow ->
                 LaunchedEffect(handOver) { if (handOver) onNothingToShow() }
                 Box(Modifier.fillMaxSize().testTag("content")) {
-                    Text("Title", Modifier.testTag("title").clickable {})
+                    BasicText("Title", Modifier.testTag("title").clickable {})
                 }
             }
         }

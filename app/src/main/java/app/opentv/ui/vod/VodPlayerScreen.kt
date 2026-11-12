@@ -31,7 +31,7 @@ import androidx.compose.material.icons.filled.Bedtime
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.FiberManualRecord
 import androidx.compose.material.icons.filled.MoreHoriz
-import androidx.compose.material3.Icon
+import app.opentv.ui.design.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect

@@ -5,7 +5,7 @@
  */
 package app.opentv
 
-import androidx.compose.material3.Text
+import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
@@ -42,13 +42,13 @@ class PlayerNavigationTest {
         NavHost(nav, startDestination = Routes.MAIN) {
             composable(Routes.MAIN) { entry ->
                 val tab by entry.shellTab()
-                Text("Main: $tab")
+                BasicText("Main: $tab")
             }
-            composable(Routes.MOVIE_DETAIL) { entry -> Text("Movie ${entry.arguments?.getString("movieId")}") }
-            composable(Routes.SERIES_DETAIL) { entry -> Text("Series ${entry.arguments?.getString("seriesId")}") }
-            composable(Routes.SEARCH) { Text("Search") }
-            composable(Routes.PLAYER) { Text("Live player") }
-            composable(Routes.VOD_PLAYER) { Text("Movie player") }
+            composable(Routes.MOVIE_DETAIL) { entry -> BasicText("Movie ${entry.arguments?.getString("movieId")}") }
+            composable(Routes.SERIES_DETAIL) { entry -> BasicText("Series ${entry.arguments?.getString("seriesId")}") }
+            composable(Routes.SEARCH) { BasicText("Search") }
+            composable(Routes.PLAYER) { BasicText("Live player") }
+            composable(Routes.VOD_PLAYER) { BasicText("Movie player") }
         }
     }
 
