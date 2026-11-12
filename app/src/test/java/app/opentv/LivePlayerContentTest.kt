@@ -22,6 +22,7 @@ import androidx.compose.ui.test.click
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
@@ -37,6 +38,7 @@ import app.opentv.data.model.Channel
 import app.opentv.data.repo.MediaKey
 import app.opentv.player.PlaybackQueue
 import app.opentv.player.PlayerController
+import app.opentv.ui.design.ERROR_DETAIL_TAG
 import app.opentv.ui.player.BannerChannel
 import app.opentv.ui.player.LivePlayerContent
 import app.opentv.ui.player.SubtitlePicks
@@ -621,6 +623,8 @@ class LivePlayerContentTest {
         compose.mainClock.advanceTimeBy(BANNER_TIMEOUT_MILLIS)
 
         compose.onNodeWithText("Two").assertDoesNotExist()
+        compose.onNodeWithTag(ERROR_DETAIL_TAG).assertExists()
+        captureScreen("live_player_error")
         failing.release()
     }
 

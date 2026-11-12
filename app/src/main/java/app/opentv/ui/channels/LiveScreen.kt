@@ -61,6 +61,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import app.opentv.R
 import app.opentv.core.AppSettings
 import app.opentv.core.ServiceLocator
+import app.opentv.core.ViewerError
 import app.opentv.core.findActivity
 import app.opentv.data.model.Channel
 import app.opentv.data.model.Programme
@@ -69,6 +70,7 @@ import app.opentv.data.repo.MediaKey
 import app.opentv.data.repo.toRecord
 import app.opentv.player.PlayerController
 import app.opentv.ui.ChannelsViewModel
+import app.opentv.ui.design.ErrorMessage
 import app.opentv.ui.options.LocalConfirmLive
 import app.opentv.ui.options.LocalRecordingStarted
 import app.opentv.ui.railReturnTarget
@@ -94,6 +96,8 @@ fun LiveScreen(
     isTelevision: Boolean,
     hasSources: Boolean,
     isSyncing: Boolean,
+    /** Why the last Catalogue Refresh couldn't download the channels, for the guide's empty state. */
+    loadFailure: ViewerError? = null,
     onPlayChannel: (Channel) -> Unit,
     onAddSource: () -> Unit,
     onRefresh: () -> Unit,
@@ -342,7 +346,7 @@ fun LiveScreen(
                     // Nothing is syncing and the catalogue is confirmed empty. With a provider
                     // configured, the last load failed or returned nothing — surface a clear error
                     // with Retry and a way back to setup instead of spinning forever.
-                    hasSources -> ChannelsErrorState(onRetry = onRefresh, onEditProvider = onAddSource)
+                    hasSources -> ChannelsErrorState(loadFailure, onRetry = onRefresh, onEditProvider = onAddSource)
                     else -> EmptyState(onAddSource)
                 }
             } else {
@@ -553,7 +557,7 @@ private fun NoFavouritesState() {
  * "Loading your channels" spinner with something the user can act on.
  */
 @Composable
-private fun ChannelsErrorState(onRetry: () -> Unit, onEditProvider: () -> Unit) {
+private fun ChannelsErrorState(failure: ViewerError?, onRetry: () -> Unit, onEditProvider: () -> Unit) {
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -565,10 +569,10 @@ private fun ChannelsErrorState(onRetry: () -> Unit, onEditProvider: () -> Unit) 
                 textAlign = TextAlign.Center,
             )
             Spacer(Modifier.height(8.dp))
-            Text(
-                stringResource(R.string.guide_load_failed_desc),
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center,
+            // With no refresh this session to say why, the generic sentence; it has no detail to show.
+            ErrorMessage(
+                failure?.sentence ?: stringResource(R.string.guide_load_failed_desc),
+                failure?.detail.orEmpty(),
             )
             Spacer(Modifier.height(20.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {

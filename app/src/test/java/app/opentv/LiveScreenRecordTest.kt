@@ -6,17 +6,23 @@
 package app.opentv
 
 import android.app.Application
+import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.test.core.app.ApplicationProvider
 import app.opentv.core.ServiceLocator
+import app.opentv.core.ViewerError
 import app.opentv.data.model.Category
 import app.opentv.data.model.Channel
 import app.opentv.data.model.Source
 import app.opentv.data.model.SourceKind
 import app.opentv.data.model.StreamKind
 import app.opentv.ui.channels.LiveScreen
+import app.opentv.ui.design.ERROR_DETAIL_TAG
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
@@ -80,6 +86,38 @@ class LiveScreenRecordTest {
 
         val recording = runBlocking { graph.recordingRepository.observeActive().first().single() }
         assertThat(recording.channelId).isEqualTo(playable)
+    }
+
+    @Test
+    fun `a guide whose channels couldn't load says why, with the detail line, and offers Try again`() {
+        // The graph is process-wide, so another test's channels would leave this guide loading.
+        runBlocking {
+            graph.database.sources().observeAll().first().forEach { graph.catalogRepository.deleteSource(it.id) }
+        }
+        compose.setTvContent {
+            LiveScreen(
+                isTelevision = true,
+                hasSources = true,
+                isSyncing = false,
+                loadFailure = ViewerError(
+                    "Can't reach your provider. Check this TV is online and the address is right.",
+                    "UnknownHost",
+                ),
+                onPlayChannel = {},
+                onAddSource = {},
+                onRefresh = {},
+            )
+        }
+        compose.waitUntil(TIMEOUT_MILLIS) {
+            compose.onAllNodesWithText(
+                "Can't reach your provider.",
+                substring = true,
+            ).fetchSemanticsNodes().isNotEmpty()
+        }
+
+        compose.onNodeWithTag(ERROR_DETAIL_TAG).assertTextEquals("UnknownHost")
+        compose.onNodeWithText("Try again").assertExists()
+        captureScreen("live_guide_load_failed")
     }
 
     /** One Channel with a 4K and an HD Quality; answers the HD row's id. */

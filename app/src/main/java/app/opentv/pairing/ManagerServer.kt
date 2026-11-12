@@ -6,7 +6,10 @@
 package app.opentv.pairing
 
 import android.util.Log
+import app.opentv.R
 import app.opentv.core.AppSettings
+import app.opentv.core.ErrorWording
+import app.opentv.core.ServerProblem
 import app.opentv.data.model.Channel
 import app.opentv.data.model.Source
 import app.opentv.data.model.SourceKind
@@ -71,6 +74,8 @@ class ManagerServer(
     private val lineup: ChannelLineup,
     private val refresh: CatalogueRefresh,
 ) {
+    /** Words a failed test or add for the page; it never sends an exception's own message. */
+    private val wording get() = catalog.wording
 
     data class Session(
         /** What the QR code encodes, e.g. `http://192.168.0.14:41234/?t=…` */
@@ -85,7 +90,9 @@ class ManagerServer(
     sealed interface State {
         data object Idle : State
         data class Listening(val session: Session) : State
-        data class Failed(val reason: String) : State
+
+        /** [code] is the exception's type, for the detail line, when one was behind it. */
+        data class Failed(val problem: ServerProblem, val code: String? = null) : State
     }
 
     private val _state = MutableStateFlow<State>(State.Idle)
@@ -107,9 +114,7 @@ class ManagerServer(
         if (running) return
         val host = lanAddress()
         if (host == null) {
-            _state.value = State.Failed(
-                "This device doesn't appear to be on a network, so a phone or laptop can't reach it.",
-            )
+            _state.value = State.Failed(ServerProblem.NO_NETWORK)
             return
         }
 
@@ -127,7 +132,7 @@ class ManagerServer(
             ServerSocket(0)
         } catch (e: Exception) {
             Log.w(TAG, "Could not open a socket", e)
-            _state.value = State.Failed("Could not start the channel manager on this device.")
+            _state.value = State.Failed(ServerProblem.COULDNT_START, ErrorWording.codeOf(e))
             return
         }
 
@@ -166,9 +171,7 @@ class ManagerServer(
                 val idleFor = System.currentTimeMillis() - lastActivityMillis
                 if (running && idleFor > TimeUnit.MINUTES.toMillis(IDLE_TIMEOUT_MINUTES)) {
                     stop()
-                    _state.value = State.Failed(
-                        "The channel manager closed after a while unused. Reopen it when you need it.",
-                    )
+                    _state.value = State.Failed(ServerProblem.TIMED_OUT)
                     break
                 }
             }
@@ -383,8 +386,8 @@ class ManagerServer(
         val dto = if (result.isSuccess) {
             TestDto(ok = true, error = null)
         } else {
-            val e = result.exceptionOrNull()
-            TestDto(ok = false, error = e?.message ?: e?.javaClass?.simpleName ?: "Connection failed")
+            val reason = wording.of(result.exceptionOrNull()!!, R.string.recset_status_failed)
+            TestDto(ok = false, error = reason.sentence, detail = reason.detail)
         }
         output.write(
             PairingHttp.httpResponse("200 OK", "application/json", json.encodeToString(TestDto.serializer(), dto)),
@@ -412,10 +415,14 @@ class ManagerServer(
         val result = runBlocking {
             val id = sourceRepository.save(draft)
             val saved = sourceRepository.byId(id)
-                ?: return@runBlocking AddResultDto(ok = false, error = "Could not save the source.")
+                ?: return@runBlocking AddResultDto(
+                    ok = false,
+                    error = wording.of(R.string.refresh_save_failed).sentence,
+                )
             when (val r = refresh.refresh(CatalogueRefresh.Trigger.ProviderAdded(saved))) {
                 is CatalogueRefresh.Outcome.ChannelsLoaded -> AddResultDto(ok = true, channels = r.channels)
-                is CatalogueRefresh.Outcome.AddFailed -> AddResultDto(ok = false, error = r.reason)
+                is CatalogueRefresh.Outcome.AddFailed ->
+                    AddResultDto(ok = false, error = r.reason.sentence, detail = r.reason.detail)
             }
         }
         writeJson(output, AddResultDto.serializer(), result)
@@ -436,7 +443,8 @@ class ManagerServer(
         val dto = if (result.isSuccess) {
             TestResultDto(ok = true, message = result.getOrNull())
         } else {
-            TestResultDto(ok = false, error = result.exceptionOrNull()?.message ?: "Test failed.")
+            val reason = wording.ofProvider(result.exceptionOrNull()!!, R.string.error_test_failed)
+            TestResultDto(ok = false, error = reason.sentence, detail = reason.detail)
         }
         writeJson(output, TestResultDto.serializer(), dto)
     }
@@ -567,7 +575,7 @@ class ManagerServer(
     val password: String? = null,
 )
 
-@Serializable private data class TestDto(val ok: Boolean, val error: String?)
+@Serializable private data class TestDto(val ok: Boolean, val error: String?, val detail: String? = null)
 
 @Serializable private data class SourceReq(
     val kind: String = "xtream",
@@ -578,6 +586,16 @@ class ManagerServer(
     val mac: String? = null,
 )
 
-@Serializable private data class AddResultDto(val ok: Boolean, val channels: Int = 0, val error: String? = null)
+@Serializable private data class AddResultDto(
+    val ok: Boolean,
+    val channels: Int = 0,
+    val error: String? = null,
+    val detail: String? = null,
+)
 
-@Serializable private data class TestResultDto(val ok: Boolean, val message: String? = null, val error: String? = null)
+@Serializable private data class TestResultDto(
+    val ok: Boolean,
+    val message: String? = null,
+    val error: String? = null,
+    val detail: String? = null,
+)

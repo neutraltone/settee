@@ -8,6 +8,7 @@ package app.opentv
 import android.content.Context
 import androidx.room.Room
 import app.opentv.core.AppSettings
+import app.opentv.core.ErrorWording
 import app.opentv.data.db.OpenTvDatabase
 import app.opentv.data.remote.StalkerApi
 import app.opentv.data.remote.XtreamApi
@@ -47,6 +48,7 @@ class TestCatalog(context: Context, private val clock: () -> Long = { 0L }) {
         stalkerApi = StalkerApi(panel.http),
         http = panel.http,
         settings = AppSettings.get(context),
+        wording = ErrorWording(context, onTelevision = false),
     )
 
     val settings: AppSettings = AppSettings.get(context)
@@ -59,6 +61,7 @@ class TestCatalog(context: Context, private val clock: () -> Long = { 0L }) {
         sourceDao = db.sources(),
         api = XtreamApi(panel.http),
         http = panel.http,
+        wording = ErrorWording(context, onTelevision = false),
     )
 
     /** Where [lineup] keeps its folds; cancelled with the database. */

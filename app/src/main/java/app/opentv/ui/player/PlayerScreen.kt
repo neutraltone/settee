@@ -70,7 +70,6 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -93,6 +92,7 @@ import app.opentv.data.repo.toRecord
 import app.opentv.player.PlaybackQueue
 import app.opentv.player.PlayerController
 import app.opentv.player.SettledChannel
+import app.opentv.ui.design.ErrorMessage
 import app.opentv.ui.design.SetteeType
 import app.opentv.ui.design.Text as SetteeText
 import app.opentv.ui.formatPlaybackTime
@@ -757,11 +757,7 @@ fun LivePlayerContent(
                     ) {
                         Text(current.title, style = MaterialTheme.typography.headlineSmall, color = Color.White)
                         Spacer(Modifier.height(12.dp))
-                        Text(
-                            current.message,
-                            color = Color.White.copy(alpha = 0.85f),
-                            textAlign = TextAlign.Center,
-                        )
+                        ErrorMessage(current.reason.sentence, current.reason.detail)
                         if (current.canRetry) {
                             Spacer(Modifier.height(24.dp))
                             Button(onClick = { controller.retry() }) {

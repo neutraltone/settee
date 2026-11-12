@@ -19,7 +19,9 @@ import app.opentv.player.PlaybackErrors
 internal suspend fun openInExternalPlayer(context: Context, sources: PlaybackSources, key: MediaKey) {
     val playable = sources.forWatching(key)
     if (playable is Playable.Failed) {
-        Toast.makeText(context, PlaybackErrors.messageOf(playable.failure), Toast.LENGTH_LONG).show()
+        // A toast can't hold the shared ErrorMessage, so the detail line goes on its own line under the sentence.
+        val reason = PlaybackErrors.describe(context, playable.failure)
+        Toast.makeText(context, "${reason.sentence}\n${reason.detail}".trim(), Toast.LENGTH_LONG).show()
         return
     }
     playable as Playable.Ready

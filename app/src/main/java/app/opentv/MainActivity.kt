@@ -369,6 +369,7 @@ private fun OpenTvApp(isTelevision: Boolean, launchedToPlay: Boolean) {
                         isTelevision = isTelevision,
                         hasSources = sourcesUi.sources.isNotEmpty(),
                         isSyncing = sourcesUi.syncing,
+                        loadFailure = sourcesUi.loadFailure,
                         onPlayChannel = { channel -> navController.navigate(Routes.player(channel.id)) },
                         onOpenMovie = { movie ->
                             navController.navigate(Routes.movieDetail(movie.id))
@@ -599,7 +600,17 @@ private fun RecordingSwitchBanner() {
  * Checked at runtime rather than by shipping a separate leanback build: one APK for phone,
  * tablet, Android TV and Fire TV means one thing to release and one thing to test.
  */
-fun isRunningOnTelevision(context: Context): Boolean {
+fun isRunningOnTelevision(context: Context): Boolean =
+    onTelevision ?: checkTelevision(context).also { onTelevision = it }
+
+/**
+ * Decided once per process, so every "this TV" or "this device" sentence (ErrorWording, the players)
+ * agrees with what was decided at launch, and the package manager is asked only once.
+ */
+@Volatile
+private var onTelevision: Boolean? = null
+
+private fun checkTelevision(context: Context): Boolean {
     val uiModeManager = context.getSystemService(Context.UI_MODE_SERVICE) as? UiModeManager
     if (uiModeManager?.currentModeType == Configuration.UI_MODE_TYPE_TELEVISION) return true
     val packageManager = context.packageManager

@@ -35,10 +35,10 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import app.opentv.R
 import app.opentv.player.PlayerController
+import app.opentv.ui.design.ErrorMessage
 
 /**
  * Why a film or episode can't go on, with somewhere to go. Takes focus itself: a remote has no other way
@@ -64,7 +64,7 @@ internal fun PlayerErrorPanel(error: PlayerController.State.Error, onRetry: () -
         Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(48.dp)) {
             Text(error.title, style = MaterialTheme.typography.headlineSmall, color = Color.White)
             Spacer(Modifier.height(12.dp))
-            Text(error.message, color = Color.White.copy(alpha = 0.85f), textAlign = TextAlign.Center)
+            ErrorMessage(error.reason.sentence, error.reason.detail)
             Spacer(Modifier.height(24.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                 if (error.canRetry) {

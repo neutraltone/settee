@@ -42,6 +42,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import app.opentv.R
 import app.opentv.data.model.Source
@@ -49,6 +50,7 @@ import app.opentv.data.model.SourceKind
 import app.opentv.isRunningOnTelevision
 import app.opentv.ui.SourcesViewModel
 import app.opentv.ui.channels.DeviceTextField
+import app.opentv.ui.design.ErrorMessage
 
 /**
  * First-run setup.
@@ -221,6 +223,13 @@ fun AddSourceScreen(viewModel: SourcesViewModel, onFinished: () -> Unit, editing
                     keyboardType = KeyboardType.Password,
                     modifier = Modifier.fillMaxWidth(),
                 )
+                // Setup advice an error sentence can't give (docs/ERRORS.md, HTTP 405).
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    stringResource(R.string.onboarding_xtream_or_playlist_help),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
 
             if (kind == SourceKind.STALKER) {
@@ -276,15 +285,14 @@ fun AddSourceScreen(viewModel: SourcesViewModel, onFinished: () -> Unit, editing
                 }
                 Spacer(Modifier.height(12.dp))
             }
-            ui.testError?.let { message ->
+            ui.testError?.let { error ->
                 Card(Modifier.fillMaxWidth()) {
-                    Text(
-                        message,
-                        Modifier.padding(16.dp),
-                        color = MaterialTheme.colorScheme.error,
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
+                    ErrorMessage(error.sentence, error.detail, Modifier.padding(16.dp), textAlign = TextAlign.Start)
                 }
+                Spacer(Modifier.height(12.dp))
+            }
+            ui.addFailure?.let { error ->
+                ErrorMessage(error.sentence, error.detail, textAlign = TextAlign.Start)
                 Spacer(Modifier.height(12.dp))
             }
             ui.syncMessage?.let { message ->

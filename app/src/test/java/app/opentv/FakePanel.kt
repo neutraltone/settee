@@ -31,7 +31,9 @@ val PANEL_SOURCE =
  * An Xtream panel that answers `player_api.php?action=…` with whatever JSON [replies] holds for
  * that action (`get_series_info` and `get_vod_info` can be keyed by title too, as
  * `get_series_info:<id>`), and `[]` otherwise. A reply of `"!"` fails the request, as a panel timing
- * out would.
+ * out would, and `"!host"` fails it as an address that can't be found, with the request's own
+ * address, login and a MAC in the exception's message, as some clients put them there. `"!503"`
+ * (any three digits) answers with that HTTP status.
  */
 class FakePanel(vararg initial: Pair<String, String>) {
     val replies = initial.toMap().toMutableMap()
@@ -79,11 +81,13 @@ class FakePanel(vararg initial: Pair<String, String>) {
         val body = keyed?.let { replies[it] } ?: replies[action] ?: "[]"
         (keyed?.let { holds[it] } ?: holds[action])?.pass()
         if (body == "!") throw java.io.IOException("Panel timed out")
+        if (body == "!host") throw java.net.UnknownHostException("${request.url} mac=00:1A:79:00:00:01")
+        val status = Regex("!(\\d{3})").matchEntire(body)?.groupValues?.get(1)?.toInt()
         Response.Builder()
             .request(request)
             .protocol(Protocol.HTTP_1_1)
-            .code(200)
-            .message("OK")
+            .code(status ?: 200)
+            .message(if (status == null) "OK" else "Error")
             .body(body.toResponseBody("application/json".toMediaType()))
             .build()
     }.build()
