@@ -60,6 +60,7 @@ internal fun GuidePane(viewModel: EpgViewModel = viewModel()) {
                 onClick = { details = feed.id },
                 value = if (feed.enabled) on else off,
                 note = ViewerError.fromStored(feed.lastResult)?.sentence ?: feed.lastResult.ifBlank { null },
+                detail = ViewerError.fromStored(feed.lastResult)?.detail,
                 onOptions = { details = feed.id },
             )
         }
@@ -98,7 +99,9 @@ internal fun GuidePane(viewModel: EpgViewModel = viewModel()) {
             keyboardType = KeyboardType.Uri,
             onSave = { url ->
                 adding = false
-                viewModel.addCustom("", url)
+                // Named by its host: the full address is the row's label otherwise, and a
+                // provider's guide link can carry the login.
+                viewModel.addCustom(hostOnly(url.trim()), url)
             },
             onCancel = { adding = false },
         )

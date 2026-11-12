@@ -83,10 +83,12 @@ internal fun ManagerPane(viewModel: WebManagerViewModel = viewModel()) {
         }
         is ManagerServer.State.Failed -> {
             val wording = ServiceLocator.get(LocalContext.current).errorWording
+            val reason = remember(current) { describe(wording, current) }
             ListRow(
                 stringResource(R.string.common_try_again),
                 onClick = viewModel::start,
-                note = remember(current) { describe(wording, current) }.sentence,
+                note = reason.sentence,
+                detail = reason.detail,
             )
         }
         ManagerServer.State.Idle -> Unit

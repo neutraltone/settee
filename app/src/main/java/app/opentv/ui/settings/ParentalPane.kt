@@ -7,13 +7,11 @@ package app.opentv.ui.settings
 
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -37,21 +35,12 @@ import app.opentv.ui.design.Text
  * access, not a serious attacker.
  */
 @Composable
-internal fun ParentalPane(onUnlocked: () -> Unit) {
+internal fun ParentalPane() {
     val context = LocalContext.current
     val settings = remember { ServiceLocator.get(context).settings }
     val pinIsSet by settings.pinIsSet.collectAsState()
     val pinEntered by settings.pinEntered.collectAsState()
     var step by remember { mutableStateOf<PinStep?>(null) }
-    var moveIn by remember { mutableStateOf(false) }
-    // Once the settings have replaced Enter your PIN: the row that had the Highlight has gone.
-    LaunchedEffect(moveIn, pinEntered) {
-        if (moveIn && pinEntered) {
-            moveIn = false
-            withFrameNanos {}
-            onUnlocked()
-        }
-    }
     val wrongPin = stringResource(R.string.settings_parental_wrong_pin)
     val mismatch = stringResource(R.string.settings_parental_pin_mismatch)
 
@@ -65,12 +54,7 @@ internal fun ParentalPane(onUnlocked: () -> Unit) {
         PinStep.Enter -> PinEntry(
             title = stringResource(R.string.settings_parental_enter_pin),
             refusal = { if (it.length == PIN_LENGTH && !settings.verifyPin(it)) wrongPin else null },
-            onPin = {
-                if (settings.enterPin(it)) {
-                    step = null
-                    moveIn = true
-                }
-            },
+            onPin = { if (settings.enterPin(it)) step = null },
             onCancel = { step = null },
         )
         PinStep.Choose -> PinEntry(

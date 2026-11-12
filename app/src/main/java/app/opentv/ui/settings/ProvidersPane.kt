@@ -6,17 +6,19 @@
 package app.opentv.ui.settings
 
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.withFrameNanos
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.lifecycle.ViewModelStoreOwner
+import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
 import app.opentv.R
+import app.opentv.core.findActivity
 import app.opentv.data.model.Source
 import app.opentv.ui.SourcesViewModel
 import app.opentv.ui.design.ListRow
@@ -32,13 +34,13 @@ import app.opentv.ui.design.SidePanel
 internal fun ProvidersPane(
     onAddProvider: () -> Unit,
     onEditProvider: (sourceId: Long) -> Unit,
-    onRowGone: () -> Unit,
-    viewModel: SourcesViewModel = viewModel(),
+    // The activity's, the one the rest of the app uses: one per visit to Settings would collect the
+    // refresh's progress again, and announce it on the status bar beside the app's own.
+    viewModel: SourcesViewModel = viewModel(viewModelStoreOwner = activityOwner()),
 ) {
     val ui by viewModel.ui.collectAsState()
     var options by remember { mutableStateOf<Source?>(null) }
     var removing by remember { mutableStateOf<Source?>(null) }
-    var gone by remember { mutableStateOf<Long?>(null) }
     ui.sources.forEach { source ->
         // Keyed, so the Highlight stays on its provider when the list changes around it.
         key(source.id) {
@@ -67,21 +69,15 @@ internal fun ProvidersPane(
     removing?.let { source ->
         RemoveQuestion(source.name, onKeep = { removing = null }, onRemove = {
             removing = null
-            gone = source.id
             viewModel.delete(source)
         })
     }
-    // Only once the list no longer has it: moving the Highlight sooner could land on the very row
-    // that's about to go.
-    LaunchedEffect(ui.sources, gone) {
-        val id = gone ?: return@LaunchedEffect
-        if (ui.sources.none { it.id == id }) {
-            gone = null
-            withFrameNanos {}
-            onRowGone()
-        }
-    }
 }
+
+/** The activity, which owns the view models the app shares across its screens. */
+@Composable
+private fun activityOwner(): ViewModelStoreOwner =
+    LocalContext.current.findActivity() as? ViewModelStoreOwner ?: checkNotNull(LocalViewModelStoreOwner.current)
 
 /** Host only: the full URL carries the login and has no place on a settings list. */
 internal fun hostOnly(url: String): String = runCatching { java.net.URI(url).host ?: url }.getOrDefault(url)

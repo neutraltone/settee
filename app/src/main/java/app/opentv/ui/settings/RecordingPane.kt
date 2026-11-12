@@ -6,6 +6,7 @@
 package app.opentv.ui.settings
 
 import android.content.Intent
+import android.content.res.Resources
 import android.net.Uri
 import android.os.StatFs
 import android.widget.Toast
@@ -28,7 +29,6 @@ import androidx.documentfile.provider.DocumentFile
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
-import java.util.Locale
 import app.opentv.R
 import app.opentv.core.AppSettings.RecordingTarget
 import app.opentv.core.ServiceLocator
@@ -68,6 +68,7 @@ internal fun RecordingPane() {
     var choosing by remember { mutableStateOf<RecordingChoice?>(null) }
     var typing by remember { mutableStateOf<NasField?>(null) }
     var testNote by remember { mutableStateOf<String?>(null) }
+    var testDetail by remember { mutableStateOf<String?>(null) }
     var testing by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
 
@@ -115,7 +116,12 @@ internal fun RecordingPane() {
             ListRow(
                 stringResource(if (testing) R.string.recset_status_testing else R.string.recset_test_connection),
                 onClick = {
-                    if (testing || host.isBlank() || share.isBlank()) return@ListRow
+                    if (testing) return@ListRow
+                    testDetail = null
+                    if (host.isBlank() || share.isBlank()) {
+                        testNote = resources.getString(R.string.settings_rec_test_needs_details)
+                        return@ListRow
+                    }
                     testing = true
                     testNote = null
                     scope.launch {
@@ -123,12 +129,15 @@ internal fun RecordingPane() {
                             runCatching { SmbClient.test(SmbConfig(host.trim(), share.trim(), folder.trim(), user, password)) }
                         }
                         testing = false
-                        testNote = result.exceptionOrNull()?.let {
-                            ServiceLocator.get(context).errorWording.of(it, R.string.recset_status_failed).sentence
-                        } ?: resources.getString(R.string.recset_status_connected)
+                        val failure = result.exceptionOrNull()?.let {
+                            ServiceLocator.get(context).errorWording.of(it, R.string.recset_status_failed)
+                        }
+                        testNote = failure?.sentence ?: resources.getString(R.string.recset_status_connected)
+                        testDetail = failure?.detail
                     }
                 },
                 note = testNote,
+                detail = testDetail,
             )
         }
         RecordingTarget.USB -> ListRow(
@@ -193,6 +202,8 @@ internal fun RecordingPane() {
             initial = field.of(host, share, folder, user, password),
             keyboardType = if (field == NasField.Password) KeyboardType.Password else KeyboardType.Text,
             hint = stringResource(R.string.settings_row_from_phone),
+            // A guest share has no login, and an empty folder means the share itself.
+            allowBlank = field.optional,
             onSave = { typed ->
                 typing = null
                 val value = if (field == NasField.Password) typed else typed.trim()
@@ -262,22 +273,21 @@ private fun storageNote(): String? {
             val files = dir.listFiles()?.filter { it.isFile }.orEmpty()
             resources.getString(
                 R.string.settings_rec_storage,
-                formatBytes(files.sumOf { it.length() }),
+                formatBytes(resources, files.sumOf { it.length() }),
                 files.size,
-                formatBytes(StatFs(dir.path).availableBytes),
+                formatBytes(resources, StatFs(dir.path).availableBytes),
             )
         }
     }
     return note
 }
 
-private fun formatBytes(bytes: Long): String {
-    if (bytes <= 0) return "0 MB"
-    val mb = bytes / (BYTES_PER_UNIT * BYTES_PER_UNIT)
+private fun formatBytes(resources: Resources, bytes: Long): String {
+    val mb = bytes.coerceAtLeast(0) / (BYTES_PER_UNIT * BYTES_PER_UNIT)
     return if (mb >= BYTES_PER_UNIT) {
-        String.format(Locale.getDefault(), "%.1f GB", mb / BYTES_PER_UNIT)
+        resources.getString(R.string.settings_size_gb, mb / BYTES_PER_UNIT)
     } else {
-        String.format(Locale.getDefault(), "%.0f MB", mb)
+        resources.getString(R.string.settings_size_mb, mb)
     }
 }
 
@@ -291,12 +301,12 @@ private val RecordingTarget.label: Int
 private enum class RecordingChoice { Target, Start, End }
 
 /** The network drive's details, each typed on an entry screen. */
-private enum class NasField(val label: Int) {
+private enum class NasField(val label: Int, val optional: Boolean = false) {
     Server(R.string.settings_rec_server),
     Share(R.string.settings_rec_share),
-    Folder(R.string.settings_rec_folder),
-    Username(R.string.recset_field_username),
-    Password(R.string.recset_field_password),
+    Folder(R.string.settings_rec_folder, optional = true),
+    Username(R.string.recset_field_username, optional = true),
+    Password(R.string.recset_field_password, optional = true),
     ;
 
     fun of(host: String, share: String, folder: String, user: String, password: String) = when (this) {

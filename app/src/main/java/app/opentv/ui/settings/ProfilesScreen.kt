@@ -28,6 +28,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
@@ -72,7 +73,11 @@ fun ProfilesScreen(onBack: () -> Unit, modifier: Modifier = Modifier, viewModel:
             .fillMaxSize()
             .background(SetteeColors.Background)
             .verticalScroll(rememberScrollState())
-            .padding(horizontal = SetteeSpace.ScreenSide, vertical = SetteeSpace.ScreenTopBottom),
+            .padding(horizontal = SetteeSpace.ScreenSide, vertical = SetteeSpace.ScreenTopBottom)
+            // Removing the Profile with the Highlight takes its row away, and nothing else would
+            // take the Highlight: back into the list it goes.
+            .focusProperties { onEnter = { runCatching { rows.requestFocus() } } }
+            .focusGroup(),
     ) {
         Text(stringResource(R.string.profiles_title), SetteeType.ScreenTitle)
         Text(stringResource(R.string.profiles_hint), SetteeType.Body, color = SetteeColors.QuietText)

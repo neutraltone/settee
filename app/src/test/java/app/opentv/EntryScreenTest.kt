@@ -43,6 +43,7 @@ class EntryScreenTest {
         initial: String = "",
         keyboardType: KeyboardType = KeyboardType.Text,
         maxLength: Int? = null,
+        allowBlank: Boolean = false,
         refusal: (String) -> String? = { null },
     ) {
         compose.setTvContent {
@@ -56,6 +57,7 @@ class EntryScreenTest {
                 hint = "You can also set this from your phone, in Manage on phone or laptop",
                 keyboardType = keyboardType,
                 maxLength = maxLength,
+                allowBlank = allowBlank,
                 refusal = refusal,
             )
         }
@@ -102,6 +104,16 @@ class EntryScreenTest {
         device.pressAction()
 
         assertThat(saved).isNull()
+    }
+
+    @Test
+    fun `an optional setting saves empty, which clears it`() {
+        show(initial = "u", allowBlank = true)
+
+        device.replaceAll("")
+        device.pressAction()
+
+        assertThat(saved).isEqualTo("")
     }
 
     @Test

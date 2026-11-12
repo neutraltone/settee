@@ -119,6 +119,8 @@ internal fun DisplayPane() {
             title = stringResource(R.string.settings_tmdb_key_label),
             initial = "",
             hint = stringResource(R.string.settings_tmdb_note),
+            // Saving it empty is how TMDB is switched off again.
+            allowBlank = true,
             onSave = {
                 choosing = null
                 settings.setTmdbApiKey(it)

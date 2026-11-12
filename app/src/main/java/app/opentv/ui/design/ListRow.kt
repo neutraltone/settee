@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.toggleableState
 import androidx.compose.ui.state.ToggleableState
@@ -32,7 +33,9 @@ import androidx.compose.ui.unit.dp
  * - [opens]: a chevron alone, for a row that opens a screen of its own.
  * - none: an action, or an item in a list.
  *
- * [note] is a quiet line under the label, such as which Profile a setting belongs to. [onOptions]
+ * [note] is a quiet line under the label, such as which Profile a setting belongs to, or an error's
+ * sentence; [detail] is that error's code, status and format, in a smaller quiet line (LOOK.md,
+ * Voice), never left out where an error has one. [onOptions]
  * gives the row options (hold Select), for an item with more to do than its main thing.
  */
 @Composable
@@ -42,6 +45,7 @@ fun ListRow(
     modifier: Modifier = Modifier,
     value: String? = null,
     note: String? = null,
+    detail: String? = null,
     switch: Boolean? = null,
     opens: Boolean = value != null,
     onOptions: (() -> Unit)? = null,
@@ -62,7 +66,16 @@ fun ListRow(
         ) {
             Column(Modifier.weight(1f)) {
                 Text(label, SetteeType.RowTitle, color = text, maxLines = 2)
-                note?.let { Text(it, SetteeType.Body, color = quiet, maxLines = 2) }
+                note?.let { Text(it, SetteeType.Body, color = quiet, maxLines = NOTE_LINES) }
+                detail?.takeIf { it.isNotBlank() }?.let {
+                    Text(
+                        it,
+                        SetteeType.Body,
+                        color = quiet,
+                        maxLines = 1,
+                        modifier = Modifier.testTag(ERROR_DETAIL_TAG),
+                    )
+                }
             }
             value?.let {
                 Spacer(Modifier.width(SIDE))
@@ -108,6 +121,8 @@ fun Switch(on: Boolean, highlighted: Boolean, modifier: Modifier = Modifier) {
     }
 }
 
+// Room for a whole explanation beside a value, which a TV row has no other way to show.
+private const val NOTE_LINES = 4
 private val ROW_HEIGHT = 52.dp
 private val SIDE = 10.dp
 private val TOP_BOTTOM = 8.dp

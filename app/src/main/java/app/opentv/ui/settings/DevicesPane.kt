@@ -34,6 +34,7 @@ internal fun DevicesPane(viewModel: SyncViewModel = viewModel()) {
     var typing by remember { mutableStateOf(false) }
 
     val state = sharing
+    val shareFailure = (state as? SyncServer.State.Failed)?.let { remember(it) { viewModel.describe(it) } }
     if (state is SyncServer.State.Sharing) {
         CodeBlock(
             lead = stringResource(R.string.settings_devices_type_this),
@@ -47,9 +48,10 @@ internal fun DevicesPane(viewModel: SyncViewModel = viewModel()) {
         onClick = if (state is SyncServer.State.Sharing) viewModel::stopSharing else viewModel::startSharing,
         note = when (state) {
             is SyncServer.State.Sharing -> null
-            is SyncServer.State.Failed -> remember(state) { viewModel.describe(state) }.sentence
+            is SyncServer.State.Failed -> shareFailure?.sentence
             SyncServer.State.Idle -> stringResource(R.string.settings_devices_share_note)
         },
+        detail = shareFailure?.detail,
     )
     ListRow(
         stringResource(R.string.settings_devices_get),
@@ -64,6 +66,7 @@ internal fun DevicesPane(viewModel: SyncViewModel = viewModel()) {
             is SyncViewModel.ReceiveState.Done -> stringResource(R.string.sync_synced_items, state.merged)
             is SyncViewModel.ReceiveState.Failed -> state.reason.sentence
         },
+        detail = (receiving as? SyncViewModel.ReceiveState.Failed)?.reason?.detail,
     )
     val nasReady = smbHost.isNotBlank()
     ListRow(
@@ -74,6 +77,7 @@ internal fun DevicesPane(viewModel: SyncViewModel = viewModel()) {
         } else {
             nasNote(nas)
         },
+        detail = (nas as? SyncViewModel.NasState.Failed)?.reason?.detail.takeIf { nasReady },
     )
     ListRow(
         stringResource(R.string.settings_devices_nas_auto),
@@ -97,9 +101,13 @@ private fun nasNote(nas: SyncViewModel.NasState): String = when (nas) {
     is SyncViewModel.NasState.Failed -> nas.reason.sentence
 }
 
-/** The other device shows "address#code"; both are typed in one go. */
+/**
+ * The other device shows "address#code"; both are typed in one go. Without the code, the other
+ * device would only answer that the code is wrong, so it's asked for here instead.
+ */
 @Composable
 private fun GetFromAnotherDevice(onCancel: () -> Unit, onGet: (address: String, code: String) -> Unit) {
+    val needsCode = stringResource(R.string.settings_devices_get_needs_code)
     EntryWindow(
         title = stringResource(R.string.settings_devices_get_title),
         initial = "",
@@ -107,5 +115,8 @@ private fun GetFromAnotherDevice(onCancel: () -> Unit, onGet: (address: String, 
         hint = stringResource(R.string.settings_devices_get_hint),
         onSave = { typed -> onGet(typed.substringBefore('#').trim(), typed.substringAfter('#', "").trim()) },
         onCancel = onCancel,
+        refusal = { typed ->
+            if (typed.isNotBlank() && typed.substringAfter('#', "").isBlank()) needsCode else null
+        },
     )
 }

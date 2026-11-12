@@ -216,6 +216,11 @@
     <string name="settings_devices_get">Get from another device</string>
     <string name="settings_devices_get_title">What the other device shows</string>
     <string name="settings_devices_get_hint">Its address and code, such as 192.168.1.20:41234#123456</string>
+    <string name="settings_devices_get_needs_code">Add # and the code the other device shows.</string>
+    <string name="settings_rec_test_needs_details">Type the server and shared folder first.</string>
+    <string name="settings_about_licence_value">GNU GPL v3.0</string>
+    <string name="settings_size_gb">%1$.1f GB</string>
+    <string name="settings_size_mb">%1$.0f MB</string>
     <string name="settings_devices_nas_now">Sync through your network drive now</string>
     <string name="settings_devices_nas_note">Every device you set up with the same drive keeps the same Favourites and watch history.</string>
     <string name="settings_devices_nas_needs_setup">Set up your network drive in Recording first.</string>

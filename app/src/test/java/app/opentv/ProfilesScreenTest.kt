@@ -174,6 +174,8 @@ class ProfilesScreenTest {
         pressInPanel("Keep it", Key.DirectionUp)
         pressInPanel("Yes, remove Remove me 168", Key.DirectionCenter)
         compose.waitUntil(5_000) { profile("Remove me 168") == null }
+        // Its row has gone, and the Highlight goes back into the list rather than vanishing.
+        compose.waitUntil(5_000) { compose.onAllNodes(isFocused()).fetchSemanticsNodes().isNotEmpty() }
 
         val base = baseName()
         holdSelectOn(base)

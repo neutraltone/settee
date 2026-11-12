@@ -57,6 +57,7 @@ internal fun AboutPane(onOpenFontLicences: () -> Unit, checkForUpdate: UpdateChe
     val resources = LocalResources.current
     val scope = rememberCoroutineScope()
     var checkNote by remember { mutableStateOf<String?>(null) }
+    var checkDetail by remember { mutableStateOf<String?>(null) }
     var checking by remember { mutableStateOf(false) }
     var whatsNew by remember { mutableStateOf<List<VersionNotes>?>(null) }
 
@@ -73,15 +74,16 @@ internal fun AboutPane(onOpenFontLicences: () -> Unit, checkForUpdate: UpdateChe
             if (checking) return@ListRow
             checking = true
             checkNote = null
+            checkDetail = null
             scope.launch {
                 val outcome = checkForUpdate(context)
                 checkNote = when (outcome) {
                     is UpdateChecker.Outcome.Available ->
                         resources.getString(R.string.about_update_available, outcome.update.versionName)
                     UpdateChecker.Outcome.UpToDate -> resources.getString(R.string.about_up_to_date)
-                    is UpdateChecker.Outcome.CouldNotCheck ->
-                        "${resources.getString(R.string.about_check_failed)} · ${outcome.detail}"
+                    is UpdateChecker.Outcome.CouldNotCheck -> resources.getString(R.string.about_check_failed)
                 }
+                checkDetail = (outcome as? UpdateChecker.Outcome.CouldNotCheck)?.detail
                 // UpdateGate draws over every screen, so the install prompt appears over Settings.
                 if (outcome is UpdateChecker.Outcome.Available) UpdateHub.state.value = UpdateUiState.Available(outcome.update)
                 checking = false
@@ -89,6 +91,7 @@ internal fun AboutPane(onOpenFontLicences: () -> Unit, checkForUpdate: UpdateChe
         },
         value = "${stringResource(R.string.app_name)} ${BuildConfig.VERSION_NAME}",
         note = if (checking) stringResource(R.string.about_checking) else checkNote ?: stringResource(R.string.about_based_on),
+        detail = checkDetail.takeUnless { checking },
     )
     ListRow(
         stringResource(R.string.about_whats_new),
@@ -104,7 +107,7 @@ internal fun AboutPane(onOpenFontLicences: () -> Unit, checkForUpdate: UpdateChe
     ListRow(
         stringResource(R.string.about_licence_label),
         onClick = { context.openLink("https://www.gnu.org/licenses/gpl-3.0.html") },
-        value = "GNU GPL v3.0",
+        value = stringResource(R.string.settings_about_licence_value),
     )
     ListRow(
         stringResource(R.string.about_source_code),

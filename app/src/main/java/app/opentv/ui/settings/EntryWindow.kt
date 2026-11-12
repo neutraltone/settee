@@ -31,6 +31,7 @@ internal fun EntryWindow(
     keyboardType: KeyboardType = KeyboardType.Text,
     hint: String? = null,
     maxLength: Int? = null,
+    allowBlank: Boolean = false,
     refusal: (String) -> String? = { null },
 ) {
     Dialog(
@@ -50,6 +51,7 @@ internal fun EntryWindow(
             hint = hint,
             keyboardType = keyboardType,
             maxLength = maxLength,
+            allowBlank = allowBlank,
             refusal = refusal,
         )
     }

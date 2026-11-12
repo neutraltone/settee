@@ -92,6 +92,11 @@ class SettingsMemory(section: SettingsSection = SettingsSection.Providers) {
     internal var openedRow: String? = null
 }
 
+/** Whether the Highlight was last in the pane or the sections. Not state: nothing draws from it. */
+private class LastHighlight {
+    var pane = false
+}
+
 /** Test tags for what a test can't find by its text alone. */
 object SettingsTags {
     const val SECTION = "settings-section"
@@ -118,7 +123,8 @@ fun SettingsScreen(
     val current = remember { FocusRequester() }
     val pane = remember { FocusRequester() }
     var inPane by remember { mutableStateOf(false) }
-    val focusPane: () -> Unit = { runCatching { pane.requestFocus() } }
+    // Where the Highlight last was, which outlives the row it was on (inPane goes false with it).
+    val lastIn = remember { LastHighlight() }
     BackHandler { if (inPane) runCatching { current.requestFocus() } else onBack() }
     LaunchedEffect(Unit) {
         // A frame first: until the input mode has gone to keyboard, nothing can take focus.
@@ -137,11 +143,17 @@ fun SettingsScreen(
         modifier
             .fillMaxSize()
             .background(SetteeColors.Background)
-            // When the row with the Highlight goes (Enter your PIN, once the PIN is in), Compose
-            // starts again from the first thing on screen, and highlighting a section opens it: so
-            // Settings jumped to Providers. Starting on the open section keeps the viewer where
-            // they were.
-            .focusProperties { onEnter = { runCatching { current.requestFocus() } } }
+            // When the row with the Highlight goes (a provider, guide or add-on removed, Enter your
+            // PIN once the PIN is in), Compose starts again from the first thing on screen, and
+            // highlighting a section opens it: so Settings jumped to Providers. Going back into the
+            // pane, or to the open section, keeps the viewer where they were. One rule for every
+            // pane, rather than each pane moving the Highlight after its own removals. A row taking
+            // the Highlight back from its own screen (screenRow) is let through.
+            .focusProperties {
+                onEnter = {
+                    if (memory.openedRow == null) runCatching { (if (lastIn.pane) pane else current).requestFocus() }
+                }
+            }
             .focusGroup(),
     ) {
         Column(
@@ -150,6 +162,7 @@ fun SettingsScreen(
                 .fillMaxHeight()
                 .background(SetteeColors.Surface)
                 .padding(horizontal = SetteeSpace.ScreenSide, vertical = SetteeSpace.ScreenTopBottom)
+                .onFocusChanged { if (it.hasFocus) lastIn.pane = false }
                 .focusGroup(),
         ) {
             Text(stringResource(R.string.nav_settings), SetteeType.ScreenTitle)
@@ -171,7 +184,10 @@ fun SettingsScreen(
                 .fillMaxHeight()
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = SetteeSpace.ScreenSide, vertical = SetteeSpace.ScreenTopBottom)
-                .onFocusChanged { inPane = it.hasFocus }
+                .onFocusChanged {
+                    inPane = it.hasFocus
+                    if (it.hasFocus) lastIn.pane = true
+                }
                 // Left always goes back to the sections: nothing in a pane sits beside anything
                 // else, and the nearest section by position is rarely the one being shown.
                 .onPreviewKeyEvent { event ->
@@ -189,7 +205,7 @@ fun SettingsScreen(
                 verticalArrangement = Arrangement.spacedBy(ROW_GAP),
             ) {
                 CompositionLocalProvider(LocalSettingsMemory provides memory) {
-                    Pane(section, focusPane, onAddProvider, onEditProvider, onOpenChannels, onOpenFontLicences, checkForUpdate)
+                    Pane(section, onAddProvider, onEditProvider, onOpenChannels, onOpenFontLicences, checkForUpdate)
                 }
             }
         }
@@ -199,7 +215,6 @@ fun SettingsScreen(
 @Composable
 private fun Pane(
     section: SettingsSection,
-    focusPane: () -> Unit,
     onAddProvider: () -> Unit,
     onEditProvider: (sourceId: Long) -> Unit,
     onOpenChannels: () -> Unit,
@@ -207,12 +222,12 @@ private fun Pane(
     checkForUpdate: UpdateCheck,
 ) {
     when (section) {
-        SettingsSection.Providers -> ProvidersPane(onAddProvider, onEditProvider, onRowGone = focusPane)
+        SettingsSection.Providers -> ProvidersPane(onAddProvider, onEditProvider)
         SettingsSection.Guide -> GuidePane()
         SettingsSection.Channels -> ChannelsPane(onOpenChannels)
         SettingsSection.Display -> DisplayPane()
         SettingsSection.Recording -> RecordingPane()
-        SettingsSection.Parental -> ParentalPane(onUnlocked = focusPane)
+        SettingsSection.Parental -> ParentalPane()
         SettingsSection.Devices -> DevicesPane()
         SettingsSection.Addons -> AddonsPane()
         SettingsSection.Manager -> ManagerPane()

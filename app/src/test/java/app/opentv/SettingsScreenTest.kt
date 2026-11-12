@@ -285,7 +285,9 @@ class SettingsScreenTest {
         entry.pressAction()
 
         compose.waitUntil(5_000) { feed("http://127.0.0.1:9/guide168.xml") != null }
-        waitFor("http://127.0.0.1:9/guide168.xml")
+        // Named by its host: a provider's guide link can carry the login.
+        assertThat(feed("http://127.0.0.1:9/guide168.xml")?.name).isEqualTo("127.0.0.1")
+        compose.onNode(hasText("guide168", substring = true)).assertDoesNotExist()
         compose.onNode(hasText("Add your own guide") and isFocused()).assertExists()
     }
 
@@ -309,11 +311,15 @@ class SettingsScreenTest {
         pressInPanel("Keep it", Key.DirectionUp)
         pressInPanel("Yes, remove Own guide 168", Key.DirectionCenter)
         compose.waitUntil(5_000) { feed("http://127.0.0.1:9/own168.xml") == null }
+        // Its row has gone, so the Highlight goes back into the pane rather than to the sections.
+        compose.waitUntil(5_000) { compose.onAllNodes(hasText("Update the guide now") and isFocused()).fetchSemanticsNodes().isNotEmpty() }
+        paneTitle().assertTextContains("TV guide")
     }
 
     @Test
     fun `Recording saves to a network drive once it's picked, with each detail typed on an entry screen`() {
         graph.settings.setRecordingTarget(AppSettings.RecordingTarget.INTERNAL)
+        graph.settings.setSmbConfig(host = "", share = "", folder = "", user = "", password = "")
         show(SettingsMemory(SettingsSection.Recording))
         press(KeyEvent.KEYCODE_DPAD_RIGHT)
         highlighted().assertTextContains("Save recordings to")
@@ -335,6 +341,11 @@ class SettingsScreenTest {
         }
         assertThat(graph.settings.smbHost.value).isEqualTo("nas.example.com")
         compose.onNode(hasText("Server") and hasText("nas.example.com") and isFocused()).assertExists()
+
+        // Without a shared folder there's nothing to test, and it says so.
+        compose.onNodeWithText("Test connection").requestFocus()
+        press(KeyEvent.KEYCODE_DPAD_CENTER)
+        compose.onNode(hasText("Test connection") and hasText("Type the server and shared folder first.")).assertExists()
 
         compose.onNodeWithText("Password").requestFocus()
         press(KeyEvent.KEYCODE_DPAD_CENTER)
@@ -443,7 +454,10 @@ class SettingsScreenTest {
         compose.onNodeWithText("Get from another device").requestFocus()
         press(KeyEvent.KEYCODE_DPAD_CENTER)
         entryKeyboard().run {
-            type("127.0.0.1:9#123456")
+            // Without the code, it asks for it rather than letting the other device refuse.
+            type("127.0.0.1:9")
+            compose.onNodeWithText("Add # and the code the other device shows.").assertExists()
+            type("#123456")
             pressAction()
         }
 
@@ -554,6 +568,8 @@ class SettingsScreenTest {
         press(KeyEvent.KEYCODE_DPAD_CENTER)
         compose.onNode(hasText("Check for updates") and hasText("Couldn't check for updates", substring = true))
             .assertExists()
+        // The detail goes on its own quiet line, as every error's does.
+        compose.onNode(hasText("Check for updates") and hasText("HTTP 503")).assertExists()
         compose.onNode(hasText("You're on the latest version.", substring = true)).assertDoesNotExist()
 
         compose.onNode(hasText("Fonts")).requestFocus()

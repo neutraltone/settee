@@ -30,7 +30,8 @@ import androidx.compose.ui.unit.dp
  * Highlight on it, and a Save below. OK on the box opens the device's keyboard, whose Done key
  * saves, as Save does. Back leaves without saving.
  *
- * Nothing blank is saved, nor anything [refusal] turns down; its reason shows under the box. [hint]
+ * Nothing blank is saved unless [allowBlank] (for an optional setting, where empty clears it),
+ * nor anything [refusal] turns down; its reason shows under the box. [hint]
  * is a quiet line under that, such as where else the setting can be typed. Text longer than
  * [maxLength] is cut to fit, however it arrives.
  */
@@ -45,6 +46,7 @@ fun EntryScreen(
     hint: String? = null,
     keyboardType: KeyboardType = KeyboardType.Text,
     maxLength: Int? = null,
+    allowBlank: Boolean = false,
     refusal: (String) -> String? = { null },
 ) {
     val text = rememberTextFieldState(initial)
@@ -57,7 +59,7 @@ fun EntryScreen(
     }
     val typed = text.text.toString()
     val refused = refusal(typed)
-    val save = { if (typed.isNotBlank() && refused == null) onSave(typed) }
+    val save = { if ((allowBlank || typed.isNotBlank()) && refused == null) onSave(typed) }
     Column(
         Modifier
             .fillMaxSize()
