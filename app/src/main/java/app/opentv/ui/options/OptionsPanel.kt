@@ -103,17 +103,16 @@ internal fun <T> ChoicePanel(
 internal fun ItemOption.label(): String = when (this) {
     ItemOption.PlayFromStart -> stringResource(R.string.options_play_from_start)
     ItemOption.ShowInfo -> stringResource(R.string.options_show_info)
-    ItemOption.MarkWatched -> stringResource(R.string.options_mark_watched)
-    ItemOption.MarkUnwatched -> stringResource(R.string.options_mark_unwatched)
-    ItemOption.MarkWatchedUpToHere -> stringResource(R.string.options_mark_watched_up_to_here)
-    ItemOption.MarkSeasonWatched -> stringResource(R.string.options_mark_season_watched)
-    ItemOption.MarkSeasonUnwatched -> stringResource(R.string.options_mark_season_unwatched)
+    ItemOption.MarkWatched, ItemOption.MarkUnwatched, ItemOption.MarkWatchedUpToHere,
+    ItemOption.MarkSeasonWatched, ItemOption.MarkSeasonUnwatched,
+    -> markLabel()
     ItemOption.RemoveFromContinueWatching -> stringResource(R.string.options_remove_continue_watching)
     ItemOption.AddFavourite -> stringResource(R.string.options_add_favourite)
     ItemOption.RemoveFavourite -> stringResource(R.string.options_remove_favourite)
     ItemOption.RemoveRecentSearch -> stringResource(R.string.common_remove)
     is ItemOption.PlayerAction -> label()
     is ItemOption.ChannelAction -> label()
+    is ItemOption.RecordingAction -> label()
 }
 
 @Composable
@@ -123,6 +122,26 @@ private fun ItemOption.PlayerAction.label(): String = when (this) {
     ItemOption.Quality -> stringResource(R.string.player_quality)
     ItemOption.AspectRatio -> stringResource(R.string.player_aspect_ratio_title)
     ItemOption.SleepTimer -> stringResource(R.string.settings_sleep_timer)
+}
+
+@Composable
+private fun ItemOption.markLabel(): String = stringResource(
+    when (this) {
+        ItemOption.MarkUnwatched -> R.string.options_mark_unwatched
+        ItemOption.MarkWatchedUpToHere -> R.string.options_mark_watched_up_to_here
+        ItemOption.MarkSeasonWatched -> R.string.options_mark_season_watched
+        ItemOption.MarkSeasonUnwatched -> R.string.options_mark_season_unwatched
+        else -> R.string.options_mark_watched
+    },
+)
+
+@Composable
+private fun ItemOption.RecordingAction.label(): String = when (this) {
+    ItemOption.StopRecording -> stringResource(R.string.rec_stop_recording)
+    ItemOption.DeleteRecording -> stringResource(R.string.common_delete)
+    ItemOption.CancelRecording -> stringResource(R.string.rec_cancel_recording)
+    ItemOption.CancelReminder -> stringResource(R.string.rec_cancel_reminder)
+    ItemOption.RemoveSeriesLink -> stringResource(R.string.rec_series_remove)
 }
 
 @Composable

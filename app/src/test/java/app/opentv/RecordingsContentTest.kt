@@ -1,0 +1,274 @@
+/*
+ * This file is part of OpenTV.
+ * Copyright (C) 2026 The OpenTV Contributors
+ * Licensed under the GNU General Public License v3.0 or later.
+ */
+package app.opentv
+
+import androidx.compose.foundation.layout.Box
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toPixelMap
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.test.SemanticsNodeInteraction
+import androidx.compose.ui.test.assert
+import androidx.compose.ui.test.assertIsFocused
+import androidx.compose.ui.test.captureToImage
+import androidx.compose.ui.test.hasClickAction
+import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onRoot
+import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performKeyInput
+import androidx.compose.ui.test.pressKey
+import androidx.test.espresso.Espresso
+import app.opentv.data.model.Recording
+import app.opentv.data.model.RecordingStatus
+import app.opentv.data.model.Reminder
+import app.opentv.data.model.SeriesRule
+import app.opentv.ui.design.SetteeColors
+import app.opentv.ui.options.ItemOption
+import app.opentv.ui.recordings.RecordingsContent
+import app.opentv.ui.recordings.RecordingsRow
+import app.opentv.ui.recordings.recordingsSections
+import com.google.common.truth.Truth.assertThat
+import org.junit.Rule
+import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
+import org.robolectric.annotation.GraphicsMode
+
+// Plain Application: OpenTvApp schedules WorkManager on start, which a lone composable doesn't need.
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [34], qualifiers = TV_1080P, application = android.app.Application::class)
+@GraphicsMode(GraphicsMode.Mode.NATIVE)
+@OptIn(ExperimentalTestApi::class)
+class RecordingsContentTest {
+
+    @get:Rule
+    val compose = createComposeRule()
+
+    @get:Rule
+    val artwork = PlaceholderArtwork()
+
+    private val played = mutableListOf<Recording>()
+    private val retried = mutableListOf<Recording>()
+    private val chosen = mutableListOf<Pair<RecordingsRow, ItemOption>>()
+
+    /**
+     * Shows the screen and enters it the way the rail does, by asking the content for the Highlight
+     * without saying which row should have it.
+     */
+    private fun show(
+        recordings: List<Recording> = emptyList(),
+        reminders: List<Reminder> = emptyList(),
+        seriesRules: List<SeriesRule> = emptyList(),
+        profileNames: Map<Long, String> = emptyMap(),
+    ) {
+        val enter = FocusRequester()
+        compose.setTvContent {
+            Box(Modifier.focusRequester(enter)) {
+                RecordingsContent(
+                    sections = recordingsSections(recordings, reminders, seriesRules, NOW),
+                    profileNames = profileNames,
+                    onPlay = { played += it },
+                    onRetry = { retried += it },
+                    onChoose = { row, option -> chosen += row to option },
+                )
+            }
+        }
+        compose.runOnIdle { enter.requestFocus() }
+        compose.waitForIdle()
+    }
+
+    private fun row(title: String): SemanticsNodeInteraction = compose.onNode(
+        hasText(title, substring = true) and hasClickAction(),
+    )
+
+    private fun press(key: Key) = compose.onRoot().performKeyInput { pressKey(key) }
+
+    @Test
+    fun `the first Highlight is on the first row, and Down moves row by row across the headings`() {
+        show(
+            recordings = listOf(booking(1), completed(2)),
+            seriesRules = listOf(seriesLink(3)),
+        )
+
+        row("Booking 1").assertIsFocused()
+        captureScreen("recordings_initial")
+        press(Key.DirectionDown)
+        row("Recorded 2").assertIsFocused()
+        press(Key.DirectionDown)
+        row("Series 3").assertIsFocused()
+    }
+
+    @Test
+    fun `OK plays a finished recording and retries a failed one`() {
+        val finished = completed(1)
+        val failed = completed(2, RecordingStatus.FAILED)
+        show(recordings = listOf(finished, failed))
+
+        press(Key.DirectionCenter)
+        press(Key.DirectionDown)
+        press(Key.DirectionCenter)
+
+        assertThat(played).containsExactly(finished)
+        assertThat(retried).containsExactly(failed)
+    }
+
+    @Test
+    fun `OK on a booking opens its options panel, where it can be cancelled`() {
+        val booked = booking(1)
+        show(recordings = listOf(booked))
+
+        press(Key.DirectionCenter)
+        compose.waitUntilAtLeastOneExists(hasText("Cancel recording"), TIMEOUT_MILLIS)
+        captureScreen("recordings_options")
+        compose.onNode(hasText("Cancel recording") and hasClickAction()).performClick()
+
+        assertThat(chosen).containsExactly(RecordingsRow.Booking(booked, clashes = false) to ItemOption.CancelRecording)
+    }
+
+    @Test
+    fun `Menu on a finished recording opens its options panel instead of playing it`() {
+        show(recordings = listOf(completed(1)))
+
+        press(Key.Menu)
+
+        compose.waitUntilAtLeastOneExists(hasText("Delete"), TIMEOUT_MILLIS)
+        assertThat(played).isEmpty()
+    }
+
+    @Test
+    fun `Delete asks first, and backing out keeps the recording`() {
+        show(recordings = listOf(completed(1)))
+
+        press(Key.Menu)
+        compose.waitUntilAtLeastOneExists(hasText("Delete"), TIMEOUT_MILLIS)
+        compose.onNode(hasText("Delete") and hasClickAction()).performClick()
+        compose.waitUntilAtLeastOneExists(hasText("Keep it"), TIMEOUT_MILLIS)
+        captureScreen("recordings_delete_confirm")
+        Espresso.pressBack()
+        compose.waitForIdle()
+
+        compose.onNode(hasText("Keep it")).assertDoesNotExist()
+        assertThat(chosen).isEmpty()
+    }
+
+    @Test
+    fun `the delete confirmation starts on Keep it, so a second press of OK deletes nothing`() {
+        show(recordings = listOf(completed(1)))
+
+        press(Key.Menu)
+        compose.waitUntilAtLeastOneExists(hasText("Delete"), TIMEOUT_MILLIS)
+        compose.onNode(hasText("Delete") and hasClickAction()).performClick()
+        compose.waitUntilAtLeastOneExists(hasText("Keep it"), TIMEOUT_MILLIS)
+        compose.waitForIdle()
+
+        compose.onNode(hasText("Keep it") and hasClickAction()).assertIsFocused()
+    }
+
+    @Test
+    fun `confirming Delete deletes the recording`() {
+        val finished = completed(1)
+        show(recordings = listOf(finished))
+
+        press(Key.Menu)
+        compose.waitUntilAtLeastOneExists(hasText("Delete"), TIMEOUT_MILLIS)
+        compose.onNode(hasText("Delete") and hasClickAction()).performClick()
+        compose.waitUntilAtLeastOneExists(hasText("Keep it"), TIMEOUT_MILLIS)
+        compose.onNode(hasText("Delete") and hasClickAction()).performClick()
+
+        assertThat(chosen).containsExactly(RecordingsRow.Recorded(finished) to ItemOption.DeleteRecording)
+    }
+
+    @Test
+    fun `a recording in progress shows a Recording-red dot, which turns On accent while the row has the Highlight`() {
+        show(recordings = listOf(completed(1), completed(2, RecordingStatus.RECORDING)))
+
+        // In progress sorts first, so it starts with the Highlight.
+        compose.onNodeWithText("Recording", useUnmergedTree = true).assertExists()
+        assertThat(dotColour()).isEqualTo(SetteeColors.OnAccent)
+        press(Key.DirectionDown)
+        assertThat(dotColour()).isEqualTo(SetteeColors.Recording)
+    }
+
+    @Test
+    fun `a recording says whose it is only when there's more than one Profile`() {
+        val mine = completed(1).copy(profileId = 7)
+        show(recordings = listOf(mine), profileNames = mapOf(7L to "Sam"))
+        row("Recorded 1").assert(hasText("For Sam", substring = true).not())
+    }
+
+    @Test
+    fun `with several Profiles a recording says whose it is`() {
+        val mine = completed(1).copy(profileId = 7)
+        show(recordings = listOf(mine), profileNames = mapOf(7L to "Sam", 8L to "Alex"))
+        row("Recorded 1").assert(hasText("For Sam", substring = true))
+    }
+
+    @Test
+    fun `a booking that clashes on its provider says so`() {
+        val a = booking(1)
+        val b = booking(1).copy(id = 2, title = "Booking 2")
+        show(recordings = listOf(a, b))
+        row("Booking 2").assert(hasText("Overlaps another recording", substring = true))
+    }
+
+    @Test
+    fun `with nothing booked, recorded or linked the screen says how to record`() {
+        show()
+        compose.onNodeWithText("Nothing here yet", substring = true).assertExists()
+        captureScreen("recordings_empty")
+    }
+
+    private fun dotColour(): Color {
+        val image = compose.onNodeWithTag("recording-dot", useUnmergedTree = true).captureToImage().toPixelMap()
+        return image[image.width / 2, image.height / 2]
+    }
+
+    private fun booking(id: Long) = Recording(
+        id = id,
+        channelId = id,
+        sourceId = 1,
+        channelName = "Channel $id",
+        logoUrl = "https://example.com/logo$id.png",
+        title = "Booking $id",
+        filePath = "/rec/$id.ts",
+        streamUrl = "",
+        scheduledStartMillis = NOW + id * HOUR,
+        scheduledEndMillis = NOW + (id + 1) * HOUR,
+        status = RecordingStatus.SCHEDULED,
+    )
+
+    private fun completed(id: Long, status: RecordingStatus = RecordingStatus.COMPLETED) = Recording(
+        id = id,
+        channelId = id,
+        sourceId = 1,
+        channelName = "Channel $id",
+        logoUrl = "https://example.com/logo$id.png",
+        title = "Recorded $id",
+        filePath = "/rec/$id.ts",
+        streamUrl = "",
+        startedAtMillis = NOW - id * HOUR,
+        endedAtMillis = NOW - id * HOUR + 45 * MINUTE,
+        sizeBytes = 1_500_000_000L,
+        status = status,
+    )
+
+    private fun seriesLink(id: Long) =
+        SeriesRule(id = id, channelId = id, channelName = "Channel $id", titleKey = "series $id", title = "Series $id")
+
+    private companion object {
+        const val TIMEOUT_MILLIS = 5_000L
+        const val NOW = 1_800_000_000_000L
+        const val MINUTE = 60_000L
+        const val HOUR = 60 * MINUTE
+    }
+}

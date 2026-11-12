@@ -78,6 +78,9 @@ Plain constants in `ui/design`.
 | Quiet text | `#BDABA8` | 8.3:1 on Background |
 | Accent | `#FF8F6B` | 8.1:1 on Background |
 | On accent | `#2A130B` | 7.9:1 on Accent |
+| Recording | `#FF5A5F` | Only for capturing right now. 6.0:1 on Background, 4.5:1 on Raised |
+
+Recording red means one thing: something is being captured now. A row in progress shows a red dot and the word "Recording", and the dot turns On accent while the row has the Highlight. Failures, series links and clashes are never red.
 
 Watched episodes step back by colour, never alpha. On-video colours for the players are set with the player tickets.
 
@@ -227,7 +230,12 @@ One page: the welcome and the choice of provider together.
 
 ## Recordings
 
-One list, with Coming up, Recorded and Series links as headings. Recordings have a channel logo but no artwork, so they're rows, not cards.
+One list, with Coming up, Recorded and Series links as headings, and a heading with no rows hidden. Recordings have a channel logo but no artwork, so they're rows, not cards.
+
+- **Coming up:** bookings and reminders together, soonest first. A reminder shows a bell instead of a logo.
+- **Recorded:** a recording in progress first, then newest first. Failed ones stay here and say what went wrong.
+- **Series links:** A to Z.
+- **Rows:** OK plays, watches live or retries. Everything else is in the options panel, and Delete asks first because it can't be undone.
 
 ## Motion and cost
 

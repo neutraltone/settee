@@ -83,15 +83,13 @@
     <string name="rec_record_series_named">Record whole series — %1$s</string>
     <string name="rec_series_recording_set">Series recording set for \"%1$s\"</string>
     <string name="rec_screen_title">Recordings &amp; reminders</string>
-    <string name="rec_screen_desc">Record live TV to this box or your NAS, and set reminders for what\'s coming up.</string>
     <string name="rec_empty_state">Nothing here yet. Press Record in the player, or open a channel in the guide to schedule a recording or set a reminder.</string>
-    <string name="rec_upcoming_reminders">Upcoming reminders</string>
-    <string name="rec_reminder_autoswitch">Auto-switch</string>
-    <string name="rec_reminder_plain">Reminder</string>
     <string name="rec_cancel_reminder">Cancel reminder</string>
-    <string name="rec_status_scheduled">Scheduled · %1$s</string>
-    <string name="rec_status_recording">● Recording · %1$s · %2$s</string>
-    <string name="rec_status_failed">Failed · %1$s</string>
+    <string name="rec_cancel_recording">Cancel recording</string>
+    <string name="rec_heading_coming_up">Coming up</string>
+    <string name="rec_in_progress">Recording</string>
+    <string name="rec_delete_confirm">Delete “%1$s”? It can\'t be undone.</string>
+    <string name="rec_delete_keep">Keep it</string>
     <string name="rec_error_unknown">unknown error</string>
     <string name="rec_notification_one">Recording 1 programme</string>
     <string name="rec_notification_many">Recording %1$d programmes</string>
@@ -535,18 +533,13 @@
 
     <!-- Recordings: sections, scheduling detail, retry, profile -->
     <string name="rec_section_series_links">Series links</string>
-    <string name="rec_series_upcoming">%1$s · %2$d scheduled</string>
     <string name="rec_series_waiting">%1$s · waiting for next airing</string>
     <string name="rec_series_next_at">%1$s · records %2$s</string>
     <string name="rec_series_next_more">Next records %1$s · +%2$d more</string>
     <string name="rec_series_remove">Remove series link</string>
-    <string name="rec_section_scheduled">Scheduled</string>
     <string name="rec_section_recorded">Recorded</string>
-    <string name="rec_status_scheduled_at">Records %1$s · %2$s</string>
     <string name="rec_status_failed_at">Failed · %1$s · %2$s</string>
     <string name="rec_for_profile">For %1$s</string>
-    <string name="rec_retry">Retry</string>
-    <string name="rec_watch_live">Watch</string>
     <string name="rec_watching_live_badge">Recording — live</string>
     <!-- Single-connection auto-switch -->
     <string name="rec_switch_now_title">Recording %1$s</string>

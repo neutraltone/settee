@@ -123,6 +123,20 @@ _Avoid_: New, new releases
 A muted, playing tile on Home of the live channel the Profile last watched on this device, shown only when live TV was the Profile's most recent playback. Settling on a channel full screen counts as watching it; zapping past one or seeing it in the guide's preview does not. A channel that has since left the channel list still shows, as a reminder that can't play; a channel the viewer hid does not.
 _Avoid_: Last channel, boot channel
 
+## Recordings
+
+**Recording**:
+A programme captured from a channel to storage on this device, a NAS or USB, or booked to be. It can be booked, in progress, recorded or failed.
+_Avoid_: DVR, PVR, capture
+
+**Reminder**:
+A prompt when a programme starts, which can also switch to its channel. It never captures anything.
+_Avoid_: Alert, notification
+
+**Series link**:
+Books every airing of a show on one channel as the guide reveals them, including before the next airing is known.
+_Avoid_: Series rule, season pass
+
 ## On screen
 
 **Highlight**:
