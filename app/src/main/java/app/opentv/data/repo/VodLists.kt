@@ -72,15 +72,19 @@ internal fun Movie.over(old: Movie?): Movie = if (old == null) {
         cast = cast ?: old.cast,
         genre = genre ?: old.genre,
         tmdbId = tmdbId ?: old.tmdbId,
-        // TMDB's people outrank the provider's, which would otherwise come back with every refresh.
-        director = if (old.tmdbLookedUp) old.director ?: director else director ?: old.director,
-        writer = old.writer ?: writer,
-        studio = old.studio ?: studio,
         releaseDate = releaseDate ?: old.releaseDate,
-        detailsLookedUp = detailsLookedUp || old.detailsLookedUp,
-        tmdbLookedUp = tmdbLookedUp || old.tmdbLookedUp,
-    )
+    ).keepingLookUpsOf(old)
 }
+
+/** [old]'s people and looked-up markers, which a list refresh knows nothing of. */
+private fun Movie.keepingLookUpsOf(old: Movie): Movie = copy(
+    // TMDB's people outrank the provider's, which would otherwise come back with every refresh.
+    director = if (old.tmdbLookedUp) old.director ?: director else director ?: old.director,
+    writer = old.writer ?: writer,
+    studio = old.studio ?: studio,
+    detailsLookedUp = detailsLookedUp || old.detailsLookedUp,
+    tmdbLookedUp = tmdbLookedUp || old.tmdbLookedUp,
+)
 
 /** This freshly fetched series in place of [old]; see the [Movie] version. */
 internal fun Series.over(old: Series?): Series = if (old == null) {
@@ -131,14 +135,17 @@ internal fun Movie.withTmdb(meta: TmdbMeta?): Movie = if (meta == null) {
         backdropUrl = backdropUrl ?: meta.backdropUrl,
         plot = plot ?: meta.overview,
         cast = cast ?: meta.cast,
-        director = meta.director ?: director,
-        writer = meta.writers ?: writer,
-        studio = meta.studios ?: studio,
         genre = genre?.ifBlank { null } ?: meta.genre ?: genre,
         tmdbId = tmdbId ?: meta.tmdbId,
         rating = rating ?: meta.rating,
         year = year ?: meta.year,
         releaseDate = releaseDate ?: meta.releaseDate,
         tmdbLookedUp = true,
-    )
+    ).withPeopleFrom(meta)
 }
+
+private fun Movie.withPeopleFrom(meta: TmdbMeta): Movie = copy(
+    director = meta.director ?: director,
+    writer = meta.writers ?: writer,
+    studio = meta.studios ?: studio,
+)

@@ -506,9 +506,6 @@ class CatalogRepository(
     private val Movie.isEnriched: Boolean
         get() = backdropUrl != null || cast != null || director != null
 
-    /** Null for a genre [MovieGenres] found the provider has none for, so another source can fill it. */
-    private fun String?.ifUnknown(): String? = this?.ifBlank { null }
-
     private val Series.isEnriched: Boolean
         get() = backdropUrl != null || cast != null || genre != null
 

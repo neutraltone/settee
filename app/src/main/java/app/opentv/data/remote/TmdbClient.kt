@@ -217,11 +217,6 @@ class TmdbClient(
         }
     }
 
-    /** Strips a trailing "(2023)"/year and collapses whitespace so the title searches cleanly. */
-    private fun searchTitle(raw: String): String = raw.replace(Regex("""\(?(19|20)\d{2}\)?\s*$"""), "")
-        .replace(Regex("""\s+"""), " ")
-        .trim()
-
     private companion object {
         const val TAG = "TmdbClient"
         val TMDB_BASE: HttpUrl = "https://api.themoviedb.org/3".toHttpUrl()
@@ -235,3 +230,8 @@ class TmdbClient(
         val WRITING_JOBS = setOf("Screenplay", "Writer", "Story", "Novel", "Author")
     }
 }
+
+/** Strips a trailing "(2023)"/year and collapses whitespace so the title searches cleanly. */
+private fun searchTitle(raw: String): String = raw.replace(Regex("""\(?(19|20)\d{2}\)?\s*$"""), "")
+    .replace(Regex("""\s+"""), " ")
+    .trim()

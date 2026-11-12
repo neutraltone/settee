@@ -93,7 +93,8 @@ class MovieGenres(
             }
         }
         // Blank, not missing, once everyone there is to ask has said they have none.
-        if (found.genre == null && found.detailsLookedUp && (!withTmdb || found.tmdbLookedUp)) {
+        val everyoneAsked = found.detailsLookedUp && (!withTmdb || found.tmdbLookedUp)
+        if (found.genre == null && everyoneAsked) {
             found = found.copy(genre = "")
         }
         return found.takeIf { answered }
