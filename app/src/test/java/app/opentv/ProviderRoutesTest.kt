@@ -150,7 +150,7 @@ class ProviderRoutesTest {
         savePlaylist()
 
         compose.waitUntil(5_000) {
-            compose.onAllNodesWithText("There are no channels at that address", substring = true).fetchSemanticsNodes().isNotEmpty()
+            compose.onAllNodesWithText(NO_CHANNELS, substring = true).fetchSemanticsNodes().isNotEmpty()
         }
         assertThat(route()).isEqualTo(Routes.ADD_SOURCE)
         compose.onNodeWithText("Playlist URL").assertExists()
@@ -163,7 +163,7 @@ class ProviderRoutesTest {
         setApp(start = Routes.ADD_SOURCE, sources = SourcesViewModel(app, graph))
         savePlaylist()
         compose.waitUntil(5_000) {
-            compose.onAllNodesWithText("There are no channels at that address", substring = true).fetchSemanticsNodes().isNotEmpty()
+            compose.onAllNodesWithText(NO_CHANNELS, substring = true).fetchSemanticsNodes().isNotEmpty()
         }
 
         panel.replies[""] = "#EXTM3U\n#EXTINF:-1,BBC One\nhttp://example.com/1.ts\n"
@@ -237,3 +237,6 @@ class ProviderRoutesTest {
         onThePage()
     }
 }
+
+/** The start of what a playlist with no channels says (core/ErrorWording). */
+private const val NO_CHANNELS = "There are no channels at that address"
