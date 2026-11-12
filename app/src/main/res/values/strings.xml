@@ -344,6 +344,7 @@
     <string name="recset_background_not_allowed">Not allowed</string>
     <string name="recset_background_fix">Fix</string>
     <string name="recset_background_desc">Android may stop recordings when the device sleeps or you leave Settee, unless Settee is allowed to ignore battery optimisation. Allowing it keeps recordings running even in standby, like a set-top box.</string>
+    <string name="recset_background_no_setting">Android may stop recordings when the device sleeps or you leave Settee. This device has no setting to prevent that.</string>
     <string name="recset_background_on_title">Background recording is on</string>
     <string name="recset_background_on_desc">Recordings will keep running when you leave Settee or the TV goes to sleep.</string>
     <string name="recset_background_toast">Background recording is on. Recordings will keep going in the background.</string>
