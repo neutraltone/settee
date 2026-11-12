@@ -101,8 +101,17 @@ class CatalogueRefresh(
     data class Setup(
         val steps: List<SetupStep>,
         val running: SetupStep? = steps.first(),
+        /** How full the bar is, 0 to 1; see [SetupBar]. */
+        val bar: Float = 0f,
+        val done: List<StepDone> = emptyList(),
         val finished: Boolean = false,
-    )
+    ) {
+        /** The steps that didn't load, for the finished screen to say so. */
+        val failed: List<SetupStep> get() = done.filter { it.failed }.map { it.step }
+    }
+
+    /** A finished Setup step: how many it found ([of] how many, for the guide's channels), or that it failed. */
+    data class StepDone(val step: SetupStep, val count: Int, val of: Int? = null, val failed: Boolean = false)
 
     private val _state = MutableStateFlow(State())
     val state: StateFlow<State> = _state.asStateFlow()
@@ -188,22 +197,36 @@ class CatalogueRefresh(
                 if (settings.seriesEnabled.value) add(SetupStep.SHOWS)
             }
         }
+        setupBar = SetupBar(steps)
         _state.update { it.copy(setup = Setup(steps)) }
         val outcome = when (val result = live(source)) {
             is CatalogRepository.SyncResult.Failed -> Outcome.AddFailed(result.reason)
             is CatalogRepository.SyncResult.Success -> Outcome.ChannelsLoaded(result.channelCount)
         }
         _state.update { it.copy(last = outcome) }
+        if (outcome is Outcome.AddFailed) {
+            // A provider that never loaded isn't there yet: the form's next try is the first provider
+            // again, and a restart opens on the provider choice rather than an empty Home.
+            catalog.deleteSource(source.id)
+            setup { copy(running = null) }
+        }
         if (outcome is Outcome.ChannelsLoaded) {
+            stepDone(StepDone(SetupStep.CHANNELS, outcome.channels))
             scope.launch {
                 // One step after another, never two at once: two big downloads compete for a
                 // Stick's 1 GB and its network.
                 if (SetupStep.GUIDE in steps) {
                     setup { copy(running = SetupStep.GUIDE) }
-                    runCatching { syncGuide(force = false) }
+                    val guide = runCatching { syncGuide(force = false) }
+                        .onFailure { Log.w(TAG, "Guide failed to load during setup", it) }
+                        .getOrNull()
+                    // Only when nothing came through: one dead feed among good ones still gives a guide.
+                    val failed = guide == null || (guide.feedsSucceeded == 0 && guide.feedsFailed > 0)
+                    val step = StepDone(SetupStep.GUIDE, guide?.channelsMatched ?: 0, guide?.channelsTotal, failed)
+                    stepDone(step)
                 }
                 vod(source, waitForNewEpisodes = false, setupSteps = steps)
-                setup { copy(running = null, finished = true) }
+                setup { copy(running = null, finished = true, bar = setupBar.finish()) }
                 rescan()
             }
         }
@@ -211,6 +234,14 @@ class CatalogueRefresh(
     }.await()
 
     private fun setup(change: Setup.() -> Setup) = _state.update { it.copy(setup = it.setup?.change()) }
+
+    /** Setup's bar for the running [Trigger.Setup]; only that refresh moves it. */
+    private var setupBar = SetupBar(emptyList())
+
+    private fun stepDone(step: StepDone) {
+        val bar = setupBar.advance(step.step, done = 1f)
+        setup { copy(done = done + step, bar = bar) }
+    }
 
     @Suppress("UnusedParameter") // The trigger is how a caller says what it is, as with the others.
     suspend fun refresh(trigger: Trigger.OpenedMoviesOrShows): Outcome.VodChecked {
@@ -300,18 +331,15 @@ class CatalogueRefresh(
     }
 
     private suspend fun setupVod(source: Source, steps: List<SetupStep>): CatalogRepository.VodFetch {
-        val movies = if (SetupStep.MOVIES in steps) {
-            setup { copy(running = SetupStep.MOVIES) }
-            catalog.fetchMovies(source)
-        } else {
-            CatalogRepository.ListFetch.SKIPPED
-        }
-        val shows = if (SetupStep.SHOWS in steps) {
-            setup { copy(running = SetupStep.SHOWS) }
-            catalog.fetchShows(source)
-        } else {
-            CatalogRepository.ListFetch.SKIPPED
-        }
+        suspend fun list(step: SetupStep, fetch: suspend () -> CatalogRepository.ListFetch) =
+            if (step in steps) {
+                setup { copy(running = step) }
+                fetch().also { stepDone(StepDone(step, it.count, failed = !it.complete)) }
+            } else {
+                CatalogRepository.ListFetch.SKIPPED
+            }
+        val movies = list(SetupStep.MOVIES) { catalog.fetchMovies(source) }
+        val shows = list(SetupStep.SHOWS) { catalog.fetchShows(source) }
         return CatalogRepository.VodFetch(
             shows.updated,
             movies.complete && shows.complete && (movies.count > 0 || shows.count > 0),

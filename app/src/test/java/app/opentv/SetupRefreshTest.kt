@@ -7,6 +7,8 @@ package app.opentv
 
 import androidx.test.core.app.ApplicationProvider
 import app.opentv.data.repo.CatalogueRefresh
+import app.opentv.data.model.Source
+import app.opentv.data.model.SourceKind
 import app.opentv.data.repo.SetupStep
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.test.runTest
@@ -101,6 +103,123 @@ class SetupRefreshTest {
         assertThat(panel.asked).contains("get_vod_streams")
         assertThat(refresh.state.value.setup?.steps)
             .containsExactly(SetupStep.CHANNELS, SetupStep.GUIDE, SetupStep.MOVIES).inOrder()
+    }
+
+    @Test
+    fun `a playlist has no movies or shows to fetch`() = runTest {
+        val playlist = Source(id = 2, name = "List", kind = SourceKind.M3U, url = "http://example.com/list.m3u")
+        panel.replies[""] = "#EXTM3U\n#EXTINF:-1,BBC One\nhttp://example.com/1.ts\n"
+        test.db.sources().insert(playlist)
+
+        refresh.refresh(CatalogueRefresh.Trigger.Setup(playlist))
+        test.awaitRefresh()
+
+        assertThat(refresh.state.value.setup?.steps)
+            .containsExactly(SetupStep.CHANNELS, SetupStep.GUIDE).inOrder()
+        assertThat(refresh.state.value.setup?.finished).isTrue()
+    }
+
+    @Test
+    fun `each step is named only while it runs`() = runTest {
+        val guide = panel.hold("xmltv.php")
+        val movies = panel.hold("get_vod_streams")
+        test.db.sources().insert(PANEL_SOURCE)
+        refresh.refresh(CatalogueRefresh.Trigger.Setup(PANEL_SOURCE))
+
+        during(guide) {
+            assertThat(refresh.state.value.setup?.running).isEqualTo(SetupStep.GUIDE)
+            guide.release()
+        }
+        during(movies) {
+            assertThat(refresh.state.value.setup?.running).isEqualTo(SetupStep.MOVIES)
+            movies.release()
+        }
+        test.awaitRefresh()
+
+        assertThat(refresh.state.value.setup?.running).isNull()
+    }
+
+    @Test
+    fun `each step that's done says how many it found`() = runTest {
+        panel.replies["get_live_streams"] =
+            """[{"stream_id": 1, "name": "BBC One", "epg_channel_id": "bbc1"}, {"stream_id": 2, "name": "Dave"}]"""
+
+        setUp()
+
+        assertThat(refresh.state.value.setup?.done).containsExactly(
+            CatalogueRefresh.StepDone(SetupStep.CHANNELS, count = 2),
+            CatalogueRefresh.StepDone(SetupStep.GUIDE, count = 1, of = 2),
+            CatalogueRefresh.StepDone(SetupStep.MOVIES, count = 1),
+            CatalogueRefresh.StepDone(SetupStep.SHOWS, count = 1),
+        ).inOrder()
+    }
+
+    @Test
+    fun `a guide that won't download doesn't stop setup, which says it didn't load`() = runTest {
+        panel.replies["xmltv.php"] = "!"
+
+        setUp()
+
+        val setup = refresh.state.value.setup!!
+        assertThat(setup.finished).isTrue()
+        assertThat(setup.failed).containsExactly(SetupStep.GUIDE)
+        assertThat(panel.asked).contains("get_series")
+    }
+
+    @Test
+    fun `movies or shows that won't download don't stop setup, which says which`() = runTest {
+        panel.replies["get_vod_streams"] = "!"
+        panel.replies["get_series"] = "!"
+
+        setUp()
+
+        val setup = refresh.state.value.setup!!
+        assertThat(setup.finished).isTrue()
+        assertThat(setup.failed).containsExactly(SetupStep.MOVIES, SetupStep.SHOWS).inOrder()
+    }
+
+    @Test
+    fun `a login that fails says why, fetches nothing else and leaves no provider behind`() = runTest {
+        panel.replies["get_live_streams"] = "[]"
+
+        val outcome = setUp()
+
+        assertThat(outcome).isInstanceOf(CatalogueRefresh.Outcome.AddFailed::class.java)
+        assertThat(panel.asked).doesNotContain("xmltv.php")
+        assertThat(panel.asked).doesNotContain("get_vod_streams")
+        // So the form's next try is the first provider again, and a restart opens on the provider choice.
+        assertThat(test.db.sources().byId(PANEL_SOURCE.id)).isNull()
+    }
+
+    @Test
+    fun `opening Movies or Shows after setup doesn't fetch them a second time`() = runTest {
+        setUp()
+        panel.asked.clear()
+
+        refresh.refresh(CatalogueRefresh.Trigger.OpenedMoviesOrShows)
+
+        assertThat(panel.asked).doesNotContain("get_vod_streams")
+        assertThat(panel.asked).doesNotContain("get_series")
+    }
+
+    @Test
+    fun `the bar fills each step's share as it finishes, and is full only once setup is`() = runTest {
+        val guide = panel.hold("xmltv.php")
+        val movies = panel.hold("get_vod_streams")
+        test.db.sources().insert(PANEL_SOURCE)
+        refresh.refresh(CatalogueRefresh.Trigger.Setup(PANEL_SOURCE))
+
+        during(guide) {
+            assertThat(refresh.state.value.setup?.bar).isWithin(0.001f).of(0.15f)
+            guide.release()
+        }
+        during(movies) {
+            assertThat(refresh.state.value.setup?.bar).isWithin(0.001f).of(0.76f)
+            movies.release()
+        }
+        test.awaitRefresh()
+
+        assertThat(refresh.state.value.setup?.bar).isEqualTo(1f)
     }
 
     private companion object {
