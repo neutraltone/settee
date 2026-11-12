@@ -59,6 +59,7 @@ class TestCatalog(context: Context, private val clock: () -> Long = { 0L }) {
         sourceDao = db.sources(),
         api = XtreamApi(panel.http),
         http = panel.http,
+        selfEnabledGuide = EpgRepository.SelfEnabledGuide.InMemory(),
     )
 
     /** Where [lineup] keeps its folds; cancelled with the database. */

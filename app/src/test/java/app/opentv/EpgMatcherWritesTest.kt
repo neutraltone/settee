@@ -48,6 +48,7 @@ class EpgMatcherWritesTest {
         sourceDao = db.sources(),
         api = XtreamApi(http),
         http = http,
+        selfEnabledGuide = EpgRepository.SelfEnabledGuide.InMemory(),
     )
 
     @After

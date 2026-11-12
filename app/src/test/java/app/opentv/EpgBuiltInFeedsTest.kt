@@ -10,6 +10,7 @@ import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import app.opentv.data.db.OpenTvDatabase
 import app.opentv.data.model.Channel
+import app.opentv.data.model.EpgChannelAlias
 import app.opentv.data.model.EpgFeed
 import app.opentv.data.parser.ChannelNameNormalizer
 import app.opentv.data.remote.XtreamApi
@@ -85,7 +86,7 @@ class EpgBuiltInFeedsTest {
         },
     )
 
-    private suspend fun feed(name: String) = db.epgFeeds().all().single { it.name == name }
+    private suspend fun feed(name: String) = db.epgFeeds().all().single { it.builtIn && it.name == name }
 
     @Test
     fun `a built-in guide whose address moved keeps its row and switch and takes the new address`() = runTest {
@@ -99,8 +100,15 @@ class EpgBuiltInFeedsTest {
             ),
         )
 
+        val old = feed(usa)
+        db.epgAliases().upsertAll(
+            listOf(EpgChannelAlias(feedId = old.id, epgId = "CNN.us1", displayName = "CNN", normalizedKey = "cnn")),
+        )
+
         guide.ensureFeeds()
 
+        // The old file's channel ids would otherwise keep matching channels to a guide that never refreshes.
+        assertThat(db.epgAliases().all()).isEmpty()
         val moved = feed(usa)
         assertThat(moved.url).isEqualTo(usaUrl)
         assertThat(moved.enabled).isTrue()
@@ -119,6 +127,18 @@ class EpgBuiltInFeedsTest {
         assertThat(summary.feedsFailed).isEqualTo(0)
         // Guide settings still says why it isn't working.
         assertThat(feed(usa).lastResult).contains("404")
+    }
+
+    @Test
+    fun `a custom guide sharing the self-enabled guide's name still counts when it fails`() = runTest {
+        americanChannels()
+        guide.syncAll(nowUtcMillis = NOW)
+        guide.addCustomFeed(usa, "https://example.com/guide.xml")
+
+        val summary = guide.syncAll(nowUtcMillis = NOW + 60_000L)
+
+        assertThat(selfEnabled.name).isEqualTo(usa)
+        assertThat(summary.feedsFailed).isEqualTo(1)
     }
 
     @Test

@@ -51,6 +51,7 @@ class SeriesRuleRescanTest {
             sourceDao = db.sources(),
             api = XtreamApi(test.panel.http),
             http = test.panel.http,
+            selfEnabledGuide = EpgRepository.SelfEnabledGuide.InMemory(),
         ),
         test.lineup,
     )

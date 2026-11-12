@@ -71,7 +71,7 @@ class EpgRepository(
     private val sourceDao: SourceDao,
     private val api: XtreamApi,
     private val http: OkHttpClient,
-    private val selfEnabledGuide: SelfEnabledGuide = SelfEnabledGuide.InMemory(),
+    private val selfEnabledGuide: SelfEnabledGuide,
 ) {
 
     /**
@@ -132,7 +132,7 @@ class EpgRepository(
 
     suspend fun setFeedEnabled(id: Long, enabled: Boolean) {
         val selfEnabled = selfEnabledGuide.name
-        if (selfEnabled != null && feedDao.byId(id)?.name == selfEnabled) selfEnabledGuide.name = null
+        if (selfEnabled != null && feedDao.byId(id)?.isSelfEnabled(selfEnabled) == true) selfEnabledGuide.name = null
         feedDao.setEnabled(id, enabled)
     }
 
@@ -166,7 +166,13 @@ class EpgRepository(
         for ((name, url) in BUILT_IN_FEEDS) {
             val existing = builtIns[name]
             if (existing != null) {
-                if (existing.url != url) feedDao.update(existing.copy(url = url, lastResult = ""))
+                if (existing.url != url) {
+                    // The new file names its channels differently (epgshare01's `.us1` became `.us2`), so
+                    // nothing would ever replace the old file's aliases: left, they keep matching channels
+                    // to ids whose programmes have aged out. Its programmes go by age as usual.
+                    aliasDao.deleteForFeed(existing.id)
+                    feedDao.update(existing.copy(url = url, lastResult = ""))
+                }
             } else if (feedDao.byUrl(url) == null) {
                 // Off by default: shipping a switched-on 20 MB download for a country the
                 // user may not live in would be rude. The EPG settings screen makes
@@ -210,7 +216,7 @@ class EpgRepository(
                     is FeedResult.Failed -> {
                         // A guide the viewer never asked for doesn't make the refresh a failure (Setup
                         // would say the guide didn't load); Guide settings still shows why it failed.
-                        if (feed.name != selfEnabledGuide.name) failed++
+                        if (!feed.isSelfEnabled(selfEnabledGuide.name)) failed++
                         // The stamp is NOT advanced on failure, so the next sync retries
                         // rather than waiting out the interval on a feed that never landed.
                         feedDao.markSynced(feed.id, feed.lastSyncMillis, result.reason)
@@ -391,6 +397,9 @@ class EpgRepository(
         selfEnabledGuide.name = feed.name
         Log.i(TAG, "Auto-enabled '${feed.name}' — ${top.value} channels tagged ${top.key}")
     }
+
+    /** A custom feed can share a built-in's name, so only the built-in row is the one Settee switched on. */
+    private fun EpgFeed.isSelfEnabled(selfEnabledName: String?) = builtIn && name == selfEnabledName
 
     companion object {
         private const val TAG = "EpgRepository"
