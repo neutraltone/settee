@@ -332,6 +332,11 @@ data class Movie(
      */
     @ColumnInfo(defaultValue = "0")
     val tmdbLookedUp: Boolean = false,
+    /**
+     * When TMDB last answered about this film, a match or not (UTC epoch millis); null if it never
+     * has. Six months on, the background pass asks again ([tmdbDue]).
+     */
+    val tmdbAnsweredAt: Long? = null,
 )
 
 @Entity(
@@ -371,6 +376,8 @@ data class Series(
      * stays only to avoid a schema bump; drop it with the next one.
      */
     val latestAirDate: Long? = null,
+    /** When TMDB last answered about this series, as [Movie.tmdbAnsweredAt]. */
+    val tmdbAnsweredAt: Long? = null,
 )
 
 /** A series by what identifies it across a catalogue refresh: its source and the provider's id. */

@@ -236,7 +236,71 @@ class MovieGenresTest {
     }
 
     private fun withTmdb(answer: (Movie) -> Result<TmdbMeta?>) =
-        MovieGenres(test.db.movies(), XtreamApi(panel.http), tmdb = tmdb(answer))
+        MovieGenres(test.db.movies(), XtreamApi(panel.http), tmdb = tmdb(answer), clock = { NOW })
+
+    /** A film the provider and TMDB have both answered about, TMDB at [tmdbAt]. */
+    private fun answered(id: String, tmdbAt: Long, plot: String? = null) = movie(id, added = 1, genre = "Drama", lookedUp = true)
+        .copy(tmdbLookedUp = true, tmdbAnsweredAt = tmdbAt, plot = plot)
+
+    private suspend fun stored(id: String): Movie = test.db.movies().forSource(1).single { it.streamId == id }
+
+    @Test
+    fun `TMDB's answer is dated, so it can be asked again in six months`() = runTest {
+        test.db.movies().upsertAll(listOf(movie("7", added = 1)))
+        panel.replies["get_vod_info"] = """{"info": {"genre": "Drama"}}"""
+
+        withTmdb { Result.success(TmdbMeta(overview = "A film.")) }.refresh(PANEL_SOURCE)
+
+        assertThat(stored("7").tmdbAnsweredAt).isEqualTo(NOW)
+    }
+
+    @Test
+    fun `a film TMDB answered about over six months ago is asked again`() = runTest {
+        test.db.movies().upsertAll(listOf(answered("7", tmdbAt = NOW - SEVEN_MONTHS)))
+
+        withTmdb { Result.success(TmdbMeta(overview = "A film.")) }.refresh(PANEL_SOURCE)
+
+        assertThat(tmdbAsked).isEqualTo(1)
+        assertThat(panel.asked).isEmpty()
+        assertThat(stored("7").tmdbAnsweredAt).isEqualTo(NOW)
+    }
+
+    @Test
+    fun `a film TMDB answered about this year isn't asked again yet`() = runTest {
+        test.db.movies().upsertAll(listOf(answered("7", tmdbAt = NOW - FIVE_MONTHS)))
+
+        withTmdb { Result.success(TmdbMeta(overview = "A film.")) }.refresh(PANEL_SOURCE)
+
+        assertThat(tmdbAsked).isEqualTo(0)
+    }
+
+    @Test
+    fun `asking TMDB again leaves the provider's own synopsis`() = runTest {
+        test.db.movies().upsertAll(listOf(answered("7", tmdbAt = NOW - SEVEN_MONTHS, plot = "The provider's.")))
+
+        withTmdb { Result.success(TmdbMeta(overview = "TMDB's.")) }.refresh(PANEL_SOURCE)
+
+        assertThat(stored("7").plot).isEqualTo("The provider's.")
+    }
+
+    @Test
+    fun `a film TMDB couldn't be reached about keeps the date it last answered`() = runTest {
+        test.db.movies().upsertAll(listOf(answered("7", tmdbAt = NOW - SEVEN_MONTHS)))
+
+        withTmdb { Result.failure(Exception("offline")) }.refresh(PANEL_SOURCE)
+
+        assertThat(stored("7").tmdbAnsweredAt).isEqualTo(NOW - SEVEN_MONTHS)
+    }
+
+    @Test
+    fun `without a key, a film's old TMDB details are kept`() = runTest {
+        test.db.movies().upsertAll(listOf(answered("7", tmdbAt = NOW - SEVEN_MONTHS, plot = "A film.")))
+
+        MovieGenres(test.db.movies(), XtreamApi(panel.http), clock = { NOW }).refresh(PANEL_SOURCE)
+
+        assertThat(stored("7").plot).isEqualTo("A film.")
+        assertThat(stored("7").tmdbAnsweredAt).isEqualTo(NOW - SEVEN_MONTHS)
+    }
 
     @Test
     fun `a film the provider has no genre for gets TMDB's, with the viewer's key`() = runTest {
@@ -282,5 +346,12 @@ class MovieGenresTest {
 
         assertThat(genre("7")).isEqualTo("Western")
         assertThat(panel.asked).isEmpty()
+    }
+
+    private companion object {
+        const val DAY = 24 * 60 * 60 * 1000L
+        const val NOW = 400 * DAY
+        const val FIVE_MONTHS = 152 * DAY
+        const val SEVEN_MONTHS = 213 * DAY
     }
 }

@@ -97,8 +97,8 @@ class TmdbKeysTest {
         panel.requests.clear()
 
         keys.remove()
-        tmdb.movieMeta("A Film", year = null, tmdbId = null)
-        tmdb.seriesMeta("A Show", year = null, tmdbId = null)
+        tmdb.movieMetaOrFailure("A Film", year = null, tmdbId = null)
+        tmdb.seriesMetaOrFailure("A Show", year = null, tmdbId = null)
         tmdb.imdbId("A Film", year = null, isMovie = true, tmdbId = null)
 
         assertThat(tmdb.isConfigured()).isFalse()

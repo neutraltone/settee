@@ -543,14 +543,15 @@ interface MovieDao {
 
     /**
      * The [limit] movies a source most recently added that the provider hasn't been asked about, or,
-     * [withTmdb], that TMDB hasn't answered about, for [MovieGenres].
+     * [withTmdb], that TMDB hasn't answered about since [tmdbStaleBefore], for [MovieGenres].
      */
     @Query(
         "SELECT * FROM movies WHERE sourceId = :sourceId " +
-            "AND (detailsLookedUp = 0 OR (:withTmdb AND tmdbLookedUp = 0)) " +
+            "AND (detailsLookedUp = 0 OR " +
+            "(:withTmdb AND (tmdbAnsweredAt IS NULL OR tmdbAnsweredAt < :tmdbStaleBefore))) " +
             "ORDER BY addedMillis DESC, id DESC LIMIT :limit",
     )
-    suspend fun newestNotLookedUp(sourceId: Long, withTmdb: Boolean, limit: Int): List<Movie>
+    suspend fun newestNotLookedUp(sourceId: Long, withTmdb: Boolean, tmdbStaleBefore: Long, limit: Int): List<Movie>
 
     /**
      * Fills whichever of a movie's details are still empty from what [MovieGenres] looked up, and marks
@@ -576,7 +577,8 @@ interface MovieDao {
             durationSeconds = COALESCE(durationSeconds, :durationSeconds),
             releaseDate = COALESCE(releaseDate, :releaseDate),
             detailsLookedUp = MAX(detailsLookedUp, :detailsLookedUp),
-            tmdbLookedUp = MAX(tmdbLookedUp, :tmdbLookedUp)
+            tmdbLookedUp = MAX(tmdbLookedUp, :tmdbLookedUp),
+            tmdbAnsweredAt = COALESCE(MAX(tmdbAnsweredAt, :tmdbAnsweredAt), tmdbAnsweredAt, :tmdbAnsweredAt)
         WHERE id = :id
         """,
     )
@@ -597,6 +599,7 @@ interface MovieDao {
         releaseDate: Long?,
         detailsLookedUp: Boolean,
         tmdbLookedUp: Boolean,
+        tmdbAnsweredAt: Long?,
     )
 
     /**
@@ -623,6 +626,7 @@ interface MovieDao {
                 releaseDate = it.releaseDate,
                 detailsLookedUp = it.detailsLookedUp,
                 tmdbLookedUp = it.tmdbLookedUp,
+                tmdbAnsweredAt = it.tmdbAnsweredAt,
             )
         }
         recreditChanged(before.associateBy { it.id }, credited(found.map { it.id }))
@@ -841,6 +845,71 @@ interface SeriesDao {
             deleteCredits(now.id)
             insertCredits(seriesCredits(now.id, now.cast))
         }
+    }
+
+    /**
+     * The [limit] series a source most recently added that TMDB hasn't answered about since
+     * [staleBefore], for `SeriesTmdbPass`.
+     */
+    @Query(
+        "SELECT * FROM series WHERE sourceId = :sourceId " +
+            "AND (tmdbAnsweredAt IS NULL OR tmdbAnsweredAt < :staleBefore) " +
+            "ORDER BY addedMillis DESC, id DESC LIMIT :limit",
+    )
+    suspend fun newestTmdbDue(sourceId: Long, staleBefore: Long, limit: Int): List<Series>
+
+    /**
+     * Fills whichever of a series' details are still empty from what TMDB said, and dates its answer.
+     * Never overwrites, since opening the series may have found the provider's own meanwhile.
+     */
+    @Query(
+        """
+        UPDATE series SET
+            posterUrl = COALESCE(posterUrl, :posterUrl),
+            backdropUrl = COALESCE(backdropUrl, :backdropUrl),
+            plot = COALESCE(plot, :plot),
+            `cast` = COALESCE(`cast`, :cast),
+            genre = COALESCE(genre, :genre),
+            tmdbId = COALESCE(tmdbId, :tmdbId),
+            rating = COALESCE(rating, :rating),
+            year = COALESCE(year, :year),
+            tmdbAnsweredAt = COALESCE(MAX(tmdbAnsweredAt, :tmdbAnsweredAt), tmdbAnsweredAt, :tmdbAnsweredAt)
+        WHERE id = :id
+        """,
+    )
+    @Suppress("LongParameterList") // One per column; Room binds no objects.
+    suspend fun fillTmdb(
+        id: Long,
+        posterUrl: String?,
+        backdropUrl: String?,
+        plot: String?,
+        cast: String?,
+        genre: String?,
+        tmdbId: String?,
+        rating: Double?,
+        year: Int?,
+        tmdbAnsweredAt: Long?,
+    )
+
+    /** [fillTmdb] for each of these in one go, keeping their credits in step with any cast TMDB added. */
+    @Transaction
+    suspend fun fillTmdb(found: List<Series>) {
+        val before = credited(found.map { it.id }).associateBy { it.id }
+        found.forEach {
+            fillTmdb(
+                id = it.id,
+                posterUrl = it.posterUrl,
+                backdropUrl = it.backdropUrl,
+                plot = it.plot,
+                cast = it.cast,
+                genre = it.genre,
+                tmdbId = it.tmdbId,
+                rating = it.rating,
+                year = it.year,
+                tmdbAnsweredAt = it.tmdbAnsweredAt,
+            )
+        }
+        recreditChanged(before, credited(found.map { it.id }))
     }
 
     @Query("SELECT id, `cast`, NULL AS director, NULL AS writer, NULL AS studio FROM series WHERE id IN (:ids)")

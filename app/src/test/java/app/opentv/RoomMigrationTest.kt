@@ -58,6 +58,35 @@ class RoomMigrationTest {
     }
 
     @Test
+    fun `films TMDB answered about before 11 are dated then, so they aren't all asked again at once`() {
+        val name = "tmdb-dates.db"
+        helper.createDatabase(name, 10).use { db ->
+            db.execSQL(
+                "INSERT INTO movies (id, sourceId, streamId, name, streamUrl, addedMillis, tmdbLookedUp) VALUES " +
+                    "(1, 1, 'asked', 'Asked', 'http://example.com/1.mp4', 0, 1), " +
+                    "(2, 1, 'unasked', 'Unasked', 'http://example.com/2.mp4', 0, 0)",
+            )
+            db.execSQL("INSERT INTO series (id, sourceId, seriesId, name, addedMillis) VALUES (1, 1, 's', 'Show', 0)")
+        }
+        val before = System.currentTimeMillis()
+
+        val db = helper.runMigrationsAndValidate(name, 11, true, *OpenTvDatabase.MIGRATIONS)
+        val after = System.currentTimeMillis()
+
+        db.use {
+            fun answeredAt(table: String, id: Int): Long? =
+                it.query("SELECT tmdbAnsweredAt FROM $table WHERE id = $id").use { row ->
+                    row.moveToFirst()
+                    if (row.isNull(0)) null else row.getLong(0)
+                }
+            // SQLite's clock is in whole seconds.
+            assertThat(answeredAt("movies", 1)).isIn(com.google.common.collect.Range.closed(before - 1000, after))
+            assertThat(answeredAt("movies", 2)).isNull()
+            assertThat(answeredAt("series", 1)).isNull()
+        }
+    }
+
+    @Test
     fun `the latest exported schema is the version the app opens`() {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         val db = OpenTvDatabase.build(context)

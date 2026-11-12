@@ -92,7 +92,11 @@ private fun Movie.keepingLookUpsOf(old: Movie): Movie = copy(
     studio = old.studio ?: studio,
     detailsLookedUp = detailsLookedUp || old.detailsLookedUp,
     tmdbLookedUp = tmdbLookedUp || old.tmdbLookedUp,
+    tmdbAnsweredAt = newer(tmdbAnsweredAt, old.tmdbAnsweredAt),
 )
+
+/** The later of two times, either of which may be missing. */
+internal fun newer(a: Long?, b: Long?): Long? = if (a == null || b == null) a ?: b else maxOf(a, b)
 
 /** This freshly fetched series in place of [old]; see the [Movie] version. */
 internal fun Series.over(old: Series?): Series = if (old == null) {
@@ -108,6 +112,7 @@ internal fun Series.over(old: Series?): Series = if (old == null) {
         cast = cast ?: old.cast,
         genre = genre ?: old.genre,
         tmdbId = tmdbId ?: old.tmdbId,
+        tmdbAnsweredAt = newer(tmdbAnsweredAt, old.tmdbAnsweredAt),
     )
 }
 
@@ -131,12 +136,13 @@ internal fun Movie.filledFrom(info: XtreamApi.VodInfo): Movie = copy(
 )
 
 /**
- * This movie with what TMDB said about it ([meta], null for no match) and marked TMDB-looked-up.
- * TMDB fills what's empty, and its directors, writers and studios replace whatever was there: a
- * provider's director is only the first name of its crew, and providers have no writers or studios.
+ * This movie with what TMDB said about it ([meta], null for no match) [at] that time, and marked
+ * TMDB-looked-up. TMDB fills what's empty, and its directors, writers and studios replace whatever
+ * was there: a provider's director is only the first name of its crew, and providers have no writers
+ * or studios. The same when TMDB is asked again six months on, so the provider's values still win.
  */
-internal fun Movie.withTmdb(meta: TmdbMeta?): Movie = if (meta == null) {
-    copy(tmdbLookedUp = true)
+internal fun Movie.withTmdb(meta: TmdbMeta?, at: Long): Movie = if (meta == null) {
+    copy(tmdbLookedUp = true, tmdbAnsweredAt = at)
 } else {
     copy(
         posterUrl = posterUrl ?: meta.posterUrl,
@@ -149,6 +155,7 @@ internal fun Movie.withTmdb(meta: TmdbMeta?): Movie = if (meta == null) {
         year = year ?: meta.year,
         releaseDate = releaseDate ?: meta.releaseDate,
         tmdbLookedUp = true,
+        tmdbAnsweredAt = at,
     ).withPeopleFrom(meta)
 }
 
@@ -157,3 +164,23 @@ private fun Movie.withPeopleFrom(meta: TmdbMeta): Movie = copy(
     writer = meta.writers ?: writer,
     studio = meta.studios ?: studio,
 )
+
+/**
+ * This series with what TMDB said about it ([meta], null for no match) [at] that time. TMDB only
+ * fills what's empty, the provider's values winning, as on a first look-up; TMDB has no director for TV.
+ */
+internal fun Series.withTmdb(meta: TmdbMeta?, at: Long): Series = if (meta == null) {
+    copy(tmdbAnsweredAt = at)
+} else {
+    copy(
+        posterUrl = posterUrl ?: meta.posterUrl,
+        backdropUrl = backdropUrl ?: meta.backdropUrl,
+        plot = plot ?: meta.overview,
+        cast = cast ?: meta.cast,
+        genre = genre ?: meta.genre,
+        tmdbId = tmdbId ?: meta.tmdbId,
+        rating = rating ?: meta.rating,
+        year = year ?: meta.year,
+        tmdbAnsweredAt = at,
+    )
+}

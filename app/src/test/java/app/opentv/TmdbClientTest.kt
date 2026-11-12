@@ -61,7 +61,7 @@ class TmdbClientTest {
     fun `an API Key fills in a film as an api_key parameter`() {
         settings.setTmdbApiKey(API_KEY)
 
-        val meta = tmdb.movieMeta("A Film", year = null, tmdbId = null)
+        val meta = tmdb.movieMetaOrFailure("A Film", year = null, tmdbId = null).getOrNull()
 
         assertThat(meta?.overview).isEqualTo("A film.")
         assertSentAsApiKey(API_KEY)
@@ -71,19 +71,9 @@ class TmdbClientTest {
     fun `a Read Access Token fills in a film as a Bearer header`() {
         settings.setTmdbApiKey(READ_TOKEN)
 
-        val meta = tmdb.movieMeta("A Film", year = null, tmdbId = null)
+        val meta = tmdb.movieMetaOrFailure("A Film", year = null, tmdbId = null).getOrNull()
 
         assertThat(meta?.overview).isEqualTo("A film.")
-        assertSentAsBearer(READ_TOKEN)
-    }
-
-    @Test
-    fun `the background pass sends a Read Access Token as a Bearer header`() {
-        settings.setTmdbApiKey(READ_TOKEN)
-
-        val meta = tmdb.movieMetaOrFailure("A Film", year = null, tmdbId = null)
-
-        assertThat(meta.getOrNull()?.overview).isEqualTo("A film.")
         assertSentAsBearer(READ_TOKEN)
     }
 
@@ -91,7 +81,7 @@ class TmdbClientTest {
     fun `an API Key fills in a series as an api_key parameter`() {
         settings.setTmdbApiKey(API_KEY)
 
-        val meta = tmdb.seriesMeta("A Show", year = null, tmdbId = null)
+        val meta = tmdb.seriesMetaOrFailure("A Show", year = null, tmdbId = null).getOrNull()
 
         assertThat(meta?.overview).isEqualTo("A show.")
         assertSentAsApiKey(API_KEY)
@@ -101,7 +91,7 @@ class TmdbClientTest {
     fun `a Read Access Token fills in a series as a Bearer header`() {
         settings.setTmdbApiKey(READ_TOKEN)
 
-        val meta = tmdb.seriesMeta("A Show", year = null, tmdbId = null)
+        val meta = tmdb.seriesMetaOrFailure("A Show", year = null, tmdbId = null).getOrNull()
 
         assertThat(meta?.overview).isEqualTo("A show.")
         assertSentAsBearer(READ_TOKEN)
@@ -125,8 +115,8 @@ class TmdbClientTest {
 
     @Test
     fun `with no key TMDB is never asked`() {
-        tmdb.movieMeta("A Film", year = null, tmdbId = null)
-        tmdb.seriesMeta("A Show", year = null, tmdbId = null)
+        tmdb.movieMetaOrFailure("A Film", year = null, tmdbId = null).getOrNull()
+        tmdb.seriesMetaOrFailure("A Show", year = null, tmdbId = null).getOrNull()
         tmdb.imdbId("A Film", year = null, isMovie = true, tmdbId = null)
 
         assertThat(toTmdb()).isEmpty()
@@ -179,7 +169,10 @@ class TmdbClientTest {
     }
 
     private companion object {
-        /** Placeholders in the shape of each (a v3 key is 32 hex digits, a v4 token a JWT), built so gitleaks sees no secret. */
+        /**
+         * Placeholders in the shape of each (a v3 key is 32 hex digits, a v4 token a JWT), built so
+         * gitleaks sees no secret.
+         */
         val API_KEY = "f".repeat(32)
         val READ_TOKEN = listOf("eyJhbGci", "eyJzdWIi", "c2lnbmF0").joinToString(".")
     }

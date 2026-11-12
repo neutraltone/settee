@@ -220,6 +220,19 @@ class CatalogRepository(
         )
     }
 
+    /** [SeriesTmdbPass], which asks TMDB about series as [movieGenres] does films. */
+    private val seriesTmdb by lazy {
+        SeriesTmdbPass(
+            seriesDao,
+            tmdb = object : SeriesTmdb {
+                override val ready get() = tmdb.isConfigured()
+
+                override suspend fun lookUp(series: Series) = withContext(Dispatchers.IO) { tmdbMetaOf(series) }
+            },
+            pauseMillis = genrePauseMillis,
+        )
+    }
+
     /**
      * [MovieGenres]' rest between batches. It runs in real time on [background], which tests wait
      * for, so they set 0 before their first sync: a 1,200-film test otherwise sleeps six minutes.
@@ -229,6 +242,9 @@ class CatalogRepository(
 
     private fun tmdbMetaOf(movie: Movie) =
         tmdb.movieMetaOrFailure(VodTitleCleaner.clean(movie.name), movie.year, movie.tmdbId)
+
+    private fun tmdbMetaOf(series: Series) =
+        tmdb.seriesMetaOrFailure(VodTitleCleaner.clean(series.name), series.year, series.tmdbId)
 
     sealed interface SyncResult {
         data class Success(val channelCount: Int, val movieCount: Int, val seriesCount: Int) : SyncResult
@@ -448,7 +464,7 @@ class CatalogRepository(
      * tolerates any failure (returning the row unchanged), and copies the stored row so nothing
      * already on it is lost. Non-Xtream sources are returned as-is.
      */
-    suspend fun movieDetail(id: Long): Movie? = withContext(Dispatchers.IO) {
+    suspend fun movieDetail(id: Long, now: Long = System.currentTimeMillis()): Movie? = withContext(Dispatchers.IO) {
         val movie = movieDao.byId(id) ?: return@withContext null
         var result = movie
         val source = sourceDao.byId(movie.sourceId)
@@ -459,11 +475,11 @@ class CatalogRepository(
             if (info != null) result = result.filledFrom(info)
         }
 
-        // 2) TMDB, with the viewer's key, once per film: for what the provider left blank and for
-        //    the directors, writers and studios. Usually the background pass has asked already; this
-        //    is for a film opened before the pass reached it.
-        if (tmdb.isConfigured() && !result.tmdbLookedUp) {
-            tmdbMetaOf(result).onSuccess { result = result.withTmdb(it) }
+        // 2) TMDB, with the viewer's key, once per film and again six months on: for what the
+        //    provider left blank and for the directors, writers and studios. Usually the background
+        //    pass has asked already; this is for a film opened before the pass reached it.
+        if (tmdb.isConfigured() && tmdbDue(result.tmdbAnsweredAt, now)) {
+            tmdbMetaOf(result).onSuccess { result = result.withTmdb(it, now) }
         }
 
         if (result != movie) movieDao.upsertAll(listOf(result))
@@ -471,7 +487,7 @@ class CatalogRepository(
     }
 
     /** Loads a series and lazily back-fills its detail fields from `get_series_info`. See [movieDetail]. */
-    suspend fun seriesDetail(id: Long): Series? = withContext(Dispatchers.IO) {
+    suspend fun seriesDetail(id: Long, now: Long = System.currentTimeMillis()): Series? = withContext(Dispatchers.IO) {
         val series = seriesDao.byId(id) ?: return@withContext null
         var result = series
         val source = sourceDao.byId(series.sourceId)
@@ -492,23 +508,11 @@ class CatalogRepository(
             }
         }
 
-        // 2) TMDB fallback for anything still missing (see [movieDetail]); TMDB has no director for TV.
-        if (tmdb.isConfigured() && (result.backdropUrl == null || result.plot == null || result.cast == null)) {
-            val meta = runCatching {
-                tmdb.seriesMeta(VodTitleCleaner.clean(result.name), result.year, result.tmdbId)
-            }.getOrNull()
-            if (meta != null) {
-                result = result.copy(
-                    posterUrl = result.posterUrl ?: meta.posterUrl,
-                    backdropUrl = result.backdropUrl ?: meta.backdropUrl,
-                    plot = result.plot ?: meta.overview,
-                    cast = result.cast ?: meta.cast,
-                    genre = result.genre ?: meta.genre,
-                    tmdbId = result.tmdbId ?: meta.tmdbId,
-                    rating = result.rating ?: meta.rating,
-                    year = result.year ?: meta.year,
-                )
-            }
+        // 2) TMDB, with the viewer's key, at once when something is still missing or TMDB's answer
+        //    is six months old, so a series the background pass hasn't reached still fills in.
+        val missing = result.backdropUrl == null || result.plot == null || result.cast == null
+        if (tmdb.isConfigured() && (missing || tmdbDue(result.tmdbAnsweredAt, now))) {
+            tmdbMetaOf(result).onSuccess { result = result.withTmdb(it, now) }
         }
 
         if (result != series) seriesDao.upsertAll(listOf(result))
@@ -764,6 +768,7 @@ class CatalogRepository(
             val categories = fetchList { categoryDao.upsertAll(api.seriesCategories(source)) }
             var saved = SavedSeries(0, emptyList())
             val list = fetchList { saved = api.series(source).use { seriesDao.save(source.id, it, progress) } }
+            if (saved.count > 0) fillGenresInBackground(source)
             ListFetch(saved.count, categories && list, saved.moved)
         }
 
@@ -818,6 +823,9 @@ class CatalogRepository(
                 runCatching {
                     movieGenres.fillAll(source)
                 }.onFailure { Log.w(TAG, "Movie genres failed for source ${source.id}", it) }
+                runCatching {
+                    seriesTmdb.fillAll(source)
+                }.onFailure { Log.w(TAG, "Series TMDB look-ups failed for source ${source.id}", it) }
             } finally {
                 sourcesGettingGenres.remove(source.id)
             }

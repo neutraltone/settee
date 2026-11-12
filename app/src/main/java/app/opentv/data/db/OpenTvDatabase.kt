@@ -87,7 +87,7 @@ class Converters {
         SeriesRule::class,
         Reminder::class,
     ],
-    version = 10,
+    version = 11,
     exportSchema = true,
 )
 @TypeConverters(Converters::class)
@@ -152,10 +152,26 @@ abstract class OpenTvDatabase : RoomDatabase() {
         }
 
         /**
+         * 10 → 11: when TMDB last answered about each film and series, so the background pass asks
+         * again six months on. Films TMDB has already answered about are dated now, the best guess
+         * there is, so they come round in six months rather than all being asked again at once.
+         */
+        private val TMDB_ANSWERED_AT = object : Migration(10, 11) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE `movies` ADD COLUMN `tmdbAnsweredAt` INTEGER")
+                db.execSQL("ALTER TABLE `series` ADD COLUMN `tmdbAnsweredAt` INTEGER")
+                db.execSQL(
+                    "UPDATE `movies` SET `tmdbAnsweredAt` = CAST(strftime('%s', 'now') AS INTEGER) * 1000 " +
+                        "WHERE `tmdbLookedUp` = 1",
+                )
+            }
+        }
+
+        /**
          * Every migration, in order. Shared with the migration test so neither list can lag. None
          * before 9, which wiped under the pre-1.0 policy below; its older schemas went with it.
          */
-        internal val MIGRATIONS: Array<Migration> = arrayOf(CREDITS)
+        internal val MIGRATIONS: Array<Migration> = arrayOf(CREDITS, TMDB_ANSWERED_AT)
 
         /**
          * [onWiped] runs when the destructive fallback below rebuilds the database. Settings that

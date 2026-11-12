@@ -85,26 +85,27 @@ class TmdbClient(
     /** True once the user has saved a key. Callers gate on this so nothing runs without one. */
     fun isConfigured(): Boolean = settings.tmdbApiKey.value.isNotBlank()
 
-    /** Metadata for a film: by [tmdbId] when the provider already gave one, else a title(+year) search. */
-    fun movieMeta(title: String, year: Int?, tmdbId: String?): TmdbMeta? =
-        lookup(isMovie = true, title = title, year = year, tmdbId = tmdbId)
-
     /**
-     * As [movieMeta], for the background pass, which needs to tell no match (success with null), not
-     * to be asked about again, from TMDB not answering (a failure), to be asked again next time.
+     * Metadata for a film: by [tmdbId] when the provider already gave one, else a title(+year)
+     * search. No match (success with null), not to be asked about again, is told apart from TMDB not
+     * answering (a failure), to be asked again next time.
      */
-    fun movieMetaOrFailure(title: String, year: Int?, tmdbId: String?): Result<TmdbMeta?> = runCatching {
-        val key = settings.tmdbApiKey.value.trim()
-        val query = searchTitle(title)
-        if (key.isEmpty() || (query.isBlank() && tmdbId.isNullOrBlank())) return@runCatching null
-        val read = { url: HttpUrl -> fetch(url, key) }
-        val id = tmdbId?.takeIf { it.isNotBlank() } ?: searchId(true, query, year, read)
-        id?.let { details(true, it, read) }
-    }
+    fun movieMetaOrFailure(title: String, year: Int?, tmdbId: String?): Result<TmdbMeta?> =
+        metaOrFailure(isMovie = true, title = title, year = year, tmdbId = tmdbId)
 
-    /** Metadata for a show. Same strategy as [movieMeta]; TMDB has no director for TV, so that stays null. */
-    fun seriesMeta(title: String, year: Int?, tmdbId: String?): TmdbMeta? =
-        lookup(isMovie = false, title = title, year = year, tmdbId = tmdbId)
+    /** As [movieMetaOrFailure], for a show. TMDB has no director for TV, so that stays null. */
+    fun seriesMetaOrFailure(title: String, year: Int?, tmdbId: String?): Result<TmdbMeta?> =
+        metaOrFailure(isMovie = false, title = title, year = year, tmdbId = tmdbId)
+
+    private fun metaOrFailure(isMovie: Boolean, title: String, year: Int?, tmdbId: String?): Result<TmdbMeta?> =
+        runCatching {
+            val key = settings.tmdbApiKey.value.trim()
+            val query = searchTitle(title)
+            if (key.isEmpty() || (query.isBlank() && tmdbId.isNullOrBlank())) return@runCatching null
+            val read = { url: HttpUrl -> fetch(url, key) }
+            val id = tmdbId?.takeIf { it.isNotBlank() } ?: searchId(isMovie, query, year, read)
+            id?.let { details(isMovie, it, read) }
+        }
 
     /**
      * The IMDb id (`tt…`) for a title, for handing to Stremio add-ons. Uses the provider's TMDB id
@@ -125,25 +126,8 @@ class TmdbClient(
         return o["imdb_id"]?.jsonPrimitive?.contentOrNull?.takeIf { it.startsWith("tt") }
     }
 
-    private fun lookup(isMovie: Boolean, title: String, year: Int?, tmdbId: String?): TmdbMeta? {
-        val key = settings.tmdbApiKey.value.trim()
-        if (key.isEmpty()) return null
-        val query = searchTitle(title)
-        if (query.isBlank() && tmdbId.isNullOrBlank()) return null
-        val read = { url: HttpUrl -> get(url, key) }
-        val id = tmdbId?.takeIf { it.isNotBlank() } ?: searchId(isMovie, query, year, read) ?: return null
-        return runCatching { details(isMovie, id, read) }
-            .onFailure { Log.w(TAG, "TMDB details failed for $id", it) }
-            .getOrNull()
-    }
-
     /** Finds the best-matching TMDB id, retrying without the year filter if a year search comes back empty. */
-    private fun searchId(
-        isMovie: Boolean,
-        query: String,
-        year: Int?,
-        read: (HttpUrl) -> JsonElement?,
-    ): String? {
+    private fun searchId(isMovie: Boolean, query: String, year: Int?, read: (HttpUrl) -> JsonElement?): String? {
         fun run(withYear: Boolean): String? {
             val b = TMDB_BASE.newBuilder()
                 .addPathSegment("search")

@@ -22,7 +22,8 @@ import kotlinx.coroutines.delay
  * fills what's still missing and replaces the director, which from a provider is only a guess, and
  * adds the writers and studios, which only it has ([Movie.withTmdb]). A film nobody has a genre for
  * is saved with a blank one. Each is marked once it has answered, a match or not, so it isn't asked
- * again; one that couldn't be reached is asked again next time, the other not.
+ * again, except TMDB once its answer is six months old ([tmdbDue]); one that couldn't be reached is
+ * asked again next time.
  *
  * [fillAll] works through every film not looked up, newest first, [count] at a time with
  * [pauseMillis] between batches, so a struggling panel never gets a flood of calls and a provider
@@ -35,6 +36,7 @@ class MovieGenres(
     private val count: Int = CANDIDATES,
     private val pauseMillis: Long = BATCH_PAUSE_MILLIS,
     private val tmdb: MovieTmdb = MovieTmdb.None,
+    private val clock: () -> Long = System::currentTimeMillis,
 ) {
     /** One batch of the newest films not looked up. False if the provider stopped answering. */
     suspend fun refresh(source: Source): Boolean = batch(source, mutableSetOf()).answering
@@ -61,11 +63,14 @@ class MovieGenres(
 
     private suspend fun batch(source: Source, tried: MutableSet<Long>): Batch {
         val withTmdb = tmdb.ready
-        val titles = next(tried) { movieDao.newestNotLookedUp(source.id, withTmdb, it) }
+        val now = clock()
+        val titles = next(tried) {
+            movieDao.newestNotLookedUp(source.id, withTmdb, now - TMDB_REFRESH_MILLIS, it)
+        }
         val answering = lookUpEach(
             titles = titles,
             tag = TAG,
-            ask = { lookUp(source, it, withTmdb) },
+            ask = { lookUp(source, it, withTmdb, now) },
             found = { _, found -> found },
             save = { found -> movieDao.fillDetails(found.map { (_, details) -> details }) },
         )
@@ -77,7 +82,7 @@ class MovieGenres(
      * answered before; null if neither answered. All of the provider's answer is kept, not just the
      * genre: it's the only way films nobody opens get the people a person's page lists them by.
      */
-    private suspend fun lookUp(source: Source, movie: Movie, withTmdb: Boolean): Movie? {
+    private suspend fun lookUp(source: Source, movie: Movie, withTmdb: Boolean, now: Long): Movie? {
         var found = movie
         var answered = false
         if (!movie.detailsLookedUp) {
@@ -86,14 +91,14 @@ class MovieGenres(
                 answered = true
             }
         }
-        if (withTmdb && !movie.tmdbLookedUp) {
+        if (withTmdb && tmdbDue(movie.tmdbAnsweredAt, now)) {
             tmdb.lookUp(found).onSuccess {
-                found = found.withTmdb(it)
+                found = found.withTmdb(it, now)
                 answered = true
             }
         }
         // Blank, not missing, once everyone there is to ask has said they have none.
-        val everyoneAsked = found.detailsLookedUp && (!withTmdb || found.tmdbLookedUp)
+        val everyoneAsked = found.detailsLookedUp && (!withTmdb || found.tmdbAnsweredAt != null)
         if (found.genre == null && everyoneAsked) {
             found = found.copy(genre = "")
         }
