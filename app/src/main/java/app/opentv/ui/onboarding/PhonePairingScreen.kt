@@ -24,12 +24,9 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
@@ -47,6 +44,7 @@ import app.opentv.ui.design.SetteeColors
 import app.opentv.ui.design.SetteeShapes
 import app.opentv.ui.design.SetteeType
 import app.opentv.ui.design.Text
+import app.opentv.update.startsFocused
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -88,8 +86,6 @@ fun PhonePairingScreen(onReceived: (Source) -> Unit, onCancel: () -> Unit) {
                 is PairingServer.State.Failed -> Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
-                    val tryAgain = remember { FocusRequester() }
-                    TakesHighlight(tryAgain)
                     Text(stringResource(R.string.pairing_stopped), SetteeType.Section)
                     Spacer(Modifier.height(10.dp))
                     Text(current.reason, SetteeType.Body, color = SetteeColors.QuietText, textAlign = TextAlign.Center)
@@ -98,7 +94,7 @@ fun PhonePairingScreen(onReceived: (Source) -> Unit, onCancel: () -> Unit) {
                         PillButton(
                             stringResource(R.string.common_try_again),
                             onClick = { server.start() },
-                            modifier = Modifier.focusRequester(tryAgain),
+                            modifier = Modifier.startsFocused(),
                         )
                         PillButton(stringResource(R.string.pairing_type_here), onClick = onCancel)
                     }
@@ -115,15 +111,6 @@ fun PhonePairingScreen(onReceived: (Source) -> Unit, onCancel: () -> Unit) {
                 PairingServer.State.Idle -> CircularProgressIndicator(color = SetteeColors.Accent)
             }
         }
-    }
-}
-
-/** Gives [requester] the Highlight once it's placed, so the remote always has something to move. */
-@Composable
-private fun TakesHighlight(requester: FocusRequester) {
-    LaunchedEffect(requester) {
-        withFrameNanos {}
-        runCatching { requester.requestFocus() }
     }
 }
 
@@ -150,8 +137,6 @@ internal fun Listening(session: PairingServer.Session, onCancel: () -> Unit) {
         }
 
         Column(Modifier.widthIn(max = 520.dp)) {
-            val typeOnTv = remember { FocusRequester() }
-            TakesHighlight(typeOnTv)
             Text(stringResource(R.string.pairing_setup_title), SetteeType.ScreenTitle)
             Spacer(Modifier.height(12.dp))
             Text(stringResource(R.string.pairing_setup_desc), SetteeType.Synopsis, color = SetteeColors.QuietText)
@@ -175,7 +160,7 @@ internal fun Listening(session: PairingServer.Session, onCancel: () -> Unit) {
             PillButton(
                 stringResource(R.string.pairing_type_on_tv),
                 onClick = onCancel,
-                modifier = Modifier.focusRequester(typeOnTv),
+                modifier = Modifier.startsFocused(),
             )
         }
     }

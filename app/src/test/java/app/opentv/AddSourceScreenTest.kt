@@ -13,6 +13,7 @@ import android.view.KeyEvent
 import android.view.View
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.test.assertIsFocused
+import androidx.compose.ui.test.junit4.StateRestorationTester
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
@@ -20,12 +21,16 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.requestFocus
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.espresso.Espresso
+import androidx.test.platform.app.InstrumentationRegistry
 import app.opentv.core.ServiceLocator
 import app.opentv.data.model.Source
 import app.opentv.data.model.SourceKind
 import app.opentv.ui.SourcesViewModel
+import app.opentv.ui.design.SetteeTheme
 import app.opentv.ui.onboarding.AddSourceScreen
 import com.google.common.truth.Truth.assertThat
+import java.net.InetAddress
+import java.net.ServerSocket
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.Rule
@@ -48,11 +53,12 @@ class AddSourceScreenTest {
 
     private lateinit var view: View
     private val device = DeviceKeyboard(compose) { view }
+    private lateinit var viewModel: SourcesViewModel
 
     private fun show(tv: Boolean = false, editing: Long? = null) {
         val app = ApplicationProvider.getApplicationContext<Application>()
         if (tv) shadowOf(app.packageManager).setSystemFeature("android.software.leanback", true)
-        val viewModel = SourcesViewModel(app)
+        viewModel = SourcesViewModel(app)
         compose.setTvContent {
             view = LocalView.current
             AddSourceScreen(viewModel = viewModel, onFinished = {}, editingSourceId = editing)
@@ -86,6 +92,70 @@ class AddSourceScreenTest {
             graph.sourceRepository.observeAll().first()
         }.filter { it.name.endsWith("films", ignoreCase = true) }
         assertThat(named.map { it.id }).containsExactly(id)
+    }
+
+    @Test
+    fun `editing a provider that has gone leaves the screen rather than showing nothing`() {
+        var finished = false
+        val app = ApplicationProvider.getApplicationContext<Application>()
+        val viewModel = SourcesViewModel(app)
+        compose.setTvContent {
+            AddSourceScreen(viewModel = viewModel, onFinished = { finished = true }, editingSourceId = 999_999)
+        }
+
+        compose.waitUntil(5_000) { finished }
+    }
+
+    @Test
+    fun `Test connection keeps the Highlight while it runs`() {
+        // A portal that takes the connection and never answers, so the test stays running.
+        ServerSocket(0, 1, InetAddress.getLoopbackAddress()).use { portal ->
+            show()
+            compose.onNodeWithText(STALKER).performClick()
+            device.type("http://127.0.0.1:${portal.localPort}/c/", device.box(SERVER))
+            device.type("00:1A:79:00:00:01", device.box(MAC))
+            compose.onNodeWithText("Test connection").requestFocus()
+
+            device.remote(KeyEvent.KEYCODE_DPAD_CENTER)
+            compose.waitUntil(5_000) { viewModel.ui.value.testing }
+
+            compose.onNodeWithText("Working…").assertIsFocused()
+        }
+    }
+
+    @Test
+    fun `a test's result isn't shown on the next form opened`() {
+        show()
+        compose.onNodeWithText(M3U).performClick()
+        device.type(UNREACHABLE, device.box(SERVER))
+        compose.onNodeWithText("Test connection").requestFocus()
+        device.remote(KeyEvent.KEYCODE_DPAD_CENTER)
+        compose.waitUntil(5_000) { viewModel.ui.value.let { !it.testing && it.testResult != null } }
+        val result = viewModel.ui.value.testResult!!
+        compose.onNodeWithText(result).assertExists()
+
+        Espresso.pressBack()
+        compose.onNodeWithText(STALKER).performClick()
+
+        compose.onNodeWithText(result).assertDoesNotExist()
+    }
+
+    @Test
+    fun `what's typed survives the screen being rebuilt, as a phone turning round does`() {
+        val app = ApplicationProvider.getApplicationContext<Application>()
+        viewModel = SourcesViewModel(app)
+        val restoration = StateRestorationTester(compose)
+        InstrumentationRegistry.getInstrumentation().setInTouchMode(false)
+        restoration.setContent {
+            view = LocalView.current
+            SetteeTheme { AddSourceScreen(viewModel = viewModel, onFinished = {}) }
+        }
+        compose.onNodeWithText(XTREAM).performClick()
+        device.type("http://example.com", device.box(SERVER))
+
+        restoration.emulateSavedInstanceStateRestore()
+
+        assertThat(device.textShownBy(device.box(SERVER))).isEqualTo("http://example.com")
     }
 
     private fun showXtreamForm() {
@@ -236,6 +306,12 @@ private const val M3U = "M3U playlist"
 private const val STALKER = "Stalker portal"
 
 private const val SERVER = 1
+
+/** A Stalker portal's MAC address comes after its name and portal URL. */
+private const val MAC = 2
+
+/** Port 9 refuses at once, so a test of it fails fast rather than reaching out. */
+private const val UNREACHABLE = "http://127.0.0.1:9/list.m3u"
 
 /** Name, server address, username, password: the order an Xtream login lays them out in. */
 private const val PASSWORD = 3

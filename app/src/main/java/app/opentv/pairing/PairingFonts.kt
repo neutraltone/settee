@@ -7,6 +7,7 @@ package app.opentv.pairing
 
 import android.content.Context
 import app.opentv.R
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Settee's two fonts, as the phone's setup page asks for them. The TV serves them itself, because
@@ -15,9 +16,14 @@ import app.opentv.R
  */
 class PairingFonts(private val context: Context) {
 
+    // Read once a session: every page load asks for all three again.
+    private val read = ConcurrentHashMap<String, ByteArray>()
+
     /** The bytes of the font file [name], or null for a name that isn't one of Settee's fonts. */
-    fun open(name: String): ByteArray? =
-        FILES[name]?.let { id -> context.resources.openRawResource(id).use { it.readBytes() } }
+    fun open(name: String): ByteArray? {
+        val id = FILES[name] ?: return null
+        return read.getOrPut(name) { context.resources.openRawResource(id).use { it.readBytes() } }
+    }
 
     companion object {
         /** The names the page asks for, and the bundled files behind them. */

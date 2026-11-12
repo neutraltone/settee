@@ -31,13 +31,11 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.mapSaver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
@@ -56,6 +54,7 @@ import app.opentv.ui.design.SetteeColors
 import app.opentv.ui.design.SetteeType
 import app.opentv.ui.design.Text
 import app.opentv.ui.design.TextField
+import app.opentv.update.startsFocused
 
 /**
  * Adding a provider, from first run, Settings or Live TV alike, and editing one.
@@ -102,10 +101,21 @@ fun AddSourceScreen(viewModel: SourcesViewModel, onFinished: () -> Unit, editing
 }
 
 /** The ways onto the page, in the order it lists them. */
-private enum class AddOption(val kind: SourceKind?, val title: Int, val description: Int) {
+private enum class AddOption(
+    val kind: SourceKind?,
+    val title: Int,
+    val description: Int,
+    /** What a provider added this way is called when the viewer leaves its name blank. */
+    val defaultName: Int = R.string.onboarding_default_provider_name,
+) {
     PHONE(null, R.string.pairing_setup_title, R.string.onboarding_phone_desc),
     XTREAM(SourceKind.XTREAM, R.string.onboarding_xtream_login, R.string.onboarding_xtream_desc),
-    M3U(SourceKind.M3U, R.string.onboarding_m3u_url, R.string.onboarding_m3u_desc),
+    M3U(
+        SourceKind.M3U,
+        R.string.onboarding_m3u_url,
+        R.string.onboarding_m3u_desc,
+        defaultName = R.string.onboarding_default_playlist_name,
+    ),
     STALKER(SourceKind.STALKER, R.string.onboarding_stalker_portal, R.string.onboarding_stalker_desc),
 }
 
@@ -115,18 +125,12 @@ private val SourceKind.option: AddOption
 /** The welcome and the choice of provider together (docs/LOOK.md, Onboarding). */
 @Composable
 private fun ProviderPage(options: List<AddOption>, highlight: AddOption, onOpen: (AddOption) -> Unit) {
-    val requesters = remember(options) { options.associateWith { FocusRequester() } }
-    // A frame first, as Home does: the rows aren't placed yet on the frame the page first composes.
-    LaunchedEffect(requesters) {
-        withFrameNanos {}
-        runCatching { requesters.getValue(highlight).requestFocus() }
-    }
     Centred {
         Text(stringResource(R.string.onboarding_add_provider_title), SetteeType.ScreenTitle)
         Text(stringResource(R.string.onboarding_add_provider_desc), SetteeType.Synopsis, color = SetteeColors.QuietText)
         Spacer(Modifier.height(8.dp))
         options.forEach { option ->
-            OptionRow(option, Modifier.focusRequester(requesters.getValue(option))) { onOpen(option) }
+            OptionRow(option, if (option == highlight) Modifier.startsFocused() else Modifier) { onOpen(option) }
         }
         Spacer(Modifier.height(8.dp))
         Text(stringResource(R.string.onboarding_privacy_note), SetteeType.Body, color = SetteeColors.QuietText)
@@ -177,61 +181,73 @@ private fun ProviderForm(
     kind: SourceKind?,
 ) {
     val ui by viewModel.ui.collectAsState()
+    // The view model outlives the form, so without this one form would open on another's test result.
+    LaunchedEffect(Unit) { viewModel.clearFormMessages() }
 
     // When editing, find the source being edited and fill every field from it. Keyed on its id so
     // the fields fill once the list has loaded; a fresh add leaves everything blank.
     val existing = remember(editingSourceId, ui.sources) {
         editingSourceId?.let { id -> ui.sources.firstOrNull { it.id == id } }
     }
+    // A provider removed before its form opened has nothing to fill the form with, so go back.
+    LaunchedEffect(ui.loaded, existing) {
+        if (editingSourceId != null && ui.loaded && existing == null) onFinished()
+    }
     // Editing before the list has loaded: there's no kind yet to choose the fields by.
     val formKind = existing?.kind ?: kind ?: return
-    val details = remember(existing?.id) { ProviderDetails(existing, formKind) }
-    val defaultName = stringResource(
-        if (formKind ==
-            SourceKind.M3U
-        ) {
-            R.string.onboarding_default_playlist_name
-        } else {
-            R.string.onboarding_default_provider_name
-        },
-    )
-    val firstBox = remember { FocusRequester() }
-    LaunchedEffect(firstBox) {
-        withFrameNanos {}
-        runCatching { firstBox.requestFocus() }
+    // Saveable, so a phone turning round keeps what was typed (the form stays open, as `opened` is).
+    val details = rememberSaveable(existing?.id, saver = ProviderDetails.saver(existing, formKind)) {
+        ProviderDetails(existing, formKind)
     }
+    val defaultName = stringResource(formKind.option.defaultName)
 
     Centred {
         Text(
             stringResource(if (existing != null) R.string.settings_edit_provider_title else formKind.option.title),
             SetteeType.ScreenTitle,
         )
-        KindFields(details, Modifier.focusRequester(firstBox))
+        KindFields(details, Modifier.startsFocused())
 
         ui.testResult?.let { Text(it, SetteeType.Body) }
         ui.testError?.let { Text(it, SetteeType.Body, color = SetteeColors.Accent) }
         ui.syncMessage?.let { Text(it, SetteeType.Body) }
 
-        val allowed = details.canSubmit && !ui.testing && !ui.adding
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            PillButton(
-                label = stringResource(
-                    if (ui.testing) R.string.onboarding_working else R.string.recset_test_connection,
-                ),
-                onClick = { viewModel.test(details.draft(defaultName)) },
-                enabled = allowed,
-            )
-            PillButton(
-                label = stringResource(if (ui.adding) R.string.onboarding_working else R.string.onboarding_save_load),
-                onClick = { viewModel.saveAndSync(details.draft(defaultName)) { ok -> if (ok) onFinished() } },
-                enabled = allowed,
-            )
-        }
+        FormButtons(viewModel, details, defaultName, onFinished)
 
         AdvancedFields(details)
 
         Spacer(Modifier.height(8.dp))
         Text(stringResource(R.string.onboarding_privacy_note), SetteeType.Body, color = SetteeColors.QuietText)
+    }
+}
+
+/** Test connection and Save and load, which work on [details] once it has what its kind needs. */
+@Composable
+private fun FormButtons(
+    viewModel: SourcesViewModel,
+    details: ProviderDetails,
+    defaultName: String,
+    onFinished: () -> Unit,
+) {
+    val ui by viewModel.ui.collectAsState()
+    // Working ignores presses rather than disabling the buttons: one that isn't enabled can't
+    // hold the Highlight, so the button just pressed would drop it and leave nothing highlighted.
+    val working = ui.testing || ui.adding
+    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        PillButton(
+            label = stringResource(
+                if (ui.testing) R.string.onboarding_working else R.string.recset_test_connection,
+            ),
+            onClick = { if (!working) viewModel.test(details.draft(defaultName)) },
+            enabled = details.canSubmit,
+        )
+        PillButton(
+            label = stringResource(if (ui.adding) R.string.onboarding_working else R.string.onboarding_save_load),
+            onClick = {
+                if (!working) viewModel.saveAndSync(details.draft(defaultName)) { ok -> if (ok) onFinished() }
+            },
+            enabled = details.canSubmit,
+        )
     }
 }
 
@@ -267,6 +283,34 @@ private class ProviderDetails(private val existing: Source?, val kind: SourceKin
         epgUrl = epgUrl.takeIf { it.isNotBlank() },
         userAgent = userAgent.ifBlank { Source.DEFAULT_USER_AGENT },
     )
+
+    companion object {
+        /** Keeps what's typed across the screen being rebuilt; [existing] and [kind] come from the caller again. */
+        fun saver(existing: Source?, kind: SourceKind) = mapSaver(
+            save = {
+                mapOf(
+                    "name" to it.name,
+                    "url" to it.url,
+                    "username" to it.username,
+                    "password" to it.password,
+                    "mac" to it.mac,
+                    "epgUrl" to it.epgUrl,
+                    "userAgent" to it.userAgent,
+                )
+            },
+            restore = { saved ->
+                ProviderDetails(existing, kind).apply {
+                    name = saved["name"] as String
+                    url = saved["url"] as String
+                    username = saved["username"] as String
+                    password = saved["password"] as String
+                    mac = saved["mac"] as String
+                    epgUrl = saved["epgUrl"] as String
+                    userAgent = saved["userAgent"] as String
+                }
+            },
+        )
+    }
 }
 
 /** The fields [details]' kind needs, and only those. [modifier] goes on the first, the name. */
@@ -324,7 +368,7 @@ private fun KindFields(details: ProviderDetails, modifier: Modifier = Modifier) 
 /** The guide URL and User-Agent, collapsed at the bottom: most providers never need either. */
 @Composable
 private fun AdvancedFields(details: ProviderDetails) {
-    var showing by remember { mutableStateOf(false) }
+    var showing by rememberSaveable { mutableStateOf(false) }
     PillButton(
         label = stringResource(if (showing) R.string.onboarding_hide_advanced else R.string.onboarding_advanced),
         onClick = { showing = !showing },
