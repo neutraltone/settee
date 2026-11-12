@@ -27,6 +27,7 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import app.opentv.R
 import app.opentv.data.repo.CatalogueRefresh.Setup
@@ -53,8 +54,8 @@ fun SetupScreen(setup: Setup, onWatchLive: (() -> Unit)?, onFinish: () -> Unit) 
     // Live TV really works once the channels are in, while movies and shows don't yet, so that's the
     // one way out early. Before then Back does nothing: there's nothing to watch. The Home button
     // still leaves, as Android always allows.
-    val watchLive = onWatchLive?.takeIf { channelsIn }
-    BackHandler { watchLive?.invoke() }
+    val watchLive = onWatchLive?.takeIf { channelsIn && !setup.finished }
+    BackHandler { if (setup.finished) onFinish() else watchLive?.invoke() }
     // A step just done says what it found for a moment, in place of the next step's name. Not on
     // opening: only a step finishing while the screen is up.
     var justDone by remember { mutableStateOf<StepDone?>(null) }
@@ -71,6 +72,10 @@ fun SetupScreen(setup: Setup, onWatchLive: (() -> Unit)?, onFinish: () -> Unit) 
             Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
                 Image(painterResource(R.drawable.ic_settee_mark), contentDescription = null, Modifier.size(96.dp))
                 Spacer(Modifier.height(24.dp))
+                if (setup.finished) {
+                    Finished(setup, onFinish)
+                    return@Column
+                }
                 Text(stringResource(R.string.setup_wordplay), SetteeType.Hero)
                 Spacer(Modifier.height(12.dp))
                 val line = justDone?.let { countLine(it) } ?: setup.running?.let { stringResource(it.label) }
@@ -85,6 +90,52 @@ fun SetupScreen(setup: Setup, onWatchLive: (() -> Unit)?, onFinish: () -> Unit) 
         }
     }
 }
+
+@Composable
+private fun Finished(setup: Setup, onFinish: () -> Unit) {
+    Text(stringResource(R.string.setup_finished_title), SetteeType.Hero)
+    Spacer(Modifier.height(12.dp))
+    Text(summary(setup), SetteeType.Synopsis, color = SetteeColors.QuietText, textAlign = TextAlign.Center)
+    setup.failed.forEach { step ->
+        Spacer(Modifier.height(8.dp))
+        Text(stringResource(step.failure), SetteeType.Body, color = SetteeColors.QuietText, textAlign = TextAlign.Center)
+    }
+    Spacer(Modifier.height(32.dp))
+    PillButton(stringResource(R.string.setup_take_me_in), onClick = onFinish, Modifier.startsFocused())
+}
+
+/** "1,204 channels, 6,400 movies and 1,100 shows.", counting only what loaded, and film details if any did. */
+@Composable
+private fun summary(setup: Setup): String {
+    val loaded = setup.done.filterNot { it.failed }
+    val parts = loaded.mapNotNull { done ->
+        val count = number(done.count)
+        when (done.step) {
+            SetupStep.CHANNELS -> pluralStringResource(R.plurals.setup_summary_channels, done.count, count)
+            SetupStep.MOVIES -> pluralStringResource(R.plurals.setup_summary_movies, done.count, count)
+            SetupStep.SHOWS -> pluralStringResource(R.plurals.setup_summary_shows, done.count, count)
+            SetupStep.GUIDE -> null
+        }
+    }
+    val sentence = when (parts.size) {
+        0 -> ""
+        1 -> stringResource(R.string.setup_summary_one, parts[0])
+        2 -> stringResource(R.string.setup_summary_two, parts[0], parts[1])
+        else -> stringResource(R.string.setup_summary_three, parts[0], parts[1], parts[2])
+    }
+    // Genres, cast and directors are looked up a film at a time, far too long to wait for.
+    val films = loaded.any { it.step == SetupStep.MOVIES && it.count > 0 }
+    return if (films) "$sentence ${stringResource(R.string.setup_summary_film_details)}" else sentence
+}
+
+private val SetupStep.failure: Int
+    get() = when (this) {
+        SetupStep.GUIDE -> R.string.setup_failed_guide
+        SetupStep.MOVIES -> R.string.setup_failed_movies
+        SetupStep.SHOWS -> R.string.setup_failed_shows
+        // A login that fails goes back to the form; Setup never finishes with it.
+        SetupStep.CHANNELS -> R.string.setup_step_channels
+    }
 
 /** How long a step's count stays up once it's done. */
 private const val COUNT_MILLIS = 2_000L

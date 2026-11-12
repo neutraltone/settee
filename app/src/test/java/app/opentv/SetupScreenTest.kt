@@ -126,4 +126,58 @@ class SetupScreenTest {
         assertThat(pressed).isEmpty()
         assertThat(compose.activity.isFinishing).isFalse()
     }
+
+    private fun finished(vararg failed: SetupStep) = Setup(
+        SetupStep.entries,
+        running = null,
+        bar = 1f,
+        done = listOf(
+            CatalogueRefresh.StepDone(SetupStep.CHANNELS, count = 1_204),
+            CatalogueRefresh.StepDone(SetupStep.GUIDE, count = 980, of = 1_204, failed = SetupStep.GUIDE in failed),
+            CatalogueRefresh.StepDone(SetupStep.MOVIES, count = 6_400, failed = SetupStep.MOVIES in failed),
+            CatalogueRefresh.StepDone(SetupStep.SHOWS, count = 1_100, failed = SetupStep.SHOWS in failed),
+        ),
+        finished = true,
+    )
+
+    @Test
+    fun `once finished it sums up the library, and Take me to Settee has the highlight`() {
+        setScreen(finished())
+
+        compose.onNodeWithText("You're all set.").assertIsDisplayed()
+        compose.onNodeWithText(
+            "1,204 channels, 6,400 movies and 1,100 shows. Film details will keep filling in while you watch.",
+        ).assertIsDisplayed()
+        compose.onNodeWithText("Watch live TV now").assertDoesNotExist()
+        compose.onNodeWithText("Take me to Settee").assertIsFocused()
+        captureScreen("setup_finished")
+        compose.onRoot().performKeyInput { pressKey(Key.DirectionCenter) }
+
+        assertThat(pressed).containsExactly("finish")
+    }
+
+    @Test
+    fun `once finished, Back takes you in too`() {
+        setScreen(finished())
+
+        back()
+
+        assertThat(pressed).containsExactly("finish")
+    }
+
+    @Test
+    fun `a guide or list that didn't load is named on the finished screen`() {
+        setScreen(finished(SetupStep.GUIDE, SetupStep.SHOWS))
+
+        compose.onNodeWithText("The TV guide didn't load. Settee will try again on the next refresh.")
+            .assertIsDisplayed()
+        compose.onNodeWithText(
+            "Shows didn't load. Settee will try again on the next refresh, or when you open Shows.",
+        ).assertIsDisplayed()
+        // The summary counts only what loaded.
+        compose.onNodeWithText(
+            "1,204 channels and 6,400 movies. Film details will keep filling in while you watch.",
+        ).assertIsDisplayed()
+        captureScreen("setup_finished_with_failures")
+    }
 }
