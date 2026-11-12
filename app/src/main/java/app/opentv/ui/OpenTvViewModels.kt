@@ -1033,9 +1033,11 @@ class VodViewModel @JvmOverloads constructor(
         loadedSeriesFeeds = key
     }
 
-    // Movies + series load on demand — the first time the user opens Movies or Shows — rather than
-    // up front at login. A provider's 40,000-title VOD list is exactly what makes a first sync
-    // crawl, and most sessions only ever watch live TV. Loaded once per app run.
+    // The first provider's movies and shows are fetched during Setup, while the viewer is waiting
+    // anyway. This is the backup: the first time Movies or Shows opens in an app run, any list more
+    // than 12 hours old is fetched, which covers a Setup step that failed or was left, a provider
+    // added later from Settings (no Setup), and Movies or Shows switched on afterwards. A list Setup
+    // has just fetched is fresh, so opening the tab doesn't fetch it again.
     val vodLoading: StateFlow<Boolean> = graph.catalogueRefresh.state
         .map { it.loadingVod }
         .stateIn(viewModelScope, SharingStarted.Eagerly, false)

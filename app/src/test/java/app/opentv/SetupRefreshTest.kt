@@ -257,6 +257,28 @@ class SetupRefreshTest {
         assertThat(bars.filter { it > 0.765f && it < saving - 0.001f }).isEmpty()
     }
 
+    @Test
+    fun `once the guide is in, the module's last result says so, as adding a provider does`() = runTest {
+        setUp()
+
+        assertThat(refresh.state.value.last).isInstanceOf(CatalogueRefresh.Outcome.GuideLoaded::class.java)
+    }
+
+    @Test
+    fun `while setup builds the guide, screens are told it's building`() = runTest {
+        val guide = panel.hold("xmltv.php")
+        test.db.sources().insert(PANEL_SOURCE)
+        refresh.refresh(CatalogueRefresh.Trigger.Setup(PANEL_SOURCE))
+
+        during(guide) {
+            assertThat(refresh.state.value.buildingGuide).isTrue()
+            guide.release()
+        }
+        test.awaitRefresh()
+
+        assertThat(refresh.state.value.buildingGuide).isFalse()
+    }
+
     private companion object {
         val GUIDE = """
             <tv><programme start="20260101000000 +0000" stop="20260101010000 +0000" channel="bbc1">

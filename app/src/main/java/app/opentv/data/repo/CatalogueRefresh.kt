@@ -219,14 +219,19 @@ class CatalogueRefresh(
                 // Stick's 1 GB and its network.
                 if (SetupStep.GUIDE in steps) {
                     setup { copy(running = SetupStep.GUIDE) }
-                    val guide = runCatching {
-                        syncGuide(force = false) { done ->
-                            val bar = setupBar.advance(SetupStep.GUIDE, done)
-                            setup { copy(bar = bar) }
+                    // Marked and reported as adding a provider does, so whoever left for Live TV
+                    // hears how the guide went the way they would have without Setup.
+                    val guide = marking(guideBuilds, { copy(buildingGuide = it) }) {
+                        runCatching {
+                            syncGuide(force = false) { done ->
+                                val bar = setupBar.advance(SetupStep.GUIDE, done)
+                                setup { copy(bar = bar) }
+                            }
                         }
+                            .onSuccess { summary -> _state.update { it.copy(last = Outcome.GuideLoaded(summary)) } }
+                            .onFailure { Log.w(TAG, "Guide failed to load during setup", it) }
+                            .getOrNull()
                     }
-                        .onFailure { Log.w(TAG, "Guide failed to load during setup", it) }
-                        .getOrNull()
                     // Only when nothing came through: one dead feed among good ones still gives a guide.
                     val failed = guide == null || (guide.feedsSucceeded == 0 && guide.feedsFailed > 0)
                     val step = StepDone(SetupStep.GUIDE, guide?.channelsMatched ?: 0, guide?.channelsTotal, failed)
