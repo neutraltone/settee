@@ -33,6 +33,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import app.opentv.R
+import app.opentv.core.batteryOptimizationRequests
 import app.opentv.core.isIgnoringBatteryOptimizations
 
 /**
@@ -45,8 +46,14 @@ object RecordingBackgroundPrompt {
 
     @Volatile private var shownThisSession = false
 
-    /** True at most once per app session, and only while OpenTV still isn't Doze-exempt. */
-    fun shouldShow(context: Context): Boolean = !shownThisSession && !context.isIgnoringBatteryOptimizations()
+    /**
+     * True at most once per app session, and only while OpenTV still isn't Doze-exempt. Never on a
+     * device with no screen to grant it on, a Fire TV Stick for one: the dialog would come back every
+     * session to offer something the viewer can't do.
+     */
+    fun shouldShow(context: Context): Boolean = !shownThisSession &&
+        !context.isIgnoringBatteryOptimizations() &&
+        batteryOptimizationRequests(context.packageManager, context.packageName).isNotEmpty()
 
     fun markShown() {
         shownThisSession = true
