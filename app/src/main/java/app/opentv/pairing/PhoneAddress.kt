@@ -115,15 +115,15 @@ class PhoneAddress private constructor(
 
         fun open(): Opening {
             val host = lanAddress() ?: return Opening.NoNetwork
-            val socket = try {
+            return try {
                 // Port 0 asks the OS for a free one. A fixed port would be predictable and would
                 // clash with whatever else the user runs at home.
-                ServerSocket(0)
+                val socket = ServerSocket(0)
+                Opening.Opened(PhoneAddress(host, socket, newToken()).apply { shortToken = newShortToken() })
             } catch (e: IOException) {
                 Log.w(TAG, "Could not open a socket", e)
-                return Opening.NoSocket(ErrorWording.codeOf(e))
+                Opening.NoSocket(ErrorWording.codeOf(e))
             }
-            return Opening.Opened(PhoneAddress(host, socket, newToken()).apply { shortToken = newShortToken() })
         }
 
         private val random = SecureRandom()
