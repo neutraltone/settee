@@ -63,6 +63,7 @@ import app.opentv.data.parser.displayTitle
 import app.opentv.ui.ChannelsViewModel
 import app.opentv.ui.RecentSearchesViewModel
 import app.opentv.ui.VodViewModel
+import app.opentv.ui.design.TextField
 import app.opentv.ui.options.LeaveScreen
 import app.opentv.ui.options.LocalConfirmLive
 import app.opentv.ui.options.OptionsSubject
@@ -175,7 +176,7 @@ internal fun SearchContent(
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(stringResource(R.string.nav_search), style = MaterialTheme.typography.headlineMedium)
             Spacer(Modifier.width(20.dp))
-            DeviceTextField(
+            TextField(
                 state = query,
                 placeholder = stringResource(R.string.search_type_name),
                 maxLength = MAX_SEARCH_LENGTH,
@@ -401,3 +402,6 @@ private fun SearchResultRow(row: ChannelsViewModel.Row, onClick: () -> Unit, mod
 
 private val searchTimeFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
 private fun searchTime(utcMillis: Long): String = searchTimeFormat.format(Date(utcMillis))
+
+/** The longest search either search box takes, the Search screen's or the Channel manager's. */
+internal const val MAX_SEARCH_LENGTH = 40

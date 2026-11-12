@@ -163,6 +163,16 @@ class SourcesViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    /**
+     * Forgets the last test and save, so a form doesn't open showing another's. A refresh still
+     * running keeps its progress: that's news about now, not about another form.
+     */
+    fun clearFormMessages() {
+        _ui.update {
+            it.copy(testResult = null, testError = null, syncMessage = it.syncMessage.takeIf { _ -> it.syncing })
+        }
+    }
+
     fun test(draft: Source) {
         viewModelScope.launch {
             _ui.value = _ui.value.copy(testing = true, testResult = null, testError = null)

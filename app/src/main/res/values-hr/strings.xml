@@ -300,7 +300,6 @@
     <string name="onboarding_user_agent_help">Neki pružatelji usluga blokiraju nepoznate aplikacije s greškom 403. Ako svi kanali ne uspiju, pokušajte ovdje unijeti User-Agent uobičajenog playera.</string>
     <string name="onboarding_working">Obrada…</string>
     <string name="onboarding_save_load">Spremi i učitaj</string>
-    <string name="onboarding_use_phone">Koristi moj telefon umjesto toga</string>
     <string name="onboarding_privacy_note">Podaci vašeg pružatelja usluge pohranjuju se samo na ovom uređaju. Settee nema sustav računa niti vlastiti poslužitelj — ništa što ovdje upišete ne šalje se nikamo osim vašem pružatelju usluge.</string>
     <string name="pairing_stopped">Uparivanje zaustavljeno</string>
     <string name="pairing_type_here">Upišite ovdje umjesto toga</string>

@@ -44,7 +44,7 @@ import app.opentv.R
 import app.opentv.data.model.Profile
 import app.opentv.data.repo.Profiles
 import app.opentv.ui.ProfilesViewModel
-import app.opentv.ui.channels.DeviceTextField
+import app.opentv.ui.design.TextField
 import app.opentv.update.startsFocused
 
 /**
@@ -199,7 +199,7 @@ internal fun ProfileNameEntry(
             OutlinedButton(onClick = onCancel) { Text(stringResource(R.string.common_cancel)) }
         }
         Spacer(Modifier.height(24.dp))
-        DeviceTextField(
+        TextField(
             state = name,
             placeholder = stringResource(R.string.profiles_name_placeholder),
             maxLength = MAX_NAME,

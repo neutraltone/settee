@@ -300,7 +300,6 @@
     <string name="onboarding_user_agent_help">ผู้ให้บริการบางรายบล็อกแอปที่ไม่คุ้นเคยด้วยข้อผิดพลาด 403 หากทุกช่องใช้งานไม่ได้ ให้ลองใส่ User-Agent ของเครื่องเล่นทั่วไปที่นี่</string>
     <string name="onboarding_working">กำลังดำเนินการ…</string>
     <string name="onboarding_save_load">บันทึกและโหลด</string>
-    <string name="onboarding_use_phone">ใช้โทรศัพท์ของฉันแทน</string>
     <string name="onboarding_privacy_note">รายละเอียดผู้ให้บริการของคุณถูกเก็บไว้บนอุปกรณ์นี้เท่านั้น Settee ไม่มีระบบบัญชีและไม่มีเซิร์ฟเวอร์เป็นของตัวเอง — สิ่งที่คุณพิมพ์ที่นี่จะไม่ถูกส่งไปที่ใดนอกจากผู้ให้บริการของคุณ</string>
     <string name="pairing_stopped">หยุดการจับคู่แล้ว</string>
     <string name="pairing_type_here">พิมพ์ที่นี่แทน</string>

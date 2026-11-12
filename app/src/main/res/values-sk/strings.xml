@@ -300,7 +300,6 @@
     <string name="onboarding_user_agent_help">Niektorí poskytovatelia blokujú neznáme aplikácie chybou 403. Ak zlyhajú všetky kanály, skúste sem zadať User-Agent bežného prehrávača.</string>
     <string name="onboarding_working">Spracúva sa…</string>
     <string name="onboarding_save_load">Uložiť a načítať</string>
-    <string name="onboarding_use_phone">Použiť radšej môj telefón</string>
     <string name="onboarding_privacy_note">Údaje o vašom poskytovateľovi sa ukladajú iba na tomto zariadení. Settee nemá systém účtov ani vlastný server — nič, čo tu zadáte, sa nikam neposiela okrem vášho poskytovateľa.</string>
     <string name="pairing_stopped">Párovanie zastavené</string>
     <string name="pairing_type_here">Zadať radšej tu</string>

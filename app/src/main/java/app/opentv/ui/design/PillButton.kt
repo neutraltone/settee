@@ -16,11 +16,29 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 
-/** A button: a pill on a Raised fill, solid coral with dark text while it has the Highlight (docs/LOOK.md). */
+/**
+ * A button: a pill on a Raised fill, solid coral with dark text while it has the Highlight (docs/LOOK.md).
+ * One that isn't [enabled] has quiet text and the Highlight passes over it.
+ */
 @Composable
-fun PillButton(label: String, onClick: () -> Unit, modifier: Modifier = Modifier, icon: ImageVector? = null) {
-    HighlightSurface(onClick = onClick, style = HighlightStyle.Button, modifier = modifier) { highlighted ->
-        val colour = if (highlighted) SetteeColors.OnAccent else SetteeColors.Text
+fun PillButton(
+    label: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    icon: ImageVector? = null,
+    enabled: Boolean = true,
+) {
+    HighlightSurface(
+        onClick = onClick,
+        style = HighlightStyle.Button,
+        modifier = modifier,
+        enabled = enabled,
+    ) { highlighted ->
+        val colour = when {
+            highlighted -> SetteeColors.OnAccent
+            enabled -> SetteeColors.Text
+            else -> SetteeColors.QuietText
+        }
         Row(
             Modifier.padding(horizontal = 22.dp, vertical = 10.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
