@@ -349,7 +349,7 @@ class AppSettings private constructor(context: Context, fileName: String = "open
             prefs.edit { putString(KEY_LAST_SEEN_VERSION, value) }
         }
 
-    /** The built-in guide Settee switched on by itself, by name ([app.opentv.data.repo.EpgRepository.SelfEnabledGuide]). */
+    /** The built-in guide Settee switched on by itself ([app.opentv.data.repo.EpgRepository.SelfEnabledGuide]). */
     var selfEnabledGuide: String?
         get() = prefs.getString(KEY_SELF_ENABLED_GUIDE, null)
         set(value) {

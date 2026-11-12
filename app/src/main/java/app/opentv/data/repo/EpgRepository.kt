@@ -130,10 +130,9 @@ class EpgRepository(
         )
     }
 
-    suspend fun setFeedEnabled(id: Long, enabled: Boolean) {
-        val selfEnabled = selfEnabledGuide.name
-        if (selfEnabled != null && feedDao.byId(id)?.isSelfEnabled(selfEnabled) == true) selfEnabledGuide.name = null
-        feedDao.setEnabled(id, enabled)
+    suspend fun setFeedEnabled(feed: EpgFeed, enabled: Boolean) {
+        if (feed.isSelfEnabled(selfEnabledGuide.name)) selfEnabledGuide.name = null
+        feedDao.setEnabled(feed.id, enabled)
     }
 
     suspend fun removeFeed(feed: EpgFeed) {

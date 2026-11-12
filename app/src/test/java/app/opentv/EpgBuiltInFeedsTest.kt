@@ -146,8 +146,8 @@ class EpgBuiltInFeedsTest {
         americanChannels()
         guide.syncAll(nowUtcMillis = NOW)
 
-        guide.setFeedEnabled(feed(usa).id, false)
-        guide.setFeedEnabled(feed(usa).id, true)
+        guide.setFeedEnabled(feed(usa), false)
+        guide.setFeedEnabled(feed(usa), true)
         val summary = guide.syncAll(nowUtcMillis = NOW + 60_000L)
 
         assertThat(selfEnabled.name).isNull()

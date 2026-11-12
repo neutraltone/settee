@@ -650,7 +650,7 @@ class EpgViewModel(app: Application) : AndroidViewModel(app) {
 
     fun setEnabled(feed: EpgFeed, enabled: Boolean) {
         viewModelScope.launch {
-            graph.epgRepository.setFeedEnabled(feed.id, enabled)
+            graph.epgRepository.setFeedEnabled(feed, enabled)
             if (enabled) refresh() // turning a guide on should visibly do something
         }
     }
