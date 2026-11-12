@@ -158,6 +158,9 @@ object ServiceLocator {
                 sourceDao = database.sources(),
                 api = xtreamApi,
                 http = httpClient,
+                selfEnabledGuide = object : EpgRepository.SelfEnabledGuide {
+                    override var name by settings::selfEnabledGuide
+                },
             )
         }
 

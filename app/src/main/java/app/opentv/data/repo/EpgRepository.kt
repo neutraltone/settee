@@ -71,7 +71,20 @@ class EpgRepository(
     private val sourceDao: SourceDao,
     private val api: XtreamApi,
     private val http: OkHttpClient,
+    private val selfEnabledGuide: SelfEnabledGuide = SelfEnabledGuide.InMemory(),
 ) {
+
+    /**
+     * The built-in guide Settee switched on by itself, by name rather than id: ids restart when the
+     * database is rebuilt, and the name is what [BUILT_IN_FEEDS] keys on. Null once the viewer has
+     * switched it on or off themselves, which makes it their choice.
+     */
+    interface SelfEnabledGuide {
+        var name: String?
+
+        /** For tests: the app keeps it in [app.opentv.core.AppSettings] so it outlives the process. */
+        class InMemory(override var name: String? = null) : SelfEnabledGuide
+    }
 
     data class SyncSummary(
         val feedsSucceeded: Int,
@@ -117,7 +130,11 @@ class EpgRepository(
         )
     }
 
-    suspend fun setFeedEnabled(id: Long, enabled: Boolean) = feedDao.setEnabled(id, enabled)
+    suspend fun setFeedEnabled(id: Long, enabled: Boolean) {
+        val selfEnabled = selfEnabledGuide.name
+        if (selfEnabled != null && feedDao.byId(id)?.name == selfEnabled) selfEnabledGuide.name = null
+        feedDao.setEnabled(id, enabled)
+    }
 
     suspend fun removeFeed(feed: EpgFeed) {
         // A removed feed takes its guide data with it — orphaned programmes would otherwise
@@ -129,7 +146,9 @@ class EpgRepository(
 
     /**
      * Makes sure the standing feed rows exist: one per provider source, plus the curated
-     * built-in list. Insert-if-absent, so user toggles survive every call.
+     * built-in list. Insert-if-absent, so user toggles survive every call. A built-in whose address
+     * has moved keeps its row, toggle included, and takes the new address: matching by address
+     * alone would leave the dead one switched on beside a second, switched-off row of the same name.
      */
     suspend fun ensureFeeds() {
         for (source in sourceDao.enabled()) {
@@ -143,8 +162,12 @@ class EpgRepository(
                 )
             }
         }
+        val builtIns = feedDao.all().filter { it.builtIn }.associateBy { it.name }
         for ((name, url) in BUILT_IN_FEEDS) {
-            if (feedDao.byUrl(url) == null) {
+            val existing = builtIns[name]
+            if (existing != null) {
+                if (existing.url != url) feedDao.update(existing.copy(url = url, lastResult = ""))
+            } else if (feedDao.byUrl(url) == null) {
                 // Off by default: shipping a switched-on 20 MB download for a country the
                 // user may not live in would be rude. The EPG settings screen makes
                 // enabling one a single click.
@@ -185,7 +208,9 @@ class EpgRepository(
                         )
                     }
                     is FeedResult.Failed -> {
-                        failed++
+                        // A guide the viewer never asked for doesn't make the refresh a failure (Setup
+                        // would say the guide didn't load); Guide settings still shows why it failed.
+                        if (feed.name != selfEnabledGuide.name) failed++
                         // The stamp is NOT advanced on failure, so the next sync retries
                         // rather than waiting out the interval on a feed that never landed.
                         feedDao.markSynced(feed.id, feed.lastSyncMillis, result.reason)
@@ -363,6 +388,7 @@ class EpgRepository(
         val feedName = REGION_TO_FEED[top.key] ?: return
         val feed = builtIns.firstOrNull { it.name == feedName } ?: return
         feedDao.setEnabled(feed.id, true)
+        selfEnabledGuide.name = feed.name
         Log.i(TAG, "Auto-enabled '${feed.name}' — ${top.value} channels tagged ${top.key}")
     }
 
@@ -405,10 +431,12 @@ class EpgRepository(
                 "https://raw.githubusercontent.com/dp247/Freeview-EPG/master/epg.xml",
             "UK — epgshare01 (Sky lineup)" to
                 "https://epgshare01.online/epgshare01/epg_ripper_UK1.xml.gz",
+            // epgshare01 renumbers a file when it rebuilds a country's lineup (US1 and CA1 went in
+            // 2026, leaving 404s): its directory listing at /epgshare01/ shows the current names.
             "USA — epgshare01" to
-                "https://epgshare01.online/epgshare01/epg_ripper_US1.xml.gz",
+                "https://epgshare01.online/epgshare01/epg_ripper_US2.xml.gz",
             "Canada — epgshare01" to
-                "https://epgshare01.online/epgshare01/epg_ripper_CA1.xml.gz",
+                "https://epgshare01.online/epgshare01/epg_ripper_CA2.xml.gz",
             "Australia — epgshare01" to
                 "https://epgshare01.online/epgshare01/epg_ripper_AU1.xml.gz",
         )
