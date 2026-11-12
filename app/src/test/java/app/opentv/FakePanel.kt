@@ -41,6 +41,9 @@ class FakePanel(vararg initial: Pair<String, String>) {
     /** Every `action` (with its series or movie id, where it has one) asked for, in order. */
     val asked: MutableList<String> = java.util.Collections.synchronizedList(mutableListOf())
 
+    /** Every request made, in order, for what [asked] leaves out: headers and every query parameter. */
+    val requests: MutableList<okhttp3.Request> = java.util.Collections.synchronizedList(mutableListOf())
+
     /** Every Stalker `cmd` a link was asked for, in order. */
     val cmds = mutableListOf<String>()
 
@@ -67,6 +70,7 @@ class FakePanel(vararg initial: Pair<String, String>) {
 
     val http: OkHttpClient = OkHttpClient.Builder().addInterceptor { chain ->
         val request = chain.request()
+        requests += request
         // A provider's guide has no action, so it answers to its file name instead.
         val guide = request.url.encodedPath.endsWith("xmltv.php")
         // TMDB shares the client, so it answers to its path, keyed by what was searched for.

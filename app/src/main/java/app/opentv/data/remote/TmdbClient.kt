@@ -44,13 +44,26 @@ data class TmdbMeta(
     val releaseDate: Long? = null,
 )
 
+/** What TMDB said about a TMDB Key before it's saved. */
+sealed interface TmdbCheck {
+    /** TMDB took it: safe to save. */
+    data object Accepted : TmdbCheck
+
+    /** TMDB turned it down: a wrong or mistyped key. */
+    data object Rejected : TmdbCheck
+
+    /** TMDB didn't answer, or answered with trouble of its own, so nothing is known about the key. */
+    data class Unreachable(val cause: Throwable) : TmdbCheck
+}
+
 /**
  * A thin, read-only TMDB v3 client used to enrich VOD detail pages when the provider's own
  * metadata is thin — the "match Plex" back-fill for posters, backdrops, synopsis, cast, director
  * and genre.
  *
  * ## Per-user key, on device only
- * There is no bundled key. Each user pastes their own free TMDB API key in Settings; it lives in
+ * There is no bundled key. Each viewer saves their own free TMDB Key in Settings › TMDB, either the
+ * "API Key" (v3) or the "API Read Access Token" (v4); [authorised] sends whichever it is. It lives in
  * [AppSettings] (SharedPreferences) exactly like a provider credential and never leaves the box.
  * With no key set [isConfigured] is false and every lookup short-circuits to null, so the whole
  * feature is simply inert until the user opts in — no traffic, nothing to leak.
@@ -84,8 +97,9 @@ class TmdbClient(
         val key = settings.tmdbApiKey.value.trim()
         val query = searchTitle(title)
         if (key.isEmpty() || (query.isBlank() && tmdbId.isNullOrBlank())) return@runCatching null
-        val id = tmdbId?.takeIf { it.isNotBlank() } ?: searchId(true, query, year, key, ::fetch)
-        id?.let { details(true, it, key, ::fetch) }
+        val read = { url: HttpUrl -> fetch(url, key) }
+        val id = tmdbId?.takeIf { it.isNotBlank() } ?: searchId(true, query, year, read)
+        id?.let { details(true, it, read) }
     }
 
     /** Metadata for a show. Same strategy as [movieMeta]; TMDB has no director for TV, so that stays null. */
@@ -101,14 +115,13 @@ class TmdbClient(
         val key = settings.tmdbApiKey.value.trim()
         if (key.isEmpty()) return null
         val id = tmdbId?.takeIf { it.isNotBlank() }
-            ?: searchId(isMovie, searchTitle(title), year, key, ::get)
+            ?: searchId(isMovie, searchTitle(title), year) { get(it, key) }
             ?: return null
         val builder = TMDB_BASE.newBuilder()
             .addPathSegment(if (isMovie) "movie" else "tv")
             .addPathSegment(id)
         if (!isMovie) builder.addPathSegment("external_ids")
-        builder.addQueryParameter("api_key", key)
-        val o = get(builder.build())?.jsonObject ?: return null
+        val o = get(builder.build(), key)?.jsonObject ?: return null
         return o["imdb_id"]?.jsonPrimitive?.contentOrNull?.takeIf { it.startsWith("tt") }
     }
 
@@ -117,8 +130,9 @@ class TmdbClient(
         if (key.isEmpty()) return null
         val query = searchTitle(title)
         if (query.isBlank() && tmdbId.isNullOrBlank()) return null
-        val id = tmdbId?.takeIf { it.isNotBlank() } ?: searchId(isMovie, query, year, key, ::get) ?: return null
-        return runCatching { details(isMovie, id, key, ::get) }
+        val read = { url: HttpUrl -> get(url, key) }
+        val id = tmdbId?.takeIf { it.isNotBlank() } ?: searchId(isMovie, query, year, read) ?: return null
+        return runCatching { details(isMovie, id, read) }
             .onFailure { Log.w(TAG, "TMDB details failed for $id", it) }
             .getOrNull()
     }
@@ -128,14 +142,12 @@ class TmdbClient(
         isMovie: Boolean,
         query: String,
         year: Int?,
-        key: String,
         read: (HttpUrl) -> JsonElement?,
     ): String? {
         fun run(withYear: Boolean): String? {
             val b = TMDB_BASE.newBuilder()
                 .addPathSegment("search")
                 .addPathSegment(if (isMovie) "movie" else "tv")
-                .addQueryParameter("api_key", key)
                 .addQueryParameter("query", query)
                 .addQueryParameter("include_adult", "false")
             if (withYear && year != null) {
@@ -147,11 +159,10 @@ class TmdbClient(
         return run(withYear = year != null) ?: if (year != null) run(withYear = false) else null
     }
 
-    private fun details(isMovie: Boolean, id: String, key: String, read: (HttpUrl) -> JsonElement?): TmdbMeta? {
+    private fun details(isMovie: Boolean, id: String, read: (HttpUrl) -> JsonElement?): TmdbMeta? {
         val url = TMDB_BASE.newBuilder()
             .addPathSegment(if (isMovie) "movie" else "tv")
             .addPathSegment(id)
-            .addQueryParameter("api_key", key)
             .addQueryParameter("append_to_response", "credits")
             .build()
         val o = read(url)?.jsonObject ?: return null
@@ -202,18 +213,51 @@ class TmdbClient(
         )
     }
 
-    private fun get(url: HttpUrl): JsonElement? =
-        runCatching { fetch(url) }.onFailure { Log.w(TAG, "TMDB request failed", it) }.getOrNull()
+    /**
+     * Whether TMDB takes [key], asked before it's saved so a mistyped key is caught while the viewer
+     * is still there. A wrong key and no answer are told apart: only TMDB saying 401 means the key is
+     * wrong, and anything else it can't vouch for is [TmdbCheck.Unreachable], so a viewer whose
+     * network is down isn't told to go and fetch a new key.
+     */
+    fun check(key: String): TmdbCheck {
+        val url = TMDB_BASE.newBuilder().addPathSegment("authentication").build()
+        return try {
+            http.newCall(authorised(url, key.trim())).execute().use { response ->
+                when {
+                    response.isSuccessful -> TmdbCheck.Accepted
+                    response.code == HTTP_UNAUTHORISED -> TmdbCheck.Rejected
+                    else -> TmdbCheck.Unreachable(IOException("TMDB answered ${response.code}"))
+                }
+            }
+        } catch (e: IOException) {
+            TmdbCheck.Unreachable(e)
+        }
+    }
+
+    private fun get(url: HttpUrl, key: String): JsonElement? =
+        runCatching { fetch(url, key) }.onFailure { Log.w(TAG, "TMDB request failed", it) }.getOrNull()
 
     /** The answer to [url]; null for a 404, which is TMDB saying there's nothing. Throws if TMDB didn't answer. */
-    private fun fetch(url: HttpUrl): JsonElement? {
-        val request = Request.Builder().url(url).header("User-Agent", "OpenTV").build()
-        return http.newCall(request).execute().use { response ->
+    private fun fetch(url: HttpUrl, key: String): JsonElement? =
+        http.newCall(authorised(url, key)).execute().use { response ->
             when {
                 response.code == HTTP_NOT_FOUND -> null
                 !response.isSuccessful -> throw IOException("TMDB answered ${response.code}")
                 else -> json.parseToJsonElement(response.body.string())
             }
+        }
+
+    /**
+     * The one place a request gets the viewer's [key], so every call sends it the same way: a Read
+     * Access Token (v4) as a Bearer header, which TMDB rejects as an `api_key`, and an API Key (v3)
+     * as that parameter, which TMDB rejects as a Bearer.
+     */
+    private fun authorised(url: HttpUrl, key: String): Request {
+        val builder = Request.Builder().header("User-Agent", "OpenTV")
+        return if (isReadAccessToken(key)) {
+            builder.url(url).header("Authorization", "Bearer $key").build()
+        } else {
+            builder.url(url.newBuilder().addQueryParameter("api_key", key).build()).build()
         }
     }
 
@@ -225,6 +269,7 @@ class TmdbClient(
         const val TOP_CAST = 12
         const val TOP_STUDIOS = 4
         const val HTTP_NOT_FOUND = 404
+        const val HTTP_UNAUTHORISED = 401
 
         /** The crew jobs that count as writing it: TMDB files writers under several. */
         val WRITING_JOBS = setOf("Screenplay", "Writer", "Story", "Novel", "Author")
@@ -235,3 +280,14 @@ class TmdbClient(
 private fun searchTitle(raw: String): String = raw.replace(Regex("""\(?(19|20)\d{2}\)?\s*$"""), "")
     .replace(Regex("""\s+"""), " ")
     .trim()
+
+/**
+ * Whether [key] is TMDB's "API Read Access Token" (v4) rather than its "API Key" (v3): the token is
+ * a JWT, three base64url parts with a JSON header (so `eyJ…`), where the key is 32 hex digits.
+ */
+internal fun isReadAccessToken(key: String): Boolean {
+    val parts = key.split('.')
+    return parts.size == JWT_PARTS && parts[0].startsWith("eyJ") && parts.all { it.isNotEmpty() }
+}
+
+private const val JWT_PARTS = 3
