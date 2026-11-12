@@ -15,7 +15,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
-import app.opentv.ui.design.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -42,6 +41,7 @@ import app.opentv.data.repo.WatchStatus
 import app.opentv.data.repo.playerTitle
 import app.opentv.ui.design.HighlightStyle
 import app.opentv.ui.design.HighlightSurface
+import app.opentv.ui.design.Icon
 import app.opentv.ui.design.ProgressBar
 import app.opentv.ui.design.SetteeColors
 import app.opentv.ui.design.SetteeShapes

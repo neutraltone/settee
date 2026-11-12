@@ -72,10 +72,10 @@ import app.opentv.ui.options.openOptionsOn
 import app.opentv.ui.options.optionsClickable
 import app.opentv.ui.options.rememberRowHighlight
 import coil.compose.AsyncImage
-import kotlinx.coroutines.delay
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import kotlinx.coroutines.delay
 
 /**
  * Search across channels, movies and shows, with matches shown live as you type.

@@ -24,7 +24,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Repeat
-import app.opentv.ui.design.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
@@ -45,6 +44,7 @@ import app.opentv.data.model.Recording
 import app.opentv.ui.design.ERROR_DETAIL_TAG
 import app.opentv.ui.design.HighlightStyle
 import app.opentv.ui.design.HighlightSurface
+import app.opentv.ui.design.Icon
 import app.opentv.ui.design.Message
 import app.opentv.ui.design.ScreenFrame
 import app.opentv.ui.design.SetteeColors

@@ -31,7 +31,6 @@ import androidx.compose.material.icons.filled.Bedtime
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.FiberManualRecord
 import androidx.compose.material.icons.filled.MoreHoriz
-import app.opentv.ui.design.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -73,6 +72,7 @@ import app.opentv.data.repo.MediaKey
 import app.opentv.player.NextEpisodeCountdown
 import app.opentv.player.PlayerController
 import app.opentv.ui.design.AerialTv
+import app.opentv.ui.design.Icon
 import app.opentv.ui.design.SetteeColors
 import app.opentv.ui.design.SetteeType
 import app.opentv.ui.design.Text

@@ -5,8 +5,8 @@
  */
 package app.opentv
 
-import androidx.compose.ui.MotionDurationScale
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.MotionDurationScale
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.junit4.createComposeRule

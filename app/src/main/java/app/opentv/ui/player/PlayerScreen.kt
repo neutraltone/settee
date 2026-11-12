@@ -95,13 +95,13 @@ import app.opentv.ui.options.LocalOpenOptions
 import app.opentv.ui.options.LocalRecordingStarted
 import app.opentv.ui.options.OptionsFor
 import app.opentv.ui.options.OptionsSubject
+import java.util.Locale
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import java.util.Locale
 
 /**
  * Full-screen live playback.

@@ -33,7 +33,6 @@ import androidx.compose.material.icons.filled.PhoneAndroid
 import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material.icons.filled.Tune
-import app.opentv.ui.design.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
@@ -62,6 +61,7 @@ import androidx.compose.ui.unit.dp
 import app.opentv.R
 import app.opentv.ui.design.HighlightStyle
 import app.opentv.ui.design.HighlightSurface
+import app.opentv.ui.design.Icon
 import app.opentv.ui.design.SetteeColors
 import app.opentv.ui.design.SetteeSpace
 import app.opentv.ui.design.SetteeType
