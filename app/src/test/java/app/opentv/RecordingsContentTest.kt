@@ -6,6 +6,9 @@
 package app.opentv
 
 import androidx.compose.foundation.layout.Box
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
@@ -15,6 +18,7 @@ import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.assert
+import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.hasClickAction
@@ -61,6 +65,9 @@ class RecordingsContentTest {
     private val retried = mutableListOf<Recording>()
     private val chosen = mutableListOf<Pair<RecordingsRow, ItemOption>>()
 
+    /** What the screen lists, so a test can change it under the screen as the database would. */
+    private var shown by mutableStateOf(emptyList<Recording>())
+
     /**
      * Shows the screen and enters it the way the rail does, by asking the content for the Highlight
      * without saying which row should have it.
@@ -72,14 +79,16 @@ class RecordingsContentTest {
         profileNames: Map<Long, String> = emptyMap(),
     ) {
         val enter = FocusRequester()
+        shown = recordings
         compose.setTvContent {
             Box(Modifier.focusRequester(enter)) {
                 RecordingsContent(
-                    sections = recordingsSections(recordings, reminders, seriesRules, NOW),
+                    sections = recordingsSections(shown, reminders, seriesRules, NOW),
                     profileNames = profileNames,
                     onPlay = { played += it },
                     onRetry = { retried += it },
                     onChoose = { row, option -> chosen += row to option },
+                    now = { NOW },
                 )
             }
         }
@@ -120,6 +129,93 @@ class RecordingsContentTest {
 
         assertThat(played).containsExactly(finished)
         assertThat(retried).containsExactly(failed)
+    }
+
+    @Test
+    fun `OK on a failed booking whose programme is over opens its options, as there's nothing left to record`() {
+        val missed = booking(1).copy(
+            status = RecordingStatus.FAILED,
+            scheduledStartMillis = NOW - 2 * HOUR,
+            scheduledEndMillis = NOW - HOUR,
+        )
+        show(recordings = listOf(missed))
+
+        press(Key.DirectionCenter)
+
+        compose.waitUntilAtLeastOneExists(hasText("Delete"), TIMEOUT_MILLIS)
+        assertThat(retried).isEmpty()
+    }
+
+    @Test
+    fun `OK on a failed booking still on air retries it`() {
+        val failing = booking(1).copy(
+            status = RecordingStatus.FAILED,
+            scheduledStartMillis = NOW - HOUR,
+            scheduledEndMillis = NOW + HOUR,
+        )
+        show(recordings = listOf(failing))
+
+        press(Key.DirectionCenter)
+
+        assertThat(retried).containsExactly(failing)
+    }
+
+    @Test
+    fun `a booking that starts while its options are open offers Stop, not Cancel`() {
+        show(recordings = listOf(booking(1)))
+        press(Key.DirectionCenter)
+        compose.waitUntilAtLeastOneExists(hasText("Cancel recording"), TIMEOUT_MILLIS)
+
+        shown = listOf(booking(1).copy(status = RecordingStatus.RECORDING))
+
+        compose.waitUntilAtLeastOneExists(hasText("Stop recording"), TIMEOUT_MILLIS)
+        compose.onNode(hasText("Cancel recording")).assertDoesNotExist()
+    }
+
+    @Test
+    fun `the options close when their row goes while they're open`() {
+        show(recordings = listOf(booking(1), completed(2)))
+        press(Key.DirectionCenter)
+        compose.waitUntilAtLeastOneExists(hasText("Cancel recording"), TIMEOUT_MILLIS)
+
+        shown = listOf(completed(2))
+
+        compose.waitUntilDoesNotExist(hasText("Cancel recording"), TIMEOUT_MILLIS)
+    }
+
+    @Test
+    fun `deleting a recording moves the Highlight to the one that takes its place`() {
+        show(recordings = listOf(completed(1), completed(2), completed(3)))
+        press(Key.DirectionDown)
+
+        deleteHighlighted()
+        shown = shown.filter { it.id != 2L }
+        compose.waitForIdle()
+
+        row("Recorded 3").assertIsFocused()
+    }
+
+    @Test
+    fun `deleting the last recording moves the Highlight to the one before it`() {
+        show(recordings = listOf(completed(1), completed(2)))
+        press(Key.DirectionDown)
+
+        deleteHighlighted()
+        shown = shown.filter { it.id != 2L }
+        compose.waitForIdle()
+
+        row("Recorded 1").assertIsFocused()
+    }
+
+    @Test
+    fun `going back up a long list brings its first heading back`() {
+        show(recordings = (1L..LONG_LIST).map { completed(it) })
+
+        repeat(LONG_LIST.toInt() - 1) { press(Key.DirectionDown) }
+        repeat(LONG_LIST.toInt() - 1) { press(Key.DirectionUp) }
+
+        compose.onNode(hasText("Recorded 1") and hasClickAction()).assertIsFocused()
+        compose.onNodeWithText("Recorded").assertIsDisplayed()
     }
 
     @Test
@@ -228,6 +324,15 @@ class RecordingsContentTest {
         captureScreen("recordings_empty")
     }
 
+    private fun deleteHighlighted() {
+        press(Key.Menu)
+        compose.waitUntilAtLeastOneExists(hasText("Delete"), TIMEOUT_MILLIS)
+        compose.onNode(hasText("Delete") and hasClickAction()).performClick()
+        compose.waitUntilAtLeastOneExists(hasText("Keep it"), TIMEOUT_MILLIS)
+        compose.onNode(hasText("Delete") and hasClickAction()).performClick()
+        compose.waitForIdle()
+    }
+
     private fun dotColour(): Color {
         val image = compose.onNodeWithTag("recording-dot", useUnmergedTree = true).captureToImage().toPixelMap()
         return image[image.width / 2, image.height / 2]
@@ -270,5 +375,6 @@ class RecordingsContentTest {
         const val NOW = 1_800_000_000_000L
         const val MINUTE = 60_000L
         const val HOUR = 60 * MINUTE
+        const val LONG_LIST = 30L
     }
 }

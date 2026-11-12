@@ -103,9 +103,7 @@ internal fun <T> ChoicePanel(
 internal fun ItemOption.label(): String = when (this) {
     ItemOption.PlayFromStart -> stringResource(R.string.options_play_from_start)
     ItemOption.ShowInfo -> stringResource(R.string.options_show_info)
-    ItemOption.MarkWatched, ItemOption.MarkUnwatched, ItemOption.MarkWatchedUpToHere,
-    ItemOption.MarkSeasonWatched, ItemOption.MarkSeasonUnwatched,
-    -> markLabel()
+    is ItemOption.MarkAction -> label()
     ItemOption.RemoveFromContinueWatching -> stringResource(R.string.options_remove_continue_watching)
     ItemOption.AddFavourite -> stringResource(R.string.options_add_favourite)
     ItemOption.RemoveFavourite -> stringResource(R.string.options_remove_favourite)
@@ -125,15 +123,13 @@ private fun ItemOption.PlayerAction.label(): String = when (this) {
 }
 
 @Composable
-private fun ItemOption.markLabel(): String = stringResource(
-    when (this) {
-        ItemOption.MarkUnwatched -> R.string.options_mark_unwatched
-        ItemOption.MarkWatchedUpToHere -> R.string.options_mark_watched_up_to_here
-        ItemOption.MarkSeasonWatched -> R.string.options_mark_season_watched
-        ItemOption.MarkSeasonUnwatched -> R.string.options_mark_season_unwatched
-        else -> R.string.options_mark_watched
-    },
-)
+private fun ItemOption.MarkAction.label(): String = when (this) {
+    ItemOption.MarkWatched -> stringResource(R.string.options_mark_watched)
+    ItemOption.MarkUnwatched -> stringResource(R.string.options_mark_unwatched)
+    ItemOption.MarkWatchedUpToHere -> stringResource(R.string.options_mark_watched_up_to_here)
+    ItemOption.MarkSeasonWatched -> stringResource(R.string.options_mark_season_watched)
+    ItemOption.MarkSeasonUnwatched -> stringResource(R.string.options_mark_season_unwatched)
+}
 
 @Composable
 private fun ItemOption.RecordingAction.label(): String = when (this) {

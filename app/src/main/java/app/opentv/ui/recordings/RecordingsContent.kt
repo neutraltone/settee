@@ -7,7 +7,9 @@ package app.opentv.ui.recordings
 
 import android.text.format.Formatter
 import androidx.annotation.StringRes
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.LocalBringIntoViewSpec
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -25,6 +27,7 @@ import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Repeat
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -33,8 +36,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -66,6 +69,7 @@ import java.util.concurrent.TimeUnit
  * OK plays a recording ([onPlay]) or retries a failed one ([onRetry]); everything else is in the
  * row's options panel, and what's picked there reaches [onChoose].
  */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun RecordingsContent(
     sections: List<RecordingsSection>,
@@ -74,9 +78,15 @@ fun RecordingsContent(
     onRetry: (Recording) -> Unit,
     onChoose: (RecordingsRow, ItemOption) -> Unit,
     modifier: Modifier = Modifier,
+    now: () -> Long = System::currentTimeMillis,
 ) {
-    var optionsOn by remember { mutableStateOf<RecordingsRow?>(null) }
-    var deleting by remember { mutableStateOf<RecordingsRow?>(null) }
+    // By key, not the row: the list can change under an open panel (a booking starts, a recording
+    // ends), and the panel must act on the row as it is now, or close if it has gone.
+    var optionsOn by remember { mutableStateOf<String?>(null) }
+    var deleting by remember { mutableStateOf<String?>(null) }
+    val rows = remember(sections) { sections.flatMap { it.rows } }
+    val heir = rememberHeir(remember(rows) { rows.map { it.key } })
+    val room = with(LocalDensity.current) { HEADING_ROOM.toPx() }
     ScreenFrame(modifier) {
         Column {
             Text(stringResource(R.string.rec_screen_title), SetteeType.ScreenTitle)
@@ -84,29 +94,32 @@ fun RecordingsContent(
             if (sections.isEmpty()) {
                 Message(stringResource(R.string.rec_empty_state))
             } else {
-                LazyColumn(verticalArrangement = Arrangement.spacedBy(ROW_GAP)) {
-                    sections.forEach { section ->
-                        item(key = section.heading, contentType = "heading") {
-                            Text(
-                                stringResource(section.heading.label),
-                                SetteeType.Section,
-                                modifier = Modifier.padding(top = HEADING_GAP),
-                            )
-                        }
-                        section.rows.forEach { row ->
-                            item(key = row.key, contentType = "row") {
-                                RecordingsRowItem(
-                                    row = row,
-                                    profileNames = profileNames.takeIf { it.size > 1 }.orEmpty(),
-                                    onClick = {
-                                        when (val ok = row.okAction()) {
-                                            is OkAction.Play -> onPlay(ok.recording)
-                                            is OkAction.Retry -> onRetry(ok.recording)
-                                            null -> optionsOn = row
-                                        }
-                                    },
-                                    onOptions = { optionsOn = row },
+                CompositionLocalProvider(LocalBringIntoViewSpec provides remember(room) { RoomForHeading(room) }) {
+                    LazyColumn(heir.watchPresses, verticalArrangement = Arrangement.spacedBy(ROW_GAP)) {
+                        sections.forEach { section ->
+                            item(key = section.heading, contentType = "heading") {
+                                Text(
+                                    stringResource(section.heading.label),
+                                    SetteeType.Section,
+                                    modifier = Modifier.padding(top = HEADING_GAP),
                                 )
+                            }
+                            section.rows.forEach { row ->
+                                item(key = row.key, contentType = "row") {
+                                    RecordingsRowItem(
+                                        row = row,
+                                        profileNames = profileNames.takeIf { it.size > 1 }.orEmpty(),
+                                        onClick = {
+                                            when (val ok = row.okAction(now())) {
+                                                is OkAction.Play -> onPlay(ok.recording)
+                                                is OkAction.Retry -> onRetry(ok.recording)
+                                                null -> optionsOn = row.key
+                                            }
+                                        },
+                                        onOptions = { optionsOn = row.key },
+                                        modifier = heir.modifierFor(row.key),
+                                    )
+                                }
                             }
                         }
                     }
@@ -114,26 +127,36 @@ fun RecordingsContent(
             }
         }
     }
-    optionsOn?.let { row ->
+    rows.firstOrNull { it.key == optionsOn }?.let { row ->
         OptionsPanel(
             title = row.title,
             options = row.options().options(),
             onChoose = { option ->
                 optionsOn = null
-                if (option == ItemOption.DeleteRecording) deleting = row else onChoose(row, option)
+                when (option) {
+                    ItemOption.DeleteRecording -> deleting = row.key
+                    else -> {
+                        // Stopping keeps the row, as a finished recording; everything else removes it.
+                        if (option != ItemOption.StopRecording) heir.expectToLose(row.key)
+                        onChoose(row, option)
+                    }
+                }
             },
             onDismiss = { optionsOn = null },
         )
     }
     // Delete removes the file from this device, the NAS or USB, and nothing can bring it back.
-    deleting?.let { row ->
+    rows.firstOrNull { it.key == deleting }?.let { row ->
         ChoicePanel(
             title = stringResource(R.string.rec_delete_confirm, row.title),
             choices = DeleteChoice.entries,
             labelOf = { stringResource(it.label) },
             onChoose = { choice ->
                 deleting = null
-                if (choice == DeleteChoice.Delete) onChoose(row, ItemOption.DeleteRecording)
+                if (choice == DeleteChoice.Delete) {
+                    heir.expectToLose(row.key)
+                    onChoose(row, ItemOption.DeleteRecording)
+                }
             },
             onDismiss = { deleting = null },
         )
@@ -167,11 +190,12 @@ private fun RecordingsRowItem(
     profileNames: Map<Long, String>,
     onClick: () -> Unit,
     onOptions: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     HighlightSurface(
         onClick = onClick,
         style = HighlightStyle.Row,
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth(),
         onOptions = onOptions,
     ) { highlighted ->
         val text = if (highlighted) SetteeColors.OnAccent else SetteeColors.Text
@@ -202,25 +226,17 @@ private fun RecordingsRowItem(
 /** The channel's logo, or what stands in for one: a bell for a Reminder, a repeat for a series link. */
 @Composable
 private fun Leading(row: RecordingsRow, tint: Color) {
-    val logo = when (row) {
-        is RecordingsRow.Booking -> row.recording.logoUrl
-        is RecordingsRow.Recorded -> row.recording.logoUrl
-        is RecordingsRow.OfReminder -> row.reminder.logoUrl
-        is RecordingsRow.SeriesLink -> null
-    }
-    val glyph: ImageVector? = when (row) {
-        is RecordingsRow.OfReminder -> Icons.Filled.Notifications
-        is RecordingsRow.SeriesLink -> Icons.Filled.Repeat
-        else -> null
-    }
     Box(Modifier.size(LOGO_SIZE), contentAlignment = Alignment.Center) {
-        when {
-            glyph != null -> Icon(glyph, contentDescription = null, tint = tint)
-            logo != null -> AsyncImage(
-                model = logo,
-                contentDescription = null,
-                modifier = Modifier.size(LOGO_SIZE).clip(SetteeShapes.Thumbnail),
-            )
+        when (row) {
+            is RecordingsRow.OfReminder -> Icon(Icons.Filled.Notifications, contentDescription = null, tint = tint)
+            is RecordingsRow.SeriesLink -> Icon(Icons.Filled.Repeat, contentDescription = null, tint = tint)
+            is RecordingsRow.Booking, is RecordingsRow.Recorded -> row.recording?.logoUrl?.let { logo ->
+                AsyncImage(
+                    model = logo,
+                    contentDescription = null,
+                    modifier = Modifier.size(LOGO_SIZE).clip(SetteeShapes.Thumbnail),
+                )
+            }
         }
     }
 }
@@ -263,7 +279,7 @@ private fun RecordingsRow.line(profileNames: Map<Long, String>): String {
         is RecordingsRow.SeriesLink -> listOf(nextAiring())
         is RecordingsRow.Recorded -> recording.details()
     }
-    val profile = profileOf(this)?.let { profileNames[it] }?.let { stringResource(R.string.rec_for_profile, it) }
+    val profile = recording?.profileId?.let { profileNames[it] }?.let { stringResource(R.string.rec_for_profile, it) }
     return (parts + listOfNotNull(profile)).filter { it.isNotBlank() }.joinToString(" · ")
 }
 
@@ -295,14 +311,18 @@ private fun Recording.details(): List<String> {
     }
 }
 
-private fun profileOf(row: RecordingsRow): Long? = when (row) {
-    is RecordingsRow.Booking -> row.recording.profileId
-    is RecordingsRow.Recorded -> row.recording.profileId
-    else -> null
-}
+/** The Recording behind a row; a Reminder and a series link have none. */
+private val RecordingsRow.recording: Recording?
+    get() = when (this) {
+        is RecordingsRow.Booking -> recording
+        is RecordingsRow.Recorded -> recording
+        else -> null
+    }
 
-private fun formatWhen(utcMillis: Long): String =
-    if (utcMillis <= 0) "" else SimpleDateFormat("EEE d MMM, HH:mm", Locale.getDefault()).format(Date(utcMillis))
+// Built once, as GuideGrid's clock is: every visible row formats a time each time it's drawn.
+private val whenFormat = SimpleDateFormat("EEE d MMM, HH:mm", Locale.getDefault())
+
+private fun formatWhen(utcMillis: Long): String = if (utcMillis <= 0) "" else whenFormat.format(Date(utcMillis))
 
 private fun formatLength(millis: Long): String {
     if (millis <= 0) return ""
@@ -313,6 +333,9 @@ private fun formatLength(millis: Long): String {
 }
 
 private val HEADING_GAP = 12.dp
+
+// A heading's line, the gap above it and the gap between it and its first row.
+private val HEADING_ROOM = 40.dp
 private val ROW_GAP = 4.dp
 private val ROW_PADDING_SIDE = 16.dp
 private val ROW_PADDING_TOP = 10.dp

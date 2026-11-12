@@ -105,15 +105,22 @@ internal sealed interface OkAction {
     data class Retry(val recording: Recording) : OkAction
 }
 
-internal fun RecordingsRow.okAction(): OkAction? {
+internal fun RecordingsRow.okAction(nowMillis: Long): OkAction? {
     val recording = (this as? RecordingsRow.Recorded)?.recording ?: return null
     return when (recording.status) {
         RecordingStatus.COMPLETED -> OkAction.Play(recording)
-        RecordingStatus.FAILED -> OkAction.Retry(recording)
+        RecordingStatus.FAILED -> OkAction.Retry(recording).takeIf { recording.canRetryAt(nowMillis) }
         RecordingStatus.RECORDING -> OkAction.Play(recording).takeIf { recording.watchableWhileRecording }
         RecordingStatus.SCHEDULED -> null
     }
 }
+
+/**
+ * Whether there's anything left to record. `RecordingEngine.retry` does nothing once a booking's
+ * programme is over, and a row whose OK did nothing would look broken. One started on the spot has
+ * no end, and records from now.
+ */
+private fun Recording.canRetryAt(nowMillis: Long) = scheduledEndMillis == 0L || scheduledEndMillis > nowMillis
 
 /**
  * Whether a recording in progress can be watched as it records: tail-followed off disk (internal) or

@@ -15,15 +15,18 @@ sealed interface ItemOption {
 
     data object ShowInfo : ItemOption
 
-    data object MarkWatched : ItemOption
+    /** Marking watched or unwatched, kept apart so their labels are checked like the other groups'. */
+    sealed interface MarkAction : ItemOption
 
-    data object MarkUnwatched : ItemOption
+    data object MarkWatched : MarkAction
 
-    data object MarkWatchedUpToHere : ItemOption
+    data object MarkUnwatched : MarkAction
 
-    data object MarkSeasonWatched : ItemOption
+    data object MarkWatchedUpToHere : MarkAction
 
-    data object MarkSeasonUnwatched : ItemOption
+    data object MarkSeasonWatched : MarkAction
+
+    data object MarkSeasonUnwatched : MarkAction
 
     data object RemoveFromContinueWatching : ItemOption
 
