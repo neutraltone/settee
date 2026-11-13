@@ -81,6 +81,12 @@ scratch. It fixes nothing. The next refresh fails the same way.
    reports success.
 3. A failed sync leaves the previous guide completely intact and returns the reason.
 
+Each batch re-runs every Room query on `programmes`, so an open guide would regroup and rebuild its
+rows hundreds of times during one sync. `guideIndex` (`ui/GuideIndex.kt`) lets a new window's
+first listings straight through, then takes the rest at most once every two seconds, ending on the
+latest, and skips an index equal to the last (#257). Not a plain `debounce`: that delays start-up
+and shows nothing new until a long first download ends.
+
 `XmltvParser` streams via `XmlPullParser` and emits programmes to a callback. A week of guide
 data for a large provider is comfortably 150 MB of XML; nothing about that fits in the heap of
 a cheap TV stick, and `String`-based parsing is an OOM waiting to happen.

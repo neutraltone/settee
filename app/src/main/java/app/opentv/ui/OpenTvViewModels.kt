@@ -463,18 +463,12 @@ class ChannelsViewModel @JvmOverloads constructor(
      *
      * Keyed on the half-hour bucket (not the raw minute tick) so it holds steady while you flick
      * between categories and refreshes at most twice an hour; the underlying Room flow also
-     * re-emits on its own when an EPG sync lands new programmes.
+     * re-emits on its own when an EPG sync lands new programmes, once per written batch, which
+     * [guideIndex] thins out to one rebuild per [GUIDE_SETTLE_MILLIS] (#257).
      */
-    @OptIn(ExperimentalCoroutinesApi::class)
     private val programmeIndex: StateFlow<Map<String, List<Programme>>> =
-        // guideWindow is a StateFlow, which already conflates equal values — an explicit
-        // distinctUntilChanged() on it is a no-op (and a build error under our warnings-as-errors).
         guideWindow
-            .flatMapLatest { (windowStart, windowEnd) ->
-                graph.epgRepository
-                    .observeWindow(windowStart, windowEnd)
-                    .map { programmes -> programmes.groupBy { it.epgChannelId } }
-            }
+            .guideIndex(graph.epgRepository::observeWindow)
             .flowOn(Dispatchers.Default)
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())
 
