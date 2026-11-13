@@ -316,8 +316,14 @@ class ProviderRoutesTest {
         compose.waitUntil(5_000) { route() == Routes.SETUP }
     }
 
+    @After
+    fun closeOpenSubtitles() {
+        // At the end, as [graph]'s is: closed mid-test, Setup's provider list could still be reading it.
+        if (openSubtitlesGraph.isInitialized()) openSubtitlesGraph.value.database.close()
+    }
+
     /** The same app as [graph], in a build with an OpenSubtitles key. */
-    private val withOpenSubtitles by lazy {
+    private val openSubtitlesGraph = lazy {
         ServiceLocator.Graph(
             app,
             http = panel.http,
@@ -327,6 +333,8 @@ class ProviderRoutesTest {
             },
         ).apply { openSubtitlesKey = "k" }
     }
+
+    private val withOpenSubtitles by openSubtitlesGraph
 
     private fun openSubtitlesStepButton(text: String) = compose.onNode(
         hasText(text) and hasAnyAncestor(hasTestTag(TMDB_STEP_ACTIONS)),
@@ -356,7 +364,6 @@ class ProviderRoutesTest {
         compose.waitUntil(5_000) { route() == Routes.SETUP }
         assertThat(compose.runOnIdle { nav.previousBackStackEntry?.destination?.route })
             .isNotEqualTo(Routes.OPENSUBTITLES_STEP)
-        withOpenSubtitles.database.close()
     }
 
     @Test
@@ -367,7 +374,6 @@ class ProviderRoutesTest {
         savePlaylist()
 
         compose.waitUntil(5_000) { route() == Routes.OPENSUBTITLES_STEP }
-        withOpenSubtitles.database.close()
     }
 
     /**
@@ -431,7 +437,6 @@ class ProviderRoutesTest {
         compose.waitForIdle()
         // The same address, so the phone needs no new code.
         assertThat((server.state.value as PairingServer.State.Listening).session).isEqualTo(session)
-        withOpenSubtitles.database.close()
     }
 
     @Test
@@ -480,7 +485,6 @@ class ProviderRoutesTest {
         compose.mainClock.advanceTimeBy(2_000)
         compose.waitForIdle()
         assertThat(route()).isEqualTo(Routes.OPENSUBTITLES_STEP)
-        withOpenSubtitles.database.close()
     }
 
     /** Where Type it instead is on screen. */
