@@ -6,6 +6,7 @@
 package app.opentv
 
 import androidx.room.testing.MigrationTestHelper
+import androidx.sqlite.db.SupportSQLiteDatabase
 import androidx.test.platform.app.InstrumentationRegistry
 import app.opentv.data.db.OpenTvDatabase
 import com.google.common.truth.Truth.assertThat
@@ -102,15 +103,11 @@ class RoomMigrationTest {
             db.execSQL("INSERT INTO series_credits (seriesId, nameKey) VALUES (9, 'someone')")
         }
 
-        helper.runMigrationsAndValidate(name, 12, true, *OpenTvDatabase.MIGRATIONS).use {
-            fun first(sql: String): String = it.query(sql).use { row ->
-                row.moveToFirst()
-                row.getString(0)
-            }
-            assertThat(first("SELECT plot FROM movies WHERE id = 7")).isEqualTo("A film.")
-            assertThat(first("SELECT plot FROM series WHERE id = 9")).isEqualTo("A show.")
-            assertThat(first("SELECT nameKey FROM movie_credits WHERE movieId = 7")).isEqualTo("someone")
-            assertThat(first("SELECT nameKey FROM series_credits WHERE seriesId = 9")).isEqualTo("someone")
+        helper.runMigrationsAndValidate(name, 12, true, *OpenTvDatabase.MIGRATIONS).use { db ->
+            assertThat(db.first("SELECT plot FROM movies WHERE id = 7")).isEqualTo("A film.")
+            assertThat(db.first("SELECT plot FROM series WHERE id = 9")).isEqualTo("A show.")
+            assertThat(db.first("SELECT nameKey FROM movie_credits WHERE movieId = 7")).isEqualTo("someone")
+            assertThat(db.first("SELECT nameKey FROM series_credits WHERE seriesId = 9")).isEqualTo("someone")
         }
     }
 
@@ -127,14 +124,16 @@ class RoomMigrationTest {
             )
         }
 
-        helper.runMigrationsAndValidate(name, 13, true, *OpenTvDatabase.MIGRATIONS).use {
-            fun first(sql: String): String = it.query(sql).use { row ->
-                row.moveToFirst()
-                row.getString(0)
-            }
-            assertThat(first("SELECT name || ':' || addedMillis FROM movies WHERE id = 7")).isEqualTo("Film:5")
-            assertThat(first("SELECT name || ':' || addedMillis FROM series WHERE id = 9")).isEqualTo("Show:6")
+        helper.runMigrationsAndValidate(name, 13, true, *OpenTvDatabase.MIGRATIONS).use { db ->
+            assertThat(db.first("SELECT name || ':' || addedMillis FROM movies WHERE id = 7")).isEqualTo("Film:5")
+            assertThat(db.first("SELECT name || ':' || addedMillis FROM series WHERE id = 9")).isEqualTo("Show:6")
         }
+    }
+
+    /** The first column of [sql]'s first row. */
+    private fun SupportSQLiteDatabase.first(sql: String): String = query(sql).use { row ->
+        row.moveToFirst()
+        row.getString(0)
     }
 
     @Test

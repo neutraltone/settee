@@ -526,13 +526,7 @@ interface MovieDao {
     @Query("SELECT COUNT(*) FROM movies WHERE sourceId = :sourceId")
     suspend fun countForSource(sourceId: Long): Int
 
-    @Query(
-        """
-        SELECT * FROM movies
-        WHERE (:categoryId IS NULL OR categoryId = :categoryId)
-        ORDER BY addedMillis DESC, name
-        """,
-    )
+    @Query(MOVIES_IN_CATEGORY)
     fun observe(categoryId: String?): Flow<List<Movie>>
 
     /**
@@ -557,7 +551,7 @@ interface MovieDao {
      * genre-affinity recommendations, more-like-this). One pass over a few thousand rows is cheap;
      * per-genre `LIKE` queries would multiply round-trips and risk substring false positives.
      */
-    @Query("SELECT * FROM movies ORDER BY addedMillis DESC")
+    @Query(ALL_MOVIES)
     suspend fun all(): List<Movie>
 
     /** See [RANKED_FINGERPRINT]. */
@@ -571,12 +565,7 @@ interface MovieDao {
      * The [limit] movies a source most recently added that the provider hasn't been asked about, or,
      * [withTmdb], that TMDB hasn't answered about since [tmdbStaleBefore], for [MovieGenres].
      */
-    @Query(
-        "SELECT * FROM movies WHERE sourceId = :sourceId " +
-            "AND (detailsLookedUp = 0 OR " +
-            "(:withTmdb AND (tmdbAnsweredAt IS NULL OR tmdbAnsweredAt < :tmdbStaleBefore))) " +
-            "ORDER BY addedMillis DESC, id DESC LIMIT :limit",
-    )
+    @Query(NEWEST_MOVIES_NOT_LOOKED_UP)
     suspend fun newestNotLookedUp(sourceId: Long, withTmdb: Boolean, tmdbStaleBefore: Long, limit: Int): List<Movie>
 
     /**
@@ -784,13 +773,7 @@ interface SeriesDao {
     @Query("SELECT COUNT(*) FROM series WHERE sourceId = :sourceId")
     suspend fun countForSource(sourceId: Long): Int
 
-    @Query(
-        """
-        SELECT * FROM series
-        WHERE (:categoryId IS NULL OR categoryId = :categoryId)
-        ORDER BY addedMillis DESC, name
-        """,
-    )
+    @Query(SERIES_IN_CATEGORY)
     fun observe(categoryId: String?): Flow<List<Series>>
 
     /**
@@ -811,7 +794,7 @@ interface SeriesDao {
     fun observeRecentlyAdded(limit: Int): Flow<List<Series>>
 
     /** Every series, newest first — working set for the Kotlin-side by-genre / more-like-this feeds. */
-    @Query("SELECT * FROM series ORDER BY addedMillis DESC")
+    @Query(ALL_SERIES)
     suspend fun all(): List<Series>
 
     /** See [RANKED_FINGERPRINT]. */
@@ -886,11 +869,7 @@ interface SeriesDao {
      * The [limit] series a source most recently added that TMDB hasn't answered about since
      * [staleBefore], for `SeriesTmdbPass`.
      */
-    @Query(
-        "SELECT * FROM series WHERE sourceId = :sourceId " +
-            "AND (tmdbAnsweredAt IS NULL OR tmdbAnsweredAt < :staleBefore) " +
-            "ORDER BY addedMillis DESC, id DESC LIMIT :limit",
-    )
+    @Query(NEWEST_SERIES_TMDB_DUE)
     suspend fun newestTmdbDue(sourceId: Long, staleBefore: Long, limit: Int): List<Series>
 
     @Query("SELECT id, `cast`, NULL AS director, NULL AS writer, NULL AS studio FROM series WHERE id IN (:ids)")
@@ -1396,11 +1375,51 @@ data class StarredSeries(@Embedded val series: Series, val starredAtMillis: Long
  * Home's Recently Added films, by walking the `addedMillis` index backwards to the limit. Room re-runs it
  * on every write to `movies`, which the background title lookups make every few seconds, so sorting the
  * whole library each time would cost Home its smoothness. A const so the query-plan test reads it.
+ * Providers stamp a whole import alike, so `id` settles which of a tie make the limit, the last saved
+ * first, rather than leaving it to the plan; the index holds the rowid, so it still needs no sort.
  */
-internal const val RECENT_MOVIES = "SELECT * FROM movies ORDER BY addedMillis DESC LIMIT :limit"
+internal const val RECENT_MOVIES = "SELECT * FROM movies ORDER BY addedMillis DESC, id DESC LIMIT :limit"
 
 /** Home's Recently Added shows. See [RECENT_MOVIES]. */
-internal const val RECENT_SERIES = "SELECT * FROM series ORDER BY addedMillis DESC LIMIT :limit"
+internal const val RECENT_SERIES = "SELECT * FROM series ORDER BY addedMillis DESC, id DESC LIMIT :limit"
+
+/**
+ * Every film, newest first, read straight through the table and sorted, as before `addedMillis` was
+ * indexed. Left alone, SQLite walks that index instead and fetches each row out of order by id, which
+ * reads the same rows less sequentially. NOT INDEXED keeps the index to Recently Added, which stops at
+ * its limit. Consts like these are read by the query-plan tests.
+ */
+internal const val ALL_MOVIES = "SELECT * FROM movies NOT INDEXED ORDER BY addedMillis DESC"
+
+/** Every series, newest first. See [ALL_MOVIES]. */
+internal const val ALL_SERIES = "SELECT * FROM series NOT INDEXED ORDER BY addedMillis DESC"
+
+/** A category's films, or every film, newest first. See [ALL_MOVIES]. */
+internal const val MOVIES_IN_CATEGORY = """
+    SELECT * FROM movies NOT INDEXED
+    WHERE (:categoryId IS NULL OR categoryId = :categoryId)
+    ORDER BY addedMillis DESC, name
+"""
+
+/** A category's series, or every series, newest first. See [ALL_MOVIES]. */
+internal const val SERIES_IN_CATEGORY = """
+    SELECT * FROM series NOT INDEXED
+    WHERE (:categoryId IS NULL OR categoryId = :categoryId)
+    ORDER BY addedMillis DESC, name
+"""
+
+/** A source's newest films due a lookup: found through `sourceId`, not by walking every source's titles. */
+internal const val NEWEST_MOVIES_NOT_LOOKED_UP =
+    "SELECT * FROM movies WHERE sourceId = :sourceId " +
+        "AND (detailsLookedUp = 0 OR " +
+        "(:withTmdb AND (tmdbAnsweredAt IS NULL OR tmdbAnsweredAt < :tmdbStaleBefore))) " +
+        "ORDER BY addedMillis DESC, id DESC LIMIT :limit"
+
+/** A source's newest series due a TMDB lookup. See [NEWEST_MOVIES_NOT_LOOKED_UP]. */
+internal const val NEWEST_SERIES_TMDB_DUE =
+    "SELECT * FROM series WHERE sourceId = :sourceId " +
+        "AND (tmdbAnsweredAt IS NULL OR tmdbAnsweredAt < :staleBefore) " +
+        "ORDER BY addedMillis DESC, id DESC LIMIT :limit"
 
 /** A person's films, by an index lookup on their credits. A const so the query-plan test reads it. */
 internal const val MOVIES_WITH_PERSON = """
