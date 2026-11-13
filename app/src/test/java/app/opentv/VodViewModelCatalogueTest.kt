@@ -14,6 +14,7 @@ import app.opentv.data.model.Series
 import app.opentv.data.model.Source
 import app.opentv.data.model.SourceKind
 import app.opentv.data.model.StreamKind
+import app.opentv.data.repo.movies
 import app.opentv.ui.browseKey
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.CoroutineScope
