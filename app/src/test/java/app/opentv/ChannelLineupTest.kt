@@ -25,8 +25,11 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
@@ -262,14 +265,132 @@ class ChannelLineupTest {
         assertThat(dao.sameNameLookups).isEqualTo(1)
     }
 
-    /** Counts the by-name lookups: each one scans the whole table. */
+    /** Counts the by-name lookups and the subscriptions to the whole table: each one scans it. */
     private class CountingChannelDao(private val real: ChannelDao) : ChannelDao by real {
         var sameNameLookups = 0
+        var everyRowSubscriptions = 0
+        var scopeSubscriptions = 0
 
         override suspend fun sameName(nameKey: String): List<Channel> {
             sameNameLookups++
             return real.sameName(nameKey)
         }
+
+        override fun observeEvery(): Flow<List<Channel>> = real.observeEvery().onStart { everyRowSubscriptions++ }
+
+        override fun observe(sourceId: Long?, categoryId: String?): Flow<List<Channel>> =
+            real.observe(sourceId, categoryId).onStart { scopeSubscriptions++ }
+    }
+
+    private fun countedLineup(dao: ChannelDao) = ChannelLineup(
+        db,
+        catalogue.viewerLibrary.favourites,
+        lockedKeys,
+        unlocked,
+        ANY_SIZE_DECODERS,
+        sharing,
+        channelDao = dao,
+    )
+
+    @Test
+    fun `every channel is listed from one read of the channels table`() = runTest {
+        seed("UK| ITV HD", "UK| BBC One")
+        val dao = CountingChannelDao(db.channels())
+
+        assertThat(countedLineup(dao).channels(LineupScope.All()).first()).hasSize(2)
+        assertThat(dao.everyRowSubscriptions + dao.scopeSubscriptions).isEqualTo(1)
+    }
+
+    @Test
+    fun `the channel manager open alongside every channel shares its read of the channels table`() = runTest {
+        seed("UK| ITV HD", "UK| BBC One")
+        val dao = CountingChannelDao(db.channels())
+        val counted = countedLineup(dao)
+
+        combine(counted.channels(LineupScope.All()), counted.channels(LineupScope.ManageSearch("itv")), ::Pair).first()
+
+        assertThat(dao.everyRowSubscriptions).isEqualTo(1)
+    }
+
+    /** Stores [rows], (name, category id), as one provider's, cleaned the way an import cleans them. */
+    private suspend fun seedIn(sourceId: Long, vararg rows: Pair<String, String?>) {
+        val channels = rows.mapIndexed { i, (name, categoryId) ->
+            Channel(
+                sourceId = sourceId,
+                streamId = "$sourceId-$i-$name",
+                name = name,
+                categoryId = categoryId,
+                logoUrl = null,
+                epgChannelId = null,
+                number = null,
+                streamUrl = "http://example.com/live/u/p/$sourceId$i.ts",
+            )
+        }
+        db.channels().replaceCatalogue(sourceId, channels, syncStamp = 1)
+        catalogue.catalog.renormalizeAll()
+    }
+
+    /**
+     * Hidden rows, a locked category, two providers and two Qualities of one Channel. Names are sorted
+     * the way SQLite sorts them, byte by byte: capitals before small letters, accented letters after both.
+     */
+    private suspend fun mixedCatalogue() {
+        category(sourceId = 2, id = "66", name = "UK| Adult")
+        seedIn(1, "UK| alpha" to null, "UK| Zulu" to null, "UK| Élan" to null, "UK| ITV HD" to null, "UK| beta" to null)
+        seedIn(2, "UK| ITV FHD" to null, "UK| Bravo" to null, "UK| Late Night" to "66")
+        db.channels().setHidden(row("UK| beta").id, true)
+        db.channels().setSortIndex(row("UK| Zulu").id, -1)
+        lockedKeys.value = setOf("adult")
+    }
+
+    @Test
+    fun `every channel is listed in the viewer's order, then by name`() = runTest {
+        mixedCatalogue()
+
+        val channels = all()
+
+        assertThat(channels.names()).containsExactly(
+            listOf("UK| Zulu"),
+            listOf("UK| Bravo"),
+            listOf("UK| ITV FHD", "UK| ITV HD"),
+            listOf("UK| alpha"),
+            listOf("UK| Élan"),
+        ).inOrder()
+        assertThat(channels.map { it.primary.name })
+            .containsExactly("UK| Zulu", "UK| Bravo", "UK| ITV FHD", "UK| alpha", "UK| Élan").inOrder()
+    }
+
+    @Test
+    fun `one provider's channels are listed in the same order, played from that provider`() = runTest {
+        mixedCatalogue()
+
+        val first = scope(LineupScope.All(sourceId = 1))
+        val second = scope(LineupScope.All(sourceId = 2))
+
+        assertThat(first.names()).containsExactly(
+            listOf("UK| Zulu"),
+            listOf("UK| ITV FHD", "UK| ITV HD"),
+            listOf("UK| alpha"),
+            listOf("UK| Élan"),
+        ).inOrder()
+        assertThat(first.map { it.primary.name }).containsExactly("UK| Zulu", "UK| ITV HD", "UK| alpha", "UK| Élan").inOrder()
+        assertThat(second.map { it.primary.name }).containsExactly("UK| Bravo", "UK| ITV FHD").inOrder()
+    }
+
+    @Test
+    fun `hiding, showing and renaming a channel update every channel's list`() = runTest {
+        seed("UK| BBC One", "UK| ITV")
+        val channels = lineup.channels(LineupScope.All())
+        assertThat(channels.first().map { it.primary.name }).containsExactly("UK| BBC One", "UK| ITV").inOrder()
+
+        db.channels().setHidden(row("UK| ITV").id, true)
+        channels.first { list -> list.map { it.primary.name } == listOf("UK| BBC One") }
+
+        db.channels().setHidden(row("UK| ITV").id, false)
+        channels.first { list -> list.map { it.primary.name } == listOf("UK| BBC One", "UK| ITV") }
+
+        db.channels().setCustomName(row("UK| ITV").id, "Granada")
+        channels.first { list -> list.any { it.primary.customName == "Granada" } }
     }
 
     @Test
