@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  This file is part of OpenTV.
+  Copyright (C) 2026 The OpenTV Contributors
+  Licensed under the GNU General Public License v3.0 or later.
+-->
+<!--
+  The debug build's own launcher label (#244), so it can't be mistaken for the release build it
+  installs beside. Only the launcher entry changes: in-app text keeps app_name's "Settee".
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <application
+        android:label="@string/launcher_label_debug"
+        tools:replace="android:label" />
+</manifest>

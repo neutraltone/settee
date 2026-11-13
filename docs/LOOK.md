@@ -60,6 +60,7 @@ A settee that's also a TV: its back is the screen, with an old TV's aerials on t
 - **App icon:** the mark on coral, for rounded, round and square launchers. API 24-25 has no adaptive icons, so it needs a PNG fallback. On a Fire TV this is the tile people see: Fire TV Home draws a sideloaded app's icon on a grey tile and ignores its banner (checked on the Stick against TiviMate; Appstore apps such as Downloader get full tiles from Amazon's listing).
 - **TV banner:** 320 x 180 on coral, the mark beside "Settee" in Young Serif. It must carry the name. It's a PNG, for the Android TV and Google TV launchers that show banners.
 - **With the name on a dark screen:** the tile beside the name in cream.
+- **Debug build:** the icon and banner carry a "DEBUG" badge, cream Alegreya Sans Bold on a plum pill with a coral gap around it, and the launcher calls it "Settee Debug", so it can't be mistaken for the release build installed beside it. The badge runs across the foot of the icon rather than in a corner: inside the adaptive icon's safe circle, a corner only has room for type too small to read on Fire TV Home. These live in the debug source set alone, so a release build's icon never changes.
 - **Artwork:** `tools/launcher-art/mark.py` writes every copy of the mark from [the prototype's SVG](https://github.com/neutraltone/settee/blob/prototype/153-identity/prototype-screenshots/153-identity/settee-icon.svg), and "Settee" is drawn as shapes, not live text (`outline_wordmark.py`). Change the artwork there and run `tools/render-launcher-art.sh`.
 
 ## Tokens
