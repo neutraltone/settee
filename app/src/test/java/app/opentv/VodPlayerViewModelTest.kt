@@ -14,11 +14,14 @@ import androidx.test.core.app.ApplicationProvider
 import app.opentv.core.ServiceLocator
 import app.opentv.data.model.Movie
 import app.opentv.data.model.Series
+import app.opentv.data.model.Source
+import app.opentv.data.model.SourceKind
 import app.opentv.data.repo.MediaKey
 import app.opentv.data.repo.WatchStatus
 import app.opentv.player.NextEpisodeCountdown.Overlay
 import app.opentv.ui.vod.VodPlayerViewModel
 import app.opentv.ui.vod.VodPlayerViewModel.NextEpisodeCard
+import app.opentv.ui.vod.chooseVersion
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -121,6 +124,27 @@ class VodPlayerViewModelTest {
         assertThat(vm.current.value).isEqualTo(MediaKey.Movie(2))
         assertThat(graph.viewerLibrary.resumeFrom("movie:2")).isEqualTo(300_000L)
         assertThat(graph.viewerLibrary.resumeFrom("movie:1")).isEqualTo(0L)
+    }
+
+    @Test
+    fun `switching Version in the player carries on from the same position`() = runTest {
+        graph.database.sources().insert(
+            Source(id = 1, name = "Provider", kind = SourceKind.XTREAM, url = "http://example.com"),
+        )
+        graph.database.movies().upsertAll(listOf(film(1, "EN - Superbad (2007)"), film(2, "DE - Superbad HD (2007)")))
+        val vm = VodPlayerViewModel(app, graph)
+        vm.attach(MediaKey.Movie(1), playback)
+        assertThat(
+            vm.qualityChoices.value.map {
+                it.key
+            },
+        ).containsExactly(MediaKey.Movie(2), MediaKey.Movie(1)).inOrder()
+
+        playback.positionMillis = 1_200_000
+        vm.chooseVersion(MediaKey.Movie(2))
+
+        assertThat(playback.played.last()).isEqualTo(MediaKey.Movie(2) to 1_200_000L)
+        assertThat(vm.current.value).isEqualTo(MediaKey.Movie(2))
     }
 
     @Test

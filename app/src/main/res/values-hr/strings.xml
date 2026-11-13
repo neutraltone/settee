@@ -302,6 +302,12 @@
     <string name="onboarding_xtream_or_playlist_help">Ako vam je pružatelj dao jednu dugu poveznicu umjesto podataka za prijavu, dodajte je kao popis za reprodukciju.</string>
     <string name="providers_empty">Još nema pružatelja usluga. Dodajte uslugu koju već plaćate za početak.</string>
     <string name="addons_empty">Još nema dodataka. Zalijepite poveznicu dodatka iznad da ga dodate.</string>
+    <!-- A film or show's Versions (#181) -->
+    <string name="vod_cant_play_tv">Ovaj televizor ne može reproducirati %1$s</string>
+    <string name="vod_cant_play_device">Ovaj uređaj ne može reproducirati %1$s</string>
+    <string name="vod_language_title">Ovdje samo na jeziku %1$s</string>
+    <string name="vod_language_body_tv">Ovaj televizor ne može reproducirati verziju na vašem jeziku.</string>
+    <string name="vod_language_body_device">Ovaj uređaj ne može reproducirati verziju na vašem jeziku.</string>
     <string name="error_tmdb_key_rejected">TMDB nije prihvatio taj ključ. Provjerite jeste li kopirali cijeli API Key pa pokušajte ponovno.</string>
     <string name="error_tmdb_unreachable_tv">Nije moguće doći do TMDB-a. Provjerite je li ovaj televizor na mreži pa pokušajte ponovno.</string>
     <string name="error_tmdb_unreachable_device">Nije moguće doći do TMDB-a. Provjerite je li ovaj uređaj na mreži pa pokušajte ponovno.</string>

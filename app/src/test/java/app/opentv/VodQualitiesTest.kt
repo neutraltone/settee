@@ -11,13 +11,20 @@ import androidx.test.core.app.ApplicationProvider
 import app.opentv.core.ServiceLocator
 import app.opentv.data.model.Movie
 import app.opentv.data.model.Series
+import app.opentv.data.model.Source
+import app.opentv.data.model.SourceKind
 import app.opentv.data.repo.MediaKey
+import app.opentv.data.repo.TitleIndex
+import app.opentv.data.repo.VersionIds
 import app.opentv.data.repo.VodQualities
 import app.opentv.player.DecoderList
 import app.opentv.player.DecoderSize
 import com.google.common.truth.Truth.assertThat
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.After
+import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -37,10 +44,22 @@ class VodQualitiesTest {
     private val stick = FakeDecoders(MimeTypes.VIDEO_H265 to DecoderSize(1920, 1088))
     private val fourK = FakeDecoders(MimeTypes.VIDEO_H265 to DecoderSize(3840, 2160))
 
+    @Before
+    fun provider() = runTest {
+        db.sources().insert(Source(id = 1, name = "Provider", kind = SourceKind.XTREAM, url = "http://example.com"))
+    }
+
     @After
     fun close() = db.close()
 
-    private fun qualities(decoders: DecoderList = stick) = VodQualities(db, graph.catalogRepository, decoders)
+    private fun qualities(decoders: DecoderList = stick, versionIds: VersionIds = VersionIds.BY_TMDB) = VodQualities(
+        db,
+        graph.catalogRepository,
+        decoders,
+        graph.profileSettings,
+        deviceLanguage = { "en" },
+        versionIds = versionIds,
+    )
 
     private fun movie(id: Long, name: String, tmdbId: String? = "8363") = Movie(
         id = id,
@@ -99,13 +118,13 @@ class VodQualitiesTest {
     }
 
     @Test
-    fun `a row with no tag can step down to a tagged copy, since it says nothing of its own size`() = runTest {
+    fun `a tagged Quality starts before an untagged one, which says nothing of its size`() = runTest {
         db.movies().upsertAll(listOf(en, movie(4, "EN - Superbad HD (2007)")))
 
         val plan = qualities().planFor(MediaKey.Movie(3))
 
-        assertThat(plan.start.key).isEqualTo(MediaKey.Movie(3))
-        assertThat(plan.lower.map { it.key }).containsExactly(MediaKey.Movie(4))
+        assertThat(plan.start.key).isEqualTo(MediaKey.Movie(4))
+        assertThat(plan.lower.map { it.key }).containsExactly(MediaKey.Movie(3))
     }
 
     @Test
@@ -185,5 +204,143 @@ class VodQualitiesTest {
 
         assertThat(plan.start.key).isEqualTo(MediaKey.Episode(11))
         assertThat(plan.skipped).isNull()
+    }
+
+    @Test
+    fun `the best Quality this device can play starts, whichever Version was opened`() = runTest {
+        db.movies().upsertAll(listOf(top4k, en, movie(4, "NF - Superbad FHD (2007)")))
+
+        val plan = qualities().planFor(MediaKey.Movie(3))
+
+        assertThat(plan.start.key).isEqualTo(MediaKey.Movie(4))
+        assertThat(plan.lower.map { it.key }).containsExactly(MediaKey.Movie(3))
+        assertThat(plan.skipped).isNull()
+    }
+
+    @Test
+    fun `a cam copy comes last, and never starts while another Version plays`() = runTest {
+        val cam = movie(5, "EN - Superbad (2007) HDCAM")
+        db.movies().upsertAll(listOf(cam, en))
+
+        val plan = qualities().planFor(MediaKey.Movie(5))
+
+        assertThat(plan.start.key).isEqualTo(MediaKey.Movie(3))
+        assertThat(plan.lower.map { it.key }).containsExactly(MediaKey.Movie(5))
+    }
+
+    @Test
+    fun `a cam copy starts when it's the only one that plays`() = runTest {
+        db.movies().upsertAll(listOf(top4k, movie(5, "EN - Superbad (2007) HDCAM")))
+
+        assertThat(qualities().planFor(MediaKey.Movie(1)).start.key).isEqualTo(MediaKey.Movie(5))
+    }
+
+    @Test
+    fun `what it steps down to stays in the device's language`() = runTest {
+        db.movies().upsertAll(listOf(en4k, en, movie(6, "DE - Superbad HD (2007)")))
+
+        val plan = qualities().planFor(MediaKey.Movie(2))
+
+        assertThat(plan.start.key).isEqualTo(MediaKey.Movie(3))
+        assertThat(plan.lower).isEmpty()
+        assertThat(plan.otherLanguages).isEmpty()
+    }
+
+    @Test
+    fun `when only another language plays, the plan asks rather than starting it`() = runTest {
+        db.movies().upsertAll(listOf(en4k, movie(6, "DE - Superbad HD (2007)")))
+
+        val plan = qualities().planFor(MediaKey.Movie(2))
+
+        assertThat(plan.start.key).isEqualTo(MediaKey.Movie(2))
+        assertThat(plan.otherLanguages.map { it.key }).containsExactly(MediaKey.Movie(6))
+    }
+
+    @Test
+    fun `the Version this Profile last played starts`() = runTest {
+        db.movies().upsertAll(listOf(en, movie(4, "NF - Superbad FHD (2007)")))
+        graph.viewerLibrary.recordProgress(
+            MediaKey.Movie(3).stored,
+            positionMillis = 60_000,
+            durationMillis = 6_000_000,
+        )
+
+        assertThat(qualities().planFor(MediaKey.Movie(4)).start.key).isEqualTo(MediaKey.Movie(3))
+    }
+
+    @Test
+    fun `a Version chosen after the last one played starts`() = runTest {
+        db.movies().upsertAll(listOf(en, movie(4, "NF - Superbad FHD (2007)"), movie(7, "AMZ - Superbad (2007)")))
+        graph.viewerLibrary.recordProgress(
+            MediaKey.Movie(3).stored,
+            positionMillis = 60_000,
+            durationMillis = 6_000_000,
+        )
+
+        qualities().choose(MediaKey.Movie(7))
+
+        assertThat(qualities().planFor(MediaKey.Movie(4)).start.key).isEqualTo(MediaKey.Movie(7))
+    }
+
+    @Test
+    fun `a Version chosen in another language starts without asking again`() = runTest {
+        db.movies().upsertAll(listOf(en4k, movie(6, "DE - Superbad HD (2007)")))
+
+        qualities().choose(MediaKey.Movie(6))
+        val plan = qualities().planFor(MediaKey.Movie(2))
+
+        assertThat(plan.start.key).isEqualTo(MediaKey.Movie(6))
+        assertThat(plan.otherLanguages).isEmpty()
+    }
+
+    @Test
+    fun `a chosen Version this device can't play is passed over`() = runTest {
+        db.movies().upsertAll(listOf(en4k, en))
+
+        qualities().choose(MediaKey.Movie(2))
+
+        assertThat(qualities().planFor(MediaKey.Movie(3)).start.key).isEqualTo(MediaKey.Movie(3))
+    }
+
+    @Test
+    fun `the Quality pill lists the Versions that differ, identical copies once`() = runTest {
+        db.movies().upsertAll(listOf(top4k, en, movie(4, "NF - Superbad (2007)"), movie(6, "DE - Superbad HD (2007)")))
+
+        val choices = qualities().choicesFor(MediaKey.Movie(3))
+
+        assertThat(choices.map { it.traits.qualityLabel to it.traits.language })
+            .containsExactly("4K" to null, "HD" to "de", "" to null).inOrder()
+        assertThat(choices.map { it.playable }).containsExactly(false, true, true).inOrder()
+        assertThat(choices.single { it.playing }.key).isEqualTo(MediaKey.Movie(3))
+    }
+
+    @Test
+    fun `a title whose Versions are all alike has one entry, so no pill`() = runTest {
+        db.movies().upsertAll(listOf(en, movie(4, "NF - Superbad (2007)"), movie(7, "AMZ - Superbad (2007)")))
+
+        assertThat(qualities().choicesFor(MediaKey.Movie(4))).hasSize(1)
+    }
+
+    @Test
+    fun `choosing in the pill is what plays next`() = runTest {
+        db.movies().upsertAll(listOf(en, movie(6, "DE - Superbad HD (2007)")))
+        val german = qualities().choicesFor(MediaKey.Movie(3)).first { it.traits.language == "de" }
+
+        qualities().choose(german.key)
+
+        assertThat(qualities().choicesFor(MediaKey.Movie(3)).single { it.playing }.key).isEqualTo(MediaKey.Movie(6))
+    }
+
+    @Test
+    fun `a Version with no TMDB id that lists group with the title is in its pill`() = runTest {
+        db.movies().upsertAll(listOf(movie(1, "NF - Superbad (2007)"), movie(2, "EN - Superbad (2007) FHD", null)))
+        val index = TitleIndex(db, stick)
+        // Grouped first: runTest's clock would otherwise skip straight past the wait for it.
+        index.movies.filterNotNull().first()
+
+        val choices = qualities(versionIds = index.versionIds).choicesFor(MediaKey.Movie(1))
+
+        assertThat(choices.map { it.key }).containsExactly(MediaKey.Movie(2), MediaKey.Movie(1)).inOrder()
+        index.close()
     }
 }

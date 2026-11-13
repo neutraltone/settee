@@ -41,16 +41,19 @@ import app.opentv.data.repo.LineupScope
 import app.opentv.data.repo.LivePreview
 import app.opentv.data.repo.MediaKey
 import app.opentv.data.repo.RefreshMessages
+import app.opentv.data.repo.ShowEpisodes
 import app.opentv.data.repo.TitleCover
+import app.opentv.data.repo.TitleIndex
 import app.opentv.data.repo.VodTitle
 import app.opentv.data.repo.categoryGroupKey
 import app.opentv.data.repo.coverStatuses
-import app.opentv.data.repo.movieCovers
 import app.opentv.data.repo.movies
 import app.opentv.data.repo.nowOn
+import app.opentv.data.repo.sameTmdbTitle
 import app.opentv.data.repo.series
-import app.opentv.data.repo.seriesCovers
 import app.opentv.data.repo.splitGenres
+import app.opentv.data.repo.titleCovers
+import app.opentv.data.repo.versionsOf
 import app.opentv.data.work.SyncWorker
 import app.opentv.pairing.ManagerServer
 import app.opentv.player.playsQualityRanked
@@ -58,6 +61,7 @@ import app.opentv.sync.NasSync
 import app.opentv.sync.SyncClient
 import app.opentv.sync.SyncEngine
 import app.opentv.sync.SyncServer
+import app.opentv.ui.vod.PageVersions
 import java.net.HttpURLConnection
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
@@ -74,6 +78,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
@@ -963,12 +968,16 @@ class VodViewModel @JvmOverloads constructor(
     // re-scan a 20k-title catalogue; it recomputes only when the profile, catalogue or started titles
     // change.
 
+    // Each title once, where its newest Version puts it (ADR 0007). A provider adds a title's Versions
+    // together, so more rows are read than shown.
     val recentlyAddedMovies: StateFlow<List<Movie>> =
-        graph.catalogRepository.recentlyAddedMovies()
+        graph.titleIndex.distinctMovies(graph.catalogRepository.recentlyAddedMovies(RECENT_ROWS_READ)) { it.id }
+            .map { it.take(RECENT_TITLES_SHOWN) }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     val recentlyAddedSeries: StateFlow<List<Series>> =
-        graph.catalogRepository.recentlyAddedSeries()
+        graph.titleIndex.distinctSeries(graph.catalogRepository.recentlyAddedSeries(RECENT_ROWS_READ)) { it.id }
+            .map { it.take(RECENT_TITLES_SHOWN) }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     // True while Recommended is being worked out, which takes seconds on a big library, so the
@@ -1055,14 +1064,18 @@ class VodViewModel @JvmOverloads constructor(
         // viewer could move onto a title they have only just started.
         _recommendedMovies.value = _recommendedMovies.value.filterNot { it.id in key.started }
 
-        val all = runCatching { graph.catalogRepository.allMovies() }.getOrDefault(emptyList())
+        // One row per title, and a title started in any Version counts as started in all (#181).
+        val titles = graph.titleIndex.movies.filterNotNull().first()
+        val every = runCatching { graph.catalogRepository.allMovies() }.getOrDefault(emptyList())
+        val started = key.started.flatMapTo(HashSet()) { id -> titles.of(id)?.versionIds?.asList() ?: listOf(id) }
+        val all = titles.distinct(every) { it.id }
         _recommendedMovies.value = runCatching {
-            graph.catalogRepository.recommendedMoviesFrom(all, key.started)
+            graph.catalogRepository.recommendedMoviesFrom(all, started)
         }.getOrDefault(emptyList())
         _recommendingMovies.value = false
         // Watching something takes it out of its rows and can move its genres to the top.
         _movieGenreRows.value = runCatching {
-            graph.catalogRepository.moviesByGenreFrom(all, key.started, key.recent)
+            graph.catalogRepository.moviesByGenreFrom(all, started, key.recent)
         }.getOrDefault(emptyList())
         loadedMovieFeeds = key
     }
@@ -1083,13 +1096,18 @@ class VodViewModel @JvmOverloads constructor(
         _recommendedSeries.value =
             _recommendedSeries.value.filterNot { it.ref in key.started || it.ref in key.dismissed }
 
-        val all = runCatching { graph.catalogRepository.allSeries() }.getOrDefault(emptyList())
+        // As in [refreshMovieFeeds]: one row per title, started or dismissed in any Version.
+        val titles = graph.titleIndex.series.filterNotNull().first()
+        val every = runCatching { graph.catalogRepository.allSeries() }.getOrDefault(emptyList())
+        val started = acrossVersions(every, key.started, titles)
+        val dismissed = acrossVersions(every, key.dismissed, titles)
+        val all = titles.distinct(every) { it.id }
         _recommendedSeries.value = runCatching {
-            graph.catalogRepository.recommendedSeriesFrom(all, key.started, key.dismissed)
+            graph.catalogRepository.recommendedSeriesFrom(all, started, dismissed)
         }.getOrDefault(emptyList())
         _recommendingSeries.value = false
         _seriesGenreRows.value = runCatching {
-            graph.catalogRepository.seriesByGenreFrom(all, key.started, key.dismissed, key.recent)
+            graph.catalogRepository.seriesByGenreFrom(all, started, dismissed, key.recent)
         }.getOrDefault(emptyList())
         loadedSeriesFeeds = key
     }
@@ -1126,7 +1144,11 @@ class VodViewModel @JvmOverloads constructor(
     val movieResults: StateFlow<List<Movie>> =
         vodSearchInput.map { it.trim() }.debounceSearch().distinctUntilChanged()
             .flatMapLatest { q ->
-                if (q.length < 2) flowOf(emptyList()) else graph.catalogRepository.searchMovies(q)
+                if (q.length < 2) {
+                    flowOf(emptyList())
+                } else {
+                    graph.titleIndex.distinctMovies(graph.catalogRepository.searchMovies(q)) { it.id }
+                }
             }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
@@ -1134,7 +1156,11 @@ class VodViewModel @JvmOverloads constructor(
     val seriesResults: StateFlow<List<Series>> =
         vodSearchInput.map { it.trim() }.debounceSearch().distinctUntilChanged()
             .flatMapLatest { q ->
-                if (q.length < 2) flowOf(emptyList()) else graph.catalogRepository.searchSeries(q)
+                if (q.length < 2) {
+                    flowOf(emptyList())
+                } else {
+                    graph.titleIndex.distinctSeries(graph.catalogRepository.searchSeries(q)) { it.id }
+                }
             }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
@@ -1160,31 +1186,40 @@ class VodViewModel @JvmOverloads constructor(
      * Pulling every episode of every series up front is what makes a first sync take twenty
      * minutes on a large provider, and most of it is never looked at.
      */
-    fun loadEpisodes(series: Series) {
-        viewModelScope.launch {
-            val source = graph.sourceRepository.byId(series.sourceId) ?: return@launch
-            graph.catalogRepository.ensureEpisodes(source, series.seriesId)
+    fun loadEpisodes(series: Series): Job = viewModelScope.launch {
+        // Every Version's, as the page lists episodes from all of them (#181).
+        graph.database.versionsOf(series, graph.titleIndex.versionIds).forEach { version ->
+            launch {
+                val source = graph.sourceRepository.byId(version.sourceId) ?: return@launch
+                graph.catalogRepository.ensureEpisodes(source, version.seriesId)
+            }
         }
     }
+
+    /** [series]' episodes across its Versions, for its page (#181, ADR 0007). */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    fun showEpisodes(series: Series): Flow<ShowEpisodes> = flow {
+        emit(graph.database.versionsOf(series, graph.titleIndex.versionIds))
+    }
+        .flatMapLatest { versions ->
+            val ordered = listOf(series) + versions.filter { it.id != series.id }
+            combine(ordered.map { graph.catalogRepository.observeEpisodes(it.sourceId, it.seriesId) }) { lists ->
+                ShowEpisodes.of(lists.first(), lists.drop(1))
+            }
+        }
 
     /** Where the active Profile is with the series of [episodes], for its page's hero. */
     fun seriesStatus(episodes: List<Episode>): Flow<CoverStatus?> = graph.viewerLibrary.titleStatus.series(episodes)
 
     /** Where the active Profile is with [movie], for its page's hero. */
-    fun movieStatus(movie: Movie): Flow<CoverStatus?> = graph.viewerLibrary.titleStatus.movie(movie.id)
+    fun movieStatus(movieId: Long): Flow<CoverStatus?> = graph.viewerLibrary.titleStatus.movie(movieId)
 
     /** The series page's main button over that series' [episodes]: Resume, Up Next or the first episode. */
     fun seriesMainAction(episodes: List<Episode>) = graph.viewerLibrary.seriesMainAction(episodes)
 
-    fun episodes(series: Series) = graph.catalogRepository.observeEpisodes(series.sourceId, series.seriesId)
-
     /** For the series detail screen: look the series up by row id. */
     fun seriesById(id: Long): kotlinx.coroutines.flow.Flow<Series?> =
         kotlinx.coroutines.flow.flow { emit(graph.catalogRepository.series(id)) }
-
-    /** An always-empty episode flow, so the detail screen has something before a series loads. */
-    val noEpisodes: kotlinx.coroutines.flow.Flow<List<app.opentv.data.model.Episode>> =
-        kotlinx.coroutines.flow.flowOf(emptyList())
 
     suspend fun movieById(id: Long): Movie? = graph.catalogRepository.movie(id)
 
@@ -1204,7 +1239,32 @@ class VodViewModel @JvmOverloads constructor(
     suspend fun moreLikeThis(movie: Movie): List<Movie> = graph.catalogRepository.moreLikeThis(movie)
 
     /** Everything in the library with this person in it, for their page. */
-    suspend fun titlesWithPerson(name: String): List<VodTitle> = graph.catalogRepository.titlesWithPerson(name)
+    suspend fun titlesWithPerson(name: String): List<VodTitle> =
+        graph.titleIndex.distinct(graph.catalogRepository.titlesWithPerson(name))
+
+    /**
+     * Whether the page opened on [movie] shows it a Favourite, given the Profile's [favourites]: a title is
+     * one when any of its Versions is, and the list holds only the one starred last (ADR 0007).
+     */
+    fun isFavourite(movie: Movie, favourites: List<Movie>): Boolean = favourites.any {
+        it.id == movie.id ||
+            (graph.titleIndex.sameTitle(StreamKind.MOVIE, it.id, movie.id) ?: sameTmdbTitle(it.tmdbId, movie.tmdbId))
+    }
+
+    /** As [isFavourite], for the page opened on [series]. */
+    fun isFavourite(series: Series, favourites: List<Series>): Boolean = favourites.any {
+        it.id == series.id ||
+            (graph.titleIndex.sameTitle(StreamKind.SERIES, it.id, series.id) ?: sameTmdbTitle(it.tmdbId, series.tmdbId))
+    }
+
+    /** What a film's or show's page shows of its Versions, for the one opened at [key] (#181). */
+    suspend fun pageVersions(key: MediaKey): PageVersions {
+        val (plan, choices) = graph.vodQualities.pageFor(key)
+        return PageVersions.of(plan, choices, plan.playsNothing(graph.decoders))
+    }
+
+    /** The viewer chose [version] in a Quality pill, or agreed to it in another language. */
+    suspend fun chooseVersion(version: MediaKey) = graph.vodQualities.choose(version)
 
     suspend fun resumesPartway(movie: Movie): Boolean {
         val playing = graph.vodQualities.planFor(MediaKey.Movie(movie.id)).start.key
@@ -1212,9 +1272,9 @@ class VodViewModel @JvmOverloads constructor(
     }
 
     /**
-     * The picked category's grid as covers, each film's Qualities folded into one ([movieCovers]),
-     * or null while it loads. Off the main thread: folding parses every name, again each time a
-     * refresh touches the movies table, and done while composing it froze a Fire TV Stick long
+     * The picked category's grid as covers, one per film however many of its Versions are there
+     * ([titleCovers]), or null while it loads. Off the main thread: it parses every name, again each
+     * time a refresh touches the movies table, and done while composing it froze a Fire TV Stick long
      * enough for Android to close the app (#180).
      *
      * No category means For you, which doesn't read this: observing every row for nothing would
@@ -1223,13 +1283,18 @@ class VodViewModel @JvmOverloads constructor(
     val movieGrid: StateFlow<List<TitleCover>?> =
         grid(movieCategory, StreamKind.MOVIE) { category ->
             graph.catalogRepository.observeMovieCovers(category.sourceId, category.id)
-                .map { movieCovers(it, graph.decoders) }
+                .combine(graph.titleIndex.movies.filterNotNull()) { rows, titles ->
+                    titleCovers(rows, titles, graph.decoders)
+                }
         }
 
     /** The picked category's shows as covers, or null while they load. */
     val seriesGrid: StateFlow<List<TitleCover>?> =
         grid(seriesCategory, StreamKind.SERIES) { category ->
-            graph.catalogRepository.observeSeriesCovers(category.sourceId, category.id).map(::seriesCovers)
+            graph.catalogRepository.observeSeriesCovers(category.sourceId, category.id)
+                .combine(graph.titleIndex.series.filterNotNull()) { rows, titles ->
+                    titleCovers(rows, titles, graph.decoders)
+                }
         }
 
     /**
@@ -1343,11 +1408,16 @@ class HomeViewModel @JvmOverloads constructor(
 
     @OptIn(ExperimentalCoroutinesApi::class)
     private val recentShows: Flow<List<VodTitle>> =
-        settings.seriesEnabled.flatMapLatest { on -> graph.catalogRepository.recentlyAdded(movies = false, shows = on) }
+        settings.seriesEnabled.flatMapLatest { on -> recentlyAdded(movies = false, shows = on) }
 
     @OptIn(ExperimentalCoroutinesApi::class)
     private val recentMovies: Flow<List<VodTitle>> =
-        settings.moviesEnabled.flatMapLatest { on -> graph.catalogRepository.recentlyAdded(movies = on, shows = false) }
+        settings.moviesEnabled.flatMapLatest { on -> recentlyAdded(movies = on, shows = false) }
+
+    /** Home's Recently Added rows, each title once where its newest Version puts it (ADR 0007). */
+    private fun recentlyAdded(movies: Boolean, shows: Boolean): Flow<List<VodTitle>> = graph.titleIndex
+        .distinctTitles(graph.catalogRepository.recentlyAdded(movies, shows, limit = RECENT_ROWS_READ))
+        .map { it.take(HOME_RECENT_TITLES_SHOWN) }
 
     private val favourites: Flow<List<VodTitle>> = combine(
         graph.viewerLibrary.favourites.titles(),
@@ -1361,10 +1431,17 @@ class HomeViewModel @JvmOverloads constructor(
         Cover(
             title,
             when (title) {
-                is VodTitle.OfMovie -> statuses.ofMovie(title.movie.id)
+                is VodTitle.OfMovie -> filmStatus(title.movie.id, statuses)
                 is VodTitle.OfSeries -> statuses.ofSeries(title.series.ref)
             },
         )
+    }
+
+    /** A film's cover status across its Versions: Watched when any is, else the one it has (ADR 0007). */
+    private fun filmStatus(movieId: Long, statuses: CoverStatuses): CoverStatus? {
+        val versions = graph.titleIndex.movies.value?.of(movieId)?.versionIds ?: longArrayOf(movieId)
+        val found = versions.asList().mapNotNull { statuses.ofMovie(it) }
+        return found.firstOrNull { it == CoverStatus.Watched } ?: found.firstOrNull()
     }
 
     /** The time now, again every minute, so what's on the Live Preview's channel moves on. */
@@ -1679,4 +1756,20 @@ class WebManagerViewModel(app: Application) : AndroidViewModel(app) {
     override fun onCleared() {
         server.stop()
     }
+}
+
+/** How many rows a Recently Added row reads, to fill [RECENT_TITLES_SHOWN] titles of several Versions each. */
+private const val RECENT_ROWS_READ = 90
+
+/** How many titles a Recently Added row shows. */
+private const val RECENT_TITLES_SHOWN = 30
+
+/** How many titles Home's Recently Added rows show. */
+private const val HOME_RECENT_TITLES_SHOWN = 20
+
+/** [refs] and every other Version of the shows they're Versions of, among [every] show. */
+private fun acrossVersions(every: List<Series>, refs: Set<SeriesRef>, titles: TitleIndex.Titles): Set<SeriesRef> {
+    if (refs.isEmpty()) return refs
+    val marked = every.filter { it.ref in refs }.mapNotNullTo(HashSet()) { titles.of(it.id) }
+    return refs + every.filter { titles.of(it.id) in marked }.map { it.ref }
 }

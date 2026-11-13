@@ -22,6 +22,7 @@ import app.opentv.data.repo.RecordingRepository
 import app.opentv.data.repo.RefreshMessages
 import app.opentv.data.repo.ReminderRepository
 import app.opentv.data.repo.SourceRepository
+import app.opentv.data.repo.TitleIndex
 import app.opentv.data.repo.TmdbKeys
 import app.opentv.data.repo.ViewerLibrary
 import app.opentv.data.repo.VodQualities
@@ -152,7 +153,18 @@ object ServiceLocator {
             )
         }
 
-        val vodQualities: VodQualities by lazy { VodQualities(database, catalogRepository, decoders) }
+        /** Every film and show grouped into titles, for lists and covers (ADR 0007). */
+        val titleIndex: TitleIndex by lazy { TitleIndex(database, decoders) }
+
+        val vodQualities: VodQualities by lazy {
+            VodQualities(
+                database,
+                catalogRepository,
+                decoders,
+                profileSettings,
+                versionIds = titleIndex.versionIds,
+            )
+        }
 
         val playbackSources: PlaybackSources by lazy { PlaybackSources(database, xtreamApi, stalkerApi, channelLineup) }
 
@@ -208,7 +220,7 @@ object ServiceLocator {
         }
 
         val viewerLibrary: ViewerLibrary by lazy {
-            ViewerLibrary(database, settings.activeProfileId, clock)
+            ViewerLibrary(database, settings.activeProfileId, clock, titleIndex.versionIds)
         }
 
         /** Outlives every screen, so progress still arrives after the sync screen has closed. */

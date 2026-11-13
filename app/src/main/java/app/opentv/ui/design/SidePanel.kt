@@ -107,7 +107,8 @@ private val LocalTickedRow = staticCompositionLocalOf<FocusRequester?> { null }
 
 /**
  * One row of a [SidePanel]: [label], with the current [value] beside it when the row opens a
- * choice, or a tick when it's the [ticked] one of a choice.
+ * choice, or a tick when it's the [ticked] one of a choice. A row not [enabled] is greyed out, and the
+ * Highlight passes over it.
  */
 @Composable
 fun PanelRow(
@@ -116,11 +117,13 @@ fun PanelRow(
     modifier: Modifier = Modifier,
     value: String? = null,
     ticked: Boolean = false,
+    enabled: Boolean = true,
 ) {
     val startHere = LocalTickedRow.current?.takeIf { ticked }
     HighlightSurface(
         onClick = onClick,
         style = HighlightStyle.Cell,
+        enabled = enabled,
         modifier = modifier
             .fillMaxWidth()
             .semantics { selected = ticked }
@@ -132,7 +135,11 @@ fun PanelRow(
             Text(
                 label,
                 SetteeType.Body,
-                color = if (highlighted) SetteeColors.OnAccent else SetteeColors.Text,
+                color = when {
+                    highlighted -> SetteeColors.OnAccent
+                    enabled -> SetteeColors.Text
+                    else -> SetteeColors.QuietText
+                },
                 modifier = Modifier.weight(1f),
             )
             value?.let { Text(it, SetteeType.Body, color = quiet, maxLines = 1) }

@@ -46,6 +46,7 @@ import app.opentv.R
 import app.opentv.data.model.Category
 import app.opentv.data.model.Movie
 import app.opentv.data.model.Series
+import app.opentv.data.model.StreamKind
 import app.opentv.data.parser.displayTitle
 import app.opentv.data.repo.GenreGroup
 import app.opentv.data.repo.MediaKey
@@ -248,6 +249,7 @@ internal fun ScreenFrameScope.MovieShelves(
     recommending: Boolean = false,
 ) {
     val held = rememberHeldRow(recommended)
+    val badges = LocalCoverBadges.current
     val rows = listOf(
         TitleRow("fav", stringResource(R.string.vod_favourites), favourites),
         TitleRow("rec", stringResource(R.string.vod_recommended), held.titles, held.modifier, recommending),
@@ -257,7 +259,7 @@ internal fun ScreenFrameScope.MovieShelves(
         resume,
         rows.filter { it.titles.isNotEmpty() || it.pending },
         onResume,
-        cover = Movie::cover,
+        cover = { it.cover(badges) },
         onOpen = onOpenMovie,
         onHighlight = onHighlight,
         options = { openOptionsOn(OptionsSubject.OfMovie(it)) },
@@ -278,6 +280,7 @@ internal fun ScreenFrameScope.SeriesShelves(
     recommending: Boolean = false,
 ) {
     val held = rememberHeldRow(recommended)
+    val badges = LocalCoverBadges.current
     val rows = listOf(
         TitleRow("fav", stringResource(R.string.vod_favourites), favourites),
         TitleRow("rec", stringResource(R.string.vod_recommended), held.titles, held.modifier, recommending),
@@ -287,16 +290,18 @@ internal fun ScreenFrameScope.SeriesShelves(
         resume,
         rows.filter { it.titles.isNotEmpty() || it.pending },
         onResume,
-        cover = Series::cover,
+        cover = { it.cover(badges) },
         onOpen = onOpenSeries,
         onHighlight = onHighlight,
         options = { openOptionsOn(OptionsSubject.OfSeries(it)) },
     )
 }
 
-private fun Movie.cover() = TitleCover(id, name, displayTitle, posterUrl)
+private fun Movie.cover(badges: CoverBadges) =
+    TitleCover(id, name, displayTitle, posterUrl, badges.of(StreamKind.MOVIE, id, name))
 
-private fun Series.cover() = TitleCover(id, name, displayTitle, posterUrl)
+private fun Series.cover(badges: CoverBadges) =
+    TitleCover(id, name, displayTitle, posterUrl, badges.of(StreamKind.SERIES, id, name))
 
 /**
  * One of For you's rows; [modifier] goes around it (a held row's, see [rememberHeldRow]). A [pending]

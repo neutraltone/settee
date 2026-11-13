@@ -302,6 +302,12 @@
     <string name="onboarding_xtream_or_playlist_help">プロバイダーからログイン情報ではなく長いリンクを1つ受け取った場合は、プレイリストとして追加してください。</string>
     <string name="providers_empty">まだプロバイダーがありません。すでに契約しているサービスを追加して始めましょう。</string>
     <string name="addons_empty">まだアドオンがありません。上にアドオンのリンクを貼り付けて追加してください。</string>
+    <!-- A film or show's Versions (#181) -->
+    <string name="vod_cant_play_tv">このテレビでは%1$sを再生できません</string>
+    <string name="vod_cant_play_device">このデバイスでは%1$sを再生できません</string>
+    <string name="vod_language_title">ここでは%1$sのみ</string>
+    <string name="vod_language_body_tv">このテレビではあなたの言語のバージョンを再生できません。</string>
+    <string name="vod_language_body_device">このデバイスではあなたの言語のバージョンを再生できません。</string>
     <string name="error_tmdb_key_rejected">TMDB がこのキーを受け付けませんでした。API Key 全体をコピーしたか確認して、もう一度お試しください。</string>
     <string name="error_tmdb_unreachable_tv">TMDB に接続できません。このテレビがオンラインか確認して、もう一度お試しください。</string>
     <string name="error_tmdb_unreachable_device">TMDB に接続できません。このデバイスがオンラインか確認して、もう一度お試しください。</string>

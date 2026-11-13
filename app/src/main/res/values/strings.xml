@@ -503,6 +503,22 @@
     <string name="categories_find_count">%1$d of %2$d</string>
     <string name="vod_resume">Resume</string>
     <string name="vod_play">Play</string>
+    <!-- A film or show's Versions (#181): the Quality pill, and what Play says when it can't simply play -->
+    <string name="vod_quality">Quality</string>
+    <string name="vod_quality_other">Other</string>
+    <string name="vod_quality_cam">CAM</string>
+    <string name="vod_quality_dubbed">Dubbed</string>
+    <string name="vod_quality_subtitles">%1$s subtitles</string>
+    <string name="vod_quality_subtitles_multi">Several subtitles</string>
+    <string name="vod_cant_play_tv">This TV can\'t play %1$s</string>
+    <string name="vod_cant_play_device">This device can\'t play %1$s</string>
+    <string name="vod_language_title">Only in %1$s here</string>
+    <string name="vod_language_title_unnamed">Only in another language here</string>
+    <string name="vod_language_body_tv">This TV can\'t play a version in your language.</string>
+    <string name="vod_language_body_device">This device can\'t play a version in your language.</string>
+    <string name="vod_language_play">Play in %1$s</string>
+    <string name="vod_language_play_unnamed">Play it anyway</string>
+    <string name="vod_language_keep">Not now</string>
     <!-- The series page's main button: season and episode numbers. -->
     <string name="vod_resume_episode">Resume S%1$d E%2$d</string>
     <string name="vod_play_episode">Play S%1$d E%2$d</string>

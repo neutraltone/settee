@@ -302,6 +302,12 @@
     <string name="onboarding_xtream_or_playlist_help">Sağlayıcınız size giriş bilgileri yerine tek bir uzun bağlantı verdiyse, onu oynatma listesi olarak ekleyin.</string>
     <string name="providers_empty">Henüz sağlayıcı yok. Başlamak için zaten ödeme yaptığınız hizmeti ekleyin.</string>
     <string name="addons_empty">Henüz eklenti yok. Eklemek için bir eklentinin bağlantısını yukarıya yapıştırın.</string>
+    <!-- A film or show's Versions (#181) -->
+    <string name="vod_cant_play_tv">Bu TV %1$s oynatamıyor</string>
+    <string name="vod_cant_play_device">Bu cihaz %1$s oynatamıyor</string>
+    <string name="vod_language_title">Burada yalnızca %1$s</string>
+    <string name="vod_language_body_tv">Bu TV, dilinizde bir sürümü oynatamıyor.</string>
+    <string name="vod_language_body_device">Bu cihaz, dilinizde bir sürümü oynatamıyor.</string>
     <string name="error_tmdb_key_rejected">TMDB bu anahtarı kabul etmedi. API Key\'in tamamını kopyaladığınızdan emin olun, sonra tekrar deneyin.</string>
     <string name="error_tmdb_unreachable_tv">TMDB\'ye ulaşılamıyor. Bu televizyonun çevrimiçi olduğundan emin olun, sonra tekrar deneyin.</string>
     <string name="error_tmdb_unreachable_device">TMDB\'ye ulaşılamıyor. Bu cihazın çevrimiçi olduğundan emin olun, sonra tekrar deneyin.</string>

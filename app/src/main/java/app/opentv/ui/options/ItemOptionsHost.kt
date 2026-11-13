@@ -28,7 +28,6 @@ import app.opentv.data.model.Episode
 import app.opentv.data.model.Movie
 import app.opentv.data.model.Programme
 import app.opentv.data.model.Series
-import app.opentv.data.model.StreamKind
 import app.opentv.data.model.shownName
 import app.opentv.data.parser.displayTitle
 import app.opentv.data.repo.CatalogRepository
@@ -36,6 +35,7 @@ import app.opentv.data.repo.CatchUpMarks
 import app.opentv.data.repo.ContinueWatchingCard
 import app.opentv.data.repo.LineupChannel
 import app.opentv.data.repo.MediaKey
+import app.opentv.data.repo.VodTitle
 import app.opentv.data.repo.mediaKey
 import app.opentv.ui.ChannelsViewModel
 import app.opentv.ui.RecordingBackgroundDialog
@@ -357,11 +357,9 @@ class ItemOptionsViewModel @JvmOverloads constructor(
         library.favourites.set(series, it)
     }
 
-    private suspend fun isFavourite(movie: Movie) =
-        library.favourites.contains(StreamKind.MOVIE, movie.sourceId, movie.streamId)
+    private suspend fun isFavourite(movie: Movie) = library.favourites.isFavourite(VodTitle.OfMovie(movie))
 
-    private suspend fun isFavourite(series: Series) =
-        library.favourites.contains(StreamKind.SERIES, series.sourceId, series.seriesId)
+    private suspend fun isFavourite(series: Series) = library.favourites.isFavourite(VodTitle.OfSeries(series))
 }
 
 /** The title behind a Continue Watching card, or null when it has left the catalogue. */

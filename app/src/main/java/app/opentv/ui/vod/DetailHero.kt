@@ -32,6 +32,8 @@ import app.opentv.ui.design.SetteeType
 import app.opentv.ui.design.Text
 import coil.compose.AsyncImage
 import kotlin.time.Duration.Companion.seconds
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 
 /**
  * A details page's artwork across the whole screen, behind the hero: the backdrop, else the poster,
@@ -134,3 +136,9 @@ internal fun LoadingDetail() {
         }
     }
 }
+
+/** A value a page has read, which may itself be null: a page waiting on it waits for this, not for non-null. */
+internal class Loaded<T>(val value: T)
+
+/** This flow's values as [Loaded], for a page that waits for the first one ([Loaded]). */
+internal fun <T> Flow<T>.loaded(): Flow<Loaded<T>> = map { Loaded(it) }

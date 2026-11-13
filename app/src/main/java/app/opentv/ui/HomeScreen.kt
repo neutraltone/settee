@@ -34,6 +34,7 @@ import app.opentv.R
 import app.opentv.data.model.Channel
 import app.opentv.data.model.Movie
 import app.opentv.data.model.Series
+import app.opentv.data.model.StreamKind
 import app.opentv.data.parser.displayTitle
 import app.opentv.data.repo.CoverStatus
 import app.opentv.data.repo.MediaKey
@@ -55,7 +56,7 @@ import app.opentv.ui.options.LocalOpenOptions
 import app.opentv.ui.options.OptionsSubject
 import app.opentv.ui.options.openOptionsOn
 import app.opentv.ui.vod.CardFocus
-import app.opentv.ui.vod.rememberQualityBadge
+import app.opentv.ui.vod.rememberCoverBadge
 import app.opentv.ui.vod.rememberRowState
 import app.opentv.ui.vod.takesFocus
 
@@ -398,7 +399,11 @@ internal fun ScreenFrameScope.ContinueWatchingShelf(
                     .onFocusChanged { if (it.isFocused) onHighlight(card) },
                 status = resumeStatusText(card),
                 progress = card.progress,
-                badge = rememberQualityBadge(card.name),
+                badge = rememberCoverBadge(
+                    StreamKind.MOVIE,
+                    (card.key as? MediaKey.Movie)?.movieId ?: NOT_A_ROW,
+                    card.name,
+                ),
                 scrollsTitle = true,
                 onOptions = openOptions?.let { open -> { open(OptionsSubject.OfContinueWatching(card), leave(card)) } },
             )
@@ -438,7 +443,7 @@ private fun ScreenFrameScope.CoverShelf(
                 modifier = Modifier.takesFocus(index, focus).shelfCard(memory, cover.title.pickKey),
                 status = if (showsStatus) coverStatusText(cover.status) else emptyList(),
                 progress = (cover.status as? CoverStatus.InProgress)?.progress?.takeIf { showsStatus },
-                badge = rememberQualityBadge(cover.title.name),
+                badge = rememberCoverBadge(cover.title.kind, cover.title.id, cover.title.name),
                 onOptions = openOptionsOn(subject, leave(cover.title)),
             )
         }
@@ -456,3 +461,6 @@ private val VodTitle.posterUrl
         is VodTitle.OfMovie -> movie.posterUrl
         is VodTitle.OfSeries -> series.posterUrl
     }
+
+/** An id no row has: a Continue Watching episode's cover goes by its own name, not its show's Versions. */
+private const val NOT_A_ROW = -1L

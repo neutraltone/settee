@@ -302,6 +302,12 @@
     <string name="onboarding_xtream_or_playlist_help">Jika penyedia Anda memberi satu tautan panjang alih-alih info login, tambahkan sebagai playlist.</string>
     <string name="providers_empty">Belum ada penyedia. Tambahkan layanan yang sudah Anda bayar untuk memulai.</string>
     <string name="addons_empty">Belum ada add-on. Tempelkan tautan add-on di atas untuk menambahkannya.</string>
+    <!-- A film or show's Versions (#181) -->
+    <string name="vod_cant_play_tv">TV ini tidak bisa memutar %1$s</string>
+    <string name="vod_cant_play_device">Perangkat ini tidak bisa memutar %1$s</string>
+    <string name="vod_language_title">Di sini hanya dalam bahasa %1$s</string>
+    <string name="vod_language_body_tv">TV ini tidak bisa memutar versi dalam bahasamu.</string>
+    <string name="vod_language_body_device">Perangkat ini tidak bisa memutar versi dalam bahasamu.</string>
     <string name="error_tmdb_key_rejected">TMDB tidak menerima kunci itu. Pastikan Anda menyalin seluruh API Key, lalu coba lagi.</string>
     <string name="error_tmdb_unreachable_tv">Tidak dapat menjangkau TMDB. Pastikan TV ini online, lalu coba lagi.</string>
     <string name="error_tmdb_unreachable_device">Tidak dapat menjangkau TMDB. Pastikan perangkat ini online, lalu coba lagi.</string>

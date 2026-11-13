@@ -302,6 +302,12 @@
     <string name="onboarding_xtream_or_playlist_help">Jeśli dostawca dał ci jeden długi link zamiast danych logowania, dodaj go jako playlistę.</string>
     <string name="providers_empty">Brak dostawców. Dodaj usługę, za którą już płacisz, aby rozpocząć.</string>
     <string name="addons_empty">Brak dodatków. Wklej powyżej link do dodatku, aby go dodać.</string>
+    <!-- A film or show's Versions (#181) -->
+    <string name="vod_cant_play_tv">Ten telewizor nie może odtworzyć %1$s</string>
+    <string name="vod_cant_play_device">To urządzenie nie może odtworzyć %1$s</string>
+    <string name="vod_language_title">Tutaj tylko w języku: %1$s</string>
+    <string name="vod_language_body_tv">Ten telewizor nie może odtworzyć wersji w Twoim języku.</string>
+    <string name="vod_language_body_device">To urządzenie nie może odtworzyć wersji w Twoim języku.</string>
     <string name="error_tmdb_key_rejected">TMDB nie przyjął tego klucza. Sprawdź, czy skopiowano cały API Key, i spróbuj ponownie.</string>
     <string name="error_tmdb_unreachable_tv">Nie można połączyć się z TMDB. Sprawdź, czy ten telewizor jest online, i spróbuj ponownie.</string>
     <string name="error_tmdb_unreachable_device">Nie można połączyć się z TMDB. Sprawdź, czy to urządzenie jest online, i spróbuj ponownie.</string>

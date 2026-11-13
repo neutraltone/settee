@@ -302,6 +302,12 @@
     <string name="onboarding_xtream_or_playlist_help">Om din leverantör gav dig en lång länk i stället för inloggningsuppgifter, lägg till den som spellista i stället.</string>
     <string name="providers_empty">Inga leverantörer än. Lägg till tjänsten du redan betalar för att komma igång.</string>
     <string name="addons_empty">Inga tillägg än. Klistra in länken till ett tillägg ovan för att lägga till det.</string>
+    <!-- A film or show's Versions (#181) -->
+    <string name="vod_cant_play_tv">Den här tv:n kan inte spela upp %1$s</string>
+    <string name="vod_cant_play_device">Den här enheten kan inte spela upp %1$s</string>
+    <string name="vod_language_title">Bara på %1$s här</string>
+    <string name="vod_language_body_tv">Den här tv:n kan inte spela upp en version på ditt språk.</string>
+    <string name="vod_language_body_device">Den här enheten kan inte spela upp en version på ditt språk.</string>
     <string name="error_tmdb_key_rejected">TMDB godtog inte den nyckeln. Kontrollera att du kopierade hela API Key och försök igen.</string>
     <string name="error_tmdb_unreachable_tv">Det går inte att nå TMDB. Kontrollera att den här tv:n är online och försök igen.</string>
     <string name="error_tmdb_unreachable_device">Det går inte att nå TMDB. Kontrollera att den här enheten är online och försök igen.</string>

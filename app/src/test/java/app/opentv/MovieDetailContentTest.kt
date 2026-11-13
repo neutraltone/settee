@@ -9,7 +9,10 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsFocused
+import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isFocused
@@ -22,7 +25,11 @@ import androidx.test.espresso.Espresso
 import app.opentv.data.model.Movie
 import app.opentv.data.model.StremioStream
 import app.opentv.data.repo.CoverStatus
+import app.opentv.data.repo.MediaKey
+import app.opentv.data.repo.VersionTraits
+import app.opentv.data.repo.VodQualities
 import app.opentv.ui.vod.MovieDetailContent
+import app.opentv.ui.vod.PageVersions
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.CompletableDeferred
 import org.junit.Rule
@@ -72,6 +79,10 @@ class MovieDetailContentTest {
     )
 
     private var plays = 0
+
+    // What the page shows of the film's Versions; set before [show].
+    private var versions = PageVersions()
+    private val chosen = mutableListOf<MediaKey>()
     private var playedStream: StremioStream? = null
     private val favouriteRequests = mutableListOf<Boolean>()
     private val favourite = mutableStateOf<Boolean?>(false)
@@ -110,6 +121,8 @@ class MovieDetailContentTest {
                 onPlay = { plays++ },
                 onPlayAddonStream = { playedStream = it },
                 onSetFavourite = { favouriteRequests += it },
+                versions = versions,
+                onChooseVersion = { chosen += it },
             )
         }
         settle()
@@ -380,5 +393,77 @@ class MovieDetailContentTest {
 
         compose.onNodeWithText("First add-on").assertExists()
         compose.onNodeWithText("Second add-on").assertExists()
+    }
+
+    private fun showWith(shown: PageVersions) {
+        versions = shown
+        show()
+    }
+
+    private fun choice(id: Long, traits: VersionTraits, playable: Boolean = true, playing: Boolean = false) =
+        VodQualities.Choice(MediaKey.Movie(id), traits, playable, playing)
+
+    private val threeVersions = PageVersions(
+        choices = listOf(
+            choice(1, VersionTraits(qualityRank = 400, qualityLabel = "4K"), playable = false),
+            choice(2, VersionTraits(qualityRank = 200, qualityLabel = "HD", language = "de")),
+            choice(3, VersionTraits(), playing = true),
+        ),
+    )
+
+    @Test
+    fun `the Quality pill lists the Versions that differ, greying out what this TV can't play`() {
+        showWith(threeVersions)
+
+        compose.onNodeWithText("Quality").performClick()
+        settle()
+
+        compose.onNodeWithText("4K").assertIsNotEnabled()
+        compose.onNodeWithText("HD · German").assertIsEnabled()
+        compose.onNodeWithText("Other").assertIsSelected()
+        captureScreen("movie_detail_quality_pill")
+    }
+
+    @Test
+    fun `choosing in the Quality pill chooses that Version`() {
+        showWith(threeVersions)
+
+        compose.onNodeWithText("Quality").performClick()
+        settle()
+        compose.onNodeWithText("HD · German").performClick()
+        settle()
+
+        assertThat(chosen).containsExactly(MediaKey.Movie(2))
+    }
+
+    @Test
+    fun `there's no Quality pill when the Versions are alike`() {
+        showWith(PageVersions(choices = listOf(choice(3, VersionTraits(), playing = true))))
+
+        compose.onNodeWithText("Quality").assertDoesNotExist()
+    }
+
+    @Test
+    fun `Play is off and says why when nothing of the film plays here`() {
+        showWith(PageVersions(cantPlay = "4K"))
+
+        compose.onNodeWithText("Play").assertIsNotEnabled()
+        compose.onNodeWithText("can't play 4K", substring = true).assertIsDisplayed()
+        captureScreen("movie_detail_cant_play")
+    }
+
+    @Test
+    fun `Play asks before another language, and agreeing chooses it and plays`() {
+        showWith(PageVersions(otherLanguage = PageVersions.OtherLanguage(MediaKey.Movie(2), "de")))
+
+        compose.onNodeWithText("Play").performClick()
+        settle()
+        captureScreen("movie_detail_language_question")
+        assertThat(plays).isEqualTo(0)
+        compose.onNodeWithText("Play in German").performClick()
+        settle()
+
+        assertThat(chosen).containsExactly(MediaKey.Movie(2))
+        assertThat(plays).isEqualTo(1)
     }
 }

@@ -104,6 +104,21 @@ class VodHomeFeedsTest {
     }
 
     @Test
+    fun `Recommended lists a film once, and one started in any Version is gone in all of them`() = runTest {
+        graph.database.movies().upsertAll(
+            listOf(movie(1, 9.0).copy(tmdbId = "8363"), movie(2, 9.0).copy(tmdbId = "8363"), movie(3, 8.0)),
+        )
+        val vod = VodViewModel(app, graph)
+        vod.loadHomeFeeds().join()
+        assertThat(vod.recommendedMovieIds()).hasSize(2)
+
+        graph.viewerLibrary.recordProgress("movie:2", positionMillis = 600_000, durationMillis = 2_400_000)
+        vod.loadHomeFeeds().join()
+
+        assertThat(vod.recommendedMovieIds()).containsExactly(3L)
+    }
+
+    @Test
     fun `a series the Profile has started is gone from Recommended the next time Shows opens`() = runTest {
         val vod = openWithTwoSeries()
         assertThat(vod.recommendedSeriesIds()).containsExactly(1L, 2L).inOrder()

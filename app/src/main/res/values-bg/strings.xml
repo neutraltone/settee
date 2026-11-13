@@ -302,6 +302,12 @@
     <string name="onboarding_xtream_or_playlist_help">Ако доставчикът ви е дал една дълга връзка вместо данни за вход, добавете я като плейлист.</string>
     <string name="providers_empty">Все още няма доставчици. Добавете услугата, за която вече плащате, за да започнете.</string>
     <string name="addons_empty">Все още няма добавки. Поставете връзката към добавка по-горе, за да я добавите.</string>
+    <!-- A film or show's Versions (#181) -->
+    <string name="vod_cant_play_tv">Този телевизор не може да пусне %1$s</string>
+    <string name="vod_cant_play_device">Това устройство не може да пусне %1$s</string>
+    <string name="vod_language_title">Тук има само на %1$s</string>
+    <string name="vod_language_body_tv">Този телевизор не може да пусне версия на вашия език.</string>
+    <string name="vod_language_body_device">Това устройство не може да пусне версия на вашия език.</string>
     <string name="error_tmdb_key_rejected">TMDB не прие този ключ. Проверете дали сте копирали целия API Key и опитайте отново.</string>
     <string name="error_tmdb_unreachable_tv">Няма връзка с TMDB. Проверете дали този телевизор е онлайн и опитайте отново.</string>
     <string name="error_tmdb_unreachable_device">Няма връзка с TMDB. Проверете дали това устройство е онлайн и опитайте отново.</string>

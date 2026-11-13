@@ -302,6 +302,12 @@
     <string name="onboarding_xtream_or_playlist_help">اگر ارائه‌دهنده به جای اطلاعات ورود یک پیوند طولانی به شما داده است، آن را به‌عنوان فهرست پخش اضافه کنید.</string>
     <string name="providers_empty">هنوز ارائه‌دهنده‌ای وجود ندارد. برای شروع، سرویسی را که هزینه‌اش را می‌پردازید اضافه کنید.</string>
     <string name="addons_empty">هنوز افزونه‌ای وجود ندارد. برای افزودن، پیوند یک افزونه را در بالا بچسبانید.</string>
+    <!-- A film or show's Versions (#181) -->
+    <string name="vod_cant_play_tv">این تلویزیون نمی‌تواند %1$s را پخش کند</string>
+    <string name="vod_cant_play_device">این دستگاه نمی‌تواند %1$s را پخش کند</string>
+    <string name="vod_language_title">اینجا فقط به %1$s</string>
+    <string name="vod_language_body_tv">این تلویزیون نمی‌تواند نسخه‌ای به زبان شما را پخش کند.</string>
+    <string name="vod_language_body_device">این دستگاه نمی‌تواند نسخه‌ای به زبان شما را پخش کند.</string>
     <string name="error_tmdb_key_rejected">TMDB این کلید را نپذیرفت. بررسی کنید کل API Key را کپی کرده‌اید، سپس دوباره امتحان کنید.</string>
     <string name="error_tmdb_unreachable_tv">دسترسی به TMDB ممکن نیست. بررسی کنید این تلویزیون آنلاین باشد، سپس دوباره امتحان کنید.</string>
     <string name="error_tmdb_unreachable_device">دسترسی به TMDB ممکن نیست. بررسی کنید این دستگاه آنلاین باشد، سپس دوباره امتحان کنید.</string>

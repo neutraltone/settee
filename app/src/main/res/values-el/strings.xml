@@ -302,6 +302,12 @@
     <string name="onboarding_xtream_or_playlist_help">Αν ο πάροχός σας σάς έδωσε έναν μεγάλο σύνδεσμο αντί για στοιχεία σύνδεσης, προσθέστε τον ως λίστα αναπαραγωγής.</string>
     <string name="providers_empty">Δεν υπάρχουν ακόμη πάροχοι. Προσθέστε την υπηρεσία που ήδη πληρώνετε για να ξεκινήσετε.</string>
     <string name="addons_empty">Δεν υπάρχουν ακόμη πρόσθετα. Επικολλήστε τον σύνδεσμο ενός πρόσθετου παραπάνω για να το προσθέσετε.</string>
+    <!-- A film or show's Versions (#181) -->
+    <string name="vod_cant_play_tv">Αυτή η τηλεόραση δεν μπορεί να παίξει %1$s</string>
+    <string name="vod_cant_play_device">Αυτή η συσκευή δεν μπορεί να παίξει %1$s</string>
+    <string name="vod_language_title">Εδώ μόνο στα %1$s</string>
+    <string name="vod_language_body_tv">Αυτή η τηλεόραση δεν μπορεί να παίξει έκδοση στη γλώσσα σας.</string>
+    <string name="vod_language_body_device">Αυτή η συσκευή δεν μπορεί να παίξει έκδοση στη γλώσσα σας.</string>
     <string name="error_tmdb_key_rejected">Το TMDB δεν δέχτηκε αυτό το κλειδί. Ελέγξτε ότι αντιγράψατε ολόκληρο το API Key και δοκιμάστε ξανά.</string>
     <string name="error_tmdb_unreachable_tv">Δεν είναι δυνατή η σύνδεση με το TMDB. Ελέγξτε ότι αυτή η τηλεόραση είναι συνδεδεμένη και δοκιμάστε ξανά.</string>
     <string name="error_tmdb_unreachable_device">Δεν είναι δυνατή η σύνδεση με το TMDB. Ελέγξτε ότι αυτή η συσκευή είναι συνδεδεμένη και δοκιμάστε ξανά.</string>

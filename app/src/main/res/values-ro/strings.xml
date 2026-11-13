@@ -302,6 +302,12 @@
     <string name="onboarding_xtream_or_playlist_help">Dacă furnizorul ți-a dat un singur link lung în loc de date de autentificare, adaugă-l ca playlist.</string>
     <string name="providers_empty">Încă nu există furnizori. Adaugă serviciul pe care îl plătești deja ca să începi.</string>
     <string name="addons_empty">Încă nu există suplimente. Lipește mai sus linkul unui supliment ca să-l adaugi.</string>
+    <!-- A film or show's Versions (#181) -->
+    <string name="vod_cant_play_tv">Acest televizor nu poate reda %1$s</string>
+    <string name="vod_cant_play_device">Acest dispozitiv nu poate reda %1$s</string>
+    <string name="vod_language_title">Aici doar în %1$s</string>
+    <string name="vod_language_body_tv">Acest televizor nu poate reda o versiune în limba ta.</string>
+    <string name="vod_language_body_device">Acest dispozitiv nu poate reda o versiune în limba ta.</string>
     <string name="error_tmdb_key_rejected">TMDB nu a acceptat această cheie. Verifică dacă ai copiat întreaga API Key, apoi încearcă din nou.</string>
     <string name="error_tmdb_unreachable_tv">Nu se poate accesa TMDB. Verifică dacă acest televizor este online, apoi încearcă din nou.</string>
     <string name="error_tmdb_unreachable_device">Nu se poate accesa TMDB. Verifică dacă acest dispozitiv este online, apoi încearcă din nou.</string>

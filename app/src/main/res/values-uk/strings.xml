@@ -302,6 +302,12 @@
     <string name="onboarding_xtream_or_playlist_help">Якщо провайдер дав вам одне довге посилання замість логіна, додайте його як плейлист.</string>
     <string name="providers_empty">Провайдерів поки немає. Додайте сервіс, за який ви вже платите, щоб почати.</string>
     <string name="addons_empty">Додатків поки немає. Вставте посилання на додаток вище, щоб додати його.</string>
+    <!-- A film or show's Versions (#181) -->
+    <string name="vod_cant_play_tv">Цей телевізор не може відтворити %1$s</string>
+    <string name="vod_cant_play_device">Цей пристрій не може відтворити %1$s</string>
+    <string name="vod_language_title">Тут лише мовою: %1$s</string>
+    <string name="vod_language_body_tv">Цей телевізор не може відтворити версію вашою мовою.</string>
+    <string name="vod_language_body_device">Цей пристрій не може відтворити версію вашою мовою.</string>
     <string name="error_tmdb_key_rejected">TMDB не прийняв цей ключ. Перевірте, що скопіювали API Key повністю, і спробуйте ще раз.</string>
     <string name="error_tmdb_unreachable_tv">Не вдається зв\'язатися з TMDB. Перевірте, що цей телевізор у мережі, і спробуйте ще раз.</string>
     <string name="error_tmdb_unreachable_device">Не вдається зв\'язатися з TMDB. Перевірте, що цей пристрій у мережі, і спробуйте ще раз.</string>

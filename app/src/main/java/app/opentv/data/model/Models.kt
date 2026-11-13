@@ -97,6 +97,22 @@ data class Category(val id: String, val sourceId: Long, val name: String, val ki
  */
 data class CoverRow(val id: Long, val name: String, val posterUrl: String?, val year: Int?)
 
+/**
+ * What grouping a film or show into its title reads from each row, instead of whole rows, so the whole
+ * catalogue fits on a 1 GB Stick (`TitleIndex`).
+ */
+data class VersionRow(
+    val id: Long,
+    val sourceId: Long,
+    val name: String,
+    val tmdbId: String?,
+    val year: Int?,
+    val categoryId: String?,
+)
+
+/** A category's name within its source, for what it says of a Version (`VersionTraits`). */
+data class SourceCategoryName(val sourceId: Long, val id: String, val name: String)
+
 @Entity(
     tableName = "channels",
     indices = [

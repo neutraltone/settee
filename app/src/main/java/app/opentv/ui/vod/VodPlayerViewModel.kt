@@ -12,6 +12,7 @@ import androidx.lifecycle.viewModelScope
 import app.opentv.core.ServiceLocator
 import app.opentv.data.model.Episode
 import app.opentv.data.repo.MediaKey
+import app.opentv.data.repo.VodQualities
 import app.opentv.data.repo.WatchStatus
 import app.opentv.player.NextEpisodeCountdown
 import app.opentv.player.NextEpisodeCountdown.Decision
@@ -81,6 +82,17 @@ class VodPlayerViewModel(
 
     /** The Next Episode card or "Are you still watching?", whichever is showing. */
     val overlay: StateFlow<Overlay> = _overlay.asStateFlow()
+
+    private val _qualityChoices = MutableStateFlow<List<VodQualities.Choice>>(emptyList())
+
+    /** The Quality pill's entries for what's playing: fewer than two, and there's no pill (#181). */
+    val qualityChoices: StateFlow<List<VodQualities.Choice>> = _qualityChoices.asStateFlow()
+
+    /** What [chooseVersion] keeps the choice with. */
+    internal val versions: VodQualities get() = graph.vodQualities
+
+    /** Where what's playing had got to, for starting another Version of it there. */
+    internal val playingAt: Long? get() = playback?.progress()?.positionMillis ?: lastSeen?.positionMillis
 
     private val _canMarkWatched = MutableStateFlow(false)
 
@@ -206,10 +218,11 @@ class VodPlayerViewModel(
     }
 
     /**
-     * Plays the highest Quality of [opened] this device can play, from [fromMillis] or else that
-     * Quality's own resume point, and works out its Next Episode. [alreadyPlaying] leaves the player be.
+     * Plays the Version of [opened] its Plan picks, from [fromMillis] or else that Version's own resume
+     * point, and works out its Next Episode. [alreadyPlaying] leaves the player be. Internal for
+     * [chooseVersion], which starts another Version where this one was.
      */
-    private suspend fun start(opened: MediaKey, fromMillis: Long? = null, alreadyPlaying: Boolean = false) {
+    internal suspend fun start(opened: MediaKey, fromMillis: Long? = null, alreadyPlaying: Boolean = false) {
         suspend fun offer(episode: Episode?) {
             next = episode
             _nextEpisode.value = episode?.let { lookup.card(it) }
@@ -226,6 +239,7 @@ class VodPlayerViewModel(
         _current.value = key
         lastSeen = null
         planned?.let { (request, skipped) -> playback?.play(request, skipped) }
+        _qualityChoices.value = graph.vodQualities.choicesFor(key)
         _canMarkWatched.value = graph.canMarkWatched(key)
         val episode = (key as? MediaKey.Episode)?.let { graph.catalogRepository.episode(it.episodeId) }
         offer(episode?.let { graph.viewerLibrary.nextEpisodes.after(it) })
@@ -235,6 +249,15 @@ class VodPlayerViewModel(
             }
         }
     }
+}
+
+/**
+ * The viewer chose [version] in the player's Quality pill: it's the Profile's Version of the title from
+ * now on, and plays from where the one playing had got to (#181).
+ */
+suspend fun VodPlayerViewModel.chooseVersion(version: MediaKey) {
+    versions.choose(version)
+    start(version, fromMillis = playingAt)
 }
 
 /**

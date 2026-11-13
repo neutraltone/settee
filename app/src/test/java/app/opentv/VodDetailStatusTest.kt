@@ -113,7 +113,7 @@ class VodDetailStatusTest {
         graph.database.movies().upsertAll(listOf(film))
         graph.viewerLibrary.recordProgress("movie:7", positionMillis = 3_000_000, durationMillis = 6_000_000)
 
-        val status = VodViewModel(app, graph).movieStatus(film).first { it != null }
+        val status = VodViewModel(app, graph).movieStatus(film.id).first { it != null }
 
         assertThat(status).isEqualTo(CoverStatus.InProgress(progress = 0.5f, remainingMillis = 3_000_000))
     }
@@ -123,13 +123,13 @@ class VodDetailStatusTest {
         graph.database.movies().upsertAll(listOf(film, film.copy(id = 70, streamId = "m70")))
         graph.viewerLibrary.recordProgress("movie:70", positionMillis = 3_000_000, durationMillis = 6_000_000)
 
-        assertThat(VodViewModel(app, graph).movieStatus(film).first()).isNull()
+        assertThat(VodViewModel(app, graph).movieStatus(film.id).first()).isNull()
     }
 
     @Test
     fun `a film never started says nothing`() = runTest {
         graph.database.movies().upsertAll(listOf(film))
 
-        assertThat(VodViewModel(app, graph).movieStatus(film).first()).isNull()
+        assertThat(VodViewModel(app, graph).movieStatus(film.id).first()).isNull()
     }
 }

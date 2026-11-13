@@ -29,6 +29,7 @@ class Favourites internal constructor(
     private val db: OpenTvDatabase,
     private val activeProfileId: StateFlow<Long>,
     private val clock: () -> Long,
+    private val versionIds: VersionIds,
 ) {
     private val dao = db.favourites()
     private val profiles = db.profiles()
@@ -40,26 +41,52 @@ class Favourites internal constructor(
         clock(),
     )
 
-    suspend fun set(movie: Movie, favourite: Boolean) = db.setFavourite(
-        activeProfileId.value,
-        FavouriteTitle(StreamKind.MOVIE, movie.sourceId, movie.streamId),
-        favourite,
-        clock(),
-    )
+    /**
+     * Stars the Version of a film the viewer is on. Unstarring clears every Version of it, since the title
+     * stays a Favourite while any of them is one (ADR 0007).
+     */
+    suspend fun set(movie: Movie, favourite: Boolean) {
+        val versions = if (favourite) listOf(movie) else db.versionsOf(movie, versionIds)
+        val at = clock()
+        versions.forEach {
+            db.setFavourite(
+                activeProfileId.value,
+                FavouriteTitle(StreamKind.MOVIE, it.sourceId, it.streamId),
+                favourite,
+                at,
+            )
+        }
+    }
 
-    suspend fun set(series: Series, favourite: Boolean) = db.setFavourite(
-        activeProfileId.value,
-        FavouriteTitle(StreamKind.SERIES, series.sourceId, series.seriesId),
-        favourite,
-        clock(),
-    )
+    /** As [set] for a film: starring takes this Version, unstarring clears every Version. */
+    suspend fun set(series: Series, favourite: Boolean) {
+        val versions = if (favourite) listOf(series) else db.versionsOf(series, versionIds)
+        val at = clock()
+        versions.forEach {
+            db.setFavourite(
+                activeProfileId.value,
+                FavouriteTitle(StreamKind.SERIES, it.sourceId, it.seriesId),
+                favourite,
+                at,
+            )
+        }
+    }
 
     /**
-     * Whether the active Profile has this title as a Favourite: [itemId] is the provider's stream id
-     * ([kind] LIVE or MOVIE) or series id (SERIES) within the source [sourceId].
+     * Whether the active Profile has this channel or Version as a Favourite: [itemId] is the provider's
+     * stream id ([kind] LIVE or MOVIE) or series id (SERIES) within the source [sourceId].
      */
     suspend fun contains(kind: StreamKind, sourceId: Long, itemId: String): Boolean =
         dao.contains(activeProfileId.value, kind, sourceId, itemId)
+
+    /** Whether the active Profile has any Version of [title] as a Favourite (ADR 0007). */
+    suspend fun isFavourite(title: VodTitle): Boolean = when (title) {
+        is VodTitle.OfMovie -> db.versionsOf(title.movie, versionIds).any {
+            contains(StreamKind.MOVIE, it.sourceId, it.streamId)
+        }
+        is VodTitle.OfSeries ->
+            db.versionsOf(title.series, versionIds).any { contains(StreamKind.SERIES, it.sourceId, it.seriesId) }
+    }
 
     /** The active Profile's Favourite channels in guide order, leaving out channels hidden on this device. */
     @OptIn(ExperimentalCoroutinesApi::class)
@@ -73,7 +100,8 @@ class Favourites internal constructor(
 
     /**
      * The active Profile's Favourite movies and series together, the most recently starred first, so
-     * starring a title again brings it to the front.
+     * starring a title again brings it to the front. A title starred in several Versions is there once,
+     * as the Version starred last.
      */
     @OptIn(ExperimentalCoroutinesApi::class)
     fun titles(): Flow<List<VodTitle>> = activeProfileId.flatMapLatest { profileId ->
@@ -84,6 +112,7 @@ class Favourites internal constructor(
                 )
                 .sortedByDescending { it.first }
                 .map { it.second }
+                .distinctBy { it.titleKey() }
         }
     }
 
@@ -149,4 +178,10 @@ private suspend fun OpenTvDatabase.setFavourite(
             }
         }
     }
+}
+
+/** What makes two of a list's titles one: their TMDB id, or for a title without one, the row itself. */
+private fun VodTitle.titleKey(): Any = when (this) {
+    is VodTitle.OfMovie -> knownTmdbId(movie.tmdbId)?.let { "movie:$it" } ?: movie
+    is VodTitle.OfSeries -> knownTmdbId(series.tmdbId)?.let { "series:$it" } ?: series
 }

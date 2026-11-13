@@ -10,9 +10,11 @@ import androidx.media3.common.MimeTypes
 import androidx.test.core.app.ApplicationProvider
 import app.opentv.data.model.Series
 import app.opentv.data.repo.MediaKey
+import app.opentv.data.repo.ProfileSettings
 import app.opentv.data.repo.VodQualities
 import app.opentv.player.DecoderSize
 import com.google.common.truth.Truth.assertThat
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Before
@@ -32,7 +34,14 @@ class VodQualitiesFetchTest {
 
     private val test = TestCatalog(ApplicationProvider.getApplicationContext<Application>())
     private val stick = FakeDecoders(MimeTypes.VIDEO_H265 to DecoderSize(1920, 1088))
-    private val qualities = VodQualities(test.db, test.catalog, stick)
+    private val profile = MutableStateFlow(1L)
+    private val qualities = VodQualities(
+        test.db,
+        test.catalog,
+        stick,
+        ProfileSettings(test.db, profile),
+        deviceLanguage = { "en" },
+    )
 
     private fun series(id: Long, name: String) = Series(
         id = id,

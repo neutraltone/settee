@@ -9,13 +9,11 @@ import android.content.Context
 import androidx.media3.common.MimeTypes
 import androidx.test.core.app.ApplicationProvider
 import app.opentv.data.model.Channel
-import app.opentv.data.model.Movie
 import app.opentv.data.model.Source
 import app.opentv.data.model.SourceKind
 import app.opentv.data.repo.ChannelLineup
 import app.opentv.data.repo.LineupChannel
 import app.opentv.data.repo.LineupScope
-import app.opentv.data.repo.collapseMovieVariants
 import app.opentv.player.DecoderSize
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.CoroutineScope
@@ -32,7 +30,10 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
-/** The Quality that plays by default is the highest this device's decoders can play, going by its name (#184). */
+/**
+ * The Quality of a Channel that plays by default is the highest this device's decoders can play, going by its
+ * name (#184). A film's or show's Versions are VodQualitiesTest's.
+ */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], application = android.app.Application::class)
 class DefaultQualityTest {
@@ -62,18 +63,8 @@ class DefaultQualityTest {
     }
 
     @Test
-    fun `a Movie group skips a 4K Quality on a device whose decoders stop at 1080p`() {
-        val group = groupOf(decodersUpTo(1088), "Film 2001 4K", "Film 2001 HD")
-
-        assertThat(group.primary.name).isEqualTo("Film 2001 HD")
-        assertThat(group.variants.map { it.movie.name }).containsExactly("Film 2001 4K", "Film 2001 HD").inOrder()
-    }
-
-    @Test
     fun `4K stays the default where a decoder lists 2160`() = runTest {
         assertThat(channelOn(decodersUpTo(2160), "News 4K", "News HD").primary.name).isEqualTo("News 4K")
-        assertThat(groupOf(decodersUpTo(2160), "Film 2001 4K", "Film 2001 HD").primary.name)
-            .isEqualTo("Film 2001 4K")
     }
 
     @Test
@@ -102,8 +93,6 @@ class DefaultQualityTest {
     @Test
     fun `when every Quality is skipped the best still plays, so it gets the sentence`() = runTest {
         assertThat(channelOn(decodersUpTo(1088), "News 8K", "News 4K").primary.name).isEqualTo("News 8K")
-        assertThat(groupOf(decodersUpTo(1088), "Film 2001 8K", "Film 2001 4K").primary.name)
-            .isEqualTo("Film 2001 8K")
     }
 
     @Test
@@ -183,26 +172,6 @@ class DefaultQualityTest {
         catalogue.catalog.renormalizeAll()
         return lineupOn(decoders).channels(LineupScope.All()).first().single()
     }
-
-    private fun groupOf(decoders: FakeDecoders, vararg names: String) = collapseMovieVariants(
-        names.mapIndexed { i, name ->
-            Movie(
-                id = i + 1L,
-                sourceId = 1,
-                streamId = "$i",
-                name = name,
-                categoryId = null,
-                posterUrl = null,
-                rating = null,
-                year = null,
-                plot = null,
-                durationSeconds = null,
-                containerExtension = null,
-                streamUrl = "http://example.com/$i.mp4",
-            )
-        },
-        decoders,
-    ).single()
 
     private fun decodersUpTo(height: Int) = FakeDecoders(
         MimeTypes.VIDEO_H265 to DecoderSize(height * 16 / 9, height),

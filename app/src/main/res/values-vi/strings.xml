@@ -302,6 +302,12 @@
     <string name="onboarding_xtream_or_playlist_help">Nếu nhà cung cấp đưa bạn một liên kết dài thay vì thông tin đăng nhập, hãy thêm nó dưới dạng danh sách phát.</string>
     <string name="providers_empty">Chưa có nhà cung cấp nào. Thêm dịch vụ bạn đang trả tiền để bắt đầu.</string>
     <string name="addons_empty">Chưa có tiện ích nào. Dán liên kết của tiện ích ở trên để thêm.</string>
+    <!-- A film or show's Versions (#181) -->
+    <string name="vod_cant_play_tv">TV này không phát được %1$s</string>
+    <string name="vod_cant_play_device">Thiết bị này không phát được %1$s</string>
+    <string name="vod_language_title">Ở đây chỉ có tiếng %1$s</string>
+    <string name="vod_language_body_tv">TV này không phát được phiên bản bằng ngôn ngữ của bạn.</string>
+    <string name="vod_language_body_device">Thiết bị này không phát được phiên bản bằng ngôn ngữ của bạn.</string>
     <string name="error_tmdb_key_rejected">TMDB không chấp nhận khóa đó. Hãy kiểm tra bạn đã sao chép toàn bộ API Key, rồi thử lại.</string>
     <string name="error_tmdb_unreachable_tv">Không kết nối được TMDB. Hãy kiểm tra TV này đang trực tuyến, rồi thử lại.</string>
     <string name="error_tmdb_unreachable_device">Không kết nối được TMDB. Hãy kiểm tra thiết bị này đang trực tuyến, rồi thử lại.</string>

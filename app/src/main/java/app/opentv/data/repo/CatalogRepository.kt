@@ -75,94 +75,53 @@ data class GenreGroup<T>(val genre: String, val items: List<T>)
 sealed interface VodTitle {
     val name: String
 
+    /** Its row's id in its own table: a film's and a show's can be the same number. */
+    val id: Long
+    val kind: StreamKind
+
     data class OfMovie(val movie: Movie) : VodTitle {
         override val name get() = movie.name
+        override val id get() = movie.id
+        override val kind get() = StreamKind.MOVIE
     }
 
     data class OfSeries(val series: Series) : VodTitle {
         override val name get() = series.name
+        override val id get() = series.id
+        override val kind get() = StreamKind.SERIES
     }
 }
-
-/** One quality variant of a film, with the quality parsed from its name by [ChannelNameNormalizer]. */
-data class MovieVariant(val movie: Movie, val qualityLabel: String, val qualityRank: Int)
-
-/** One logical film with its switchable quality tiers, best first — the VOD analogue of a channel group. */
-@androidx.compose.runtime.Immutable
-data class MovieVariantGroup(
-    /** The highest Quality this device can play: what a row shows and plays by default. */
-    val primary: Movie,
-    /** Every variant (including [primary]), best quality first. */
-    val variants: List<MovieVariant>,
-) {
-    val hasMultipleQualities: Boolean get() = variants.size > 1
-}
-
-/** A standalone 4-digit release year (19xx/20xx) as it appears inside a VOD title. */
-private val VOD_YEAR = Regex("""\b(19|20)\d{2}\b""")
 
 /**
- * Collapses obvious quality variants of the same film — "The Godfather 1972 HD" and
- * "The Godfather 4K" — into one entry with switchable tiers, the VOD analogue of a channel's
- * quality group. Pure and in-memory: movies carry no stored groupKey, so the key is computed here
- * from the normalised, year-stripped name plus the year (the field, else the one embedded in the
- * name). Group order follows first appearance; variants within a group are best-quality first.
- *
- * It folds only genuine quality variants: edition tokens [ChannelNameNormalizer] does not know
- * (IMAX, EXTENDED, 3D) stay in the name and keep those cuts separate — intended. Two same-named
- * films that both lack any year will merge, an accepted edge for a best-effort collapse.
+ * One cover on Movies or Shows, in a row or a category's grid: a film or show, however many of its
+ * Versions are listed. [name] is the provider's, where a Quality is written, [title] the cleaned one the
+ * card shows, and [badge] what its Versions say of its Quality ([titleBadge]). Compose infers it's stable
+ * from its fields, so the data layer needs no Compose annotation.
  */
-internal fun collapseMovieVariants(movies: List<Movie>, decoders: DecoderList): List<MovieVariantGroup> =
-    foldQualities(movies, Movie::name, Movie::year, decoders).map { (primary, variants) ->
-        MovieVariantGroup(primary = primary, variants = variants.map { MovieVariant(it.item, it.label, it.rank) })
-    }
+data class TitleCover(
+    val id: Long,
+    val name: String,
+    val title: String,
+    val posterUrl: String?,
+    val badge: String? = null,
+)
 
 /**
- * One cover on Movies or Shows, in a row or a category's grid: a show, or a film with its Qualities
- * folded into the one this device plays by default ([qualities] says how many there are). [name] is
- * the provider's, where a Quality is written, and [title] the cleaned one the card shows. Compose
- * infers it's stable from its fields, so the data layer needs no Compose annotation.
+ * A category's films or shows as grid covers, one per title however many of its Versions the category
+ * holds (ADR 0007), in the order the rows came. The first Version this device plays stands for it.
  */
-data class TitleCover(val id: Long, val name: String, val title: String, val posterUrl: String?, val qualities: Int = 1)
-
-/** A category's films as grid covers, each film's Qualities folded as [collapseMovieVariants] does. */
-internal fun movieCovers(rows: List<CoverRow>, decoders: DecoderList): List<TitleCover> =
-    foldQualities(rows, CoverRow::name, CoverRow::year, decoders).map { (primary, variants) ->
-        primary.toCover(qualities = variants.size)
+internal fun titleCovers(rows: List<CoverRow>, titles: TitleIndex.Titles, decoders: DecoderList): List<TitleCover> =
+    rows.groupBy { titles.of(it.id) ?: it.id }.values.map { versions ->
+        val shown = versions.firstOrNull { decoders.playsQualityRanked(versionTraits(it.name, null).qualityRank) }
+            ?: versions.first()
+        TitleCover(
+            id = shown.id,
+            name = shown.name,
+            title = VodTitleCleaner.clean(shown.name),
+            posterUrl = shown.posterUrl ?: versions.firstNotNullOfOrNull { it.posterUrl },
+            badge = titles.badgeFor(shown.id, shown.name),
+        )
     }
-
-/** A category's shows as grid covers. */
-internal fun seriesCovers(rows: List<CoverRow>): List<TitleCover> = rows.map { it.toCover() }
-
-private fun CoverRow.toCover(qualities: Int = 1) =
-    TitleCover(id, name, VodTitleCleaner.clean(name), posterUrl, qualities)
-
-private class RankedVariant<T>(val item: T, val label: String, val rank: Int)
-
-/** See [collapseMovieVariants]: each film's primary, and all its variants best first. */
-private fun <T> foldQualities(
-    items: List<T>,
-    nameOf: (T) -> String,
-    yearOf: (T) -> Int?,
-    decoders: DecoderList,
-): List<Pair<T, List<RankedVariant<T>>>> {
-    val groups = LinkedHashMap<String, MutableList<RankedVariant<T>>>()
-    for (item in items) {
-        val name = nameOf(item)
-        val embeddedYear = VOD_YEAR.find(name)?.value?.toIntOrNull()
-        val normalized = ChannelNameNormalizer.normalize(VOD_YEAR.replace(name, " "))
-        val year = yearOf(item) ?: embeddedYear
-        val key = normalized.groupKey + "|" + (year?.toString() ?: "")
-        groups.getOrPut(key) {
-            mutableListOf()
-        }.add(RankedVariant(item, normalized.qualityLabel, normalized.qualityRank))
-    }
-    return groups.values.map { variants ->
-        val ordered = variants.sortedWith(compareByDescending<RankedVariant<T>> { it.rank }.thenBy { nameOf(it.item) })
-        val primary = ordered.firstOrNull { decoders.playsQualityRanked(it.rank) } ?: ordered.first()
-        primary.item to ordered
-    }
-}
 
 /**
  * Channels, movies and series.
