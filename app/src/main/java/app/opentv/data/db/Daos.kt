@@ -549,7 +549,7 @@ interface MovieDao {
     fun search(query: String, limit: Int = 200): Flow<List<Movie>>
 
     /** Newest-first, for the "Recently Added" home row. Reactive so it fills in as VOD sync lands. */
-    @Query("SELECT * FROM movies ORDER BY addedMillis DESC LIMIT :limit")
+    @Query(RECENT_MOVIES)
     fun observeRecentlyAdded(limit: Int): Flow<List<Movie>>
 
     /**
@@ -807,7 +807,7 @@ interface SeriesDao {
     fun search(query: String, limit: Int = 200): Flow<List<Series>>
 
     /** Newest-first, for the "Recently Added" home row. Reactive so it fills in as VOD sync lands. */
-    @Query("SELECT * FROM series ORDER BY addedMillis DESC LIMIT :limit")
+    @Query(RECENT_SERIES)
     fun observeRecentlyAdded(limit: Int): Flow<List<Series>>
 
     /** Every series, newest first — working set for the Kotlin-side by-genre / more-like-this feeds. */
@@ -1391,6 +1391,16 @@ data class StarredMovie(@Embedded val movie: Movie, val starredAtMillis: Long)
 
 /** A Favourite series and when the Profile last starred it. */
 data class StarredSeries(@Embedded val series: Series, val starredAtMillis: Long)
+
+/**
+ * Home's Recently Added films, by walking the `addedMillis` index backwards to the limit. Room re-runs it
+ * on every write to `movies`, which the background title lookups make every few seconds, so sorting the
+ * whole library each time would cost Home its smoothness. A const so the query-plan test reads it.
+ */
+internal const val RECENT_MOVIES = "SELECT * FROM movies ORDER BY addedMillis DESC LIMIT :limit"
+
+/** Home's Recently Added shows. See [RECENT_MOVIES]. */
+internal const val RECENT_SERIES = "SELECT * FROM series ORDER BY addedMillis DESC LIMIT :limit"
 
 /** A person's films, by an index lookup on their credits. A const so the query-plan test reads it. */
 internal const val MOVIES_WITH_PERSON = """

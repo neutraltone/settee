@@ -115,6 +115,29 @@ class RoomMigrationTest {
     }
 
     @Test
+    fun `indexing when titles were added for 13 keeps every film and show`() {
+        val name = "added-index.db"
+        helper.createDatabase(name, 12).use { db ->
+            db.execSQL(
+                "INSERT INTO movies (id, sourceId, streamId, name, streamUrl, addedMillis) VALUES " +
+                    "(7, 1, 'film', 'Film', 'http://example.com/7.mp4', 5)",
+            )
+            db.execSQL(
+                "INSERT INTO series (id, sourceId, seriesId, name, addedMillis) VALUES (9, 1, 'show', 'Show', 6)",
+            )
+        }
+
+        helper.runMigrationsAndValidate(name, 13, true, *OpenTvDatabase.MIGRATIONS).use {
+            fun first(sql: String): String = it.query(sql).use { row ->
+                row.moveToFirst()
+                row.getString(0)
+            }
+            assertThat(first("SELECT name || ':' || addedMillis FROM movies WHERE id = 7")).isEqualTo("Film:5")
+            assertThat(first("SELECT name || ':' || addedMillis FROM series WHERE id = 9")).isEqualTo("Show:6")
+        }
+    }
+
+    @Test
     fun `the latest exported schema is the version the app opens`() {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         val db = OpenTvDatabase.build(context)

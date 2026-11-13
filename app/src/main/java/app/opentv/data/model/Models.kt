@@ -304,6 +304,8 @@ data class Programme(
     indices = [
         Index(value = ["sourceId", "streamId"], unique = true),
         Index(value = ["sourceId", "categoryId"]),
+        // Home's Recently Added walks it backwards, rather than sorting the library on every write.
+        Index(value = ["addedMillis"]),
     ],
 )
 data class Movie(
@@ -370,6 +372,8 @@ data class Movie(
     indices = [
         Index(value = ["sourceId", "seriesId"], unique = true),
         Index(value = ["sourceId", "categoryId"]),
+        // See Movie's.
+        Index(value = ["addedMillis"]),
     ],
 )
 data class Series(
