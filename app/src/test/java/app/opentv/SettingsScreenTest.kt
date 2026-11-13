@@ -433,7 +433,6 @@ class SettingsScreenTest {
         }
         waitFor("Show hidden categories now")
         compose.onNodeWithText("Enter your PIN").assertDoesNotExist()
-        compose.onNodeWithText("also locked on your other devices", substring = true).assertExists()
         paneTitle().assertTextContains("Parental lock")
         highlighted().assertTextContains("Show hidden categories now")
         captureScreen("settings_parental")

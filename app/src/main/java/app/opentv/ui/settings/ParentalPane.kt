@@ -5,25 +5,19 @@
  */
 package app.opentv.ui.settings
 
-import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.unit.dp
 import app.opentv.R
 import app.opentv.core.ServiceLocator
 import app.opentv.ui.design.ListRow
-import app.opentv.ui.design.SetteeColors
-import app.opentv.ui.design.SetteeType
-import app.opentv.ui.design.Text
 
 /**
  * Parental lock (GLOSSARY: Parental Lock). With a PIN set, the pane shows only "Enter your PIN"
@@ -111,12 +105,6 @@ private fun ParentalSettings(pinIsSet: Boolean, onSetPin: () -> Unit, onOpenLock
         } else {
             pluralStringResource(R.plurals.parental_locked_count, hidden.size, hidden.size)
         },
-    )
-    Text(
-        stringResource(R.string.parental_lock_sync_note),
-        SetteeType.Body,
-        color = SetteeColors.QuietText,
-        modifier = Modifier.padding(top = 12.dp),
     )
 }
 

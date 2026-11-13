@@ -51,15 +51,23 @@ fun LockedCategoriesScreen(
 ) {
     val categories by viewModel.categoryGroups.collectAsState()
     val hidden by settings.hiddenCategories.collectAsState()
-    val first = remember { FocusRequester() }
+    val firstRow = remember { FocusRequester() }
     // Once, when the categories arrive. Not startsFocused on the first row: a lazy row is composed
     // again each time it scrolls back into view, and would take the Highlight back each time.
     LaunchedEffect(categories.isNotEmpty()) {
         if (categories.isEmpty()) return@LaunchedEffect
         withFrameNanos {}
-        runCatching { first.requestFocus() }
+        runCatching { firstRow.requestFocus() }
     }
     BackHandler(onBack = onBack)
+    // The pane only opens this once the PIN is in, but Android can bring the app back on this
+    // screen after it closed, which forgets the PIN: then it's not this screen's to show.
+    val pinIsSet by settings.pinIsSet.collectAsState()
+    val pinEntered by settings.pinEntered.collectAsState()
+    if (pinIsSet && !pinEntered) {
+        LaunchedEffect(Unit) { onBack() }
+        return
+    }
     Column(
         modifier
             .fillMaxSize()
@@ -87,7 +95,7 @@ fun LockedCategoriesScreen(
                     group.label,
                     onClick = { settings.setCategoryLocked(group.key, !locked) },
                     switch = locked,
-                    modifier = if (index == 0) Modifier.focusRequester(first) else Modifier,
+                    modifier = if (index == 0) Modifier.focusRequester(firstRow) else Modifier,
                 )
             }
         }

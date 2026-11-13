@@ -62,6 +62,7 @@ class LockedCategoriesScreenTest {
     @After
     fun close() {
         graph.settings.setHiddenCategories(emptySet())
+        graph.settings.clearPin()
         viewModels.clear()
         graph.database.close()
     }
@@ -116,6 +117,7 @@ class LockedCategoriesScreenTest {
         show()
 
         compose.onNodeWithText("Locked categories").assertExists()
+        compose.onNodeWithText("also locked on your other devices", substring = true).assertExists()
         row("News").assertIsFocused()
         row("News").assertIsOff()
         row("Adult").assertIsOn()
@@ -151,6 +153,20 @@ class LockedCategoriesScreenTest {
         compose.waitForIdle()
 
         compose.onNodeWithText("No categories yet", substring = true).assertExists()
+        captureScreen("locked_categories_empty")
+    }
+
+    @Test
+    fun `with a PIN set but not entered, as when Android brings the app back on this screen, it leaves at once`() {
+        library()
+        graph.settings.setPin("1234")
+        graph.settings.forgetPinEntry()
+        compose.setTvContent {
+            LockedCategoriesScreen(onBack = { left = true }, viewModel = viewModel, settings = graph.settings)
+        }
+
+        compose.runOnIdle { assertThat(left).isTrue() }
+        compose.onNodeWithText("Classics").assertDoesNotExist()
     }
 
     @Test
