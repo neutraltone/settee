@@ -6,7 +6,7 @@ ship in the app.
 
 Every image comes from Wikimedia Commons, under an open licence or in the public domain: the Blender
 Foundation's open films, and posters for films whose copyright has expired. They were scaled down and
-saved as JPEGs; the Flash Gordon backdrop is a crop of its poster. Nothing else was changed.
+saved as JPEGs; the Flash Gordon backdrop is a darkened crop of its poster, so text can sit on it. Nothing else was changed.
 
 Add only images whose Commons page shows CC BY, CC0 or public domain, and add a row here when you do.
 
@@ -20,7 +20,7 @@ Add only images whose Commons page shows CC BY, CC0 or public domain, and add a 
 | `elephants-dream-backdrop.jpg` | Ton Roosendaal et al. | CC BY 2.5 | [Elephants Dream s5 both.jpg](https://commons.wikimedia.org/wiki/File:Elephants_Dream_s5_both.jpg) |
 | `elephants-dream-poster.jpg` | Bassam Kurdali, Andy Goralczyk, and the Blender Foundation | CC BY 4.0 | [ElephantsDreamPoster.jpg](https://commons.wikimedia.org/wiki/File:ElephantsDreamPoster.jpg) |
 | `flash-gordon-poster.jpg` | Employee(s) of Universal | Public domain | [Flash Gordon (serial).jpg](https://commons.wikimedia.org/wiki/File:Flash_Gordon_(serial).jpg) |
-| `flash-gordon-backdrop.jpg` | Employee(s) of Universal, cropped from the poster | Public domain | [Flash Gordon (serial).jpg](https://commons.wikimedia.org/wiki/File:Flash_Gordon_(serial).jpg) |
+| `flash-gordon-backdrop.jpg` | Employee(s) of Universal; cropped from the poster and darkened | Public domain | [Flash Gordon (serial).jpg](https://commons.wikimedia.org/wiki/File:Flash_Gordon_(serial).jpg) |
 | `plan-9-poster.jpg` | Distributors Corporation of America | Public domain | [Plan 9 Alternative poster.jpg](https://commons.wikimedia.org/wiki/File:Plan_9_Alternative_poster.jpg) |
 | `safety-last-poster.jpg` | Unknown | Public domain | [Safety last poster.jpg](https://commons.wikimedia.org/wiki/File:Safety_last_poster.jpg) |
 | `sherlock-jr-poster.jpg` | Unknown | Public domain | [Sherlock jr poster.jpg](https://commons.wikimedia.org/wiki/File:Sherlock_jr_poster.jpg) |

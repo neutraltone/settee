@@ -12,12 +12,18 @@ import android.os.Looper
 import androidx.activity.ComponentActivity
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.hasClickAction
+import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.isFocused
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onRoot
+import androidx.compose.ui.test.performKeyInput
+import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.test.requestFocus
 import androidx.test.core.app.ApplicationProvider
 import app.opentv.core.ServiceLocator
@@ -89,6 +95,11 @@ class ReadmeScreenshotsTest {
     fun close() {
         viewModels.clear()
         graph.database.close()
+    }
+
+    private fun press(key: Key) {
+        compose.onRoot().performKeyInput { pressKey(key) }
+        compose.waitForIdle()
     }
 
     private fun art(name: String) = "https://example.com/readme/$name.jpg"
@@ -291,7 +302,8 @@ class ReadmeScreenshotsTest {
         }
         artwork.awaitLoaded(compose)
 
-        compose.onNodeWithText(sintel.name).assertIsFocused()
+        // Sintel is in Recently added too; the first is its Continue Watching card.
+        compose.onAllNodes(hasText(sintel.name) and hasClickAction())[0].assertIsFocused()
         captureScreen("readme_home")
     }
 
@@ -379,9 +391,17 @@ class ReadmeScreenshotsTest {
             shadowOf(Looper.getMainLooper()).idle()
             !viewModel.recommendingMovies.value && viewModel.recommendedMovies.value.isNotEmpty()
         }
-        val cover = hasText(tearsOfSteel.name) and hasClickAction()
-        compose.waitUntilAtLeastOneExists(cover, 5_000)
-        compose.onAllNodes(cover)[0].requestFocus()
+        // As the app gets there: OK on Movies in the rail lands on the first cover, then Right
+        // along the row to a film with a backdrop. Focusing the cover directly lost out to the
+        // screen placing its own first Highlight once it had loaded.
+        compose.onNode(hasContentDescription("Movies") or hasText("Movies")).requestFocus()
+        press(Key.DirectionCenter)
+        compose.mainClock.advanceTimeBy(500)
+        val cover = hasText(tearsOfSteel.name) and hasClickAction() and isFocused()
+        repeat(openFilms.size + classics.size) {
+            if (compose.onAllNodes(cover).fetchSemanticsNodes().isEmpty()) press(Key.DirectionRight)
+        }
+        compose.onNode(cover).assertExists()
         compose.waitUntilAtLeastOneExists(hasText(tearsOfSteel.plot!!), 5_000)
         artwork.awaitLoaded(compose)
 
