@@ -149,58 +149,49 @@ fun SubtitleNote(subtitles: VodSubtitles, modifier: Modifier = Modifier) {
     }
 }
 
-/** The rows OpenSubtitles adds to the subtitle list: its entry first, the title's downloads, and Timing. */
+/**
+ * The rows OpenSubtitles adds to the top of the subtitle list: its entry, then, while a Downloaded
+ * Subtitle shows, its Timing, then the title's Downloaded Subtitles. Kept together at the top, so the
+ * subtitle the viewer picked and the control that adjusts it are where they picked it from.
+ */
 @Composable
-internal fun openSubtitlesChoices(
-    subtitles: VodSubtitles,
-    onFind: () -> Unit,
-    onDone: () -> Unit,
-): Pair<List<PlayerChoice>, List<PlayerChoice>> {
+internal fun openSubtitlesChoices(subtitles: VodSubtitles, onFind: () -> Unit, onDone: () -> Unit): List<PlayerChoice> {
     val subject by subtitles.subject.collectAsState()
     val downloaded by subtitles.downloaded.collectAsState()
     val showing by subtitles.showing.collectAsState()
-    if (subject == null) return emptyList<PlayerChoice>() to emptyList()
-    val top = listOf(
-        PlayerChoice(
-            stringResource(R.string.opensubtitles_name),
-            selected = false,
-            onClick = onFind,
-            detail = stringResource(R.string.opensubtitles_find),
-            tag = OPENSUBTITLES_ENTRY_TAG,
-        ),
-    )
+    if (subject == null) return emptyList()
     val downloadedLabel = stringResource(R.string.opensubtitles_downloaded)
     val kindLabels = kindLabels()
-    val bottom = buildList {
-        downloaded.orEmpty().sortedBy { it.language }.forEach { subtitle ->
-            val selected = showing?.subtitle?.fileId == subtitle.fileId
-            add(
-                PlayerChoice(
-                    languageName(subtitle.language) ?: subtitle.language,
-                    selected = selected,
-                    onClick = {
-                        subtitles.show(subtitle, picked = true)
-                        onDone()
-                    },
-                    detail = listOfNotNull(downloadedLabel, kindLabels[subtitle.kind]).joinToString(" · "),
-                ),
-            )
-        }
-        showing?.let { current ->
-            add(
-                PlayerChoice(
-                    stringResource(R.string.opensubtitles_timing),
-                    selected = false,
-                    onClick = {},
-                    detail = timingLabel(current.subtitle.offsetMillis) + " · " +
-                        stringResource(R.string.opensubtitles_timing_hint),
-                    onAdjust = subtitles::nudge,
-                    tag = TIMING_TAG,
-                ),
-            )
-        }
+    val entry = PlayerChoice(
+        stringResource(R.string.opensubtitles_name),
+        selected = false,
+        onClick = onFind,
+        detail = stringResource(R.string.opensubtitles_find),
+        tag = OPENSUBTITLES_ENTRY_TAG,
+    )
+    val timing = showing?.let { current ->
+        PlayerChoice(
+            stringResource(R.string.opensubtitles_timing),
+            selected = false,
+            onClick = {},
+            detail = timingLabel(current.subtitle.offsetMillis) + " · " +
+                stringResource(R.string.opensubtitles_timing_hint),
+            onAdjust = subtitles::nudge,
+            tag = TIMING_TAG,
+        )
     }
-    return top to bottom
+    val saved = downloaded.orEmpty().sortedBy { it.language }.map { subtitle ->
+        PlayerChoice(
+            languageName(subtitle.language) ?: subtitle.language,
+            selected = showing?.subtitle?.fileId == subtitle.fileId,
+            onClick = {
+                subtitles.show(subtitle, picked = true)
+                onDone()
+            },
+            detail = listOfNotNull(downloadedLabel, kindLabels[subtitle.kind]).joinToString(" · "),
+        )
+    }
+    return listOfNotNull(entry, timing) + saved
 }
 
 /** "+0.3 s", "−1.2 s", "0.0 s". */

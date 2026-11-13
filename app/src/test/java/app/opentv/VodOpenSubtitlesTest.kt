@@ -235,6 +235,13 @@ class VodOpenSubtitlesTest {
         searchAndPickEnglish()
 
         openSubtitleList()
+        // At the top, under OpenSubtitles: Timing, then the Downloaded Subtitle, then the stream's own choices.
+        fun top(of: androidx.compose.ui.test.SemanticsNodeInteraction) = of.fetchSemanticsNode().boundsInRoot.top
+        val entry = top(compose.onNodeWithTag(OPENSUBTITLES_ENTRY_TAG))
+        val timing = top(compose.onNodeWithTag(TIMING_TAG))
+        val downloaded = top(compose.onNode(hasText("English") and hasText("Downloaded", substring = true)))
+        val off = top(compose.onNodeWithText("Off"))
+        assertThat(listOf(entry, timing, downloaded, off)).isInStrictOrder()
         compose.onNodeWithTag(TIMING_TAG).requestFocus()
         press(Key.DirectionRight)
         press(Key.DirectionRight)

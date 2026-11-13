@@ -670,8 +670,8 @@ private enum class VodPanel { NONE, SUBTITLES, AUDIO, OPENSUBTITLES }
 
 /**
  * Subtitles or audio, in the player's choice panel. With OpenSubtitles ([subtitles]), the subtitle
- * list starts with its entry and ends with the title's Downloaded Subtitles and, while one shows,
- * its Timing.
+ * list starts with its rows (see [openSubtitlesChoices]): its entry, Timing while a Downloaded Subtitle
+ * shows, then the title's Downloaded Subtitles, before Off and the stream's own tracks.
  */
 @OptIn(UnstableApi::class)
 @Composable
@@ -689,10 +689,10 @@ private fun TrackPanel(
     val trackType = if (panel == VodPanel.SUBTITLES) C.TRACK_TYPE_TEXT else C.TRACK_TYPE_AUDIO
     val groups = tracks.groups.filter { it.type == trackType }
     val options = mutableListOf<PlayerChoice>()
-    val (above, below) = if (panel == VodPanel.SUBTITLES && subtitles != null) {
+    val above = if (panel == VodPanel.SUBTITLES && subtitles != null) {
         openSubtitlesChoices(subtitles, onFind, onDone)
     } else {
-        emptyList<PlayerChoice>() to emptyList()
+        emptyList()
     }
     // A Downloaded Subtitle is drawn by the screen with the stream's text off, so none of the
     // stream's tracks counts as chosen while one shows.
@@ -721,7 +721,7 @@ private fun TrackPanel(
     }
     PlayerChoicePanel(
         title = stringResource(if (panel == VodPanel.SUBTITLES) R.string.player_subtitles else R.string.player_audio),
-        choices = above + options + below,
+        choices = above + options,
         startFocus = firstFocus,
         onClose = onDone,
         modifier = modifier,
