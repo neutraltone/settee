@@ -135,6 +135,12 @@ class VodSubtitles(
     /** Downloads [result], keeps it, and shows it. [onDone] hears whether it worked. */
     fun choose(result: SubtitleResult, onDone: (Throwable?) -> Unit) {
         val subject = _subject.value ?: return
+        // Already on the box: shown from there, rather than spending one of the day's downloads again.
+        _downloaded.value.orEmpty().firstOrNull { it.fileId == result.fileId }?.let { saved ->
+            show(saved, picked = true)
+            onDone(null)
+            return
+        }
         scope.launch {
             openSubtitles.fetch(subject, result).fold(
                 onSuccess = { saved ->

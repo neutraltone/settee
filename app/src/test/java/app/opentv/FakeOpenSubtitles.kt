@@ -26,11 +26,16 @@ class FakeOpenSubtitles {
     /** Every request body sent, in order. */
     val bodies: MutableList<String> = Collections.synchronizedList(mutableListOf())
 
+    /** Held open, downloads wait until it counts down, so a test can see what shows while one is fetched. */
+    @Volatile var downloadsHeld: java.util.concurrent.CountDownLatch? = null
+
     val http: OkHttpClient = OkHttpClient.Builder().addInterceptor { chain ->
         val request = chain.request()
         requests += request
         request.body?.let { body -> bodies += Buffer().also(body::writeTo).readUtf8() }
         val path = request.url.encodedPath.removePrefix("/api/v1")
+        // Bounded, so a test that fails before letting go fails rather than hangs.
+        if (path == "/download") downloadsHeld?.await(10, java.util.concurrent.TimeUnit.SECONDS)
         val reply = replies["${request.method} $path"] ?: if (path == "/subtitles") """{"data": []}""" else "{}"
         if (reply == "!") throw java.io.IOException("OpenSubtitles timed out")
         val status = Regex("!(\\d{3})\\s*(.*)", RegexOption.DOT_MATCHES_ALL).matchEntire(reply)

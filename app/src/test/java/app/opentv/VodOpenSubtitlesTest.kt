@@ -10,10 +10,11 @@ import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
+import androidx.compose.ui.test.hasAnyAncestor
+import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
-import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
@@ -33,9 +34,7 @@ import app.opentv.data.repo.SubtitleTitle
 import app.opentv.ui.player.SubtitlePicks
 import app.opentv.ui.vod.DOWNLOADED_SUBTITLE_TAG
 import app.opentv.ui.vod.LocalVodSubtitles
-import app.opentv.ui.vod.OPENSUBTITLES_ENTRY_TAG
 import app.opentv.ui.vod.OPENSUBTITLES_RESULTS_TAG
-import app.opentv.ui.vod.TIMING_TAG
 import app.opentv.ui.vod.VodPlayerContent
 import app.opentv.ui.vod.VodPlayerViewModel
 import app.opentv.ui.vod.VodSubtitles
@@ -92,6 +91,10 @@ class VodOpenSubtitlesTest {
     private val subtitles = vodSubtitles()
     private val noPicks = SubtitlePicks(onOff = {}, onPicked = {})
     private val heat = SubtitleTitle.film(source = "Provider", streamId = "1")
+
+    // The OpenSubtitles entry and the Timing row, by what they say.
+    private val entryRow = hasText("Find subtitles online")
+    private val timingRow = hasText("Timing")
 
     @Before
     fun seed() = runBlocking {
@@ -158,7 +161,7 @@ class VodOpenSubtitlesTest {
 
     private fun searchAndPickEnglish() {
         openSubtitleList()
-        compose.onNodeWithTag(OPENSUBTITLES_ENTRY_TAG).performClick()
+        compose.onNode(entryRow).performClick()
         until { compose.onAllNodes(hasText("English")).fetchSemanticsNodes().isNotEmpty() }
         compose.onNodeWithText("English").performClick()
         until { exists(DOWNLOADED_SUBTITLE_TAG) }
@@ -171,7 +174,7 @@ class VodOpenSubtitlesTest {
 
         openSubtitleList()
 
-        val entry = compose.onNodeWithTag(OPENSUBTITLES_ENTRY_TAG).fetchSemanticsNode().boundsInRoot
+        val entry = compose.onNode(entryRow).fetchSemanticsNode().boundsInRoot
         val off = compose.onNodeWithText("Off").fetchSemanticsNode().boundsInRoot
         assertThat(entry.top).isLessThan(off.top)
     }
@@ -183,7 +186,7 @@ class VodOpenSubtitlesTest {
         openSubtitleList()
 
         compose.onNodeWithText("Off").assertIsDisplayed()
-        assertThat(exists(OPENSUBTITLES_ENTRY_TAG)).isFalse()
+        assertThat(compose.onAllNodes(entryRow).fetchSemanticsNodes().isNotEmpty()).isFalse()
     }
 
     @Test
@@ -192,7 +195,7 @@ class VodOpenSubtitlesTest {
         until { subtitles.subject.value != null }
         openSubtitleList()
 
-        compose.onNodeWithTag(OPENSUBTITLES_ENTRY_TAG).performClick()
+        compose.onNode(entryRow).performClick()
         until { compose.onAllNodes(hasText("English")).fetchSemanticsNodes().isNotEmpty() }
 
         // The device's language comes before the more downloaded French.
@@ -204,7 +207,7 @@ class VodOpenSubtitlesTest {
         Espresso.pressBack()
         settle()
         assertThat(exists(OPENSUBTITLES_RESULTS_TAG)).isFalse()
-        compose.onNodeWithTag(OPENSUBTITLES_ENTRY_TAG).assertIsDisplayed()
+        compose.onNode(entryRow).assertIsDisplayed()
     }
 
     @Test
@@ -229,6 +232,48 @@ class VodOpenSubtitlesTest {
     }
 
     @Test
+    fun `the result being downloaded waits with the small aerial TV on its row`() {
+        showFilm()
+        until { subtitles.subject.value != null }
+        val held = java.util.concurrent.CountDownLatch(1)
+        site.downloadsHeld = held
+        openSubtitleList()
+        compose.onNode(entryRow).performClick()
+        until { compose.onAllNodes(hasText("English")).fetchSemanticsNodes().isNotEmpty() }
+
+        compose.onNodeWithText("English").performClick()
+
+        until { compose.onAllNodes(hasContentDescription("Downloading")).fetchSemanticsNodes().isNotEmpty() }
+        compose.onNodeWithText("English").assertIsFocused()
+        captureScreen("vod_player_opensubtitles_downloading")
+        held.countDown()
+        until { exists(DOWNLOADED_SUBTITLE_TAG) }
+    }
+
+    @Test
+    fun `a result already on the box says so, and picking it again shows it with no new download`() {
+        showFilm()
+        until { subtitles.subject.value != null }
+        searchAndPickEnglish()
+        val downloads = site.requests.count { it.url.encodedPath.endsWith("/download") }
+
+        openSubtitleList()
+        compose.onNode(entryRow).performClick()
+        until { compose.onAllNodes(hasText("Heat.1995.FR")).fetchSemanticsNodes().isNotEmpty() }
+
+        val english = hasText("English") and hasAnyAncestor(hasTestTag(OPENSUBTITLES_RESULTS_TAG))
+        compose.onNode(english and hasText("Downloaded", substring = true)).assertExists()
+        // Showing now, so ticked, as the chosen row of any list is.
+        compose.onNode(english and hasContentDescription("Selected")).assertExists()
+        captureScreen("vod_player_opensubtitles_downloaded")
+
+        compose.onNode(english).performClick()
+        until { !exists(OPENSUBTITLES_RESULTS_TAG) }
+        assertThat(site.requests.count { it.url.encodedPath.endsWith("/download") }).isEqualTo(downloads)
+        assertThat(exists(DOWNLOADED_SUBTITLE_TAG)).isTrue()
+    }
+
+    @Test
     fun `Timing moves a Downloaded Subtitle in tenths of a second, and keeps it for the next time`() {
         showFilm()
         until { subtitles.subject.value != null }
@@ -237,12 +282,12 @@ class VodOpenSubtitlesTest {
         openSubtitleList()
         // At the top, under OpenSubtitles: Timing, then the Downloaded Subtitle, then the stream's own choices.
         fun top(of: androidx.compose.ui.test.SemanticsNodeInteraction) = of.fetchSemanticsNode().boundsInRoot.top
-        val entry = top(compose.onNodeWithTag(OPENSUBTITLES_ENTRY_TAG))
-        val timing = top(compose.onNodeWithTag(TIMING_TAG))
+        val entry = top(compose.onNode(entryRow))
+        val timing = top(compose.onNode(timingRow))
         val downloaded = top(compose.onNode(hasText("English") and hasText("Downloaded", substring = true)))
         val off = top(compose.onNodeWithText("Off"))
         assertThat(listOf(entry, timing, downloaded, off)).isInStrictOrder()
-        compose.onNodeWithTag(TIMING_TAG).requestFocus()
+        compose.onNode(timingRow).requestFocus()
         press(Key.DirectionRight)
         press(Key.DirectionRight)
         press(Key.DirectionRight)

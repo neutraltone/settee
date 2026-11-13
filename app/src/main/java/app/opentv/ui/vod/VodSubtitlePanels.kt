@@ -167,7 +167,6 @@ internal fun openSubtitlesChoices(subtitles: VodSubtitles, onFind: () -> Unit, o
         selected = false,
         onClick = onFind,
         detail = stringResource(R.string.opensubtitles_find),
-        tag = OPENSUBTITLES_ENTRY_TAG,
     )
     val timing = showing?.let { current ->
         PlayerChoice(
@@ -177,7 +176,6 @@ internal fun openSubtitlesChoices(subtitles: VodSubtitles, onFind: () -> Unit, o
             detail = timingLabel(current.subtitle.offsetMillis) + " · " +
                 stringResource(R.string.opensubtitles_timing_hint),
             onAdjust = subtitles::nudge,
-            tag = TIMING_TAG,
         )
     }
     val saved = downloaded.orEmpty().sortedBy { it.language }.map { subtitle ->
@@ -214,8 +212,6 @@ private const val NOTE_MILLIS = 4_000L
 private const val TENTH = 100L
 private const val TENTHS_PER_SECOND = 10L
 
-const val OPENSUBTITLES_ENTRY_TAG = "opensubtitles_entry"
 const val OPENSUBTITLES_RESULTS_TAG = "opensubtitles_results"
-const val TIMING_TAG = "opensubtitles_timing"
 const val DOWNLOADED_SUBTITLE_TAG = "downloaded_subtitle"
 const val SUBTITLE_NOTE_TAG = "subtitle_note"

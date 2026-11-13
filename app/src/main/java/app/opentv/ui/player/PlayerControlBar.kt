@@ -54,11 +54,12 @@ import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
-import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import app.opentv.R
+import app.opentv.ui.design.AerialTv
+import app.opentv.ui.design.AerialTvSize
 import app.opentv.ui.design.HighlightStyle
 import app.opentv.ui.design.HighlightSurface
 import app.opentv.ui.design.Icon
@@ -318,7 +319,8 @@ private fun Pill(pill: PlayerPill, modifier: Modifier = Modifier) {
 
 /**
  * One row of a [PlayerChoicePanel]. [detail] is a quieter second line. [onAdjust], when set, makes
- * the row a control: left and right call it with -1 and +1 instead of leaving the row.
+ * the row a control: left and right call it with -1 and +1 instead of leaving the row. At its end:
+ * [end] when it's waiting, else a tick when [selected], else [end]'s icon if it has one.
  */
 @Immutable
 internal class PlayerChoice(
@@ -327,8 +329,17 @@ internal class PlayerChoice(
     val onClick: () -> Unit,
     val detail: String? = null,
     val onAdjust: ((Int) -> Unit)? = null,
-    val tag: String? = null,
+    val end: RowEnd? = null,
 )
+
+/** What a [PlayerChoice] row shows at its end besides the tick. */
+internal sealed interface RowEnd {
+    /** The small aerial TV, waiting for what the row does; [description] names the wait for TalkBack. */
+    data class Waiting(val description: String) : RowEnd
+
+    /** An icon saying something about the row, such as Downloaded; the tick wins over it. */
+    data class Mark(val icon: ImageVector) : RowEnd
+}
 
 /**
  * A picker over the player (subtitles, audio, quality, aspect ratio): a panel down the right of the
@@ -404,7 +415,7 @@ private fun ChoiceRow(choice: PlayerChoice, modifier: Modifier) {
     HighlightSurface(
         onClick = choice.onClick,
         style = HighlightStyle.Row,
-        modifier = modifier.fillMaxWidth().then(adjusting).then(choice.tag?.let { Modifier.testTag(it) } ?: Modifier),
+        modifier = modifier.fillMaxWidth().then(adjusting),
     ) { highlighted ->
         val colour = if (highlighted) SetteeColors.OnAccent else SetteeColors.Text
         Row(Modifier.padding(horizontal = 14.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -414,9 +425,7 @@ private fun ChoiceRow(choice: PlayerChoice, modifier: Modifier) {
                     Text(it, SetteeType.Body, color = if (highlighted) colour else SetteeColors.QuietText)
                 }
             }
-            if (choice.selected) {
-                Icon(Icons.Filled.Check, contentDescription = stringResource(R.string.common_selected), tint = colour)
-            }
+            ChoiceEnd(choice, colour)
         }
     }
 }
@@ -424,3 +433,15 @@ private fun ChoiceRow(choice: PlayerChoice, modifier: Modifier) {
 private val ChoicePanelWidth = 360.dp
 private val PillRowHeight = 42.dp
 private val Scrim = SetteeColors.Background.copy(alpha = 0.92f)
+
+/** What sits at the end of a [ChoiceRow]: waiting, the tick, or the row's own icon. */
+@Composable
+private fun ChoiceEnd(choice: PlayerChoice, colour: Color) {
+    val end = choice.end
+    when {
+        end is RowEnd.Waiting -> AerialTv(end.description, size = AerialTvSize.Small)
+        choice.selected ->
+            Icon(Icons.Filled.Check, contentDescription = stringResource(R.string.common_selected), tint = colour)
+        end is RowEnd.Mark -> Icon(end.icon, contentDescription = null, tint = colour)
+    }
+}

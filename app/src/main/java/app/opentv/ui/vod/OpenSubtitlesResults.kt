@@ -6,6 +6,8 @@
 package app.opentv.ui.vod
 
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.DownloadDone
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -32,6 +34,7 @@ import app.opentv.ui.design.SetteeType
 import app.opentv.ui.design.Text
 import app.opentv.ui.player.PlayerChoice
 import app.opentv.ui.player.PlayerChoicePanel
+import app.opentv.ui.player.RowEnd
 import app.opentv.ui.player.languageName
 import kotlinx.coroutines.flow.MutableStateFlow
 
@@ -49,9 +52,15 @@ internal fun OpenSubtitlesResultsPanel(
     val wording = remember { ServiceLocator.get(context).errorWording }
     val failure = remember { MutableStateFlow<Throwable?>(null) }
     val downloadFailure by failure.collectAsState()
-    var fetching by remember { mutableStateOf(false) }
+    // The result being downloaded, whose row waits with the small aerial TV; one at a time.
+    var fetching by remember { mutableStateOf<Long?>(null) }
     val kindLabels = kindLabels()
     val found = (results as? VodSubtitles.Results.Found)?.results.orEmpty()
+    val onBox by subtitles.downloaded.collectAsState()
+    val showing by subtitles.showing.collectAsState()
+    val saved = onBox.orEmpty().map { it.fileId }.toSet()
+    val downloadedLabel = stringResource(R.string.opensubtitles_downloaded)
+    val downloading = stringResource(R.string.opensubtitles_downloading)
     // The results come after the panel opens, with nothing yet to take the Highlight: the first one
     // takes it as they arrive, a frame later, once its row is there to hold it.
     LaunchedEffect(found.isNotEmpty()) {
@@ -61,24 +70,33 @@ internal fun OpenSubtitlesResultsPanel(
         }
     }
     val choices = found.map { result ->
+        val onThisBox = result.fileId in saved
         PlayerChoice(
             languageName(result.language) ?: result.language,
-            selected = false,
+            // The one showing now is ticked, as any list's chosen row is; others already here say so.
+            selected = showing?.subtitle?.fileId == result.fileId,
             onClick = {
-                if (!fetching) {
-                    fetching = true
+                if (fetching == null) {
+                    fetching = result.fileId
                     failure.value = null
                     subtitles.choose(result) { error ->
-                        fetching = false
+                        fetching = null
                         if (error == null) onPicked() else failure.value = error
                     }
                 }
             },
-            detail = resultDetail(result, kindLabels),
+            detail = listOfNotNull(resultDetail(result, kindLabels), downloadedLabel.takeIf { onThisBox })
+                .filter { it.isNotBlank() }
+                .joinToString(" · "),
+            end = when {
+                fetching == result.fileId -> RowEnd.Waiting(downloading)
+                onThisBox -> RowEnd.Mark(Icons.Filled.DownloadDone)
+                else -> null
+            },
         )
     }
     val problem = downloadFailure ?: problemIn(results)
-    val waiting = waitingFor(results, fetching)?.let { stringResource(it) }
+    val waiting = waitingFor(results)?.let { stringResource(it) }
     PlayerChoicePanel(
         title = stringResource(R.string.opensubtitles_name),
         choices = choices,
@@ -96,7 +114,6 @@ internal fun OpenSubtitlesResultsPanel(
                     textAlign = TextAlign.Start,
                 )
             }
-            if (waiting != null && choices.isNotEmpty()) Text(waiting, SetteeType.Body, color = SetteeColors.QuietText)
             Text(stringResource(R.string.opensubtitles_attribution), SetteeType.Body, color = SetteeColors.QuietText)
         },
     )
@@ -109,12 +126,9 @@ private fun problemIn(results: VodSubtitles.Results): Throwable? = when (results
     else -> null
 }
 
-/** What the list is waiting for, said where the rows would be: the download picked, or the search. */
-private fun waitingFor(results: VodSubtitles.Results, fetching: Boolean): Int? = when {
-    fetching -> R.string.opensubtitles_downloading
-    results is VodSubtitles.Results.Searching || results is VodSubtitles.Results.Idle ->
-        R.string.opensubtitles_searching
-    else -> null
+/** The search being waited for, said where the rows will be. A download waits on its own row. */
+private fun waitingFor(results: VodSubtitles.Results): Int? = R.string.opensubtitles_searching.takeIf {
+    results is VodSubtitles.Results.Searching || results is VodSubtitles.Results.Idle
 }
 
 @Composable

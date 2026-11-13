@@ -663,7 +663,7 @@
     <string name="opensubtitles_attribution">Subtitles provided by OpenSubtitles.com</string>
     <string name="opensubtitles_find">Find subtitles online</string>
     <string name="opensubtitles_searching">Looking for subtitles…</string>
-    <string name="opensubtitles_downloading">Getting the subtitles…</string>
+    <string name="opensubtitles_downloading">Downloading</string>
     <string name="opensubtitles_hearing_impaired">Hearing impaired</string>
     <string name="opensubtitles_forced">Forced</string>
     <string name="opensubtitles_downloaded">Downloaded</string>
