@@ -9,7 +9,7 @@ module (`app/`), Kotlin + Jetpack Compose + Room + Media3/ExoPlayer. Sources are
 M3U/M3U8 playlists, Stalker/Ministra portals and Stremio add-ons. **D-pad first**: every UI change must
 be fully navigable with a remote (focus order, focus visuals), touch is secondary.
 
-This is **Settee** (`neutraltone/settee`), a personal app based on the abandoned OpenTV project (see the
+This is **Settee** (`neutraltone/settee`), a personal app that started as a fork of OpenTV (see the
 spec, neutraltone/settee#1). The primary target device is a Fire TV Stick. The application ID is
 `uk.neutraltone.settee`, but the Kotlin package stays `app.opentv` and the GPL headers still credit the
 OpenTV contributors — don't rename either.
