@@ -145,15 +145,17 @@ fun foldCategories(categories: List<Category>): List<CategoryGroup> {
  * here, rather than in each screen's flow.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
-class ChannelLineup(
+class ChannelLineup
+@Suppress("LongParameterList") // channelDao is only passed by tests, to count the table scans.
+constructor(
     private val db: OpenTvDatabase,
     private val favourites: Favourites,
     private val lockedKeys: StateFlow<Set<String>>,
     private val unlocked: StateFlow<Boolean>,
     internal val decoders: DecoderList,
     private val sharing: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default),
+    private val channelDao: ChannelDao = db.channels(),
 ) {
-    private val channelDao = db.channels()
     private val categories = db.categories().observe(StreamKind.LIVE)
 
     /**
@@ -221,7 +223,14 @@ class ChannelLineup(
             // is far cheaper than the whole catalogue.
             return combine(favourites.channels(), locked, favourites.channelIds(), ::Triple)
                 .mapLatest { (rows, locked, starred) ->
-                    val named = rows.flatMap { channelDao.sameNamed(it) }.distinctBy { it.id }
+                    // One lookup per name, not per row: every Quality of a Favourite is starred,
+                    // and each lookup scans the table. A row with no group key only finds itself.
+                    val named = rows
+                        .distinctBy {
+                            if (it.groupKey.isEmpty()) it.id else ChannelNameNormalizer.nameKeyOf(it.groupKey)
+                        }
+                        .flatMap { channelDao.sameNamed(it) }
+                        .distinctBy { it.id }
                     Catalogue(named, decoders) { it.isShown(locked) }
                         .channelsOf(rows.from(scope.sourceId), scope)
                         .map { it.starredBy(starred) }
