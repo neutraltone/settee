@@ -71,9 +71,12 @@ scratch. It fixes nothing. The next refresh fails the same way.
 
 `EpgRepository` never deletes before it has the replacement:
 
-1. Programmes are **upserted in batches of 500** as they stream out of the parser. The unique
-   index on `(sourceId, epgChannelId, startUtcMillis)` makes this idempotent, so a sync that
-   dies at 60% leaves 60% of a *fresher* guide — strictly better than what was there.
+1. Programmes are **written in batches of 500** as they stream out of the parser, each replacing
+   the stored programme in its slot (`INSERT OR REPLACE` on the unique index over `(feedId,
+   epgChannelId, startUtcMillis)`), so a refresh picks up the provider's corrections and a sync
+   that dies at 60% leaves 60% of a *fresher* guide — strictly better than what was there. Not
+   Room's `@Upsert`: parsed rows have `id = 0`, so its fallback `UPDATE … WHERE id = 0` matched
+   nothing and kept the first download's details (#253).
 2. Pruning happens **by age** (`deleteEndedBefore`), never by source, and only **after** a sync
    reports success.
 3. A failed sync leaves the previous guide completely intact and returns the reason.
