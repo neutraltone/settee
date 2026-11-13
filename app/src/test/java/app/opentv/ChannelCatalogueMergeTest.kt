@@ -111,6 +111,7 @@ class ChannelCatalogueMergeTest {
         channels.setSortIndex(a.id, 3)
         channels.setCustomName(a.id, "Renamed")
         channels.setEpgOverride(a.id, "override.guide")
+        channels.setMatchedEpgIds(listOf(ChannelEpgMatch(a.id, "matched.guide")))
 
         assertThat(channels.userStateForSource(home)).containsExactly(
             ChannelUserState(
@@ -120,7 +121,7 @@ class ChannelCatalogueMergeTest {
                 sortIndex = 3,
                 customName = "Renamed",
                 epgOverrideId = "override.guide",
-                matchedEpgId = null,
+                matchedEpgId = "matched.guide",
             ),
         )
     }
