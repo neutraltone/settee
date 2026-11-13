@@ -5,7 +5,10 @@
  */
 package app.opentv
 
+import androidx.sqlite.db.SimpleSQLiteQuery
 import androidx.test.core.app.ApplicationProvider
+import app.opentv.data.db.RECENT_MOVIES
+import app.opentv.data.db.RECENT_SERIES
 import app.opentv.data.model.Movie
 import app.opentv.data.model.Series
 import com.google.common.truth.Truth.assertThat
@@ -55,6 +58,18 @@ class RecentRowsTest {
         plot = null,
         addedMillis = added,
     )
+
+    @Test
+    fun `Recently Added reads the newest titles from an index rather than sorting the whole library`() {
+        val queries = listOf(RECENT_MOVIES to "index_movies_addedMillis", RECENT_SERIES to "index_series_addedMillis")
+        for ((sql, index) in queries) {
+            val explain = SimpleSQLiteQuery("EXPLAIN QUERY PLAN " + sql.replace(":limit", "?"), arrayOf<Any>(30))
+            val plan = db.query(explain).use { rows -> buildList { while (rows.moveToNext()) add(rows.getString(3)) } }
+
+            assertThat(plan.joinToString("\n")).contains(index)
+            assertThat(plan.filter { "TEMP B-TREE" in it }).isEmpty()
+        }
+    }
 
     @Test
     fun `recently added rows go by when the provider added or last updated the title`() = runTest {

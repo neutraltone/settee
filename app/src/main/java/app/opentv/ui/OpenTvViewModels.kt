@@ -463,20 +463,14 @@ class ChannelsViewModel @JvmOverloads constructor(
      *
      * Keyed on the half-hour bucket (not the raw minute tick) so it holds steady while you flick
      * between categories and refreshes at most twice an hour; the underlying Room flow also
-     * re-emits on its own when an EPG sync lands new programmes.
+     * re-emits on its own when an EPG sync lands new programmes, at most every couple of seconds
+     * however many batches it writes (`EpgRepository.observeGuideWindow`, #257).
      */
-    @OptIn(ExperimentalCoroutinesApi::class)
-    private val programmeIndex: StateFlow<Map<String, List<GuideProgramme>>> =
-        // guideWindow is a StateFlow, which already conflates equal values — an explicit
-        // distinctUntilChanged() on it is a no-op (and a build error under our warnings-as-errors).
+    private val programmeIndex: StateFlow<ProgrammeIndex> =
         guideWindow
-            .flatMapLatest { (windowStart, windowEnd) ->
-                graph.epgRepository
-                    .observeGuideWindow(windowStart, windowEnd)
-                    .map { programmes -> programmes.groupBy { it.epgChannelId } }
-            }
+            .guideIndex(graph.epgRepository::observeGuideWindow)
             .flowOn(Dispatchers.Default)
-            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ProgrammeIndex.Empty)
 
     /** Guards the start-up loading bar so it shows once, on the first build, not on every tap. */
     @Volatile
@@ -509,7 +503,9 @@ class ChannelsViewModel @JvmOverloads constructor(
                 // rows) can take longer than 60s, and a tick landing mid-build would cancel and
                 // restart it via flatMapLatest so it would never finish. "Now" is captured per
                 // build instead; the guide's live progress bars advance off the screen's clock.
-                combine(lineup.channels(scope), programmeIndex) { channels, byEpgChannel ->
+                // guideBuilds paces rebuilds for more listings from the end of the last build, so
+                // a guide sync doesn't keep a slow build running back to back (#257).
+                lineup.channels(scope).guideBuilds(programmeIndex) { channels, byEpgChannel ->
                     // Show the size-aware loading bar for the FIRST guide build only (start-up).
                     // After that the guide is built and flicking between categories is cheap, so
                     // don't flash a loading line on every tap — that bar was only ever meant for

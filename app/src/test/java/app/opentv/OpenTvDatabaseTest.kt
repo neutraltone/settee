@@ -58,8 +58,8 @@ class OpenTvDatabaseTest {
     }
 
     @Test
-    fun `a fresh install opens at schema version 12 without counting as a wipe`() {
-        assertThat(open().version()).isEqualTo(12)
+    fun `a fresh install opens at schema version 13 without counting as a wipe`() {
+        assertThat(open().version()).isEqualTo(13)
         assertThat(wipes).isEqualTo(0)
     }
 
@@ -69,7 +69,7 @@ class OpenTvDatabaseTest {
 
         val opened = open()
 
-        assertThat(opened.version()).isEqualTo(12)
+        assertThat(opened.version()).isEqualTo(13)
         assertThat(opened.sources().enabled()).isEmpty()
     }
 
