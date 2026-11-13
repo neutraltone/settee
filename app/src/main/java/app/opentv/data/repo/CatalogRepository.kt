@@ -449,12 +449,13 @@ class CatalogRepository(
     }
 
     /**
-     * Loads a series and lazily back-fills a still-bare row from `get_series_info`, keeping the
-     * episodes that reply brings too, at no extra cost. See [movieDetail]; the browse backdrop uses
-     * this, and the series page [openSeries].
+     * Loads a series and lazily back-fills a still-bare row from `get_series_info`. See [movieDetail].
+     * The browse backdrop asks this as the highlight moves, so the reply's episodes aren't stored:
+     * that would write every highlighted show's episodes, stamped as first seen while browsing. The
+     * series page uses [openSeries].
      */
     suspend fun seriesDetail(id: Long, now: Long = System.currentTimeMillis()): Series? = withContext(Dispatchers.IO) {
-        seriesDetails(id, now, askPanel = { !it.isEnriched }).lastOrNull()
+        seriesDetails(id, now, opening = false).lastOrNull()
     }
 
     /**
@@ -463,17 +464,18 @@ class CatalogRepository(
      * with its episodes before TMDB is asked; then again with what TMDB filled in, if it was asked.
      */
     fun openSeries(id: Long, now: Long = System.currentTimeMillis()): Flow<Series> =
-        seriesDetails(id, now, askPanel = { true })
+        seriesDetails(id, now, opening = true)
 
-    private fun seriesDetails(id: Long, now: Long, askPanel: (Series) -> Boolean): Flow<Series> = flow {
+    /** [seriesDetail], or with [opening] [openSeries]: the panel always asked, and its episodes stored. */
+    private fun seriesDetails(id: Long, now: Long, opening: Boolean): Flow<Series> = flow {
         val series = seriesDao.byId(id) ?: return@flow
         var result = series
         val source = sourceDao.byId(series.sourceId)
 
-        // 1) The provider's get_series_info, on an Xtream source: its episodes are stored either
-        //    way, and its details fill a still-bare row.
-        if (source?.kind == SourceKind.XTREAM && askPanel(series)) {
-            val info = fetchSeries(source, series.seriesId, now)
+        // 1) The provider's get_series_info, on an Xtream source: on opening for its episodes, and
+        //    for a still-bare row its details.
+        if (source?.kind == SourceKind.XTREAM && (opening || !series.isEnriched)) {
+            val info = fetchSeries(source, series.seriesId, now, storeEpisodes = opening)
             if (info != null && !result.isEnriched) result = result.filledFrom(info)
         }
         if (result != series) seriesDao.upsertAll(listOf(result))
@@ -600,22 +602,29 @@ class CatalogRepository(
         source: Source,
         seriesId: String,
         nowUtcMillis: Long = System.currentTimeMillis(),
-    ): Boolean = source.kind != SourceKind.XTREAM || fetchSeries(source, seriesId, nowUtcMillis) != null
+    ): Boolean = source.kind != SourceKind.XTREAM ||
+        fetchSeries(source, seriesId, nowUtcMillis, storeEpisodes = true) != null
 
     /**
-     * Asks the panel for [seriesId]'s `get_series_info` and stores its episodes, returning its
-     * details, or null when the fetch failed. One request serves both, so opening a series never
-     * asks for the same reply twice.
+     * Asks the panel for [seriesId]'s `get_series_info`, storing its episodes when [storeEpisodes],
+     * and returns its details, or null when the fetch failed. One request serves both, so opening a
+     * series never asks for the same reply twice.
      */
-    private suspend fun fetchSeries(source: Source, seriesId: String, nowUtcMillis: Long): XtreamApi.SeriesInfo? =
-        runCatching {
-            val reply = api.seriesInfo(source, seriesId)
-            if (reply.episodes.isNotEmpty()) storeEpisodes(source, seriesId, reply.episodes, nowUtcMillis)
-            reply.info
-        }
-            .onFailure { if (it is CancellationException) throw it }
-            .onFailure { Log.w(TAG, "Episode fetch failed for series $seriesId", it) }
-            .getOrNull()
+    private suspend fun fetchSeries(
+        source: Source,
+        seriesId: String,
+        nowUtcMillis: Long,
+        storeEpisodes: Boolean,
+    ): XtreamApi.SeriesInfo? = runCatching {
+        val reply = api.seriesInfo(source, seriesId)
+        if (storeEpisodes && reply.episodes.isNotEmpty()) storeEpisodes(source, seriesId, reply.episodes, nowUtcMillis)
+        reply.info
+    }
+        .onFailure { if (it is CancellationException) throw it }
+        // The exception's kind only: some clients put the request's address, with the account's
+        // login in it, in the message, and the browse backdrop can fail here on every highlight.
+        .onFailure { Log.w(TAG, "Series info failed for series $seriesId: ${it.javaClass.simpleName}") }
+        .getOrNull()
 
     private suspend fun storeEpisodes(source: Source, seriesId: String, fetched: List<Episode>, nowUtcMillis: Long) {
         // Matched to the stored rows like a catalogue refresh: an upsert without the local id would

@@ -12,7 +12,10 @@ import app.opentv.data.model.Series
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
@@ -47,6 +50,7 @@ class ShowPageFetchTest {
 
     @After
     fun close() {
+        graph.settings.setTmdbApiKey("")
         viewModels.clear()
         graph.database.close()
         Dispatchers.resetMain()
@@ -74,12 +78,19 @@ class ShowPageFetchTest {
     private suspend fun episodeIds(seriesId: Long) =
         graph.database.episodes().forSeries(PANEL_SOURCE.id, "$seriesId").map { it.episodeId }
 
-    @Test
-    fun `opening a show asks for each Version's series info once, and stores every Version's episodes`() = runBlocking {
+    /** Shows 1 and 2, as Versions of one title, once the title index has grouped them. */
+    private suspend fun saveTwoVersions() {
         graph.database.sources().insert(PANEL_SOURCE)
         graph.database.series().upsertAll(listOf(series(1, "Dragons"), series(2, "4K - Dragons")))
         panel.replies["get_series_info:1"] = reply("101")
         panel.replies["get_series_info:2"] = reply("201")
+        // Otherwise the page's look-up of Versions waits out the index's first grouping in real time.
+        withTimeout(10_000) { graph.titleIndex.series.filterNotNull().first { it.of(2) != null } }
+    }
+
+    @Test
+    fun `opening a show asks for each Version's series info once, and stores every Version's episodes`() = runBlocking {
+        saveTwoVersions()
 
         val opened = withTimeout(10_000) { viewModel.openShow(1).first { it.fetched } }
 
@@ -88,5 +99,21 @@ class ShowPageFetchTest {
         assertThat(timesAsked(2)).isEqualTo(1)
         assertThat(episodeIds(1)).containsExactly("101")
         assertThat(episodeIds(2)).containsExactly("201")
+    }
+
+    @Test
+    fun `another Version's episodes are stored before TMDB answers about the show`() = runBlocking {
+        saveTwoVersions()
+        graph.settings.setTmdbApiKey("k")
+        val tmdb = panel.hold("/3/search/tv")
+        val show = viewModel.openShow(1)
+        val opening = launch(Dispatchers.Default) { show.collect {} }
+
+        during(tmdb) { withTimeout(10_000) { while (episodeIds(2).isEmpty()) delay(20) } }
+        tmdb.release()
+        opening.join()
+
+        assertThat(episodeIds(2)).containsExactly("201")
+        assertThat(timesAsked(2)).isEqualTo(1)
     }
 }

@@ -1183,27 +1183,33 @@ class VodViewModel @JvmOverloads constructor(
 
     /**
      * A show opened on its page: the series as [CatalogRepository.openSeries] gives it, whose one
-     * `get_series_info` brings its episodes too, so stored episodes show before TMDB answers. Then
-     * each other Version's episodes, as the page lists episodes from all of them (#181), asked for
-     * with the series as TMDB left it, as that can make another row a Version; [OpenedShow.fetched]
-     * once they have been. Episodes are fetched here rather than during catalogue sync: pulling
+     * `get_series_info` brings its episodes too, so stored episodes show before TMDB answers. Each
+     * other Version's episodes are asked for alongside, as the page lists episodes from all of them
+     * (#181), and once TMDB has answered, any Version its TMDB id newly matches; [OpenedShow.fetched]
+     * once they all have been. Episodes are fetched here rather than during catalogue sync: pulling
      * every episode of every series up front is what makes a first sync take twenty minutes on a
      * large provider, and most of it is never looked at.
      */
     fun openShow(id: Long): Flow<OpenedShow> = channelFlow {
+        // Only touched by one coroutine at a time: the first fetch is joined before the second.
+        val asked = mutableSetOf(id)
         var opened: Series? = null
+        var others: Job? = null
         graph.catalogRepository.openSeries(id).collect {
+            if (others == null) others = launch { fetchVersions(it, asked) }
             opened = it
             send(OpenedShow(it, fetched = false))
         }
         val series = opened ?: return@channelFlow
-        fetchOtherVersions(series)
+        others?.join()
+        fetchVersions(series, asked)
         send(OpenedShow(series, fetched = true))
     }
 
-    private suspend fun fetchOtherVersions(series: Series) = coroutineScope {
-        val others = graph.database.versionsOf(series, graph.titleIndex.versionIds).filter { it.id != series.id }
-        others.forEach { version ->
+    /** Episodes for each of [series]' Versions not [asked] for yet, all at once. */
+    private suspend fun fetchVersions(series: Series, asked: MutableSet<Long>) = coroutineScope {
+        val versions = graph.database.versionsOf(series, graph.titleIndex.versionIds).filter { asked.add(it.id) }
+        versions.forEach { version ->
             launch {
                 val source = graph.sourceRepository.byId(version.sourceId) ?: return@launch
                 graph.catalogRepository.ensureEpisodes(source, version.seriesId)
