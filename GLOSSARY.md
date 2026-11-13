@@ -47,8 +47,12 @@ What follows saving a Provider when none was saved before: its first Catalogue R
 _Avoid_: Onboarding (that's the page before), sync, first run
 
 **Quality**:
-One provider's stream of a Channel or Movie, such as HD, FHD or 4K. The highest one this device can play is the one that plays by default. A Channel's Qualities are the same wherever it's shown.
+How big a picture a stream promises, such as HD, FHD or 4K. A Channel's streams differ by Quality, and the highest one this device can play is the one that plays by default; a Channel's Qualities are the same wherever it's shown. For a Movie or Series, Quality is one of the things a Version is.
 _Avoid_: Variant (in user-facing text), feed
+
+**Version**:
+One of a provider's copies of a Movie or Series, such as its Netflix copy and its 4K copy. A title shows once however many Versions it has. A Version may differ from the others in Quality, language, subtitles, sound, or in being a cam copy; Settee never switches to a Version in another language on its own. On screen, choosing between them is the Quality pill; the word Version isn't shown.
+_Avoid_: Copy, variant, duplicate
 
 ## Live TV
 
@@ -83,7 +87,7 @@ One numbered part of a series, holding its episodes in order. On screen it is al
 _Avoid_: Series (for this meaning), series 2
 
 **Watched**:
-A movie or episode the Profile has played past 93% of its length, or marked watched by hand.
+A movie or episode the Profile has played past 93% of its length, or marked watched by hand, in any of its Versions.
 _Avoid_: Finished, seen, completed
 
 **In Progress**:
