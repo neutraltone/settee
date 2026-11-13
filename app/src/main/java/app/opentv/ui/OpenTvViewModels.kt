@@ -43,6 +43,7 @@ import app.opentv.data.repo.MediaKey
 import app.opentv.data.repo.RefreshMessages
 import app.opentv.data.repo.ShowEpisodes
 import app.opentv.data.repo.TitleCover
+import app.opentv.data.repo.TitleIndex
 import app.opentv.data.repo.VodTitle
 import app.opentv.data.repo.categoryGroupKey
 import app.opentv.data.repo.coverStatuses
@@ -1052,14 +1053,18 @@ class VodViewModel @JvmOverloads constructor(
         // viewer could move onto a title they have only just started.
         _recommendedMovies.value = _recommendedMovies.value.filterNot { it.id in key.started }
 
-        val all = runCatching { graph.catalogRepository.allMovies() }.getOrDefault(emptyList())
+        // One row per title, and a title started in any Version counts as started in all (#181).
+        val titles = graph.titleIndex.movies.filterNotNull().first()
+        val every = runCatching { graph.catalogRepository.allMovies() }.getOrDefault(emptyList())
+        val started = key.started.flatMapTo(HashSet()) { id -> titles.of(id)?.versionIds?.asList() ?: listOf(id) }
+        val all = titles.distinct(every) { it.id }
         _recommendedMovies.value = runCatching {
-            graph.catalogRepository.recommendedMoviesFrom(all, key.started)
+            graph.catalogRepository.recommendedMoviesFrom(all, started)
         }.getOrDefault(emptyList())
         _recommendingMovies.value = false
         // Watching something takes it out of its rows and can move its genres to the top.
         _movieGenreRows.value = runCatching {
-            graph.catalogRepository.moviesByGenreFrom(all, key.started, key.recent)
+            graph.catalogRepository.moviesByGenreFrom(all, started, key.recent)
         }.getOrDefault(emptyList())
         loadedMovieFeeds = key
     }
@@ -1080,13 +1085,18 @@ class VodViewModel @JvmOverloads constructor(
         _recommendedSeries.value =
             _recommendedSeries.value.filterNot { it.ref in key.started || it.ref in key.dismissed }
 
-        val all = runCatching { graph.catalogRepository.allSeries() }.getOrDefault(emptyList())
+        // As in [refreshMovieFeeds]: one row per title, started or dismissed in any Version.
+        val titles = graph.titleIndex.series.filterNotNull().first()
+        val every = runCatching { graph.catalogRepository.allSeries() }.getOrDefault(emptyList())
+        val started = acrossVersions(every, key.started, titles)
+        val dismissed = acrossVersions(every, key.dismissed, titles)
+        val all = titles.distinct(every) { it.id }
         _recommendedSeries.value = runCatching {
-            graph.catalogRepository.recommendedSeriesFrom(all, key.started, key.dismissed)
+            graph.catalogRepository.recommendedSeriesFrom(all, started, dismissed)
         }.getOrDefault(emptyList())
         _recommendingSeries.value = false
         _seriesGenreRows.value = runCatching {
-            graph.catalogRepository.seriesByGenreFrom(all, key.started, key.dismissed, key.recent)
+            graph.catalogRepository.seriesByGenreFrom(all, started, dismissed, key.recent)
         }.getOrDefault(emptyList())
         loadedSeriesFeeds = key
     }
@@ -1730,3 +1740,10 @@ private const val RECENT_TITLES_SHOWN = 30
 
 /** How many titles Home's Recently Added rows show. */
 private const val HOME_RECENT_TITLES_SHOWN = 20
+
+/** [refs] and every other Version of the shows they're Versions of, among [every] show. */
+private fun acrossVersions(every: List<Series>, refs: Set<SeriesRef>, titles: TitleIndex.Titles): Set<SeriesRef> {
+    if (refs.isEmpty()) return refs
+    val marked = every.filter { it.ref in refs }.mapNotNullTo(HashSet()) { titles.of(it.id) }
+    return refs + every.filter { titles.of(it.id) in marked }.map { it.ref }
+}
