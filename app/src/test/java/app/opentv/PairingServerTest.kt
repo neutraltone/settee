@@ -6,6 +6,7 @@
 package app.opentv
 
 import androidx.test.core.app.ApplicationProvider
+import app.opentv.core.ViewerError
 import app.opentv.pairing.PairingFonts
 import app.opentv.pairing.PairingServer
 import com.google.common.truth.Truth.assertThat
@@ -43,8 +44,8 @@ class PairingServerTest {
         scope.cancel()
     }
 
-    private fun listening(): PairingServer.Session {
-        server.start()
+    private fun listening(mode: PairingServer.Mode = PairingServer.Mode.Provider()): PairingServer.Session {
+        server.start(mode)
         val session = (server.state.value as? PairingServer.State.Listening)?.session
         assumeTrue("needs a private LAN address to serve on", session != null)
         return session!!
@@ -206,5 +207,190 @@ class PairingServerTest {
         assertThat(page.lowercase()).doesNotContain("opentv")
         // docs/LOOK.md's background, surface, text and coral.
         listOf("#1a1416", "#281f22", "#f8efea", "#ff8f6b").forEach { assertThat(page.lowercase()).contains(it) }
+    }
+
+    // ---- The TMDB Key --------------------------------------------------------------------------
+
+    /** [page]'s text as the phone shows it: the page escapes what it puts in, apostrophes included. */
+    private fun shown(page: String) = page.replace("&#39;", "'").replace("&quot;", "\"")
+        .replace("&lt;", "<").replace("&gt;", ">").replace("&amp;", "&")
+
+    /** What the phone says once the TV has saved its key. */
+    private val saved get() = context.getString(R.string.pairing_phone_tmdb_saved_title)
+
+    /** Sends a TMDB Key from the phone's paste box, as the viewer would. */
+    private fun sendKey(session: PairingServer.Session, key: String = KEY): Pair<Int, String> {
+        val form = okhttp3.FormBody.Builder()
+            .add("t", session.url.substringAfter("t="))
+            .add("key", key)
+            .build()
+        val request = Request.Builder().url("http://${session.host}:${session.port}/key").post(form).build()
+        return OkHttpClient.Builder().readTimeout(30, java.util.concurrent.TimeUnit.SECONDS).build()
+            .newCall(request).execute().use { it.code to it.body.string() }
+    }
+
+    /** The TMDB Key the TV got, once it has it. */
+    private fun receivedKey(): PairingServer.State.KeyReceived {
+        val deadline = System.currentTimeMillis() + 10_000
+        while (System.currentTimeMillis() < deadline) {
+            (server.state.value as? PairingServer.State.KeyReceived)?.let { return it }
+            Thread.sleep(20)
+        }
+        error("the TV never got the key")
+    }
+
+    @Test
+    fun `for a TMDB Key the QR code opens a paste box, with how to get a key under it`() {
+        val session = listening(PairingServer.Mode.TmdbKey())
+
+        val (code, page) = get(session.url)
+
+        assertThat(code).isEqualTo(200)
+        assertThat(page).contains("action=\"/key\"")
+        assertThat(page).contains("https://www.themoviedb.org/signup")
+        assertThat(page).contains("https://www.themoviedb.org/settings/api")
+        assertThat(page).contains("Settee")
+        // The paste box comes first, the steps under it.
+        assertThat(page.indexOf("name=\"key\"")).isLessThan(page.indexOf("themoviedb.org/signup"))
+    }
+
+    @Test
+    fun `a TMDB Key pasted on the phone reaches the TV, and the phone hears it was saved`() {
+        val session = listening(PairingServer.Mode.TmdbKey())
+
+        val reply = scope.async(Dispatchers.IO) { sendKey(session) }
+        val got = receivedKey()
+        assertThat(got.key).isEqualTo(KEY)
+        assertThat(reply.isCompleted).isFalse()
+        got.answer(problem = null)
+
+        val (_, page) = runBlocking { reply.await() }
+        assertThat(page).contains(saved)
+    }
+
+    @Test
+    fun `a TMDB Key TMDB turns down shows why on the phone, which can paste another`() {
+        val session = listening(PairingServer.Mode.TmdbKey())
+
+        val first = scope.async(Dispatchers.IO) { sendKey(session) }
+        receivedKey().answer(ViewerError("TMDB didn't accept that key.", "KeyRejected · HTTP 401"))
+        val (_, page) = runBlocking { first.await() }
+
+        assertThat(shown(page)).contains("TMDB didn't accept that key.")
+        assertThat(page).contains("KeyRejected · HTTP 401")
+        assertThat(page).contains("action=\"/key\"")
+        assertThat(server.state.value).isInstanceOf(PairingServer.State.Listening::class.java)
+        val second = scope.async(Dispatchers.IO) { sendKey(session) }
+        receivedKey().answer(problem = null)
+        assertThat(runBlocking { second.await() }.second).contains(saved)
+    }
+
+    @Test
+    fun `once the TV leaves, a key it was sent is forgotten, so the next screen isn't handed it again`() {
+        val session = listening(PairingServer.Mode.TmdbKey())
+        val reply = scope.async(Dispatchers.IO) { sendKey(session) }
+        receivedKey().answer(problem = null)
+        runBlocking { reply.await() }
+
+        server.stop()
+
+        assertThat(server.state.value).isEqualTo(PairingServer.State.Idle)
+    }
+
+    @Test
+    fun `carrying on to the TMDB Key gives it a whole session of its own, not what the provider left`() {
+        val quick = PairingServer(scope, PairingFonts(context), context::getString, sessionTimeoutMillis = 2_000)
+        try {
+            quick.start(PairingServer.Mode.Provider(thenTmdbKey = true))
+            assumeTrue("needs a private LAN address to serve on", quick.state.value is PairingServer.State.Listening)
+            Thread.sleep(1_500)
+
+            // As the TV's TMDB step takes the server over, the provider having taken most of its time.
+            quick.start(PairingServer.Mode.TmdbKey(onboarding = true))
+            Thread.sleep(1_500)
+
+            assertThat(quick.state.value).isInstanceOf(PairingServer.State.Listening::class.java)
+        } finally {
+            quick.stop()
+        }
+    }
+
+    @Test
+    fun `a blank TMDB Key is asked for again without troubling the TV`() {
+        val session = listening(PairingServer.Mode.TmdbKey())
+
+        val (_, page) = sendKey(session, key = "   ")
+
+        assertThat(page).contains("action=\"/key\"")
+        assertThat(server.state.value).isInstanceOf(PairingServer.State.Listening::class.java)
+    }
+
+    @Test
+    fun `a TMDB Key is not taken while the phone is adding a provider`() {
+        val session = listening(PairingServer.Mode.Provider())
+
+        sendKey(session)
+
+        assertThat(server.state.value).isInstanceOf(PairingServer.State.Listening::class.java)
+    }
+
+    @Test
+    fun `after the first provider, the phone carries on to the TMDB Key`() {
+        val session = listening(PairingServer.Mode.Provider(thenTmdbKey = true))
+
+        val reply = scope.async(Dispatchers.IO) { submit(session) }
+        received().answer(error = null)
+        val (_, page) = runBlocking { reply.await() }
+
+        assertThat(page).contains("action=\"/key\"")
+        assertThat(server.state.value).isInstanceOf(PairingServer.State.Listening::class.java)
+        val key = scope.async(Dispatchers.IO) { sendKey(session) }
+        receivedKey().answer(problem = null)
+        assertThat(runBlocking { key.await() }.second).contains(saved)
+    }
+
+    @Test
+    fun `the phone's TMDB step says the key is optional and can be added later`() {
+        val session = listening(PairingServer.Mode.Provider(thenTmdbKey = true))
+
+        val reply = scope.async(Dispatchers.IO) { submit(session) }
+        received().answer(error = null)
+        val (_, page) = runBlocking { reply.await() }
+
+        assertThat(shown(page)).contains(context.getString(R.string.onboarding_tmdb_help))
+        assertThat(shown(page)).contains(context.getString(R.string.pairing_phone_tmdb_how))
+    }
+
+    /** Presses the Onboarding TMDB page's Skip for now, as the viewer would. */
+    private fun skipKey(session: PairingServer.Session): Pair<Int, String> {
+        val form = okhttp3.FormBody.Builder().add("t", session.url.substringAfter("t=")).build()
+        val request = Request.Builder().url("http://${session.host}:${session.port}/skip").post(form).build()
+        return OkHttpClient().newCall(request).execute().use { it.code to it.body.string() }
+    }
+
+    @Test
+    fun `Onboarding's TMDB page offers Skip for now, which tells the TV and the phone`() {
+        val session = listening(PairingServer.Mode.TmdbKey(onboarding = true))
+        assertThat(get(session.url).second).contains("action=\"/skip\"")
+
+        val (_, page) = skipKey(session)
+
+        assertThat(server.state.value).isEqualTo(PairingServer.State.KeySkipped)
+        assertThat(shown(page)).contains(context.getString(R.string.pairing_phone_tmdb_skipped_title))
+    }
+
+    @Test
+    fun `Settings' TMDB page has no Skip, and a skip sent anyway is ignored`() {
+        val session = listening(PairingServer.Mode.TmdbKey(onboarding = false))
+        assertThat(get(session.url).second).doesNotContain("action=\"/skip\"")
+
+        skipKey(session)
+
+        assertThat(server.state.value).isInstanceOf(PairingServer.State.Listening::class.java)
+    }
+
+    private companion object {
+        /** A placeholder, low-entropy so gitleaks sees no secret. */
+        val KEY = "d".repeat(32)
     }
 }

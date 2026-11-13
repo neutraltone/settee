@@ -233,7 +233,6 @@
     <string name="rec_switch_keep_watching">Продовжити перегляд</string>
     <string name="rec_switch_channel_name">Автоперемикання запису</string>
     <string name="rec_switch_channel_desc">Попереджає перед перемиканням екрана на запланований запис</string>
-    <string name="settings_tmdb_note">Вставте свій безкоштовний ключ TMDB API, щоб заповнити відсутні постери, фони, акторський склад і описи для фільмів і серіалів. Він залишається на цьому пристрої.</string>
     <string name="settings_tmdb_key_label">Ключ TMDB API</string>
     <string name="guide_next_prefix">Далі  %1$s  %2$s</string>
     <string name="vod_empty_category_movies">У цій категорії немає фільмів.</string>
@@ -309,4 +308,8 @@
     <string name="vod_language_title">Тут лише мовою: %1$s</string>
     <string name="vod_language_body_tv">Цей телевізор не може відтворити версію вашою мовою.</string>
     <string name="vod_language_body_device">Цей пристрій не може відтворити версію вашою мовою.</string>
+    <string name="error_tmdb_key_rejected">TMDB не прийняв цей ключ. Перевірте, що скопіювали API Key повністю, і спробуйте ще раз.</string>
+    <string name="error_tmdb_unreachable_tv">Не вдається зв\'язатися з TMDB. Перевірте, що цей телевізор у мережі, і спробуйте ще раз.</string>
+    <string name="error_tmdb_unreachable_device">Не вдається зв\'язатися з TMDB. Перевірте, що цей пристрій у мережі, і спробуйте ще раз.</string>
+    <string name="error_tmdb_trouble">У TMDB проблеми. Вони на їхньому боці, тож спробуйте пізніше.</string>
 </resources>

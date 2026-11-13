@@ -148,6 +148,22 @@ Watched the episode before it. That is worked out on the fly rather than stored 
 works for every Profile and needs nothing synced. A re-fetch matches rows by provider episode id,
 keeping the local id that resume points use and the first-seen time.
 
+### TMDB fills in the background, and again every six months
+
+With the viewer's TMDB Key, the background pass after a catalogue sync (`MovieGenres` for films,
+`SeriesTmdbPass` for series) asks TMDB about every title once, 200 at a time with a minute's rest
+between, and asks again once its answer is six months old: posters and casts change, and a title TMDB
+had no match for may have one since. Each title stores when TMDB last answered (`tmdbAnsweredAt`), a
+match or not; a refresh carries it across like every other looked-up detail, and a title TMDB couldn't
+be reached about keeps its old date, so it's asked again next time rather than in six months. TMDB only
+fills what the provider left empty, the second time as the first. Opening a series asks at once when
+its details are missing or that old, so a series the pass hasn't reached still fills in. Without a key
+nothing is asked, and nothing TMDB filled in is cleared or aged out.
+
+The key is checked with TMDB before it's saved (`TmdbKeys`), so a mistyped one never sits behind every
+lookup failing quietly. It may be TMDB's v3 API Key or its v4 Read Access Token; `TmdbClient` sends
+whichever it is the way TMDB wants, from one place. It stays on the box: sync never carries it.
+
 ## SQLite's bound-variable limit is a real constraint here
 
 Two queries are written in a non-obvious way because of it, and both are marked in the code.

@@ -10,15 +10,17 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithCache
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.drawOutline
@@ -137,7 +139,10 @@ fun HighlightSurface(
     content: @Composable BoxScope.(highlighted: Boolean) -> Unit,
 ) {
     val interactions = remember { MutableInteractionSource() }
-    val highlighted by interactions.collectIsFocusedAsState()
+    // From the focus state itself, not the interaction source's focus events: those are only heard
+    // once something is listening, a frame after the item appears, so an item given focus the moment
+    // it appeared (the focused row swapped for another in its place) had focus and never showed it.
+    var highlighted by remember { mutableStateOf(false) }
     val look = if (highlighted) style.highlighted else style.resting
     // By style, not state: a card has no ring at rest, but its artwork still needs its corners.
     val clips = style.highlighted.ring != null
@@ -156,6 +161,7 @@ fun HighlightSurface(
                 clip = clips
             }
             .background(look.fill, look.shape)
+            .onFocusChanged { highlighted = it.isFocused }
             .pressable(interactions, onClick, onOptions, enabled)
             .ring(look),
     ) {

@@ -14,8 +14,14 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.input.key.Key
@@ -182,5 +188,23 @@ class HighlightSurfaceTest {
         assertThat(at(160, 60)).isEqualTo(Color.Red)
         // Card starts at 348: its badge past 448 is cut off by the card's corners.
         assertThat(at(460, 60)).isNotEqualTo(Color.Red)
+    }
+
+    @Test
+    fun `an item given focus the moment it appears is drawn highlighted`() {
+        // As when the focused row is swapped for another in its place: the new one has focus before
+        // anything that listens for focus events has started listening.
+        var shown by mutableStateOf(false)
+        val focus = FocusRequester()
+        compose.setTvContent {
+            if (shown) {
+                Box(Modifier.focusRequester(focus)) { Item("Carry on", HighlightStyle.Button, withOptions = false) }
+                SideEffect { focus.requestFocus() }
+            }
+        }
+
+        compose.runOnIdle { shown = true }
+
+        compose.onNodeWithText("Carry on highlighted").assertExists()
     }
 }

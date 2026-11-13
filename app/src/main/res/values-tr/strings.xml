@@ -233,7 +233,6 @@
     <string name="rec_switch_keep_watching">Bu kanalda kal</string>
     <string name="rec_switch_channel_name">Kayıt otomatik geçişi</string>
     <string name="rec_switch_channel_desc">Ekran planlanan bir kayda geçmeden önce uyarır</string>
-    <string name="settings_tmdb_note">Filmler ve Diziler\'de eksik posterleri, arka planları, oyuncu kadrolarını ve özetleri tamamlamak için kendi ücretsiz TMDB API anahtarınızı yapıştırın. Bu cihazda kalır.</string>
     <string name="settings_tmdb_key_label">TMDB API anahtarı</string>
     <string name="guide_next_prefix">Sıradaki  %1$s  %2$s</string>
     <string name="vod_empty_category_movies">Bu kategoride film yok.</string>
@@ -309,4 +308,8 @@
     <string name="vod_language_title">Burada yalnızca %1$s</string>
     <string name="vod_language_body_tv">Bu TV, dilinizde bir sürümü oynatamıyor.</string>
     <string name="vod_language_body_device">Bu cihaz, dilinizde bir sürümü oynatamıyor.</string>
+    <string name="error_tmdb_key_rejected">TMDB bu anahtarı kabul etmedi. API Key\'in tamamını kopyaladığınızdan emin olun, sonra tekrar deneyin.</string>
+    <string name="error_tmdb_unreachable_tv">TMDB\'ye ulaşılamıyor. Bu televizyonun çevrimiçi olduğundan emin olun, sonra tekrar deneyin.</string>
+    <string name="error_tmdb_unreachable_device">TMDB\'ye ulaşılamıyor. Bu cihazın çevrimiçi olduğundan emin olun, sonra tekrar deneyin.</string>
+    <string name="error_tmdb_trouble">TMDB sorun yaşıyor. Sorun onlarda, bu yüzden daha sonra tekrar deneyin.</string>
 </resources>

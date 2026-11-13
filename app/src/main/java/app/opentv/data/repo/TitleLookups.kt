@@ -7,6 +7,7 @@ package app.opentv.data.repo
 
 import android.util.Log
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.delay
 
 /** Saved together: one write per title would reload the whole catalogue on any screen showing it. */
 private const val SAVE_EVERY = 10
@@ -57,3 +58,25 @@ private suspend fun <R : Any> attempt(tag: String, block: suspend () -> R?): R? 
     .onFailure { if (it is CancellationException) throw it }
     .onFailure { Log.w(tag, "Lookup failed", it) }
     .getOrNull()
+
+/**
+ * Works through what [select] picks (given how many to pick), [count] at a time with [pauseMillis]
+ * between, until a batch comes up short or [lookUp] says whoever it asks stopped answering. A title
+ * already tried this run ([id]) isn't picked again: one whose lookup failed would otherwise come
+ * round for ever, as the oldest-first order puts it first each time.
+ */
+internal suspend fun <T> inBatches(
+    count: Int,
+    pauseMillis: Long,
+    id: (T) -> Long,
+    select: suspend (limit: Int) -> List<T>,
+    lookUp: suspend (List<T>) -> Boolean,
+) {
+    val tried = mutableSetOf<Long>()
+    while (true) {
+        val titles = select(count + tried.size).filterNot { id(it) in tried }.take(count)
+        tried += titles.map(id)
+        if (!lookUp(titles) || titles.size < count) return
+        delay(pauseMillis)
+    }
+}

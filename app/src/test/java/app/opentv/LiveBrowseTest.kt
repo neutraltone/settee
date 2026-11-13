@@ -65,12 +65,22 @@ class LiveBrowseTest {
     val artwork = PlaceholderArtwork()
 
     private val app: Application = ApplicationProvider.getApplicationContext()
-    private val graph = ServiceLocator.Graph(app)
+
+    /**
+     * Midday on a fixed date, on this device's clock. Today's page of the guide ends at local
+     * midnight, so a guide built from the real clock put "Later on" into tomorrow, and "Now on"
+     * into yesterday, whenever the tests ran within two hours of it.
+     */
+    private val now = java.util.Calendar.getInstance().apply {
+        clear()
+        set(2026, java.util.Calendar.JUNE, 15, 12, 0)
+    }.timeInMillis
+
+    private val graph = ServiceLocator.Graph(app, clock = { now })
     private val viewModels = TestViewModels()
     private val viewModel by lazy { viewModels.channels(app, graph) }
     private lateinit var view: View
     private val device = DeviceKeyboard(compose) { view }
-    private val now = System.currentTimeMillis()
 
     /** The start of tomorrow on this device, which is where the guide's next day starts. */
     private val tomorrow = java.util.Calendar.getInstance().apply {

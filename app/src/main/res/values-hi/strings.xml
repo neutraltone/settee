@@ -233,7 +233,6 @@
     <string name="rec_switch_keep_watching">देखते रहें</string>
     <string name="rec_switch_channel_name">रिकॉर्डिंग ऑटो-स्विच</string>
     <string name="rec_switch_channel_desc">किसी शेड्यूल्ड रिकॉर्डिंग पर स्क्रीन स्विच करने से पहले चेतावनी देता है</string>
-    <string name="settings_tmdb_note">फ़िल्में और शोज़ में छूटे हुए पोस्टर, बैकड्रॉप, कलाकार और सारांश भरने के लिए अपनी खुद की मुफ़्त TMDB API कुंजी पेस्ट करें। यह इसी डिवाइस पर रहती है।</string>
     <string name="settings_tmdb_key_label">TMDB API कुंजी</string>
     <string name="guide_next_prefix">अगला  %1$s  %2$s</string>
     <string name="vod_empty_category_movies">इस श्रेणी में कोई फ़िल्म नहीं है।</string>
@@ -309,4 +308,8 @@
     <string name="vod_language_title">यहाँ केवल %1$s में</string>
     <string name="vod_language_body_tv">यह टीवी आपकी भाषा में कोई संस्करण नहीं चला सकता।</string>
     <string name="vod_language_body_device">यह डिवाइस आपकी भाषा में कोई संस्करण नहीं चला सकता।</string>
+    <string name="error_tmdb_key_rejected">TMDB ने यह कुंजी स्वीकार नहीं की। जाँचें कि आपने पूरी API Key कॉपी की है, फिर दोबारा कोशिश करें।</string>
+    <string name="error_tmdb_unreachable_tv">TMDB तक नहीं पहुँच पा रहे। जाँचें कि यह टीवी ऑनलाइन है, फिर दोबारा कोशिश करें।</string>
+    <string name="error_tmdb_unreachable_device">TMDB तक नहीं पहुँच पा रहे। जाँचें कि यह डिवाइस ऑनलाइन है, फिर दोबारा कोशिश करें।</string>
+    <string name="error_tmdb_trouble">TMDB में समस्या है। यह उनकी तरफ़ से है, इसलिए बाद में दोबारा कोशिश करें।</string>
 </resources>

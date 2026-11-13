@@ -233,7 +233,6 @@
     <string name="rec_switch_keep_watching">ดูรายการนี้ต่อ</string>
     <string name="rec_switch_channel_name">การสลับอัตโนมัติของการบันทึก</string>
     <string name="rec_switch_channel_desc">เตือนก่อนสลับหน้าจอไปยังรายการที่ตั้งเวลาบันทึกไว้</string>
-    <string name="settings_tmdb_note">วางคีย์ TMDB API ฟรีของคุณเองเพื่อเติมโปสเตอร์ ภาพพื้นหลัง นักแสดง และเรื่องย่อที่ขาดหายไปในภาพยนตร์และซีรีส์ คีย์นี้จะอยู่บนอุปกรณ์นี้เท่านั้น</string>
     <string name="settings_tmdb_key_label">คีย์ TMDB API</string>
     <string name="guide_next_prefix">ถัดไป  %1$s  %2$s</string>
     <string name="vod_empty_category_movies">ไม่มีภาพยนตร์ในหมวดหมู่นี้</string>
@@ -309,4 +308,8 @@
     <string name="vod_language_title">ที่นี่มีแค่ภาษา%1$s</string>
     <string name="vod_language_body_tv">ทีวีนี้เล่นเวอร์ชันภาษาของคุณไม่ได้</string>
     <string name="vod_language_body_device">อุปกรณ์นี้เล่นเวอร์ชันภาษาของคุณไม่ได้</string>
+    <string name="error_tmdb_key_rejected">TMDB ไม่ยอมรับคีย์นี้ ตรวจสอบว่าคัดลอก API Key ครบทั้งหมด แล้วลองอีกครั้ง</string>
+    <string name="error_tmdb_unreachable_tv">ติดต่อ TMDB ไม่ได้ ตรวจสอบว่าทีวีเครื่องนี้ออนไลน์อยู่ แล้วลองอีกครั้ง</string>
+    <string name="error_tmdb_unreachable_device">ติดต่อ TMDB ไม่ได้ ตรวจสอบว่าอุปกรณ์นี้ออนไลน์อยู่ แล้วลองอีกครั้ง</string>
+    <string name="error_tmdb_trouble">TMDB กำลังมีปัญหา ซึ่งเป็นที่ฝั่งของเขา โปรดลองอีกครั้งภายหลัง</string>
 </resources>

@@ -10,6 +10,7 @@ import androidx.annotation.StringRes
 import app.opentv.R
 import app.opentv.data.remote.ProviderException
 import app.opentv.data.remote.ProviderException.Problem
+import app.opentv.data.remote.TmdbCheck
 import java.io.InterruptedIOException
 import java.net.ConnectException
 import java.net.HttpURLConnection
@@ -83,6 +84,27 @@ class ErrorWording(private val context: Context, private val onTelevision: Boole
         ),
         ViewerError.detailOf("HTTP $status"),
     )
+
+    /**
+     * Why a TMDB Key wasn't saved, or null when TMDB accepted it. A wrong key and no answer are
+     * worded apart, so a viewer whose network is down isn't sent off to fetch a new key.
+     */
+    fun ofTmdb(check: TmdbCheck): ViewerError? = when (check) {
+        TmdbCheck.Accepted -> null
+        TmdbCheck.Rejected -> ViewerError(
+            resources.getString(R.string.error_tmdb_key_rejected),
+            ViewerError.detailOf("KeyRejected", "HTTP 401"),
+        )
+        is TmdbCheck.Unreachable -> {
+            val status = check.status
+            if (status != null) {
+                ViewerError(resources.getString(R.string.error_tmdb_trouble), ViewerError.detailOf("HTTP $status"))
+            } else {
+                val tv = R.string.error_tmdb_unreachable_tv
+                ofHardware(tv, R.string.error_tmdb_unreachable_device, codeOf(check.cause))
+            }
+        }
+    }
 
     @StringRes
     private fun sentenceOf(error: Throwable): Int? = networkSentenceOf(error, onTelevision)

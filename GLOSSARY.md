@@ -50,6 +50,14 @@ _Avoid_: Onboarding (that's the page before), sync, first run
 How big a picture a stream promises, such as HD, FHD or 4K. A Channel's streams differ by Quality, and the highest one this device can play is the one that plays by default; a Channel's Qualities are the same wherever it's shown. For a Movie or Series, Quality is one of the things a Version is.
 _Avoid_: Variant (in user-facing text), feed
 
+**TMDB**:
+The free online film and TV database Settee asks for what a Provider left out: posters, backdrops, synopses, cast and the IMDb match add-ons need. It never supplies anything to play, and it has its own section in Settings. Settee only asks it once the viewer has saved a TMDB Key.
+_Avoid_: Provider, metadata provider, scraper
+
+**TMDB Key**:
+The viewer's own free key from their TMDB account, which lets this box ask TMDB for details. Each viewer gets their own; Settee never ships one. It stays on the box it was entered on and isn't synced.
+_Avoid_: Token, API key (except when pointing at the field of that name on TMDB's site), connecting your TMDB account
+
 **Version**:
 One of a provider's copies of a Movie or Series, such as its Netflix copy and its 4K copy. A title shows once however many Versions it has. A Version may differ from the others in Quality, language, subtitles, sound, or in being a cam copy; Settee never switches to a Version in another language on its own. On screen, choosing between them is the Quality pill; the word Version isn't shown.
 _Avoid_: Copy, variant, duplicate

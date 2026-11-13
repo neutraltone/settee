@@ -233,7 +233,6 @@
     <string name="rec_switch_keep_watching">Pokračovať v sledovaní</string>
     <string name="rec_switch_channel_name">Automatické prepnutie pri nahrávaní</string>
     <string name="rec_switch_channel_desc">Upozorní pred prepnutím obrazovky na naplánované nahrávanie</string>
-    <string name="settings_tmdb_note">Vložte svoj vlastný bezplatný API kľúč TMDB a doplňte chýbajúce plagáty, pozadia, obsadenie a synopsy pre Filmy &amp; Seriály. Zostáva iba na tomto zariadení.</string>
     <string name="settings_tmdb_key_label">API kľúč TMDB</string>
     <string name="guide_next_prefix">Ďalej  %1$s  %2$s</string>
     <string name="vod_empty_category_movies">V tejto kategórii nie sú žiadne filmy.</string>
@@ -309,4 +308,8 @@
     <string name="vod_language_title">Tu len v jazyku %1$s</string>
     <string name="vod_language_body_tv">Tento televízor nedokáže prehrať verziu vo vašom jazyku.</string>
     <string name="vod_language_body_device">Toto zariadenie nedokáže prehrať verziu vo vašom jazyku.</string>
+    <string name="error_tmdb_key_rejected">TMDB tento kľúč neprijal. Skontrolujte, či ste skopírovali celý API Key, a skúste to znova.</string>
+    <string name="error_tmdb_unreachable_tv">TMDB nie je dostupné. Skontrolujte, či je tento televízor online, a skúste to znova.</string>
+    <string name="error_tmdb_unreachable_device">TMDB nie je dostupné. Skontrolujte, či je toto zariadenie online, a skúste to znova.</string>
+    <string name="error_tmdb_trouble">TMDB má problémy. Sú na ich strane, skúste to teda neskôr.</string>
 </resources>

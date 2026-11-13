@@ -233,7 +233,6 @@
     <string name="rec_switch_keep_watching">Nastavi gledati</string>
     <string name="rec_switch_channel_name">Automatski prijelaz snimanja</string>
     <string name="rec_switch_channel_desc">Upozorava prije prebacivanja zaslona na zakazano snimanje</string>
-    <string name="settings_tmdb_note">Zalijepite vlastiti besplatni TMDB API ključ za popunjavanje nedostajućih postera, pozadinskih slika, glumačke postave i sinopsisa za filmove i serije. Ostaje na ovom uređaju.</string>
     <string name="settings_tmdb_key_label">TMDB API ključ</string>
     <string name="guide_next_prefix">Sljedeće  %1$s  %2$s</string>
     <string name="vod_empty_category_movies">U ovoj kategoriji nema filmova.</string>
@@ -309,4 +308,8 @@
     <string name="vod_language_title">Ovdje samo na jeziku %1$s</string>
     <string name="vod_language_body_tv">Ovaj televizor ne može reproducirati verziju na vašem jeziku.</string>
     <string name="vod_language_body_device">Ovaj uređaj ne može reproducirati verziju na vašem jeziku.</string>
+    <string name="error_tmdb_key_rejected">TMDB nije prihvatio taj ključ. Provjerite jeste li kopirali cijeli API Key pa pokušajte ponovno.</string>
+    <string name="error_tmdb_unreachable_tv">Nije moguće doći do TMDB-a. Provjerite je li ovaj televizor na mreži pa pokušajte ponovno.</string>
+    <string name="error_tmdb_unreachable_device">Nije moguće doći do TMDB-a. Provjerite je li ovaj uređaj na mreži pa pokušajte ponovno.</string>
+    <string name="error_tmdb_trouble">TMDB ima problema. Do njih je, pa pokušajte ponovno kasnije.</string>
 </resources>

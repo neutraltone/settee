@@ -8,6 +8,7 @@ package app.opentv.pairing
 import android.util.Log
 import app.opentv.R
 import app.opentv.core.ServerProblem
+import app.opentv.core.ViewerError
 import app.opentv.data.model.Source
 import app.opentv.data.model.SourceKind
 import java.io.BufferedReader
@@ -19,6 +20,8 @@ import kotlin.concurrent.thread
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -57,13 +60,41 @@ import kotlinx.coroutines.withTimeoutOrNull
  * - Requests from non-private addresses are refused outright.
  * - After [SESSION_TIMEOUT_MINUTES], or on success, the socket closes and the token is void.
  * - Five wrong codes and the session is burned.
+ *
+ * ## The TMDB Key
+ *
+ * The same server takes the viewer's TMDB Key ([Mode.TmdbKey]), from Settings › TMDB, Onboarding's
+ * TMDB step, or straight on from the first provider ([Mode.Provider.thenTmdbKey]). The key asks
+ * for no code from the TV: the token in the QR code is enough to reach the paste box, and the worst a
+ * stolen link could do is save someone else's key, which the TV checks with TMDB first anyway.
  */
 class PairingServer(
     private val scope: CoroutineScope,
     private val fonts: PairingFonts,
     /** The app's strings, for what the phone is told once the TV answers. */
     private val text: (Int) -> String,
+    sessionTimeoutMillis: Long = TimeUnit.MINUTES.toMillis(SESSION_TIMEOUT_MINUTES),
 ) {
+
+    /** Ends a session left listening, so a code on screen isn't left open on the network for ever. */
+    private val timer = SessionTimer(scope, sessionTimeoutMillis) {
+        if (running && _state.value is State.Listening) {
+            stop()
+            _state.value = State.Failed(ServerProblem.TIMED_OUT)
+        }
+    }
+
+    /** What the phone is sent to fill in. */
+    sealed interface Mode {
+        /**
+         * A provider's details; [thenTmdbKey], once its channels are in, Onboarding's TMDB Key on the
+         * same address, for the first provider.
+         */
+        data class Provider(val thenTmdbKey: Boolean = false) : Mode
+
+        /** The TMDB Key, [onboarding] in Onboarding's words: optional, with how to get one folded away. */
+        data class TmdbKey(val onboarding: Boolean = false) : Mode
+    }
 
     data class Session(
         /** What the QR code encodes, e.g. `http://192.168.0.14:41234/?t=…` */
@@ -98,6 +129,20 @@ class PairingServer(
             }
         }
 
+        /**
+         * The phone sent a TMDB Key. The UI checks it with TMDB and [answer]s: the phone waits for
+         * that, so it can say whether the key was saved or why not.
+         */
+        class KeyReceived(val key: String, private val reply: CompletableDeferred<Reply>) : State {
+            /** [problem] is why the key wasn't saved, or null once it has been. */
+            fun answer(problem: ViewerError?) {
+                reply.complete(if (problem == null) Reply.KeySaved else Reply.KeyTurnedDown(problem))
+            }
+        }
+
+        /** The phone chose Skip for now on Onboarding's TMDB Key page: the TV carries on without one. */
+        data object KeySkipped : State
+
         /** [code] is the exception's type, for the detail line, when one was behind it. */
         data class Failed(val problem: ServerProblem, val code: String? = null) : State
     }
@@ -110,6 +155,10 @@ class PairingServer(
 
         /** The TV left pairing before it answered. */
         data object Stopped : Reply
+
+        data object KeySaved : Reply
+
+        data class KeyTurnedDown(val problem: ViewerError) : Reply
     }
 
     private val _state = MutableStateFlow<State>(State.Idle)
@@ -128,11 +177,28 @@ class PairingServer(
     /** The session listening, to go back to when a login from the phone fails. */
     @Volatile private var session: Session? = null
 
+    /** What the phone is filling in; a provider that carries on becomes Onboarding's TMDB Key. */
+    @Volatile private var mode: Mode = Mode.Provider()
+
     /** What the phone waiting on the TV will be told; null when none is waiting. */
     @Volatile private var pending: CompletableDeferred<Reply>? = null
 
-    fun start() {
-        if (running) return
+    /**
+     * Starts listening for [mode]. Already listening, it carries on with the same address, now for
+     * [mode]: the TMDB step takes over the server the first provider came through.
+     */
+    fun start(mode: Mode = Mode.Provider()) {
+        this.mode = mode
+        // Taken over for the key, it gets a whole session: the provider before it may have used most of
+        // one loading its channels, which left the TMDB step's code expiring under the viewer.
+        if (!running) {
+            open()
+        } else if (mode is Mode.TmdbKey) {
+            timer.arm()
+        }
+    }
+
+    private fun open() {
         val opened = when (val opening = PhoneAddress.open()) {
             is PhoneAddress.Opening.Opened -> opening.address
             PhoneAddress.Opening.NoNetwork -> {
@@ -175,23 +241,21 @@ class PairingServer(
             }
         }
 
-        scope.launch(Dispatchers.Default) {
-            kotlinx.coroutines.delay(TimeUnit.MINUTES.toMillis(SESSION_TIMEOUT_MINUTES))
-            if (running && _state.value is State.Listening) {
-                stop()
-                _state.value = State.Failed(ServerProblem.TIMED_OUT)
-            }
-        }
+        timer.arm()
     }
 
     fun stop() {
         // A phone still waiting on the TV is told now, not when its wait runs out.
         pending?.complete(Reply.Stopped)
+        timer.cancel()
         running = false
         address?.close()
         address = null
         confirmCode = ""
-        if (_state.value is State.Listening) _state.value = State.Idle
+        // Whatever the phone sent goes with the session: the server is shared, and a key left as
+        // KeyReceived was handed to the next screen to show TMDB, which saved it again. Only a failure
+        // stays, for the screen that's still saying why.
+        if (_state.value !is State.Failed) _state.value = State.Idle
     }
 
     // ---- Request handling ------------------------------------------------------------------
@@ -239,15 +303,28 @@ class PairingServer(
             return
         }
         val token = address.token
+        // As the request found it: the TV's TMDB step may change it while a provider is still loading.
+        val asked = mode
 
         when {
             method == "GET" && path.startsWith(FONTS_PATH) -> output.write(font(path.removePrefix(FONTS_PATH)))
+
+            method == "GET" && asked is Mode.TmdbKey -> output.write(
+                PairingHttp.httpResponse("200 OK", "text/html", keyPage(token, null, asked, text)),
+            )
 
             method == "GET" -> output.write(
                 PairingHttp.httpResponse("200 OK", "text/html", PairingPage.form(token, null)),
             )
 
-            method == "POST" && path.startsWith("/submit") -> handleSubmit(output, body)
+            method == "POST" && path.startsWith("/submit") && asked is Mode.Provider ->
+                handleSubmit(output, body, asked)
+
+            method == "POST" && path.startsWith("/key") && asked is Mode.TmdbKey -> handleKey(output, body, asked)
+
+            // Only Onboarding's page has Skip: in Settings there's nothing to carry on to.
+            method == "POST" && path.startsWith("/skip") && asked is Mode.TmdbKey && asked.onboarding ->
+                handleSkip(output)
 
             else -> output.write(
                 PairingHttp.httpResponse("405 Method Not Allowed", "text/plain", "No."),
@@ -260,66 +337,15 @@ class PairingServer(
         return PairingHttp.httpResponse("200 OK", "font/ttf", bytes)
     }
 
-    private fun handleSubmit(output: java.io.OutputStream, body: String) {
+    private fun handleSubmit(output: java.io.OutputStream, body: String, asked: Mode.Provider) {
         val token = address?.token.orEmpty()
         val form = PairingHttp.parseFormEncoded(body)
-
-        val code = form["code"].orEmpty().filter { it.isDigit() }
-        if (!PairingHttp.secretsMatch(code, confirmCode)) {
-            wrongCodeAttempts++
-            if (wrongCodeAttempts >= MAX_CODE_ATTEMPTS) {
-                output.write(
-                    PairingHttp.httpResponse(
-                        "403 Forbidden",
-                        "text/html",
-                        PairingPage.message(
-                            "Too many attempts",
-                            "Start pairing again on the TV to get a new code.",
-                        ),
-                    ),
-                )
-                stop()
-                _state.value = State.Failed(ServerProblem.TOO_MANY_CODES)
-                return
-            }
-            output.write(
-                PairingHttp.httpResponse(
-                    "200 OK",
-                    "text/html",
-                    PairingPage.form(
-                        token,
-                        "That code doesn't match the one on the TV. " +
-                            "${MAX_CODE_ATTEMPTS - wrongCodeAttempts} attempts left.",
-                    ),
-                ),
-            )
+        if (!codeMatches(output, form, token)) return
+        val draft = draftFrom(form)
+        if (draft == null) {
+            output.write(html(PairingPage.form(token, "Please fill in the server address.")))
             return
         }
-
-        val kind = if (form["kind"] == "m3u") SourceKind.M3U else SourceKind.XTREAM
-        val url = form["url"].orEmpty().trim()
-        if (url.isEmpty()) {
-            output.write(
-                PairingHttp.httpResponse(
-                    "200 OK",
-                    "text/html",
-                    PairingPage.form(token, "Please fill in the server address."),
-                ),
-            )
-            return
-        }
-
-        val draft = Source(
-            name = form["name"].orEmpty().trim().ifBlank {
-                if (kind == SourceKind.XTREAM) "My provider" else "My playlist"
-            },
-            kind = kind,
-            url = url,
-            username = form["username"]?.trim()?.takeIf { it.isNotEmpty() },
-            password = form["password"]?.takeIf { it.isNotEmpty() },
-            epgUrl = form["epg"]?.trim()?.takeIf { it.isNotEmpty() },
-        )
-
         val reply = CompletableDeferred<Reply>()
         pending = reply
         _state.value = State.Received(draft, reply)
@@ -328,33 +354,104 @@ class PairingServer(
         // back to what the phone was told before it waited.
         val answer = runBlocking { withTimeoutOrNull(REPLY_TIMEOUT_MILLIS) { reply.await() } }
         pending = null
-        if (answer is Reply.LoginFailed) {
-            output.write(PairingHttp.httpResponse("200 OK", "text/html", PairingPage.form(token, answer.reason)))
-            // Still listening, with the same code and address, so the phone can put it right.
-            session?.let { _state.value = State.Listening(it) }
+        when {
+            answer is Reply.LoginFailed -> {
+                output.write(html(PairingPage.form(token, answer.reason)))
+                // Still listening, with the same code and address, so the phone can put it right.
+                session?.let { _state.value = State.Listening(it) }
+            }
+            answer == Reply.AllDone && asked.thenTmdbKey -> {
+                // Straight on to the TMDB Key, on the same address, as the TV moves to its TMDB step.
+                val next = Mode.TmdbKey(onboarding = true)
+                mode = next
+                timer.arm()
+                output.write(html(keyPage(token, null, next, text)))
+                session?.let { _state.value = State.Listening(it) }
+            }
+            else -> {
+                output.write(html(afterProvider(answer, text)))
+                output.flush()
+                closeDoor()
+            }
+        }
+    }
+
+    /**
+     * Whether the phone sent the code on the TV. If not, it's told so, and after too many wrong
+     * codes the session is burned.
+     */
+    private fun codeMatches(output: java.io.OutputStream, form: Map<String, String>, token: String): Boolean {
+        val code = form["code"].orEmpty().filter { it.isDigit() }
+        if (PairingHttp.secretsMatch(code, confirmCode)) return true
+        wrongCodeAttempts++
+        if (wrongCodeAttempts >= MAX_CODE_ATTEMPTS) {
+            output.write(
+                PairingHttp.httpResponse(
+                    "403 Forbidden",
+                    "text/html",
+                    PairingPage.message("Too many attempts", "Start pairing again on the TV to get a new code."),
+                ),
+            )
+            stop()
+            _state.value = State.Failed(ServerProblem.TOO_MANY_CODES)
+        } else {
+            val left = MAX_CODE_ATTEMPTS - wrongCodeAttempts
+            output.write(
+                html(PairingPage.form(token, "That code doesn't match the one on the TV. $left attempts left.")),
+            )
+        }
+        return false
+    }
+
+    /** Nothing more to receive: shut it now, not leave a socket open on the network for the rest of the timeout. */
+    private fun closeDoor() {
+        running = false
+        address?.close()
+        address = null
+    }
+
+    private fun handleKey(output: java.io.OutputStream, body: String, asked: Mode.TmdbKey) {
+        val token = address?.token.orEmpty()
+        val key = PairingHttp.parseFormEncoded(body)["key"].orEmpty().trim()
+        if (key.isEmpty()) {
+            output.write(PairingHttp.httpResponse("200 OK", "text/html", keyPage(token, null, asked, text)))
             return
         }
+        val reply = CompletableDeferred<Reply>()
+        pending = reply
+        _state.value = State.KeyReceived(key, reply)
+        // TMDB answers a check in a second or two; the wait is only for a TV that never answers.
+        val answer = runBlocking { withTimeoutOrNull(REPLY_TIMEOUT_MILLIS) { reply.await() } }
+        pending = null
         val page = when (answer) {
-            Reply.AllDone -> PairingPage.message(
-                text(R.string.pairing_phone_all_done_title),
-                text(R.string.pairing_phone_all_done_body),
+            Reply.KeySaved -> PairingPage.message(
+                text(R.string.pairing_phone_tmdb_saved_title),
+                text(R.string.pairing_phone_tmdb_saved_body),
             )
-            Reply.Stopped -> PairingPage.message(
+            is Reply.KeyTurnedDown -> {
+                output.write(
+                    PairingHttp.httpResponse("200 OK", "text/html", keyPage(token, answer.problem, asked, text)),
+                )
+                // Still listening, with the same address, so the phone can paste another.
+                session?.let { _state.value = State.Listening(it) }
+                return
+            }
+            else -> PairingPage.message(
                 text(R.string.pairing_phone_stopped_title),
                 text(R.string.pairing_phone_stopped_body),
-            )
-            else -> PairingPage.message(
-                "Sent to your TV",
-                "You can put your phone down. The rest happens on the telly.",
             )
         }
         output.write(PairingHttp.httpResponse("200 OK", "text/html", page))
         output.flush()
-        // Nothing more to receive. Shut the door immediately rather than leaving a socket
-        // open on the user's network for the rest of the timeout.
-        running = false
-        address?.close()
-        address = null
+        closeDoor()
+    }
+
+    private fun handleSkip(output: java.io.OutputStream) {
+        _state.value = State.KeySkipped
+        val title = text(R.string.pairing_phone_tmdb_skipped_title)
+        output.write(html(PairingPage.message(title, text(R.string.pairing_phone_tmdb_skipped_body))))
+        output.flush()
+        closeDoor()
     }
 
     private companion object {
@@ -367,5 +464,71 @@ class PairingServer(
 
         // Fonts take the full token too, as every route does, so they only load for the form.
         const val FONTS_PATH = "/fonts/"
+    }
+}
+
+/** [page] as the phone gets it. */
+private fun html(page: String): ByteArray = PairingHttp.httpResponse("200 OK", "text/html", page)
+
+/** The provider the phone's form describes; null without a server address. */
+private fun draftFrom(form: Map<String, String>): Source? {
+    val kind = if (form["kind"] == "m3u") SourceKind.M3U else SourceKind.XTREAM
+    val url = form["url"].orEmpty().trim().ifEmpty { return null }
+    return Source(
+        name = form["name"].orEmpty().trim().ifBlank {
+            if (kind == SourceKind.XTREAM) "My provider" else "My playlist"
+        },
+        kind = kind,
+        url = url,
+        username = form["username"]?.trim()?.takeIf { it.isNotEmpty() },
+        password = form["password"]?.takeIf { it.isNotEmpty() },
+        epgUrl = form["epg"]?.trim()?.takeIf { it.isNotEmpty() },
+    )
+}
+
+/** What the phone is told once the TV has answered about a provider: all done, stopped, or nothing heard. */
+private fun afterProvider(answer: PairingServer.Reply?, text: (Int) -> String): String = when (answer) {
+    PairingServer.Reply.AllDone -> PairingPage.message(
+        text(R.string.pairing_phone_all_done_title),
+        text(R.string.pairing_phone_all_done_body),
+    )
+    PairingServer.Reply.Stopped -> PairingPage.message(
+        text(R.string.pairing_phone_stopped_title),
+        text(R.string.pairing_phone_stopped_body),
+    )
+    else -> PairingPage.message(
+        "Sent to your TV",
+        "You can put your phone down. The rest happens on the telly.",
+    )
+}
+
+/** The TMDB Key's page, in Onboarding's words when [asked] says so. */
+private fun keyPage(token: String, problem: ViewerError?, asked: PairingServer.Mode.TmdbKey, text: (Int) -> String) =
+    PairingPage.tmdbKey(
+        token = token,
+        text = text,
+        error = problem?.let { PairingPage.Error(it.sentence, it.detail) },
+        onboarding = asked.onboarding,
+    )
+
+/** Runs [onExpiry] [millis] after the last [arm], unless [cancel]led first. */
+private class SessionTimer(
+    private val scope: CoroutineScope,
+    private val millis: Long,
+    private val onExpiry: () -> Unit,
+) {
+    @Volatile private var running: Job? = null
+
+    fun arm() {
+        running?.cancel()
+        running = scope.launch(Dispatchers.Default) {
+            delay(millis)
+            onExpiry()
+        }
+    }
+
+    fun cancel() {
+        running?.cancel()
+        running = null
     }
 }

@@ -233,7 +233,6 @@
     <string name="rec_switch_keep_watching">Seguir viendo</string>
     <string name="rec_switch_channel_name">Cambio automático de grabación</string>
     <string name="rec_switch_channel_desc">Avisa antes de cambiar la pantalla a una grabación programada</string>
-    <string name="settings_tmdb_note">Pega tu propia clave gratuita de la API de TMDB para completar carátulas, fondos, reparto y sinopsis que falten en Películas y Series. Permanece en este dispositivo.</string>
     <string name="settings_tmdb_key_label">Clave de la API de TMDB</string>
     <string name="guide_next_prefix">Siguiente  %1$s  %2$s</string>
     <string name="vod_empty_category_movies">No hay películas en esta categoría.</string>
@@ -309,4 +308,8 @@
     <string name="vod_language_title">Aquí solo en %1$s</string>
     <string name="vod_language_body_tv">Esta tele no puede reproducir una versión en tu idioma.</string>
     <string name="vod_language_body_device">Este dispositivo no puede reproducir una versión en tu idioma.</string>
+    <string name="error_tmdb_key_rejected">TMDB no aceptó esa clave. Comprueba que copiaste la API Key completa y vuelve a intentarlo.</string>
+    <string name="error_tmdb_unreachable_tv">No se puede conectar con TMDB. Comprueba que esta tele está conectada y vuelve a intentarlo.</string>
+    <string name="error_tmdb_unreachable_device">No se puede conectar con TMDB. Comprueba que este dispositivo está conectado y vuelve a intentarlo.</string>
+    <string name="error_tmdb_trouble">TMDB tiene problemas. Son de su lado, así que vuelve a intentarlo más tarde.</string>
 </resources>

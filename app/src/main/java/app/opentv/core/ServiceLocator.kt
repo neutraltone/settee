@@ -9,6 +9,7 @@ import android.content.Context
 import app.opentv.data.db.OpenTvDatabase
 import app.opentv.data.remote.StalkerApi
 import app.opentv.data.remote.StremioClient
+import app.opentv.data.remote.TmdbClient
 import app.opentv.data.remote.XtreamApi
 import app.opentv.data.repo.CatalogRepository
 import app.opentv.data.repo.CatalogueRefresh
@@ -22,10 +23,13 @@ import app.opentv.data.repo.RefreshMessages
 import app.opentv.data.repo.ReminderRepository
 import app.opentv.data.repo.SourceRepository
 import app.opentv.data.repo.TitleIndex
+import app.opentv.data.repo.TmdbKeys
 import app.opentv.data.repo.ViewerLibrary
 import app.opentv.data.repo.VodQualities
 import app.opentv.data.repo.WaitingProgress
 import app.opentv.isRunningOnTelevision
+import app.opentv.pairing.PairingFonts
+import app.opentv.pairing.PairingServer
 import app.opentv.player.DecoderList
 import app.opentv.player.DeviceDecoders
 import app.opentv.recording.RecordingEngine
@@ -33,6 +37,7 @@ import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 
 /**
@@ -183,6 +188,22 @@ object ServiceLocator {
         private val refreshScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
         val refreshMessages: RefreshMessages by lazy { RefreshMessages(appContext) }
+
+        /** TMDB, for checking a TMDB Key before it's saved. Holds nothing, so the catalogue's own is no conflict. */
+        private val tmdbClient: TmdbClient by lazy { TmdbClient(httpClient, settings) }
+
+        /** Saving and removing the TMDB Key, each key checked with TMDB first, off the main thread. */
+        val tmdbKeys: TmdbKeys by lazy {
+            TmdbKeys(settings) { key -> withContext(Dispatchers.IO) { tmdbClient.check(key) } }
+        }
+
+        /**
+         * The phone's way in, for providers and the TMDB Key. One for the app, so Onboarding's TMDB step
+         * carries on with the address the phone sent the first provider through.
+         */
+        val pairingServer: PairingServer by lazy {
+            PairingServer(refreshScope, PairingFonts(appContext), appContext::getString)
+        }
 
         /** Says "this TV" or "this device" as the app decided at launch, with [isRunningOnTelevision]. */
         val errorWording: ErrorWording by lazy { ErrorWording(appContext, isRunningOnTelevision(appContext)) }

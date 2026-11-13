@@ -233,7 +233,6 @@
     <string name="rec_switch_keep_watching">Hier bleiben</string>
     <string name="rec_switch_channel_name">Automatischer Aufnahmewechsel</string>
     <string name="rec_switch_channel_desc">Warnt, bevor der Bildschirm zu einer geplanten Aufnahme wechselt</string>
-    <string name="settings_tmdb_note">Füge deinen eigenen kostenlosen TMDB-API-Schlüssel ein, um fehlende Poster, Hintergrundbilder, Besetzungen und Zusammenfassungen bei Filmen &amp; Serien zu ergänzen. Er bleibt auf diesem Gerät.</string>
     <string name="settings_tmdb_key_label">TMDB-API-Schlüssel</string>
     <string name="guide_next_prefix">Danach  %1$s  %2$s</string>
     <string name="vod_empty_category_movies">Keine Filme in dieser Kategorie.</string>
@@ -309,4 +308,8 @@
     <string name="vod_language_title">Hier nur auf %1$s</string>
     <string name="vod_language_body_tv">Dieser Fernseher kann keine Version in deiner Sprache abspielen.</string>
     <string name="vod_language_body_device">Dieses Gerät kann keine Version in deiner Sprache abspielen.</string>
+    <string name="error_tmdb_key_rejected">TMDB hat diesen Schlüssel nicht akzeptiert. Prüfe, ob du den ganzen API Key kopiert hast, und versuche es erneut.</string>
+    <string name="error_tmdb_unreachable_tv">TMDB ist nicht erreichbar. Prüfe, ob dieser Fernseher online ist, und versuche es erneut.</string>
+    <string name="error_tmdb_unreachable_device">TMDB ist nicht erreichbar. Prüfe, ob dieses Gerät online ist, und versuche es erneut.</string>
+    <string name="error_tmdb_trouble">TMDB hat Probleme. Das liegt bei ihnen, versuche es also später erneut.</string>
 </resources>

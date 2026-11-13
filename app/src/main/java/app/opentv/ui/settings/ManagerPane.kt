@@ -5,22 +5,14 @@
  */
 package app.opentv.ui.settings
 
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import app.opentv.R
 import app.opentv.core.ErrorWording
@@ -28,10 +20,8 @@ import app.opentv.core.ServerProblem
 import app.opentv.core.ServiceLocator
 import app.opentv.core.ViewerError
 import app.opentv.pairing.ManagerServer
-import app.opentv.pairing.QrCodes
 import app.opentv.ui.WebManagerViewModel
 import app.opentv.ui.design.ListRow
-import app.opentv.ui.design.SetteeShapes
 import kotlinx.coroutines.delay
 
 /**
@@ -53,24 +43,11 @@ internal fun ManagerPane(viewModel: WebManagerViewModel = viewModel()) {
     when (val current = state) {
         is ManagerServer.State.Listening -> {
             val session = current.session
-            // Drawn once per address: encoding isn't free, and the content doesn't change.
-            val qr = remember(session.url) { QrCodes.render(session.url, QR_SIZE_PX) }
             CodeBlock(
                 lead = stringResource(R.string.settings_manager_scan),
                 code = session.shortUrl,
                 note = stringResource(R.string.webmanager_local_only),
-                beside = {
-                    qr?.let {
-                        Image(
-                            it.asImageBitmap(),
-                            contentDescription = stringResource(R.string.webmanager_qr_desc),
-                            modifier = Modifier
-                                .size(QR_SIZE)
-                                .background(Color.White, SetteeShapes.Card)
-                                .padding(QR_PADDING),
-                        )
-                    }
-                },
+                beside = { PhoneQrCode(session.url, stringResource(R.string.webmanager_qr_desc)) },
             )
             ListRow(
                 stringResource(R.string.settings_manager_new_address),
@@ -105,6 +82,3 @@ private fun describe(wording: ErrorWording, failed: ManagerServer.State.Failed):
 }
 
 private const val START_DELAY_MS = 400L
-private const val QR_SIZE_PX = 600
-private val QR_SIZE = 200.dp
-private val QR_PADDING = 10.dp

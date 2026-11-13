@@ -104,8 +104,12 @@ import kotlinx.coroutines.withContext
 
 class SourcesViewModel @JvmOverloads constructor(
     app: Application,
-    private val graph: ServiceLocator.Graph = ServiceLocator.get(app),
+    /** Public for the TMDB step, which saves its key in the graph this provider is saved through. */
+    val graph: ServiceLocator.Graph = ServiceLocator.get(app),
 ) : AndroidViewModel(app) {
+
+    /** Whether a first provider is followed by Onboarding's TMDB step: only while there's no TMDB Key. */
+    fun offersTmdbKey(): Boolean = graph.settings.tmdbApiKey.value.isBlank()
 
     data class UiState(
         val sources: List<Source> = emptyList(),
@@ -324,7 +328,14 @@ class ChannelsViewModel @JvmOverloads constructor(
     val selectedCategory = MutableStateFlow<String?>(null)
     val favouritesOnly = MutableStateFlow(false)
 
-    private val nowTick = MutableStateFlow(System.currentTimeMillis())
+    /**
+     * The time now, from the graph's clock rather than the system's, so a test can pin the guide's
+     * day: today's page ends at local midnight, and a guide built from the real clock moves its
+     * programmes between days when a test runs late in the evening.
+     */
+    fun now(): Long = graph.clock()
+
+    private val nowTick = MutableStateFlow(now())
 
     /**
      * Every provider's categories, folded into one entry per logical category, locked ones
@@ -397,7 +408,7 @@ class ChannelsViewModel @JvmOverloads constructor(
             .stateIn(
                 viewModelScope,
                 SharingStarted.WhileSubscribed(5_000),
-                guideWindowOf(System.currentTimeMillis().let { it - it % HALF_HOUR_MILLIS }, 0),
+                guideWindowOf(now().let { it - it % HALF_HOUR_MILLIS }, 0),
             )
 
     private fun guideWindowOf(halfHour: Long, day: Int): Pair<Long, Long> {
@@ -499,14 +510,13 @@ class ChannelsViewModel @JvmOverloads constructor(
                 // restart it via flatMapLatest so it would never finish. "Now" is captured per
                 // build instead; the guide's live progress bars advance off the screen's clock.
                 combine(lineup.channels(scope), programmeIndex) { channels, byEpgChannel ->
-                    val now = System.currentTimeMillis()
                     // Show the size-aware loading bar for the FIRST guide build only (start-up).
                     // After that the guide is built and flicking between categories is cheap, so
                     // don't flash a loading line on every tap — that bar was only ever meant for
                     // the one-time heavy load, and leaking it per-category read as a stuck "100%".
                     val firstBuild = !guideBuilt
                     if (firstBuild) StatusBus.set(sizeMessage(channels.size), 0f)
-                    GuideRows(scope, buildRows(channels, byEpgChannel, now, reportProgress = firstBuild))
+                    GuideRows(scope, buildRows(channels, byEpgChannel, now(), reportProgress = firstBuild))
                 }
             }
             // Grouping thousands of channels against a 12-hour, all-feeds programme window is heavy
@@ -622,7 +632,7 @@ class ChannelsViewModel @JvmOverloads constructor(
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     fun tick() {
-        nowTick.value = System.currentTimeMillis()
+        nowTick.value = now()
     }
 
     // ---- Channel manager (search, then hide/show or favourite) ---------------------------------

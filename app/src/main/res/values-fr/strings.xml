@@ -233,7 +233,6 @@
     <string name="rec_switch_keep_watching">Rester ici</string>
     <string name="rec_switch_channel_name">Bascule automatique d\'enregistrement</string>
     <string name="rec_switch_channel_desc">Avertit avant de basculer l\'écran vers un enregistrement programmé</string>
-    <string name="settings_tmdb_note">Collez votre propre clé API TMDB gratuite pour compléter les affiches, arrière-plans, distributions et synopsis manquants des films et séries. Elle reste sur cet appareil.</string>
     <string name="settings_tmdb_key_label">Clé API TMDB</string>
     <string name="guide_next_prefix">Ensuite  %1$s  %2$s</string>
     <string name="vod_empty_category_movies">Aucun film dans cette catégorie.</string>
@@ -309,4 +308,8 @@
     <string name="vod_language_title">Seulement en %1$s ici</string>
     <string name="vod_language_body_tv">Cette TV ne peut pas lire de version dans votre langue.</string>
     <string name="vod_language_body_device">Cet appareil ne peut pas lire de version dans votre langue.</string>
+    <string name="error_tmdb_key_rejected">TMDB n\'a pas accepté cette clé. Vérifiez que vous avez copié toute l\'API Key, puis réessayez.</string>
+    <string name="error_tmdb_unreachable_tv">Impossible de joindre TMDB. Vérifiez que ce téléviseur est connecté, puis réessayez.</string>
+    <string name="error_tmdb_unreachable_device">Impossible de joindre TMDB. Vérifiez que cet appareil est connecté, puis réessayez.</string>
+    <string name="error_tmdb_trouble">TMDB rencontre des problèmes. Cela vient de chez eux, réessayez plus tard.</string>
 </resources>

@@ -115,6 +115,7 @@ fun GuideGrid(
     onLanded: () -> Unit = {},
     rowsFor: Any? = null,
     onToNow: (() -> Unit)? = null,
+    nowMillis: Long = System.currentTimeMillis(),
 ) {
     val scroll = rememberScrollState()
     // A fresh list for each category: one kept across them holds on to the old channel by key, and
@@ -142,7 +143,6 @@ fun GuideGrid(
     }
     val returnTo = rememberReturnToChannel(returnToChannelId, takeFocus, rows, listState, onReturnToRow)
     val highlight = rememberRowHighlight(rows, listState) { it.key }
-    val now = System.currentTimeMillis()
     // A new day starts at its own beginning, or at its end when the viewer came back to it from
     // the next one, so the Highlight lands next to where it was.
     LaunchedEffect(dayOffset) { if (landAtEnd) scroll.scrollTo(scroll.maxValue) else scroll.scrollTo(0) }
@@ -154,7 +154,7 @@ fun GuideGrid(
                 GuideRow(
                     row = row,
                     window = windowStartMillis..windowEndMillis,
-                    nowMillis = now,
+                    nowMillis = nowMillis,
                     scroll = scroll,
                     onWatch = { onWatch(row) },
                     onHighlight = { programme -> onHighlight(row, programme) },
