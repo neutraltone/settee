@@ -799,6 +799,12 @@ class CatalogRepository(
         }
 
         if (parsed.channels.isEmpty()) {
+            if (parsed.filmsAndEpisodes > 0) {
+                // The playlist answered, with only films and episodes: an earlier version stored
+                // those as channels, and replaceCatalogue never clears a source on an empty list.
+                channelDao.deleteStale(source.id, nowUtcMillis)
+                categoryDao.deleteEmptyLive(source.id)
+            }
             return SyncResult.Failed(wording.of(R.string.error_playlist_empty, NO_CHANNELS), null)
         }
 
@@ -820,6 +826,9 @@ class CatalogRepository(
         categoryDao.upsertAll(categories)
         val categoryNames = categories.associate { it.id to it.name }
         channelDao.replaceCatalogue(source.id, normalized(parsed.channels, categoryNames), nowUtcMillis)
+        // A playlist's categories are only its channels' group-titles, so one no channel is in any
+        // more is a group the playlist dropped, or the films and shows an earlier version stored.
+        categoryDao.deleteEmptyLive(source.id)
 
         // If the playlist declared its own guide URL and the user did not set one, adopt it.
         if (source.epgUrl.isNullOrBlank() && !parsed.declaredEpgUrl.isNullOrBlank()) {
