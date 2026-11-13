@@ -141,7 +141,7 @@ class LiveBrowseTest {
     private suspend fun guide() {
         val db = graph.database
         val feed = db.epgFeeds().insert(EpgFeed(name = "Feed"))
-        db.programmes().upsertAll(
+        db.programmes().insertOrReplace(
             (1L..4L).flatMap { id ->
                 listOf(
                     Programme(

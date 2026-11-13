@@ -494,8 +494,18 @@ interface ProgrammeDao {
     @Query("SELECT DISTINCT epgChannelId FROM programmes")
     suspend fun channelIdsWithProgrammes(): List<String>
 
-    @Upsert
-    suspend fun upsertAll(programmes: List<Programme>)
+    /**
+     * Writes a feed's programmes, each replacing the stored one in its slot (same feed, channel and start).
+     *
+     * Not `@Upsert`: parsed rows come with `id = 0`, so Room's upsert hit the slot's unique index on
+     * insert, fell back to `UPDATE … WHERE id = 0`, matched nothing, and kept the first download's
+     * details, throwing an exception per stored row on the way. REPLACE lets SQLite resolve the
+     * conflict on that index itself. `ON CONFLICT … DO UPDATE` would keep the row's id, but the oldest
+     * devices' SQLite doesn't have it. A replaced row gets a new id, which is fine: nothing refers to
+     * programme ids (reminders and recordings key on channel and start time).
+     */
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertOrReplace(programmes: List<Programme>)
 
     /** Housekeeping: drop anything that finished before the retention cut-off. */
     @Query("DELETE FROM programmes WHERE endUtcMillis < :beforeUtcMillis")

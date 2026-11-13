@@ -179,7 +179,7 @@ class GuideChannelOptionsTest {
         val now = System.currentTimeMillis()
         runBlocking {
             val feed = graph.database.epgFeeds().insert(EpgFeed(name = "Feed"))
-            graph.database.programmes().upsertAll(
+            graph.database.programmes().insertOrReplace(
                 listOf(
                     Programme(
                         feedId = feed,

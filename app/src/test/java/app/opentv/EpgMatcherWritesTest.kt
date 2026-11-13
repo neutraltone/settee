@@ -88,7 +88,7 @@ class EpgMatcherWritesTest {
                 )
             },
         )
-        db.programmes().upsertAll(
+        db.programmes().insertOrReplace(
             populated.map {
                 Programme(
                     feedId = feedId,

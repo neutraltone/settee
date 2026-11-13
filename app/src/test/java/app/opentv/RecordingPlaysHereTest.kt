@@ -80,7 +80,7 @@ class RecordingPlaysHereTest {
         db.channels().replaceCatalogue(1, rows, syncStamp = 1)
         graph.catalogRepository.renormalizeAll()
         val feed = db.epgFeeds().insert(EpgFeed(name = "Feed"))
-        db.programmes().upsertAll(
+        db.programmes().insertOrReplace(
             listOf(now - HOUR / 2, laterStart).map { start ->
                 Programme(
                     feedId = feed,

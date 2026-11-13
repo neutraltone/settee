@@ -89,7 +89,7 @@ class SeriesRuleRescanTest {
         db.channels().upsertAll(listOf(itv("1", "UK| ITV FHD", 300, "itv.fhd"), itv("2", "UK| ITV HD", 200, "itv.hd")))
         val hd = db.channels().everyRow().single { it.streamId == "2" }
         val tomorrow = System.currentTimeMillis() + DAY
-        db.programmes().upsertAll(listOf(airing("itv.fhd", tomorrow), airing("itv.hd", tomorrow + HOUR)))
+        db.programmes().insertOrReplace(listOf(airing("itv.fhd", tomorrow), airing("itv.hd", tomorrow + HOUR)))
         db.seriesRules().insert(
             SeriesRule(
                 channelId = hd.id,
