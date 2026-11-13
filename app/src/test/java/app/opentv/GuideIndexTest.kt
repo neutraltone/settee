@@ -5,7 +5,7 @@
  */
 package app.opentv
 
-import app.opentv.data.model.Programme
+import app.opentv.data.model.GuideProgramme
 import app.opentv.ui.ProgrammeIndex
 import app.opentv.ui.guideBuilds
 import app.opentv.ui.guideIndex
@@ -158,13 +158,12 @@ class GuideIndexTest {
     private fun index(window: Pair<Long, Long>, count: Int) =
         ProgrammeIndex(window, mapOf("bbc1" to (1..count).map { programme("bbc1", "Programme $it", startMinute = it) }))
 
-    private fun listingsThenWait(programmes: List<Programme>) = flow {
+    private fun listingsThenWait(programmes: List<GuideProgramme>) = flow {
         emit(programmes)
         awaitCancellation()
     }
 
-    private fun programme(channel: String, title: String, startMinute: Int = 0) = Programme(
-        feedId = 1,
+    private fun programme(channel: String, title: String, startMinute: Int = 0) = GuideProgramme(
         epgChannelId = channel,
         startUtcMillis = WINDOW.first + startMinute * 60_000L,
         endUtcMillis = WINDOW.first + (startMinute + 1) * 60_000L,

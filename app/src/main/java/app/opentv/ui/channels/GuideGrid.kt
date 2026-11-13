@@ -57,7 +57,7 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import app.opentv.R
-import app.opentv.data.model.Programme
+import app.opentv.data.model.GuideProgramme
 import app.opentv.data.model.shownName
 import app.opentv.ui.ChannelsViewModel
 import app.opentv.ui.LocalRailReturn
@@ -116,8 +116,8 @@ fun GuideGrid(
     onWatch: (ChannelsViewModel.Row) -> Unit,
     modifier: Modifier = Modifier,
     windowEndMillis: Long = windowStartMillis + HOURS_IN_DAY * HOUR_MS,
-    onHighlight: (ChannelsViewModel.Row, Programme?) -> Unit = { _, _ -> },
-    onProgramme: (ChannelsViewModel.Row, Programme) -> Unit = { _, _ -> },
+    onHighlight: (ChannelsViewModel.Row, GuideProgramme?) -> Unit = { _, _ -> },
+    onProgramme: (ChannelsViewModel.Row, GuideProgramme) -> Unit = { _, _ -> },
     dayLabel: String = "",
     dayOffset: Int = 0,
     onNextDay: ((ChannelsViewModel.Row) -> Unit)? = null,
@@ -330,8 +330,8 @@ private fun GuideRow(
     scroll: ScrollState,
     strip: StripState,
     onWatch: () -> Unit,
-    onHighlight: (Programme?) -> Unit,
-    onProgramme: (Programme) -> Unit,
+    onHighlight: (GuideProgramme?) -> Unit,
+    onProgramme: (GuideProgramme) -> Unit,
     onNextDay: (() -> Unit)?,
     onPrevDay: (() -> Unit)?,
     focusRequester: FocusRequester?,
@@ -485,12 +485,12 @@ private fun ChannelCell(
  */
 @Composable
 private fun ProgrammeCells(
-    shown: List<Programme>,
+    shown: List<GuideProgramme>,
     spans: List<CellSpan>,
     strip: StripState,
     nowMillis: Long,
-    onHighlight: (Programme?) -> Unit,
-    onProgramme: (Programme) -> Unit,
+    onHighlight: (GuideProgramme?) -> Unit,
+    onProgramme: (GuideProgramme) -> Unit,
     onNextDay: (() -> Unit)?,
     onPrevDay: (() -> Unit)?,
     first: FocusRequester,
@@ -534,7 +534,7 @@ private fun ProgrammeCells(
 
 @Composable
 private fun ProgrammeCell(
-    programme: Programme,
+    programme: GuideProgramme,
     width: Dp,
     isNow: Boolean,
     onHighlight: () -> Unit,

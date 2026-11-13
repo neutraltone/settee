@@ -12,7 +12,6 @@ import app.opentv.data.model.Recording
 import app.opentv.data.repo.LineupChannel
 import app.opentv.data.repo.MediaKey
 import app.opentv.data.repo.toRecord
-import app.opentv.ui.ChannelsViewModel
 import kotlinx.coroutines.flow.first
 
 /**
@@ -41,10 +40,6 @@ class ChannelOptions(private val graph: ServiceLocator.Graph) {
     suspend fun laterProgrammes(channel: LineupChannel): List<Programme> =
         programmesOf(channel).later().take(MAX_LATER_PROGRAMMES)
 
-    /** [channel] as the programme dialog takes it, whichever surface it was opened from. */
-    suspend fun rowWithProgrammes(channel: LineupChannel) =
-        ChannelsViewModel.Row(channel, programmes = programmesOf(channel))
-
     suspend fun openInExternalPlayer(context: Context, channel: LineupChannel) =
         openInExternalPlayer(context, graph.playbackSources, MediaKey.Live(channel.best.id))
 
@@ -63,7 +58,7 @@ class ChannelOptions(private val graph: ServiceLocator.Graph) {
             // Every one: a channel's Qualities can each be recording at once.
             ItemOption.StopRecording -> recordingsOf(channel).forEach { engine.stop(it.id) }
             is ItemOption.RecordWholeSeries ->
-                engine.recordSeries(graph.channelLineup.toRecord(channel), option.programme, programmesOf(channel))
+                engine.recordSeries(graph.channelLineup.toRecord(channel), option.programme.title)
             else -> Unit
         }
     }

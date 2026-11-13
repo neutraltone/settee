@@ -22,7 +22,9 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -37,6 +39,7 @@ import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
 import app.opentv.R
 import app.opentv.core.ServiceLocator
+import app.opentv.data.model.GuideProgramme
 import app.opentv.data.model.Programme
 import app.opentv.data.model.shownName
 import app.opentv.player.PlayerController
@@ -51,6 +54,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
 
 /** The guide's preview player, released with the screen. Its sound follows the guide's sound setting. */
 @Composable
@@ -93,8 +97,9 @@ internal fun rememberGuidePreviewController(): PlayerController {
 @Composable
 internal fun ScreenFrameScope.GuideBand(
     row: ChannelsViewModel.Row?,
-    programme: Programme?,
+    programme: GuideProgramme?,
     previewPlayer: ExoPlayer?,
+    inFull: suspend (GuideProgramme) -> Programme?,
     modifier: Modifier = Modifier,
 ) {
     Row(modifier.fillMaxWidth().height(BAND_HEIGHT)) {
@@ -124,18 +129,47 @@ internal fun ScreenFrameScope.GuideBand(
                 color = SetteeColors.QuietText,
                 maxLines = 1,
             )
-            programme.description?.takeIf { it.isNotBlank() }?.let { synopsis ->
+            val synopsis = rememberInFull(programme, inFull, settleMillis = SYNOPSIS_SETTLE_MILLIS)?.description
+            synopsis?.takeIf { it.isNotBlank() }?.let {
                 Spacer(Modifier.height(BAND_LINE_GAP))
-                Text(synopsis, SetteeType.Synopsis, color = SetteeColors.Text, maxLines = SYNOPSIS_LINES)
+                Text(it, SetteeType.Synopsis, color = SetteeColors.Text, maxLines = SYNOPSIS_LINES)
             }
         }
     }
+}
+
+/**
+ * [programme] read in full with [inFull], for its synopsis. Null until it loads, and null if the
+ * guide has dropped it. Keyed on the programme alone, so the Highlight moving on never leaves the
+ * last one's text showing under the new one's title.
+ *
+ * [inFull] is the caller's, not [ServiceLocator.get]'s: the guide reads through its view model's
+ * graph, and the band has to read the same guide the rows came from.
+ *
+ * [settleMillis] waits that long before reading, so holding a direction key down through the guide
+ * reads only where the Highlight stops rather than every cell it passes on the way.
+ */
+@Composable
+internal fun rememberInFull(
+    programme: GuideProgramme?,
+    inFull: suspend (GuideProgramme) -> Programme?,
+    settleMillis: Long = 0,
+): Programme? {
+    val read by rememberUpdatedState(inFull)
+    return produceState<Programme?>(null, programme) {
+        if (programme == null) return@produceState
+        if (settleMillis > 0) delay(settleMillis)
+        value = read(programme)
+    }.value
 }
 
 private val BAND_HEIGHT = 150.dp
 private val BAND_GAP = 18.dp
 private val BAND_LINE_GAP = 6.dp
 private const val SYNOPSIS_LINES = 3
+
+/** Shorter than the preview player's 350 ms switch, so the synopsis isn't the last thing to arrive. */
+private const val SYNOPSIS_SETTLE_MILLIS = 200L
 private const val LOGO_FRACTION = 0.6f
 
 /**

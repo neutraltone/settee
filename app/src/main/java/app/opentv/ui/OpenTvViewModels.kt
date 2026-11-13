@@ -17,6 +17,7 @@ import app.opentv.data.model.Category
 import app.opentv.data.model.Channel
 import app.opentv.data.model.EpgFeed
 import app.opentv.data.model.Episode
+import app.opentv.data.model.GuideProgramme
 import app.opentv.data.model.LiveStreamFormat
 import app.opentv.data.model.Movie
 import app.opentv.data.model.Profile
@@ -361,10 +362,10 @@ class ChannelsViewModel @JvmOverloads constructor(
     @androidx.compose.runtime.Immutable
     data class Row(
         val channel: LineupChannel,
-        val now: Programme? = null,
-        val next: Programme? = null,
+        val now: GuideProgramme? = null,
+        val next: GuideProgramme? = null,
         /** Every programme for this channel inside the guide window, start-ordered. */
-        val programmes: List<Programme> = emptyList(),
+        val programmes: List<GuideProgramme> = emptyList(),
     ) {
         val primary: Channel get() = channel.primary
 
@@ -445,6 +446,9 @@ class ChannelsViewModel @JvmOverloads constructor(
         else -> LineupScope.All()
     }
 
+    /** A programme the guide lists, in full: the rows hold only what the guide's cells draw. */
+    suspend fun programmeInFull(programme: GuideProgramme): Programme? = graph.epgRepository.programme(programme)
+
     /** From Search, channel up and down go through every Channel rather than the results. */
     fun zapFromAll() = lineup.zapFrom(LineupScope.All())
 
@@ -464,11 +468,11 @@ class ChannelsViewModel @JvmOverloads constructor(
      * Keyed on the half-hour bucket (not the raw minute tick) so it holds steady while you flick
      * between categories and refreshes at most twice an hour; the underlying Room flow also
      * re-emits on its own when an EPG sync lands new programmes, at most every couple of seconds
-     * however many batches it writes (`EpgRepository.observeWindow`, #257).
+     * however many batches it writes (`EpgRepository.observeGuideWindow`, #257).
      */
     private val programmeIndex: StateFlow<ProgrammeIndex> =
         guideWindow
-            .guideIndex(graph.epgRepository::observeWindow)
+            .guideIndex(graph.epgRepository::observeGuideWindow)
             .flowOn(Dispatchers.Default)
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ProgrammeIndex.Empty)
 
@@ -532,7 +536,7 @@ class ChannelsViewModel @JvmOverloads constructor(
 
     private fun buildRows(
         channels: List<LineupChannel>,
-        byEpgChannel: Map<String, List<Programme>>,
+        byEpgChannel: Map<String, List<GuideProgramme>>,
         now: Long,
         reportProgress: Boolean = false,
     ): List<Row> {

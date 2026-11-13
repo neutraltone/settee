@@ -121,6 +121,32 @@ class SeriesRuleRescanTest {
         assertThat(recordings.scheduled()).hasSize(20)
     }
 
+    @Test
+    fun `recording a series from the guide records an airing on now once, though two feeds list it`() = runTest {
+        db.sources().insert(PANEL_SOURCE)
+        db.channels().upsertAll(listOf(itv("2", "UK| ITV HD", 200, "itv.hd")))
+        val channel = db.channels().everyRow().single()
+        val onNow = airing("itv.hd", System.currentTimeMillis() - HOUR / 2)
+        db.programmes().insertOrReplace(listOf(onNow, onNow.copy(feedId = 2)))
+
+        engine.recordSeries(channel, "Countryfile")
+
+        assertThat(recordings.active()).hasSize(1)
+    }
+
+    @Test
+    fun `recording a series from the guide books its later airings from the guide, past the day on show`() = runTest {
+        db.sources().insert(PANEL_SOURCE)
+        db.channels().upsertAll(listOf(itv("2", "UK| ITV HD", 200, "itv.hd")))
+        val channel = db.channels().everyRow().single()
+        val nextWeek = System.currentTimeMillis() + 7 * DAY
+        db.programmes().insertOrReplace(listOf(airing("itv.hd", nextWeek).copy(description = "Farming.")))
+
+        engine.recordSeries(channel, "Countryfile")
+
+        assertThat(recordings.scheduled().map { it.description }).containsExactly("Farming.")
+    }
+
     private companion object {
         const val HOUR = 60 * 60 * 1000L
         const val DAY = 24 * HOUR

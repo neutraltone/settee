@@ -25,8 +25,8 @@ import app.opentv.R
 import app.opentv.core.ServiceLocator
 import app.opentv.core.requestIgnoreBatteryOptimizations
 import app.opentv.data.model.Episode
+import app.opentv.data.model.GuideProgramme
 import app.opentv.data.model.Movie
-import app.opentv.data.model.Programme
 import app.opentv.data.model.Series
 import app.opentv.data.model.shownName
 import app.opentv.data.parser.displayTitle
@@ -141,10 +141,7 @@ fun ItemOptionsHost(
             }
             is ItemOption.LaterProgramme -> {
                 open = null
-                scope.launch {
-                    scheduling =
-                        Scheduling(viewModel.channels.rowWithProgrammes(subject.channel), option.programme, subject)
-                }
+                scheduling = Scheduling(ChannelsViewModel.Row(subject.channel), option.programme.listed(), subject)
             }
             ItemOption.Watch -> {
                 open = null
@@ -221,7 +218,7 @@ fun ItemOptionsHost(
 /** The programme picked from a channel's Schedule a later programme list. */
 private data class Scheduling(
     val row: ChannelsViewModel.Row,
-    val programme: Programme,
+    val programme: GuideProgramme,
     val subject: OptionsSubject.OfChannel,
 )
 

@@ -17,6 +17,7 @@ import app.opentv.data.db.SourceDao
 import app.opentv.data.model.ChannelEpgMatch
 import app.opentv.data.model.EpgChannelAlias
 import app.opentv.data.model.EpgFeed
+import app.opentv.data.model.GuideProgramme
 import app.opentv.data.model.Programme
 import app.opentv.data.model.Source
 import app.opentv.data.parser.ChannelNameNormalizer
@@ -105,10 +106,17 @@ class EpgRepository(
 
     fun observeFeeds(): Flow<List<EpgFeed>> = feedDao.observeAll()
 
-    // Both settled: Room re-runs them for every batch a guide sync writes, and whoever watches
-    // them would otherwise redo its work hundreds of times per sync (#257).
-    fun observeWindow(fromUtcMillis: Long, toUtcMillis: Long): Flow<List<Programme>> =
-        programmeDao.observeWindow(fromUtcMillis, toUtcMillis).settled()
+    // Settled: Room re-runs it for every batch a guide sync writes, and whoever watches it would
+    // otherwise redo its work hundreds of times per sync (#257).
+    fun observeGuideWindow(fromUtcMillis: Long, toUtcMillis: Long): Flow<List<GuideProgramme>> =
+        programmeDao.observeGuideWindow(fromUtcMillis, toUtcMillis).settled()
+
+    /**
+     * A programme the guide lists, in full, found by its slot so a guide refresh since doesn't lose it.
+     * Null only once the guide has dropped that airing.
+     */
+    suspend fun programme(listed: GuideProgramme): Programme? =
+        programmeDao.startingAt(listed.epgChannelId, listed.startUtcMillis)
 
     suspend fun upcoming(epgChannelId: String, nowUtcMillis: Long, limit: Int = 12): List<Programme> =
         programmeDao.upcoming(epgChannelId, nowUtcMillis, limit)

@@ -26,6 +26,7 @@ import androidx.compose.ui.unit.dp
 import app.opentv.R
 import app.opentv.core.ServiceLocator
 import app.opentv.data.model.Channel
+import app.opentv.data.model.GuideProgramme
 import app.opentv.data.model.Programme
 import app.opentv.data.model.Recording
 import app.opentv.data.model.Reminder
@@ -50,6 +51,10 @@ import kotlinx.coroutines.launch
  * the right with the programme's title, channel, time and synopsis at the top, and what can be done
  * with it as rows beneath: record it, be reminded of it, switch to it when it starts. Back closes it.
  *
+ * The guide holds only what its cells draw, so the synopsis is read from the guide by the programme's
+ * channel and start, and so is the description a recording is booked with. If the guide has dropped
+ * it since the grid was built, it shows without a synopsis and books without a description.
+ *
  * Record from and Quality are rows showing the current choice; OK on one swaps the panel for that
  * choice, with the current one ticked, and choosing comes back to the details.
  *
@@ -58,7 +63,7 @@ import kotlinx.coroutines.launch
 @Composable
 internal fun ProgrammeDetails(
     targetRow: ChannelsViewModel.Row,
-    programme: Programme,
+    programme: GuideProgramme,
     nowMillis: Long,
     sources: List<Source>,
     activeRecordings: List<Recording>,
@@ -172,7 +177,9 @@ internal fun ProgrammeDetails(
 private enum class Choosing { SOURCE, QUALITY }
 
 @Composable
-private fun ColumnScope.Heading(programme: Programme, channel: Channel) {
+private fun ColumnScope.Heading(programme: GuideProgramme, channel: Channel) {
+    val context = LocalContext.current
+    val graph = remember { ServiceLocator.get(context) }
     Text(programme.title, SetteeType.Section, maxLines = 2)
     Text(channel.shownName, SetteeType.Body, maxLines = 1)
     Text(
@@ -180,7 +187,10 @@ private fun ColumnScope.Heading(programme: Programme, channel: Channel) {
         SetteeType.Body,
         color = SetteeColors.QuietText,
     )
-    programme.description?.takeIf { it.isNotBlank() }?.let { Text(it, SetteeType.Synopsis, maxLines = SYNOPSIS_LINES) }
+    // The same graph its actions book through, so the synopsis and the booking read one guide.
+    rememberInFull(programme, graph.epgRepository::programme)?.description?.takeIf { it.isNotBlank() }?.let {
+        Text(it, SetteeType.Synopsis, maxLines = SYNOPSIS_LINES)
+    }
     Spacer(Modifier.height(HEADING_GAP))
 }
 
@@ -219,7 +229,7 @@ private fun Choice(
 @Composable
 private fun Actions(
     targetRow: ChannelsViewModel.Row,
-    programme: Programme,
+    programme: GuideProgramme,
     nowMillis: Long,
     activeRecordings: List<Recording>,
     chosenVariant: Channel,
@@ -245,7 +255,7 @@ private fun Actions(
             onDismiss()
         })
         liveNow -> PanelRow(stringResource(R.string.rec_record_now), onClick = {
-            scope.launch { graph.recordingEngine.startChannel(chosenVariant, programme) }
+            scope.launch { graph.recordingEngine.startChannel(chosenVariant, graph.inFull(programme)) }
             toast(resources.getString(R.string.rec_recording_channel, channel.shownName))
             recordingStarted()
             onDismiss()
@@ -256,7 +266,7 @@ private fun Actions(
             onDismiss()
         })
         !isPast -> PanelRow(stringResource(R.string.rec_schedule_recording), onClick = {
-            scope.launch { graph.recordingEngine.scheduleProgramme(chosenVariant, programme) }
+            scope.launch { graph.recordingEngine.scheduleProgramme(chosenVariant, graph.inFull(programme)) }
             toast(resources.getString(R.string.rec_scheduled_title, programme.title))
             recordingStarted()
             onDismiss()
@@ -266,11 +276,7 @@ private fun Actions(
     if (!isPast) ReminderActions(channel, programme, scope, onDismiss)
     PanelRow(stringResource(R.string.rec_record_series), onClick = {
         scope.launch {
-            graph.recordingEngine.recordSeries(
-                graph.channelLineup.toRecord(targetRow.channel),
-                programme,
-                targetRow.programmes,
-            )
+            graph.recordingEngine.recordSeries(graph.channelLineup.toRecord(targetRow.channel), programme.title)
         }
         toast(resources.getString(R.string.rec_series_recording_set, programme.title))
         recordingStarted()
@@ -283,7 +289,7 @@ private fun Actions(
 }
 
 @Composable
-private fun ReminderActions(channel: Channel, programme: Programme, scope: CoroutineScope, onDismiss: () -> Unit) {
+private fun ReminderActions(channel: Channel, programme: GuideProgramme, scope: CoroutineScope, onDismiss: () -> Unit) {
     val context = LocalContext.current
     val resources = LocalResources.current
     val graph = remember { ServiceLocator.get(context) }
@@ -324,12 +330,19 @@ private fun ReminderActions(channel: Channel, programme: Programme, scope: Corou
     }
 }
 
+/**
+ * [programme] in full, to book a recording with its description. When the guide has dropped it since
+ * the grid was built, the recording is still booked from what the guide showed, without one.
+ */
+private suspend fun ServiceLocator.Graph.inFull(programme: GuideProgramme): Programme =
+    epgRepository.programme(programme) ?: programme.withoutDetails()
+
 /** Inserts a reminder for a future programme and arms its alarm. No-op if one already exists. */
 private suspend fun setReminder(
     graph: ServiceLocator.Graph,
     context: android.content.Context,
     channel: Channel,
-    programme: Programme,
+    programme: GuideProgramme,
     autoTune: Boolean,
 ) {
     if (graph.reminderRepository.forProgramme(channel.id, programme.startUtcMillis) != null) return

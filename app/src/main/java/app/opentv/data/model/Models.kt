@@ -291,23 +291,65 @@ data class Programme(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     /** The [EpgFeed] this came from. */
     val feedId: Long,
-    val epgChannelId: String,
-    val startUtcMillis: Long,
-    val endUtcMillis: Long,
+    override val epgChannelId: String,
+    override val startUtcMillis: Long,
+    override val endUtcMillis: Long,
     val title: String,
     val description: String? = null,
     val category: String? = null,
     val season: Int? = null,
     val episode: Int? = null,
     val iconUrl: String? = null,
-) {
+) : Airing {
     val durationMillis: Long get() = endUtcMillis - startUtcMillis
-
-    fun isLiveAt(nowUtcMillis: Long): Boolean = nowUtcMillis in startUtcMillis until endUtcMillis
 
     fun progressAt(nowUtcMillis: Long): Float {
         if (durationMillis <= 0L) return 0f
         return ((nowUtcMillis - startUtcMillis).toFloat() / durationMillis).coerceIn(0f, 1f)
+    }
+
+    /** As the guide grid lists it, for opening its details from somewhere other than the grid. */
+    fun listed() = GuideProgramme(epgChannelId, startUtcMillis, endUtcMillis, title, season, episode)
+}
+
+/** A programme's slot in the guide: its channel there and its times, whichever form it's held in. */
+interface Airing {
+    val epgChannelId: String
+    val startUtcMillis: Long
+    val endUtcMillis: Long
+
+    fun isLiveAt(nowUtcMillis: Long): Boolean = nowUtcMillis in startUtcMillis until endUtcMillis
+}
+
+/**
+ * A [Programme] as the guide grid holds it: only what a cell draws and a row is built from. The grid
+ * keeps a whole day's programmes for every guide feed in memory, so the description, category and
+ * icon stay in the database, read by guide channel and start when one programme is shown in full or
+ * booked. Not by row id: a guide refresh replaces every row with a new one, so an id the grid held
+ * would miss after each sync, while the same airing is still there in the same slot.
+ */
+data class GuideProgramme(
+    override val epgChannelId: String,
+    override val startUtcMillis: Long,
+    override val endUtcMillis: Long,
+    val title: String,
+    val season: Int? = null,
+    val episode: Int? = null,
+) : Airing {
+    /** The full row with only what the guide holds, for an airing the guide has since dropped. */
+    fun withoutDetails() = Programme(
+        feedId = NO_FEED,
+        epgChannelId = epgChannelId,
+        startUtcMillis = startUtcMillis,
+        endUtcMillis = endUtcMillis,
+        title = title,
+        season = season,
+        episode = episode,
+    )
+
+    private companion object {
+        /** Never stored, so it names no feed. */
+        const val NO_FEED = 0L
     }
 }
 

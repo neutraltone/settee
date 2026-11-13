@@ -7,7 +7,7 @@ package app.opentv.ui.channels
 
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import app.opentv.data.model.Programme
+import app.opentv.data.model.Airing
 
 /** Where one programme's cell sits along its guide row, from the start of the strip. */
 internal data class CellSpan(val x: Dp, val width: Dp) {
@@ -21,7 +21,7 @@ internal data class CellSpan(val x: Dp, val width: Dp) {
  * cell is floored at [MIN_CELL_WIDTH], and the borrowed width is repaid out of the gaps that follow,
  * so everything downstream stays aligned with the time header.
  */
-internal fun layOutCells(shown: List<Programme>, windowStartMillis: Long, windowEndMillis: Long): List<CellSpan> {
+internal fun layOutCells(shown: List<Airing>, windowStartMillis: Long, windowEndMillis: Long): List<CellSpan> {
     var cursor = windowStartMillis
     var x = 0.dp
     var debt = 0.dp

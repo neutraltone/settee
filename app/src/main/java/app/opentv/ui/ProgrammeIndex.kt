@@ -5,7 +5,7 @@
  */
 package app.opentv.ui
 
-import app.opentv.data.model.Programme
+import app.opentv.data.model.GuideProgramme
 import app.opentv.data.repo.GUIDE_SETTLE_MILLIS
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
@@ -29,7 +29,7 @@ import kotlinx.coroutines.launch
  * [app.opentv.data.repo.settled]), and comparing a whole window's programmes again here cost a
  * second full pass over them on every update.
  */
-internal class ProgrammeIndex(val window: Pair<Long, Long>?, val byChannel: Map<String, List<Programme>>) {
+internal class ProgrammeIndex(val window: Pair<Long, Long>?, val byChannel: Map<String, List<GuideProgramme>>) {
     companion object {
         val Empty = ProgrammeIndex(null, emptyMap())
     }
@@ -38,7 +38,7 @@ internal class ProgrammeIndex(val window: Pair<Long, Long>?, val byChannel: Map<
 /** Each guide window's stored listings, grouped by channel; a new window starts reading afresh. */
 @OptIn(ExperimentalCoroutinesApi::class)
 internal fun Flow<Pair<Long, Long>>.guideIndex(
-    programmesIn: (fromUtcMillis: Long, toUtcMillis: Long) -> Flow<List<Programme>>,
+    programmesIn: (fromUtcMillis: Long, toUtcMillis: Long) -> Flow<List<GuideProgramme>>,
 ): Flow<ProgrammeIndex> = flatMapLatest { window ->
     programmesIn(window.first, window.second)
         .map { programmes -> ProgrammeIndex(window, programmes.groupBy { it.epgChannelId }) }
@@ -57,7 +57,7 @@ internal fun Flow<Pair<Long, Long>>.guideIndex(
 internal fun <C, R> Flow<C>.guideBuilds(
     index: Flow<ProgrammeIndex>,
     settleMillis: Long = GUIDE_SETTLE_MILLIS,
-    build: suspend (channels: C, byChannel: Map<String, List<Programme>>) -> R,
+    build: suspend (channels: C, byChannel: Map<String, List<GuideProgramme>>) -> R,
 ): Flow<R> = channelFlow {
     val latest = MutableStateFlow<BuildInputs<C>?>(null)
     launch {
