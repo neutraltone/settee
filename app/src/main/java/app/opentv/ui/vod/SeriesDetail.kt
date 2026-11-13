@@ -118,7 +118,7 @@ fun SeriesDetailScreen(
 
     SeriesDetailContent(
         series = s,
-        episodes = episodes,
+        episodes = show.shown,
         statuses = statuses,
         mainAction = mainAction,
         status = status,
