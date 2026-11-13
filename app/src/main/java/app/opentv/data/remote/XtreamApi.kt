@@ -217,29 +217,6 @@ class XtreamApi(
         }
     }
 
-    /** Episode list for one series. See [seasonEpisodes] for the shapes `episodes` comes in. */
-    suspend fun episodes(source: Source, seriesId: String): List<Episode> = withContext(Dispatchers.IO) {
-        val body = getJson(source, "get_series_info") { it.addQueryParameter("series_id", seriesId) }
-        body.jsonObjectOrNull?.get("episodes").seasonEpisodes().mapNotNull { (seasonHint, obj) ->
-            val episodeId = obj["id"].asStringOrNull ?: return@mapNotNull null
-            val info = obj["info"].jsonObjectOrNull
-            val extension = obj["container_extension"].asStringOrNull
-                ?.takeIf { it.isNotBlank() }
-            Episode(
-                sourceId = source.id,
-                seriesId = seriesId,
-                episodeId = episodeId,
-                season = obj["season"].asIntOrNull ?: seasonHint ?: 1,
-                episodeNumber = obj["episode_num"].asIntOrNull ?: 0,
-                title = obj["title"].asStringOrNull ?: "Episode",
-                plot = info?.get("plot").asStringOrNull,
-                durationSeconds = info?.get("duration_secs").asIntOrNull,
-                stillUrl = info?.get("movie_image").asStringOrNull?.takeIf { it.isNotBlank() },
-                streamUrl = seriesStreamUrl(source, episodeId, extension),
-            )
-        }
-    }
-
     /**
      * Rich metadata for a single movie, from `get_vod_info`'s `info` object.
      *
@@ -268,24 +245,44 @@ class XtreamApi(
     }
 
     /**
-     * Rich metadata for a single series, from `get_series_info`'s `info` object. Same contract as
-     * [movieInfo]; series carry no director. This shares the `get_series_info` endpoint with
-     * [episodes] but is a separate call — the detail screen fetches episodes and info independently,
-     * and most series are never opened, so paying for both only when needed is the point.
+     * One series' `get_series_info`: its details from the `info` object and its episodes, from one
+     * request. The detail screen needs both when a series is opened, and most series never are, so
+     * this is asked lazily, once per open, rather than during catalogue sync. Details follow
+     * [movieInfo]'s contract (series carry no director): a panel that omits `info` or sends it as
+     * `[]` yields all nulls. See [seasonEpisodes] for the shapes `episodes` comes in. Throws when
+     * the panel doesn't answer, so callers can tell that apart from a series with nothing to give.
      */
-    suspend fun seriesInfo(source: Source, seriesId: String): SeriesInfo? = withContext(Dispatchers.IO) {
-        val body = runCatching {
-            getJson(source, "get_series_info") { it.addQueryParameter("series_id", seriesId) }
-        }.getOrNull() ?: return@withContext null
-        val info = body.jsonObjectOrNull?.get("info").jsonObjectOrNull ?: JsonObject(emptyMap())
-        SeriesInfo(
-            backdropUrl = info.asBackdropUrl("cover_big", "cover"),
-            cast = info["cast"].asStringOrNull ?: info["actors"].asStringOrNull,
-            genre = info["genre"].asStringOrNull,
-            tmdbId = info["tmdb_id"].asStringOrNull ?: info["tmdb"].asStringOrNull,
-            plot = info["plot"].asStringOrNull ?: info["description"].asStringOrNull,
-            rating = info["rating"].asDoubleOrNull,
-            year = info["year"].asIntOrNull ?: info["releaseDate"].asStringOrNull?.take(4)?.toIntOrNull(),
+    suspend fun seriesInfo(source: Source, seriesId: String): SeriesReply = withContext(Dispatchers.IO) {
+        val body = getJson(source, "get_series_info") { it.addQueryParameter("series_id", seriesId) }.jsonObjectOrNull
+        val info = body?.get("info").jsonObjectOrNull ?: JsonObject(emptyMap())
+        SeriesReply(
+            info = SeriesInfo(
+                backdropUrl = info.asBackdropUrl("cover_big", "cover"),
+                cast = info["cast"].asStringOrNull ?: info["actors"].asStringOrNull,
+                genre = info["genre"].asStringOrNull,
+                tmdbId = info["tmdb_id"].asStringOrNull ?: info["tmdb"].asStringOrNull,
+                plot = info["plot"].asStringOrNull ?: info["description"].asStringOrNull,
+                rating = info["rating"].asDoubleOrNull,
+                year = info["year"].asIntOrNull ?: info["releaseDate"].asStringOrNull?.take(4)?.toIntOrNull(),
+            ),
+            episodes = body?.get("episodes").seasonEpisodes().mapNotNull { (seasonHint, obj) ->
+                val episodeId = obj["id"].asStringOrNull ?: return@mapNotNull null
+                val episodeInfo = obj["info"].jsonObjectOrNull
+                val extension = obj["container_extension"].asStringOrNull
+                    ?.takeIf { it.isNotBlank() }
+                Episode(
+                    sourceId = source.id,
+                    seriesId = seriesId,
+                    episodeId = episodeId,
+                    season = obj["season"].asIntOrNull ?: seasonHint ?: 1,
+                    episodeNumber = obj["episode_num"].asIntOrNull ?: 0,
+                    title = obj["title"].asStringOrNull ?: "Episode",
+                    plot = episodeInfo?.get("plot").asStringOrNull,
+                    durationSeconds = episodeInfo?.get("duration_secs").asIntOrNull,
+                    stillUrl = episodeInfo?.get("movie_image").asStringOrNull?.takeIf { it.isNotBlank() },
+                    streamUrl = seriesStreamUrl(source, episodeId, extension),
+                )
+            },
         )
     }
 
@@ -482,6 +479,9 @@ class XtreamApi(
         val rating: Double?,
         val year: Int?,
     )
+
+    /** One series' `get_series_info` reply: its details and its episodes. See [seriesInfo]. */
+    data class SeriesReply(val info: SeriesInfo, val episodes: List<Episode>)
 }
 
 private fun parsed(json: Json, text: String): JsonElement {
