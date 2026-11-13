@@ -7,6 +7,7 @@ package app.opentv
 
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
+import app.opentv.data.db.ChannelDao
 import app.opentv.data.model.Category
 import app.opentv.data.model.Channel
 import app.opentv.data.model.Programme
@@ -237,6 +238,38 @@ class ChannelLineupTest {
 
         assertThat(scope(LineupScope.Favourites()).names()).containsExactly(listOf("UK| ITV FHD", "UK| ITV HD"))
         assertThat(all().filter { it.favourite }.names()).containsExactly(listOf("UK| ITV FHD", "UK| ITV HD"))
+    }
+
+    @Test
+    fun `the favourites look each channel's name up once, however many qualities are starred`() = runTest {
+        seed("UK| ITV HD", "UK| ITV SD", sourceId = 1)
+        seed("UK| ITV FHD", sourceId = 2)
+        lineup.setFavourite(all().single(), favourite = true)
+        val dao = CountingChannelDao(db.channels())
+        val counted = ChannelLineup(
+            db,
+            catalogue.viewerLibrary.favourites,
+            lockedKeys,
+            unlocked,
+            ANY_SIZE_DECODERS,
+            sharing,
+            channelDao = dao,
+        )
+
+        val favourites = counted.channels(LineupScope.Favourites()).first()
+
+        assertThat(favourites.single().qualities).hasSize(3)
+        assertThat(dao.sameNameLookups).isEqualTo(1)
+    }
+
+    /** Counts the by-name lookups: each one scans the whole table. */
+    private class CountingChannelDao(private val real: ChannelDao) : ChannelDao by real {
+        var sameNameLookups = 0
+
+        override suspend fun sameName(nameKey: String): List<Channel> {
+            sameNameLookups++
+            return real.sameName(nameKey)
+        }
     }
 
     @Test
