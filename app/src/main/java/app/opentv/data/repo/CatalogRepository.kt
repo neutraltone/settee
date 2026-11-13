@@ -750,26 +750,6 @@ class CatalogRepository(
         .onFailure { Log.w(TAG, "A movie or show list failed", it) }
         .isSuccess
 
-    /**
-     * Files the credits of titles saved before credits were kept (database version 9), so they're on
-     * people's pages without the viewer adding their providers again. In the background at launch;
-     * once they're done, it's one quick query that finds nothing.
-     */
-    fun creditEarlierTitles() {
-        background.launch {
-            runCatching {
-                pageThrough { after -> movieDao.creditNextUncredited(after, CREDIT_BATCH) }
-                pageThrough { after -> seriesDao.creditNextUncredited(after, CREDIT_BATCH) }
-            }.onFailure { Log.w(TAG, "Filing earlier titles' credits failed", it) }
-        }
-    }
-
-    /** Calls [next] with the last id it returned (0 at first) until it returns null. */
-    private suspend fun pageThrough(next: suspend (afterId: Long) -> Long?) {
-        var after = 0L
-        while (true) after = next(after) ?: return
-    }
-
     /** [fillGenresInBackground] for every provider that has films: Xtream's. */
     suspend fun fillEveryProvidersGenres() =
         enabledSources().filter { it.kind == SourceKind.XTREAM }.forEach(::fillGenresInBackground)
@@ -977,8 +957,6 @@ class CatalogRepository(
         private const val NO_CHANNELS = "NoChannels"
         private const val OUT_OF_MEMORY = "OutOfMemory"
 
-        /** Titles [creditEarlierTitles] files at a time, each batch one transaction. */
-        private const val CREDIT_BATCH = 500
         val SEPARATOR_CHARS = setOf('#', '*', '=', '~', '-', '_', '•', '█', '▓', '|')
 
         /**

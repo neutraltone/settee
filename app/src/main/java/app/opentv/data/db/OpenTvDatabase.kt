@@ -119,9 +119,10 @@ abstract class OpenTvDatabase : RoomDatabase() {
          * 9 → 10: adds the credits a person's page looks people up in, a film's writers and studios,
          * and marks every film as not yet looked up, so the background pass asks each once for the cast
          * version 9 threw away, and TMDB for the rest.
-         * Nothing is dropped, so it's worth not wiping providers for. The credits start empty:
-         * `CatalogRepository.creditEarlierTitles` fills them in for the titles already saved, which
-         * needs Kotlin to fold the names.
+         * Nothing is dropped, so it's worth not wiping providers for. The credits start empty, since
+         * filing them needs Kotlin to fold the names. Marking the films not looked up is also what
+         * credits them again: the lookup files a film's credits when it finds its cast. Other titles
+         * already saved get theirs when a refresh changes them, or when their provider is added again.
          */
         private val CREDITS = object : Migration(9, 10) {
             override fun migrate(db: SupportSQLiteDatabase) {
