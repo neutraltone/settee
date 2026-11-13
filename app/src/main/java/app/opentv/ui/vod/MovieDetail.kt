@@ -24,6 +24,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Extension
+import androidx.compose.material.icons.filled.HighQuality
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -87,12 +88,17 @@ fun MovieDetailScreen(
     var movie by remember(movieId) { mutableStateOf<Movie?>(null) }
     var similar by remember(movieId) { mutableStateOf<List<Movie>?>(null) }
     var resumes by remember(movieId) { mutableStateOf(false) }
+    var versions by remember(movieId) { mutableStateOf(PageVersions()) }
     val hasAddons by viewModel.hasAddons.collectAsState()
+    val scope = rememberCoroutineScope()
 
     LaunchedEffect(movieId) {
         val loaded = viewModel.movieDetail(movieId)
         movie = loaded
-        if (loaded != null) resumes = viewModel.resumesPartway(loaded)
+        if (loaded != null) {
+            resumes = viewModel.resumesPartway(loaded)
+            versions = viewModel.pageVersions(MediaKey.Movie(loaded.id))
+        }
     }
     // Apart from the film's own load, so the hero never waits on the row.
     LaunchedEffect(movie?.id) { movie?.let { similar = viewModel.moreLikeThis(it) } }
@@ -118,6 +124,14 @@ fun MovieDetailScreen(
         onPlay = { onPlay(m) },
         onPlayAddonStream = { onPlayAddonStream(MediaKey.AddonStream(m.id, it.url)) },
         onSetFavourite = { viewModel.setMovieFavourite(m, it) },
+        versions = versions,
+        onChooseVersion = { chosen ->
+            scope.launch {
+                viewModel.chooseVersion(chosen)
+                versions = viewModel.pageVersions(MediaKey.Movie(m.id))
+                resumes = viewModel.resumesPartway(m)
+            }
+        },
     )
 }
 
@@ -127,7 +141,9 @@ fun MovieDetailScreen(
  * are the film's people as rows of names ([PeopleRows]), which call [onOpenPerson]. The main button resumes
  * when [resumes], else plays. [findAddonStreams] is null unless add-ons are set up, and then adds an
  * Add-on sources button, last, whose picker plays the stream chosen. [favourite] is null until the
- * Profile's Favourites have loaded, and the toggle does nothing till then.
+ * Profile's Favourites have loaded, and the toggle does nothing till then. [versions] adds the Quality
+ * pill when the film's Versions differ, whose choice goes to [onChooseVersion]; Play asks first when only
+ * another language plays, and is off, saying why, when nothing does.
  */
 @Composable
 internal fun MovieDetailContent(
@@ -142,8 +158,13 @@ internal fun MovieDetailContent(
     onPlay: () -> Unit,
     onPlayAddonStream: (StremioStream) -> Unit,
     onSetFavourite: (Boolean) -> Unit,
+    versions: PageVersions = PageVersions(),
+    onChooseVersion: (MediaKey) -> Unit = {},
 ) {
     val playFocus = remember { FocusRequester() }
+    var choosingQuality by remember(movie.id) { mutableStateOf(false) }
+    var askingLanguage by remember(movie.id) { mutableStateOf(false) }
+    val plays = versions.cantPlay == null
     val scope = rememberCoroutineScope()
     // Null while the picker is closed; Loading while the add-ons are asked.
     var picker by remember(movie.id) { mutableStateOf<AddonPicker?>(null) }
@@ -176,10 +197,23 @@ internal fun MovieDetailContent(
                         PillButton(
                             label = stringResource(if (resumes) R.string.vod_resume else R.string.vod_play),
                             icon = Icons.Filled.PlayArrow,
-                            onClick = onPlay,
-                            modifier = Modifier.focusRequester(playFocus),
+                            onClick = { if (versions.otherLanguage != null) askingLanguage = true else onPlay() },
+                            modifier = if (plays) Modifier.focusRequester(playFocus) else Modifier,
+                            enabled = plays,
                         )
-                        FavouriteButton(favourite, onSetFavourite)
+                        if (versions.showsPill) {
+                            PillButton(
+                                label = stringResource(R.string.vod_quality),
+                                icon = Icons.Filled.HighQuality,
+                                onClick = { choosingQuality = true },
+                            )
+                        }
+                        // With Play off, the page opens on the star instead.
+                        FavouriteButton(
+                            favourite,
+                            onSetFavourite,
+                            if (plays) Modifier else Modifier.focusRequester(playFocus),
+                        )
                         if (findAddonStreams != null) {
                             PillButton(
                                 label = stringResource(R.string.vod_addon_sources),
@@ -192,6 +226,14 @@ internal fun MovieDetailContent(
                             )
                         }
                     }
+                }
+                versions.cantPlay?.let {
+                    Text(
+                        cantPlayText(it),
+                        style = SetteeType.Body,
+                        color = SetteeColors.QuietText,
+                        modifier = Modifier.padding(top = 10.dp),
+                    )
                 }
                 PeopleRows(movie, onOpenPerson, Modifier.padding(top = SetteeSpace.RowGap))
                 if (similar == null) {
@@ -210,6 +252,18 @@ internal fun MovieDetailContent(
             }
         }
     }
+
+    VersionPrompts(
+        versions,
+        choosingQuality = choosingQuality,
+        askingLanguage = askingLanguage,
+        onChooseVersion = onChooseVersion,
+        onPlay = onPlay,
+        onClose = {
+            choosingQuality = false
+            askingLanguage = false
+        },
+    )
 
     picker?.let { shown ->
         AddonStreamPicker(

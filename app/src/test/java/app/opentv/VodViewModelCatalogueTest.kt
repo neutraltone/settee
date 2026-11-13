@@ -131,7 +131,7 @@ class VodViewModelCatalogueTest {
     }
 
     @Test
-    fun `Search lists a film once, however many of its Versions match`() = runBlocking {
+    fun `Search lists a film once, however many of its Versions match`(): Unit = runBlocking {
         graph.database.movies().upsertAll(
             listOf(
                 movie(1, "NF - Superbad (2007)"),
@@ -148,7 +148,7 @@ class VodViewModelCatalogueTest {
     }
 
     @Test
-    fun `Recently Added lists a film once, where its newest Version puts it`() = runBlocking {
+    fun `Recently Added lists a film once, where its newest Version puts it`(): Unit = runBlocking {
         graph.database.movies().upsertAll(
             listOf(
                 movie(1, "NF - Superbad (2007)").copy(addedMillis = 100),
@@ -164,7 +164,7 @@ class VodViewModelCatalogueTest {
     }
 
     @Test
-    fun `a person's page lists a film once`() = runBlocking {
+    fun `a person's page lists a film once`(): Unit = runBlocking {
         graph.database.movies().upsertAll(
             listOf(
                 movie(1, "NF - Superbad (2007)").copy(cast = "Jonah Hill, Michael Cera"),

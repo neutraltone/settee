@@ -57,6 +57,7 @@ import app.opentv.sync.NasSync
 import app.opentv.sync.SyncClient
 import app.opentv.sync.SyncEngine
 import app.opentv.sync.SyncServer
+import app.opentv.ui.vod.PageVersions
 import java.net.HttpURLConnection
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
@@ -1208,6 +1209,15 @@ class VodViewModel @JvmOverloads constructor(
     /** Everything in the library with this person in it, for their page. */
     suspend fun titlesWithPerson(name: String): List<VodTitle> =
         graph.titleIndex.distinct(graph.catalogRepository.titlesWithPerson(name))
+
+    /** What a film's or show's page shows of its Versions, for the one opened at [key] (#181). */
+    suspend fun pageVersions(key: MediaKey): PageVersions {
+        val plan = graph.vodQualities.planFor(key)
+        return PageVersions.of(plan, graph.vodQualities.choicesFor(key), plan.playsNothing(graph.decoders))
+    }
+
+    /** The viewer chose [version] in a Quality pill, or agreed to it in another language. */
+    suspend fun chooseVersion(version: MediaKey) = graph.vodQualities.choose(version)
 
     suspend fun resumesPartway(movie: Movie): Boolean {
         val playing = graph.vodQualities.planFor(MediaKey.Movie(movie.id)).start.key

@@ -26,13 +26,15 @@ import kotlinx.coroutines.withTimeoutOrNull
  * the viewer is asked.
  */
 class VodQualities(
-    private val db: OpenTvDatabase,
-    private val catalog: CatalogRepository,
+    db: OpenTvDatabase,
+    catalog: CatalogRepository,
     private val decoders: DecoderList,
     private val profileSettings: ProfileSettings,
-    private val activeProfileId: StateFlow<Long>,
+    activeProfileId: StateFlow<Long>,
     private val deviceLanguage: () -> String = { Locale.getDefault().language },
 ) {
+    private val versions = TitleVersionLookup(db, catalog, decoders, activeProfileId)
+
     /** One Version: what plays it and what a viewer calls its Quality, which may be nothing. */
     data class Quality(val key: MediaKey, val label: String)
 
@@ -40,21 +42,56 @@ class VodQualities(
      * [start] is what plays, and [lower] what to step down to, best first. [skipped] is what the title
      * opened was called, when this device isn't going to try it at all. [otherLanguages] are the
      * Versions that would play when none in the device's language does: [start] is then the one opened,
-     * and the viewer is asked before any of them plays.
+     * and the viewer is asked before any of them plays, in [otherLanguage] if their names say which.
      */
     data class Plan(
         val start: Quality,
         val lower: List<Quality> = emptyList(),
         val skipped: String? = null,
         val otherLanguages: List<Quality> = emptyList(),
-    )
+        val otherLanguage: String? = null,
+    ) {
+        /** Nothing of the title plays on this device, in any language: Play can only fail. */
+        fun playsNothing(decoders: DecoderList) =
+            otherLanguages.isEmpty() && lower.isEmpty() && !decoders.playsQualityRanked(qualityRankOf(start.label))
+    }
+
+    /**
+     * One entry in the Quality pill: a Version, standing for every other that differs from it in nothing
+     * a viewer would notice. [traits] leave out the device's own language, which a shelf only names when
+     * the others are in it too. [playing] is the one that plays now.
+     */
+    data class Choice(val key: MediaKey, val traits: VersionTraits, val playable: Boolean, val playing: Boolean)
 
     /** The Plan for what was opened. Anything without Versions of this kind just plays. */
-    suspend fun planFor(opened: MediaKey): Plan = when (opened) {
-        is MediaKey.Movie -> movie(opened)
-        is MediaKey.Episode -> episode(opened)
-        else -> Plan(Quality(opened, ""))
-    } ?: Plan(Quality(opened, ""))
+    suspend fun planFor(opened: MediaKey): Plan = versions.of(opened)?.let { plan(it) } ?: Plan(Quality(opened, ""))
+
+    /**
+     * The Quality pill's entries for what was opened, best Quality first: one per way its Versions
+     * differ. One entry, or none, means there's nothing to choose and no pill.
+     */
+    suspend fun choicesFor(opened: MediaKey): List<Choice> {
+        val title = versions.of(opened) ?: return emptyList()
+        val playing = plan(title).start.key
+        val language = deviceLanguage()
+        return title.all
+            .sortedWith(
+                compareBy<Candidate> { it.traits.cam }
+                    .thenByDescending { it.traits.qualityRank }
+                    .thenByDescending { it.traits.inLanguage(language) }
+                    .thenByDescending { it.quality.key == playing },
+            )
+            .groupBy { it.traits.copy(language = it.traits.language.takeUnless { code -> code == language }) }
+            .map { (traits, alike) ->
+                val shown = alike.firstOrNull { it.quality.key == playing } ?: alike.first()
+                Choice(
+                    key = shown.quality.key,
+                    traits = traits,
+                    playable = alike.any { decoders.playsQualityRanked(it.traits.qualityRank) },
+                    playing = alike.any { it.quality.key == playing },
+                )
+            }
+    }
 
     /**
      * The viewer chose [version] in the Quality pill, or agreed to a Version in another language: it's
@@ -62,26 +99,91 @@ class VodQualities(
      * other Versions to choose between here, so nothing is kept.
      */
     suspend fun choose(version: MediaKey) {
-        val chosen = when (version) {
-            is MediaKey.Movie -> db.movies().byId(version.movieId)?.let { movie ->
-                knownTmdbId(movie.tmdbId)?.let { "movie:$it" to versionId(movie.sourceId, movie.streamId) }
-            }
-            is MediaKey.Episode -> db.episodes().byId(version.episodeId)
-                ?.let { db.series().bySeriesId(it.sourceId, it.seriesId) }
-                ?.let { series ->
-                    knownTmdbId(series.tmdbId)?.let { "series:$it" to versionId(series.sourceId, series.seriesId) }
-                }
-            else -> null
-        }
-        chosen?.let { (title, id) -> id?.let { profileSettings.chooseVersion(title, it) } }
+        versions.chosenAs(version)?.let { (title, id) -> profileSettings.chooseVersion(title, id) }
     }
 
-    private suspend fun movie(opened: MediaKey.Movie): Plan? {
+    private suspend fun plan(title: TitleVersionLookup.Versions): Plan {
+        val opened = title.opened
+        val playable = title.all.filter { decoders.playsQualityRanked(it.traits.qualityRank) }
+        val language = deviceLanguage()
+        val usual = playable.filter { it.traits.inLanguage(language) }.sortedWith(
+            compareBy<Candidate> { it.traits.cam }
+                .thenByDescending { it.traits.qualityRank }
+                // The same shelf next: a provider's shelves differ in more than their names say.
+                .thenByDescending { it.shelf != null && it.shelf == opened.shelf }
+                .thenByDescending { it === opened },
+        )
+        val preferred = preferredOf(playable, title.key)
+        val ordered = listOfNotNull(preferred) + usual.filter { it !== preferred }
+        return when {
+            ordered.isEmpty() && playable.isNotEmpty() -> {
+                val others = playable.sortedByDescending { it.traits.qualityRank }
+                Plan(
+                    opened.quality,
+                    otherLanguages = others.map {
+                        it.quality
+                    },
+                    otherLanguage = others.first().traits.language,
+                )
+            }
+            ordered.isEmpty() -> Plan(opened.quality)
+            else -> Plan(
+                start = ordered.first().quality,
+                lower = ordered.drop(1).map { it.quality },
+                skipped = opened.quality.label.takeUnless { opened in playable },
+            )
+        }
+    }
+
+    /** What this Profile last played or chose of the title, whichever was later, if it plays here. */
+    private suspend fun preferredOf(playable: List<Candidate>, title: String?): Candidate? {
+        val lastPlayed = playable.filter { it.playedAt != null }.maxByOrNull { it.playedAt ?: 0 }
+        val choice = title?.let { profileSettings.chosenVersion(it) }
+        val chosen = choice?.let { c -> playable.firstOrNull { it.version == c.version } }
+        return when {
+            chosen == null -> lastPlayed
+            choice.atMillis >= (lastPlayed?.playedAt ?: 0) -> chosen
+            else -> lastPlayed
+        }
+    }
+}
+
+/** Finds the Versions of what was opened, with what [VodQualities] weighs them by. */
+private class TitleVersionLookup(
+    private val db: OpenTvDatabase,
+    private val catalog: CatalogRepository,
+    private val decoders: DecoderList,
+    private val activeProfileId: StateFlow<Long>,
+) {
+    /** [opened] among [all] a title's Versions; [key] names the title for a chosen Version, if it has an id. */
+    class Versions(val opened: Candidate, val all: List<Candidate>, val key: String?)
+
+    suspend fun of(opened: MediaKey): Versions? = when (opened) {
+        is MediaKey.Movie -> movie(opened)
+        is MediaKey.Episode -> episode(opened)
+        else -> null
+    }
+
+    /** The title [version] is a Version of, and how that Version is named in a choice. */
+    suspend fun chosenAs(version: MediaKey): Pair<String, String>? {
+        val found = when (version) {
+            is MediaKey.Movie -> db.movies().byId(version.movieId)
+                ?.let { Triple(knownTmdbId(it.tmdbId)?.let { id -> "movie:$id" }, it.sourceId, it.streamId) }
+            is MediaKey.Episode -> db.episodes().byId(version.episodeId)
+                ?.let { db.series().bySeriesId(it.sourceId, it.seriesId) }
+                ?.let { Triple(knownTmdbId(it.tmdbId)?.let { id -> "series:$id" }, it.sourceId, it.seriesId) }
+            else -> null
+        }
+        val title = found?.first ?: return null
+        return versionId(found.second, found.third)?.let { title to it }
+    }
+
+    private suspend fun movie(opened: MediaKey.Movie): Versions? {
         val movie = db.movies().byId(opened.movieId) ?: return null
         val tmdbId = knownTmdbId(movie.tmdbId)
         val rows = (listOf(movie) + tmdbId?.let { db.movies().byTmdbId(it) }.orEmpty()).distinctBy { it.id }
         val profile = activeProfileId.value
-        val versions = rows.map { row ->
+        val candidates = rows.map { row ->
             val key = MediaKey.Movie(row.id)
             candidate(
                 key = key,
@@ -91,16 +193,21 @@ class VodQualities(
                 playedAt = db.positions().get(profile, key.stored)?.updatedAtMillis,
             )
         }
-        return plan(versions.first(), versions, tmdbId?.let { "movie:$it" })
+        return Versions(candidates.first(), candidates, tmdbId?.let { "movie:$it" })
     }
 
-    private suspend fun episode(opened: MediaKey.Episode): Plan? {
+    private suspend fun episode(opened: MediaKey.Episode): Versions? {
         val episode = db.episodes().byId(opened.episodeId)
         val series = episode?.let { db.series().bySeriesId(it.sourceId, it.seriesId) }
         if (episode == null || series == null) return null
         val self = seriesCandidate(series, opened)
-        val title = knownTmdbId(series.tmdbId)?.let { "series:$it" }
-        return plan(self, listOf(self) + copiesOf(episode, series), title)
+        return Versions(
+            self,
+            listOf(self) + copiesOf(episode, series),
+            knownTmdbId(series.tmdbId)?.let {
+                "series:$it"
+            },
+        )
     }
 
     private suspend fun copiesOf(episode: Episode, series: Series): List<Candidate> {
@@ -138,44 +245,6 @@ class VodQualities(
         return stored()
     }
 
-    private suspend fun plan(opened: Candidate, versions: List<Candidate>, title: String?): Plan {
-        val playable = versions.filter { decoders.playsQualityRanked(it.traits.qualityRank) }
-        val language = deviceLanguage()
-        val usual = playable.filter { it.traits.inLanguage(language) }.sortedWith(
-            compareBy<Candidate> { it.traits.cam }
-                .thenByDescending { it.traits.qualityRank }
-                // The same shelf next: a provider's shelves differ in more than their names say.
-                .thenByDescending { it.shelf != null && it.shelf == opened.shelf }
-                .thenByDescending { it === opened },
-        )
-        val preferred = preferredOf(playable, title)
-        val ordered = listOfNotNull(preferred) + usual.filter { it !== preferred }
-        return when {
-            ordered.isEmpty() && playable.isNotEmpty() -> Plan(
-                opened.quality,
-                otherLanguages = playable.sortedByDescending { it.traits.qualityRank }.map { it.quality },
-            )
-            ordered.isEmpty() -> Plan(opened.quality)
-            else -> Plan(
-                start = ordered.first().quality,
-                lower = ordered.drop(1).map { it.quality },
-                skipped = opened.quality.label.takeUnless { opened in playable },
-            )
-        }
-    }
-
-    /** What this Profile last played or chose of the title, whichever was later, if it plays here. */
-    private suspend fun preferredOf(playable: List<Candidate>, title: String?): Candidate? {
-        val lastPlayed = playable.filter { it.playedAt != null }.maxByOrNull { it.playedAt ?: 0 }
-        val choice = title?.let { profileSettings.chosenVersion(it) }
-        val chosen = choice?.let { c -> playable.firstOrNull { it.version == c.version } }
-        return when {
-            chosen == null -> lastPlayed
-            choice.atMillis >= (lastPlayed?.playedAt ?: 0) -> chosen
-            else -> lastPlayed
-        }
-    }
-
     /** A Version by its source's name and the provider's id, as a Favourite is, so it syncs (ADR 0004). */
     private suspend fun versionId(sourceId: Long, providerId: String): String? =
         db.sources().byId(sourceId)?.name?.let { "$providerId|$it" }
@@ -206,3 +275,6 @@ private val SHELF = Regex("""^\s*(?:[48]K-)?(.+?)\s+-\s""", RegexOption.IGNORE_C
 
 /** Whether a Version could play here, going by the Quality its name promises. */
 private fun DecoderList.playsName(name: String) = playsQualityRanked(versionTraits(name, null).qualityRank)
+
+/** The rank of a Quality's label, as [VersionTraits.qualityLabel] writes it. */
+private fun qualityRankOf(label: String) = versionTraits(label, null).qualityRank

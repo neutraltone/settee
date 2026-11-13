@@ -835,9 +835,13 @@ private class SeriesEpisodes(episodes: List<Episode>) {
         val at = ordered.indexOfFirst { it.id == latest.episodeId }
         val played = ordered[at]
         // A show of several Versions lists each episode once per Version: the same one in another
-        // Version comes next in this order, and isn't what follows it.
-        val following = ordered.asSequence().drop(at + 1)
-            .firstOrNull { it.season != played.season || it.episodeNumber != played.episodeNumber }
+        // Version comes next in this order, and isn't what follows it. One a provider lists twice in
+        // the same Version is a repeat, and does follow it.
+        val following = ordered.asSequence().drop(at + 1).firstOrNull {
+            it.season != played.season ||
+                it.episodeNumber != played.episodeNumber ||
+                (it.sourceId == played.sourceId && it.seriesId == played.seriesId)
+        }
         return SeriesProgress(played, latest, following)
     }
 }

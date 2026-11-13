@@ -45,7 +45,7 @@ class TitleIndexTest {
     }
 
     @Test
-    fun `a film's Versions in other categories are one title with it`() = runBlocking {
+    fun `a film's Versions in other categories are one title with it`(): Unit = runBlocking {
         db.movies().upsertAll(
             listOf(
                 movie(1, "4K-EN - Superbad (2007)", "4k"),
@@ -61,7 +61,7 @@ class TitleIndexTest {
     }
 
     @Test
-    fun `a list keeps the first row of each title`() = runBlocking {
+    fun `a list keeps the first row of each title`(): Unit = runBlocking {
         db.movies().upsertAll(listOf(movie(1, "NF - Superbad (2007)", "nf"), movie(2, "EN - Superbad (2007)", "en")))
 
         val titles = index.movies.filterNotNull().first()
@@ -70,7 +70,7 @@ class TitleIndexTest {
     }
 
     @Test
-    fun `a cover's badge counts every Version and what its category says`() = runBlocking {
+    fun `a cover's badge counts every Version and what its category says`(): Unit = runBlocking {
         db.categories().upsertAll(listOf(Category("cam", 1, "CAM MOVIES", StreamKind.MOVIE)))
         db.movies().upsertAll(listOf(movie(1, "4K-EN - New Film (2026)", "4k"), movie(2, "New Film (2026)", "cam")))
 
@@ -78,7 +78,7 @@ class TitleIndexTest {
     }
 
     @Test
-    fun `shows are grouped the same way`() = runBlocking {
+    fun `shows are grouped the same way`(): Unit = runBlocking {
         db.series().upsertAll(
             listOf(series(1, "4K-NF - The Diplomat (2023) (US)"), series(2, "EN - The Diplomat (2023) (US)")),
         )

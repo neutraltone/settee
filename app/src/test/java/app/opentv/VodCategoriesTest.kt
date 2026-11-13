@@ -129,7 +129,7 @@ class VodCategoriesTest {
     }
 
     @Test
-    fun `a category's grid of shows has a cover per show`() {
+    fun `a category's grid of shows has a cover per show, its Versions shown once`() {
         runBlocking {
             graph.database.series().upsertAll(
                 listOf(
@@ -141,9 +141,10 @@ class VodCategoriesTest {
         runBlocking { graph.database.categories().upsertAll(listOf(shows)) }
         viewModel.selectSeriesCategory(shows.browseKey)
 
-        // Shows aren't folded by Quality: each is its own series, with its own episodes.
-        assertThat(viewModel.seriesGrid.names({ "${it.id} ${it.posterUrl}" }) { it.size == 2 })
-            .containsExactly("1 https://example.com/s.jpg", "2 null")
+        // The Version this device plays stands for the show, with another's poster when it has none
+        // (#181). Robolectric lists no decoders, so the 4K one doesn't play.
+        assertThat(viewModel.seriesGrid.names({ "${it.id} ${it.posterUrl}" }) { it.size == 1 })
+            .containsExactly("2 https://example.com/s.jpg")
     }
 
     @Test

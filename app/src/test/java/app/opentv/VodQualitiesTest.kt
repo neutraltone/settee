@@ -297,4 +297,33 @@ class VodQualitiesTest {
 
         assertThat(qualities().planFor(MediaKey.Movie(3)).start.key).isEqualTo(MediaKey.Movie(3))
     }
+
+    @Test
+    fun `the Quality pill lists the Versions that differ, identical copies once`() = runTest {
+        db.movies().upsertAll(listOf(top4k, en, movie(4, "NF - Superbad (2007)"), movie(6, "DE - Superbad HD (2007)")))
+
+        val choices = qualities().choicesFor(MediaKey.Movie(3))
+
+        assertThat(choices.map { it.traits.qualityLabel to it.traits.language })
+            .containsExactly("4K" to null, "HD" to "de", "" to null).inOrder()
+        assertThat(choices.map { it.playable }).containsExactly(false, true, true).inOrder()
+        assertThat(choices.single { it.playing }.key).isEqualTo(MediaKey.Movie(3))
+    }
+
+    @Test
+    fun `a title whose Versions are all alike has one entry, so no pill`() = runTest {
+        db.movies().upsertAll(listOf(en, movie(4, "NF - Superbad (2007)"), movie(7, "AMZ - Superbad (2007)")))
+
+        assertThat(qualities().choicesFor(MediaKey.Movie(4))).hasSize(1)
+    }
+
+    @Test
+    fun `choosing in the pill is what plays next`() = runTest {
+        db.movies().upsertAll(listOf(en, movie(6, "DE - Superbad HD (2007)")))
+        val german = qualities().choicesFor(MediaKey.Movie(3)).first { it.traits.language == "de" }
+
+        qualities().choose(german.key)
+
+        assertThat(qualities().choicesFor(MediaKey.Movie(3)).single { it.playing }.key).isEqualTo(MediaKey.Movie(6))
+    }
 }
