@@ -18,6 +18,7 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterNotNull
@@ -109,6 +110,9 @@ class TitleIndex(
         // A refresh writes in batches: grouping again from the latest is all that's wanted.
         .flatMapLatest { names -> rows.mapLatest { group(it, names) } }
         .flowOn(Dispatchers.Default)
+        // A read that fails, or a database closed under it, leaves every row its own title rather than
+        // grids that wait for ever, and nothing thrown where no one catches it.
+        .catch { emit(Titles.NONE) }
         .stateIn(scope, SharingStarted.Lazily, null)
 
     private fun group(rows: List<VersionRow>, categoryNames: Map<Pair<Long, String>, String>): Titles {
