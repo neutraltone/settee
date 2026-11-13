@@ -436,6 +436,23 @@ class PlaybackErrorsTest {
         assertThat(ShadowLog.getLogsForTag("OpenTV")).isEmpty()
     }
 
+    @Test
+    fun `a stream that isn't video, or isn't a format the player reads, is a parse failure`() {
+        val parsing = listOf(
+            PlaybackException.ERROR_CODE_PARSING_CONTAINER_MALFORMED,
+            PlaybackException.ERROR_CODE_PARSING_MANIFEST_MALFORMED,
+            PlaybackException.ERROR_CODE_PARSING_CONTAINER_UNSUPPORTED,
+            PlaybackException.ERROR_CODE_PARSING_MANIFEST_UNSUPPORTED,
+        )
+
+        parsing.forEach { code ->
+            assertThat(PlaybackErrors.isParseFailure(PlaybackException(null, null, code))).isTrue()
+        }
+        assertThat(PlaybackErrors.isParseFailure(decoderFailure(null))).isFalse()
+        assertThat(PlaybackErrors.isParseFailure(unreachable())).isFalse()
+        assertThat(PlaybackErrors.isParseFailure(httpFailure(403))).isFalse()
+    }
+
     private fun httpFailure(status: Int) = ExoPlaybackException.createForSource(
         HttpDataSource.InvalidResponseCodeException(
             status,

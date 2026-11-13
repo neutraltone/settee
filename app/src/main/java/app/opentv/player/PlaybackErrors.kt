@@ -30,6 +30,9 @@ import java.util.Locale
  * "fix" — hiding the symptom while the stream still failed. The right answer is to say what
  * probably went wrong and what to try, with the code kept, quietly, on the detail line.
  */
+// Each kind of failure the player tells apart gets a sentence or a predicate here, so the wording
+// and the restart decisions can't drift apart; the count grows with the kinds.
+@Suppress("TooManyFunctions")
 @OptIn(UnstableApi::class)
 object PlaybackErrors {
 
@@ -128,6 +131,12 @@ object PlaybackErrors {
      */
     fun isUnplayableFormat(error: PlaybackException): Boolean = error.errorCode in UNPLAYABLE_FORMATS
 
+    /**
+     * Whether what arrived wasn't a stream the player could read: often a provider's HTML page,
+     * sent with HTTP 200, for an expired account or a blocked channel. Asking again gets the same.
+     */
+    fun isParseFailure(error: PlaybackException): Boolean = error.errorCode in PARSE_FAILURES
+
     /** Whether the app ran out of memory, however deep the loader and player wrapped it. */
     fun isOutOfMemory(error: PlaybackException): Boolean =
         generateSequence<Throwable>(error) { it.cause }.take(MAX_CAUSE_DEPTH).any { it is OutOfMemoryError }
@@ -189,6 +198,13 @@ object PlaybackErrors {
         PlaybackException.ERROR_CODE_DECODER_QUERY_FAILED,
         PlaybackException.ERROR_CODE_DECODING_FORMAT_EXCEEDS_CAPABILITIES,
         PlaybackException.ERROR_CODE_DECODING_FORMAT_UNSUPPORTED,
+    )
+
+    private val PARSE_FAILURES = setOf(
+        PlaybackException.ERROR_CODE_PARSING_CONTAINER_MALFORMED,
+        PlaybackException.ERROR_CODE_PARSING_MANIFEST_MALFORMED,
+        PlaybackException.ERROR_CODE_PARSING_CONTAINER_UNSUPPORTED,
+        PlaybackException.ERROR_CODE_PARSING_MANIFEST_UNSUPPORTED,
     )
 }
 

@@ -15,13 +15,10 @@ import androidx.media3.common.TrackSelectionOverride
 import androidx.media3.common.Tracks
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.DefaultDataSource
-import androidx.media3.datasource.HttpDataSource
 import androidx.media3.datasource.okhttp.OkHttpDataSource
 import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
-import androidx.media3.exoplayer.upstream.DefaultLoadErrorHandlingPolicy
-import androidx.media3.exoplayer.upstream.LoadErrorHandlingPolicy
 import app.opentv.core.ViewerError
 import app.opentv.data.model.Source
 import app.opentv.data.repo.MediaKey
@@ -234,36 +231,7 @@ class PlayerController(
             if (custom.isEmpty()) default else RoutingDataSourceFactory(default, custom)
         }
 
-    /**
-     * Retry policy tuned for IPTV rather than for CDNs.
-     *
-     * A provider under load returns 403, 429 or 500 for a few seconds and then serves the
-     * stream perfectly well. ExoPlayer's default is to give up almost immediately on those,
-     * which surfaces to the user as a channel that "doesn't work" but plays fine on the
-     * second try. We retry them with backoff instead. 401 and 404 are not retried — those
-     * genuinely will not fix themselves.
-     */
-    private val loadErrorPolicy = object : DefaultLoadErrorHandlingPolicy() {
-        override fun getRetryDelayMsFor(info: LoadErrorHandlingPolicy.LoadErrorInfo): Long {
-            val statusCode =
-                (info.exception as? HttpDataSource.InvalidResponseCodeException)?.responseCode
-
-            return when (statusCode) {
-                401, 404, 410 -> C_TIME_UNSET
-                403, 405, 429, 500, 502, 503, 504 -> backoffFor(info.errorCount)
-                null -> backoffFor(info.errorCount) // network blips
-                else -> super.getRetryDelayMsFor(info)
-            }
-        }
-
-        override fun getMinimumLoadableRetryCount(dataType: Int): Int = MAX_LOAD_RETRIES
-
-        private fun backoffFor(errorCount: Int): Long = if (errorCount > MAX_LOAD_RETRIES) {
-            C_TIME_UNSET
-        } else {
-            minOf(INITIAL_BACKOFF_MILLIS * (1L shl (errorCount - 1)), MAX_BACKOFF_MILLIS)
-        }
-    }
+    private val loadErrorPolicy = IptvLoadErrorPolicy()
 
     /**
      * Held so captions can be turned on and off at runtime. Prefer the device language when
@@ -343,8 +311,12 @@ class PlayerController(
                         consecutiveFailures < MAX_AUTO_RESTARTS
                     // Running out of memory took the Stick over a minute (#180), so a silent
                     // restart would hide the message for another minute. Retry stays on offer:
-                    // the memory may be free by the time the viewer asks.
-                    val canRestart = canRetry && !PlaybackErrors.isOutOfMemory(error)
+                    // the memory may be free by the time the viewer asks. A stream that won't parse is
+                    // usually the provider's HTML page, which a restart only fetches again (#255);
+                    // Retry stays for when the viewer has sorted out the account.
+                    val canRestart = canRetry &&
+                        !PlaybackErrors.isOutOfMemory(error) &&
+                        !PlaybackErrors.isParseFailure(error)
                     _state.value = State.Error(
                         title = _title.value,
                         // The last stream's format lingers until this one's tracks are known, so only a
@@ -357,7 +329,7 @@ class PlayerController(
                         ),
                         canRetry = canRetry,
                     )
-                    // One silent restart covers the common case of a provider dropping the
+                    // A silent restart covers the common case of a provider dropping the
                     // connection when another device on the account starts streaming.
                     if (canRestart && request != null) {
                         scope.launch {
@@ -601,14 +573,7 @@ class PlayerController(
         /** How far rewind and fast-forward skip, on screen and on the remote. */
         const val SEEK_INCREMENT_MILLIS = 15_000L
 
-        /** ExoPlayer's "do not retry" sentinel. */
-        private const val C_TIME_UNSET = androidx.media3.common.C.TIME_UNSET
-
         private const val SWITCH_DEBOUNCE_MILLIS = 350L
-        private const val INITIAL_BACKOFF_MILLIS = 500L
-        private const val MAX_BACKOFF_MILLIS = 8_000L
-
-        private const val MAX_LOAD_RETRIES = 5
         private const val MAX_AUTO_RESTARTS = 3
         private const val AUTO_RESTART_DELAY_MILLIS = 1_500L
 
