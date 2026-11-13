@@ -143,6 +143,8 @@ object PairingPage {
               <button id="send" type="submit">${escape(text(R.string.pairing_phone_tmdb_send))}</button>
             </form>
 
+            ${if (onboarding) skipButton(token, text) else ""}
+
             ${if (onboarding) {
                 "<details><summary>${escape(
                     text(R.string.pairing_phone_tmdb_how),
@@ -162,6 +164,14 @@ object PairingPage {
             """.trimIndent(),
         )
     }
+
+    /** Onboarding's Skip for now, under Send to TV: the key is optional there, as on the TV. */
+    private fun skipButton(token: String, text: (Int) -> String): String = """
+        <form method="post" action="/skip">
+          <input type="hidden" name="t" value="${escape(token)}">
+          <button type="submit" class="secondary">${escape(text(R.string.onboarding_tmdb_skip))}</button>
+        </form>
+    """.trimIndent()
 
     /** Why the TV turned a key down: the sentence and detail line `ErrorMessage` draws on the TV. */
     data class Error(val sentence: String, val detail: String)
@@ -233,6 +243,8 @@ object PairingPage {
           button { width:100%; margin-top:26px; padding:17px; font:inherit; font-size:17px; font-weight:700;
             background:var(--accent); color:var(--on-accent); border:0; border-radius:999px; }
           button:active { opacity:.85; }
+          button.secondary { margin-top:12px; background:transparent; color:var(--text);
+            border:1px solid var(--line); font-weight:500; }
           button:disabled { opacity:.85; }
           .spin { display:inline-block; width:1em; height:1em; margin-right:.6em; vertical-align:-.15em;
             border:2px solid currentColor; border-right-color:transparent; border-radius:50%;

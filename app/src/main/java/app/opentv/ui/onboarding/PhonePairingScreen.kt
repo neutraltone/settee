@@ -105,7 +105,10 @@ fun PhonePairingScreen(
                 }
 
                 // A TMDB Key only arrives once the TMDB step has taken over, so this is never seen.
-                is PairingServer.State.Received, is PairingServer.State.KeyReceived -> PairingConnecting()
+                is PairingServer.State.Received,
+                is PairingServer.State.KeyReceived,
+                PairingServer.State.KeySkipped,
+                -> PairingConnecting()
 
                 PairingServer.State.Idle -> PairingStarting()
             }

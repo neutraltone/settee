@@ -331,6 +331,34 @@ class PairingServerTest {
         assertThat(shown(page)).contains(context.getString(R.string.pairing_phone_tmdb_how))
     }
 
+    /** Presses the Onboarding TMDB page's Skip for now, as the viewer would. */
+    private fun skipKey(session: PairingServer.Session): Pair<Int, String> {
+        val form = okhttp3.FormBody.Builder().add("t", session.url.substringAfter("t=")).build()
+        val request = Request.Builder().url("http://${session.host}:${session.port}/skip").post(form).build()
+        return OkHttpClient().newCall(request).execute().use { it.code to it.body.string() }
+    }
+
+    @Test
+    fun `Onboarding's TMDB page offers Skip for now, which tells the TV and the phone`() {
+        val session = listening(PairingServer.Mode.TmdbKey(onboarding = true))
+        assertThat(get(session.url).second).contains("action=\"/skip\"")
+
+        val (_, page) = skipKey(session)
+
+        assertThat(server.state.value).isEqualTo(PairingServer.State.KeySkipped)
+        assertThat(shown(page)).contains(context.getString(R.string.pairing_phone_tmdb_skipped_title))
+    }
+
+    @Test
+    fun `Settings' TMDB page has no Skip, and a skip sent anyway is ignored`() {
+        val session = listening(PairingServer.Mode.TmdbKey(onboarding = false))
+        assertThat(get(session.url).second).doesNotContain("action=\"/skip\"")
+
+        skipKey(session)
+
+        assertThat(server.state.value).isInstanceOf(PairingServer.State.Listening::class.java)
+    }
+
     private companion object {
         /** A placeholder, low-entropy so gitleaks sees no secret. */
         val KEY = "d".repeat(32)

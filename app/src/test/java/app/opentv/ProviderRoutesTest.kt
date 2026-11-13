@@ -16,8 +16,8 @@ import androidx.compose.ui.test.isFocused
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
-import androidx.compose.ui.test.performScrollTo
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -32,6 +32,7 @@ import androidx.test.espresso.matcher.ViewMatchers
 import app.opentv.core.ServiceLocator
 import app.opentv.data.db.OpenTvDatabase
 import app.opentv.data.model.SourceKind
+import app.opentv.pairing.PairingServer
 import app.opentv.ui.SourcesViewModel
 import app.opentv.ui.design.SetteeType
 import app.opentv.ui.design.Text
@@ -41,6 +42,7 @@ import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.After
+import org.junit.Assume.assumeTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -263,6 +265,7 @@ class ProviderRoutesTest {
         compose.onNodeWithText("Type it instead").assertExists()
         compose.onNodeWithText(TMDB_ATTRIBUTION).assertExists()
         compose.onNode(hasText("Skip for now") and isFocused()).assertExists()
+        assertWholeStepOnScreen()
         // The first Catalogue Refresh didn't wait for the step.
         compose.waitUntil(5_000) { runBlocking { graph.sourceRepository.all() }.any { it.lastCatalogSyncMillis > 0 } }
         captureScreen("onboarding_tmdb_step")
@@ -296,9 +299,77 @@ class ProviderRoutesTest {
         }
         captureScreen("onboarding_tmdb_saved")
 
-        stepButton("Carry on").performScrollTo().performClick()
+        assertWholeStepOnScreen()
+        stepButton("Carry on").performClick()
 
         compose.waitUntil(5_000) { route() == Routes.SETUP }
+    }
+
+    /**
+     * The step fits on a TV screen as it is: nothing scrolled off the top to bring the Highlight into
+     * view, and nothing hanging off the bottom.
+     */
+    private fun assertWholeStepOnScreen() {
+        val screen = compose.onRoot().fetchSemanticsNode().boundsInRoot
+        val title = compose.onNodeWithText("Add your TMDB Key").fetchSemanticsNode().boundsInRoot
+        val attribution = compose.onNodeWithText(TMDB_ATTRIBUTION).fetchSemanticsNode().boundsInRoot
+        assertThat(title.top).isAtLeast(screen.top)
+        assertThat(attribution.bottom).isAtMost(screen.bottom)
+    }
+
+    /**
+     * The phone's address for the TMDB step's paste box, once its server is listening; skips the test
+     * where the machine running it has no private network address to listen on.
+     */
+    private fun phoneAddress(): PairingServer.Session {
+        compose.waitUntil(5_000) { graph.pairingServer.state.value !is PairingServer.State.Idle }
+        val listening = graph.pairingServer.state.value as? PairingServer.State.Listening
+        assumeTrue("needs a private LAN address to serve on", listening != null)
+        return listening!!.session
+    }
+
+    /** Posts [form] to the phone page's [path], as the phone's browser would. */
+    private fun fromPhone(session: PairingServer.Session, path: String, vararg form: Pair<String, String>) {
+        val body = okhttp3.FormBody.Builder().add("t", session.url.substringAfter("t="))
+            .apply { form.forEach { (name, value) -> add(name, value) } }
+            .build()
+        val request = okhttp3.Request.Builder().url("http://${session.host}:${session.port}$path").post(body).build()
+        // Off the main thread: the server waits on the TV, which answers there.
+        Thread {
+            runCatching { okhttp3.OkHttpClient().newCall(request).execute().close() }
+        }.start()
+    }
+
+    @Test
+    fun `a key sent from the phone is saved on the TV, which says so with Carry on highlighted`() {
+        graph.settings.removeTmdbApiKey()
+        panel.replies["/3/authentication"] = """{"success": true}"""
+        setApp(start = Routes.ADD_SOURCE, sources = SourcesViewModel(app, graph))
+        savePlaylist()
+        compose.waitUntil(5_000) { route() == Routes.TMDB_STEP }
+        val session = phoneAddress()
+
+        fromPhone(session, "/key", "key" to OTHER_TMDB_KEY)
+
+        compose.waitUntil(10_000) {
+            compose.onAllNodes(hasText("Carry on") and isFocused()).fetchSemanticsNodes().isNotEmpty()
+        }
+        assertThat(graph.settings.tmdbApiKey.value).isEqualTo(OTHER_TMDB_KEY)
+        assertWholeStepOnScreen()
+    }
+
+    @Test
+    fun `Skip for now on the phone takes the TV on to Setup`() {
+        graph.settings.removeTmdbApiKey()
+        setApp(start = Routes.ADD_SOURCE, sources = SourcesViewModel(app, graph))
+        savePlaylist()
+        compose.waitUntil(5_000) { route() == Routes.TMDB_STEP }
+        val session = phoneAddress()
+
+        fromPhone(session, "/skip")
+
+        compose.waitUntil(10_000) { route() == Routes.SETUP }
+        assertThat(graph.settings.tmdbApiKey.value).isEmpty()
     }
 
     /** Where Type it instead is on screen. */
@@ -356,10 +427,9 @@ class ProviderRoutesTest {
         assertThat(graph.settings.tmdbApiKey.value).isEmpty()
         assertThat(runBlocking { graph.sourceRepository.all() }.map { it.kind }).containsExactly(SourceKind.M3U)
 
-        // Below the message, near the foot of the screen, where a tap would miss it unscrolled.
-        stepButton("Try again").performScrollTo().performClick()
+        stepButton("Try again").performClick()
         compose.onNode(hasText("TMDB didn't accept", substring = true)).assertDoesNotExist()
-        stepButton("Skip for now").performScrollTo().performClick()
+        stepButton("Skip for now").performClick()
         compose.waitUntil(5_000) { route() == Routes.SETUP }
     }
 

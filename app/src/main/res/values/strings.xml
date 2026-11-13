@@ -623,6 +623,8 @@
     <string name="pairing_phone_tmdb_step3">Fill in TMDB\'s form: personal use, with Settee as the app name.</string>
     <string name="pairing_phone_tmdb_step4">Copy the \"API Key\" and paste it here.</string>
     <string name="pairing_phone_tmdb_saved_title">Key saved</string>
+    <string name="pairing_phone_tmdb_skipped_title">Skipped for now</string>
+    <string name="pairing_phone_tmdb_skipped_body">You can add your TMDB Key later in Settings › TMDB. Carry on on your TV.</string>
     <string name="pairing_phone_tmdb_saved_body">Your TV can fill in posters, synopses and cast now. You can put your phone down.</string>
     <string name="error_tmdb_key_rejected">TMDB didn\'t accept that key. Check you copied the whole API Key, then try again.</string>
     <string name="error_tmdb_unreachable_tv">Can\'t reach TMDB. Check this TV is online, then try again.</string>

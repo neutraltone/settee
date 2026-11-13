@@ -129,6 +129,9 @@ class PairingServer(
             }
         }
 
+        /** The phone chose Skip for now on Onboarding's TMDB Key page: the TV carries on without one. */
+        data object KeySkipped : State
+
         /** [code] is the exception's type, for the detail line, when one was behind it. */
         data class Failed(val problem: ServerProblem, val code: String? = null) : State
     }
@@ -292,7 +295,7 @@ class PairingServer(
             method == "GET" && path.startsWith(FONTS_PATH) -> output.write(font(path.removePrefix(FONTS_PATH)))
 
             method == "GET" && asked is Mode.TmdbKey -> output.write(
-                PairingHttp.httpResponse("200 OK", "text/html", keyPage(token, null, asked)),
+                PairingHttp.httpResponse("200 OK", "text/html", keyPage(token, null, asked, text)),
             )
 
             method == "GET" -> output.write(
@@ -303,6 +306,10 @@ class PairingServer(
                 handleSubmit(output, body, asked)
 
             method == "POST" && path.startsWith("/key") && asked is Mode.TmdbKey -> handleKey(output, body, asked)
+
+            // Only Onboarding's page has Skip: in Settings there's nothing to carry on to.
+            method == "POST" && path.startsWith("/skip") && asked is Mode.TmdbKey && asked.onboarding ->
+                handleSkip(output)
 
             else -> output.write(
                 PairingHttp.httpResponse("405 Method Not Allowed", "text/plain", "No."),
@@ -342,7 +349,7 @@ class PairingServer(
                 // Straight on to the TMDB Key, on the same address, as the TV moves to its TMDB step.
                 val next = Mode.TmdbKey(onboarding = true)
                 mode = next
-                output.write(html(keyPage(token, null, next)))
+                output.write(html(keyPage(token, null, next, text)))
                 session?.let { _state.value = State.Listening(it) }
             }
             else -> {
@@ -391,7 +398,7 @@ class PairingServer(
         val token = address?.token.orEmpty()
         val key = PairingHttp.parseFormEncoded(body)["key"].orEmpty().trim()
         if (key.isEmpty()) {
-            output.write(PairingHttp.httpResponse("200 OK", "text/html", keyPage(token, null, asked)))
+            output.write(PairingHttp.httpResponse("200 OK", "text/html", keyPage(token, null, asked, text)))
             return
         }
         val reply = CompletableDeferred<Reply>()
@@ -406,7 +413,9 @@ class PairingServer(
                 text(R.string.pairing_phone_tmdb_saved_body),
             )
             is Reply.KeyTurnedDown -> {
-                output.write(PairingHttp.httpResponse("200 OK", "text/html", keyPage(token, answer.problem, asked)))
+                output.write(
+                    PairingHttp.httpResponse("200 OK", "text/html", keyPage(token, answer.problem, asked, text)),
+                )
                 // Still listening, with the same address, so the phone can paste another.
                 session?.let { _state.value = State.Listening(it) }
                 return
@@ -421,13 +430,13 @@ class PairingServer(
         closeDoor()
     }
 
-    /** The TMDB Key's page, in Onboarding's words when [asked] says so. */
-    private fun keyPage(token: String, problem: ViewerError?, asked: Mode.TmdbKey): String = PairingPage.tmdbKey(
-        token = token,
-        text = text,
-        error = problem?.let { PairingPage.Error(it.sentence, it.detail) },
-        onboarding = asked.onboarding,
-    )
+    private fun handleSkip(output: java.io.OutputStream) {
+        _state.value = State.KeySkipped
+        val title = text(R.string.pairing_phone_tmdb_skipped_title)
+        output.write(html(PairingPage.message(title, text(R.string.pairing_phone_tmdb_skipped_body))))
+        output.flush()
+        closeDoor()
+    }
 
     private companion object {
         const val TAG = "PairingServer"
@@ -476,3 +485,12 @@ private fun afterProvider(answer: PairingServer.Reply?, text: (Int) -> String): 
         "You can put your phone down. The rest happens on the telly.",
     )
 }
+
+/** The TMDB Key's page, in Onboarding's words when [asked] says so. */
+private fun keyPage(token: String, problem: ViewerError?, asked: PairingServer.Mode.TmdbKey, text: (Int) -> String) =
+    PairingPage.tmdbKey(
+        token = token,
+        text = text,
+        error = problem?.let { PairingPage.Error(it.sentence, it.detail) },
+        onboarding = asked.onboarding,
+    )

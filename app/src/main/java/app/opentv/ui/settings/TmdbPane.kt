@@ -5,12 +5,8 @@
  */
 package app.opentv.ui.settings
 
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
@@ -29,7 +25,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -119,6 +114,8 @@ internal fun TmdbKeyRows(
     onboarding: Boolean,
     graph: ServiceLocator.Graph,
     onSaved: () -> Unit = {},
+    onSkipped: () -> Unit = {},
+    arrange: @Composable (TmdbKeyParts) -> Unit = { StackedParts(it) },
 ) {
     val savedKey by graph.settings.tmdbApiKey.collectAsState()
     val ending = TmdbKeys.endingOf(savedKey)
@@ -135,8 +132,11 @@ internal fun TmdbKeyRows(
 
     // Outside the rows that come and go, so a key arriving from the phone is answered whatever shows.
     LaunchedEffect(phone) {
-        val received = phone as? PairingServer.State.KeyReceived ?: return@LaunchedEffect
-        received.answer(save(received.key))
+        when (val now = phone) {
+            is PairingServer.State.KeyReceived -> now.answer(save(now.key))
+            PairingServer.State.KeySkipped -> onSkipped()
+            else -> Unit
+        }
     }
     PhoneServerWhile(asking, server, onboarding)
     LaunchedEffect(entry.moveHighlight, asking) {
@@ -146,18 +146,40 @@ internal fun TmdbKeyRows(
         entry.moveHighlight = false
     }
 
-    if (asking) {
-        AskingRows(phone, onRetry = { server.start(PairingServer.Mode.TmdbKey(onboarding)) }, graph.errorWording)
-        ListRow(
-            stringResource(R.string.settings_tmdb_type),
-            onClick = { typing = true },
-            modifier = Modifier.focusRequester(typeRow),
-            opens = true,
-        )
-    } else {
-        SavedRows(ending.orEmpty(), replaceRow, onReplace = { entry.replacing = true }, onRemove = { removing = true })
-    }
-    KeyStatus(entry.checking, entry.problem)
+    arrange(
+        TmdbKeyParts(
+            asking = asking,
+            code = { card ->
+                val retry = { server.start(PairingServer.Mode.TmdbKey(onboarding)) }
+                if (card) {
+                    PhoneCodeCard(
+                        phone,
+                        retry,
+                        graph.errorWording,
+                    )
+                } else {
+                    AskingRows(phone, retry, graph.errorWording)
+                }
+            },
+            typeIt = {
+                ListRow(
+                    stringResource(R.string.settings_tmdb_type),
+                    onClick = { typing = true },
+                    modifier = Modifier.focusRequester(typeRow),
+                    opens = true,
+                )
+            },
+            saved = {
+                SavedRows(
+                    ending.orEmpty(),
+                    replaceRow,
+                    onReplace = { entry.replacing = true },
+                    onRemove = { removing = true },
+                )
+            },
+            status = { KeyStatus(entry.checking, entry.problem) },
+        ),
+    )
 
     if (typing) {
         // Never filled in with the saved key: the pane only ever shows its last four characters.
@@ -183,6 +205,32 @@ internal fun TmdbKeyRows(
             },
         )
     }
+}
+
+/**
+ * The pieces of adding a TMDB Key, for a screen to lay out as it fits: [code] is the phone's QR code
+ * (as a card beside the rows, or a block above them), [typeIt] the Type it instead row, [saved] a saved
+ * key's rows, and [status] the line for checking a key and why it was turned down. [asking] says
+ * whether [code] and [typeIt] are wanted, or [saved].
+ */
+internal class TmdbKeyParts(
+    val asking: Boolean,
+    val code: @Composable (card: Boolean) -> Unit,
+    val typeIt: @Composable () -> Unit,
+    val saved: @Composable () -> Unit,
+    val status: @Composable () -> Unit,
+)
+
+/** Settings › TMDB's arrangement: the QR code above Type it instead, or a saved key's rows; then the status. */
+@Composable
+private fun StackedParts(parts: TmdbKeyParts) {
+    if (parts.asking) {
+        parts.code(false)
+        parts.typeIt()
+    } else {
+        parts.saved()
+    }
+    parts.status()
 }
 
 /**
@@ -275,27 +323,10 @@ private fun StatusLine(checking: Boolean, problem: ViewerError?) {
     }
 }
 
-/** TMDB's logo and the sentence its terms ask for, in Settings › TMDB and About. */
-@Composable
-internal fun TmdbAttribution(modifier: Modifier = Modifier) {
-    Row(modifier, verticalAlignment = Alignment.CenterVertically) {
-        // Smaller than Settee's own mark anywhere, as TMDB's terms ask.
-        Image(
-            painterResource(R.drawable.tmdb_logo),
-            contentDescription = stringResource(R.string.tmdb_logo_desc),
-            modifier = Modifier.height(LOGO_HEIGHT),
-        )
-        Column(Modifier.padding(start = 16.dp)) {
-            Text(stringResource(R.string.tmdb_attribution), SetteeType.Body, color = SetteeColors.QuietText)
-        }
-    }
-}
-
 private const val START_DELAY_MS = 400L
 
 /** A [CodeBlock] with its QR code: the code and the block's padding. */
 private val QR_SLOT_HEIGHT = 240.dp
 
 /** The checking line, or a turned-down key's sentence over two lines and its detail line. */
-private val STATUS_HEIGHT = 112.dp
-private val LOGO_HEIGHT = 16.dp
+private val STATUS_HEIGHT = 88.dp
