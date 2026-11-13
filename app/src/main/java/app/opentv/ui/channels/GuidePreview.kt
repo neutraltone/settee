@@ -62,7 +62,7 @@ internal fun rememberGuidePreviewController(): PlayerController {
         PlayerController(
             context,
             scope,
-            graph.httpClient,
+            graph.streamingHttpClient,
             resolve = graph.playbackSources::forWatching,
             PlayerController.Options(subtitlesEnabled = false, preview = true),
         )
