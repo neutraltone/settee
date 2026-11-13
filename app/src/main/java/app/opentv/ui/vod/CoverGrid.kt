@@ -97,6 +97,12 @@ private fun ScreenFrameScope.CoverRows(
  *
  * Asked for at the size the card draws them, so the card finds them already decoded in Coil's
  * memory cache rather than decoding a full-size poster again.
+ *
+ * Those the viewer has gone past, and all of them once the grid closes or its covers change, are
+ * cancelled. Posters mostly come from one host, and OkHttp fetches only five at a time from a host,
+ * in the order asked: a held Down queues hundreds of covers for rows already passed, and the cards of
+ * the row the viewer stops on wait behind every one of them, blank, which this prefetch is meant to
+ * prevent. Finished ones stay in Coil's caches for a viewer who scrolls back.
  */
 @Composable
 private fun PrefetchCovers(state: LazyGridState, covers: List<TitleCover>) {
@@ -106,31 +112,23 @@ private fun PrefetchCovers(state: LazyGridState, covers: List<TitleCover>) {
     }
     LaunchedEffect(state, covers, tile) {
         val loader = context.imageLoader
-        val asked = HashSet<Long>()
-        var previousFirst = state.firstVisibleItemIndex
-        snapshotFlow {
-            state.layoutInfo.visibleItemsInfo.takeIf { it.isNotEmpty() }
-                ?.let { shown -> ShownCovers(shown.first().index, shown.last().index, shown.maxOf { it.column } + 1) }
-        }.filterNotNull().collect { shown ->
-            val ahead = PREFETCH_ROWS * shown.columns
-            val upwards = shown.first < previousFirst
-            previousFirst = shown.first
-            // Clamped both ways: just after the covers change, the layout can still be the old one's.
-            val range = if (upwards) {
-                (shown.first - ahead).coerceAtLeast(0) until shown.first.coerceAtMost(covers.size)
-            } else {
-                shown.last + 1..(shown.last + ahead).coerceAtMost(covers.lastIndex)
-            }
-            for (index in range) {
-                val cover = covers[index]
-                val url = cover.posterUrl ?: continue
-                if (asked.add(cover.id)) loader.enqueue(ImageRequest.Builder(context).data(url).size(tile).build())
-            }
+        val prefetcher = CoverPrefetcher(covers, PREFETCH_ROWS) { url ->
+            loader.enqueue(ImageRequest.Builder(context).data(url).size(tile).build())
+        }
+        try {
+            snapshotFlow {
+                state.layoutInfo.visibleItemsInfo.takeIf { it.isNotEmpty() }
+                    ?.let { shown ->
+                        ShownCovers(shown.first().index, shown.last().index, shown.maxOf { it.column } + 1)
+                    }
+            }.filterNotNull().collect { shown -> prefetcher.onShown(shown.first, shown.last, shown.columns) }
+        } finally {
+            prefetcher.cancelAll()
         }
     }
 }
 
-private class ShownCovers(val first: Int, val last: Int, val columns: Int)
+private data class ShownCovers(val first: Int, val last: Int, val columns: Int)
 
 private const val PREFETCH_ROWS = 4
 
