@@ -18,6 +18,7 @@ import app.opentv.data.model.Channel
 import app.opentv.data.model.ChannelEpgMatch
 import app.opentv.data.model.ChannelHiddenChange
 import app.opentv.data.model.ChannelMatchInput
+import app.opentv.data.model.ChannelUserState
 import app.opentv.data.model.CoverRow
 import app.opentv.data.model.CreditedTitle
 import app.opentv.data.model.EpgChannelAlias
@@ -352,8 +353,13 @@ interface ChannelDao {
         deleteStale(sourceId, syncStamp)
     }
 
-    @Query("SELECT * FROM channels WHERE sourceId = :sourceId")
-    suspend fun userStateForSource(sourceId: Long): List<Channel>
+    @Query(
+        """
+        SELECT streamId, id, hidden, sortIndex, customName, epgOverrideId, matchedEpgId
+        FROM channels WHERE sourceId = :sourceId
+        """,
+    )
+    suspend fun userStateForSource(sourceId: Long): List<ChannelUserState>
 }
 
 @Dao
