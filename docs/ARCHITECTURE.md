@@ -91,6 +91,21 @@ device zone, and converts to local time only at draw time. `XmltvTimeTest` chang
 default zone between assertions specifically to catch the "works on my machine, an hour out on
 yours" bug.
 
+### An open guide while a sync writes
+
+Each batch re-runs every Room query on `programmes`, so an open guide used to regroup and rebuild
+its rows hundreds of times during one sync (#257). Two things stop that:
+
+- `EpgRepository.observeWindow` and `observeNow` are `settled()` (`data/repo/SettledListings.kt`):
+  the first listings straight away, then the latest at most every two seconds, ending on the
+  finished listings, and never the same listings twice in a row. Not a plain `debounce`: that
+  delays start-up and shows nothing new until a long first download ends. Settled in the
+  repository, not the screen, so anything else that watches the guide gets the same.
+- `guideBuilds` (`ui/ProgrammeIndex.kt`) times the guide's next rebuild for more listings from the end
+  of the last build, not from when the listings arrived: building "All channels" for a big
+  provider outlasts the pause on a Fire TV Stick, and paced from arrival it rebuilt back to back.
+  New channels and a new window's first listings never wait.
+
 ## Every Catalogue Refresh goes through one module
 
 `data/repo/CatalogueRefresh` is asked by every trigger: the periodic worker, a manual refresh, adding a
