@@ -223,14 +223,7 @@ constructor(
             // is far cheaper than the whole catalogue.
             return combine(favourites.channels(), locked, favourites.channelIds(), ::Triple)
                 .mapLatest { (rows, locked, starred) ->
-                    // One lookup per name, not per row: every Quality of a Favourite is starred,
-                    // and each lookup scans the table. A row with no group key only finds itself.
-                    val named = rows
-                        .distinctBy {
-                            if (it.groupKey.isEmpty()) it.id else ChannelNameNormalizer.nameKeyOf(it.groupKey)
-                        }
-                        .flatMap { channelDao.sameNamed(it) }
-                        .distinctBy { it.id }
+                    val named = channelDao.sameNamed(rows)
                     Catalogue(named, decoders) { it.isShown(locked) }
                         .channelsOf(rows.from(scope.sourceId), scope)
                         .map { it.starredBy(starred) }
@@ -323,7 +316,7 @@ constructor(
         val row = channelDao.byId(channelId) ?: return null
         val locked = if (manage) emptySet() else locked.first()
         // Only rows of the same name can share its Channel, so the fold needn't see the catalogue.
-        return Catalogue(channelDao.sameNamed(row), decoders) { manage || it.isShown(locked) }
+        return Catalogue(channelDao.sameNamed(listOf(row)), decoders) { manage || it.isShown(locked) }
             .channelContaining(row.id)
             ?.starredBy(favourites.channelIds().first())
     }
@@ -420,9 +413,16 @@ private fun rowsIn(scope: LineupScope, channelDao: ChannelDao, categories: Flow<
         }
     }
 
-/** Every row, hidden ones too, that could share a Channel with [row]. */
-private suspend fun ChannelDao.sameNamed(row: Channel): List<Channel> =
-    if (row.groupKey.isEmpty()) listOf(row) else sameName(ChannelNameNormalizer.nameKeyOf(row.groupKey))
+/**
+ * Every row, hidden ones too, that could share a Channel with any of [rows]. One lookup per name,
+ * not per row: each scans the table, and a Favourite has every Quality starred. A row with no
+ * group key only finds itself.
+ */
+private suspend fun ChannelDao.sameNamed(rows: List<Channel>): List<Channel> {
+    val (keyless, keyed) = rows.partition { it.groupKey.isEmpty() }
+    val named = keyed.map { ChannelNameNormalizer.nameKeyOf(it.groupKey) }.distinct().flatMap { sameName(it) }
+    return (keyless + named).distinctBy { it.id }
+}
 
 /**
  * Whether a Channel shown in this scope may default to [row] when it isn't among the scope's own rows.
