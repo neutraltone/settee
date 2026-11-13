@@ -1534,10 +1534,12 @@ class HomeViewModel @JvmOverloads constructor(
         // In the same state as the rows, so Home is first drawn with it and highlights it.
         live,
     ) { rows, live -> rows.copy(live = live) }
-        // Nothing replayed once the rows have stopped updating: back from the player, Home waits for
-        // fresh rows rather than drawing the old ones, where it would highlight a card that's about
-        // to move or go (a title just finished, a Favourite just removed).
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000, replayExpirationMillis = 0), null)
+        // Kept updating for as long as Home's back stack entry lives, not just while Home is drawn
+        // (#192). Stopping a few seconds after a screen covered it meant Back found no rows: Home drew
+        // empty, then built them once fresh ones came, well past the 300 ms a screen has. Replaying the
+        // rows from before the cover instead would highlight a card that has since moved or gone (a
+        // title just finished, a Favourite just removed). Kept live, the rows Back finds are current.
+        .stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
     /** Channel up and down go through every Channel, as Home has no list of its own. */
     fun zapFromAll() = lineup.zapFrom(LineupScope.All())
