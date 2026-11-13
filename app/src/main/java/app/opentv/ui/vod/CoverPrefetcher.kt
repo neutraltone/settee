@@ -11,15 +11,18 @@ import coil.request.Disposable
 /**
  * Decides which of a grid's [covers] to fetch ahead of the ones on screen, [rowsAhead] rows in the
  * direction the viewer is moving, and gives up on those the viewer has gone past. [fetch] asks for a
- * poster and returns its request.
+ * poster, calls `failed` if it can't be had, and returns its request.
+ *
+ * Kept by position, which stands for a cover as long as this prefetcher lives: a change of covers
+ * starts a new one.
  */
 internal class CoverPrefetcher(
     private val covers: List<TitleCover>,
     private val rowsAhead: Int,
-    private val fetch: (url: String) -> Disposable,
+    private val fetch: (url: String, failed: () -> Unit) -> Disposable,
 ) {
-    private val asked = HashSet<Long>()
-    private val outstanding = HashMap<Long, Disposable>()
+    private val asked = HashSet<Int>()
+    private val outstanding = HashMap<Int, Disposable>()
     private var previousFirst = -1
     private var upwards = false
 
@@ -40,7 +43,8 @@ internal class CoverPrefetcher(
         for (index in toFetch) {
             val cover = covers[index]
             val url = cover.posterUrl ?: continue
-            if (asked.add(cover.id)) outstanding[cover.id] = fetch(url)
+            // A failed one is asked for again next time it's ahead, as a passing fault may have cleared.
+            if (asked.add(index)) outstanding[index] = fetch(url) { asked -= index }
         }
     }
 
@@ -48,15 +52,14 @@ internal class CoverPrefetcher(
     fun cancelAll() = cancelOutside(IntRange.EMPTY)
 
     private fun cancelOutside(window: IntRange) {
-        val inWindow = window.mapTo(HashSet()) { covers[it].id }
         val iterator = outstanding.entries.iterator()
         while (iterator.hasNext()) {
-            val (id, request) = iterator.next()
+            val (index, request) = iterator.next()
             when {
                 request.isDisposed -> iterator.remove()
-                id !in inWindow -> {
+                index !in window -> {
                     request.dispose()
-                    asked -= id
+                    asked -= index
                     iterator.remove()
                 }
             }

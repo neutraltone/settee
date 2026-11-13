@@ -24,7 +24,11 @@ class CoverPrefetcherTest {
     /** Every prefetch asked for, in order. */
     private val prefetches = mutableListOf<Prefetch>()
 
-    private val prefetcher = CoverPrefetcher(covers, rowsAhead = 2) { url -> Prefetch(url).also { prefetches += it } }
+    private fun prefetcher(covers: List<TitleCover>) = CoverPrefetcher(covers, rowsAhead = 2) { url, failed ->
+        Prefetch(url, failed).also { prefetches += it }
+    }
+
+    private val prefetcher = prefetcher(covers)
 
     private fun urls(range: IntRange) = range.map { "https://example.com/$it.jpg" }
 
@@ -79,6 +83,38 @@ class CoverPrefetcherTest {
     }
 
     @Test
+    fun `a cover given up on going up is asked for again on the way back down`() {
+        prefetcher.onShown(first = 40, last = 47, columns = 4)
+        prefetcher.onShown(first = 36, last = 43, columns = 4)
+        assertThat(asked(48..55).map { it.cancelled }).doesNotContain(false)
+
+        prefetcher.onShown(first = 40, last = 47, columns = 4)
+
+        assertThat(asked(48..55).filterNot { it.cancelled }.map { it.url }).containsExactlyElementsIn(urls(48..55))
+    }
+
+    @Test
+    fun `a cover whose poster failed is asked for again when the viewer moves on`() {
+        prefetcher.onShown(first = 0, last = 7, columns = 4)
+        asked(12..15).forEach { it.fail() }
+
+        prefetcher.onShown(first = 4, last = 11, columns = 4)
+
+        val again = asked(12..15).filterNot { it.isDisposed }
+        assertThat(again.map { it.url }).containsExactlyElementsIn(urls(12..15))
+    }
+
+    @Test
+    fun `a cover with no poster is left out`() {
+        val someWithout = covers.map { if (it.id % 2 == 0L) it.copy(posterUrl = null) else it }
+
+        prefetcher(someWithout).onShown(first = 0, last = 7, columns = 4)
+
+        val odd = listOf(9, 11, 13, 15).map { "https://example.com/$it.jpg" }
+        assertThat(prefetches.map { it.url }).containsExactlyElementsIn(odd).inOrder()
+    }
+
+    @Test
     fun `a cover already fetched is not asked for again`() {
         prefetcher.onShown(first = 0, last = 7, columns = 4)
         prefetches.forEach { it.finished = true }
@@ -104,14 +140,19 @@ class CoverPrefetcherTest {
         assertThat(asked(12..15).map { it.cancelled }).containsExactly(true, true, true, true)
     }
 
-    /** A prefetch the test finishes or the prefetcher cancels, like Coil's own. */
-    private class Prefetch(val url: String) : Disposable {
+    /** A prefetch the test finishes or fails, or the prefetcher cancels, like Coil's own. */
+    private class Prefetch(val url: String, private val failed: () -> Unit) : Disposable {
         override val job = CompletableDeferred<ImageResult>()
         var cancelled = false
             private set
         var finished = false
 
         override val isDisposed get() = cancelled || finished
+
+        fun fail() {
+            finished = true
+            failed()
+        }
 
         override fun dispose() {
             check(!finished) { "$url was cancelled after it finished" }

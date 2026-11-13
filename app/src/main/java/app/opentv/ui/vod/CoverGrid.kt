@@ -112,8 +112,10 @@ private fun PrefetchCovers(state: LazyGridState, covers: List<TitleCover>) {
     }
     LaunchedEffect(state, covers, tile) {
         val loader = context.imageLoader
-        val prefetcher = CoverPrefetcher(covers, PREFETCH_ROWS) { url ->
-            loader.enqueue(ImageRequest.Builder(context).data(url).size(tile).build())
+        val prefetcher = CoverPrefetcher(covers, PREFETCH_ROWS) { url, failed ->
+            loader.enqueue(
+                ImageRequest.Builder(context).data(url).size(tile).listener(onError = { _, _ -> failed() }).build(),
+            )
         }
         try {
             snapshotFlow {

@@ -18,8 +18,10 @@ import coil.Coil
 import coil.EventListener
 import coil.ImageLoader
 import coil.request.ImageRequest
+import coil.size.Size
 import coil.test.FakeImageLoaderEngine
 import com.google.common.truth.Truth.assertThat
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CopyOnWriteArrayList
 import kotlinx.coroutines.awaitCancellation
 import org.junit.After
@@ -46,6 +48,7 @@ class CoverGridPrefetchTest {
 
     private val started = CopyOnWriteArrayList<String>()
     private val cancelled = CopyOnWriteArrayList<String>()
+    private val sizes = ConcurrentHashMap<String, Size>()
 
     /** Every poster stays loading until it's cancelled, so nothing finishes before the test looks. */
     @Before
@@ -63,6 +66,10 @@ class CoverGridPrefetchTest {
                         override fun onCancel(request: ImageRequest) {
                             cancelled += request.data.toString()
                         }
+
+                        override fun resolveSizeEnd(request: ImageRequest, size: Size) {
+                            sizes[request.data.toString()] = size
+                        }
                     },
                 )
                 .build(),
@@ -77,19 +84,40 @@ class CoverGridPrefetchTest {
 
     private fun titleOf(url: String) = url.removePrefix("https://example.com/").removeSuffix(".jpg").replace('/', ' ')
 
+    private fun numberOf(url: String) = url.substringAfterLast('/').removeSuffix(".jpg").toInt()
+
     private fun onScreen(url: String) =
         compose.onAllNodesWithText(titleOf(url), useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
 
-    /** The posters asked for that have no card on screen: the ones fetched ahead. */
+    /**
+     * The posters asked for more than a row past the last card on screen: the ones only the prefetch
+     * fetches. The lazy grid composes the next row itself, and its cards ask for their own posters.
+     */
     private fun fetchedAhead(): List<String> {
-        compose.waitUntil(5_000) { started.any { !onScreen(it) } }
+        fun ahead(): List<String> {
+            val last = started.filter(::onScreen).maxOfOrNull(::numberOf) ?: return emptyList()
+            return started.filter { numberOf(it) > last + MORE_THAN_A_ROW }
+        }
+        compose.waitUntil(5_000) { ahead().isNotEmpty() }
         compose.waitForIdle()
-        return started.filterNot(::onScreen)
+        return ahead()
     }
 
     private fun assertGivenUp(urls: List<String>) {
         runCatching { compose.waitUntil(5_000) { cancelled.containsAll(urls) } }
         assertThat(cancelled).containsAtLeastElementsIn(urls)
+    }
+
+    @Test
+    fun `covers are fetched ahead at the size their cards draw them`() {
+        compose.setTvContent {
+            ScreenFrame { CoverGrid(covers("Film"), "Loading", "Nothing here", {}, {}, null) }
+        }
+
+        val ahead = fetchedAhead()
+
+        // 118 x 177 dp, ArtCardSize.Portrait, at the Stick's xhdpi.
+        assertThat(ahead.map { sizes[it] }.toSet()).containsExactly(Size(236, 354))
     }
 
     @Test
@@ -116,5 +144,10 @@ class CoverGridPrefetchTest {
         category = covers("Show")
 
         assertGivenUp(ahead)
+    }
+
+    private companion object {
+        /** A row at 1080p (960 dp) holds at most seven 118 dp covers and their gaps. */
+        const val MORE_THAN_A_ROW = 8
     }
 }
