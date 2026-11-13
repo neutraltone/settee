@@ -15,16 +15,25 @@ import java.net.URLEncoder
 import java.util.concurrent.ConcurrentHashMap
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.DeserializationStrategy
+import kotlinx.serialization.builtins.ListSerializer
+import kotlinx.serialization.descriptors.SerialDescriptor
+import kotlinx.serialization.descriptors.buildClassSerialDescriptor
+import kotlinx.serialization.encoding.CompositeDecoder
+import kotlinx.serialization.encoding.Decoder
+import kotlinx.serialization.encoding.decodeStructure
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.decodeFromStream
 import okhttp3.HttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import okio.BufferedSource
 
 /**
  * A client for the Stalker / Ministra portal protocol (the "MAG box" middleware many panels speak).
@@ -67,8 +76,8 @@ class StalkerApi(
 
     /** Live categories ("genres") for the guide's rail. */
     suspend fun liveCategories(source: Source): List<Category> = withContext(Dispatchers.IO) {
-        val arr =
-            callRetrying(source, type = "itv", action = "get_genres") as? JsonArray ?: return@withContext emptyList()
+        val arr = callRetrying(source, type = "itv", action = "get_genres", read = ::js) as? JsonArray
+            ?: return@withContext emptyList()
         arr.mapIndexedNotNull { index, element ->
             val o = element as? JsonObject ?: return@mapIndexedNotNull null
             val id = o.str("id") ?: return@mapIndexedNotNull null
@@ -82,41 +91,67 @@ class StalkerApi(
         }
     }
 
-    /** Every live channel. Each carries its `cmd`; the real URL is minted by [createLink] at play time. */
+    /**
+     * Every live channel. Each carries its `cmd`; the real URL is minted by [createLink] at play time.
+     *
+     * A big portal's list can be more than a Fire TV Stick's heap will hold as one string, a JSON
+     * tree and the channels at once, so it's read one channel at a time, as Xtream's lists are.
+     */
     suspend fun liveChannels(source: Source): List<Channel> = withContext(Dispatchers.IO) {
         val s = session(source)
-        val js = callRetrying(source, type = "itv", action = "get_all_channels")
-        // get_all_channels returns { js: { data: [ ... ] } }; some portals return the array directly.
-        val data = when (js) {
-            is JsonArray -> js
-            is JsonObject -> js["data"] as? JsonArray ?: JsonArray(emptyList())
-            else -> JsonArray(emptyList())
+        callRetrying(source, type = "itv", action = "get_all_channels", read = { channels(it, source, s.endpoint) })
+            .orEmpty()
+    }
+
+    /**
+     * get_all_channels' reply, one channel at a time: `{ js: { data: [ ... ] } }`, or from some portals
+     * `{ js: [ ... ] }`. A reply that starts any other way (an error, `js` not first) is small, or odd
+     * enough to be rare, so it's read whole. Null when there's no `js`, as for any other call.
+     */
+    private fun channels(body: BufferedSource, source: Source, endpoint: HttpUrl): List<Channel>? {
+        val channels = ArrayList<Channel>()
+        var index = 0
+        val each: (JsonElement) -> Unit = { element ->
+            (element as? JsonObject)?.let { channel(it, index, source, endpoint) }?.let(channels::add)
+            index++
         }
-        data.mapIndexedNotNull { index, element ->
-            val o = element as? JsonObject ?: return@mapIndexedNotNull null
-            val id = o.str("id") ?: return@mapIndexedNotNull null
-            val name = o.str("name") ?: return@mapIndexedNotNull null
-            val number = o.str("number")?.toIntOrNull()
-            Channel(
-                sourceId = source.id,
-                streamId = id,
-                name = name,
-                categoryId = o.str("tv_genre_id"),
-                logoUrl = o.str("logo")?.takeIf { it.isNotBlank() }?.let { absoluteLogo(s.endpoint, it) },
-                epgChannelId = o.str("xmltv_id")?.takeIf { it.isNotBlank() },
-                number = number,
-                // Never played directly — a marker so nothing mistakes it for a real URL; [cmd] is
-                // what gets resolved. Distinct per channel so de-dup/quality-grouping still works.
-                streamUrl = "stalker://${source.id}/$id",
-                cmd = o.str("cmd"),
-                sortIndex = number ?: index,
-            )
+        when (body.replyShape()) {
+            ReplyShape.LIST -> json.decodeFromStream(Field("js", EachElement(each)), body.inputStream())
+            ReplyShape.DATA -> json.decodeFromStream(Field("js", Field("data", EachElement(each))), body.inputStream())
+            ReplyShape.OTHER -> when (val js = js(body)) {
+                null -> return null
+                is JsonArray -> js.forEach(each)
+                is JsonObject -> (js["data"] as? JsonArray)?.forEach(each)
+                else -> Unit
+            }
         }
+        return channels
+    }
+
+    private fun channel(o: JsonObject, index: Int, source: Source, endpoint: HttpUrl): Channel? {
+        val id = o.str("id")
+        val name = o.str("name")
+        if (id == null || name == null) return null
+        val number = o.str("number")?.toIntOrNull()
+        return Channel(
+            sourceId = source.id,
+            streamId = id,
+            name = name,
+            categoryId = o.str("tv_genre_id"),
+            logoUrl = o.str("logo")?.takeIf { it.isNotBlank() }?.let { absoluteLogo(endpoint, it) },
+            epgChannelId = o.str("xmltv_id")?.takeIf { it.isNotBlank() },
+            number = number,
+            // Never played directly — a marker so nothing mistakes it for a real URL; [cmd] is
+            // what gets resolved. Distinct per channel so de-dup/quality-grouping still works.
+            streamUrl = "stalker://${source.id}/$id",
+            cmd = o.str("cmd"),
+            sortIndex = number ?: index,
+        )
     }
 
     /** Mint the real, short-lived stream URL for a channel's [cmd]. Null if the portal declines. */
     suspend fun createLink(source: Source, cmd: String): String? = withContext(Dispatchers.IO) {
-        val js = callRetrying(source, type = "itv", action = "create_link") { b ->
+        val js = callRetrying(source, type = "itv", action = "create_link", read = ::js) { b ->
             b.addQueryParameter("cmd", cmd)
             b.addQueryParameter("forced_storage", "0")
             b.addQueryParameter("disable_ad", "0")
@@ -137,13 +172,14 @@ class StalkerApi(
         var lastError: Throwable? = null
         for (endpoint in endpoints(source)) {
             val hs = runCatching { handshake(source, endpoint) }
+                .throwingErrors()
                 .onFailure { lastError = it }
                 .getOrNull()
             if (hs != null) {
                 // Many portals won't serve itv data until get_profile is called with a full MAG
                 // identity (device_id/signature) — that's what unlocks the ones that authenticate the
                 // box rather than just accepting any MAC.
-                runCatching { getProfile(source, endpoint, hs.token, hs.random) }
+                runCatching { getProfile(source, endpoint, hs.token, hs.random) }.throwingErrors()
                 return Session(hs.token, endpoint, now + TOKEN_TTL_MILLIS).also { sessions[source.id] = it }
             }
         }
@@ -163,7 +199,7 @@ class StalkerApi(
             .addQueryParameter("token", "")
             .addQueryParameter("JsHttpRequest", "1-xml")
             .build()
-        val js = (execute(source, url, token = null) as? JsonObject)?.obj("js") ?: return null
+        val js = (execute(source, url, token = null, read = ::whole) as? JsonObject)?.obj("js") ?: return null
         val token = js.str("token")?.takeIf { it.isNotBlank() } ?: return null
         // Some Ministra versions return a `random` at handshake that the box folds into the
         // get_profile signature; capture it so we can.
@@ -207,7 +243,7 @@ class StalkerApi(
             .addQueryParameter("prehash", "")
             .addQueryParameter("JsHttpRequest", "1-xml")
             .build()
-        execute(source, url, token)
+        execute(source, url, token, read = ::whole)
     }
 
     private data class StbIdentity(val sn: String, val deviceId: String, val deviceId2: String)
@@ -227,40 +263,46 @@ class StalkerApi(
 
     // ---- HTTP --------------------------------------------------------------------------------
 
-    private fun call(
-        session: Session,
-        source: Source,
-        type: String,
-        action: String,
-        extra: (HttpUrl.Builder) -> Unit = {},
-    ): JsonElement? {
-        val builder = session.endpoint.newBuilder()
+    private fun Session.url(type: String, action: String, extra: (HttpUrl.Builder) -> Unit): HttpUrl {
+        val builder = endpoint.newBuilder()
             .addQueryParameter("type", type)
             .addQueryParameter("action", action)
             .addQueryParameter("JsHttpRequest", "1-xml")
         extra(builder)
-        val body = execute(source, builder.build(), session.token) ?: return null
-        return (body as? JsonObject)?.get("js")
+        return builder.build()
     }
+
+    /** A reply's `js`, read whole: null when it's blank or has none. */
+    private fun js(body: BufferedSource): JsonElement? = (whole(body) as? JsonObject)?.get("js")
+
+    /** A reply read whole, or null when it's blank. */
+    private fun whole(body: BufferedSource): JsonElement? =
+        body.readUtf8().takeIf { it.isNotBlank() }?.let(json::parseToJsonElement)
 
     /**
      * An itv call that survives a dropped session. Real portals hand out short-lived tokens and now
      * and then refuse a call mid-session (server load, a token invalidated early); the first attempt
      * then comes back null. Re-handshake once for a fresh token and try again, so an intermittent
      * "sometimes just rejected" becomes a silent retry instead of an empty channel list or a channel
-     * that won't tune.
+     * that won't tune. Running out of memory isn't a null: it's thrown, never retried, since a second
+     * download would land in the heap that just ran out.
      */
-    private fun callRetrying(
+    private fun <T : Any> callRetrying(
         source: Source,
         type: String,
         action: String,
+        read: (BufferedSource) -> T?,
         extra: (HttpUrl.Builder) -> Unit = {},
-    ): JsonElement? {
-        call(session(source), source, type, action, extra)?.let { return it }
-        return call(session(source, force = true), source, type, action, extra)
+    ): T? {
+        fun call(session: Session) = execute(source, session.url(type, action, extra), session.token, read)
+        return call(session(source)) ?: call(session(source, force = true))
     }
 
-    private fun execute(source: Source, url: HttpUrl, token: String?): JsonElement? {
+    /**
+     * A request's reply, by [read]; null when the portal refused it, or it couldn't be fetched or
+     * read. Only exceptions mean that: an [Error] such as [OutOfMemoryError] is thrown on.
+     */
+    private fun <T : Any> execute(source: Source, url: HttpUrl, token: String?, read: (BufferedSource) -> T?): T? {
         val mac = source.macAddress?.trim().orEmpty()
         // adid (the lower-case device id) rides in the cookie the way a real box sends it; some
         // portals key off it alongside the MAC.
@@ -282,12 +324,12 @@ class StalkerApi(
             .build()
         return runCatching {
             http.newCall(request).execute().use { response ->
-                if (!response.isSuccessful) return null
-                val text = response.body.string()
-                if (text.isBlank()) return null
-                json.parseToJsonElement(text)
+                if (response.isSuccessful) read(response.body.source()) else null
             }
-        }.onFailure { Log.w(TAG, "Stalker request failed", it) }.getOrNull()
+        }
+            .throwingErrors()
+            .onFailure { Log.w(TAG, "Stalker request failed", it) }
+            .getOrNull()
     }
 
     /** Candidate API endpoints for a portal URL, most common first. First that handshakes wins. */
@@ -345,3 +387,64 @@ private fun JsonObject.str(key: String): String? =
     (this[key] as? JsonPrimitive)?.contentOrNull?.takeIf { it.isNotEmpty() && it != "null" }
 
 private fun JsonObject.obj(key: String): JsonObject? = this[key] as? JsonObject
+
+/**
+ * Throws an [Error] such as [OutOfMemoryError] on, so only exceptions are a failed request. Out of
+ * memory isn't a portal refusing a call: retrying it would download the same list into a heap that
+ * just ran out, and it was being worded as "no channels".
+ */
+private fun <T> Result<T>.throwingErrors(): Result<T> = onFailure { if (it is Error) throw it }
+
+/** How a reply begins, so the channel list can be streamed: `{"js": [`, `{"js": {`, or anything else. */
+private enum class ReplyShape { LIST, DATA, OTHER }
+
+/** This reply's [ReplyShape], from its first few bytes; peeked, so nothing is consumed. */
+private fun BufferedSource.replyShape(): ReplyShape {
+    val ahead = peek()
+    val opening = StringBuilder()
+    while (opening.length < LIST_OPENING.length && ahead.request(1)) {
+        val c = ahead.readByte().toInt().toChar()
+        if (!c.isWhitespace()) opening.append(c)
+    }
+    return when (opening.toString()) {
+        LIST_OPENING -> ReplyShape.LIST
+        DATA_OPENING -> ReplyShape.DATA
+        else -> ReplyShape.OTHER
+    }
+}
+
+private const val LIST_OPENING = """{"js":["""
+private const val DATA_OPENING = """{"js":{"""
+
+/**
+ * A JSON array, each element handed to [each] as soon as it's read and then let go, the way Xtream's
+ * lists use `decodeToSequence`; that only takes an array at the top, and a channel list sits inside
+ * `js`, so it's reached with [Field].
+ */
+private class EachElement(private val each: (JsonElement) -> Unit) : DeserializationStrategy<Unit> {
+    override val descriptor: SerialDescriptor = ListSerializer(JsonElement.serializer()).descriptor
+
+    override fun deserialize(decoder: Decoder) = decoder.decodeStructure(descriptor) {
+        while (true) {
+            val index = decodeElementIndex(descriptor)
+            if (index == CompositeDecoder.DECODE_DONE) break
+            each(decodeSerializableElement(descriptor, index, JsonElement.serializer()))
+        }
+    }
+}
+
+/** An object's [key], read by [value]; its other keys are skipped (Json's `ignoreUnknownKeys`). */
+private class Field(private val key: String, private val value: DeserializationStrategy<Unit>) :
+    DeserializationStrategy<Unit> {
+    override val descriptor: SerialDescriptor = buildClassSerialDescriptor("StalkerReply.$key") {
+        element(key, value.descriptor, isOptional = true)
+    }
+
+    override fun deserialize(decoder: Decoder) = decoder.decodeStructure(descriptor) {
+        while (true) {
+            val index = decodeElementIndex(descriptor)
+            if (index == CompositeDecoder.DECODE_DONE) break
+            decodeSerializableElement(descriptor, index, value)
+        }
+    }
+}

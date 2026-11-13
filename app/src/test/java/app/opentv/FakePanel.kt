@@ -15,7 +15,11 @@ import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Protocol
 import okhttp3.Response
+import okhttp3.ResponseBody.Companion.asResponseBody
 import okhttp3.ResponseBody.Companion.toResponseBody
+import okio.Buffer
+import okio.Timeout
+import okio.buffer
 
 /** Runs [block] off the test's virtual clock, with the panel's real threads, once [hold] is reached. */
 suspend fun <T> during(hold: FakePanel.Hold, block: suspend () -> T): T = withContext(Dispatchers.Default) {
@@ -33,7 +37,8 @@ val PANEL_SOURCE =
  * `get_series_info:<id>`), and `[]` otherwise. A reply of `"!"` fails the request, as a panel timing
  * out would, and `"!host"` fails it as an address that can't be found, with the request's own
  * address, login and a MAC in the exception's message, as some clients put them there. `"!503"`
- * (any three digits) answers with that HTTP status.
+ * (any three digits) answers with that HTTP status, and `"!oom"` with a body that runs out of memory
+ * as it's read, as a list too big for the device would.
  */
 class FakePanel(vararg initial: Pair<String, String>) {
     val replies = initial.toMap().toMutableMap()
@@ -97,7 +102,9 @@ class FakePanel(vararg initial: Pair<String, String>) {
             .message(if (status == null) "OK" else "Error")
             .body(
                 body.toResponseBody("application/json".toMediaType()).let { sized ->
-                    if (action !in unsized) {
+                    if (body == "!oom") {
+                        OutOfMemorySource().buffer().asResponseBody("application/json".toMediaType())
+                    } else if (action !in unsized) {
                         sized
                     } else {
                         object : okhttp3.ResponseBody() {
@@ -112,6 +119,15 @@ class FakePanel(vararg initial: Pair<String, String>) {
             )
             .build()
     }.build()
+}
+
+/** A body that runs out of memory the first time anything reads it. */
+private class OutOfMemorySource : okio.Source {
+    override fun read(sink: Buffer, byteCount: Long): Long = throw OutOfMemoryError("Fake portal's list")
+
+    override fun timeout(): Timeout = Timeout.NONE
+
+    override fun close() = Unit
 }
 
 /** A Stalker portal at a placeholder address and MAC, for [FakePanel] to answer (`handshake`, `create_link`). */
