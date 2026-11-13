@@ -549,17 +549,13 @@ interface ProgrammeDao {
      */
     @Query(
         """
-        SELECT id, epgChannelId, startUtcMillis, endUtcMillis, title, season, episode FROM programmes
+        SELECT epgChannelId, startUtcMillis, endUtcMillis, title, season, episode FROM programmes
         WHERE endUtcMillis > :fromUtcMillis
           AND startUtcMillis < :toUtcMillis
         ORDER BY epgChannelId, startUtcMillis
         """,
     )
     fun observeGuideWindow(fromUtcMillis: Long, toUtcMillis: Long): Flow<List<GuideProgramme>>
-
-    /** One programme in full, for what the guide doesn't hold. Null once a refresh has replaced it. */
-    @Query("SELECT * FROM programmes WHERE id = :id")
-    suspend fun byId(id: Long): Programme?
 
     /** What is on right now, for the channel list's "now playing" line. */
     @Query(
@@ -579,8 +575,17 @@ interface ProgrammeDao {
     )
     suspend fun upcoming(channelId: String, nowUtcMillis: Long, limit: Int): List<Programme>
 
-    /** The programme starting at [startUtcMillis] on [channelId], for playing it back from the archive. */
-    @Query("SELECT * FROM programmes WHERE epgChannelId = :channelId AND startUtcMillis = :startUtcMillis LIMIT 1")
+    /**
+     * The programme starting at [startUtcMillis] on [channelId]: for playing it back from the archive,
+     * and for the details of one the guide grid lists. When two feeds both carry it, the one with a
+     * description wins, so the synopsis doesn't depend on which feed SQLite happens to return first.
+     */
+    @Query(
+        """
+        SELECT * FROM programmes WHERE epgChannelId = :channelId AND startUtcMillis = :startUtcMillis
+        ORDER BY description IS NULL LIMIT 1
+        """,
+    )
     suspend fun startingAt(channelId: String, startUtcMillis: Long): Programme?
 
     @Query("SELECT EXISTS(SELECT 1 FROM programmes WHERE epgChannelId = :epgChannelId)")

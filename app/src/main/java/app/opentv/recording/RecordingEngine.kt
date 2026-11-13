@@ -245,12 +245,19 @@ class RecordingEngine(
         repo.deleteRule(ruleId)
     }
 
-    /** Book every not-yet-booked airing in [programmes] whose title matches the rule. */
+    /**
+     * Book every not-yet-booked airing in [programmes] whose title matches the rule, each once. Two
+     * guide feeds carrying one channel list each airing twice: a booking for later de-duplicates
+     * itself, but one on now starts a capture straight away, so the second listing would start another.
+     */
     suspend fun scheduleMatching(channel: Channel, titleKey: String, ruleId: Long, programmes: List<Programme>) {
         val now = System.currentTimeMillis()
         bookingLock.withLock {
             programmes
                 .filter { it.endUtcMillis > now && titleKeyOf(it.title) == titleKey }
+                // The listing with a description first, so it's the one the booking keeps.
+                .sortedBy { it.description == null }
+                .distinctBy { it.startUtcMillis }
                 .forEach { recordProgramme(channel, it, ruleId) }
         }
     }

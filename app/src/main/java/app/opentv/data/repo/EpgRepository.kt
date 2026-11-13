@@ -109,8 +109,12 @@ class EpgRepository(
     fun observeGuideWindow(fromUtcMillis: Long, toUtcMillis: Long): Flow<List<GuideProgramme>> =
         programmeDao.observeGuideWindow(fromUtcMillis, toUtcMillis)
 
-    /** A programme the guide lists, in full. Null when a refresh has replaced or pruned it since. */
-    suspend fun programme(id: Long): Programme? = programmeDao.byId(id)
+    /**
+     * A programme the guide lists, in full, found by its slot so a guide refresh since doesn't lose it.
+     * Null only once the guide has dropped that airing.
+     */
+    suspend fun programme(listed: GuideProgramme): Programme? =
+        programmeDao.startingAt(listed.epgChannelId, listed.startUtcMillis)
 
     fun observeNow(nowUtcMillis: Long): Flow<List<Programme>> = programmeDao.observeNow(nowUtcMillis)
 

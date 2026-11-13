@@ -51,10 +51,9 @@ import kotlinx.coroutines.launch
  * the right with the programme's title, channel, time and synopsis at the top, and what can be done
  * with it as rows beneath: record it, be reminded of it, switch to it when it starts. Back closes it.
  *
- * The guide holds only what its cells draw, so the synopsis is read by the programme's id, and so is
- * the description a recording is booked with. A guide refresh since the grid was built gives the
- * programme a new id: then it shows without a synopsis and books without a description, rather than
- * showing what was there before.
+ * The guide holds only what its cells draw, so the synopsis is read from the guide by the programme's
+ * channel and start, and so is the description a recording is booked with. If the guide has dropped
+ * it since the grid was built, it shows without a synopsis and books without a description.
  *
  * Record from and Quality are rows showing the current choice; OK on one swaps the panel for that
  * choice, with the current one ticked, and choosing comes back to the details.
@@ -329,19 +328,11 @@ private fun ReminderActions(channel: Channel, programme: GuideProgramme, scope: 
 }
 
 /**
- * [programme] in full, to book a recording with its description. When a guide refresh has replaced it
- * since the grid was built, the recording is still booked from what the guide showed, without one.
+ * [programme] in full, to book a recording with its description. When the guide has dropped it since
+ * the grid was built, the recording is still booked from what the guide showed, without one.
  */
 private suspend fun ServiceLocator.Graph.inFull(programme: GuideProgramme): Programme =
-    epgRepository.programme(programme.id) ?: Programme(
-        feedId = 0,
-        epgChannelId = programme.epgChannelId,
-        startUtcMillis = programme.startUtcMillis,
-        endUtcMillis = programme.endUtcMillis,
-        title = programme.title,
-        season = programme.season,
-        episode = programme.episode,
-    )
+    epgRepository.programme(programme) ?: programme.withoutDetails()
 
 /** Inserts a reminder for a future programme and arms its alarm. No-op if one already exists. */
 private suspend fun setReminder(

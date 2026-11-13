@@ -53,6 +53,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
 
 /** The guide's preview player, released with the screen. Its sound follows the guide's sound setting. */
 @Composable
@@ -126,7 +127,8 @@ internal fun ScreenFrameScope.GuideBand(
                 color = SetteeColors.QuietText,
                 maxLines = 1,
             )
-            rememberInFull(programme)?.description?.takeIf { it.isNotBlank() }?.let { synopsis ->
+            val inFull = rememberInFull(programme, settleMillis = SYNOPSIS_SETTLE_MILLIS)
+            inFull?.description?.takeIf { it.isNotBlank() }?.let { synopsis ->
                 Spacer(Modifier.height(BAND_LINE_GAP))
                 Text(synopsis, SetteeType.Synopsis, color = SetteeColors.Text, maxLines = SYNOPSIS_LINES)
             }
@@ -135,17 +137,21 @@ internal fun ScreenFrameScope.GuideBand(
 }
 
 /**
- * [programme] read in full from the guide, for its synopsis. Null until it loads, and null if a guide
- * refresh has replaced it since the grid was built: keyed on the id, so the Highlight moving on never
- * leaves the last programme's text showing under the new one's title.
+ * [programme] read in full from the guide, for its synopsis. Null until it loads, and null if the
+ * guide has dropped it. Keyed on the programme, so the Highlight moving on never leaves the last
+ * one's text showing under the new one's title.
+ *
+ * [settleMillis] waits that long before reading, so holding a direction key down through the guide
+ * reads only where the Highlight stops rather than every cell it passes on the way.
  */
 @Composable
-internal fun rememberInFull(programme: GuideProgramme?): Programme? {
+internal fun rememberInFull(programme: GuideProgramme?, settleMillis: Long = 0): Programme? {
     val context = LocalContext.current
     val graph = remember { ServiceLocator.get(context) }
-    val id = programme?.id
-    return produceState<Programme?>(null, id) {
-        value = id?.let { graph.epgRepository.programme(it) }
+    return produceState<Programme?>(null, programme) {
+        if (programme == null) return@produceState
+        if (settleMillis > 0) delay(settleMillis)
+        value = graph.epgRepository.programme(programme)
     }.value
 }
 
@@ -153,6 +159,9 @@ private val BAND_HEIGHT = 150.dp
 private val BAND_GAP = 18.dp
 private val BAND_LINE_GAP = 6.dp
 private const val SYNOPSIS_LINES = 3
+
+/** Shorter than the preview player's 350 ms switch, so the synopsis isn't the last thing to arrive. */
+private const val SYNOPSIS_SETTLE_MILLIS = 200L
 private const val LOGO_FRACTION = 0.6f
 
 /**

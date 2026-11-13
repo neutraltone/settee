@@ -298,18 +298,21 @@ class ProgrammeDetailsTest {
     }
 
     @Test
-    fun `a programme a guide refresh has replaced since shows without a synopsis, and can still be booked`() {
+    fun `a programme the guide has dropped since shows without a synopsis, and can still be booked`() {
         val gone = listed(later)
         runBlocking { graph.database.programmes().deleteForFeed(FEED) }
 
         show(row(quality(2, "News HD")), programme = gone)
         compose.onNodeWithText("The Film").assertExists()
-        compose.onNodeWithText("A film about a film.").assertDoesNotExist()
         compose.onNode(hasText("Schedule recording") and hasClickAction()).performClick()
 
         val booked = awaitBooking()
         assertThat(booked.title).isEqualTo("The Film")
         assertThat(booked.description).isNull()
+        // Checked only now: the booking read the guide after the panel did, so the panel's read is
+        // done too, and a synopsis that was going to show would be showing.
+        compose.waitForIdle()
+        compose.onNodeWithText("A film about a film.").assertDoesNotExist()
     }
 
     /** Waits for text that's read from the database once the panel is up, such as a synopsis. */

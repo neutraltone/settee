@@ -122,20 +122,20 @@ class EpgRepositoryTest {
     }
 
     @Test
-    fun `a programme in the guide window is found by its id with its description`() = runTest {
+    fun `a programme in the guide window is found in full with its description`() = runTest {
         catalogue.db.sources().insert(PANEL_SOURCE)
         catalogue.panel.replies["xmltv.php"] = feed(slot("c1", "10", "11", "News", "Headlines"))
         guide.syncAll(nowUtcMillis = NOW)
         val listed = guide.observeGuideWindow(0, Long.MAX_VALUE).first().single()
 
-        val full = guide.programme(listed.id)
+        val full = guide.programme(listed)
 
         assertThat(full?.title).isEqualTo("News")
         assertThat(full?.description).isEqualTo("Headlines")
     }
 
     @Test
-    fun `a programme replaced by a refreshed guide is no longer found by its old id`() = runTest {
+    fun `a programme listed before the guide refreshed is still found, with the refreshed description`() = runTest {
         catalogue.db.sources().insert(PANEL_SOURCE)
         catalogue.panel.replies["xmltv.php"] = feed(slot("c1", "10", "11", "News", "First go"))
         guide.syncAll(nowUtcMillis = NOW)
@@ -144,7 +144,37 @@ class EpgRepositoryTest {
         catalogue.panel.replies["xmltv.php"] = feed(slot("c1", "10", "11", "News", "Corrected"))
         guide.syncAll(nowUtcMillis = NOW, force = true)
 
-        assertThat(guide.programme(listed.id)).isNull()
+        assertThat(guide.programme(listed)?.description).isEqualTo("Corrected")
+    }
+
+    @Test
+    fun `a programme two feeds list is found with the description either of them has`() = runTest {
+        catalogue.db.programmes().insertOrReplace(
+            listOf(
+                Programme(feedId = 1, epgChannelId = "itv", startUtcMillis = 0, endUtcMillis = 1_000, title = "News"),
+                Programme(
+                    feedId = 2,
+                    epgChannelId = "itv",
+                    startUtcMillis = 0,
+                    endUtcMillis = 1_000,
+                    title = "News",
+                    description = "Headlines",
+                ),
+            ),
+        )
+        val listed = guide.observeGuideWindow(0, Long.MAX_VALUE).first().first()
+
+        assertThat(guide.programme(listed)?.description).isEqualTo("Headlines")
+    }
+
+    @Test
+    fun `a programme the guide has dropped isn't found`() = runTest {
+        programme("News", start = 0, end = 1_000)
+        val listed = guide.observeGuideWindow(0, Long.MAX_VALUE).first().single()
+
+        catalogue.db.programmes().deleteEndedBefore(2_000)
+
+        assertThat(guide.programme(listed)).isNull()
     }
 
     private fun slot(channel: String, from: String, to: String, title: String, description: String) =

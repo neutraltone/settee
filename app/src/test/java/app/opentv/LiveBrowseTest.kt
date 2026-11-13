@@ -262,6 +262,7 @@ class LiveBrowseTest {
         awaitRows()
 
         channelCell("Channel One").assertIsFocused()
+        awaitText("What's on 1 now.")
         captureScreen("live_first_highlight")
     }
 
@@ -279,6 +280,7 @@ class LiveBrowseTest {
         compose.onNode(hasText("News") and hasClickAction()).assertExists()
         compose.onNode(hasText("Sport") and hasClickAction()).assertExists()
         compose.onNode(hasText("Provider A")).assertDoesNotExist()
+        awaitText("What's on 1 now.")
         captureScreen("live_sidebar")
     }
 
@@ -399,6 +401,8 @@ class LiveBrowseTest {
     private fun awaitText(text: String) {
         compose.waitUntil(10_000) {
             shadowOf(Looper.getMainLooper()).idle()
+            // Past the band's wait for the Highlight to settle, which runs on the test's clock.
+            compose.mainClock.advanceTimeBy(100)
             compose.onAllNodes(hasText(text)).fetchSemanticsNodes().isNotEmpty()
         }
     }
@@ -638,6 +642,7 @@ class LiveBrowseTest {
         compose.onNode(hasText("Sport") and hasClickAction()).assertExists()
         compose.onNode(hasText("News") and hasClickAction()).assertDoesNotExist()
         compose.onNode(hasText("1 of 2")).assertExists()
+        awaitText("What's on 1 now.")
         captureScreen("live_find_category")
         device.close()
     }
