@@ -395,6 +395,7 @@ private fun OpenTvApp(isTelevision: Boolean, launchedToPlay: Boolean) {
                                 navController.navigate(Routes.seriesDetail(series.id))
                             },
                             onBack = { navController.popBackStack() },
+                            vodViewModel = vodViewModel,
                         )
                     }
 

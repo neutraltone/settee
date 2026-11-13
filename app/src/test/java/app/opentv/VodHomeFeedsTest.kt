@@ -6,20 +6,28 @@
 package app.opentv
 
 import android.app.Application
+import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import app.opentv.core.ServiceLocator
+import app.opentv.data.db.ALL_MOVIES
+import app.opentv.data.db.ALL_SERIES
+import app.opentv.data.db.OpenTvDatabase
 import app.opentv.data.model.Movie
 import app.opentv.data.model.Series
 import app.opentv.data.repo.ContinueWatchingCard
 import app.opentv.ui.VodViewModel
 import com.google.common.truth.Truth.assertThat
+import java.util.Collections
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeout
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -34,7 +42,22 @@ import org.robolectric.annotation.Config
 class VodHomeFeedsTest {
 
     private val app: Application = ApplicationProvider.getApplicationContext()
-    private val graph = ServiceLocator.Graph(app)
+
+    // Every statement the database runs, logged as it runs, from whichever thread runs it.
+    private val statements: MutableList<String> = Collections.synchronizedList(mutableListOf())
+
+    // Its own settings, so a Profile switched here isn't still active in the next test, and its own
+    // database, so its statements can be counted.
+    private val graph = ServiceLocator.Graph(
+        app,
+        settingsFile = "vod-home-feeds-test",
+        openDatabase = {
+            Room.inMemoryDatabaseBuilder(app, OpenTvDatabase::class.java)
+                .allowMainThreadQueries()
+                .setQueryCallback({ sql, _ -> statements += sql.trim() }, Runnable::run)
+                .build()
+        },
+    )
 
     @Before
     fun mainDispatcher() = Dispatchers.setMain(UnconfinedTestDispatcher())
@@ -91,6 +114,55 @@ class VodHomeFeedsTest {
     private fun VodViewModel.recommendedMovieIds() = recommendedMovies.value.map { it.id }
 
     private fun VodViewModel.recommendedSeriesIds() = recommendedSeries.value.map { it.id }
+
+    private suspend fun withTwoOfEach() {
+        graph.database.movies().upsertAll(listOf(movie(1, rating = 9.0), movie(2, rating = 8.0)))
+        graph.database.series().upsertAll(listOf(series(1, rating = 9.0), series(2, rating = 8.0)))
+        graph.database.episodes().upsertAll(listOf(episodeOf(1)))
+    }
+
+    /** How many times the whole movie library, and the whole series library, have been read. */
+    private fun libraryReads() = statements.count { it == ALL_MOVIES } to statements.count { it == ALL_SERIES }
+
+    /**
+     * Waits until Recommended's movies are [ids], in real time: a Profile switch rebuilds the rows on
+     * its own, reading on threads the test scheduler can't wait for.
+     */
+    private suspend fun VodViewModel.awaitRecommendedMovies(vararg ids: Long) = withContext(Dispatchers.Default) {
+        withTimeout(5_000) { recommendedMovies.first { row -> row.map { it.id } == ids.toList() } }
+    }
+
+    // Home is still drawing when the app's one model is built, and Movies and Shows may be off. The
+    // rows are built one at a time, in the order asked for, so once Movies' own build has finished,
+    // any read that building the model or switching Profile started has finished too.
+    @Test
+    fun `nothing reads either library until Movies or Shows opens, whatever Profile is switched to`() = runTest {
+        withTwoOfEach()
+        graph.viewerLibrary.recordProgress("movie:1", positionMillis = 600_000, durationMillis = 2_400_000)
+        val vod = VodViewModel(app, graph)
+        graph.settings.setActiveProfile(OTHER_PROFILE)
+        assertThat(vod.recommendingMovies.value).isTrue()
+        assertThat(vod.recommendingSeries.value).isTrue()
+
+        vod.loadHomeFeeds().join()
+
+        assertThat(libraryReads()).isEqualTo(1 to 1)
+        // Built for the Profile active by then, who hasn't started movie 1.
+        assertThat(vod.recommendedMovieIds()).containsExactly(1L, 2L).inOrder()
+    }
+
+    @Test
+    fun `switching Profile once Movies has opened rebuilds the rows for the new Profile`() = runTest {
+        withTwoOfEach()
+        graph.viewerLibrary.recordProgress("movie:1", positionMillis = 600_000, durationMillis = 2_400_000)
+        val vod = VodViewModel(app, graph)
+        vod.loadHomeFeeds().join()
+        assertThat(vod.recommendedMovieIds()).containsExactly(2L)
+
+        graph.settings.setActiveProfile(OTHER_PROFILE)
+
+        vod.awaitRecommendedMovies(1L, 2L)
+    }
 
     @Test
     fun `a movie the Profile has started is gone from Recommended the next time Movies opens`() = runTest {
@@ -277,5 +349,9 @@ class VodHomeFeedsTest {
         vod.loadHomeFeeds().join()
 
         assertThat(vod.recommendedSeriesIds()).containsExactly(3L, 1L, 2L).inOrder()
+    }
+
+    private companion object {
+        const val OTHER_PROFILE = 2L
     }
 }
