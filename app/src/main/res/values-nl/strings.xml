@@ -303,4 +303,10 @@
     <string name="onboarding_xtream_or_playlist_help">Heeft je provider je één lange link gegeven in plaats van inloggegevens? Voeg hem dan toe als afspeellijst.</string>
     <string name="providers_empty">Nog geen providers. Voeg de dienst toe waar je al voor betaalt om te beginnen.</string>
     <string name="addons_empty">Nog geen add-ons. Plak hierboven de link van een add-on om er een toe te voegen.</string>
+    <!-- A film or show's Versions (#181) -->
+    <string name="vod_cant_play_tv">Deze tv kan %1$s niet afspelen</string>
+    <string name="vod_cant_play_device">Dit apparaat kan %1$s niet afspelen</string>
+    <string name="vod_language_title">Hier alleen in het %1$s</string>
+    <string name="vod_language_body_tv">Deze tv kan geen versie in jouw taal afspelen.</string>
+    <string name="vod_language_body_device">Dit apparaat kan geen versie in jouw taal afspelen.</string>
 </resources>

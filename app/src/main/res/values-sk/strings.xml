@@ -303,4 +303,10 @@
     <string name="onboarding_xtream_or_playlist_help">Ak vám poskytovateľ dal jeden dlhý odkaz namiesto prihlasovacích údajov, pridajte ho radšej ako playlist.</string>
     <string name="providers_empty">Zatiaľ žiadni poskytovatelia. Ak chcete začať, pridajte službu, za ktorú už platíte.</string>
     <string name="addons_empty">Zatiaľ žiadne doplnky. Doplnok pridáte vložením jeho odkazu vyššie.</string>
+    <!-- A film or show's Versions (#181) -->
+    <string name="vod_cant_play_tv">Tento televízor nedokáže prehrať %1$s</string>
+    <string name="vod_cant_play_device">Toto zariadenie nedokáže prehrať %1$s</string>
+    <string name="vod_language_title">Tu len v jazyku %1$s</string>
+    <string name="vod_language_body_tv">Tento televízor nedokáže prehrať verziu vo vašom jazyku.</string>
+    <string name="vod_language_body_device">Toto zariadenie nedokáže prehrať verziu vo vašom jazyku.</string>
 </resources>

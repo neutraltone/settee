@@ -303,4 +303,10 @@
     <string name="onboarding_xtream_or_playlist_help">Wenn dein Anbieter dir statt Zugangsdaten einen einzigen langen Link gegeben hat, füge ihn stattdessen als Playlist hinzu.</string>
     <string name="providers_empty">Noch keine Anbieter. Füge den Dienst hinzu, für den du schon bezahlst, um loszulegen.</string>
     <string name="addons_empty">Noch keine Add-ons. Füge oben den Link eines Add-ons ein, um eines hinzuzufügen.</string>
+    <!-- A film or show's Versions (#181) -->
+    <string name="vod_cant_play_tv">Dieser Fernseher kann %1$s nicht abspielen</string>
+    <string name="vod_cant_play_device">Dieses Gerät kann %1$s nicht abspielen</string>
+    <string name="vod_language_title">Hier nur auf %1$s</string>
+    <string name="vod_language_body_tv">Dieser Fernseher kann keine Version in deiner Sprache abspielen.</string>
+    <string name="vod_language_body_device">Dieses Gerät kann keine Version in deiner Sprache abspielen.</string>
 </resources>

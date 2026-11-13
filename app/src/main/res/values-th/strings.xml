@@ -303,4 +303,10 @@
     <string name="onboarding_xtream_or_playlist_help">หากผู้ให้บริการให้ลิงก์ยาวลิงก์เดียวแทนข้อมูลเข้าสู่ระบบ ให้เพิ่มเป็นเพลย์ลิสต์แทน</string>
     <string name="providers_empty">ยังไม่มีผู้ให้บริการ เพิ่มบริการที่คุณจ่ายเงินอยู่แล้วเพื่อเริ่มต้นใช้งาน</string>
     <string name="addons_empty">ยังไม่มีแอดออน วางลิงก์ของแอดออนด้านบนเพื่อเพิ่ม</string>
+    <!-- A film or show's Versions (#181) -->
+    <string name="vod_cant_play_tv">ทีวีนี้เล่น %1$s ไม่ได้</string>
+    <string name="vod_cant_play_device">อุปกรณ์นี้เล่น %1$s ไม่ได้</string>
+    <string name="vod_language_title">ที่นี่มีแค่ภาษา%1$s</string>
+    <string name="vod_language_body_tv">ทีวีนี้เล่นเวอร์ชันภาษาของคุณไม่ได้</string>
+    <string name="vod_language_body_device">อุปกรณ์นี้เล่นเวอร์ชันภาษาของคุณไม่ได้</string>
 </resources>

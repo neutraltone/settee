@@ -303,4 +303,10 @@
     <string name="onboarding_xtream_or_playlist_help">إذا أعطاك مزوّدك رابطًا طويلًا واحدًا بدلًا من بيانات تسجيل الدخول، فأضفه كقائمة تشغيل بدلًا من ذلك.</string>
     <string name="providers_empty">لا يوجد مزوّدو خدمة بعد. أضف الخدمة التي تدفع مقابلها بالفعل للبدء.</string>
     <string name="addons_empty">لا توجد إضافات بعد. الصق رابط الإضافة أعلاه لإضافتها.</string>
+    <!-- A film or show's Versions (#181) -->
+    <string name="vod_cant_play_tv">لا يمكن لهذا التلفزيون تشغيل %1$s</string>
+    <string name="vod_cant_play_device">لا يمكن لهذا الجهاز تشغيل %1$s</string>
+    <string name="vod_language_title">متوفر هنا بـ%1$s فقط</string>
+    <string name="vod_language_body_tv">لا يمكن لهذا التلفزيون تشغيل نسخة بلغتك.</string>
+    <string name="vod_language_body_device">لا يمكن لهذا الجهاز تشغيل نسخة بلغتك.</string>
 </resources>

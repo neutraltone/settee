@@ -75,10 +75,11 @@ internal fun VersionPrompts(
     versions.otherLanguage?.takeIf { askingLanguage }?.let { other ->
         LanguageQuestion(
             other.language,
+            // Closing last: what's playing may be held only until the prompt closes.
             onPlay = {
-                onClose()
                 onChooseVersion(other.key)
                 onPlay()
+                onClose()
             },
             onKeep = onClose,
         )

@@ -303,4 +303,10 @@
     <string name="onboarding_xtream_or_playlist_help">Jos palveluntarjoajasi antoi sinulle yhden pitkän linkin kirjautumistietojen sijaan, lisää se soittolistana.</string>
     <string name="providers_empty">Ei vielä palveluntarjoajia. Aloita lisäämällä palvelu, josta jo maksat.</string>
     <string name="addons_empty">Ei vielä lisäosia. Lisää lisäosa liittämällä sen linkki yllä olevaan kenttään.</string>
+    <!-- A film or show's Versions (#181) -->
+    <string name="vod_cant_play_tv">Tämä televisio ei voi toistaa %1$s-laatua</string>
+    <string name="vod_cant_play_device">Tämä laite ei voi toistaa %1$s-laatua</string>
+    <string name="vod_language_title">Täällä vain kielellä %1$s</string>
+    <string name="vod_language_body_tv">Tämä televisio ei voi toistaa versiota omalla kielelläsi.</string>
+    <string name="vod_language_body_device">Tämä laite ei voi toistaa versiota omalla kielelläsi.</string>
 </resources>

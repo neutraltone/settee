@@ -303,4 +303,10 @@
     <string name="onboarding_xtream_or_playlist_help">अगर आपके प्रदाता ने लॉगिन के बजाय एक लंबा लिंक दिया है, तो उसे प्लेलिस्ट के रूप में जोड़ें।</string>
     <string name="providers_empty">अभी तक कोई प्रदाता नहीं। शुरू करने के लिए वह सेवा जोड़ें जिसके लिए आप पहले से भुगतान करते हैं।</string>
     <string name="addons_empty">अभी तक कोई ऐड-ऑन नहीं। एक जोड़ने के लिए ऊपर किसी ऐड-ऑन का लिंक पेस्ट करें।</string>
+    <!-- A film or show's Versions (#181) -->
+    <string name="vod_cant_play_tv">यह टीवी %1$s नहीं चला सकता</string>
+    <string name="vod_cant_play_device">यह डिवाइस %1$s नहीं चला सकता</string>
+    <string name="vod_language_title">यहाँ केवल %1$s में</string>
+    <string name="vod_language_body_tv">यह टीवी आपकी भाषा में कोई संस्करण नहीं चला सकता।</string>
+    <string name="vod_language_body_device">यह डिवाइस आपकी भाषा में कोई संस्करण नहीं चला सकता।</string>
 </resources>

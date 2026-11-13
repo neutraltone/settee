@@ -303,4 +303,10 @@
     <string name="onboarding_xtream_or_playlist_help">Ha a szolgáltatója bejelentkezési adatok helyett egyetlen hosszú hivatkozást adott, adja hozzá lejátszási listaként.</string>
     <string name="providers_empty">Még nincsenek szolgáltatók. Kezdéshez adja hozzá azt a szolgáltatást, amelyért már fizet.</string>
     <string name="addons_empty">Még nincsenek bővítmények. Hozzáadáshoz illessze be fent egy bővítmény linkjét.</string>
+    <!-- A film or show's Versions (#181) -->
+    <string name="vod_cant_play_tv">Ez a tévé nem tudja lejátszani a(z) %1$s minőséget</string>
+    <string name="vod_cant_play_device">Ez az eszköz nem tudja lejátszani a(z) %1$s minőséget</string>
+    <string name="vod_language_title">Itt csak %1$s nyelven</string>
+    <string name="vod_language_body_tv">Ez a tévé nem tud lejátszani a te nyelveden készült változatot.</string>
+    <string name="vod_language_body_device">Ez az eszköz nem tud lejátszani a te nyelveden készült változatot.</string>
 </resources>

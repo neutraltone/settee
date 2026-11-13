@@ -303,4 +303,10 @@
     <string name="onboarding_xtream_or_playlist_help">Hvis din udbyder gav dig ét langt link i stedet for et login, så tilføj det som en playliste i stedet.</string>
     <string name="providers_empty">Ingen udbydere endnu. Tilføj den tjeneste, du allerede betaler for, for at komme i gang.</string>
     <string name="addons_empty">Ingen tilføjelser endnu. Indsæt linket til en tilføjelse ovenfor for at tilføje den.</string>
+    <!-- A film or show's Versions (#181) -->
+    <string name="vod_cant_play_tv">Dette tv kan ikke afspille %1$s</string>
+    <string name="vod_cant_play_device">Denne enhed kan ikke afspille %1$s</string>
+    <string name="vod_language_title">Kun på %1$s her</string>
+    <string name="vod_language_body_tv">Dette tv kan ikke afspille en version på dit sprog.</string>
+    <string name="vod_language_body_device">Denne enhed kan ikke afspille en version på dit sprog.</string>
 </resources>
