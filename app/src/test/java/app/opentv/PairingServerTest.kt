@@ -452,6 +452,36 @@ class PairingServerTest {
     }
 
     @Test
+    fun `with OpenSubtitles next, a key saved from the phone goes on to its sign-in at the same address`() {
+        val session = listening(PairingServer.Mode.TmdbKey(onboarding = true, thenOpenSubtitles = true))
+
+        val reply = scope.async(Dispatchers.IO) { sendKey(session) }
+        receivedKey().answer(problem = null)
+        val (_, page) = runBlocking { reply.await() }
+
+        assertThat(page).contains("action=\"/signin\"")
+        assertThat((server.state.value as PairingServer.State.Listening).session).isEqualTo(session)
+        // The same address takes the sign-in.
+        val signedIn = scope.async(Dispatchers.IO) { signIn(session) }
+        receivedSignIn().answer(problem = null)
+        assertThat(runBlocking { signedIn.await() }.second)
+            .contains(context.getString(R.string.pairing_phone_opensubtitles_saved_title))
+    }
+
+    @Test
+    fun `with OpenSubtitles next, Skip for now on the phone goes on to its sign-in, and the TV hears the skip`() {
+        val session = listening(PairingServer.Mode.TmdbKey(onboarding = true, thenOpenSubtitles = true))
+
+        val (_, page) = skipKey(session)
+
+        assertThat(page).contains("action=\"/signin\"")
+        assertThat(server.state.value).isEqualTo(PairingServer.State.KeySkipped)
+        // The TV's OpenSubtitles step takes the server over: the TMDB step's skip isn't its own.
+        server.start(PairingServer.Mode.OpenSubtitles(onboarding = true))
+        assertThat((server.state.value as PairingServer.State.Listening).session).isEqualTo(session)
+    }
+
+    @Test
     fun `Setup's OpenSubtitles page has Not now, which tells the TV to carry on`() {
         val session = listening(PairingServer.Mode.OpenSubtitles(onboarding = true))
         assertThat(get(session.url).second).contains("action=\"/skip\"")

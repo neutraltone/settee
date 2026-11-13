@@ -93,7 +93,18 @@ fun TmdbStepScreen(graph: ServiceLocator.Graph, onDone: () -> Unit) {
         )
         return
     }
-    TmdbKeyRows(entry, onboarding = true, graph = graph, onSaved = { saved = true }, onSkipped = onDone) { parts ->
+    // With OpenSubtitles' step next, the phone goes straight on to its sign-in once it has sent a key, so
+    // the TV goes with it rather than waiting on Carry on here while the phone is a step ahead.
+    val thenOpenSubtitles = remember { graph.offersOpenSubtitles() }
+    TmdbKeyRows(
+        entry,
+        onboarding = true,
+        graph = graph,
+        onSaved = { saved = true },
+        onSkipped = onDone,
+        thenOpenSubtitles = thenOpenSubtitles,
+        onSavedFromPhone = if (thenOpenSubtitles) onDone else ({}),
+    ) { parts ->
         StepLayout(
             code = { parts.code(true) },
             rows = {

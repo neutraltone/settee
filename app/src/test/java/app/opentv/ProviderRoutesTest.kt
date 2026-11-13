@@ -406,6 +406,28 @@ class ProviderRoutesTest {
     }
 
     @Test
+    fun `with OpenSubtitles next, a key sent from the phone takes the TV straight on, at the same address`() {
+        withOpenSubtitles.settings.removeTmdbApiKey()
+        panel.replies["/3/authentication"] = """{"success": true}"""
+        setApp(start = Routes.ADD_SOURCE, sources = SourcesViewModel(app, withOpenSubtitles))
+        savePlaylist()
+        compose.waitUntil(5_000) { route() == Routes.TMDB_STEP }
+        val server = withOpenSubtitles.pairingServer
+        val session = phoneAddress(server)
+
+        fromPhone(session, "/key", "key" to OTHER_TMDB_KEY)
+
+        // No Carry on: the phone has gone on to OpenSubtitles' sign-in, and the TV goes with it.
+        compose.waitUntil(10_000) { route() == Routes.OPENSUBTITLES_STEP }
+        assertThat(withOpenSubtitles.settings.tmdbApiKey.value).isEqualTo(OTHER_TMDB_KEY)
+        compose.mainClock.advanceTimeBy(2_000)
+        compose.waitForIdle()
+        // The same address, so the phone needs no new code.
+        assertThat((server.state.value as PairingServer.State.Listening).session).isEqualTo(session)
+        withOpenSubtitles.database.close()
+    }
+
+    @Test
     fun `a key sent from the phone is saved on the TV, which says so with Carry on highlighted`() {
         graph.settings.removeTmdbApiKey()
         panel.replies["/3/authentication"] = """{"success": true}"""

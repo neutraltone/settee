@@ -92,8 +92,12 @@ class PairingServer(
          */
         data class Provider(val thenTmdbKey: Boolean = false) : Mode
 
-        /** The TMDB Key, [onboarding] in Onboarding's words: optional, with how to get one folded away. */
-        data class TmdbKey(val onboarding: Boolean = false) : Mode
+        /**
+         * The TMDB Key, [onboarding] in Onboarding's words: optional, with how to get one folded away.
+         * [thenOpenSubtitles] carries the phone straight on to OpenSubtitles' sign-in, on the same
+         * address, once a key is saved or skipped, as the TV goes on to that step.
+         */
+        data class TmdbKey(val onboarding: Boolean = false, val thenOpenSubtitles: Boolean = false) : Mode
 
         /** Signing the TV in to OpenSubtitles; [onboarding] adds Not now, for Setup's step. */
         data class OpenSubtitles(val onboarding: Boolean = false) : Mode
@@ -213,6 +217,11 @@ class PairingServer(
             open()
         } else if (mode is Mode.TmdbKey || mode is Mode.OpenSubtitles) {
             timer.arm()
+            // A skip from the TMDB step's page is that step's answer, already heard: the OpenSubtitles
+            // step taking the server over starts from listening, or it would take the skip as its own.
+            if (mode is Mode.OpenSubtitles && _state.value == State.KeySkipped) {
+                session?.let { _state.value = State.Listening(it) }
+            }
         }
     }
 
@@ -379,11 +388,7 @@ class PairingServer(
                 output.write(html(keyPage(token, null, next, text)))
                 session?.let { _state.value = State.Listening(it) }
             }
-            else -> {
-                output.write(html(afterProvider(answer, text)))
-                output.flush()
-                closeDoor()
-            }
+            else -> finish(output, afterProvider(answer, text))
         }
     }
 
@@ -414,8 +419,21 @@ class PairingServer(
         return false
     }
 
-    /** Nothing more to receive: shut it now, not leave a socket open on the network for the rest of the timeout. */
-    private fun closeDoor() {
+    /**
+     * The phone is done with its page. [then] carries it straight on to that step's page, at the same
+     * address, as the TV goes on to the step: a new address would mean scanning a new code. Otherwise
+     * it gets [page] and the server shuts now, not leaving a socket open on the network for the rest
+     * of the timeout.
+     */
+    private fun finish(output: java.io.OutputStream, page: String, then: Mode? = null) {
+        if (then != null) {
+            mode = then
+            timer.arm()
+            output.write(html(phonePage(address?.token.orEmpty(), null, then, text)))
+            return
+        }
+        output.write(html(page))
+        output.flush()
         running = false
         address?.close()
         address = null
@@ -445,9 +463,10 @@ class PairingServer(
             session?.let { _state.value = State.Listening(it) }
             return
         }
-        output.write(html(afterAnswer(answer, asked, text)))
-        output.flush()
-        closeDoor()
+        // A TMDB Key saved during Setup goes on to OpenSubtitles' sign-in, as the TV does.
+        val then = Mode.OpenSubtitles(onboarding = true).takeIf { answer == Reply.KeySaved && asked.handsOn() }
+        if (then != null) session?.let { _state.value = State.Listening(it) }
+        finish(output, afterAnswer(answer, asked, text), then)
     }
 
     private fun handleSkip(output: java.io.OutputStream, asked: Mode) {
@@ -457,9 +476,9 @@ class PairingServer(
         } else {
             R.string.pairing_phone_tmdb_skipped_body
         }
-        output.write(html(PairingPage.message(text(R.string.pairing_phone_tmdb_skipped_title), text(body))))
-        output.flush()
-        closeDoor()
+        // The TV hears the skip (KeySkipped) and moves on; the phone moves on with it, if there's a step.
+        val then = Mode.OpenSubtitles(onboarding = true).takeIf { asked.handsOn() }
+        finish(output, PairingPage.message(text(R.string.pairing_phone_tmdb_skipped_title), text(body)), then)
     }
 
     private companion object {
@@ -538,6 +557,9 @@ private fun answersAt(asked: PairingServer.Mode, path: String): Boolean = when (
     is PairingServer.Mode.OpenSubtitles -> path.startsWith("/signin")
     is PairingServer.Mode.Provider -> false
 }
+
+/** Whether [this] goes on to OpenSubtitles' sign-in once done: Setup's TMDB step, with that step next. */
+private fun PairingServer.Mode.handsOn(): Boolean = (this as? PairingServer.Mode.TmdbKey)?.thenOpenSubtitles == true
 
 /** Whether [this] is one of Setup's optional steps, whose page has Skip. */
 private fun PairingServer.Mode.isSetupStep(): Boolean = when (this) {

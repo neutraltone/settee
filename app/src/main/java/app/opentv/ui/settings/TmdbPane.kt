@@ -117,6 +117,11 @@ internal fun TmdbKeyRows(
     graph: ServiceLocator.Graph,
     onSaved: () -> Unit = {},
     onSkipped: () -> Unit = {},
+    // Setup's TMDB step with OpenSubtitles' step next: the phone goes on to it at the same address
+    // (see PairingServer.Mode.TmdbKey), so the server is left running for that step, and a key from
+    // the phone moves the TV on with it ([onSavedFromPhone]) rather than waiting on Carry on.
+    thenOpenSubtitles: Boolean = false,
+    onSavedFromPhone: () -> Unit = {},
     arrange: @Composable (TmdbKeyParts) -> Unit = { StackedParts(it) },
 ) {
     val savedKey by graph.settings.tmdbApiKey.collectAsState()
@@ -132,17 +137,23 @@ internal fun TmdbKeyRows(
     val asking = ending == null || entry.replacing
     ScreenKeptOnWhile(asking && codeState is PairingServer.State.Listening)
 
-    suspend fun save(key: String): ViewerError? = entry.save(key).also { why -> if (why == null) onSaved() }
+    suspend fun save(key: String, then: () -> Unit = {}): ViewerError? = entry.save(key).also { why ->
+        if (why == null) {
+            onSaved()
+            then()
+        }
+    }
 
     // Outside the rows that come and go, so a key arriving from the phone is answered whatever shows.
     LaunchedEffect(phone) {
         when (val now = phone) {
-            is PairingServer.State.KeyReceived -> now.answer(save(now.key))
+            is PairingServer.State.KeyReceived -> now.answer(save(now.key, then = onSavedFromPhone))
             PairingServer.State.KeySkipped -> onSkipped()
             else -> Unit
         }
     }
-    PhoneServerWhile(asking, server, onboarding)
+    val mode = PairingServer.Mode.TmdbKey(onboarding, thenOpenSubtitles)
+    PhoneServerWhile(asking, server, mode)
     LaunchedEffect(entry.moveHighlight, asking) {
         if (!entry.moveHighlight) return@LaunchedEffect
         withFrameNanos {}
@@ -154,7 +165,7 @@ internal fun TmdbKeyRows(
         TmdbKeyParts(
             asking = asking,
             code = { panel ->
-                val retry = { server.start(PairingServer.Mode.TmdbKey(onboarding)) }
+                val retry = { server.start(mode) }
                 if (panel) {
                     PhoneQrPanel(codeState, retry, graph.errorWording)
                 } else {
@@ -249,20 +260,21 @@ private fun StackedParts(parts: TmdbKeyParts) {
  * already listening (the first provider's, from the phone) carries on, now for the key.
  */
 @Composable
-private fun PhoneServerWhile(asking: Boolean, server: PairingServer, onboarding: Boolean) {
+private fun PhoneServerWhile(asking: Boolean, server: PairingServer, mode: PairingServer.Mode.TmdbKey) {
     val scope = rememberCoroutineScope()
     DisposableEffect(asking) {
         val starting = if (asking) {
             scope.launch {
                 delay(START_DELAY_MS)
-                server.start(PairingServer.Mode.TmdbKey(onboarding))
+                server.start(mode)
             }
         } else {
             null
         }
         onDispose {
             starting?.cancel()
-            if (asking) server.stop()
+            // Left running when OpenSubtitles' step comes next: it takes the server over, address and all.
+            if (asking && !mode.thenOpenSubtitles) server.stop()
         }
     }
 }
