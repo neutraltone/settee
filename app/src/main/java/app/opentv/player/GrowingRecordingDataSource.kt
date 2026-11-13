@@ -17,7 +17,7 @@ import app.opentv.core.ServiceLocator
 import app.opentv.recording.RecordingLiveState
 import app.opentv.recording.RecordingStorage
 import app.opentv.recording.SmbClient
-import app.opentv.recording.SmbReadHandle
+import app.opentv.recording.SmbReader
 import java.io.File
 import java.io.IOException
 import java.io.RandomAccessFile
@@ -42,7 +42,16 @@ import kotlinx.coroutines.runBlocking
  * end-of-file hasn't caught up to what the recorder has appended).
  */
 @OptIn(UnstableApi::class)
-class GrowingRecordingDataSource(private val context: Context) : BaseDataSource(true) {
+class GrowingRecordingDataSource internal constructor(
+    private val context: Context,
+    private val openSmb: (locator: String) -> SmbReader,
+    private val pollMillis: Long = POLL_MILLIS,
+) : BaseDataSource(true) {
+
+    constructor(context: Context) : this(
+        context,
+        { SmbClient.openForRead(RecordingStorage.smbConfig(ServiceLocator.get(context).settings), it) },
+    )
 
     private var uri: Uri? = null
     private var recordingId: Long = -1L
@@ -54,8 +63,9 @@ class GrowingRecordingDataSource(private val context: Context) : BaseDataSource(
 
     // Exactly one of these is used, decided at open() by the recording's locator.
     private var file: RandomAccessFile? = null
-    private var smb: SmbReadHandle? = null
+    private var smb: SmbReader? = null
     private var smbLocator: String = ""
+    private val readAhead = SmbReadAhead()
 
     override fun open(dataSpec: DataSpec): Long {
         transferInitializing(dataSpec)
@@ -65,13 +75,13 @@ class GrowingRecordingDataSource(private val context: Context) : BaseDataSource(
             ?: dataSpec.uri.schemeSpecificPart?.trim('/')?.toLongOrNull()
             ?: throw IOException("Bad recording URI: ${dataSpec.uri}")
 
-        val graph = ServiceLocator.get(context)
         // Prefer the live registry (no I/O); fall back to the row if it just finished.
         val locator = RecordingLiveState.pathOf(recordingId)
-            ?: runBlocking { graph.recordingRepository.byId(recordingId)?.filePath }
+            ?: runBlocking { ServiceLocator.get(context).recordingRepository.byId(recordingId)?.filePath }
             ?: throw IOException("Recording $recordingId not found")
 
         position = dataSpec.position
+        readAhead.clear()
 
         if (locator.startsWith("smb://", ignoreCase = true)) {
             smbLocator = locator
@@ -83,8 +93,8 @@ class GrowingRecordingDataSource(private val context: Context) : BaseDataSource(
             var waited = 0L
             while (!target.exists() && waited < OPEN_WAIT_MILLIS) {
                 if (closed) throw IOException("closed while waiting for recording $recordingId")
-                Thread.sleep(POLL_MILLIS)
-                waited += POLL_MILLIS
+                Thread.sleep(pollMillis)
+                waited += pollMillis
             }
             if (!target.exists()) throw IOException("Recording $recordingId file not ready: $locator")
             val f = RandomAccessFile(target, "r")
@@ -99,15 +109,14 @@ class GrowingRecordingDataSource(private val context: Context) : BaseDataSource(
     }
 
     /** Open the SMB file for reading, tolerating the brief window before the recorder has created it. */
-    private fun openSmbWithGrace(): SmbReadHandle {
-        val cfg = RecordingStorage.smbConfig(ServiceLocator.get(context).settings)
+    private fun openSmbWithGrace(): SmbReader {
         var waited = 0L
         while (waited < OPEN_WAIT_MILLIS) {
             if (closed) throw IOException("closed while opening $smbLocator")
-            val handle = runCatching { SmbClient.openForRead(cfg, smbLocator) }.getOrNull()
+            val handle = runCatching { openSmb(smbLocator) }.getOrNull()
             if (handle != null) return handle
-            Thread.sleep(POLL_MILLIS)
-            waited += POLL_MILLIS
+            Thread.sleep(pollMillis)
+            waited += pollMillis
         }
         throw IOException("NAS recording $recordingId not ready: $smbLocator")
     }
@@ -143,7 +152,9 @@ class GrowingRecordingDataSource(private val context: Context) : BaseDataSource(
         var stallPolls = 0
         while (!closed) {
             val handle = smb ?: return C.RESULT_END_OF_INPUT
-            val read = runCatching { handle.readAt(buffer, position, offset, length) }.getOrDefault(-1)
+            // A short chunk here is the growing edge, not the end: its bytes are served, and the
+            // next miss fetches again from wherever they ran out.
+            val read = runCatching { readAhead.read(handle, position, buffer, offset, length) }.getOrDefault(-1)
             if (read > 0) {
                 position += read
                 bytesTransferred(read)
@@ -151,7 +162,7 @@ class GrowingRecordingDataSource(private val context: Context) : BaseDataSource(
             }
             // At the growing edge. If the capture is done, this really is the end.
             if (!RecordingLiveState.isActive(recordingId)) {
-                val last = runCatching { handle.readAt(buffer, position, offset, length) }.getOrDefault(-1)
+                val last = runCatching { readAhead.read(handle, position, buffer, offset, length) }.getOrDefault(-1)
                 if (last > 0) {
                     position += last
                     bytesTransferred(last)
@@ -165,9 +176,8 @@ class GrowingRecordingDataSource(private val context: Context) : BaseDataSource(
             if (++stallPolls >= REOPEN_AFTER_POLLS) {
                 stallPolls = 0
                 runCatching { smb?.close() }
-                smb = runCatching {
-                    SmbClient.openForRead(RecordingStorage.smbConfig(ServiceLocator.get(context).settings), smbLocator)
-                }.getOrNull()
+                readAhead.clear()
+                smb = runCatching { openSmb(smbLocator) }.getOrNull()
                 if (smb == null) return C.RESULT_END_OF_INPUT
             }
         }
@@ -176,7 +186,7 @@ class GrowingRecordingDataSource(private val context: Context) : BaseDataSource(
 
     /** Sleep one poll; returns true if interrupted (caller should end). */
     private fun sleep(): Boolean = try {
-        Thread.sleep(POLL_MILLIS)
+        Thread.sleep(pollMillis)
         false
     } catch (e: InterruptedException) {
         Thread.currentThread().interrupt()
@@ -191,6 +201,7 @@ class GrowingRecordingDataSource(private val context: Context) : BaseDataSource(
         runCatching { smb?.close() }
         file = null
         smb = null
+        readAhead.clear()
         if (opened) {
             opened = false
             transferEnded()
