@@ -152,7 +152,13 @@ object ServiceLocator {
         val titleIndex: TitleIndex by lazy { TitleIndex(database, decoders) }
 
         val vodQualities: VodQualities by lazy {
-            VodQualities(database, catalogRepository, decoders, profileSettings, settings.activeProfileId)
+            VodQualities(
+                database,
+                catalogRepository,
+                decoders,
+                profileSettings,
+                versionIds = titleIndex.versionIds,
+            )
         }
 
         val playbackSources: PlaybackSources by lazy { PlaybackSources(database, xtreamApi, stalkerApi, channelLineup) }
@@ -193,7 +199,7 @@ object ServiceLocator {
         }
 
         val viewerLibrary: ViewerLibrary by lazy {
-            ViewerLibrary(database, settings.activeProfileId, clock)
+            ViewerLibrary(database, settings.activeProfileId, clock, titleIndex.versionIds)
         }
 
         /** Outlives every screen, so progress still arrives after the sync screen has closed. */

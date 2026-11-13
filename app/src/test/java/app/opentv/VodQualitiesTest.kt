@@ -14,6 +14,8 @@ import app.opentv.data.model.Series
 import app.opentv.data.model.Source
 import app.opentv.data.model.SourceKind
 import app.opentv.data.repo.MediaKey
+import app.opentv.data.repo.TitleIndex
+import app.opentv.data.repo.VersionIds
 import app.opentv.data.repo.VodQualities
 import app.opentv.player.DecoderList
 import app.opentv.player.DecoderSize
@@ -48,13 +50,13 @@ class VodQualitiesTest {
     @After
     fun close() = db.close()
 
-    private fun qualities(decoders: DecoderList = stick) = VodQualities(
+    private fun qualities(decoders: DecoderList = stick, versionIds: VersionIds = VersionIds.BY_TMDB) = VodQualities(
         db,
         graph.catalogRepository,
         decoders,
         graph.profileSettings,
-        graph.settings.activeProfileId,
         deviceLanguage = { "en" },
+        versionIds = versionIds,
     )
 
     private fun movie(id: Long, name: String, tmdbId: String? = "8363") = Movie(
@@ -325,5 +327,16 @@ class VodQualitiesTest {
         qualities().choose(german.key)
 
         assertThat(qualities().choicesFor(MediaKey.Movie(3)).single { it.playing }.key).isEqualTo(MediaKey.Movie(6))
+    }
+
+    @Test
+    fun `a Version with no TMDB id that lists group with the title is in its pill`() = runTest {
+        db.movies().upsertAll(listOf(movie(1, "NF - Superbad (2007)"), movie(2, "EN - Superbad (2007) FHD", null)))
+        val index = TitleIndex(db, stick)
+
+        val choices = qualities(versionIds = index.versionIds).choicesFor(MediaKey.Movie(1))
+
+        assertThat(choices.map { it.key }).containsExactly(MediaKey.Movie(2), MediaKey.Movie(1)).inOrder()
+        index.close()
     }
 }

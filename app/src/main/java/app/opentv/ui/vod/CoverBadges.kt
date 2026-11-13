@@ -11,7 +11,10 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.ui.res.stringResource
+import app.opentv.R
 import app.opentv.data.model.StreamKind
+import app.opentv.data.repo.CAM_BADGE
 import app.opentv.data.repo.TitleIndex
 
 /**
@@ -37,8 +40,13 @@ internal val LocalCoverBadges = staticCompositionLocalOf { CoverBadges.NONE }
 @Composable
 internal fun rememberCoverBadge(kind: StreamKind, id: Long, name: String): String? {
     val badges = LocalCoverBadges.current
-    return remember(badges, kind, id, name) { badges.of(kind, id, name) }
+    return badgeText(remember(badges, kind, id, name) { badges.of(kind, id, name) })
 }
+
+/** A badge as the cover writes it: a Quality as it is, and the cam mark in the viewer's language. */
+@Composable
+internal fun badgeText(badge: String?): String? =
+    if (badge == CAM_BADGE) stringResource(R.string.vod_quality_cam) else badge
 
 /** [index]'s titles as cover badges, again whenever they're regrouped; until then, covers go by name. */
 @Composable

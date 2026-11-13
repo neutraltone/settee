@@ -52,11 +52,12 @@ fun versionTraits(name: String, category: String?): VersionTraits {
     // A shelf is written in capitals, which keeps `It - Chapter Two` English.
     val shelfWords = (shelfOf(name) + shelfOf(category.orEmpty())).filter { it == it.uppercase() }
     val allWords = words(name) + words(category.orEmpty())
+    val markers = nameMarkers(name) + words(category.orEmpty())
     var language: String? = null
     var subtitles: String? = null
-    allWords.forEachIndexed { i, word ->
+    markers.forEachIndexed { i, word ->
         val named = LANGUAGE_NAMES[word]
-        val next = allWords.getOrNull(i + 1)
+        val next = markers.getOrNull(i + 1)
         when {
             word == "MULTI" && next in SUBTITLE_WORDS -> subtitles = VersionTraits.MULTI
             named != null && next in SUBTITLE_WORDS -> subtitles = subtitles ?: named
@@ -68,18 +69,29 @@ fun versionTraits(name: String, category: String?): VersionTraits {
         qualityRank = rank,
         qualityLabel = QUALITY_LABELS[rank].orEmpty(),
         language = language,
-        dubbed = allWords.any { it in DUB_WORDS },
+        dubbed = markers.any { it in DUB_WORDS },
         subtitles = subtitles,
         sound = when {
             "ATMOS" in allWords -> "Atmos"
             "DOLBY" in allWords && "VISION" !in allWords -> "Dolby"
             else -> null
         },
-        cam = allWords.any { it in CAM_WORDS },
+        cam = markers.any { it in CAM_WORDS },
     )
 }
 
 private fun words(text: String): List<String> = text.uppercase().split(NOT_A_WORD).filter { it.isNotEmpty() }
+
+/**
+ * The words of a [name] that can mark a Version rather than be its title. A title is written in mixed case
+ * and a provider's marker in capitals: `The Italian Job` is English, `ITALIAN SUB` isn't. A name all in
+ * capitals can't tell them apart, so only what's in its brackets counts.
+ */
+private fun nameMarkers(name: String): List<String> = if (name.any { it.isLowerCase() }) {
+    name.split(NOT_A_WORD).filter { it.isNotEmpty() && it == it.uppercase() }
+} else {
+    BRACKETED.findAll(name).flatMap { words(it.value) }.toList()
+}
 
 private fun shelfOf(text: String): List<String> =
     SHELF.find(text)?.groupValues?.get(1).orEmpty().split(NOT_A_WORD).filter { it.isNotEmpty() }
@@ -87,6 +99,7 @@ private fun shelfOf(text: String): List<String> =
 /** What's before the title: `4K-EN` in `4K-EN - Superbad`. */
 private val SHELF = Regex("""^\s*(.+?)\s+[-|]\s""")
 private val NOT_A_WORD = Regex("""[^\p{L}\p{Nd}+]+""")
+private val BRACKETED = Regex("""[\[(][^\])]*[\])]""")
 
 internal val QUALITY_LABELS = mapOf(500 to "8K", 400 to "4K", 300 to "FHD", 200 to "HD", 100 to "SD")
 private val SUBTITLE_WORDS = setOf("SUB", "SUBS", "SUBBED", "SUBTITLES", "SUBTITLED")

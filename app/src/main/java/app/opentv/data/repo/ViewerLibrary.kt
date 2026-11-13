@@ -21,6 +21,7 @@ import app.opentv.data.model.RecentSearch
 import app.opentv.data.model.Series
 import app.opentv.data.model.SeriesDismissal
 import app.opentv.data.model.SeriesRef
+import app.opentv.data.model.StreamKind
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -124,6 +125,8 @@ class ViewerLibrary(
     db: OpenTvDatabase,
     private val activeProfileId: StateFlow<Long>,
     private val clock: () -> Long = System::currentTimeMillis,
+    /** Which rows are Versions of one title, as lists group them (ADR 0007). */
+    versionIds: VersionIds = VersionIds.BY_TMDB,
 ) {
     // The database rather than a DAO each: the library owns every per-Profile table, and the list
     // only grows as watch state does.
@@ -134,9 +137,9 @@ class ViewerLibrary(
     private val series = db.series()
 
     /** The active Profile's Favourites, and every Profile's for sync. */
-    val favourites = Favourites(db, activeProfileId, clock)
+    val favourites = Favourites(db, activeProfileId, clock, versionIds)
 
-    private val cards = ContinueWatchingCards(positions, episodes, dismissals, movies, series)
+    private val cards = ContinueWatchingCards(positions, episodes, dismissals, movies, series, versionIds)
 
     /** The live channel the active Profile last settled on, and its Live Preview. */
     val live = LiveWatching(db.livePlayback(), activeProfileId, clock)
@@ -170,7 +173,7 @@ class ViewerLibrary(
     val history = TitleHistory(positions, episodes, dismissals)
 
     /** Where the Profile is with one title, for its details page. */
-    val titleStatus = TitleStatus(positions, movies, activeProfileId)
+    val titleStatus = TitleStatus(positions, movies, activeProfileId, versionIds)
 
     /** Removing a Profile's watch state and Favourites, for the Profiles module. */
     val profileRemoval = ProfileRemoval(db)
@@ -296,6 +299,7 @@ class TitleStatus internal constructor(
     private val positions: PlaybackPositionDao,
     private val movies: MovieDao,
     private val activeProfileId: StateFlow<Long>,
+    private val versionIds: VersionIds,
 ) {
     /**
      * The film [movieId] across its Versions (ADR 0007): Watched when any Version is, else as the Version
@@ -311,9 +315,10 @@ class TitleStatus internal constructor(
         .distinctUntilChanged()
 
     private suspend fun versionKeys(movieId: Long): Set<String> {
-        val tmdbId = knownTmdbId(movies.byId(movieId)?.tmdbId)
-        val ids = tmdbId?.let { id -> movies.byTmdbId(id).map { it.id } }.orEmpty() + movieId
-        return ids.mapTo(HashSet()) { MediaKey.Movie(it).stored }
+        val grouped = versionIds.of(StreamKind.MOVIE, movieId)?.asList()
+        val ids = grouped ?: knownTmdbId(movies.byId(movieId)?.tmdbId)
+            ?.let { id -> movies.byTmdbId(id).map { it.id } }.orEmpty()
+        return (ids + movieId).mapTo(HashSet()) { MediaKey.Movie(it).stored }
     }
 
     private fun statusAcross(versions: List<PlaybackPosition>): CoverStatus? {
@@ -699,6 +704,7 @@ private class ContinueWatchingCards(
     private val dismissals: SeriesDismissalDao,
     private val movies: MovieDao,
     private val series: SeriesDao,
+    private val versionIds: VersionIds,
 ) {
     /**
      * [cards] most recently played first, with one card for each title however many of its Versions
@@ -716,12 +722,18 @@ private class ContinueWatchingCards(
         }
         val seen = HashSet<String>()
         return newestFirst.filter { played ->
-            val tmdbId = when (val card = played.card) {
-                is ContinueWatchingCard.Movie -> knownTmdbId(movieTitles[card.movieId])?.let { "movie:$it" }
+            // A title is its first Version's row id as lists group them, or else its TMDB id.
+            val title = when (val card = played.card) {
+                is ContinueWatchingCard.Movie -> versionIds.of(StreamKind.MOVIE, card.movieId)?.minOrNull()
+                    ?.let { "movie:#$it" }
+                    ?: knownTmdbId(movieTitles[card.movieId])?.let { "movie:$it" }
                 is ContinueWatchingCard.Series -> series.bySeriesId(card.episode.sourceId, card.episode.seriesId)
-                    ?.let { knownTmdbId(it.tmdbId) }?.let { "series:$it" }
+                    ?.let { row ->
+                        versionIds.of(StreamKind.SERIES, row.id)?.minOrNull()?.let { "series:#$it" }
+                            ?: knownTmdbId(row.tmdbId)?.let { "series:$it" }
+                    }
             }
-            tmdbId == null || seen.add(tmdbId)
+            title == null || seen.add(title)
         }
     }
     fun movies(pid: Long): Flow<List<Played>> = positions.observeNewestFirst(pid).map(::moviesFrom)

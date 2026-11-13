@@ -116,7 +116,7 @@ fun MovieDetailScreen(
         movie = m,
         resumes = resumes,
         status = status,
-        favourite = favouriteMovies?.any { it.id == m.id },
+        favourite = favouriteMovies?.let { viewModel.isFavourite(m, it) },
         findAddonStreams = if (hasAddons) ({ viewModel.addonStreams(m) }) else null,
         similar = similar,
         onOpenMovie = onOpenMovie,

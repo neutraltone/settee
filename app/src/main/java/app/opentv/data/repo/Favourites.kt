@@ -29,6 +29,7 @@ class Favourites internal constructor(
     private val db: OpenTvDatabase,
     private val activeProfileId: StateFlow<Long>,
     private val clock: () -> Long,
+    private val versionIds: VersionIds,
 ) {
     private val dao = db.favourites()
     private val profiles = db.profiles()
@@ -45,7 +46,7 @@ class Favourites internal constructor(
      * stays a Favourite while any of them is one (ADR 0007).
      */
     suspend fun set(movie: Movie, favourite: Boolean) {
-        val versions = if (favourite) listOf(movie) else db.versionsOf(movie)
+        val versions = if (favourite) listOf(movie) else db.versionsOf(movie, versionIds)
         val at = clock()
         versions.forEach {
             db.setFavourite(
@@ -59,7 +60,7 @@ class Favourites internal constructor(
 
     /** As [set] for a film: starring takes this Version, unstarring clears every Version. */
     suspend fun set(series: Series, favourite: Boolean) {
-        val versions = if (favourite) listOf(series) else db.versionsOf(series)
+        val versions = if (favourite) listOf(series) else db.versionsOf(series, versionIds)
         val at = clock()
         versions.forEach {
             db.setFavourite(
@@ -80,9 +81,11 @@ class Favourites internal constructor(
 
     /** Whether the active Profile has any Version of [title] as a Favourite (ADR 0007). */
     suspend fun isFavourite(title: VodTitle): Boolean = when (title) {
-        is VodTitle.OfMovie -> db.versionsOf(title.movie).any { contains(StreamKind.MOVIE, it.sourceId, it.streamId) }
+        is VodTitle.OfMovie -> db.versionsOf(title.movie, versionIds).any {
+            contains(StreamKind.MOVIE, it.sourceId, it.streamId)
+        }
         is VodTitle.OfSeries ->
-            db.versionsOf(title.series).any { contains(StreamKind.SERIES, it.sourceId, it.seriesId) }
+            db.versionsOf(title.series, versionIds).any { contains(StreamKind.SERIES, it.sourceId, it.seriesId) }
     }
 
     /** The active Profile's Favourite channels in guide order, leaving out channels hidden on this device. */

@@ -122,7 +122,7 @@ fun SeriesDetailScreen(
         statuses = statuses,
         mainAction = mainAction,
         status = status,
-        favourite = favouriteSeries?.any { it.id == s.id },
+        favourite = favouriteSeries?.let { viewModel.isFavourite(s, it) },
         onPlayEpisode = onPlayEpisode,
         onSetFavourite = { viewModel.setSeriesFavourite(s, it) },
         onOpenPerson = onOpenPerson,
@@ -162,14 +162,13 @@ internal fun SeriesDetailContent(
     var castShown by remember(series.id) { mutableStateOf(false) }
     var choosingQuality by remember(series.id) { mutableStateOf(false) }
     var askingFor by remember(series.id) { mutableStateOf<MediaKey?>(null) }
-    // Play asks first when only another language plays (#181).
+    // Play asks first when only another language plays, and when nothing plays here an episode doesn't
+    // either: the hero says why, and the player would only fail (#181).
     val play: (MediaKey) -> Unit = { key ->
-        if (versions.otherLanguage !=
-            null
-        ) {
-            askingFor = key
-        } else {
-            onPlayEpisode(key)
+        when {
+            versions.cantPlay != null -> Unit
+            versions.otherLanguage != null -> askingFor = key
+            else -> onPlayEpisode(key)
         }
     }
     val seasons = remember(episodes) { seasonsOf(episodes) }

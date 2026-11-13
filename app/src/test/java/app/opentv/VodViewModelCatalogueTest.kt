@@ -11,6 +11,8 @@ import app.opentv.core.ServiceLocator
 import app.opentv.data.model.Category
 import app.opentv.data.model.Movie
 import app.opentv.data.model.Series
+import app.opentv.data.model.Source
+import app.opentv.data.model.SourceKind
 import app.opentv.data.model.StreamKind
 import app.opentv.ui.browseKey
 import com.google.common.truth.Truth.assertThat
@@ -185,6 +187,21 @@ class VodViewModelCatalogueTest {
         )
 
         assertThat(viewModel.titlesWithPerson("Jonah Hill")).hasSize(1)
+    }
+
+    @Test
+    fun `a film's page shows it a Favourite when another of its Versions is starred`(): Unit = runBlocking {
+        graph.database.sources().insert(
+            Source(id = 1, name = "Provider", kind = SourceKind.XTREAM, url = "http://example.com"),
+        )
+        val netflix = movie(1, "NF - Superbad (2007)")
+        val english = movie(2, "EN - Superbad (2007)")
+        graph.database.movies().upsertAll(listOf(netflix, english))
+        graph.viewerLibrary.favourites.set(netflix, true)
+
+        val favourites = graph.viewerLibrary.favourites.movies().first()
+
+        assertThat(viewModel.isFavourite(english, favourites)).isTrue()
     }
 }
 

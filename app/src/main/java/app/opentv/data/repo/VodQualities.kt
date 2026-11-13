@@ -7,6 +7,7 @@ package app.opentv.data.repo
 
 import app.opentv.data.db.OpenTvDatabase
 import app.opentv.data.model.Episode
+import app.opentv.data.model.PlaybackPosition
 import app.opentv.data.model.Series
 import app.opentv.data.model.StreamKind
 import app.opentv.player.DecoderList
@@ -30,10 +31,11 @@ class VodQualities(
     catalog: CatalogRepository,
     private val decoders: DecoderList,
     private val profileSettings: ProfileSettings,
-    activeProfileId: StateFlow<Long>,
-    private val deviceLanguage: () -> String = { Locale.getDefault().language },
+    // Normalised, as an older Android names Indonesian `in` and Hebrew `iw`.
+    private val deviceLanguage: () -> String = { baseLanguage(Locale.getDefault().language) ?: "" },
+    versionIds: VersionIds = VersionIds.BY_TMDB,
 ) {
-    private val versions = TitleVersionLookup(db, catalog, decoders, activeProfileId)
+    private val versions = TitleVersionLookup(db, catalog, decoders, profileSettings.activeProfileId, versionIds)
 
     /** One Version: what plays it and what a viewer calls its Quality, which may be nothing. */
     data class Quality(val key: MediaKey, val label: String)
@@ -70,9 +72,18 @@ class VodQualities(
      * The Quality pill's entries for what was opened, best Quality first: one per way its Versions
      * differ. One entry, or none, means there's nothing to choose and no pill.
      */
-    suspend fun choicesFor(opened: MediaKey): List<Choice> {
-        val title = versions.of(opened) ?: return emptyList()
-        val playing = plan(title).start.key
+    suspend fun choicesFor(opened: MediaKey): List<Choice> =
+        versions.of(opened)?.let { choicesIn(it, plan(it)) }.orEmpty()
+
+    /** The Plan and the Quality pill's entries together, from one look at the title's Versions, for a page. */
+    suspend fun pageFor(opened: MediaKey): Pair<Plan, List<Choice>> {
+        val title = versions.of(opened) ?: return Plan(Quality(opened, "")) to emptyList()
+        val plan = plan(title)
+        return plan to choicesIn(title, plan)
+    }
+
+    private fun choicesIn(title: TitleVersionLookup.Versions, plan: Plan): List<Choice> {
+        val playing = plan.start.key
         val language = deviceLanguage()
         return title.all
             .sortedWith(
@@ -154,6 +165,7 @@ private class TitleVersionLookup(
     private val catalog: CatalogRepository,
     private val decoders: DecoderList,
     private val activeProfileId: StateFlow<Long>,
+    private val versionIds: VersionIds,
 ) {
     /** [opened] among [all] a title's Versions; [key] names the title for a chosen Version, if it has an id. */
     class Versions(val opened: Candidate, val all: List<Candidate>, val key: String?)
@@ -181,7 +193,7 @@ private class TitleVersionLookup(
     private suspend fun movie(opened: MediaKey.Movie): Versions? {
         val movie = db.movies().byId(opened.movieId) ?: return null
         val tmdbId = knownTmdbId(movie.tmdbId)
-        val rows = (listOf(movie) + tmdbId?.let { db.movies().byTmdbId(it) }.orEmpty()).distinctBy { it.id }
+        val rows = (listOf(movie) + db.versionsOf(movie, versionIds)).distinctBy { it.id }
         val profile = activeProfileId.value
         val candidates = rows.map { row ->
             val key = MediaKey.Movie(row.id)
@@ -200,33 +212,36 @@ private class TitleVersionLookup(
         val episode = db.episodes().byId(opened.episodeId)
         val series = episode?.let { db.series().bySeriesId(it.sourceId, it.seriesId) }
         if (episode == null || series == null) return null
-        val self = seriesCandidate(series, opened)
+        // Read once for every Version, rather than once each.
+        val played = db.positions().ofKind(activeProfileId.value, EPISODE_PREFIX)
+        val self = seriesCandidate(series, opened, played)
         return Versions(
             self,
-            listOf(self) + copiesOf(episode, series),
+            listOf(self) + copiesOf(episode, series, played),
             knownTmdbId(series.tmdbId)?.let {
                 "series:$it"
             },
         )
     }
 
-    private suspend fun copiesOf(episode: Episode, series: Series): List<Candidate> {
+    private suspend fun copiesOf(episode: Episode, series: Series, played: List<PlaybackPosition>): List<Candidate> {
         // A series' episodes are fetched when its page is opened, so another Version's may never have
         // been. Waiting on the provider is only worth it when this device won't try the one opened.
         val fetch = !decoders.playsName(series.name)
-        val copies = knownTmdbId(series.tmdbId)?.let {
-            db.series().byTmdbId(it)
-        }.orEmpty().filter { it.id != series.id }
+        val copies = db.versionsOf(series, versionIds).filter { it.id != series.id }
         return copies.filter { decoders.playsName(it.name) }.mapNotNull { copy ->
-            sameEpisodeIn(copy, episode, fetch)?.let { seriesCandidate(copy, MediaKey.Episode(it)) }
+            sameEpisodeIn(copy, episode, fetch)?.let { seriesCandidate(copy, MediaKey.Episode(it), played) }
         }
     }
 
-    private suspend fun seriesCandidate(series: Series, key: MediaKey.Episode): Candidate {
+    private suspend fun seriesCandidate(
+        series: Series,
+        key: MediaKey.Episode,
+        played: List<PlaybackPosition>,
+    ): Candidate {
         val episodeKeys = db.episodes().forSeries(series.sourceId, series.seriesId)
             .map { MediaKey.Episode(it.id).stored }.toSet()
-        val playedAt = db.positions().ofKind(activeProfileId.value, EPISODE_PREFIX)
-            .filter { it.mediaKey in episodeKeys }.maxOfOrNull { it.updatedAtMillis }
+        val playedAt = played.filter { it.mediaKey in episodeKeys }.maxOfOrNull { it.updatedAtMillis }
         return candidate(
             key = key,
             name = series.name,

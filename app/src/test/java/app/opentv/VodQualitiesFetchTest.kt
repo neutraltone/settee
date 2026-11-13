@@ -40,7 +40,6 @@ class VodQualitiesFetchTest {
         test.catalog,
         stick,
         ProfileSettings(test.db, profile),
-        profile,
         deviceLanguage = { "en" },
     )
 

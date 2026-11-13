@@ -811,6 +811,10 @@ interface SeriesDao {
     @Query("SELECT * FROM series WHERE tmdbId = :tmdbId ORDER BY id")
     suspend fun byTmdbId(tmdbId: String): List<Series>
 
+    /** At most a title's worth of shows, in no particular order. */
+    @Query("SELECT * FROM series WHERE id IN (:ids)")
+    suspend fun byIds(ids: List<Long>): List<Series>
+
     /** Every show as grouping into titles reads it, again whenever the table changes. */
     @Query("SELECT id, sourceId, name, tmdbId, year, categoryId FROM series ORDER BY id")
     fun observeVersionRows(): Flow<List<VersionRow>>

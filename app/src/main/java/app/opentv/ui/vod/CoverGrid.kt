@@ -152,7 +152,7 @@ internal fun TitleArt(
         onClick = onOpen,
         size = ArtCardSize.Portrait,
         modifier = modifier.onFocusChanged { if (it.isFocused) onHighlight(cover.id) },
-        badge = cover.badge,
+        badge = badgeText(cover.badge),
         onOptions = onOptions,
     )
 }

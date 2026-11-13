@@ -49,6 +49,7 @@ import app.opentv.data.repo.categoryGroupKey
 import app.opentv.data.repo.coverStatuses
 import app.opentv.data.repo.movies
 import app.opentv.data.repo.nowOn
+import app.opentv.data.repo.sameTmdbTitle
 import app.opentv.data.repo.series
 import app.opentv.data.repo.splitGenres
 import app.opentv.data.repo.titleCovers
@@ -1178,7 +1179,7 @@ class VodViewModel @JvmOverloads constructor(
     fun loadEpisodes(series: Series) {
         viewModelScope.launch {
             // Every Version's, as the page lists episodes from all of them (#181).
-            graph.database.versionsOf(series).forEach { version ->
+            graph.database.versionsOf(series, graph.titleIndex.versionIds).forEach { version ->
                 launch {
                     val source = graph.sourceRepository.byId(version.sourceId) ?: return@launch
                     graph.catalogRepository.ensureEpisodes(source, version.seriesId)
@@ -1189,7 +1190,9 @@ class VodViewModel @JvmOverloads constructor(
 
     /** [series]' episodes across its Versions, for its page (#181, ADR 0007). */
     @OptIn(ExperimentalCoroutinesApi::class)
-    fun showEpisodes(series: Series): Flow<ShowEpisodes> = flow { emit(graph.database.versionsOf(series)) }
+    fun showEpisodes(series: Series): Flow<ShowEpisodes> = flow {
+        emit(graph.database.versionsOf(series, graph.titleIndex.versionIds))
+    }
         .flatMapLatest { versions ->
             val ordered = listOf(series) + versions.filter { it.id != series.id }
             combine(ordered.map { graph.catalogRepository.observeEpisodes(it.sourceId, it.seriesId) }) { lists ->
@@ -1231,10 +1234,25 @@ class VodViewModel @JvmOverloads constructor(
     suspend fun titlesWithPerson(name: String): List<VodTitle> =
         graph.titleIndex.distinct(graph.catalogRepository.titlesWithPerson(name))
 
+    /**
+     * Whether the page opened on [movie] shows it a Favourite, given the Profile's [favourites]: a title is
+     * one when any of its Versions is, and the list holds only the one starred last (ADR 0007).
+     */
+    fun isFavourite(movie: Movie, favourites: List<Movie>): Boolean = favourites.any {
+        it.id == movie.id ||
+            (graph.titleIndex.sameTitle(StreamKind.MOVIE, it.id, movie.id) ?: sameTmdbTitle(it.tmdbId, movie.tmdbId))
+    }
+
+    /** As [isFavourite], for the page opened on [series]. */
+    fun isFavourite(series: Series, favourites: List<Series>): Boolean = favourites.any {
+        it.id == series.id ||
+            (graph.titleIndex.sameTitle(StreamKind.SERIES, it.id, series.id) ?: sameTmdbTitle(it.tmdbId, series.tmdbId))
+    }
+
     /** What a film's or show's page shows of its Versions, for the one opened at [key] (#181). */
     suspend fun pageVersions(key: MediaKey): PageVersions {
-        val plan = graph.vodQualities.planFor(key)
-        return PageVersions.of(plan, graph.vodQualities.choicesFor(key), plan.playsNothing(graph.decoders))
+        val (plan, choices) = graph.vodQualities.pageFor(key)
+        return PageVersions.of(plan, choices, plan.playsNothing(graph.decoders))
     }
 
     /** The viewer chose [version] in a Quality pill, or agreed to it in another language. */

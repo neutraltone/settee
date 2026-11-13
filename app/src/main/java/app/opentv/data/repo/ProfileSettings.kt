@@ -37,7 +37,8 @@ fun baseLanguage(code: String?): String? =
  */
 class ProfileSettings(
     private val db: OpenTvDatabase,
-    private val activeProfileId: StateFlow<Long>,
+    /** Which Profile's settings are read and written: the active one. */
+    internal val activeProfileId: StateFlow<Long>,
     private val clock: () -> Long = System::currentTimeMillis,
 ) {
     private val dao = db.profileSettings()

@@ -32,6 +32,20 @@ class VersionTraitsTest {
     }
 
     @Test
+    fun `a film named after a language or a camera is neither`() {
+        assertThat(versionTraits("EN - The Italian Job (2003)", null).language).isNull()
+        assertThat(versionTraits("THE ITALIAN JOB (2003)", null).language).isNull()
+        assertThat(versionTraits("EN - Cam (2018)", null).cam).isFalse()
+        assertThat(versionTraits("EN - The Dub (2020)", null).dubbed).isFalse()
+    }
+
+    @Test
+    fun `a marker in capitals after a title says what it is`() {
+        assertThat(versionTraits("Il Sorpasso (1962) ITALIAN SUB", null).subtitles).isEqualTo("it")
+        assertThat(versionTraits("NEW FILM (2026) [CAM]", null).cam).isTrue()
+    }
+
+    @Test
     fun `a country after the title is where it's from, not its language`() {
         assertThat(versionTraits("NF - Love 101 (2020) (TR)", null).language).isNull()
     }

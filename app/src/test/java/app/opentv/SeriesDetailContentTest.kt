@@ -661,4 +661,16 @@ class SeriesDetailContentTest {
         assertThat(chosen).containsExactly(MediaKey.Episode(51))
         assertThat(played).isEqualTo(MediaKey.Episode(testEpisode(1, 1).id))
     }
+
+    @Test
+    fun `an episode doesn't start when nothing of the show plays here`() {
+        versions = PageVersions(cantPlay = "4K")
+        show(SeriesMainAction.Play(testEpisode(1, 1)))
+
+        compose.onNodeWithText("can't play 4K", substring = true).assertIsDisplayed()
+        compose.onNodeWithText("Episode 2", substring = true).performClick()
+        settle()
+
+        assertThat(played).isNull()
+    }
 }
