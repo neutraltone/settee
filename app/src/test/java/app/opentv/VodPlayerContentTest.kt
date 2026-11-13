@@ -28,6 +28,9 @@ import androidx.test.core.app.ApplicationProvider
 import androidx.test.espresso.Espresso
 import app.opentv.core.ServiceLocator
 import app.opentv.core.SleepTimer
+import app.opentv.data.model.Movie
+import app.opentv.data.model.Source
+import app.opentv.data.model.SourceKind
 import app.opentv.data.repo.MediaKey
 import app.opentv.data.repo.Playable
 import app.opentv.data.repo.WatchStatus
@@ -206,6 +209,45 @@ class VodPlayerContentTest {
         assertThat(barPosition()).isEqualTo(TEN_MINUTES)
         captureScreen("vod_player_seek_bar")
     }
+
+    @Test
+    fun `a film whose Versions differ has a Quality pill, listing them`() {
+        runBlocking {
+            graph.database.sources().insert(
+                Source(id = 1, name = "Provider", kind = SourceKind.XTREAM, url = "http://example.com"),
+            )
+            graph.database.movies().upsertAll(
+                listOf(film(1, "EN - Superbad (2007)"), film(2, "DE - Superbad HD (2007)")),
+            )
+            viewModel.attach(MediaKey.Movie(1), FakePlayback())
+        }
+        showFilmPartWay()
+
+        press(Key.DirectionDown)
+        settle()
+        compose.onNodeWithText("Quality").performClick()
+        settle()
+
+        compose.onNodeWithText("HD · German").assertIsDisplayed()
+        compose.onNodeWithText("Other").assertIsDisplayed()
+        captureScreen("vod_player_quality_pill")
+    }
+
+    private fun film(id: Long, name: String) = Movie(
+        id = id,
+        sourceId = 1,
+        streamId = "$id",
+        name = name,
+        categoryId = null,
+        posterUrl = null,
+        rating = null,
+        year = null,
+        plot = null,
+        durationSeconds = null,
+        containerExtension = "mkv",
+        streamUrl = "https://example.com/$id",
+        tmdbId = "8363",
+    )
 
     @Test
     fun `Down from the bar goes to Subtitles without seeking and brings up the pills, and Left comes back`() {

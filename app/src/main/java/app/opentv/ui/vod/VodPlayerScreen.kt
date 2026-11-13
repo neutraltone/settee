@@ -30,6 +30,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bedtime
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.FiberManualRecord
+import androidx.compose.material.icons.filled.HighQuality
 import androidx.compose.material.icons.filled.MoreHoriz
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -281,6 +282,8 @@ fun VodPlayerContent(
     var vodPanel by remember { mutableStateOf(VodPanel.NONE) }
     var optionsOpen by remember { mutableStateOf(false) }
     var choosingSleep by remember { mutableStateOf(false) }
+    var choosingQuality by remember { mutableStateOf(false) }
+    val qualityChoices by viewModel.qualityChoices.collectAsState()
     val canMarkWatched by viewModel.canMarkWatched.collectAsState()
     val marking = rememberCoroutineScope()
 
@@ -517,6 +520,7 @@ fun VodPlayerContent(
                     onMarkWatched = ::markWatched,
                     onSleepTimer = { choosingSleep = true },
                     onOptions = { optionsOpen = true },
+                    onQuality = { choosingQuality = true }.takeIf { qualityChoices.size > 1 },
                 ),
                 startFocus = barFocus,
                 barInteractions = barInteractions,
@@ -544,6 +548,17 @@ fun VodPlayerContent(
     }
 
     if (choosingSleep) SleepTimerPanel(onDone = { choosingSleep = false })
+
+    if (choosingQuality) {
+        QualityPanel(
+            qualityChoices,
+            onChoose = { version ->
+                choosingQuality = false
+                marking.launch { viewModel.chooseVersion(version) }
+            },
+            onDismiss = { choosingQuality = false },
+        )
+    }
 
     if (optionsOpen) {
         PlayerOptions(
@@ -577,8 +592,9 @@ private const val UNFINISHED_SEEK_GRACE_MILLIS = 3_000L
 private const val SAVE_EVERY_MILLIS = 15_000L
 
 /**
- * The pills under the row: [OptionsFor.VodPlayer]'s options, less Subtitles and Audio, which have
- * their own buttons on the row, then Options for the whole list (what Menu opens).
+ * The pills under the row: Quality when the title's Versions differ ([onQuality] is null when they
+ * don't), [OptionsFor.VodPlayer]'s options, less Subtitles and Audio, which have their own buttons on the
+ * row, then Options for the whole list (what Menu opens).
  */
 @Composable
 private fun vodPills(
@@ -586,7 +602,9 @@ private fun vodPills(
     onMarkWatched: () -> Unit,
     onSleepTimer: () -> Unit,
     onOptions: () -> Unit,
+    onQuality: (() -> Unit)?,
 ): List<PlayerPill> = buildList {
+    onQuality?.let { add(PlayerPill(stringResource(R.string.vod_quality), Icons.Filled.HighQuality, it)) }
     options.forEach { option ->
         when (option) {
             ItemOption.MarkWatched -> add(PlayerPill(option.label(), Icons.Filled.Check, onMarkWatched))

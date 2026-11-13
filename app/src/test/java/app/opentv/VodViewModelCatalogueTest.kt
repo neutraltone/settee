@@ -19,9 +19,11 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.TestCoroutineScheduler
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
@@ -47,8 +49,11 @@ class VodViewModelCatalogueTest {
     private val viewModel by lazy { viewModels.vod(app, graph) }
     private val watching = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
+    // Kept, so a test can move on past Search's wait for the viewer to stop typing.
+    private val scheduler = TestCoroutineScheduler()
+
     @Before
-    fun mainDispatcher() = Dispatchers.setMain(UnconfinedTestDispatcher())
+    fun mainDispatcher() = Dispatchers.setMain(UnconfinedTestDispatcher(scheduler))
 
     @After
     fun close() {
@@ -142,7 +147,14 @@ class VodViewModelCatalogueTest {
         watching.launch { viewModel.movieResults.collect {} }
 
         viewModel.setVodSearchQuery("Superbad")
-        val found = withTimeout(5_000) { viewModel.movieResults.first { it.isNotEmpty() } }
+        // The search starts once collected, on another thread: keep moving its clock on till it answers.
+        val found = withTimeout(5_000) {
+            while (viewModel.movieResults.value.isEmpty()) {
+                scheduler.advanceTimeBy(SEARCH_SETTLED_MILLIS)
+                delay(50)
+            }
+            viewModel.movieResults.value
+        }
 
         assertThat(found.map { it.tmdbId }).containsExactly("8363", "9999")
     }
@@ -175,3 +187,6 @@ class VodViewModelCatalogueTest {
         assertThat(viewModel.titlesWithPerson("Jonah Hill")).hasSize(1)
     }
 }
+
+/** Longer than Search waits for typing to stop. */
+private const val SEARCH_SETTLED_MILLIS = 2_000L

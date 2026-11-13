@@ -90,7 +90,7 @@ internal fun VersionPrompts(
  * device can't play greyed out and passed over.
  */
 @Composable
-private fun QualityPanel(choices: List<VodQualities.Choice>, onChoose: (MediaKey) -> Unit, onDismiss: () -> Unit) {
+internal fun QualityPanel(choices: List<VodQualities.Choice>, onChoose: (MediaKey) -> Unit, onDismiss: () -> Unit) {
     SidePanel(onBack = onDismiss) {
         PanelTitle(stringResource(R.string.vod_quality))
         choices.forEach { choice ->
