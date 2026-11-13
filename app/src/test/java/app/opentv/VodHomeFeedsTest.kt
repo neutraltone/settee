@@ -17,6 +17,7 @@ import app.opentv.data.model.Series
 import app.opentv.data.repo.ContinueWatchingCard
 import app.opentv.ui.VodViewModel
 import com.google.common.truth.Truth.assertThat
+import java.util.Collections
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
@@ -33,7 +34,6 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
-import java.util.Collections
 
 // Plain Application: OpenTvApp schedules WorkManager on start, which the view model doesn't need.
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -42,6 +42,7 @@ import java.util.Collections
 class VodHomeFeedsTest {
 
     private val app: Application = ApplicationProvider.getApplicationContext()
+
     // Every statement the database runs, logged as it runs, from whichever thread runs it.
     private val statements: MutableList<String> = Collections.synchronizedList(mutableListOf())
 

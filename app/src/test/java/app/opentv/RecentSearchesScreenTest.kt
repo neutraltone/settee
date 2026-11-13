@@ -188,8 +188,12 @@ class RecentSearchesScreenTest {
         waitFor("Zebra Crossing")
 
         open = false
-        // Before Search is back, so its first frame can't have them.
-        compose.waitUntil(TIMEOUT_MILLIS) { vod.movieResults.value.isEmpty() }
+        // Before Search is back, so its first frame can't have them. waitUntil alone doesn't
+        // recompose, so Search would never leave; waitForIdle each time round does.
+        compose.waitUntil(TIMEOUT_MILLIS) {
+            compose.waitForIdle()
+            vod.movieResults.value.isEmpty()
+        }
         open = true
         compose.waitForIdle()
 
