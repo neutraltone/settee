@@ -233,7 +233,6 @@
     <string name="rec_switch_keep_watching">Jatka katselua</string>
     <string name="rec_switch_channel_name">Tallennuksen automaattinen vaihto</string>
     <string name="rec_switch_channel_desc">Varoittaa ennen näytön vaihtamista ajastettuun tallennukseen</string>
-    <string name="settings_tmdb_note">Liitä oma ilmainen TMDB API -avaimesi täyttääksesi puuttuvat julisteet, taustakuvat, näyttelijät ja juonikuvaukset Elokuvat- ja Sarjat-osioihin. Se pysyy tässä laitteessa.</string>
     <string name="settings_tmdb_key_label">TMDB API -avain</string>
     <string name="guide_next_prefix">Seuraavaksi  %1$s  %2$s</string>
     <string name="vod_empty_category_movies">Tässä kategoriassa ei ole elokuvia.</string>
@@ -303,4 +302,8 @@
     <string name="onboarding_xtream_or_playlist_help">Jos palveluntarjoajasi antoi sinulle yhden pitkän linkin kirjautumistietojen sijaan, lisää se soittolistana.</string>
     <string name="providers_empty">Ei vielä palveluntarjoajia. Aloita lisäämällä palvelu, josta jo maksat.</string>
     <string name="addons_empty">Ei vielä lisäosia. Lisää lisäosa liittämällä sen linkki yllä olevaan kenttään.</string>
+    <string name="error_tmdb_key_rejected">TMDB ei hyväksynyt avainta. Tarkista, että kopioit koko API Keyn, ja yritä uudelleen.</string>
+    <string name="error_tmdb_unreachable_tv">TMDB:hen ei saada yhteyttä. Tarkista, että tämä televisio on verkossa, ja yritä uudelleen.</string>
+    <string name="error_tmdb_unreachable_device">TMDB:hen ei saada yhteyttä. Tarkista, että tämä laite on verkossa, ja yritä uudelleen.</string>
+    <string name="error_tmdb_trouble">TMDB:llä on ongelmia. Vika on heidän päässään, joten yritä myöhemmin uudelleen.</string>
 </resources>

@@ -233,7 +233,6 @@
     <string name="rec_switch_keep_watching">Συνέχιση παρακολούθησης</string>
     <string name="rec_switch_channel_name">Αυτόματη εναλλαγή εγγραφής</string>
     <string name="rec_switch_channel_desc">Προειδοποιεί πριν από τη μετάβαση της οθόνης σε μια προγραμματισμένη εγγραφή</string>
-    <string name="settings_tmdb_note">Επικολλήστε το δικό σας δωρεάν κλειδί API TMDB για να συμπληρωθούν οι αφίσες, τα φόντα, οι ηθοποιοί και οι συνόψεις που λείπουν στις Ταινίες &amp; Σειρές. Παραμένει σε αυτή τη συσκευή.</string>
     <string name="settings_tmdb_key_label">Κλειδί API TMDB</string>
     <string name="guide_next_prefix">Επόμενο  %1$s  %2$s</string>
     <string name="vod_empty_category_movies">Δεν υπάρχουν ταινίες σε αυτή την κατηγορία.</string>
@@ -303,4 +302,8 @@
     <string name="onboarding_xtream_or_playlist_help">Αν ο πάροχός σας σάς έδωσε έναν μεγάλο σύνδεσμο αντί για στοιχεία σύνδεσης, προσθέστε τον ως λίστα αναπαραγωγής.</string>
     <string name="providers_empty">Δεν υπάρχουν ακόμη πάροχοι. Προσθέστε την υπηρεσία που ήδη πληρώνετε για να ξεκινήσετε.</string>
     <string name="addons_empty">Δεν υπάρχουν ακόμη πρόσθετα. Επικολλήστε τον σύνδεσμο ενός πρόσθετου παραπάνω για να το προσθέσετε.</string>
+    <string name="error_tmdb_key_rejected">Το TMDB δεν δέχτηκε αυτό το κλειδί. Ελέγξτε ότι αντιγράψατε ολόκληρο το API Key και δοκιμάστε ξανά.</string>
+    <string name="error_tmdb_unreachable_tv">Δεν είναι δυνατή η σύνδεση με το TMDB. Ελέγξτε ότι αυτή η τηλεόραση είναι συνδεδεμένη και δοκιμάστε ξανά.</string>
+    <string name="error_tmdb_unreachable_device">Δεν είναι δυνατή η σύνδεση με το TMDB. Ελέγξτε ότι αυτή η συσκευή είναι συνδεδεμένη και δοκιμάστε ξανά.</string>
+    <string name="error_tmdb_trouble">Το TMDB αντιμετωπίζει προβλήματα. Είναι από τη δική τους πλευρά, οπότε δοκιμάστε ξανά αργότερα.</string>
 </resources>

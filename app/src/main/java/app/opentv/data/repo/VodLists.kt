@@ -87,12 +87,15 @@ internal fun Movie.over(old: Movie?): Movie = if (old == null) {
 /** [old]'s people and looked-up markers, which a list refresh knows nothing of. */
 private fun Movie.keepingLookUpsOf(old: Movie): Movie = copy(
     // TMDB's people outrank the provider's, which would otherwise come back with every refresh.
-    director = if (old.tmdbLookedUp) old.director ?: director else director ?: old.director,
+    director = if (old.tmdbAnsweredAt != null) old.director ?: director else director ?: old.director,
     writer = old.writer ?: writer,
     studio = old.studio ?: studio,
     detailsLookedUp = detailsLookedUp || old.detailsLookedUp,
-    tmdbLookedUp = tmdbLookedUp || old.tmdbLookedUp,
+    tmdbAnsweredAt = newer(tmdbAnsweredAt, old.tmdbAnsweredAt),
 )
+
+/** The later of two times, either of which may be missing. */
+internal fun newer(a: Long?, b: Long?): Long? = if (a == null || b == null) a ?: b else maxOf(a, b)
 
 /** This freshly fetched series in place of [old]; see the [Movie] version. */
 internal fun Series.over(old: Series?): Series = if (old == null) {
@@ -108,6 +111,7 @@ internal fun Series.over(old: Series?): Series = if (old == null) {
         cast = cast ?: old.cast,
         genre = genre ?: old.genre,
         tmdbId = tmdbId ?: old.tmdbId,
+        tmdbAnsweredAt = newer(tmdbAnsweredAt, old.tmdbAnsweredAt),
     )
 }
 
@@ -131,12 +135,13 @@ internal fun Movie.filledFrom(info: XtreamApi.VodInfo): Movie = copy(
 )
 
 /**
- * This movie with what TMDB said about it ([meta], null for no match) and marked TMDB-looked-up.
- * TMDB fills what's empty, and its directors, writers and studios replace whatever was there: a
- * provider's director is only the first name of its crew, and providers have no writers or studios.
+ * This movie with what TMDB said about it ([meta], null for no match) [at] that time, dated so it
+ * isn't asked again for six months. TMDB fills what's empty, and its directors, writers and studios replace whatever
+ * was there: a provider's director is only the first name of its crew, and providers have no writers
+ * or studios. The same when TMDB is asked again six months on, so the provider's values still win.
  */
-internal fun Movie.withTmdb(meta: TmdbMeta?): Movie = if (meta == null) {
-    copy(tmdbLookedUp = true)
+internal fun Movie.withTmdb(meta: TmdbMeta?, at: Long): Movie = if (meta == null) {
+    copy(tmdbAnsweredAt = at)
 } else {
     copy(
         posterUrl = posterUrl ?: meta.posterUrl,
@@ -148,7 +153,7 @@ internal fun Movie.withTmdb(meta: TmdbMeta?): Movie = if (meta == null) {
         rating = rating ?: meta.rating,
         year = year ?: meta.year,
         releaseDate = releaseDate ?: meta.releaseDate,
-        tmdbLookedUp = true,
+        tmdbAnsweredAt = at,
     ).withPeopleFrom(meta)
 }
 

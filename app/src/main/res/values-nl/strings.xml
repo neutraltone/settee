@@ -233,7 +233,6 @@
     <string name="rec_switch_keep_watching">Blijven kijken</string>
     <string name="rec_switch_channel_name">Automatisch wisselen bij opname</string>
     <string name="rec_switch_channel_desc">Waarschuwt voordat het scherm overschakelt naar een geplande opname</string>
-    <string name="settings_tmdb_note">Plak je eigen gratis TMDB API-sleutel om ontbrekende posters, achtergronden, cast en synopsissen bij Films en Series aan te vullen. Deze blijft op dit apparaat.</string>
     <string name="settings_tmdb_key_label">TMDB API-sleutel</string>
     <string name="guide_next_prefix">Volgende  %1$s  %2$s</string>
     <string name="vod_empty_category_movies">Geen films in deze categorie.</string>
@@ -303,4 +302,8 @@
     <string name="onboarding_xtream_or_playlist_help">Heeft je provider je één lange link gegeven in plaats van inloggegevens? Voeg hem dan toe als afspeellijst.</string>
     <string name="providers_empty">Nog geen providers. Voeg de dienst toe waar je al voor betaalt om te beginnen.</string>
     <string name="addons_empty">Nog geen add-ons. Plak hierboven de link van een add-on om er een toe te voegen.</string>
+    <string name="error_tmdb_key_rejected">TMDB accepteerde die sleutel niet. Controleer of je de hele API Key hebt gekopieerd en probeer het opnieuw.</string>
+    <string name="error_tmdb_unreachable_tv">Kan TMDB niet bereiken. Controleer of deze tv online is en probeer het opnieuw.</string>
+    <string name="error_tmdb_unreachable_device">Kan TMDB niet bereiken. Controleer of dit apparaat online is en probeer het opnieuw.</string>
+    <string name="error_tmdb_trouble">TMDB heeft problemen. Dat ligt bij hen, dus probeer het later opnieuw.</string>
 </resources>

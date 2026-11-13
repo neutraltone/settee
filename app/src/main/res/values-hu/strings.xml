@@ -233,7 +233,6 @@
     <string name="rec_switch_keep_watching">Nézés folytatása</string>
     <string name="rec_switch_channel_name">Felvétel automatikus váltása</string>
     <string name="rec_switch_channel_desc">Figyelmeztet, mielőtt a képernyő átvált egy ütemezett felvételre</string>
-    <string name="settings_tmdb_note">Illessze be saját ingyenes TMDB API-kulcsát a hiányzó plakátok, háttérképek, szereplők és ismertetők kiegészítéséhez a Filmek &amp; Sorozatok részben. Az eszközön marad.</string>
     <string name="settings_tmdb_key_label">TMDB API-kulcs</string>
     <string name="guide_next_prefix">Következő  %1$s  %2$s</string>
     <string name="vod_empty_category_movies">Ebben a kategóriában nincsenek filmek.</string>
@@ -303,4 +302,8 @@
     <string name="onboarding_xtream_or_playlist_help">Ha a szolgáltatója bejelentkezési adatok helyett egyetlen hosszú hivatkozást adott, adja hozzá lejátszási listaként.</string>
     <string name="providers_empty">Még nincsenek szolgáltatók. Kezdéshez adja hozzá azt a szolgáltatást, amelyért már fizet.</string>
     <string name="addons_empty">Még nincsenek bővítmények. Hozzáadáshoz illessze be fent egy bővítmény linkjét.</string>
+    <string name="error_tmdb_key_rejected">A TMDB nem fogadta el ezt a kulcsot. Ellenőrizd, hogy a teljes API Key-t másoltad-e, majd próbáld újra.</string>
+    <string name="error_tmdb_unreachable_tv">A TMDB nem érhető el. Ellenőrizd, hogy ez a tévé online van-e, majd próbáld újra.</string>
+    <string name="error_tmdb_unreachable_device">A TMDB nem érhető el. Ellenőrizd, hogy ez az eszköz online van-e, majd próbáld újra.</string>
+    <string name="error_tmdb_trouble">A TMDB-nél gondok vannak. Ez az ő oldalukon van, ezért próbáld újra később.</string>
 </resources>

@@ -5,17 +5,24 @@
  */
 package app.opentv.ui.settings
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import app.opentv.pairing.QrCodes
 import app.opentv.ui.design.SetteeColors
 import app.opentv.ui.design.SetteeShapes
 import app.opentv.ui.design.SetteeType
@@ -54,3 +61,22 @@ internal fun CodeBlock(
 
 private val BLOCK_PADDING = 20.dp
 private val LINE_GAP = 8.dp
+
+/** A QR code for [url], dark on white so a phone can read it off the TV, [size] square. */
+@Composable
+internal fun PhoneQrCode(url: String, description: String, size: Dp = QR_SIZE) {
+    // Drawn once per address: encoding isn't free, and the content doesn't change.
+    val qr = remember(url) { QrCodes.render(url, QR_SIZE_PX) } ?: return
+    Image(
+        qr.asImageBitmap(),
+        contentDescription = description,
+        modifier = Modifier
+            .size(size)
+            .background(Color.White, SetteeShapes.Card)
+            .padding(QR_PADDING),
+    )
+}
+
+private const val QR_SIZE_PX = 600
+private val QR_SIZE = 200.dp
+private val QR_PADDING = 10.dp

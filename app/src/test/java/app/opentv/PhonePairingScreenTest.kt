@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
@@ -19,6 +20,7 @@ import app.opentv.pairing.PairingServer
 import app.opentv.ui.onboarding.Listening
 import app.opentv.ui.onboarding.PairingConnecting
 import app.opentv.ui.onboarding.PairingStarting
+import app.opentv.ui.onboarding.PhonePairingScreen
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -72,5 +74,15 @@ class PhonePairingScreenTest {
         compose.onNodeWithContentDescription("Still working").assertIsDisplayed()
         compose.onNodeWithText("Got it. Connecting to your provider…").assertIsDisplayed()
         captureScreen("phone_pairing_connecting")
+    }
+
+    @Test
+    fun `once a provider hands on to the TMDB step, it stays on Got it rather than showing its code again`() {
+        // The server listens again for the key as the channels come in; handed on, that isn't shown.
+        compose.setTvContent { PhonePairingScreen(onReceived = {}, onCancel = {}, keepListening = { true }) }
+
+        compose.onNodeWithText("Got it. Connecting to your provider…").assertIsDisplayed()
+        compose.onNode(hasText("Getting pairing ready")).assertDoesNotExist()
+        compose.onNode(hasText(session.shortUrl)).assertDoesNotExist()
     }
 }

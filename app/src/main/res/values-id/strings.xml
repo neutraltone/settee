@@ -233,7 +233,6 @@
     <string name="rec_switch_keep_watching">Tetap menonton</string>
     <string name="rec_switch_channel_name">Alih otomatis rekaman</string>
     <string name="rec_switch_channel_desc">Memperingatkan sebelum mengalihkan layar ke rekaman terjadwal</string>
-    <string name="settings_tmdb_note">Tempelkan kunci API TMDB gratis Anda sendiri untuk melengkapi poster, backdrop, pemeran, dan sinopsis yang hilang pada Film &amp; Acara TV. Kunci ini tetap di perangkat ini.</string>
     <string name="settings_tmdb_key_label">Kunci API TMDB</string>
     <string name="guide_next_prefix">Berikutnya  %1$s  %2$s</string>
     <string name="vod_empty_category_movies">Tidak ada film di kategori ini.</string>
@@ -303,4 +302,8 @@
     <string name="onboarding_xtream_or_playlist_help">Jika penyedia Anda memberi satu tautan panjang alih-alih info login, tambahkan sebagai playlist.</string>
     <string name="providers_empty">Belum ada penyedia. Tambahkan layanan yang sudah Anda bayar untuk memulai.</string>
     <string name="addons_empty">Belum ada add-on. Tempelkan tautan add-on di atas untuk menambahkannya.</string>
+    <string name="error_tmdb_key_rejected">TMDB tidak menerima kunci itu. Pastikan Anda menyalin seluruh API Key, lalu coba lagi.</string>
+    <string name="error_tmdb_unreachable_tv">Tidak dapat menjangkau TMDB. Pastikan TV ini online, lalu coba lagi.</string>
+    <string name="error_tmdb_unreachable_device">Tidak dapat menjangkau TMDB. Pastikan perangkat ini online, lalu coba lagi.</string>
+    <string name="error_tmdb_trouble">TMDB sedang bermasalah. Itu di pihak mereka, jadi coba lagi nanti.</string>
 </resources>

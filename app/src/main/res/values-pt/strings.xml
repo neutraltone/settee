@@ -233,7 +233,6 @@
     <string name="rec_switch_keep_watching">Continuar a ver</string>
     <string name="rec_switch_channel_name">Mudança automática de gravação</string>
     <string name="rec_switch_channel_desc">Avisa antes de mudar o ecrã para uma gravação agendada</string>
-    <string name="settings_tmdb_note">Cole a sua própria chave API TMDB gratuita para preencher pósteres, imagens de fundo, elenco e sinopses em falta em Filmes e Séries. Fica guardada apenas neste dispositivo.</string>
     <string name="settings_tmdb_key_label">Chave API TMDB</string>
     <string name="guide_next_prefix">A seguir  %1$s  %2$s</string>
     <string name="vod_empty_category_movies">Sem filmes nesta categoria.</string>
@@ -303,4 +302,8 @@
     <string name="onboarding_xtream_or_playlist_help">Se o seu fornecedor lhe deu uma ligação longa em vez de dados de acesso, adicione-a como lista de reprodução.</string>
     <string name="providers_empty">Ainda sem fornecedores. Adicione o serviço que já paga para começar.</string>
     <string name="addons_empty">Ainda sem add-ons. Cole acima o link de um add-on para o adicionar.</string>
+    <string name="error_tmdb_key_rejected">O TMDB não aceitou essa chave. Confirme que copiou a API Key inteira e tente novamente.</string>
+    <string name="error_tmdb_unreachable_tv">Não é possível ligar ao TMDB. Confirme que esta TV está online e tente novamente.</string>
+    <string name="error_tmdb_unreachable_device">Não é possível ligar ao TMDB. Confirme que este dispositivo está online e tente novamente.</string>
+    <string name="error_tmdb_trouble">O TMDB está com problemas. São do lado deles, por isso tente novamente mais tarde.</string>
 </resources>

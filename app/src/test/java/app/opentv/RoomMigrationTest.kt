@@ -58,6 +58,63 @@ class RoomMigrationTest {
     }
 
     @Test
+    fun `films TMDB answered about before 12 are dated then, so they aren't all asked again at once`() {
+        val name = "tmdb-dates.db"
+        helper.createDatabase(name, 10).use { db ->
+            db.execSQL(
+                "INSERT INTO movies (id, sourceId, streamId, name, streamUrl, addedMillis, tmdbLookedUp) VALUES " +
+                    "(1, 1, 'asked', 'Asked', 'http://example.com/1.mp4', 0, 1), " +
+                    "(2, 1, 'unasked', 'Unasked', 'http://example.com/2.mp4', 0, 0)",
+            )
+            db.execSQL("INSERT INTO series (id, sourceId, seriesId, name, addedMillis) VALUES (1, 1, 's', 'Show', 0)")
+        }
+        val before = System.currentTimeMillis()
+
+        val db = helper.runMigrationsAndValidate(name, 12, true, *OpenTvDatabase.MIGRATIONS)
+        val after = System.currentTimeMillis()
+
+        db.use {
+            fun answeredAt(table: String, id: Int): Long? =
+                it.query("SELECT tmdbAnsweredAt FROM $table WHERE id = $id").use { row ->
+                    row.moveToFirst()
+                    if (row.isNull(0)) null else row.getLong(0)
+                }
+            // SQLite's clock is in whole seconds.
+            assertThat(answeredAt("movies", 1)).isIn(com.google.common.collect.Range.closed(before - 1000, after))
+            assertThat(answeredAt("movies", 2)).isNull()
+            assertThat(answeredAt("series", 1)).isNull()
+        }
+    }
+
+    @Test
+    fun `rebuilding the film and series tables for 12 keeps every row, its id and its credits`() {
+        val name = "rebuilt.db"
+        helper.createDatabase(name, 10).use { db ->
+            db.execSQL(
+                "INSERT INTO movies (id, sourceId, streamId, name, streamUrl, addedMillis, plot) VALUES " +
+                    "(7, 1, 'film', 'Film', 'http://example.com/7.mp4', 5, 'A film.')",
+            )
+            db.execSQL(
+                "INSERT INTO series (id, sourceId, seriesId, name, addedMillis, plot, latestAirDate) VALUES " +
+                    "(9, 1, 'show', 'Show', 5, 'A show.', 123)",
+            )
+            db.execSQL("INSERT INTO movie_credits (movieId, role, nameKey) VALUES (7, 'cast', 'someone')")
+            db.execSQL("INSERT INTO series_credits (seriesId, nameKey) VALUES (9, 'someone')")
+        }
+
+        helper.runMigrationsAndValidate(name, 12, true, *OpenTvDatabase.MIGRATIONS).use {
+            fun first(sql: String): String = it.query(sql).use { row ->
+                row.moveToFirst()
+                row.getString(0)
+            }
+            assertThat(first("SELECT plot FROM movies WHERE id = 7")).isEqualTo("A film.")
+            assertThat(first("SELECT plot FROM series WHERE id = 9")).isEqualTo("A show.")
+            assertThat(first("SELECT nameKey FROM movie_credits WHERE movieId = 7")).isEqualTo("someone")
+            assertThat(first("SELECT nameKey FROM series_credits WHERE seriesId = 9")).isEqualTo("someone")
+        }
+    }
+
+    @Test
     fun `the latest exported schema is the version the app opens`() {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         val db = OpenTvDatabase.build(context)

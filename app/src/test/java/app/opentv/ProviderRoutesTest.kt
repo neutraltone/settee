@@ -9,9 +9,15 @@ import android.app.Application
 import android.view.View
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.test.hasAnyAncestor
+import androidx.compose.ui.test.hasContentDescription
+import androidx.compose.ui.test.hasTestTag
+import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.isFocused
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
@@ -19,17 +25,26 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
+import androidx.test.espresso.Espresso
+import androidx.test.espresso.UiController
+import androidx.test.espresso.ViewAction
+import androidx.test.espresso.matcher.RootMatchers
+import androidx.test.espresso.matcher.ViewMatchers
 import app.opentv.core.ServiceLocator
 import app.opentv.data.db.OpenTvDatabase
 import app.opentv.data.model.SourceKind
+import app.opentv.pairing.PairingServer
 import app.opentv.ui.SourcesViewModel
 import app.opentv.ui.design.SetteeType
 import app.opentv.ui.design.Text
+import app.opentv.ui.onboarding.TMDB_STEP_ACTIONS
 import app.opentv.ui.settings.SettingsMemory
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.After
+import org.junit.Assume.assumeTrue
+import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -66,8 +81,43 @@ class ProviderRoutesTest {
         },
     )
 
+    // Most tests here are about Setup, so they have a TMDB Key already and see no TMDB step.
+    @Before
+    fun haveTmdbKey() = graph.settings.setTmdbApiKey(TMDB_KEY)
+
     @After
     fun close() = graph.database.close()
+
+    /** The keyboard over an entry screen, which is a window of its own. */
+    private fun entryKeyboard(): DeviceKeyboard {
+        compose.waitForIdle()
+        var root: View? = null
+        Espresso.onView(ViewMatchers.isRoot()).inRoot(RootMatchers.isDialog()).perform(
+            object : ViewAction {
+                override fun getConstraints() = ViewMatchers.isRoot()
+                override fun getDescription() = "find the entry screen's window"
+                override fun perform(controller: UiController, view: View) {
+                    root = view
+                }
+            },
+        )
+        return DeviceKeyboard(compose) { checkNotNull(root) }
+    }
+
+    /** The TMDB step's own button, not the Try again of a phone server that couldn't start. */
+    private fun stepButton(text: String) = compose.onNode(
+        hasText(text) and hasAnyAncestor(hasTestTag(TMDB_STEP_ACTIONS)),
+    )
+
+    /** Types [key] on the TMDB step's Type it instead and saves it. */
+    private fun typeTmdbKey(key: String) {
+        compose.waitUntil(5_000) { compose.onAllNodesWithText("Type it instead").fetchSemanticsNodes().isNotEmpty() }
+        compose.onNodeWithText("Type it instead").performClick()
+        entryKeyboard().run {
+            type(key)
+            pressAction()
+        }
+    }
 
     private fun setApp(start: String, sources: SourcesViewModel = SourcesViewModel(app)) {
         compose.setTvContent {
@@ -204,7 +254,199 @@ class ProviderRoutesTest {
     }
 
     @Test
-    fun `a provider added while there's one already doesn't open Setup`() {
+    fun `saving the first provider with no TMDB Key asks for one, with Setup loading behind it`() {
+        graph.settings.removeTmdbApiKey()
+        setApp(start = Routes.ADD_SOURCE, sources = SourcesViewModel(app, graph))
+
+        savePlaylist()
+
+        compose.waitUntil(5_000) { route() == Routes.TMDB_STEP }
+        compose.onNodeWithText("Add your TMDB Key").assertExists()
+        compose.onNodeWithText("It's optional", substring = true).assertExists()
+        compose.onNodeWithText("Type it instead").assertExists()
+        compose.onNodeWithText(TMDB_ATTRIBUTION).assertExists()
+        compose.onNode(hasText("Skip for now") and isFocused()).assertExists()
+        assertWholeStepOnScreen()
+        // The first Catalogue Refresh didn't wait for the step.
+        compose.waitUntil(5_000) { runBlocking { graph.sourceRepository.all() }.any { it.lastCatalogSyncMillis > 0 } }
+        captureScreen("onboarding_tmdb_step")
+
+        compose.onNodeWithText("Skip for now").performClick()
+
+        compose.waitUntil(5_000) { route() == Routes.SETUP }
+        compose.waitUntil(5_000) { compose.onAllNodesWithText("Take me to Settee").fetchSemanticsNodes().isNotEmpty() }
+        assertThat(graph.settings.tmdbApiKey.value).isEmpty()
+        // Back from Setup doesn't return to the step.
+        assertThat(compose.runOnIdle { nav.previousBackStackEntry?.destination?.route }).isNotEqualTo(Routes.TMDB_STEP)
+    }
+
+    @Test
+    fun `a key TMDB accepts on the TMDB step is saved and says so, and Carry on goes on to Setup`() {
+        graph.settings.removeTmdbApiKey()
+        panel.replies["/3/authentication"] = """{"success": true}"""
+        setApp(start = Routes.ADD_SOURCE, sources = SourcesViewModel(app, graph))
+        savePlaylist()
+        compose.waitUntil(5_000) { route() == Routes.TMDB_STEP }
+        compose.waitForIdle()
+        val keyRowTop = typeItInstead().top
+        val keyRowHeight = typeItInstead().height
+
+        typeTmdbKey(OTHER_TMDB_KEY)
+
+        val savedKey = hasContentDescription("Key saved, ending bbbb")
+        compose.waitUntil(5_000) { compose.onAllNodes(savedKey).fetchSemanticsNodes().isNotEmpty() }
+        assertThat(graph.settings.tmdbApiKey.value).isEqualTo(OTHER_TMDB_KEY)
+        // A field filled with the key, masked but for its end, in the key row's place and size; the
+        // QR code goes with the server that answered it.
+        compose.onNodeWithText("•".repeat(24) + "bbbb", useUnmergedTree = true).assertExists()
+        val field = compose.onNode(savedKey).fetchSemanticsNode().boundsInRoot
+        assertThat(field.top).isEqualTo(keyRowTop)
+        assertThat(field.height).isEqualTo(keyRowHeight)
+        compose.onNode(hasText("Scan with your phone", substring = true)).assertDoesNotExist()
+        // Time to read it: the step waits for the viewer rather than moving on by itself.
+        assertThat(route()).isEqualTo(Routes.TMDB_STEP)
+        compose.waitUntil(5_000) {
+            compose.onAllNodes(hasText("Carry on") and isFocused()).fetchSemanticsNodes().isNotEmpty()
+        }
+        captureScreen("onboarding_tmdb_saved")
+
+        assertWholeStepOnScreen()
+        stepButton("Carry on").performClick()
+
+        compose.waitUntil(5_000) { route() == Routes.SETUP }
+    }
+
+    /**
+     * The step fits on a TV screen as it is: nothing scrolled off the top to bring the Highlight into
+     * view, and nothing hanging off the bottom.
+     */
+    private fun assertWholeStepOnScreen() {
+        val screen = compose.onRoot().fetchSemanticsNode().boundsInRoot
+        val title = compose.onNodeWithText("Add your TMDB Key").fetchSemanticsNode().boundsInRoot
+        val attribution = compose.onNodeWithText(TMDB_ATTRIBUTION).fetchSemanticsNode().boundsInRoot
+        assertThat(title.top).isAtLeast(screen.top)
+        assertThat(attribution.bottom).isAtMost(screen.bottom)
+    }
+
+    /**
+     * The phone's address for the TMDB step's paste box, once its server is listening; skips the test
+     * where the machine running it has no private network address to listen on.
+     */
+    private fun phoneAddress(): PairingServer.Session {
+        compose.waitUntil(5_000) { graph.pairingServer.state.value !is PairingServer.State.Idle }
+        val listening = graph.pairingServer.state.value as? PairingServer.State.Listening
+        assumeTrue("needs a private LAN address to serve on", listening != null)
+        return listening!!.session
+    }
+
+    /** Posts [form] to the phone page's [path], as the phone's browser would. */
+    private fun fromPhone(session: PairingServer.Session, path: String, vararg form: Pair<String, String>) {
+        val body = okhttp3.FormBody.Builder().add("t", session.url.substringAfter("t="))
+            .apply { form.forEach { (name, value) -> add(name, value) } }
+            .build()
+        val request = okhttp3.Request.Builder().url("http://${session.host}:${session.port}$path").post(body).build()
+        // Off the main thread: the server waits on the TV, which answers there.
+        Thread {
+            runCatching { okhttp3.OkHttpClient().newCall(request).execute().close() }
+        }.start()
+    }
+
+    @Test
+    fun `a key sent from the phone is saved on the TV, which says so with Carry on highlighted`() {
+        graph.settings.removeTmdbApiKey()
+        panel.replies["/3/authentication"] = """{"success": true}"""
+        setApp(start = Routes.ADD_SOURCE, sources = SourcesViewModel(app, graph))
+        savePlaylist()
+        compose.waitUntil(5_000) { route() == Routes.TMDB_STEP }
+        val session = phoneAddress()
+
+        fromPhone(session, "/key", "key" to OTHER_TMDB_KEY)
+
+        compose.waitUntil(10_000) {
+            compose.onAllNodes(hasText("Carry on") and isFocused()).fetchSemanticsNodes().isNotEmpty()
+        }
+        assertThat(graph.settings.tmdbApiKey.value).isEqualTo(OTHER_TMDB_KEY)
+        assertWholeStepOnScreen()
+    }
+
+    @Test
+    fun `Skip for now on the phone takes the TV on to Setup`() {
+        graph.settings.removeTmdbApiKey()
+        setApp(start = Routes.ADD_SOURCE, sources = SourcesViewModel(app, graph))
+        savePlaylist()
+        compose.waitUntil(5_000) { route() == Routes.TMDB_STEP }
+        val session = phoneAddress()
+
+        fromPhone(session, "/skip")
+
+        compose.waitUntil(10_000) { route() == Routes.SETUP }
+        assertThat(graph.settings.tmdbApiKey.value).isEmpty()
+    }
+
+    /** Where Type it instead is on screen. */
+    private fun typeItInstead() = compose.onNodeWithText("Type it instead").fetchSemanticsNode().boundsInRoot
+
+    /** Where the step's Skip for now is on screen. */
+    private fun skipForNow() = stepButton("Skip for now").fetchSemanticsNode().boundsInRoot
+
+    @Test
+    fun `the TMDB step holds still while a key is checked and when it's turned down`() {
+        graph.settings.removeTmdbApiKey()
+        panel.replies["/3/authentication"] = "!401"
+        val checking = panel.hold("/3/authentication")
+        setApp(start = Routes.ADD_SOURCE, sources = SourcesViewModel(app, graph))
+        savePlaylist()
+        compose.waitUntil(5_000) { route() == Routes.TMDB_STEP }
+        compose.waitForIdle()
+        val typeAt = typeItInstead()
+        val skipAt = skipForNow()
+
+        typeTmdbKey(OTHER_TMDB_KEY)
+        assertThat(checking.reached.await(10, java.util.concurrent.TimeUnit.SECONDS)).isTrue()
+        compose.waitUntil(5_000) {
+            compose.onAllNodesWithText("Checking your key with TMDB…").fetchSemanticsNodes().isNotEmpty()
+        }
+        assertThat(typeItInstead()).isEqualTo(typeAt)
+        assertThat(skipForNow()).isEqualTo(skipAt)
+        captureScreen("onboarding_tmdb_checking")
+        checking.release()
+
+        compose.waitUntil(5_000) {
+            compose.onAllNodesWithText("TMDB didn't accept", substring = true).fetchSemanticsNodes().isNotEmpty()
+        }
+        assertThat(typeItInstead()).isEqualTo(typeAt)
+        assertThat(skipForNow()).isEqualTo(skipAt)
+        captureScreen("onboarding_tmdb_wrong_key")
+    }
+
+    @Test
+    fun `a key TMDB turns down on the TMDB step offers Try again and Skip for now, and keeps the provider`() {
+        graph.settings.removeTmdbApiKey()
+        panel.replies["/3/authentication"] = "!401"
+        setApp(start = Routes.ADD_SOURCE, sources = SourcesViewModel(app, graph))
+        savePlaylist()
+        compose.waitUntil(5_000) { route() == Routes.TMDB_STEP }
+
+        typeTmdbKey(OTHER_TMDB_KEY)
+
+        compose.waitUntil(5_000) {
+            compose.onAllNodesWithText("TMDB didn't accept", substring = true).fetchSemanticsNodes().isNotEmpty()
+        }
+        stepButton("Try again").assertExists()
+        stepButton("Skip for now").assertExists()
+        assertThat(route()).isEqualTo(Routes.TMDB_STEP)
+        assertThat(graph.settings.tmdbApiKey.value).isEmpty()
+        assertThat(runBlocking { graph.sourceRepository.all() }.map { it.kind }).containsExactly(SourceKind.M3U)
+
+        stepButton("Try again").performClick()
+        compose.onNode(hasText("TMDB didn't accept", substring = true)).assertDoesNotExist()
+        stepButton("Skip for now").performClick()
+        compose.waitUntil(5_000) { route() == Routes.SETUP }
+    }
+
+    @Test
+    fun `a provider added while there's one already doesn't open Setup, or the TMDB step`() {
+        graph.settings.removeTmdbApiKey()
         runBlocking { graph.sourceRepository.save(PANEL_SOURCE.copy(id = 0, lastCatalogSyncMillis = 1)) }
         setApp(start = Routes.ADD_SOURCE, sources = SourcesViewModel(app, graph))
 
@@ -242,3 +484,9 @@ class ProviderRoutesTest {
 
 /** The start of what a playlist with no channels says (core/ErrorWording). */
 private const val NO_CHANNELS = "There are no channels at that address"
+
+/** Placeholder TMDB Keys, low-entropy so gitleaks sees no secret. */
+private val TMDB_KEY = "a".repeat(32)
+private val OTHER_TMDB_KEY = "b".repeat(32)
+
+private const val TMDB_ATTRIBUTION = "This product uses the TMDB API but is not endorsed or certified by TMDB."

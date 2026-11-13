@@ -233,7 +233,6 @@
     <string name="rec_switch_keep_watching">Продължи да гледаш</string>
     <string name="rec_switch_channel_name">Автоматично превключване при запис</string>
     <string name="rec_switch_channel_desc">Предупреждава преди превключване на екрана към насрочен запис</string>
-    <string name="settings_tmdb_note">Поставете своя безплатен TMDB API ключ, за да попълните липсващи постери, фонови изображения, актьорски състав и синопсиси за Филми &amp; Сериали. Той остава на това устройство.</string>
     <string name="settings_tmdb_key_label">TMDB API ключ</string>
     <string name="guide_next_prefix">Следва  %1$s  %2$s</string>
     <string name="vod_empty_category_movies">Няма филми в тази категория.</string>
@@ -303,4 +302,8 @@
     <string name="onboarding_xtream_or_playlist_help">Ако доставчикът ви е дал една дълга връзка вместо данни за вход, добавете я като плейлист.</string>
     <string name="providers_empty">Все още няма доставчици. Добавете услугата, за която вече плащате, за да започнете.</string>
     <string name="addons_empty">Все още няма добавки. Поставете връзката към добавка по-горе, за да я добавите.</string>
+    <string name="error_tmdb_key_rejected">TMDB не прие този ключ. Проверете дали сте копирали целия API Key и опитайте отново.</string>
+    <string name="error_tmdb_unreachable_tv">Няма връзка с TMDB. Проверете дали този телевизор е онлайн и опитайте отново.</string>
+    <string name="error_tmdb_unreachable_device">Няма връзка с TMDB. Проверете дали това устройство е онлайн и опитайте отново.</string>
+    <string name="error_tmdb_trouble">TMDB има проблеми. Те са от тяхна страна, затова опитайте отново по-късно.</string>
 </resources>

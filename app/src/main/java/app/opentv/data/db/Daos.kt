@@ -543,14 +543,15 @@ interface MovieDao {
 
     /**
      * The [limit] movies a source most recently added that the provider hasn't been asked about, or,
-     * [withTmdb], that TMDB hasn't answered about, for [MovieGenres].
+     * [withTmdb], that TMDB hasn't answered about since [tmdbStaleBefore], for [MovieGenres].
      */
     @Query(
         "SELECT * FROM movies WHERE sourceId = :sourceId " +
-            "AND (detailsLookedUp = 0 OR (:withTmdb AND tmdbLookedUp = 0)) " +
+            "AND (detailsLookedUp = 0 OR " +
+            "(:withTmdb AND (tmdbAnsweredAt IS NULL OR tmdbAnsweredAt < :tmdbStaleBefore))) " +
             "ORDER BY addedMillis DESC, id DESC LIMIT :limit",
     )
-    suspend fun newestNotLookedUp(sourceId: Long, withTmdb: Boolean, limit: Int): List<Movie>
+    suspend fun newestNotLookedUp(sourceId: Long, withTmdb: Boolean, tmdbStaleBefore: Long, limit: Int): List<Movie>
 
     /**
      * Fills whichever of a movie's details are still empty from what [MovieGenres] looked up, and marks
@@ -576,7 +577,7 @@ interface MovieDao {
             durationSeconds = COALESCE(durationSeconds, :durationSeconds),
             releaseDate = COALESCE(releaseDate, :releaseDate),
             detailsLookedUp = MAX(detailsLookedUp, :detailsLookedUp),
-            tmdbLookedUp = MAX(tmdbLookedUp, :tmdbLookedUp)
+            tmdbAnsweredAt = COALESCE(MAX(tmdbAnsweredAt, :tmdbAnsweredAt), tmdbAnsweredAt, :tmdbAnsweredAt)
         WHERE id = :id
         """,
     )
@@ -596,7 +597,7 @@ interface MovieDao {
         durationSeconds: Int?,
         releaseDate: Long?,
         detailsLookedUp: Boolean,
-        tmdbLookedUp: Boolean,
+        tmdbAnsweredAt: Long?,
     )
 
     /**
@@ -622,7 +623,7 @@ interface MovieDao {
                 durationSeconds = it.durationSeconds,
                 releaseDate = it.releaseDate,
                 detailsLookedUp = it.detailsLookedUp,
-                tmdbLookedUp = it.tmdbLookedUp,
+                tmdbAnsweredAt = it.tmdbAnsweredAt,
             )
         }
         recreditChanged(before.associateBy { it.id }, credited(found.map { it.id }))
@@ -842,6 +843,17 @@ interface SeriesDao {
             insertCredits(seriesCredits(now.id, now.cast))
         }
     }
+
+    /**
+     * The [limit] series a source most recently added that TMDB hasn't answered about since
+     * [staleBefore], for `SeriesTmdbPass`.
+     */
+    @Query(
+        "SELECT * FROM series WHERE sourceId = :sourceId " +
+            "AND (tmdbAnsweredAt IS NULL OR tmdbAnsweredAt < :staleBefore) " +
+            "ORDER BY addedMillis DESC, id DESC LIMIT :limit",
+    )
+    suspend fun newestTmdbDue(sourceId: Long, staleBefore: Long, limit: Int): List<Series>
 
     @Query("SELECT id, `cast`, NULL AS director, NULL AS writer, NULL AS studio FROM series WHERE id IN (:ids)")
     suspend fun credited(ids: List<Long>): List<CreditedTitle>

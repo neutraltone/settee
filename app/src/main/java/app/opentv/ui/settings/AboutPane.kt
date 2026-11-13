@@ -128,6 +128,8 @@ internal fun AboutPane(onOpenFontLicences: () -> Unit, checkForUpdate: UpdateChe
         opens = true,
     )
 
+    TmdbAttribution(Modifier.padding(top = 12.dp))
+
     whatsNew?.let { WhatsNewDialog(BuildConfig.VERSION_NAME, it) { whatsNew = null } }
 }
 

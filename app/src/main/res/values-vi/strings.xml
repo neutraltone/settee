@@ -233,7 +233,6 @@
     <string name="rec_switch_keep_watching">Tiếp tục xem</string>
     <string name="rec_switch_channel_name">Tự động chuyển khi ghi hình</string>
     <string name="rec_switch_channel_desc">Cảnh báo trước khi chuyển màn hình sang bản ghi đã lên lịch</string>
-    <string name="settings_tmdb_note">Dán khóa API TMDB miễn phí của riêng bạn để bổ sung poster, ảnh nền, diễn viên và tóm tắt còn thiếu cho Phim &amp; Phim bộ. Nó chỉ được lưu trên thiết bị này.</string>
     <string name="settings_tmdb_key_label">Khóa API TMDB</string>
     <string name="guide_next_prefix">Tiếp theo  %1$s  %2$s</string>
     <string name="vod_empty_category_movies">Không có phim nào trong danh mục này.</string>
@@ -303,4 +302,8 @@
     <string name="onboarding_xtream_or_playlist_help">Nếu nhà cung cấp đưa bạn một liên kết dài thay vì thông tin đăng nhập, hãy thêm nó dưới dạng danh sách phát.</string>
     <string name="providers_empty">Chưa có nhà cung cấp nào. Thêm dịch vụ bạn đang trả tiền để bắt đầu.</string>
     <string name="addons_empty">Chưa có tiện ích nào. Dán liên kết của tiện ích ở trên để thêm.</string>
+    <string name="error_tmdb_key_rejected">TMDB không chấp nhận khóa đó. Hãy kiểm tra bạn đã sao chép toàn bộ API Key, rồi thử lại.</string>
+    <string name="error_tmdb_unreachable_tv">Không kết nối được TMDB. Hãy kiểm tra TV này đang trực tuyến, rồi thử lại.</string>
+    <string name="error_tmdb_unreachable_device">Không kết nối được TMDB. Hãy kiểm tra thiết bị này đang trực tuyến, rồi thử lại.</string>
+    <string name="error_tmdb_trouble">TMDB đang gặp sự cố. Lỗi ở phía họ, vì vậy hãy thử lại sau.</string>
 </resources>

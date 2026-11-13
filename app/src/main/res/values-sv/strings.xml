@@ -233,7 +233,6 @@
     <string name="rec_switch_keep_watching">Fortsätt titta</string>
     <string name="rec_switch_channel_name">Automatiskt inspelningsbyte</string>
     <string name="rec_switch_channel_desc">Varnar innan skärmen byter till en schemalagd inspelning</string>
-    <string name="settings_tmdb_note">Klistra in din egen gratis TMDB API-nyckel för att fylla i saknade affischer, bakgrundsbilder, skådespelare och sammanfattningar för Filmer och Serier. Den stannar på den här enheten.</string>
     <string name="settings_tmdb_key_label">TMDB API-nyckel</string>
     <string name="guide_next_prefix">Nästa  %1$s  %2$s</string>
     <string name="vod_empty_category_movies">Inga filmer i den här kategorin.</string>
@@ -303,4 +302,8 @@
     <string name="onboarding_xtream_or_playlist_help">Om din leverantör gav dig en lång länk i stället för inloggningsuppgifter, lägg till den som spellista i stället.</string>
     <string name="providers_empty">Inga leverantörer än. Lägg till tjänsten du redan betalar för att komma igång.</string>
     <string name="addons_empty">Inga tillägg än. Klistra in länken till ett tillägg ovan för att lägga till det.</string>
+    <string name="error_tmdb_key_rejected">TMDB godtog inte den nyckeln. Kontrollera att du kopierade hela API Key och försök igen.</string>
+    <string name="error_tmdb_unreachable_tv">Det går inte att nå TMDB. Kontrollera att den här tv:n är online och försök igen.</string>
+    <string name="error_tmdb_unreachable_device">Det går inte att nå TMDB. Kontrollera att den här enheten är online och försök igen.</string>
+    <string name="error_tmdb_trouble">TMDB har problem. Det är hos dem, så försök igen senare.</string>
 </resources>

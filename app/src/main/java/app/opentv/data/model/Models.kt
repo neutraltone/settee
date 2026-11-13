@@ -327,11 +327,12 @@ data class Movie(
     @ColumnInfo(defaultValue = "0")
     val detailsLookedUp: Boolean = false,
     /**
-     * Whether TMDB has answered about this film, a match or not, with the viewer's key. Once it has,
-     * its directors, writers and studios are kept over the provider's, a refresh included.
+     * When TMDB last answered about this film, a match or not, with the viewer's key (UTC epoch
+     * millis); null if it never has. Six months on, the background pass asks again (`tmdbDue`). Once
+     * it has answered, its directors, writers and studios are kept over the provider's, a refresh
+     * included.
      */
-    @ColumnInfo(defaultValue = "0")
-    val tmdbLookedUp: Boolean = false,
+    val tmdbAnsweredAt: Long? = null,
 )
 
 @Entity(
@@ -365,12 +366,8 @@ data class Series(
     val genre: String? = null,
     /** TMDB id, stored only — resolved/used by a later agent. Coerced to String (panels vary). */
     val tmdbId: String? = null,
-    /**
-     * When its newest episode aired (UTC epoch millis at midnight). Was looked up for Home's Recently
-     * Released row, which is gone: nothing fills it any more, and a sync clears what's left. The column
-     * stays only to avoid a schema bump; drop it with the next one.
-     */
-    val latestAirDate: Long? = null,
+    /** When TMDB last answered about this series, as [Movie.tmdbAnsweredAt]. */
+    val tmdbAnsweredAt: Long? = null,
 )
 
 /** A series by what identifies it across a catalogue refresh: its source and the provider's id. */

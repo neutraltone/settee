@@ -26,6 +26,7 @@ import androidx.compose.ui.test.isFocused
 import androidx.compose.ui.test.isSelected
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performKeyInput
@@ -161,7 +162,7 @@ class SettingsScreenTest {
     private fun paneTitle() = compose.onNodeWithTag(SettingsTags.PANE_TITLE)
 
     @Test
-    fun `Settings opens on Providers, with the ten sections in order and Providers' settings beside them`() {
+    fun `Settings opens on Providers, with the eleven sections in order and Providers' settings beside them`() {
         show()
         captureScreen("settings_initial")
 
@@ -178,6 +179,7 @@ class SettingsScreenTest {
             "Parental lock",
             "Your devices",
             "Add-ons",
+            "TMDB",
             "Manage on phone or laptop",
             "About",
         ).inOrder()
@@ -584,6 +586,8 @@ class SettingsScreenTest {
         }
         press(KeyEvent.KEYCODE_DPAD_RIGHT)
         highlighted().assertTextContains("Check for updates")
+        compose.onNodeWithText(ATTRIBUTION).assertExists()
+        compose.onNodeWithContentDescription("TMDB").assertExists()
         captureScreen("settings_about")
 
         press(KeyEvent.KEYCODE_DPAD_CENTER)
@@ -599,22 +603,11 @@ class SettingsScreenTest {
     }
 
     @Test
-    fun `the TMDB key is typed on an entry screen, and the row then says a key is saved without showing it`() {
-        graph.settings.setTmdbApiKey("")
+    fun `Display and playback no longer has a TMDB row`() {
         show(SettingsMemory(SettingsSection.Display))
-        press(KeyEvent.KEYCODE_DPAD_RIGHT)
 
-        compose.onNodeWithText("Artwork from TMDB").requestFocus()
-        compose.onNode(hasText("Artwork from TMDB") and hasText("Not set")).assertExists()
-        press(KeyEvent.KEYCODE_DPAD_CENTER)
-        entryKeyboard().run {
-            type(" k168 ")
-            pressAction()
-        }
-
-        assertThat(graph.settings.tmdbApiKey.value).isEqualTo("k168")
-        compose.onNode(hasText("Artwork from TMDB") and hasText("Key saved") and isFocused()).assertExists()
-        compose.onNode(hasText("k168", substring = true)).assertDoesNotExist()
+        // Only the pane: the sections beside it list TMDB's own.
+        compose.onNode(hasText("TMDB", substring = true) and !hasTestTag(SettingsTags.SECTION)).assertDoesNotExist()
     }
 
     @Test
@@ -699,5 +692,9 @@ class SettingsScreenTest {
 
         highlighted().assertTextContains("Recording")
         paneTitle().assertTextContains("Recording")
+    }
+
+    private companion object {
+        const val ATTRIBUTION = "This product uses the TMDB API but is not endorsed or certified by TMDB."
     }
 }

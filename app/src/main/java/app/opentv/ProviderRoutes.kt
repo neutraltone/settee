@@ -15,6 +15,7 @@ import app.opentv.ui.SourcesViewModel
 import app.opentv.ui.Tab
 import app.opentv.ui.hasProvider
 import app.opentv.ui.onboarding.AddSourceScreen
+import app.opentv.ui.onboarding.TmdbStepScreen
 import app.opentv.ui.setup.SetupScreen
 
 /**
@@ -36,7 +37,20 @@ fun NavGraphBuilder.providerRoutes(nav: NavController, sources: SourcesViewModel
                     popUpTo(Routes.ADD_SOURCE) { inclusive = true }
                 }
             },
-            onSetup = { nav.navigate(Routes.SETUP) },
+            // The first provider's Setup is already loading; while there's no TMDB Key, the TMDB
+            // step comes first, in front of it.
+            onSetup = { nav.navigate(if (sources.offersTmdbKey()) Routes.TMDB_STEP else Routes.SETUP) },
+            offerTmdbKey = sources::offersTmdbKey,
+        )
+    }
+
+    composable(Routes.TMDB_STEP) {
+        val setup by sources.setup.collectAsState()
+        // A failed login goes back to the form, which says why, as from Setup itself.
+        LaunchedEffect(setup?.loginFailed) { if (setup?.loginFailed == true) nav.popBackStack() }
+        TmdbStepScreen(
+            graph = sources.graph,
+            onDone = { nav.navigate(Routes.SETUP) { popUpTo(Routes.TMDB_STEP) { inclusive = true } } },
         )
     }
 

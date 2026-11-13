@@ -36,7 +36,6 @@ import app.opentv.core.ErrorWording
 import app.opentv.core.ServerProblem
 import app.opentv.core.ServiceLocator
 import app.opentv.core.ViewerError
-import app.opentv.pairing.PairingFonts
 import app.opentv.pairing.PairingServer
 import app.opentv.pairing.QrCodes
 import app.opentv.ui.design.AerialTv
@@ -47,11 +46,8 @@ import app.opentv.ui.design.SetteeColors
 import app.opentv.ui.design.SetteeShapes
 import app.opentv.ui.design.SetteeType
 import app.opentv.ui.design.Text
+import app.opentv.ui.settings.ScreenKeptOnWhile
 import app.opentv.update.startsFocused
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancel
 
 /**
  * "Set it up from your phone."
@@ -61,22 +57,24 @@ import kotlinx.coroutines.cancel
  * a website.
  */
 @Composable
-fun PhonePairingScreen(onReceived: (PairingServer.State.Received) -> Unit, onCancel: () -> Unit) {
-    val scope = remember { CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate) }
+fun PhonePairingScreen(
+    onReceived: (PairingServer.State.Received) -> Unit,
+    onCancel: () -> Unit,
+    mode: PairingServer.Mode = PairingServer.Mode.Provider(),
+    /** True once the TMDB step is taking the address over, so leaving doesn't close it. */
+    keepListening: () -> Boolean = { false },
+) {
     val context = LocalContext.current
-    val server = remember {
-        val app = context.applicationContext
-        PairingServer(scope, PairingFonts(app), app::getString)
-    }
+    val server = remember(context) { ServiceLocator.get(context).pairingServer }
     val state by server.state.collectAsState()
 
+    ScreenKeptOnWhile(state is PairingServer.State.Listening && !keepListening())
     DisposableEffect(Unit) {
-        server.start()
+        server.start(mode)
         onDispose {
             // Never leave a socket listening on someone's home network after they have
-            // navigated away.
-            server.stop()
-            scope.cancel()
+            // navigated away, unless the TMDB step is carrying on with it.
+            if (!keepListening()) server.stop()
         }
     }
 
@@ -86,6 +84,13 @@ fun PhonePairingScreen(onReceived: (PairingServer.State.Received) -> Unit, onCan
 
     ScreenFrame {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            // Handed on to the TMDB step, it stays on Got it: the server listens again for the key as
+            // the channels come in, which would otherwise show the code again for the moment before
+            // the TMDB step opens.
+            if (keepListening()) {
+                PairingConnecting()
+                return@Box
+            }
             when (val current = state) {
                 is PairingServer.State.Listening -> Listening(current.session, onCancel)
 
@@ -95,7 +100,7 @@ fun PhonePairingScreen(onReceived: (PairingServer.State.Received) -> Unit, onCan
                     Text(stringResource(R.string.pairing_stopped), SetteeType.Section)
                     Spacer(Modifier.height(10.dp))
                     val wording = ServiceLocator.get(LocalContext.current).errorWording
-                    val reason = remember(current) { describe(wording, current) }
+                    val reason = remember(current) { describePairingFailure(wording, current) }
                     ErrorMessage(reason.sentence, reason.detail)
                     Spacer(Modifier.height(24.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -108,7 +113,11 @@ fun PhonePairingScreen(onReceived: (PairingServer.State.Received) -> Unit, onCan
                     }
                 }
 
-                is PairingServer.State.Received -> PairingConnecting()
+                // A TMDB Key only arrives once the TMDB step has taken over, so this is never seen.
+                is PairingServer.State.Received,
+                is PairingServer.State.KeyReceived,
+                PairingServer.State.KeySkipped,
+                -> PairingConnecting()
 
                 PairingServer.State.Idle -> PairingStarting()
             }
@@ -187,13 +196,14 @@ internal fun Listening(session: PairingServer.Session, onCancel: () -> Unit) {
 private const val QR_SIZE_PX = 600
 
 /** What [failed] says to the viewer (docs/ERRORS.md). */
-private fun describe(wording: ErrorWording, failed: PairingServer.State.Failed): ViewerError = when (failed.problem) {
-    ServerProblem.NO_NETWORK -> wording.ofHardware(
-        R.string.pairing_no_network_tv,
-        R.string.pairing_no_network_device,
-    )
-    ServerProblem.COULDNT_START ->
-        wording.ofHardware(R.string.pairing_failed_tv, R.string.pairing_failed_device, failed.code)
-    ServerProblem.TIMED_OUT -> wording.of(R.string.pairing_timed_out)
-    ServerProblem.TOO_MANY_CODES -> wording.of(R.string.pairing_too_many_codes)
-}
+internal fun describePairingFailure(wording: ErrorWording, failed: PairingServer.State.Failed): ViewerError =
+    when (failed.problem) {
+        ServerProblem.NO_NETWORK -> wording.ofHardware(
+            R.string.pairing_no_network_tv,
+            R.string.pairing_no_network_device,
+        )
+        ServerProblem.COULDNT_START ->
+            wording.ofHardware(R.string.pairing_failed_tv, R.string.pairing_failed_device, failed.code)
+        ServerProblem.TIMED_OUT -> wording.of(R.string.pairing_timed_out)
+        ServerProblem.TOO_MANY_CODES -> wording.of(R.string.pairing_too_many_codes)
+    }

@@ -233,7 +233,6 @@
     <string name="rec_switch_keep_watching">البقاء على هذه القناة</string>
     <string name="rec_switch_channel_name">التبديل التلقائي للتسجيل</string>
     <string name="rec_switch_channel_desc">يُنبّه قبل تبديل العرض إلى تسجيل مجدول</string>
-    <string name="settings_tmdb_note">الصق مفتاح TMDB API المجاني الخاص بك لإكمال الملصقات والخلفيات وطاقم التمثيل والملخصات الناقصة في الأفلام والمسلسلات. يبقى هذا المفتاح على هذا الجهاز.</string>
     <string name="settings_tmdb_key_label">مفتاح TMDB API</string>
     <string name="guide_next_prefix">التالي  %1$s  %2$s</string>
     <string name="vod_empty_category_movies">لا توجد أفلام في هذه الفئة.</string>
@@ -303,4 +302,8 @@
     <string name="onboarding_xtream_or_playlist_help">إذا أعطاك مزوّدك رابطًا طويلًا واحدًا بدلًا من بيانات تسجيل الدخول، فأضفه كقائمة تشغيل بدلًا من ذلك.</string>
     <string name="providers_empty">لا يوجد مزوّدو خدمة بعد. أضف الخدمة التي تدفع مقابلها بالفعل للبدء.</string>
     <string name="addons_empty">لا توجد إضافات بعد. الصق رابط الإضافة أعلاه لإضافتها.</string>
+    <string name="error_tmdb_key_rejected">لم يقبل TMDB هذا المفتاح. تأكد من نسخ API Key كاملًا، ثم حاول مرة أخرى.</string>
+    <string name="error_tmdb_unreachable_tv">تعذّر الوصول إلى TMDB. تأكد من اتصال هذا التلفزيون بالإنترنت، ثم حاول مرة أخرى.</string>
+    <string name="error_tmdb_unreachable_device">تعذّر الوصول إلى TMDB. تأكد من اتصال هذا الجهاز بالإنترنت، ثم حاول مرة أخرى.</string>
+    <string name="error_tmdb_trouble">يواجه TMDB مشكلات. المشكلة من جهتهم، فحاول مرة أخرى لاحقًا.</string>
 </resources>

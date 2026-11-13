@@ -524,9 +524,10 @@ class AppSettings private constructor(context: Context, fileName: String = "open
     }
 
     /**
-     * The user's own TMDB API key (v3 auth), stored on-device only exactly like provider
-     * credentials, used to fill in artwork/metadata a provider left blank. Blank = the TMDB
-     * fallback is off. Each user brings their own key, so no single key carries everyone's traffic.
+     * The viewer's own TMDB Key (a v3 API Key or a v4 Read Access Token), stored on-device only
+     * exactly like provider credentials and never synced (ADR 0004), used to fill in what a
+     * provider left blank. Blank = TMDB is off. Each viewer brings their own key, so no single key
+     * carries everyone's traffic. Saved through `TmdbKeys`, which checks it with TMDB first.
      */
     private val _tmdbApiKey = MutableStateFlow(prefs.getString(KEY_TMDB_KEY, "").orEmpty())
     val tmdbApiKey: StateFlow<String> = _tmdbApiKey.asStateFlow()
@@ -535,6 +536,12 @@ class AppSettings private constructor(context: Context, fileName: String = "open
         val trimmed = key.trim()
         prefs.edit { putString(KEY_TMDB_KEY, trimmed) }
         _tmdbApiKey.value = trimmed
+    }
+
+    /** Forgets the TMDB Key, which stops every call to TMDB; what it already filled in stays. */
+    fun removeTmdbApiKey() {
+        prefs.edit { remove(KEY_TMDB_KEY) }
+        _tmdbApiKey.value = ""
     }
 
     // ---- Stremio add-ons ---------------------------------------------------------------------
