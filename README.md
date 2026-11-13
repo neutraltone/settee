@@ -60,8 +60,9 @@ Stick. Touch works too.
 
 ## Screenshots
 
-Taken from Settee's screenshot tests, so the artwork is placeholder colour rather than real
-covers.
+Drawn by Settee's screenshot tests. The films are the Blender Foundation's open films (CC BY) and
+classics whose posters are in the public domain, from Wikimedia Commons. The
+[credits](app/src/test/resources/readme/CREDITS.md) list each one.
 
 | Home | A film |
 | :---: | :---: |

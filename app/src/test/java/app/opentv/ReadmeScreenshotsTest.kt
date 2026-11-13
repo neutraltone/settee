@@ -93,167 +93,128 @@ class ReadmeScreenshotsTest {
 
     private fun art(name: String) = "https://example.com/readme/$name.jpg"
 
-    /** A film whose artwork is `<art>-poster.jpg`, and `<art>-backdrop.jpg` when it has a [backdrop]. */
-    private fun film(
-        id: Long,
-        name: String,
-        art: String,
-        year: Int,
-        minutes: Int,
-        genre: String,
-        plot: String,
-        category: String = "open",
-        backdrop: Boolean = false,
-    ) = Movie(
+    /**
+     * A film whose artwork is `<art>-poster.jpg`, with its year, running time and genres; [withBackdrop]
+     * adds `<art>-backdrop.jpg`.
+     */
+    private fun film(id: Long, name: String, art: String, facts: Facts, plot: String) = Movie(
         id = id,
         sourceId = 1,
         streamId = "$id",
         name = name,
-        categoryId = category,
+        categoryId = facts.category,
         posterUrl = art("$art-poster"),
         rating = null,
-        year = year,
+        year = facts.year,
         plot = plot,
-        durationSeconds = minutes * 60,
+        durationSeconds = facts.minutes * 60,
         containerExtension = "mkv",
         streamUrl = "https://example.com/$id.mkv",
-        backdropUrl = if (backdrop) art("$art-backdrop") else null,
-        genre = genre,
+        genre = facts.genre,
         addedMillis = id,
     )
+
+    private data class Facts(val year: Int, val minutes: Int, val genre: String, val category: String = "open")
+
+    private fun Movie.withBackdrop(art: String) = copy(backdropUrl = art("$art-backdrop"))
 
     private val sintel = film(
         id = 1,
         name = "Sintel",
         art = "sintel",
-        year = 2010,
-        minutes = 15,
-        genre = "Fantasy, Animation",
+        facts = Facts(2010, 15, "Fantasy, Animation"),
         plot = "A young woman crosses a harsh land to find the baby dragon she raised and lost.",
-        backdrop = true,
-    ).copy(cast = "Halina Reijn, Thom Hoffman", director = "Colin Levy")
+    ).withBackdrop("sintel").copy(cast = "Halina Reijn, Thom Hoffman", director = "Colin Levy")
     private val tearsOfSteel = film(
         id = 2,
         name = "Tears of Steel",
         art = "tears-of-steel",
-        year = 2012,
-        minutes = 12,
-        genre = "Science Fiction",
+        facts = Facts(2012, 12, "Science Fiction"),
         plot = "In a future Amsterdam, scientists try to save the world by reliving one painful moment.",
-        backdrop = true,
-    )
+    ).withBackdrop("tears-of-steel")
     private val bigBuckBunny = film(
         id = 3,
         name = "Big Buck Bunny",
         art = "big-buck-bunny",
-        year = 2008,
-        minutes = 10,
-        genre = "Comedy, Animation",
+        facts = Facts(2008, 10, "Comedy, Animation"),
         plot = "A gentle giant of a rabbit has had enough of the three bullies who wreck his day.",
-        backdrop = true,
-    )
+    ).withBackdrop("big-buck-bunny")
     private val elephantsDream = film(
         id = 4,
         name = "Elephants Dream",
         art = "elephants-dream",
-        year = 2006,
-        minutes = 11,
-        genre = "Science Fiction, Animation",
+        facts = Facts(2006, 11, "Science Fiction, Animation"),
         plot = "Two men find their way through a vast machine that only one of them believes in.",
-        backdrop = true,
-    )
+    ).withBackdrop("elephants-dream")
     private val cosmosLaundromat = film(
         id = 5,
         name = "Cosmos Laundromat",
         art = "cosmos-laundromat",
-        year = 2015,
-        minutes = 12,
-        genre = "Comedy, Animation",
+        facts = Facts(2015, 12, "Comedy, Animation"),
         plot = "A sheep with nothing left to live for is offered every life he could want.",
-        )
-        private val spring = film(
-        6, "Spring", 2019, 8, "Fantasy, Animation",
-        "A shepherd girl and her dog face the ancient spirits that keep the seasons turning.",
+    )
+    private val spring = film(
+        id = 6,
+        name = "Spring",
+        art = "spring",
+        facts = Facts(2019, 8, "Fantasy, Animation"),
+        plot = "A shepherd girl and her dog face the ancient spirits that keep the seasons turning.",
     )
     private val theGeneral = film(
         id = 7,
         name = "The General",
         art = "the-general",
-        year = 1926,
-        minutes = 78,
-        genre = "Comedy, Action",
+        facts = Facts(1926, 78, "Comedy, Action", "silent"),
         plot = "A train driver chases his stolen locomotive, and the woman he loves, behind enemy lines.",
-        category = "silent",
     )
     private val sherlockJr = film(
         id = 8,
         name = "Sherlock Jr.",
         art = "sherlock-jr",
-        year = 1924,
-        minutes = 45,
-        genre = "Comedy",
+        facts = Facts(1924, 45, "Comedy", "silent"),
         plot = "A projectionist who dreams of being a detective walks into the film he's showing.",
-        category = "silent",
     )
     private val theKid = film(
         id = 9,
         name = "The Kid",
         art = "the-kid",
-        year = 1921,
-        minutes = 68,
-        genre = "Comedy, Drama",
+        facts = Facts(1921, 68, "Comedy, Drama", "silent"),
         plot = "A tramp finds an abandoned baby and brings him up as his own.",
-        category = "silent",
     )
     private val theGoldRush = film(
         id = 10,
         name = "The Gold Rush",
         art = "the-gold-rush",
-        year = 1925,
-        minutes = 95,
-        genre = "Comedy, Adventure",
+        facts = Facts(1925, 95, "Comedy, Adventure", "silent"),
         plot = "A lone prospector heads for the Klondike and finds snow, hunger and love.",
-        category = "silent",
     )
     private val safetyLast = film(
         id = 11,
         name = "Safety Last!",
         art = "safety-last",
-        year = 1923,
-        minutes = 70,
-        genre = "Comedy",
+        facts = Facts(1923, 70, "Comedy", "silent"),
         plot = "A shop clerk climbs the outside of a department store to impress his girl.",
-        category = "silent",
     )
     private val caligari = film(
         id = 12,
         name = "The Cabinet of Dr. Caligari",
         art = "caligari",
-        year = 1920,
-        minutes = 77,
-        genre = "Horror",
+        facts = Facts(1920, 77, "Horror", "silent"),
         plot = "A showman and his sleepwalker arrive in a mountain town, and the murders begin.",
-        category = "silent",
     )
     private val detour = film(
         id = 13,
         name = "Detour",
         art = "detour",
-        year = 1945,
-        minutes = 68,
-        genre = "Crime, Drama",
+        facts = Facts(1945, 68, "Crime, Drama", "classic"),
         plot = "A pianist hitchhiking across America picks up a lift, and a run of very bad luck.",
-        category = "classic",
     )
     private val plan9 = film(
         id = 14,
         name = "Plan 9 from Outer Space",
         art = "plan-9",
-        year = 1957,
-        minutes = 79,
-        genre = "Science Fiction",
+        facts = Facts(1957, 79, "Science Fiction", "classic"),
         plot = "Visitors from space raise the dead to stop humanity building a doomsday weapon.",
-        category = "classic",
     )
 
     private val openFilms = listOf(sintel, tearsOfSteel, bigBuckBunny, elephantsDream, cosmosLaundromat, spring)
