@@ -312,4 +312,14 @@
     <string name="error_tmdb_unreachable_tv">TMDB\'ye ulaşılamıyor. Bu televizyonun çevrimiçi olduğundan emin olun, sonra tekrar deneyin.</string>
     <string name="error_tmdb_unreachable_device">TMDB\'ye ulaşılamıyor. Bu cihazın çevrimiçi olduğundan emin olun, sonra tekrar deneyin.</string>
     <string name="error_tmdb_trouble">TMDB sorun yaşıyor. Sorun onlarda, bu yüzden daha sonra tekrar deneyin.</string>
+    <string name="error_opensubtitles_none">OpenSubtitles\'ta bunun için henüz altyazı yok.</string>
+    <string name="error_opensubtitles_unreachable_tv">OpenSubtitles\'a ulaşılamıyor. Bu televizyonun çevrimiçi olduğunu kontrol edip tekrar deneyin.</string>
+    <string name="error_opensubtitles_unreachable_device">OpenSubtitles\'a ulaşılamıyor. Bu cihazın çevrimiçi olduğunu kontrol edip tekrar deneyin.</string>
+    <string name="error_opensubtitles_trouble">OpenSubtitles\'ta sorun var. Sorun onlarda, bu yüzden daha sonra tekrar deneyin.</string>
+    <string name="error_opensubtitles_limit_anonymous">Bugünkü 5 ücretsiz altyazı kullanıldı. Daha fazlası için Ayarlar\'dan OpenSubtitles\'a giriş yapın.</string>
+    <string name="error_opensubtitles_limit_account">Bugünkü OpenSubtitles indirmeleri kullanıldı. Yenileri %1$s itibarıyla.</string>
+    <string name="error_opensubtitles_limit_account_unknown">Bugünkü OpenSubtitles indirmeleri kullanıldı. Yenileri yarın.</string>
+    <string name="error_opensubtitles_sign_in">OpenSubtitles bu kullanıcı adını veya şifreyi kabul etmedi. Kontrol edip tekrar deneyin.</string>
+    <string name="error_opensubtitles_token_tv">OpenSubtitles bu televizyonun oturumunu kapattı. Ayarlar\'dan tekrar giriş yapın.</string>
+    <string name="error_opensubtitles_token_device">OpenSubtitles bu cihazın oturumunu kapattı. Ayarlar\'dan tekrar giriş yapın.</string>
 </resources>

@@ -10,6 +10,7 @@ import android.content.Context
 import android.view.View
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
@@ -32,6 +33,7 @@ import app.opentv.ui.settings.OPENSUBTITLES_SIGN_IN_HERE_TAG
 import app.opentv.ui.settings.SettingsMemory
 import app.opentv.ui.settings.SettingsScreen
 import app.opentv.ui.settings.SettingsSection
+import app.opentv.ui.settings.SettingsTags
 import com.google.common.truth.Truth.assertThat
 import org.junit.After
 import org.junit.Rule
@@ -70,10 +72,11 @@ class OpenSubtitlesSettingsTest {
     @After
     fun close() = graph.database.close()
 
-    private fun show(with: OpenSubtitles? = openSubtitles) = compose.setTvContent {
-        view = LocalView.current
-        SettingsScreen(memory = SettingsMemory(SettingsSection.OpenSubtitles), onBack = {}, openSubtitles = with)
-    }
+    private fun show(with: OpenSubtitles? = openSubtitles, section: SettingsSection = SettingsSection.OpenSubtitles) =
+        compose.setTvContent {
+            view = LocalView.current
+            SettingsScreen(memory = SettingsMemory(section), onBack = {}, openSubtitles = with)
+        }
 
     private fun entryKeyboard(): DeviceKeyboard {
         compose.waitForIdle()
@@ -158,9 +161,11 @@ class OpenSubtitlesSettingsTest {
 
     @Test
     fun `a build without Settee's key has no OpenSubtitles section`() {
-        show(with = null)
+        // On Providers: without a key nothing leads to the OpenSubtitles section.
+        show(with = null, section = SettingsSection.Providers)
 
-        compose.onNodeWithText("Subtitles for films and episodes that have none").assertDoesNotExist()
+        compose.onNode(hasTestTag(SettingsTags.SECTION) and hasText("OpenSubtitles")).assertDoesNotExist()
+        compose.onNode(hasTestTag(SettingsTags.SECTION) and hasText("TMDB")).assertExists()
         compose.onNodeWithTag(OPENSUBTITLES_PANE_TAG).assertDoesNotExist()
     }
 

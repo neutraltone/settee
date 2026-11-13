@@ -312,4 +312,14 @@
     <string name="error_tmdb_unreachable_tv">Impossibile raggiungere TMDB. Controlla che questa TV sia online, poi riprova.</string>
     <string name="error_tmdb_unreachable_device">Impossibile raggiungere TMDB. Controlla che questo dispositivo sia online, poi riprova.</string>
     <string name="error_tmdb_trouble">TMDB ha dei problemi. Sono dalla loro parte, quindi riprova più tardi.</string>
+    <string name="error_opensubtitles_none">OpenSubtitles non ha ancora sottotitoli per questo.</string>
+    <string name="error_opensubtitles_unreachable_tv">Impossibile raggiungere OpenSubtitles. Controlla che questa TV sia online, poi riprova.</string>
+    <string name="error_opensubtitles_unreachable_device">Impossibile raggiungere OpenSubtitles. Controlla che questo dispositivo sia online, poi riprova.</string>
+    <string name="error_opensubtitles_trouble">OpenSubtitles ha dei problemi. Dipende da loro, quindi riprova più tardi.</string>
+    <string name="error_opensubtitles_limit_anonymous">Hai usato i 5 sottotitoli gratuiti di oggi. Accedi a OpenSubtitles nelle Impostazioni per averne altri.</string>
+    <string name="error_opensubtitles_limit_account">Hai usato i download di OpenSubtitles di oggi. Altri dalle %1$s.</string>
+    <string name="error_opensubtitles_limit_account_unknown">Hai usato i download di OpenSubtitles di oggi. Altri domani.</string>
+    <string name="error_opensubtitles_sign_in">OpenSubtitles non ha accettato quel nome utente o quella password. Controllali e riprova.</string>
+    <string name="error_opensubtitles_token_tv">OpenSubtitles ha disconnesso questa TV. Accedi di nuovo nelle Impostazioni.</string>
+    <string name="error_opensubtitles_token_device">OpenSubtitles ha disconnesso questo dispositivo. Accedi di nuovo nelle Impostazioni.</string>
 </resources>

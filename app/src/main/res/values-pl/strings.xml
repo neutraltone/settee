@@ -312,4 +312,14 @@
     <string name="error_tmdb_unreachable_tv">Nie można połączyć się z TMDB. Sprawdź, czy ten telewizor jest online, i spróbuj ponownie.</string>
     <string name="error_tmdb_unreachable_device">Nie można połączyć się z TMDB. Sprawdź, czy to urządzenie jest online, i spróbuj ponownie.</string>
     <string name="error_tmdb_trouble">TMDB ma problemy. Leżą po ich stronie, więc spróbuj ponownie później.</string>
+    <string name="error_opensubtitles_none">OpenSubtitles nie ma jeszcze napisów do tego.</string>
+    <string name="error_opensubtitles_unreachable_tv">Nie można połączyć się z OpenSubtitles. Sprawdź, czy ten telewizor jest online, i spróbuj ponownie.</string>
+    <string name="error_opensubtitles_unreachable_device">Nie można połączyć się z OpenSubtitles. Sprawdź, czy to urządzenie jest online, i spróbuj ponownie.</string>
+    <string name="error_opensubtitles_trouble">OpenSubtitles ma problemy. Leżą one po ich stronie, więc spróbuj później.</string>
+    <string name="error_opensubtitles_limit_anonymous">Dzisiejsze 5 darmowych napisów zostało wykorzystanych. Aby pobrać więcej, zaloguj się do OpenSubtitles w Ustawieniach.</string>
+    <string name="error_opensubtitles_limit_account">Dzisiejsze pobrania z OpenSubtitles zostały wykorzystane. Kolejne od %1$s.</string>
+    <string name="error_opensubtitles_limit_account_unknown">Dzisiejsze pobrania z OpenSubtitles zostały wykorzystane. Kolejne jutro.</string>
+    <string name="error_opensubtitles_sign_in">OpenSubtitles nie przyjął tej nazwy użytkownika lub hasła. Sprawdź je i spróbuj ponownie.</string>
+    <string name="error_opensubtitles_token_tv">OpenSubtitles wylogował ten telewizor. Zaloguj się ponownie w Ustawieniach.</string>
+    <string name="error_opensubtitles_token_device">OpenSubtitles wylogował to urządzenie. Zaloguj się ponownie w Ustawieniach.</string>
 </resources>

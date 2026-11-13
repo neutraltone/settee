@@ -312,4 +312,14 @@
     <string name="error_tmdb_unreachable_tv">دسترسی به TMDB ممکن نیست. بررسی کنید این تلویزیون آنلاین باشد، سپس دوباره امتحان کنید.</string>
     <string name="error_tmdb_unreachable_device">دسترسی به TMDB ممکن نیست. بررسی کنید این دستگاه آنلاین باشد، سپس دوباره امتحان کنید.</string>
     <string name="error_tmdb_trouble">TMDB با مشکل روبه‌رو است. مشکل از طرف آن‌هاست، پس بعداً دوباره امتحان کنید.</string>
+    <string name="error_opensubtitles_none">OpenSubtitles هنوز زیرنویسی برای این ندارد.</string>
+    <string name="error_opensubtitles_unreachable_tv">دسترسی به OpenSubtitles ممکن نیست. بررسی کنید این تلویزیون به اینترنت وصل باشد و دوباره امتحان کنید.</string>
+    <string name="error_opensubtitles_unreachable_device">دسترسی به OpenSubtitles ممکن نیست. بررسی کنید این دستگاه به اینترنت وصل باشد و دوباره امتحان کنید.</string>
+    <string name="error_opensubtitles_trouble">OpenSubtitles دچار مشکل شده است. مشکل از سمت آن‌هاست، پس بعداً دوباره امتحان کنید.</string>
+    <string name="error_opensubtitles_limit_anonymous">۵ زیرنویس رایگان امروز تمام شد. برای دریافت بیشتر، در تنظیمات وارد OpenSubtitles شوید.</string>
+    <string name="error_opensubtitles_limit_account">دانلودهای امروز OpenSubtitles تمام شد. دانلود بیشتر از %1$s.</string>
+    <string name="error_opensubtitles_limit_account_unknown">دانلودهای امروز OpenSubtitles تمام شد. دانلود بیشتر فردا.</string>
+    <string name="error_opensubtitles_sign_in">OpenSubtitles این نام کاربری یا گذرواژه را نپذیرفت. آن‌ها را بررسی کنید و دوباره امتحان کنید.</string>
+    <string name="error_opensubtitles_token_tv">OpenSubtitles این تلویزیون را از حساب خارج کرد. دوباره در تنظیمات وارد شوید.</string>
+    <string name="error_opensubtitles_token_device">OpenSubtitles این دستگاه را از حساب خارج کرد. دوباره در تنظیمات وارد شوید.</string>
 </resources>

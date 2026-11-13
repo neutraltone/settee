@@ -312,4 +312,14 @@
     <string name="error_tmdb_unreachable_tv">Det går inte att nå TMDB. Kontrollera att den här tv:n är online och försök igen.</string>
     <string name="error_tmdb_unreachable_device">Det går inte att nå TMDB. Kontrollera att den här enheten är online och försök igen.</string>
     <string name="error_tmdb_trouble">TMDB har problem. Det är hos dem, så försök igen senare.</string>
+    <string name="error_opensubtitles_none">OpenSubtitles har inga undertexter till det här än.</string>
+    <string name="error_opensubtitles_unreachable_tv">Når inte OpenSubtitles. Kontrollera att den här tv:n är online och försök igen.</string>
+    <string name="error_opensubtitles_unreachable_device">Når inte OpenSubtitles. Kontrollera att den här enheten är online och försök igen.</string>
+    <string name="error_opensubtitles_trouble">OpenSubtitles har problem. Det är på deras sida, så försök igen senare.</string>
+    <string name="error_opensubtitles_limit_anonymous">Dagens 5 gratis undertexter är använda. Logga in på OpenSubtitles i Inställningar för fler.</string>
+    <string name="error_opensubtitles_limit_account">Dagens nedladdningar från OpenSubtitles är använda. Fler från %1$s.</string>
+    <string name="error_opensubtitles_limit_account_unknown">Dagens nedladdningar från OpenSubtitles är använda. Fler i morgon.</string>
+    <string name="error_opensubtitles_sign_in">OpenSubtitles godkände inte det användarnamnet eller lösenordet. Kontrollera dem och försök igen.</string>
+    <string name="error_opensubtitles_token_tv">OpenSubtitles har loggat ut den här tv:n. Logga in igen i Inställningar.</string>
+    <string name="error_opensubtitles_token_device">OpenSubtitles har loggat ut den här enheten. Logga in igen i Inställningar.</string>
 </resources>

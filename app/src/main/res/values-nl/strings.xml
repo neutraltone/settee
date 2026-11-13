@@ -312,4 +312,14 @@
     <string name="error_tmdb_unreachable_tv">Kan TMDB niet bereiken. Controleer of deze tv online is en probeer het opnieuw.</string>
     <string name="error_tmdb_unreachable_device">Kan TMDB niet bereiken. Controleer of dit apparaat online is en probeer het opnieuw.</string>
     <string name="error_tmdb_trouble">TMDB heeft problemen. Dat ligt bij hen, dus probeer het later opnieuw.</string>
+    <string name="error_opensubtitles_none">OpenSubtitles heeft hier nog geen ondertitels voor.</string>
+    <string name="error_opensubtitles_unreachable_tv">OpenSubtitles is niet bereikbaar. Controleer of deze tv online is en probeer het opnieuw.</string>
+    <string name="error_opensubtitles_unreachable_device">OpenSubtitles is niet bereikbaar. Controleer of dit apparaat online is en probeer het opnieuw.</string>
+    <string name="error_opensubtitles_trouble">OpenSubtitles heeft problemen. Dat ligt aan hun kant, dus probeer het later opnieuw.</string>
+    <string name="error_opensubtitles_limit_anonymous">De 5 gratis ondertitels van vandaag zijn op. Log in bij OpenSubtitles in Instellingen voor meer.</string>
+    <string name="error_opensubtitles_limit_account">De downloads van OpenSubtitles voor vandaag zijn op. Meer vanaf %1$s.</string>
+    <string name="error_opensubtitles_limit_account_unknown">De downloads van OpenSubtitles voor vandaag zijn op. Morgen weer meer.</string>
+    <string name="error_opensubtitles_sign_in">OpenSubtitles accepteerde die gebruikersnaam of dat wachtwoord niet. Controleer ze en probeer het opnieuw.</string>
+    <string name="error_opensubtitles_token_tv">OpenSubtitles heeft deze tv afgemeld. Log opnieuw in via Instellingen.</string>
+    <string name="error_opensubtitles_token_device">OpenSubtitles heeft dit apparaat afgemeld. Log opnieuw in via Instellingen.</string>
 </resources>

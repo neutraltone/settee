@@ -312,4 +312,14 @@
     <string name="error_tmdb_unreachable_tv">Impossible de joindre TMDB. Vérifiez que ce téléviseur est connecté, puis réessayez.</string>
     <string name="error_tmdb_unreachable_device">Impossible de joindre TMDB. Vérifiez que cet appareil est connecté, puis réessayez.</string>
     <string name="error_tmdb_trouble">TMDB rencontre des problèmes. Cela vient de chez eux, réessayez plus tard.</string>
+    <string name="error_opensubtitles_none">OpenSubtitles n\'a pas encore de sous-titres pour ceci.</string>
+    <string name="error_opensubtitles_unreachable_tv">Impossible de joindre OpenSubtitles. Vérifiez que ce téléviseur est connecté, puis réessayez.</string>
+    <string name="error_opensubtitles_unreachable_device">Impossible de joindre OpenSubtitles. Vérifiez que cet appareil est connecté, puis réessayez.</string>
+    <string name="error_opensubtitles_trouble">OpenSubtitles rencontre des problèmes. Ça vient de chez eux, réessayez plus tard.</string>
+    <string name="error_opensubtitles_limit_anonymous">Les 5 sous-titres gratuits du jour sont utilisés. Connectez-vous à OpenSubtitles dans les Réglages pour en avoir plus.</string>
+    <string name="error_opensubtitles_limit_account">Les téléchargements OpenSubtitles du jour sont utilisés. D\'autres à partir de %1$s.</string>
+    <string name="error_opensubtitles_limit_account_unknown">Les téléchargements OpenSubtitles du jour sont utilisés. D\'autres demain.</string>
+    <string name="error_opensubtitles_sign_in">OpenSubtitles n\'a pas accepté ce nom d\'utilisateur ou ce mot de passe. Vérifiez-les et réessayez.</string>
+    <string name="error_opensubtitles_token_tv">OpenSubtitles a déconnecté ce téléviseur. Reconnectez-vous dans les Réglages.</string>
+    <string name="error_opensubtitles_token_device">OpenSubtitles a déconnecté cet appareil. Reconnectez-vous dans les Réglages.</string>
 </resources>

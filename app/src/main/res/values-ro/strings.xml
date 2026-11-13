@@ -312,4 +312,14 @@
     <string name="error_tmdb_unreachable_tv">Nu se poate accesa TMDB. Verifică dacă acest televizor este online, apoi încearcă din nou.</string>
     <string name="error_tmdb_unreachable_device">Nu se poate accesa TMDB. Verifică dacă acest dispozitiv este online, apoi încearcă din nou.</string>
     <string name="error_tmdb_trouble">TMDB are probleme. Sunt de partea lor, așa că încearcă din nou mai târziu.</string>
+    <string name="error_opensubtitles_none">OpenSubtitles nu are încă subtitrări pentru asta.</string>
+    <string name="error_opensubtitles_unreachable_tv">OpenSubtitles nu poate fi accesat. Verifică dacă acest televizor este online, apoi încearcă din nou.</string>
+    <string name="error_opensubtitles_unreachable_device">OpenSubtitles nu poate fi accesat. Verifică dacă acest dispozitiv este online, apoi încearcă din nou.</string>
+    <string name="error_opensubtitles_trouble">OpenSubtitles are probleme. Sunt de partea lor, așa că încearcă mai târziu.</string>
+    <string name="error_opensubtitles_limit_anonymous">Cele 5 subtitrări gratuite de azi s-au terminat. Conectează-te la OpenSubtitles din Setări pentru mai multe.</string>
+    <string name="error_opensubtitles_limit_account">Descărcările de azi de pe OpenSubtitles s-au terminat. Altele de la %1$s.</string>
+    <string name="error_opensubtitles_limit_account_unknown">Descărcările de azi de pe OpenSubtitles s-au terminat. Altele mâine.</string>
+    <string name="error_opensubtitles_sign_in">OpenSubtitles nu a acceptat acest nume de utilizator sau această parolă. Verifică-le și încearcă din nou.</string>
+    <string name="error_opensubtitles_token_tv">OpenSubtitles a deconectat acest televizor. Conectează-te din nou din Setări.</string>
+    <string name="error_opensubtitles_token_device">OpenSubtitles a deconectat acest dispozitiv. Conectează-te din nou din Setări.</string>
 </resources>

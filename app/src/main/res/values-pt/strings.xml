@@ -312,4 +312,14 @@
     <string name="error_tmdb_unreachable_tv">Não é possível ligar ao TMDB. Confirme que esta TV está online e tente novamente.</string>
     <string name="error_tmdb_unreachable_device">Não é possível ligar ao TMDB. Confirme que este dispositivo está online e tente novamente.</string>
     <string name="error_tmdb_trouble">O TMDB está com problemas. São do lado deles, por isso tente novamente mais tarde.</string>
+    <string name="error_opensubtitles_none">O OpenSubtitles ainda não tem legendas para isto.</string>
+    <string name="error_opensubtitles_unreachable_tv">Não foi possível acessar o OpenSubtitles. Verifique se esta TV está online e tente novamente.</string>
+    <string name="error_opensubtitles_unreachable_device">Não foi possível acessar o OpenSubtitles. Verifique se este dispositivo está online e tente novamente.</string>
+    <string name="error_opensubtitles_trouble">O OpenSubtitles está com problemas. É do lado deles, então tente mais tarde.</string>
+    <string name="error_opensubtitles_limit_anonymous">As 5 legendas grátis de hoje acabaram. Entre no OpenSubtitles nas Configurações para ter mais.</string>
+    <string name="error_opensubtitles_limit_account">Os downloads do OpenSubtitles de hoje acabaram. Mais a partir das %1$s.</string>
+    <string name="error_opensubtitles_limit_account_unknown">Os downloads do OpenSubtitles de hoje acabaram. Mais amanhã.</string>
+    <string name="error_opensubtitles_sign_in">O OpenSubtitles não aceitou esse nome de usuário ou senha. Verifique e tente novamente.</string>
+    <string name="error_opensubtitles_token_tv">O OpenSubtitles desconectou esta TV. Entre novamente nas Configurações.</string>
+    <string name="error_opensubtitles_token_device">O OpenSubtitles desconectou este dispositivo. Entre novamente nas Configurações.</string>
 </resources>

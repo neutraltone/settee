@@ -312,4 +312,14 @@
     <string name="error_tmdb_unreachable_tv">Δεν είναι δυνατή η σύνδεση με το TMDB. Ελέγξτε ότι αυτή η τηλεόραση είναι συνδεδεμένη και δοκιμάστε ξανά.</string>
     <string name="error_tmdb_unreachable_device">Δεν είναι δυνατή η σύνδεση με το TMDB. Ελέγξτε ότι αυτή η συσκευή είναι συνδεδεμένη και δοκιμάστε ξανά.</string>
     <string name="error_tmdb_trouble">Το TMDB αντιμετωπίζει προβλήματα. Είναι από τη δική τους πλευρά, οπότε δοκιμάστε ξανά αργότερα.</string>
+    <string name="error_opensubtitles_none">Το OpenSubtitles δεν έχει ακόμη υπότιτλους για αυτό.</string>
+    <string name="error_opensubtitles_unreachable_tv">Δεν είναι δυνατή η σύνδεση με το OpenSubtitles. Ελέγξτε ότι αυτή η τηλεόραση είναι συνδεδεμένη και δοκιμάστε ξανά.</string>
+    <string name="error_opensubtitles_unreachable_device">Δεν είναι δυνατή η σύνδεση με το OpenSubtitles. Ελέγξτε ότι αυτή η συσκευή είναι συνδεδεμένη και δοκιμάστε ξανά.</string>
+    <string name="error_opensubtitles_trouble">Το OpenSubtitles αντιμετωπίζει προβλήματα από τη δική του πλευρά, οπότε δοκιμάστε αργότερα.</string>
+    <string name="error_opensubtitles_limit_anonymous">Οι 5 δωρεάν υπότιτλοι της ημέρας εξαντλήθηκαν. Συνδεθείτε στο OpenSubtitles από τις Ρυθμίσεις για περισσότερους.</string>
+    <string name="error_opensubtitles_limit_account">Οι σημερινές λήψεις από το OpenSubtitles εξαντλήθηκαν. Περισσότερες από τις %1$s.</string>
+    <string name="error_opensubtitles_limit_account_unknown">Οι σημερινές λήψεις από το OpenSubtitles εξαντλήθηκαν. Περισσότερες αύριο.</string>
+    <string name="error_opensubtitles_sign_in">Το OpenSubtitles δεν δέχτηκε αυτό το όνομα χρήστη ή τον κωδικό. Ελέγξτε τα και δοκιμάστε ξανά.</string>
+    <string name="error_opensubtitles_token_tv">Το OpenSubtitles αποσύνδεσε αυτή την τηλεόραση. Συνδεθείτε ξανά από τις Ρυθμίσεις.</string>
+    <string name="error_opensubtitles_token_device">Το OpenSubtitles αποσύνδεσε αυτή τη συσκευή. Συνδεθείτε ξανά από τις Ρυθμίσεις.</string>
 </resources>

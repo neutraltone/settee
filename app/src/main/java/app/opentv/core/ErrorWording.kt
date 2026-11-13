@@ -17,6 +17,8 @@ import java.net.ConnectException
 import java.net.HttpURLConnection
 import java.net.NoRouteToHostException
 import java.net.UnknownHostException
+import java.time.format.DateTimeFormatter
+import java.time.format.FormatStyle
 import java.util.Locale
 
 /**
@@ -36,7 +38,14 @@ interface HttpStatus {
 class ErrorWording(private val context: Context, private val onTelevision: Boolean) {
     // Looked up each time, as RefreshMessages does: changing language only recreates the activity.
     private val resources get() = LocaleUtils.wrap(context).resources
-    private val timeFormat get() = android.text.format.DateFormat.getTimeFormat(LocaleUtils.wrap(context))
+
+    // The app's own language decides 12 or 24 hours, as it does the words around it. Android's DateFormat
+    // goes by the device's setting instead, which would say "12:00 AM" in a British sentence.
+    private val timeFormat get() = java.time.format.DateTimeFormatter.ofLocalizedTime(
+        java.time.format.FormatStyle.SHORT,
+    )
+        .withLocale(resources.configuration.locales[0])
+        .withZone(java.time.ZoneId.systemDefault())
 
     /**
      * A provider's [error] in words, or [fallback] when its type says nothing a viewer could act on.
@@ -118,7 +127,7 @@ class ErrorWording(private val context: Context, private val onTelevision: Boole
                 resetsAt != null -> resources.getString(
                     R.string.error_opensubtitles_limit_account,
                     // In the app's language, as the sentence around it is, not the device's.
-                    timeFormat.format(java.util.Date(resetsAt)),
+                    timeFormat.format(java.time.Instant.ofEpochMilli(resetsAt)),
                 )
                 else -> resources.getString(R.string.error_opensubtitles_limit_account_unknown)
             }

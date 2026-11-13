@@ -312,4 +312,14 @@
     <string name="error_tmdb_unreachable_tv">تعذّر الوصول إلى TMDB. تأكد من اتصال هذا التلفزيون بالإنترنت، ثم حاول مرة أخرى.</string>
     <string name="error_tmdb_unreachable_device">تعذّر الوصول إلى TMDB. تأكد من اتصال هذا الجهاز بالإنترنت، ثم حاول مرة أخرى.</string>
     <string name="error_tmdb_trouble">يواجه TMDB مشكلات. المشكلة من جهتهم، فحاول مرة أخرى لاحقًا.</string>
+    <string name="error_opensubtitles_none">لا تتوفر على OpenSubtitles ترجمات لهذا بعد.</string>
+    <string name="error_opensubtitles_unreachable_tv">تعذّر الوصول إلى OpenSubtitles. تأكّد من اتصال هذا التلفاز بالإنترنت، ثم حاول مرة أخرى.</string>
+    <string name="error_opensubtitles_unreachable_device">تعذّر الوصول إلى OpenSubtitles. تأكّد من اتصال هذا الجهاز بالإنترنت، ثم حاول مرة أخرى.</string>
+    <string name="error_opensubtitles_trouble">يواجه OpenSubtitles مشكلات من جهته، لذا حاول لاحقًا.</string>
+    <string name="error_opensubtitles_limit_anonymous">استُخدمت الترجمات الخمس المجانية لهذا اليوم. سجّل الدخول إلى OpenSubtitles في الإعدادات للحصول على المزيد.</string>
+    <string name="error_opensubtitles_limit_account">استُخدمت تنزيلات OpenSubtitles لهذا اليوم. يتوفر المزيد بدءًا من %1$s.</string>
+    <string name="error_opensubtitles_limit_account_unknown">استُخدمت تنزيلات OpenSubtitles لهذا اليوم. يتوفر المزيد غدًا.</string>
+    <string name="error_opensubtitles_sign_in">لم يقبل OpenSubtitles اسم المستخدم أو كلمة المرور. تحقّق منهما وحاول مرة أخرى.</string>
+    <string name="error_opensubtitles_token_tv">سجّل OpenSubtitles خروج هذا التلفاز. سجّل الدخول مرة أخرى في الإعدادات.</string>
+    <string name="error_opensubtitles_token_device">سجّل OpenSubtitles خروج هذا الجهاز. سجّل الدخول مرة أخرى في الإعدادات.</string>
 </resources>

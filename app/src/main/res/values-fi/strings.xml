@@ -312,4 +312,14 @@
     <string name="error_tmdb_unreachable_tv">TMDB:hen ei saada yhteyttä. Tarkista, että tämä televisio on verkossa, ja yritä uudelleen.</string>
     <string name="error_tmdb_unreachable_device">TMDB:hen ei saada yhteyttä. Tarkista, että tämä laite on verkossa, ja yritä uudelleen.</string>
     <string name="error_tmdb_trouble">TMDB:llä on ongelmia. Vika on heidän päässään, joten yritä myöhemmin uudelleen.</string>
+    <string name="error_opensubtitles_none">OpenSubtitlesissa ei ole vielä tekstityksiä tähän.</string>
+    <string name="error_opensubtitles_unreachable_tv">OpenSubtitlesiin ei saada yhteyttä. Tarkista, että tämä televisio on verkossa, ja yritä uudelleen.</string>
+    <string name="error_opensubtitles_unreachable_device">OpenSubtitlesiin ei saada yhteyttä. Tarkista, että tämä laite on verkossa, ja yritä uudelleen.</string>
+    <string name="error_opensubtitles_trouble">OpenSubtitlesissa on ongelmia. Vika on heidän päässään, joten yritä myöhemmin uudelleen.</string>
+    <string name="error_opensubtitles_limit_anonymous">Päivän 5 ilmaista tekstitystä on käytetty. Kirjaudu OpenSubtitlesiin asetuksissa saadaksesi lisää.</string>
+    <string name="error_opensubtitles_limit_account">Päivän OpenSubtitles-lataukset on käytetty. Lisää klo %1$s alkaen.</string>
+    <string name="error_opensubtitles_limit_account_unknown">Päivän OpenSubtitles-lataukset on käytetty. Lisää huomenna.</string>
+    <string name="error_opensubtitles_sign_in">OpenSubtitles ei hyväksynyt käyttäjätunnusta tai salasanaa. Tarkista ne ja yritä uudelleen.</string>
+    <string name="error_opensubtitles_token_tv">OpenSubtitles kirjasi tämän television ulos. Kirjaudu uudelleen asetuksissa.</string>
+    <string name="error_opensubtitles_token_device">OpenSubtitles kirjasi tämän laitteen ulos. Kirjaudu uudelleen asetuksissa.</string>
 </resources>

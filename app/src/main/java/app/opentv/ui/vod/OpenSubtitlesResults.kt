@@ -7,11 +7,13 @@ package app.opentv.ui.vod
 
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.platform.LocalContext
@@ -50,6 +52,14 @@ internal fun OpenSubtitlesResultsPanel(
     var fetching by remember { mutableStateOf(false) }
     val kindLabels = kindLabels()
     val found = (results as? VodSubtitles.Results.Found)?.results.orEmpty()
+    // The results come after the panel opens, with nothing yet to take the Highlight: the first one
+    // takes it as they arrive, a frame later, once its row is there to hold it.
+    LaunchedEffect(found.isNotEmpty()) {
+        if (found.isNotEmpty()) {
+            withFrameNanos {}
+            runCatching { firstFocus.requestFocus() }
+        }
+    }
     val choices = found.map { result ->
         PlayerChoice(
             languageName(result.language) ?: result.language,

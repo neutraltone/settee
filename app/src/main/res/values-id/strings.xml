@@ -312,4 +312,14 @@
     <string name="error_tmdb_unreachable_tv">Tidak dapat menjangkau TMDB. Pastikan TV ini online, lalu coba lagi.</string>
     <string name="error_tmdb_unreachable_device">Tidak dapat menjangkau TMDB. Pastikan perangkat ini online, lalu coba lagi.</string>
     <string name="error_tmdb_trouble">TMDB sedang bermasalah. Itu di pihak mereka, jadi coba lagi nanti.</string>
+    <string name="error_opensubtitles_none">OpenSubtitles belum punya subtitel untuk ini.</string>
+    <string name="error_opensubtitles_unreachable_tv">Tidak dapat menjangkau OpenSubtitles. Pastikan TV ini online, lalu coba lagi.</string>
+    <string name="error_opensubtitles_unreachable_device">Tidak dapat menjangkau OpenSubtitles. Pastikan perangkat ini online, lalu coba lagi.</string>
+    <string name="error_opensubtitles_trouble">OpenSubtitles sedang bermasalah. Itu di pihak mereka, jadi coba lagi nanti.</string>
+    <string name="error_opensubtitles_limit_anonymous">5 subtitel gratis hari ini sudah terpakai. Masuk ke OpenSubtitles di Setelan untuk mendapatkan lebih.</string>
+    <string name="error_opensubtitles_limit_account">Unduhan OpenSubtitles hari ini sudah terpakai. Tersedia lagi mulai %1$s.</string>
+    <string name="error_opensubtitles_limit_account_unknown">Unduhan OpenSubtitles hari ini sudah terpakai. Tersedia lagi besok.</string>
+    <string name="error_opensubtitles_sign_in">OpenSubtitles tidak menerima nama pengguna atau sandi itu. Periksa lalu coba lagi.</string>
+    <string name="error_opensubtitles_token_tv">OpenSubtitles mengeluarkan TV ini dari akun. Masuk lagi di Setelan.</string>
+    <string name="error_opensubtitles_token_device">OpenSubtitles mengeluarkan perangkat ini dari akun. Masuk lagi di Setelan.</string>
 </resources>

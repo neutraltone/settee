@@ -221,12 +221,10 @@ class VodOpenSubtitlesTest {
         val downloads = site.requests.count { it.url.encodedPath.endsWith("/download") }
         assertThat(downloads).isEqualTo(1)
 
-        // The next time the film plays.
-        val again =
-            vodSubtitles()
-        again.load(MediaKey.Movie(1))
-        until { again.downloaded.value != null }
-        assertThat(again.downloaded.value!!.map { it.language }).containsExactly("en")
+        // From then on it's one of the title's subtitles, in the list like a stream's own, with no new
+        // download. Kept across a restart: DownloadedSubtitlesTest.
+        openSubtitleList()
+        compose.onNode(hasText("English") and hasText("Downloaded", substring = true)).assertExists()
         assertThat(site.requests.count { it.url.encodedPath.endsWith("/download") }).isEqualTo(downloads)
     }
 
