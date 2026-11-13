@@ -45,12 +45,11 @@ import app.opentv.data.repo.TitleCover
 import app.opentv.data.repo.VodTitle
 import app.opentv.data.repo.categoryGroupKey
 import app.opentv.data.repo.coverStatuses
-import app.opentv.data.repo.movieCovers
 import app.opentv.data.repo.movies
 import app.opentv.data.repo.nowOn
 import app.opentv.data.repo.series
-import app.opentv.data.repo.seriesCovers
 import app.opentv.data.repo.splitGenres
+import app.opentv.data.repo.titleCovers
 import app.opentv.data.work.SyncWorker
 import app.opentv.pairing.ManagerServer
 import app.opentv.player.playsQualityRanked
@@ -74,6 +73,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
@@ -1202,9 +1202,9 @@ class VodViewModel @JvmOverloads constructor(
     }
 
     /**
-     * The picked category's grid as covers, each film's Qualities folded into one ([movieCovers]),
-     * or null while it loads. Off the main thread: folding parses every name, again each time a
-     * refresh touches the movies table, and done while composing it froze a Fire TV Stick long
+     * The picked category's grid as covers, one per film however many of its Versions are there
+     * ([titleCovers]), or null while it loads. Off the main thread: it parses every name, again each
+     * time a refresh touches the movies table, and done while composing it froze a Fire TV Stick long
      * enough for Android to close the app (#180).
      *
      * No category means For you, which doesn't read this: observing every row for nothing would
@@ -1213,13 +1213,18 @@ class VodViewModel @JvmOverloads constructor(
     val movieGrid: StateFlow<List<TitleCover>?> =
         grid(movieCategory, StreamKind.MOVIE) { category ->
             graph.catalogRepository.observeMovieCovers(category.sourceId, category.id)
-                .map { movieCovers(it, graph.decoders) }
+                .combine(graph.titleIndex.movies.filterNotNull()) { rows, titles ->
+                    titleCovers(rows, titles, graph.decoders)
+                }
         }
 
     /** The picked category's shows as covers, or null while they load. */
     val seriesGrid: StateFlow<List<TitleCover>?> =
         grid(seriesCategory, StreamKind.SERIES) { category ->
-            graph.catalogRepository.observeSeriesCovers(category.sourceId, category.id).map(::seriesCovers)
+            graph.catalogRepository.observeSeriesCovers(category.sourceId, category.id)
+                .combine(graph.titleIndex.series.filterNotNull()) { rows, titles ->
+                    titleCovers(rows, titles, graph.decoders)
+                }
         }
 
     /**

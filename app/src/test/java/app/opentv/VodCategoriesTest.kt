@@ -107,7 +107,7 @@ class VodCategoriesTest {
     )
 
     @Test
-    fun `a category's grid has a cover per film, its Qualities folded into one`() {
+    fun `a category's grid has a cover per film, its Versions shown once`() {
         runBlocking {
             graph.database.categories().upsertAll(listOf(films))
             graph.database.movies().upsertAll(
@@ -116,15 +116,15 @@ class VodCategoriesTest {
         }
         viewModel.selectMovieCategory(films.browseKey)
 
-        val covers = viewModel.movieGrid.names({ "${it.id} ${it.title} ${it.qualities} ${it.posterUrl}" }) {
+        val covers = viewModel.movieGrid.names({ "${it.id} ${it.title} ${it.badge} ${it.posterUrl}" }) {
             it.size ==
                 2
         }
 
-        // Robolectric lists no decoders, so as on a 1080p Stick the 4K version isn't the one shown.
+        // Robolectric lists no decoders, so as on a 1080p Stick the 4K Version isn't the one shown.
         assertThat(covers).containsExactly(
-            "2 Superbad 2007 2 https://example.com/2.jpg",
-            "3 Ronin 1998 1 https://example.com/3.jpg",
+            "2 Superbad 2007 HD https://example.com/2.jpg",
+            "3 Ronin 1998 HD https://example.com/3.jpg",
         )
     }
 

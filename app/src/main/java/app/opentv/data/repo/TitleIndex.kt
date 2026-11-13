@@ -18,9 +18,10 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.flow.stateIn
 
@@ -48,6 +49,15 @@ class TitleIndex(
 
         fun badgeOf(id: Long): String? = byId[id]?.badge
 
+        /**
+         * The badge on a cover for [id]: its title's, or before the index has seen it, what its own [name]
+         * says, as covers showed before titles were grouped.
+         */
+        fun badgeFor(id: Long, name: String): String? {
+            val title = byId[id] ?: return nameBadge(name)
+            return title.badge
+        }
+
         /** [items] with only the first of each title's Versions, in their order. */
         fun <T> distinct(items: List<T>, idOf: (T) -> Long): List<T> = items.distinctBy { byId[idOf(it)] ?: idOf(it) }
 
@@ -68,16 +78,18 @@ class TitleIndex(
     /** Stops regrouping, for a test that closes its database. */
     fun close() = scope.cancel()
 
+    // Rows go straight into titles and aren't kept: holding every row of a catalogue in memory is
+    // what made a Stick close the app (#180). Only the titles stay, a fraction of the size.
     @OptIn(ExperimentalCoroutinesApi::class)
-    private fun titlesOf(rows: Flow<List<VersionRow>>, categories: Flow<List<SourceCategoryName>>) =
-        combine(rows.distinctUntilChanged(), categories.distinctUntilChanged(), ::Pair)
-            // A refresh writes in batches: grouping again from the latest is all that's wanted.
-            .mapLatest { (versions, names) -> group(versions, names) }
-            .flowOn(Dispatchers.Default)
-            .stateIn(scope, SharingStarted.Lazily, null)
+    private fun titlesOf(rows: Flow<List<VersionRow>>, categories: Flow<List<SourceCategoryName>>) = categories
+        .map { names -> names.associate { (it.sourceId to it.id) to it.name } }
+        .distinctUntilChanged()
+        // A refresh writes in batches: grouping again from the latest is all that's wanted.
+        .flatMapLatest { names -> rows.mapLatest { group(it, names) } }
+        .flowOn(Dispatchers.Default)
+        .stateIn(scope, SharingStarted.Lazily, null)
 
-    private fun group(rows: List<VersionRow>, categories: List<SourceCategoryName>): Titles {
-        val categoryNames = categories.associate { (it.sourceId to it.id) to it.name }
+    private fun group(rows: List<VersionRow>, categoryNames: Map<Pair<Long, String>, String>): Titles {
         val byId = HashMap<Long, Title>(rows.size)
         for (versions in groupVersions(rows, VersionRow::tmdbId, VersionRow::name, VersionRow::year)) {
             val traits = versions.map {

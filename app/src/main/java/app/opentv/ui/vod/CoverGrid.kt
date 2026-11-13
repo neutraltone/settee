@@ -28,9 +28,7 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import app.opentv.R
 import app.opentv.data.repo.TitleCover
 import app.opentv.ui.design.ArtCard
 import app.opentv.ui.design.ArtCardSize
@@ -154,8 +152,7 @@ internal fun TitleArt(
         onClick = onOpen,
         size = ArtCardSize.Portrait,
         modifier = modifier.onFocusChanged { if (it.isFocused) onHighlight(cover.id) },
-        badge = rememberQualityBadge(cover.name)
-            ?: if (cover.qualities > 1) stringResource(R.string.guide_qualities_count, cover.qualities) else null,
+        badge = cover.badge,
         onOptions = onOptions,
     )
 }

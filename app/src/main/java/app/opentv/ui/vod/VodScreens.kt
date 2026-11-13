@@ -49,7 +49,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import app.opentv.data.model.Movie
 import app.opentv.data.model.Series
-import app.opentv.data.parser.ChannelNameNormalizer
+import app.opentv.data.model.StreamKind
 import app.opentv.data.parser.displayTitle
 import app.opentv.ui.design.ProgressBar
 import app.opentv.ui.design.SetteeColors
@@ -95,7 +95,7 @@ internal fun MoviePosterRow(
                 posterUrl = movie.posterUrl,
                 subtitle = movie.year?.toString(),
                 rating = movie.rating,
-                qualityBadge = rememberQualityBadge(movie.name),
+                qualityBadge = rememberCoverBadge(StreamKind.MOVIE, movie.id, movie.name),
                 onClick = { onOpenMovie(movie) },
                 onOptions = openOptionsOn(OptionsSubject.OfMovie(movie), onLeave(movie)),
                 modifier = Modifier.takesFocus(index, focus),
@@ -120,7 +120,7 @@ internal fun SeriesPosterRow(
                 posterUrl = item.posterUrl,
                 subtitle = item.year?.toString(),
                 rating = item.rating,
-                qualityBadge = rememberQualityBadge(item.name),
+                qualityBadge = rememberCoverBadge(StreamKind.SERIES, item.id, item.name),
                 onClick = { onOpenSeries(item) },
                 onOptions = openOptionsOn(OptionsSubject.OfSeries(item), onLeave(item)),
                 modifier = Modifier.takesFocus(index, focus),
@@ -293,11 +293,6 @@ internal fun PosterCard(
         }
     }
 }
-
-/** What a title's name says its Quality is, for the chip on its card; null when it doesn't say. */
-@Composable
-internal fun rememberQualityBadge(name: String): String? =
-    remember(name) { ChannelNameNormalizer.normalize(name).qualityLabel.takeIf { it.isNotBlank() } }
 
 /** A small rounded chip drawn over poster art — a rating or a quality label. */
 @Composable

@@ -159,6 +159,9 @@ fun titleBadge(versions: List<VersionTraits>, decoders: DecoderList): String? {
     }
 }
 
+/** The badge a [name] would get on its own, knowing nothing of the device or other Versions. */
+internal fun nameBadge(name: String): String? = versionTraits(name, null).qualityLabel.takeIf { it in BADGE_QUALITIES }
+
 private const val CAM_BADGE = "CAM"
 private val BADGE_QUALITIES = setOf("8K", "4K", "FHD", "HD")
 
