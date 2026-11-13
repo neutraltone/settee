@@ -100,6 +100,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        (application as? OpenTvApp)?.opened()
         // Settee is always dark, so the bars' icons are always light. The default follows the
         // system's light or dark mode, which on a phone in light mode drew dark icons on our background.
         enableEdgeToEdge(

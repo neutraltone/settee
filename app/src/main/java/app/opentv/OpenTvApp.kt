@@ -19,16 +19,18 @@ import coil.ImageLoader
 import coil.ImageLoaderFactory
 import coil.disk.DiskCache
 import coil.memory.MemoryCache
+import java.util.concurrent.atomic.AtomicBoolean
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
-class OpenTvApp :
+open class OpenTvApp :
     Application(),
     ImageLoaderFactory {
     private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    private val launchWorkStarted = AtomicBoolean(false)
 
     /**
      * The app-wide Coil loader, tuned for a poster-and-logo heavy UI on a low-end TV box. The
@@ -67,10 +69,6 @@ class OpenTvApp :
         val graph = ServiceLocator.get(this)
         SyncWorker.schedule(this)
 
-        // When the normaliser has moved on since the catalogue was last processed, re-clean
-        // the stored channels and re-run the guide matcher — locally, no re-download. This
-        // is why a name-cleanup fix shows up on the next launch rather than the next 6-hour
-        // sync, and it costs nothing when the version has not changed.
         // Cold-start reconciliation: a recording still marked "in progress" at process start is an
         // orphan from a killed capture. Done here, once per process — NOT when the Recordings screen
         // opens — so checking on a recording you just started never marks it interrupted.
@@ -93,34 +91,59 @@ class OpenTvApp :
                 }
             }
         }
+    }
 
-        // Free, server-less "cloud" sync through the user's own NAS, if they've opted in. Writes
-        // this device's bundle to the shared folder and merges in every other device's — favourites,
-        // watch history and NAS recordings. Fire-and-forget and fully guarded: a blank or unreachable
-        // NAS returns a result rather than throwing, so a bad launch never costs the user anything.
-        if (graph.settings.nasAutoSync.value) {
-            appScope.launch { runCatching { app.opentv.sync.NasSync(graph).sync() } }
-        }
+    /**
+     * A screen has opened. The first call in the process starts [onFirstOpen]; later ones, from
+     * coming back to the app, a rotation or the activity being made again, do nothing.
+     */
+    fun opened() {
+        if (launchWorkStarted.compareAndSet(false, true)) onFirstOpen()
+    }
 
-        appScope.launch {
-            val prefs = getSharedPreferences("opentv", MODE_PRIVATE)
-            val seen = prefs.getInt("normalizer_version", 0)
-            if (seen < CatalogRepository.NORMALIZER_VERSION) {
-                graph.catalogRepository.renormalizeAll()
-                if (seen < LOCK_KEYS_VERSION) {
-                    val categories = graph.database.categories().observe(StreamKind.LIVE).first()
-                    graph.settings.setHiddenCategories(
-                        migratedLockKeys(graph.settings.hiddenCategories.value, categories),
-                    )
+    /**
+     * The work a launch does for the viewer: catching up with the NAS, re-cleaning the catalogue when
+     * the normaliser has moved on, and freshening the guide. It waits for a screen to open, not
+     * the process to start, because alarms, boot and [SyncWorker] start the process with nobody
+     * looking, and on a 1 GB Fire TV Stick a guide download and an SMB sync then land on top of
+     * the recording that alarm just opened.
+     */
+    protected open fun onFirstOpen() {
+        val graph = ServiceLocator.get(this)
+        val work = FirstOpenWork(
+            nasAutoSync = graph.settings.nasAutoSync.value,
+            // Free, server-less "cloud" sync through the user's own NAS, if they've opted in. Writes
+            // this device's bundle to the shared folder and merges in every other device's — favourites,
+            // watch history and NAS recordings. Fire-and-forget and fully guarded: a blank or unreachable
+            // NAS returns a result rather than throwing, so a bad launch never costs the user anything.
+            syncNas = { app.opentv.sync.NasSync(graph).sync() },
+            catchUpNormaliser = {
+                // When the normaliser has moved on since the catalogue was last processed, re-clean
+                // the stored channels and re-run the guide matcher — locally, no re-download. This
+                // is why a name-cleanup fix shows up on the next launch rather than the next 6-hour
+                // sync, and it costs nothing when the version has not changed.
+                val prefs = getSharedPreferences("opentv", MODE_PRIVATE)
+                val seen = prefs.getInt("normalizer_version", 0)
+                if (seen < CatalogRepository.NORMALIZER_VERSION) {
+                    graph.catalogRepository.renormalizeAll()
+                    if (seen < LOCK_KEYS_VERSION) {
+                        val categories = graph.database.categories().observe(StreamKind.LIVE).first()
+                        graph.settings.setHiddenCategories(
+                            migratedLockKeys(graph.settings.hiddenCategories.value, categories),
+                        )
+                    }
+                    prefs.edit { putInt("normalizer_version", CatalogRepository.NORMALIZER_VERSION) }
                 }
-                prefs.edit { putInt("normalizer_version", CatalogRepository.NORMALIZER_VERSION) }
-            }
-            // Runs on every launch. It is cheap when nothing is stale (feeds within their
-            // refresh window are skipped), but it is what makes the free regional guide turn
-            // itself on and download the first time — without waiting for the user to find
-            // the refresh button. ensureFeeds + auto-enable-by-region + matcher all live here.
-            graph.catalogueRefresh.refresh(CatalogueRefresh.Trigger.AppLaunch)
-        }
+            },
+            launchRefresh = {
+                // Runs on every launch. It is cheap when nothing is stale (feeds within their
+                // refresh window are skipped), but it is what makes the free regional guide turn
+                // itself on and download the first time — without waiting for the user to find
+                // the refresh button. ensureFeeds + auto-enable-by-region + matcher all live here.
+                graph.catalogueRefresh.refresh(CatalogueRefresh.Trigger.AppLaunch)
+            },
+        )
+        appScope.launch { work.run() }
     }
 }
 
