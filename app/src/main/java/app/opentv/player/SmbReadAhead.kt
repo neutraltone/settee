@@ -37,19 +37,26 @@ internal class SmbReadAhead(private val chunkSize: Int = CHUNK_BYTES) {
      * reader's own result (0, or -1 at its end) when the fetch returned nothing; -1 with no reader.
      */
     fun read(position: Long, buffer: ByteArray, offset: Int, length: Int, fetchLimit: Long = Long.MAX_VALUE): Int {
-        val reader = reader ?: return -1
         val chunk = chunk ?: ByteArray(chunkSize).also { chunk = it }
         if (position < chunkStart || position >= chunkStart + chunkFilled) {
-            chunkFilled = 0
-            val fetched = reader.readAt(chunk, position, 0, minOf(chunkSize.toLong(), fetchLimit).toInt())
+            val fetched = fetch(chunk, position, fetchLimit)
             if (fetched <= 0) return fetched
-            chunkStart = position
-            chunkFilled = fetched
         }
         val at = (position - chunkStart).toInt()
         val n = minOf(length, chunkFilled - at)
         System.arraycopy(chunk, at, buffer, offset, n)
         return n
+    }
+
+    /** Refills [chunk] from [position]; returns what the reader returned, or -1 with no reader. */
+    private fun fetch(chunk: ByteArray, position: Long, fetchLimit: Long): Int {
+        chunkFilled = 0
+        val fetched = reader?.readAt(chunk, position, 0, minOf(chunkSize.toLong(), fetchLimit).toInt()) ?: -1
+        if (fetched > 0) {
+            chunkStart = position
+            chunkFilled = fetched
+        }
+        return fetched
     }
 
     companion object {
