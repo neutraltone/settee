@@ -320,11 +320,9 @@ class SearchContentTest {
         compose.mainClock.autoAdvance = false
 
         liveMovies = listOf(movie("Film"))
-        runMainLooper()
-        compose.mainClock.advanceTimeBy(50)
+        advanceFramesBy(50)
         liveChannels = listOf(channelRow("BBC One"))
-        runMainLooper()
-        compose.mainClock.advanceTimeBy(500)
+        advanceFramesBy(500)
         compose.mainClock.autoAdvance = true
 
         compose.waitForIdle()
@@ -487,6 +485,19 @@ class SearchContentTest {
     // looper has run, so a change wouldn't be composed by advancing the clock alone.
     private fun runMainLooper() = shadowOf(Looper.getMainLooper()).idle()
 
+    // Frame by frame, running the looper before each, so a change is drawn within a frame as on a
+    // device. One advanceTimeBy(500) ran no looper: when the EditText held the channels' frame
+    // back, the movies' settle delay ended first and moved the highlight to the film (flaky on CI).
+    private fun advanceFramesBy(millis: Long) {
+        var advanced = 0L
+        while (advanced < millis) {
+            runMainLooper()
+            compose.mainClock.advanceTimeByFrame()
+            advanced += FRAME_MILLIS
+        }
+        runMainLooper()
+    }
+
     // waitForIdle doesn't wait out a delay with nothing else pending.
     private fun waitForResultsToSettle() {
         compose.waitForIdle()
@@ -532,5 +543,7 @@ class SearchContentTest {
     ).let { ChannelsViewModel.Row(LineupChannel(it, listOf(it))) }
 }
 
+// What MainTestClock.advanceTimeByFrame moves the clock by.
+private const val FRAME_MILLIS = 16L
 private const val CLEAR = "Clear recent searches"
 private const val HINT = "Start typing to search channels, movies and shows."
