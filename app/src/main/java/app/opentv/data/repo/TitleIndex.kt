@@ -18,7 +18,10 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
@@ -74,6 +77,25 @@ class TitleIndex(
     /** The shows' titles, or null until they've first been grouped. */
     val series: StateFlow<Titles?> =
         titlesOf(db.series().observeVersionRows(), db.categories().observeNames(StreamKind.SERIES))
+
+    /** [items], a list of films, with each title once: the first of its Versions there. */
+    fun <T> distinctMovies(items: Flow<List<T>>, idOf: (T) -> Long): Flow<List<T>> =
+        items.combine(movies.filterNotNull()) { list, titles -> titles.distinct(list, idOf) }
+
+    /** [items], a list of shows, with each title once: the first of its Versions there. */
+    fun <T> distinctSeries(items: Flow<List<T>>, idOf: (T) -> Long): Flow<List<T>> =
+        items.combine(series.filterNotNull()) { list, titles -> titles.distinct(list, idOf) }
+
+    /** [items], films and shows together, with each title once: the first of its Versions there. */
+    fun distinctTitles(items: Flow<List<VodTitle>>): Flow<List<VodTitle>> =
+        combine(items, movies.filterNotNull(), series.filterNotNull(), ::distinctIn)
+
+    /** As [distinctTitles], for a list read once. */
+    suspend fun distinct(items: List<VodTitle>): List<VodTitle> =
+        distinctIn(items, movies.filterNotNull().first(), series.filterNotNull().first())
+
+    private fun distinctIn(items: List<VodTitle>, movies: Titles, series: Titles): List<VodTitle> =
+        items.distinctBy { (if (it.kind == StreamKind.SERIES) series else movies).of(it.id) ?: it }
 
     /** Stops regrouping, for a test that closes its database. */
     fun close() = scope.cancel()

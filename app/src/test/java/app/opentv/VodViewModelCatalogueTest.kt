@@ -129,4 +129,49 @@ class VodViewModelCatalogueTest {
 
         assertThat(viewModel.resumesPartway(fourK)).isTrue()
     }
+
+    @Test
+    fun `Search lists a film once, however many of its Versions match`() = runBlocking {
+        graph.database.movies().upsertAll(
+            listOf(
+                movie(1, "NF - Superbad (2007)"),
+                movie(2, "EN - Superbad (2007)"),
+                movie(3, "EN - Superbad Too (2009)", tmdbId = "9999"),
+            ),
+        )
+        watching.launch { viewModel.movieResults.collect {} }
+
+        viewModel.setVodSearchQuery("Superbad")
+        val found = withTimeout(5_000) { viewModel.movieResults.first { it.isNotEmpty() } }
+
+        assertThat(found.map { it.tmdbId }).containsExactly("8363", "9999")
+    }
+
+    @Test
+    fun `Recently Added lists a film once, where its newest Version puts it`() = runBlocking {
+        graph.database.movies().upsertAll(
+            listOf(
+                movie(1, "NF - Superbad (2007)").copy(addedMillis = 100),
+                movie(2, "EN - Juno (2007)", tmdbId = "7326").copy(addedMillis = 200),
+                movie(3, "EN - Superbad (2007)").copy(addedMillis = 300),
+            ),
+        )
+        watching.launch { viewModel.recentlyAddedMovies.collect {} }
+
+        val recent = withTimeout(5_000) { viewModel.recentlyAddedMovies.first { it.size == 2 } }
+
+        assertThat(recent.map { it.id }).containsExactly(3L, 2L).inOrder()
+    }
+
+    @Test
+    fun `a person's page lists a film once`() = runBlocking {
+        graph.database.movies().upsertAll(
+            listOf(
+                movie(1, "NF - Superbad (2007)").copy(cast = "Jonah Hill, Michael Cera"),
+                movie(2, "EN - Superbad (2007)").copy(cast = "Jonah Hill, Michael Cera"),
+            ),
+        )
+
+        assertThat(viewModel.titlesWithPerson("Jonah Hill")).hasSize(1)
+    }
 }

@@ -953,12 +953,16 @@ class VodViewModel @JvmOverloads constructor(
     // re-scan a 20k-title catalogue; it recomputes only when the profile, catalogue or started titles
     // change.
 
+    // Each title once, where its newest Version puts it (ADR 0007). A provider adds a title's Versions
+    // together, so more rows are read than shown.
     val recentlyAddedMovies: StateFlow<List<Movie>> =
-        graph.catalogRepository.recentlyAddedMovies()
+        graph.titleIndex.distinctMovies(graph.catalogRepository.recentlyAddedMovies(RECENT_ROWS_READ)) { it.id }
+            .map { it.take(RECENT_TITLES_SHOWN) }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     val recentlyAddedSeries: StateFlow<List<Series>> =
-        graph.catalogRepository.recentlyAddedSeries()
+        graph.titleIndex.distinctSeries(graph.catalogRepository.recentlyAddedSeries(RECENT_ROWS_READ)) { it.id }
+            .map { it.take(RECENT_TITLES_SHOWN) }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     // True while Recommended is being worked out, which takes seconds on a big library, so the
@@ -1116,7 +1120,11 @@ class VodViewModel @JvmOverloads constructor(
     val movieResults: StateFlow<List<Movie>> =
         vodSearchInput.map { it.trim() }.debounceSearch().distinctUntilChanged()
             .flatMapLatest { q ->
-                if (q.length < 2) flowOf(emptyList()) else graph.catalogRepository.searchMovies(q)
+                if (q.length < 2) {
+                    flowOf(emptyList())
+                } else {
+                    graph.titleIndex.distinctMovies(graph.catalogRepository.searchMovies(q)) { it.id }
+                }
             }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
@@ -1124,7 +1132,11 @@ class VodViewModel @JvmOverloads constructor(
     val seriesResults: StateFlow<List<Series>> =
         vodSearchInput.map { it.trim() }.debounceSearch().distinctUntilChanged()
             .flatMapLatest { q ->
-                if (q.length < 2) flowOf(emptyList()) else graph.catalogRepository.searchSeries(q)
+                if (q.length < 2) {
+                    flowOf(emptyList())
+                } else {
+                    graph.titleIndex.distinctSeries(graph.catalogRepository.searchSeries(q)) { it.id }
+                }
             }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
@@ -1194,7 +1206,8 @@ class VodViewModel @JvmOverloads constructor(
     suspend fun moreLikeThis(movie: Movie): List<Movie> = graph.catalogRepository.moreLikeThis(movie)
 
     /** Everything in the library with this person in it, for their page. */
-    suspend fun titlesWithPerson(name: String): List<VodTitle> = graph.catalogRepository.titlesWithPerson(name)
+    suspend fun titlesWithPerson(name: String): List<VodTitle> =
+        graph.titleIndex.distinct(graph.catalogRepository.titlesWithPerson(name))
 
     suspend fun resumesPartway(movie: Movie): Boolean {
         val playing = graph.vodQualities.planFor(MediaKey.Movie(movie.id)).start.key
@@ -1338,11 +1351,16 @@ class HomeViewModel @JvmOverloads constructor(
 
     @OptIn(ExperimentalCoroutinesApi::class)
     private val recentShows: Flow<List<VodTitle>> =
-        settings.seriesEnabled.flatMapLatest { on -> graph.catalogRepository.recentlyAdded(movies = false, shows = on) }
+        settings.seriesEnabled.flatMapLatest { on -> recentlyAdded(movies = false, shows = on) }
 
     @OptIn(ExperimentalCoroutinesApi::class)
     private val recentMovies: Flow<List<VodTitle>> =
-        settings.moviesEnabled.flatMapLatest { on -> graph.catalogRepository.recentlyAdded(movies = on, shows = false) }
+        settings.moviesEnabled.flatMapLatest { on -> recentlyAdded(movies = on, shows = false) }
+
+    /** Home's Recently Added rows, each title once where its newest Version puts it (ADR 0007). */
+    private fun recentlyAdded(movies: Boolean, shows: Boolean): Flow<List<VodTitle>> = graph.titleIndex
+        .distinctTitles(graph.catalogRepository.recentlyAdded(movies, shows, limit = RECENT_ROWS_READ))
+        .map { it.take(HOME_RECENT_TITLES_SHOWN) }
 
     private val favourites: Flow<List<VodTitle>> = combine(
         graph.viewerLibrary.favourites.titles(),
@@ -1675,3 +1693,12 @@ class WebManagerViewModel(app: Application) : AndroidViewModel(app) {
         server.stop()
     }
 }
+
+/** How many rows a Recently Added row reads, to fill [RECENT_TITLES_SHOWN] titles of several Versions each. */
+private const val RECENT_ROWS_READ = 90
+
+/** How many titles a Recently Added row shows. */
+private const val RECENT_TITLES_SHOWN = 30
+
+/** How many titles Home's Recently Added rows show. */
+private const val HOME_RECENT_TITLES_SHOWN = 20
