@@ -2,6 +2,40 @@
 
 Settee is based on OpenTV 0.11.8; everything before this is in [OpenTV's changelog](https://github.com/opentvproject/opentv/blob/v0.11.8/CHANGELOG.md).
 
+## [0.6.0](https://github.com/neutraltone/settee/compare/v0.5.0...v0.6.0) (2026-11-13)
+
+
+### Features
+
+* **#159:** the rail opens with labels and slides smoothly, Search sits at the top, and Right takes you back to the row you left ([#202](https://github.com/neutraltone/settee/issues/202)) ([4ae11db](https://github.com/neutraltone/settee/commit/4ae11dbf017160908e8f0a7005f3df33f0cd7409))
+* **#160:** Home has rows for Recently added and Favourite shows and movies, shows what's on under your favourite channels, and remembers where you were in each row ([#210](https://github.com/neutraltone/settee/issues/210)) ([6588d46](https://github.com/neutraltone/settee/commit/6588d46a02a5b6f5564d37740afc7bdc3435b1d7))
+* **#161:** Movies and Shows open on their first cover, with big artwork, a categories sidebar you can search, and a row for every genre ([#217](https://github.com/neutraltone/settee/issues/217)) ([dd16161](https://github.com/neutraltone/settee/commit/dd16161c8f4cd69b0c0538112778d3b919957aaf))
+* **#162:** film and show pages open on a big hero, and a show's seasons are pills you move along ([#215](https://github.com/neutraltone/settee/issues/215)) ([727a770](https://github.com/neutraltone/settee/commit/727a770ffb3fa13120e3e1985cb031b60416bdd6))
+* **#163:** the player's controls start on a seek bar you scrub with Left and Right, with Subtitles and Audio beside it and less-used actions as pills below ([#216](https://github.com/neutraltone/settee/issues/216)) ([2374d4e](https://github.com/neutraltone/settee/commit/2374d4e27d08f1daa77428b377543be33d57299c))
+* **#164:** Live TV's guide is ruled and square, with categories in a sidebar and programme details in a side panel, and the List layout is gone ([#218](https://github.com/neutraltone/settee/issues/218)) ([02704f5](https://github.com/neutraltone/settee/commit/02704f5d1171aec4e02baed69ea50d31b7db6b7a))
+* **#165:** changing channel shows what's on, how far through it is and what's next, and the channel list shows what's on each channel ([#221](https://github.com/neutraltone/settee/issues/221)) ([ec2027a](https://github.com/neutraltone/settee/commit/ec2027a782ad0fed9d59938b53104434ff21f4ee))
+* **#166:** every error says what happened and what to do, with its code, status and format in a quiet line underneath ([#223](https://github.com/neutraltone/settee/issues/223)) ([4b4fb1a](https://github.com/neutraltone/settee/commit/4b4fb1aa3c08ca144eda1d228b7e16aa3df36e42))
+* **#167:** adding a provider starts on one page of choices, with setting up from your phone first on a TV and a form of its own for each kind ([#222](https://github.com/neutraltone/settee/issues/222)) ([4f97304](https://github.com/neutraltone/settee/commit/4f9730498362b6a724a3bab613bcf0211d247836))
+* **#168:** every Settings section works beside its list, Profiles has the new look, and removing anything asks first ([#237](https://github.com/neutraltone/settee/issues/237)) ([30798d6](https://github.com/neutraltone/settee/commit/30798d6cb9295432d977bea5a2e7dc6ac03019db))
+* **#168:** Settings shows each section's options beside it ([#228](https://github.com/neutraltone/settee/issues/228)) ([b090ad3](https://github.com/neutraltone/settee/commit/b090ad3784621c81c7d40bf27a11f1beb71af013))
+* **#169:** Recordings is one list under Coming up, Recorded and Series links, and deleting a recording asks first ([#230](https://github.com/neutraltone/settee/issues/230)) ([9d0d28f](https://github.com/neutraltone/settee/commit/9d0d28f639959594ccb9f6b62bf880668f2d31e9))
+* **#170:** every question opens down the right, and Settee waits with its own aerial TV ([#240](https://github.com/neutraltone/settee/issues/240)) ([5ea40fa](https://github.com/neutraltone/settee/commit/5ea40fa49fa5e3c7272a805f57db0ac1b12a23c8))
+* **#181:** a film or show is listed once, with a Quality pill to choose between its versions ([#246](https://github.com/neutraltone/settee/issues/246)) ([192d716](https://github.com/neutraltone/settee/commit/192d71697e5b9ff914c4f55ebdf1054a2fd889a7))
+* **#219:** a film's cast and crew, and a show's cast, open a page of everything they're in ([#226](https://github.com/neutraltone/settee/issues/226)) ([9c69b81](https://github.com/neutraltone/settee/commit/9c69b813a73bf975d816e480bdaaa8ac71886e4d))
+* **#224:** adding your first provider shows Setup, one bar for your channels, guide, movies and shows, then You're all set ([#232](https://github.com/neutraltone/settee/issues/232)) ([df78cf9](https://github.com/neutraltone/settee/commit/df78cf95fa8f19d2210a5978bb74c63100551c06))
+* **#239:** add your TMDB key from your phone, in its own Settings section ([#241](https://github.com/neutraltone/settee/issues/241)) ([a2cfd6e](https://github.com/neutraltone/settee/commit/a2cfd6e575977278fee3cc0be16e6db5497da962))
+* **#245:** find subtitles on OpenSubtitles when a film or episode has none, and adjust their timing ([#248](https://github.com/neutraltone/settee/issues/248)) ([f7ec2ee](https://github.com/neutraltone/settee/commit/f7ec2ee804492aa7629211ade5528eeb1ef65e7b))
+
+
+### Bug fixes
+
+* **#203:** checking for updates says when it couldn't check, instead of saying you're up to date ([#204](https://github.com/neutraltone/settee/issues/204)) ([dfaebc5](https://github.com/neutraltone/settee/commit/dfaebc51e2f364ee7af2179ab309ab8cba52ea07))
+* **#211:** adding a big provider no longer freezes on Loading movies ([#213](https://github.com/neutraltone/settee/issues/213)) ([e7cb12b](https://github.com/neutraltone/settee/commit/e7cb12baae65df21d2d1fce78819ba9d0cda9d4e))
+* **#224:** messages and settings read as plain sentences, without long dashes ([#235](https://github.com/neutraltone/settee/issues/235)) ([270ca05](https://github.com/neutraltone/settee/commit/270ca05c997dfb55b511e415ce7a5876a88e9a6a))
+* **#224:** the free USA and Canada guides load again, and one Settee turns on by itself no longer reports a failure ([#229](https://github.com/neutraltone/settee/issues/229)) ([f2a9be6](https://github.com/neutraltone/settee/commit/f2a9be6b9a9af6cbca0ef3503e4c523cd5e0289c))
+* **#233:** recording on a Fire TV Stick no longer asks "Keep recording when you leave?" and sends you to Fire TV Home ([#234](https://github.com/neutraltone/settee/issues/234)) ([5b09f15](https://github.com/neutraltone/settee/commit/5b09f1500a270fe5d1dc74042abed0d86403dfd2))
+* **#233:** Settings no longer offers a Fix for background recording that does nothing on a Fire TV Stick ([#236](https://github.com/neutraltone/settee/issues/236)) ([aae5e9e](https://github.com/neutraltone/settee/commit/aae5e9e9d0572393b29e8f74b7a1ce561c501e26))
+
 ## [0.5.0](https://github.com/neutraltone/settee/compare/v0.4.0...v0.5.0) (2026-11-10)
 
 
