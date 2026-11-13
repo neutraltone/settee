@@ -89,20 +89,21 @@ class ShowPageFetchTest {
     }
 
     @Test
-    fun `opening a show asks for each Version's series info once, and stores every Version's episodes`() = runBlocking {
-        saveTwoVersions()
+    fun `opening a show asks for each Version's series info once, and stores every Version's episodes`() =
+        runBlocking<Unit> {
+            saveTwoVersions()
 
-        val opened = withTimeout(10_000) { viewModel.openShow(1).first { it.fetched } }
+            val opened = withTimeout(10_000) { viewModel.openShow(1).first { it.fetched } }
 
-        assertThat(opened.series.genre).isEqualTo("Drama")
-        assertThat(timesAsked(1)).isEqualTo(1)
-        assertThat(timesAsked(2)).isEqualTo(1)
-        assertThat(episodeIds(1)).containsExactly("101")
-        assertThat(episodeIds(2)).containsExactly("201")
-    }
+            assertThat(opened.series.genre).isEqualTo("Drama")
+            assertThat(timesAsked(1)).isEqualTo(1)
+            assertThat(timesAsked(2)).isEqualTo(1)
+            assertThat(episodeIds(1)).containsExactly("101")
+            assertThat(episodeIds(2)).containsExactly("201")
+        }
 
     @Test
-    fun `another Version's episodes are stored before TMDB answers about the show`() = runBlocking {
+    fun `another Version's episodes are stored before TMDB answers about the show`() = runBlocking<Unit> {
         saveTwoVersions()
         graph.settings.setTmdbApiKey("k")
         val tmdb = panel.hold("/3/search/tv")
