@@ -6,6 +6,7 @@
 package app.opentv
 
 import androidx.test.core.app.ApplicationProvider
+import app.opentv.data.db.MovieDao
 import app.opentv.data.model.Movie
 import app.opentv.data.remote.TmdbMeta
 import app.opentv.data.remote.XtreamApi
@@ -207,6 +208,48 @@ class MovieGenresTest {
         unreachable.fillAll(PANEL_SOURCE)
 
         assertThat(panel.asked).containsExactly("get_vod_info:1", "get_vod_info:2", "get_vod_info:3")
+    }
+
+    /** The films' DAO, recording every limit the pass asks for films due a lookup with. */
+    private val limits = mutableListOf<Int>()
+    private val counted = object : MovieDao by test.db.movies() {
+        override suspend fun newestNotLookedUp(
+            sourceId: Long,
+            withTmdb: Boolean,
+            tmdbStaleBefore: Long,
+            limit: Int,
+        ): List<Movie> {
+            limits += limit
+            return test.db.movies().newestNotLookedUp(sourceId, withTmdb, tmdbStaleBefore, limit)
+        }
+    }
+
+    @Test
+    fun `filling in reads only as many films each batch as it asks about`() = runTest {
+        test.db.movies().upsertAll((1..5).map { movie("$it", added = it.toLong()) })
+        panel.replies["get_vod_info"] = """{"info": {"genre": "Comedy"}}"""
+
+        MovieGenres(counted, XtreamApi(panel.http), count = 2, pauseMillis = 0).fillAll(PANEL_SOURCE)
+
+        assertThat(limits).containsExactly(2, 2, 2).inOrder()
+    }
+
+    @Test
+    fun `filling in makes room for a film whose lookup failed and asks about it only once`() = runTest {
+        test.db.movies().upsertAll((1..5).map { movie("$it", added = it.toLong()) })
+        panel.replies["get_vod_info"] = """{"info": {"genre": "Comedy"}}"""
+        panel.replies["get_vod_info:4"] = "!"
+
+        MovieGenres(counted, XtreamApi(panel.http), count = 2, pauseMillis = 0).fillAll(PANEL_SOURCE)
+
+        assertThat(limits).containsExactly(2, 2, 3, 3).inOrder()
+        assertThat(panel.asked).containsExactly(
+            "get_vod_info:5",
+            "get_vod_info:4",
+            "get_vod_info:3",
+            "get_vod_info:2",
+            "get_vod_info:1",
+        ).inOrder()
     }
 
     @Test
