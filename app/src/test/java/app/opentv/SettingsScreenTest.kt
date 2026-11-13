@@ -40,8 +40,10 @@ import androidx.test.espresso.matcher.RootMatchers
 import androidx.test.espresso.matcher.ViewMatchers
 import app.opentv.core.AppSettings
 import app.opentv.core.ServiceLocator
+import app.opentv.data.model.Category
 import app.opentv.data.model.Source
 import app.opentv.data.model.SourceKind
+import app.opentv.data.model.StreamKind
 import app.opentv.data.model.StremioAddon
 import app.opentv.data.repo.EpgRepository
 import app.opentv.ui.settings.SettingsMemory
@@ -87,6 +89,7 @@ class SettingsScreenTest {
             onAddProvider = { opened += "add provider" },
             onEditProvider = { opened += "edit provider $it" },
             onOpenChannels = { opened += "channels" },
+            onOpenLockedCategories = { opened += "locked categories" },
         )
     }
 
@@ -441,6 +444,32 @@ class SettingsScreenTest {
         compose.runOnIdle { assertThat(showing).isFalse() }
         showing = true
         compose.onNodeWithText("Show hidden categories now").assertExists()
+    }
+
+    @Test
+    fun `Parental lock lists no categories itself, just a Locked categories row that says how many and opens them`() {
+        graph.settings.clearPin()
+        val provider = saveProvider("Provider A")
+        runBlocking {
+            graph.database.categories().upsertAll(
+                listOf(Category("10", provider, "News", StreamKind.LIVE, sortIndex = 0)),
+            )
+        }
+        graph.settings.setHiddenCategories(setOf("news", "adult"))
+        try {
+            show(SettingsMemory(SettingsSection.Parental))
+            press(KeyEvent.KEYCODE_DPAD_RIGHT)
+            compose.onNodeWithText("Locked categories").assertExists()
+            compose.onNodeWithText("2 locked").assertExists()
+            compose.onNodeWithText("News").assertDoesNotExist()
+
+            compose.onNodeWithText("Locked categories").requestFocus()
+            press(KeyEvent.KEYCODE_DPAD_CENTER)
+
+            assertThat(opened).containsExactly("locked categories")
+        } finally {
+            graph.settings.setHiddenCategories(emptySet())
+        }
     }
 
     @Test

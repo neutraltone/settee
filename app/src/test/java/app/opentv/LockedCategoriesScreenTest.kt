@@ -1,0 +1,165 @@
+/*
+ * This file is part of OpenTV.
+ * Copyright (C) 2026 The OpenTV Contributors
+ * Licensed under the GNU General Public License v3.0 or later.
+ */
+package app.opentv
+
+import android.app.Application
+import android.os.Looper
+import androidx.activity.ComponentActivity
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.test.assertIsFocused
+import androidx.compose.ui.test.assertIsOff
+import androidx.compose.ui.test.assertIsOn
+import androidx.compose.ui.test.hasClickAction
+import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onRoot
+import androidx.compose.ui.test.performKeyInput
+import androidx.compose.ui.test.pressKey
+import androidx.test.core.app.ApplicationProvider
+import androidx.test.espresso.Espresso
+import app.opentv.core.ServiceLocator
+import app.opentv.data.model.Category
+import app.opentv.data.model.Source
+import app.opentv.data.model.SourceKind
+import app.opentv.data.model.StreamKind
+import app.opentv.ui.settings.LockedCategoriesScreen
+import com.google.common.truth.Truth.assertThat
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.runBlocking
+import org.junit.After
+import org.junit.Rule
+import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.Shadows.shadowOf
+import org.robolectric.annotation.Config
+import org.robolectric.annotation.GraphicsMode
+
+/**
+ * Locked categories, the Parental lock's own screen: a switch per category, many more than fit on
+ * the screen on a big provider, so the list is reached with the remote (#267).
+ */
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [34], qualifiers = TV_1080P, application = android.app.Application::class)
+@GraphicsMode(GraphicsMode.Mode.NATIVE)
+@OptIn(ExperimentalTestApi::class)
+class LockedCategoriesScreenTest {
+
+    @get:Rule
+    val compose = createAndroidComposeRule<ComponentActivity>()
+
+    private val app: Application = ApplicationProvider.getApplicationContext()
+    private val graph = ServiceLocator.Graph(app)
+    private val viewModels = TestViewModels()
+    private val viewModel by lazy { viewModels.channels(app, graph) }
+    private var left = false
+
+    @After
+    fun close() {
+        graph.settings.setHiddenCategories(emptySet())
+        viewModels.clear()
+        graph.database.close()
+    }
+
+    /** Far more than fit on the screen at once: the last is well below it. */
+    private val genres = listOf(
+        "Arts", "Business", "Cartoons", "Documentaries", "Drama", "Education", "Entertainment", "Fashion",
+        "Food", "Gaming", "History", "Kids", "Lifestyle", "Movies", "Music", "Nature", "Religion", "Science",
+        "Shopping", "Travel", "Weather", "Comedy", "Crime", "Cooking", "Motors", "Outdoors", "Pets",
+        "Politics", "Reality", "Classics",
+    )
+
+    /** News, Sport and the genres from one provider, and a locked category from another. */
+    private fun library() = runBlocking {
+        val db = graph.database
+        db.sources().insert(Source(id = 1, name = "Provider A", kind = SourceKind.XTREAM, url = "https://example.com"))
+        db.sources().insert(Source(id = 2, name = "Provider B", kind = SourceKind.XTREAM, url = "https://example.org"))
+        val first = listOf("News", "Sport") + genres
+        db.categories().upsertAll(
+            first.mapIndexed { index, name -> Category("${index + 10}", 1, name, StreamKind.LIVE, sortIndex = index) } +
+                Category("66", 2, "UK| Adult", StreamKind.LIVE, sortIndex = 0),
+        )
+        graph.settings.setHiddenCategories(setOf("adult"))
+    }
+
+    private fun show() {
+        compose.setTvContent {
+            LockedCategoriesScreen(onBack = { left = true }, viewModel = viewModel, settings = graph.settings)
+        }
+        compose.waitUntil(10_000) {
+            shadowOf(Looper.getMainLooper()).idle()
+            viewModel.categoryGroups.value.isNotEmpty()
+        }
+        compose.waitForIdle()
+    }
+
+    private fun press(key: Key, times: Int = 1) = repeat(times) {
+        compose.onRoot().performKeyInput { pressKey(key) }
+        compose.waitForIdle()
+    }
+
+    private fun row(label: String) = compose.onNode(hasText(label) and hasClickAction())
+
+    /** What Live TV's Categories Sidebar lists: locked categories drop out of it. */
+    private fun liveSidebar(): List<String> = runBlocking {
+        graph.channelLineup.categoryGroups().first()
+    }.map { it.label }
+
+    @Test
+    fun `it opens on the first category, each one's switch on when it's locked`() {
+        library()
+        show()
+
+        compose.onNodeWithText("Locked categories").assertExists()
+        row("News").assertIsFocused()
+        row("News").assertIsOff()
+        row("Adult").assertIsOn()
+        captureScreen("locked_categories")
+    }
+
+    @Test
+    fun `OK on a category far down the list locks it, and OK again unlocks it`() {
+        library()
+        show()
+        assertThat(liveSidebar()).contains("Classics")
+
+        // News, Sport, then the genres: Classics is the last of them.
+        press(Key.DirectionDown, times = genres.size + 1)
+        row("Classics").assertIsFocused()
+        press(Key.DirectionCenter)
+
+        row("Classics").assertIsOn()
+        assertThat(liveSidebar()).doesNotContain("Classics")
+        captureScreen("locked_categories_scrolled")
+
+        press(Key.DirectionCenter)
+
+        row("Classics").assertIsOff()
+        assertThat(liveSidebar()).contains("Classics")
+    }
+
+    @Test
+    fun `with no categories yet, it says where they come from`() {
+        compose.setTvContent {
+            LockedCategoriesScreen(onBack = { left = true }, viewModel = viewModel, settings = graph.settings)
+        }
+        compose.waitForIdle()
+
+        compose.onNodeWithText("No categories yet", substring = true).assertExists()
+    }
+
+    @Test
+    fun `Back leaves it`() {
+        library()
+        show()
+
+        Espresso.pressBack()
+
+        compose.runOnIdle { assertThat(left).isTrue() }
+    }
+}

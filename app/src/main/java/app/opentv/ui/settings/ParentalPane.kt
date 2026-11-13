@@ -14,13 +14,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import app.opentv.R
 import app.opentv.core.ServiceLocator
-import app.opentv.ui.ChannelsViewModel
 import app.opentv.ui.design.ListRow
 import app.opentv.ui.design.SetteeColors
 import app.opentv.ui.design.SetteeType
@@ -35,7 +34,7 @@ import app.opentv.ui.design.Text
  * access, not a serious attacker.
  */
 @Composable
-internal fun ParentalPane() {
+internal fun ParentalPane(onOpenLockedCategories: () -> Unit) {
     val context = LocalContext.current
     val settings = remember { ServiceLocator.get(context).settings }
     val pinIsSet by settings.pinIsSet.collectAsState()
@@ -47,7 +46,7 @@ internal fun ParentalPane() {
     if (pinIsSet && !pinEntered) {
         ListRow(stringResource(R.string.settings_parental_enter_pin), onClick = { step = PinStep.Enter }, opens = true)
     } else {
-        ParentalSettings(pinIsSet, onSetPin = { step = PinStep.Choose })
+        ParentalSettings(pinIsSet, onSetPin = { step = PinStep.Choose }, onOpenLockedCategories)
     }
 
     when (val current = step) {
@@ -80,16 +79,12 @@ internal fun ParentalPane() {
 }
 
 @Composable
-private fun ParentalSettings(
-    pinIsSet: Boolean,
-    onSetPin: () -> Unit,
-    channelsViewModel: ChannelsViewModel = viewModel(),
-) {
+private fun ParentalSettings(pinIsSet: Boolean, onSetPin: () -> Unit, onOpenLockedCategories: () -> Unit) {
     val context = LocalContext.current
     val settings = remember { ServiceLocator.get(context).settings }
     val hidden by settings.hiddenCategories.collectAsState()
     val unlocked by settings.hiddenUnlocked.collectAsState()
-    val categories by channelsViewModel.categoryGroups.collectAsState()
+    val lockedRow = screenRow("locked-categories", onOpenLockedCategories)
 
     ListRow(
         stringResource(R.string.settings_parental_show_hidden),
@@ -105,18 +100,18 @@ private fun ParentalSettings(
     if (pinIsSet) {
         ListRow(stringResource(R.string.parental_remove_pin), onClick = settings::clearPin)
     }
-    if (categories.isEmpty()) {
-        Text(
-            stringResource(R.string.parental_no_categories),
-            SetteeType.Body,
-            color = SetteeColors.QuietText,
-            modifier = Modifier.padding(top = 12.dp),
-        )
-    }
-    categories.forEach { group ->
-        val locked = group.key in hidden
-        ListRow(group.label, onClick = { settings.setCategoryLocked(group.key, !locked) }, switch = locked)
-    }
+    // A row that opens the categories on a screen of their own, not a switch per category here: a
+    // big provider has hundreds, and highlighting Parental lock on the way down composed them all.
+    ListRow(
+        stringResource(R.string.parental_locked_categories),
+        onClick = lockedRow.open,
+        modifier = lockedRow.modifier,
+        value = if (hidden.isEmpty()) {
+            stringResource(R.string.parental_locked_none)
+        } else {
+            pluralStringResource(R.plurals.parental_locked_count, hidden.size, hidden.size)
+        },
+    )
     Text(
         stringResource(R.string.parental_lock_sync_note),
         SetteeType.Body,

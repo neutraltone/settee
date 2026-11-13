@@ -145,6 +145,7 @@ fun SettingsScreen(
     onAddProvider: () -> Unit = {},
     onEditProvider: (sourceId: Long) -> Unit = {},
     onOpenChannels: () -> Unit = {},
+    onOpenLockedCategories: () -> Unit = {},
     onOpenFontLicences: () -> Unit = {},
     // A seam so tests can show each answer without reaching GitHub.
     checkForUpdate: UpdateCheck = CheckGitHub,
@@ -248,6 +249,7 @@ fun SettingsScreen(
                         onAddProvider,
                         onEditProvider,
                         onOpenChannels,
+                        onOpenLockedCategories,
                         onOpenFontLicences,
                         checkForUpdate,
                         tmdbKeys ?: ServiceLocator.get(LocalContext.current).tmdbKeys,
@@ -265,6 +267,7 @@ private fun Pane(
     onAddProvider: () -> Unit,
     onEditProvider: (sourceId: Long) -> Unit,
     onOpenChannels: () -> Unit,
+    onOpenLockedCategories: () -> Unit,
     onOpenFontLicences: () -> Unit,
     checkForUpdate: UpdateCheck,
     tmdbKeys: TmdbKeys,
@@ -276,7 +279,7 @@ private fun Pane(
         SettingsSection.Channels -> ChannelsPane(onOpenChannels)
         SettingsSection.Display -> DisplayPane()
         SettingsSection.Recording -> RecordingPane()
-        SettingsSection.Parental -> ParentalPane()
+        SettingsSection.Parental -> ParentalPane(onOpenLockedCategories)
         SettingsSection.Devices -> DevicesPane()
         SettingsSection.Addons -> AddonsPane()
         SettingsSection.Tmdb -> TmdbPane(tmdbKeys)

@@ -214,6 +214,8 @@ class ChannelLineup(
             )
             if (includeLocked || unlocked) groups else groups.filter { it.key !in keys }
         }
+            // Folding normalises every category's name: hundreds on a big provider, so not on the main thread.
+            .flowOn(Dispatchers.Default)
 
     fun channels(scope: LineupScope): Flow<List<LineupChannel>> {
         if (scope is LineupScope.Favourites) {

@@ -126,6 +126,17 @@ class SettingsRoutesTest {
     }
 
     @Test
+    fun `Parental lock's Locked categories opens them on a screen of their own, and Back returns to its row`() {
+        ServiceLocator.get(app).settings.clearPin()
+        setApp(SettingsMemory(SettingsSection.Parental))
+
+        openFrom("Locked categories")
+
+        assertThat(route()).isEqualTo(Routes.LOCKED_CATEGORIES)
+        backReturnsTo("Locked categories")
+    }
+
+    @Test
     fun `About's Fonts row opens both font licences on a screen of their own, and Back returns to it`() {
         setApp(SettingsMemory(SettingsSection.About))
 

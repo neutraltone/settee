@@ -196,6 +196,7 @@ object Routes {
     const val SETTINGS = "settings"
     const val FONT_LICENCES = "font-licences"
     const val CHANNELS = "channels"
+    const val LOCKED_CATEGORIES = "locked-categories"
     const val PROFILES = "profiles"
     const val SERIES_DETAIL = "series/{seriesId}"
     const val MOVIE_DETAIL = "movie/{movieId}"
