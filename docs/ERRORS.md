@@ -58,6 +58,16 @@ recording that can't start. Strings are in `res/values/strings.xml`.
 The external player's toast can't hold `ErrorMessage`, so it shows the sentence with the detail on the
 line under it.
 
+### Before playing
+
+A film's or show's page says so before Play is pressed, rather than as an error after (#181). These
+aren't `ErrorMessage`s and have no detail line.
+
+| Trigger | String key | Sentence | Whose end, likely cause |
+|---|---|---|---|
+| None of the title's Versions plays here (only 4K ones on a 1080p Stick) | `vod_cant_play_tv` / `_device` | This TV can't play 4K | This hardware: Play is off |
+| Only Versions in another language play here | `vod_language_title`, `vod_language_body_tv` / `_device` | Only in German here. This TV can't play a version in your language. | This hardware, or the provider's shelves: Play asks first |
+
 ## Provider connection
 
 A failed Catalogue Refresh as the guide shows it (`Outcome.Refreshed.failure`), adding a provider

@@ -7,6 +7,8 @@ package app.opentv.ui.vod
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.staticCompositionLocalOf
 import app.opentv.data.model.StreamKind
@@ -36,4 +38,14 @@ internal val LocalCoverBadges = staticCompositionLocalOf { CoverBadges.NONE }
 internal fun rememberCoverBadge(kind: StreamKind, id: Long, name: String): String? {
     val badges = LocalCoverBadges.current
     return remember(badges, kind, id, name) { badges.of(kind, id, name) }
+}
+
+/** [index]'s titles as cover badges, again whenever they're regrouped; until then, covers go by name. */
+@Composable
+internal fun rememberCoverBadges(index: TitleIndex): CoverBadges {
+    val movies by index.movies.collectAsState()
+    val series by index.series.collectAsState()
+    return remember(movies, series) {
+        CoverBadges(movies ?: TitleIndex.Titles.NONE, series ?: TitleIndex.Titles.NONE)
+    }
 }

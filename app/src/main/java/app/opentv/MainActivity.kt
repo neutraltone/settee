@@ -32,6 +32,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.FiberManualRecord
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
@@ -79,10 +80,12 @@ import app.opentv.ui.options.OptionsDestination
 import app.opentv.ui.player.PlayerScreen
 import app.opentv.ui.settings.ProfilesScreen
 import app.opentv.ui.settings.SettingsMemory
+import app.opentv.ui.vod.LocalCoverBadges
 import app.opentv.ui.vod.MovieDetailScreen
 import app.opentv.ui.vod.PersonScreen
 import app.opentv.ui.vod.SeriesDetailScreen
 import app.opentv.ui.vod.VodPlayerScreen
+import app.opentv.ui.vod.rememberCoverBadges
 import app.opentv.update.UpdateGate
 import app.opentv.update.WhatsNewGate
 import kotlinx.coroutines.launch
@@ -332,138 +335,146 @@ private fun OpenTvApp(isTelevision: Boolean, launchedToPlay: Boolean) {
         }
     }
 
-    ItemOptionsHost(navigate = { destination -> navController.navigate(Routes.of(destination)) }) {
-        Box(Modifier.fillMaxSize()) {
-            NavHost(navController = navController, startDestination = start) {
-                providerRoutes(navController, sourcesViewModel)
+    // Every cover's badge, from its title's Versions (#181).
+    val coverBadges = rememberCoverBadges(ServiceLocator.get(bootContext).titleIndex)
+    CompositionLocalProvider(LocalCoverBadges provides coverBadges) {
+        ItemOptionsHost(navigate = { destination -> navController.navigate(Routes.of(destination)) }) {
+            Box(Modifier.fillMaxSize()) {
+                NavHost(navController = navController, startDestination = start) {
+                    providerRoutes(navController, sourcesViewModel)
 
-                composable(Routes.MAIN) { entry ->
-                    val tab by entry.shellTab()
-                    MainScreen(
-                        isTelevision = isTelevision,
-                        hasSources = sourcesUi.sources.isNotEmpty(),
-                        isSyncing = sourcesUi.syncing,
-                        loadFailure = sourcesUi.loadFailure,
-                        onPlayChannel = { channel -> navController.navigate(Routes.player(channel.id)) },
-                        onOpenMovie = { movie ->
-                            navController.navigate(Routes.movieDetail(movie.id))
-                        },
-                        onOpenSeries = { series ->
-                            navController.navigate(Routes.seriesDetail(series.id))
-                        },
-                        onResume = { key -> navController.navigate(Routes.vodPlayer(key)) },
-                        onAddSource = { navController.openAddProvider() },
-                        onRefresh = sourcesViewModel::refreshAll,
-                        onOpenSearch = { navController.navigate(Routes.SEARCH) },
-                        onOpenSettings = { navController.navigate(Routes.SETTINGS) },
-                        onOpenProfiles = { navController.navigate(Routes.PROFILES) },
-                        // The player works out where the recording is stored, and follows one still capturing.
-                        onPlayRecording = { rec ->
-                            navController.navigate(Routes.vodPlayer(MediaKey.Recording(rec.id)))
-                        },
-                        // Catch-up is a seekable archive stream — plays through the VOD player.
-                        onPlayCatchup = { key -> navController.navigate(Routes.vodPlayer(key)) },
-                        activeProfileName = activeProfileName,
-                        tab = tab,
-                        onSelectTab = { navController.selectShellTab(it) },
-                    )
-                }
+                    composable(Routes.MAIN) { entry ->
+                        val tab by entry.shellTab()
+                        MainScreen(
+                            isTelevision = isTelevision,
+                            hasSources = sourcesUi.sources.isNotEmpty(),
+                            isSyncing = sourcesUi.syncing,
+                            loadFailure = sourcesUi.loadFailure,
+                            onPlayChannel = { channel -> navController.navigate(Routes.player(channel.id)) },
+                            onOpenMovie = { movie ->
+                                navController.navigate(Routes.movieDetail(movie.id))
+                            },
+                            onOpenSeries = { series ->
+                                navController.navigate(Routes.seriesDetail(series.id))
+                            },
+                            onResume = { key -> navController.navigate(Routes.vodPlayer(key)) },
+                            onAddSource = { navController.openAddProvider() },
+                            onRefresh = sourcesViewModel::refreshAll,
+                            onOpenSearch = { navController.navigate(Routes.SEARCH) },
+                            onOpenSettings = { navController.navigate(Routes.SETTINGS) },
+                            onOpenProfiles = { navController.navigate(Routes.PROFILES) },
+                            // The player works out where the recording is stored, and follows one still capturing.
+                            onPlayRecording = { rec ->
+                                navController.navigate(Routes.vodPlayer(MediaKey.Recording(rec.id)))
+                            },
+                            // Catch-up is a seekable archive stream — plays through the VOD player.
+                            onPlayCatchup = { key -> navController.navigate(Routes.vodPlayer(key)) },
+                            activeProfileName = activeProfileName,
+                            tab = tab,
+                            onSelectTab = { navController.selectShellTab(it) },
+                        )
+                    }
 
-                composable(Routes.PROFILES) {
-                    ProfilesScreen(
-                        viewModel = profilesViewModel,
-                        onBack = { navController.popBackStack() },
-                    )
-                }
+                    composable(Routes.PROFILES) {
+                        ProfilesScreen(
+                            viewModel = profilesViewModel,
+                            onBack = { navController.popBackStack() },
+                        )
+                    }
 
-                composable(Routes.SEARCH) {
-                    SearchScreen(
-                        onPlayChannel = { channel -> navController.navigate(Routes.player(channel.id)) },
-                        onPlayMovie = { movie -> navController.navigate(Routes.vodPlayer(MediaKey.Movie(movie.id))) },
-                        onOpenSeries = { series -> navController.navigate(Routes.seriesDetail(series.id)) },
-                        onBack = { navController.popBackStack() },
-                    )
-                }
+                    composable(Routes.SEARCH) {
+                        SearchScreen(
+                            onPlayChannel = { channel -> navController.navigate(Routes.player(channel.id)) },
+                            onPlayMovie = { movie ->
+                                navController.navigate(Routes.vodPlayer(MediaKey.Movie(movie.id)))
+                            },
+                            onOpenSeries = { series ->
+                                navController.navigate(Routes.seriesDetail(series.id))
+                            },
+                            onBack = { navController.popBackStack() },
+                        )
+                    }
 
-                settingsRoutes(navController, settingsMemory)
+                    settingsRoutes(navController, settingsMemory)
 
-                composable(Routes.CHANNELS) {
-                    ChannelManagerScreen(onBack = { navController.popBackStack() })
-                }
+                    composable(Routes.CHANNELS) {
+                        ChannelManagerScreen(onBack = { navController.popBackStack() })
+                    }
 
-                composable(Routes.PLAYER) { entry ->
-                    val channelId = entry.arguments?.getString("channelId")?.toLongOrNull()
-                    PlayerScreen(
-                        channelId = channelId,
-                        onBack = { navController.leaveLivePlayer(entry) },
-                    )
-                }
+                    composable(Routes.PLAYER) { entry ->
+                        val channelId = entry.arguments?.getString("channelId")?.toLongOrNull()
+                        PlayerScreen(
+                            channelId = channelId,
+                            onBack = { navController.leaveLivePlayer(entry) },
+                        )
+                    }
 
-                composable(Routes.SERIES_DETAIL) { entry ->
-                    val seriesId = entry.arguments?.getString("seriesId")?.toLongOrNull() ?: return@composable
-                    SeriesDetailScreen(
-                        seriesId = seriesId,
-                        viewModel = vodViewModel,
-                        onPlayEpisode = { key -> navController.navigate(Routes.vodPlayer(key)) },
-                        onOpenPerson = { name -> navController.navigate(Routes.person(name)) },
-                    )
-                }
+                    composable(Routes.SERIES_DETAIL) { entry ->
+                        val seriesId = entry.arguments?.getString("seriesId")?.toLongOrNull() ?: return@composable
+                        SeriesDetailScreen(
+                            seriesId = seriesId,
+                            viewModel = vodViewModel,
+                            onPlayEpisode = { key -> navController.navigate(Routes.vodPlayer(key)) },
+                            onOpenPerson = { name -> navController.navigate(Routes.person(name)) },
+                        )
+                    }
 
-                composable(Routes.MOVIE_DETAIL) { entry ->
-                    val movieId = entry.arguments?.getString("movieId")?.toLongOrNull() ?: return@composable
-                    MovieDetailScreen(
-                        movieId = movieId,
-                        viewModel = vodViewModel,
-                        onPlay = { movie -> navController.navigate(Routes.vodPlayer(MediaKey.Movie(movie.id))) },
-                        onPlayAddonStream = { key -> navController.navigate(Routes.vodPlayer(key)) },
-                        onOpenMovie = { movie -> navController.navigate(Routes.movieDetail(movie.id)) },
-                        onOpenPerson = { name -> navController.navigate(Routes.person(name)) },
-                    )
-                }
+                    composable(Routes.MOVIE_DETAIL) { entry ->
+                        val movieId = entry.arguments?.getString("movieId")?.toLongOrNull() ?: return@composable
+                        MovieDetailScreen(
+                            movieId = movieId,
+                            viewModel = vodViewModel,
+                            onPlay = { movie -> navController.navigate(Routes.vodPlayer(MediaKey.Movie(movie.id))) },
+                            onPlayAddonStream = { key -> navController.navigate(Routes.vodPlayer(key)) },
+                            onOpenMovie = { movie -> navController.navigate(Routes.movieDetail(movie.id)) },
+                            onOpenPerson = { name -> navController.navigate(Routes.person(name)) },
+                        )
+                    }
 
-                composable(Routes.PERSON) { entry ->
-                    val name = entry.arguments?.getString("name")?.takeIf { it.isNotBlank() } ?: return@composable
-                    PersonScreen(
-                        name = name,
-                        viewModel = vodViewModel,
-                        onOpenMovie = { movie -> navController.navigate(Routes.movieDetail(movie.id)) },
-                        onOpenSeries = { series -> navController.navigate(Routes.seriesDetail(series.id)) },
-                    )
-                }
+                    composable(Routes.PERSON) { entry ->
+                        val name = entry.arguments?.getString("name")?.takeIf { it.isNotBlank() } ?: return@composable
+                        PersonScreen(
+                            name = name,
+                            viewModel = vodViewModel,
+                            onOpenMovie = { movie -> navController.navigate(Routes.movieDetail(movie.id)) },
+                            onOpenSeries = { series -> navController.navigate(Routes.seriesDetail(series.id)) },
+                        )
+                    }
 
-                composable(Routes.VOD_PLAYER) { entry ->
-                    fun arg(name: String) = entry.arguments?.getString(name)
-                        ?.let { java.net.URLDecoder.decode(it, "UTF-8") }.orEmpty()
-                    val mediaKey = Routes.vodPlayerKey(arg("key"), arg("addon")) ?: return@composable
-                    val leaveScope = rememberCoroutineScope()
-                    VodPlayerScreen(
-                        mediaKey = mediaKey,
-                        fromStart = arg("fromStart").toBoolean(),
-                        // The page is looked up when Back is pressed rather than as the player opens,
-                        // so an early press can't miss it and fall back to plain Back.
-                        onBack = {
-                            leaveScope.launch {
-                                val catalog = ServiceLocator.get(bootContext).catalogRepository
-                                val titlePage = titlePageFor(mediaKey) { episodeId ->
-                                    catalog.episode(episodeId)?.let { catalog.seriesOf(it) }?.id
+                    composable(Routes.VOD_PLAYER) { entry ->
+                        fun arg(name: String) = entry.arguments?.getString(name)
+                            ?.let { java.net.URLDecoder.decode(it, "UTF-8") }.orEmpty()
+                        val mediaKey = Routes.vodPlayerKey(arg("key"), arg("addon")) ?: return@composable
+                        val leaveScope = rememberCoroutineScope()
+                        VodPlayerScreen(
+                            mediaKey = mediaKey,
+                            fromStart = arg("fromStart").toBoolean(),
+                            // The page is looked up when Back is pressed rather than as the player opens,
+                            // so an early press can't miss it and fall back to plain Back.
+                            onBack = {
+                                leaveScope.launch {
+                                    val catalog = ServiceLocator.get(bootContext).catalogRepository
+                                    val titlePage = titlePageFor(mediaKey) { episodeId ->
+                                        catalog.episode(episodeId)?.let { catalog.seriesOf(it) }?.id
+                                    }
+                                    navController.leaveVodPlayer(entry, titlePage)
                                 }
-                                navController.leaveVodPlayer(entry, titlePage)
-                            }
-                        },
-                    )
+                            },
+                        )
+                    }
                 }
+
+                // Sits above the whole nav graph so a found update can prompt from any screen.
+                UpdateGate()
+
+                // Only over the main screen: never over first-run setup, and never over playback when the
+                // app boots straight into the last channel; it waits until the viewer backs out to Home.
+                val route by navController.currentBackStackEntryAsState()
+                WhatsNewGate(canShow = route?.destination?.route == Routes.MAIN)
+
+                // "About to switch to a recording" banner — shows 30s before an auto-switch fires.
+                RecordingSwitchBanner()
             }
-
-            // Sits above the whole nav graph so a found update can prompt from any screen.
-            UpdateGate()
-
-            // Only over the main screen: never over first-run setup, and never over playback when the
-            // app boots straight into the last channel; it waits until the viewer backs out to Home.
-            val route by navController.currentBackStackEntryAsState()
-            WhatsNewGate(canShow = route?.destination?.route == Routes.MAIN)
-
-            // "About to switch to a recording" banner — shows 30s before an auto-switch fires.
-            RecordingSwitchBanner()
         }
     }
 }

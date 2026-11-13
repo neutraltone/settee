@@ -6,13 +6,17 @@
 package app.opentv
 
 import androidx.compose.foundation.layout.Column
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import app.opentv.data.model.Movie
 import app.opentv.data.model.Series
 import app.opentv.data.repo.MediaKey
+import app.opentv.data.repo.TitleIndex
 import app.opentv.ui.ResumeItem
+import app.opentv.ui.vod.CoverBadges
+import app.opentv.ui.vod.LocalCoverBadges
 import app.opentv.ui.vod.MoviePosterRow
 import app.opentv.ui.vod.SeriesPosterRow
 import org.junit.Rule
@@ -99,5 +103,26 @@ class QualityBadgeTest {
         compose.onNodeWithText("4K").assertExists()
         compose.onNodeWithText("FHD").assertExists()
         captureScreen("shelves_quality_badges")
+    }
+
+    @Test
+    fun `a cover shows its title's badge, from all its Versions, not its own name's`() {
+        val badges = CoverBadges(
+            movies = TitleIndex.Titles(mapOf(1L to TitleIndex.Title(longArrayOf(1, 3), "HD"))),
+            series = TitleIndex.Titles(mapOf(2L to TitleIndex.Title(longArrayOf(2), "CAM"))),
+        )
+        compose.setTvContent {
+            CompositionLocalProvider(LocalCoverBadges provides badges) {
+                Column {
+                    MoviePosterRow("Movies", listOf(movie(1, "4K-TOP - Superbad")), onOpenMovie = {})
+                    SeriesPosterRow("Shows", listOf(series(2, "EN - New Show")), onOpenSeries = {})
+                }
+            }
+        }
+
+        compose.onNodeWithText("4K").assertDoesNotExist()
+        compose.onNodeWithText("HD").assertExists()
+        compose.onNodeWithText("CAM").assertExists()
+        captureScreen("shelves_title_badges")
     }
 }
