@@ -15,11 +15,16 @@ import app.opentv.ui.VodViewModel
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.withTimeoutOrNull
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -34,7 +39,8 @@ import org.robolectric.annotation.Config
 class VodHomeFeedsTest {
 
     private val app: Application = ApplicationProvider.getApplicationContext()
-    private val graph = ServiceLocator.Graph(app)
+    // Its own settings, so a Profile switched here isn't still active in the next test.
+    private val graph = ServiceLocator.Graph(app, settingsFile = "vod-home-feeds-test")
 
     @Before
     fun mainDispatcher() = Dispatchers.setMain(UnconfinedTestDispatcher())
@@ -91,6 +97,69 @@ class VodHomeFeedsTest {
     private fun VodViewModel.recommendedMovieIds() = recommendedMovies.value.map { it.id }
 
     private fun VodViewModel.recommendedSeriesIds() = recommendedSeries.value.map { it.id }
+
+    private suspend fun withTwoOfEach() {
+        graph.database.movies().upsertAll(listOf(movie(1, rating = 9.0), movie(2, rating = 8.0)))
+        graph.database.series().upsertAll(listOf(series(1, rating = 9.0), series(2, rating = 8.0)))
+        graph.database.episodes().upsertAll(listOf(episodeOf(1)))
+    }
+
+    /**
+     * Any Recommended row that shows up within [millis], or null. The library is read on other
+     * threads, which the test scheduler can't wait for, so a scan nobody asked for can only be seen
+     * by giving it time: here it takes a fraction of this.
+     */
+    private suspend fun VodViewModel.rowsWithin(millis: Long = 1_000) = withContext(Dispatchers.Default) {
+        withTimeoutOrNull(millis) {
+            combine(recommendedMovies, recommendedSeries) { movies, series -> movies + series }
+                .first { it.isNotEmpty() }
+        }
+    }
+
+    /** Waits, in real time for the same reason, until Recommended's movies are [ids]. */
+    private suspend fun VodViewModel.awaitRecommendedMovies(vararg ids: Long) = withContext(Dispatchers.Default) {
+        withTimeout(5_000) { recommendedMovies.first { row -> row.map { it.id } == ids.toList() } }
+    }
+
+    // Home is still drawing when the app's one model is built, and Movies and Shows may be off.
+    @Test
+    fun `building the model reads neither library until Movies or Shows opens`() = runTest {
+        withTwoOfEach()
+        val vod = VodViewModel(app, graph)
+
+        assertThat(vod.rowsWithin()).isNull()
+        assertThat(vod.recommendingMovies.value).isTrue()
+        assertThat(vod.recommendingSeries.value).isTrue()
+        assertThat(vod.movieGenreRows.value).isEmpty()
+        assertThat(vod.seriesGenreRows.value).isEmpty()
+    }
+
+    @Test
+    fun `switching Profile before Movies or Shows has opened reads neither library`() = runTest {
+        withTwoOfEach()
+        graph.viewerLibrary.recordProgress("movie:1", positionMillis = 600_000, durationMillis = 2_400_000)
+        val vod = VodViewModel(app, graph)
+
+        graph.settings.setActiveProfile(OTHER_PROFILE)
+
+        assertThat(vod.rowsWithin()).isNull()
+        // And opening Movies then builds the rows for the Profile active by then, who hasn't started movie 1.
+        vod.loadHomeFeeds().join()
+        assertThat(vod.recommendedMovieIds()).containsExactly(1L, 2L).inOrder()
+    }
+
+    @Test
+    fun `switching Profile once Movies has opened rebuilds the rows for the new Profile`() = runTest {
+        withTwoOfEach()
+        graph.viewerLibrary.recordProgress("movie:1", positionMillis = 600_000, durationMillis = 2_400_000)
+        val vod = VodViewModel(app, graph)
+        vod.loadHomeFeeds().join()
+        assertThat(vod.recommendedMovieIds()).containsExactly(2L)
+
+        graph.settings.setActiveProfile(OTHER_PROFILE)
+
+        vod.awaitRecommendedMovies(1L, 2L)
+    }
 
     @Test
     fun `a movie the Profile has started is gone from Recommended the next time Movies opens`() = runTest {
@@ -277,5 +346,9 @@ class VodHomeFeedsTest {
         vod.loadHomeFeeds().join()
 
         assertThat(vod.recommendedSeriesIds()).containsExactly(3L, 1L, 2L).inOrder()
+    }
+
+    private companion object {
+        const val OTHER_PROFILE = 2L
     }
 }

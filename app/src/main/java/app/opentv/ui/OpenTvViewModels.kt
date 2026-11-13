@@ -1009,21 +1009,24 @@ class VodViewModel @JvmOverloads constructor(
 
     @Volatile private var loadedSeriesFeeds: HomeFeedsKey<SeriesRef>? = null
 
-    /** Serialises [loadHomeFeeds] so two near-simultaneous calls (screen open + the profile emit in
-     *  `init`) can't both start the heavy scan — the second waits, sees the guard satisfied, returns.
-     *  MUST be declared before the `init` block below: `activeProfileId` is a StateFlow, so its
-     *  `collect` fires synchronously during construction, and Kotlin initialises properties top to
-     *  bottom — declared after `init`, this mutex would still be null when the first collect runs. */
+    /** Serialises [loadHomeFeeds] so two near-simultaneous calls (screen open + a profile switch)
+     *  can't both start the heavy scan — the second waits, sees the guard satisfied, returns.
+     *  Declared before the `init` block below, which collects a StateFlow during construction. */
     private val homeFeedsMutex = Mutex()
 
+    // Set by the first [loadHomeFeeds], not when it finishes: a Profile switched during that first
+    // scan, which read the Profile before the switch, still needs the rows rebuilt.
+    @Volatile private var homeFeedsWanted = false
+
     init {
-        // The home feeds are per profile and per catalogue (Recommended and the genre rows). Rebuild
-        // them when the active profile changes — and once at start. Routed through the guarded
-        // [loadHomeFeeds] so a profile switch triggers exactly one library scan, and re-opening the
-        // tab with nothing changed triggers none. Reads an empty result
-        // until a VOD sync has populated the catalogue; [ensureVodLoaded] re-runs it once one has.
+        // The home feeds are per profile and per catalogue (Recommended and the genre rows). Movies
+        // and Shows build them when they open; this rebuilds them when the active profile changes,
+        // once one has. Not at start: the app's one model is built while Home is still drawing, and
+        // reading the whole library then, with Movies and Shows perhaps switched off, cost every cold
+        // start (#258). Routed through the guarded [loadHomeFeeds] so a profile switch triggers
+        // exactly one library scan.
         viewModelScope.launch {
-            settings.activeProfileId.collect { loadHomeFeeds() }
+            settings.activeProfileId.collect { if (homeFeedsWanted) loadHomeFeeds() }
         }
     }
 
@@ -1037,7 +1040,12 @@ class VodViewModel @JvmOverloads constructor(
      * main thread, and only when a [HomeFeedsKey] says something they depend on changed — so
      * re-opening Movies/Shows is free and a post-sync refresh still fills the rows in.
      */
-    fun loadHomeFeeds(): Job = viewModelScope.launch {
+    fun loadHomeFeeds(): Job {
+        homeFeedsWanted = true
+        return viewModelScope.launch { refreshHomeFeeds() }
+    }
+
+    private suspend fun refreshHomeFeeds() {
         homeFeedsMutex.withLock {
             val profileId = settings.activeProfileId.value
             refreshMovieFeeds(profileId)

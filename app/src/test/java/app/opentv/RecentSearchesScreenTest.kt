@@ -8,6 +8,9 @@ package app.opentv
 import android.app.Application
 import android.view.View
 import androidx.compose.ui.input.key.Key
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.SemanticsNodeInteraction
@@ -22,8 +25,10 @@ import androidx.compose.ui.test.requestFocus
 import androidx.test.core.app.ApplicationProvider
 import app.opentv.core.ServiceLocator
 import app.opentv.data.model.Channel
+import app.opentv.data.model.Movie
 import app.opentv.data.model.Source
 import app.opentv.data.model.SourceKind
+import app.opentv.ui.VodViewModel
 import app.opentv.ui.channels.SearchScreen
 import app.opentv.ui.options.ItemOptionsHost
 import com.google.common.truth.Truth.assertThat
@@ -130,6 +135,38 @@ class RecentSearchesScreenTest {
         waitFor("Remove")
     }
 
+    // Search now shares the app's one VodViewModel, which outlives each visit, where it used to get a new one.
+    @Test
+    fun `Search opened again starts empty, without the last visit's movies`() {
+        runBlocking {
+            graph.database.sources().insert(
+                Source(id = 1, name = "Provider", kind = SourceKind.XTREAM, url = "http://example.com"),
+            )
+            graph.database.movies().upsertAll(listOf(movie("Zebra Crossing")))
+        }
+        val vod = VodViewModel(ApplicationProvider.getApplicationContext())
+        var open by mutableStateOf(true)
+        compose.setTvContent {
+            view = LocalView.current
+            ItemOptionsHost {
+                if (open) {
+                    SearchScreen(onPlayChannel = {}, onPlayMovie = {}, onOpenSeries = {}, onBack = {}, vodViewModel = vod)
+                }
+            }
+        }
+        device.type("zebra")
+        waitFor("Zebra Crossing")
+
+        open = false
+        compose.waitForIdle()
+        open = true
+        compose.waitForIdle()
+
+        compose.onNodeWithText("zebra").assertDoesNotExist()
+        compose.onNodeWithText("Zebra Crossing").assertDoesNotExist()
+        compose.waitUntil(TIMEOUT_MILLIS) { vod.movieResults.value.isEmpty() }
+    }
+
     private fun channel(name: String) = Channel(
         sourceId = 1,
         streamId = name,
@@ -139,6 +176,20 @@ class RecentSearchesScreenTest {
         epgChannelId = null,
         number = null,
         streamUrl = "https://example.com/$name.ts",
+    )
+
+    private fun movie(name: String) = Movie(
+        sourceId = 1,
+        streamId = name,
+        name = name,
+        categoryId = null,
+        posterUrl = null,
+        rating = null,
+        year = null,
+        plot = null,
+        durationSeconds = null,
+        containerExtension = "mp4",
+        streamUrl = "https://example.com/$name.mp4",
     )
 
     private companion object {

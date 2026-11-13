@@ -97,6 +97,8 @@ fun MainScreen(
     activeProfileName: String,
     tab: Tab,
     onSelectTab: (Tab) -> Unit,
+    // The activity's, which the title pages and Search share: one per tab built and scanned its own library.
+    vodViewModel: VodViewModel,
 ) {
     val context = LocalContext.current
     val settings = remember { AppSettings.get(context) }
@@ -160,12 +162,14 @@ fun MainScreen(
                 )
                 Tab.MOVIES -> MoviesScreen(
                     onOpenMovie = onOpenMovie,
+                    viewModel = vodViewModel,
                     onResume = onResume,
                     hasSources = hasSources,
                     isSyncing = isSyncing,
                 )
                 Tab.SHOWS -> SeriesScreen(
                     onOpenSeries = onOpenSeries,
+                    viewModel = vodViewModel,
                     onResume = onResume,
                     hasSources = hasSources,
                     isSyncing = isSyncing,
