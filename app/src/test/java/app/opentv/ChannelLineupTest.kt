@@ -24,13 +24,15 @@ import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancel
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.onStart
+import kotlinx.coroutines.job
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import org.junit.After
@@ -62,7 +64,9 @@ class ChannelLineupTest {
 
     @After
     fun close() {
-        sharing.cancel()
+        // Waits for the shared flows to stop: one still mid-query when the database closes throws
+        // "connection pool has been closed" into whichever test is running.
+        runBlocking { sharing.coroutineContext.job.cancelAndJoin() }
         catalogue.close()
     }
 
