@@ -13,7 +13,11 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
@@ -57,6 +61,20 @@ internal fun PhoneQrPanel(phone: PairingServer.State, onRetry: () -> Unit, wordi
             else -> Unit
         }
     }
+}
+
+/**
+ * What the QR code shows for [phone]: the server's state, except that while it hears from the phone (a
+ * key to check, a skip) it keeps showing what it was. Those states carry no address, and the code
+ * vanished each time a key was checked.
+ */
+@Composable
+internal fun codeShown(phone: PairingServer.State): PairingServer.State {
+    var shown by remember { mutableStateOf(phone) }
+    LaunchedEffect(phone) {
+        if (phone !is PairingServer.State.KeyReceived && phone != PairingServer.State.KeySkipped) shown = phone
+    }
+    return shown
 }
 
 /** TMDB's logo and the sentence its terms ask for, in Settings › TMDB and About. */

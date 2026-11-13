@@ -121,6 +121,7 @@ internal fun TmdbKeyRows(
     val ending = TmdbKeys.endingOf(savedKey)
     val server = graph.pairingServer
     val phone by server.state.collectAsState()
+    val codeState = codeShown(phone)
     val scope = rememberCoroutineScope()
     var typing by remember { mutableStateOf(false) }
     var removing by remember { mutableStateOf(false) }
@@ -152,9 +153,9 @@ internal fun TmdbKeyRows(
             code = { panel ->
                 val retry = { server.start(PairingServer.Mode.TmdbKey(onboarding)) }
                 if (panel) {
-                    PhoneQrPanel(phone, retry, graph.errorWording)
+                    PhoneQrPanel(codeState, retry, graph.errorWording)
                 } else {
-                    AskingRows(phone, retry, graph.errorWording)
+                    AskingRows(codeState, retry, graph.errorWording)
                 }
             },
             typeIt = {

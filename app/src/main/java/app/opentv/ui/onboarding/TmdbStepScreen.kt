@@ -5,7 +5,6 @@
  */
 package app.opentv.ui.onboarding
 
-import android.util.Log
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -18,6 +17,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -31,9 +31,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.input.InputMode
-import androidx.compose.ui.platform.LocalInputModeManager
-import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
@@ -127,7 +124,15 @@ private fun StepLayout(code: @Composable () -> Unit, rows: @Composable () -> Uni
     ScreenFrame {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(48.dp)) {
-                Box(Modifier.size(QR_PANEL_WIDTH, QR_PANEL_HEIGHT)) { code() }
+                // Only the code counts in the row's height, as on the pairing screen, so the code sits
+                // where that screen's did; the address to type hangs below it.
+                Box(
+                    Modifier
+                        .size(QR_PANEL_WIDTH, QR_PANEL_WIDTH)
+                        .wrapContentHeight(Alignment.Top, unbounded = true),
+                ) {
+                    Box(Modifier.size(QR_PANEL_WIDTH, QR_PANEL_HEIGHT)) { code() }
+                }
                 Column(Modifier.widthIn(max = WORDS_WIDTH)) {
                     Text(stringResource(R.string.onboarding_tmdb_title), SetteeType.ScreenTitle)
                     Spacer(Modifier.height(12.dp))
@@ -170,43 +175,26 @@ private fun SavedKeyField(ending: String) {
 }
 
 /**
- * Takes the Highlight when it appears, and keeps asking, a frame at a time while this window has the
- * system's focus, for up to [FOCUS_PATIENCE_MILLIS]. Asking once, a frame later, wasn't enough: on a
- * Fire TV Stick, coming on from the phone, nothing on the step was highlighted. A clickable can't take
- * focus while Compose thinks input is by touch, which a TV's remote never is, so that's put right
- * first. Each try is logged ([TAG], at info, as the Stick drops debug logs) until it's understood.
+ * Takes the Highlight when it appears, asking a frame at a time, while this window has the system's
+ * focus, until it has it or [FOCUS_PATIENCE_MILLIS] pass: asked once, a frame later, it can be refused
+ * while the row that had the Highlight is still going.
  */
 @Composable
 private fun Modifier.takesHighlight(): Modifier {
     val focus = remember { FocusRequester() }
     var highlighted by remember { mutableStateOf(false) }
     val windowFocused = LocalWindowInfo.current.isWindowFocused
-    val inputMode = LocalInputModeManager.current
-    val view = LocalView.current
     LaunchedEffect(focus, windowFocused) {
-        Log.i(TAG, "Asking: window ${if (windowFocused) "focused" else "not focused"}, ${inputMode.inputMode}")
         if (!windowFocused) return@LaunchedEffect
-        if (inputMode.inputMode == InputMode.Touch) {
-            Log.i(TAG, "Keyboard mode asked for: ${inputMode.requestInputMode(InputMode.Keyboard)}")
-        }
         val until = System.currentTimeMillis() + FOCUS_PATIENCE_MILLIS
-        var tries = 0
         while (!highlighted && System.currentTimeMillis() < until) {
             withFrameNanos {}
-            tries++
-            val asked = runCatching { focus.requestFocus() }
-            asked.exceptionOrNull()?.let { Log.i(TAG, "Try $tries refused: ${it.javaClass.simpleName}") }
+            runCatching { focus.requestFocus() }
         }
-        Log.i(
-            TAG,
-            "${if (highlighted) "Highlighted" else "Never highlighted"} after $tries tries; " +
-                "view focused ${view.hasFocus()}, touch mode ${view.isInTouchMode}, ${inputMode.inputMode}",
-        )
     }
     return focusRequester(focus).onFocusChanged { highlighted = it.hasFocus }
 }
 
-private const val TAG = "TmdbStep"
 private const val FOCUS_PATIENCE_MILLIS = 2_000L
 
 /** As wide as the pairing screen's words. */
