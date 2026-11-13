@@ -72,12 +72,14 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingCommand
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.dropWhile
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
@@ -89,6 +91,7 @@ import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.transformLatest
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
@@ -1512,7 +1515,7 @@ class HomeViewModel @JvmOverloads constructor(
         return LiveNow(preview, shows.now?.title, shows.next?.title)
     }
 
-    val state: StateFlow<HomeState?> = combine(
+    private val rows: Flow<HomeState> = combine(
         combine(watching, favourites, favouriteChannels, recentShows, recentMovies) {
                 (continueWatching, statuses),
                 favourites,
@@ -1534,12 +1537,19 @@ class HomeViewModel @JvmOverloads constructor(
         // In the same state as the rows, so Home is first drawn with it and highlights it.
         live,
     ) { rows, live -> rows.copy(live = live) }
-        // Kept updating for as long as Home's back stack entry lives, not just while Home is drawn
-        // (#192). Stopping a few seconds after a screen covered it meant Back found no rows: Home drew
-        // empty, then built them once fresh ones came, well past the 300 ms a screen has. Replaying the
-        // rows from before the cover instead would highlight a card that has since moved or gone (a
-        // title just finished, a Favourite just removed). Kept live, the rows Back finds are current.
-        .stateIn(viewModelScope, SharingStarted.Eagerly, null)
+
+    /**
+     * Home's rows, kept updating while Home is drawn and while a screen covers it ([app.opentv.KeepHomeLive]), so
+     * Back finds current rows and draws them at once (#192). Otherwise they stop a few seconds after
+     * Home goes, and nothing is replayed: back from a player or the background, Home waits for fresh
+     * rows rather than drawing old ones, where it would highlight a card that's about to move or go
+     * (a title just finished, a Favourite just removed). Dropped as soon as the Profile changes, so
+     * Back from Profiles never draws the last Profile's rows.
+     */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val state: StateFlow<HomeState?> = settings.activeProfileId
+        .flatMapLatest { rows.onStart<HomeState?> { emit(null) } }
+        .stateIn(viewModelScope, WhileDrawnOrKeptLive(graph.homeKeptLive), null)
 
     /** Channel up and down go through every Channel, as Home has no list of its own. */
     fun zapFromAll() = lineup.zapFrom(LineupScope.All())
@@ -1550,6 +1560,30 @@ class HomeViewModel @JvmOverloads constructor(
     private companion object {
         const val MINUTE_MILLIS = 60L * 1000
     }
+}
+
+/**
+ * Shares while anything collects or [keptLive] holds; once neither has for [stopMillis], stops and
+ * drops the last value, as WhileSubscribed(stopMillis, replayExpirationMillis = 0) does.
+ */
+private class WhileDrawnOrKeptLive(
+    private val keptLive: StateFlow<Boolean>,
+    private val stopMillis: Long = 5_000,
+) : SharingStarted {
+    @OptIn(ExperimentalCoroutinesApi::class)
+    override fun command(subscriptionCount: StateFlow<Int>): Flow<SharingCommand> =
+        combine(subscriptionCount, keptLive) { collectors, kept -> collectors > 0 || kept }
+            .distinctUntilChanged()
+            .transformLatest { live ->
+                if (live) {
+                    emit(SharingCommand.START)
+                } else {
+                    delay(stopMillis)
+                    emit(SharingCommand.STOP_AND_RESET_REPLAY_CACHE)
+                }
+            }
+            .dropWhile { it != SharingCommand.START }
+            .distinctUntilChanged()
 }
 
 /**

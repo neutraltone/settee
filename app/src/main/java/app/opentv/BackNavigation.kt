@@ -6,13 +6,19 @@
 package app.opentv
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.State
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavController
+import androidx.navigation.compose.currentBackStackEntryAsState
 import app.opentv.data.repo.MediaKey
 import app.opentv.ui.Tab
+import kotlinx.coroutines.flow.MutableStateFlow
 
 /*
  * Where Back goes (#67). The main screen's tab lives on its own back stack entry rather than in
@@ -121,3 +127,21 @@ private fun NavBackStackEntry.filledRoute(): String? {
         args?.getString(match.groupValues[1]).orEmpty()
     }
 }
+
+/**
+ * Says in [keptLive] whether Home's rows should keep updating while Home isn't drawn (#192): while a
+ * screen covers it with the app in front, so Back draws current rows at once instead of waiting for
+ * them. Not under a player, which saves its last position only as it closes, after Home is drawn
+ * again: Home waits for fresh rows there rather than highlight a card about to move or go, and its
+ * queries don't run on every progress save. Not in the background, where nobody will press Back.
+ */
+@Composable
+fun KeepHomeLive(nav: NavController, keptLive: MutableStateFlow<Boolean>) {
+    val top by nav.currentBackStackEntryAsState()
+    val lifecycle by LocalLifecycleOwner.current.lifecycle.currentStateFlow.collectAsState()
+    val keep = lifecycle.isAtLeast(Lifecycle.State.STARTED) && coversHomeLive(top?.destination?.route)
+    SideEffect { keptLive.value = keep }
+}
+
+private fun coversHomeLive(route: String?): Boolean =
+    route != null && route != Routes.MAIN && route != Routes.PLAYER && route != Routes.VOD_PLAYER

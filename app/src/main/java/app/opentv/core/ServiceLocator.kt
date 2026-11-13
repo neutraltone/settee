@@ -43,6 +43,7 @@ import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 
@@ -83,6 +84,12 @@ object ServiceLocator {
         val settings: AppSettings by lazy {
             settingsFile?.let { AppSettings.separate(appContext, it) } ?: AppSettings.get(appContext)
         }
+
+        /**
+         * Whether Home's rows keep updating while Home isn't drawn: true while a screen other than a
+         * player covers it with the app in front. Set by [app.opentv.KeepHomeLive] (#192).
+         */
+        val homeKeptLive = MutableStateFlow(false)
 
         val database: OpenTvDatabase by lazy {
             openDatabase?.invoke() ?: OpenTvDatabase.build(context, onWiped = settings::forgetDatabaseRows)

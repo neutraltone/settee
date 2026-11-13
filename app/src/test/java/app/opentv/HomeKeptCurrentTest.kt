@@ -8,8 +8,10 @@ package app.opentv
 import android.app.Application
 import androidx.test.core.app.ApplicationProvider
 import app.opentv.core.ServiceLocator
+import app.opentv.data.repo.Profiles
 import app.opentv.data.model.Channel
 import app.opentv.data.model.Movie
+import app.opentv.data.model.Profile
 import app.opentv.data.model.Source
 import app.opentv.data.model.SourceKind
 import app.opentv.ui.HomeState
@@ -19,6 +21,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.advanceTimeBy
@@ -70,6 +73,8 @@ class HomeKeptCurrentTest {
 
     @After
     fun close() {
+        // The settings outlive the test; the Profile mustn't leak into the next one.
+        graph.settings.setActiveProfile(Profiles.BASE_PROFILE_ID)
         runBlocking { viewModels.stopAll() }
         db.close()
         Dispatchers.resetMain()
@@ -91,12 +96,20 @@ class HomeKeptCurrentTest {
             }
         }
 
+    /** Home drawn until [rows] hold, then covered by a screen: Settings when [keptLive], else a player. */
+    private suspend fun HomeViewModel.shownThenCovered(keptLive: Boolean, rows: (HomeState?) -> Boolean) {
+        state.first(rows)
+        graph.homeKeptLive.value = keptLive
+    }
+
+    private fun HomeState?.continuing() = this?.continueWatching?.map { it.name }
+
     @Test
-    fun `after a long time away, Home has its rows ready, with a Favourite added meanwhile`() = runTest {
+    fun `after a long time in Settings, Home has its rows ready, with a Favourite added meanwhile`() = runTest {
         graph.viewerLibrary.favourites.set(row("UK| ITV HD"), true)
         val home = viewModels.track(HomeViewModel(app, graph))
-        // Home shown, then covered by Settings for longer than it used to keep its rows.
-        home.state.first { it.channelNames() == listOf("UK| ITV HD") }
+        home.shownThenCovered(keptLive = true) { it.channelNames() == listOf("UK| ITV HD") }
+        // Longer away than Home once kept its rows.
         advanceTimeBy(15_000)
 
         graph.viewerLibrary.favourites.set(row("UK| BBC One HD"), true)
@@ -106,12 +119,10 @@ class HomeKeptCurrentTest {
     }
 
     @Test
-    fun `a film finished while Home was covered is already off Continue Watching when Home is back`() = runTest {
-        db.movies().upsertAll(listOf(superbad))
-        graph.viewerLibrary.recordProgress("movie:1", positionMillis = FILM_MILLIS / 2, durationMillis = FILM_MILLIS)
+    fun `a film marked watched on its page is already off Continue Watching when Home is back`() = runTest {
+        startSuperbad()
         val home = viewModels.track(HomeViewModel(app, graph))
-        // Home shown with the film on Continue Watching, then covered by the player for a long time.
-        home.state.first { it?.continueWatching?.map { item -> item.name } == listOf(superbad.name) }
+        home.shownThenCovered(keptLive = true) { it.continuing() == listOf(superbad.name) }
         advanceTimeBy(15_000)
 
         graph.viewerLibrary.recordProgress("movie:1", positionMillis = FILM_MILLIS, durationMillis = FILM_MILLIS)
@@ -119,6 +130,40 @@ class HomeKeptCurrentTest {
         val shown = home.whileCovered { it != null && it.continueWatching.isEmpty() }
         assertThat(shown).isNotNull()
         assertThat(shown!!.continueWatching).isEmpty()
+    }
+
+    @Test
+    fun `after a long time in a player, Home has dropped its rows, so Back waits for fresh ones`() = runTest {
+        // The player saves its last position only as it closes, after Home is drawn again: rows kept
+        // until then could still show the film it just finished.
+        startSuperbad()
+        val home = viewModels.track(HomeViewModel(app, graph))
+        home.shownThenCovered(keptLive = false) { it.continuing() == listOf(superbad.name) }
+
+        advanceTimeBy(15_000)
+
+        assertThat(home.state.value).isNull()
+    }
+
+    @Test
+    fun `switching Profile drops the last Profile's rows rather than drawing them`() = runTest {
+        startSuperbad()
+        db.profiles().insert(Profile(id = 2, name = "Second", createdAtMillis = 1))
+        val home = viewModels.track(HomeViewModel(app, graph))
+        home.shownThenCovered(keptLive = true) { it.continuing() == listOf(superbad.name) }
+        val seen = mutableListOf<HomeState?>()
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { home.state.collect { seen += it } }
+        val before = seen.size
+
+        graph.settings.setActiveProfile(2)
+
+        home.whileCovered { it != null && it.continueWatching.isEmpty() }
+        assertThat(seen.drop(before).mapNotNull { it.continuing() }.flatten()).doesNotContain(superbad.name)
+    }
+
+    private suspend fun startSuperbad() {
+        db.movies().upsertAll(listOf(superbad))
+        graph.viewerLibrary.recordProgress("movie:1", positionMillis = FILM_MILLIS / 2, durationMillis = FILM_MILLIS)
     }
 
     private val superbad = Movie(
