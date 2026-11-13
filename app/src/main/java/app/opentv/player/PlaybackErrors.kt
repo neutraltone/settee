@@ -122,12 +122,6 @@ object PlaybackErrors {
         format?.displayNameAndSize.orEmpty(),
     )
 
-    /**
-     * Whether this stream's format is the problem, so trying it again can't help. A decoder failing
-     * partway through isn't counted: one bad frame in a stream is worth a restart.
-     */
-    fun isUnplayableFormat(error: PlaybackException): Boolean = error.errorCode in UNPLAYABLE_FORMATS
-
     /** Whether the app ran out of memory, however deep the loader and player wrapped it. */
     fun isOutOfMemory(error: PlaybackException): Boolean =
         generateSequence<Throwable>(error) { it.cause }.take(MAX_CAUSE_DEPTH).any { it is OutOfMemoryError }
@@ -183,13 +177,6 @@ object PlaybackErrors {
 
     /** Far deeper than Media3 wraps anything, and stops a cause that loops back on itself. */
     private const val MAX_CAUSE_DEPTH = 10
-
-    internal val UNPLAYABLE_FORMATS = setOf(
-        PlaybackException.ERROR_CODE_DECODER_INIT_FAILED,
-        PlaybackException.ERROR_CODE_DECODER_QUERY_FAILED,
-        PlaybackException.ERROR_CODE_DECODING_FORMAT_EXCEEDS_CAPABILITIES,
-        PlaybackException.ERROR_CODE_DECODING_FORMAT_UNSUPPORTED,
-    )
 }
 
 /** "ERROR_CODE_IO_BAD_HTTP_STATUS" as "IO bad HTTP status", for the detail line. */

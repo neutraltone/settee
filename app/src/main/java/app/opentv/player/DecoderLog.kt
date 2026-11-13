@@ -129,5 +129,5 @@ object DecoderLog {
 
     private const val TAG = "OpenTV"
 
-    private val DECODER_FAILURES = PlaybackErrors.UNPLAYABLE_FORMATS + PlaybackException.ERROR_CODE_DECODING_FAILED
+    private val DECODER_FAILURES = PlaybackRecovery.UNPLAYABLE_FORMATS + PlaybackException.ERROR_CODE_DECODING_FAILED
 }

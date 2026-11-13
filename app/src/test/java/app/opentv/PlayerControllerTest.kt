@@ -6,6 +6,7 @@
 package app.opentv
 
 import android.content.Context
+import androidx.media3.common.ParserException
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.upstream.Loader
 import androidx.test.core.app.ApplicationProvider
@@ -100,6 +101,21 @@ class PlayerControllerTest {
         assertThat(error.reason.detail).isEqualTo("IO unspecified")
         assertThat(error.canRetry).isTrue()
         assertThat(players.played).hasSize(1)
+    }
+
+    @Test
+    fun `a stream that isn't video shows its error at once, with Retry still on offer`() {
+        players.failure = { ParserException.createForMalformedContainer("an HTML page, not video", null) }
+        val controller = players.controller(LIVE, failing = 100, resolve = sources::forWatching)
+
+        controller.play(PlayerController.Request(MediaKey.Live(channels.first())), debounce = false)
+        players.until { controller.state.value is PlayerController.State.Error }
+        players.advance(10_000)
+
+        val error = controller.state.value as PlayerController.State.Error
+        assertThat(error.canRetry).isTrue()
+        assertThat(players.played).hasSize(1)
+        assertThat(panel.asked.count { it == "create_link" }).isEqualTo(1)
     }
 
     @Test
