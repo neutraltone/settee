@@ -433,7 +433,11 @@ private class EachElement(private val each: (JsonElement) -> Unit) : Deserializa
     }
 }
 
-/** An object's [key], read by [value]; its other keys are skipped (Json's `ignoreUnknownKeys`). */
+/**
+ * An object's [key], read by [value]; its other keys are skipped (Json's `ignoreUnknownKeys`). A
+ * null is skipped too: a portal with no channels can send `"data": null`, which is an empty list,
+ * not an unusable reply worth a second handshake.
+ */
 private class Field(private val key: String, private val value: DeserializationStrategy<Unit>) :
     DeserializationStrategy<Unit> {
     override val descriptor: SerialDescriptor = buildClassSerialDescriptor("StalkerReply.$key") {
@@ -444,7 +448,7 @@ private class Field(private val key: String, private val value: DeserializationS
         while (true) {
             val index = decodeElementIndex(descriptor)
             if (index == CompositeDecoder.DECODE_DONE) break
-            decodeSerializableElement(descriptor, index, value)
+            decodeNullableSerializableElement(descriptor, index, value)
         }
     }
 }

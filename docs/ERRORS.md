@@ -72,7 +72,8 @@ aren't `ErrorMessage`s and have no detail line.
 
 A failed Catalogue Refresh as the guide shows it (`Outcome.Refreshed.failure`), adding a provider
 (`Outcome.AddFailed`, also on the phone's channel manager page) and the provider's Test button.
-`ErrorWording.ofProvider` words them.
+`ErrorWording.ofProvider` words them, except a channel list too big for memory, which is about this
+hardware and worded by `ErrorWording.ofHardware`.
 
 | Trigger | String key | Sentence | Detail | Whose end, likely cause |
 |---|---|---|---|---|

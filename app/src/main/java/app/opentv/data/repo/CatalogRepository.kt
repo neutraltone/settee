@@ -612,8 +612,9 @@ class CatalogRepository(
             SyncResult.Failed(wording.ofProvider(e, R.string.error_catalogue), e)
         } catch (e: OutOfMemoryError) {
             // A list too big for the heap. The half-built list went with the frames that threw, so
-            // the app carries on and the next sync can try again; a crash would help nobody.
-            Log.w(TAG, "Catalogue sync ran out of memory for source ${source.id}", e)
+            // the app carries on and the next sync can try again; a crash would help nobody. Logged
+            // without the stack trace, whose text could need more memory than is left.
+            Log.w(TAG, "Catalogue sync ran out of memory for source ${source.id}")
             val tv = R.string.error_channel_list_memory_tv
             SyncResult.Failed(wording.ofHardware(tv, R.string.error_channel_list_memory_device, OUT_OF_MEMORY), e)
         }

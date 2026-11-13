@@ -53,6 +53,22 @@ class StalkerApiTest {
     }
 
     @Test
+    fun `a list cut off partway is no channels, after one more try, never the half that came`() = runTest {
+        panel.replies["get_all_channels"] = """{"js": {"data": [{"id": "9", "name": "News"}, {"id": "1"""
+
+        assertThat(api.liveChannels(STALKER_SOURCE)).isEmpty()
+        assertThat(panel.asked.count { it == "get_all_channels" }).isEqualTo(2)
+    }
+
+    @Test
+    fun `a null list is no channels, without shaking hands again`() = runTest {
+        panel.replies["get_all_channels"] = """{"js": {"total_items": 0, "data": null}}"""
+
+        assertThat(api.liveChannels(STALKER_SOURCE)).isEmpty()
+        assertThat(panel.asked.count { it == "get_all_channels" }).isEqualTo(1)
+    }
+
+    @Test
     fun `channels under js data are read with everything they carry`() = runTest {
         panel.replies["get_all_channels"] = """{"js": {"total_items": 3, "data": $CHANNELS, "cur_page": 0}}"""
 
