@@ -277,7 +277,7 @@ class ProviderRoutesTest {
     }
 
     @Test
-    fun `a key TMDB accepts on the TMDB step is saved, and Setup follows`() {
+    fun `a key TMDB accepts on the TMDB step is saved and says so, and Carry on goes on to Setup`() {
         graph.settings.removeTmdbApiKey()
         panel.replies["/3/authentication"] = """{"success": true}"""
         setApp(start = Routes.ADD_SOURCE, sources = SourcesViewModel(app, graph))
@@ -286,8 +286,55 @@ class ProviderRoutesTest {
 
         typeTmdbKey(OTHER_TMDB_KEY)
 
-        compose.waitUntil(5_000) { route() == Routes.SETUP }
+        compose.waitUntil(5_000) { compose.onAllNodes(hasText("Key saved")).fetchSemanticsNodes().isNotEmpty() }
         assertThat(graph.settings.tmdbApiKey.value).isEqualTo(OTHER_TMDB_KEY)
+        compose.onNodeWithText("Ends in bbbb").assertExists()
+        // Time to read it: the step waits for the viewer rather than moving on by itself.
+        assertThat(route()).isEqualTo(Routes.TMDB_STEP)
+        compose.waitUntil(5_000) {
+            compose.onAllNodes(hasText("Carry on") and isFocused()).fetchSemanticsNodes().isNotEmpty()
+        }
+        captureScreen("onboarding_tmdb_saved")
+
+        stepButton("Carry on").performScrollTo().performClick()
+
+        compose.waitUntil(5_000) { route() == Routes.SETUP }
+    }
+
+    /** Where Type it instead is on screen. */
+    private fun typeItInstead() = compose.onNodeWithText("Type it instead").fetchSemanticsNode().boundsInRoot
+
+    /** Where the step's Skip for now is on screen. */
+    private fun skipForNow() = stepButton("Skip for now").fetchSemanticsNode().boundsInRoot
+
+    @Test
+    fun `the TMDB step holds still while a key is checked and when it's turned down`() {
+        graph.settings.removeTmdbApiKey()
+        panel.replies["/3/authentication"] = "!401"
+        val checking = panel.hold("/3/authentication")
+        setApp(start = Routes.ADD_SOURCE, sources = SourcesViewModel(app, graph))
+        savePlaylist()
+        compose.waitUntil(5_000) { route() == Routes.TMDB_STEP }
+        compose.waitForIdle()
+        val typeAt = typeItInstead()
+        val skipAt = skipForNow()
+
+        typeTmdbKey(OTHER_TMDB_KEY)
+        assertThat(checking.reached.await(10, java.util.concurrent.TimeUnit.SECONDS)).isTrue()
+        compose.waitUntil(5_000) {
+            compose.onAllNodesWithText("Checking your key with TMDB…").fetchSemanticsNodes().isNotEmpty()
+        }
+        assertThat(typeItInstead()).isEqualTo(typeAt)
+        assertThat(skipForNow()).isEqualTo(skipAt)
+        captureScreen("onboarding_tmdb_checking")
+        checking.release()
+
+        compose.waitUntil(5_000) {
+            compose.onAllNodesWithText("TMDB didn't accept", substring = true).fetchSemanticsNodes().isNotEmpty()
+        }
+        assertThat(typeItInstead()).isEqualTo(typeAt)
+        assertThat(skipForNow()).isEqualTo(skipAt)
+        captureScreen("onboarding_tmdb_wrong_key")
     }
 
     @Test

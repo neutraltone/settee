@@ -6,9 +6,12 @@
 package app.opentv.ui.settings
 
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -48,7 +51,8 @@ import kotlinx.coroutines.launch
 /** Settings › TMDB: adding the TMDB Key from a phone or by typing it, and replacing or removing it. */
 @Composable
 internal fun TmdbPane(keys: TmdbKeys) {
-    TmdbKeyRows(keys, onboarding = false)
+    val graph = ServiceLocator.get(LocalContext.current)
+    TmdbKeyRows(rememberTmdbKeyEntry(keys, graph), onboarding = false, graph = graph)
     TmdbAttribution(Modifier.padding(top = 20.dp))
 }
 
@@ -57,7 +61,7 @@ internal fun TmdbPane(keys: TmdbKeys) {
  * the viewer chose Replace key. Saving and removing go through [keys], so only a key TMDB accepts is kept.
  */
 @Stable
-private class TmdbKeyEntry(private val keys: TmdbKeys, private val wording: ErrorWording) {
+internal class TmdbKeyEntry(private val keys: TmdbKeys, private val wording: ErrorWording) {
     var replacing by mutableStateOf(false)
     var checking by mutableStateOf(false)
         private set
@@ -86,25 +90,36 @@ private class TmdbKeyEntry(private val keys: TmdbKeys, private val wording: Erro
         problem = null
         moveHighlight = true
     }
+
+    /** Try again: the last key's problem is put away, ready for the next. */
+    fun clearProblem() {
+        problem = null
+    }
 }
+
+/** A [TmdbKeyEntry] for [keys], kept while the screen showing it is. */
+@Composable
+internal fun rememberTmdbKeyEntry(keys: TmdbKeys, graph: ServiceLocator.Graph): TmdbKeyEntry =
+    remember(keys, graph) { TmdbKeyEntry(keys, graph.errorWording) }
 
 /**
  * What adding the TMDB Key takes, shared by Settings › TMDB and Onboarding's TMDB step. With no key
  * (or Replace key chosen) it's the QR code for the phone's paste box and Type it instead; with one,
  * its last four characters, Replace key and Remove key. The phone's server runs only while the QR
- * code is up. [onSaved] hears each key TMDB accepts; [onTurnedDown] each one it doesn't, with why,
- * which the rows show themselves unless [showProblem] is false.
+ * code is up. [onSaved] hears each key TMDB accepts.
+ *
+ * Nothing below moves while a key is added: the QR code's space is held from the start, though its
+ * server waits a moment before listening, and checking a key and why it was turned down share one
+ * line that's always there. On a TV the viewer reads from across the room, and a row that jumps as
+ * they reach it is a row they lose.
  */
 @Composable
 internal fun TmdbKeyRows(
-    keys: TmdbKeys,
+    entry: TmdbKeyEntry,
     onboarding: Boolean,
+    graph: ServiceLocator.Graph,
     onSaved: () -> Unit = {},
-    onTurnedDown: (ViewerError) -> Unit = {},
-    showProblem: Boolean = true,
-    graph: ServiceLocator.Graph = ServiceLocator.get(LocalContext.current),
 ) {
-    val entry = remember(keys, graph) { TmdbKeyEntry(keys, graph.errorWording) }
     val savedKey by graph.settings.tmdbApiKey.collectAsState()
     val ending = TmdbKeys.endingOf(savedKey)
     val server = graph.pairingServer
@@ -116,9 +131,7 @@ internal fun TmdbKeyRows(
     val typeRow = remember { FocusRequester() }
     val asking = ending == null || entry.replacing
 
-    suspend fun save(key: String): ViewerError? = entry.save(key).also { why ->
-        if (why == null) onSaved() else onTurnedDown(why)
-    }
+    suspend fun save(key: String): ViewerError? = entry.save(key).also { why -> if (why == null) onSaved() }
 
     // Outside the rows that come and go, so a key arriving from the phone is answered whatever shows.
     LaunchedEffect(phone) {
@@ -144,7 +157,7 @@ internal fun TmdbKeyRows(
     } else {
         SavedRows(ending.orEmpty(), replaceRow, onReplace = { entry.replacing = true }, onRemove = { removing = true })
     }
-    KeyStatus(entry.checking, entry.problem.takeIf { showProblem })
+    KeyStatus(entry.checking, entry.problem)
 
     if (typing) {
         // Never filled in with the saved key: the pane only ever shows its last four characters.
@@ -198,7 +211,13 @@ private fun PhoneServerWhile(asking: Boolean, server: PairingServer, onboarding:
 
 /** The QR code for the phone's paste box, or why the server couldn't listen, with Try again. */
 @Composable
-private fun AskingRows(phone: PairingServer.State, onRetry: () -> Unit, wording: ErrorWording) {
+private fun AskingRows(phone: PairingServer.State, onRetry: () -> Unit, wording: ErrorWording) =
+    Box(Modifier.fillMaxWidth().heightIn(min = QR_SLOT_HEIGHT), contentAlignment = Alignment.CenterStart) {
+        QrOrRetry(phone, onRetry, wording)
+    }
+
+@Composable
+private fun QrOrRetry(phone: PairingServer.State, onRetry: () -> Unit, wording: ErrorWording) {
     when (phone) {
         is PairingServer.State.Listening -> {
             val session = phone.session
@@ -237,9 +256,13 @@ private fun SavedRows(ending: String, replaceRow: FocusRequester, onReplace: () 
     ListRow(stringResource(R.string.settings_tmdb_remove), onClick = onRemove)
 }
 
-/** Checking a key with TMDB, or why TMDB turned the last one down. */
+/** Checking a key with TMDB, or why TMDB turned the last one down, in space that's always there. */
 @Composable
-private fun KeyStatus(checking: Boolean, problem: ViewerError?) {
+private fun KeyStatus(checking: Boolean, problem: ViewerError?) =
+    Box(Modifier.fillMaxWidth().heightIn(min = STATUS_HEIGHT)) { StatusLine(checking, problem) }
+
+@Composable
+private fun StatusLine(checking: Boolean, problem: ViewerError?) {
     when {
         checking -> Text(
             stringResource(R.string.settings_tmdb_checking),
@@ -269,4 +292,10 @@ internal fun TmdbAttribution(modifier: Modifier = Modifier) {
 }
 
 private const val START_DELAY_MS = 400L
+
+/** A [CodeBlock] with its QR code: the code and the block's padding. */
+private val QR_SLOT_HEIGHT = 240.dp
+
+/** The checking line, or a turned-down key's sentence over two lines and its detail line. */
+private val STATUS_HEIGHT = 112.dp
 private val LOGO_HEIGHT = 16.dp
