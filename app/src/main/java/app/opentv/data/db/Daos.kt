@@ -465,6 +465,17 @@ interface CategoryDao {
 
     @Query("DELETE FROM categories WHERE sourceId = :sourceId")
     suspend fun deleteForSource(sourceId: Long)
+
+    /**
+     * Drops [sourceId]'s live categories that no channel row is in, hidden rows included. A
+     * subquery rather than a list of ids, which a playlist's group-titles could take past SQLite's
+     * bound-variable limit.
+     */
+    @Query(
+        "DELETE FROM categories WHERE sourceId = :sourceId AND kind = 'LIVE' AND id NOT IN " +
+            "(SELECT categoryId FROM channels WHERE sourceId = :sourceId AND categoryId IS NOT NULL)",
+    )
+    suspend fun deleteEmptyLive(sourceId: Long)
 }
 
 /** Projection for [CategoryDao.namesFor]. */
