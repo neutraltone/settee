@@ -32,6 +32,7 @@ import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.After
+import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -59,10 +60,18 @@ class LockedCategoriesScreenTest {
     private val viewModel by lazy { viewModels.channels(app, graph) }
     private var left = false
 
+    // AppSettings is one per process, so the session's lock state outlives each test: every test
+    // starts locked, with no PIN, and leaves it that way (clearing the PIN also unlocks).
+    @Before
+    fun locked() {
+        graph.settings.clearPin()
+        graph.settings.setHiddenUnlocked(false)
+    }
+
     @After
     fun close() {
         graph.settings.setHiddenCategories(emptySet())
-        graph.settings.clearPin()
+        locked()
         viewModels.clear()
         graph.database.close()
     }
@@ -75,15 +84,14 @@ class LockedCategoriesScreenTest {
         "Politics", "Reality", "Classics",
     )
 
-    /** News, Sport and the genres from one provider, and a locked category from another. */
+    /** News, a locked category, Sport, then the genres. */
+    private val names = listOf("News", "UK| Adult", "Sport") + genres
+
     private fun library() = runBlocking {
         val db = graph.database
         db.sources().insert(Source(id = 1, name = "Provider A", kind = SourceKind.XTREAM, url = "https://example.com"))
-        db.sources().insert(Source(id = 2, name = "Provider B", kind = SourceKind.XTREAM, url = "https://example.org"))
-        val first = listOf("News", "Sport") + genres
         db.categories().upsertAll(
-            first.mapIndexed { index, name -> Category("${index + 10}", 1, name, StreamKind.LIVE, sortIndex = index) } +
-                Category("66", 2, "UK| Adult", StreamKind.LIVE, sortIndex = 0),
+            names.mapIndexed { index, name -> Category("${index + 10}", 1, name, StreamKind.LIVE, sortIndex = index) },
         )
         graph.settings.setHiddenCategories(setOf("adult"))
     }
@@ -130,8 +138,8 @@ class LockedCategoriesScreenTest {
         show()
         assertThat(liveSidebar()).contains("Classics")
 
-        // News, Sport, then the genres: Classics is the last of them.
-        press(Key.DirectionDown, times = genres.size + 1)
+        // Classics is the last row.
+        press(Key.DirectionDown, times = names.size - 1)
         row("Classics").assertIsFocused()
         press(Key.DirectionCenter)
 
