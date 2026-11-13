@@ -113,8 +113,10 @@ order, so the triggers can't drift apart.
 
 ## Catalogue refresh preserves what the user did
 
-`ChannelDao.replaceCatalogue` merges rather than wipes: it reads existing rows, carries
-`hidden` and `sortIndex` across to the incoming rows by `streamId`, upserts, and only then
+`ChannelDao.replaceCatalogue` merges rather than wipes: it reads only what it keeps of the stored
+channels (`ChannelUserState`: the row id, `hidden`, `sortIndex`, custom name and both guide ids, not
+names or URLs, so a large catalogue isn't held twice while it merges), carries those across to the
+incoming rows by `streamId`, upserts, and only then
 deletes channels the provider no longer lists. Favourites live in their own per-Profile table,
 matched by source name and provider id (not stream URL, which Xtream changes with the live format
 and the password), so a channel dropped and re-listed keeps them.
@@ -285,5 +287,4 @@ whole playlist.
 Things worth testing that are not yet covered, and would be very welcome contributions:
 
 - `EpgRepository.sync` against a mid-stream failure, asserting the old guide survives
-- `ChannelDao.replaceCatalogue` preserving hidden channels and ordering across a refresh
 - `XtreamApi` against captured real-world panel responses (with credentials stripped)

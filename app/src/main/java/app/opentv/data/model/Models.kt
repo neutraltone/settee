@@ -199,6 +199,20 @@ data class ChannelMatchInput(
         get() = listOfNotNull(epgOverrideId, epgChannelId, matchedEpgId)
 }
 
+/**
+ * What a catalogue refresh carries across from a stored [Channel]. No names or URLs: loading whole rows
+ * would hold a second copy of a large catalogue in memory while it merges.
+ */
+data class ChannelUserState(
+    val streamId: String,
+    val id: Long,
+    val hidden: Boolean,
+    val sortIndex: Int,
+    val customName: String?,
+    val epgOverrideId: String?,
+    val matchedEpgId: String?,
+)
+
 /** A guide match to save on the [Channel] with this [id]. */
 data class ChannelEpgMatch(val id: Long, val matchedEpgId: String?)
 
