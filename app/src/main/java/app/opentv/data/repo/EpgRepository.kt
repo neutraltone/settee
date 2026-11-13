@@ -118,8 +118,6 @@ class EpgRepository(
     suspend fun programme(listed: GuideProgramme): Programme? =
         programmeDao.startingAt(listed.epgChannelId, listed.startUtcMillis)
 
-    fun observeNow(nowUtcMillis: Long): Flow<List<Programme>> = programmeDao.observeNow(nowUtcMillis).settled()
-
     suspend fun upcoming(epgChannelId: String, nowUtcMillis: Long, limit: Int = 12): List<Programme> =
         programmeDao.upcoming(epgChannelId, nowUtcMillis, limit)
 
