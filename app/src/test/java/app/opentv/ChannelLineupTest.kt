@@ -373,7 +373,8 @@ class ChannelLineupTest {
             listOf("UK| alpha"),
             listOf("UK| Élan"),
         ).inOrder()
-        assertThat(first.map { it.primary.name }).containsExactly("UK| Zulu", "UK| ITV HD", "UK| alpha", "UK| Élan").inOrder()
+        val played = first.map { it.primary.name }
+        assertThat(played).containsExactly("UK| Zulu", "UK| ITV HD", "UK| alpha", "UK| Élan").inOrder()
         assertThat(second.map { it.primary.name }).containsExactly("UK| Bravo", "UK| ITV FHD").inOrder()
     }
 
