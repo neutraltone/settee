@@ -1414,7 +1414,7 @@ class HomeViewModel @JvmOverloads constructor(
     /** A film's cover status across its Versions: Watched when any is, else the one it has (ADR 0007). */
     private fun filmStatus(movieId: Long, statuses: CoverStatuses): CoverStatus? {
         val versions = graph.titleIndex.movies.value?.of(movieId)?.versionIds ?: longArrayOf(movieId)
-        val found = versions.mapNotNull { statuses.ofMovie(it) }
+        val found = versions.asList().mapNotNull { statuses.ofMovie(it) }
         return found.firstOrNull { it == CoverStatus.Watched } ?: found.firstOrNull()
     }
 
