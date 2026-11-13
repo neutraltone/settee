@@ -60,7 +60,7 @@ class LockedCategoriesScreenTest {
     private val toggles = mutableListOf<Pair<String, Boolean>>()
     private var left = 0
 
-    private fun show(entries: List<SidebarEntry> = categories) = compose.setTvContent {
+    private fun show(entries: List<SidebarEntry>? = categories) = compose.setTvContent {
         view = LocalView.current
         LockedCategoriesContent(
             categories = entries,
@@ -108,11 +108,30 @@ class LockedCategoriesScreenTest {
         compose.onNode(hasText("News") and hasClickAction()).assert(switchedOn(false))
         assertThat(rowLabels()).containsExactly("News", "Kids", "Adult", "Sport").inOrder()
         highlighted().assertHighlightIs("Adult")
+        captureScreen("locked_categories_locked")
 
         press(KeyEvent.KEYCODE_DPAD_CENTER)
 
         assertThat(toggles).containsExactly("adult" to true, "adult" to false).inOrder()
         compose.onNode(hasText("Adult") and hasClickAction()).assert(switchedOn(false))
+    }
+
+    @Test
+    fun `while the categories are still being read it says nothing, then opens on the first one`() {
+        var loaded by mutableStateOf<List<SidebarEntry>?>(null)
+        compose.setTvContent {
+            view = LocalView.current
+            LockedCategoriesContent(categories = loaded, locked = locked, onLock = { _, _ -> }, onBack = {})
+        }
+
+        compose.onNodeWithText("No categories yet", substring = true).assertDoesNotExist()
+
+        loaded = categories
+
+        compose.waitUntil(5_000) {
+            compose.onAllNodes(hasText("News") and isFocused()).fetchSemanticsNodes().isNotEmpty()
+        }
+        assertThat(device.highlighted()).isFalse()
     }
 
     @Test

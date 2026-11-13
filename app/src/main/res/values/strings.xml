@@ -275,7 +275,7 @@
         <item quantity="other">%d locked</item>
     </plurals>
     <string name="parental_locked_none">None</string>
-    <string name="locked_categories_hint">Switch a category on to hide it behind the PIN.</string>
+    <string name="locked_categories_hint">Switch a category on to hide it.</string>
 
     <!-- ============================ Profiles ============================ -->
     <string name="profiles_new_heading">New profile name</string>

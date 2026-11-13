@@ -28,10 +28,8 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import app.opentv.R
 import app.opentv.core.ServiceLocator
-import app.opentv.ui.ChannelsViewModel
 import app.opentv.ui.design.FindCount
 import app.opentv.ui.design.ListRow
 import app.opentv.ui.design.ScreenFrame
@@ -41,6 +39,7 @@ import app.opentv.ui.design.SidebarEntry
 import app.opentv.ui.design.Text
 import app.opentv.ui.design.TextField
 import app.opentv.ui.design.findCategories
+import kotlinx.coroutines.flow.map
 
 /**
  * Locked categories (docs/LOOK.md, Settings), opened from the Parental lock pane: a switch for every
@@ -48,13 +47,19 @@ import app.opentv.ui.design.findCategories
  * provider has hundreds of categories, and the pane builds all its rows just by being highlighted.
  */
 @Composable
-fun LockedCategoriesScreen(onBack: () -> Unit, channelsViewModel: ChannelsViewModel = viewModel()) {
+fun LockedCategoriesScreen(onBack: () -> Unit) {
     val context = LocalContext.current
-    val settings = remember { ServiceLocator.get(context).settings }
-    val groups by channelsViewModel.categoryGroups.collectAsState()
+    val graph = remember { ServiceLocator.get(context) }
+    val settings = graph.settings
+    // Straight from the lineup, not ChannelsViewModel's StateFlow: that starts as an empty list, which
+    // would show "No categories yet" every time the screen opens, until the fold finished.
+    val categories by remember {
+        graph.channelLineup.categoryGroups(includeLocked = true)
+            .map { groups -> groups.map { SidebarEntry(it.key, it.label) } }
+    }.collectAsState(initial = null)
     val locked by settings.hiddenCategories.collectAsState()
     LockedCategoriesContent(
-        categories = remember(groups) { groups.map { SidebarEntry(it.key, it.label) } },
+        categories = categories,
         locked = locked,
         onLock = settings::setCategoryLocked,
         onBack = onBack,
@@ -63,12 +68,12 @@ fun LockedCategoriesScreen(onBack: () -> Unit, channelsViewModel: ChannelsViewMo
 
 /**
  * The screen over plain [categories], in the order they're given: nothing is re-sorted when one is
- * locked, so a row never moves away from the Highlight. [onLock] is a category's key and whether to
- * lock it.
+ * locked, so a row never moves away from the Highlight. Null while they're still being read, when
+ * the screen shows only its title. [onLock] is a category's key and whether to lock it.
  */
 @Composable
 internal fun LockedCategoriesContent(
-    categories: List<SidebarEntry>,
+    categories: List<SidebarEntry>?,
     locked: Set<String>,
     onLock: (key: String, lock: Boolean) -> Unit,
     onBack: () -> Unit,
@@ -80,8 +85,8 @@ internal fun LockedCategoriesContent(
     // Once, when the categories first arrive: they're read off the main thread, so not on the first
     // frame. Finding afterwards mustn't pull the Highlight out of the box.
     var landed by remember { mutableStateOf(false) }
-    LaunchedEffect(categories.isNotEmpty()) {
-        if (landed || categories.isEmpty()) return@LaunchedEffect
+    LaunchedEffect(categories.isNullOrEmpty()) {
+        if (landed || categories.isNullOrEmpty()) return@LaunchedEffect
         withFrameNanos {}
         if (runCatching { firstRow.requestFocus() }.getOrNull() == true) landed = true
     }
@@ -89,6 +94,7 @@ internal fun LockedCategoriesContent(
         Column(Modifier.widthIn(max = MAX_WIDTH), verticalArrangement = Arrangement.spacedBy(ROW_GAP)) {
             Text(stringResource(R.string.parental_locked_categories), SetteeType.ScreenTitle)
             Text(stringResource(R.string.locked_categories_hint), SetteeType.Body, color = SetteeColors.QuietText)
+            if (categories == null) return@Column
             if (categories.isEmpty()) {
                 Text(
                     stringResource(R.string.parental_no_categories),

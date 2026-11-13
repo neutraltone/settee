@@ -134,7 +134,7 @@ class SettingsRoutesTest {
         openFrom("Locked categories")
 
         assertThat(route()).isEqualTo(Routes.LOCKED_CATEGORIES)
-        compose.onNode(hasText("Switch a category on to hide it behind the PIN.")).assertExists()
+        compose.onNode(hasText("Switch a category on to hide it.")).assertExists()
         backReturnsTo("Locked categories")
     }
 
