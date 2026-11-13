@@ -20,6 +20,7 @@
     <string name="common_keep_typing">Keep typing…</string>
     <string name="common_channels">Channels</string>
     <string name="common_try_again">Try again</string>
+    <string name="common_not_now">Not now</string>
     <string name="common_percent">%1$d%%</string>
 
     <!-- ============================ Navigation rail ============================ -->
@@ -613,6 +614,7 @@
     <string name="settings_tmdb_key_label">Your TMDB Key</string>
     <string name="settings_pane_tmdb">TMDB</string>
     <string name="settings_pane_tmdb_hint">Posters, synopses and cast your provider left out</string>
+    <string name="settings_pane_opensubtitles_hint">Subtitles for films and episodes that have none</string>
     <string name="settings_tmdb_scan">Scan with your phone to add your TMDB Key</string>
     <string name="settings_tmdb_qr_desc">QR code for adding your TMDB Key from your phone</string>
     <string name="settings_tmdb_type">Type it instead</string>
@@ -647,6 +649,48 @@
     <string name="error_tmdb_unreachable_tv">Can\'t reach TMDB. Check this TV is online, then try again.</string>
     <string name="error_tmdb_unreachable_device">Can\'t reach TMDB. Check this device is online, then try again.</string>
     <string name="error_tmdb_trouble">TMDB is having problems. That\'s at their end, so try again later.</string>
+    <string name="error_opensubtitles_none">OpenSubtitles has no subtitles for this yet.</string>
+    <string name="error_opensubtitles_unreachable_tv">Can\'t reach OpenSubtitles. Check this TV is online, then try again.</string>
+    <string name="error_opensubtitles_unreachable_device">Can\'t reach OpenSubtitles. Check this device is online, then try again.</string>
+    <string name="error_opensubtitles_trouble">OpenSubtitles is having problems. That\'s at their end, so try again later.</string>
+    <string name="error_opensubtitles_limit_anonymous">That\'s today\'s 5 free subtitles used. Sign in to OpenSubtitles in Settings for more.</string>
+    <string name="error_opensubtitles_limit_account">That\'s today\'s OpenSubtitles downloads used. More from %1$s.</string>
+    <string name="error_opensubtitles_limit_account_unknown">That\'s today\'s OpenSubtitles downloads used. More tomorrow.</string>
+    <string name="error_opensubtitles_sign_in">OpenSubtitles didn\'t accept that username or password. Check them and try again.</string>
+    <string name="error_opensubtitles_token_tv">OpenSubtitles signed this TV out. Sign in again in Settings.</string>
+    <string name="error_opensubtitles_token_device">OpenSubtitles signed this device out. Sign in again in Settings.</string>
+    <string name="opensubtitles_name" translatable="false">OpenSubtitles</string>
+    <string name="opensubtitles_attribution">Subtitles provided by OpenSubtitles.com</string>
+    <string name="opensubtitles_find">Find subtitles online</string>
+    <string name="opensubtitles_searching">Looking for subtitles…</string>
+    <string name="opensubtitles_downloading">Downloading</string>
+    <string name="opensubtitles_hearing_impaired">Hearing impaired</string>
+    <string name="opensubtitles_forced">Forced</string>
+    <string name="opensubtitles_downloaded">Downloaded</string>
+    <string name="opensubtitles_timing">Timing</string>
+    <string name="opensubtitles_timing_hint">Left for earlier, right for later</string>
+    <string name="opensubtitles_fetched">Subtitles from OpenSubtitles</string>
+    <string name="opensubtitles_step_title">Find subtitles with OpenSubtitles</string>
+    <string name="opensubtitles_step_body">Settee can find subtitles on OpenSubtitles when a film or episode has none in your language. 5 a day work without an account. Sign in to your free OpenSubtitles account to get its own daily allowance, and have subtitles fetched for you.</string>
+    <string name="opensubtitles_step_signed_in">Subtitles now count against your account\'s own daily allowance, and one missing in your language is fetched for you.</string>
+    <string name="opensubtitles_sign_in">Sign in</string>
+    <string name="opensubtitles_sign_out">Sign out</string>
+    <string name="opensubtitles_sign_in_here">Sign in on this TV</string>
+    <string name="opensubtitles_sign_in_phone">Or scan with your phone to sign in there</string>
+    <string name="opensubtitles_username">Username</string>
+    <string name="opensubtitles_password">Password</string>
+    <string name="opensubtitles_create_account">No account? Create a free one at opensubtitles.com</string>
+    <string name="opensubtitles_signed_in_as">Signed in as %1$s</string>
+    <string name="opensubtitles_not_signed_in">Not signed in. 5 subtitles a day work without an account.</string>
+    <string name="opensubtitles_downloads_left">%1$d downloads left today</string>
+    <string name="opensubtitles_auto">Fetch missing subtitles by themselves</string>
+    <string name="opensubtitles_auto_detail">When a film or episode has none in your language</string>
+    <string name="opensubtitles_signing_in">Signing in…</string>
+    <string name="pairing_phone_opensubtitles_title">Sign in to OpenSubtitles</string>
+    <string name="pairing_phone_opensubtitles_body">Your username and password go to your TV, which signs in to OpenSubtitles. They go nowhere else.</string>
+    <string name="pairing_phone_opensubtitles_saved_title">Signed in</string>
+    <string name="pairing_phone_opensubtitles_skipped_body">You can sign in later in Settings › OpenSubtitles. Carry on on your TV.</string>
+    <string name="pairing_phone_opensubtitles_saved_body">Your TV is signed in to OpenSubtitles. You can put your phone down.</string>
     <string name="error_http_401">Your provider didn\'t accept your login. Check the username and password in Settings.</string>
     <string name="error_http_403">Your provider refused this. Your account may be in use on another device, so stop it there and try again.</string>
     <string name="error_http_429">Your provider is getting too many requests from this device. Wait a minute, then try again.</string>

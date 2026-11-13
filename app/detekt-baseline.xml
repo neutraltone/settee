@@ -149,7 +149,6 @@
     <ID>ReturnCount:PairingHttp.kt$PairingHttp$fun isPrivateAddress(host: String?): Boolean</ID>
     <ID>ReturnCount:PairingServer.kt$PairingServer$fun start()</ID>
     <ID>ReturnCount:PairingServer.kt$PairingServer$private fun handle(client: Socket)</ID>
-    <ID>ReturnCount:PlayerScreen.kt$private fun trackLabel(label: String?, language: String?, index: Int): String</ID>
     <ID>ReturnCount:RecordingEngine.kt$RecordingEngine$private suspend fun alternateProviderForClash(channel: Channel, startMillis: Long, endMillis: Long): Channel</ID>
     <ID>ReturnCount:RecordingEngine.kt$RecordingEngine$suspend fun scheduleProgramme( channel: Channel, programme: Programme, ruleId: Long? = null, profileId: Long = settings.activeProfileId.value, ): Long</ID>
     <ID>ReturnCount:SleepTimer.kt$SleepTimer$fun minutesRemaining(nowMillis: Long = System.currentTimeMillis()): Int?</ID>
@@ -165,7 +164,6 @@
     <ID>ReturnCount:TmdbClient.kt$TmdbClient$fun imdbId(title: String, year: Int?, isMovie: Boolean, tmdbId: String?): String?</ID>
     <ID>ReturnCount:TmdbClient.kt$TmdbClient$private fun get(url: HttpUrl): JsonElement?</ID>
     <ID>ReturnCount:TmdbClient.kt$TmdbClient$private fun lookup(isMovie: Boolean, title: String, year: Int?, tmdbId: String?): TmdbMeta?</ID>
-    <ID>ReturnCount:VodPlayerScreen.kt$private fun vodTrackLabel(label: String?, language: String?, index: Int): String</ID>
     <ID>ReturnCount:VodTitleCleaner.kt$VodTitleCleaner$private fun isPrefixTag(token: String, bracketed: Boolean, separator: Char?): Boolean</ID>
     <ID>ReturnCount:XmltvParser.kt$XmltvParser$fun parseXmltvTime(raw: String?): Long?</ID>
     <ID>ReturnCount:XmltvParser.kt$XmltvParser$private fun parseOffset(raw: String): Int?</ID>

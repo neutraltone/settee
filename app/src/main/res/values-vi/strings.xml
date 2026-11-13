@@ -312,4 +312,14 @@
     <string name="error_tmdb_unreachable_tv">Không kết nối được TMDB. Hãy kiểm tra TV này đang trực tuyến, rồi thử lại.</string>
     <string name="error_tmdb_unreachable_device">Không kết nối được TMDB. Hãy kiểm tra thiết bị này đang trực tuyến, rồi thử lại.</string>
     <string name="error_tmdb_trouble">TMDB đang gặp sự cố. Lỗi ở phía họ, vì vậy hãy thử lại sau.</string>
+    <string name="error_opensubtitles_none">OpenSubtitles chưa có phụ đề cho nội dung này.</string>
+    <string name="error_opensubtitles_unreachable_tv">Không kết nối được OpenSubtitles. Hãy kiểm tra TV này đang trực tuyến rồi thử lại.</string>
+    <string name="error_opensubtitles_unreachable_device">Không kết nối được OpenSubtitles. Hãy kiểm tra thiết bị này đang trực tuyến rồi thử lại.</string>
+    <string name="error_opensubtitles_trouble">OpenSubtitles đang gặp sự cố ở phía họ, nên hãy thử lại sau.</string>
+    <string name="error_opensubtitles_limit_anonymous">Đã dùng hết 5 phụ đề miễn phí hôm nay. Đăng nhập OpenSubtitles trong Cài đặt để có thêm.</string>
+    <string name="error_opensubtitles_limit_account">Đã dùng hết lượt tải từ OpenSubtitles hôm nay. Có thêm từ %1$s.</string>
+    <string name="error_opensubtitles_limit_account_unknown">Đã dùng hết lượt tải từ OpenSubtitles hôm nay. Có thêm vào ngày mai.</string>
+    <string name="error_opensubtitles_sign_in">OpenSubtitles không chấp nhận tên người dùng hoặc mật khẩu đó. Hãy kiểm tra rồi thử lại.</string>
+    <string name="error_opensubtitles_token_tv">OpenSubtitles đã đăng xuất TV này. Hãy đăng nhập lại trong Cài đặt.</string>
+    <string name="error_opensubtitles_token_device">OpenSubtitles đã đăng xuất thiết bị này. Hãy đăng nhập lại trong Cài đặt.</string>
 </resources>

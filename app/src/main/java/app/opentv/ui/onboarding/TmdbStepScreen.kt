@@ -93,7 +93,17 @@ fun TmdbStepScreen(graph: ServiceLocator.Graph, onDone: () -> Unit) {
         )
         return
     }
-    TmdbKeyRows(entry, onboarding = true, graph = graph, onSaved = { saved = true }, onSkipped = onDone) { parts ->
+    // With OpenSubtitles' step next, the phone goes straight on to its sign-in once a key is sent, on the
+    // same address, which stays open for that step. The TV still says the key is saved and waits on Carry
+    // on, so there's time to read it; a sign-in sent meanwhile is answered when the step opens.
+    TmdbKeyRows(
+        entry,
+        onboarding = true,
+        graph = graph,
+        onSaved = { saved = true },
+        onSkipped = onDone,
+        thenOpenSubtitles = remember { graph.offersOpenSubtitles() },
+    ) { parts ->
         StepLayout(
             code = { parts.code(true) },
             rows = {
@@ -120,7 +130,14 @@ fun TmdbStepScreen(graph: ServiceLocator.Graph, onDone: () -> Unit) {
  * title, the help, [rows], [actions] and TMDB's attribution.
  */
 @Composable
-private fun StepLayout(code: @Composable () -> Unit, rows: @Composable () -> Unit, actions: @Composable () -> Unit) {
+internal fun StepLayout(
+    code: @Composable () -> Unit,
+    rows: @Composable () -> Unit,
+    actions: @Composable () -> Unit,
+    title: String = stringResource(R.string.onboarding_tmdb_title),
+    help: String = stringResource(R.string.onboarding_tmdb_help),
+    attribution: @Composable () -> Unit = { TmdbAttribution() },
+) {
     ScreenFrame {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(48.dp)) {
@@ -134,10 +151,10 @@ private fun StepLayout(code: @Composable () -> Unit, rows: @Composable () -> Uni
                     Box(Modifier.size(QR_PANEL_WIDTH, QR_PANEL_HEIGHT)) { code() }
                 }
                 Column(Modifier.widthIn(max = WORDS_WIDTH)) {
-                    Text(stringResource(R.string.onboarding_tmdb_title), SetteeType.ScreenTitle)
+                    Text(title, SetteeType.ScreenTitle)
                     Spacer(Modifier.height(12.dp))
                     Text(
-                        stringResource(R.string.onboarding_tmdb_help),
+                        help,
                         SetteeType.Synopsis,
                         color = SetteeColors.QuietText,
                     )
@@ -148,7 +165,7 @@ private fun StepLayout(code: @Composable () -> Unit, rows: @Composable () -> Uni
                         modifier = Modifier.padding(top = 4.dp).testTag(TMDB_STEP_ACTIONS),
                     ) { actions() }
                     Spacer(Modifier.height(24.dp))
-                    TmdbAttribution()
+                    attribution()
                 }
             }
         }
@@ -180,7 +197,7 @@ private fun SavedKeyField(ending: String) {
  * while the row that had the Highlight is still going.
  */
 @Composable
-private fun Modifier.takesHighlight(): Modifier {
+internal fun Modifier.takesHighlight(): Modifier {
     val focus = remember { FocusRequester() }
     var highlighted by remember { mutableStateOf(false) }
     val windowFocused = LocalWindowInfo.current.isWindowFocused

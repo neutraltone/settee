@@ -312,4 +312,14 @@
     <string name="error_tmdb_unreachable_tv">Nije moguće doći do TMDB-a. Provjerite je li ovaj televizor na mreži pa pokušajte ponovno.</string>
     <string name="error_tmdb_unreachable_device">Nije moguće doći do TMDB-a. Provjerite je li ovaj uređaj na mreži pa pokušajte ponovno.</string>
     <string name="error_tmdb_trouble">TMDB ima problema. Do njih je, pa pokušajte ponovno kasnije.</string>
+    <string name="error_opensubtitles_none">OpenSubtitles još nema titlove za ovo.</string>
+    <string name="error_opensubtitles_unreachable_tv">OpenSubtitles nije dostupan. Provjerite je li ovaj televizor na mreži pa pokušajte ponovno.</string>
+    <string name="error_opensubtitles_unreachable_device">OpenSubtitles nije dostupan. Provjerite je li ovaj uređaj na mreži pa pokušajte ponovno.</string>
+    <string name="error_opensubtitles_trouble">OpenSubtitles ima problema. Do njih je, pa pokušajte kasnije.</string>
+    <string name="error_opensubtitles_limit_anonymous">Današnjih 5 besplatnih titlova je potrošeno. Za više se prijavite u OpenSubtitles u Postavkama.</string>
+    <string name="error_opensubtitles_limit_account">Današnja preuzimanja s OpenSubtitlesa su potrošena. Više od %1$s.</string>
+    <string name="error_opensubtitles_limit_account_unknown">Današnja preuzimanja s OpenSubtitlesa su potrošena. Više sutra.</string>
+    <string name="error_opensubtitles_sign_in">OpenSubtitles nije prihvatio to korisničko ime ili lozinku. Provjerite ih i pokušajte ponovno.</string>
+    <string name="error_opensubtitles_token_tv">OpenSubtitles je odjavio ovaj televizor. Ponovno se prijavite u Postavkama.</string>
+    <string name="error_opensubtitles_token_device">OpenSubtitles je odjavio ovaj uređaj. Ponovno se prijavite u Postavkama.</string>
 </resources>

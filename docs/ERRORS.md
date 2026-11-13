@@ -119,3 +119,18 @@ A guide feed's failure is stored on its row (`ViewerError.stored`) and shown in 
 | TMDB Key check got no answer (`TmdbCheck.Unreachable` with no status) | `error_tmdb_unreachable_tv` / `_device` | Can't reach TMDB. Check this TV is online, then try again. | exception type | Viewer's network |
 | TMDB Key check answered with any other status | `error_tmdb_trouble` | TMDB is having problems. That's at their end, so try again later. | HTTP status | TMDB's server |
 | Settings › TMDB or the Onboarding TMDB step: phone server no network, wouldn't start, timed out | `pairing_*` (as pairing) | As pairing | exception type when one was behind it | As pairing |
+
+## OpenSubtitles
+
+Worded by `ErrorWording.ofOpenSubtitles`. In the film and episode players' OpenSubtitles results (searching and picking), the note an automatic download leaves over the picture, Settings › OpenSubtitles, Setup's OpenSubtitles step and the phone's sign-in page. An automatic download that fails never stops playback: it shows only as the note.
+
+| Trigger | String key | Sentence | Detail | Whose end, likely cause |
+|---|---|---|---|---|
+| No results, or none in the language and kind an automatic download wants (`OpenSubtitlesFailure.NoResults`) | `error_opensubtitles_none` | OpenSubtitles has no subtitles for this yet. | NoResults | Nobody's: nothing uploaded for the title |
+| No answer (`Unreachable` with no status) | `error_opensubtitles_unreachable_tv` / `_device` | Can't reach OpenSubtitles. Check this TV is online, then try again. | exception type | Viewer's network |
+| Any other status, 401 and 406 aside (`Unreachable` with a status) | `error_opensubtitles_trouble` | OpenSubtitles is having problems. That's at their end, so try again later. | HTTP status | OpenSubtitles' server, or its rate limit (429) |
+| Daily download limit, not signed in (HTTP 406) | `error_opensubtitles_limit_anonymous` | That's today's 5 free subtitles used. Sign in to OpenSubtitles in Settings for more. | DownloadLimit · HTTP 406 | The anonymous allowance for this address |
+| Daily download limit, signed in (HTTP 406) | `error_opensubtitles_limit_account` (`_unknown` when no reset time came back) | That's today's OpenSubtitles downloads used. More from 00:00. (local time of `reset_time_utc`) | DownloadLimit · HTTP 406 | The account's own allowance |
+| Wrong username or password (HTTP 401 from `/login`) | `error_opensubtitles_sign_in` | OpenSubtitles didn't accept that username or password. Check them and try again. | SignInRejected · HTTP 401 | Viewer's typing |
+| Token expired or invalid, and signing in again with the saved password failed | `error_opensubtitles_token_tv` / `_device` | OpenSubtitles signed this TV out. Sign in again in Settings. | TokenRejected | A changed password, or a closed account |
+| Settings › OpenSubtitles or Setup's step: phone server no network, wouldn't start, timed out | `pairing_*` (as pairing) | As pairing | exception type when one was behind it | As pairing |

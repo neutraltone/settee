@@ -316,6 +316,66 @@ class ProviderRoutesTest {
         compose.waitUntil(5_000) { route() == Routes.SETUP }
     }
 
+    @After
+    fun closeOpenSubtitles() {
+        // At the end, as [graph]'s is: closed mid-test, Setup's provider list could still be reading it.
+        if (openSubtitlesGraph.isInitialized()) openSubtitlesGraph.value.database.close()
+    }
+
+    /** The same app as [graph], in a build with an OpenSubtitles key. */
+    private val openSubtitlesGraph = lazy {
+        ServiceLocator.Graph(
+            app,
+            http = panel.http,
+            settingsFile = "provider-routes-opensubtitles",
+            openDatabase = {
+                Room.inMemoryDatabaseBuilder(app, OpenTvDatabase::class.java).allowMainThreadQueries().build()
+            },
+        ).apply { openSubtitlesKey = "k" }
+    }
+
+    private val withOpenSubtitles by openSubtitlesGraph
+
+    private fun openSubtitlesStepButton(text: String) = compose.onNode(
+        hasText(text) and hasAnyAncestor(hasTestTag(TMDB_STEP_ACTIONS)),
+    )
+
+    @Test
+    fun `with OpenSubtitles, skipping the TMDB step goes on to the OpenSubtitles step, and Not now to Setup`() {
+        withOpenSubtitles.settings.removeTmdbApiKey()
+        setApp(start = Routes.ADD_SOURCE, sources = SourcesViewModel(app, withOpenSubtitles))
+        savePlaylist()
+        compose.waitUntil(5_000) { route() == Routes.TMDB_STEP }
+
+        compose.onNodeWithText("Skip for now").performClick()
+
+        compose.waitUntil(5_000) { route() == Routes.OPENSUBTITLES_STEP }
+        compose.onNodeWithText("Find subtitles with OpenSubtitles").assertExists()
+        compose.onNodeWithText("5 a day work without an account", substring = true).assertExists()
+        compose.onNodeWithText("Sign in on this TV").assertExists()
+        compose.onNodeWithText("Subtitles provided by OpenSubtitles.com").assertExists()
+        compose.waitUntil(5_000) {
+            compose.onAllNodes(hasText("Not now") and isFocused()).fetchSemanticsNodes().isNotEmpty()
+        }
+        captureScreen("onboarding_opensubtitles_step")
+
+        openSubtitlesStepButton("Not now").performClick()
+
+        compose.waitUntil(5_000) { route() == Routes.SETUP }
+        assertThat(compose.runOnIdle { nav.previousBackStackEntry?.destination?.route })
+            .isNotEqualTo(Routes.OPENSUBTITLES_STEP)
+    }
+
+    @Test
+    fun `with OpenSubtitles and a TMDB Key already, the first provider goes straight to the OpenSubtitles step`() {
+        withOpenSubtitles.settings.setTmdbApiKey(TMDB_KEY)
+        setApp(start = Routes.ADD_SOURCE, sources = SourcesViewModel(app, withOpenSubtitles))
+
+        savePlaylist()
+
+        compose.waitUntil(5_000) { route() == Routes.OPENSUBTITLES_STEP }
+    }
+
     /**
      * The step fits on a TV screen as it is: nothing scrolled off the top to bring the Highlight into
      * view, and nothing hanging off the bottom.
@@ -332,9 +392,9 @@ class ProviderRoutesTest {
      * The phone's address for the TMDB step's paste box, once its server is listening; skips the test
      * where the machine running it has no private network address to listen on.
      */
-    private fun phoneAddress(): PairingServer.Session {
-        compose.waitUntil(5_000) { graph.pairingServer.state.value !is PairingServer.State.Idle }
-        val listening = graph.pairingServer.state.value as? PairingServer.State.Listening
+    private fun phoneAddress(server: PairingServer = graph.pairingServer): PairingServer.Session {
+        compose.waitUntil(5_000) { server.state.value !is PairingServer.State.Idle }
+        val listening = server.state.value as? PairingServer.State.Listening
         assumeTrue("needs a private LAN address to serve on", listening != null)
         return listening!!.session
     }
@@ -349,6 +409,34 @@ class ProviderRoutesTest {
         Thread {
             runCatching { okhttp3.OkHttpClient().newCall(request).execute().close() }
         }.start()
+    }
+
+    @Test
+    fun `with OpenSubtitles next, a key from the phone waits on Carry on, then that step keeps the same address`() {
+        withOpenSubtitles.settings.removeTmdbApiKey()
+        panel.replies["/3/authentication"] = """{"success": true}"""
+        setApp(start = Routes.ADD_SOURCE, sources = SourcesViewModel(app, withOpenSubtitles))
+        savePlaylist()
+        compose.waitUntil(5_000) { route() == Routes.TMDB_STEP }
+        val server = withOpenSubtitles.pairingServer
+        val session = phoneAddress(server)
+
+        fromPhone(session, "/key", "key" to OTHER_TMDB_KEY)
+
+        // The TV says the key is saved and waits, so there's time to read it, while the phone goes on.
+        compose.waitUntil(10_000) {
+            compose.onAllNodes(hasText("Carry on") and isFocused()).fetchSemanticsNodes().isNotEmpty()
+        }
+        assertThat(route()).isEqualTo(Routes.TMDB_STEP)
+        assertThat(withOpenSubtitles.settings.tmdbApiKey.value).isEqualTo(OTHER_TMDB_KEY)
+
+        compose.onNodeWithText("Carry on").performClick()
+
+        compose.waitUntil(10_000) { route() == Routes.OPENSUBTITLES_STEP }
+        compose.mainClock.advanceTimeBy(2_000)
+        compose.waitForIdle()
+        // The same address, so the phone needs no new code.
+        assertThat((server.state.value as PairingServer.State.Listening).session).isEqualTo(session)
     }
 
     @Test
@@ -381,6 +469,22 @@ class ProviderRoutesTest {
 
         compose.waitUntil(10_000) { route() == Routes.SETUP }
         assertThat(graph.settings.tmdbApiKey.value).isEmpty()
+    }
+
+    @Test
+    fun `Skip for now on the phone's TMDB page goes on to the OpenSubtitles step, which waits for its own answer`() {
+        withOpenSubtitles.settings.removeTmdbApiKey()
+        setApp(start = Routes.ADD_SOURCE, sources = SourcesViewModel(app, withOpenSubtitles))
+        savePlaylist()
+        compose.waitUntil(5_000) { route() == Routes.TMDB_STEP }
+
+        fromPhone(phoneAddress(withOpenSubtitles.pairingServer), "/skip")
+
+        compose.waitUntil(10_000) { route() == Routes.OPENSUBTITLES_STEP }
+        // The TMDB page's skip is no answer to this step: it stays until the viewer chooses.
+        compose.mainClock.advanceTimeBy(2_000)
+        compose.waitForIdle()
+        assertThat(route()).isEqualTo(Routes.OPENSUBTITLES_STEP)
     }
 
     /** Where Type it instead is on screen. */

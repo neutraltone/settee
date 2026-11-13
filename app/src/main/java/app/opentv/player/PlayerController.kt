@@ -505,11 +505,50 @@ class PlayerController(
     /**
      * Applies a Profile's Subtitle Preference to the current stream, once its text tracks are known
      * (see [StreamSubtitles]). Safe to call on every tracks or preference change.
+     *
+     * A film or episode passes its Downloaded Subtitles ([downloaded], their languages) to be among
+     * the choices (see [chooseSubtitle]). The pick is returned when it's one of those, for the screen
+     * to show: those are drawn by the screen, so the stream's text goes off. With some, it waits until
+     * the stream's tracks are known, or a Downloaded Subtitle would win over a track in the same
+     * language that just hadn't arrived yet.
      */
-    fun applySubtitlePreference(preference: SubtitlePreference?) {
-        val hasText = _tracks.value.groups.any { it.type == C.TRACK_TYPE_TEXT }
-        if (streamSubtitles.shouldTurnOn(preference, hasText)) setSubtitlesEnabled(true, preference?.language)
+    fun applySubtitlePreference(
+        preference: SubtitlePreference?,
+        downloaded: List<String> = emptyList(),
+    ): SubtitlePick.Downloaded? {
+        val groups = _tracks.value.groups
+        val hasText = groups.any { it.type == C.TRACK_TYPE_TEXT } || (groups.isNotEmpty() && downloaded.isNotEmpty())
+        if (!streamSubtitles.shouldTurnOn(preference, hasText)) return null
+        val candidates = groups
+            .filter { it.type == C.TRACK_TYPE_TEXT }
+            .flatMap { group -> (0 until group.length).map { group to it } }
+        val pick = chooseSubtitle(
+            candidates.map { (group, i) -> SubtitleTrack(group.getTrackFormat(i).language, group.isTrackSupported(i)) },
+            downloaded,
+            preferred = preference?.language,
+            device = Locale.getDefault().language,
+        )
+        return when (pick) {
+            is SubtitlePick.Stream -> {
+                val (group, i) = candidates[pick.index]
+                selectTrack(group, i)
+                null
+            }
+            is SubtitlePick.Downloaded -> {
+                disableText()
+                pick
+            }
+            null -> {
+                setSubtitlesEnabled(true, preference?.language)
+                null
+            }
+        }
     }
+
+    /** The stream's text tracks' languages, as [AutoSubtitles] needs them. */
+    val streamSubtitleLanguages: List<String?>
+        get() = _tracks.value.groups.filter { it.type == C.TRACK_TYPE_TEXT }
+            .flatMap { group -> (0 until group.length).map { group.getTrackFormat(it).language } }
 
     /** Force a specific audio or text track on (used by the in-player pickers). */
     fun selectTrack(group: Tracks.Group, trackIndex: Int) {

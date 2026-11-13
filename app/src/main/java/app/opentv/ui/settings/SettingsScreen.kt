@@ -32,6 +32,7 @@ import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Movie
 import androidx.compose.material.icons.filled.PhoneAndroid
 import androidx.compose.material.icons.filled.Storage
+import androidx.compose.material.icons.filled.Subtitles
 import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.runtime.Composable
@@ -62,6 +63,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import app.opentv.R
 import app.opentv.core.ServiceLocator
+import app.opentv.data.repo.OpenSubtitles
 import app.opentv.data.repo.TmdbKeys
 import app.opentv.ui.design.HighlightStyle
 import app.opentv.ui.design.HighlightSurface
@@ -82,6 +84,7 @@ enum class SettingsSection(@StringRes val title: Int, @StringRes val hint: Int, 
     Devices(R.string.settings_pane_devices, R.string.settings_pane_devices_hint, Icons.Filled.Sync),
     Addons(R.string.settings_pane_addons, R.string.settings_pane_addons_hint, Icons.Filled.Extension),
     Tmdb(R.string.settings_pane_tmdb, R.string.settings_pane_tmdb_hint, Icons.Filled.Movie),
+    OpenSubtitles(R.string.opensubtitles_name, R.string.settings_pane_opensubtitles_hint, Icons.Filled.Subtitles),
     Manager(R.string.settings_pane_manager, R.string.settings_pane_manager_hint, Icons.Filled.PhoneAndroid),
     About(R.string.settings_pane_about, R.string.settings_pane_about_hint, Icons.Filled.Info),
 }
@@ -147,6 +150,8 @@ fun SettingsScreen(
     checkForUpdate: UpdateCheck = CheckGitHub,
     // Likewise, so tests can give TMDB's answer to a key without reaching TMDB; null for the app's own.
     tmdbKeys: TmdbKeys? = null,
+    // And one so tests can have OpenSubtitles whatever key the build has; the app's own by default.
+    openSubtitles: OpenSubtitles? = ServiceLocator.get(LocalContext.current).openSubtitles,
 ) {
     val current = remember { FocusRequester() }
     val pane = remember { FocusRequester() }
@@ -197,7 +202,10 @@ fun SettingsScreen(
         ) {
             Text(stringResource(R.string.nav_settings), SetteeType.ScreenTitle)
             Spacer(Modifier.height(SetteeSpace.RowGap))
-            SettingsSection.entries.forEach { section ->
+            // Only a build with Settee's OpenSubtitles key has the section.
+            SettingsSection.entries.filter {
+                it != SettingsSection.OpenSubtitles || openSubtitles != null
+            }.forEach { section ->
                 SectionRow(
                     section = section,
                     isCurrent = section == memory.section,
@@ -243,6 +251,7 @@ fun SettingsScreen(
                         onOpenFontLicences,
                         checkForUpdate,
                         tmdbKeys ?: ServiceLocator.get(LocalContext.current).tmdbKeys,
+                        openSubtitles,
                     )
                 }
             }
@@ -259,6 +268,7 @@ private fun Pane(
     onOpenFontLicences: () -> Unit,
     checkForUpdate: UpdateCheck,
     tmdbKeys: TmdbKeys,
+    openSubtitles: OpenSubtitles?,
 ) {
     when (section) {
         SettingsSection.Providers -> ProvidersPane(onAddProvider, onEditProvider)
@@ -270,6 +280,7 @@ private fun Pane(
         SettingsSection.Devices -> DevicesPane()
         SettingsSection.Addons -> AddonsPane()
         SettingsSection.Tmdb -> TmdbPane(tmdbKeys)
+        SettingsSection.OpenSubtitles -> openSubtitles?.let { OpenSubtitlesPane(it) }
         SettingsSection.Manager -> ManagerPane()
         SettingsSection.About -> AboutPane(onOpenFontLicences, checkForUpdate)
     }

@@ -312,4 +312,14 @@
     <string name="error_tmdb_unreachable_tv">Не вдається зв\'язатися з TMDB. Перевірте, що цей телевізор у мережі, і спробуйте ще раз.</string>
     <string name="error_tmdb_unreachable_device">Не вдається зв\'язатися з TMDB. Перевірте, що цей пристрій у мережі, і спробуйте ще раз.</string>
     <string name="error_tmdb_trouble">У TMDB проблеми. Вони на їхньому боці, тож спробуйте пізніше.</string>
+    <string name="error_opensubtitles_none">На OpenSubtitles поки немає субтитрів для цього.</string>
+    <string name="error_opensubtitles_unreachable_tv">Не вдається під\'єднатися до OpenSubtitles. Перевірте, чи цей телевізор у мережі, і спробуйте ще раз.</string>
+    <string name="error_opensubtitles_unreachable_device">Не вдається під\'єднатися до OpenSubtitles. Перевірте, чи цей пристрій у мережі, і спробуйте ще раз.</string>
+    <string name="error_opensubtitles_trouble">В OpenSubtitles проблеми. Це на їхньому боці, тож спробуйте пізніше.</string>
+    <string name="error_opensubtitles_limit_anonymous">Сьогоднішні 5 безкоштовних субтитрів використано. Щоб отримати більше, увійдіть в OpenSubtitles у Налаштуваннях.</string>
+    <string name="error_opensubtitles_limit_account">Сьогоднішні завантаження з OpenSubtitles використано. Нові з %1$s.</string>
+    <string name="error_opensubtitles_limit_account_unknown">Сьогоднішні завантаження з OpenSubtitles використано. Нові завтра.</string>
+    <string name="error_opensubtitles_sign_in">OpenSubtitles не прийняв це ім\'я користувача або пароль. Перевірте їх і спробуйте ще раз.</string>
+    <string name="error_opensubtitles_token_tv">OpenSubtitles вийшов з облікового запису на цьому телевізорі. Увійдіть знову в Налаштуваннях.</string>
+    <string name="error_opensubtitles_token_device">OpenSubtitles вийшов з облікового запису на цьому пристрої. Увійдіть знову в Налаштуваннях.</string>
 </resources>

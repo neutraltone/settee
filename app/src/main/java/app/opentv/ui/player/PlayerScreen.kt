@@ -95,7 +95,6 @@ import app.opentv.ui.options.LocalOpenOptions
 import app.opentv.ui.options.LocalRecordingStarted
 import app.opentv.ui.options.OptionsFor
 import app.opentv.ui.options.OptionsSubject
-import java.util.Locale
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -1052,14 +1051,6 @@ private fun buildAudioOptions(controller: PlayerController, tracks: Tracks, onDo
         }
     }
     return list
-}
-
-private fun trackLabel(label: String?, language: String?, index: Int): String {
-    if (!label.isNullOrBlank()) return label
-    if (!language.isNullOrBlank() && language != "und") {
-        return runCatching { Locale(language).displayLanguage.ifBlank { language } }.getOrDefault(language)
-    }
-    return "Track ${index + 1}"
 }
 
 /**

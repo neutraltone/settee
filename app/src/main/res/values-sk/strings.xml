@@ -312,4 +312,14 @@
     <string name="error_tmdb_unreachable_tv">TMDB nie je dostupné. Skontrolujte, či je tento televízor online, a skúste to znova.</string>
     <string name="error_tmdb_unreachable_device">TMDB nie je dostupné. Skontrolujte, či je toto zariadenie online, a skúste to znova.</string>
     <string name="error_tmdb_trouble">TMDB má problémy. Sú na ich strane, skúste to teda neskôr.</string>
+    <string name="error_opensubtitles_none">OpenSubtitles pre toto zatiaľ nemá titulky.</string>
+    <string name="error_opensubtitles_unreachable_tv">OpenSubtitles nie sú dostupné. Skontrolujte, či je tento televízor online, a skúste to znova.</string>
+    <string name="error_opensubtitles_unreachable_device">OpenSubtitles nie sú dostupné. Skontrolujte, či je toto zariadenie online, a skúste to znova.</string>
+    <string name="error_opensubtitles_trouble">OpenSubtitles majú problémy. Sú na ich strane, skúste to teda neskôr.</string>
+    <string name="error_opensubtitles_limit_anonymous">Dnešných 5 titulkov zadarmo je vyčerpaných. Ak chcete ďalšie, prihláste sa do OpenSubtitles v Nastaveniach.</string>
+    <string name="error_opensubtitles_limit_account">Dnešné sťahovanie z OpenSubtitles je vyčerpané. Ďalšie od %1$s.</string>
+    <string name="error_opensubtitles_limit_account_unknown">Dnešné sťahovanie z OpenSubtitles je vyčerpané. Ďalšie zajtra.</string>
+    <string name="error_opensubtitles_sign_in">OpenSubtitles neprijali toto používateľské meno alebo heslo. Skontrolujte ich a skúste to znova.</string>
+    <string name="error_opensubtitles_token_tv">OpenSubtitles tento televízor odhlásili. Prihláste sa znova v Nastaveniach.</string>
+    <string name="error_opensubtitles_token_device">OpenSubtitles toto zariadenie odhlásili. Prihláste sa znova v Nastaveniach.</string>
 </resources>

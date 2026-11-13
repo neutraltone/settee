@@ -25,8 +25,20 @@ The screen behind the Rail's Profile, listing every Profile on this device: wher
 _Avoid_: Profile settings, accounts
 
 **Subtitle Preference**:
-Whether a Profile wants subtitles shown, and in which language. Belongs to one Profile and follows it from one title to the next, whatever kind of title it is.
+Whether a Profile wants subtitles shown, and in which language. Belongs to one Profile and follows it from one title to the next, whatever kind of title it is. When the last pick came from OpenSubtitles, it also remembers whether that was a Forced or Hearing impaired subtitle.
 _Avoid_: Captions setting, CC, subtitle default
+
+**OpenSubtitles**:
+The free online subtitle library Settee searches when a film or episode has no subtitles the viewer wants. It only supplies subtitles, never anything to play.
+_Avoid_: Subtitle provider, Provider (that's the IPTV service)
+
+**OpenSubtitles Account**:
+The viewer's own free account on OpenSubtitles, signed in on this box so downloads count against their own daily allowance. It belongs to the box, not a Profile, and isn't synced. Settee's key is Settee's own: viewers never bring one.
+_Avoid_: OpenSubtitles key, API key, login
+
+**Downloaded Subtitle**:
+A subtitle file fetched from OpenSubtitles for one title and kept on this box, where it's offered alongside the stream's own tracks from then on.
+_Avoid_: External subtitle, sideloaded subtitle, OpenSubtitles track
 
 ## Providers
 

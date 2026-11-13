@@ -312,4 +312,14 @@
     <string name="error_tmdb_unreachable_tv">ติดต่อ TMDB ไม่ได้ ตรวจสอบว่าทีวีเครื่องนี้ออนไลน์อยู่ แล้วลองอีกครั้ง</string>
     <string name="error_tmdb_unreachable_device">ติดต่อ TMDB ไม่ได้ ตรวจสอบว่าอุปกรณ์นี้ออนไลน์อยู่ แล้วลองอีกครั้ง</string>
     <string name="error_tmdb_trouble">TMDB กำลังมีปัญหา ซึ่งเป็นที่ฝั่งของเขา โปรดลองอีกครั้งภายหลัง</string>
+    <string name="error_opensubtitles_none">OpenSubtitles ยังไม่มีคำบรรยายสำหรับเรื่องนี้</string>
+    <string name="error_opensubtitles_unreachable_tv">เชื่อมต่อ OpenSubtitles ไม่ได้ ตรวจสอบว่าทีวีเครื่องนี้ออนไลน์อยู่ แล้วลองอีกครั้ง</string>
+    <string name="error_opensubtitles_unreachable_device">เชื่อมต่อ OpenSubtitles ไม่ได้ ตรวจสอบว่าอุปกรณ์นี้ออนไลน์อยู่ แล้วลองอีกครั้ง</string>
+    <string name="error_opensubtitles_trouble">OpenSubtitles มีปัญหาจากฝั่งของเขา โปรดลองใหม่ภายหลัง</string>
+    <string name="error_opensubtitles_limit_anonymous">ใช้คำบรรยายฟรี 5 รายการของวันนี้หมดแล้ว ลงชื่อเข้าใช้ OpenSubtitles ในการตั้งค่าเพื่อรับเพิ่ม</string>
+    <string name="error_opensubtitles_limit_account">ใช้การดาวน์โหลดจาก OpenSubtitles ของวันนี้หมดแล้ว ดาวน์โหลดได้อีกตั้งแต่ %1$s</string>
+    <string name="error_opensubtitles_limit_account_unknown">ใช้การดาวน์โหลดจาก OpenSubtitles ของวันนี้หมดแล้ว ดาวน์โหลดได้อีกพรุ่งนี้</string>
+    <string name="error_opensubtitles_sign_in">OpenSubtitles ไม่ยอมรับชื่อผู้ใช้หรือรหัสผ่านนั้น ตรวจสอบแล้วลองอีกครั้ง</string>
+    <string name="error_opensubtitles_token_tv">OpenSubtitles ออกจากระบบทีวีเครื่องนี้แล้ว ลงชื่อเข้าใช้อีกครั้งในการตั้งค่า</string>
+    <string name="error_opensubtitles_token_device">OpenSubtitles ออกจากระบบอุปกรณ์นี้แล้ว ลงชื่อเข้าใช้อีกครั้งในการตั้งค่า</string>
 </resources>

@@ -312,4 +312,14 @@
     <string name="error_tmdb_unreachable_tv">Kan ikke nå TMDB. Tjek, at dette tv er online, og prøv igen.</string>
     <string name="error_tmdb_unreachable_device">Kan ikke nå TMDB. Tjek, at denne enhed er online, og prøv igen.</string>
     <string name="error_tmdb_trouble">TMDB har problemer. Det er hos dem, så prøv igen senere.</string>
+    <string name="error_opensubtitles_none">OpenSubtitles har endnu ingen undertekster til dette.</string>
+    <string name="error_opensubtitles_unreachable_tv">Kan ikke nå OpenSubtitles. Tjek, at dette tv er online, og prøv igen.</string>
+    <string name="error_opensubtitles_unreachable_device">Kan ikke nå OpenSubtitles. Tjek, at denne enhed er online, og prøv igen.</string>
+    <string name="error_opensubtitles_trouble">OpenSubtitles har problemer. Det er i deres ende, så prøv igen senere.</string>
+    <string name="error_opensubtitles_limit_anonymous">Dagens 5 gratis undertekster er brugt. Log ind på OpenSubtitles under Indstillinger for at få flere.</string>
+    <string name="error_opensubtitles_limit_account">Dagens downloads fra OpenSubtitles er brugt. Flere fra %1$s.</string>
+    <string name="error_opensubtitles_limit_account_unknown">Dagens downloads fra OpenSubtitles er brugt. Flere i morgen.</string>
+    <string name="error_opensubtitles_sign_in">OpenSubtitles godtog ikke det brugernavn eller den adgangskode. Tjek dem, og prøv igen.</string>
+    <string name="error_opensubtitles_token_tv">OpenSubtitles har logget dette tv ud. Log ind igen under Indstillinger.</string>
+    <string name="error_opensubtitles_token_device">OpenSubtitles har logget denne enhed ud. Log ind igen under Indstillinger.</string>
 </resources>

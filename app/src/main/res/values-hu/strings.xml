@@ -312,4 +312,14 @@
     <string name="error_tmdb_unreachable_tv">A TMDB nem érhető el. Ellenőrizd, hogy ez a tévé online van-e, majd próbáld újra.</string>
     <string name="error_tmdb_unreachable_device">A TMDB nem érhető el. Ellenőrizd, hogy ez az eszköz online van-e, majd próbáld újra.</string>
     <string name="error_tmdb_trouble">A TMDB-nél gondok vannak. Ez az ő oldalukon van, ezért próbáld újra később.</string>
+    <string name="error_opensubtitles_none">Az OpenSubtitlesen még nincs felirat ehhez.</string>
+    <string name="error_opensubtitles_unreachable_tv">Az OpenSubtitles nem érhető el. Ellenőrizd, hogy ez a tévé online van-e, majd próbáld újra.</string>
+    <string name="error_opensubtitles_unreachable_device">Az OpenSubtitles nem érhető el. Ellenőrizd, hogy ez az eszköz online van-e, majd próbáld újra.</string>
+    <string name="error_opensubtitles_trouble">Az OpenSubtitlesnél gondok vannak. Ez az ő oldalukon van, ezért próbáld később.</string>
+    <string name="error_opensubtitles_limit_anonymous">Elfogyott a mai 5 ingyenes felirat. Továbbiakért jelentkezz be az OpenSubtitlesbe a Beállításokban.</string>
+    <string name="error_opensubtitles_limit_account">Elfogytak a mai OpenSubtitles-letöltések. Újabbak %1$s-tól.</string>
+    <string name="error_opensubtitles_limit_account_unknown">Elfogytak a mai OpenSubtitles-letöltések. Újabbak holnap.</string>
+    <string name="error_opensubtitles_sign_in">Az OpenSubtitles nem fogadta el ezt a felhasználónevet vagy jelszót. Ellenőrizd őket, és próbáld újra.</string>
+    <string name="error_opensubtitles_token_tv">Az OpenSubtitles kijelentkeztette ezt a tévét. Jelentkezz be újra a Beállításokban.</string>
+    <string name="error_opensubtitles_token_device">Az OpenSubtitles kijelentkeztette ezt az eszközt. Jelentkezz be újra a Beállításokban.</string>
 </resources>

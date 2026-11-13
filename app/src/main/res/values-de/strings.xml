@@ -312,4 +312,14 @@
     <string name="error_tmdb_unreachable_tv">TMDB ist nicht erreichbar. Prüfe, ob dieser Fernseher online ist, und versuche es erneut.</string>
     <string name="error_tmdb_unreachable_device">TMDB ist nicht erreichbar. Prüfe, ob dieses Gerät online ist, und versuche es erneut.</string>
     <string name="error_tmdb_trouble">TMDB hat Probleme. Das liegt bei ihnen, versuche es also später erneut.</string>
+    <string name="error_opensubtitles_none">OpenSubtitles hat dafür noch keine Untertitel.</string>
+    <string name="error_opensubtitles_unreachable_tv">OpenSubtitles ist nicht erreichbar. Prüfe, ob dieser Fernseher online ist, und versuche es erneut.</string>
+    <string name="error_opensubtitles_unreachable_device">OpenSubtitles ist nicht erreichbar. Prüfe, ob dieses Gerät online ist, und versuche es erneut.</string>
+    <string name="error_opensubtitles_trouble">OpenSubtitles hat Probleme. Das liegt bei ihnen, versuche es also später noch einmal.</string>
+    <string name="error_opensubtitles_limit_anonymous">Die 5 kostenlosen Untertitel für heute sind aufgebraucht. Melde dich in den Einstellungen bei OpenSubtitles an, um mehr zu bekommen.</string>
+    <string name="error_opensubtitles_limit_account">Die heutigen Downloads von OpenSubtitles sind aufgebraucht. Weitere ab %1$s.</string>
+    <string name="error_opensubtitles_limit_account_unknown">Die heutigen Downloads von OpenSubtitles sind aufgebraucht. Weitere morgen.</string>
+    <string name="error_opensubtitles_sign_in">OpenSubtitles hat diesen Benutzernamen oder dieses Passwort nicht akzeptiert. Prüfe beides und versuche es erneut.</string>
+    <string name="error_opensubtitles_token_tv">OpenSubtitles hat diesen Fernseher abgemeldet. Melde dich in den Einstellungen erneut an.</string>
+    <string name="error_opensubtitles_token_device">OpenSubtitles hat dieses Gerät abgemeldet. Melde dich in den Einstellungen erneut an.</string>
 </resources>

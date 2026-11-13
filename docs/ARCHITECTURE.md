@@ -220,6 +220,24 @@ the failure's type, never an exception's message, which can carry a provider URL
 
 [`docs/ERRORS.md`](ERRORS.md) lists every failure, its string and its detail line.
 
+### Downloaded Subtitles are drawn by Settee, not side-loaded into ExoPlayer
+
+A subtitle fetched from OpenSubtitles could go to ExoPlayer as a `SubtitleConfiguration` on the
+media item. It doesn't, because of Timing: a side-loaded track's times are fixed when the item is
+prepared, so every 0.1-second step would mean replacing the media item and buffering again, where
+the viewer needs to watch the lines move as they adjust. Instead `DownloadedSubtitleCues` parses
+the SRT once (with Media3's own `SubripParser`) and the film player draws the lines at the
+player's position plus the offset, in a `SubtitleView` styled as the stream's own. The stream is
+never touched, so picking a subtitle can't lose the position, and while one shows the stream's
+text is switched off. In the subtitle list they're ordinary rows; `chooseSubtitle` weighs them
+against the stream's tracks when a title starts, the stream's own track winning in a language.
+
+OpenSubtitles is Settee's one bundled key (`BuildConfig.OPENSUBTITLES_API_KEY`, from a repository
+secret or `local.properties`, never committed): its terms ban apps that make viewers bring their
+own. A build without one has no `ServiceLocator.openSubtitles`, and with it nothing that offers
+OpenSubtitles. The files and their index live in `filesDir/subtitles` rather than Room: they never
+sync, are files anyway, and a table would cost a migration for what one JSON index does.
+
 ## Defensive parsing of Xtream responses
 
 `XtreamApi` reads `JsonElement` by hand instead of deserialising into `@Serializable` data

@@ -312,4 +312,14 @@
     <string name="error_tmdb_unreachable_tv">Няма връзка с TMDB. Проверете дали този телевизор е онлайн и опитайте отново.</string>
     <string name="error_tmdb_unreachable_device">Няма връзка с TMDB. Проверете дали това устройство е онлайн и опитайте отново.</string>
     <string name="error_tmdb_trouble">TMDB има проблеми. Те са от тяхна страна, затова опитайте отново по-късно.</string>
+    <string name="error_opensubtitles_none">OpenSubtitles все още няма субтитри за това.</string>
+    <string name="error_opensubtitles_unreachable_tv">Няма връзка с OpenSubtitles. Проверете дали този телевизор е онлайн и опитайте отново.</string>
+    <string name="error_opensubtitles_unreachable_device">Няма връзка с OpenSubtitles. Проверете дали това устройство е онлайн и опитайте отново.</string>
+    <string name="error_opensubtitles_trouble">OpenSubtitles има проблеми. Те са от тяхна страна, така че опитайте по-късно.</string>
+    <string name="error_opensubtitles_limit_anonymous">Днешните 5 безплатни субтитри са използвани. Влезте в OpenSubtitles от Настройки за още.</string>
+    <string name="error_opensubtitles_limit_account">Днешните изтегляния от OpenSubtitles са използвани. Още от %1$s.</string>
+    <string name="error_opensubtitles_limit_account_unknown">Днешните изтегляния от OpenSubtitles са използвани. Още утре.</string>
+    <string name="error_opensubtitles_sign_in">OpenSubtitles не прие това потребителско име или парола. Проверете ги и опитайте отново.</string>
+    <string name="error_opensubtitles_token_tv">OpenSubtitles излезе от профила на този телевизор. Влезте отново от Настройки.</string>
+    <string name="error_opensubtitles_token_device">OpenSubtitles излезе от профила на това устройство. Влезте отново от Настройки.</string>
 </resources>

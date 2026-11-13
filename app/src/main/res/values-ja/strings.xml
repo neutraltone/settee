@@ -312,4 +312,14 @@
     <string name="error_tmdb_unreachable_tv">TMDB に接続できません。このテレビがオンラインか確認して、もう一度お試しください。</string>
     <string name="error_tmdb_unreachable_device">TMDB に接続できません。このデバイスがオンラインか確認して、もう一度お試しください。</string>
     <string name="error_tmdb_trouble">TMDB で問題が起きています。先方の問題なので、しばらくしてからもう一度お試しください。</string>
+    <string name="error_opensubtitles_none">OpenSubtitles にはまだこの字幕がありません。</string>
+    <string name="error_opensubtitles_unreachable_tv">OpenSubtitles に接続できません。このテレビがオンラインか確認して、もう一度お試しください。</string>
+    <string name="error_opensubtitles_unreachable_device">OpenSubtitles に接続できません。このデバイスがオンラインか確認して、もう一度お試しください。</string>
+    <string name="error_opensubtitles_trouble">OpenSubtitles 側で問題が起きています。しばらくしてからお試しください。</string>
+    <string name="error_opensubtitles_limit_anonymous">今日の無料字幕 5 件を使い切りました。さらに使うには、設定で OpenSubtitles にサインインしてください。</string>
+    <string name="error_opensubtitles_limit_account">今日の OpenSubtitles のダウンロードを使い切りました。%1$s から再び使えます。</string>
+    <string name="error_opensubtitles_limit_account_unknown">今日の OpenSubtitles のダウンロードを使い切りました。明日また使えます。</string>
+    <string name="error_opensubtitles_sign_in">OpenSubtitles がそのユーザー名またはパスワードを受け付けませんでした。確認してもう一度お試しください。</string>
+    <string name="error_opensubtitles_token_tv">OpenSubtitles がこのテレビをサインアウトしました。設定でもう一度サインインしてください。</string>
+    <string name="error_opensubtitles_token_device">OpenSubtitles がこのデバイスをサインアウトしました。設定でもう一度サインインしてください。</string>
 </resources>

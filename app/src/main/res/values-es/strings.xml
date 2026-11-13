@@ -312,4 +312,14 @@
     <string name="error_tmdb_unreachable_tv">No se puede conectar con TMDB. Comprueba que esta tele está conectada y vuelve a intentarlo.</string>
     <string name="error_tmdb_unreachable_device">No se puede conectar con TMDB. Comprueba que este dispositivo está conectado y vuelve a intentarlo.</string>
     <string name="error_tmdb_trouble">TMDB tiene problemas. Son de su lado, así que vuelve a intentarlo más tarde.</string>
+    <string name="error_opensubtitles_none">OpenSubtitles aún no tiene subtítulos para esto.</string>
+    <string name="error_opensubtitles_unreachable_tv">No se puede conectar con OpenSubtitles. Comprueba que esta tele esté conectada y vuelve a intentarlo.</string>
+    <string name="error_opensubtitles_unreachable_device">No se puede conectar con OpenSubtitles. Comprueba que este dispositivo esté conectado y vuelve a intentarlo.</string>
+    <string name="error_opensubtitles_trouble">OpenSubtitles tiene problemas. Son cosa suya, así que inténtalo más tarde.</string>
+    <string name="error_opensubtitles_limit_anonymous">Ya has usado los 5 subtítulos gratis de hoy. Inicia sesión en OpenSubtitles en Ajustes para conseguir más.</string>
+    <string name="error_opensubtitles_limit_account">Ya has usado las descargas de OpenSubtitles de hoy. Más a partir de las %1$s.</string>
+    <string name="error_opensubtitles_limit_account_unknown">Ya has usado las descargas de OpenSubtitles de hoy. Más mañana.</string>
+    <string name="error_opensubtitles_sign_in">OpenSubtitles no ha aceptado ese usuario o contraseña. Revísalos y vuelve a intentarlo.</string>
+    <string name="error_opensubtitles_token_tv">OpenSubtitles ha cerrado la sesión de esta tele. Vuelve a iniciar sesión en Ajustes.</string>
+    <string name="error_opensubtitles_token_device">OpenSubtitles ha cerrado la sesión de este dispositivo. Vuelve a iniciar sesión en Ajustes.</string>
 </resources>

@@ -5,6 +5,7 @@
  */
 package app.opentv.player
 
+import app.opentv.data.remote.SubtitleResult
 import app.opentv.data.repo.SubtitlePreference
 import app.opentv.data.repo.baseLanguage
 
@@ -21,6 +22,45 @@ fun chooseSubtitleTrack(tracks: List<SubtitleTrack>, preferred: String?, device:
         val wanted = baseLanguage(language)
         tracks.indexOfFirst { it.supported && baseLanguage(it.language) == wanted }.takeIf { it >= 0 }
     } ?: tracks.indexOfFirst { it.supported }.takeIf { it >= 0 }
+
+/** Which subtitle to show: one of the stream's own tracks, or one of the title's Downloaded Subtitles. */
+sealed interface SubtitlePick {
+    data class Stream(val index: Int) : SubtitlePick
+
+    data class Downloaded(val index: Int) : SubtitlePick
+}
+
+/**
+ * As [chooseSubtitleTrack], with the title's [downloaded] subtitles (their languages) among the
+ * choices: in each language the stream's own track comes first, so a Downloaded Subtitle is shown
+ * when the stream has nothing in the language wanted. Failing both languages, the stream's first
+ * track, then the first Downloaded Subtitle.
+ */
+fun chooseSubtitle(
+    stream: List<SubtitleTrack>,
+    downloaded: List<String>,
+    preferred: String?,
+    device: String,
+): SubtitlePick? {
+    val all = stream + downloaded.map { SubtitleTrack(it, supported = true) }
+    val index = chooseSubtitleTrack(all, preferred, device) ?: return null
+    return if (index < stream.size) SubtitlePick.Stream(index) else SubtitlePick.Downloaded(index - stream.size)
+}
+
+/**
+ * OpenSubtitles' [results] in the order the results list shows them: the Profile's [preferred]
+ * language, then the [device] language, then every other, most downloaded first within each.
+ * Languages compare by base code, as [chooseSubtitleTrack] does, since a preference saved from a
+ * stream's track may say `eng` where OpenSubtitles says `en`.
+ */
+fun orderSubtitleResults(results: List<SubtitleResult>, preferred: String?, device: String): List<SubtitleResult> {
+    val leading = listOfNotNull(baseLanguage(preferred), baseLanguage(device)).distinct()
+    return results.sortedWith(
+        compareBy<SubtitleResult> { result ->
+            leading.indexOf(baseLanguage(result.language)).takeIf { it >= 0 } ?: leading.size
+        }.thenByDescending { it.downloads },
+    )
+}
 
 /**
  * When a Profile's Subtitle Preference turns subtitles on for one stream: once, as soon as both the

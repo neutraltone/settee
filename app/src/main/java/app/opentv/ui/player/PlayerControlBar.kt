@@ -58,6 +58,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import app.opentv.R
+import app.opentv.ui.design.AerialTv
+import app.opentv.ui.design.AerialTvSize
 import app.opentv.ui.design.HighlightStyle
 import app.opentv.ui.design.HighlightSurface
 import app.opentv.ui.design.Icon
@@ -315,9 +317,29 @@ private fun Pill(pill: PlayerPill, modifier: Modifier = Modifier) {
     }
 }
 
-/** One row of a [PlayerChoicePanel]. */
+/**
+ * One row of a [PlayerChoicePanel]. [detail] is a quieter second line. [onAdjust], when set, makes
+ * the row a control: left and right call it with -1 and +1 instead of leaving the row. At its end:
+ * [end] when it's waiting, else a tick when [selected], else [end]'s icon if it has one.
+ */
 @Immutable
-internal class PlayerChoice(val label: String, val selected: Boolean, val onClick: () -> Unit)
+internal class PlayerChoice(
+    val label: String,
+    val selected: Boolean,
+    val onClick: () -> Unit,
+    val detail: String? = null,
+    val onAdjust: ((Int) -> Unit)? = null,
+    val end: RowEnd? = null,
+)
+
+/** What a [PlayerChoice] row shows at its end besides the tick. */
+internal sealed interface RowEnd {
+    /** The small aerial TV, waiting for what the row does; [description] names the wait for TalkBack. */
+    data class Waiting(val description: String) : RowEnd
+
+    /** An icon saying something about the row, such as Downloaded; the tick wins over it. */
+    data class Mark(val icon: ImageVector) : RowEnd
+}
 
 /**
  * A picker over the player (subtitles, audio, quality, aspect ratio): a panel down the right of the
@@ -331,6 +353,10 @@ internal fun PlayerChoicePanel(
     startFocus: FocusRequester,
     onClose: () -> Unit,
     modifier: Modifier = Modifier,
+    /** Shown under the rows, such as OpenSubtitles' attribution, or in place of them, such as an error. */
+    footer: (@Composable () -> Unit)? = null,
+    /** What's said when there are no rows; null for the usual "None available". */
+    empty: String? = null,
 ) {
     val start = choices.indexOfFirst { it.selected }.coerceAtLeast(0)
     Column(
@@ -351,9 +377,9 @@ internal fun PlayerChoicePanel(
         Text(title, SetteeType.Section)
         Spacer(Modifier.height(12.dp))
         Column(Modifier.verticalScroll(rememberScrollState())) {
-            if (choices.isEmpty()) {
+            if (choices.isEmpty() && empty != "") {
                 Text(
-                    stringResource(R.string.player_none_available),
+                    empty ?: stringResource(R.string.player_none_available),
                     SetteeType.Body,
                     color = SetteeColors.QuietText,
                     modifier = Modifier.padding(vertical = 8.dp),
@@ -362,23 +388,44 @@ internal fun PlayerChoicePanel(
             choices.forEachIndexed { index, choice ->
                 ChoiceRow(choice, if (index == start) Modifier.focusRequester(startFocus) else Modifier)
             }
+            footer?.let {
+                Spacer(Modifier.height(12.dp))
+                it()
+            }
         }
     }
 }
 
 @Composable
 private fun ChoiceRow(choice: PlayerChoice, modifier: Modifier) {
+    val adjust = choice.onAdjust
+    val adjusting = if (adjust == null) {
+        Modifier
+    } else {
+        Modifier.onPreviewKeyEvent { event ->
+            val step = when (event.key) {
+                Key.DirectionLeft -> -1
+                Key.DirectionRight -> 1
+                else -> 0
+            }
+            if (step != 0 && event.type == KeyEventType.KeyDown) adjust(step)
+            step != 0
+        }
+    }
     HighlightSurface(
         onClick = choice.onClick,
         style = HighlightStyle.Row,
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth().then(adjusting),
     ) { highlighted ->
         val colour = if (highlighted) SetteeColors.OnAccent else SetteeColors.Text
         Row(Modifier.padding(horizontal = 14.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-            Text(choice.label, SetteeType.RowTitle, color = colour, modifier = Modifier.weight(1f))
-            if (choice.selected) {
-                Icon(Icons.Filled.Check, contentDescription = stringResource(R.string.common_selected), tint = colour)
+            Column(Modifier.weight(1f)) {
+                Text(choice.label, SetteeType.RowTitle, color = colour)
+                choice.detail?.let {
+                    Text(it, SetteeType.Body, color = if (highlighted) colour else SetteeColors.QuietText)
+                }
             }
+            ChoiceEnd(choice, colour, highlighted)
         }
     }
 }
@@ -386,3 +433,15 @@ private fun ChoiceRow(choice: PlayerChoice, modifier: Modifier) {
 private val ChoicePanelWidth = 360.dp
 private val PillRowHeight = 42.dp
 private val Scrim = SetteeColors.Background.copy(alpha = 0.92f)
+
+/** What sits at the end of a [ChoiceRow]: waiting, the tick, or the row's own icon. */
+@Composable
+private fun ChoiceEnd(choice: PlayerChoice, colour: Color, highlighted: Boolean) {
+    val end = choice.end
+    when {
+        end is RowEnd.Waiting -> AerialTv(end.description, size = AerialTvSize.Small, onHighlight = highlighted)
+        choice.selected ->
+            Icon(Icons.Filled.Check, contentDescription = stringResource(R.string.common_selected), tint = colour)
+        end is RowEnd.Mark -> Icon(end.icon, contentDescription = null, tint = colour)
+    }
+}
