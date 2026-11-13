@@ -152,7 +152,7 @@ class PlaybackSourcesTest {
     fun `catch-up plays the programme from the panel's archive, for as long as the guide says it ran`() = runTest {
         db.sources().insert(PANEL_SOURCE.copy(userAgent = "Panel/1"))
         val id = channel(streamUrl = "http://example.com/live/u/p/9.m3u8")
-        db.programmes().upsertAll(listOf(news()))
+        db.programmes().insertOrReplace(listOf(news()))
         val key = MediaKey.Catchup(id, NEWS_START)
 
         val playable = inUtc { sources.forWatching(key) }
@@ -190,7 +190,7 @@ class PlaybackSourcesTest {
             ),
         )
         db.channels().everyRow().forEach { db.channels().upsertAll(listOf(it.copy(groupKey = "uk:bbc1"))) }
-        db.programmes().upsertAll(listOf(news(), news().copy(epgChannelId = "bbc1.fhd", title = "Breakfast")))
+        db.programmes().insertOrReplace(listOf(news(), news().copy(epgChannelId = "bbc1.fhd", title = "Breakfast")))
 
         val playable = inUtc { sources.forWatching(MediaKey.Catchup(hd, NEWS_START)) } as Playable.Ready
 
@@ -201,7 +201,7 @@ class PlaybackSourcesTest {
     fun `playlists and portals say they have no catch-up rather than play something else`() = runTest {
         val playlist = PANEL_SOURCE.copy(id = 3, name = "Playlist", kind = SourceKind.M3U)
         db.sources().insert(playlist)
-        db.programmes().upsertAll(listOf(news()))
+        db.programmes().insertOrReplace(listOf(news()))
         val key = MediaKey.Catchup(channel(streamUrl = "http://example.com/9.ts", sourceId = 3), NEWS_START)
 
         val playable = sources.forWatching(key)
@@ -391,7 +391,7 @@ class PlaybackSourcesTest {
         db.sources().insert(PANEL_SOURCE)
         val id = channel(streamUrl = "http://example.com/live/u/p/9.m3u8")
         val overlapping = news().copy(feedId = 2, startUtcMillis = NEWS_START - 30 * 60_000L, title = "Quiz")
-        db.programmes().upsertAll(listOf(overlapping, news()))
+        db.programmes().insertOrReplace(listOf(overlapping, news()))
 
         val playable = inUtc { sources.forWatching(MediaKey.Catchup(id, NEWS_START)) } as Playable.Ready
 

@@ -150,7 +150,7 @@ class LiveScreenRecordTest {
         graph.catalogRepository.renormalizeAll()
         val feed = db.epgFeeds().insert(EpgFeed(name = "Feed"))
         val now = System.currentTimeMillis()
-        db.programmes().upsertAll(
+        db.programmes().insertOrReplace(
             listOf(
                 Programme(
                     feedId = feed,

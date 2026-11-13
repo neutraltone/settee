@@ -9,6 +9,7 @@ import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import app.opentv.data.model.Programme
 import com.google.common.truth.Truth.assertThat
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Test
@@ -27,7 +28,7 @@ class EpgRepositoryTest {
     @After
     fun close() = catalogue.close()
 
-    private suspend fun programme(title: String, start: Long, end: Long) = catalogue.db.programmes().upsertAll(
+    private suspend fun programme(title: String, start: Long, end: Long) = catalogue.db.programmes().insertOrReplace(
         listOf(Programme(feedId = 1, epgChannelId = "itv", startUtcMillis = start, endUtcMillis = end, title = title)),
     )
 
@@ -46,5 +47,65 @@ class EpgRepositoryTest {
         programme("Later", start = 1_000, end = 2_000)
 
         assertThat(guide.programmeOnNow("itv", nowUtcMillis = 999)).isNull()
+    }
+
+    @Test
+    fun `a refreshed guide shows the provider's corrections to a programme it already had`() = runTest {
+        catalogue.db.sources().insert(PANEL_SOURCE)
+        catalogue.panel.replies["xmltv.php"] = feed(slot("c1", "10", "11", "Nwes", "First go"))
+        guide.syncAll(nowUtcMillis = NOW)
+
+        catalogue.panel.replies["xmltv.php"] = feed(slot("c1", "10", "12", "News", "Corrected"))
+        guide.syncAll(nowUtcMillis = NOW, force = true)
+
+        val stored = catalogue.db.programmes().startingAt("c1", TEN_O_CLOCK)
+        assertThat(stored?.title).isEqualTo("News")
+        assertThat(stored?.description).isEqualTo("Corrected")
+        assertThat(stored?.endUtcMillis).isEqualTo(TEN_O_CLOCK + 2 * HOUR)
+    }
+
+    @Test
+    fun `refreshing an unchanged guide doesn't add programmes`() = runTest {
+        catalogue.db.sources().insert(PANEL_SOURCE)
+        catalogue.panel.replies["xmltv.php"] = feed(
+            slot("c1", "10", "11", "News", "Headlines"),
+            slot("c1", "11", "12", "Weather", "Rain"),
+            slot("c2", "10", "12", "Film", "A film"),
+        )
+        guide.syncAll(nowUtcMillis = NOW)
+
+        guide.syncAll(nowUtcMillis = NOW, force = true)
+
+        assertThat(storedProgrammes().map { it.title }).containsExactly("News", "Weather", "Film")
+    }
+
+    @Test
+    fun `a programme left out of a refreshed guide stays until it's old enough to drop`() = runTest {
+        catalogue.db.sources().insert(PANEL_SOURCE)
+        catalogue.panel.replies["xmltv.php"] = feed(
+            slot("c1", "10", "11", "News", "Headlines"),
+            slot("c1", "11", "12", "Weather", "Rain"),
+        )
+        guide.syncAll(nowUtcMillis = NOW)
+
+        catalogue.panel.replies["xmltv.php"] = feed(slot("c1", "10", "11", "News", "Headlines"))
+        guide.syncAll(nowUtcMillis = NOW, force = true)
+
+        assertThat(storedProgrammes().map { it.title }).containsExactly("News", "Weather")
+    }
+
+    private fun slot(channel: String, from: String, to: String, title: String, description: String) =
+        """<programme start="20260101${from}0000 +0000" stop="20260101${to}0000 +0000" channel="$channel">""" +
+            "<title>$title</title><desc>$description</desc></programme>"
+
+    private fun feed(vararg slots: String) = "<tv>${slots.joinToString("")}</tv>"
+
+    private suspend fun storedProgrammes() = catalogue.db.programmes().observeWindow(0, Long.MAX_VALUE).first()
+
+    private companion object {
+        /** 2026-01-01, when the guide's programmes are. */
+        const val NOW = 1_767_225_600_000L
+        const val HOUR = 3_600_000L
+        const val TEN_O_CLOCK = NOW + 10 * HOUR
     }
 }

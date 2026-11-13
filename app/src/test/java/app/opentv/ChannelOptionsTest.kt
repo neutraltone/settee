@@ -80,7 +80,7 @@ class ChannelOptionsTest {
 
     private suspend fun guide(vararg programmes: Triple<String, Long, Long>) {
         val feed = db.epgFeeds().insert(EpgFeed(name = "Feed"))
-        db.programmes().upsertAll(
+        db.programmes().insertOrReplace(
             programmes.map { (title, start, end) ->
                 Programme(
                     feedId = feed,

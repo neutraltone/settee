@@ -254,7 +254,7 @@ class ChannelLineupTest {
 
     private suspend fun guide(rowName: String, epgId: String) = db.channels().setEpgOverride(row(rowName).id, epgId)
 
-    private suspend fun programmesOn(epgId: String) = db.programmes().upsertAll(
+    private suspend fun programmesOn(epgId: String) = db.programmes().insertOrReplace(
         listOf(Programme(feedId = 1, epgChannelId = epgId, startUtcMillis = 0, endUtcMillis = 60_000, title = "News")),
     )
 
@@ -271,7 +271,7 @@ class ChannelLineupTest {
     fun `a channel's card gets what's on now and what's on after it, from the guide it uses`() = runTest {
         seed("UK| ITV FHD", "UK| ITV HD")
         guide("UK| ITV HD", "itv.hd")
-        db.programmes().upsertAll(
+        db.programmes().insertOrReplace(
             listOf(
                 Programme(
                     feedId = 1,
@@ -314,7 +314,7 @@ class ChannelLineupTest {
     fun `two guide feeds for one channel don't make what's next repeat what's on now`() = runTest {
         seed("UK| ITV HD")
         guide("UK| ITV HD", "itv.hd")
-        db.programmes().upsertAll(
+        db.programmes().insertOrReplace(
             listOf(1L, 2L).flatMap { feed ->
                 listOf(
                     Programme(
@@ -345,7 +345,7 @@ class ChannelLineupTest {
     fun `between programmes the card has nothing on now, only what's next`() = runTest {
         seed("UK| ITV HD")
         guide("UK| ITV HD", "itv.hd")
-        db.programmes().upsertAll(
+        db.programmes().insertOrReplace(
             listOf(
                 Programme(
                     feedId = 1,
@@ -386,7 +386,7 @@ class ChannelLineupTest {
         guide("UK| ITV HD", "itv.hd")
         guide("UK| BBC One", "bbc1")
         programmesOn("itv.hd")
-        db.programmes().upsertAll(
+        db.programmes().insertOrReplace(
             listOf(
                 Programme(
                     feedId = 1,

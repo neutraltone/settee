@@ -346,7 +346,7 @@ class EpgRepository(
                         if (programme.endUtcMillis >= nowUtcMillis - RETENTION_PAST_MILLIS) {
                             batch += programme
                             if (batch.size >= BATCH_SIZE) {
-                                programmeDao.upsertAll(batch)
+                                programmeDao.insertOrReplace(batch)
                                 written += batch.size
                                 batch.clear()
                             }
@@ -354,7 +354,7 @@ class EpgRepository(
                     },
                 )
                 if (batch.isNotEmpty()) {
-                    programmeDao.upsertAll(batch)
+                    programmeDao.insertOrReplace(batch)
                     written += batch.size
                 }
                 if (aliases.isNotEmpty()) {
