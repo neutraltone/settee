@@ -254,13 +254,12 @@ class ChannelLineup(
      * [LineupChannel.guideId] by what the guide has stored: for Home's now and next, series-rule
      * rescans and catch-up, which don't draw the guide's window.
      */
-    suspend fun guideId(channel: LineupChannel): String? =
-        channel.guideCandidates.firstOrNull { programmes.hasProgrammes(it) }
+    suspend fun guideId(channel: LineupChannel): String? = channel.guideId(storedGuides.ids()::contains)
 
-    /** The guide stored on the device, for [guideId] and [nowOn]. */
+    /** The guide stored on the device, for [nowOn]. */
     internal val programmes = db.programmes()
 
-    /** Which guides have programmes, for [nowOn]: read again only when the guide changes. */
+    /** Which guides have programmes, for [guideId] and [nowOn]: read again only when the guide changes. */
     internal val storedGuides = StoredGuides(db)
 
     /**

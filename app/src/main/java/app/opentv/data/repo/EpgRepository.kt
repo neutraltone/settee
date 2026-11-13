@@ -79,6 +79,13 @@ class EpgRepository(
     /** Words a feed that failed: its last result is shown in Guide settings. */
     private val wording: ErrorWording,
     private val selfEnabledGuide: SelfEnabledGuide,
+    /**
+     * The guide ids that have programmes. The app passes the set [ChannelLineup.nowOn] keeps, so the
+     * matcher's read is the one Home then uses rather than a second walk of the guide.
+     */
+    private val guidesWithProgrammes: suspend () -> Set<String> = {
+        programmeDao.channelIdsWithProgrammes().toHashSet()
+    },
 ) {
 
     /**
@@ -423,7 +430,7 @@ class EpgRepository(
         val index = EpgMatcher.buildIndex(aliases.map { it.epgId to it.displayName })
         // Only ids that actually have programmes count as "working" — a match against a
         // channel the guide lists but never fills is a guide that looks broken.
-        val populated = programmeDao.channelIdsWithProgrammes().toHashSet()
+        val populated = guidesWithProgrammes()
 
         val channels = channelDao.matcherInputs()
         var matched = 0

@@ -10,6 +10,7 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.sqlite.db.SimpleSQLiteQuery
 import androidx.test.core.app.ApplicationProvider
+import app.opentv.data.db.GUIDE_FINGERPRINT_QUERY
 import app.opentv.data.db.ON_NOW_QUERY
 import app.opentv.data.db.OpenTvDatabase
 import app.opentv.data.model.Channel
@@ -144,13 +145,24 @@ class NowOnTest {
         guide("UK| ITV HD", "itv.hd")
         store(on("itv.hd", "News", start = 0, end = 10 * MINUTE))
         val channels = all()
+        issued.clear()
         lineup.nowOn(channels, nowMillis = MINUTE)
+        assertThat(issued.filter { "DISTINCT epgChannelId" in it }).hasSize(1)
         issued.clear()
 
         lineup.nowOn(channels, nowMillis = 2 * MINUTE)
         lineup.nowOn(channels, nowMillis = 3 * MINUTE)
 
         assertThat(issued.filter { "DISTINCT epgChannelId" in it }).isEmpty()
+    }
+
+    @Test
+    fun `telling whether the guide changed reads the ends of two indexes, not the guide`() {
+        val plan = db.query(SimpleSQLiteQuery("EXPLAIN QUERY PLAN $GUIDE_FINGERPRINT_QUERY"))
+            .use { rows -> buildList { while (rows.moveToNext()) add(rows.getString(3)) } }
+
+        // The outer SELECT has no table: newer SQLite lists it as a scan of one constant row.
+        assertThat(plan.filter { it.startsWith("SCAN") && it != "SCAN CONSTANT ROW" }).isEmpty()
     }
 
     @Test

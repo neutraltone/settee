@@ -25,6 +25,7 @@ import app.opentv.data.model.EpgChannelAlias
 import app.opentv.data.model.EpgFeed
 import app.opentv.data.model.Episode
 import app.opentv.data.model.Favourite
+import app.opentv.data.model.GuideFingerprint
 import app.opentv.data.model.HandMark
 import app.opentv.data.model.LivePlayback
 import app.opentv.data.model.Movie
@@ -489,8 +490,9 @@ interface ProgrammeDao {
     @Query("SELECT COUNT(*) FROM programmes WHERE feedId = :feedId")
     suspend fun countForFeed(feedId: Long): Int
 
-    @Query("SELECT EXISTS(SELECT 1 FROM programmes WHERE epgChannelId = :epgChannelId)")
-    suspend fun hasProgrammes(epgChannelId: String): Boolean
+    /** See [GuideFingerprint] and [GUIDE_FINGERPRINT_QUERY]. */
+    @Query(GUIDE_FINGERPRINT_QUERY)
+    suspend fun guideFingerprint(): GuideFingerprint
 
     /** Distinct guide channels that actually have programmes — the match report's baseline. */
     @Query("SELECT DISTINCT epgChannelId FROM programmes")
@@ -1089,6 +1091,13 @@ interface SeriesDismissalDao {
     @Query("DELETE FROM series_dismissals WHERE profileId = :profileId")
     suspend fun deleteFor(profileId: Long)
 }
+
+/**
+ * Two subqueries, not one SELECT of both: SQLite answers a lone MIN or MAX from an index, but two
+ * aggregates in one SELECT walk the whole table.
+ */
+const val GUIDE_FINGERPRINT_QUERY =
+    "SELECT (SELECT MAX(id) FROM programmes) AS lastId, (SELECT MIN(endUtcMillis) FROM programmes) AS firstEnd"
 
 /**
  * What's on now, for many channels at once. Ranged over the programmes ending soon after now, not

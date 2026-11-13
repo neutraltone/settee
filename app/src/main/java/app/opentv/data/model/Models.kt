@@ -91,6 +91,13 @@ enum class StreamKind { LIVE, MOVIE, SERIES }
 )
 data class Category(val id: String, val sourceId: Long, val name: String, val kind: StreamKind, val sortIndex: Int = 0)
 
+/**
+ * What changes whenever programmes are stored or pruned, read in two index lookups rather than a walk
+ * of the guide: every write gives a programme a new, higher [lastId] (ids are never reused), and a
+ * prune removes the programmes that ended first, moving [firstEnd]. Null while the guide is empty.
+ */
+data class GuideFingerprint(val lastId: Long?, val firstEnd: Long?)
+
 /** What [app.opentv.data.repo.nowOn] reads of a programme on now: no descriptions or artwork. */
 data class OnNowRow(val epgChannelId: String, val startUtcMillis: Long, val title: String)
 
