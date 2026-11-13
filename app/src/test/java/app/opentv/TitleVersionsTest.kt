@@ -6,7 +6,11 @@
 package app.opentv
 
 import app.opentv.data.model.Movie
+import app.opentv.data.repo.EpisodeStatuses
+import app.opentv.data.repo.ShowEpisodes
+import app.opentv.data.repo.WatchStatus
 import app.opentv.data.repo.groupVersions
+import app.opentv.data.repo.showEpisodes
 import com.google.common.truth.Truth.assertThat
 import org.junit.Test
 
@@ -69,7 +73,41 @@ class TitleVersionsTest {
             .containsExactly(listOf(1L), listOf(2L), listOf(3L))
     }
 
+    @Test
+    fun `a show's episodes are every one found in any of its Versions, matched by season and episode`() {
+        val opened = listOf(episode(11, "s1", 1, 1), episode(12, "s1", 1, 2))
+        val other = listOf(episode(21, "s2", 1, 1), episode(22, "s2", 1, 2), episode(23, "s2", 1, 3))
+
+        val shown = showEpisodes(opened, listOf(other))
+
+        assertThat(shown.map { it.id }).containsExactly(11L, 12L, 23L).inOrder()
+    }
+
+    @Test
+    fun `an episode a Version lists twice stays twice`() {
+        val opened = listOf(episode(11, "s1", 1, 1), episode(19, "s1", 1, 1))
+
+        assertThat(showEpisodes(opened, listOf(listOf(episode(21, "s2", 1, 1)))).map { it.id })
+            .containsExactly(11L, 19L)
+    }
+
+    @Test
+    fun `a show's page shows an episode Watched in another Version as Watched, but not a repeat`() {
+        val opened = listOf(episode(11, "s1", 1, 1), episode(19, "s1", 1, 1))
+        val other = listOf(episode(21, "s2", 1, 1))
+        val show = ShowEpisodes.of(opened, listOf(other))
+
+        val shown = show.statusesFrom(EpisodeStatuses(mapOf(21L to WatchStatus.Watched)))
+        val repeat = show.statusesFrom(EpisodeStatuses(mapOf(11L to WatchStatus.Watched)))
+
+        assertThat(shown[11]).isEqualTo(WatchStatus.Watched)
+        assertThat(repeat[19]).isEqualTo(WatchStatus.Unwatched)
+    }
+
     private fun group(vararg movies: Movie) = groupVersions(movies.toList(), Movie::tmdbId, Movie::name, Movie::year)
+
+    private fun episode(id: Long, seriesId: String, season: Int, number: Int) =
+        testEpisode(season, number).copy(id = id, seriesId = seriesId, episodeId = "$id")
 
     private fun movie(id: Long, name: String, tmdbId: String? = null, year: Int? = null) = Movie(
         id = id,

@@ -14,12 +14,14 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.HighQuality
 import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.runtime.Composable
@@ -30,6 +32,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
@@ -57,6 +60,7 @@ import app.opentv.data.repo.CoverStatus
 import app.opentv.data.repo.EpisodeStatuses
 import app.opentv.data.repo.MediaKey
 import app.opentv.data.repo.SeriesMainAction
+import app.opentv.data.repo.ShowEpisodes
 import app.opentv.ui.VodViewModel
 import app.opentv.ui.design.Pill
 import app.opentv.ui.design.PillButton
@@ -68,6 +72,8 @@ import app.opentv.ui.design.Text
 import app.opentv.ui.options.OptionsSubject
 import app.opentv.ui.options.openOptionsOn
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.launch
 
 /**
  * A show's page. Episodes are fetched when it opens rather than during catalogue sync: pulling every
@@ -82,6 +88,8 @@ fun SeriesDetailScreen(
     viewModel: VodViewModel = viewModel(),
 ) {
     var series by remember(seriesId) { mutableStateOf<Series?>(null) }
+    var versions by remember(seriesId) { mutableStateOf(PageVersions()) }
+    val scope = rememberCoroutineScope()
 
     LaunchedEffect(seriesId) {
         val loaded = viewModel.seriesDetail(seriesId)
@@ -90,11 +98,18 @@ fun SeriesDetailScreen(
     }
 
     val s = series
-    val episodes by (s?.let { viewModel.episodes(it) } ?: viewModel.noEpisodes).collectAsState(initial = emptyList())
-    val statuses by viewModel.episodeStatuses.collectAsState(initial = EpisodeStatuses())
-    val mainAction by remember(episodes) { viewModel.seriesMainAction(episodes) }.collectAsState(initial = null)
-    val status by remember(episodes) { viewModel.seriesStatus(episodes) }.collectAsState(initial = null)
+    // One row per episode across the show's Versions, and each Version's for what's been watched (#181).
+    val show by remember(s) { s?.let { viewModel.showEpisodes(it) } ?: flowOf(ShowEpisodes()) }
+        .collectAsState(initial = ShowEpisodes())
+    val played by viewModel.episodeStatuses.collectAsState(initial = EpisodeStatuses())
+    val statuses = remember(show, played) { show.statusesFrom(played) }
+    val action by remember(show) { viewModel.seriesMainAction(show.all) }.collectAsState(initial = null)
+    val mainAction = remember(action, show) { action?.let(show::shownAs) }
+    val status by remember(show) { viewModel.seriesStatus(show.all) }.collectAsState(initial = null)
     val favouriteSeries by viewModel.favouriteSeries.collectAsState()
+    // The whole show's Versions, as its main episode has them.
+    val versionKey = (mainAction?.episode ?: show.shown.firstOrNull())?.let { MediaKey.Episode(it.id) }
+    LaunchedEffect(versionKey) { versionKey?.let { versions = viewModel.pageVersions(it) } }
 
     if (s == null) {
         LoadingDetail()
@@ -111,6 +126,13 @@ fun SeriesDetailScreen(
         onPlayEpisode = onPlayEpisode,
         onSetFavourite = { viewModel.setSeriesFavourite(s, it) },
         onOpenPerson = onOpenPerson,
+        versions = versions,
+        onChooseVersion = { chosen ->
+            scope.launch {
+                viewModel.chooseVersion(chosen)
+                versionKey?.let { versions = viewModel.pageVersions(it) }
+            }
+        },
     )
 }
 
@@ -119,7 +141,8 @@ fun SeriesDetailScreen(
  * episode, from [mainAction]) and the Favourite toggle, the season pills, and the selected season's
  * episodes. Cast, when the show lists any, opens a panel of them, and a name picked there calls
  * [onOpenPerson]. [status] is where the Profile is with the show, for the meta line. [favourite] is null
- * until the Profile's Favourites have loaded, and the toggle does nothing till then.
+ * until the Profile's Favourites have loaded, and the toggle does nothing till then. [versions] adds the
+ * Quality pill for the whole show, as the film page has it.
  */
 @Composable
 internal fun SeriesDetailContent(
@@ -132,9 +155,23 @@ internal fun SeriesDetailContent(
     onPlayEpisode: (MediaKey) -> Unit,
     onSetFavourite: (Boolean) -> Unit,
     onOpenPerson: (String) -> Unit,
+    versions: PageVersions = PageVersions(),
+    onChooseVersion: (MediaKey) -> Unit = {},
 ) {
     val cast = remember(series.cast) { personNames(series.cast) }
     var castShown by remember(series.id) { mutableStateOf(false) }
+    var choosingQuality by remember(series.id) { mutableStateOf(false) }
+    var askingFor by remember(series.id) { mutableStateOf<MediaKey?>(null) }
+    // Play asks first when only another language plays (#181).
+    val play: (MediaKey) -> Unit = { key ->
+        if (versions.otherLanguage !=
+            null
+        ) {
+            askingFor = key
+        } else {
+            onPlayEpisode(key)
+        }
+    }
     val seasons = remember(episodes) { seasonsOf(episodes) }
     val nav = remember(series.id) { ShowPageNav() }
     val shown = remember(seasons, mainAction, nav.pickedSeason) { ShowSeasons(seasons, mainAction, nav.pickedSeason) }
@@ -152,7 +189,14 @@ internal fun SeriesDetailContent(
         Column(Modifier.fillMaxWidth()) {
             Text(series.displayTitle, style = SetteeType.Hero, maxLines = 2)
             if (!nav.heroAway) {
-                ShowHero(series, nav, shown, status, favourite, onPlayEpisode, onSetFavourite) {
+                ShowHero(series, nav, shown, status, favourite, versions.cantPlay, play, onSetFavourite) {
+                    if (versions.showsPill) {
+                        PillButton(
+                            label = stringResource(R.string.vod_quality),
+                            icon = Icons.Filled.HighQuality,
+                            onClick = { choosingQuality = true },
+                        )
+                    }
                     if (cast.isNotEmpty()) {
                         PillButton(
                             label = stringResource(R.string.vod_cast),
@@ -167,9 +211,21 @@ internal fun SeriesDetailContent(
                 SeasonPills(nav, shown, pillRow)
                 Spacer(Modifier.height(SetteeSpace.RowGap))
             }
-            EpisodeList(series, nav, shown, statuses, episodeList, onPlayEpisode)
+            EpisodeList(series, nav, shown, statuses, episodeList, play)
         }
     }
+
+    VersionPrompts(
+        versions,
+        choosingQuality = choosingQuality,
+        askingLanguage = askingFor != null,
+        onChooseVersion = onChooseVersion,
+        onPlay = { askingFor?.let(onPlayEpisode) },
+        onClose = {
+            choosingQuality = false
+            askingFor = null
+        },
+    )
 
     if (castShown) {
         CastPanel(
@@ -192,6 +248,7 @@ private fun ShowHero(
     shown: ShowSeasons,
     status: CoverStatus?,
     favourite: Boolean?,
+    cantPlay: String?,
     onPlayEpisode: (MediaKey) -> Unit,
     onSetFavourite: (Boolean) -> Unit,
     moreButtons: @Composable () -> Unit,
@@ -221,6 +278,7 @@ private fun ShowHero(
                 icon = Icons.Filled.PlayArrow,
                 onClick = { onPlayEpisode(MediaKey.Episode(action.episode.id)) },
                 modifier = Modifier.focusRequester(nav.focus.main),
+                enabled = cantPlay == null,
             )
         }
         FavouriteButton(
@@ -231,6 +289,14 @@ private fun ShowHero(
                 .onFocusChanged { nav.favouriteFocused = it.isFocused },
         )
         moreButtons()
+    }
+    cantPlay?.let {
+        Text(
+            cantPlayText(it),
+            style = SetteeType.Body,
+            color = SetteeColors.QuietText,
+            modifier = Modifier.padding(top = 10.dp),
+        )
     }
 }
 

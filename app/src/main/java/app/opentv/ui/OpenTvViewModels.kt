@@ -41,6 +41,7 @@ import app.opentv.data.repo.LineupScope
 import app.opentv.data.repo.LivePreview
 import app.opentv.data.repo.MediaKey
 import app.opentv.data.repo.RefreshMessages
+import app.opentv.data.repo.ShowEpisodes
 import app.opentv.data.repo.TitleCover
 import app.opentv.data.repo.VodTitle
 import app.opentv.data.repo.categoryGroupKey
@@ -50,6 +51,7 @@ import app.opentv.data.repo.nowOn
 import app.opentv.data.repo.series
 import app.opentv.data.repo.splitGenres
 import app.opentv.data.repo.titleCovers
+import app.opentv.data.repo.versionsOf
 import app.opentv.data.work.SyncWorker
 import app.opentv.pairing.ManagerServer
 import app.opentv.player.playsQualityRanked
@@ -1165,10 +1167,25 @@ class VodViewModel @JvmOverloads constructor(
      */
     fun loadEpisodes(series: Series) {
         viewModelScope.launch {
-            val source = graph.sourceRepository.byId(series.sourceId) ?: return@launch
-            graph.catalogRepository.ensureEpisodes(source, series.seriesId)
+            // Every Version's, as the page lists episodes from all of them (#181).
+            graph.database.versionsOf(series).forEach { version ->
+                launch {
+                    val source = graph.sourceRepository.byId(version.sourceId) ?: return@launch
+                    graph.catalogRepository.ensureEpisodes(source, version.seriesId)
+                }
+            }
         }
     }
+
+    /** [series]' episodes across its Versions, for its page (#181, ADR 0007). */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    fun showEpisodes(series: Series): Flow<ShowEpisodes> = flow { emit(graph.database.versionsOf(series)) }
+        .flatMapLatest { versions ->
+            val ordered = listOf(series) + versions.filter { it.id != series.id }
+            combine(ordered.map { graph.catalogRepository.observeEpisodes(it.sourceId, it.seriesId) }) { lists ->
+                ShowEpisodes.of(lists.first(), lists.drop(1))
+            }
+        }
 
     /** Where the active Profile is with the series of [episodes], for its page's hero. */
     fun seriesStatus(episodes: List<Episode>): Flow<CoverStatus?> = graph.viewerLibrary.titleStatus.series(episodes)
