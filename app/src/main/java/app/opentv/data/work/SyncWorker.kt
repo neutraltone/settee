@@ -49,7 +49,7 @@ class SyncWorker(context: Context, params: WorkerParameters) : CoroutineWorker(c
 
     companion object {
         private const val TAG = "SyncWorker"
-        private const val WORK_NAME = "opentv-periodic-sync"
+        internal const val WORK_NAME = "opentv-periodic-sync"
         private const val ONE_SHOT_WORK_NAME = "opentv-manual-sync"
         private const val KEY_MANUAL = "manual"
 
