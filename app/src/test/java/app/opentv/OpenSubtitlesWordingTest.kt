@@ -6,8 +6,8 @@
 package app.opentv
 
 import androidx.test.core.app.ApplicationProvider
-import app.opentv.core.AppSettings
 import app.opentv.core.ErrorWording
+import app.opentv.core.LocaleUtils
 import app.opentv.data.remote.OpenSubtitlesFailure
 import com.google.common.truth.Truth.assertThat
 import java.util.TimeZone
@@ -64,10 +64,13 @@ class OpenSubtitlesWordingTest {
         val zone = TimeZone.getDefault()
         TimeZone.setDefault(TimeZone.getTimeZone("Europe/London"))
         val locale = java.util.Locale.getDefault()
-        AppSettings.get(ApplicationProvider.getApplicationContext()).setLanguageTag("en-GB")
         try {
+            // The app in British English, as MainActivity's attachBaseContext puts its chosen language on
+            // every context. Not through AppSettings.get: that's one per process, and may still hold an
+            // earlier test's application, whose settings this test's context never reads.
+            val british = LocaleUtils.wrap(ApplicationProvider.getApplicationContext(), "en-GB")
             val midnightUtc = java.time.Instant.parse("2026-11-14T00:00:00Z").toEpochMilli()
-            val error = wording.ofOpenSubtitles(
+            val error = ErrorWording(british, onTelevision = true).ofOpenSubtitles(
                 OpenSubtitlesFailure.DownloadLimit(signedIn = true, resetsAt = midnightUtc),
             )
 
@@ -75,7 +78,6 @@ class OpenSubtitlesWordingTest {
         } finally {
             TimeZone.setDefault(zone)
             java.util.Locale.setDefault(locale)
-            AppSettings.get(ApplicationProvider.getApplicationContext()).setLanguageTag("")
         }
     }
 
