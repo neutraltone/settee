@@ -7,10 +7,10 @@ package app.opentv
 
 import android.app.Application
 import android.view.View
-import androidx.compose.ui.input.key.Key
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.SemanticsNodeInteraction
@@ -22,8 +22,11 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.test.requestFocus
+import androidx.lifecycle.viewModelScope
+import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import app.opentv.core.ServiceLocator
+import app.opentv.data.db.OpenTvDatabase
 import app.opentv.data.model.Channel
 import app.opentv.data.model.Movie
 import app.opentv.data.model.Source
@@ -32,6 +35,7 @@ import app.opentv.ui.VodViewModel
 import app.opentv.ui.channels.SearchScreen
 import app.opentv.ui.options.ItemOptionsHost
 import com.google.common.truth.Truth.assertThat
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.Before
@@ -138,19 +142,45 @@ class RecentSearchesScreenTest {
     // Search now shares the app's one VodViewModel, which outlives each visit, where it used to get a new one.
     @Test
     fun `Search opened again starts empty, without the last visit's movies`() {
+        // A graph and database of its own for the movie, so the app's shared one, which outlives each
+        // test, doesn't gain a film every run.
+        val app = ApplicationProvider.getApplicationContext<Application>()
+        val vodGraph = ServiceLocator.Graph(
+            app,
+            settingsFile = "search-vod-test",
+            openDatabase = {
+                Room.inMemoryDatabaseBuilder(app, OpenTvDatabase::class.java).allowMainThreadQueries().build()
+            },
+        )
         runBlocking {
-            graph.database.sources().insert(
+            vodGraph.database.sources().insert(
                 Source(id = 1, name = "Provider", kind = SourceKind.XTREAM, url = "http://example.com"),
             )
-            graph.database.movies().upsertAll(listOf(movie("Zebra Crossing")))
+            vodGraph.database.movies().upsertAll(listOf(movie("Zebra Crossing")))
         }
-        val vod = VodViewModel(ApplicationProvider.getApplicationContext())
+        val vod = VodViewModel(app, vodGraph)
+        try {
+            searchAgain(vod)
+        } finally {
+            // Nothing clears a model built outside a ViewModelStore, so stop its flows by hand.
+            vod.viewModelScope.cancel()
+            vodGraph.database.close()
+        }
+    }
+
+    private fun searchAgain(vod: VodViewModel) {
         var open by mutableStateOf(true)
         compose.setTvContent {
             view = LocalView.current
             ItemOptionsHost {
                 if (open) {
-                    SearchScreen(onPlayChannel = {}, onPlayMovie = {}, onOpenSeries = {}, onBack = {}, vodViewModel = vod)
+                    SearchScreen(
+                        onPlayChannel = {},
+                        onPlayMovie = {},
+                        onOpenSeries = {},
+                        onBack = {},
+                        vodViewModel = vod,
+                    )
                 }
             }
         }
@@ -158,13 +188,13 @@ class RecentSearchesScreenTest {
         waitFor("Zebra Crossing")
 
         open = false
-        compose.waitForIdle()
+        // Before Search is back, so its first frame can't have them.
+        compose.waitUntil(TIMEOUT_MILLIS) { vod.movieResults.value.isEmpty() }
         open = true
         compose.waitForIdle()
 
         compose.onNodeWithText("zebra").assertDoesNotExist()
         compose.onNodeWithText("Zebra Crossing").assertDoesNotExist()
-        compose.waitUntil(TIMEOUT_MILLIS) { vod.movieResults.value.isEmpty() }
     }
 
     private fun channel(name: String) = Channel(

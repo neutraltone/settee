@@ -374,7 +374,6 @@ private fun OpenTvApp(isTelevision: Boolean, launchedToPlay: Boolean) {
                             activeProfileName = activeProfileName,
                             tab = tab,
                             onSelectTab = { navController.selectShellTab(it) },
-                            vodViewModel = vodViewModel,
                         )
                     }
 

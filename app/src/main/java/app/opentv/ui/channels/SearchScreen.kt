@@ -28,6 +28,7 @@ import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -59,6 +60,7 @@ import app.opentv.data.parser.displayTitle
 import app.opentv.ui.ChannelsViewModel
 import app.opentv.ui.RecentSearchesViewModel
 import app.opentv.ui.VodViewModel
+import app.opentv.ui.activityViewModelStoreOwner
 import app.opentv.ui.design.PillButton
 import app.opentv.ui.design.SetteeColors
 import app.opentv.ui.design.SetteeShapes
@@ -90,7 +92,7 @@ fun SearchScreen(
     onOpenSeries: (Series) -> Unit,
     onBack: () -> Unit,
     viewModel: ChannelsViewModel = viewModel(),
-    vodViewModel: VodViewModel = viewModel(),
+    vodViewModel: VodViewModel = viewModel(activityViewModelStoreOwner()),
     recentSearches: RecentSearchesViewModel = viewModel(),
 ) {
     val query = rememberTextFieldState()
@@ -105,6 +107,9 @@ fun SearchScreen(
             vodViewModel.setVodSearchQuery(it)
         }
     }
+    // The VOD model is the app's, and outlives this visit: left holding the query, its results would
+    // still be there next time, ready to be taken for the next search's while it loads.
+    DisposableEffect(vodViewModel) { onDispose { vodViewModel.setVodSearchQuery("") } }
     BackHandler { onBack() }
 
     SearchContent(

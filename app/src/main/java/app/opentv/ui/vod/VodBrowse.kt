@@ -55,6 +55,7 @@ import app.opentv.ui.Backdrop
 import app.opentv.ui.LocalRailReturn
 import app.opentv.ui.ResumeItem
 import app.opentv.ui.VodViewModel
+import app.opentv.ui.activityViewModelStoreOwner
 import app.opentv.ui.browseKey
 import app.opentv.ui.design.CategoriesSidebar
 import app.opentv.ui.design.CategoriesSidebarWidth
@@ -82,7 +83,7 @@ fun MoviesScreen(
     onResume: (MediaKey) -> Unit,
     hasSources: Boolean,
     isSyncing: Boolean,
-    viewModel: VodViewModel = viewModel(),
+    viewModel: VodViewModel = viewModel(activityViewModelStoreOwner()),
 ) {
     val resume = viewModel.continueWatchingMovies.collectAsState().value
     val favourites = viewModel.favouriteMovies.collectAsState().value
@@ -163,7 +164,7 @@ fun SeriesScreen(
     onResume: (MediaKey) -> Unit,
     hasSources: Boolean,
     isSyncing: Boolean,
-    viewModel: VodViewModel = viewModel(),
+    viewModel: VodViewModel = viewModel(activityViewModelStoreOwner()),
 ) {
     val resume = viewModel.continueWatchingSeries.collectAsState().value
     val favourites = viewModel.favouriteSeries.collectAsState().value
