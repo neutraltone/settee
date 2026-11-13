@@ -174,9 +174,11 @@ class NowOnTest {
             ),
         ).use { rows -> buildList { while (rows.moveToNext()) add(rows.getString(3)) } }
 
-        assertThat(plan).containsExactly(
-            "SEARCH programmes USING INDEX index_programmes_endUtcMillis_startUtcMillis " +
-                "(endUtcMillis>? AND endUtcMillis<?)",
+        // Older SQLite, as on older Android, writes "SEARCH TABLE programmes": the index and range are what count.
+        assertThat(plan).hasSize(1)
+        assertThat(plan.single()).startsWith("SEARCH")
+        assertThat(plan.single()).endsWith(
+            "USING INDEX index_programmes_endUtcMillis_startUtcMillis (endUtcMillis>? AND endUtcMillis<?)",
         )
     }
 

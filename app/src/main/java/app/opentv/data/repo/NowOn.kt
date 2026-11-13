@@ -19,8 +19,7 @@ private const val LONGEST_PROGRAMME_MILLIS = 24 * 60 * 60 * 1_000L
  * many Channels: asking one Channel at a time cost Home a few queries per Favourite every minute.
  */
 suspend fun ChannelLineup.nowOn(channels: List<LineupChannel>, nowMillis: Long): Map<String, String> {
-    if (channels.isEmpty()) return emptyMap()
-    val stored = storedGuides.ids()
+    val stored = if (channels.isEmpty()) emptySet() else storedGuides.ids()
     val guides = channels.mapNotNull { channel -> channel.guideId(stored::contains)?.let { channel.key to it } }
     if (guides.isEmpty()) return emptyMap()
     val onNow = programmes.onNow(nowMillis, nowMillis + LONGEST_PROGRAMME_MILLIS)
