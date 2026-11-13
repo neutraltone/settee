@@ -32,6 +32,7 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import app.opentv.R
 import app.opentv.core.ServiceLocator
@@ -71,7 +72,10 @@ fun TmdbStepScreen(graph: ServiceLocator.Graph, onDone: () -> Unit) {
             left = {
                 Text(stringResource(R.string.onboarding_tmdb_help), SetteeType.Body, color = SetteeColors.QuietText)
                 Column(
-                    Modifier.heightIn(min = KEY_ROW_HEIGHT).padding(horizontal = KEY_ROW_SIDE),
+                    // One item, as the row it replaces is, for a screen reader and the tests alike.
+                    Modifier.heightIn(min = KEY_ROW_HEIGHT)
+                        .padding(horizontal = KEY_ROW_SIDE)
+                        .semantics(mergeDescendants = true) {},
                     verticalArrangement = Arrangement.Center,
                 ) {
                     Text(stringResource(R.string.settings_row_tmdb_set), SetteeType.Section)
