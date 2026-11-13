@@ -125,7 +125,7 @@ fun LiveScreen(
 
     // Where the Highlight is in the guide: what the band describes and the preview plays.
     var highlighted by remember { mutableStateOf<Pair<ChannelsViewModel.Row, Programme?>?>(null) }
-    var nowMillis by remember { mutableLongStateOf(System.currentTimeMillis()) }
+    var nowMillis by remember { mutableLongStateOf(viewModel.now()) }
 
     val activeRecordings by graph.recordingRepository.observeActive().collectAsState(initial = emptyList())
     val recordScope = rememberCoroutineScope()
@@ -135,7 +135,7 @@ fun LiveScreen(
     // Re-evaluate "now" once a minute so the band and the bold programme move with the time.
     LaunchedEffect(Unit) {
         while (true) {
-            nowMillis = System.currentTimeMillis()
+            nowMillis = viewModel.now()
             viewModel.tick()
             delay(60_000)
         }
@@ -287,6 +287,7 @@ fun LiveScreen(
                         landOnRow = landOn?.first,
                         landAtEnd = landOn?.second == true,
                         onLanded = { landOn = null },
+                        nowMillis = nowMillis,
                     )
                 }
             }
