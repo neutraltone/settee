@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The debug build's adaptive-icon foreground, written by tools/launcher-art/mark.py:
+  ic_launcher_foreground with a DEBUG badge across its foot, kept inside the safe circle, so it
+  can't be mistaken for the release build.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <group
+        android:scaleX="0.612"
+        android:scaleY="0.612"
+        android:translateX="23.415"
+        android:translateY="24.791">
+        <path
+            android:strokeColor="@color/settee_plum"
+            android:strokeWidth="4.5"
+            android:strokeLineCap="round"
+            android:pathData="M50,30L37,13M50,30L63,13" />
+        <path
+            android:fillColor="@color/settee_plum"
+            android:pathData="M32.5,11.5a4,4 0 1 0 8,0a4,4 0 1 0 -8,0z" />
+        <path
+            android:fillColor="@color/settee_plum"
+            android:pathData="M59.5,11.5a4,4 0 1 0 8,0a4,4 0 1 0 -8,0z" />
+        <path
+            android:fillColor="@color/settee_plum"
+            android:pathData="M17.5,74h4a2.5,2.5 0 0 1 2.5,2.5v9a2.5,2.5 0 0 1 -2.5,2.5h-4
+                              a2.5,2.5 0 0 1 -2.5,-2.5v-9a2.5,2.5 0 0 1 2.5,-2.5z" />
+        <path
+            android:fillColor="@color/settee_plum"
+            android:pathData="M78.5,74h4a2.5,2.5 0 0 1 2.5,2.5v9a2.5,2.5 0 0 1 -2.5,2.5h-4
+                              a2.5,2.5 0 0 1 -2.5,-2.5v-9a2.5,2.5 0 0 1 2.5,-2.5z" />
+        <path
+            android:fillColor="@color/settee_plum"
+            android:pathData="M32,26h36a11,11 0 0 1 11,11v30a11,11 0 0 1 -11,11h-36
+                              a11,11 0 0 1 -11,-11v-30a11,11 0 0 1 11,-11z" />
+        <path
+            android:fillColor="@color/settee_plum"
+            android:pathData="M17,45h0a12,12 0 0 1 12,12v12a12,12 0 0 1 -12,12h0a12,12 0 0 1 -12,-12
+                              v-12a12,12 0 0 1 12,-12z" />
+        <path
+            android:fillColor="@color/settee_plum"
+            android:pathData="M83,45h0a12,12 0 0 1 12,12v12a12,12 0 0 1 -12,12h0a12,12 0 0 1 -12,-12
+                              v-12a12,12 0 0 1 12,-12z" />
+        <path
+            android:fillColor="@color/settee_plum"
+            android:pathData="M16,62h68v19h-68z" />
+        <path
+            android:fillColor="@color/settee_coral"
+            android:pathData="M33,33h34a5,5 0 0 1 5,5v18a5,5 0 0 1 -5,5h-34a5,5 0 0 1 -5,-5v-18
+                              a5,5 0 0 1 5,-5z" />
+        <path
+            android:fillColor="@color/settee_plum"
+            android:pathData="M34.1,45a4.4,4.4 0 1 0 8.8,0a4.4,4.4 0 1 0 -8.8,0z" />
+        <path
+            android:fillColor="@color/settee_plum"
+            android:pathData="M57.1,45a4.4,4.4 0 1 0 8.8,0a4.4,4.4 0 1 0 -8.8,0z" />
+        <path
+            android:strokeColor="@color/settee_plum"
+            android:strokeWidth="3.4"
+            android:strokeLineCap="round"
+            android:pathData="M45,50Q50,55 55,50" />
+        <path
+            android:fillColor="@color/settee_coral"
+            android:pathData="M32.75,67h34.5a1.75,1.75 0 0 1 1.75,1.75v0a1.75,1.75 0 0 1 -1.75,1.75
+                              h-34.5a1.75,1.75 0 0 1 -1.75,-1.75v0a1.75,1.75 0 0 1 1.75,-1.75z" />
+    </group>
+    <path
+        android:fillColor="@color/settee_coral"
+        android:pathData="M29.574,108V71.733a7.454,7.454 0 0 1 7.454,-7.454h33.944
+                          a7.454,7.454 0 0 1 7.454,7.454V108z" />
+    <group
+        android:scaleX="0.713"
+        android:scaleY="0.713"
+        android:translateX="38.097"
+        android:translateY="75.173">
+        <path
+            android:fillColor="@color/settee_plum"
+            android:pathData="M-1.5,-13.28h47.61a8.455,8.455 0 0 1 8.455,8.455v0
+                              a8.455,8.455 0 0 1 -8.455,8.455h-47.61a8.455,8.455 0 0 1 -8.455,-8.455
+                              v0a8.455,8.455 0 0 1 8.455,-8.455z" />
+        <path
+            android:fillColor="@color/settee_cream"
+            android:pathData="M9.4 -5.19Q9.4 -2.62 8.14 -1.26Q6.88 0.1 4.54 0.1Q3.84 0.1 2.86 0.07
+                              Q1.88 0.04 1.17 0L1.27 -2.88L1.17 -9.66L5.05 -9.72
+                              Q7.15 -9.72 8.28 -8.55Q9.4 -7.38 9.4 -5.19ZM7.29 -4.72
+                              Q7.29 -6.5 6.71 -7.3Q6.13 -8.1 4.91 -8.1Q4.11 -8.1 3.21 -8.03
+                              L3.12 -3.06L3.17 -1.57Q4.21 -1.47 4.91 -1.47Q7.29 -1.47 7.29 -4.72Z
+                              M17 -1.68 17.11 -1.51 16.98 0H10.92L11.03 -2.88L10.92 -9.66H17.04
+                              L17.16 -9.49L17.01 -7.98L14.7 -8.05L12.96 -8.04L12.91 -5.71
+                              L14.58 -5.68L16.16 -5.73L16.27 -5.58L16.14 -4.06L14.43 -4.11
+                              L12.88 -4.09L12.87 -3.06L12.91 -1.6L14.61 -1.59ZM25.59 -2.73
+                              Q25.59 0.07 21.19 0.07Q19.9 0.07 18.55 0L18.66 -2.88L18.55 -9.66
+                              L21.99 -9.67Q23.47 -9.67 24.3 -9.05Q25.12 -8.43 25.12 -7.26
+                              Q25.12 -6.48 24.74 -5.89Q24.36 -5.31 23.65 -5.01
+                              Q24.64 -4.77 25.12 -4.21Q25.59 -3.65 25.59 -2.73ZM21.28 -8.21H20.55
+                              L20.5 -5.58L21.91 -5.54Q22.48 -5.68 22.76 -6.03
+                              Q23.04 -6.38 23.04 -6.99Q23.04 -7.65 22.65 -7.93
+                              Q22.26 -8.21 21.28 -8.21ZM23.52 -2.83Q23.52 -3.9 22.14 -4.16
+                              L20.47 -4.12L20.46 -3.06L20.5 -1.44Q21.03 -1.38 21.54 -1.38
+                              Q22.48 -1.38 23 -1.75Q23.52 -2.13 23.52 -2.83ZM34.66 -4.75 34.65 -3.48
+                              Q34.66 -1.75 33.64 -0.81Q32.62 0.14 30.72 0.14Q28.89 0.14 27.93 -0.78
+                              Q26.97 -1.69 27.02 -3.4L27.03 -4.8L26.98 -9.66H29.02L28.92 -3.67
+                              Q28.91 -2.58 29.39 -2.06Q29.87 -1.53 30.84 -1.53
+                              Q32.79 -1.53 32.77 -3.57L32.67 -9.66H34.74Z
+                              M43.94 -9.2 43.5 -7.36 43.3 -7.33Q42.57 -7.75 41.99 -7.94
+                              Q41.41 -8.13 40.76 -8.13Q39.42 -8.13 38.8 -7.33
+                              Q38.19 -6.54 38.19 -4.72Q38.19 -3.52 38.45 -2.82
+                              Q38.72 -2.11 39.27 -1.79Q39.83 -1.47 40.74 -1.47
+                              Q41.05 -1.47 41.33 -1.52Q41.61 -1.56 42.02 -1.68L42.05 -2.5
+                              L42.02 -4.04L43.89 -4.17L43.84 -2.82L43.89 -0.46Q42.09 0.14 40.58 0.14
+                              Q38.33 0.14 37.19 -1.09Q36.06 -2.32 36.06 -4.62
+                              Q36.06 -7.12 37.37 -8.45Q38.69 -9.78 41.1 -9.78Q42.67 -9.78 43.94 -9.2
+                              Z" />
+    </group>
+</vector>

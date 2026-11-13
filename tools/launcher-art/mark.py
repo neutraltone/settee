@@ -11,10 +11,14 @@ Outputs, relative to the repo root:
   app/src/main/res/drawable/ic_waiting_tv.xml            the aerial TV's still parts, full size
   app/src/main/res/drawable/ic_waiting_tv_small.xml      the aerial TV's still parts, at text height
   app/src/main/java/app/opentv/ui/design/AerialTvShape.kt  where Compose draws its moving parts
+  tools/launcher-art/settee-icon-debug.svg    settee-icon.svg with the DEBUG badge (#244)
+  tools/launcher-art/settee-banner-debug.svg  settee-banner.svg with the DEBUG badge
+  app/src/debug/res/drawable/ic_launcher_foreground.xml  the debug build's, with the badge
+  app/src/debug/res/drawable/ic_launcher_monochrome.xml  the debug build's, with the badge
 
-The wordmark comes from settee-wordmark.svg (see outline_wordmark.py), so this needs no font and
-only the standard library. tools/render-launcher-art.sh runs it before rendering the PNGs, and
-test_mark.py fails when a committed file no longer matches what this writes.
+The words come from settee-wordmark.svg and debug-badge.svg (see outline_wordmark.py), so this
+needs no font and only the standard library. tools/render-launcher-art.sh runs it before rendering
+the PNGs, and test_mark.py fails when a committed file no longer matches what this writes.
 
     python3 tools/launcher-art/mark.py [repo root]
 """
@@ -22,6 +26,7 @@ import math
 import re
 import sys
 from pathlib import Path
+from typing import NamedTuple
 
 # Kept in step with @color/settee_coral and @color/settee_plum, which test_mark.py checks. The
 # drawables use those resources; the SVGs can't, so they carry the hex.
@@ -55,6 +60,14 @@ WAIT_SMALL_AERIAL_WIDTH, WAIT_SMALL_KNOB = 7, 5.5
 WAIT_SMALL_ARC_RADIUS, WAIT_SMALL_ARC_WIDTH = 11, 5
 
 SAFE_RADIUS = 32  # a unit inside the adaptive icon's 33 (of 108), so antialiasing never meets the mask
+
+# The debug build's badge (#244): "DEBUG" in cream on a plum pill, with a coral gap around it so it
+# stands apart from the plum mark it covers, in debug-badge.svg's units. It sits across the foot of
+# the icon rather than in a corner: inside the safe circle a corner leaves room for type too small
+# to read on Fire TV Home's tiles.
+BADGE_PAD_X, BADGE_PAD_Y, BADGE_GAP = 5, 3.5, 2
+# Width of the pill on each copy: the adaptive icon (of 108), the tile (of 100) and the banner (px).
+BADGE_WIDTH_ADAPTIVE, BADGE_WIDTH_TILE, BADGE_WIDTH_BANNER = 46, 64, 96
 WRAP = 100
 
 
@@ -194,6 +207,91 @@ def extent():
     return box, centre, reach
 
 
+class Badge(NamedTuple):
+    """The badge in debug-badge.svg's units, the text's baseline starting at the origin.
+
+    pill and gap (the coral ring around it) are (x, y, w, h, r); text is path data.
+    """
+    pill: tuple
+    gap: tuple
+    text: str
+
+
+def badge_shape(art):
+    word, advance, top, bottom = read_word(art, "debug-badge.svg")
+    h = bottom - top + 2 * BADGE_PAD_Y
+    inset = BADGE_PAD_X + h / 2 - BADGE_PAD_Y  # the text's margin, measured from the end caps' centres
+    pill = (-inset, top - BADGE_PAD_Y, advance + 2 * inset, h, h / 2)
+    g = BADGE_GAP
+    return Badge(pill, (pill[0] - g, pill[1] - g, pill[2] + 2 * g, pill[3] + 2 * g, pill[4] + g), word)
+
+
+def badge_place(badge, width, centre_x, centre_y):
+    """(scale, translate x, translate y) drawing the pill `width` wide, centred on the point."""
+    x, y, w, h, _ = badge.gap
+    s = width / badge.pill[2]
+    return s, centre_x - (x + w / 2) * s, centre_y - (y + h / 2) * s
+
+
+def adaptive_badge_place(badge):
+    """As low on the adaptive icon as it goes with its gap still inside the safe circle."""
+    s = BADGE_WIDTH_ADAPTIVE / badge.pill[2]
+    half_w, half_h = badge.gap[2] * s / 2, badge.gap[3] * s / 2
+    room = (SAFE_RADIUS - half_h) ** 2 - (half_w - half_h) ** 2
+    if room < 0:
+        raise ValueError(f"a {BADGE_WIDTH_ADAPTIVE}-unit badge doesn't fit the safe circle: narrow it")
+    return badge_place(badge, BADGE_WIDTH_ADAPTIVE, 54, 54 + math.sqrt(room))
+
+
+def placed(rect, place):
+    """An (x, y, w, h, r) in the badge's units, in the coordinates `place` draws it at."""
+    s, tx, ty = place
+    x, y, w, h, r = rect
+    return tx + x * s, ty + y * s, w * s, h * s, r * s
+
+
+def badge_reach(art):
+    """How far the adaptive icon's badge, gap included, reaches from the icon's centre."""
+    badge = badge_shape(art)
+    x, y, w, _, r = placed(badge.gap, adaptive_badge_place(badge))
+    return max(math.dist((54, 54), (cx, y + r)) for cx in (x + r, x + w - r)) + r
+
+
+def badge_paths(badge, plum, coral, cream, gap=True):
+    ring = [fill(rrect(*badge.gap), coral)] if gap else []
+    return ring + [fill(rrect(*badge.pill), plum), fill(badge.text, cream)]
+
+
+def badge_silhouette(badge, colour):
+    """The pill with the text cut out (even-odd also fills the letters' counters back in)."""
+    return [fill(rrect(*badge.pill) + badge.text, colour, True)]
+
+
+def skirt(badge, place, size):
+    """The adaptive badge's gap carried on down to the icon's foot, in the vector's coordinates.
+
+    The mark's legs and seat reach lower than the badge can go inside the safe circle, and the
+    slivers left under its gap looked like a mistake. Below the safe circle the gap is coral on the
+    coral background (or nothing, on a themed icon), so it can run off the edge unseen.
+    """
+    x, y, w, _, r = placed(badge.gap, place)
+    a = f"a{fmt(r)},{fmt(r)} 0 0 1"
+    return (f"M{fmt(x)},{fmt(size)}V{fmt(y + r)}{a} {fmt(r)},{fmt(-r)}h{fmt(w - 2 * r)}{a} {fmt(r)},{fmt(r)}"
+            f"V{fmt(size)}z")
+
+
+def outside(badge, place, size):
+    """Clip path data for the square with the skirt notched out of its foot.
+
+    One outline running round the notch, rather than the square plus a hole: a VectorDrawable
+    clip-path has no fill type, so a hole would rest on how each renderer winds it.
+    """
+    x, y, w, _, r = placed(badge.gap, place)
+    a = f"a{fmt(r)},{fmt(r)} 0 0 0"
+    return (f"M0,0H{size}V{size}H{fmt(x + w)}V{fmt(y + r)}{a} {fmt(-r)},{fmt(-r)}h{fmt(-(w - 2 * r))}"
+            f"{a} {fmt(-r)},{fmt(r)}V{size}H0z")
+
+
 def wrap_words(text, width, indent):
     lines, line = [], ""
     for word in text.split():
@@ -219,13 +317,25 @@ def wrap_path(d, indent):
     return ("\n" + indent).join(lines)
 
 
+class Group(NamedTuple):
+    """A vector drawable's group: (scale, translate x, translate y) or None, its paths, and
+    optionally a clip path in the vector's own coordinates, applied outside the transform."""
+    transform: tuple | None
+    paths: list
+    clip: str | None = None
+
+
 def vector(size_dp, viewport, comment, groups):
     out = ['<?xml version="1.0" encoding="utf-8"?>', "<!--"] + wrap_words(comment, WRAP, "  ") + ["-->",
            '<vector xmlns:android="http://schemas.android.com/apk/res/android"',
            f'    android:width="{size_dp}dp"', f'    android:height="{size_dp}dp"',
            f'    android:viewportWidth="{viewport}"', f'    android:viewportHeight="{viewport}">']
-    for transform, paths in groups:
+    for group in groups:
+        transform, paths, clip = Group(*group)
         ind = "    "
+        if clip:
+            out += ["    <group>", "        <clip-path", '            android:pathData="'
+                    + wrap_path(clip, " " * len('            android:pathData="')) + '" />']
         if transform:
             scale, tx, ty = transform
             out += ["    <group", f'        android:scaleX="{fmt(scale)}"', f'        android:scaleY="{fmt(scale)}"',
@@ -245,6 +355,8 @@ def vector(size_dp, viewport, comment, groups):
             out.append(body + wrap_path(p["d"], " " * len(body)) + '" />')
         if transform:
             out.append("    </group>")
+        if clip:
+            out.append("    </group>")
     return "\n".join(out + ["</vector>"]) + "\n"
 
 
@@ -260,9 +372,9 @@ def svg_paths(paths, indent):
     return out
 
 
-def read_wordmark(art):
-    """(path data, advance, ink top, ink bottom), in banner pixels with the baseline at y=0."""
-    text = (art / "settee-wordmark.svg").read_text()
+def read_word(art, name):
+    """(path data, advance, ink top, ink bottom), in the outline's pixels with the baseline at y=0."""
+    text = (art / name).read_text()
     x, y, w, h = (float(v) for v in re.search(r'viewBox="([^"]+)"', text)[1].split())
     advance = float(re.search(r'data-advance="([^"]+)"', text)[1])
     return re.search(r'<path d="([^"]+)"', text)[1], advance, y, y + h
@@ -288,6 +400,24 @@ def outputs(root):
         "mark in one colour with the screen and seat slit cut out, placed as in "
         "ic_launcher_foreground."), [(adaptive, silhouette("#FF000000"))])
 
+    # The debug build's copies: the same, with the badge across the foot (#244). Only the debug
+    # source set gets them, so a release build's resources stay exactly as they were.
+    debug_res = root / "app/src/debug/res/drawable"
+    badge = badge_shape(art)
+    badged = adaptive_badge_place(badge)
+    files[debug_res / "ic_launcher_foreground.xml"] = vector(108, 108, (
+        "The debug build's adaptive-icon foreground, written by tools/launcher-art/mark.py: "
+        "ic_launcher_foreground with a DEBUG badge across its foot, kept inside the safe circle, so "
+        "it can't be mistaken for the release build."),
+        [(adaptive, colour_mark(PLUM_RES, CORAL_RES)), (None, [fill(skirt(badge, badged, 108), CORAL_RES)]),
+         (badged, badge_paths(badge, PLUM_RES, CORAL_RES, CREAM_RES, gap=False))])
+    files[debug_res / "ic_launcher_monochrome.xml"] = vector(108, 108, (
+        "The debug build's monochrome layer, written by tools/launcher-art/mark.py: "
+        "ic_launcher_monochrome with the DEBUG badge, the mark clipped clear of the badge's gap "
+        "because a themed icon is drawn from alpha alone."),
+        [Group(adaptive, silhouette("#FF000000"), clip=outside(badge, badged, 108)),
+         (badged, badge_silhouette(badge, "#FF000000"))])
+
     # Notification: Android keeps only the alpha. The mark fills 20dp of 24, the usual 2dp inset.
     n = 20 / max(box[2] - box[0], box[3] - box[1])
     files[res / "ic_notification.xml"] = vector(24, 24, (
@@ -311,26 +441,42 @@ def outputs(root):
         [((1, *wait[1:]), waiting_tv(small=True))])
     files[root / "app/src/main/java/app/opentv/ui/design/AerialTvShape.kt"] = aerial_tv_kotlin()
 
-    files[art / "settee-icon.svg"] = "\n".join(
-        ['<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">',
-         "  <!-- Written by mark.py: the mark in its coral tile at 74%, the API 24-25 launcher icon. -->",
-         f'  <rect width="100" height="100" rx="22" fill="{CORAL}"/>',
-         '  <g transform="translate(13 13) scale(.74)">'] + svg_paths(colour_mark(PLUM, CORAL), "    ")
-        + ["  </g>", "</svg>"]) + "\n"
+    def icon_svg(comment, extra):
+        return "\n".join(
+            ['<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">', f"  <!-- {comment} -->",
+             f'  <rect width="100" height="100" rx="22" fill="{CORAL}"/>',
+             '  <g transform="translate(13 13) scale(.74)">'] + svg_paths(colour_mark(PLUM, CORAL), "    ")
+            + ["  </g>"] + extra + ["</svg>"]) + "\n"
+
+    files[art / "settee-icon.svg"] = icon_svg(
+        "Written by mark.py: the mark in its coral tile at 74%, the API 24-25 launcher icon.", [])
+    # The gap's foot 4 units above the tile's.
+    gap_h = badge.gap[3] * BADGE_WIDTH_TILE / badge.pill[2]
+    files[art / "settee-icon-debug.svg"] = icon_svg(
+        "Written by mark.py: settee-icon.svg with the DEBUG badge, the debug build's API 24-25 icon.",
+        badge_svg(badge, badge_place(badge, BADGE_WIDTH_TILE, 50, 100 - 4 - gap_h / 2)))
 
     # Banner, laid out as the prototype: the mark 30% of the width, a 4% gap, then the word, the
     # whole row centred, and the word's ink centred on the banner's middle.
-    word, advance, top, bottom = read_wordmark(art)
+    word, advance, top, bottom = read_word(art, "settee-wordmark.svg")
     mark_w, gap = 96, 12.8
     left = (320 - (mark_w + gap + advance)) / 2
     word_x, word_y = left + mark_w + gap, 90 - (top + bottom) / 2
-    files[art / "settee-banner.svg"] = "\n".join(
-        ['<svg xmlns="http://www.w3.org/2000/svg" width="320" height="180" viewBox="0 0 320 180">',
-         "  <!-- Written by mark.py: the TV banner, the mark beside settee-wordmark.svg. -->",
-         f'  <rect width="320" height="180" fill="{CORAL}"/>',
-         f'  <g transform="translate({fmt(left)} 42) scale(.96)">'] + svg_paths(colour_mark(PLUM, CORAL), "    ")
-        + ["  </g>", f'  <path transform="translate({fmt(word_x)} {fmt(word_y)})" d="{word}" fill="{PLUM}"/>',
-           "</svg>"]) + "\n"
+
+    def banner_svg(comment, extra):
+        return "\n".join(
+            ['<svg xmlns="http://www.w3.org/2000/svg" width="320" height="180" viewBox="0 0 320 180">',
+             f"  <!-- {comment} -->", f'  <rect width="320" height="180" fill="{CORAL}"/>',
+             f'  <g transform="translate({fmt(left)} 42) scale(.96)">'] + svg_paths(colour_mark(PLUM, CORAL), "    ")
+            + ["  </g>", f'  <path transform="translate({fmt(word_x)} {fmt(word_y)})" d="{word}" fill="{PLUM}"/>']
+            + extra + ["</svg>"]) + "\n"
+
+    files[art / "settee-banner.svg"] = banner_svg(
+        "Written by mark.py: the TV banner, the mark beside settee-wordmark.svg.", [])
+    # Under the name, centred on it, where the banner has room.
+    files[art / "settee-banner-debug.svg"] = banner_svg(
+        "Written by mark.py: settee-banner.svg with the DEBUG badge under the name.",
+        badge_svg(badge, badge_place(badge, BADGE_WIDTH_BANNER, word_x + advance / 2, 146)))
 
     # The phone page's lockup, for a dark screen: the tile beside the name in cream, the word's ink
     # centred on the tile. A Kotlin constant rather than an asset, so every page can include it
@@ -362,6 +508,12 @@ def outputs(root):
     return files
 
 
+def badge_svg(badge, place):
+    s, tx, ty = place
+    return ([f'  <g transform="translate({fmt(tx)} {fmt(ty)}) scale({fmt(s)})">']
+            + svg_paths(badge_paths(badge, PLUM, CORAL, CREAM), "    ") + ["  </g>"])
+
+
 def wrap_long(text):
     """Breaks any line over WRAP at a space, which SVG treats as any other space."""
     out = []
@@ -379,6 +531,7 @@ def wrap_long(text):
 def main():
     root = Path(sys.argv[1]) if len(sys.argv) > 1 else Path(__file__).resolve().parents[2]
     for path, text in outputs(root).items():
+        path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(text)
 
 
