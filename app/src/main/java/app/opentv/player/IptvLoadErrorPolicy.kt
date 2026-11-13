@@ -18,27 +18,29 @@ import androidx.media3.exoplayer.upstream.LoadErrorHandlingPolicy
  * A provider under load returns 403, 429 or 500 for a few seconds and then serves the
  * stream perfectly well. ExoPlayer's default is to give up almost immediately on those,
  * which surfaces to the user as a channel that "doesn't work" but plays fine on the
- * second try. We retry them, and connections that fail or drop, with backoff instead.
- * 401, 404 and 410 are not retried — those genuinely will not fix themselves.
+ * second try. We retry them, and reads that fail or drop, with backoff instead. 401, 404
+ * and 410 are not retried — those genuinely will not fix themselves.
  *
- * Everything else is ExoPlayer's call, because its "don't retry" is deliberate: a provider
- * answering an expired account with HTTP 200 and an HTML page fails to parse, and no number
- * of retries turns that page into video. Backing those off too kept the spinner up for
- * about 15 seconds per attempt before the viewer saw why (#255).
+ * Whether anything else is retried is ExoPlayer's call, because its "don't retry" is deliberate:
+ * a provider answering an expired account with HTTP 200 and an HTML page fails to parse, and no
+ * number of retries turns that page into video. Backing those off too kept the spinner up for
+ * about 15 seconds per attempt before the viewer saw why (#255). Asking it whether, rather than
+ * listing exception types here, keeps the NAS and recordings, whose sources aren't HTTP, on the
+ * same backoff as a provider's stream.
  */
 @OptIn(UnstableApi::class)
 internal class IptvLoadErrorPolicy : DefaultLoadErrorHandlingPolicy() {
 
     override fun getRetryDelayMsFor(info: LoadErrorHandlingPolicy.LoadErrorInfo): Long {
-        val exception = info.exception
-        val statusCode = (exception as? HttpDataSource.InvalidResponseCodeException)?.responseCode
-        val isNetworkFailure = exception is HttpDataSource.HttpDataSourceException &&
-            exception !is HttpDataSource.CleartextNotPermittedException
-
+        val statusCode = (info.exception as? HttpDataSource.InvalidResponseCodeException)?.responseCode
         return when {
+            statusCode == null -> if (super.getRetryDelayMsFor(info) == C.TIME_UNSET) {
+                C.TIME_UNSET
+            } else {
+                backoffFor(info.errorCount)
+            }
             statusCode in NOT_RETRIED -> C.TIME_UNSET
             statusCode in RETRIED -> backoffFor(info.errorCount)
-            statusCode == null && isNetworkFailure -> backoffFor(info.errorCount)
             else -> super.getRetryDelayMsFor(info)
         }
     }

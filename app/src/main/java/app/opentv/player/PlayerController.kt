@@ -207,6 +207,9 @@ class PlayerController(
     private var loaded: MediaKey? = null
     private var consecutiveFailures = 0
 
+    /** Whether the stream on the player has played since it loaded, for [PlaybackRecovery]. */
+    private var hadPlayed = false
+
     /** Whether the controller itself has stopped this stream, until the next one starts. */
     private var gaveUp = false
 
@@ -292,6 +295,7 @@ class PlayerController(
                         Player.STATE_BUFFERING -> State.Buffering(_title.value)
                         Player.STATE_READY -> {
                             consecutiveFailures = 0
+                            hadPlayed = true
                             State.Playing(_title.value)
                         }
                         Player.STATE_IDLE -> _state.value
@@ -305,18 +309,7 @@ class PlayerController(
                     guard.leaving()
                     DecoderLog.logFailure(error)
                     val request = current
-                    // Restarting can't change what this device can decode, and on a portal it would
-                    // only mint more links for a stream that will fail the same way.
-                    val canRetry = !PlaybackErrors.isUnplayableFormat(error) &&
-                        consecutiveFailures < MAX_AUTO_RESTARTS
-                    // Running out of memory took the Stick over a minute (#180), so a silent
-                    // restart would hide the message for another minute. Retry stays on offer:
-                    // the memory may be free by the time the viewer asks. A stream that won't parse is
-                    // usually the provider's HTML page, which a restart only fetches again (#255);
-                    // Retry stays for when the viewer has sorted out the account.
-                    val canRestart = canRetry &&
-                        !PlaybackErrors.isOutOfMemory(error) &&
-                        !PlaybackErrors.isParseFailure(error)
+                    val recovery = PlaybackRecovery.after(error, consecutiveFailures, hadPlayed)
                     _state.value = State.Error(
                         title = _title.value,
                         // The last stream's format lingers until this one's tracks are known, so only a
@@ -327,11 +320,9 @@ class PlayerController(
                             onTelevision,
                             player.videoFormat.takeIf { player.currentTracks.isTypeSelected(C.TRACK_TYPE_VIDEO) },
                         ),
-                        canRetry = canRetry,
+                        canRetry = recovery.canRetry,
                     )
-                    // A silent restart covers the common case of a provider dropping the
-                    // connection when another device on the account starts streaming.
-                    if (canRestart && request != null) {
+                    if (recovery.canRestart && request != null) {
                         scope.launch {
                             delay(AUTO_RESTART_DELAY_MILLIS)
                             if (current == request) play(request, debounce = false)
@@ -370,7 +361,7 @@ class PlayerController(
         // reaches the player, so we never stack prepares.
         switchJob?.cancel()
         // An automatic restart plays the same request again and keeps counting, so a stream that
-        // keeps dropping stops after MAX_AUTO_RESTARTS rather than retrying (and, on a portal,
+        // keeps dropping stops after a couple of restarts rather than retrying (and, on a portal,
         // minting a link) forever.
         if (request != current) consecutiveFailures = 0
         if (request.key != current?.key) guard.forgetNotices()
@@ -414,6 +405,7 @@ class PlayerController(
                 // stop() rather than release(): keeps the codec and the surface alive.
                 stop()
                 gaveUp = false
+                hadPlayed = false
                 guard.started()
                 clearMediaItems()
                 // Each stream starts with text off, then applySubtitlePreference picks its track.
@@ -574,7 +566,6 @@ class PlayerController(
         const val SEEK_INCREMENT_MILLIS = 15_000L
 
         private const val SWITCH_DEBOUNCE_MILLIS = 350L
-        private const val MAX_AUTO_RESTARTS = 3
         private const val AUTO_RESTART_DELAY_MILLIS = 1_500L
 
         // Debounce channel-surfing in the guide preview harder, so scrolling the list doesn't tune

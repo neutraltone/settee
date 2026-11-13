@@ -14,6 +14,7 @@ import androidx.media3.datasource.HttpDataSource
 import androidx.media3.exoplayer.source.LoadEventInfo
 import androidx.media3.exoplayer.source.MediaLoadData
 import androidx.media3.exoplayer.source.UnrecognizedInputFormatException
+import androidx.media3.exoplayer.upstream.DefaultLoadErrorHandlingPolicy
 import androidx.media3.exoplayer.upstream.LoadErrorHandlingPolicy.LoadErrorInfo
 import androidx.media3.exoplayer.upstream.Loader
 import app.opentv.player.IptvLoadErrorPolicy
@@ -65,12 +66,32 @@ class IptvLoadErrorPolicyTest {
     }
 
     @Test
+    fun `a read that fails on the NAS or a recording backs off the same way`() {
+        val dropped = IOException("Connection reset")
+
+        val delays = (1..6).map { policy.getRetryDelayMsFor(info(dropped, errorCount = it)) }
+
+        assertThat(delays).containsExactly(500L, 1_000L, 2_000L, 4_000L, 8_000L, C.TIME_UNSET).inOrder()
+    }
+
+    @Test
     fun `a busy provider's statuses back off, and ones that won't fix themselves aren't retried`() {
-        listOf(403, 429, 503).forEach { code ->
+        listOf(403, 405, 429, 500, 502, 503, 504).forEach { code ->
             assertThat(policy.getRetryDelayMsFor(info(status(code), errorCount = 1))).isEqualTo(500L)
         }
         listOf(401, 404, 410).forEach { code ->
             assertThat(policy.getRetryDelayMsFor(info(status(code), errorCount = 1))).isEqualTo(C.TIME_UNSET)
+        }
+    }
+
+    @Test
+    fun `any other status is left to ExoPlayer`() {
+        listOf(400, 418, 451, 501).forEach { code ->
+            val failure = info(status(code), errorCount = 1)
+
+            assertThat(policy.getRetryDelayMsFor(failure))
+                .isEqualTo(DefaultLoadErrorHandlingPolicy().getRetryDelayMsFor(failure))
+            assertThat(policy.getRetryDelayMsFor(failure)).isNotEqualTo(500L)
         }
     }
 

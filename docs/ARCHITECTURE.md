@@ -202,16 +202,19 @@ CDN and wrong here: a provider under load returns 403, 429 or 503 for a few seco
 serves the stream perfectly. Users experience the default as "this channel doesn't work" when
 it demonstrably works on the second attempt.
 
-`PlayerController`'s `IptvLoadErrorPolicy` retries those, and connections that fail or drop, with
-exponential backoff (500 ms doubling to 8 s, 5 attempts); then the player restarts silently, up
-to two times. `401`, `404` and `410` are **not** retried — those will not fix themselves.
+`PlayerController`'s `IptvLoadErrorPolicy` retries those, and reads that fail or drop (from a
+provider, the NAS or a recording), with exponential backoff (500 ms doubling to 8 s, 5 attempts);
+then the player restarts silently, up to two times. `401`, `404` and `410` are **not** retried —
+those will not fix themselves.
 
-Everything else is left to ExoPlayer's own policy, which deliberately doesn't retry a stream that
-won't parse, a missing file, a cleartext refusal or running out of memory. Providers often answer
-an expired account or a blocked channel with HTTP 200 and an HTML page, and backing that off,
-then restarting, kept the spinner up for about 50 seconds before the error showed (#255). A parse
-failure isn't restarted silently either, but Retry stays on offer, as it does for running out of
-memory; a format this device can't decode gets neither.
+Whether anything else is retried is left to ExoPlayer's own policy, which deliberately doesn't
+retry a stream that won't parse, a missing file, a cleartext refusal or running out of memory.
+Providers often answer an expired account or a blocked channel with HTTP 200 and an HTML page,
+and backing that off, then restarting, kept the spinner up for about 50 seconds before the error
+showed (#255). `PlaybackRecovery` decides the restarts: a stream that won't parse from the start
+isn't restarted silently, but Retry stays on offer, as it does for running out of memory; one that
+played and then broke is restarted, since that's more likely a bad segment than an HTML page. A
+format this device can't decode gets neither.
 
 ### Errors say what to do
 
