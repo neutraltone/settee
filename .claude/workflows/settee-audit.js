@@ -266,27 +266,33 @@ const verified = await pipeline(
           effort: 'medium',
         })))).filter(Boolean)
       const upheld = votes.filter(v => !v.refuted)
-      // A high-severity finding needs both skeptics to fail to refute it.
-      const survives = votes.length > 0 && upheld.length === votes.length
-      return survives
-        ? { ...f, area: job.area, lens: job.lens, verified: true, verifiedSeverity: upheld.map(v => v.severity), verifierNotes: upheld.map(v => v.reason) }
-        : null
+      // Any skeptic that refutes it drops it (a high-severity finding needs both to fail to).
+      if (upheld.length < votes.length) return null
+      const kept = { ...f, area: job.area, lens: job.lens, verifiedSeverity: upheld.map(v => v.severity), verifierNotes: upheld.map(v => v.reason) }
+      // A skeptic that never ran (usage limit, API error, skipped) is not a refutation: keep the
+      // finding, marked unchecked, rather than lose it as if it had been disproved.
+      const missing = skeptics - votes.length
+      return missing > 0 ? { ...kept, verified: false, skepticsMissing: missing } : { ...kept, verified: true }
     }))
   },
 )
 
 const confirmed = verified.flat().filter(Boolean)
-log(SKEPTICS === 0 ? `${confirmed.length} unverified findings` : `${confirmed.length} findings survived verification`)
+const unchecked = confirmed.filter(f => f.skepticsMissing)
+log(SKEPTICS === 0 ? `${confirmed.length} unverified findings` : `${confirmed.length - unchecked.length} findings survived verification`)
+if (unchecked.length) log(`${unchecked.length} findings kept UNCHECKED because a skeptic didn't run (look for skepticsMissing); resume the run to check them`)
 if (notReviewed.length) log(`${notReviewed.length} items reported as not reviewed (returned in notReviewed)`)
 
-if (!confirmed.length) return { confirmed: [], issues: [], notReviewed }
+if (!confirmed.length) return { confirmed: [], issues: [], unchecked: 0, notReviewed }
 
 phase('Report')
-const report = await agent(`You are turning audit findings (verified ones are marked verified: true; unverified ones must say so in their body) for the Settee Android TV app into draft GitHub issues. Do NOT create the issues; return them.
+const report = await agent(`You are turning audit findings (verified ones are marked verified: true; unverified ones, including those with skepticsMissing, must say in their body that no skeptic has checked them yet) for the Settee Android TV app into draft GitHub issues. Do NOT create the issues; return them.
 
 Merge findings that describe the same root cause (list the merged titles in merged_from). Order by severity, then by size of saving. Write titles in plain words; follow the repo's style (no jargon a viewer would not follow for bugs a viewer notices). Each body: what happens, where (file:line links relative to repo root), evidence, suggested fix, how to verify (for performance items, which measurement in docs/PERFORMANCE.md or which CI timing shows the saving).
 
 Findings (JSON):
 ${JSON.stringify(confirmed, null, 1)}`, { phase: 'Report', schema: REPORT })
 
-return { summary: report?.summary, issues: report?.issues ?? [], confirmed, notReviewed }
+// If the report writer didn't run either, the findings themselves are still returned.
+if (!report) log('The report writer did not run: returning the findings without draft issues')
+return { summary: report?.summary, issues: report?.issues ?? [], confirmed, unchecked: unchecked.length, notReviewed }
