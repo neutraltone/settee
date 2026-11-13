@@ -9,6 +9,7 @@ import androidx.navigation.NavController
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
 import app.opentv.ui.settings.FontLicencesScreen
+import app.opentv.ui.settings.LockedCategoriesScreen
 import app.opentv.ui.settings.SettingsMemory
 import app.opentv.ui.settings.SettingsScreen
 
@@ -25,8 +26,13 @@ fun NavGraphBuilder.settingsRoutes(nav: NavController, memory: SettingsMemory) {
             onAddProvider = { nav.openAddProvider() },
             onEditProvider = { id -> nav.navigate(Routes.editSource(id)) },
             onOpenChannels = { nav.navigate(Routes.CHANNELS) },
+            onOpenLockedCategories = { nav.navigate(Routes.LOCKED_CATEGORIES) },
             onOpenFontLicences = { nav.navigate(Routes.FONT_LICENCES) },
         )
+    }
+
+    composable(Routes.LOCKED_CATEGORIES) {
+        LockedCategoriesScreen(onBack = { nav.popBackStack() })
     }
 
     composable(Routes.FONT_LICENCES) {

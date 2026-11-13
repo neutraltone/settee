@@ -212,7 +212,7 @@
     <string name="settings_parental_confirm_pin">Type the PIN again</string>
     <string name="settings_parental_pin_mismatch">That doesn\'t match the first one.</string>
     <string name="settings_parental_show_hidden">Show hidden categories now</string>
-    <string name="settings_parental_show_hidden_note">Until Settee closes. Switch a category on below to hide it.</string>
+    <string name="settings_parental_show_hidden_note">Until Settee closes. Lock a category in Locked categories to hide it.</string>
     <string name="settings_devices_share">Share from this device</string>
     <string name="settings_devices_share_note">For a few minutes, behind a code, over your own wifi. Nothing leaves the house.</string>
     <string name="settings_devices_type_this">On the other device, go to Your devices, choose Get from another device and type:</string>
@@ -269,6 +269,12 @@
     <string name="parental_lock_sync_note">Categories you lock here are also locked on your other devices when they sync. Unlocking one only unlocks it on this device.</string>
     <string name="parental_no_categories">No categories yet. Add a provider and its categories will show up here.</string>
     <string name="parental_remove_pin">Remove PIN</string>
+    <string name="parental_locked_categories">Locked categories</string>
+    <string name="parental_locked_none">None</string>
+    <plurals name="parental_locked_count">
+        <item quantity="one">%d locked</item>
+        <item quantity="other">%d locked</item>
+    </plurals>
 
     <!-- ============================ Profiles ============================ -->
     <string name="profiles_new_heading">New profile name</string>
