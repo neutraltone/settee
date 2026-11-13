@@ -28,6 +28,7 @@ import app.opentv.data.model.Favourite
 import app.opentv.data.model.GuideFingerprint
 import app.opentv.data.model.GuideProgramme
 import app.opentv.data.model.HandMark
+import app.opentv.data.model.LiveStreamFormat
 import app.opentv.data.model.LivePlayback
 import app.opentv.data.model.Movie
 import app.opentv.data.model.MovieCredit
@@ -47,6 +48,7 @@ import app.opentv.data.model.SeriesRef
 import app.opentv.data.model.SeriesRule
 import app.opentv.data.model.Source
 import app.opentv.data.model.SourceCategoryName
+import app.opentv.data.model.SourceKind
 import app.opentv.data.model.StreamKind
 import app.opentv.data.model.VersionRow
 import app.opentv.data.model.movieCredits
@@ -263,19 +265,31 @@ interface ChannelDao {
     @Query("UPDATE channels SET streamUrl = :url WHERE id = :id AND streamUrl != :url")
     suspend fun changeStreamUrl(id: Long, url: String)
 
-    @Update
-    suspend fun updateSource(source: Source)
+    @Query("SELECT * FROM sources WHERE id = :id")
+    suspend fun sourceFor(id: Long): Source?
+
+    // Only the one column: writing back a whole Source read earlier would undo an edit saved since.
+    @Query("UPDATE sources SET liveFormat = :format WHERE id = :id")
+    suspend fun setSourceLiveFormat(id: Long, format: LiveStreamFormat)
 
     /**
-     * Saves [source] with its new live format and gives each of its channels the URL [urlFor] builds
-     * from its stream id, all in one transaction. A format switch changes every URL, and a commit per
-     * row took tens of seconds on a big provider; anything that stopped it partway left the source
-     * saying one format while some channels played the other. Now it lands whole or not at all.
+     * Switches an Xtream source to [format] and gives each of its channels the URL [urlFor] builds
+     * for the switched source and the channel's stream id, all in one transaction. A format switch
+     * changes every URL, and a commit per row took tens of seconds on a big provider; anything that
+     * stopped it partway left the source saying one format while some channels played the other.
+     * The source is read inside the transaction too, so the URLs carry its current login.
      */
     @Transaction
-    suspend fun switchLiveFormat(source: Source, urlFor: (streamId: String) -> String) {
-        updateSource(source)
-        for (channel in streamIdsFor(source.id)) changeStreamUrl(channel.id, urlFor(channel.streamId))
+    suspend fun switchLiveFormat(
+        sourceId: Long,
+        format: LiveStreamFormat,
+        urlFor: (source: Source, streamId: String) -> String,
+    ) {
+        val source = sourceFor(sourceId) ?: return
+        if (source.kind != SourceKind.XTREAM || source.liveFormat == format) return
+        setSourceLiveFormat(sourceId, format)
+        val switched = source.copy(liveFormat = format)
+        for (channel in streamIdsFor(sourceId)) changeStreamUrl(channel.id, urlFor(switched, channel.streamId))
     }
 
     // --- Sync: identify hidden channels by source name and stream id (ADR 0004) ---

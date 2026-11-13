@@ -430,7 +430,9 @@ object ManagerPage {
           // the order on screen is the one saved even if an earlier save was slow or failed.
           var waitingOrders = [];   // { cat, ids }, oldest first
           var savingOrder = false;
+          var unsavedCats = [];     // categories whose last save failed, until they're saved again
           function saveOrder(ids){
+            unsavedCats = unsavedCats.filter(function(c){ return c !== currentCat; });
             var last = waitingOrders[waitingOrders.length - 1];
             if (last && last.cat === currentCat) last.ids = ids;
             else waitingOrders.push({ cat: currentCat, ids: ids });
@@ -441,10 +443,17 @@ object ManagerPage {
             if (!next) { savingOrder = false; return; }
             savingOrder = true;
             post('/reorder', { ids: next.ids })
-              .then(function(){ if (!waitingOrders.length) setStatus('Order saved', 'ok'); })
+              // Another category's failed save keeps its error showing rather than 'Order saved'.
+              .then(function(){
+                if (waitingOrders.length) return;
+                if (unsavedCats.length) setStatus(UNREACH, 'err');
+                else setStatus('Order saved', 'ok');
+              })
               // A newer order for the same category replaces this one; for another, it doesn't.
               .catch(function(){
-                if (!waitingOrders.some(function(o){ return o.cat === next.cat; })) setStatus(UNREACH, 'err');
+                if (waitingOrders.some(function(o){ return o.cat === next.cat; })) return;
+                unsavedCats.push(next.cat);
+                setStatus(UNREACH, 'err');
               })
               .then(sendNextOrder);
           }

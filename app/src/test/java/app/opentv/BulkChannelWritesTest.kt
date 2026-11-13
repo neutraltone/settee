@@ -5,14 +5,18 @@
  */
 package app.opentv
 
-import androidx.room.InvalidationTracker
 import androidx.test.core.app.ApplicationProvider
 import app.opentv.data.model.Channel
 import app.opentv.data.model.LiveStreamFormat
 import app.opentv.data.model.Source
 import com.google.common.truth.Truth.assertThat
-import java.util.concurrent.atomic.AtomicInteger
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.yield
 import org.junit.After
 import org.junit.Assert.assertThrows
 import org.junit.Test
@@ -60,21 +64,24 @@ class BulkChannelWritesTest {
     @Test
     fun `switching a big provider's live format rewrites every channel in one go`() = runBlocking {
         hlsProvider(3_000)
-        val invalidations = AtomicInteger()
-        db.invalidationTracker.addObserver(
-            object : InvalidationTracker.Observer("channels") {
-                override fun onInvalidated(tables: Set<String>) {
-                    invalidations.incrementAndGet()
+        // Reads the channels over and over while the switch runs. Committed one row at a time, some
+        // read would find both formats; in one transaction, every read finds all old or all new.
+        // (Counting Room's invalidations would say the same, but Room delivers them asynchronously.)
+        val formatsSeen = mutableListOf<Set<String>>()
+        coroutineScope {
+            val reading = launch(Dispatchers.IO) {
+                while (isActive) {
+                    formatsSeen += db.channels().everyRow().map { it.streamUrl.substringAfterLast('.') }.toSet()
+                    yield()
                 }
-            },
-        )
-
-        test.catalog.setLiveFormat(PANEL_SOURCE.id, LiveStreamFormat.MPEG_TS)
-        db.invalidationTracker.refreshVersionsSync()
+            }
+            test.catalog.setLiveFormat(PANEL_SOURCE.id, LiveStreamFormat.MPEG_TS)
+            reading.cancelAndJoin()
+        }
 
         assertThat(db.sources().byId(PANEL_SOURCE.id)?.liveFormat).isEqualTo(LiveStreamFormat.MPEG_TS)
         assertThat(db.channels().everyRow().map { it.streamUrl }.filterNot { it.endsWith(".ts") }).isEmpty()
-        assertThat(invalidations.get()).isEqualTo(1)
+        assertThat(formatsSeen.filter { it.size > 1 }).isEmpty()
     }
 
     @Test
@@ -84,7 +91,7 @@ class BulkChannelWritesTest {
 
         assertThrows(IllegalStateException::class.java) {
             runBlocking {
-                db.channels().switchLiveFormat(source.copy(liveFormat = LiveStreamFormat.MPEG_TS)) { streamId ->
+                db.channels().switchLiveFormat(source.id, LiveStreamFormat.MPEG_TS) { _, streamId ->
                     check(++built < 10) { "stopped partway" }
                     "http://example.com/live/u/p/$streamId.ts"
                 }

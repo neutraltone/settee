@@ -934,10 +934,7 @@ class CatalogRepository(
      * tables), so every row here is a live channel whose URL derives from [XtreamApi.liveStreamUrl].
      */
     suspend fun setLiveFormat(sourceId: Long, format: LiveStreamFormat) = withContext(Dispatchers.IO) {
-        val source = sourceDao.byId(sourceId) ?: return@withContext
-        if (source.kind != SourceKind.XTREAM || source.liveFormat == format) return@withContext
-        val updated = source.copy(liveFormat = format)
-        channelDao.switchLiveFormat(updated) { streamId -> api.liveStreamUrl(updated, streamId) }
+        channelDao.switchLiveFormat(sourceId, format, api::liveStreamUrl)
     }
 
     suspend fun deleteSource(sourceId: Long) = withContext(Dispatchers.IO) {

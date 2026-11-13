@@ -24,6 +24,8 @@ import java.io.InputStreamReader
 import java.io.OutputStream
 import java.net.Socket
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.locks.ReentrantLock
+import kotlin.concurrent.withLock
 import kotlin.concurrent.thread
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -103,6 +105,12 @@ class ManagerServer(
 
     @Volatile private var lastActivityMillis = 0L
 
+    /**
+     * Adds one provider at a time, as when every request waited its turn: requests now run side by
+     * side, and two Adds at once would each save and refresh before either saw the other.
+     */
+    private val adding = ReentrantLock()
+
     private val json = Json {
         ignoreUnknownKeys = true
         encodeDefaults = true
@@ -141,11 +149,12 @@ class ManagerServer(
                 }
                 // Each request on its own, so a slow one (a reorder, an add that tests a login)
                 // doesn't hold up the page's next request behind it on this loop.
+                // Closed on completion, not at the end of the block: a scope cancelled as the
+                // screen closes never runs the block, and the socket would be left open.
                 scope.launch(Dispatchers.IO) {
                     runCatching { handle(client) }
                         .onFailure { Log.w(TAG, "Manager request failed", it) }
-                    runCatching { client.close() }
-                }
+                }.invokeOnCompletion { runCatching { client.close() } }
             }
         }
 
@@ -401,20 +410,19 @@ class ManagerServer(
             )
             return
         }
-        val result = runBlocking {
-            val id = sourceRepository.save(draft)
-            val saved = sourceRepository.byId(id)
-                ?: return@runBlocking AddResultDto(
-                    ok = false,
-                    error = wording.of(R.string.refresh_save_failed).sentence,
-                )
-            when (val r = refresh.refresh(CatalogueRefresh.Trigger.ProviderAdded(saved))) {
-                is CatalogueRefresh.Outcome.ChannelsLoaded -> AddResultDto(ok = true, channels = r.channels)
-                is CatalogueRefresh.Outcome.AddFailed ->
-                    AddResultDto(ok = false, error = r.reason.sentence, detail = r.reason.detail)
-            }
-        }
+        val result = adding.withLock { runBlocking { addSource(draft) } }
         writeJson(output, AddResultDto.serializer(), result)
+    }
+
+    private suspend fun addSource(draft: Source): AddResultDto {
+        val id = sourceRepository.save(draft)
+        val saved = sourceRepository.byId(id)
+            ?: return AddResultDto(ok = false, error = wording.of(R.string.refresh_save_failed).sentence)
+        return when (val r = refresh.refresh(CatalogueRefresh.Trigger.ProviderAdded(saved))) {
+            is CatalogueRefresh.Outcome.ChannelsLoaded -> AddResultDto(ok = true, channels = r.channels)
+            is CatalogueRefresh.Outcome.AddFailed ->
+                AddResultDto(ok = false, error = r.reason.sentence, detail = r.reason.detail)
+        }
     }
 
     /** `POST /source/test {…}` → validate the provider details without saving (handshake / auth). */
