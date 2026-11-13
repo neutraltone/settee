@@ -113,9 +113,11 @@ fun PhonePairingScreen(
                     }
                 }
 
-                // A TMDB Key only arrives once the TMDB step has taken over, so this is never seen.
+                // A TMDB Key or an OpenSubtitles sign-in only arrives once a later step has taken over, so
+                // neither is seen here.
                 is PairingServer.State.Received,
                 is PairingServer.State.KeyReceived,
+                is PairingServer.State.SignInReceived,
                 PairingServer.State.KeySkipped,
                 -> PairingConnecting()
 
