@@ -12,7 +12,9 @@ captures/
 *.keystore
 !debug.keystore
 
-.claude/
+# Local Claude state (worktrees, settings), except the shared workflows
+.claude/*
+!.claude/workflows/
 
 # Kotlin compiler transient logs
 .kotlin/
