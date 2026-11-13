@@ -5,7 +5,9 @@
  */
 package app.opentv.ui.settings
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
@@ -223,16 +225,22 @@ internal class TmdbKeyParts(
     val status: @Composable () -> Unit,
 )
 
-/** Settings › TMDB's arrangement: the QR code above Type it instead, or a saved key's rows; then the status. */
+/**
+ * Settings › TMDB's arrangement: the QR code above Type it instead, or a saved key's rows; then the
+ * status. In the taller of the two's height either way, so the attribution under them stays put when
+ * Replace key brings the QR code up, rather than dropping as it did.
+ */
 @Composable
 private fun StackedParts(parts: TmdbKeyParts) {
-    if (parts.asking) {
-        parts.code(false)
-        parts.typeIt()
-    } else {
-        parts.saved()
+    Column(Modifier.heightIn(min = ROWS_HEIGHT), verticalArrangement = Arrangement.spacedBy(ROW_GAP)) {
+        if (parts.asking) {
+            parts.code(false)
+            parts.typeIt()
+        } else {
+            parts.saved()
+        }
+        parts.status()
     }
-    parts.status()
 }
 
 /**
@@ -336,8 +344,17 @@ private const val START_DELAY_MS = 400L
  */
 private val SETTINGS_QR_SIZE = 140.dp
 
-/** A [CodeBlock] with its QR code: the code and the block's padding. */
-private val QR_SLOT_HEIGHT = 180.dp
+/** A [CodeBlock] with its QR code: the code and the block's padding, and room for its address on two lines. */
+private val QR_SLOT_HEIGHT = 190.dp
+
+/** Settings' gap between rows, which [StackedParts] keeps inside its own column. */
+private val ROW_GAP = 8.dp
 
 /** The checking line, or a turned-down key's sentence over two lines and its detail line. */
 private val STATUS_HEIGHT = 88.dp
+
+/** [ListRow]'s height, Type it instead's. */
+private val KEY_ROW_HEIGHT = 52.dp
+
+/** The QR code's rows, the taller of [StackedParts]' two: the code, Type it instead and the status line. */
+private val ROWS_HEIGHT = QR_SLOT_HEIGHT + ROW_GAP + KEY_ROW_HEIGHT + ROW_GAP + STATUS_HEIGHT

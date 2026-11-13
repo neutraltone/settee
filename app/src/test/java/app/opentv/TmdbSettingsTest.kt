@@ -291,12 +291,15 @@ class TmdbSettingsTest {
         show(SettingsMemory(SettingsSection.Tmdb))
         waitFor("Key saved")
         press(KeyEvent.KEYCODE_DPAD_RIGHT)
+        val attributionAt = attributionTop()
 
         press(KeyEvent.KEYCODE_DPAD_CENTER)
         compose.waitUntil(5_000) {
             compose.onAllNodes(hasText("Type it instead") and isFocused()).fetchSemanticsNodes().isNotEmpty()
         }
         assertWholePaneOnScreen()
+        // The taller QR code's space was held all along, so the attribution doesn't move down.
+        assertThat(attributionTop()).isEqualTo(attributionAt)
         press(KeyEvent.KEYCODE_DPAD_CENTER)
         entryKeyboard().run {
             type("e".repeat(32))
@@ -307,6 +310,11 @@ class TmdbSettingsTest {
         assertThat(graph.settings.tmdbApiKey.value).isEqualTo(TMDB_KEY)
         assertWholePaneOnScreen()
         captureScreen("settings_tmdb_replace_wrong_key")
+    }
+
+    private fun attributionTop(): Float {
+        compose.waitForIdle()
+        return compose.onNodeWithText(ATTRIBUTION).fetchSemanticsNode().boundsInRoot.top
     }
 
     /**
