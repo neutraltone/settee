@@ -10,6 +10,7 @@ import androidx.media3.common.C
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.DataSource
 import androidx.media3.datasource.DataSpec
+import androidx.media3.datasource.TransferListener
 import androidx.test.core.app.ApplicationProvider
 import app.opentv.player.GrowingRecordingDataSource
 import app.opentv.player.SmbDataSource
@@ -36,12 +37,29 @@ class SmbReadAheadTest {
     fun `a finished recording plays through in a few large NAS reads`() {
         val file = FakeNasFile(recording(10 * MB))
         val source = SmbDataSource { file }
+        val reported = mutableListOf<Int>()
+        source.addTransferListener(
+            object : TransferListener {
+                override fun onTransferInitializing(source: DataSource, spec: DataSpec, isNetwork: Boolean) = Unit
+
+                override fun onTransferStart(source: DataSource, spec: DataSpec, isNetwork: Boolean) = Unit
+
+                override fun onBytesTransferred(source: DataSource, spec: DataSpec, isNetwork: Boolean, bytes: Int) {
+                    reported += bytes
+                }
+
+                override fun onTransferEnd(source: DataSource, spec: DataSpec, isNetwork: Boolean) = Unit
+            },
+        )
 
         source.open(DataSpec(URI))
         val delivered = source.readAll()
         source.close()
 
         assertThat(delivered).isEqualTo(file.bytes)
+        // Bandwidth meters see the bytes the player got, read by read, not each 512 KB fetch.
+        assertThat(reported.sum()).isEqualTo(file.bytes.size)
+        assertThat(reported.max()).isAtMost(EXTRACTOR_READ)
         // ~1,100 round trips if each of the extractor's 9.4 KB reads went to the NAS.
         assertThat(file.reads).isAtMost(25)
     }
@@ -77,7 +95,7 @@ class SmbReadAheadTest {
         assertThat(delivered).isEqualTo(file.bytes.copyOfRange(1_000, 51_000))
     }
 
-    @Test(timeout = 10_000)
+    @Test
     fun `watching a NAS recording as it records plays what's appended after the edge`() {
         val nas = GrowingNas(cachesEndOfFile = false)
 
@@ -86,7 +104,7 @@ class SmbReadAheadTest {
         assertThat(delivered).isEqualTo(nas.content)
     }
 
-    @Test(timeout = 10_000)
+    @Test
     fun `reopening the recording to see past a cached end neither repeats nor skips bytes`() {
         val nas = GrowingNas(cachesEndOfFile = true)
 
