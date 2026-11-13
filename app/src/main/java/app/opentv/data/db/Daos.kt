@@ -315,43 +315,64 @@ interface ChannelDao {
 
     /**
      * Preserves device state (hidden, manual order, custom names, EPG overrides) across a
-     * catalogue refresh. Upsert would otherwise overwrite them with the defaults from the
-     * freshly parsed rows.
+     * catalogue refresh, for a list held whole, as Stalker and M3U have theirs. Upsert would
+     * otherwise overwrite them with the defaults from the freshly parsed rows.
      */
     @Transaction
     suspend fun replaceCatalogue(sourceId: Long, incoming: List<Channel>, syncStamp: Long) {
         if (incoming.isEmpty()) return
 
-        val existing = userStateForSource(sourceId).associateBy { it.streamId }
-        val hiddenChanges = hiddenChangesFor(sourceId).associateBy { it.streamId }
-        val merged = incoming.map { channel ->
-            val previous = existing[channel.streamId]
-            if (previous == null) {
-                // A channel the provider dropped for a while comes back as the viewer left it.
-                channel.copy(
-                    hidden = hiddenChanges[channel.streamId]?.hidden ?: channel.hidden,
-                    lastSeenMillis = syncStamp,
-                )
-            } else {
-                channel.copy(
-                    id = previous.id,
-                    // OR, not overwrite: the importer hides separator rows ('### UK ###')
-                    // at parse time, and that decision must stick even for rows that
-                    // predate the rule. User hides are preserved the same way.
-                    hidden = previous.hidden || channel.hidden,
-                    sortIndex = previous.sortIndex,
-                    // A user's rename must outlive the provider's fresh name on every refresh.
-                    customName = previous.customName,
-                    epgOverrideId = previous.epgOverrideId,
-                    matchedEpgId = previous.matchedEpgId,
-                    lastSeenMillis = syncStamp,
-                )
-            }
-        }
+        // Every stored row at once, not a batch at a time as below: a stream id listed twice then
+        // meets the row as it was before the refresh both times, which is how these lists always
+        // merged, and the whole list is in memory already.
+        val merged = mergedOver(
+            incoming,
+            userStateForSource(sourceId).associateBy { it.streamId },
+            hiddenChangesFor(sourceId).associateBy { it.streamId },
+            syncStamp,
+        )
         // Chunked so a 40,000-channel playlist does not build one enormous statement.
         merged.chunked(UPSERT_CHUNK).forEach { upsertAll(it) }
         deleteStale(sourceId, syncStamp)
     }
+
+    /**
+     * [replaceCatalogue] for a list read a batch at a time, as Xtream's is, returning how many
+     * channels there were. Each batch is merged over the stored rows as it comes, and stale
+     * channels go only once the last is saved: all in one transaction, so a list that fails partway
+     * changes nothing, and a list with no channels deletes none.
+     */
+    suspend fun replaceCatalogue(
+        sourceId: Long,
+        syncStamp: Long,
+        batches: suspend (save: suspend (List<Channel>) -> Unit) -> Unit,
+    ): Int {
+        var saved = 0
+        inTransaction {
+            batches { batch ->
+                // Looked up a chunk at a time rather than every stored row at once, which would cost
+                // as much memory as the list. Chunked whatever the batch size, since both lookups
+                // bind every stream id in it and SQLite allows 999 variables.
+                batch.chunked(UPSERT_CHUNK).forEach { chunk ->
+                    val streamIds = chunk.map { it.streamId }
+                    val merged = mergedOver(
+                        chunk,
+                        byStreamIds(sourceId, streamIds).associateBy { it.streamId },
+                        hiddenChangesFor(sourceId, streamIds).associateBy { it.streamId },
+                        syncStamp,
+                    )
+                    upsertAll(merged)
+                }
+                saved += batch.size
+            }
+            if (saved > 0) deleteStale(sourceId, syncStamp)
+        }
+        return saved
+    }
+
+    /** Runs [block] as one transaction; see [replaceCatalogue]. */
+    @Transaction
+    suspend fun inTransaction(block: suspend () -> Unit) = block()
 
     @Query(
         """
@@ -360,6 +381,61 @@ interface ChannelDao {
         """,
     )
     suspend fun userStateForSource(sourceId: Long): List<ChannelUserState>
+
+    /** The stored rows for one refresh batch of [streamIds]; keep it under SQLite's 999 variables. */
+    @Query(
+        """
+        SELECT streamId, id, hidden, sortIndex, customName, epgOverrideId, matchedEpgId
+        FROM channels WHERE sourceId = :sourceId AND streamId IN (:streamIds)
+        """,
+    )
+    suspend fun byStreamIds(sourceId: Long, streamIds: List<String>): List<ChannelUserState>
+
+    /**
+     * [hiddenChangesFor] only for one refresh batch's [streamIds]; keep it under SQLite's 999
+     * variables.
+     */
+    @Query(
+        """
+        SELECT * FROM channel_hidden_changes
+        WHERE source = (SELECT name FROM sources WHERE id = :sourceId) AND streamId IN (:streamIds)
+        """,
+    )
+    suspend fun hiddenChangesFor(sourceId: Long, streamIds: List<String>): List<ChannelHiddenChange>
+}
+
+/**
+ * [incoming] over the rows they replace ([existing], by stream id), carrying what the viewer set
+ * across a catalogue refresh, each stamped as seen at [syncStamp].
+ */
+private fun mergedOver(
+    incoming: List<Channel>,
+    existing: Map<String, ChannelUserState>,
+    hiddenChanges: Map<String, ChannelHiddenChange>,
+    syncStamp: Long,
+): List<Channel> = incoming.map { channel ->
+    val previous = existing[channel.streamId]
+    if (previous == null) {
+        // A channel the provider dropped for a while comes back as the viewer left it.
+        channel.copy(
+            hidden = hiddenChanges[channel.streamId]?.hidden ?: channel.hidden,
+            lastSeenMillis = syncStamp,
+        )
+    } else {
+        channel.copy(
+            id = previous.id,
+            // OR, not overwrite: the importer hides separator rows ('### UK ###')
+            // at parse time, and that decision must stick even for rows that
+            // predate the rule. User hides are preserved the same way.
+            hidden = previous.hidden || channel.hidden,
+            sortIndex = previous.sortIndex,
+            // A user's rename must outlive the provider's fresh name on every refresh.
+            customName = previous.customName,
+            epgOverrideId = previous.epgOverrideId,
+            matchedEpgId = previous.matchedEpgId,
+            lastSeenMillis = syncStamp,
+        )
+    }
 }
 
 @Dao

@@ -5,6 +5,7 @@
  */
 package app.opentv
 
+import app.opentv.data.model.Channel
 import app.opentv.data.model.Movie
 import app.opentv.data.remote.XtreamApi
 import com.google.common.truth.Truth.assertThat
@@ -73,6 +74,28 @@ class XtreamStreamingTest {
     }
 
     @Test
+    fun `a huge live channel list is read a batch at a time, never whole`() = runTest {
+        val list = GeneratedList(CHANNELS) { i -> """{"stream_id": "$i", "name": "Channel $i", "num": "${i + 1}"}""" }
+        val batches = mutableListOf<Int>()
+        var last: Channel? = null
+
+        XtreamApi(serving { list.buffer().asResponseBody(JSON) }, downloads.root).liveStreams(PANEL_SOURCE).use {
+            assertThat(downloads.root.listFiles().orEmpty()).hasLength(1)
+            it.forEachBatch { batch ->
+                batches += batch.size
+                last = batch.last()
+            }
+        }
+
+        assertThat(batches.sum()).isEqualTo(CHANNELS)
+        assertThat(batches.max()).isEqualTo(XtreamApi.CATALOGUE_BATCH)
+        assertThat(last?.name).isEqualTo("Channel ${CHANNELS - 1}")
+        assertThat(last?.number).isEqualTo(CHANNELS)
+        assertThat(last?.streamUrl).isEqualTo("http://example.com/live/u/p/${CHANNELS - 1}.m3u8")
+        assertThat(downloads.root.listFiles().orEmpty()).isEmpty()
+    }
+
+    @Test
     fun `a list in another charset is read in that charset`() = runTest {
         val reply = """[{"stream_id": 1, "name": "Amélie"}]""".toByteArray(Charsets.ISO_8859_1)
         val api = XtreamApi(
@@ -125,6 +148,16 @@ class XtreamStreamingTest {
     @Test
     fun `a failed download leaves no file behind`() = runTest {
         failure(java.io.IOException::class.java) { movies(panel("!")) }
+
+        assertThat(downloads.root.listFiles().orEmpty()).isEmpty()
+    }
+
+    @Test
+    fun `a live list cut off partway leaves no file behind`() = runTest {
+        val whole = (1..700).joinToString(",", "[", "]") { """{"stream_id": $it, "name": "Channel $it"}""" }
+        val api = XtreamApi(FakePanel("get_live_streams" to whole.dropLast(40)).http, downloads.root)
+
+        failure { api.liveStreams(PANEL_SOURCE).use { list -> list.forEachBatch {} } }
 
         assertThat(downloads.root.listFiles().orEmpty()).isEmpty()
     }
@@ -195,6 +228,9 @@ class XtreamStreamingTest {
         /** About 33 MB of list: a big panel's, and far more than the reader ever holds. */
         const val MOVIES = 100_000
         const val LATE_FILM = 90_000
+
+        /** A very large panel's line-up. */
+        const val CHANNELS = 30_000
         val JSON = "application/json".toMediaType()
         val PLOT = "A long plot. ".repeat(20)
 

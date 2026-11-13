@@ -185,6 +185,10 @@ of thousands. So neither of these works, despite being the natural thing to writ
 Both would pass every test written against a small synthetic dataset and fail on exactly the
 providers where it matters most.
 
+The `IN (:streamIds)` lookups that do exist (`ChannelDao.byStreamIds` and the batch form of
+`hiddenChangesFor`) only ever see one chunk of a refresh, 500 ids at most, which
+`replaceCatalogue` enforces itself rather than trusting its caller's batch size.
+
 ## Playback
 
 `PlayerController` owns exactly one `ExoPlayer` for the lifetime of the screen and only ever
@@ -265,6 +269,14 @@ catalogue, which the user experiences as "the app won't load my channels" with n
 
 It is ugly. It is correct. Do not "clean it up" into typed models without a very large corpus
 of real panel responses to test against.
+
+The big lists (live channels, movies and series) never arrive whole. `XtreamApi` saves each reply
+to a temp file as it downloads and hands it back as a `CatalogueList`, which reads one array
+element at a time (`decodeToSequence`) and gives the caller 500 at a time. A large panel's list is
+tens of megabytes, and holding it as a string, a JSON tree and the parsed rows at once ran a Fire
+TV Stick's 128 MB heap out. Each list is saved in one transaction across its batches; for live
+channels `ChannelDao.replaceCatalogue` merges each batch as it comes and deletes stale channels
+only after the last, so a reply cut off partway changes nothing.
 
 Similarly, `syncXtream` treats VOD as optional: plenty of accounts are live-TV only, and a 404
 on `get_vod_streams` must never cost the user their channel list.
