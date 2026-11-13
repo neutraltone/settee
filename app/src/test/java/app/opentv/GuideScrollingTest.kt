@@ -97,8 +97,10 @@ class GuideScrollingTest {
         compose.setTvContent { GuideGrid(rows = rows, windowStartMillis = 0, onWatch = {}, dayOffset = 1) }
 
         // The strip shows 740 dp (960 less the channel column), six or seven half hours, not 48.
+        // 00:00 to 04:00 are on screen (with the half hour of slack), 04:00 is one past the edge.
         assertThat(builtCells("A")).isAtMost(MOST_CELLS_BUILT)
-        assertThat(exists(programme("A 0"))).isTrue()
+        assertThat(exists(programme("A 8"))).isTrue()
+        assertThat(exists(programme("A 9"))).isFalse()
         assertThat(exists(programme("A 20"))).isFalse()
 
         // Along to 13:30.
@@ -187,7 +189,8 @@ class GuideScrollingTest {
         const val DAY_MS = 24 * 60 * MINUTE_MS
 
         // Seven half hours on screen, the one the scroll position is part-way into, one past each
-        // edge, and the day's first and last, which paging to this day lands on.
-        const val MOST_CELLS_BUILT = 12
+        // edge, and the day's first and last, which paging to this day lands on: 12, with one to
+        // spare for wherever bringing the Highlight into view leaves the scroll.
+        const val MOST_CELLS_BUILT = 13
     }
 }
