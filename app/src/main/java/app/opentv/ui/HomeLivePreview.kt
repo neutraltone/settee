@@ -88,7 +88,7 @@ internal class LivePreviewPlayer(
     val player: ExoPlayer?,
     val error: ViewerError?,
     val stop: () -> Unit,
-    val httpClient: OkHttpClient? = null,
+    val httpClient: OkHttpClient?,
 )
 
 /**

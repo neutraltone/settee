@@ -7,12 +7,15 @@ package app.opentv
 
 import android.app.Application
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.test.core.app.ApplicationProvider
+import app.opentv.core.ServiceLocator
 import app.opentv.data.model.Channel
 import app.opentv.player.PlayerController
 import app.opentv.ui.LivePreviewPlayer
 import app.opentv.ui.channels.rememberGuidePreviewController
 import app.opentv.ui.rememberLivePreviewPlayer
 import com.google.common.truth.Truth.assertThat
+import org.junit.After
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -30,6 +33,12 @@ class PreviewStreamClientTest {
     @get:Rule
     val compose = createComposeRule()
 
+    private val settings = ServiceLocator.get(ApplicationProvider.getApplicationContext<Application>()).settings
+
+    // The settings are process-wide, so they outlive each test; on is the app's default.
+    @After
+    fun restore() = settings.setGuidePreviewVideo(true)
+
     @Test
     fun `the guide preview's stream is never cut off by a call timeout`() {
         lateinit var controller: PlayerController
@@ -41,6 +50,8 @@ class PreviewStreamClientTest {
 
     @Test
     fun `Home's Live Preview stream is never cut off by a call timeout`() {
+        // Home builds no player at all with preview video off.
+        settings.setGuidePreviewVideo(true)
         lateinit var preview: LivePreviewPlayer
         compose.setContent { preview = rememberLivePreviewPlayer(channel) }
         compose.waitForIdle()
