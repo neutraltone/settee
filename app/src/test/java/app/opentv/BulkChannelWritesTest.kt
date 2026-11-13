@@ -105,17 +105,18 @@ class BulkChannelWritesTest {
     @Test
     fun `a reorder saves the order and writes only the channels whose place changed`() = runBlocking {
         hlsProvider(5)
-        val ids = db.channels().everyRow().sortedBy { it.streamId }.map { it.id }
-        val (a, b, c, d, e) = ids
+        val inOrder = db.channels().everyRow().sortedBy { it.streamId }.map { it.id }
+        // The third channel up one place.
+        val oneMoved = listOf(inOrder[0], inOrder[2], inOrder[1], inOrder[3], inOrder[4])
 
-        test.catalog.setChannelOrder(listOf(a, b, c, d, e))
-        val unchanged = test.catalog.setChannelOrder(listOf(a, b, c, d, e))
-        val oneMove = test.catalog.setChannelOrder(listOf(a, c, b, d, e))
+        test.catalog.setChannelOrder(inOrder)
+        val unchanged = test.catalog.setChannelOrder(inOrder)
+        val oneMove = test.catalog.setChannelOrder(oneMoved)
 
         assertThat(unchanged).isEqualTo(0)
         assertThat(oneMove).isEqualTo(2)
         assertThat(db.channels().everyRow().sortedBy { it.sortIndex }.map { it.id })
-            .containsExactly(a, c, b, d, e)
+            .containsExactlyElementsIn(oneMoved)
             .inOrder()
     }
 }

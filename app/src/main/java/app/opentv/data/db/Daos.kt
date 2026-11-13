@@ -28,8 +28,8 @@ import app.opentv.data.model.Favourite
 import app.opentv.data.model.GuideFingerprint
 import app.opentv.data.model.GuideProgramme
 import app.opentv.data.model.HandMark
-import app.opentv.data.model.LiveStreamFormat
 import app.opentv.data.model.LivePlayback
+import app.opentv.data.model.LiveStreamFormat
 import app.opentv.data.model.Movie
 import app.opentv.data.model.MovieCredit
 import app.opentv.data.model.OnNowRow
