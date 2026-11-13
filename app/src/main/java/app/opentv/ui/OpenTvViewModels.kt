@@ -70,12 +70,14 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.channelFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -803,6 +805,9 @@ data class ResumeItem(
     val titleId: Long? = null,
 )
 
+/** A show on its page: [series] as far as it's filled in, and whether its episodes have been [fetched]. */
+data class OpenedShow(val series: Series, val fetched: Boolean)
+
 /**
  * What Movies' and Shows' backdrop shows for the highlighted title: its name, where the Profile is
  * with it ([status]), a line of facts about it, its synopsis and its wide art, if it has any.
@@ -1189,14 +1194,34 @@ class VodViewModel @JvmOverloads constructor(
     }
 
     /**
-     * Episodes are fetched on demand rather than during catalogue sync.
-     *
-     * Pulling every episode of every series up front is what makes a first sync take twenty
-     * minutes on a large provider, and most of it is never looked at.
+     * A show opened on its page: the series as [CatalogRepository.openSeries] gives it, whose one
+     * `get_series_info` brings its episodes too, so stored episodes show before TMDB answers. Each
+     * other Version's episodes are asked for alongside, as the page lists episodes from all of them
+     * (#181), and once TMDB has answered, any Version its TMDB id newly matches; [OpenedShow.fetched]
+     * once they all have been. Episodes are fetched here rather than during catalogue sync: pulling
+     * every episode of every series up front is what makes a first sync take twenty minutes on a
+     * large provider, and most of it is never looked at.
      */
-    fun loadEpisodes(series: Series): Job = viewModelScope.launch {
-        // Every Version's, as the page lists episodes from all of them (#181).
-        graph.database.versionsOf(series, graph.titleIndex.versionIds).forEach { version ->
+    fun openShow(id: Long): Flow<OpenedShow> = channelFlow {
+        // Only touched by one coroutine at a time: the first fetch is joined before the second.
+        val asked = mutableSetOf(id)
+        var opened: Series? = null
+        var others: Job? = null
+        graph.catalogRepository.openSeries(id).collect {
+            if (others == null) others = launch { fetchVersions(it, asked) }
+            opened = it
+            send(OpenedShow(it, fetched = false))
+        }
+        val series = opened ?: return@channelFlow
+        others?.join()
+        fetchVersions(series, asked)
+        send(OpenedShow(series, fetched = true))
+    }
+
+    /** Episodes for each of [series]' Versions not [asked] for yet, all at once. */
+    private suspend fun fetchVersions(series: Series, asked: MutableSet<Long>) = coroutineScope {
+        val versions = graph.database.versionsOf(series, graph.titleIndex.versionIds).filter { asked.add(it.id) }
+        versions.forEach { version ->
             launch {
                 val source = graph.sourceRepository.byId(version.sourceId) ?: return@launch
                 graph.catalogRepository.ensureEpisodes(source, version.seriesId)
@@ -1238,9 +1263,6 @@ class VodViewModel @JvmOverloads constructor(
 
     /** Loads a movie, lazily enriching backdrop/cast/genre on first open. See CatalogRepository.movieDetail. */
     suspend fun movieDetail(id: Long): Movie? = graph.catalogRepository.movieDetail(id)
-
-    /** Loads a series, lazily enriching backdrop/cast/genre on first open. See CatalogRepository.seriesDetail. */
-    suspend fun seriesDetail(id: Long): Series? = graph.catalogRepository.seriesDetail(id)
 
     /** Whether playing [movie] would pick up partway: the Quality that plays keeps the resume point. */
     /** A film's More like this. */

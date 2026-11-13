@@ -10,6 +10,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -37,11 +38,9 @@ fun SeriesDetailScreen(
     var fetched by remember(seriesId) { mutableStateOf(false) }
 
     LaunchedEffect(seriesId) {
-        val loaded = viewModel.seriesDetail(seriesId)
-        series = loaded
-        if (loaded != null) {
-            viewModel.loadEpisodes(loaded).join()
-            fetched = true
+        viewModel.openShow(seriesId).collect {
+            series = it.series
+            fetched = it.fetched
         }
     }
 
@@ -61,7 +60,9 @@ private fun ShowPage(
     val scope = rememberCoroutineScope()
     var versions by remember(series.id) { mutableStateOf<Pair<MediaKey, PageVersions>?>(null) }
     // One row per episode across the show's Versions, and each Version's for what's been watched (#181).
-    val read = remember(series) { viewModel.showEpisodes(series) }.collectAsState(initial = null).value
+    // Not collectAsState: the series is shown again once TMDB has filled it in, and a fresh read
+    // would start from nothing, emptying the episode list for a moment under the highlight.
+    val read = produceState<ShowEpisodes?>(null, series) { viewModel.showEpisodes(series).collect { value = it } }.value
     val show = read ?: ShowEpisodes()
     val played by viewModel.episodeStatuses.collectAsState(initial = EpisodeStatuses())
     val statuses = remember(show, played) { show.statusesFrom(played) }
