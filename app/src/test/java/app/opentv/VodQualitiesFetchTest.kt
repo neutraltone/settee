@@ -35,8 +35,14 @@ class VodQualitiesFetchTest {
     private val test = TestCatalog(ApplicationProvider.getApplicationContext<Application>())
     private val stick = FakeDecoders(MimeTypes.VIDEO_H265 to DecoderSize(1920, 1088))
     private val profile = MutableStateFlow(1L)
-    private val qualities =
-        VodQualities(test.db, test.catalog, stick, ProfileSettings(test.db, profile), profile, deviceLanguage = { "en" })
+    private val qualities = VodQualities(
+        test.db,
+        test.catalog,
+        stick,
+        ProfileSettings(test.db, profile),
+        profile,
+        deviceLanguage = { "en" },
+    )
 
     private fun series(id: Long, name: String) = Series(
         id = id,

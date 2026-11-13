@@ -255,7 +255,11 @@ class VodQualitiesTest {
     @Test
     fun `the Version this Profile last played starts`() = runTest {
         db.movies().upsertAll(listOf(en, movie(4, "NF - Superbad FHD (2007)")))
-        graph.viewerLibrary.recordProgress(MediaKey.Movie(3).stored, positionMillis = 60_000, durationMillis = 6_000_000)
+        graph.viewerLibrary.recordProgress(
+            MediaKey.Movie(3).stored,
+            positionMillis = 60_000,
+            durationMillis = 6_000_000,
+        )
 
         assertThat(qualities().planFor(MediaKey.Movie(4)).start.key).isEqualTo(MediaKey.Movie(3))
     }
@@ -263,7 +267,11 @@ class VodQualitiesTest {
     @Test
     fun `a Version chosen after the last one played starts`() = runTest {
         db.movies().upsertAll(listOf(en, movie(4, "NF - Superbad FHD (2007)"), movie(7, "AMZ - Superbad (2007)")))
-        graph.viewerLibrary.recordProgress(MediaKey.Movie(3).stored, positionMillis = 60_000, durationMillis = 6_000_000)
+        graph.viewerLibrary.recordProgress(
+            MediaKey.Movie(3).stored,
+            positionMillis = 60_000,
+            durationMillis = 6_000_000,
+        )
 
         qualities().choose(MediaKey.Movie(7))
 

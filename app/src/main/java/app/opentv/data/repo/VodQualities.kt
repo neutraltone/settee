@@ -11,9 +11,9 @@ import app.opentv.data.model.Series
 import app.opentv.data.model.StreamKind
 import app.opentv.player.DecoderList
 import app.opentv.player.playsQualityRanked
+import java.util.Locale
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.withTimeoutOrNull
-import java.util.Locale
 
 /**
  * Which Version of a Movie or Episode plays. A provider lists each of a title's Versions as a row of its
@@ -95,23 +95,25 @@ class VodQualities(
     }
 
     private suspend fun episode(opened: MediaKey.Episode): Plan? {
-        val episode = db.episodes().byId(opened.episodeId) ?: return null
-        val series = db.series().bySeriesId(episode.sourceId, episode.seriesId) ?: return null
+        val episode = db.episodes().byId(opened.episodeId)
+        val series = episode?.let { db.series().bySeriesId(it.sourceId, it.seriesId) }
+        if (episode == null || series == null) return null
         val self = seriesCandidate(series, opened)
-        return plan(self, listOf(self) + copiesOf(episode, series), knownTmdbId(series.tmdbId)?.let { "series:$it" })
+        val title = knownTmdbId(series.tmdbId)?.let { "series:$it" }
+        return plan(self, listOf(self) + copiesOf(episode, series), title)
     }
 
     private suspend fun copiesOf(episode: Episode, series: Series): List<Candidate> {
         // A series' episodes are fetched when its page is opened, so another Version's may never have
         // been. Waiting on the provider is only worth it when this device won't try the one opened.
-        val fetch = !plays(series.name)
-        val copies = knownTmdbId(series.tmdbId)?.let { db.series().byTmdbId(it) }.orEmpty().filter { it.id != series.id }
-        return copies.filter { plays(it.name) }.mapNotNull { copy ->
+        val fetch = !decoders.playsName(series.name)
+        val copies = knownTmdbId(series.tmdbId)?.let {
+            db.series().byTmdbId(it)
+        }.orEmpty().filter { it.id != series.id }
+        return copies.filter { decoders.playsName(it.name) }.mapNotNull { copy ->
             sameEpisodeIn(copy, episode, fetch)?.let { seriesCandidate(copy, MediaKey.Episode(it)) }
         }
     }
-
-    private fun plays(name: String) = decoders.playsQualityRanked(versionTraits(name, null).qualityRank)
 
     private suspend fun seriesCandidate(series: Series, key: MediaKey.Episode): Candidate {
         val episodeKeys = db.episodes().forSeries(series.sourceId, series.seriesId)
@@ -174,20 +176,6 @@ class VodQualities(
         }
     }
 
-    private class Candidate(
-        val quality: Quality,
-        val traits: VersionTraits,
-        val shelf: String?,
-        val version: String?,
-        val playedAt: Long?,
-    )
-
-    private fun candidate(key: MediaKey, name: String, category: String?, version: String?, playedAt: Long?): Candidate {
-        val traits = versionTraits(name, category)
-        val shelf = SHELF.find(name)?.groupValues?.get(1)?.lowercase()
-        return Candidate(Quality(key, traits.qualityLabel), traits, shelf, version, playedAt)
-    }
-
     /** A Version by its source's name and the provider's id, as a Favourite is, so it syncs (ADR 0004). */
     private suspend fun versionId(sourceId: Long, providerId: String): String? =
         db.sources().byId(sourceId)?.name?.let { "$providerId|$it" }
@@ -195,8 +183,26 @@ class VodQualities(
     private companion object {
         const val FETCH_LIMIT_MILLIS = 10_000L
         const val EPISODE_PREFIX = "ep:"
-
-        /** What's before the title in `4K-EN - Superbad` and `EN - Superbad`: the same shelf, EN. */
-        val SHELF = Regex("""^\s*(?:[48]K-)?(.+?)\s+-\s""", RegexOption.IGNORE_CASE)
     }
 }
+
+/** One Version as the Plan weighs it: what plays it, what it is, and when this Profile last played it. */
+private class Candidate(
+    val quality: VodQualities.Quality,
+    val traits: VersionTraits,
+    val shelf: String?,
+    val version: String?,
+    val playedAt: Long?,
+)
+
+private fun candidate(key: MediaKey, name: String, category: String?, version: String?, playedAt: Long?): Candidate {
+    val traits = versionTraits(name, category)
+    val shelf = SHELF.find(name)?.groupValues?.get(1)?.lowercase()
+    return Candidate(VodQualities.Quality(key, traits.qualityLabel), traits, shelf, version, playedAt)
+}
+
+/** What's before the title in `4K-EN - Superbad` and `EN - Superbad`: the same shelf, EN. */
+private val SHELF = Regex("""^\s*(?:[48]K-)?(.+?)\s+-\s""", RegexOption.IGNORE_CASE)
+
+/** Whether a Version could play here, going by the Quality its name promises. */
+private fun DecoderList.playsName(name: String) = playsQualityRanked(versionTraits(name, null).qualityRank)
