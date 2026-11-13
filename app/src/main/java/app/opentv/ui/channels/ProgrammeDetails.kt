@@ -178,6 +178,8 @@ private enum class Choosing { SOURCE, QUALITY }
 
 @Composable
 private fun ColumnScope.Heading(programme: GuideProgramme, channel: Channel) {
+    val context = LocalContext.current
+    val graph = remember { ServiceLocator.get(context) }
     Text(programme.title, SetteeType.Section, maxLines = 2)
     Text(channel.shownName, SetteeType.Body, maxLines = 1)
     Text(
@@ -185,7 +187,8 @@ private fun ColumnScope.Heading(programme: GuideProgramme, channel: Channel) {
         SetteeType.Body,
         color = SetteeColors.QuietText,
     )
-    rememberInFull(programme)?.description?.takeIf { it.isNotBlank() }?.let {
+    // The same graph its actions book through, so the synopsis and the booking read one guide.
+    rememberInFull(programme, graph.epgRepository::programme)?.description?.takeIf { it.isNotBlank() }?.let {
         Text(it, SetteeType.Synopsis, maxLines = SYNOPSIS_LINES)
     }
     Spacer(Modifier.height(HEADING_GAP))

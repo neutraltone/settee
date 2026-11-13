@@ -21,6 +21,7 @@ import app.opentv.data.model.GuideProgramme
 import app.opentv.data.model.LiveStreamFormat
 import app.opentv.data.model.Movie
 import app.opentv.data.model.Profile
+import app.opentv.data.model.Programme
 import app.opentv.data.model.Series
 import app.opentv.data.model.SeriesRef
 import app.opentv.data.model.Source
@@ -444,6 +445,9 @@ class ChannelsViewModel @JvmOverloads constructor(
         category != null -> LineupScope.Group(category)
         else -> LineupScope.All()
     }
+
+    /** A programme the guide lists, in full: the rows hold only what the guide's cells draw. */
+    suspend fun programmeInFull(programme: GuideProgramme): Programme? = graph.epgRepository.programme(programme)
 
     /** From Search, channel up and down go through every Channel rather than the results. */
     fun zapFromAll() = lineup.zapFrom(LineupScope.All())

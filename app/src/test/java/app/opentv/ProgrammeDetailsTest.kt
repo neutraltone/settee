@@ -6,6 +6,7 @@
 package app.opentv
 
 import android.app.Application
+import android.os.Looper
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertIsFocused
@@ -43,6 +44,7 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
@@ -320,8 +322,15 @@ class ProgrammeDetailsTest {
         compose.onAllNodes(hasText(text)).fetchSemanticsNodes().isNotEmpty()
     }
 
+    /**
+     * Waits for the booking OK on Schedule recording makes. It runs in the panel's scope, on the main
+     * looper, which Robolectric holds paused until it's told to run what's queued there.
+     */
     private fun awaitBooking(): Recording {
-        compose.waitUntil(TIMEOUT_MILLIS) { runBlocking { graph.recordingRepository.scheduled().isNotEmpty() } }
+        compose.waitUntil(TIMEOUT_MILLIS) {
+            shadowOf(Looper.getMainLooper()).idle()
+            runBlocking { graph.recordingRepository.scheduled().isNotEmpty() }
+        }
         return runBlocking { graph.recordingRepository.scheduled().single() }
     }
 

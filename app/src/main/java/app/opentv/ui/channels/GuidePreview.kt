@@ -24,6 +24,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -98,6 +99,7 @@ internal fun ScreenFrameScope.GuideBand(
     row: ChannelsViewModel.Row?,
     programme: GuideProgramme?,
     previewPlayer: ExoPlayer?,
+    inFull: suspend (GuideProgramme) -> Programme?,
     modifier: Modifier = Modifier,
 ) {
     Row(modifier.fillMaxWidth().height(BAND_HEIGHT)) {
@@ -127,31 +129,37 @@ internal fun ScreenFrameScope.GuideBand(
                 color = SetteeColors.QuietText,
                 maxLines = 1,
             )
-            val inFull = rememberInFull(programme, settleMillis = SYNOPSIS_SETTLE_MILLIS)
-            inFull?.description?.takeIf { it.isNotBlank() }?.let { synopsis ->
+            val synopsis = rememberInFull(programme, inFull, settleMillis = SYNOPSIS_SETTLE_MILLIS)?.description
+            synopsis?.takeIf { it.isNotBlank() }?.let {
                 Spacer(Modifier.height(BAND_LINE_GAP))
-                Text(synopsis, SetteeType.Synopsis, color = SetteeColors.Text, maxLines = SYNOPSIS_LINES)
+                Text(it, SetteeType.Synopsis, color = SetteeColors.Text, maxLines = SYNOPSIS_LINES)
             }
         }
     }
 }
 
 /**
- * [programme] read in full from the guide, for its synopsis. Null until it loads, and null if the
- * guide has dropped it. Keyed on the programme, so the Highlight moving on never leaves the last
- * one's text showing under the new one's title.
+ * [programme] read in full with [inFull], for its synopsis. Null until it loads, and null if the
+ * guide has dropped it. Keyed on the programme alone, so the Highlight moving on never leaves the
+ * last one's text showing under the new one's title.
+ *
+ * [inFull] is the caller's, not [ServiceLocator.get]'s: the guide reads through its view model's
+ * graph, and the band has to read the same guide the rows came from.
  *
  * [settleMillis] waits that long before reading, so holding a direction key down through the guide
  * reads only where the Highlight stops rather than every cell it passes on the way.
  */
 @Composable
-internal fun rememberInFull(programme: GuideProgramme?, settleMillis: Long = 0): Programme? {
-    val context = LocalContext.current
-    val graph = remember { ServiceLocator.get(context) }
+internal fun rememberInFull(
+    programme: GuideProgramme?,
+    inFull: suspend (GuideProgramme) -> Programme?,
+    settleMillis: Long = 0,
+): Programme? {
+    val read by rememberUpdatedState(inFull)
     return produceState<Programme?>(null, programme) {
         if (programme == null) return@produceState
         if (settleMillis > 0) delay(settleMillis)
-        value = graph.epgRepository.programme(programme)
+        value = read(programme)
     }.value
 }
 

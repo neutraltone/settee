@@ -236,6 +236,7 @@ fun LiveScreen(
                 row = highlighted?.first,
                 programme = highlighted?.let { (row, programme) -> programme ?: row.now },
                 previewPlayer = if (previewEnabled && !recordingActive) previewController.player else null,
+                inFull = viewModel::programmeInFull,
             )
             Spacer(Modifier.height(GUIDE_GAP))
             Box(Modifier.weight(1f)) {
