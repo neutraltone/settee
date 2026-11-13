@@ -68,7 +68,7 @@ classics whose posters are in the public domain, from Wikimedia Commons. The
 | :---: | :---: |
 | ![Home: Continue watching and Recently added](docs/screenshots/02-home.png) | ![A film's page](docs/screenshots/03-film.png) |
 | **A show** | **Movies** |
-| ![A show's page, with seasons as pills](docs/screenshots/04-show.png) | ![Movies: Recommended for you, under the highlighted film's backdrop](docs/screenshots/05-movies.png) |
+| ![A show's page, ready to resume the next chapter](docs/screenshots/04-show.png) | ![Movies: Recommended for you, under the highlighted film's backdrop](docs/screenshots/05-movies.png) |
 | **Recordings** | **Your devices** |
 | ![Recordings: coming up, recorded and series links](docs/screenshots/06-recordings.png) | ![Settings: Your devices](docs/screenshots/07-your-devices.png) |
 | **Who's watching?** | **Setting up from your phone** |
