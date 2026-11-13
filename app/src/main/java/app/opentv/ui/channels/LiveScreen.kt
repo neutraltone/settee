@@ -57,7 +57,7 @@ import app.opentv.core.StatusBus
 import app.opentv.core.ViewerError
 import app.opentv.core.findActivity
 import app.opentv.data.model.Channel
-import app.opentv.data.model.Programme
+import app.opentv.data.model.GuideProgramme
 import app.opentv.data.repo.CategoryGroup
 import app.opentv.data.repo.MediaKey
 import app.opentv.player.PlayerController
@@ -124,13 +124,13 @@ fun LiveScreen(
     val channelsPresent by viewModel.channelsPresent.collectAsState()
 
     // Where the Highlight is in the guide: what the band describes and the preview plays.
-    var highlighted by remember { mutableStateOf<Pair<ChannelsViewModel.Row, Programme?>?>(null) }
+    var highlighted by remember { mutableStateOf<Pair<ChannelsViewModel.Row, GuideProgramme?>?>(null) }
     var nowMillis by remember { mutableLongStateOf(viewModel.now()) }
 
     val activeRecordings by graph.recordingRepository.observeActive().collectAsState(initial = emptyList())
     val recordScope = rememberCoroutineScope()
     // The programme the viewer pressed OK on in the guide, whose details are open.
-    var details by remember { mutableStateOf<Pair<ChannelsViewModel.Row, Programme>?>(null) }
+    var details by remember { mutableStateOf<Pair<ChannelsViewModel.Row, GuideProgramme>?>(null) }
 
     // Re-evaluate "now" once a minute so the band and the bold programme move with the time.
     LaunchedEffect(Unit) {

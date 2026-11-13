@@ -16,10 +16,14 @@ import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isFocused
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
+import androidx.test.core.app.ApplicationProvider
 import androidx.test.espresso.Espresso
+import app.opentv.core.ServiceLocator
 import app.opentv.data.model.Channel
+import app.opentv.data.model.GuideProgramme
 import app.opentv.data.model.Programme
 import app.opentv.data.model.Recording
 import app.opentv.data.model.RecordingStatus
@@ -31,6 +35,10 @@ import app.opentv.ui.channels.ProgrammeDetails
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.runBlocking
+import org.junit.After
+import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -72,8 +80,18 @@ class ProgrammeDetailsTest {
         qualityRank = if (label == "4K") 400 else 0,
     )
 
+    private val graph = ServiceLocator.get(ApplicationProvider.getApplicationContext<Application>())
+
+    // The graph is process-wide, so what a test stores is the next test's to trip over.
+    @Before
+    @After
+    fun leaveNothingBehind() = runBlocking {
+        graph.database.programmes().deleteForFeed(FEED)
+        graph.recordingRepository.scheduled().forEach { graph.database.recordings().delete(it.id) }
+    }
+
     private val onNow = Programme(
-        feedId = 1,
+        feedId = FEED,
         epgChannelId = "news",
         startUtcMillis = NOW - 1_000,
         endUtcMillis = NOW + 1_000,
@@ -81,15 +99,32 @@ class ProgrammeDetailsTest {
         description = "The day's headlines.",
     )
 
+    private val later = Programme(
+        feedId = FEED,
+        epgChannelId = "news",
+        startUtcMillis = NOW + HOUR,
+        endUtcMillis = NOW + 2 * HOUR,
+        title = "The Film",
+        description = "A film about a film.",
+    )
+
+    /** [programme] stored in the guide, and as the guide grid lists it. */
+    private fun listed(programme: Programme): GuideProgramme = runBlocking {
+        graph.database.programmes().insertOrReplace(listOf(programme))
+        graph.epgRepository.observeGuideWindow(programme.startUtcMillis, programme.endUtcMillis).first()
+            .single { it.epgChannelId == programme.epgChannelId && it.startUtcMillis == programme.startUtcMillis }
+    }
+
     private fun show(
         row: ChannelsViewModel.Row,
         activeRecordings: List<Recording> = emptyList(),
         sources: List<Source> = emptyList(),
+        programme: GuideProgramme = listed(onNow),
     ) {
         compose.setTvContent {
             ProgrammeDetails(
                 targetRow = row,
-                programme = onNow,
+                programme = programme,
                 nowMillis = NOW,
                 sources = sources,
                 activeRecordings = activeRecordings,
@@ -116,7 +151,7 @@ class ProgrammeDetailsTest {
 
         compose.onNodeWithText("The News").assertExists()
         compose.onNodeWithText("News HD").assertExists()
-        compose.onNodeWithText("The day's headlines.").assertExists()
+        awaitText("The day's headlines.")
         compose.onNode(hasText("Record now", substring = true) and hasClickAction()).assertIsFocused()
         compose.onNode(hasText("Record whole series") and hasClickAction()).assertExists()
         compose.onNode(hasText("Watch channel") and hasClickAction()).assertExists()
@@ -251,7 +286,46 @@ class ProgrammeDetailsTest {
         compose.onNodeWithText("4K").assertDoesNotExist()
     }
 
+    @Test
+    fun `scheduling a programme books it with its synopsis`() {
+        show(row(quality(2, "News HD")), programme = listed(later))
+
+        compose.onNode(hasText("Schedule recording") and hasClickAction()).performClick()
+
+        val booked = awaitBooking()
+        assertThat(booked.title).isEqualTo("The Film")
+        assertThat(booked.description).isEqualTo("A film about a film.")
+    }
+
+    @Test
+    fun `a programme a guide refresh has replaced since shows without a synopsis, and can still be booked`() {
+        val gone = listed(later)
+        runBlocking { graph.database.programmes().deleteForFeed(FEED) }
+
+        show(row(quality(2, "News HD")), programme = gone)
+        compose.onNodeWithText("The Film").assertExists()
+        compose.onNodeWithText("A film about a film.").assertDoesNotExist()
+        compose.onNode(hasText("Schedule recording") and hasClickAction()).performClick()
+
+        val booked = awaitBooking()
+        assertThat(booked.title).isEqualTo("The Film")
+        assertThat(booked.description).isNull()
+    }
+
+    /** Waits for text that's read from the database once the panel is up, such as a synopsis. */
+    private fun awaitText(text: String) = compose.waitUntil(TIMEOUT_MILLIS) {
+        compose.onAllNodes(hasText(text)).fetchSemanticsNodes().isNotEmpty()
+    }
+
+    private fun awaitBooking(): Recording {
+        compose.waitUntil(TIMEOUT_MILLIS) { runBlocking { graph.recordingRepository.scheduled().isNotEmpty() } }
+        return runBlocking { graph.recordingRepository.scheduled().single() }
+    }
+
     private companion object {
         const val NOW = 1_000_000L
+        const val HOUR = 3_600_000L
+        const val FEED = 266L
+        const val TIMEOUT_MILLIS = 5_000L
     }
 }

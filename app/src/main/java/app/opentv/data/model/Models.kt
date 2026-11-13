@@ -297,6 +297,27 @@ data class Programme(
         if (durationMillis <= 0L) return 0f
         return ((nowUtcMillis - startUtcMillis).toFloat() / durationMillis).coerceIn(0f, 1f)
     }
+
+    /** As the guide grid lists it, for opening its details from somewhere other than the grid. */
+    fun listed() = GuideProgramme(id, epgChannelId, startUtcMillis, endUtcMillis, title, season, episode)
+}
+
+/**
+ * A [Programme] as the guide grid holds it: only what a cell draws and a row is built from. The grid
+ * keeps a whole day's programmes for every guide feed in memory, so the description, category and
+ * icon stay in the database and are read by [id] when one programme is shown in full or booked.
+ * The id lasts only until a guide refresh replaces the row, so that lookup can come back empty.
+ */
+data class GuideProgramme(
+    val id: Long,
+    val epgChannelId: String,
+    val startUtcMillis: Long,
+    val endUtcMillis: Long,
+    val title: String,
+    val season: Int? = null,
+    val episode: Int? = null,
+) {
+    fun isLiveAt(nowUtcMillis: Long): Boolean = nowUtcMillis in startUtcMillis until endUtcMillis
 }
 
 @Entity(

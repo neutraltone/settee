@@ -160,6 +160,7 @@ class LiveBrowseTest {
                         endUtcMillis =
                         now + 2 * HOUR,
                         title = "Later on $id",
+                        description = "What's on $id later.",
                     ),
                     Programme(
                         feedId = feed,
@@ -372,10 +373,33 @@ class LiveBrowseTest {
         press(Key.DirectionUp)
 
         channelCell("Channel One").assertIsFocused()
-        compose.onNode(hasText("What's on 1 now.")).assertExists()
+        awaitText("What's on 1 now.")
         compose.onAllNodes(hasClickAction()).fetchSemanticsNodes().forEach { node ->
             val text = node.config.getOrElse(androidx.compose.ui.semantics.SemanticsProperties.Text) { emptyList() }
             assertThat(text.joinToString()).doesNotContain("What's on")
+        }
+    }
+
+    @Test
+    fun `the preview band shows the synopsis of the programme the Highlight is on`() {
+        library()
+        setLive()
+        pressOkOnLiveInTheRail()
+        awaitRows()
+
+        press(Key.DirectionRight, times = 2)
+
+        programmeCell("Later on 1").assertIsFocused()
+        awaitText("What's on 1 later.")
+        compose.onNode(hasText("What's on 1 now.")).assertDoesNotExist()
+        captureScreen("live_later_programme")
+    }
+
+    /** Waits for text that's read from the database after the Highlight lands, such as a synopsis. */
+    private fun awaitText(text: String) {
+        compose.waitUntil(10_000) {
+            shadowOf(Looper.getMainLooper()).idle()
+            compose.onAllNodes(hasText(text)).fetchSemanticsNodes().isNotEmpty()
         }
     }
 

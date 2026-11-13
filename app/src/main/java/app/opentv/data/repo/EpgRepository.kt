@@ -17,6 +17,7 @@ import app.opentv.data.db.SourceDao
 import app.opentv.data.model.ChannelEpgMatch
 import app.opentv.data.model.EpgChannelAlias
 import app.opentv.data.model.EpgFeed
+import app.opentv.data.model.GuideProgramme
 import app.opentv.data.model.Programme
 import app.opentv.data.model.Source
 import app.opentv.data.parser.ChannelNameNormalizer
@@ -105,8 +106,11 @@ class EpgRepository(
 
     fun observeFeeds(): Flow<List<EpgFeed>> = feedDao.observeAll()
 
-    fun observeWindow(fromUtcMillis: Long, toUtcMillis: Long): Flow<List<Programme>> =
-        programmeDao.observeWindow(fromUtcMillis, toUtcMillis)
+    fun observeGuideWindow(fromUtcMillis: Long, toUtcMillis: Long): Flow<List<GuideProgramme>> =
+        programmeDao.observeGuideWindow(fromUtcMillis, toUtcMillis)
+
+    /** A programme the guide lists, in full. Null when a refresh has replaced or pruned it since. */
+    suspend fun programme(id: Long): Programme? = programmeDao.byId(id)
 
     fun observeNow(nowUtcMillis: Long): Flow<List<Programme>> = programmeDao.observeNow(nowUtcMillis)
 

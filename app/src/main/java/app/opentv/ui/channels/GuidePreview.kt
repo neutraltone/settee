@@ -22,6 +22,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -37,6 +38,7 @@ import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
 import app.opentv.R
 import app.opentv.core.ServiceLocator
+import app.opentv.data.model.GuideProgramme
 import app.opentv.data.model.Programme
 import app.opentv.data.model.shownName
 import app.opentv.player.PlayerController
@@ -93,7 +95,7 @@ internal fun rememberGuidePreviewController(): PlayerController {
 @Composable
 internal fun ScreenFrameScope.GuideBand(
     row: ChannelsViewModel.Row?,
-    programme: Programme?,
+    programme: GuideProgramme?,
     previewPlayer: ExoPlayer?,
     modifier: Modifier = Modifier,
 ) {
@@ -124,12 +126,27 @@ internal fun ScreenFrameScope.GuideBand(
                 color = SetteeColors.QuietText,
                 maxLines = 1,
             )
-            programme.description?.takeIf { it.isNotBlank() }?.let { synopsis ->
+            rememberInFull(programme)?.description?.takeIf { it.isNotBlank() }?.let { synopsis ->
                 Spacer(Modifier.height(BAND_LINE_GAP))
                 Text(synopsis, SetteeType.Synopsis, color = SetteeColors.Text, maxLines = SYNOPSIS_LINES)
             }
         }
     }
+}
+
+/**
+ * [programme] read in full from the guide, for its synopsis. Null until it loads, and null if a guide
+ * refresh has replaced it since the grid was built: keyed on the id, so the Highlight moving on never
+ * leaves the last programme's text showing under the new one's title.
+ */
+@Composable
+internal fun rememberInFull(programme: GuideProgramme?): Programme? {
+    val context = LocalContext.current
+    val graph = remember { ServiceLocator.get(context) }
+    val id = programme?.id
+    return produceState<Programme?>(null, id) {
+        value = id?.let { graph.epgRepository.programme(it) }
+    }.value
 }
 
 private val BAND_HEIGHT = 150.dp

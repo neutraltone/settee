@@ -204,23 +204,32 @@ class RecordingEngine(
     }
 
     /**
-     * Create (or reuse) a series-link rule for this programme's title on this channel, and book
-     * every matching future airing already in the guide. Airings beyond the loaded window get
-     * picked up by [scheduleMatching] on the next guide refresh.
+     * Create (or reuse) a series-link rule for [title] on this channel, and book every matching
+     * future airing already in the guide, read the way [rescanSeriesRules] reads it. Not from the
+     * guide grid's programmes: those leave out the description each booking is stored with. Airings
+     * the guide doesn't have yet get booked by the rescan after a later guide refresh.
      */
-    suspend fun recordSeries(channel: Channel, programme: Programme, windowProgrammes: List<Programme>): Long {
-        val key = titleKeyOf(programme.title)
+    suspend fun recordSeries(channel: Channel, title: String): Long {
+        val key = titleKeyOf(title)
         val existing = repo.ruleForChannelTitle(channel.id, key)
         val ruleId = existing?.id ?: repo.addRule(
             SeriesRule(
                 channelId = channel.id,
                 channelName = channel.displayName,
                 titleKey = key,
-                title = programme.title,
+                title = title,
                 createdAtMillis = System.currentTimeMillis(),
             ),
         )
-        scheduleMatching(channel, key, ruleId, windowProgrammes)
+        val guideId = lineupChannelOf(channel.id)?.let { lineup.guideId(it) }
+        if (guideId != null) {
+            scheduleMatching(
+                channel,
+                key,
+                ruleId,
+                epgRepository.upcoming(guideId, System.currentTimeMillis(), AIRINGS_LOOKED_UP),
+            )
+        }
         return ruleId
     }
 
@@ -294,18 +303,23 @@ class RecordingEngine(
         if (rules.isEmpty()) return
         val now = System.currentTimeMillis()
         for (rule in rules) {
-            // The guide the rule was set from: its Channel's, whichever Quality the rule is on. A
-            // Channel hidden or locked since still records, from its own rows.
-            val lineupChannel = lineup.channelOf(rule.channelId) ?: lineup.channelOf(rule.channelId, manage = true)
-                ?: continue
+            // The guide the rule was set from: its Channel's, whichever Quality the rule is on.
+            val lineupChannel = lineupChannelOf(rule.channelId) ?: continue
             val channel = lineupChannel.qualities.first { it.id == rule.channelId }
             val guideId = lineup.guideId(lineupChannel) ?: continue
-            scheduleMatching(channel, rule.titleKey, rule.id, epgRepository.upcoming(guideId, now, 200))
+            scheduleMatching(channel, rule.titleKey, rule.id, epgRepository.upcoming(guideId, now, AIRINGS_LOOKED_UP))
         }
     }
+
+    /** The Channel a Quality belongs to. One hidden or locked since a rule was set still records, from its own rows. */
+    private suspend fun lineupChannelOf(channelId: Long) =
+        lineup.channelOf(channelId) ?: lineup.channelOf(channelId, manage = true)
 
     private companion object {
         /** A programme starting within this window counts as "on now" and records immediately. */
         const val LEAD_MILLIS = 20_000L
+
+        /** How far into a channel's guide a series rule looks for airings to book. */
+        const val AIRINGS_LOOKED_UP = 200
     }
 }

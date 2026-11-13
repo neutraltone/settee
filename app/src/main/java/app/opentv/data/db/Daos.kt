@@ -25,6 +25,7 @@ import app.opentv.data.model.EpgChannelAlias
 import app.opentv.data.model.EpgFeed
 import app.opentv.data.model.Episode
 import app.opentv.data.model.Favourite
+import app.opentv.data.model.GuideProgramme
 import app.opentv.data.model.HandMark
 import app.opentv.data.model.LivePlayback
 import app.opentv.data.model.Movie
@@ -538,7 +539,8 @@ interface EpgChannelAliasDao {
 @Dao
 interface ProgrammeDao {
     /**
-     * The guide grid: everything overlapping the visible window.
+     * The guide grid: everything overlapping the visible window, without the details the grid
+     * doesn't draw (see [GuideProgramme]).
      *
      * Filtered by time only, never by a list of channel ids. `epgChannelId IN (:ids)` is the
      * natural way to write this and it breaks on any provider large enough to matter — SQLite
@@ -547,13 +549,17 @@ interface ProgrammeDao {
      */
     @Query(
         """
-        SELECT * FROM programmes
+        SELECT id, epgChannelId, startUtcMillis, endUtcMillis, title, season, episode FROM programmes
         WHERE endUtcMillis > :fromUtcMillis
           AND startUtcMillis < :toUtcMillis
         ORDER BY epgChannelId, startUtcMillis
         """,
     )
-    fun observeWindow(fromUtcMillis: Long, toUtcMillis: Long): Flow<List<Programme>>
+    fun observeGuideWindow(fromUtcMillis: Long, toUtcMillis: Long): Flow<List<GuideProgramme>>
+
+    /** One programme in full, for what the guide doesn't hold. Null once a refresh has replaced it. */
+    @Query("SELECT * FROM programmes WHERE id = :id")
+    suspend fun byId(id: Long): Programme?
 
     /** What is on right now, for the channel list's "now playing" line. */
     @Query(
@@ -576,9 +582,6 @@ interface ProgrammeDao {
     /** The programme starting at [startUtcMillis] on [channelId], for playing it back from the archive. */
     @Query("SELECT * FROM programmes WHERE epgChannelId = :channelId AND startUtcMillis = :startUtcMillis LIMIT 1")
     suspend fun startingAt(channelId: String, startUtcMillis: Long): Programme?
-
-    @Query("SELECT COUNT(*) FROM programmes WHERE feedId = :feedId")
-    suspend fun countForFeed(feedId: Long): Int
 
     @Query("SELECT EXISTS(SELECT 1 FROM programmes WHERE epgChannelId = :epgChannelId)")
     suspend fun hasProgrammes(epgChannelId: String): Boolean

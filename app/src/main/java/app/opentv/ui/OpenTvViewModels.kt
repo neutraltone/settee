@@ -17,10 +17,10 @@ import app.opentv.data.model.Category
 import app.opentv.data.model.Channel
 import app.opentv.data.model.EpgFeed
 import app.opentv.data.model.Episode
+import app.opentv.data.model.GuideProgramme
 import app.opentv.data.model.LiveStreamFormat
 import app.opentv.data.model.Movie
 import app.opentv.data.model.Profile
-import app.opentv.data.model.Programme
 import app.opentv.data.model.Series
 import app.opentv.data.model.SeriesRef
 import app.opentv.data.model.Source
@@ -361,10 +361,10 @@ class ChannelsViewModel @JvmOverloads constructor(
     @androidx.compose.runtime.Immutable
     data class Row(
         val channel: LineupChannel,
-        val now: Programme? = null,
-        val next: Programme? = null,
+        val now: GuideProgramme? = null,
+        val next: GuideProgramme? = null,
         /** Every programme for this channel inside the guide window, start-ordered. */
-        val programmes: List<Programme> = emptyList(),
+        val programmes: List<GuideProgramme> = emptyList(),
     ) {
         val primary: Channel get() = channel.primary
 
@@ -466,13 +466,13 @@ class ChannelsViewModel @JvmOverloads constructor(
      * re-emits on its own when an EPG sync lands new programmes.
      */
     @OptIn(ExperimentalCoroutinesApi::class)
-    private val programmeIndex: StateFlow<Map<String, List<Programme>>> =
+    private val programmeIndex: StateFlow<Map<String, List<GuideProgramme>>> =
         // guideWindow is a StateFlow, which already conflates equal values — an explicit
         // distinctUntilChanged() on it is a no-op (and a build error under our warnings-as-errors).
         guideWindow
             .flatMapLatest { (windowStart, windowEnd) ->
                 graph.epgRepository
-                    .observeWindow(windowStart, windowEnd)
+                    .observeGuideWindow(windowStart, windowEnd)
                     .map { programmes -> programmes.groupBy { it.epgChannelId } }
             }
             .flowOn(Dispatchers.Default)
@@ -536,7 +536,7 @@ class ChannelsViewModel @JvmOverloads constructor(
 
     private fun buildRows(
         channels: List<LineupChannel>,
-        byEpgChannel: Map<String, List<Programme>>,
+        byEpgChannel: Map<String, List<GuideProgramme>>,
         now: Long,
         reportProgress: Boolean = false,
     ): List<Row> {

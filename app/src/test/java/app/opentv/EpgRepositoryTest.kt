@@ -94,13 +94,66 @@ class EpgRepositoryTest {
         assertThat(storedProgrammes().map { it.title }).containsExactly("News", "Weather")
     }
 
+    @Test
+    fun `the guide window holds only the programmes overlapping it, in channel then start order`() = runTest {
+        programme("Before", start = 0, end = 1_000)
+        programme("Overlaps the start", start = 500, end = 1_500)
+        catalogue.db.programmes().insertOrReplace(
+            listOf(
+                Programme(
+                    feedId = 1,
+                    epgChannelId = "bbc",
+                    startUtcMillis = 1_800,
+                    endUtcMillis = 2_500,
+                    title = "Inside",
+                ),
+            ),
+        )
+        programme("Inside too", start = 1_500, end = 1_900)
+        programme("After", start = 2_000, end = 3_000)
+
+        val window = guide.observeGuideWindow(fromUtcMillis = 1_000, toUtcMillis = 2_000).first()
+
+        assertThat(window.map { it.epgChannelId to it.title }).containsExactly(
+            "bbc" to "Inside",
+            "itv" to "Overlaps the start",
+            "itv" to "Inside too",
+        ).inOrder()
+    }
+
+    @Test
+    fun `a programme in the guide window is found by its id with its description`() = runTest {
+        catalogue.db.sources().insert(PANEL_SOURCE)
+        catalogue.panel.replies["xmltv.php"] = feed(slot("c1", "10", "11", "News", "Headlines"))
+        guide.syncAll(nowUtcMillis = NOW)
+        val listed = guide.observeGuideWindow(0, Long.MAX_VALUE).first().single()
+
+        val full = guide.programme(listed.id)
+
+        assertThat(full?.title).isEqualTo("News")
+        assertThat(full?.description).isEqualTo("Headlines")
+    }
+
+    @Test
+    fun `a programme replaced by a refreshed guide is no longer found by its old id`() = runTest {
+        catalogue.db.sources().insert(PANEL_SOURCE)
+        catalogue.panel.replies["xmltv.php"] = feed(slot("c1", "10", "11", "News", "First go"))
+        guide.syncAll(nowUtcMillis = NOW)
+        val listed = guide.observeGuideWindow(0, Long.MAX_VALUE).first().single()
+
+        catalogue.panel.replies["xmltv.php"] = feed(slot("c1", "10", "11", "News", "Corrected"))
+        guide.syncAll(nowUtcMillis = NOW, force = true)
+
+        assertThat(guide.programme(listed.id)).isNull()
+    }
+
     private fun slot(channel: String, from: String, to: String, title: String, description: String) =
         """<programme start="20260101${from}0000 +0000" stop="20260101${to}0000 +0000" channel="$channel">""" +
             "<title>$title</title><desc>$description</desc></programme>"
 
     private fun feed(vararg slots: String) = "<tv>${slots.joinToString("")}</tv>"
 
-    private suspend fun storedProgrammes() = catalogue.db.programmes().observeWindow(0, Long.MAX_VALUE).first()
+    private suspend fun storedProgrammes() = guide.observeGuideWindow(0, Long.MAX_VALUE).first()
 
     private companion object {
         /** 2026-01-01, when the guide's programmes are. */
