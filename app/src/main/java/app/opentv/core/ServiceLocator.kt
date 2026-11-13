@@ -193,6 +193,9 @@ object ServiceLocator {
         /** Outlives every screen, so a refresh keeps going when the viewer moves on. */
         private val refreshScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
+        /** Outlives every screen, for a change that mustn't be cut off when the viewer moves on. */
+        val appScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
         val refreshMessages: RefreshMessages by lazy { RefreshMessages(appContext) }
 
         /** TMDB, for checking a TMDB Key before it's saved. Holds nothing, so the catalogue's own is no conflict. */

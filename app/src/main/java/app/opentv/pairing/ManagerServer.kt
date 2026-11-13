@@ -139,9 +139,13 @@ class ManagerServer(
                 } catch (_: Exception) {
                     break // socket closed, which is how we stop
                 }
-                runCatching { handle(client) }
-                    .onFailure { Log.w(TAG, "Manager request failed", it) }
-                runCatching { client.close() }
+                // Each request on its own, so a slow one (a reorder, an add that tests a login)
+                // doesn't hold up the page's next request behind it on this loop.
+                scope.launch(Dispatchers.IO) {
+                    runCatching { handle(client) }
+                        .onFailure { Log.w(TAG, "Manager request failed", it) }
+                    runCatching { client.close() }
+                }
             }
         }
 
@@ -304,7 +308,7 @@ class ManagerServer(
         writeOk(output)
     }
 
-    /** `POST /reorder {ids:[orderedChannelIds]}` → assign sortIndex by position. */
+    /** `POST /reorder {ids:[orderedChannelIds]}` → assign sortIndex by position, in one write. */
     private fun handleReorder(output: OutputStream, body: String) {
         val req = runCatching { json.decodeFromString(ReorderReq.serializer(), body) }.getOrNull()
         if (req == null) {
@@ -312,7 +316,8 @@ class ManagerServer(
             return
         }
         runBlocking {
-            req.ids.forEachIndexed { index, id -> if (id > 0L) catalog.setChannelSortIndex(id, index) }
+            // Ids ≤ 0 keep their position but match no channel, so nothing moves to it.
+            catalog.setChannelOrder(req.ids)
         }
         writeOk(output)
     }

@@ -8,6 +8,7 @@ package app.opentv
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import app.opentv.core.AppSettings
+import app.opentv.data.model.Channel
 import app.opentv.data.remote.StalkerApi
 import app.opentv.data.remote.XtreamApi
 import app.opentv.data.repo.SourceRepository
@@ -16,8 +17,11 @@ import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.runBlocking
+import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
 import org.junit.After
 import org.junit.Assume.assumeTrue
 import org.junit.Test
@@ -101,5 +105,43 @@ class ManagerServerTest {
 
         assertThat(code).isEqualTo(404)
         assertThat(page).isEqualTo("Not found.")
+    }
+
+    @Test
+    fun `reordering a category from the manager saves the new order, skipping ids that aren't channels`() {
+        val session = listening()
+        val (a, b, c) = runBlocking {
+            test.db.sources().insert(PANEL_SOURCE)
+            test.db.channels().upsertAll(
+                listOf("1", "2", "3").map { id ->
+                    Channel(
+                        sourceId = PANEL_SOURCE.id,
+                        streamId = id,
+                        name = "Channel $id",
+                        displayName = "Channel $id",
+                        groupKey = "ch:$id",
+                        qualityRank = 200,
+                        qualityLabel = "HD",
+                        categoryId = "1",
+                        logoUrl = null,
+                        epgChannelId = null,
+                        number = null,
+                        streamUrl = "http://example.com/live/u/p/$id.m3u8",
+                    )
+                },
+            )
+            test.db.channels().everyRow().sortedBy { it.streamId }.map { it.id }
+        }
+
+        val reorder = Request.Builder()
+            .url(session.url.replace("/?", "/reorder?"))
+            .post("""{"ids":[$c,0,$a,-1,$b]}""".toRequestBody("application/json".toMediaType()))
+            .build()
+        val (code, body) = OkHttpClient().newCall(reorder).execute().use { it.code to it.body.string() }
+
+        assertThat(code).isEqualTo(200)
+        assertThat(body).isEqualTo("""{"ok":true}""")
+        val saved = runBlocking { test.db.channels().everyRow() }.associate { it.id to it.sortIndex }
+        assertThat(saved).containsExactly(c, 0, a, 2, b, 4)
     }
 }
