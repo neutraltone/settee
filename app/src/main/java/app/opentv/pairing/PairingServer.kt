@@ -376,17 +376,18 @@ class PairingServer(
         pending = null
         when {
             answer is Reply.LoginFailed -> {
-                output.write(html(PairingPage.form(token, answer.reason)))
-                // Still listening, with the same code and address, so the phone can put it right.
+                // Still listening, with the same code and address, so the phone can put it right. Before
+                // the page goes, or the phone could have it, and try again, while this still says received.
                 session?.let { _state.value = State.Listening(it) }
+                output.write(html(PairingPage.form(token, answer.reason)))
             }
             answer == Reply.AllDone && asked.thenTmdbKey -> {
                 // Straight on to the TMDB Key, on the same address, as the TV moves to its TMDB step.
                 val next = Mode.TmdbKey(onboarding = true)
                 mode = next
                 timer.arm()
-                output.write(html(keyPage(token, null, next, text)))
                 session?.let { _state.value = State.Listening(it) }
+                output.write(html(keyPage(token, null, next, text)))
             }
             else -> finish(output, afterProvider(answer, text))
         }
@@ -458,9 +459,10 @@ class PairingServer(
         val answer = runBlocking { withTimeoutOrNull(REPLY_TIMEOUT_MILLIS) { reply.await() } }
         pending = null
         if (answer is Reply.KeyTurnedDown) {
-            output.write(html(phonePage(token, answer.problem, asked, text)))
-            // Still listening, with the same address, so the phone can try again.
+            // Still listening, with the same address, so the phone can try again: before the page goes,
+            // as for a provider's failed login.
             session?.let { _state.value = State.Listening(it) }
+            output.write(html(phonePage(token, answer.problem, asked, text)))
             return
         }
         // A TMDB Key saved during Setup goes on to OpenSubtitles' sign-in, as the TV does.
