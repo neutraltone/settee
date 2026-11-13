@@ -126,9 +126,9 @@ Run the tests:
 
 ## Where it came from
 
-Settee is based on [OpenTV](https://github.com/opentvproject/opentv), a GPL-licensed, clean-room
-IPTV player whose original project has been abandoned. Settee carries it on with its own name,
-look, application ID and updates, and installs alongside OpenTV rather than over it. The licence
+Settee started as a fork of [OpenTV](https://github.com/opentvproject/opentv), a GPL-licensed IPTV
+player, and has gone its own way since. It has its own name, look, application ID and updates, and
+installs alongside OpenTV rather than over it. The licence
 and the OpenTV contributors' copyright in each file stay as they are.
 
 Nothing in OpenTV or Settee was decompiled or copied from another IPTV app. The code was written
