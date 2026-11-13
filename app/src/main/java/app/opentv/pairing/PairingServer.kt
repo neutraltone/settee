@@ -240,7 +240,10 @@ class PairingServer(
         address?.close()
         address = null
         confirmCode = ""
-        if (_state.value is State.Listening) _state.value = State.Idle
+        // Whatever the phone sent goes with the session: the server is shared, and a key left as
+        // KeyReceived was handed to the next screen to show TMDB, which saved it again. Only a failure
+        // stays, for the screen that's still saying why.
+        if (_state.value !is State.Failed) _state.value = State.Idle
     }
 
     // ---- Request handling ------------------------------------------------------------------

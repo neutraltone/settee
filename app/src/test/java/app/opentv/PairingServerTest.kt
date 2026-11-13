@@ -286,6 +286,18 @@ class PairingServerTest {
     }
 
     @Test
+    fun `once the TV leaves, a key it was sent is forgotten, so the next screen isn't handed it again`() {
+        val session = listening(PairingServer.Mode.TmdbKey())
+        val reply = scope.async(Dispatchers.IO) { sendKey(session) }
+        receivedKey().answer(problem = null)
+        runBlocking { reply.await() }
+
+        server.stop()
+
+        assertThat(server.state.value).isEqualTo(PairingServer.State.Idle)
+    }
+
+    @Test
     fun `a blank TMDB Key is asked for again without troubling the TV`() {
         val session = listening(PairingServer.Mode.TmdbKey())
 

@@ -33,6 +33,7 @@ import app.opentv.core.ServiceLocator
 import app.opentv.data.model.Series
 import app.opentv.data.remote.TmdbCheck
 import app.opentv.data.repo.TmdbKeys
+import app.opentv.pairing.PairingServer
 import app.opentv.ui.settings.SettingsMemory
 import app.opentv.ui.settings.SettingsScreen
 import app.opentv.ui.settings.SettingsSection
@@ -130,6 +131,22 @@ class TmdbSettingsTest {
             check(System.currentTimeMillis() < until) { "what was saved still isn't there after 5 seconds" }
             Thread.sleep(10)
         }
+    }
+
+    @Test
+    fun `highlighting TMDB leaves the Highlight on the sections, even after a key came from the phone`() {
+        graph.settings.setTmdbApiKey(TMDB_KEY)
+        // As Onboarding's step leaves it when the phone sent the key: answered, and the server stopped.
+        val session = runCatching { graph.pairingServer.start(PairingServer.Mode.TmdbKey(onboarding = true)) }
+        graph.pairingServer.stop()
+        assertThat(session.isSuccess).isTrue()
+
+        show(SettingsMemory(SettingsSection.Tmdb))
+        waitFor("Key saved")
+        compose.waitForIdle()
+
+        highlighted().assertTextContains("TMDB")
+        assertThat(tmdbAsked).isEmpty()
     }
 
     /** Settings › TMDB once its QR code is up, or its server couldn't start, which a test machine may not allow. */

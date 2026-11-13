@@ -5,6 +5,7 @@
  */
 package app.opentv.ui.onboarding
 
+import android.util.Log
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -12,7 +13,9 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -26,6 +29,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -37,7 +41,7 @@ import app.opentv.ui.design.ScreenFrame
 import app.opentv.ui.design.SetteeColors
 import app.opentv.ui.design.SetteeType
 import app.opentv.ui.design.Text
-import app.opentv.ui.settings.KeySavedCard
+import app.opentv.ui.settings.PHONE_CARD_WIDTH
 import app.opentv.ui.settings.TmdbAttribution
 import app.opentv.ui.settings.TmdbKeyRows
 import app.opentv.ui.settings.rememberTmdbKeyEntry
@@ -60,10 +64,28 @@ fun TmdbStepScreen(graph: ServiceLocator.Graph, onDone: () -> Unit) {
     val entry = rememberTmdbKeyEntry(graph.tmdbKeys, graph)
     var saved by remember { mutableStateOf(false) }
     if (saved) {
+        // Each in the place of what it replaces: the key in the key row's, what TMDB will do in the
+        // status line's, Carry on in Skip for now's. The QR code goes with the server it pointed at.
         val key by graph.settings.tmdbApiKey.collectAsState()
         StepFrame(
             left = {
-                Text(stringResource(R.string.onboarding_tmdb_saved), SetteeType.Body, color = SetteeColors.QuietText)
+                Text(stringResource(R.string.onboarding_tmdb_help), SetteeType.Body, color = SetteeColors.QuietText)
+                Column(
+                    Modifier.heightIn(min = KEY_ROW_HEIGHT).padding(horizontal = KEY_ROW_SIDE),
+                    verticalArrangement = Arrangement.Center,
+                ) {
+                    Text(stringResource(R.string.settings_row_tmdb_set), SetteeType.Section)
+                    Text(
+                        stringResource(R.string.settings_tmdb_ending, TmdbKeys.endingOf(key).orEmpty()),
+                        SetteeType.Body,
+                    )
+                }
+                Text(
+                    stringResource(R.string.onboarding_tmdb_saved),
+                    SetteeType.Body,
+                    color = SetteeColors.QuietText,
+                    modifier = Modifier.heightIn(min = STATUS_HEIGHT),
+                )
                 StepActions {
                     PillButton(
                         stringResource(R.string.onboarding_tmdb_carry_on),
@@ -72,7 +94,7 @@ fun TmdbStepScreen(graph: ServiceLocator.Graph, onDone: () -> Unit) {
                     )
                 }
             },
-            right = { KeySavedCard(TmdbKeys.endingOf(key).orEmpty()) },
+            right = {},
         )
         return
     }
@@ -110,7 +132,8 @@ private fun StepFrame(left: @Composable () -> Unit, right: @Composable () -> Uni
                 Spacer(Modifier.weight(1f))
                 TmdbAttribution()
             }
-            Box(Modifier.fillMaxHeight(), contentAlignment = Alignment.Center) { right() }
+            // Its width kept when the card goes, so the left column's text doesn't reflow.
+            Box(Modifier.width(PHONE_CARD_WIDTH).fillMaxHeight(), contentAlignment = Alignment.Center) { right() }
         }
     }
 }
@@ -124,25 +147,44 @@ private fun StepActions(buttons: @Composable () -> Unit) {
 }
 
 /**
- * Takes the Highlight when it appears, asking again each frame until it has it, for a few frames. Once
- * isn't enough here: a key saved from the phone swaps the rows away from under the Highlight, and the
- * first ask, a frame later, was refused on a Fire TV Stick, leaving nothing highlighted.
+ * Takes the Highlight when it appears, and keeps asking, a frame at a time while this window has the
+ * system's focus, for up to [FOCUS_PATIENCE_MILLIS]. Asking once, a frame later, isn't enough here: on
+ * a Fire TV Stick, coming on from the phone, nothing on the step was highlighted, so a request was
+ * being dropped; one made while the window doesn't have focus is lost rather than kept for when it
+ * does. Each try is logged ([TAG]) until that's understood.
  */
 @Composable
 private fun Modifier.takesHighlight(): Modifier {
     val focus = remember { FocusRequester() }
     var highlighted by remember { mutableStateOf(false) }
-    LaunchedEffect(focus) {
-        repeat(FOCUS_TRIES) {
-            withFrameNanos {}
-            if (highlighted) return@LaunchedEffect
-            runCatching { focus.requestFocus() }
+    val windowFocused = LocalWindowInfo.current.isWindowFocused
+    LaunchedEffect(focus, windowFocused) {
+        if (!windowFocused) {
+            Log.d(TAG, "Waiting for the window's focus")
+            return@LaunchedEffect
         }
+        val until = System.currentTimeMillis() + FOCUS_PATIENCE_MILLIS
+        var tries = 0
+        while (!highlighted && System.currentTimeMillis() < until) {
+            withFrameNanos {}
+            tries++
+            val asked = runCatching { focus.requestFocus() }
+            asked.exceptionOrNull()?.let { Log.d(TAG, "Try $tries refused: ${it.javaClass.simpleName}") }
+        }
+        Log.d(TAG, if (highlighted) "Highlighted after $tries tries" else "Never highlighted after $tries tries")
     }
     return focusRequester(focus).onFocusChanged { highlighted = it.hasFocus }
 }
 
-private const val FOCUS_TRIES = 10
+private const val TAG = "TmdbStep"
+private const val FOCUS_PATIENCE_MILLIS = 2_000L
+
+/** [app.opentv.ui.design.ListRow]'s height and side inset, which the saved key takes the place of. */
+private val KEY_ROW_HEIGHT = 52.dp
+private val KEY_ROW_SIDE = 10.dp
+
+/** The status line's reserved height, which what TMDB will do takes the place of. */
+private val STATUS_HEIGHT = 88.dp
 private val COLUMN_GAP = 40.dp
 
 /** The step's own buttons, apart from a Try again for the phone's server. */

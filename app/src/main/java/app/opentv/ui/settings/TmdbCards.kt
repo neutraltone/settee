@@ -40,7 +40,7 @@ import app.opentv.ui.onboarding.describePairingFailure
 internal fun PhoneCodeCard(phone: PairingServer.State, onRetry: () -> Unit, wording: ErrorWording) {
     Column(
         Modifier
-            .size(CARD_WIDTH, CARD_HEIGHT)
+            .size(PHONE_CARD_WIDTH, CARD_HEIGHT)
             .background(SetteeColors.Surface, SetteeShapes.Card)
             .padding(20.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -71,22 +71,6 @@ internal fun PhoneCodeCard(phone: PairingServer.State, onRetry: () -> Unit, word
     }
 }
 
-/** A saved key, by its last four characters, in [PhoneCodeCard]'s place and size, which it replaces. */
-@Composable
-internal fun KeySavedCard(ending: String) {
-    Column(
-        Modifier
-            .size(CARD_WIDTH, CARD_HEIGHT)
-            .background(SetteeColors.Surface, SetteeShapes.Card)
-            .padding(20.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterVertically),
-    ) {
-        Text(stringResource(R.string.settings_row_tmdb_set), SetteeType.Section, textAlign = TextAlign.Center)
-        Text(stringResource(R.string.settings_tmdb_ending, ending), SetteeType.Body, textAlign = TextAlign.Center)
-    }
-}
-
 /** TMDB's logo and the sentence its terms ask for, in Settings › TMDB and About. */
 @Composable
 internal fun TmdbAttribution(modifier: Modifier = Modifier) {
@@ -104,6 +88,6 @@ internal fun TmdbAttribution(modifier: Modifier = Modifier) {
 }
 
 /** [PhoneCodeCard]: wide enough for the address, tall enough for the code, the line above it and the address. */
-private val CARD_WIDTH = 340.dp
+internal val PHONE_CARD_WIDTH = 340.dp
 private val CARD_HEIGHT = 340.dp
 private val LOGO_HEIGHT = 16.dp

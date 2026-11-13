@@ -286,12 +286,17 @@ class ProviderRoutesTest {
         setApp(start = Routes.ADD_SOURCE, sources = SourcesViewModel(app, graph))
         savePlaylist()
         compose.waitUntil(5_000) { route() == Routes.TMDB_STEP }
+        compose.waitForIdle()
+        val keyRowTop = typeItInstead().top
 
         typeTmdbKey(OTHER_TMDB_KEY)
 
         compose.waitUntil(5_000) { compose.onAllNodes(hasText("Key saved")).fetchSemanticsNodes().isNotEmpty() }
         assertThat(graph.settings.tmdbApiKey.value).isEqualTo(OTHER_TMDB_KEY)
         compose.onNodeWithText("Ends in bbbb").assertExists()
+        // In the key row's place; the QR code goes with the server that answered it.
+        assertThat(compose.onNodeWithText("Key saved").fetchSemanticsNode().boundsInRoot.top).isEqualTo(keyRowTop)
+        compose.onNode(hasText("Scan with your phone", substring = true)).assertDoesNotExist()
         // Time to read it: the step waits for the viewer rather than moving on by itself.
         assertThat(route()).isEqualTo(Routes.TMDB_STEP)
         compose.waitUntil(5_000) {
