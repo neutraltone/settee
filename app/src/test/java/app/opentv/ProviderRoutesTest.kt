@@ -386,9 +386,9 @@ class ProviderRoutesTest {
      * The phone's address for the TMDB step's paste box, once its server is listening; skips the test
      * where the machine running it has no private network address to listen on.
      */
-    private fun phoneAddress(): PairingServer.Session {
-        compose.waitUntil(5_000) { graph.pairingServer.state.value !is PairingServer.State.Idle }
-        val listening = graph.pairingServer.state.value as? PairingServer.State.Listening
+    private fun phoneAddress(server: PairingServer = graph.pairingServer): PairingServer.Session {
+        compose.waitUntil(5_000) { server.state.value !is PairingServer.State.Idle }
+        val listening = server.state.value as? PairingServer.State.Listening
         assumeTrue("needs a private LAN address to serve on", listening != null)
         return listening!!.session
     }
@@ -435,6 +435,23 @@ class ProviderRoutesTest {
 
         compose.waitUntil(10_000) { route() == Routes.SETUP }
         assertThat(graph.settings.tmdbApiKey.value).isEmpty()
+    }
+
+    @Test
+    fun `Skip for now on the phone's TMDB page goes on to the OpenSubtitles step, which waits for its own answer`() {
+        withOpenSubtitles.settings.removeTmdbApiKey()
+        setApp(start = Routes.ADD_SOURCE, sources = SourcesViewModel(app, withOpenSubtitles))
+        savePlaylist()
+        compose.waitUntil(5_000) { route() == Routes.TMDB_STEP }
+
+        fromPhone(phoneAddress(withOpenSubtitles.pairingServer), "/skip")
+
+        compose.waitUntil(10_000) { route() == Routes.OPENSUBTITLES_STEP }
+        // The TMDB page's skip is no answer to this step: it stays until the viewer chooses.
+        compose.mainClock.advanceTimeBy(2_000)
+        compose.waitForIdle()
+        assertThat(route()).isEqualTo(Routes.OPENSUBTITLES_STEP)
+        withOpenSubtitles.database.close()
     }
 
     /** Where Type it instead is on screen. */

@@ -71,6 +71,8 @@ class DownloadedSubtitles(
      * same file, then trims to the cap.
      */
     suspend fun save(title: SubtitleTitle, from: SubtitleResult, text: String): DownloadedSubtitle = locked {
+        // Kept, it would push the whole store over the cap however much else went.
+        if (text.toByteArray().size > capBytes) throw java.io.IOException("Subtitle bigger than the cap")
         dir.mkdirs()
         val fileId = from.fileId
         val entry = Entry(title, fileId, from.language, from.kind, from.release, fileName(title, fileId), 0, clock())

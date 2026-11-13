@@ -20,6 +20,7 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.test.requestFocus
+import androidx.media3.common.C
 import androidx.media3.common.util.UnstableApi
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.espresso.Espresso
@@ -81,7 +82,14 @@ class VodOpenSubtitlesTest {
     private val graph = ServiceLocator.Graph(app, http = site.http).apply { openSubtitlesKey = "k" }
     private val viewModel = VodPlayerViewModel(app, graph)
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
-    private val subtitles = VodSubtitles(graph.openSubtitles!!, graph.profileSettings, scope, device = { "en" })
+
+    /** The film player's OpenSubtitles side, on a device in English. */
+    private fun vodSubtitles() =
+        VodSubtitles(graph.openSubtitles!!, graph.profileSettings, scope, controller::disableText) {
+            "en"
+        }
+
+    private val subtitles = vodSubtitles()
     private val noPicks = SubtitlePicks(onOff = {}, onPicked = {})
     private val heat = SubtitleTitle.film(source = "Provider", streamId = "1")
 
@@ -207,12 +215,15 @@ class VodOpenSubtitlesTest {
         searchAndPickEnglish()
 
         assertThat(controller.player.currentPosition).isAtLeast(TEN_MINUTES)
+        // Drawn by Settee, so the stream's own text is off, or both would show at once.
+        assertThat(controller.player.trackSelectionParameters.disabledTrackTypes).contains(C.TRACK_TYPE_TEXT)
         assertThat(runBlocking { graph.openSubtitles!!.store.forTitle(heat) }.map { it.language }).containsExactly("en")
         val downloads = site.requests.count { it.url.encodedPath.endsWith("/download") }
         assertThat(downloads).isEqualTo(1)
 
         // The next time the film plays.
-        val again = VodSubtitles(graph.openSubtitles!!, graph.profileSettings, scope, device = { "en" })
+        val again =
+            vodSubtitles()
         again.load(MediaKey.Movie(1))
         until { again.downloaded.value != null }
         assertThat(again.downloaded.value!!.map { it.language }).containsExactly("en")

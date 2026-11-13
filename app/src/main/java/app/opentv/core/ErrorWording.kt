@@ -36,6 +36,7 @@ interface HttpStatus {
 class ErrorWording(private val context: Context, private val onTelevision: Boolean) {
     // Looked up each time, as RefreshMessages does: changing language only recreates the activity.
     private val resources get() = LocaleUtils.wrap(context).resources
+    private val timeFormat get() = android.text.format.DateFormat.getTimeFormat(LocaleUtils.wrap(context))
 
     /**
      * A provider's [error] in words, or [fallback] when its type says nothing a viewer could act on.
@@ -116,7 +117,8 @@ class ErrorWording(private val context: Context, private val onTelevision: Boole
                 !error.signedIn -> resources.getString(R.string.error_opensubtitles_limit_anonymous)
                 resetsAt != null -> resources.getString(
                     R.string.error_opensubtitles_limit_account,
-                    android.text.format.DateFormat.getTimeFormat(context).format(java.util.Date(resetsAt)),
+                    // In the app's language, as the sentence around it is, not the device's.
+                    timeFormat.format(java.util.Date(resetsAt)),
                 )
                 else -> resources.getString(R.string.error_opensubtitles_limit_account_unknown)
             }

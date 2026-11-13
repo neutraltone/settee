@@ -32,12 +32,15 @@ import kotlinx.coroutines.withContext
 /**
  * The film and episode players' OpenSubtitles side: the title's Downloaded Subtitles, the one
  * showing and its Timing, searching and picking a result, and fetching one automatically. Holds no
- * player: the screen hands it what the stream offers and draws what [cuesAt] returns.
+ * player: the screen hands it what the stream offers and draws what [cuesAt] returns, and
+ * [streamTextOff] turns the stream's own subtitles off whenever a Downloaded Subtitle shows, however
+ * it came to, so the two never draw over each other.
  */
 class VodSubtitles(
     private val openSubtitles: OpenSubtitles,
     private val profileSettings: ProfileSettings,
     private val scope: CoroutineScope,
+    private val streamTextOff: () -> Unit,
     private val device: () -> String = { Locale.getDefault().language },
 ) {
     sealed interface Results {
@@ -104,6 +107,7 @@ class VodSubtitles(
     fun show(subtitle: DownloadedSubtitle, picked: Boolean) {
         scope.launch {
             val cues = withContext(Dispatchers.IO) { DownloadedSubtitleCues.parse(subtitle.file.readText()) }
+            streamTextOff()
             _showing.value = Showing(subtitle, cues)
             openSubtitles.store.played(subtitle)
             if (picked) profileSettings.pickSubtitleTrack(subtitle.language, subtitle.kind)

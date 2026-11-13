@@ -140,10 +140,17 @@ internal fun OpenSubtitlesSignInRows(
     suspend fun signIn(name: String, password: String): ViewerError? =
         entry.signIn(name, password).also { why -> if (why == null) onSignedIn() }
 
-    LaunchedEffect(phone) {
+    // The server is the app's one, so until this screen has started it for OpenSubtitles its state may
+    // be the screen before's: Setup's TMDB step skipped from the phone leaves a skip this step isn't
+    // to take as its own Not now.
+    var listening by remember { mutableStateOf(false) }
+    LaunchedEffect(phone, listening) {
+        if (!listening) return@LaunchedEffect
         when (val now = phone) {
             is PairingServer.State.SignInReceived -> now.answer(signIn(now.username, now.password))
             PairingServer.State.KeySkipped -> if (onboarding) onSkipped()
+            // The screen before stopping the server as it went, after this one had started it.
+            PairingServer.State.Idle -> server.start(PairingServer.Mode.OpenSubtitles(onboarding))
             else -> Unit
         }
     }
@@ -151,6 +158,7 @@ internal fun OpenSubtitlesSignInRows(
         val starting = scope.launch {
             delay(SERVER_DELAY_MS)
             server.start(PairingServer.Mode.OpenSubtitles(onboarding))
+            listening = true
         }
         onDispose {
             starting.cancel()

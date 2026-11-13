@@ -61,7 +61,7 @@ class OpenSubtitles(
 
     /** Downloads [result] and keeps it for [subject]'s title, so it plays from then on with no new download. */
     suspend fun fetch(subject: SubtitleSubject, result: SubtitleResult): Result<DownloadedSubtitle> =
-        account.download(result.fileId).map { file ->
+        account.download(result.fileId).mapCatching { file ->
             store.save(subject.title, result, file.text)
         }
 }

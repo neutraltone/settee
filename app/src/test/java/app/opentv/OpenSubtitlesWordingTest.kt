@@ -6,6 +6,7 @@
 package app.opentv
 
 import androidx.test.core.app.ApplicationProvider
+import app.opentv.core.AppSettings
 import app.opentv.core.ErrorWording
 import app.opentv.data.remote.OpenSubtitlesFailure
 import com.google.common.truth.Truth.assertThat
@@ -17,8 +18,8 @@ import org.robolectric.annotation.Config
 
 /** Each OpenSubtitles failure says what happened and what to do, as docs/ERRORS.md lists. */
 @RunWith(RobolectricTestRunner::class)
-// British English, so the reset time reads in 24-hour form.
-@Config(sdk = [34], qualifiers = "en-rGB", application = android.app.Application::class)
+// The device in American English; the app set to British English below, where the time is said.
+@Config(sdk = [34], qualifiers = "en-rUS", application = android.app.Application::class)
 class OpenSubtitlesWordingTest {
 
     private val wording = ErrorWording(ApplicationProvider.getApplicationContext(), onTelevision = true)
@@ -59,9 +60,11 @@ class OpenSubtitlesWordingTest {
     }
 
     @Test
-    fun `the daily limit when signed in says when the counter resets, in local time`() {
+    fun `the daily limit when signed in says when the counter resets, in local time and the app's language`() {
         val zone = TimeZone.getDefault()
         TimeZone.setDefault(TimeZone.getTimeZone("Europe/London"))
+        val locale = java.util.Locale.getDefault()
+        AppSettings.get(ApplicationProvider.getApplicationContext()).setLanguageTag("en-GB")
         try {
             val midnightUtc = java.time.Instant.parse("2026-11-14T00:00:00Z").toEpochMilli()
             val error = wording.ofOpenSubtitles(
@@ -71,6 +74,8 @@ class OpenSubtitlesWordingTest {
             assertThat(error.sentence).isEqualTo("That's today's OpenSubtitles downloads used. More from 00:00.")
         } finally {
             TimeZone.setDefault(zone)
+            java.util.Locale.setDefault(locale)
+            AppSettings.get(ApplicationProvider.getApplicationContext()).setLanguageTag("")
         }
     }
 

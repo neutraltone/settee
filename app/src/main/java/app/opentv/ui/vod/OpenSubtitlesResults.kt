@@ -30,6 +30,7 @@ import app.opentv.ui.design.SetteeType
 import app.opentv.ui.design.Text
 import app.opentv.ui.player.PlayerChoice
 import app.opentv.ui.player.PlayerChoicePanel
+import app.opentv.ui.player.languageName
 import kotlinx.coroutines.flow.MutableStateFlow
 
 /** OpenSubtitles' results for the title, Back returning to the subtitle list. */
@@ -51,7 +52,7 @@ internal fun OpenSubtitlesResultsPanel(
     val found = (results as? VodSubtitles.Results.Found)?.results.orEmpty()
     val choices = found.map { result ->
         PlayerChoice(
-            languageName(result.language),
+            languageName(result.language) ?: result.language,
             selected = false,
             onClick = {
                 if (!fetching) {

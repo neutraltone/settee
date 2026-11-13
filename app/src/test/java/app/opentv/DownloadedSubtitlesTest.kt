@@ -102,6 +102,18 @@ class DownloadedSubtitlesTest {
     }
 
     @Test
+    fun `a subtitle bigger than the whole cap isn't kept, and nothing else goes to make room for it`() = runTest {
+        val store = store(cap = 100)
+        store.save(SubtitleTitle.film("Test", "1"), result(1), "x".repeat(40))
+
+        val tooBig = runCatching { store.save(heat, result(11), "x".repeat(150)) }
+
+        assertThat(tooBig.isFailure).isTrue()
+        assertThat(store.forTitle(heat)).isEmpty()
+        assertThat(store.forTitle(SubtitleTitle.film("Test", "1"))).hasSize(1)
+    }
+
+    @Test
     fun `a timing offset is kept with the title's file`() = runTest {
         val saved = store().save(heat, result(11), srt)
 

@@ -24,6 +24,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.media3.common.text.Cue
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.ui.SubtitleView
 import app.opentv.R
@@ -38,7 +39,7 @@ import app.opentv.ui.design.SetteeType
 import app.opentv.ui.design.Text
 import app.opentv.ui.player.PlayerChoice
 import app.opentv.ui.player.SubtitlePicks
-import java.util.Locale
+import app.opentv.ui.player.languageName
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -62,6 +63,9 @@ fun rememberVodProfileSubtitles(
     val none = remember { MutableStateFlow<List<DownloadedSubtitle>?>(emptyList()) }
     val downloaded by (subtitles?.downloaded ?: none).collectAsState()
     LaunchedEffect(tracks, preference, downloaded) {
+        // Until the next title's stream is in, the tracks are still the last one's: deciding on them
+        // would show, or not fetch, by the wrong title's languages.
+        if (controller.isSwitching) return@LaunchedEffect
         val list = downloaded ?: return@LaunchedEffect
         controller.applySubtitlePreference(preference, list.map { it.language })?.let { pick ->
             subtitles?.show(list[pick.index], picked = false)
@@ -101,8 +105,14 @@ fun DownloadedSubtitleOverlay(subtitles: VodSubtitles, positionMillis: () -> Lon
     )
     // Looked up often enough that a line appears on its frame to the eye, and as Timing moves it.
     LaunchedEffect(showing) {
+        var drawn: List<Cue>? = null
         while (isActive) {
-            holder[0]?.setCues(subtitles.cuesAt(positionMillis()))
+            val cues = subtitles.cuesAt(positionMillis())
+            // Only when the lines change: setting them redraws the view, ten times a second for a whole film.
+            if (cues != drawn) {
+                holder[0]?.setCues(cues)
+                drawn = cues
+            }
             delay(CUE_POLL_MILLIS)
         }
     }
@@ -166,7 +176,7 @@ internal fun openSubtitlesChoices(
             val selected = showing?.subtitle?.fileId == subtitle.fileId
             add(
                 PlayerChoice(
-                    languageName(subtitle.language),
+                    languageName(subtitle.language) ?: subtitle.language,
                     selected = selected,
                     onClick = {
                         subtitles.show(subtitle, picked = true)
@@ -204,10 +214,6 @@ internal fun timingLabel(offsetMillis: Long): String {
     val abs = kotlin.math.abs(tenths)
     return "$sign${abs / TENTHS_PER_SECOND}.${abs % TENTHS_PER_SECOND} s"
 }
-
-internal fun languageName(code: String): String =
-    runCatching { Locale.forLanguageTag(code).displayLanguage.ifBlank { code } }.getOrDefault(code)
-        .replaceFirstChar { it.titlecase() }
 
 /** The film player's OpenSubtitles side, from [VodPlayerScreen]; null without Settee's key. */
 val LocalVodSubtitles = staticCompositionLocalOf<VodSubtitles?> { null }

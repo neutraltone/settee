@@ -64,6 +64,34 @@ class OpenSubtitlesAccountTest {
     }
 
     @Test
+    fun `a Keystore that won't seal the password is a failed sign-in that keeps nothing, not a crash`() = runTest {
+        val broken = object : Sealer {
+            override fun seal(plain: String): String = throw java.security.KeyStoreException("no key")
+
+            override fun open(sealed: String): String? = null
+        }
+        val unsealed = OpenSubtitlesAccount(settings, OpenSubtitlesClient(site.http, "k", "0.5.0"), broken, { now })
+
+        assertThat(unsealed.signIn("viewer", "secret").isFailure).isTrue()
+        assertThat(unsealed.signedInAs.value).isNull()
+    }
+
+    @Test
+    fun `a VIP account's own address is kept with its token, and used again after a restart`() = runTest {
+        site.replies["POST /login"] = """{"user": {}, "token": "t1", "base_url": "vip-api.opensubtitles.example"}"""
+        account.signIn("viewer", "secret")
+
+        // A new account and client over the same settings, as after Settee restarts.
+        val restarted =
+            OpenSubtitlesAccount(settings, OpenSubtitlesClient(site.http, "k", "0.5.0"), FakeSealer(), { now })
+        restarted.download(fileId = 1)
+
+        val asked = site.requests.last { it.url.encodedPath.endsWith("/download") }
+        assertThat(asked.url.host).isEqualTo("vip-api.opensubtitles.example")
+        assertThat(asked.header("Authorization")).isEqualTo("Bearer t1")
+    }
+
+    @Test
     fun `a wrong username or password keeps nothing`() = runTest {
         site.replies["POST /login"] = """!401 {"message": "Invalid username/password"}"""
 

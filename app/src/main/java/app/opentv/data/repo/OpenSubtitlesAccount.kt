@@ -57,17 +57,28 @@ class OpenSubtitlesAccount(
     /** One renewal at a time, so two downloads finding a stale token don't both sign in. */
     private val renewing = Mutex()
 
+    init {
+        // The saved token only works with the host that issued it.
+        client.useHost(settings.openSubtitlesHost)
+    }
+
     fun setAutoDownload(on: Boolean) = settings.setOpenSubtitlesAuto(on)
 
     /** Signs in, keeping the account only if OpenSubtitles accepts it. */
     suspend fun signIn(username: String, password: String): Result<OpenSubtitlesSession> = io {
-        client.signIn(username.trim(), password).onSuccess {
+        // mapCatching: a Keystore that won't seal is a failed sign-in, never a crash, and keeps nothing.
+        client.signIn(username.trim(), password).mapCatching {
             settings.setOpenSubtitlesAccount(username.trim(), sealer.seal(password), it.token, clock())
+            settings.openSubtitlesHost = client.host
+            it
         }
     }
 
     /** Forgets the username, sealed password and token. */
-    fun signOut() = settings.removeOpenSubtitlesAccount()
+    fun signOut() {
+        settings.removeOpenSubtitlesAccount()
+        client.useHost(null)
+    }
 
     suspend fun search(query: SubtitleSearch): Result<List<SubtitleResult>> = io { client.search(query) }
 
@@ -106,6 +117,7 @@ class OpenSubtitlesAccount(
         client.signIn(username, password).fold(
             onSuccess = {
                 settings.setOpenSubtitlesToken(it.token, clock())
+                settings.openSubtitlesHost = client.host
                 Result.success(it.token)
             },
             onFailure = {

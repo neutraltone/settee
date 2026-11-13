@@ -575,8 +575,17 @@ class AppSettings private constructor(context: Context, fileName: String = "open
         }
     }
 
+    /** The host that issued the token: a VIP account's own, which the token only works with. */
+    var openSubtitlesHost: String?
+        get() = prefs.getString(KEY_OS_HOST, null)
+        set(value) {
+            prefs.edit { putString(KEY_OS_HOST, value) }
+        }
+
     fun removeOpenSubtitlesAccount() {
-        prefs.edit { listOf(KEY_OS_USERNAME, KEY_OS_PASSWORD, KEY_OS_TOKEN, KEY_OS_TOKEN_AT).forEach(::remove) }
+        prefs.edit {
+            listOf(KEY_OS_USERNAME, KEY_OS_PASSWORD, KEY_OS_TOKEN, KEY_OS_TOKEN_AT, KEY_OS_HOST).forEach(::remove)
+        }
         _openSubtitlesUsername.value = null
     }
 
@@ -667,6 +676,7 @@ class AppSettings private constructor(context: Context, fileName: String = "open
         private const val KEY_OS_PASSWORD = "opensubtitles_password_sealed"
         private const val KEY_OS_TOKEN = "opensubtitles_token"
         private const val KEY_OS_TOKEN_AT = "opensubtitles_token_at"
+        private const val KEY_OS_HOST = "opensubtitles_host"
         private const val KEY_OS_AUTO = "opensubtitles_auto"
         private const val KEY_STREMIO_ADDONS = "stremio_addons"
         private const val KEY_PAD_START = "rec_pad_start_min"

@@ -89,6 +89,7 @@ import app.opentv.ui.player.PlayerOptions
 import app.opentv.ui.player.PlayerPill
 import app.opentv.ui.player.SleepTimerPanel
 import app.opentv.ui.player.SubtitlePicks
+import app.opentv.ui.player.trackLabel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
@@ -148,7 +149,11 @@ fun VodPlayerScreen(
     val playback = remember { controller.vodPlayback() }
 
     // Null in a build without Settee's OpenSubtitles key: then the subtitle list is only the stream's.
-    val vodSubtitles = remember { graph.openSubtitles?.let { VodSubtitles(it, graph.profileSettings, scope) } }
+    val vodSubtitles = remember {
+        graph.openSubtitles?.let {
+            VodSubtitles(it, graph.profileSettings, scope, streamTextOff = controller::disableText)
+        }
+    }
     val subtitlePicks = rememberVodProfileSubtitles(controller, graph.profileSettings, scope, vodSubtitles)
 
     // Keep the screen awake during playback — see the note in PlayerScreen; a film is exactly when
@@ -707,7 +712,7 @@ private fun TrackPanel(
             if (!group.isTrackSupported(i)) continue
             val format = group.getTrackFormat(i)
             val selected = group.isTrackSelected(i) && !(trackType == C.TRACK_TYPE_TEXT && downloadedShowing)
-            options += PlayerChoice(vodTrackLabel(format.label, format.language, options.size), selected, {
+            options += PlayerChoice(trackLabel(format.label, format.language, options.size), selected, {
                 controller.selectTrack(group, i)
                 if (trackType == C.TRACK_TYPE_TEXT) subtitlePicks.onPicked(format.language)
                 onDone()
@@ -721,12 +726,4 @@ private fun TrackPanel(
         onClose = onDone,
         modifier = modifier,
     )
-}
-
-private fun vodTrackLabel(label: String?, language: String?, index: Int): String {
-    if (!label.isNullOrBlank()) return label
-    if (!language.isNullOrBlank() && language != "und") {
-        return runCatching { java.util.Locale(language).displayLanguage.ifBlank { language } }.getOrDefault(language)
-    }
-    return "Track ${index + 1}"
 }

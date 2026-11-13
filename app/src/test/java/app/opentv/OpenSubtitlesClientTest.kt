@@ -130,6 +130,27 @@ class OpenSubtitlesClientTest {
     }
 
     @Test
+    fun `a 406 to anything but a download isn't taken for the daily limit`() {
+        site.replies["GET /subtitles"] = """!406 {"message": "Not acceptable"}"""
+
+        val failure = client.search(SubtitleSearch.Film(title = "Heat", year = null, tmdbId = null)).exceptionOrNull()
+
+        assertThat(failure).isInstanceOf(OpenSubtitlesFailure.Unreachable::class.java)
+        assertThat((failure as OpenSubtitlesFailure.Unreachable).status).isEqualTo(406)
+    }
+
+    @Test
+    fun `a VIP account's own address is used from sign-in on`() {
+        site.replies["POST /login"] = """{"user": {}, "token": "t", "base_url": "vip-api.opensubtitles.example"}"""
+
+        client.signIn("viewer", "secret")
+        client.search(SubtitleSearch.Film(title = "Heat", year = null, tmdbId = null))
+
+        assertThat(searched().host).isEqualTo("vip-api.opensubtitles.example")
+        assertThat(client.host).isEqualTo("vip-api.opensubtitles.example")
+    }
+
+    @Test
     fun `signing in returns the token and the account's allowance`() {
         site.replies["POST /login"] =
             """{"user": {"allowed_downloads": 20, "remaining_downloads": 18}, "token": "t",
