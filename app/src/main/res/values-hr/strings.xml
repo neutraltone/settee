@@ -256,6 +256,8 @@
     <string name="error_no_first_frame_device">Ovaj uređaj nije mogao prikazati ovaj video. Pokušajte ponovno ili odaberite nešto drugo.</string>
     <string name="error_login">Vaš pružatelj usluge nije prihvatio vašu prijavu. Provjerite podatke pružatelja usluge u Postavkama.</string>
     <string name="error_catalogue">Nije moguće učitati kanale vašeg pružatelja usluge. Pokušajte ponovno za trenutak.</string>
+    <string name="error_channel_list_memory_tv">Popis kanala vašeg pružatelja usluge treba više memorije nego što ovaj TV ima.</string>
+    <string name="error_channel_list_memory_device">Popis kanala vašeg pružatelja usluge treba više memorije nego što ovaj uređaj ima.</string>
     <string name="error_no_channels">Vaš pružatelj usluge nije poslao nijedan kanal. Vaš račun možda još nema kanala, pa provjerite kod njega.</string>
     <string name="error_playlist_empty">Na toj adresi nema kanala. Provjerite je li to poveznica koju vam je dao pružatelj usluge.</string>
     <string name="error_account_inactive">Vaš pružatelj usluge kaže da ovaj račun nije aktivan. Provjerite kod njega, zatim pokušajte ponovno.</string>

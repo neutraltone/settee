@@ -256,6 +256,8 @@
     <string name="error_no_first_frame_device">Tämä laite ei pystynyt näyttämään videota. Yritä uudelleen tai valitse jotain muuta.</string>
     <string name="error_login">Palveluntarjoajasi ei hyväksynyt kirjautumistasi. Tarkista palveluntarjoajasi tiedot Asetuksista.</string>
     <string name="error_catalogue">Palveluntarjoajasi kanavia ei voitu ladata. Yritä hetken päästä uudelleen.</string>
+    <string name="error_channel_list_memory_tv">Palveluntarjoajasi kanavalista tarvitsee enemmän muistia kuin tässä televisiossa on.</string>
+    <string name="error_channel_list_memory_device">Palveluntarjoajasi kanavalista tarvitsee enemmän muistia kuin tässä laitteessa on.</string>
     <string name="error_no_channels">Palveluntarjoajasi ei lähettänyt kanavia. Tililläsi ei ehkä ole vielä niitä, joten tarkista asia heiltä.</string>
     <string name="error_playlist_empty">Osoitteessa ei ole kanavia. Tarkista, että se on palveluntarjoajaltasi saamasi linkki.</string>
     <string name="error_account_inactive">Palveluntarjoajasi mukaan tämä tili ei ole aktiivinen. Tarkista asia heiltä ja yritä sitten uudelleen.</string>

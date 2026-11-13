@@ -256,6 +256,8 @@
     <string name="error_no_first_frame_device">Ez az eszköz nem tudta megjeleníteni ezt a videót. Próbálja újra, vagy válasszon mást.</string>
     <string name="error_login">A szolgáltató nem fogadta el a bejelentkezést. Ellenőrizze a szolgáltató adatait a Beállításokban.</string>
     <string name="error_catalogue">Nem sikerült betölteni a szolgáltató csatornáit. Próbálja újra egy kicsit később.</string>
+    <string name="error_channel_list_memory_tv">A szolgáltató csatornalistájához több memória kell, mint amennyi ebben a TV-ben van.</string>
+    <string name="error_channel_list_memory_device">A szolgáltató csatornalistájához több memória kell, mint amennyi ebben az eszközben van.</string>
     <string name="error_no_channels">A szolgáltató nem küldött csatornákat. Lehet, hogy a fiókjához még nem tartozik egy sem, ezért érdeklődjön náluk.</string>
     <string name="error_playlist_empty">Ezen a címen nincsenek csatornák. Ellenőrizze, hogy ezt a linket kapta-e a szolgáltatótól.</string>
     <string name="error_account_inactive">A szolgáltató szerint ez a fiók nem aktív. Érdeklődjön náluk, majd próbálja újra.</string>

@@ -256,6 +256,8 @@
     <string name="error_no_first_frame_device">To urządzenie nie mogło wyświetlić tego wideo. Spróbuj ponownie lub wybierz coś innego.</string>
     <string name="error_login">Dostawca nie zaakceptował Twoich danych logowania. Sprawdź dane dostawcy w Ustawieniach.</string>
     <string name="error_catalogue">Nie udało się wczytać kanałów dostawcy. Spróbuj ponownie za chwilę.</string>
+    <string name="error_channel_list_memory_tv">Lista kanałów dostawcy wymaga więcej pamięci, niż ma ten telewizor.</string>
+    <string name="error_channel_list_memory_device">Lista kanałów dostawcy wymaga więcej pamięci, niż ma to urządzenie.</string>
     <string name="error_no_channels">Dostawca nie przesłał żadnych kanałów. Twoje konto może ich jeszcze nie mieć, więc skontaktuj się z dostawcą.</string>
     <string name="error_playlist_empty">Pod tym adresem nie ma kanałów. Sprawdź, czy to link otrzymany od dostawcy.</string>
     <string name="error_account_inactive">Dostawca informuje, że to konto nie jest aktywne. Skontaktuj się z nim, a potem spróbuj ponownie.</string>

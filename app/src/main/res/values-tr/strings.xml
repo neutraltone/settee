@@ -256,6 +256,8 @@
     <string name="error_no_first_frame_device">Bu cihaz bu videoyu gösteremedi. Tekrar deneyin veya başka bir şey seçin.</string>
     <string name="error_login">Sağlayıcınız girişinizi kabul etmedi. Ayarlar\'dan sağlayıcı bilgilerinizi kontrol edin.</string>
     <string name="error_catalogue">Sağlayıcınızın kanalları yüklenemedi. Birazdan tekrar deneyin.</string>
+    <string name="error_channel_list_memory_tv">Sağlayıcınızın kanal listesi, bu TV\'de olandan daha fazla bellek gerektiriyor.</string>
+    <string name="error_channel_list_memory_device">Sağlayıcınızın kanal listesi, bu cihazda olandan daha fazla bellek gerektiriyor.</string>
     <string name="error_no_channels">Sağlayıcınız hiç kanal göndermedi. Hesabınızda henüz kanal olmayabilir, bu yüzden onlara danışın.</string>
     <string name="error_playlist_empty">Bu adreste hiç kanal yok. Sağlayıcınızın size verdiği bağlantı olduğunu kontrol edin.</string>
     <string name="error_account_inactive">Sağlayıcınız bu hesabın etkin olmadığını söylüyor. Onlara danışın, ardından tekrar deneyin.</string>

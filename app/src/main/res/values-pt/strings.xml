@@ -256,6 +256,8 @@
     <string name="error_no_first_frame_device">Este dispositivo não conseguiu mostrar este vídeo. Tente novamente, ou escolha outra coisa.</string>
     <string name="error_login">O seu fornecedor não aceitou o seu início de sessão. Verifique os dados do seu fornecedor nas Definições.</string>
     <string name="error_catalogue">Não foi possível carregar os canais do seu fornecedor. Tente novamente daqui a pouco.</string>
+    <string name="error_channel_list_memory_tv">A lista de canais do seu fornecedor precisa de mais memória do que esta televisão tem.</string>
+    <string name="error_channel_list_memory_device">A lista de canais do seu fornecedor precisa de mais memória do que este dispositivo tem.</string>
     <string name="error_no_channels">O seu fornecedor não enviou nenhum canal. A sua conta pode ainda não ter nenhum, por isso confirme com ele.</string>
     <string name="error_playlist_empty">Não há canais nesse endereço. Verifique se é o link que o seu fornecedor lhe deu.</string>
     <string name="error_account_inactive">O seu fornecedor diz que esta conta não está ativa. Confirme com ele e tente novamente.</string>

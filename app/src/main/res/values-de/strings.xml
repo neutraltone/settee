@@ -256,6 +256,8 @@
     <string name="error_no_first_frame_device">Dieses Gerät konnte das Video nicht anzeigen. Versuch es erneut, oder wähle etwas anderes.</string>
     <string name="error_login">Dein Anbieter hat deine Anmeldung nicht akzeptiert. Überprüfe deine Anbieterdaten in den Einstellungen.</string>
     <string name="error_catalogue">Die Sender deines Anbieters konnten nicht geladen werden. Versuch es gleich noch einmal.</string>
+    <string name="error_channel_list_memory_tv">Die Senderliste deines Anbieters braucht mehr Speicher, als dieser Fernseher hat.</string>
+    <string name="error_channel_list_memory_device">Die Senderliste deines Anbieters braucht mehr Speicher, als dieses Gerät hat.</string>
     <string name="error_no_channels">Dein Anbieter hat keine Sender geschickt. Vielleicht hat dein Konto noch keine, also frag bei ihm nach.</string>
     <string name="error_playlist_empty">Unter dieser Adresse gibt es keine Sender. Überprüfe, ob es der Link ist, den dir dein Anbieter gegeben hat.</string>
     <string name="error_account_inactive">Laut deinem Anbieter ist dieses Konto nicht aktiv. Frag bei ihm nach und versuch es dann erneut.</string>

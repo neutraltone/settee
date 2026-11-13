@@ -256,6 +256,8 @@
     <string name="error_no_first_frame_device">Este dispositivo no pudo mostrar este video. Vuelve a intentarlo, o elige otra cosa.</string>
     <string name="error_login">Tu proveedor no aceptó tu inicio de sesión. Revisa los datos de tu proveedor en Ajustes.</string>
     <string name="error_catalogue">No se pudieron cargar los canales de tu proveedor. Vuelve a intentarlo en un momento.</string>
+    <string name="error_channel_list_memory_tv">La lista de canales de tu proveedor necesita más memoria de la que tiene este televisor.</string>
+    <string name="error_channel_list_memory_device">La lista de canales de tu proveedor necesita más memoria de la que tiene este dispositivo.</string>
     <string name="error_no_channels">Tu proveedor no envió ningún canal. Puede que tu cuenta todavía no tenga ninguno, así que consúltalo con ellos.</string>
     <string name="error_playlist_empty">No hay canales en esa dirección. Comprueba que sea el enlace que te dio tu proveedor.</string>
     <string name="error_account_inactive">Tu proveedor dice que esta cuenta no está activa. Consúltalo con ellos y vuelve a intentarlo.</string>
