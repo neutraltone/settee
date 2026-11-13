@@ -128,6 +128,7 @@ internal fun TmdbKeyRows(
     val replaceRow = remember { FocusRequester() }
     val typeRow = remember { FocusRequester() }
     val asking = ending == null || entry.replacing
+    ScreenKeptOnWhile(asking && codeState is PairingServer.State.Listening)
 
     suspend fun save(key: String): ViewerError? = entry.save(key).also { why -> if (why == null) onSaved() }
 

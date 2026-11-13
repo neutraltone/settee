@@ -298,6 +298,24 @@ class PairingServerTest {
     }
 
     @Test
+    fun `carrying on to the TMDB Key gives it a whole session of its own, not what the provider left`() {
+        val quick = PairingServer(scope, PairingFonts(context), context::getString, sessionTimeoutMillis = 2_000)
+        try {
+            quick.start(PairingServer.Mode.Provider(thenTmdbKey = true))
+            assumeTrue("needs a private LAN address to serve on", quick.state.value is PairingServer.State.Listening)
+            Thread.sleep(1_500)
+
+            // As the TV's TMDB step takes the server over, the provider having taken most of its time.
+            quick.start(PairingServer.Mode.TmdbKey(onboarding = true))
+            Thread.sleep(1_500)
+
+            assertThat(quick.state.value).isInstanceOf(PairingServer.State.Listening::class.java)
+        } finally {
+            quick.stop()
+        }
+    }
+
+    @Test
     fun `a blank TMDB Key is asked for again without troubling the TV`() {
         val session = listening(PairingServer.Mode.TmdbKey())
 

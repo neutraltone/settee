@@ -20,6 +20,8 @@ import kotlin.concurrent.thread
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -71,7 +73,16 @@ class PairingServer(
     private val fonts: PairingFonts,
     /** The app's strings, for what the phone is told once the TV answers. */
     private val text: (Int) -> String,
+    sessionTimeoutMillis: Long = TimeUnit.MINUTES.toMillis(SESSION_TIMEOUT_MINUTES),
 ) {
+
+    /** Ends a session left listening, so a code on screen isn't left open on the network for ever. */
+    private val timer = SessionTimer(scope, sessionTimeoutMillis) {
+        if (running && _state.value is State.Listening) {
+            stop()
+            _state.value = State.Failed(ServerProblem.TIMED_OUT)
+        }
+    }
 
     /** What the phone is sent to fill in. */
     sealed interface Mode {
@@ -178,7 +189,13 @@ class PairingServer(
      */
     fun start(mode: Mode = Mode.Provider()) {
         this.mode = mode
-        if (!running) open()
+        // Taken over for the key, it gets a whole session: the provider before it may have used most of
+        // one loading its channels, which left the TMDB step's code expiring under the viewer.
+        if (!running) {
+            open()
+        } else if (mode is Mode.TmdbKey) {
+            timer.arm()
+        }
     }
 
     private fun open() {
@@ -224,18 +241,13 @@ class PairingServer(
             }
         }
 
-        scope.launch(Dispatchers.Default) {
-            kotlinx.coroutines.delay(TimeUnit.MINUTES.toMillis(SESSION_TIMEOUT_MINUTES))
-            if (running && _state.value is State.Listening) {
-                stop()
-                _state.value = State.Failed(ServerProblem.TIMED_OUT)
-            }
-        }
+        timer.arm()
     }
 
     fun stop() {
         // A phone still waiting on the TV is told now, not when its wait runs out.
         pending?.complete(Reply.Stopped)
+        timer.cancel()
         running = false
         address?.close()
         address = null
@@ -352,6 +364,7 @@ class PairingServer(
                 // Straight on to the TMDB Key, on the same address, as the TV moves to its TMDB step.
                 val next = Mode.TmdbKey(onboarding = true)
                 mode = next
+                timer.arm()
                 output.write(html(keyPage(token, null, next, text)))
                 session?.let { _state.value = State.Listening(it) }
             }
@@ -497,3 +510,25 @@ private fun keyPage(token: String, problem: ViewerError?, asked: PairingServer.M
         error = problem?.let { PairingPage.Error(it.sentence, it.detail) },
         onboarding = asked.onboarding,
     )
+
+/** Runs [onExpiry] [millis] after the last [arm], unless [cancel]led first. */
+private class SessionTimer(
+    private val scope: CoroutineScope,
+    private val millis: Long,
+    private val onExpiry: () -> Unit,
+) {
+    @Volatile private var running: Job? = null
+
+    fun arm() {
+        running?.cancel()
+        running = scope.launch(Dispatchers.Default) {
+            delay(millis)
+            onExpiry()
+        }
+    }
+
+    fun cancel() {
+        running?.cancel()
+        running = null
+    }
+}

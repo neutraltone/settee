@@ -182,6 +182,8 @@ class TmdbSettingsTest {
         compose.onNodeWithContentDescription("TMDB").assertExists()
         press(KeyEvent.KEYCODE_DPAD_RIGHT)
         if (scanning) highlighted().assertTextContains("Type it instead")
+        // Fire TV's screensaver would otherwise cover the code while the viewer fetches their key.
+        if (scanning) assertThat(compose.runOnIdle { view.keepScreenOn }).isTrue()
         captureScreen("settings_tmdb_no_key")
     }
 

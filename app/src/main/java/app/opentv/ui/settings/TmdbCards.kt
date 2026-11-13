@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -20,6 +21,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -75,6 +77,20 @@ internal fun codeShown(phone: PairingServer.State): PairingServer.State {
         if (phone !is PairingServer.State.KeyReceived && phone != PairingServer.State.KeySkipped) shown = phone
     }
     return shown
+}
+
+/**
+ * Keeps the screen awake while [on]: while a code is up for the viewer to read off the TV, with their
+ * phone out fetching what to send, Fire TV's screensaver otherwise covers it. Only while the code is
+ * up, not once it has timed out, or a screen left on Try again would stay lit for ever.
+ */
+@Composable
+internal fun ScreenKeptOnWhile(on: Boolean) {
+    val view = LocalView.current
+    DisposableEffect(view, on) {
+        view.keepScreenOn = on
+        onDispose { view.keepScreenOn = false }
+    }
 }
 
 /** TMDB's logo and the sentence its terms ask for, in Settings › TMDB and About. */

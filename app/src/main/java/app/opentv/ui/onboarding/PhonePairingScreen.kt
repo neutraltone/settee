@@ -46,6 +46,7 @@ import app.opentv.ui.design.SetteeColors
 import app.opentv.ui.design.SetteeShapes
 import app.opentv.ui.design.SetteeType
 import app.opentv.ui.design.Text
+import app.opentv.ui.settings.ScreenKeptOnWhile
 import app.opentv.update.startsFocused
 
 /**
@@ -67,6 +68,7 @@ fun PhonePairingScreen(
     val server = remember(context) { ServiceLocator.get(context).pairingServer }
     val state by server.state.collectAsState()
 
+    ScreenKeptOnWhile(state is PairingServer.State.Listening && !keepListening())
     DisposableEffect(Unit) {
         server.start(mode)
         onDispose {
