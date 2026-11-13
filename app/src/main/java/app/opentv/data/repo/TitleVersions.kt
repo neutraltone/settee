@@ -10,6 +10,8 @@ import app.opentv.data.model.Movie
 import app.opentv.data.model.Series
 import app.opentv.data.parser.ChannelNameNormalizer
 import app.opentv.data.parser.VodTitleCleaner
+import app.opentv.player.DecoderList
+import app.opentv.player.playsQualityRanked
 
 /**
  * A provider's rows of films or shows as titles, each title its Versions in the order given, titles in
@@ -141,6 +143,24 @@ private val LANGUAGE_CODES = mapOf(
     "HI" to "hi", "GR" to "el", "SE" to "sv", "SWE" to "sv", "DK" to "da", "NO" to "no", "FI" to "fi",
     "RO" to "ro", "HU" to "hu", "CZ" to "cs", "ALB" to "sq", "IR" to "fa", "KR" to "ko", "JP" to "ja",
 )
+
+/**
+ * A title's one badge, from its [versions]: the best known Quality among those [decoders] can play (4K,
+ * FHD or HD), CAM when only cam copies play, and none when the best is untagged. When nothing plays here
+ * it's the 4K that can't, so a viewer sees why before opening it (docs/LOOK.md).
+ */
+fun titleBadge(versions: List<VersionTraits>, decoders: DecoderList): String? {
+    val playable = versions.filter { decoders.playsQualityRanked(it.qualityRank) }
+    val shown = playable.filterNot { it.cam }
+    return when {
+        playable.isEmpty() -> versions.maxByOrNull { it.qualityRank }?.qualityLabel?.takeIf { it.isNotEmpty() }
+        shown.isEmpty() -> CAM_BADGE
+        else -> shown.maxOf { it.qualityRank }.let(QUALITY_LABELS::get)?.takeIf { it in BADGE_QUALITIES }
+    }
+}
+
+private const val CAM_BADGE = "CAM"
+private val BADGE_QUALITIES = setOf("8K", "4K", "FHD", "HD")
 
 /** Panels send 0 or nothing for a title they don't know, which would make every such title one. */
 internal fun knownTmdbId(tmdbId: String?): String? = tmdbId?.trim()?.takeIf { it.isNotEmpty() && it != "0" }

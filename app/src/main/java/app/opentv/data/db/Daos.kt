@@ -42,7 +42,9 @@ import app.opentv.data.model.SeriesDismissal
 import app.opentv.data.model.SeriesRef
 import app.opentv.data.model.SeriesRule
 import app.opentv.data.model.Source
+import app.opentv.data.model.SourceCategoryName
 import app.opentv.data.model.StreamKind
+import app.opentv.data.model.VersionRow
 import app.opentv.data.model.movieCredits
 import app.opentv.data.model.seriesCredits
 import app.opentv.sync.SyncHiddenChannel
@@ -368,6 +370,10 @@ interface CategoryDao {
     @Query("SELECT name FROM categories WHERE sourceId = :sourceId AND id = :id AND kind = :kind")
     suspend fun nameOf(sourceId: Long, id: String, kind: StreamKind): String?
 
+    /** Every category of [kind] by name, for what each says of its Versions. */
+    @Query("SELECT sourceId, id, name FROM categories WHERE kind = :kind")
+    fun observeNames(kind: StreamKind): Flow<List<SourceCategoryName>>
+
     /** Minimal id+name rows for the re-normalise pass. */
     @Query("SELECT id, name FROM categories WHERE id IN (:ids)")
     suspend fun namesFor(ids: Set<String>): List<CategoryName>
@@ -646,6 +652,10 @@ interface MovieDao {
     @Query("SELECT * FROM movies WHERE tmdbId = :tmdbId ORDER BY id")
     suspend fun byTmdbId(tmdbId: String): List<Movie>
 
+    /** Every film as grouping into titles reads it, again whenever the table changes. */
+    @Query("SELECT id, sourceId, name, tmdbId, year, categoryId FROM movies ORDER BY id")
+    fun observeVersionRows(): Flow<List<VersionRow>>
+
     @Query("SELECT * FROM movies WHERE sourceId = :sourceId AND streamId = :streamId")
     suspend fun byProviderId(sourceId: Long, streamId: String): Movie?
 
@@ -800,6 +810,10 @@ interface SeriesDao {
     /** Every copy of one show: providers list each Quality as its own row, in its own category. */
     @Query("SELECT * FROM series WHERE tmdbId = :tmdbId ORDER BY id")
     suspend fun byTmdbId(tmdbId: String): List<Series>
+
+    /** Every show as grouping into titles reads it, again whenever the table changes. */
+    @Query("SELECT id, sourceId, name, tmdbId, year, categoryId FROM series ORDER BY id")
+    fun observeVersionRows(): Flow<List<VersionRow>>
 
     /**
      * Series whose cast credits the person filed under [nameKey], best-rated first. See

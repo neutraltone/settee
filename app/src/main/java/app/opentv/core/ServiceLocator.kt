@@ -21,6 +21,7 @@ import app.opentv.data.repo.RecordingRepository
 import app.opentv.data.repo.RefreshMessages
 import app.opentv.data.repo.ReminderRepository
 import app.opentv.data.repo.SourceRepository
+import app.opentv.data.repo.TitleIndex
 import app.opentv.data.repo.ViewerLibrary
 import app.opentv.data.repo.VodQualities
 import app.opentv.data.repo.WaitingProgress
@@ -146,6 +147,9 @@ object ServiceLocator {
                 decoders,
             )
         }
+
+        /** Every film and show grouped into titles, for lists and covers (ADR 0007). */
+        val titleIndex: TitleIndex by lazy { TitleIndex(database, decoders) }
 
         val vodQualities: VodQualities by lazy {
             VodQualities(database, catalogRepository, decoders, profileSettings, settings.activeProfileId)
