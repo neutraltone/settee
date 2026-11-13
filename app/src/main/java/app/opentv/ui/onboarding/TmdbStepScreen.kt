@@ -58,7 +58,7 @@ fun TmdbStepScreen(graph: ServiceLocator.Graph, onDone: () -> Unit) {
             Text(stringResource(R.string.onboarding_tmdb_help), SetteeType.Body, color = SetteeColors.QuietText)
             Spacer(Modifier.height(8.dp))
             TmdbKeyRows(
-                check = { _, key -> graph.checkTmdbKey(key) },
+                keys = graph.tmdbKeys,
                 onboarding = true,
                 onSaved = onDone,
                 onTurnedDown = { turnedDown = it },

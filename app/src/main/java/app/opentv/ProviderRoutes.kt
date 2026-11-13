@@ -40,7 +40,7 @@ fun NavGraphBuilder.providerRoutes(nav: NavController, sources: SourcesViewModel
             // The first provider's Setup is already loading; while there's no TMDB Key, the TMDB
             // step comes first, in front of it.
             onSetup = { nav.navigate(if (sources.offersTmdbKey()) Routes.TMDB_STEP else Routes.SETUP) },
-            offerTmdbKey = sources.offersTmdbKey(),
+            offerTmdbKey = sources::offersTmdbKey,
         )
     }
 
@@ -49,7 +49,7 @@ fun NavGraphBuilder.providerRoutes(nav: NavController, sources: SourcesViewModel
         // A failed login goes back to the form, which says why, as from Setup itself.
         LaunchedEffect(setup?.loginFailed) { if (setup?.loginFailed == true) nav.popBackStack() }
         TmdbStepScreen(
-            graph = sources.tmdbGraph,
+            graph = sources.graph,
             onDone = { nav.navigate(Routes.SETUP) { popUpTo(Routes.TMDB_STEP) { inclusive = true } } },
         )
     }

@@ -56,10 +56,13 @@ import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import app.opentv.R
+import app.opentv.core.ServiceLocator
+import app.opentv.data.repo.TmdbKeys
 import app.opentv.ui.design.HighlightStyle
 import app.opentv.ui.design.HighlightSurface
 import app.opentv.ui.design.Icon
@@ -142,8 +145,8 @@ fun SettingsScreen(
     onOpenFontLicences: () -> Unit = {},
     // A seam so tests can show each answer without reaching GitHub.
     checkForUpdate: UpdateCheck = CheckGitHub,
-    // Likewise, so tests can give TMDB's answer to a key without reaching TMDB.
-    checkTmdbKey: TmdbKeyCheck = CheckTmdb,
+    // Likewise, so tests can give TMDB's answer to a key without reaching TMDB; null for the app's own.
+    tmdbKeys: TmdbKeys? = null,
 ) {
     val current = remember { FocusRequester() }
     val pane = remember { FocusRequester() }
@@ -239,7 +242,7 @@ fun SettingsScreen(
                         onOpenChannels,
                         onOpenFontLicences,
                         checkForUpdate,
-                        checkTmdbKey,
+                        tmdbKeys ?: ServiceLocator.get(LocalContext.current).tmdbKeys,
                     )
                 }
             }
@@ -255,7 +258,7 @@ private fun Pane(
     onOpenChannels: () -> Unit,
     onOpenFontLicences: () -> Unit,
     checkForUpdate: UpdateCheck,
-    checkTmdbKey: TmdbKeyCheck,
+    tmdbKeys: TmdbKeys,
 ) {
     when (section) {
         SettingsSection.Providers -> ProvidersPane(onAddProvider, onEditProvider)
@@ -266,7 +269,7 @@ private fun Pane(
         SettingsSection.Parental -> ParentalPane()
         SettingsSection.Devices -> DevicesPane()
         SettingsSection.Addons -> AddonsPane()
-        SettingsSection.Tmdb -> TmdbPane(checkTmdbKey)
+        SettingsSection.Tmdb -> TmdbPane(tmdbKeys)
         SettingsSection.Manager -> ManagerPane()
         SettingsSection.About -> AboutPane(onOpenFontLicences, checkForUpdate)
     }

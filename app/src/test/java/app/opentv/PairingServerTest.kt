@@ -44,7 +44,7 @@ class PairingServerTest {
         scope.cancel()
     }
 
-    private fun listening(mode: PairingServer.Mode = PairingServer.Mode.PROVIDER): PairingServer.Session {
+    private fun listening(mode: PairingServer.Mode = PairingServer.Mode.Provider()): PairingServer.Session {
         server.start(mode)
         val session = (server.state.value as? PairingServer.State.Listening)?.session
         assumeTrue("needs a private LAN address to serve on", session != null)
@@ -241,7 +241,7 @@ class PairingServerTest {
 
     @Test
     fun `for a TMDB Key the QR code opens a paste box, with how to get a key under it`() {
-        val session = listening(PairingServer.Mode.TMDB_KEY)
+        val session = listening(PairingServer.Mode.TmdbKey())
 
         val (code, page) = get(session.url)
 
@@ -256,7 +256,7 @@ class PairingServerTest {
 
     @Test
     fun `a TMDB Key pasted on the phone reaches the TV, and the phone hears it was saved`() {
-        val session = listening(PairingServer.Mode.TMDB_KEY)
+        val session = listening(PairingServer.Mode.TmdbKey())
 
         val reply = scope.async(Dispatchers.IO) { sendKey(session) }
         val got = receivedKey()
@@ -270,7 +270,7 @@ class PairingServerTest {
 
     @Test
     fun `a TMDB Key TMDB turns down shows why on the phone, which can paste another`() {
-        val session = listening(PairingServer.Mode.TMDB_KEY)
+        val session = listening(PairingServer.Mode.TmdbKey())
 
         val first = scope.async(Dispatchers.IO) { sendKey(session) }
         receivedKey().answer(ViewerError("TMDB didn't accept that key.", "KeyRejected · HTTP 401"))
@@ -287,7 +287,7 @@ class PairingServerTest {
 
     @Test
     fun `a blank TMDB Key is asked for again without troubling the TV`() {
-        val session = listening(PairingServer.Mode.TMDB_KEY)
+        val session = listening(PairingServer.Mode.TmdbKey())
 
         val (_, page) = sendKey(session, key = "   ")
 
@@ -297,7 +297,7 @@ class PairingServerTest {
 
     @Test
     fun `a TMDB Key is not taken while the phone is adding a provider`() {
-        val session = listening(PairingServer.Mode.PROVIDER)
+        val session = listening(PairingServer.Mode.Provider())
 
         sendKey(session)
 
@@ -306,7 +306,7 @@ class PairingServerTest {
 
     @Test
     fun `after the first provider, the phone carries on to the TMDB Key`() {
-        val session = listening(PairingServer.Mode.PROVIDER_THEN_TMDB_KEY)
+        val session = listening(PairingServer.Mode.Provider(thenTmdbKey = true))
 
         val reply = scope.async(Dispatchers.IO) { submit(session) }
         received().answer(error = null)
@@ -321,13 +321,13 @@ class PairingServerTest {
 
     @Test
     fun `the phone's TMDB step says the key is optional and can be added later`() {
-        val session = listening(PairingServer.Mode.PROVIDER_THEN_TMDB_KEY)
+        val session = listening(PairingServer.Mode.Provider(thenTmdbKey = true))
 
         val reply = scope.async(Dispatchers.IO) { submit(session) }
         received().answer(error = null)
         val (_, page) = runBlocking { reply.await() }
 
-        assertThat(shown(page)).contains(context.getString(R.string.pairing_phone_tmdb_optional))
+        assertThat(shown(page)).contains(context.getString(R.string.onboarding_tmdb_help))
         assertThat(shown(page)).contains(context.getString(R.string.pairing_phone_tmdb_how))
     }
 

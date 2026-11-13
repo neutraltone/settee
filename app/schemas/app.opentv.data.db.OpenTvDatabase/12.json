@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 12,
-    "identityHash": "28f8ad4fabb22fe0452d6915bbe85d90",
+    "identityHash": "a0675f3b504a328d3b234df8a93f921c",
     "entities": [
       {
         "tableName": "sources",
@@ -546,7 +546,7 @@
       },
       {
         "tableName": "movies",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `sourceId` INTEGER NOT NULL, `streamId` TEXT NOT NULL, `name` TEXT NOT NULL, `categoryId` TEXT, `posterUrl` TEXT, `rating` REAL, `year` INTEGER, `plot` TEXT, `durationSeconds` INTEGER, `containerExtension` TEXT, `streamUrl` TEXT NOT NULL, `addedMillis` INTEGER NOT NULL, `backdropUrl` TEXT, `cast` TEXT, `genre` TEXT, `tmdbId` TEXT, `director` TEXT, `writer` TEXT, `studio` TEXT, `releaseDate` INTEGER, `detailsLookedUp` INTEGER NOT NULL DEFAULT 0, `tmdbLookedUp` INTEGER NOT NULL DEFAULT 0, `tmdbAnsweredAt` INTEGER)",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `sourceId` INTEGER NOT NULL, `streamId` TEXT NOT NULL, `name` TEXT NOT NULL, `categoryId` TEXT, `posterUrl` TEXT, `rating` REAL, `year` INTEGER, `plot` TEXT, `durationSeconds` INTEGER, `containerExtension` TEXT, `streamUrl` TEXT NOT NULL, `addedMillis` INTEGER NOT NULL, `backdropUrl` TEXT, `cast` TEXT, `genre` TEXT, `tmdbId` TEXT, `director` TEXT, `writer` TEXT, `studio` TEXT, `releaseDate` INTEGER, `detailsLookedUp` INTEGER NOT NULL DEFAULT 0, `tmdbAnsweredAt` INTEGER)",
         "fields": [
           {
             "fieldPath": "id",
@@ -667,13 +667,6 @@
             "defaultValue": "0"
           },
           {
-            "fieldPath": "tmdbLookedUp",
-            "columnName": "tmdbLookedUp",
-            "affinity": "INTEGER",
-            "notNull": true,
-            "defaultValue": "0"
-          },
-          {
             "fieldPath": "tmdbAnsweredAt",
             "columnName": "tmdbAnsweredAt",
             "affinity": "INTEGER"
@@ -766,7 +759,7 @@
       },
       {
         "tableName": "series",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `sourceId` INTEGER NOT NULL, `seriesId` TEXT NOT NULL, `name` TEXT NOT NULL, `categoryId` TEXT, `posterUrl` TEXT, `rating` REAL, `year` INTEGER, `plot` TEXT, `addedMillis` INTEGER NOT NULL, `backdropUrl` TEXT, `cast` TEXT, `genre` TEXT, `tmdbId` TEXT, `latestAirDate` INTEGER, `tmdbAnsweredAt` INTEGER)",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `sourceId` INTEGER NOT NULL, `seriesId` TEXT NOT NULL, `name` TEXT NOT NULL, `categoryId` TEXT, `posterUrl` TEXT, `rating` REAL, `year` INTEGER, `plot` TEXT, `addedMillis` INTEGER NOT NULL, `backdropUrl` TEXT, `cast` TEXT, `genre` TEXT, `tmdbId` TEXT, `tmdbAnsweredAt` INTEGER)",
         "fields": [
           {
             "fieldPath": "id",
@@ -842,11 +835,6 @@
             "fieldPath": "tmdbId",
             "columnName": "tmdbId",
             "affinity": "TEXT"
-          },
-          {
-            "fieldPath": "latestAirDate",
-            "columnName": "latestAirDate",
-            "affinity": "INTEGER"
           },
           {
             "fieldPath": "tmdbAnsweredAt",
@@ -1640,7 +1628,7 @@
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '28f8ad4fabb22fe0452d6915bbe85d90')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'a0675f3b504a328d3b234df8a93f921c')"
     ]
   }
 }

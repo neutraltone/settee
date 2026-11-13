@@ -190,6 +190,9 @@ class CatalogRepository(
     val wording: ErrorWording,
 ) {
 
+    /** TMDB back-fill for VOD detail pages, gated on the viewer's TMDB Key. See [TmdbClient]. */
+    private val tmdb = TmdbClient(http, settings)
+
     /** Where work that outlives a sync runs, such as [MovieGenres]. */
     private val background = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
@@ -198,9 +201,6 @@ class CatalogRepository(
      * sync, and work still reading it then fails into whichever test runs next.
      */
     internal suspend fun awaitBackground() = background.coroutineContext.job.children.toList().joinAll()
-
-    /** TMDB back-fill for VOD detail pages, gated on a user-supplied key. See [TmdbClient]. */
-    private val tmdb = TmdbClient(http, settings)
 
     /** Sources with a [fillGenresInBackground] job running. */
     private val sourcesGettingGenres: MutableSet<Long> = java.util.concurrent.ConcurrentHashMap.newKeySet()

@@ -5,14 +5,11 @@
  */
 package app.opentv.ui.settings
 
-import android.content.Context
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -28,8 +25,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -39,29 +34,21 @@ import app.opentv.R
 import app.opentv.core.ErrorWording
 import app.opentv.core.ServiceLocator
 import app.opentv.core.ViewerError
-import app.opentv.data.remote.TmdbCheck
 import app.opentv.data.repo.TmdbKeys
 import app.opentv.pairing.PairingServer
-import app.opentv.pairing.QrCodes
 import app.opentv.ui.design.ErrorMessage
 import app.opentv.ui.design.ListRow
 import app.opentv.ui.design.SetteeColors
-import app.opentv.ui.design.SetteeShapes
 import app.opentv.ui.design.SetteeType
 import app.opentv.ui.design.Text
 import app.opentv.ui.onboarding.describePairingFailure
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-/** Asks TMDB whether it takes a TMDB Key. A seam, so tests can give each answer without reaching TMDB. */
-typealias TmdbKeyCheck = suspend (Context, String) -> TmdbCheck
-
-internal val CheckTmdb: TmdbKeyCheck = { context, key -> ServiceLocator.get(context).checkTmdbKey(key) }
-
 /** Settings › TMDB: adding the TMDB Key from a phone or by typing it, and replacing or removing it. */
 @Composable
-internal fun TmdbPane(check: TmdbKeyCheck) {
-    TmdbKeyRows(check, onboarding = false)
+internal fun TmdbPane(keys: TmdbKeys) {
+    TmdbKeyRows(keys, onboarding = false)
     TmdbAttribution(Modifier.padding(top = 20.dp))
 }
 
@@ -110,17 +97,14 @@ private class TmdbKeyEntry(private val keys: TmdbKeys, private val wording: Erro
  */
 @Composable
 internal fun TmdbKeyRows(
-    check: TmdbKeyCheck,
+    keys: TmdbKeys,
     onboarding: Boolean,
     onSaved: () -> Unit = {},
     onTurnedDown: (ViewerError) -> Unit = {},
     showProblem: Boolean = true,
     graph: ServiceLocator.Graph = ServiceLocator.get(LocalContext.current),
 ) {
-    val context = LocalContext.current
-    val entry = remember(check, graph) {
-        TmdbKeyEntry(TmdbKeys(graph.settings) { key -> check(context, key) }, graph.errorWording)
-    }
+    val entry = remember(keys, graph) { TmdbKeyEntry(keys, graph.errorWording) }
     val savedKey by graph.settings.tmdbApiKey.collectAsState()
     val ending = TmdbKeys.endingOf(savedKey)
     val server = graph.pairingServer
@@ -150,7 +134,7 @@ internal fun TmdbKeyRows(
     }
 
     if (asking) {
-        AskingRows(phone, onRetry = { server.start(PairingServer.Mode.TMDB_KEY, onboarding) }, graph.errorWording)
+        AskingRows(phone, onRetry = { server.start(PairingServer.Mode.TmdbKey(onboarding)) }, graph.errorWording)
         ListRow(
             stringResource(R.string.settings_tmdb_type),
             onClick = { typing = true },
@@ -178,6 +162,7 @@ internal fun TmdbKeyRows(
     if (removing) {
         RemoveQuestion(
             stringResource(R.string.settings_tmdb_remove_name),
+            note = stringResource(R.string.settings_tmdb_remove_note),
             onKeep = { removing = false },
             onRemove = {
                 removing = false
@@ -199,7 +184,7 @@ private fun PhoneServerWhile(asking: Boolean, server: PairingServer, onboarding:
         val starting = if (asking) {
             scope.launch {
                 delay(START_DELAY_MS)
-                server.start(PairingServer.Mode.TMDB_KEY, onboarding)
+                server.start(PairingServer.Mode.TmdbKey(onboarding))
             }
         } else {
             null
@@ -217,24 +202,11 @@ private fun AskingRows(phone: PairingServer.State, onRetry: () -> Unit, wording:
     when (phone) {
         is PairingServer.State.Listening -> {
             val session = phone.session
-            // Drawn once per address: encoding isn't free, and the content doesn't change.
-            val qr = remember(session.url) { QrCodes.render(session.url, QR_SIZE_PX) }
             CodeBlock(
                 lead = stringResource(R.string.settings_tmdb_scan),
                 code = session.shortUrl,
                 note = stringResource(R.string.webmanager_local_only),
-                beside = {
-                    qr?.let {
-                        Image(
-                            it.asImageBitmap(),
-                            contentDescription = stringResource(R.string.settings_tmdb_qr_desc),
-                            modifier = Modifier
-                                .size(QR_SIZE)
-                                .background(Color.White, SetteeShapes.Card)
-                                .padding(QR_PADDING),
-                        )
-                    }
-                },
+                beside = { PhoneQrCode(session.url, stringResource(R.string.settings_tmdb_qr_desc)) },
             )
         }
         is PairingServer.State.Failed -> {
@@ -297,7 +269,4 @@ internal fun TmdbAttribution(modifier: Modifier = Modifier) {
 }
 
 private const val START_DELAY_MS = 400L
-private const val QR_SIZE_PX = 600
-private val QR_SIZE = 200.dp
-private val QR_PADDING = 10.dp
 private val LOGO_HEIGHT = 16.dp

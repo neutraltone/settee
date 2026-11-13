@@ -155,17 +155,79 @@ abstract class OpenTvDatabase : RoomDatabase() {
          * 10 → 12: when TMDB last answered about each film and series, so the background pass asks
          * again six months on. Not 11: that's upstream OpenTV's last version, which a device that ran a
          * build from before the restart still holds, and it must stay a stranger with no migration
-         * from it, so the fallback below wipes it rather than Room opening it as Settee's own. Films
-         * TMDB has already answered about are dated now, the best guess there is, so they come round
-         * in six months rather than all being asked again at once.
+         * from it, so the fallback below wipes it rather than Room opening it as Settee's own.
+         *
+         * Films TMDB has already answered about (`tmdbLookedUp`) are dated now, the best guess there
+         * is, so they come round in six months rather than all being asked again at once. The date
+         * then says everything `tmdbLookedUp` did, so that column goes, and with it series'
+         * `latestAirDate`, which nothing has filled since Home lost its Recently Released row.
+         *
+         * Dropping a column means rebuilding the table: `DROP COLUMN` needs SQLite 3.35 (Android 14),
+         * and Settee runs on Android 7. Every row keeps its id, which watch progress is keyed by. The
+         * credits are copied aside first, as dropping the old table may delete them with it.
          */
         private val TMDB_ANSWERED_AT = object : Migration(10, 12) {
             override fun migrate(db: SupportSQLiteDatabase) {
-                db.execSQL("ALTER TABLE `movies` ADD COLUMN `tmdbAnsweredAt` INTEGER")
-                db.execSQL("ALTER TABLE `series` ADD COLUMN `tmdbAnsweredAt` INTEGER")
+                db.execSQL("CREATE TEMP TABLE `kept_movie_credits` AS SELECT * FROM `movie_credits`")
+                db.execSQL("CREATE TEMP TABLE `kept_series_credits` AS SELECT * FROM `series_credits`")
+                rebuildMovies(db)
+                rebuildSeries(db)
+                db.execSQL("INSERT OR IGNORE INTO `movie_credits` SELECT * FROM `kept_movie_credits`")
+                db.execSQL("INSERT OR IGNORE INTO `series_credits` SELECT * FROM `kept_series_credits`")
+                db.execSQL("DROP TABLE `kept_movie_credits`")
+                db.execSQL("DROP TABLE `kept_series_credits`")
+            }
+
+            private fun rebuildMovies(db: SupportSQLiteDatabase) {
                 db.execSQL(
-                    "UPDATE `movies` SET `tmdbAnsweredAt` = CAST(strftime('%s', 'now') AS INTEGER) * 1000 " +
-                        "WHERE `tmdbLookedUp` = 1",
+                    "CREATE TABLE IF NOT EXISTS `movies_new` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                        "`sourceId` INTEGER NOT NULL, `streamId` TEXT NOT NULL, `name` TEXT NOT NULL, " +
+                        "`categoryId` TEXT, `posterUrl` TEXT, `rating` REAL, `year` INTEGER, `plot` TEXT, " +
+                        "`durationSeconds` INTEGER, `containerExtension` TEXT, `streamUrl` TEXT NOT NULL, " +
+                        "`addedMillis` INTEGER NOT NULL, `backdropUrl` TEXT, `cast` TEXT, `genre` TEXT, " +
+                        "`tmdbId` TEXT, `director` TEXT, `writer` TEXT, `studio` TEXT, `releaseDate` INTEGER, " +
+                        "`detailsLookedUp` INTEGER NOT NULL DEFAULT 0, `tmdbAnsweredAt` INTEGER)",
+                )
+                val kept = "`id`, `sourceId`, `streamId`, `name`, `categoryId`, `posterUrl`, `rating`, `year`, " +
+                    "`plot`, `durationSeconds`, `containerExtension`, `streamUrl`, `addedMillis`, `backdropUrl`, " +
+                    "`cast`, `genre`, `tmdbId`, `director`, `writer`, `studio`, `releaseDate`, `detailsLookedUp`"
+                db.execSQL(
+                    "INSERT INTO `movies_new` ($kept, `tmdbAnsweredAt`) SELECT $kept, " +
+                        "CASE WHEN `tmdbLookedUp` = 1 THEN CAST(strftime('%s', 'now') AS INTEGER) * 1000 END " +
+                        "FROM `movies`",
+                )
+                db.execSQL("DROP TABLE `movies`")
+                db.execSQL("ALTER TABLE `movies_new` RENAME TO `movies`")
+                db.execSQL(
+                    "CREATE UNIQUE INDEX IF NOT EXISTS `index_movies_sourceId_streamId` " +
+                        "ON `movies` (`sourceId`, `streamId`)",
+                )
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS `index_movies_sourceId_categoryId` " +
+                        "ON `movies` (`sourceId`, `categoryId`)",
+                )
+            }
+
+            private fun rebuildSeries(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `series_new` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                        "`sourceId` INTEGER NOT NULL, `seriesId` TEXT NOT NULL, `name` TEXT NOT NULL, " +
+                        "`categoryId` TEXT, `posterUrl` TEXT, `rating` REAL, `year` INTEGER, `plot` TEXT, " +
+                        "`addedMillis` INTEGER NOT NULL, `backdropUrl` TEXT, `cast` TEXT, `genre` TEXT, " +
+                        "`tmdbId` TEXT, `tmdbAnsweredAt` INTEGER)",
+                )
+                val kept = "`id`, `sourceId`, `seriesId`, `name`, `categoryId`, `posterUrl`, `rating`, `year`, " +
+                    "`plot`, `addedMillis`, `backdropUrl`, `cast`, `genre`, `tmdbId`"
+                db.execSQL("INSERT INTO `series_new` ($kept) SELECT $kept FROM `series`")
+                db.execSQL("DROP TABLE `series`")
+                db.execSQL("ALTER TABLE `series_new` RENAME TO `series`")
+                db.execSQL(
+                    "CREATE UNIQUE INDEX IF NOT EXISTS `index_series_sourceId_seriesId` " +
+                        "ON `series` (`sourceId`, `seriesId`)",
+                )
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS `index_series_sourceId_categoryId` " +
+                        "ON `series` (`sourceId`, `categoryId`)",
                 )
             }
         }

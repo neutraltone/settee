@@ -10,7 +10,6 @@ import app.opentv.data.model.Movie
 import app.opentv.data.model.Source
 import app.opentv.data.remote.TmdbMeta
 import app.opentv.data.remote.XtreamApi
-import kotlinx.coroutines.delay
 
 /**
  * Asks the provider, and TMDB when the viewer has set a key, about each film neither has answered
@@ -39,42 +38,28 @@ class MovieGenres(
     private val clock: () -> Long = System::currentTimeMillis,
 ) {
     /** One batch of the newest films not looked up. False if the provider stopped answering. */
-    suspend fun refresh(source: Source): Boolean = batch(source, mutableSetOf()).answering
+    suspend fun refresh(source: Source): Boolean = lookUpBatch(source, dueFilms(source, count))
 
-    /**
-     * Every film not looked up, a batch at a time, until none is left to ask about or the provider
-     * stops answering. A film whose lookup failed isn't asked about again in this run, which would
-     * otherwise go round it for ever.
-     */
+    /** Every film not looked up, a batch at a time, until none is left or the provider stops answering. */
     suspend fun fillAll(source: Source) {
-        val tried = mutableSetOf<Long>()
-        while (true) {
-            val done = batch(source, tried)
-            if (!done.answering || done.asked < count) return
-            delay(pauseMillis)
-        }
+        val due: suspend (Int) -> List<Movie> = { dueFilms(source, it) }
+        inBatches(count, pauseMillis, Movie::id, due) { lookUpBatch(source, it) }
     }
 
-    /** The next [count] films [select] picks that aren't in [tried], added to it. */
-    private suspend fun next(tried: MutableSet<Long>, select: suspend (Int) -> List<Movie>): List<Movie> =
-        select(count + tried.size).filterNot { it.id in tried }.take(count).also { tried += it.map(Movie::id) }
+    /** The [limit] newest films the provider, or with a key TMDB, is due to be asked about. */
+    private suspend fun dueFilms(source: Source, limit: Int): List<Movie> =
+        movieDao.newestNotLookedUp(source.id, tmdb.ready, clock() - TMDB_REFRESH_MILLIS, limit)
 
-    private class Batch(val asked: Int, val answering: Boolean)
-
-    private suspend fun batch(source: Source, tried: MutableSet<Long>): Batch {
+    private suspend fun lookUpBatch(source: Source, titles: List<Movie>): Boolean {
         val withTmdb = tmdb.ready
         val now = clock()
-        val titles = next(tried) {
-            movieDao.newestNotLookedUp(source.id, withTmdb, now - TMDB_REFRESH_MILLIS, it)
-        }
-        val answering = lookUpEach(
+        return lookUpEach(
             titles = titles,
             tag = TAG,
             ask = { lookUp(source, it, withTmdb, now) },
             found = { _, found -> found },
             save = { found -> movieDao.fillDetails(found.map { (_, details) -> details }) },
         )
-        return Batch(titles.size, answering)
     }
 
     /**

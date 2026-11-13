@@ -76,7 +76,7 @@ fun AddSourceScreen(
     editingSourceId: Long? = null,
     onSetup: () -> Unit = {},
     /** Whether a first provider goes on to Onboarding's TMDB step, so the phone carries on to it too. */
-    offerTmdbKey: Boolean = false,
+    offerTmdbKey: () -> Boolean = { false },
 ) {
     val context = LocalContext.current
     // The QR flow serves a setup page FROM this device for a phone to fill in, so only a TV offers

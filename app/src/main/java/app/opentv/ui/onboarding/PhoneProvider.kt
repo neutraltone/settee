@@ -22,21 +22,22 @@ import app.opentv.ui.hasProvider
 @Composable
 internal fun PhoneProvider(
     viewModel: SourcesViewModel,
-    offerTmdbKey: Boolean,
+    offerTmdbKey: () -> Boolean,
     onSetup: () -> Unit,
     onFinished: () -> Unit,
     onCancel: () -> Unit,
 ) {
     val ui by viewModel.ui.collectAsState()
-    // Until the providers have loaded, it can't be known to be the first, so it isn't offered.
-    val first = ui.loaded && !hasProvider(ui.sources)
+    // The server starts once, for what it was started for: so not until the providers have loaded,
+    // or a first provider couldn't be told from a later one and wouldn't carry on to the TMDB Key.
+    if (!ui.loaded) {
+        PairingStarting()
+        return
+    }
+    val carriesOn = remember { offerTmdbKey() && !hasProvider(ui.sources) }
     var handedOn by remember { mutableStateOf(false) }
     PhonePairingScreen(
-        mode = if (offerTmdbKey && first) {
-            PairingServer.Mode.PROVIDER_THEN_TMDB_KEY
-        } else {
-            PairingServer.Mode.PROVIDER
-        },
+        mode = PairingServer.Mode.Provider(thenTmdbKey = carriesOn),
         keepListening = { handedOn },
         // The TV stays on "Got it" while the channels load, and the phone waits with it: a
         // failed login is put right on the phone, which shows why, and the TV listens again.
@@ -50,7 +51,7 @@ internal fun PhoneProvider(
                 onSetup = { setup = true },
                 onChannels = { failure ->
                     // Before the answer, so leaving for the TMDB step doesn't close the address.
-                    if (failure == null && setup && offerTmdbKey) handedOn = true
+                    if (failure == null && setup && carriesOn) handedOn = true
                     received.answer(failure)
                     if (failure == null) if (setup) onSetup() else onFinished()
                 },

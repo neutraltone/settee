@@ -23,7 +23,6 @@
     <ID>LambdaParameterInRestartableEffect:VodPlayerScreen.kt$onBack</ID>
     <ID>LongMethod:ManagerPage.kt$ManagerPage$fun page(token: String): String</ID>
     <ID>LongMethod:PairingPage.kt$PairingPage$fun form(token: String, error: String?): String</ID>
-    <ID>LongMethod:PairingServer.kt$PairingServer$private fun handleSubmit(output: java.io.OutputStream, body: String)</ID>
     <ID>LongMethod:RecordingService.kt$RecordingService$private suspend fun runCapture(id: Long)</ID>
     <ID>LongMethod:SyncEngine.kt$SyncEngine$suspend fun apply(bundle: SyncBundle): MergeResult</ID>
     <ID>LongMethod:XmltvParser.kt$XmltvParser$private fun readProgramme(parser: XmlPullParser, feedId: Long): Programme?</ID>
@@ -150,7 +149,6 @@
     <ID>ReturnCount:PairingHttp.kt$PairingHttp$fun isPrivateAddress(host: String?): Boolean</ID>
     <ID>ReturnCount:PairingServer.kt$PairingServer$fun start()</ID>
     <ID>ReturnCount:PairingServer.kt$PairingServer$private fun handle(client: Socket)</ID>
-    <ID>ReturnCount:PairingServer.kt$PairingServer$private fun handleSubmit(output: java.io.OutputStream, body: String)</ID>
     <ID>ReturnCount:PlayerScreen.kt$private fun trackLabel(label: String?, language: String?, index: Int): String</ID>
     <ID>ReturnCount:RecordingEngine.kt$RecordingEngine$private suspend fun alternateProviderForClash(channel: Channel, startMillis: Long, endMillis: Long): Channel</ID>
     <ID>ReturnCount:RecordingEngine.kt$RecordingEngine$suspend fun scheduleProgramme( channel: Channel, programme: Programme, ruleId: Long? = null, profileId: Long = settings.activeProfileId.value, ): Long</ID>

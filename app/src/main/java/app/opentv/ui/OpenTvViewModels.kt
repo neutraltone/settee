@@ -99,14 +99,12 @@ import kotlinx.coroutines.withContext
 
 class SourcesViewModel @JvmOverloads constructor(
     app: Application,
-    private val graph: ServiceLocator.Graph = ServiceLocator.get(app),
+    /** Public for the TMDB step, which saves its key in the graph this provider is saved through. */
+    val graph: ServiceLocator.Graph = ServiceLocator.get(app),
 ) : AndroidViewModel(app) {
 
     /** Whether a first provider is followed by Onboarding's TMDB step: only while there's no TMDB Key. */
     fun offersTmdbKey(): Boolean = graph.settings.tmdbApiKey.value.isBlank()
-
-    /** Where the TMDB step saves its key: the graph this provider is saved through. */
-    val tmdbGraph: ServiceLocator.Graph get() = graph
 
     data class UiState(
         val sources: List<Source> = emptyList(),

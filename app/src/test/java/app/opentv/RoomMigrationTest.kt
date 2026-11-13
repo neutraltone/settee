@@ -87,6 +87,34 @@ class RoomMigrationTest {
     }
 
     @Test
+    fun `rebuilding the film and series tables for 12 keeps every row, its id and its credits`() {
+        val name = "rebuilt.db"
+        helper.createDatabase(name, 10).use { db ->
+            db.execSQL(
+                "INSERT INTO movies (id, sourceId, streamId, name, streamUrl, addedMillis, plot) VALUES " +
+                    "(7, 1, 'film', 'Film', 'http://example.com/7.mp4', 5, 'A film.')",
+            )
+            db.execSQL(
+                "INSERT INTO series (id, sourceId, seriesId, name, addedMillis, plot, latestAirDate) VALUES " +
+                    "(9, 1, 'show', 'Show', 5, 'A show.', 123)",
+            )
+            db.execSQL("INSERT INTO movie_credits (movieId, role, nameKey) VALUES (7, 'cast', 'someone')")
+            db.execSQL("INSERT INTO series_credits (seriesId, nameKey) VALUES (9, 'someone')")
+        }
+
+        helper.runMigrationsAndValidate(name, 12, true, *OpenTvDatabase.MIGRATIONS).use {
+            fun first(sql: String): String = it.query(sql).use { row ->
+                row.moveToFirst()
+                row.getString(0)
+            }
+            assertThat(first("SELECT plot FROM movies WHERE id = 7")).isEqualTo("A film.")
+            assertThat(first("SELECT plot FROM series WHERE id = 9")).isEqualTo("A show.")
+            assertThat(first("SELECT nameKey FROM movie_credits WHERE movieId = 7")).isEqualTo("someone")
+            assertThat(first("SELECT nameKey FROM series_credits WHERE seriesId = 9")).isEqualTo("someone")
+        }
+    }
+
+    @Test
     fun `the latest exported schema is the version the app opens`() {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         val db = OpenTvDatabase.build(context)

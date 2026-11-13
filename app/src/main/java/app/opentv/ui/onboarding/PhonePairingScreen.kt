@@ -59,7 +59,7 @@ import app.opentv.update.startsFocused
 fun PhonePairingScreen(
     onReceived: (PairingServer.State.Received) -> Unit,
     onCancel: () -> Unit,
-    mode: PairingServer.Mode = PairingServer.Mode.PROVIDER,
+    mode: PairingServer.Mode = PairingServer.Mode.Provider(),
     /** True once the TMDB step is taking the address over, so leaving doesn't close it. */
     keepListening: () -> Boolean = { false },
 ) {

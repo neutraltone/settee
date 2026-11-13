@@ -9,7 +9,6 @@ import app.opentv.data.db.SeriesDao
 import app.opentv.data.model.Series
 import app.opentv.data.model.Source
 import app.opentv.data.remote.TmdbMeta
-import kotlinx.coroutines.delay
 
 /**
  * Asks TMDB, with the viewer's TMDB Key, about each series once, and again once its answer is six
@@ -29,29 +28,36 @@ class SeriesTmdbPass(
     private val clock: () -> Long = System::currentTimeMillis,
 ) {
     /**
-     * Every series due a look-up, a batch at a time, until none is left or TMDB stops answering. A
-     * series whose look-up failed isn't asked about again in this run, which would go round it for ever.
+     * Every series due a look-up, a batch at a time, until none is left or TMDB stops answering. Each
+     * answer is merged into the row as it is when it's saved, since opening the series may have
+     * filled it in meanwhile.
      */
     suspend fun fillAll(source: Source) {
         if (!tmdb.ready) return
-        val tried = mutableSetOf<Long>()
-        while (true) {
-            val now = clock()
-            val titles = seriesDao.newestTmdbDue(source.id, now - TMDB_REFRESH_MILLIS, count + tried.size)
-                .filterNot { it.id in tried }
-                .take(count)
-            tried += titles.map(Series::id)
-            val answering = lookUpEach(
-                titles = titles,
-                tag = TAG,
-                // A failure is null, which lookUpEach counts as TMDB not answering; no match is an Answer.
-                ask = { series -> tmdb.lookUp(series).fold(onSuccess = ::Answer, onFailure = { null }) },
-                found = { series, answer -> series.withTmdb(answer.meta, now) },
-                save = { found -> seriesDao.fillTmdb(found.map { (_, filled) -> filled }) },
-            )
-            if (!answering || titles.size < count) return
-            delay(pauseMillis)
-        }
+        inBatches(
+            count,
+            pauseMillis,
+            Series::id,
+            select = { seriesDao.newestTmdbDue(source.id, clock() - TMDB_REFRESH_MILLIS, it) },
+            lookUp = { titles ->
+                val now = clock()
+                lookUpEach(
+                    titles = titles,
+                    tag = TAG,
+                    // A failure is null, which lookUpEach counts as TMDB not answering; no match is an Answer.
+                    ask = { series -> tmdb.lookUp(series).fold(onSuccess = ::Answer, onFailure = { null }) },
+                    found = { _, answer -> answer },
+                    save = { found ->
+                        seriesDao.inTransaction {
+                            val filled = found.mapNotNull { (series, answer) ->
+                                seriesDao.byId(series.id)?.withTmdb(answer.meta, now)
+                            }
+                            seriesDao.upsertAll(filled)
+                        }
+                    },
+                )
+            },
+        )
     }
 
     /** TMDB's answer, [meta] null for no match, wrapped so [lookUpEach] can tell it from no answer. */

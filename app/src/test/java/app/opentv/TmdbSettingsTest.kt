@@ -30,12 +30,15 @@ import androidx.test.espresso.ViewAction
 import androidx.test.espresso.matcher.RootMatchers
 import androidx.test.espresso.matcher.ViewMatchers
 import app.opentv.core.ServiceLocator
+import app.opentv.data.model.Series
 import app.opentv.data.remote.TmdbCheck
+import app.opentv.data.repo.TmdbKeys
 import app.opentv.ui.settings.SettingsMemory
 import app.opentv.ui.settings.SettingsScreen
 import app.opentv.ui.settings.SettingsSection
 import app.opentv.ui.settings.SettingsTags
 import com.google.common.truth.Truth.assertThat
+import kotlinx.coroutines.runBlocking
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -70,7 +73,7 @@ class TmdbSettingsTest {
         SettingsScreen(
             memory = memory,
             onBack = {},
-            checkTmdbKey = { _, key ->
+            tmdbKeys = TmdbKeys(graph.settings) { key ->
                 tmdbAsked += key
                 tmdbAnswer
             },
@@ -215,8 +218,21 @@ class TmdbSettingsTest {
     }
 
     @Test
-    fun `Remove key asks first, starting on Keep it, then TMDB is off and its QR code is back`() {
+    fun `Remove key asks first, then TMDB is off, its QR code is back and nothing it filled in goes`() {
         graph.settings.setTmdbApiKey(TMDB_KEY)
+        val filledIn = Series(
+            sourceId = 1,
+            seriesId = "remove-key",
+            name = "Show",
+            categoryId = null,
+            posterUrl = "http://example.com/p.jpg",
+            rating = null,
+            year = null,
+            plot = "A show.",
+            cast = "Someone",
+            tmdbAnsweredAt = 1L,
+        )
+        runBlocking { graph.database.series().upsertAll(listOf(filledIn)) }
         show(SettingsMemory(SettingsSection.Tmdb))
         waitFor("Key saved")
         press(KeyEvent.KEYCODE_DPAD_RIGHT)
@@ -226,6 +242,8 @@ class TmdbSettingsTest {
 
         press(KeyEvent.KEYCODE_DPAD_CENTER)
         compose.onNode(hasText("Keep it") and isFocused()).assertExists()
+        compose.onNode(hasText(REMOVE_NOTE) and hasAnyAncestor(isDialog())).assertExists()
+        captureScreen("settings_tmdb_remove_question")
         Espresso.pressBack()
         compose.onNode(hasText("Remove key") and isFocused()).assertExists()
         assertThat(graph.settings.tmdbApiKey.value).isEqualTo(TMDB_KEY)
@@ -235,8 +253,14 @@ class TmdbSettingsTest {
         pressInPanel("Yes, remove your TMDB Key", Key.DirectionCenter)
 
         waitUntilSaved { graph.settings.tmdbApiKey.value.isEmpty() }
-        compose.waitUntil(5_000) { compose.onAllNodes(hasText("Type it instead")).fetchSemanticsNodes().isNotEmpty() }
+        compose.waitUntil(5_000) {
+            compose.onAllNodes(hasText("Type it instead")).fetchSemanticsNodes().isNotEmpty()
+        }
         highlighted().assertExists()
+        val kept = runBlocking { graph.database.series().forSource(1) }.single { it.seriesId == "remove-key" }
+        assertThat(
+            listOf(kept.posterUrl, kept.plot, kept.cast),
+        ).isEqualTo(listOf(filledIn.posterUrl, "A show.", "Someone"))
     }
 
     @Test
@@ -263,6 +287,7 @@ class TmdbSettingsTest {
     private companion object {
         /** A placeholder TMDB Key, low-entropy so gitleaks sees no secret. */
         val TMDB_KEY = "a".repeat(28) + "wxyz"
+        const val REMOVE_NOTE = "Settee stops asking TMDB. The posters, synopses and cast it already filled in stay."
         const val ATTRIBUTION = "This product uses the TMDB API but is not endorsed or certified by TMDB."
     }
 }

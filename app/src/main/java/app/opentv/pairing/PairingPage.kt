@@ -7,6 +7,7 @@ package app.opentv.pairing
 
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
+import app.opentv.R
 import app.opentv.ui.design.SetteeColors
 
 /**
@@ -106,13 +107,17 @@ object PairingPage {
      * behind "How do I get one?" during Onboarding ([onboarding]), where the key is optional and the
      * page says so. [error] is why the TV turned the last key down, a sentence and a detail line.
      */
-    fun tmdbKey(token: String, words: TmdbKeyWords, error: Error?, onboarding: Boolean): String {
+    fun tmdbKey(token: String, text: (Int) -> String, error: Error?, onboarding: Boolean): String {
         val steps = """
             <ol class="steps">
-              <li><a href="$TMDB_SIGNUP" target="_blank" rel="noopener">${escape(words.step1)}</a></li>
-              <li><a href="$TMDB_API_SETTINGS" target="_blank" rel="noopener">${escape(words.step2)}</a></li>
-              <li>${escape(words.step3)}</li>
-              <li>${escape(words.step4)}</li>
+              <li><a href="$TMDB_SIGNUP" target="_blank" rel="noopener">${escape(
+            text(R.string.pairing_phone_tmdb_step1),
+        )}</a></li>
+              <li><a href="$TMDB_API_SETTINGS" target="_blank" rel="noopener">${escape(
+            text(R.string.pairing_phone_tmdb_step2),
+        )}</a></li>
+              <li>${escape(text(R.string.pairing_phone_tmdb_step3))}</li>
+              <li>${escape(text(R.string.pairing_phone_tmdb_step4))}</li>
             </ol>
         """.trimIndent()
         val errorBox = error?.let {
@@ -123,20 +128,28 @@ object PairingPage {
         return page(
             token = token,
             content = """
-            <h1>${escape(words.title)}</h1>
-            <p class="sub">${escape(if (onboarding) words.optional else words.sub)}</p>
+            <h1>${escape(text(R.string.onboarding_tmdb_title))}</h1>
+            <p class="sub">${escape(
+                text(if (onboarding) R.string.onboarding_tmdb_help else R.string.pairing_phone_tmdb_sub),
+            )}</p>
 
             $errorBox
 
             <form id="form" method="post" action="/key" autocomplete="off">
               <input type="hidden" name="t" value="${escape(token)}">
-              <label for="key">${escape(words.label)}</label>
+              <label for="key">${escape(text(R.string.pairing_phone_tmdb_label))}</label>
               <input id="key" name="key" type="text" required
                      autocapitalize="off" autocorrect="off" spellcheck="false">
-              <button id="send" type="submit">${escape(words.send)}</button>
+              <button id="send" type="submit">${escape(text(R.string.pairing_phone_tmdb_send))}</button>
             </form>
 
-            ${if (onboarding) "<details><summary>${escape(words.how)}</summary>$steps</details>" else steps}
+            ${if (onboarding) {
+                "<details><summary>${escape(
+                    text(R.string.pairing_phone_tmdb_how),
+                )}</summary>$steps</details>"
+            } else {
+                steps
+            }}
 
             <script>
               // The TV checks the key with TMDB before it answers, so the button says it's working.
@@ -149,20 +162,6 @@ object PairingPage {
             """.trimIndent(),
         )
     }
-
-    /** What the TMDB Key's page says, in the app's own strings so it's translated with them. */
-    data class TmdbKeyWords(
-        val title: String,
-        val sub: String,
-        val optional: String,
-        val label: String,
-        val send: String,
-        val how: String,
-        val step1: String,
-        val step2: String,
-        val step3: String,
-        val step4: String,
-    )
 
     /** Why the TV turned a key down: the sentence and detail line `ErrorMessage` draws on the TV. */
     data class Error(val sentence: String, val detail: String)

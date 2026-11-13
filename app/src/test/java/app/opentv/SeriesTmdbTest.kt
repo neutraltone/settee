@@ -252,7 +252,7 @@ class SeriesTmdbTest {
         panel.replies["get_vod_streams"] = """[{"stream_id": 7, "name": "Film 7", "container_extension": "mp4"}]"""
         test.syncVod()
         val film = test.db.movies().forSource(PANEL_SOURCE.id).single()
-        test.db.movies().upsertAll(listOf(film.copy(tmdbLookedUp = true, tmdbAnsweredAt = NOW)))
+        test.db.movies().upsertAll(listOf(film.copy(tmdbAnsweredAt = NOW)))
 
         test.syncVod()
 

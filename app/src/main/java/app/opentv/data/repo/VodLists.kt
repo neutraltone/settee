@@ -87,11 +87,10 @@ internal fun Movie.over(old: Movie?): Movie = if (old == null) {
 /** [old]'s people and looked-up markers, which a list refresh knows nothing of. */
 private fun Movie.keepingLookUpsOf(old: Movie): Movie = copy(
     // TMDB's people outrank the provider's, which would otherwise come back with every refresh.
-    director = if (old.tmdbLookedUp) old.director ?: director else director ?: old.director,
+    director = if (old.tmdbAnsweredAt != null) old.director ?: director else director ?: old.director,
     writer = old.writer ?: writer,
     studio = old.studio ?: studio,
     detailsLookedUp = detailsLookedUp || old.detailsLookedUp,
-    tmdbLookedUp = tmdbLookedUp || old.tmdbLookedUp,
     tmdbAnsweredAt = newer(tmdbAnsweredAt, old.tmdbAnsweredAt),
 )
 
@@ -136,13 +135,13 @@ internal fun Movie.filledFrom(info: XtreamApi.VodInfo): Movie = copy(
 )
 
 /**
- * This movie with what TMDB said about it ([meta], null for no match) [at] that time, and marked
- * TMDB-looked-up. TMDB fills what's empty, and its directors, writers and studios replace whatever
+ * This movie with what TMDB said about it ([meta], null for no match) [at] that time, dated so it
+ * isn't asked again for six months. TMDB fills what's empty, and its directors, writers and studios replace whatever
  * was there: a provider's director is only the first name of its crew, and providers have no writers
  * or studios. The same when TMDB is asked again six months on, so the provider's values still win.
  */
 internal fun Movie.withTmdb(meta: TmdbMeta?, at: Long): Movie = if (meta == null) {
-    copy(tmdbLookedUp = true, tmdbAnsweredAt = at)
+    copy(tmdbAnsweredAt = at)
 } else {
     copy(
         posterUrl = posterUrl ?: meta.posterUrl,
@@ -154,7 +153,6 @@ internal fun Movie.withTmdb(meta: TmdbMeta?, at: Long): Movie = if (meta == null
         rating = rating ?: meta.rating,
         year = year ?: meta.year,
         releaseDate = releaseDate ?: meta.releaseDate,
-        tmdbLookedUp = true,
         tmdbAnsweredAt = at,
     ).withPeopleFrom(meta)
 }

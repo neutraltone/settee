@@ -9,7 +9,6 @@ import android.content.Context
 import app.opentv.data.db.OpenTvDatabase
 import app.opentv.data.remote.StalkerApi
 import app.opentv.data.remote.StremioClient
-import app.opentv.data.remote.TmdbCheck
 import app.opentv.data.remote.TmdbClient
 import app.opentv.data.remote.XtreamApi
 import app.opentv.data.repo.CatalogRepository
@@ -23,6 +22,7 @@ import app.opentv.data.repo.RecordingRepository
 import app.opentv.data.repo.RefreshMessages
 import app.opentv.data.repo.ReminderRepository
 import app.opentv.data.repo.SourceRepository
+import app.opentv.data.repo.TmdbKeys
 import app.opentv.data.repo.ViewerLibrary
 import app.opentv.data.repo.VodQualities
 import app.opentv.data.repo.WaitingProgress
@@ -177,11 +177,13 @@ object ServiceLocator {
 
         val refreshMessages: RefreshMessages by lazy { RefreshMessages(appContext) }
 
-        /** TMDB for checking a TMDB Key before it's saved; the catalogue has its own for look-ups. */
+        /** TMDB, for checking a TMDB Key before it's saved. Holds nothing, so the catalogue's own is no conflict. */
         private val tmdbClient: TmdbClient by lazy { TmdbClient(httpClient, settings) }
 
-        /** Asks TMDB whether it takes [key], off the main thread. */
-        suspend fun checkTmdbKey(key: String): TmdbCheck = withContext(Dispatchers.IO) { tmdbClient.check(key) }
+        /** Saving and removing the TMDB Key, each key checked with TMDB first, off the main thread. */
+        val tmdbKeys: TmdbKeys by lazy {
+            TmdbKeys(settings) { key -> withContext(Dispatchers.IO) { tmdbClient.check(key) } }
+        }
 
         /**
          * The phone's way in, for providers and the TMDB Key. One for the app, so Onboarding's TMDB step

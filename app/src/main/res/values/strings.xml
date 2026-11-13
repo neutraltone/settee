@@ -612,9 +612,7 @@
     <string name="onboarding_tmdb_title">Add your TMDB Key</string>
     <string name="onboarding_tmdb_help">It\'s optional. It fills in missing posters, synopses and cast, and you can add it later in Settings › TMDB.</string>
     <string name="onboarding_tmdb_skip">Skip for now</string>
-    <string name="pairing_phone_tmdb_title">Add your TMDB Key</string>
     <string name="pairing_phone_tmdb_sub">Paste it here and your TV checks it with TMDB.</string>
-    <string name="pairing_phone_tmdb_optional">It\'s optional. It fills in missing posters, synopses and cast, and you can add it later in Settings › TMDB.</string>
     <string name="pairing_phone_tmdb_label">TMDB Key</string>
     <string name="pairing_phone_tmdb_send">Send to TV</string>
     <string name="pairing_phone_tmdb_how">How do I get one?</string>

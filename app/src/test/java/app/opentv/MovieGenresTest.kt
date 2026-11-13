@@ -241,7 +241,7 @@ class MovieGenresTest {
     /** A film the provider and TMDB have both answered about, TMDB at [tmdbAt]. */
     private fun answered(id: String, tmdbAt: Long, plot: String? = null): Movie {
         val film = movie(id, added = 1, genre = "Drama", lookedUp = true)
-        return film.copy(tmdbLookedUp = true, tmdbAnsweredAt = tmdbAt, plot = plot)
+        return film.copy(tmdbAnsweredAt = tmdbAt, plot = plot)
     }
 
     private suspend fun stored(id: String): Movie = test.db.movies().forSource(1).single { it.streamId == id }
