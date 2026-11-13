@@ -13,6 +13,7 @@ import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.hasAnyAncestor
+import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isDialog
 import androidx.compose.ui.test.isFocused
@@ -20,6 +21,7 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.test.requestFocus
@@ -289,8 +291,10 @@ class TmdbSettingsTest {
         press(KeyEvent.KEYCODE_DPAD_RIGHT)
 
         press(KeyEvent.KEYCODE_DPAD_CENTER)
-        compose.waitUntil(5_000) { compose.onAllNodes(hasText("Type it instead")).fetchSemanticsNodes().isNotEmpty() }
-        compose.onNodeWithText("Type it instead").requestFocus()
+        compose.waitUntil(5_000) {
+            compose.onAllNodes(hasText("Type it instead") and isFocused()).fetchSemanticsNodes().isNotEmpty()
+        }
+        assertWholePaneOnScreen()
         press(KeyEvent.KEYCODE_DPAD_CENTER)
         entryKeyboard().run {
             type("e".repeat(32))
@@ -299,6 +303,21 @@ class TmdbSettingsTest {
 
         waitFor("TMDB didn't accept that key. Check you copied the whole API Key, then try again.")
         assertThat(graph.settings.tmdbApiKey.value).isEqualTo(TMDB_KEY)
+        assertWholePaneOnScreen()
+        captureScreen("settings_tmdb_replace_wrong_key")
+    }
+
+    /**
+     * The TMDB pane fits the screen: its title isn't scrolled off the top to bring the Highlight into
+     * view, nor the attribution off the bottom.
+     */
+    private fun assertWholePaneOnScreen() {
+        compose.waitForIdle()
+        val screen = compose.onRoot().fetchSemanticsNode().boundsInRoot
+        val title = compose.onNode(hasTestTag(SettingsTags.PANE_TITLE)).fetchSemanticsNode().boundsInRoot
+        val attribution = compose.onNodeWithText(ATTRIBUTION).fetchSemanticsNode().boundsInRoot
+        assertThat(title.top).isAtLeast(screen.top)
+        assertThat(attribution.bottom).isAtMost(screen.bottom)
     }
 
     private companion object {

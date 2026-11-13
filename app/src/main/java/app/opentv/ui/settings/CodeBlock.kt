@@ -20,6 +20,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import app.opentv.pairing.QrCodes
 import app.opentv.ui.design.SetteeColors
@@ -61,16 +62,16 @@ internal fun CodeBlock(
 private val BLOCK_PADDING = 20.dp
 private val LINE_GAP = 8.dp
 
-/** A QR code for [url], dark on white so a phone can read it off the TV, beside a [CodeBlock]. */
+/** A QR code for [url], dark on white so a phone can read it off the TV, [size] square. */
 @Composable
-internal fun PhoneQrCode(url: String, description: String) {
+internal fun PhoneQrCode(url: String, description: String, size: Dp = QR_SIZE) {
     // Drawn once per address: encoding isn't free, and the content doesn't change.
     val qr = remember(url) { QrCodes.render(url, QR_SIZE_PX) } ?: return
     Image(
         qr.asImageBitmap(),
         contentDescription = description,
         modifier = Modifier
-            .size(QR_SIZE)
+            .size(size)
             .background(Color.White, SetteeShapes.Card)
             .padding(QR_PADDING),
     )

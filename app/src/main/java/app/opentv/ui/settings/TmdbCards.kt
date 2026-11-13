@@ -6,10 +6,9 @@
 package app.opentv.ui.settings
 
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -19,43 +18,32 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import app.opentv.R
 import app.opentv.core.ErrorWording
 import app.opentv.pairing.PairingServer
 import app.opentv.ui.design.ListRow
 import app.opentv.ui.design.SetteeColors
-import app.opentv.ui.design.SetteeShapes
 import app.opentv.ui.design.SetteeType
 import app.opentv.ui.design.Text
 import app.opentv.ui.onboarding.describePairingFailure
 
 /**
- * The QR code as a card of its own, beside the rows rather than above them, for a screen with no room
- * to stack them, such as Onboarding's step. The card's size is fixed, so nothing moves when the code
- * appears after its server starts, or the server can't start and the card says why instead.
+ * The QR code for Onboarding's TMDB step, laid out as the phone pairing screen before it lays its own:
+ * the code, white and 300 dp square, with the address to type under it for a camera that won't scan.
+ * Its space is fixed, so nothing moves when the code appears after its server starts, or the server
+ * can't start and Try again says why in its place.
  */
 @Composable
-internal fun PhoneCodeCard(phone: PairingServer.State, onRetry: () -> Unit, wording: ErrorWording) {
-    Column(
-        Modifier
-            .size(PHONE_CARD_WIDTH, CARD_HEIGHT)
-            .background(SetteeColors.Surface, SetteeShapes.Card)
-            .padding(20.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterVertically),
-    ) {
+internal fun PhoneQrPanel(phone: PairingServer.State, onRetry: () -> Unit, wording: ErrorWording) {
+    Column(Modifier.size(QR_PANEL_WIDTH, QR_PANEL_HEIGHT)) {
         when (phone) {
             is PairingServer.State.Listening -> {
-                PhoneQrCode(phone.session.url, stringResource(R.string.settings_tmdb_qr_desc))
-                Text(
-                    stringResource(R.string.settings_tmdb_scan),
-                    SetteeType.Body,
-                    color = SetteeColors.QuietText,
-                    textAlign = TextAlign.Center,
-                )
-                Text(phone.session.shortUrl, SetteeType.CardTitle, textAlign = TextAlign.Center)
+                PhoneQrCode(phone.session.url, stringResource(R.string.settings_tmdb_qr_desc), QR_PANEL_WIDTH)
+                Spacer(Modifier.height(16.dp))
+                Text(stringResource(R.string.pairing_camera_fail), SetteeType.Body, color = SetteeColors.QuietText)
+                Spacer(Modifier.height(4.dp))
+                Text(phone.session.shortUrl, SetteeType.Section)
             }
             is PairingServer.State.Failed -> {
                 val reason = remember(phone) { describePairingFailure(wording, phone) }
@@ -87,7 +75,7 @@ internal fun TmdbAttribution(modifier: Modifier = Modifier) {
     }
 }
 
-/** [PhoneCodeCard]: wide enough for the address, tall enough for the code, the line above it and the address. */
-internal val PHONE_CARD_WIDTH = 340.dp
-private val CARD_HEIGHT = 340.dp
+/** [PhoneQrPanel]: the pairing screen's 300 dp code, and under it how to type the address, and the address. */
+internal val QR_PANEL_WIDTH = 300.dp
+internal val QR_PANEL_HEIGHT = 390.dp
 private val LOGO_HEIGHT = 16.dp

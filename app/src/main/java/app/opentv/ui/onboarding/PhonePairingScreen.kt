@@ -82,6 +82,13 @@ fun PhonePairingScreen(
 
     ScreenFrame {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            // Handed on to the TMDB step, it stays on Got it: the server listens again for the key as
+            // the channels come in, which would otherwise show the code again for the moment before
+            // the TMDB step opens.
+            if (keepListening()) {
+                PairingConnecting()
+                return@Box
+            }
             when (val current = state) {
                 is PairingServer.State.Listening -> Listening(current.session, onCancel)
 

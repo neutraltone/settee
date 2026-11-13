@@ -10,6 +10,7 @@ import android.view.View
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.test.hasAnyAncestor
+import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isFocused
@@ -288,14 +289,19 @@ class ProviderRoutesTest {
         compose.waitUntil(5_000) { route() == Routes.TMDB_STEP }
         compose.waitForIdle()
         val keyRowTop = typeItInstead().top
+        val keyRowHeight = typeItInstead().height
 
         typeTmdbKey(OTHER_TMDB_KEY)
 
-        compose.waitUntil(5_000) { compose.onAllNodes(hasText("Key saved")).fetchSemanticsNodes().isNotEmpty() }
+        val savedKey = hasContentDescription("Key saved, ending bbbb")
+        compose.waitUntil(5_000) { compose.onAllNodes(savedKey).fetchSemanticsNodes().isNotEmpty() }
         assertThat(graph.settings.tmdbApiKey.value).isEqualTo(OTHER_TMDB_KEY)
-        compose.onNodeWithText("Ends in bbbb").assertExists()
-        // In the key row's place; the QR code goes with the server that answered it.
-        assertThat(compose.onNodeWithText("Key saved").fetchSemanticsNode().boundsInRoot.top).isEqualTo(keyRowTop)
+        // A field filled with the key, masked but for its end, in the key row's place and size; the
+        // QR code goes with the server that answered it.
+        compose.onNodeWithText("•".repeat(24) + "bbbb", useUnmergedTree = true).assertExists()
+        val field = compose.onNode(savedKey).fetchSemanticsNode().boundsInRoot
+        assertThat(field.top).isEqualTo(keyRowTop)
+        assertThat(field.height).isEqualTo(keyRowHeight)
         compose.onNode(hasText("Scan with your phone", substring = true)).assertDoesNotExist()
         // Time to read it: the step waits for the viewer rather than moving on by itself.
         assertThat(route()).isEqualTo(Routes.TMDB_STEP)

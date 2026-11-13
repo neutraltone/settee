@@ -149,14 +149,10 @@ internal fun TmdbKeyRows(
     arrange(
         TmdbKeyParts(
             asking = asking,
-            code = { card ->
+            code = { panel ->
                 val retry = { server.start(PairingServer.Mode.TmdbKey(onboarding)) }
-                if (card) {
-                    PhoneCodeCard(
-                        phone,
-                        retry,
-                        graph.errorWording,
-                    )
+                if (panel) {
+                    PhoneQrPanel(phone, retry, graph.errorWording)
                 } else {
                     AskingRows(phone, retry, graph.errorWording)
                 }
@@ -173,7 +169,11 @@ internal fun TmdbKeyRows(
                 SavedRows(
                     ending.orEmpty(),
                     replaceRow,
-                    onReplace = { entry.replacing = true },
+                    onReplace = {
+                        // Its row goes, so the Highlight goes where the new key is asked for.
+                        entry.replacing = true
+                        entry.moveHighlight = true
+                    },
                     onRemove = { removing = true },
                 )
             },
@@ -209,13 +209,13 @@ internal fun TmdbKeyRows(
 
 /**
  * The pieces of adding a TMDB Key, for a screen to lay out as it fits: [code] is the phone's QR code
- * (as a card beside the rows, or a block above them), [typeIt] the Type it instead row, [saved] a saved
+ * (as a panel beside the rows, or a block above them), [typeIt] the Type it instead row, [saved] a saved
  * key's rows, and [status] the line for checking a key and why it was turned down. [asking] says
  * whether [code] and [typeIt] are wanted, or [saved].
  */
 internal class TmdbKeyParts(
     val asking: Boolean,
-    val code: @Composable (card: Boolean) -> Unit,
+    val code: @Composable (panel: Boolean) -> Unit,
     val typeIt: @Composable () -> Unit,
     val saved: @Composable () -> Unit,
     val status: @Composable () -> Unit,
@@ -273,7 +273,9 @@ private fun QrOrRetry(phone: PairingServer.State, onRetry: () -> Unit, wording: 
                 lead = stringResource(R.string.settings_tmdb_scan),
                 code = session.shortUrl,
                 note = stringResource(R.string.webmanager_local_only),
-                beside = { PhoneQrCode(session.url, stringResource(R.string.settings_tmdb_qr_desc)) },
+                beside = {
+                    PhoneQrCode(session.url, stringResource(R.string.settings_tmdb_qr_desc), SETTINGS_QR_SIZE)
+                },
             )
         }
         is PairingServer.State.Failed -> {
@@ -325,8 +327,15 @@ private fun StatusLine(checking: Boolean, problem: ViewerError?) {
 
 private const val START_DELAY_MS = 400L
 
+/**
+ * Settings' QR code, smaller than Manage on phone or laptop's: with Type it instead, the status line
+ * and the attribution under it, a 200 dp code took the pane past a Fire TV Stick's screen, which
+ * scrolled to the Highlight and cut the pane's title in half. 140 dp still scans from the sofa.
+ */
+private val SETTINGS_QR_SIZE = 140.dp
+
 /** A [CodeBlock] with its QR code: the code and the block's padding. */
-private val QR_SLOT_HEIGHT = 240.dp
+private val QR_SLOT_HEIGHT = 180.dp
 
 /** The checking line, or a turned-down key's sentence over two lines and its detail line. */
 private val STATUS_HEIGHT = 88.dp
