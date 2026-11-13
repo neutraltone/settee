@@ -5,6 +5,9 @@
  */
 package app.opentv.data.repo
 
+import app.opentv.data.db.OpenTvDatabase
+import app.opentv.data.model.Movie
+import app.opentv.data.model.Series
 import app.opentv.data.parser.ChannelNameNormalizer
 import app.opentv.data.parser.VodTitleCleaner
 
@@ -152,3 +155,11 @@ private fun nameKey(name: String, year: Int?): String {
     val normalized = ChannelNameNormalizer.normalize(VodTitleCleaner.clean(TITLE_YEAR.replace(name, " ")))
     return normalized.groupKey + "|" + ((year ?: embedded)?.toString() ?: "")
 }
+
+/** Every Version of [movie] by its TMDB id, itself included: just itself when it has none. */
+internal suspend fun OpenTvDatabase.versionsOf(movie: Movie): List<Movie> =
+    knownTmdbId(movie.tmdbId)?.let { movies().byTmdbId(it) }.orEmpty().ifEmpty { listOf(movie) }
+
+/** Every Version of [series] by its TMDB id, itself included: just itself when it has none. */
+internal suspend fun OpenTvDatabase.versionsOf(series: Series): List<Series> =
+    knownTmdbId(series.tmdbId)?.let { series().byTmdbId(it) }.orEmpty().ifEmpty { listOf(series) }
