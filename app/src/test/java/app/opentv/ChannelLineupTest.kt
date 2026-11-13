@@ -249,17 +249,8 @@ class ChannelLineupTest {
         seed("UK| ITV FHD", sourceId = 2)
         lineup.setFavourite(all().single(), favourite = true)
         val dao = CountingChannelDao(db.channels())
-        val counted = ChannelLineup(
-            db,
-            catalogue.viewerLibrary.favourites,
-            lockedKeys,
-            unlocked,
-            ANY_SIZE_DECODERS,
-            sharing,
-            channelDao = dao,
-        )
 
-        val favourites = counted.channels(LineupScope.Favourites()).first()
+        val favourites = countedLineup(dao).channels(LineupScope.Favourites()).first()
 
         assertThat(favourites.single().qualities).hasSize(3)
         assertThat(dao.sameNameLookups).isEqualTo(1)

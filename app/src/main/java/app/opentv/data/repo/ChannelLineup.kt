@@ -173,10 +173,12 @@ constructor(
 
     /**
      * Every row, hidden and locked ones too, as it changes: one read of the table for every
-     * catalogue, so Live and the channel manager open together don't each scan ~40k rows.
+     * catalogue, so Live and the channel manager open together don't each scan ~40k rows. Stops with
+     * the catalogues, which already wait [SHARE_MILLIS]: a wait here too would watch the table twice
+     * as long, and a cached list would be replayed, stale, when they start again.
      */
-    private val everyRow: Flow<List<Channel>> =
-        channelDao.observeEvery().shareIn(sharing, SharingStarted.WhileSubscribed(SHARE_MILLIS), replay = 1)
+    private val everyRow: Flow<List<Channel>> = channelDao.observeEvery()
+        .shareIn(sharing, SharingStarted.WhileSubscribed(stopTimeoutMillis = 0, replayExpirationMillis = 0), replay = 1)
 
     /**
      * Every row a viewer may see, folded into Channels. Built over the whole catalogue whatever the
@@ -411,8 +413,9 @@ fun migratedLockKeys(keys: Set<String>, categories: List<Category>): Set<String>
 @OptIn(ExperimentalCoroutinesApi::class)
 private fun rowsIn(scope: LineupScope, channelDao: ChannelDao, categories: Flow<List<Category>>): Flow<List<Channel>> =
     when (scope) {
-        // Listed from the catalogue, or folded from their names' rows: see ChannelLineup.channels.
-        is LineupScope.All, is LineupScope.Favourites -> flowOf(emptyList())
+        is LineupScope.All -> error("All is listed from the catalogue's rows: see ChannelLineup.channels")
+        // Folded from their names' rows instead: see ChannelLineup.channels.
+        is LineupScope.Favourites -> flowOf(emptyList())
         is LineupScope.Search -> channelDao.search(scope.query)
         is LineupScope.ManageSearch -> channelDao.searchIncludingHidden(scope.query)
         is LineupScope.Group -> categories.map { it.idsOf(scope.key, scope.sourceId) }.flatMapLatest { ids ->
@@ -495,19 +498,23 @@ internal fun channelKeys(rows: List<Channel>): Map<Long, String> {
 
 /**
  * By display name as SQLite's `ORDER BY` compares it, byte by byte in UTF-8, which is code point
- * order. Not [String.compareTo], whose UTF-16 units put emoji before fullwidth letters.
+ * order. Not [String.compareTo] alone, whose UTF-16 units put emoji before fullwidth letters; it only
+ * decides where neither name has a surrogate, which is nearly every name, as walking code points
+ * through a 40k-row sort is slow on a stick.
  */
 private val BY_NAME: Comparator<Channel> = Comparator { first, second ->
     val a = first.displayName
     val b = second.displayName
-    var i = 0
-    var j = 0
-    while (i < a.length && j < b.length) {
-        val x = a.codePointAt(i)
-        val y = b.codePointAt(j)
-        if (x != y) return@Comparator x.compareTo(y)
-        i += Character.charCount(x)
-        j += Character.charCount(y)
+    val shorter = minOf(a.length, b.length)
+    var k = 0
+    while (k < shorter && a[k] == b[k]) k++
+    when {
+        k == shorter -> a.length.compareTo(b.length)
+        !a[k].isSurrogate() && !b[k].isSurrogate() -> a[k].compareTo(b[k])
+        else -> {
+            // Inside a pair whose first halves match: compare the whole characters.
+            val at = if (k > 0 && a[k - 1].isHighSurrogate()) k - 1 else k
+            a.codePointAt(at).compareTo(b.codePointAt(at))
+        }
     }
-    (a.length - i).compareTo(b.length - j)
 }
