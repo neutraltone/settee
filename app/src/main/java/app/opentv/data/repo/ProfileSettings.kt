@@ -68,6 +68,20 @@ class ProfileSettings(
         baseLanguage(language)?.takeIf { it.isNotBlank() }?.let { store(SUBTITLE_LANGUAGE, it) }
     }
 
+    /** A Version the active Profile chose for a title, and when: [VodQualities] weighs it against what played. */
+    data class Choice(val version: String, val atMillis: Long)
+
+    /** The Version the active Profile chose for [title], a key [VodQualities] makes, or null if it never did. */
+    suspend fun chosenVersion(title: String): Choice? =
+        dao.find(activeProfileId.value, VERSION + title)?.let { Choice(it.value, it.updatedAtMillis) }
+
+    /**
+     * The viewer chose a Version of [title] in the Quality pill, or agreed to one in another language.
+     * Stored here so it follows the Profile to its other devices, with [version] naming it by source and
+     * provider id like a Favourite (ADR 0004).
+     */
+    suspend fun chooseVersion(title: String, version: String) = store(VERSION + title, version)
+
     private suspend fun store(name: String, value: String) =
         dao.upsert(ProfileSetting(activeProfileId.value, name, value, clock()))
 
@@ -112,5 +126,6 @@ class ProfileSettings(
     private companion object {
         const val SUBTITLES_ON = "subtitles.on"
         const val SUBTITLE_LANGUAGE = "subtitles.language"
+        const val VERSION = "version."
     }
 }

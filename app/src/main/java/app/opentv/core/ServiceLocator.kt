@@ -147,7 +147,9 @@ object ServiceLocator {
             )
         }
 
-        val vodQualities: VodQualities by lazy { VodQualities(database, catalogRepository, decoders) }
+        val vodQualities: VodQualities by lazy {
+            VodQualities(database, catalogRepository, decoders, profileSettings, settings.activeProfileId)
+        }
 
         val playbackSources: PlaybackSources by lazy { PlaybackSources(database, xtreamApi, stalkerApi, channelLineup) }
 

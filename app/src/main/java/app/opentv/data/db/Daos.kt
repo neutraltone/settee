@@ -364,6 +364,10 @@ interface CategoryDao {
     @Query("SELECT * FROM categories WHERE kind = :kind ORDER BY sortIndex, name")
     suspend fun allByKind(kind: StreamKind): List<Category>
 
+    /** One category's name, for what a Version's category says of it (`VersionTraits`). */
+    @Query("SELECT name FROM categories WHERE sourceId = :sourceId AND id = :id AND kind = :kind")
+    suspend fun nameOf(sourceId: Long, id: String, kind: StreamKind): String?
+
     /** Minimal id+name rows for the re-normalise pass. */
     @Query("SELECT id, name FROM categories WHERE id IN (:ids)")
     suspend fun namesFor(ids: Set<String>): List<CategoryName>
