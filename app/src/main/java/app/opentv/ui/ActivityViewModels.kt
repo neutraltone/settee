@@ -19,6 +19,5 @@ import app.opentv.core.findActivity
  * (#258). Falls back to the nearest owner where there's no activity.
  */
 @Composable
-fun activityViewModelStoreOwner(): ViewModelStoreOwner =
-    LocalContext.current.findActivity() as? ComponentActivity
-        ?: checkNotNull(LocalViewModelStoreOwner.current) { "No ViewModelStoreOwner here" }
+fun activityViewModelStoreOwner(): ViewModelStoreOwner = LocalContext.current.findActivity() as? ComponentActivity
+    ?: checkNotNull(LocalViewModelStoreOwner.current) { "No ViewModelStoreOwner here" }
