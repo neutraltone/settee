@@ -1186,14 +1186,12 @@ class VodViewModel @JvmOverloads constructor(
      * Pulling every episode of every series up front is what makes a first sync take twenty
      * minutes on a large provider, and most of it is never looked at.
      */
-    fun loadEpisodes(series: Series) {
-        viewModelScope.launch {
-            // Every Version's, as the page lists episodes from all of them (#181).
-            graph.database.versionsOf(series, graph.titleIndex.versionIds).forEach { version ->
-                launch {
-                    val source = graph.sourceRepository.byId(version.sourceId) ?: return@launch
-                    graph.catalogRepository.ensureEpisodes(source, version.seriesId)
-                }
+    fun loadEpisodes(series: Series): Job = viewModelScope.launch {
+        // Every Version's, as the page lists episodes from all of them (#181).
+        graph.database.versionsOf(series, graph.titleIndex.versionIds).forEach { version ->
+            launch {
+                val source = graph.sourceRepository.byId(version.sourceId) ?: return@launch
+                graph.catalogRepository.ensureEpisodes(source, version.seriesId)
             }
         }
     }
@@ -1214,7 +1212,7 @@ class VodViewModel @JvmOverloads constructor(
     fun seriesStatus(episodes: List<Episode>): Flow<CoverStatus?> = graph.viewerLibrary.titleStatus.series(episodes)
 
     /** Where the active Profile is with [movie], for its page's hero. */
-    fun movieStatus(movie: Movie): Flow<CoverStatus?> = graph.viewerLibrary.titleStatus.movie(movie.id)
+    fun movieStatus(movieId: Long): Flow<CoverStatus?> = graph.viewerLibrary.titleStatus.movie(movieId)
 
     /** The series page's main button over that series' [episodes]: Resume, Up Next or the first episode. */
     fun seriesMainAction(episodes: List<Episode>) = graph.viewerLibrary.seriesMainAction(episodes)

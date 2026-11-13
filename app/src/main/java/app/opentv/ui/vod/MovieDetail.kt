@@ -68,8 +68,9 @@ import app.opentv.ui.design.shelfCard
 import app.opentv.ui.options.OptionsSubject
 import app.opentv.ui.options.openOptionsOn
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 
 /**
@@ -92,22 +93,27 @@ fun MovieDetailScreen(
     val hasAddons by viewModel.hasAddons.collectAsState()
     val scope = rememberCoroutineScope()
 
+    // The page waits for everything its buttons depend on, read side by side, so they're all there when it
+    // shows rather than arriving one by one: Resume replacing Play, the Quality pill pushing the star along.
     LaunchedEffect(movieId) {
-        val loaded = viewModel.movieDetail(movieId)
-        movie = loaded
-        if (loaded != null) {
-            resumes = viewModel.resumesPartway(loaded)
-            versions = viewModel.pageVersions(MediaKey.Movie(loaded.id))
+        val loaded = viewModel.movieDetail(movieId) ?: return@LaunchedEffect
+        coroutineScope {
+            val resuming = async { viewModel.resumesPartway(loaded) }
+            val versionsOf = async { viewModel.pageVersions(MediaKey.Movie(loaded.id)) }
+            resumes = resuming.await()
+            versions = versionsOf.await()
         }
+        movie = loaded
     }
     // Apart from the film's own load, so the hero never waits on the row.
     LaunchedEffect(movie?.id) { movie?.let { similar = viewModel.moreLikeThis(it) } }
 
     val m = movie
-    val status by remember(m) { m?.let { viewModel.movieStatus(it) } ?: flowOf(null) }.collectAsState(initial = null)
-    // Null until the Profile's Favourites have loaded: the star stays put and ignores a press till then.
-    val favouriteMovies by viewModel.favouriteMovies.collectAsState()
-    if (m == null) {
+    // Waited for as well: the line it adds to the hero would push the buttons up.
+    val status = remember(movieId) { viewModel.movieStatus(movieId).loaded() }.collectAsState(initial = null).value
+    // Null until the Profile's Favourites have loaded, which the page waits for too, so the star doesn't change.
+    val favourites = viewModel.favouriteMovies.collectAsState().value
+    if (m == null || favourites == null || status == null) {
         LoadingDetail()
         return
     }
@@ -115,8 +121,8 @@ fun MovieDetailScreen(
     MovieDetailContent(
         movie = m,
         resumes = resumes,
-        status = status,
-        favourite = favouriteMovies?.let { viewModel.isFavourite(m, it) },
+        status = status.value,
+        favourite = viewModel.isFavourite(m, favourites),
         findAddonStreams = if (hasAddons) ({ viewModel.addonStreams(m) }) else null,
         similar = similar,
         onOpenMovie = onOpenMovie,

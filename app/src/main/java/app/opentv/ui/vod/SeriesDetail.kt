@@ -28,11 +28,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
@@ -50,7 +48,6 @@ import androidx.compose.ui.input.key.type
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import app.opentv.R
 import app.opentv.data.model.Episode
 import app.opentv.data.model.Series
@@ -60,8 +57,6 @@ import app.opentv.data.repo.CoverStatus
 import app.opentv.data.repo.EpisodeStatuses
 import app.opentv.data.repo.MediaKey
 import app.opentv.data.repo.SeriesMainAction
-import app.opentv.data.repo.ShowEpisodes
-import app.opentv.ui.VodViewModel
 import app.opentv.ui.design.Pill
 import app.opentv.ui.design.PillButton
 import app.opentv.ui.design.ScreenFrame
@@ -72,69 +67,6 @@ import app.opentv.ui.design.Text
 import app.opentv.ui.options.OptionsSubject
 import app.opentv.ui.options.openOptionsOn
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.flowOf
-import kotlinx.coroutines.launch
-
-/**
- * A show's page. Episodes are fetched when it opens rather than during catalogue sync: pulling every
- * episode of every series up front is what makes a first sync take twenty minutes on a large
- * provider, and most of it is never looked at.
- */
-@Composable
-fun SeriesDetailScreen(
-    seriesId: Long,
-    onPlayEpisode: (MediaKey) -> Unit,
-    onOpenPerson: (String) -> Unit,
-    viewModel: VodViewModel = viewModel(),
-) {
-    var series by remember(seriesId) { mutableStateOf<Series?>(null) }
-    var versions by remember(seriesId) { mutableStateOf(PageVersions()) }
-    val scope = rememberCoroutineScope()
-
-    LaunchedEffect(seriesId) {
-        val loaded = viewModel.seriesDetail(seriesId)
-        series = loaded
-        if (loaded != null) viewModel.loadEpisodes(loaded)
-    }
-
-    val s = series
-    // One row per episode across the show's Versions, and each Version's for what's been watched (#181).
-    val show by remember(s) { s?.let { viewModel.showEpisodes(it) } ?: flowOf(ShowEpisodes()) }
-        .collectAsState(initial = ShowEpisodes())
-    val played by viewModel.episodeStatuses.collectAsState(initial = EpisodeStatuses())
-    val statuses = remember(show, played) { show.statusesFrom(played) }
-    val action by remember(show) { viewModel.seriesMainAction(show.all) }.collectAsState(initial = null)
-    val mainAction = remember(action, show) { action?.let(show::shownAs) }
-    val status by remember(show) { viewModel.seriesStatus(show.all) }.collectAsState(initial = null)
-    val favouriteSeries by viewModel.favouriteSeries.collectAsState()
-    // The whole show's Versions, as its main episode has them.
-    val versionKey = (mainAction?.episode ?: show.shown.firstOrNull())?.let { MediaKey.Episode(it.id) }
-    LaunchedEffect(versionKey) { versionKey?.let { versions = viewModel.pageVersions(it) } }
-
-    if (s == null) {
-        LoadingDetail()
-        return
-    }
-
-    SeriesDetailContent(
-        series = s,
-        episodes = show.shown,
-        statuses = statuses,
-        mainAction = mainAction,
-        status = status,
-        favourite = favouriteSeries?.let { viewModel.isFavourite(s, it) },
-        onPlayEpisode = onPlayEpisode,
-        onSetFavourite = { viewModel.setSeriesFavourite(s, it) },
-        onOpenPerson = onOpenPerson,
-        versions = versions,
-        onChooseVersion = { chosen ->
-            scope.launch {
-                viewModel.chooseVersion(chosen)
-                versionKey?.let { versions = viewModel.pageVersions(it) }
-            }
-        },
-    )
-}
 
 /**
  * A show's page once the show is known: the hero with its main button (Resume or Play the right
