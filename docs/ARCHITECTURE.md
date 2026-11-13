@@ -81,12 +81,6 @@ scratch. It fixes nothing. The next refresh fails the same way.
    reports success.
 3. A failed sync leaves the previous guide completely intact and returns the reason.
 
-Each batch re-runs every Room query on `programmes`, so an open guide would regroup and rebuild its
-rows hundreds of times during one sync. `guideIndex` (`ui/GuideIndex.kt`) lets a new window's
-first listings straight through, then takes the rest at most once every two seconds, ending on the
-latest, and skips an index equal to the last (#257). Not a plain `debounce`: that delays start-up
-and shows nothing new until a long first download ends.
-
 `XmltvParser` streams via `XmlPullParser` and emits programmes to a callback. A week of guide
 data for a large provider is comfortably 150 MB of XML; nothing about that fits in the heap of
 a cheap TV stick, and `String`-based parsing is an OOM waiting to happen.
@@ -96,6 +90,21 @@ a cheap TV stick, and `String`-based parsing is an OOM waiting to happen.
 device zone, and converts to local time only at draw time. `XmltvTimeTest` changes the JVM's
 default zone between assertions specifically to catch the "works on my machine, an hour out on
 yours" bug.
+
+### An open guide while a sync writes
+
+Each batch re-runs every Room query on `programmes`, so an open guide used to regroup and rebuild
+its rows hundreds of times during one sync (#257). Two things stop that:
+
+- `EpgRepository.observeWindow` and `observeNow` are `settled()` (`data/repo/SettledListings.kt`):
+  the first listings straight away, then the latest at most every two seconds, ending on the
+  finished listings, and never the same listings twice in a row. Not a plain `debounce`: that
+  delays start-up and shows nothing new until a long first download ends. Settled in the
+  repository, not the screen, so anything else that watches the guide gets the same.
+- `guideBuilds` (`ui/GuideIndex.kt`) times the guide's next rebuild for more listings from the end
+  of the last build, not from when the listings arrived: building "All channels" for a big
+  provider outlasts the pause on a Fire TV Stick, and paced from arrival it rebuilt back to back.
+  New channels and a new window's first listings never wait.
 
 ## Every Catalogue Refresh goes through one module
 

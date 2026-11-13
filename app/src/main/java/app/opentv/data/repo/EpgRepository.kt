@@ -105,10 +105,12 @@ class EpgRepository(
 
     fun observeFeeds(): Flow<List<EpgFeed>> = feedDao.observeAll()
 
+    // Both settled: Room re-runs them for every batch a guide sync writes, and whoever watches
+    // them would otherwise redo its work hundreds of times per sync (#257).
     fun observeWindow(fromUtcMillis: Long, toUtcMillis: Long): Flow<List<Programme>> =
-        programmeDao.observeWindow(fromUtcMillis, toUtcMillis)
+        programmeDao.observeWindow(fromUtcMillis, toUtcMillis).settled()
 
-    fun observeNow(nowUtcMillis: Long): Flow<List<Programme>> = programmeDao.observeNow(nowUtcMillis)
+    fun observeNow(nowUtcMillis: Long): Flow<List<Programme>> = programmeDao.observeNow(nowUtcMillis).settled()
 
     suspend fun upcoming(epgChannelId: String, nowUtcMillis: Long, limit: Int = 12): List<Programme> =
         programmeDao.upcoming(epgChannelId, nowUtcMillis, limit)

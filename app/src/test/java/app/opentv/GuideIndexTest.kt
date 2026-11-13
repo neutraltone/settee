@@ -6,6 +6,8 @@
 package app.opentv
 
 import app.opentv.data.model.Programme
+import app.opentv.ui.ProgrammeIndex
+import app.opentv.ui.guideBuilds
 import app.opentv.ui.guideIndex
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -14,6 +16,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -22,9 +25,9 @@ import kotlinx.coroutines.test.runTest
 import org.junit.Test
 
 /**
- * The open guide's programme index while a guide sync writes its listings in batches (#257): the
- * first listings show at once, a burst of batches costs one rebuild per quiet period rather than one
- * per batch, and the finished listings always show.
+ * The open guide's programme index and the row builds made from it while a guide sync writes its
+ * listings (#257): the first listings build at once, new channels and a new window never wait, and
+ * more listings for the same window wait for a pause after the last build has finished.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class GuideIndexTest {
@@ -32,117 +35,133 @@ class GuideIndexTest {
     private val quiet = 2_000L
 
     @Test
-    fun `the guide's first listings show straight away, grouped by channel`() = runTest {
+    fun `the guide's listings are grouped by channel, for the window they were read for`() = runTest {
         val bbc = programme("bbc1", "News")
         val itv = programme("itv1", "Quiz")
-        val seen = collect(MutableStateFlow(WINDOW)) { _, _ -> listingsThenWait(listOf(bbc, itv)) }
+        val seen = mutableListOf<ProgrammeIndex>()
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            MutableStateFlow(WINDOW).guideIndex { _, _ -> listingsThenWait(listOf(bbc, itv)) }.collect { seen += it }
+        }
 
         advanceTimeBy(1)
 
-        assertThat(seen).containsExactly(mapOf("bbc1" to listOf(bbc), "itv1" to listOf(itv)) to 0L)
+        assertThat(seen.single().window).isEqualTo(WINDOW)
+        assertThat(seen.single().byChannel).isEqualTo(mapOf("bbc1" to listOf(bbc), "itv1" to listOf(itv)))
     }
 
     @Test
-    fun `a burst of batches inside the quiet period rebuilds once, then once more when it ends`() = runTest {
-        // Ten batches 100 ms apart, as a guide sync writes them; the stored listings grow each time.
-        val batches = flow {
-            for (count in 1..10) {
-                emit(programmes(count))
-                if (count < 10) delay(100)
-            }
-            awaitCancellation()
-        }
-        val seen = collect(MutableStateFlow(WINDOW)) { _, _ -> batches }
-
-        advanceTimeBy(10_000)
-
-        assertThat(seen.map { it.programmeCount() }).containsExactly(1 to 0L, 10 to quiet).inOrder()
-    }
-
-    @Test
-    fun `a long sync fills the guide in at most once per quiet period, ending on the finished listings`() = runTest {
-        // A batch at 0 ms, then every 500 ms from 300 ms to 4800 ms.
-        val batches = flow {
-            emit(programmes(1))
-            delay(300)
-            for (count in 2..11) {
-                emit(programmes(count))
-                if (count < 11) delay(500)
-            }
-            awaitCancellation()
-        }
-        val seen = collect(MutableStateFlow(WINDOW)) { _, _ -> batches }
-
-        advanceTimeBy(20_000)
-
-        // At 2 s the latest batch is the one from 1800 ms (5 stored), at 4 s the one from 3800 ms (9).
-        assertThat(seen.map { it.programmeCount() })
-            .containsExactly(1 to 0L, 5 to quiet, 9 to 2 * quiet, 11 to 3 * quiet)
-            .inOrder()
-    }
-
-    @Test
-    fun `the same listings written again don't rebuild the guide`() = runTest {
-        val rewritten = flow {
-            emit(programmes(3))
-            delay(100)
-            emit(programmes(3))
-            delay(5_000)
-            emit(programmes(3))
-            awaitCancellation()
-        }
-        val seen = collect(MutableStateFlow(WINDOW)) { _, _ -> rewritten }
-
-        advanceTimeBy(20_000)
-
-        assertThat(seen.map { it.programmeCount() }).containsExactly(3 to 0L)
-    }
-
-    @Test
-    fun `moving to the next half hour shows its listings straight away, even mid-burst`() = runTest {
+    fun `moving to the next half hour reads its listings straight away`() = runTest {
         val window = MutableStateFlow(WINDOW)
-        val seen = collect(window) { from, _ ->
-            if (from == WINDOW.first) {
-                flow {
-                    emit(programmes(1))
-                    delay(100)
-                    emit(programmes(2))
-                    awaitCancellation()
-                }
-            } else {
-                listingsThenWait(listOf(programme("bbc1", "Later")))
-            }
+        val seen = mutableListOf<Pair<ProgrammeIndex, Long>>()
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            window.guideIndex { from, _ ->
+                listingsThenWait(listOf(programme("bbc1", if (from == WINDOW.first) "Now" else "Later")))
+            }.collect { seen += it to testScheduler.currentTime }
         }
 
         advanceTimeBy(500)
         window.value = NEXT_WINDOW
         advanceTimeBy(1)
 
-        assertThat(seen.map { it.programmeCount() }).containsExactly(1 to 0L, 1 to 500L).inOrder()
-        assertThat(seen.last().first.getValue("bbc1").single().title).isEqualTo("Later")
+        assertThat(seen.map { it.first.window to it.second })
+            .containsExactly(WINDOW to 0L, NEXT_WINDOW to 500L)
+            .inOrder()
+        assertThat(seen.last().first.byChannel.getValue("bbc1").single().title).isEqualTo("Later")
     }
 
-    /** Collects the index for the test's lifetime, noting each value with the virtual time it arrived. */
-    private fun TestScope.collect(
-        window: MutableStateFlow<Pair<Long, Long>>,
-        source: (Long, Long) -> Flow<List<Programme>>,
-    ): List<Pair<Map<String, List<Programme>>, Long>> {
-        val seen = mutableListOf<Pair<Map<String, List<Programme>>, Long>>()
+    @Test
+    fun `the guide's first rows are built at once`() = runTest {
+        val builds = builds(flowOf(listOf("BBC One")), MutableStateFlow(index(WINDOW, 3)))
+
+        advanceTimeBy(1)
+
+        assertThat(builds).containsExactly(Build(listOf("BBC One"), 3, 0L))
+    }
+
+    @Test
+    fun `more listings wait for a pause after a slow build has finished, then build from the latest`() = runTest {
+        val index = MutableStateFlow(index(WINDOW, 1))
+        // Each build takes 3 s, longer than the pause, as "All channels" does for a big provider.
+        val builds = builds(flowOf(listOf("BBC One")), index, buildMillis = 3_000)
+
+        advanceTimeBy(100)
+        index.value = index(WINDOW, 2)
+        advanceTimeBy(100)
+        index.value = index(WINDOW, 3)
+        advanceTimeBy(20_000)
+
+        // The first build ends at 3 s; the next waits out the pause after it, to 5 s.
+        assertThat(builds).containsExactly(
+            Build(listOf("BBC One"), 1, 0L),
+            Build(listOf("BBC One"), 3, 3_000 + quiet),
+        ).inOrder()
+    }
+
+    @Test
+    fun `new channels build at once, with the latest listings, even during the pause`() = runTest {
+        val channels = MutableStateFlow(listOf("BBC One"))
+        val index = MutableStateFlow(index(WINDOW, 1))
+        val builds = builds(channels, index)
+
+        advanceTimeBy(500)
+        index.value = index(WINDOW, 2)
+        advanceTimeBy(500)
+        channels.value = listOf("BBC One", "ITV")
+        advanceTimeBy(20_000)
+
+        assertThat(builds).containsExactly(
+            Build(listOf("BBC One"), 1, 0L),
+            Build(listOf("BBC One", "ITV"), 2, 1_000L),
+        ).inOrder()
+    }
+
+    @Test
+    fun `the first listings for the guide and for each new window build at once`() = runTest {
+        // Before the first listings are read, the guide builds its channels with none.
+        val index = MutableStateFlow(ProgrammeIndex.Empty)
+        val builds = builds(flowOf(listOf("BBC One")), index)
+
+        advanceTimeBy(100)
+        index.value = index(WINDOW, 3)
+        advanceTimeBy(100)
+        index.value = index(WINDOW, 4)
+        advanceTimeBy(2_300)
+        index.value = index(NEXT_WINDOW, 1)
+        advanceTimeBy(20_000)
+
+        assertThat(builds.map { it.programmes to it.atMillis }).containsExactly(
+            0 to 0L,
+            3 to 100L,
+            4 to 100 + quiet,
+            1 to 2_500L,
+        ).inOrder()
+    }
+
+    private data class Build(val channels: List<String>, val programmes: Int, val atMillis: Long)
+
+    /** Every build guideBuilds starts, with the virtual time it started. */
+    private fun TestScope.builds(
+        channels: Flow<List<String>>,
+        index: Flow<ProgrammeIndex>,
+        buildMillis: Long = 0,
+    ): List<Build> {
+        val builds = mutableListOf<Build>()
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
-            window.guideIndex(source, quiet).collect { seen += it to testScheduler.currentTime }
+            channels.guideBuilds(index, quiet) { names, byChannel ->
+                builds += Build(names, byChannel.values.sumOf { it.size }, testScheduler.currentTime)
+                delay(buildMillis)
+            }.collect {}
         }
-        return seen
+        return builds
     }
 
-    private fun Pair<Map<String, List<Programme>>, Long>.programmeCount() = first.values.sumOf { it.size } to second
+    private fun index(window: Pair<Long, Long>, count: Int) =
+        ProgrammeIndex(window, mapOf("bbc1" to (1..count).map { programme("bbc1", "Programme $it", startMinute = it) }))
 
     private fun listingsThenWait(programmes: List<Programme>) = flow {
         emit(programmes)
         awaitCancellation()
     }
-
-    /** What the store holds once [count] programmes have been written: a fresh list each time, as Room returns. */
-    private fun programmes(count: Int) = (1..count).map { programme("bbc1", "Programme $it", startMinute = it) }
 
     private fun programme(channel: String, title: String, startMinute: Int = 0) = Programme(
         feedId = 1,
