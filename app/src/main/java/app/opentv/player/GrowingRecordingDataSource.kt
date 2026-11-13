@@ -81,11 +81,10 @@ class GrowingRecordingDataSource internal constructor(
             ?: throw IOException("Recording $recordingId not found")
 
         position = dataSpec.position
-        readAhead.clear()
 
         if (locator.startsWith("smb://", ignoreCase = true)) {
             smbLocator = locator
-            smb = openSmbWithGrace()
+            smb = openSmbWithGrace().also { readAhead.reader = it }
         } else {
             // Internal: the auto-switch can open this the instant capture starts, a moment before
             // the recorder has created the file. Give it a short grace to appear.
@@ -151,10 +150,10 @@ class GrowingRecordingDataSource internal constructor(
     private fun readSmb(buffer: ByteArray, offset: Int, length: Int): Int {
         var stallPolls = 0
         while (!closed) {
-            val handle = smb ?: return C.RESULT_END_OF_INPUT
+            if (smb == null) return C.RESULT_END_OF_INPUT
             // A short chunk here is the growing edge, not the end: its bytes are served, and the
             // next miss fetches again from wherever they ran out.
-            val read = runCatching { readAhead.read(handle, position, buffer, offset, length) }.getOrDefault(-1)
+            val read = runCatching { readAhead.read(position, buffer, offset, length) }.getOrDefault(-1)
             if (read > 0) {
                 position += read
                 bytesTransferred(read)
@@ -162,7 +161,7 @@ class GrowingRecordingDataSource internal constructor(
             }
             // At the growing edge. If the capture is done, this really is the end.
             if (!RecordingLiveState.isActive(recordingId)) {
-                val last = runCatching { readAhead.read(handle, position, buffer, offset, length) }.getOrDefault(-1)
+                val last = runCatching { readAhead.read(position, buffer, offset, length) }.getOrDefault(-1)
                 if (last > 0) {
                     position += last
                     bytesTransferred(last)
@@ -176,8 +175,8 @@ class GrowingRecordingDataSource internal constructor(
             if (++stallPolls >= REOPEN_AFTER_POLLS) {
                 stallPolls = 0
                 runCatching { smb?.close() }
-                readAhead.clear()
                 smb = runCatching { openSmb(smbLocator) }.getOrNull()
+                readAhead.reader = smb
                 if (smb == null) return C.RESULT_END_OF_INPUT
             }
         }
@@ -201,7 +200,7 @@ class GrowingRecordingDataSource internal constructor(
         runCatching { smb?.close() }
         file = null
         smb = null
-        readAhead.clear()
+        readAhead.reader = null
         if (opened) {
             opened = false
             transferEnded()

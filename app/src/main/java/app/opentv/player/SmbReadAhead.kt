@@ -14,9 +14,16 @@ import app.opentv.recording.SmbReader
  *
  * The chunk is keyed by file offset, so a read anywhere outside it fetches afresh. Bytes already
  * written to a recording never change, which is why a chunk can outlive the growing edge; it is
- * still [clear]ed whenever the reader behind it changes, since a different file could share offsets.
+ * still dropped whenever the [reader] behind it is set, since a different file could share offsets.
  */
 internal class SmbReadAhead(private val chunkSize: Int = CHUNK_BYTES) {
+
+    /** The file reads are served from. Setting it, even to the same one reopened, drops the chunk. */
+    var reader: SmbReader? = null
+        set(value) {
+            field = value
+            chunkFilled = 0
+        }
 
     // Allocated on first use, not up front: every player's routing source creates one of these
     // whether or not it ever plays a NAS recording.
@@ -27,16 +34,10 @@ internal class SmbReadAhead(private val chunkSize: Int = CHUNK_BYTES) {
     /**
      * Copies up to [length] bytes at file [position] into [buffer], fetching a chunk of at most
      * [fetchLimit] bytes from [reader] if [position] isn't held. Returns the bytes copied, or the
-     * reader's own result (0, or -1 at its end) when the fetch returned nothing.
+     * reader's own result (0, or -1 at its end) when the fetch returned nothing; -1 with no reader.
      */
-    fun read(
-        reader: SmbReader,
-        position: Long,
-        buffer: ByteArray,
-        offset: Int,
-        length: Int,
-        fetchLimit: Long = Long.MAX_VALUE,
-    ): Int {
+    fun read(position: Long, buffer: ByteArray, offset: Int, length: Int, fetchLimit: Long = Long.MAX_VALUE): Int {
+        val reader = reader ?: return -1
         val chunk = chunk ?: ByteArray(chunkSize).also { chunk = it }
         if (position < chunkStart || position >= chunkStart + chunkFilled) {
             chunkFilled = 0
@@ -49,11 +50,6 @@ internal class SmbReadAhead(private val chunkSize: Int = CHUNK_BYTES) {
         val n = minOf(length, chunkFilled - at)
         System.arraycopy(chunk, at, buffer, offset, n)
         return n
-    }
-
-    /** Forgets the held chunk; the next read fetches. */
-    fun clear() {
-        chunkFilled = 0
     }
 
     companion object {

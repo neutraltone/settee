@@ -38,9 +38,9 @@ class SmbDataSource(private val openReader: (locator: String) -> SmbReader) : Ba
     override fun open(dataSpec: DataSpec): Long {
         transferInitializing(dataSpec)
         uri = dataSpec.uri
-        readAhead.clear()
         val handle = openReader(dataSpec.uri.toString())
         this.handle = handle
+        readAhead.reader = handle
         position = dataSpec.position
         bytesRemaining =
             if (dataSpec.length != C.LENGTH_UNSET.toLong()) {
@@ -57,8 +57,7 @@ class SmbDataSource(private val openReader: (locator: String) -> SmbReader) : Ba
         if (length == 0) return 0
         if (bytesRemaining == 0L) return C.RESULT_END_OF_INPUT
         val toRead = minOf(length.toLong(), bytesRemaining).toInt()
-        val handle = handle ?: return C.RESULT_END_OF_INPUT
-        val read = readAhead.read(handle, position, buffer, offset, toRead, fetchLimit = bytesRemaining)
+        val read = readAhead.read(position, buffer, offset, toRead, fetchLimit = bytesRemaining)
         if (read < 0) return C.RESULT_END_OF_INPUT
         position += read
         bytesRemaining -= read
@@ -71,7 +70,7 @@ class SmbDataSource(private val openReader: (locator: String) -> SmbReader) : Ba
     override fun close() {
         runCatching { handle?.close() }
         handle = null
-        readAhead.clear()
+        readAhead.reader = null
         if (opened) {
             opened = false
             transferEnded()

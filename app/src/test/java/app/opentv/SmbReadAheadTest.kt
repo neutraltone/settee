@@ -22,10 +22,12 @@ import org.junit.After
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
 
 /** NAS recordings read off the NAS in large chunks, not one round trip per small read (#259). */
 @UnstableApi
 @RunWith(RobolectricTestRunner::class)
+@Config(sdk = [34], application = android.app.Application::class)
 class SmbReadAheadTest {
 
     @After
