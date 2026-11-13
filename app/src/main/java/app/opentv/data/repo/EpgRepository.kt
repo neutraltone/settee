@@ -108,8 +108,6 @@ class EpgRepository(
     fun observeWindow(fromUtcMillis: Long, toUtcMillis: Long): Flow<List<Programme>> =
         programmeDao.observeWindow(fromUtcMillis, toUtcMillis)
 
-    fun observeNow(nowUtcMillis: Long): Flow<List<Programme>> = programmeDao.observeNow(nowUtcMillis)
-
     suspend fun upcoming(epgChannelId: String, nowUtcMillis: Long, limit: Int = 12): List<Programme> =
         programmeDao.upcoming(epgChannelId, nowUtcMillis, limit)
 

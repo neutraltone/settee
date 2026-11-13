@@ -29,6 +29,7 @@ import app.opentv.data.model.HandMark
 import app.opentv.data.model.LivePlayback
 import app.opentv.data.model.Movie
 import app.opentv.data.model.MovieCredit
+import app.opentv.data.model.OnNowRow
 import app.opentv.data.model.PlaybackPosition
 import app.opentv.data.model.Profile
 import app.opentv.data.model.ProfileSetting
@@ -468,14 +469,9 @@ interface ProgrammeDao {
     )
     fun observeWindow(fromUtcMillis: Long, toUtcMillis: Long): Flow<List<Programme>>
 
-    /** What is on right now, for the channel list's "now playing" line. */
-    @Query(
-        """
-        SELECT * FROM programmes
-        WHERE startUtcMillis <= :nowUtcMillis AND endUtcMillis > :nowUtcMillis
-        """,
-    )
-    fun observeNow(nowUtcMillis: Long): Flow<List<Programme>>
+    /** What's on at [nowUtcMillis] of the programmes ending by [endsByUtcMillis]; see [ON_NOW_QUERY]. */
+    @Query(ON_NOW_QUERY)
+    suspend fun onNow(nowUtcMillis: Long, endsByUtcMillis: Long): List<OnNowRow>
 
     @Query(
         """
@@ -1093,6 +1089,15 @@ interface SeriesDismissalDao {
     @Query("DELETE FROM series_dismissals WHERE profileId = :profileId")
     suspend fun deleteFor(profileId: Long)
 }
+
+/**
+ * What's on now, for many channels at once. Ranged over the programmes ending soon after now, not
+ * every one still to end: with the index on (end, start) that's a short stretch of the index, and
+ * the start is tested there before any row is read. Only what's on is read, not whole programmes.
+ */
+const val ON_NOW_QUERY =
+    "SELECT epgChannelId, startUtcMillis, title FROM programmes " +
+        "WHERE endUtcMillis > :nowUtcMillis AND endUtcMillis <= :endsByUtcMillis AND startUtcMillis <= :nowUtcMillis"
 
 /**
  * Changes when a catalogue's titles or anything the home feeds rank them by does, for telling "same as

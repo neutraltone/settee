@@ -91,6 +91,9 @@ enum class StreamKind { LIVE, MOVIE, SERIES }
 )
 data class Category(val id: String, val sourceId: Long, val name: String, val kind: StreamKind, val sortIndex: Int = 0)
 
+/** What [app.opentv.data.repo.nowOn] reads of a programme on now: no descriptions or artwork. */
+data class OnNowRow(val epgChannelId: String, val startUtcMillis: Long, val title: String)
+
 /**
  * What a cover in a category's grid is drawn from, read instead of whole rows so a category of
  * thousands opens quickly and stays light on a 1 GB Stick (#161). The year is for folding Qualities.
@@ -271,7 +274,9 @@ data class EpgChannelAlias(
     tableName = "programmes",
     indices = [
         Index(value = ["feedId", "epgChannelId", "startUtcMillis"], unique = true),
-        Index(value = ["endUtcMillis"]),
+        // End then start, so what's on now is answered from the index: the start is tested there
+        // instead of looking up every programme still to end. It also serves what the end alone did.
+        Index(value = ["endUtcMillis", "startUtcMillis"]),
         Index(value = ["epgChannelId"]),
     ],
 )

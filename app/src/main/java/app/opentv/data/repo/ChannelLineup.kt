@@ -260,6 +260,9 @@ class ChannelLineup(
     /** The guide stored on the device, for [guideId] and [nowOn]. */
     internal val programmes = db.programmes()
 
+    /** Which guides have programmes, for [nowOn]: read again only when the guide changes. */
+    internal val storedGuides = StoredGuides(db)
+
     /**
      * Channel up and down follow [scope] from now on: the guide's current scope, or All from
      * screens without one. Kept here rather than as a list handed to the player, so it's never
