@@ -639,16 +639,22 @@ class CatalogRepository(
         api.authenticate(source)
 
         val liveCategories = api.liveCategories(source)
-        val channels = api.liveStreams(source)
-        if (channels.isEmpty()) {
+        val categoryNames = liveCategories.associate { it.id to it.name }
+        // Saved a batch at a time off the download, as movies and shows are: a very large line-up
+        // held whole, as a string, a JSON tree and the channels at once, can run a stick's heap out.
+        // Cleaning a channel looks at it alone, so it happens per batch too.
+        val saved = api.liveStreams(source).use { list ->
+            channelDao.replaceCatalogue(source.id, nowUtcMillis) { save ->
+                list.forEachBatch { batch -> save(normalized(batch, categoryNames)) }
+            }
+        }
+        if (saved == 0) {
             return SyncResult.Failed(wording.of(R.string.error_no_channels, NO_CHANNELS), null)
         }
 
         categoryDao.upsertAll(liveCategories)
-        val categoryNames = liveCategories.associate { it.id to it.name }
-        channelDao.replaceCatalogue(source.id, normalized(channels, categoryNames), nowUtcMillis)
         sourceDao.markCatalogSynced(source.id, nowUtcMillis)
-        return SyncResult.Success(channels.size, 0, 0)
+        return SyncResult.Success(saved, 0, 0)
     }
 
     /**
