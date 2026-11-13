@@ -87,7 +87,7 @@ class Converters {
         SeriesRule::class,
         Reminder::class,
     ],
-    version = 13,
+    version = 14,
     exportSchema = true,
 )
 @TypeConverters(Converters::class)
@@ -233,10 +233,22 @@ abstract class OpenTvDatabase : RoomDatabase() {
         }
 
         /**
-         * 12 → 13: what's on now is looked up in an index on (end, start), which takes over from the
+         * 12 → 13: indexes when the provider added each film and series, so Home's Recently Added
+         * walks the index to its limit instead of sorting the library, which it did on every write
+         * the background title lookups made. Only indices change, so nothing is worth wiping for.
+         */
+        private val ADDED_INDEX = object : Migration(12, 13) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_movies_addedMillis` ON `movies` (`addedMillis`)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_series_addedMillis` ON `series` (`addedMillis`)")
+            }
+        }
+
+        /**
+         * 13 → 14: what's on now is looked up in an index on (end, start), which takes over from the
          * one on the end alone. Only indexes change, so nothing is lost.
          */
-        private val ON_NOW_INDEX = object : Migration(12, 13) {
+        private val ON_NOW_INDEX = object : Migration(13, 14) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("DROP INDEX IF EXISTS `index_programmes_endUtcMillis`")
                 db.execSQL(
@@ -250,7 +262,7 @@ abstract class OpenTvDatabase : RoomDatabase() {
          * Every migration, in order. Shared with the migration test so neither list can lag. None
          * before 9, which wiped under the pre-1.0 policy below; its older schemas went with it.
          */
-        internal val MIGRATIONS: Array<Migration> = arrayOf(CREDITS, TMDB_ANSWERED_AT, ON_NOW_INDEX)
+        internal val MIGRATIONS: Array<Migration> = arrayOf(CREDITS, TMDB_ANSWERED_AT, ADDED_INDEX, ON_NOW_INDEX)
 
         /**
          * [onWiped] runs when the destructive fallback below rebuilds the database. Settings that

@@ -256,6 +256,8 @@
     <string name="error_no_first_frame_device">यह डिवाइस इस वीडियो को नहीं दिखा सका। फिर कोशिश करें, या कुछ और चुनें।</string>
     <string name="error_login">आपके प्रदाता ने आपका लॉगिन स्वीकार नहीं किया। सेटिंग्स में अपने प्रदाता का विवरण जांचें।</string>
     <string name="error_catalogue">आपके प्रदाता के चैनल लोड नहीं हो सके। थोड़ी देर में फिर कोशिश करें।</string>
+    <string name="error_channel_list_memory_tv">आपके प्रदाता की चैनल सूची को इस टीवी में मौजूद मेमोरी से ज़्यादा मेमोरी चाहिए।</string>
+    <string name="error_channel_list_memory_device">आपके प्रदाता की चैनल सूची को इस डिवाइस में मौजूद मेमोरी से ज़्यादा मेमोरी चाहिए।</string>
     <string name="error_no_channels">आपके प्रदाता ने कोई चैनल नहीं भेजा। हो सकता है आपके खाते में अभी कोई चैनल न हो, इसलिए उनसे पूछें।</string>
     <string name="error_playlist_empty">उस पते पर कोई चैनल नहीं है। जांचें कि यह वही लिंक है जो आपके प्रदाता ने आपको दिया था।</string>
     <string name="error_account_inactive">आपका प्रदाता कहता है कि यह खाता सक्रिय नहीं है। उनसे पूछें, फिर कोशिश करें।</string>

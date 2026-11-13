@@ -256,6 +256,8 @@
     <string name="error_no_first_frame_device">Thiết bị này không thể hiển thị video này. Thử lại, hoặc chọn nội dung khác.</string>
     <string name="error_login">Nhà cung cấp không chấp nhận đăng nhập của bạn. Kiểm tra thông tin nhà cung cấp trong Cài đặt.</string>
     <string name="error_catalogue">Không thể tải các kênh của nhà cung cấp. Thử lại sau giây lát.</string>
+    <string name="error_channel_list_memory_tv">Danh sách kênh của nhà cung cấp cần nhiều bộ nhớ hơn TV này có.</string>
+    <string name="error_channel_list_memory_device">Danh sách kênh của nhà cung cấp cần nhiều bộ nhớ hơn thiết bị này có.</string>
     <string name="error_no_channels">Nhà cung cấp không gửi kênh nào. Tài khoản của bạn có thể chưa có kênh, vì vậy hãy hỏi lại họ.</string>
     <string name="error_playlist_empty">Không có kênh nào ở địa chỉ đó. Kiểm tra xem đó có phải liên kết nhà cung cấp đã đưa cho bạn không.</string>
     <string name="error_account_inactive">Nhà cung cấp cho biết tài khoản này chưa hoạt động. Hỏi lại họ, rồi thử lại.</string>

@@ -72,7 +72,8 @@ aren't `ErrorMessage`s and have no detail line.
 
 A failed Catalogue Refresh as the guide shows it (`Outcome.Refreshed.failure`), adding a provider
 (`Outcome.AddFailed`, also on the phone's channel manager page) and the provider's Test button.
-`ErrorWording.ofProvider` words them.
+`ErrorWording.ofProvider` words them, except a channel list too big for memory, which is about this
+hardware and worded by `ErrorWording.ofHardware`.
 
 | Trigger | String key | Sentence | Detail | Whose end, likely cause |
 |---|---|---|---|---|
@@ -85,6 +86,7 @@ A failed Catalogue Refresh as the guide shows it (`Outcome.Refreshed.failure`), 
 | HTTP 429 | `error_http_429` | Your provider is getting too many requests from this device. Wait a minute, then try again. | HTTP 429 | Provider's rate limit |
 | HTTP 5xx | `error_http_5xx` | Your provider is having problems. That's at their end, so try again later. | HTTP 5xx | Provider's server |
 | Provider answered with no channels | `error_no_channels` | Your provider sent no channels. Your account may not have any yet, so check with them. | NoChannels | Provider's: no package |
+| Channel list too big for memory (`OutOfMemoryError` while syncing) | `error_channel_list_memory_tv` / `_device` | Your provider's channel list needs more memory than this TV has. | OutOfMemory | This hardware: list too big |
 | Playlist with no channels | `error_playlist_empty` | There are no channels at that address. Check it's the link your provider gave you. | NoChannels | Viewer's setup |
 | Anything else while downloading | `error_catalogue` | Couldn't load your provider's channels. Try again in a moment. | exception type, or HTTP status | Unknown |
 | Test button, anything else | `error_test_failed` | Couldn't connect to your provider with these details. Check them and try again. | exception type | Unknown |

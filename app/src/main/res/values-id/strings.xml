@@ -256,6 +256,8 @@
     <string name="error_no_first_frame_device">Perangkat ini tidak dapat menampilkan video ini. Coba lagi, atau pilih yang lain.</string>
     <string name="error_login">Penyedia Anda tidak menerima login Anda. Periksa detail penyedia Anda di Pengaturan.</string>
     <string name="error_catalogue">Gagal memuat saluran penyedia Anda. Coba lagi sebentar lagi.</string>
+    <string name="error_channel_list_memory_tv">Daftar saluran penyedia Anda membutuhkan lebih banyak memori daripada yang dimiliki TV ini.</string>
+    <string name="error_channel_list_memory_device">Daftar saluran penyedia Anda membutuhkan lebih banyak memori daripada yang dimiliki perangkat ini.</string>
     <string name="error_no_channels">Penyedia Anda tidak mengirim saluran apa pun. Akun Anda mungkin belum memiliki saluran, jadi tanyakan kepada mereka.</string>
     <string name="error_playlist_empty">Tidak ada saluran di alamat itu. Periksa apakah itu tautan yang diberikan penyedia Anda.</string>
     <string name="error_account_inactive">Penyedia Anda menyatakan akun ini tidak aktif. Tanyakan kepada mereka, lalu coba lagi.</string>

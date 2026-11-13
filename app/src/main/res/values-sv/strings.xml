@@ -256,6 +256,8 @@
     <string name="error_no_first_frame_device">Den här enheten kunde inte visa videon. Försök igen, eller välj något annat.</string>
     <string name="error_login">Din leverantör godkände inte din inloggning. Kontrollera din leverantörs uppgifter i Inställningar.</string>
     <string name="error_catalogue">Det gick inte att läsa in din leverantörs kanaler. Försök igen om en stund.</string>
+    <string name="error_channel_list_memory_tv">Din leverantörs kanallista behöver mer minne än den här TV:n har.</string>
+    <string name="error_channel_list_memory_device">Din leverantörs kanallista behöver mer minne än den här enheten har.</string>
     <string name="error_no_channels">Din leverantör skickade inga kanaler. Ditt konto kanske inte har några än, så kontakta dem.</string>
     <string name="error_playlist_empty">Det finns inga kanaler på den adressen. Kontrollera att det är länken din leverantör gav dig.</string>
     <string name="error_account_inactive">Din leverantör säger att kontot inte är aktivt. Kontakta dem och försök sedan igen.</string>

@@ -91,6 +91,21 @@ device zone, and converts to local time only at draw time. `XmltvTimeTest` chang
 default zone between assertions specifically to catch the "works on my machine, an hour out on
 yours" bug.
 
+### An open guide while a sync writes
+
+Each batch re-runs every Room query on `programmes`, so an open guide used to regroup and rebuild
+its rows hundreds of times during one sync (#257). Two things stop that:
+
+- `EpgRepository.observeWindow` and `observeNow` are `settled()` (`data/repo/SettledListings.kt`):
+  the first listings straight away, then the latest at most every two seconds, ending on the
+  finished listings, and never the same listings twice in a row. Not a plain `debounce`: that
+  delays start-up and shows nothing new until a long first download ends. Settled in the
+  repository, not the screen, so anything else that watches the guide gets the same.
+- `guideBuilds` (`ui/ProgrammeIndex.kt`) times the guide's next rebuild for more listings from the end
+  of the last build, not from when the listings arrived: building "All channels" for a big
+  provider outlasts the pause on a Fire TV Stick, and paced from arrival it rebuilt back to back.
+  New channels and a new window's first listings never wait.
+
 ## Every Catalogue Refresh goes through one module
 
 `data/repo/CatalogueRefresh` is asked by every trigger: the periodic worker, a manual refresh, adding a
@@ -185,6 +200,10 @@ of thousands. So neither of these works, despite being the natural thing to writ
 Both would pass every test written against a small synthetic dataset and fail on exactly the
 providers where it matters most.
 
+The `IN (:streamIds)` lookups that do exist (`ChannelDao.byStreamIds` and the batch form of
+`hiddenChangesFor`) only ever see one chunk of a refresh, 500 ids at most, which
+`replaceCatalogue` enforces itself rather than trusting its caller's batch size.
+
 ## Playback
 
 `PlayerController` owns exactly one `ExoPlayer` for the lifetime of the screen and only ever
@@ -265,6 +284,14 @@ catalogue, which the user experiences as "the app won't load my channels" with n
 
 It is ugly. It is correct. Do not "clean it up" into typed models without a very large corpus
 of real panel responses to test against.
+
+The big lists (live channels, movies and series) never arrive whole. `XtreamApi` saves each reply
+to a temp file as it downloads and hands it back as a `CatalogueList`, which reads one array
+element at a time (`decodeToSequence`) and gives the caller 500 at a time. A large panel's list is
+tens of megabytes, and holding it as a string, a JSON tree and the parsed rows at once ran a Fire
+TV Stick's 128 MB heap out. Each list is saved in one transaction across its batches; for live
+channels `ChannelDao.replaceCatalogue` merges each batch as it comes and deletes stale channels
+only after the last, so a reply cut off partway changes nothing.
 
 Similarly, `syncXtream` treats VOD as optional: plenty of accounts are live-TV only, and a 404
 on `get_vod_streams` must never cost the user their channel list.

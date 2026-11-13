@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 13,
-    "identityHash": "828756c29e9ff7739d8208fb9a385dd0",
+    "identityHash": "aa331a05ae97bce68795e207a65e985b",
     "entities": [
       {
         "tableName": "sources",
@@ -525,14 +525,13 @@
             "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_programmes_feedId_epgChannelId_startUtcMillis` ON `${TABLE_NAME}` (`feedId`, `epgChannelId`, `startUtcMillis`)"
           },
           {
-            "name": "index_programmes_endUtcMillis_startUtcMillis",
+            "name": "index_programmes_endUtcMillis",
             "unique": false,
             "columnNames": [
-              "endUtcMillis",
-              "startUtcMillis"
+              "endUtcMillis"
             ],
             "orders": [],
-            "createSql": "CREATE INDEX IF NOT EXISTS `index_programmes_endUtcMillis_startUtcMillis` ON `${TABLE_NAME}` (`endUtcMillis`, `startUtcMillis`)"
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_programmes_endUtcMillis` ON `${TABLE_NAME}` (`endUtcMillis`)"
           },
           {
             "name": "index_programmes_epgChannelId",
@@ -699,6 +698,15 @@
             ],
             "orders": [],
             "createSql": "CREATE INDEX IF NOT EXISTS `index_movies_sourceId_categoryId` ON `${TABLE_NAME}` (`sourceId`, `categoryId`)"
+          },
+          {
+            "name": "index_movies_addedMillis",
+            "unique": false,
+            "columnNames": [
+              "addedMillis"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_movies_addedMillis` ON `${TABLE_NAME}` (`addedMillis`)"
           }
         ]
       },
@@ -869,6 +877,15 @@
             ],
             "orders": [],
             "createSql": "CREATE INDEX IF NOT EXISTS `index_series_sourceId_categoryId` ON `${TABLE_NAME}` (`sourceId`, `categoryId`)"
+          },
+          {
+            "name": "index_series_addedMillis",
+            "unique": false,
+            "columnNames": [
+              "addedMillis"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_series_addedMillis` ON `${TABLE_NAME}` (`addedMillis`)"
           }
         ]
       },
@@ -1629,7 +1646,7 @@
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '828756c29e9ff7739d8208fb9a385dd0')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'aa331a05ae97bce68795e207a65e985b')"
     ]
   }
 }

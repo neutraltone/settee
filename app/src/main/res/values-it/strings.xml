@@ -256,6 +256,8 @@
     <string name="error_no_first_frame_device">Questo dispositivo non è riuscito a mostrare il video. Riprova, oppure scegli qualcos\'altro.</string>
     <string name="error_login">Il tuo provider non ha accettato il tuo accesso. Controlla i dati del tuo provider in Impostazioni.</string>
     <string name="error_catalogue">Impossibile caricare i canali del tuo provider. Riprova tra un momento.</string>
+    <string name="error_channel_list_memory_tv">L\'elenco dei canali del tuo provider richiede più memoria di quella che ha questo televisore.</string>
+    <string name="error_channel_list_memory_device">L\'elenco dei canali del tuo provider richiede più memoria di quella che ha questo dispositivo.</string>
     <string name="error_no_channels">Il tuo provider non ha inviato nessun canale. Il tuo account potrebbe non averne ancora, quindi chiedi a loro.</string>
     <string name="error_playlist_empty">Non ci sono canali a quell\'indirizzo. Controlla che sia il link che ti ha dato il tuo provider.</string>
     <string name="error_account_inactive">Il tuo provider dice che questo account non è attivo. Chiedi a loro, poi riprova.</string>

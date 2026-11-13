@@ -53,7 +53,10 @@ import okio.source
  */
 class XtreamApi(
     private val http: OkHttpClient,
-    /** Where [movies] and [series] download to; null is the JVM's temp folder, the app's cache on Android. */
+    /**
+     * Where [liveStreams], [movies] and [series] download to; null is the JVM's temp folder, the app's
+     * cache on Android.
+     */
     private val downloads: File? = null,
     private val json: Json = Json {
         ignoreUnknownKeys = true
@@ -123,11 +126,18 @@ class XtreamApi(
             }
         }
 
-    suspend fun liveStreams(source: Source): List<Channel> = withContext(Dispatchers.IO) {
-        getJson(source, "get_live_streams").arrayOrEmpty.mapIndexedNotNull { index, element ->
-            val obj = element.jsonObjectOrNull ?: return@mapIndexedNotNull null
-            val streamId = obj["stream_id"].asStringOrNull ?: return@mapIndexedNotNull null
-            val name = obj["name"].asStringOrNull ?: return@mapIndexedNotNull null
+    /**
+     * The live channel list, downloaded for reading a batch at a time as [movies] is: a very large
+     * line-up's reply is tens of megabytes too.
+     */
+    suspend fun liveStreams(source: Source): CatalogueList<Channel> = withContext(Dispatchers.IO) {
+        // Where a channel falls in the list, for one without a number; counted here, as the list
+        // hands parse each object on its own.
+        var index = 0
+        download(source, "get_live_streams") { obj ->
+            val position = index++
+            val streamId = obj["stream_id"].asStringOrNull ?: return@download null
+            val name = obj["name"].asStringOrNull ?: return@download null
             Channel(
                 sourceId = source.id,
                 streamId = streamId,
@@ -141,7 +151,7 @@ class XtreamApi(
                 tvArchiveDays = obj["tv_archive_duration"].asIntOrNull ?: 0,
                 number = obj["num"].asIntOrNull,
                 streamUrl = liveStreamUrl(source, streamId),
-                sortIndex = obj["num"].asIntOrNull ?: index,
+                sortIndex = obj["num"].asIntOrNull ?: position,
             )
         }
     }
@@ -376,7 +386,7 @@ class XtreamApi(
     }
 
     /**
-     * A movie or series list on disk, read one array element at a time, so nothing ever holds more
+     * A channel, movie or series list on disk, read one array element at a time, so nothing ever holds more
      * than a batch of it. Close it to delete the file.
      */
     class CatalogueList<T : Any> internal constructor(

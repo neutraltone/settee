@@ -256,6 +256,8 @@
     <string name="error_no_first_frame_device">Dit apparaat kon deze video niet tonen. Probeer het opnieuw, of kies iets anders.</string>
     <string name="error_login">Je provider heeft je inloggegevens niet geaccepteerd. Controleer je providergegevens in Instellingen.</string>
     <string name="error_catalogue">Kan de zenders van je provider niet laden. Probeer het zo opnieuw.</string>
+    <string name="error_channel_list_memory_tv">De zenderlijst van je provider heeft meer geheugen nodig dan deze tv heeft.</string>
+    <string name="error_channel_list_memory_device">De zenderlijst van je provider heeft meer geheugen nodig dan dit apparaat heeft.</string>
     <string name="error_no_channels">Je provider heeft geen zenders gestuurd. Je account heeft er misschien nog geen, dus vraag het na bij je provider.</string>
     <string name="error_playlist_empty">Er staan geen zenders op dat adres. Controleer of het de link is die je provider je gaf.</string>
     <string name="error_account_inactive">Je provider zegt dat dit account niet actief is. Vraag het na bij je provider en probeer het dan opnieuw.</string>

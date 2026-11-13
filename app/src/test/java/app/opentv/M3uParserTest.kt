@@ -133,6 +133,114 @@ class M3uParserTest {
     }
 
     @Test
+    fun `an m3u_plus playlist's films and episodes are left out of its live channels`() {
+        val playlist = """
+            #EXTM3U
+            #EXTINF:-1 tvg-id="bbc1",BBC One
+            http://example.com:8080/live/u/p/1.ts
+            #EXTINF:-1 tvg-id="" group-title="Films",Drive (2011)
+            http://example.com:8080/movie/u/p/30.mkv
+            #EXTINF:-1 tvg-id="itv1",ITV 1
+            http://example.com:8080/live/u/p/2.ts
+            #EXTINF:-1 tvg-id="" group-title="Shows",Taskmaster S01 E01
+            http://example.com:8080/series/u/p/40.mp4
+            #EXTINF:-1 tvg-id="ch4",Channel 4
+            http://example.com:8080/u/p/3
+        """.trimIndent()
+
+        val channels = M3uParser.parse(playlist, sourceId = 1).channels
+
+        assertThat(channels.map { it.name }).containsExactly("BBC One", "ITV 1", "Channel 4").inOrder()
+        assertThat(channels.map { it.sortIndex }).containsExactly(0, 1, 2).inOrder()
+    }
+
+    @Test
+    fun `films and episodes are left out whatever the case of their path`() {
+        val playlist = """
+            #EXTM3U
+            #EXTINF:-1,Drive (2011)
+            http://example.com/Movie/u/p/30.mkv
+            #EXTINF:-1,BBC One
+            http://example.com/live/u/p/1.ts
+            #EXTINF:-1,Taskmaster S01 E01
+            http://example.com/SERIES/u/p/40.mp4
+            #EXTINF:-1,Heat (1995)
+            HTTP://EXAMPLE.COM/MOVIE/U/P/31.MKV
+        """.trimIndent()
+
+        val channels = M3uParser.parse(playlist, sourceId = 1).channels
+
+        assertThat(channels.map { it.name }).containsExactly("BBC One")
+    }
+
+    @Test
+    fun `a film sharing a live channel's tvg-id does not crowd the channel out`() {
+        val playlist = """
+            #EXTM3U
+            #EXTINF:-1 tvg-id="bbc1",BBC One Documentary
+            http://example.com/movie/u/p/30.mkv
+            #EXTINF:-1 tvg-id="bbc1",BBC One
+            http://example.com/live/u/p/1.ts
+        """.trimIndent()
+
+        val channel = M3uParser.parse(playlist, sourceId = 1).channels.single()
+
+        assertThat(channel.name).isEqualTo("BBC One")
+    }
+
+    @Test
+    fun `films and episodes left out are not counted as malformed entries`() {
+        val playlist = """
+            #EXTM3U
+            #EXTINF:-1,Drive (2011)
+            http://example.com/movie/u/p/30.mkv
+            #EXTINF:-1,Taskmaster S01 E01
+            http://example.com/series/u/p/40.mp4
+            #EXTINF:-1,BBC One
+            http://example.com/live/u/p/1.ts
+        """.trimIndent()
+
+        assertThat(M3uParser.parse(playlist, sourceId = 1).skippedEntries).isEqualTo(0)
+    }
+
+    @Test
+    fun `a live stream whose URL mentions movie or series elsewhere is still a channel`() {
+        val playlist = """
+            #EXTM3U
+            #EXTINF:-1,Movie Channel
+            http://example.com/live/movie/1.m3u8
+            #EXTINF:-1,Series Channel
+            http://example.com/live/u/p/series/2.ts
+            #EXTINF:-1,Movie Host
+            http://movie.example.com/live/3.ts
+            #EXTINF:-1,Query
+            http://example.com/play?path=/movie/4
+            #EXTINF:-1,Movies Hub
+            http://example.com/movies/5.m3u8
+            #EXTINF:-1,Bare Movie
+            http://example.com/movie
+            #EXTINF:-1,Query With No Path
+            http://example.com:8080?stream=/movie/6
+            #EXTINF:-1,Fragment With No Path
+            http://example.com#/series/7
+        """.trimIndent()
+
+        val channels = M3uParser.parse(playlist, sourceId = 1).channels
+
+        assertThat(channels.map { it.name })
+            .containsExactly(
+                "Movie Channel",
+                "Series Channel",
+                "Movie Host",
+                "Query",
+                "Movies Hub",
+                "Bare Movie",
+                "Query With No Path",
+                "Fragment With No Path",
+            ).inOrder()
+    }
+
+    @Test
     fun `an empty playlist yields no channels rather than throwing`() {
         val result = M3uParser.parse("#EXTM3U\n", sourceId = 1)
 

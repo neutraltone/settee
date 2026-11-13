@@ -256,6 +256,8 @@
     <string name="error_no_first_frame_device">이 기기에서 이 동영상을 표시하지 못했습니다. 다시 시도하거나 다른 항목을 선택하세요.</string>
     <string name="error_login">공급자가 로그인을 거부했습니다. 설정에서 공급자 정보를 확인하세요.</string>
     <string name="error_catalogue">공급자의 채널을 불러오지 못했습니다. 잠시 후 다시 시도하세요.</string>
+    <string name="error_channel_list_memory_tv">공급자의 채널 목록에는 이 TV의 메모리보다 더 많은 메모리가 필요합니다.</string>
+    <string name="error_channel_list_memory_device">공급자의 채널 목록에는 이 기기의 메모리보다 더 많은 메모리가 필요합니다.</string>
     <string name="error_no_channels">공급자가 보낸 채널이 없습니다. 계정에 아직 채널이 없을 수 있으니 공급자에게 확인하세요.</string>
     <string name="error_playlist_empty">해당 주소에 채널이 없습니다. 공급자가 준 링크가 맞는지 확인하세요.</string>
     <string name="error_account_inactive">공급자에 따르면 이 계정은 활성 상태가 아닙니다. 공급자에게 확인한 후 다시 시도하세요.</string>

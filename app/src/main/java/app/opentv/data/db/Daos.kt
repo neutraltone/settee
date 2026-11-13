@@ -317,43 +317,64 @@ interface ChannelDao {
 
     /**
      * Preserves device state (hidden, manual order, custom names, EPG overrides) across a
-     * catalogue refresh. Upsert would otherwise overwrite them with the defaults from the
-     * freshly parsed rows.
+     * catalogue refresh, for a list held whole, as Stalker and M3U have theirs. Upsert would
+     * otherwise overwrite them with the defaults from the freshly parsed rows.
      */
     @Transaction
     suspend fun replaceCatalogue(sourceId: Long, incoming: List<Channel>, syncStamp: Long) {
         if (incoming.isEmpty()) return
 
-        val existing = userStateForSource(sourceId).associateBy { it.streamId }
-        val hiddenChanges = hiddenChangesFor(sourceId).associateBy { it.streamId }
-        val merged = incoming.map { channel ->
-            val previous = existing[channel.streamId]
-            if (previous == null) {
-                // A channel the provider dropped for a while comes back as the viewer left it.
-                channel.copy(
-                    hidden = hiddenChanges[channel.streamId]?.hidden ?: channel.hidden,
-                    lastSeenMillis = syncStamp,
-                )
-            } else {
-                channel.copy(
-                    id = previous.id,
-                    // OR, not overwrite: the importer hides separator rows ('### UK ###')
-                    // at parse time, and that decision must stick even for rows that
-                    // predate the rule. User hides are preserved the same way.
-                    hidden = previous.hidden || channel.hidden,
-                    sortIndex = previous.sortIndex,
-                    // A user's rename must outlive the provider's fresh name on every refresh.
-                    customName = previous.customName,
-                    epgOverrideId = previous.epgOverrideId,
-                    matchedEpgId = previous.matchedEpgId,
-                    lastSeenMillis = syncStamp,
-                )
-            }
-        }
+        // Every stored row at once, not a batch at a time as below: a stream id listed twice then
+        // meets the row as it was before the refresh both times, which is how these lists always
+        // merged, and the whole list is in memory already.
+        val merged = mergedOver(
+            incoming,
+            userStateForSource(sourceId).associateBy { it.streamId },
+            hiddenChangesFor(sourceId).associateBy { it.streamId },
+            syncStamp,
+        )
         // Chunked so a 40,000-channel playlist does not build one enormous statement.
         merged.chunked(UPSERT_CHUNK).forEach { upsertAll(it) }
         deleteStale(sourceId, syncStamp)
     }
+
+    /**
+     * [replaceCatalogue] for a list read a batch at a time, as Xtream's is, returning how many
+     * channels there were. Each batch is merged over the stored rows as it comes, and stale
+     * channels go only once the last is saved: all in one transaction, so a list that fails partway
+     * changes nothing, and a list with no channels deletes none.
+     */
+    suspend fun replaceCatalogue(
+        sourceId: Long,
+        syncStamp: Long,
+        batches: suspend (save: suspend (List<Channel>) -> Unit) -> Unit,
+    ): Int {
+        var saved = 0
+        inTransaction {
+            batches { batch ->
+                // Looked up a chunk at a time rather than every stored row at once, which would cost
+                // as much memory as the list. Chunked whatever the batch size, since both lookups
+                // bind every stream id in it and SQLite allows 999 variables.
+                batch.chunked(UPSERT_CHUNK).forEach { chunk ->
+                    val streamIds = chunk.map { it.streamId }
+                    val merged = mergedOver(
+                        chunk,
+                        byStreamIds(sourceId, streamIds).associateBy { it.streamId },
+                        hiddenChangesFor(sourceId, streamIds).associateBy { it.streamId },
+                        syncStamp,
+                    )
+                    upsertAll(merged)
+                }
+                saved += batch.size
+            }
+            if (saved > 0) deleteStale(sourceId, syncStamp)
+        }
+        return saved
+    }
+
+    /** Runs [block] as one transaction; see [replaceCatalogue]. */
+    @Transaction
+    suspend fun inTransaction(block: suspend () -> Unit) = block()
 
     @Query(
         """
@@ -362,6 +383,61 @@ interface ChannelDao {
         """,
     )
     suspend fun userStateForSource(sourceId: Long): List<ChannelUserState>
+
+    /** The stored rows for one refresh batch of [streamIds]; keep it under SQLite's 999 variables. */
+    @Query(
+        """
+        SELECT streamId, id, hidden, sortIndex, customName, epgOverrideId, matchedEpgId
+        FROM channels WHERE sourceId = :sourceId AND streamId IN (:streamIds)
+        """,
+    )
+    suspend fun byStreamIds(sourceId: Long, streamIds: List<String>): List<ChannelUserState>
+
+    /**
+     * [hiddenChangesFor] only for one refresh batch's [streamIds]; keep it under SQLite's 999
+     * variables.
+     */
+    @Query(
+        """
+        SELECT * FROM channel_hidden_changes
+        WHERE source = (SELECT name FROM sources WHERE id = :sourceId) AND streamId IN (:streamIds)
+        """,
+    )
+    suspend fun hiddenChangesFor(sourceId: Long, streamIds: List<String>): List<ChannelHiddenChange>
+}
+
+/**
+ * [incoming] over the rows they replace ([existing], by stream id), carrying what the viewer set
+ * across a catalogue refresh, each stamped as seen at [syncStamp].
+ */
+private fun mergedOver(
+    incoming: List<Channel>,
+    existing: Map<String, ChannelUserState>,
+    hiddenChanges: Map<String, ChannelHiddenChange>,
+    syncStamp: Long,
+): List<Channel> = incoming.map { channel ->
+    val previous = existing[channel.streamId]
+    if (previous == null) {
+        // A channel the provider dropped for a while comes back as the viewer left it.
+        channel.copy(
+            hidden = hiddenChanges[channel.streamId]?.hidden ?: channel.hidden,
+            lastSeenMillis = syncStamp,
+        )
+    } else {
+        channel.copy(
+            id = previous.id,
+            // OR, not overwrite: the importer hides separator rows ('### UK ###')
+            // at parse time, and that decision must stick even for rows that
+            // predate the rule. User hides are preserved the same way.
+            hidden = previous.hidden || channel.hidden,
+            sortIndex = previous.sortIndex,
+            // A user's rename must outlive the provider's fresh name on every refresh.
+            customName = previous.customName,
+            epgOverrideId = previous.epgOverrideId,
+            matchedEpgId = previous.matchedEpgId,
+            lastSeenMillis = syncStamp,
+        )
+    }
 }
 
 @Dao
@@ -391,6 +467,17 @@ interface CategoryDao {
 
     @Query("DELETE FROM categories WHERE sourceId = :sourceId")
     suspend fun deleteForSource(sourceId: Long)
+
+    /**
+     * Drops [sourceId]'s live categories that no channel row is in, hidden rows included. A
+     * subquery rather than a list of ids, which a playlist's group-titles could take past SQLite's
+     * bound-variable limit.
+     */
+    @Query(
+        "DELETE FROM categories WHERE sourceId = :sourceId AND kind = 'LIVE' AND id NOT IN " +
+            "(SELECT categoryId FROM channels WHERE sourceId = :sourceId AND categoryId IS NOT NULL)",
+    )
+    suspend fun deleteEmptyLive(sourceId: Long)
 }
 
 /** Projection for [CategoryDao.namesFor]. */
@@ -524,13 +611,7 @@ interface MovieDao {
     @Query("SELECT COUNT(*) FROM movies WHERE sourceId = :sourceId")
     suspend fun countForSource(sourceId: Long): Int
 
-    @Query(
-        """
-        SELECT * FROM movies
-        WHERE (:categoryId IS NULL OR categoryId = :categoryId)
-        ORDER BY addedMillis DESC, name
-        """,
-    )
+    @Query(MOVIES_IN_CATEGORY)
     fun observe(categoryId: String?): Flow<List<Movie>>
 
     /**
@@ -547,7 +628,7 @@ interface MovieDao {
     fun search(query: String, limit: Int = 200): Flow<List<Movie>>
 
     /** Newest-first, for the "Recently Added" home row. Reactive so it fills in as VOD sync lands. */
-    @Query("SELECT * FROM movies ORDER BY addedMillis DESC LIMIT :limit")
+    @Query(RECENT_MOVIES)
     fun observeRecentlyAdded(limit: Int): Flow<List<Movie>>
 
     /**
@@ -555,7 +636,7 @@ interface MovieDao {
      * genre-affinity recommendations, more-like-this). One pass over a few thousand rows is cheap;
      * per-genre `LIKE` queries would multiply round-trips and risk substring false positives.
      */
-    @Query("SELECT * FROM movies ORDER BY addedMillis DESC")
+    @Query(ALL_MOVIES)
     suspend fun all(): List<Movie>
 
     /** See [RANKED_FINGERPRINT]. */
@@ -569,12 +650,7 @@ interface MovieDao {
      * The [limit] movies a source most recently added that the provider hasn't been asked about, or,
      * [withTmdb], that TMDB hasn't answered about since [tmdbStaleBefore], for [MovieGenres].
      */
-    @Query(
-        "SELECT * FROM movies WHERE sourceId = :sourceId " +
-            "AND (detailsLookedUp = 0 OR " +
-            "(:withTmdb AND (tmdbAnsweredAt IS NULL OR tmdbAnsweredAt < :tmdbStaleBefore))) " +
-            "ORDER BY addedMillis DESC, id DESC LIMIT :limit",
-    )
+    @Query(NEWEST_MOVIES_NOT_LOOKED_UP)
     suspend fun newestNotLookedUp(sourceId: Long, withTmdb: Boolean, tmdbStaleBefore: Long, limit: Int): List<Movie>
 
     /**
@@ -782,13 +858,7 @@ interface SeriesDao {
     @Query("SELECT COUNT(*) FROM series WHERE sourceId = :sourceId")
     suspend fun countForSource(sourceId: Long): Int
 
-    @Query(
-        """
-        SELECT * FROM series
-        WHERE (:categoryId IS NULL OR categoryId = :categoryId)
-        ORDER BY addedMillis DESC, name
-        """,
-    )
+    @Query(SERIES_IN_CATEGORY)
     fun observe(categoryId: String?): Flow<List<Series>>
 
     /**
@@ -805,11 +875,11 @@ interface SeriesDao {
     fun search(query: String, limit: Int = 200): Flow<List<Series>>
 
     /** Newest-first, for the "Recently Added" home row. Reactive so it fills in as VOD sync lands. */
-    @Query("SELECT * FROM series ORDER BY addedMillis DESC LIMIT :limit")
+    @Query(RECENT_SERIES)
     fun observeRecentlyAdded(limit: Int): Flow<List<Series>>
 
     /** Every series, newest first — working set for the Kotlin-side by-genre / more-like-this feeds. */
-    @Query("SELECT * FROM series ORDER BY addedMillis DESC")
+    @Query(ALL_SERIES)
     suspend fun all(): List<Series>
 
     /** See [RANKED_FINGERPRINT]. */
@@ -884,11 +954,7 @@ interface SeriesDao {
      * The [limit] series a source most recently added that TMDB hasn't answered about since
      * [staleBefore], for `SeriesTmdbPass`.
      */
-    @Query(
-        "SELECT * FROM series WHERE sourceId = :sourceId " +
-            "AND (tmdbAnsweredAt IS NULL OR tmdbAnsweredAt < :staleBefore) " +
-            "ORDER BY addedMillis DESC, id DESC LIMIT :limit",
-    )
+    @Query(NEWEST_SERIES_TMDB_DUE)
     suspend fun newestTmdbDue(sourceId: Long, staleBefore: Long, limit: Int): List<Series>
 
     @Query("SELECT id, `cast`, NULL AS director, NULL AS writer, NULL AS studio FROM series WHERE id IN (:ids)")
@@ -1405,6 +1471,56 @@ data class StarredMovie(@Embedded val movie: Movie, val starredAtMillis: Long)
 
 /** A Favourite series and when the Profile last starred it. */
 data class StarredSeries(@Embedded val series: Series, val starredAtMillis: Long)
+
+/**
+ * Home's Recently Added films, by walking the `addedMillis` index backwards to the limit. Room re-runs it
+ * on every write to `movies`, which the background title lookups make every few seconds, so sorting the
+ * whole library each time would cost Home its smoothness. A const so the query-plan test reads it.
+ * Providers stamp a whole import alike, so `id` settles which of a tie make the limit, the last saved
+ * first, rather than leaving it to the plan; the index holds the rowid, so it still needs no sort.
+ */
+internal const val RECENT_MOVIES = "SELECT * FROM movies ORDER BY addedMillis DESC, id DESC LIMIT :limit"
+
+/** Home's Recently Added shows. See [RECENT_MOVIES]. */
+internal const val RECENT_SERIES = "SELECT * FROM series ORDER BY addedMillis DESC, id DESC LIMIT :limit"
+
+/**
+ * Every film, newest first, read straight through the table and sorted, as before `addedMillis` was
+ * indexed. Left alone, SQLite walks that index instead and fetches each row out of order by id, which
+ * reads the same rows less sequentially. NOT INDEXED keeps the index to Recently Added, which stops at
+ * its limit. Consts like these are read by the query-plan tests.
+ */
+internal const val ALL_MOVIES = "SELECT * FROM movies NOT INDEXED ORDER BY addedMillis DESC"
+
+/** Every series, newest first. See [ALL_MOVIES]. */
+internal const val ALL_SERIES = "SELECT * FROM series NOT INDEXED ORDER BY addedMillis DESC"
+
+/** A category's films, or every film, newest first. See [ALL_MOVIES]. */
+internal const val MOVIES_IN_CATEGORY = """
+    SELECT * FROM movies NOT INDEXED
+    WHERE (:categoryId IS NULL OR categoryId = :categoryId)
+    ORDER BY addedMillis DESC, name
+"""
+
+/** A category's series, or every series, newest first. See [ALL_MOVIES]. */
+internal const val SERIES_IN_CATEGORY = """
+    SELECT * FROM series NOT INDEXED
+    WHERE (:categoryId IS NULL OR categoryId = :categoryId)
+    ORDER BY addedMillis DESC, name
+"""
+
+/** A source's newest films due a lookup: found through `sourceId`, not by walking every source's titles. */
+internal const val NEWEST_MOVIES_NOT_LOOKED_UP =
+    "SELECT * FROM movies WHERE sourceId = :sourceId " +
+        "AND (detailsLookedUp = 0 OR " +
+        "(:withTmdb AND (tmdbAnsweredAt IS NULL OR tmdbAnsweredAt < :tmdbStaleBefore))) " +
+        "ORDER BY addedMillis DESC, id DESC LIMIT :limit"
+
+/** A source's newest series due a TMDB lookup. See [NEWEST_MOVIES_NOT_LOOKED_UP]. */
+internal const val NEWEST_SERIES_TMDB_DUE =
+    "SELECT * FROM series WHERE sourceId = :sourceId " +
+        "AND (tmdbAnsweredAt IS NULL OR tmdbAnsweredAt < :staleBefore) " +
+        "ORDER BY addedMillis DESC, id DESC LIMIT :limit"
 
 /** A person's films, by an index lookup on their credits. A const so the query-plan test reads it. */
 internal const val MOVIES_WITH_PERSON = """

@@ -24,7 +24,12 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.Stable
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -44,7 +49,11 @@ import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import app.opentv.R
@@ -91,8 +100,14 @@ import kotlinx.coroutines.launch
  *
  * Every row and the time header share one [horizontalScroll] state, so scrolling any of them
  * scrolls all of them in lock-step and the columns stay time-aligned. Within a row, cells are
- * placed left to right at [MINUTE_DP] per minute, with spacers for gaps. No absolute positioning
- * and no measuring pass, which is cheap enough for a lazy list of thousands of channels on a Stick.
+ * placed left to right at [MINUTE_DP] per minute ([layOutCells]), with spacers for gaps.
+ *
+ * A row builds only the cells on screen and one past each edge ([cellsToBuild]), plus its first
+ * and last for paging a day to land on, and stands in for the rest with spacers of the same width,
+ * so the strip is as wide as ever and every cell lands where it would have. Building the whole day
+ * made every row a hundred or so cells, and the guide the Stick's most janky screen. Which to build is
+ * worked out from the half hour the scroll is in, not the scroll itself, so a row rebuilds when
+ * that changes rather than on every frame of a scroll.
  */
 @Composable
 fun GuideGrid(
@@ -146,9 +161,10 @@ fun GuideGrid(
     // A new day starts at its own beginning, or at its end when the viewer came back to it from
     // the next one, so the Highlight lands next to where it was.
     LaunchedEffect(dayOffset) { if (landAtEnd) scroll.scrollTo(scroll.maxValue) else scroll.scrollTo(0) }
+    val strip = rememberStripState(scroll)
 
-    Column(modifier.fillMaxSize()) {
-        TimeHeader(windowStartMillis, windowEndMillis, dayLabel, scroll)
+    Column(modifier.fillMaxSize().onSizeChanged { strip.gridWidthPx = it.width }) {
+        TimeHeader(windowStartMillis, windowEndMillis, dayLabel, scroll, strip)
         LazyColumn(state = listState) {
             itemsIndexed(rows, key = { _, row -> row.key }) { index, row ->
                 GuideRow(
@@ -156,6 +172,7 @@ fun GuideGrid(
                     window = windowStartMillis..windowEndMillis,
                     nowMillis = nowMillis,
                     scroll = scroll,
+                    strip = strip,
                     onWatch = { onWatch(row) },
                     onHighlight = { programme -> onHighlight(row, programme) },
                     onProgramme = { programme -> onProgramme(row, programme) },
@@ -225,8 +242,41 @@ private fun rememberReturnToChannel(
 /** Which of a row's programmes takes the Highlight when the guide pages to another day. */
 private enum class Land { First, Last }
 
+/** The part of the strip, from its start, that rows build cells for: what's on screen and a little more. */
+private data class StripView(val from: Dp, val width: Dp)
+
+@Stable
+private class StripState(scroll: ScrollState, private val density: Density, screenWidthPx: Int) {
+    /** How wide the guide is laid out; the screen's width until it's measured, which is never less. */
+    var gridWidthPx by mutableIntStateOf(screenWidthPx)
+
+    // The half hour the scroll is in, rather than the scroll itself, so rows rebuild when that
+    // changes and not on every frame of a scroll animation.
+    private val halfHourPx = with(density) { HALF_HOUR_WIDTH.toPx() }
+    private val slot by derivedStateOf { (scroll.value / halfHourPx).toInt() }
+
+    /** From the start of [slot], a half hour wider than the strip on screen, so it covers it to the slot's end. */
+    val view by derivedStateOf {
+        val stripWidth = with(density) { gridWidthPx.toDp() } - CHANNEL_COLUMN
+        StripView(from = HALF_HOUR_WIDTH * slot, width = stripWidth.coerceAtLeast(0.dp) + HALF_HOUR_WIDTH)
+    }
+}
+
 @Composable
-private fun TimeHeader(windowStartMillis: Long, windowEndMillis: Long, dayLabel: String, scroll: ScrollState) {
+private fun rememberStripState(scroll: ScrollState): StripState {
+    val density = LocalDensity.current
+    val screenWidthDp = LocalConfiguration.current.screenWidthDp
+    return remember(scroll, density) { StripState(scroll, density, with(density) { screenWidthDp.dp.roundToPx() }) }
+}
+
+@Composable
+private fun TimeHeader(
+    windowStartMillis: Long,
+    windowEndMillis: Long,
+    dayLabel: String,
+    scroll: ScrollState,
+    strip: StripState,
+) {
     Row(
         Modifier
             .fillMaxWidth()
@@ -248,7 +298,13 @@ private fun TimeHeader(windowStartMillis: Long, windowEndMillis: Long, dayLabel:
             Text(dayLabel, SetteeType.Body, color = SetteeColors.Text, maxLines = 1)
         }
         Row(Modifier.horizontalScroll(scroll, enabled = false)) {
-            repeat(((windowEndMillis - windowStartMillis + HALF_HOUR_MS - 1) / HALF_HOUR_MS).toInt()) { i ->
+            // Only the labels over the strip on screen; spacers keep the header as wide as the rows.
+            val view = strip.view
+            val labels = ((windowEndMillis - windowStartMillis + HALF_HOUR_MS - 1) / HALF_HOUR_MS).toInt()
+            val firstShown = (view.from / HALF_HOUR_WIDTH).toInt().coerceIn(0, labels)
+            val lastShown = ((view.from + view.width) / HALF_HOUR_WIDTH).toInt().coerceAtMost(labels - 1)
+            if (firstShown > 0) Spacer(Modifier.width(HALF_HOUR_WIDTH * firstShown))
+            for (i in firstShown..lastShown) {
                 Box(
                     Modifier.width(HALF_HOUR_WIDTH).fillMaxHeight().padding(start = CELL_PADDING),
                     contentAlignment = Alignment.CenterStart,
@@ -260,6 +316,8 @@ private fun TimeHeader(windowStartMillis: Long, windowEndMillis: Long, dayLabel:
                     )
                 }
             }
+            val after = labels - maxOf(lastShown + 1, firstShown)
+            if (after > 0) Spacer(Modifier.width(HALF_HOUR_WIDTH * after))
         }
     }
 }
@@ -270,6 +328,7 @@ private fun GuideRow(
     window: LongRange,
     nowMillis: Long,
     scroll: ScrollState,
+    strip: StripState,
     onWatch: () -> Unit,
     onHighlight: (Programme?) -> Unit,
     onProgramme: (Programme) -> Unit,
@@ -285,6 +344,7 @@ private fun GuideRow(
     val shown = remember(row.programmes, window) {
         row.programmes.filter { it.endUtcMillis > window.first && it.startUtcMillis < window.last }
     }
+    val spans = remember(shown, window) { layOutCells(shown, window.first, window.last) }
     val channel = remember { FocusRequester() }
     val first = remember { FocusRequester() }
     val last = remember { FocusRequester() }
@@ -343,7 +403,18 @@ private fun GuideRow(
                     )
                 }
             } else {
-                ProgrammeCells(shown, window, nowMillis, onHighlight, onProgramme, onNextDay, onPrevDay, first, last)
+                ProgrammeCells(
+                    shown = shown,
+                    spans = spans,
+                    strip = strip,
+                    nowMillis = nowMillis,
+                    onHighlight = onHighlight,
+                    onProgramme = onProgramme,
+                    onNextDay = onNextDay,
+                    onPrevDay = onPrevDay,
+                    first = first,
+                    last = last,
+                )
             }
         }
     }
@@ -404,11 +475,19 @@ private fun ChannelCell(
     }
 }
 
-/** [shown], the row's programmes in the window, each a cell; [first] and [last] for landing on. */
+/**
+ * [shown], the row's programmes in the window, laid out at [spans]: the ones [strip]'s view covers built as
+ * cells and the rest spacers. [first] and [last] are for landing on.
+ *
+ * Beyond those on screen, the row's first and last are always built, since paging a day lands on
+ * one of them wherever the strip is scrolled, and so is the one last highlighted, so the Highlight
+ * isn't lost with its cell (the sidebar comes back to it).
+ */
 @Composable
 private fun ProgrammeCells(
     shown: List<Programme>,
-    window: LongRange,
+    spans: List<CellSpan>,
+    strip: StripState,
     nowMillis: Long,
     onHighlight: (Programme?) -> Unit,
     onProgramme: (Programme) -> Unit,
@@ -417,35 +496,40 @@ private fun ProgrammeCells(
     first: FocusRequester,
     last: FocusRequester,
 ) {
-    val windowStartMillis = window.first
-    val windowEnd = window.last
-    var cursor = windowStartMillis
-    // A programme almost over (or a very short one) would otherwise be a sliver too thin to read.
-    // Each cell is floored at [MIN_CELL_WIDTH], and the borrowed width is repaid out of the gaps
-    // that follow, so everything downstream stays aligned with the time header.
-    var debt = 0.dp
-    shown.forEachIndexed { i, programme ->
-        val start = programme.startUtcMillis.coerceAtLeast(windowStartMillis)
-        val gap = widthFor(cursor, start)
-        val repaid = minOf(debt, gap)
-        debt -= repaid
-        if (gap - repaid > 0.dp) Spacer(Modifier.width(gap - repaid))
-        val end = programme.endUtcMillis.coerceAtMost(windowEnd)
-        val trueWidth = widthFor(start, end)
-        val drawnWidth = maxOf(trueWidth, MIN_CELL_WIDTH)
-        debt += drawnWidth - trueWidth
-        ProgrammeCell(
-            programme = programme,
-            width = drawnWidth,
-            isNow = programme.isLiveAt(nowMillis),
-            onHighlight = { onHighlight(programme) },
-            onClick = { onProgramme(programme) },
-            onPastEnd = onNextDay.takeIf { i == shown.lastIndex },
-            onBeforeStart = onPrevDay.takeIf { i == 0 },
-            landing = listOfNotNull(first.takeIf { i == 0 }, last.takeIf { i == shown.lastIndex }),
-        )
-        cursor = end
+    // By start rather than index, so a guide refresh that adds or drops a programme keeps the same one.
+    var highlightedStart by remember { mutableLongStateOf(Long.MIN_VALUE) }
+    val highlighted = shown.indexOfFirst { it.startUtcMillis == highlightedStart }
+    // Read here, not in GuideGrid, so crossing a half hour recomposes the rows' cells and no more.
+    val view = strip.view
+    val built = (cellsToBuild(spans, view.from, view.width) + listOf(0, shown.lastIndex, highlighted))
+        .filter { it in shown.indices }
+        .toSortedSet()
+    var x = 0.dp
+    built.forEach { i ->
+        val programme = shown[i]
+        val span = spans[i]
+        // Keyed, so as the built cells move along the row each keeps its own state, focus included,
+        // rather than one slot passing it to whichever programme lands there next.
+        key(programme.startUtcMillis) {
+            if (span.x > x) Spacer(Modifier.width(span.x - x))
+            ProgrammeCell(
+                programme = programme,
+                width = span.width,
+                isNow = programme.isLiveAt(nowMillis),
+                onHighlight = {
+                    highlightedStart = programme.startUtcMillis
+                    onHighlight(programme)
+                },
+                onClick = { onProgramme(programme) },
+                onPastEnd = onNextDay.takeIf { i == shown.lastIndex },
+                onBeforeStart = onPrevDay.takeIf { i == 0 },
+                landing = listOfNotNull(first.takeIf { i == 0 }, last.takeIf { i == shown.lastIndex }),
+            )
+        }
+        x = span.end
     }
+    val stripEnd = spans.last().end
+    if (stripEnd > x) Spacer(Modifier.width(stripEnd - x))
 }
 
 @Composable
@@ -501,14 +585,6 @@ private fun ProgrammeCell(
     }
 }
 
-/** Minutes between two instants, as guide width. Never negative. */
-private fun widthFor(fromMillis: Long, toMillis: Long): Dp {
-    val minutes = ((toMillis - fromMillis) / 60_000L).coerceAtLeast(0)
-    return (minutes * MINUTE_DP).dp
-}
-
-// A day across at 4 dp a minute is about 5800 dp of strip, which a Stick scrolls happily.
-private const val MINUTE_DP = 4f
 private const val HOURS_IN_DAY = 24
 private const val HOUR_MS = 60 * 60 * 1000L
 private const val HALF_HOUR_MS = 30 * 60 * 1000L
@@ -519,9 +595,6 @@ private val LOGO = 32.dp
 private val CELL_PADDING = 10.dp
 private val RULE = 1.dp
 private val STRONG_RULE = 2.dp
-
-// Floor for a cell so a nearly finished or very short programme still shows its name.
-private val MIN_CELL_WIDTH = 72.dp
 private val HALF_HOUR_WIDTH: Dp = (30 * MINUTE_DP).dp
 
 private val clockFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
