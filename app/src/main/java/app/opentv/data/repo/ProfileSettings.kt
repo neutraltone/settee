@@ -9,6 +9,7 @@ import androidx.media3.common.util.UnstableApi
 import androidx.media3.common.util.Util
 import app.opentv.data.db.OpenTvDatabase
 import app.opentv.data.model.ProfileSetting
+import app.opentv.data.model.SubtitleKind
 import app.opentv.sync.SyncProfileSetting
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -21,7 +22,12 @@ import kotlinx.coroutines.flow.map
  * Whether the Profile wants subtitles shown, and in which language. A null [language] follows the
  * device's language, worked out when a title plays rather than stored.
  */
-data class SubtitlePreference(val enabled: Boolean, val language: String?)
+data class SubtitlePreference(
+    val enabled: Boolean,
+    val language: String?,
+    /** Set only by a pick from OpenSubtitles; a stream's own tracks don't say what kind they are. */
+    val kind: SubtitleKind = SubtitleKind.STANDARD,
+)
 
 /**
  * Streams tag the same language as `eng`, `en` or `en-GB`; a viewer who picked English subtitles
@@ -53,6 +59,9 @@ class ProfileSettings(
             SubtitlePreference(
                 enabled = byName[SUBTITLES_ON].toBoolean(),
                 language = byName[SUBTITLE_LANGUAGE],
+                kind = byName[SUBTITLE_KIND]
+                    ?.let { name -> SubtitleKind.entries.firstOrNull { it.name == name } }
+                    ?: SubtitleKind.STANDARD,
             )
         }
         .distinctUntilChanged()
@@ -62,11 +71,14 @@ class ProfileSettings(
 
     /**
      * The viewer picked a subtitle track. A track with no language says nothing about which
-     * language they want, so the one they picked before is kept.
+     * language they want, so the one they picked before is kept. [kind] comes with a Downloaded
+     * Subtitle (Forced, Hearing impaired), for automatic downloads to look for; a stream's own
+     * tracks don't say, so null leaves the kind picked before.
      */
-    suspend fun pickSubtitleTrack(language: String?) {
+    suspend fun pickSubtitleTrack(language: String?, kind: SubtitleKind? = null) {
         setSubtitlesOn(true)
         baseLanguage(language)?.takeIf { it.isNotBlank() }?.let { store(SUBTITLE_LANGUAGE, it) }
+        kind?.let { store(SUBTITLE_KIND, it.name) }
     }
 
     /** A Version the active Profile chose for a title, and when: [VodQualities] weighs it against what played. */
@@ -127,6 +139,7 @@ class ProfileSettings(
     private companion object {
         const val SUBTITLES_ON = "subtitles.on"
         const val SUBTITLE_LANGUAGE = "subtitles.language"
+        const val SUBTITLE_KIND = "subtitles.kind"
         const val VERSION = "version."
     }
 }

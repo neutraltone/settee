@@ -189,6 +189,7 @@ object Routes {
     const val ADD_SOURCE = "add-source"
     const val SETUP = "setup"
     const val TMDB_STEP = "tmdb-step"
+    const val OPENSUBTITLES_STEP = "opensubtitles-step"
     const val PLAYER = "player/{channelId}"
     const val SEARCH = "search"
     const val SETTINGS = "settings"

@@ -316,6 +316,60 @@ class ProviderRoutesTest {
         compose.waitUntil(5_000) { route() == Routes.SETUP }
     }
 
+    /** The same app as [graph], in a build with an OpenSubtitles key. */
+    private val withOpenSubtitles by lazy {
+        ServiceLocator.Graph(
+            app,
+            http = panel.http,
+            settingsFile = "provider-routes-opensubtitles",
+            openDatabase = {
+                Room.inMemoryDatabaseBuilder(app, OpenTvDatabase::class.java).allowMainThreadQueries().build()
+            },
+        ).apply { openSubtitlesKey = "k" }
+    }
+
+    private fun openSubtitlesStepButton(text: String) = compose.onNode(
+        hasText(text) and hasAnyAncestor(hasTestTag(TMDB_STEP_ACTIONS)),
+    )
+
+    @Test
+    fun `with OpenSubtitles, skipping the TMDB step goes on to the OpenSubtitles step, and Not now to Setup`() {
+        withOpenSubtitles.settings.removeTmdbApiKey()
+        setApp(start = Routes.ADD_SOURCE, sources = SourcesViewModel(app, withOpenSubtitles))
+        savePlaylist()
+        compose.waitUntil(5_000) { route() == Routes.TMDB_STEP }
+
+        compose.onNodeWithText("Skip for now").performClick()
+
+        compose.waitUntil(5_000) { route() == Routes.OPENSUBTITLES_STEP }
+        compose.onNodeWithText("Find subtitles with OpenSubtitles").assertExists()
+        compose.onNodeWithText("5 a day work without an account", substring = true).assertExists()
+        compose.onNodeWithText("Sign in on this TV").assertExists()
+        compose.onNodeWithText("Subtitles provided by OpenSubtitles.com").assertExists()
+        compose.waitUntil(5_000) {
+            compose.onAllNodes(hasText("Not now") and isFocused()).fetchSemanticsNodes().isNotEmpty()
+        }
+        captureScreen("onboarding_opensubtitles_step")
+
+        openSubtitlesStepButton("Not now").performClick()
+
+        compose.waitUntil(5_000) { route() == Routes.SETUP }
+        assertThat(compose.runOnIdle { nav.previousBackStackEntry?.destination?.route })
+            .isNotEqualTo(Routes.OPENSUBTITLES_STEP)
+        withOpenSubtitles.database.close()
+    }
+
+    @Test
+    fun `with OpenSubtitles and a TMDB Key already, the first provider goes straight to the OpenSubtitles step`() {
+        withOpenSubtitles.settings.setTmdbApiKey(TMDB_KEY)
+        setApp(start = Routes.ADD_SOURCE, sources = SourcesViewModel(app, withOpenSubtitles))
+
+        savePlaylist()
+
+        compose.waitUntil(5_000) { route() == Routes.OPENSUBTITLES_STEP }
+        withOpenSubtitles.database.close()
+    }
+
     /**
      * The step fits on a TV screen as it is: nothing scrolled off the top to bring the Highlight into
      * view, and nothing hanging off the bottom.

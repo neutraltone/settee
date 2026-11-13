@@ -165,13 +165,60 @@ object PairingPage {
         )
     }
 
+    /**
+     * Signing the TV in to OpenSubtitles: username and password, which go to the TV and from there
+     * only to OpenSubtitles, with where to make a free account. Setup's ([onboarding]) has Not now.
+     */
+    fun openSubtitles(token: String, text: (Int) -> String, error: Error?, onboarding: Boolean): String = page(
+        token = token,
+        content = """
+        <h1>${escape(text(R.string.pairing_phone_opensubtitles_title))}</h1>
+        <p class="sub">${escape(text(R.string.pairing_phone_opensubtitles_body))}</p>
+
+        ${errorBox(error)}
+
+        <form id="form" method="post" action="/signin">
+          <input type="hidden" name="t" value="${escape(token)}">
+          <label for="username">${escape(text(R.string.opensubtitles_username))}</label>
+          <input id="username" name="username" type="text" required autocomplete="username"
+                 autocapitalize="off" autocorrect="off" spellcheck="false">
+          <label for="password">${escape(text(R.string.opensubtitles_password))}</label>
+          <input id="password" name="password" type="password" required autocomplete="current-password">
+          <button id="send" type="submit">${escape(text(R.string.opensubtitles_sign_in))}</button>
+        </form>
+
+        ${if (onboarding) skipButton(token, text, R.string.common_not_now) else ""}
+
+        <p class="hint"><a href="$OPENSUBTITLES_SIGNUP" target="_blank" rel="noopener">${escape(
+            text(R.string.opensubtitles_create_account),
+        )}</a></p>
+        <p class="hint">${escape(text(R.string.opensubtitles_attribution))}</p>
+
+        <script>
+          // The TV signs in with OpenSubtitles before it answers, so the button says it's working.
+          document.getElementById('form').addEventListener('submit', function () {
+            var send = document.getElementById('send');
+            send.disabled = true;
+            send.innerHTML = '<span class="spin" aria-hidden="true"></span>' + send.textContent;
+          });
+        </script>
+        """.trimIndent(),
+    )
+
+    private fun errorBox(error: Error?): String = error?.let {
+        "<div class=\"error\">${escape(it.sentence)}" +
+            (if (it.detail.isNotBlank()) "<span class=\"detail\">${escape(it.detail)}</span>" else "") +
+            "</div>"
+    }.orEmpty()
+
     /** Onboarding's Skip for now, under Send to TV: the key is optional there, as on the TV. */
-    private fun skipButton(token: String, text: (Int) -> String): String = """
+    private fun skipButton(token: String, text: (Int) -> String, label: Int = R.string.onboarding_tmdb_skip): String =
+        """
         <form method="post" action="/skip">
           <input type="hidden" name="t" value="${escape(token)}">
-          <button type="submit" class="secondary">${escape(text(R.string.onboarding_tmdb_skip))}</button>
+          <button type="submit" class="secondary">${escape(text(label))}</button>
         </form>
-    """.trimIndent()
+        """.trimIndent()
 
     /** Why the TV turned a key down: the sentence and detail line `ErrorMessage` draws on the TV. */
     data class Error(val sentence: String, val detail: String)
@@ -269,6 +316,7 @@ object PairingPage {
     /** Where a viewer signs up for TMDB, and where its account settings hand out the key. */
     private const val TMDB_SIGNUP = "https://www.themoviedb.org/signup"
     private const val TMDB_API_SETTINGS = "https://www.themoviedb.org/settings/api"
+    private const val OPENSUBTITLES_SIGNUP = "https://www.opensubtitles.com/"
 
     /** Settee's fonts, fetched from the TV's own server. */
     private fun fontFaces(token: String): String {

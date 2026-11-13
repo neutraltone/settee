@@ -8,6 +8,7 @@ package app.opentv.core
 import android.content.Context
 import androidx.annotation.StringRes
 import app.opentv.R
+import app.opentv.data.remote.OpenSubtitlesFailure
 import app.opentv.data.remote.ProviderException
 import app.opentv.data.remote.ProviderException.Problem
 import app.opentv.data.remote.TmdbCheck
@@ -104,6 +105,55 @@ class ErrorWording(private val context: Context, private val onTelevision: Boole
                 ofHardware(tv, R.string.error_tmdb_unreachable_device, codeOf(check.cause))
             }
         }
+    }
+
+    /** What went wrong with OpenSubtitles: finding, downloading or signing in. */
+    fun ofOpenSubtitles(error: Throwable): ViewerError = when (error) {
+        is OpenSubtitlesFailure.NoResults -> of(R.string.error_opensubtitles_none, "NoResults")
+        is OpenSubtitlesFailure.DownloadLimit -> {
+            val resetsAt = error.resetsAt
+            val sentence = when {
+                !error.signedIn -> resources.getString(R.string.error_opensubtitles_limit_anonymous)
+                resetsAt != null -> resources.getString(
+                    R.string.error_opensubtitles_limit_account,
+                    android.text.format.DateFormat.getTimeFormat(context).format(java.util.Date(resetsAt)),
+                )
+                else -> resources.getString(R.string.error_opensubtitles_limit_account_unknown)
+            }
+            ViewerError(sentence, ViewerError.detailOf("DownloadLimit", "HTTP 406"))
+        }
+        is OpenSubtitlesFailure.SignInRejected ->
+            ViewerError(
+                resources.getString(R.string.error_opensubtitles_sign_in),
+                ViewerError.detailOf("SignInRejected", "HTTP 401"),
+            )
+        is OpenSubtitlesFailure.TokenRejected ->
+            ofHardware(
+                R.string.error_opensubtitles_token_tv,
+                R.string.error_opensubtitles_token_device,
+                "TokenRejected",
+            )
+        is OpenSubtitlesFailure.Unreachable -> {
+            val status = error.status
+            if (status != null) {
+                ViewerError(
+                    resources.getString(R.string.error_opensubtitles_trouble),
+                    ViewerError.detailOf("HTTP $status"),
+                )
+            } else {
+                val cause = error.cause ?: error
+                ofHardware(
+                    R.string.error_opensubtitles_unreachable_tv,
+                    R.string.error_opensubtitles_unreachable_device,
+                    codeOf(cause),
+                )
+            }
+        }
+        else -> ofHardware(
+            R.string.error_opensubtitles_unreachable_tv,
+            R.string.error_opensubtitles_unreachable_device,
+            codeOf(error),
+        )
     }
 
     @StringRes

@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
@@ -14,6 +16,17 @@ plugins {
 // CHANGELOG.md but not the APK's version.
 val appVersionName = "0.5.0" // x-release-please-version
 
+/*
+ * Settee's own OpenSubtitles key (one per app: OpenSubtitles bans apps that make viewers bring their
+ * own). From the OPENSUBTITLES_API_KEY secret in CI, or opensubtitles.apiKey in local.properties,
+ * which git ignores. Never committed. Blank leaves OpenSubtitles out of the app entirely.
+ */
+val openSubtitlesApiKey: String = providers.environmentVariable("OPENSUBTITLES_API_KEY").orNull
+    ?: rootProject.file("local.properties").takeIf { it.isFile }?.let { file ->
+        Properties().apply { file.inputStream().use { load(it) } }.getProperty("opensubtitles.apiKey")
+    }
+    ?: ""
+
 // The profile generator's builds of the app take this plus a suffix (androidComponents below).
 val releaseApplicationId = "uk.neutraltone.settee"
 
@@ -28,6 +41,13 @@ android {
         versionCode = versionCodeOf(appVersionName)
         versionName = appVersionName
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        buildConfigField(
+            "String",
+            "OPENSUBTITLES_API_KEY",
+            "\"${openSubtitlesApiKey.filter {
+                it.isLetterOrDigit()
+            }}\"",
+        )
     }
 
     signingConfigs {

@@ -389,6 +389,78 @@ class PairingServerTest {
         assertThat(server.state.value).isInstanceOf(PairingServer.State.Listening::class.java)
     }
 
+    /** Sends an OpenSubtitles username and password from the phone, as the viewer would. */
+    private fun signIn(session: PairingServer.Session, password: String = "p"): Pair<Int, String> {
+        val form = okhttp3.FormBody.Builder()
+            .add("t", session.url.substringAfter("t="))
+            .add("username", "u")
+            .add("password", password)
+            .build()
+        val request = Request.Builder().url("http://${session.host}:${session.port}/signin").post(form).build()
+        return OkHttpClient.Builder().readTimeout(30, java.util.concurrent.TimeUnit.SECONDS).build()
+            .newCall(request).execute().use { it.code to it.body.string() }
+    }
+
+    private fun receivedSignIn(): PairingServer.State.SignInReceived {
+        val deadline = System.currentTimeMillis() + 10_000
+        while (System.currentTimeMillis() < deadline) {
+            (server.state.value as? PairingServer.State.SignInReceived)?.let { return it }
+            Thread.sleep(20)
+        }
+        error("the TV never got the sign-in")
+    }
+
+    @Test
+    fun `for OpenSubtitles the QR code opens a sign-in form, with where to make a free account`() {
+        val session = listening(PairingServer.Mode.OpenSubtitles())
+
+        val (code, page) = get(session.url)
+
+        assertThat(code).isEqualTo(200)
+        assertThat(page).contains("action=\"/signin\"")
+        assertThat(page).contains("name=\"username\"")
+        assertThat(page).contains("type=\"password\"")
+        assertThat(page).contains("https://www.opensubtitles.com/")
+        assertThat(page).doesNotContain("action=\"/skip\"")
+    }
+
+    @Test
+    fun `a sign-in sent from the phone reaches the TV, and the phone hears it worked`() {
+        val session = listening(PairingServer.Mode.OpenSubtitles())
+
+        val reply = scope.async(Dispatchers.IO) { signIn(session) }
+        val got = receivedSignIn()
+        assertThat(got.username).isEqualTo("u")
+        assertThat(got.password).isEqualTo("p")
+        got.answer(problem = null)
+
+        assertThat(runBlocking { reply.await() }.second)
+            .contains(context.getString(R.string.pairing_phone_opensubtitles_saved_title))
+    }
+
+    @Test
+    fun `a sign-in OpenSubtitles turns down shows why on the phone, which can try again`() {
+        val session = listening(PairingServer.Mode.OpenSubtitles())
+
+        val first = scope.async(Dispatchers.IO) { signIn(session, password = "wrong") }
+        receivedSignIn().answer(ViewerError("OpenSubtitles didn't accept that username or password.", "SignInRejected"))
+        val (_, page) = runBlocking { first.await() }
+
+        assertThat(shown(page)).contains("OpenSubtitles didn't accept that username or password.")
+        assertThat(page).contains("action=\"/signin\"")
+        assertThat(server.state.value).isInstanceOf(PairingServer.State.Listening::class.java)
+    }
+
+    @Test
+    fun `Setup's OpenSubtitles page has Not now, which tells the TV to carry on`() {
+        val session = listening(PairingServer.Mode.OpenSubtitles(onboarding = true))
+        assertThat(get(session.url).second).contains("action=\"/skip\"")
+
+        skipKey(session)
+
+        assertThat(server.state.value).isEqualTo(PairingServer.State.KeySkipped)
+    }
+
     private companion object {
         /** A placeholder, low-entropy so gitleaks sees no secret. */
         val KEY = "d".repeat(32)

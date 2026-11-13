@@ -33,6 +33,7 @@ import androidx.compose.material.icons.filled.FiberManualRecord
 import androidx.compose.material.icons.filled.HighQuality
 import androidx.compose.material.icons.filled.MoreHoriz
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -88,7 +89,6 @@ import app.opentv.ui.player.PlayerOptions
 import app.opentv.ui.player.PlayerPill
 import app.opentv.ui.player.SleepTimerPanel
 import app.opentv.ui.player.SubtitlePicks
-import app.opentv.ui.player.rememberProfileSubtitles
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
@@ -147,7 +147,9 @@ fun VodPlayerScreen(
 
     val playback = remember { controller.vodPlayback() }
 
-    val subtitlePicks = rememberProfileSubtitles(controller, graph.profileSettings, scope)
+    // Null in a build without Settee's OpenSubtitles key: then the subtitle list is only the stream's.
+    val vodSubtitles = remember { graph.openSubtitles?.let { VodSubtitles(it, graph.profileSettings, scope) } }
+    val subtitlePicks = rememberVodProfileSubtitles(controller, graph.profileSettings, scope, vodSubtitles)
 
     // Keep the screen awake during playback — see the note in PlayerScreen; a film is exactly when
     // the screensaver must not fire. Window flag is the reliable path; keepScreenOn is a backstop.
@@ -197,7 +199,9 @@ fun VodPlayerScreen(
     val finished by viewModel.finished.collectAsState()
     LaunchedEffect(finished) { if (finished) onBack() }
 
-    VodPlayerContent(controller, viewModel, growingRec, subtitlePicks, onBack)
+    CompositionLocalProvider(LocalVodSubtitles provides vodSubtitles) {
+        VodPlayerContent(controller, viewModel, growingRec, subtitlePicks, onBack)
+    }
 }
 
 /** [this] as the view model drives it. */
@@ -245,6 +249,8 @@ fun VodPlayerContent(
     onBack: () -> Unit,
 ) {
     val seek = remember { UnfinishedSeek() }
+    // OpenSubtitles' part of the subtitle list; null without Settee's key.
+    val subtitles = LocalVodSubtitles.current
 
     // Skip within a recording that's still being written. ExoPlayer won't report it as seekable (no
     // fixed length), so we seek directly, clamped to what's on disk.
@@ -340,6 +346,7 @@ fun VodPlayerContent(
     LaunchedEffect(playing) {
         seek.drop()
         positionMs = controller.positionMillis
+        subtitles?.load(playing)
     }
 
     // Not tied to the bar losing focus or the controls hiding: a key-up can go missing with the bar
@@ -461,8 +468,11 @@ fun VodPlayerContent(
             },
         )
 
+        subtitles?.let { DownloadedSubtitleOverlay(it, positionMillis = { controller.positionMillis }) }
+
         val notice by controller.notice.collectAsState()
         notice?.let { PlayerNotice(it, Modifier.align(Alignment.TopCenter)) }
+        subtitles?.let { SubtitleNote(it, Modifier.align(Alignment.TopStart)) }
 
         when (val current = state) {
             // Which Quality to play is still being worked out, which may mean asking the provider. Idle
@@ -529,12 +539,33 @@ fun VodPlayerContent(
             )
         }
 
-        if (vodPanel != VodPanel.NONE && controlsVisible && !failed) {
+        val panelShowing = vodPanel != VodPanel.NONE && controlsVisible && !failed
+        if (panelShowing && vodPanel == VodPanel.OPENSUBTITLES && subtitles != null) {
+            OpenSubtitlesResultsPanel(
+                subtitles,
+                firstFocus = panelFocus,
+                onClose = {
+                    vodPanel = VodPanel.SUBTITLES
+                    interaction++
+                },
+                onPicked = {
+                    vodPanel = VodPanel.NONE
+                    interaction++
+                },
+                modifier = Modifier.align(Alignment.CenterEnd),
+            )
+        } else if (panelShowing) {
             TrackPanel(
                 panel = vodPanel,
                 controller = controller,
                 tracks = tracks,
                 subtitlePicks = subtitlePicks,
+                subtitles = subtitles,
+                onFind = {
+                    subtitles?.search()
+                    vodPanel = VodPanel.OPENSUBTITLES
+                    interaction++
+                },
                 firstFocus = panelFocus,
                 onDone = {
                     vodPanel = VodPanel.NONE
@@ -630,9 +661,13 @@ private fun RecordingBadge() {
     }
 }
 
-private enum class VodPanel { NONE, SUBTITLES, AUDIO }
+private enum class VodPanel { NONE, SUBTITLES, AUDIO, OPENSUBTITLES }
 
-/** Subtitles or audio, in the player's choice panel. */
+/**
+ * Subtitles or audio, in the player's choice panel. With OpenSubtitles ([subtitles]), the subtitle
+ * list starts with its entry and ends with the title's Downloaded Subtitles and, while one shows,
+ * its Timing.
+ */
 @OptIn(UnstableApi::class)
 @Composable
 private fun TrackPanel(
@@ -640,37 +675,48 @@ private fun TrackPanel(
     controller: PlayerController,
     tracks: Tracks,
     subtitlePicks: SubtitlePicks,
+    subtitles: VodSubtitles?,
+    onFind: () -> Unit,
     firstFocus: FocusRequester,
     onDone: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val trackType = if (panel == VodPanel.SUBTITLES) C.TRACK_TYPE_TEXT else C.TRACK_TYPE_AUDIO
     val groups = tracks.groups.filter { it.type == trackType }
-    val options = mutableListOf<Triple<String, Boolean, () -> Unit>>()
+    val options = mutableListOf<PlayerChoice>()
+    val (above, below) = if (panel == VodPanel.SUBTITLES && subtitles != null) {
+        openSubtitlesChoices(subtitles, onFind, onDone)
+    } else {
+        emptyList<PlayerChoice>() to emptyList()
+    }
+    // A Downloaded Subtitle is drawn by the screen with the stream's text off, so none of the
+    // stream's tracks counts as chosen while one shows.
+    val downloadedShowing = subtitles?.showing?.collectAsState()?.value != null
 
     if (panel == VodPanel.SUBTITLES) {
-        val anySelected = groups.any { g -> (0 until g.length).any { g.isTrackSelected(it) } }
+        val anySelected = downloadedShowing || groups.any { g -> (0 until g.length).any { g.isTrackSelected(it) } }
         options +=
-            Triple(stringResource(R.string.player_subtitles_off), !anySelected) {
+            PlayerChoice(stringResource(R.string.player_subtitles_off), !anySelected, {
                 controller.disableText()
                 subtitlePicks.onOff()
                 onDone()
-            }
+            })
     }
     groups.forEach { group ->
         for (i in 0 until group.length) {
             if (!group.isTrackSupported(i)) continue
             val format = group.getTrackFormat(i)
-            options += Triple(vodTrackLabel(format.label, format.language, options.size), group.isTrackSelected(i)) {
+            val selected = group.isTrackSelected(i) && !(trackType == C.TRACK_TYPE_TEXT && downloadedShowing)
+            options += PlayerChoice(vodTrackLabel(format.label, format.language, options.size), selected, {
                 controller.selectTrack(group, i)
                 if (trackType == C.TRACK_TYPE_TEXT) subtitlePicks.onPicked(format.language)
                 onDone()
-            }
+            })
         }
     }
     PlayerChoicePanel(
         title = stringResource(if (panel == VodPanel.SUBTITLES) R.string.player_subtitles else R.string.player_audio),
-        choices = options.map { (label, selected, onClick) -> PlayerChoice(label, selected, onClick) },
+        choices = above + options + below,
         startFocus = firstFocus,
         onClose = onDone,
         modifier = modifier,

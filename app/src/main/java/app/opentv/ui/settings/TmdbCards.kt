@@ -74,7 +74,8 @@ internal fun PhoneQrPanel(phone: PairingServer.State, onRetry: () -> Unit, wordi
 internal fun codeShown(phone: PairingServer.State): PairingServer.State {
     var shown by remember { mutableStateOf(phone) }
     LaunchedEffect(phone) {
-        if (phone !is PairingServer.State.KeyReceived && phone != PairingServer.State.KeySkipped) shown = phone
+        val hearing = phone is PairingServer.State.KeyReceived || phone is PairingServer.State.SignInReceived
+        if (!hearing && phone != PairingServer.State.KeySkipped) shown = phone
     }
     return shown
 }

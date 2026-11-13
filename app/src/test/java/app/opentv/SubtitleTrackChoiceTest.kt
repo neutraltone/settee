@@ -5,7 +5,9 @@
  */
 package app.opentv
 
+import app.opentv.player.SubtitlePick
 import app.opentv.player.SubtitleTrack
+import app.opentv.player.chooseSubtitle
 import app.opentv.player.chooseSubtitleTrack
 import com.google.common.truth.Truth.assertThat
 import org.junit.Test
@@ -44,5 +46,33 @@ class SubtitleTrackChoiceTest {
     fun `codes for the same language match however the stream writes them`() {
         assertThat(chooseSubtitleTrack(tracks("fr", "eng"), preferred = null, device = "en")).isEqualTo(1)
         assertThat(chooseSubtitleTrack(tracks("fr", "en-GB"), preferred = "en", device = "de")).isEqualTo(1)
+    }
+
+    @Test
+    fun `a Downloaded Subtitle in the Profile's language is chosen when the stream has none in it`() {
+        val choice = chooseSubtitle(tracks("en"), downloaded = listOf("de", "fr"), preferred = "fr", device = "en")
+
+        assertThat(choice).isEqualTo(SubtitlePick.Downloaded(1))
+    }
+
+    @Test
+    fun `the stream's own track wins over a Downloaded Subtitle in the same language`() {
+        val choice = chooseSubtitle(tracks("en", "fr"), downloaded = listOf("fr"), preferred = "fr", device = "en")
+
+        assertThat(choice).isEqualTo(SubtitlePick.Stream(1))
+    }
+
+    @Test
+    fun `a Downloaded Subtitle in the device language beats a stream track in neither`() {
+        val choice = chooseSubtitle(tracks("it"), downloaded = listOf("en"), preferred = "fr", device = "en")
+
+        assertThat(choice).isEqualTo(SubtitlePick.Downloaded(0))
+    }
+
+    @Test
+    fun `with nothing in either language, the stream's first track is still shown`() {
+        assertThat(chooseSubtitle(tracks("it"), downloaded = listOf("es"), preferred = "fr", device = "en"))
+            .isEqualTo(SubtitlePick.Stream(0))
+        assertThat(chooseSubtitle(emptyList(), downloaded = emptyList(), preferred = "fr", device = "en")).isNull()
     }
 }

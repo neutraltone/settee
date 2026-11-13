@@ -54,6 +54,7 @@ import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
@@ -315,9 +316,19 @@ private fun Pill(pill: PlayerPill, modifier: Modifier = Modifier) {
     }
 }
 
-/** One row of a [PlayerChoicePanel]. */
+/**
+ * One row of a [PlayerChoicePanel]. [detail] is a quieter second line. [onAdjust], when set, makes
+ * the row a control: left and right call it with -1 and +1 instead of leaving the row.
+ */
 @Immutable
-internal class PlayerChoice(val label: String, val selected: Boolean, val onClick: () -> Unit)
+internal class PlayerChoice(
+    val label: String,
+    val selected: Boolean,
+    val onClick: () -> Unit,
+    val detail: String? = null,
+    val onAdjust: ((Int) -> Unit)? = null,
+    val tag: String? = null,
+)
 
 /**
  * A picker over the player (subtitles, audio, quality, aspect ratio): a panel down the right of the
@@ -331,6 +342,10 @@ internal fun PlayerChoicePanel(
     startFocus: FocusRequester,
     onClose: () -> Unit,
     modifier: Modifier = Modifier,
+    /** Shown under the rows, such as OpenSubtitles' attribution, or in place of them, such as an error. */
+    footer: (@Composable () -> Unit)? = null,
+    /** What's said when there are no rows; null for the usual "None available". */
+    empty: String? = null,
 ) {
     val start = choices.indexOfFirst { it.selected }.coerceAtLeast(0)
     Column(
@@ -351,9 +366,9 @@ internal fun PlayerChoicePanel(
         Text(title, SetteeType.Section)
         Spacer(Modifier.height(12.dp))
         Column(Modifier.verticalScroll(rememberScrollState())) {
-            if (choices.isEmpty()) {
+            if (choices.isEmpty() && empty != "") {
                 Text(
-                    stringResource(R.string.player_none_available),
+                    empty ?: stringResource(R.string.player_none_available),
                     SetteeType.Body,
                     color = SetteeColors.QuietText,
                     modifier = Modifier.padding(vertical = 8.dp),
@@ -362,20 +377,43 @@ internal fun PlayerChoicePanel(
             choices.forEachIndexed { index, choice ->
                 ChoiceRow(choice, if (index == start) Modifier.focusRequester(startFocus) else Modifier)
             }
+            footer?.let {
+                Spacer(Modifier.height(12.dp))
+                it()
+            }
         }
     }
 }
 
 @Composable
 private fun ChoiceRow(choice: PlayerChoice, modifier: Modifier) {
+    val adjust = choice.onAdjust
+    val adjusting = if (adjust == null) {
+        Modifier
+    } else {
+        Modifier.onPreviewKeyEvent { event ->
+            val step = when (event.key) {
+                Key.DirectionLeft -> -1
+                Key.DirectionRight -> 1
+                else -> 0
+            }
+            if (step != 0 && event.type == KeyEventType.KeyDown) adjust(step)
+            step != 0
+        }
+    }
     HighlightSurface(
         onClick = choice.onClick,
         style = HighlightStyle.Row,
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth().then(adjusting).then(choice.tag?.let { Modifier.testTag(it) } ?: Modifier),
     ) { highlighted ->
         val colour = if (highlighted) SetteeColors.OnAccent else SetteeColors.Text
         Row(Modifier.padding(horizontal = 14.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-            Text(choice.label, SetteeType.RowTitle, color = colour, modifier = Modifier.weight(1f))
+            Column(Modifier.weight(1f)) {
+                Text(choice.label, SetteeType.RowTitle, color = colour)
+                choice.detail?.let {
+                    Text(it, SetteeType.Body, color = if (highlighted) colour else SetteeColors.QuietText)
+                }
+            }
             if (choice.selected) {
                 Icon(Icons.Filled.Check, contentDescription = stringResource(R.string.common_selected), tint = colour)
             }

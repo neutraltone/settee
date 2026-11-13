@@ -10,6 +10,7 @@ import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import app.opentv.data.db.OpenTvDatabase
 import app.opentv.data.model.ProfileSetting
+import app.opentv.data.model.SubtitleKind
 import app.opentv.data.repo.ProfileSettings
 import app.opentv.data.repo.SubtitlePreference
 import com.google.common.truth.Truth.assertThat
@@ -69,6 +70,32 @@ class ProfileSettingsTest {
 
         settings.pickSubtitleTrack(language = "pt-BR")
         assertThat(preference().language).isEqualTo("pt")
+    }
+
+    @Test
+    fun `picking a Downloaded Subtitle remembers its language and its kind`() = runTest {
+        settings.pickSubtitleTrack(language = "de", kind = SubtitleKind.HEARING_IMPAIRED)
+
+        assertThat(preference())
+            .isEqualTo(SubtitlePreference(enabled = true, language = "de", kind = SubtitleKind.HEARING_IMPAIRED))
+    }
+
+    @Test
+    fun `picking a stream's own track changes the language but leaves the kind alone`() = runTest {
+        settings.pickSubtitleTrack(language = "de", kind = SubtitleKind.FORCED)
+
+        settings.pickSubtitleTrack(language = "fr")
+
+        assertThat(
+            preference(),
+        ).isEqualTo(SubtitlePreference(enabled = true, language = "fr", kind = SubtitleKind.FORCED))
+    }
+
+    @Test
+    fun `a Profile that never picked from OpenSubtitles wants standard subtitles`() = runTest {
+        settings.pickSubtitleTrack(language = "fr")
+
+        assertThat(preference().kind).isEqualTo(SubtitleKind.STANDARD)
     }
 
     @Test

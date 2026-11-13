@@ -544,6 +544,51 @@ class AppSettings private constructor(context: Context, fileName: String = "open
         _tmdbApiKey.value = ""
     }
 
+    // ---- OpenSubtitles Account --------------------------------------------------------------
+
+    /**
+     * The box's OpenSubtitles Account, shared by every Profile and never synced, like the TMDB Key.
+     * The password is kept only as `OpenSubtitlesAccount` sealed it, so the 24-hour token can renew
+     * without asking. Read and written only through `OpenSubtitlesAccount`.
+     */
+    private val _openSubtitlesUsername = MutableStateFlow(prefs.getString(KEY_OS_USERNAME, null))
+    val openSubtitlesUsername: StateFlow<String?> = _openSubtitlesUsername.asStateFlow()
+
+    val openSubtitlesSealedPassword: String? get() = prefs.getString(KEY_OS_PASSWORD, null)
+    val openSubtitlesToken: String? get() = prefs.getString(KEY_OS_TOKEN, null)
+    val openSubtitlesTokenAt: Long get() = prefs.getLong(KEY_OS_TOKEN_AT, 0L)
+
+    fun setOpenSubtitlesAccount(username: String, sealedPassword: String, token: String, tokenAt: Long) {
+        prefs.edit {
+            putString(KEY_OS_USERNAME, username)
+            putString(KEY_OS_PASSWORD, sealedPassword)
+            putString(KEY_OS_TOKEN, token)
+            putLong(KEY_OS_TOKEN_AT, tokenAt)
+        }
+        _openSubtitlesUsername.value = username
+    }
+
+    fun setOpenSubtitlesToken(token: String, tokenAt: Long) {
+        prefs.edit {
+            putString(KEY_OS_TOKEN, token)
+            putLong(KEY_OS_TOKEN_AT, tokenAt)
+        }
+    }
+
+    fun removeOpenSubtitlesAccount() {
+        prefs.edit { listOf(KEY_OS_USERNAME, KEY_OS_PASSWORD, KEY_OS_TOKEN, KEY_OS_TOKEN_AT).forEach(::remove) }
+        _openSubtitlesUsername.value = null
+    }
+
+    /** Whether a signed-in box fetches a missing subtitle by itself. On unless turned off. */
+    private val _openSubtitlesAuto = MutableStateFlow(prefs.getBoolean(KEY_OS_AUTO, true))
+    val openSubtitlesAuto: StateFlow<Boolean> = _openSubtitlesAuto.asStateFlow()
+
+    fun setOpenSubtitlesAuto(on: Boolean) {
+        prefs.edit { putBoolean(KEY_OS_AUTO, on) }
+        _openSubtitlesAuto.value = on
+    }
+
     // ---- Stremio add-ons ---------------------------------------------------------------------
 
     /**
@@ -618,6 +663,11 @@ class AppSettings private constructor(context: Context, fileName: String = "open
         // cleared with a provider's other stamps, so it doesn't linger on devices that had it.
         private const val KEY_TMDB_BLANKS_RETRIED = "tmdb_blanks_retried_"
         private const val KEY_TMDB_KEY = "tmdb_api_key"
+        private const val KEY_OS_USERNAME = "opensubtitles_username"
+        private const val KEY_OS_PASSWORD = "opensubtitles_password_sealed"
+        private const val KEY_OS_TOKEN = "opensubtitles_token"
+        private const val KEY_OS_TOKEN_AT = "opensubtitles_token_at"
+        private const val KEY_OS_AUTO = "opensubtitles_auto"
         private const val KEY_STREMIO_ADDONS = "stremio_addons"
         private const val KEY_PAD_START = "rec_pad_start_min"
         private const val KEY_PAD_END = "rec_pad_end_min"

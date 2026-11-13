@@ -6,7 +6,9 @@
 package app.opentv.core
 
 import android.content.Context
+import app.opentv.BuildConfig
 import app.opentv.data.db.OpenTvDatabase
+import app.opentv.data.remote.OpenSubtitlesClient
 import app.opentv.data.remote.StalkerApi
 import app.opentv.data.remote.StremioClient
 import app.opentv.data.remote.TmdbClient
@@ -14,7 +16,11 @@ import app.opentv.data.remote.XtreamApi
 import app.opentv.data.repo.CatalogRepository
 import app.opentv.data.repo.CatalogueRefresh
 import app.opentv.data.repo.ChannelLineup
+import app.opentv.data.repo.DownloadedSubtitles
 import app.opentv.data.repo.EpgRepository
+import app.opentv.data.repo.KeystoreSealer
+import app.opentv.data.repo.OpenSubtitles
+import app.opentv.data.repo.OpenSubtitlesAccount
 import app.opentv.data.repo.PlaybackSources
 import app.opentv.data.repo.ProfileSettings
 import app.opentv.data.repo.Profiles
@@ -195,6 +201,32 @@ object ServiceLocator {
         /** Saving and removing the TMDB Key, each key checked with TMDB first, off the main thread. */
         val tmdbKeys: TmdbKeys by lazy {
             TmdbKeys(settings) { key -> withContext(Dispatchers.IO) { tmdbClient.check(key) } }
+        }
+
+        /**
+         * Settee's OpenSubtitles key; blank, as in a build without one, leaves OpenSubtitles out. A test
+         * sets its own before [openSubtitles] is first used, to have OpenSubtitles whatever the build has.
+         */
+        internal var openSubtitlesKey: String = BuildConfig.OPENSUBTITLES_API_KEY
+
+        /**
+         * OpenSubtitles, with Settee's own key, or null in a build without one: then no player,
+         * Setup step or Settings section offers it.
+         */
+        val openSubtitles: OpenSubtitles? by lazy {
+            openSubtitlesKey.takeIf { it.isNotBlank() }?.let { key ->
+                OpenSubtitles(
+                    account = OpenSubtitlesAccount(
+                        settings,
+                        OpenSubtitlesClient(httpClient, key, BuildConfig.VERSION_NAME),
+                        KeystoreSealer(),
+                        clock,
+                    ),
+                    store = DownloadedSubtitles(java.io.File(appContext.filesDir, "subtitles"), clock),
+                    catalog = catalogRepository,
+                    sources = sourceRepository,
+                )
+            }
         }
 
         /**
