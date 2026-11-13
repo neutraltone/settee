@@ -69,7 +69,7 @@ class HomeBackTest {
     private lateinit var nav: NavHostController
 
     @Before
-    fun setUp() = runBlocking {
+    fun setUp(): Unit = runBlocking {
         Dispatchers.setMain(UnconfinedTestDispatcher(scheduler))
         db.sources().insert(Source(id = 1, name = "Provider", kind = SourceKind.XTREAM, url = "http://example.com"))
         db.movies().upsertAll(listOf(superbad))

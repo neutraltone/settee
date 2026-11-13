@@ -8,12 +8,12 @@ package app.opentv
 import android.app.Application
 import androidx.test.core.app.ApplicationProvider
 import app.opentv.core.ServiceLocator
-import app.opentv.data.repo.Profiles
 import app.opentv.data.model.Channel
 import app.opentv.data.model.Movie
 import app.opentv.data.model.Profile
 import app.opentv.data.model.Source
 import app.opentv.data.model.SourceKind
+import app.opentv.data.repo.Profiles
 import app.opentv.ui.HomeState
 import app.opentv.ui.HomeViewModel
 import com.google.common.truth.Truth.assertThat

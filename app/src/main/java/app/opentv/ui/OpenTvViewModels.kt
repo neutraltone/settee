@@ -1563,13 +1563,10 @@ class HomeViewModel @JvmOverloads constructor(
 }
 
 /**
- * Shares while anything collects or [keptLive] holds; once neither has for [stopMillis], stops and
- * drops the last value, as WhileSubscribed(stopMillis, replayExpirationMillis = 0) does.
+ * Shares while anything collects or [keptLive] holds; once neither has for [STOP_MILLIS], stops and
+ * drops the last value, as WhileSubscribed(STOP_MILLIS, replayExpirationMillis = 0) does.
  */
-private class WhileDrawnOrKeptLive(
-    private val keptLive: StateFlow<Boolean>,
-    private val stopMillis: Long = 5_000,
-) : SharingStarted {
+private class WhileDrawnOrKeptLive(private val keptLive: StateFlow<Boolean>) : SharingStarted {
     @OptIn(ExperimentalCoroutinesApi::class)
     override fun command(subscriptionCount: StateFlow<Int>): Flow<SharingCommand> =
         combine(subscriptionCount, keptLive) { collectors, kept -> collectors > 0 || kept }
@@ -1578,12 +1575,16 @@ private class WhileDrawnOrKeptLive(
                 if (live) {
                     emit(SharingCommand.START)
                 } else {
-                    delay(stopMillis)
+                    delay(STOP_MILLIS)
                     emit(SharingCommand.STOP_AND_RESET_REPLAY_CACHE)
                 }
             }
             .dropWhile { it != SharingCommand.START }
             .distinctUntilChanged()
+
+    private companion object {
+        const val STOP_MILLIS = 5_000L
+    }
 }
 
 /**
