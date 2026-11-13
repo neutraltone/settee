@@ -104,7 +104,14 @@ class CoverGridPrefetchTest {
     }
 
     private fun assertGivenUp(urls: List<String>) {
-        runCatching { compose.waitUntil(5_000) { cancelled.containsAll(urls) } }
+        // Idled each time round: the test runs on the main thread, and a cancelled request only
+        // reports it once its coroutine resumes there. waitUntil alone never lets the looper run.
+        runCatching {
+            compose.waitUntil(5_000) {
+                compose.waitForIdle()
+                cancelled.containsAll(urls)
+            }
+        }
         assertThat(cancelled).containsAtLeastElementsIn(urls)
     }
 
