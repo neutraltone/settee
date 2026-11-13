@@ -19,7 +19,7 @@ import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
 import app.opentv.data.model.Channel
-import app.opentv.data.model.Programme
+import app.opentv.data.model.GuideProgramme
 import app.opentv.data.repo.LineupChannel
 import app.opentv.ui.ChannelsViewModel
 import app.opentv.ui.channels.GuideGrid
@@ -46,7 +46,7 @@ class GuideScrollingTest {
     @get:Rule
     val artwork = PlaceholderArtwork()
 
-    private fun row(id: Long, programmes: List<Programme>): ChannelsViewModel.Row {
+    private fun row(id: Long, programmes: List<GuideProgramme>): ChannelsViewModel.Row {
         val channel = Channel(
             id = id,
             sourceId = 1,
@@ -62,11 +62,11 @@ class GuideScrollingTest {
     }
 
     /** Back-to-back programmes from [fromMillis], each [minutes] long in turn, titled "[name] 0", "[name] 1"… */
-    private fun programmes(name: String, fromMillis: Long, minutes: List<Int>): List<Programme> {
+    private fun programmes(name: String, fromMillis: Long, minutes: List<Int>): List<GuideProgramme> {
         var start = fromMillis
         return minutes.mapIndexed { i, length ->
             val end = start + length * MINUTE_MS
-            Programme(feedId = 1, epgChannelId = name, startUtcMillis = start, endUtcMillis = end, title = "$name $i")
+            GuideProgramme(epgChannelId = name, startUtcMillis = start, endUtcMillis = end, title = "$name $i")
                 .also { start = end }
         }
     }
