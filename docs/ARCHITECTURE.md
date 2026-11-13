@@ -101,7 +101,7 @@ its rows hundreds of times during one sync (#257). Two things stop that:
   finished listings, and never the same listings twice in a row. Not a plain `debounce`: that
   delays start-up and shows nothing new until a long first download ends. Settled in the
   repository, not the screen, so anything else that watches the guide gets the same.
-- `guideBuilds` (`ui/GuideIndex.kt`) times the guide's next rebuild for more listings from the end
+- `guideBuilds` (`ui/ProgrammeIndex.kt`) times the guide's next rebuild for more listings from the end
   of the last build, not from when the listings arrived: building "All channels" for a big
   provider outlasts the pause on a Fire TV Stick, and paced from arrival it rebuilt back to back.
   New channels and a new window's first listings never wait.
