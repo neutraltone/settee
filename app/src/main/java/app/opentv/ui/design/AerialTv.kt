@@ -18,6 +18,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -42,10 +44,21 @@ import kotlin.math.abs
  * frame redraws the indicator and nothing else.
  */
 @Composable
-fun AerialTv(description: String, modifier: Modifier = Modifier, size: AerialTvSize = AerialTvSize.Full) {
+fun AerialTv(
+    description: String,
+    modifier: Modifier = Modifier,
+    size: AerialTvSize = AerialTvSize.Full,
+    /**
+     * On the Highlight's coral, as at the end of a highlighted row: all of it in plum, as the row's
+     * text is, since coral arcs would vanish into the coral and leave a TV that looks stuck.
+     */
+    onHighlight: Boolean = false,
+) {
     val still = painterResource(
         if (size == AerialTvSize.Full) R.drawable.ic_waiting_tv else R.drawable.ic_waiting_tv_small,
     )
+    val tint = if (onHighlight) ColorFilter.tint(SetteeColors.OnAccent) else null
+    val arcs = if (onHighlight) SetteeColors.OnAccent else SetteeColors.Accent
     val millis = rememberElapsedMillis()
     Spacer(
         modifier
@@ -53,11 +66,11 @@ fun AerialTv(description: String, modifier: Modifier = Modifier, size: AerialTvS
             .progressSemantics()
             .semantics { contentDescription = description }
             .drawBehind {
-                with(still) { draw(this@drawBehind.size) }
+                with(still) { draw(this@drawBehind.size, colorFilter = tint) }
                 // Read here, while drawing, so each frame redraws only this.
                 val elapsed = millis.longValue
                 scale(this.size.width / AerialTvShape.VIEWPORT, pivot = Offset.Zero) {
-                    if (size == AerialTvSize.Full) drawFull(elapsed) else drawSmall(elapsed)
+                    if (size == AerialTvSize.Full) drawFull(elapsed) else drawSmall(elapsed, arcs)
                 }
             },
     )
@@ -106,16 +119,16 @@ private fun DrawScope.drawFull(millis: Long) {
 }
 
 /** One arc from each aerial, widening as it fades. */
-private fun DrawScope.drawSmall(millis: Long) {
+private fun DrawScope.drawSmall(millis: Long, colour: Color) {
     val fading = millis.mod(SMALL_CYCLE_MILLIS).toFloat() / SMALL_CYCLE_MILLIS
     val radius = AerialTvShape.SMALL_ARC_RADIUS * (SMALL_START + (1f - SMALL_START) * fading)
-    drawArcs(radius, SmallArc, alpha = 1f - fading)
+    drawArcs(radius, SmallArc, alpha = 1f - fading, colour = colour)
 }
 
-private fun DrawScope.drawArcs(radius: Float, stroke: Stroke, alpha: Float) {
+private fun DrawScope.drawArcs(radius: Float, stroke: Stroke, alpha: Float, colour: Color = SetteeColors.Accent) {
     AerialTvShape.knobs.forEachIndexed { i, knob ->
         drawArc(
-            SetteeColors.Accent,
+            colour,
             startAngle = AerialTvShape.arcFacing[i] - AerialTvShape.ARC_SWEEP / 2,
             sweepAngle = AerialTvShape.ARC_SWEEP,
             useCenter = false,

@@ -425,7 +425,7 @@ private fun ChoiceRow(choice: PlayerChoice, modifier: Modifier) {
                     Text(it, SetteeType.Body, color = if (highlighted) colour else SetteeColors.QuietText)
                 }
             }
-            ChoiceEnd(choice, colour)
+            ChoiceEnd(choice, colour, highlighted)
         }
     }
 }
@@ -436,10 +436,10 @@ private val Scrim = SetteeColors.Background.copy(alpha = 0.92f)
 
 /** What sits at the end of a [ChoiceRow]: waiting, the tick, or the row's own icon. */
 @Composable
-private fun ChoiceEnd(choice: PlayerChoice, colour: Color) {
+private fun ChoiceEnd(choice: PlayerChoice, colour: Color, highlighted: Boolean) {
     val end = choice.end
     when {
-        end is RowEnd.Waiting -> AerialTv(end.description, size = AerialTvSize.Small)
+        end is RowEnd.Waiting -> AerialTv(end.description, size = AerialTvSize.Small, onHighlight = highlighted)
         choice.selected ->
             Icon(Icons.Filled.Check, contentDescription = stringResource(R.string.common_selected), tint = colour)
         end is RowEnd.Mark -> Icon(end.icon, contentDescription = null, tint = colour)

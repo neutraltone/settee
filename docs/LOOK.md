@@ -303,6 +303,7 @@ Waiting is the aerial TV: the TV from the mark, with its face on the screen and 
 
 - **Full size,** about 48-64 dp, centred with what's loading named under it: the players while they buffer, live and on demand, and phone pairing's two waits. Three arcs rise in turn over about 1.8 s, and the eyes blink about every 4 s.
 - **Small size,** at text height, in the status line at the foot of the main screen, and at the end of a row whose thing is being fetched, such as an OpenSubtitles result downloading: no face, thicker aerials, one arc. A row already done shows its icon there instead (Downloaded, for a subtitle already on the box).
+- **On the Highlight,** at the end of a highlighted row, it's drawn all in plum, as the row's text is: coral arcs would vanish into the coral and leave a TV that looks stuck.
 - **Always animated,** even when the system's animations are removed. It's the one exception in Settee: the motion is the only sign that the app isn't frozen, and WCAG counts a loading indicator as essential motion.
 - **Drawn, not laid out:** a frame redraws only the indicator, so it stays within the budget below.
 - **Nothing at app start.** The wait before the saved providers and Profiles have loaded shows only the background: it's usually a frame or two, and anything drawn there would flicker.

@@ -5,6 +5,8 @@
  */
 package app.opentv
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.MotionDurationScale
 import androidx.compose.ui.platform.testTag
@@ -14,6 +16,7 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import app.opentv.ui.design.AerialTv
 import app.opentv.ui.design.AerialTvSize
+import app.opentv.ui.design.SetteeColors
 import com.google.common.truth.Truth.assertThat
 import org.junit.Rule
 import org.junit.Test
@@ -37,9 +40,20 @@ class AerialTvTest {
     val compose = createComposeRule(effectContext = AnimationsOff)
 
     /** What the indicator looks like at each step of [stepMillis], [steps] times. */
-    private fun frames(size: AerialTvSize, steps: Int = 12, stepMillis: Long = 250): List<Int> {
+    private fun frames(
+        size: AerialTvSize,
+        steps: Int = 12,
+        stepMillis: Long = 250,
+        onHighlight: Boolean = false,
+    ): List<Int> {
         compose.mainClock.autoAdvance = false
-        compose.setTvContent { AerialTv("Loading", Modifier.testTag("tv"), size) }
+        compose.setTvContent {
+            // On the Highlight, it sits on the Highlight's coral, as at the end of a highlighted row.
+            val behind = if (onHighlight) SetteeColors.Accent else SetteeColors.Background
+            Box(Modifier.background(behind).testTag("tv")) {
+                AerialTv("Loading", size = size, onHighlight = onHighlight)
+            }
+        }
         return (1..steps).map {
             compose.mainClock.advanceTimeBy(stepMillis)
             val image = compose.onNodeWithTag("tv").captureToImage()
@@ -55,6 +69,11 @@ class AerialTvTest {
     @Test
     fun `the small size keeps moving with the system's animations turned off`() {
         assertThat(frames(AerialTvSize.Small).distinct().size).isGreaterThan(1)
+    }
+
+    @Test
+    fun `on the Highlight the small size still visibly moves, its arcs not lost in the coral`() {
+        assertThat(frames(AerialTvSize.Small, onHighlight = true).distinct().size).isGreaterThan(1)
     }
 
     @Test
