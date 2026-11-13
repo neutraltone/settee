@@ -93,17 +93,16 @@ fun TmdbStepScreen(graph: ServiceLocator.Graph, onDone: () -> Unit) {
         )
         return
     }
-    // With OpenSubtitles' step next, the phone goes straight on to its sign-in once it has sent a key, so
-    // the TV goes with it rather than waiting on Carry on here while the phone is a step ahead.
-    val thenOpenSubtitles = remember { graph.offersOpenSubtitles() }
+    // With OpenSubtitles' step next, the phone goes straight on to its sign-in once a key is sent, on the
+    // same address, which stays open for that step. The TV still says the key is saved and waits on Carry
+    // on, so there's time to read it; a sign-in sent meanwhile is answered when the step opens.
     TmdbKeyRows(
         entry,
         onboarding = true,
         graph = graph,
         onSaved = { saved = true },
         onSkipped = onDone,
-        thenOpenSubtitles = thenOpenSubtitles,
-        onSavedFromPhone = if (thenOpenSubtitles) onDone else ({}),
+        thenOpenSubtitles = remember { graph.offersOpenSubtitles() },
     ) { parts ->
         StepLayout(
             code = { parts.code(true) },

@@ -672,6 +672,7 @@
     <string name="opensubtitles_fetched">Subtitles from OpenSubtitles</string>
     <string name="opensubtitles_step_title">Find subtitles with OpenSubtitles</string>
     <string name="opensubtitles_step_body">Settee can find subtitles on OpenSubtitles when a film or episode has none in your language. 5 a day work without an account. Sign in to your free OpenSubtitles account to get its own daily allowance, and have subtitles fetched for you.</string>
+    <string name="opensubtitles_step_signed_in">Subtitles now count against your account\'s own daily allowance, and one missing in your language is fetched for you.</string>
     <string name="opensubtitles_sign_in">Sign in</string>
     <string name="opensubtitles_sign_out">Sign out</string>
     <string name="opensubtitles_sign_in_here">Sign in on this TV</string>

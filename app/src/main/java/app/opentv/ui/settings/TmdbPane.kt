@@ -118,10 +118,8 @@ internal fun TmdbKeyRows(
     onSaved: () -> Unit = {},
     onSkipped: () -> Unit = {},
     // Setup's TMDB step with OpenSubtitles' step next: the phone goes on to it at the same address
-    // (see PairingServer.Mode.TmdbKey), so the server is left running for that step, and a key from
-    // the phone moves the TV on with it ([onSavedFromPhone]) rather than waiting on Carry on.
+    // (see PairingServer.Mode.TmdbKey), so the server is left running for that step.
     thenOpenSubtitles: Boolean = false,
-    onSavedFromPhone: () -> Unit = {},
     arrange: @Composable (TmdbKeyParts) -> Unit = { StackedParts(it) },
 ) {
     val savedKey by graph.settings.tmdbApiKey.collectAsState()
@@ -137,17 +135,12 @@ internal fun TmdbKeyRows(
     val asking = ending == null || entry.replacing
     ScreenKeptOnWhile(asking && codeState is PairingServer.State.Listening)
 
-    suspend fun save(key: String, then: () -> Unit = {}): ViewerError? = entry.save(key).also { why ->
-        if (why == null) {
-            onSaved()
-            then()
-        }
-    }
+    suspend fun save(key: String): ViewerError? = entry.save(key).also { why -> if (why == null) onSaved() }
 
     // Outside the rows that come and go, so a key arriving from the phone is answered whatever shows.
     LaunchedEffect(phone) {
         when (val now = phone) {
-            is PairingServer.State.KeyReceived -> now.answer(save(now.key, then = onSavedFromPhone))
+            is PairingServer.State.KeyReceived -> now.answer(save(now.key))
             PairingServer.State.KeySkipped -> onSkipped()
             else -> Unit
         }

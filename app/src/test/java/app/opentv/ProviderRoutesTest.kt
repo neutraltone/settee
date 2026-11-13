@@ -406,7 +406,7 @@ class ProviderRoutesTest {
     }
 
     @Test
-    fun `with OpenSubtitles next, a key sent from the phone takes the TV straight on, at the same address`() {
+    fun `with OpenSubtitles next, a key from the phone waits on Carry on, then that step keeps the same address`() {
         withOpenSubtitles.settings.removeTmdbApiKey()
         panel.replies["/3/authentication"] = """{"success": true}"""
         setApp(start = Routes.ADD_SOURCE, sources = SourcesViewModel(app, withOpenSubtitles))
@@ -417,9 +417,16 @@ class ProviderRoutesTest {
 
         fromPhone(session, "/key", "key" to OTHER_TMDB_KEY)
 
-        // No Carry on: the phone has gone on to OpenSubtitles' sign-in, and the TV goes with it.
-        compose.waitUntil(10_000) { route() == Routes.OPENSUBTITLES_STEP }
+        // The TV says the key is saved and waits, so there's time to read it, while the phone goes on.
+        compose.waitUntil(10_000) {
+            compose.onAllNodes(hasText("Carry on") and isFocused()).fetchSemanticsNodes().isNotEmpty()
+        }
+        assertThat(route()).isEqualTo(Routes.TMDB_STEP)
         assertThat(withOpenSubtitles.settings.tmdbApiKey.value).isEqualTo(OTHER_TMDB_KEY)
+
+        compose.onNodeWithText("Carry on").performClick()
+
+        compose.waitUntil(10_000) { route() == Routes.OPENSUBTITLES_STEP }
         compose.mainClock.advanceTimeBy(2_000)
         compose.waitForIdle()
         // The same address, so the phone needs no new code.
