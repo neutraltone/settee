@@ -49,7 +49,9 @@ class PhoneAddressTest {
 
         assertThat(address.check("GET", "/", token)).isEqualTo(PhoneAddress.Check.Scanned)
         assertThat(address.check("POST", "/submit", token)).isEqualTo(PhoneAddress.Check.Scanned)
-        assertThat(address.check("POST", "/submit", token.dropLast(1) + "0"))
+        // Swap the last hex digit for a different one: a fixed "0" left the token unchanged 1 run in 16.
+        val tampered = token.dropLast(1) + if (token.last() == '0') "1" else "0"
+        assertThat(address.check("POST", "/submit", tampered))
             .isInstanceOf(PhoneAddress.Check.Refused::class.java)
     }
 
