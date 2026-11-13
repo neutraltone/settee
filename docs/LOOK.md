@@ -334,7 +334,7 @@ Set from measurements on a Fire TV Stick (`AFTSS`) in [#156](https://github.com/
 - **Printed titles:** real covers often carry their own title, which runs into ours. Nothing here fixes it yet, so try it with real artwork when `ArtCard` is built.
 - **Rows at the edge:** rows run to the screen's edge, so partly hidden text sits outside the margin.
 - **Colour:** everything so far was judged on a monitor. Check colour and legibility on a real TV.
-- **Back to Home is slow:** rebuilding Home takes 330-510 ms on a Stick, over the 300 ms budget for a new screen.
+- **Back to Home is slow:** rebuilding Home took about 345 ms on a Stick even with its rows ready, over the 300 ms budget for a new screen. Its rows now stay current while a screen other than a player covers it, so Back from there no longer waits for them after a long time away (#192); back from a player it still waits, on purpose, for rows that know what was just watched. The rebuild itself is still to cut.
 - **Setup's bar can't tell much yet:** no step reports how far through it is today, so without new reporting the bar moves in three jumps. Measure how long each step takes on a Stick with a big provider before sharing the bar out.
 
 ## What done means

@@ -476,6 +476,8 @@ private fun OpenTvApp(isTelevision: Boolean, launchedToPlay: Boolean) {
                 val route by navController.currentBackStackEntryAsState()
                 WhatsNewGate(canShow = route?.destination?.route == Routes.MAIN)
 
+                KeepHomeLive(navController, ServiceLocator.get(bootContext).homeKeptLive)
+
                 // "About to switch to a recording" banner — shows 30s before an auto-switch fires.
                 RecordingSwitchBanner()
             }
