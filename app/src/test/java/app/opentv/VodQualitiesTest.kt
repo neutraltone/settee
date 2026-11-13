@@ -20,6 +20,8 @@ import app.opentv.data.repo.VodQualities
 import app.opentv.player.DecoderList
 import app.opentv.player.DecoderSize
 import com.google.common.truth.Truth.assertThat
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Before
@@ -333,6 +335,8 @@ class VodQualitiesTest {
     fun `a Version with no TMDB id that lists group with the title is in its pill`() = runTest {
         db.movies().upsertAll(listOf(movie(1, "NF - Superbad (2007)"), movie(2, "EN - Superbad (2007) FHD", null)))
         val index = TitleIndex(db, stick)
+        // Grouped first: runTest's clock would otherwise skip straight past the wait for it.
+        index.movies.filterNotNull().first()
 
         val choices = qualities(versionIds = index.versionIds).choicesFor(MediaKey.Movie(1))
 

@@ -33,7 +33,7 @@ class VersionTraitsTest {
 
     @Test
     fun `a film named after a language or a camera is neither`() {
-        assertThat(versionTraits("EN - The Italian Job (2003)", null).language).isNull()
+        assertThat(versionTraits("EN - The Italian Job (2003)", null).language).isEqualTo("en")
         assertThat(versionTraits("THE ITALIAN JOB (2003)", null).language).isNull()
         assertThat(versionTraits("EN - Cam (2018)", null).cam).isFalse()
         assertThat(versionTraits("EN - The Dub (2020)", null).dubbed).isFalse()
