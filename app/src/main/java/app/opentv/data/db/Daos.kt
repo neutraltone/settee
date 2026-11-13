@@ -818,33 +818,6 @@ interface MovieDao {
     @Query("SELECT id, `cast`, director, writer, studio FROM movies WHERE id IN (:ids)")
     suspend fun credited(ids: List<Long>): List<CreditedTitle>
 
-    /**
-     * The next [limit] movies after [afterId] that credit someone but have no [MovieCredit]s: those
-     * saved before credits were kept. Ones whose names all fold to nothing come back each time, so
-     * callers page by id rather than asking until none are left.
-     */
-    @Query(
-        """
-        SELECT id, `cast`, director, writer, studio FROM movies
-        WHERE id > :afterId AND (`cast` != '' OR director != '' OR writer != '' OR studio != '')
-          AND id NOT IN (SELECT movieId FROM movie_credits)
-        ORDER BY id LIMIT :limit
-        """,
-    )
-    suspend fun uncredited(afterId: Long, limit: Int): List<CreditedTitle>
-
-    /**
-     * Credits the next [limit] [uncredited] titles after [afterId], returning the last one's id, or
-     * null when none are left. Read and written in one transaction, so a refresh changing a cast in
-     * between can't have its credits replaced with the old names.
-     */
-    @Transaction
-    suspend fun creditNextUncredited(afterId: Long, limit: Int): Long? {
-        val titles = uncredited(afterId, limit).ifEmpty { return null }
-        recreditChanged(emptyMap(), titles)
-        return titles.last().id
-    }
-
     @Query("DELETE FROM movie_credits WHERE movieId = :movieId")
     suspend fun deleteCredits(movieId: Long)
 
@@ -961,28 +934,6 @@ interface SeriesDao {
 
     @Query("SELECT id, `cast`, NULL AS director, NULL AS writer, NULL AS studio FROM series WHERE id IN (:ids)")
     suspend fun credited(ids: List<Long>): List<CreditedTitle>
-
-    /** The next [limit] series after [afterId] with a cast but no [SeriesCredit]s. See [MovieDao.uncredited]. */
-    @Query(
-        """
-        SELECT id, `cast`, NULL AS director, NULL AS writer, NULL AS studio FROM series
-        WHERE id > :afterId AND `cast` != '' AND id NOT IN (SELECT seriesId FROM series_credits)
-        ORDER BY id LIMIT :limit
-        """,
-    )
-    suspend fun uncredited(afterId: Long, limit: Int): List<CreditedTitle>
-
-    /**
-     * Credits the next [limit] [uncredited] titles after [afterId], returning the last one's id, or
-     * null when none are left. Read and written in one transaction, so a refresh changing a cast in
-     * between can't have its credits replaced with the old names.
-     */
-    @Transaction
-    suspend fun creditNextUncredited(afterId: Long, limit: Int): Long? {
-        val titles = uncredited(afterId, limit).ifEmpty { return null }
-        recreditChanged(emptyMap(), titles)
-        return titles.last().id
-    }
 
     @Query("DELETE FROM series_credits WHERE seriesId = :seriesId")
     suspend fun deleteCredits(seriesId: Long)

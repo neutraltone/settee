@@ -20,8 +20,10 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
 /**
- * Titles saved before the app kept credits (database version 9) reach people's pages once the app
- * has started, without the viewer adding their providers again.
+ * A database from before the app kept credits (version 9) upgrades without the viewer adding their
+ * providers again. Its earlier titles reach people's pages when something changes their credits: a
+ * refresh, or the background lookup finding a film's cast. Starting the app doesn't read the whole
+ * library looking for uncredited ones.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], application = android.app.Application::class)
@@ -40,7 +42,7 @@ class PersonCreditsUpgradeTest {
     }
 
     @Test
-    fun `films and shows saved before credits were kept are on their people's pages after the app starts`() = runTest {
+    fun `starting the app doesn't go through films and shows saved before credits were kept`() = runTest {
         helper.createDatabase(NAME, 9).apply {
             execSQL(
                 "INSERT INTO movies (id, sourceId, streamId, name, streamUrl, addedMillis, `cast`, director) " +
@@ -58,9 +60,9 @@ class PersonCreditsUpgradeTest {
         test.refresh().refresh(CatalogueRefresh.Trigger.AppLaunch)
         test.catalog.awaitBackground()
 
-        assertThat(test.titlesWith("Nicolas Winding Refn")).containsExactly("Drive")
-        assertThat(test.titlesWith("Some Assistant")).isEmpty()
-        assertThat(test.titlesWith("Olivia Colman")).containsExactly("Broadchurch")
+        assertThat(test.titlesWith("Nicolas Winding Refn")).isEmpty()
+        assertThat(test.titlesWith("Ryan Gosling")).isEmpty()
+        assertThat(test.titlesWith("Olivia Colman")).isEmpty()
     }
 
     @Test

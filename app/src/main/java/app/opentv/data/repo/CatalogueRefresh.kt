@@ -350,7 +350,6 @@ class CatalogueRefresh(
 
     suspend fun refresh(trigger: Trigger.GuideOnly): Outcome.GuideRefreshed {
         if (trigger == Trigger.AppLaunch && settings.moviesEnabled.value) catalog.fillEveryProvidersGenres()
-        if (trigger == Trigger.AppLaunch) catalog.creditEarlierTitles()
         return Outcome.GuideRefreshed(syncGuide(force = trigger == Trigger.GuideSettings))
     }
 
