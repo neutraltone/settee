@@ -57,7 +57,11 @@ import okhttp3.OkHttpClient
 class PlayerController(
     context: Context,
     private val scope: CoroutineScope,
-    httpClient: OkHttpClient,
+    /**
+     * What every stream is read through. Players are given [app.opentv.core.ServiceLocator.Graph.streamingHttpClient]:
+     * the catalogue client's call timeout would cut a live channel off after five minutes (#268).
+     */
+    internal val httpClient: OkHttpClient,
     /**
      * Turns a key into its stream: [app.opentv.data.repo.PlaybackSources.forWatching]. Asked after
      * the zap delay rather than by the caller, so zapping through Stalker channels mints one link,

@@ -61,6 +61,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import okhttp3.OkHttpClient
 
 /**
  * Whether Home's Live Preview may play. Once a card is picked it stays stopped until Home has really
@@ -79,8 +80,16 @@ internal class LivePreviewGate {
     }
 }
 
-/** Home's muted player for the Live Preview: [player] is null while nothing should play. */
-internal class LivePreviewPlayer(val player: ExoPlayer?, val error: ViewerError?, val stop: () -> Unit)
+/**
+ * Home's muted player for the Live Preview: [player] is null while nothing should play. [httpClient] is
+ * what its streams are read through, null when there's no player.
+ */
+internal class LivePreviewPlayer(
+    val player: ExoPlayer?,
+    val error: ViewerError?,
+    val stop: () -> Unit,
+    val httpClient: OkHttpClient? = null,
+)
 
 /**
  * Plays [channel] muted for the Live Preview, the way the guide's preview does: one player, only while
@@ -102,7 +111,7 @@ internal fun rememberLivePreviewPlayer(channel: Channel?): LivePreviewPlayer {
         PlayerController(
             context,
             scope,
-            graph.httpClient,
+            graph.streamingHttpClient,
             resolve = graph.playbackSources::forWatching,
             PlayerController.Options(subtitlesEnabled = false, preview = true),
         ) to scope
@@ -129,6 +138,7 @@ internal fun rememberLivePreviewPlayer(channel: Channel?): LivePreviewPlayer {
     return LivePreviewPlayer(
         player = playing?.player,
         error = (state as? PlayerController.State.Error)?.reason,
+        httpClient = playing?.httpClient,
         stop = {
             gate.leave()
             playing?.stop()
