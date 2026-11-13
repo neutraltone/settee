@@ -126,6 +126,19 @@ class SettingsRoutesTest {
     }
 
     @Test
+    fun `Locked categories opens its own screen, and Back returns to its row`() {
+        val settings = ServiceLocator.get(app).settings
+        settings.clearPin()
+        setApp(SettingsMemory(SettingsSection.Parental))
+
+        openFrom("Locked categories")
+
+        assertThat(route()).isEqualTo(Routes.LOCKED_CATEGORIES)
+        compose.onNode(hasText("Switch a category on to hide it behind the PIN.")).assertExists()
+        backReturnsTo("Locked categories")
+    }
+
+    @Test
     fun `About's Fonts row opens both font licences on a screen of their own, and Back returns to it`() {
         setApp(SettingsMemory(SettingsSection.About))
 

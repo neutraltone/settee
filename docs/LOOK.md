@@ -245,13 +245,14 @@ Sections are Providers, TV guide, Channels, Display and playback, Recording, Par
 - **Each pane** opens with its title and one hint line in the [Voice](#voice).
 - **Only rows**, each with one target: a switch, a value, an action or an item in a list (`ListRow`, with `Switch`).
 - **The one exception is a code block:** something to read off the TV and type or scan on another device, such as Manage on phone or laptop's QR code and address, or the code while sharing to another device. It sits at the top of the pane, the Highlight skips it, and rows follow below it.
-- **Anything bigger than a row** opens as its own screen from a row, such as the channel manager, the font licences or Edit provider. Back returns to that row.
+- **Anything bigger than a row** opens as its own screen from a row, such as the channel manager, Locked categories, the font licences or Edit provider. Back returns to that row.
 - **Picking a value:** OK opens a panel on the right with the current choice ticked and highlighted. Choosing closes it, and so does Back.
 - **Typing text:** the row shows the current value, never a password or key, and OK opens an entry screen with the device's keyboard and a Save. Where the phone manager can set it too, the row says so.
 - **Row options:** a row with more than one thing to do does the main one on OK. The rest are in its options, opened by holding Select or pressing Menu, in the same right-hand panel.
 - **Removing** a provider, a Profile, a TV guide source or an add-on asks first, in that panel: "Yes, remove <name>" and "Keep it", with the Highlight starting on "Keep it". Back also keeps it.
 - **A setting that belongs to the Profile** shows a quiet line under the value, such as "For Sam".
 - **Parental lock:** with a PIN set, the pane shows one row, "Enter your PIN", until it's entered, then the settings until the app closes. With no PIN, it shows the settings and a "Set a PIN" row. The PIN has its own number entry.
+- **Locked categories:** the Parental lock pane's last row, which says how many categories are locked ("3 locked", or "None"), with the note that locks spread to your other devices and unlocks stay on this one. OK opens a screen of its own with a switch for every live category, locked ones included, in provider order. Locking one never moves its row. Find a category sits at the top and works as the [Categories Sidebar](#categories-sidebar)'s does, with the same matching. The screen opens on the first category, and the list builds only the rows on screen, since a big provider has hundreds. With no categories, it says so in place of the list.
 
 Profiles, behind the Rail's Profile, is a screen of its own built from the same parts: a row per Profile and an "Add a profile" row. OK renames a Profile, and switching to it and removing it are in its options.
 

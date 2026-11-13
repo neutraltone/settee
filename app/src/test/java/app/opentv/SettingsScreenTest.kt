@@ -17,6 +17,7 @@ import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasTestTag
@@ -26,6 +27,7 @@ import androidx.compose.ui.test.isFocused
 import androidx.compose.ui.test.isSelected
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -40,8 +42,10 @@ import androidx.test.espresso.matcher.RootMatchers
 import androidx.test.espresso.matcher.ViewMatchers
 import app.opentv.core.AppSettings
 import app.opentv.core.ServiceLocator
+import app.opentv.data.model.Category
 import app.opentv.data.model.Source
 import app.opentv.data.model.SourceKind
+import app.opentv.data.model.StreamKind
 import app.opentv.data.model.StremioAddon
 import app.opentv.data.repo.EpgRepository
 import app.opentv.ui.settings.SettingsMemory
@@ -87,6 +91,7 @@ class SettingsScreenTest {
             onAddProvider = { opened += "add provider" },
             onEditProvider = { opened += "edit provider $it" },
             onOpenChannels = { opened += "channels" },
+            onOpenLockedCategories = { opened += "locked categories" },
         )
     }
 
@@ -416,6 +421,7 @@ class SettingsScreenTest {
         press(KeyEvent.KEYCODE_DPAD_RIGHT)
         highlighted().assertTextContains("Enter your PIN")
         compose.onNodeWithText("Show hidden categories now").assertDoesNotExist()
+        compose.onNodeWithText("Locked categories").assertDoesNotExist()
         captureScreen("settings_parental_locked")
 
         press(KeyEvent.KEYCODE_DPAD_CENTER)
@@ -430,6 +436,7 @@ class SettingsScreenTest {
         }
         waitFor("Show hidden categories now")
         compose.onNodeWithText("Enter your PIN").assertDoesNotExist()
+        compose.onNodeWithText("Locked categories").assertExists()
         compose.onNodeWithText("also locked on your other devices", substring = true).assertExists()
         paneTitle().assertTextContains("Parental lock")
         highlighted().assertTextContains("Show hidden categories now")
@@ -465,6 +472,43 @@ class SettingsScreenTest {
         compose.runOnIdle { assertThat(graph.settings.pinIsSet.value).isTrue() }
         assertThat(graph.settings.verifyPin("2468")).isTrue()
         compose.onNodeWithText("Change the PIN").assertExists()
+    }
+
+    @Test
+    fun `Parental lock has one Locked categories row counting the locks, not a switch per category`() {
+        graph.settings.clearPin()
+        graph.settings.setHiddenCategories(setOf("adult", "horror", "news"))
+        runBlocking {
+            graph.database.categories().upsertAll(
+                listOf("Adult", "Horror", "News", "Kids").mapIndexed { i, name ->
+                    Category(id = "267-$i", sourceId = 267, name = name, kind = StreamKind.LIVE)
+                },
+            )
+        }
+        show(SettingsMemory(SettingsSection.Parental))
+        press(KeyEvent.KEYCODE_DPAD_RIGHT)
+
+        waitFor("Locked categories")
+        compose.onNode(hasText("Locked categories") and hasText("3 locked", substring = true)).assertExists()
+        compose.onNode(hasText("Locked categories") and hasText("also locked on your other devices", substring = true))
+            .assertExists()
+        compose.onAllNodesWithText("Kids").assertCountEquals(0)
+        compose.onAllNodesWithText("Horror").assertCountEquals(0)
+        captureScreen("settings_parental_locked_categories")
+
+        compose.onNodeWithText("Locked categories").requestFocus()
+        press(KeyEvent.KEYCODE_DPAD_CENTER)
+        assertThat(opened).containsExactly("locked categories")
+    }
+
+    @Test
+    fun `with nothing locked, the Locked categories row says None`() {
+        graph.settings.clearPin()
+        graph.settings.setHiddenCategories(emptySet())
+        show(SettingsMemory(SettingsSection.Parental))
+        press(KeyEvent.KEYCODE_DPAD_RIGHT)
+
+        compose.onNode(hasText("Locked categories") and hasText("None")).assertExists()
     }
 
     @Test
