@@ -256,6 +256,8 @@
     <string name="error_no_first_frame_device">本设备无法显示此视频。请重试，或选择其他内容。</string>
     <string name="error_login">你的提供商未接受你的登录。请在“设置”中检查提供商信息。</string>
     <string name="error_catalogue">无法加载你的提供商的频道。请稍后重试。</string>
+    <string name="error_channel_list_memory_tv">你的提供商的频道列表所需的内存超出了这台电视的内存。</string>
+    <string name="error_channel_list_memory_device">你的提供商的频道列表所需的内存超出了本设备的内存。</string>
     <string name="error_no_channels">你的提供商没有发送任何频道。你的账户可能还没有频道，请向他们确认。</string>
     <string name="error_playlist_empty">该地址没有任何频道。请确认这是你的提供商给你的链接。</string>
     <string name="error_account_inactive">你的提供商表示此账户未激活。请向他们确认后重试。</string>

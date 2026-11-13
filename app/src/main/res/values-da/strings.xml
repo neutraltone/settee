@@ -256,6 +256,8 @@
     <string name="error_no_first_frame_device">Denne enhed kunne ikke vise videoen. Prøv igen, eller vælg noget andet.</string>
     <string name="error_login">Din udbyder godkendte ikke dit login. Tjek din udbyders oplysninger i Indstillinger.</string>
     <string name="error_catalogue">Kunne ikke indlæse din udbyders kanaler. Prøv igen om lidt.</string>
+    <string name="error_channel_list_memory_tv">Din udbyders kanalliste kræver mere hukommelse, end dette tv har.</string>
+    <string name="error_channel_list_memory_device">Din udbyders kanalliste kræver mere hukommelse, end denne enhed har.</string>
     <string name="error_no_channels">Din udbyder sendte ingen kanaler. Din konto har måske ikke nogen endnu, så spørg dem.</string>
     <string name="error_playlist_empty">Der er ingen kanaler på den adresse. Tjek, at det er det link, din udbyder gav dig.</string>
     <string name="error_account_inactive">Din udbyder siger, at kontoen ikke er aktiv. Spørg dem, og prøv så igen.</string>

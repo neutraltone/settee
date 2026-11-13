@@ -256,6 +256,8 @@
     <string name="error_no_first_frame_device">Toto zařízení nedokázalo video zobrazit. Zkuste to znovu, nebo vyberte něco jiného.</string>
     <string name="error_login">Poskytovatel nepřijal vaše přihlašovací údaje. Zkontrolujte údaje poskytovatele v Nastavení.</string>
     <string name="error_catalogue">Kanály poskytovatele se nepodařilo načíst. Zkuste to za chvíli znovu.</string>
+    <string name="error_channel_list_memory_tv">Seznam kanálů vašeho poskytovatele potřebuje víc paměti, než má tato televize.</string>
+    <string name="error_channel_list_memory_device">Seznam kanálů vašeho poskytovatele potřebuje víc paměti, než má toto zařízení.</string>
     <string name="error_no_channels">Poskytovatel neposlal žádné kanály. Váš účet je možná ještě nemá, ověřte si to proto u poskytovatele.</string>
     <string name="error_playlist_empty">Na této adrese nejsou žádné kanály. Zkontrolujte, že je to odkaz od vašeho poskytovatele.</string>
     <string name="error_account_inactive">Podle poskytovatele tento účet není aktivní. Ověřte si to u něj a pak to zkuste znovu.</string>

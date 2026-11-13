@@ -610,6 +610,13 @@ class CatalogRepository(
         } catch (e: Exception) {
             Log.w(TAG, "Catalogue sync failed for source ${source.id}", e)
             SyncResult.Failed(wording.ofProvider(e, R.string.error_catalogue), e)
+        } catch (e: OutOfMemoryError) {
+            // A list too big for the heap. The half-built list went with the frames that threw, so
+            // the app carries on and the next sync can try again; a crash would help nobody. Logged
+            // without the stack trace, whose text could need more memory than is left.
+            Log.w(TAG, "Catalogue sync ran out of memory for source ${source.id}")
+            val tv = R.string.error_channel_list_memory_tv
+            SyncResult.Failed(wording.ofHardware(tv, R.string.error_channel_list_memory_device, OUT_OF_MEMORY), e)
         }
     }
 
@@ -959,6 +966,7 @@ class CatalogRepository(
 
         /** The detail line's code for a provider that answered with no channels at all. */
         private const val NO_CHANNELS = "NoChannels"
+        private const val OUT_OF_MEMORY = "OutOfMemory"
 
         /** Titles [creditEarlierTitles] files at a time, each batch one transaction. */
         private const val CREDIT_BATCH = 500

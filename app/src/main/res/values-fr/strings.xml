@@ -256,6 +256,8 @@
     <string name="error_no_first_frame_device">Cet appareil n\'a pas pu afficher cette vidéo. Réessayez, ou choisissez autre chose.</string>
     <string name="error_login">Votre fournisseur n\'a pas accepté votre identifiant. Vérifiez les informations de votre fournisseur dans les Paramètres.</string>
     <string name="error_catalogue">Impossible de charger les chaînes de votre fournisseur. Réessayez dans un instant.</string>
+    <string name="error_channel_list_memory_tv">La liste de chaînes de votre fournisseur demande plus de mémoire que cette télévision n\'en a.</string>
+    <string name="error_channel_list_memory_device">La liste de chaînes de votre fournisseur demande plus de mémoire que cet appareil n\'en a.</string>
     <string name="error_no_channels">Votre fournisseur n\'a envoyé aucune chaîne. Votre compte n\'en a peut-être pas encore, alors renseignez-vous auprès de lui.</string>
     <string name="error_playlist_empty">Il n\'y a aucune chaîne à cette adresse. Vérifiez que c\'est bien le lien que votre fournisseur vous a donné.</string>
     <string name="error_account_inactive">Votre fournisseur indique que ce compte n\'est pas actif. Renseignez-vous auprès de lui, puis réessayez.</string>

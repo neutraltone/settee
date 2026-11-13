@@ -710,6 +710,8 @@
     <string name="error_no_first_frame_device">This device couldn\'t show this video. Try again, or pick something else.</string>
     <string name="error_login">Your provider didn\'t accept your login. Check your provider\'s details in Settings.</string>
     <string name="error_catalogue">Couldn\'t load your provider\'s channels. Try again in a moment.</string>
+    <string name="error_channel_list_memory_tv">Your provider\'s channel list needs more memory than this TV has.</string>
+    <string name="error_channel_list_memory_device">Your provider\'s channel list needs more memory than this device has.</string>
     <string name="error_no_channels">Your provider sent no channels. Your account may not have any yet, so check with them.</string>
     <string name="error_playlist_empty">There are no channels at that address. Check it\'s the link your provider gave you.</string>
     <string name="error_account_inactive">Your provider says this account isn\'t active. Check with them, then try again.</string>

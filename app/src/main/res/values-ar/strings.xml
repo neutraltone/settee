@@ -256,6 +256,8 @@
     <string name="error_no_first_frame_device">لم يتمكن هذا الجهاز من عرض هذا الفيديو. أعد المحاولة، أو اختر شيئًا آخر.</string>
     <string name="error_login">لم يقبل مزوّدك بيانات تسجيل الدخول. تحقق من بيانات مزوّدك في الإعدادات.</string>
     <string name="error_catalogue">تعذر تحميل قنوات مزوّدك. أعد المحاولة بعد قليل.</string>
+    <string name="error_channel_list_memory_tv">تحتاج قائمة قنوات مزوّدك إلى ذاكرة أكبر مما يتوفر في هذا التلفاز.</string>
+    <string name="error_channel_list_memory_device">تحتاج قائمة قنوات مزوّدك إلى ذاكرة أكبر مما يتوفر في هذا الجهاز.</string>
     <string name="error_no_channels">لم يرسل مزوّدك أي قنوات. ربما لا يحتوي حسابك على قنوات بعد، لذا تواصل معه للتأكد.</string>
     <string name="error_playlist_empty">لا توجد قنوات على هذا العنوان. تأكد من أنه الرابط الذي أعطاك إياه مزوّدك.</string>
     <string name="error_account_inactive">يقول مزوّدك إن هذا الحساب غير نشط. تواصل معه، ثم أعد المحاولة.</string>

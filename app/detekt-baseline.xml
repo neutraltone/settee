@@ -154,7 +154,6 @@
     <ID>ReturnCount:SleepTimer.kt$SleepTimer$fun minutesRemaining(nowMillis: Long = System.currentTimeMillis()): Int?</ID>
     <ID>ReturnCount:SmbDataSource.kt$SmbDataSource$override fun read(buffer: ByteArray, offset: Int, length: Int): Int</ID>
     <ID>ReturnCount:SourceRepository.kt$SourceRepository.Companion$fun normaliseUrl(raw: String, kind: SourceKind): String</ID>
-    <ID>ReturnCount:StalkerApi.kt$StalkerApi$private fun execute(source: Source, url: HttpUrl, token: String?): JsonElement?</ID>
     <ID>ReturnCount:StalkerApi.kt$StalkerApi$private fun handshake(source: Source, endpoint: HttpUrl): Handshake?</ID>
     <ID>ReturnCount:StremioClient.kt$StremioClient$fun fetchManifest(manifestUrl: String): String?</ID>
     <ID>ReturnCount:StremioClient.kt$StremioClient$fun streams(addonManifestUrl: String, addonName: String, type: String, id: String): List&lt;StremioStream&gt;</ID>

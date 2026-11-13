@@ -256,6 +256,8 @@
     <string name="error_no_first_frame_device">この端末ではこの動画を表示できませんでした。もう一度お試しいただくか、別のものを選んでください。</string>
     <string name="error_login">プロバイダーがログインを受け付けませんでした。「設定」でプロバイダーの情報を確認してください。</string>
     <string name="error_catalogue">プロバイダーのチャンネルを読み込めませんでした。少し待ってからもう一度お試しください。</string>
+    <string name="error_channel_list_memory_tv">プロバイダーのチャンネルリストには、このテレビのメモリでは足りません。</string>
+    <string name="error_channel_list_memory_device">プロバイダーのチャンネルリストには、この端末のメモリでは足りません。</string>
     <string name="error_no_channels">プロバイダーからチャンネルが届きませんでした。アカウントにまだチャンネルがない可能性があるので、プロバイダーに確認してください。</string>
     <string name="error_playlist_empty">そのアドレスにはチャンネルがありません。プロバイダーから受け取ったリンクかどうかを確認してください。</string>
     <string name="error_account_inactive">プロバイダーによると、このアカウントは有効になっていません。プロバイダーに確認してから、もう一度お試しください。</string>
