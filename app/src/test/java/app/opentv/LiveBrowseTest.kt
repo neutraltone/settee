@@ -229,10 +229,15 @@ class LiveBrowseTest {
         press(Key.DirectionDown)
     }
 
+    /**
+     * Waits for the guide's rows with their listings. The guide builds its channels as soon as they're
+     * read, before the listings are (`guideBuilds`), so rows alone can still have no programme cells:
+     * a Right pressed then stays on the channel, and the presses after it land a cell short.
+     */
     private fun awaitRows() {
         compose.waitUntil(10_000) {
             shadowOf(Looper.getMainLooper()).idle()
-            viewModel.guideRows.value.rows.isNotEmpty()
+            viewModel.guideRows.value.rows.any { it.programmes.isNotEmpty() }
         }
         compose.waitForIdle()
     }
