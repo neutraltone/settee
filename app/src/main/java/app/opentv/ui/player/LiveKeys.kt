@@ -1,0 +1,87 @@
+/*
+ * This file is part of OpenTV.
+ * Copyright (C) 2026 The OpenTV Contributors
+ * Licensed under the GNU General Public License v3.0 or later.
+ */
+package app.opentv.ui.player
+
+import androidx.compose.ui.input.key.Key
+
+/** What the live player has up when a key comes in, as far as where the key goes. */
+internal data class LiveScreen(
+    /** The channel list or a picker, which owns the whole d-pad while it's up. */
+    val overlayOpen: Boolean,
+    val controlsVisible: Boolean,
+    /** A failure trying again could fix, so Try again is on screen. */
+    val retryableError: Boolean,
+) {
+    /** Try again holds the highlight only when there's nothing over it. */
+    val onTryAgain: Boolean get() = retryableError && !overlayOpen && !controlsVisible
+}
+
+/** What a key press does in the live player. */
+internal sealed interface LiveKey {
+    /** Not the player's: it goes on to whatever has focus, and to the back handler. */
+    data object PassThrough : LiveKey
+
+    /** The channel list or a picker takes it. */
+    data object ToOverlay : LiveKey
+
+    /** The control bar moves its highlight or presses a control. */
+    data object AroundControls : LiveKey
+
+    data class Digit(val digit: Char) : LiveKey
+    data class Zap(val delta: Int) : LiveKey
+    data object OpenChannelList : LiveKey
+    data object OpenQualities : LiveKey
+    data object OpenOptions : LiveKey
+    data object Reveal : LiveKey
+    data object Retry : LiveKey
+
+    /** Back leaves the player: Compose would otherwise spend the first press taking focus off Try again. */
+    data object Leave : LiveKey
+}
+
+/** Where a key pressed down in the live player goes. Media keys and a held OK are dealt with before this. */
+internal fun liveKey(key: Key, screen: LiveScreen): LiveKey {
+    val digit = keyToDigit(key)
+    return when {
+        key == Key.Back || key == Key.Escape -> if (screen.onTryAgain) LiveKey.Leave else LiveKey.PassThrough
+        // Typing a channel number jumps to it, TiviMate-style.
+        digit != null -> LiveKey.Digit(digit)
+        screen.overlayOpen -> LiveKey.ToOverlay
+        key == Key.Menu -> LiveKey.OpenOptions
+        // With the controls up, the d-pad moves around them: Down reaches Subtitles and the pills, and
+        // Up reaches close (docs/LOOK.md, Player). The channel keys still zap.
+        screen.controlsVisible && key != Key.ChannelUp && key != Key.ChannelDown -> LiveKey.AroundControls
+        else -> overPicture(key, screen.retryableError)
+    }
+}
+
+/** With nothing over the picture, or Try again alone. */
+private fun overPicture(key: Key, retryableError: Boolean): LiveKey = when {
+    // This remote has no CH+/CH- keys, so up and down are the channel changer, a dead channel's too:
+    // zapping away is how the viewer leaves it.
+    key == Key.DirectionUp || key == Key.ChannelUp -> LiveKey.Zap(-1)
+    key == Key.DirectionDown || key == Key.ChannelDown -> LiveKey.Zap(1)
+    key == Key.DirectionLeft -> LiveKey.OpenChannelList
+    key == Key.DirectionRight -> LiveKey.OpenQualities
+    // The highlight's on Try again, but this handler sees OK before the button does.
+    key in OK_KEYS -> if (retryableError) LiveKey.Retry else LiveKey.Reveal
+    else -> LiveKey.PassThrough
+}
+
+/** Maps a remote's number keys (top row and numeric keypad) to a digit, or null for other keys. */
+private fun keyToDigit(key: Key): Char? = when (key) {
+    Key.Zero, Key.NumPad0 -> '0'
+    Key.One, Key.NumPad1 -> '1'
+    Key.Two, Key.NumPad2 -> '2'
+    Key.Three, Key.NumPad3 -> '3'
+    Key.Four, Key.NumPad4 -> '4'
+    Key.Five, Key.NumPad5 -> '5'
+    Key.Six, Key.NumPad6 -> '6'
+    Key.Seven, Key.NumPad7 -> '7'
+    Key.Eight, Key.NumPad8 -> '8'
+    Key.Nine, Key.NumPad9 -> '9'
+    else -> null
+}
