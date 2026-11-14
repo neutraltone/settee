@@ -34,6 +34,7 @@ import androidx.test.core.app.ApplicationProvider
 import androidx.test.espresso.Espresso
 import app.opentv.core.AppSettings
 import app.opentv.core.PipState
+import app.opentv.core.SleepTimer
 import app.opentv.data.model.Channel
 import app.opentv.data.model.Programme
 import app.opentv.data.repo.MediaKey
@@ -89,6 +90,8 @@ class LivePlayerContentTest {
 
     @After
     fun release() {
+        // A process-wide singleton: a timer left armed would close the next test's player.
+        SleepTimer.clear()
         controller.release()
         players.close()
     }
@@ -184,6 +187,32 @@ class LivePlayerContentTest {
     private fun press(key: Key) {
         compose.onRoot().performKeyInput { pressKey(key) }
         compose.waitForIdle()
+    }
+
+    @Test
+    fun `a sleep timer that ran out before the channel opened is off, and the channel plays on`() {
+        SleepTimer.armMinutes(-1)
+
+        showChannel()
+        compose.mainClock.advanceTimeBy(60_000L)
+
+        assertThat(backs).isEqualTo(0)
+        assertThat(controller.state.value).isNotEqualTo(PlayerController.State.Idle)
+        assertThat(SleepTimer.deadline.value).isNull()
+    }
+
+    @Test
+    fun `a sleep timer that runs out while watching stops the channel, leaves and turns itself off`() {
+        showChannel()
+        SleepTimer.armMinutes(15)
+
+        compose.mainClock.advanceTimeBy(14 * 60_000L)
+        assertThat(backs).isEqualTo(0)
+
+        compose.mainClock.advanceTimeBy(60_000L + 1_000L)
+        assertThat(backs).isEqualTo(1)
+        assertThat(controller.state.value).isEqualTo(PlayerController.State.Idle)
+        assertThat(SleepTimer.deadline.value).isNull()
     }
 
     @Test
