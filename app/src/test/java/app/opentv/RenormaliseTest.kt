@@ -100,7 +100,8 @@ class RenormaliseTest {
         )
         db.channels().replaceCatalogue(
             1,
-            (0 until groups).map { channel(1, "s$it", "Channel $it", categoryId = "g$it") },
+            // "n" before the number, so no name is read as its own quality ("Channel 720", "Channel 1080").
+            (0 until groups).map { channel(1, "s$it", "Channel n$it", categoryId = "g$it") },
             syncStamp = 1,
         )
 
