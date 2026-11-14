@@ -352,6 +352,26 @@ interface ChannelDao {
     @Upsert
     suspend fun upsertAll(channels: List<Channel>)
 
+    /**
+     * Writes what the normaliser makes of one row, and only that, for the re-normalise pass. Not the
+     * whole row: the pass reads every row first and writes later, and a refresh or a synced hidden
+     * channel in between would be undone, a deleted row put back. [hideSeparator] only ever hides.
+     * Matching [name] skips a row a refresh renamed meanwhile, which the refresh cleaned itself.
+     */
+    @Query(
+        "UPDATE channels SET displayName = :displayName, groupKey = :groupKey, qualityLabel = :qualityLabel, " +
+            "qualityRank = :qualityRank, hidden = hidden OR :hideSeparator WHERE id = :id AND name = :name",
+    )
+    suspend fun setCleaned(
+        id: Long,
+        name: String,
+        displayName: String,
+        groupKey: String,
+        qualityLabel: String,
+        qualityRank: Int,
+        hideSeparator: Boolean,
+    )
+
     @Insert
     suspend fun insertAll(channels: List<Channel>): List<Long>
 

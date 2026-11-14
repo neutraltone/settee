@@ -65,6 +65,32 @@ class RenormaliseTest {
     }
 
     @Test
+    fun `what a refresh or another device changes while names are being cleaned stays changed`() = runTest {
+        provider(1)
+        category(sourceId = 1, id = "7", name = "UK| GENERAL")
+        db.channels().replaceCatalogue(
+            1,
+            listOf(channel(1, "a", "BBC One HD", categoryId = "7"), channel(1, "b", "ITV1 HD", categoryId = "7")),
+            syncStamp = 1,
+        )
+        val itv = db.channels().everyRow().single { it.streamId == "b" }
+        db.channels().setHidden(itv.id, hidden = true)
+
+        catalogue.catalog.renormalizeAll(
+            beforeWrite = {
+                // A refresh drops BBC One, and another device shows ITV1 again.
+                db.openHelper.writableDatabase.execSQL("DELETE FROM channels WHERE streamId = 'a'")
+                db.channels().setHidden(itv.id, hidden = false)
+            },
+        )
+
+        val rows = db.channels().everyRow()
+        assertThat(rows.map { it.streamId }).containsExactly("b")
+        assertThat(rows.single().hidden).isFalse()
+        assertThat(rows.single().displayName).isEqualTo("ITV1")
+    }
+
+    @Test
     fun `a playlist with more group-titles than SQLite can take in one query still gets cleaned`() = runTest {
         // Past the 32,766 bound variables Robolectric's SQLite allows, and far past the Stick's 999.
         val groups = 33_000

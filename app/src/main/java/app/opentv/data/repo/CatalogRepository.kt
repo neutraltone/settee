@@ -945,8 +945,11 @@ class CatalogRepository(
      * channels already in the database until the next full catalogue sync — which can be
      * hours away. This runs the same pass over existing rows locally, so a code fix shows up
      * on the next launch instead of the next sync. Bump [NORMALIZER_VERSION] to trigger it.
+     *
+     * [beforeWrite] is for tests: it runs between reading the rows and writing them back, where a
+     * refresh or a synced hidden channel can land.
      */
-    suspend fun renormalizeAll(): Int = withContext(Dispatchers.IO) {
+    suspend fun renormalizeAll(beforeWrite: suspend () -> Unit = {}): Int = withContext(Dispatchers.IO) {
         val existing = channelDao.everyRow()
         if (existing.isEmpty()) return@withContext 0
 
@@ -956,8 +959,7 @@ class CatalogRepository(
             val names = categoryDao.liveNamesOf(sourceId).associate { it.id to it.name }
             val renamed = normalized(channels, names)
             // Only write rows that actually changed, to keep the write small.
-            val diff = renamed.filterIndexed { i, c ->
-                val old = channels[i]
+            val diff = renamed.zip(channels).filter { (c, old) ->
                 c.displayName != old.displayName ||
                     c.groupKey != old.groupKey ||
                     c.qualityLabel != old.qualityLabel ||
@@ -965,7 +967,21 @@ class CatalogRepository(
                     c.hidden != old.hidden
             }
             if (diff.isNotEmpty()) {
-                diff.chunked(500).forEach { channelDao.upsertAll(it) }
+                beforeWrite()
+                // One transaction, as a row's own UPDATE each would commit tens of thousands of times.
+                channelDao.inTransaction {
+                    diff.forEach { (c, old) ->
+                        channelDao.setCleaned(
+                            id = c.id,
+                            name = c.name,
+                            displayName = c.displayName,
+                            groupKey = c.groupKey,
+                            qualityLabel = c.qualityLabel,
+                            qualityRank = c.qualityRank,
+                            hideSeparator = c.hidden && !old.hidden,
+                        )
+                    }
+                }
                 changed += diff.size
             }
         }
