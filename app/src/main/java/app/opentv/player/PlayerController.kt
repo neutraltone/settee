@@ -170,7 +170,8 @@ class PlayerController(
         moveDown = { forSound ->
             val playing = current?.takeIf { !forSound || it.stepsForSound }
             playing?.lower?.firstOrNull()?.let { next ->
-                giveUp()
+                gaveUp = true
+                player.stop()
                 play(
                     Request(
                         next.key,
@@ -188,7 +189,8 @@ class PlayerController(
     ) { reason, canRetry ->
         // Before anything reports an error, so none flashes up. The player's stopped and marked so
         // first, so a state it's already reporting can't cover the sentence.
-        giveUp()
+        gaveUp = true
+        player.stop()
         _state.value = State.Error(_title.value, reason, canRetry)
     }
 
@@ -310,7 +312,8 @@ class PlayerController(
                     // The last stream, failing while the next one is on its way: it says nothing about
                     // that one, and restarting `current` would cancel its switch and ask for it again.
                     if (isSwitching) {
-                        giveUp()
+                        gaveUp = true
+                        player.stop()
                         return
                     }
                     consecutiveFailures++
@@ -387,7 +390,8 @@ class PlayerController(
                 is Playable.Failed -> {
                     // The last stream is still on the player. Left playing, it'd be heard behind the
                     // sentence and its next state would cover it.
-                    giveUp()
+                    gaveUp = true
+                    player.stop()
                     loaded = null
                     // Whether stop() empties the player's tracks is ExoPlayer's business; the options
                     // offered under the sentence mustn't be the last stream's.
@@ -438,12 +442,6 @@ class PlayerController(
             }
         }
         skipped?.let { guard.steppedDown(it, Quality(request.key, request.label)) }
-    }
-
-    /** Stops the stream on the player and marks it, so nothing it reports afterwards reaches [state]. */
-    private fun giveUp() {
-        gaveUp = true
-        player.stop()
     }
 
     /** Whether a [play] hasn't reached the player yet, so [player] still holds the last stream. */
