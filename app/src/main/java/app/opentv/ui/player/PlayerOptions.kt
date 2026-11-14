@@ -85,8 +85,9 @@ internal fun SleepTimerPanel(onDone: () -> Unit) {
 internal fun SleepTimerEffect(onRunOut: () -> Unit) {
     val deadline by SleepTimer.deadline.collectAsState()
     val runOut by rememberUpdatedState(onRunOut)
+    // Keyed on the deadline only to restart when the timer is armed or cleared; SleepTimer says
+    // whether it's still running.
     LaunchedEffect(deadline) {
-        if (deadline == null) return@LaunchedEffect
         val wait = SleepTimer.millisRemaining()
         if (wait == null) {
             SleepTimer.clear()

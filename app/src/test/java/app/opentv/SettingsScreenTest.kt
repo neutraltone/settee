@@ -56,6 +56,7 @@ import app.opentv.update.UpdateChecker
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
+import org.junit.After
 import org.junit.Assume.assumeTrue
 import org.junit.Rule
 import org.junit.Test
@@ -85,6 +86,13 @@ class SettingsScreenTest {
     private val opened = mutableListOf<String>()
 
     private val graph get() = ServiceLocator.get(ApplicationProvider.getApplicationContext<Application>())
+
+    // A process-wide singleton: a timer left armed, or on the test's clock, would leak into the next test.
+    @After
+    fun resetSleepTimer() {
+        SleepTimer.clear()
+        SleepTimer.now = System::currentTimeMillis
+    }
 
     private fun show(memory: SettingsMemory = SettingsMemory()) = compose.setTvContent {
         view = LocalView.current
@@ -238,15 +246,37 @@ class SettingsScreenTest {
     @Test
     fun `Sleep timer shows Off once its time has run out, not 0 min left`() {
         SleepTimer.armMinutes(-1)
-        try {
-            show(SettingsMemory(SettingsSection.Display))
 
-            compose.onNode(hasText("Sleep timer") and hasText("Off")).assertExists()
-            compose.onNode(hasText("Sleep timer") and hasText("0 min left")).assertDoesNotExist()
-        } finally {
-            // A process-wide singleton: a timer left armed would close the next test's player.
-            SleepTimer.clear()
-        }
+        show(SettingsMemory(SettingsSection.Display))
+
+        compose.onNode(hasText("Sleep timer") and hasText("Off")).assertExists()
+        compose.onNode(hasText("Sleep timer") and hasText("0 min left")).assertDoesNotExist()
+    }
+
+    @Test
+    fun `a sleep timer that has run out has Off ticked in its panel`() {
+        SleepTimer.armMinutes(-1)
+        show(SettingsMemory(SettingsSection.Display))
+
+        press(KeyEvent.KEYCODE_DPAD_RIGHT, KeyEvent.KEYCODE_DPAD_DOWN, KeyEvent.KEYCODE_DPAD_CENTER)
+
+        compose.onNode(hasText("Off") and isSelected() and isFocused()).assertExists()
+    }
+
+    @Test
+    fun `Sleep timer counts down while Settings is open, and turns to Off when it runs out`() {
+        // The timer reads the test's clock, so its minutes pass without waiting for real ones.
+        val start = System.currentTimeMillis()
+        SleepTimer.now = { start + compose.mainClock.currentTime }
+        SleepTimer.armMinutes(2)
+        show(SettingsMemory(SettingsSection.Display))
+        compose.onNode(hasText("Sleep timer") and hasText("2 min left")).assertExists()
+
+        compose.mainClock.advanceTimeBy(60_000L)
+        compose.onNode(hasText("Sleep timer") and hasText("1 min left")).assertExists()
+
+        compose.mainClock.advanceTimeBy(60_000L + 1_000L)
+        compose.onNode(hasText("Sleep timer") and hasText("Off")).assertExists()
     }
 
     @Test

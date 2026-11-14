@@ -21,14 +21,21 @@ import kotlinx.coroutines.flow.asStateFlow
 object SleepTimer {
     private val _deadline = MutableStateFlow<Long?>(null)
 
-    /** Epoch millis at which playback should stop, or null when the timer is off. */
+    /**
+     * Epoch millis at which playback should stop, or null once cleared. Observe it to hear the timer
+     * armed or cleared, but don't read it as on or off: it can still hold a deadline that ran out with
+     * no player open. [millisRemaining] and [minutesRemaining] answer that.
+     */
     val deadline: StateFlow<Long?> = _deadline.asStateFlow()
+
+    /** The clock the timer counts by. Tests point it at the compose test clock. */
+    internal var now: () -> Long = System::currentTimeMillis
 
     /** The options offered in the UI, in minutes. */
     val presets = listOf(15, 30, 45, 60, 90, 120)
 
     fun armMinutes(minutes: Int) {
-        _deadline.value = System.currentTimeMillis() + minutes * 60_000L
+        _deadline.value = now() + minutes * 60_000L
     }
 
     fun clear() {
@@ -41,13 +48,13 @@ object SleepTimer {
      * A deadline that has passed counts as off: only a player can act on one, so if it ran out
      * with none open there is nothing left to stop, and "0 min" would be a timer that never fires.
      */
-    fun minutesRemaining(nowMillis: Long = System.currentTimeMillis()): Int? {
+    fun minutesRemaining(nowMillis: Long = now()): Int? {
         val left = millisRemaining(nowMillis) ?: return null
         return ((left + 59_999L) / 60_000L).toInt()
     }
 
     /** Millis until the deadline, or null when the timer is off or its deadline has passed. */
-    fun millisRemaining(nowMillis: Long = System.currentTimeMillis()): Long? {
+    fun millisRemaining(nowMillis: Long = now()): Long? {
         val d = _deadline.value ?: return null
         return (d - nowMillis).takeIf { it > 0L }
     }

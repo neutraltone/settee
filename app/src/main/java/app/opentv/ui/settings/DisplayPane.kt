@@ -8,8 +8,10 @@ package app.opentv.ui.settings
 import android.content.Context
 import android.widget.Toast
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -25,6 +27,7 @@ import app.opentv.data.work.SyncWorker
 import app.opentv.ui.design.ListRow
 import app.opentv.ui.design.PanelRow
 import app.opentv.ui.design.SidePanel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /** Display and playback: what shows, and how things play. */
@@ -35,7 +38,6 @@ internal fun DisplayPane() {
     val graph = remember { ServiceLocator.get(context) }
     val subtitles by graph.profileSettings.subtitlePreference.collectAsState(initial = null)
     val profileName = activeProfileName()
-    val deadline by SleepTimer.deadline.collectAsState()
     val playNext by settings.playNextAutomatically.collectAsState()
     val previewOnHome by settings.livePreviewOnHome.collectAsState()
     val previewVideo by settings.guidePreviewVideo.collectAsState()
@@ -55,9 +57,7 @@ internal fun DisplayPane() {
         value = if (subtitlesOn) on else off,
         note = profileName?.let { stringResource(R.string.settings_row_for_profile, it) },
     )
-    // Reading deadline redraws the row when the timer is armed or cleared; SleepTimer decides that
-    // one which has passed is off.
-    val minutesLeft = deadline?.let { SleepTimer.minutesRemaining() }
+    val minutesLeft = rememberSleepMinutesLeft()
     ListRow(
         stringResource(R.string.settings_row_sleep_timer),
         onClick = { choosing = Choice.Sleep },
@@ -110,7 +110,7 @@ internal fun DisplayPane() {
 
     when (val choice = choosing) {
         null -> Unit
-        else -> ChoicePanel(choice, subtitlesOn = subtitlesOn, sleeping = deadline != null, language = language) {
+        else -> ChoicePanel(choice, subtitlesOn = subtitlesOn, sleeping = minutesLeft != null, language = language) {
             choosing = null
         }
     }
@@ -213,6 +213,26 @@ private val OpenTvLanguages: List<Pair<String, String>> = listOf(
     "fa" to "فارسی",
 )
 
+/**
+ * The sleep timer's minutes left, or null when it's off, redrawn as each minute passes. Nothing else
+ * would redraw the row: with no player open nobody clears a timer that runs out, so without this the
+ * row would keep its last count instead of turning to Off.
+ */
+@Composable
+private fun rememberSleepMinutesLeft(): Int? {
+    val deadline by SleepTimer.deadline.collectAsState()
+    var minutePassed by remember { mutableIntStateOf(0) }
+    LaunchedEffect(deadline) {
+        while (true) {
+            val left = SleepTimer.millisRemaining() ?: break
+            // Until the rounded-up count drops by one, or the timer runs out.
+            delay((left - 1) % MINUTE_MILLIS + 1)
+            minutePassed++
+        }
+    }
+    return remember(deadline, minutePassed) { SleepTimer.minutesRemaining() }
+}
+
 /** Persist the chosen language and recreate the activity so the whole UI reloads translated. */
 private fun changeLanguage(context: Context, settings: AppSettings, tag: String) {
     if (settings.languageTag.value == tag) return
@@ -220,3 +240,4 @@ private fun changeLanguage(context: Context, settings: AppSettings, tag: String)
     context.findActivity()?.recreate()
 }
 
+private const val MINUTE_MILLIS = 60_000L
