@@ -30,6 +30,7 @@ import app.opentv.ui.ChannelsViewModel
 import app.opentv.ui.channels.GuideGrid
 import app.opentv.ui.options.ItemOptionsHost
 import com.google.common.truth.Truth.assertThat
+import java.time.Instant
 import kotlinx.coroutines.runBlocking
 import org.junit.Rule
 import org.junit.Test
@@ -176,7 +177,6 @@ class GuideChannelOptionsTest {
 
     @Test
     fun `Schedule a later programme lists what's on later, and leads to the record and remind choices`() {
-        val now = System.currentTimeMillis()
         runBlocking {
             val feed = graph.database.epgFeeds().insert(EpgFeed(name = "Feed"))
             graph.database.programmes().insertOrReplace(
@@ -184,8 +184,8 @@ class GuideChannelOptionsTest {
                     Programme(
                         feedId = feed,
                         epgChannelId = "later-guide",
-                        startUtcMillis = now + 3_600_000,
-                        endUtcMillis = now + 7_200_000,
+                        startUtcMillis = LATE_FILM_START,
+                        endUtcMillis = LATE_FILM_START + 3_600_000,
                         title = "Late Film",
                     ),
                 ),
@@ -207,5 +207,9 @@ class GuideChannelOptionsTest {
 
     private companion object {
         const val TIMEOUT_MILLIS = 10_000L
+
+        // A fixed time rather than an hour from now, which the list draws as a different time on
+        // every run and so turned up as changed in every PR's screenshots.
+        val LATE_FILM_START = Instant.parse("2099-01-01T20:00:00Z").toEpochMilli()
     }
 }

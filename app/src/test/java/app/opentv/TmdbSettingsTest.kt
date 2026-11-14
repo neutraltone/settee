@@ -62,6 +62,9 @@ class TmdbSettingsTest {
     @get:Rule
     val compose = createComposeRule()
 
+    @get:Rule
+    val secrets = FixedServerSecrets()
+
     private lateinit var view: View
     private val device = DeviceKeyboard(compose) { view }
 

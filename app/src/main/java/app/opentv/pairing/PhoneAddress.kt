@@ -11,7 +11,7 @@ import java.io.IOException
 import java.net.NetworkInterface
 import java.net.ServerSocket
 import java.net.Socket
-import java.security.SecureRandom
+import java.util.Random
 
 /**
  * Where a phone or laptop reaches this TV, and the check every request passes before a server
@@ -116,23 +116,23 @@ class PhoneAddress private constructor(
         fun open(): Opening {
             val host = lanAddress() ?: return Opening.NoNetwork
             return try {
-                // Port 0 asks the OS for a free one. A fixed port would be predictable and would
-                // clash with whatever else the user runs at home.
-                val socket = ServerSocket(0)
-                Opening.Opened(PhoneAddress(host, socket, newToken()).apply { shortToken = newShortToken() })
+                val socket = ServerSecrets.openSocket()
+                val random = ServerSecrets.random()
+                val address = PhoneAddress(host, socket, newToken(random))
+                address.shortToken = newShortToken(random)
+                Opening.Opened(address)
             } catch (e: IOException) {
                 Log.w(TAG, "Could not open a socket", e)
                 Opening.NoSocket(ErrorWording.codeOf(e))
             }
         }
 
-        private val random = SecureRandom()
-
-        private fun newToken() = ByteArray(TOKEN_BYTES).also(random::nextBytes).joinToString("") { "%02x".format(it) }
+        private fun newToken(random: Random) =
+            ByteArray(TOKEN_BYTES).also(random::nextBytes).joinToString("") { "%02x".format(it) }
 
         // Not just a shorter hex token: nothing that looks like another character across a room
         // in the TV's serif face (0/o, 1/l/i, 2/z, 5/s, 6/b, 9/g/q, u/v/y).
-        private fun newShortToken() = (1..SHORT_TOKEN_LENGTH)
+        private fun newShortToken(random: Random) = (1..SHORT_TOKEN_LENGTH)
             .map { SHORT_TOKEN_ALPHABET[random.nextInt(SHORT_TOKEN_ALPHABET.length)] }
             .joinToString("")
 

@@ -9,13 +9,13 @@ import android.util.Log
 import app.opentv.core.ErrorWording
 import app.opentv.core.ServerProblem
 import app.opentv.pairing.PairingHttp
+import app.opentv.pairing.ServerSecrets
 import java.io.BufferedReader
 import java.io.InputStreamReader
 import java.net.InetAddress
 import java.net.NetworkInterface
 import java.net.ServerSocket
 import java.net.Socket
-import java.security.SecureRandom
 import java.util.concurrent.TimeUnit
 import kotlin.concurrent.thread
 import kotlinx.coroutines.CoroutineScope
@@ -63,13 +63,12 @@ class SyncServer(private val scope: CoroutineScope) {
             _state.value = State.Failed(ServerProblem.NO_NETWORK)
             return
         }
-        val random = SecureRandom()
-        code = "%06d".format(random.nextInt(1_000_000))
+        code = ServerSecrets.sixDigitCode()
         bundle = bundleJson
         wrongAttempts = 0
 
         val socket = try {
-            ServerSocket(0)
+            ServerSecrets.openSocket()
         } catch (e: Exception) {
             Log.w(TAG, "Could not open a socket", e)
             _state.value = State.Failed(ServerProblem.COULDNT_START, ErrorWording.codeOf(e))

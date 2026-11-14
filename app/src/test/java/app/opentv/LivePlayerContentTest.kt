@@ -840,10 +840,22 @@ class LivePlayerContentTest {
     }
 }
 
-/** The guide with [title] on now, as the card is handed it, or no guide at all. */
+/**
+ * The guide with [title] on now, half an hour in, as the card is handed it, or no guide at all. An
+ * hour long rather than a millisecond, which drew the progress bar empty or full depending on whether
+ * the clock had moved on by the time it drew.
+ */
 private fun cardShowing(title: String?, now: Long): NowAndNext? = title?.let {
     NowAndNext(
-        Programme(feedId = 1, epgChannelId = "g", startUtcMillis = now, endUtcMillis = now + 1, title = it),
+        Programme(
+            feedId = 1,
+            epgChannelId = "g",
+            startUtcMillis = now - HALF_HOUR_MILLIS,
+            endUtcMillis = now + HALF_HOUR_MILLIS,
+            title = it,
+        ),
         next = null,
     )
 }
+
+private const val HALF_HOUR_MILLIS = 1_800_000L

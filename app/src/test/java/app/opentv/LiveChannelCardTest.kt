@@ -30,6 +30,7 @@ import app.opentv.ui.player.CardChannel
 import app.opentv.ui.player.LivePlayerContent
 import app.opentv.ui.player.SubtitlePicks
 import com.google.common.truth.Truth.assertThat
+import java.time.Instant
 import org.junit.After
 import org.junit.Rule
 import org.junit.Test
@@ -96,10 +97,14 @@ class LiveChannelCardTest {
         compose.waitForIdle()
     }
 
-    /** What's on in the guide: [programme] half an hour in, with [nextProgramme] straight after. */
+    /**
+     * What's on in the guide: [programme] half an hour in, with [nextProgramme] after it. The card
+     * draws next's start time, so it starts at a fixed time rather than when [programme] ends, or the
+     * card would show a different time on every run and turn up as changed in every PR's screenshots.
+     */
     private fun guide(now: Long): NowAndNext? {
         val on = programme?.let { programmeOn(it, now - HALF_HOUR_MILLIS) }
-        val next = nextProgramme?.let { programmeOn(it, now + HALF_HOUR_MILLIS) }
+        val next = nextProgramme?.let { programmeOn(it, NEXT_START) }
         return if (on == null && next == null) null else NowAndNext(on, next)
     }
 
@@ -149,6 +154,7 @@ class LiveChannelCardTest {
 
     private companion object {
         const val HALF_HOUR_MILLIS = 1_800_000L
+        val NEXT_START = Instant.parse("2099-01-01T20:00:00Z").toEpochMilli()
         val TWO = PlaybackQueue.Item(11L, "Two", logoUrl = "https://example.com/logo/11.png", number = 2)
         val CHANNELS = listOf(
             PlaybackQueue.Item(10L, "One", logoUrl = null, number = 1),

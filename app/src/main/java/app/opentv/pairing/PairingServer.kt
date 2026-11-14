@@ -14,7 +14,6 @@ import app.opentv.data.model.SourceKind
 import java.io.BufferedReader
 import java.io.InputStreamReader
 import java.net.Socket
-import java.security.SecureRandom
 import java.util.concurrent.TimeUnit
 import kotlin.concurrent.thread
 import kotlinx.coroutines.CompletableDeferred
@@ -238,7 +237,7 @@ class PairingServer(
             }
         }
 
-        confirmCode = "%06d".format(SecureRandom().nextInt(1_000_000))
+        confirmCode = ServerSecrets.sixDigitCode()
         wrongCodeAttempts = 0
         address = opened
         running = true

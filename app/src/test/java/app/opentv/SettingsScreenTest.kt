@@ -30,6 +30,7 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performKeyInput
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.test.requestFocus
 import androidx.test.core.app.ApplicationProvider
@@ -72,6 +73,9 @@ class SettingsScreenTest {
 
     @get:Rule
     val compose = createComposeRule()
+
+    @get:Rule
+    val secrets = FixedServerSecrets()
 
     private lateinit var view: View
     private val device = DeviceKeyboard(compose) { view }
@@ -321,7 +325,9 @@ class SettingsScreenTest {
         waitFor("Own guide 168")
         press(KeyEvent.KEYCODE_DPAD_RIGHT)
 
-        compose.onNodeWithText("Own guide 168").requestFocus()
+        // Scrolled to first: focus scrolls to it too, but sometimes hadn't finished when the screenshot
+        // was taken, so the list behind the panel turned up as changed in every PR's screenshots.
+        compose.onNodeWithText("Own guide 168").performScrollTo().requestFocus()
         press(KeyEvent.KEYCODE_DPAD_CENTER)
         compose.onNode(hasText("Use this guide") and isFocused()).assertExists()
         compose.onNode(hasText("Own guide 168") and hasAnyAncestor(isDialog())).assertExists()
