@@ -108,7 +108,8 @@ class GrowingNasRecordingTest {
     fun `a connection that drops is reconnected straight away, not after a long wait`() {
         val nas = GrowingFile(recording(2 * MB), visible = MB)
         clock.at(4_000) { nas.visible += MB }
-        clock.at(30_000) { RecordingLiveState.markInactive(RECORDING_ID) }
+        // Ends before a stall long enough to reopen, so the only reopen is the one the drop causes.
+        clock.at(6_000) { RecordingLiveState.markInactive(RECORDING_ID) }
         val openedAt = mutableListOf<Long>()
 
         val delivered = watchWhileRecording {
