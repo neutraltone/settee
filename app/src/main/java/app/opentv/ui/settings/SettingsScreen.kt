@@ -197,6 +197,10 @@ fun SettingsScreen(
                 .width(SECTIONS_WIDTH)
                 .fillMaxHeight()
                 .background(SetteeColors.Surface)
+                // With OpenSubtitles the sections are taller than a 1080p TV (#386): without
+                // scrolling, the column squeezed the last ones, About down to nothing the
+                // Highlight could reach.
+                .verticalScroll(rememberScrollState())
                 .padding(horizontal = SetteeSpace.ScreenSide, vertical = SetteeSpace.ScreenTopBottom)
                 .onFocusChanged { if (it.hasFocus) lastIn.pane = false }
                 .focusGroup(),

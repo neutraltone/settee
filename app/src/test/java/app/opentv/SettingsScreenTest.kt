@@ -94,6 +94,8 @@ class SettingsScreenTest {
             onEditProvider = { opened += "edit provider $it" },
             onOpenChannels = { opened += "channels" },
             onOpenLockedCategories = { opened += "locked categories" },
+            // Left out whether or not the build has Settee's key, so every build shows the same sections.
+            openSubtitles = null,
         )
     }
 
@@ -190,6 +192,7 @@ class SettingsScreenTest {
             "Manage on phone or laptop",
             "About",
         ).inOrder()
+        compose.assertSectionWhollyOnScreen("About")
     }
 
     @Test

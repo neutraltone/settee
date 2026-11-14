@@ -24,10 +24,7 @@ import androidx.test.espresso.ViewAction
 import androidx.test.espresso.matcher.RootMatchers
 import androidx.test.espresso.matcher.ViewMatchers
 import app.opentv.core.ServiceLocator
-import app.opentv.data.remote.OpenSubtitlesClient
-import app.opentv.data.repo.DownloadedSubtitles
 import app.opentv.data.repo.OpenSubtitles
-import app.opentv.data.repo.OpenSubtitlesAccount
 import app.opentv.ui.settings.OPENSUBTITLES_PANE_TAG
 import app.opentv.ui.settings.OPENSUBTITLES_SIGN_IN_HERE_TAG
 import app.opentv.ui.settings.SettingsMemory
@@ -61,13 +58,7 @@ class OpenSubtitlesSettingsTest {
     }
     private val graph = ServiceLocator.Graph(app, http = site.http, settingsFile = SETTINGS)
 
-    // Built here rather than by the graph: the Android Keystore the graph's sealer uses isn't in Robolectric.
-    private val openSubtitles = OpenSubtitles(
-        OpenSubtitlesAccount(graph.settings, OpenSubtitlesClient(site.http, "k", "0.5.0"), FakeSealer()),
-        DownloadedSubtitles(app.filesDir.resolve("subtitles")),
-        graph.catalogRepository,
-        graph.sourceRepository,
-    )
+    private val openSubtitles = site.openSubtitles(graph, app.filesDir)
 
     @After
     fun close() = graph.database.close()
