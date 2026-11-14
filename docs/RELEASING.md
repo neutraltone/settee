@@ -133,7 +133,7 @@ the screen tells the viewer that clearing the app's data is the way out and what
 So before a release that changes the schema, install it on the Fire Stick over the previous signed
 release and check that providers, Favourites and progress are still there. From 1.0 a mistake here
 can't be fixed by an in-app update. For 1.0 that means the last 0.x over signed v0.6.0 (schema 12 →
-13 → 14).
+13 → 14 → 15).
 
 ## Version numbers
 

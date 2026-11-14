@@ -73,8 +73,8 @@ class OpenTvDatabaseTest {
     }
 
     @Test
-    fun `a fresh install opens at schema version 15 without counting as a wipe`() {
-        assertThat(open().version()).isEqualTo(15)
+    fun `a fresh install opens at the latest schema without counting as a wipe`() {
+        assertThat(open().version()).isEqualTo(LATEST)
         assertThat(wipes).isEqualTo(0)
     }
 
@@ -84,7 +84,7 @@ class OpenTvDatabaseTest {
 
         val opened = open()
 
-        assertThat(opened.version()).isEqualTo(15)
+        assertThat(opened.version()).isEqualTo(LATEST)
         assertThat(opened.sources().enabled()).isEmpty()
         assertThat(wipes).isEqualTo(1)
     }
@@ -95,7 +95,7 @@ class OpenTvDatabaseTest {
 
         val opened = open()
 
-        assertThat(opened.version()).isEqualTo(14)
+        assertThat(opened.version()).isEqualTo(LATEST)
         assertThat(opened.sources().enabled()).isEmpty()
         assertThat(wipes).isEqualTo(1)
     }
@@ -119,17 +119,17 @@ class OpenTvDatabaseTest {
 
     @Test
     fun `a database from a newer Settee is refused rather than wiped`() {
-        leaveStrangerDatabase(15)
+        leaveStrangerDatabase(NEWER)
 
         val refused = assertThrows(IllegalStateException::class.java) { open().version() }
 
-        assertThat(refused).hasMessageThat().contains("A migration from 15 to 14 was required but not found")
+        assertThat(refused).hasMessageThat().contains("A migration from $NEWER to $LATEST was required but not found")
         assertThat(wipes).isEqualTo(0)
     }
 
     @Test
     fun `a database that won't open says why, so the alarms and the first screen can stop short of crashing`() {
-        leaveStrangerDatabase(15)
+        leaveStrangerDatabase(NEWER)
 
         val failure = open().wontOpen()
 
@@ -140,5 +140,13 @@ class OpenTvDatabaseTest {
     @Test
     fun `a database that opens has nothing to say`() {
         assertThat(open().wontOpen()).isNull()
+    }
+
+    private companion object {
+        /** OpenTvDatabase's version. A schema bump changes it here, and nothing else in this test. */
+        const val LATEST = 15
+
+        /** A database left by a newer Settee, after a downgrade. */
+        const val NEWER = LATEST + 1
     }
 }
