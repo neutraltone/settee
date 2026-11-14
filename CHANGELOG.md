@@ -2,6 +2,13 @@
 
 Settee is based on OpenTV 0.11.8; everything before this is in [OpenTV's changelog](https://github.com/opentvproject/opentv/blob/v0.11.8/CHANGELOG.md).
 
+## [1.0.0](https://github.com/neutraltone/settee/compare/v0.7.0...v1.0.0) (2026-11-14)
+
+
+### Bug fixes
+
+* **#386:** Settings' sections scroll, so About and Check for updates are within reach ([#387](https://github.com/neutraltone/settee/issues/387)) ([315ca7a](https://github.com/neutraltone/settee/commit/315ca7a4ffc31e7342f60f5a0181bc2004905872))
+
 ## [0.7.0](https://github.com/neutraltone/settee/compare/v0.6.0...v0.7.0) (2026-11-14)
 
 
