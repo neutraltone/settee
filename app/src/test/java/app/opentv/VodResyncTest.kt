@@ -7,6 +7,7 @@ package app.opentv
 
 import androidx.test.core.app.ApplicationProvider
 import com.google.common.truth.Truth.assertThat
+import com.google.common.truth.Truth.assertWithMessage
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Test
@@ -42,6 +43,58 @@ class VodResyncTest {
     }
 
     @Test
+    fun `a complete film list deletes the films it no longer has, keeping the rest as they were`() = runTest {
+        panel.replies["get_vod_streams"] = films(1, 2, 3)
+        test.syncVod()
+        val kept = test.catalog.allMovies().associate { it.streamId to it.id }
+
+        panel.replies["get_vod_streams"] = films(1, 2)
+        test.syncVod()
+
+        assertThat(test.catalog.allMovies().associate { it.streamId to it.id })
+            .containsExactly("1", kept["1"], "2", kept["2"])
+    }
+
+    @Test
+    fun `a film list that fails, is cut off or comes back empty deletes nothing`() = runTest {
+        for (reply in listOf("!", films(1).dropLast(10), "[]")) {
+            panel.replies["get_vod_streams"] = films(1, 2, 3)
+            test.syncVod()
+
+            panel.replies["get_vod_streams"] = reply
+            test.syncVod()
+
+            assertWithMessage(reply).that(test.catalog.allMovies().map { it.streamId }).containsExactly("1", "2", "3")
+        }
+    }
+
+    @Test
+    fun `a complete show list deletes the shows it no longer has, keeping the rest as they were`() = runTest {
+        panel.replies["get_series"] = shows(1, 2, 3)
+        test.syncVod()
+        val kept = test.catalog.allSeries().associate { it.seriesId to it.id }
+
+        panel.replies["get_series"] = shows(1, 2)
+        test.syncVod()
+
+        assertThat(test.catalog.allSeries().associate { it.seriesId to it.id })
+            .containsExactly("1", kept["1"], "2", kept["2"])
+    }
+
+    @Test
+    fun `a show list that fails, is cut off or comes back empty deletes nothing`() = runTest {
+        for (reply in listOf("!", shows(1).dropLast(10), "[]")) {
+            panel.replies["get_series"] = shows(1, 2, 3)
+            test.syncVod()
+
+            panel.replies["get_series"] = reply
+            test.syncVod()
+
+            assertWithMessage(reply).that(test.catalog.allSeries().map { it.seriesId }).containsExactly("1", "2", "3")
+        }
+    }
+
+    @Test
     fun `a refresh keeps the release date and artwork filled in when the movie was opened`() = runTest {
         panel.replies["get_vod_streams"] = """[{"stream_id": 3, "name": "Drive", "added": "100"}]"""
         panel.replies["get_vod_info"] =
@@ -57,4 +110,10 @@ class VodResyncTest {
         assertThat(movie.releaseDate).isEqualTo(1_314_921_600_000L)
         assertThat(movie.backdropUrl).isEqualTo("https://example.com/b.jpg")
     }
+
+    private fun films(vararg ids: Int) =
+        ids.joinToString(",", "[", "]") { """{"stream_id": $it, "name": "Film $it", "added": "100"}""" }
+
+    private fun shows(vararg ids: Int) =
+        ids.joinToString(",", "[", "]") { """{"series_id": $it, "name": "Show $it", "last_modified": "100"}""" }
 }

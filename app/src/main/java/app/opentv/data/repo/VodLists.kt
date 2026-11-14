@@ -22,47 +22,68 @@ import app.opentv.data.remote.XtreamApi
 // row instead of inserting a second one of the same (source, provider id), keeps the local id that
 // resume points hang off, and keeps what detail opens filled in. The rows are looked up a batch at a
 // time too, since loading every stored title to match against costs as much memory as the list.
+//
+// Each saved title is stamped with the refresh, so once a whole list has been saved the titles of that
+// source with an older stamp are the ones the provider no longer lists, and RetiredTitles deletes them.
+// A list that fails or is cut off throws, saving and stamping nothing, and an empty list stamps nothing,
+// so neither deletes anything.
 
-/** Saves [list] as [sourceId]'s movies, returning how many there were. */
+/** How many movies a list had, and the stamp each of them was saved with. */
+internal data class SavedMovies(val count: Int, val stamp: Long)
+
+/** Saves [list] as [sourceId]'s movies, each stamped as listed by this refresh ([refreshStamp]). */
 internal suspend fun MovieDao.save(
     sourceId: Long,
     list: XtreamApi.CatalogueList<Movie>,
     progress: (CatalogRepository.SaveProgress) -> Unit = {},
-): Int {
+    now: Long = System.currentTimeMillis(),
+): SavedMovies {
     var saved = 0
+    var stamp = 0L
     inTransaction {
+        stamp = refreshStamp(lastSeenOf(sourceId), now)
         list.forEachBatch({ progress(CatalogRepository.SaveProgress(it, saved)) }) { batch ->
             val stored = byProviderIds(sourceId, batch.map { it.streamId }).associateBy { it.streamId }
-            upsertAll(batch.map { it.over(stored[it.streamId]) })
+            upsertAll(batch.map { it.over(stored[it.streamId]).copy(lastSeenMillis = stamp) })
             saved += batch.size
         }
     }
-    return saved
+    return SavedMovies(saved, stamp)
 }
 
-/** How many series a list had, and the ones the provider updated since they were last saved. */
-internal data class SavedSeries(val count: Int, val moved: List<Series>)
+/** How many series a list had, the ones the provider updated since they were last saved, and their stamp. */
+internal data class SavedSeries(val count: Int, val moved: List<Series>, val stamp: Long)
 
-/** Saves [list] as [sourceId]'s series. */
+/** Saves [list] as [sourceId]'s series, stamped as [MovieDao.save] stamps movies. */
 internal suspend fun SeriesDao.save(
     sourceId: Long,
     list: XtreamApi.CatalogueList<Series>,
     progress: (CatalogRepository.SaveProgress) -> Unit = {},
+    now: Long = System.currentTimeMillis(),
 ): SavedSeries {
     var saved = 0
+    var stamp = 0L
     val moved = mutableListOf<Series>()
     inTransaction {
+        stamp = refreshStamp(lastSeenOf(sourceId), now)
         list.forEachBatch({ progress(CatalogRepository.SaveProgress(it, saved)) }) { batch ->
             val stored = byProviderIds(sourceId, batch.map { it.seriesId }).associateBy { it.seriesId }
-            val merged = batch.map { it.over(stored[it.seriesId]) }
+            val merged = batch.map { it.over(stored[it.seriesId]).copy(lastSeenMillis = stamp) }
             upsertAll(merged)
             saved += merged.size
             // A show seen for the first time has nobody caught up on it, so only ones that moved.
             merged.filterTo(moved) { it.addedMillis > (stored[it.seriesId]?.addedMillis ?: Long.MAX_VALUE) }
         }
     }
-    return SavedSeries(saved, moved)
+    return SavedSeries(saved, moved, stamp)
 }
+
+/**
+ * The stamp a refresh saves its titles with: the time, unless a source's titles already carry that time
+ * or later. Two refreshes in one millisecond, or a TV whose clock was put back, would otherwise stamp
+ * titles the provider dropped no older than the ones it still lists, and nothing would ever be deleted.
+ */
+internal fun refreshStamp(lastSeen: Long?, now: Long): Long = maxOf(now, (lastSeen ?: 0L) + 1)
 
 /** This freshly fetched movie in place of [old], keeping whatever it lacks that [old] had. */
 internal fun Movie.over(old: Movie?): Movie = if (old == null) {

@@ -156,6 +156,31 @@ class RoomMigrationTest {
         }
     }
 
+    @Test
+    fun `stamping films and series for 16 keeps every film, show and resume point`() {
+        val name = "titles-last-seen.db"
+        helper.createDatabase(name, 15).use { db ->
+            db.execSQL(
+                "INSERT INTO movies (id, sourceId, streamId, name, streamUrl, addedMillis) VALUES " +
+                    "(7, 1, 'film', 'Film', 'http://example.com/7.mp4', 5)",
+            )
+            db.execSQL(
+                "INSERT INTO series (id, sourceId, seriesId, name, addedMillis) VALUES (9, 1, 'show', 'Show', 6)",
+            )
+            db.execSQL(
+                "INSERT INTO playback_positions (profileId, mediaKey, positionMillis, durationMillis, " +
+                    "updatedAtMillis, mark) VALUES (1, 'movie:7', 600000, 6000000, 50, 'WATCHED')",
+            )
+        }
+
+        helper.runMigrationsAndValidate(name, 16, true, *OpenTvDatabase.MIGRATIONS).use { db ->
+            assertThat(db.first("SELECT name || ':' || lastSeenMillis FROM movies WHERE id = 7")).isEqualTo("Film:0")
+            assertThat(db.first("SELECT name || ':' || lastSeenMillis FROM series WHERE id = 9")).isEqualTo("Show:0")
+            val position = "SELECT positionMillis || ':' || mark FROM playback_positions WHERE mediaKey = 'movie:7'"
+            assertThat(db.first(position)).isEqualTo("600000:WATCHED")
+        }
+    }
+
     /** The first column of [sql]'s first row. */
     private fun SupportSQLiteDatabase.first(sql: String): String = query(sql).use { row ->
         row.moveToFirst()

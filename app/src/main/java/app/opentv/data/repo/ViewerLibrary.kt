@@ -175,6 +175,9 @@ class ViewerLibrary(
     /** Where the Profile is with one title, for its details page. */
     val titleStatus = TitleStatus(positions, movies, activeProfileId, versionIds)
 
+    /** Deleting the titles a provider stopped listing, their resume points moved to a Version that's left. */
+    val retired = RetiredTitles(db, versionIds)
+
     /** Removing a Profile's watch state and Favourites, for the Profiles module. */
     val profileRemoval = ProfileRemoval(db)
 
