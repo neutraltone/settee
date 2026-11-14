@@ -156,7 +156,7 @@ abstract class OpenTvDatabase : RoomDatabase() {
          * 10 → 12: when TMDB last answered about each film and series, so the background pass asks
          * again six months on. Not 11: that's upstream OpenTV's last version, which a device that ran a
          * build from before the restart still holds, and it must stay a stranger with no migration
-         * from it, so the fallback below wipes it rather than Room opening it as Settee's own.
+         * from it, so [build] wipes it rather than Room opening it as Settee's own.
          *
          * Films TMDB has already answered about (`tmdbLookedUp`) are dated now, the best guess there
          * is, so they come round in six months rather than all being asked again at once. The date
@@ -261,12 +261,15 @@ abstract class OpenTvDatabase : RoomDatabase() {
 
         /**
          * Every migration, in order. Shared with the migration test so neither list can lag. None
-         * before 9, which wiped under the pre-1.0 policy below; its older schemas went with it.
+         * before 9: those schemas are wiped instead (see [WIPED_SCHEMAS]).
          */
         internal val MIGRATIONS: Array<Migration> = arrayOf(CREDITS, TMDB_ANSWERED_AT, ADDED_INDEX, ON_NOW_INDEX)
 
+        /** The schemas opened empty rather than migrated; see [build]. */
+        private val WIPED_SCHEMAS = intArrayOf(1, 2, 3, 4, 5, 6, 7, 8, 11)
+
         /**
-         * [onWiped] runs when the destructive fallback below rebuilds the database. Settings that
+         * [onWiped] runs when a stranger's database is rebuilt empty (see [WIPED_SCHEMAS]). Settings that
          * hold a row id (active profile, last channel) would otherwise outlive their rows and
          * later match whatever reuses that id.
          */
@@ -277,15 +280,14 @@ abstract class OpenTvDatabase : RoomDatabase() {
                 .setJournalMode(JournalMode.WRITE_AHEAD_LOGGING)
                 .addMigrations(*MIGRATIONS)
                 /*
-                 * Pre-1.0 policy: until 1.0, schema changes drop and rebuild the database.
-                 * Everything in it is re-derivable from the provider (one sync away) except
-                 * favourites and overrides, and only the developer installs 0.x releases. From
-                 * 1.0 every schema change ships a Migration and this line is deleted.
-                 *
-                 * It also covers downgrades, which matters because the schema restarted at v1: a
-                 * device that ran a build from before the restart holds an upstream v11 database.
+                 * Only strangers are wiped (#334): 1 to 8, which v0.2.0 to v0.4.0 shipped before
+                 * migrations were kept, and upstream OpenTV's 11, which a device that ran a build from
+                 * before the schema restarted still holds. Writing migrations from those isn't worth
+                 * it for the developer's own devices, and without this they'd stop the app on every
+                 * launch. From 9 on, a missing migration throws: the blanket fallback would turn it
+                 * into a silent loss of Favourites, and so would a newer database after a downgrade.
                  */
-                .fallbackToDestructiveMigration()
+                .fallbackToDestructiveMigrationFrom(true, *WIPED_SCHEMAS)
                 .addCallback(
                     object : Callback() {
                         override fun onDestructiveMigration(db: SupportSQLiteDatabase) = onWiped()
