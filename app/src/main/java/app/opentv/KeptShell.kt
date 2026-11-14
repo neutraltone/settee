@@ -71,7 +71,7 @@ fun KeptShell(nav: NavHostController, shell: @Composable (NavBackStackEntry) -> 
     // NavController's whole back stack is library-only API, so the main screen's entry is looked up
     // whenever the top one changes, which every change to the stack does.
     val top by nav.currentBackStackEntryAsState()
-    val main = top?.let { runCatching { nav.getBackStackEntry(Routes.MAIN) }.getOrNull() }
+    val main = remember(top) { top?.let { runCatching { nav.getBackStackEntry(Routes.MAIN) }.getOrNull() } }
     val saveable = rememberSaveableStateHolder()
     Box(Modifier.fillMaxSize()) {
         if (main != null && !isPlayerRoute(top?.destination?.route)) {

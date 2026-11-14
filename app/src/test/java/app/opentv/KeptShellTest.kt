@@ -24,7 +24,6 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.ExperimentalTestApi
-import androidx.compose.ui.test.and
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasText
