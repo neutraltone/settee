@@ -24,11 +24,8 @@ internal sealed interface LiveKey {
     /** Not the player's: it goes on to whatever has focus, and to the back handler. */
     data object PassThrough : LiveKey
 
-    /** The channel list or a picker takes it. */
-    data object ToOverlay : LiveKey
-
-    /** The control bar moves its highlight or presses a control. */
-    data object AroundControls : LiveKey
+    /** The channel list, a picker or the control bar takes it: it moves their highlight or presses a row. */
+    data object ToFocused : LiveKey
 
     data class Digit(val digit: Char) : LiveKey
     data class Zap(val delta: Int) : LiveKey
@@ -42,18 +39,21 @@ internal sealed interface LiveKey {
     data object Leave : LiveKey
 }
 
-/** Where a key pressed down in the live player goes. Media keys and a held OK are dealt with before this. */
+/**
+ * Where a key pressed down in the live player goes. Media keys, a held OK and the release of a Back
+ * that's leaving are dealt with before this.
+ */
 internal fun liveKey(key: Key, screen: LiveScreen): LiveKey {
     val digit = keyToDigit(key)
     return when {
         key == Key.Back || key == Key.Escape -> if (screen.onTryAgain) LiveKey.Leave else LiveKey.PassThrough
         // Typing a channel number jumps to it, TiviMate-style.
         digit != null -> LiveKey.Digit(digit)
-        screen.overlayOpen -> LiveKey.ToOverlay
+        screen.overlayOpen -> LiveKey.ToFocused
         key == Key.Menu -> LiveKey.OpenOptions
         // With the controls up, the d-pad moves around them: Down reaches Subtitles and the pills, and
         // Up reaches close (docs/LOOK.md, Player). The channel keys still zap.
-        screen.controlsVisible && key != Key.ChannelUp && key != Key.ChannelDown -> LiveKey.AroundControls
+        screen.controlsVisible && key != Key.ChannelUp && key != Key.ChannelDown -> LiveKey.ToFocused
         else -> overPicture(key, screen.retryableError)
     }
 }

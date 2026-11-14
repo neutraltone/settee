@@ -403,6 +403,7 @@ fun LivePlayerContent(
     var cardVisible by remember { mutableStateOf(false) }
     var cardShows by remember { mutableIntStateOf(0) }
     var openingPress by remember { mutableStateOf(false) }
+    var leavingPress by remember { mutableStateOf(false) }
     var panel by remember { mutableStateOf(PlayerPanel.NONE) }
     var channelListVisible by remember { mutableStateOf(false) }
     var optionsOpen by remember { mutableStateOf(false) }
@@ -494,9 +495,6 @@ fun LivePlayerContent(
         retryableError = (controller.state.value as? PlayerController.State.Error)?.canRetry == true,
     )
 
-    /** Where the highlight rests with nothing else up: Try again when there is one, else the catcher. */
-    fun homeFocus() = if (liveScreen().retryableError) retryFocus else rootFocus
-
     /** Says which Channel is on: the card, or the bar's title if the bar's already up. */
     fun announceChannel() {
         if (controlsVisible) {
@@ -560,28 +558,29 @@ fun LivePlayerContent(
         }
     }
 
-    // Focus: a picker's first row when one is open, otherwise the bar, otherwise Try again or the
-    // full-screen catcher (so OK can bring the bar back, and up and down can change channel).
-    LaunchedEffect(controlsVisible, panel) {
-        if (controlsVisible) {
-            delay(40)
-            runCatching { if (panel != PlayerPanel.NONE) panelFocus.requestFocus() else barFocus.requestFocus() }
-        } else {
-            runCatching { homeFocus().requestFocus() }
-            // The player opens with nothing else to focus, and without focus the remote does nothing,
-            // so ask again after the beat the bar waits, in case the screen was still opening.
-            delay(40)
-            if (!channelListVisible) runCatching { homeFocus().requestFocus() }
-        }
-    }
-
-    // Try again takes the highlight when it appears, and again for each new error. When it goes, the
-    // highlight would go with it and leave the remote doing nothing, so the catcher takes it back.
+    // Focus: the channel list when it's open, a picker's first row, the bar, and with none of them Try
+    // again or else the full-screen catcher (so OK can bring the bar back, and up and down can change
+    // channel). One effect, so every way out of a layer hands the highlight on alike. Side panels
+    // aren't here: they're dialogs, with focus of their own, and this window's waits for them.
     val retryError = (state as? PlayerController.State.Error)?.takeIf { it.canRetry }
-    LaunchedEffect(retryError) {
-        val sidePanelOpen = optionsOpen || choosingSleep || pausePrompt
-        if (!sidePanelOpen && !liveScreen().overlayOpen && !controlsVisible) {
-            runCatching { homeFocus().requestFocus() }
+    val focusOn = when {
+        channelListVisible -> listFocus
+        controlsVisible -> if (panel != PlayerPanel.NONE) panelFocus else barFocus
+        retryError != null -> retryFocus
+        else -> rootFocus
+    }
+    // Each new error draws Try again afresh, and when it goes the highlight would go with it.
+    LaunchedEffect(focusOn, panel, retryError.takeIf { focusOn == retryFocus }) {
+        if (focusOn == rootFocus || focusOn == retryFocus) {
+            runCatching { focusOn.requestFocus() }
+            // The player opens with nothing else to focus, and without focus the remote does nothing,
+            // so ask again after the beat the others wait, in case the screen was still opening.
+            delay(40)
+            runCatching { focusOn.requestFocus() }
+        } else {
+            // They fade in: give them a beat to be there.
+            delay(40)
+            runCatching { focusOn.requestFocus() }
         }
     }
 
@@ -606,16 +605,6 @@ fun LivePlayerContent(
         numberEntry = ""
         val target = num?.let { n -> queue.firstOrNull { it.number == n } }
         if (target != null) playPicked(target)
-    }
-
-    // Focus the channel list when it opens; hand focus back to the video catcher when it closes.
-    LaunchedEffect(channelListVisible) {
-        if (channelListVisible) {
-            delay(40)
-            runCatching { listFocus.requestFocus() }
-        } else if (!controlsVisible) {
-            runCatching { homeFocus().requestFocus() }
-        }
     }
 
     Box(
@@ -649,22 +638,29 @@ fun LivePlayerContent(
                     if (!repeating) openingPress = false
                     if (releasing || repeating) return@onPreviewKeyEvent true
                 }
-                val key = liveKey(event.key, liveScreen())
                 // Leaving on the release, as the back handler would, so the press can't reach whatever
-                // the screen underneath focuses next.
-                if (key == LiveKey.Leave) {
-                    if (event.type == KeyEventType.KeyUp) leave()
+                // the screen underneath focuses next. Decided on the way down: the screen can change
+                // before the release, which Android would then get without the press that began it.
+                if (leavingPress && (event.key == Key.Back || event.key == Key.Escape)) {
+                    if (event.type == KeyEventType.KeyUp) {
+                        leavingPress = false
+                        leave()
+                    }
                     return@onPreviewKeyEvent true
                 }
                 if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
-                when (key) {
-                    LiveKey.PassThrough, LiveKey.Leave -> false
+                when (val key = liveKey(event.key, liveScreen())) {
+                    LiveKey.PassThrough -> false
+                    LiveKey.Leave -> {
+                        leavingPress = true
+                        true
+                    }
                     is LiveKey.Digit -> {
                         numberEntry = (numberEntry + key.digit).take(4)
                         interaction++
                         true
                     }
-                    LiveKey.ToOverlay, LiveKey.AroundControls -> {
+                    LiveKey.ToFocused -> {
                         interaction++
                         false
                     }

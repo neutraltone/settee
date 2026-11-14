@@ -26,6 +26,7 @@ import app.opentv.ui.player.CardChannel
 import app.opentv.ui.player.LivePlayerContent
 import app.opentv.ui.player.SubtitlePicks
 import com.google.common.truth.Truth.assertThat
+import kotlinx.coroutines.delay
 import org.junit.After
 import org.junit.Rule
 import org.junit.Test
@@ -61,11 +62,17 @@ class LivePlayerErrorTest {
         players.close()
     }
 
-    /** A channel whose every tune fails in a way trying again could fix, counting each try. */
-    private fun deadChannel() = players.controller(LIVE) { key ->
+    /**
+     * A channel whose every tune fails in a way trying again could fix, counting each try. [wait] keeps
+     * each try buffering for a while first, as a real provider does, so Try again leaves the screen.
+     */
+    private fun deadChannel(wait: Long = 0L) = players.controller(LIVE) { key ->
         tries++
+        if (wait > 0) delay(wait)
         Playable.Failed(key, Playable.Failure.GONE, "Two")
     }
+
+    private fun untilBuffering() = players.until { controller?.state?.value is PlayerController.State.Buffering }
 
     private fun failed(retryable: Boolean) = (controller?.state?.value as? PlayerController.State.Error)
         ?.let { it.canRetry == retryable } == true
@@ -137,14 +144,38 @@ class LivePlayerErrorTest {
 
     @Test
     fun `when trying again fails too, the highlight is back on Try again`() {
-        show(deadChannel())
+        show(deadChannel(wait = TRY_MILLIS))
         val before = tries
 
         press(Key.DirectionCenter)
+        untilBuffering()
+        compose.waitForIdle()
+        compose.onNodeWithText("Try again").assertDoesNotExist()
         untilFailedAgain(after = before)
         compose.waitForIdle()
         compose.mainClock.advanceTimeBy(FOCUS_MILLIS)
 
+        compose.onNodeWithText("Try again").assertIsFocused()
+    }
+
+    @Test
+    fun `an error that comes while Options is open has the highlight on Try again once it closes`() {
+        val dead = deadChannel(wait = TRY_MILLIS)
+        show(dead)
+        val before = tries
+        press(Key.Menu)
+
+        // Keys go to Options while it's open, so the channel is tried again from behind it.
+        dead.retry()
+        untilBuffering()
+        compose.waitForIdle()
+        untilFailedAgain(after = before)
+        compose.waitForIdle()
+        Espresso.pressBack()
+        compose.waitForIdle()
+        compose.mainClock.advanceTimeBy(FOCUS_MILLIS)
+
+        assertThat(backs).isEqualTo(0)
         compose.onNodeWithText("Try again").assertIsFocused()
     }
 
@@ -200,6 +231,7 @@ class LivePlayerErrorTest {
         const val FOCUS_MILLIS = 100L
         const val CARD_TIMEOUT_MILLIS = 5_000L
         const val HOLD_MILLIS = 1_000L
+        const val TRY_MILLIS = 500L
 
         val CHANNELS = listOf(
             PlaybackQueue.Item(10L, "One", logoUrl = null, number = 1),
