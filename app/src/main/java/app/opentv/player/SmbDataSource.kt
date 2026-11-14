@@ -16,7 +16,7 @@ import androidx.media3.datasource.TransferListener
 import app.opentv.core.AppSettings
 import app.opentv.recording.RecordingStorage
 import app.opentv.recording.SmbClient
-import app.opentv.recording.SmbReadHandle
+import app.opentv.recording.SmbReader
 
 /**
  * A Media3 data source that reads a recording straight off a NAS over SMB, at arbitrary offsets —
@@ -24,19 +24,23 @@ import app.opentv.recording.SmbReadHandle
  * pulled down first. Only `smb://` URIs come here; everything else routes to the default source.
  */
 @OptIn(UnstableApi::class)
-class SmbDataSource(private val settings: AppSettings) : BaseDataSource(true) {
+class SmbDataSource(private val openReader: (locator: String) -> SmbReader) : BaseDataSource(true) {
+
+    constructor(settings: AppSettings) : this({ SmbClient.openForRead(RecordingStorage.smbConfig(settings), it) })
 
     private var uri: Uri? = null
-    private var handle: SmbReadHandle? = null
+    private var handle: SmbReader? = null
     private var position: Long = 0
     private var bytesRemaining: Long = 0
     private var opened: Boolean = false
+    private val readAhead = SmbReadAhead()
 
     override fun open(dataSpec: DataSpec): Long {
         transferInitializing(dataSpec)
         uri = dataSpec.uri
-        val handle = SmbClient.openForRead(RecordingStorage.smbConfig(settings), dataSpec.uri.toString())
+        val handle = openReader(dataSpec.uri.toString())
         this.handle = handle
+        readAhead.reader = handle
         position = dataSpec.position
         bytesRemaining =
             if (dataSpec.length != C.LENGTH_UNSET.toLong()) {
@@ -53,7 +57,7 @@ class SmbDataSource(private val settings: AppSettings) : BaseDataSource(true) {
         if (length == 0) return 0
         if (bytesRemaining == 0L) return C.RESULT_END_OF_INPUT
         val toRead = minOf(length.toLong(), bytesRemaining).toInt()
-        val read = handle?.readAt(buffer, position, offset, toRead) ?: return C.RESULT_END_OF_INPUT
+        val read = readAhead.read(position, buffer, offset, toRead, fetchLimit = bytesRemaining)
         if (read < 0) return C.RESULT_END_OF_INPUT
         position += read
         bytesRemaining -= read
@@ -66,6 +70,7 @@ class SmbDataSource(private val settings: AppSettings) : BaseDataSource(true) {
     override fun close() {
         runCatching { handle?.close() }
         handle = null
+        readAhead.reader = null
         if (opened) {
             opened = false
             transferEnded()

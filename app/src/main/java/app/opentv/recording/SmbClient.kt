@@ -54,6 +54,15 @@ class SmbWriteHandle(
     }
 }
 
+/** Random-access reads of one file on a NAS: what the players need from an open SMB file. */
+interface SmbReader : Closeable {
+    /** The file's size when it was opened. */
+    val length: Long
+
+    /** Reads up to [length] bytes at [fileOffset]; returns bytes read or -1 at EOF. One SMB round trip. */
+    fun readAt(buffer: ByteArray, fileOffset: Long, bufferOffset: Int, length: Int): Int
+}
+
 /**
  * A random-access reader over an SMB file, for playing a NAS recording back in-app. Media3's
  * data source seeks by asking for bytes at an offset; SMB supports exactly that.
@@ -64,10 +73,9 @@ class SmbReadHandle(
     private val session: Session,
     private val share: DiskShare,
     private val file: com.hierynomus.smbj.share.File,
-    val length: Long,
-) : Closeable {
-    /** Reads up to [length] bytes at [fileOffset]; returns bytes read or -1 at EOF. */
-    fun readAt(buffer: ByteArray, fileOffset: Long, bufferOffset: Int, length: Int): Int =
+    override val length: Long,
+) : SmbReader {
+    override fun readAt(buffer: ByteArray, fileOffset: Long, bufferOffset: Int, length: Int): Int =
         file.read(buffer, fileOffset, bufferOffset, length)
 
     override fun close() {
