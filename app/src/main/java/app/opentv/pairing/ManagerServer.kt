@@ -71,8 +71,6 @@ class ManagerServer(
     private val sourceRepository: SourceRepository,
     private val lineup: ChannelLineup,
     private val refresh: CatalogueRefresh,
-    /** Saves a category's new order; tests hold one back to see that the next waits its turn. */
-    private val saveOrder: suspend (List<Long>) -> Unit = { catalog.setChannelOrder(it) },
 ) {
     /** Words a failed test or add for the page; it never sends an exception's own message. */
     private val wording get() = catalog.wording
@@ -119,6 +117,9 @@ class ManagerServer(
      * save the later first and be overwritten by the earlier: the last to save wins, not the last tap.
      */
     private val reordering = ReentrantLock(true)
+
+    /** Saves a category's new order; tests hold one back to see that the next waits its turn. */
+    internal var saveOrder: suspend (List<Long>) -> Unit = { catalog.setChannelOrder(it) }
 
     private val json = Json {
         ignoreUnknownKeys = true

@@ -45,10 +45,11 @@ class ManagerServerTest {
     private val test = TestCatalog(context)
     private val scope = CoroutineScope(Dispatchers.Default)
 
-    /** Each reorder's ids as it commits; the first waits for [firstMayCommit] once [firstCommitting] says it's begun. */
+    /** Each reorder's ids as it commits. The first waits for [firstMayCommit] once [firstCommitting] says it began. */
     private val committed: MutableList<List<Long>> = Collections.synchronizedList(mutableListOf())
     private val firstCommitting = CountDownLatch(1)
     private val firstMayCommit = CountDownLatch(1)
+
     @Volatile private var holdFirstCommit = false
 
     private val server = ManagerServer(
@@ -58,6 +59,7 @@ class ManagerServerTest {
         SourceRepository(test.db.sources(), XtreamApi(test.panel.http), StalkerApi(test.panel.http)),
         test.lineup,
         test.refresh(),
+    ).apply {
         saveOrder = { ids ->
             if (holdFirstCommit && firstCommitting.count > 0) {
                 firstCommitting.countDown()
@@ -65,8 +67,8 @@ class ManagerServerTest {
             }
             committed += ids
             test.catalog.setChannelOrder(ids)
-        },
-    )
+        }
+    }
 
     @After
     fun close() {

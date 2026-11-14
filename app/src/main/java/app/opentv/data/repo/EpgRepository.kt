@@ -6,7 +6,6 @@
 package app.opentv.data.repo
 
 import android.util.Log
-import androidx.room.InvalidationTracker
 import app.opentv.R
 import app.opentv.core.ErrorWording
 import app.opentv.core.ViewerError
@@ -81,8 +80,6 @@ class EpgRepository(
     /** Words a feed that failed: its last result is shown in Guide settings. */
     private val wording: ErrorWording,
     private val selfEnabledGuide: SelfEnabledGuide,
-    /** Says when the programmes table changes, for [observeGuideWindow] to read it again. */
-    private val invalidationTracker: InvalidationTracker,
 ) {
 
     /**
@@ -112,7 +109,7 @@ class EpgRepository(
     // Settled: every batch a guide sync writes changes the table, and reading the window for each, or
     // whoever watches it redoing its work for each, cost hundreds of reads per sync (#257, #328).
     fun observeGuideWindow(fromUtcMillis: Long, toUtcMillis: Long): Flow<List<GuideProgramme>> =
-        invalidationTracker.createFlow(PROGRAMMES_TABLE).settledReads {
+        programmeDao.changes().settledReads {
             programmeDao.guideWindow(fromUtcMillis, toUtcMillis)
         }
 
@@ -556,5 +553,3 @@ class EpgRepository(
 
 /** Enough rows for what's on now and next with a few feeds carrying the same channel. */
 private const val NOW_AND_NEXT_ROWS = 8
-
-private const val PROGRAMMES_TABLE = "programmes"

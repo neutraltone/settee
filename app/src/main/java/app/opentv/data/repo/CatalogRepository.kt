@@ -17,6 +17,7 @@ import app.opentv.data.db.MovieDao
 import app.opentv.data.db.MoviePick
 import app.opentv.data.db.SeriesDao
 import app.opentv.data.db.SourceDao
+import app.opentv.data.db.StagedBatches
 import app.opentv.data.model.Category
 import app.opentv.data.model.Channel
 import app.opentv.data.model.ChannelHiddenChange
@@ -40,6 +41,7 @@ import app.opentv.data.remote.XtreamApi
 import app.opentv.player.DecoderList
 import app.opentv.player.playsQualityRanked
 import app.opentv.sync.SyncHiddenChannel
+import java.io.File
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -201,6 +203,15 @@ class CatalogRepository(
      * A property and not a constructor parameter, as the constructor has more than enough.
      */
     internal var genrePauseMillis: Long = MovieGenres.BATCH_PAUSE_MILLIS
+
+    /**
+     * Where a live list is staged, decoded, before it's saved; null is the JVM's temp folder, the
+     * app's cache on Android. A property for the reason [genrePauseMillis] is.
+     */
+    internal var staging: File? = null
+
+    /** Called as each batch of an Xtream live list is decoded; tests watch it against the database's statements. */
+    internal var onLiveBatchDecoded: () -> Unit = {}
 
     private fun tmdbMetaOf(movie: Movie) =
         tmdb.movieMetaOrFailure(VodTitleCleaner.clean(movie.name), movie.year, movie.tmdbId)
@@ -692,14 +703,21 @@ class CatalogRepository(
 
         val liveCategories = api.liveCategories(source)
         val categoryNames = liveCategories.associate { it.id to it.name }
-        // Saved a batch at a time off the download, as movies and shows are: a very large line-up
+        // Decoded a batch at a time off the download, as movies and shows are: a very large line-up
         // held whole, as a string, a JSON tree and the channels at once, can run a stick's heap out.
-        // Cleaning a channel looks at it alone, so it happens per batch too.
-        val saved = api.liveStreams(source).use { list ->
-            channelDao.replaceCatalogue(source.id, nowUtcMillis) { save ->
-                list.forEachBatch { batch -> save(normalized(batch, categoryNames)) }
+        // Cleaning a channel looks at it alone, so it happens per batch too. The cleaned batches are
+        // staged on disk and saved only once the whole reply has decoded: decoded inside the save's
+        // transaction, they held SQLite's writer for the length of the decode, and progress and guide
+        // writes queued behind it (#328). A reply cut off partway throws here, before anything's saved.
+        val staged = api.liveStreams(source).use { list ->
+            StagedBatches.stage(staging, Channel.serializer()) { stage ->
+                list.forEachBatch { batch ->
+                    stage(normalized(batch, categoryNames))
+                    onLiveBatchDecoded()
+                }
             }
         }
+        val saved = staged.use { channelDao.replaceCatalogue(source.id, nowUtcMillis, it) }
         if (saved == 0) {
             return SyncResult.Failed(wording.of(R.string.error_no_channels, NO_CHANNELS), null)
         }

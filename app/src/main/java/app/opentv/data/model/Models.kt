@@ -9,6 +9,7 @@ import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.PrimaryKey
+import kotlinx.serialization.Serializable
 
 /**
  * The domain models double as Room entities.
@@ -131,6 +132,8 @@ data class SourceCategoryName(val sourceId: Long, val id: String, val name: Stri
         Index(value = ["groupKey"]),
     ],
 )
+// Serializable so a live list can be staged on disk, decoded, before the transaction that saves it.
+@Serializable
 data class Channel(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val sourceId: Long,

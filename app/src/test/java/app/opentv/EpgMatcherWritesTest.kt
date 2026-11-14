@@ -51,7 +51,6 @@ class EpgMatcherWritesTest {
         http = http,
         wording = ErrorWording(ApplicationProvider.getApplicationContext(), onTelevision = false),
         selfEnabledGuide = EpgRepository.SelfEnabledGuide.InMemory(),
-        invalidationTracker = db.invalidationTracker,
     )
 
     @After

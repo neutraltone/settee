@@ -10,6 +10,7 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.test.core.app.ApplicationProvider
 import app.opentv.data.db.OpenTvDatabase
+import app.opentv.data.db.StagedBatches
 import app.opentv.data.model.Channel
 import app.opentv.data.model.Movie
 import app.opentv.data.model.Series
@@ -71,9 +72,10 @@ class CatalogueRefreshWritesTest {
         streamUrl = "https://example.com/$streamId.ts",
     )
 
-    /** The batched overload, as Xtream's list is saved: the whole of [list] as one batch. */
+    /** The staged overload, as Xtream's list is saved: the whole of [list] staged as one batch. */
     private suspend fun refreshInBatches(sourceId: Long, list: List<Channel>, syncStamp: Long) =
-        channels.replaceCatalogue(sourceId, syncStamp) { save -> save(list) }
+        StagedBatches.stage(null, Channel.serializer()) { stage -> stage(list) }
+            .use { channels.replaceCatalogue(sourceId, syncStamp, it) }
 
     @Test
     fun `refreshing an unchanged channel list again updates its rows without trying to insert them`() = runTest {
