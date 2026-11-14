@@ -50,6 +50,7 @@ import androidx.compose.ui.zIndex
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import app.opentv.R
 import app.opentv.core.ServiceLocator
@@ -110,25 +111,31 @@ fun LiveScreen(
     val settings = remember { graph.settings }
     val previewEnabled by settings.guidePreviewVideo.collectAsState()
 
-    val categories by viewModel.visibleCategoryGroups.collectAsState()
-    val guideRows by viewModel.guideRows.collectAsState()
+    // What reads the database is collected only while the screen is started, so none of it runs
+    // under Settings, Search or a title's page, which keep the guide built (see programmeIndex, #327).
+    val categories by viewModel.visibleCategoryGroups.collectAsStateWithLifecycle()
+    val guideRows by viewModel.guideRows.collectAsStateWithLifecycle()
     val rows = guideRows.rows
     val selectedCategory by viewModel.selectedCategory.collectAsState()
     val favouritesOnly by viewModel.favouritesOnly.collectAsState()
-    val sources by viewModel.sources.collectAsState()
+    val sources by viewModel.sources.collectAsStateWithLifecycle()
+    // Kept current while covered, as they read no database: Back from a guide that went back to
+    // today while covered then draws today at once, and leaves out the stale rows' other day until
+    // today's are built, as paging does. Their window moves first, which is what the rows land on.
     val windowStart by viewModel.windowStartMillis.collectAsState()
     val windowEnd by viewModel.windowEndMillis.collectAsState()
     val rowsBuilt by viewModel.rowsBuilt.collectAsState()
     val guideDayOffset by viewModel.guideDayOffset.collectAsState()
     // Tri-state: null = still checking the catalogue, true = channels on disk, false = confirmed
     // empty. Drives the choice between the loading message and a recoverable error below.
-    val channelsPresent by viewModel.channelsPresent.collectAsState()
+    val channelsPresent by viewModel.channelsPresent.collectAsStateWithLifecycle()
 
     // Where the Highlight is in the guide: what the band describes and the preview plays.
     var highlighted by remember { mutableStateOf<Pair<ChannelsViewModel.Row, GuideProgramme?>?>(null) }
     var nowMillis by remember { mutableLongStateOf(viewModel.now()) }
 
-    val activeRecordings by graph.recordingRepository.observeActive().collectAsState(initial = emptyList())
+    val activeRecordings by graph.recordingRepository.observeActive()
+        .collectAsStateWithLifecycle(initialValue = emptyList())
     val recordScope = rememberCoroutineScope()
     // The programme the viewer pressed OK on in the guide, whose details are open.
     var details by remember { mutableStateOf<Pair<ChannelsViewModel.Row, GuideProgramme>?>(null) }
