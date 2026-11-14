@@ -197,6 +197,9 @@ fun SettingsScreen(
                 .width(SECTIONS_WIDTH)
                 .fillMaxHeight()
                 .background(SetteeColors.Surface)
+                // Twelve sections are taller than a 1080p TV (#386): without scrolling, the last
+                // ones sat below the edge, where the Highlight couldn't reach About.
+                .verticalScroll(rememberScrollState())
                 .padding(horizontal = SetteeSpace.ScreenSide, vertical = SetteeSpace.ScreenTopBottom)
                 .onFocusChanged { if (it.hasFocus) lastIn.pane = false }
                 .focusGroup(),
