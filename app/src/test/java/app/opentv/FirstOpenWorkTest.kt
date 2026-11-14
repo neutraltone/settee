@@ -65,9 +65,35 @@ class FirstOpenWorkTest {
             catchUpNormaliser = { error("database unavailable") },
         )
 
-        // Swallows the catalogue's failure, which in the app goes on to crash it as it did before.
-        withContext(CoroutineExceptionHandler { _, _ -> }) { failing.run() }
+        failing.run()
 
         assertThat(ran).contains("nas")
+    }
+
+    @Test
+    fun `a catalogue that fails to catch up still gets its launch refresh, and nothing reaches the app`() = runTest {
+        val escaped = mutableListOf<Throwable>()
+        val failing = work(nasAutoSync = false, catchUpNormaliser = { error("database full") })
+
+        withContext(CoroutineExceptionHandler { _, t -> escaped += t }) { failing.run() }
+
+        assertThat(ran).containsExactly("refresh")
+        assertThat(escaped).isEmpty()
+    }
+
+    @Test
+    fun `a launch refresh that fails doesn't reach the app`() = runTest {
+        val escaped = mutableListOf<Throwable>()
+        val failing = FirstOpenWork(
+            nasAutoSync = false,
+            syncNas = {},
+            catchUpNormaliser = { ran += "normaliser" },
+            launchRefresh = { error("database full") },
+        )
+
+        withContext(CoroutineExceptionHandler { _, t -> escaped += t }) { failing.run() }
+
+        assertThat(ran).containsExactly("normaliser")
+        assertThat(escaped).isEmpty()
     }
 }

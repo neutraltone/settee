@@ -952,8 +952,8 @@ class CatalogRepository(
 
         val bySource = existing.groupBy { it.sourceId }
         var changed = 0
-        for ((_, channels) in bySource) {
-            val names = channelCategoryNames(channels)
+        for ((sourceId, channels) in bySource) {
+            val names = categoryDao.liveNamesOf(sourceId).associate { it.id to it.name }
             val renamed = normalized(channels, names)
             // Only write rows that actually changed, to keep the write small.
             val diff = renamed.filterIndexed { i, c ->
@@ -971,13 +971,6 @@ class CatalogRepository(
         }
         Log.i(TAG, "Re-normalised $changed channels with the current normaliser")
         changed
-    }
-
-    /** Best-effort category-id → name map for a set of channels. */
-    private suspend fun channelCategoryNames(channels: List<Channel>): Map<String, String> {
-        val ids = channels.mapNotNull { it.categoryId }.toSet()
-        if (ids.isEmpty()) return emptyMap()
-        return categoryDao.namesFor(ids).associate { it.id to it.name }
     }
 
     /**

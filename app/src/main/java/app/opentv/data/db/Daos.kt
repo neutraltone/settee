@@ -559,9 +559,13 @@ interface CategoryDao {
     @Query("SELECT sourceId, id, name FROM categories WHERE kind = :kind")
     fun observeNames(kind: StreamKind): Flow<List<SourceCategoryName>>
 
-    /** Minimal id+name rows for the re-normalise pass. */
-    @Query("SELECT id, name FROM categories WHERE id IN (:ids)")
-    suspend fun namesFor(ids: Set<String>): List<CategoryName>
+    /**
+     * One source's live category names, for the re-normalise pass. By source, not by the ids its
+     * channels use: two providers can number their categories alike, and a list of every id a
+     * playlist's group-titles produce goes past the Stick's 999 bound variables.
+     */
+    @Query("SELECT id, name FROM categories WHERE sourceId = :sourceId AND kind = 'LIVE'")
+    suspend fun liveNamesOf(sourceId: Long): List<CategoryName>
 
     @Upsert
     suspend fun upsertAll(categories: List<Category>)
@@ -581,7 +585,7 @@ interface CategoryDao {
     suspend fun deleteEmptyLive(sourceId: Long)
 }
 
-/** Projection for [CategoryDao.namesFor]. */
+/** Projection for [CategoryDao.liveNamesOf]. */
 data class CategoryName(val id: String, val name: String)
 
 /** A channel's row id and provider id: all a live format switch needs to rebuild its URL. */

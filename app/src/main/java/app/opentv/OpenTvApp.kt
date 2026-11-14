@@ -7,6 +7,7 @@ package app.opentv
 
 import android.app.Application
 import android.content.Context
+import android.util.Log
 import app.opentv.core.AppSettings
 import app.opentv.core.LocaleUtils
 import app.opentv.core.ServiceLocator
@@ -17,6 +18,7 @@ import coil.ImageLoaderFactory
 import coil.disk.DiskCache
 import coil.memory.MemoryCache
 import java.util.concurrent.atomic.AtomicBoolean
+import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -25,7 +27,13 @@ import kotlinx.coroutines.launch
 open class OpenTvApp :
     Application(),
     ImageLoaderFactory {
-    private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    // The handler is a backstop: each launch job catches its own failures, but one that slips past
+    // would otherwise kill the process, and work started on every launch would then do so on every
+    // launch, with no chance for the updater to bring a fix.
+    private val appScope = CoroutineScope(
+        SupervisorJob() + Dispatchers.Default +
+            CoroutineExceptionHandler { _, t -> Log.e(TAG, "Launch work failed", t) },
+    )
     private val launchWorkStarted = AtomicBoolean(false)
 
     /**
@@ -122,8 +130,13 @@ open class OpenTvApp :
                 // the refresh button. ensureFeeds + auto-enable-by-region + matcher all live here.
                 graph.catalogueRefresh.refresh(CatalogueRefresh.Trigger.AppLaunch)
             },
+            failed = { step, cause -> Log.w(TAG, "First-open $step failed", cause) },
         )
         appScope.launch { work.run() }
+    }
+
+    private companion object {
+        const val TAG = "OpenTV"
     }
 }
 
