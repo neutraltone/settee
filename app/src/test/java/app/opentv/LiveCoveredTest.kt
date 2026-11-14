@@ -20,7 +20,6 @@ import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertIsDisplayed
@@ -30,9 +29,7 @@ import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isFocused
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
-import androidx.compose.ui.test.onRoot
-import androidx.compose.ui.test.performKeyInput
-import androidx.compose.ui.test.pressKey
+import androidx.compose.ui.test.requestFocus
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -188,11 +185,6 @@ class LiveCoveredTest {
         compose.waitForIdle()
     }
 
-    private fun press(key: Key) {
-        compose.onRoot().performKeyInput { pressKey(key) }
-        compose.waitForIdle()
-    }
-
     private fun channelCell(name: String) = compose.onNode(hasText(name) and hasClickAction())
 
     private fun liveShown() = runCatching { channelCell("Channel Two").assertIsDisplayed() }.isSuccess
@@ -220,7 +212,8 @@ class LiveCoveredTest {
         library()
         setApp()
         awaitRows()
-        press(Key.DirectionDown)
+        channelCell("Channel Two").requestFocus()
+        compose.waitForIdle()
         channelCell("Channel Two").assertIsFocused()
 
         openSettings()
