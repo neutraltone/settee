@@ -2,6 +2,56 @@
 
 Settee is based on OpenTV 0.11.8; everything before this is in [OpenTV's changelog](https://github.com/opentvproject/opentv/blob/v0.11.8/CHANGELOG.md).
 
+## [0.7.0](https://github.com/neutraltone/settee/compare/v0.6.0...v0.7.0) (2026-11-14)
+
+
+### Features
+
+* **#267:** Locked categories has Find a category, and no longer says there are none while it's reading them ([#317](https://github.com/neutraltone/settee/issues/317)) ([c9e59f9](https://github.com/neutraltone/settee/commit/c9e59f957294383d2567c4f8b51c58ba4d603e0c))
+
+
+### Bug fixes
+
+* **#253:** guide listings pick up the provider's corrections when the guide refreshes ([#278](https://github.com/neutraltone/settee/issues/278)) ([ab359ff](https://github.com/neutraltone/settee/commit/ab359ff33e7bf5f50277118081984f712753e17d))
+* **#255:** a channel that can't play says so in seconds, not a minute ([#280](https://github.com/neutraltone/settee/issues/280)) ([9139bda](https://github.com/neutraltone/settee/commit/9139bda1011f489e1cd8aabe7dc2e193958f8231))
+* **#256:** a provider with a very large channel line-up loads without running out of memory ([#285](https://github.com/neutraltone/settee/issues/285)) ([a980784](https://github.com/neutraltone/settee/commit/a980784721a25d89293593143d776b4f961ad07b))
+* **#259:** NAS recordings start sooner and stall less on a slow network ([#313](https://github.com/neutraltone/settee/issues/313)) ([1ffad16](https://github.com/neutraltone/settee/commit/1ffad16bfa68158d22c7313f781a69161c21079a))
+* **#261:** a portal channel list too big for the TV is read a channel at a time, and says so if it still runs out of memory ([#284](https://github.com/neutraltone/settee/issues/284)) ([5270b46](https://github.com/neutraltone/settee/commit/5270b46e87ce3d9f7e57f46120db324ea1b1cff1))
+* **#262:** films and episodes in an M3U playlist no longer show up as live channels ([#286](https://github.com/neutraltone/settee/issues/286)) ([cd9e275](https://github.com/neutraltone/settee/commit/cd9e2752ed2edc8d94edcc3e97eef36b1474094f))
+* **#264:** after holding Down through Movies or Shows, the covers where you stop load straight away ([#318](https://github.com/neutraltone/settee/issues/318)) ([c73d133](https://github.com/neutraltone/settee/commit/c73d133d20f590907f02fb3ef3a4c37962e00082))
+* **#268:** live previews no longer stutter every five minutes ([#279](https://github.com/neutraltone/settee/issues/279)) ([1c311f4](https://github.com/neutraltone/settee/commit/1c311f4d5f16cd15b94fd90a01744c71d1de5abb))
+* **#325:** a playlist that briefly comes back with only films and episodes no longer deletes your channels ([#329](https://github.com/neutraltone/settee/issues/329)) ([c162683](https://github.com/neutraltone/settee/commit/c1626837cbe307b11dbd0e657c78f4a0304605d8))
+* **#326:** a show you've opened before draws its page at once, even when its provider is slow ([#330](https://github.com/neutraltone/settee/issues/330)) ([3ab9489](https://github.com/neutraltone/settee/commit/3ab948966163f2ce8d93fd191cf89e0f52ff9099))
+* **#328:** long programmes show as on now, Search keeps its results after a title, and Parental lock's count matches its switches ([#331](https://github.com/neutraltone/settee/issues/331)) ([122abeb](https://github.com/neutraltone/settee/commit/122abebf0c857bc6bb884793af29bdb877cc895a))
+* **#333:** series links, reminders and your channel edits survive a channel missing from one refresh ([#382](https://github.com/neutraltone/settee/issues/382)) ([30079aa](https://github.com/neutraltone/settee/commit/30079aa84828bb5557b6af5e55b198063fae5b64))
+* **#334:** a database Settee can't open says how to get out and offers the update, instead of the app stopping on every launch ([#381](https://github.com/neutraltone/settee/issues/381)) ([727a6e5](https://github.com/neutraltone/settee/commit/727a6e594987a78ce33e2fc3397dfa32d762f891))
+* **#372:** a problem while the app starts no longer stops it on every launch ([#383](https://github.com/neutraltone/settee/issues/383)) ([29f261e](https://github.com/neutraltone/settee/commit/29f261e0454e02b85cfe279e35ce209248acb6bb))
+* **#384:** back from a film or show's page, the highlight is on the title you opened, not the main nav ([#385](https://github.com/neutraltone/settee/issues/385)) ([3b4ea9b](https://github.com/neutraltone/settee/commit/3b4ea9b727edd67b0e1c34fdd36d0f6923391a8c))
+
+
+### Performance
+
+* **#192:** back to Home from Settings, Profiles or Search draws its rows straight away ([#312](https://github.com/neutraltone/settee/issues/312)) ([6d10200](https://github.com/neutraltone/settee/commit/6d102009a85ccaf5a033c990bc03674790bda559))
+* **#192:** back to Home from Settings, Search or a title's page keeps your place instead of redrawing Home ([#322](https://github.com/neutraltone/settee/issues/322)) ([e04ea88](https://github.com/neutraltone/settee/commit/e04ea8838c7384139012da892ae5fd33011787c3))
+* **#254:** moving around the guide no longer judders, as each row builds only the programmes near the screen ([#287](https://github.com/neutraltone/settee/issues/287)) ([d6482cf](https://github.com/neutraltone/settee/commit/d6482cf56325fbdc20786dae8834311f0eec8c35))
+* **#257:** the guide stays smooth while its listings are updating ([#289](https://github.com/neutraltone/settee/issues/289)) ([0d8f6e9](https://github.com/neutraltone/settee/commit/0d8f6e9b9d31cbe67c09cbea38023f59ee652b09))
+* **#258:** the app and Search open without reading the whole film and show library, which waits until Movies or Shows opens ([#308](https://github.com/neutraltone/settee/issues/308)) ([785aa1c](https://github.com/neutraltone/settee/commit/785aa1c6694b366905524aaff9b99c9d2ac160a4))
+* **#260:** a show's episodes appear sooner when you open it ([#311](https://github.com/neutraltone/settee/issues/311)) ([ae294b5](https://github.com/neutraltone/settee/commit/ae294b53a99536c81323262b4c85ce26fe9cc87d))
+* **#263:** changing a provider's stream format, or reordering channels from your phone, saves in a moment ([#314](https://github.com/neutraltone/settee/issues/314)) ([8d097f6](https://github.com/neutraltone/settee/commit/8d097f6dd416110874d80316e2dfa5535671cf50))
+* **#265:** Home and the channel list look up what's on now faster ([#290](https://github.com/neutraltone/settee/issues/290)) ([0ae0713](https://github.com/neutraltone/settee/commit/0ae0713d933074526e366c8568edcc0539f36a59))
+* **#266:** the guide uses less memory on a big provider ([#291](https://github.com/neutraltone/settee/issues/291)) ([e562b02](https://github.com/neutraltone/settee/commit/e562b02ea2efba9819acc1ca4e6a7c5ddd2458ad))
+* **#267:** moving down past Parental lock in Settings no longer stalls on a big provider ([#316](https://github.com/neutraltone/settee/issues/316)) ([79d72dc](https://github.com/neutraltone/settee/commit/79d72dc0b47fade56a5ef923dd047365ec418026))
+* **#269:** refreshing a provider takes less time with a large catalogue ([#323](https://github.com/neutraltone/settee/issues/323)) ([78f0dfd](https://github.com/neutraltone/settee/commit/78f0dfdf35e749f0d69ec0ed43060b9e07ad7ad9))
+* **#270:** Home stays smooth while film and show details are looked up ([#288](https://github.com/neutraltone/settee/issues/288)) ([df1cb50](https://github.com/neutraltone/settee/commit/df1cb5077b4a46f91d9b15dda85243334c0632c9))
+* **#271:** Home's Favourite channels row loads faster when a Favourite has several Qualities ([#309](https://github.com/neutraltone/settee/issues/309)) ([03698f1](https://github.com/neutraltone/settee/commit/03698f1e62f9601fa7f712ec4ecac2e409d7f4f5))
+* **#272:** Live and the player open faster, reading the channel list once instead of twice ([#315](https://github.com/neutraltone/settee/issues/315)) ([5d2d46e](https://github.com/neutraltone/settee/commit/5d2d46eb8e11201236d1be989417200c6161618f))
+* **#273:** refreshing a large channel list uses less memory while something plays ([#282](https://github.com/neutraltone/settee/issues/282)) ([a144543](https://github.com/neutraltone/settee/commit/a1445431ba8c9a01609caf36aff4909d81ca29d8))
+* **#274:** looking up film and show details in the background reads far less from the database ([#310](https://github.com/neutraltone/settee/issues/310)) ([be6b7ac](https://github.com/neutraltone/settee/commit/be6b7ac12007a56e85df58f036d151e052ad6c58))
+* **#275:** a recording or reminder that wakes the app no longer sets off a guide download and NAS sync ([#298](https://github.com/neutraltone/settee/issues/298)) ([46b1927](https://github.com/neutraltone/settee/commit/46b19279a7180cebf162c5281c0fbfd4286e4248))
+* **#276:** starting the app no longer re-reads the whole film and show library ([#292](https://github.com/neutraltone/settee/issues/292)) ([4525471](https://github.com/neutraltone/settee/commit/452547169f91349f6afd4dad9b14fb678d94797a))
+* **#277:** watching a NAS recording while it records no longer stops early, and Home, Live TV and For you do less work ([#324](https://github.com/neutraltone/settee/issues/324)) ([fb47543](https://github.com/neutraltone/settee/commit/fb47543b4bb5fb66e97f42d6d88e09956a2a4263))
+* **#327:** Live TV stops updating its guide in the background while Settings or another screen covers it ([#332](https://github.com/neutraltone/settee/issues/332)) ([1c0b1e1](https://github.com/neutraltone/settee/commit/1c0b1e166837ca7ed0f3f35a35567eeb23f18f7d))
+
 ## [0.6.0](https://github.com/neutraltone/settee/compare/v0.5.0...v0.6.0) (2026-11-13)
 
 
