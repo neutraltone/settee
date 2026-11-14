@@ -27,6 +27,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -130,7 +131,12 @@ internal fun MainShell(
                     .focusRequester(contentFocus)
                     .focusGroup(),
             ) {
-                content(current, !railFocused || entry.entering) { runCatching { currentItem.requestFocus() } }
+                // Covered by another screen, the shell is still built (KeptShell), and Home's rows
+                // still change: nothing in it may take the highlight from the screen on top.
+                val covered = LocalShellCovered.current
+                content(current, (!railFocused || entry.entering) && !covered) {
+                    if (!covered) runCatching { currentItem.requestFocus() }
+                }
             }
         }
         Rail(
@@ -307,6 +313,9 @@ internal class RailReturn {
 }
 
 internal val LocalRailReturn = staticCompositionLocalOf { RailReturn() }
+
+/** Whether a screen other than a player is open over the main screen, which stays built under it. */
+val LocalShellCovered = compositionLocalOf { false }
 
 /** Marks a row (or the guide) as where Right out of the rail goes back to once it has had the Highlight. */
 @Composable

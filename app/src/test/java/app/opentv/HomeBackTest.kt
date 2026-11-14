@@ -7,11 +7,13 @@ package app.opentv
 
 import android.app.Application
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.test.hasTestTag
+import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -44,7 +46,8 @@ import org.robolectric.annotation.GraphicsMode
 
 /**
  * Back to Home draws its rows in its first frame, however long the screen over it was open, except
- * from a player, where it waits for rows that know what was just watched (#192).
+ * from a player, where it is built again and waits for rows that know what was just watched (#192).
+ * Through the real [KeptShell].
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(RobolectricTestRunner::class)
@@ -87,10 +90,12 @@ class HomeBackTest {
         val home = viewModels.track(HomeViewModel(app, graph))
         compose.setTvContent {
             nav = rememberNavController()
-            NavHost(nav, startDestination = Routes.MAIN) {
-                composable(Routes.MAIN) {
+            KeptShell(
+                nav,
+                shell = {
                     // Tagged so a test sees the frame Home is back in, even before it has rows to draw.
-                    Box(Modifier.testTag(HOME)) {
+                    // Full size, so it counts as displayed in a frame with nothing in it yet.
+                    Box(Modifier.fillMaxSize().testTag(HOME)) {
                         HomeScreen(
                             onResume = {},
                             onOpenSeries = {},
@@ -102,9 +107,13 @@ class HomeBackTest {
                             viewModel = home,
                         )
                     }
+                },
+            ) {
+                NavHost(nav, startDestination = Routes.MAIN) {
+                    mainShellRoute()
+                    composable(Routes.SETTINGS) { Text("Settings", SetteeType.Body) }
+                    composable(Routes.VOD_PLAYER) { Text("Player", SetteeType.Body) }
                 }
-                composable(Routes.SETTINGS) { Text("Settings", SetteeType.Body) }
-                composable(Routes.VOD_PLAYER) { Text("Player", SetteeType.Body) }
             }
             KeepHomeLive(nav, graph.homeKeptLive)
         }
@@ -113,7 +122,8 @@ class HomeBackTest {
     private fun shown(text: String) =
         compose.onAllNodes(hasText(text, substring = true)).fetchSemanticsNodes().isNotEmpty()
 
-    private fun homeShown() = compose.onAllNodes(hasTestTag(HOME)).fetchSemanticsNodes().isNotEmpty()
+    // Displayed rather than present: under Settings, Home is still built (KeptShell), just not placed.
+    private fun homeShown() = runCatching { compose.onNodeWithTag(HOME).assertIsDisplayed() }.isSuccess
 
     /** Opens [route] over Home and stays there for longer than Home once kept its rows. */
     private fun awayAt(route: String, until: String) {
