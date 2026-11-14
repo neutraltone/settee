@@ -28,7 +28,6 @@ import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -50,6 +49,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import app.opentv.R
 import app.opentv.data.model.Channel
@@ -108,8 +108,10 @@ fun SearchScreen(
         }
     }
     // The VOD model is the app's, and outlives this visit: left holding the query, its results would
-    // still be there next time, ready to be taken for the next search's while it loads.
-    DisposableEffect(vodViewModel) { onDispose { vodViewModel.setVodSearchQuery("") } }
+    // still be there next time, ready to be taken for the next search's while it loads. Cleared as
+    // the visit ends, not as the screen leaves the composition, which it also does under a title page
+    // or the player: the films and shows then emptied, and came back only after the search ran again.
+    viewModel { SearchVisit(vodViewModel) }
     BackHandler { onBack() }
 
     SearchContent(
@@ -411,3 +413,11 @@ private fun searchTime(utcMillis: Long): String = searchTimeFormat.format(Date(u
 
 /** The longest search either search box takes, the Search screen's or the Channel manager's. */
 internal const val MAX_SEARCH_LENGTH = 40
+
+/**
+ * One visit to Search: kept by its back stack entry, so it lasts while a title page or the player
+ * covers Search and ends only when Search is left, which empties the shared VOD search.
+ */
+private class SearchVisit(private val vod: VodViewModel) : ViewModel() {
+    override fun onCleared() = vod.setVodSearchQuery("")
+}

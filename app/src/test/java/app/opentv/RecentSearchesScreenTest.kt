@@ -7,9 +7,7 @@ package app.opentv
 
 import android.app.Application
 import android.view.View
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
+import androidx.compose.foundation.text.BasicText
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.test.ExperimentalTestApi
@@ -23,6 +21,10 @@ import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.test.requestFocus
 import androidx.lifecycle.viewModelScope
+import androidx.navigation.NavHostController
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import app.opentv.core.ServiceLocator
@@ -141,9 +143,76 @@ class RecentSearchesScreenTest {
 
     // Search now shares the app's one VodViewModel, which outlives each visit, where it used to get a new one.
     @Test
-    fun `Search opened again starts empty, without the last visit's movies`() {
-        // A graph and database of its own for the movie, so the app's shared one, which outlives each
-        // test, doesn't gain a film every run.
+    fun `Search opened again starts empty, without the last visit's movies`() = withVod { vod ->
+        showSearchInApp(vod)
+        device.type("zebra")
+        waitFor("Zebra Crossing")
+
+        act { popBackStack() }
+        // Before Search is back, so its first frame can't have them. waitUntil alone doesn't
+        // recompose, so Search would never leave; waitForIdle each time round does.
+        compose.waitUntil(TIMEOUT_MILLIS) {
+            compose.waitForIdle()
+            vod.movieResults.value.isEmpty()
+        }
+        act { navigate(Routes.SEARCH) }
+        compose.waitForIdle()
+
+        compose.onNodeWithText("zebra").assertDoesNotExist()
+        compose.onNodeWithText("Zebra Crossing").assertDoesNotExist()
+    }
+
+    @Test
+    fun `back from a title, Search still has its movies, with no empty moment while they reload`() = withVod { vod ->
+        showSearchInApp(vod)
+        device.type("zebra")
+        waitFor("Zebra Crossing")
+
+        act { navigate(Routes.movieDetail(1)) }
+        compose.onNodeWithText("Title").assertExists()
+        // Covered, not left: the results Search comes back to are still there.
+        assertThat(vod.movieResults.value.map { it.name }).containsExactly("Zebra Crossing")
+
+        act { popBackStack() }
+
+        compose.onNodeWithText("Zebra Crossing").assertExists()
+        captureScreen("search_back_from_title")
+    }
+
+    private lateinit var nav: NavHostController
+
+    private fun act(block: NavHostController.() -> Unit) = compose.runOnIdle { nav.block() }
+
+    /** Search in a NavHost as the app has it, over Home, with a title page it can open. */
+    private fun showSearchInApp(vod: VodViewModel) {
+        compose.setTvContent {
+            view = LocalView.current
+            nav = rememberNavController()
+            ItemOptionsHost {
+                NavHost(nav, startDestination = Routes.MAIN) {
+                    composable(Routes.MAIN) { BasicText("Home") }
+                    composable(Routes.SEARCH) {
+                        SearchScreen(
+                            onPlayChannel = {},
+                            onPlayMovie = {},
+                            onOpenSeries = {},
+                            onBack = { nav.popBackStack() },
+                            vodViewModel = vod,
+                        )
+                    }
+                    composable(Routes.MOVIE_DETAIL) { BasicText("Title") }
+                }
+            }
+        }
+        act { navigate(Routes.SEARCH) }
+        compose.waitForIdle()
+    }
+
+    /**
+     * Runs [block] with a VodViewModel over a graph and database of its own holding one film, so the
+     * app's shared one, which outlives each test, doesn't gain a film every run.
+     */
+    private fun withVod(block: (VodViewModel) -> Unit) {
         val app = ApplicationProvider.getApplicationContext<Application>()
         val vodGraph = ServiceLocator.Graph(
             app,
@@ -160,45 +229,12 @@ class RecentSearchesScreenTest {
         }
         val vod = VodViewModel(app, vodGraph)
         try {
-            searchAgain(vod)
+            block(vod)
         } finally {
             // Nothing clears a model built outside a ViewModelStore, so stop its flows by hand.
             vod.viewModelScope.cancel()
             vodGraph.database.close()
         }
-    }
-
-    private fun searchAgain(vod: VodViewModel) {
-        var open by mutableStateOf(true)
-        compose.setTvContent {
-            view = LocalView.current
-            ItemOptionsHost {
-                if (open) {
-                    SearchScreen(
-                        onPlayChannel = {},
-                        onPlayMovie = {},
-                        onOpenSeries = {},
-                        onBack = {},
-                        vodViewModel = vod,
-                    )
-                }
-            }
-        }
-        device.type("zebra")
-        waitFor("Zebra Crossing")
-
-        open = false
-        // Before Search is back, so its first frame can't have them. waitUntil alone doesn't
-        // recompose, so Search would never leave; waitForIdle each time round does.
-        compose.waitUntil(TIMEOUT_MILLIS) {
-            compose.waitForIdle()
-            vod.movieResults.value.isEmpty()
-        }
-        open = true
-        compose.waitForIdle()
-
-        compose.onNodeWithText("zebra").assertDoesNotExist()
-        compose.onNodeWithText("Zebra Crossing").assertDoesNotExist()
     }
 
     private fun channel(name: String) = Channel(
