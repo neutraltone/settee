@@ -25,6 +25,7 @@ import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertIsFocused
+import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isFocused
@@ -42,6 +43,7 @@ import androidx.navigation.compose.rememberNavController
 import app.opentv.data.model.Movie
 import app.opentv.data.repo.GenreGroup
 import app.opentv.data.repo.MediaKey
+import app.opentv.data.repo.TitleCover
 import app.opentv.data.repo.VodTitle
 import app.opentv.ui.Cover
 import app.opentv.ui.HomeContent
@@ -52,6 +54,7 @@ import app.opentv.ui.design.SetteeColors
 import app.opentv.ui.design.SetteeType
 import app.opentv.ui.design.Text
 import app.opentv.ui.visibleTabs
+import app.opentv.ui.vod.CoverGrid
 import app.opentv.ui.vod.MovieShelves
 import com.google.common.truth.Truth.assertThat
 import org.junit.Rule
@@ -80,18 +83,26 @@ class KeptShellTest {
 
     private lateinit var nav: NavHostController
 
-    /** The title last opened with OK, and how many have been. */
+    /** The title last opened with OK, its id, and how many have been. */
     private var opened = ""
+    private var openedId = 0L
     private var openedCount = 0
 
     private fun open(movie: Movie) {
         opened = movie.name
+        openedId = movie.id
         openedCount++
         nav.navigate(Routes.movieDetail(movie.id))
     }
 
-    /** The rail over Home, which shows a row of [recent] titles, and Movies, which shows three rows. */
-    private fun setApp(recent: () -> List<Cover> = { covers("Added", 1L..8L) }) = compose.setTvContent {
+    /**
+     * The rail over Home, which shows a row of [recent] titles, and Movies, which shows three rows, or
+     * a category's [grid] of covers when there is one.
+     */
+    private fun setApp(
+        recent: () -> List<Cover> = { covers("Added", 1L..8L) },
+        grid: (() -> List<TitleCover>)? = null,
+    ) = compose.setTvContent {
         nav = rememberNavController()
         KeptShell(
             nav,
@@ -109,17 +120,7 @@ class KeptShellTest {
                     modifier = Modifier.fillMaxSize(),
                 ) { shown, takeFocus, onNothingToShow ->
                     if (shown == Tab.MOVIES) {
-                        ScreenFrame {
-                            MovieShelves(
-                                resume = emptyList(),
-                                favourites = (1L..8L).map { movie(it, "Favourite $it") },
-                                recommended = emptyList(),
-                                recentlyAdded = (11L..18L).map { movie(it, "New $it") },
-                                genreRows = listOf(GenreGroup("Drama", (21L..28L).map { movie(it, "Drama $it") })),
-                                onResume = {},
-                                onOpenMovie = ::open,
-                            )
-                        }
+                        Movies(grid)
                     } else {
                         HomeContent(
                             continueWatching = emptyList(),
@@ -144,6 +145,31 @@ class KeptShellTest {
                 composable(Routes.MOVIE_DETAIL) { StandIn("Movie") }
                 composable(Routes.VOD_PLAYER) { StandIn("Player") }
             }
+        }
+    }
+
+    /** Movies: three rows of films, or a category's [grid] of covers when there is one. */
+    @Composable
+    private fun Movies(grid: (() -> List<TitleCover>)?) = ScreenFrame {
+        if (grid != null) {
+            CoverGrid(
+                grid(),
+                loading = "Loading",
+                empty = "Empty",
+                onHighlight = {},
+                onOpen = { id -> open(movie(id, grid().first { it.id == id }.title)) },
+                onOptions = null,
+            )
+        } else {
+            MovieShelves(
+                resume = emptyList(),
+                favourites = (1L..8L).map { movie(it, "Favourite $it") },
+                recommended = emptyList(),
+                recentlyAdded = (11L..18L).map { movie(it, "New $it") },
+                genreRows = listOf(GenreGroup("Drama", (21L..28L).map { movie(it, "Drama $it") })),
+                onResume = {},
+                onOpenMovie = ::open,
+            )
         }
     }
 
@@ -279,6 +305,88 @@ class KeptShellTest {
 
         assertThat(openedCount).isEqualTo(2)
         assertThat(opened).isEqualTo("Drama 22")
+    }
+
+    /** Opens Movies' [grid], which has the films "Grid 1" to "Grid 24", and waits for its covers. */
+    private fun openGrid() {
+        compose.waitUntil(5_000) { compose.onAllNodes(hasText("Added 1")).fetchSemanticsNodes().isNotEmpty() }
+        compose.runOnIdle { nav.selectShellTab(Tab.MOVIES) }
+        compose.waitUntil(5_000) { compose.onAllNodes(hasText("Grid 1")).fetchSemanticsNodes().isNotEmpty() }
+    }
+
+    /**
+     * Plays the title whose page is open; Back from the player puts the page back, over a main
+     * screen built again, since the player let it go.
+     */
+    private fun playAndLeave(id: Long) {
+        compose.runOnIdle { nav.navigate(Routes.vodPlayer(MediaKey.Movie(id))) }
+        compose.waitUntil(5_000) { focused("Player option 1") }
+        compose.runOnIdle { nav.leaveVodPlayer(nav.currentBackStackEntry!!, Routes.movieDetail(id)) }
+        compose.waitUntil(5_000) { focused("Movie option 1") }
+    }
+
+    private fun gridCover(title: String) = compose.onNode(hasText(title) and hasClickAction())
+
+    @Test
+    fun `Back to a category's grid after playing a title from it puts the highlight on that title, not the rail`() {
+        setApp(grid = { gridCovers(1L..24L) })
+        openGrid()
+        gridCover("Grid 1").requestFocus()
+        press(Key.DirectionDown)
+        press(Key.DirectionRight)
+        press(Key.DirectionCenter)
+        val picked = opened
+        compose.waitUntil(5_000) { focused("Movie option 1") }
+        playAndLeave(openedId)
+
+        back()
+
+        gridCover(picked).assertIsFocused()
+        assertThat(railItemFocused("Movies")).isFalse()
+        captureScreen("movies_grid_back_from_title")
+    }
+
+    @Test
+    fun `Back to a category's grid when the title opened has left it puts the highlight on its first cover`() {
+        var grid by mutableStateOf(gridCovers(1L..24L))
+        setApp(grid = { grid })
+        openGrid()
+        gridCover("Grid 1").requestFocus()
+        press(Key.DirectionRight, times = 2)
+        press(Key.DirectionCenter)
+        assertThat(opened).isEqualTo("Grid 3")
+        compose.waitUntil(5_000) { focused("Movie option 1") }
+        playAndLeave(3)
+        grid = grid.filterNot { it.title == "Grid 3" }
+        compose.waitForIdle()
+
+        back()
+
+        gridCover("Grid 1").assertIsFocused()
+    }
+
+    @Test
+    fun `Back to Movies' rows after playing goes into the rows, never the rail`() {
+        setApp()
+        compose.waitUntil(5_000) { compose.onAllNodes(hasText("Added 1")).fetchSemanticsNodes().isNotEmpty() }
+        compose.runOnIdle { nav.selectShellTab(Tab.MOVIES) }
+        compose.waitUntil(5_000) { compose.onAllNodes(hasText("Drama 21")).fetchSemanticsNodes().isNotEmpty() }
+        compose.onNodeWithText("Favourite 1").requestFocus()
+        press(Key.DirectionCenter)
+        compose.waitUntil(5_000) { focused("Movie option 1") }
+        playAndLeave(1)
+
+        back()
+
+        val highlighted = compose.onNode(isFocused()).fetchSemanticsNode()
+            .config.getOrElse(androidx.compose.ui.semantics.SemanticsProperties.Text) { emptyList() }
+            .joinToString()
+        assertThat(highlighted).containsMatch("Favourite|New|Drama")
+        assertThat(railItemFocused("Movies")).isFalse()
+    }
+
+    private fun gridCovers(ids: LongRange) = ids.map {
+        TitleCover(it, "Grid $it", "Grid $it", "https://example.com/$it.jpg")
     }
 
     private fun covers(name: String, ids: LongRange) = ids.map { Cover(VodTitle.OfMovie(movie(it, "$name $it"))) }

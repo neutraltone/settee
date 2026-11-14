@@ -19,17 +19,26 @@ import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import app.opentv.data.repo.TitleCover
+import app.opentv.ui.LocalShellReturn
 import app.opentv.ui.design.ArtCard
 import app.opentv.ui.design.ArtCardSize
 import app.opentv.ui.design.ScreenFrameScope
@@ -60,16 +69,64 @@ internal fun ScreenFrameScope.CoverGrid(
     }
     val state = rememberLazyGridState()
     PrefetchCovers(state, covers)
+    val back = rememberCoverReturn(state, covers)
     val room = with(LocalDensity.current) { GRID_LIFT_ROOM.toPx() }
     CompositionLocalProvider(LocalBringIntoViewSpec provides remember(room) { RowToTheTop(room) }) {
-        CoverRows(state, covers, onHighlight, onOpen, onOptions)
+        CoverRows(state, covers, back, onHighlight, onOpen, onOptions)
     }
+}
+
+/**
+ * Where the Highlight goes back to in the grid when Back to the main screen couldn't put it straight
+ * back on its cover (KeptShell asks, [LocalShellReturn]): the title last highlighted, so it's found
+ * after the grid was built again under a player, and the first cover when it has gone (#384).
+ * Without this nothing in Movies or Shows answered, and the Highlight fell to the rail.
+ *
+ * By id, and failing that by title: a cover's id is the first of its Versions this device plays
+ * ([TitleCover]), which can change while the title's page is open.
+ */
+@Stable
+private class CoverReturn(private val lastId: MutableState<Long?>, private val lastTitle: MutableState<String?>) {
+    /** The cover [requester] is on while the Highlight goes back. */
+    var target: Long? by mutableStateOf(null)
+
+    val requester = FocusRequester()
+
+    fun highlighted(cover: TitleCover) {
+        lastId.value = cover.id
+        lastTitle.value = cover.title
+    }
+
+    /** Where in [covers] the Highlight goes back to. */
+    fun indexIn(covers: List<TitleCover>): Int = covers.indexOfFirst { it.id == lastId.value }.takeIf { it >= 0 }
+        ?: covers.indexOfFirst { it.title == lastTitle.value }.coerceAtLeast(0)
+}
+
+/** Saved, so it outlives the grid being built again under a player. */
+@Composable
+private fun rememberCoverReturn(state: LazyGridState, covers: List<TitleCover>): CoverReturn {
+    val lastId = rememberSaveable { mutableStateOf<Long?>(null) }
+    val lastTitle = rememberSaveable { mutableStateOf<String?>(null) }
+    val back = remember(lastId, lastTitle) { CoverReturn(lastId, lastTitle) }
+    val shown by rememberUpdatedState(covers)
+    val shellReturn = LocalShellReturn.current
+    LaunchedEffect(shellReturn.asked) {
+        if (!shellReturn.asked) return@LaunchedEffect
+        val index = back.indexIn(shown)
+        back.target = shown[index].id
+        if (state.layoutInfo.visibleItemsInfo.none { it.index == index }) state.scrollToItem(index)
+        // The cover is composed with the requester on the frame after it's scrolled to.
+        withFrameNanos {}
+        runCatching { back.requester.requestFocus() }
+    }
+    return back
 }
 
 @Composable
 private fun ScreenFrameScope.CoverRows(
     state: LazyGridState,
     covers: List<TitleCover>,
+    back: CoverReturn,
     onHighlight: (Long) -> Unit,
     onOpen: (Long) -> Unit,
     onOptions: ((Long) -> Unit)?,
@@ -85,7 +142,16 @@ private fun ScreenFrameScope.CoverRows(
         modifier = Modifier.fillMaxSize().railReturnTarget(),
     ) {
         gridItems(covers, key = { it.id }, contentType = { "cover" }) { cover ->
-            TitleArt(cover, Modifier, onHighlight, { onOpen(cover.id) }, onOptions?.let { { it(cover.id) } })
+            TitleArt(
+                cover,
+                if (cover.id == back.target) Modifier.focusRequester(back.requester) else Modifier,
+                { id ->
+                    back.highlighted(cover)
+                    onHighlight(id)
+                },
+                { onOpen(cover.id) },
+                onOptions?.let { { it(cover.id) } },
+            )
         }
     }
 }

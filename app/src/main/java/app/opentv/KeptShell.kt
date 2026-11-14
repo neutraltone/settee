@@ -157,8 +157,9 @@ private fun ShellLayer(
 /**
  * Back on the main screen: the highlight goes to the item that had it as the screen opened over it.
  * When that's gone (the shell was built again after a player let it go, or the card went), the tab
- * on show gets a few frames to place it ([ShellReturn]), and failing that it goes anywhere in the
- * shell rather than nowhere.
+ * on show gets a few frames to place it ([ShellReturn]). Failing that it goes into the tab's content,
+ * and only with nothing there to take it, anywhere in the shell rather than nowhere: the shell's
+ * nearest item is the rail's, which left a viewer back from a title's page on the rail (#384).
  */
 private suspend fun returnHighlight(
     memory: HighlightMemory,
@@ -170,7 +171,9 @@ private suspend fun returnHighlight(
     shellReturn.asked = true
     repeat(RETURN_FRAMES) { withFrameNanos {} }
     shellReturn.asked = false
-    if (!hasFocus()) runCatching { anywhere.requestFocus() }
+    if (hasFocus()) return
+    val inContent = runCatching { shellReturn.content?.requestFocus() }.getOrNull() == true
+    if (!inContent) runCatching { anywhere.requestFocus() }
 }
 
 private const val RETURN_FRAMES = 3

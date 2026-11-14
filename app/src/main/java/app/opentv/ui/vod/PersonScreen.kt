@@ -11,16 +11,20 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.itemsIndexed
+import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -58,6 +62,9 @@ fun PersonScreen(
  * [name]'s page once known: their name, then [titles] (films they're in or directed, then shows
  * they're in) as covers, the Highlight starting on the first. [titles] is null while they load,
  * which shows just the name: the lookup is quick, and a loading line would only flash.
+ *
+ * Back from a title opened here builds the page again, so the title last highlighted is saved, and
+ * the Highlight goes back to it rather than to the first (#384); to the first when it has gone.
  */
 @Composable
 internal fun PersonContent(
@@ -66,11 +73,20 @@ internal fun PersonContent(
     onOpenMovie: (Movie) -> Unit,
     onOpenSeries: (Series) -> Unit,
 ) {
-    val first = remember { FocusRequester() }
+    val grid = rememberLazyGridState()
+    var last by rememberSaveable(name) { mutableStateOf<String?>(null) }
+    val start = remember { FocusRequester() }
+    val startKey = remember(titles) { (titles?.firstOrNull { it.key == last } ?: titles?.firstOrNull())?.key }
     LaunchedEffect(titles) {
         if (titles.isNullOrEmpty()) return@LaunchedEffect
         delay(FIRST_HIGHLIGHT_DELAY_MILLIS)
-        runCatching { first.requestFocus() }
+        val index = titles.indexOfFirst { it.key == startKey }.coerceAtLeast(0)
+        if (grid.layoutInfo.visibleItemsInfo.none { it.index == index }) {
+            grid.scrollToItem(index)
+            // The cover is composed with the requester on the frame after it's scrolled to.
+            withFrameNanos {}
+        }
+        runCatching { start.requestFocus() }
     }
     ScreenFrame {
         Column(Modifier.fillMaxSize()) {
@@ -79,6 +95,7 @@ internal fun PersonContent(
                 titles == null -> Unit
                 titles.isEmpty() -> Message(stringResource(R.string.vod_person_empty, name))
                 else -> LazyVerticalGrid(
+                    state = grid,
                     // Columns as wide as a cover, as Movies' and Shows' grids have, so covers match.
                     columns = GridCells.FixedSize(ArtCardSize.Portrait.width),
                     contentPadding = PaddingValues(vertical = GRID_TOP),
@@ -86,18 +103,13 @@ internal fun PersonContent(
                     verticalArrangement = Arrangement.spacedBy(SetteeSpace.RowGap),
                     modifier = Modifier.fillMaxSize(),
                 ) {
-                    itemsIndexed(titles, key = { _, title -> title.key }) { index, title ->
+                    items(titles, key = { it.key }) { title ->
                         PersonCover(
                             title,
                             onOpenMovie,
                             onOpenSeries,
-                            if (index ==
-                                0
-                            ) {
-                                Modifier.focusRequester(first)
-                            } else {
-                                Modifier
-                            },
+                            (if (title.key == startKey) Modifier.focusRequester(start) else Modifier)
+                                .onFocusChanged { if (it.isFocused) last = title.key },
                         )
                     }
                 }

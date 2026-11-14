@@ -5,7 +5,16 @@
  */
 package app.opentv
 
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
@@ -16,6 +25,10 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
+import androidx.navigation.NavHostController
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
 import app.opentv.data.model.Movie
 import app.opentv.data.model.Series
 import app.opentv.data.repo.VodTitle
@@ -104,6 +117,82 @@ class PersonContentTest {
         assertThat(openedSeries).isEqualTo(show)
     }
 
+    private lateinit var nav: NavHostController
+
+    /**
+     * The page in a NavHost, as the app has it, so Back from a title opened on it builds it again. Its
+     * titles load each time it's built, as [app.opentv.ui.vod.PersonScreen]'s do, from [library].
+     */
+    private fun showPageInApp(library: () -> List<VodTitle>) {
+        compose.setTvContent {
+            nav = rememberNavController()
+            NavHost(nav, startDestination = "person") {
+                composable("person") {
+                    var titles by remember { mutableStateOf<List<VodTitle>?>(null) }
+                    LaunchedEffect(Unit) { titles = library() }
+                    PersonContent(
+                        name = "Somebody Famous",
+                        titles = titles,
+                        onOpenMovie = { nav.navigate("title") },
+                        onOpenSeries = { nav.navigate("title") },
+                    )
+                }
+                composable("title") { Box(Modifier.fillMaxSize()) }
+            }
+        }
+        compose.waitForIdle()
+        compose.mainClock.advanceTimeBy(500)
+    }
+
+    private fun backToPage() {
+        compose.runOnIdle { nav.popBackStack() }
+        compose.waitForIdle()
+        compose.mainClock.advanceTimeBy(500)
+        compose.waitForIdle()
+    }
+
+    private fun cover(title: String) = compose.onNode(hasText(title) and hasClickAction())
+
+    @Test
+    fun `Back from a title opened on the page puts the highlight back on that title`() {
+        showPageInApp { listOf(VodTitle.OfMovie(film), VodTitle.OfSeries(show)) }
+        press(Key.DirectionRight)
+        press(Key.DirectionCenter)
+        compose.runOnIdle { assertThat(nav.currentDestination?.route).isEqualTo("title") }
+
+        backToPage()
+
+        cover("The Long Way Round").assertIsFocused()
+        captureScreen("person_back_from_title")
+    }
+
+    @Test
+    fun `Back to the page when the title opened has gone puts the highlight on the first`() {
+        var library = listOf(VodTitle.OfMovie(film), VodTitle.OfSeries(show))
+        showPageInApp { library }
+        press(Key.DirectionRight)
+        press(Key.DirectionCenter)
+        library = listOf(VodTitle.OfMovie(film))
+
+        backToPage()
+
+        cover("The Quiet Road").assertIsFocused()
+    }
+
+    @Test
+    fun `Back from a title further down the page scrolls back to it`() {
+        val films = (1L..40L).map { VodTitle.OfMovie(film.copy(id = it, streamId = "m$it", name = "Film $it")) }
+        showPageInApp { films }
+        repeat(DOWN_PRESSES) { press(Key.DirectionDown) }
+        val picked = compose.onNode(isFocused()).fetchSemanticsNode()
+            .config[SemanticsProperties.Text].joinToString()
+        press(Key.DirectionCenter)
+
+        backToPage()
+
+        cover(picked).assertIsFocused().assertIsDisplayed()
+    }
+
     @Test
     fun `OK on a film opens its page`() {
         showPage(listOf(VodTitle.OfMovie(film)))
@@ -127,5 +216,10 @@ class PersonContentTest {
 
         compose.onNodeWithText("Somebody Famous").assertIsDisplayed()
         compose.onNode(hasText("Nothing in your library", substring = true)).assertDoesNotExist()
+    }
+
+    private companion object {
+        /** Enough rows down that the first screen of covers has scrolled away. */
+        const val DOWN_PRESSES = 4
     }
 }
