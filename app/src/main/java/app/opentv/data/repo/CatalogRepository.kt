@@ -11,6 +11,7 @@ import app.opentv.core.AppSettings
 import app.opentv.core.ErrorWording
 import app.opentv.core.ViewerError
 import app.opentv.data.db.CategoryDao
+import app.opentv.data.db.ChannelCleaned
 import app.opentv.data.db.ChannelDao
 import app.opentv.data.db.EpisodeDao
 import app.opentv.data.db.MovieDao
@@ -945,19 +946,21 @@ class CatalogRepository(
      * channels already in the database until the next full catalogue sync — which can be
      * hours away. This runs the same pass over existing rows locally, so a code fix shows up
      * on the next launch instead of the next sync. Bump [NORMALIZER_VERSION] to trigger it.
+     *
+     * [beforeWrite] is for tests: it runs between reading the rows and writing them back, where a
+     * refresh or a synced hidden channel can land.
      */
-    suspend fun renormalizeAll(): Int = withContext(Dispatchers.IO) {
+    suspend fun renormalizeAll(beforeWrite: suspend () -> Unit = {}): Int = withContext(Dispatchers.IO) {
         val existing = channelDao.everyRow()
         if (existing.isEmpty()) return@withContext 0
 
         val bySource = existing.groupBy { it.sourceId }
         var changed = 0
-        for ((_, channels) in bySource) {
-            val names = channelCategoryNames(channels)
+        for ((sourceId, channels) in bySource) {
+            val names = categoryDao.liveNamesOf(sourceId).associate { it.id to it.name }
             val renamed = normalized(channels, names)
             // Only write rows that actually changed, to keep the write small.
-            val diff = renamed.filterIndexed { i, c ->
-                val old = channels[i]
+            val diff = renamed.zip(channels).filter { (c, old) ->
                 c.displayName != old.displayName ||
                     c.groupKey != old.groupKey ||
                     c.qualityLabel != old.qualityLabel ||
@@ -965,19 +968,22 @@ class CatalogRepository(
                     c.hidden != old.hidden
             }
             if (diff.isNotEmpty()) {
-                diff.chunked(500).forEach { channelDao.upsertAll(it) }
+                beforeWrite()
+                // One transaction, as a row's own UPDATE each would commit tens of thousands of times.
+                channelDao.inTransaction {
+                    channelDao.setCleaned(
+                        diff.map { (c, _) ->
+                            ChannelCleaned(c.id, c.displayName, c.groupKey, c.qualityLabel, c.qualityRank)
+                        },
+                    )
+                    // Separator rows are hidden as they're found. Never un-hides: that's the viewer's.
+                    diff.forEach { (c, old) -> if (c.hidden && !old.hidden) channelDao.setHidden(c.id, hidden = true) }
+                }
                 changed += diff.size
             }
         }
         Log.i(TAG, "Re-normalised $changed channels with the current normaliser")
         changed
-    }
-
-    /** Best-effort category-id → name map for a set of channels. */
-    private suspend fun channelCategoryNames(channels: List<Channel>): Map<String, String> {
-        val ids = channels.mapNotNull { it.categoryId }.toSet()
-        if (ids.isEmpty()) return emptyMap()
-        return categoryDao.namesFor(ids).associate { it.id to it.name }
     }
 
     /**

@@ -352,6 +352,15 @@ interface ChannelDao {
     @Upsert
     suspend fun upsertAll(channels: List<Channel>)
 
+    /**
+     * Writes what the normaliser makes of each row, and only that, for the re-normalise pass. Not the
+     * whole row: the pass reads every row first and writes later, and a refresh or a synced hidden
+     * channel in between would be undone, a deleted row put back. An update by id leaves a deleted
+     * row deleted. Hiding a separator row is [setHidden]'s, as it only ever hides.
+     */
+    @Update(entity = Channel::class)
+    suspend fun setCleaned(rows: List<ChannelCleaned>)
+
     @Insert
     suspend fun insertAll(channels: List<Channel>): List<Long>
 
@@ -674,9 +683,13 @@ interface CategoryDao {
     @Query("SELECT sourceId, id, name FROM categories WHERE kind = :kind")
     fun observeNames(kind: StreamKind): Flow<List<SourceCategoryName>>
 
-    /** Minimal id+name rows for the re-normalise pass. */
-    @Query("SELECT id, name FROM categories WHERE id IN (:ids)")
-    suspend fun namesFor(ids: Set<String>): List<CategoryName>
+    /**
+     * One source's live category names, for the re-normalise pass. By source, not by the ids its
+     * channels use: two providers can number their categories alike, and a list of every id a
+     * playlist's group-titles produce goes past the Stick's 999 bound variables.
+     */
+    @Query("SELECT id, name FROM categories WHERE sourceId = :sourceId AND kind = 'LIVE'")
+    suspend fun liveNamesOf(sourceId: Long): List<CategoryName>
 
     @Upsert
     suspend fun upsertAll(categories: List<Category>)
@@ -696,11 +709,20 @@ interface CategoryDao {
     suspend fun deleteEmptyLive(sourceId: Long)
 }
 
-/** Projection for [CategoryDao.namesFor]. */
+/** Projection for [CategoryDao.liveNamesOf]. */
 data class CategoryName(val id: String, val name: String)
 
 /** A channel's row id and provider id: all a live format switch needs to rebuild its URL. */
 data class ChannelStreamId(val id: Long, val streamId: String)
+
+/** What the normaliser sets on a channel row: see [ChannelDao.setCleaned]. */
+data class ChannelCleaned(
+    val id: Long,
+    val displayName: String,
+    val groupKey: String,
+    val qualityLabel: String,
+    val qualityRank: Int,
+)
 
 /** What More like this ranks a film by, without the rest of its row. */
 data class MoviePick(val id: Long, val sourceId: Long, val genre: String?, val rating: Double?, val addedMillis: Long)
