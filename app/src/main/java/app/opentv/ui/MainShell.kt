@@ -317,6 +317,18 @@ internal val LocalRailReturn = staticCompositionLocalOf { RailReturn() }
 /** Whether a screen other than a player is open over the main screen, which stays built under it. */
 val LocalShellCovered = compositionLocalOf { false }
 
+/**
+ * Back has returned to the main screen and the Highlight couldn't go straight back to the item that
+ * had it (KeptShell): the main screen was built again under the screen over it, after a player had
+ * let it go. While [asked], the tab on show may put the Highlight where it would coming back.
+ */
+@Stable
+class ShellReturn {
+    var asked by mutableStateOf(false)
+}
+
+val LocalShellReturn = staticCompositionLocalOf { ShellReturn() }
+
 /** Marks a row (or the guide) as where Right out of the rail goes back to once it has had the Highlight. */
 @Composable
 internal fun Modifier.railReturnTarget(): Modifier {

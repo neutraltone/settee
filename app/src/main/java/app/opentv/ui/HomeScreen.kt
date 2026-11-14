@@ -209,9 +209,27 @@ private fun ScreenFrameScope.HomeRows(shelves: List<HomeShelf>, takeFocus: Boole
     // picked card, the list instead scrolls to its row, which highlights the card itself.
     val column = rememberLazyListState()
     val confirmLive = LocalConfirmLive.current
+    val covered = LocalShellCovered.current
+    val shellReturn = LocalShellReturn.current
     LaunchedEffect(start) {
+        // Built under the screen it will come back from (a player let it go): the pick waits for Back.
+        if (covered) return@LaunchedEffect
         picked = null
         if (!takeFocus || restoring != null) return@LaunchedEffect
+        column.scrollToItem(0)
+        withFrameNanos {}
+        runCatching { start.requestFocus() }
+    }
+    // Back to Home, and the highlight couldn't go straight back to its card (KeptShell): to the
+    // picked card if there is one, as when Home is built on its return, otherwise the first.
+    LaunchedEffect(shellReturn.asked) {
+        if (!shellReturn.asked) return@LaunchedEffect
+        val pick = picked
+        picked = null
+        if (pick != null) {
+            restoring = pick
+            return@LaunchedEffect
+        }
         column.scrollToItem(0)
         withFrameNanos {}
         runCatching { start.requestFocus() }

@@ -31,4 +31,4 @@ fun KeepHomeLive(nav: NavController, keptLive: MutableStateFlow<Boolean>) {
 }
 
 private fun coversHomeLive(route: String?): Boolean =
-    route != null && route != Routes.MAIN && route != Routes.PLAYER && route != Routes.VOD_PLAYER
+    route != null && route != Routes.MAIN && !isPlayerRoute(route)

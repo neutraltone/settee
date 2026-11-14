@@ -25,7 +25,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalFocusManager
@@ -36,6 +35,10 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.LocalOwnersProvider
 import androidx.navigation.compose.composable
 import app.opentv.ui.LocalShellCovered
+import app.opentv.ui.LocalShellReturn
+import app.opentv.ui.ShellReturn
+import app.opentv.ui.design.HighlightMemory
+import app.opentv.ui.design.LocalHighlightMemory
 
 /*
  * The main screen stays built under the screens opened over it (#192). Navigation disposes a
@@ -69,14 +72,38 @@ fun KeptShell(nav: NavHostController, shell: @Composable (NavBackStackEntry) -> 
     val main = backStack.lastOrNull { it.destination.route == Routes.MAIN }
     val above = main?.let { backStack.drop(backStack.indexOf(it) + 1) }.orEmpty()
     Box(Modifier.fillMaxSize()) {
-        if (main != null && above.none { it.destination.route in PLAYERS }) {
+        if (main != null && above.none { isPlayerRoute(it.destination.route) }) {
             key(main.id) { ShellLayer(main, covered = above.isNotEmpty(), saveable, shell) }
         }
         navHost()
     }
+    ForgetGoneEntries(backStack, main, saveable)
 }
 
-private val PLAYERS = setOf(Routes.PLAYER, Routes.VOD_PLAYER)
+/** The live player and the movie and episode player, which the main screen isn't kept under. */
+internal fun isPlayerRoute(route: String?): Boolean = route == Routes.PLAYER || route == Routes.VOD_PLAYER
+
+/**
+ * Drops what the main screen saved for back stack entries that have gone (Setup finished, a new
+ * Profile's navigation), as the NavHost does for its own. After composition, so a shell leaving
+ * in the same frame has already saved into [saveable] what this removes.
+ */
+@Composable
+private fun ForgetGoneEntries(
+    backStack: List<NavBackStackEntry>,
+    main: NavBackStackEntry?,
+    saveable: SaveableStateHolder,
+) {
+    val known = remember { mutableSetOf<String>() }
+    LaunchedEffect(backStack) {
+        val live = backStack.mapTo(HashSet()) { it.id }
+        known.filterNot { it in live }.forEach {
+            saveable.removeState(it)
+            known.remove(it)
+        }
+        main?.let { known.add(it.id) }
+    }
+}
 
 @Composable
 private fun ShellLayer(
@@ -89,7 +116,9 @@ private fun ShellLayer(
     // Placed while it's on top, and while the screen over it fades in or out, as it was in the NavHost.
     val placed = lifecycle.isAtLeast(Lifecycle.State.STARTED)
     val coveredNow by rememberUpdatedState(covered)
-    val restore = remember { FocusRequester() }
+    val anywhere = remember { FocusRequester() }
+    val memory = remember { HighlightMemory() }
+    val shellReturn = remember { ShellReturn() }
     var hasFocus by remember { mutableStateOf(false) }
     var wasCovered by remember { mutableStateOf(covered) }
     val focusManager = LocalFocusManager.current
@@ -97,17 +126,21 @@ private fun ShellLayer(
         if (covered) {
             wasCovered = true
             // Every screen takes the highlight as it opens. One that didn't would leave it on the
-            // hidden shell, where OK would still press whatever has it.
+            // hidden shell, where OK would still press whatever has it. [memory] still knows it.
             withFrameNanos {}
             withFrameNanos {}
             if (hasFocus) focusManager.clearFocus(force = true)
         } else if (wasCovered) {
             wasCovered = false
-            runCatching { restore.requestFocus() }
+            returnHighlight(memory, shellReturn, hasFocus = { hasFocus }, anywhere)
         }
     }
     entry.LocalOwnersProvider(saveable) {
-        CompositionLocalProvider(LocalShellCovered provides covered) {
+        CompositionLocalProvider(
+            LocalShellCovered provides covered,
+            LocalShellReturn provides shellReturn,
+            LocalHighlightMemory provides memory,
+        ) {
             Box(
                 Modifier
                     .fillMaxSize()
@@ -115,16 +148,35 @@ private fun ShellLayer(
                     .onFocusChanged { hasFocus = it.hasFocus }
                     // While the screen over it fades in, the shell is still placed: keep the remote out.
                     .focusProperties { onEnter = { if (coveredNow) cancelFocusChange() } }
-                    .focusGroup()
-                    // Back to the item that had the highlight as the screen opened over it.
-                    .focusRequester(restore)
-                    .focusRestorer(),
+                    .focusRequester(anywhere)
+                    .focusGroup(),
             ) {
                 shell(entry)
             }
         }
     }
 }
+
+/**
+ * Back on the main screen: the highlight goes to the item that had it as the screen opened over it.
+ * When that's gone (the shell was built again after a player let it go, or the card went), the tab
+ * on show gets a few frames to place it ([ShellReturn]), and failing that it goes anywhere in the
+ * shell rather than nowhere.
+ */
+private suspend fun returnHighlight(
+    memory: HighlightMemory,
+    shellReturn: ShellReturn,
+    hasFocus: () -> Boolean,
+    anywhere: FocusRequester,
+) {
+    if (memory.restore()) return
+    shellReturn.asked = true
+    repeat(RETURN_FRAMES) { withFrameNanos {} }
+    shellReturn.asked = false
+    if (!hasFocus()) runCatching { anywhere.requestFocus() }
+}
+
+private const val RETURN_FRAMES = 3
 
 /**
  * Measured, so its lazy lists keep their items, but placed only when [placed]: an unplaced node is

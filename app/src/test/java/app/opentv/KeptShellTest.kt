@@ -40,6 +40,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import app.opentv.data.model.Movie
+import app.opentv.data.repo.MediaKey
 import app.opentv.data.repo.GenreGroup
 import app.opentv.data.repo.VodTitle
 import app.opentv.ui.Cover
@@ -141,6 +142,7 @@ class KeptShellTest {
                 mainShellRoute()
                 composable(Routes.SETTINGS) { StandIn("Settings") }
                 composable(Routes.MOVIE_DETAIL) { StandIn("Movie") }
+                composable(Routes.VOD_PLAYER) { StandIn("Player") }
             }
         }
     }
@@ -199,6 +201,28 @@ class KeptShellTest {
 
         railItem("Settings").assertIsFocused()
         captureScreen("main_back_from_settings")
+    }
+
+    @Test
+    fun `Back to Home from a title's page after playing it puts the highlight on the card picked`() {
+        setApp()
+        compose.waitUntil(5_000) { compose.onAllNodes(hasText("Added 1")).fetchSemanticsNodes().isNotEmpty() }
+        press(Key.DirectionRight, times = 2)
+        press(Key.DirectionCenter)
+        assertThat(opened).isEqualTo("Added 3")
+        compose.waitUntil(5_000) { focused("Movie option 1") }
+        // Play from the page, then Back from the player, which puts the page back: the player let
+        // the main screen go, so it was built again under the page.
+        compose.runOnIdle { nav.navigate(Routes.vodPlayer(MediaKey.Movie(3))) }
+        compose.waitUntil(5_000) { focused("Player option 1") }
+        compose.runOnIdle { nav.leaveVodPlayer(nav.currentBackStackEntry!!, Routes.movieDetail(3)) }
+        compose.waitUntil(5_000) { focused("Movie option 1") }
+
+        back()
+        press(Key.DirectionCenter)
+
+        assertThat(openedCount).isEqualTo(2)
+        assertThat(opened).isEqualTo("Added 3")
     }
 
     @Test

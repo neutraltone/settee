@@ -18,8 +18,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithCache
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
@@ -139,6 +142,8 @@ fun HighlightSurface(
     content: @Composable BoxScope.(highlighted: Boolean) -> Unit,
 ) {
     val interactions = remember { MutableInteractionSource() }
+    val memory = LocalHighlightMemory.current
+    val requester = remember { FocusRequester() }
     // From the focus state itself, not the interaction source's focus events: those are only heard
     // once something is listening, a frame after the item appears, so an item given focus the moment
     // it appeared (the focused row swapped for another in its place) had focus and never showed it.
@@ -161,7 +166,11 @@ fun HighlightSurface(
                 clip = clips
             }
             .background(look.fill, look.shape)
-            .onFocusChanged { highlighted = it.isFocused }
+            .onFocusChanged {
+                highlighted = it.isFocused
+                if (it.isFocused) memory?.last = requester
+            }
+            .then(if (memory != null) Modifier.focusRequester(requester) else Modifier)
             .pressable(interactions, onClick, onOptions, enabled)
             .ring(look),
     ) {
@@ -218,3 +227,19 @@ private fun Modifier.ring(look: HighlightLook): Modifier {
         }
     }
 }
+
+/**
+ * The item that last had the Highlight in a part of the screen, so the Highlight can go straight
+ * back to it: the main screen uses it when Back returns to it from a screen opened over it. A
+ * FocusRequester of the item itself, because focusRestorer, the obvious tool, lost the row when it
+ * restored through nested lazy lists.
+ */
+class HighlightMemory {
+    var last: FocusRequester? = null
+
+    /** Puts the Highlight back on [last]; false when there's none, or it has left the screen. */
+    fun restore(): Boolean = runCatching { last?.requestFocus() }.getOrNull() == true
+}
+
+/** Where [HighlightSurface]s below record themselves as they take the Highlight; none by default. */
+val LocalHighlightMemory = staticCompositionLocalOf<HighlightMemory?> { null }
