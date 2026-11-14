@@ -29,7 +29,6 @@ import app.opentv.data.model.Channel
 import app.opentv.data.model.GuideProgramme
 import app.opentv.data.model.Programme
 import app.opentv.data.model.Recording
-import app.opentv.data.model.Reminder
 import app.opentv.data.model.Source
 import app.opentv.data.model.shownName
 import app.opentv.data.repo.MediaKey
@@ -345,19 +344,7 @@ private suspend fun setReminder(
     programme: GuideProgramme,
     autoTune: Boolean,
 ) {
-    if (graph.reminderRepository.forProgramme(channel.id, programme.startUtcMillis) != null) return
-    val id = graph.reminderRepository.insert(
-        Reminder(
-            channelId = channel.id,
-            channelName = channel.displayName,
-            logoUrl = channel.logoUrl,
-            title = programme.title,
-            startUtcMillis = programme.startUtcMillis,
-            endUtcMillis = programme.endUtcMillis,
-            autoTune = autoTune,
-            createdAtMillis = System.currentTimeMillis(),
-        ),
-    )
+    val id = graph.reminderRepository.remind(channel, programme, autoTune) ?: return
     ReminderScheduler.set(context, id, programme.startUtcMillis)
 }
 

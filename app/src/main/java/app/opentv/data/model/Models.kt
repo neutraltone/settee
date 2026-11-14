@@ -611,6 +611,22 @@ data class Profile(
 @Entity(tableName = "channel_hidden_changes", primaryKeys = ["source", "streamId"])
 data class ChannelHiddenChange(val source: String, val streamId: String, val hidden: Boolean, val changedAtMillis: Long)
 
+/**
+ * What the viewer had set on a channel when a Catalogue Refresh deleted it for being missing from the
+ * provider's list, kept by source name and the provider's id, as [ChannelHiddenChange] is, so the
+ * channel comes back with them if a later refresh lists it again (#333). Not the deleted row kept and
+ * marked gone: every channel query would then need to leave those out.
+ */
+@Entity(tableName = "channel_edits", primaryKeys = ["source", "streamId"])
+data class ChannelEdits(
+    val source: String,
+    val streamId: String,
+    val sortIndex: Int,
+    val customName: String?,
+    val epgOverrideId: String?,
+    val matchedEpgId: String?,
+)
+
 /** Where a recording is in its lifecycle. */
 enum class RecordingStatus {
     /** Booked from the guide, waiting for its start time. */
@@ -690,7 +706,16 @@ data class Recording(
 @Entity(tableName = "series_rules", indices = [Index(value = ["channelId"])])
 data class SeriesRule(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    /**
+     * The id of the stream the rule was set on, one Quality of its Channel, while the provider lists
+     * it. A refresh that leaves the stream out deletes it, and listing it again later gives it a new
+     * id, so this is relinked then by [source] and [streamId], which are what the rule is really set on
+     * (#333).
+     */
     val channelId: Long,
+    /** The name of the channel's source, with [streamId] the channel as the provider names it (ADR 0004). */
+    @ColumnInfo(defaultValue = "''") val source: String,
+    @ColumnInfo(defaultValue = "''") val streamId: String,
     val channelName: String,
     /** Normalised programme title to match upcoming airings against. */
     val titleKey: String,
@@ -715,7 +740,13 @@ data class SeriesRule(
 )
 data class Reminder(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    /**
+     * The id of the stream reminded about while it's listed, relinked by [source] and [streamId] as
+     * [SeriesRule.channelId] is.
+     */
     val channelId: Long,
+    @ColumnInfo(defaultValue = "''") val source: String,
+    @ColumnInfo(defaultValue = "''") val streamId: String,
     val channelName: String,
     val logoUrl: String? = null,
     /** The programme title being reminded about. */
