@@ -46,7 +46,10 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.lastOrNull
 import kotlinx.coroutines.job
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
@@ -445,27 +448,49 @@ class CatalogRepository(
         result
     }
 
-    /** Loads a series and lazily back-fills its detail fields from `get_series_info`. See [movieDetail]. */
+    /**
+     * Loads a series and lazily back-fills a still-bare row from `get_series_info`. See [movieDetail].
+     * The browse backdrop asks this as the highlight moves, so the reply's episodes aren't stored:
+     * that would write every highlighted show's episodes, stamped as first seen while browsing. The
+     * series page uses [openSeries].
+     */
     suspend fun seriesDetail(id: Long, now: Long = System.currentTimeMillis()): Series? = withContext(Dispatchers.IO) {
-        val series = seriesDao.byId(id) ?: return@withContext null
+        seriesDetails(id, now, opening = false).lastOrNull()
+    }
+
+    /**
+     * A series being opened on its page: one `get_series_info` gives its episodes and, for a
+     * still-bare row, its details, and the series is emitted once they're stored, so the page shows
+     * with its episodes before TMDB is asked; then again with what TMDB filled in, if it was asked.
+     */
+    fun openSeries(id: Long, now: Long = System.currentTimeMillis()): Flow<Series> =
+        seriesDetails(id, now, opening = true)
+
+    /** [seriesDetail], or with [opening] [openSeries]: the panel always asked, and its episodes stored. */
+    private fun seriesDetails(id: Long, now: Long, opening: Boolean): Flow<Series> = flow {
+        val series = seriesDao.byId(id) ?: return@flow
         var result = series
         val source = sourceDao.byId(series.sourceId)
 
-        // 1) Provider back-fill from get_series_info, for a still-bare row on an Xtream source.
-        if (!result.isEnriched && source?.kind == SourceKind.XTREAM) {
-            val info = runCatching { api.seriesInfo(source, result.seriesId) }.getOrNull()
-            if (info != null) result = result.filledFrom(info)
+        // 1) The provider's get_series_info, on an Xtream source: on opening for its episodes, and
+        //    for a still-bare row its details.
+        if (source?.kind == SourceKind.XTREAM && (opening || !series.isEnriched)) {
+            val info = fetchSeries(source, series.seriesId, now, storeEpisodes = opening)
+            if (info != null && !result.isEnriched) result = result.filledFrom(info)
         }
+        if (result != series) seriesDao.upsertAll(listOf(result))
+        emit(result)
 
         // 2) TMDB, with the viewer's key, at once when something is still missing or TMDB's answer
         //    is six months old, so a series the background pass hasn't reached still fills in.
         if (tmdb.isConfigured() && result.wantsTmdb(now)) {
-            tmdbMetaOf(result).onSuccess { result = result.withTmdb(it, now) }
+            tmdbMetaOf(result).onSuccess { meta ->
+                val answered = result.withTmdb(meta, now)
+                seriesDao.upsertAll(listOf(answered))
+                emit(answered)
+            }
         }
-
-        if (result != series) seriesDao.upsertAll(listOf(result))
-        result
-    }
+    }.flowOn(Dispatchers.IO)
 
     // -- feed helpers --
 
@@ -523,12 +548,16 @@ class CatalogRepository(
     suspend fun setChannelCustomName(id: Long, name: String?) =
         channelDao.setCustomName(id, name?.trim()?.takeIf { it.isNotBlank() })
 
-    suspend fun setChannelSortIndex(id: Long, sortIndex: Int) = channelDao.setSortIndex(id, sortIndex)
+    /**
+     * Puts a category's channels in the order of [ids], each one's position becoming its sortIndex,
+     * in one transaction. Only channels whose place changed are written; returns how many were.
+     */
+    suspend fun setChannelOrder(ids: List<Long>): Int = channelDao.setOrder(ids)
 
     // --- Web channel manager: one-shot reads for the socket-thread server ------------------------
-    // The manager server handles one HTTP request at a time off the UI thread and wants plain
+    // The manager server handles its HTTP requests off the UI thread and wants plain
     // lists, not Flows. These are read-only pass-throughs; every mutation still goes through the
-    // suspend setters above (setChannelHidden/CustomName/SortIndex).
+    // suspend setters above (setChannelHidden, setChannelCustomName, setChannelOrder).
 
     /** Enabled providers, for the manager's source selector. */
     suspend fun enabledSources(): List<Source> = sourceDao.enabled()
@@ -577,24 +606,40 @@ class CatalogRepository(
         source: Source,
         seriesId: String,
         nowUtcMillis: Long = System.currentTimeMillis(),
-    ): Boolean {
-        if (source.kind != SourceKind.XTREAM) return true
-        return runCatching { api.episodes(source, seriesId) }
-            .onSuccess { fetched ->
-                if (fetched.isEmpty()) return@onSuccess
-                // Matched to the stored rows like a catalogue refresh: an upsert without the local
-                // id would update nothing, and an episode must keep when it was first seen.
-                val stored = episodeDao.forSeries(source.id, seriesId).associateBy { it.episodeId }
-                episodeDao.upsertAll(
-                    fetched.map { ep ->
-                        stored[ep.episodeId]?.let { ep.copy(id = it.id, firstSeenMillis = it.firstSeenMillis) }
-                            ?: ep.copy(firstSeenMillis = nowUtcMillis)
-                    },
-                )
-            }
-            .onFailure { if (it is CancellationException) throw it }
-            .onFailure { Log.w(TAG, "Episode fetch failed for series $seriesId", it) }
-            .isSuccess
+    ): Boolean = source.kind != SourceKind.XTREAM ||
+        fetchSeries(source, seriesId, nowUtcMillis, storeEpisodes = true) != null
+
+    /**
+     * Asks the panel for [seriesId]'s `get_series_info`, storing its episodes when [storeEpisodes],
+     * and returns its details, or null when the fetch failed. One request serves both, so opening a
+     * series never asks for the same reply twice.
+     */
+    private suspend fun fetchSeries(
+        source: Source,
+        seriesId: String,
+        nowUtcMillis: Long,
+        storeEpisodes: Boolean,
+    ): XtreamApi.SeriesInfo? = runCatching {
+        val reply = api.seriesInfo(source, seriesId)
+        if (storeEpisodes && reply.episodes.isNotEmpty()) storeEpisodes(source, seriesId, reply.episodes, nowUtcMillis)
+        reply.info
+    }
+        .onFailure { if (it is CancellationException) throw it }
+        // The exception's kind only: some clients put the request's address, with the account's
+        // login in it, in the message, and the browse backdrop can fail here on every highlight.
+        .onFailure { Log.w(TAG, "Series info failed for series $seriesId: ${it.javaClass.simpleName}") }
+        .getOrNull()
+
+    private suspend fun storeEpisodes(source: Source, seriesId: String, fetched: List<Episode>, nowUtcMillis: Long) {
+        // Matched to the stored rows like a catalogue refresh: an upsert without the local id would
+        // update nothing, and an episode must keep when it was first seen.
+        val stored = episodeDao.forSeries(source.id, seriesId).associateBy { it.episodeId }
+        episodeDao.upsertAll(
+            fetched.map { ep ->
+                stored[ep.episodeId]?.let { ep.copy(id = it.id, firstSeenMillis = it.firstSeenMillis) }
+                    ?: ep.copy(firstSeenMillis = nowUtcMillis)
+            },
+        )
     }
 
     /** Live channels only — the fast path so the guide can show before VOD and the guide load. */
@@ -930,15 +975,7 @@ class CatalogRepository(
      * tables), so every row here is a live channel whose URL derives from [XtreamApi.liveStreamUrl].
      */
     suspend fun setLiveFormat(sourceId: Long, format: LiveStreamFormat) = withContext(Dispatchers.IO) {
-        val source = sourceDao.byId(sourceId) ?: return@withContext
-        if (source.kind != SourceKind.XTREAM || source.liveFormat == format) return@withContext
-        val updated = source.copy(liveFormat = format)
-        sourceDao.update(updated)
-        // Rebuild each live channel's URL for the new container.
-        channelDao.forSource(sourceId).forEach { channel ->
-            val newUrl = api.liveStreamUrl(updated, channel.streamId)
-            if (newUrl != channel.streamUrl) channelDao.updateStreamUrl(channel.id, newUrl)
-        }
+        channelDao.switchLiveFormat(sourceId, format, api::liveStreamUrl)
     }
 
     suspend fun deleteSource(sourceId: Long) = withContext(Dispatchers.IO) {

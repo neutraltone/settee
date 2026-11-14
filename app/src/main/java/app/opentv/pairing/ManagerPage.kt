@@ -422,9 +422,40 @@ object ManagerPage {
             var item = channels.splice(from, 1)[0];
             channels.splice(to, 0, item);
             renderChannels();
-            post('/reorder', { ids: channels.map(function(c){ return c.id; }) })
-              .then(function(){ setStatus('Order saved', 'ok'); })
-              .catch(function(){ setStatus(UNREACH, 'err'); });
+            saveOrder(channels.map(function(c){ return c.id; }));
+          }
+
+          // Quick taps would each post the category's whole order. Instead one save is in flight at
+          // a time, and taps meanwhile only replace the order waiting to go next, per category, so
+          // the order on screen is the one saved even if an earlier save was slow or failed.
+          var waitingOrders = [];   // { cat, ids }, oldest first
+          var savingOrder = false;
+          var unsavedCats = [];     // categories whose last save failed, until they're saved again
+          function saveOrder(ids){
+            unsavedCats = unsavedCats.filter(function(c){ return c !== currentCat; });
+            var last = waitingOrders[waitingOrders.length - 1];
+            if (last && last.cat === currentCat) last.ids = ids;
+            else waitingOrders.push({ cat: currentCat, ids: ids });
+            if (!savingOrder) sendNextOrder();
+          }
+          function sendNextOrder(){
+            var next = waitingOrders.shift();
+            if (!next) { savingOrder = false; return; }
+            savingOrder = true;
+            post('/reorder', { ids: next.ids })
+              // Another category's failed save keeps its error showing rather than 'Order saved'.
+              .then(function(){
+                if (waitingOrders.length) return;
+                if (unsavedCats.length) setStatus(UNREACH, 'err');
+                else setStatus('Order saved', 'ok');
+              })
+              // A newer order for the same category replaces this one; for another, it doesn't.
+              .catch(function(){
+                if (waitingOrders.some(function(o){ return o.cat === next.cat; })) return;
+                unsavedCats.push(next.cat);
+                setStatus(UNREACH, 'err');
+              })
+              .then(sendNextOrder);
           }
 
           // ---- Recording / NAS settings ------------------------------------------------------

@@ -126,15 +126,13 @@ class SettingsRoutesTest {
     }
 
     @Test
-    fun `Locked categories opens its own screen, and Back returns to its row`() {
-        val settings = ServiceLocator.get(app).settings
-        settings.clearPin()
+    fun `Parental lock's Locked categories opens them on a screen of their own, and Back returns to its row`() {
+        ServiceLocator.get(app).settings.clearPin()
         setApp(SettingsMemory(SettingsSection.Parental))
 
         openFrom("Locked categories")
 
         assertThat(route()).isEqualTo(Routes.LOCKED_CATEGORIES)
-        compose.onNode(hasText("Switch a category on to hide it.")).assertExists()
         backReturnsTo("Locked categories")
     }
 

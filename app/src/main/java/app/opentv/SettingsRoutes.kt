@@ -26,16 +26,16 @@ fun NavGraphBuilder.settingsRoutes(nav: NavController, memory: SettingsMemory) {
             onAddProvider = { nav.openAddProvider() },
             onEditProvider = { id -> nav.navigate(Routes.editSource(id)) },
             onOpenChannels = { nav.navigate(Routes.CHANNELS) },
-            onOpenFontLicences = { nav.navigate(Routes.FONT_LICENCES) },
             onOpenLockedCategories = { nav.navigate(Routes.LOCKED_CATEGORIES) },
+            onOpenFontLicences = { nav.navigate(Routes.FONT_LICENCES) },
         )
-    }
-
-    composable(Routes.FONT_LICENCES) {
-        FontLicencesScreen(onBack = { nav.popBackStack() })
     }
 
     composable(Routes.LOCKED_CATEGORIES) {
         LockedCategoriesScreen(onBack = { nav.popBackStack() })
+    }
+
+    composable(Routes.FONT_LICENCES) {
+        FontLicencesScreen(onBack = { nav.popBackStack() })
     }
 }

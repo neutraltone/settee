@@ -60,10 +60,19 @@ private suspend fun <R : Any> attempt(tag: String, block: suspend () -> R?): R? 
     .getOrNull()
 
 /**
- * Works through what [select] picks (given how many to pick), [count] at a time with [pauseMillis]
- * between, until a batch comes up short or [lookUp] says whoever it asks stopped answering. A title
- * already tried this run ([id]) isn't picked again: one whose lookup failed would otherwise come
- * round for ever, as the oldest-first order puts it first each time.
+ * Works through what [select] picks (given how many to pick, in an order that stays put), up to
+ * [count] at a time with [pauseMillis] between, until [select] runs out or [lookUp] says whoever it
+ * asks stopped answering. A title already tried this run ([id]) isn't picked again: one whose lookup
+ * failed would otherwise come round for ever, as the order puts it first each time.
+ *
+ * Only the titles [select] still returns stay tried. A title that's no longer due can't come back,
+ * and remembering it would make each [select] read rows only to throw them away: asking for [count]
+ * more per batch read about 1.1M rows for a 30,000-film source. What [lookUp] saved doesn't settle
+ * which titles are no longer due (a film the provider answered about can still be due TMDB), so
+ * that's learnt from the next [select]. A tried title still due ranks above every untried one, so the
+ * window always holds it. The exception is a catalogue refresh adding newer titles during a run,
+ * which can push a failed one out and get it tried once more. Each failure costs the batch after it a
+ * title, as the window learns of it only then.
  */
 internal suspend fun <T> inBatches(
     count: Int,
@@ -73,10 +82,17 @@ internal suspend fun <T> inBatches(
     lookUp: suspend (List<T>) -> Boolean,
 ) {
     val tried = mutableSetOf<Long>()
+    var triedStillDue = 0
     while (true) {
-        val titles = select(count + tried.size).filterNot { id(it) in tried }.take(count)
+        val limit = count + triedStillDue
+        val picked = select(limit)
+        tried.retainAll(picked.mapTo(HashSet(), id))
+        triedStillDue = tried.size
+        // More than [count] when a title tried earlier has been filled in elsewhere, by opening it.
+        val titles = picked.filterNot { id(it) in tried }.take(count)
         tried += titles.map(id)
-        if (!lookUp(titles) || titles.size < count) return
-        delay(pauseMillis)
+        if (titles.isNotEmpty() && !lookUp(titles)) return
+        if (picked.size < limit) return
+        if (titles.isNotEmpty()) delay(pauseMillis)
     }
 }

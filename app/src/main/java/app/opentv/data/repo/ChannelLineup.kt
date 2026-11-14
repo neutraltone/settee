@@ -216,8 +216,7 @@ constructor(
             )
             if (includeLocked || unlocked) groups else groups.filter { it.key !in keys }
         }
-            // The fold normalises every category's name: hundreds on a big provider, too many for
-            // the main thread, which Live TV's sidebar and Locked categories collect on.
+            // Folding normalises every category's name: hundreds on a big provider, so not on the main thread.
             .flowOn(Dispatchers.Default)
 
     fun channels(scope: LineupScope): Flow<List<LineupChannel>> {

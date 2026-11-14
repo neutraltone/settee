@@ -94,8 +94,8 @@ private fun ParentalSettings(pinIsSet: Boolean, onSetPin: () -> Unit, onOpenLock
     if (pinIsSet) {
         ListRow(stringResource(R.string.parental_remove_pin), onClick = settings::clearPin)
     }
-    // Counted from the stored keys, not the catalogue: folding hundreds of categories is what
-    // highlighting this pane used to cost, and the switches are on Locked categories' own screen.
+    // A row that opens the categories on a screen of their own, not a switch per category here: a
+    // big provider has hundreds, and highlighting Parental lock on the way down composed them all.
     ListRow(
         stringResource(R.string.parental_locked_categories),
         onClick = lockedRow.open,
@@ -105,7 +105,6 @@ private fun ParentalSettings(pinIsSet: Boolean, onSetPin: () -> Unit, onOpenLock
         } else {
             pluralStringResource(R.plurals.parental_locked_count, hidden.size, hidden.size)
         },
-        note = stringResource(R.string.parental_lock_sync_note),
     )
 }
 

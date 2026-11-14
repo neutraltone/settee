@@ -59,9 +59,16 @@ fun CategoriesSidebar(
             .focusGroup(),
     ) {
         findBox(find, Modifier.fillMaxWidth())
-        val query = find.text.toString()
-        val shown = findCategories(entries, query)
-        FindCount(query, shown.size, entries.size, Modifier.padding(ROW_PADDING))
+        val query = find.text.toString().trim()
+        val shown = if (query.isEmpty()) entries else entries.filter { it.label.contains(query, ignoreCase = true) }
+        if (query.isNotEmpty()) {
+            Text(
+                stringResource(R.string.categories_find_count, shown.size, entries.size),
+                SetteeType.Body,
+                color = SetteeColors.QuietText,
+                modifier = Modifier.padding(ROW_PADDING),
+            )
+        }
         LazyColumn(state = list) {
             items(pinned + shown, key = { it.key }) { entry ->
                 val isCurrent = entry.key == current
@@ -85,27 +92,6 @@ fun CategoriesSidebar(
             }
         }
     }
-}
-
-/**
- * Find a category's rule, for every screen that has the box: the [entries] whose label has [query]
- * in it, whatever the case, in their order. Labels only, never a provider's name.
- */
-fun findCategories(entries: List<SidebarEntry>, query: String): List<SidebarEntry> {
-    val typed = query.trim()
-    return if (typed.isEmpty()) entries else entries.filter { it.label.contains(typed, ignoreCase = true) }
-}
-
-/** How many of how many categories Find a category is showing, once something is typed in it. */
-@Composable
-fun FindCount(query: String, shown: Int, total: Int, modifier: Modifier = Modifier) {
-    if (query.isBlank()) return
-    Text(
-        stringResource(R.string.categories_find_count, shown, total),
-        SetteeType.Body,
-        color = SetteeColors.QuietText,
-        modifier = modifier,
-    )
 }
 
 /** How wide a [CategoriesSidebar] is, for sliding the screen beside it along by as much. */

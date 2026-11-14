@@ -143,9 +143,10 @@ ordering silently vanish.
 
 ### Episodes load lazily, with two exceptions
 
-A series' episodes are fetched when it is opened (`CatalogRepository.ensureEpisodes`), never
-during catalogue sync: one `get_series_info` per show across a 10,000-show catalogue would take
-hours. The first exception is New Episode detection. Whenever the catalogue's shows are merged, every
+A series' episodes are fetched when it is opened (`CatalogRepository.openSeries`, and
+`ensureEpisodes` for its other Versions), never during catalogue sync: one `get_series_info` per
+show across a 10,000-show catalogue would take hours. That one reply also back-fills a bare row's
+details, so opening a show asks its panel once, and its episodes are stored before TMDB is asked. The first exception is New Episode detection. Whenever the catalogue's shows are merged, every
 show whose `last_modified` moved forward goes to `ViewerLibrary.newEpisodes`, which fetches the
 episodes only of shows some Profile on the device is caught up on, one at a time. That is normally
 a handful of calls, not the catalogue. A refresh (the worker, or Refresh in settings) waits for it.

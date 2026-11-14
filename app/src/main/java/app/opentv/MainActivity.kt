@@ -195,8 +195,8 @@ object Routes {
     const val SEARCH = "search"
     const val SETTINGS = "settings"
     const val FONT_LICENCES = "font-licences"
-    const val LOCKED_CATEGORIES = "locked-categories"
     const val CHANNELS = "channels"
+    const val LOCKED_CATEGORIES = "locked-categories"
     const val PROFILES = "profiles"
     const val SERIES_DETAIL = "series/{seriesId}"
     const val MOVIE_DETAIL = "movie/{movieId}"
@@ -476,6 +476,8 @@ private fun OpenTvApp(isTelevision: Boolean, launchedToPlay: Boolean) {
                 // app boots straight into the last channel; it waits until the viewer backs out to Home.
                 val route by navController.currentBackStackEntryAsState()
                 WhatsNewGate(canShow = route?.destination?.route == Routes.MAIN)
+
+                KeepHomeLive(navController, ServiceLocator.get(bootContext).homeKeptLive)
 
                 // "About to switch to a recording" banner — shows 30s before an auto-switch fires.
                 RecordingSwitchBanner()

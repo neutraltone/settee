@@ -6,21 +6,19 @@
 package app.opentv.ui.settings
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
@@ -28,101 +26,78 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import app.opentv.R
+import app.opentv.core.AppSettings
 import app.opentv.core.ServiceLocator
-import app.opentv.ui.design.FindCount
+import app.opentv.ui.ChannelsViewModel
 import app.opentv.ui.design.ListRow
-import app.opentv.ui.design.ScreenFrame
 import app.opentv.ui.design.SetteeColors
+import app.opentv.ui.design.SetteeSpace
 import app.opentv.ui.design.SetteeType
-import app.opentv.ui.design.SidebarEntry
 import app.opentv.ui.design.Text
-import app.opentv.ui.design.TextField
-import app.opentv.ui.design.findCategories
-import kotlinx.coroutines.flow.map
 
 /**
- * Locked categories (docs/LOOK.md, Settings), opened from the Parental lock pane: a switch for every
- * live category, locked ones included. It's a screen rather than rows in the pane because a big
- * provider has hundreds of categories, and the pane builds all its rows just by being highlighted.
+ * Locked categories (GLOSSARY: Parental Lock): a switch per category of every provider, on when
+ * it's locked. A screen of its own, opened from the Parental lock pane, because a big provider has
+ * hundreds of categories: lazily, only the rows on screen are built. Back returns to the pane's row.
  */
 @Composable
-fun LockedCategoriesScreen(onBack: () -> Unit) {
-    val context = LocalContext.current
-    val graph = remember { ServiceLocator.get(context) }
-    val settings = graph.settings
-    // Straight from the lineup, not ChannelsViewModel's StateFlow: that starts as an empty list, which
-    // would show "No categories yet" every time the screen opens, until the fold finished.
-    val categories by remember {
-        graph.channelLineup.categoryGroups(includeLocked = true)
-            .map { groups -> groups.map { SidebarEntry(it.key, it.label) } }
-    }.collectAsState(initial = null)
-    val locked by settings.hiddenCategories.collectAsState()
-    LockedCategoriesContent(
-        categories = categories,
-        locked = locked,
-        onLock = settings::setCategoryLocked,
-        onBack = onBack,
-    )
-}
-
-/**
- * The screen over plain [categories], in the order they're given: nothing is re-sorted when one is
- * locked, so a row never moves away from the Highlight. Null while they're still being read, when
- * the screen shows only its title. [onLock] is a category's key and whether to lock it.
- */
-@Composable
-internal fun LockedCategoriesContent(
-    categories: List<SidebarEntry>?,
-    locked: Set<String>,
-    onLock: (key: String, lock: Boolean) -> Unit,
+fun LockedCategoriesScreen(
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
+    viewModel: ChannelsViewModel = viewModel(),
+    settings: AppSettings = ServiceLocator.get(LocalContext.current).settings,
 ) {
-    BackHandler(onBack = onBack)
-    val find = rememberTextFieldState()
+    val categories by viewModel.categoryGroups.collectAsState()
+    val hidden by settings.hiddenCategories.collectAsState()
     val firstRow = remember { FocusRequester() }
-    // Once, when the categories first arrive: they're read off the main thread, so not on the first
-    // frame. Finding afterwards mustn't pull the Highlight out of the box.
-    var landed by remember { mutableStateOf(false) }
-    LaunchedEffect(categories.isNullOrEmpty()) {
-        if (landed || categories.isNullOrEmpty()) return@LaunchedEffect
+    // Once, when the categories arrive. Not startsFocused on the first row: a lazy row is composed
+    // again each time it scrolls back into view, and would take the Highlight back each time.
+    LaunchedEffect(categories.isNotEmpty()) {
+        if (categories.isEmpty()) return@LaunchedEffect
         withFrameNanos {}
-        if (runCatching { firstRow.requestFocus() }.getOrNull() == true) landed = true
+        runCatching { firstRow.requestFocus() }
     }
-    ScreenFrame(modifier) {
-        Column(Modifier.widthIn(max = MAX_WIDTH), verticalArrangement = Arrangement.spacedBy(ROW_GAP)) {
-            Text(stringResource(R.string.parental_locked_categories), SetteeType.ScreenTitle)
-            Text(stringResource(R.string.locked_categories_hint), SetteeType.Body, color = SetteeColors.QuietText)
-            if (categories == null) return@Column
-            if (categories.isEmpty()) {
-                Text(
-                    stringResource(R.string.parental_no_categories),
-                    SetteeType.Body,
-                    color = SetteeColors.QuietText,
-                    modifier = Modifier.padding(top = 12.dp),
+    BackHandler(onBack = onBack)
+    // The pane only opens this once the PIN is in, but Android can bring the app back on this
+    // screen after it closed, which forgets the PIN: then it's not this screen's to show.
+    val pinIsSet by settings.pinIsSet.collectAsState()
+    val pinEntered by settings.pinEntered.collectAsState()
+    if (pinIsSet && !pinEntered) {
+        LaunchedEffect(Unit) { onBack() }
+        return
+    }
+    Column(
+        modifier
+            .fillMaxSize()
+            .background(SetteeColors.Background)
+            .padding(horizontal = SetteeSpace.ScreenSide, vertical = SetteeSpace.ScreenTopBottom),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Text(stringResource(R.string.parental_locked_categories), SetteeType.ScreenTitle)
+        Text(stringResource(R.string.parental_lock_sync_note), SetteeType.Body, color = SetteeColors.QuietText)
+        if (categories.isEmpty()) {
+            Text(
+                stringResource(R.string.parental_no_categories),
+                SetteeType.Body,
+                color = SetteeColors.QuietText,
+                modifier = Modifier.padding(top = 12.dp),
+            )
+        }
+        LazyColumn(
+            Modifier.weight(1f).widthIn(max = 900.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            itemsIndexed(categories, key = { _, group -> group.key }) { index, group ->
+                val locked = group.key in hidden
+                ListRow(
+                    group.label,
+                    onClick = { settings.setCategoryLocked(group.key, !locked) },
+                    switch = locked,
+                    modifier = if (index == 0) Modifier.focusRequester(firstRow) else Modifier,
                 )
-                return@Column
-            }
-            TextField(find, stringResource(R.string.categories_find), FIND_MAX_LENGTH, Modifier.fillMaxWidth())
-            val query = find.text.toString()
-            val shown = findCategories(categories, query)
-            FindCount(query, shown.size, categories.size)
-            LazyColumn(verticalArrangement = Arrangement.spacedBy(ROW_GAP)) {
-                itemsIndexed(shown, key = { _, entry -> entry.key }) { index, entry ->
-                    val isLocked = entry.key in locked
-                    ListRow(
-                        entry.label,
-                        onClick = { onLock(entry.key, !isLocked) },
-                        switch = isLocked,
-                        modifier = if (index == 0) Modifier.focusRequester(firstRow) else Modifier,
-                    )
-                }
             }
         }
     }
 }
-
-private val MAX_WIDTH = 900.dp
-private val ROW_GAP = 8.dp
-private const val FIND_MAX_LENGTH = 40

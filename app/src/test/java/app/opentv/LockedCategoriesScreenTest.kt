@@ -6,188 +6,184 @@
 package app.opentv
 
 import android.app.Application
-import android.view.KeyEvent
-import android.view.View
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.platform.LocalView
-import androidx.compose.ui.semantics.SemanticsProperties
-import androidx.compose.ui.semantics.getOrNull
-import androidx.compose.ui.state.ToggleableState
-import androidx.compose.ui.test.SemanticsMatcher
-import androidx.compose.ui.test.assert
-import androidx.compose.ui.test.assertCountEquals
+import android.os.Looper
+import androidx.activity.ComponentActivity
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertIsFocused
+import androidx.compose.ui.test.assertIsOff
+import androidx.compose.ui.test.assertIsOn
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasText
-import androidx.compose.ui.test.isFocused
-import androidx.compose.ui.test.junit4.createComposeRule
-import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onRoot
+import androidx.compose.ui.test.performKeyInput
+import androidx.compose.ui.test.pressKey
+import androidx.test.core.app.ApplicationProvider
 import androidx.test.espresso.Espresso
-import app.opentv.ui.design.SidebarEntry
-import app.opentv.ui.settings.LockedCategoriesContent
+import app.opentv.core.ServiceLocator
+import app.opentv.data.model.Category
+import app.opentv.data.model.Source
+import app.opentv.data.model.SourceKind
+import app.opentv.data.model.StreamKind
+import app.opentv.ui.settings.LockedCategoriesScreen
 import com.google.common.truth.Truth.assertThat
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.runBlocking
+import org.junit.After
+import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
-/** Locked categories: every live category's Parental Lock switch, on a screen of its own (#267). */
+/**
+ * Locked categories, the Parental lock's own screen: a switch per category, many more than fit on
+ * the screen on a big provider, so the list is reached with the remote (#267).
+ */
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [34], qualifiers = TV_1080P, application = Application::class)
+@Config(sdk = [34], qualifiers = TV_1080P, application = android.app.Application::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
+@OptIn(ExperimentalTestApi::class)
 class LockedCategoriesScreenTest {
 
     @get:Rule
-    val compose = createComposeRule()
+    val compose = createAndroidComposeRule<ComponentActivity>()
 
-    private lateinit var view: View
-    private val device = DeviceKeyboard(compose) { view }
+    private val app: Application = ApplicationProvider.getApplicationContext()
+    private val graph = ServiceLocator.Graph(app)
+    private val viewModels = TestViewModels()
+    private val viewModel by lazy { viewModels.channels(app, graph) }
+    private var left = false
 
-    /** In provider order, as the pane listed them: not alphabetical, so a sort would show. */
-    private val categories = listOf(
-        SidebarEntry("news", "News"),
-        SidebarEntry("kids", "Kids"),
-        SidebarEntry("adult", "Adult"),
-        SidebarEntry("sport", "Sport"),
+    // AppSettings is one per process, so the session's lock state outlives each test: every test
+    // starts locked, with no PIN, and leaves it that way (clearing the PIN also unlocks).
+    @Before
+    fun locked() {
+        graph.settings.clearPin()
+        graph.settings.setHiddenUnlocked(false)
+    }
+
+    @After
+    fun close() {
+        graph.settings.setHiddenCategories(emptySet())
+        locked()
+        viewModels.clear()
+        graph.database.close()
+    }
+
+    /** Far more than fit on the screen at once: the last is well below it. */
+    private val genres = listOf(
+        "Arts", "Business", "Cartoons", "Documentaries", "Drama", "Education", "Entertainment", "Fashion",
+        "Food", "Gaming", "History", "Kids", "Lifestyle", "Movies", "Music", "Nature", "Religion", "Science",
+        "Shopping", "Travel", "Weather", "Comedy", "Crime", "Cooking", "Motors", "Outdoors", "Pets",
+        "Politics", "Reality", "Classics",
     )
 
-    private var locked by mutableStateOf(setOf<String>())
-    private val toggles = mutableListOf<Pair<String, Boolean>>()
-    private var left = 0
+    /** News, a locked category, Sport, then the genres. */
+    private val names = listOf("News", "UK| Adult", "Sport") + genres
 
-    private fun show(entries: List<SidebarEntry>? = categories) = compose.setTvContent {
-        view = LocalView.current
-        LockedCategoriesContent(
-            categories = entries,
-            locked = locked,
-            onLock = { key, lock ->
-                toggles += key to lock
-                locked = if (lock) locked + key else locked - key
-            },
-            onBack = { left++ },
+    private fun library() = runBlocking {
+        val db = graph.database
+        db.sources().insert(Source(id = 1, name = "Provider A", kind = SourceKind.XTREAM, url = "https://example.com"))
+        db.categories().upsertAll(
+            names.mapIndexed { index, name -> Category("${index + 10}", 1, name, StreamKind.LIVE, sortIndex = index) },
         )
+        graph.settings.setHiddenCategories(setOf("adult"))
     }
 
-    private fun press(vararg keys: Int) = keys.forEach(device::remote)
-
-    private fun highlighted() = compose.onNode(isFocused())
-
-    private fun switchedOn(on: Boolean) =
-        SemanticsMatcher.expectValue(SemanticsProperties.ToggleableState, ToggleableState(on))
-
-    /** The category rows' labels, top to bottom. */
-    private fun rowLabels(): List<String> = compose.onAllNodes(hasClickAction()).fetchSemanticsNodes()
-        .mapNotNull { node -> node.config.getOrNull(SemanticsProperties.Text)?.joinToString { it.text } }
-        .filter { label -> categories.any { it.label == label } }
-
-    @Test
-    fun `opens on the first category, listing every one in provider order`() {
-        show()
-
-        highlighted().assertHighlightIs("News")
-        assertThat(rowLabels()).containsExactly("News", "Kids", "Adult", "Sport").inOrder()
-        assertThat(device.highlighted()).isFalse()
-        captureScreen("locked_categories_initial")
-    }
-
-    @Test
-    fun `OK on a category locks it and OK again unlocks it, and the row stays where it was`() {
-        show()
-        press(KeyEvent.KEYCODE_DPAD_DOWN, KeyEvent.KEYCODE_DPAD_DOWN)
-        highlighted().assertHighlightIs("Adult")
-
-        press(KeyEvent.KEYCODE_DPAD_CENTER)
-
-        assertThat(toggles).containsExactly("adult" to true)
-        compose.onNode(hasText("Adult") and hasClickAction()).assert(switchedOn(true))
-        compose.onNode(hasText("News") and hasClickAction()).assert(switchedOn(false))
-        assertThat(rowLabels()).containsExactly("News", "Kids", "Adult", "Sport").inOrder()
-        highlighted().assertHighlightIs("Adult")
-        captureScreen("locked_categories_locked")
-
-        press(KeyEvent.KEYCODE_DPAD_CENTER)
-
-        assertThat(toggles).containsExactly("adult" to true, "adult" to false).inOrder()
-        compose.onNode(hasText("Adult") and hasClickAction()).assert(switchedOn(false))
-    }
-
-    @Test
-    fun `while the categories are still being read it says nothing, then opens on the first one`() {
-        var loaded by mutableStateOf<List<SidebarEntry>?>(null)
+    private fun show() {
         compose.setTvContent {
-            view = LocalView.current
-            LockedCategoriesContent(categories = loaded, locked = locked, onLock = { _, _ -> }, onBack = {})
+            LockedCategoriesScreen(onBack = { left = true }, viewModel = viewModel, settings = graph.settings)
         }
-
-        compose.onNodeWithText("No categories yet", substring = true).assertDoesNotExist()
-
-        loaded = categories
-
-        compose.waitUntil(5_000) {
-            compose.onAllNodes(hasText("News") and isFocused()).fetchSemanticsNodes().isNotEmpty()
+        compose.waitUntil(10_000) {
+            shadowOf(Looper.getMainLooper()).idle()
+            viewModel.categoryGroups.value.isNotEmpty()
         }
-        assertThat(device.highlighted()).isFalse()
+        compose.waitForIdle()
+    }
+
+    private fun press(key: Key, times: Int = 1) = repeat(times) {
+        compose.onRoot().performKeyInput { pressKey(key) }
+        compose.waitForIdle()
+    }
+
+    private fun row(label: String) = compose.onNode(hasText(label) and hasClickAction())
+
+    /** What Live TV's Categories Sidebar lists: locked categories drop out of it. */
+    private fun liveSidebar(): List<String> = runBlocking {
+        graph.channelLineup.categoryGroups().first()
+    }.map { it.label }
+
+    @Test
+    fun `it opens on the first category, each one's switch on when it's locked`() {
+        library()
+        show()
+
+        compose.onNodeWithText("Locked categories").assertExists()
+        compose.onNodeWithText("also locked on your other devices", substring = true).assertExists()
+        row("News").assertIsFocused()
+        row("News").assertIsOff()
+        row("Adult").assertIsOn()
+        captureScreen("locked_categories")
     }
 
     @Test
-    fun `with no categories it says so`() {
-        show(entries = emptyList())
+    fun `OK on a category far down the list locks it, and OK again unlocks it`() {
+        library()
+        show()
+        assertThat(liveSidebar()).contains("Classics")
+
+        // Classics is the last row.
+        press(Key.DirectionDown, times = names.size - 1)
+        row("Classics").assertIsFocused()
+        press(Key.DirectionCenter)
+
+        row("Classics").assertIsOn()
+        assertThat(liveSidebar()).doesNotContain("Classics")
+        captureScreen("locked_categories_scrolled")
+
+        press(Key.DirectionCenter)
+
+        row("Classics").assertIsOff()
+        assertThat(liveSidebar()).contains("Classics")
+    }
+
+    @Test
+    fun `with no categories yet, it says where they come from`() {
+        compose.setTvContent {
+            LockedCategoriesScreen(onBack = { left = true }, viewModel = viewModel, settings = graph.settings)
+        }
+        compose.waitForIdle()
 
         compose.onNodeWithText("No categories yet", substring = true).assertExists()
         captureScreen("locked_categories_empty")
     }
 
     @Test
-    fun `Up from the first category reaches Find a category, and Down comes back to the list`() {
-        show()
-        press(KeyEvent.KEYCODE_DPAD_UP)
-        assertThat(device.highlighted()).isTrue()
+    fun `with a PIN set but not entered, as when Android brings the app back on this screen, it leaves at once`() {
+        library()
+        graph.settings.setPin("1234")
+        graph.settings.forgetPinEntry()
+        compose.setTvContent {
+            LockedCategoriesScreen(onBack = { left = true }, viewModel = viewModel, settings = graph.settings)
+        }
 
-        press(KeyEvent.KEYCODE_DPAD_DOWN)
-        assertThat(device.highlighted()).isFalse()
-        highlighted().assertHighlightIs("News")
+        compose.runOnIdle { assertThat(left).isTrue() }
+        compose.onNodeWithText("Classics").assertDoesNotExist()
     }
 
     @Test
-    fun `Find a category narrows the list by name, whatever the case, and counts what's showing`() {
-        show()
-        press(KeyEvent.KEYCODE_DPAD_UP, KeyEvent.KEYCODE_DPAD_CENTER)
-
-        device.type("SPO")
-
-        compose.onNode(hasText("Sport") and hasClickAction()).assertExists()
-        compose.onAllNodesWithText("News").assertCountEquals(0)
-        compose.onAllNodesWithText("Adult").assertCountEquals(0)
-        compose.onNodeWithText("1 of 4").assertExists()
-        captureScreen("locked_categories_find")
-        device.close()
-    }
-
-    @Test
-    fun `only the categories on screen are built`() {
-        val many = (1..400).map { SidebarEntry("c$it", "Category $it") }
-        show(entries = many)
-
-        compose.onNode(hasText("Category 1") and hasClickAction()).assertExists()
-        compose.onAllNodesWithText("Category 400").assertCountEquals(0)
-    }
-
-    @Test
-    fun `Back leaves the screen`() {
+    fun `Back leaves it`() {
+        library()
         show()
 
         Espresso.pressBack()
 
-        compose.runOnIdle { assertThat(left).isEqualTo(1) }
-    }
-
-    private fun androidx.compose.ui.test.SemanticsNodeInteraction.assertHighlightIs(label: String) {
-        assertIsFocused()
-        assert(hasText(label))
+        compose.runOnIdle { assertThat(left).isTrue() }
     }
 }
