@@ -462,6 +462,7 @@ class CatalogRepository(
      * A series being opened on its page: one `get_series_info` gives its episodes and, for a
      * still-bare row, its details, and the series is emitted once they're stored, so the page shows
      * with its episodes before TMDB is asked; then again with what TMDB filled in, if it was asked.
+     * A row whose details are already in is emitted before that request too, and again after it.
      */
     fun openSeries(id: Long, now: Long = System.currentTimeMillis()): Flow<Series> =
         seriesDetails(id, now, opening = true)
@@ -470,16 +471,23 @@ class CatalogRepository(
     private fun seriesDetails(id: Long, now: Long, opening: Boolean): Flow<Series> = flow {
         val series = seriesDao.byId(id) ?: return@flow
         var result = series
-        val source = sourceDao.byId(series.sourceId)
+        val panel = sourceDao.byId(series.sourceId)?.takeIf { it.kind == SourceKind.XTREAM }
 
         // 1) The provider's get_series_info, on an Xtream source: on opening for its episodes, and
         //    for a still-bare row its details.
-        if (source?.kind == SourceKind.XTREAM && (opening || !series.isEnriched)) {
-            val info = fetchSeries(source, series.seriesId, now, storeEpisodes = opening)
-            if (info != null && !result.isEnriched) result = result.filledFrom(info)
+        if (panel != null && opening && series.isEnriched) {
+            // Shown first, with its stored episodes: a slow panel would otherwise keep the page on
+            // Loading for details it already has (#326). Shown again once the episodes are in.
+            emit(series)
+            if (fetchSeries(panel, series.seriesId, now, storeEpisodes = true) != null) emit(series)
+        } else {
+            if (panel != null && !series.isEnriched) {
+                val info = fetchSeries(panel, series.seriesId, now, storeEpisodes = opening)
+                if (info != null) result = result.filledFrom(info)
+            }
+            if (result != series) seriesDao.upsertAll(listOf(result))
+            emit(result)
         }
-        if (result != series) seriesDao.upsertAll(listOf(result))
-        emit(result)
 
         // 2) TMDB, with the viewer's key, at once when something is still missing or TMDB's answer
         //    is six months old, so a series the background pass hasn't reached still fills in.

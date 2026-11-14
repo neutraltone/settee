@@ -9,6 +9,7 @@ import android.app.Application
 import androidx.test.core.app.ApplicationProvider
 import app.opentv.core.ServiceLocator
 import app.opentv.data.model.Series
+import app.opentv.ui.OpenedShow
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -100,6 +101,30 @@ class ShowPageFetchTest {
             assertThat(timesAsked(2)).isEqualTo(1)
             assertThat(episodeIds(1)).containsExactly("101")
             assertThat(episodeIds(2)).containsExactly("201")
+        }
+
+    @Test
+    fun `a show whose details are in opens, and its other Versions' episodes come, before its own panel answers`() =
+        runBlocking<Unit> {
+            saveTwoVersions()
+            graph.database.series().upsertAll(listOf(series(1, "Dragons").copy(genre = "Comedy")))
+            val answer = panel.hold("get_series_info:1")
+            val shown = java.util.Collections.synchronizedList(mutableListOf<OpenedShow>())
+            val show = viewModel.openShow(1)
+            val opening = launch(Dispatchers.Default) { show.collect { shown += it } }
+
+            during(answer) {
+                withTimeout(10_000) { while (shown.isEmpty() || episodeIds(2).isEmpty()) delay(20) }
+                assertThat(shown.single().series.genre).isEqualTo("Comedy")
+                assertThat(shown.single().fetched).isFalse()
+            }
+            answer.release()
+            opening.join()
+
+            assertThat(shown.last().fetched).isTrue()
+            assertThat(episodeIds(1)).containsExactly("101")
+            assertThat(timesAsked(1)).isEqualTo(1)
+            assertThat(timesAsked(2)).isEqualTo(1)
         }
 
     @Test
