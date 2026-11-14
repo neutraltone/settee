@@ -5,6 +5,12 @@
  */
 package app.opentv
 
+import app.opentv.core.ServiceLocator
+import app.opentv.data.remote.OpenSubtitlesClient
+import app.opentv.data.repo.DownloadedSubtitles
+import app.opentv.data.repo.OpenSubtitles
+import app.opentv.data.repo.OpenSubtitlesAccount
+import java.io.File
 import java.util.Collections
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
@@ -47,4 +53,15 @@ class FakeOpenSubtitles {
             .body((status?.groupValues?.get(2) ?: reply).toResponseBody("application/json".toMediaType()))
             .build()
     }.build()
+
+    /**
+     * OpenSubtitles on [graph]'s catalogue and settings, talking to this fake. Built here rather than
+     * by the graph: the Android Keystore the graph's sealer uses isn't in Robolectric.
+     */
+    fun openSubtitles(graph: ServiceLocator.Graph, files: File) = OpenSubtitles(
+        OpenSubtitlesAccount(graph.settings, OpenSubtitlesClient(http, "k", "0.5.0"), FakeSealer()),
+        DownloadedSubtitles(files.resolve("subtitles")),
+        graph.catalogRepository,
+        graph.sourceRepository,
+    )
 }

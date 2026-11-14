@@ -29,7 +29,6 @@ import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
-import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.pressKey
@@ -47,18 +46,13 @@ import app.opentv.data.model.Source
 import app.opentv.data.model.SourceKind
 import app.opentv.data.model.StreamKind
 import app.opentv.data.model.StremioAddon
-import app.opentv.data.remote.OpenSubtitlesClient
-import app.opentv.data.repo.DownloadedSubtitles
 import app.opentv.data.repo.EpgRepository
-import app.opentv.data.repo.OpenSubtitles
-import app.opentv.data.repo.OpenSubtitlesAccount
 import app.opentv.ui.settings.SettingsMemory
 import app.opentv.ui.settings.SettingsScreen
 import app.opentv.ui.settings.SettingsSection
 import app.opentv.ui.settings.SettingsTags
 import app.opentv.update.UpdateChecker
 import com.google.common.truth.Truth.assertThat
-import com.google.common.truth.Truth.assertWithMessage
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.Assume.assumeTrue
@@ -100,7 +94,7 @@ class SettingsScreenTest {
             onEditProvider = { opened += "edit provider $it" },
             onOpenChannels = { opened += "channels" },
             onOpenLockedCategories = { opened += "locked categories" },
-            // Without OpenSubtitles whatever key the build has, so the sections are the same everywhere.
+            // Left out whether or not the build has Settee's key, so every build shows the same sections.
             openSubtitles = null,
         )
     }
@@ -198,7 +192,7 @@ class SettingsScreenTest {
             "Manage on phone or laptop",
             "About",
         ).inOrder()
-        assertWhollyOnScreen("About")
+        compose.assertSectionWhollyOnScreen("About")
     }
 
     @Test
@@ -766,49 +760,6 @@ class SettingsScreenTest {
 
         highlighted().assertTextContains("Recording")
         paneTitle().assertTextContains("Recording")
-    }
-
-    @Test
-    fun `every section comes into view as the Highlight moves down to About and back up to Providers`() {
-        compose.setTvContent {
-            view = LocalView.current
-            // With OpenSubtitles, as a build with Settee's key has it: twelve sections, more than
-            // the left side has room for.
-            SettingsScreen(memory = SettingsMemory(), onBack = {}, openSubtitles = openSubtitles())
-        }
-        val sections = compose.onAllNodesWithTag(SettingsTags.SECTION).fetchSemanticsNodes()
-            .map { it.config[SemanticsProperties.Text].joinToString("") }
-        assertThat(sections).hasSize(12)
-
-        sections.drop(1).forEach { section ->
-            press(KeyEvent.KEYCODE_DPAD_DOWN)
-            highlighted().assertTextContains(section)
-            assertWhollyOnScreen(section)
-        }
-        captureScreen("settings_sections_scrolled_to_about")
-
-        sections.reversed().drop(1).forEach { section ->
-            press(KeyEvent.KEYCODE_DPAD_UP)
-            highlighted().assertTextContains(section)
-            assertWhollyOnScreen(section)
-        }
-    }
-
-    /** OpenSubtitles against [FakeOpenSubtitles], built here: the graph's sealer needs the Android Keystore. */
-    private fun openSubtitles() = OpenSubtitles(
-        OpenSubtitlesAccount(graph.settings, OpenSubtitlesClient(FakeOpenSubtitles().http, "k", "0.5.0"), FakeSealer()),
-        DownloadedSubtitles(ApplicationProvider.getApplicationContext<Application>().filesDir.resolve("subtitles")),
-        graph.catalogRepository,
-        graph.sourceRepository,
-    )
-
-    /** The section row showing [text] is inside the window from top to bottom, not cut off at an edge. */
-    private fun assertWhollyOnScreen(text: String) {
-        val row = compose.onNode(hasTestTag(SettingsTags.SECTION) and hasText(text)).fetchSemanticsNode().boundsInWindow
-        val window = compose.onRoot().fetchSemanticsNode().boundsInWindow
-        assertWithMessage("$text's row, $row, inside the window, $window").that(
-            row.top >= window.top && row.bottom <= window.bottom,
-        ).isTrue()
     }
 
     private companion object {
