@@ -218,8 +218,11 @@ class PlayerController(
     /** Whether the controller itself has stopped this stream, until the next one starts. */
     private var gaveUp = false
 
-    /** Whether [standBy] stopped the stream, for [wake] to start it again. */
-    private var standingBy = false
+    /**
+     * How the app being behind another holds playback back (#356). Every way a stream starts goes through
+     * [play], an automatic restart and a step down included, so it's decided there, not by each caller.
+     */
+    private var hold = Hold.NONE
 
     /**
      * Held so the User-Agent can be swapped per source before each tune.
@@ -337,7 +340,7 @@ class PlayerController(
                     if (recovery.canRestart && request != null) {
                         scope.launch {
                             delay(AUTO_RESTART_DELAY_MILLIS)
-                            if (current == request && !standingBy) play(request, debounce = false)
+                            if (current == request) play(request, debounce = false)
                         }
                     }
                 }
@@ -372,7 +375,6 @@ class PlayerController(
         // Cancelling here is what makes fast channel-changing safe: the previous switch never
         // reaches the player, so we never stack prepares.
         switchJob?.cancel()
-        standingBy = false
         // An automatic restart plays the same request again and keeps counting, so a stream that
         // keeps dropping stops after a couple of restarts rather than retrying (and, on a portal,
         // minting a link) forever.
@@ -380,6 +382,8 @@ class PlayerController(
         if (request.key != current?.key) guard.forgetNotices()
         current = request
         guard.leaving()
+        // Stood by, nothing connects: [comeBack] plays the latest one asked for.
+        if (hold == Hold.STOPPED) return
 
         switchJob = scope.launch {
             if (debounce) delay(switchDebounceMillis)
@@ -431,7 +435,8 @@ class PlayerController(
                 if (!playable.isLive && request.startPositionMillis > 0) {
                     seekTo(request.startPositionMillis)
                 }
-                playWhenReady = true
+                // Paused behind another app, a stream that starts meanwhile waits there too.
+                playWhenReady = hold != Hold.PAUSED
                 prepare()
             }
         }
@@ -569,20 +574,37 @@ class PlayerController(
     }
 
     /**
-     * Stops the stream and closes its connection, but keeps what it was for [wake]: live TV behind another
-     * app (#356). Stopped rather than paused, so a single-connection account is free for another TV.
+     * Behind another app, a film or episode pauses and stays paused, whatever starts meanwhile: a
+     * restart after a dropped connection, a step down, the next episode. [comeBack] doesn't play it.
      */
-    fun standBy() {
-        val playing = current ?: return
-        stop()
-        current = playing
-        standingBy = true
+    fun pauseBehind() {
+        hold = Hold.PAUSED
+        player.playWhenReady = false
     }
 
-    /** Plays again what [standBy] stopped, freshly asked for, as a link may have expired meanwhile. */
-    fun wake() {
-        if (!standingBy) return
+    /**
+     * Behind another app, live TV stops and closes its connection, so a single-connection account is free
+     * for another TV, and nothing asked for meanwhile connects. [comeBack] tunes in the latest. An error
+     * on screen stays there, for the viewer to read and retry.
+     */
+    fun standBy() {
+        hold = Hold.STOPPED
+        if (_state.value is State.Error) return
+        switchJob?.cancel()
+        guard.leaving()
+        loaded = null
+        player.stop()
+        player.clearMediaItems()
+        _state.value = State.Idle
+    }
+
+    /** In front again: lets playback go, and tunes in again what [standBy] stopped. */
+    fun comeBack() {
+        val was = hold
+        hold = Hold.NONE
+        if (was != Hold.STOPPED || _state.value is State.Error) return
         consecutiveFailures = 0
+        // Asked for afresh, as a portal's link may have expired meanwhile.
         current?.let { play(it, debounce = false) }
     }
 
@@ -591,6 +613,8 @@ class PlayerController(
         guard.release()
         player.release()
     }
+
+    private enum class Hold { NONE, PAUSED, STOPPED }
 
     companion object {
         /** How far rewind and fast-forward skip, on screen and on the remote. */

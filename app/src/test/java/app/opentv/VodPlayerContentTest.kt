@@ -793,6 +793,20 @@ class VodPlayerContentTest {
     }
 
     @Test
+    fun `a stream that starts while the app is behind stays paused, as after a dropped connection`() {
+        watchEpisodeTenMinutesIn()
+        lifecycle.goBehind()
+        compose.waitForIdle()
+
+        // What an automatic restart, a step down or a stream that was still being found does.
+        val again = PlayerController.Request(testEpisode(1, 1).key, startPositionMillis = TEN_MINUTES)
+        controller.play(again, debounce = false)
+        players.untilReady(controller.player)
+
+        assertThat(controller.playWhenReady.value).isFalse()
+    }
+
+    @Test
     fun `in picture-in-picture the film plays on when the app is behind another`() {
         PipState.setInPip(true)
         try {

@@ -14,7 +14,6 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import app.opentv.core.PipState
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.drop
 
 /**
  * Runs [onGoneBehind] when the app goes behind another one, and [onBack] when it comes in front again
@@ -32,12 +31,15 @@ fun WhenBehindAnotherApp(onGoneBehind: () -> Unit, onBack: () -> Unit) {
     // Collected rather than read in composition: Compose stops drawing frames while the activity is
     // stopped, so a recomposition keyed on the lifecycle wouldn't run until the app was back in front.
     LaunchedEffect(lifecycle) {
+        var wasBehind = false
         combine(lifecycle.currentStateFlow, PipState.inPip) { state, inPip ->
             !state.isAtLeast(Lifecycle.State.STARTED) && !inPip
         }
             .distinctUntilChanged()
-            // The screen opening in front isn't coming back.
-            .drop(1)
-            .collect { behind -> if (behind) goneBehind() else cameBack() }
+            .collect { behind ->
+                // A screen opened in front isn't coming back; one opened behind (restored there) has gone.
+                if (behind) goneBehind() else if (wasBehind) cameBack()
+                wasBehind = behind
+            }
     }
 }

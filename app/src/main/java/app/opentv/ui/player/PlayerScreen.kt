@@ -100,6 +100,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 
 /**
@@ -195,10 +196,14 @@ fun PlayerScreen(channelId: Long?, onBack: () -> Unit) {
     // Its waits go with [scope], so leaving the player settles on nothing.
     val settled = remember { SettledChannel(scope) { graph.viewerLibrary.live.record(it) } }
     // Started rather than resumed: picture-in-picture is still watching, behind another app isn't.
-    val inFront = LocalLifecycleOwner.current.lifecycle.currentStateFlow.collectAsState().value
-        .isAtLeast(Lifecycle.State.STARTED)
-    val playerState by controller.state.collectAsState()
-    LaunchedEffect(playerState, inFront) { settled.playing(inFront && playerState is PlayerController.State.Playing) }
+    // Collected, not read in composition: Compose draws no frames while the activity is stopped, so a
+    // recomposition wouldn't hear of going behind until the app was in front again.
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
+    LaunchedEffect(controller, lifecycle) {
+        combine(controller.state, lifecycle.currentStateFlow) { state, at ->
+            at.isAtLeast(Lifecycle.State.STARTED) && state is PlayerController.State.Playing
+        }.collect(settled::playing)
+    }
 
     fun showPlaying(channel: Channel) {
         currentId = channel.id
@@ -392,7 +397,7 @@ fun LivePlayerContent(
     val confirmLive = LocalConfirmLive.current
     // Behind another app live TV stops rather than pausing, so the provider's connection closes, and
     // coming back the same channel tunes in again. What live pause held is lost; that's expected.
-    WhenBehindAnotherApp(onGoneBehind = controller::standBy, onBack = controller::wake)
+    WhenBehindAnotherApp(onGoneBehind = controller::standBy, onBack = controller::comeBack)
     val state by controller.state.collectAsState()
     val tracks by controller.tracks.collectAsState()
     // Digits typed on the remote accumulate here, then jump to that channel number after a beat.

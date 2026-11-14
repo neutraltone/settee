@@ -862,6 +862,51 @@ class LivePlayerContentTest {
     }
 
     @Test
+    fun `a channel asked for once the app is behind waits, and comes on when it's back`() {
+        val asked = mutableListOf<MediaKey>()
+        val seven = channelSeven(asked)
+        showChannel(player = seven, start = ::startSeven)
+        lifecycle.goBehind()
+        compose.waitForIdle()
+
+        // A zap that finished looking up its channel after Home was pressed.
+        seven.play(PlayerController.Request(MediaKey.Live(8)), debounce = false)
+        players.advance(1_000)
+
+        assertThat(asked).containsExactly(MediaKey.Live(7))
+        assertThat(seven.player.playbackState).isEqualTo(Player.STATE_IDLE)
+
+        lifecycle.comeBack()
+        compose.waitForIdle()
+        players.untilReady(seven.player)
+
+        assertThat(asked).containsExactly(MediaKey.Live(7), MediaKey.Live(8)).inOrder()
+        assertThat(seven.state.value).isInstanceOf(PlayerController.State.Playing::class.java)
+        seven.release()
+    }
+
+    @Test
+    fun `an error showing as the app goes behind is still there on coming back, and nothing restarted it`() {
+        val failing = players.controller(LIVE, failing = 100)
+        showChannel(player = failing, start = {
+            it.play(PlayerController.Request(MediaKey.Live(1)), debounce = false)
+            players.until { it.state.value is PlayerController.State.Error }
+        })
+        val tries = players.played.size
+
+        lifecycle.goBehind()
+        compose.waitForIdle()
+        players.advance(10_000)
+        lifecycle.comeBack()
+        compose.waitForIdle()
+        players.advance(10_000)
+
+        assertThat(failing.state.value).isInstanceOf(PlayerController.State.Error::class.java)
+        assertThat(players.played).hasSize(tries)
+        failing.release()
+    }
+
+    @Test
     fun `in picture-in-picture the channel plays on when the app is behind another`() {
         PipState.setInPip(true)
         try {

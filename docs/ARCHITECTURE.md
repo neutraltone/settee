@@ -238,11 +238,13 @@ player behind the next app. Left alone it carries on there: its sound over the o
 full-screen players ask for audio focus; a muted preview never does, or it would pause the
 viewer's music), and live TV holding the provider's connection that a single-connection account
 needs for another TV. `WhenBehindAnotherApp` acts when the activity stops outside
-picture-in-picture: a film or episode pauses and saves its resume point, and stays paused on the
-way back; live TV is `standBy()`ed, stopped rather than paused so the connection closes, and
-`wake()` tunes the same channel in again. Neither releases the player. It collects the lifecycle
-rather than reading it in composition, because Compose draws no frames while the activity is
-stopped.
+picture-in-picture: a film or episode `pauseBehind()`s and saves its resume point, and stays
+paused on the way back; live TV is `standBy()`ed, stopped rather than paused so the connection
+closes, and `comeBack()` tunes the channel in again. The hold lives in `PlayerController`, not the
+screens, because every way a stream starts goes through `play()`: an automatic restart, a step
+down, a zap finishing or a link arriving after Home was pressed would otherwise start the sound
+again behind the other app. Neither releases the player. It collects the lifecycle rather than
+reading it in composition, because Compose draws no frames while the activity is stopped.
 
 ### Retries are tuned for IPTV, not for CDNs
 
