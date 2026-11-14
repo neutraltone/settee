@@ -61,6 +61,12 @@ interface SmbReader : Closeable {
 
     /** Reads up to [length] bytes at [fileOffset]; returns bytes read or -1 at EOF. One SMB round trip. */
     fun readAt(buffer: ByteArray, fileOffset: Long, bufferOffset: Int, length: Int): Int
+
+    /**
+     * The file's size now, asked again on this open handle: how a recording being written is seen to
+     * grow without reconnecting. One SMB round trip; a reader that can't ask again gives [length].
+     */
+    fun endOfFile(): Long = length
 }
 
 /**
@@ -77,6 +83,8 @@ class SmbReadHandle(
 ) : SmbReader {
     override fun readAt(buffer: ByteArray, fileOffset: Long, bufferOffset: Int, length: Int): Int =
         file.read(buffer, fileOffset, bufferOffset, length)
+
+    override fun endOfFile(): Long = file.fileInformation.standardInformation.endOfFile
 
     override fun close() {
         runCatching { file.close() }

@@ -10,8 +10,10 @@ import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import app.opentv.data.db.OpenTvDatabase
 import app.opentv.data.model.Episode
+import app.opentv.data.model.PlaybackPosition
 import app.opentv.data.model.SeriesRef
 import app.opentv.data.repo.CoverStatus
+import app.opentv.data.repo.MediaKey
 import app.opentv.data.repo.ViewerLibrary
 import app.opentv.data.repo.coverStatuses
 import com.google.common.truth.Truth.assertThat
@@ -114,9 +116,83 @@ class CoverStatusTest {
         assertThat(library.coverStatuses().first().ofSeries(show)).isEqualTo(CoverStatus.NewEpisode)
     }
 
+    @Test
+    fun `with many shows played, each cover goes by that show's own episodes`() = runTest {
+        playManyShows()
+
+        val covers = library.coverStatuses().first()
+
+        (0 until SHOWS).forEach { show ->
+            val ref = SeriesRef(sourceId = 1, seriesId = "s$show")
+            val expected = if (show % 2 == 0) {
+                CoverStatus.UpNext(manyShowsEpisode(show, PLAYED + 1))
+            } else {
+                CoverStatus.InProgress(
+                    progress = 0.25f,
+                    remainingMillis = 1_800_000,
+                    episode = manyShowsEpisode(show, PLAYED),
+                )
+            }
+            assertThat(covers.ofSeries(ref)).isEqualTo(expected)
+        }
+    }
+
+    @Test
+    fun `working out the covers reads each saved position's key a few times, not once per show`() = runTest {
+        playManyShows()
+        var parses = 0
+        MediaKey.onParse = { parses++ }
+        try {
+            library.coverStatuses().first()
+        } finally {
+            MediaKey.onParse = null
+        }
+
+        // Each position's key is read by Continue Watching's movies, its series and the covers; once
+        // per show would be SHOWS * SHOWS * PLAYED.
+        assertThat(parses).isAtMost(PARSES_PER_POSITION * SHOWS * PLAYED)
+    }
+
+    /**
+     * [SHOWS] shows of 30 episodes, each played in order through its first [PLAYED]: the last of them
+     * to the end in even-numbered shows, and a quarter of the way in odd-numbered ones.
+     */
+    private suspend fun playManyShows() {
+        db.episodes().upsertAll((0 until SHOWS).flatMap { show -> (1..30).map { manyShowsEpisode(show, it) } })
+        db.positions().upsertAll(
+            (0 until SHOWS).flatMap { show ->
+                (1..PLAYED).map { number ->
+                    val partWay = show % 2 == 1 && number == PLAYED
+                    PlaybackPosition(
+                        profileId = 1,
+                        mediaKey = "ep:${manyShowsEpisode(show, number).id}",
+                        positionMillis = if (partWay) 600_000 else 2_400_000,
+                        durationMillis = 2_400_000,
+                        updatedAtMillis = now + show * 100L + number,
+                    )
+                }
+            },
+        )
+    }
+
+    private fun manyShowsEpisode(show: Int, number: Int) = testEpisode(1, number).copy(
+        id = show * 100L + number,
+        seriesId = "s$show",
+        episodeId = "$show-$number",
+    )
+
     /** Two seasons of three. */
     private val episodes = listOf(1, 2).flatMap { season -> (1..3).map { number -> testEpisode(season, number) } }
 
     private suspend fun watch(ep: Episode) =
         library.recordProgress("ep:${ep.id}", positionMillis = 2_400_000, durationMillis = 2_400_000)
+
+    private companion object {
+        const val SHOWS = 100
+
+        /** Episodes played of each show: 2,000 positions in all. */
+        const val PLAYED = 20
+
+        const val PARSES_PER_POSITION = 5
+    }
 }

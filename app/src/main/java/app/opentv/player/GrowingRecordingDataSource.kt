@@ -38,14 +38,15 @@ import kotlinx.coroutines.runBlocking
  * account, where a second live stream would get the first one cut off.
  *
  * Addressed by `optvrec://<recordingId>`. Internal recordings tail a local file; NAS recordings tail
- * the SMB file (re-reading past the last size, and reopening the handle if the server's cached
- * end-of-file hasn't caught up to what the recorder has appended).
+ * the SMB file (asking the open handle for its end of file, and reopening it only after a long stall
+ * in case the server caches the end of file on an open handle).
  */
 @OptIn(UnstableApi::class)
 class GrowingRecordingDataSource internal constructor(
     private val context: Context,
     private val openSmb: (locator: String) -> SmbReader,
     private val pollMillis: Long = POLL_MILLIS,
+    private val sleep: (millis: Long) -> Unit = Thread::sleep,
 ) : BaseDataSource(true) {
 
     constructor(context: Context) : this(
@@ -66,6 +67,10 @@ class GrowingRecordingDataSource internal constructor(
     private var smb: SmbReader? = null
     private var smbLocator: String = ""
     private val readAhead = SmbReadAhead()
+
+    // Polls at the SMB growing edge since bytes last arrived; the handle is reopened once it reaches
+    // REOPEN_AFTER_POLLS. Kept across reads so a server whose answers never move still gets reopened.
+    private var stalledPolls = 0
 
     override fun open(dataSpec: DataSpec): Long {
         transferInitializing(dataSpec)
@@ -92,7 +97,7 @@ class GrowingRecordingDataSource internal constructor(
             var waited = 0L
             while (!target.exists() && waited < OPEN_WAIT_MILLIS) {
                 if (closed) throw IOException("closed while waiting for recording $recordingId")
-                Thread.sleep(pollMillis)
+                sleep(pollMillis)
                 waited += pollMillis
             }
             if (!target.exists()) throw IOException("Recording $recordingId file not ready: $locator")
@@ -114,7 +119,7 @@ class GrowingRecordingDataSource internal constructor(
             if (closed) throw IOException("closed while opening $smbLocator")
             val handle = runCatching { openSmb(smbLocator) }.getOrNull()
             if (handle != null) return handle
-            Thread.sleep(pollMillis)
+            sleep(pollMillis)
             waited += pollMillis
         }
         throw IOException("NAS recording $recordingId not ready: $smbLocator")
@@ -122,7 +127,8 @@ class GrowingRecordingDataSource internal constructor(
 
     override fun read(buffer: ByteArray, offset: Int, length: Int): Int {
         if (length == 0) return 0
-        return if (smb != null) readSmb(buffer, offset, length) else readLocal(buffer, offset, length)
+        // By locator, not by handle: a reopen that failed leaves no handle, and is retried.
+        return if (smbLocator.isNotEmpty()) readSmb(buffer, offset, length) else readLocal(buffer, offset, length)
     }
 
     private fun readLocal(buffer: ByteArray, offset: Int, length: Int): Int {
@@ -142,20 +148,19 @@ class GrowingRecordingDataSource internal constructor(
                 if (f.length() - position > 0) continue
                 return C.RESULT_END_OF_INPUT
             }
-            if (sleep()) return C.RESULT_END_OF_INPUT
+            if (pollOnce()) return C.RESULT_END_OF_INPUT
         }
         return C.RESULT_END_OF_INPUT
     }
 
     private fun readSmb(buffer: ByteArray, offset: Int, length: Int): Int {
-        var stallPolls = 0
         while (!closed) {
-            if (smb == null) return C.RESULT_END_OF_INPUT
             // A short chunk here is the growing edge, not the end: its bytes are served, and the
             // next miss fetches again from wherever they ran out.
             val read = runCatching { readAhead.read(position, buffer, offset, length) }.getOrDefault(-1)
             if (read > 0) {
                 position += read
+                stalledPolls = 0
                 bytesTransferred(read)
                 return read
             }
@@ -169,23 +174,45 @@ class GrowingRecordingDataSource internal constructor(
                 }
                 return C.RESULT_END_OF_INPUT
             }
-            if (sleep()) return C.RESULT_END_OF_INPUT
-            // Some servers cache the end-of-file on an open handle, so a plain re-read never sees the
-            // freshly-appended bytes. After a short stall, reopen the handle to refresh it.
-            if (++stallPolls >= REOPEN_AFTER_POLLS) {
-                stallPolls = 0
-                runCatching { smb?.close() }
-                smb = runCatching { openSmb(smbLocator) }.getOrNull()
-                readAhead.reader = smb
-                if (smb == null) return C.RESULT_END_OF_INPUT
-            }
+            if (!awaitSmbGrowth()) return C.RESULT_END_OF_INPUT
         }
         return C.RESULT_END_OF_INPUT
     }
 
+    /**
+     * Waits at the growing edge until there may be more to read: the open handle's end of file has
+     * passed [position], the capture has finished, or the handle was reopened. False if closed or
+     * interrupted.
+     *
+     * The recorder's buffered stream lands about a megabyte at a time, seconds apart, so asking the
+     * open handle is what keeps up. Reconnecting (a new client, login and share) on each of those
+     * waits cost a connection every step, and one that failed ended playback mid-recording.
+     */
+    private fun awaitSmbGrowth(): Boolean {
+        while (!closed) {
+            if (pollOnce()) return false
+            if (!RecordingLiveState.isActive(recordingId)) return true
+            // Some servers cache the end of file on an open handle, so neither asking nor reading
+            // through it sees what's been appended: after a long stall, reopen it to refresh it.
+            // Counted whatever the handle answers, in case its answer moves while its reads don't.
+            // While the capture runs a reopen that fails is tried again later, not taken as the end.
+            if (++stalledPolls >= REOPEN_AFTER_POLLS) {
+                stalledPolls = 0
+                runCatching { smb?.close() }
+                smb = runCatching { openSmb(smbLocator) }.getOrNull()
+                readAhead.reader = smb
+                if (smb != null) return true
+                continue
+            }
+            val end = smb?.let { runCatching { it.endOfFile() }.getOrNull() }
+            if (end != null && end > position) return true
+        }
+        return false
+    }
+
     /** Sleep one poll; returns true if interrupted (caller should end). */
-    private fun sleep(): Boolean = try {
-        Thread.sleep(pollMillis)
+    private fun pollOnce(): Boolean = try {
+        sleep(pollMillis)
         false
     } catch (e: InterruptedException) {
         Thread.currentThread().interrupt()
@@ -200,6 +227,8 @@ class GrowingRecordingDataSource internal constructor(
         runCatching { smb?.close() }
         file = null
         smb = null
+        smbLocator = ""
+        stalledPolls = 0
         readAhead.reader = null
         if (opened) {
             opened = false
@@ -219,7 +248,10 @@ class GrowingRecordingDataSource internal constructor(
         /** How long open() waits for the capture to create the file before giving up. */
         const val OPEN_WAIT_MILLIS = 8_000L
 
-        /** Reopen an SMB read handle after this many idle polls (~2s), to refresh a cached EOF. */
-        const val REOPEN_AFTER_POLLS = 8
+        /**
+         * Reopen an SMB read handle after this many polls without new bytes (~10 s), to refresh a
+         * server's cached end of file. Longer than the recorder takes to land its next megabyte.
+         */
+        const val REOPEN_AFTER_POLLS = 40
     }
 }

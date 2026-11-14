@@ -689,7 +689,26 @@ private class PlayedSnapshot(
     val positions: List<PlaybackPosition>,
     val ofPlayedSeries: List<Episode>,
     val dismissals: List<SeriesDismissal>,
-)
+) {
+    /**
+     * Each played series with the positions in its own episodes (still newest first). Grouped once
+     * for Continue Watching and the covers both: handing every series all the positions would read
+     * each one's key once per series, every time a position is saved.
+     */
+    val series: List<PlayedSeries> by lazy {
+        val episodesOf = ofPlayedSeries.groupBy { SeriesRef(it.sourceId, it.seriesId) }
+        val refOf = ofPlayedSeries.associate { it.id to SeriesRef(it.sourceId, it.seriesId) }
+        positions
+            .mapNotNull { pos -> refOf[pos.episodeId]?.let { it to pos } }
+            .groupBy({ it.first }, { it.second })
+            .map { (ref, mine) -> PlayedSeries(ref, SeriesEpisodes(episodesOf[ref].orEmpty()), mine) }
+    }
+}
+
+/** One series a Profile has played: its [episodes], and the Profile's [positions] in them, newest first. */
+private class PlayedSeries(val ref: SeriesRef, val episodes: SeriesEpisodes, val positions: List<PlaybackPosition>) {
+    val progress: SeriesProgress? by lazy { episodes.progressOfOwn(positions) }
+}
 
 /** A card with when the Profile last played what it stands for, so movies and series can be interleaved. */
 private data class Played(val card: ContinueWatchingCard, val playedAtMillis: Long)
@@ -768,25 +787,16 @@ private class ContinueWatchingCards(
 
     /** Continue Watching's series cards in [played]. */
     suspend fun seriesFrom(played: PlayedSnapshot): List<Played> {
-        val list = played.positions
-        val dismissalOf = played.dismissals.associateBy { it.sourceId to it.seriesId }
-        val positionOf = list.associateBy { it.mediaKey }
-        val ofPlayedSeries = played.ofPlayedSeries
-        val episodesOf = ofPlayedSeries.groupBy { it.sourceId to it.seriesId }
-        val episodeById = ofPlayedSeries.associateBy { it.id }
-        // Still newest first within each series.
-        val positionsOf = list
-            .mapNotNull { pos -> episodeById[pos.episodeId]?.let { (it.sourceId to it.seriesId) to pos } }
-            .groupBy({ it.first }, { it.second })
+        val dismissalOf = played.dismissals.associateBy { SeriesRef(it.sourceId, it.seriesId) }
+        val positionOf = played.positions.associateBy { it.mediaKey }
         // Capped on cards, not series: a series with nothing left to watch takes no slot. Every
         // series is built before the cap, since a New Episode can lift one long unplayed to the top.
-        return positionsOf
-            .mapNotNull { (series, mine) ->
-                val progress = SeriesEpisodes(episodesOf[series].orEmpty()).progressIn(mine)
-                    ?: return@mapNotNull null
-                val dismissal = dismissalOf[series]
+        return played.series
+            .mapNotNull { series ->
+                val progress = series.progress ?: return@mapNotNull null
+                val dismissal = dismissalOf[series.ref]
                 // The first is when the series was last played or marked, Unwatched marks included.
-                val touchedAt = mine.first().updatedAtMillis
+                val touchedAt = series.positions.first().updatedAtMillis
                 if (dismissal != null && stillDismissed(dismissal, touchedAt)) return@mapNotNull null
                 seriesCard(progress, positionOf)?.let { Played(it, placedAt(it, progress.position)) }
             }
@@ -840,11 +850,16 @@ private class SeriesEpisodes(episodes: List<Episode>) {
      * when it has played none of these episodes. An episode marked Unwatched is as if never played:
      * it doesn't mean the Profile has stopped following the series, so Up Next comes from what remains.
      */
-    fun progressIn(positions: List<PlaybackPosition>): SeriesProgress? {
-        val latest = positions.filter { it.episodeId in ids && it.mark != HandMark.UNWATCHED }
+    fun progressIn(positions: List<PlaybackPosition>): SeriesProgress? =
+        progressOfOwn(positions.filter { it.episodeId in ids })
+
+    /** [progressIn] for [own], positions already known to be in these episodes, so their keys aren't read again. */
+    fun progressOfOwn(own: List<PlaybackPosition>): SeriesProgress? {
+        val latest = own.filter { it.mark != HandMark.UNWATCHED }
             .maxByOrNull { it.updatedAtMillis }
             ?: return null
-        val at = ordered.indexOfFirst { it.id == latest.episodeId }
+        val latestId = latest.episodeId
+        val at = ordered.indexOfFirst { it.id == latestId }
         val played = ordered[at]
         // A show of several Versions lists each episode once per Version: the same one in another
         // Version comes next in this order, and isn't what follows it. One a provider lists twice in
@@ -966,8 +981,8 @@ private fun coverStatusesIn(played: PlayedSnapshot): CoverStatuses {
         coverStatusOf(statusOf(pos))?.let { id to it }
     }.toMap()
     val positionOf = list.associateBy { it.mediaKey }
-    val series = played.ofPlayedSeries.groupBy { SeriesRef(it.sourceId, it.seriesId) }.mapNotNull { (ref, theirs) ->
-        SeriesEpisodes(theirs).progressIn(list)?.let { seriesCoverStatus(it, positionOf) }?.let { ref to it }
+    val series = played.series.mapNotNull { series ->
+        series.progress?.let { seriesCoverStatus(it, positionOf) }?.let { series.ref to it }
     }.toMap()
     return CoverStatuses(movies, series)
 }
