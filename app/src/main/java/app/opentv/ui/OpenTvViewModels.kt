@@ -475,6 +475,10 @@ class ChannelsViewModel @JvmOverloads constructor(
      * between categories and refreshes at most twice an hour; the underlying Room flow also
      * re-emits on its own when an EPG sync lands new programmes, at most every couple of seconds
      * however many batches it writes (`EpgRepository.observeGuideWindow`, #257).
+     *
+     * Held only while the guide is on screen: the Live screen collects [guideRows] only while it's
+     * started, so under Settings, Search or a title's page, where it stays built (`KeptShell`), this
+     * stops after the usual five seconds rather than regrouping every EPG write behind them (#327).
      */
     private val programmeIndex: StateFlow<ProgrammeIndex> =
         guideWindow

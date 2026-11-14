@@ -50,6 +50,7 @@ import androidx.compose.ui.zIndex
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import app.opentv.R
 import app.opentv.core.ServiceLocator
@@ -111,13 +112,18 @@ fun LiveScreen(
     val previewEnabled by settings.guidePreviewVideo.collectAsState()
 
     val categories by viewModel.visibleCategoryGroups.collectAsState()
-    val guideRows by viewModel.guideRows.collectAsState()
+    // Settings, Search and title pages keep the guide built under them (KeptShell), and the main
+    // screen's lifecycle drops below STARTED once one has covered it. Collected only while it's
+    // started, the guide's flows lose their last subscriber there, so the day's programme index is
+    // let go and an EPG sync started from Settings doesn't regroup it and rebuild the rows behind it
+    // (#327). Back shows the last rows at once, and they refresh from what was written meanwhile.
+    val guideRows by viewModel.guideRows.collectAsStateWithLifecycle()
     val rows = guideRows.rows
     val selectedCategory by viewModel.selectedCategory.collectAsState()
     val favouritesOnly by viewModel.favouritesOnly.collectAsState()
     val sources by viewModel.sources.collectAsState()
-    val windowStart by viewModel.windowStartMillis.collectAsState()
-    val windowEnd by viewModel.windowEndMillis.collectAsState()
+    val windowStart by viewModel.windowStartMillis.collectAsStateWithLifecycle()
+    val windowEnd by viewModel.windowEndMillis.collectAsStateWithLifecycle()
     val rowsBuilt by viewModel.rowsBuilt.collectAsState()
     val guideDayOffset by viewModel.guideDayOffset.collectAsState()
     // Tri-state: null = still checking the catalogue, true = channels on disk, false = confirmed
