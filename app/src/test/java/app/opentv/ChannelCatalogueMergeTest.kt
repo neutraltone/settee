@@ -9,6 +9,7 @@ import android.content.Context
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import app.opentv.data.db.OpenTvDatabase
+import app.opentv.data.db.StagedBatches
 import app.opentv.data.model.Channel
 import app.opentv.data.model.ChannelEpgMatch
 import app.opentv.data.model.ChannelUserState
@@ -88,6 +89,59 @@ class ChannelCatalogueMergeTest {
         assertThat(after.name).isEqualTo("Station a (2)")
         assertThat(after.streamUrl).isEqualTo("https://example.com/a/2.ts")
         assertThat(after.lastSeenMillis).isEqualTo(2)
+    }
+
+    /** [ChannelDao.replaceCatalogue] as Xtream's list goes through it, staged a batch at a time. */
+    private suspend fun replaceStaged(sourceId: Long, incoming: List<Channel>, syncStamp: Long) =
+        StagedBatches.stage(null, Channel.serializer()) { stage -> stage(incoming) }.use {
+            channels.replaceCatalogue(sourceId, syncStamp, it)
+        }
+
+    private suspend fun editsComeBackAfterAMissedRefresh(
+        replace: suspend (sourceId: Long, incoming: List<Channel>, syncStamp: Long) -> Unit,
+    ) {
+        val sourceId = source("Home")
+        replace(sourceId, listOf(fromProvider(sourceId, "a"), fromProvider(sourceId, "b")), 1)
+        val b = stored(sourceId, "b")
+        channels.setSortIndex(b.id, 7)
+        channels.setCustomName(b.id, "My Station")
+        channels.setEpgOverride(b.id, "override.guide")
+        channels.setMatchedEpgIds(listOf(ChannelEpgMatch(b.id, "matched.guide")))
+
+        replace(sourceId, listOf(fromProvider(sourceId, "a", refresh = 2)), 2)
+        replace(sourceId, listOf(fromProvider(sourceId, "a", refresh = 3), fromProvider(sourceId, "b", refresh = 3)), 3)
+
+        val back = stored(sourceId, "b")
+        assertThat(back.sortIndex).isEqualTo(7)
+        assertThat(back.customName).isEqualTo("My Station")
+        assertThat(back.epgOverrideId).isEqualTo("override.guide")
+        assertThat(back.matchedEpgId).isEqualTo("matched.guide")
+        assertThat(back.name).isEqualTo("Station b (3)")
+    }
+
+    @Test
+    fun `a channel missing from one refresh comes back with the viewer's edits`() = runTest {
+        editsComeBackAfterAMissedRefresh { sourceId, incoming, stamp ->
+            channels.replaceCatalogue(sourceId, incoming, stamp)
+        }
+    }
+
+    @Test
+    fun `a channel missing from one staged refresh comes back with the viewer's edits`() = runTest {
+        editsComeBackAfterAMissedRefresh { sourceId, incoming, stamp -> replaceStaged(sourceId, incoming, stamp) }
+    }
+
+    @Test
+    fun `a channel's edits are not carried to another source's channel of the same stream id`() = runTest {
+        val home = source("Home")
+        val other = source("Other")
+        channels.replaceCatalogue(home, listOf(fromProvider(home, "a"), fromProvider(home, "b")), syncStamp = 1)
+        channels.setCustomName(stored(home, "b").id, "My Station")
+        channels.replaceCatalogue(home, listOf(fromProvider(home, "a")), syncStamp = 2)
+
+        channels.replaceCatalogue(other, listOf(fromProvider(other, "b")), syncStamp = 3)
+
+        assertThat(stored(other, "b").customName).isNull()
     }
 
     @Test

@@ -215,6 +215,8 @@ class RecordingEngine(
         val ruleId = existing?.id ?: repo.addRule(
             SeriesRule(
                 channelId = channel.id,
+                source = sources.byId(channel.sourceId)?.name.orEmpty(),
+                streamId = channel.streamId,
                 channelName = channel.displayName,
                 titleKey = key,
                 title = title,
