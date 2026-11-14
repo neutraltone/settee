@@ -313,6 +313,16 @@
     <string name="error_tmdb_key_rejected">TMDB n\'a pas accepté cette clé. Vérifiez que vous avez copié toute l\'API Key, puis réessayez.</string>
     <string name="error_tmdb_unreachable_tv">Impossible de joindre TMDB. Vérifiez que ce téléviseur est connecté, puis réessayez.</string>
     <string name="error_tmdb_unreachable_device">Impossible de joindre TMDB. Vérifiez que cet appareil est connecté, puis réessayez.</string>
+    <string name="error_database_checking_tv">Settee n\'arrive pas à lire ce qu\'il a enregistré sur cette télé. Recherche d\'une mise à jour qui corrige le problème.</string>
+    <string name="error_database_checking_device">Settee n\'arrive pas à lire ce qu\'il a enregistré sur cet appareil. Recherche d\'une mise à jour qui corrige le problème.</string>
+    <string name="error_database_update_tv">Settee n\'arrive pas à lire ce qu\'il a enregistré sur cette télé, et une mise à jour corrige le problème.</string>
+    <string name="error_database_update_device">Settee n\'arrive pas à lire ce qu\'il a enregistré sur cet appareil, et une mise à jour corrige le problème.</string>
+    <string name="error_database_no_update_tv">Settee n\'arrive pas à lire ce qu\'il a enregistré sur cette télé, et aucune mise à jour ne corrige encore le problème. Effacer ses données dans les paramètres des applications de la télé le fait repartir de zéro, mais vous perdez vos fournisseurs, vos favoris et votre historique.</string>
+    <string name="error_database_no_update_device">Settee n\'arrive pas à lire ce qu\'il a enregistré sur cet appareil, et aucune mise à jour ne corrige encore le problème. Effacer ses données dans les paramètres de l\'application le fait repartir de zéro, mais vous perdez vos fournisseurs, vos favoris et votre historique.</string>
+    <string name="error_database_offline_tv">Settee n\'arrive pas à lire ce qu\'il a enregistré sur cette télé, et n\'a pas pu chercher de mise à jour. Connectez la télé à Internet et réessayez, ou effacez ses données dans les paramètres des applications de la télé, ce qui supprime vos fournisseurs, vos favoris et votre historique.</string>
+    <string name="error_database_offline_device">Settee n\'arrive pas à lire ce qu\'il a enregistré sur cet appareil, et n\'a pas pu chercher de mise à jour. Connectez l\'appareil à Internet et réessayez, ou effacez ses données dans les paramètres de l\'application, ce qui supprime vos fournisseurs, vos favoris et votre historique.</string>
+    <string name="database_check_again">Vérifier à nouveau</string>
+    <string name="database_see_update">Voir la mise à jour</string>
     <string name="error_tmdb_trouble">TMDB rencontre des problèmes. Cela vient de chez eux, réessayez plus tard.</string>
     <string name="error_opensubtitles_none">OpenSubtitles n\'a pas encore de sous-titres pour ceci.</string>
     <string name="error_opensubtitles_unreachable_tv">Impossible de joindre OpenSubtitles. Vérifiez que ce téléviseur est connecté, puis réessayez.</string>

@@ -7,6 +7,7 @@ package app.opentv.update
 
 import android.app.Application
 import android.content.Context
+import android.content.SharedPreferences
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
@@ -181,13 +182,27 @@ class UpdateViewModel(app: Application) : AndroidViewModel(app) {
                 .getSharedPreferences(APP_PREFS, Context.MODE_PRIVATE)
             val now = System.currentTimeMillis()
             if (now - prefs.getLong(KEY_LAST_CHECK, 0L) < CHECK_INTERVAL_MS) return@launch
-
-            val outcome = checker.check()
-            // A failed check (offline, or a release still missing its APK) mustn't hold the next
-            // one off for 6 hours: the APK usually turns up minutes later when the job is re-run.
-            if (outcome !is UpdateChecker.Outcome.CouldNotCheck) prefs.edit { putLong(KEY_LAST_CHECK, now) }
-            if (outcome is UpdateChecker.Outcome.Available) _state.value = UpdateUiState.Available(outcome.update)
+            check(prefs, now)
         }
+    }
+
+    /**
+     * Checks whatever the throttle says. For a database Settee can't open (#334): a newer release is the
+     * fix, and the viewer is stuck on that one screen until it arrives, so waiting out six hours since
+     * the last check would leave them there.
+     */
+    suspend fun checkNow(): UpdateChecker.Outcome {
+        val prefs = getApplication<Application>().getSharedPreferences("opentv", Context.MODE_PRIVATE)
+        return check(prefs, System.currentTimeMillis())
+    }
+
+    private suspend fun check(prefs: SharedPreferences, now: Long): UpdateChecker.Outcome {
+        val outcome = checker.check()
+        // A failed check (offline, or a release still missing its APK) mustn't hold the next
+        // one off for 6 hours: the APK usually turns up minutes later when the job is re-run.
+        if (outcome !is UpdateChecker.Outcome.CouldNotCheck) prefs.edit { putLong(KEY_LAST_CHECK, now) }
+        if (outcome is UpdateChecker.Outcome.Available) _state.value = UpdateUiState.Available(outcome.update)
+        return outcome
     }
 
     fun install() {

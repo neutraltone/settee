@@ -21,6 +21,25 @@ a television (`isRunningOnTelevision`), "this device" on phones and tablets.
 Who builds them: `PlaybackErrors` for playback, `ErrorWording` (`core/`) for everything else, through
 `ServiceLocator.errorWording`. Change a mapping here and in the code together.
 
+## Starting up
+
+Worded by `ErrorWording.ofDatabase`, drawn by `ui/DatabaseGate` in place of every screen. The app can't
+run without its database, so the way out is a release that fixes it or clearing the app's data. The
+screen looks for a release straight away, and the sentence follows what that found. Check again (See
+the update once one is found) looks again and takes the highlight, unless the update panel is up
+(`docs/RELEASING.md`, "When an update can't open the database").
+
+The trigger for all four: the database wouldn't open at launch (`OpenTvDatabase.wontOpen`: Room's
+`IllegalStateException`, SQLite's `SQLException`). Whose end: Settee's, from a database left by a newer
+build after a downgrade, or a migration that doesn't match its schema. The detail is the exception type.
+
+| Update check | String key | Sentence |
+|---|---|---|
+| Still checking | `error_database_checking_tv` / `_device` | Settee can't read what it saved on this TV. Checking for an update that fixes it. |
+| Found one (the update panel opens over it) | `error_database_update_tv` / `_device` | Settee can't read what it saved on this TV, and there's an update that fixes it. |
+| Up to date | `error_database_no_update_tv` / `_device` | Settee can't read what it saved on this TV, and there's no update to fix it yet. Clearing its data in this TV's settings for apps starts it afresh, but loses your providers, Favourites and watch history. |
+| Couldn't check | `error_database_offline_tv` / `_device` | Settee can't read what it saved on this TV, and couldn't check for an update. Connect this TV to the internet and check again, or clear its data in this TV's settings for apps, which loses your providers, Favourites and watch history. |
+
 ## Playback
 
 Movies and Shows' error panel, the live player, the Home Live Preview, the guide's preview, and a

@@ -313,6 +313,16 @@
     <string name="error_tmdb_key_rejected">TMDB nie przyjął tego klucza. Sprawdź, czy skopiowano cały API Key, i spróbuj ponownie.</string>
     <string name="error_tmdb_unreachable_tv">Nie można połączyć się z TMDB. Sprawdź, czy ten telewizor jest online, i spróbuj ponownie.</string>
     <string name="error_tmdb_unreachable_device">Nie można połączyć się z TMDB. Sprawdź, czy to urządzenie jest online, i spróbuj ponownie.</string>
+    <string name="error_database_checking_tv">Settee nie może odczytać tego, co zapisał na tym telewizorze. Szukam aktualizacji, która to naprawi.</string>
+    <string name="error_database_checking_device">Settee nie może odczytać tego, co zapisał na tym urządzeniu. Szukam aktualizacji, która to naprawi.</string>
+    <string name="error_database_update_tv">Settee nie może odczytać tego, co zapisał na tym telewizorze, a jest aktualizacja, która to naprawia.</string>
+    <string name="error_database_update_device">Settee nie może odczytać tego, co zapisał na tym urządzeniu, a jest aktualizacja, która to naprawia.</string>
+    <string name="error_database_no_update_tv">Settee nie może odczytać tego, co zapisał na tym telewizorze, a nie ma jeszcze aktualizacji, która to naprawi. Wyczyszczenie jego danych w ustawieniach aplikacji telewizora zaczyna od nowa, ale tracisz dostawców, ulubione i historię oglądania.</string>
+    <string name="error_database_no_update_device">Settee nie może odczytać tego, co zapisał na tym urządzeniu, a nie ma jeszcze aktualizacji, która to naprawi. Wyczyszczenie jego danych w ustawieniach aplikacji zaczyna od nowa, ale tracisz dostawców, ulubione i historię oglądania.</string>
+    <string name="error_database_offline_tv">Settee nie może odczytać tego, co zapisał na tym telewizorze, i nie mógł sprawdzić aktualizacji. Połącz telewizor z internetem i sprawdź ponownie albo wyczyść jego dane w ustawieniach aplikacji telewizora, tracąc dostawców, ulubione i historię oglądania.</string>
+    <string name="error_database_offline_device">Settee nie może odczytać tego, co zapisał na tym urządzeniu, i nie mógł sprawdzić aktualizacji. Połącz urządzenie z internetem i sprawdź ponownie albo wyczyść jego dane w ustawieniach aplikacji, tracąc dostawców, ulubione i historię oglądania.</string>
+    <string name="database_check_again">Sprawdź ponownie</string>
+    <string name="database_see_update">Zobacz aktualizację</string>
     <string name="error_tmdb_trouble">TMDB ma problemy. Leżą po ich stronie, więc spróbuj ponownie później.</string>
     <string name="error_opensubtitles_none">OpenSubtitles nie ma jeszcze napisów do tego.</string>
     <string name="error_opensubtitles_unreachable_tv">Nie można połączyć się z OpenSubtitles. Sprawdź, czy ten telewizor jest online, i spróbuj ponownie.</string>

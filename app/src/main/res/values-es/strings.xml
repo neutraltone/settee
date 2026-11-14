@@ -313,6 +313,16 @@
     <string name="error_tmdb_key_rejected">TMDB no aceptó esa clave. Comprueba que copiaste la API Key completa y vuelve a intentarlo.</string>
     <string name="error_tmdb_unreachable_tv">No se puede conectar con TMDB. Comprueba que esta tele está conectada y vuelve a intentarlo.</string>
     <string name="error_tmdb_unreachable_device">No se puede conectar con TMDB. Comprueba que este dispositivo está conectado y vuelve a intentarlo.</string>
+    <string name="error_database_checking_tv">Settee no puede leer lo que guardó en esta tele. Buscando una actualización que lo arregle.</string>
+    <string name="error_database_checking_device">Settee no puede leer lo que guardó en este dispositivo. Buscando una actualización que lo arregle.</string>
+    <string name="error_database_update_tv">Settee no puede leer lo que guardó en esta tele, y hay una actualización que lo arregla.</string>
+    <string name="error_database_update_device">Settee no puede leer lo que guardó en este dispositivo, y hay una actualización que lo arregla.</string>
+    <string name="error_database_no_update_tv">Settee no puede leer lo que guardó en esta tele, y aún no hay una actualización que lo arregle. Borrar sus datos en los ajustes de aplicaciones de la tele lo deja como nuevo, pero pierdes tus proveedores, favoritos e historial.</string>
+    <string name="error_database_no_update_device">Settee no puede leer lo que guardó en este dispositivo, y aún no hay una actualización que lo arregle. Borrar sus datos en los ajustes de la aplicación lo deja como nuevo, pero pierdes tus proveedores, favoritos e historial.</string>
+    <string name="error_database_offline_tv">Settee no puede leer lo que guardó en esta tele, y no pudo buscar actualizaciones. Conecta la tele a internet y vuelve a comprobarlo, o borra sus datos en los ajustes de aplicaciones de la tele, con lo que pierdes tus proveedores, favoritos e historial.</string>
+    <string name="error_database_offline_device">Settee no puede leer lo que guardó en este dispositivo, y no pudo buscar actualizaciones. Conecta el dispositivo a internet y vuelve a comprobarlo, o borra sus datos en los ajustes de la aplicación, con lo que pierdes tus proveedores, favoritos e historial.</string>
+    <string name="database_check_again">Volver a comprobar</string>
+    <string name="database_see_update">Ver la actualización</string>
     <string name="error_tmdb_trouble">TMDB tiene problemas. Son de su lado, así que vuelve a intentarlo más tarde.</string>
     <string name="error_opensubtitles_none">OpenSubtitles aún no tiene subtítulos para esto.</string>
     <string name="error_opensubtitles_unreachable_tv">No se puede conectar con OpenSubtitles. Comprueba que esta tele esté conectada y vuelve a intentarlo.</string>

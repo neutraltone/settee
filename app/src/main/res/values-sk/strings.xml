@@ -313,6 +313,16 @@
     <string name="error_tmdb_key_rejected">TMDB tento kľúč neprijal. Skontrolujte, či ste skopírovali celý API Key, a skúste to znova.</string>
     <string name="error_tmdb_unreachable_tv">TMDB nie je dostupné. Skontrolujte, či je tento televízor online, a skúste to znova.</string>
     <string name="error_tmdb_unreachable_device">TMDB nie je dostupné. Skontrolujte, či je toto zariadenie online, a skúste to znova.</string>
+    <string name="error_database_checking_tv">Settee nedokáže prečítať, čo si uložil na tomto televízore. Hľadám aktualizáciu, ktorá to opraví.</string>
+    <string name="error_database_checking_device">Settee nedokáže prečítať, čo si uložil na tomto zariadení. Hľadám aktualizáciu, ktorá to opraví.</string>
+    <string name="error_database_update_tv">Settee nedokáže prečítať, čo si uložil na tomto televízore, a je dostupná aktualizácia, ktorá to opraví.</string>
+    <string name="error_database_update_device">Settee nedokáže prečítať, čo si uložil na tomto zariadení, a je dostupná aktualizácia, ktorá to opraví.</string>
+    <string name="error_database_no_update_tv">Settee nedokáže prečítať, čo si uložil na tomto televízore, a aktualizácia, ktorá by to opravila, zatiaľ nie je. Vymazanie jeho údajov v nastaveniach aplikácií televízora ho spustí odznova, ale prídete o poskytovateľov, obľúbené a históriu pozerania.</string>
+    <string name="error_database_no_update_device">Settee nedokáže prečítať, čo si uložil na tomto zariadení, a aktualizácia, ktorá by to opravila, zatiaľ nie je. Vymazanie jeho údajov v nastaveniach aplikácie ho spustí odznova, ale prídete o poskytovateľov, obľúbené a históriu pozerania.</string>
+    <string name="error_database_offline_tv">Settee nedokáže prečítať, čo si uložil na tomto televízore, a nemohol vyhľadať aktualizáciu. Pripojte televízor na internet a skontrolujte to znova, alebo vymažte jeho údaje v nastaveniach aplikácií televízora, čím prídete o poskytovateľov, obľúbené a históriu pozerania.</string>
+    <string name="error_database_offline_device">Settee nedokáže prečítať, čo si uložil na tomto zariadení, a nemohol vyhľadať aktualizáciu. Pripojte zariadenie na internet a skontrolujte to znova, alebo vymažte jeho údaje v nastaveniach aplikácie, čím prídete o poskytovateľov, obľúbené a históriu pozerania.</string>
+    <string name="database_check_again">Skontrolovať znova</string>
+    <string name="database_see_update">Zobraziť aktualizáciu</string>
     <string name="error_tmdb_trouble">TMDB má problémy. Sú na ich strane, skúste to teda neskôr.</string>
     <string name="error_opensubtitles_none">OpenSubtitles pre toto zatiaľ nemá titulky.</string>
     <string name="error_opensubtitles_unreachable_tv">OpenSubtitles nie sú dostupné. Skontrolujte, či je tento televízor online, a skúste to znova.</string>

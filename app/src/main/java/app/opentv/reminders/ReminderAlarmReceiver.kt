@@ -18,6 +18,7 @@ import androidx.core.app.NotificationManagerCompat
 import app.opentv.MainActivity
 import app.opentv.R
 import app.opentv.core.ServiceLocator
+import app.opentv.data.db.wontOpen
 import app.opentv.data.model.Reminder
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -45,7 +46,9 @@ class ReminderAlarmReceiver : BroadcastReceiver() {
         val pending = goAsync()
         CoroutineScope(Dispatchers.IO).launch {
             try {
-                val repo = ServiceLocator.get(context).reminderRepository
+                val graph = ServiceLocator.get(context)
+                if (graph.database.wontOpen() != null) return@launch
+                val repo = graph.reminderRepository
                 val reminder = repo.byId(id) ?: return@launch
                 notify(context.applicationContext, reminder)
                 repo.markFired(id)
@@ -59,7 +62,9 @@ class ReminderAlarmReceiver : BroadcastReceiver() {
         val pending = goAsync()
         CoroutineScope(Dispatchers.IO).launch {
             try {
-                val repo = ServiceLocator.get(context).reminderRepository
+                val graph = ServiceLocator.get(context)
+                if (graph.database.wontOpen() != null) return@launch
+                val repo = graph.reminderRepository
                 val now = System.currentTimeMillis()
                 repo.upcoming(now).forEach { r -> ReminderScheduler.set(context, r.id, r.startUtcMillis) }
             } finally {

@@ -313,6 +313,16 @@
     <string name="error_tmdb_key_rejected">O TMDB não aceitou essa chave. Confirme que copiou a API Key inteira e tente novamente.</string>
     <string name="error_tmdb_unreachable_tv">Não é possível ligar ao TMDB. Confirme que esta TV está online e tente novamente.</string>
     <string name="error_tmdb_unreachable_device">Não é possível ligar ao TMDB. Confirme que este dispositivo está online e tente novamente.</string>
+    <string name="error_database_checking_tv">O Settee não consegue ler o que guardou nesta TV. A procurar uma atualização que o resolva.</string>
+    <string name="error_database_checking_device">O Settee não consegue ler o que guardou neste dispositivo. A procurar uma atualização que o resolva.</string>
+    <string name="error_database_update_tv">O Settee não consegue ler o que guardou nesta TV, e há uma atualização que o resolve.</string>
+    <string name="error_database_update_device">O Settee não consegue ler o que guardou neste dispositivo, e há uma atualização que o resolve.</string>
+    <string name="error_database_no_update_tv">O Settee não consegue ler o que guardou nesta TV, e ainda não há atualização que o resolva. Limpar os seus dados nas definições de aplicações da TV recomeça do zero, mas perde os seus fornecedores, favoritos e histórico.</string>
+    <string name="error_database_no_update_device">O Settee não consegue ler o que guardou neste dispositivo, e ainda não há atualização que o resolva. Limpar os seus dados nas definições da aplicação recomeça do zero, mas perde os seus fornecedores, favoritos e histórico.</string>
+    <string name="error_database_offline_tv">O Settee não consegue ler o que guardou nesta TV, e não conseguiu procurar atualizações. Ligue a TV à internet e verifique de novo, ou limpe os seus dados nas definições de aplicações da TV, perdendo os seus fornecedores, favoritos e histórico.</string>
+    <string name="error_database_offline_device">O Settee não consegue ler o que guardou neste dispositivo, e não conseguiu procurar atualizações. Ligue o dispositivo à internet e verifique de novo, ou limpe os seus dados nas definições da aplicação, perdendo os seus fornecedores, favoritos e histórico.</string>
+    <string name="database_check_again">Verificar de novo</string>
+    <string name="database_see_update">Ver a atualização</string>
     <string name="error_tmdb_trouble">O TMDB está com problemas. São do lado deles, por isso tente novamente mais tarde.</string>
     <string name="error_opensubtitles_none">O OpenSubtitles ainda não tem legendas para isto.</string>
     <string name="error_opensubtitles_unreachable_tv">Não foi possível acessar o OpenSubtitles. Verifique se esta TV está online e tente novamente.</string>
