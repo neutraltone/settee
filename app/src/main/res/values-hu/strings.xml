@@ -313,6 +313,8 @@
     <string name="error_tmdb_key_rejected">A TMDB nem fogadta el ezt a kulcsot. Ellenőrizd, hogy a teljes API Key-t másoltad-e, majd próbáld újra.</string>
     <string name="error_tmdb_unreachable_tv">A TMDB nem érhető el. Ellenőrizd, hogy ez a tévé online van-e, majd próbáld újra.</string>
     <string name="error_tmdb_unreachable_device">A TMDB nem érhető el. Ellenőrizd, hogy ez az eszköz online van-e, majd próbáld újra.</string>
+    <string name="error_database_tv">A Settee nem tudja beolvasni, amit ezen a tévén mentett. Frissítse a Downloader 6405610-es kódjával, vagy törölje az adatait a tévé alkalmazásbeállításaiban.</string>
+    <string name="error_database_device">A Settee nem tudja beolvasni, amit ezen az eszközön mentett. Telepítse rá a legújabb kiadást, vagy törölje az adatait az alkalmazás beállításaiban.</string>
     <string name="error_tmdb_trouble">A TMDB-nél gondok vannak. Ez az ő oldalukon van, ezért próbáld újra később.</string>
     <string name="error_opensubtitles_none">Az OpenSubtitlesen még nincs felirat ehhez.</string>
     <string name="error_opensubtitles_unreachable_tv">Az OpenSubtitles nem érhető el. Ellenőrizd, hogy ez a tévé online van-e, majd próbáld újra.</string>

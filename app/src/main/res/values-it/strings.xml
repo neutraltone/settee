@@ -313,6 +313,8 @@
     <string name="error_tmdb_key_rejected">TMDB non ha accettato questa chiave. Controlla di aver copiato tutta la API Key, poi riprova.</string>
     <string name="error_tmdb_unreachable_tv">Impossibile raggiungere TMDB. Controlla che questa TV sia online, poi riprova.</string>
     <string name="error_tmdb_unreachable_device">Impossibile raggiungere TMDB. Controlla che questo dispositivo sia online, poi riprova.</string>
+    <string name="error_database_tv">Settee non riesce a leggere ciò che ha salvato su questa TV. Aggiornalo con il codice Downloader 6405610 o cancella i suoi dati nelle impostazioni delle app della TV.</string>
+    <string name="error_database_device">Settee non riesce a leggere ciò che ha salvato su questo dispositivo. Installa sopra l\'ultima versione o cancella i suoi dati nelle impostazioni dell\'app.</string>
     <string name="error_tmdb_trouble">TMDB ha dei problemi. Sono dalla loro parte, quindi riprova più tardi.</string>
     <string name="error_opensubtitles_none">OpenSubtitles non ha ancora sottotitoli per questo.</string>
     <string name="error_opensubtitles_unreachable_tv">Impossibile raggiungere OpenSubtitles. Controlla che questa TV sia online, poi riprova.</string>

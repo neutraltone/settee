@@ -313,6 +313,8 @@
     <string name="error_tmdb_key_rejected">TMDB no aceptó esa clave. Comprueba que copiaste la API Key completa y vuelve a intentarlo.</string>
     <string name="error_tmdb_unreachable_tv">No se puede conectar con TMDB. Comprueba que esta tele está conectada y vuelve a intentarlo.</string>
     <string name="error_tmdb_unreachable_device">No se puede conectar con TMDB. Comprueba que este dispositivo está conectado y vuelve a intentarlo.</string>
+    <string name="error_database_tv">Settee no puede leer lo que guardó en esta tele. Actualízalo con el código 6405610 de Downloader o borra sus datos en los ajustes de aplicaciones de la tele.</string>
+    <string name="error_database_device">Settee no puede leer lo que guardó en este dispositivo. Instala la última versión encima o borra sus datos en los ajustes de la aplicación.</string>
     <string name="error_tmdb_trouble">TMDB tiene problemas. Son de su lado, así que vuelve a intentarlo más tarde.</string>
     <string name="error_opensubtitles_none">OpenSubtitles aún no tiene subtítulos para esto.</string>
     <string name="error_opensubtitles_unreachable_tv">No se puede conectar con OpenSubtitles. Comprueba que esta tele esté conectada y vuelve a intentarlo.</string>

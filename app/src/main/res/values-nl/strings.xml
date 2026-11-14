@@ -313,6 +313,8 @@
     <string name="error_tmdb_key_rejected">TMDB accepteerde die sleutel niet. Controleer of je de hele API Key hebt gekopieerd en probeer het opnieuw.</string>
     <string name="error_tmdb_unreachable_tv">Kan TMDB niet bereiken. Controleer of deze tv online is en probeer het opnieuw.</string>
     <string name="error_tmdb_unreachable_device">Kan TMDB niet bereiken. Controleer of dit apparaat online is en probeer het opnieuw.</string>
+    <string name="error_database_tv">Settee kan niet lezen wat het op deze tv heeft opgeslagen. Werk het bij met Downloader-code 6405610 of wis de gegevens in de app-instellingen van de tv.</string>
+    <string name="error_database_device">Settee kan niet lezen wat het op dit apparaat heeft opgeslagen. Installeer de nieuwste versie eroverheen of wis de gegevens in de app-instellingen.</string>
     <string name="error_tmdb_trouble">TMDB heeft problemen. Dat ligt bij hen, dus probeer het later opnieuw.</string>
     <string name="error_opensubtitles_none">OpenSubtitles heeft hier nog geen ondertitels voor.</string>
     <string name="error_opensubtitles_unreachable_tv">OpenSubtitles is niet bereikbaar. Controleer of deze tv online is en probeer het opnieuw.</string>

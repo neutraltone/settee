@@ -313,6 +313,8 @@
     <string name="error_tmdb_key_rejected">TMDB bu anahtarı kabul etmedi. API Key\'in tamamını kopyaladığınızdan emin olun, sonra tekrar deneyin.</string>
     <string name="error_tmdb_unreachable_tv">TMDB\'ye ulaşılamıyor. Bu televizyonun çevrimiçi olduğundan emin olun, sonra tekrar deneyin.</string>
     <string name="error_tmdb_unreachable_device">TMDB\'ye ulaşılamıyor. Bu cihazın çevrimiçi olduğundan emin olun, sonra tekrar deneyin.</string>
+    <string name="error_database_tv">Settee bu televizyona kaydettiklerini okuyamıyor. Downloader kodu 6405610 ile güncelleyin veya televizyonun uygulama ayarlarından verilerini temizleyin.</string>
+    <string name="error_database_device">Settee bu cihaza kaydettiklerini okuyamıyor. En son sürümü üzerine yükleyin veya uygulama ayarlarından verilerini temizleyin.</string>
     <string name="error_tmdb_trouble">TMDB sorun yaşıyor. Sorun onlarda, bu yüzden daha sonra tekrar deneyin.</string>
     <string name="error_opensubtitles_none">OpenSubtitles\'ta bunun için henüz altyazı yok.</string>
     <string name="error_opensubtitles_unreachable_tv">OpenSubtitles\'a ulaşılamıyor. Bu televizyonun çevrimiçi olduğunu kontrol edip tekrar deneyin.</string>

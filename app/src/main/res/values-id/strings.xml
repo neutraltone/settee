@@ -313,6 +313,8 @@
     <string name="error_tmdb_key_rejected">TMDB tidak menerima kunci itu. Pastikan Anda menyalin seluruh API Key, lalu coba lagi.</string>
     <string name="error_tmdb_unreachable_tv">Tidak dapat menjangkau TMDB. Pastikan TV ini online, lalu coba lagi.</string>
     <string name="error_tmdb_unreachable_device">Tidak dapat menjangkau TMDB. Pastikan perangkat ini online, lalu coba lagi.</string>
+    <string name="error_database_tv">Settee tidak bisa membaca data yang disimpannya di TV ini. Perbarui dengan kode Downloader 6405610, atau hapus datanya di setelan aplikasi TV ini.</string>
+    <string name="error_database_device">Settee tidak bisa membaca data yang disimpannya di perangkat ini. Pasang rilis terbaru di atasnya, atau hapus datanya di setelan aplikasi.</string>
     <string name="error_tmdb_trouble">TMDB sedang bermasalah. Itu di pihak mereka, jadi coba lagi nanti.</string>
     <string name="error_opensubtitles_none">OpenSubtitles belum punya subtitel untuk ini.</string>
     <string name="error_opensubtitles_unreachable_tv">Tidak dapat menjangkau OpenSubtitles. Pastikan TV ini online, lalu coba lagi.</string>

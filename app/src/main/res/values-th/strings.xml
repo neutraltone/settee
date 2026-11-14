@@ -313,6 +313,8 @@
     <string name="error_tmdb_key_rejected">TMDB ไม่ยอมรับคีย์นี้ ตรวจสอบว่าคัดลอก API Key ครบทั้งหมด แล้วลองอีกครั้ง</string>
     <string name="error_tmdb_unreachable_tv">ติดต่อ TMDB ไม่ได้ ตรวจสอบว่าทีวีเครื่องนี้ออนไลน์อยู่ แล้วลองอีกครั้ง</string>
     <string name="error_tmdb_unreachable_device">ติดต่อ TMDB ไม่ได้ ตรวจสอบว่าอุปกรณ์นี้ออนไลน์อยู่ แล้วลองอีกครั้ง</string>
+    <string name="error_database_tv">Settee อ่านข้อมูลที่บันทึกไว้ในทีวีเครื่องนี้ไม่ได้ อัปเดตด้วยรหัส Downloader 6405610 หรือล้างข้อมูลในการตั้งค่าแอปของทีวี</string>
+    <string name="error_database_device">Settee อ่านข้อมูลที่บันทึกไว้ในอุปกรณ์นี้ไม่ได้ ติดตั้งรุ่นล่าสุดทับ หรือล้างข้อมูลในการตั้งค่าของแอป</string>
     <string name="error_tmdb_trouble">TMDB กำลังมีปัญหา ซึ่งเป็นที่ฝั่งของเขา โปรดลองอีกครั้งภายหลัง</string>
     <string name="error_opensubtitles_none">OpenSubtitles ยังไม่มีคำบรรยายสำหรับเรื่องนี้</string>
     <string name="error_opensubtitles_unreachable_tv">เชื่อมต่อ OpenSubtitles ไม่ได้ ตรวจสอบว่าทีวีเครื่องนี้ออนไลน์อยู่ แล้วลองอีกครั้ง</string>

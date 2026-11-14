@@ -313,6 +313,8 @@
     <string name="error_tmdb_key_rejected">TMDB không chấp nhận khóa đó. Hãy kiểm tra bạn đã sao chép toàn bộ API Key, rồi thử lại.</string>
     <string name="error_tmdb_unreachable_tv">Không kết nối được TMDB. Hãy kiểm tra TV này đang trực tuyến, rồi thử lại.</string>
     <string name="error_tmdb_unreachable_device">Không kết nối được TMDB. Hãy kiểm tra thiết bị này đang trực tuyến, rồi thử lại.</string>
+    <string name="error_database_tv">Settee không đọc được dữ liệu đã lưu trên TV này. Hãy cập nhật bằng mã Downloader 6405610, hoặc xóa dữ liệu của ứng dụng trong phần cài đặt ứng dụng của TV.</string>
+    <string name="error_database_device">Settee không đọc được dữ liệu đã lưu trên thiết bị này. Hãy cài bản mới nhất đè lên, hoặc xóa dữ liệu trong phần cài đặt của ứng dụng.</string>
     <string name="error_tmdb_trouble">TMDB đang gặp sự cố. Lỗi ở phía họ, vì vậy hãy thử lại sau.</string>
     <string name="error_opensubtitles_none">OpenSubtitles chưa có phụ đề cho nội dung này.</string>
     <string name="error_opensubtitles_unreachable_tv">Không kết nối được OpenSubtitles. Hãy kiểm tra TV này đang trực tuyến rồi thử lại.</string>

@@ -313,6 +313,8 @@
     <string name="error_tmdb_key_rejected">TMDB nije prihvatio taj ključ. Provjerite jeste li kopirali cijeli API Key pa pokušajte ponovno.</string>
     <string name="error_tmdb_unreachable_tv">Nije moguće doći do TMDB-a. Provjerite je li ovaj televizor na mreži pa pokušajte ponovno.</string>
     <string name="error_tmdb_unreachable_device">Nije moguće doći do TMDB-a. Provjerite je li ovaj uređaj na mreži pa pokušajte ponovno.</string>
+    <string name="error_database_tv">Settee ne može pročitati ono što je spremio na ovom televizoru. Ažurirajte ga kodom 6405610 u aplikaciji Downloader ili izbrišite njegove podatke u postavkama aplikacija televizora.</string>
+    <string name="error_database_device">Settee ne može pročitati ono što je spremio na ovom uređaju. Instalirajte najnovije izdanje preko njega ili izbrišite njegove podatke u postavkama aplikacije.</string>
     <string name="error_tmdb_trouble">TMDB ima problema. Do njih je, pa pokušajte ponovno kasnije.</string>
     <string name="error_opensubtitles_none">OpenSubtitles još nema titlove za ovo.</string>
     <string name="error_opensubtitles_unreachable_tv">OpenSubtitles nije dostupan. Provjerite je li ovaj televizor na mreži pa pokušajte ponovno.</string>

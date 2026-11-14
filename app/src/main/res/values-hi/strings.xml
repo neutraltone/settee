@@ -313,6 +313,8 @@
     <string name="error_tmdb_key_rejected">TMDB ने यह कुंजी स्वीकार नहीं की। जाँचें कि आपने पूरी API Key कॉपी की है, फिर दोबारा कोशिश करें।</string>
     <string name="error_tmdb_unreachable_tv">TMDB तक नहीं पहुँच पा रहे। जाँचें कि यह टीवी ऑनलाइन है, फिर दोबारा कोशिश करें।</string>
     <string name="error_tmdb_unreachable_device">TMDB तक नहीं पहुँच पा रहे। जाँचें कि यह डिवाइस ऑनलाइन है, फिर दोबारा कोशिश करें।</string>
+    <string name="error_database_tv">Settee इस टीवी पर सहेजा गया डेटा नहीं पढ़ पा रहा है। Downloader कोड 6405610 से इसे अपडेट करें, या टीवी की ऐप सेटिंग में इसका डेटा साफ़ करें।</string>
+    <string name="error_database_device">Settee इस डिवाइस पर सहेजा गया डेटा नहीं पढ़ पा रहा है। इसके ऊपर नया रिलीज़ इंस्टॉल करें, या ऐप की सेटिंग में इसका डेटा साफ़ करें।</string>
     <string name="error_tmdb_trouble">TMDB में समस्या है। यह उनकी तरफ़ से है, इसलिए बाद में दोबारा कोशिश करें।</string>
     <string name="error_opensubtitles_none">OpenSubtitles पर अभी इसके लिए कोई सबटाइटल नहीं है।</string>
     <string name="error_opensubtitles_unreachable_tv">OpenSubtitles तक नहीं पहुँच पा रहे। देखें कि यह टीवी ऑनलाइन है, फिर से कोशिश करें।</string>

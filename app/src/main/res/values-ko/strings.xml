@@ -313,6 +313,8 @@
     <string name="error_tmdb_key_rejected">TMDB가 이 키를 받아들이지 않았습니다. API Key 전체를 복사했는지 확인한 다음 다시 시도하세요.</string>
     <string name="error_tmdb_unreachable_tv">TMDB에 연결할 수 없습니다. 이 TV가 온라인인지 확인한 다음 다시 시도하세요.</string>
     <string name="error_tmdb_unreachable_device">TMDB에 연결할 수 없습니다. 이 기기가 온라인인지 확인한 다음 다시 시도하세요.</string>
+    <string name="error_database_tv">Settee가 이 TV에 저장한 데이터를 읽을 수 없습니다. Downloader 코드 6405610으로 업데이트하거나 TV의 앱 설정에서 데이터를 지우세요.</string>
+    <string name="error_database_device">Settee가 이 기기에 저장한 데이터를 읽을 수 없습니다. 최신 버전을 덮어서 설치하거나 앱 설정에서 데이터를 지우세요.</string>
     <string name="error_tmdb_trouble">TMDB에 문제가 있습니다. 그쪽 문제이니 나중에 다시 시도하세요.</string>
     <string name="error_opensubtitles_none">OpenSubtitles에 아직 이 자막이 없습니다.</string>
     <string name="error_opensubtitles_unreachable_tv">OpenSubtitles에 연결할 수 없습니다. 이 TV가 온라인인지 확인한 후 다시 시도하세요.</string>

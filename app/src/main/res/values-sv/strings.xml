@@ -313,6 +313,8 @@
     <string name="error_tmdb_key_rejected">TMDB godtog inte den nyckeln. Kontrollera att du kopierade hela API Key och försök igen.</string>
     <string name="error_tmdb_unreachable_tv">Det går inte att nå TMDB. Kontrollera att den här tv:n är online och försök igen.</string>
     <string name="error_tmdb_unreachable_device">Det går inte att nå TMDB. Kontrollera att den här enheten är online och försök igen.</string>
+    <string name="error_database_tv">Settee kan inte läsa det den har sparat på den här tv:n. Uppdatera den med Downloader-koden 6405610, eller rensa dess data i tv:ns inställningar för appar.</string>
+    <string name="error_database_device">Settee kan inte läsa det den har sparat på den här enheten. Installera den senaste versionen ovanpå, eller rensa dess data i appens inställningar.</string>
     <string name="error_tmdb_trouble">TMDB har problem. Det är hos dem, så försök igen senare.</string>
     <string name="error_opensubtitles_none">OpenSubtitles har inga undertexter till det här än.</string>
     <string name="error_opensubtitles_unreachable_tv">Når inte OpenSubtitles. Kontrollera att den här tv:n är online och försök igen.</string>

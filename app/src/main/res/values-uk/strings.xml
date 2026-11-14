@@ -313,6 +313,8 @@
     <string name="error_tmdb_key_rejected">TMDB не прийняв цей ключ. Перевірте, що скопіювали API Key повністю, і спробуйте ще раз.</string>
     <string name="error_tmdb_unreachable_tv">Не вдається зв\'язатися з TMDB. Перевірте, що цей телевізор у мережі, і спробуйте ще раз.</string>
     <string name="error_tmdb_unreachable_device">Не вдається зв\'язатися з TMDB. Перевірте, що цей пристрій у мережі, і спробуйте ще раз.</string>
+    <string name="error_database_tv">Settee не може прочитати те, що зберіг на цьому телевізорі. Оновіть його за кодом 6405610 у Downloader або очистьте його дані в налаштуваннях застосунків телевізора.</string>
+    <string name="error_database_device">Settee не може прочитати те, що зберіг на цьому пристрої. Установіть поверх нього найновішу версію або очистьте його дані в налаштуваннях застосунку.</string>
     <string name="error_tmdb_trouble">У TMDB проблеми. Вони на їхньому боці, тож спробуйте пізніше.</string>
     <string name="error_opensubtitles_none">На OpenSubtitles поки немає субтитрів для цього.</string>
     <string name="error_opensubtitles_unreachable_tv">Не вдається під\'єднатися до OpenSubtitles. Перевірте, чи цей телевізор у мережі, і спробуйте ще раз.</string>

@@ -313,6 +313,8 @@
     <string name="error_tmdb_key_rejected">TMDB nu a acceptat această cheie. Verifică dacă ai copiat întreaga API Key, apoi încearcă din nou.</string>
     <string name="error_tmdb_unreachable_tv">Nu se poate accesa TMDB. Verifică dacă acest televizor este online, apoi încearcă din nou.</string>
     <string name="error_tmdb_unreachable_device">Nu se poate accesa TMDB. Verifică dacă acest dispozitiv este online, apoi încearcă din nou.</string>
+    <string name="error_database_tv">Settee nu poate citi ce a salvat pe acest televizor. Actualizează-l cu codul Downloader 6405610 sau șterge-i datele din setările de aplicații ale televizorului.</string>
+    <string name="error_database_device">Settee nu poate citi ce a salvat pe acest dispozitiv. Instalează peste el cea mai nouă versiune sau șterge-i datele din setările aplicației.</string>
     <string name="error_tmdb_trouble">TMDB are probleme. Sunt de partea lor, așa că încearcă din nou mai târziu.</string>
     <string name="error_opensubtitles_none">OpenSubtitles nu are încă subtitrări pentru asta.</string>
     <string name="error_opensubtitles_unreachable_tv">OpenSubtitles nu poate fi accesat. Verifică dacă acest televizor este online, apoi încearcă din nou.</string>

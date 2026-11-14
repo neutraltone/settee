@@ -313,6 +313,8 @@
     <string name="error_tmdb_key_rejected">TMDB n\'a pas accepté cette clé. Vérifiez que vous avez copié toute l\'API Key, puis réessayez.</string>
     <string name="error_tmdb_unreachable_tv">Impossible de joindre TMDB. Vérifiez que ce téléviseur est connecté, puis réessayez.</string>
     <string name="error_tmdb_unreachable_device">Impossible de joindre TMDB. Vérifiez que cet appareil est connecté, puis réessayez.</string>
+    <string name="error_database_tv">Settee n\'arrive pas à lire ce qu\'il a enregistré sur cette télé. Mettez-le à jour avec le code Downloader 6405610, ou effacez ses données dans les paramètres des applications de la télé.</string>
+    <string name="error_database_device">Settee n\'arrive pas à lire ce qu\'il a enregistré sur cet appareil. Installez la dernière version par-dessus, ou effacez ses données dans les paramètres de l\'application.</string>
     <string name="error_tmdb_trouble">TMDB rencontre des problèmes. Cela vient de chez eux, réessayez plus tard.</string>
     <string name="error_opensubtitles_none">OpenSubtitles n\'a pas encore de sous-titres pour ceci.</string>
     <string name="error_opensubtitles_unreachable_tv">Impossible de joindre OpenSubtitles. Vérifiez que ce téléviseur est connecté, puis réessayez.</string>

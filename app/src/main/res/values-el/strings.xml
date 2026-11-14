@@ -313,6 +313,8 @@
     <string name="error_tmdb_key_rejected">Το TMDB δεν δέχτηκε αυτό το κλειδί. Ελέγξτε ότι αντιγράψατε ολόκληρο το API Key και δοκιμάστε ξανά.</string>
     <string name="error_tmdb_unreachable_tv">Δεν είναι δυνατή η σύνδεση με το TMDB. Ελέγξτε ότι αυτή η τηλεόραση είναι συνδεδεμένη και δοκιμάστε ξανά.</string>
     <string name="error_tmdb_unreachable_device">Δεν είναι δυνατή η σύνδεση με το TMDB. Ελέγξτε ότι αυτή η συσκευή είναι συνδεδεμένη και δοκιμάστε ξανά.</string>
+    <string name="error_database_tv">Το Settee δεν μπορεί να διαβάσει όσα αποθήκευσε σε αυτή την τηλεόραση. Ενημερώστε το με τον κωδικό 6405610 στο Downloader ή διαγράψτε τα δεδομένα του από τις ρυθμίσεις εφαρμογών της τηλεόρασης.</string>
+    <string name="error_database_device">Το Settee δεν μπορεί να διαβάσει όσα αποθήκευσε σε αυτή τη συσκευή. Εγκαταστήστε την πιο πρόσφατη έκδοση από πάνω ή διαγράψτε τα δεδομένα του από τις ρυθμίσεις της εφαρμογής.</string>
     <string name="error_tmdb_trouble">Το TMDB αντιμετωπίζει προβλήματα. Είναι από τη δική τους πλευρά, οπότε δοκιμάστε ξανά αργότερα.</string>
     <string name="error_opensubtitles_none">Το OpenSubtitles δεν έχει ακόμη υπότιτλους για αυτό.</string>
     <string name="error_opensubtitles_unreachable_tv">Δεν είναι δυνατή η σύνδεση με το OpenSubtitles. Ελέγξτε ότι αυτή η τηλεόραση είναι συνδεδεμένη και δοκιμάστε ξανά.</string>
