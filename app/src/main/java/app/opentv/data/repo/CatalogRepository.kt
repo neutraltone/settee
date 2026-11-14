@@ -11,6 +11,7 @@ import app.opentv.core.AppSettings
 import app.opentv.core.ErrorWording
 import app.opentv.core.ViewerError
 import app.opentv.data.db.CategoryDao
+import app.opentv.data.db.ChannelCleaned
 import app.opentv.data.db.ChannelDao
 import app.opentv.data.db.EpisodeDao
 import app.opentv.data.db.MovieDao
@@ -970,18 +971,13 @@ class CatalogRepository(
                 beforeWrite()
                 // One transaction, as a row's own UPDATE each would commit tens of thousands of times.
                 channelDao.inTransaction {
-                    diff.forEach { (c, old) ->
-                        channelDao.setCleaned(
-                            id = c.id,
-                            name = c.name,
-                            displayName = c.displayName,
-                            groupKey = c.groupKey,
-                            qualityLabel = c.qualityLabel,
-                            qualityRank = c.qualityRank,
-                        )
-                        // Separator rows are hidden as they're found. Never un-hides: that's the viewer's.
-                        if (c.hidden && !old.hidden) channelDao.setHidden(c.id, hidden = true)
-                    }
+                    channelDao.setCleaned(
+                        diff.map { (c, _) ->
+                            ChannelCleaned(c.id, c.displayName, c.groupKey, c.qualityLabel, c.qualityRank)
+                        },
+                    )
+                    // Separator rows are hidden as they're found. Never un-hides: that's the viewer's.
+                    diff.forEach { (c, old) -> if (c.hidden && !old.hidden) channelDao.setHidden(c.id, hidden = true) }
                 }
                 changed += diff.size
             }

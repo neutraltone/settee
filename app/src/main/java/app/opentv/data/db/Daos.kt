@@ -353,24 +353,13 @@ interface ChannelDao {
     suspend fun upsertAll(channels: List<Channel>)
 
     /**
-     * Writes what the normaliser makes of one row, and only that, for the re-normalise pass. Not the
+     * Writes what the normaliser makes of each row, and only that, for the re-normalise pass. Not the
      * whole row: the pass reads every row first and writes later, and a refresh or a synced hidden
-     * channel in between would be undone, a deleted row put back. Hiding a separator row is
-     * [setHidden]'s, as it only ever hides. Matching [name] skips a row a refresh renamed meanwhile,
-     * which the refresh cleaned itself.
+     * channel in between would be undone, a deleted row put back. An update by id leaves a deleted
+     * row deleted. Hiding a separator row is [setHidden]'s, as it only ever hides.
      */
-    @Query(
-        "UPDATE channels SET displayName = :displayName, groupKey = :groupKey, qualityLabel = :qualityLabel, " +
-            "qualityRank = :qualityRank WHERE id = :id AND name = :name",
-    )
-    suspend fun setCleaned(
-        id: Long,
-        name: String,
-        displayName: String,
-        groupKey: String,
-        qualityLabel: String,
-        qualityRank: Int,
-    )
+    @Update(entity = Channel::class)
+    suspend fun setCleaned(rows: List<ChannelCleaned>)
 
     @Insert
     suspend fun insertAll(channels: List<Channel>): List<Long>
@@ -725,6 +714,15 @@ data class CategoryName(val id: String, val name: String)
 
 /** A channel's row id and provider id: all a live format switch needs to rebuild its URL. */
 data class ChannelStreamId(val id: Long, val streamId: String)
+
+/** What the normaliser sets on a channel row: see [ChannelDao.setCleaned]. */
+data class ChannelCleaned(
+    val id: Long,
+    val displayName: String,
+    val groupKey: String,
+    val qualityLabel: String,
+    val qualityRank: Int,
+)
 
 /** What More like this ranks a film by, without the rest of its row. */
 data class MoviePick(val id: Long, val sourceId: Long, val genre: String?, val rating: Double?, val addedMillis: Long)
