@@ -289,7 +289,7 @@ object ServiceLocator {
         }
 
         val reminderRepository: ReminderRepository by lazy {
-            ReminderRepository(database.reminders())
+            ReminderRepository(database.reminders(), database.sources())
         }
 
         val recordingEngine: RecordingEngine by lazy {

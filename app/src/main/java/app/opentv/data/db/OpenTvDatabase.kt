@@ -15,6 +15,7 @@ import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 import app.opentv.data.model.Category
 import app.opentv.data.model.Channel
+import app.opentv.data.model.ChannelEdits
 import app.opentv.data.model.ChannelHiddenChange
 import app.opentv.data.model.EpgChannelAlias
 import app.opentv.data.model.EpgFeed
@@ -68,6 +69,7 @@ class Converters {
         Category::class,
         Channel::class,
         ChannelHiddenChange::class,
+        ChannelEdits::class,
         EpgFeed::class,
         EpgChannelAlias::class,
         Programme::class,
@@ -87,7 +89,7 @@ class Converters {
         SeriesRule::class,
         Reminder::class,
     ],
-    version = 14,
+    version = 15,
     exportSchema = true,
 )
 @TypeConverters(Converters::class)
@@ -260,10 +262,40 @@ abstract class OpenTvDatabase : RoomDatabase() {
         }
 
         /**
+         * 14 → 15: series links and reminders record their channel by its source's name and stream id,
+         * and a channel a refresh deletes leaves what the viewer set on it in `channel_edits`, so all
+         * three find the channel again when the provider lists it again (#333). Existing links and
+         * reminders take both from the channel row they point at; one whose channel has already gone
+         * is left blank, as nothing can say what it was.
+         */
+        private val CHANNEL_IDENTITY = object : Migration(14, 15) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `channel_edits` " +
+                        "(`source` TEXT NOT NULL, `streamId` TEXT NOT NULL, `sortIndex` INTEGER NOT NULL, " +
+                        " `customName` TEXT, `epgOverrideId` TEXT, `matchedEpgId` TEXT, " +
+                        "PRIMARY KEY(`source`, `streamId`))",
+                )
+                for (table in listOf("series_rules", "reminders")) {
+                    db.execSQL("ALTER TABLE `$table` ADD COLUMN `source` TEXT NOT NULL DEFAULT ''")
+                    db.execSQL("ALTER TABLE `$table` ADD COLUMN `streamId` TEXT NOT NULL DEFAULT ''")
+                    db.execSQL(
+                        "UPDATE `$table` SET " +
+                            "`source` = COALESCE((SELECT s.name FROM channels c " +
+                            "JOIN sources s ON s.id = c.sourceId WHERE c.id = `$table`.channelId), ''), " +
+                            "`streamId` = COALESCE((SELECT c.streamId FROM channels c " +
+                            "WHERE c.id = `$table`.channelId), '')",
+                    )
+                }
+            }
+        }
+
+        /**
          * Every migration, in order. Shared with the migration test so neither list can lag. None
          * before 9: those schemas are wiped instead (see [WIPED_SCHEMAS]).
          */
-        internal val MIGRATIONS: Array<Migration> = arrayOf(CREDITS, TMDB_ANSWERED_AT, ADDED_INDEX, ON_NOW_INDEX)
+        internal val MIGRATIONS: Array<Migration> =
+            arrayOf(CREDITS, TMDB_ANSWERED_AT, ADDED_INDEX, ON_NOW_INDEX, CHANNEL_IDENTITY)
 
         /** The schemas opened empty rather than migrated; see [build]. */
         private val WIPED_SCHEMAS = intArrayOf(1, 2, 3, 4, 5, 6, 7, 8, 11)

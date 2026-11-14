@@ -86,8 +86,26 @@ class RecordingsSectionsTest {
 
     @Test
     fun `series links come last, A to Z, each with its next airing and how many are booked`() {
-        val zebras = SeriesRule(id = 1, channelId = 1, channelName = "One", titleKey = "zebras", title = "Zebras")
-        val ants = SeriesRule(id = 2, channelId = 1, channelName = "One", titleKey = "ants", title = "Ants")
+        val zebras =
+            SeriesRule(
+                id = 1,
+                channelId = 1,
+                source = "Home",
+                streamId = "1",
+                channelName = "One",
+                titleKey = "zebras",
+                title = "Zebras",
+            )
+        val ants =
+            SeriesRule(
+                id = 2,
+                channelId = 1,
+                source = "Home",
+                streamId = "1",
+                channelName = "One",
+                titleKey = "ants",
+                title = "Ants",
+            )
         val nextAnts = booking(id = 10, start = NOW + HOUR).copy(seriesRuleId = 2)
         val laterAnts = booking(id = 11, start = NOW + DAY).copy(seriesRuleId = 2)
 
@@ -137,6 +155,8 @@ class RecordingsSectionsTest {
     private fun reminder(id: Long, start: Long) = Reminder(
         id = id,
         channelId = id,
+        source = "Home",
+        streamId = "$id",
         channelName = "Channel $id",
         title = "Reminder $id",
         startUtcMillis = start,

@@ -130,6 +130,32 @@ class RoomMigrationTest {
         }
     }
 
+    @Test
+    fun `a series link set before 15 records its channel's source and stream id`() {
+        val name = "channel-identity.db"
+        helper.createDatabase(name, 14).use { db ->
+            db.execSQL(
+                "INSERT INTO sources (id, name, kind, url, userAgent, liveFormat, enabled, lastCatalogSyncMillis) " +
+                    "VALUES (1, 'Home', 'M3U', 'https://example.com/h.m3u', 'ua', 'TS', 1, 0)",
+            )
+            db.execSQL(
+                "INSERT INTO channels (id, sourceId, streamId, name, displayName, groupKey, qualityRank, " +
+                    "qualityLabel, streamUrl, hidden, sortIndex, lastSeenMillis) " +
+                    "VALUES (5, 1, 'itv', 'ITV', 'ITV', 'itv', 0, '', 'https://example.com/itv.ts', 0, 0, 0)",
+            )
+            db.execSQL(
+                "INSERT INTO series_rules (id, channelId, channelName, titleKey, title, createdAtMillis, enabled) " +
+                    "VALUES (1, 5, 'ITV', 'countryfile', 'Countryfile', 0, 1), (2, 99, 'Gone', 'news', 'News', 0, 1)",
+            )
+        }
+
+        helper.runMigrationsAndValidate(name, 15, true, *OpenTvDatabase.MIGRATIONS).use { db ->
+            fun channelOf(rule: Int) = db.first("SELECT source || ':' || streamId FROM series_rules WHERE id = $rule")
+            assertThat(channelOf(1)).isEqualTo("Home:itv")
+            assertThat(channelOf(2)).isEqualTo(":")
+        }
+    }
+
     /** The first column of [sql]'s first row. */
     private fun SupportSQLiteDatabase.first(sql: String): String = query(sql).use { row ->
         row.moveToFirst()

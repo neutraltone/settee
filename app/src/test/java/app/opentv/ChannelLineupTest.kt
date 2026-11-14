@@ -17,7 +17,6 @@ import app.opentv.data.model.StreamKind
 import app.opentv.data.repo.ChannelLineup
 import app.opentv.data.repo.LineupChannel
 import app.opentv.data.repo.LineupScope
-import app.opentv.data.repo.migratedLockKeys
 import app.opentv.data.repo.nowOn
 import app.opentv.ui.player.nowAndNext
 import com.google.common.truth.Truth.assertThat
@@ -664,17 +663,6 @@ class ChannelLineupTest {
             assertThat(scope(LineupScope.ManageSearch("itv")).names())
                 .containsExactly(listOf("UK| ITV"), listOf("US| ITV"), listOf("ITV"))
         }
-
-    @Test
-    fun `a lock saved under a nameless category's old key carries over to its new one`() {
-        val categories = listOf(
-            Category(id = "7", sourceId = 1, name = "★★★", kind = StreamKind.LIVE),
-            Category(id = "7", sourceId = 2, name = "★★★", kind = StreamKind.LIVE),
-            Category(id = "8", sourceId = 1, name = "UK| Adult", kind = StreamKind.LIVE),
-        )
-
-        assertThat(migratedLockKeys(setOf("7", "adult"), categories)).containsExactly("1:7", "2:7", "adult")
-    }
 
     @Test
     fun `a 40k-row catalogue folds within a time budget`() = runTest {

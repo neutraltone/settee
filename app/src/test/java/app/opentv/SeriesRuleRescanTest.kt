@@ -9,6 +9,7 @@ import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import app.opentv.core.AppSettings
 import app.opentv.core.ErrorWording
+import app.opentv.data.db.StagedBatches
 import app.opentv.data.model.Channel
 import app.opentv.data.model.Programme
 import app.opentv.data.model.SeriesRule
@@ -93,6 +94,8 @@ class SeriesRuleRescanTest {
         db.seriesRules().insert(
             SeriesRule(
                 channelId = hd.id,
+                source = PANEL_SOURCE.name,
+                streamId = hd.streamId,
                 channelName = "ITV",
                 titleKey = "countryfile",
                 title = "Countryfile",
@@ -145,6 +148,55 @@ class SeriesRuleRescanTest {
         engine.recordSeries(channel, "Countryfile")
 
         assertThat(recordings.scheduled().map { it.description }).containsExactly("Farming.")
+    }
+
+    private suspend fun seriesLinkBooksAfterAMissedRefresh(
+        replace: suspend (incoming: List<Channel>, syncStamp: Long) -> Unit,
+    ) {
+        db.sources().insert(PANEL_SOURCE)
+        val bbc = itv("1", "UK| BBC One HD", 200, "bbc.one").copy(displayName = "BBC One", groupKey = "uk:bbcone")
+        val itv = itv("2", "UK| ITV HD", 200, "itv.hd")
+        replace(listOf(bbc, itv), 1)
+        engine.recordSeries(db.channels().everyRow().single { it.streamId == "2" }, "Countryfile")
+
+        replace(listOf(bbc), 2)
+        replace(listOf(bbc, itv), 3)
+        val tomorrow = System.currentTimeMillis() + DAY
+        db.programmes().insertOrReplace(listOf(airing("itv.hd", tomorrow)))
+        engine.rescanSeriesRules()
+
+        val padding = 60_000L * AppSettings.get(context).recordPadStartMinutes.value
+        assertThat(recordings.scheduled().map { it.scheduledStartMillis }).containsExactly(tomorrow - padding)
+    }
+
+    @Test
+    fun `a series link still books its channel's airings after the channel misses a refresh`() = runTest {
+        seriesLinkBooksAfterAMissedRefresh { incoming, stamp ->
+            db.channels().replaceCatalogue(PANEL_SOURCE.id, incoming, stamp)
+        }
+    }
+
+    @Test
+    fun `a series link still books its channel's airings after the channel misses a staged refresh`() = runTest {
+        seriesLinkBooksAfterAMissedRefresh { incoming, stamp ->
+            StagedBatches.stage(null, Channel.serializer()) { stage -> stage(incoming) }.use {
+                db.channels().replaceCatalogue(PANEL_SOURCE.id, stamp, it)
+            }
+        }
+    }
+
+    @Test
+    fun `a series link stays listed while its channel is missing`() = runTest {
+        db.sources().insert(PANEL_SOURCE)
+        val itv = itv("2", "UK| ITV HD", 200, "itv.hd")
+        val bbc = itv("1", "UK| BBC One HD", 200, "bbc.one").copy(displayName = "BBC One", groupKey = "uk:bbcone")
+        db.channels().replaceCatalogue(PANEL_SOURCE.id, listOf(bbc, itv), syncStamp = 1)
+        engine.recordSeries(db.channels().everyRow().single { it.streamId == "2" }, "Countryfile")
+
+        db.channels().replaceCatalogue(PANEL_SOURCE.id, listOf(bbc), syncStamp = 2)
+        engine.rescanSeriesRules()
+
+        assertThat(recordings.enabledRules().map { it.title }).containsExactly("Countryfile")
     }
 
     private companion object {
