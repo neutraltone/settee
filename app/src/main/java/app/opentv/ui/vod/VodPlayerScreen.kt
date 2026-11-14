@@ -86,6 +86,7 @@ import app.opentv.ui.player.PlayerControlBar
 import app.opentv.ui.player.PlayerNotice
 import app.opentv.ui.player.PlayerOptions
 import app.opentv.ui.player.PlayerPill
+import app.opentv.ui.player.SleepTimerEffect
 import app.opentv.ui.player.SleepTimerPanel
 import app.opentv.ui.player.SubtitlePicks
 import app.opentv.ui.player.trackLabel
