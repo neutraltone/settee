@@ -20,6 +20,7 @@ import app.opentv.data.repo.Playable
 import app.opentv.data.repo.PlaybackSources
 import app.opentv.player.PlayerController
 import com.google.common.truth.Truth.assertThat
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Before
@@ -136,26 +137,18 @@ class PlayerControllerTest {
 
     @Test
     fun `a channel that can't be opened stops the one that was playing, so only its sentence is left`() {
-        val controller = players.controller(LIVE, resolve = ::refusingChannel2)
-        controller.play(PlayerController.Request(MediaKey.Live(1)), debounce = false)
-        players.untilReady(controller.player)
-
-        controller.play(PlayerController.Request(MediaKey.Live(2)), debounce = false)
-        players.until { controller.state.value is PlayerController.State.Error }
+        val controller = refusedAfterPlaying()
 
         assertThat(controller.player.playbackState).isEqualTo(Player.STATE_IDLE)
         assertThat(controller.player.isPlaying).isFalse()
         assertThat((controller.state.value as PlayerController.State.Error).reason.sentence)
-            .isEqualTo("Your provider didn't give a link for this channel. Try refreshing your provider in Settings.")
+            .isEqualTo(context.getString(R.string.playback_link_refused))
+        assertThat(controller.tracks.value.groups).isEmpty()
     }
 
     @Test
     fun `nothing the stopped channel's player does afterwards covers the sentence`() {
-        val controller = players.controller(LIVE, resolve = ::refusingChannel2)
-        controller.play(PlayerController.Request(MediaKey.Live(1)), debounce = false)
-        players.untilReady(controller.player)
-        controller.play(PlayerController.Request(MediaKey.Live(2)), debounce = false)
-        players.until { controller.state.value is PlayerController.State.Error }
+        val controller = refusedAfterPlaying()
         val error = controller.state.value
 
         // A seek is what makes a playing stream buffer and then play again.
@@ -171,12 +164,29 @@ class PlayerControllerTest {
     }
 
     @Test
-    fun `retry after a channel can't be opened asks for that channel again`() {
-        val controller = players.controller(LIVE, resolve = ::refusingChannel2)
+    fun `the last channel dropping while the next is being asked for doesn't ask for the next one twice`() {
+        val portal = CompletableDeferred<Playable>()
+        val controller = players.controller(LIVE, failing = 1) { key ->
+            resolved += key
+            if (key == MediaKey.Live(2)) portal.await() else stream(key)
+        }
         controller.play(PlayerController.Request(MediaKey.Live(1)), debounce = false)
-        players.untilReady(controller.player)
         controller.play(PlayerController.Request(MediaKey.Live(2)), debounce = false)
-        players.until { controller.state.value is PlayerController.State.Error }
+
+        // Channel 1 drops while the portal is still answering for channel 2.
+        players.until { controller.player.playbackState == Player.STATE_IDLE }
+        players.advance(5_000)
+        assertThat(resolved).containsExactly(MediaKey.Live(1), MediaKey.Live(2)).inOrder()
+        assertThat(controller.state.value).isInstanceOf(PlayerController.State.Buffering::class.java)
+
+        portal.complete(stream(MediaKey.Live(2)))
+        players.until { controller.state.value is PlayerController.State.Playing }
+        assertThat(players.played).hasSize(2)
+    }
+
+    @Test
+    fun `retry after a channel can't be opened asks for that channel again`() {
+        val controller = refusedAfterPlaying()
 
         controller.retry()
         players.until { resolved.size == 3 }
@@ -184,15 +194,21 @@ class PlayerControllerTest {
         assertThat(resolved.last()).isEqualTo(MediaKey.Live(2))
     }
 
-    /** Resolves channel 2 as a portal that refuses it a link, and any other channel to a stream. */
-    private fun refusingChannel2(key: MediaKey): Playable {
-        resolved += key
-        return if (key == MediaKey.Live(2)) {
-            Playable.Failed(key, Playable.Failure.LINK_REFUSED)
-        } else {
-            Playable.Ready(key, "https://example.com/live", userAgent = "", title = "Channel", isLive = true)
+    /** Plays channel 1 until it's playing, then asks for channel 2, which the portal refuses a link. */
+    private fun refusedAfterPlaying(): PlayerController {
+        val controller = players.controller(LIVE) { key ->
+            resolved += key
+            if (key == MediaKey.Live(2)) Playable.Failed(key, Playable.Failure.LINK_REFUSED) else stream(key)
         }
+        controller.play(PlayerController.Request(MediaKey.Live(1)), debounce = false)
+        players.untilReady(controller.player)
+        controller.play(PlayerController.Request(MediaKey.Live(2)), debounce = false)
+        players.until { controller.state.value is PlayerController.State.Error }
+        return controller
     }
+
+    private fun stream(key: MediaKey) =
+        Playable.Ready(key, "https://example.com/live", userAgent = "", title = "Channel", isLive = true)
 
     private fun stalkerChannel(n: Int) = Channel(
         sourceId = STALKER_SOURCE.id,
