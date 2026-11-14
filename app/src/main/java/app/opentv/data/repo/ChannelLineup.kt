@@ -172,17 +172,26 @@ constructor(
         }
 
     /**
+     * Every row, hidden and locked ones too, as it changes: one read of the table for every
+     * catalogue, so Live and the channel manager open together don't each scan ~40k rows. Stops with
+     * the catalogues, which already wait [SHARE_MILLIS]: a wait here too would watch the table twice
+     * as long, and a cached list would be replayed, stale, when they start again.
+     */
+    private val everyRow: Flow<List<Channel>> = channelDao.observeEvery()
+        .shareIn(sharing, SharingStarted.WhileSubscribed(stopTimeoutMillis = 0, replayExpirationMillis = 0), replay = 1)
+
+    /**
      * Every row a viewer may see, folded into Channels. Built over the whole catalogue whatever the
      * scope, because which Channel a row joins depends on rows outside it.
      */
     private val browsable: Flow<Catalogue> =
-        combine(channelDao.observeEvery(), locked) { rows, locked -> Catalogue(rows, decoders) { it.isShown(locked) } }
+        combine(everyRow, locked) { rows, locked -> Catalogue(rows, decoders) { it.isShown(locked) } }
             // One fold for every screen open at once, off the main thread.
             .flowOn(Dispatchers.Default)
             .shareIn(sharing, SharingStarted.WhileSubscribed(SHARE_MILLIS), replay = 1)
 
     /** Every row, hidden and locked ones too: what the channel manager folds. */
-    private val manageable: Flow<Catalogue> = channelDao.observeEvery().map { Catalogue(it, decoders) }
+    private val manageable: Flow<Catalogue> = everyRow.map { Catalogue(it, decoders) }
         .flowOn(Dispatchers.Default)
         .shareIn(sharing, SharingStarted.WhileSubscribed(SHARE_MILLIS), replay = 1)
 
@@ -235,12 +244,20 @@ constructor(
             is LineupScope.ManageSearch, is LineupScope.ManageGroup -> manageable
             else -> browsable
         }
-        return combine(rowsIn(scope, channelDao, categories), catalogue, favourites.channelIds()) {
-                rows,
-                catalogue,
-                starred,
-            ->
-            catalogue.channelsOf(rows, scope).map { it.starredBy(starred) }
+        // All from the rows the catalogue already holds, not a query of its own: All is the default,
+        // and that query read the whole table a second time on every change to it.
+        return if (scope is LineupScope.All) {
+            combine(catalogue, favourites.channelIds()) { catalogue, starred ->
+                catalogue.channelsOf(catalogue.listed(scope.sourceId), scope).map { it.starredBy(starred) }
+            }.flowOn(Dispatchers.Default)
+        } else {
+            combine(rowsIn(scope, channelDao, categories), catalogue, favourites.channelIds()) {
+                    rows,
+                    catalogue,
+                    starred,
+                ->
+                catalogue.channelsOf(rows, scope).map { it.starredBy(starred) }
+            }
         }
     }
 
@@ -329,7 +346,7 @@ constructor(
      * Qualities.
      */
     private class Catalogue(
-        rows: List<Channel>,
+        private val rows: List<Channel>,
         private val decoders: DecoderList,
         shown: (Channel) -> Boolean = { true },
     ) {
@@ -338,6 +355,14 @@ constructor(
         private val qualities: Map<String, List<Channel>> = rows.filter { it.id in shownIds }
             .groupBy { keyOf.getValue(it.id) }
             .mapValues { (_, group) -> group.sortedWith(BEST_FIRST) }
+
+        /** Every row that isn't hidden, in the viewer's order and then by name; sorted once, on first use. */
+        private val listedRows: List<Channel> by lazy {
+            rows.filter { !it.hidden }.sortedWith(compareBy<Channel> { it.sortIndex }.then(BY_NAME).thenBy { it.id })
+        }
+
+        /** What All lists, before folding: [listedRows], only [sourceId]'s when one is given. */
+        fun listed(sourceId: Long?): List<Channel> = listedRows.from(sourceId)
 
         fun channelContaining(rowId: Long): LineupChannel? {
             if (rowId !in shownIds) return null
@@ -390,7 +415,7 @@ fun migratedLockKeys(keys: Set<String>, categories: List<Category>): Set<String>
 @OptIn(ExperimentalCoroutinesApi::class)
 private fun rowsIn(scope: LineupScope, channelDao: ChannelDao, categories: Flow<List<Category>>): Flow<List<Channel>> =
     when (scope) {
-        is LineupScope.All -> channelDao.observe(scope.sourceId, null)
+        is LineupScope.All -> error("All is listed from the catalogue's rows: see ChannelLineup.channels")
         // Folded from their names' rows instead: see ChannelLineup.channels.
         is LineupScope.Favourites -> flowOf(emptyList())
         is LineupScope.Search -> channelDao.search(scope.query)
@@ -470,5 +495,28 @@ internal fun channelKeys(rows: List<Channel>): Map<Long, String> {
             else -> regionalByName[row.groupKey]?.singleOrNull() ?: row.groupKey
         }
         row.id to key
+    }
+}
+
+/**
+ * By display name as SQLite's `ORDER BY` compares it, byte by byte in UTF-8, which is code point
+ * order. Not [String.compareTo] alone, whose UTF-16 units put emoji before fullwidth letters; it only
+ * decides where neither name has a surrogate, which is nearly every name, as walking code points
+ * through a 40k-row sort is slow on a stick.
+ */
+private val BY_NAME: Comparator<Channel> = Comparator { first, second ->
+    val a = first.displayName
+    val b = second.displayName
+    val shorter = minOf(a.length, b.length)
+    var k = 0
+    while (k < shorter && a[k] == b[k]) k++
+    when {
+        k == shorter -> a.length.compareTo(b.length)
+        !a[k].isSurrogate() && !b[k].isSurrogate() -> a[k].compareTo(b[k])
+        else -> {
+            // Inside a pair whose first halves match: compare the whole characters.
+            val at = if (k > 0 && a[k - 1].isHighSurrogate()) k - 1 else k
+            a.codePointAt(at).compareTo(b.codePointAt(at))
+        }
     }
 }
