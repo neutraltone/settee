@@ -363,6 +363,7 @@ class KeptShellTest {
         back()
 
         gridCover("Grid 1").assertIsFocused()
+        captureScreen("movies_grid_back_title_gone")
     }
 
     @Test

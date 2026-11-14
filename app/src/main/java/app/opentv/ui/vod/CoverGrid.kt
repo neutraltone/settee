@@ -47,6 +47,7 @@ import app.opentv.ui.railReturnTarget
 import coil.imageLoader
 import coil.request.ImageRequest
 import coil.size.Size
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.filterNotNull
 
 /**
@@ -69,10 +70,10 @@ internal fun ScreenFrameScope.CoverGrid(
     }
     val state = rememberLazyGridState()
     PrefetchCovers(state, covers)
-    val back = rememberCoverReturn(state, covers)
+    val coverReturn = rememberCoverReturn(state, covers)
     val room = with(LocalDensity.current) { GRID_LIFT_ROOM.toPx() }
     CompositionLocalProvider(LocalBringIntoViewSpec provides remember(room) { RowToTheTop(room) }) {
-        CoverRows(state, covers, back, onHighlight, onOpen, onOptions)
+        CoverRows(state, covers, coverReturn, onHighlight, onOpen, onOptions)
     }
 }
 
@@ -107,26 +108,29 @@ private class CoverReturn(private val lastId: MutableState<Long?>, private val l
 private fun rememberCoverReturn(state: LazyGridState, covers: List<TitleCover>): CoverReturn {
     val lastId = rememberSaveable { mutableStateOf<Long?>(null) }
     val lastTitle = rememberSaveable { mutableStateOf<String?>(null) }
-    val back = remember(lastId, lastTitle) { CoverReturn(lastId, lastTitle) }
-    val shown by rememberUpdatedState(covers)
+    val coverReturn = remember(lastId, lastTitle) { CoverReturn(lastId, lastTitle) }
+    val latestCovers by rememberUpdatedState(covers)
     val shellReturn = LocalShellReturn.current
-    LaunchedEffect(shellReturn.asked) {
-        if (!shellReturn.asked) return@LaunchedEffect
-        val index = back.indexIn(shown)
-        back.target = shown[index].id
-        if (state.layoutInfo.visibleItemsInfo.none { it.index == index }) state.scrollToItem(index)
-        // The cover is composed with the requester on the frame after it's scrolled to.
-        withFrameNanos {}
-        runCatching { back.requester.requestFocus() }
+    // Collected rather than keyed on `asked`: KeptShell lowers it after a few frames, and an effect
+    // keyed on it was cancelled there, mid-scroll, before it put the Highlight back.
+    LaunchedEffect(shellReturn) {
+        snapshotFlow { shellReturn.asked }.filter { it }.collect {
+            val index = coverReturn.indexIn(latestCovers)
+            coverReturn.target = latestCovers[index].id
+            if (state.layoutInfo.visibleItemsInfo.none { it.index == index }) state.scrollToItem(index)
+            // The requester goes on the target cover when it's next composed, scrolled to or not.
+            withFrameNanos {}
+            runCatching { coverReturn.requester.requestFocus() }
+        }
     }
-    return back
+    return coverReturn
 }
 
 @Composable
 private fun ScreenFrameScope.CoverRows(
     state: LazyGridState,
     covers: List<TitleCover>,
-    back: CoverReturn,
+    coverReturn: CoverReturn,
     onHighlight: (Long) -> Unit,
     onOpen: (Long) -> Unit,
     onOptions: ((Long) -> Unit)?,
@@ -144,9 +148,9 @@ private fun ScreenFrameScope.CoverRows(
         gridItems(covers, key = { it.id }, contentType = { "cover" }) { cover ->
             TitleArt(
                 cover,
-                if (cover.id == back.target) Modifier.focusRequester(back.requester) else Modifier,
+                if (cover.id == coverReturn.target) Modifier.focusRequester(coverReturn.requester) else Modifier,
                 { id ->
-                    back.highlighted(cover)
+                    coverReturn.highlighted(cover)
                     onHighlight(id)
                 },
                 { onOpen(cover.id) },
