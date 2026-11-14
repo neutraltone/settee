@@ -96,11 +96,13 @@ class RenormaliseTest {
         val groups = 33_000
         provider(1, SourceKind.M3U)
         db.categories().upsertAll(
-            (0 until groups).map { Category(id = "g$it", sourceId = 1, name = "Group $it HD", kind = StreamKind.LIVE) },
+            (0 until groups).map {
+                Category(id = "g$it", sourceId = 1, name = "Group n$it HD", kind = StreamKind.LIVE)
+            },
         )
         db.channels().replaceCatalogue(
             1,
-            // "n" before the number, so no name is read as its own quality ("Channel 720", "Channel 1080").
+            // "n" before each number, here and in the groups, so none is read as a quality ("Channel 720").
             (0 until groups).map { channel(1, "s$it", "Channel n$it", categoryId = "g$it") },
             syncStamp = 1,
         )
