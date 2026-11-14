@@ -7,6 +7,7 @@ package app.opentv.player
 
 import android.content.Context
 import androidx.annotation.OptIn
+import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.PlaybackException
@@ -217,6 +218,9 @@ class PlayerController(
     /** Whether the controller itself has stopped this stream, until the next one starts. */
     private var gaveUp = false
 
+    /** Whether [standBy] stopped the stream, for [wake] to start it again. */
+    private var standingBy = false
+
     /**
      * Held so the User-Agent can be swapped per source before each tune.
      *
@@ -277,6 +281,10 @@ class PlayerController(
         .setLoadControl(bufferWatch)
         .let(options.buildPlayer)
         .apply {
+            // Set on the player rather than the builder so it holds however the player was built. A muted
+            // preview mustn't take the sound: asking for it would pause the viewer's music in another app.
+            val handleAudioFocus = !options.preview
+            setAudioAttributes(MEDIA_AUDIO, handleAudioFocus)
             addAnalyticsListener(DecoderLog.listener)
             addAnalyticsListener(guard.firstFrameListener)
             addListener(object : Player.Listener {
@@ -329,7 +337,7 @@ class PlayerController(
                     if (recovery.canRestart && request != null) {
                         scope.launch {
                             delay(AUTO_RESTART_DELAY_MILLIS)
-                            if (current == request) play(request, debounce = false)
+                            if (current == request && !standingBy) play(request, debounce = false)
                         }
                     }
                 }
@@ -364,6 +372,7 @@ class PlayerController(
         // Cancelling here is what makes fast channel-changing safe: the previous switch never
         // reaches the player, so we never stack prepares.
         switchJob?.cancel()
+        standingBy = false
         // An automatic restart plays the same request again and keeps counting, so a stream that
         // keeps dropping stops after a couple of restarts rather than retrying (and, on a portal,
         // minting a link) forever.
@@ -559,6 +568,24 @@ class PlayerController(
         _state.value = State.Idle
     }
 
+    /**
+     * Stops the stream and closes its connection, but keeps what it was for [wake]: live TV behind another
+     * app (#356). Stopped rather than paused, so a single-connection account is free for another TV.
+     */
+    fun standBy() {
+        val playing = current ?: return
+        stop()
+        current = playing
+        standingBy = true
+    }
+
+    /** Plays again what [standBy] stopped, freshly asked for, as a link may have expired meanwhile. */
+    fun wake() {
+        if (!standingBy) return
+        consecutiveFailures = 0
+        current?.let { play(it, debounce = false) }
+    }
+
     fun release() {
         switchJob?.cancel()
         guard.release()
@@ -577,6 +604,12 @@ class PlayerController(
         private const val PREVIEW_SWITCH_DEBOUNCE_MILLIS = 700L
 
         private const val LIVE_TARGET_OFFSET_MILLIS = 10_000L
+
+        /** Live TV, films and episodes alike: the system treats them all as a film's sound. */
+        private val MEDIA_AUDIO = AudioAttributes.Builder()
+            .setUsage(C.USAGE_MEDIA)
+            .setContentType(C.AUDIO_CONTENT_TYPE_MOVIE)
+            .build()
     }
 }
 

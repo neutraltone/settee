@@ -5,6 +5,7 @@
  */
 package app.opentv
 
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.semantics.SemanticsProperties
@@ -23,9 +24,11 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.pressKey
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.media3.common.util.UnstableApi
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.espresso.Espresso
+import app.opentv.core.PipState
 import app.opentv.core.ServiceLocator
 import app.opentv.core.SleepTimer
 import app.opentv.data.model.Movie
@@ -69,6 +72,7 @@ class VodPlayerContentTest {
     private val graph = ServiceLocator.Graph(app)
     private val viewModel = VodPlayerViewModel(app, graph)
     private val noPicks = SubtitlePicks(onOff = {}, onPicked = {})
+    private val lifecycle = TestLifecycle()
 
     @After
     fun release() {
@@ -754,6 +758,53 @@ class VodPlayerContentTest {
         press(Key.Menu)
 
         inList("Sleep timer").assertDoesNotExist()
+    }
+
+    /** An episode playing ten minutes in, in a screen whose lifecycle [lifecycle] moves. */
+    private fun watchEpisodeTenMinutesIn() {
+        runBlocking { graph.database.episodes().upsertAll(listOf(testEpisode(1, 1))) }
+        compose.setTvContent {
+            CompositionLocalProvider(LocalLifecycleOwner provides lifecycle) {
+                VodPlayerContent(controller, viewModel, false, noPicks, onBack = {})
+            }
+        }
+        runBlocking { viewModel.attach(testEpisode(1, 1).key, controller.vodPlayback()) }
+        players.untilReady(controller.player)
+        controller.player.seekTo(TEN_MINUTES)
+        players.untilReady(controller.player)
+        compose.waitForIdle()
+    }
+
+    @Test
+    fun `behind another app the film pauses and keeps its place, and coming back it's still paused there`() {
+        watchEpisodeTenMinutesIn()
+
+        lifecycle.goBehind()
+        compose.waitForIdle()
+
+        assertThat(controller.playWhenReady.value).isFalse()
+        compose.waitUntil(WAIT_MILLIS) { runBlocking { graph.viewerLibrary.resumeFrom("ep:11") } == TEN_MINUTES }
+
+        lifecycle.comeBack()
+        compose.waitForIdle()
+
+        assertThat(controller.playWhenReady.value).isFalse()
+        assertThat(controller.player.currentPosition).isEqualTo(TEN_MINUTES)
+    }
+
+    @Test
+    fun `in picture-in-picture the film plays on when the app is behind another`() {
+        PipState.setInPip(true)
+        try {
+            watchEpisodeTenMinutesIn()
+
+            lifecycle.goBehind()
+            compose.waitForIdle()
+
+            assertThat(controller.playWhenReady.value).isTrue()
+        } finally {
+            PipState.setInPip(false)
+        }
     }
 
     private companion object {

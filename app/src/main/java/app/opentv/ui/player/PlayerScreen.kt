@@ -390,6 +390,9 @@ fun LivePlayerContent(
 ) {
     val context = LocalContext.current
     val confirmLive = LocalConfirmLive.current
+    // Behind another app live TV stops rather than pausing, so the provider's connection closes, and
+    // coming back the same channel tunes in again. What live pause held is lost; that's expected.
+    WhenBehindAnotherApp(onGoneBehind = controller::standBy, onBack = controller::wake)
     val state by controller.state.collectAsState()
     val tracks by controller.tracks.collectAsState()
     // Digits typed on the remote accumulate here, then jump to that channel number after a beat.

@@ -6,6 +6,7 @@
 package app.opentv
 
 import androidx.compose.foundation.layout.Box
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -29,6 +30,8 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.pressKey
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.espresso.Espresso
@@ -38,6 +41,7 @@ import app.opentv.data.model.Channel
 import app.opentv.data.model.Programme
 import app.opentv.data.repo.MediaKey
 import app.opentv.data.repo.NowAndNext
+import app.opentv.data.repo.Playable
 import app.opentv.player.PlaybackQueue
 import app.opentv.player.PlayerController
 import app.opentv.ui.design.ERROR_DETAIL_TAG
@@ -74,6 +78,7 @@ class LivePlayerContentTest {
     private var dontAskAgain = 0
     private var backs = 0
     private val passedThrough = mutableListOf<Key>()
+    private val lifecycle = TestLifecycle()
 
     // What PlayerScreen reads from AppSettings; a test flips them the way the settings would change.
     private var livePause by mutableStateOf(true)
@@ -104,48 +109,50 @@ class LivePlayerContentTest {
         current = player
         playing = currentId
         compose.setTvContent {
-            Box(
-                Modifier.onKeyEvent { event ->
-                    if (event.type == KeyEventType.KeyDown) passedThrough += event.key
-                    false
-                },
-            ) {
-                LivePlayerContent(
-                    controller = current,
-                    settings = AppSettings.get(context),
-                    queue = queue,
-                    variants = variants,
-                    currentId = playing,
-                    previousId = null,
-                    onNow = { emptyMap() },
-                    cardChannel = playingChannel ?: queue.firstOrNull { playing in it.qualityIds }?.let {
-                        CardChannel("#${it.id}", it.number, it.name)
+            CompositionLocalProvider(LocalLifecycleOwner provides lifecycle) {
+                Box(
+                    Modifier.onKeyEvent { event ->
+                        if (event.type == KeyEventType.KeyDown) passedThrough += event.key
+                        false
                     },
-                    nowAndNext = { now ->
-                        programmeLookups++
-                        cardShowing(programme, now)
-                    },
-                    recordingThis = false,
-                    livePause = this@LivePlayerContentTest.livePause,
-                    pausePromptDismissed = promptDismissed,
-                    onPlayChannel = { played += it },
-                    onZap = { delta, atEnd ->
-                        zapped += delta
-                        val from = queue.indexOfFirst { playing in it.qualityIds }
-                        if (queue.getOrNull(from + delta) == null) atEnd()
-                    },
-                    onTune = {},
-                    onToggleRecord = {},
-                    favourite = false,
-                    onToggleFavourite = {},
-                    onTurnOnLivePause = { turnedOn++ },
-                    onDontAskAgain = {
-                        dontAskAgain++
-                        promptDismissed = true
-                    },
-                    subtitlePicks = SubtitlePicks(onOff = {}, onPicked = {}),
-                    onBack = { backs++ },
-                )
+                ) {
+                    LivePlayerContent(
+                        controller = current,
+                        settings = AppSettings.get(context),
+                        queue = queue,
+                        variants = variants,
+                        currentId = playing,
+                        previousId = null,
+                        onNow = { emptyMap() },
+                        cardChannel = playingChannel ?: queue.firstOrNull { playing in it.qualityIds }?.let {
+                            CardChannel("#${it.id}", it.number, it.name)
+                        },
+                        nowAndNext = { now ->
+                            programmeLookups++
+                            cardShowing(programme, now)
+                        },
+                        recordingThis = false,
+                        livePause = this@LivePlayerContentTest.livePause,
+                        pausePromptDismissed = promptDismissed,
+                        onPlayChannel = { played += it },
+                        onZap = { delta, atEnd ->
+                            zapped += delta
+                            val from = queue.indexOfFirst { playing in it.qualityIds }
+                            if (queue.getOrNull(from + delta) == null) atEnd()
+                        },
+                        onTune = {},
+                        onToggleRecord = {},
+                        favourite = false,
+                        onToggleFavourite = {},
+                        onTurnOnLivePause = { turnedOn++ },
+                        onDontAskAgain = {
+                            dontAskAgain++
+                            promptDismissed = true
+                        },
+                        subtitlePicks = SubtitlePicks(onOff = {}, onPicked = {}),
+                        onBack = { backs++ },
+                    )
+                }
             }
         }
         start(player)
@@ -815,6 +822,56 @@ class LivePlayerContentTest {
             showChannel(queue = CHANNELS, currentId = 11L)
 
             compose.onNodeWithText("Two").assertDoesNotExist()
+        } finally {
+            PipState.setInPip(false)
+        }
+    }
+
+    /** A controller that plays channel 7, noting each channel it's asked to find. */
+    private fun channelSeven(asked: MutableList<MediaKey>) = players.controller(LIVE) { key ->
+        asked += key
+        Playable.Ready(key, "https://example.com/live/7", userAgent = "", title = "Seven", isLive = true)
+    }
+
+    private fun startSeven(player: PlayerController) {
+        player.play(PlayerController.Request(MediaKey.Live(7)), debounce = false)
+        players.untilReady(player.player)
+    }
+
+    @Test
+    fun `behind another app the channel stops, closing its connection, and coming back it tunes in again`() {
+        val asked = mutableListOf<MediaKey>()
+        val seven = channelSeven(asked)
+        showChannel(player = seven, start = ::startSeven)
+
+        lifecycle.goBehind()
+        compose.waitForIdle()
+
+        assertThat(seven.state.value).isEqualTo(PlayerController.State.Idle)
+        assertThat(seven.player.playbackState).isEqualTo(Player.STATE_IDLE)
+        assertThat(seven.player.isLoading).isFalse()
+
+        lifecycle.comeBack()
+        compose.waitForIdle()
+        players.untilReady(seven.player)
+
+        assertThat(asked).containsExactly(MediaKey.Live(7), MediaKey.Live(7))
+        assertThat(seven.state.value).isInstanceOf(PlayerController.State.Playing::class.java)
+        assertThat(seven.playWhenReady.value).isTrue()
+        seven.release()
+    }
+
+    @Test
+    fun `in picture-in-picture the channel plays on when the app is behind another`() {
+        PipState.setInPip(true)
+        try {
+            showChannel()
+
+            lifecycle.goBehind()
+            compose.waitForIdle()
+
+            assertThat(controller.state.value).isInstanceOf(PlayerController.State.Playing::class.java)
+            assertThat(controller.player.playbackState).isEqualTo(Player.STATE_READY)
         } finally {
             PipState.setInPip(false)
         }

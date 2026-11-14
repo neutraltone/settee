@@ -89,6 +89,7 @@ import app.opentv.ui.player.PlayerOptions
 import app.opentv.ui.player.PlayerPill
 import app.opentv.ui.player.SleepTimerPanel
 import app.opentv.ui.player.SubtitlePicks
+import app.opentv.ui.player.WhenBehindAnotherApp
 import app.opentv.ui.player.trackLabel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -242,7 +243,7 @@ internal fun PlayerController.vodPlayback() = object : VodPlayerViewModel.Playba
 /**
  * The player's picture, transport bar and Next Episode card, with everything about playback that the
  * remote drives. [VodPlayerScreen] owns the stream, resume, saving progress and moving between
- * episodes; this owns what the viewer sees and presses.
+ * episodes; this owns what the viewer sees and presses, and pausing behind another app.
  */
 @OptIn(UnstableApi::class)
 @Composable
@@ -302,6 +303,17 @@ fun VodPlayerContent(
     fun markWatched() {
         marking.launch { if (viewModel.markWatched()) onBack() }
     }
+
+    // Behind another app it pauses and keeps its place, as leaving the player does, and coming back it
+    // stays paused: the viewer may have been away for hours, and presses Play when they're watching.
+    // A recording pauses the same way; RecordingEngine goes on recording it.
+    WhenBehindAnotherApp(
+        onGoneBehind = {
+            controller.player.playWhenReady = false
+            marking.launch { withContext(NonCancellable) { viewModel.saveProgress() } }
+        },
+        onBack = {},
+    )
     val panelFocus = remember { FocusRequester() }
     var positionMs by remember { mutableLongStateOf(0L) }
     var durationMs by remember { mutableLongStateOf(0L) }
