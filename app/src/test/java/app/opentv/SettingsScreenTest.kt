@@ -41,6 +41,7 @@ import androidx.test.espresso.matcher.RootMatchers
 import androidx.test.espresso.matcher.ViewMatchers
 import app.opentv.core.AppSettings
 import app.opentv.core.ServiceLocator
+import app.opentv.core.SleepTimer
 import app.opentv.data.model.Category
 import app.opentv.data.model.Source
 import app.opentv.data.model.SourceKind
@@ -232,6 +233,20 @@ class SettingsScreenTest {
 
         Espresso.pressBack()
         assertThat(leftSettings).isEqualTo(1)
+    }
+
+    @Test
+    fun `Sleep timer shows Off once its time has run out, not 0 min left`() {
+        SleepTimer.armMinutes(-1)
+        try {
+            show(SettingsMemory(SettingsSection.Display))
+
+            compose.onNode(hasText("Sleep timer") and hasText("Off")).assertExists()
+            compose.onNode(hasText("Sleep timer") and hasText("0 min left")).assertDoesNotExist()
+        } finally {
+            // A process-wide singleton: a timer left armed would close the next test's player.
+            SleepTimer.clear()
+        }
     }
 
     @Test

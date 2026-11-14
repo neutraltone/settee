@@ -55,11 +55,13 @@ internal fun DisplayPane() {
         value = if (subtitlesOn) on else off,
         note = profileName?.let { stringResource(R.string.settings_row_for_profile, it) },
     )
-    val minutesLeft = deadline?.let { ((it - System.currentTimeMillis()).coerceAtLeast(0) + MINUTE - 1) / MINUTE }
+    // Reading deadline redraws the row when the timer is armed or cleared; SleepTimer decides that
+    // one which has passed is off.
+    val minutesLeft = deadline?.let { SleepTimer.minutesRemaining() }
     ListRow(
         stringResource(R.string.settings_row_sleep_timer),
         onClick = { choosing = Choice.Sleep },
-        value = minutesLeft?.let { stringResource(R.string.settings_row_sleep_left, it.toInt()) } ?: off,
+        value = minutesLeft?.let { stringResource(R.string.settings_row_sleep_left, it) } ?: off,
     )
     ListRow(
         stringResource(R.string.settings_row_play_next),
@@ -218,4 +220,3 @@ private fun changeLanguage(context: Context, settings: AppSettings, tag: String)
     context.findActivity()?.recreate()
 }
 
-private const val MINUTE = 60_000L
