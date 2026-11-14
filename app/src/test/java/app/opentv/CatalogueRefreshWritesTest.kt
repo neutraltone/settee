@@ -142,6 +142,24 @@ class CatalogueRefreshWritesTest {
         assertThat(rows.single { it.streamId == "a" }.name).isEqualTo("Second")
     }
 
+    @Test
+    fun `a new channel carrying an id is added under that id`() = runTest {
+        val sourceId = source()
+
+        channels.replaceCatalogue(sourceId, listOf(channel(sourceId, "a").copy(id = 7)), syncStamp = 1)
+
+        assertThat(channels.forSource(sourceId).map { it.id }).containsExactly(7L)
+    }
+
+    @Test
+    fun `a new channel carrying an id in a batch is added under that id`() = runTest {
+        val sourceId = source(SourceKind.XTREAM)
+
+        refreshInBatches(sourceId, listOf(channel(sourceId, "a").copy(id = 7)), syncStamp = 1)
+
+        assertThat(channels.forSource(sourceId).map { it.id }).containsExactly(7L)
+    }
+
     private fun movie(sourceId: Long, streamId: String, name: String = "Film $streamId", cast: String? = null) = Movie(
         sourceId = sourceId,
         streamId = streamId,

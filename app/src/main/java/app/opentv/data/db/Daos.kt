@@ -358,14 +358,15 @@ interface ChannelDao {
     suspend fun updateAll(channels: List<Channel>)
 
     /**
-     * Saves a refresh's merged rows by [updateOrInsert], not [upsertAll]. A row with an id is stored:
-     * the merge read it in this same transaction and carried its id across.
+     * Saves a refresh's merged rows by [updateOrInsert], not [upsertAll]. Stored are the rows the
+     * merge matched to [stored], read in this same transaction; not any row with an id, since a new
+     * one may carry its own.
      */
-    suspend fun saveMerged(merged: List<Channel>) {
+    suspend fun saveMerged(merged: List<Channel>, stored: Map<String, ChannelUserState>) {
         updateOrInsert(
             merged,
             Channel::id,
-            isStored = { it.id > 0 },
+            isStored = { it.streamId in stored },
             update = { updateAll(it) },
             insert = { insertAll(it) },
         )
@@ -402,14 +403,15 @@ interface ChannelDao {
         // Every stored row at once, not a batch at a time as below: a stream id listed twice then
         // meets the row as it was before the refresh both times, which is how these lists always
         // merged, and the whole list is in memory already.
+        val stored = userStateForSource(sourceId).associateBy { it.streamId }
         val merged = mergedOver(
             lastOfEach(incoming) { it.streamId },
-            userStateForSource(sourceId).associateBy { it.streamId },
+            stored,
             hiddenChangesFor(sourceId).associateBy { it.streamId },
             syncStamp,
         )
         // Chunked so a 40,000-channel playlist does not build one enormous statement.
-        merged.chunked(WRITE_CHUNK).forEach { saveMerged(it) }
+        merged.chunked(WRITE_CHUNK).forEach { saveMerged(it, stored) }
         deleteStale(sourceId, syncStamp)
     }
 
@@ -434,13 +436,14 @@ interface ChannelDao {
                 // of one id would otherwise both be inserted, and the second break the unique index.
                 lastOfEach(batch) { it.streamId }.chunked(WRITE_CHUNK).forEach { chunk ->
                     val streamIds = chunk.map { it.streamId }
+                    val stored = byStreamIds(sourceId, streamIds).associateBy { it.streamId }
                     val merged = mergedOver(
                         chunk,
-                        byStreamIds(sourceId, streamIds).associateBy { it.streamId },
+                        stored,
                         hiddenChangesFor(sourceId, streamIds).associateBy { it.streamId },
                         syncStamp,
                     )
-                    saveMerged(merged)
+                    saveMerged(merged, stored)
                 }
                 saved += batch.size
             }
