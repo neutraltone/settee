@@ -19,6 +19,7 @@ import androidx.core.app.NotificationCompat
 import app.opentv.R
 import app.opentv.core.ServiceLocator
 import app.opentv.core.ViewerError
+import app.opentv.data.db.wontOpen
 import app.opentv.data.repo.MediaKey
 import app.opentv.player.PlaybackErrors
 import java.util.concurrent.ConcurrentHashMap
@@ -79,7 +80,7 @@ class RecordingService : Service() {
     private suspend fun runCapture(id: Long) {
         val graph = ServiceLocator.get(applicationContext)
         val repo = graph.recordingRepository
-        val recording = repo.byId(id)
+        val recording = if (graph.database.wontOpen() == null) repo.byId(id) else null
         if (recording == null) {
             finish(id)
             return

@@ -57,6 +57,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import app.opentv.core.ServiceLocator
+import app.opentv.data.db.wontOpen
 import app.opentv.data.repo.MediaKey
 import app.opentv.ui.DatabaseGate
 import app.opentv.ui.FirstScreen
@@ -88,6 +89,7 @@ import app.opentv.ui.vod.SeriesDetailScreen
 import app.opentv.ui.vod.VodPlayerScreen
 import app.opentv.ui.vod.rememberCoverBadges
 import app.opentv.update.UpdateGate
+import app.opentv.update.UpdateViewModel
 import app.opentv.update.WhatsNewGate
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -122,11 +124,19 @@ class MainActivity : ComponentActivity() {
                     val graph = ServiceLocator.get(this@MainActivity)
                     DatabaseGate(
                         open = {
-                            withContext(Dispatchers.IO) { graph.database.openHelper.writableDatabase }
+                            val failure = withContext(Dispatchers.IO) { graph.database.wontOpen() }
                             // The launch work reads the database too, so it waits for it as well.
-                            (application as? OpenTvApp)?.opened()
+                            if (failure == null) (application as? OpenTvApp)?.opened()
+                            failure
                         },
                         describe = graph.errorWording::ofDatabase,
+                        alongsideFailure = {
+                            // The fix for a database Settee can't open is a newer release, and the
+                            // updater needs only the network, so it's offered here as well.
+                            val updates: UpdateViewModel = viewModel()
+                            LaunchedEffect(updates) { updates.checkNow() }
+                            UpdateGate(updates)
+                        },
                     ) {
                         OpenTvApp(isTelevision = isTelevision, launchedToPlay = toPlay)
                     }

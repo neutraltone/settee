@@ -121,7 +121,8 @@ This is the owner's job. The passwords and backups stay with them, not with CI o
 Every schema from 9 (v0.5.0) on must migrate; only 1–8 and upstream OpenTV's 11 are rebuilt empty
 (`WIPED_SCHEMAS` in `OpenTvDatabase`, #334). A database Settee can't open, from a migration that doesn't
 match its schema or from a newer build after a downgrade, shows "Settee can't read what it saved" at
-launch instead of any screen, and the in-app updater can't be reached from there. The ways out:
+launch instead of any screen. That screen checks for a newer release straight away and offers it, so
+once a fixed release is out the in-app updater still gets there. Otherwise, the ways out:
 
 - **Keeps the data:** reinstall over the top with Downloader code **6405610** (it installs the latest
   `settee.apk`), or `adb install -r settee.apk`. This works once a release with a fix is out.

@@ -11,6 +11,7 @@ import androidx.room.testing.MigrationTestHelper
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.platform.app.InstrumentationRegistry
 import app.opentv.data.db.OpenTvDatabase
+import app.opentv.data.db.wontOpen
 import app.opentv.data.model.Favourite
 import app.opentv.data.model.StreamKind
 import com.google.common.truth.Truth.assertThat
@@ -124,5 +125,20 @@ class OpenTvDatabaseTest {
 
         assertThat(refused).hasMessageThat().contains("A migration from 15 to 14 was required but not found")
         assertThat(wipes).isEqualTo(0)
+    }
+
+    @Test
+    fun `a database that won't open says why, so the alarms and the first screen can stop short of crashing`() {
+        leaveStrangerDatabase(15)
+
+        val failure = open().wontOpen()
+
+        assertThat(failure).isInstanceOf(IllegalStateException::class.java)
+        assertThat(wipes).isEqualTo(0)
+    }
+
+    @Test
+    fun `a database that opens has nothing to say`() {
+        assertThat(open().wontOpen()).isNull()
     }
 }

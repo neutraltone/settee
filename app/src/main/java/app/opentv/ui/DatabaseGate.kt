@@ -5,7 +5,6 @@
  */
 package app.opentv.ui
 
-import android.database.SQLException
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -14,45 +13,67 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
+import app.opentv.R
 import app.opentv.core.ViewerError
+import app.opentv.ui.design.AerialTv
 import app.opentv.ui.design.ErrorMessage
 import app.opentv.ui.design.SetteeSpace
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 private sealed interface Opening {
     data object Waiting : Opening
+    data object Slow : Opening
     data object Open : Opening
     data class Failed(val error: ViewerError) : Opening
 }
 
 /**
- * Draws [content] only once [open] has opened the database (#334). Every screen reads it, and a
- * failure there is thrown from a view model's coroutine, which stops the app with no message on every
- * launch. The in-app updater is behind it too, so the viewer has to be told the way out from here.
+ * Draws [content] only once [open] has opened the database (#334); [open] gives the failure, or null.
+ * Every screen reads the database, and a failure there is thrown from a view model's coroutine, which
+ * stops the app with no message on every launch, so the viewer is told the way out from here instead,
+ * with [alongsideFailure] (the update offer) over it.
  *
- * Draws nothing while waiting: opening takes a frame or two, or longer once while a migration runs.
+ * Opening usually takes a frame or two, which a waiting TV would only flash through, so it shows
+ * only once opening has taken long enough to look stuck, as a migration on the Stick can.
  */
 @Composable
-fun DatabaseGate(open: suspend () -> Unit, describe: (Throwable) -> ViewerError, content: @Composable () -> Unit) {
+fun DatabaseGate(
+    open: suspend () -> Throwable?,
+    describe: (Throwable) -> ViewerError,
+    alongsideFailure: @Composable () -> Unit = {},
+    content: @Composable () -> Unit,
+) {
     val state by produceState<Opening>(Opening.Waiting) {
-        value = try {
-            open()
-            Opening.Open
-        } catch (missingMigration: IllegalStateException) {
-            // Room's: no migration from the version on disk, or a schema that doesn't match.
-            Opening.Failed(describe(missingMigration))
-        } catch (unreadable: SQLException) {
-            // SQLite's: a full disk, or a file it can't open.
-            Opening.Failed(describe(unreadable))
+        val slow = launch {
+            delay(SLOW_OPEN_MILLIS)
+            value = Opening.Slow
         }
+        val failure = open()
+        slow.cancel()
+        value = if (failure == null) Opening.Open else Opening.Failed(describe(failure))
     }
     when (val opening = state) {
         Opening.Waiting -> Unit
         Opening.Open -> content()
-        is Opening.Failed -> Box(
-            Modifier.fillMaxSize().padding(horizontal = SetteeSpace.ScreenSide, vertical = SetteeSpace.ScreenTopBottom),
-            contentAlignment = Alignment.Center,
-        ) {
-            ErrorMessage(opening.error.sentence, opening.error.detail)
+        Opening.Slow -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            AerialTv(stringResource(R.string.progress_still_working))
+        }
+        is Opening.Failed -> {
+            Box(
+                Modifier.fillMaxSize().padding(
+                    horizontal = SetteeSpace.ScreenSide,
+                    vertical = SetteeSpace.ScreenTopBottom,
+                ),
+                contentAlignment = Alignment.Center,
+            ) {
+                ErrorMessage(opening.error.sentence, opening.error.detail)
+            }
+            alongsideFailure()
         }
     }
 }
+
+/** Long enough that an ordinary open never shows the waiting TV. */
+private const val SLOW_OPEN_MILLIS = 500L
