@@ -7,8 +7,10 @@ package app.opentv
 
 import android.content.Context
 import androidx.media3.common.ParserException
+import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.upstream.Loader
+import androidx.media3.test.utils.robolectric.TestPlayerRunHelper
 import androidx.test.core.app.ApplicationProvider
 import app.opentv.data.model.Channel
 import app.opentv.data.remote.StalkerApi
@@ -38,6 +40,7 @@ class PlayerControllerTest {
     private val sources = PlaybackSources(test.db, XtreamApi(panel.http), StalkerApi(panel.http), test.lineup)
     private val players = TestPlayers(context)
     private val channels = mutableListOf<Long>()
+    private val resolved = mutableListOf<MediaKey>()
 
     @Before
     fun portal() = runBlocking {
@@ -129,6 +132,66 @@ class PlayerControllerTest {
         assertThat(error.reason.sentence)
             .isEqualTo("Your provider didn't give a link for this channel. Try refreshing your provider in Settings.")
         assertThat(error.reason.detail).isEqualTo("LinkRefused")
+    }
+
+    @Test
+    fun `a channel that can't be opened stops the one that was playing, so only its sentence is left`() {
+        val controller = players.controller(LIVE, resolve = ::refusingChannel2)
+        controller.play(PlayerController.Request(MediaKey.Live(1)), debounce = false)
+        players.untilReady(controller.player)
+
+        controller.play(PlayerController.Request(MediaKey.Live(2)), debounce = false)
+        players.until { controller.state.value is PlayerController.State.Error }
+
+        assertThat(controller.player.playbackState).isEqualTo(Player.STATE_IDLE)
+        assertThat(controller.player.isPlaying).isFalse()
+        assertThat((controller.state.value as PlayerController.State.Error).reason.sentence)
+            .isEqualTo("Your provider didn't give a link for this channel. Try refreshing your provider in Settings.")
+    }
+
+    @Test
+    fun `nothing the stopped channel's player does afterwards covers the sentence`() {
+        val controller = players.controller(LIVE, resolve = ::refusingChannel2)
+        controller.play(PlayerController.Request(MediaKey.Live(1)), debounce = false)
+        players.untilReady(controller.player)
+        controller.play(PlayerController.Request(MediaKey.Live(2)), debounce = false)
+        players.until { controller.state.value is PlayerController.State.Error }
+        val error = controller.state.value
+
+        // A seek is what makes a playing stream buffer and then play again.
+        controller.player.seekTo(60_000)
+        repeat(50) {
+            players.clock.advanceTime(10)
+            TestPlayerRunHelper.run(controller.player).untilPendingCommandsAreFullyHandled()
+        }
+        players.advance(5_000)
+
+        assertThat(controller.state.value).isSameInstanceAs(error)
+        assertThat(resolved).containsExactly(MediaKey.Live(1), MediaKey.Live(2)).inOrder()
+    }
+
+    @Test
+    fun `retry after a channel can't be opened asks for that channel again`() {
+        val controller = players.controller(LIVE, resolve = ::refusingChannel2)
+        controller.play(PlayerController.Request(MediaKey.Live(1)), debounce = false)
+        players.untilReady(controller.player)
+        controller.play(PlayerController.Request(MediaKey.Live(2)), debounce = false)
+        players.until { controller.state.value is PlayerController.State.Error }
+
+        controller.retry()
+        players.until { resolved.size == 3 }
+
+        assertThat(resolved.last()).isEqualTo(MediaKey.Live(2))
+    }
+
+    /** Resolves channel 2 as a portal that refuses it a link, and any other channel to a stream. */
+    private fun refusingChannel2(key: MediaKey): Playable {
+        resolved += key
+        return if (key == MediaKey.Live(2)) {
+            Playable.Failed(key, Playable.Failure.LINK_REFUSED)
+        } else {
+            Playable.Ready(key, "https://example.com/live", userAgent = "", title = "Channel", isLive = true)
+        }
     }
 
     private fun stalkerChannel(n: Int) = Channel(

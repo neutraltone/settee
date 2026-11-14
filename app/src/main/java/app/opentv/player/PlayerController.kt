@@ -381,6 +381,11 @@ class PlayerController(
             val playable = when (val resolved = resolve(request.key)) {
                 is Playable.Ready -> resolved
                 is Playable.Failed -> {
+                    // The last stream is still on the player. Left playing, it'd be heard behind the
+                    // sentence, its next state would cover it, and its failure would restart this one.
+                    gaveUp = true
+                    player.stop()
+                    loaded = null
                     val title = resolved.title.ifEmpty { _title.value }
                     _state.value = State.Error(title, PlaybackErrors.describe(strings, resolved.failure), true)
                     return@launch
