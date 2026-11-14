@@ -71,6 +71,8 @@ class ManagerServer(
     private val sourceRepository: SourceRepository,
     private val lineup: ChannelLineup,
     private val refresh: CatalogueRefresh,
+    /** Saves a category's new order; tests hold one back to see that the next waits its turn. */
+    private val saveOrder: suspend (List<Long>) -> Unit = { catalog.setChannelOrder(it) },
 ) {
     /** Words a failed test or add for the page; it never sends an exception's own message. */
     private val wording get() = catalog.wording
@@ -110,6 +112,13 @@ class ManagerServer(
      * side, and two Adds at once would each save and refresh before either saw the other.
      */
     private val adding = ReentrantLock()
+
+    /**
+     * Saves one reorder at a time, in the order they reached it (a fair lock hands it on first come,
+     * first served). Each request runs on its own, so two reorders sent a tap apart could otherwise
+     * save the later first and be overwritten by the earlier: the last to save wins, not the last tap.
+     */
+    private val reordering = ReentrantLock(true)
 
     private val json = Json {
         ignoreUnknownKeys = true
@@ -324,10 +333,8 @@ class ManagerServer(
             output.write(PairingHttp.httpResponse("400 Bad Request", "text/plain", "Bad request."))
             return
         }
-        runBlocking {
-            // Ids ≤ 0 keep their position but match no channel, so nothing moves to it.
-            catalog.setChannelOrder(req.ids)
-        }
+        // Ids ≤ 0 keep their position but match no channel, so nothing moves to it.
+        reordering.withLock { runBlocking { saveOrder(req.ids) } }
         writeOk(output)
     }
 
