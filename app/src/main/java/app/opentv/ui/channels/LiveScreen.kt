@@ -127,9 +127,7 @@ fun LiveScreen(
     var highlighted by remember { mutableStateOf<Pair<ChannelsViewModel.Row, GuideProgramme?>?>(null) }
     var nowMillis by remember { mutableLongStateOf(viewModel.now()) }
 
-    // Remembered: a new flow each recomposition would restart the query on every guide move.
-    val activeRecordings by remember(graph) { graph.recordingRepository.observeActive() }
-        .collectAsState(initial = emptyList())
+    val activeRecordings by graph.recordingRepository.observeActive().collectAsState(initial = emptyList())
     val recordScope = rememberCoroutineScope()
     // The programme the viewer pressed OK on in the guide, whose details are open.
     var details by remember { mutableStateOf<Pair<ChannelsViewModel.Row, GuideProgramme>?>(null) }

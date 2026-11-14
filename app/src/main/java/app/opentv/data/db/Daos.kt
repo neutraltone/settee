@@ -1558,5 +1558,5 @@ internal const val SERIES_WITH_PERSON = """
 internal const val EPISODES_OF_PLAYED_SERIES =
     "SELECT episodes.* FROM episodes JOIN (SELECT DISTINCT played.sourceId, played.seriesId " +
         "FROM playback_positions JOIN episodes AS played ON playback_positions.mediaKey = 'ep:' || played.id " +
-        "WHERE playback_positions.profileId = :profileId) AS series " +
-        "ON episodes.sourceId = series.sourceId AND episodes.seriesId = series.seriesId"
+        "WHERE playback_positions.profileId = :profileId) AS played_series " +
+        "ON episodes.sourceId = played_series.sourceId AND episodes.seriesId = played_series.seriesId"

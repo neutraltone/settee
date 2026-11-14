@@ -69,8 +69,21 @@ class GrowingRecordingDataSource internal constructor(
     private val readAhead = SmbReadAhead()
 
     // Polls at the SMB growing edge since bytes last arrived; the handle is reopened once it reaches
-    // REOPEN_AFTER_POLLS. Kept across reads so a server whose answers never move still gets reopened.
+    // the stall limit. Kept across reads so a server whose answers never move still gets reopened.
     private var stalledPolls = 0
+
+    // The open handle's last answer for the end of file; -1 when it gave none.
+    private var lastEnd = -1L
+
+    // Learnt when a reopen shows bytes the old handle, still answering, never reported: such a server
+    // is reopened after a short stall, since asking its open handle never shows anything new.
+    private var serverCachesEnd = false
+
+    // Set once the handle has been reopened to look for bytes written as the capture finished.
+    private var reopenedAfterFinish = false
+
+    // Guards swapping the SMB handle against close(), which the player calls from another thread.
+    private val smbLock = Any()
 
     override fun open(dataSpec: DataSpec): Long {
         transferInitializing(dataSpec)
@@ -166,6 +179,13 @@ class GrowingRecordingDataSource internal constructor(
             }
             // At the growing edge. If the capture is done, this really is the end.
             if (!RecordingLiveState.isActive(recordingId)) {
+                // Unless the handle can't show what the capture wrote last: there is none after a
+                // reopen that failed, and a server that caches the end of file shows only what there
+                // was when it was opened. One more open finds it.
+                if ((smb == null || serverCachesEnd) && !reopenedAfterFinish) {
+                    reopenedAfterFinish = true
+                    if (reopenSmb()) continue
+                }
                 val last = runCatching { readAhead.read(position, buffer, offset, length) }.getOrDefault(-1)
                 if (last > 0) {
                     position += last
@@ -193,21 +213,46 @@ class GrowingRecordingDataSource internal constructor(
             if (pollOnce()) return false
             if (!RecordingLiveState.isActive(recordingId)) return true
             // Some servers cache the end of file on an open handle, so neither asking nor reading
-            // through it sees what's been appended: after a long stall, reopen it to refresh it.
-            // Counted whatever the handle answers, in case its answer moves while its reads don't.
-            // While the capture runs a reopen that fails is tried again later, not taken as the end.
-            if (++stalledPolls >= REOPEN_AFTER_POLLS) {
+            // through it sees what's been appended: after a stall, reopen it to refresh it. Counted
+            // whatever the handle answers, in case its answer moves while its reads don't.
+            val stalled = ++stalledPolls >= if (serverCachesEnd) REOPEN_CACHED_AFTER_POLLS else REOPEN_AFTER_POLLS
+            val handle = smb
+            val end = handle?.let { runCatching { it.endOfFile() }.getOrNull() }
+            lastEnd = end ?: -1L
+            if (!stalled && end != null && end > position) return true
+            // A handle that no longer answers has lost its connection: reconnect now, not after the
+            // stall. While the capture runs a reopen that fails is tried again later, not taken as the end.
+            if (stalled || (handle != null && end == null)) {
                 stalledPolls = 0
-                runCatching { smb?.close() }
-                smb = runCatching { openSmb(smbLocator) }.getOrNull()
-                readAhead.reader = smb
-                if (smb != null) return true
-                continue
+                if (reopenSmb()) return true
             }
-            val end = smb?.let { runCatching { it.endOfFile() }.getOrNull() }
-            if (end != null && end > position) return true
         }
         return false
+    }
+
+    /** Swaps in a fresh SMB handle; false if the NAS couldn't be reached or the source closed meanwhile. */
+    private fun reopenSmb(): Boolean {
+        val endBefore = lastEnd
+        synchronized(smbLock) {
+            runCatching { smb?.close() }
+            smb = null
+            readAhead.reader = null
+        }
+        // Connecting takes a while, so it's done outside the lock, and its handle closed if close()
+        // came in meanwhile: kept, it would hold a connection and login on the NAS that nothing ends.
+        val fresh = runCatching { openSmb(smbLocator) }.getOrNull()
+        synchronized(smbLock) {
+            if (closed) {
+                runCatching { fresh?.close() }
+                return false
+            }
+            smb = fresh
+            readAhead.reader = fresh
+        }
+        if (fresh == null) return false
+        if (endBefore >= 0 && fresh.length > endBefore) serverCachesEnd = true
+        lastEnd = fresh.length
+        return true
     }
 
     /** Sleep one poll; returns true if interrupted (caller should end). */
@@ -224,12 +269,17 @@ class GrowingRecordingDataSource internal constructor(
     override fun close() {
         closed = true
         runCatching { file?.close() }
-        runCatching { smb?.close() }
         file = null
-        smb = null
+        synchronized(smbLock) {
+            runCatching { smb?.close() }
+            smb = null
+            readAhead.reader = null
+        }
         smbLocator = ""
         stalledPolls = 0
-        readAhead.reader = null
+        lastEnd = -1L
+        serverCachesEnd = false
+        reopenedAfterFinish = false
         if (opened) {
             opened = false
             transferEnded()
@@ -253,5 +303,8 @@ class GrowingRecordingDataSource internal constructor(
          * server's cached end of file. Longer than the recorder takes to land its next megabyte.
          */
         const val REOPEN_AFTER_POLLS = 40
+
+        /** Once a server is known to cache the end of file, reopen after this many (~2 s) instead. */
+        const val REOPEN_CACHED_AFTER_POLLS = 8
     }
 }

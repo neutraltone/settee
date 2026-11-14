@@ -690,6 +690,9 @@ private class PlayedSnapshot(
     val ofPlayedSeries: List<Episode>,
     val dismissals: List<SeriesDismissal>,
 ) {
+    /** Each position by its media key, built once for Continue Watching and the covers both. */
+    val positionOf: Map<String, PlaybackPosition> by lazy { positions.associateBy { it.mediaKey } }
+
     /**
      * Each played series with the positions in its own episodes (still newest first). Grouped once
      * for Continue Watching and the covers both: handing every series all the positions would read
@@ -788,7 +791,7 @@ private class ContinueWatchingCards(
     /** Continue Watching's series cards in [played]. */
     suspend fun seriesFrom(played: PlayedSnapshot): List<Played> {
         val dismissalOf = played.dismissals.associateBy { SeriesRef(it.sourceId, it.seriesId) }
-        val positionOf = played.positions.associateBy { it.mediaKey }
+        val positionOf = played.positionOf
         // Capped on cards, not series: a series with nothing left to watch takes no slot. Every
         // series is built before the cap, since a New Episode can lift one long unplayed to the top.
         return played.series
@@ -980,7 +983,7 @@ private fun coverStatusesIn(played: PlayedSnapshot): CoverStatuses {
         val id = pos.movieId ?: return@mapNotNull null
         coverStatusOf(statusOf(pos))?.let { id to it }
     }.toMap()
-    val positionOf = list.associateBy { it.mediaKey }
+    val positionOf = played.positionOf
     val series = played.series.mapNotNull { series ->
         series.progress?.let { seriesCoverStatus(it, positionOf) }?.let { series.ref to it }
     }.toMap()

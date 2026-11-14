@@ -102,9 +102,7 @@ internal fun rememberLivePreviewPlayer(channel: Channel?): LivePreviewPlayer {
     val context = LocalContext.current
     val graph = remember { ServiceLocator.get(context) }
     val previewVideo by graph.settings.guidePreviewVideo.collectAsState()
-    // Remembered, or each recomposition would start the query again.
-    val recordings by remember(graph) { graph.recordingRepository.observeActive() }
-        .collectAsState(initial = emptyList())
+    val recordings by graph.recordingRepository.observeActive().collectAsState(initial = emptyList())
     val wanted = channel != null && previewVideo
     // Built only while there's something to play: most visits to Home have no Live Preview.
     val controller = remember(wanted) {

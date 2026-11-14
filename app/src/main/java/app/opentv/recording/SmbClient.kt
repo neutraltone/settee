@@ -6,6 +6,7 @@
 package app.opentv.recording
 
 import com.hierynomus.msdtyp.AccessMask
+import com.hierynomus.msfscc.fileinformation.FileStandardInformation
 import com.hierynomus.mssmb2.SMB2CreateDisposition
 import com.hierynomus.mssmb2.SMB2ShareAccess
 import com.hierynomus.smbj.SMBClient
@@ -84,7 +85,9 @@ class SmbReadHandle(
     override fun readAt(buffer: ByteArray, fileOffset: Long, bufferOffset: Int, length: Int): Int =
         file.read(buffer, fileOffset, bufferOffset, length)
 
-    override fun endOfFile(): Long = file.fileInformation.standardInformation.endOfFile
+    // The standard information alone: the whole of it is a larger request and reply, four times a
+    // second while a recording is watched at its growing edge.
+    override fun endOfFile(): Long = file.getFileInformation(FileStandardInformation::class.java).endOfFile
 
     override fun close() {
         runCatching { file.close() }

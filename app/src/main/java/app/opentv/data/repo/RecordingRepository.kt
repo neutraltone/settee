@@ -12,12 +12,32 @@ import app.opentv.data.model.RecordingStatus
 import app.opentv.data.model.SeriesRule
 import app.opentv.recording.SmbClient
 import app.opentv.sync.SyncRecording
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.shareIn
 
 /** Reads and writes over the recordings + series-rule tables. Pure data access, no capture logic. */
-class RecordingRepository(private val dao: RecordingDao, private val ruleDao: SeriesRuleDao) {
+class RecordingRepository(
+    private val dao: RecordingDao,
+    private val ruleDao: SeriesRuleDao,
+    private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.IO),
+) {
+    // One query shared by every screen that shows what's recording: Live TV, Home and the player
+    // ask for this while composing, and a new Room flow each time restarted the query on every
+    // redraw. Nothing is replayed once the last viewer has gone, so a later first() reads afresh.
+    private val active: Flow<List<Recording>> by lazy {
+        dao.observeActive().shareIn(
+            scope,
+            SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000, replayExpirationMillis = 0),
+            replay = 1,
+        )
+    }
+
     fun observeAll(): Flow<List<Recording>> = dao.observeAll()
-    fun observeActive(): Flow<List<Recording>> = dao.observeActive()
+    fun observeActive(): Flow<List<Recording>> = active
     fun observeRules(): Flow<List<SeriesRule>> = ruleDao.observeAll()
 
     suspend fun byId(id: Long): Recording? = dao.byId(id)
