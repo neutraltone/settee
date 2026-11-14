@@ -462,6 +462,8 @@ class RecordingsContentTest {
     private fun reminder(id: Long, autoTune: Boolean) = Reminder(
         id = id,
         channelId = id,
+        source = "Home",
+        streamId = "$id",
         channelName = "Channel $id",
         title = "Reminder $id",
         startUtcMillis = NOW + id * HOUR,
@@ -469,8 +471,15 @@ class RecordingsContentTest {
         autoTune = autoTune,
     )
 
-    private fun seriesLink(id: Long) =
-        SeriesRule(id = id, channelId = id, channelName = "Channel $id", titleKey = "series $id", title = "Series $id")
+    private fun seriesLink(id: Long) = SeriesRule(
+        id = id,
+        channelId = id,
+        source = "Home",
+        streamId = "$id",
+        channelName = "Channel $id",
+        titleKey = "series $id",
+        title = "Series $id",
+    )
 
     private companion object {
         const val TIMEOUT_MILLIS = 5_000L

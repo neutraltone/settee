@@ -15,6 +15,7 @@ import androidx.room.Update
 import androidx.room.Upsert
 import app.opentv.data.model.Category
 import app.opentv.data.model.Channel
+import app.opentv.data.model.ChannelEdits
 import app.opentv.data.model.ChannelEpgMatch
 import app.opentv.data.model.ChannelHiddenChange
 import app.opentv.data.model.ChannelMatchInput
@@ -387,6 +388,85 @@ interface ChannelDao {
     @Query("DELETE FROM channels WHERE sourceId = :sourceId AND lastSeenMillis < :syncStamp")
     suspend fun deleteStale(sourceId: Long, syncStamp: Long)
 
+    /**
+     * [deleteStale], keeping first what the viewer set on each channel it deletes as [ChannelEdits],
+     * for when the provider lists it again. Called inside a refresh's transaction.
+     */
+    suspend fun removeStale(sourceId: Long, syncStamp: Long) {
+        forgetEditsOfStale(sourceId, syncStamp)
+        keepEditsOfStale(sourceId, syncStamp)
+        deleteStale(sourceId, syncStamp)
+        relinkSeriesRules(sourceId)
+        relinkReminders(sourceId)
+    }
+
+    /**
+     * Points each of this source's series links at its channel's row, which is a new one when the
+     * channel is back after a refresh left it out. One that's still missing keeps the row id it had
+     * and books nothing until it's back. Both tables are small, so this binds no list of ids.
+     */
+    @Query(
+        """
+        UPDATE series_rules SET channelId = (
+            SELECT c.id FROM channels c
+            WHERE c.sourceId = :sourceId AND c.streamId = series_rules.streamId
+        )
+        WHERE source = (SELECT name FROM sources WHERE id = :sourceId)
+        AND EXISTS (SELECT 1 FROM channels c WHERE c.sourceId = :sourceId AND c.streamId = series_rules.streamId)
+        """,
+    )
+    suspend fun relinkSeriesRules(sourceId: Long)
+
+    /** [relinkSeriesRules] for reminders, so one still switches to its channel when it fires. */
+    @Query(
+        """
+        UPDATE reminders SET channelId = (
+            SELECT c.id FROM channels c
+            WHERE c.sourceId = :sourceId AND c.streamId = reminders.streamId
+        )
+        WHERE source = (SELECT name FROM sources WHERE id = :sourceId)
+        AND EXISTS (SELECT 1 FROM channels c WHERE c.sourceId = :sourceId AND c.streamId = reminders.streamId)
+        """,
+    )
+    suspend fun relinkReminders(sourceId: Long)
+
+    /**
+     * Clears what was kept from an earlier time each stale channel went missing, so a name the viewer
+     * has cleared since doesn't come back with it: [keepEditsOfStale] writes only channels with edits.
+     */
+    @Query(
+        """
+        DELETE FROM channel_edits
+        WHERE source = (SELECT name FROM sources WHERE id = :sourceId)
+        AND streamId IN (SELECT streamId FROM channels WHERE sourceId = :sourceId AND lastSeenMillis < :syncStamp)
+        """,
+    )
+    suspend fun forgetEditsOfStale(sourceId: Long, syncStamp: Long)
+
+    @Query(
+        """
+        INSERT OR REPLACE INTO channel_edits (source, streamId, sortIndex, customName, epgOverrideId, matchedEpgId)
+        SELECT s.name, c.streamId, c.sortIndex, c.customName, c.epgOverrideId, c.matchedEpgId
+        FROM channels c JOIN sources s ON s.id = c.sourceId
+        WHERE c.sourceId = :sourceId AND c.lastSeenMillis < :syncStamp
+        AND (c.sortIndex != 0 OR c.customName IS NOT NULL OR c.epgOverrideId IS NOT NULL OR c.matchedEpgId IS NOT NULL)
+        """,
+    )
+    suspend fun keepEditsOfStale(sourceId: Long, syncStamp: Long)
+
+    /** What was kept of each of this source's channels when a refresh last deleted it. */
+    @Query("SELECT * FROM channel_edits WHERE source = (SELECT name FROM sources WHERE id = :sourceId)")
+    suspend fun editsFor(sourceId: Long): List<ChannelEdits>
+
+    /** [editsFor] only for one refresh batch's [streamIds]; keep it under SQLite's 999 variables. */
+    @Query(
+        """
+        SELECT * FROM channel_edits
+        WHERE source = (SELECT name FROM sources WHERE id = :sourceId) AND streamId IN (:streamIds)
+        """,
+    )
+    suspend fun editsFor(sourceId: Long, streamIds: List<String>): List<ChannelEdits>
+
     @Query("DELETE FROM channels WHERE sourceId = :sourceId")
     suspend fun deleteForSource(sourceId: Long)
 
@@ -408,11 +488,12 @@ interface ChannelDao {
             lastOfEach(incoming) { it.streamId },
             stored,
             hiddenChangesFor(sourceId).associateBy { it.streamId },
+            editsFor(sourceId).associateBy { it.streamId },
             syncStamp,
         )
         // Chunked so a 40,000-channel playlist does not build one enormous statement.
         merged.chunked(WRITE_CHUNK).forEach { saveMerged(it, stored) }
-        deleteStale(sourceId, syncStamp)
+        removeStale(sourceId, syncStamp)
     }
 
     /**
@@ -438,12 +519,13 @@ interface ChannelDao {
                         chunk,
                         stored,
                         hiddenChangesFor(sourceId, streamIds).associateBy { it.streamId },
+                        editsFor(sourceId, streamIds).associateBy { it.streamId },
                         syncStamp,
                     )
                     saveMerged(merged, stored)
                 }
             }
-            deleteStale(sourceId, syncStamp)
+            removeStale(sourceId, syncStamp)
         }
         return staged.count
     }
@@ -515,13 +597,20 @@ private fun mergedOver(
     incoming: List<Channel>,
     existing: Map<String, ChannelUserState>,
     hiddenChanges: Map<String, ChannelHiddenChange>,
+    edits: Map<String, ChannelEdits>,
     syncStamp: Long,
 ): List<Channel> = incoming.map { channel ->
     val previous = existing[channel.streamId]
     if (previous == null) {
-        // A channel the provider dropped for a while comes back as the viewer left it.
+        // New, or back after a refresh that left it out and deleted its row: a new row id, with the
+        // viewer's last hide or show and what they had set on it when it went ([removeStale]).
+        val kept = edits[channel.streamId]
         channel.copy(
             hidden = hiddenChanges[channel.streamId]?.hidden ?: channel.hidden,
+            sortIndex = kept?.sortIndex ?: channel.sortIndex,
+            customName = kept?.customName ?: channel.customName,
+            epgOverrideId = kept?.epgOverrideId ?: channel.epgOverrideId,
+            matchedEpgId = kept?.matchedEpgId ?: channel.matchedEpgId,
             lastSeenMillis = syncStamp,
         )
     } else {
@@ -1536,14 +1625,15 @@ interface ReminderDao {
     @Insert
     suspend fun insert(reminder: Reminder): Long
 
+    /** The name a reminder records its channel's source by. */
+    @Query("SELECT name FROM sources WHERE id = :sourceId")
+    suspend fun sourceName(sourceId: Long): String?
+
     @Query("UPDATE reminders SET fired = 1 WHERE id = :id")
     suspend fun markFired(id: Long)
 
     @Query("DELETE FROM reminders WHERE id = :id")
     suspend fun delete(id: Long)
-
-    @Query("DELETE FROM reminders WHERE channelId = :channelId AND startUtcMillis = :startMillis")
-    suspend fun deleteForProgramme(channelId: Long, startMillis: Long)
 
     /** Housekeeping: drop reminders whose programme has already ended. */
     @Query("DELETE FROM reminders WHERE endUtcMillis < :beforeMillis")

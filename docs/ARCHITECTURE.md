@@ -138,6 +138,15 @@ listing. Movies and series save the same way. Favourites live in their own per-P
 matched by source name and provider id (not stream URL, which Xtream changes with the live format
 and the password), so a channel dropped and re-listed keeps them.
 
+A channel left out of one refresh is still deleted, and comes back as a new row with a new id. So
+that it comes back as the viewer left it (#333), what they set on it (`sortIndex`, custom name, both
+guide ids) is kept in `channel_edits` by source name and `streamId` just before the delete
+(`removeStale`), the same shape as `channel_hidden_changes`, and the merge applies it to a channel
+that arrives with no stored row. Series links and reminders record their channel by source name and
+`streamId` too: their `channelId` is a cache of the row, relinked at the end of every refresh, and
+one whose channel is still missing stays listed and books nothing until it returns. Keeping deleted
+rows marked gone was rejected: every channel query would need to leave them out.
+
 This is why `M3uParser` works so hard to produce a **stable** `streamId` for playlists with no
 `tvg-id` — an FNV-1a hash of the URL rather than `String.hashCode()`. An unstable id means
 every refresh looks like a completely new set of channels, and the user's hidden channels and
