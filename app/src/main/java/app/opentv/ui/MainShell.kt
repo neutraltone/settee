@@ -39,6 +39,7 @@ import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
@@ -362,7 +363,13 @@ private fun Rail(
             .fillMaxHeight()
             // Closed, the icons sit on the screen itself, with no panel behind them.
             .background(if (labelled) SetteeColors.Surface else Color.Transparent)
-            .focusProperties { onEnter = { runCatching { currentItem.requestFocus() } } }
+            // A move into the rail lands on the open tab's item. A request for one item (Back to
+            // the main screen putting the highlight back where it was, KeptShell) keeps that item.
+            .focusProperties {
+                onEnter = {
+                    if (requestedFocusDirection != FocusDirection.Enter) runCatching { currentItem.requestFocus() }
+                }
+            }
             // Moving on in the rail while a tab loads mustn't have the Highlight pulled away later.
             .onPreviewKeyEvent { event ->
                 if (event.type == KeyEventType.KeyDown && event.key != Key.DirectionCenter && event.key != Key.Enter) {
