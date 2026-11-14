@@ -17,6 +17,7 @@ import androidx.compose.ui.platform.LocalInputModeManager
 import androidx.compose.ui.test.junit4.ComposeContentTestRule
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.platform.app.InstrumentationRegistry
+import app.opentv.pairing.ServerSecrets
 import app.opentv.ui.design.SetteeColors
 import app.opentv.ui.design.SetteeTheme
 import coil.Coil
@@ -39,6 +40,7 @@ import org.junit.rules.ExternalResource
  *   @Config(sdk = [34], qualifiers = TV_1080P, application = android.app.Application::class)
  *   @GraphicsMode(GraphicsMode.Mode.NATIVE)
  *   @get:Rule val artwork = PlaceholderArtwork()
+ *   @get:Rule val secrets = FixedServerSecrets()   // if it opens a phone or sync address
  *
  * renders with setTvContent and calls captureScreen("<screen>_<state>") where it asserts a state.
  * captureScreen does nothing in a plain test run; ./gradlew recordRoborazziDebug writes the PNGs to
@@ -141,5 +143,25 @@ class PlaceholderArtwork : ExternalResource() {
         const val HUES = 360
         const val SATURATION = 0.45f
         const val VALUE = 0.6f
+    }
+}
+
+/**
+ * Gives the servers a phone or another device reaches a fixed port and fixed secrets, so a screen
+ * showing an address, QR code or code draws the same every run instead of turning up as changed on
+ * every PR. The host is still the machine's own, which is the same for every render in one job.
+ */
+class FixedServerSecrets : ExternalResource() {
+    override fun before() {
+        ServerSecrets.fixed = ServerSecrets.Fixed(port = PORT, seed = SEED)
+    }
+
+    override fun after() {
+        ServerSecrets.fixed = null
+    }
+
+    private companion object {
+        const val PORT = 41234
+        const val SEED = 44L
     }
 }
