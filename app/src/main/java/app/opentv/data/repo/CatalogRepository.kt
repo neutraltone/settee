@@ -838,7 +838,7 @@ class CatalogRepository(
 
         if (parsed.channels.isEmpty()) {
             // Nothing touched: a playlist that briefly comes back empty, or with only films and
-            // episodes, is a provider hiccup, and must not cost the viewer their channel list.
+            // episodes, is a provider hiccup, and must not cost the viewer their channels.
             return SyncResult.Failed(wording.of(R.string.error_playlist_empty, NO_CHANNELS), null)
         }
 

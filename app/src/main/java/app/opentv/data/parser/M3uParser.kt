@@ -80,6 +80,8 @@ object M3uParser {
                         // A URL with no preceding #EXTINF. Nothing sensible to label it with.
                         skipped++
                     } else if (!isFilmOrEpisode(line)) {
+                        // Films and episodes are left out before the dedupe and sortIndex, so the
+                        // channels' positions stay consecutive.
                         val attributes = pendingAttributes
                         val streamId = attributes["tvg-id"]
                             ?.takeIf { it.isNotBlank() }

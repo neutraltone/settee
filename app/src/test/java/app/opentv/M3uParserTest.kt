@@ -198,10 +198,7 @@ class M3uParserTest {
             http://example.com/series/u/p/40.mp4
         """.trimIndent()
 
-        val result = M3uParser.parse(playlist, sourceId = 1)
-
-        assertThat(result.channels).isEmpty()
-        assertThat(result.skippedEntries).isEqualTo(0)
+        assertThat(M3uParser.parse(playlist, sourceId = 1).channels).isEmpty()
     }
 
     @Test

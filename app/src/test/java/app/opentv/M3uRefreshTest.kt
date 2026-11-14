@@ -115,7 +115,7 @@ class M3uRefreshTest {
     }
 
     @Test
-    fun `a playlist that comes back with only films and episodes keeps the channel list as it was`() = runTest {
+    fun `a playlist that comes back with only films and episodes keeps your channels as they were`() = runTest {
         test.db.sources().insert(playlist)
         test.db.categories().upsertAll(
             listOf(Category(id = "UK", sourceId = playlist.id, name = "UK", kind = StreamKind.LIVE, sortIndex = 0)),
@@ -134,7 +134,7 @@ class M3uRefreshTest {
         test.catalog.setChannelHidden(byStream.getValue("tvg:itv1").id, hidden = true, now = 1)
         test.catalog.setChannelOrder(listOf("tvg:ch4", "tvg:bbc1", "tvg:itv1").map { byStream.getValue(it).id })
         test.catalog.setChannelCustomName(byStream.getValue("tvg:bbc1").id, "Beeb")
-        val edited = test.catalog.observeChannelsInIncludingHidden(playlist.id, listOf("UK")).first()
+        test.guide.setManualOverride(byStream.getValue("tvg:ch4").id, "channel4.uk")
         test.panel.replies[""] = """
             #EXTM3U
             #EXTINF:-1 group-title="VOD | Action",Drive (2011)
@@ -149,15 +149,23 @@ class M3uRefreshTest {
             ApplicationProvider.getApplicationContext<Context>().getString(R.string.error_playlist_empty),
         )
         val after = test.catalog.observeChannelsInIncludingHidden(playlist.id, listOf("UK")).first()
-        assertThat(after.map { Triple(it.streamId, it.hidden, it.sortIndex) to it.customName })
+        assertThat(after.map { Edits(it.streamId, it.hidden, it.sortIndex, it.customName, it.epgOverrideId) })
             .containsExactly(
-                Triple("tvg:ch4", false, 0) to null,
-                Triple("tvg:bbc1", false, 1) to "Beeb",
-                Triple("tvg:itv1", true, 2) to null,
+                Edits("tvg:ch4", hidden = false, sortIndex = 0, customName = null, epgOverride = "channel4.uk"),
+                Edits("tvg:bbc1", hidden = false, sortIndex = 1, customName = "Beeb", epgOverride = null),
+                Edits("tvg:itv1", hidden = true, sortIndex = 2, customName = null, epgOverride = null),
             )
-        assertThat(after).containsExactlyElementsIn(edited)
         assertThat(test.lineup.categoryGroups(playlist.id).first().flatMap { it.ids }).containsExactly("UK")
     }
+
+    /** What a viewer can change about a channel, which a refresh must carry over. */
+    private data class Edits(
+        val streamId: String,
+        val hidden: Boolean,
+        val sortIndex: Int,
+        val customName: String?,
+        val epgOverride: String?,
+    )
 
     private fun channel(streamId: String, name: String, url: String, sortIndex: Int, category: String? = null) =
         Channel(
