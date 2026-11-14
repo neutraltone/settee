@@ -35,11 +35,20 @@ object SleepTimer {
         _deadline.value = null
     }
 
-    /** Minutes left (rounded up), or null if the timer is off. For showing "Sleep in 22 min". */
+    /**
+     * Minutes left (rounded up), or null if the timer is off. For showing "Sleep in 22 min".
+     *
+     * A deadline that has passed counts as off: only a player can act on one, so if it ran out
+     * with none open there is nothing left to stop, and "0 min" would be a timer that never fires.
+     */
     fun minutesRemaining(nowMillis: Long = System.currentTimeMillis()): Int? {
-        val d = _deadline.value ?: return null
-        val left = d - nowMillis
-        if (left <= 0L) return 0
+        val left = millisRemaining(nowMillis) ?: return null
         return ((left + 59_999L) / 60_000L).toInt()
+    }
+
+    /** Millis until the deadline, or null when the timer is off or its deadline has passed. */
+    fun millisRemaining(nowMillis: Long = System.currentTimeMillis()): Long? {
+        val d = _deadline.value ?: return null
+        return (d - nowMillis).takeIf { it > 0L }
     }
 }
