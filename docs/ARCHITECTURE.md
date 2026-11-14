@@ -131,11 +131,10 @@ order, so the triggers can't drift apart.
 `ChannelDao.replaceCatalogue` merges rather than wipes: it reads only what it keeps of the stored
 channels (`ChannelUserState`: the row id, `hidden`, `sortIndex`, custom name and both guide ids, not
 names or URLs, so a large catalogue isn't held twice while it merges), carries those across to the
-incoming rows by `streamId`, updates the rows it matched and inserts the rest, and only then
-deletes channels the provider no longer lists. Not Room's `@Upsert`: it tries an INSERT first and
-catches the unique-index failure, and a refresh is nearly all stored rows, so that was an exception
-a row. A `streamId` listed twice is saved once, as its last listing. Movies and series save the same
-way (`MovieDao.upsertAll`, `SeriesDao.upsertAll`). Favourites live in their own per-Profile table,
+incoming rows by `streamId`, updates the rows it matched and inserts the rest (not Room's `@Upsert`,
+whose failed INSERT a row was most of a refresh's work; see `updateOrInsert`), and only then
+deletes channels the provider no longer lists. A `streamId` listed twice is saved once, as its last
+listing. Movies and series save the same way. Favourites live in their own per-Profile table,
 matched by source name and provider id (not stream URL, which Xtream changes with the live format
 and the password), so a channel dropped and re-listed keeps them.
 

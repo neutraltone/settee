@@ -213,6 +213,16 @@ class CatalogueRefreshWritesTest {
         assertThat(movies.moviesWithPerson(personKey("Jane Doe"), limit = 10)).isEmpty()
     }
 
+    @Test
+    fun `a film saved with an id that isn't stored yet is added under that id, credits and all`() = runTest {
+        val sourceId = source(SourceKind.XTREAM)
+
+        movies.upsertAll(listOf(movie(sourceId, "a", cast = "Jane Doe").copy(id = 7)))
+
+        assertThat(movies.byId(7)?.streamId).isEqualTo("a")
+        assertThat(movies.moviesWithPerson(personKey("Jane Doe"), limit = 10).map { it.id }).containsExactly(7L)
+    }
+
     private fun show(sourceId: Long, seriesId: String, name: String = "Show $seriesId", cast: String? = null) = Series(
         sourceId = sourceId,
         seriesId = seriesId,
@@ -277,5 +287,15 @@ class CatalogueRefreshWritesTest {
         assertThat(a.name).isEqualTo("Second")
         assertThat(shows.seriesWithPerson(personKey("John Roe"), limit = 10).map { it.id }).containsExactly(a.id)
         assertThat(shows.seriesWithPerson(personKey("Jane Doe"), limit = 10)).isEmpty()
+    }
+
+    @Test
+    fun `a show saved with an id that isn't stored yet is added under that id, credits and all`() = runTest {
+        val sourceId = source(SourceKind.XTREAM)
+
+        shows.upsertAll(listOf(show(sourceId, "a", cast = "Jane Doe").copy(id = 7)))
+
+        assertThat(shows.byId(7)?.seriesId).isEqualTo("a")
+        assertThat(shows.seriesWithPerson(personKey("Jane Doe"), limit = 10).map { it.id }).containsExactly(7L)
     }
 }

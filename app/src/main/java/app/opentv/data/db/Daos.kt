@@ -57,7 +57,7 @@ import app.opentv.sync.SyncHiddenChannel
 import kotlinx.coroutines.flow.Flow
 
 /** Rows per upsert statement. Keeps a 40,000-channel playlist from building one huge query. */
-private const val UPSERT_CHUNK = 500
+private const val WRITE_CHUNK = 500
 
 @Dao
 interface SourceDao {
@@ -352,21 +352,23 @@ interface ChannelDao {
     suspend fun upsertAll(channels: List<Channel>)
 
     @Insert
-    suspend fun insertAll(channels: List<Channel>)
+    suspend fun insertAll(channels: List<Channel>): List<Long>
 
     @Update
     suspend fun updateAll(channels: List<Channel>)
 
     /**
-     * Saves a refresh's merged rows: an UPDATE for each already stored, whose id the merge carried
-     * across, and an INSERT for each new one. Not [upsertAll]: Room's upsert tries an INSERT first
-     * and catches the unique-index failure, and on a refresh that is nearly every row, a second or
-     * two of exceptions on a Fire TV Stick for a big catalogue.
+     * Saves a refresh's merged rows by [updateOrInsert], not [upsertAll]. A row with an id is stored:
+     * the merge read it in this same transaction and carried its id across.
      */
     suspend fun saveMerged(merged: List<Channel>) {
-        val (stored, fresh) = merged.partition { it.id > 0 }
-        if (stored.isNotEmpty()) updateAll(stored)
-        if (fresh.isNotEmpty()) insertAll(fresh)
+        updateOrInsert(
+            merged,
+            Channel::id,
+            isStored = { it.id > 0 },
+            update = { updateAll(it) },
+            insert = { insertAll(it) },
+        )
     }
 
     /**
@@ -407,7 +409,7 @@ interface ChannelDao {
             syncStamp,
         )
         // Chunked so a 40,000-channel playlist does not build one enormous statement.
-        merged.chunked(UPSERT_CHUNK).forEach { saveMerged(it) }
+        merged.chunked(WRITE_CHUNK).forEach { saveMerged(it) }
         deleteStale(sourceId, syncStamp)
     }
 
@@ -430,7 +432,7 @@ interface ChannelDao {
                 // bind every stream id in it and SQLite allows 999 variables.
                 // Its last listing of a stream id, as [replaceCatalogue] for a whole list: two new rows
                 // of one id would otherwise both be inserted, and the second break the unique index.
-                lastOfEach(batch) { it.streamId }.chunked(UPSERT_CHUNK).forEach { chunk ->
+                lastOfEach(batch) { it.streamId }.chunked(WRITE_CHUNK).forEach { chunk ->
                     val streamIds = chunk.map { it.streamId }
                     val merged = mergedOver(
                         chunk,
@@ -481,8 +483,24 @@ interface ChannelDao {
     suspend fun hiddenChangesFor(sourceId: Long, streamIds: List<String>): List<ChannelHiddenChange>
 }
 
-/** Who [this] movie credits, saved under [id]. */
-private fun Movie.creditsUnder(id: Long) = CreditedTitle(id, cast, director, writer, studio)
+/**
+ * Saves [rows] with an UPDATE for each [isStored] and an INSERT for the rest, returning each row with
+ * its id: an inserted row's from its INSERT. Not Room's `@Upsert`, which tries an INSERT first and
+ * catches the unique-index failure: a catalogue refresh hands over nearly every row stored already,
+ * and on a big catalogue that was a second or two of exceptions on a Fire TV Stick.
+ */
+private suspend fun <T> updateOrInsert(
+    rows: List<T>,
+    id: (T) -> Long,
+    isStored: (T) -> Boolean,
+    update: suspend (List<T>) -> Unit,
+    insert: suspend (List<T>) -> List<Long>,
+): List<Pair<Long, T>> {
+    val (stored, fresh) = rows.partition(isStored)
+    if (stored.isNotEmpty()) update(stored)
+    val newIds = if (fresh.isEmpty()) emptyList() else insert(fresh)
+    return stored.map { id(it) to it } + fresh.mapIndexed { i, row -> newIds[i] to row }
+}
 
 /**
  * [rows] keeping only the last of those that share a [key], in the order of the ones kept: a provider
@@ -891,23 +909,21 @@ interface MovieDao {
      * Saves these movies, rewriting the [MovieCredit]s of those whose people changed. At
      * most a catalogue batch (500) at a time: their ids are bound in one query.
      *
-     * A movie with an id is stored, and is updated; one without is new, and is inserted. Not
-     * `@Upsert`, which tries the INSERT first and catches the unique-index failure: a refresh hands
-     * this nearly every title stored already, so that was an exception a row. A provider id listed
-     * twice is saved as its last listing, since two new rows of one id would break that index.
+     * Each stored row is updated and the rest inserted ([updateOrInsert]), one carrying an id that
+     * isn't stored under it. A provider id listed twice is saved as its last listing.
      */
     @Transaction
     suspend fun upsertAll(movies: List<Movie>) {
-        val (withId, fresh) = lastOfEach(movies) { it.sourceId to it.streamId }.partition { it.id > 0 }
-        val before = credited(withId.map { it.id }).associateBy { it.id }
-        // Only rows still there: one removed with its provider while a detail lookup ran has nothing
-        // to update, and crediting it would break the credits' foreign key.
-        val stored = withId.filter { it.id in before }
-        if (stored.isNotEmpty()) updateRows(stored)
-        val newIds = if (fresh.isEmpty()) emptyList() else insertRows(fresh)
-        val after = stored.map { it.creditsUnder(it.id) } +
-            fresh.mapIndexed { i, movie -> movie.creditsUnder(newIds[i]) }
-        recreditChanged(before, after)
+        val rows = lastOfEach(movies) { it.sourceId to it.streamId }
+        val before = credited(rows.map { it.id }.filter { it > 0 }).associateBy { it.id }
+        val saved = updateOrInsert(
+            rows,
+            Movie::id,
+            isStored = { it.id in before },
+            update = { updateRows(it) },
+            insert = { insertRows(it) },
+        )
+        recreditChanged(before, saved.map { (id, movie) -> movie.creditsUnder(id) })
     }
 
     /** Rewrites the credits of each of [after] whose people aren't what [before] had. */
@@ -931,6 +947,9 @@ interface MovieDao {
     @Query("DELETE FROM movies WHERE sourceId = :sourceId")
     suspend fun deleteForSource(sourceId: Long)
 }
+
+/** Who [this] movie credits, saved under [id]. */
+private fun Movie.creditsUnder(id: Long) = CreditedTitle(id, cast, director, writer, studio)
 
 @Dao
 interface SeriesDao {
@@ -1012,21 +1031,19 @@ interface SeriesDao {
     @Update
     suspend fun updateRows(items: List<Series>)
 
-    /**
-     * Saves these series, rewriting the [SeriesCredit]s of those whose cast changed: an UPDATE for
-     * each with an id, an INSERT for each without, the last listing of a provider id twice. See
-     * [MovieDao.upsertAll].
-     */
+    /** Saves these series, rewriting the [SeriesCredit]s of those whose cast changed. See [MovieDao.upsertAll]. */
     @Transaction
     suspend fun upsertAll(items: List<Series>) {
-        val (withId, fresh) = lastOfEach(items) { it.sourceId to it.seriesId }.partition { it.id > 0 }
-        val before = credited(withId.map { it.id }).associateBy { it.id }
-        val stored = withId.filter { it.id in before } // See MovieDao.upsertAll.
-        if (stored.isNotEmpty()) updateRows(stored)
-        val newIds = if (fresh.isEmpty()) emptyList() else insertRows(fresh)
-        val after = stored.map { CreditedTitle(it.id, it.cast) } +
-            fresh.mapIndexed { i, series -> CreditedTitle(newIds[i], series.cast) }
-        recreditChanged(before, after)
+        val rows = lastOfEach(items) { it.sourceId to it.seriesId }
+        val before = credited(rows.map { it.id }.filter { it > 0 }).associateBy { it.id }
+        val saved = updateOrInsert(
+            rows,
+            Series::id,
+            isStored = { it.id in before },
+            update = { updateRows(it) },
+            insert = { insertRows(it) },
+        )
+        recreditChanged(before, saved.map { (id, series) -> CreditedTitle(id, series.cast) })
     }
 
     /** Rewrites the credits of each of [after] whose cast isn't what [before] had. */
