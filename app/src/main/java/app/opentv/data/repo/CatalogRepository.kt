@@ -978,8 +978,9 @@ class CatalogRepository(
                             groupKey = c.groupKey,
                             qualityLabel = c.qualityLabel,
                             qualityRank = c.qualityRank,
-                            hideSeparator = c.hidden && !old.hidden,
                         )
+                        // Separator rows are hidden as they're found. Never un-hides: that's the viewer's.
+                        if (c.hidden && !old.hidden) channelDao.setHidden(c.id, hidden = true)
                     }
                 }
                 changed += diff.size
