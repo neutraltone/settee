@@ -111,6 +111,18 @@ class ManagerServer(
      */
     private val adding = ReentrantLock()
 
+    /**
+     * Saves reorders one at a time, in the order they finished arriving. Each request runs on its own,
+     * so two reorders sent a tap apart could otherwise save the later first and be overwritten by the
+     * earlier: the last to save wins, not the last tap. The turn is taken as soon as the body is in,
+     * before it's decoded, rather than when the socket is accepted: a browser opens spare connections
+     * that may send nothing, and every reorder would wait out such a socket's timeout behind it.
+     */
+    private val reorderTurns = Turns()
+
+    /** Saves a category's new order; tests hold one back to see that the next waits its turn. */
+    internal var saveOrder: suspend (List<Long>) -> Unit = { catalog.setChannelOrder(it) }
+
     private val json = Json {
         ignoreUnknownKeys = true
         encodeDefaults = true
@@ -219,8 +231,13 @@ class ManagerServer(
         lastActivityMillis = System.currentTimeMillis()
 
         val body = if (method == "POST") readBody(reader, headers) else ""
+        // Straight after the body, so reorders keep the order they arrived in; see [reorderTurns].
+        val reorderTurn = if (method == "POST" && path == "/reorder") reorderTurns.take() else null
 
         when {
+            // First, so a turn taken is always run: one skipped would hold every later reorder.
+            reorderTurn != null -> handleReorder(output, body, reorderTurn)
+
             check == PhoneAddress.Check.Typed || (method == "GET" && path == "/") ->
                 output.write(PairingHttp.httpResponse("200 OK", "text/html", ManagerPage.page(token)))
 
@@ -231,8 +248,6 @@ class ManagerServer(
                 output.write(PairingHttp.httpResponse("200 OK", "application/json", channelsJson(query)))
 
             method == "POST" && path == "/channel" -> handleChannelPatch(output, body)
-
-            method == "POST" && path == "/reorder" -> handleReorder(output, body)
 
             method == "GET" && path == "/recording" ->
                 output.write(PairingHttp.httpResponse("200 OK", "application/json", recordingJson()))
@@ -318,17 +333,18 @@ class ManagerServer(
     }
 
     /** `POST /reorder {ids:[orderedChannelIds]}` → assign sortIndex by position, in one write. */
-    private fun handleReorder(output: OutputStream, body: String) {
-        val req = runCatching { json.decodeFromString(ReorderReq.serializer(), body) }.getOrNull()
-        if (req == null) {
-            output.write(PairingHttp.httpResponse("400 Bad Request", "text/plain", "Bad request."))
-            return
-        }
-        runBlocking {
+    private fun handleReorder(output: OutputStream, body: String, turn: Long) {
+        // In its turn even when it's refused, so the reorders after it aren't left waiting for it.
+        val saved = reorderTurns.inTurn(turn) {
+            val req = runCatching { json.decodeFromString(ReorderReq.serializer(), body) }.getOrNull()
             // Ids ≤ 0 keep their position but match no channel, so nothing moves to it.
-            catalog.setChannelOrder(req.ids)
+            req?.let { runBlocking { saveOrder(it.ids) } } != null
         }
-        writeOk(output)
+        if (saved) {
+            writeOk(output)
+        } else {
+            output.write(PairingHttp.httpResponse("400 Bad Request", "text/plain", "Bad request."))
+        }
     }
 
     private fun writeOk(output: OutputStream) {
@@ -565,3 +581,28 @@ class ManagerServer(
     val error: String? = null,
     val detail: String? = null,
 )
+
+/**
+ * Numbered turns, each run once every turn taken before it has run: [take] one, then always pass it
+ * to [inTurn], or the turns after it wait for ever.
+ */
+private class Turns {
+    private val lock = ReentrantLock()
+    private val turnCame = lock.newCondition()
+    private var taken = 0L
+    private var serving = 0L
+
+    fun take(): Long = lock.withLock { taken++ }
+
+    fun <T> inTurn(turn: Long, block: () -> T): T {
+        lock.withLock { while (serving != turn) turnCame.await() }
+        try {
+            return block()
+        } finally {
+            lock.withLock {
+                serving++
+                turnCame.signalAll()
+            }
+        }
+    }
+}

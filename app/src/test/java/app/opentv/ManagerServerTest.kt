@@ -14,6 +14,10 @@ import app.opentv.data.remote.XtreamApi
 import app.opentv.data.repo.SourceRepository
 import app.opentv.pairing.ManagerServer
 import com.google.common.truth.Truth.assertThat
+import java.util.Collections
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
+import kotlin.concurrent.thread
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.cancel
@@ -40,6 +44,14 @@ class ManagerServerTest {
     private val context: Context = ApplicationProvider.getApplicationContext()
     private val test = TestCatalog(context)
     private val scope = CoroutineScope(Dispatchers.Default)
+
+    /** Each reorder's ids as it commits. The first waits for [firstMayCommit] once [firstCommitting] says it began. */
+    private val committed: MutableList<List<Long>> = Collections.synchronizedList(mutableListOf())
+    private val firstCommitting = CountDownLatch(1)
+    private val firstMayCommit = CountDownLatch(1)
+
+    @Volatile private var holdFirstCommit = false
+
     private val server = ManagerServer(
         scope,
         test.catalog,
@@ -47,7 +59,16 @@ class ManagerServerTest {
         SourceRepository(test.db.sources(), XtreamApi(test.panel.http), StalkerApi(test.panel.http)),
         test.lineup,
         test.refresh(),
-    )
+    ).apply {
+        saveOrder = { ids ->
+            if (holdFirstCommit && firstCommitting.count > 0) {
+                firstCommitting.countDown()
+                firstMayCommit.await(5, TimeUnit.SECONDS)
+            }
+            committed += ids
+            test.catalog.setChannelOrder(ids)
+        }
+    }
 
     @After
     fun close() {
@@ -143,5 +164,30 @@ class ManagerServerTest {
         assertThat(body).isEqualTo("""{"ok":true}""")
         val saved = runBlocking { test.db.channels().everyRow() }.associate { it.id to it.sortIndex }
         assertThat(saved).containsExactly(c, 0, a, 2, b, 4)
+    }
+
+    @Test
+    fun `two reorders commit in the order the TV took them, even when the first is slow to save`() {
+        val session = listening()
+        holdFirstCommit = true
+        val first = thread { post(session, "/reorder", """{"ids":[1,2,3]}""") }
+        assertThat(firstCommitting.await(5, TimeUnit.SECONDS)).isTrue()
+
+        val second = thread { post(session, "/reorder", """{"ids":[3,2,1]}""") }
+        // Long enough for the second to save, if nothing made it wait its turn.
+        Thread.sleep(500)
+        firstMayCommit.countDown()
+        first.join(5_000)
+        second.join(5_000)
+
+        assertThat(committed).containsExactly(listOf(1L, 2L, 3L), listOf(3L, 2L, 1L)).inOrder()
+    }
+
+    private fun post(session: ManagerServer.Session, path: String, body: String): Int {
+        val request = Request.Builder()
+            .url(session.url.replace("/?", "$path?"))
+            .post(body.toRequestBody("application/json".toMediaType()))
+            .build()
+        return OkHttpClient().newCall(request).execute().use { it.code }
     }
 }

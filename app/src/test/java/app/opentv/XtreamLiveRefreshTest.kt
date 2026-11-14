@@ -6,7 +6,10 @@
 package app.opentv
 
 import android.content.Context
+import androidx.room.Room
+import androidx.room.RoomDatabase
 import androidx.test.core.app.ApplicationProvider
+import app.opentv.data.db.OpenTvDatabase
 import app.opentv.data.model.ChannelEpgMatch
 import app.opentv.data.repo.CatalogRepository.SyncResult
 import com.google.common.truth.Truth.assertThat
@@ -26,7 +29,28 @@ import org.robolectric.annotation.Config
 @Config(sdk = [34], application = android.app.Application::class)
 class XtreamLiveRefreshTest {
 
-    private val test = TestCatalog(ApplicationProvider.getApplicationContext())
+    private val context: Context = ApplicationProvider.getApplicationContext()
+
+    /**
+     * How many batches of the live list were staged when the database was first asked about channels,
+     * which is inside the transaction that saves them; null until it was asked.
+     */
+    @Volatile private var stagedAtFirstChannelStatement: Int? = null
+
+    private val test = TestCatalog(
+        context,
+        db = Room.inMemoryDatabaseBuilder(context, OpenTvDatabase::class.java)
+            .allowMainThreadQueries()
+            // On the thread running the statement, before it runs, so the staged file is seen as it was then.
+            .setQueryCallback(RoomDatabase.QueryCallback { sql, _ -> statement(sql) }, Runnable::run)
+            .build(),
+    )
+
+    private fun statement(sql: String) {
+        if (stagedAtFirstChannelStatement == null && CHANNEL_STATEMENT.containsMatchIn(sql)) {
+            stagedAtFirstChannelStatement = test.staging.listFiles().orEmpty().sumOf { it.readLines().size }
+        }
+    }
     private val channels = test.db.channels()
     private val panel = test.panel
 
@@ -119,6 +143,55 @@ class XtreamLiveRefreshTest {
     }
 
     @Test
+    fun `a line-up is decoded whole before the transaction that saves it begins`() = runTest {
+        test.db.sources().insert(PANEL_SOURCE)
+        panel.replies["get_live_streams"] = lineUp(0 until LARGE)
+        stagedAtFirstChannelStatement = null
+
+        test.catalog.fetchLive(PANEL_SOURCE, nowUtcMillis = 1_000)
+
+        // All eleven batches of 500, ten full and a part one, before the save asked about a channel.
+        assertThat(stagedAtFirstChannelStatement).isEqualTo(11)
+    }
+
+    @Test
+    fun `a line-up cut off partway leaves what the viewer set on each channel, and no staged copy behind`() = runTest {
+        test.db.sources().insert(PANEL_SOURCE)
+        panel.replies["get_live_streams"] = lineUp(0 until 1_200)
+        test.catalog.fetchLive(PANEL_SOURCE, nowUtcMillis = 1_000)
+        val set = stored("1150")
+        channels.setHidden(set.id, true)
+        channels.setSortIndex(set.id, 7)
+        channels.setCustomName(set.id, "My channel")
+        channels.setEpgOverride(set.id, "bbc1.uk")
+
+        // The channel the viewer set comes in the first batch of the new line-up, then the reply breaks off.
+        panel.replies["get_live_streams"] = lineUp(listOf(1150) + (5_000 until 6_100)) { "New $it" }.dropLast(40)
+        val result = test.catalog.fetchLive(PANEL_SOURCE, nowUtcMillis = 2_000)
+
+        assertThat(result).isInstanceOf(SyncResult.Failed::class.java)
+        val kept = stored("1150")
+        assertThat(kept.name).isEqualTo("Channel 1150")
+        assertThat(kept.hidden).isTrue()
+        assertThat(kept.sortIndex).isEqualTo(7)
+        assertThat(kept.customName).isEqualTo("My channel")
+        assertThat(kept.epgOverrideId).isEqualTo("bbc1.uk")
+        assertThat(channels.forSource(PANEL_SOURCE.id)).hasSize(1_200)
+        assertThat(test.staging.list()).isEmpty()
+    }
+
+    @Test
+    fun `a saved line-up leaves no staged copy behind`() = runTest {
+        test.db.sources().insert(PANEL_SOURCE)
+        panel.replies["get_live_streams"] = lineUp(0 until LARGE)
+
+        val result = test.catalog.fetchLive(PANEL_SOURCE, nowUtcMillis = 1_000)
+
+        assertThat(result).isEqualTo(SyncResult.Success(LARGE, 0, 0))
+        assertThat(test.staging.list()).isEmpty()
+    }
+
+    @Test
     fun `an empty line-up says there are no channels and deletes none`() = runTest {
         test.db.sources().insert(PANEL_SOURCE)
         panel.replies["get_live_streams"] = lineUp(0 until 3)
@@ -128,7 +201,7 @@ class XtreamLiveRefreshTest {
         val result = test.catalog.fetchLive(PANEL_SOURCE, nowUtcMillis = 2_000)
 
         assertThat((result as SyncResult.Failed).reason.sentence).isEqualTo(
-            ApplicationProvider.getApplicationContext<Context>().getString(R.string.error_no_channels),
+            context.getString(R.string.error_no_channels),
         )
         assertThat(channels.forSource(PANEL_SOURCE.id)).hasSize(3)
     }
@@ -139,6 +212,12 @@ class XtreamLiveRefreshTest {
     private companion object {
         /** Several batches' worth, with a part batch at the end. */
         const val LARGE = 5_250
+
+        /** A statement reading or writing the channels table, as the save's first ones do. */
+        val CHANNEL_STATEMENT = Regex(
+            """^\s*(SELECT|INSERT|UPDATE|DELETE)\b.*\bchannels\b""",
+            setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL),
+        )
 
         /** A `get_live_streams` reply listing a channel for each of [ids]. */
         fun lineUp(ids: Iterable<Int>, name: (Int) -> String = { "Channel $it" }) =

@@ -457,7 +457,10 @@ class SettingsScreenTest {
         val provider = saveProvider("Provider A")
         runBlocking {
             graph.database.categories().upsertAll(
-                listOf(Category("10", provider, "News", StreamKind.LIVE, sortIndex = 0)),
+                listOf(
+                    Category("10", provider, "News", StreamKind.LIVE, sortIndex = 0),
+                    Category("11", provider, "UK| Adult", StreamKind.LIVE, sortIndex = 1),
+                ),
             )
         }
         graph.settings.setHiddenCategories(setOf("news", "adult"))
@@ -472,6 +475,34 @@ class SettingsScreenTest {
             press(KeyEvent.KEYCODE_DPAD_CENTER)
 
             assertThat(opened).containsExactly("locked categories")
+        } finally {
+            graph.settings.setHiddenCategories(emptySet())
+        }
+    }
+
+    @Test
+    fun `Locked categories counts only the locked categories today's providers list, as its switches show`() {
+        graph.settings.clearPin()
+        val provider = saveProvider("Provider A")
+        runBlocking {
+            graph.database.categories().upsertAll(
+                listOf(
+                    Category("10", provider, "News", StreamKind.LIVE, sortIndex = 0),
+                    Category("11", provider, "UK| Adult", StreamKind.LIVE, sortIndex = 1),
+                    Category("12", provider, "Weather", StreamKind.LIVE, sortIndex = 2),
+                ),
+            )
+        }
+        // Sport was locked on another device, or its provider has since dropped it: it isn't listed here.
+        graph.settings.setHiddenCategories(setOf("news", "adult", "sport"))
+        try {
+            show(SettingsMemory(SettingsSection.Parental))
+            press(KeyEvent.KEYCODE_DPAD_RIGHT)
+
+            waitFor("2 locked")
+            compose.onNodeWithText("3 locked").assertDoesNotExist()
+            captureScreen("settings_parental_locked_count")
+            assertThat(graph.settings.hiddenCategories.value).containsExactly("news", "adult", "sport")
         } finally {
             graph.settings.setHiddenCategories(emptySet())
         }

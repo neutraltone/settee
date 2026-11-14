@@ -106,10 +106,12 @@ class EpgRepository(
 
     fun observeFeeds(): Flow<List<EpgFeed>> = feedDao.observeAll()
 
-    // Settled: Room re-runs it for every batch a guide sync writes, and whoever watches it would
-    // otherwise redo its work hundreds of times per sync (#257).
+    // Settled: every batch a guide sync writes changes the table, and reading the window for each, or
+    // whoever watches it redoing its work for each, cost hundreds of reads per sync (#257, #328).
     fun observeGuideWindow(fromUtcMillis: Long, toUtcMillis: Long): Flow<List<GuideProgramme>> =
-        programmeDao.observeGuideWindow(fromUtcMillis, toUtcMillis).settled()
+        programmeDao.changes().settledReads {
+            programmeDao.guideWindow(fromUtcMillis, toUtcMillis)
+        }
 
     /**
      * A programme the guide lists, in full, found by its slot so a guide refresh since doesn't lose it.

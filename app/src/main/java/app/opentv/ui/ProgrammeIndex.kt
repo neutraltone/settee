@@ -26,7 +26,7 @@ import kotlinx.coroutines.launch
  * [Empty], the placeholder before the first listings are read.
  *
  * Compared by identity, not content: the listings are already never sent twice in a row (see
- * [app.opentv.data.repo.settled]), and comparing a whole window's programmes again here cost a
+ * [app.opentv.data.repo.settledReads]), and comparing a whole window's programmes again here cost a
  * second full pass over them on every update.
  */
 internal class ProgrammeIndex(val window: Pair<Long, Long>?, val byChannel: Map<String, List<GuideProgramme>>) {

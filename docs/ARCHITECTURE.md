@@ -292,9 +292,14 @@ The big lists (live channels, movies and series) never arrive whole. `XtreamApi`
 to a temp file as it downloads and hands it back as a `CatalogueList`, which reads one array
 element at a time (`decodeToSequence`) and gives the caller 500 at a time. A large panel's list is
 tens of megabytes, and holding it as a string, a JSON tree and the parsed rows at once ran a Fire
-TV Stick's 128 MB heap out. Each list is saved in one transaction across its batches; for live
-channels `ChannelDao.replaceCatalogue` merges each batch as it comes and deletes stale channels
-only after the last, so a reply cut off partway changes nothing.
+TV Stick's 128 MB heap out. Each list is saved in one transaction across its batches. Live channels
+are decoded and cleaned *before* that transaction opens: `CatalogRepository` stages each cleaned
+batch to a temp file (`StagedBatches`, one batch a line) and only once the whole reply has decoded
+does `ChannelDao.replaceCatalogue` open the transaction, merge the staged batches in turn and delete
+stale channels after the last. Decoding a 60,000-channel list inside the transaction held SQLite's
+writer the whole time, and playback-position and guide writes queued behind it. A reply cut off
+partway throws while staging, so nothing is saved, and the staged file is deleted on success and on
+failure alike. Movies and series are still decoded inside their transaction.
 
 Similarly, `syncXtream` treats VOD as optional: plenty of accounts are live-TV only, and a 404
 on `get_vod_streams` must never cost the user their channel list.

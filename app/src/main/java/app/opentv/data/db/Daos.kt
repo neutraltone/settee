@@ -416,19 +416,16 @@ interface ChannelDao {
     }
 
     /**
-     * [replaceCatalogue] for a list read a batch at a time, as Xtream's is, returning how many
-     * channels there were. Each batch is merged over the stored rows as it comes, and stale
-     * channels go only once the last is saved: all in one transaction, so a list that fails partway
-     * changes nothing, and a list with no channels deletes none.
+     * [replaceCatalogue] for a list too big to hold whole, as Xtream's is, returning how many
+     * channels there were. Staged, already decoded, so the transaction holds SQLite's writer only for
+     * the writes, not while a 60,000-channel reply is decoded and cleaned (#328). Each batch is merged
+     * over the stored rows in turn, and stale channels go only once the last is saved: all in one
+     * transaction, so a list with no channels deletes none.
      */
-    suspend fun replaceCatalogue(
-        sourceId: Long,
-        syncStamp: Long,
-        batches: suspend (save: suspend (List<Channel>) -> Unit) -> Unit,
-    ): Int {
-        var saved = 0
+    suspend fun replaceCatalogue(sourceId: Long, syncStamp: Long, staged: StagedBatches<Channel>): Int {
+        if (staged.count == 0) return 0
         inTransaction {
-            batches { batch ->
+            staged.forEachBatch { batch ->
                 // Looked up a chunk at a time rather than every stored row at once, which would cost
                 // as much memory as the list. Chunked whatever the batch size, since both lookups
                 // bind every stream id in it and SQLite allows 999 variables.
@@ -445,11 +442,10 @@ interface ChannelDao {
                     )
                     saveMerged(merged, stored)
                 }
-                saved += batch.size
             }
-            if (saved > 0) deleteStale(sourceId, syncStamp)
+            deleteStale(sourceId, syncStamp)
         }
-        return saved
+        return staged.count
     }
 
     /** Runs [block] as one transaction; see [replaceCatalogue]. */
@@ -664,7 +660,14 @@ interface ProgrammeDao {
         ORDER BY epgChannelId, startUtcMillis
         """,
     )
-    fun observeGuideWindow(fromUtcMillis: Long, toUtcMillis: Long): Flow<List<GuideProgramme>>
+    suspend fun guideWindow(fromUtcMillis: Long, toUtcMillis: Long): List<GuideProgramme>
+
+    /**
+     * Something each time the programmes table changes, and once at the start, reading no rows: what
+     * [guideWindow]'s readers throttle, rather than a flow of the window itself (#328).
+     */
+    @Query("SELECT 1 FROM programmes LIMIT 0")
+    fun changes(): Flow<List<Int>>
 
     /** What's on at [nowUtcMillis] of the programmes ending by [endsByUtcMillis]; see [ON_NOW_QUERY]. */
     @Query(ON_NOW_QUERY)

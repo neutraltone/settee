@@ -172,6 +172,29 @@ constructor(
         }
 
     /**
+     * Each live category's [categoryGroupKey], shared, and worked out again only when the categories
+     * themselves change: Parental lock counts its locked categories against these each time its pane
+     * shows, and normalising hundreds of names for every showing was the cost #267 took off that pane.
+     */
+    private val categoryKeys: Flow<Set<String>> = run {
+        var last: Pair<List<Category>, Set<String>>? = null
+        categories.map { list ->
+            last?.takeIf { it.first == list }?.second
+                ?: list.mapTo(HashSet(), ::categoryGroupKey).also { last = list to it }
+        }
+            .flowOn(Dispatchers.Default)
+            .shareIn(sharing, SharingStarted.WhileSubscribed(SHARE_MILLIS), replay = 1)
+    }
+
+    /**
+     * How many of today's category groups the Parental Lock holds: the switches Locked categories
+     * shows on. Stored keys for categories no provider lists now are kept but not counted (#328).
+     */
+    val lockedCategoryCount: Flow<Int> = combine(categoryKeys, lockedKeys) { keys, locked ->
+        locked.count { it in keys }
+    }
+
+    /**
      * Every row, hidden and locked ones too, as it changes: one read of the table for every
      * catalogue, so Live and the channel manager open together don't each scan ~40k rows. Stops with
      * the catalogues, which already wait [SHARE_MILLIS]: a wait here too would watch the table twice

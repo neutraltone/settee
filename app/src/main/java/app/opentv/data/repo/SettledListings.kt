@@ -22,18 +22,25 @@ import kotlinx.coroutines.flow.transform
 internal const val GUIDE_SETTLE_MILLIS = 2_000L
 
 /**
- * Stored listings as a guide sync rewrites them: the first straight away, then the latest at most
- * once every [settleMillis] (conflate keeps only the newest while the pause runs, so the last of a
- * burst always comes through), and never the same listings twice in a row.
+ * [read]'s listings as a guide sync rewrites them, read again only when this flow of changes says the
+ * store changed: the first straight away, then the latest at most once every [settleMillis] (conflate
+ * keeps only the newest change while the pause runs, so the last of a burst always gets a read), and
+ * never the same listings twice in a row.
  *
  * Not a plain debounce: that would hold back the first listings too, slowing the guide's start-up
  * and its half-hour refresh, and show nothing new for the whole of a long first download. Equal
  * listings are dropped here, before anyone groups them, because since #253 every refresh rewrites
- * programmes that are mostly unchanged.
+ * programmes that are mostly unchanged. And not a Room query's flow throttled afterwards, as it was:
+ * conflating that flow still collected it, so Room ran the sorted query for every batch a sync wrote
+ * and the throttle threw the answers away (#328). Throttling the change signal instead means the
+ * query runs only for listings that are sent.
  */
-internal fun <T> Flow<List<T>>.settled(settleMillis: Long = GUIDE_SETTLE_MILLIS): Flow<List<T>> = conflate()
+internal fun <T> Flow<*>.settledReads(
+    settleMillis: Long = GUIDE_SETTLE_MILLIS,
+    read: suspend () -> List<T>,
+): Flow<List<T>> = conflate()
     .transform {
-        emit(it)
+        emit(read())
         delay(settleMillis)
     }
     .distinctUntilChanged()

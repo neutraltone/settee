@@ -6,11 +6,13 @@
 package app.opentv.data.repo
 
 /**
- * The longest programme [nowOn] finds: the on-now query only reads programmes ending within this of
- * now, which keeps it to a short stretch of the index. A day covers the longest a guide realistically
- * lists (all-day cricket, a 24-hour marathon); anything longer that's on now goes missing.
+ * How far ahead [nowOn] looks for a programme's end: the on-now query only reads programmes ending
+ * within this of now, which keeps it to a bounded stretch of the index. Two days, not one: with a day,
+ * a programme with more than 24 hours left (a weekend telethon, a channel listed as one long block)
+ * wasn't on now until its last day (#328). Anything ending later still goes missing until it's within
+ * two days of its end.
  */
-private const val LONGEST_PROGRAMME_MILLIS = 24 * 60 * 60 * 1_000L
+private const val LONGEST_PROGRAMME_MILLIS = 48 * 60 * 60 * 1_000L
 
 /**
  * The title of what's on now on each of [channels], by [LineupChannel.key], from the guide stored on

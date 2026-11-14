@@ -18,6 +18,8 @@ import app.opentv.data.repo.ChannelLineup
 import app.opentv.data.repo.EpgRepository
 import app.opentv.data.repo.ViewerLibrary
 import app.opentv.data.repo.VodTitle
+import java.io.File
+import java.nio.file.Files
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -39,6 +41,10 @@ class TestCatalog(
     private val clock: () -> Long = { 0L },
 ) {
     val panel = FakePanel()
+
+    /** Where the catalogue stages a decoded live list before saving it; empty between syncs. */
+    val staging: File = Files.createTempDirectory("staging").toFile()
+
     val viewerLibrary = ViewerLibrary(db, MutableStateFlow(1L), clock = clock)
     val catalog: CatalogRepository = CatalogRepository(
         sourceDao = db.sources(),
@@ -53,7 +59,10 @@ class TestCatalog(
         http = panel.http,
         settings = AppSettings.get(context),
         wording = ErrorWording(context, onTelevision = false),
-    ).apply { genrePauseMillis = 0 }
+    ).apply {
+        genrePauseMillis = 0
+        staging = this@TestCatalog.staging
+    }
 
     val settings: AppSettings = AppSettings.get(context)
 
@@ -104,11 +113,14 @@ class TestCatalog(
     }
 
     /** Closes the database once the refreshes [awaitRefresh] waits for are done with it. */
-    fun close() = runBlocking {
+    // Unit, not the Boolean deleteRecursively returns: tests' @After methods are `= test.close()`,
+    // and JUnit rejects a class whose @After returns anything.
+    fun close(): Unit = runBlocking {
         awaitRefresh()
         catalog.awaitBackground()
         sharing.cancel()
         db.close()
+        staging.deleteRecursively()
     }
 
     /**

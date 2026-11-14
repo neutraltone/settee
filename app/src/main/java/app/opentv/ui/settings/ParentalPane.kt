@@ -75,8 +75,12 @@ internal fun ParentalPane(onOpenLockedCategories: () -> Unit) {
 @Composable
 private fun ParentalSettings(pinIsSet: Boolean, onSetPin: () -> Unit, onOpenLockedCategories: () -> Unit) {
     val context = LocalContext.current
-    val settings = remember { ServiceLocator.get(context).settings }
-    val hidden by settings.hiddenCategories.collectAsState()
+    val graph = remember { ServiceLocator.get(context) }
+    val settings = graph.settings
+    // Counted against today's categories, as Locked categories draws its switches: the stored keys
+    // also hold categories a provider has dropped, or another device's provider lists (they're kept
+    // in case they come back), and counting those said more were locked than the switches showed.
+    val locked = graph.channelLineup.lockedCategoryCount.collectAsState(initial = null as Int?).value
     val unlocked by settings.hiddenUnlocked.collectAsState()
     val lockedRow = screenRow("locked-categories", onOpenLockedCategories)
 
@@ -100,11 +104,13 @@ private fun ParentalSettings(pinIsSet: Boolean, onSetPin: () -> Unit, onOpenLock
         stringResource(R.string.parental_locked_categories),
         onClick = lockedRow.open,
         modifier = lockedRow.modifier,
-        value = if (hidden.isEmpty()) {
-            stringResource(R.string.parental_locked_none)
-        } else {
-            pluralStringResource(R.plurals.parental_locked_count, hidden.size, hidden.size)
+        value = when (locked) {
+            // Nothing until the categories have been read, rather than None and then a count.
+            null -> null
+            0 -> stringResource(R.string.parental_locked_none)
+            else -> pluralStringResource(R.plurals.parental_locked_count, locked, locked)
         },
+        opens = true,
     )
 }
 

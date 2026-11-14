@@ -153,7 +153,7 @@ object ServiceLocator {
                 http = httpClient,
                 settings = settings,
                 wording = errorWording,
-            )
+            ).apply { staging = appContext.cacheDir }
         }
 
         /** The one place a title becomes something playable (see [PlaybackSources]). */

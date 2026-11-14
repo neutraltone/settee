@@ -114,6 +114,16 @@ class NowOnTest {
     }
 
     @Test
+    fun `a programme with more than a day still to run is on now`() = runTest {
+        seed("UK| ITV HD")
+        guide("UK| ITV HD", "itv.hd")
+        val now = 3 * DAY
+        store(on("itv.hd", "Telethon", start = now - HOUR, end = now + 30 * HOUR))
+
+        assertThat(nowOnByName(now)).containsExactly("UK| ITV HD", "Telethon")
+    }
+
+    @Test
     fun `a guide that gains programmes is used from then on`() = runTest {
         seed("UK| ITV FHD", "UK| ITV HD")
         guide("UK| ITV FHD", "itv.fhd")
@@ -184,6 +194,7 @@ class NowOnTest {
 
     private companion object {
         const val MINUTE = 60_000L
+        const val HOUR = 60 * MINUTE
         const val DAY = 24 * 60 * MINUTE
     }
 }
