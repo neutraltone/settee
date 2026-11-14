@@ -113,7 +113,9 @@ class TestCatalog(
     }
 
     /** Closes the database once the refreshes [awaitRefresh] waits for are done with it. */
-    fun close() = runBlocking {
+    // Unit, not the Boolean deleteRecursively returns: tests' @After methods are `= test.close()`,
+    // and JUnit rejects a class whose @After returns anything.
+    fun close(): Unit = runBlocking {
         awaitRefresh()
         catalog.awaitBackground()
         sharing.cancel()
