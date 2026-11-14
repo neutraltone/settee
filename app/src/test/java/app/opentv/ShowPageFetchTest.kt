@@ -9,6 +9,7 @@ import android.app.Application
 import androidx.test.core.app.ApplicationProvider
 import app.opentv.core.ServiceLocator
 import app.opentv.data.model.Series
+import app.opentv.ui.OpenedShow
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -78,10 +79,10 @@ class ShowPageFetchTest {
     private suspend fun episodeIds(seriesId: Long) =
         graph.database.episodes().forSeries(PANEL_SOURCE.id, "$seriesId").map { it.episodeId }
 
-    /** Shows 1 and 2, as Versions of one title, once the title index has grouped them. */
-    private suspend fun saveTwoVersions() {
+    /** Shows 1 ([first]) and 2, as Versions of one title, once the title index has grouped them. */
+    private suspend fun saveTwoVersions(first: Series = series(1, "Dragons")) {
         graph.database.sources().insert(PANEL_SOURCE)
-        graph.database.series().upsertAll(listOf(series(1, "Dragons"), series(2, "4K - Dragons")))
+        graph.database.series().upsertAll(listOf(first, series(2, "4K - Dragons")))
         panel.replies["get_series_info:1"] = reply("101")
         panel.replies["get_series_info:2"] = reply("201")
         // Otherwise the page's look-up of Versions waits out the index's first grouping in real time.
@@ -100,6 +101,29 @@ class ShowPageFetchTest {
             assertThat(timesAsked(2)).isEqualTo(1)
             assertThat(episodeIds(1)).containsExactly("101")
             assertThat(episodeIds(2)).containsExactly("201")
+        }
+
+    @Test
+    fun `a show whose details are in opens, and its other Versions' episodes come, before its own panel answers`() =
+        runBlocking<Unit> {
+            saveTwoVersions(first = series(1, "Dragons").copy(genre = "Comedy"))
+            val answer = panel.hold("get_series_info:1")
+            val shown = java.util.Collections.synchronizedList(mutableListOf<OpenedShow>())
+            val show = viewModel.openShow(1)
+            val opening = launch(Dispatchers.Default) { show.collect { shown += it } }
+
+            during(answer) {
+                withTimeout(10_000) { while (shown.isEmpty() || episodeIds(2).isEmpty()) delay(20) }
+                assertThat(shown.single().series.genre).isEqualTo("Comedy")
+                assertThat(shown.single().fetched).isFalse()
+            }
+            answer.release()
+            opening.join()
+
+            assertThat(shown.last().fetched).isTrue()
+            assertThat(episodeIds(1)).containsExactly("101")
+            assertThat(timesAsked(1)).isEqualTo(1)
+            assertThat(timesAsked(2)).isEqualTo(1)
         }
 
     @Test
