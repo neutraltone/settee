@@ -80,7 +80,7 @@ private fun ParentalSettings(pinIsSet: Boolean, onSetPin: () -> Unit, onOpenLock
     // Counted against today's categories, as Locked categories draws its switches: the stored keys
     // also hold categories a provider has dropped, or another device's provider lists (they're kept
     // in case they come back), and counting those said more were locked than the switches showed.
-    val locked by graph.channelLineup.lockedCategoryCount.collectAsState(initial = null as Int?)
+    val locked = graph.channelLineup.lockedCategoryCount.collectAsState(initial = null as Int?).value
     val unlocked by settings.hiddenUnlocked.collectAsState()
     val lockedRow = screenRow("locked-categories", onOpenLockedCategories)
 
