@@ -35,9 +35,10 @@ import kotlinx.coroutines.withContext
 /**
  * Shows [WhatsNewDialog] on the first launch after an upgrade, once [canShow] allows it, and stores
  * the installed version when it is dismissed. A launch with nothing to show stores it straight away.
+ * [onSettled] runs once there's nothing (left) to show, so the update prompt can wait its turn.
  */
 @Composable
-fun WhatsNewGate(canShow: Boolean) {
+fun WhatsNewGate(canShow: Boolean, onSettled: () -> Unit = {}) {
     val context = LocalContext.current
     val settings = remember { ServiceLocator.get(context).settings }
     var pending by remember { mutableStateOf<List<VersionNotes>>(emptyList()) }
@@ -52,12 +53,18 @@ fun WhatsNewGate(canShow: Boolean) {
                 changelog = context.bundledChangelog(),
             )
         }
-        if (notes.isEmpty()) settings.lastSeenVersion = BuildConfig.VERSION_NAME else pending = notes
+        if (notes.isEmpty()) {
+            settings.lastSeenVersion = BuildConfig.VERSION_NAME
+            onSettled()
+        } else {
+            pending = notes
+        }
     }
     if (canShow && pending.isNotEmpty()) {
         WhatsNewDialog(BuildConfig.VERSION_NAME, pending) {
             settings.lastSeenVersion = BuildConfig.VERSION_NAME
             pending = emptyList()
+            onSettled()
         }
     }
 }
