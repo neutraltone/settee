@@ -147,8 +147,8 @@ class GuideIndexTest {
     ): List<Build> {
         val builds = mutableListOf<Build>()
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
-            channels.guideBuilds(index, quiet) { names, built ->
-                builds += Build(names, built.byChannel.values.sumOf { it.size }, testScheduler.currentTime)
+            channels.guideBuilds(index, quiet) { names, byChannel ->
+                builds += Build(names, byChannel.values.sumOf { it.size }, testScheduler.currentTime)
                 delay(buildMillis)
             }.collect {}
         }

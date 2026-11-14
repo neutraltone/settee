@@ -86,6 +86,16 @@ class LiveCoveredTest {
         set(2026, java.util.Calendar.JUNE, 15, 12, 0)
     }.timeInMillis
 
+    /** The start of tomorrow on this device, where the guide's next day starts. */
+    private val tomorrow = java.util.Calendar.getInstance().apply {
+        timeInMillis = now
+        set(java.util.Calendar.HOUR_OF_DAY, 0)
+        set(java.util.Calendar.MINUTE, 0)
+        set(java.util.Calendar.SECOND, 0)
+        set(java.util.Calendar.MILLISECOND, 0)
+        add(java.util.Calendar.DAY_OF_MONTH, 1)
+    }.timeInMillis
+
     private val graph = ServiceLocator.Graph(app, clock = { now })
     private val viewModels = TestViewModels()
     private val viewModel by lazy { viewModels.channels(app, graph) }
@@ -248,40 +258,35 @@ class LiveCoveredTest {
     }
 
     @Test
-    fun `back from Settings over a later day, the guide names the day of the rows it shows, then shows today`() {
+    fun `back from Settings over a later day, the guide shows today and none of that day's listings`() {
         library()
+        runBlocking {
+            graph.database.programmes().insertOrReplace(listOf(programme(1, tomorrow, tomorrow + HOUR, TOMORROW)))
+        }
         setApp()
         awaitRows()
         compose.runOnIdle { viewModel.nudgeGuideDay(1) }
         compose.waitUntil(10_000) {
             idleMainLooper()
-            viewModel.guideRows.value.day == 1
+            rowsList(TOMORROW)
         }
         compose.waitForIdle()
+        compose.onNode(hasText(TOMORROW)).assertIsDisplayed()
 
         openSettings()
         letTheGuideStop()
         back()
 
-        // Whether or not today's rows were built before the guide stopped, the day named is theirs.
-        assertThat(namesTheRowsDay()).isTrue()
+        // Whether or not today's rows were built before the guide stopped, it draws today.
+        compose.onNode(hasText("Today")).assertIsDisplayed()
+        compose.onNode(hasText(TOMORROW)).assertDoesNotExist()
         compose.waitUntil(10_000) {
             idleMainLooper()
-            viewModel.guideRows.value.day == 0
+            !rowsList(TOMORROW)
         }
         compose.waitForIdle()
         compose.onNode(hasText("Today")).assertIsDisplayed()
         assertThat(viewModel.guideDayOffset.value).isEqualTo(0)
-    }
-
-    /** Whether the guide names its rows' day; true too if the rows changed while looking, to look again. */
-    private fun namesTheRowsDay(): Boolean {
-        repeat(LOOKS) {
-            val day = viewModel.guideRows.value.day
-            val tomorrowNamed = compose.onAllNodes(hasText("Tomorrow")).fetchSemanticsNodes().isNotEmpty()
-            if (viewModel.guideRows.value.day == day) return tomorrowNamed == (day == 1)
-        }
-        return true
     }
 
     /**
@@ -296,7 +301,7 @@ class LiveCoveredTest {
         const val DAY = 24 * HOUR
         const val STOP_SECONDS = 11L
         const val BUILD_MILLIS = 1_500L
-        const val LOOKS = 3
+        const val TOMORROW = "Tomorrow's news"
         const val POLL_MILLIS = 100L
     }
 }

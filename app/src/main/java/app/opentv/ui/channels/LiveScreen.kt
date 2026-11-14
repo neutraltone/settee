@@ -119,6 +119,11 @@ fun LiveScreen(
     val selectedCategory by viewModel.selectedCategory.collectAsState()
     val favouritesOnly by viewModel.favouritesOnly.collectAsState()
     val sources by viewModel.sources.collectAsStateWithLifecycle()
+    // Kept current while covered, as they read no database: Back from a guide that went back to
+    // today while covered then draws today at once, and leaves out the stale rows' other day until
+    // today's are built, as paging does. Their window moves first, which is what the rows land on.
+    val windowStart by viewModel.windowStartMillis.collectAsState()
+    val windowEnd by viewModel.windowEndMillis.collectAsState()
     val rowsBuilt by viewModel.rowsBuilt.collectAsState()
     val guideDayOffset by viewModel.guideDayOffset.collectAsState()
     // Tri-state: null = still checking the catalogue, true = channels on disk, false = confirmed
@@ -263,11 +268,7 @@ fun LiveScreen(
                         else -> NoChannels(onAddSource)
                     }
                 } else {
-                    // The rows' own window and day, so a guide still building another day's rows
-                    // never draws them under that day's times or name.
-                    val (windowStart, windowEnd) = guideRows.window
-                        ?: (viewModel.windowStartMillis.value to viewModel.windowEndMillis.value)
-                    val dayLabel = when (guideRows.day) {
+                    val dayLabel = when (guideDayOffset) {
                         0 -> stringResource(R.string.guide_today)
                         1 -> stringResource(R.string.guide_tomorrow)
                         else -> remember(windowStart) {

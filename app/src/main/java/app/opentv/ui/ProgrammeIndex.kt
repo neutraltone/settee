@@ -57,7 +57,7 @@ internal fun Flow<Pair<Long, Long>>.guideIndex(
 internal fun <C, R> Flow<C>.guideBuilds(
     index: Flow<ProgrammeIndex>,
     settleMillis: Long = GUIDE_SETTLE_MILLIS,
-    build: suspend (channels: C, index: ProgrammeIndex) -> R,
+    build: suspend (channels: C, byChannel: Map<String, List<GuideProgramme>>) -> R,
 ): Flow<R> = channelFlow {
     val latest = MutableStateFlow<BuildInputs<C>?>(null)
     launch {
@@ -72,7 +72,7 @@ internal fun <C, R> Flow<C>.guideBuilds(
         val inputs = combine(latest, settledSinceBuild) { next, settled -> next?.takeIf { it.due(built, settled) } }
             .filterNotNull()
             .first()
-        send(build(inputs.channels, inputs.index))
+        send(build(inputs.channels, inputs.index.byChannel))
         built = inputs
         settledSinceBuild.value = false
         settling?.cancel()

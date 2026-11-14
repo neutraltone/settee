@@ -432,10 +432,6 @@ class ChannelsViewModel @JvmOverloads constructor(
     val windowEndMillis: StateFlow<Long> = guideWindow.map { it.second }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), guideWindow.value.second)
 
-    /** How many days after today [millis] falls, by this device's calendar; rounded, for a DST change. */
-    private fun dayOf(millis: Long): Int =
-        ((startOfLocalDay(millis) - startOfLocalDay(now()) + DAY_MILLIS / 2) / DAY_MILLIS).toInt()
-
     private fun startOfLocalDay(millis: Long): Long {
         val cal = java.util.Calendar.getInstance()
         cal.timeInMillis = millis
@@ -509,20 +505,9 @@ class ChannelsViewModel @JvmOverloads constructor(
      * The guide's rows with the scope (All channels, Favourites, a category) they were built for,
      * in one value, so the guide can tell a new category's rows from the old one's and start it
      * at the top: a list kept by key would otherwise open it wherever the old channel was.
-     *
-     * With the [window] and [day] they were built for too, so the guide draws its times and day
-     * from the rows rather than from the day asked for. The two differ while the rows for another
-     * day are built, and for longer after Back to a guide that went back to today while covered
-     * (#327): drawn from the day asked for, it labelled tomorrow's rows Today.
      */
     @androidx.compose.runtime.Immutable
-    data class GuideRows(
-        val scope: LineupScope? = null,
-        val rows: List<Row> = emptyList(),
-        /** Null only before the first build, when there are no rows to draw. */
-        val window: Pair<Long, Long>? = null,
-        val day: Int = 0,
-    )
+    data class GuideRows(val scope: LineupScope? = null, val rows: List<Row> = emptyList())
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val guideRows: StateFlow<GuideRows> =
@@ -537,17 +522,14 @@ class ChannelsViewModel @JvmOverloads constructor(
                 // build instead; the guide's live progress bars advance off the screen's clock.
                 // guideBuilds paces rebuilds for more listings from the end of the last build, so
                 // a guide sync doesn't keep a slow build running back to back (#257).
-                lineup.channels(scope).guideBuilds(programmeIndex) { channels, index ->
+                lineup.channels(scope).guideBuilds(programmeIndex) { channels, byEpgChannel ->
                     // Show the size-aware loading bar for the FIRST guide build only (start-up).
                     // After that the guide is built and flicking between categories is cheap, so
                     // don't flash a loading line on every tap — that bar was only ever meant for
                     // the one-time heavy load, and leaking it per-category read as a stuck "100%".
                     val firstBuild = !guideBuilt
                     if (firstBuild) StatusBus.set(sizeMessage(channels.size), 0f)
-                    val rows = buildRows(channels, index.byChannel, now(), reportProgress = firstBuild)
-                    // Before the first listings are read the index has no window: the one asked for.
-                    val window = index.window ?: guideWindow.value
-                    GuideRows(scope, rows, window, dayOf(window.first))
+                    GuideRows(scope, buildRows(channels, byEpgChannel, now(), reportProgress = firstBuild))
                 }
             }
             // Grouping thousands of channels against a 12-hour, all-feeds programme window is heavy
