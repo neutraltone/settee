@@ -67,6 +67,7 @@ class TestCatalog(
         http = panel.http,
         wording = ErrorWording(context, onTelevision = false),
         selfEnabledGuide = EpgRepository.SelfEnabledGuide.InMemory(),
+        invalidationTracker = db.invalidationTracker,
     )
 
     /** Where [lineup] keeps its folds; cancelled with the database. */

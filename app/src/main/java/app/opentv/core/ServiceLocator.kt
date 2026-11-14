@@ -196,6 +196,7 @@ object ServiceLocator {
                 selfEnabledGuide = object : EpgRepository.SelfEnabledGuide {
                     override var name by settings::selfEnabledGuide
                 },
+                invalidationTracker = database.invalidationTracker,
             )
         }
 

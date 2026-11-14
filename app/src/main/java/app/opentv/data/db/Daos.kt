@@ -664,7 +664,7 @@ interface ProgrammeDao {
         ORDER BY epgChannelId, startUtcMillis
         """,
     )
-    fun observeGuideWindow(fromUtcMillis: Long, toUtcMillis: Long): Flow<List<GuideProgramme>>
+    suspend fun guideWindow(fromUtcMillis: Long, toUtcMillis: Long): List<GuideProgramme>
 
     /** What's on at [nowUtcMillis] of the programmes ending by [endsByUtcMillis]; see [ON_NOW_QUERY]. */
     @Query(ON_NOW_QUERY)

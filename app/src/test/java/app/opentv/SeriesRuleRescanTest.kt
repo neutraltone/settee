@@ -54,6 +54,7 @@ class SeriesRuleRescanTest {
             http = test.panel.http,
             wording = ErrorWording(ApplicationProvider.getApplicationContext(), onTelevision = false),
             selfEnabledGuide = EpgRepository.SelfEnabledGuide.InMemory(),
+            invalidationTracker = db.invalidationTracker,
         ),
         test.lineup,
     )

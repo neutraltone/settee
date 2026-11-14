@@ -62,6 +62,7 @@ class EpgBuiltInFeedsTest {
         http = http,
         wording = ErrorWording(ApplicationProvider.getApplicationContext(), onTelevision = false),
         selfEnabledGuide = selfEnabled,
+        invalidationTracker = db.invalidationTracker,
     )
 
     private val usa = "USA — epgshare01"
