@@ -18,10 +18,9 @@ import app.opentv.data.remote.XtreamApi
 // transaction: a transaction a batch would reload every screen watching movies a hundred times on a
 // big list, and a list cut off halfway saves nothing, as it always has.
 //
-// Fresh rows carry no local id, and an upsert without one hits the unique (source, provider id) index
-// and then updates nothing, so a title's last_modified would never move after its first sync.
-// Matching each to the row it replaces fixes that, keeps the local id that resume points hang off,
-// and keeps what detail opens filled in. The rows are looked up a batch at a
+// Fresh rows carry no local id, so each is matched to the row it replaces: the save then updates that
+// row instead of inserting a second one of the same (source, provider id), keeps the local id that
+// resume points hang off, and keeps what detail opens filled in. The rows are looked up a batch at a
 // time too, since loading every stored title to match against costs as much memory as the list.
 
 /** Saves [list] as [sourceId]'s movies, returning how many there were. */
