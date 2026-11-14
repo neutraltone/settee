@@ -72,6 +72,8 @@ class VodPlayerContentTest {
 
     @After
     fun release() {
+        // A process-wide singleton: a timer left armed would close the next test's player.
+        SleepTimer.clear()
         controller.release()
         players.close()
         graph.database.close()
@@ -698,6 +700,32 @@ class VodPlayerContentTest {
         } finally {
             SleepTimer.clear()
         }
+    }
+
+    @Test
+    fun `a sleep timer that ran out before the film opened is off, and the film plays on`() {
+        SleepTimer.armMinutes(-1)
+        var backs = 0
+
+        showWatching(MediaKey.Movie(1), onBack = { backs++ })
+        compose.mainClock.advanceTimeBy(60_000L)
+
+        assertThat(backs).isEqualTo(0)
+        assertThat(SleepTimer.deadline.value).isNull()
+    }
+
+    @Test
+    fun `a sleep timer that runs out during the film leaves the player and turns itself off`() {
+        var backs = 0
+        showWatching(MediaKey.Movie(1), onBack = { backs++ })
+        SleepTimer.armMinutes(15)
+
+        compose.mainClock.advanceTimeBy(14 * 60_000L)
+        assertThat(backs).isEqualTo(0)
+
+        compose.mainClock.advanceTimeBy(60_000L + 1_000L)
+        assertThat(backs).isEqualTo(1)
+        assertThat(SleepTimer.deadline.value).isNull()
     }
 
     @Test

@@ -68,7 +68,6 @@ import androidx.media3.common.util.UnstableApi
 import androidx.media3.ui.PlayerView
 import app.opentv.R
 import app.opentv.core.ServiceLocator
-import app.opentv.core.SleepTimer
 import app.opentv.core.findActivity
 import app.opentv.data.repo.MediaKey
 import app.opentv.player.NextEpisodeCountdown
@@ -191,16 +190,6 @@ fun VodPlayerScreen(
         }
     }
 
-    // Sleep timer: leave the film when the armed deadline passes (position is saved on dispose).
-    val sleepDeadline by SleepTimer.deadline.collectAsState()
-    LaunchedEffect(sleepDeadline) {
-        val d = sleepDeadline ?: return@LaunchedEffect
-        val wait = d - System.currentTimeMillis()
-        if (wait > 0) delay(wait)
-        SleepTimer.clear()
-        onBack()
-    }
-
     val finished by viewModel.finished.collectAsState()
     LaunchedEffect(finished) { if (finished) onBack() }
 
@@ -253,6 +242,8 @@ fun VodPlayerContent(
     subtitlePicks: SubtitlePicks,
     onBack: () -> Unit,
 ) {
+    // Leave the film when the sleep timer runs out (VodPlayerScreen saves the position on dispose).
+    SleepTimerEffect(onRunOut = onBack)
     val seek = remember { UnfinishedSeek() }
     // OpenSubtitles' part of the subtitle list; null without Settee's key.
     val subtitles = LocalVodSubtitles.current
