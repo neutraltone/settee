@@ -654,6 +654,8 @@
     <string name="error_tmdb_key_rejected">TMDB didn\'t accept that key. Check you copied the whole API Key, then try again.</string>
     <string name="error_tmdb_unreachable_tv">Can\'t reach TMDB. Check this TV is online, then try again.</string>
     <string name="error_tmdb_unreachable_device">Can\'t reach TMDB. Check this device is online, then try again.</string>
+    <string name="error_database_tv">Settee can\'t read what it saved on this TV. Update it with Downloader code 6405610, or clear its data in Settings › Applications.</string>
+    <string name="error_database_device">Settee can\'t read what it saved on this device. Install the latest release over it, or clear its data in the app\'s settings.</string>
     <string name="error_tmdb_trouble">TMDB is having problems. That\'s at their end, so try again later.</string>
     <string name="error_opensubtitles_none">OpenSubtitles has no subtitles for this yet.</string>
     <string name="error_opensubtitles_unreachable_tv">Can\'t reach OpenSubtitles. Check this TV is online, then try again.</string>

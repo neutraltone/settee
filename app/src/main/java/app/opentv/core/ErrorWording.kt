@@ -79,6 +79,13 @@ class ErrorWording(private val context: Context, private val onTelevision: Boole
     fun ofHardware(@StringRes tv: Int, @StringRes device: Int, code: String? = null): ViewerError =
         of(hardware(onTelevision, tv, device), code)
 
+    /**
+     * The database wouldn't open at launch (#334): one left by a build Settee can't migrate from. The
+     * app can't run without it and its own updater sits behind it, so the way out is outside the app.
+     */
+    fun ofDatabase(error: Throwable): ViewerError =
+        ofHardware(R.string.error_database_tv, R.string.error_database_device, codeOf(error))
+
     /** A failure the app found itself, with no exception behind it. */
     fun of(@StringRes sentence: Int, code: String? = null): ViewerError =
         ViewerError(resources.getString(sentence), ViewerError.detailOf(code))

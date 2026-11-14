@@ -21,6 +21,16 @@ a television (`isRunningOnTelevision`), "this device" on phones and tablets.
 Who builds them: `PlaybackErrors` for playback, `ErrorWording` (`core/`) for everything else, through
 `ServiceLocator.errorWording`. Change a mapping here and in the code together.
 
+## Starting up
+
+Worded by `ErrorWording.ofDatabase`, drawn by `ui/DatabaseGate` in place of every screen. The app can't
+run without its database, and the in-app updater is behind it, so the sentence names the ways out from
+outside the app (`docs/RELEASING.md`, "When an update can't open the database").
+
+| Trigger | String key | Sentence | Detail | Whose end, likely cause |
+|---|---|---|---|---|
+| The database wouldn't open at launch (Room's `IllegalStateException`, SQLite's `SQLException`) | `error_database_tv` / `_device` | Settee can't read what it saved on this TV. Update it with Downloader code 6405610, or clear its data in Settings › Applications. | exception type | Settee's: a database from a newer build after a downgrade, or a migration that doesn't match its schema |
+
 ## Playback
 
 Movies and Shows' error panel, the live player, the Home Live Preview, the guide's preview, and a

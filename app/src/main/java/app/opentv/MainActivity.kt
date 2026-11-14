@@ -58,6 +58,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import app.opentv.core.ServiceLocator
 import app.opentv.data.repo.MediaKey
+import app.opentv.ui.DatabaseGate
 import app.opentv.ui.FirstScreen
 import app.opentv.ui.MainScreen
 import app.opentv.ui.ProfilesViewModel
@@ -88,7 +89,9 @@ import app.opentv.ui.vod.VodPlayerScreen
 import app.opentv.ui.vod.rememberCoverBadges
 import app.opentv.update.UpdateGate
 import app.opentv.update.WhatsNewGate
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class MainActivity : ComponentActivity() {
 
@@ -100,7 +103,6 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        (application as? OpenTvApp)?.opened()
         // Settee is always dark, so the bars' icons are always light. The default follows the
         // system's light or dark mode, which on a phone in light mode drew dark icons on our background.
         enableEdgeToEdge(
@@ -117,7 +119,17 @@ class MainActivity : ComponentActivity() {
                 // its own, this fill goes, and only then is a ScreenFrame's VideoArea truly clear
                 // (SurfaceView playback punches through it regardless).
                 Box(Modifier.fillMaxSize().background(SetteeColors.Background)) {
-                    OpenTvApp(isTelevision = isTelevision, launchedToPlay = toPlay)
+                    val graph = ServiceLocator.get(this@MainActivity)
+                    DatabaseGate(
+                        open = {
+                            withContext(Dispatchers.IO) { graph.database.openHelper.writableDatabase }
+                            // The launch work reads the database too, so it waits for it as well.
+                            (application as? OpenTvApp)?.opened()
+                        },
+                        describe = graph.errorWording::ofDatabase,
+                    ) {
+                        OpenTvApp(isTelevision = isTelevision, launchedToPlay = toPlay)
+                    }
                 }
             }
         }
