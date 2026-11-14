@@ -382,7 +382,7 @@ class PlayerController(
         if (request.key != current?.key) guard.forgetNotices()
         current = request
         guard.leaving()
-        // Stood by, nothing connects: [comeBack] plays the latest one asked for.
+        // Live TV behind another app: nothing connects, and coming back plays the latest one asked for.
         if (hold == Hold.STOPPED) return
 
         switchJob = scope.launch {
@@ -574,39 +574,42 @@ class PlayerController(
     }
 
     /**
-     * Behind another app, a film or episode pauses and stays paused, whatever starts meanwhile: a
-     * restart after a dropped connection, a step down, the next episode. [comeBack] doesn't play it.
+     * Whether the app is behind another one, outside picture-in-picture (#356). Going behind, a film or
+     * episode pauses and stays paused, whatever starts meanwhile (a restart after a dropped connection,
+     * a step down, the next episode), and coming back doesn't play it. Live TV stops instead and closes
+     * its connection, so a single-connection account is free for another TV; nothing asked for meanwhile
+     * connects, and coming back tunes in the latest. An error on screen stays there for the viewer.
+     *
+     * A property rather than functions, as [audioEnabled] is: it's a state the screen sets.
      */
-    fun pauseBehind() {
-        hold = Hold.PAUSED
-        player.playWhenReady = false
-    }
-
-    /**
-     * Behind another app, live TV stops and closes its connection, so a single-connection account is free
-     * for another TV, and nothing asked for meanwhile connects. [comeBack] tunes in the latest. An error
-     * on screen stays there, for the viewer to read and retry.
-     */
-    fun standBy() {
-        hold = Hold.STOPPED
-        if (_state.value is State.Error) return
-        switchJob?.cancel()
-        guard.leaving()
-        loaded = null
-        player.stop()
-        player.clearMediaItems()
-        _state.value = State.Idle
-    }
-
-    /** In front again: lets playback go, and tunes in again what [standBy] stopped. */
-    fun comeBack() {
-        val was = hold
-        hold = Hold.NONE
-        if (was != Hold.STOPPED || _state.value is State.Error) return
-        consecutiveFailures = 0
-        // Asked for afresh, as a portal's link may have expired meanwhile.
-        current?.let { play(it, debounce = false) }
-    }
+    var behindAnotherApp: Boolean = false
+        set(behind) {
+            if (behind == field) return
+            field = behind
+            if (behind) {
+                // Nothing playing yet counts as live: then nothing connects unseen.
+                val live = current?.key.let { it == null || it is MediaKey.Live }
+                hold = if (live) Hold.STOPPED else Hold.PAUSED
+                if (!live) {
+                    player.playWhenReady = false
+                } else if (_state.value !is State.Error) {
+                    switchJob?.cancel()
+                    guard.leaving()
+                    loaded = null
+                    player.stop()
+                    player.clearMediaItems()
+                    _state.value = State.Idle
+                }
+            } else {
+                val was = hold
+                hold = Hold.NONE
+                if (was == Hold.STOPPED && _state.value !is State.Error) {
+                    consecutiveFailures = 0
+                    // Asked for afresh, as a portal's link may have expired meanwhile.
+                    current?.let { play(it, debounce = false) }
+                }
+            }
+        }
 
     fun release() {
         switchJob?.cancel()

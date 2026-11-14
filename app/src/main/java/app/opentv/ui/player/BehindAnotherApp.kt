@@ -38,7 +38,11 @@ fun WhenBehindAnotherApp(onGoneBehind: () -> Unit, onBack: () -> Unit) {
             .distinctUntilChanged()
             .collect { behind ->
                 // A screen opened in front isn't coming back; one opened behind (restored there) has gone.
-                if (behind) goneBehind() else if (wasBehind) cameBack()
+                if (behind) {
+                    goneBehind()
+                } else if (wasBehind) {
+                    cameBack()
+                }
                 wasBehind = behind
             }
     }

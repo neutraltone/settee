@@ -309,10 +309,10 @@ fun VodPlayerContent(
     // A recording pauses the same way; RecordingEngine goes on recording it.
     WhenBehindAnotherApp(
         onGoneBehind = {
-            controller.pauseBehind()
+            controller.behindAnotherApp = true
             marking.launch { withContext(NonCancellable) { viewModel.saveProgress() } }
         },
-        onBack = controller::comeBack,
+        onBack = { controller.behindAnotherApp = false },
     )
     val panelFocus = remember { FocusRequester() }
     var positionMs by remember { mutableLongStateOf(0L) }
