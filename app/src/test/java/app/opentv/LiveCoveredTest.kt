@@ -49,7 +49,9 @@ import app.opentv.ui.design.SetteeType
 import app.opentv.ui.design.Text
 import com.google.common.truth.Truth.assertThat
 import java.time.Duration
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
 import org.junit.After
 import org.junit.Rule
 import org.junit.Test
@@ -217,15 +219,18 @@ class LiveCoveredTest {
         channelCell("Channel Two").assertIsFocused()
 
         openSettings()
-        // Longer than the guide's flows keep going once nothing collects them (WhileSubscribed).
-        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(STOP_SECONDS))
+        letTheGuideStop()
         runBlocking {
             graph.database.programmes().insertOrReplace(listOf(programme(2, now + 2 * HOUR, now + 3 * HOUR, NEWS)))
+            // The same settled listings the guide reads, so the EPG's settle has passed once this has
+            // them; the guide's own pause between builds ran out long before, from its last build.
+            withTimeout(10_000) {
+                graph.epgRepository.observeGuideWindow(now, now + DAY).first { list -> list.any { it.title == NEWS } }
+            }
         }
 
-        // Past the EPG's settle and the guide's pause between builds, both on real time: a guide
-        // still listening would have rebuilt its rows with the new programme by now.
-        val until = System.currentTimeMillis() + QUIET_MILLIS
+        // A guide still listening builds its three rows from them now: give it time to.
+        val until = System.currentTimeMillis() + BUILD_MILLIS
         while (System.currentTimeMillis() < until) {
             idleMainLooper()
             assertThat(rowsList(NEWS)).isFalse()
@@ -242,11 +247,56 @@ class LiveCoveredTest {
         channelCell("Channel Two").assertIsFocused()
     }
 
+    @Test
+    fun `back from Settings over a later day, the guide names the day of the rows it shows, then shows today`() {
+        library()
+        setApp()
+        awaitRows()
+        compose.runOnIdle { viewModel.nudgeGuideDay(1) }
+        compose.waitUntil(10_000) {
+            idleMainLooper()
+            viewModel.guideRows.value.day == 1
+        }
+        compose.waitForIdle()
+
+        openSettings()
+        letTheGuideStop()
+        back()
+
+        // Whether or not today's rows were built before the guide stopped, the day named is theirs.
+        assertThat(namesTheRowsDay()).isTrue()
+        compose.waitUntil(10_000) {
+            idleMainLooper()
+            viewModel.guideRows.value.day == 0
+        }
+        compose.waitForIdle()
+        compose.onNode(hasText("Today")).assertIsDisplayed()
+        assertThat(viewModel.guideDayOffset.value).isEqualTo(0)
+    }
+
+    /** Whether the guide names its rows' day; true too if the rows changed while looking, to look again. */
+    private fun namesTheRowsDay(): Boolean {
+        repeat(LOOKS) {
+            val day = viewModel.guideRows.value.day
+            val tomorrowNamed = compose.onAllNodes(hasText("Tomorrow")).fetchSemanticsNodes().isNotEmpty()
+            if (viewModel.guideRows.value.day == day) return tomorrowNamed == (day == 1)
+        }
+        return true
+    }
+
+    /**
+     * Past when nothing collecting them stops the guide's flows: the rows five seconds after the screen
+     * stops, and the programme index under them five seconds after that (WhileSubscribed).
+     */
+    private fun letTheGuideStop() = shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(STOP_SECONDS))
+
     private companion object {
         const val HOUR = 60 * 60 * 1000L
         const val NEWS = "News flash"
-        const val STOP_SECONDS = 6L
-        const val QUIET_MILLIS = 6_000L
+        const val DAY = 24 * HOUR
+        const val STOP_SECONDS = 11L
+        const val BUILD_MILLIS = 1_500L
+        const val LOOKS = 3
         const val POLL_MILLIS = 100L
     }
 }

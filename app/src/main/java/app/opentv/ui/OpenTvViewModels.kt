@@ -432,6 +432,10 @@ class ChannelsViewModel @JvmOverloads constructor(
     val windowEndMillis: StateFlow<Long> = guideWindow.map { it.second }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), guideWindow.value.second)
 
+    /** How many days after today [millis] falls, by this device's calendar; rounded, for a DST change. */
+    private fun dayOf(millis: Long): Int =
+        ((startOfLocalDay(millis) - startOfLocalDay(now()) + DAY_MILLIS / 2) / DAY_MILLIS).toInt()
+
     private fun startOfLocalDay(millis: Long): Long {
         val cal = java.util.Calendar.getInstance()
         cal.timeInMillis = millis
@@ -476,9 +480,12 @@ class ChannelsViewModel @JvmOverloads constructor(
      * re-emits on its own when an EPG sync lands new programmes, at most every couple of seconds
      * however many batches it writes (`EpgRepository.observeGuideWindow`, #257).
      *
-     * Held only while the guide is on screen: the Live screen collects [guideRows] only while it's
-     * started, so under Settings, Search or a title's page, where it stays built (`KeptShell`), this
-     * stops after the usual five seconds rather than regrouping every EPG write behind them (#327).
+     * Held only while the guide is on screen (#327). Settings, Search and title pages keep the Live
+     * screen built under them (`KeptShell`) but drop the main screen's lifecycle below STARTED, and
+     * the screen collects [guideRows] only while it's started. So under them [guideRows] stops after
+     * five seconds, and this five seconds after that, rather than regrouping every EPG write behind
+     * them. Back shows the last rows at once, and they refresh from what was written meanwhile.
+     * `GuideCollectionTest` keeps every collector of [guideRows] lifecycle-aware.
      */
     private val programmeIndex: StateFlow<ProgrammeIndex> =
         guideWindow
@@ -502,9 +509,20 @@ class ChannelsViewModel @JvmOverloads constructor(
      * The guide's rows with the scope (All channels, Favourites, a category) they were built for,
      * in one value, so the guide can tell a new category's rows from the old one's and start it
      * at the top: a list kept by key would otherwise open it wherever the old channel was.
+     *
+     * With the [window] and [day] they were built for too, so the guide draws its times and day
+     * from the rows rather than from the day asked for. The two differ while the rows for another
+     * day are built, and for longer after Back to a guide that went back to today while covered
+     * (#327): drawn from the day asked for, it labelled tomorrow's rows Today.
      */
     @androidx.compose.runtime.Immutable
-    data class GuideRows(val scope: LineupScope? = null, val rows: List<Row> = emptyList())
+    data class GuideRows(
+        val scope: LineupScope? = null,
+        val rows: List<Row> = emptyList(),
+        /** Null only before the first build, when there are no rows to draw. */
+        val window: Pair<Long, Long>? = null,
+        val day: Int = 0,
+    )
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val guideRows: StateFlow<GuideRows> =
@@ -519,14 +537,17 @@ class ChannelsViewModel @JvmOverloads constructor(
                 // build instead; the guide's live progress bars advance off the screen's clock.
                 // guideBuilds paces rebuilds for more listings from the end of the last build, so
                 // a guide sync doesn't keep a slow build running back to back (#257).
-                lineup.channels(scope).guideBuilds(programmeIndex) { channels, byEpgChannel ->
+                lineup.channels(scope).guideBuilds(programmeIndex) { channels, index ->
                     // Show the size-aware loading bar for the FIRST guide build only (start-up).
                     // After that the guide is built and flicking between categories is cheap, so
                     // don't flash a loading line on every tap — that bar was only ever meant for
                     // the one-time heavy load, and leaking it per-category read as a stuck "100%".
                     val firstBuild = !guideBuilt
                     if (firstBuild) StatusBus.set(sizeMessage(channels.size), 0f)
-                    GuideRows(scope, buildRows(channels, byEpgChannel, now(), reportProgress = firstBuild))
+                    val rows = buildRows(channels, index.byChannel, now(), reportProgress = firstBuild)
+                    // Before the first listings are read the index has no window: the one asked for.
+                    val window = index.window ?: guideWindow.value
+                    GuideRows(scope, rows, window, dayOf(window.first))
                 }
             }
             // Grouping thousands of channels against a 12-hour, all-feeds programme window is heavy

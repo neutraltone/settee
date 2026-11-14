@@ -59,8 +59,7 @@ fun NavGraphBuilder.mainShellRoute() = composable(Routes.MAIN) {}
 /**
  * Draws [shell] (the main screen) under [navHost], owned by the [Routes.MAIN] back stack entry as it
  * would be inside the NavHost: the same view models, saved state and tab ([shellTab]), and the same
- * lifecycle, so the Live Preview still stops while it's covered, and so do the flows a screen collects
- * with `collectAsStateWithLifecycle`, such as the Live guide's rows and the listings behind them.
+ * lifecycle, so the Live Preview and the guide's listings still stop while it's covered.
  *
  * Covered by any screen but a player, it stays built without being placed: nothing of it is drawn
  * and the remote can't reach it, and Back finds it as it was, the highlight where it was left. Under a

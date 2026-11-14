@@ -111,30 +111,26 @@ fun LiveScreen(
     val settings = remember { graph.settings }
     val previewEnabled by settings.guidePreviewVideo.collectAsState()
 
-    val categories by viewModel.visibleCategoryGroups.collectAsState()
-    // Settings, Search and title pages keep the guide built under them (KeptShell), and the main
-    // screen's lifecycle drops below STARTED once one has covered it. Collected only while it's
-    // started, the guide's flows lose their last subscriber there, so the day's programme index is
-    // let go and an EPG sync started from Settings doesn't regroup it and rebuild the rows behind it
-    // (#327). Back shows the last rows at once, and they refresh from what was written meanwhile.
+    // What reads the database is collected only while the screen is started, so none of it runs
+    // under Settings, Search or a title's page, which keep the guide built (see programmeIndex, #327).
+    val categories by viewModel.visibleCategoryGroups.collectAsStateWithLifecycle()
     val guideRows by viewModel.guideRows.collectAsStateWithLifecycle()
     val rows = guideRows.rows
     val selectedCategory by viewModel.selectedCategory.collectAsState()
     val favouritesOnly by viewModel.favouritesOnly.collectAsState()
-    val sources by viewModel.sources.collectAsState()
-    val windowStart by viewModel.windowStartMillis.collectAsStateWithLifecycle()
-    val windowEnd by viewModel.windowEndMillis.collectAsStateWithLifecycle()
+    val sources by viewModel.sources.collectAsStateWithLifecycle()
     val rowsBuilt by viewModel.rowsBuilt.collectAsState()
     val guideDayOffset by viewModel.guideDayOffset.collectAsState()
     // Tri-state: null = still checking the catalogue, true = channels on disk, false = confirmed
     // empty. Drives the choice between the loading message and a recoverable error below.
-    val channelsPresent by viewModel.channelsPresent.collectAsState()
+    val channelsPresent by viewModel.channelsPresent.collectAsStateWithLifecycle()
 
     // Where the Highlight is in the guide: what the band describes and the preview plays.
     var highlighted by remember { mutableStateOf<Pair<ChannelsViewModel.Row, GuideProgramme?>?>(null) }
     var nowMillis by remember { mutableLongStateOf(viewModel.now()) }
 
-    val activeRecordings by graph.recordingRepository.observeActive().collectAsState(initial = emptyList())
+    val activeRecordings by graph.recordingRepository.observeActive()
+        .collectAsStateWithLifecycle(initialValue = emptyList())
     val recordScope = rememberCoroutineScope()
     // The programme the viewer pressed OK on in the guide, whose details are open.
     var details by remember { mutableStateOf<Pair<ChannelsViewModel.Row, GuideProgramme>?>(null) }
@@ -267,7 +263,11 @@ fun LiveScreen(
                         else -> NoChannels(onAddSource)
                     }
                 } else {
-                    val dayLabel = when (guideDayOffset) {
+                    // The rows' own window and day, so a guide still building another day's rows
+                    // never draws them under that day's times or name.
+                    val (windowStart, windowEnd) = guideRows.window
+                        ?: (viewModel.windowStartMillis.value to viewModel.windowEndMillis.value)
+                    val dayLabel = when (guideRows.day) {
                         0 -> stringResource(R.string.guide_today)
                         1 -> stringResource(R.string.guide_tomorrow)
                         else -> remember(windowStart) {
