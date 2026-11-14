@@ -6,6 +6,7 @@
 package app.opentv.recording
 
 import com.hierynomus.msdtyp.AccessMask
+import com.hierynomus.msfscc.fileinformation.FileStandardInformation
 import com.hierynomus.mssmb2.SMB2CreateDisposition
 import com.hierynomus.mssmb2.SMB2ShareAccess
 import com.hierynomus.smbj.SMBClient
@@ -61,6 +62,12 @@ interface SmbReader : Closeable {
 
     /** Reads up to [length] bytes at [fileOffset]; returns bytes read or -1 at EOF. One SMB round trip. */
     fun readAt(buffer: ByteArray, fileOffset: Long, bufferOffset: Int, length: Int): Int
+
+    /**
+     * The file's size now, asked again on this open handle: how a recording being written is seen to
+     * grow without reconnecting. One SMB round trip; a reader that can't ask again gives [length].
+     */
+    fun endOfFile(): Long = length
 }
 
 /**
@@ -77,6 +84,10 @@ class SmbReadHandle(
 ) : SmbReader {
     override fun readAt(buffer: ByteArray, fileOffset: Long, bufferOffset: Int, length: Int): Int =
         file.read(buffer, fileOffset, bufferOffset, length)
+
+    // The standard information alone: the whole of it is a larger request and reply, four times a
+    // second while a recording is watched at its growing edge.
+    override fun endOfFile(): Long = file.getFileInformation(FileStandardInformation::class.java).endOfFile
 
     override fun close() {
         runCatching { file.close() }

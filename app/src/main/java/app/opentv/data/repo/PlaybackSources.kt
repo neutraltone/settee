@@ -7,6 +7,7 @@ package app.opentv.data.repo
 
 import android.net.Uri
 import android.util.Log
+import androidx.annotation.VisibleForTesting
 import app.opentv.data.db.OpenTvDatabase
 import app.opentv.data.model.Channel
 import app.opentv.data.model.Episode
@@ -68,8 +69,13 @@ sealed interface MediaKey {
         const val CATCHUP = "catchup"
         const val RECORDING = "rec"
 
+        /** Told of every [parse], so a test can see how often a hot path reads keys. Null in the app. */
+        @VisibleForTesting
+        internal var onParse: (() -> Unit)? = null
+
         /** The key [stored] names, or null when it names none. */
         fun parse(stored: String): MediaKey? {
+            onParse?.invoke()
             val kind = stored.substringBefore(':')
             val rest = stored.substringAfter(':', missingDelimiterValue = "")
             return when (kind) {

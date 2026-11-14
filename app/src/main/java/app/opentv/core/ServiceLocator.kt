@@ -285,7 +285,7 @@ object ServiceLocator {
         }
 
         val recordingRepository: RecordingRepository by lazy {
-            RecordingRepository(database.recordings(), database.seriesRules())
+            RecordingRepository(database.recordings(), database.seriesRules(), appScope)
         }
 
         val reminderRepository: ReminderRepository by lazy {

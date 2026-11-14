@@ -139,10 +139,24 @@ internal class HeldRow<T>(val titles: List<T>, val modifier: Modifier)
  */
 @Composable
 internal fun <T> rememberHeldRow(titles: List<T>): HeldRow<T> {
-    var highlighted by remember { mutableStateOf(false) }
-    var shown by remember { mutableStateOf(titles) }
-    if (!highlighted && shown !== titles) shown = titles
-    return HeldRow(shown, Modifier.onFocusChanged { highlighted = it.hasFocus })
+    val latest by rememberUpdatedState(titles)
+    val held = remember { HeldTitles(titles) }
+    if (!held.highlighted && held.shown !== titles) held.shown = titles
+    // One modifier for good, and the highlight kept out of snapshot state: read while composing, it
+    // recomposed every For you shelf each time the highlight moved onto or off this one.
+    val modifier = remember {
+        Modifier.onFocusChanged {
+            held.highlighted = it.hasFocus
+            if (!it.hasFocus) held.shown = latest
+        }
+    }
+    return HeldRow(held.shown, modifier)
+}
+
+/** What [rememberHeldRow] shows, and whether the highlight is on it, which only its focus callback reads. */
+private class HeldTitles<T>(titles: List<T>) {
+    var highlighted = false
+    var shown by mutableStateOf(titles)
 }
 
 /**

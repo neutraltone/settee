@@ -1111,11 +1111,7 @@ interface EpisodeDao {
     suspend fun startedSeries(profileId: Long, except: HandMark): List<SeriesRef>
 
     /** Every episode of each series [profileId] has played any of, by a join for the same reason. */
-    @Query(
-        "SELECT * FROM episodes WHERE EXISTS (SELECT 1 FROM episodes AS played JOIN playback_positions " +
-            "ON playback_positions.mediaKey = 'ep:' || played.id WHERE playback_positions.profileId = :profileId " +
-            "AND played.sourceId = episodes.sourceId AND played.seriesId = episodes.seriesId)",
-    )
+    @Query(EPISODES_OF_PLAYED_SERIES)
     suspend fun ofPlayedSeries(profileId: Long): List<Episode>
 
     @Query("SELECT * FROM episodes WHERE sourceId = :sourceId AND seriesId = :seriesId")
@@ -1622,3 +1618,15 @@ internal const val SERIES_WITH_PERSON = """
     ORDER BY rating DESC, addedMillis DESC
     LIMIT :limit
 """
+
+/**
+ * Every episode of each series a Profile has played any of. See [EpisodeDao.ofPlayedSeries].
+ *
+ * Joined from the played series rather than asking `EXISTS` of each episode: SQLite 3.22 on Fire OS 7
+ * runs a correlated subquery once per stored episode, and Home re-runs this whenever it comes back.
+ */
+internal const val EPISODES_OF_PLAYED_SERIES =
+    "SELECT episodes.* FROM episodes JOIN (SELECT DISTINCT played.sourceId, played.seriesId " +
+        "FROM playback_positions JOIN episodes AS played ON playback_positions.mediaKey = 'ep:' || played.id " +
+        "WHERE playback_positions.profileId = :profileId) AS played_series " +
+        "ON episodes.sourceId = played_series.sourceId AND episodes.seriesId = played_series.seriesId"

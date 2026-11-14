@@ -5,20 +5,28 @@
  */
 package app.opentv
 
+import androidx.compose.foundation.focusable
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.test.requestFocus
+import androidx.compose.ui.unit.dp
 import app.opentv.data.model.Movie
 import app.opentv.data.model.Series
 import app.opentv.data.repo.GenreGroup
@@ -27,6 +35,7 @@ import app.opentv.ui.ResumeItem
 import app.opentv.ui.design.ScreenFrame
 import app.opentv.ui.vod.MovieShelves
 import app.opentv.ui.vod.SeriesShelves
+import app.opentv.ui.vod.rememberHeldRow
 import com.google.common.truth.Truth.assertThat
 import org.junit.Rule
 import org.junit.Test
@@ -284,6 +293,29 @@ class VodShelvesTest {
 
         compose.onNodeWithText("Ozark").assertDoesNotExist()
         compose.onNodeWithText("Dark").assertExists()
+    }
+
+    @Test
+    fun `the highlight moving onto or off a held row doesn't recompose the shelves around it`() {
+        val titles = listOf("Ozark")
+        var compositions = 0
+        compose.setTvContent {
+            val held = rememberHeldRow(titles)
+            compositions++
+            Column {
+                Box(held.modifier) { Box(Modifier.size(10.dp).focusable().testTag("held")) }
+                Box(Modifier.size(10.dp).focusable().testTag("elsewhere"))
+            }
+        }
+        compose.waitForIdle()
+        val before = compositions
+
+        compose.onNodeWithTag("held").requestFocus()
+        compose.waitForIdle()
+        compose.onNodeWithTag("elsewhere").requestFocus()
+        compose.waitForIdle()
+
+        assertThat(compositions).isEqualTo(before)
     }
 
     private fun backUpToRecommended(from: String) {
