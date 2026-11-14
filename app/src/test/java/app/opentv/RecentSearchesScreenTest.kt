@@ -179,6 +179,30 @@ class RecentSearchesScreenTest {
         captureScreen("search_back_from_title")
     }
 
+    @Test
+    fun `Search left and opened again at once keeps the new visit's movies as the old one finishes leaving`() =
+        withVod { vod ->
+            showSearchInApp(vod)
+            // Frame by frame, so the new visit can search while the old one is still on its way out.
+            compose.mainClock.autoAdvance = false
+            act {
+                popBackStack()
+                navigate(Routes.SEARCH)
+            }
+            // A few frames: the new visit is up and has read its empty box, well inside the transition.
+            repeat(5) { compose.mainClock.advanceTimeByFrame() }
+            vod.setVodSearchQuery("zebra")
+
+            compose.mainClock.autoAdvance = true
+            compose.waitUntil(TIMEOUT_MILLIS) {
+                compose.waitForIdle()
+                vod.movieResults.value.isNotEmpty()
+            }
+            compose.waitForIdle()
+
+            assertThat(vod.movieResults.value.map { it.name }).containsExactly("Zebra Crossing")
+        }
+
     private lateinit var nav: NavHostController
 
     private fun act(block: NavHostController.() -> Unit) = compose.runOnIdle { nav.block() }

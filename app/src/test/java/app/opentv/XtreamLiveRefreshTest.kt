@@ -13,7 +13,6 @@ import app.opentv.data.db.OpenTvDatabase
 import app.opentv.data.model.ChannelEpgMatch
 import app.opentv.data.repo.CatalogRepository.SyncResult
 import com.google.common.truth.Truth.assertThat
-import java.util.Collections
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Test
@@ -32,16 +31,26 @@ class XtreamLiveRefreshTest {
 
     private val context: Context = ApplicationProvider.getApplicationContext()
 
-    /** Every statement the database is given, in order, with a marker for each live batch decoded. */
-    private val events: MutableList<String> = Collections.synchronizedList(mutableListOf())
+    /**
+     * How many batches of the live list were staged when the database was first asked about channels,
+     * which is inside the transaction that saves them; null until it was asked.
+     */
+    @Volatile private var stagedAtFirstChannelStatement: Int? = null
 
     private val test = TestCatalog(
         context,
         db = Room.inMemoryDatabaseBuilder(context, OpenTvDatabase::class.java)
             .allowMainThreadQueries()
-            .setQueryCallback(RoomDatabase.QueryCallback { sql, _ -> events += sql }, Runnable::run)
+            // On the thread running the statement, before it runs, so the staged file is seen as it was then.
+            .setQueryCallback(RoomDatabase.QueryCallback { sql, _ -> statement(sql) }, Runnable::run)
             .build(),
     )
+
+    private fun statement(sql: String) {
+        if (stagedAtFirstChannelStatement == null && CHANNEL_STATEMENT.containsMatchIn(sql)) {
+            stagedAtFirstChannelStatement = test.staging.listFiles().orEmpty().sumOf { it.readLines().size }
+        }
+    }
     private val channels = test.db.channels()
     private val panel = test.panel
 
@@ -137,17 +146,12 @@ class XtreamLiveRefreshTest {
     fun `a line-up is decoded whole before the transaction that saves it begins`() = runTest {
         test.db.sources().insert(PANEL_SOURCE)
         panel.replies["get_live_streams"] = lineUp(0 until LARGE)
-        test.catalog.onLiveBatchDecoded = { events += DECODED }
-        events.clear()
+        stagedAtFirstChannelStatement = null
 
         test.catalog.fetchLive(PANEL_SOURCE, nowUtcMillis = 1_000)
 
-        val order = synchronized(events) { events.toList() }
-        val begins = order.indexOfFirst { it.startsWith("BEGIN") }
-        assertThat(begins).isAtLeast(0)
-        // Eleven batches of 500: ten full and a part one.
-        assertThat(order.count { it == DECODED }).isEqualTo(11)
-        assertThat(order.lastIndexOf(DECODED)).isLessThan(begins)
+        // All eleven batches of 500, ten full and a part one, before the save asked about a channel.
+        assertThat(stagedAtFirstChannelStatement).isEqualTo(11)
     }
 
     @Test
@@ -209,8 +213,11 @@ class XtreamLiveRefreshTest {
         /** Several batches' worth, with a part batch at the end. */
         const val LARGE = 5_250
 
-        /** Logged among the statements as each batch of the live list is decoded. */
-        const val DECODED = "-- decoded a batch"
+        /** A statement reading or writing the channels table, as the save's first ones do. */
+        val CHANNEL_STATEMENT = Regex(
+            """^\s*(SELECT|INSERT|UPDATE|DELETE)\b.*\bchannels\b""",
+            setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL),
+        )
 
         /** A `get_live_streams` reply listing a channel for each of [ids]. */
         fun lineUp(ids: Iterable<Int>, name: (Int) -> String = { "Channel $it" }) =

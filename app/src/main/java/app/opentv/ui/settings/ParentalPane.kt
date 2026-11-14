@@ -77,13 +77,10 @@ private fun ParentalSettings(pinIsSet: Boolean, onSetPin: () -> Unit, onOpenLock
     val context = LocalContext.current
     val graph = remember { ServiceLocator.get(context) }
     val settings = graph.settings
-    val hidden by settings.hiddenCategories.collectAsState()
     // Counted against today's categories, as Locked categories draws its switches: the stored keys
     // also hold categories a provider has dropped, or another device's provider lists (they're kept
     // in case they come back), and counting those said more were locked than the switches showed.
-    val categories by remember(graph) { graph.channelLineup.categoryGroups(includeLocked = true) }
-        .collectAsState(initial = null)
-    val locked = categories?.count { it.key in hidden }
+    val locked by graph.channelLineup.lockedCategoryCount.collectAsState(initial = null as Int?)
     val unlocked by settings.hiddenUnlocked.collectAsState()
     val lockedRow = screenRow("locked-categories", onOpenLockedCategories)
 

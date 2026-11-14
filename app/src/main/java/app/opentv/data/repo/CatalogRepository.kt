@@ -210,9 +210,6 @@ class CatalogRepository(
      */
     internal var staging: File? = null
 
-    /** Called as each batch of an Xtream live list is decoded; tests watch it against the database's statements. */
-    internal var onLiveBatchDecoded: () -> Unit = {}
-
     private fun tmdbMetaOf(movie: Movie) =
         tmdb.movieMetaOrFailure(VodTitleCleaner.clean(movie.name), movie.year, movie.tmdbId)
 
@@ -711,10 +708,7 @@ class CatalogRepository(
         // writes queued behind it (#328). A reply cut off partway throws here, before anything's saved.
         val staged = api.liveStreams(source).use { list ->
             StagedBatches.stage(staging, Channel.serializer()) { stage ->
-                list.forEachBatch { batch ->
-                    stage(normalized(batch, categoryNames))
-                    onLiveBatchDecoded()
-                }
+                list.forEachBatch { batch -> stage(normalized(batch, categoryNames)) }
             }
         }
         val saved = staged.use { channelDao.replaceCatalogue(source.id, nowUtcMillis, it) }

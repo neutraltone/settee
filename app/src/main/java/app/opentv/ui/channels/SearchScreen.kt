@@ -419,5 +419,7 @@ internal const val MAX_SEARCH_LENGTH = 40
  * covers Search and ends only when Search is left, which empties the shared VOD search.
  */
 private class SearchVisit(private val vod: VodViewModel) : ViewModel() {
-    override fun onCleared() = vod.setVodSearchQuery("")
+    private val visit = vod.searchVisitStarted()
+
+    override fun onCleared() = vod.searchVisitEnded(visit)
 }

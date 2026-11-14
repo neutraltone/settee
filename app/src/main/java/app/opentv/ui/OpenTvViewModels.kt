@@ -1157,6 +1157,20 @@ class VodViewModel @JvmOverloads constructor(
         vodSearchInput.value = text
     }
 
+    /** The latest visit to Search: see [searchVisitStarted]. Main thread only. */
+    private var searchVisit = 0
+
+    /**
+     * Search has opened, as visit number returned. Its [searchVisitEnded] empties the search only if
+     * no visit has started since: a visit ends once Search has finished leaving, and a new one opened
+     * during that would otherwise lose what it had just searched for.
+     */
+    fun searchVisitStarted(): Int = ++searchVisit
+
+    fun searchVisitEnded(visit: Int) {
+        if (visit == searchVisit) setVodSearchQuery("")
+    }
+
     @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
     val movieResults: StateFlow<List<Movie>> =
         vodSearchInput.map { it.trim() }.debounceSearch().distinctUntilChanged()
