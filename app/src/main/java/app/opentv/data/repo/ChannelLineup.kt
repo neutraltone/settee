@@ -424,16 +424,6 @@ constructor(
     }
 }
 
-/**
- * [keys] with each lock saved under a nameless category's old key, its bare id, moved to the key it
- * has now, `source:id`, on every provider with that id, as the old key locked them all. Run once on
- * upgrade, so a lock the viewer set doesn't quietly lift.
- */
-fun migratedLockKeys(keys: Set<String>, categories: List<Category>): Set<String> {
-    val nameless = categories.filter { ChannelNameNormalizer.normalize(it.name).groupKey.isEmpty() }.groupBy { it.id }
-    return keys.flatMapTo(HashSet()) { key -> nameless[key]?.map(::categoryGroupKey) ?: listOf(key) }
-}
-
 /** The rows [scope] shows, in its order, before they're folded into Channels. */
 @OptIn(ExperimentalCoroutinesApi::class)
 private fun rowsIn(scope: LineupScope, channelDao: ChannelDao, categories: Flow<List<Category>>): Flow<List<Channel>> =
