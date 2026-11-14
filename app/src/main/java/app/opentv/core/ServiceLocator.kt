@@ -6,6 +6,7 @@
 package app.opentv.core
 
 import android.content.Context
+import android.util.Log
 import app.opentv.BuildConfig
 import app.opentv.data.db.OpenTvDatabase
 import app.opentv.data.remote.OpenSubtitlesClient
@@ -40,6 +41,7 @@ import app.opentv.player.DecoderList
 import app.opentv.player.DeviceDecoders
 import app.opentv.recording.RecordingEngine
 import java.util.concurrent.TimeUnit
+import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -197,8 +199,15 @@ object ServiceLocator {
             )
         }
 
-        /** Outlives every screen, so a refresh keeps going when the viewer moves on. */
-        private val refreshScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+        /**
+         * Outlives every screen, so a refresh or a change keeps going when the viewer moves on. A
+         * failure is logged rather than left to crash the app: what's launched here has no screen
+         * left to show it, and a rolled-back write leaves nothing to clear up.
+         */
+        val appScope = CoroutineScope(
+            SupervisorJob() + Dispatchers.IO +
+                CoroutineExceptionHandler { _, e -> Log.w("ServiceLocator", "Background work failed", e) },
+        )
 
         val refreshMessages: RefreshMessages by lazy { RefreshMessages(appContext) }
 
@@ -241,7 +250,7 @@ object ServiceLocator {
          * carries on with the address the phone sent the first provider through.
          */
         val pairingServer: PairingServer by lazy {
-            PairingServer(refreshScope, PairingFonts(appContext), appContext::getString)
+            PairingServer(appScope, PairingFonts(appContext), appContext::getString)
         }
 
         /** Says "this TV" or "this device" as the app decided at launch, with [isRunningOnTelevision]. */
@@ -254,7 +263,7 @@ object ServiceLocator {
                 settings = settings,
                 rescanSeriesRules = { recordingEngine.rescanSeriesRules() },
                 clock = System::currentTimeMillis,
-                scope = refreshScope,
+                scope = appScope,
             )
         }
 

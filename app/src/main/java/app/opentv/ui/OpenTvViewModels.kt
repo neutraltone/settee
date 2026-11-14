@@ -312,10 +312,11 @@ class SourcesViewModel @JvmOverloads constructor(
      * Change an Xtream source's live-stream container. The repository rewrites the source's live
      * channel URLs in place, so the switch takes effect without a re-sync; the observed source list
      * then re-emits with the new [Source.liveFormat]. A no-op for M3U sources and unchanged values.
+     * Runs in [ServiceLocator.Graph.appScope], not this screen's: leaving Sources mustn't cut it off.
      */
     fun setLiveFormat(source: Source, format: LiveStreamFormat) {
         if (source.kind != SourceKind.XTREAM || source.liveFormat == format) return
-        viewModelScope.launch { graph.catalogRepository.setLiveFormat(source.id, format) }
+        graph.appScope.launch { graph.catalogRepository.setLiveFormat(source.id, format) }
     }
 
     /** Runs as background work, like Settings' Refresh now, so leaving Home doesn't stop it. */

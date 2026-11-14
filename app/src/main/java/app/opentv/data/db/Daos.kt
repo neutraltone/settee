@@ -29,6 +29,7 @@ import app.opentv.data.model.GuideFingerprint
 import app.opentv.data.model.GuideProgramme
 import app.opentv.data.model.HandMark
 import app.opentv.data.model.LivePlayback
+import app.opentv.data.model.LiveStreamFormat
 import app.opentv.data.model.Movie
 import app.opentv.data.model.MovieCredit
 import app.opentv.data.model.OnNowRow
@@ -47,6 +48,7 @@ import app.opentv.data.model.SeriesRef
 import app.opentv.data.model.SeriesRule
 import app.opentv.data.model.Source
 import app.opentv.data.model.SourceCategoryName
+import app.opentv.data.model.SourceKind
 import app.opentv.data.model.StreamKind
 import app.opentv.data.model.VersionRow
 import app.opentv.data.model.movieCredits
@@ -231,13 +233,64 @@ interface ChannelDao {
     @Query("UPDATE channels SET sortIndex = :sortIndex WHERE id = :id")
     suspend fun setSortIndex(id: Long, sortIndex: Int)
 
+    /** Moves one channel to [sortIndex] unless it's already there; the number of rows written. */
+    @Query("UPDATE channels SET sortIndex = :sortIndex WHERE id = :id AND sortIndex != :sortIndex")
+    suspend fun moveTo(id: Long, sortIndex: Int): Int
+
+    /**
+     * Gives each of [ids] its position as its sortIndex, in one transaction, writing only the rows
+     * whose place changed: the web manager sends a category's whole order after every move, and
+     * rewriting every row each time kept the database busy for nothing. An id with no row (the
+     * page sends none, but ≤ 0 has always been allowed) matches nothing. Returns the rows written.
+     */
+    @Transaction
+    suspend fun setOrder(ids: List<Long>): Int {
+        var written = 0
+        ids.forEachIndexed { index, id -> written += moveTo(id, index) }
+        return written
+    }
+
     /** Every channel for a source. The channels table is live-only, so these are its live channels. */
     @Query("SELECT * FROM channels WHERE sourceId = :sourceId")
     suspend fun forSource(sourceId: Long): List<Channel>
 
-    /** Rewrites one channel's resolved playback URL — used when a source's live stream format changes. */
+    /** Rewrites one channel's resolved playback URL. */
     @Query("UPDATE channels SET streamUrl = :url WHERE id = :id")
     suspend fun updateStreamUrl(id: Long, url: String)
+
+    /** Each of a source's channels by its provider id, without the rest of the row. */
+    @Query("SELECT id, streamId FROM channels WHERE sourceId = :sourceId")
+    suspend fun streamIdsFor(sourceId: Long): List<ChannelStreamId>
+
+    @Query("UPDATE channels SET streamUrl = :url WHERE id = :id AND streamUrl != :url")
+    suspend fun changeStreamUrl(id: Long, url: String)
+
+    @Query("SELECT * FROM sources WHERE id = :id")
+    suspend fun sourceFor(id: Long): Source?
+
+    // Only the one column: writing back a whole Source read earlier would undo an edit saved since.
+    @Query("UPDATE sources SET liveFormat = :format WHERE id = :id")
+    suspend fun setSourceLiveFormat(id: Long, format: LiveStreamFormat)
+
+    /**
+     * Switches an Xtream source to [format] and gives each of its channels the URL [urlFor] builds
+     * for the switched source and the channel's stream id, all in one transaction. A format switch
+     * changes every URL, and a commit per row took tens of seconds on a big provider; anything that
+     * stopped it partway left the source saying one format while some channels played the other.
+     * The source is read inside the transaction too, so the URLs carry its current login.
+     */
+    @Transaction
+    suspend fun switchLiveFormat(
+        sourceId: Long,
+        format: LiveStreamFormat,
+        urlFor: (source: Source, streamId: String) -> String,
+    ) {
+        val source = sourceFor(sourceId) ?: return
+        if (source.kind != SourceKind.XTREAM || source.liveFormat == format) return
+        setSourceLiveFormat(sourceId, format)
+        val switched = source.copy(liveFormat = format)
+        for (channel in streamIdsFor(sourceId)) changeStreamUrl(channel.id, urlFor(switched, channel.streamId))
+    }
 
     // --- Sync: identify hidden channels by source name and stream id (ADR 0004) ---
     @Query(
@@ -483,6 +536,9 @@ interface CategoryDao {
 
 /** Projection for [CategoryDao.namesFor]. */
 data class CategoryName(val id: String, val name: String)
+
+/** A channel's row id and provider id: all a live format switch needs to rebuild its URL. */
+data class ChannelStreamId(val id: Long, val streamId: String)
 
 /** What More like this ranks a film by, without the rest of its row. */
 data class MoviePick(val id: Long, val sourceId: Long, val genre: String?, val rating: Double?, val addedMillis: Long)

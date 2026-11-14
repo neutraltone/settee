@@ -548,12 +548,16 @@ class CatalogRepository(
     suspend fun setChannelCustomName(id: Long, name: String?) =
         channelDao.setCustomName(id, name?.trim()?.takeIf { it.isNotBlank() })
 
-    suspend fun setChannelSortIndex(id: Long, sortIndex: Int) = channelDao.setSortIndex(id, sortIndex)
+    /**
+     * Puts a category's channels in the order of [ids], each one's position becoming its sortIndex,
+     * in one transaction. Only channels whose place changed are written; returns how many were.
+     */
+    suspend fun setChannelOrder(ids: List<Long>): Int = channelDao.setOrder(ids)
 
     // --- Web channel manager: one-shot reads for the socket-thread server ------------------------
-    // The manager server handles one HTTP request at a time off the UI thread and wants plain
+    // The manager server handles its HTTP requests off the UI thread and wants plain
     // lists, not Flows. These are read-only pass-throughs; every mutation still goes through the
-    // suspend setters above (setChannelHidden/CustomName/SortIndex).
+    // suspend setters above (setChannelHidden, setChannelCustomName, setChannelOrder).
 
     /** Enabled providers, for the manager's source selector. */
     suspend fun enabledSources(): List<Source> = sourceDao.enabled()
@@ -971,15 +975,7 @@ class CatalogRepository(
      * tables), so every row here is a live channel whose URL derives from [XtreamApi.liveStreamUrl].
      */
     suspend fun setLiveFormat(sourceId: Long, format: LiveStreamFormat) = withContext(Dispatchers.IO) {
-        val source = sourceDao.byId(sourceId) ?: return@withContext
-        if (source.kind != SourceKind.XTREAM || source.liveFormat == format) return@withContext
-        val updated = source.copy(liveFormat = format)
-        sourceDao.update(updated)
-        // Rebuild each live channel's URL for the new container.
-        channelDao.forSource(sourceId).forEach { channel ->
-            val newUrl = api.liveStreamUrl(updated, channel.streamId)
-            if (newUrl != channel.streamUrl) channelDao.updateStreamUrl(channel.id, newUrl)
-        }
+        channelDao.switchLiveFormat(sourceId, format, api::liveStreamUrl)
     }
 
     suspend fun deleteSource(sourceId: Long) = withContext(Dispatchers.IO) {
