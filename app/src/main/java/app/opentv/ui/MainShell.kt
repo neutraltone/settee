@@ -25,6 +25,7 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.compositionLocalOf
@@ -109,6 +110,11 @@ internal fun MainShell(
     val currentItem = remember { FocusRequester() }
     val railReturn = remember(current) { RailReturn() }
     val contentFocus = remember { FocusRequester() }
+    val shellReturn = LocalShellReturn.current
+    DisposableEffect(shellReturn, contentFocus) {
+        shellReturn.content = contentFocus
+        onDispose { if (shellReturn.content === contentFocus) shellReturn.content = null }
+    }
     val entry = remember { RailEntry() }
     EnterContentAfterPick(entry, railFocused, railReturn, contentFocus)
     val travel = RAIL_OPEN - RAIL_CLOSED
@@ -326,6 +332,12 @@ val LocalShellCovered = compositionLocalOf { false }
 @Stable
 class ShellReturn {
     var asked by mutableStateOf(false)
+
+    /**
+     * The tab's content, where the Highlight goes when nothing in the tab placed it while [asked]:
+     * the shell as a whole would take it to its top-left item, which is the rail's (#384).
+     */
+    var content: FocusRequester? = null
 }
 
 val LocalShellReturn = staticCompositionLocalOf { ShellReturn() }
