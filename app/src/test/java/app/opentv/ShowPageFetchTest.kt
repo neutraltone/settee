@@ -79,10 +79,10 @@ class ShowPageFetchTest {
     private suspend fun episodeIds(seriesId: Long) =
         graph.database.episodes().forSeries(PANEL_SOURCE.id, "$seriesId").map { it.episodeId }
 
-    /** Shows 1 and 2, as Versions of one title, once the title index has grouped them. */
-    private suspend fun saveTwoVersions() {
+    /** Shows 1 ([first]) and 2, as Versions of one title, once the title index has grouped them. */
+    private suspend fun saveTwoVersions(first: Series = series(1, "Dragons")) {
         graph.database.sources().insert(PANEL_SOURCE)
-        graph.database.series().upsertAll(listOf(series(1, "Dragons"), series(2, "4K - Dragons")))
+        graph.database.series().upsertAll(listOf(first, series(2, "4K - Dragons")))
         panel.replies["get_series_info:1"] = reply("101")
         panel.replies["get_series_info:2"] = reply("201")
         // Otherwise the page's look-up of Versions waits out the index's first grouping in real time.
@@ -106,8 +106,7 @@ class ShowPageFetchTest {
     @Test
     fun `a show whose details are in opens, and its other Versions' episodes come, before its own panel answers`() =
         runBlocking<Unit> {
-            saveTwoVersions()
-            graph.database.series().upsertAll(listOf(series(1, "Dragons").copy(genre = "Comedy")))
+            saveTwoVersions(first = series(1, "Dragons").copy(genre = "Comedy"))
             val answer = panel.hold("get_series_info:1")
             val shown = java.util.Collections.synchronizedList(mutableListOf<OpenedShow>())
             val show = viewModel.openShow(1)
