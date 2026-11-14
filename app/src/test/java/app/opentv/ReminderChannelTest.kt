@@ -34,7 +34,7 @@ class ReminderChannelTest {
         .build()
 
     private val channels = db.channels()
-    private val reminders = ReminderRepository(db.reminders())
+    private val reminders = ReminderRepository(db.reminders(), db.sources())
 
     @After
     fun close() = db.close()

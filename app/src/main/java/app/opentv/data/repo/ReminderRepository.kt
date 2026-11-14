@@ -6,13 +6,14 @@
 package app.opentv.data.repo
 
 import app.opentv.data.db.ReminderDao
+import app.opentv.data.db.SourceDao
 import app.opentv.data.model.Channel
 import app.opentv.data.model.GuideProgramme
 import app.opentv.data.model.Reminder
 import kotlinx.coroutines.flow.Flow
 
 /** Reads and writes over the reminders table. Pure data access — the alarm wiring lives elsewhere. */
-class ReminderRepository(private val dao: ReminderDao) {
+class ReminderRepository(private val dao: ReminderDao, private val sources: SourceDao) {
     fun observeAll(): Flow<List<Reminder>> = dao.observeAll()
     fun observeStartsForChannel(channelId: Long): Flow<List<Long>> = dao.observeStartsForChannel(channelId)
 
@@ -30,7 +31,7 @@ class ReminderRepository(private val dao: ReminderDao) {
         return dao.insert(
             Reminder(
                 channelId = channel.id,
-                source = dao.sourceName(channel.sourceId).orEmpty(),
+                source = sources.byId(channel.sourceId)?.name.orEmpty(),
                 streamId = channel.streamId,
                 channelName = channel.displayName,
                 logoUrl = channel.logoUrl,

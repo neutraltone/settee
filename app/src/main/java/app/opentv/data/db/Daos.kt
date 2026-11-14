@@ -392,7 +392,7 @@ interface ChannelDao {
      * [deleteStale], keeping first what the viewer set on each channel it deletes as [ChannelEdits],
      * for when the provider lists it again. Called inside a refresh's transaction.
      */
-    suspend fun removeStale(sourceId: Long, syncStamp: Long) {
+    suspend fun deleteStaleKeepingEdits(sourceId: Long, syncStamp: Long) {
         forgetEditsOfStale(sourceId, syncStamp)
         keepEditsOfStale(sourceId, syncStamp)
         deleteStale(sourceId, syncStamp)
@@ -417,7 +417,10 @@ interface ChannelDao {
     )
     suspend fun relinkSeriesRules(sourceId: Long)
 
-    /** [relinkSeriesRules] for reminders, so one still switches to its channel when it fires. */
+    /**
+     * [relinkSeriesRules] for reminders, so one still switches to its channel when it fires. The same
+     * statement written out again: Room can't bind a table's name.
+     */
     @Query(
         """
         UPDATE reminders SET channelId = (
@@ -467,8 +470,31 @@ interface ChannelDao {
     )
     suspend fun editsFor(sourceId: Long, streamIds: List<String>): List<ChannelEdits>
 
+    /**
+     * Deletes the source's channels and what's kept of them by its name: series links, reminders and
+     * [ChannelEdits]. Those find their channel by name, so left behind they'd come back to life on a
+     * source added later under the same name. Run before the source's own row goes, which the name is
+     * read from.
+     */
+    @Transaction
+    suspend fun deleteForSource(sourceId: Long) {
+        deleteEditsOfSource(sourceId)
+        deleteSeriesRulesOfSource(sourceId)
+        deleteRemindersOfSource(sourceId)
+        deleteRowsOfSource(sourceId)
+    }
+
+    @Query("DELETE FROM channel_edits WHERE source = (SELECT name FROM sources WHERE id = :sourceId)")
+    suspend fun deleteEditsOfSource(sourceId: Long)
+
+    @Query("DELETE FROM series_rules WHERE source = (SELECT name FROM sources WHERE id = :sourceId)")
+    suspend fun deleteSeriesRulesOfSource(sourceId: Long)
+
+    @Query("DELETE FROM reminders WHERE source = (SELECT name FROM sources WHERE id = :sourceId)")
+    suspend fun deleteRemindersOfSource(sourceId: Long)
+
     @Query("DELETE FROM channels WHERE sourceId = :sourceId")
-    suspend fun deleteForSource(sourceId: Long)
+    suspend fun deleteRowsOfSource(sourceId: Long)
 
     /**
      * Preserves device state (hidden, manual order, custom names, EPG overrides) across a
@@ -493,7 +519,7 @@ interface ChannelDao {
         )
         // Chunked so a 40,000-channel playlist does not build one enormous statement.
         merged.chunked(WRITE_CHUNK).forEach { saveMerged(it, stored) }
-        removeStale(sourceId, syncStamp)
+        deleteStaleKeepingEdits(sourceId, syncStamp)
     }
 
     /**
@@ -525,7 +551,7 @@ interface ChannelDao {
                     saveMerged(merged, stored)
                 }
             }
-            removeStale(sourceId, syncStamp)
+            deleteStaleKeepingEdits(sourceId, syncStamp)
         }
         return staged.count
     }
@@ -603,7 +629,7 @@ private fun mergedOver(
     val previous = existing[channel.streamId]
     if (previous == null) {
         // New, or back after a refresh that left it out and deleted its row: a new row id, with the
-        // viewer's last hide or show and what they had set on it when it went ([removeStale]).
+        // viewer's last hide or show and what they had set on it when it went ([deleteStaleKeepingEdits]).
         val kept = edits[channel.streamId]
         channel.copy(
             hidden = hiddenChanges[channel.streamId]?.hidden ?: channel.hidden,
@@ -1624,10 +1650,6 @@ interface ReminderDao {
 
     @Insert
     suspend fun insert(reminder: Reminder): Long
-
-    /** The name a reminder records its channel's source by. */
-    @Query("SELECT name FROM sources WHERE id = :sourceId")
-    suspend fun sourceName(sourceId: Long): String?
 
     @Query("UPDATE reminders SET fired = 1 WHERE id = :id")
     suspend fun markFired(id: Long)

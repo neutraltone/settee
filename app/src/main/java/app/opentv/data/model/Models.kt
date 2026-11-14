@@ -707,9 +707,10 @@ data class Recording(
 data class SeriesRule(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     /**
-     * The Quality's row while it's listed. A refresh that deletes the channel and lists it again later
-     * gives it a new row, so this is relinked then by [source] and [streamId], which are what the rule
-     * is really set on (#333).
+     * The id of the stream the rule was set on, one Quality of its Channel, while the provider lists
+     * it. A refresh that leaves the stream out deletes it, and listing it again later gives it a new
+     * id, so this is relinked then by [source] and [streamId], which are what the rule is really set on
+     * (#333).
      */
     val channelId: Long,
     /** The name of the channel's source, with [streamId] the channel as the provider names it (ADR 0004). */
@@ -739,7 +740,10 @@ data class SeriesRule(
 )
 data class Reminder(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
-    /** The channel's row while it's listed, relinked by [source] and [streamId] as [SeriesRule.channelId] is. */
+    /**
+     * The id of the stream reminded about while it's listed, relinked by [source] and [streamId] as
+     * [SeriesRule.channelId] is.
+     */
     val channelId: Long,
     @ColumnInfo(defaultValue = "''") val source: String,
     @ColumnInfo(defaultValue = "''") val streamId: String,

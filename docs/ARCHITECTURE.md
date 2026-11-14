@@ -141,7 +141,7 @@ and the password), so a channel dropped and re-listed keeps them.
 A channel left out of one refresh is still deleted, and comes back as a new row with a new id. So
 that it comes back as the viewer left it (#333), what they set on it (`sortIndex`, custom name, both
 guide ids) is kept in `channel_edits` by source name and `streamId` just before the delete
-(`removeStale`), the same shape as `channel_hidden_changes`, and the merge applies it to a channel
+(`deleteStaleKeepingEdits`), the same shape as `channel_hidden_changes`, and the merge applies it to a channel
 that arrives with no stored row. Series links and reminders record their channel by source name and
 `streamId` too: their `channelId` is a cache of the row, relinked at the end of every refresh, and
 one whose channel is still missing stays listed and books nothing until it returns. Keeping deleted
