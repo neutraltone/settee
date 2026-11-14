@@ -16,8 +16,8 @@ import app.opentv.ui.Tab
 
 /*
  * Where Back goes (#67). The main screen's tab lives on its own back stack entry rather than in
- * remember: Navigation disposes the main screen while a player or detail page covers it, which
- * used to throw the tab away and rebuild the shell on Home.
+ * remember: the main screen is let go while a player covers it (KeptShell), and Android can restore
+ * the app with nothing built, and either used to throw the tab away and rebuild the shell on Home.
  */
 
 private const val SHELL_TAB = "shellTab"

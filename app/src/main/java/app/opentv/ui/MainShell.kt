@@ -27,6 +27,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -38,6 +39,7 @@ import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
@@ -130,7 +132,12 @@ internal fun MainShell(
                     .focusRequester(contentFocus)
                     .focusGroup(),
             ) {
-                content(current, !railFocused || entry.entering) { runCatching { currentItem.requestFocus() } }
+                // Covered by another screen, the shell is still built (KeptShell), and Home's rows
+                // still change: nothing in it may take the highlight from the screen on top.
+                val covered = LocalShellCovered.current
+                content(current, (!railFocused || entry.entering) && !covered) {
+                    if (!covered) runCatching { currentItem.requestFocus() }
+                }
             }
         }
         Rail(
@@ -308,6 +315,21 @@ internal class RailReturn {
 
 internal val LocalRailReturn = staticCompositionLocalOf { RailReturn() }
 
+/** Whether a screen other than a player is open over the main screen, which stays built under it. */
+val LocalShellCovered = compositionLocalOf { false }
+
+/**
+ * Back has returned to the main screen and the Highlight couldn't go straight back to the item that
+ * had it (KeptShell): the main screen was built again under the screen over it, after a player had
+ * let it go. While [asked], the tab on show may put the Highlight where it would coming back.
+ */
+@Stable
+class ShellReturn {
+    var asked by mutableStateOf(false)
+}
+
+val LocalShellReturn = staticCompositionLocalOf { ShellReturn() }
+
 /** Marks a row (or the guide) as where Right out of the rail goes back to once it has had the Highlight. */
 @Composable
 internal fun Modifier.railReturnTarget(): Modifier {
@@ -341,7 +363,13 @@ private fun Rail(
             .fillMaxHeight()
             // Closed, the icons sit on the screen itself, with no panel behind them.
             .background(if (labelled) SetteeColors.Surface else Color.Transparent)
-            .focusProperties { onEnter = { runCatching { currentItem.requestFocus() } } }
+            // A move into the rail lands on the open tab's item. A request for one item (Back to
+            // the main screen putting the highlight back where it was, KeptShell) keeps that item.
+            .focusProperties {
+                onEnter = {
+                    if (requestedFocusDirection != FocusDirection.Enter) runCatching { currentItem.requestFocus() }
+                }
+            }
             // Moving on in the rail while a tab loads mustn't have the Highlight pulled away later.
             .onPreviewKeyEvent { event ->
                 if (event.type == KeyEventType.KeyDown && event.key != Key.DirectionCenter && event.key != Key.Enter) {

@@ -63,6 +63,7 @@ import app.opentv.data.repo.MediaKey
 import app.opentv.player.PlayerController
 import app.opentv.ui.ChannelsViewModel
 import app.opentv.ui.LocalRailReturn
+import app.opentv.ui.LocalShellCovered
 import app.opentv.ui.design.ActionButton
 import app.opentv.ui.design.CategoriesSidebar
 import app.opentv.ui.design.CategoriesSidebarWidth
@@ -151,6 +152,10 @@ fun LiveScreen(
     // Live TV opens on today: a later day browsed last time isn't where anyone expects to come
     // back to, from the player or another tab, and getting back from it is a Left per day.
     DisposableEffect(viewModel) { onDispose { viewModel.guideToNow() } }
+    // Settings, Search and title pages keep the guide built under them (KeptShell), so it isn't
+    // disposed there: back to today as one covers it instead.
+    val covered = LocalShellCovered.current
+    LaunchedEffect(covered) { if (covered) viewModel.guideToNow() }
 
     // The guide opens on the channel last watched, so Back from the player lands where you were and
     // shows what's on it next. The guide is disposed under the player, so this is the way back in.

@@ -344,10 +344,9 @@ private fun OpenTvApp(isTelevision: Boolean, launchedToPlay: Boolean) {
     CompositionLocalProvider(LocalCoverBadges provides coverBadges) {
         ItemOptionsHost(navigate = { destination -> navController.navigate(Routes.of(destination)) }) {
             Box(Modifier.fillMaxSize()) {
-                NavHost(navController = navController, startDestination = start) {
-                    providerRoutes(navController, sourcesViewModel)
-
-                    composable(Routes.MAIN) { entry ->
+                KeptShell(
+                    navController,
+                    shell = { entry ->
                         val tab by entry.shellTab()
                         MainScreen(
                             isTelevision = isTelevision,
@@ -377,95 +376,104 @@ private fun OpenTvApp(isTelevision: Boolean, launchedToPlay: Boolean) {
                             tab = tab,
                             onSelectTab = { navController.selectShellTab(it) },
                         )
-                    }
+                    },
+                ) {
+                    NavHost(navController = navController, startDestination = start) {
+                        providerRoutes(navController, sourcesViewModel)
 
-                    composable(Routes.PROFILES) {
-                        ProfilesScreen(
-                            viewModel = profilesViewModel,
-                            onBack = { navController.popBackStack() },
-                        )
-                    }
+                        mainShellRoute()
 
-                    composable(Routes.SEARCH) {
-                        SearchScreen(
-                            onPlayChannel = { channel -> navController.navigate(Routes.player(channel.id)) },
-                            onPlayMovie = { movie ->
-                                navController.navigate(Routes.vodPlayer(MediaKey.Movie(movie.id)))
-                            },
-                            onOpenSeries = { series ->
-                                navController.navigate(Routes.seriesDetail(series.id))
-                            },
-                            onBack = { navController.popBackStack() },
-                            vodViewModel = vodViewModel,
-                        )
-                    }
+                        composable(Routes.PROFILES) {
+                            ProfilesScreen(
+                                viewModel = profilesViewModel,
+                                onBack = { navController.popBackStack() },
+                            )
+                        }
 
-                    settingsRoutes(navController, settingsMemory)
+                        composable(Routes.SEARCH) {
+                            SearchScreen(
+                                onPlayChannel = { channel -> navController.navigate(Routes.player(channel.id)) },
+                                onPlayMovie = { movie ->
+                                    navController.navigate(Routes.vodPlayer(MediaKey.Movie(movie.id)))
+                                },
+                                onOpenSeries = { series ->
+                                    navController.navigate(Routes.seriesDetail(series.id))
+                                },
+                                onBack = { navController.popBackStack() },
+                                vodViewModel = vodViewModel,
+                            )
+                        }
 
-                    composable(Routes.CHANNELS) {
-                        ChannelManagerScreen(onBack = { navController.popBackStack() })
-                    }
+                        settingsRoutes(navController, settingsMemory)
 
-                    composable(Routes.PLAYER) { entry ->
-                        val channelId = entry.arguments?.getString("channelId")?.toLongOrNull()
-                        PlayerScreen(
-                            channelId = channelId,
-                            onBack = { navController.leaveLivePlayer(entry) },
-                        )
-                    }
+                        composable(Routes.CHANNELS) {
+                            ChannelManagerScreen(onBack = { navController.popBackStack() })
+                        }
 
-                    composable(Routes.SERIES_DETAIL) { entry ->
-                        val seriesId = entry.arguments?.getString("seriesId")?.toLongOrNull() ?: return@composable
-                        SeriesDetailScreen(
-                            seriesId = seriesId,
-                            viewModel = vodViewModel,
-                            onPlayEpisode = { key -> navController.navigate(Routes.vodPlayer(key)) },
-                            onOpenPerson = { name -> navController.navigate(Routes.person(name)) },
-                        )
-                    }
+                        composable(Routes.PLAYER) { entry ->
+                            val channelId = entry.arguments?.getString("channelId")?.toLongOrNull()
+                            PlayerScreen(
+                                channelId = channelId,
+                                onBack = { navController.leaveLivePlayer(entry) },
+                            )
+                        }
 
-                    composable(Routes.MOVIE_DETAIL) { entry ->
-                        val movieId = entry.arguments?.getString("movieId")?.toLongOrNull() ?: return@composable
-                        MovieDetailScreen(
-                            movieId = movieId,
-                            viewModel = vodViewModel,
-                            onPlay = { movie -> navController.navigate(Routes.vodPlayer(MediaKey.Movie(movie.id))) },
-                            onPlayAddonStream = { key -> navController.navigate(Routes.vodPlayer(key)) },
-                            onOpenMovie = { movie -> navController.navigate(Routes.movieDetail(movie.id)) },
-                            onOpenPerson = { name -> navController.navigate(Routes.person(name)) },
-                        )
-                    }
+                        composable(Routes.SERIES_DETAIL) { entry ->
+                            val seriesId = entry.arguments?.getString("seriesId")?.toLongOrNull() ?: return@composable
+                            SeriesDetailScreen(
+                                seriesId = seriesId,
+                                viewModel = vodViewModel,
+                                onPlayEpisode = { key -> navController.navigate(Routes.vodPlayer(key)) },
+                                onOpenPerson = { name -> navController.navigate(Routes.person(name)) },
+                            )
+                        }
 
-                    composable(Routes.PERSON) { entry ->
-                        val name = entry.arguments?.getString("name")?.takeIf { it.isNotBlank() } ?: return@composable
-                        PersonScreen(
-                            name = name,
-                            viewModel = vodViewModel,
-                            onOpenMovie = { movie -> navController.navigate(Routes.movieDetail(movie.id)) },
-                            onOpenSeries = { series -> navController.navigate(Routes.seriesDetail(series.id)) },
-                        )
-                    }
+                        composable(Routes.MOVIE_DETAIL) { entry ->
+                            val movieId = entry.arguments?.getString("movieId")?.toLongOrNull() ?: return@composable
+                            MovieDetailScreen(
+                                movieId = movieId,
+                                viewModel = vodViewModel,
+                                onPlay = { movie ->
+                                    navController.navigate(Routes.vodPlayer(MediaKey.Movie(movie.id)))
+                                },
+                                onPlayAddonStream = { key -> navController.navigate(Routes.vodPlayer(key)) },
+                                onOpenMovie = { movie -> navController.navigate(Routes.movieDetail(movie.id)) },
+                                onOpenPerson = { name -> navController.navigate(Routes.person(name)) },
+                            )
+                        }
 
-                    composable(Routes.VOD_PLAYER) { entry ->
-                        fun arg(name: String) = entry.arguments?.getString(name)
-                            ?.let { java.net.URLDecoder.decode(it, "UTF-8") }.orEmpty()
-                        val mediaKey = Routes.vodPlayerKey(arg("key"), arg("addon")) ?: return@composable
-                        val leaveScope = rememberCoroutineScope()
-                        VodPlayerScreen(
-                            mediaKey = mediaKey,
-                            fromStart = arg("fromStart").toBoolean(),
-                            // The page is looked up when Back is pressed rather than as the player opens,
-                            // so an early press can't miss it and fall back to plain Back.
-                            onBack = {
-                                leaveScope.launch {
-                                    val catalog = ServiceLocator.get(bootContext).catalogRepository
-                                    val titlePage = titlePageFor(mediaKey) { episodeId ->
-                                        catalog.episode(episodeId)?.let { catalog.seriesOf(it) }?.id
+                        composable(Routes.PERSON) { entry ->
+                            val name = entry.arguments?.getString("name")?.takeIf { it.isNotBlank() }
+                                ?: return@composable
+                            PersonScreen(
+                                name = name,
+                                viewModel = vodViewModel,
+                                onOpenMovie = { movie -> navController.navigate(Routes.movieDetail(movie.id)) },
+                                onOpenSeries = { series -> navController.navigate(Routes.seriesDetail(series.id)) },
+                            )
+                        }
+
+                        composable(Routes.VOD_PLAYER) { entry ->
+                            fun arg(name: String) = entry.arguments?.getString(name)
+                                ?.let { java.net.URLDecoder.decode(it, "UTF-8") }.orEmpty()
+                            val mediaKey = Routes.vodPlayerKey(arg("key"), arg("addon")) ?: return@composable
+                            val leaveScope = rememberCoroutineScope()
+                            VodPlayerScreen(
+                                mediaKey = mediaKey,
+                                fromStart = arg("fromStart").toBoolean(),
+                                // The page is looked up when Back is pressed rather than as the player opens,
+                                // so an early press can't miss it and fall back to plain Back.
+                                onBack = {
+                                    leaveScope.launch {
+                                        val catalog = ServiceLocator.get(bootContext).catalogRepository
+                                        val titlePage = titlePageFor(mediaKey) { episodeId ->
+                                            catalog.episode(episodeId)?.let { catalog.seriesOf(it) }?.id
+                                        }
+                                        navController.leaveVodPlayer(entry, titlePage)
                                     }
-                                    navController.leaveVodPlayer(entry, titlePage)
-                                }
-                            },
-                        )
+                                },
+                            )
+                        }
                     }
                 }
 
