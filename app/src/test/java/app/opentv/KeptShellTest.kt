@@ -24,6 +24,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.test.and
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasText
@@ -40,8 +41,8 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import app.opentv.data.model.Movie
-import app.opentv.data.repo.MediaKey
 import app.opentv.data.repo.GenreGroup
+import app.opentv.data.repo.MediaKey
 import app.opentv.data.repo.VodTitle
 import app.opentv.ui.Cover
 import app.opentv.ui.HomeContent
@@ -174,6 +175,11 @@ class KeptShellTest {
         compose.waitForIdle()
     }
 
+    private fun railItemFocused(name: String) =
+        compose.onAllNodes((hasContentDescription(name) or hasText(name)) and isFocused())
+            .fetchSemanticsNodes()
+            .isNotEmpty()
+
     /** Back as the remote sends it, through the activity, so whoever handles Back on screen gets it. */
     private fun back() {
         compose.runOnUiThread { compose.activity.onBackPressedDispatcher.onBackPressed() }
@@ -186,8 +192,13 @@ class KeptShellTest {
 
     private fun openSettingsFromRail() {
         compose.waitUntil(5_000) { compose.onAllNodes(hasText("Added 1")).fetchSemanticsNodes().isNotEmpty() }
-        railItem("Settings").requestFocus()
-        compose.waitForIdle()
+        // By the remote, as a viewer does: requestFocus enters the rail on the open tab's item.
+        press(Key.DirectionLeft)
+        repeat(RAIL_ITEMS) {
+            if (railItemFocused("Settings")) return@repeat
+            press(Key.DirectionDown)
+        }
+        railItem("Settings").assertIsFocused()
         press(Key.DirectionCenter)
         compose.waitUntil(5_000) { focused("Settings option 1") }
     }
@@ -287,4 +298,9 @@ class KeptShellTest {
         containerExtension = "mp4",
         streamUrl = "",
     )
+
+    private companion object {
+        /** More than the rail has, so walking Down through it always reaches the bottom. */
+        const val RAIL_ITEMS = 10
+    }
 }

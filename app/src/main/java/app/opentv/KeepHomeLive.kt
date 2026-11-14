@@ -30,5 +30,4 @@ fun KeepHomeLive(nav: NavController, keptLive: MutableStateFlow<Boolean>) {
     SideEffect { keptLive.value = keep }
 }
 
-private fun coversHomeLive(route: String?): Boolean =
-    route != null && route != Routes.MAIN && !isPlayerRoute(route)
+private fun coversHomeLive(route: String?): Boolean = route != null && route != Routes.MAIN && !isPlayerRoute(route)

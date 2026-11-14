@@ -34,6 +34,7 @@ import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.LocalOwnersProvider
 import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
 import app.opentv.ui.LocalShellCovered
 import app.opentv.ui.LocalShellReturn
 import app.opentv.ui.ShellReturn
@@ -67,41 +68,37 @@ fun NavGraphBuilder.mainShellRoute() = composable(Routes.MAIN) {}
  */
 @Composable
 fun KeptShell(nav: NavHostController, shell: @Composable (NavBackStackEntry) -> Unit, navHost: @Composable () -> Unit) {
-    val backStack by nav.currentBackStack.collectAsState()
+    // NavController's whole back stack is library-only API, so the main screen's entry is looked up
+    // whenever the top one changes, which every change to the stack does.
+    val top by nav.currentBackStackEntryAsState()
+    val main = top?.let { runCatching { nav.getBackStackEntry(Routes.MAIN) }.getOrNull() }
     val saveable = rememberSaveableStateHolder()
-    val main = backStack.lastOrNull { it.destination.route == Routes.MAIN }
-    val above = main?.let { backStack.drop(backStack.indexOf(it) + 1) }.orEmpty()
     Box(Modifier.fillMaxSize()) {
-        if (main != null && above.none { isPlayerRoute(it.destination.route) }) {
-            key(main.id) { ShellLayer(main, covered = above.isNotEmpty(), saveable, shell) }
+        if (main != null && !isPlayerRoute(top?.destination?.route)) {
+            key(main.id) { ShellLayer(main, covered = top != main, saveable, shell) }
         }
         navHost()
     }
-    ForgetGoneEntries(backStack, main, saveable)
+    ForgetGoneEntries(main?.id, saveable)
 }
 
 /** The live player and the movie and episode player, which the main screen isn't kept under. */
 internal fun isPlayerRoute(route: String?): Boolean = route == Routes.PLAYER || route == Routes.VOD_PLAYER
 
 /**
- * Drops what the main screen saved for back stack entries that have gone (Setup finished, a new
- * Profile's navigation), as the NavHost does for its own. After composition, so a shell leaving
- * in the same frame has already saved into [saveable] what this removes.
+ * Drops what the main screen saved for an entry that has gone (Setup finished, a new Profile's
+ * navigation), as the NavHost does for its own. After composition, so a shell leaving in the same
+ * frame has already saved into [saveable] what this removes.
  */
 @Composable
-private fun ForgetGoneEntries(
-    backStack: List<NavBackStackEntry>,
-    main: NavBackStackEntry?,
-    saveable: SaveableStateHolder,
-) {
+private fun ForgetGoneEntries(mainId: String?, saveable: SaveableStateHolder) {
     val known = remember { mutableSetOf<String>() }
-    LaunchedEffect(backStack) {
-        val live = backStack.mapTo(HashSet()) { it.id }
-        known.filterNot { it in live }.forEach {
+    LaunchedEffect(mainId) {
+        known.filterNot { it == mainId }.forEach {
             saveable.removeState(it)
             known.remove(it)
         }
-        main?.let { known.add(it.id) }
+        mainId?.let(known::add)
     }
 }
 
