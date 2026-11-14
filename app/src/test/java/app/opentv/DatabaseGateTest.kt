@@ -14,6 +14,7 @@ import androidx.test.core.app.ApplicationProvider
 import app.opentv.core.ErrorWording
 import app.opentv.ui.DatabaseGate
 import app.opentv.ui.design.ERROR_DETAIL_TAG
+import app.opentv.ui.design.SetteeType
 import app.opentv.ui.design.Text
 import kotlinx.coroutines.delay
 import org.junit.Rule
@@ -38,8 +39,10 @@ class DatabaseGateTest {
     private val wording = ErrorWording(ApplicationProvider.getApplicationContext(), onTelevision = true)
 
     private fun show(open: suspend () -> Throwable?) = compose.setTvContent {
-        DatabaseGate(open = open, describe = wording::ofDatabase, alongsideFailure = { Text("Update offered") }) {
-            Text("Home")
+        DatabaseGate(open = open, describe = wording::ofDatabase, alongsideFailure = {
+            Text("Update offered", SetteeType.Body)
+        }) {
+            Text("Home", SetteeType.Body)
         }
     }
 
