@@ -30,6 +30,9 @@ import java.util.Locale
 @StringRes
 fun hardware(onTelevision: Boolean, @StringRes tv: Int, @StringRes device: Int): Int = if (onTelevision) tv else device
 
+/** How far the look for a release that fixes an unreadable database has got (#334). */
+enum class UpdateSearch { CHECKING, FOUND, NONE, COULD_NOT_CHECK }
+
 /** A failure that came with an HTTP status, for the detail line. */
 interface HttpStatus {
     val status: Int?
@@ -80,11 +83,18 @@ class ErrorWording(private val context: Context, private val onTelevision: Boole
         of(hardware(onTelevision, tv, device), code)
 
     /**
-     * The database wouldn't open at launch (#334): one left by a build Settee can't migrate from. The
-     * app can't run without it and its own updater sits behind it, so the way out is outside the app.
+     * The database wouldn't open at launch (#334). The way out depends on [search]: a release that
+     * fixes it, or clearing the app's data, which costs the viewer everything, so it says so.
      */
-    fun ofDatabase(error: Throwable): ViewerError =
-        ofHardware(R.string.error_database_tv, R.string.error_database_device, codeOf(error))
+    fun ofDatabase(error: Throwable, search: UpdateSearch): ViewerError {
+        val (tv, device) = when (search) {
+            UpdateSearch.CHECKING -> R.string.error_database_checking_tv to R.string.error_database_checking_device
+            UpdateSearch.FOUND -> R.string.error_database_update_tv to R.string.error_database_update_device
+            UpdateSearch.NONE -> R.string.error_database_no_update_tv to R.string.error_database_no_update_device
+            UpdateSearch.COULD_NOT_CHECK -> R.string.error_database_offline_tv to R.string.error_database_offline_device
+        }
+        return ofHardware(tv, device, codeOf(error))
+    }
 
     /** A failure the app found itself, with no exception behind it. */
     fun of(@StringRes sentence: Int, code: String? = null): ViewerError =

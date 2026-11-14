@@ -89,9 +89,12 @@ import app.opentv.ui.vod.SeriesDetailScreen
 import app.opentv.ui.vod.VodPlayerScreen
 import app.opentv.ui.vod.rememberCoverBadges
 import app.opentv.update.UpdateGate
+import app.opentv.update.UpdateUiState
 import app.opentv.update.UpdateViewModel
 import app.opentv.update.WhatsNewGate
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -122,6 +125,12 @@ class MainActivity : ComponentActivity() {
                 // (SurfaceView playback punches through it regardless).
                 Box(Modifier.fillMaxSize().background(SetteeColors.Background)) {
                     val graph = ServiceLocator.get(this@MainActivity)
+                    // The same view model UpdateGate uses further in, so this costs no extra check.
+                    val updates: UpdateViewModel = viewModel()
+                    // Only whether a panel is up: the download's progress would recompose all of this.
+                    val updateShowing by remember(updates) {
+                        updates.state.map { it != UpdateUiState.Idle }.distinctUntilChanged()
+                    }.collectAsState(initial = false)
                     DatabaseGate(
                         open = {
                             val failure = withContext(Dispatchers.IO) { graph.database.wontOpen() }
@@ -129,14 +138,12 @@ class MainActivity : ComponentActivity() {
                             if (failure == null) (application as? OpenTvApp)?.opened()
                             failure
                         },
+                        // The fix for a database Settee can't open is a newer release, and the
+                        // updater needs only the network, so it's offered there as well.
+                        checkForUpdate = updates::checkNow,
+                        updateShowing = updateShowing,
                         describe = graph.errorWording::ofDatabase,
-                        alongsideFailure = {
-                            // The fix for a database Settee can't open is a newer release, and the
-                            // updater needs only the network, so it's offered here as well.
-                            val updates: UpdateViewModel = viewModel()
-                            LaunchedEffect(updates) { updates.checkNow() }
-                            UpdateGate(updates)
-                        },
+                        alongsideFailure = { UpdateGate(updates) },
                     ) {
                         OpenTvApp(isTelevision = isTelevision, launchedToPlay = toPlay)
                     }
