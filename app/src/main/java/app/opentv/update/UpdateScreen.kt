@@ -21,6 +21,7 @@ import androidx.core.content.edit
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
+import app.opentv.APP_PREFS
 import app.opentv.BuildConfig
 import app.opentv.R
 import app.opentv.core.ErrorWording
@@ -177,7 +178,7 @@ class UpdateViewModel(app: Application) : AndroidViewModel(app) {
     private fun checkThrottled() {
         viewModelScope.launch {
             val prefs = getApplication<Application>()
-                .getSharedPreferences("opentv", Context.MODE_PRIVATE)
+                .getSharedPreferences(APP_PREFS, Context.MODE_PRIVATE)
             val now = System.currentTimeMillis()
             if (now - prefs.getLong(KEY_LAST_CHECK, 0L) < CHECK_INTERVAL_MS) return@launch
 

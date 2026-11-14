@@ -5,7 +5,7 @@
  */
 package app.opentv
 
-import android.content.SharedPreferences
+import android.content.Context
 import androidx.core.content.edit
 import app.opentv.data.repo.CatalogRepository
 
@@ -15,8 +15,11 @@ import app.opentv.data.repo.CatalogRepository
  * fix shows up on the next launch rather than the next 6-hour sync, and it costs nothing when the
  * version has not changed.
  */
-internal class NormaliserCatchUp(private val prefs: SharedPreferences, private val renormalise: suspend () -> Unit) {
+internal class NormaliserCatchUp(private val context: Context, private val renormalise: suspend () -> Unit) {
+    // Opened here rather than passed in, so the file is read on the launch work's thread, not the
+    // main one that builds it as the first screen opens.
     suspend operator fun invoke() {
+        val prefs = context.getSharedPreferences(APP_PREFS, Context.MODE_PRIVATE)
         if (prefs.getInt(KEY, 0) < CatalogRepository.NORMALIZER_VERSION) {
             renormalise()
             prefs.edit { putInt(KEY, CatalogRepository.NORMALIZER_VERSION) }

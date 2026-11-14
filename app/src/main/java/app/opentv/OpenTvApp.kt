@@ -7,6 +7,7 @@ package app.opentv
 
 import android.app.Application
 import android.content.Context
+import app.opentv.core.AppSettings
 import app.opentv.core.LocaleUtils
 import app.opentv.core.ServiceLocator
 import app.opentv.data.repo.CatalogueRefresh
@@ -105,6 +106,7 @@ open class OpenTvApp :
      */
     protected open fun onFirstOpen() {
         val graph = ServiceLocator.get(this)
+        val catchUpNormaliser = NormaliserCatchUp(this, renormalise = { graph.catalogRepository.renormalizeAll() })
         val work = FirstOpenWork(
             nasAutoSync = graph.settings.nasAutoSync.value,
             // Free, server-less "cloud" sync through the user's own NAS, if they've opted in. Writes
@@ -112,10 +114,7 @@ open class OpenTvApp :
             // watch history and NAS recordings. Fire-and-forget and fully guarded: a blank or unreachable
             // NAS returns a result rather than throwing, so a bad launch never costs the user anything.
             syncNas = { app.opentv.sync.NasSync(graph).sync() },
-            catchUpNormaliser = NormaliserCatchUp(
-                prefs = getSharedPreferences("opentv", MODE_PRIVATE),
-                renormalise = { graph.catalogRepository.renormalizeAll() },
-            )::invoke,
+            catchUpNormaliser = catchUpNormaliser::invoke,
             launchRefresh = {
                 // Runs on every launch. It is cheap when nothing is stale (feeds within their
                 // refresh window are skipped), but it is what makes the free regional guide turn
@@ -127,3 +126,10 @@ open class OpenTvApp :
         appScope.launch { work.run() }
     }
 }
+
+/**
+ * The SharedPreferences file for the app's own bookkeeping (which normaliser last cleaned the
+ * catalogue, when updates were last checked), apart from the viewer's settings in [AppSettings].
+ * Installed builds already wrote it under this name.
+ */
+internal const val APP_PREFS = "opentv"

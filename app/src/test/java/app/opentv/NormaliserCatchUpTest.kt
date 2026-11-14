@@ -22,10 +22,10 @@ import org.robolectric.annotation.Config
 class NormaliserCatchUpTest {
 
     // The file and key installed builds have already written, so a rename here would re-clean every launch.
-    private val prefs = ApplicationProvider.getApplicationContext<Application>()
-        .getSharedPreferences("opentv", Context.MODE_PRIVATE)
+    private val app = ApplicationProvider.getApplicationContext<Application>()
+    private val prefs = app.getSharedPreferences("opentv", Context.MODE_PRIVATE)
     private var renormalised = 0
-    private val catchUp = NormaliserCatchUp(prefs, renormalise = { renormalised++ })
+    private val catchUp = NormaliserCatchUp(app, renormalise = { renormalised++ })
 
     @Test
     fun `a fresh install cleans the catalogue and remembers the normaliser it used`() = runTest {
@@ -42,5 +42,25 @@ class NormaliserCatchUpTest {
         catchUp()
 
         assertThat(renormalised).isEqualTo(0)
+    }
+
+    @Test
+    fun `a catalogue cleaned by an older normaliser is cleaned again with this one`() = runTest {
+        prefs.edit { putInt("normalizer_version", CatalogRepository.NORMALIZER_VERSION - 1) }
+
+        catchUp()
+
+        assertThat(renormalised).isEqualTo(1)
+        assertThat(prefs.getInt("normalizer_version", 0)).isEqualTo(CatalogRepository.NORMALIZER_VERSION)
+    }
+
+    @Test
+    fun `a clean that fails is tried again on the next launch`() = runTest {
+        val failing = NormaliserCatchUp(app, renormalise = { error("database unavailable") })
+
+        assertThat(runCatching { failing() }.isFailure).isTrue()
+        catchUp()
+
+        assertThat(renormalised).isEqualTo(1)
     }
 }
