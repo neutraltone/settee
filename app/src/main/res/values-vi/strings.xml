@@ -313,6 +313,16 @@
     <string name="error_tmdb_key_rejected">TMDB không chấp nhận khóa đó. Hãy kiểm tra bạn đã sao chép toàn bộ API Key, rồi thử lại.</string>
     <string name="error_tmdb_unreachable_tv">Không kết nối được TMDB. Hãy kiểm tra TV này đang trực tuyến, rồi thử lại.</string>
     <string name="error_tmdb_unreachable_device">Không kết nối được TMDB. Hãy kiểm tra thiết bị này đang trực tuyến, rồi thử lại.</string>
+    <string name="error_database_checking_tv">Settee không đọc được dữ liệu đã lưu trên TV này. Đang tìm bản cập nhật để sửa lỗi này.</string>
+    <string name="error_database_checking_device">Settee không đọc được dữ liệu đã lưu trên thiết bị này. Đang tìm bản cập nhật để sửa lỗi này.</string>
+    <string name="error_database_update_tv">Settee không đọc được dữ liệu đã lưu trên TV này, và đã có bản cập nhật sửa lỗi này.</string>
+    <string name="error_database_update_device">Settee không đọc được dữ liệu đã lưu trên thiết bị này, và đã có bản cập nhật sửa lỗi này.</string>
+    <string name="error_database_no_update_tv">Settee không đọc được dữ liệu đã lưu trên TV này, và chưa có bản cập nhật sửa lỗi này. Xóa dữ liệu trong phần cài đặt ứng dụng của TV sẽ khởi động lại từ đầu, nhưng bạn sẽ mất nhà cung cấp, mục yêu thích và lịch sử xem.</string>
+    <string name="error_database_no_update_device">Settee không đọc được dữ liệu đã lưu trên thiết bị này, và chưa có bản cập nhật sửa lỗi này. Xóa dữ liệu trong phần cài đặt của ứng dụng sẽ khởi động lại từ đầu, nhưng bạn sẽ mất nhà cung cấp, mục yêu thích và lịch sử xem.</string>
+    <string name="error_database_offline_tv">Settee không đọc được dữ liệu đã lưu trên TV này, và không thể kiểm tra bản cập nhật. Hãy kết nối TV với internet rồi kiểm tra lại, hoặc xóa dữ liệu trong phần cài đặt ứng dụng của TV, khi đó bạn sẽ mất nhà cung cấp, mục yêu thích và lịch sử xem.</string>
+    <string name="error_database_offline_device">Settee không đọc được dữ liệu đã lưu trên thiết bị này, và không thể kiểm tra bản cập nhật. Hãy kết nối thiết bị với internet rồi kiểm tra lại, hoặc xóa dữ liệu trong phần cài đặt của ứng dụng, khi đó bạn sẽ mất nhà cung cấp, mục yêu thích và lịch sử xem.</string>
+    <string name="database_check_again">Kiểm tra lại</string>
+    <string name="database_see_update">Xem bản cập nhật</string>
     <string name="error_tmdb_trouble">TMDB đang gặp sự cố. Lỗi ở phía họ, vì vậy hãy thử lại sau.</string>
     <string name="error_opensubtitles_none">OpenSubtitles chưa có phụ đề cho nội dung này.</string>
     <string name="error_opensubtitles_unreachable_tv">Không kết nối được OpenSubtitles. Hãy kiểm tra TV này đang trực tuyến rồi thử lại.</string>

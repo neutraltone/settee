@@ -313,6 +313,16 @@
     <string name="error_tmdb_key_rejected">TMDB accepterede ikke den nøgle. Tjek, at du har kopieret hele API Key, og prøv igen.</string>
     <string name="error_tmdb_unreachable_tv">Kan ikke nå TMDB. Tjek, at dette tv er online, og prøv igen.</string>
     <string name="error_tmdb_unreachable_device">Kan ikke nå TMDB. Tjek, at denne enhed er online, og prøv igen.</string>
+    <string name="error_database_checking_tv">Settee kan ikke læse det, den har gemt på dette tv. Leder efter en opdatering, der løser det.</string>
+    <string name="error_database_checking_device">Settee kan ikke læse det, den har gemt på denne enhed. Leder efter en opdatering, der løser det.</string>
+    <string name="error_database_update_tv">Settee kan ikke læse det, den har gemt på dette tv, og der er en opdatering, der løser det.</string>
+    <string name="error_database_update_device">Settee kan ikke læse det, den har gemt på denne enhed, og der er en opdatering, der løser det.</string>
+    <string name="error_database_no_update_tv">Settee kan ikke læse det, den har gemt på dette tv, og der er endnu ingen opdatering, der løser det. Hvis du rydder dens data i tv\'ets indstillinger for apps, starter den forfra, men du mister dine udbydere, favoritter og din historik.</string>
+    <string name="error_database_no_update_device">Settee kan ikke læse det, den har gemt på denne enhed, og der er endnu ingen opdatering, der løser det. Hvis du rydder dens data i appens indstillinger, starter den forfra, men du mister dine udbydere, favoritter og din historik.</string>
+    <string name="error_database_offline_tv">Settee kan ikke læse det, den har gemt på dette tv, og kunne ikke søge efter en opdatering. Forbind tv\'et til internettet og tjek igen, eller ryd dens data i tv\'ets indstillinger for apps, så du mister dine udbydere, favoritter og din historik.</string>
+    <string name="error_database_offline_device">Settee kan ikke læse det, den har gemt på denne enhed, og kunne ikke søge efter en opdatering. Forbind enheden til internettet og tjek igen, eller ryd dens data i appens indstillinger, så du mister dine udbydere, favoritter og din historik.</string>
+    <string name="database_check_again">Tjek igen</string>
+    <string name="database_see_update">Se opdateringen</string>
     <string name="error_tmdb_trouble">TMDB har problemer. Det er hos dem, så prøv igen senere.</string>
     <string name="error_opensubtitles_none">OpenSubtitles har endnu ingen undertekster til dette.</string>
     <string name="error_opensubtitles_unreachable_tv">Kan ikke nå OpenSubtitles. Tjek, at dette tv er online, og prøv igen.</string>

@@ -19,6 +19,7 @@ import app.opentv.MainActivity
 import app.opentv.R
 import app.opentv.core.RecordingSignals
 import app.opentv.core.ServiceLocator
+import app.opentv.data.db.wontOpen
 import app.opentv.data.model.Recording
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -56,6 +57,7 @@ class RecordingAlarmReceiver : BroadcastReceiver() {
             try {
                 val graph = ServiceLocator.get(app)
                 if (!graph.settings.recordAutoSwitch.value) return@launch
+                if (graph.database.wontOpen() != null) return@launch
                 val rec = graph.recordingRepository.byId(id) ?: return@launch
                 // Only internal recordings can be tail-watched; a NAS/USB one just records.
                 if (!isTailWatchable(rec)) return@launch
@@ -77,6 +79,7 @@ class RecordingAlarmReceiver : BroadcastReceiver() {
             try {
                 val graph = ServiceLocator.get(app)
                 if (!graph.settings.recordAutoSwitch.value) return@launch
+                if (graph.database.wontOpen() != null) return@launch
                 val rec = graph.recordingRepository.byId(id) ?: return@launch
                 if (!isTailWatchable(rec)) return@launch
                 RecordingSignals.warn(
@@ -99,6 +102,7 @@ class RecordingAlarmReceiver : BroadcastReceiver() {
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 val graph = ServiceLocator.get(context)
+                if (graph.database.wontOpen() != null) return@launch
                 val autoSwitch = graph.settings.recordAutoSwitch.value
                 val now = System.currentTimeMillis()
                 graph.recordingRepository.scheduled().forEach { rec ->

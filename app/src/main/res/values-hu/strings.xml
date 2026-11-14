@@ -313,6 +313,16 @@
     <string name="error_tmdb_key_rejected">A TMDB nem fogadta el ezt a kulcsot. Ellenőrizd, hogy a teljes API Key-t másoltad-e, majd próbáld újra.</string>
     <string name="error_tmdb_unreachable_tv">A TMDB nem érhető el. Ellenőrizd, hogy ez a tévé online van-e, majd próbáld újra.</string>
     <string name="error_tmdb_unreachable_device">A TMDB nem érhető el. Ellenőrizd, hogy ez az eszköz online van-e, majd próbáld újra.</string>
+    <string name="error_database_checking_tv">A Settee nem tudja beolvasni, amit ezen a tévén mentett. Olyan frissítést keresek, amely megoldja.</string>
+    <string name="error_database_checking_device">A Settee nem tudja beolvasni, amit ezen az eszközön mentett. Olyan frissítést keresek, amely megoldja.</string>
+    <string name="error_database_update_tv">A Settee nem tudja beolvasni, amit ezen a tévén mentett, de van frissítés, amely megoldja.</string>
+    <string name="error_database_update_device">A Settee nem tudja beolvasni, amit ezen az eszközön mentett, de van frissítés, amely megoldja.</string>
+    <string name="error_database_no_update_tv">A Settee nem tudja beolvasni, amit ezen a tévén mentett, és még nincs frissítés, amely megoldaná. Ha törli az adatait a tévé alkalmazásbeállításaiban, elölről indul, de elvesznek a szolgáltatói, kedvencei és megtekintési előzményei.</string>
+    <string name="error_database_no_update_device">A Settee nem tudja beolvasni, amit ezen az eszközön mentett, és még nincs frissítés, amely megoldaná. Ha törli az adatait az alkalmazás beállításaiban, elölről indul, de elvesznek a szolgáltatói, kedvencei és megtekintési előzményei.</string>
+    <string name="error_database_offline_tv">A Settee nem tudja beolvasni, amit ezen a tévén mentett, és nem tudott frissítést keresni. Csatlakoztassa a tévét az internethez, és nézze meg újra, vagy törölje az adatait a tévé alkalmazásbeállításaiban, amivel elvesznek a szolgáltatói, kedvencei és megtekintési előzményei.</string>
+    <string name="error_database_offline_device">A Settee nem tudja beolvasni, amit ezen az eszközön mentett, és nem tudott frissítést keresni. Csatlakoztassa az eszközt az internethez, és nézze meg újra, vagy törölje az adatait az alkalmazás beállításaiban, amivel elvesznek a szolgáltatói, kedvencei és megtekintési előzményei.</string>
+    <string name="database_check_again">Újra megnézem</string>
+    <string name="database_see_update">Frissítés megtekintése</string>
     <string name="error_tmdb_trouble">A TMDB-nél gondok vannak. Ez az ő oldalukon van, ezért próbáld újra később.</string>
     <string name="error_opensubtitles_none">Az OpenSubtitlesen még nincs felirat ehhez.</string>
     <string name="error_opensubtitles_unreachable_tv">Az OpenSubtitles nem érhető el. Ellenőrizd, hogy ez a tévé online van-e, majd próbáld újra.</string>

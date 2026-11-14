@@ -313,6 +313,16 @@
     <string name="error_tmdb_key_rejected">TMDB hat diesen Schlüssel nicht akzeptiert. Prüfe, ob du den ganzen API Key kopiert hast, und versuche es erneut.</string>
     <string name="error_tmdb_unreachable_tv">TMDB ist nicht erreichbar. Prüfe, ob dieser Fernseher online ist, und versuche es erneut.</string>
     <string name="error_tmdb_unreachable_device">TMDB ist nicht erreichbar. Prüfe, ob dieses Gerät online ist, und versuche es erneut.</string>
+    <string name="error_database_checking_tv">Settee kann nicht lesen, was es auf diesem Fernseher gespeichert hat. Es wird nach einem Update gesucht, das das behebt.</string>
+    <string name="error_database_checking_device">Settee kann nicht lesen, was es auf diesem Gerät gespeichert hat. Es wird nach einem Update gesucht, das das behebt.</string>
+    <string name="error_database_update_tv">Settee kann nicht lesen, was es auf diesem Fernseher gespeichert hat, und es gibt ein Update, das das behebt.</string>
+    <string name="error_database_update_device">Settee kann nicht lesen, was es auf diesem Gerät gespeichert hat, und es gibt ein Update, das das behebt.</string>
+    <string name="error_database_no_update_tv">Settee kann nicht lesen, was es auf diesem Fernseher gespeichert hat, und noch gibt es kein Update dafür. Wenn du seine Daten in den App-Einstellungen des Fernsehers löschst, startet es neu, aber deine Anbieter, Favoriten und dein Wiedergabeverlauf gehen verloren.</string>
+    <string name="error_database_no_update_device">Settee kann nicht lesen, was es auf diesem Gerät gespeichert hat, und noch gibt es kein Update dafür. Wenn du seine Daten in den App-Einstellungen löschst, startet es neu, aber deine Anbieter, Favoriten und dein Wiedergabeverlauf gehen verloren.</string>
+    <string name="error_database_offline_tv">Settee kann nicht lesen, was es auf diesem Fernseher gespeichert hat, und konnte nicht nach einem Update suchen. Verbinde den Fernseher mit dem Internet und suche erneut, oder lösche seine Daten in den App-Einstellungen des Fernsehers, wodurch deine Anbieter, Favoriten und dein Wiedergabeverlauf verloren gehen.</string>
+    <string name="error_database_offline_device">Settee kann nicht lesen, was es auf diesem Gerät gespeichert hat, und konnte nicht nach einem Update suchen. Verbinde das Gerät mit dem Internet und suche erneut, oder lösche seine Daten in den App-Einstellungen, wodurch deine Anbieter, Favoriten und dein Wiedergabeverlauf verloren gehen.</string>
+    <string name="database_check_again">Erneut suchen</string>
+    <string name="database_see_update">Update ansehen</string>
     <string name="error_tmdb_trouble">TMDB hat Probleme. Das liegt bei ihnen, versuche es also später erneut.</string>
     <string name="error_opensubtitles_none">OpenSubtitles hat dafür noch keine Untertitel.</string>
     <string name="error_opensubtitles_unreachable_tv">OpenSubtitles ist nicht erreichbar. Prüfe, ob dieser Fernseher online ist, und versuche es erneut.</string>

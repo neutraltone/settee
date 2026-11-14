@@ -313,6 +313,16 @@
     <string name="error_tmdb_key_rejected">لم يقبل TMDB هذا المفتاح. تأكد من نسخ API Key كاملًا، ثم حاول مرة أخرى.</string>
     <string name="error_tmdb_unreachable_tv">تعذّر الوصول إلى TMDB. تأكد من اتصال هذا التلفزيون بالإنترنت، ثم حاول مرة أخرى.</string>
     <string name="error_tmdb_unreachable_device">تعذّر الوصول إلى TMDB. تأكد من اتصال هذا الجهاز بالإنترنت، ثم حاول مرة أخرى.</string>
+    <string name="error_database_checking_tv">لا يستطيع Settee قراءة ما حفظه على هذا التلفزيون. جارٍ البحث عن تحديث يصلح ذلك.</string>
+    <string name="error_database_checking_device">لا يستطيع Settee قراءة ما حفظه على هذا الجهاز. جارٍ البحث عن تحديث يصلح ذلك.</string>
+    <string name="error_database_update_tv">لا يستطيع Settee قراءة ما حفظه على هذا التلفزيون، ويوجد تحديث يصلح ذلك.</string>
+    <string name="error_database_update_device">لا يستطيع Settee قراءة ما حفظه على هذا الجهاز، ويوجد تحديث يصلح ذلك.</string>
+    <string name="error_database_no_update_tv">لا يستطيع Settee قراءة ما حفظه على هذا التلفزيون، ولا يوجد تحديث يصلح ذلك بعد. مسح بياناته من إعدادات التطبيقات في التلفزيون يبدأه من جديد، لكنك تفقد مزوّديك ومفضلاتك وسجل المشاهدة.</string>
+    <string name="error_database_no_update_device">لا يستطيع Settee قراءة ما حفظه على هذا الجهاز، ولا يوجد تحديث يصلح ذلك بعد. مسح بياناته من إعدادات التطبيق يبدأه من جديد، لكنك تفقد مزوّديك ومفضلاتك وسجل المشاهدة.</string>
+    <string name="error_database_offline_tv">لا يستطيع Settee قراءة ما حفظه على هذا التلفزيون، ولم يتمكن من البحث عن تحديث. وصّل التلفزيون بالإنترنت وتحقق مرة أخرى، أو امسح بياناته من إعدادات التطبيقات في التلفزيون، فتفقد مزوّديك ومفضلاتك وسجل المشاهدة.</string>
+    <string name="error_database_offline_device">لا يستطيع Settee قراءة ما حفظه على هذا الجهاز، ولم يتمكن من البحث عن تحديث. وصّل الجهاز بالإنترنت وتحقق مرة أخرى، أو امسح بياناته من إعدادات التطبيق، فتفقد مزوّديك ومفضلاتك وسجل المشاهدة.</string>
+    <string name="database_check_again">تحقق مرة أخرى</string>
+    <string name="database_see_update">عرض التحديث</string>
     <string name="error_tmdb_trouble">يواجه TMDB مشكلات. المشكلة من جهتهم، فحاول مرة أخرى لاحقًا.</string>
     <string name="error_opensubtitles_none">لا تتوفر على OpenSubtitles ترجمات لهذا بعد.</string>
     <string name="error_opensubtitles_unreachable_tv">تعذّر الوصول إلى OpenSubtitles. تأكّد من اتصال هذا التلفاز بالإنترنت، ثم حاول مرة أخرى.</string>

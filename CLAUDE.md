@@ -161,12 +161,12 @@ catalogue refresh, playback or Xtream parsing. The big picture:
 Room schema version lives in `data/db/OpenTvDatabase.kt`; schemas are exported to `app/schemas/`. The
 schema restarted at version 1 for Settee, with none of upstream's migrations.
 
-**Until 1.0, a schema change may wipe data:** bump the version, commit the newly exported schema, and
-let `fallbackToDestructiveMigration()` rebuild the database. The 0.x releases are installed only by the
-developer, so losing favourites on an upgrade is acceptable while the schema is still settling. **From
-1.0 on, real migrations are required:** every schema change bumps the version and adds a hand-written
-`Migration` that matches Room's generated DDL so favourites survive, and the destructive fallback (with the
-pre-restart test in `OpenTvDatabaseTest`) is deleted.
+**Every schema change needs a real migration** (#334): bump the version, commit the newly exported
+schema, and add a hand-written `Migration` to `OpenTvDatabase.MIGRATIONS` that matches Room's generated
+DDL, so Favourites survive. Room throws on a missing one; nothing falls back to a wipe. The only
+databases rebuilt empty are strangers, `WIPED_SCHEMAS` in `OpenTvDatabase`: 1–8 (v0.2.0–v0.4.0, from
+before migrations were kept) and upstream OpenTV's 11. Never add a Settee schema from 9 on to that
+list. `OpenTvDatabaseTest` pins which are wiped and which migrate.
 
 ### Playback
 
@@ -201,8 +201,7 @@ keep it up to date whenever a mapping changes or a new failure can reach the scr
 - **`feat`, `fix` and `perf` titles describe what a viewer notices** ("episodes show how far through
   them you are", not "add ViewerLibrary"), because release-please turns them into `CHANGELOG.md` and
   the app shows that, filtered by `update/ReleaseNotes`, as its What's new and update-available notes.
-  Other types never reach a viewer. Before 1.0, a change that wipes the database is marked `!` and its
-  title says what the viewer has to redo (e.g. "add your providers again").
+  Other types never reach a viewer.
 - **Releases:** one branch and PR per ticket, squash-merged so the PR title becomes the commit on
   `main`. release-please (`.github/workflows/release-please.yml`) keeps a `chore(main): release x.y.z`
   PR open that bumps `appVersionName` in `app/build.gradle.kts` (`versionCode` is derived from it) and

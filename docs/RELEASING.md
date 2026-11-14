@@ -116,6 +116,25 @@ This is the owner's job. The passwords and backups stay with them, not with CI o
    install it over the first (through the in-app updater or `adb install -r settee.apk`). It
    must install without asking you to uninstall, and keep your sources.
 
+## When an update can't open the database
+
+Every schema from 9 (v0.5.0) on must migrate; only 1–8 and upstream OpenTV's 11 are rebuilt empty
+(`WIPED_SCHEMAS` in `OpenTvDatabase`, #334). A database Settee can't open, from a migration that doesn't
+match its schema or from a newer build after a downgrade, shows "Settee can't read what it saved" at
+launch instead of any screen. That screen checks for a newer release straight away and offers it, and
+Check again looks again, so once a fixed release is out the in-app updater still gets there. Until then
+the screen tells the viewer that clearing the app's data is the way out and what it loses. The ways out:
+
+- **Keeps the data:** reinstall over the top with Downloader code **6405610** (it installs the latest
+  `settee.apk`), or `adb install -r settee.apk`. This works once a release with a fix is out.
+- **Loses the data:** Fire TV Settings → Applications → Manage Installed Applications → Settee →
+  Clear data (or uninstall). Providers, Favourites and progress go with it.
+
+So before a release that changes the schema, install it on the Fire Stick over the previous signed
+release and check that providers, Favourites and progress are still there. From 1.0 a mistake here
+can't be fixed by an in-app update. For 1.0 that means the last 0.x over signed v0.6.0 (schema 12 →
+13 → 14 → 15).
+
 ## Version numbers
 
 `appVersionName` in `app/build.gradle.kts` is the only number a release changes, and release-please
