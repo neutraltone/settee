@@ -506,8 +506,7 @@ private suspend fun <T> updateOrInsert(
  * [rows] keeping only the last of those that share a [key], in the order of the ones kept: a provider
  * that lists one id twice means the later one, and saving both as new rows would break the unique index.
  */
-internal fun <T, K> lastOfEach(rows: List<T>, key: (T) -> K): List<T> =
-    rows.asReversed().distinctBy(key).asReversed()
+internal fun <T, K> lastOfEach(rows: List<T>, key: (T) -> K): List<T> = rows.asReversed().distinctBy(key).asReversed()
 
 /**
  * [incoming] over the rows they replace ([existing], by stream id), carrying what the viewer set
