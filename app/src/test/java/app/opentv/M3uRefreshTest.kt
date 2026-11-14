@@ -5,6 +5,7 @@
  */
 package app.opentv
 
+import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import app.opentv.data.model.Category
 import app.opentv.data.model.Channel
@@ -114,36 +115,57 @@ class M3uRefreshTest {
     }
 
     @Test
-    fun `a playlist of only films and episodes clears the ones stored as channels before`() = runTest {
+    fun `a playlist that comes back with only films and episodes keeps your channels as they were`() = runTest {
         test.db.sources().insert(playlist)
         test.db.categories().upsertAll(
-            listOf(Category(id = "VOD | Action", sourceId = playlist.id, name = "VOD", kind = StreamKind.LIVE)),
+            listOf(Category(id = "UK", sourceId = playlist.id, name = "UK", kind = StreamKind.LIVE, sortIndex = 0)),
         )
         test.db.channels().replaceCatalogue(
             playlist.id,
             listOf(
-                channel(
-                    "url:film",
-                    "Drive (2011)",
-                    "http://example.com/movie/u/p/30.mkv",
-                    0,
-                    category = "VOD | Action",
-                ),
+                channel("tvg:bbc1", "BBC One", "http://example.com/live/u/p/1.ts", 0, category = "UK"),
+                channel("tvg:itv1", "ITV 1", "http://example.com/live/u/p/2.ts", 1, category = "UK"),
+                channel("tvg:ch4", "Channel 4", "http://example.com/live/u/p/3.ts", 2, category = "UK"),
             ),
             syncStamp = 1,
         )
+        val stored = test.catalog.observeChannelsInIncludingHidden(playlist.id, listOf("UK")).first()
+        val byStream = stored.associateBy { it.streamId }
+        test.catalog.setChannelHidden(byStream.getValue("tvg:itv1").id, hidden = true, now = 1)
+        test.catalog.setChannelOrder(listOf("tvg:ch4", "tvg:bbc1", "tvg:itv1").map { byStream.getValue(it).id })
+        test.catalog.setChannelCustomName(byStream.getValue("tvg:bbc1").id, "Beeb")
+        test.guide.setManualOverride(byStream.getValue("tvg:ch4").id, "channel4.uk")
         test.panel.replies[""] = """
             #EXTM3U
             #EXTINF:-1 group-title="VOD | Action",Drive (2011)
             http://example.com/movie/u/p/30.mkv
+            #EXTINF:-1 group-title="SERIES | Comedy",Taskmaster S01 E01
+            http://example.com/series/u/p/40.mp4
         """.trimIndent()
 
         val result = test.catalog.fetchLive(playlist, nowUtcMillis = 2)
 
-        assertThat(result).isInstanceOf(SyncResult.Failed::class.java)
-        assertThat(test.catalog.observeChannels(playlist.id).first()).isEmpty()
-        assertThat(test.lineup.categoryGroups(playlist.id).first()).isEmpty()
+        assertThat((result as SyncResult.Failed).reason.sentence).isEqualTo(
+            ApplicationProvider.getApplicationContext<Context>().getString(R.string.error_playlist_empty),
+        )
+        val after = test.catalog.observeChannelsInIncludingHidden(playlist.id, listOf("UK")).first()
+        assertThat(after.map { Edits(it.streamId, it.hidden, it.sortIndex, it.customName, it.epgOverrideId) })
+            .containsExactly(
+                Edits("tvg:ch4", hidden = false, sortIndex = 0, customName = null, epgOverride = "channel4.uk"),
+                Edits("tvg:bbc1", hidden = false, sortIndex = 1, customName = "Beeb", epgOverride = null),
+                Edits("tvg:itv1", hidden = true, sortIndex = 2, customName = null, epgOverride = null),
+            )
+        assertThat(test.lineup.categoryGroups(playlist.id).first().flatMap { it.ids }).containsExactly("UK")
     }
+
+    /** What a viewer can change about a channel, which a refresh must carry over. */
+    private data class Edits(
+        val streamId: String,
+        val hidden: Boolean,
+        val sortIndex: Int,
+        val customName: String?,
+        val epgOverride: String?,
+    )
 
     private fun channel(streamId: String, name: String, url: String, sortIndex: Int, category: String? = null) =
         Channel(

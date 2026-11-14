@@ -837,12 +837,8 @@ class CatalogRepository(
         }
 
         if (parsed.channels.isEmpty()) {
-            if (parsed.filmsAndEpisodes > 0) {
-                // The playlist answered, with only films and episodes: an earlier version stored
-                // those as channels, and replaceCatalogue never clears a source on an empty list.
-                channelDao.deleteStale(source.id, nowUtcMillis)
-                categoryDao.deleteEmptyLive(source.id)
-            }
+            // Nothing touched: a playlist that briefly comes back empty, or with only films and
+            // episodes, is a provider hiccup, and must not cost the viewer their channels.
             return SyncResult.Failed(wording.of(R.string.error_playlist_empty, NO_CHANNELS), null)
         }
 

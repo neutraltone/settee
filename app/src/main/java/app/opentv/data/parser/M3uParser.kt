@@ -33,9 +33,8 @@ object M3uParser {
         val channels: List<Channel>,
         /** Value of `url-tvg`/`x-tvg-url` on the #EXTM3U header, if the playlist declares one. */
         val declaredEpgUrl: String?,
+        /** Malformed entries. Films and episodes are left out of the channels but not counted here. */
         val skippedEntries: Int,
-        /** Films and episodes left out of the channels: not malformed, so not in [skippedEntries]. */
-        val filmsAndEpisodes: Int = 0,
     )
 
     fun parse(input: InputStream, sourceId: Long): Result = input.bufferedReader().use { parse(it, sourceId) }
@@ -47,7 +46,6 @@ object M3uParser {
         val seenStreamIds = HashSet<String>()
         var declaredEpgUrl: String? = null
         var skipped = 0
-        var filmsAndEpisodes = 0
 
         var pendingName: String? = null
         var pendingAttributes: Map<String, String> = emptyMap()
@@ -81,9 +79,9 @@ object M3uParser {
                     if (name.isNullOrBlank()) {
                         // A URL with no preceding #EXTINF. Nothing sensible to label it with.
                         skipped++
-                    } else if (isFilmOrEpisode(line)) {
-                        filmsAndEpisodes++ // Before the dedupe and sortIndex: positions stay consecutive.
-                    } else {
+                    } else if (!isFilmOrEpisode(line)) {
+                        // Films and episodes are left out before the dedupe and sortIndex, so the
+                        // channels' positions stay consecutive.
                         val attributes = pendingAttributes
                         val streamId = attributes["tvg-id"]
                             ?.takeIf { it.isNotBlank() }
@@ -104,7 +102,7 @@ object M3uParser {
             }
         }
 
-        return Result(channels, declaredEpgUrl, skipped, filmsAndEpisodes)
+        return Result(channels, declaredEpgUrl, skipped)
     }
 
     @Suppress("LongParameterList") // One entry's parts, as parse has gathered them.

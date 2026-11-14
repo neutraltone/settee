@@ -189,6 +189,19 @@ class M3uParserTest {
     }
 
     @Test
+    fun `a playlist of only films and episodes has no live channels`() {
+        val playlist = """
+            #EXTM3U
+            #EXTINF:-1 group-title="VOD | Action",Drive (2011)
+            http://example.com/movie/u/p/30.mkv
+            #EXTINF:-1 group-title="SERIES | Comedy",Taskmaster S01 E01
+            http://example.com/series/u/p/40.mp4
+        """.trimIndent()
+
+        assertThat(M3uParser.parse(playlist, sourceId = 1).channels).isEmpty()
+    }
+
+    @Test
     fun `films and episodes left out are not counted as malformed entries`() {
         val playlist = """
             #EXTM3U
