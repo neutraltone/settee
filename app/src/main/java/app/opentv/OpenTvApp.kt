@@ -7,13 +7,9 @@ package app.opentv
 
 import android.app.Application
 import android.content.Context
-import androidx.core.content.edit
 import app.opentv.core.LocaleUtils
 import app.opentv.core.ServiceLocator
-import app.opentv.data.model.StreamKind
-import app.opentv.data.repo.CatalogRepository
 import app.opentv.data.repo.CatalogueRefresh
-import app.opentv.data.repo.migratedLockKeys
 import app.opentv.data.work.SyncWorker
 import coil.ImageLoader
 import coil.ImageLoaderFactory
@@ -23,7 +19,6 @@ import java.util.concurrent.atomic.AtomicBoolean
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 open class OpenTvApp :
@@ -117,24 +112,10 @@ open class OpenTvApp :
             // watch history and NAS recordings. Fire-and-forget and fully guarded: a blank or unreachable
             // NAS returns a result rather than throwing, so a bad launch never costs the user anything.
             syncNas = { app.opentv.sync.NasSync(graph).sync() },
-            catchUpNormaliser = {
-                // When the normaliser has moved on since the catalogue was last processed, re-clean
-                // the stored channels and re-run the guide matcher — locally, no re-download. This
-                // is why a name-cleanup fix shows up on the next launch rather than the next 6-hour
-                // sync, and it costs nothing when the version has not changed.
-                val prefs = getSharedPreferences("opentv", MODE_PRIVATE)
-                val seen = prefs.getInt("normalizer_version", 0)
-                if (seen < CatalogRepository.NORMALIZER_VERSION) {
-                    graph.catalogRepository.renormalizeAll()
-                    if (seen < LOCK_KEYS_VERSION) {
-                        val categories = graph.database.categories().observe(StreamKind.LIVE).first()
-                        graph.settings.setHiddenCategories(
-                            migratedLockKeys(graph.settings.hiddenCategories.value, categories),
-                        )
-                    }
-                    prefs.edit { putInt("normalizer_version", CatalogRepository.NORMALIZER_VERSION) }
-                }
-            },
+            catchUpNormaliser = NormaliserCatchUp(
+                prefs = getSharedPreferences("opentv", MODE_PRIVATE),
+                renormalise = { graph.catalogRepository.renormalizeAll() },
+            )::invoke,
             launchRefresh = {
                 // Runs on every launch. It is cheap when nothing is stale (feeds within their
                 // refresh window are skipped), but it is what makes the free regional guide turn
@@ -146,6 +127,3 @@ open class OpenTvApp :
         appScope.launch { work.run() }
     }
 }
-
-/** The [CatalogRepository.NORMALIZER_VERSION] that re-keyed nameless categories' locks (#104). */
-private const val LOCK_KEYS_VERSION = 3
