@@ -251,7 +251,7 @@ Sections are Providers, TV guide, Channels, Display and playback, Recording, Par
 - **Row options:** a row with more than one thing to do does the main one on OK. The rest are in its options, opened by holding Select or pressing Menu, in the same right-hand panel.
 - **Removing** a provider, a Profile, a TV guide source or an add-on asks first, in that panel: "Yes, remove <name>" and "Keep it", with the Highlight starting on "Keep it". Back also keeps it.
 - **A setting that belongs to the Profile** shows a quiet line under the value, such as "For Sam".
-- **Parental lock:** with a PIN set, the pane shows one row, "Enter your PIN", until it's entered, then the settings until the app closes. With no PIN, it shows the settings and a "Set a PIN" row. The PIN has its own number entry. The categories to lock are on a screen of their own, behind a "Locked categories" row that says how many are locked: a big provider has hundreds of them.
+- **Parental lock:** with a PIN set, the pane shows one row, "Enter your PIN", until it's entered, then the settings until the app closes. With no PIN, it shows the settings and a "Set a PIN" row. The PIN has its own number entry. The categories to lock are on a screen of their own, behind a "Locked categories" row that says how many are locked: a big provider has hundreds of them. That screen opens on the first category, and has Find a category at the top, which works as the [Categories Sidebar](#categories-sidebar)'s does.
 
 Profiles, behind the Rail's Profile, is a screen of its own built from the same parts: a row per Profile and an "Add a profile" row. OK renames a Profile, and switching to it and removing it are in its options.
 

@@ -6,16 +6,21 @@
 package app.opentv
 
 import android.app.Application
-import android.os.Looper
+import android.view.KeyEvent
+import android.view.View
 import androidx.activity.ComponentActivity
 import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsOff
 import androidx.compose.ui.test.assertIsOn
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.isFocused
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performKeyInput
@@ -27,8 +32,11 @@ import app.opentv.data.model.Category
 import app.opentv.data.model.Source
 import app.opentv.data.model.SourceKind
 import app.opentv.data.model.StreamKind
+import app.opentv.data.repo.CategoryGroup
 import app.opentv.ui.settings.LockedCategoriesScreen
 import com.google.common.truth.Truth.assertThat
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.After
@@ -37,7 +45,6 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
-import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
@@ -56,9 +63,10 @@ class LockedCategoriesScreenTest {
 
     private val app: Application = ApplicationProvider.getApplicationContext()
     private val graph = ServiceLocator.Graph(app)
-    private val viewModels = TestViewModels()
-    private val viewModel by lazy { viewModels.channels(app, graph) }
     private var left = false
+
+    private lateinit var view: View
+    private val device = DeviceKeyboard(compose) { view }
 
     // AppSettings is one per process, so the session's lock state outlives each test: every test
     // starts locked, with no PIN, and leaves it that way (clearing the PIN also unlocks).
@@ -72,7 +80,6 @@ class LockedCategoriesScreenTest {
     fun close() {
         graph.settings.setHiddenCategories(emptySet())
         locked()
-        viewModels.clear()
         graph.database.close()
     }
 
@@ -96,15 +103,22 @@ class LockedCategoriesScreenTest {
         graph.settings.setHiddenCategories(setOf("adult"))
     }
 
-    private fun show() {
+    private fun setScreen(
+        categories: Flow<List<CategoryGroup>> = graph.channelLineup.categoryGroups(includeLocked = true),
+    ) {
         compose.setTvContent {
-            LockedCategoriesScreen(onBack = { left = true }, viewModel = viewModel, settings = graph.settings)
+            view = LocalView.current
+            LockedCategoriesScreen(onBack = { left = true }, categories = categories, settings = graph.settings)
         }
-        compose.waitUntil(10_000) {
-            shadowOf(Looper.getMainLooper()).idle()
-            viewModel.categoryGroups.value.isNotEmpty()
-        }
-        compose.waitForIdle()
+    }
+
+    private fun show() {
+        setScreen()
+        awaitHighlight("News", 10_000)
+    }
+
+    private fun awaitHighlight(label: String, millis: Long) = compose.waitUntil(millis) {
+        compose.onAllNodes(hasText(label) and isFocused()).fetchSemanticsNodes().isNotEmpty()
     }
 
     private fun press(key: Key, times: Int = 1) = repeat(times) {
@@ -155,12 +169,11 @@ class LockedCategoriesScreenTest {
 
     @Test
     fun `with no categories yet, it says where they come from`() {
-        compose.setTvContent {
-            LockedCategoriesScreen(onBack = { left = true }, viewModel = viewModel, settings = graph.settings)
-        }
-        compose.waitForIdle()
+        setScreen()
 
-        compose.onNodeWithText("No categories yet", substring = true).assertExists()
+        compose.waitUntil(10_000) {
+            compose.onAllNodesWithText("No categories yet", substring = true).fetchSemanticsNodes().isNotEmpty()
+        }
         captureScreen("locked_categories_empty")
     }
 
@@ -169,12 +182,56 @@ class LockedCategoriesScreenTest {
         library()
         graph.settings.setPin("1234")
         graph.settings.forgetPinEntry()
-        compose.setTvContent {
-            LockedCategoriesScreen(onBack = { left = true }, viewModel = viewModel, settings = graph.settings)
-        }
+        setScreen()
 
         compose.runOnIdle { assertThat(left).isTrue() }
         compose.onNodeWithText("Classics").assertDoesNotExist()
+    }
+
+    @Test
+    fun `while the categories are still being read it doesn't say there are none, then opens on the first`() {
+        val categories = MutableSharedFlow<List<CategoryGroup>>()
+        setScreen(categories)
+        compose.waitForIdle()
+
+        compose.onNodeWithText("No categories yet", substring = true).assertDoesNotExist()
+
+        runBlocking { categories.emit(listOf(CategoryGroup("news", "News", listOf("10")))) }
+
+        awaitHighlight("News", 5_000)
+        compose.onNodeWithText("No categories yet", substring = true).assertDoesNotExist()
+    }
+
+    @Test
+    fun `Up from the first category reaches Find a category, and Down comes back to the list`() {
+        library()
+        show()
+
+        device.remote(KeyEvent.KEYCODE_DPAD_UP)
+        assertThat(device.highlighted()).isTrue()
+        assertThat(device.showing).isFalse()
+
+        device.remote(KeyEvent.KEYCODE_DPAD_DOWN)
+        assertThat(device.highlighted()).isFalse()
+        row("News").assertIsFocused()
+    }
+
+    @Test
+    fun `Find a category narrows the list by name, whatever the case, and says how many are showing`() {
+        library()
+        show()
+        device.remote(KeyEvent.KEYCODE_DPAD_UP)
+        device.remote(KeyEvent.KEYCODE_DPAD_CENTER)
+
+        device.type("CO")
+
+        row("Comedy").assertExists()
+        row("Cooking").assertExists()
+        compose.onAllNodesWithText("News").assertCountEquals(0)
+        compose.onAllNodesWithText("Sport").assertCountEquals(0)
+        compose.onNodeWithText("2 of ${names.size}").assertExists()
+        captureScreen("locked_categories_find")
+        device.close()
     }
 
     @Test
