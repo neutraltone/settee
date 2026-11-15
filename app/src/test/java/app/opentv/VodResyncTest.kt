@@ -8,6 +8,8 @@ package app.opentv
 import androidx.test.core.app.ApplicationProvider
 import com.google.common.truth.Truth.assertThat
 import com.google.common.truth.Truth.assertWithMessage
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Test
@@ -92,6 +94,24 @@ class VodResyncTest {
 
             assertWithMessage(reply).that(test.catalog.allSeries().map { it.seriesId }).containsExactly("1", "2", "3")
         }
+    }
+
+    @Test
+    fun `a film page open while a refresh removes the film doesn't bring it back`() = runTest {
+        panel.replies["get_vod_streams"] = films(1, 2)
+        test.syncVod()
+        val film = test.catalog.allMovies().single { it.streamId == "1" }
+        val hold = panel.hold("get_vod_info:1")
+
+        val opening = async(Dispatchers.Default) { test.catalog.movieDetail(film.id) }
+        during(hold) {
+            panel.replies["get_vod_streams"] = films(2)
+            test.syncVod()
+            hold.release()
+        }
+        opening.await()
+
+        assertThat(test.catalog.allMovies().map { it.streamId }).containsExactly("2")
     }
 
     @Test

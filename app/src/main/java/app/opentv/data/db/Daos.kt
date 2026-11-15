@@ -1056,13 +1056,8 @@ interface MovieDao {
      */
     @Transaction
     suspend fun upsertAll(movies: List<Movie>) {
-        val listed = lastOfEach(movies) { it.sourceId to it.streamId }
-        val ids = listed.map { it.id }.filter { it > 0 }
-        // A detail open or background pass writes back a row it read before a refresh restamped it,
-        // and the refresh would then delete a film it had just listed.
-        val seen = lastSeen(ids).associate { it.id to it.lastSeenMillis }
-        val rows = listed.map { it.copy(lastSeenMillis = maxOf(it.lastSeenMillis, seen[it.id] ?: 0L)) }
-        val before = credited(ids).associateBy { it.id }
+        val rows = lastOfEach(movies) { it.sourceId to it.streamId }
+        val before = credited(rows.map { it.id }.filter { it > 0 }).associateBy { it.id }
         val saved = updateOrInsert(
             rows,
             Movie::id,
@@ -1101,6 +1096,19 @@ interface MovieDao {
     /** The refresh stamps of these stored films (at most a batch of 500). */
     @Query("SELECT id, lastSeenMillis FROM movies WHERE id IN (:ids)")
     suspend fun lastSeen(ids: List<Long>): List<LastSeen>
+
+    /**
+     * Saves films a detail open filled in, those still stored only, each keeping the refresh stamp it
+     * has now. The row was read before network calls, and a refresh in between may have restamped it,
+     * so saving it as read would let the refresh delete a film it had just listed, or deleted it, and
+     * [upsertAll] would bring it back.
+     */
+    @Transaction
+    suspend fun saveLookedUp(movies: List<Movie>) {
+        val stamps = lastSeen(movies.map { it.id }).associate { it.id to it.lastSeenMillis }
+        val stored = movies.mapNotNull { movie -> stamps[movie.id]?.let { movie.copy(lastSeenMillis = it) } }
+        if (stored.isNotEmpty()) upsertAll(stored)
+    }
 }
 
 /**
@@ -1168,6 +1176,14 @@ interface RetiredTitlesDao {
     /** Deletes every Profile's position on [key]. */
     @Query("DELETE FROM playback_positions WHERE mediaKey = :key")
     suspend fun deletePositionsOn(key: String)
+
+    /** [sourceId]'s films as grouping into titles reads them, once. */
+    @Query("SELECT id, sourceId, name, tmdbId, year, categoryId FROM movies WHERE sourceId = :sourceId")
+    suspend fun movieVersionRows(sourceId: Long): List<VersionRow>
+
+    /** [sourceId]'s series as grouping into titles reads them, once. */
+    @Query("SELECT id, sourceId, name, tmdbId, year, categoryId FROM series WHERE sourceId = :sourceId")
+    suspend fun seriesVersionRows(sourceId: Long): List<VersionRow>
 }
 
 /** A film or series' local id and the refresh that last listed it. */
@@ -1259,12 +1275,8 @@ interface SeriesDao {
     /** Saves these series, rewriting the [SeriesCredit]s of those whose cast changed. See [MovieDao.upsertAll]. */
     @Transaction
     suspend fun upsertAll(items: List<Series>) {
-        val listed = lastOfEach(items) { it.sourceId to it.seriesId }
-        val ids = listed.map { it.id }.filter { it > 0 }
-        // See MovieDao.upsertAll: a row read before a refresh mustn't put its older stamp back.
-        val seen = lastSeen(ids).associate { it.id to it.lastSeenMillis }
-        val rows = listed.map { it.copy(lastSeenMillis = maxOf(it.lastSeenMillis, seen[it.id] ?: 0L)) }
-        val before = credited(ids).associateBy { it.id }
+        val rows = lastOfEach(items) { it.sourceId to it.seriesId }
+        val before = credited(rows.map { it.id }.filter { it > 0 }).associateBy { it.id }
         val saved = updateOrInsert(
             rows,
             Series::id,
@@ -1310,6 +1322,14 @@ interface SeriesDao {
     /** The refresh stamps of these stored series (at most a batch of 500). */
     @Query("SELECT id, lastSeenMillis FROM series WHERE id IN (:ids)")
     suspend fun lastSeen(ids: List<Long>): List<LastSeen>
+
+    /** Saves series a detail open or background pass filled in, as [MovieDao.saveLookedUp] saves films. */
+    @Transaction
+    suspend fun saveLookedUp(items: List<Series>) {
+        val stamps = lastSeen(items.map { it.id }).associate { it.id to it.lastSeenMillis }
+        val stored = items.mapNotNull { series -> stamps[series.id]?.let { series.copy(lastSeenMillis = it) } }
+        if (stored.isNotEmpty()) upsertAll(stored)
+    }
 }
 
 @Dao

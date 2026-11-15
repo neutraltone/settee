@@ -107,6 +107,37 @@ class RetiredTitlesTest {
     }
 
     @Test
+    fun `a film listed again under a new id without a TMDB id keeps its resume point`() = runTest {
+        panel.replies["get_vod_streams"] =
+            """[{"stream_id": 1, "name": "EN - Brief Encounter (1945)", "added": "100"}]"""
+        test.syncVod()
+        library.recordProgress(movie(1), positionMillis = 600_000, durationMillis = 6_000_000)
+
+        panel.replies["get_vod_streams"] =
+            """[{"stream_id": 9, "name": "EN - Brief Encounter (1945)", "added": "100"}]"""
+        test.syncVod()
+
+        assertThat(library.resumeFrom(movie(9))).isEqualTo(600_000L)
+        assertThat(everyPosition()).hasSize(1)
+    }
+
+    @Test
+    fun `an episode dropped from a show follows to another Version whose episodes weren't fetched yet`() = runTest {
+        panel.replies["get_series"] = shows(7 to "1399", 8 to "1399")
+        panel.replies["get_series_info:7"] = episodes(1 to 1, 2 to 2)
+        panel.replies["get_series_info:8"] = episodes(21 to 1, 22 to 2)
+        test.syncVod()
+        test.catalog.ensureEpisodes(PANEL_SOURCE, "7")
+        library.recordProgress(episode("7", "2"), positionMillis = 600_000, durationMillis = 2_400_000)
+
+        panel.replies["get_series_info:7"] = episodes(1 to 1)
+        test.catalog.ensureEpisodes(PANEL_SOURCE, "7")
+
+        assertThat(library.resumeFrom(episode("8", "22"))).isEqualTo(600_000L)
+        assertThat(everyPosition()).hasSize(1)
+    }
+
+    @Test
     fun `an episode reply that no longer lists an episode deletes it`() = runTest {
         showSeven()
         panel.replies["get_series_info:7"] = episodes(1 to 1, 2 to 2)
