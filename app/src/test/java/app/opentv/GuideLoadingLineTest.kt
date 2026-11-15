@@ -133,7 +133,7 @@ class GuideLoadingLineTest {
         builds.finish()
         assertThat(lineOnceCleared()).isNull()
 
-        launch { viewModel.guideRows.collect {} }
+        backgroundScope.launch { viewModel.guideRows.collect {} }
         builds.awaitHeld()
 
         assertThat(StatusBus.message.value).isNotNull()
@@ -142,7 +142,7 @@ class GuideLoadingLineTest {
     @Test
     fun `the first build clears the loading line, and switching category doesn't bring it back`() = runTest {
         val viewModel = viewModels.track(ChannelsViewModel(app, graph))
-        launch { viewModel.guideRows.collect {} }
+        backgroundScope.launch { viewModel.guideRows.collect {} }
         builds.awaitHeld()
         // Not held from here: a line put up again by a later build stays up, for the asserts to see.
         builds.stopHolding()
