@@ -123,6 +123,79 @@ class TmdbClientTest {
         assertThat(toTmdb()).isEmpty()
     }
 
+    /** The path of every request that went to TMDB, without the key. */
+    private fun pathsAsked() = toTmdb().map { it.url.encodedPath }
+
+    @Test
+    fun `a film a panel gave TMDB id 0 is searched for by its title`() {
+        settings.setTmdbApiKey(API_KEY)
+
+        val meta = tmdb.movieMetaOrFailure("A Film", year = null, tmdbId = "0").getOrNull()
+
+        assertThat(meta?.overview).isEqualTo("A film.")
+        assertThat(meta?.tmdbId).isEqualTo("11")
+        assertThat(pathsAsked()).contains("/3/search/movie")
+        assertThat(pathsAsked()).doesNotContain("/3/movie/0")
+    }
+
+    @Test
+    fun `a series a panel gave TMDB id 0 is searched for by its title`() {
+        settings.setTmdbApiKey(API_KEY)
+
+        val meta = tmdb.seriesMetaOrFailure("A Show", year = null, tmdbId = "0").getOrNull()
+
+        assertThat(meta?.overview).isEqualTo("A show.")
+        assertThat(pathsAsked()).contains("/3/search/tv")
+        assertThat(pathsAsked()).doesNotContain("/3/tv/0")
+    }
+
+    @Test
+    fun `a film a panel gave TMDB id 0 finds its IMDb match by its title`() {
+        settings.setTmdbApiKey(API_KEY)
+
+        assertThat(tmdb.imdbId("A Film", year = null, isMovie = true, tmdbId = "0")).isEqualTo("tt0000011")
+        assertThat(pathsAsked()).contains("/3/search/movie")
+        assertThat(pathsAsked()).doesNotContain("/3/movie/0")
+    }
+
+    @Test
+    fun `a TMDB id of 0 with spaces round it, or only spaces, is searched for like 0`() {
+        settings.setTmdbApiKey(API_KEY)
+
+        for (id in listOf(" 0 ", "  ")) {
+            panel.requests.clear()
+
+            val meta = tmdb.movieMetaOrFailure("A Film", year = null, tmdbId = id).getOrNull()
+
+            assertThat(meta?.tmdbId).isEqualTo("11")
+            assertThat(pathsAsked()).contains("/3/search/movie")
+            assertThat(pathsAsked().filter { it.startsWith("/3/movie/") }).containsExactly("/3/movie/11")
+        }
+    }
+
+    @Test
+    fun `a film with a real TMDB id is looked up by it, not searched for`() {
+        settings.setTmdbApiKey(API_KEY)
+        panel.replies["/3/movie/603"] = """{"id": 603, "overview": "The real one."}"""
+
+        val meta = tmdb.movieMetaOrFailure("A Film", year = null, tmdbId = "603").getOrNull()
+
+        assertThat(meta?.overview).isEqualTo("The real one.")
+        assertThat(pathsAsked()).containsExactly("/3/movie/603")
+    }
+
+    @Test
+    fun `a real TMDB id TMDB doesn't know is no match, not searched for`() {
+        settings.setTmdbApiKey(API_KEY)
+        panel.replies["/3/movie/603"] = "!404"
+
+        val answer = tmdb.movieMetaOrFailure("A Film", year = null, tmdbId = "603")
+
+        assertThat(answer.isSuccess).isTrue()
+        assertThat(answer.getOrNull()).isNull()
+        assertThat(pathsAsked()).containsExactly("/3/movie/603")
+    }
+
     @Test
     fun `a TMDB request that fails logs nothing of the key`() {
         settings.setTmdbApiKey(API_KEY)

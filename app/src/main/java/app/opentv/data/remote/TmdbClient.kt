@@ -7,6 +7,7 @@ package app.opentv.data.remote
 
 import android.util.Log
 import app.opentv.core.AppSettings
+import app.opentv.data.model.knownTmdbId
 import app.opentv.data.parser.parseReleaseDate
 import java.io.IOException
 import kotlinx.serialization.json.Json
@@ -265,9 +266,13 @@ private fun isReadAccessToken(key: String): Boolean {
 
 private const val JWT_PARTS = 3
 
-/** A title as TMDB is asked about it: [tmdbId] when the provider gave one, else [title] and [year] to search. */
+/**
+ * A title as TMDB is asked about it: [tmdbId] when the provider gave a real one, else [title] and
+ * [year] to search. The 0 panels send for a title they haven't matched counts as none, or TMDB would
+ * be asked for title 0, answer 404, and the title would never be searched for.
+ */
 private data class TmdbTitle(val isMovie: Boolean, val title: String, val year: Int?, val providersId: String?) {
-    val tmdbId: String? get() = providersId?.takeIf { it.isNotBlank() }
+    val tmdbId: String? get() = knownTmdbId(providersId)
     val query: String get() = searchTitle(title)
 }
 

@@ -914,7 +914,8 @@ interface MovieDao {
      * since opening the movie may have found better ones meanwhile, except a blank genre (the provider
      * had none) with one found since, and the director, writers and studios, which TMDB's replace.
      * Every field `Movie.filledFrom` fills, since a film this fills counts as enriched and opening it
-     * won't ask the provider again.
+     * won't ask the provider again. A stored TMDB id of 0 counts as none, as `knownTmdbId` has it, so
+     * the id found for a title the panel calls 0 lands.
      */
     @Query(
         """
@@ -926,7 +927,7 @@ interface MovieDao {
             studio = COALESCE(:studio, studio),
             plot = COALESCE(plot, :plot),
             backdropUrl = COALESCE(backdropUrl, :backdropUrl),
-            tmdbId = COALESCE(tmdbId, :tmdbId),
+            tmdbId = CASE WHEN TRIM(COALESCE(tmdbId, '')) IN ('', '0') THEN COALESCE(:tmdbId, tmdbId) ELSE tmdbId END,
             rating = COALESCE(rating, :rating),
             year = COALESCE(year, :year),
             durationSeconds = COALESCE(durationSeconds, :durationSeconds),
