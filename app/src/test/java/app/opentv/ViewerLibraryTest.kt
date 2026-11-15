@@ -425,4 +425,18 @@ class ViewerLibraryTest {
 
         assertThat(lastFinishedName()).isEqualTo("Still Here")
     }
+
+    @Test
+    fun `a finished title of a kind that isn't wanted is passed over for the newest one that is`() = runTest {
+        storeFilm(3, "Hidden Film")
+        storeShow("The Show")
+        db.episodes().upsertAll(listOf(testEpisode(1, 1)))
+        library.recordProgress("ep:11", positionMillis = 2_400_000, durationMillis = 2_400_000)
+        now += 60_000
+        library.recordProgress("movie:3", positionMillis = 2_400_000, durationMillis = 2_400_000)
+
+        val finished = library.lastFinished { it is VodTitle.OfSeries }.first()
+
+        assertThat(finished?.name).isEqualTo("The Show")
+    }
 }

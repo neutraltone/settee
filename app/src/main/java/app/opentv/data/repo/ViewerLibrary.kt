@@ -264,15 +264,16 @@ class ViewerLibrary(
     /**
      * The film or show the active Profile most recently finished, for Home's Because you watched: the
      * newest film or episode it watched past 93% (or marked Watched), an episode standing for its show.
-     * One the provider no longer lists is passed over. Null when it has finished nothing; otherwise it
-     * changes only when the Profile finishes something else.
+     * One the provider no longer lists, or that isn't [wanted] (a kind Home hides), is passed over for the
+     * next newest. Null when it has finished nothing; otherwise it changes only when the Profile finishes
+     * something else.
      */
     @OptIn(ExperimentalCoroutinesApi::class)
-    fun lastFinished(): Flow<VodTitle?> = activeProfileId
+    fun lastFinished(wanted: (VodTitle) -> Boolean = { true }): Flow<VodTitle?> = activeProfileId
         .flatMapLatest { pid -> positions.observeNewestFirst(pid) }
         .map { newestFirst -> newestFirst.filter { statusOf(it) == WatchStatus.Watched }.map { it.mediaKey } }
         .distinctUntilChanged()
-        .map { finished -> finished.firstNotNullOfOrNull { titleOf(it) } }
+        .map { finished -> finished.firstNotNullOfOrNull { key -> titleOf(key)?.takeIf(wanted) } }
         .distinctUntilChanged()
 
     /** The film, or the show of the episode, [mediaKey] names; null when it's gone. */

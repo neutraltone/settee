@@ -1336,9 +1336,17 @@ class VodViewModel @JvmOverloads constructor(
     /** A film's More like this. */
     suspend fun moreLikeThis(movie: Movie): List<Movie> = graph.catalogRepository.moreLikeThis(movie)
 
-    /** A show's More like this, as the covers its page's grid draws. */
-    suspend fun moreLikeThis(series: Series): List<TitleCover> =
-        graph.catalogRepository.moreLikeThis(series).map(Series::cover)
+    /**
+     * A show's More like this, as the covers its page's grid draws: one per title, badged as a category's
+     * are, and never another Version of the show itself, even one TMDB doesn't know (ADR 0007).
+     */
+    suspend fun moreLikeThis(series: Series): List<TitleCover> {
+        val titles = graph.titleIndex.series.filterNotNull().first()
+        val own = titles.of(series.id)
+        return titles.distinct(graph.catalogRepository.moreLikeThis(series)) { it.id }
+            .filter { own == null || titles.of(it.id) !== own }
+            .map { TitleCover(it.id, it.name, it.displayTitle, it.posterUrl, titles.badgeFor(it.id, it.name)) }
+    }
 
     /** Everything in the library with this person in it, for their page. */
     suspend fun titlesWithPerson(name: String): List<VodTitle> =
@@ -1528,18 +1536,30 @@ class HomeViewModel @JvmOverloads constructor(
         .distinctTitles(graph.catalogRepository.recentlyAdded(movies, shows, limit = RECENT_ROWS_READ))
         .map { it.take(HOME_RECENT_TITLES_SHOWN) }
 
+    /** The last Because you watched worked out, and for which Profile; see [becauseYouWatched]. */
+    @Volatile
+    private var lastBecause: Pair<Long, Pair<String, List<VodTitle>>?>? = null
+
     /**
-     * What's like the title the Profile finished last, and its name: films for a film, shows for a show,
-     * one cover per title. Worked out again only when it finishes something else, so the row stays put.
+     * What's like the title the Profile finished last, of a kind Home shows, and its name: films for a
+     * film, shows for a show, one cover per title. Worked out again only when it finishes something else,
+     * so the row stays put.
+     *
+     * Choosing reads every title sharing a genre, which takes a moment on a Stick, so Home doesn't wait
+     * for it: back on Home it starts from the row it last had for this Profile, or none.
      */
     @OptIn(ExperimentalCoroutinesApi::class)
-    private val becauseYouWatched: Flow<Pair<String, List<VodTitle>>?> = combine(
-        graph.viewerLibrary.lastFinished(),
-        settings.moviesEnabled,
-        settings.seriesEnabled,
-    ) { title, movies, shows -> title?.takeIf { if (it is VodTitle.OfMovie) movies else shows } }
-        .distinctUntilChanged { a, b -> a?.kind == b?.kind && a?.id == b?.id }
-        .mapLatest { basis -> basis?.let { VodTitleCleaner.clean(it.name) to likeThis(it) } }
+    private val becauseYouWatched: Flow<Pair<String, List<VodTitle>>?> =
+        combine(settings.moviesEnabled, settings.seriesEnabled, ::Pair)
+            .flatMapLatest { (movies, shows) ->
+                graph.viewerLibrary.lastFinished { if (it is VodTitle.OfMovie) movies else shows }
+            }
+            .distinctUntilChanged { a, b -> a?.kind == b?.kind && a?.id == b?.id }
+            .mapLatest { basis ->
+                val profile = settings.activeProfileId.value
+                basis?.let { VodTitleCleaner.clean(it.name) to likeThis(it) }.also { lastBecause = profile to it }
+            }
+            .onStart { emit(lastBecause?.takeIf { it.first == settings.activeProfileId.value }?.second) }
 
     private suspend fun likeThis(basis: VodTitle): List<VodTitle> {
         val catalog = graph.catalogRepository
@@ -1948,10 +1968,6 @@ private fun acrossVersions(every: List<Series>, refs: Set<SeriesRef>, titles: Ti
     val marked = every.filter { it.ref in refs }.mapNotNullTo(HashSet()) { titles.of(it.id) }
     return refs + every.filter { titles.of(it.id) in marked }.map { it.ref }
 }
-
-/** [this] as a portrait cover, as a category's grid draws a show. */
-internal fun Series.cover() =
-    TitleCover(id = id, name = name, title = VodTitleCleaner.clean(name), posterUrl = posterUrl)
 
 /** How many titles Home's Because you watched row holds. */
 private const val BECAUSE_YOU_WATCHED_TITLES = 20

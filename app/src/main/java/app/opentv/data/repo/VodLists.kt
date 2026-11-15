@@ -179,7 +179,7 @@ internal fun Movie.withTmdb(meta: TmdbMeta?, at: Long): Movie = if (meta == null
         releaseDate = releaseDate ?: meta.releaseDate,
         tmdbAnsweredAt = at,
         // TMDB's latest answer, unlike the fields above: nothing else says what's like a title.
-        tmdbRecommendations = joinRecommendations(meta.recommendations) ?: tmdbRecommendations,
+        tmdbRecommendations = joinRecommendations(meta.recommendations),
     ).withPeopleFrom(meta)
 }
 

@@ -19,6 +19,7 @@ import app.opentv.data.model.Series
 import app.opentv.data.repo.EpisodeStatuses
 import app.opentv.data.repo.MediaKey
 import app.opentv.data.repo.ShowEpisodes
+import app.opentv.data.repo.TitleCover
 import app.opentv.ui.VodViewModel
 import kotlinx.coroutines.launch
 
@@ -60,9 +61,9 @@ private fun ShowPage(
     viewModel: VodViewModel,
 ) {
     val scope = rememberCoroutineScope()
-    // From stored data only, so the page never waits on it; read again once TMDB's answer is stored,
-    // which can only add the pill at the end of the row, so the Highlight doesn't move.
-    val suggestions = produceState(emptyList(), series.id, series.tmdbRecommendations) {
+    // From stored data only, so the page never waits on it; null until first read. Read again once
+    // TMDB's answer is stored, keeping the last read meanwhile, so a pill already there stays put.
+    val suggestions = produceState<List<TitleCover>?>(null, series.id, series.tmdbRecommendations) {
         value = viewModel.moreLikeThis(series)
     }.value
     var versions by remember(series.id) { mutableStateOf<Pair<MediaKey, PageVersions>?>(null) }
@@ -108,8 +109,9 @@ private fun ShowPage(
                 versionKey?.let { versions = it to viewModel.pageVersions(it) }
             }
         },
-        suggestions = suggestions,
+        suggestions = suggestions.orEmpty(),
         onOpenSeries = onOpenSeries,
+        suggestionsKnown = suggestions != null,
     )
 }
 

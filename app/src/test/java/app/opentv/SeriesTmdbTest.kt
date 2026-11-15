@@ -112,6 +112,15 @@ class SeriesTmdbTest {
     }
 
     @Test
+    fun `TMDB recommending nothing now clears the recommendations it gave before`() = runTest {
+        save(series("7", tmdbAt = NOW - 7 * 31 * DAY).copy(tmdbRecommendations = "1,2"))
+
+        pass { Result.success(TmdbMeta(overview = "A show.")) }.fillAll(PANEL_SOURCE)
+
+        assertThat(stored("7").recommendedTmdbIds).isEmpty()
+    }
+
+    @Test
     fun `a series TMDB has no match for isn't asked about again`() = runTest {
         save(series("7"))
         val noMatch = pass { Result.success(null) }

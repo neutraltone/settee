@@ -443,8 +443,9 @@ data class Movie(
     val tmdbAnsweredAt: Long? = null,
     /**
      * The TMDB ids of the films TMDB recommends for this one, comma-separated in its order, from the
-     * same details request (see [recommendedTmdbIds]). Null until TMDB has answered with them, so
-     * More like this falls back to genres; replaced each time TMDB answers again.
+     * same details request (see [recommendedTmdbIds]). Null until TMDB has answered, so More like this
+     * falls back to genres; replaced each time TMDB answers again, with an empty list when it recommends
+     * nothing now.
      */
     val tmdbRecommendations: String? = null,
     /**
@@ -504,8 +505,11 @@ val Movie.recommendedTmdbIds: List<String> get() = splitRecommendations(tmdbReco
 /** The TMDB ids TMDB recommends for this show, in its order; empty when it hasn't said. */
 val Series.recommendedTmdbIds: List<String> get() = splitRecommendations(tmdbRecommendations)
 
-/** TMDB's recommended [ids] as a title stores them; null for none, so nothing is stored. */
-fun joinRecommendations(ids: List<String>): String? = ids.takeIf { it.isNotEmpty() }?.joinToString(",")
+/**
+ * TMDB's recommended [ids] as a title stores them. Empty, not null, for none: null is "TMDB hasn't said",
+ * which a catalogue refresh and a provider's details keep the stored list over.
+ */
+fun joinRecommendations(ids: List<String>): String = ids.joinToString(",")
 
 private fun splitRecommendations(stored: String?): List<String> =
     stored?.split(',')?.mapNotNull { knownTmdbId(it) }.orEmpty()

@@ -35,7 +35,6 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
@@ -85,7 +84,8 @@ import kotlinx.coroutines.delay
  * until the Profile's Favourites have loaded, and the toggle does nothing till then. [versions] adds the
  * Quality pill for the whole show, as the film page has it. [suggestions] are its More like this: with
  * any, a More like this pill comes last in the pill row, and highlighting it shows them as a grid in the
- * episodes' place; OK on one calls [onOpenSeries].
+ * episodes' place; OK on one calls [onOpenSeries]. Until [suggestionsKnown], a one-season show's episodes
+ * wait, since a pill row may yet come above them.
  */
 @Composable
 internal fun SeriesDetailContent(
@@ -102,6 +102,7 @@ internal fun SeriesDetailContent(
     onChooseVersion: (MediaKey) -> Unit = {},
     suggestions: List<TitleCover> = emptyList(),
     onOpenSeries: (Long) -> Unit = {},
+    suggestionsKnown: Boolean = true,
 ) {
     val cast = remember(series.cast) { personNames(series.cast) }
     var castShown by remember(series.id) { mutableStateOf(false) }
@@ -163,6 +164,9 @@ internal fun SeriesDetailContent(
             }
             if (showingLikeThis) {
                 LikeThisGrid(nav, suggestions, onOpenSeries)
+            } else if (!suggestionsKnown && seasons.size == 1) {
+                // Rather than list them and push them down a row when More like this's pill row arrives.
+                EpisodesComing()
             } else {
                 EpisodeList(series, nav, shown, statuses, episodeList, play)
             }
@@ -315,7 +319,8 @@ private fun SeasonPills(nav: ShowPageNav, shown: ShowSeasons, pillRow: LazyListS
 @Composable
 private fun LikeThisGrid(nav: ShowPageNav, covers: List<TitleCover>, onOpenSeries: (Long) -> Unit) {
     val grid = rememberLazyGridState()
-    var highlighted by remember { mutableIntStateOf(-1) }
+    // By id, not place: the covers can be read again while one is highlighted.
+    var highlighted by remember { mutableStateOf<Long?>(null) }
     LazyVerticalGrid(
         state = grid,
         columns = GridCells.FixedSize(ArtCardSize.Portrait.width),
@@ -331,7 +336,7 @@ private fun LikeThisGrid(nav: ShowPageNav, covers: List<TitleCover>, onOpenSerie
             TitleArt(
                 cover = cover,
                 modifier = if (index == 0) Modifier.focusRequester(nav.focus.firstCover) else Modifier,
-                onHighlight = { highlighted = index },
+                onHighlight = { highlighted = cover.id },
                 onOpen = { onOpenSeries(cover.id) },
                 onOptions = null,
             )
@@ -339,8 +344,12 @@ private fun LikeThisGrid(nav: ShowPageNav, covers: List<TitleCover>, onOpenSerie
     }
 }
 
-private fun LazyGridState.inFirstRow(index: Int): Boolean =
-    layoutInfo.visibleItemsInfo.firstOrNull { it.index == index }?.row == 0
+private fun LazyGridState.inFirstRow(coverId: Long?): Boolean =
+    coverId != null && layoutInfo.visibleItemsInfo.firstOrNull { it.key == coverId }?.row == 0
+
+@Composable
+private fun EpisodesComing() =
+    Text(stringResource(R.string.vod_loading_episodes), style = SetteeType.Body, color = SetteeColors.QuietText)
 
 /** The selected season's episodes, or a line saying they're on their way. */
 @Composable
@@ -354,7 +363,7 @@ private fun EpisodeList(
 ) {
     val season = shown.selected
     if (season == null) {
-        Text(stringResource(R.string.vod_loading_episodes), style = SetteeType.Body, color = SetteeColors.QuietText)
+        EpisodesComing()
         return
     }
     LazyColumn(

@@ -28,7 +28,7 @@ internal fun Series.withTmdb(meta: TmdbMeta?, at: Long): Series = if (meta == nu
         rating = rating ?: meta.rating,
         year = year ?: meta.year,
         tmdbAnsweredAt = at,
-        tmdbRecommendations = joinRecommendations(meta.recommendations) ?: tmdbRecommendations,
+        tmdbRecommendations = joinRecommendations(meta.recommendations),
     )
 }
 

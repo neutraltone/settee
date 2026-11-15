@@ -7,8 +7,10 @@ package app.opentv
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.SemanticsNodeInteraction
@@ -105,8 +107,9 @@ class SeriesDetailContentTest {
 
     private val chosen = mutableListOf<MediaKey>()
 
-    // The show's More like this; set before [show].
-    private var suggestions = emptyList<TitleCover>()
+    // The show's More like this, and whether it has been read yet.
+    private var suggestions by mutableStateOf(emptyList<TitleCover>())
+    private val suggestionsKnown = mutableStateOf(true)
 
     private var openedSeries: Long? = null
 
@@ -129,6 +132,7 @@ class SeriesDetailContentTest {
                 onChooseVersion = { chosen += it },
                 suggestions = suggestions,
                 onOpenSeries = { openedSeries = it },
+                suggestionsKnown = suggestionsKnown.value,
             )
         }
         settle()
@@ -486,6 +490,22 @@ class SeriesDetailContentTest {
         press(Key.DirectionUp)
 
         pill("Season 1").assertIsFocused()
+    }
+
+    @Test
+    fun `a one-season show's episodes wait for its suggestions, so a pill row never pushes them down`() {
+        episodes = (1..3).map { testEpisode(1, it) }
+        suggestionsKnown.value = false
+        show(SeriesMainAction.Play(testEpisode(1, 1)))
+
+        episodeRow(1, 1).assertDoesNotExist()
+
+        suggestions = likeThis
+        suggestionsKnown.value = true
+        settle()
+
+        pill("More like this").assertExists()
+        episodeRow(1, 1).assertExists()
     }
 
     @Test
