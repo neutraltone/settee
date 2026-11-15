@@ -12,12 +12,14 @@ import app.opentv.core.ViewerError
 import app.opentv.data.db.ChannelDao
 import app.opentv.data.db.EpgChannelAliasDao
 import app.opentv.data.db.EpgFeedDao
+import app.opentv.data.db.GuideRefreshDao
 import app.opentv.data.db.ProgrammeDao
 import app.opentv.data.db.SourceDao
 import app.opentv.data.model.ChannelEpgMatch
 import app.opentv.data.model.EpgChannelAlias
 import app.opentv.data.model.EpgFeed
 import app.opentv.data.model.GuideProgramme
+import app.opentv.data.model.GuideSpan
 import app.opentv.data.model.Programme
 import app.opentv.data.model.Source
 import app.opentv.data.parser.ChannelNameNormalizer
@@ -58,6 +60,8 @@ import okhttp3.ResponseBody
  * - Programmes are **upserted in batches** as they stream out of the parser. The unique index
  *   on `(feedId, epgChannelId, startUtcMillis)` makes a re-run idempotent, so a sync that
  *   dies at 60% leaves 60% of a fresher guide behind — strictly better than before.
+ * - Once a feed's download is whole, that feed's older rows overlapping what it now lists for each
+ *   channel go, so a programme whose start moved doesn't stay on as a ghost (#352).
  * - Old programmes are pruned **by age**, only after at least one feed succeeds.
  * - A failed feed leaves that feed's previous data intact and records the reason on the
  *   feed row, where the settings screen shows it — no silent failure.
@@ -71,6 +75,7 @@ internal fun List<Programme>.onNowAt(nowUtcMillis: Long): Programme? =
 
 class EpgRepository(
     private val programmeDao: ProgrammeDao,
+    private val refreshDao: GuideRefreshDao,
     private val feedDao: EpgFeedDao,
     private val aliasDao: EpgChannelAliasDao,
     private val channelDao: ChannelDao,
@@ -335,8 +340,11 @@ class EpgRepository(
         val batch = ArrayList<Programme>(BATCH_SIZE)
         val aliases = ArrayList<EpgChannelAlias>(256)
         var written = 0
+        // One per channel, not per programme: a week of a national guide is hundreds of thousands.
+        val spans = HashMap<String, GuideSpan>()
 
         try {
+            val writtenUpToId = refreshDao.highestId()
             openFeedStream(feed, read).use { stream ->
                 val stats = XmltvParser.parse(
                     input = stream,
@@ -354,6 +362,9 @@ class EpgRepository(
                         // Skip anything that finished before the retention cut-off; no point
                         // writing rows we are about to prune.
                         if (programme.endUtcMillis >= nowUtcMillis - RETENTION_PAST_MILLIS) {
+                            spans.getOrPut(programme.epgChannelId) {
+                                GuideSpan(programme.startUtcMillis, programme.endUtcMillis)
+                            }.widen(programme.startUtcMillis, programme.endUtcMillis)
                             batch += programme
                             if (batch.size >= BATCH_SIZE) {
                                 programmeDao.insertOrReplace(batch)
@@ -374,6 +385,9 @@ class EpgRepository(
                 if (written == 0 && stats.programmeCount == 0) {
                     return FeedResult.Failed(wording.of(R.string.error_guide_empty, "NoProgrammes"))
                 }
+                // Only now the download is whole: a feed cut off part way never got to say what
+                // replaces the rest, so it mustn't lose any of it.
+                refreshDao.deleteSuperseded(feed.id, writtenUpToId, spans)
                 return FeedResult.Success(written, stats.channelCount)
             }
         } catch (e: CancellationException) {

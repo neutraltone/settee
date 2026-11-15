@@ -28,6 +28,7 @@ import app.opentv.data.model.Episode
 import app.opentv.data.model.Favourite
 import app.opentv.data.model.GuideFingerprint
 import app.opentv.data.model.GuideProgramme
+import app.opentv.data.model.GuideSpan
 import app.opentv.data.model.HandMark
 import app.opentv.data.model.LivePlayback
 import app.opentv.data.model.LiveStreamFormat
@@ -859,6 +860,49 @@ interface ProgrammeDao {
 
     @Query("DELETE FROM programmes WHERE feedId = :feedId")
     suspend fun deleteForFeed(feedId: Long)
+}
+
+/**
+ * What a guide refresh does to a feed's stored programmes besides writing the new ones (#352). Apart
+ * from [ProgrammeDao] so neither grows past what one interface should hold.
+ */
+@Dao
+interface GuideRefreshDao {
+    /**
+     * The highest programme id so far, 0 when there are none: a guide sync's watermark. Ids are
+     * `AUTOINCREMENT`, so every row written after this has a higher one, each slot
+     * [ProgrammeDao.insertOrReplace] replaced included.
+     */
+    @Query("SELECT IFNULL(MAX(id), 0) FROM programmes")
+    suspend fun highestId(): Long
+
+    /**
+     * Drops what [feedId]'s earlier downloads stored, at or below [writtenUpToId], that overlaps the
+     * span each channel in [spans] now covers: a programme whose start moved isn't in the slot its
+     * replacement took, so nothing else would remove it (#352). One delete per channel rather than
+     * `NOT IN (:everyNewId)`, which would pass SQLite's bound-variable limit on any real guide.
+     */
+    @Transaction
+    suspend fun deleteSuperseded(feedId: Long, writtenUpToId: Long, spans: Map<String, GuideSpan>) {
+        for ((channelId, span) in spans) {
+            deleteSupersededOn(feedId, channelId, writtenUpToId, span.fromUtcMillis, span.untilUtcMillis)
+        }
+    }
+
+    @Query(
+        """
+        DELETE FROM programmes
+        WHERE feedId = :feedId AND epgChannelId = :channelId AND id <= :writtenUpToId
+          AND startUtcMillis < :untilUtcMillis AND endUtcMillis > :fromUtcMillis
+        """,
+    )
+    suspend fun deleteSupersededOn(
+        feedId: Long,
+        channelId: String,
+        writtenUpToId: Long,
+        fromUtcMillis: Long,
+        untilUtcMillis: Long,
+    )
 }
 
 @Dao

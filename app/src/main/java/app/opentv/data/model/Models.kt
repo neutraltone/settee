@@ -328,6 +328,22 @@ interface Airing {
 fun <T : Airing> List<T>.liveAt(millis: Long): T? = firstOrNull { it.isLiveAt(millis) }
 
 /**
+ * The time one channel's programmes in a guide download run over, its earliest start to its latest
+ * end, widened as they're read.
+ */
+class GuideSpan(fromUtcMillis: Long, untilUtcMillis: Long) {
+    var fromUtcMillis = fromUtcMillis
+        private set
+    var untilUtcMillis = untilUtcMillis
+        private set
+
+    fun widen(startUtcMillis: Long, endUtcMillis: Long) {
+        if (startUtcMillis < fromUtcMillis) fromUtcMillis = startUtcMillis
+        if (endUtcMillis > untilUtcMillis) untilUtcMillis = endUtcMillis
+    }
+}
+
+/**
  * A [Programme] as the guide grid holds it: only what a cell draws and a row is built from. The grid
  * keeps a whole day's programmes for every guide feed in memory, so the description, category and
  * icon stay in the database, read by guide channel and start when one programme is shown in full or
