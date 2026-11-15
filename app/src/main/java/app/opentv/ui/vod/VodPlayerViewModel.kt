@@ -49,6 +49,13 @@ class VodPlayerViewModel(
     interface Playback {
         fun progress(): NextEpisodeCountdown.Playback
 
+        /**
+         * Where what was last asked for has got to, for starting another Version there, or null when that
+         * isn't known. Unlike [progress] it doesn't need the stream's length, and while a stream is still
+         * being found it's where that stream was asked to start (#379).
+         */
+        fun position(): Long?
+
         /** Plays [request], saying it's in place of the Quality called [skipped] if there is one. */
         fun play(request: PlayerController.Request, skipped: String? = null)
 
@@ -91,8 +98,12 @@ class VodPlayerViewModel(
     /** What [chooseVersion] keeps the choice with. */
     internal val versions: VodQualities get() = graph.vodQualities
 
-    /** Where what's playing had got to, for starting another Version of it there. */
-    internal val playingAt: Long? get() = playback?.progress()?.positionMillis ?: lastSeen?.positionMillis
+    /** Where what's playing had got to, for starting another Version of it there, or null when that isn't known. */
+    internal val playingAt: Long? get() = playback?.position() ?: lastKnown
+
+    /** Where what's playing had got to without asking the player, which a rebuilt screen's doesn't know. */
+    private val lastKnown: Long?
+        get() = lastSeen?.positionMillis ?: 0L.takeIf { startedAtZero } ?: requestedFrom
 
     private val _canMarkWatched = MutableStateFlow(false)
 
@@ -116,6 +127,14 @@ class VodPlayerViewModel(
      * position the old one saved as it went.
      */
     private var lastSeen: NextEpisodeCountdown.Playback? = null
+
+    /**
+     * Where what's playing was asked to start in place of its resume point, until [lastSeen] knows
+     * better. A Version chosen while the last was still loading has saved no resume point of its own
+     * yet, so a rebuilt screen must start it here (#379). A step down keeps it: the lower Quality
+     * started from the same place.
+     */
+    private var requestedFrom: Long? = null
 
     /** What was marked Watched from the options list, which saving progress must leave alone. */
     private var marked: MediaKey? = null
@@ -141,7 +160,7 @@ class VodPlayerViewModel(
                 start(route, fromMillis = if (fromStart && savedState.spendFromStart()) 0 else null)
             }
             countdown.overlay is Overlay.StillWatching -> Unit
-            else -> start(current, fromMillis = lastSeen?.positionMillis ?: 0L.takeIf { startedAtZero })
+            else -> start(current, fromMillis = lastKnown)
         }
     }
 
@@ -238,7 +257,10 @@ class VodPlayerViewModel(
         startedAtZero = fromMillis == 0L || (startedAtZero && key == _current.value)
         _current.value = key
         lastSeen = null
-        planned?.let { (request, skipped) -> playback?.play(request, skipped) }
+        planned?.let { (request, skipped) ->
+            requestedFrom = fromMillis
+            playback?.play(request, skipped)
+        }
         _qualityChoices.value = graph.vodQualities.choicesFor(key)
         _canMarkWatched.value = graph.canMarkWatched(key)
         val episode = (key as? MediaKey.Episode)?.let { graph.catalogRepository.episode(it.episodeId) }
