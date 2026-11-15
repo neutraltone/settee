@@ -295,11 +295,15 @@ abstract class OpenTvDatabase : RoomDatabase() {
          * are asked again, so the ones the provider sent without a poster get TMDB's. Only those with
          * no poster: one that has a poster keeps it whatever TMDB says. The provider's answer
          * (`detailsLookedUp`) stands. Only data changes.
+         *
+         * Dated the epoch rather than cleared: that's long enough ago to be due again, while a null
+         * would say TMDB never answered, and a list refresh would then put the provider's guessed
+         * director back over TMDB's (`keepingLookUpsOf`), for good if the viewer has no key now.
          */
         private val POSTER_REASK = object : Migration(15, 16) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL(
-                    "UPDATE `movies` SET `tmdbAnsweredAt` = NULL " +
+                    "UPDATE `movies` SET `tmdbAnsweredAt` = 0 " +
                         "WHERE `posterUrl` IS NULL AND `tmdbAnsweredAt` IS NOT NULL",
                 )
             }
