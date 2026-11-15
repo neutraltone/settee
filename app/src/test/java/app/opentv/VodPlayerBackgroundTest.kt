@@ -16,7 +16,6 @@ import app.opentv.core.ServiceLocator
 import app.opentv.player.PlayerController
 import app.opentv.ui.player.SubtitlePicks
 import app.opentv.ui.vod.VodPlayerContent
-import app.opentv.ui.vod.VodPlayerViewModel
 import app.opentv.ui.vod.vodPlayback
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.runBlocking
@@ -42,13 +41,18 @@ class VodPlayerBackgroundTest {
     private val players = TestPlayers(app)
     private val controller = players.controller()
     private val graph = ServiceLocator.Graph(app)
-    private val viewModel = VodPlayerViewModel(app, graph)
+    private val viewModels = TestViewModels()
+
+    // From a store, so it's cleared before the database closes: looking up the next episode on its
+    // scope could otherwise land after the close and fail a test with "connection is closed".
+    private val viewModel = viewModels.vodPlayer(app, graph)
     private val lifecycle = TestLifecycle()
 
     @After
     fun release() {
         controller.release()
         players.close()
+        viewModels.clear()
         graph.database.close()
     }
 
@@ -108,11 +112,6 @@ class VodPlayerBackgroundTest {
             compose.waitForIdle()
 
             assertThat(controller.playWhenReady.value).isTrue()
-            // Going behind still saves the place, off the main thread: closing the database under that
-            // write failed this test now and then with "connection is closed".
-            compose.waitUntil(WAIT_MILLIS) {
-                runBlocking { graph.viewerLibrary.resumeFrom("ep:11") } >= TEN_MINUTES
-            }
         } finally {
             PipState.setInPip(false)
         }
