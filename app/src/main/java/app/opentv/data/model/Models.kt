@@ -422,6 +422,13 @@ data class Movie(
      * included.
      */
     val tmdbAnsweredAt: Long? = null,
+    /**
+     * The catalogue refresh that last listed this film (UTC epoch millis, see `VodLists`). After a
+     * complete list, the source's films with an older stamp are the ones the provider dropped, found
+     * without binding every listed id, as for [Channel.lastSeenMillis].
+     */
+    @ColumnInfo(defaultValue = "0")
+    val lastSeenMillis: Long = 0,
 )
 
 @Entity(
@@ -459,6 +466,9 @@ data class Series(
     val tmdbId: String? = null,
     /** When TMDB last answered about this series, as [Movie.tmdbAnsweredAt]. */
     val tmdbAnsweredAt: Long? = null,
+    /** The catalogue refresh that last listed this series, as [Movie.lastSeenMillis]. */
+    @ColumnInfo(defaultValue = "0")
+    val lastSeenMillis: Long = 0,
 )
 
 /** A series by what identifies it across a catalogue refresh: its source and the provider's id. */

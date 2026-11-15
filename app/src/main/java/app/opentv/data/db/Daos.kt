@@ -1088,7 +1088,106 @@ interface MovieDao {
 
     @Query("DELETE FROM movies WHERE sourceId = :sourceId")
     suspend fun deleteForSource(sourceId: Long)
+
+    /** The newest refresh stamp on [sourceId]'s films, or null when it has none. */
+    @Query("SELECT MAX(lastSeenMillis) FROM movies WHERE sourceId = :sourceId")
+    suspend fun lastSeenOf(sourceId: Long): Long?
+
+    /** The refresh stamps of these stored films (at most a batch of 500). */
+    @Query("SELECT id, lastSeenMillis FROM movies WHERE id IN (:ids)")
+    suspend fun lastSeen(ids: List<Long>): List<LastSeen>
+
+    /**
+     * Saves films a detail open filled in, those still stored only, each keeping the refresh stamp it
+     * has now. The row was read before network calls, and a refresh in between may have restamped it,
+     * so saving it as read would let the refresh delete a film it had just listed, or deleted it, and
+     * [upsertAll] would bring it back.
+     */
+    @Transaction
+    suspend fun saveLookedUp(movies: List<Movie>) {
+        val stamps = lastSeen(movies.map { it.id }).associate { it.id to it.lastSeenMillis }
+        val stored = movies.mapNotNull { movie -> stamps[movie.id]?.let { movie.copy(lastSeenMillis = it) } }
+        if (stored.isNotEmpty()) upsertAll(stored)
+    }
 }
+
+/**
+ * What `RetiredTitles` reads and deletes when a provider stops listing films, series and episodes,
+ * kept apart from the catalogue's own DAOs since only that one place may delete titles and move
+ * resume points (#351).
+ */
+@Dao
+interface RetiredTitlesDao {
+    /**
+     * [sourceId]'s films last listed before [stamp] that someone has a resume point on. From the
+     * positions' side, looked up by id: a source pointed at another panel leaves every film stale, and
+     * checking each of those against the positions would take far longer than the few positions there are.
+     */
+    @Query(
+        """
+        SELECT DISTINCT movies.* FROM playback_positions
+        JOIN movies ON movies.id = CAST(substr(playback_positions.mediaKey, 7) AS INTEGER)
+        WHERE substr(playback_positions.mediaKey, 1, 6) = 'movie:'
+          AND movies.sourceId = :sourceId AND movies.lastSeenMillis < :stamp
+        """,
+    )
+    suspend fun staleWatchedMovies(sourceId: Long, stamp: Long): List<Movie>
+
+    /** Deletes [sourceId]'s films last listed before [stamp]: the ones the provider dropped. */
+    @Query("DELETE FROM movies WHERE sourceId = :sourceId AND lastSeenMillis < :stamp")
+    suspend fun deleteStaleMovies(sourceId: Long, stamp: Long)
+
+    /** Deletes [sourceId]'s series last listed before [stamp]: the ones the provider dropped. */
+    @Query("DELETE FROM series WHERE sourceId = :sourceId AND lastSeenMillis < :stamp")
+    suspend fun deleteStaleSeries(sourceId: Long, stamp: Long)
+
+    /**
+     * The episodes someone has a resume point on, of [sourceId]'s series last listed before [stamp].
+     * From the positions' side, as [staleWatchedMovies] and for the same reason.
+     */
+    @Query(
+        """
+        SELECT DISTINCT episodes.* FROM playback_positions
+        JOIN episodes ON episodes.id = CAST(substr(playback_positions.mediaKey, 4) AS INTEGER)
+        JOIN series ON series.sourceId = episodes.sourceId AND series.seriesId = episodes.seriesId
+        WHERE substr(playback_positions.mediaKey, 1, 3) = 'ep:'
+          AND series.sourceId = :sourceId AND series.lastSeenMillis < :stamp
+        """,
+    )
+    suspend fun watchedEpisodesOfStaleSeries(sourceId: Long, stamp: Long): List<Episode>
+
+    /** Deletes the episodes of [sourceId]'s series last listed before [stamp], before those series go. */
+    @Query(
+        """
+        DELETE FROM episodes WHERE sourceId = :sourceId AND seriesId IN
+            (SELECT seriesId FROM series WHERE sourceId = :sourceId AND lastSeenMillis < :stamp)
+        """,
+    )
+    suspend fun deleteEpisodesOfStaleSeries(sourceId: Long, stamp: Long)
+
+    /** Deletes these episodes (at most a batch of 500). */
+    @Query("DELETE FROM episodes WHERE id IN (:ids)")
+    suspend fun deleteEpisodes(ids: List<Long>)
+
+    /** Every Profile's position on [key], for moving them off a title that's going. */
+    @Query("SELECT * FROM playback_positions WHERE mediaKey = :key")
+    suspend fun positionsOn(key: String): List<PlaybackPosition>
+
+    /** Deletes every Profile's position on [key]. */
+    @Query("DELETE FROM playback_positions WHERE mediaKey = :key")
+    suspend fun deletePositionsOn(key: String)
+
+    /** [sourceId]'s films as grouping into titles reads them, once. */
+    @Query("SELECT id, sourceId, name, tmdbId, year, categoryId FROM movies WHERE sourceId = :sourceId")
+    suspend fun movieVersionRows(sourceId: Long): List<VersionRow>
+
+    /** [sourceId]'s series as grouping into titles reads them, once. */
+    @Query("SELECT id, sourceId, name, tmdbId, year, categoryId FROM series WHERE sourceId = :sourceId")
+    suspend fun seriesVersionRows(sourceId: Long): List<VersionRow>
+}
+
+/** A film or series' local id and the refresh that last listed it. */
+data class LastSeen(val id: Long, val lastSeenMillis: Long)
 
 /** Who [this] movie credits, saved under [id]. */
 private fun Movie.creditsUnder(id: Long) = CreditedTitle(id, cast, director, writer, studio)
@@ -1215,6 +1314,22 @@ interface SeriesDao {
 
     @Query("DELETE FROM series WHERE sourceId = :sourceId")
     suspend fun deleteForSource(sourceId: Long)
+
+    /** The newest refresh stamp on [sourceId]'s series, or null when it has none. */
+    @Query("SELECT MAX(lastSeenMillis) FROM series WHERE sourceId = :sourceId")
+    suspend fun lastSeenOf(sourceId: Long): Long?
+
+    /** The refresh stamps of these stored series (at most a batch of 500). */
+    @Query("SELECT id, lastSeenMillis FROM series WHERE id IN (:ids)")
+    suspend fun lastSeen(ids: List<Long>): List<LastSeen>
+
+    /** Saves series a detail open or background pass filled in, as [MovieDao.saveLookedUp] saves films. */
+    @Transaction
+    suspend fun saveLookedUp(items: List<Series>) {
+        val stamps = lastSeen(items.map { it.id }).associate { it.id to it.lastSeenMillis }
+        val stored = items.mapNotNull { series -> stamps[series.id]?.let { series.copy(lastSeenMillis = it) } }
+        if (stored.isNotEmpty()) upsertAll(stored)
+    }
 }
 
 @Dao

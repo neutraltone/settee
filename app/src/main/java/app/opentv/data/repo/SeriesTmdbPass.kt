@@ -52,7 +52,7 @@ class SeriesTmdbPass(
                             val filled = found.mapNotNull { (series, answer) ->
                                 seriesDao.byId(series.id)?.withTmdb(answer.meta, now)
                             }
-                            seriesDao.upsertAll(filled)
+                            seriesDao.saveLookedUp(filled)
                         }
                     },
                 )
