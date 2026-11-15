@@ -42,6 +42,7 @@ python3 -m unittest discover -s tools/screenshots  # screenshot comparison tests
 tools/perf/stick_baseline.py --help         # measure performance on a Fire TV Stick (docs/PERFORMANCE.md)
 python3 -m unittest discover -s tools/perf  # tests for that script
 python3 -m unittest discover -s tools/check # tests for check.py
+python3 -m unittest discover -s tools/signing  # tests for check-apk-signer.sh
 ANDROID_SERIAL=emulator-5554 ./gradlew :app:generateBaselineProfile  # regenerate the baseline profile on an Android 13+ TV emulator; commit it (docs/PERFORMANCE.md)
 tools/render-launcher-art.sh                # regenerate the mark's drawables, SVGs and launcher PNGs
 python3 -m unittest discover -s tools/launcher-art  # every copy of the mark matches its generator
@@ -74,7 +75,7 @@ timeout.
 
 `.github/workflows/build.yml` runs one job per required check: **Test and assemble** (unit tests, debug
 APK, and a fail if the build changed `app/schemas/`), **Android Lint**, **ktlint**, **detekt**,
-**Screenshot tools** (the Python tests in `tools/screenshots/`, `tools/perf/`, `tools/check/` and `tools/launcher-art/`) and **gitleaks** (every commit
+**Screenshot tools** (the Python tests in `tools/screenshots/`, `tools/perf/`, `tools/check/`, `tools/signing/` and `tools/launcher-art/`) and **gitleaks** (every commit
 a PR adds, reverted ones included, not other branches; pushes to `main` scan its whole history). `pr-hygiene.yml` runs `tools/check-message-test.sh` and checks the PR title with
 `tools/check-message.sh`. Lint and detekt fail only on findings missing from `app/lint-baseline.xml` /
 `app/detekt-baseline.xml`: fix a new finding, don't regenerate a baseline to hide it. detekt's

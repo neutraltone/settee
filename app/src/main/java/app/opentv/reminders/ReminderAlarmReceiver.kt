@@ -25,16 +25,21 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 /**
- * Fires when a booked reminder is due (or after a reboot). On the due alarm it raises a
+ * Fires when a booked reminder is due (or after a reboot or an update). On the due alarm it raises a
  * notification for the programme — tapping jumps to the channel — and, for an auto-tune reminder,
- * attaches a full-screen intent so a TV box switches over on its own. On boot it re-arms every
- * still-future reminder, since alarms do not survive a power cycle.
+ * attaches a full-screen intent so a TV box switches over on its own. After a boot or an update it
+ * re-arms every still-future reminder, since alarms survive neither.
  */
 class ReminderAlarmReceiver : BroadcastReceiver() {
 
     override fun onReceive(context: Context, intent: Intent) {
         when (intent.action) {
-            Intent.ACTION_BOOT_COMPLETED, Intent.ACTION_LOCKED_BOOT_COMPLETED -> rescheduleAll(context)
+            // An update drops every alarm, like a reboot, and the app may not be opened again before
+            // the next one is due (#336).
+            Intent.ACTION_BOOT_COMPLETED,
+            Intent.ACTION_LOCKED_BOOT_COMPLETED,
+            Intent.ACTION_MY_PACKAGE_REPLACED,
+            -> rescheduleAll(context)
             ReminderScheduler.ACTION_REMIND -> {
                 val id = ReminderScheduler.reminderIdFrom(intent)
                 if (id > 0) fire(context, id)
@@ -64,9 +69,7 @@ class ReminderAlarmReceiver : BroadcastReceiver() {
             try {
                 val graph = ServiceLocator.get(context)
                 if (graph.database.wontOpen() != null) return@launch
-                val repo = graph.reminderRepository
-                val now = System.currentTimeMillis()
-                repo.upcoming(now).forEach { r -> ReminderScheduler.set(context, r.id, r.startUtcMillis) }
+                ReminderScheduler.rearmUpcoming(context, graph.reminderRepository)
             } finally {
                 pending.finish()
             }

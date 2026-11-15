@@ -78,21 +78,19 @@ open class OpenTvApp :
         // opens — so checking on a recording you just started never marks it interrupted.
         appScope.launch { runCatching { graph.recordingRepository.failInterrupted() } }
 
-        // Re-arm scheduled recordings on every launch, for the same reason as the reminders below:
-        // a force-stop or app update drops their exact alarms and only a reboot is covered by the
-        // boot receiver. Re-setting the same alarm is idempotent, so this quietly keeps bookings alive.
+        // Re-arm scheduled recordings on every launch, for the same reason as the reminders below: a
+        // force-stop drops their exact alarms, and no receiver hears of one (the receivers cover a
+        // reboot and an update). Re-setting the same alarm is idempotent, so this quietly keeps
+        // bookings alive.
         appScope.launch { runCatching { graph.recordingEngine.rearmScheduled() } }
 
-        // Re-arm programme reminders on every launch. Alarms are lost on a force-stop or app
-        // update (not just a reboot, which the boot receiver already covers), and re-setting an
-        // exact alarm for the same reminder is idempotent — so this quietly keeps bells alive.
+        // Re-arm programme reminders on every launch. Alarms are lost on a force-stop, which no
+        // receiver hears of (they cover a reboot and an update), and re-setting an exact alarm for the
+        // same reminder is idempotent — so this quietly keeps bells alive.
         appScope.launch {
             runCatching {
-                val now = System.currentTimeMillis()
-                graph.reminderRepository.deleteEndedBefore(now)
-                graph.reminderRepository.upcoming(now).forEach {
-                    app.opentv.reminders.ReminderScheduler.set(this@OpenTvApp, it.id, it.startUtcMillis)
-                }
+                graph.reminderRepository.deleteEndedBefore(System.currentTimeMillis())
+                app.opentv.reminders.ReminderScheduler.rearmUpcoming(this@OpenTvApp, graph.reminderRepository)
             }
         }
     }

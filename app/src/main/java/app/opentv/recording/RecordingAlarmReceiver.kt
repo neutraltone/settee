@@ -27,16 +27,21 @@ import kotlinx.coroutines.launch
 
 /**
  * Fires when a booked recording is due, when its "about to switch" pre-alarm lands, or after a
- * reboot. On the due alarm it starts the capture service and — if auto-switch is on — moves the
- * live view onto the recording so a single-connection account doesn't get its live stream cut. On
- * the pre-alarm it warns the viewer 30s ahead. On boot it re-arms every still-future booking, since
- * alarms don't survive a power cycle.
+ * reboot or an update. On the due alarm it starts the capture service and — if auto-switch is on —
+ * moves the live view onto the recording so a single-connection account doesn't get its live stream
+ * cut. On the pre-alarm it warns the viewer 30s ahead. After a boot or an update it re-arms every
+ * still-future booking, since alarms survive neither.
  */
 class RecordingAlarmReceiver : BroadcastReceiver() {
 
     override fun onReceive(context: Context, intent: Intent) {
         when (intent.action) {
-            Intent.ACTION_BOOT_COMPLETED, Intent.ACTION_LOCKED_BOOT_COMPLETED -> rescheduleAll(context)
+            // An update drops every alarm, like a reboot, and the app may not be opened again before
+            // the next one is due (#336).
+            Intent.ACTION_BOOT_COMPLETED,
+            Intent.ACTION_LOCKED_BOOT_COMPLETED,
+            Intent.ACTION_MY_PACKAGE_REPLACED,
+            -> rescheduleAll(context)
             RecordingScheduler.ACTION_START -> {
                 val id = RecordingScheduler.recordingIdFrom(intent)
                 if (id > 0) onDue(context, id)
@@ -105,8 +110,9 @@ class RecordingAlarmReceiver : BroadcastReceiver() {
             try {
                 val graph = ServiceLocator.get(context)
                 if (graph.database.wontOpen() != null) return@launch
-                // The same rule as on launch: what's still on starts, what ended while off is missed.
-                graph.recordingEngine.rearmScheduled()
+                // The same re-arm as every launch: a booking still on starts now rather than being
+                // skipped, and one that ended while the box was off or the update installed is missed.
+                graph.recordingEngine.rearmScheduled(context.applicationContext)
             } finally {
                 pending.finish()
             }
