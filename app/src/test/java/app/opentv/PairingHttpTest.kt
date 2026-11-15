@@ -8,6 +8,7 @@ package app.opentv
 import app.opentv.pairing.PairingHttp
 import com.google.common.truth.Truth.assertThat
 import java.io.InputStream
+import java.io.SequenceInputStream
 import org.junit.Test
 
 /**
@@ -133,9 +134,9 @@ class PairingHttpTest {
             "6]}",
         )
 
-        val request = PairingHttp.readRequest(stream, maxBodyBytes = 1024)
+        val read = PairingHttp.readHead(stream)?.readBody(maxBodyBytes = 1024)
 
-        assertThat(request?.body).isEqualTo(body)
+        assertThat(read).isEqualTo(PairingHttp.Body(body, complete = true))
     }
 
     @Test
@@ -146,46 +147,70 @@ class PairingHttpTest {
         // Split inside the television's four bytes, so a piece ends partway through a character.
         val stream = Pieces(head + bytes.copyOfRange(0, bytes.size - 2), bytes.copyOfRange(bytes.size - 2, bytes.size))
 
-        val request = PairingHttp.readRequest(stream, maxBodyBytes = 1024)
+        val read = PairingHttp.readHead(stream)?.readBody(maxBodyBytes = 1024)
 
-        assertThat(request?.body).isEqualTo(body)
+        assertThat(read).isEqualTo(PairingHttp.Body(body, complete = true))
     }
 
     @Test
-    fun `a body longer than the cap is cut at the cap`() {
+    fun `a body longer than the cap is cut at the cap, and says it isn't all there`() {
         val stream = Pieces("POST /reorder HTTP/1.1\r\nContent-Length: 100\r\n\r\n", "a".repeat(100))
 
-        val request = PairingHttp.readRequest(stream, maxBodyBytes = 10)
+        val read = PairingHttp.readHead(stream)?.readBody(maxBodyBytes = 10)
 
-        assertThat(request?.body).isEqualTo("aaaaaaaaaa")
+        assertThat(read).isEqualTo(PairingHttp.Body("aaaaaaaaaa", complete = false))
     }
 
     @Test
-    fun `a stream that ends before Content-Length gives back what arrived`() {
+    fun `a stream that ends before Content-Length gives back what arrived, and says it isn't all there`() {
         val stream = Pieces("POST /reorder HTTP/1.1\r\nContent-Length: 50\r\n\r\nshort")
 
-        val request = PairingHttp.readRequest(stream, maxBodyBytes = 1024)
+        val read = PairingHttp.readHead(stream)?.readBody(maxBodyBytes = 1024)
 
-        assertThat(request?.body).isEqualTo("short")
+        assertThat(read).isEqualTo(PairingHttp.Body("short", complete = false))
     }
 
     @Test
-    fun `the request line and headers are read alongside the body`() {
-        val stream = Pieces("GET /channels?t=abc&category=7 HTTP/1.1\r\nHost: 192.168.1.2\r\nX-Thing:  yes \r\n\r\n")
+    fun `a request with no body has a complete, empty one`() {
+        val stream = Pieces("GET /meta?t=abc HTTP/1.1\r\nHost: 192.168.1.2\r\n\r\n")
 
-        val request = PairingHttp.readRequest(stream, maxBodyBytes = 1024)!!
+        val read = PairingHttp.readHead(stream)?.readBody(maxBodyBytes = 1024)
+
+        assertThat(read).isEqualTo(PairingHttp.Body("", complete = true))
+    }
+
+    @Test
+    fun `the request line and headers are read without touching the body`() {
+        val head = "GET /channels?t=abc&category=7 HTTP/1.1\r\nHost: 192.168.1.2\r\nX-Thing:  yes \r\n" +
+            "Content-Length: 10\r\n\r\n"
+        // Anything read past the head fails the test: the body is only read when it's asked for.
+        val stream = SequenceInputStream(Pieces(head), NothingMore)
+
+        val request = PairingHttp.readHead(stream)!!
 
         assertThat(request.method).isEqualTo("GET")
         assertThat(request.path).isEqualTo("/channels")
         assertThat(request.query).containsExactly("t", "abc", "category", "7")
-        assertThat(request.headers).containsExactly("host", "192.168.1.2", "x-thing", "yes")
-        assertThat(request.body).isEmpty()
+        assertThat(request.headers).containsExactly("host", "192.168.1.2", "x-thing", "yes", "content-length", "10")
     }
 
     @Test
     fun `a stream with no request in it gives no request`() {
-        assertThat(PairingHttp.readRequest(Pieces(""), maxBodyBytes = 1024)).isNull()
-        assertThat(PairingHttp.readRequest(Pieces("\r\n"), maxBodyBytes = 1024)).isNull()
+        assertThat(PairingHttp.readHead(Pieces(""))).isNull()
+        assertThat(PairingHttp.readHead(Pieces("\r\n"))).isNull()
+    }
+
+    @Test
+    fun `a head too long to be a phone's gives no request, rather than filling the TV's memory`() {
+        // One header line with no end, as a stream of rubbish without a newline would be.
+        val stream = Pieces("GET /?t=abc HTTP/1.1\r\nX-Rubbish: ", "a".repeat(PairingHttp.MAX_HEAD_BYTES))
+
+        assertThat(PairingHttp.readHead(stream)).isNull()
+    }
+
+    /** What a test's stream gives once it should have been left alone. */
+    private object NothingMore : InputStream() {
+        override fun read(): Int = throw AssertionError("read past the head")
     }
 
     /** A stream that hands over at most one piece per read, the way a socket hands over segments. */

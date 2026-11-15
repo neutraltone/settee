@@ -16,40 +16,62 @@ import java.net.URLDecoder
  *
  * Request parsing and form decoding live here, apart from sockets, so they can be tested
  * without standing up a server or a device. Everything here is a pure function, except
- * [readRequest], which reads from any stream rather than a socket.
+ * [readHead] and [Head.readBody], which read from any stream rather than a socket.
  */
 object PairingHttp {
 
-    data class Request(
+    /**
+     * The most a request's line and headers may take. A phone's are a kilobyte or two; without a
+     * limit, anything on the network trickling bytes with no line break would grow the TV's memory
+     * until the app fell over, since only the body had a cap.
+     */
+    const val MAX_HEAD_BYTES = 32 * 1024
+
+    /** A request's line and headers. Its body stays unread until [readBody] asks for it. */
+    class Head internal constructor(
         val method: String,
         val path: String,
         val query: Map<String, String>,
         val headers: Map<String, String>,
-        val body: String,
+        private val stream: RequestStream,
     ) {
-        val contentLength: Int
-            get() = headers["content-length"]?.toIntOrNull() ?: 0
+        /**
+         * Reads the body to `Content-Length` bytes, or [maxBodyBytes] if that's fewer, and only
+         * then decodes it, since `Content-Length` counts bytes, not characters. A stream that ends
+         * early, or times out, gives what arrived, marked incomplete; so does a body cut at the cap.
+         */
+        fun readBody(maxBodyBytes: Int): Body {
+            val declared = (headers["content-length"]?.toLongOrNull() ?: 0L).coerceAtLeast(0L)
+            val read = stream.readBody(minOf(declared, maxBodyBytes.toLong()).toInt())
+            return Body(read.toString(Charsets.UTF_8), complete = read.size.toLong() == declared)
+        }
     }
 
     /**
-     * Reads one request from [input]: its line, headers and a body of up to [maxBodyBytes].
-     * Null if the stream ends first or the first line isn't a request line.
+     * A request's body as it arrived. [complete] is false when fewer bytes came than
+     * `Content-Length` promised: a form cut off partway would otherwise be taken at its word,
+     * and a truncated password saved as if it were the whole one.
+     */
+    data class Body(val text: String, val complete: Boolean)
+
+    /**
+     * Reads a request's line and headers from [input], leaving the body for [Head.readBody], so a
+     * server can turn a request away before reading what it sent. Null if the stream ends first,
+     * the first line isn't a request line, or the head is longer than [MAX_HEAD_BYTES].
      *
      * The head is read as bytes, not through a `BufferedReader`, because a reader pulls the start
      * of the body into its own buffer, and a single read of the rest then returns only what has
      * arrived so far: a `/reorder` of a big group, spread over several TCP segments, was cut short
-     * (#358). `Content-Length` counts bytes, so the body is read to that many bytes and only then
-     * decoded. A stream that ends early, or times out, leaves the body as whatever arrived.
+     * (#358).
      */
-    fun readRequest(input: InputStream, maxBodyBytes: Int): Request? {
+    fun readHead(input: InputStream): Head? {
         val stream = RequestStream(input)
         val (method, path, query) = stream.readLine()?.let(::parseRequestLine) ?: return null
         val headers = generateSequence { stream.readLine() }
             .takeWhile { it.isNotEmpty() }
             .mapNotNull(::parseHeader)
             .toMap()
-        val length = (headers["content-length"]?.toIntOrNull() ?: 0).coerceIn(0, maxBodyBytes)
-        return Request(method, path, query, headers, stream.readBody(length))
+        return if (stream.headTooLong) null else Head(method, path, query, headers, stream)
     }
 
     /** Parses a request line such as `GET /pair?t=abc HTTP/1.1`. Null if it is not one. */
@@ -159,24 +181,36 @@ object PairingHttp {
     }
 }
 
-/** The bytes of one request, read as [PairingHttp.readRequest] needs them. */
-private class RequestStream(input: InputStream) {
+/** The bytes of one request, read as [PairingHttp.readHead] and [PairingHttp.Head.readBody] need them. */
+internal class RequestStream(input: InputStream) {
     private val stream = input as? BufferedInputStream ?: BufferedInputStream(input)
+    private var headBytes = 0
 
-    /** One line of the head, without its CRLF (or bare LF). Null if the stream has ended. */
+    /** True once the head ran past [PairingHttp.MAX_HEAD_BYTES]; [readLine] gives nothing more. */
+    var headTooLong = false
+        private set
+
+    /** One line of the head, without its CRLF (or bare LF). Null if the stream has ended or the head is too long. */
     fun readLine(): String? {
         val line = ByteArrayOutputStream()
-        var byte = stream.read()
+        var byte = nextHeadByte()
         while (byte != -1 && byte != '\n'.code) {
             line.write(byte)
-            byte = stream.read()
+            byte = nextHeadByte()
         }
-        if (byte == -1 && line.size() == 0) return null
+        if (headTooLong || (byte == -1 && line.size() == 0)) return null
         return line.toString(Charsets.UTF_8.name()).removeSuffix("\r")
     }
 
-    /** Up to [length] bytes of body, decoded once they're all here, or once no more will come. */
-    fun readBody(length: Int): String {
+    private fun nextHeadByte(): Int {
+        if (headBytes >= PairingHttp.MAX_HEAD_BYTES) headTooLong = true
+        if (headTooLong) return -1
+        headBytes++
+        return stream.read()
+    }
+
+    /** Up to [length] bytes of body: all of them, or as many as came before the stream ended or timed out. */
+    fun readBody(length: Int): ByteArray {
         val buffer = ByteArray(length)
         var filled = 0
         try {
@@ -188,6 +222,6 @@ private class RequestStream(input: InputStream) {
         } catch (_: SocketTimeoutException) {
             // The phone stopped sending: answer with what arrived rather than not at all.
         }
-        return String(buffer, 0, filled, Charsets.UTF_8)
+        return buffer.copyOf(filled)
     }
 }

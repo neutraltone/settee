@@ -15,6 +15,7 @@ import app.opentv.data.repo.SourceRepository
 import app.opentv.pairing.ManagerServer
 import com.google.common.truth.Truth.assertThat
 import java.net.Socket
+import java.net.URI
 import java.util.Collections
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
@@ -189,29 +190,68 @@ class ManagerServerTest {
         val session = listening()
         val ids = (1L..600L).toList()
         val body = """{"ids":[${ids.joinToString(",")}]}""".toByteArray(Charsets.UTF_8)
-        val target = session.url.substringAfter("${session.port}").replace("/?", "/reorder?")
+        val pieceSize = body.size / 4 + 1
+        val pieces = body.indices.step(pieceSize).map { body.copyOfRange(it, minOf(it + pieceSize, body.size)) }
 
-        val status = Socket(session.host, session.port).use { socket ->
-            socket.soTimeout = 5_000
-            val out = socket.getOutputStream()
-            out.write(
-                (
-                    "POST $target HTTP/1.1\r\nHost: ${session.host}\r\nContent-Type: application/json\r\n" +
-                        "Content-Length: ${body.size}\r\nConnection: close\r\n\r\n"
-                    ).toByteArray(Charsets.UTF_8),
-            )
-            // Each piece flushed on its own, with a pause, so the TV sees them arrive one at a time.
-            val pieceSize = body.size / 4 + 1
-            for (start in body.indices step pieceSize) {
-                out.write(body, start, minOf(pieceSize, body.size - start))
-                out.flush()
-                Thread.sleep(100)
-            }
-            socket.getInputStream().bufferedReader().readLine()
-        }
+        val status = sendRaw(session, withToken(session, "/reorder"), body.size, pieces)
 
         assertThat(status).isEqualTo("HTTP/1.1 200 OK")
         assertThat(committed).containsExactly(ids)
+    }
+
+    @Test
+    fun `a reorder cut off partway is refused, and nothing moves`() {
+        val session = listening()
+        val start = """{"ids":[3,2,""".toByteArray(Charsets.UTF_8)
+
+        val status = sendRaw(session, withToken(session, "/reorder"), contentLength = 100, listOf(start), end = true)
+
+        assertThat(status).isEqualTo("HTTP/1.1 400 Bad Request")
+        assertThat(committed).isEmpty()
+    }
+
+    @Test
+    fun `a request without the token is turned away at once, without waiting for the body it promised`() {
+        val session = listening()
+
+        // The body never comes. Waiting for it would hold the answer for the socket's whole timeout.
+        val status = sendRaw(session, "/reorder", contentLength = 1_000, pieces = emptyList())
+
+        assertThat(status).isEqualTo("HTTP/1.1 404 Not Found")
+    }
+
+    /** [path] with the session's long token, as the manager page asks for it. */
+    private fun withToken(session: ManagerServer.Session, path: String) = "$path?${URI(session.url).rawQuery}"
+
+    /**
+     * POSTs to [target] over a plain socket, promising [contentLength] bytes and then sending each of
+     * [pieces] on its own, flushed and paused, so the TV sees them arrive one at a time; with [end],
+     * the phone then stops sending. Gives back the status line, waiting at most five seconds.
+     */
+    private fun sendRaw(
+        session: ManagerServer.Session,
+        target: String,
+        contentLength: Int,
+        pieces: List<ByteArray>,
+        end: Boolean = false,
+    ): String? = Socket(session.host, session.port).use { socket ->
+        socket.soTimeout = 5_000
+        socket.tcpNoDelay = true
+        val out = socket.getOutputStream()
+        out.write(
+            (
+                "POST $target HTTP/1.1\r\nHost: ${session.host}\r\nContent-Type: application/json\r\n" +
+                    "Content-Length: $contentLength\r\nConnection: close\r\n\r\n"
+                ).toByteArray(Charsets.UTF_8),
+        )
+        out.flush()
+        for (piece in pieces) {
+            Thread.sleep(20)
+            out.write(piece)
+            out.flush()
+        }
+        if (end) socket.shutdownOutput()
+        socket.getInputStream().bufferedReader().readLine()
     }
 
     private fun post(session: ManagerServer.Session, path: String, body: String): Int {

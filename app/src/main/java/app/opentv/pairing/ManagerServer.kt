@@ -202,8 +202,11 @@ class ManagerServer(
             return
         }
 
-        val request = PairingHttp.readRequest(client.getInputStream(), MAX_BODY_BYTES) ?: return
-        val (method, path, query) = request
+        // Only the head for now: a request the token check turns away never has its body read.
+        val head = PairingHttp.readHead(client.getInputStream()) ?: return
+        val method = head.method
+        val path = head.path
+        val query = head.query
 
         val output = client.getOutputStream()
 
@@ -220,8 +223,15 @@ class ManagerServer(
         // A valid request counts as activity; the idle watchdog measures from here.
         lastActivityMillis = System.currentTimeMillis()
 
-        val body = if (method == "POST") request.body else ""
-        // Straight after the request is read, so reorders keep the order they arrived in; see [reorderTurns].
+        val sent = if (method == "POST") head.readBody(MAX_BODY_BYTES) else null
+        // Half of what the phone sent is refused rather than acted on, before it can take a reorder turn.
+        if (sent?.complete == false) {
+            output.write(PairingHttp.httpResponse("400 Bad Request", "text/plain", "Bad request."))
+            return
+        }
+        val body = sent?.text.orEmpty()
+        // Taken as soon as the body is in, before anything acts on it, so reorders keep the order
+        // they arrived in; see [reorderTurns].
         val reorderTurn = if (method == "POST" && path == "/reorder") reorderTurns.take() else null
 
         when {

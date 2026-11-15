@@ -294,11 +294,22 @@ class PairingServer(
             return
         }
 
-        val request = PairingHttp.readRequest(client.getInputStream(), MAX_BODY_BYTES) ?: return
-        val (method, path, query) = request
-        val body = request.body
+        val head = PairingHttp.readHead(client.getInputStream()) ?: return
+        val method = head.method
+        val path = head.path
+        val query = head.query
+        // Read before the token check, since the submit carries its token in the body.
+        val sent = head.readBody(MAX_BODY_BYTES)
 
         val output = client.getOutputStream()
+
+        // A form cut off partway is refused, not saved: its last field, a password or an address,
+        // would be stored as if it were whole.
+        if (!sent.complete) {
+            output.write(PairingHttp.httpResponse("400 Bad Request", "text/plain", "Bad request."))
+            return
+        }
+        val body = sent.text
 
         // Every route checks a token. Without one the page does not exist. The short token
         // only opens the form, which carries the full token for the submit.
