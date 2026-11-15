@@ -73,6 +73,8 @@
     <string name="rec_notification_many">Nagrywanie %1$d programów</string>
     <string name="rec_channel_name">Nagrywanie</string>
     <string name="rec_channel_desc">Wyświetlane, gdy Settee nagrywa</string>
+    <string name="rec_error_missed">To nie zostało nagrane, bo Settee nie działało w trakcie emisji.</string>
+    <string name="rec_error_missed_late">To nie zostało nagrane, bo Android uruchomił nagrywanie dopiero po zakończeniu.</string>
     <string name="rec_error_nothing">Nic nie zostało nagrane. Kanał mógł przestać nadawać, więc spróbuj nagrać go ponownie.</string>
     <string name="rec_error_usb_no_folder">Nie ma folderu do nagrywania. Wybierz folder na dysku USB w ustawieniach nagrywania.</string>
     <string name="rec_error_usb_unavailable">Nie można znaleźć dysku USB. Podłącz go ponownie, a potem jeszcze raz wybierz jego folder w ustawieniach nagrywania.</string>

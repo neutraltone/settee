@@ -73,6 +73,8 @@
     <string name="rec_notification_many">%1$d program kaydediliyor</string>
     <string name="rec_channel_name">Kayıt</string>
     <string name="rec_channel_desc">Settee kayıt yaparken gösterilir</string>
+    <string name="rec_error_missed">Bu kaçırıldı, çünkü yayın sırasında Settee çalışmıyordu.</string>
+    <string name="rec_error_missed_late">Bu kaçırıldı, çünkü Android kaydı yayın bittikten sonra başlattı.</string>
     <string name="rec_error_nothing">Hiçbir şey kaydedilmedi. Kanal durmuş olabilir, bu yüzden tekrar kaydetmeyi deneyin.</string>
     <string name="rec_error_usb_no_folder">Kayıt yapılacak bir klasör yok. Kayıt ayarlarından USB sürücünüzde bir klasör seçin.</string>
     <string name="rec_error_usb_unavailable">USB sürücünüz bulunamıyor. Sürücüyü yeniden takın, ardından Kayıt ayarlarından klasörünü tekrar seçin.</string>

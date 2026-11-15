@@ -73,6 +73,8 @@
     <string name="rec_notification_many">Tar opp %1$d programmer</string>
     <string name="rec_channel_name">Opptak</string>
     <string name="rec_channel_desc">Vises mens Settee tar opp</string>
+    <string name="rec_error_missed">Dette ble ikke tatt opp fordi Settee ikke kjørte mens det gikk.</string>
+    <string name="rec_error_missed_late">Dette ble ikke tatt opp fordi Android startet det etter at det var slutt.</string>
     <string name="rec_error_nothing">Ingenting ble tatt opp. Kanalen kan ha stoppet, så prøv å ta den opp igjen.</string>
     <string name="rec_error_usb_no_folder">Det finnes ingen mappe å ta opp til. Velg en på USB-stasjonen din i opptaksinnstillinger.</string>
     <string name="rec_error_usb_unavailable">Finner ikke USB-stasjonen din. Koble den til igjen, og velg så mappen på nytt i opptaksinnstillinger.</string>

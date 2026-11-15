@@ -73,6 +73,8 @@
     <string name="rec_notification_many">Spelar in %1$d program</string>
     <string name="rec_channel_name">Inspelning</string>
     <string name="rec_channel_desc">Visas medan Settee spelar in</string>
+    <string name="rec_error_missed">Det här missades eftersom Settee inte var igång medan det sändes.</string>
+    <string name="rec_error_missed_late">Det här missades eftersom Android startade det efter att det hade slutat.</string>
     <string name="rec_error_nothing">Inget spelades in. Kanalen kan ha slutat sända, så försök spela in den igen.</string>
     <string name="rec_error_usb_no_folder">Det finns ingen mapp att spela in till. Välj en på ditt USB-minne i inspelningsinställningarna.</string>
     <string name="rec_error_usb_unavailable">Hittar inte ditt USB-minne. Anslut det igen och välj sedan dess mapp igen i inspelningsinställningarna.</string>

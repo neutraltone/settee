@@ -73,6 +73,8 @@
     <string name="rec_notification_many">در حال ضبط %1$d برنامه</string>
     <string name="rec_channel_name">ضبط</string>
     <string name="rec_channel_desc">هنگام ضبط Settee نمایش داده می‌شود</string>
+    <string name="rec_error_missed">این برنامه از دست رفت چون Settee هنگام پخش آن اجرا نمی‌شد.</string>
+    <string name="rec_error_missed_late">این برنامه از دست رفت چون Android آن را پس از پایانش شروع کرد.</string>
     <string name="rec_error_nothing">چیزی ضبط نشد. ممکن است کانال متوقف شده باشد، پس دوباره ضبط آن را امتحان کنید.</string>
     <string name="rec_error_usb_no_folder">پوشه‌ای برای ضبط وجود ندارد. در تنظیمات ضبط، پوشه‌ای روی درایو USB خود انتخاب کنید.</string>
     <string name="rec_error_usb_unavailable">درایو USB شما پیدا نشد. آن را دوباره وصل کنید، سپس پوشه آن را دوباره در تنظیمات ضبط انتخاب کنید.</string>

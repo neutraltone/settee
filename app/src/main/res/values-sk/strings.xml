@@ -73,6 +73,8 @@
     <string name="rec_notification_many">Nahráva sa %1$d programov</string>
     <string name="rec_channel_name">Nahrávanie</string>
     <string name="rec_channel_desc">Zobrazuje sa, keď Settee nahráva</string>
+    <string name="rec_error_missed">Toto sa nenahralo, pretože Settee nebežalo počas vysielania.</string>
+    <string name="rec_error_missed_late">Toto sa nenahralo, pretože to Android spustil až po skončení.</string>
     <string name="rec_error_nothing">Nič sa nenahralo. Kanál možno prestal vysielať, preto ho skúste nahrať znova.</string>
     <string name="rec_error_usb_no_folder">Nie je kam nahrávať. Vyberte priečinok na USB disku v Nastaveniach nahrávania.</string>
     <string name="rec_error_usb_unavailable">USB disk sa nenašiel. Znova ho pripojte a potom znova vyberte jeho priečinok v Nastaveniach nahrávania.</string>

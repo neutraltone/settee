@@ -73,6 +73,8 @@
     <string name="rec_notification_many">Запись: %1$d передач</string>
     <string name="rec_channel_name">Запись</string>
     <string name="rec_channel_desc">Отображается во время записи в Settee</string>
+    <string name="rec_error_missed">Эта запись пропущена, потому что Settee не был запущен во время эфира.</string>
+    <string name="rec_error_missed_late">Эта запись пропущена, потому что Android запустил её уже после окончания.</string>
     <string name="rec_error_nothing">Ничего не записалось. Возможно, канал прервался, поэтому попробуйте записать его ещё раз.</string>
     <string name="rec_error_usb_no_folder">Нет папки для записи. Выберите папку на USB-накопителе в настройках записи.</string>
     <string name="rec_error_usb_unavailable">USB-накопитель не найден. Подключите его снова, затем ещё раз выберите папку в настройках записи.</string>

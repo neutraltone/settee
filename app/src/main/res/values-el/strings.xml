@@ -73,6 +73,8 @@
     <string name="rec_notification_many">Εγγραφή %1$d προγραμμάτων</string>
     <string name="rec_channel_name">Εγγραφή</string>
     <string name="rec_channel_desc">Εμφανίζεται όσο το Settee πραγματοποιεί εγγραφή</string>
+    <string name="rec_error_missed">Αυτό χάθηκε επειδή το Settee δεν λειτουργούσε όσο προβαλλόταν.</string>
+    <string name="rec_error_missed_late">Αυτό χάθηκε επειδή το Android το ξεκίνησε αφού είχε τελειώσει.</string>
     <string name="rec_error_nothing">Δεν εγγράφηκε τίποτα. Το κανάλι μπορεί να σταμάτησε, οπότε δοκιμάστε να το εγγράψετε ξανά.</string>
     <string name="rec_error_usb_no_folder">Δεν υπάρχει φάκελος για την εγγραφή. Επιλέξτε έναν στον δίσκο USB σας στις Ρυθμίσεις εγγραφής.</string>
     <string name="rec_error_usb_unavailable">Δεν βρέθηκε ο δίσκος USB σας. Συνδέστε τον ξανά και επιλέξτε πάλι τον φάκελό του στις Ρυθμίσεις εγγραφής.</string>
