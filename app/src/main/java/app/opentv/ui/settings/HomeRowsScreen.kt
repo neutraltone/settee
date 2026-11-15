@@ -189,10 +189,7 @@ private class HomeRowsState(initial: HomeArrangement, private val onArrange: (Ho
 
     /** Select on a row: lifts it, or drops the one in hand. */
     fun select(row: HomeRowKind) {
-        when (lifted) {
-            null -> lift(row)
-            row -> drop()
-        }
+        if (lifted == null) lift(row) else if (lifted == row) drop()
     }
 
     fun lift(row: HomeRowKind) {
