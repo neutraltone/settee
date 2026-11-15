@@ -148,14 +148,34 @@ object RecordingStorage {
     private fun mimeForFilename(filename: String): String =
         if (filename.endsWith(".ts", ignoreCase = true)) "video/mp2t" else "video/*"
 
+    /**
+     * Removes the file at [locator], or throws when it's still there: its row goes only after this
+     * returns, so a failure hidden here leaves the file where nothing points to it again. A file
+     * that's already gone counts as removed, or the viewer could never delete its row. Blocks on
+     * disk or the network, so never call it on the main thread.
+     */
     fun delete(context: Context, settings: AppSettings, locator: String) {
         when {
-            SmbClient.isSmb(locator) -> runCatching { SmbClient.delete(smbConfig(settings), locator) }
-            isContent(locator) ->
-                runCatching { DocumentFile.fromSingleUri(context, locator.toUri())?.delete() }
+            SmbClient.isSmb(locator) -> SmbClient.delete(smbConfig(settings), locator)
+            isContent(locator) -> deleteDocument(context, settings, locator)
             isUsbPlaceholder(locator) -> Unit // never created — nothing on disk to remove
-            else -> runCatching { File(locator).delete() }
+            else -> {
+                val file = File(locator)
+                if (!file.delete() && file.exists()) throw IOException("Recording file not deleted")
+            }
         }
+    }
+
+    /**
+     * SAF answers a failed delete with false, whatever the cause, and a drive that's been unplugged
+     * reports its documents as not existing. So a document that won't go counts as gone only while
+     * its drive is there to say so.
+     */
+    private fun deleteDocument(context: Context, settings: AppSettings, locator: String) {
+        val doc = DocumentFile.fromSingleUri(context, locator.toUri()) ?: return
+        if (doc.delete()) return
+        val tree = settings.usbTreeUri.value?.let { DocumentFile.fromTreeUri(context, it.toUri()) }
+        if (doc.exists() || tree == null || !tree.exists()) throw Unavailable(R.string.rec_error_usb_unavailable)
     }
 
     /**

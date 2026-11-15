@@ -75,6 +75,8 @@ change channel.
 | Recording: storage missing (`RecordingStorage.Unavailable`) | `rec_error_usb_no_folder`, `rec_error_usb_unavailable` | There's no folder to record to. Pick one on your USB drive in Recording settings. / Can't find your USB drive. Plug it back in, then pick its folder again in Recording settings. | StorageUnavailable | Viewer's: drive or folder |
 | Recording: any other exception | `rec_error_failed` | This recording stopped. Try recording it again. | exception type | Unknown |
 | Recording: nothing came | `rec_error_nothing` | Nothing was recorded. The channel may have stopped, so try recording it again. | none | Provider's stream, usually |
+| Recordings: deleting a NAS recording failed (unreachable, wrong login, refused); the row stays | `rec_delete_failed_nas` | Couldn't delete this from your NAS. Check it's on, then try deleting it again. | exception type | The NAS, or the network |
+| Recordings: deleting a USB or on-device recording failed; the row stays | `rec_delete_failed` | Couldn't delete this recording. Try deleting it again. | exception type (Unavailable when the USB drive is gone) | The drive |
 
 The external player's toast can't hold `ErrorMessage`, so it shows the sentence with the detail on the
 line under it.

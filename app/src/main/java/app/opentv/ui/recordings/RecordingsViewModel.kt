@@ -9,16 +9,17 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import app.opentv.core.ServiceLocator
+import app.opentv.core.ViewerError
 import app.opentv.data.model.Profile
 import app.opentv.data.model.Recording
-import app.opentv.data.model.RecordingStatus
 import app.opentv.data.model.Reminder
 import app.opentv.data.model.SeriesRule
-import app.opentv.recording.RecordingStorage
 import app.opentv.reminders.ReminderScheduler
 import app.opentv.ui.options.ItemOption
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -72,6 +73,7 @@ class RecordingsViewModel(app: Application) : AndroidViewModel(app) {
 
     /** Does what the viewer picked in a row's options panel. */
     fun choose(row: RecordingsRow, option: ItemOption) {
+        _deleteFailure.value = null
         when (row) {
             is RecordingsRow.Booking -> if (option == ItemOption.CancelRecording) cancel(row.recording)
             is RecordingsRow.Recorded -> when (option) {
@@ -84,11 +86,17 @@ class RecordingsViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    private val _deleteFailure = MutableStateFlow<ViewerError?>(null)
+
+    /** Why the last recording the viewer deleted is still there, until they move on. */
+    val deleteFailure: StateFlow<ViewerError?> = _deleteFailure.asStateFlow()
+
+    fun dismissDeleteFailure() {
+        _deleteFailure.value = null
+    }
+
     fun delete(recording: Recording) {
-        viewModelScope.launch {
-            if (recording.status == RecordingStatus.RECORDING) graph.recordingEngine.stop(recording.id)
-            RecordingStorage.delete(getApplication(), graph.settings, recording.filePath)
-            graph.recordingRepository.delete(recording.id)
-        }
+        _deleteFailure.value = null
+        viewModelScope.launch { _deleteFailure.value = graph.recordingEngine.delete(recording) }
     }
 }

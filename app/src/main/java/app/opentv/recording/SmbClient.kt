@@ -6,9 +6,11 @@
 package app.opentv.recording
 
 import com.hierynomus.msdtyp.AccessMask
+import com.hierynomus.mserref.NtStatus
 import com.hierynomus.msfscc.fileinformation.FileStandardInformation
 import com.hierynomus.mssmb2.SMB2CreateDisposition
 import com.hierynomus.mssmb2.SMB2ShareAccess
+import com.hierynomus.mssmb2.SMBApiException
 import com.hierynomus.smbj.SMBClient
 import com.hierynomus.smbj.auth.AuthenticationContext
 import com.hierynomus.smbj.connection.Connection
@@ -105,6 +107,9 @@ class SmbReadHandle(
  * sessions.
  */
 object SmbClient {
+
+    /** What the share answers for a file or folder that isn't there: to [delete], already done. */
+    private val ALREADY_GONE = setOf(NtStatus.STATUS_OBJECT_NAME_NOT_FOUND, NtStatus.STATUS_OBJECT_PATH_NOT_FOUND)
 
     // Bound every SMB operation. Without this a write to a NAS that has gone quiet (a Wi-Fi blip, a
     // drive spinning up, the session dropping) blocks forever — which silently freezes a recording
@@ -205,13 +210,20 @@ object SmbClient {
         }
     }
 
-    /** Delete a recording from the NAS. */
+    /**
+     * Delete a recording from the NAS, throwing when the share refuses. One that isn't there any
+     * more counts as deleted, so its row can still go.
+     */
     fun delete(config: SmbConfig, locator: String) {
         val parsed = parse(locator)
         val cfg = config.copy(host = parsed.host, share = parsed.share)
         val q = connect(cfg)
         try {
-            runCatching { q.share.rm(parsed.path.replace('/', '\\')) }
+            try {
+                q.share.rm(parsed.path.replace('/', '\\'))
+            } catch (e: SMBApiException) {
+                if (e.status !in ALREADY_GONE) throw e
+            }
         } finally {
             runCatching { q.share.close() }
             runCatching { q.session.close() }

@@ -19,6 +19,7 @@ fun RecordingsScreen(onPlay: (Recording) -> Unit) {
     val reminders by viewModel.reminders.collectAsState()
     val profiles by viewModel.profiles.collectAsState()
     val seriesRules by viewModel.seriesRules.collectAsState()
+    val deleteFailure by viewModel.deleteFailure.collectAsState()
     val sections = remember(recordings, reminders, seriesRules) {
         recordingsSections(recordings, reminders, seriesRules, System.currentTimeMillis())
     }
@@ -28,5 +29,7 @@ fun RecordingsScreen(onPlay: (Recording) -> Unit) {
         onPlay = onPlay,
         onRetry = viewModel::retry,
         onChoose = viewModel::choose,
+        deleteFailure = deleteFailure,
+        onDismissFailure = viewModel::dismissDeleteFailure,
     )
 }

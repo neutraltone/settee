@@ -6,7 +6,10 @@
 package app.opentv.recording
 
 import android.content.Context
+import app.opentv.R
 import app.opentv.core.AppSettings
+import app.opentv.core.ErrorWording
+import app.opentv.core.ViewerError
 import app.opentv.data.model.Channel
 import app.opentv.data.model.Programme
 import app.opentv.data.model.Recording
@@ -18,14 +21,18 @@ import app.opentv.data.repo.EpgRepository
 import app.opentv.data.repo.RecordingRepository
 import app.opentv.data.repo.SourceRepository
 import app.opentv.data.repo.recordable
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 
 /**
  * Turns "record this" into a running capture: it creates the [Recording] row, works out where the
  * file goes and which URL to pull, then hands off to [RecordingService] to do the actual byte
  * copy in the foreground so it survives the user leaving the player or the screen going dark.
  */
+@Suppress("LongParameterList") // removeFile is only passed by tests, to fail a delete without a NAS.
 class RecordingEngine(
     private val appContext: Context,
     private val repo: RecordingRepository,
@@ -33,6 +40,9 @@ class RecordingEngine(
     private val settings: AppSettings,
     private val epgRepository: EpgRepository,
     private val lineup: ChannelLineup,
+    private val wording: ErrorWording,
+    /** Removes a recording's file, throwing when it's still there: [RecordingStorage.delete]. */
+    private val removeFile: (String) -> Unit = { RecordingStorage.delete(appContext, settings, it) },
 ) {
     /**
      * Booking checks for an existing row and then inserts one, and a rescan can overlap another or a
@@ -81,6 +91,23 @@ class RecordingEngine(
 
     /** Stop an in-progress recording. */
     fun stop(recordingId: Long) = RecordingService.stop(appContext, recordingId)
+
+    /**
+     * Deletes [recording]'s file, then its row, stopping it first if it's still going. When the file
+     * won't go, the row stays and this says why: deleting the row anyway would leave the file on the
+     * NAS or drive with nothing in the app pointing to it again.
+     */
+    suspend fun delete(recording: Recording): ViewerError? {
+        if (recording.status == RecordingStatus.RECORDING) stop(recording.id)
+        val failure = runCatching { withContext(Dispatchers.IO) { removeFile(recording.filePath) } }.exceptionOrNull()
+        if (failure is CancellationException) throw failure
+        if (failure != null) {
+            val onNas = SmbClient.isSmb(recording.filePath)
+            return wording.of(failure, if (onNas) R.string.rec_delete_failed_nas else R.string.rec_delete_failed)
+        }
+        repo.delete(recording.id)
+        return null
+    }
 
     /**
      * Record a specific programme: if it's already on, start capturing now (bounded to its end);

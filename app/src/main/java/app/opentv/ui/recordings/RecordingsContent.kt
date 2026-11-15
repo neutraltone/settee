@@ -34,14 +34,19 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import app.opentv.R
 import app.opentv.core.ViewerError
 import app.opentv.data.model.Recording
 import app.opentv.ui.design.ERROR_DETAIL_TAG
+import app.opentv.ui.design.ErrorMessage
 import app.opentv.ui.design.HighlightStyle
 import app.opentv.ui.design.HighlightSurface
 import app.opentv.ui.design.Icon
@@ -64,6 +69,9 @@ import coil.compose.AsyncImage
  *
  * OK plays a recording ([onPlay]) or retries a failed one ([onRetry]); everything else is in the
  * row's options panel, and what's picked there reaches [onChoose].
+ *
+ * [deleteFailure] is why a recording the viewer deleted is still here, shown under the title, out of
+ * the Highlight's way, until their next press, which also tells [onDismissFailure].
  */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -74,6 +82,8 @@ fun RecordingsContent(
     onRetry: (Recording) -> Unit,
     onChoose: (RecordingsRow, ItemOption) -> Unit,
     modifier: Modifier = Modifier,
+    deleteFailure: ViewerError? = null,
+    onDismissFailure: () -> Unit = {},
     now: () -> Long = System::currentTimeMillis,
 ) {
     // By key, not the row: the list can change under an open panel (a booking starts, a recording
@@ -86,11 +96,28 @@ fun RecordingsContent(
         Column {
             Text(stringResource(R.string.rec_screen_title), SetteeType.ScreenTitle)
             Spacer(Modifier.height(HEADING_GAP))
+            deleteFailure?.let {
+                ErrorMessage(
+                    it.sentence,
+                    it.detail,
+                    Modifier.padding(bottom = HEADING_GAP),
+                    textAlign = TextAlign.Start,
+                )
+            }
+            // Cleared on the press rather than when focus moves, so it stays while the Highlight
+            // settles back on the row after the delete panels close.
+            val dismissOnPress = Modifier.onPreviewKeyEvent { event ->
+                if (deleteFailure != null && event.type == KeyEventType.KeyDown) onDismissFailure()
+                false
+            }
             if (sections.isEmpty()) {
                 Message(stringResource(R.string.rec_empty_state))
             } else {
                 CompositionLocalProvider(LocalBringIntoViewSpec provides remember(room) { RoomForHeading(room) }) {
-                    LazyColumn(heir.watchPresses, verticalArrangement = Arrangement.spacedBy(ROW_GAP)) {
+                    LazyColumn(
+                        heir.watchPresses.then(dismissOnPress),
+                        verticalArrangement = Arrangement.spacedBy(ROW_GAP),
+                    ) {
                         sections.forEach { section ->
                             item(key = section.heading, contentType = "heading") {
                                 Text(

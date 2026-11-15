@@ -71,6 +71,9 @@ class RecordingsContentTest {
     /** What the screen lists, so a test can change it under the screen as the database would. */
     private var shown by mutableStateOf(emptyList<Recording>())
 
+    /** What the screen says about a delete that failed, as the view model would expose it. */
+    private var deleteFailure by mutableStateOf<ViewerError?>(null)
+
     /**
      * Shows the screen and enters it the way the rail does, by asking the content for the Highlight
      * without saying which row should have it.
@@ -91,6 +94,8 @@ class RecordingsContentTest {
                     onPlay = { played += it },
                     onRetry = { retried += it },
                     onChoose = { row, option -> chosen += row to option },
+                    deleteFailure = deleteFailure,
+                    onDismissFailure = { deleteFailure = null },
                     now = { NOW },
                 )
             }
@@ -208,6 +213,33 @@ class RecordingsContentTest {
         compose.waitForIdle()
 
         row("Recorded 1").assertIsFocused()
+    }
+
+    @Test
+    fun `a recording that couldn't be deleted keeps the Highlight, and the screen says why`() {
+        show(recordings = listOf(completed(1), completed(2)))
+        press(Key.DirectionDown)
+
+        deleteHighlighted()
+        deleteFailure = ViewerError(NAS_DELETE_FAILED, "IO")
+        compose.waitForIdle()
+
+        compose.onNodeWithText(NAS_DELETE_FAILED).assertIsDisplayed()
+        compose.onNodeWithTag(ERROR_DETAIL_TAG, useUnmergedTree = true).assertTextEquals("IO")
+        row("Recorded 2").assertIsFocused()
+        captureScreen("recordings_delete_failed")
+    }
+
+    @Test
+    fun `the next press clears what the screen said about a failed delete, and still moves the Highlight`() {
+        show(recordings = listOf(completed(1), completed(2)))
+        deleteFailure = ViewerError(NAS_DELETE_FAILED, "IO")
+        compose.waitForIdle()
+
+        press(Key.DirectionDown)
+
+        compose.onNodeWithText(NAS_DELETE_FAILED).assertDoesNotExist()
+        row("Recorded 2").assertIsFocused()
     }
 
     @Test
@@ -487,5 +519,6 @@ class RecordingsContentTest {
         const val MINUTE = 60_000L
         const val HOUR = 60 * MINUTE
         const val LONG_LIST = 30L
+        const val NAS_DELETE_FAILED = "Couldn't delete this from your NAS. Check it's on, then try deleting it again."
     }
 }
