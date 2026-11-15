@@ -130,6 +130,16 @@ class RecordingEngine(
     }
 
     /**
+     * Best effort, for a failed attempt's file before a retry: unlike [delete], nobody is waiting to
+     * hear that it stayed, and a NAS that's down mustn't stop the retry, which reports that itself.
+     */
+    private suspend fun deleteFileUnlessShared(recording: Recording) {
+        if (repo.fileUsedByOthers(recording.id, recording.filePath)) return
+        val failure = runCatching { withContext(Dispatchers.IO) { removeFile(recording.filePath) } }.exceptionOrNull()
+        if (failure is CancellationException) throw failure
+    }
+
+    /**
      * Record a specific programme: if it's already on, start capturing now (bounded to its end);
      * if it's in the future, book an exact alarm to start it at broadcast time.
      */
