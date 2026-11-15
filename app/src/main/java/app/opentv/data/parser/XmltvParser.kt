@@ -59,7 +59,8 @@ object XmltvParser {
 
         val parser = Xml.newPullParser()
         parser.setFeature(XmlPullParser.FEATURE_PROCESS_NAMESPACES, false)
-        parser.setInput(input, null)
+        // Strict about structure, lenient about entities: see LenientEntityStream (#347).
+        parser.setInput(LenientEntityStream(input), null)
 
         var event = parser.eventType
         while (event != XmlPullParser.END_DOCUMENT) {
