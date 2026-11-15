@@ -110,7 +110,7 @@ class RecordingAlarmReceiver : BroadcastReceiver() {
                 if (graph.database.wontOpen() != null) return@launch
                 // The same re-arm as every launch, so a booking that came due while the box was off or
                 // the update installed starts now rather than being skipped.
-                graph.recordingEngine.rearmScheduled()
+                graph.recordingEngine.rearmScheduled(context.applicationContext)
             } finally {
                 pending.finish()
             }
