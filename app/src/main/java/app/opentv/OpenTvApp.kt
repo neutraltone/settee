@@ -11,6 +11,7 @@ import android.util.Log
 import app.opentv.core.AppSettings
 import app.opentv.core.LocaleUtils
 import app.opentv.core.ServiceLocator
+import app.opentv.core.carryLivePreviewFromBefore
 import app.opentv.data.repo.CatalogueRefresh
 import app.opentv.data.work.SyncWorker
 import coil.ImageLoader
@@ -77,6 +78,10 @@ open class OpenTvApp :
         // orphan from a killed capture. Done here, once per process — NOT when the Recordings screen
         // opens — so checking on a recording you just started never marks it interrupted.
         appScope.launch { runCatching { graph.recordingRepository.failInterrupted() } }
+
+        // 1.0's device-wide Live Preview switch, moved onto each Profile (#212). Early in the launch,
+        // so Home seldom draws a preview the device had turned off before it lands.
+        appScope.launch { runCatching { carryLivePreviewFromBefore(graph.settings, graph.profileSettings) } }
 
         // Re-arm scheduled recordings on every launch, for the same reason as the reminders below: a
         // force-stop drops their exact alarms, and no receiver hears of one (the receivers cover a

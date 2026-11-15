@@ -32,14 +32,13 @@ import kotlinx.coroutines.launch
 
 /** Display and playback: what shows, and how things play. */
 @Composable
-internal fun DisplayPane() {
+internal fun DisplayPane(onOpenHomeRows: () -> Unit = {}) {
     val context = LocalContext.current
     val settings = remember { AppSettings.get(context) }
     val graph = remember { ServiceLocator.get(context) }
     val subtitles by graph.profileSettings.subtitlePreference.collectAsState(initial = null)
     val profileName = activeProfileName()
     val playNext by settings.playNextAutomatically.collectAsState()
-    val previewOnHome by settings.livePreviewOnHome.collectAsState()
     val previewVideo by settings.guidePreviewVideo.collectAsState()
     val previewSound by settings.guidePreviewSound.collectAsState()
     val language by settings.languageTag.collectAsState()
@@ -68,10 +67,14 @@ internal fun DisplayPane() {
         onClick = { settings.setPlayNextAutomatically(!playNext) },
         switch = playNext,
     )
+    // A Profile's, like the Subtitle Preference: its own screen, as moving rows needs room.
+    val homeRows = screenRow("home-rows", onOpenHomeRows)
     ListRow(
-        stringResource(R.string.settings_row_live_preview_home),
-        onClick = { settings.setLivePreviewOnHome(!previewOnHome) },
-        switch = previewOnHome,
+        stringResource(R.string.home_rows_title),
+        onClick = homeRows.open,
+        opens = true,
+        note = profileName?.let { stringResource(R.string.settings_row_for_profile, it) },
+        modifier = homeRows.modifier,
     )
     ListRow(
         stringResource(R.string.settings_row_guide_preview),

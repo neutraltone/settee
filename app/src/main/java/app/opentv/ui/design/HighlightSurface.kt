@@ -93,6 +93,22 @@ class HighlightStyle(val resting: HighlightLook, val highlighted: HighlightLook)
          */
         val ListRow = fill(SetteeShapes.Card, resting = SetteeColors.Surface)
 
+        /**
+         * A Settings row the viewer has picked up to move. Clearly not the coral fill of an ordinary
+         * Highlight: it sits on a Raised fill inside the card ring, lifted a little, so it reads as
+         * held in hand rather than as one more row to press.
+         */
+        val LiftedRow = HighlightStyle(
+            resting = HighlightLook(SetteeShapes.Card, fill = SetteeColors.Raised, ring = HighlightRing()),
+            highlighted = HighlightLook(
+                SetteeShapes.Card,
+                fill = SetteeColors.Raised,
+                ring = HighlightRing(),
+                scale = 1.02f,
+                glow = 14.dp,
+            ),
+        )
+
         /** Guide cells and sidebar rows. */
         val Cell = fill(SetteeShapes.Cell)
 

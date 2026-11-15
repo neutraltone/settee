@@ -41,6 +41,8 @@ fun baseLanguage(code: String?): String? =
  * The settings that belong to a Profile rather than the device (ADR 0002): the one owner of the
  * `profile_settings` table. Screens, players and sync ask it, never the DAO.
  */
+// The table's one owner (ADR 0002), so each setting moved onto a Profile brings its reads and writes here.
+@Suppress("TooManyFunctions")
 class ProfileSettings(
     private val db: OpenTvDatabase,
     /** Which Profile's settings are read and written: the active one. */
@@ -65,6 +67,31 @@ class ProfileSettings(
             )
         }
         .distinctUntilChanged()
+
+    /** How the active Profile arranged Home; the usual arrangement until it changes it. Follows Profile switches. */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val homeArrangement: Flow<HomeArrangement> = activeProfileId
+        .flatMapLatest { dao.observeFor(it) }
+        .map { rows -> HomeArrangement.decode(rows.firstOrNull { it.name == HOME_ROWS }?.value) }
+        .distinctUntilChanged()
+
+    /**
+     * The viewer rearranged Home on the Home rows page. Restoring the usual order stores it too, rather
+     * than deleting the setting, so the restore reaches the Profile's other devices.
+     */
+    suspend fun arrangeHome(arrangement: HomeArrangement) = store(HOME_ROWS, arrangement.encode())
+
+    /**
+     * The device had 1.0's Live Preview switch off: each Profile that hasn't arranged Home gets it off
+     * too. Stored as the oldest possible choice, so any arrangement the Profile makes on any device,
+     * whenever, wins over it.
+     */
+    suspend fun turnLivePreviewOffEverywhere() {
+        val off = HomeArrangement.USUAL.copy(livePreview = false).encode()
+        profiles.all().filter { dao.find(it.id, HOME_ROWS) == null }.forEach {
+            dao.upsert(ProfileSetting(it.id, HOME_ROWS, off, updatedAtMillis = 0))
+        }
+    }
 
     /** The viewer turned subtitles on or off, in a player or in Settings. */
     suspend fun setSubtitlesOn(enabled: Boolean) = store(SUBTITLES_ON, enabled.toString())
@@ -141,5 +168,6 @@ class ProfileSettings(
         const val SUBTITLE_LANGUAGE = "subtitles.language"
         const val SUBTITLE_KIND = "subtitles.kind"
         const val VERSION = "version."
+        const val HOME_ROWS = "home.rows"
     }
 }

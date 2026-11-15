@@ -22,10 +22,15 @@ import app.opentv.data.model.SeriesDismissal
 import app.opentv.data.model.Source
 import app.opentv.data.model.SourceKind
 import app.opentv.data.model.StreamKind
+import app.opentv.data.repo.HomeArrangement
+import app.opentv.data.repo.HomeRowKind
+import app.opentv.data.repo.ProfileSettings
 import app.opentv.data.repo.WatchStatus
 import app.opentv.sync.SyncFavourite
 import app.opentv.sync.SyncHiddenChannel
 import com.google.common.truth.Truth.assertThat
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Test
@@ -176,6 +181,26 @@ class SyncStoresTest {
             ProfileSetting(onB, "subtitles.on", "true", 2_000),
             ProfileSetting(onB, "subtitles.language", "fr", 5_000),
         )
+    }
+
+    @Test
+    fun `a Profile's Home arrangement travels whole, and the newer one wins`() = runTest {
+        deviceB.graph.profiles.create("Spare")
+        val onA = ProfileSettings(deviceA.db, MutableStateFlow(deviceA.alex()), clock = { 3_000 })
+        val onB = ProfileSettings(deviceB.db, MutableStateFlow(deviceB.alex()), clock = { 2_000 })
+        val rowsReversed = HomeRowKind.entries.reversed()
+        // B hid a row earlier; A moved every row later. A's arrangement replaces B's, hidden row and all.
+        onB.arrangeHome(
+            HomeArrangement(HomeRowKind.entries, hidden = setOf(HomeRowKind.RECENT_SHOWS), livePreview = true),
+        )
+        onA.arrangeHome(HomeArrangement(rowsReversed, hidden = emptySet(), livePreview = false))
+
+        assertThat(onB.import(onA.export())).isEqualTo(1)
+        assertThat(onA.import(onB.export())).isEqualTo(0)
+
+        val expected = HomeArrangement(rowsReversed, hidden = emptySet(), livePreview = false)
+        assertThat(onB.homeArrangement.first()).isEqualTo(expected)
+        assertThat(onA.homeArrangement.first()).isEqualTo(expected)
     }
 
     @Test

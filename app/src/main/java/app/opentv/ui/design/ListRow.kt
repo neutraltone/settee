@@ -9,6 +9,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
@@ -37,6 +38,9 @@ import androidx.compose.ui.unit.dp
  * sentence; [detail] is that error's code, status and format, in a smaller quiet line (LOOK.md,
  * Voice), never left out where an error has one. [onOptions]
  * gives the row options (hold Select), for an item with more to do than its main thing.
+ *
+ * [lifted] draws the row as picked up to be moved ([HighlightStyle.LiftedRow]), and [leading] goes
+ * before the label, such as the grip a finger drags that row by.
  */
 @Composable
 fun ListRow(
@@ -49,21 +53,29 @@ fun ListRow(
     switch: Boolean? = null,
     opens: Boolean = value != null,
     onOptions: (() -> Unit)? = null,
+    lifted: Boolean = false,
+    leading: (@Composable RowScope.(highlighted: Boolean) -> Unit)? = null,
 ) {
     HighlightSurface(
         onClick = onClick,
-        style = HighlightStyle.ListRow,
+        style = if (lifted) HighlightStyle.LiftedRow else HighlightStyle.ListRow,
         onOptions = onOptions,
         modifier = modifier
             .fillMaxWidth()
             .semantics { if (switch != null) toggleableState = ToggleableState(switch) },
-    ) { highlighted ->
+    ) { focused ->
+        // A lifted row keeps its Raised fill, where coral's On accent text would be too dark to read.
+        val highlighted = focused && !lifted
         val text = if (highlighted) SetteeColors.OnAccent else SetteeColors.Text
         val quiet = if (highlighted) SetteeColors.OnAccent else SetteeColors.QuietText
         Row(
             Modifier.fillMaxWidth().heightIn(min = ROW_HEIGHT).padding(horizontal = SIDE, vertical = TOP_BOTTOM),
             verticalAlignment = Alignment.CenterVertically,
         ) {
+            leading?.let {
+                it(highlighted)
+                Spacer(Modifier.width(SIDE))
+            }
             Column(Modifier.weight(1f)) {
                 Text(label, SetteeType.RowTitle, color = text, maxLines = 2)
                 note?.let { Text(it, SetteeType.Body, color = quiet, maxLines = NOTE_LINES) }
