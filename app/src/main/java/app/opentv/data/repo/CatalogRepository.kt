@@ -521,16 +521,21 @@ class CatalogRepository(
 
         // 2) TMDB, with the viewer's key, at once when something is still missing or TMDB's answer
         //    is six months old, so a series the background pass hasn't reached still fills in.
-        if (tmdb.isConfigured() && result.wantsTmdb(now)) {
-            tmdbMetaOf(result).onSuccess { meta ->
-                // Not over an answer the background pass saved while this one was out.
-                val answered = seriesDao.saveLookedUp(id) {
-                    if (it.tmdbAnsweredAt == result.tmdbAnsweredAt) it.withTmdb(meta, now) else it
-                }
-                answered?.let { emit(it) }
-            }
-        }
+        tmdbAnswered(result, now)?.let { emit(it) }
     }.flowOn(Dispatchers.IO)
+
+    /**
+     * [series] with TMDB's answer saved onto it as it's stored now, if it [wantsTmdb]; null if TMDB
+     * wasn't asked or didn't answer, or the series has gone.
+     */
+    private suspend fun tmdbAnswered(series: Series, now: Long): Series? {
+        if (!tmdb.isConfigured() || !series.wantsTmdb(now)) return null
+        val meta = tmdbMetaOf(series).getOrElse { return null }
+        // Not over an answer the background pass saved while this one was out.
+        return seriesDao.saveLookedUp(series.id) {
+            if (it.tmdbAnsweredAt == series.tmdbAnsweredAt) it.withTmdb(meta, now) else it
+        }
+    }
 
     // -- feed helpers --
 
