@@ -490,11 +490,19 @@ class ChannelsViewModel @JvmOverloads constructor(
             .flowOn(Dispatchers.Default)
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ProgrammeIndex.Empty)
 
-    /** Guards the start-up loading bar so it shows once, on the first build, not on every tap. */
+    /** Whether the guide's first rows have reached the screen: after that, no loading line again. */
     @Volatile
     private var guideBuilt = false
 
-    /** The start-up loading line the first build put up, so stopping early takes down only that. */
+    /**
+     * Whether a start-up build has finished since the guide was last watched, decided on the build's
+     * own thread. [guideBuilt] is set only once its rows reach the screen, so a second build starting
+     * straight after the first, before then, would show the line again and leave it up (#359).
+     */
+    @Volatile
+    private var startupBuildDone = false
+
+    /** The start-up loading line while it's up, so taking it down never takes another job's line. */
     @Volatile
     private var startupLine: String? = null
 
@@ -532,11 +540,13 @@ class ChannelsViewModel @JvmOverloads constructor(
                     // After that the guide is built and flicking between categories is cheap, so
                     // don't flash a loading line on every tap — that bar was only ever meant for
                     // the one-time heavy load, and leaking it per-category read as a stuck "100%".
-                    val firstBuild = !guideBuilt
+                    val firstBuild = !startupBuildDone
                     if (firstBuild) {
                         startupLine = sizeMessage(channels.size).also { StatusBus.set(it, 0f) }
                     }
-                    GuideRows(scope, buildRows(channels, byEpgChannel, now(), reportProgress = firstBuild))
+                    val rows = buildRows(channels, byEpgChannel, now(), reportProgress = firstBuild)
+                    startupBuildDone = true
+                    GuideRows(scope, rows)
                 }
             }
             // Grouping thousands of channels against a 12-hour, all-feeds programme window is heavy
@@ -548,7 +558,7 @@ class ChannelsViewModel @JvmOverloads constructor(
             .onEach {
                 if (!guideBuilt) {
                     guideBuilt = true
-                    StatusBus.set(null)
+                    clearStartupLine()
                 }
                 _rowsBuilt.value = true
             }
@@ -557,8 +567,19 @@ class ChannelsViewModel @JvmOverloads constructor(
             // cancelled build runs on to the end and only fails when it hands its rows on, outside
             // it. Here, after flowOn, this runs once the build has finished, so no progress lands
             // after the clear. Coming back before any build arrived puts the line up again.
-            .onCompletion { if (!guideBuilt) startupLine?.let(StatusBus::clear) }
+            .onCompletion {
+                if (!guideBuilt) {
+                    clearStartupLine()
+                    startupBuildDone = false
+                }
+            }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), GuideRows())
+
+    /** Takes the start-up line down, unless another job has put up its own line since. */
+    private fun clearStartupLine() {
+        startupLine?.let(StatusBus::clear)
+        startupLine = null
+    }
 
     private fun buildRows(
         channels: List<LineupChannel>,
