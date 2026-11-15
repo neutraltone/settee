@@ -9,6 +9,7 @@ import androidx.room.testing.MigrationTestHelper
 import androidx.sqlite.db.SupportSQLiteDatabase
 import androidx.test.platform.app.InstrumentationRegistry
 import app.opentv.data.db.OpenTvDatabase
+import app.opentv.data.repo.tmdbDue
 import com.google.common.truth.Truth.assertThat
 import org.junit.Assume.assumeTrue
 import org.junit.Before
@@ -178,6 +179,51 @@ class RoomMigrationTest {
             assertThat(db.first("SELECT name || ':' || lastSeenMillis FROM series WHERE id = 9")).isEqualTo("Show:0")
             val position = "SELECT positionMillis || ':' || mark FROM playback_positions WHERE mediaKey = 'movie:7'"
             assertThat(db.first(position)).isEqualTo("600000:WATCHED")
+        }
+    }
+
+    @Test
+    fun `films TMDB answered without their poster being saved are due again after 17, and nothing else changes`() {
+        val name = "poster-reask.db"
+        val now = System.currentTimeMillis()
+        val lastWeek = now - 7 * 24 * 60 * 60 * 1000L
+        val columns = "id, sourceId, streamId, name, posterUrl, plot, director, streamUrl, addedMillis, " +
+            "detailsLookedUp, tmdbAnsweredAt"
+        helper.createDatabase(name, 16).use { db ->
+            db.execSQL(
+                "INSERT INTO movies ($columns) VALUES " +
+                    "(1, 1, 'blank', 'Blank', NULL, 'One.', 'TMDB', 'http://example.com/1.mp4', 5, 1, $lastWeek), " +
+                    "(2, 1, 'poster', 'Poster', 'http://example.com/2.jpg', 'Two.', 'TMDB', " +
+                    "'http://example.com/2.mp4', 6, 1, $lastWeek), " +
+                    "(3, 1, 'unasked', 'Unasked', NULL, 'Three.', NULL, 'http://example.com/3.mp4', 7, 0, NULL)",
+            )
+            db.execSQL(
+                "INSERT INTO favourites (profileId, kind, source, itemId, changedAtMillis, removed) " +
+                    "VALUES (1, 'MOVIE', 'Home', 'blank', 9, 0)",
+            )
+        }
+
+        helper.runMigrationsAndValidate(name, 17, true, *OpenTvDatabase.MIGRATIONS).use { db ->
+            fun film(id: Int) = db.first(
+                "SELECT id || '|' || sourceId || '|' || streamId || '|' || name || '|' || " +
+                    "IFNULL(posterUrl, '-') || '|' || plot || '|' || IFNULL(director, '-') || '|' || " +
+                    "streamUrl || '|' || addedMillis || '|' || detailsLookedUp FROM movies WHERE id = $id",
+            )
+            fun answeredAt(id: Int): Long? = db.query("SELECT tmdbAnsweredAt FROM movies WHERE id = $id").use {
+                it.moveToFirst()
+                if (it.isNull(0)) null else it.getLong(0)
+            }
+            assertThat(film(1)).isEqualTo("1|1|blank|Blank|-|One.|TMDB|http://example.com/1.mp4|5|1")
+            assertThat(film(2))
+                .isEqualTo("2|1|poster|Poster|http://example.com/2.jpg|Two.|TMDB|http://example.com/2.mp4|6|1")
+            assertThat(film(3)).isEqualTo("3|1|unasked|Unasked|-|Three.|-|http://example.com/3.mp4|7|0")
+            // Due for TMDB again, but still marked answered, so a list refresh keeps TMDB's director.
+            assertThat(answeredAt(1)).isNotNull()
+            assertThat(tmdbDue(answeredAt(1), now)).isTrue()
+            assertThat(answeredAt(2)).isEqualTo(lastWeek)
+            assertThat(answeredAt(3)).isNull()
+            assertThat(db.first("SELECT source || ':' || itemId FROM favourites WHERE profileId = 1"))
+                .isEqualTo("Home:blank")
         }
     }
 
