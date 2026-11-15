@@ -1,6 +1,6 @@
 #!/bin/sh
 # Checks that an APK is signed by exactly one certificate, the one in the release keystore, and
-# prints that certificate's SHA-256 digest. Given a pinned digest (lowercase hex, no colons), the
+# prints that certificate's SHA-256 digest. Given a pinned digest (as apksigner or keytool prints it), the
 # certificate must also be that one.
 # Usage: tools/check-apk-signer.sh <apk> <keystore> <alias> [pinned-digest], with KEYSTORE_PASSWORD exported
 # APKSIGNER names the apksigner binary; by default the newest one under $ANDROID_HOME/build-tools.
@@ -18,8 +18,18 @@ if [ -z "${APKSIGNER:-}" ]; then
     APKSIGNER="$build_tools/apksigner"
 fi
 
-# keytool prints AB:CD:..., apksigner prints abcd...
-normalise() { tr -d ': ' | tr 'A-F' 'a-f'; }
+# keytool prints AB:CD:..., apksigner prints abcd... A pin may be pasted in either form, and saved
+# with a Windows line end that $(cat) keeps.
+normalise() { tr -d ': \r' | tr 'A-F' 'a-f'; }
+pinned=$(printf '%s' "$pinned" | normalise)
+
+# release.yml passes "$(cat tools/release-cert.sha256)", and a failed substitution inside an
+# argument doesn't stop the step: a missing or emptied file arrives as "", which must not read as
+# "no pin" or deleting the file would switch the check off.
+if [ $# -ge 4 ] && [ -z "$pinned" ]; then
+    echo "The pinned digest is empty: is tools/release-cert.sha256 missing or blank?" >&2
+    exit 1
+fi
 
 # -storepass:env keeps the password out of the process list. keytool lists every certificate in
 # the key's chain; the first is the key's own, the one apksigner reports.
