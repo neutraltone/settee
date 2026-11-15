@@ -39,7 +39,6 @@ import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.test.requestFocus
 import androidx.navigation.NavHostController
-import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import app.opentv.data.model.Movie
@@ -141,7 +140,7 @@ class KeptShellTest {
                 }
             },
         ) {
-            NavHost(nav, startDestination = Routes.MAIN) {
+            ScreensNavHost(nav, startDestination = Routes.MAIN) {
                 mainShellRoute()
                 composable(Routes.SETTINGS) { StandIn("Settings") }
                 composable(Routes.MOVIE_DETAIL) { StandIn("Movie") }
@@ -338,6 +337,19 @@ class KeptShellTest {
     }
 
     @Test
+    fun `Settings has faded in and Home is let go from under it by about 300 ms`() {
+        setApp()
+        homeShowing()
+        holdTheClock()
+
+        compose.runOnUiThread { nav.navigate(Routes.SETTINGS) }
+        compose.mainClock.advanceTimeBy(FADE_DONE)
+
+        assertThat(homeDrawn()).isFalse()
+        assertThat(compose.onAllNodes(hasText("Settings option 1")).fetchSemanticsNodes()).isNotEmpty()
+    }
+
+    @Test
     fun `Home is drawn under Settings while Back fades Settings out`() {
         setApp()
         openSettingsFromRail()
@@ -348,6 +360,37 @@ class KeptShellTest {
 
         assertThat(compose.onAllNodes(hasText("Settings option 1")).fetchSemanticsNodes()).isNotEmpty()
         assertThat(homeDrawn()).isTrue()
+    }
+
+    @Test
+    fun `a press while Settings fades in moves Settings' highlight and never reaches Home`() {
+        setApp()
+        homeShowing()
+        holdTheClock()
+        compose.runOnUiThread { nav.navigate(Routes.SETTINGS) }
+        compose.mainClock.advanceTimeBy(MID_FADE)
+        assertThat(homeDrawn()).isTrue()
+
+        press(Key.DirectionDown)
+        press(Key.DirectionCenter)
+        compose.mainClock.advanceTimeBy(MID_FADE)
+
+        assertThat(focused("Settings option 2")).isTrue()
+        assertThat(openedCount).isEqualTo(0)
+    }
+
+    @Test
+    fun `Home is let go from under a player as soon as it opens`() {
+        setApp()
+        homeShowing()
+        holdTheClock()
+
+        compose.runOnUiThread { nav.navigate(Routes.vodPlayer(MediaKey.Movie(1))) }
+        compose.mainClock.advanceTimeByFrame()
+        compose.mainClock.advanceTimeByFrame()
+
+        assertThat(homeDrawn()).isFalse()
+        assertThat(compose.onAllNodes(hasText("Player option 1")).fetchSemanticsNodes()).isNotEmpty()
     }
 
     /** Opens Movies' [grid], which has the films "Grid 1" to "Grid 24", and waits for its covers. */
@@ -456,5 +499,8 @@ class KeptShellTest {
 
         /** Partway through a screen change's fade. */
         const val MID_FADE = 100L
+
+        /** Past the end of a screen change's fade, which is about 300 ms (#194): a frame or two over. */
+        const val FADE_DONE = 350L
     }
 }

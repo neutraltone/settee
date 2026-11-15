@@ -286,7 +286,7 @@ Once a provider is saved while none was saved before (a fresh install, or after 
 - **If Settee is closed partway,** it doesn't come back to setup. With the channels in, it opens on Home, the guide arrives with the refresh at launch, and movies and shows when their tab is opened, as for any provider. Before the channels are in there's no provider yet, so it opens on the provider choice again.
 - **If the login fails,** it goes back to the form with the error, as today.
 - **If the guide or the movies fail,** setup still finishes. The finished screen says which part didn't load and that Settee will try again on the next refresh, worded as in [Voice](#voice). Movies and shows also load when their tab is first opened, as they do today, so a failed or skipped fetch, or Movies or Shows switched on later, still gets them.
-- **Finished:** "You're all set." with a summary line ("1,204 channels, 6,400 movies and 1,100 shows. Film details will keep filling in while you watch."), and one button, **Take me to Settee**, with the Highlight on it. OK leaves through the usual screen-change dip, onto Home with its first Highlight. Back does the same.
+- **Finished:** "You're all set." with a summary line ("1,204 channels, 6,400 movies and 1,100 shows. Film details will keep filling in while you watch."), and one button, **Take me to Settee**, with the Highlight on it. OK leaves through the usual screen-change fade, onto Home with its first Highlight. Back does the same.
 - **The phone page** says "All done. Carry on on your TV." once the channels are in and the login is proven, so the viewer looks up at the setup screen. A failed login shows its error on the phone, as today.
 - **Motion:** the bar's fill may slide between values if it passes [Motion and cost](#motion-and-cost) on the Stick; otherwise it jumps. The heartbeat is drawn, not laid out, so a beat redraws only the bar. On the Stick it looked smooth when watched through a whole Setup, but it hasn't been frame-timed; the simpler pulse it replaced was (5 ms median, worst frame 15.5 ms).
 
@@ -323,10 +323,10 @@ Set from measurements on a Fire TV Stick (`AFTSS`) in [#156](https://github.com/
 - **A new screen's first frame** comes within 300 ms.
 - **Anything that can't pass doesn't animate.** It goes straight to where it ends up. There's no slower animation as a middle ground.
 - **No limit on how many things move at once.** The budget applies to the whole screen while they move.
-- **Screen changes** dip through the background in about 300 ms: the old screen darkens, the screen swaps, and the new one comes up. Only one screen is drawn at a time, so it should cost about what drawing that screen does, but it hasn't been measured: measure it when it's built. Today's 700 ms crossfade drew both screens see-through and cost 21-45 ms a frame on the way back to Home.
-- **Presses during a dip go through.** They act on the new screen as soon as it's there, and are never dropped, so the dip doesn't make the viewer wait.
+- **Screen changes** crossfade in 300 ms: a screen opening fades in over the one it covers, and Back fades it out over the one under it, which stays solid. Only the fading screen is see-through, so nothing dips through the background. A player comes and goes at once, since Home isn't kept under one. Not measured on the Stick yet: measure Home to Settings, Settings back to Home, and Home to a title's page and back, and if it can't hold 16.7 ms, screens switch with no animation. Navigation's old 700 ms default faded both screens at once and cost 21-45 ms a frame on the way back to Home.
+- **Presses during a fade go through.** They act on the new screen as soon as it takes the Highlight, and are never dropped, so the fade doesn't make the viewer wait.
 - **Every screen draws a solid background,** so nothing behind it shows through. The one exception is where video plays (the players, the Live Preview): the picture sits behind the screen, so that area stays clear.
-- **Never:** blur, alpha-dimmed shelves, more than one glow, or two screens drawn see-through at once.
+- **Never:** blur, alpha-dimmed shelves or more than one glow.
 - **Images:** decoded at tile size.
 - **The gradient on every card** costs nothing measurable.
 
