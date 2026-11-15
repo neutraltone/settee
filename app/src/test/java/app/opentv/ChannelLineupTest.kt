@@ -150,6 +150,39 @@ class ChannelLineupTest {
     }
 
     @Test
+    fun `a category lists only its own provider's channels when another provider uses the same id`() = runTest {
+        category(sourceId = 1, id = "3", name = "UK| ENTERTAINMENT")
+        category(sourceId = 2, id = "3", name = "SPORTS")
+        seed("UK| Dave", sourceId = 1, categoryId = "3")
+        seed("UK| Sky Sports Main Event", sourceId = 2, categoryId = "3")
+
+        assertThat(scope(LineupScope.Group("entertainment")).names()).containsExactly(listOf("UK| Dave"))
+    }
+
+    @Test
+    fun `the channel manager's category lists only its own provider's channels, hidden ones too`() = runTest {
+        category(sourceId = 1, id = "3", name = "UK| ENTERTAINMENT")
+        category(sourceId = 2, id = "3", name = "SPORTS")
+        seed("UK| Dave", "UK| Gold", sourceId = 1, categoryId = "3")
+        seed("UK| Sky Sports Main Event", sourceId = 2, categoryId = "3")
+        db.channels().setHidden(row("UK| Gold").id, true)
+
+        assertThat(scope(LineupScope.ManageGroup("entertainment")).names())
+            .containsExactly(listOf("UK| Dave"), listOf("UK| Gold"))
+    }
+
+    @Test
+    fun `a category two providers both have lists both providers' channels, whatever their ids`() = runTest {
+        category(sourceId = 1, id = "3", name = "UK| ENTERTAINMENT")
+        category(sourceId = 2, id = "9", name = "UK| Entertainment")
+        seed("UK| Dave", sourceId = 1, categoryId = "3")
+        seed("UK| Comedy Central", sourceId = 2, categoryId = "9")
+
+        assertThat(scope(LineupScope.Group("entertainment")).names())
+            .containsExactly(listOf("UK| Dave"), listOf("UK| Comedy Central"))
+    }
+
+    @Test
     fun `a channel plays the quality its scope came from first`() = runTest {
         seed("UK| ITV HD", sourceId = 1)
         seed("UK| ITV FHD", sourceId = 2)
