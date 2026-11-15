@@ -91,6 +91,7 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.mapLatest
+import kotlinx.coroutines.flow.onCompletion
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
@@ -493,6 +494,10 @@ class ChannelsViewModel @JvmOverloads constructor(
     @Volatile
     private var guideBuilt = false
 
+    /** The start-up loading line the first build put up, so stopping early takes down only that. */
+    @Volatile
+    private var startupLine: String? = null
+
     private val _rowsBuilt = MutableStateFlow(false)
 
     /**
@@ -528,7 +533,9 @@ class ChannelsViewModel @JvmOverloads constructor(
                     // don't flash a loading line on every tap — that bar was only ever meant for
                     // the one-time heavy load, and leaking it per-category read as a stuck "100%".
                     val firstBuild = !guideBuilt
-                    if (firstBuild) StatusBus.set(sizeMessage(channels.size), 0f)
+                    if (firstBuild) {
+                        startupLine = sizeMessage(channels.size).also { StatusBus.set(it, 0f) }
+                    }
                     GuideRows(scope, buildRows(channels, byEpgChannel, now(), reportProgress = firstBuild))
                 }
             }
@@ -545,6 +552,12 @@ class ChannelsViewModel @JvmOverloads constructor(
                 }
                 _rowsBuilt.value = true
             }
+            // Leaving Live, or covering it with Settings, before the first build arrives stops this
+            // with the line still up, under every tab (#359). Not a finally round the build: a
+            // cancelled build runs on to the end and only fails when it hands its rows on, outside
+            // it. Here, after flowOn, this runs once the build has finished, so no progress lands
+            // after the clear. Coming back before any build arrived puts the line up again.
+            .onCompletion { if (!guideBuilt) startupLine?.let(StatusBus::clear) }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), GuideRows())
 
     private fun buildRows(
