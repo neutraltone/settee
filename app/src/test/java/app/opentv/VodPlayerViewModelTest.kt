@@ -147,6 +147,64 @@ class VodPlayerViewModelTest {
         assertThat(vm.current.value).isEqualTo(MediaKey.Movie(2))
     }
 
+    private suspend fun twoVersions() {
+        graph.database.sources().insert(
+            Source(id = 1, name = "Provider", kind = SourceKind.XTREAM, url = "http://example.com"),
+        )
+        graph.database.movies().upsertAll(listOf(film(1, "EN - Superbad (2007)"), film(2, "DE - Superbad HD (2007)")))
+    }
+
+    /** What the player reports while it is still finding the stream it was asked for. */
+    private fun FakePlayback.stillFindingTheStream() {
+        positionMillis = 0
+        durationMillis = 0
+    }
+
+    @Test
+    fun `choosing a Version while the stream is still being found carries on from where the film was`() = runTest {
+        twoVersions()
+        graph.viewerLibrary.recordProgress("movie:1", positionMillis = FIFTY_MINUTES, durationMillis = FILM_MILLIS)
+        val vm = VodPlayerViewModel(app, graph)
+        vm.attach(MediaKey.Movie(1), playback)
+        assertThat(playback.played).containsExactly(MediaKey.Movie(1) to FIFTY_MINUTES)
+
+        playback.stillFindingTheStream()
+        assertThat(vm.playingAt).isEqualTo(FIFTY_MINUTES)
+        vm.chooseVersion(MediaKey.Movie(2))
+
+        assertThat(playback.played.last()).isEqualTo(MediaKey.Movie(2) to FIFTY_MINUTES)
+    }
+
+    @Test
+    fun `choosing a Version with no position known starts it from its own resume point`() = runTest {
+        twoVersions()
+        graph.viewerLibrary.recordProgress("movie:2", positionMillis = 600_000, durationMillis = EPISODE_MILLIS)
+        val vm = VodPlayerViewModel(app, graph)
+        vm.attach(MediaKey.Movie(1), playback)
+        assertThat(playback.played).containsExactly(MediaKey.Movie(1) to 0L)
+
+        playback.stillFindingTheStream()
+        assertThat(vm.playingAt).isNull()
+        vm.chooseVersion(MediaKey.Movie(2))
+
+        assertThat(playback.played.last()).isEqualTo(MediaKey.Movie(2) to 600_000L)
+    }
+
+    @Test
+    fun `a player rebuilt after choosing a Version mid-switch doesn't restart the film at 0`() = runTest {
+        twoVersions()
+        graph.viewerLibrary.recordProgress("movie:1", positionMillis = FIFTY_MINUTES, durationMillis = FILM_MILLIS)
+        val vm = VodPlayerViewModel(app, graph)
+        vm.attach(MediaKey.Movie(1), playback)
+        playback.stillFindingTheStream()
+        vm.chooseVersion(MediaKey.Movie(2))
+
+        val rebuilt = FakePlayback()
+        vm.attach(MediaKey.Movie(1), rebuilt)
+
+        assertThat(rebuilt.played).containsExactly(MediaKey.Movie(2) to FIFTY_MINUTES)
+    }
+
     @Test
     fun `a film that reaches its end is finished`() = runTest {
         graph.database.movies().upsertAll(listOf(film(1, "EN - Superbad (2007)")))
@@ -613,5 +671,7 @@ class VodPlayerViewModelTest {
 
     private companion object {
         const val OLD_RESUME_POINT = 900_000L
+        const val FIFTY_MINUTES = 3_000_000L
+        const val FILM_MILLIS = 6_000_000L
     }
 }

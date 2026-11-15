@@ -91,8 +91,17 @@ class VodPlayerViewModel(
     /** What [chooseVersion] keeps the choice with. */
     internal val versions: VodQualities get() = graph.vodQualities
 
-    /** Where what's playing had got to, for starting another Version of it there. */
-    internal val playingAt: Long? get() = playback?.progress()?.positionMillis ?: lastSeen?.positionMillis
+    /**
+     * Where what's playing had got to, for starting another Version of it there, or null when that isn't
+     * known. A player still finding its stream reports 0 of 0 so the last title's position isn't saved
+     * against this one (#379): that 0 isn't where the viewer is, but the start it was asked for is.
+     */
+    internal val playingAt: Long?
+        get() = playback?.progress()?.takeIf { it.durationMillis > 0 }?.positionMillis ?: lastKnown
+
+    /** Where what's playing had got to without asking the player, which may be new or still switching. */
+    private val lastKnown: Long?
+        get() = lastSeen?.positionMillis ?: 0L.takeIf { startedAtZero } ?: requestedFrom
 
     private val _canMarkWatched = MutableStateFlow(false)
 
@@ -116,6 +125,13 @@ class VodPlayerViewModel(
      * position the old one saved as it went.
      */
     private var lastSeen: NextEpisodeCountdown.Playback? = null
+
+    /**
+     * Where the stream last handed to [playback] was asked to start, until [lastSeen] knows better. Not
+     * when that's 0: a start from a resume point of 0 says nothing about where another Version should
+     * start, and Play from start has [startedAtZero].
+     */
+    private var requestedFrom: Long? = null
 
     /** What was marked Watched from the options list, which saving progress must leave alone. */
     private var marked: MediaKey? = null
@@ -141,7 +157,7 @@ class VodPlayerViewModel(
                 start(route, fromMillis = if (fromStart && savedState.spendFromStart()) 0 else null)
             }
             countdown.overlay is Overlay.StillWatching -> Unit
-            else -> start(current, fromMillis = lastSeen?.positionMillis ?: 0L.takeIf { startedAtZero })
+            else -> start(current, fromMillis = lastKnown)
         }
     }
 
@@ -238,6 +254,7 @@ class VodPlayerViewModel(
         startedAtZero = fromMillis == 0L || (startedAtZero && key == _current.value)
         _current.value = key
         lastSeen = null
+        requestedFrom = planned?.first?.startPositionMillis?.takeIf { it > 0 }
         planned?.let { (request, skipped) -> playback?.play(request, skipped) }
         _qualityChoices.value = graph.vodQualities.choicesFor(key)
         _canMarkWatched.value = graph.canMarkWatched(key)
