@@ -157,7 +157,7 @@ private fun ShellLayer(
             if (hasFocus) focusManager.clearFocus(force = true)
         } else if (wasCovered) {
             wasCovered = false
-            returnHighlight(memory, shellReturn, hasFocus = { hasFocus }, anywhere)
+            returnHighlight(memory, shellReturn, anywhere)
         }
     }
     entry.LocalOwnersProvider(saveable) {
@@ -190,17 +190,14 @@ private fun ShellLayer(
  * and only with nothing there to take it, anywhere in the shell rather than nowhere: the shell's
  * nearest item is the rail's, which left a viewer back from a title's page on the rail (#384).
  */
-private suspend fun returnHighlight(
-    memory: HighlightMemory,
-    shellReturn: ShellReturn,
-    hasFocus: () -> Boolean,
-    anywhere: FocusRequester,
-) {
+private suspend fun returnHighlight(memory: HighlightMemory, shellReturn: ShellReturn, anywhere: FocusRequester) {
     if (memory.restore()) return
     shellReturn.asked = true
     repeat(RETURN_FRAMES) { withFrameNanos {} }
     shellReturn.asked = false
-    if (hasFocus()) return
+    // Only the tab's content counts: the rail may have been handed it as the screen over the
+    // shell went, and a viewer back from a title's page belongs in the rows (#384).
+    if (shellReturn.contentHasFocus) return
     val inContent = runCatching { shellReturn.content?.requestFocus() }.getOrNull() == true
     if (!inContent) runCatching { anywhere.requestFocus() }
 }
