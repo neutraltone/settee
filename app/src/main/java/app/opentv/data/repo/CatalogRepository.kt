@@ -530,11 +530,16 @@ class CatalogRepository(
      */
     private suspend fun tmdbAnswered(series: Series, now: Long): Series? {
         if (!tmdb.isConfigured() || !series.wantsTmdb(now)) return null
-        val meta = tmdbMetaOf(series).getOrElse { return null }
-        // Not over an answer the background pass saved while this one was out.
-        return seriesDao.saveLookedUp(series.id) {
-            if (it.tmdbAnsweredAt == series.tmdbAnsweredAt) it.withTmdb(meta, now) else it
-        }
+        // A failure is null, a match or no match an answer to save.
+        return tmdbMetaOf(series).fold(
+            onSuccess = { meta ->
+                // Not over an answer the background pass saved while this one was out.
+                seriesDao.saveLookedUp(series.id) {
+                    if (it.tmdbAnsweredAt == series.tmdbAnsweredAt) it.withTmdb(meta, now) else it
+                }
+            },
+            onFailure = { null },
+        )
     }
 
     // -- feed helpers --
