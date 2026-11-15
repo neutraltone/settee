@@ -95,6 +95,90 @@ class EpgRepositoryTest {
     }
 
     @Test
+    fun `a programme the refreshed guide moved is replaced by what's on in its place`() = runTest {
+        catalogue.db.sources().insert(PANEL_SOURCE)
+        catalogue.panel.replies["xmltv.php"] = feed(airing("c1", "2000", "2200", "Film"))
+        guide.syncAll(nowUtcMillis = NOW)
+
+        catalogue.panel.replies["xmltv.php"] = feed(
+            airing("c1", "2005", "2035", "News"),
+            airing("c1", "2035", "2130", "Drama"),
+        )
+        guide.syncAll(nowUtcMillis = NOW, force = true)
+
+        assertThat(guide.nowAndNext("c1", TWENTY_FORTY).now?.title).isEqualTo("Drama")
+        val evening = guide.observeGuideWindow(NOW + 19 * HOUR, NOW + 23 * HOUR).first()
+        assertThat(evening.map { it.title }).containsExactly("News", "Drama").inOrder()
+    }
+
+    @Test
+    fun `a refreshed guide that fails to download keeps the programmes it had`() = runTest {
+        catalogue.db.sources().insert(PANEL_SOURCE)
+        catalogue.panel.replies["xmltv.php"] = feed(airing("c1", "2000", "2200", "Film"))
+        guide.syncAll(nowUtcMillis = NOW)
+
+        catalogue.panel.replies["xmltv.php"] = "!"
+        guide.syncAll(nowUtcMillis = NOW, force = true)
+
+        assertThat(guide.nowAndNext("c1", TWENTY_FORTY).now?.title).isEqualTo("Film")
+    }
+
+    @Test
+    fun `a refreshed guide keeps the programmes of a channel it left out`() = runTest {
+        catalogue.db.sources().insert(PANEL_SOURCE)
+        catalogue.panel.replies["xmltv.php"] = feed(
+            airing("c1", "2000", "2200", "Film"),
+            airing("c2", "2000", "2100", "Quiz"),
+        )
+        guide.syncAll(nowUtcMillis = NOW)
+
+        catalogue.panel.replies["xmltv.php"] = feed(
+            airing("c1", "2005", "2035", "News"),
+            airing("c1", "2035", "2130", "Drama"),
+        )
+        guide.syncAll(nowUtcMillis = NOW, force = true)
+
+        assertThat(guide.nowAndNext("c2", TWENTY_FORTY).now?.title).isEqualTo("Quiz")
+    }
+
+    @Test
+    fun `a refreshed guide covering less of the day keeps the programmes before and after it`() = runTest {
+        catalogue.db.sources().insert(PANEL_SOURCE)
+        catalogue.panel.replies["xmltv.php"] = feed(
+            airing("c1", "0800", "0900", "Breakfast"),
+            airing("c1", "2000", "2200", "Film"),
+            airing("c1", "2200", "2300", "Late"),
+        )
+        guide.syncAll(nowUtcMillis = NOW)
+
+        catalogue.panel.replies["xmltv.php"] = feed(
+            airing("c1", "2005", "2035", "News"),
+            airing("c1", "2035", "2130", "Drama"),
+        )
+        guide.syncAll(nowUtcMillis = NOW, force = true)
+
+        assertThat(storedProgrammes().map { it.title }).containsExactly("Breakfast", "News", "Drama", "Late").inOrder()
+    }
+
+    @Test
+    fun `a refreshed guide leaves another guide's programmes for the same channel alone`() = runTest {
+        catalogue.db.sources().insert(PANEL_SOURCE)
+        guide.addCustomFeed("Other", "http://example.com/other/xmltv.php")
+        catalogue.panel.replies["xmltv.php"] = feed(airing("c1", "2000", "2200", "Film"))
+        guide.syncAll(nowUtcMillis = NOW)
+        val other = guide.observeFeeds().first().single { it.name == "Other" }
+        guide.setFeedEnabled(other, enabled = false)
+
+        catalogue.panel.replies["xmltv.php"] = feed(
+            airing("c1", "2005", "2035", "News"),
+            airing("c1", "2035", "2130", "Drama"),
+        )
+        guide.syncAll(nowUtcMillis = NOW, force = true)
+
+        assertThat(storedProgrammes().map { it.title }).containsExactly("Film", "News", "Drama").inOrder()
+    }
+
+    @Test
     fun `the guide window holds only the programmes overlapping it, in channel then start order`() = runTest {
         programme("Before", start = 0, end = 1_000)
         programme("Overlaps the start", start = 500, end = 1_500)
@@ -181,6 +265,11 @@ class EpgRepositoryTest {
         """<programme start="20260101${from}0000 +0000" stop="20260101${to}0000 +0000" channel="$channel">""" +
             "<title>$title</title><desc>$description</desc></programme>"
 
+    /** A programme on 2026-01-01 from [from] to [to], each `HHMM`. */
+    private fun airing(channel: String, from: String, to: String, title: String) =
+        """<programme start="20260101${from}00 +0000" stop="20260101${to}00 +0000" channel="$channel">""" +
+            "<title>$title</title></programme>"
+
     private fun feed(vararg slots: String) = "<tv>${slots.joinToString("")}</tv>"
 
     private suspend fun storedProgrammes() = guide.observeGuideWindow(0, Long.MAX_VALUE).first()
@@ -190,5 +279,6 @@ class EpgRepositoryTest {
         const val NOW = 1_767_225_600_000L
         const val HOUR = 3_600_000L
         const val TEN_O_CLOCK = NOW + 10 * HOUR
+        const val TWENTY_FORTY = NOW + 20 * HOUR + 40 * 60_000L
     }
 }
