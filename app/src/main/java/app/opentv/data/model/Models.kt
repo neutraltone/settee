@@ -324,6 +324,9 @@ interface Airing {
     fun isLiveAt(nowUtcMillis: Long): Boolean = nowUtcMillis in startUtcMillis until endUtcMillis
 }
 
+/** The airing on at [millis] in this list, or null if nothing is. */
+fun <T : Airing> List<T>.liveAt(millis: Long): T? = firstOrNull { it.isLiveAt(millis) }
+
 /**
  * A [Programme] as the guide grid holds it: only what a cell draws and a row is built from. The grid
  * keeps a whole day's programmes for every guide feed in memory, so the description, category and
