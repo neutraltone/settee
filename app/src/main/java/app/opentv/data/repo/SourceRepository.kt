@@ -29,7 +29,10 @@ class SourceRepository(private val dao: SourceDao, private val api: XtreamApi, p
         if (source.id == 0L) {
             dao.insert(normalised)
         } else {
-            dao.update(normalised)
+            // The zone is the panel's to give when a refresh signs in, never the edit screen's: a
+            // draft read before a refresh heard it would put back an older one, or none.
+            val zone = dao.byId(source.id)?.serverTimeZone
+            dao.update(normalised.copy(serverTimeZone = zone))
             source.id
         }
     }

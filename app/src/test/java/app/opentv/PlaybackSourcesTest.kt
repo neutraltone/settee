@@ -169,6 +169,46 @@ class PlaybackSourcesTest {
     }
 
     @Test
+    fun `catch-up asks the panel for the programme's start in the panel's own time zone`() = runTest {
+        // November: London is on GMT and Amsterdam an hour ahead, so 21:00 UTC is 22:00 to the panel.
+        db.sources().insert(PANEL_SOURCE.copy(serverTimeZone = "Europe/Amsterdam"))
+        val id = channel(streamUrl = "http://example.com/live/u/p/9.m3u8")
+        db.programmes().insertOrReplace(listOf(news()))
+
+        val key = MediaKey.Catchup(id, NEWS_START)
+
+        val playable = inZone("Europe/London") { sources.forWatching(key) } as Playable.Ready
+
+        assertThat(playable.url).isEqualTo("http://example.com/timeshift/u/p/30/2023-11-14:22-00/9.ts")
+    }
+
+    @Test
+    fun `catch-up from a panel that gives no time zone asks in the device's`() = runTest {
+        db.sources().insert(PANEL_SOURCE.copy(serverTimeZone = null))
+        val id = channel(streamUrl = "http://example.com/live/u/p/9.m3u8")
+        db.programmes().insertOrReplace(listOf(news()))
+
+        val key = MediaKey.Catchup(id, NEWS_START)
+
+        val playable = inZone("America/New_York") { sources.forWatching(key) } as Playable.Ready
+
+        assertThat(playable.url).isEqualTo("http://example.com/timeshift/u/p/30/2023-11-14:16-00/9.ts")
+    }
+
+    @Test
+    fun `catch-up from a panel whose time zone isn't one asks in the device's, not GMT`() = runTest {
+        db.sources().insert(PANEL_SOURCE.copy(serverTimeZone = "Not/AZone"))
+        val id = channel(streamUrl = "http://example.com/live/u/p/9.m3u8")
+        db.programmes().insertOrReplace(listOf(news()))
+
+        val key = MediaKey.Catchup(id, NEWS_START)
+
+        val playable = inZone("America/New_York") { sources.forWatching(key) } as Playable.Ready
+
+        assertThat(playable.url).isEqualTo("http://example.com/timeshift/u/p/30/2023-11-14:16-00/9.ts")
+    }
+
+    @Test
     fun `catch-up plays the programme from the guide the guide shows for the channel`() = runTest {
         db.sources().insert(PANEL_SOURCE.copy(userAgent = "Panel/1"))
         val hd = channel(streamUrl = "http://example.com/live/u/p/9.m3u8")
@@ -437,9 +477,12 @@ class PlaybackSourcesTest {
     )
 
     /** The panel reads a catch-up start in its own time; these tests put the device in UTC. */
-    private suspend fun <T> inUtc(block: suspend () -> T): T {
+    private suspend fun <T> inUtc(block: suspend () -> T): T = inZone("UTC", block)
+
+    /** Runs [block] with the device's time zone set to [id]. */
+    private suspend fun <T> inZone(id: String, block: suspend () -> T): T {
         val zone = TimeZone.getDefault()
-        TimeZone.setDefault(TimeZone.getTimeZone("UTC"))
+        TimeZone.setDefault(TimeZone.getTimeZone(id))
         return try {
             block()
         } finally {

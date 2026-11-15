@@ -86,6 +86,10 @@ interface SourceDao {
 
     @Query("UPDATE sources SET lastCatalogSyncMillis = :millis WHERE id = :id")
     suspend fun markCatalogSynced(id: Long, millis: Long)
+
+    /** Only the zone, so a sync doesn't put back what an edit changed meanwhile. */
+    @Query("UPDATE sources SET serverTimeZone = :zone WHERE id = :id")
+    suspend fun setServerTimeZone(id: Long, zone: String?)
 }
 
 @Dao

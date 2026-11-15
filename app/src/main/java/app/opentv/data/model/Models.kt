@@ -78,6 +78,12 @@ data class Source(
     val liveFormat: LiveStreamFormat = LiveStreamFormat.HLS,
     val enabled: Boolean = true,
     val lastCatalogSyncMillis: Long = 0,
+    /**
+     * The time zone an Xtream panel said it runs in (`server_info.timezone`) when a catalogue sync
+     * last signed in, as given: it may not be a real zone. Catch-up asks for a start time in it.
+     * Null for other kinds, and for a panel that hasn't said.
+     */
+    val serverTimeZone: String? = null,
 ) {
     companion object {
         const val DEFAULT_USER_AGENT: String = "OpenTV/0.1 (Android)"

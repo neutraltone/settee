@@ -707,8 +707,10 @@ class CatalogRepository(
 
     private suspend fun syncXtreamLive(source: Source, nowUtcMillis: Long): SyncResult {
         // Authenticate first so a wrong password produces a clear message rather than
-        // four separate confusing failures further down.
-        api.authenticate(source)
+        // four separate confusing failures further down. Catch-up writes its start time in the zone
+        // the panel says it runs in, which a panel can change, so it's kept from every sign-in.
+        val account = api.authenticate(source)
+        sourceDao.setServerTimeZone(source.id, account.timezone)
 
         val liveCategories = api.liveCategories(source)
         val categoryNames = liveCategories.associate { it.id to it.name }

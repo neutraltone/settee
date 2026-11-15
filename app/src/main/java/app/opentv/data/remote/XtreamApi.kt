@@ -17,6 +17,10 @@ import app.opentv.data.parser.parseReleaseDate
 import app.opentv.data.remote.ProviderException.Problem
 import java.io.Closeable
 import java.io.File
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.DecodeSequenceMode
@@ -77,6 +81,8 @@ class XtreamApi(
          * under SQLite's 999 bound variables for looking up the rows they replace.
          */
         const val CATALOGUE_BATCH = 500
+
+        private val CATCHUP_STAMP = DateTimeFormatter.ofPattern("yyyy-MM-dd:HH-mm", Locale.US)
     }
 
     /** Verifies credentials and returns the account's expiry, if the panel reports one. */
@@ -318,12 +324,17 @@ class XtreamApi(
     /**
      * Catch-up / archive stream for a past programme. Uses the widely-supported path form
      * `/timeshift/{user}/{pass}/{durationMinutes}/{yyyy-MM-dd:HH-mm}/{streamId}.ts`, which returns a
-     * seekable MPEG-TS just like a recording. The start time is formatted in the device's local
-     * zone, matching how the guide shows programme times.
+     * seekable MPEG-TS just like a recording. The panel reads the start as wall-clock time in its own
+     * zone, so it's written in [Source.serverTimeZone]; the device's zone, which the guide draws in,
+     * puts the start hours out wherever the two differ, often outside the archive (#346). A panel that
+     * gave no zone, or one Java doesn't know, gets the device's: `TimeZone.getTimeZone` would quietly
+     * turn an unknown name into GMT, which is no likelier to be right.
      */
     fun catchupUrl(source: Source, streamId: String, startUtcMillis: Long, durationMinutes: Int): String {
-        val stamp = java.text.SimpleDateFormat("yyyy-MM-dd:HH-mm", java.util.Locale.US)
-            .format(java.util.Date(startUtcMillis))
+        val zone = source.serverTimeZone
+            ?.let { runCatching { ZoneId.of(it) }.getOrNull() }
+            ?: ZoneId.systemDefault()
+        val stamp = CATCHUP_STAMP.format(Instant.ofEpochMilli(startUtcMillis).atZone(zone))
         val minutes = durationMinutes.coerceAtLeast(1)
         return "${source.url}/timeshift/${source.username}/${source.password}/$minutes/$stamp/$streamId.ts"
     }

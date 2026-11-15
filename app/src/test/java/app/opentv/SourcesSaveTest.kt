@@ -71,4 +71,19 @@ class SourcesSaveTest {
             assertThat(graph.sourceRepository.all().map { it.kind }).containsExactly(SourceKind.XTREAM)
         }
     }
+
+    @Test
+    fun `editing a provider keeps the time zone its panel last gave, which catch-up asks in`() {
+        runBlocking {
+            val id = graph.sourceRepository.save(PANEL_SOURCE.copy(id = 0, serverTimeZone = "Europe/Amsterdam"))
+            // The edit screen's draft was read before a refresh heard the panel's zone.
+            val draft = graph.sourceRepository.byId(id)!!.copy(name = "Renamed", serverTimeZone = null)
+
+            graph.sourceRepository.save(draft)
+
+            val saved = graph.sourceRepository.byId(id)!!
+            assertThat(saved.name).isEqualTo("Renamed")
+            assertThat(saved.serverTimeZone).isEqualTo("Europe/Amsterdam")
+        }
+    }
 }
