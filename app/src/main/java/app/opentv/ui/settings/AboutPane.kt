@@ -86,7 +86,7 @@ internal fun AboutPane(onOpenFontLicences: () -> Unit, checkForUpdate: UpdateChe
                 checkDetail = (outcome as? UpdateChecker.Outcome.CouldNotCheck)?.detail
                 // UpdateGate draws over every screen, so the install prompt appears over Settings.
                 if (outcome is UpdateChecker.Outcome.Available) {
-                    UpdateHub.state.value = UpdateUiState.Available(outcome.update)
+                    UpdateHub.state.value = UpdateUiState.Available(outcome.update, asked = true)
                 }
                 checking = false
             }

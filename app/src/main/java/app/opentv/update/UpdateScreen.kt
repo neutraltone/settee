@@ -47,12 +47,14 @@ import kotlinx.coroutines.launch
  * The one-line entry point: drop [UpdateGate] into the top-level layout and a sideloaded
  * install will notice and offer its own updates. It renders nothing until there is something
  * to say, so it is safe to place unconditionally over the whole app.
+ *
+ * [canShow] is whether the launch check's find may prompt here; see [shownWhere].
  */
 @Composable
-fun UpdateGate(viewModel: UpdateViewModel = viewModel()) {
+fun UpdateGate(canShow: Boolean, viewModel: UpdateViewModel = viewModel()) {
     val state by viewModel.state.collectAsState()
 
-    when (val s = state) {
+    when (val s = state.shownWhere(canShow)) {
         UpdateUiState.Idle -> Unit
 
         is UpdateUiState.Available -> UpdateAvailableDialog(
@@ -134,7 +136,9 @@ fun UpdateFailedPanel(reason: ViewerError, onTryAgain: () -> Unit, onClose: () -
 
 sealed interface UpdateUiState {
     data object Idle : UpdateUiState
-    data class Available(val update: UpdateChecker.Update) : UpdateUiState
+
+    /** [asked] when the viewer checked for it (Settings › About), not the launch check. */
+    data class Available(val update: UpdateChecker.Update, val asked: Boolean = false) : UpdateUiState
     data class Downloading(val update: UpdateChecker.Update, val fraction: Float) : UpdateUiState
 
     /** [detail] is the download's failure, for the detail line. */
@@ -147,6 +151,15 @@ sealed interface UpdateUiState {
  */
 fun UpdateUiState.withProgress(fraction: Float): UpdateUiState =
     if (this is UpdateUiState.Downloading) copy(fraction = fraction) else this
+
+/**
+ * What the gate draws where [canShow] says whether the launch check's find may prompt (#389). It waits,
+ * still Available, for the main screen: over first-run setup it covered the provider form, and Later
+ * there lost it, since the next check is six hours off. A find the viewer [asked][UpdateUiState.Available.asked]
+ * for prompts where they are, and so do the download's panels, which they started.
+ */
+fun UpdateUiState.shownWhere(canShow: Boolean): UpdateUiState =
+    if (this is UpdateUiState.Available && !asked && !canShow) UpdateUiState.Idle else this
 
 /**
  * One shared update state so the manual "check for updates" (About) and the automatic gate speak

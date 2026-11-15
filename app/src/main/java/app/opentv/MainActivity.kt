@@ -143,7 +143,8 @@ class MainActivity : ComponentActivity() {
                         checkForUpdate = updates::checkNow,
                         updateShowing = updateShowing,
                         describe = graph.errorWording::ofDatabase,
-                        alongsideFailure = { UpdateGate(updates) },
+                        // Shown here whatever found it: this screen has nothing else to offer.
+                        alongsideFailure = { UpdateGate(canShow = true, viewModel = updates) },
                     ) {
                         OpenTvApp(isTelevision = isTelevision, launchedToPlay = toPlay)
                     }
@@ -213,6 +214,14 @@ class MainActivity : ComponentActivity() {
         const val EXTRA_WATCH_RECORDING = "opentv.watch_recording"
     }
 }
+
+/**
+ * Whether a prompt the viewer didn't ask for (What's new, the launch check's update) may open on [route]:
+ * only the main screen, never over first-run setup or a player the app booted straight into (#389). The
+ * update also waits [afterWhatsNew], or the two Side Panels opened together and fought over the highlight.
+ */
+internal fun launchPromptMayShow(route: String?, afterWhatsNew: Boolean = true): Boolean =
+    route == Routes.MAIN && afterWhatsNew
 
 object Routes {
     const val MAIN = "main"
@@ -506,13 +515,17 @@ private fun OpenTvApp(isTelevision: Boolean, launchedToPlay: Boolean) {
                     }
                 }
 
-                // Sits above the whole nav graph so a found update can prompt from any screen.
-                UpdateGate()
-
-                // Only over the main screen: never over first-run setup, and never over playback when the
-                // app boots straight into the last channel; it waits until the viewer backs out to Home.
+                // What's new and the launch check's update wait for the main screen (launchPromptMayShow).
+                // The update gate still sits above the whole nav graph, so an update the viewer checked for
+                // in Settings, and its download, show from any screen.
                 val route by navController.currentBackStackEntryAsState()
-                WhatsNewGate(canShow = route?.destination?.route == Routes.MAIN)
+                val routeName = route?.destination?.route
+                var whatsNewSettled by remember { mutableStateOf(false) }
+                WhatsNewGate(
+                    canShow = launchPromptMayShow(routeName),
+                    onSettled = { whatsNewSettled = true },
+                )
+                UpdateGate(canShow = launchPromptMayShow(routeName, afterWhatsNew = whatsNewSettled))
 
                 KeepHomeLive(navController, ServiceLocator.get(bootContext).homeKeptLive)
 
