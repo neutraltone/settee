@@ -87,8 +87,9 @@ scratch. It fixes nothing. The next refresh fails the same way.
    feed that leaves a channel out this time hasn't said anything about it; only programmes written
    count towards the span, so what the parser skipped as too old doesn't widen it; and what lies
    before the span (already aired) or after it (past this download's horizon) stays.
-3. Pruning happens **by age** (`deleteEndedBefore`), never by source, and only **after** a sync
-   reports success.
+3. Everything else goes **by age** (`deleteEndedBefore`), never by source, and only **after** a
+   sync reports success: the step above is the only other deletion, and it only removes what a
+   finished download has just replaced.
 4. A failed sync, or one cut off part way, deletes nothing: what it wrote stays, and so does
    everything it didn't get to. It returns the reason.
 

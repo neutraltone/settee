@@ -341,7 +341,7 @@ class EpgRepository(
         val aliases = ArrayList<EpgChannelAlias>(256)
         var written = 0
         // One per channel, not per programme: a week of a national guide is hundreds of thousands.
-        val spans = HashMap<String, SpanSoFar>()
+        val spans = HashMap<String, GuideSpan>()
 
         try {
             val writtenUpToId = refreshDao.highestId()
@@ -362,7 +362,9 @@ class EpgRepository(
                         // Skip anything that finished before the retention cut-off; no point
                         // writing rows we are about to prune.
                         if (programme.endUtcMillis >= nowUtcMillis - RETENTION_PAST_MILLIS) {
-                            spans.getOrPut(programme.epgChannelId) { SpanSoFar(programme) }.widen(programme)
+                            spans.getOrPut(programme.epgChannelId) {
+                                GuideSpan(programme.startUtcMillis, programme.endUtcMillis)
+                            }.widen(programme.startUtcMillis, programme.endUtcMillis)
                             batch += programme
                             if (batch.size >= BATCH_SIZE) {
                                 programmeDao.insertOrReplace(batch)
@@ -385,11 +387,7 @@ class EpgRepository(
                 }
                 // Only now the download is whole: a feed cut off part way never got to say what
                 // replaces the rest, so it mustn't lose any of it.
-                refreshDao.deleteSuperseded(
-                    feed.id,
-                    writtenUpToId,
-                    spans.mapValues { (_, span) -> GuideSpan(span.from, span.until) },
-                )
+                refreshDao.deleteSuperseded(feed.id, writtenUpToId, spans)
                 return FeedResult.Success(written, stats.channelCount)
             }
         } catch (e: CancellationException) {
@@ -399,19 +397,6 @@ class EpgRepository(
             // and what was there is still there.
             Log.w(TAG, "Feed '${feed.name}' download failed", e)
             return FeedResult.Failed(wording.of(e, R.string.error_guide))
-        }
-    }
-
-    /** How far a channel's programmes in the download being read reach, so far. */
-    private class SpanSoFar(first: Programme) {
-        var from = first.startUtcMillis
-            private set
-        var until = first.endUtcMillis
-            private set
-
-        fun widen(programme: Programme) {
-            if (programme.startUtcMillis < from) from = programme.startUtcMillis
-            if (programme.endUtcMillis > until) until = programme.endUtcMillis
         }
     }
 

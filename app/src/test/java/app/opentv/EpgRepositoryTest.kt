@@ -8,6 +8,7 @@ package app.opentv
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import app.opentv.data.model.Programme
+import app.opentv.data.repo.EpgRepository
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
@@ -121,6 +122,41 @@ class EpgRepositoryTest {
         guide.syncAll(nowUtcMillis = NOW, force = true)
 
         assertThat(guide.nowAndNext("c1", TWENTY_FORTY).now?.title).isEqualTo("Film")
+    }
+
+    @Test
+    fun `a refreshed guide cut off part way keeps the programmes it had`() = runTest {
+        catalogue.db.sources().insert(PANEL_SOURCE)
+        catalogue.panel.replies["xmltv.php"] = feed(airing("c1", "2000", "2200", "Film"))
+        guide.syncAll(nowUtcMillis = NOW)
+
+        // A full batch is written before the file ends mid-programme.
+        val filler = (0 until EpgRepository.BATCH_SIZE).map { minute ->
+            airing("c2", hhmm(minute), hhmm(minute + 1), "Short")
+        }
+        catalogue.panel.replies["xmltv.php"] = "<tv>" +
+            airing("c1", "2005", "2035", "News") +
+            airing("c1", "2035", "2130", "Drama") +
+            filler.joinToString("") +
+            """<programme start="20260101220000 +0000" stop="2026"""
+        guide.syncAll(nowUtcMillis = NOW, force = true)
+
+        assertThat(guide.nowAndNext("c1", TWENTY_FORTY).now?.title).isEqualTo("Film")
+    }
+
+    @Test
+    fun `a programme too old to keep in a refreshed guide doesn't cost the ones that aired since`() = runTest {
+        catalogue.db.sources().insert(PANEL_SOURCE)
+        catalogue.panel.replies["xmltv.php"] = feed(airing("c1", "1200", "1300", "Lunchtime", day = "20251231"))
+        guide.syncAll(nowUtcMillis = NOW)
+
+        catalogue.panel.replies["xmltv.php"] = feed(
+            airing("c1", "1000", "1100", "Long gone", day = "20251230"),
+            airing("c1", "2005", "2035", "News"),
+        )
+        guide.syncAll(nowUtcMillis = NOW, force = true)
+
+        assertThat(storedProgrammes().map { it.title }).containsExactly("Lunchtime", "News").inOrder()
     }
 
     @Test
@@ -265,10 +301,12 @@ class EpgRepositoryTest {
         """<programme start="20260101${from}0000 +0000" stop="20260101${to}0000 +0000" channel="$channel">""" +
             "<title>$title</title><desc>$description</desc></programme>"
 
-    /** A programme on 2026-01-01 from [from] to [to], each `HHMM`. */
-    private fun airing(channel: String, from: String, to: String, title: String) =
-        """<programme start="20260101${from}00 +0000" stop="20260101${to}00 +0000" channel="$channel">""" +
+    /** A programme on [day] (`YYYYMMDD`, 2026-01-01 unless given) from [from] to [to], each `HHMM`. */
+    private fun airing(channel: String, from: String, to: String, title: String, day: String = "20260101") =
+        """<programme start="$day${from}00 +0000" stop="$day${to}00 +0000" channel="$channel">""" +
             "<title>$title</title></programme>"
+
+    private fun hhmm(minutes: Int) = "%02d%02d".format(minutes / 60, minutes % 60)
 
     private fun feed(vararg slots: String) = "<tv>${slots.joinToString("")}</tv>"
 

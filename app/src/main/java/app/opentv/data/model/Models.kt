@@ -324,8 +324,21 @@ interface Airing {
     fun isLiveAt(nowUtcMillis: Long): Boolean = nowUtcMillis in startUtcMillis until endUtcMillis
 }
 
-/** The time one channel's programmes in a guide download run over: its earliest start to its latest end. */
-data class GuideSpan(val fromUtcMillis: Long, val untilUtcMillis: Long)
+/**
+ * The time one channel's programmes in a guide download run over, its earliest start to its latest
+ * end, widened as they're read.
+ */
+class GuideSpan(fromUtcMillis: Long, untilUtcMillis: Long) {
+    var fromUtcMillis = fromUtcMillis
+        private set
+    var untilUtcMillis = untilUtcMillis
+        private set
+
+    fun widen(startUtcMillis: Long, endUtcMillis: Long) {
+        if (startUtcMillis < fromUtcMillis) fromUtcMillis = startUtcMillis
+        if (endUtcMillis > untilUtcMillis) untilUtcMillis = endUtcMillis
+    }
+}
 
 /**
  * A [Programme] as the guide grid holds it: only what a cell draws and a row is built from. The grid
