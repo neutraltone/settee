@@ -114,9 +114,11 @@ class MainActivity : ComponentActivity() {
             statusBarStyle = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT),
             navigationBarStyle = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT),
         )
-        handlePlayIntent(intent)
         val isTelevision = isRunningOnTelevision(this)
-        val toPlay = launchedToPlay(intent, restored = savedInstanceState != null)
+        val restored = savedInstanceState != null
+        // Read before consumePlayIntent takes the extras off.
+        val toPlay = launchedToPlay(intent, restored)
+        consumePlayIntent(restored)
 
         setContent {
             SetteeTheme {
@@ -158,16 +160,32 @@ class MainActivity : ComponentActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
-        handlePlayIntent(intent)
+        consumePlayIntent(restored = false)
     }
 
-    private fun handlePlayIntent(intent: Intent?) {
-        val id = intent?.getLongExtra(EXTRA_PLAY_CHANNEL, 0L) ?: 0L
-        if (id != 0L) app.opentv.core.PlayRequests.request(id)
-        val recId = intent?.getLongExtra(EXTRA_WATCH_RECORDING, 0L) ?: 0L
-        if (recId != 0L) {
-            app.opentv.core.RecordingSignals.requestWatch(recId, System.currentTimeMillis())
+    /**
+     * Hands what the activity's intent asks to play to the nav graph, once: only if it [isFreshDelivery],
+     * and then the extras come off, so nothing that reads the intent later acts on them again (#357).
+     * A restore after the process was killed still gets the original intent back from Android, which
+     * is why the rule matters as well as the stripping.
+     */
+    private fun consumePlayIntent(restored: Boolean) {
+        val delivered = intent ?: return
+        val channelId = delivered.getLongExtra(EXTRA_PLAY_CHANNEL, 0L)
+        val recordingId = delivered.getLongExtra(EXTRA_WATCH_RECORDING, 0L)
+        if (channelId == 0L && recordingId == 0L) return
+        if (isFreshDelivery(delivered, restored)) {
+            if (channelId != 0L) app.opentv.core.PlayRequests.request(channelId)
+            if (recordingId != 0L) {
+                app.opentv.core.RecordingSignals.requestWatch(recordingId, System.currentTimeMillis())
+            }
         }
+        setIntent(
+            Intent(delivered).apply {
+                removeExtra(EXTRA_PLAY_CHANNEL)
+                removeExtra(EXTRA_WATCH_RECORDING)
+            },
+        )
     }
 
     // ---- Picture-in-picture ------------------------------------------------------------------
