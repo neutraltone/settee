@@ -6,7 +6,9 @@
 package app.opentv.recording
 
 import android.content.Context
+import app.opentv.R
 import app.opentv.core.AppSettings
+import app.opentv.core.ViewerError
 import app.opentv.data.model.Channel
 import app.opentv.data.model.Programme
 import app.opentv.data.model.Recording
@@ -26,6 +28,7 @@ import kotlinx.coroutines.sync.withLock
  * file goes and which URL to pull, then hands off to [RecordingService] to do the actual byte
  * copy in the foreground so it survives the user leaving the player or the screen going dark.
  */
+@Suppress("LongParameterList") // clock is only passed by tests, to fix the time.
 class RecordingEngine(
     private val appContext: Context,
     private val repo: RecordingRepository,
@@ -33,6 +36,8 @@ class RecordingEngine(
     private val settings: AppSettings,
     private val epgRepository: EpgRepository,
     private val lineup: ChannelLineup,
+    /** Wall-clock time, so a test can fix it; the graph's own clock everywhere else. */
+    private val clock: () -> Long = System::currentTimeMillis,
 ) {
     /**
      * Booking checks for an existing row and then inserts one, and a rescan can overlap another or a
@@ -49,7 +54,7 @@ class RecordingEngine(
     ): Long {
         val source = sources.byId(channel.sourceId)
         val ua = source?.userAgent ?: Source.DEFAULT_USER_AGENT
-        val now = System.currentTimeMillis()
+        val now = clock()
         val title = programme?.title?.takeIf { it.isNotBlank() } ?: channel.displayName
         val filename = RecordingStorage.fileNameFor(channel.displayName, title, now)
         val locator = RecordingStorage.plannedLocator(appContext, settings, filename)
@@ -92,7 +97,7 @@ class RecordingEngine(
         ruleId: Long? = null,
         profileId: Long = settings.activeProfileId.value,
     ): Long {
-        val now = System.currentTimeMillis()
+        val now = clock()
         return if (programme.startUtcMillis > now + LEAD_MILLIS) {
             scheduleProgramme(channel, programme, ruleId, profileId)
         } else {
@@ -147,11 +152,11 @@ class RecordingEngine(
             profileId = profileId,
         )
         val id = repo.insert(recording)
-        val armAt = scheduledStart.coerceAtLeast(System.currentTimeMillis() + 1_000L)
+        val armAt = scheduledStart.coerceAtLeast(clock() + 1_000L)
         RecordingScheduler.set(appContext, id, armAt)
         // Warn the viewer just before we switch their screen to the recording (single-connection
         // auto-switch); only meaningful when auto-switch is on.
-        if (settings.recordAutoSwitch.value) RecordingScheduler.setWarning(appContext, id, armAt)
+        if (settings.recordAutoSwitch.value) RecordingScheduler.setWarning(appContext, id, armAt, clock())
         return id
     }
 
@@ -162,7 +167,7 @@ class RecordingEngine(
      * and stays failed. Returns true when a retry was actually kicked off.
      */
     suspend fun retry(recording: Recording): Boolean {
-        val now = System.currentTimeMillis()
+        val now = clock()
         val start = recording.scheduledStartMillis
         val end = recording.scheduledEndMillis
         return when {
@@ -183,17 +188,43 @@ class RecordingEngine(
     /**
      * Re-arm the exact alarm for every scheduled recording. Alarms are dropped on a force-stop or
      * app update — which the boot receiver does not see — so [app.opentv.OpenTvApp] calls this on
-     * each launch. A booking whose start slipped past while the app was dead fires almost at once;
-     * re-setting an existing alarm is idempotent, so this is safe to run every time.
+     * each launch. A booking whose start slipped past while the app was dead fires almost at once
+     * for what's left of it; one whose whole window went by is marked missed instead, since starting
+     * it would only write an empty file and blame the channel. Re-setting an existing alarm is
+     * idempotent, so this is safe to run every time.
      */
     suspend fun rearmScheduled() {
-        val now = System.currentTimeMillis()
+        val now = clock()
         val autoSwitch = settings.recordAutoSwitch.value
         for (rec in repo.scheduled()) {
+            if (markMissedIfOver(rec)) continue
             val at = if (rec.scheduledStartMillis <= now) now + 1_000L else rec.scheduledStartMillis
             RecordingScheduler.set(appContext, rec.id, at)
-            if (autoSwitch) RecordingScheduler.setWarning(appContext, rec.id, at)
+            if (autoSwitch) RecordingScheduler.setWarning(appContext, rec.id, at, now)
         }
+    }
+
+    /**
+     * Whether [recording]'s window has already ended, so there's nothing left to capture. Unbounded
+     * captures (no end) never have.
+     */
+    fun windowEnded(recording: Recording): Boolean = recording.scheduledEndMillis in 1..clock()
+
+    /**
+     * Fail [recording] as missed when its window has already ended, before anything is written to
+     * storage. Returns true when it was. [RecordingService] calls this too, for an alarm that fires
+     * late by any route, not only the re-arming on launch.
+     */
+    suspend fun markMissedIfOver(recording: Recording): Boolean {
+        if (!windowEnded(recording)) return false
+        repo.markFinished(
+            id = recording.id,
+            ok = false,
+            atMillis = clock(),
+            bytes = 0,
+            error = ViewerError(appContext.getString(R.string.rec_error_missed), MISSED_DETAIL).stored(),
+        )
+        return true
     }
 
     /** Cancel a scheduled recording: disarm the alarm (and its pre-warning) and drop the row. */
@@ -220,7 +251,7 @@ class RecordingEngine(
                 channelName = channel.displayName,
                 titleKey = key,
                 title = title,
-                createdAtMillis = System.currentTimeMillis(),
+                createdAtMillis = clock(),
             ),
         )
         val guideId = lineupChannelOf(channel.id)?.let { lineup.guideId(it) }
@@ -229,7 +260,7 @@ class RecordingEngine(
                 channel,
                 key,
                 ruleId,
-                epgRepository.upcoming(guideId, System.currentTimeMillis(), AIRINGS_LOOKED_UP),
+                epgRepository.upcoming(guideId, clock(), AIRINGS_LOOKED_UP),
             )
         }
         return ruleId
@@ -253,7 +284,7 @@ class RecordingEngine(
      * itself, but one on now starts a capture straight away, so the second listing would start another.
      */
     suspend fun scheduleMatching(channel: Channel, titleKey: String, ruleId: Long, programmes: List<Programme>) {
-        val now = System.currentTimeMillis()
+        val now = clock()
         bookingLock.withLock {
             programmes
                 .filter { it.endUtcMillis > now && titleKeyOf(it.title) == titleKey }
@@ -310,7 +341,7 @@ class RecordingEngine(
     suspend fun rescanSeriesRules() {
         val rules = repo.enabledRules()
         if (rules.isEmpty()) return
-        val now = System.currentTimeMillis()
+        val now = clock()
         for (rule in rules) {
             // The guide the rule was set from: its Channel's, whichever Quality the rule is on.
             val lineupChannel = lineupChannelOf(rule.channelId) ?: continue
@@ -330,5 +361,8 @@ class RecordingEngine(
 
         /** How far into a channel's guide a series rule looks for airings to book. */
         const val AIRINGS_LOOKED_UP = 200
+
+        /** The detail line under the missed sentence: the problem found, as `docs/ERRORS.md` lists it. */
+        const val MISSED_DETAIL = "Missed"
     }
 }

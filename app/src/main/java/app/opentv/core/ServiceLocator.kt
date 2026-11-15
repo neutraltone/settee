@@ -297,6 +297,7 @@ object ServiceLocator {
                 settings,
                 epgRepository,
                 channelLineup,
+                clock,
             )
         }
     }

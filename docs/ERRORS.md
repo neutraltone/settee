@@ -74,6 +74,7 @@ change channel.
 | `Playable.Failure.GONE` | `error_gone` | This isn't on your provider any more. Try refreshing your provider in Settings. | Gone | Provider's: removed from the catalogue |
 | Recording: storage missing (`RecordingStorage.Unavailable`) | `rec_error_usb_no_folder`, `rec_error_usb_unavailable` | There's no folder to record to. Pick one on your USB drive in Recording settings. / Can't find your USB drive. Plug it back in, then pick its folder again in Recording settings. | StorageUnavailable | Viewer's: drive or folder |
 | Recording: any other exception | `rec_error_failed` | This recording stopped. Try recording it again. | exception type | Unknown |
+| Recording: its whole window passed before it started (`RecordingEngine.markMissedIfOver`, on launch or from a late alarm) | `rec_error_missed` | This was missed because Settee wasn't running while it was on. | Missed | Device's: off, unplugged or force-stopped |
 | Recording: nothing came | `rec_error_nothing` | Nothing was recorded. The channel may have stopped, so try recording it again. | none | Provider's stream, usually |
 
 The external player's toast can't hold `ErrorMessage`, so it shows the sentence with the detail on the

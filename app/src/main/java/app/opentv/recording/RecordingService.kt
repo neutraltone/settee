@@ -81,7 +81,9 @@ class RecordingService : Service() {
         val graph = ServiceLocator.get(applicationContext)
         val repo = graph.recordingRepository
         val recording = if (graph.database.wontOpen() == null) repo.byId(id) else null
-        if (recording == null) {
+        // An alarm that fired after the whole window went by: starting would only write an empty
+        // file, announce a capture that can't happen and blame the channel for it.
+        if (recording == null || graph.recordingEngine.markMissedIfOver(recording)) {
             finish(id)
             return
         }
