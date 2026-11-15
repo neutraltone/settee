@@ -84,6 +84,16 @@ class XtreamApi(
 
         /** The start of a catch-up, as `/timeshift/` paths spell it. */
         private val TIMESHIFT_STAMP = DateTimeFormatter.ofPattern("yyyy-MM-dd:HH-mm", Locale.US)
+
+        /**
+         * The zone a panel's `server_info.timezone` names, or null when it names none Java knows.
+         * [ZoneId.of] rather than `TimeZone.getTimeZone`, which quietly turns a name it doesn't know
+         * into GMT. Names are taken as the zone database reads them, `EST` as UTC-5 all year
+         * included: the panel's PHP reads its own setting from the same database, and it's the
+         * panel's clock a catch-up start has to match.
+         */
+        fun panelZone(name: String?): ZoneId? =
+            name?.trim()?.takeIf { it.isNotEmpty() }?.let { runCatching { ZoneId.of(it) }.getOrNull() }
     }
 
     /** Verifies credentials and returns the account's expiry, if the panel reports one. */
@@ -105,7 +115,7 @@ class XtreamApi(
             expiryMillis = userInfo["exp_date"].asLongOrNull?.times(1000),
             maxConnections = userInfo["max_connections"].asIntOrNull,
             activeConnections = userInfo["active_cons"].asIntOrNull,
-            timezone = body["server_info"]?.jsonObjectOrNull?.get("timezone").asStringOrNull,
+            timezone = panelZone(body["server_info"]?.jsonObjectOrNull?.get("timezone").asStringOrNull)?.id,
         )
     }
 
@@ -331,11 +341,9 @@ class XtreamApi(
      * reported ([Source.serverTimeZone]). The guide's local times don't come into it: a UK device on
      * an Amsterdam panel asked for the guide's 21:00 got the hour before, or nothing at all (#346).
      * A panel that names no zone, or one Java doesn't know, gets the device's, the best guess left.
-     * The id is checked with [ZoneId.of] rather than handed to `TimeZone.getTimeZone`, which quietly
-     * turns a name it doesn't know into GMT.
      */
     fun catchupUrl(source: Source, streamId: String, startUtcMillis: Long, durationMinutes: Int): String {
-        val zone = source.serverTimeZone?.let { runCatching { ZoneId.of(it) }.getOrNull() } ?: ZoneId.systemDefault()
+        val zone = panelZone(source.serverTimeZone) ?: ZoneId.systemDefault()
         val stamp = TIMESHIFT_STAMP.format(Instant.ofEpochMilli(startUtcMillis).atZone(zone))
         val minutes = durationMinutes.coerceAtLeast(1)
         return "${source.url}/timeshift/${source.username}/${source.password}/$minutes/$stamp/$streamId.ts"
@@ -460,6 +468,7 @@ class XtreamApi(
         val expiryMillis: Long?,
         val maxConnections: Int?,
         val activeConnections: Int?,
+        /** The panel's zone as a [ZoneId] id; null when it names none, or none Java knows ([panelZone]). */
         val timezone: String?,
     )
 

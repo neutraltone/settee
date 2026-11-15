@@ -96,6 +96,37 @@ class XtreamLiveRefreshTest {
     }
 
     @Test
+    fun `a zone the panel names is saved as its clock reads it, and one that's no zone is left out`() = runTest {
+        test.db.sources().insert(PANEL_SOURCE)
+        panel.replies["get_live_streams"] = lineUp(0 until 3)
+
+        val saved = listOf("EST", "Not/AZone").map { zone ->
+            panel.replies[""] = """{"user_info": {"status": "Active"}, "server_info": {"timezone": "$zone"}}"""
+            test.catalog.fetchLive(PANEL_SOURCE, nowUtcMillis = 1_000)
+            test.db.sources().byId(PANEL_SOURCE.id)?.serverTimeZone
+        }
+
+        // EST stays EST, not New York: the panel's PHP reads it from the same zone database as Java,
+        // as UTC-5 all year, so that's how catch-up has to write it. A name that's no zone at all is
+        // left out, so catch-up goes by the device's.
+        assertThat(saved).containsExactly("EST", null).inOrder()
+    }
+
+    @Test
+    fun `a refresh the panel turns away keeps the time zone it said before`() = runTest {
+        test.db.sources().insert(PANEL_SOURCE)
+        panel.replies["get_live_streams"] = lineUp(0 until 3)
+        panel.replies[""] = """{"user_info": {"status": "Active"}, "server_info": {"timezone": "Europe/Amsterdam"}}"""
+        test.catalog.fetchLive(PANEL_SOURCE, nowUtcMillis = 1_000)
+
+        panel.replies[""] = """{"user_info": {"auth": 0}, "server_info": {"timezone": "America/New_York"}}"""
+        val result = test.catalog.fetchLive(PANEL_SOURCE, nowUtcMillis = 2_000)
+
+        assertThat(result).isInstanceOf(SyncResult.Failed::class.java)
+        assertThat(test.db.sources().byId(PANEL_SOURCE.id)?.serverTimeZone).isEqualTo("Europe/Amsterdam")
+    }
+
+    @Test
     fun `a refresh keeps what the viewer set on each channel and drops the ones the provider did`() = runTest {
         test.db.sources().insert(PANEL_SOURCE)
         panel.replies["get_live_streams"] = lineUp(0 until 1_200)
