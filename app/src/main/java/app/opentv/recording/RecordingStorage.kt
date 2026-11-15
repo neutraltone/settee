@@ -6,6 +6,8 @@
 package app.opentv.recording
 
 import android.content.Context
+import android.net.Uri
+import android.provider.DocumentsContract
 import androidx.core.net.toUri
 import androidx.documentfile.provider.DocumentFile
 import app.opentv.R
@@ -157,7 +159,7 @@ object RecordingStorage {
     fun delete(context: Context, settings: AppSettings, locator: String) {
         when {
             SmbClient.isSmb(locator) -> SmbClient.delete(smbConfig(settings), locator)
-            isContent(locator) -> deleteDocument(context, settings, locator)
+            isContent(locator) -> deleteDocument(context, locator)
             isUsbPlaceholder(locator) -> Unit // never created — nothing on disk to remove
             else -> {
                 val file = File(locator)
@@ -169,13 +171,25 @@ object RecordingStorage {
     /**
      * SAF answers a failed delete with false, whatever the cause, and a drive that's been unplugged
      * reports its documents as not existing. So a document that won't go counts as gone only while
-     * its drive is there to say so.
+     * the folder it was made in is there to say so. That's the document's own folder, not the one in
+     * settings, which the viewer may since have cleared or changed; and with no grant left on it,
+     * nothing could ever delete the file, so the row goes rather than stay for good.
      */
-    private fun deleteDocument(context: Context, settings: AppSettings, locator: String) {
-        val doc = DocumentFile.fromSingleUri(context, locator.toUri()) ?: return
-        if (doc.delete()) return
-        val tree = settings.usbTreeUri.value?.let { DocumentFile.fromTreeUri(context, it.toUri()) }
-        if (doc.exists() || tree == null || !tree.exists()) throw Unavailable(R.string.rec_error_usb_unavailable)
+    private fun deleteDocument(context: Context, locator: String) {
+        val uri = locator.toUri()
+        val doc = DocumentFile.fromSingleUri(context, uri)
+        if (doc == null || doc.delete()) return
+        if (doc.exists()) throw IOException("Recording document not deleted")
+        if (folderMissing(context, uri)) throw Unavailable(R.string.rec_error_usb_unavailable)
+    }
+
+    /** True when [document]'s folder is one this app still holds a grant on, and it can't be reached. */
+    private fun folderMissing(context: Context, document: Uri): Boolean {
+        val treeUri = runCatching {
+            DocumentsContract.buildTreeDocumentUri(document.authority, DocumentsContract.getTreeDocumentId(document))
+        }.getOrNull() ?: return false
+        val granted = context.contentResolver.persistedUriPermissions.any { it.uri == treeUri && it.isWritePermission }
+        return granted && DocumentFile.fromTreeUri(context, treeUri)?.exists() != true
     }
 
     /**

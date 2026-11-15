@@ -5,7 +5,10 @@
  */
 package app.opentv
 
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -31,6 +34,7 @@ import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
+import androidx.compose.ui.unit.dp
 import androidx.test.espresso.Espresso
 import app.opentv.core.ViewerError
 import app.opentv.data.model.Recording
@@ -240,6 +244,38 @@ class RecordingsContentTest {
 
         compose.onNodeWithText(NAS_DELETE_FAILED).assertDoesNotExist()
         row("Recorded 2").assertIsFocused()
+    }
+
+    @Test
+    fun `leaving Recordings for the rail clears what the screen said about a failed delete`() {
+        val rail = FocusRequester()
+        val enter = FocusRequester()
+        deleteFailure = ViewerError(NAS_DELETE_FAILED, "IO")
+        compose.setTvContent {
+            Row {
+                Box(Modifier.size(RAIL).focusRequester(rail).focusable())
+                Box(Modifier.focusRequester(enter)) {
+                    RecordingsContent(
+                        sections = recordingsSections(listOf(completed(1)), emptyList(), emptyList(), NOW),
+                        profileNames = emptyMap(),
+                        onPlay = {},
+                        onRetry = {},
+                        onChoose = { _, _ -> },
+                        deleteFailure = deleteFailure,
+                        onDismissFailure = { deleteFailure = null },
+                        now = { NOW },
+                    )
+                }
+            }
+        }
+        compose.runOnIdle { enter.requestFocus() }
+        compose.waitForIdle()
+        compose.onNodeWithText(NAS_DELETE_FAILED).assertIsDisplayed()
+
+        compose.runOnIdle { rail.requestFocus() }
+        compose.waitForIdle()
+
+        compose.onNodeWithText(NAS_DELETE_FAILED).assertDoesNotExist()
     }
 
     @Test
@@ -519,6 +555,7 @@ class RecordingsContentTest {
         const val MINUTE = 60_000L
         const val HOUR = 60 * MINUTE
         const val LONG_LIST = 30L
+        val RAIL = 48.dp
         const val NAS_DELETE_FAILED = "Couldn't delete this from your NAS. Check it's on, then try deleting it again."
     }
 }

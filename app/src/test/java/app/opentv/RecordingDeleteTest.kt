@@ -141,6 +141,19 @@ class RecordingDeleteTest {
         assertThat(error?.sentence).isEqualTo("Couldn't delete this recording. Try deleting it again.")
     }
 
+    @Test
+    fun `a USB recording whose drive is unplugged stays, and the viewer is told to plug it back in`() = runTest {
+        val id = recordings.insert(finished("content://com.android.externalstorage.documents/document/News.ts"))
+        refusal = RecordingStorage.Unavailable(R.string.rec_error_usb_unavailable)
+
+        val error = engine.delete(recordings.byId(id)!!)
+
+        assertThat(recordings.byId(id)).isNotNull()
+        assertThat(error?.sentence)
+            .isEqualTo("Can't find your USB drive. Plug it back in, then pick its folder again in Recording settings.")
+        assertThat(error?.detail).isEqualTo("StorageUnavailable")
+    }
+
     private fun finished(locator: String) = Recording(
         channelId = 1,
         sourceId = 1,

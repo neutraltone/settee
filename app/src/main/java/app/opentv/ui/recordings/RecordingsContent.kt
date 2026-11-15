@@ -33,6 +33,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.onPreviewKeyEvent
@@ -71,7 +72,8 @@ import coil.compose.AsyncImage
  * row's options panel, and what's picked there reaches [onChoose].
  *
  * [deleteFailure] is why a recording the viewer deleted is still here, shown under the title, out of
- * the Highlight's way, until their next press, which also tells [onDismissFailure].
+ * the Highlight's way, until their next press or the Highlight leaves the screen, either of which
+ * tells [onDismissFailure].
  */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -93,7 +95,11 @@ fun RecordingsContent(
     val heir = rememberHeir(remember(rows) { rows.map { it.key } })
     val room = with(LocalDensity.current) { HEADING_ROOM.toPx() }
     ScreenFrame(modifier) {
-        Column {
+        // Also cleared when the Highlight leaves the screen (for the rail, or another tab), whose
+        // presses the list never sees: the screen stays built under the others, and so would this.
+        Column(
+            Modifier.onFocusChanged { if (!it.hasFocus && deleteFailure != null) onDismissFailure() },
+        ) {
             Text(stringResource(R.string.rec_screen_title), SetteeType.ScreenTitle)
             Spacer(Modifier.height(HEADING_GAP))
             deleteFailure?.let {

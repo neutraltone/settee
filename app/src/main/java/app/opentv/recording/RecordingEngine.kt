@@ -101,12 +101,15 @@ class RecordingEngine(
         if (recording.status == RecordingStatus.RECORDING) stop(recording.id)
         val failure = runCatching { withContext(Dispatchers.IO) { removeFile(recording.filePath) } }.exceptionOrNull()
         if (failure is CancellationException) throw failure
-        if (failure != null) {
-            val onNas = SmbClient.isSmb(recording.filePath)
-            return wording.of(failure, if (onNas) R.string.rec_delete_failed_nas else R.string.rec_delete_failed)
+        return when {
+            failure == null -> {
+                repo.delete(recording.id)
+                null
+            }
+            failure is RecordingStorage.Unavailable -> wording.of(failure.sentence, "StorageUnavailable")
+            SmbClient.isSmb(recording.filePath) -> wording.of(failure, R.string.rec_delete_failed_nas)
+            else -> wording.of(failure, R.string.rec_delete_failed)
         }
-        repo.delete(recording.id)
-        return null
     }
 
     /**
