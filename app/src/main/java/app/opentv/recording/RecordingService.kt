@@ -95,15 +95,7 @@ class RecordingService : Service() {
             repo.markStarted(id, System.currentTimeMillis())
             // Announce the live capture so the player can watch this file while it grows.
             RecordingLiveState.markActive(id, recording.filePath)
-            sink = RecordingStorage.openSink(applicationContext, graph.settings, recording.filePath)
-            // A USB (SAF) sink only learns its real content:// URI when the document is created —
-            // persist it onto the row so the finished recording plays back and deletes correctly.
-            sink.resolvedLocator?.let { actual ->
-                if (actual != recording.filePath) {
-                    repo.setFilePath(id, actual)
-                    RecordingLiveState.updatePath(id, actual)
-                }
-            }
+            sink = graph.recordingEngine.openSink(recording)
 
             error = capture.run(
                 sink.output,

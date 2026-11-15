@@ -43,10 +43,11 @@ object RecordingStorage {
     class Sink(
         val output: OutputStream,
         /**
-         * The real locator the bytes are going to when it differs from the planned one — set only
-         * for USB, where the `content://` document URI is known only once the file is created. The
-         * capture persists this onto the recording row so playback and delete can find the file.
-         * Null for INTERNAL and SMB, whose planned locator is already the final one.
+         * The real locator the bytes are going to when it differs from the planned one: for USB the
+         * `content://` document URI, known only once the file is created; for INTERNAL and SMB a
+         * suffixed name when the planned one was already taken (#354). The capture persists this
+         * onto the recording row so playback and delete can find the file. Null when the planned
+         * locator is the final one.
          */
         val resolvedLocator: String? = null,
         private val closer: () -> Unit,
@@ -95,8 +96,8 @@ object RecordingStorage {
      */
     fun openSink(context: Context, settings: AppSettings, locator: String): Sink = when {
         SmbClient.isSmb(locator) -> {
-            val handle = SmbClient.openForWrite(smbConfig(settings), locator)
-            Sink(handle.output) { handle.close() }
+            val handle = SmbClient.openNewForWrite(smbConfig(settings), locator)
+            Sink(handle.output, resolvedLocator = handle.locator.takeIf { it != locator }) { handle.close() }
         }
         isUsbPlaceholder(locator) ->
             openUsbSink(context, settings, locator.removePrefix(USB_PLACEHOLDER_PREFIX))
@@ -113,12 +114,32 @@ object RecordingStorage {
             }
         }
         else -> {
-            val file = File(locator)
-            file.parentFile?.mkdirs()
+            File(locator).parentFile?.mkdirs()
+            // Never open a taken name truncating: it would be another recording's file (#354).
+            // createNewFile claims a name atomically, so two captures starting together can't both get it.
+            val file = candidateNames(locator).map(::File).firstOrNull { it.createNewFile() }
+                ?: throw IOException("No free recording name")
             val out = FileOutputStream(file)
-            Sink(out) { runCatching { out.close() } }
+            Sink(out, resolvedLocator = file.path.takeIf { it != locator }) { runCatching { out.close() } }
         }
     }
+
+    /**
+     * The names a new recording at [path] tries in turn: [path] itself, then `… (2)`, `… (3)` before
+     * its extension. Checked when the file is created, not when it's booked, because a booking made
+     * days ahead, or another device writing to the same NAS folder, can take the name in between; and
+     * a row id in the name wouldn't do, as each device sharing that folder numbers its rows separately.
+     */
+    internal fun candidateNames(path: String): Sequence<String> {
+        val slash = path.lastIndexOfAny(charArrayOf('/', '\\'))
+        val dot = path.lastIndexOf('.').takeIf { it > slash } ?: path.length
+        val stem = path.substring(0, dot)
+        val extension = path.substring(dot)
+        return sequenceOf(path) + (2..MAX_NAMES).asSequence().map { "$stem ($it)$extension" }
+    }
+
+    /** Past this many recordings of one name in one minute something else is wrong; stop looking. */
+    private const val MAX_NAMES = 999
 
     /**
      * Create the recording's file on the granted USB tree and open it for writing. The tree URI

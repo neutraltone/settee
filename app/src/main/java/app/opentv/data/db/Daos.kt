@@ -1787,6 +1787,9 @@ interface RecordingDao {
     @Query("DELETE FROM recordings WHERE id = :id")
     suspend fun delete(id: Long)
 
+    @Query("SELECT COUNT(*) FROM recordings WHERE filePath = :filePath")
+    suspend fun countWithFilePath(filePath: String): Int
+
     /**
      * On a cold start, any row still marked RECORDING is a leftover from a process that was
      * killed mid-capture — reconcile it to FAILED so the UI never shows a phantom "recording".
