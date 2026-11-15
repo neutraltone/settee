@@ -183,6 +183,16 @@ class ProfileSettingsTest {
         FAVOURITE_CHANNELS,
     )
 
+    /** Favourite channels moved to the top, the rest in their usual order. */
+    private val channelsFirst = listOf(
+        FAVOURITE_CHANNELS,
+        CONTINUE_WATCHING,
+        RECENT_SHOWS,
+        RECENT_MOVIES,
+        FAVOURITE_SHOWS,
+        FAVOURITE_MOVIES,
+    )
+
     @Test
     fun `a Profile that never arranged Home gets the usual rows, all shown, with the Live Preview`() = runTest {
         assertThat(home()).isEqualTo(HomeArrangement(usualRows, hidden = emptySet(), livePreview = true))
@@ -192,7 +202,7 @@ class ProfileSettingsTest {
     @Test
     fun `moving and hiding Home's rows is remembered across a restart`() = runTest {
         val arranged = HomeArrangement(
-            listOf(FAVOURITE_CHANNELS, CONTINUE_WATCHING, RECENT_SHOWS, RECENT_MOVIES, FAVOURITE_SHOWS, FAVOURITE_MOVIES),
+            channelsFirst,
             hidden = setOf(RECENT_MOVIES),
             livePreview = false,
         )
@@ -231,7 +241,7 @@ class ProfileSettingsTest {
 
             assertThat(home()).isEqualTo(
                 HomeArrangement(
-                    listOf(FAVOURITE_CHANNELS, CONTINUE_WATCHING, RECENT_SHOWS, RECENT_MOVIES, FAVOURITE_SHOWS, FAVOURITE_MOVIES),
+                    channelsFirst,
                     hidden = setOf(CONTINUE_WATCHING),
                     livePreview = false,
                 ),
@@ -247,7 +257,8 @@ class ProfileSettingsTest {
 
     @Test
     fun `a hidden row keeps its place, so showing it puts it back where it was`() = runTest {
-        val hidden = HomeArrangement(usualRows, hidden = emptySet(), livePreview = true).withShown(FAVOURITE_SHOWS, false)
+        val hidden = HomeArrangement(usualRows, hidden = emptySet(), livePreview = true)
+            .withShown(FAVOURITE_SHOWS, false)
 
         assertThat(hidden.withShown(FAVOURITE_SHOWS, true).rows).isEqualTo(usualRows)
         assertThat(hidden.rows).isEqualTo(usualRows)

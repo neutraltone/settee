@@ -41,6 +41,8 @@ fun baseLanguage(code: String?): String? =
  * The settings that belong to a Profile rather than the device (ADR 0002): the one owner of the
  * `profile_settings` table. Screens, players and sync ask it, never the DAO.
  */
+// The table's one owner (ADR 0002), so each setting moved onto a Profile brings its reads and writes here.
+@Suppress("TooManyFunctions")
 class ProfileSettings(
     private val db: OpenTvDatabase,
     /** Which Profile's settings are read and written: the active one. */

@@ -103,7 +103,6 @@ class SettingsScreenTest {
             onEditProvider = { opened += "edit provider $it" },
             onOpenChannels = { opened += "channels" },
             onOpenLockedCategories = { opened += "locked categories" },
-            onOpenHomeRows = { opened += "home rows" },
             // Left out whether or not the build has Settee's key, so every build shows the same sections.
             openSubtitles = null,
         )
@@ -722,22 +721,6 @@ class SettingsScreenTest {
 
         // Only the pane: the sections beside it list TMDB's own.
         compose.onNode(hasText("TMDB", substring = true) and !hasTestTag(SettingsTags.SECTION)).assertDoesNotExist()
-    }
-
-    @Test
-    fun `Home rows says which Profile it belongs to, and opens its own screen`() {
-        show(SettingsMemory(SettingsSection.Display))
-        compose.waitUntil(5_000) {
-            // Its Profile's name, whichever that is: asking Profiles for it would block on its lock.
-            val row = hasText("Home rows") and hasText("For ", substring = true)
-            compose.onAllNodes(row).fetchSemanticsNodes().isNotEmpty()
-        }
-
-        press(KeyEvent.KEYCODE_DPAD_RIGHT)
-        compose.onNodeWithText("Home rows").requestFocus()
-        press(KeyEvent.KEYCODE_DPAD_CENTER)
-
-        assertThat(opened).containsExactly("home rows")
     }
 
     @Test

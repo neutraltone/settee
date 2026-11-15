@@ -325,7 +325,8 @@ private sealed class HomeShelf(key: String, items: List<String>) {
 
     class Live(val tile: LiveTile) : HomeShelf("live", listOf(LIVE_PICK))
 
-    class Resume(val cards: List<ResumeItem>) : HomeShelf(HomeRowKind.CONTINUE_WATCHING.key, cards.map { it.key.stored })
+    class Resume(val cards: List<ResumeItem>) :
+        HomeShelf(HomeRowKind.CONTINUE_WATCHING.key, cards.map { it.key.stored })
 
     /** A row of covers; [showsStatus] when each says where the Profile is with its title. */
     class Covers(key: String, val title: Int, val covers: List<Cover>, val showsStatus: Boolean) :

@@ -28,6 +28,7 @@ import androidx.compose.ui.test.longClick
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.unit.dp
 import androidx.test.espresso.Espresso
@@ -257,7 +258,8 @@ class HomeRowsScreenTest {
     fun `Restore the usual order puts back the order, every row and the Live Preview`() {
         show(HomeArrangement(usualRows.reversed(), hidden = setOf(FAVOURITE_SHOWS), livePreview = false))
 
-        compose.onNodeWithText("Restore the usual order").performClick()
+        // A click is a tap where the row is, so bring it into view first.
+        compose.onNodeWithText("Restore the usual order").performScrollTo().performClick()
         compose.waitForIdle()
 
         assertThat(arrangement).isEqualTo(HomeArrangement(usualRows, hidden = emptySet(), livePreview = true))

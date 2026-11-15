@@ -61,13 +61,14 @@ data class HomeArrangement(val rows: List<HomeRowKind>, val hidden: Set<HomeRowK
          * Anything unreadable is the usual arrangement rather than an error on Home.
          */
         internal fun decode(value: String?): HomeArrangement {
-            val (preview, list) = value?.split(';', limit = 2)?.takeIf { it.size == 2 } ?: return USUAL
-            val livePreview = when (preview) {
+            val parts = value?.split(';', limit = 2)?.takeIf { it.size == 2 }
+            val livePreview = when (parts?.first()) {
                 PREVIEW + ON -> true
                 PREVIEW + OFF -> false
-                else -> return USUAL
+                else -> null
             }
-            val stored = list.split(',').filter { it.isNotBlank() }.mapNotNull { entry ->
+            if (parts == null || livePreview == null) return USUAL
+            val stored = parts[1].split(',').filter { it.isNotBlank() }.mapNotNull { entry ->
                 HomeRowKind.byKey(entry.removePrefix(HIDDEN))?.let { it to entry.startsWith(HIDDEN) }
             }.distinctBy { it.first }
             val rows = stored.map { it.first }

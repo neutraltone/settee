@@ -126,8 +126,13 @@ class SettingsRoutesTest {
     }
 
     @Test
-    fun `Display's Home rows opens the Profile's Home rows on a screen of their own, and Back returns to its row`() {
+    fun `Display's Home rows, noted with the Profile, opens on a screen of its own, and Back returns to its row`() {
         setApp(SettingsMemory(SettingsSection.Display))
+        compose.waitUntil(5_000) {
+            // A Profile's setting, noted with its name, whichever that is.
+            val row = hasText("Home rows") and hasText("For ", substring = true)
+            compose.onAllNodes(row).fetchSemanticsNodes().isNotEmpty()
+        }
 
         openFrom("Home rows")
 

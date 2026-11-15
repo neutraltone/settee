@@ -90,14 +90,11 @@ fun HomeRowsScreen(onBack: () -> Unit) {
  */
 @Composable
 internal fun HomeRowsContent(arrangement: HomeArrangement, onArrange: (HomeArrangement) -> Unit, onBack: () -> Unit) {
-    // What was last saved, ahead of the store handing it back: a second quick press builds on the
-    // first, not on what the page was drawn with, which would undo it. Starts again from the store's
-    // whenever that changes, a sync from another device included.
-    var latest by remember(arrangement) { mutableStateOf(arrangement) }
-    // While a row is lifted, the arrangement it's being tried out in; saved only when it's dropped.
-    var moving by remember { mutableStateOf<Moving?>(null) }
+    val save by rememberUpdatedState(onArrange)
+    val state = remember { HomeRowsState(arrangement) { save(it) } }
+    // A sync from another device, or the store catching up: the page starts again from what it holds.
+    LaunchedEffect(arrangement) { state.latest = arrangement }
     var options by remember { mutableStateOf<HomeRowKind?>(null) }
-    val shown = (moving?.draft ?: latest).rows
     val requesters = remember { HomeRowKind.entries.associateWith { FocusRequester() } }
     val livePreviewRow = remember { FocusRequester() }
 
@@ -106,24 +103,103 @@ internal fun HomeRowsContent(arrangement: HomeArrangement, onArrange: (HomeArran
         runCatching { livePreviewRow.requestFocus() }
     }
     // The lifted row keeps the Highlight wherever it goes.
-    val lifted = moving?.row
+    val lifted = state.lifted
+    val shown = state.shown
     LaunchedEffect(lifted, shown) {
         if (lifted != null) runCatching { requesters.getValue(lifted).requestFocus() }
     }
 
     BackHandler(onBack = onBack)
     // Registered after the page's own, so with a row lifted Back puts it back rather than leaving.
-    BackHandler(enabled = moving != null) { moving = null }
+    BackHandler(enabled = lifted != null, onBack = state::cancel)
 
-    fun save(next: HomeArrangement) {
+    val shownLabel = stringResource(R.string.home_rows_shown)
+    val hiddenLabel = stringResource(R.string.home_rows_hidden)
+    Column(
+        Modifier
+            .fillMaxSize()
+            .background(SetteeColors.Background)
+            .padding(horizontal = SetteeSpace.ScreenSide, vertical = SetteeSpace.ScreenTopBottom)
+            .movesLiftedRow(state)
+            .verticalScroll(rememberScrollState()),
+        verticalArrangement = Arrangement.spacedBy(ROW_GAP),
+    ) {
+        Text(stringResource(R.string.home_rows_title), SetteeType.ScreenTitle)
+        // Under the title rather than under the rows, where a full page scrolls it out of view; and
+        // always one line, so lifting a row doesn't push the rows down.
+        Text(
+            stringResource(if (lifted != null) R.string.home_rows_moving_hint else R.string.home_rows_hint),
+            SetteeType.Body,
+            color = SetteeColors.QuietText,
+            maxLines = 1,
+        )
+        val column = Modifier.widthIn(max = 900.dp)
+        ListRow(
+            stringResource(R.string.home_rows_live_preview),
+            onClick = state::toggleLivePreview,
+            switch = state.latest.livePreview,
+            modifier = column.focusRequester(livePreviewRow),
+        )
+        shown.forEach { row ->
+            key(row) {
+                HomeRowItem(
+                    row = row,
+                    value = if (state.latest.isShown(row)) shownLabel else hiddenLabel,
+                    lifted = row == lifted,
+                    modifier = column.focusRequester(requesters.getValue(row)),
+                    onSelect = { state.select(row) },
+                    onOptions = { if (state.lifted == null) options = row },
+                    drag = RowDrag(
+                        start = { state.lift(row) },
+                        move = state::move,
+                        end = state::drop,
+                        cancel = state::cancel,
+                    ),
+                )
+            }
+        }
+        ListRow(stringResource(R.string.home_rows_restore), onClick = state::restore, modifier = column)
+    }
+
+    options?.let { row ->
+        ShowOnHomePanel(row, shown = state.latest.isShown(row), onToggle = { state.toggleShown(row) }) {
+            options = null
+        }
+    }
+}
+
+/**
+ * The page's arrangement and the row in hand. [latest] is what was last saved, ahead of the store
+ * handing it back: a second quick press builds on the first, not on what the page was drawn with,
+ * which would undo it.
+ */
+private class HomeRowsState(initial: HomeArrangement, private val onArrange: (HomeArrangement) -> Unit) {
+    var latest by mutableStateOf(initial)
+
+    /** While a row is lifted, the arrangement it's being tried out in; saved only when it's dropped. */
+    private var moving by mutableStateOf<Moving?>(null)
+
+    val lifted: HomeRowKind? get() = moving?.row
+    val shown: List<HomeRowKind> get() = (moving?.draft ?: latest).rows
+
+    private fun save(next: HomeArrangement) {
         latest = next
         onArrange(next)
+    }
+
+    /** Select on a row: lifts it, or drops the one in hand. */
+    fun select(row: HomeRowKind) {
+        when (lifted) {
+            null -> lift(row)
+            row -> drop()
+        }
     }
 
     fun lift(row: HomeRowKind) {
         moving = Moving(row, latest)
     }
 
+    /** The row in hand moves [by] places, stopping at the first and last Home Row. */
     fun move(by: Int) {
         val now = moving ?: return
         val from = now.draft.rows.indexOf(now.row)
@@ -136,84 +212,48 @@ internal fun HomeRowsContent(arrangement: HomeArrangement, onArrange: (HomeArran
         if (done.draft.rows != latest.rows) save(latest.copy(rows = done.draft.rows))
     }
 
+    /** Back, or a drag the system cancelled: the row goes back where it was, unsaved. */
     fun cancel() {
         moving = null
     }
 
-    val on = stringResource(R.string.settings_row_on)
-    val off = stringResource(R.string.settings_row_off)
-    val shownLabel = stringResource(R.string.home_rows_shown)
-    val hiddenLabel = stringResource(R.string.home_rows_hidden)
-    Column(
-        Modifier
-            .fillMaxSize()
-            .background(SetteeColors.Background)
-            .padding(horizontal = SetteeSpace.ScreenSide, vertical = SetteeSpace.ScreenTopBottom)
-            .onPreviewKeyEvent { event ->
-                if (moving == null) return@onPreviewKeyEvent false
-                val by = when (event.key) {
-                    Key.DirectionUp -> -1
-                    Key.DirectionDown -> 1
-                    Key.DirectionLeft, Key.DirectionRight -> 0
-                    else -> return@onPreviewKeyEvent false
-                }
-                if (event.type == KeyEventType.KeyDown && by != 0) move(by)
-                true
-            }
-            .verticalScroll(rememberScrollState()),
-        verticalArrangement = Arrangement.spacedBy(ROW_GAP),
-    ) {
-        Text(stringResource(R.string.home_rows_title), SetteeType.ScreenTitle)
-        // Under the title rather than under the rows, where a full page scrolls it out of view; and
-        // always one line, so lifting a row doesn't push the rows down.
-        Text(
-            stringResource(if (moving != null) R.string.home_rows_moving_hint else R.string.home_rows_hint),
-            SetteeType.Body,
-            color = SetteeColors.QuietText,
-            maxLines = 1,
-        )
-        val column = Modifier.widthIn(max = 900.dp)
-        ListRow(
-            stringResource(R.string.home_rows_live_preview),
-            onClick = { if (moving == null) save(latest.copy(livePreview = !latest.livePreview)) },
-            switch = latest.livePreview,
-            modifier = column.focusRequester(livePreviewRow),
-        )
-        shown.forEach { row ->
-            key(row) {
-                HomeRowItem(
-                    row = row,
-                    value = if (latest.isShown(row)) shownLabel else hiddenLabel,
-                    lifted = row == lifted,
-                    modifier = column.focusRequester(requesters.getValue(row)),
-                    onSelect = {
-                        when {
-                            moving == null -> lift(row)
-                            row == lifted -> drop()
-                        }
-                    },
-                    onOptions = { if (moving == null) options = row },
-                    drag = RowDrag(start = { lift(row) }, move = ::move, end = ::drop, cancel = ::cancel),
-                )
-            }
-        }
-        ListRow(
-            stringResource(R.string.home_rows_restore),
-            onClick = { if (moving == null) save(HomeArrangement.USUAL) },
-            modifier = column,
-        )
+    fun toggleLivePreview() {
+        if (moving == null) save(latest.copy(livePreview = !latest.livePreview))
     }
 
-    options?.let { row ->
-        SidePanel(onBack = { options = null }) {
-            PanelTitle(stringResource(row.label))
-            val isShown = latest.isShown(row)
-            PanelRow(
-                stringResource(R.string.home_rows_show_on_home),
-                value = if (isShown) on else off,
-                onClick = { save(latest.withShown(row, !isShown)) },
-            )
-        }
+    fun toggleShown(row: HomeRowKind) = save(latest.withShown(row, !latest.isShown(row)))
+
+    fun restore() {
+        if (moving == null) save(HomeArrangement.USUAL)
+    }
+}
+
+/**
+ * With a row in hand, Up and Down move it, and Left and Right are swallowed so the Highlight can't
+ * leave for the side menu with it.
+ */
+private fun Modifier.movesLiftedRow(state: HomeRowsState) = onPreviewKeyEvent { event ->
+    if (state.lifted == null) return@onPreviewKeyEvent false
+    val by = when (event.key) {
+        Key.DirectionUp -> -1
+        Key.DirectionDown -> 1
+        Key.DirectionLeft, Key.DirectionRight -> 0
+        else -> return@onPreviewKeyEvent false
+    }
+    if (event.type == KeyEventType.KeyDown && by != 0) state.move(by)
+    true
+}
+
+/** A Home Row's options: Show on Home, and no move actions, which are the page's own. */
+@Composable
+private fun ShowOnHomePanel(row: HomeRowKind, shown: Boolean, onToggle: () -> Unit, onClose: () -> Unit) {
+    SidePanel(onBack = onClose) {
+        PanelTitle(stringResource(row.label))
+        PanelRow(
+            stringResource(R.string.home_rows_show_on_home),
+            value = stringResource(if (shown) R.string.settings_row_on else R.string.settings_row_off),
+            onClick = onToggle,
+        )
     }
 }
 

@@ -190,7 +190,9 @@ class SyncStoresTest {
         val onB = ProfileSettings(deviceB.db, MutableStateFlow(deviceB.alex()), clock = { 2_000 })
         val rowsReversed = HomeRowKind.entries.reversed()
         // B hid a row earlier; A moved every row later. A's arrangement replaces B's, hidden row and all.
-        onB.arrangeHome(HomeArrangement(HomeRowKind.entries, hidden = setOf(HomeRowKind.RECENT_SHOWS), livePreview = true))
+        onB.arrangeHome(
+            HomeArrangement(HomeRowKind.entries, hidden = setOf(HomeRowKind.RECENT_SHOWS), livePreview = true),
+        )
         onA.arrangeHome(HomeArrangement(rowsReversed, hidden = emptySet(), livePreview = false))
 
         assertThat(onB.import(onA.export())).isEqualTo(1)
