@@ -279,14 +279,23 @@ object Routes {
  * Whether this launch asks to play something: a tapped reminder, or a recording switching the
  * screen to itself. Read from the intent that created the activity, not from [app.opentv.core.PlayRequests] or
  * [app.opentv.core.RecordingSignals]: a recording alarm sets those with no launch at all, sometimes long before the
- * viewer next opens the app, and that mustn't stop them being asked who's watching. A restore
- * redelivers the old intent, so it never counts.
+ * viewer next opens the app, and that mustn't stop them being asked who's watching. Only an intent
+ * that [isFreshDelivery] counts.
  */
 internal fun launchedToPlay(intent: Intent?, restored: Boolean): Boolean {
-    if (restored || intent == null) return false
+    if (intent == null || !isFreshDelivery(intent, restored)) return false
     return intent.getLongExtra(MainActivity.EXTRA_PLAY_CHANNEL, 0L) != 0L ||
         intent.getLongExtra(MainActivity.EXTRA_WATCH_RECORDING, 0L) != 0L
 }
+
+/**
+ * Whether [intent] is being delivered now, so what it asks for should happen, rather than handed back
+ * again: a restore after Android killed the process, a recreate (a language change), and a reopen
+ * from Recents all redeliver the intent the activity started with, extras and all (#357). Both the
+ * play dispatch and [launchedToPlay] ask this, so they can't disagree about which intents count.
+ */
+internal fun isFreshDelivery(intent: Intent, restored: Boolean): Boolean =
+    !restored && intent.flags and Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY == 0
 
 @Composable
 private fun OpenTvApp(isTelevision: Boolean, launchedToPlay: Boolean) {
