@@ -85,7 +85,8 @@ class EpgFeedRemovedMidSyncTest {
         val summary = guide.syncAll(nowUtcMillis = 0, force = true)
 
         assertThat(summary.feedsFailed).isEqualTo(0)
-        assertThat(db.epgFeeds().all()).isEmpty()
+        // The refresh adds the built-in feeds, switched off; only this one should be gone.
+        assertThat(db.epgFeeds().byUrl(url)).isNull()
         assertThat(guide.upcoming("news", nowUtcMillis = 0)).isEmpty()
         assertThat(db.epgAliases().all()).isEmpty()
     }
