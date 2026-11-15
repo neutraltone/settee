@@ -7,6 +7,7 @@ package app.opentv.player
 
 import android.content.Context
 import androidx.annotation.OptIn
+import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.PlaybackException
@@ -218,6 +219,12 @@ class PlayerController(
     private var gaveUp = false
 
     /**
+     * How the app being behind another holds playback back (#356). Every way a stream starts goes through
+     * [play], an automatic restart and a step down included, so it's decided there, not by each caller.
+     */
+    private var hold = Hold.NONE
+
+    /**
      * Held so the User-Agent can be swapped per source before each tune.
      *
      * Providers commonly 403 any client whose UA they do not recognise, and the workaround —
@@ -277,6 +284,10 @@ class PlayerController(
         .setLoadControl(bufferWatch)
         .let(options.buildPlayer)
         .apply {
+            // Set on the player rather than the builder so it holds however the player was built. A muted
+            // preview mustn't take the sound: asking for it would pause the viewer's music in another app.
+            val handleAudioFocus = !options.preview
+            setAudioAttributes(MEDIA_AUDIO, handleAudioFocus)
             addAnalyticsListener(DecoderLog.listener)
             addAnalyticsListener(guard.firstFrameListener)
             addListener(object : Player.Listener {
@@ -378,6 +389,8 @@ class PlayerController(
         if (request.key != current?.key) guard.forgetNotices()
         current = request
         guard.leaving()
+        // Live TV behind another app: nothing connects, and coming back plays the latest one asked for.
+        if (hold == Hold.STOPPED) return
 
         switchJob = scope.launch {
             if (debounce) delay(switchDebounceMillis)
@@ -437,7 +450,8 @@ class PlayerController(
                 if (!playable.isLive && request.startPositionMillis > 0) {
                     seekTo(request.startPositionMillis)
                 }
-                playWhenReady = true
+                // Paused behind another app, a stream that starts meanwhile waits there too.
+                playWhenReady = hold != Hold.PAUSED
                 prepare()
             }
         }
@@ -574,11 +588,51 @@ class PlayerController(
         _state.value = State.Idle
     }
 
+    /**
+     * Whether the app is behind another one, outside picture-in-picture (#356). Going behind, a film or
+     * episode pauses and stays paused, whatever starts meanwhile (a restart after a dropped connection,
+     * a step down, the next episode), and coming back doesn't play it. Live TV stops instead and closes
+     * its connection, so a single-connection account is free for another TV; nothing asked for meanwhile
+     * connects, and coming back tunes in the latest. An error on screen stays there for the viewer.
+     *
+     * A property rather than functions, as [audioEnabled] is: it's a state the screen sets.
+     */
+    var behindAnotherApp: Boolean = false
+        set(behind) {
+            if (behind == field) return
+            field = behind
+            if (behind) {
+                // Nothing playing yet counts as live: then nothing connects unseen.
+                val live = current?.key.let { it == null || it is MediaKey.Live }
+                hold = if (live) Hold.STOPPED else Hold.PAUSED
+                if (!live) {
+                    player.playWhenReady = false
+                } else if (_state.value !is State.Error) {
+                    switchJob?.cancel()
+                    guard.leaving()
+                    loaded = null
+                    player.stop()
+                    player.clearMediaItems()
+                    _state.value = State.Idle
+                }
+            } else {
+                val was = hold
+                hold = Hold.NONE
+                if (was == Hold.STOPPED && _state.value !is State.Error) {
+                    consecutiveFailures = 0
+                    // Asked for afresh, as a portal's link may have expired meanwhile.
+                    current?.let { play(it, debounce = false) }
+                }
+            }
+        }
+
     fun release() {
         switchJob?.cancel()
         guard.release()
         player.release()
     }
+
+    private enum class Hold { NONE, PAUSED, STOPPED }
 
     companion object {
         /** How far rewind and fast-forward skip, on screen and on the remote. */
@@ -592,6 +646,12 @@ class PlayerController(
         private const val PREVIEW_SWITCH_DEBOUNCE_MILLIS = 700L
 
         private const val LIVE_TARGET_OFFSET_MILLIS = 10_000L
+
+        /** Live TV, films and episodes alike: the system treats them all as a film's sound. */
+        private val MEDIA_AUDIO = AudioAttributes.Builder()
+            .setUsage(C.USAGE_MEDIA)
+            .setContentType(C.AUDIO_CONTENT_TYPE_MOVIE)
+            .build()
     }
 }
 

@@ -231,6 +231,21 @@ So: requests are debounced (350 ms), an in-flight switch is cancelled the moment
 arrives, and the player is `stop()`ed rather than released. Holding channel-up costs one actual
 tune — the one you stopped on.
 
+### Behind another app
+
+Fire TV Sticks mostly can't do picture-in-picture, so pressing Home mid-programme leaves the
+player behind the next app. Left alone it carries on there: its sound over the other app's (the
+full-screen players ask for audio focus; a muted preview never does, or it would pause the
+viewer's music), and live TV holding the provider's connection that a single-connection account
+needs for another TV. `WhenBehindAnotherApp` acts when the activity stops outside
+picture-in-picture, by setting `PlayerController.behindAnotherApp`: a film or episode pauses and
+saves its resume point, and stays paused on the way back; live TV stops rather than pausing so
+the connection closes, and tunes the channel in again on return. The hold lives in `PlayerController`, not the
+screens, because every way a stream starts goes through `play()`: an automatic restart, a step
+down, a zap finishing or a link arriving after Home was pressed would otherwise start the sound
+again behind the other app. Neither releases the player. It collects the lifecycle rather than
+reading it in composition, because Compose draws no frames while the activity is stopped.
+
 ### Retries are tuned for IPTV, not for CDNs
 
 ExoPlayer's default policy gives up almost immediately on a 403 or a 5xx. That is right for a
