@@ -73,6 +73,8 @@
     <string name="rec_notification_many">프로그램 %1$d개 녹화 중</string>
     <string name="rec_channel_name">녹화</string>
     <string name="rec_channel_desc">Settee가 녹화하는 동안 표시됩니다</string>
+    <string name="rec_error_missed">방송되는 동안 Settee가 실행 중이 아니어서 녹화하지 못했어요.</string>
+    <string name="rec_error_missed_late">Android가 방송이 끝난 뒤에 녹화를 시작해서 녹화하지 못했어요.</string>
     <string name="rec_error_nothing">녹화된 내용이 없습니다. 채널이 멈췄을 수 있으니 다시 녹화해 보세요.</string>
     <string name="rec_error_usb_no_folder">녹화할 폴더가 없습니다. 녹화 설정에서 USB 드라이브의 폴더를 선택하세요.</string>
     <string name="rec_error_usb_unavailable">USB 드라이브를 찾을 수 없습니다. 다시 연결한 후 녹화 설정에서 폴더를 다시 선택하세요.</string>

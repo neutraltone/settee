@@ -64,6 +64,8 @@ class RecordingAlarmReceiver : BroadcastReceiver() {
                 if (!graph.settings.recordAutoSwitch.value) return@launch
                 if (graph.database.wontOpen() != null) return@launch
                 val rec = graph.recordingRepository.byId(id) ?: return@launch
+                // Missed, so there's nothing to switch to: RecordingService won't start it.
+                if (graph.recordingEngine.windowEnded(rec)) return@launch
                 // Only internal recordings can be tail-watched; a NAS/USB one just records.
                 if (!isTailWatchable(rec)) return@launch
                 // In-app (foreground) switch: the nav graph is watching this.
@@ -108,8 +110,8 @@ class RecordingAlarmReceiver : BroadcastReceiver() {
             try {
                 val graph = ServiceLocator.get(context)
                 if (graph.database.wontOpen() != null) return@launch
-                // The same re-arm as every launch, so a booking that came due while the box was off or
-                // the update installed starts now rather than being skipped.
+                // The same re-arm as every launch: a booking still on starts now rather than being
+                // skipped, and one that ended while the box was off or the update installed is missed.
                 graph.recordingEngine.rearmScheduled(context.applicationContext)
             } finally {
                 pending.finish()

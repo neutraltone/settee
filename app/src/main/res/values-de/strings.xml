@@ -73,6 +73,8 @@
     <string name="rec_notification_many">%1$d Sendungen werden aufgenommen</string>
     <string name="rec_channel_name">Aufnahme</string>
     <string name="rec_channel_desc">Wird angezeigt, während Settee aufnimmt</string>
+    <string name="rec_error_missed">Das wurde verpasst, weil Settee während der Sendung nicht lief.</string>
+    <string name="rec_error_missed_late">Das wurde verpasst, weil Android die Aufnahme erst nach dem Ende gestartet hat.</string>
     <string name="rec_error_nothing">Es wurde nichts aufgenommen. Der Sender ist vielleicht ausgefallen, also versuch die Aufnahme noch einmal.</string>
     <string name="rec_error_usb_no_folder">Es gibt keinen Ordner für Aufnahmen. Wähle in den Aufnahme-Einstellungen einen auf deinem USB-Laufwerk aus.</string>
     <string name="rec_error_usb_unavailable">Dein USB-Laufwerk wurde nicht gefunden. Steck es wieder ein und wähle dann seinen Ordner in den Aufnahme-Einstellungen erneut aus.</string>

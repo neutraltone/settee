@@ -43,6 +43,7 @@ class RecordingEngine(
     private val wording: ErrorWording,
     /** Removes a recording's file, throwing when it's still there: [RecordingStorage.delete]. */
     private val removeFile: (String) -> Unit = { RecordingStorage.delete(appContext, settings, it) },
+    /** Wall-clock time, so a test can fix it; the graph's own clock everywhere else. */
     private val clock: () -> Long = System::currentTimeMillis,
 ) {
     /**
@@ -208,7 +209,7 @@ class RecordingEngine(
         RecordingScheduler.set(appContext, id, armAt)
         // Warn the viewer just before we switch their screen to the recording (single-connection
         // auto-switch); only meaningful when auto-switch is on.
-        if (settings.recordAutoSwitch.value) RecordingScheduler.setWarning(appContext, id, armAt)
+        if (settings.recordAutoSwitch.value) RecordingScheduler.setWarning(appContext, id, armAt, clock())
         return id
     }
 
@@ -221,14 +222,13 @@ class RecordingEngine(
     suspend fun retry(recording: Recording): Boolean {
         val now = clock()
         val start = recording.scheduledStartMillis
-        val end = recording.scheduledEndMillis
         return when {
             start > now + LEAD_MILLIS -> {
                 repo.setStatus(recording.id, RecordingStatus.SCHEDULED, null)
                 RecordingScheduler.set(appContext, recording.id, start)
                 true
             }
-            end == 0L || end > now -> {
+            !recording.windowEndedBy(now) -> {
                 // The failed attempt's file would count as taken and the capture would move on to a
                 // suffixed name, leaving it behind with no row; it used to be overwritten, so drop
                 // it. A USB document is reopened and overwritten in place, so it stays.
@@ -245,19 +245,50 @@ class RecordingEngine(
      * Re-arm the exact alarm for every scheduled recording. Alarms are dropped on a reboot, an
      * update or a force-stop, so [RecordingAlarmReceiver] calls this after the first two and
      * [app.opentv.OpenTvApp] on each launch, for the force-stop no receiver hears of. A booking whose
-     * start slipped past while the app was dead fires almost at once; re-setting an existing alarm is
-     * idempotent, so this is safe to run every time. The alarms are set through [context]: a receiver
-     * passes its own, since the process-wide graph can outlive the Application it was built with (it
-     * does across Robolectric tests), and alarms set through a stale one land where nothing reads them.
+     * start slipped past while the app was dead fires almost at once for what's left of it; one whose
+     * whole window went by is marked missed instead, since starting it would only write an empty file
+     * and blame the channel. Re-setting an existing alarm is idempotent, so this is safe to run every
+     * time. The alarms are set through [context]: a receiver passes its own, since the process-wide
+     * graph can outlive the Application it was built with (it does across Robolectric tests), and
+     * alarms set through a stale one land where nothing reads them.
      */
     suspend fun rearmScheduled(context: Context = appContext) {
         val now = clock()
         val autoSwitch = settings.recordAutoSwitch.value
         for (rec in repo.scheduled()) {
+            if (markMissedIfOver(rec, Missed.NOT_RUNNING)) continue
             val at = if (rec.scheduledStartMillis <= now) now + 1_000L else rec.scheduledStartMillis
             RecordingScheduler.set(context, rec.id, at)
-            if (autoSwitch) RecordingScheduler.setWarning(context, rec.id, at)
+            if (autoSwitch) RecordingScheduler.setWarning(context, rec.id, at, now)
         }
+    }
+
+    /** Whether [recording]'s window has already ended, so there's nothing left to capture. */
+    fun windowEnded(recording: Recording): Boolean = recording.windowEndedBy(clock())
+
+    /** Why a booking whose window ended was never started, which decides what the viewer is told. */
+    enum class Missed(val sentence: Int, val detail: String) {
+        /** Its alarm was lost: Settee wasn't running, found on launch or after a reboot. */
+        NOT_RUNNING(R.string.rec_error_missed, "Missed"),
+
+        /** Settee was running, but Android delivered the alarm after the window ended. */
+        LATE(R.string.rec_error_missed_late, "MissedLate"),
+    }
+
+    /**
+     * Fail [recording] as missed for [why] when its window has already ended, before anything is
+     * written to storage. Returns true when it was.
+     */
+    suspend fun markMissedIfOver(recording: Recording, why: Missed): Boolean {
+        if (!windowEnded(recording)) return false
+        repo.markFinished(
+            id = recording.id,
+            ok = false,
+            atMillis = clock(),
+            bytes = 0,
+            error = ViewerError(appContext.getString(why.sentence), why.detail).stored(),
+        )
+        return true
     }
 
     /** Cancel a scheduled recording: disarm the alarm (and its pre-warning) and drop the row. */
@@ -396,3 +427,10 @@ class RecordingEngine(
         const val AIRINGS_LOOKED_UP = 200
     }
 }
+
+/**
+ * Whether this recording's window had ended by [nowMillis], leaving nothing to capture. One started on
+ * the spot with no end never has. Retry, the Recordings screen's Retry action and the missed check all
+ * ask this, so they can't disagree.
+ */
+fun Recording.windowEndedBy(nowMillis: Long): Boolean = scheduledEndMillis in 1..nowMillis

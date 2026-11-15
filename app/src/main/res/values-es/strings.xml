@@ -73,6 +73,8 @@
     <string name="rec_notification_many">Grabando %1$d programas</string>
     <string name="rec_channel_name">Grabación</string>
     <string name="rec_channel_desc">Se muestra mientras Settee está grabando</string>
+    <string name="rec_error_missed">Esto se perdió porque Settee no estaba abierto mientras se emitía.</string>
+    <string name="rec_error_missed_late">Esto se perdió porque Android lo inició cuando ya había terminado.</string>
     <string name="rec_error_nothing">No se grabó nada. Puede que el canal se haya detenido, así que vuelve a intentar grabarlo.</string>
     <string name="rec_error_usb_no_folder">No hay ninguna carpeta donde grabar. Elige una en tu unidad USB en Ajustes de grabación.</string>
     <string name="rec_error_usb_unavailable">No se encuentra tu unidad USB. Vuelve a conectarla y elige su carpeta de nuevo en Ajustes de grabación.</string>
