@@ -8,9 +8,7 @@ package app.opentv
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import app.opentv.data.model.Channel
-import app.opentv.data.model.EpgChannelAlias
 import app.opentv.data.model.GuideProgramme
-import app.opentv.data.model.Programme
 import app.opentv.data.model.SeriesRule
 import app.opentv.data.model.Source
 import app.opentv.data.model.SourceKind
@@ -46,23 +44,6 @@ class SourceDeletionTest {
 
     private suspend fun away() =
         db.sources().insert(Source(name = "Away", kind = SourceKind.M3U, url = "https://example.com/a.m3u"))
-
-    /** Gives [sourceId]'s provider guide one programme and one alias on [epgId]. */
-    private suspend fun guideFor(sourceId: Long, epgId: String) {
-        val feed = db.epgFeeds().forProvider(sourceId)!!
-        db.programmes().insertOrReplace(
-            listOf(
-                Programme(
-                    feedId = feed.id,
-                    epgChannelId = epgId,
-                    startUtcMillis = tomorrow.startUtcMillis,
-                    endUtcMillis = tomorrow.endUtcMillis,
-                    title = "News",
-                ),
-            ),
-        )
-        db.epgAliases().upsertAll(listOf(EpgChannelAlias(feed.id, epgId, "News", "news")))
-    }
 
     private fun fromProvider(sourceId: Long, streamId: String) = Channel(
         sourceId = sourceId,
@@ -116,8 +97,8 @@ class SourceDeletionTest {
         val first = home()
         val second = away()
         test.guide.ensureFeeds()
-        guideFor(first, "home.news")
-        guideFor(second, "away.news")
+        test.seedProviderGuide(first, "home.news")
+        test.seedProviderGuide(second, "away.news")
 
         test.catalog.deleteSource(first)
 
@@ -139,6 +120,8 @@ class SourceDeletionTest {
 
         test.catalog.deleteSource(first)
 
+        // Gone before any refresh, which would otherwise clear it up itself.
+        assertThat(db.epgFeeds().forProvider(first)).isNull()
         assertThat(test.guide.syncAll(nowUtcMillis = now).feedsFailed).isEqualTo(0)
     }
 }

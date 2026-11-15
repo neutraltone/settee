@@ -7,8 +7,6 @@ package app.opentv
 
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
-import app.opentv.data.model.EpgChannelAlias
-import app.opentv.data.model.Programme
 import app.opentv.data.model.Source
 import app.opentv.data.model.SourceKind
 import com.google.common.truth.Truth.assertThat
@@ -42,30 +40,13 @@ class EpgProviderFeedsTest {
 
     private suspend fun feeds() = guide.observeFeeds().first()
 
-    /** Gives [sourceId]'s provider guide one programme and one alias on [epgId]. */
-    private suspend fun guideFor(sourceId: Long, epgId: String) {
-        val feed = db.epgFeeds().forProvider(sourceId)!!
-        db.programmes().insertOrReplace(
-            listOf(
-                Programme(
-                    feedId = feed.id,
-                    epgChannelId = epgId,
-                    startUtcMillis = 2_000_000_000_000,
-                    endUtcMillis = 2_000_003_600_000,
-                    title = "News",
-                ),
-            ),
-        )
-        db.epgAliases().upsertAll(listOf(EpgChannelAlias(feed.id, epgId, "News", "news")))
-    }
-
     @Test
     fun `a provider feed whose provider is gone is removed with its programmes and aliases`() = runTest {
         val gone = provider("Gone")
         val kept = provider("Kept")
         guide.ensureFeeds()
-        guideFor(gone, "gone.news")
-        guideFor(kept, "kept.news")
+        test.seedProviderGuide(gone, "gone.news")
+        test.seedProviderGuide(kept, "kept.news")
         // How a device that deleted a provider before #343 was left: the source row gone, its feed not.
         db.sources().delete(gone)
 
