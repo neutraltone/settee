@@ -28,6 +28,7 @@ import app.opentv.data.model.Source
 import app.opentv.data.model.SourceKind
 import app.opentv.data.model.StreamKind
 import app.opentv.data.model.StremioStream
+import app.opentv.data.model.liveAt
 import app.opentv.data.model.ref
 import app.opentv.data.parser.displayTitle
 import app.opentv.data.repo.CatalogRepository
@@ -368,6 +369,10 @@ class ChannelsViewModel @JvmOverloads constructor(
     @androidx.compose.runtime.Immutable
     data class Row(
         val channel: LineupChannel,
+        /**
+         * What was on when the row was built. Rows aren't rebuilt every minute, so it may since have
+         * ended: anything that draws what's on now asks [liveAt] with the screen's clock instead.
+         */
         val now: GuideProgramme? = null,
         val next: GuideProgramme? = null,
         /** Every programme for this channel inside the guide window, start-ordered. */
@@ -375,11 +380,8 @@ class ChannelsViewModel @JvmOverloads constructor(
     ) {
         val primary: Channel get() = channel.primary
 
-        /**
-         * The programme on at [millis], from [programmes]. Rows aren't rebuilt every minute, so
-         * [now] is what was on when the row was built and may since have ended.
-         */
-        fun liveAt(millis: Long): GuideProgramme? = programmes.firstOrNull { it.isLiveAt(millis) }
+        /** The programme on at [millis], from [programmes]. */
+        fun liveAt(millis: Long): GuideProgramme? = programmes.liveAt(millis)
 
         /** Every Quality of the Channel, the same wherever it's shown. */
         val variants: List<Channel> get() = channel.qualities
@@ -581,7 +583,7 @@ class ChannelsViewModel @JvmOverloads constructor(
 
             Row(
                 channel,
-                now = list.firstOrNull { it.isLiveAt(now) },
+                now = list.liveAt(now),
                 next = list.firstOrNull { it.startUtcMillis > now },
                 programmes = list,
             )
