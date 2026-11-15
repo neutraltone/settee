@@ -309,6 +309,13 @@ class PlayerController(
                 }
 
                 override fun onPlayerError(error: PlaybackException) {
+                    // The last stream, failing while the next one is on its way: it says nothing about
+                    // that one, and restarting `current` would cancel its switch and ask for it again.
+                    if (isSwitching) {
+                        gaveUp = true
+                        player.stop()
+                        return
+                    }
                     consecutiveFailures++
                     guard.leaving()
                     DecoderLog.logFailure(error)
@@ -381,6 +388,14 @@ class PlayerController(
             val playable = when (val resolved = resolve(request.key)) {
                 is Playable.Ready -> resolved
                 is Playable.Failed -> {
+                    // The last stream is still on the player. Left playing, it'd be heard behind the
+                    // sentence and its next state would cover it.
+                    gaveUp = true
+                    player.stop()
+                    loaded = null
+                    // Whether stop() empties the player's tracks is ExoPlayer's business; the options
+                    // offered under the sentence mustn't be the last stream's.
+                    _tracks.value = Tracks.EMPTY
                     val title = resolved.title.ifEmpty { _title.value }
                     _state.value = State.Error(title, PlaybackErrors.describe(strings, resolved.failure), true)
                     return@launch
