@@ -44,4 +44,14 @@ class LaunchedToPlayTest {
 
         assertThat(launchedToPlay(reminder, restored = true)).isFalse()
     }
+
+    @Test
+    fun `reopening from Recents an app a reminder once opened is not a launch to play`() {
+        // Android hands back the intent the task started with, extras and all, marked as from history.
+        val fromRecents = Intent(launcher)
+            .putExtra(MainActivity.EXTRA_PLAY_CHANNEL, 7L)
+            .addFlags(Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY)
+
+        assertThat(launchedToPlay(fromRecents, restored = false)).isFalse()
+    }
 }
