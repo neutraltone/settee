@@ -284,7 +284,7 @@ private fun ScreenFrameScope.HomeRows(shelves: List<HomeShelf>, takeFocus: Boole
                         leave = { card -> leave(card.key.stored) },
                     )
                     is HomeShelf.Covers -> CoverShelf(
-                        shelf.titleArg?.let { stringResource(shelf.title, it) } ?: stringResource(shelf.title),
+                        stringResource(shelf.title, *shelf.titleArgs),
                         shelf.covers,
                         shelf.showsStatus,
                         rowFocus,
@@ -341,8 +341,10 @@ private sealed class HomeShelf(key: String, items: List<String>) {
         val title: Int,
         val covers: List<Cover>,
         val showsStatus: Boolean,
-        val titleArg: String? = null,
-    ) : HomeShelf(key, covers.map { it.title.pickKey })
+        titleArg: String? = null,
+    ) : HomeShelf(key, covers.map { it.title.pickKey }) {
+        val titleArgs: Array<Any> = listOfNotNull<Any>(titleArg).toTypedArray()
+    }
 
     class Channels(val channels: List<HomeChannel>) :
         HomeShelf(HomeRowKind.FAVOURITE_CHANNELS.key, channels.map { it.channel.primary.pickKey })

@@ -39,14 +39,12 @@ class MoreLikeThisTest {
         genre: String? = null,
         rating: Double? = null,
         sourceId: Long = 1,
-        categoryId: String? = null,
         tmdbId: String? = null,
-        recommends: String? = null,
     ) = Movie(
         sourceId = sourceId,
         streamId = name,
         name = name,
-        categoryId = categoryId,
+        categoryId = null,
         posterUrl = null,
         rating = rating,
         year = null,
@@ -56,8 +54,12 @@ class MoreLikeThisTest {
         streamUrl = "",
         genre = genre,
         tmdbId = tmdbId,
-        tmdbRecommendations = recommends,
     )
+
+    /** [this], with the TMDB ids TMDB recommends for it stored, in its order. */
+    private fun Movie.recommending(ids: String) = copy(tmdbRecommendations = ids)
+
+    private fun Series.recommending(ids: String) = copy(tmdbRecommendations = ids)
 
     private suspend fun stored(name: String) = db.movies().all().single { it.name == name }
 
@@ -96,10 +98,10 @@ class MoreLikeThisTest {
     fun `a film with no genre is offered others from its category, best-rated first`() = runTest {
         db.movies().upsertAll(
             listOf(
-                movie("Untitled", categoryId = "7"),
-                movie("Same shelf", categoryId = "7", rating = 6.0),
-                movie("Same shelf, better", categoryId = "7", rating = 8.0),
-                movie("Other shelf", categoryId = "9", rating = 9.0),
+                movie("Untitled").copy(categoryId = "7"),
+                movie("Same shelf", rating = 6.0).copy(categoryId = "7"),
+                movie("Same shelf, better", rating = 8.0).copy(categoryId = "7"),
+                movie("Other shelf", rating = 9.0).copy(categoryId = "9"),
             ),
         )
 
@@ -180,7 +182,7 @@ class MoreLikeThisTest {
             withKey()
             db.movies().upsertAll(
                 listOf(
-                    movie("The Quiet Road", genre = "Drama", tmdbId = "1", recommends = "30,10,20"),
+                    movie("The Quiet Road", genre = "Drama", tmdbId = "1").recommending("30,10,20"),
                     movie("Ten", tmdbId = "10"),
                     movie("Twenty", tmdbId = "20", rating = 9.0),
                     movie("Thirty, elsewhere", tmdbId = "30", sourceId = 2),
@@ -200,7 +202,7 @@ class MoreLikeThisTest {
             withKey()
             db.movies().upsertAll(
                 listOf(
-                    movie("The Quiet Road", genre = "Drama", tmdbId = "1", recommends = "10,99"),
+                    movie("The Quiet Road", genre = "Drama", tmdbId = "1").recommending("10,99"),
                     movie("Ten", genre = "Drama", tmdbId = "10"),
                     movie("Long Night", genre = "Drama", rating = 6.0),
                     movie("Harbour Lights", genre = "Drama", rating = 8.0),
@@ -217,7 +219,7 @@ class MoreLikeThisTest {
         withKey()
         db.movies().upsertAll(
             listOf(
-                movie("The Quiet Road", tmdbId = "1", recommends = "10"),
+                movie("The Quiet Road", tmdbId = "1").recommending("10"),
                 movie("Ten, elsewhere", tmdbId = "10", sourceId = 2),
                 movie("Ten", tmdbId = "10"),
             ),
@@ -233,7 +235,7 @@ class MoreLikeThisTest {
         withKey()
         db.movies().upsertAll(
             listOf(
-                movie("The Quiet Road", genre = "Drama", tmdbId = "5", recommends = "5,10"),
+                movie("The Quiet Road", genre = "Drama", tmdbId = "5").recommending("5,10"),
                 movie("The Quiet Road 4K", genre = "Drama", tmdbId = "5", sourceId = 2),
                 movie("Ten", tmdbId = "10"),
             ),
@@ -251,21 +253,18 @@ class MoreLikeThisTest {
         genre: String? = null,
         rating: Double? = null,
         sourceId: Long = 1,
-        categoryId: String? = null,
         tmdbId: String? = null,
-        recommends: String? = null,
     ) = Series(
         sourceId = sourceId,
         seriesId = name,
         name = name,
-        categoryId = categoryId,
+        categoryId = null,
         posterUrl = null,
         rating = rating,
         year = null,
         plot = null,
         genre = genre,
         tmdbId = tmdbId,
-        tmdbRecommendations = recommends,
     )
 
     private suspend fun storedShow(name: String) = db.series().all().single { it.name == name }
@@ -291,9 +290,9 @@ class MoreLikeThisTest {
     fun `a show with no genre is offered others from its category`() = runTest {
         db.series().upsertAll(
             listOf(
-                series("Untitled", categoryId = "7"),
-                series("Same shelf", categoryId = "7"),
-                series("Other shelf", categoryId = "9"),
+                series("Untitled").copy(categoryId = "7"),
+                series("Same shelf").copy(categoryId = "7"),
+                series("Other shelf").copy(categoryId = "9"),
             ),
         )
 
@@ -307,7 +306,7 @@ class MoreLikeThisTest {
         withKey()
         db.series().upsertAll(
             listOf(
-                series("Harbour", genre = "Drama", tmdbId = "1", recommends = "20,10"),
+                series("Harbour", genre = "Drama", tmdbId = "1").recommending("20,10"),
                 series("Ten", tmdbId = "10"),
                 series("Twenty", tmdbId = "20"),
                 series("Just drama", genre = "Drama"),
@@ -323,8 +322,8 @@ class MoreLikeThisTest {
     fun `without a TMDB Key, or for a film with no TMDB id, genres decide, as before TMDB was asked`() = runTest {
         db.movies().upsertAll(
             listOf(
-                movie("Keyless", genre = "Drama", tmdbId = "1", recommends = "10"),
-                movie("No id", genre = "Drama", recommends = "10"),
+                movie("Keyless", genre = "Drama", tmdbId = "1").recommending("10"),
+                movie("No id", genre = "Drama").recommending("10"),
                 movie("Ten", tmdbId = "10"),
                 movie("Long Night", genre = "Drama"),
             ),

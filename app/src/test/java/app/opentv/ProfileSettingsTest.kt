@@ -239,7 +239,7 @@ class ProfileSettingsTest {
         runTest {
             // Written by an older or newer release: no Favourite movies yet, and a row since retired.
             db.profileSettings().upsert(
-                ProfileSetting(1L, "home.rows", "preview=off;channels,-cw,retiredRow,recentShows", now),
+                ProfileSetting(1L, "home.rows", "preview=off;channels,-cw,because,retiredRow,recentShows", now),
             )
 
             assertThat(home()).isEqualTo(

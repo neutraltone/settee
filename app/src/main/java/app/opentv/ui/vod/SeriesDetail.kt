@@ -10,7 +10,6 @@ import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -19,11 +18,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyGridState
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.itemsIndexed
-import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
@@ -64,7 +58,6 @@ import app.opentv.data.repo.EpisodeStatuses
 import app.opentv.data.repo.MediaKey
 import app.opentv.data.repo.SeriesMainAction
 import app.opentv.data.repo.TitleCover
-import app.opentv.ui.design.ArtCardSize
 import app.opentv.ui.design.Pill
 import app.opentv.ui.design.PillButton
 import app.opentv.ui.design.ScreenFrame
@@ -120,19 +113,15 @@ internal fun SeriesDetailContent(
     val seasons = remember(episodes) { seasonsOf(episodes) }
     val nav = remember(series.id) { ShowPageNav() }
     val hasLikeThis = suggestions.isNotEmpty()
-    val shown = remember(seasons, mainAction, nav.pickedSeason, hasLikeThis) {
-        ShowSeasons(seasons, mainAction, nav.pickedSeason, hasLikeThis)
+    val shown = remember(seasons, mainAction, nav.pickedSeason, hasLikeThis, suggestionsKnown) {
+        ShowSeasons(seasons, mainAction, nav.pickedSeason, hasLikeThis, suggestionsKnown)
     }
-    val showingLikeThis = nav.likeThis && hasLikeThis
+    val showingLikeThis = nav.showsLikeThis(shown)
     val pillRow = rememberLazyListState()
     val episodeList = rememberLazyListState()
     ShowPageFocusEffects(nav, shown, pillRow, episodeList, showingLikeThis)
     EpisodeListScrollEffects(nav, shown, episodeList)
-    // Back from anywhere in the list goes to the pills first. Without pills, Back leaves as it
-    // always has: there's nowhere nearer to go.
-    BackHandler(enabled = nav.inList && shown.hasPills) { nav.pillTarget = PillTarget() }
-    // From anywhere in More like this, as from the episodes: its pill holds the pill row's requester.
-    BackHandler(enabled = nav.inGrid && showingLikeThis) { nav.pillTarget = PillTarget() }
+    BackHandler(enabled = nav.backGoesToPills(shown)) { nav.pillTarget = PillTarget() }
 
     val backdrop: (@Composable BoxScope.() -> Unit)? =
         if (nav.heroAway) null else ({ HeroBackdrop(series.backdropUrl, series.posterUrl) })
@@ -163,10 +152,13 @@ internal fun SeriesDetailContent(
                 Spacer(Modifier.height(SetteeSpace.RowGap))
             }
             if (showingLikeThis) {
-                LikeThisGrid(nav, suggestions, onOpenSeries)
-            } else if (!suggestionsKnown && seasons.size == 1) {
-                // Rather than list them and push them down a row when More like this's pill row arrives.
-                EpisodesComing()
+                LikeThisGrid(
+                    suggestions,
+                    firstCover = nav.focus.firstCover,
+                    onFocusChanged = nav::gridFocusChanged,
+                    onUpFromFirstRow = { nav.pillTarget = PillTarget() },
+                    onOpenSeries = onOpenSeries,
+                )
             } else {
                 EpisodeList(series, nav, shown, statuses, episodeList, play)
             }
@@ -312,45 +304,6 @@ private fun SeasonPills(nav: ShowPageNav, shown: ShowSeasons, pillRow: LazyListS
     }
 }
 
-/**
- * A show's More like this, where its episodes were: a grid of the same covers as a category's. Up from
- * its first row goes back to the More like this pill.
- */
-@Composable
-private fun LikeThisGrid(nav: ShowPageNav, covers: List<TitleCover>, onOpenSeries: (Long) -> Unit) {
-    val grid = rememberLazyGridState()
-    // By id, not place: the covers can be read again while one is highlighted.
-    var highlighted by remember { mutableStateOf<Long?>(null) }
-    LazyVerticalGrid(
-        state = grid,
-        columns = GridCells.FixedSize(ArtCardSize.Portrait.width),
-        contentPadding = PaddingValues(vertical = LIKE_THIS_LIFT_ROOM),
-        horizontalArrangement = Arrangement.spacedBy(SetteeSpace.CardGap),
-        verticalArrangement = Arrangement.spacedBy(SetteeSpace.RowGap),
-        modifier = Modifier
-            .fillMaxWidth()
-            .onFocusChanged { nav.gridFocusChanged(it.hasFocus) }
-            .onPreviewKeyEvent { e -> e.isPress(Key.DirectionUp) && nav.goUpFromGrid(grid.inFirstRow(highlighted)) },
-    ) {
-        itemsIndexed(covers, key = { _, cover -> cover.id }) { index, cover ->
-            TitleArt(
-                cover = cover,
-                modifier = if (index == 0) Modifier.focusRequester(nav.focus.firstCover) else Modifier,
-                onHighlight = { highlighted = cover.id },
-                onOpen = { onOpenSeries(cover.id) },
-                onOptions = null,
-            )
-        }
-    }
-}
-
-private fun LazyGridState.inFirstRow(coverId: Long?): Boolean =
-    coverId != null && layoutInfo.visibleItemsInfo.firstOrNull { it.key == coverId }?.row == 0
-
-@Composable
-private fun EpisodesComing() =
-    Text(stringResource(R.string.vod_loading_episodes), style = SetteeType.Body, color = SetteeColors.QuietText)
-
 /** The selected season's episodes, or a line saying they're on their way. */
 @Composable
 private fun EpisodeList(
@@ -362,8 +315,10 @@ private fun EpisodeList(
     onPlayEpisode: (MediaKey) -> Unit,
 ) {
     val season = shown.selected
-    if (season == null) {
-        EpisodesComing()
+    // A one-season show's wait for its suggestions too, rather than be pushed down a row when More like
+    // this's pill row arrives.
+    if (season == null || shown.waiting) {
+        Text(stringResource(R.string.vod_loading_episodes), style = SetteeType.Body, color = SetteeColors.QuietText)
         return
     }
     LazyColumn(
@@ -492,12 +447,17 @@ private class ShowSeasons(
     picked: Int?,
     /** Whether the show has suggestions, and so a More like this pill. */
     val hasLikeThis: Boolean,
+    /** Whether the show's suggestions have been read, so whether it has the pill is known. */
+    suggestionsKnown: Boolean = true,
 ) {
     val selected: Season? = all.firstOrNull { it.number == (picked ?: openingSeason(all, mainAction)) }
     val selectedIndex: Int = all.indexOf(selected)
 
     /** A pill row: for more than one season, or for More like this beside a show's only season. */
     val hasPills: Boolean = all.size > 1 || (hasLikeThis && all.isNotEmpty())
+
+    /** A one-season show's episodes wait until it's known whether a pill row comes above them. */
+    val waiting: Boolean = !suggestionsKnown && all.size == 1
 
     fun after(season: Season): Season? = all.getOrNull(all.indexOf(season) + 1)
 }
@@ -544,6 +504,15 @@ private class ShowPageNav {
         if (hasFocus) heroAway = true
     }
 
+    /** Whether More like this's grid is shown in the episodes' place. */
+    fun showsLikeThis(shown: ShowSeasons) = likeThis && shown.hasLikeThis
+
+    /**
+     * Back from anywhere in the episodes, or in More like this, goes to the pills first. Without pills,
+     * Back leaves as it always has: there's nowhere nearer to go.
+     */
+    fun backGoesToPills(shown: ShowSeasons) = (inList && shown.hasPills) || (inGrid && showsLikeThis(shown))
+
     fun gridFocusChanged(hasFocus: Boolean) {
         inGrid = hasFocus
         if (hasFocus) heroAway = true
@@ -567,12 +536,6 @@ private class ShowPageNav {
 
     /** Down from More like this's pill reaches its first cover. */
     fun goDownToGrid(): Boolean = runCatching { focus.firstCover.requestFocus() }.isSuccess
-
-    /** Up from More like this's first row reaches its pill. */
-    fun goUpFromGrid(inFirstRow: Boolean): Boolean {
-        if (inFirstRow) pillTarget = PillTarget()
-        return inFirstRow
-    }
 
     /** Off a season's last episode onto the next season's first; the last season's last stays put. */
     fun goDownFromList(shown: ShowSeasons): Boolean {
@@ -629,9 +592,6 @@ internal const val NEXT_SEASON_PEEK = "next_season_peek"
 
 private const val PEEK_KEY = "next-season-peek"
 private const val LIKE_THIS_KEY = "more-like-this"
-
-/** Above and below More like this's covers, for a highlighted one's lift and ring. */
-private val LIKE_THIS_LIFT_ROOM = 12.dp
 
 private const val FIRST_HIGHLIGHT_DELAY_MILLIS = 60L
 private const val SYNOPSIS_WIDTH = 0.6f
