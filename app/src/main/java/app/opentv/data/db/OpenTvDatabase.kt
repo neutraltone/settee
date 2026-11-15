@@ -89,7 +89,7 @@ class Converters {
         SeriesRule::class,
         Reminder::class,
     ],
-    version = 16,
+    version = 17,
     exportSchema = true,
 )
 @TypeConverters(Converters::class)
@@ -104,6 +104,7 @@ abstract class OpenTvDatabase : RoomDatabase() {
     abstract fun series(): SeriesDao
     abstract fun episodes(): EpisodeDao
     abstract fun positions(): PlaybackPositionDao
+    abstract fun retiredTitles(): RetiredTitlesDao
     abstract fun seriesDismissals(): SeriesDismissalDao
     abstract fun favourites(): FavouriteDao
     abstract fun livePlayback(): LivePlaybackDao
@@ -291,7 +292,20 @@ abstract class OpenTvDatabase : RoomDatabase() {
         }
 
         /**
-         * 15 → 16: films TMDB answered about while the background pass threw its poster away (#349)
+         * Films and series get the stamp of the refresh that last listed them (#351). 0 for what's
+         * stored: the next complete list stamps every title it has, so only the ones it doesn't are
+         * deleted, which they would have been all along.
+         */
+        private val TITLES_LAST_SEEN = object : Migration(15, 16) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                for (table in listOf("movies", "series")) {
+                    db.execSQL("ALTER TABLE `$table` ADD COLUMN `lastSeenMillis` INTEGER NOT NULL DEFAULT 0")
+                }
+            }
+        }
+
+        /**
+         * 16 → 17: films TMDB answered about while the background pass threw its poster away (#349)
          * are asked again, so the ones the provider sent without a poster get TMDB's. Only those with
          * no poster: one that has a poster keeps it whatever TMDB says. The provider's answer
          * (`detailsLookedUp`) stands. Only data changes.
@@ -300,7 +314,7 @@ abstract class OpenTvDatabase : RoomDatabase() {
          * would say TMDB never answered, and a list refresh would then put the provider's guessed
          * director back over TMDB's (`keepingLookUpsOf`), for good if the viewer has no key now.
          */
-        private val POSTER_REASK = object : Migration(15, 16) {
+        private val POSTER_REASK = object : Migration(16, 17) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL(
                     "UPDATE `movies` SET `tmdbAnsweredAt` = 0 " +
@@ -314,7 +328,15 @@ abstract class OpenTvDatabase : RoomDatabase() {
          * before 9: those schemas are wiped instead (see [WIPED_SCHEMAS]).
          */
         internal val MIGRATIONS: Array<Migration> =
-            arrayOf(CREDITS, TMDB_ANSWERED_AT, ADDED_INDEX, ON_NOW_INDEX, CHANNEL_IDENTITY, POSTER_REASK)
+            arrayOf(
+                CREDITS,
+                TMDB_ANSWERED_AT,
+                ADDED_INDEX,
+                ON_NOW_INDEX,
+                CHANNEL_IDENTITY,
+                TITLES_LAST_SEEN,
+                POSTER_REASK,
+            )
 
         /** The schemas opened empty rather than migrated; see [build]. */
         private val WIPED_SCHEMAS = intArrayOf(1, 2, 3, 4, 5, 6, 7, 8, 11)

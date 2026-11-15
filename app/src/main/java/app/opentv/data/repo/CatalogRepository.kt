@@ -453,7 +453,7 @@ class CatalogRepository(
             tmdbMetaOf(result).onSuccess { result = result.withTmdb(it, now) }
         }
 
-        if (result != movie) movieDao.upsertAll(listOf(result))
+        if (result != movie) movieDao.saveLookedUp(listOf(result))
         result
     }
 
@@ -493,7 +493,7 @@ class CatalogRepository(
             val info = fetchSeries(panel, series.seriesId, now, storeEpisodes = opening)
             if (info != null && !result.isEnriched) result = result.filledFrom(info)
         }
-        if (result != series) seriesDao.upsertAll(listOf(result))
+        if (result != series) seriesDao.saveLookedUp(listOf(result))
         if (!shownFirst) emit(result)
 
         // 2) TMDB, with the viewer's key, at once when something is still missing or TMDB's answer
@@ -501,7 +501,7 @@ class CatalogRepository(
         if (tmdb.isConfigured() && result.wantsTmdb(now)) {
             tmdbMetaOf(result).onSuccess { meta ->
                 val answered = result.withTmdb(meta, now)
-                seriesDao.upsertAll(listOf(answered))
+                seriesDao.saveLookedUp(listOf(answered))
                 emit(answered)
             }
         }
@@ -655,6 +655,11 @@ class CatalogRepository(
                     ?: ep.copy(firstSeenMillis = nowUtcMillis)
             },
         )
+        // Never reached with an empty reply, which may be a struggling panel's and would delete them all.
+        viewerLibrary.retired.episodes(source.id, seriesId, fetched.mapTo(HashSet()) { it.episodeId }) { version ->
+            // Only once: what this fetch stores has nothing left out, so it never fetches again.
+            ensureEpisodes(source, version.seriesId, nowUtcMillis)
+        }
     }
 
     /** Live channels only — the fast path so the guide can show before VOD and the guide load. */
@@ -786,7 +791,12 @@ class CatalogRepository(
         withContext(Dispatchers.IO) {
             val categories = fetchList { categoryDao.upsertAll(api.movieCategories(source)) }
             var count = 0
-            val list = fetchList { count = api.movies(source).use { movieDao.save(source.id, it, progress) } }
+            val list = fetchList {
+                val saved = api.movies(source).use { movieDao.save(source.id, it, progress) }
+                count = saved.count
+                // Only after a whole list: one that failed or was cut off threw before here.
+                if (saved.count > 0) viewerLibrary.retired.movies(source.id, saved.stamp)
+            }
             if (count > 0) fillGenresInBackground(source)
             ListFetch(count, categories && list)
         }
@@ -795,8 +805,13 @@ class CatalogRepository(
     suspend fun fetchShows(source: Source, progress: (SaveProgress) -> Unit = {}): ListFetch =
         withContext(Dispatchers.IO) {
             val categories = fetchList { categoryDao.upsertAll(api.seriesCategories(source)) }
-            var saved = SavedSeries(0, emptyList())
-            val list = fetchList { saved = api.series(source).use { seriesDao.save(source.id, it, progress) } }
+            var saved = SavedSeries(0, emptyList(), stamp = 0)
+            val list = fetchList {
+                saved = api.series(source).use { seriesDao.save(source.id, it, progress) }
+                if (saved.count > 0) {
+                    viewerLibrary.retired.series(source.id, saved.stamp) { ensureEpisodes(source, it.seriesId) }
+                }
+            }
             if (saved.count > 0) fillGenresInBackground(source)
             ListFetch(saved.count, categories && list, saved.moved)
         }

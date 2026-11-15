@@ -134,7 +134,13 @@ names or URLs, so a large catalogue isn't held twice while it merges), carries t
 incoming rows by `streamId`, updates the rows it matched and inserts the rest (not Room's `@Upsert`,
 whose failed INSERT a row was most of a refresh's work; see `updateOrInsert`), and only then
 deletes channels the provider no longer lists. A `streamId` listed twice is saved once, as its last
-listing. Movies and series save the same way. Favourites live in their own per-Profile table,
+listing. Movies and series save the same way (`VodLists`): each saved title is stamped with the
+refresh, in the same transaction, and once a whole list is saved `RetiredTitles` deletes the source's
+titles with an older stamp, and a deleted series' episodes. A list that fails or is cut off throws
+before anything is saved, and an empty one deletes nothing. A series' episodes are matched the same way
+when its `get_series_info` reply lists any: the stored ones it leaves out are deleted. Before a title
+goes, its resume points move to a Version of it that's left (ADR 0007), and only with none left are they
+deleted with it, so no position points at a deleted title. Favourites live in their own per-Profile table,
 matched by source name and provider id (not stream URL, which Xtream changes with the live format
 and the password), so a channel dropped and re-listed keeps them.
 

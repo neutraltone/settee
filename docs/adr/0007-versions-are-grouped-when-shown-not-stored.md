@@ -9,5 +9,6 @@ Versions group by TMDB id, falling back to the cleaned name and year only for a 
 ## Consequences
 
 - Every list of films or shows pays for the grouping when it's read, so it has to stay off the main thread and within the Stick's frame budget (`docs/PERFORMANCE.md`).
-- A resume point doesn't carry from one Version to another, since copies may not line up. A title's status and its Continue Watching card come from the Version played most recently.
+- A resume point doesn't carry from one Version to another while both exist, since copies may not line up. A title's status and its Continue Watching card come from the Version played most recently.
+- When the provider stops listing the Version a resume point was made on, the point moves to a Version still listed (#351): to one that Profile has a point on already, keeping the newer, and otherwise to the one listed last, an episode's to the same season and number. We accept that an In Progress point may then land slightly off in a different cut, since the alternative is losing it. Only with no Version left is it deleted with the title.
 - Unstarring a title clears the star on every Version of it, and an older device that doesn't group still shows the right copies starred.

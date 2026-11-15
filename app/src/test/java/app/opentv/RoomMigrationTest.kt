@@ -158,13 +158,38 @@ class RoomMigrationTest {
     }
 
     @Test
-    fun `films TMDB answered without their poster being saved are due again after 16, and nothing else changes`() {
+    fun `stamping films and series for 16 keeps every film, show and resume point`() {
+        val name = "titles-last-seen.db"
+        helper.createDatabase(name, 15).use { db ->
+            db.execSQL(
+                "INSERT INTO movies (id, sourceId, streamId, name, streamUrl, addedMillis) VALUES " +
+                    "(7, 1, 'film', 'Film', 'http://example.com/7.mp4', 5)",
+            )
+            db.execSQL(
+                "INSERT INTO series (id, sourceId, seriesId, name, addedMillis) VALUES (9, 1, 'show', 'Show', 6)",
+            )
+            db.execSQL(
+                "INSERT INTO playback_positions (profileId, mediaKey, positionMillis, durationMillis, " +
+                    "updatedAtMillis, mark) VALUES (1, 'movie:7', 600000, 6000000, 50, 'WATCHED')",
+            )
+        }
+
+        helper.runMigrationsAndValidate(name, 16, true, *OpenTvDatabase.MIGRATIONS).use { db ->
+            assertThat(db.first("SELECT name || ':' || lastSeenMillis FROM movies WHERE id = 7")).isEqualTo("Film:0")
+            assertThat(db.first("SELECT name || ':' || lastSeenMillis FROM series WHERE id = 9")).isEqualTo("Show:0")
+            val position = "SELECT positionMillis || ':' || mark FROM playback_positions WHERE mediaKey = 'movie:7'"
+            assertThat(db.first(position)).isEqualTo("600000:WATCHED")
+        }
+    }
+
+    @Test
+    fun `films TMDB answered without their poster being saved are due again after 17, and nothing else changes`() {
         val name = "poster-reask.db"
         val now = System.currentTimeMillis()
         val lastWeek = now - 7 * 24 * 60 * 60 * 1000L
         val columns = "id, sourceId, streamId, name, posterUrl, plot, director, streamUrl, addedMillis, " +
             "detailsLookedUp, tmdbAnsweredAt"
-        helper.createDatabase(name, 15).use { db ->
+        helper.createDatabase(name, 16).use { db ->
             db.execSQL(
                 "INSERT INTO movies ($columns) VALUES " +
                     "(1, 1, 'blank', 'Blank', NULL, 'One.', 'TMDB', 'http://example.com/1.mp4', 5, 1, $lastWeek), " +
@@ -178,7 +203,7 @@ class RoomMigrationTest {
             )
         }
 
-        helper.runMigrationsAndValidate(name, 16, true, *OpenTvDatabase.MIGRATIONS).use { db ->
+        helper.runMigrationsAndValidate(name, 17, true, *OpenTvDatabase.MIGRATIONS).use { db ->
             fun film(id: Int) = db.first(
                 "SELECT id || '|' || sourceId || '|' || streamId || '|' || name || '|' || " +
                     "IFNULL(posterUrl, '-') || '|' || plot || '|' || IFNULL(director, '-') || '|' || " +
