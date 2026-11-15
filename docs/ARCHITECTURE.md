@@ -101,7 +101,9 @@ a cheap TV stick, and `String`-based parsing is an OOM waiting to happen.
 guides carry bare `&`s and HTML entities (`&nbsp;`, `&eacute;`) that strict XML stops at, every
 sync, losing every channel after them. `LenientEntityStream` rewrites them in the byte stream
 before KXmlParser sees it: a bare `&` becomes `&amp;`, HTML's Latin-1 and typographic entities
-become numeric references, any other unknown entity comes through as literal text. KXmlParser's
+become numeric references, any other unknown entity comes through as literal text, including
+ones a guide declares in its own DOCTYPE: resolving those needs KXmlParser's DOCTYPE processing,
+which would let a hostile guide expand entities until the Stick runs out of memory. KXmlParser's
 relaxed mode was rejected because it also tolerates broken structure, so a guide cut off part way
 could pass as whole and prune programmes it never replaced. When a feed does fail part way, the
 channel aliases read before the failure are still saved, like the programmes already written.

@@ -5,7 +5,6 @@
  */
 package app.opentv.data.repo
 
-import android.database.sqlite.SQLiteException
 import android.util.Log
 import app.opentv.R
 import app.opentv.core.ErrorWording
@@ -432,9 +431,12 @@ class EpgRepository(
             Log.w(TAG, "Feed '${feed.name}' download failed", e)
             try {
                 saveAliases(aliases)
-            } catch (saveFailed: SQLiteException) {
-                // The database may be what failed; the feed's own failure is the one to report.
-                Log.w(TAG, "Feed '${feed.name}': couldn't save the channels read before it failed", saveFailed)
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (ignored: Exception) {
+                // Whatever stopped the save (the database may be what failed), the feed's own failure
+                // is the one to report, and the rest of the feeds still get their turn.
+                Log.w(TAG, "Feed '${feed.name}': couldn't save the channels read before it failed", ignored)
             }
             return FeedResult.Failed(wording.of(e, R.string.error_guide))
         }

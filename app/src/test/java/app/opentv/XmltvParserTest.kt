@@ -93,6 +93,35 @@ class XmltvParserTest {
         assertThat(result.programmes.map { it.title }).containsExactly("Odd &foo; title", "After").inOrder()
     }
 
+    @Test
+    fun `a reference to a character XML forbids comes through as text`() = runTest {
+        val result = parse(
+            "<tv>" + programme("c1", "Bad &#0; and &#xFFFF; refs") + programme("c2", "After") + "</tv>",
+        )
+
+        assertThat(result.programmes.map { it.title }).containsExactly("Bad &#0; and &#xFFFF; refs", "After").inOrder()
+    }
+
+    /** KXmlParser never resolved these (DOCTYPE processing is off), and used to stop at them. */
+    @Test
+    fun `an entity the guide declares itself comes through as text`() = runTest {
+        val result = parse(
+            """<!DOCTYPE tv [<!ENTITY deg2 "&#176;">]>""" +
+                "<tv>" + programme("c1", "20&deg2;") + programme("c2", "After") + "</tv>",
+        )
+
+        assertThat(result.programmes.map { it.title }).containsExactly("20&deg2;", "After").inOrder()
+    }
+
+    @Test
+    fun `a CDATA opener inside a comment doesn't stop bare ampersands being read`() = runTest {
+        val result = parse(
+            "<tv><!-- text may be wrapped in <![CDATA[ when needed -->" + programme("c1", "Tom & Jerry") + "</tv>",
+        )
+
+        assertThat(result.programmes.single().title).isEqualTo("Tom & Jerry")
+    }
+
     /** Long enough that entities and bare `&`s fall across where the file is read in pieces. */
     @Test
     fun `entities are decoded all through a long guide`() = runTest {
