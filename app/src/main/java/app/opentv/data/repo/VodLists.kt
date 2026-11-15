@@ -9,6 +9,7 @@ import app.opentv.data.db.MovieDao
 import app.opentv.data.db.SeriesDao
 import app.opentv.data.model.Movie
 import app.opentv.data.model.Series
+import app.opentv.data.model.knownTmdbId
 import app.opentv.data.remote.TmdbMeta
 import app.opentv.data.remote.XtreamApi
 
@@ -169,7 +170,7 @@ internal fun Movie.withTmdb(meta: TmdbMeta?, at: Long): Movie = if (meta == null
         plot = plot ?: meta.overview,
         cast = cast ?: meta.cast,
         genre = genre?.ifBlank { null } ?: meta.genre ?: genre,
-        tmdbId = tmdbId ?: meta.tmdbId,
+        tmdbId = tmdbId.takeIf { knownTmdbId(it) != null } ?: meta.tmdbId ?: tmdbId,
         rating = rating ?: meta.rating,
         year = year ?: meta.year,
         releaseDate = releaseDate ?: meta.releaseDate,
