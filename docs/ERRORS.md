@@ -43,7 +43,9 @@ build after a downgrade, or a migration that doesn't match its schema. The detai
 ## Playback
 
 Movies and Shows' error panel, the live player, the Home Live Preview, the guide's preview, and a
-recording that can't start. Strings are in `res/values/strings.xml`.
+recording that can't start. Strings are in `res/values/strings.xml`. Where trying again could fix it,
+both players put the highlight on Try again and OK presses it; in the live player Up and Down still
+change channel.
 
 | Trigger | String key | Sentence | Detail | Whose end, likely cause |
 |---|---|---|---|---|

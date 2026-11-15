@@ -404,6 +404,7 @@ fun LivePlayerContent(
     var cardVisible by remember { mutableStateOf(false) }
     var cardShows by remember { mutableIntStateOf(0) }
     var openingPress by remember { mutableStateOf(false) }
+    var leavingPress by remember { mutableStateOf(false) }
     var panel by remember { mutableStateOf(PlayerPanel.NONE) }
     var channelListVisible by remember { mutableStateOf(false) }
     var optionsOpen by remember { mutableStateOf(false) }
@@ -431,6 +432,7 @@ fun LivePlayerContent(
     val panelFocus = remember { FocusRequester() }
     val rootFocus = remember { FocusRequester() }
     val listFocus = remember { FocusRequester() }
+    val retryFocus = remember { FocusRequester() }
 
     // While live TV is paused, how long until the forward buffer is full and the pause can't hold.
     var pauseLeftMillis by remember { mutableLongStateOf(0L) }
@@ -480,6 +482,19 @@ fun LivePlayerContent(
         cardVisible = false
         interaction++
     }
+
+    fun leave() {
+        controller.stop()
+        onBack()
+    }
+
+    // Read when asked rather than when last drawn: a key can arrive between the state changing and
+    // the screen being drawn again.
+    fun liveScreen() = LiveScreen(
+        overlayOpen = channelListVisible || panel != PlayerPanel.NONE,
+        controlsVisible = controlsVisible,
+        retryableError = (controller.state.value as? PlayerController.State.Error)?.canRetry == true,
+    )
 
     /** Says which Channel is on: the card, or the bar's title if the bar's already up. */
     fun announceChannel() {
@@ -544,18 +559,29 @@ fun LivePlayerContent(
         }
     }
 
-    // Focus: a picker's first row when one is open, otherwise the bar, otherwise the full-screen
-    // catcher (so OK can bring the bar back, and up and down can change channel).
-    LaunchedEffect(controlsVisible, panel) {
-        if (controlsVisible) {
-            delay(40)
-            runCatching { if (panel != PlayerPanel.NONE) panelFocus.requestFocus() else barFocus.requestFocus() }
-        } else {
-            runCatching { rootFocus.requestFocus() }
+    // Focus: the channel list when it's open, a picker's first row, the bar, and with none of them Try
+    // again or else the full-screen catcher (so OK can bring the bar back, and up and down can change
+    // channel). One effect, so every way out of a layer hands the highlight on alike. Side panels
+    // aren't here: they're dialogs, with focus of their own, and this window's waits for them.
+    val retryError = (state as? PlayerController.State.Error)?.takeIf { it.canRetry }
+    val focusOn = when {
+        channelListVisible -> listFocus
+        controlsVisible -> if (panel != PlayerPanel.NONE) panelFocus else barFocus
+        retryError != null -> retryFocus
+        else -> rootFocus
+    }
+    // Each new error draws Try again afresh, and when it goes the highlight would go with it.
+    LaunchedEffect(focusOn, panel, retryError.takeIf { focusOn == retryFocus }) {
+        if (focusOn == rootFocus || focusOn == retryFocus) {
+            runCatching { focusOn.requestFocus() }
             // The player opens with nothing else to focus, and without focus the remote does nothing,
-            // so ask again after the beat the bar waits, in case the screen was still opening.
+            // so ask again after the beat the others wait, in case the screen was still opening.
             delay(40)
-            if (!channelListVisible) runCatching { rootFocus.requestFocus() }
+            runCatching { focusOn.requestFocus() }
+        } else {
+            // They fade in: give them a beat to be there.
+            delay(40)
+            runCatching { focusOn.requestFocus() }
         }
     }
 
@@ -568,10 +594,7 @@ fun LivePlayerContent(
             channelListVisible -> channelListVisible = false
             panel != PlayerPanel.NONE -> panel = PlayerPanel.NONE
             controlsVisible -> controlsVisible = false
-            else -> {
-                controller.stop()
-                onBack()
-            }
+            else -> leave()
         }
     }
 
@@ -583,16 +606,6 @@ fun LivePlayerContent(
         numberEntry = ""
         val target = num?.let { n -> queue.firstOrNull { it.number == n } }
         if (target != null) playPicked(target)
-    }
-
-    // Focus the channel list when it opens; hand focus back to the video catcher when it closes.
-    LaunchedEffect(channelListVisible) {
-        if (channelListVisible) {
-            delay(40)
-            runCatching { listFocus.requestFocus() }
-        } else if (!controlsVisible) {
-            runCatching { rootFocus.requestFocus() }
-        }
     }
 
     Box(
@@ -618,73 +631,75 @@ fun LivePlayerContent(
                     return@onPreviewKeyEvent true
                 }
                 // The press that opens the bar isn't also a press on the button focus lands on: held,
-                // its repeats and release would reach that button and pause the channel. A new press
-                // means the release went astray.
+                // its repeats and release would reach that button and pause the channel. Nor is a
+                // press on Try again more than one try. A new press means the release went astray.
                 if (openingPress && event.key in OK_KEYS) {
                     val releasing = event.type == KeyEventType.KeyUp
                     val repeating = event.type == KeyEventType.KeyDown && event.nativeKeyEvent.repeatCount > 0
                     if (!repeating) openingPress = false
                     if (releasing || repeating) return@onPreviewKeyEvent true
                 }
+                // Leaving on the release, as the back handler would, so the press can't reach whatever
+                // the screen underneath focuses next. Decided on the way down: the screen can change
+                // before the release, which Android would then get without the press that began it.
+                if (leavingPress && (event.key == Key.Back || event.key == Key.Escape)) {
+                    if (event.type == KeyEventType.KeyUp) {
+                        leavingPress = false
+                        leave()
+                    }
+                    return@onPreviewKeyEvent true
+                }
                 if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
-                val digit = keyToDigit(event.key)
-                when {
-                    // Never swallow Back/Escape — they must reach the back handler.
-                    event.key == Key.Back || event.key == Key.Escape -> false
-                    // Typing a channel number jumps to it, TiviMate-style.
-                    digit != null -> {
-                        numberEntry = (numberEntry + digit).take(4)
+                when (val key = liveKey(event.key, liveScreen())) {
+                    LiveKey.PassThrough -> false
+                    LiveKey.Leave -> {
+                        leavingPress = true
+                        true
+                    }
+                    is LiveKey.Digit -> {
+                        numberEntry = (numberEntry + key.digit).take(4)
                         interaction++
                         true
                     }
-                    // A picker or the channel list owns the whole d-pad while it's up.
-                    channelListVisible || panel != PlayerPanel.NONE -> {
+                    LiveKey.ToFocused -> {
                         interaction++
                         false
                     }
-                    event.key == Key.Menu -> {
+                    LiveKey.OpenOptions -> {
                         if (!inPip) optionsOpen = true
                         true
                     }
-                    // With the controls up, the d-pad moves around them: Down reaches Subtitles and the
-                    // pills, and Up reaches close (docs/LOOK.md, Player). The channel keys still zap.
-                    controlsVisible && event.key != Key.ChannelUp && event.key != Key.ChannelDown -> {
-                        interaction++
-                        false
-                    }
-                    // Channel up/down with nothing showing: this remote has no CH+/CH- keys, so
-                    // up/down IS the channel changer. Only announced if the zap finds
-                    // nothing, at either end of the list: otherwise the Channel changing announces it,
-                    // and announcing now would show the old one until the new one is found.
-                    event.key == Key.DirectionUp || event.key == Key.ChannelUp -> {
-                        onZap(-1, ::announceChannel)
+                    // Only announced if the zap finds nothing, at either end of the list: otherwise the
+                    // Channel changing announces it, and announcing now would show the old one until the
+                    // new one is found.
+                    is LiveKey.Zap -> {
+                        onZap(key.delta, ::announceChannel)
                         true
                     }
-                    event.key == Key.DirectionDown || event.key == Key.ChannelDown -> {
-                        onZap(1, ::announceChannel)
-                        true
-                    }
-                    // Immersive: left opens the channel list, right the quality picker.
-                    event.key == Key.DirectionLeft -> {
+                    LiveKey.OpenChannelList -> {
                         if (queue.isNotEmpty()) {
                             channelListVisible = true
                             cardVisible = false
                         }
                         true
                     }
-                    event.key == Key.DirectionRight -> {
+                    LiveKey.OpenQualities -> {
                         if (variants.size > 1) {
                             reveal()
                             panel = PlayerPanel.QUALITY
                         }
                         true
                     }
-                    event.key in OK_KEYS -> {
+                    LiveKey.Reveal -> {
                         reveal()
                         openingPress = true
                         true
                     }
-                    else -> false
+                    LiveKey.Retry -> {
+                        controller.retry()
+                        openingPress = true
+                        true
+                    }
                 }
             }
             .focusRequester(rootFocus)
@@ -759,7 +774,11 @@ fun LivePlayerContent(
                         ErrorMessage(current.reason.sentence, current.reason.detail)
                         if (current.canRetry) {
                             Spacer(Modifier.height(24.dp))
-                            PillButton(stringResource(R.string.common_try_again), onClick = { controller.retry() })
+                            PillButton(
+                                stringResource(R.string.common_try_again),
+                                onClick = { controller.retry() },
+                                modifier = Modifier.focusRequester(retryFocus),
+                            )
                         }
                     }
                 }
@@ -1107,18 +1126,3 @@ private const val BACK_TO_LIVE_MESSAGE_MILLIS = 4_000L
 internal val OK_KEYS = setOf(Key.DirectionCenter, Key.Enter, Key.NumPadEnter, Key.ButtonA)
 private val MEDIA_KEYS =
     setOf(Key.MediaPlayPause, Key.MediaPlay, Key.MediaPause, Key.MediaRewind, Key.MediaFastForward)
-
-/** Maps a remote's number keys (top row and numeric keypad) to a digit, or null for other keys. */
-private fun keyToDigit(key: Key): Char? = when (key) {
-    Key.Zero, Key.NumPad0 -> '0'
-    Key.One, Key.NumPad1 -> '1'
-    Key.Two, Key.NumPad2 -> '2'
-    Key.Three, Key.NumPad3 -> '3'
-    Key.Four, Key.NumPad4 -> '4'
-    Key.Five, Key.NumPad5 -> '5'
-    Key.Six, Key.NumPad6 -> '6'
-    Key.Seven, Key.NumPad7 -> '7'
-    Key.Eight, Key.NumPad8 -> '8'
-    Key.Nine, Key.NumPad9 -> '9'
-    else -> null
-}
