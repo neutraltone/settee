@@ -224,18 +224,6 @@ class AppSettings private constructor(context: Context, fileName: String = "open
     }
 
     /**
-     * Whether Home leads with the Live Preview when live TV was the last thing played. Device-wide
-     * rather than a Profile's: a muted stream on Home is about what the box can decode, not taste.
-     */
-    private val _livePreviewOnHome = MutableStateFlow(prefs.getBoolean(KEY_LIVE_PREVIEW_HOME, true))
-    val livePreviewOnHome: StateFlow<Boolean> = _livePreviewOnHome.asStateFlow()
-
-    fun setLivePreviewOnHome(enabled: Boolean) {
-        prefs.edit { putBoolean(KEY_LIVE_PREVIEW_HOME, enabled) }
-        _livePreviewOnHome.value = enabled
-    }
-
-    /**
      * Whether an episode's Next Episode card counts down and plays it on its own. Off, the card
      * still comes up but waits for OK.
      */
@@ -636,7 +624,6 @@ class AppSettings private constructor(context: Context, fileName: String = "open
         private const val KEY_REMOVED_PROFILES = "removed_profile_names"
         private const val KEY_PROFILE_RENAMES = "profile_renames"
         private const val KEY_PROFILE_ADDS = "profile_adds"
-        private const val KEY_LIVE_PREVIEW_HOME = "live_preview_on_home"
         private const val KEY_PLAY_NEXT = "play_next_automatically"
         private const val KEY_CONTENT_LIVE = "content_live"
         private const val KEY_CONTENT_MOVIES = "content_movies"

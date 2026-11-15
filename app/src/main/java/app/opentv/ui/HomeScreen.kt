@@ -37,6 +37,8 @@ import app.opentv.data.model.Series
 import app.opentv.data.model.StreamKind
 import app.opentv.data.parser.displayTitle
 import app.opentv.data.repo.CoverStatus
+import app.opentv.data.repo.HomeArrangement
+import app.opentv.data.repo.HomeRowKind
 import app.opentv.data.repo.MediaKey
 import app.opentv.data.repo.VodTitle
 import app.opentv.ui.design.ArtCard
@@ -78,7 +80,8 @@ internal fun HomeScreen(
 ) {
     val state = viewModel.state.collectAsState().value ?: return
     val live = state.live
-    val preview = rememberLivePreviewPlayer(live?.preview?.channel)
+    // A Live Preview the Profile turned off doesn't play unseen; Home still hears of it, for its hint.
+    val preview = rememberLivePreviewPlayer(live?.preview?.channel?.takeIf { state.arrangement.livePreview })
     // Home has no list of its own to zap through, so channel up and down go through every Channel.
     val play: (Channel) -> Unit = { channel ->
         viewModel.zapFromAll()
@@ -101,13 +104,15 @@ internal fun HomeScreen(
         onWatchLive = play,
         onOpenLive = onOpenLive,
         stopPreview = preview.stop,
+        arrangement = state.arrangement,
     )
 }
 
 /**
- * Home's rows, top to bottom: the Live Preview, what the Profile can pick back up, what's Recently
- * Added ([recentShows], [recentMovies]), then its Favourite shows, movies and channels. An empty row
- * is left out rather than shown blank.
+ * Home's rows, top to bottom: the Live Preview, then the Home Rows in the order the Profile put them
+ * in ([arrangement]); usually what it can pick back up, what's Recently Added ([recentShows],
+ * [recentMovies]), then its Favourite shows, movies and channels. An empty row is left out rather
+ * than shown blank, and so is one the Profile hid.
  */
 @Composable
 internal fun HomeContent(
@@ -127,8 +132,9 @@ internal fun HomeContent(
     onWatchLive: (Channel) -> Unit = {},
     onOpenLive: () -> Unit = {},
     stopPreview: () -> Unit = {},
+    arrangement: HomeArrangement = HomeArrangement.USUAL,
 ) {
-    val shelves =
+    val all =
         remember(
             live,
             continueWatching,
@@ -137,14 +143,17 @@ internal fun HomeContent(
             favouriteChannels,
             recentShows,
             recentMovies,
+            arrangement,
         ) {
             homeShelves(
                 live,
                 continueWatching,
                 HomeTitles(recentShows, recentMovies, favouriteShows, favouriteMovies),
                 favouriteChannels,
+                arrangement,
             )
         }
+    val shelves = all.shown
     ScreenFrame {
         if (shelves.isEmpty()) {
             // A hint can't take the highlight, so hand it to the side menu rather than leave the remote
@@ -155,7 +164,10 @@ internal fun HomeContent(
                 onNothingToShow()
             }
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text(stringResource(R.string.home_empty_hint), style = SetteeType.Body, color = SetteeColors.QuietText)
+                // Rows with something in them that the Profile hid would otherwise leave it wondering
+                // where its Favourites went.
+                val hint = if (all.anyHidden) R.string.home_hidden_rows_hint else R.string.home_empty_hint
+                Text(stringResource(hint), style = SetteeType.Body, color = SetteeColors.QuietText)
             }
             return@ScreenFrame
         }
@@ -330,22 +342,36 @@ private class HomeTitles(
     val favouriteMovies: List<Cover>,
 )
 
-/** Home's rows that have something in them, top to bottom. */
+/** Home's rows that have something in them: those [shown], top to bottom, and whether any are hidden. */
+private class HomeShelves(val shown: List<HomeShelf>, val anyHidden: Boolean)
+
+/** Home's rows with something in them, the Live Preview first and the Home Rows in the Profile's order. */
 private fun homeShelves(
     live: LiveTile?,
     continueWatching: List<ResumeItem>,
     titles: HomeTitles,
     favouriteChannels: List<HomeChannel>,
-) = listOfNotNull(
-    live?.let(HomeShelf::Live),
-    HomeShelf.Resume(continueWatching),
-    HomeShelf.Covers("recentShows", R.string.home_recently_added_shows, titles.recentShows, showsStatus = true),
-    HomeShelf.Covers("recentMovies", R.string.home_recently_added_movies, titles.recentMovies, showsStatus = true),
-    // A Favourite shows only its title: where the Profile is with it is Continue Watching's job.
-    HomeShelf.Covers("favouriteShows", R.string.home_favourite_shows, titles.favouriteShows, showsStatus = false),
-    HomeShelf.Covers("favouriteMovies", R.string.home_favourite_movies, titles.favouriteMovies, showsStatus = false),
-    HomeShelf.Channels(favouriteChannels),
-).filter { it.row.items.isNotEmpty() }
+    arrangement: HomeArrangement,
+): HomeShelves {
+    fun shelf(row: HomeRowKind): HomeShelf = when (row) {
+        HomeRowKind.CONTINUE_WATCHING -> HomeShelf.Resume(continueWatching)
+        HomeRowKind.RECENT_SHOWS ->
+            HomeShelf.Covers(row.key, R.string.home_recently_added_shows, titles.recentShows, showsStatus = true)
+        HomeRowKind.RECENT_MOVIES ->
+            HomeShelf.Covers(row.key, R.string.home_recently_added_movies, titles.recentMovies, showsStatus = true)
+        // A Favourite shows only its title: where the Profile is with it is Continue Watching's job.
+        HomeRowKind.FAVOURITE_SHOWS ->
+            HomeShelf.Covers(row.key, R.string.home_favourite_shows, titles.favouriteShows, showsStatus = false)
+        HomeRowKind.FAVOURITE_MOVIES ->
+            HomeShelf.Covers(row.key, R.string.home_favourite_movies, titles.favouriteMovies, showsStatus = false)
+        HomeRowKind.FAVOURITE_CHANNELS -> HomeShelf.Channels(favouriteChannels)
+    }
+    val (shownRows, hiddenRows) = arrangement.rows.partition(arrangement::isShown)
+    val shown = listOfNotNull(live?.takeIf { arrangement.livePreview }?.let(HomeShelf::Live)) + shownRows.map(::shelf)
+    val anyHidden = (live != null && !arrangement.livePreview) ||
+        hiddenRows.any { shelf(it).row.items.isNotEmpty() }
+    return HomeShelves(shown.filter { it.row.items.isNotEmpty() }, anyHidden)
+}
 
 private const val LIVE_PICK = "live"
 

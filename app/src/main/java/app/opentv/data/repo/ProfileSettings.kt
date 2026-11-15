@@ -66,6 +66,19 @@ class ProfileSettings(
         }
         .distinctUntilChanged()
 
+    /** How the active Profile arranged Home; the usual arrangement until it changes it. Follows Profile switches. */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val homeArrangement: Flow<HomeArrangement> = activeProfileId
+        .flatMapLatest { dao.observeFor(it) }
+        .map { rows -> HomeArrangement.decode(rows.firstOrNull { it.name == HOME_ROWS }?.value) }
+        .distinctUntilChanged()
+
+    /**
+     * The viewer rearranged Home on the Home rows page. Restoring the usual order stores it too, rather
+     * than deleting the setting, so the restore reaches the Profile's other devices.
+     */
+    suspend fun arrangeHome(arrangement: HomeArrangement) = store(HOME_ROWS, arrangement.encode())
+
     /** The viewer turned subtitles on or off, in a player or in Settings. */
     suspend fun setSubtitlesOn(enabled: Boolean) = store(SUBTITLES_ON, enabled.toString())
 
@@ -141,5 +154,6 @@ class ProfileSettings(
         const val SUBTITLE_LANGUAGE = "subtitles.language"
         const val SUBTITLE_KIND = "subtitles.kind"
         const val VERSION = "version."
+        const val HOME_ROWS = "home.rows"
     }
 }

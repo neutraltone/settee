@@ -38,6 +38,8 @@ import app.opentv.data.model.Channel
 import app.opentv.data.model.Movie
 import app.opentv.data.model.Series
 import app.opentv.data.repo.CoverStatus
+import app.opentv.data.repo.HomeArrangement
+import app.opentv.data.repo.HomeRowKind
 import app.opentv.data.repo.LineupChannel
 import app.opentv.data.repo.LivePreview
 import app.opentv.data.repo.MediaKey
@@ -197,6 +199,7 @@ class HomeContentTest {
         channels: List<HomeChannel> = listOf(favourite(3, "BBC One")),
         recent: List<Cover> = emptyList(),
         favouritesNow: () -> List<Cover> = { favourites },
+        arrangement: HomeArrangement = HomeArrangement.USUAL,
     ) = compose.setTvContent {
         CompositionLocalProvider(LocalOpenOptions provides { _, leave -> leaveThroughOptions = leave }) {
             HomeContent(
@@ -224,6 +227,7 @@ class HomeContentTest {
                     played = it
                 },
                 takeFocus = takeFocus,
+                arrangement = arrangement,
             )
         }
     }
@@ -355,6 +359,86 @@ class HomeContentTest {
             assertThat(topOf(above)).isLessThan(topOf(below))
         }
         compose.onNodeWithText("BBC One").assertExists()
+    }
+
+    @Test
+    fun `Home draws its rows in the order the Profile arranged them`() {
+        setHome(
+            recent = recent,
+            arrangement = HomeArrangement(
+                listOf(
+                    HomeRowKind.FAVOURITE_CHANNELS,
+                    HomeRowKind.FAVOURITE_MOVIES,
+                    HomeRowKind.CONTINUE_WATCHING,
+                    HomeRowKind.RECENT_SHOWS,
+                    HomeRowKind.RECENT_MOVIES,
+                    HomeRowKind.FAVOURITE_SHOWS,
+                ),
+                hidden = emptySet(),
+                livePreview = true,
+            ),
+        )
+
+        val order = listOf(
+            "Favourite channels",
+            "Favourite movies",
+            "Continue watching",
+            "Recently added shows",
+            "Recently added movies",
+            "Favourite shows",
+        )
+        order.zipWithNext { above, below ->
+            scrollTo(below)
+            assertThat(topOf(above)).isLessThan(topOf(below))
+        }
+        // The top row in the Profile's order takes the first highlight.
+        scrollTo("BBC One")
+        compose.onNodeWithText("BBC One").assertIsFocused()
+    }
+
+    @Test
+    fun `a row the Profile hid is left off Home`() {
+        setHome(arrangement = HomeArrangement.USUAL.withShown(HomeRowKind.CONTINUE_WATCHING, false))
+
+        compose.onNodeWithText("Continue watching").assertDoesNotExist()
+        compose.onNodeWithText("Collateral").assertDoesNotExist()
+        compose.onNodeWithText("Severance").assertIsFocused()
+    }
+
+    @Test
+    fun `with the Live Preview turned off, Home leaves it out even after live TV`() {
+        live = playable()
+        setHome(arrangement = HomeArrangement.USUAL.copy(livePreview = false))
+
+        compose.onNodeWithText("Channel 4").assertDoesNotExist()
+        compose.onNodeWithText("Collateral").assertIsFocused()
+    }
+
+    @Test
+    fun `when the only rows with anything in them are hidden, Home says so instead of the usual hint`() {
+        setHome(
+            favourites = emptyList(),
+            channels = emptyList(),
+            arrangement = HomeArrangement.USUAL.withShown(HomeRowKind.CONTINUE_WATCHING, false),
+        )
+
+        compose.onNodeWithText("What you watch and favourite will show up here.").assertDoesNotExist()
+        compose.onNodeWithText(
+            "You've hidden Home's rows. Turn them back on in Settings → Display → Home rows.",
+        ).assertExists()
+        captureScreen("home_hidden_rows_hint")
+    }
+
+    @Test
+    fun `with nothing in any row, hidden or not, Home keeps the usual hint`() {
+        setHome(
+            resume = emptyList(),
+            favourites = emptyList(),
+            channels = emptyList(),
+            arrangement = HomeArrangement.USUAL.withShown(HomeRowKind.CONTINUE_WATCHING, false),
+        )
+
+        compose.onNodeWithText("What you watch and favourite will show up here.").assertExists()
     }
 
     @Test

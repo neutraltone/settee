@@ -155,6 +155,10 @@ _Avoid_: New, new releases
 A muted, playing tile on Home of the live channel the Profile last watched on this device, shown only when live TV was the Profile's most recent playback. Settling on a channel full screen counts as watching it; zapping past one or seeing it in the guide's preview does not. A channel that has since left the channel list still shows, as a reminder that can't play; a channel the viewer hid does not.
 _Avoid_: Last channel, boot channel
 
+**Home Row**:
+One of Home's rows of titles or channels a Profile can move or hide: Continue Watching, Recently Added shows, Recently Added movies, Favourite shows, Favourite movies and Favourite channels. Each Profile keeps its own order and hidden rows, which follow it to its other devices. The Live Preview is not a Home Row: it can be turned off, but always comes first.
+_Avoid_: Shelf, section, rail
+
 ## Recordings
 
 **Recording**:

@@ -235,6 +235,7 @@ object Routes {
     const val FONT_LICENCES = "font-licences"
     const val CHANNELS = "channels"
     const val LOCKED_CATEGORIES = "locked-categories"
+    const val HOME_ROWS = "home-rows"
     const val PROFILES = "profiles"
     const val SERIES_DETAIL = "series/{seriesId}"
     const val MOVIE_DETAIL = "movie/{movieId}"

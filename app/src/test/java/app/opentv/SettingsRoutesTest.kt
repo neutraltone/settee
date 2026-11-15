@@ -126,6 +126,19 @@ class SettingsRoutesTest {
     }
 
     @Test
+    fun `Display's Home rows opens the Profile's Home rows on a screen of their own, and Back returns to its row`() {
+        setApp(SettingsMemory(SettingsSection.Display))
+
+        openFrom("Home rows")
+
+        assertThat(route()).isEqualTo(Routes.HOME_ROWS)
+        compose.waitUntil(5_000) {
+            compose.onAllNodes(hasText("Restore the usual order")).fetchSemanticsNodes().isNotEmpty()
+        }
+        backReturnsTo("Home rows")
+    }
+
+    @Test
     fun `Parental lock's Locked categories opens them on a screen of their own, and Back returns to its row`() {
         ServiceLocator.get(app).settings.clearPin()
         setApp(SettingsMemory(SettingsSection.Parental))

@@ -38,6 +38,7 @@ import app.opentv.data.repo.ContinueWatchingCard
 import app.opentv.data.repo.CoverStatus
 import app.opentv.data.repo.CoverStatuses
 import app.opentv.data.repo.GenreGroup
+import app.opentv.data.repo.HomeArrangement
 import app.opentv.data.repo.LineupChannel
 import app.opentv.data.repo.LineupScope
 import app.opentv.data.repo.LivePreview
@@ -1472,6 +1473,8 @@ data class HomeState(
     val recentShows: List<Cover>,
     val recentMovies: List<Cover>,
     val live: LiveNow? = null,
+    /** How the Profile arranged Home; the Live Preview is in [live] even when it turned it off, for Home's hint. */
+    val arrangement: HomeArrangement = HomeArrangement.USUAL,
 )
 
 /** A show's or movie's cover on Home, with where the active Profile is with it; null when never started. */
@@ -1570,9 +1573,8 @@ class HomeViewModel @JvmOverloads constructor(
     @OptIn(ExperimentalCoroutinesApi::class)
     private val live: Flow<LiveNow?> = combine(
         graph.viewerLibrary.live.preview(),
-        settings.livePreviewOnHome,
         settings.liveEnabled,
-    ) { preview, onHome, liveOn -> preview?.takeIf { onHome && liveOn } }
+    ) { preview, liveOn -> preview?.takeIf { liveOn } }
         .distinctUntilChanged()
         .flatMapLatest { preview ->
             val channelId = preview?.channel?.id
@@ -1634,7 +1636,9 @@ class HomeViewModel @JvmOverloads constructor(
         },
         // In the same state as the rows, so Home is first drawn with it and highlights it.
         live,
-    ) { rows, live -> rows.copy(live = live) }
+        // And so is the arrangement, so Home is never drawn once in the usual order and then moved.
+        graph.profileSettings.homeArrangement,
+    ) { rows, live, arrangement -> rows.copy(live = live, arrangement = arrangement) }
 
     /**
      * Home's rows, kept updating while Home is drawn and while a screen covers it ([app.opentv.KeepHomeLive]), so
