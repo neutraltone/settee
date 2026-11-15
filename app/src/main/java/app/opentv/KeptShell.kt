@@ -5,12 +5,8 @@
  */
 package app.opentv
 
-import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -68,11 +64,10 @@ fun NavGraphBuilder.mainShellRoute() = composable(Routes.MAIN) {}
  * lifecycle, so the Live Preview and the guide's listings still stop while it's covered.
  *
  * Covered by any screen but a player, it stays built, and is placed only while the NavHost still
- * draws its entry: while the screen over it fades in, and again from the moment Back starts fading
- * that screen out. The rest of the time nothing of it is drawn and the remote can't reach it, and Back
- * finds it as it was, the highlight where it was left. Under a player it's let go, as before, so Home
- * waits for rows that know what was just watched rather than show a card about to move or go (see
- * [KeepHomeLive]).
+ * draws its entry: on top, and through any transition to or from the screen over it. The rest of
+ * the time nothing of it is drawn and the remote can't reach it, and Back finds it as it was, the
+ * highlight where it was left. Under a player it's let go, as before, so Home waits for rows that
+ * know what was just watched rather than show a card about to move or go (see [KeepHomeLive]).
  */
 @Composable
 fun KeptShell(nav: NavHostController, shell: @Composable (NavBackStackEntry) -> Unit, navHost: @Composable () -> Unit) {
@@ -80,9 +75,11 @@ fun KeptShell(nav: NavHostController, shell: @Composable (NavBackStackEntry) -> 
     // whenever the top one changes, which every change to the stack does.
     val top by nav.currentBackStackEntryAsState()
     val main = remember(top) { top?.let { runCatching { nav.getBackStackEntry(Routes.MAIN) }.getOrNull() } }
-    // What the NavHost draws, the screen fading out included. Not the main entry's lifecycle:
-    // Navigation drops an entry that isn't on top to CREATED at once, before the screen over it has
-    // faded in, which left the window's plain background under the fade (#194).
+    // What the NavHost draws, a screen it's still letting go included. Not the main entry's
+    // lifecycle: Navigation drops an entry that isn't on top to CREATED at once, while a screen
+    // opening over it may still be see-through, which left the window's plain background under
+    // Navigation's old crossfade (#194). Screens switch at once now, but this holds whatever
+    // [ScreensNavHost] does.
     val visible by nav.visibleEntries.collectAsState()
     val saveable = rememberSaveableStateHolder()
     Box(Modifier.fillMaxSize()) {
@@ -95,43 +92,25 @@ fun KeptShell(nav: NavHostController, shell: @Composable (NavBackStackEntry) -> 
 }
 
 /**
- * The app's NavHost, with its screen changes (#194): a screen opening fades in over the one it covers
- * in [SCREEN_FADE_MILLIS], and Back fades it out again over the one under it, which stays solid. So
- * only one screen is ever see-through, and nothing dips through the background. Navigation's
- * default faded both at once over 700 ms.
- *
- * Going on to the main screen fades the old screen out instead, since the main screen is drawn under
- * the NavHost rather than in it.
- *
- * A player comes and goes at once: the main screen isn't kept under one ([KeptShell]), so a fade
- * there would only be over the plain background.
+ * The app's NavHost, whose screens switch at once, with no animation (#194). Navigation's default was
+ * a 700 ms crossfade, and a 300 ms one was tried. On a Fire TV Stick, building the new screen takes
+ * several frames of 90-240 ms (about 600 ms for Settings, three frames for Home coming back), so a
+ * fade timed from the press was mostly over before anyone saw it, and one timed from when the screen
+ * was drawn kept the viewer waiting about half a second first. Docs/LOOK.md: anything that can't pass
+ * doesn't animate.
  */
 @Composable
 fun ScreensNavHost(nav: NavHostController, startDestination: String, builder: NavGraphBuilder.() -> Unit) {
     NavHost(
         navController = nav,
         startDestination = startDestination,
-        enterTransition = { if (involvesPlayer()) EnterTransition.None else fadeIn(tween(SCREEN_FADE_MILLIS)) },
-        exitTransition = {
-            when {
-                involvesPlayer() -> ExitTransition.None
-                // The main screen's own route is empty and Home is drawn under the NavHost, so going
-                // on to it (Setup finishing) has to fade the old screen out, as Back does.
-                targetState.destination.route == Routes.MAIN -> fadeOut(tween(SCREEN_FADE_MILLIS))
-                else -> ExitTransition.KeepUntilTransitionsFinished
-            }
-        },
+        enterTransition = { EnterTransition.None },
+        exitTransition = { ExitTransition.None },
         popEnterTransition = { EnterTransition.None },
-        popExitTransition = { if (involvesPlayer()) ExitTransition.None else fadeOut(tween(SCREEN_FADE_MILLIS)) },
+        popExitTransition = { ExitTransition.None },
         builder = builder,
     )
 }
-
-/** How long a screen takes to fade in or out. */
-const val SCREEN_FADE_MILLIS = 300
-
-private fun AnimatedContentTransitionScope<NavBackStackEntry>.involvesPlayer() =
-    isPlayerRoute(initialState.destination.route) || isPlayerRoute(targetState.destination.route)
 
 /** The live player and the movie and episode player, which the main screen isn't kept under. */
 internal fun isPlayerRoute(route: String?): Boolean = route == Routes.PLAYER || route == Routes.VOD_PLAYER
@@ -192,8 +171,8 @@ private fun ShellLayer(
                     .fillMaxSize()
                     .placedOnlyIf(drawn)
                     .onFocusChanged { hasFocus = it.hasFocus }
-                    // Placed but covered while a screen fades in over it: keep the remote out, so a
-                    // press then goes to the screen fading in.
+                    // Placed but covered while a screen opens over it: keep the remote out, so a
+                    // press then goes to the screen opening.
                     .focusProperties { onEnter = { if (coveredNow) cancelFocusChange() } }
                     .focusRequester(anywhere)
                     .focusGroup(),

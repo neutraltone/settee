@@ -25,7 +25,6 @@ import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertIsFocused
-import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasText
@@ -318,85 +317,68 @@ class KeptShellTest {
     private fun homeShowing() =
         compose.waitUntil(5_000) { compose.onAllNodes(hasText("Added 1")).fetchSemanticsNodes().isNotEmpty() }
 
-    /** Stops the clock, so a screen change can be looked at partway through its fade. */
+    /** Stops the clock, so a screen change can be looked at frame by frame. */
     private fun holdTheClock() {
         compose.waitForIdle()
         compose.mainClock.autoAdvance = false
     }
 
+    /** The few frames a screen change takes: Navigation lets go of the old screen a frame or two after the new one. */
+    private fun aFewFrames() = repeat(SWITCH_FRAMES) { compose.mainClock.advanceTimeByFrame() }
+
+    private fun shown(text: String) = compose.onAllNodes(hasText(text)).fetchSemanticsNodes().isNotEmpty()
+
     @Test
-    fun `Home stays drawn under Settings while Settings fades in`() {
+    fun `Settings takes Home's place at once, with no fade`() {
         setApp()
         homeShowing()
         holdTheClock()
 
         compose.runOnUiThread { nav.navigate(Routes.SETTINGS) }
-        compose.mainClock.advanceTimeBy(MID_FADE)
+        aFewFrames()
 
-        assertThat(compose.onAllNodes(hasText("Settings option 1")).fetchSemanticsNodes()).isNotEmpty()
-        assertThat(homeDrawn()).isTrue()
-    }
-
-    @Test
-    fun `Settings has faded in and Home is let go from under it by about 300 ms`() {
-        setApp()
-        homeShowing()
-        holdTheClock()
-
-        compose.runOnUiThread { nav.navigate(Routes.SETTINGS) }
-        compose.mainClock.advanceTimeBy(FADE_DONE)
-
+        assertThat(shown("Settings option 1")).isTrue()
         assertThat(homeDrawn()).isFalse()
-        assertThat(compose.onAllNodes(hasText("Settings option 1")).fetchSemanticsNodes()).isNotEmpty()
     }
 
     @Test
-    fun `Home is drawn under Settings while Back fades Settings out`() {
+    fun `Back from Settings shows Home at once, with no fade`() {
         setApp()
         openSettingsFromRail()
         holdTheClock()
 
         back()
-        compose.mainClock.advanceTimeBy(MID_FADE)
+        aFewFrames()
 
-        assertThat(compose.onAllNodes(hasText("Settings option 1")).fetchSemanticsNodes()).isNotEmpty()
+        assertThat(shown("Settings option 1")).isFalse()
         assertThat(homeDrawn()).isTrue()
     }
 
-    /** Every pixel on screen, top row first. */
-    private fun screenPixels(): IntArray {
-        val image = compose.onRoot().captureToImage()
-        return IntArray(image.width * image.height).also { image.readPixels(it) }
-    }
-
     @Test
-    fun `going on to Home from a screen fades that screen out over Home`() {
+    fun `going on to Home from a screen shows Home at once, with no fade`() {
         setApp()
         openSettingsFromRail()
         holdTheClock()
-        val settingsAlone = screenPixels()
 
         // As Setup does when it's finished: on to Home, with nothing left behind it.
         compose.runOnUiThread { nav.leaveSetup(Tab.HOME) }
-        compose.mainClock.advanceTimeBy(MID_FADE)
+        aFewFrames()
 
+        assertThat(shown("Settings option 1")).isFalse()
         assertThat(homeDrawn()).isTrue()
-        val now = screenPixels()
-        assertThat(now.indices.count { now[it] != settingsAlone[it] }).isGreaterThan(0)
     }
 
     @Test
-    fun `a press while Settings fades in moves Settings' highlight and never reaches Home`() {
+    fun `a press as Settings opens moves Settings' highlight and never reaches Home`() {
         setApp()
         homeShowing()
         holdTheClock()
         compose.runOnUiThread { nav.navigate(Routes.SETTINGS) }
-        compose.mainClock.advanceTimeBy(MID_FADE)
-        assertThat(homeDrawn()).isTrue()
+        aFewFrames()
 
         press(Key.DirectionDown)
         press(Key.DirectionCenter)
-        compose.mainClock.advanceTimeBy(MID_FADE)
+        aFewFrames()
 
         assertThat(focused("Settings option 2")).isTrue()
         assertThat(openedCount).isEqualTo(0)
@@ -409,11 +391,10 @@ class KeptShellTest {
         holdTheClock()
 
         compose.runOnUiThread { nav.navigate(Routes.vodPlayer(MediaKey.Movie(1))) }
-        compose.mainClock.advanceTimeByFrame()
-        compose.mainClock.advanceTimeByFrame()
+        aFewFrames()
 
         assertThat(homeDrawn()).isFalse()
-        assertThat(compose.onAllNodes(hasText("Player option 1")).fetchSemanticsNodes()).isNotEmpty()
+        assertThat(shown("Player option 1")).isTrue()
     }
 
     /** Opens Movies' [grid], which has the films "Grid 1" to "Grid 24", and waits for its covers. */
@@ -520,10 +501,7 @@ class KeptShellTest {
         /** More than the rail has, so walking Down through it always reaches the bottom. */
         const val RAIL_ITEMS = 10
 
-        /** Partway through a screen change's fade. */
-        const val MID_FADE = 100L
-
-        /** Past the end of a screen change's 300 ms fade (#194), with frames to spare, but short of 700 ms. */
-        const val FADE_DONE = 400L
+        /** Frames enough for any screen change: a fade would take at least 18. */
+        const val SWITCH_FRAMES = 6
     }
 }
