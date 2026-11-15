@@ -97,6 +97,7 @@ internal fun HomeScreen(
         state.recentShows,
         state.recentMovies,
         onNothingToShow,
+        becauseYouWatched = state.becauseYouWatched,
         live = live?.let { LiveTile(it, preview.player, preview.error) },
         onWatchLive = play,
         onOpenLive = onOpenLive,
@@ -105,8 +106,9 @@ internal fun HomeScreen(
 }
 
 /**
- * Home's rows, top to bottom: the Live Preview, what the Profile can pick back up, what's Recently
- * Added ([recentShows], [recentMovies]), then its Favourite shows, movies and channels. An empty row
+ * Home's rows, top to bottom: the Live Preview, what the Profile can pick back up, what's like the
+ * title it finished last ([becauseYouWatched]), what's Recently Added ([recentShows], [recentMovies]),
+ * then its Favourite shows, movies and channels. An empty row
  * is left out rather than shown blank.
  */
 @Composable
@@ -127,11 +129,13 @@ internal fun HomeContent(
     onWatchLive: (Channel) -> Unit = {},
     onOpenLive: () -> Unit = {},
     stopPreview: () -> Unit = {},
+    becauseYouWatched: BecauseYouWatched? = null,
 ) {
     val shelves =
         remember(
             live,
             continueWatching,
+            becauseYouWatched,
             favouriteShows,
             favouriteMovies,
             favouriteChannels,
@@ -141,7 +145,7 @@ internal fun HomeContent(
             homeShelves(
                 live,
                 continueWatching,
-                HomeTitles(recentShows, recentMovies, favouriteShows, favouriteMovies),
+                HomeTitles(recentShows, recentMovies, favouriteShows, favouriteMovies, becauseYouWatched),
                 favouriteChannels,
             )
         }
@@ -268,7 +272,7 @@ private fun ScreenFrameScope.HomeRows(shelves: List<HomeShelf>, takeFocus: Boole
                         leave = { card -> leave(card.key.stored) },
                     )
                     is HomeShelf.Covers -> CoverShelf(
-                        stringResource(shelf.title),
+                        shelf.titleArg?.let { stringResource(shelf.title, it) } ?: stringResource(shelf.title),
                         shelf.covers,
                         shelf.showsStatus,
                         rowFocus,
@@ -315,9 +319,17 @@ private sealed class HomeShelf(key: String, items: List<String>) {
 
     class Resume(val cards: List<ResumeItem>) : HomeShelf("cw", cards.map { it.key.stored })
 
-    /** A row of covers; [showsStatus] when each says where the Profile is with its title. */
-    class Covers(key: String, val title: Int, val covers: List<Cover>, val showsStatus: Boolean) :
-        HomeShelf(key, covers.map { it.title.pickKey })
+    /**
+     * A row of covers; [showsStatus] when each says where the Profile is with its title. [titleArg]
+     * fills in [title] where it names something, as Because you watched names the title.
+     */
+    class Covers(
+        key: String,
+        val title: Int,
+        val covers: List<Cover>,
+        val showsStatus: Boolean,
+        val titleArg: String? = null,
+    ) : HomeShelf(key, covers.map { it.title.pickKey })
 
     class Channels(val channels: List<HomeChannel>) : HomeShelf("channels", channels.map { it.channel.primary.pickKey })
 }
@@ -328,6 +340,7 @@ private class HomeTitles(
     val recentMovies: List<Cover>,
     val favouriteShows: List<Cover>,
     val favouriteMovies: List<Cover>,
+    val becauseYouWatched: BecauseYouWatched?,
 )
 
 /** Home's rows that have something in them, top to bottom. */
@@ -339,6 +352,10 @@ private fun homeShelves(
 ) = listOfNotNull(
     live?.let(HomeShelf::Live),
     HomeShelf.Resume(continueWatching),
+    titles.becauseYouWatched?.let {
+        val title = R.string.home_because_you_watched
+        HomeShelf.Covers("because", title, it.covers, showsStatus = true, titleArg = it.basedOn)
+    },
     HomeShelf.Covers("recentShows", R.string.home_recently_added_shows, titles.recentShows, showsStatus = true),
     HomeShelf.Covers("recentMovies", R.string.home_recently_added_movies, titles.recentMovies, showsStatus = true),
     // A Favourite shows only its title: where the Profile is with it is Continue Watching's job.

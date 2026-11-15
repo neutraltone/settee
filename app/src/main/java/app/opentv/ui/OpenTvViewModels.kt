@@ -30,6 +30,7 @@ import app.opentv.data.model.StreamKind
 import app.opentv.data.model.StremioStream
 import app.opentv.data.model.liveAt
 import app.opentv.data.model.ref
+import app.opentv.data.parser.VodTitleCleaner
 import app.opentv.data.parser.displayTitle
 import app.opentv.data.repo.CatalogRepository
 import app.opentv.data.repo.CatalogueRefresh
@@ -1335,6 +1336,10 @@ class VodViewModel @JvmOverloads constructor(
     /** A film's More like this. */
     suspend fun moreLikeThis(movie: Movie): List<Movie> = graph.catalogRepository.moreLikeThis(movie)
 
+    /** A show's More like this, as the covers its page's grid draws. */
+    suspend fun moreLikeThis(series: Series): List<TitleCover> =
+        graph.catalogRepository.moreLikeThis(series).map(Series::cover)
+
     /** Everything in the library with this person in it, for their page. */
     suspend fun titlesWithPerson(name: String): List<VodTitle> =
         graph.titleIndex.distinct(graph.catalogRepository.titlesWithPerson(name))
@@ -1472,7 +1477,14 @@ data class HomeState(
     val recentShows: List<Cover>,
     val recentMovies: List<Cover>,
     val live: LiveNow? = null,
+    val becauseYouWatched: BecauseYouWatched? = null,
 )
+
+/**
+ * Home's Because you watched: up to 20 films or shows like [basedOn], the title the Profile finished
+ * last, never that title itself.
+ */
+data class BecauseYouWatched(val basedOn: String, val covers: List<Cover>)
 
 /** A show's or movie's cover on Home, with where the active Profile is with it; null when never started. */
 data class Cover(val title: VodTitle, val status: CoverStatus? = null)
@@ -1515,6 +1527,30 @@ class HomeViewModel @JvmOverloads constructor(
     private fun recentlyAdded(movies: Boolean, shows: Boolean): Flow<List<VodTitle>> = graph.titleIndex
         .distinctTitles(graph.catalogRepository.recentlyAdded(movies, shows, limit = RECENT_ROWS_READ))
         .map { it.take(HOME_RECENT_TITLES_SHOWN) }
+
+    /**
+     * What's like the title the Profile finished last, and its name: films for a film, shows for a show,
+     * one cover per title. Worked out again only when it finishes something else, so the row stays put.
+     */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    private val becauseYouWatched: Flow<Pair<String, List<VodTitle>>?> = combine(
+        graph.viewerLibrary.lastFinished(),
+        settings.moviesEnabled,
+        settings.seriesEnabled,
+    ) { title, movies, shows -> title?.takeIf { if (it is VodTitle.OfMovie) movies else shows } }
+        .distinctUntilChanged { a, b -> a?.kind == b?.kind && a?.id == b?.id }
+        .mapLatest { basis -> basis?.let { VodTitleCleaner.clean(it.name) to likeThis(it) } }
+
+    private suspend fun likeThis(basis: VodTitle): List<VodTitle> {
+        val catalog = graph.catalogRepository
+        val limit = BECAUSE_YOU_WATCHED_TITLES
+        val titles = when (basis) {
+            is VodTitle.OfMovie -> catalog.moreLikeThis(basis.movie, limit).map(VodTitle::OfMovie)
+            is VodTitle.OfSeries -> catalog.moreLikeThis(basis.series, limit).map(VodTitle::OfSeries)
+        }
+        return graph.titleIndex.distinct(titles)
+            .filterNot { graph.titleIndex.sameTitle(basis.kind, it.id, basis.id) == true }
+    }
 
     private val favourites: Flow<List<VodTitle>> = combine(
         graph.viewerLibrary.favourites.titles(),
@@ -1630,11 +1666,19 @@ class HomeViewModel @JvmOverloads constructor(
                 channels,
                 shows.withStatuses(statuses),
                 movies.withStatuses(statuses),
-            )
+            ) to statuses
         },
         // In the same state as the rows, so Home is first drawn with it and highlights it.
         live,
-    ) { rows, live -> rows.copy(live = live) }
+        becauseYouWatched,
+    ) { (rows, statuses), live, because ->
+        rows.copy(
+            live = live,
+            becauseYouWatched = because
+                ?.let { (basedOn, titles) -> BecauseYouWatched(basedOn, titles.withStatuses(statuses)) }
+                ?.takeIf { it.covers.isNotEmpty() },
+        )
+    }
 
     /**
      * Home's rows, kept updating while Home is drawn and while a screen covers it ([app.opentv.KeepHomeLive]), so
@@ -1904,3 +1948,10 @@ private fun acrossVersions(every: List<Series>, refs: Set<SeriesRef>, titles: Ti
     val marked = every.filter { it.ref in refs }.mapNotNullTo(HashSet()) { titles.of(it.id) }
     return refs + every.filter { titles.of(it.id) in marked }.map { it.ref }
 }
+
+/** [this] as a portrait cover, as a category's grid draws a show. */
+internal fun Series.cover() =
+    TitleCover(id = id, name = name, title = VodTitleCleaner.clean(name), posterUrl = posterUrl)
+
+/** How many titles Home's Because you watched row holds. */
+private const val BECAUSE_YOU_WATCHED_TITLES = 20

@@ -463,6 +463,7 @@ private fun OpenTvApp(isTelevision: Boolean, launchedToPlay: Boolean) {
                                 viewModel = vodViewModel,
                                 onPlayEpisode = { key -> navController.navigate(Routes.vodPlayer(key)) },
                                 onOpenPerson = { name -> navController.navigate(Routes.person(name)) },
+                                onOpenSeries = { id -> navController.navigate(Routes.seriesDetail(id)) },
                             )
                         }
 

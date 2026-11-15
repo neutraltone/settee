@@ -261,6 +261,29 @@ class ViewerLibrary(
             HomeLibrary(continueWatching, coverStatusesIn(played))
         }
 
+    /**
+     * The film or show the active Profile most recently finished, for Home's Because you watched: the
+     * newest film or episode it watched past 93% (or marked Watched), an episode standing for its show.
+     * One the provider no longer lists is passed over. Null when it has finished nothing; otherwise it
+     * changes only when the Profile finishes something else.
+     */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    fun lastFinished(): Flow<VodTitle?> = activeProfileId
+        .flatMapLatest { pid -> positions.observeNewestFirst(pid) }
+        .map { newestFirst -> newestFirst.filter { statusOf(it) == WatchStatus.Watched }.map { it.mediaKey } }
+        .distinctUntilChanged()
+        .map { finished -> finished.firstNotNullOfOrNull { titleOf(it) } }
+        .distinctUntilChanged()
+
+    /** The film, or the show of the episode, [mediaKey] names; null when it's gone. */
+    private suspend fun titleOf(mediaKey: String): VodTitle? = when (val key = MediaKey.parse(mediaKey)) {
+        is MediaKey.Movie -> movies.byId(key.movieId)?.let(VodTitle::OfMovie)
+        is MediaKey.Episode -> episodes.byId(key.episodeId)
+            ?.let { series.bySeriesId(it.sourceId, it.seriesId) }
+            ?.let(VodTitle::OfSeries)
+        else -> null
+    }
+
     /** Every episode's status for the active Profile; re-emits only when a status actually changes. */
     @OptIn(ExperimentalCoroutinesApi::class)
     fun episodeStatuses(): Flow<EpisodeStatuses> = activeProfileId

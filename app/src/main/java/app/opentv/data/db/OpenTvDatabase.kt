@@ -89,7 +89,7 @@ class Converters {
         SeriesRule::class,
         Reminder::class,
     ],
-    version = 17,
+    version = 18,
     exportSchema = true,
 )
 @TypeConverters(Converters::class)
@@ -325,6 +325,18 @@ abstract class OpenTvDatabase : RoomDatabase() {
         }
 
         /**
+         * 17 → 18: films and series keep the TMDB ids TMDB recommends for them (#206), for More like
+         * this. Null for what's stored, so suggestions go by genre until TMDB is next asked.
+         */
+        private val TMDB_RECOMMENDATIONS = object : Migration(17, 18) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                for (table in listOf("movies", "series")) {
+                    db.execSQL("ALTER TABLE `$table` ADD COLUMN `tmdbRecommendations` TEXT")
+                }
+            }
+        }
+
+        /**
          * Every migration, in order. Shared with the migration test so neither list can lag. None
          * before 9: those schemas are wiped instead (see [WIPED_SCHEMAS]).
          */
@@ -337,6 +349,7 @@ abstract class OpenTvDatabase : RoomDatabase() {
                 CHANNEL_IDENTITY,
                 TITLES_LAST_SEEN,
                 POSTER_REASK,
+                TMDB_RECOMMENDATIONS,
             )
 
         /** The schemas opened empty rather than migrated; see [build]. */

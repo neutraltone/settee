@@ -7,6 +7,7 @@ package app.opentv
 
 import androidx.test.core.app.ApplicationProvider
 import app.opentv.data.model.Series
+import app.opentv.data.model.recommendedTmdbIds
 import app.opentv.data.remote.TmdbMeta
 import app.opentv.data.repo.SeriesTmdb
 import app.opentv.data.repo.SeriesTmdbPass
@@ -89,6 +90,25 @@ class SeriesTmdbTest {
 
         assertThat(stored("7").plot).isEqualTo("A show.")
         assertThat(stored("7").tmdbAnsweredAt).isEqualTo(NOW)
+    }
+
+    @Test
+    fun `the background pass keeps the shows TMDB recommends, in its order`() = runTest {
+        save(series("7"))
+
+        pass { Result.success(TmdbMeta(overview = "A show.", recommendations = listOf("9", "4"))) }
+            .fillAll(PANEL_SOURCE)
+
+        assertThat(stored("7").recommendedTmdbIds).containsExactly("9", "4").inOrder()
+    }
+
+    @Test
+    fun `asking TMDB again six months on replaces the recommendations it gave before`() = runTest {
+        save(series("7", tmdbAt = NOW - 7 * 31 * DAY).copy(tmdbRecommendations = "1,2"))
+
+        pass { Result.success(TmdbMeta(recommendations = listOf("3"))) }.fillAll(PANEL_SOURCE)
+
+        assertThat(stored("7").recommendedTmdbIds).containsExactly("3")
     }
 
     @Test
@@ -257,6 +277,21 @@ class SeriesTmdbTest {
         test.syncVod()
 
         assertThat(test.db.movies().forSource(PANEL_SOURCE.id).single().tmdbAnsweredAt).isEqualTo(NOW)
+    }
+
+    @Test
+    fun `a refresh of the show and film lists keeps what TMDB recommended`() = runTest {
+        panel.replies["get_series"] = """[{"series_id": 7, "name": "Show 7"}]"""
+        panel.replies["get_vod_streams"] = """[{"stream_id": 7, "name": "Film 7", "container_extension": "mp4"}]"""
+        test.syncVod()
+        test.db.series().upsertAll(listOf(stored("7").copy(tmdbRecommendations = "9,4")))
+        val film = test.db.movies().forSource(PANEL_SOURCE.id).single()
+        test.db.movies().upsertAll(listOf(film.copy(tmdbRecommendations = "5")))
+
+        test.syncVod()
+
+        assertThat(stored("7").recommendedTmdbIds).containsExactly("9", "4").inOrder()
+        assertThat(test.db.movies().forSource(PANEL_SOURCE.id).single().recommendedTmdbIds).containsExactly("5")
     }
 
     @Test

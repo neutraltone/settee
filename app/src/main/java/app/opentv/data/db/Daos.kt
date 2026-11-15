@@ -725,8 +725,15 @@ data class ChannelCleaned(
     val qualityRank: Int,
 )
 
-/** What More like this ranks a film by, without the rest of its row. */
-data class MoviePick(val id: Long, val sourceId: Long, val genre: String?, val rating: Double?, val addedMillis: Long)
+/** What More like this ranks a film or show by, without the rest of its row. */
+data class TitlePick(
+    val id: Long,
+    val sourceId: Long,
+    val genre: String?,
+    val rating: Double?,
+    val addedMillis: Long,
+    val tmdbId: String?,
+)
 
 /** Projection for [ChannelDao.channelCountsByCategory]. */
 data class CategoryChannelCount(val sourceId: Long, val categoryId: String, val count: Int)
@@ -979,7 +986,8 @@ interface MovieDao {
             durationSeconds = COALESCE(durationSeconds, :durationSeconds),
             releaseDate = COALESCE(releaseDate, :releaseDate),
             detailsLookedUp = MAX(detailsLookedUp, :detailsLookedUp),
-            tmdbAnsweredAt = COALESCE(MAX(tmdbAnsweredAt, :tmdbAnsweredAt), tmdbAnsweredAt, :tmdbAnsweredAt)
+            tmdbAnsweredAt = COALESCE(MAX(tmdbAnsweredAt, :tmdbAnsweredAt), tmdbAnsweredAt, :tmdbAnsweredAt),
+            tmdbRecommendations = COALESCE(:tmdbRecommendations, tmdbRecommendations)
         WHERE id = :id
         """,
     )
@@ -1001,6 +1009,7 @@ interface MovieDao {
         releaseDate: Long?,
         detailsLookedUp: Boolean,
         tmdbAnsweredAt: Long?,
+        tmdbRecommendations: String?,
     )
 
     /**
@@ -1028,6 +1037,7 @@ interface MovieDao {
                 releaseDate = it.releaseDate,
                 detailsLookedUp = it.detailsLookedUp,
                 tmdbAnsweredAt = it.tmdbAnsweredAt,
+                tmdbRecommendations = it.tmdbRecommendations,
             )
         }
         recreditChanged(before.associateBy { it.id }, credited(found.map { it.id }))
@@ -1069,20 +1079,27 @@ interface MovieDao {
      */
     @Query(
         """
-        SELECT id, sourceId, genre, rating, addedMillis FROM movies
+        SELECT id, sourceId, genre, rating, addedMillis, tmdbId FROM movies
         WHERE id != :excludeId AND genre LIKE '%' || :genre || '%'
         """,
     )
-    suspend fun picksSharingGenre(genre: String, excludeId: Long): List<MoviePick>
+    suspend fun picksSharingGenre(genre: String, excludeId: Long): List<TitlePick>
 
     /** More like this's candidates for a film with no genre: others from its provider and category. */
     @Query(
         """
-        SELECT id, sourceId, genre, rating, addedMillis FROM movies
+        SELECT id, sourceId, genre, rating, addedMillis, tmdbId FROM movies
         WHERE sourceId = :sourceId AND id != :excludeId AND (:categoryId IS NULL OR categoryId = :categoryId)
         """,
     )
-    suspend fun picksInCategory(sourceId: Long, categoryId: String?, excludeId: Long): List<MoviePick>
+    suspend fun picksInCategory(sourceId: Long, categoryId: String?, excludeId: Long): List<TitlePick>
+
+    /**
+     * The films with any of these TMDB ids: TMDB's recommendations for one film, a page of 20, so well
+     * inside the bound-variable limit.
+     */
+    @Query("SELECT id, sourceId, genre, rating, addedMillis, tmdbId FROM movies WHERE tmdbId IN (:tmdbIds)")
+    suspend fun picksWithTmdbIds(tmdbIds: List<String>): List<TitlePick>
 
     /** At most a row's worth of films, in no particular order. */
     @Query("SELECT * FROM movies WHERE id IN (:ids)")
@@ -1287,6 +1304,28 @@ interface SeriesDao {
     /** At most a title's worth of shows, in no particular order. */
     @Query("SELECT * FROM series WHERE id IN (:ids)")
     suspend fun byIds(ids: List<Long>): List<Series>
+
+    /** A show's More like this candidates sharing [genre]; see [MovieDao.picksSharingGenre]. */
+    @Query(
+        """
+        SELECT id, sourceId, genre, rating, addedMillis, tmdbId FROM series
+        WHERE id != :excludeId AND genre LIKE '%' || :genre || '%'
+        """,
+    )
+    suspend fun picksSharingGenre(genre: String, excludeId: Long): List<TitlePick>
+
+    /** More like this's candidates for a show with no genre: others from its provider and category. */
+    @Query(
+        """
+        SELECT id, sourceId, genre, rating, addedMillis, tmdbId FROM series
+        WHERE sourceId = :sourceId AND id != :excludeId AND (:categoryId IS NULL OR categoryId = :categoryId)
+        """,
+    )
+    suspend fun picksInCategory(sourceId: Long, categoryId: String?, excludeId: Long): List<TitlePick>
+
+    /** The shows with any of these TMDB ids; see [MovieDao.picksWithTmdbIds]. */
+    @Query("SELECT id, sourceId, genre, rating, addedMillis, tmdbId FROM series WHERE tmdbId IN (:tmdbIds)")
+    suspend fun picksWithTmdbIds(tmdbIds: List<String>): List<TitlePick>
 
     /** Every show as grouping into titles reads it, again whenever the table changes. */
     @Query("SELECT id, sourceId, name, tmdbId, year, categoryId FROM series ORDER BY id")

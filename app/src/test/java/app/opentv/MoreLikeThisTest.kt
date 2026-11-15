@@ -7,6 +7,7 @@ package app.opentv
 
 import androidx.test.core.app.ApplicationProvider
 import app.opentv.data.model.Movie
+import app.opentv.data.model.Series
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.test.runTest
 import org.junit.After
@@ -15,7 +16,7 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
-/** The films a film's page offers under More like this. */
+/** The films a film's page offers under More like this, and the shows a show's page offers. */
 // Plain Application: OpenTvApp schedules WorkManager on start, which the database doesn't need.
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], application = android.app.Application::class)
@@ -25,7 +26,13 @@ class MoreLikeThisTest {
     private val db = test.db
 
     @After
-    fun close() = test.close()
+    fun close() {
+        test.settings.setTmdbApiKey("")
+        test.close()
+    }
+
+    /** The viewer has saved a TMDB Key, which TMDB's stored recommendations count only with. */
+    private fun withKey() = test.settings.setTmdbApiKey("f".repeat(32))
 
     private fun movie(
         name: String,
@@ -33,6 +40,8 @@ class MoreLikeThisTest {
         rating: Double? = null,
         sourceId: Long = 1,
         categoryId: String? = null,
+        tmdbId: String? = null,
+        recommends: String? = null,
     ) = Movie(
         sourceId = sourceId,
         streamId = name,
@@ -46,6 +55,8 @@ class MoreLikeThisTest {
         containerExtension = "mp4",
         streamUrl = "",
         genre = genre,
+        tmdbId = tmdbId,
+        tmdbRecommendations = recommends,
     )
 
     private suspend fun stored(name: String) = db.movies().all().single { it.name == name }
@@ -159,5 +170,171 @@ class MoreLikeThisTest {
         val similar = test.catalog.moreLikeThis(stored("The Quiet Road"))
 
         assertThat(similar.map { it.name }).containsExactly("Long Night")
+    }
+
+    // ---- TMDB's recommendations -----------------------------------------------------------------
+
+    @Test
+    fun `with TMDB's recommendations, the films it recommends come first, its own provider's, then TMDB's order`() =
+        runTest {
+            withKey()
+            db.movies().upsertAll(
+                listOf(
+                    movie("The Quiet Road", genre = "Drama", tmdbId = "1", recommends = "30,10,20"),
+                    movie("Ten", tmdbId = "10"),
+                    movie("Twenty", tmdbId = "20", rating = 9.0),
+                    movie("Thirty, elsewhere", tmdbId = "30", sourceId = 2),
+                    movie("Long Night", genre = "Drama", rating = 9.5),
+                ),
+            )
+
+            val similar = test.catalog.moreLikeThis(stored("The Quiet Road"))
+
+            assertThat(similar.map { it.name })
+                .containsExactly("Ten", "Twenty", "Thirty, elsewhere", "Long Night").inOrder()
+        }
+
+    @Test
+    fun `when TMDB's recommendations match fewer films than the row holds, genre matches fill it, none twice`() =
+        runTest {
+            withKey()
+            db.movies().upsertAll(
+                listOf(
+                    movie("The Quiet Road", genre = "Drama", tmdbId = "1", recommends = "10,99"),
+                    movie("Ten", genre = "Drama", tmdbId = "10"),
+                    movie("Long Night", genre = "Drama", rating = 6.0),
+                    movie("Harbour Lights", genre = "Drama", rating = 8.0),
+                ),
+            )
+
+            val similar = test.catalog.moreLikeThis(stored("The Quiet Road"), limit = 2)
+
+            assertThat(similar.map { it.name }).containsExactly("Ten", "Harbour Lights").inOrder()
+        }
+
+    @Test
+    fun `a film TMDB recommends that the library has twice gets one cover, its own provider's`() = runTest {
+        withKey()
+        db.movies().upsertAll(
+            listOf(
+                movie("The Quiet Road", tmdbId = "1", recommends = "10"),
+                movie("Ten, elsewhere", tmdbId = "10", sourceId = 2),
+                movie("Ten", tmdbId = "10"),
+            ),
+        )
+
+        val similar = test.catalog.moreLikeThis(stored("The Quiet Road"))
+
+        assertThat(similar.map { it.name }).containsExactly("Ten")
+    }
+
+    @Test
+    fun `the film's own other Versions are never suggested, even when TMDB recommends them`() = runTest {
+        withKey()
+        db.movies().upsertAll(
+            listOf(
+                movie("The Quiet Road", genre = "Drama", tmdbId = "5", recommends = "5,10"),
+                movie("The Quiet Road 4K", genre = "Drama", tmdbId = "5", sourceId = 2),
+                movie("Ten", tmdbId = "10"),
+            ),
+        )
+
+        val similar = test.catalog.moreLikeThis(stored("The Quiet Road"))
+
+        assertThat(similar.map { it.name }).containsExactly("Ten")
+    }
+
+    // ---- A show's page --------------------------------------------------------------------------
+
+    private fun series(
+        name: String,
+        genre: String? = null,
+        rating: Double? = null,
+        sourceId: Long = 1,
+        categoryId: String? = null,
+        tmdbId: String? = null,
+        recommends: String? = null,
+    ) = Series(
+        sourceId = sourceId,
+        seriesId = name,
+        name = name,
+        categoryId = categoryId,
+        posterUrl = null,
+        rating = rating,
+        year = null,
+        plot = null,
+        genre = genre,
+        tmdbId = tmdbId,
+        tmdbRecommendations = recommends,
+    )
+
+    private suspend fun storedShow(name: String) = db.series().all().single { it.name == name }
+
+    @Test
+    fun `a show is offered shows sharing its genres, its provider's first, then most shared, never itself`() = runTest {
+        db.series().upsertAll(
+            listOf(
+                series("Harbour", genre = "Drama, Crime"),
+                series("Elsewhere", genre = "Drama, Crime", rating = 9.0, sourceId = 2),
+                series("Just drama", genre = "Drama", rating = 8.0),
+                series("Crime drama", genre = "Crime|Drama", rating = 6.0),
+                series("Cartoons", genre = "Animation", rating = 9.9),
+            ),
+        )
+
+        val similar = test.catalog.moreLikeThis(storedShow("Harbour"))
+
+        assertThat(similar.map { it.name }).containsExactly("Crime drama", "Just drama", "Elsewhere").inOrder()
+    }
+
+    @Test
+    fun `a show with no genre is offered others from its category`() = runTest {
+        db.series().upsertAll(
+            listOf(
+                series("Untitled", categoryId = "7"),
+                series("Same shelf", categoryId = "7"),
+                series("Other shelf", categoryId = "9"),
+            ),
+        )
+
+        val similar = test.catalog.moreLikeThis(storedShow("Untitled"))
+
+        assertThat(similar.map { it.name }).containsExactly("Same shelf")
+    }
+
+    @Test
+    fun `with TMDB's recommendations, a show is offered the shows it recommends first, then genre matches`() = runTest {
+        withKey()
+        db.series().upsertAll(
+            listOf(
+                series("Harbour", genre = "Drama", tmdbId = "1", recommends = "20,10"),
+                series("Ten", tmdbId = "10"),
+                series("Twenty", tmdbId = "20"),
+                series("Just drama", genre = "Drama"),
+            ),
+        )
+
+        val similar = test.catalog.moreLikeThis(storedShow("Harbour"))
+
+        assertThat(similar.map { it.name }).containsExactly("Twenty", "Ten", "Just drama").inOrder()
+    }
+
+    @Test
+    fun `without a TMDB Key, or for a film with no TMDB id, genres decide, as before TMDB was asked`() = runTest {
+        db.movies().upsertAll(
+            listOf(
+                movie("Keyless", genre = "Drama", tmdbId = "1", recommends = "10"),
+                movie("No id", genre = "Drama", recommends = "10"),
+                movie("Ten", tmdbId = "10"),
+                movie("Long Night", genre = "Drama"),
+            ),
+        )
+
+        val keyless = test.catalog.moreLikeThis(stored("Keyless"))
+        withKey()
+        val noId = test.catalog.moreLikeThis(stored("No id"))
+
+        assertThat(keyless.map { it.name }).containsExactly("No id", "Long Night")
+        assertThat(noId.map { it.name }).containsExactly("Keyless", "Long Night")
     }
 }

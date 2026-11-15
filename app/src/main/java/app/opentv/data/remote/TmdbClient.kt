@@ -43,6 +43,8 @@ data class TmdbMeta(
     val year: Int? = null,
     /** Release day (a film) or first air day (a show), UTC epoch millis at midnight. */
     val releaseDate: Long? = null,
+    /** TMDB ids of the titles TMDB recommends for this one, in its order; same kind as this title. */
+    val recommendations: List<String> = emptyList(),
 )
 
 /** What TMDB said about a TMDB Key before it's saved. */
@@ -148,7 +150,8 @@ class TmdbClient(
         val url = TMDB_BASE.newBuilder()
             .addPathSegment(if (isMovie) "movie" else "tv")
             .addPathSegment(id)
-            .addQueryParameter("append_to_response", "credits")
+            // Recommendations ride on the details request, so suggestions cost no request of their own.
+            .addQueryParameter("append_to_response", "credits,recommendations")
             .build()
         val o = read(url)?.jsonObject ?: return null
 
@@ -178,6 +181,11 @@ class TmdbClient(
             ?.take(TOP_STUDIOS)
             ?.joinToString(", ")?.takeIf { it.isNotBlank() }
 
+        val recommendations = o["recommendations"]?.jsonObject?.get("results")?.jsonArray
+            ?.mapNotNull { knownTmdbId(it.jsonObject["id"]?.jsonPrimitive?.contentOrNull) }
+            ?.distinct()
+            .orEmpty()
+
         val rating = o["vote_average"]?.jsonPrimitive?.doubleOrNull?.takeIf { it > 0.0 }
         val dateStr = (o["release_date"] ?: o["first_air_date"])?.jsonPrimitive?.contentOrNull
         val year = dateStr?.take(4)?.toIntOrNull()
@@ -195,6 +203,7 @@ class TmdbClient(
             rating = rating,
             year = year,
             releaseDate = parseReleaseDate(dateStr),
+            recommendations = recommendations,
         )
     }
 

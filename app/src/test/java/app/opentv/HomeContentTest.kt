@@ -42,6 +42,7 @@ import app.opentv.data.repo.LineupChannel
 import app.opentv.data.repo.LivePreview
 import app.opentv.data.repo.MediaKey
 import app.opentv.data.repo.VodTitle
+import app.opentv.ui.BecauseYouWatched
 import app.opentv.ui.Cover
 import app.opentv.ui.HomeChannel
 import app.opentv.ui.HomeContent
@@ -197,6 +198,7 @@ class HomeContentTest {
         channels: List<HomeChannel> = listOf(favourite(3, "BBC One")),
         recent: List<Cover> = emptyList(),
         favouritesNow: () -> List<Cover> = { favourites },
+        because: BecauseYouWatched? = null,
     ) = compose.setTvContent {
         CompositionLocalProvider(LocalOpenOptions provides { _, leave -> leaveThroughOptions = leave }) {
             HomeContent(
@@ -213,6 +215,7 @@ class HomeContentTest {
                 favouriteChannels = channels,
                 recentShows = recent.shows(),
                 recentMovies = recent.movies(),
+                becauseYouWatched = because,
                 onResume = { events += "resume" },
                 onOpenSeries = { events += "series" },
                 onOpenMovie = {
@@ -355,6 +358,31 @@ class HomeContentTest {
             assertThat(topOf(above)).isLessThan(topOf(below))
         }
         compose.onNodeWithText("BBC One").assertExists()
+    }
+
+    @Test
+    fun `Because you watched comes right after Continue Watching, named for the title it's based on`() {
+        setHome(
+            recent = recent,
+            because = BecauseYouWatched("Heat", listOf(cover(movie(21, "Ronin")), cover(movie(22, "Thief")))),
+        )
+
+        val order = listOf("Continue watching", "Because you watched Heat", "Recently added shows")
+        order.zipWithNext { above, below ->
+            scrollTo(below)
+            assertThat(topOf(above)).isLessThan(topOf(below))
+        }
+        scrollTo("Ronin")
+        compose.onNodeWithText("Ronin").performClick()
+        assertThat(opened).isEqualTo(movie(21, "Ronin"))
+        captureScreen("home_because_you_watched")
+    }
+
+    @Test
+    fun `with nothing to base it on, Home has no Because you watched row`() {
+        setHome(recent = recent)
+
+        compose.onNodeWithText("Because you watched", substring = true).assertDoesNotExist()
     }
 
     @Test
