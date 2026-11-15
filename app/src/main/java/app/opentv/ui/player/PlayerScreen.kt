@@ -40,7 +40,6 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -67,7 +66,6 @@ import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
 import app.opentv.R
 import app.opentv.core.ServiceLocator
-import app.opentv.core.SleepTimer
 import app.opentv.core.findActivity
 import app.opentv.data.model.Channel
 import app.opentv.data.model.shownName
@@ -291,20 +289,6 @@ fun PlayerScreen(channelId: Long?, onBack: () -> Unit) {
         }
     }
 
-    // Sleep timer: when the armed deadline passes, stop and leave the player. Re-arming from
-    // settings restarts this effect with the new deadline.
-    val sleepDeadline by SleepTimer.deadline.collectAsState()
-    // Switching live pause on replaces the controller while this waits; stop whichever is current.
-    val currentController by rememberUpdatedState(controller)
-    LaunchedEffect(sleepDeadline) {
-        val d = sleepDeadline ?: return@LaunchedEffect
-        val wait = d - System.currentTimeMillis()
-        if (wait > 0) delay(wait)
-        SleepTimer.clear()
-        currentController.stop()
-        onBack()
-    }
-
     val subtitlePicks = rememberProfileSubtitles(controller, graph.profileSettings, scope)
     val openOptions = LocalOpenOptions.current
 
@@ -388,6 +372,12 @@ fun LivePlayerContent(
     onBack: () -> Unit,
     onChannelOptions: (PlaybackQueue.Item, onWatch: () -> Unit) -> Unit = { _, _ -> },
 ) {
+    // Stop and leave when the sleep timer runs out. Switching live pause on replaces the controller
+    // while the timer waits; the effect calls the newest lambda, so it stops whichever is current.
+    SleepTimerEffect {
+        controller.stop()
+        onBack()
+    }
     val context = LocalContext.current
     val confirmLive = LocalConfirmLive.current
     val state by controller.state.collectAsState()

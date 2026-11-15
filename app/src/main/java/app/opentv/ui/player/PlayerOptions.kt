@@ -6,9 +6,12 @@
 package app.opentv.ui.player
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.res.stringResource
 import app.opentv.R
@@ -17,6 +20,7 @@ import app.opentv.ui.options.ChoicePanel
 import app.opentv.ui.options.ItemOption
 import app.opentv.ui.options.OptionsPanel
 import app.opentv.ui.options.label
+import kotlinx.coroutines.delay
 
 /**
  * What Menu or the bar's Options button opens over the video. It's the cards' options panel, a
@@ -67,4 +71,30 @@ internal fun SleepTimerPanel(onDone: () -> Unit) {
         },
         onDismiss = onDone,
     )
+}
+
+/**
+ * Calls [onRunOut] when the sleep timer's deadline passes while this player is open, and turns the
+ * timer off. Re-arming restarts the wait with the new deadline.
+ *
+ * A deadline that had already passed when the player opened is only cleared: it ran out with no
+ * player there to stop (armed from Settings, or armed here and then left), and acting on it now
+ * would close the film or channel on its first frame.
+ */
+@Composable
+internal fun SleepTimerEffect(onRunOut: () -> Unit) {
+    val deadline by SleepTimer.deadline.collectAsState()
+    val runOut by rememberUpdatedState(onRunOut)
+    // Keyed on the deadline only to restart when the timer is armed or cleared; SleepTimer says
+    // whether it's still running.
+    LaunchedEffect(deadline) {
+        val wait = SleepTimer.millisRemaining()
+        if (wait == null) {
+            SleepTimer.clear()
+            return@LaunchedEffect
+        }
+        delay(wait)
+        SleepTimer.clear()
+        runOut()
+    }
 }
