@@ -77,9 +77,20 @@ scratch. It fixes nothing. The next refresh fails the same way.
    that dies at 60% leaves 60% of a *fresher* guide — strictly better than what was there. Not
    Room's `@Upsert`: parsed rows have `id = 0`, so its fallback `UPDATE … WHERE id = 0` matched
    nothing and kept the first download's details (#253).
-2. Pruning happens **by age** (`deleteEndedBefore`), never by source, and only **after** a sync
+2. Once a feed's download has **finished**, what that feed stored before it and the download
+   contradicts goes (`deleteSuperseded`, #352). Replacing slots can't do this on its own: when a
+   provider moves a programme from 20:00 to 20:05 its replacement takes a new slot, and the old row
+   would stay, show as on now and draw over its successors in the grid. So for each channel the
+   download listed, it deletes the feed's rows written before the sync started (ids are
+   `AUTOINCREMENT`, so the highest id beforehand is the watermark) that overlap the span the
+   download's programmes cover on that channel, earliest start to latest end. Per channel, because a
+   feed that leaves a channel out this time hasn't said anything about it; only programmes written
+   count towards the span, so what the parser skipped as too old doesn't widen it; and what lies
+   before the span (already aired) or after it (past this download's horizon) stays.
+3. Pruning happens **by age** (`deleteEndedBefore`), never by source, and only **after** a sync
    reports success.
-3. A failed sync leaves the previous guide completely intact and returns the reason.
+4. A failed sync, or one cut off part way, deletes nothing: what it wrote stays, and so does
+   everything it didn't get to. It returns the reason.
 
 `XmltvParser` streams via `XmlPullParser` and emits programmes to a callback. A week of guide
 data for a large provider is comfortably 150 MB of XML; nothing about that fits in the heap of

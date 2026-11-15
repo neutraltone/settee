@@ -324,6 +324,9 @@ interface Airing {
     fun isLiveAt(nowUtcMillis: Long): Boolean = nowUtcMillis in startUtcMillis until endUtcMillis
 }
 
+/** The time one channel's programmes in a guide download run over: its earliest start to its latest end. */
+data class GuideSpan(val fromUtcMillis: Long, val untilUtcMillis: Long)
+
 /**
  * A [Programme] as the guide grid holds it: only what a cell draws and a row is built from. The grid
  * keeps a whole day's programmes for every guide feed in memory, so the description, category and

@@ -186,6 +186,7 @@ object ServiceLocator {
         val epgRepository: EpgRepository by lazy {
             EpgRepository(
                 programmeDao = database.programmes(),
+                refreshDao = database.guideRefresh(),
                 feedDao = database.epgFeeds(),
                 aliasDao = database.epgAliases(),
                 channelDao = database.channels(),

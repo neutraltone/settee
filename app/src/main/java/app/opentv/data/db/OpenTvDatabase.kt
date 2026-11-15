@@ -100,6 +100,7 @@ abstract class OpenTvDatabase : RoomDatabase() {
     abstract fun epgFeeds(): EpgFeedDao
     abstract fun epgAliases(): EpgChannelAliasDao
     abstract fun programmes(): ProgrammeDao
+    abstract fun guideRefresh(): GuideRefreshDao
     abstract fun movies(): MovieDao
     abstract fun series(): SeriesDao
     abstract fun episodes(): EpisodeDao
