@@ -181,10 +181,11 @@ class RecordingEngine(
     }
 
     /**
-     * Re-arm the exact alarm for every scheduled recording. Alarms are dropped on a force-stop or
-     * app update — which the boot receiver does not see — so [app.opentv.OpenTvApp] calls this on
-     * each launch. A booking whose start slipped past while the app was dead fires almost at once;
-     * re-setting an existing alarm is idempotent, so this is safe to run every time.
+     * Re-arm the exact alarm for every scheduled recording. Alarms are dropped on a reboot, an
+     * update or a force-stop, so [RecordingAlarmReceiver] calls this after the first two and
+     * [app.opentv.OpenTvApp] on each launch, for the force-stop no receiver hears of. A booking whose
+     * start slipped past while the app was dead fires almost at once; re-setting an existing alarm is
+     * idempotent, so this is safe to run every time.
      */
     suspend fun rearmScheduled() {
         val now = System.currentTimeMillis()

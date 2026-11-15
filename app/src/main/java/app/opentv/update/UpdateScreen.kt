@@ -39,6 +39,7 @@ import app.opentv.ui.design.SetteeType
 import app.opentv.ui.design.SidePanel
 import app.opentv.ui.design.Text
 import app.opentv.ui.design.percentText
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
@@ -212,6 +213,9 @@ class UpdateViewModel @JvmOverloads constructor(
     private val checker = UpdateChecker(graph.httpClient, BuildConfig.VERSION_NAME)
     private val installer = ApkInstaller(graph.httpClient)
 
+    /** The install a press started, looking for a recording or downloading. */
+    private var installing: Job? = null
+
     // Backed by the shared hub so a manual check from About lights up this same gate.
     private val _state = UpdateHub.state
     val state = _state.asStateFlow()
@@ -257,9 +261,12 @@ class UpdateViewModel @JvmOverloads constructor(
     /**
      * Downloads and installs the update, unless a recording is running: the installer kills the app and
      * the recording with it (#336), so that asks first. Asked now rather than when the prompt opened,
-     * since a booking may have started while it sat there.
+     * since a booking may have started while it sat there. Pressed again while the first press is still
+     * looking or downloading, it does nothing: the panel stays up until the lookup answers, and a second
+     * download would write over the first's file.
      */
     fun install() {
+        if (installing?.isActive == true) return
         val update = when (val s = _state.value) {
             is UpdateUiState.Available -> s.update
             is UpdateUiState.RecordingRunning -> s.update
@@ -267,8 +274,10 @@ class UpdateViewModel @JvmOverloads constructor(
             is UpdateUiState.Downloading -> s.update
             UpdateUiState.Idle -> return
         }
-        viewModelScope.launch {
-            val running = graph.recordingRepository.active()
+        installing = viewModelScope.launch {
+            // A database that won't open has nothing recording, and an update is its fix (#334), so
+            // failing to look mustn't stop the download.
+            val running = runCatching { graph.recordingRepository.active() }.getOrDefault(emptyList())
             if (running.isEmpty()) {
                 download(update)
             } else {
@@ -280,7 +289,8 @@ class UpdateViewModel @JvmOverloads constructor(
     /** Install anyway, once the viewer has been told it stops the recording that's running. */
     fun installAnyway() {
         val s = _state.value as? UpdateUiState.RecordingRunning ?: return
-        viewModelScope.launch { download(s.update) }
+        if (installing?.isActive == true) return
+        installing = viewModelScope.launch { download(s.update) }
     }
 
     private suspend fun download(update: UpdateChecker.Update) {
@@ -300,6 +310,12 @@ class UpdateViewModel @JvmOverloads constructor(
     }
 
     fun dismiss() {
+        // Later on the recording warning means "after the recording", so the next launch looks again
+        // rather than waiting out the six hours since this check.
+        if (_state.value is UpdateUiState.RecordingRunning) {
+            getApplication<Application>().getSharedPreferences(APP_PREFS, Context.MODE_PRIVATE)
+                .edit { remove(KEY_LAST_CHECK) }
+        }
         _state.value = UpdateUiState.Idle
     }
 

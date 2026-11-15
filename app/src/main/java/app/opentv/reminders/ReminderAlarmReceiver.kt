@@ -69,9 +69,7 @@ class ReminderAlarmReceiver : BroadcastReceiver() {
             try {
                 val graph = ServiceLocator.get(context)
                 if (graph.database.wontOpen() != null) return@launch
-                val repo = graph.reminderRepository
-                val now = System.currentTimeMillis()
-                repo.upcoming(now).forEach { r -> ReminderScheduler.set(context, r.id, r.startUtcMillis) }
+                ReminderScheduler.rearmUpcoming(context, graph.reminderRepository)
             } finally {
                 pending.finish()
             }

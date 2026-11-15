@@ -6,6 +6,8 @@
 package app.opentv
 
 import android.app.Application
+import android.content.Context
+import androidx.core.content.edit
 import androidx.test.core.app.ApplicationProvider
 import app.opentv.core.ServiceLocator
 import app.opentv.data.model.Recording
@@ -17,12 +19,14 @@ import com.google.common.truth.Truth.assertThat
 import com.google.common.truth.Truth.assertWithMessage
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
 import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.withTimeoutOrNull
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Protocol
@@ -100,6 +104,8 @@ class UpdateViewModelTest {
 
     private fun downloadStarted() = asked.any { it == update.apkUrl }
 
+    private fun downloads() = asked.count { it == update.apkUrl }
+
     private suspend fun stateBecomes(predicate: (UpdateUiState) -> Boolean): UpdateUiState =
         withTimeout(5_000) { viewModel.state.first(predicate) }
 
@@ -172,5 +178,58 @@ class UpdateViewModelTest {
 
         assertThat(viewModel.state.value).isEqualTo(UpdateUiState.Idle)
         assertWithMessage("whether the update's APK was asked for").that(downloadStarted()).isFalse()
+    }
+
+    @Test
+    fun `with a database Settee can't open, Install still downloads the update that may fix it`() = runBlocking {
+        // Its own graph, which the close after each test would fail on.
+        val broken = ServiceLocator.Graph(app, http = http, openDatabase = { error("won't open") })
+        val own = TestViewModels()
+        val viewModel = own.update(app, broken)
+        UpdateHub.state.value = UpdateUiState.Available(update)
+
+        viewModel.install()
+
+        withTimeout(5_000) { viewModel.state.first { it is UpdateUiState.Failed } }
+        own.clear()
+        assertWithMessage("whether the update's APK was asked for").that(downloadStarted()).isTrue()
+    }
+
+    @Test
+    fun `pressing Install twice downloads the update once`() = runBlocking {
+        UpdateHub.state.value = UpdateUiState.Available(update)
+
+        viewModel.install()
+        viewModel.install()
+
+        stateBecomes { it is UpdateUiState.Failed }
+        // A second download would follow the first closely; give it the chance to.
+        withTimeoutOrNull(1_000) {
+            while (downloads() < 2) delay(20)
+        }
+        assertThat(downloads()).isEqualTo(1)
+    }
+
+    @Test
+    fun `after Later on the warning, the next launch looks for the update again`() = runBlocking {
+        app.getSharedPreferences(APP_PREFS, Context.MODE_PRIVATE).edit {
+            putLong("last_update_check", System.currentTimeMillis())
+        }
+        recording("The News")
+        UpdateHub.state.value = UpdateUiState.Available(update)
+        viewModel.install()
+        stateBecomes { it is UpdateUiState.RecordingRunning }
+
+        viewModel.dismiss()
+        asked.clear()
+        // The next launch: a view model of its own, which looks for an update as it starts.
+        val next = TestViewModels()
+        next.update(app, graph)
+
+        val looked = withTimeoutOrNull(5_000) {
+            while (asked.none { it != update.apkUrl }) delay(20)
+        }
+        next.clear()
+        assertWithMessage("whether GitHub was asked for the latest release").that(looked).isNotNull()
     }
 }
