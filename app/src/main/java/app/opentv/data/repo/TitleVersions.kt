@@ -9,6 +9,7 @@ import app.opentv.data.db.OpenTvDatabase
 import app.opentv.data.model.Movie
 import app.opentv.data.model.Series
 import app.opentv.data.model.StreamKind
+import app.opentv.data.model.knownTmdbId
 import app.opentv.data.parser.ChannelNameNormalizer
 import app.opentv.data.parser.VodTitleCleaner
 import app.opentv.player.DecoderList
@@ -95,9 +96,6 @@ private val BADGE_QUALITIES = setOf("8K", "4K", "FHD", "HD")
 /** Whether two rows are one title by their TMDB ids, for before titles are grouped. */
 internal fun sameTmdbTitle(one: String?, other: String?): Boolean =
     knownTmdbId(one)?.let { it == knownTmdbId(other) } == true
-
-/** Panels send 0 or nothing for a title they don't know, which would make every such title one. */
-internal fun knownTmdbId(tmdbId: String?): String? = tmdbId?.trim()?.takeIf { it.isNotEmpty() && it != "0" }
 
 /** A standalone 4-digit release year (19xx/20xx) as it appears inside a VOD title. */
 private val TITLE_YEAR = Regex("""\b(19|20)\d{2}\b""")

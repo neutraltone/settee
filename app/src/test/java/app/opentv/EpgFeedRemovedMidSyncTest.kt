@@ -65,6 +65,7 @@ class EpgFeedRemovedMidSyncTest {
 
     private val guide: EpgRepository = EpgRepository(
         programmeDao = db.programmes(),
+        refreshDao = db.guideRefresh(),
         feedDao = db.epgFeeds(),
         aliasDao = db.epgAliases(),
         channelDao = db.channels(),

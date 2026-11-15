@@ -50,6 +50,7 @@ class TestCatalog(
     val viewerLibrary = ViewerLibrary(db, MutableStateFlow(1L), clock = clock)
     val guide = EpgRepository(
         programmeDao = db.programmes(),
+        refreshDao = db.guideRefresh(),
         feedDao = db.epgFeeds(),
         aliasDao = db.epgAliases(),
         channelDao = db.channels(),

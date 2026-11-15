@@ -37,6 +37,14 @@ object StatusBus {
         _progress.value = progress
     }
 
+    /**
+     * Take [message] down, bar and all, if it's still the one showing. A job that stops on its own
+     * schedule clears its line with this, so a line another job put up since stays.
+     */
+    fun clear(message: String) {
+        if (_message.compareAndSet(message, null)) _progress.value = null
+    }
+
     /** Announce [message] while [block] runs, then clear it — even if the work throws. */
     suspend fun <T> during(message: String, block: suspend () -> T): T {
         set(message)

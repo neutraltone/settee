@@ -348,6 +348,32 @@ class MovieGenresTest {
     }
 
     @Test
+    fun `a film a provider gave TMDB id 0 keeps the id TMDB found for it`() = runTest {
+        test.db.movies().upsertAll(listOf(movie("7", added = 1).copy(tmdbId = "0")))
+        panel.replies["get_vod_info"] = """{"info": {"year": "2011"}}"""
+
+        withTmdb { Result.success(TmdbMeta(tmdbId = "11", overview = "A film.")) }.refresh(PANEL_SOURCE)
+
+        assertThat(stored("7").tmdbId).isEqualTo("11")
+        assertThat(stored("7").plot).isEqualTo("A film.")
+    }
+
+    @Test
+    fun `a film listed with TMDB id 0 is asked about by the id its details give`() = runTest {
+        test.db.movies().upsertAll(listOf(movie("7", added = 1).copy(tmdbId = "0")))
+        panel.replies["get_vod_info"] = """{"info": {"tmdb_id": "603"}}"""
+        var askedBy: String? = null
+
+        withTmdb {
+            askedBy = it.tmdbId
+            Result.success(TmdbMeta(tmdbId = "603"))
+        }.refresh(PANEL_SOURCE)
+
+        assertThat(askedBy).isEqualTo("603")
+        assertThat(stored("7").tmdbId).isEqualTo("603")
+    }
+
+    @Test
     fun `a film the provider has no genre for gets TMDB's, with the viewer's key`() = runTest {
         test.db.movies().upsertAll(listOf(movie("7", added = 1)))
         panel.replies["get_vod_info"] = """{"info": {"year": "2011"}}"""

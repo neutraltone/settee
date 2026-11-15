@@ -69,9 +69,10 @@ class LiveBrowseTest {
     /**
      * Midday on a fixed date, on this device's clock. Today's page of the guide ends at local
      * midnight, so a guide built from the real clock put "Later on" into tomorrow, and "Now on"
-     * into yesterday, whenever the tests ran within two hours of it.
+     * into yesterday, whenever the tests ran within two hours of it. A test may move it on, to
+     * see what the guide shows once time has passed since it was built.
      */
-    private val now = java.util.Calendar.getInstance().apply {
+    private var now = java.util.Calendar.getInstance().apply {
         clear()
         set(2026, java.util.Calendar.JUNE, 15, 12, 0)
     }.timeInMillis
@@ -670,7 +671,106 @@ class LiveBrowseTest {
         programmeCell("Later on 1").assertIsFocused()
     }
 
+    /**
+     * Channel One: a short news that ends ten minutes after the guide is built, then a film.
+     * Channel Two: a programme that ends at the same time, then nothing until one o'clock.
+     */
+    private fun endingSoonLibrary() = runBlocking {
+        val db = graph.database
+        db.sources().insert(Source(id = 1, name = "Provider A", kind = SourceKind.XTREAM, url = "https://example.com"))
+        db.categories().upsertAll(listOf(Category("10", 1, "News", StreamKind.LIVE, sortIndex = 0)))
+        db.channels().replaceCatalogue(
+            1,
+            listOf(channel(1, "Channel One", 1, "10"), channel(2, "Channel Two", 1, "10")),
+            syncStamp = 1,
+        )
+        graph.catalogRepository.renormalizeAll()
+        val feed = db.epgFeeds().insert(EpgFeed(name = "Feed"))
+        fun programme(id: Long, start: Long, end: Long, title: String, description: String) = Programme(
+            feedId = feed,
+            epgChannelId = "epg$id",
+            startUtcMillis = start,
+            endUtcMillis = end,
+            title = title,
+            description = description,
+        )
+        db.programmes().insertOrReplace(
+            listOf(
+                programme(1, now - HOUR, now + 10 * MINUTE, "Short news", "The short news."),
+                programme(1, now + 10 * MINUTE, now + 2 * HOUR, "Afternoon film", "The afternoon film."),
+                programme(2, now - HOUR, now + 10 * MINUTE, "Quiz", "The quiz."),
+                programme(2, now + HOUR, now + 2 * HOUR, "Drama", "The drama."),
+            ),
+        )
+    }
+
+    /**
+     * Moves the clock on to twenty past, past the end of what was on when the guide was built but
+     * inside the same half hour, so the rows aren't rebuilt, and lets the Live screen's minute tick
+     * run. Checks the rows really are the ones built at noon, so the band can't pass by a rebuild.
+     */
+    private fun twentyMinutesLater() {
+        val builtAtNoon = viewModel.guideRows.value.rows.first { it.primary.name == "Channel One" }
+        assertThat(builtAtNoon.now?.title).isEqualTo("Short news")
+        now += 20 * MINUTE
+        compose.mainClock.advanceTimeBy(60_000)
+        compose.waitForIdle()
+        assertThat(
+            viewModel.guideRows.value.rows.first {
+                it.primary.name == "Channel One"
+            },
+        ).isSameInstanceAs(builtAtNoon)
+    }
+
+    @Test
+    fun `on a channel's name, the band shows what's on now, not a programme that ended since the guide was built`() {
+        endingSoonLibrary()
+        setLive()
+        pressOkOnLiveInTheRail()
+        awaitRows()
+        channelCell("Channel One").assertIsFocused()
+        awaitText("The short news.")
+
+        twentyMinutesLater()
+
+        awaitText("The afternoon film.")
+        compose.onNode(hasText("The short news.")).assertDoesNotExist()
+        captureScreen("live_channel_after_programme_ended")
+    }
+
+    @Test
+    fun `on a programme that has ended, the band still shows that programme`() {
+        endingSoonLibrary()
+        setLive()
+        pressOkOnLiveInTheRail()
+        awaitRows()
+        twentyMinutesLater()
+
+        programmeCell("Short news").requestFocus()
+        compose.waitForIdle()
+
+        awaitText("The short news.")
+        compose.onNode(hasText("The afternoon film.")).assertDoesNotExist()
+    }
+
+    @Test
+    fun `on a channel with nothing on now, the band says there's no guide for it, as for a channel with no guide`() {
+        endingSoonLibrary()
+        setLive()
+        pressOkOnLiveInTheRail()
+        awaitRows()
+        twentyMinutesLater()
+
+        press(Key.DirectionDown)
+
+        channelCell("Channel Two").assertIsFocused()
+        awaitText(app.getString(R.string.guide_no_info_channel))
+        compose.onNode(hasText("The quiz.")).assertDoesNotExist()
+        compose.onNode(hasText("The drama.")).assertDoesNotExist()
+    }
+
     private companion object {
+        const val MINUTE = 60 * 1000L
         const val HOUR = 60 * 60 * 1000L
         const val DAY = 24 * HOUR
     }

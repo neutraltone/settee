@@ -13,6 +13,7 @@ import app.opentv.data.model.Series
 import app.opentv.data.model.SeriesRef
 import app.opentv.data.model.StreamKind
 import app.opentv.data.model.VersionRow
+import app.opentv.data.model.knownTmdbId
 import app.opentv.data.model.ref
 
 /**
