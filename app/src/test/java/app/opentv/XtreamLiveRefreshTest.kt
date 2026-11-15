@@ -206,6 +206,41 @@ class XtreamLiveRefreshTest {
         assertThat(channels.forSource(PANEL_SOURCE.id)).hasSize(3)
     }
 
+    @Test
+    fun `a refresh keeps the time zone the panel says it runs in, and follows it when it changes`() = runTest {
+        test.db.sources().insert(PANEL_SOURCE)
+        panel.replies["get_live_streams"] = lineUp(0 until 3)
+
+        panel.replies[""] = signIn(timezone = "Europe/Amsterdam")
+        test.catalog.fetchLive(PANEL_SOURCE, nowUtcMillis = 1_000)
+        val first = serverTimeZone()
+        panel.replies[""] = signIn(timezone = "America/New_York")
+        test.catalog.fetchLive(PANEL_SOURCE, nowUtcMillis = 2_000)
+        val second = serverTimeZone()
+        panel.replies[""] = """{"user_info": {"status": "Active"}, "server_info": {}}"""
+        test.catalog.fetchLive(PANEL_SOURCE, nowUtcMillis = 3_000)
+
+        assertThat(first).isEqualTo("Europe/Amsterdam")
+        assertThat(second).isEqualTo("America/New_York")
+        assertThat(serverTimeZone()).isNull()
+    }
+
+    @Test
+    fun `a refresh the panel turns away keeps the time zone it gave before`() = runTest {
+        test.db.sources().insert(PANEL_SOURCE)
+        panel.replies["get_live_streams"] = lineUp(0 until 3)
+        panel.replies[""] = signIn(timezone = "Europe/Amsterdam")
+        test.catalog.fetchLive(PANEL_SOURCE, nowUtcMillis = 1_000)
+
+        panel.replies[""] = """{"user_info": {"auth": 0}}"""
+        val result = test.catalog.fetchLive(PANEL_SOURCE, nowUtcMillis = 2_000)
+
+        assertThat(result).isInstanceOf(SyncResult.Failed::class.java)
+        assertThat(serverTimeZone()).isEqualTo("Europe/Amsterdam")
+    }
+
+    private suspend fun serverTimeZone() = test.db.sources().byId(PANEL_SOURCE.id)!!.serverTimeZone
+
     private suspend fun stored(streamId: String) =
         channels.forSource(PANEL_SOURCE.id).single { it.streamId == streamId }
 
@@ -218,6 +253,10 @@ class XtreamLiveRefreshTest {
             """^\s*(SELECT|INSERT|UPDATE|DELETE)\b.*\bchannels\b""",
             setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL),
         )
+
+        /** The panel's sign-in reply, saying it runs in [timezone]. */
+        fun signIn(timezone: String) =
+            """{"user_info": {"status": "Active"}, "server_info": {"timezone": "$timezone"}}"""
 
         /** A `get_live_streams` reply listing a channel for each of [ids]. */
         fun lineUp(ids: Iterable<Int>, name: (Int) -> String = { "Channel $it" }) =

@@ -29,7 +29,7 @@ class SourceRepository(private val dao: SourceDao, private val api: XtreamApi, p
         if (source.id == 0L) {
             dao.insert(normalised)
         } else {
-            dao.update(normalised)
+            dao.updateEdit(normalised)
             source.id
         }
     }

@@ -89,7 +89,7 @@ class Converters {
         SeriesRule::class,
         Reminder::class,
     ],
-    version = 18,
+    version = 19,
     exportSchema = true,
 )
 @TypeConverters(Converters::class)
@@ -337,6 +337,17 @@ abstract class OpenTvDatabase : RoomDatabase() {
         }
 
         /**
+         * 18 → 19: the time zone each Xtream panel says it runs in, which catch-up writes its start
+         * time in (#346). Null for what's stored, so catch-up goes by the device's zone, as it did,
+         * until the provider's next refresh signs in.
+         */
+        private val SERVER_TIME_ZONE = object : Migration(18, 19) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE `sources` ADD COLUMN `serverTimeZone` TEXT")
+            }
+        }
+
+        /**
          * Every migration, in order. Shared with the migration test so neither list can lag. None
          * before 9: those schemas are wiped instead (see [WIPED_SCHEMAS]).
          */
@@ -350,6 +361,7 @@ abstract class OpenTvDatabase : RoomDatabase() {
                 TITLES_LAST_SEEN,
                 POSTER_REASK,
                 TMDB_RECOMMENDATIONS,
+                SERVER_TIME_ZONE,
             )
 
         /** The schemas opened empty rather than migrated; see [build]. */
