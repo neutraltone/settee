@@ -25,6 +25,7 @@ import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertIsFocused
+import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasText
@@ -217,7 +218,7 @@ class KeptShellTest {
     }
 
     private fun openSettingsFromRail() {
-        compose.waitUntil(5_000) { compose.onAllNodes(hasText("Added 1")).fetchSemanticsNodes().isNotEmpty() }
+        homeShowing()
         // By the remote, as a viewer does: requestFocus enters the rail on the open tab's item.
         press(Key.DirectionLeft)
         repeat(RAIL_ITEMS) {
@@ -243,7 +244,7 @@ class KeptShellTest {
     @Test
     fun `Back to Home from a title's page after playing it puts the highlight on the card picked`() {
         setApp()
-        compose.waitUntil(5_000) { compose.onAllNodes(hasText("Added 1")).fetchSemanticsNodes().isNotEmpty() }
+        homeShowing()
         press(Key.DirectionRight, times = 2)
         press(Key.DirectionCenter)
         assertThat(opened).isEqualTo("Added 3")
@@ -291,7 +292,7 @@ class KeptShellTest {
     @Test
     fun `Back from a title opened on Movies is still on Movies, with the highlight on that title`() {
         setApp()
-        compose.waitUntil(5_000) { compose.onAllNodes(hasText("Added 1")).fetchSemanticsNodes().isNotEmpty() }
+        homeShowing()
         compose.runOnIdle { nav.selectShellTab(Tab.MOVIES) }
         compose.waitUntil(5_000) { compose.onAllNodes(hasText("Drama 21")).fetchSemanticsNodes().isNotEmpty() }
         compose.onNodeWithText("Favourite 1").requestFocus()
@@ -362,6 +363,28 @@ class KeptShellTest {
         assertThat(homeDrawn()).isTrue()
     }
 
+    /** Every pixel on screen, top row first. */
+    private fun screenPixels(): IntArray {
+        val image = compose.onRoot().captureToImage()
+        return IntArray(image.width * image.height).also { image.readPixels(it) }
+    }
+
+    @Test
+    fun `going on to Home from a screen fades that screen out over Home`() {
+        setApp()
+        openSettingsFromRail()
+        holdTheClock()
+        val settingsAlone = screenPixels()
+
+        // As Setup does when it's finished: on to Home, with nothing left behind it.
+        compose.runOnUiThread { nav.leaveSetup(Tab.HOME) }
+        compose.mainClock.advanceTimeBy(MID_FADE)
+
+        assertThat(homeDrawn()).isTrue()
+        val now = screenPixels()
+        assertThat(now.indices.count { now[it] != settingsAlone[it] }).isGreaterThan(0)
+    }
+
     @Test
     fun `a press while Settings fades in moves Settings' highlight and never reaches Home`() {
         setApp()
@@ -395,7 +418,7 @@ class KeptShellTest {
 
     /** Opens Movies' [grid], which has the films "Grid 1" to "Grid 24", and waits for its covers. */
     private fun openGrid() {
-        compose.waitUntil(5_000) { compose.onAllNodes(hasText("Added 1")).fetchSemanticsNodes().isNotEmpty() }
+        homeShowing()
         compose.runOnIdle { nav.selectShellTab(Tab.MOVIES) }
         compose.waitUntil(5_000) { compose.onAllNodes(hasText("Grid 1")).fetchSemanticsNodes().isNotEmpty() }
     }
@@ -455,7 +478,7 @@ class KeptShellTest {
     @Test
     fun `Back to Movies' rows after playing goes into the rows, never the rail`() {
         setApp()
-        compose.waitUntil(5_000) { compose.onAllNodes(hasText("Added 1")).fetchSemanticsNodes().isNotEmpty() }
+        homeShowing()
         compose.runOnIdle { nav.selectShellTab(Tab.MOVIES) }
         compose.waitUntil(5_000) { compose.onAllNodes(hasText("Drama 21")).fetchSemanticsNodes().isNotEmpty() }
         compose.onNodeWithText("Favourite 1").requestFocus()
@@ -500,7 +523,7 @@ class KeptShellTest {
         /** Partway through a screen change's fade. */
         const val MID_FADE = 100L
 
-        /** Past the end of a screen change's fade, which is about 300 ms (#194): a frame or two over. */
-        const val FADE_DONE = 350L
+        /** Past the end of a screen change's 300 ms fade (#194), with frames to spare, but short of 700 ms. */
+        const val FADE_DONE = 400L
     }
 }

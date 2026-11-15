@@ -100,6 +100,9 @@ fun KeptShell(nav: NavHostController, shell: @Composable (NavBackStackEntry) -> 
  * only one screen is ever see-through, and nothing dips through the background. Navigation's
  * default faded both at once over 700 ms.
  *
+ * Going on to the main screen fades the old screen out instead, since the main screen is drawn under
+ * the NavHost rather than in it.
+ *
  * A player comes and goes at once: the main screen isn't kept under one ([KeptShell]), so a fade
  * there would only be over the plain background.
  */
@@ -109,7 +112,15 @@ fun ScreensNavHost(nav: NavHostController, startDestination: String, builder: Na
         navController = nav,
         startDestination = startDestination,
         enterTransition = { if (involvesPlayer()) EnterTransition.None else fadeIn(tween(SCREEN_FADE_MILLIS)) },
-        exitTransition = { if (involvesPlayer()) ExitTransition.None else ExitTransition.KeepUntilTransitionsFinished },
+        exitTransition = {
+            when {
+                involvesPlayer() -> ExitTransition.None
+                // The main screen's own route is empty and Home is drawn under the NavHost, so going
+                // on to it (Setup finishing) has to fade the old screen out, as Back does.
+                targetState.destination.route == Routes.MAIN -> fadeOut(tween(SCREEN_FADE_MILLIS))
+                else -> ExitTransition.KeepUntilTransitionsFinished
+            }
+        },
         popEnterTransition = { EnterTransition.None },
         popExitTransition = { if (involvesPlayer()) ExitTransition.None else fadeOut(tween(SCREEN_FADE_MILLIS)) },
         builder = builder,
