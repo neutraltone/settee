@@ -112,6 +112,13 @@ class VodPlayerBackgroundTest {
             compose.waitForIdle()
 
             assertThat(controller.playWhenReady.value).isTrue()
+
+            // Leaving picture-in-picture while behind is going behind, and saves the place off the main
+            // thread: that write has to land before the database closes, or it fails with "already closed".
+            PipState.setInPip(false)
+            compose.waitUntil(WAIT_MILLIS) {
+                runBlocking { graph.viewerLibrary.resumeFrom("ep:11") } >= TEN_MINUTES
+            }
         } finally {
             PipState.setInPip(false)
         }
