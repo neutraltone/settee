@@ -91,14 +91,19 @@ fun RecordingsContent(
     // By key, not the row: the list can change under an open panel (a booking starts, a recording
     // ends), and the panel must act on the row as it is now, or close if it has gone.
     val panels = remember { Panels() }
+    var hadFocus by remember { mutableStateOf(false) }
     val rows = remember(sections) { sections.flatMap { it.rows } }
     val heir = rememberHeir(remember(rows) { rows.map { it.key } })
     val room = with(LocalDensity.current) { HEADING_ROOM.toPx() }
     ScreenFrame(modifier) {
         // Also cleared when the Highlight leaves the screen (for the rail, or another tab), whose
         // presses the list never sees: the screen stays built under the others, and so would this.
+        // On leaving only: the first report, before the Highlight has come in, says it isn't here.
         Column(
-            Modifier.onFocusChanged { if (!it.hasFocus && deleteFailure != null) onDismissFailure() },
+            Modifier.onFocusChanged {
+                if (hadFocus && !it.hasFocus && deleteFailure != null) onDismissFailure()
+                hadFocus = it.hasFocus
+            },
         ) {
             Text(stringResource(R.string.rec_screen_title), SetteeType.ScreenTitle)
             Spacer(Modifier.height(HEADING_GAP))

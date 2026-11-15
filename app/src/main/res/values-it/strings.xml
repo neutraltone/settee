@@ -76,6 +76,8 @@
     <string name="rec_error_nothing">Non è stato registrato nulla. Il canale potrebbe essersi interrotto, quindi prova a registrarlo di nuovo.</string>
     <string name="rec_error_usb_no_folder">Non c\'è una cartella in cui registrare. Scegline una sulla tua unità USB nelle impostazioni di registrazione.</string>
     <string name="rec_error_usb_unavailable">Impossibile trovare la tua unità USB. Ricollegala, poi scegli di nuovo la sua cartella nelle impostazioni di registrazione.</string>
+    <string name="rec_delete_failed_nas">Impossibile eliminarlo dal tuo NAS. Controlla che sia acceso, poi prova di nuovo a eliminarlo.</string>
+    <string name="rec_delete_failed">Impossibile eliminare questa registrazione. Prova di nuovo a eliminarla.</string>
     <string name="rec_background_prompt_title">Continuare a registrare quando esci?</string>
     <string name="rec_background_prompt_body">Android potrebbe interrompere questa registrazione quando lo schermo va in standby o esci da Settee. Consenti a Settee di ignorare l\'ottimizzazione della batteria in modo che le registrazioni continuino anche in standby, come farebbe un decoder.</string>
     <string name="rec_background_prompt_allow">Consenti</string>

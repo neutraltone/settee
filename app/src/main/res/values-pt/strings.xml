@@ -76,6 +76,8 @@
     <string name="rec_error_nothing">Nada foi gravado. O canal pode ter parado, por isso tente gravá-lo novamente.</string>
     <string name="rec_error_usb_no_folder">Não há nenhuma pasta para gravar. Escolha uma na sua unidade USB nas definições de Gravação.</string>
     <string name="rec_error_usb_unavailable">Não foi possível encontrar a sua unidade USB. Volte a ligá-la e escolha novamente a pasta nas definições de Gravação.</string>
+    <string name="rec_delete_failed_nas">Não foi possível eliminar isto do seu NAS. Verifique se está ligado e tente eliminar novamente.</string>
+    <string name="rec_delete_failed">Não foi possível eliminar esta gravação. Tente eliminá-la novamente.</string>
     <string name="rec_background_prompt_title">Continuar a gravar ao sair?</string>
     <string name="rec_background_prompt_body">O Android pode interromper esta gravação quando o ecrã adormece ou sai do Settee. Permita que o Settee ignore a otimização de bateria para que as gravações continuem, mesmo em standby — tal como uma set-top box.</string>
     <string name="rec_background_prompt_allow">Permitir</string>

@@ -76,6 +76,8 @@
     <string name="rec_error_nothing">No se grabó nada. Puede que el canal se haya detenido, así que vuelve a intentar grabarlo.</string>
     <string name="rec_error_usb_no_folder">No hay ninguna carpeta donde grabar. Elige una en tu unidad USB en Ajustes de grabación.</string>
     <string name="rec_error_usb_unavailable">No se encuentra tu unidad USB. Vuelve a conectarla y elige su carpeta de nuevo en Ajustes de grabación.</string>
+    <string name="rec_delete_failed_nas">No se pudo borrar de tu NAS. Comprueba que esté encendido y vuelve a intentar borrarlo.</string>
+    <string name="rec_delete_failed">No se pudo borrar esta grabación. Vuelve a intentar borrarla.</string>
     <string name="rec_background_prompt_title">¿Mantener la grabación al salir?</string>
     <string name="rec_background_prompt_body">Android puede detener esta grabación cuando la pantalla se apaga o sales de Settee. Permite que Settee ignore la optimización de batería para que las grabaciones sigan en marcha, incluso en reposo, tal como lo haría un decodificador.</string>
     <string name="rec_background_prompt_allow">Permitir</string>

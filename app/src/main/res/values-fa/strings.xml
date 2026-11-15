@@ -76,6 +76,8 @@
     <string name="rec_error_nothing">چیزی ضبط نشد. ممکن است کانال متوقف شده باشد، پس دوباره ضبط آن را امتحان کنید.</string>
     <string name="rec_error_usb_no_folder">پوشه‌ای برای ضبط وجود ندارد. در تنظیمات ضبط، پوشه‌ای روی درایو USB خود انتخاب کنید.</string>
     <string name="rec_error_usb_unavailable">درایو USB شما پیدا نشد. آن را دوباره وصل کنید، سپس پوشه آن را دوباره در تنظیمات ضبط انتخاب کنید.</string>
+    <string name="rec_delete_failed_nas">حذف این از NAS شما ممکن نشد. بررسی کنید روشن باشد، سپس دوباره برای حذف آن تلاش کنید.</string>
+    <string name="rec_delete_failed">حذف این ضبط ممکن نشد. دوباره برای حذف آن تلاش کنید.</string>
     <string name="rec_background_prompt_title">هنگام خروج، ضبط ادامه یابد؟</string>
     <string name="rec_background_prompt_body">اندروید ممکن است این ضبط را هنگام خاموش شدن صفحه یا خروج از Settee متوقف کند. به Settee اجازه دهید بهینه‌سازی باتری را نادیده بگیرد تا ضبط‌ها حتی در حالت آماده‌به‌کار، مانند یک گیرنده دیجیتال، ادامه یابند.</string>
     <string name="rec_background_prompt_allow">اجازه دادن</string>

@@ -76,6 +76,8 @@
     <string name="rec_error_nothing">कुछ भी रिकॉर्ड नहीं हुआ। हो सकता है चैनल रुक गया हो, इसलिए उसे फिर से रिकॉर्ड करके देखें।</string>
     <string name="rec_error_usb_no_folder">रिकॉर्ड करने के लिए कोई फ़ोल्डर नहीं है। रिकॉर्डिंग सेटिंग्स में अपनी USB ड्राइव पर एक फ़ोल्डर चुनें।</string>
     <string name="rec_error_usb_unavailable">आपकी USB ड्राइव नहीं मिल रही। उसे फिर से लगाएं, फिर रिकॉर्डिंग सेटिंग्स में उसका फ़ोल्डर दोबारा चुनें।</string>
+    <string name="rec_delete_failed_nas">इसे आपके NAS से हटाया नहीं जा सका। जांचें कि वह चालू है, फिर इसे दोबारा हटाने की कोशिश करें।</string>
+    <string name="rec_delete_failed">यह रिकॉर्डिंग हटाई नहीं जा सकी। इसे दोबारा हटाने की कोशिश करें।</string>
     <string name="rec_background_prompt_title">बाहर जाने पर भी रिकॉर्डिंग जारी रखें?</string>
     <string name="rec_background_prompt_body">स्क्रीन स्लीप होने या Settee छोड़ने पर Android इस रिकॉर्डिंग को रोक सकता है। रिकॉर्डिंग को स्टैंडबाय में भी चालू रखने के लिए Settee को बैटरी ऑप्टिमाइज़ेशन नज़रअंदाज़ करने की अनुमति दें — ठीक वैसे ही जैसे सेट-टॉप बॉक्स करता है।</string>
     <string name="rec_background_prompt_allow">अनुमति दें</string>
