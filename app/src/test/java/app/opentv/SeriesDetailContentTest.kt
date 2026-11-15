@@ -7,8 +7,10 @@ package app.opentv
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.SemanticsNodeInteraction
@@ -36,6 +38,7 @@ import app.opentv.data.repo.CoverStatus
 import app.opentv.data.repo.EpisodeStatuses
 import app.opentv.data.repo.MediaKey
 import app.opentv.data.repo.SeriesMainAction
+import app.opentv.data.repo.TitleCover
 import app.opentv.data.repo.VersionTraits
 import app.opentv.data.repo.VodQualities
 import app.opentv.data.repo.WatchStatus
@@ -43,6 +46,7 @@ import app.opentv.ui.options.LocalOpenOptions
 import app.opentv.ui.options.OptionsFor
 import app.opentv.ui.options.OptionsPanel
 import app.opentv.ui.options.OptionsSubject
+import app.opentv.ui.vod.LIKE_THIS_PEEK
 import app.opentv.ui.vod.NEXT_SEASON_PEEK
 import app.opentv.ui.vod.PageVersions
 import app.opentv.ui.vod.SeriesDetailContent
@@ -104,6 +108,12 @@ class SeriesDetailContentTest {
 
     private val chosen = mutableListOf<MediaKey>()
 
+    // The show's More like this, and whether it has been read yet.
+    private var suggestions by mutableStateOf(emptyList<TitleCover>())
+    private val suggestionsKnown = mutableStateOf(true)
+
+    private var openedSeries: Long? = null
+
     private fun show(initial: SeriesMainAction?) {
         mainAction.value = initial
         compose.setTvContent {
@@ -121,6 +131,9 @@ class SeriesDetailContentTest {
                 onOpenPerson = { openedPerson = it },
                 versions = versions,
                 onChooseVersion = { chosen += it },
+                suggestions = suggestions,
+                onOpenSeries = { openedSeries = it },
+                suggestionsKnown = suggestionsKnown.value,
             )
         }
         settle()
@@ -189,6 +202,12 @@ class SeriesDetailContentTest {
 
     private fun pill(label: String) = compose.onNode(hasText(label) and hasClickAction())
 
+    private fun cover(title: String) = compose.onNode(hasText(title) and hasClickAction())
+
+    private val likeThis = listOf("Harbour", "Lighthouse", "Tides").mapIndexed { i, name ->
+        TitleCover(id = 100L + i, name = name, title = name, posterUrl = "https://example.com/$i.jpg")
+    }
+
     private fun SemanticsNodeInteraction.assertNotShown() {
         val shown = runCatching { assertIsDisplayed() }.isSuccess
         assertWithMessage("still on screen").that(shown).isFalse()
@@ -248,6 +267,7 @@ class SeriesDetailContentTest {
 
         episodeRow(2, 5).assertIsFocused()
         compose.onNode(hasTestTag(NEXT_SEASON_PEEK)).assertDoesNotExist()
+        compose.onNode(hasTestTag(LIKE_THIS_PEEK)).assertDoesNotExist()
     }
 
     @Test
@@ -388,6 +408,125 @@ class SeriesDetailContentTest {
 
         compose.onNodeWithText("Play S1 E1").assertIsFocused()
         compose.onNodeWithText("Two friends and a lot of road.").assertIsDisplayed()
+    }
+
+    // ---- More like this ----------------------------------------------------------------------------
+
+    @Test
+    fun `More like this is the last pill, and highlighting it swaps the episodes for the suggestions`() {
+        episodes = listOf(testEpisode(0, 1)) + episodes
+        suggestions = likeThis
+        show(SeriesMainAction.Resume(testEpisode(2, 1)))
+        press(Key.DirectionDown)
+        episodeRow(2, 1).assertIsFocused()
+        press(Key.DirectionUp)
+
+        press(Key.DirectionRight)
+        press(Key.DirectionRight)
+
+        val last = pill("More like this").assertIsFocused().assertIsSelected().fetchSemanticsNode().boundsInRoot
+        assertThat(last.left).isGreaterThan(pill("Specials").fetchSemanticsNode().boundsInRoot.right)
+        pill("Season 2").assertIsNotSelected()
+        episodeRow(2, 1).assertDoesNotExist()
+        cover("Harbour").assertIsDisplayed()
+        captureScreen("series_detail_more_like_this")
+    }
+
+    @Test
+    fun `Up from the suggestions' first row and Back from them highlight More like this, and OK opens a show`() {
+        suggestions = likeThis
+        show(SeriesMainAction.Resume(testEpisode(2, 1)))
+        press(Key.DirectionDown)
+        press(Key.DirectionUp)
+        press(Key.DirectionRight)
+
+        press(Key.DirectionDown)
+        cover("Harbour").assertIsFocused()
+        press(Key.DirectionUp)
+        pill("More like this").assertIsFocused()
+
+        press(Key.DirectionDown)
+        press(Key.DirectionRight)
+        cover("Lighthouse").assertIsFocused()
+        Espresso.pressBack()
+        settle()
+        pill("More like this").assertIsFocused()
+        assertThat(leaves).isEqualTo(0)
+
+        press(Key.DirectionDown)
+        press(Key.DirectionCenter)
+        assertThat(openedSeries).isEqualTo(100L)
+    }
+
+    @Test
+    fun `under the last season More like this peeks, and Down from its last episode reaches the first suggestion`() {
+        suggestions = likeThis
+        show(SeriesMainAction.Resume(testEpisode(2, 5)))
+
+        press(Key.DirectionDown)
+        episodeRow(2, 5).assertIsFocused()
+        compose.onNode(hasTestTag(LIKE_THIS_PEEK)).assertIsDisplayed()
+        compose.onNode(hasTestTag(NEXT_SEASON_PEEK)).assertDoesNotExist()
+        captureScreen("series_detail_more_like_this_peek")
+
+        press(Key.DirectionDown)
+        settle()
+
+        cover("Harbour").assertIsFocused()
+        pill("More like this").assertIsSelected()
+        episodeRow(2, 5).assertDoesNotExist()
+        press(Key.DirectionUp)
+        pill("More like this").assertIsFocused()
+    }
+
+    @Test
+    fun `under any season but the last, the next season's first episode peeks, not More like this`() {
+        suggestions = likeThis
+        show(SeriesMainAction.Resume(testEpisode(1, 5)))
+
+        press(Key.DirectionDown)
+
+        episodeRow(1, 5).assertIsFocused()
+        compose.onNode(hasTestTag(NEXT_SEASON_PEEK)).assertIsDisplayed()
+        compose.onNode(hasTestTag(LIKE_THIS_PEEK)).assertDoesNotExist()
+    }
+
+    @Test
+    fun `a show with no suggestions has no More like this pill`() {
+        show(SeriesMainAction.Resume(testEpisode(2, 1)))
+
+        compose.onNodeWithText("More like this").assertDoesNotExist()
+    }
+
+    @Test
+    fun `a one-season show with suggestions gets a pill row of its season and More like this`() {
+        episodes = (1..3).map { testEpisode(1, it) }
+        suggestions = likeThis
+        show(SeriesMainAction.Play(testEpisode(1, 1)))
+        pill("Season 1").assertIsSelected()
+        pill("More like this").assertExists()
+
+        press(Key.DirectionDown)
+        episodeRow(1, 1).assertIsFocused()
+        press(Key.DirectionUp)
+
+        pill("Season 1").assertIsFocused()
+    }
+
+    @Test
+    fun `a one-season show's episodes wait for its suggestions, so a pill row never pushes them down`() {
+        episodes = (1..3).map { testEpisode(1, it) }
+        suggestionsKnown.value = false
+        show(SeriesMainAction.Play(testEpisode(1, 1)))
+
+        episodeRow(1, 1).assertDoesNotExist()
+
+        suggestions = likeThis
+        suggestionsKnown.value = true
+        settle()
+
+        pill("More like this").assertExists()
+        episodeRow(1, 1).assertExists()
     }
 
     @Test

@@ -9,11 +9,14 @@ import android.content.Context
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import app.opentv.data.db.OpenTvDatabase
+import app.opentv.data.model.Movie
 import app.opentv.data.model.PlaybackPosition
+import app.opentv.data.model.Series
 import app.opentv.data.model.SeriesRef
 import app.opentv.data.repo.ContinueWatchingCard
 import app.opentv.data.repo.SeriesMainAction
 import app.opentv.data.repo.ViewerLibrary
+import app.opentv.data.repo.VodTitle
 import app.opentv.data.repo.WatchStatus
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -331,5 +334,109 @@ class ViewerLibraryTest {
         assertThat(statusOf(7)).isEqualTo(WatchStatus.Unwatched)
         activeProfile.value = 2L
         assertThat(statusOf(7)).isEqualTo(WatchStatus.InProgress(progress = 0.5f, remainingMillis = 500_000))
+    }
+
+    // ---- What the Profile finished last, for Home's Because you watched ---------------------------
+
+    private suspend fun storeFilm(id: Long, name: String) = db.movies().upsertAll(
+        listOf(
+            Movie(
+                id = id,
+                sourceId = 1,
+                streamId = "$id",
+                name = name,
+                categoryId = null,
+                posterUrl = null,
+                rating = null,
+                year = null,
+                plot = null,
+                durationSeconds = null,
+                containerExtension = "mp4",
+                streamUrl = "",
+            ),
+        ),
+    )
+
+    private suspend fun storeShow(name: String) = db.series().upsertAll(
+        listOf(
+            Series(
+                sourceId = 1,
+                seriesId = "s",
+                name = name,
+                categoryId = null,
+                posterUrl = null,
+                rating = null,
+                year = null,
+                plot = null,
+            ),
+        ),
+    )
+
+    private suspend fun lastFinishedName() = library.lastFinished().first()?.name
+
+    @Test
+    fun `the title a Profile finished last is the newest film or episode it watched past 93 percent`() = runTest {
+        storeFilm(3, "Old Film")
+        storeFilm(4, "Half Watched")
+        storeShow("The Show")
+        db.episodes().upsertAll(listOf(testEpisode(1, 1)))
+        library.recordProgress("movie:3", positionMillis = 2_400_000, durationMillis = 2_400_000)
+        now += 60_000
+        library.recordProgress("ep:11", positionMillis = 2_400_000, durationMillis = 2_400_000)
+        now += 60_000
+        library.recordProgress("movie:4", positionMillis = 600_000, durationMillis = 2_400_000)
+
+        val finished = library.lastFinished().first()
+
+        assertThat(finished).isInstanceOf(VodTitle.OfSeries::class.java)
+        assertThat(finished?.name).isEqualTo("The Show")
+    }
+
+    @Test
+    fun `finishing a film after an episode makes the film the one finished last`() = runTest {
+        storeFilm(3, "New Film")
+        storeShow("The Show")
+        db.episodes().upsertAll(listOf(testEpisode(1, 1)))
+        library.recordProgress("ep:11", positionMillis = 2_400_000, durationMillis = 2_400_000)
+        now += 60_000
+        library.recordProgress("movie:3", positionMillis = 2_400_000, durationMillis = 2_400_000)
+
+        assertThat(lastFinishedName()).isEqualTo("New Film")
+    }
+
+    @Test
+    fun `a Profile that has finished nothing has no title finished last, nor does another Profile's`() = runTest {
+        storeFilm(3, "Someone Else's")
+        storeFilm(4, "Started")
+        activeProfile.value = 2L
+        library.recordProgress("movie:3", positionMillis = 2_400_000, durationMillis = 2_400_000)
+        activeProfile.value = 1L
+        library.recordProgress("movie:4", positionMillis = 600_000, durationMillis = 2_400_000)
+
+        assertThat(lastFinishedName()).isNull()
+    }
+
+    @Test
+    fun `a finished title the provider no longer lists is passed over for the one before`() = runTest {
+        storeFilm(3, "Still Here")
+        library.recordProgress("movie:3", positionMillis = 2_400_000, durationMillis = 2_400_000)
+        now += 60_000
+        library.recordProgress("movie:99", positionMillis = 2_400_000, durationMillis = 2_400_000)
+
+        assertThat(lastFinishedName()).isEqualTo("Still Here")
+    }
+
+    @Test
+    fun `a finished title of a kind that isn't wanted is passed over for the newest one that is`() = runTest {
+        storeFilm(3, "Hidden Film")
+        storeShow("The Show")
+        db.episodes().upsertAll(listOf(testEpisode(1, 1)))
+        library.recordProgress("ep:11", positionMillis = 2_400_000, durationMillis = 2_400_000)
+        now += 60_000
+        library.recordProgress("movie:3", positionMillis = 2_400_000, durationMillis = 2_400_000)
+
+        val finished = library.lastFinished { it is VodTitle.OfSeries }.first()
+
+        assertThat(finished?.name).isEqualTo("The Show")
     }
 }

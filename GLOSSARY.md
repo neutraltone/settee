@@ -156,7 +156,7 @@ A muted, playing tile on Home of the live channel the Profile last watched on th
 _Avoid_: Last channel, boot channel
 
 **Home Row**:
-One of Home's rows of titles or channels a Profile can move or hide: Continue Watching, Recently Added shows, Recently Added movies, Favourite shows, Favourite movies and Favourite channels. Each Profile keeps its own order and hidden rows, which follow it to its other devices. The Live Preview is not a Home Row: it can be turned off, but always comes first.
+One of Home's rows of titles or channels a Profile can move or hide: Continue Watching, Because you watched, Recently Added shows, Recently Added movies, Favourite shows, Favourite movies and Favourite channels. Each Profile keeps its own order and hidden rows, which follow it to its other devices. The Live Preview is not a Home Row: it can be turned off, but always comes first.
 _Avoid_: Shelf, section, rail
 
 ## Recordings

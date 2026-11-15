@@ -12,6 +12,7 @@ package app.opentv.data.repo
  */
 enum class HomeRowKind(val key: String) {
     CONTINUE_WATCHING("cw"),
+    BECAUSE_YOU_WATCHED("because"),
     RECENT_SHOWS("recentShows"),
     RECENT_MOVIES("recentMovies"),
     FAVOURITE_SHOWS("favouriteShows"),

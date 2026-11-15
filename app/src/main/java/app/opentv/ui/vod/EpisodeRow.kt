@@ -94,7 +94,8 @@ internal fun EpisodePeek(ep: Episode, status: WatchStatus, seriesArt: List<Strin
     }
 }
 
-private val PeekFade = Brush.verticalGradient(0f to Color.Black.copy(alpha = 0.55f), 1f to Color.Transparent)
+/** How a peek at what Down reaches fades out downwards. */
+internal val PeekFade = Brush.verticalGradient(0f to Color.Black.copy(alpha = 0.55f), 1f to Color.Transparent)
 
 @Composable
 private fun EpisodeRowBody(ep: Episode, status: WatchStatus, seriesArt: List<String>, highlighted: Boolean) {

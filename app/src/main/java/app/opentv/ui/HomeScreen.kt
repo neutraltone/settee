@@ -100,6 +100,7 @@ internal fun HomeScreen(
         state.recentShows,
         state.recentMovies,
         onNothingToShow,
+        becauseYouWatched = state.becauseYouWatched,
         live = live?.let { LiveTile(it, preview.player, preview.error) },
         onWatchLive = play,
         onOpenLive = onOpenLive,
@@ -110,9 +111,10 @@ internal fun HomeScreen(
 
 /**
  * Home's rows, top to bottom: the Live Preview, then the Home Rows in the order the Profile put them
- * in ([arrangement]); usually what it can pick back up, what's Recently Added ([recentShows],
- * [recentMovies]), then its Favourite shows, movies and channels. An empty row is left out rather
- * than shown blank, and so is one the Profile hid.
+ * in ([arrangement]); usually what it can pick back up, what's like the title it finished last
+ * ([becauseYouWatched]), what's Recently Added ([recentShows], [recentMovies]), then its Favourite
+ * shows, movies and channels. An empty row is left out rather than shown blank, and so is one the
+ * Profile hid.
  */
 @Composable
 internal fun HomeContent(
@@ -133,11 +135,13 @@ internal fun HomeContent(
     onOpenLive: () -> Unit = {},
     stopPreview: () -> Unit = {},
     arrangement: HomeArrangement = HomeArrangement.USUAL,
+    becauseYouWatched: BecauseYouWatched? = null,
 ) {
     val all =
         remember(
             live,
             continueWatching,
+            becauseYouWatched,
             favouriteShows,
             favouriteMovies,
             favouriteChannels,
@@ -148,7 +152,7 @@ internal fun HomeContent(
             homeShelves(
                 live,
                 continueWatching,
-                HomeTitles(recentShows, recentMovies, favouriteShows, favouriteMovies),
+                HomeTitles(recentShows, recentMovies, favouriteShows, favouriteMovies, becauseYouWatched),
                 favouriteChannels,
                 arrangement,
             )
@@ -280,7 +284,7 @@ private fun ScreenFrameScope.HomeRows(shelves: List<HomeShelf>, takeFocus: Boole
                         leave = { card -> leave(card.key.stored) },
                     )
                     is HomeShelf.Covers -> CoverShelf(
-                        stringResource(shelf.title),
+                        stringResource(shelf.title, *shelf.titleArgs),
                         shelf.covers,
                         shelf.showsStatus,
                         rowFocus,
@@ -328,9 +332,19 @@ private sealed class HomeShelf(key: String, items: List<String>) {
     class Resume(val cards: List<ResumeItem>) :
         HomeShelf(HomeRowKind.CONTINUE_WATCHING.key, cards.map { it.key.stored })
 
-    /** A row of covers; [showsStatus] when each says where the Profile is with its title. */
-    class Covers(key: String, val title: Int, val covers: List<Cover>, val showsStatus: Boolean) :
-        HomeShelf(key, covers.map { it.title.pickKey })
+    /**
+     * A row of covers; [showsStatus] when each says where the Profile is with its title. [titleArg]
+     * fills in [title] where it names something, as Because you watched names the title.
+     */
+    class Covers(
+        key: String,
+        val title: Int,
+        val covers: List<Cover>,
+        val showsStatus: Boolean,
+        titleArg: String? = null,
+    ) : HomeShelf(key, covers.map { it.title.pickKey }) {
+        val titleArgs: Array<Any> = listOfNotNull<Any>(titleArg).toTypedArray()
+    }
 
     class Channels(val channels: List<HomeChannel>) :
         HomeShelf(HomeRowKind.FAVOURITE_CHANNELS.key, channels.map { it.channel.primary.pickKey })
@@ -342,6 +356,7 @@ private class HomeTitles(
     val recentMovies: List<Cover>,
     val favouriteShows: List<Cover>,
     val favouriteMovies: List<Cover>,
+    val becauseYouWatched: BecauseYouWatched?,
 )
 
 /** Home's rows that have something in them: those [shown], top to bottom, and whether any are hidden. */
@@ -357,6 +372,13 @@ private fun homeShelves(
 ): HomeShelves {
     fun shelf(row: HomeRowKind): HomeShelf = when (row) {
         HomeRowKind.CONTINUE_WATCHING -> HomeShelf.Resume(continueWatching)
+        HomeRowKind.BECAUSE_YOU_WATCHED -> HomeShelf.Covers(
+            row.key,
+            R.string.home_because_you_watched,
+            titles.becauseYouWatched?.covers.orEmpty(),
+            showsStatus = true,
+            titleArg = titles.becauseYouWatched?.basedOn,
+        )
         HomeRowKind.RECENT_SHOWS ->
             HomeShelf.Covers(row.key, R.string.home_recently_added_shows, titles.recentShows, showsStatus = true)
         HomeRowKind.RECENT_MOVIES ->

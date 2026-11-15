@@ -19,6 +19,7 @@ import app.opentv.data.model.Series
 import app.opentv.data.repo.EpisodeStatuses
 import app.opentv.data.repo.MediaKey
 import app.opentv.data.repo.ShowEpisodes
+import app.opentv.data.repo.TitleCover
 import app.opentv.ui.VodViewModel
 import kotlinx.coroutines.launch
 
@@ -32,6 +33,7 @@ fun SeriesDetailScreen(
     seriesId: Long,
     onPlayEpisode: (MediaKey) -> Unit,
     onOpenPerson: (String) -> Unit,
+    onOpenSeries: (Long) -> Unit = {},
     viewModel: VodViewModel = viewModel(),
 ) {
     var series by remember(seriesId) { mutableStateOf<Series?>(null) }
@@ -45,7 +47,7 @@ fun SeriesDetailScreen(
     }
 
     val s = series
-    if (s == null) LoadingDetail() else ShowPage(s, fetched, onPlayEpisode, onOpenPerson, viewModel)
+    if (s == null) LoadingDetail() else ShowPage(s, fetched, onPlayEpisode, onOpenPerson, onOpenSeries, viewModel)
 }
 
 /** [series]' page once its row is read, [fetched] once its episodes have been asked for. */
@@ -55,9 +57,15 @@ private fun ShowPage(
     fetched: Boolean,
     onPlayEpisode: (MediaKey) -> Unit,
     onOpenPerson: (String) -> Unit,
+    onOpenSeries: (Long) -> Unit,
     viewModel: VodViewModel,
 ) {
     val scope = rememberCoroutineScope()
+    // From stored data only, so the page never waits on it; null until first read. Read again once
+    // TMDB's answer is stored, keeping the last read meanwhile, so a pill already there stays put.
+    val suggestions = produceState<List<TitleCover>?>(null, series.id, series.tmdbRecommendations) {
+        value = viewModel.moreLikeThis(series)
+    }.value
     var versions by remember(series.id) { mutableStateOf<Pair<MediaKey, PageVersions>?>(null) }
     // One row per episode across the show's Versions, and each Version's for what's been watched (#181).
     // Not collectAsState: the series is shown again once TMDB has filled it in, and a fresh read
@@ -101,6 +109,9 @@ private fun ShowPage(
                 versionKey?.let { versions = it to viewModel.pageVersions(it) }
             }
         },
+        suggestions = suggestions.orEmpty(),
+        onOpenSeries = onOpenSeries,
+        suggestionsKnown = suggestions != null,
     )
 }
 

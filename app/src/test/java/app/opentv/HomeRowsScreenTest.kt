@@ -33,6 +33,7 @@ import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.unit.dp
 import androidx.test.espresso.Espresso
 import app.opentv.data.repo.HomeArrangement
+import app.opentv.data.repo.HomeRowKind.BECAUSE_YOU_WATCHED
 import app.opentv.data.repo.HomeRowKind.CONTINUE_WATCHING
 import app.opentv.data.repo.HomeRowKind.FAVOURITE_CHANNELS
 import app.opentv.data.repo.HomeRowKind.FAVOURITE_MOVIES
@@ -79,7 +80,15 @@ class HomeRowsScreenTest {
     private var storeLags = false
 
     private val usualRows =
-        listOf(CONTINUE_WATCHING, RECENT_SHOWS, RECENT_MOVIES, FAVOURITE_SHOWS, FAVOURITE_MOVIES, FAVOURITE_CHANNELS)
+        listOf(
+            CONTINUE_WATCHING,
+            BECAUSE_YOU_WATCHED,
+            RECENT_SHOWS,
+            RECENT_MOVIES,
+            FAVOURITE_SHOWS,
+            FAVOURITE_MOVIES,
+            FAVOURITE_CHANNELS,
+        )
 
     // A row to the left stands in for Settings' side menu, which Left must not reach with a row in hand.
     private fun show(initial: HomeArrangement = HomeArrangement.USUAL) {
@@ -121,6 +130,7 @@ class HomeRowsScreenTest {
         assertOnScreenInOrder(
             "Live Preview",
             "Continue watching",
+            "Because you watched",
             "Recently added shows",
             "Recently added movies",
             "Favourite shows",
@@ -146,9 +156,10 @@ class HomeRowsScreenTest {
         press(KeyEvent.KEYCODE_DPAD_CENTER)
 
         assertThat(arrangement.rows).containsExactly(
+            BECAUSE_YOU_WATCHED,
             RECENT_SHOWS,
-            RECENT_MOVIES,
             CONTINUE_WATCHING,
+            RECENT_MOVIES,
             FAVOURITE_SHOWS,
             FAVOURITE_MOVIES,
             FAVOURITE_CHANNELS,
@@ -156,7 +167,7 @@ class HomeRowsScreenTest {
         assertThat(saves).isEqualTo(1)
         highlighted().assertTextContains("Continue watching")
         compose.onNodeWithText(hint).assertDoesNotExist()
-        assertOnScreenInOrder("Recently added movies", "Continue watching", "Favourite shows")
+        assertOnScreenInOrder("Recently added shows", "Continue watching", "Recently added movies")
     }
 
     @Test
@@ -212,7 +223,7 @@ class HomeRowsScreenTest {
     @Test
     fun `a row's options turn Show on Home off and on, and it keeps its place`() {
         show()
-        press(KeyEvent.KEYCODE_DPAD_DOWN, KeyEvent.KEYCODE_DPAD_DOWN)
+        press(KeyEvent.KEYCODE_DPAD_DOWN, KeyEvent.KEYCODE_DPAD_DOWN, KeyEvent.KEYCODE_DPAD_DOWN)
         highlighted().assertTextContains("Recently added shows")
 
         press(KeyEvent.KEYCODE_MENU)
@@ -240,7 +251,7 @@ class HomeRowsScreenTest {
         press(KeyEvent.KEYCODE_DPAD_DOWN, KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_DPAD_DOWN)
         press(KeyEvent.KEYCODE_DPAD_CENTER)
 
-        assertThat(arrangement.rows.take(2)).containsExactly(RECENT_SHOWS, CONTINUE_WATCHING).inOrder()
+        assertThat(arrangement.rows.take(2)).containsExactly(BECAUSE_YOU_WATCHED, CONTINUE_WATCHING).inOrder()
         assertThat(arrangement.hidden).containsExactly(CONTINUE_WATCHING)
     }
 
@@ -285,6 +296,7 @@ class HomeRowsScreenTest {
         assertThat(arrangement.rows).containsExactly(
             FAVOURITE_MOVIES,
             CONTINUE_WATCHING,
+            BECAUSE_YOU_WATCHED,
             RECENT_SHOWS,
             RECENT_MOVIES,
             FAVOURITE_SHOWS,

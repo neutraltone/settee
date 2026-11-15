@@ -13,6 +13,7 @@ import app.opentv.data.model.ProfileSetting
 import app.opentv.data.model.SubtitleKind
 import app.opentv.data.repo.HomeArrangement
 import app.opentv.data.repo.HomeRowKind
+import app.opentv.data.repo.HomeRowKind.BECAUSE_YOU_WATCHED
 import app.opentv.data.repo.HomeRowKind.CONTINUE_WATCHING
 import app.opentv.data.repo.HomeRowKind.FAVOURITE_CHANNELS
 import app.opentv.data.repo.HomeRowKind.FAVOURITE_MOVIES
@@ -176,6 +177,7 @@ class ProfileSettingsTest {
 
     private val usualRows = listOf(
         CONTINUE_WATCHING,
+        BECAUSE_YOU_WATCHED,
         RECENT_SHOWS,
         RECENT_MOVIES,
         FAVOURITE_SHOWS,
@@ -187,6 +189,7 @@ class ProfileSettingsTest {
     private val channelsFirst = listOf(
         FAVOURITE_CHANNELS,
         CONTINUE_WATCHING,
+        BECAUSE_YOU_WATCHED,
         RECENT_SHOWS,
         RECENT_MOVIES,
         FAVOURITE_SHOWS,
@@ -236,7 +239,7 @@ class ProfileSettingsTest {
         runTest {
             // Written by an older or newer release: no Favourite movies yet, and a row since retired.
             db.profileSettings().upsert(
-                ProfileSetting(1L, "home.rows", "preview=off;channels,-cw,retiredRow,recentShows", now),
+                ProfileSetting(1L, "home.rows", "preview=off;channels,-cw,because,retiredRow,recentShows", now),
             )
 
             assertThat(home()).isEqualTo(
@@ -268,7 +271,15 @@ class ProfileSettingsTest {
     @Test
     fun `the Home Rows' keys are the ones Home's rows use`() {
         assertThat(HomeRowKind.entries.map { it.key })
-            .containsExactly("cw", "recentShows", "recentMovies", "favouriteShows", "favouriteMovies", "channels")
+            .containsExactly(
+                "cw",
+                "because",
+                "recentShows",
+                "recentMovies",
+                "favouriteShows",
+                "favouriteMovies",
+                "channels",
+            )
             .inOrder()
     }
 }

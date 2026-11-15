@@ -185,6 +185,19 @@ class TmdbClientTest {
     }
 
     @Test
+    fun `a title's recommendations come in TMDB's order with its details, in the one request`() {
+        settings.setTmdbApiKey(API_KEY)
+        panel.replies["/3/tv/603"] =
+            """{"id": 603, "recommendations": {"results": [{"id": 9}, {"id": 4}, {"id": 12}]}}"""
+
+        val meta = tmdb.seriesMetaOrFailure("A Show", year = null, tmdbId = "603").getOrNull()
+
+        assertThat(meta?.recommendations).containsExactly("9", "4", "12").inOrder()
+        assertThat(pathsAsked()).containsExactly("/3/tv/603")
+        assertThat(toTmdb().single().url.queryParameter("append_to_response")).isEqualTo("credits,recommendations")
+    }
+
+    @Test
     fun `a real TMDB id TMDB doesn't know is no match, not searched for`() {
         settings.setTmdbApiKey(API_KEY)
         panel.replies["/3/movie/603"] = "!404"

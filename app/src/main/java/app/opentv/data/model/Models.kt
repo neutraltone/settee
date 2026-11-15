@@ -442,6 +442,13 @@ data class Movie(
      */
     val tmdbAnsweredAt: Long? = null,
     /**
+     * The TMDB ids of the films TMDB recommends for this one, comma-separated in its order, from the
+     * same details request (see [recommendedTmdbIds]). Null until TMDB has answered, so More like this
+     * falls back to genres; replaced each time TMDB answers again, with an empty list when it recommends
+     * nothing now.
+     */
+    val tmdbRecommendations: String? = null,
+    /**
      * The catalogue refresh that last listed this film (UTC epoch millis, see `VodLists`). After a
      * complete list, the source's films with an older stamp are the ones the provider dropped, found
      * without binding every listed id, as for [Channel.lastSeenMillis].
@@ -485,10 +492,27 @@ data class Series(
     val tmdbId: String? = null,
     /** When TMDB last answered about this series, as [Movie.tmdbAnsweredAt]. */
     val tmdbAnsweredAt: Long? = null,
+    /** The shows TMDB recommends for this one, as [Movie.tmdbRecommendations]. */
+    val tmdbRecommendations: String? = null,
     /** The catalogue refresh that last listed this series, as [Movie.lastSeenMillis]. */
     @ColumnInfo(defaultValue = "0")
     val lastSeenMillis: Long = 0,
 )
+
+/** The TMDB ids TMDB recommends for this film, in its order; empty when it hasn't said. */
+val Movie.recommendedTmdbIds: List<String> get() = splitRecommendations(tmdbRecommendations)
+
+/** The TMDB ids TMDB recommends for this show, in its order; empty when it hasn't said. */
+val Series.recommendedTmdbIds: List<String> get() = splitRecommendations(tmdbRecommendations)
+
+/**
+ * TMDB's recommended [ids] as a title stores them. Empty, not null, for none: null is "TMDB hasn't said",
+ * which a catalogue refresh and a provider's details keep the stored list over.
+ */
+fun joinRecommendations(ids: List<String>): String = ids.joinToString(",")
+
+private fun splitRecommendations(stored: String?): List<String> =
+    stored?.split(',')?.mapNotNull { knownTmdbId(it) }.orEmpty()
 
 /** A series by what identifies it across a catalogue refresh: its source and the provider's id. */
 data class SeriesRef(val sourceId: Long, val seriesId: String)

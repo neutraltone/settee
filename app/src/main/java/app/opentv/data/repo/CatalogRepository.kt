@@ -13,7 +13,6 @@ import app.opentv.core.ErrorWording
 import app.opentv.core.ViewerError
 import app.opentv.data.db.ChannelCleaned
 import app.opentv.data.db.ChannelDao
-import app.opentv.data.db.MoviePick
 import app.opentv.data.db.OpenTvDatabase
 import app.opentv.data.db.StagedBatches
 import app.opentv.data.model.Category
@@ -526,34 +525,33 @@ class CatalogRepository(
     private fun Series.wantsTmdb(now: Long): Boolean =
         backdropUrl == null || plot == null || cast == null || tmdbDue(tmdbAnsweredAt, now)
 
+    private val movieSuggestions =
+        MoreLikeThis(movieDao::picksSharingGenre, movieDao::picksInCategory, movieDao::picksWithTmdbIds)
+    private val seriesSuggestions =
+        MoreLikeThis(seriesDao::picksSharingGenre, seriesDao::picksInCategory, seriesDao::picksWithTmdbIds)
+
     /**
-     * A film's More like this, ranked by the rules For you uses ([score]), after two things that
-     * matter more for "like this": its own provider's films first, since another's may not play the
-     * same, then the films sharing the most of its genres. With no genre, others from its category.
+     * A film's More like this, from stored data only, so the row never waits on TMDB: the films TMDB
+     * recommends, with the viewer's key, then genre matches ([MoreLikeThis]).
      */
     suspend fun moreLikeThis(
         movie: Movie,
         limit: Int = MORE_LIKE_THIS_LIMIT,
         now: Long = System.currentTimeMillis(),
     ): List<Movie> = withContext(Dispatchers.IO) {
-        val genres = splitGenres(movie.genre)
-        val candidates = if (genres.isEmpty()) {
-            movieDao.picksInCategory(movie.sourceId, movie.categoryId, movie.id)
-        } else {
-            genres.flatMap { movieDao.picksSharingGenre(it, movie.id) }.distinctBy { it.id }
-        }
-        val ranking = Ranking(MoviePick::genre, MoviePick::rating, MoviePick::addedMillis, now)
-        val shared = candidates.associate { it.id to splitGenres(it.genre).count(genres::contains) }
-        val picked = candidates
-            .filter { genres.isEmpty() || shared.getValue(it.id) > 0 }
-            .sortedWith(
-                compareByDescending<MoviePick> { it.sourceId == movie.sourceId }
-                    .thenByDescending { shared.getValue(it.id) }
-                    .then(ranking.byScore),
-            )
-            .take(limit)
-            .map { it.id }
+        val picked = movieSuggestions.idsFor(movie.likeThis(tmdb.isConfigured()), limit, now)
         val byId = movieDao.byIds(picked).associateBy { it.id }
+        picked.mapNotNull(byId::get)
+    }
+
+    /** A show's More like this, as a film's: TMDB's recommendations, then genre matches. */
+    suspend fun moreLikeThis(
+        series: Series,
+        limit: Int = MORE_LIKE_THIS_LIMIT,
+        now: Long = System.currentTimeMillis(),
+    ): List<Series> = withContext(Dispatchers.IO) {
+        val picked = seriesSuggestions.idsFor(series.likeThis(tmdb.isConfigured()), limit, now)
+        val byId = seriesDao.byIds(picked).associateBy { it.id }
         picked.mapNotNull(byId::get)
     }
 

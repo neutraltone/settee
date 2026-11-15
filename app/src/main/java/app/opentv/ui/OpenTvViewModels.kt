@@ -30,6 +30,7 @@ import app.opentv.data.model.StreamKind
 import app.opentv.data.model.StremioStream
 import app.opentv.data.model.liveAt
 import app.opentv.data.model.ref
+import app.opentv.data.parser.VodTitleCleaner
 import app.opentv.data.parser.displayTitle
 import app.opentv.data.repo.CatalogRepository
 import app.opentv.data.repo.CatalogueRefresh
@@ -1336,6 +1337,18 @@ class VodViewModel @JvmOverloads constructor(
     /** A film's More like this. */
     suspend fun moreLikeThis(movie: Movie): List<Movie> = graph.catalogRepository.moreLikeThis(movie)
 
+    /**
+     * A show's More like this, as the covers its page's grid draws: one per title, badged as a category's
+     * are, and never another Version of the show itself, even one TMDB doesn't know (ADR 0007).
+     */
+    suspend fun moreLikeThis(series: Series): List<TitleCover> {
+        val titles = graph.titleIndex.series.filterNotNull().first()
+        val own = titles.of(series.id)
+        return titles.distinct(graph.catalogRepository.moreLikeThis(series)) { it.id }
+            .filter { own == null || titles.of(it.id) !== own }
+            .map { TitleCover(it.id, it.name, it.displayTitle, it.posterUrl, titles.badgeFor(it.id, it.name)) }
+    }
+
     /** Everything in the library with this person in it, for their page. */
     suspend fun titlesWithPerson(name: String): List<VodTitle> =
         graph.titleIndex.distinct(graph.catalogRepository.titlesWithPerson(name))
@@ -1475,7 +1488,14 @@ data class HomeState(
     val live: LiveNow? = null,
     /** How the Profile arranged Home; the Live Preview is in [live] even when it turned it off, for Home's hint. */
     val arrangement: HomeArrangement = HomeArrangement.USUAL,
+    val becauseYouWatched: BecauseYouWatched? = null,
 )
+
+/**
+ * Home's Because you watched: up to 20 films or shows like [basedOn], the title the Profile finished
+ * last, never that title itself.
+ */
+data class BecauseYouWatched(val basedOn: String, val covers: List<Cover>)
 
 /** A show's or movie's cover on Home, with where the active Profile is with it; null when never started. */
 data class Cover(val title: VodTitle, val status: CoverStatus? = null)
@@ -1518,6 +1538,42 @@ class HomeViewModel @JvmOverloads constructor(
     private fun recentlyAdded(movies: Boolean, shows: Boolean): Flow<List<VodTitle>> = graph.titleIndex
         .distinctTitles(graph.catalogRepository.recentlyAdded(movies, shows, limit = RECENT_ROWS_READ))
         .map { it.take(HOME_RECENT_TITLES_SHOWN) }
+
+    /** The last Because you watched worked out, and for which Profile; see [becauseYouWatched]. */
+    @Volatile
+    private var lastBecause: Pair<Long, Pair<String, List<VodTitle>>?>? = null
+
+    /**
+     * What's like the title the Profile finished last, of a kind Home shows, and its name: films for a
+     * film, shows for a show, one cover per title. Worked out again only when it finishes something else,
+     * so the row stays put.
+     *
+     * Choosing reads every title sharing a genre, which takes a moment on a Stick, so Home doesn't wait
+     * for it: back on Home it starts from the row it last had for this Profile, or none.
+     */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    private val becauseYouWatched: Flow<Pair<String, List<VodTitle>>?> =
+        combine(settings.moviesEnabled, settings.seriesEnabled, ::Pair)
+            .flatMapLatest { (movies, shows) ->
+                graph.viewerLibrary.lastFinished { if (it is VodTitle.OfMovie) movies else shows }
+            }
+            .distinctUntilChanged { a, b -> a?.kind == b?.kind && a?.id == b?.id }
+            .mapLatest { basis ->
+                val profile = settings.activeProfileId.value
+                basis?.let { VodTitleCleaner.clean(it.name) to likeThis(it) }.also { lastBecause = profile to it }
+            }
+            .onStart { emit(lastBecause?.takeIf { it.first == settings.activeProfileId.value }?.second) }
+
+    private suspend fun likeThis(basis: VodTitle): List<VodTitle> {
+        val catalog = graph.catalogRepository
+        val limit = BECAUSE_YOU_WATCHED_TITLES
+        val titles = when (basis) {
+            is VodTitle.OfMovie -> catalog.moreLikeThis(basis.movie, limit).map(VodTitle::OfMovie)
+            is VodTitle.OfSeries -> catalog.moreLikeThis(basis.series, limit).map(VodTitle::OfSeries)
+        }
+        return graph.titleIndex.distinct(titles)
+            .filterNot { graph.titleIndex.sameTitle(basis.kind, it.id, basis.id) == true }
+    }
 
     private val favourites: Flow<List<VodTitle>> = combine(
         graph.viewerLibrary.favourites.titles(),
@@ -1643,13 +1699,22 @@ class HomeViewModel @JvmOverloads constructor(
                 channels,
                 shows.withStatuses(statuses),
                 movies.withStatuses(statuses),
-            )
+            ) to statuses
         },
         // In the same state as the rows, so Home is first drawn with it and highlights it.
         live,
         // And so is the arrangement, so Home is never drawn once in the usual order and then moved.
         graph.profileSettings.homeArrangement,
-    ) { rows, live, arrangement -> rows.copy(live = live, arrangement = arrangement) }
+        becauseYouWatched,
+    ) { (rows, statuses), live, arrangement, because ->
+        rows.copy(
+            live = live,
+            arrangement = arrangement,
+            becauseYouWatched = because
+                ?.let { (basedOn, titles) -> BecauseYouWatched(basedOn, titles.withStatuses(statuses)) }
+                ?.takeIf { it.covers.isNotEmpty() },
+        )
+    }
 
     /**
      * Home's rows, kept updating while Home is drawn and while a screen covers it ([app.opentv.KeepHomeLive]), so
@@ -1919,3 +1984,6 @@ private fun acrossVersions(every: List<Series>, refs: Set<SeriesRef>, titles: Ti
     val marked = every.filter { it.ref in refs }.mapNotNullTo(HashSet()) { titles.of(it.id) }
     return refs + every.filter { titles.of(it.id) in marked }.map { it.ref }
 }
+
+/** How many titles Home's Because you watched row holds. */
+private const val BECAUSE_YOU_WATCHED_TITLES = 20

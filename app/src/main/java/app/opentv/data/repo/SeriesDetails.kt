@@ -6,6 +6,7 @@
 package app.opentv.data.repo
 
 import app.opentv.data.model.Series
+import app.opentv.data.model.joinRecommendations
 import app.opentv.data.model.tmdbIdOr
 import app.opentv.data.remote.TmdbMeta
 import app.opentv.data.remote.XtreamApi
@@ -27,6 +28,7 @@ internal fun Series.withTmdb(meta: TmdbMeta?, at: Long): Series = if (meta == nu
         rating = rating ?: meta.rating,
         year = year ?: meta.year,
         tmdbAnsweredAt = at,
+        tmdbRecommendations = joinRecommendations(meta.recommendations),
     )
 }
 

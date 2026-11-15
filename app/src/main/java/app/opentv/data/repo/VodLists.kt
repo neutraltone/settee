@@ -9,6 +9,7 @@ import app.opentv.data.db.MovieDao
 import app.opentv.data.db.SeriesDao
 import app.opentv.data.model.Movie
 import app.opentv.data.model.Series
+import app.opentv.data.model.joinRecommendations
 import app.opentv.data.model.tmdbIdOr
 import app.opentv.data.remote.TmdbMeta
 import app.opentv.data.remote.XtreamApi
@@ -113,6 +114,7 @@ private fun Movie.keepingLookUpsOf(old: Movie): Movie = copy(
     studio = old.studio ?: studio,
     detailsLookedUp = detailsLookedUp || old.detailsLookedUp,
     tmdbAnsweredAt = newer(tmdbAnsweredAt, old.tmdbAnsweredAt),
+    tmdbRecommendations = tmdbRecommendations ?: old.tmdbRecommendations,
 )
 
 /** The later of two times, either of which may be missing. */
@@ -133,6 +135,7 @@ internal fun Series.over(old: Series?): Series = if (old == null) {
         genre = genre ?: old.genre,
         tmdbId = tmdbIdOr(tmdbId, old.tmdbId),
         tmdbAnsweredAt = newer(tmdbAnsweredAt, old.tmdbAnsweredAt),
+        tmdbRecommendations = tmdbRecommendations ?: old.tmdbRecommendations,
     )
 }
 
@@ -175,6 +178,8 @@ internal fun Movie.withTmdb(meta: TmdbMeta?, at: Long): Movie = if (meta == null
         year = year ?: meta.year,
         releaseDate = releaseDate ?: meta.releaseDate,
         tmdbAnsweredAt = at,
+        // TMDB's latest answer, unlike the fields above: nothing else says what's like a title.
+        tmdbRecommendations = joinRecommendations(meta.recommendations),
     ).withPeopleFrom(meta)
 }
 

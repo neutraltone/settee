@@ -261,6 +261,9 @@ class ViewerLibrary(
             HomeLibrary(continueWatching, coverStatusesIn(played))
         }
 
+    /** The film or show the active Profile most recently finished, for Home's Because you watched. */
+    val lastFinished = LastFinished(positions, movies, episodes, series, activeProfileId)
+
     /** Every episode's status for the active Profile; re-emits only when a status actually changes. */
     @OptIn(ExperimentalCoroutinesApi::class)
     fun episodeStatuses(): Flow<EpisodeStatuses> = activeProfileId
@@ -937,7 +940,7 @@ private fun markedPosition(
     mark = mark,
 )
 
-private fun statusOf(pos: PlaybackPosition): WatchStatus = when (pos.mark) {
+internal fun statusOf(pos: PlaybackPosition): WatchStatus = when (pos.mark) {
     HandMark.WATCHED -> WatchStatus.Watched
     HandMark.UNWATCHED -> WatchStatus.Unwatched
     null -> playedStatusOf(pos)

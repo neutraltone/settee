@@ -344,6 +344,7 @@ internal fun homeRowGripTag(row: HomeRowKind) = "homeRowGrip:${row.key}"
 private val HomeRowKind.label: Int
     get() = when (this) {
         HomeRowKind.CONTINUE_WATCHING -> R.string.vod_continue_watching
+        HomeRowKind.BECAUSE_YOU_WATCHED -> R.string.home_rows_because_you_watched
         HomeRowKind.RECENT_SHOWS -> R.string.home_recently_added_shows
         HomeRowKind.RECENT_MOVIES -> R.string.home_recently_added_movies
         HomeRowKind.FAVOURITE_SHOWS -> R.string.home_favourite_shows

@@ -498,6 +498,7 @@
     <string name="home_favourite_shows">Favourite shows</string>
     <string name="home_favourite_movies">Favourite movies</string>
     <string name="home_recently_added_shows">Recently added shows</string>
+    <string name="home_because_you_watched">Because you watched %1$s</string>
     <string name="home_recently_added_movies">Recently added movies</string>
     <string name="home_favourite_channels">Favourite channels</string>
     <string name="home_live_now">Now: %1$s</string>
@@ -508,6 +509,7 @@
     <string name="home_empty_hint">What you watch and favourite will show up here.</string>
     <string name="home_rows_title">Home rows</string>
     <string name="home_rows_live_preview">Live Preview</string>
+    <string name="home_rows_because_you_watched">Because you watched</string>
     <string name="home_rows_shown">Shown</string>
     <string name="home_rows_hidden">Hidden</string>
     <string name="home_rows_restore">Restore the usual order</string>
