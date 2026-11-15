@@ -183,6 +183,19 @@ class ChannelLineupTest {
     }
 
     @Test
+    fun `a category two providers both have lists only the chosen provider's channels`() = runTest {
+        category(sourceId = 1, id = "3", name = "UK| ENTERTAINMENT")
+        category(sourceId = 2, id = "9", name = "UK| Entertainment")
+        seed("UK| Dave", sourceId = 1, categoryId = "3")
+        seed("UK| Comedy Central", sourceId = 2, categoryId = "9")
+
+        assertThat(scope(LineupScope.Group("entertainment", sourceId = 2)).names())
+            .containsExactly(listOf("UK| Comedy Central"))
+        assertThat(scope(LineupScope.ManageGroup("entertainment", sourceId = 1)).names())
+            .containsExactly(listOf("UK| Dave"))
+    }
+
+    @Test
     fun `a channel plays the quality its scope came from first`() = runTest {
         seed("UK| ITV HD", sourceId = 1)
         seed("UK| ITV FHD", sourceId = 2)

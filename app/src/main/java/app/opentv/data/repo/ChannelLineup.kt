@@ -433,22 +433,36 @@ private fun rowsIn(scope: LineupScope, channelDao: ChannelDao, categories: Flow<
         is LineupScope.Favourites -> flowOf(emptyList())
         is LineupScope.Search -> channelDao.search(scope.query)
         is LineupScope.ManageSearch -> channelDao.searchIncludingHidden(scope.query)
-        is LineupScope.Group -> categories.map { it.inGroup(scope.key, scope.sourceId) }.flatMapLatest { group ->
-            if (group.isEmpty()) {
-                flowOf(emptyList())
-            } else {
-                channelDao.observeInCategories(group.ids()).map { rows -> rows.filter { it.isIn(group) } }
-            }
-        }
-        is LineupScope.ManageGroup -> categories.map { it.inGroup(scope.key, scope.sourceId) }.flatMapLatest { group ->
-            if (group.isEmpty()) {
-                flowOf(emptyList())
-            } else {
-                channelDao.observeInCategoriesIncludingHidden(scope.sourceId, group.ids())
-                    .map { rows -> rows.filter { it.isIn(group) } }
-            }
+        is LineupScope.Group -> categories.rowsInGroup(scope.key, scope.sourceId, channelDao::observeInCategories)
+        is LineupScope.ManageGroup -> categories.rowsInGroup(scope.key, scope.sourceId) { ids ->
+            channelDao.observeInCategoriesIncludingHidden(scope.sourceId, ids)
         }
     }
+
+/**
+ * The rows [query] finds in the [CategoryGroup] keyed [key], optionally one provider's. The query
+ * matches bare category ids, a handful, well under SQLite's bound-variable cap; but ids are only
+ * unique within a provider, so it also finds another provider's category of the same id, which
+ * belongs to another group (#350), and what comes back is matched on provider too.
+ */
+@OptIn(ExperimentalCoroutinesApi::class)
+private fun Flow<List<Category>>.rowsInGroup(
+    key: String,
+    sourceId: Long?,
+    query: (categoryIds: List<String>) -> Flow<List<Channel>>,
+): Flow<List<Channel>> = map { categories ->
+    categories.filter { (sourceId == null || it.sourceId == sourceId) && categoryGroupKey(it) == key }
+        .groupBy(Category::sourceId, Category::id)
+        .mapValues { (_, ids) -> ids.toSet() }
+}.flatMapLatest { group ->
+    if (group.isEmpty()) {
+        flowOf(emptyList())
+    } else {
+        query(group.values.flatten().distinct()).map { rows ->
+            rows.filter { row -> row.categoryId?.let { group[row.sourceId]?.contains(it) } == true }
+        }
+    }
+}
 
 /**
  * Every row, hidden ones too, that could share a Channel with any of [rows]. One lookup per name,
@@ -476,25 +490,6 @@ private fun LineupScope.mayPlayFromOutside(row: Channel): Boolean = when (this) 
 
 private fun List<Channel>.from(sourceId: Long?): List<Channel> =
     if (sourceId == null) this else filter { it.sourceId == sourceId }
-
-/**
- * The categories in the [CategoryGroup] keyed [key], optionally one provider's, as (source, category
- * id): ids are only unique within a provider, so another provider's category of the same id is
- * another group's (#350).
- */
-private fun List<Category>.inGroup(key: String, sourceId: Long?): Set<Pair<Long, String>> =
-    filter { (sourceId == null || it.sourceId == sourceId) && categoryGroupKey(it) == key }
-        .mapTo(HashSet()) { it.sourceId to it.id }
-
-/**
- * The bare ids to query by: a handful, well under SQLite's bound-variable cap. What comes back still
- * goes through [isIn], since another provider can use the same ids.
- */
-private fun Set<Pair<Long, String>>.ids(): List<String> = mapTo(HashSet()) { it.second }.toList()
-
-/** Whether this row's (source, category) is one of [categories]. */
-private fun Channel.isIn(categories: Set<Pair<Long, String>>): Boolean =
-    categoryId != null && (sourceId to categoryId) in categories
 
 /** Whether a viewer may see this row: not hidden, and not in a [locked] category. */
 private fun Channel.isShown(locked: Set<Pair<Long, String>>): Boolean =
