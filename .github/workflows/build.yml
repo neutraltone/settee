@@ -179,6 +179,10 @@ jobs:
       - name: Check script tests
         run: python3 -m unittest discover -s tools/check
 
+      # The release workflow trusts it to refuse an APK signed with any other key.
+      - name: Signer check tests
+        run: python3 -m unittest discover -s tools/signing
+
       # The mark's drawables and SVGs are generated, and a hand edit to one copy would drift.
       - name: Launcher artwork tests
         run: python3 -m unittest discover -s tools/launcher-art
