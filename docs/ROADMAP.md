@@ -24,7 +24,7 @@ launch a past programme.
 - **Xtream** signals it per channel in `get_live_streams`: `tv_archive` (0/1) and
   `tv_archive_duration` (days). Playback URL:
   `http://host:port/timeshift/USER/PASS/DURATION_MINUTES/YYYY-MM-DD:HH-MM/STREAM_ID.ts`
-  (start time in **UTC**, duration from EPG end−start).
+  (start time in the **panel's own zone**, `server_info.timezone`, duration from EPG end−start).
 - **M3U/XMLTV** providers use the Kodi-standard tags instead — `catchup` (`default` / `append`
   / `shift` / `flussonic` / `xc`), `catchup-source`, `catchup-days`, `catchup-correction`,
   with `{utc}`/`{start}`/`{duration}`/`{offset}` tokens to substitute. Supporting these is what

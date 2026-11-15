@@ -144,7 +144,7 @@ class OpenTvDatabaseTest {
 
     private companion object {
         /** OpenTvDatabase's version. A schema bump changes it here, and nothing else in this test. */
-        const val LATEST = 18
+        const val LATEST = 19
 
         /** A database left by a newer Settee, after a downgrade. */
         const val NEWER = LATEST + 1

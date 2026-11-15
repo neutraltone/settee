@@ -198,6 +198,38 @@ class PlaybackSourcesTest {
     }
 
     @Test
+    fun `catch-up asks the panel for the programme's start in the panel's own time zone`() = runTest {
+        db.sources().insert(PANEL_SOURCE.copy(serverTimeZone = "Europe/Amsterdam"))
+        val id = channel(streamUrl = "http://example.com/live/u/p/9.m3u8")
+        db.programmes().insertOrReplace(listOf(news()))
+
+        // 21:00 UTC in November: 21:00 on the device in London, 22:00 on the panel in Amsterdam.
+        val playable = inZone("Europe/London") { sources.forWatching(MediaKey.Catchup(id, NEWS_START)) }
+
+        assertThat((playable as Playable.Ready).url)
+            .isEqualTo("http://example.com/timeshift/u/p/30/2023-11-14:22-00/9.ts")
+    }
+
+    @Test
+    fun `catch-up from a panel that names no time zone, or one that isn't real, goes by the device's`() = runTest {
+        db.sources().insert(PANEL_SOURCE)
+        val id = channel(streamUrl = "http://example.com/live/u/p/9.m3u8")
+        db.programmes().insertOrReplace(listOf(news()))
+
+        val stamps = listOf(null, "Not/AZone").map { zone ->
+            db.sources().update(PANEL_SOURCE.copy(serverTimeZone = zone))
+            // Not GMT, which is what TimeZone.getTimeZone makes of a name it doesn't know.
+            val playable = inZone("America/New_York") { sources.forWatching(MediaKey.Catchup(id, NEWS_START)) }
+            (playable as Playable.Ready).url
+        }
+
+        assertThat(stamps).containsExactly(
+            "http://example.com/timeshift/u/p/30/2023-11-14:16-00/9.ts",
+            "http://example.com/timeshift/u/p/30/2023-11-14:16-00/9.ts",
+        )
+    }
+
+    @Test
     fun `playlists and portals say they have no catch-up rather than play something else`() = runTest {
         val playlist = PANEL_SOURCE.copy(id = 3, name = "Playlist", kind = SourceKind.M3U)
         db.sources().insert(playlist)
@@ -436,10 +468,15 @@ class PlaybackSourcesTest {
         title = "News",
     )
 
-    /** The panel reads a catch-up start in its own time; these tests put the device in UTC. */
-    private suspend fun <T> inUtc(block: suspend () -> T): T {
+    /**
+     * The panel reads a catch-up start in its own time, and one that doesn't say what that is gets
+     * the device's; these tests put the device in UTC.
+     */
+    private suspend fun <T> inUtc(block: suspend () -> T): T = inZone("UTC", block)
+
+    private suspend fun <T> inZone(id: String, block: suspend () -> T): T {
         val zone = TimeZone.getDefault()
-        TimeZone.setDefault(TimeZone.getTimeZone("UTC"))
+        TimeZone.setDefault(TimeZone.getTimeZone(id))
         return try {
             block()
         } finally {

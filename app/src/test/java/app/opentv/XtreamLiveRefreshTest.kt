@@ -80,6 +80,22 @@ class XtreamLiveRefreshTest {
     }
 
     @Test
+    fun `a refresh saves the time zone the panel says it runs in, and the next one updates it`() = runTest {
+        test.db.sources().insert(PANEL_SOURCE)
+        panel.replies["get_live_streams"] = lineUp(0 until 3)
+
+        panel.replies[""] = """{"user_info": {"status": "Active"}, "server_info": {"timezone": "Europe/Amsterdam"}}"""
+        test.catalog.fetchLive(PANEL_SOURCE, nowUtcMillis = 1_000)
+        val first = test.db.sources().byId(PANEL_SOURCE.id)?.serverTimeZone
+
+        panel.replies[""] = """{"user_info": {"status": "Active"}, "server_info": {"timezone": "America/New_York"}}"""
+        test.catalog.fetchLive(PANEL_SOURCE, nowUtcMillis = 2_000)
+        val second = test.db.sources().byId(PANEL_SOURCE.id)?.serverTimeZone
+
+        assertThat(listOf(first, second)).containsExactly("Europe/Amsterdam", "America/New_York").inOrder()
+    }
+
+    @Test
     fun `a refresh keeps what the viewer set on each channel and drops the ones the provider did`() = runTest {
         test.db.sources().insert(PANEL_SOURCE)
         panel.replies["get_live_streams"] = lineUp(0 until 1_200)
