@@ -9,7 +9,7 @@ import app.opentv.data.db.MovieDao
 import app.opentv.data.db.SeriesDao
 import app.opentv.data.model.Movie
 import app.opentv.data.model.Series
-import app.opentv.data.model.knownTmdbId
+import app.opentv.data.model.tmdbIdOr
 import app.opentv.data.remote.TmdbMeta
 import app.opentv.data.remote.XtreamApi
 
@@ -100,7 +100,7 @@ internal fun Movie.over(old: Movie?): Movie = if (old == null) {
         backdropUrl = backdropUrl ?: old.backdropUrl,
         cast = cast ?: old.cast,
         genre = genre ?: old.genre,
-        tmdbId = tmdbId ?: old.tmdbId,
+        tmdbId = tmdbIdOr(tmdbId, old.tmdbId),
         releaseDate = releaseDate ?: old.releaseDate,
     ).keepingLookUpsOf(old)
 }
@@ -131,7 +131,7 @@ internal fun Series.over(old: Series?): Series = if (old == null) {
         backdropUrl = backdropUrl ?: old.backdropUrl,
         cast = cast ?: old.cast,
         genre = genre ?: old.genre,
-        tmdbId = tmdbId ?: old.tmdbId,
+        tmdbId = tmdbIdOr(tmdbId, old.tmdbId),
         tmdbAnsweredAt = newer(tmdbAnsweredAt, old.tmdbAnsweredAt),
     )
 }
@@ -146,7 +146,7 @@ internal fun Movie.filledFrom(info: XtreamApi.VodInfo): Movie = copy(
     cast = cast ?: info.cast,
     director = director ?: info.director,
     genre = genre?.ifBlank { null } ?: info.genre?.ifBlank { null } ?: genre,
-    tmdbId = tmdbId ?: info.tmdbId,
+    tmdbId = tmdbIdOr(tmdbId, info.tmdbId),
     plot = plot ?: info.plot,
     rating = rating ?: info.rating,
     year = year ?: info.year,
@@ -170,7 +170,7 @@ internal fun Movie.withTmdb(meta: TmdbMeta?, at: Long): Movie = if (meta == null
         plot = plot ?: meta.overview,
         cast = cast ?: meta.cast,
         genre = genre?.ifBlank { null } ?: meta.genre ?: genre,
-        tmdbId = tmdbId.takeIf { knownTmdbId(it) != null } ?: meta.tmdbId ?: tmdbId,
+        tmdbId = tmdbIdOr(tmdbId, meta.tmdbId),
         rating = rating ?: meta.rating,
         year = year ?: meta.year,
         releaseDate = releaseDate ?: meta.releaseDate,

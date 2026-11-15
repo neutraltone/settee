@@ -8,6 +8,8 @@ package app.opentv
 import app.opentv.data.model.Movie
 import app.opentv.data.model.Series
 import app.opentv.data.remote.TmdbMeta
+import app.opentv.data.remote.XtreamApi
+import app.opentv.data.repo.filledFrom
 import app.opentv.data.repo.withTmdb
 import com.google.common.truth.Truth.assertThat
 import org.junit.Test
@@ -57,5 +59,15 @@ class TmdbIdMergeTest {
     @Test
     fun `no match leaves a stored 0 as it was`() {
         assertThat(movie("0").withTmdb(null, at = 1).tmdbId).isEqualTo("0")
+    }
+
+    @Test
+    fun `a series listed with TMDB id 0 takes the real id its details give`() {
+        val info = XtreamApi.SeriesInfo(
+            backdropUrl = null, cast = null, genre = null, tmdbId = "1399", plot = null, rating = null, year = null,
+        )
+
+        assertThat(series("0").filledFrom(info).tmdbId).isEqualTo("1399")
+        assertThat(series("22").filledFrom(info).tmdbId).isEqualTo("22")
     }
 }
