@@ -181,18 +181,21 @@ class RecordingEngine(
     }
 
     /**
-     * Re-arm the exact alarm for every scheduled recording. Alarms are dropped on a force-stop or
-     * app update — which the boot receiver does not see — so [app.opentv.OpenTvApp] calls this on
-     * each launch. A booking whose start slipped past while the app was dead fires almost at once;
-     * re-setting an existing alarm is idempotent, so this is safe to run every time.
+     * Re-arm the exact alarm for every scheduled recording. Alarms are dropped on a reboot, an
+     * update or a force-stop, so [RecordingAlarmReceiver] calls this after the first two and
+     * [app.opentv.OpenTvApp] on each launch, for the force-stop no receiver hears of. A booking whose
+     * start slipped past while the app was dead fires almost at once; re-setting an existing alarm is
+     * idempotent, so this is safe to run every time. The alarms are set through [context]: a receiver
+     * passes its own, since the process-wide graph can outlive the Application it was built with (it
+     * does across Robolectric tests), and alarms set through a stale one land where nothing reads them.
      */
-    suspend fun rearmScheduled() {
+    suspend fun rearmScheduled(context: Context = appContext) {
         val now = System.currentTimeMillis()
         val autoSwitch = settings.recordAutoSwitch.value
         for (rec in repo.scheduled()) {
             val at = if (rec.scheduledStartMillis <= now) now + 1_000L else rec.scheduledStartMillis
-            RecordingScheduler.set(appContext, rec.id, at)
-            if (autoSwitch) RecordingScheduler.setWarning(appContext, rec.id, at)
+            RecordingScheduler.set(context, rec.id, at)
+            if (autoSwitch) RecordingScheduler.setWarning(context, rec.id, at)
         }
     }
 

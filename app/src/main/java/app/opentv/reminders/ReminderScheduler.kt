@@ -10,6 +10,7 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.os.Build
+import app.opentv.data.repo.ReminderRepository
 
 /**
  * Books a programme reminder to fire at its start time.
@@ -23,6 +24,11 @@ object ReminderScheduler {
 
     const val ACTION_REMIND = "app.opentv.reminder.ALARM_REMIND"
     private const val EXTRA_ID = "reminderId"
+
+    /** Sets every upcoming reminder's alarm again, after anything that drops them all. */
+    suspend fun rearmUpcoming(context: Context, reminders: ReminderRepository) {
+        reminders.upcoming(System.currentTimeMillis()).forEach { set(context, it.id, it.startUtcMillis) }
+    }
 
     fun set(context: Context, reminderId: Long, triggerAtMillis: Long) {
         val am = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
