@@ -24,6 +24,7 @@ import app.opentv.update.UpdateAvailableDialog
 import app.opentv.update.UpdateChecker
 import app.opentv.update.UpdateDownloadingPanel
 import app.opentv.update.UpdateFailedPanel
+import app.opentv.update.UpdateRecordingWarningPanel
 import app.opentv.update.VersionNotes
 import com.google.common.truth.Truth.assertThat
 import org.junit.Rule
@@ -160,5 +161,57 @@ class UpdateAvailableDialogTest {
         compose.pressBackOnPanel()
 
         assertThat(closed).isEqualTo(1)
+    }
+
+    private var anyway = 0
+
+    private fun warn(programme: String? = "The News") = compose.setTvContent {
+        UpdateRecordingWarningPanel(programme, onInstallAnyway = { anyway++ }, onLater = { later++ })
+    }
+
+    @Test
+    fun `with a recording running, it says updating stops it, with the highlight on Later`() {
+        warn()
+
+        compose.onNodeWithText("Updating now stops the recording of The News.").assertIsInSidePanel()
+        compose.onNodeWithText("Later").assertIsFocused()
+        compose.onNodeWithText("Install anyway").assertExists()
+        captureScreen("update_recording_warning")
+    }
+
+    @Test
+    fun `with more than one recording running, it names none of them`() {
+        warn(programme = null)
+
+        compose.onNodeWithText("Updating now stops the recordings that are running.").assertIsInSidePanel()
+    }
+
+    @Test
+    fun `Later closes the warning without installing`() {
+        warn()
+
+        compose.onNodeWithText("Later").performClick()
+
+        assertThat(later).isEqualTo(1)
+        assertThat(anyway).isEqualTo(0)
+    }
+
+    @Test
+    fun `back on the warning is Later`() {
+        warn()
+
+        compose.pressBackOnPanel()
+
+        assertThat(later).isEqualTo(1)
+        assertThat(anyway).isEqualTo(0)
+    }
+
+    @Test
+    fun `Install anyway goes on with the update`() {
+        warn()
+
+        compose.onNodeWithText("Install anyway").performClick()
+
+        assertThat(anyway).isEqualTo(1)
     }
 }

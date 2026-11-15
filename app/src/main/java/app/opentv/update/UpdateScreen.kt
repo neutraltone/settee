@@ -29,6 +29,7 @@ import app.opentv.core.ErrorWording
 import app.opentv.core.ServiceLocator
 import app.opentv.core.ViewerError
 import app.opentv.ui.design.AerialTv
+import app.opentv.ui.design.ConfirmPanel
 import app.opentv.ui.design.ErrorMessage
 import app.opentv.ui.design.NotesPanel
 import app.opentv.ui.design.PanelRow
@@ -61,6 +62,12 @@ fun UpdateGate(canShow: Boolean, viewModel: UpdateViewModel = viewModel()) {
             update = s.update,
             installedVersion = BuildConfig.VERSION_NAME,
             onInstall = viewModel::install,
+            onLater = viewModel::dismiss,
+        )
+
+        is UpdateUiState.RecordingRunning -> UpdateRecordingWarningPanel(
+            programme = s.programme,
+            onInstallAnyway = viewModel::installAnyway,
             onLater = viewModel::dismiss,
         )
 
@@ -97,6 +104,26 @@ fun UpdateAvailableDialog(
     ) {
         update.notes?.let { ReleaseNotesBody(listOf(it)) }
     }
+}
+
+/**
+ * Installing stops the recording that's running, since the installer closes Settee (#336). [programme]
+ * names it when there's only one. Later is the safe choice, so the Highlight starts there.
+ */
+@Composable
+fun UpdateRecordingWarningPanel(programme: String?, onInstallAnyway: () -> Unit, onLater: () -> Unit) {
+    ConfirmPanel(
+        confirm = stringResource(R.string.update_install_anyway),
+        keep = stringResource(R.string.update_later),
+        onConfirm = onInstallAnyway,
+        onKeep = onLater,
+        title = stringResource(R.string.update_recording_title),
+        body = if (programme != null) {
+            stringResource(R.string.update_recording_one, programme)
+        } else {
+            stringResource(R.string.update_recording_many)
+        },
+    )
 }
 
 /**
@@ -139,6 +166,13 @@ sealed interface UpdateUiState {
 
     /** [asked] when the viewer checked for it (Settings › About), not the launch check. */
     data class Available(val update: UpdateChecker.Update, val asked: Boolean = false) : UpdateUiState
+
+    /**
+     * Install was chosen while a recording runs, and installing would stop it. [programme] is the one
+     * recording's title, or null when more than one is running.
+     */
+    data class RecordingRunning(val update: UpdateChecker.Update, val programme: String?) : UpdateUiState
+
     data class Downloading(val update: UpdateChecker.Update, val fraction: Float) : UpdateUiState
 
     /** [detail] is the download's failure, for the detail line. */
@@ -171,8 +205,10 @@ object UpdateHub {
     val state = MutableStateFlow<UpdateUiState>(UpdateUiState.Idle)
 }
 
-class UpdateViewModel(app: Application) : AndroidViewModel(app) {
-    private val graph = ServiceLocator.get(app)
+class UpdateViewModel @JvmOverloads constructor(
+    app: Application,
+    private val graph: ServiceLocator.Graph = ServiceLocator.get(app),
+) : AndroidViewModel(app) {
     private val checker = UpdateChecker(graph.httpClient, BuildConfig.VERSION_NAME)
     private val installer = ApkInstaller(graph.httpClient)
 
@@ -218,27 +254,48 @@ class UpdateViewModel(app: Application) : AndroidViewModel(app) {
         return outcome
     }
 
+    /**
+     * Downloads and installs the update, unless a recording is running: the installer kills the app and
+     * the recording with it (#336), so that asks first. Asked now rather than when the prompt opened,
+     * since a booking may have started while it sat there.
+     */
     fun install() {
         val update = when (val s = _state.value) {
             is UpdateUiState.Available -> s.update
+            is UpdateUiState.RecordingRunning -> s.update
             is UpdateUiState.Failed -> s.update
             is UpdateUiState.Downloading -> s.update
             UpdateUiState.Idle -> return
         }
         viewModelScope.launch {
-            _state.value = UpdateUiState.Downloading(update, 0f)
-            runCatching {
-                installer.downloadAndInstall(
-                    context = getApplication(),
-                    url = update.apkUrl,
-                    expectedBytes = update.apkSizeBytes,
-                ) { fraction -> _state.update { it.withProgress(fraction) } }
-            }.onSuccess {
-                // The system installer is now front-and-centre; step our dialog aside.
-                _state.value = UpdateUiState.Idle
-            }.onFailure {
-                _state.value = UpdateUiState.Failed(update, ErrorWording.codeOf(it))
+            val running = graph.recordingRepository.active()
+            if (running.isEmpty()) {
+                download(update)
+            } else {
+                _state.value = UpdateUiState.RecordingRunning(update, running.singleOrNull()?.title)
             }
+        }
+    }
+
+    /** Install anyway, once the viewer has been told it stops the recording that's running. */
+    fun installAnyway() {
+        val s = _state.value as? UpdateUiState.RecordingRunning ?: return
+        viewModelScope.launch { download(s.update) }
+    }
+
+    private suspend fun download(update: UpdateChecker.Update) {
+        _state.value = UpdateUiState.Downloading(update, 0f)
+        runCatching {
+            installer.downloadAndInstall(
+                context = getApplication(),
+                url = update.apkUrl,
+                expectedBytes = update.apkSizeBytes,
+            ) { fraction -> _state.update { it.withProgress(fraction) } }
+        }.onSuccess {
+            // The system installer is now front-and-centre; step our dialog aside.
+            _state.value = UpdateUiState.Idle
+        }.onFailure {
+            _state.value = UpdateUiState.Failed(update, ErrorWording.codeOf(it))
         }
     }
 
