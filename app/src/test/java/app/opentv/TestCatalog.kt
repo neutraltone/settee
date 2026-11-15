@@ -10,6 +10,8 @@ import androidx.room.Room
 import app.opentv.core.AppSettings
 import app.opentv.core.ErrorWording
 import app.opentv.data.db.OpenTvDatabase
+import app.opentv.data.model.EpgChannelAlias
+import app.opentv.data.model.Programme
 import app.opentv.data.remote.StalkerApi
 import app.opentv.data.remote.XtreamApi
 import app.opentv.data.repo.CatalogRepository
@@ -46,26 +48,6 @@ class TestCatalog(
     val staging: File = Files.createTempDirectory("staging").toFile()
 
     val viewerLibrary = ViewerLibrary(db, MutableStateFlow(1L), clock = clock)
-    val catalog: CatalogRepository = CatalogRepository(
-        sourceDao = db.sources(),
-        channelDao = db.channels(),
-        categoryDao = db.categories(),
-        movieDao = db.movies(),
-        seriesDao = db.series(),
-        episodeDao = db.episodes(),
-        viewerLibrary = viewerLibrary,
-        api = XtreamApi(panel.http),
-        stalkerApi = StalkerApi(panel.http),
-        http = panel.http,
-        settings = AppSettings.get(context),
-        wording = ErrorWording(context, onTelevision = false),
-    ).apply {
-        genrePauseMillis = 0
-        staging = this@TestCatalog.staging
-    }
-
-    val settings: AppSettings = AppSettings.get(context)
-
     val guide = EpgRepository(
         programmeDao = db.programmes(),
         refreshDao = db.guideRefresh(),
@@ -78,6 +60,22 @@ class TestCatalog(
         wording = ErrorWording(context, onTelevision = false),
         selfEnabledGuide = EpgRepository.SelfEnabledGuide.InMemory(),
     )
+
+    val catalog: CatalogRepository = CatalogRepository(
+        database = db,
+        viewerLibrary = viewerLibrary,
+        guide = guide,
+        api = XtreamApi(panel.http),
+        stalkerApi = StalkerApi(panel.http),
+        http = panel.http,
+        settings = AppSettings.get(context),
+        wording = ErrorWording(context, onTelevision = false),
+    ).apply {
+        genrePauseMillis = 0
+        staging = this@TestCatalog.staging
+    }
+
+    val settings: AppSettings = AppSettings.get(context)
 
     /** Where [lineup] keeps its folds; cancelled with the database. */
     private val sharing = CoroutineScope(SupervisorJob() + Dispatchers.Default)
@@ -135,6 +133,23 @@ class TestCatalog(
         catalog.awaitBackground()
     }
 
+    /** Gives [sourceId]'s provider guide, made by [EpgRepository.ensureFeeds], a programme and alias on [epgId]. */
+    suspend fun seedProviderGuide(sourceId: Long, epgId: String) {
+        val feed = db.epgFeeds().forProvider(sourceId)!!
+        db.programmes().insertOrReplace(
+            listOf(
+                Programme(
+                    feedId = feed.id,
+                    epgChannelId = epgId,
+                    startUtcMillis = SEEDED_START,
+                    endUtcMillis = SEEDED_START + 3_600_000,
+                    title = "News",
+                ),
+            ),
+        )
+        db.epgAliases().upsertAll(listOf(EpgChannelAlias(feed.id, epgId, "News", "news")))
+    }
+
     /** The names of the titles on [name]'s person page, in its order. */
     suspend fun titlesWith(name: String): List<String> = catalog.titlesWithPerson(name).map {
         when (it) {
@@ -143,3 +158,6 @@ class TestCatalog(
         }
     }
 }
+
+/** When [TestCatalog.seedProviderGuide]'s programme starts: in 2033, so nothing prunes it by age. */
+const val SEEDED_START = 2_000_000_000_000L

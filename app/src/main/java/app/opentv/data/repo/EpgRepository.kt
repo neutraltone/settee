@@ -165,13 +165,30 @@ class EpgRepository(
         feedDao.delete(feed.id)
     }
 
+    /** Removes [sourceId]'s provider guide, as [removeFeed] would, when the provider itself goes. */
+    suspend fun removeProviderFeed(sourceId: Long) {
+        feedDao.forProvider(sourceId)?.let { removeFeed(it) }
+    }
+
     /**
      * Makes sure the standing feed rows exist: one per provider source, plus the curated
-     * built-in list. Insert-if-absent, so user toggles survive every call. A built-in whose address
-     * has moved keeps its row, toggle included, and takes the new address: matching by address
-     * alone would leave the dead one switched on beside a second, switched-off row of the same name.
+     * built-in list, and removes a provider feed whose source is gone. Insert-if-absent, so user
+     * toggles survive every call. A built-in whose address has moved keeps its row, toggle included,
+     * and takes the new address: matching by address alone would leave the dead one switched on
+     * beside a second, switched-off row of the same name.
      */
     suspend fun ensureFeeds() {
+        // Against every source, not just the enabled ones: a provider that's only switched off keeps
+        // its feed, toggle and all. A feed whose provider is gone would otherwise fail every refresh,
+        // and the viewer can't remove it, since Settings only offers that for custom feeds. Feeds are
+        // read first: a feed is only added after its source, so a source added while this runs can't
+        // look gone.
+        val feeds = feedDao.all()
+        val sources = sourceDao.all().mapTo(HashSet()) { it.id }
+        for (feed in feeds) {
+            val provider = feed.providerSourceId ?: continue
+            if (provider !in sources) removeFeed(feed)
+        }
         for (source in sourceDao.enabled()) {
             if (feedDao.forProvider(source.id) == null) {
                 feedDao.insert(
@@ -238,7 +255,10 @@ class EpgRepository(
                 read = { read -> reporting.reading(index, read) },
                 counted = reporting::programme,
             )
+            val removed = dropIfRemoved(feed)
             reporting.feedDone(index)
+            // Neither a success nor a problem: there's no feed left to report on.
+            if (removed) continue
             when (result) {
                 is FeedResult.Success -> {
                     succeeded++
@@ -329,6 +349,20 @@ class EpgRepository(
     private sealed interface FeedResult {
         data class Success(val programmes: Int, val channels: Int) : FeedResult
         data class Failed(val reason: ViewerError) : FeedResult
+    }
+
+    /**
+     * Removed while it downloaded (its provider deleted, say): [removeFeed] has already cleared its
+     * rows, so what the download wrote afterwards would stay for good, its aliases still matching.
+     * True when it was.
+     */
+    private suspend fun dropIfRemoved(feed: EpgFeed): Boolean {
+        val removed = feedDao.all().none { it.id == feed.id }
+        if (removed) {
+            programmeDao.deleteForFeed(feed.id)
+            aliasDao.deleteForFeed(feed.id)
+        }
+        return removed
     }
 
     private suspend fun syncFeed(

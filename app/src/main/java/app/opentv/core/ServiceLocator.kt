@@ -141,13 +141,9 @@ object ServiceLocator {
 
         val catalogRepository: CatalogRepository by lazy {
             CatalogRepository(
-                sourceDao = database.sources(),
-                channelDao = database.channels(),
-                categoryDao = database.categories(),
-                movieDao = database.movies(),
-                seriesDao = database.series(),
-                episodeDao = database.episodes(),
+                database = database,
                 viewerLibrary = viewerLibrary,
+                guide = epgRepository,
                 api = xtreamApi,
                 stalkerApi = stalkerApi,
                 http = httpClient,

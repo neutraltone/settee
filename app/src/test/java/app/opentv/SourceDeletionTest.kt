@@ -42,6 +42,9 @@ class SourceDeletionTest {
     private suspend fun home() =
         db.sources().insert(Source(name = "Home", kind = SourceKind.M3U, url = "https://example.com/h.m3u"))
 
+    private suspend fun away() =
+        db.sources().insert(Source(name = "Away", kind = SourceKind.M3U, url = "https://example.com/a.m3u"))
+
     private fun fromProvider(sourceId: Long, streamId: String) = Channel(
         sourceId = sourceId,
         streamId = streamId,
@@ -87,5 +90,38 @@ class SourceDeletionTest {
         assertThat(channels.forSource(again).single().customName).isNull()
         assertThat(db.seriesRules().observeAll().first()).isEmpty()
         assertThat(reminders.observeAll().first()).isEmpty()
+    }
+
+    @Test
+    fun `deleting a source takes its guide with it and leaves the other source's alone`() = runTest {
+        val first = home()
+        val second = away()
+        test.guide.ensureFeeds()
+        test.seedProviderGuide(first, "home.news")
+        test.seedProviderGuide(second, "away.news")
+
+        test.catalog.deleteSource(first)
+
+        val feeds = test.guide.observeFeeds().first()
+        assertThat(feeds.mapNotNull { it.providerSourceId }).containsExactly(second)
+        assertThat(test.guide.upcoming("home.news", nowUtcMillis = 0)).isEmpty()
+        assertThat(test.guide.upcoming("away.news", nowUtcMillis = 0).map { it.title }).containsExactly("News")
+        assertThat(db.epgAliases().all().map { it.epgId }).containsExactly("away.news")
+    }
+
+    @Test
+    fun `a guide refresh after deleting a source has no failed feeds`() = runTest {
+        val first = home()
+        val second = away()
+        test.guide.ensureFeeds()
+        val now = tomorrow.startUtcMillis
+        // Fetched just now, so the refresh counts the remaining provider's guide without downloading it.
+        db.epgFeeds().markSynced(db.epgFeeds().forProvider(second)!!.id, now, "")
+
+        test.catalog.deleteSource(first)
+
+        // Gone before any refresh, which would otherwise clear it up itself.
+        assertThat(db.epgFeeds().forProvider(first)).isNull()
+        assertThat(test.guide.syncAll(nowUtcMillis = now).feedsFailed).isEqualTo(0)
     }
 }

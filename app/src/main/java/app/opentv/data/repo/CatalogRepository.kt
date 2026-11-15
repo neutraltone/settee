@@ -6,18 +6,15 @@
 package app.opentv.data.repo
 
 import android.util.Log
+import androidx.room.withTransaction
 import app.opentv.R
 import app.opentv.core.AppSettings
 import app.opentv.core.ErrorWording
 import app.opentv.core.ViewerError
-import app.opentv.data.db.CategoryDao
 import app.opentv.data.db.ChannelCleaned
 import app.opentv.data.db.ChannelDao
-import app.opentv.data.db.EpisodeDao
-import app.opentv.data.db.MovieDao
 import app.opentv.data.db.MoviePick
-import app.opentv.data.db.SeriesDao
-import app.opentv.data.db.SourceDao
+import app.opentv.data.db.OpenTvDatabase
 import app.opentv.data.db.StagedBatches
 import app.opentv.data.model.Category
 import app.opentv.data.model.Channel
@@ -136,14 +133,13 @@ internal fun titleCovers(rows: List<CoverRow>, titles: TitleIndex.Titles, decode
  * than they started with. Catalogue writes go through [ChannelDao.replaceCatalogue], which
  * merges rather than wipes and carries hidden flags and manual ordering across.
  */
+@Suppress("LongParameterList") // Down from 12; the rest are clients and settings ServiceLocator shares.
 class CatalogRepository(
-    private val sourceDao: SourceDao,
-    private val channelDao: ChannelDao,
-    private val categoryDao: CategoryDao,
-    private val movieDao: MovieDao,
-    private val seriesDao: SeriesDao,
-    private val episodeDao: EpisodeDao,
+    /** The whole database, not its DAOs one by one, so [deleteSource] can be one transaction. */
+    private val database: OpenTvDatabase,
     private val viewerLibrary: ViewerLibrary,
+    /** The provider's guide feed goes with it; `epg_feeds` has no foreign key to cascade from. */
+    private val guide: EpgRepository,
     private val api: XtreamApi,
     private val stalkerApi: StalkerApi,
     private val http: OkHttpClient,
@@ -154,6 +150,12 @@ class CatalogRepository(
      */
     val wording: ErrorWording,
 ) {
+    private val sourceDao = database.sources()
+    private val channelDao = database.channels()
+    private val categoryDao = database.categories()
+    private val movieDao = database.movies()
+    private val seriesDao = database.series()
+    private val episodeDao = database.episodes()
 
     /** TMDB back-fill for VOD detail pages, gated on the viewer's TMDB Key. See [TmdbClient]. */
     private val tmdb = TmdbClient(http, settings)
@@ -1014,12 +1016,16 @@ class CatalogRepository(
     }
 
     suspend fun deleteSource(sourceId: Long) = withContext(Dispatchers.IO) {
-        channelDao.deleteForSource(sourceId)
-        categoryDao.deleteForSource(sourceId)
-        movieDao.deleteForSource(sourceId)
-        seriesDao.deleteForSource(sourceId)
-        episodeDao.deleteForSource(sourceId)
-        sourceDao.delete(sourceId)
+        // One transaction: cut off partway, a provider would be left with no channels or no guide.
+        database.withTransaction {
+            channelDao.deleteForSource(sourceId)
+            categoryDao.deleteForSource(sourceId)
+            movieDao.deleteForSource(sourceId)
+            seriesDao.deleteForSource(sourceId)
+            episodeDao.deleteForSource(sourceId)
+            guide.removeProviderFeed(sourceId)
+            sourceDao.delete(sourceId)
+        }
     }
 
     companion object {
