@@ -18,14 +18,17 @@ import app.opentv.data.repo.EpgRepository
 import app.opentv.data.repo.RecordingRepository
 import app.opentv.data.repo.SourceRepository
 import app.opentv.data.repo.recordable
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 
 /**
  * Turns "record this" into a running capture: it creates the [Recording] row, works out where the
  * file goes and which URL to pull, then hands off to [RecordingService] to do the actual byte
  * copy in the foreground so it survives the user leaving the player or the screen going dark.
  */
+@Suppress("LongParameterList") // clock is only passed by tests, to start two captures in one minute.
 class RecordingEngine(
     private val appContext: Context,
     private val repo: RecordingRepository,
@@ -33,6 +36,7 @@ class RecordingEngine(
     private val settings: AppSettings,
     private val epgRepository: EpgRepository,
     private val lineup: ChannelLineup,
+    private val clock: () -> Long = System::currentTimeMillis,
 ) {
     /**
      * Booking checks for an existing row and then inserts one, and a rescan can overlap another or a
@@ -49,7 +53,7 @@ class RecordingEngine(
     ): Long {
         val source = sources.byId(channel.sourceId)
         val ua = source?.userAgent ?: Source.DEFAULT_USER_AGENT
-        val now = System.currentTimeMillis()
+        val now = clock()
         val title = programme?.title?.takeIf { it.isNotBlank() } ?: channel.displayName
         val filename = RecordingStorage.fileNameFor(channel.displayName, title, now)
         val locator = RecordingStorage.plannedLocator(appContext, settings, filename)
@@ -83,6 +87,35 @@ class RecordingEngine(
     fun stop(recordingId: Long) = RecordingService.stop(appContext, recordingId)
 
     /**
+     * Open [recording]'s file for its capture and repoint the row at where the bytes really go: a
+     * USB document's `content://` URI, or a suffixed name when the planned one was taken (#354).
+     */
+    suspend fun openSink(recording: Recording): RecordingStorage.Sink {
+        val sink = withContext(Dispatchers.IO) { RecordingStorage.openSink(appContext, settings, recording.filePath) }
+        sink.resolvedLocator?.let { repo.setFilePath(recording.id, it) }
+        return sink
+    }
+
+    /**
+     * Delete [recording]: always its row, and its file unless another row still points at it — a
+     * recording made before names were kept apart (#354) may share one.
+     */
+    suspend fun delete(recording: Recording) {
+        if (recording.status == RecordingStatus.RECORDING) stop(recording.id)
+        repo.delete(recording.id)
+        deleteFileUnlessShared(recording)
+    }
+
+    /**
+     * Off the main thread, where callers like the Recordings screen are: an SMB delete there is
+     * refused as network on the main thread, and runCatching would swallow that, leaving the file.
+     */
+    private suspend fun deleteFileUnlessShared(recording: Recording) {
+        if (repo.fileUsedByOthers(recording.id, recording.filePath)) return
+        withContext(Dispatchers.IO) { RecordingStorage.delete(appContext, settings, recording.filePath) }
+    }
+
+    /**
      * Record a specific programme: if it's already on, start capturing now (bounded to its end);
      * if it's in the future, book an exact alarm to start it at broadcast time.
      */
@@ -92,7 +125,7 @@ class RecordingEngine(
         ruleId: Long? = null,
         profileId: Long = settings.activeProfileId.value,
     ): Long {
-        val now = System.currentTimeMillis()
+        val now = clock()
         return if (programme.startUtcMillis > now + LEAD_MILLIS) {
             scheduleProgramme(channel, programme, ruleId, profileId)
         } else {
@@ -147,7 +180,7 @@ class RecordingEngine(
             profileId = profileId,
         )
         val id = repo.insert(recording)
-        val armAt = scheduledStart.coerceAtLeast(System.currentTimeMillis() + 1_000L)
+        val armAt = scheduledStart.coerceAtLeast(clock() + 1_000L)
         RecordingScheduler.set(appContext, id, armAt)
         // Warn the viewer just before we switch their screen to the recording (single-connection
         // auto-switch); only meaningful when auto-switch is on.
@@ -162,7 +195,7 @@ class RecordingEngine(
      * and stays failed. Returns true when a retry was actually kicked off.
      */
     suspend fun retry(recording: Recording): Boolean {
-        val now = System.currentTimeMillis()
+        val now = clock()
         val start = recording.scheduledStartMillis
         val end = recording.scheduledEndMillis
         return when {
@@ -172,6 +205,10 @@ class RecordingEngine(
                 true
             }
             end == 0L || end > now -> {
+                // The failed attempt's file would count as taken and the capture would move on to a
+                // suffixed name, leaving it behind with no row; it used to be overwritten, so drop
+                // it. A USB document is reopened and overwritten in place, so it stays.
+                if (!RecordingStorage.isContent(recording.filePath)) deleteFileUnlessShared(recording)
                 repo.setStatus(recording.id, RecordingStatus.SCHEDULED, null)
                 RecordingService.start(appContext, recording.id)
                 true
@@ -190,7 +227,7 @@ class RecordingEngine(
      * does across Robolectric tests), and alarms set through a stale one land where nothing reads them.
      */
     suspend fun rearmScheduled(context: Context = appContext) {
-        val now = System.currentTimeMillis()
+        val now = clock()
         val autoSwitch = settings.recordAutoSwitch.value
         for (rec in repo.scheduled()) {
             val at = if (rec.scheduledStartMillis <= now) now + 1_000L else rec.scheduledStartMillis
@@ -223,7 +260,7 @@ class RecordingEngine(
                 channelName = channel.displayName,
                 titleKey = key,
                 title = title,
-                createdAtMillis = System.currentTimeMillis(),
+                createdAtMillis = clock(),
             ),
         )
         val guideId = lineupChannelOf(channel.id)?.let { lineup.guideId(it) }
@@ -232,7 +269,7 @@ class RecordingEngine(
                 channel,
                 key,
                 ruleId,
-                epgRepository.upcoming(guideId, System.currentTimeMillis(), AIRINGS_LOOKED_UP),
+                epgRepository.upcoming(guideId, clock(), AIRINGS_LOOKED_UP),
             )
         }
         return ruleId
@@ -256,7 +293,7 @@ class RecordingEngine(
      * itself, but one on now starts a capture straight away, so the second listing would start another.
      */
     suspend fun scheduleMatching(channel: Channel, titleKey: String, ruleId: Long, programmes: List<Programme>) {
-        val now = System.currentTimeMillis()
+        val now = clock()
         bookingLock.withLock {
             programmes
                 .filter { it.endUtcMillis > now && titleKeyOf(it.title) == titleKey }
@@ -313,7 +350,7 @@ class RecordingEngine(
     suspend fun rescanSeriesRules() {
         val rules = repo.enabledRules()
         if (rules.isEmpty()) return
-        val now = System.currentTimeMillis()
+        val now = clock()
         for (rule in rules) {
             // The guide the rule was set from: its Channel's, whichever Quality the rule is on.
             val lineupChannel = lineupChannelOf(rule.channelId) ?: continue

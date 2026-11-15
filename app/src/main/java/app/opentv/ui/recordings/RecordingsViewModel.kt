@@ -11,10 +11,8 @@ import androidx.lifecycle.viewModelScope
 import app.opentv.core.ServiceLocator
 import app.opentv.data.model.Profile
 import app.opentv.data.model.Recording
-import app.opentv.data.model.RecordingStatus
 import app.opentv.data.model.Reminder
 import app.opentv.data.model.SeriesRule
-import app.opentv.recording.RecordingStorage
 import app.opentv.reminders.ReminderScheduler
 import app.opentv.ui.options.ItemOption
 import kotlinx.coroutines.flow.SharingStarted
@@ -86,9 +84,7 @@ class RecordingsViewModel(app: Application) : AndroidViewModel(app) {
 
     fun delete(recording: Recording) {
         viewModelScope.launch {
-            if (recording.status == RecordingStatus.RECORDING) graph.recordingEngine.stop(recording.id)
-            RecordingStorage.delete(getApplication(), graph.settings, recording.filePath)
-            graph.recordingRepository.delete(recording.id)
+            graph.recordingEngine.delete(recording)
         }
     }
 }
