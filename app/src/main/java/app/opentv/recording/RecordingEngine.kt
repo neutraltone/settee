@@ -32,7 +32,7 @@ import kotlinx.coroutines.withContext
  * file goes and which URL to pull, then hands off to [RecordingService] to do the actual byte
  * copy in the foreground so it survives the user leaving the player or the screen going dark.
  */
-@Suppress("LongParameterList") // removeFile is only passed by tests, to fail a delete without a NAS.
+@Suppress("LongParameterList") // clock and removeFile are only passed by tests.
 class RecordingEngine(
     private val appContext: Context,
     private val repo: RecordingRepository,
@@ -43,6 +43,7 @@ class RecordingEngine(
     private val wording: ErrorWording,
     /** Removes a recording's file, throwing when it's still there: [RecordingStorage.delete]. */
     private val removeFile: (String) -> Unit = { RecordingStorage.delete(appContext, settings, it) },
+    private val clock: () -> Long = System::currentTimeMillis,
 ) {
     /**
      * Booking checks for an existing row and then inserts one, and a rescan can overlap another or a
@@ -59,7 +60,7 @@ class RecordingEngine(
     ): Long {
         val source = sources.byId(channel.sourceId)
         val ua = source?.userAgent ?: Source.DEFAULT_USER_AGENT
-        val now = System.currentTimeMillis()
+        val now = clock()
         val title = programme?.title?.takeIf { it.isNotBlank() } ?: channel.displayName
         val filename = RecordingStorage.fileNameFor(channel.displayName, title, now)
         val locator = RecordingStorage.plannedLocator(appContext, settings, filename)
@@ -93,13 +94,29 @@ class RecordingEngine(
     fun stop(recordingId: Long) = RecordingService.stop(appContext, recordingId)
 
     /**
-     * Deletes [recording]'s file, then its row, stopping it first if it's still going. When the file
-     * won't go, the row stays and this says why: deleting the row anyway would leave the file on the
-     * NAS or drive with nothing in the app pointing to it again.
+     * Open [recording]'s file for its capture and repoint the row at where the bytes really go: a
+     * USB document's `content://` URI, or a suffixed name when the planned one was taken (#354).
+     */
+    suspend fun openSink(recording: Recording): RecordingStorage.Sink {
+        val sink = withContext(Dispatchers.IO) { RecordingStorage.openSink(appContext, settings, recording.filePath) }
+        sink.resolvedLocator?.let { repo.setFilePath(recording.id, it) }
+        return sink
+    }
+
+    /**
+     * Deletes [recording]'s file, then its row, stopping it first if it's still going. The file stays
+     * when another row still points at it: a recording made before names were kept apart (#354) may
+     * share one. When the file won't go, the row stays and this says why: deleting the row anyway
+     * would leave the file on the NAS or drive with nothing in the app pointing to it again.
      */
     suspend fun delete(recording: Recording): ViewerError? {
         if (recording.status == RecordingStatus.RECORDING) stop(recording.id)
-        val failure = runCatching { withContext(Dispatchers.IO) { removeFile(recording.filePath) } }.exceptionOrNull()
+        val shared = repo.fileUsedByOthers(recording.id, recording.filePath)
+        val failure = if (shared) {
+            null
+        } else {
+            runCatching { withContext(Dispatchers.IO) { removeFile(recording.filePath) } }.exceptionOrNull()
+        }
         if (failure is CancellationException) throw failure
         return when {
             failure == null -> {
@@ -122,7 +139,7 @@ class RecordingEngine(
         ruleId: Long? = null,
         profileId: Long = settings.activeProfileId.value,
     ): Long {
-        val now = System.currentTimeMillis()
+        val now = clock()
         return if (programme.startUtcMillis > now + LEAD_MILLIS) {
             scheduleProgramme(channel, programme, ruleId, profileId)
         } else {
@@ -177,7 +194,7 @@ class RecordingEngine(
             profileId = profileId,
         )
         val id = repo.insert(recording)
-        val armAt = scheduledStart.coerceAtLeast(System.currentTimeMillis() + 1_000L)
+        val armAt = scheduledStart.coerceAtLeast(clock() + 1_000L)
         RecordingScheduler.set(appContext, id, armAt)
         // Warn the viewer just before we switch their screen to the recording (single-connection
         // auto-switch); only meaningful when auto-switch is on.
@@ -192,7 +209,7 @@ class RecordingEngine(
      * and stays failed. Returns true when a retry was actually kicked off.
      */
     suspend fun retry(recording: Recording): Boolean {
-        val now = System.currentTimeMillis()
+        val now = clock()
         val start = recording.scheduledStartMillis
         val end = recording.scheduledEndMillis
         return when {
@@ -202,6 +219,10 @@ class RecordingEngine(
                 true
             }
             end == 0L || end > now -> {
+                // The failed attempt's file would count as taken and the capture would move on to a
+                // suffixed name, leaving it behind with no row; it used to be overwritten, so drop
+                // it. A USB document is reopened and overwritten in place, so it stays.
+                if (!RecordingStorage.isContent(recording.filePath)) deleteFileUnlessShared(recording)
                 repo.setStatus(recording.id, RecordingStatus.SCHEDULED, null)
                 RecordingService.start(appContext, recording.id)
                 true
@@ -211,18 +232,21 @@ class RecordingEngine(
     }
 
     /**
-     * Re-arm the exact alarm for every scheduled recording. Alarms are dropped on a force-stop or
-     * app update — which the boot receiver does not see — so [app.opentv.OpenTvApp] calls this on
-     * each launch. A booking whose start slipped past while the app was dead fires almost at once;
-     * re-setting an existing alarm is idempotent, so this is safe to run every time.
+     * Re-arm the exact alarm for every scheduled recording. Alarms are dropped on a reboot, an
+     * update or a force-stop, so [RecordingAlarmReceiver] calls this after the first two and
+     * [app.opentv.OpenTvApp] on each launch, for the force-stop no receiver hears of. A booking whose
+     * start slipped past while the app was dead fires almost at once; re-setting an existing alarm is
+     * idempotent, so this is safe to run every time. The alarms are set through [context]: a receiver
+     * passes its own, since the process-wide graph can outlive the Application it was built with (it
+     * does across Robolectric tests), and alarms set through a stale one land where nothing reads them.
      */
-    suspend fun rearmScheduled() {
-        val now = System.currentTimeMillis()
+    suspend fun rearmScheduled(context: Context = appContext) {
+        val now = clock()
         val autoSwitch = settings.recordAutoSwitch.value
         for (rec in repo.scheduled()) {
             val at = if (rec.scheduledStartMillis <= now) now + 1_000L else rec.scheduledStartMillis
-            RecordingScheduler.set(appContext, rec.id, at)
-            if (autoSwitch) RecordingScheduler.setWarning(appContext, rec.id, at)
+            RecordingScheduler.set(context, rec.id, at)
+            if (autoSwitch) RecordingScheduler.setWarning(context, rec.id, at)
         }
     }
 
@@ -250,7 +274,7 @@ class RecordingEngine(
                 channelName = channel.displayName,
                 titleKey = key,
                 title = title,
-                createdAtMillis = System.currentTimeMillis(),
+                createdAtMillis = clock(),
             ),
         )
         val guideId = lineupChannelOf(channel.id)?.let { lineup.guideId(it) }
@@ -259,7 +283,7 @@ class RecordingEngine(
                 channel,
                 key,
                 ruleId,
-                epgRepository.upcoming(guideId, System.currentTimeMillis(), AIRINGS_LOOKED_UP),
+                epgRepository.upcoming(guideId, clock(), AIRINGS_LOOKED_UP),
             )
         }
         return ruleId
@@ -283,7 +307,7 @@ class RecordingEngine(
      * itself, but one on now starts a capture straight away, so the second listing would start another.
      */
     suspend fun scheduleMatching(channel: Channel, titleKey: String, ruleId: Long, programmes: List<Programme>) {
-        val now = System.currentTimeMillis()
+        val now = clock()
         bookingLock.withLock {
             programmes
                 .filter { it.endUtcMillis > now && titleKeyOf(it.title) == titleKey }
@@ -340,7 +364,7 @@ class RecordingEngine(
     suspend fun rescanSeriesRules() {
         val rules = repo.enabledRules()
         if (rules.isEmpty()) return
-        val now = System.currentTimeMillis()
+        val now = clock()
         for (rule in rules) {
             // The guide the rule was set from: its Channel's, whichever Quality the rule is on.
             val lineupChannel = lineupChannelOf(rule.channelId) ?: continue

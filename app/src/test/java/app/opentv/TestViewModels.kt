@@ -13,6 +13,7 @@ import app.opentv.core.ServiceLocator
 import app.opentv.ui.ChannelsViewModel
 import app.opentv.ui.VodViewModel
 import app.opentv.ui.vod.VodPlayerViewModel
+import app.opentv.update.UpdateViewModel
 
 /**
  * A test's view models, cleared as Android clears a screen's. Clear them before closing the
@@ -45,6 +46,14 @@ class TestViewModels {
             override fun <T : ViewModel> create(modelClass: Class<T>): T = VodPlayerViewModel(app, graph) as T
         },
     )[VodPlayerViewModel::class.java]
+
+    fun update(app: Application, graph: ServiceLocator.Graph): UpdateViewModel = ViewModelProvider(
+        store,
+        object : ViewModelProvider.Factory {
+            @Suppress("UNCHECKED_CAST")
+            override fun <T : ViewModel> create(modelClass: Class<T>): T = UpdateViewModel(app, graph) as T
+        },
+    )[UpdateViewModel::class.java]
 
     fun clear() = store.clear()
 }

@@ -17,6 +17,7 @@ import com.hierynomus.smbj.connection.Connection
 import com.hierynomus.smbj.session.Session
 import com.hierynomus.smbj.share.DiskShare
 import java.io.Closeable
+import java.io.IOException
 import java.io.OutputStream
 import java.util.EnumSet
 
@@ -159,22 +160,59 @@ object SmbClient {
         return "smb://${config.host}/${config.share}/$path"
     }
 
-    /** Open the file named by [locator] for writing. Caller writes to [SmbWriteHandle.output]. */
-    fun openForWrite(config: SmbConfig, locator: String): SmbWriteHandle {
+    /**
+     * Open the file named by [locator] for writing, replacing what's there: for files this device
+     * owns, like its sync bundle. Caller writes to [SmbWriteHandle.output].
+     */
+    fun openForWrite(config: SmbConfig, locator: String): SmbWriteHandle = openWrite(config, locator) { share, path ->
+        openFile(share, path, SMB2CreateDisposition.FILE_OVERWRITE_IF) to path
+    }
+
+    /**
+     * Create a new file at [locator] for a recording, never replacing one: when the name is taken
+     * (another recording of the same name that minute, maybe from another device) the first
+     * free suffixed name is used, reported in [SmbWriteHandle.locator] (#354).
+     */
+    fun openNewForWrite(config: SmbConfig, locator: String): SmbWriteHandle =
+        openWrite(config, locator) { share, path ->
+            createUnique(path) { candidate ->
+                try {
+                    openFile(share, candidate, SMB2CreateDisposition.FILE_CREATE) to candidate
+                } catch (e: SMBApiException) {
+                    if (e.status == NtStatus.STATUS_OBJECT_NAME_COLLISION) null else throw e
+                }
+            }
+        }
+
+    /**
+     * The first of [path]'s [RecordingStorage.candidateNames] that [tryCreateNew] manages to create;
+     * it returns null when that name already exists.
+     */
+    internal fun <T : Any> createUnique(path: String, tryCreateNew: (String) -> T?): T =
+        RecordingStorage.candidateNames(path).firstNotNullOfOrNull(tryCreateNew)
+            ?: throw IOException("No free recording name")
+
+    private fun openFile(share: DiskShare, path: String, disposition: SMB2CreateDisposition) = share.openFile(
+        path.replace('/', '\\'),
+        EnumSet.of(AccessMask.GENERIC_WRITE),
+        null,
+        SMB2ShareAccess.ALL,
+        disposition,
+        null,
+    )
+
+    private fun openWrite(
+        config: SmbConfig,
+        locator: String,
+        open: (DiskShare, String) -> Pair<com.hierynomus.smbj.share.File, String>,
+    ): SmbWriteHandle {
         val parsed = parse(locator)
         val cfg = config.copy(host = parsed.host, share = parsed.share)
         val q = connect(cfg)
         try {
             val folder = parsed.path.substringBeforeLast('/', "")
             ensureFolder(q.share, folder)
-            val file = q.share.openFile(
-                parsed.path.replace('/', '\\'),
-                EnumSet.of(AccessMask.GENERIC_WRITE),
-                null,
-                SMB2ShareAccess.ALL,
-                SMB2CreateDisposition.FILE_OVERWRITE_IF,
-                null,
-            )
+            val (file, path) = open(q.share, parsed.path)
             return SmbWriteHandle(
                 q.client,
                 q.connection,
@@ -182,7 +220,7 @@ object SmbClient {
                 q.share,
                 file,
                 file.outputStream,
-                locator,
+                "smb://${parsed.host}/${parsed.share}/$path",
             )
         } catch (t: Throwable) {
             runCatching { q.share.close() }

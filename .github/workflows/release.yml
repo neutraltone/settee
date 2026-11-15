@@ -83,7 +83,9 @@ jobs:
           echo "path=dist/settee-${TAG}.apk" >> "$GITHUB_OUTPUT"
 
       # Checks the built APK itself, not just that the secrets were set: a wrongly signed APK will
-      # not install over a release-signed one, so it must never be published.
+      # not install over a release-signed one, so it must never be published. The keystore comes
+      # from the same secrets as the signature, so it is also held to the certificate committed in
+      # tools/release-cert.sha256, which no secret can change.
       - name: Verify signing certificate
         id: signing
         env:
@@ -91,7 +93,7 @@ jobs:
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
         run: |
-          DIGEST=$(tools/check-apk-signer.sh "$APK" "$KEYSTORE_PATH" "$KEY_ALIAS")
+          DIGEST=$(tools/check-apk-signer.sh "$APK" "$KEYSTORE_PATH" "$KEY_ALIAS" "$(cat tools/release-cert.sha256)")
           echo "digest=$DIGEST" >> "$GITHUB_OUTPUT"
 
       # release-please writes headings as "## [0.2.0](compare link) (date)". The certificate digest

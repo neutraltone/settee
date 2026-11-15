@@ -123,6 +123,9 @@ class RecordingRepository(
 
     suspend fun delete(id: Long) = dao.delete(id)
 
+    /** Whether a recording row other than [id] points at [filePath]. */
+    suspend fun fileUsedByOthers(id: Long, filePath: String): Boolean = dao.countWithFilePath(filePath, id) > 0
+
     /** Cold-start reconciliation: anything left "recording" was killed mid-capture. */
     suspend fun failInterrupted() = dao.failInterrupted()
 

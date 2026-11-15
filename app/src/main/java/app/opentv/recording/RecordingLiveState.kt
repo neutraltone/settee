@@ -27,12 +27,6 @@ object RecordingLiveState {
         active[id] = filePath
     }
 
-    /** The USB SAF sink learned its real locator after creation — but only a plain file path is
-     *  tail-followable, so a `content://` update simply drops it from the live set. */
-    fun updatePath(id: Long, filePath: String) {
-        if (active.containsKey(id)) active[id] = filePath
-    }
-
     /** The capture has finished, failed, or been stopped — its file is now at its final size. */
     fun markInactive(id: Long) {
         active.remove(id)
