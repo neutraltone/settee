@@ -12,6 +12,14 @@ read -rs KEYSTORE_PASSWORD && export KEYSTORE_PASSWORD   # keeps it out of shell
 tools/check-apk-signer.sh settee.apk settee-release.jks settee
 ```
 
+Give it a fourth argument, a digest in the form it prints, and it also fails unless the APK's
+certificate is that one. `release.yml` passes the release certificate's, from
+`tools/release-cert.sha256`; the PR build's check of the debug APK passes none.
+
+```sh
+tools/check-apk-signer.sh settee.apk settee-release.jks settee "$(cat tools/release-cert.sha256)"
+```
+
 It needs `keytool` (any JDK) and `apksigner` (Android build-tools). Set `APKSIGNER` to the
 binary, or `ANDROID_HOME` for the newest one under `build-tools/`.
 
