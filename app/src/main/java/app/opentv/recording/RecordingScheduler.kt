@@ -35,10 +35,15 @@ object RecordingScheduler {
     }
 
     /** Arm the "about to switch" pre-alarm [WARN_LEAD_MILLIS] before [startAtMillis]; a no-op if
-     *  that instant has already passed (the recording is due immediately). */
-    fun setWarning(context: Context, recordingId: Long, startAtMillis: Long) {
+     *  that instant has already passed by [nowMillis] (the recording is due immediately). */
+    fun setWarning(
+        context: Context,
+        recordingId: Long,
+        startAtMillis: Long,
+        nowMillis: Long = System.currentTimeMillis(),
+    ) {
         val at = startAtMillis - WARN_LEAD_MILLIS
-        if (at <= System.currentTimeMillis()) return
+        if (at <= nowMillis) return
         arm(context, pendingIntent(context, recordingId, ACTION_WARN), at)
     }
 

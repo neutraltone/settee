@@ -122,6 +122,7 @@ Two treatments, because they suit different surfaces.
 - **Cards and the Live Preview:** a 4 dp coral ring with a 2 dp dark edge inside it, plus a lift. The dark edge keeps the ring visible on warm, white and printed artwork.
 - **Lift:** 1.05, or 1.03 on Home's large first card. Anything bigger cuts the ring off at the row's edge. Leave room for it in the row's padding.
 - **Glow:** one, 14 dp, on the highlighted item only.
+- **A row picked up to move** (Settings → Display → Home rows): the card ring on a Raised fill, lifted 1.02, with ordinary text, so it never looks like a coral Highlight. A quiet line, "Up and down to move, select to place", shows while it's held.
 - **Progress on a highlighted card:** inset 6 dp, inside the dark edge, with the text moved up clear of it.
 - **Guide cells, sidebar rows, rail items, buttons and episode rows:** a solid coral fill with dark text.
 - **Text on artwork:** a gradient across the lower part of the card.

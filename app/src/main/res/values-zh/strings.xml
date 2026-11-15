@@ -73,6 +73,8 @@
     <string name="rec_notification_many">正在录制 %1$d 个节目</string>
     <string name="rec_channel_name">录制</string>
     <string name="rec_channel_desc">Settee 录制时显示</string>
+    <string name="rec_error_missed">已错过：播出期间 Settee 没有运行。</string>
+    <string name="rec_error_missed_late">已错过：Android 在节目结束后才开始录制。</string>
     <string name="rec_error_nothing">没有录制到任何内容。频道可能已中断，请再录制一次。</string>
     <string name="rec_error_usb_no_folder">没有可录制到的文件夹。请在“录制”设置中选择 USB 存储设备上的文件夹。</string>
     <string name="rec_error_usb_unavailable">找不到你的 USB 存储设备。请重新插入，然后在“录制”设置中重新选择文件夹。</string>

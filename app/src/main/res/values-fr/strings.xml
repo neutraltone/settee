@@ -73,6 +73,8 @@
     <string name="rec_notification_many">Enregistrement de %1$d programmes</string>
     <string name="rec_channel_name">Enregistrement</string>
     <string name="rec_channel_desc">Affiché pendant qu\'Settee enregistre</string>
+    <string name="rec_error_missed">Cet enregistrement a été manqué, car Settee n\'était pas lancé pendant la diffusion.</string>
+    <string name="rec_error_missed_late">Cet enregistrement a été manqué, car Android l\'a lancé une fois l\'émission terminée.</string>
     <string name="rec_error_nothing">Rien n\'a été enregistré. La chaîne s\'est peut-être arrêtée, alors relancez l\'enregistrement.</string>
     <string name="rec_error_usb_no_folder">Il n\'y a pas de dossier où enregistrer. Choisissez-en un sur votre disque USB dans les paramètres d\'enregistrement.</string>
     <string name="rec_error_usb_unavailable">Votre disque USB est introuvable. Rebranchez-le, puis choisissez à nouveau son dossier dans les paramètres d\'enregistrement.</string>

@@ -100,6 +100,8 @@
     <string name="rec_channel_name">Recording</string>
     <string name="rec_channel_desc">Shown while Settee is recording</string>
     <string name="rec_error_nothing">Nothing was recorded. The channel may have stopped, so try recording it again.</string>
+    <string name="rec_error_missed">This was missed because Settee wasn\'t running while it was on.</string>
+    <string name="rec_error_missed_late">This was missed because Android started it after it had ended.</string>
     <string name="rec_error_usb_no_folder">There\'s no folder to record to. Pick one on your USB drive in Recording settings.</string>
     <string name="rec_error_usb_unavailable">Can\'t find your USB drive. Plug it back in, then pick its folder again in Recording settings.</string>
     <string name="rec_delete_failed_nas">Couldn\'t delete this from your NAS. Check it\'s on, then try deleting it again.</string>
@@ -178,7 +180,6 @@
     <string name="settings_row_sleep_timer">Sleep timer</string>
     <string name="settings_row_sleep_left">%1$d min left</string>
     <string name="settings_row_play_next">Play the next episode by itself</string>
-    <string name="settings_row_live_preview_home">Live preview on Home</string>
     <string name="settings_row_guide_preview">Play the highlighted channel in the guide</string>
     <string name="settings_row_guide_preview_sound">Guide preview sound</string>
     <string name="settings_row_language">Language</string>
@@ -506,6 +507,16 @@
     <string name="home_cover_episode">S%1$d E%2$d</string>
     <string name="home_live_gone">No longer in your channel list</string>
     <string name="home_empty_hint">What you watch and favourite will show up here.</string>
+    <string name="home_rows_title">Home rows</string>
+    <string name="home_rows_live_preview">Live Preview</string>
+    <string name="home_rows_because_you_watched">Because you watched</string>
+    <string name="home_rows_shown">Shown</string>
+    <string name="home_rows_hidden">Hidden</string>
+    <string name="home_rows_restore">Restore the usual order</string>
+    <string name="home_rows_hint">Select a row to move it, or press options to hide it</string>
+    <string name="home_rows_moving_hint">Up and down to move, select to place</string>
+    <string name="home_rows_show_on_home">Show on Home</string>
+    <string name="home_hidden_rows_hint">You\'ve hidden Home\'s rows. Turn them back on in Settings → Display → Home rows.</string>
     <string name="vod_recommended">Recommended for you</string>
     <string name="vod_recently_added">Recently added</string>
     <string name="vod_for_you">For you</string>

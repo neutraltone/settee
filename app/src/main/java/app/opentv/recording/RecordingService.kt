@@ -24,6 +24,7 @@ import app.opentv.data.repo.MediaKey
 import app.opentv.player.PlaybackErrors
 import java.util.concurrent.ConcurrentHashMap
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
@@ -72,16 +73,22 @@ class RecordingService : Service() {
 
     private fun startCapture(id: Long) {
         acquireWakeLock()
-        val job = scope.launch { runCapture(id) }
+        // Registered before it runs: a capture that ends at once (missed, or its row gone) calls
+        // finish, and finishing one not yet in the map would leave it there, holding the service up.
+        val job = scope.launch(start = CoroutineStart.LAZY) { runCapture(id) }
         captures[id] = Capture(null, job)
         updateNotification()
+        job.start()
     }
 
     private suspend fun runCapture(id: Long) {
         val graph = ServiceLocator.get(applicationContext)
         val repo = graph.recordingRepository
         val recording = if (graph.database.wontOpen() == null) repo.byId(id) else null
-        if (recording == null) {
+        // An alarm that fired after the whole window went by: starting would only write an empty
+        // file, announce a capture that can't happen and blame the channel for it. Settee was
+        // running to get the alarm, so the alarm was late, not missed while it was off.
+        if (recording == null || graph.recordingEngine.markMissedIfOver(recording, RecordingEngine.Missed.LATE)) {
             finish(id)
             return
         }

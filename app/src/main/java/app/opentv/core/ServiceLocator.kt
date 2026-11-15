@@ -298,6 +298,7 @@ object ServiceLocator {
                 epgRepository,
                 channelLineup,
                 errorWording,
+                clock = clock,
             )
         }
     }

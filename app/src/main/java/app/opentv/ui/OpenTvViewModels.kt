@@ -39,6 +39,7 @@ import app.opentv.data.repo.ContinueWatchingCard
 import app.opentv.data.repo.CoverStatus
 import app.opentv.data.repo.CoverStatuses
 import app.opentv.data.repo.GenreGroup
+import app.opentv.data.repo.HomeArrangement
 import app.opentv.data.repo.LineupChannel
 import app.opentv.data.repo.LineupScope
 import app.opentv.data.repo.LivePreview
@@ -1485,6 +1486,8 @@ data class HomeState(
     val recentShows: List<Cover>,
     val recentMovies: List<Cover>,
     val live: LiveNow? = null,
+    /** How the Profile arranged Home; the Live Preview is in [live] even when it turned it off, for Home's hint. */
+    val arrangement: HomeArrangement = HomeArrangement.USUAL,
     val becauseYouWatched: BecauseYouWatched? = null,
 )
 
@@ -1623,31 +1626,41 @@ class HomeViewModel @JvmOverloads constructor(
     // A channel in a locked category would otherwise play on Home, unasked, for whoever is in the
     // room next: the guide hides it until the session is unlocked, and so does Home. One that has
     // left the channel list still shows, as a reminder that can't play.
+    //
+    // A Live Preview the Profile turned off is only there for Home's hidden-rows hint, so it goes
+    // without its channel or guide rather than reading them every minute for a tile nobody sees.
     @OptIn(ExperimentalCoroutinesApi::class)
     private val live: Flow<LiveNow?> = combine(
         graph.viewerLibrary.live.preview(),
-        settings.livePreviewOnHome,
         settings.liveEnabled,
-    ) { preview, onHome, liveOn -> preview?.takeIf { onHome && liveOn } }
+        graph.profileSettings.homeArrangement.map { it.livePreview }.distinctUntilChanged(),
+    ) { preview, liveOn, shown -> preview?.takeIf { liveOn }?.let { it to shown } }
         .distinctUntilChanged()
-        .flatMapLatest { preview ->
-            val channelId = preview?.channel?.id
+        .flatMapLatest { found ->
             when {
-                preview == null -> flowOf(null)
-                channelId == null -> flowOf(preview to null)
-                else -> lineup.channel(channelId).map { channel ->
-                    channel?.let { shownQuality(preview, it) to it }
-                }
+                found == null -> flowOf(null)
+                !found.second -> flowOf(LiveNow(found.first, null, null))
+                else -> shownLive(found.first)
             }
         }
-        .distinctUntilChanged()
-        .flatMapLatest { shown ->
-            if (shown == null) {
+
+    /** The Live Preview of [preview] as Home shows it: its channel's Quality and what's on, a minute at a time. */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    private fun shownLive(preview: LivePreview): Flow<LiveNow?> {
+        val channelId = preview.channel?.id
+        val shown: Flow<Pair<LivePreview, LineupChannel?>?> = if (channelId == null) {
+            flowOf(preview to null)
+        } else {
+            lineup.channel(channelId).map { channel -> channel?.let { shownQuality(preview, it) to it } }
+        }
+        return shown.distinctUntilChanged().flatMapLatest { found ->
+            if (found == null) {
                 flowOf(null)
             } else {
-                minute.map { now -> liveNow(shown.first, shown.second, now) }.distinctUntilChanged()
+                minute.map { now -> liveNow(found.first, found.second, now) }.distinctUntilChanged()
             }
         }
+    }
 
     /**
      * The Quality last settled on, which may have been picked from the list, unless this device can't
@@ -1690,10 +1703,13 @@ class HomeViewModel @JvmOverloads constructor(
         },
         // In the same state as the rows, so Home is first drawn with it and highlights it.
         live,
+        // And so is the arrangement, so Home is never drawn once in the usual order and then moved.
+        graph.profileSettings.homeArrangement,
         becauseYouWatched,
-    ) { (rows, statuses), live, because ->
+    ) { (rows, statuses), live, arrangement, because ->
         rows.copy(
             live = live,
+            arrangement = arrangement,
             becauseYouWatched = because
                 ?.let { (basedOn, titles) -> BecauseYouWatched(basedOn, titles.withStatuses(statuses)) }
                 ?.takeIf { it.covers.isNotEmpty() },

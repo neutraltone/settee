@@ -73,6 +73,8 @@
     <string name="rec_notification_many">جارٍ تسجيل %1$d برنامج</string>
     <string name="rec_channel_name">التسجيل</string>
     <string name="rec_channel_desc">يظهر أثناء تسجيل Settee</string>
+    <string name="rec_error_missed">فاتك هذا التسجيل لأن Settee لم يكن يعمل أثناء عرضه.</string>
+    <string name="rec_error_missed_late">فاتك هذا التسجيل لأن Android بدأه بعد انتهائه.</string>
     <string name="rec_error_nothing">لم يتم تسجيل أي شيء. ربما توقفت القناة، لذا حاول تسجيلها مرة أخرى.</string>
     <string name="rec_error_usb_no_folder">لا يوجد مجلد للتسجيل فيه. اختر مجلدًا على محرك USB في إعدادات التسجيل.</string>
     <string name="rec_error_usb_unavailable">تعذر العثور على محرك USB. أعد توصيله، ثم اختر مجلده مرة أخرى في إعدادات التسجيل.</string>

@@ -73,6 +73,8 @@
     <string name="rec_notification_many">%1$d műsor rögzítése</string>
     <string name="rec_channel_name">Felvétel</string>
     <string name="rec_channel_desc">Akkor jelenik meg, amikor az Settee felvételt készít</string>
+    <string name="rec_error_missed">Ez kimaradt, mert a Settee nem futott, amíg ment.</string>
+    <string name="rec_error_missed_late">Ez kimaradt, mert az Android csak a vége után indította el.</string>
     <string name="rec_error_nothing">Semmi nem lett rögzítve. Lehet, hogy a csatorna leállt, ezért próbálja újra rögzíteni.</string>
     <string name="rec_error_usb_no_folder">Nincs mappa, ahová rögzíteni lehetne. Válasszon egyet az USB-meghajtón a Felvétel beállításaiban.</string>
     <string name="rec_error_usb_unavailable">Nem található az USB-meghajtó. Csatlakoztassa újra, majd válassza ki ismét a mappáját a Felvétel beállításaiban.</string>

@@ -147,6 +147,7 @@ fun SettingsScreen(
     onOpenChannels: () -> Unit = {},
     onOpenLockedCategories: () -> Unit = {},
     onOpenFontLicences: () -> Unit = {},
+    onOpenHomeRows: () -> Unit = {},
     // A seam so tests can show each answer without reaching GitHub.
     checkForUpdate: UpdateCheck = CheckGitHub,
     // Likewise, so tests can give TMDB's answer to a key without reaching TMDB; null for the app's own.
@@ -255,6 +256,7 @@ fun SettingsScreen(
                         onOpenChannels,
                         onOpenLockedCategories,
                         onOpenFontLicences,
+                        onOpenHomeRows,
                         checkForUpdate,
                         tmdbKeys ?: ServiceLocator.get(LocalContext.current).tmdbKeys,
                         openSubtitles,
@@ -273,6 +275,7 @@ private fun Pane(
     onOpenChannels: () -> Unit,
     onOpenLockedCategories: () -> Unit,
     onOpenFontLicences: () -> Unit,
+    onOpenHomeRows: () -> Unit,
     checkForUpdate: UpdateCheck,
     tmdbKeys: TmdbKeys,
     openSubtitles: OpenSubtitles?,
@@ -281,7 +284,7 @@ private fun Pane(
         SettingsSection.Providers -> ProvidersPane(onAddProvider, onEditProvider)
         SettingsSection.Guide -> GuidePane()
         SettingsSection.Channels -> ChannelsPane(onOpenChannels)
-        SettingsSection.Display -> DisplayPane()
+        SettingsSection.Display -> DisplayPane(onOpenHomeRows)
         SettingsSection.Recording -> RecordingPane()
         SettingsSection.Parental -> ParentalPane(onOpenLockedCategories)
         SettingsSection.Devices -> DevicesPane()

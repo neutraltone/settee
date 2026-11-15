@@ -11,6 +11,15 @@ import androidx.test.core.app.ApplicationProvider
 import app.opentv.data.db.OpenTvDatabase
 import app.opentv.data.model.ProfileSetting
 import app.opentv.data.model.SubtitleKind
+import app.opentv.data.repo.HomeArrangement
+import app.opentv.data.repo.HomeRowKind
+import app.opentv.data.repo.HomeRowKind.BECAUSE_YOU_WATCHED
+import app.opentv.data.repo.HomeRowKind.CONTINUE_WATCHING
+import app.opentv.data.repo.HomeRowKind.FAVOURITE_CHANNELS
+import app.opentv.data.repo.HomeRowKind.FAVOURITE_MOVIES
+import app.opentv.data.repo.HomeRowKind.FAVOURITE_SHOWS
+import app.opentv.data.repo.HomeRowKind.RECENT_MOVIES
+import app.opentv.data.repo.HomeRowKind.RECENT_SHOWS
 import app.opentv.data.repo.ProfileSettings
 import app.opentv.data.repo.SubtitlePreference
 import com.google.common.truth.Truth.assertThat
@@ -162,5 +171,115 @@ class ProfileSettingsTest {
 
         assertThat(taken).isFalse()
         assertThat(preference().language).isEqualTo("fr")
+    }
+
+    private suspend fun home(): HomeArrangement = settings.homeArrangement.first()
+
+    private val usualRows = listOf(
+        CONTINUE_WATCHING,
+        BECAUSE_YOU_WATCHED,
+        RECENT_SHOWS,
+        RECENT_MOVIES,
+        FAVOURITE_SHOWS,
+        FAVOURITE_MOVIES,
+        FAVOURITE_CHANNELS,
+    )
+
+    /** Favourite channels moved to the top, the rest in their usual order. */
+    private val channelsFirst = listOf(
+        FAVOURITE_CHANNELS,
+        CONTINUE_WATCHING,
+        BECAUSE_YOU_WATCHED,
+        RECENT_SHOWS,
+        RECENT_MOVIES,
+        FAVOURITE_SHOWS,
+        FAVOURITE_MOVIES,
+    )
+
+    @Test
+    fun `a Profile that never arranged Home gets the usual rows, all shown, with the Live Preview`() = runTest {
+        assertThat(home()).isEqualTo(HomeArrangement(usualRows, hidden = emptySet(), livePreview = true))
+        assertThat(db.profileSettings().all()).isEmpty()
+    }
+
+    @Test
+    fun `moving and hiding Home's rows is remembered across a restart`() = runTest {
+        val arranged = HomeArrangement(
+            channelsFirst,
+            hidden = setOf(RECENT_MOVIES),
+            livePreview = false,
+        )
+
+        settings.arrangeHome(arranged)
+        val afterRestart = ProfileSettings(db, MutableStateFlow(1L))
+
+        assertThat(afterRestart.homeArrangement.first()).isEqualTo(arranged)
+    }
+
+    @Test
+    fun `each Profile arranges its own Home`() = runTest {
+        settings.arrangeHome(HomeArrangement(usualRows.reversed(), hidden = emptySet(), livePreview = true))
+
+        activeProfile.value = 2L
+
+        assertThat(home().rows).isEqualTo(usualRows)
+    }
+
+    @Test
+    fun `restoring the usual order shows every row and the Live Preview again`() = runTest {
+        settings.arrangeHome(HomeArrangement(usualRows.reversed(), hidden = setOf(RECENT_SHOWS), livePreview = false))
+
+        settings.arrangeHome(HomeArrangement.USUAL)
+
+        assertThat(home()).isEqualTo(HomeArrangement(usualRows, hidden = emptySet(), livePreview = true))
+    }
+
+    @Test
+    fun `a row missing from a stored arrangement goes last and shown, and a row Home no longer knows is dropped`() =
+        runTest {
+            // Written by an older or newer release: no Favourite movies yet, and a row since retired.
+            db.profileSettings().upsert(
+                ProfileSetting(1L, "home.rows", "preview=off;channels,-cw,retiredRow,recentShows", now),
+            )
+
+            assertThat(home()).isEqualTo(
+                HomeArrangement(
+                    channelsFirst,
+                    hidden = setOf(CONTINUE_WATCHING),
+                    livePreview = false,
+                ),
+            )
+        }
+
+    @Test
+    fun `a stored arrangement that can't be read is the usual one`() = runTest {
+        db.profileSettings().upsert(ProfileSetting(1L, "home.rows", "nonsense", now))
+
+        assertThat(home()).isEqualTo(HomeArrangement(usualRows, hidden = emptySet(), livePreview = true))
+    }
+
+    @Test
+    fun `a hidden row keeps its place, so showing it puts it back where it was`() = runTest {
+        val hidden = HomeArrangement(usualRows, hidden = emptySet(), livePreview = true)
+            .withShown(FAVOURITE_SHOWS, false)
+
+        assertThat(hidden.withShown(FAVOURITE_SHOWS, true).rows).isEqualTo(usualRows)
+        assertThat(hidden.rows).isEqualTo(usualRows)
+        assertThat(hidden.hidden).containsExactly(FAVOURITE_SHOWS)
+    }
+
+    @Test
+    fun `the Home Rows' keys are the ones Home's rows use`() {
+        assertThat(HomeRowKind.entries.map { it.key })
+            .containsExactly(
+                "cw",
+                "because",
+                "recentShows",
+                "recentMovies",
+                "favouriteShows",
+                "favouriteMovies",
+                "channels",
+            )
+            .inOrder()
     }
 }

@@ -73,6 +73,8 @@
     <string name="rec_notification_many">%1$d件の番組を録画中</string>
     <string name="rec_channel_name">録画</string>
     <string name="rec_channel_desc">Setteeが録画している間に表示されます</string>
+    <string name="rec_error_missed">放送中に Settee が起動していなかったため、録画できませんでした。</string>
+    <string name="rec_error_missed_late">Android が終了後に録画を開始したため、録画できませんでした。</string>
     <string name="rec_error_nothing">何も録画されませんでした。チャンネルが止まった可能性があるので、もう一度録画してみてください。</string>
     <string name="rec_error_usb_no_folder">録画先のフォルダがありません。「録画」設定でUSBドライブ内のフォルダを選んでください。</string>
     <string name="rec_error_usb_unavailable">USBドライブが見つかりません。挿し直してから、「録画」設定でフォルダを選び直してください。</string>

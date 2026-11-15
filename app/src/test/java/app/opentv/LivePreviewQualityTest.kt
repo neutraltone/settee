@@ -62,7 +62,6 @@ class LivePreviewQualityTest {
         }
         db.channels().replaceCatalogue(1, rows, syncStamp = 1)
         graph.catalogRepository.renormalizeAll()
-        graph.settings.setLivePreviewOnHome(true)
         graph.viewerLibrary.live.record(db.channels().everyRow().single { it.name == settledOn })
 
         val viewModels = ViewModelsInTest()
