@@ -375,6 +375,12 @@ class ChannelsViewModel @JvmOverloads constructor(
     ) {
         val primary: Channel get() = channel.primary
 
+        /**
+         * The programme on at [millis], from [programmes]. Rows aren't rebuilt every minute, so
+         * [now] is what was on when the row was built and may since have ended.
+         */
+        fun liveAt(millis: Long): GuideProgramme? = programmes.firstOrNull { it.isLiveAt(millis) }
+
         /** Every Quality of the Channel, the same wherever it's shown. */
         val variants: List<Channel> get() = channel.qualities
 
