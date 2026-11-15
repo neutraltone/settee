@@ -433,29 +433,32 @@ class CatalogRepository(
      * Loads a movie and, if its detail fields are still bare, back-fills them from the provider's
      * `get_vod_info` and persists the merged row before returning it. Safe to call whenever a detail
      * screen opens: it runs off the main thread, only touches the network when something is missing,
-     * tolerates any failure (returning the row unchanged), and copies the stored row so nothing
-     * already on it is lost. Non-Xtream sources are returned as-is.
+     * tolerates any failure (returning the row unchanged), and saves what it found onto the row as
+     * it's stored then, so a refresh while it asked isn't undone. Non-Xtream sources are returned as-is.
+     * Null if the film has gone, before or while it asked.
      */
     suspend fun movieDetail(id: Long, now: Long = System.currentTimeMillis()): Movie? = withContext(Dispatchers.IO) {
         val movie = movieDao.byId(id) ?: return@withContext null
-        var result = movie
         val source = sourceDao.byId(movie.sourceId)
 
         // 1) Provider back-fill from get_vod_info, for a still-bare row on an Xtream source.
-        if (!result.isEnriched && source?.kind == SourceKind.XTREAM) {
-            val info = runCatching { api.movieInfo(source, result.streamId) }.getOrNull()
-            if (info != null) result = result.filledFrom(info)
+        val info = if (!movie.isEnriched && source?.kind == SourceKind.XTREAM) {
+            runCatching { api.movieInfo(source, movie.streamId) }.getOrNull()
+        } else {
+            null
         }
+        val filled = if (info != null) movie.filledFrom(info) else movie
 
         // 2) TMDB, with the viewer's key, once per film and again six months on: for what the
         //    provider left blank and for the directors, writers and studios. Usually the background
         //    pass has asked already; this is for a film opened before the pass reached it.
-        if (tmdb.isConfigured() && tmdbDue(result.tmdbAnsweredAt, now)) {
-            tmdbMetaOf(result).onSuccess { result = result.withTmdb(it, now) }
-        }
+        val answer = if (tmdb.isConfigured() && tmdbDue(filled.tmdbAnsweredAt, now)) tmdbMetaOf(filled) else null
 
-        if (result != movie) movieDao.saveLookedUp(listOf(result))
-        result
+        movieDao.saveLookedUp(id) { stored ->
+            var merged = if (info != null) stored.filledFrom(info) else stored
+            answer?.onSuccess { merged = merged.withTmdb(it, now) }
+            merged
+        }
     }
 
     /**
@@ -480,7 +483,6 @@ class CatalogRepository(
     /** [seriesDetail], or with [opening] [openSeries]: the panel always asked, and its episodes stored. */
     private fun seriesDetails(id: Long, now: Long, opening: Boolean): Flow<Series> = flow {
         val series = seriesDao.byId(id) ?: return@flow
-        var result = series
         val panel = sourceDao.byId(series.sourceId)?.takeIf { it.kind == SourceKind.XTREAM }
 
         // 1) The provider's get_series_info, on an Xtream source: on opening for its episodes, and
@@ -490,20 +492,23 @@ class CatalogRepository(
         // episodes the request stores from the database, so the row isn't shown again for them.
         val shownFirst = panel != null && opening && series.isEnriched
         if (shownFirst) emit(series)
-        if (panel != null && (opening || !series.isEnriched)) {
-            val info = fetchSeries(panel, series.seriesId, now, storeEpisodes = opening)
-            if (info != null && !result.isEnriched) result = result.filledFrom(info)
+        val info = if (panel != null && (opening || !series.isEnriched)) {
+            fetchSeries(panel, series.seriesId, now, storeEpisodes = opening)
+        } else {
+            null
         }
-        if (result != series) seriesDao.saveLookedUp(listOf(result))
+        // Each save goes onto the row as it's stored then, not the copy read before asking: a refresh
+        // while the panel or TMDB was out would otherwise be undone, or a show it deleted brought back.
+        val result = seriesDao.saveLookedUp(id) { stored ->
+            if (info != null && !stored.isEnriched) stored.filledFrom(info) else stored
+        } ?: return@flow
         if (!shownFirst) emit(result)
 
         // 2) TMDB, with the viewer's key, at once when something is still missing or TMDB's answer
         //    is six months old, so a series the background pass hasn't reached still fills in.
         if (tmdb.isConfigured() && result.wantsTmdb(now)) {
             tmdbMetaOf(result).onSuccess { meta ->
-                val answered = result.withTmdb(meta, now)
-                seriesDao.saveLookedUp(listOf(answered))
-                emit(answered)
+                seriesDao.saveLookedUp(id) { it.withTmdb(meta, now) }?.let { emit(it) }
             }
         }
     }.flowOn(Dispatchers.IO)

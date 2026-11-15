@@ -10,6 +10,7 @@ import com.google.common.truth.Truth.assertThat
 import com.google.common.truth.Truth.assertWithMessage
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
+import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Test
@@ -28,7 +29,10 @@ class VodResyncTest {
     private val panel = test.panel
 
     @After
-    fun close() = test.close()
+    fun close() {
+        test.settings.setTmdbApiKey("")
+        test.close()
+    }
 
     @Test
     fun `a show the provider updated moves up Recently Added, keeping its place in the library`() = runTest {
@@ -112,6 +116,117 @@ class VodResyncTest {
         opening.await()
 
         assertThat(test.catalog.allMovies().map { it.streamId }).containsExactly("2")
+    }
+
+    @Test
+    fun `a film page open while a refresh changes the film keeps what the refresh changed`() = runTest {
+        // The release date marks the film looked up after the first sync, so the background pass
+        // doesn't ask about it again while the page's request is held.
+        panel.replies["get_vod_info"] = """{"info": {"releasedate": "2011-09-02"}}"""
+        panel.replies["get_vod_streams"] = """[{"stream_id": 3, "name": "Drive", "category_id": "1", "added": "100"}]"""
+        test.syncVod()
+        val film = test.catalog.allMovies().single()
+        panel.replies["get_vod_info"] = """{"info": {"cast": "Ryan Gosling", "plot": "A driver."}}"""
+        val hold = panel.hold("get_vod_info:3")
+
+        val opening = async(Dispatchers.Default) { test.catalog.movieDetail(film.id) }
+        during(hold) {
+            panel.replies["get_vod_streams"] = """
+                [{"stream_id": 3, "name": "Drive Redux", "stream_icon": "https://example.com/new.jpg",
+                  "category_id": "2", "added": "300"}]
+            """
+            test.syncVod()
+            hold.release()
+        }
+        val shown = opening.await()
+
+        val movie = db.movies().byId(film.id)!!
+        assertThat(movie.name).isEqualTo("Drive Redux")
+        assertThat(movie.posterUrl).isEqualTo("https://example.com/new.jpg")
+        assertThat(movie.categoryId).isEqualTo("2")
+        assertThat(movie.addedMillis).isEqualTo(300_000L)
+        assertThat(movie.cast).isEqualTo("Ryan Gosling")
+        assertThat(movie.plot).isEqualTo("A driver.")
+        assertThat(shown).isEqualTo(movie)
+    }
+
+    @Test
+    fun `a show page open while a refresh changes the show keeps what the refresh changed`() = runTest {
+        panel.replies["get_series"] =
+            """[{"series_id": 7, "name": "Show", "category_id": "1", "last_modified": "100"}]"""
+        test.syncVod()
+        val show = test.catalog.allSeries().single()
+        panel.replies["get_series_info:7"] = """{"info": {"genre": "Drama", "cast": "Someone"}, "episodes": {}}"""
+        val hold = panel.hold("get_series_info:7")
+
+        val opening = async(Dispatchers.Default) { test.catalog.openSeries(show.id).toList() }
+        during(hold) {
+            panel.replies["get_series"] =
+                """[{"series_id": 7, "name": "Show Redux", "category_id": "2", "last_modified": "300"}]"""
+            test.syncVod()
+            hold.release()
+        }
+        val shown = opening.await()
+
+        val stored = db.series().byId(show.id)!!
+        assertThat(stored.name).isEqualTo("Show Redux")
+        assertThat(stored.categoryId).isEqualTo("2")
+        assertThat(stored.addedMillis).isEqualTo(300_000L)
+        assertThat(stored.genre).isEqualTo("Drama")
+        assertThat(stored.cast).isEqualTo("Someone")
+        assertThat(shown).containsExactly(stored)
+    }
+
+    @Test
+    fun `a show page open while a refresh changes the show keeps it when TMDB answers after`() = runTest {
+        panel.replies["get_series"] =
+            """[{"series_id": 7, "name": "Show", "category_id": "1", "last_modified": "100"}]"""
+        test.syncVod()
+        val show = test.catalog.allSeries().single()
+        panel.replies["get_series_info:7"] = """{"info": {"genre": "Drama", "cast": "Someone"}, "episodes": {}}"""
+        panel.replies["/3/search/tv"] = """{"results": [{"id": 22}]}"""
+        panel.replies["/3/tv/22"] = """{"id": 22, "overview": "A show."}"""
+        test.settings.setTmdbApiKey("k")
+        val hold = panel.hold("/3/tv/22")
+
+        val opening = async(Dispatchers.Default) { test.catalog.openSeries(show.id).toList() }
+        during(hold) {
+            panel.replies["get_series"] =
+                """[{"series_id": 7, "name": "Show Redux", "category_id": "2", "last_modified": "300"}]"""
+            // Not syncVod, which waits for the background TMDB pass, held here too.
+            test.catalog.fetchVod(PANEL_SOURCE, nowUtcMillis = 0)
+            hold.release()
+        }
+        val shown = opening.await().last()
+        test.catalog.awaitBackground()
+
+        val stored = db.series().byId(show.id)!!
+        assertThat(stored.name).isEqualTo("Show Redux")
+        assertThat(stored.categoryId).isEqualTo("2")
+        assertThat(stored.addedMillis).isEqualTo(300_000L)
+        assertThat(stored.genre).isEqualTo("Drama")
+        assertThat(stored.plot).isEqualTo("A show.")
+        // The background pass may save it again after it's shown, so not the whole row.
+        assertThat(listOf(shown.name, shown.plot)).containsExactly("Show Redux", "A show.").inOrder()
+    }
+
+    @Test
+    fun `a show page open while a refresh removes the show doesn't bring it back`() = runTest {
+        panel.replies["get_series"] = shows(1, 2)
+        test.syncVod()
+        val show = test.catalog.allSeries().single { it.seriesId == "1" }
+        panel.replies["get_series_info:1"] = """{"info": {"genre": "Drama"}, "episodes": {}}"""
+        val hold = panel.hold("get_series_info:1")
+
+        val opening = async(Dispatchers.Default) { test.catalog.openSeries(show.id).toList() }
+        during(hold) {
+            panel.replies["get_series"] = shows(2)
+            test.syncVod()
+            hold.release()
+        }
+        opening.await()
+
+        assertThat(test.catalog.allSeries().map { it.seriesId }).containsExactly("2")
     }
 
     @Test

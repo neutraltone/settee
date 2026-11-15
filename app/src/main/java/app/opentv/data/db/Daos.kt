@@ -1159,21 +1159,18 @@ interface MovieDao {
     @Query("SELECT MAX(lastSeenMillis) FROM movies WHERE sourceId = :sourceId")
     suspend fun lastSeenOf(sourceId: Long): Long?
 
-    /** The refresh stamps of these stored films (at most a batch of 500). */
-    @Query("SELECT id, lastSeenMillis FROM movies WHERE id IN (:ids)")
-    suspend fun lastSeen(ids: List<Long>): List<LastSeen>
-
     /**
-     * Saves films a detail open filled in, those still stored only, each keeping the refresh stamp it
-     * has now. The row was read before network calls, and a refresh in between may have restamped it,
-     * so saving it as read would let the refresh delete a film it had just listed, or deleted it, and
-     * [upsertAll] would bring it back.
+     * Saves what a look-up found for film [id] onto the row as it's stored now, [lookedUp] applied to
+     * that, and returns the saved row; null, saving nothing, if the film has gone. The look-up's own
+     * copy was read before its network calls, and a refresh in between may have renamed, restamped
+     * or deleted the film: saving that copy would undo the refresh, or [upsertAll] bring it back.
      */
     @Transaction
-    suspend fun saveLookedUp(movies: List<Movie>) {
-        val stamps = lastSeen(movies.map { it.id }).associate { it.id to it.lastSeenMillis }
-        val stored = movies.mapNotNull { movie -> stamps[movie.id]?.let { movie.copy(lastSeenMillis = it) } }
-        if (stored.isNotEmpty()) upsertAll(stored)
+    suspend fun saveLookedUp(id: Long, lookedUp: (Movie) -> Movie): Movie? {
+        val stored = byId(id) ?: return null
+        val filled = lookedUp(stored)
+        if (filled != stored) upsertAll(listOf(filled))
+        return filled
     }
 }
 
@@ -1251,9 +1248,6 @@ interface RetiredTitlesDao {
     @Query("SELECT id, sourceId, name, tmdbId, year, categoryId FROM series WHERE sourceId = :sourceId")
     suspend fun seriesVersionRows(sourceId: Long): List<VersionRow>
 }
-
-/** A film or series' local id and the refresh that last listed it. */
-data class LastSeen(val id: Long, val lastSeenMillis: Long)
 
 /** Who [this] movie credits, saved under [id]. */
 private fun Movie.creditsUnder(id: Long) = CreditedTitle(id, cast, director, writer, studio)
@@ -1407,16 +1401,13 @@ interface SeriesDao {
     @Query("SELECT MAX(lastSeenMillis) FROM series WHERE sourceId = :sourceId")
     suspend fun lastSeenOf(sourceId: Long): Long?
 
-    /** The refresh stamps of these stored series (at most a batch of 500). */
-    @Query("SELECT id, lastSeenMillis FROM series WHERE id IN (:ids)")
-    suspend fun lastSeen(ids: List<Long>): List<LastSeen>
-
-    /** Saves series a detail open or background pass filled in, as [MovieDao.saveLookedUp] saves films. */
+    /** Saves what a look-up found for series [id] onto the row as it's stored now, as [MovieDao.saveLookedUp]. */
     @Transaction
-    suspend fun saveLookedUp(items: List<Series>) {
-        val stamps = lastSeen(items.map { it.id }).associate { it.id to it.lastSeenMillis }
-        val stored = items.mapNotNull { series -> stamps[series.id]?.let { series.copy(lastSeenMillis = it) } }
-        if (stored.isNotEmpty()) upsertAll(stored)
+    suspend fun saveLookedUp(id: Long, lookedUp: (Series) -> Series): Series? {
+        val stored = byId(id) ?: return null
+        val filled = lookedUp(stored)
+        if (filled != stored) upsertAll(listOf(filled))
+        return filled
     }
 }
 
