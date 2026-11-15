@@ -136,6 +136,7 @@ internal fun titleCovers(rows: List<CoverRow>, titles: TitleIndex.Titles, decode
  * than they started with. Catalogue writes go through [ChannelDao.replaceCatalogue], which
  * merges rather than wipes and carries hidden flags and manual ordering across.
  */
+@Suppress("LongParameterList") // Its collaborators, as the hand-rolled ServiceLocator hands them over.
 class CatalogRepository(
     private val sourceDao: SourceDao,
     private val channelDao: ChannelDao,
@@ -144,6 +145,8 @@ class CatalogRepository(
     private val seriesDao: SeriesDao,
     private val episodeDao: EpisodeDao,
     private val viewerLibrary: ViewerLibrary,
+    /** The provider's guide feed goes with it; `epg_feeds` has no foreign key to cascade from. */
+    private val guide: EpgRepository,
     private val api: XtreamApi,
     private val stalkerApi: StalkerApi,
     private val http: OkHttpClient,
@@ -1019,6 +1022,7 @@ class CatalogRepository(
         movieDao.deleteForSource(sourceId)
         seriesDao.deleteForSource(sourceId)
         episodeDao.deleteForSource(sourceId)
+        guide.removeProviderFeed(sourceId)
         sourceDao.delete(sourceId)
     }
 

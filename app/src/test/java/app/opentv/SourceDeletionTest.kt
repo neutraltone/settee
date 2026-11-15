@@ -8,7 +8,9 @@ package app.opentv
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import app.opentv.data.model.Channel
+import app.opentv.data.model.EpgChannelAlias
 import app.opentv.data.model.GuideProgramme
+import app.opentv.data.model.Programme
 import app.opentv.data.model.SeriesRule
 import app.opentv.data.model.Source
 import app.opentv.data.model.SourceKind
@@ -41,6 +43,26 @@ class SourceDeletionTest {
 
     private suspend fun home() =
         db.sources().insert(Source(name = "Home", kind = SourceKind.M3U, url = "https://example.com/h.m3u"))
+
+    private suspend fun away() =
+        db.sources().insert(Source(name = "Away", kind = SourceKind.M3U, url = "https://example.com/a.m3u"))
+
+    /** Gives [sourceId]'s provider guide one programme and one alias on [epgId]. */
+    private suspend fun guideFor(sourceId: Long, epgId: String) {
+        val feed = db.epgFeeds().forProvider(sourceId)!!
+        db.programmes().insertOrReplace(
+            listOf(
+                Programme(
+                    feedId = feed.id,
+                    epgChannelId = epgId,
+                    startUtcMillis = tomorrow.startUtcMillis,
+                    endUtcMillis = tomorrow.endUtcMillis,
+                    title = "News",
+                ),
+            ),
+        )
+        db.epgAliases().upsertAll(listOf(EpgChannelAlias(feed.id, epgId, "News", "news")))
+    }
 
     private fun fromProvider(sourceId: Long, streamId: String) = Channel(
         sourceId = sourceId,
@@ -87,5 +109,36 @@ class SourceDeletionTest {
         assertThat(channels.forSource(again).single().customName).isNull()
         assertThat(db.seriesRules().observeAll().first()).isEmpty()
         assertThat(reminders.observeAll().first()).isEmpty()
+    }
+
+    @Test
+    fun `deleting a source takes its guide with it and leaves the other source's alone`() = runTest {
+        val first = home()
+        val second = away()
+        test.guide.ensureFeeds()
+        guideFor(first, "home.news")
+        guideFor(second, "away.news")
+
+        test.catalog.deleteSource(first)
+
+        val feeds = test.guide.observeFeeds().first()
+        assertThat(feeds.mapNotNull { it.providerSourceId }).containsExactly(second)
+        assertThat(test.guide.upcoming("home.news", nowUtcMillis = 0)).isEmpty()
+        assertThat(test.guide.upcoming("away.news", nowUtcMillis = 0).map { it.title }).containsExactly("News")
+        assertThat(db.epgAliases().all().map { it.epgId }).containsExactly("away.news")
+    }
+
+    @Test
+    fun `a guide refresh after deleting a source has no failed feeds`() = runTest {
+        val first = home()
+        val second = away()
+        test.guide.ensureFeeds()
+        val now = tomorrow.startUtcMillis
+        // Fetched just now, so the refresh counts the remaining provider's guide without downloading it.
+        db.epgFeeds().markSynced(db.epgFeeds().forProvider(second)!!.id, now, "")
+
+        test.catalog.deleteSource(first)
+
+        assertThat(test.guide.syncAll(nowUtcMillis = now).feedsFailed).isEqualTo(0)
     }
 }

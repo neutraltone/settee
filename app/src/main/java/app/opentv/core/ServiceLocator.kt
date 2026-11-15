@@ -148,6 +148,7 @@ object ServiceLocator {
                 seriesDao = database.series(),
                 episodeDao = database.episodes(),
                 viewerLibrary = viewerLibrary,
+                guide = epgRepository,
                 api = xtreamApi,
                 stalkerApi = stalkerApi,
                 http = httpClient,

@@ -160,13 +160,27 @@ class EpgRepository(
         feedDao.delete(feed.id)
     }
 
+    /** Removes [sourceId]'s provider guide, as [removeFeed] would, when the provider itself goes. */
+    suspend fun removeProviderFeed(sourceId: Long) {
+        feedDao.forProvider(sourceId)?.let { removeFeed(it) }
+    }
+
     /**
      * Makes sure the standing feed rows exist: one per provider source, plus the curated
-     * built-in list. Insert-if-absent, so user toggles survive every call. A built-in whose address
-     * has moved keeps its row, toggle included, and takes the new address: matching by address
-     * alone would leave the dead one switched on beside a second, switched-off row of the same name.
+     * built-in list, and removes a provider feed whose source is gone. Insert-if-absent, so user
+     * toggles survive every call. A built-in whose address has moved keeps its row, toggle included,
+     * and takes the new address: matching by address alone would leave the dead one switched on
+     * beside a second, switched-off row of the same name.
      */
     suspend fun ensureFeeds() {
+        // Against every source, not just the enabled ones: a provider that's only switched off keeps
+        // its feed, toggle and all. A feed whose provider is gone would otherwise fail every refresh,
+        // and the viewer can't remove it, since Settings only offers that for custom feeds.
+        val sources = sourceDao.all().mapTo(HashSet()) { it.id }
+        for (feed in feedDao.all()) {
+            val provider = feed.providerSourceId ?: continue
+            if (provider !in sources) removeFeed(feed)
+        }
         for (source in sourceDao.enabled()) {
             if (feedDao.forProvider(source.id) == null) {
                 feedDao.insert(

@@ -46,26 +46,6 @@ class TestCatalog(
     val staging: File = Files.createTempDirectory("staging").toFile()
 
     val viewerLibrary = ViewerLibrary(db, MutableStateFlow(1L), clock = clock)
-    val catalog: CatalogRepository = CatalogRepository(
-        sourceDao = db.sources(),
-        channelDao = db.channels(),
-        categoryDao = db.categories(),
-        movieDao = db.movies(),
-        seriesDao = db.series(),
-        episodeDao = db.episodes(),
-        viewerLibrary = viewerLibrary,
-        api = XtreamApi(panel.http),
-        stalkerApi = StalkerApi(panel.http),
-        http = panel.http,
-        settings = AppSettings.get(context),
-        wording = ErrorWording(context, onTelevision = false),
-    ).apply {
-        genrePauseMillis = 0
-        staging = this@TestCatalog.staging
-    }
-
-    val settings: AppSettings = AppSettings.get(context)
-
     val guide = EpgRepository(
         programmeDao = db.programmes(),
         feedDao = db.epgFeeds(),
@@ -77,6 +57,27 @@ class TestCatalog(
         wording = ErrorWording(context, onTelevision = false),
         selfEnabledGuide = EpgRepository.SelfEnabledGuide.InMemory(),
     )
+
+    val catalog: CatalogRepository = CatalogRepository(
+        sourceDao = db.sources(),
+        channelDao = db.channels(),
+        categoryDao = db.categories(),
+        movieDao = db.movies(),
+        seriesDao = db.series(),
+        episodeDao = db.episodes(),
+        viewerLibrary = viewerLibrary,
+        guide = guide,
+        api = XtreamApi(panel.http),
+        stalkerApi = StalkerApi(panel.http),
+        http = panel.http,
+        settings = AppSettings.get(context),
+        wording = ErrorWording(context, onTelevision = false),
+    ).apply {
+        genrePauseMillis = 0
+        staging = this@TestCatalog.staging
+    }
+
+    val settings: AppSettings = AppSettings.get(context)
 
     /** Where [lineup] keeps its folds; cancelled with the database. */
     private val sharing = CoroutineScope(SupervisorJob() + Dispatchers.Default)
