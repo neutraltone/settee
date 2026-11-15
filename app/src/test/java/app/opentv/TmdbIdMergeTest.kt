@@ -64,7 +64,13 @@ class TmdbIdMergeTest {
     @Test
     fun `a series listed with TMDB id 0 takes the real id its details give`() {
         val info = XtreamApi.SeriesInfo(
-            backdropUrl = null, cast = null, genre = null, tmdbId = "1399", plot = null, rating = null, year = null,
+            backdropUrl = null,
+            cast = null,
+            genre = null,
+            tmdbId = "1399",
+            plot = null,
+            rating = null,
+            year = null,
         )
 
         assertThat(series("0").filledFrom(info).tmdbId).isEqualTo("1399")
