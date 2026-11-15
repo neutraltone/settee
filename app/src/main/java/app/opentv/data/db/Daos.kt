@@ -87,6 +87,19 @@ interface SourceDao {
     @Query("UPDATE sources SET lastCatalogSyncMillis = :millis WHERE id = :id")
     suspend fun markCatalogSynced(id: Long, millis: Long)
 
+    /**
+     * Saves what the viewer edited. The panel's time zone is the panel's to give when a refresh signs
+     * in, never the edit screen's: a draft read before a refresh heard it would put back an older one,
+     * or none. So the stored one stays, read in the same transaction so a refresh can't land between,
+     * unless the edit moved the provider to another address or kind, whose zone isn't known yet.
+     */
+    @Transaction
+    suspend fun updateEdit(source: Source) {
+        val stored = byId(source.id)
+        val samePanel = stored != null && stored.url == source.url && stored.kind == source.kind
+        update(source.copy(serverTimeZone = stored?.serverTimeZone?.takeIf { samePanel }))
+    }
+
     /** Only the zone, so a sync doesn't put back what an edit changed meanwhile. */
     @Query("UPDATE sources SET serverTimeZone = :zone WHERE id = :id")
     suspend fun setServerTimeZone(id: Long, zone: String?)

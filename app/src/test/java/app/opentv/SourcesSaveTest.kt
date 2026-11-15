@@ -86,4 +86,16 @@ class SourcesSaveTest {
             assertThat(saved.serverTimeZone).isEqualTo("Europe/Amsterdam")
         }
     }
+
+    @Test
+    fun `moving a provider to another address forgets the old panel's time zone`() {
+        runBlocking {
+            val id = graph.sourceRepository.save(PANEL_SOURCE.copy(id = 0, serverTimeZone = "Europe/Amsterdam"))
+            val draft = graph.sourceRepository.byId(id)!!.copy(url = "http://other.example.com")
+
+            graph.sourceRepository.save(draft)
+
+            assertThat(graph.sourceRepository.byId(id)!!.serverTimeZone).isNull()
+        }
+    }
 }

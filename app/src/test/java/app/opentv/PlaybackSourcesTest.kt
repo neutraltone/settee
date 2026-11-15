@@ -183,6 +183,20 @@ class PlaybackSourcesTest {
     }
 
     @Test
+    fun `catch-up from a panel that names its time zone by abbreviation asks in that zone`() = runTest {
+        // PHP, which Xtream panels run on, accepts "EST" as a zone: five hours behind UTC all year.
+        db.sources().insert(PANEL_SOURCE.copy(serverTimeZone = "EST"))
+        val id = channel(streamUrl = "http://example.com/live/u/p/9.m3u8")
+        db.programmes().insertOrReplace(listOf(news()))
+
+        val key = MediaKey.Catchup(id, NEWS_START)
+
+        val playable = inZone("Europe/London") { sources.forWatching(key) } as Playable.Ready
+
+        assertThat(playable.url).isEqualTo("http://example.com/timeshift/u/p/30/2023-11-14:16-00/9.ts")
+    }
+
+    @Test
     fun `catch-up from a panel that gives no time zone asks in the device's`() = runTest {
         db.sources().insert(PANEL_SOURCE.copy(serverTimeZone = null))
         val id = channel(streamUrl = "http://example.com/live/u/p/9.m3u8")

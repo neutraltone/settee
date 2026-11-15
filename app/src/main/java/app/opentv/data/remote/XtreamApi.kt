@@ -328,11 +328,12 @@ class XtreamApi(
      * zone, so it's written in [Source.serverTimeZone]; the device's zone, which the guide draws in,
      * puts the start hours out wherever the two differ, often outside the archive (#346). A panel that
      * gave no zone, or one Java doesn't know, gets the device's: `TimeZone.getTimeZone` would quietly
-     * turn an unknown name into GMT, which is no likelier to be right.
+     * turn an unknown name into GMT, which is no likelier to be right. Panels run on PHP, which also
+     * takes abbreviations such as `EST`, so those are read as [ZoneId.SHORT_IDS] has them.
      */
     fun catchupUrl(source: Source, streamId: String, startUtcMillis: Long, durationMinutes: Int): String {
         val zone = source.serverTimeZone
-            ?.let { runCatching { ZoneId.of(it) }.getOrNull() }
+            ?.let { runCatching { ZoneId.of(it, ZoneId.SHORT_IDS) }.getOrNull() }
             ?: ZoneId.systemDefault()
         val stamp = CATCHUP_STAMP.format(Instant.ofEpochMilli(startUtcMillis).atZone(zone))
         val minutes = durationMinutes.coerceAtLeast(1)
