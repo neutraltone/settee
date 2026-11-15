@@ -108,6 +108,11 @@ class VodPlayerBackgroundTest {
             compose.waitForIdle()
 
             assertThat(controller.playWhenReady.value).isTrue()
+            // Going behind still saves the place, off the main thread: closing the database under that
+            // write failed this test now and then with "connection is closed".
+            compose.waitUntil(WAIT_MILLIS) {
+                runBlocking { graph.viewerLibrary.resumeFrom("ep:11") } >= TEN_MINUTES
+            }
         } finally {
             PipState.setInPip(false)
         }
