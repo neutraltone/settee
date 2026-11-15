@@ -78,6 +78,8 @@
     <string name="rec_error_nothing">Δεν εγγράφηκε τίποτα. Το κανάλι μπορεί να σταμάτησε, οπότε δοκιμάστε να το εγγράψετε ξανά.</string>
     <string name="rec_error_usb_no_folder">Δεν υπάρχει φάκελος για την εγγραφή. Επιλέξτε έναν στον δίσκο USB σας στις Ρυθμίσεις εγγραφής.</string>
     <string name="rec_error_usb_unavailable">Δεν βρέθηκε ο δίσκος USB σας. Συνδέστε τον ξανά και επιλέξτε πάλι τον φάκελό του στις Ρυθμίσεις εγγραφής.</string>
+    <string name="rec_delete_failed_nas">Δεν ήταν δυνατή η διαγραφή από το NAS σας. Ελέγξτε ότι είναι ενεργό και δοκιμάστε ξανά.</string>
+    <string name="rec_delete_failed">Δεν ήταν δυνατή η διαγραφή αυτής της εγγραφής. Δοκιμάστε ξανά.</string>
     <string name="rec_background_prompt_title">Συνέχιση εγγραφής όταν φύγετε;</string>
     <string name="rec_background_prompt_body">Το Android ενδέχεται να διακόψει αυτή την εγγραφή όταν η οθόνη κλειδώνει ή όταν βγαίνετε από το Settee. Επιτρέψτε στο Settee να αγνοήσει τη βελτιστοποίηση μπαταρίας, ώστε οι εγγραφές να συνεχίζονται ακόμη και σε αναμονή — όπως ακριβώς κάνει ένα set-top box.</string>
     <string name="rec_background_prompt_allow">Αποδοχή</string>

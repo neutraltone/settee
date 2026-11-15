@@ -78,6 +78,8 @@
     <string name="rec_error_nothing">没有录制到任何内容。频道可能已中断，请再录制一次。</string>
     <string name="rec_error_usb_no_folder">没有可录制到的文件夹。请在“录制”设置中选择 USB 存储设备上的文件夹。</string>
     <string name="rec_error_usb_unavailable">找不到你的 USB 存储设备。请重新插入，然后在“录制”设置中重新选择文件夹。</string>
+    <string name="rec_delete_failed_nas">无法从你的 NAS 删除。请确认它已开机，然后再试一次。</string>
+    <string name="rec_delete_failed">无法删除这个录制。请再试一次。</string>
     <string name="rec_background_prompt_title">离开后是否继续录制？</string>
     <string name="rec_background_prompt_body">当屏幕休眠或你离开 Settee 时，Android 可能会停止此次录制。允许 Settee 忽略电池优化，即可让录制像机顶盒一样，在待机状态下也能持续进行。</string>
     <string name="rec_background_prompt_allow">允许</string>

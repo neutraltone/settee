@@ -78,6 +78,8 @@
     <string name="rec_error_nothing">Ingenting ble tatt opp. Kanalen kan ha stoppet, så prøv å ta den opp igjen.</string>
     <string name="rec_error_usb_no_folder">Det finnes ingen mappe å ta opp til. Velg en på USB-stasjonen din i opptaksinnstillinger.</string>
     <string name="rec_error_usb_unavailable">Finner ikke USB-stasjonen din. Koble den til igjen, og velg så mappen på nytt i opptaksinnstillinger.</string>
+    <string name="rec_delete_failed_nas">Kunne ikke slette dette fra NAS-en din. Sjekk at den er på, og prøv så å slette det igjen.</string>
+    <string name="rec_delete_failed">Kunne ikke slette dette opptaket. Prøv å slette det igjen.</string>
     <string name="rec_background_prompt_title">Fortsette opptak når du forlater appen?</string>
     <string name="rec_background_prompt_body">Android kan stoppe dette opptaket når skjermen sovner eller du forlater Settee. Tillat Settee å ignorere batterioptimalisering slik at opptak fortsetter, selv i standby — på samme måte som en TV-boks.</string>
     <string name="rec_background_prompt_allow">Tillat</string>

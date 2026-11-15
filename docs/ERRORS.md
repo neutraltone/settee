@@ -78,6 +78,8 @@ change channel.
 | Recording: its whole window passed while Settee wasn't running (`RecordingEngine.rearmScheduled`, on launch, after a reboot or after an update) | `rec_error_missed` | This was missed because Settee wasn't running while it was on. | Missed | Device's: off, unplugged or force-stopped |
 | Recording: its alarm came after its window ended (`RecordingService`) | `rec_error_missed_late` | This was missed because Android started it after it had ended. | MissedLate | Device's: Android delayed the alarm, usually without the alarms permission |
 | Recording: nothing came | `rec_error_nothing` | Nothing was recorded. The channel may have stopped, so try recording it again. | none | Provider's stream, usually |
+| Recordings: deleting a NAS recording failed (unreachable, wrong login, refused); the row stays | `rec_delete_failed_nas` | Couldn't delete this from your NAS. Check it's on, then try deleting it again. | exception type | The NAS, or the network |
+| Recordings: deleting a USB or on-device recording failed; the row stays | `rec_delete_failed` | Couldn't delete this recording. Try deleting it again. | exception type; StorageUnavailable, with `rec_error_usb_unavailable`'s sentence, when the USB drive is gone | The drive |
 
 The external player's toast can't hold `ErrorMessage`, so it shows the sentence with the detail on the
 line under it.

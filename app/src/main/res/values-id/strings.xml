@@ -78,6 +78,8 @@
     <string name="rec_error_nothing">Tidak ada yang terekam. Saluran mungkin berhenti, jadi coba rekam lagi.</string>
     <string name="rec_error_usb_no_folder">Tidak ada folder untuk merekam. Pilih folder di drive USB Anda di pengaturan Rekaman.</string>
     <string name="rec_error_usb_unavailable">Drive USB Anda tidak ditemukan. Colokkan lagi, lalu pilih foldernya lagi di pengaturan Rekaman.</string>
+    <string name="rec_delete_failed_nas">Tidak dapat menghapus ini dari NAS Anda. Periksa apakah NAS menyala, lalu coba hapus lagi.</string>
+    <string name="rec_delete_failed">Tidak dapat menghapus rekaman ini. Coba hapus lagi.</string>
     <string name="rec_background_prompt_title">Lanjutkan rekaman saat Anda keluar?</string>
     <string name="rec_background_prompt_body">Android dapat menghentikan rekaman ini saat layar tidur atau Anda keluar dari Settee. Izinkan Settee mengabaikan pengoptimalan baterai agar rekaman terus berjalan, bahkan dalam mode siaga — seperti set-top box.</string>
     <string name="rec_background_prompt_allow">Izinkan</string>

@@ -78,6 +78,8 @@
     <string name="rec_error_nothing">Nic nie zostało nagrane. Kanał mógł przestać nadawać, więc spróbuj nagrać go ponownie.</string>
     <string name="rec_error_usb_no_folder">Nie ma folderu do nagrywania. Wybierz folder na dysku USB w ustawieniach nagrywania.</string>
     <string name="rec_error_usb_unavailable">Nie można znaleźć dysku USB. Podłącz go ponownie, a potem jeszcze raz wybierz jego folder w ustawieniach nagrywania.</string>
+    <string name="rec_delete_failed_nas">Nie udało się usunąć tego z serwera NAS. Sprawdź, czy jest włączony, i spróbuj usunąć ponownie.</string>
+    <string name="rec_delete_failed">Nie udało się usunąć tego nagrania. Spróbuj usunąć je ponownie.</string>
     <string name="rec_background_prompt_title">Kontynuować nagrywanie po wyjściu?</string>
     <string name="rec_background_prompt_body">Android może zatrzymać to nagrywanie, gdy ekran przejdzie w tryb uśpienia lub opuścisz Settee. Zezwól Settee na ignorowanie optymalizacji baterii, aby nagrywanie trwało nadal, nawet w trybie gotowości — tak jak w dekoderze telewizyjnym.</string>
     <string name="rec_background_prompt_allow">Zezwól</string>

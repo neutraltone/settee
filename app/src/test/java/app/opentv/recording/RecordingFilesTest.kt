@@ -55,6 +55,7 @@ class RecordingFilesTest {
             selfEnabledGuide = EpgRepository.SelfEnabledGuide.InMemory(),
         ),
         test.lineup,
+        ErrorWording(context, onTelevision = false),
         clock = { NOW },
     )
 

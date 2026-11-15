@@ -78,6 +78,8 @@
     <string name="rec_error_nothing">Không ghi được gì. Kênh có thể đã ngừng, vì vậy hãy thử ghi lại.</string>
     <string name="rec_error_usb_no_folder">Không có thư mục để ghi vào. Chọn một thư mục trên ổ USB của bạn trong Cài đặt ghi hình.</string>
     <string name="rec_error_usb_unavailable">Không tìm thấy ổ USB của bạn. Cắm lại, rồi chọn lại thư mục của nó trong Cài đặt ghi hình.</string>
+    <string name="rec_delete_failed_nas">Không thể xoá mục này khỏi NAS của bạn. Kiểm tra xem nó đã bật chưa, rồi thử xoá lại.</string>
+    <string name="rec_delete_failed">Không thể xoá bản ghi này. Hãy thử xoá lại.</string>
     <string name="rec_background_prompt_title">Tiếp tục ghi hình khi bạn rời khỏi ứng dụng?</string>
     <string name="rec_background_prompt_body">Android có thể dừng bản ghi này khi màn hình tắt hoặc bạn rời khỏi Settee. Cho phép Settee bỏ qua tối ưu hóa pin để việc ghi hình tiếp tục, kể cả ở chế độ chờ — giống như một đầu thu kỹ thuật số.</string>
     <string name="rec_background_prompt_allow">Cho phép</string>

@@ -78,6 +78,8 @@
     <string name="rec_error_nothing">Rien n\'a été enregistré. La chaîne s\'est peut-être arrêtée, alors relancez l\'enregistrement.</string>
     <string name="rec_error_usb_no_folder">Il n\'y a pas de dossier où enregistrer. Choisissez-en un sur votre disque USB dans les paramètres d\'enregistrement.</string>
     <string name="rec_error_usb_unavailable">Votre disque USB est introuvable. Rebranchez-le, puis choisissez à nouveau son dossier dans les paramètres d\'enregistrement.</string>
+    <string name="rec_delete_failed_nas">Impossible de supprimer ceci de votre NAS. Vérifiez qu\'il est allumé, puis réessayez de le supprimer.</string>
+    <string name="rec_delete_failed">Impossible de supprimer cet enregistrement. Réessayez de le supprimer.</string>
     <string name="rec_background_prompt_title">Continuer l\'enregistrement en quittant l\'appli ?</string>
     <string name="rec_background_prompt_body">Android peut arrêter cet enregistrement lorsque l\'écran se met en veille ou que vous quittez Settee. Autorisez Settee à ignorer l\'optimisation de la batterie afin que les enregistrements continuent, même en veille — comme le ferait un décodeur TV.</string>
     <string name="rec_background_prompt_allow">Autoriser</string>

@@ -109,6 +109,17 @@ class SmbReadHandle(
  */
 object SmbClient {
 
+    /**
+     * What the share answers for a file that isn't there, or is already on its way out (a delete
+     * while the capture still holds it open): to [delete], already done.
+     */
+    private val ALREADY_GONE = setOf(
+        NtStatus.STATUS_OBJECT_NAME_NOT_FOUND,
+        NtStatus.STATUS_OBJECT_PATH_NOT_FOUND,
+        NtStatus.STATUS_NOT_FOUND,
+        NtStatus.STATUS_DELETE_PENDING,
+    )
+
     // Bound every SMB operation. Without this a write to a NAS that has gone quiet (a Wi-Fi blip, a
     // drive spinning up, the session dropping) blocks forever — which silently freezes a recording
     // mid-capture with no error. A timeout turns that hang into a normal dropped-connection the
@@ -245,13 +256,20 @@ object SmbClient {
         }
     }
 
-    /** Delete a recording from the NAS. */
+    /**
+     * Delete a recording from the NAS, throwing when the share refuses. One that isn't there any
+     * more counts as deleted, so its row can still go.
+     */
     fun delete(config: SmbConfig, locator: String) {
         val parsed = parse(locator)
         val cfg = config.copy(host = parsed.host, share = parsed.share)
         val q = connect(cfg)
         try {
-            runCatching { q.share.rm(parsed.path.replace('/', '\\')) }
+            try {
+                q.share.rm(parsed.path.replace('/', '\\'))
+            } catch (e: SMBApiException) {
+                if (e.status !in ALREADY_GONE) throw e
+            }
         } finally {
             runCatching { q.share.close() }
             runCatching { q.session.close() }

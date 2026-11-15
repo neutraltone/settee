@@ -78,6 +78,8 @@
     <string name="rec_error_nothing">Semmi nem lett rögzítve. Lehet, hogy a csatorna leállt, ezért próbálja újra rögzíteni.</string>
     <string name="rec_error_usb_no_folder">Nincs mappa, ahová rögzíteni lehetne. Válasszon egyet az USB-meghajtón a Felvétel beállításaiban.</string>
     <string name="rec_error_usb_unavailable">Nem található az USB-meghajtó. Csatlakoztassa újra, majd válassza ki ismét a mappáját a Felvétel beállításaiban.</string>
+    <string name="rec_delete_failed_nas">Nem sikerült törölni a NAS-ról. Ellenőrizze, hogy be van-e kapcsolva, majd próbálja meg újra.</string>
+    <string name="rec_delete_failed">Nem sikerült törölni ezt a felvételt. Próbálja meg újra törölni.</string>
     <string name="rec_background_prompt_title">Folytatódjon a felvétel kilépéskor?</string>
     <string name="rec_background_prompt_body">Előfordulhat, hogy az Android leállítja ezt a felvételt, amikor a képernyő elalszik, vagy kilép az Settee-ből. Engedélyezze, hogy az Settee figyelmen kívül hagyja az akkumulátor-optimalizálást, hogy a felvételek készenléti módban is folytatódjanak — ahogyan egy set-top boxnál.</string>
     <string name="rec_background_prompt_allow">Engedélyezés</string>

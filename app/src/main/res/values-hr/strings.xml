@@ -78,6 +78,8 @@
     <string name="rec_error_nothing">Ništa nije snimljeno. Kanal se možda zaustavio, pa ga pokušajte snimiti ponovno.</string>
     <string name="rec_error_usb_no_folder">Nema mape za snimanje. Odaberite jednu na svom USB disku u postavkama snimanja.</string>
     <string name="rec_error_usb_unavailable">Vaš USB disk nije pronađen. Ponovno ga priključite, zatim ponovno odaberite njegovu mapu u postavkama snimanja.</string>
+    <string name="rec_delete_failed_nas">Brisanje s NAS-a nije uspjelo. Provjerite je li uključen, a zatim pokušajte ponovno.</string>
+    <string name="rec_delete_failed">Snimku nije bilo moguće izbrisati. Pokušajte je ponovno izbrisati.</string>
     <string name="rec_background_prompt_title">Nastaviti snimanje kad izađete?</string>
     <string name="rec_background_prompt_body">Android može zaustaviti ovo snimanje kad se zaslon isključi ili napustite Settee. Dopustite Settee-u da zanemari optimizaciju baterije kako bi snimanja nastavila raditi, čak i u stanju mirovanja — baš kao kod set-top box uređaja.</string>
     <string name="rec_background_prompt_allow">Dopusti</string>

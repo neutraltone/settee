@@ -78,6 +78,8 @@
     <string name="rec_error_nothing">Der blev ikke optaget noget. Kanalen er måske stoppet, så prøv at optage den igen.</string>
     <string name="rec_error_usb_no_folder">Der er ingen mappe at optage til. Vælg en på dit USB-drev i optageindstillinger.</string>
     <string name="rec_error_usb_unavailable">Kan ikke finde dit USB-drev. Sæt det i igen, og vælg så dets mappe igen i optageindstillinger.</string>
+    <string name="rec_delete_failed_nas">Kunne ikke slette dette fra din NAS. Tjek, at den er tændt, og prøv så at slette det igen.</string>
+    <string name="rec_delete_failed">Kunne ikke slette denne optagelse. Prøv at slette den igen.</string>
     <string name="rec_background_prompt_title">Fortsæt optagelse, når du forlader appen?</string>
     <string name="rec_background_prompt_body">Android kan stoppe denne optagelse, når skærmen går i dvale, eller du forlader Settee. Tillad, at Settee ignorerer batterioptimering, så optagelser fortsætter, selv i standby – ligesom en set-top-boks gør.</string>
     <string name="rec_background_prompt_allow">Tillad</string>

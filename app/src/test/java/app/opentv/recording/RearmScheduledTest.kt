@@ -62,6 +62,7 @@ class RearmScheduledTest {
             selfEnabledGuide = EpgRepository.SelfEnabledGuide.InMemory(),
         ),
         test.lineup,
+        ErrorWording(context, onTelevision = false),
         clock = { NOW },
     )
     private val alarms = shadowOf(context.getSystemService(Context.ALARM_SERVICE) as AlarmManager)

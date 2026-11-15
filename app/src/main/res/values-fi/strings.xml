@@ -78,6 +78,8 @@
     <string name="rec_error_nothing">Mitään ei tallennettu. Kanava on ehkä lakannut lähettämästä, joten yritä tallentaa se uudelleen.</string>
     <string name="rec_error_usb_no_folder">Tallennuskansiota ei ole. Valitse kansio USB-asemaltasi tallennusasetuksista.</string>
     <string name="rec_error_usb_unavailable">USB-asemaasi ei löydy. Kytke se takaisin ja valitse sen kansio uudelleen tallennusasetuksista.</string>
+    <string name="rec_delete_failed_nas">Poistaminen NAS-laitteeltasi ei onnistunut. Tarkista, että se on päällä, ja yritä sitten poistaa uudelleen.</string>
+    <string name="rec_delete_failed">Tallenteen poistaminen ei onnistunut. Yritä poistaa se uudelleen.</string>
     <string name="rec_background_prompt_title">Jatka tallennusta poistuessasi?</string>
     <string name="rec_background_prompt_body">Android saattaa pysäyttää tämän tallennuksen, kun näyttö sammuu tai poistut Settee:stä. Salli Settee:n ohittaa akun optimointi, jotta tallennukset jatkuvat myös valmiustilassa — samaan tapaan kuin digiboksissa.</string>
     <string name="rec_background_prompt_allow">Salli</string>

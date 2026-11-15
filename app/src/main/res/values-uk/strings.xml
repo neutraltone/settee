@@ -78,6 +78,8 @@
     <string name="rec_error_nothing">Нічого не записалося. Можливо, канал перервався, тож спробуйте записати його ще раз.</string>
     <string name="rec_error_usb_no_folder">Немає папки для запису. Виберіть папку на USB-накопичувачі в налаштуваннях запису.</string>
     <string name="rec_error_usb_unavailable">USB-накопичувач не знайдено. Під\'єднайте його знову, потім ще раз виберіть папку в налаштуваннях запису.</string>
+    <string name="rec_delete_failed_nas">Не вдалося видалити це з NAS. Перевірте, що він увімкнений, і спробуйте видалити ще раз.</string>
+    <string name="rec_delete_failed">Не вдалося видалити цей запис. Спробуйте видалити його ще раз.</string>
     <string name="rec_background_prompt_title">Продовжити запис після виходу?</string>
     <string name="rec_background_prompt_body">Android може зупинити цей запис, коли екран засинає або ви виходите з Settee. Дозвольте Settee ігнорувати оптимізацію батареї, щоб записи тривали навіть у режимі очікування — як у ТВ-приставці.</string>
     <string name="rec_background_prompt_allow">Дозволити</string>
