@@ -246,7 +246,7 @@ fun LiveScreen(
         Column(Modifier.fillMaxSize()) {
             GuideBand(
                 row = highlighted?.first,
-                programme = highlighted?.let { (row, programme) -> programme ?: row.now },
+                programme = highlighted?.let { (row, programme) -> programme ?: row.liveAt(nowMillis) },
                 previewPlayer = if (previewEnabled && !recordingActive) previewController.player else null,
                 inFull = viewModel::programmeInFull,
             )

@@ -25,12 +25,24 @@ class FakePlayback : VodPlayerViewModel.Playback {
 
     var ended = false
 
-    override fun progress() = NextEpisodeCountdown.Playback(positionMillis, durationMillis, ended)
+    /** Whether the stream last [play]ed is still being found, as on a slow portal. */
+    var switching = false
+    private var askedFrom = 0L
+
+    // As PlayerController's adapter reports it: see vodPlayback, which VodPlaybackTest checks.
+    override fun progress() = if (switching) {
+        NextEpisodeCountdown.Playback(positionMillis = 0, durationMillis = 0)
+    } else {
+        NextEpisodeCountdown.Playback(positionMillis, durationMillis, ended)
+    }
+
+    override fun position() = if (switching) askedFrom.takeIf { it > 0 } else positionMillis
 
     override fun steppedDownTo() = steppedDownTo
 
     override fun play(request: PlayerController.Request, skipped: String?) {
         played += request.key to request.startPositionMillis
+        askedFrom = request.startPositionMillis
         positionMillis = request.startPositionMillis
         durationMillis = EPISODE_MILLIS
         paused = false

@@ -199,7 +199,9 @@ class ChannelOptionsTest {
 
         viewModel.choose(subject, ItemOption.HideChannel).join()
 
-        assertThat(graph.channelLineup.channels(LineupScope.All()).first()).isEmpty()
+        // Waited for rather than read once: the lineup replays the list it shared before the hide until
+        // the table's change reaches it, which isn't always before this line.
+        graph.channelLineup.channels(LineupScope.All()).first { it.isEmpty() }
         subject.channel.qualities.forEach { assertThat(graph.catalogRepository.channel(it.id)?.hidden).isTrue() }
     }
 

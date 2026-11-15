@@ -5,6 +5,7 @@
  */
 package app.opentv.data.repo
 
+import app.opentv.data.model.knownTmdbId
 import app.opentv.data.remote.SubtitleResult
 import app.opentv.data.remote.SubtitleSearch
 
@@ -37,7 +38,7 @@ class OpenSubtitles(
                     SubtitleTitle.of(episode, source.name),
                     SubtitleSearch.Episode(
                         show = series?.name.orEmpty(),
-                        showTmdbId = series?.tmdbId?.takeIf { it.isNotBlank() },
+                        showTmdbId = knownTmdbId(series?.tmdbId),
                         season = episode.season,
                         episode = episode.episodeNumber,
                     ),
@@ -52,7 +53,7 @@ class OpenSubtitles(
         return sources.byId(movie.sourceId)?.let { source ->
             SubtitleSubject(
                 SubtitleTitle.of(movie, source.name),
-                SubtitleSearch.Film(movie.name, movie.year, movie.tmdbId?.takeIf { it.isNotBlank() }),
+                SubtitleSearch.Film(movie.name, movie.year, knownTmdbId(movie.tmdbId)),
             )
         }
     }

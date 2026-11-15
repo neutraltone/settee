@@ -472,6 +472,8 @@ class VodPlayerContentTest {
             player.player.duration.coerceAtLeast(0),
         )
 
+        override fun position() = player.player.currentPosition
+
         override fun play(request: PlayerController.Request, skipped: String?) = player.play(request, debounce = false)
 
         override fun pause() = Unit

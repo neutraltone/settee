@@ -43,6 +43,7 @@ class EpgMatcherWritesTest {
     private val http = OkHttpClient()
     private val guide = EpgRepository(
         programmeDao = db.programmes(),
+        refreshDao = db.guideRefresh(),
         feedDao = db.epgFeeds(),
         aliasDao = db.epgAliases(),
         channelDao = channels,

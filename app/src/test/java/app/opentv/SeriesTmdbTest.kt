@@ -259,6 +259,41 @@ class SeriesTmdbTest {
         assertThat(test.db.movies().forSource(PANEL_SOURCE.id).single().tmdbAnsweredAt).isEqualTo(NOW)
     }
 
+    @Test
+    fun `a refresh of the show list keeps the TMDB id found for a show the panel calls 0`() = runTest {
+        panel.replies["get_series"] = """[{"series_id": 7, "name": "Show 7", "tmdb": "0"}]"""
+        test.syncVod()
+        test.db.series().upsertAll(listOf(stored("7").copy(tmdbId = "22", tmdbAnsweredAt = NOW)))
+
+        test.syncVod()
+
+        assertThat(stored("7").tmdbId).isEqualTo("22")
+    }
+
+    @Test
+    fun `a refresh of the film list keeps the TMDB id found for a film the panel calls 0`() = runTest {
+        panel.replies["get_vod_streams"] =
+            """[{"stream_id": 7, "name": "Film 7", "container_extension": "mp4", "tmdb": "0"}]"""
+        test.syncVod()
+        val film = test.db.movies().forSource(PANEL_SOURCE.id).single()
+        test.db.movies().upsertAll(listOf(film.copy(tmdbId = "11", tmdbAnsweredAt = NOW)))
+
+        test.syncVod()
+
+        assertThat(test.db.movies().forSource(PANEL_SOURCE.id).single().tmdbId).isEqualTo("11")
+    }
+
+    @Test
+    fun `a refresh still takes a real TMDB id the panel now gives`() = runTest {
+        panel.replies["get_series"] = """[{"series_id": 7, "name": "Show 7", "tmdb": "0"}]"""
+        test.syncVod()
+        panel.replies["get_series"] = """[{"series_id": 7, "name": "Show 7", "tmdb": "1399"}]"""
+
+        test.syncVod()
+
+        assertThat(stored("7").tmdbId).isEqualTo("1399")
+    }
+
     private companion object {
         const val DAY = 24 * 60 * 60 * 1000L
         const val NOW = 400 * DAY

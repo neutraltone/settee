@@ -6,6 +6,7 @@
 package app.opentv.data.repo
 
 import app.opentv.data.model.Series
+import app.opentv.data.model.tmdbIdOr
 import app.opentv.data.remote.TmdbMeta
 import app.opentv.data.remote.XtreamApi
 
@@ -22,7 +23,7 @@ internal fun Series.withTmdb(meta: TmdbMeta?, at: Long): Series = if (meta == nu
         plot = plot ?: meta.overview,
         cast = cast ?: meta.cast,
         genre = genre ?: meta.genre,
-        tmdbId = tmdbId ?: meta.tmdbId,
+        tmdbId = tmdbIdOr(tmdbId, meta.tmdbId),
         rating = rating ?: meta.rating,
         year = year ?: meta.year,
         tmdbAnsweredAt = at,
@@ -34,7 +35,7 @@ internal fun Series.filledFrom(info: XtreamApi.SeriesInfo): Series = copy(
     backdropUrl = backdropUrl ?: info.backdropUrl,
     cast = cast ?: info.cast,
     genre = genre ?: info.genre,
-    tmdbId = tmdbId ?: info.tmdbId,
+    tmdbId = tmdbIdOr(tmdbId, info.tmdbId),
     plot = plot ?: info.plot,
     rating = rating ?: info.rating,
     year = year ?: info.year,
