@@ -6,6 +6,7 @@
 package app.opentv
 
 import android.content.Intent
+import android.os.Bundle
 import app.opentv.core.PlayRequests
 import app.opentv.core.RecordingSignals
 import com.google.common.truth.Truth.assertThat
@@ -27,9 +28,9 @@ import org.robolectric.annotation.Config
  * A tapped reminder opens its channel once: the screen being made again later (a language change,
  * Android restoring the app) never opens it again (#357).
  *
- * Every request is recorded as it's made, so the nav graph clearing one doesn't hide a second. Each
- * test clears a request itself, as the nav graph does once it has opened it, since asking again for
- * the channel still waiting wouldn't show as a new request.
+ * Every request is recorded and cleared the moment it's made, as the nav graph clears one once it has
+ * opened it. Asking again for a channel still waiting wouldn't show as a new request, and the nav
+ * graph never gets to act on one: with no provider saved there's no player for it to open.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], application = CountingOpenTvApp::class)
@@ -44,8 +45,18 @@ class PlayIntentOnceTest {
     fun recordRequests() {
         PlayRequests.consume()
         RecordingSignals.consumeWatch()
-        recording.launch { PlayRequests.channelId.filterNotNull().collect { channelsAsked += it } }
-        recording.launch { RecordingSignals.watch.filterNotNull().collect { recordingsAsked += it.recordingId } }
+        recording.launch {
+            PlayRequests.channelId.filterNotNull().collect {
+                channelsAsked += it
+                PlayRequests.consume()
+            }
+        }
+        recording.launch {
+            RecordingSignals.watch.filterNotNull().collect {
+                recordingsAsked += it.recordingId
+                RecordingSignals.consumeWatch()
+            }
+        }
     }
 
     @After
@@ -60,7 +71,6 @@ class PlayIntentOnceTest {
         val reminder = Intent(launcher).putExtra(MainActivity.EXTRA_PLAY_CHANNEL, 7L)
         val screen = Robolectric.buildActivity(MainActivity::class.java, reminder).setup()
         assertThat(channelsAsked).containsExactly(7L)
-        PlayRequests.consume()
 
         screen.recreate()
 
@@ -72,7 +82,6 @@ class PlayIntentOnceTest {
         val started = Intent(launcher).putExtra(MainActivity.EXTRA_WATCH_RECORDING, 4L)
         val screen = Robolectric.buildActivity(MainActivity::class.java, started).setup()
         assertThat(recordingsAsked).containsExactly(4L)
-        RecordingSignals.consumeWatch()
 
         screen.recreate()
 
@@ -86,7 +95,6 @@ class PlayIntentOnceTest {
 
         screen.newIntent(Intent(launcher).putExtra(MainActivity.EXTRA_PLAY_CHANNEL, 9L))
         assertThat(channelsAsked).containsExactly(9L)
-        PlayRequests.consume()
         screen.recreate()
 
         assertThat(channelsAsked).containsExactly(9L)
@@ -100,6 +108,17 @@ class PlayIntentOnceTest {
             .addFlags(Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY)
 
         Robolectric.buildActivity(MainActivity::class.java, fromRecents).setup()
+
+        assertThat(channelsAsked).isEmpty()
+    }
+
+    @Test
+    fun `Android restoring the app after killing it doesn't open the channel a reminder once opened`() {
+        // A restore hands back the intent the activity started with, extras and all, unlike recreate()
+        // here, which passes on the intent the old screen was left holding.
+        val reminder = Intent(launcher).putExtra(MainActivity.EXTRA_PLAY_CHANNEL, 7L)
+
+        Robolectric.buildActivity(MainActivity::class.java, reminder).setup(Bundle())
 
         assertThat(channelsAsked).isEmpty()
     }
