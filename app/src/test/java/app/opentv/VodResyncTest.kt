@@ -101,7 +101,7 @@ class VodResyncTest {
     }
 
     @Test
-    fun `a film page open while a refresh removes the film doesn't bring it back`() = runTest {
+    fun `a film page open while a refresh removes the film shows it as it was, without bringing it back`() = runTest {
         panel.replies["get_vod_streams"] = films(1, 2)
         test.syncVod()
         val film = test.catalog.allMovies().single { it.streamId == "1" }
@@ -113,8 +113,9 @@ class VodResyncTest {
             test.syncVod()
             hold.release()
         }
-        opening.await()
+        val shown = opening.await()
 
+        assertThat(shown).isEqualTo(film)
         assertThat(test.catalog.allMovies().map { it.streamId }).containsExactly("2")
     }
 
@@ -211,7 +212,7 @@ class VodResyncTest {
     }
 
     @Test
-    fun `a show page open while a refresh removes the show doesn't bring it back`() = runTest {
+    fun `a show page open while a refresh removes the show shows it as it was, without bringing it back`() = runTest {
         panel.replies["get_series"] = shows(1, 2)
         test.syncVod()
         val show = test.catalog.allSeries().single { it.seriesId == "1" }
@@ -224,9 +225,65 @@ class VodResyncTest {
             test.syncVod()
             hold.release()
         }
-        opening.await()
+        val shown = opening.await()
 
+        // The page doesn't wait for ever on a show that's gone; playing it says so then.
+        assertThat(shown).containsExactly(show)
         assertThat(test.catalog.allSeries().map { it.seriesId }).containsExactly("2")
+    }
+
+    @Test
+    fun `a show page open while a refresh gives the show its cover still fills in the panel's details`() = runTest {
+        panel.replies["get_series"] =
+            """[{"series_id": 7, "name": "Show", "category_id": "1", "last_modified": "100"}]"""
+        test.syncVod()
+        val show = test.catalog.allSeries().single()
+        panel.replies["get_series_info:7"] =
+            """{"info": {"genre": "Drama", "cast": "Someone", "plot": "A show."}, "episodes": {}}"""
+        val hold = panel.hold("get_series_info:7")
+
+        val opening = async(Dispatchers.Default) { test.catalog.openSeries(show.id).toList() }
+        during(hold) {
+            panel.replies["get_series"] = """
+                [{"series_id": 7, "name": "Show", "cover": "https://example.com/cover.jpg",
+                  "category_id": "1", "last_modified": "100"}]
+            """
+            test.syncVod()
+            hold.release()
+        }
+        val shown = opening.await()
+
+        val stored = db.series().byId(show.id)!!
+        assertThat(stored.posterUrl).isEqualTo("https://example.com/cover.jpg")
+        assertThat(listOf(stored.genre, stored.cast, stored.plot))
+            .containsExactly("Drama", "Someone", "A show.")
+            .inOrder()
+        assertThat(shown).containsExactly(stored)
+    }
+
+    @Test
+    fun `a film's TMDB answer doesn't replace one the background pass saved while the page was asking`() = runTest {
+        panel.replies["get_vod_info"] = """{"info": {"releasedate": "2011-09-02"}}"""
+        panel.replies["get_vod_streams"] = """[{"stream_id": 3, "name": "Drive", "added": "100"}]"""
+        test.syncVod()
+        val film = test.catalog.allMovies().single()
+        panel.replies["/3/search/movie"] = """{"results": [{"id": 11}]}"""
+        panel.replies["/3/movie/11"] = """{"id": 11, "overview": "The page's answer."}"""
+        test.settings.setTmdbApiKey("k")
+        val hold = panel.hold("/3/movie/11")
+
+        val opening = async(Dispatchers.Default) { test.catalog.movieDetail(film.id, now = NOW) }
+        during(hold) {
+            // As the background pass saves its own answer.
+            db.movies().saveLookedUp(film.id) { it.copy(plot = "The pass's answer.", tmdbAnsweredAt = NOW - 1) }
+            hold.release()
+        }
+        val shown = opening.await()
+
+        val movie = db.movies().byId(film.id)!!
+        assertThat(movie.plot).isEqualTo("The pass's answer.")
+        assertThat(movie.tmdbAnsweredAt).isEqualTo(NOW - 1)
+        assertThat(shown).isEqualTo(movie)
     }
 
     @Test
@@ -251,4 +308,8 @@ class VodResyncTest {
 
     private fun shows(vararg ids: Int) =
         ids.joinToString(",", "[", "]") { """{"series_id": $it, "name": "Show $it", "last_modified": "100"}""" }
+
+    private companion object {
+        const val NOW = 1_800_000_000_000L
+    }
 }

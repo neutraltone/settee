@@ -1166,12 +1166,8 @@ interface MovieDao {
      * or deleted the film: saving that copy would undo the refresh, or [upsertAll] bring it back.
      */
     @Transaction
-    suspend fun saveLookedUp(id: Long, lookedUp: (Movie) -> Movie): Movie? {
-        val stored = byId(id) ?: return null
-        val filled = lookedUp(stored)
-        if (filled != stored) upsertAll(listOf(filled))
-        return filled
-    }
+    suspend fun saveLookedUp(id: Long, lookedUp: (Movie) -> Movie): Movie? =
+        saveOnto(byId(id), lookedUp) { upsertAll(it) }
 }
 
 /**
@@ -1247,6 +1243,14 @@ interface RetiredTitlesDao {
     /** [sourceId]'s series as grouping into titles reads them, once. */
     @Query("SELECT id, sourceId, name, tmdbId, year, categoryId FROM series WHERE sourceId = :sourceId")
     suspend fun seriesVersionRows(sourceId: Long): List<VersionRow>
+}
+
+/** [stored] with [lookedUp] applied, saved by [upsert] if that changed it; null, saving nothing, without [stored]. */
+private suspend fun <T> saveOnto(stored: T?, lookedUp: (T) -> T, upsert: suspend (List<T>) -> Unit): T? {
+    stored ?: return null
+    val filled = lookedUp(stored)
+    if (filled != stored) upsert(listOf(filled))
+    return filled
 }
 
 /** Who [this] movie credits, saved under [id]. */
@@ -1403,12 +1407,8 @@ interface SeriesDao {
 
     /** Saves what a look-up found for series [id] onto the row as it's stored now, as [MovieDao.saveLookedUp]. */
     @Transaction
-    suspend fun saveLookedUp(id: Long, lookedUp: (Series) -> Series): Series? {
-        val stored = byId(id) ?: return null
-        val filled = lookedUp(stored)
-        if (filled != stored) upsertAll(listOf(filled))
-        return filled
-    }
+    suspend fun saveLookedUp(id: Long, lookedUp: (Series) -> Series): Series? =
+        saveOnto(byId(id), lookedUp) { upsertAll(it) }
 }
 
 @Dao
