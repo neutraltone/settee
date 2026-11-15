@@ -28,8 +28,10 @@ import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.isDisplayed
 import androidx.compose.ui.test.isFocused
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
@@ -307,6 +309,47 @@ class KeptShellTest {
         assertThat(opened).isEqualTo("Drama 22")
     }
 
+    /** Whether Home's first card is drawn: placed on screen, under whatever covers it. */
+    private fun homeDrawn(): Boolean {
+        val card = compose.onAllNodes(hasText("Added 1"))
+        return card.fetchSemanticsNodes().isNotEmpty() && card.onFirst().isDisplayed()
+    }
+
+    private fun homeShowing() =
+        compose.waitUntil(5_000) { compose.onAllNodes(hasText("Added 1")).fetchSemanticsNodes().isNotEmpty() }
+
+    /** Stops the clock, so a screen change can be looked at partway through its fade. */
+    private fun holdTheClock() {
+        compose.waitForIdle()
+        compose.mainClock.autoAdvance = false
+    }
+
+    @Test
+    fun `Home stays drawn under Settings while Settings fades in`() {
+        setApp()
+        homeShowing()
+        holdTheClock()
+
+        compose.runOnUiThread { nav.navigate(Routes.SETTINGS) }
+        compose.mainClock.advanceTimeBy(MID_FADE)
+
+        assertThat(compose.onAllNodes(hasText("Settings option 1")).fetchSemanticsNodes()).isNotEmpty()
+        assertThat(homeDrawn()).isTrue()
+    }
+
+    @Test
+    fun `Home is drawn under Settings while Back fades Settings out`() {
+        setApp()
+        openSettingsFromRail()
+        holdTheClock()
+
+        back()
+        compose.mainClock.advanceTimeBy(MID_FADE)
+
+        assertThat(compose.onAllNodes(hasText("Settings option 1")).fetchSemanticsNodes()).isNotEmpty()
+        assertThat(homeDrawn()).isTrue()
+    }
+
     /** Opens Movies' [grid], which has the films "Grid 1" to "Grid 24", and waits for its covers. */
     private fun openGrid() {
         compose.waitUntil(5_000) { compose.onAllNodes(hasText("Added 1")).fetchSemanticsNodes().isNotEmpty() }
@@ -410,5 +453,8 @@ class KeptShellTest {
     private companion object {
         /** More than the rail has, so walking Down through it always reaches the bottom. */
         const val RAIL_ITEMS = 10
+
+        /** Partway through a screen change's fade. */
+        const val MID_FADE = 100L
     }
 }
