@@ -2,6 +2,34 @@
 
 Settee is based on OpenTV 0.11.8; everything before this is in [OpenTV's changelog](https://github.com/opentvproject/opentv/blob/v0.11.8/CHANGELOG.md).
 
+## [1.1.0](https://github.com/neutraltone/settee/compare/v1.0.0...v1.1.0) (2026-11-15)
+
+
+### Features
+
+* **#212:** each Profile can reorder and hide Home's rows, and turn off its Live Preview ([#411](https://github.com/neutraltone/settee/issues/411)) ([f901738](https://github.com/neutraltone/settee/commit/f901738266689c33c0a1f6c9f95c8c4059758f09))
+
+
+### Bug fixes
+
+* **#336:** updating warns before it stops a recording, and bookings and reminders still go off after an update ([#404](https://github.com/neutraltone/settee/issues/404)) ([e705cb6](https://github.com/neutraltone/settee/commit/e705cb6569b5ba382dcc55376a2e573c0cfa3015))
+* **#343:** removing a provider takes its guide with it, so guide refreshes stop finishing with problems ([#403](https://github.com/neutraltone/settee/issues/403)) ([863c349](https://github.com/neutraltone/settee/commit/863c3498bc1f4d2442e33a01bd2d76779a05a5cf))
+* **#344:** a recording you delete leaves Recordings only once its file is gone, and the screen says why when it can't be ([#409](https://github.com/neutraltone/settee/issues/409)) ([aee6bda](https://github.com/neutraltone/settee/commit/aee6bdafc76ec8a18b1d04039bfccc028deeaf7d))
+* **#348:** films and shows a provider gave TMDB id 0 are found by their title, with a poster and plot ([#398](https://github.com/neutraltone/settee/issues/398)) ([eba9312](https://github.com/neutraltone/settee/commit/eba931288f881e10562a23053286cbb0a5c0e56c))
+* **#349:** films your provider sent without a poster get TMDB's ([#402](https://github.com/neutraltone/settee/issues/402)) ([1a38e6f](https://github.com/neutraltone/settee/commit/1a38e6f8d06461d2f1c80bbc5c34ab603a5703c3))
+* **#351:** films, shows and episodes your provider removes go, and where you'd got to moves to another version ([#396](https://github.com/neutraltone/settee/issues/396)) ([64a178a](https://github.com/neutraltone/settee/commit/64a178a3fd36e122c0fe965177a4c0d50f47adfe))
+* **#352:** a programme whose start time moved no longer shows as on now once the guide refreshes ([#400](https://github.com/neutraltone/settee/issues/400)) ([2ea7c92](https://github.com/neutraltone/settee/commit/2ea7c92a41460619ed3fd8e8229bb7e759443c8b))
+* **#354:** recording the same programme twice in a minute keeps both recordings ([#408](https://github.com/neutraltone/settee/issues/408)) ([534611d](https://github.com/neutraltone/settee/commit/534611d2e25b6ead30b6809d97a5af9af50d5407))
+* **#355:** when a channel or title can't be opened, the one before it stops instead of playing behind the error ([#391](https://github.com/neutraltone/settee/issues/391)) ([fbcd231](https://github.com/neutraltone/settee/commit/fbcd231b7527e3555a09f8459c962bbde0803c8e))
+* **#356:** pressing Home stops the sound; back again, a film waits paused and a channel plays on ([#393](https://github.com/neutraltone/settee/issues/393)) ([9c9b743](https://github.com/neutraltone/settee/commit/9c9b743dba6bffd9103cd08a65bd39fe06cc2f47))
+* **#359:** leaving Live before the guide first loads no longer leaves its loading line under every tab ([#401](https://github.com/neutraltone/settee/issues/401)) ([894bcfc](https://github.com/neutraltone/settee/commit/894bcfc4b7076ce2bfbd0b7dc5e0ede6fbc98eab))
+* **#360:** a sleep timer that ran out with nothing playing no longer closes the next film or channel ([#392](https://github.com/neutraltone/settee/issues/392)) ([a60f853](https://github.com/neutraltone/settee/commit/a60f85383137f0066758e7dc42913175d7f6c48a))
+* **#370:** on a live channel that failed, OK tries again, with the highlight on Try again ([#394](https://github.com/neutraltone/settee/issues/394)) ([6d4e7b3](https://github.com/neutraltone/settee/commit/6d4e7b3a09a172c9a7d42e233d3ceffdb4bbe2ee))
+* **#371:** a recording missed while Settee wasn't running says so, and leaves no empty file ([#410](https://github.com/neutraltone/settee/issues/410)) ([568a8c5](https://github.com/neutraltone/settee/commit/568a8c5d1fd82c97955621a1a9c5a2f062e878ec))
+* **#376:** on a channel's name in the guide, the band shows what's on now, not a programme that has since ended ([#397](https://github.com/neutraltone/settee/issues/397)) ([ac16ce5](https://github.com/neutraltone/settee/commit/ac16ce542645714a475091fe7ffb7eebf1ccfc12))
+* **#379:** choosing another Quality while a film is still loading carries on where you were, not from 0:00 ([#399](https://github.com/neutraltone/settee/issues/399)) ([e8bbc2e](https://github.com/neutraltone/settee/commit/e8bbc2e582ca59aa70dd5c04d2b775614b39c885))
+* **#389:** the update prompt waits for Home instead of opening over first-run setup ([#390](https://github.com/neutraltone/settee/issues/390)) ([3ea50b6](https://github.com/neutraltone/settee/commit/3ea50b6e29ecf1d646ce824d16a9438a2155e8a5))
+
 ## [1.0.0](https://github.com/neutraltone/settee/compare/v0.7.0...v1.0.0) (2026-11-14)
 
 
