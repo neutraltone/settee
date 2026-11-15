@@ -46,6 +46,7 @@ import app.opentv.ui.options.LocalOpenOptions
 import app.opentv.ui.options.OptionsFor
 import app.opentv.ui.options.OptionsPanel
 import app.opentv.ui.options.OptionsSubject
+import app.opentv.ui.vod.LIKE_THIS_PEEK
 import app.opentv.ui.vod.NEXT_SEASON_PEEK
 import app.opentv.ui.vod.PageVersions
 import app.opentv.ui.vod.SeriesDetailContent
@@ -266,6 +267,7 @@ class SeriesDetailContentTest {
 
         episodeRow(2, 5).assertIsFocused()
         compose.onNode(hasTestTag(NEXT_SEASON_PEEK)).assertDoesNotExist()
+        compose.onNode(hasTestTag(LIKE_THIS_PEEK)).assertDoesNotExist()
     }
 
     @Test
@@ -457,17 +459,36 @@ class SeriesDetailContentTest {
     }
 
     @Test
-    fun `with suggestions, one Down still reaches the episode in progress, and the last episode goes no further`() {
+    fun `under the last season More like this peeks, and Down from its last episode reaches the first suggestion`() {
         suggestions = likeThis
         show(SeriesMainAction.Resume(testEpisode(2, 5)))
 
         press(Key.DirectionDown)
         episodeRow(2, 5).assertIsFocused()
+        compose.onNode(hasTestTag(LIKE_THIS_PEEK)).assertIsDisplayed()
+        compose.onNode(hasTestTag(NEXT_SEASON_PEEK)).assertDoesNotExist()
+        captureScreen("series_detail_more_like_this_peek")
+
+        press(Key.DirectionDown)
+        settle()
+
+        cover("Harbour").assertIsFocused()
+        pill("More like this").assertIsSelected()
+        episodeRow(2, 5).assertDoesNotExist()
+        press(Key.DirectionUp)
+        pill("More like this").assertIsFocused()
+    }
+
+    @Test
+    fun `under any season but the last, the next season's first episode peeks, not More like this`() {
+        suggestions = likeThis
+        show(SeriesMainAction.Resume(testEpisode(1, 5)))
+
         press(Key.DirectionDown)
 
-        episodeRow(2, 5).assertIsFocused()
-        pill("Season 2").assertIsSelected()
-        pill("More like this").assertIsNotSelected()
+        episodeRow(1, 5).assertIsFocused()
+        compose.onNode(hasTestTag(NEXT_SEASON_PEEK)).assertIsDisplayed()
+        compose.onNode(hasTestTag(LIKE_THIS_PEEK)).assertDoesNotExist()
     }
 
     @Test

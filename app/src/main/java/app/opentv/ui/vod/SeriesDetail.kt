@@ -160,7 +160,7 @@ internal fun SeriesDetailContent(
                     onOpenSeries = onOpenSeries,
                 )
             } else {
-                EpisodeList(series, nav, shown, statuses, episodeList, play)
+                EpisodeList(series, nav, shown, statuses, episodeList, play, suggestions)
             }
         }
     }
@@ -295,6 +295,7 @@ private fun SeasonPills(nav: ShowPageNav, shown: ShowSeasons, pillRow: LazyListS
                     onClick = {},
                     modifier = Modifier
                         .then(if (showingLikeThis) Modifier.focusRequester(nav.focus.pill) else Modifier)
+                        .focusRequester(nav.focus.likeThisPill)
                         .onFocusChanged { if (it.isFocused) nav.likeThis = true }
                         // To the first cover, which the focus search wouldn't pick from a pill this far along.
                         .onPreviewKeyEvent { e -> e.isPress(Key.DirectionDown) && nav.goDownToGrid() },
@@ -313,6 +314,7 @@ private fun EpisodeList(
     statuses: EpisodeStatuses,
     episodeList: LazyListState,
     onPlayEpisode: (MediaKey) -> Unit,
+    suggestions: List<TitleCover>,
 ) {
     val season = shown.selected
     // A one-season show's wait for its suggestions too, rather than be pushed down a row when More like
@@ -355,6 +357,10 @@ private fun EpisodeList(
             item(key = PEEK_KEY) {
                 EpisodePeek(next, statuses[next.id], listOfNotNull(series.backdropUrl, series.posterUrl))
             }
+        }
+        // Under the last season, More like this's title and the tops of its covers, as Down goes on there.
+        if (shown.leadsToLikeThis(season)) {
+            item(key = PEEK_KEY) { LikeThisPeek(suggestions) }
         }
     }
 }
@@ -405,6 +411,17 @@ private fun ShowPageFocusEffects(
         runCatching { nav.focus.episode.requestFocus() }
         nav.parking = false
     }
+    LaunchedEffect(nav.likeThisTarget) {
+        nav.likeThisTarget ?: return@LaunchedEffect
+        // Highlighting More like this's pill is what shows the grid in the list's place, as moving along
+        // the pills does; then on to its first cover, where Down from the pill goes.
+        pillRow.keepInView(latest.all.size)
+        withFrameNanos {}
+        runCatching { nav.focus.likeThisPill.requestFocus() }
+        withFrameNanos {}
+        withFrameNanos {}
+        runCatching { nav.focus.firstCover.requestFocus() }
+    }
     LaunchedEffect(nav.pillTarget) {
         nav.pillTarget ?: return@LaunchedEffect
         pillRow.keepInView(if (onLikeThis) latest.all.size else latest.selectedIndex)
@@ -430,12 +447,12 @@ private fun EpisodeListScrollEffects(nav: ShowPageNav, shown: ShowSeasons, episo
         val index = shown.selected?.episodes?.indexOfFirst { it.id == opening?.id } ?: -1
         if (index >= 0) episodeList.scrollToItem(index)
     }
-    // On a season's last episode, bring the faded next one into view beneath it. Asking for the
-    // last item scrolls only as far as the end of the list.
+    // On a season's last episode, bring what's faded beneath it into view: the next season's first
+    // episode, or More like this. Asking for the last item scrolls only as far as the end of the list.
     LaunchedEffect(nav.focusedEpisode) {
         val season = latest.selected ?: return@LaunchedEffect
         val onLast = nav.focusedEpisode == season.episodes.lastOrNull()?.id
-        if (onLast && latest.after(season) != null) episodeList.animateScrollToItem(season.episodes.size)
+        if (onLast && latest.hasPeekAfter(season)) episodeList.animateScrollToItem(season.episodes.size)
     }
 }
 
@@ -460,6 +477,12 @@ private class ShowSeasons(
     val waiting: Boolean = !suggestionsKnown && all.size == 1
 
     fun after(season: Season): Season? = all.getOrNull(all.indexOf(season) + 1)
+
+    /** Whether Down from [season]'s last episode goes on to More like this: it's the last season. */
+    fun leadsToLikeThis(season: Season) = hasLikeThis && after(season) == null
+
+    /** Whether something faded under [season]'s last episode says where Down goes. */
+    fun hasPeekAfter(season: Season) = after(season) != null || leadsToLikeThis(season)
 }
 
 /**
@@ -496,6 +519,8 @@ private class ShowPageNav {
     var episodeTarget by mutableStateOf<EpisodeTarget?>(null)
         private set
     var pillTarget by mutableStateOf<PillTarget?>(null)
+    var likeThisTarget by mutableStateOf<LikeThisTarget?>(null)
+        private set
     var buttonTarget by mutableStateOf<ButtonTarget?>(null)
         private set
 
@@ -537,12 +562,20 @@ private class ShowPageNav {
     /** Down from More like this's pill reaches its first cover. */
     fun goDownToGrid(): Boolean = runCatching { focus.firstCover.requestFocus() }.isSuccess
 
-    /** Off a season's last episode onto the next season's first; the last season's last stays put. */
+    /**
+     * Off a season's last episode onto the next season's first, or from the last season's onto More like
+     * this's first cover. Without suggestions, the last season's last episode stays put.
+     */
     fun goDownFromList(shown: ShowSeasons): Boolean {
         val season = shown.selected
         val onLast = season != null && focusedEpisode == season.episodes.lastOrNull()?.id
-        if (season != null && onLast) shown.after(season)?.let { episodeTarget = EpisodeTarget(it.episodes.first()) }
-        return onLast
+        if (season == null || !onLast) return false
+        val next = shown.after(season)
+        when {
+            next != null -> episodeTarget = EpisodeTarget(next.episodes.first())
+            shown.hasLikeThis -> likeThisTarget = LikeThisTarget()
+        }
+        return true
     }
 
     /** Up from a season's first episode reaches the pills, or the buttons when there are none. */
@@ -572,6 +605,9 @@ private class DetailFocus {
     val list = FocusRequester()
     val firstCover = FocusRequester()
 
+    /** More like this's pill, selected or not. */
+    val likeThisPill = FocusRequester()
+
     /** The main button, or Favourite while there's no main button. */
     fun button(hasMainAction: Boolean) = if (hasMainAction) main else favourite
 }
@@ -581,6 +617,9 @@ private class ButtonTarget
 
 /** A request to highlight the selected season's pill. */
 private class PillTarget
+
+/** A request to move from the episodes onto More like this's first cover. */
+private class LikeThisTarget
 
 /** A request to highlight [episode]; a fresh one each time, so asking twice for the same episode still moves. */
 private class EpisodeTarget(val episode: Episode)
