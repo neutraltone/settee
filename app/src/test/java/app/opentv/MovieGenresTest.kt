@@ -358,6 +358,26 @@ class MovieGenresTest {
     }
 
     @Test
+    fun `a film the provider sent without a poster gets TMDB's`() = runTest {
+        test.db.movies().upsertAll(listOf(movie("7", added = 1)))
+        panel.replies["get_vod_info"] = """{"info": {"year": "2011"}}"""
+
+        withTmdb { Result.success(TmdbMeta(posterUrl = "https://example.com/tmdb.jpg")) }.refresh(PANEL_SOURCE)
+
+        assertThat(stored("7").posterUrl).isEqualTo("https://example.com/tmdb.jpg")
+    }
+
+    @Test
+    fun `a film the provider sent a poster for keeps it, whatever TMDB has`() = runTest {
+        test.db.movies().upsertAll(listOf(movie("7", added = 1).copy(posterUrl = "https://example.com/own.jpg")))
+        panel.replies["get_vod_info"] = """{"info": {"year": "2011"}}"""
+
+        withTmdb { Result.success(TmdbMeta(posterUrl = "https://example.com/tmdb.jpg")) }.refresh(PANEL_SOURCE)
+
+        assertThat(stored("7").posterUrl).isEqualTo("https://example.com/own.jpg")
+    }
+
+    @Test
     fun `a film TMDB couldn't be reached about is asked TMDB again next time, but not the provider`() = runTest {
         test.db.movies().upsertAll(listOf(movie("7", added = 1)))
         panel.replies["get_vod_info"] = """{"info": {"year": "2011"}}"""

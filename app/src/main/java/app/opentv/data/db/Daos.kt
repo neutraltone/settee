@@ -913,8 +913,9 @@ interface MovieDao {
      * what it asked, so a film nobody has opened has its people for a person's page. Never overwrites,
      * since opening the movie may have found better ones meanwhile, except a blank genre (the provider
      * had none) with one found since, and the director, writers and studios, which TMDB's replace.
-     * Every field `Movie.filledFrom` fills, since a film this fills counts as enriched and opening it
-     * won't ask the provider again.
+     * Every field `Movie.filledFrom` and `Movie.withTmdb` fill, since a film this fills counts as
+     * enriched and answered, so neither opening it nor the next pass asks again (#349: the poster was
+     * left out, so TMDB's was lost for six months).
      */
     @Query(
         """
@@ -925,6 +926,7 @@ interface MovieDao {
             writer = COALESCE(:writer, writer),
             studio = COALESCE(:studio, studio),
             plot = COALESCE(plot, :plot),
+            posterUrl = COALESCE(posterUrl, :posterUrl),
             backdropUrl = COALESCE(backdropUrl, :backdropUrl),
             tmdbId = COALESCE(tmdbId, :tmdbId),
             rating = COALESCE(rating, :rating),
@@ -945,6 +947,7 @@ interface MovieDao {
         writer: String?,
         studio: String?,
         plot: String?,
+        posterUrl: String?,
         backdropUrl: String?,
         tmdbId: String?,
         rating: Double?,
@@ -971,6 +974,7 @@ interface MovieDao {
                 writer = it.writer,
                 studio = it.studio,
                 plot = it.plot,
+                posterUrl = it.posterUrl,
                 backdropUrl = it.backdropUrl,
                 tmdbId = it.tmdbId,
                 rating = it.rating,

@@ -156,6 +156,40 @@ class RoomMigrationTest {
         }
     }
 
+    @Test
+    fun `films TMDB answered without their poster being saved are asked again after 16, and nothing else changes`() {
+        val name = "poster-reask.db"
+        val columns = "id, sourceId, streamId, name, posterUrl, plot, streamUrl, addedMillis, " +
+            "detailsLookedUp, tmdbAnsweredAt"
+        helper.createDatabase(name, 15).use { db ->
+            db.execSQL(
+                "INSERT INTO movies ($columns) VALUES " +
+                    "(1, 1, 'blank', 'Blank', NULL, 'One.', 'http://example.com/1.mp4', 5, 1, 1000), " +
+                    "(2, 1, 'poster', 'Poster', 'http://example.com/2.jpg', 'Two.', " +
+                    "'http://example.com/2.mp4', 6, 1, 2000), " +
+                    "(3, 1, 'unasked', 'Unasked', NULL, 'Three.', 'http://example.com/3.mp4', 7, 0, NULL)",
+            )
+            db.execSQL(
+                "INSERT INTO favourites (profileId, kind, source, itemId, changedAtMillis, removed) " +
+                    "VALUES (1, 'MOVIE', 'Home', 'blank', 9, 0)",
+            )
+        }
+
+        helper.runMigrationsAndValidate(name, 16, true, *OpenTvDatabase.MIGRATIONS).use { db ->
+            fun film(id: Int) = db.first(
+                "SELECT id || '|' || sourceId || '|' || streamId || '|' || name || '|' || " +
+                    "IFNULL(posterUrl, '-') || '|' || plot || '|' || streamUrl || '|' || addedMillis || '|' || " +
+                    "detailsLookedUp || '|' || IFNULL(tmdbAnsweredAt, '-') FROM movies WHERE id = $id",
+            )
+            assertThat(film(1)).isEqualTo("1|1|blank|Blank|-|One.|http://example.com/1.mp4|5|1|-")
+            assertThat(film(2))
+                .isEqualTo("2|1|poster|Poster|http://example.com/2.jpg|Two.|http://example.com/2.mp4|6|1|2000")
+            assertThat(film(3)).isEqualTo("3|1|unasked|Unasked|-|Three.|http://example.com/3.mp4|7|0|-")
+            assertThat(db.first("SELECT source || ':' || itemId FROM favourites WHERE profileId = 1"))
+                .isEqualTo("Home:blank")
+        }
+    }
+
     /** The first column of [sql]'s first row. */
     private fun SupportSQLiteDatabase.first(sql: String): String = query(sql).use { row ->
         row.moveToFirst()

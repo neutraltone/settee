@@ -89,7 +89,7 @@ class Converters {
         SeriesRule::class,
         Reminder::class,
     ],
-    version = 15,
+    version = 16,
     exportSchema = true,
 )
 @TypeConverters(Converters::class)
@@ -291,11 +291,26 @@ abstract class OpenTvDatabase : RoomDatabase() {
         }
 
         /**
+         * 15 → 16: films TMDB answered about while the background pass threw its poster away (#349)
+         * are asked again, so the ones the provider sent without a poster get TMDB's. Only those with
+         * no poster: one that has a poster keeps it whatever TMDB says. The provider's answer
+         * (`detailsLookedUp`) stands. Only data changes.
+         */
+        private val POSTER_REASK = object : Migration(15, 16) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "UPDATE `movies` SET `tmdbAnsweredAt` = NULL " +
+                        "WHERE `posterUrl` IS NULL AND `tmdbAnsweredAt` IS NOT NULL",
+                )
+            }
+        }
+
+        /**
          * Every migration, in order. Shared with the migration test so neither list can lag. None
          * before 9: those schemas are wiped instead (see [WIPED_SCHEMAS]).
          */
         internal val MIGRATIONS: Array<Migration> =
-            arrayOf(CREDITS, TMDB_ANSWERED_AT, ADDED_INDEX, ON_NOW_INDEX, CHANNEL_IDENTITY)
+            arrayOf(CREDITS, TMDB_ANSWERED_AT, ADDED_INDEX, ON_NOW_INDEX, CHANNEL_IDENTITY, POSTER_REASK)
 
         /** The schemas opened empty rather than migrated; see [build]. */
         private val WIPED_SCHEMAS = intArrayOf(1, 2, 3, 4, 5, 6, 7, 8, 11)
