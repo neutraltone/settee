@@ -325,13 +325,14 @@ private sealed class HomeShelf(key: String, items: List<String>) {
 
     class Live(val tile: LiveTile) : HomeShelf("live", listOf(LIVE_PICK))
 
-    class Resume(val cards: List<ResumeItem>) : HomeShelf("cw", cards.map { it.key.stored })
+    class Resume(val cards: List<ResumeItem>) : HomeShelf(HomeRowKind.CONTINUE_WATCHING.key, cards.map { it.key.stored })
 
     /** A row of covers; [showsStatus] when each says where the Profile is with its title. */
     class Covers(key: String, val title: Int, val covers: List<Cover>, val showsStatus: Boolean) :
         HomeShelf(key, covers.map { it.title.pickKey })
 
-    class Channels(val channels: List<HomeChannel>) : HomeShelf("channels", channels.map { it.channel.primary.pickKey })
+    class Channels(val channels: List<HomeChannel>) :
+        HomeShelf(HomeRowKind.FAVOURITE_CHANNELS.key, channels.map { it.channel.primary.pickKey })
 }
 
 /** Home's rows of covers, by kind. */

@@ -1570,30 +1570,41 @@ class HomeViewModel @JvmOverloads constructor(
     // A channel in a locked category would otherwise play on Home, unasked, for whoever is in the
     // room next: the guide hides it until the session is unlocked, and so does Home. One that has
     // left the channel list still shows, as a reminder that can't play.
+    //
+    // A Live Preview the Profile turned off is only there for Home's hidden-rows hint, so it goes
+    // without its channel or guide rather than reading them every minute for a tile nobody sees.
     @OptIn(ExperimentalCoroutinesApi::class)
     private val live: Flow<LiveNow?> = combine(
         graph.viewerLibrary.live.preview(),
         settings.liveEnabled,
-    ) { preview, liveOn -> preview?.takeIf { liveOn } }
+        graph.profileSettings.homeArrangement.map { it.livePreview }.distinctUntilChanged(),
+    ) { preview, liveOn, shown -> preview?.takeIf { liveOn }?.let { it to shown } }
         .distinctUntilChanged()
-        .flatMapLatest { preview ->
-            val channelId = preview?.channel?.id
+        .flatMapLatest { found ->
             when {
-                preview == null -> flowOf(null)
-                channelId == null -> flowOf(preview to null)
-                else -> lineup.channel(channelId).map { channel ->
-                    channel?.let { shownQuality(preview, it) to it }
-                }
+                found == null -> flowOf(null)
+                !found.second -> flowOf(LiveNow(found.first, null, null))
+                else -> shownLive(found.first)
             }
         }
-        .distinctUntilChanged()
-        .flatMapLatest { shown ->
-            if (shown == null) {
+
+    /** The Live Preview of [preview] as Home shows it: its channel's Quality and what's on, a minute at a time. */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    private fun shownLive(preview: LivePreview): Flow<LiveNow?> {
+        val channelId = preview.channel?.id
+        val shown: Flow<Pair<LivePreview, LineupChannel?>?> = if (channelId == null) {
+            flowOf(preview to null)
+        } else {
+            lineup.channel(channelId).map { channel -> channel?.let { shownQuality(preview, it) to it } }
+        }
+        return shown.distinctUntilChanged().flatMapLatest { found ->
+            if (found == null) {
                 flowOf(null)
             } else {
-                minute.map { now -> liveNow(shown.first, shown.second, now) }.distinctUntilChanged()
+                minute.map { now -> liveNow(found.first, found.second, now) }.distinctUntilChanged()
             }
         }
+    }
 
     /**
      * The Quality last settled on, which may have been picked from the list, unless this device can't

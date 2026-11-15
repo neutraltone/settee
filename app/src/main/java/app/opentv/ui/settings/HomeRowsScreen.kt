@@ -85,14 +85,19 @@ fun HomeRowsScreen(onBack: () -> Unit) {
  * Select lifts a Home Row; Up and Down move it, stopping at the first and last Home Row; Select drops
  * it, saving through [onArrange], and Back puts it back where it was. Left and Right do nothing while
  * it's lifted, so the Highlight can't leave with a row in hand. Options on a row hides or shows it.
- * On touch, each row's grip drags it, and letting go saves.
+ * On touch, each row's grip drags it, and letting go saves. Saves build on the last one made here,
+ * not on [arrangement] as drawn, so presses quicker than the store don't undo each other.
  */
 @Composable
 internal fun HomeRowsContent(arrangement: HomeArrangement, onArrange: (HomeArrangement) -> Unit, onBack: () -> Unit) {
-    // While a row is lifted, the order being tried out; saved only when it's dropped.
+    // What was last saved, ahead of the store handing it back: a second quick press builds on the
+    // first, not on what the page was drawn with, which would undo it. Starts again from the store's
+    // whenever that changes, a sync from another device included.
+    var latest by remember(arrangement) { mutableStateOf(arrangement) }
+    // While a row is lifted, the arrangement it's being tried out in; saved only when it's dropped.
     var moving by remember { mutableStateOf<Moving?>(null) }
     var options by remember { mutableStateOf<HomeRowKind?>(null) }
-    val shown = moving?.rows ?: arrangement.rows
+    val shown = (moving?.draft ?: latest).rows
     val requesters = remember { HomeRowKind.entries.associateWith { FocusRequester() } }
     val livePreviewRow = remember { FocusRequester() }
 
@@ -110,17 +115,29 @@ internal fun HomeRowsContent(arrangement: HomeArrangement, onArrange: (HomeArran
     // Registered after the page's own, so with a row lifted Back puts it back rather than leaving.
     BackHandler(enabled = moving != null) { moving = null }
 
+    fun save(next: HomeArrangement) {
+        latest = next
+        onArrange(next)
+    }
+
+    fun lift(row: HomeRowKind) {
+        moving = Moving(row, latest)
+    }
+
     fun move(by: Int) {
         val now = moving ?: return
-        val from = now.rows.indexOf(now.row)
-        val to = (from + by).coerceIn(0, now.rows.lastIndex)
-        if (to != from) moving = now.copy(rows = now.rows.toMutableList().apply { add(to, removeAt(from)) })
+        val from = now.draft.rows.indexOf(now.row)
+        moving = now.copy(draft = now.draft.moved(from, (from + by).coerceIn(0, now.draft.rows.lastIndex)))
     }
 
     fun drop() {
         val done = moving ?: return
         moving = null
-        if (done.rows != arrangement.rows) onArrange(arrangement.copy(rows = done.rows))
+        if (done.draft.rows != latest.rows) save(latest.copy(rows = done.draft.rows))
+    }
+
+    fun cancel() {
+        moving = null
     }
 
     val on = stringResource(R.string.settings_row_on)
@@ -147,63 +164,67 @@ internal fun HomeRowsContent(arrangement: HomeArrangement, onArrange: (HomeArran
         verticalArrangement = Arrangement.spacedBy(ROW_GAP),
     ) {
         Text(stringResource(R.string.home_rows_title), SetteeType.ScreenTitle)
+        // Under the title rather than under the rows, where a full page scrolls it out of view; and
+        // always one line, so lifting a row doesn't push the rows down.
+        Text(
+            stringResource(if (moving != null) R.string.home_rows_moving_hint else R.string.home_rows_hint),
+            SetteeType.Body,
+            color = SetteeColors.QuietText,
+            maxLines = 1,
+        )
         val column = Modifier.widthIn(max = 900.dp)
         ListRow(
             stringResource(R.string.home_rows_live_preview),
-            onClick = { if (moving == null) onArrange(arrangement.copy(livePreview = !arrangement.livePreview)) },
-            switch = arrangement.livePreview,
+            onClick = { if (moving == null) save(latest.copy(livePreview = !latest.livePreview)) },
+            switch = latest.livePreview,
             modifier = column.focusRequester(livePreviewRow),
         )
         shown.forEach { row ->
             key(row) {
                 HomeRowItem(
                     row = row,
-                    value = if (arrangement.isShown(row)) shownLabel else hiddenLabel,
+                    value = if (latest.isShown(row)) shownLabel else hiddenLabel,
                     lifted = row == lifted,
                     modifier = column.focusRequester(requesters.getValue(row)),
                     onSelect = {
                         when {
-                            moving == null -> moving = Moving(row, arrangement.rows)
+                            moving == null -> lift(row)
                             row == lifted -> drop()
                         }
                     },
                     onOptions = { if (moving == null) options = row },
-                    drag = RowDrag(
-                        start = { moving = Moving(row, arrangement.rows) },
-                        move = ::move,
-                        end = ::drop,
-                    ),
+                    drag = RowDrag(start = { lift(row) }, move = ::move, end = ::drop, cancel = ::cancel),
                 )
             }
         }
         ListRow(
             stringResource(R.string.home_rows_restore),
-            onClick = { if (moving == null) onArrange(HomeArrangement.USUAL) },
+            onClick = { if (moving == null) save(HomeArrangement.USUAL) },
             modifier = column,
         )
-        if (moving != null) {
-            Text(stringResource(R.string.home_rows_moving_hint), SetteeType.Body, color = SetteeColors.QuietText)
-        }
     }
 
     options?.let { row ->
         SidePanel(onBack = { options = null }) {
             PanelTitle(stringResource(row.label))
-            val isShown = arrangement.isShown(row)
+            val isShown = latest.isShown(row)
             PanelRow(
                 stringResource(R.string.home_rows_show_on_home),
                 value = if (isShown) on else off,
-                onClick = { onArrange(arrangement.withShown(row, !isShown)) },
+                onClick = { save(latest.withShown(row, !isShown)) },
             )
         }
     }
 }
 
-/** A row lifted to be moved, and the order it's in so far. */
-private data class Moving(val row: HomeRowKind, val rows: List<HomeRowKind>)
+/** A row lifted to be moved, and the arrangement it's being tried out in. */
+private data class Moving(val row: HomeRowKind, val draft: HomeArrangement)
 
-/** What a finger dragging a row's grip does: lifts it, moves it a row at a time, and drops it. */
-private class RowDrag(val start: () -> Unit, val move: (Int) -> Unit, val end: () -> Unit)
+/**
+ * What a finger dragging a row's grip does: lifts it, moves it a row at a time, and drops it, saving.
+ * A drag the system cancels puts the row back unsaved, as Back does on a remote.
+ */
+private class RowDrag(val start: () -> Unit, val move: (Int) -> Unit, val end: () -> Unit, val cancel: () -> Unit)
 
 @Composable
 private fun HomeRowItem(
@@ -251,7 +272,7 @@ private fun HomeRowItem(
                             },
                             onDragCancel = {
                                 offset = 0f
-                                currentDrag.end()
+                                currentDrag.cancel()
                             },
                         ) { change, amount ->
                             change.consume()

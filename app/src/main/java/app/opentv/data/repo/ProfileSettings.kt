@@ -79,6 +79,18 @@ class ProfileSettings(
      */
     suspend fun arrangeHome(arrangement: HomeArrangement) = store(HOME_ROWS, arrangement.encode())
 
+    /**
+     * The device had 1.0's Live Preview switch off: each Profile that hasn't arranged Home gets it off
+     * too. Stored as the oldest possible choice, so any arrangement the Profile makes on any device,
+     * whenever, wins over it.
+     */
+    suspend fun turnLivePreviewOffEverywhere() {
+        val off = HomeArrangement.USUAL.copy(livePreview = false).encode()
+        profiles.all().filter { dao.find(it.id, HOME_ROWS) == null }.forEach {
+            dao.upsert(ProfileSetting(it.id, HOME_ROWS, off, updatedAtMillis = 0))
+        }
+    }
+
     /** The viewer turned subtitles on or off, in a player or in Settings. */
     suspend fun setSubtitlesOn(enabled: Boolean) = store(SUBTITLES_ON, enabled.toString())
 

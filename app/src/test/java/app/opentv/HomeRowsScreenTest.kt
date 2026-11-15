@@ -16,6 +16,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.hasAnyAncestor
@@ -70,6 +71,12 @@ class HomeRowsScreenTest {
     /** How many times the page asked to leave. */
     private var left = 0
 
+    /** Every arrangement the page saved, in order. */
+    private val saved = mutableListOf<HomeArrangement>()
+
+    /** When true, the store hasn't caught up yet: saves are heard but not handed back to the page. */
+    private var storeLags = false
+
     private val usualRows =
         listOf(CONTINUE_WATCHING, RECENT_SHOWS, RECENT_MOVIES, FAVOURITE_SHOWS, FAVOURITE_MOVIES, FAVOURITE_CHANNELS)
 
@@ -83,7 +90,8 @@ class HomeRowsScreenTest {
                 HomeRowsContent(
                     arrangement = arrangement,
                     onArrange = {
-                        arrangement = it
+                        saved += it
+                        if (!storeLags) arrangement = it
                         saves++
                     },
                     onBack = { left++ },
@@ -129,7 +137,7 @@ class HomeRowsScreenTest {
         show()
 
         press(KeyEvent.KEYCODE_DPAD_DOWN, KeyEvent.KEYCODE_DPAD_CENTER)
-        compose.onNodeWithText(hint).assertExists()
+        compose.onNodeWithText(hint).assertIsDisplayed()
         press(KeyEvent.KEYCODE_DPAD_DOWN, KeyEvent.KEYCODE_DPAD_DOWN)
         captureScreen("home_rows_lifted")
         assertThat(saves).isEqualTo(0)
@@ -281,6 +289,66 @@ class HomeRowsScreenTest {
             FAVOURITE_CHANNELS,
         ).inOrder()
         assertThat(saves).isEqualTo(1)
+    }
+
+    @Test
+    fun `the hint sits under the title, above the rows, whether or not a row is lifted`() {
+        show()
+        val resting = "Select a row to move it, or press options to hide it"
+        compose.onNodeWithText(resting).assertIsDisplayed()
+        val restingTop = topOf(resting)
+        assertThat(restingTop).isLessThan(topOf("Live Preview"))
+
+        press(KeyEvent.KEYCODE_DPAD_DOWN, KeyEvent.KEYCODE_DPAD_CENTER)
+
+        compose.onNodeWithText(resting).assertDoesNotExist()
+        compose.onNodeWithText(hint).assertIsDisplayed()
+        // Same place, so lifting a row doesn't move every row under it.
+        assertThat(topOf(hint)).isEqualTo(restingTop)
+    }
+
+    @Test
+    fun `two quick presses on the Live Preview turn it off and back on, even before the store catches up`() {
+        show()
+        storeLags = true
+
+        press(KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_DPAD_CENTER)
+
+        assertThat(saved.map { it.livePreview }).containsExactly(false, true).inOrder()
+    }
+
+    @Test
+    fun `two quick presses on Show on Home hide the row and show it again, even before the store catches up`() {
+        show()
+        press(KeyEvent.KEYCODE_DPAD_DOWN, KeyEvent.KEYCODE_MENU)
+        val showOnHome = hasText("Show on Home") and hasAnyAncestor(isDialog())
+        compose.waitUntil(5_000) { compose.onAllNodes(showOnHome).fetchSemanticsNodes().isNotEmpty() }
+        storeLags = true
+
+        compose.onNode(showOnHome).performClick()
+        compose.onNode(showOnHome).performClick()
+        compose.waitForIdle()
+
+        assertThat(saved.map { it.hidden }).containsExactly(setOf(CONTINUE_WATCHING), emptySet<Any>()).inOrder()
+    }
+
+    @Test
+    fun `on touch, a drag that's cancelled puts the row back and saves nothing`() {
+        show()
+        val grip = compose.onNodeWithTag(homeRowGripTag(FAVOURITE_MOVIES), useUnmergedTree = true)
+        val distance = topOf("Favourite movies") - topOf("Continue watching")
+        val by = with(compose.density) { distance.toPx() }
+
+        grip.performTouchInput {
+            down(center)
+            repeat(DRAG_STEPS) { moveBy(Offset(0f, -by / DRAG_STEPS)) }
+            cancel()
+        }
+        compose.waitForIdle()
+
+        assertThat(saves).isEqualTo(0)
+        assertThat(arrangement.rows).isEqualTo(usualRows)
+        assertOnScreenInOrder("Favourite shows", "Favourite movies", "Favourite channels")
     }
 
     @Test
