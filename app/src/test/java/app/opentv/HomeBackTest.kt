@@ -15,7 +15,6 @@ import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.navigation.NavHostController
-import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.test.core.app.ApplicationProvider
@@ -109,7 +108,7 @@ class HomeBackTest {
                     }
                 },
             ) {
-                NavHost(nav, startDestination = Routes.MAIN) {
+                ScreensNavHost(nav, startDestination = Routes.MAIN) {
                     mainShellRoute()
                     composable(Routes.SETTINGS) { Text("Settings", SetteeType.Body) }
                     composable(Routes.VOD_PLAYER) { Text("Player", SetteeType.Body) }

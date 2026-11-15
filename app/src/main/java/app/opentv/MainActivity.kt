@@ -52,7 +52,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
@@ -417,7 +416,7 @@ private fun OpenTvApp(isTelevision: Boolean, launchedToPlay: Boolean) {
                         )
                     },
                 ) {
-                    NavHost(navController = navController, startDestination = start) {
+                    ScreensNavHost(navController, startDestination = start) {
                         providerRoutes(navController, sourcesViewModel)
 
                         mainShellRoute()

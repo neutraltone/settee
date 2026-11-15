@@ -31,7 +31,6 @@ import androidx.compose.ui.test.isFocused
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.requestFocus
 import androidx.navigation.NavHostController
-import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.test.core.app.ApplicationProvider
@@ -166,7 +165,7 @@ class LiveCoveredTest {
                     )
                 },
             ) {
-                NavHost(nav, startDestination = Routes.MAIN) {
+                ScreensNavHost(nav, startDestination = Routes.MAIN) {
                     mainShellRoute()
                     composable(Routes.SETTINGS) { StandIn("Settings") }
                 }

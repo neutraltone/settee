@@ -5,6 +5,8 @@
  */
 package app.opentv
 
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
 import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -28,11 +30,11 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalFocusManager
-import androidx.lifecycle.Lifecycle
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.LocalOwnersProvider
+import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import app.opentv.ui.LocalShellCovered
@@ -61,10 +63,11 @@ fun NavGraphBuilder.mainShellRoute() = composable(Routes.MAIN) {}
  * would be inside the NavHost: the same view models, saved state and tab ([shellTab]), and the same
  * lifecycle, so the Live Preview and the guide's listings still stop while it's covered.
  *
- * Covered by any screen but a player, it stays built without being placed: nothing of it is drawn
- * and the remote can't reach it, and Back finds it as it was, the highlight where it was left. Under a
- * player it's let go, as before, so Home waits for rows that know what was just watched rather than
- * show a card about to move or go (see [KeepHomeLive]).
+ * Covered by any screen but a player, it stays built, and is placed only while the NavHost still
+ * draws its entry: on top, and through any transition to or from the screen over it. The rest of
+ * the time nothing of it is drawn and the remote can't reach it, and Back finds it as it was, the
+ * highlight where it was left. Under a player it's let go, as before, so Home waits for rows that
+ * know what was just watched rather than show a card about to move or go (see [KeepHomeLive]).
  */
 @Composable
 fun KeptShell(nav: NavHostController, shell: @Composable (NavBackStackEntry) -> Unit, navHost: @Composable () -> Unit) {
@@ -72,14 +75,41 @@ fun KeptShell(nav: NavHostController, shell: @Composable (NavBackStackEntry) -> 
     // whenever the top one changes, which every change to the stack does.
     val top by nav.currentBackStackEntryAsState()
     val main = remember(top) { top?.let { runCatching { nav.getBackStackEntry(Routes.MAIN) }.getOrNull() } }
+    // What the NavHost draws, a screen it's still letting go included. Not the main entry's
+    // lifecycle: Navigation drops an entry that isn't on top to CREATED at once, while a screen
+    // opening over it may still be see-through, which left the window's plain background under
+    // Navigation's old crossfade (#194). Screens switch at once now, but this holds whatever
+    // [ScreensNavHost] does.
+    val visible by nav.visibleEntries.collectAsState()
     val saveable = rememberSaveableStateHolder()
     Box(Modifier.fillMaxSize()) {
         if (main != null && !isPlayerRoute(top?.destination?.route)) {
-            key(main.id) { ShellLayer(main, covered = top != main, saveable, shell) }
+            key(main.id) { ShellLayer(main, covered = top != main, drawn = main in visible, saveable, shell) }
         }
         navHost()
     }
     ForgetGoneEntries(main?.id, saveable)
+}
+
+/**
+ * The app's NavHost, whose screens switch at once, with no animation (#194). Navigation's default was
+ * a 700 ms crossfade, and a 300 ms one was tried. On a Fire TV Stick, building the new screen takes
+ * several frames of 90-240 ms (about 600 ms for Settings, three frames for Home coming back), so a
+ * fade timed from the press was mostly over before anyone saw it, and one timed from when the screen
+ * was drawn kept the viewer waiting about half a second first. Docs/LOOK.md: anything that can't pass
+ * doesn't animate.
+ */
+@Composable
+fun ScreensNavHost(nav: NavHostController, startDestination: String, builder: NavGraphBuilder.() -> Unit) {
+    NavHost(
+        navController = nav,
+        startDestination = startDestination,
+        enterTransition = { EnterTransition.None },
+        exitTransition = { ExitTransition.None },
+        popEnterTransition = { EnterTransition.None },
+        popExitTransition = { ExitTransition.None },
+        builder = builder,
+    )
 }
 
 /** The live player and the movie and episode player, which the main screen isn't kept under. */
@@ -106,12 +136,10 @@ private fun ForgetGoneEntries(mainId: String?, saveable: SaveableStateHolder) {
 private fun ShellLayer(
     entry: NavBackStackEntry,
     covered: Boolean,
+    drawn: Boolean,
     saveable: SaveableStateHolder,
     shell: @Composable (NavBackStackEntry) -> Unit,
 ) {
-    val lifecycle by entry.lifecycle.currentStateFlow.collectAsState()
-    // Placed while it's on top, and while the screen over it fades in or out, as it was in the NavHost.
-    val placed = lifecycle.isAtLeast(Lifecycle.State.STARTED)
     val coveredNow by rememberUpdatedState(covered)
     val anywhere = remember { FocusRequester() }
     val memory = remember { HighlightMemory() }
@@ -129,7 +157,7 @@ private fun ShellLayer(
             if (hasFocus) focusManager.clearFocus(force = true)
         } else if (wasCovered) {
             wasCovered = false
-            returnHighlight(memory, shellReturn, hasFocus = { hasFocus }, anywhere)
+            returnHighlight(memory, shellReturn, anywhere)
         }
     }
     entry.LocalOwnersProvider(saveable) {
@@ -141,9 +169,10 @@ private fun ShellLayer(
             Box(
                 Modifier
                     .fillMaxSize()
-                    .placedOnlyIf(placed)
+                    .placedOnlyIf(drawn)
                     .onFocusChanged { hasFocus = it.hasFocus }
-                    // While the screen over it fades in, the shell is still placed: keep the remote out.
+                    // Placed but covered while a screen opens over it: keep the remote out, so a
+                    // press then goes to the screen opening.
                     .focusProperties { onEnter = { if (coveredNow) cancelFocusChange() } }
                     .focusRequester(anywhere)
                     .focusGroup(),
@@ -161,17 +190,14 @@ private fun ShellLayer(
  * and only with nothing there to take it, anywhere in the shell rather than nowhere: the shell's
  * nearest item is the rail's, which left a viewer back from a title's page on the rail (#384).
  */
-private suspend fun returnHighlight(
-    memory: HighlightMemory,
-    shellReturn: ShellReturn,
-    hasFocus: () -> Boolean,
-    anywhere: FocusRequester,
-) {
+private suspend fun returnHighlight(memory: HighlightMemory, shellReturn: ShellReturn, anywhere: FocusRequester) {
     if (memory.restore()) return
     shellReturn.asked = true
     repeat(RETURN_FRAMES) { withFrameNanos {} }
     shellReturn.asked = false
-    if (hasFocus()) return
+    // Only the tab's content counts: the rail may have been handed it as the screen over the
+    // shell went, and a viewer back from a title's page belongs in the rows (#384).
+    if (shellReturn.contentHasFocus) return
     val inContent = runCatching { shellReturn.content?.requestFocus() }.getOrNull() == true
     if (!inContent) runCatching { anywhere.requestFocus() }
 }

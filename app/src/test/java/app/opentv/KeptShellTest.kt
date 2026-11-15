@@ -28,8 +28,10 @@ import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.isDisplayed
 import androidx.compose.ui.test.isFocused
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
@@ -37,7 +39,6 @@ import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.test.requestFocus
 import androidx.navigation.NavHostController
-import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import app.opentv.data.model.Movie
@@ -139,7 +140,7 @@ class KeptShellTest {
                 }
             },
         ) {
-            NavHost(nav, startDestination = Routes.MAIN) {
+            ScreensNavHost(nav, startDestination = Routes.MAIN) {
                 mainShellRoute()
                 composable(Routes.SETTINGS) { StandIn("Settings") }
                 composable(Routes.MOVIE_DETAIL) { StandIn("Movie") }
@@ -216,7 +217,7 @@ class KeptShellTest {
     }
 
     private fun openSettingsFromRail() {
-        compose.waitUntil(5_000) { compose.onAllNodes(hasText("Added 1")).fetchSemanticsNodes().isNotEmpty() }
+        homeShowing()
         // By the remote, as a viewer does: requestFocus enters the rail on the open tab's item.
         press(Key.DirectionLeft)
         repeat(RAIL_ITEMS) {
@@ -242,7 +243,7 @@ class KeptShellTest {
     @Test
     fun `Back to Home from a title's page after playing it puts the highlight on the card picked`() {
         setApp()
-        compose.waitUntil(5_000) { compose.onAllNodes(hasText("Added 1")).fetchSemanticsNodes().isNotEmpty() }
+        homeShowing()
         press(Key.DirectionRight, times = 2)
         press(Key.DirectionCenter)
         assertThat(opened).isEqualTo("Added 3")
@@ -290,7 +291,7 @@ class KeptShellTest {
     @Test
     fun `Back from a title opened on Movies is still on Movies, with the highlight on that title`() {
         setApp()
-        compose.waitUntil(5_000) { compose.onAllNodes(hasText("Added 1")).fetchSemanticsNodes().isNotEmpty() }
+        homeShowing()
         compose.runOnIdle { nav.selectShellTab(Tab.MOVIES) }
         compose.waitUntil(5_000) { compose.onAllNodes(hasText("Drama 21")).fetchSemanticsNodes().isNotEmpty() }
         compose.onNodeWithText("Favourite 1").requestFocus()
@@ -307,9 +308,98 @@ class KeptShellTest {
         assertThat(opened).isEqualTo("Drama 22")
     }
 
+    /** Whether Home's first card is drawn: placed on screen, under whatever covers it. */
+    private fun homeDrawn(): Boolean {
+        val card = compose.onAllNodes(hasText("Added 1"))
+        return card.fetchSemanticsNodes().isNotEmpty() && card.onFirst().isDisplayed()
+    }
+
+    private fun homeShowing() =
+        compose.waitUntil(5_000) { compose.onAllNodes(hasText("Added 1")).fetchSemanticsNodes().isNotEmpty() }
+
+    /** Stops the clock, so a screen change can be looked at frame by frame. */
+    private fun holdTheClock() {
+        compose.waitForIdle()
+        compose.mainClock.autoAdvance = false
+    }
+
+    /** The few frames a screen change takes: Navigation lets go of the old screen a frame or two after the new one. */
+    private fun aFewFrames() = repeat(SWITCH_FRAMES) { compose.mainClock.advanceTimeByFrame() }
+
+    private fun shown(text: String) = compose.onAllNodes(hasText(text)).fetchSemanticsNodes().isNotEmpty()
+
+    @Test
+    fun `Settings takes Home's place at once, with no fade`() {
+        setApp()
+        homeShowing()
+        holdTheClock()
+
+        compose.runOnUiThread { nav.navigate(Routes.SETTINGS) }
+        aFewFrames()
+
+        assertThat(shown("Settings option 1")).isTrue()
+        assertThat(homeDrawn()).isFalse()
+    }
+
+    @Test
+    fun `Back from Settings shows Home at once, with no fade`() {
+        setApp()
+        openSettingsFromRail()
+        holdTheClock()
+
+        back()
+        aFewFrames()
+
+        assertThat(shown("Settings option 1")).isFalse()
+        assertThat(homeDrawn()).isTrue()
+    }
+
+    @Test
+    fun `going on to Home from a screen shows Home at once, with no fade`() {
+        setApp()
+        openSettingsFromRail()
+        holdTheClock()
+
+        // As Setup does when it's finished: on to Home, with nothing left behind it.
+        compose.runOnUiThread { nav.leaveSetup(Tab.HOME) }
+        aFewFrames()
+
+        assertThat(shown("Settings option 1")).isFalse()
+        assertThat(homeDrawn()).isTrue()
+    }
+
+    @Test
+    fun `a press as Settings opens moves Settings' highlight and never reaches Home`() {
+        setApp()
+        homeShowing()
+        holdTheClock()
+        compose.runOnUiThread { nav.navigate(Routes.SETTINGS) }
+        aFewFrames()
+
+        press(Key.DirectionDown)
+        press(Key.DirectionCenter)
+        aFewFrames()
+
+        assertThat(focused("Settings option 2")).isTrue()
+        assertThat(openedCount).isEqualTo(0)
+    }
+
+    @Test
+    fun `Home is let go from under a player as soon as it opens`() {
+        setApp()
+        homeShowing()
+        holdTheClock()
+
+        compose.runOnUiThread { nav.navigate(Routes.vodPlayer(MediaKey.Movie(1))) }
+        aFewFrames()
+
+        assertThat(homeDrawn()).isFalse()
+        assertThat(shown("Player option 1")).isTrue()
+    }
+
     /** Opens Movies' [grid], which has the films "Grid 1" to "Grid 24", and waits for its covers. */
     private fun openGrid() {
-        compose.waitUntil(5_000) { compose.onAllNodes(hasText("Added 1")).fetchSemanticsNodes().isNotEmpty() }
+        homeShowing()
         compose.runOnIdle { nav.selectShellTab(Tab.MOVIES) }
         compose.waitUntil(5_000) { compose.onAllNodes(hasText("Grid 1")).fetchSemanticsNodes().isNotEmpty() }
     }
@@ -369,7 +459,7 @@ class KeptShellTest {
     @Test
     fun `Back to Movies' rows after playing goes into the rows, never the rail`() {
         setApp()
-        compose.waitUntil(5_000) { compose.onAllNodes(hasText("Added 1")).fetchSemanticsNodes().isNotEmpty() }
+        homeShowing()
         compose.runOnIdle { nav.selectShellTab(Tab.MOVIES) }
         compose.waitUntil(5_000) { compose.onAllNodes(hasText("Drama 21")).fetchSemanticsNodes().isNotEmpty() }
         compose.onNodeWithText("Favourite 1").requestFocus()
@@ -410,5 +500,8 @@ class KeptShellTest {
     private companion object {
         /** More than the rail has, so walking Down through it always reaches the bottom. */
         const val RAIL_ITEMS = 10
+
+        /** Frames enough for any screen change: a fade would take at least 18. */
+        const val SWITCH_FRAMES = 6
     }
 }

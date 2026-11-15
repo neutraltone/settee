@@ -135,6 +135,7 @@ internal fun MainShell(
                         translationX = slide.open() * travel.toPx() - settled
                     }
                     .fillMaxHeight()
+                    .onFocusChanged { shellReturn.contentHasFocus = it.hasFocus }
                     .focusRequester(contentFocus)
                     .focusGroup(),
             ) {
@@ -338,6 +339,12 @@ class ShellReturn {
      * the shell as a whole would take it to its top-left item, which is the rail's (#384).
      */
     var content: FocusRequester? = null
+
+    /**
+     * Whether the Highlight is in the tab's content. Not just anywhere in the shell: when the screen
+     * that had it goes in one frame, Android hands it to the shell's first item, the rail's (#194).
+     */
+    var contentHasFocus = false
 }
 
 val LocalShellReturn = staticCompositionLocalOf { ShellReturn() }
