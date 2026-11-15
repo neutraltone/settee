@@ -102,6 +102,8 @@
     <string name="rec_error_nothing">Nothing was recorded. The channel may have stopped, so try recording it again.</string>
     <string name="rec_error_usb_no_folder">There\'s no folder to record to. Pick one on your USB drive in Recording settings.</string>
     <string name="rec_error_usb_unavailable">Can\'t find your USB drive. Plug it back in, then pick its folder again in Recording settings.</string>
+    <string name="rec_delete_failed_nas">Couldn\'t delete this from your NAS. Check it\'s on, then try deleting it again.</string>
+    <string name="rec_delete_failed">Couldn\'t delete this recording. Try deleting it again.</string>
     <string name="rec_background_prompt_title">Keep recording when you leave?</string>
     <string name="rec_background_prompt_body">Android may stop this recording when the screen sleeps or you leave Settee. Allow Settee to ignore battery optimisation so recordings keep running in standby, as they would on a set-top box.</string>
     <string name="rec_background_prompt_allow">Allow</string>

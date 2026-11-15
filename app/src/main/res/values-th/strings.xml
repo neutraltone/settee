@@ -76,6 +76,8 @@
     <string name="rec_error_nothing">ไม่มีอะไรถูกบันทึก ช่องอาจหยุดไป ลองบันทึกอีกครั้ง</string>
     <string name="rec_error_usb_no_folder">ไม่มีโฟลเดอร์สำหรับบันทึก เลือกโฟลเดอร์บนไดรฟ์ USB ของคุณในการตั้งค่าการบันทึก</string>
     <string name="rec_error_usb_unavailable">ไม่พบไดรฟ์ USB ของคุณ เสียบกลับเข้าไป แล้วเลือกโฟลเดอร์อีกครั้งในการตั้งค่าการบันทึก</string>
+    <string name="rec_delete_failed_nas">ลบออกจาก NAS ของคุณไม่ได้ ตรวจสอบว่าเปิดเครื่องอยู่ แล้วลองลบอีกครั้ง</string>
+    <string name="rec_delete_failed">ลบการบันทึกนี้ไม่ได้ ลองลบอีกครั้ง</string>
     <string name="rec_background_prompt_title">บันทึกต่อไปเมื่อคุณออกจากแอปหรือไม่?</string>
     <string name="rec_background_prompt_body">Android อาจหยุดการบันทึกนี้เมื่อหน้าจอพัก หรือเมื่อคุณออกจาก Settee อนุญาตให้ Settee ไม่ใช้การจำกัดการใช้พลังงานแบตเตอรี่ เพื่อให้การบันทึกทำงานต่อแม้ในโหมดสแตนด์บาย เหมือนกล่องรับสัญญาณทีวี</string>
     <string name="rec_background_prompt_allow">อนุญาต</string>

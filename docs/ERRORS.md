@@ -76,6 +76,8 @@ change channel.
 | Recording: no free file name (`… (999).ts` taken too, #354) | `rec_error_failed` | This recording stopped. Try recording it again. | IOException | Recording folder full of one name |
 | Recording: any other exception | `rec_error_failed` | This recording stopped. Try recording it again. | exception type | Unknown |
 | Recording: nothing came | `rec_error_nothing` | Nothing was recorded. The channel may have stopped, so try recording it again. | none | Provider's stream, usually |
+| Recordings: deleting a NAS recording failed (unreachable, wrong login, refused); the row stays | `rec_delete_failed_nas` | Couldn't delete this from your NAS. Check it's on, then try deleting it again. | exception type | The NAS, or the network |
+| Recordings: deleting a USB or on-device recording failed; the row stays | `rec_delete_failed` | Couldn't delete this recording. Try deleting it again. | exception type; StorageUnavailable, with `rec_error_usb_unavailable`'s sentence, when the USB drive is gone | The drive |
 
 The external player's toast can't hold `ErrorMessage`, so it shows the sentence with the detail on the
 line under it.

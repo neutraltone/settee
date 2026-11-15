@@ -6,7 +6,10 @@
 package app.opentv.recording
 
 import android.content.Context
+import app.opentv.R
 import app.opentv.core.AppSettings
+import app.opentv.core.ErrorWording
+import app.opentv.core.ViewerError
 import app.opentv.data.model.Channel
 import app.opentv.data.model.Programme
 import app.opentv.data.model.Recording
@@ -18,6 +21,7 @@ import app.opentv.data.repo.EpgRepository
 import app.opentv.data.repo.RecordingRepository
 import app.opentv.data.repo.SourceRepository
 import app.opentv.data.repo.recordable
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -28,7 +32,7 @@ import kotlinx.coroutines.withContext
  * file goes and which URL to pull, then hands off to [RecordingService] to do the actual byte
  * copy in the foreground so it survives the user leaving the player or the screen going dark.
  */
-@Suppress("LongParameterList") // clock is only passed by tests, to start two captures in one minute.
+@Suppress("LongParameterList") // clock and removeFile are only passed by tests.
 class RecordingEngine(
     private val appContext: Context,
     private val repo: RecordingRepository,
@@ -36,6 +40,9 @@ class RecordingEngine(
     private val settings: AppSettings,
     private val epgRepository: EpgRepository,
     private val lineup: ChannelLineup,
+    private val wording: ErrorWording,
+    /** Removes a recording's file, throwing when it's still there: [RecordingStorage.delete]. */
+    private val removeFile: (String) -> Unit = { RecordingStorage.delete(appContext, settings, it) },
     private val clock: () -> Long = System::currentTimeMillis,
 ) {
     /**
@@ -97,22 +104,39 @@ class RecordingEngine(
     }
 
     /**
-     * Delete [recording]: always its row, and its file unless another row still points at it — a
-     * recording made before names were kept apart (#354) may share one.
+     * Deletes [recording]'s file, then its row, stopping it first if it's still going. The file stays
+     * when another row still points at it: a recording made before names were kept apart (#354) may
+     * share one. When the file won't go, the row stays and this says why: deleting the row anyway
+     * would leave the file on the NAS or drive with nothing in the app pointing to it again.
      */
-    suspend fun delete(recording: Recording) {
+    suspend fun delete(recording: Recording): ViewerError? {
         if (recording.status == RecordingStatus.RECORDING) stop(recording.id)
-        repo.delete(recording.id)
-        deleteFileUnlessShared(recording)
+        val shared = repo.fileUsedByOthers(recording.id, recording.filePath)
+        val failure = if (shared) {
+            null
+        } else {
+            runCatching { withContext(Dispatchers.IO) { removeFile(recording.filePath) } }.exceptionOrNull()
+        }
+        if (failure is CancellationException) throw failure
+        return when {
+            failure == null -> {
+                repo.delete(recording.id)
+                null
+            }
+            failure is RecordingStorage.Unavailable -> wording.of(failure.sentence, "StorageUnavailable")
+            SmbClient.isSmb(recording.filePath) -> wording.of(failure, R.string.rec_delete_failed_nas)
+            else -> wording.of(failure, R.string.rec_delete_failed)
+        }
     }
 
     /**
-     * Off the main thread, where callers like the Recordings screen are: an SMB delete there is
-     * refused as network on the main thread, and runCatching would swallow that, leaving the file.
+     * Best effort, for a failed attempt's file before a retry: unlike [delete], nobody is waiting to
+     * hear that it stayed, and a NAS that's down mustn't stop the retry, which reports that itself.
      */
     private suspend fun deleteFileUnlessShared(recording: Recording) {
         if (repo.fileUsedByOthers(recording.id, recording.filePath)) return
-        withContext(Dispatchers.IO) { RecordingStorage.delete(appContext, settings, recording.filePath) }
+        val failure = runCatching { withContext(Dispatchers.IO) { removeFile(recording.filePath) } }.exceptionOrNull()
+        if (failure is CancellationException) throw failure
     }
 
     /**

@@ -76,6 +76,8 @@
     <string name="rec_error_nothing">何も録画されませんでした。チャンネルが止まった可能性があるので、もう一度録画してみてください。</string>
     <string name="rec_error_usb_no_folder">録画先のフォルダがありません。「録画」設定でUSBドライブ内のフォルダを選んでください。</string>
     <string name="rec_error_usb_unavailable">USBドライブが見つかりません。挿し直してから、「録画」設定でフォルダを選び直してください。</string>
+    <string name="rec_delete_failed_nas">NASから削除できませんでした。電源が入っているか確認してから、もう一度削除してください。</string>
+    <string name="rec_delete_failed">この録画を削除できませんでした。もう一度削除してください。</string>
     <string name="rec_background_prompt_title">離れても録画を続けますか？</string>
     <string name="rec_background_prompt_body">画面がスリープしたりSetteeから離れたりすると、Androidがこの録画を停止することがあります。Setteeにバッテリー最適化を無視することを許可すると、セットトップボックスのようにスタンバイ中でも録画を継続できます。</string>
     <string name="rec_background_prompt_allow">許可</string>

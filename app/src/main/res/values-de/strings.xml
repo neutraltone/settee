@@ -76,6 +76,8 @@
     <string name="rec_error_nothing">Es wurde nichts aufgenommen. Der Sender ist vielleicht ausgefallen, also versuch die Aufnahme noch einmal.</string>
     <string name="rec_error_usb_no_folder">Es gibt keinen Ordner für Aufnahmen. Wähle in den Aufnahme-Einstellungen einen auf deinem USB-Laufwerk aus.</string>
     <string name="rec_error_usb_unavailable">Dein USB-Laufwerk wurde nicht gefunden. Steck es wieder ein und wähle dann seinen Ordner in den Aufnahme-Einstellungen erneut aus.</string>
+    <string name="rec_delete_failed_nas">Das konnte nicht von deinem NAS gelöscht werden. Überprüfe, ob es eingeschaltet ist, und versuch es dann noch einmal.</string>
+    <string name="rec_delete_failed">Diese Aufnahme konnte nicht gelöscht werden. Versuch es noch einmal.</string>
     <string name="rec_background_prompt_title">Aufnahme fortsetzen, wenn du die App verlässt?</string>
     <string name="rec_background_prompt_body">Android kann diese Aufnahme stoppen, wenn der Bildschirm in den Ruhezustand wechselt oder du Settee verlässt. Erlaube Settee, die Akku-Optimierung zu ignorieren, damit Aufnahmen auch im Standby weiterlaufen — so wie bei einer Set-Top-Box.</string>
     <string name="rec_background_prompt_allow">Erlauben</string>

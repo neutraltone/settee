@@ -76,6 +76,8 @@
     <string name="rec_error_nothing">Nič sa nenahralo. Kanál možno prestal vysielať, preto ho skúste nahrať znova.</string>
     <string name="rec_error_usb_no_folder">Nie je kam nahrávať. Vyberte priečinok na USB disku v Nastaveniach nahrávania.</string>
     <string name="rec_error_usb_unavailable">USB disk sa nenašiel. Znova ho pripojte a potom znova vyberte jeho priečinok v Nastaveniach nahrávania.</string>
+    <string name="rec_delete_failed_nas">Z NAS sa to nepodarilo odstrániť. Skontrolujte, či je zapnutý, a skúste to odstrániť znova.</string>
+    <string name="rec_delete_failed">Nahrávku sa nepodarilo odstrániť. Skúste ju odstrániť znova.</string>
     <string name="rec_background_prompt_title">Pokračovať v nahrávaní, aj keď odídete?</string>
     <string name="rec_background_prompt_body">Android môže toto nahrávanie zastaviť, keď obrazovka zaspí alebo opustíte Settee. Povoľte Settee ignorovať optimalizáciu batérie, aby nahrávanie pokračovalo aj v pohotovostnom režime — tak, ako to robí set-top box.</string>
     <string name="rec_background_prompt_allow">Povoliť</string>

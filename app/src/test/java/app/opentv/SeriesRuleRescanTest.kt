@@ -58,6 +58,7 @@ class SeriesRuleRescanTest {
             selfEnabledGuide = EpgRepository.SelfEnabledGuide.InMemory(),
         ),
         test.lineup,
+        ErrorWording(ApplicationProvider.getApplicationContext(), onTelevision = false),
     )
 
     @After

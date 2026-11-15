@@ -6,6 +6,8 @@
 package app.opentv.recording
 
 import android.content.Context
+import android.net.Uri
+import android.provider.DocumentsContract
 import androidx.core.net.toUri
 import androidx.documentfile.provider.DocumentFile
 import app.opentv.R
@@ -169,14 +171,46 @@ object RecordingStorage {
     private fun mimeForFilename(filename: String): String =
         if (filename.endsWith(".ts", ignoreCase = true)) "video/mp2t" else "video/*"
 
+    /**
+     * Removes the file at [locator], or throws when it's still there: its row goes only after this
+     * returns, so a failure hidden here leaves the file where nothing points to it again. A file
+     * that's already gone counts as removed, or the viewer could never delete its row. Blocks on
+     * disk or the network, so never call it on the main thread.
+     */
     fun delete(context: Context, settings: AppSettings, locator: String) {
         when {
-            SmbClient.isSmb(locator) -> runCatching { SmbClient.delete(smbConfig(settings), locator) }
-            isContent(locator) ->
-                runCatching { DocumentFile.fromSingleUri(context, locator.toUri())?.delete() }
+            SmbClient.isSmb(locator) -> SmbClient.delete(smbConfig(settings), locator)
+            isContent(locator) -> deleteDocument(context, locator)
             isUsbPlaceholder(locator) -> Unit // never created — nothing on disk to remove
-            else -> runCatching { File(locator).delete() }
+            else -> {
+                val file = File(locator)
+                if (!file.delete() && file.exists()) throw IOException("Recording file not deleted")
+            }
         }
+    }
+
+    /**
+     * SAF answers a failed delete with false, whatever the cause, and a drive that's been unplugged
+     * reports its documents as not existing. So a document that won't go counts as gone only while
+     * the folder it was made in is there to say so. That's the document's own folder, not the one in
+     * settings, which the viewer may since have cleared or changed; and with no grant left on it,
+     * nothing could ever delete the file, so the row goes rather than stay for good.
+     */
+    private fun deleteDocument(context: Context, locator: String) {
+        val uri = locator.toUri()
+        val doc = DocumentFile.fromSingleUri(context, uri)
+        if (doc == null || doc.delete()) return
+        if (doc.exists()) throw IOException("Recording document not deleted")
+        if (folderMissing(context, uri)) throw Unavailable(R.string.rec_error_usb_unavailable)
+    }
+
+    /** True when [document]'s folder is one this app still holds a grant on, and it can't be reached. */
+    private fun folderMissing(context: Context, document: Uri): Boolean {
+        val treeUri = runCatching {
+            DocumentsContract.buildTreeDocumentUri(document.authority, DocumentsContract.getTreeDocumentId(document))
+        }.getOrNull() ?: return false
+        val granted = context.contentResolver.persistedUriPermissions.any { it.uri == treeUri && it.isWritePermission }
+        return granted && DocumentFile.fromTreeUri(context, treeUri)?.exists() != true
     }
 
     /**

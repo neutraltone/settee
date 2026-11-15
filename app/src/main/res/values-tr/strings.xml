@@ -76,6 +76,8 @@
     <string name="rec_error_nothing">Hiçbir şey kaydedilmedi. Kanal durmuş olabilir, bu yüzden tekrar kaydetmeyi deneyin.</string>
     <string name="rec_error_usb_no_folder">Kayıt yapılacak bir klasör yok. Kayıt ayarlarından USB sürücünüzde bir klasör seçin.</string>
     <string name="rec_error_usb_unavailable">USB sürücünüz bulunamıyor. Sürücüyü yeniden takın, ardından Kayıt ayarlarından klasörünü tekrar seçin.</string>
+    <string name="rec_delete_failed_nas">Bu, NAS\'ınızdan silinemedi. Açık olduğunu kontrol edin, ardından tekrar silmeyi deneyin.</string>
+    <string name="rec_delete_failed">Bu kayıt silinemedi. Tekrar silmeyi deneyin.</string>
     <string name="rec_background_prompt_title">Uygulamadan çıkınca kayıt devam etsin mi?</string>
     <string name="rec_background_prompt_body">Ekran kapandığında veya Settee\'den çıktığınızda Android bu kaydı durdurabilir. Kayıtların bekleme modunda bile devam etmesi için Settee\'nin pil optimizasyonunu yok saymasına izin verin — tıpkı bir set üstü kutu gibi.</string>
     <string name="rec_background_prompt_allow">İzin ver</string>

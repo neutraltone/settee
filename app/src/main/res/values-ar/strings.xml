@@ -76,6 +76,8 @@
     <string name="rec_error_nothing">لم يتم تسجيل أي شيء. ربما توقفت القناة، لذا حاول تسجيلها مرة أخرى.</string>
     <string name="rec_error_usb_no_folder">لا يوجد مجلد للتسجيل فيه. اختر مجلدًا على محرك USB في إعدادات التسجيل.</string>
     <string name="rec_error_usb_unavailable">تعذر العثور على محرك USB. أعد توصيله، ثم اختر مجلده مرة أخرى في إعدادات التسجيل.</string>
+    <string name="rec_delete_failed_nas">تعذر حذف هذا التسجيل من وحدة NAS. تأكد من أنها قيد التشغيل، ثم حاول حذفه مرة أخرى.</string>
+    <string name="rec_delete_failed">تعذر حذف هذا التسجيل. حاول حذفه مرة أخرى.</string>
     <string name="rec_background_prompt_title">هل تريد متابعة التسجيل عند مغادرة التطبيق؟</string>
     <string name="rec_background_prompt_body">قد يوقف Android هذا التسجيل عند إطفاء الشاشة أو مغادرة Settee. اسمح لتطبيق Settee بتجاهل تحسين البطارية حتى تستمر التسجيلات حتى في وضع الاستعداد — تمامًا مثل جهاز استقبال تلفزيوني تقليدي.</string>
     <string name="rec_background_prompt_allow">سماح</string>
