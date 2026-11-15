@@ -169,14 +169,13 @@ class RecordingEngine(
     suspend fun retry(recording: Recording): Boolean {
         val now = clock()
         val start = recording.scheduledStartMillis
-        val end = recording.scheduledEndMillis
         return when {
             start > now + LEAD_MILLIS -> {
                 repo.setStatus(recording.id, RecordingStatus.SCHEDULED, null)
                 RecordingScheduler.set(appContext, recording.id, start)
                 true
             }
-            end == 0L || end > now -> {
+            !recording.windowEndedBy(now) -> {
                 repo.setStatus(recording.id, RecordingStatus.SCHEDULED, null)
                 RecordingService.start(appContext, recording.id)
                 true
@@ -197,32 +196,37 @@ class RecordingEngine(
         val now = clock()
         val autoSwitch = settings.recordAutoSwitch.value
         for (rec in repo.scheduled()) {
-            if (markMissedIfOver(rec)) continue
+            if (markMissedIfOver(rec, Missed.NOT_RUNNING)) continue
             val at = if (rec.scheduledStartMillis <= now) now + 1_000L else rec.scheduledStartMillis
             RecordingScheduler.set(appContext, rec.id, at)
             if (autoSwitch) RecordingScheduler.setWarning(appContext, rec.id, at, now)
         }
     }
 
-    /**
-     * Whether [recording]'s window has already ended, so there's nothing left to capture. Unbounded
-     * captures (no end) never have.
-     */
-    fun windowEnded(recording: Recording): Boolean = recording.scheduledEndMillis in 1..clock()
+    /** Whether [recording]'s window has already ended, so there's nothing left to capture. */
+    fun windowEnded(recording: Recording): Boolean = recording.windowEndedBy(clock())
+
+    /** Why a booking whose window ended was never started, which decides what the viewer is told. */
+    enum class Missed(val sentence: Int, val detail: String) {
+        /** Its alarm was lost: Settee wasn't running, found on launch or after a reboot. */
+        NOT_RUNNING(R.string.rec_error_missed, "Missed"),
+
+        /** Settee was running, but Android delivered the alarm after the window ended. */
+        LATE(R.string.rec_error_missed_late, "MissedLate"),
+    }
 
     /**
-     * Fail [recording] as missed when its window has already ended, before anything is written to
-     * storage. Returns true when it was. [RecordingService] calls this too, for an alarm that fires
-     * late by any route, not only the re-arming on launch.
+     * Fail [recording] as missed for [why] when its window has already ended, before anything is
+     * written to storage. Returns true when it was.
      */
-    suspend fun markMissedIfOver(recording: Recording): Boolean {
+    suspend fun markMissedIfOver(recording: Recording, why: Missed): Boolean {
         if (!windowEnded(recording)) return false
         repo.markFinished(
             id = recording.id,
             ok = false,
             atMillis = clock(),
             bytes = 0,
-            error = ViewerError(appContext.getString(R.string.rec_error_missed), MISSED_DETAIL).stored(),
+            error = ViewerError(appContext.getString(why.sentence), why.detail).stored(),
         )
         return true
     }
@@ -361,8 +365,12 @@ class RecordingEngine(
 
         /** How far into a channel's guide a series rule looks for airings to book. */
         const val AIRINGS_LOOKED_UP = 200
-
-        /** The detail line under the missed sentence: the problem found, as `docs/ERRORS.md` lists it. */
-        const val MISSED_DETAIL = "Missed"
     }
 }
+
+/**
+ * Whether this recording's window had ended by [nowMillis], leaving nothing to capture. One started on
+ * the spot with no end never has. Retry, the Recordings screen's Retry action and the missed check all
+ * ask this, so they can't disagree.
+ */
+fun Recording.windowEndedBy(nowMillis: Long): Boolean = scheduledEndMillis in 1..nowMillis

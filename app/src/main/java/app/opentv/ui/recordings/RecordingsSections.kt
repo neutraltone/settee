@@ -10,6 +10,7 @@ import app.opentv.data.model.RecordingStatus
 import app.opentv.data.model.Reminder
 import app.opentv.data.model.SeriesRule
 import app.opentv.recording.RecordingStorage
+import app.opentv.recording.windowEndedBy
 import app.opentv.ui.options.OptionsFor
 
 /** The Recordings screen's headings, in the order they're shown. */
@@ -120,7 +121,7 @@ internal fun RecordingsRow.okAction(nowMillis: Long): OkAction? {
  * programme is over, and a row whose OK did nothing would look broken. One started on the spot has
  * no end, and records from now.
  */
-private fun Recording.canRetryAt(nowMillis: Long) = scheduledEndMillis == 0L || scheduledEndMillis > nowMillis
+private fun Recording.canRetryAt(nowMillis: Long) = !windowEndedBy(nowMillis)
 
 /**
  * Whether a recording in progress can be watched as it records: tail-followed off disk (internal) or

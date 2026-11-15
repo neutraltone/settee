@@ -101,6 +101,7 @@
     <string name="rec_channel_desc">Shown while Settee is recording</string>
     <string name="rec_error_nothing">Nothing was recorded. The channel may have stopped, so try recording it again.</string>
     <string name="rec_error_missed">This was missed because Settee wasn\'t running while it was on.</string>
+    <string name="rec_error_missed_late">This was missed because Android started it after it had ended.</string>
     <string name="rec_error_usb_no_folder">There\'s no folder to record to. Pick one on your USB drive in Recording settings.</string>
     <string name="rec_error_usb_unavailable">Can\'t find your USB drive. Plug it back in, then pick its folder again in Recording settings.</string>
     <string name="rec_background_prompt_title">Keep recording when you leave?</string>

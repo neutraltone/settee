@@ -8,13 +8,15 @@ package app.opentv.recording
 import android.app.Application
 import androidx.test.core.app.ApplicationProvider
 import app.opentv.R
+import app.opentv.core.AppSettings
 import app.opentv.core.ServiceLocator
 import app.opentv.core.ViewerError
 import app.opentv.data.model.Recording
 import app.opentv.data.model.RecordingStatus
 import com.google.common.truth.Truth.assertThat
 import java.io.File
-import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import org.junit.Test
@@ -37,7 +39,10 @@ class MissedRecordingServiceTest {
     private val recordings = graph.recordingRepository
 
     @Test
-    fun `a late alarm for a booking that has ended writes nothing and is marked missed`() = runBlocking {
+    fun `a late alarm for a booking that has ended writes nothing and says the alarm was late`() = runBlocking {
+        // Internal, whatever an earlier test left set: the file checked for below is where the
+        // sink would have written it.
+        graph.settings.setRecordingTarget(AppSettings.RecordingTarget.INTERNAL)
         val file = File(RecordingStorage.internalDir(app), "missed.ts")
         val now = System.currentTimeMillis()
         val id = recordings.insert(
@@ -57,17 +62,18 @@ class MissedRecordingServiceTest {
         RecordingService.start(app, id)
         val start = shadowOf(app).nextStartedService
         Robolectric.buildService(RecordingService::class.java, start).create().startCommand(0, 1)
-        val row = withTimeout(5_000) {
-            var row = recordings.byId(id)!!
-            while (row.status == RecordingStatus.SCHEDULED || row.status == RecordingStatus.RECORDING) {
-                delay(20)
-                row = recordings.byId(id)!!
-            }
-            row
+        // The capture runs on the service's own dispatcher, so wait for the row to change rather
+        // than for time to pass; the timeout only stops a broken run hanging.
+        val row = withTimeout(10_000) {
+            recordings.observeAll()
+                .map { rows -> rows.single { it.id == id } }
+                .first { it.status != RecordingStatus.SCHEDULED && it.status != RecordingStatus.RECORDING }
         }
 
         assertThat(row.status).isEqualTo(RecordingStatus.FAILED)
-        assertThat(ViewerError.fromStored(row.error!!)?.sentence).isEqualTo(app.getString(R.string.rec_error_missed))
+        assertThat(
+            ViewerError.fromStored(row.error!!)?.sentence,
+        ).isEqualTo(app.getString(R.string.rec_error_missed_late))
         assertThat(row.startedAtMillis).isEqualTo(0)
         assertThat(file.exists()).isFalse()
     }
