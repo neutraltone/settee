@@ -93,9 +93,10 @@ class RecordingService : Service() {
         }
         try {
             repo.markStarted(id, System.currentTimeMillis())
-            // Announce the live capture so the player can watch this file while it grows.
-            RecordingLiveState.markActive(id, recording.filePath)
             sink = graph.recordingEngine.openSink(recording)
+            // Announce the live capture so the player can watch this file while it grows: only now,
+            // once the sink knows its real name, as the planned one may be another recording's (#354).
+            RecordingLiveState.markActive(id, sink.resolvedLocator ?: recording.filePath)
 
             error = capture.run(
                 sink.output,

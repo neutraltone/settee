@@ -18,8 +18,10 @@ import app.opentv.data.repo.EpgRepository
 import app.opentv.data.repo.RecordingRepository
 import app.opentv.data.repo.SourceRepository
 import app.opentv.data.repo.recordable
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 
 /**
  * Turns "record this" into a running capture: it creates the [Recording] row, works out where the
@@ -89,13 +91,8 @@ class RecordingEngine(
      * USB document's `content://` URI, or a suffixed name when the planned one was taken (#354).
      */
     suspend fun openSink(recording: Recording): RecordingStorage.Sink {
-        val sink = RecordingStorage.openSink(appContext, settings, recording.filePath)
-        sink.resolvedLocator?.let { actual ->
-            if (actual != recording.filePath) {
-                repo.setFilePath(recording.id, actual)
-                RecordingLiveState.updatePath(recording.id, actual)
-            }
-        }
+        val sink = withContext(Dispatchers.IO) { RecordingStorage.openSink(appContext, settings, recording.filePath) }
+        sink.resolvedLocator?.let { repo.setFilePath(recording.id, it) }
         return sink
     }
 
@@ -106,7 +103,16 @@ class RecordingEngine(
     suspend fun delete(recording: Recording) {
         if (recording.status == RecordingStatus.RECORDING) stop(recording.id)
         repo.delete(recording.id)
-        if (!repo.fileInUse(recording.filePath)) RecordingStorage.delete(appContext, settings, recording.filePath)
+        deleteFileUnlessShared(recording)
+    }
+
+    /**
+     * Off the main thread, where callers like the Recordings screen are: an SMB delete there is
+     * refused as network on the main thread, and runCatching would swallow that, leaving the file.
+     */
+    private suspend fun deleteFileUnlessShared(recording: Recording) {
+        if (repo.fileUsedByOthers(recording.id, recording.filePath)) return
+        withContext(Dispatchers.IO) { RecordingStorage.delete(appContext, settings, recording.filePath) }
     }
 
     /**
@@ -199,6 +205,10 @@ class RecordingEngine(
                 true
             }
             end == 0L || end > now -> {
+                // The failed attempt's file would count as taken and the capture would move on to a
+                // suffixed name, leaving it behind with no row; it used to be overwritten, so drop
+                // it. A USB document is reopened and overwritten in place, so it stays.
+                if (!RecordingStorage.isContent(recording.filePath)) deleteFileUnlessShared(recording)
                 repo.setStatus(recording.id, RecordingStatus.SCHEDULED, null)
                 RecordingService.start(appContext, recording.id)
                 true

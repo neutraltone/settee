@@ -106,7 +106,7 @@ object RecordingStorage {
             val uri = locator.toUri()
             val out = context.contentResolver.openOutputStream(uri, "w")
                 ?: throw Unavailable(R.string.rec_error_usb_unavailable)
-            Sink(out, resolvedLocator = locator) {
+            Sink(out) {
                 runCatching {
                     out.flush()
                     out.close()

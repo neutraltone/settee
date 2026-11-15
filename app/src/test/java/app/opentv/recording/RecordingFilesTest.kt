@@ -22,6 +22,7 @@ import com.google.common.truth.Truth.assertThat
 import java.io.File
 import kotlinx.coroutines.test.runTest
 import org.junit.After
+import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -72,6 +73,11 @@ class RecordingFilesTest {
         streamUrl = "http://example.com/live/u/p/7.ts",
     )
 
+    @Before
+    fun emptyRecordingsFolder() {
+        RecordingStorage.internalDir(context).listFiles()?.forEach { it.delete() }
+    }
+
     @After
     fun close() = test.close()
 
@@ -106,6 +112,21 @@ class RecordingFilesTest {
 
         assertThat(recordings.byId(second.id)).isNull()
         assertThat(file.exists()).isFalse()
+    }
+
+    @Test
+    fun `retrying a failed recording records over its own file, leaving nothing behind`() = runTest {
+        val id = engine.startChannel(bbcOne)
+        engine.openSink(recordings.byId(id)!!).apply { output.write("partial".toByteArray()) }.close()
+        val planned = recordings.byId(id)!!.filePath
+        recordings.setStatus(id, RecordingStatus.FAILED, "stopped")
+
+        assertThat(engine.retry(recordings.byId(id)!!)).isTrue()
+        engine.openSink(recordings.byId(id)!!).apply { output.write("again".toByteArray()) }.close()
+
+        assertThat(recordings.byId(id)!!.filePath).isEqualTo(planned)
+        assertThat(RecordingStorage.internalDir(context).list()).asList().containsExactly(File(planned).name)
+        assertThat(File(planned).readText()).isEqualTo("again")
     }
 
     private companion object {
