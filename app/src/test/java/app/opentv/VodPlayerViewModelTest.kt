@@ -128,10 +128,7 @@ class VodPlayerViewModelTest {
 
     @Test
     fun `switching Version in the player carries on from the same position`() = runTest {
-        graph.database.sources().insert(
-            Source(id = 1, name = "Provider", kind = SourceKind.XTREAM, url = "http://example.com"),
-        )
-        graph.database.movies().upsertAll(listOf(film(1, "EN - Superbad (2007)"), film(2, "DE - Superbad HD (2007)")))
+        twoVersions()
         val vm = VodPlayerViewModel(app, graph)
         vm.attach(MediaKey.Movie(1), playback)
         assertThat(
@@ -147,17 +144,13 @@ class VodPlayerViewModelTest {
         assertThat(vm.current.value).isEqualTo(MediaKey.Movie(2))
     }
 
+    /** A film in two Versions, English (Movie 1, the one that opens) and German HD (Movie 2). */
     private suspend fun twoVersions() {
         graph.database.sources().insert(
             Source(id = 1, name = "Provider", kind = SourceKind.XTREAM, url = "http://example.com"),
         )
         graph.database.movies().upsertAll(listOf(film(1, "EN - Superbad (2007)"), film(2, "DE - Superbad HD (2007)")))
-    }
-
-    /** What the player reports while it is still finding the stream it was asked for. */
-    private fun FakePlayback.stillFindingTheStream() {
-        positionMillis = 0
-        durationMillis = 0
+        graph.vodQualities.choose(MediaKey.Movie(1))
     }
 
     @Test
@@ -166,9 +159,8 @@ class VodPlayerViewModelTest {
         graph.viewerLibrary.recordProgress("movie:1", positionMillis = FIFTY_MINUTES, durationMillis = FILM_MILLIS)
         val vm = VodPlayerViewModel(app, graph)
         vm.attach(MediaKey.Movie(1), playback)
-        assertThat(playback.played).containsExactly(MediaKey.Movie(1) to FIFTY_MINUTES)
 
-        playback.stillFindingTheStream()
+        playback.switching = true
         assertThat(vm.playingAt).isEqualTo(FIFTY_MINUTES)
         vm.chooseVersion(MediaKey.Movie(2))
 
@@ -181,13 +173,27 @@ class VodPlayerViewModelTest {
         graph.viewerLibrary.recordProgress("movie:2", positionMillis = 600_000, durationMillis = EPISODE_MILLIS)
         val vm = VodPlayerViewModel(app, graph)
         vm.attach(MediaKey.Movie(1), playback)
-        assertThat(playback.played).containsExactly(MediaKey.Movie(1) to 0L)
 
-        playback.stillFindingTheStream()
+        playback.switching = true
         assertThat(vm.playingAt).isNull()
         vm.chooseVersion(MediaKey.Movie(2))
 
         assertThat(playback.played.last()).isEqualTo(MediaKey.Movie(2) to 600_000L)
+    }
+
+    @Test
+    fun `choosing a Version of a stream whose length isn't known carries on from where it had got to`() = runTest {
+        twoVersions()
+        val vm = VodPlayerViewModel(app, graph)
+        vm.attach(MediaKey.Movie(1), playback)
+        playback.positionMillis = 1_200_000
+        playback.durationMillis = 0
+        vm.poll()
+
+        assertThat(vm.playingAt).isEqualTo(1_200_000L)
+        vm.chooseVersion(MediaKey.Movie(2))
+
+        assertThat(playback.played.last()).isEqualTo(MediaKey.Movie(2) to 1_200_000L)
     }
 
     @Test
@@ -196,7 +202,7 @@ class VodPlayerViewModelTest {
         graph.viewerLibrary.recordProgress("movie:1", positionMillis = FIFTY_MINUTES, durationMillis = FILM_MILLIS)
         val vm = VodPlayerViewModel(app, graph)
         vm.attach(MediaKey.Movie(1), playback)
-        playback.stillFindingTheStream()
+        playback.switching = true
         vm.chooseVersion(MediaKey.Movie(2))
 
         val rebuilt = FakePlayback()
@@ -597,6 +603,21 @@ class VodPlayerViewModelTest {
 
             assertThat(rebuiltAgain.played).containsExactly(route to 0L)
         }
+
+    @Test
+    fun `choosing a Version mid-switch after a rebuild early in Play from start keeps the seconds watched`() = runTest {
+        val vm = playFromStart()
+        val route = testEpisode(1, 1).key
+        playback.positionMillis = 3_000
+        vm.poll()
+        val rebuilt = FakePlayback()
+        vm.attach(route, rebuilt, fromStart = true)
+
+        rebuilt.switching = true
+        vm.chooseVersion(route)
+
+        assertThat(rebuilt.played.last()).isEqualTo(route to 3_000L)
+    }
 
     @Test
     fun `once Play from start has saved a position, a rebuild that knows no position resumes from it`() = runTest {

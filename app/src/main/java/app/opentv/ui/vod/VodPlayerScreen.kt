@@ -217,6 +217,15 @@ internal fun PlayerController.vodPlayback() = object : VodPlayerViewModel.Playba
         }
     }
 
+    // Not the switching placeholder above, nor the player's duration: a stream whose length isn't known
+    // still has a place. A request from 0 is unknown rather than 0, so another Version starts at its
+    // own resume point rather than at the beginning.
+    override fun position() = if (isSwitching) {
+        positionMillis.takeIf { it > 0 }
+    } else {
+        player.currentPosition.coerceAtLeast(0)
+    }
+
     // Swapping the media item in the same player, never a new one: see PlayerController.
     override fun play(request: PlayerController.Request, skipped: String?) =
         this@vodPlayback.play(request, debounce = false, skipped = skipped)

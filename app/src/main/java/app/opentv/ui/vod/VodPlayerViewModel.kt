@@ -49,6 +49,13 @@ class VodPlayerViewModel(
     interface Playback {
         fun progress(): NextEpisodeCountdown.Playback
 
+        /**
+         * Where what was last asked for has got to, for starting another Version there, or null when that
+         * isn't known. Unlike [progress] it doesn't need the stream's length, and while a stream is still
+         * being found it's where that stream was asked to start (#379).
+         */
+        fun position(): Long?
+
         /** Plays [request], saying it's in place of the Quality called [skipped] if there is one. */
         fun play(request: PlayerController.Request, skipped: String? = null)
 
@@ -91,15 +98,10 @@ class VodPlayerViewModel(
     /** What [chooseVersion] keeps the choice with. */
     internal val versions: VodQualities get() = graph.vodQualities
 
-    /**
-     * Where what's playing had got to, for starting another Version of it there, or null when that isn't
-     * known. A player still finding its stream reports 0 of 0 so the last title's position isn't saved
-     * against this one (#379): that 0 isn't where the viewer is, but the start it was asked for is.
-     */
-    internal val playingAt: Long?
-        get() = playback?.progress()?.takeIf { it.durationMillis > 0 }?.positionMillis ?: lastKnown
+    /** Where what's playing had got to, for starting another Version of it there, or null when that isn't known. */
+    internal val playingAt: Long? get() = playback?.position() ?: lastKnown
 
-    /** Where what's playing had got to without asking the player, which may be new or still switching. */
+    /** Where what's playing had got to without asking the player, which a rebuilt screen's doesn't know. */
     private val lastKnown: Long?
         get() = lastSeen?.positionMillis ?: 0L.takeIf { startedAtZero } ?: requestedFrom
 
@@ -127,9 +129,10 @@ class VodPlayerViewModel(
     private var lastSeen: NextEpisodeCountdown.Playback? = null
 
     /**
-     * Where the stream last handed to [playback] was asked to start, until [lastSeen] knows better. Not
-     * when that's 0: a start from a resume point of 0 says nothing about where another Version should
-     * start, and Play from start has [startedAtZero].
+     * Where what's playing was asked to start in place of its resume point, until [lastSeen] knows
+     * better. A Version chosen while the last was still loading has saved no resume point of its own
+     * yet, so a rebuilt screen must start it here (#379). A step down keeps it: the lower Quality
+     * started from the same place.
      */
     private var requestedFrom: Long? = null
 
@@ -254,8 +257,10 @@ class VodPlayerViewModel(
         startedAtZero = fromMillis == 0L || (startedAtZero && key == _current.value)
         _current.value = key
         lastSeen = null
-        requestedFrom = planned?.first?.startPositionMillis?.takeIf { it > 0 }
-        planned?.let { (request, skipped) -> playback?.play(request, skipped) }
+        planned?.let { (request, skipped) ->
+            requestedFrom = fromMillis
+            playback?.play(request, skipped)
+        }
         _qualityChoices.value = graph.vodQualities.choicesFor(key)
         _canMarkWatched.value = graph.canMarkWatched(key)
         val episode = (key as? MediaKey.Episode)?.let { graph.catalogRepository.episode(it.episodeId) }
