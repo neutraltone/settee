@@ -20,8 +20,10 @@ import app.opentv.data.repo.EpgRepository
 import app.opentv.data.repo.RecordingRepository
 import app.opentv.data.repo.SourceRepository
 import app.opentv.data.repo.recordable
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 
 /**
  * Turns "record this" into a running capture: it creates the [Recording] row, works out where the
@@ -86,6 +88,35 @@ class RecordingEngine(
 
     /** Stop an in-progress recording. */
     fun stop(recordingId: Long) = RecordingService.stop(appContext, recordingId)
+
+    /**
+     * Open [recording]'s file for its capture and repoint the row at where the bytes really go: a
+     * USB document's `content://` URI, or a suffixed name when the planned one was taken (#354).
+     */
+    suspend fun openSink(recording: Recording): RecordingStorage.Sink {
+        val sink = withContext(Dispatchers.IO) { RecordingStorage.openSink(appContext, settings, recording.filePath) }
+        sink.resolvedLocator?.let { repo.setFilePath(recording.id, it) }
+        return sink
+    }
+
+    /**
+     * Delete [recording]: always its row, and its file unless another row still points at it — a
+     * recording made before names were kept apart (#354) may share one.
+     */
+    suspend fun delete(recording: Recording) {
+        if (recording.status == RecordingStatus.RECORDING) stop(recording.id)
+        repo.delete(recording.id)
+        deleteFileUnlessShared(recording)
+    }
+
+    /**
+     * Off the main thread, where callers like the Recordings screen are: an SMB delete there is
+     * refused as network on the main thread, and runCatching would swallow that, leaving the file.
+     */
+    private suspend fun deleteFileUnlessShared(recording: Recording) {
+        if (repo.fileUsedByOthers(recording.id, recording.filePath)) return
+        withContext(Dispatchers.IO) { RecordingStorage.delete(appContext, settings, recording.filePath) }
+    }
 
     /**
      * Record a specific programme: if it's already on, start capturing now (bounded to its end);
@@ -176,6 +207,10 @@ class RecordingEngine(
                 true
             }
             !recording.windowEndedBy(now) -> {
+                // The failed attempt's file would count as taken and the capture would move on to a
+                // suffixed name, leaving it behind with no row; it used to be overwritten, so drop
+                // it. A USB document is reopened and overwritten in place, so it stays.
+                if (!RecordingStorage.isContent(recording.filePath)) deleteFileUnlessShared(recording)
                 repo.setStatus(recording.id, RecordingStatus.SCHEDULED, null)
                 RecordingService.start(appContext, recording.id)
                 true

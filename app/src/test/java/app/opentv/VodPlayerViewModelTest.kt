@@ -144,12 +144,17 @@ class VodPlayerViewModelTest {
         assertThat(vm.current.value).isEqualTo(MediaKey.Movie(2))
     }
 
-    /** A film in two Versions, English (Movie 1, the one that opens) and German HD (Movie 2). */
-    private suspend fun twoVersions() {
+    /**
+     * A film in two Versions, English (Movie 1, the one that opens) and German HD (Movie 2). [beforeChoosing]
+     * runs before English is chosen: whichever of a choice and a Version's progress is later decides what
+     * opens, so progress on German saved after the choice would open German instead.
+     */
+    private suspend fun twoVersions(beforeChoosing: suspend () -> Unit = {}) {
         graph.database.sources().insert(
             Source(id = 1, name = "Provider", kind = SourceKind.XTREAM, url = "http://example.com"),
         )
         graph.database.movies().upsertAll(listOf(film(1, "EN - Superbad (2007)"), film(2, "DE - Superbad HD (2007)")))
+        beforeChoosing()
         graph.vodQualities.choose(MediaKey.Movie(1))
     }
 
@@ -169,8 +174,11 @@ class VodPlayerViewModelTest {
 
     @Test
     fun `choosing a Version with no position known starts it from its own resume point`() = runTest {
-        twoVersions()
-        graph.viewerLibrary.recordProgress("movie:2", positionMillis = 600_000, durationMillis = EPISODE_MILLIS)
+        // German was watched before English was chosen. Saved after, in a later millisecond than the
+        // choice, it opened German, so this failed now and then.
+        twoVersions {
+            graph.viewerLibrary.recordProgress("movie:2", positionMillis = 600_000, durationMillis = EPISODE_MILLIS)
+        }
         val vm = VodPlayerViewModel(app, graph)
         vm.attach(MediaKey.Movie(1), playback)
 
