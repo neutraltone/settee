@@ -118,21 +118,23 @@
             android:exported="false"
             android:foregroundServiceType="mediaPlayback" />
 
-        <!-- Starts a booked recording when its alarm fires; re-arms bookings after a reboot. -->
+        <!-- Starts a booked recording when its alarm fires; re-arms bookings after a reboot or an update. -->
         <receiver
             android:name=".recording.RecordingAlarmReceiver"
             android:exported="false">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
             </intent-filter>
         </receiver>
 
-        <!-- Fires a programme reminder when its alarm goes off; re-arms reminders after a reboot. -->
+        <!-- Fires a programme reminder when its alarm goes off; re-arms reminders after a reboot or an update. -->
         <receiver
             android:name=".reminders.ReminderAlarmReceiver"
             android:exported="false">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
             </intent-filter>
         </receiver>
 

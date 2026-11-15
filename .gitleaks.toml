@@ -41,3 +41,11 @@ description = "PairingServer's short-token alphabet"
 targetRules = ["generic-api-key"]
 regexTarget = "line"
 regexes = ['''SHORT_TOKEN_ALPHABET = "[a-z0-9]+"''']
+
+[[allowlists]]
+# The release signing certificate's SHA-256 digest, pinned in tools/release-cert.sha256 and printed
+# in every release's notes: public by design, but a hex string named KEY is all generic-api-key
+# looks for (#339).
+description = "Release certificate digest"
+targetRules = ["generic-api-key"]
+regexes = ['''9bf478a053deb0e620aae472991960774508ea609deed86f6ff554d226fffaa1''']

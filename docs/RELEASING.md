@@ -64,11 +64,18 @@ first, and so losing settings and sources, an update has to carry the same key a
 version. So every release must be signed with the one release key.
 
 `release.yml` enforces that. After building, it runs `tools/check-apk-signer.sh` to confirm the
-APK is signed by exactly the certificate in the release keystore. If the signing secrets are
-missing, or the APK carries any other signer, the workflow fails without attaching any APK.
-release-please has already created the release by then, so it stays without an APK: add the
-secrets, then rebuild it by running the Release workflow with its tag. Each release's notes include `signed: yes` and the certificate's SHA-256 digest, which should be
-the same in every release.
+APK is signed by exactly the certificate in the release keystore, and that this is the
+certificate pinned in `tools/release-cert.sha256`, the one every release has been signed with.
+The pin is what catches the signing secrets being replaced with another key: the keystore and the
+APK would still agree with each other. If the signing secrets are missing, or the APK carries any
+other signer, the workflow fails without attaching any APK. release-please has already created the
+release by then, so it stays without an APK: fix the secrets, then rebuild it by running the
+Release workflow with its tag. Each release's notes include `signed: yes` and the certificate's
+SHA-256 digest; the workflow has already checked it against the pin, so there is no need to compare
+releases by hand.
+
+Changing the release key on purpose means changing `tools/release-cert.sha256` in the same PR, and
+every installed copy will then refuse the update until it is uninstalled.
 
 Without a keystore, `app/build.gradle.kts` signs release builds with the Android debug key, so
 `./gradlew assembleRelease` still produces an installable APK locally. An *unsigned* APK would
@@ -109,8 +116,9 @@ This is the owner's job. The passwords and backups stay with them, not with CI o
    `release.yml` and `build.gradle.kts` already read them. Then delete the local
    `settee-release.jks`; 1Password holds the copy.
 
-4. Merge the next release PR, and check that its notes say `signed: yes`. Note the certificate digest:
-   every later release should show the same one.
+4. Put the certificate's SHA-256 digest in `tools/release-cert.sha256` (lowercase, no colons; run
+   `tools/check-apk-signer.sh` against a release-signed APK to print it), and merge that before the
+   next release PR. Then check that the release's notes say `signed: yes`.
 
 5. Confirm that upgrades work on the Fire Stick: install that release, merge the following release PR, and
    install it over the first (through the in-app updater or `adb install -r settee.apk`). It
