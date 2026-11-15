@@ -11,8 +11,6 @@ import app.opentv.core.ServerProblem
 import app.opentv.core.ViewerError
 import app.opentv.data.model.Source
 import app.opentv.data.model.SourceKind
-import java.io.BufferedReader
-import java.io.InputStreamReader
 import java.net.Socket
 import java.util.concurrent.TimeUnit
 import kotlin.concurrent.thread
@@ -296,26 +294,9 @@ class PairingServer(
             return
         }
 
-        val reader = BufferedReader(InputStreamReader(client.getInputStream(), Charsets.UTF_8))
-        val requestLine = reader.readLine() ?: return
-        val (method, path, query) = PairingHttp.parseRequestLine(requestLine) ?: return
-
-        val headers = HashMap<String, String>()
-        while (true) {
-            val line = reader.readLine() ?: break
-            if (line.isEmpty()) break
-            PairingHttp.parseHeader(line)?.let { (name, value) -> headers[name] = value }
-        }
-
-        val contentLength = (headers["content-length"]?.toIntOrNull() ?: 0)
-            .coerceAtMost(MAX_BODY_BYTES)
-        val body = if (contentLength > 0) {
-            val buffer = CharArray(contentLength)
-            val read = reader.read(buffer, 0, contentLength)
-            if (read > 0) String(buffer, 0, read) else ""
-        } else {
-            ""
-        }
+        val request = PairingHttp.readRequest(client.getInputStream(), MAX_BODY_BYTES) ?: return
+        val (method, path, query) = request
+        val body = request.body
 
         val output = client.getOutputStream()
 

@@ -5,13 +5,18 @@
  */
 package app.opentv.pairing
 
+import java.io.BufferedInputStream
+import java.io.ByteArrayOutputStream
+import java.io.InputStream
+import java.net.SocketTimeoutException
 import java.net.URLDecoder
 
 /**
  * The pure, testable half of the phone-pairing server.
  *
  * Request parsing and form decoding live here, apart from sockets, so they can be tested
- * without standing up a server or a device. Everything in this file is a pure function.
+ * without standing up a server or a device. Everything here is a pure function, except
+ * [readRequest], which reads from any stream rather than a socket.
  */
 object PairingHttp {
 
@@ -24,6 +29,27 @@ object PairingHttp {
     ) {
         val contentLength: Int
             get() = headers["content-length"]?.toIntOrNull() ?: 0
+    }
+
+    /**
+     * Reads one request from [input]: its line, headers and a body of up to [maxBodyBytes].
+     * Null if the stream ends first or the first line isn't a request line.
+     *
+     * The head is read as bytes, not through a `BufferedReader`, because a reader pulls the start
+     * of the body into its own buffer, and a single read of the rest then returns only what has
+     * arrived so far: a `/reorder` of a big group, spread over several TCP segments, was cut short
+     * (#358). `Content-Length` counts bytes, so the body is read to that many bytes and only then
+     * decoded. A stream that ends early, or times out, leaves the body as whatever arrived.
+     */
+    fun readRequest(input: InputStream, maxBodyBytes: Int): Request? {
+        val stream = RequestStream(input)
+        val (method, path, query) = stream.readLine()?.let(::parseRequestLine) ?: return null
+        val headers = generateSequence { stream.readLine() }
+            .takeWhile { it.isNotEmpty() }
+            .mapNotNull(::parseHeader)
+            .toMap()
+        val length = (headers["content-length"]?.toIntOrNull() ?: 0).coerceIn(0, maxBodyBytes)
+        return Request(method, path, query, headers, stream.readBody(length))
     }
 
     /** Parses a request line such as `GET /pair?t=abc HTTP/1.1`. Null if it is not one. */
@@ -130,5 +156,38 @@ object PairingHttp {
             append("\r\n")
         }
         return head.toByteArray(Charsets.US_ASCII) + bytes
+    }
+}
+
+/** The bytes of one request, read as [PairingHttp.readRequest] needs them. */
+private class RequestStream(input: InputStream) {
+    private val stream = input as? BufferedInputStream ?: BufferedInputStream(input)
+
+    /** One line of the head, without its CRLF (or bare LF). Null if the stream has ended. */
+    fun readLine(): String? {
+        val line = ByteArrayOutputStream()
+        var byte = stream.read()
+        while (byte != -1 && byte != '\n'.code) {
+            line.write(byte)
+            byte = stream.read()
+        }
+        if (byte == -1 && line.size() == 0) return null
+        return line.toString(Charsets.UTF_8.name()).removeSuffix("\r")
+    }
+
+    /** Up to [length] bytes of body, decoded once they're all here, or once no more will come. */
+    fun readBody(length: Int): String {
+        val buffer = ByteArray(length)
+        var filled = 0
+        try {
+            while (filled < length) {
+                val read = stream.read(buffer, filled, length - filled)
+                if (read == -1) break
+                filled += read
+            }
+        } catch (_: SocketTimeoutException) {
+            // The phone stopped sending: answer with what arrived rather than not at all.
+        }
+        return String(buffer, 0, filled, Charsets.UTF_8)
     }
 }

@@ -14,6 +14,7 @@ import app.opentv.data.remote.XtreamApi
 import app.opentv.data.repo.SourceRepository
 import app.opentv.pairing.ManagerServer
 import com.google.common.truth.Truth.assertThat
+import java.net.Socket
 import java.util.Collections
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
@@ -181,6 +182,36 @@ class ManagerServerTest {
         second.join(5_000)
 
         assertThat(committed).containsExactly(listOf(1L, 2L, 3L), listOf(3L, 2L, 1L)).inOrder()
+    }
+
+    @Test
+    fun `reordering a big group saves every id, even when the phone sends it in several pieces`() {
+        val session = listening()
+        val ids = (1L..600L).toList()
+        val body = """{"ids":[${ids.joinToString(",")}]}""".toByteArray(Charsets.UTF_8)
+        val target = session.url.substringAfter("${session.port}").replace("/?", "/reorder?")
+
+        val status = Socket(session.host, session.port).use { socket ->
+            socket.soTimeout = 5_000
+            val out = socket.getOutputStream()
+            out.write(
+                (
+                    "POST $target HTTP/1.1\r\nHost: ${session.host}\r\nContent-Type: application/json\r\n" +
+                        "Content-Length: ${body.size}\r\nConnection: close\r\n\r\n"
+                    ).toByteArray(Charsets.UTF_8),
+            )
+            // Each piece flushed on its own, with a pause, so the TV sees them arrive one at a time.
+            val pieceSize = body.size / 4 + 1
+            for (start in body.indices step pieceSize) {
+                out.write(body, start, minOf(pieceSize, body.size - start))
+                out.flush()
+                Thread.sleep(100)
+            }
+            socket.getInputStream().bufferedReader().readLine()
+        }
+
+        assertThat(status).isEqualTo("HTTP/1.1 200 OK")
+        assertThat(committed).containsExactly(ids)
     }
 
     private fun post(session: ManagerServer.Session, path: String, body: String): Int {
