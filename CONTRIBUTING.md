@@ -54,6 +54,13 @@ Testing against a real provider is the hard part of working on this project. If 
 one, the parsers, the database layer and the UI can all be worked on with unit tests and
 synthetic data — and those are where most of the interesting bugs are.
 
+## How the work is done
+
+Most of the code is written with Claude Code and a few agent skills: Matt Pocock's for the
+engineering process, Impeccable for design and Emil Kowalski's for motion. `docs/WORKFLOW.md`
+lists them, how to install them, and the process from issue to merged PR. Using them is optional;
+the same steps work by hand.
+
 ## Pull requests
 
 - One change per PR. A PR that fixes a bug *and* restyles three screens is hard to review and

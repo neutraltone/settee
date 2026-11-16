@@ -223,6 +223,10 @@ keep it up to date whenever a mapping changes or a new failure can reach the scr
 
 ## Agent skills
 
+The skills (Matt Pocock's, Impeccable, Emil Kowalski's) are installed per user, not in this repo.
+`docs/WORKFLOW.md` lists them, how to install them, and the process they slot into; keep it up to
+date when the skills or the process change.
+
 ### Issue tracker
 
 Issues live in GitHub Issues on `neutraltone/settee`, via the `gh` CLI. See `docs/agents/issue-tracker.md`.
