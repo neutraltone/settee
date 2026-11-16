@@ -19,8 +19,6 @@ import app.opentv.data.repo.ChannelLineup
 import app.opentv.data.repo.SourceRepository
 import app.opentv.recording.SmbClient
 import app.opentv.recording.SmbConfig
-import java.io.BufferedReader
-import java.io.InputStreamReader
 import java.io.OutputStream
 import java.net.Socket
 import java.util.concurrent.TimeUnit
@@ -204,16 +202,11 @@ class ManagerServer(
             return
         }
 
-        val reader = BufferedReader(InputStreamReader(client.getInputStream(), Charsets.UTF_8))
-        val requestLine = reader.readLine() ?: return
-        val (method, path, query) = PairingHttp.parseRequestLine(requestLine) ?: return
-
-        val headers = HashMap<String, String>()
-        while (true) {
-            val line = reader.readLine() ?: break
-            if (line.isEmpty()) break
-            PairingHttp.parseHeader(line)?.let { (name, value) -> headers[name] = value }
-        }
+        // Only the head for now: a request the token check turns away never has its body read.
+        val head = PairingHttp.readHead(client.getInputStream()) ?: return
+        val method = head.method
+        val path = head.path
+        val query = head.query
 
         val output = client.getOutputStream()
 
@@ -230,8 +223,15 @@ class ManagerServer(
         // A valid request counts as activity; the idle watchdog measures from here.
         lastActivityMillis = System.currentTimeMillis()
 
-        val body = if (method == "POST") readBody(reader, headers) else ""
-        // Straight after the body, so reorders keep the order they arrived in; see [reorderTurns].
+        val sent = if (method == "POST") head.readBody(MAX_BODY_BYTES) else null
+        // Half of what the phone sent is refused rather than acted on, before it can take a reorder turn.
+        if (sent?.complete == false) {
+            output.write(PairingHttp.httpResponse("400 Bad Request", "text/plain", "Bad request."))
+            return
+        }
+        val body = sent?.text.orEmpty()
+        // Taken as soon as the body is in, before anything acts on it, so reorders keep the order
+        // they arrived in; see [reorderTurns].
         val reorderTurn = if (method == "POST" && path == "/reorder") reorderTurns.take() else null
 
         when {
@@ -262,15 +262,6 @@ class ManagerServer(
 
             else -> output.write(PairingHttp.httpResponse("404 Not Found", "text/plain", "Not found."))
         }
-    }
-
-    private fun readBody(reader: BufferedReader, headers: Map<String, String>): String {
-        val contentLength = (headers["content-length"]?.toIntOrNull() ?: 0)
-            .coerceAtMost(MAX_BODY_BYTES)
-        if (contentLength <= 0) return ""
-        val buffer = CharArray(contentLength)
-        val read = reader.read(buffer, 0, contentLength)
-        return if (read > 0) String(buffer, 0, read) else ""
     }
 
     // ---- Routes --------------------------------------------------------------------------------

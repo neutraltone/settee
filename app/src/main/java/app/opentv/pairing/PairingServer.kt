@@ -11,8 +11,6 @@ import app.opentv.core.ServerProblem
 import app.opentv.core.ViewerError
 import app.opentv.data.model.Source
 import app.opentv.data.model.SourceKind
-import java.io.BufferedReader
-import java.io.InputStreamReader
 import java.net.Socket
 import java.util.concurrent.TimeUnit
 import kotlin.concurrent.thread
@@ -296,28 +294,22 @@ class PairingServer(
             return
         }
 
-        val reader = BufferedReader(InputStreamReader(client.getInputStream(), Charsets.UTF_8))
-        val requestLine = reader.readLine() ?: return
-        val (method, path, query) = PairingHttp.parseRequestLine(requestLine) ?: return
-
-        val headers = HashMap<String, String>()
-        while (true) {
-            val line = reader.readLine() ?: break
-            if (line.isEmpty()) break
-            PairingHttp.parseHeader(line)?.let { (name, value) -> headers[name] = value }
-        }
-
-        val contentLength = (headers["content-length"]?.toIntOrNull() ?: 0)
-            .coerceAtMost(MAX_BODY_BYTES)
-        val body = if (contentLength > 0) {
-            val buffer = CharArray(contentLength)
-            val read = reader.read(buffer, 0, contentLength)
-            if (read > 0) String(buffer, 0, read) else ""
-        } else {
-            ""
-        }
+        val head = PairingHttp.readHead(client.getInputStream()) ?: return
+        val method = head.method
+        val path = head.path
+        val query = head.query
+        // Read before the token check, since the submit carries its token in the body.
+        val sent = head.readBody(MAX_BODY_BYTES)
 
         val output = client.getOutputStream()
+
+        // A form cut off partway is refused, not saved: its last field, a password or an address,
+        // would be stored as if it were whole.
+        if (!sent.complete) {
+            output.write(PairingHttp.httpResponse("400 Bad Request", "text/plain", "Bad request."))
+            return
+        }
+        val body = sent.text
 
         // Every route checks a token. Without one the page does not exist. The short token
         // only opens the form, which carries the full token for the submit.

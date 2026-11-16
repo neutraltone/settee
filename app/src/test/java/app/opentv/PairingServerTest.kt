@@ -11,6 +11,7 @@ import app.opentv.pairing.PairingFonts
 import app.opentv.pairing.PairingServer
 import com.google.common.truth.Truth.assertThat
 import java.io.File
+import java.net.Socket
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
@@ -67,6 +68,31 @@ class PairingServerTest {
         val request = Request.Builder().url("http://${session.host}:${session.port}/submit").post(form).build()
         return OkHttpClient.Builder().readTimeout(30, java.util.concurrent.TimeUnit.SECONDS).build()
             .newCall(request).execute().use { it.code to it.body.string() }
+    }
+
+    @Test
+    fun `a form cut off partway is refused, so the TV never saves half an address`() {
+        val session = listening()
+        val form = "t=${session.url.substringAfter("t=")}&code=${session.confirmCode}&kind=m3u&url=http%3A%2F%2Fexam"
+
+        val status = Socket(session.host, session.port).use { socket ->
+            socket.soTimeout = 5_000
+            val out = socket.getOutputStream()
+            out.write(
+                (
+                    "POST /submit HTTP/1.1\r\nHost: ${session.host}\r\n" +
+                        "Content-Type: application/x-www-form-urlencoded\r\n" +
+                        "Content-Length: ${form.length + 30}\r\nConnection: close\r\n\r\n$form"
+                    ).toByteArray(Charsets.UTF_8),
+            )
+            out.flush()
+            // The phone stops sending, as one that has dropped off the wifi does.
+            socket.shutdownOutput()
+            socket.getInputStream().bufferedReader().readLine()
+        }
+
+        assertThat(status).isEqualTo("HTTP/1.1 400 Bad Request")
+        assertThat(server.state.value).isInstanceOf(PairingServer.State.Listening::class.java)
     }
 
     /** The details the TV got, once it has them. */
