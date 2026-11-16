@@ -10,10 +10,14 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsFocused
+import androidx.compose.ui.test.assertIsNotFocused
+import androidx.compose.ui.test.hasAnyDescendant
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isDialog
+import androidx.compose.ui.test.isFocused
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
@@ -277,6 +281,69 @@ class LivePlayerOptionsTest {
         inList("Aspect ratio").performClick()
 
         compose.onNodeWithText("Stretch").assertExists()
+    }
+
+    private fun openAudioFromTheBar() {
+        openControls()
+        press(Key.DirectionDown)
+        press(Key.DirectionRight)
+        compose.onNodeWithContentDescription("Audio").assertIsFocused()
+        press(Key.DirectionCenter)
+        compose.mainClock.advanceTimeBy(FOCUS_MILLIS)
+    }
+
+    /** The Highlight is somewhere in the empty panel: on the panel itself or on its message. */
+    private fun assertHighlightInEmptyPanel() {
+        compose.onNode(isFocused()).assert(hasText("None available") or hasAnyDescendant(hasText("None available")))
+    }
+
+    @Test
+    fun `Audio with no tracks opens a panel that takes the highlight, and Left doesn't move it underneath`() {
+        showChannel()
+
+        openAudioFromTheBar()
+
+        assertHighlightInEmptyPanel()
+        compose.onNodeWithContentDescription("Audio").assertIsNotFocused()
+        captureScreen("live_player_audio_empty")
+
+        press(Key.DirectionLeft)
+
+        assertHighlightInEmptyPanel()
+    }
+
+    @Test
+    fun `one Back closes the empty Audio panel and the highlight goes back to Audio`() {
+        showChannel()
+        openAudioFromTheBar()
+
+        Espresso.pressBack()
+        compose.mainClock.advanceTimeBy(FOCUS_MILLIS)
+        compose.waitForIdle()
+
+        compose.onNodeWithText("None available").assertDoesNotExist()
+        compose.onNodeWithContentDescription("Audio").assertIsFocused()
+    }
+
+    @Test
+    fun `choosing in a picker opened from a pill puts the highlight back on that pill`() {
+        showChannel()
+        openControls()
+        press(Key.DirectionDown)
+        press(Key.DirectionDown)
+        press(Key.DirectionRight)
+        compose.onNodeWithText("Aspect ratio").assertIsFocused()
+        press(Key.DirectionCenter)
+        compose.mainClock.advanceTimeBy(FOCUS_MILLIS)
+        compose.onNodeWithText("Stretch").assertExists()
+
+        press(Key.DirectionDown)
+        press(Key.DirectionCenter)
+        compose.mainClock.advanceTimeBy(FOCUS_MILLIS)
+        compose.waitForIdle()
+
+        compose.onNodeWithText("Stretch").assertDoesNotExist()
+        compose.onNodeWithText("Aspect ratio").assertIsFocused()
     }
 
     /** Select on a row of the list, as a remote does it: a touch would leave nothing able to take focus. */
