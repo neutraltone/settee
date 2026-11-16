@@ -14,10 +14,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.RadioButtonChecked
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.LiveTv
 import androidx.compose.material.icons.filled.Movie
+import androidx.compose.material.icons.filled.RadioButtonChecked
 import androidx.compose.material.icons.filled.Tv
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -61,6 +61,7 @@ enum class Tab(val labelRes: Int, val icon: ImageVector) {
     LIVE(R.string.nav_live_tv, Icons.Filled.LiveTv),
     MOVIES(R.string.nav_movies, Icons.Filled.Movie),
     SHOWS(R.string.nav_shows, Icons.Filled.Tv),
+
     // A ring round a dot, a recorder's button: the plain dot read as a bullet on the closed rail.
     RECORDINGS(R.string.nav_recordings, Icons.Filled.RadioButtonChecked),
 }

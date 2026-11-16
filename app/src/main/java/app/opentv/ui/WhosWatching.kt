@@ -125,7 +125,11 @@ fun WhosWatchingScreen(
                     ProfileCard(
                         profile = profile,
                         still = stills[profile.id],
-                        modifier = if (profile.id == profiles[start].id) Modifier.focusRequester(highlight) else Modifier,
+                        modifier = if (profile.id == profiles[start].id) {
+                            Modifier.focusRequester(highlight)
+                        } else {
+                            Modifier
+                        },
                         onClick = { onChoose(profile.id) },
                     )
                 }

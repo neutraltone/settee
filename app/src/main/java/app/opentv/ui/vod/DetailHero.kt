@@ -43,11 +43,7 @@ import kotlinx.coroutines.flow.map
  * posters, so the fallback follows load errors rather than trusting a non-null URL.
  */
 @Composable
-internal fun BoxScope.HeroBackdrop(
-    backdropUrl: String?,
-    posterUrl: String?,
-    fade: HeroFade = HeroFade.UnderHero,
-) {
+internal fun BoxScope.HeroBackdrop(backdropUrl: String?, posterUrl: String?, fade: HeroFade = HeroFade.UnderHero) {
     val candidates = remember(backdropUrl, posterUrl) { listOfNotNull(backdropUrl, posterUrl).distinct() }
     var index by remember(candidates) { mutableIntStateOf(0) }
     candidates.getOrNull(index)?.let { url ->
@@ -76,15 +72,20 @@ internal fun BoxScope.HeroBackdrop(
  */
 internal enum class HeroFade(val clearUntil: Float, val solidFrom: Float) {
     /** A film's page, whose hero sits low: the art shows above and behind it. */
-    UnderHero(0.35f, 0.85f),
+    UnderHero(clearUntil = FILM_CLEAR_UNTIL, solidFrom = FILM_SOLID_FROM),
 
     /**
      * A show's page, whose episodes start under the buttons, about 40% down. They're rows of quiet text
      * across the whole width, out where the across fade has cleared, so they need solid background
      * under them: over the art, "7 min left" landed on bright poster colours.
      */
-    AboveRows(0.15f, 0.45f),
+    AboveRows(clearUntil = SHOW_CLEAR_UNTIL, solidFrom = SHOW_SOLID_FROM),
 }
+
+private const val FILM_CLEAR_UNTIL = 0.35f
+private const val FILM_SOLID_FROM = 0.85f
+private const val SHOW_CLEAR_UNTIL = 0.15f
+private const val SHOW_SOLID_FROM = 0.45f
 
 /**
  * Dark under the hero's text, which runs to a little over half the width, and clear past it. Fading

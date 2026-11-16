@@ -548,8 +548,10 @@ class TitleHistory internal constructor(
      * or not: what Who's watching? shows behind each Profile. Not one marked Unwatched, as for
      * [startedMovieIds].
      */
-    suspend fun lastPlayed(profileId: Long, limit: Int): List<String> = positions.newestFor(profileId, limit)
+    suspend fun lastPlayed(profileId: Long, limit: Int): List<String> = positions.forProfile(profileId)
         .filter { it.mark != HandMark.UNWATCHED }
+        .sortedByDescending { it.updatedAtMillis }
+        .take(limit)
         .map { it.mediaKey }
 
     /** The last [limit] series [profileId] played an episode of, newest first. See [recentMovieIds]. */

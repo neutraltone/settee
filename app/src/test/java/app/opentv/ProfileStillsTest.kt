@@ -81,7 +81,13 @@ class ProfileStillsTest {
     )
 
     private suspend fun played(profileId: Long, movieId: Long, at: Long) = graph.viewerLibrary.mergeSynced(
-        PlaybackPosition(profileId, "movie:$movieId", positionMillis = 60_000, durationMillis = 600_000, updatedAtMillis = at),
+        PlaybackPosition(
+            profileId,
+            "movie:$movieId",
+            positionMillis = 60_000,
+            durationMillis = 600_000,
+            updatedAtMillis = at,
+        ),
     )
 
     /** The view model's stills once [until] holds. */
@@ -91,7 +97,7 @@ class ProfileStillsTest {
     }
 
     @Test
-    fun `each Profile shows a frame from what they last played, and one with nothing shows none`() = runBlocking {
+    fun `each Profile shows a frame from what they last played, and one with nothing shows none`() = runBlocking<Unit> {
         graph.database.categories().upsertAll(listOf(films))
         graph.database.movies().upsertAll(listOf(film(1, films), film(2, films)))
         val kids = checkNotNull(graph.profiles.create("Kids"))
@@ -105,7 +111,7 @@ class ProfileStillsTest {
     }
 
     @Test
-    fun `a title in a Parental-Locked category is passed over for the one played before it`() = runBlocking {
+    fun `a title in a Parental-Locked category is passed over for the one played before it`() = runBlocking<Unit> {
         graph.database.categories().upsertAll(listOf(films, adult))
         graph.database.movies().upsertAll(listOf(film(1, films), film(2, adult)))
         graph.settings.setHiddenCategories(setOf(categoryGroupKey(adult)))
