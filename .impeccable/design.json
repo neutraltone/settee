@@ -1,0 +1,369 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-16T00:57:29.569933+00:00",
+  "title": "Design System: Settee",
+  "extensions": {
+    "colorMeta": {
+      "aubergine-dusk": {
+        "role": "neutral",
+        "displayName": "Aubergine Dusk",
+        "codeName": "SetteeColors.Background",
+        "canonical": "#1A1416",
+        "tonalRamp": [
+          "#211C1E",
+          "#3D3336",
+          "#5A494F",
+          "#81656E",
+          "#A18790",
+          "#BAABB0",
+          "#D5CDD0",
+          "#EEECED"
+        ]
+      },
+      "upholstery": {
+        "role": "neutral",
+        "displayName": "Upholstery",
+        "codeName": "SetteeColors.Surface",
+        "canonical": "#281F22",
+        "tonalRamp": [
+          "#211C1E",
+          "#3D3337",
+          "#5A494F",
+          "#80656E",
+          "#A08890",
+          "#BAABB0",
+          "#D5CED0",
+          "#EEECED"
+        ]
+      },
+      "cushion": {
+        "role": "neutral",
+        "displayName": "Cushion",
+        "codeName": "SetteeColors.Raised",
+        "canonical": "#362A2E",
+        "tonalRamp": [
+          "#211D1E",
+          "#3D3337",
+          "#5A4A4F",
+          "#80656E",
+          "#A08890",
+          "#BAABB0",
+          "#D5CED0",
+          "#EEECED"
+        ]
+      },
+      "picture-rail": {
+        "role": "neutral",
+        "displayName": "Picture Rail",
+        "codeName": "SetteeColors.Rule",
+        "canonical": "#45373B",
+        "tonalRamp": [
+          "#201D1E",
+          "#3C3436",
+          "#594A4F",
+          "#7F676E",
+          "#9F898F",
+          "#B9ACB0",
+          "#D4CED0",
+          "#EEECED"
+        ]
+      },
+      "cream": {
+        "role": "neutral",
+        "displayName": "Cream",
+        "codeName": "SetteeColors.Text",
+        "canonical": "#F8EFEA",
+        "tonalRamp": [
+          "#271C16",
+          "#4B3325",
+          "#724832",
+          "#A9633D",
+          "#C48663",
+          "#D0AA95",
+          "#DFCDC3",
+          "#F1ECE9"
+        ]
+      },
+      "mushroom": {
+        "role": "neutral",
+        "displayName": "Mushroom",
+        "codeName": "SetteeColors.QuietText",
+        "canonical": "#BDABA8",
+        "tonalRamp": [
+          "#211D1C",
+          "#3D3433",
+          "#5A4B49",
+          "#826864",
+          "#A18A87",
+          "#BAADAB",
+          "#D5CECD",
+          "#EEECEC"
+        ]
+      },
+      "coral-lamp": {
+        "role": "primary",
+        "displayName": "Coral Lamp",
+        "codeName": "SetteeColors.Accent",
+        "canonical": "#FF8F6B",
+        "tonalRamp": [
+          "#2F160E",
+          "#5D2513",
+          "#923112",
+          "#DF3B07",
+          "#F56233",
+          "#ED9578",
+          "#EDC3B5",
+          "#F6E9E5"
+        ]
+      },
+      "plum-ink": {
+        "role": "primary",
+        "displayName": "Plum Ink",
+        "codeName": "SetteeColors.OnAccent",
+        "canonical": "#2A130B",
+        "tonalRamp": [
+          "#281A15",
+          "#4E2E22",
+          "#773F2C",
+          "#B25434",
+          "#CD785B",
+          "#D5A290",
+          "#E2C9C1",
+          "#F2EBE8"
+        ]
+      },
+      "tally-red": {
+        "role": "secondary",
+        "displayName": "Tally Red",
+        "codeName": "SetteeColors.Recording",
+        "canonical": "#FF5A5F",
+        "tonalRamp": [
+          "#2F0E0F",
+          "#5D1315",
+          "#921216",
+          "#DF070D",
+          "#F53339",
+          "#ED787C",
+          "#EDB5B7",
+          "#F6E5E5"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "The biggest moments, such as \"You're all set.\""
+      },
+      "hero": {
+        "displayName": "Hero",
+        "purpose": "A film's or show's title over its backdrop."
+      },
+      "screen-title": {
+        "displayName": "Screen title",
+        "purpose": "The name of a screen or a Settings pane."
+      },
+      "section": {
+        "displayName": "Section",
+        "purpose": "Row headings and panel titles."
+      },
+      "synopsis": {
+        "displayName": "Synopsis",
+        "purpose": "What a programme or film is about."
+      },
+      "row-title": {
+        "displayName": "Row title",
+        "purpose": "The title on a list row."
+      },
+      "card-title": {
+        "displayName": "Card title",
+        "purpose": "The title on artwork."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Labels, values, notes, status lines, buttons."
+      }
+    },
+    "shadows": [
+      {
+        "name": "highlight-glow",
+        "value": "14dp elevation, ambient and spot colour #FF8F6B",
+        "purpose": "The one glow, on the highlighted card or Live Preview only."
+      },
+      {
+        "name": "highlight-ring",
+        "value": "4dp #FF8F6B band with a 2dp #1A1416 edge inside it",
+        "purpose": "Ring on a highlighted card; the dark edge keeps it visible on bright artwork."
+      }
+    ],
+    "motion": [
+      {
+        "name": "highlight-change",
+        "value": "instant (on the press's own frame)",
+        "purpose": "Highlight states never animate between."
+      },
+      {
+        "name": "screen-dip",
+        "value": "about 300ms through the background",
+        "purpose": "Screen changes; presses during it still go through."
+      },
+      {
+        "name": "aerial-arcs",
+        "value": "three arcs over about 1.8s, eyes blink about every 4s",
+        "purpose": "Waiting indicator; the only motion kept when system animations are off."
+      },
+      {
+        "name": "frame-budget",
+        "value": "under 16.7ms a frame on a Fire TV Stick while moving",
+        "purpose": "Anything that can't pass doesn't animate."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "tv",
+        "value": "960x540dp"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Button",
+      "kind": "button",
+      "refersTo": "button",
+      "description": "A pill on Cushion that turns solid coral with Plum Ink text while it has the Highlight.",
+      "html": "<div class=\"ds-row\"><button class=\"ds-btn\">Resume</button><button class=\"ds-btn ds-on\">Play from start</button><button class=\"ds-btn\" disabled>Unavailable</button></div>",
+      "css": "@import url('https://fonts.googleapis.com/css2?family=Young+Serif&family=Alegreya+Sans:wght@500;700&display=swap');.ds-row{display:flex;gap:12px;background:#1A1416;padding:24px}.ds-btn{font-family:'Alegreya Sans',sans-serif;font-weight:500;font-size:16px;line-height:21px;font-feature-settings:'lnum','tnum';background:#362A2E;color:#F8EFEA;border:none;border-radius:9999px;padding:10px 22px;cursor:pointer}.ds-btn:hover,.ds-btn:focus-visible,.ds-btn.ds-on{background:#FF8F6B;color:#2A130B;outline:none}.ds-btn:disabled{color:#BDABA8;background:#362A2E;cursor:default}"
+    },
+    {
+      "name": "Season pills",
+      "kind": "chip",
+      "refersTo": "pill",
+      "description": "A row of choices: unselected on Upholstery, selected on Cushion in coral text, highlighted solid coral.",
+      "html": "<div class=\"ds-row\"><button class=\"ds-pill\">Season 1</button><button class=\"ds-pill ds-sel\">Season 2</button><button class=\"ds-pill ds-on\">Season 3</button><button class=\"ds-pill\">Specials</button></div>",
+      "css": "@import url('https://fonts.googleapis.com/css2?family=Young+Serif&family=Alegreya+Sans:wght@500;700&display=swap');.ds-row{display:flex;gap:12px;background:#1A1416;padding:24px}.ds-pill{font-family:'Alegreya Sans',sans-serif;font-weight:500;font-size:16px;line-height:21px;font-feature-settings:'lnum','tnum';background:#281F22;color:#BDABA8;border:none;border-radius:9999px;padding:8px 20px;cursor:pointer}.ds-pill.ds-sel{background:#362A2E;color:#FF8F6B}.ds-pill:hover,.ds-pill:focus-visible,.ds-pill.ds-on{background:#FF8F6B;color:#2A130B;outline:none}"
+    },
+    {
+      "name": "Settings row",
+      "kind": "custom",
+      "refersTo": "list-row",
+      "description": "One setting, one target, resting on Upholstery; the whole row goes coral with Plum Ink text when highlighted.",
+      "html": "<div class=\"ds-list\"><div class=\"ds-lr\" tabindex=\"0\"><div class=\"ds-lbl\"><b>Subtitles</b><span>For Sam</span></div><span class=\"ds-val\">English ›</span></div><div class=\"ds-lr ds-on\" tabindex=\"0\"><div class=\"ds-lbl\"><b>Live preview</b></div><span class=\"ds-sw ds-swon\"><i></i></span></div><div class=\"ds-lr\" tabindex=\"0\"><div class=\"ds-lbl\"><b>Autoplay next episode</b></div><span class=\"ds-sw\"><i></i></span></div></div>",
+      "css": "@import url('https://fonts.googleapis.com/css2?family=Young+Serif&family=Alegreya+Sans:wght@500;700&display=swap');.ds-list{display:flex;flex-direction:column;gap:4px;background:#1A1416;padding:24px;width:420px}.ds-lr{font-family:'Alegreya Sans',sans-serif;font-weight:500;font-size:16px;line-height:21px;font-feature-settings:'lnum','tnum';display:flex;align-items:center;min-height:52px;box-sizing:border-box;padding:8px 10px;background:#281F22;color:#F8EFEA;border-radius:10px;cursor:pointer}.ds-lbl{flex:1;display:flex;flex-direction:column}.ds-lbl b{font-weight:700;font-size:17px}.ds-lbl span,.ds-val{color:#BDABA8}.ds-lr:hover,.ds-lr:focus-visible,.ds-lr.ds-on{background:#FF8F6B;color:#2A130B;outline:none}.ds-lr:hover span,.ds-lr:focus-visible span,.ds-lr.ds-on span{color:#2A130B}.ds-sw{width:44px;height:24px;border-radius:9999px;background:#362A2E;padding:3px;box-sizing:border-box;display:flex}.ds-sw i{width:18px;height:18px;border-radius:9999px;background:#BDABA8}.ds-swon{background:#FF8F6B;justify-content:flex-end}.ds-swon i{background:#F8EFEA}.ds-lr.ds-on .ds-sw,.ds-lr:hover .ds-sw,.ds-lr:focus-visible .ds-sw{background:#2A130B}.ds-lr.ds-on .ds-swon i{background:#FF8F6B}"
+    },
+    {
+      "name": "Art card",
+      "kind": "card",
+      "refersTo": "art-card-portrait",
+      "description": "The card is its artwork, title on a fade at the foot; highlighted it lifts 1.05 inside a coral ring with a dark edge and one glow.",
+      "html": "<div class=\"ds-shelf\"><div class=\"ds-card\" tabindex=\"0\"><div class=\"ds-art\" style=\"background:linear-gradient(160deg,#5A494F,#2F160E)\"></div><div class=\"ds-txt\"><b>Tears of Steel</b><span>22 min left</span></div><div class=\"ds-bar\"><i style=\"width:40%\"></i></div></div><div class=\"ds-card ds-on\" tabindex=\"0\"><div class=\"ds-art\" style=\"background:linear-gradient(160deg,#81656E,#4B3325)\"></div><span class=\"ds-badge\">4K</span><div class=\"ds-txt\"><b>Sintel</b></div></div><div class=\"ds-card\" tabindex=\"0\"><div class=\"ds-art\"></div><div class=\"ds-txt\"><b>Spring</b></div></div></div>",
+      "css": "@import url('https://fonts.googleapis.com/css2?family=Young+Serif&family=Alegreya+Sans:wght@500;700&display=swap');.ds-shelf{display:flex;gap:12px;background:#1A1416;padding:28px}.ds-card{position:relative;width:118px;height:177px;border-radius:10px;overflow:hidden;background:#362A2E;cursor:pointer;transition:none}.ds-art{position:absolute;inset:0}.ds-card::after{content:'';position:absolute;inset:40% 0 0 0;background:linear-gradient(transparent,rgba(26,20,22,.92))}.ds-txt{font-family:'Alegreya Sans',sans-serif;font-weight:500;font-size:16px;line-height:21px;font-feature-settings:'lnum','tnum';position:absolute;left:10px;right:10px;bottom:10px;z-index:1;display:flex;flex-direction:column;color:#F8EFEA}.ds-txt b{font-weight:700;line-height:19px}.ds-txt span{color:#BDABA8}.ds-bar{position:absolute;left:0;right:0;bottom:0;height:4px;background:rgba(26,20,22,.7);z-index:1}.ds-bar i{display:block;height:100%;background:#FF8F6B}.ds-badge{font-family:'Alegreya Sans',sans-serif;font-weight:500;font-size:16px;line-height:21px;font-feature-settings:'lnum','tnum';position:absolute;top:8px;right:8px;z-index:1;background:rgba(26,20,22,.8);color:#F8EFEA;border-radius:9999px;padding:0 8px}.ds-card:hover,.ds-card:focus-visible,.ds-card.ds-on{transform:scale(1.05);box-shadow:inset 0 0 0 4px #FF8F6B,inset 0 0 0 6px #1A1416,0 0 14px rgba(255,143,107,.55);outline:none}.ds-card:hover::before,.ds-card:focus-visible::before,.ds-card.ds-on::before{content:'';position:absolute;inset:0;border-radius:10px;box-shadow:inset 0 0 0 4px #FF8F6B,inset 0 0 0 6px #1A1416;z-index:2}"
+    },
+    {
+      "name": "Side panel",
+      "kind": "custom",
+      "refersTo": "side-panel",
+      "description": "Every question and choice: 400 dp of solid Upholstery down the right, nothing dimmed behind; confirmations start on the safe choice.",
+      "html": "<div class=\"ds-screen\"><div class=\"ds-panel\"><h3>Remove Living room?</h3><p>Its channels, guide and recordings will go from this TV.</p><button class=\"ds-pr ds-on\">Keep it</button><button class=\"ds-pr\">Yes, remove Living room</button></div></div>",
+      "css": "@import url('https://fonts.googleapis.com/css2?family=Young+Serif&family=Alegreya+Sans:wght@500;700&display=swap');.ds-screen{background:#1A1416;height:300px;display:flex;justify-content:flex-end}.ds-panel{width:400px;box-sizing:border-box;background:#281F22;padding:27px 24px;display:flex;flex-direction:column;gap:2px;color:#F8EFEA}.ds-panel h3{font-family:'Young Serif',serif;font-weight:400;font-size:18px;line-height:23px;margin:0 0 8px}.ds-panel p{font-family:'Alegreya Sans',sans-serif;font-weight:500;font-size:16px;line-height:21px;font-feature-settings:'lnum','tnum';color:#BDABA8;margin:0 0 12px}.ds-pr{font-family:'Alegreya Sans',sans-serif;font-weight:500;font-size:16px;line-height:21px;font-feature-settings:'lnum','tnum';text-align:left;background:transparent;color:#F8EFEA;border:none;border-radius:10px;padding:12px;cursor:pointer}.ds-pr:hover,.ds-pr:focus-visible,.ds-pr.ds-on{background:#FF8F6B;color:#2A130B;outline:none}"
+    },
+    {
+      "name": "Guide",
+      "kind": "custom",
+      "refersTo": "guide-cell-highlighted",
+      "description": "Ruled and square: times over a strong rule, current programme bold, later ones quiet, the highlighted cell solid coral.",
+      "html": "<div class=\"ds-guide\"><div class=\"ds-hd\"><span>Today</span><span>10:30</span><span>11:00</span></div><div class=\"ds-gr\"><div class=\"ds-gc ds-ch ds-on\" tabindex=\"0\">Channel One</div><div class=\"ds-gc\" tabindex=\"0\"><b>Now on 1</b></div><div class=\"ds-gc ds-later\" tabindex=\"0\">Later on 1</div></div><div class=\"ds-gr\"><div class=\"ds-gc ds-ch\" tabindex=\"0\">Channel Two</div><div class=\"ds-gc\" tabindex=\"0\"><b>Now on 2</b></div><div class=\"ds-gc ds-later\" tabindex=\"0\">Later on 2</div></div></div>",
+      "css": "@import url('https://fonts.googleapis.com/css2?family=Young+Serif&family=Alegreya+Sans:wght@500;700&display=swap');.ds-guide{font-family:'Alegreya Sans',sans-serif;font-weight:500;font-size:16px;line-height:21px;font-feature-settings:'lnum','tnum';background:#1A1416;color:#F8EFEA;padding:24px;width:640px}.ds-hd{display:grid;grid-template-columns:200px 1fr 1fr;padding-bottom:8px;border-bottom:2px solid #BDABA8}.ds-gr{display:grid;grid-template-columns:200px 1fr 1fr;border-bottom:1px solid #45373B}.ds-gc{padding:16px;border-left:1px solid #45373B;border-radius:2px;cursor:pointer}.ds-gc b,.ds-ch{font-weight:700;font-size:17px}.ds-ch{border-left:none}.ds-later{color:#BDABA8}.ds-gc:hover,.ds-gc:focus-visible,.ds-gc.ds-on{background:#FF8F6B;color:#2A130B;outline:none}"
+    },
+    {
+      "name": "Text field",
+      "kind": "input",
+      "refersTo": "text-field",
+      "description": "Upholstery with a faint Picture Rail border that turns 3 dp coral with the Highlight; the keyboard waits for OK.",
+      "html": "<div class=\"ds-wrap\"><label class=\"ds-lab\">Find a category</label><input class=\"ds-in\" placeholder=\"Type a few letters\"></div>",
+      "css": "@import url('https://fonts.googleapis.com/css2?family=Young+Serif&family=Alegreya+Sans:wght@500;700&display=swap');.ds-wrap{background:#1A1416;padding:24px;display:flex;flex-direction:column;gap:6px;width:360px}.ds-lab{font-family:'Alegreya Sans',sans-serif;font-weight:500;font-size:16px;line-height:21px;font-feature-settings:'lnum','tnum';color:#BDABA8}.ds-in{font-family:'Alegreya Sans',sans-serif;font-weight:500;font-size:16px;line-height:21px;font-feature-settings:'lnum','tnum';background:#281F22;color:#F8EFEA;border:1px solid #45373B;border-radius:10px;padding:14px 16px}.ds-in::placeholder{color:#BDABA8}.ds-in:hover,.ds-in:focus-visible,.ds-in:focus{border:3px solid #FF8F6B;padding:12px 14px;outline:none}"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Front Room",
+    "overview": "Settee is the British front room at night: the good settee, the lamps low, the telly on. The room is dark and warm, nearly black with plum in it, so the picture and the artwork are the brightest things in it. One coral light, the Highlight, always shows where the remote is. Everything else steps back. The type is a soft, old-fashioned serif for names and a friendly humanist sans for everything you read, both big enough to read from across the room.\n\nThere are two densities in the same room. Live TV, the guide and Home are quiet, dense and quick: rows, rules and small cards, nothing ornamental. Movies, Shows and details pages are where the room opens up: big backdrops, portrait covers, space around the title. Calm is how it looks, never how fast it goes. No transition makes the viewer wait to press the next button, and anything that can't hold 60 fps on a Fire TV Stick doesn't move at all.\n\nIt must never look like a sideloaded IPTV box, a stretched phone app or a storefront: no neon, no grid of glossy tiles, no promotional hero, no badges shouting for attention.",
+    "keyCharacteristics": [
+      "Always dark, one set of colours, no light theme.",
+      "One accent, coral, which means \"the remote is here\", with a red kept only for recording.",
+      "Flat, solid surfaces layered by tone. No blur, no see-through shades, at most one glow.",
+      "Young Serif for names and headings, Alegreya Sans for reading, nothing under 16 sp.",
+      "Every question opens in a Side Panel down the right, never a dialog in the middle.",
+      "Two Highlight treatments: a ring and lift on artwork, a solid coral fill on everything list-like."
+    ],
+    "rules": [
+      {
+        "name": "The One Lamp Rule",
+        "body": "Coral marks where the remote is, or what's chosen. Never use it to decorate, for a badge, or to draw the eye to something the viewer can't press. On a TV, coral reads as \"press me\".",
+        "section": "colors"
+      },
+      {
+        "name": "The Tally Light Rule",
+        "body": "Tally Red means recording now. Failures, series links and clashes are never red.",
+        "section": "colors"
+      },
+      {
+        "name": "The Solid Colour Rule",
+        "body": "Things step back by colour, never by opacity. Watched episodes use Mushroom, not see-through Cream, and shelves are never dimmed. The only see-through colours are the fades and dark pills that keep text readable over artwork.",
+        "section": "colors"
+      },
+      {
+        "name": "The Sofa Floor Rule",
+        "body": "Nothing is smaller than 16 sp. A test on the type tokens checks it.",
+        "section": "typography"
+      },
+      {
+        "name": "The Lined-Up Figures Rule",
+        "body": "Every role draws lining, tabular figures (`lnum, tnum`), so times, counts and episode numbers line up down the guide and the lists.",
+        "section": "typography"
+      },
+      {
+        "name": "The One Weight Rule",
+        "body": "Young Serif only has Regular. Never ask it for bold; hierarchy in headings comes from size.",
+        "section": "typography"
+      },
+      {
+        "name": "The Press Budget Rule",
+        "body": "A layout is judged by the presses it costs. Daily routes have limits in `docs/LOOK.md` (one press to the first Continue Watching card, none to the next episode), and a new layout mustn't exceed them.",
+        "section": "layout"
+      },
+      {
+        "name": "The Remembered Place Rule",
+        "body": "Coming back into a row lands on the card the viewer was last on there, never on whatever is at the same position.",
+        "section": "layout"
+      },
+      {
+        "name": "The One Glow Rule",
+        "body": "Never more than one glow on screen, and never blur, a dimmed shade behind a panel, or two screens drawn see-through at once. The Side Panel sits solid over the screen with nothing dimmed behind it.",
+        "section": "elevation"
+      },
+      {
+        "name": "The Solid Floor Rule",
+        "body": "Every screen draws a solid background. Only where video plays (the players, the Live Preview) is the area left clear for the picture.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do build from `ui/design` and Compose foundation: `HighlightSurface`, `PillButton`, `Pill`, `ListRow`, `ArtCard`, `SidePanel`, `ScreenFrame`, `AerialTv`, `ErrorMessage`.",
+      "Do make every new element reachable and obvious with a D-pad. If it can take the Highlight, it draws one of the two treatments: ring and lift on artwork, solid coral fill on everything else.",
+      "Do switch text and icons to Plum Ink on anything coral, including a switch's track and the small aerial TV.",
+      "Do keep text 16 sp or larger, with lining, tabular figures.",
+      "Do put the fade under any text that sits on artwork, and make it follow the text, not the art: at least 0.7 of Aubergine Dusk under words and 0.9 under quiet text.",
+      "Do put every question, choice, confirmation and notice in a Side Panel.",
+      "Do check any motion on a Fire TV Stick: under 16.7 ms a frame while it moves, or it doesn't move."
+    ],
+    "donts": [
+      "Don't use Material 3 or `RoundedCornerShape` outside `ui/design` (detekt bans it). Use `SetteeShapes`.",
+      "Don't use coral for decoration, badges or anything that can't be pressed (The One Lamp Rule).",
+      "Don't use red for anything but recording now (The Tally Light Rule).",
+      "Don't blur, dim behind a panel, use more than one glow, or draw two screens see-through at once (The One Glow Rule).",
+      "Don't step things back with opacity; use Mushroom (The Solid Colour Rule).",
+      "Don't add a light theme, a dialog in the middle of the screen, or a promotional hero on Home.",
+      "Don't fake a bold in Young Serif.",
+      "Don't make the viewer wait for a transition. Screen changes dip through the background in about 300 ms, and presses during it still go through.",
+      "Don't let it look like a sideloaded IPTV box, a stretched phone app or a storefront."
+    ]
+  }
+}
