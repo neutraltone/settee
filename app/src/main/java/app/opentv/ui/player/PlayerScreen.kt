@@ -429,6 +429,8 @@ fun LivePlayerContent(
     }
     LaunchedEffect(paused) { app.opentv.core.PipState.isPlaying = !paused }
     val barFocus = remember { FocusRequester() }
+    // Where the Highlight was on the controls, for a panel closing to give it back to.
+    val barReturn = remember { FocusRequester() }
     val panelFocus = remember { FocusRequester() }
     val rootFocus = remember { FocusRequester() }
     val listFocus = remember { FocusRequester() }
@@ -559,14 +561,15 @@ fun LivePlayerContent(
         }
     }
 
-    // Focus: the channel list when it's open, a picker's first row, the bar, and with none of them Try
+    // Focus: the channel list when it's open, a picker's first row, the controls (back where the
+    // Highlight was on them, such as the button that opened a picker just closed), and with none of them Try
     // again or else the full-screen catcher (so OK can bring the bar back, and up and down can change
     // channel). One effect, so every way out of a layer hands the highlight on alike. Side panels
     // aren't here: they're dialogs, with focus of their own, and this window's waits for them.
     val retryError = (state as? PlayerController.State.Error)?.takeIf { it.canRetry }
     val focusOn = when {
         channelListVisible -> listFocus
-        controlsVisible -> if (panel != PlayerPanel.NONE) panelFocus else barFocus
+        controlsVisible -> if (panel != PlayerPanel.NONE) panelFocus else barReturn
         retryError != null -> retryFocus
         else -> rootFocus
     }
@@ -840,6 +843,7 @@ fun LivePlayerContent(
                     onOptions = { optionsOpen = true },
                 ),
                 startFocus = barFocus,
+                returnFocus = barReturn,
                 seekable = controller.isSeekable,
                 showPlayPause = canPause,
                 onBarFocusChanged = { onBar -> if (!onBar) scrubTo = null },

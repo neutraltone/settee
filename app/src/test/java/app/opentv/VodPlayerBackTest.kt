@@ -7,6 +7,7 @@ package app.opentv
 
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
@@ -134,7 +135,8 @@ class VodPlayerBackTest {
         settle()
 
         compose.onNodeWithText("Off").assertDoesNotExist()
-        assertThat(compose.seekBarIsFocused()).isTrue()
+        // Back on the button that opened it (#452).
+        compose.onNodeWithContentDescription("Subtitles").assertIsFocused()
         assertThat(backs).isEqualTo(0)
     }
 

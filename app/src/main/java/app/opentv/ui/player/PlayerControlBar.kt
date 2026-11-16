@@ -7,8 +7,6 @@ package app.opentv.ui.player
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.focusGroup
-import androidx.compose.foundation.focusable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -17,7 +15,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -27,25 +24,20 @@ import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Audiotrack
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ClosedCaption
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.Immutable
-import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
@@ -53,17 +45,10 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.input.key.Key
-import androidx.compose.ui.input.key.KeyEventType
-import androidx.compose.ui.input.key.key
-import androidx.compose.ui.input.key.onPreviewKeyEvent
-import androidx.compose.ui.input.key.type
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import app.opentv.R
-import app.opentv.ui.design.AerialTv
-import app.opentv.ui.design.AerialTvSize
 import app.opentv.ui.design.HighlightStyle
 import app.opentv.ui.design.HighlightSurface
 import app.opentv.ui.design.Icon
@@ -73,10 +58,6 @@ import app.opentv.ui.design.SetteeSpace
 import app.opentv.ui.design.SetteeType
 import app.opentv.ui.design.Text
 import app.opentv.ui.formatPlaybackTime
-
-/** One of the less-used actions that come up under the player's row as pills. */
-@Immutable
-internal class PlayerPill(val label: String, val icon: ImageVector, val onClick: () -> Unit)
 
 /**
  * The player's controls (docs/LOOK.md, Player): the title and one row of a play or pause icon, the
@@ -92,6 +73,11 @@ internal class PlayerPill(val label: String, val icon: ImageVector, val onClick:
  * A stream that can't seek ([seekable] false: most live TV) has no bar, so the play icon takes the
  * Highlight in its place, or Subtitles where [showPlayPause] is false because there's nothing to
  * pause. [startFocus] is wherever it starts.
+ *
+ * [returnFocus] follows the Highlight round the controls, so a panel opened from Subtitles, Audio or a
+ * pill can hand it back to that button when it closes. A FocusRequester on the bar's group with a
+ * focus restorer was the obvious way, but the player asks for the bar by name ([startFocus]) when it
+ * first opens, which goes straight to the start and never through the restorer.
  */
 @Composable
 internal fun PlayerControlBar(
@@ -113,6 +99,7 @@ internal fun PlayerControlBar(
     barInteractions: MutableInteractionSource? = null,
     onBarFocusChanged: (Boolean) -> Unit = {},
     badge: (@Composable () -> Unit)? = null,
+    returnFocus: FocusRequester? = null,
 ) {
     val close = remember { FocusRequester() }
     // Whatever starts the row (the bar, or the play icon where there's no bar) has startFocus.
@@ -124,6 +111,9 @@ internal fun PlayerControlBar(
     var pillsUp by remember { mutableStateOf(false) }
     val lower = Modifier.onFocusChanged { if (it.hasFocus) pillsUp = true }
     val toPills = if (pillsUp && pills.isNotEmpty()) firstPill else FocusRequester.Cancel
+    val lastHighlight = remember { LastHighlight() }
+    val returnTo = lastHighlight.returnTo(pillsUp, pills)
+    fun Modifier.remembered(spot: BarSpot) = then(lastHighlight.modifier(spot, returnTo, returnFocus))
 
     Box(modifier.fillMaxSize()) {
         IconAction(
@@ -135,6 +125,7 @@ internal fun PlayerControlBar(
                 .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Top + WindowInsetsSides.End))
                 .padding(horizontal = SetteeSpace.ScreenSide, vertical = SetteeSpace.ScreenTopBottom)
                 .focusRequester(close)
+                .remembered(BarSpot.Close)
                 .focusProperties { down = startFocus }
                 .onFocusChanged { if (it.hasFocus) pillsUp = false },
         )
@@ -161,6 +152,7 @@ internal fun PlayerControlBar(
                         takesHighlight = !seekable,
                         modifier = lower
                             .focusRequester(startFocus)
+                            .remembered(BarSpot.Start)
                             .focusProperties {
                                 up = close
                                 down = toPills
@@ -180,6 +172,7 @@ internal fun PlayerControlBar(
                         modifier = Modifier
                             .weight(1f)
                             .focusRequester(startFocus)
+                            .remembered(BarSpot.Start)
                             .focusProperties {
                                 up = close
                                 down = subtitles
@@ -201,6 +194,7 @@ internal fun PlayerControlBar(
                     onClick = onSubtitles,
                     modifier = lower
                         .focusRequester(subtitles)
+                        .remembered(if (rowStarts) BarSpot.Subtitles else BarSpot.Start)
                         .focusProperties {
                             up = close
                             down = toPills
@@ -215,6 +209,7 @@ internal fun PlayerControlBar(
                     onClick = onAudio,
                     modifier = lower
                         .focusRequester(audio)
+                        .remembered(BarSpot.Audio)
                         .focusProperties {
                             up = close
                             down = toPills
@@ -226,7 +221,11 @@ internal fun PlayerControlBar(
             Spacer(Modifier.height(16.dp))
             // Kept at the pills' height while they're away, so the row above doesn't move as they come.
             Box(Modifier.height(PillRowHeight)) {
-                if (pillsUp) PillRow(pills, firstPill = firstPill, up = subtitles, modifier = lower)
+                if (pillsUp) {
+                    PillRow(pills, firstPill = firstPill, up = subtitles) { pill ->
+                        lower.remembered(BarSpot.Pill(pill.label))
+                    }
+                }
             }
         }
     }
@@ -241,14 +240,58 @@ private fun PlaybackTimes(positionMs: Long, durationMs: Long) {
     )
 }
 
-/** The pills, with Up back to the row above ([up]) and the remote kept inside the row's ends. */
+/**
+ * A place on the controls the Highlight can be. Pills go by label, which stays put
+ * as others come and go.
+ */
+private sealed interface BarSpot {
+    data object Start : BarSpot
+
+    data object Close : BarSpot
+
+    data object Subtitles : BarSpot
+
+    data object Audio : BarSpot
+
+    data class Pill(val label: String) : BarSpot
+}
+
+/** Where the Highlight was last on the controls. */
+@Stable
+private class LastHighlight {
+    private var last by mutableStateOf<BarSpot>(BarSpot.Start)
+
+    // Every element keeps a requester, so the one the Highlight is on isn't rebuilt (and dropped) as
+    // returnFocus moves; the others get one nothing asks for.
+    private val unasked = FocusRequester()
+
+    /** Where a panel closing should give the Highlight back: the start, if the pill it was on has gone. */
+    fun returnTo(pillsUp: Boolean, pills: List<PlayerPill>): BarSpot {
+        val pill = last as? BarSpot.Pill ?: return last
+        return if (pillsUp && pills.any { it.label == pill.label }) pill else BarSpot.Start
+    }
+
+    fun modifier(spot: BarSpot, returnTo: BarSpot, returnFocus: FocusRequester?): Modifier = Modifier
+        .onFocusChanged { if (it.hasFocus) last = spot }
+        .focusRequester(returnFocus?.takeIf { returnTo == spot } ?: unasked)
+}
+
+/**
+ * The pills, with Up back to the row above ([up]) and the remote kept inside the row's ends. [each]
+ * is a pill's own modifier.
+ */
 @Composable
-private fun PillRow(pills: List<PlayerPill>, firstPill: FocusRequester, up: FocusRequester, modifier: Modifier) {
+private fun PillRow(
+    pills: List<PlayerPill>,
+    firstPill: FocusRequester,
+    up: FocusRequester,
+    each: (PlayerPill) -> Modifier,
+) {
     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         pills.forEachIndexed { index, pill ->
             Pill(
                 pill,
-                modifier = modifier
+                modifier = each(pill)
                     .then(if (index == 0) Modifier.focusRequester(firstPill) else Modifier)
                     .focusProperties {
                         this.up = up
@@ -321,153 +364,5 @@ private fun Pill(pill: PlayerPill, modifier: Modifier = Modifier) {
     }
 }
 
-/**
- * One row of a [PlayerChoicePanel]. [detail] is a quieter second line. [onAdjust], when set, makes
- * the row a control: left and right call it with -1 and +1 instead of leaving the row. At its end:
- * [end] when it's waiting, else a tick when [selected], else [end]'s icon if it has one.
- */
-@Immutable
-internal class PlayerChoice(
-    val label: String,
-    val selected: Boolean,
-    val onClick: () -> Unit,
-    val detail: String? = null,
-    val onAdjust: ((Int) -> Unit)? = null,
-    val end: RowEnd? = null,
-)
-
-/** What a [PlayerChoice] row shows at its end besides the tick. */
-internal sealed interface RowEnd {
-    /** The small aerial TV, waiting for what the row does; [description] names the wait for TalkBack. */
-    data class Waiting(val description: String) : RowEnd
-
-    /** An icon saying something about the row, such as Downloaded; the tick wins over it. */
-    data class Mark(val icon: ImageVector) : RowEnd
-}
-
-/**
- * A picker over the player (subtitles, audio, quality, aspect ratio): a panel down the right of the
- * picture with the current choice ticked, where the Highlight starts. Back closes it through
- * [onClose].
- */
-@Composable
-internal fun PlayerChoicePanel(
-    title: String,
-    choices: List<PlayerChoice>,
-    startFocus: FocusRequester,
-    onClose: () -> Unit,
-    modifier: Modifier = Modifier,
-    /** Shown under the rows, such as OpenSubtitles' attribution, or in place of them, such as an error. */
-    footer: (@Composable () -> Unit)? = null,
-    /** What's said when there are no rows; null for the usual "None available". */
-    empty: String? = null,
-) {
-    val start = choices.indexOfFirst { it.selected }.coerceAtLeast(0)
-    val hasRows = choices.isNotEmpty()
-    // With no rows (nothing found, still searching, none available) there'd be nothing in the panel
-    // to take the highlight, so it would stay on the hidden bar. The panel takes it itself then, and
-    // hands it to the rows when they arrive, or takes it back when they go.
-    var hadFocus by remember { mutableStateOf(false) }
-    LaunchedEffect(hasRows) { if (hadFocus) runCatching { startFocus.requestFocus() } }
-    Column(
-        modifier
-            // Left to itself, Compose spends the first Back on taking focus off the row, so the
-            // panel would stay up with nothing highlighted.
-            .onPreviewKeyEvent { event ->
-                val isBack = event.isBack()
-                if (isBack && event.type == KeyEventType.KeyUp) onClose()
-                isBack
-            }
-            // The panel is drawn over the control bar, whose buttons stay composed underneath, so
-            // an arrow off the panel's edge would land on the hidden Close or seek bar (#425). The
-            // highlight is kept to the panel's rows and footer instead. Rejected: a Dialog, as
-            // SidePanel does, would put a second window over the video and change picture-in-picture
-            // and Back; a flag that stops the bar taking focus needs every player to pass it.
-            .onFocusChanged { if (it.hasFocus) hadFocus = true }
-            .focusProperties {
-                onExit = {
-                    // Enter and Exit are code moving or clearing the highlight; the rest are keys.
-                    val byCode = requestedFocusDirection == FocusDirection.Enter ||
-                        requestedFocusDirection == FocusDirection.Exit
-                    if (!byCode) cancelFocusChange()
-                }
-            }
-            .focusGroup()
-            .then(if (hasRows) Modifier else Modifier.focusRequester(startFocus).focusable())
-            .fillMaxHeight()
-            .width(ChoicePanelWidth)
-            .background(SetteeColors.Surface)
-            .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Vertical + WindowInsetsSides.End))
-            .padding(horizontal = 20.dp, vertical = SetteeSpace.ScreenTopBottom),
-    ) {
-        Text(title, SetteeType.Section)
-        Spacer(Modifier.height(12.dp))
-        Column(Modifier.verticalScroll(rememberScrollState())) {
-            if (choices.isEmpty() && empty != "") {
-                Text(
-                    empty ?: stringResource(R.string.player_none_available),
-                    SetteeType.Body,
-                    color = SetteeColors.QuietText,
-                    modifier = Modifier.padding(vertical = 8.dp),
-                )
-            }
-            choices.forEachIndexed { index, choice ->
-                ChoiceRow(choice, if (index == start) Modifier.focusRequester(startFocus) else Modifier)
-            }
-            footer?.let {
-                Spacer(Modifier.height(12.dp))
-                it()
-            }
-        }
-    }
-}
-
-@Composable
-private fun ChoiceRow(choice: PlayerChoice, modifier: Modifier) {
-    val adjust = choice.onAdjust
-    val adjusting = if (adjust == null) {
-        Modifier
-    } else {
-        Modifier.onPreviewKeyEvent { event ->
-            val step = when (event.key) {
-                Key.DirectionLeft -> -1
-                Key.DirectionRight -> 1
-                else -> 0
-            }
-            if (step != 0 && event.type == KeyEventType.KeyDown) adjust(step)
-            step != 0
-        }
-    }
-    HighlightSurface(
-        onClick = choice.onClick,
-        style = HighlightStyle.Row,
-        modifier = modifier.fillMaxWidth().then(adjusting),
-    ) { highlighted ->
-        val colour = if (highlighted) SetteeColors.OnAccent else SetteeColors.Text
-        Row(Modifier.padding(horizontal = 14.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-            Column(Modifier.weight(1f)) {
-                Text(choice.label, SetteeType.RowTitle, color = colour)
-                choice.detail?.let {
-                    Text(it, SetteeType.Body, color = if (highlighted) colour else SetteeColors.QuietText)
-                }
-            }
-            ChoiceEnd(choice, colour, highlighted)
-        }
-    }
-}
-
-private val ChoicePanelWidth = 360.dp
 private val PillRowHeight = 42.dp
 private val Scrim = SetteeColors.Background.copy(alpha = 0.92f)
-
-/** What sits at the end of a [ChoiceRow]: waiting, the tick, or the row's own icon. */
-@Composable
-private fun ChoiceEnd(choice: PlayerChoice, colour: Color, highlighted: Boolean) {
-    val end = choice.end
-    when {
-        end is RowEnd.Waiting -> AerialTv(end.description, size = AerialTvSize.Small, onHighlight = highlighted)
-        choice.selected ->
-            Icon(Icons.Filled.Check, contentDescription = stringResource(R.string.common_selected), tint = colour)
-        end is RowEnd.Mark -> Icon(end.icon, contentDescription = null, tint = colour)
-    }
-}
