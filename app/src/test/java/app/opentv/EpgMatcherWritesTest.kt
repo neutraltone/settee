@@ -77,13 +77,19 @@ class EpgMatcherWritesTest {
     )
 
     /** A guide that lists a channel for each of [numbers] and has programmes for those in [populated]. */
-    private suspend fun guideFor(numbers: Iterable<Int>, populated: Iterable<Int> = numbers) {
-        val feedId = db.epgFeeds().insert(EpgFeed(name = "Guide", url = "https://example.com/guide.xml"))
+    private suspend fun guideFor(
+        numbers: Iterable<Int>,
+        populated: Iterable<Int> = numbers,
+        url: String = "https://example.com/guide.xml",
+        epgIdOf: (Int) -> String = ::epgId,
+        providerSourceId: Long? = null,
+    ): Long {
+        val feedId = db.epgFeeds().insert(EpgFeed(name = "Guide", url = url, providerSourceId = providerSourceId))
         db.epgAliases().upsertAll(
             numbers.map {
                 EpgChannelAlias(
                     feedId = feedId,
-                    epgId = epgId(it),
+                    epgId = epgIdOf(it),
                     displayName = name(it),
                     normalizedKey = ChannelNameNormalizer.normalize(name(it)).groupKey,
                 )
@@ -93,13 +99,14 @@ class EpgMatcherWritesTest {
             populated.map {
                 Programme(
                     feedId = feedId,
-                    epgChannelId = epgId(it),
+                    epgChannelId = epgIdOf(it),
                     startUtcMillis = 0,
                     endUtcMillis = 1,
                     title = "Programme",
                 )
             },
         )
+        return feedId
     }
 
     @Test
@@ -156,6 +163,43 @@ class EpgMatcherWritesTest {
         guideFor(0..5, populated = 0..2)
 
         assertThat(guide.runMatcher()).isEqualTo(3 to 10)
+    }
+
+    @Test
+    fun `a guide switched off takes no part in matching, and switching it on brings it back`() = runTest {
+        db.channels().upsertAll((0..1).map { channel(it) })
+        guideFor(listOf(0))
+        val second = guideFor(listOf(1), url = "https://example.com/second.xml")
+        guide.runMatcher()
+        suspend fun matches() = db.channels().matcherInputs().associate { it.id to it.matchedEpgId }
+
+        guide.setFeedEnabled(db.epgFeeds().all().single { it.id == second }, enabled = false)
+        assertThat(matches()).containsExactly(1L, epgId(0), 2L, null)
+
+        guide.setFeedEnabled(db.epgFeeds().all().single { it.id == second }, enabled = true)
+        assertThat(matches()).containsExactly(1L, epgId(0), 2L, epgId(1))
+    }
+
+    @Test
+    fun `the provider's own guide wins a channel two guides name, whatever its feed id`() = runTest {
+        db.channels().upsertAll(listOf(channel(0)))
+        guideFor(listOf(0), epgIdOf = { "free$it.guide" })
+        guideFor(listOf(0), url = "https://example.com/provider.xml", providerSourceId = 1)
+
+        guide.runMatcher()
+
+        assertThat(db.channels().matcherInputs().single().matchedEpgId).isEqualTo(epgId(0))
+    }
+
+    @Test
+    fun `a switched-off guide's programmes don't count towards the working guide total`() = runTest {
+        db.channels().upsertAll(listOf(channel(0)))
+        val only = guideFor(listOf(0))
+        assertThat(guide.runMatcher()).isEqualTo(1 to 1)
+
+        db.epgFeeds().setEnabled(only, false)
+
+        assertThat(guide.runMatcher()).isEqualTo(0 to 1)
     }
 
     /** How many matches each write to the database carried. */
