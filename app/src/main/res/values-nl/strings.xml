@@ -211,7 +211,6 @@
     <string name="vod_addon_sources">Add-onbronnen</string>
     <string name="vod_addon_pick_title">Kies een stream</string>
     <string name="vod_addon_loading">Streams zoeken via je add-ons…</string>
-    <string name="vod_addon_none">Geen streams gevonden via je add-ons voor deze titel. Er is een ingestelde TMDB-sleutel nodig (voor de IMDb-match) en een add-on die deze heeft.</string>
     <string name="vod_season">Seizoen %1$d</string>
     <string name="vod_detail_loading">Laden…</string>
     <string name="reminder_starting_now">Begint nu op %1$s</string>
@@ -237,7 +236,6 @@
     <string name="rec_switch_keep_watching">Blijven kijken</string>
     <string name="rec_switch_channel_name">Automatisch wisselen bij opname</string>
     <string name="rec_switch_channel_desc">Waarschuwt voordat het scherm overschakelt naar een geplande opname</string>
-    <string name="settings_tmdb_key_label">TMDB API-sleutel</string>
     <string name="guide_next_prefix">Volgende  %1$s  %2$s</string>
     <string name="vod_empty_category_movies">Geen films in deze categorie.</string>
     <string name="home_empty_hint">Wat je kijkt en als favoriet markeert, verschijnt hier.</string>
@@ -314,9 +312,6 @@
     <string name="vod_language_title">Hier alleen in het %1$s</string>
     <string name="vod_language_body_tv">Deze tv kan geen versie in jouw taal afspelen.</string>
     <string name="vod_language_body_device">Dit apparaat kan geen versie in jouw taal afspelen.</string>
-    <string name="error_tmdb_key_rejected">TMDB accepteerde die sleutel niet. Controleer of je de hele API Key hebt gekopieerd en probeer het opnieuw.</string>
-    <string name="error_tmdb_unreachable_tv">Kan TMDB niet bereiken. Controleer of deze tv online is en probeer het opnieuw.</string>
-    <string name="error_tmdb_unreachable_device">Kan TMDB niet bereiken. Controleer of dit apparaat online is en probeer het opnieuw.</string>
     <string name="error_database_checking_tv">Settee kan niet lezen wat het op deze tv heeft opgeslagen. Er wordt gezocht naar een update die dit oplost.</string>
     <string name="error_database_checking_device">Settee kan niet lezen wat het op dit apparaat heeft opgeslagen. Er wordt gezocht naar een update die dit oplost.</string>
     <string name="error_database_update_tv">Settee kan niet lezen wat het op deze tv heeft opgeslagen, en er is een update die dit oplost.</string>
@@ -327,7 +322,6 @@
     <string name="error_database_offline_device">Settee kan niet lezen wat het op dit apparaat heeft opgeslagen, en kon niet naar een update zoeken. Verbind het apparaat met internet en zoek opnieuw, of wis de gegevens in de app-instellingen, waarmee je je providers, favorieten en kijkgeschiedenis kwijtraakt.</string>
     <string name="database_check_again">Opnieuw zoeken</string>
     <string name="database_see_update">Update bekijken</string>
-    <string name="error_tmdb_trouble">TMDB heeft problemen. Dat ligt bij hen, dus probeer het later opnieuw.</string>
     <string name="error_opensubtitles_none">OpenSubtitles heeft hier nog geen ondertitels voor.</string>
     <string name="error_opensubtitles_unreachable_tv">OpenSubtitles is niet bereikbaar. Controleer of deze tv online is en probeer het opnieuw.</string>
     <string name="error_opensubtitles_unreachable_device">OpenSubtitles is niet bereikbaar. Controleer of dit apparaat online is en probeer het opnieuw.</string>

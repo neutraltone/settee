@@ -211,7 +211,6 @@
     <string name="vod_addon_sources">Източници от добавки</string>
     <string name="vod_addon_pick_title">Изберете поток</string>
     <string name="vod_addon_loading">Търсене на потоци от вашите добавки…</string>
-    <string name="vod_addon_none">Не са намерени потоци от добавките ви за това заглавие. Необходим е зададен TMDB ключ (за IMDb съвпадение) и добавка, която го има.</string>
     <string name="vod_season">Сезон %1$d</string>
     <string name="vod_detail_loading">Зареждане…</string>
     <string name="reminder_starting_now">Започва сега на %1$s</string>
@@ -237,7 +236,6 @@
     <string name="rec_switch_keep_watching">Продължи да гледаш</string>
     <string name="rec_switch_channel_name">Автоматично превключване при запис</string>
     <string name="rec_switch_channel_desc">Предупреждава преди превключване на екрана към насрочен запис</string>
-    <string name="settings_tmdb_key_label">TMDB API ключ</string>
     <string name="guide_next_prefix">Следва  %1$s  %2$s</string>
     <string name="vod_empty_category_movies">Няма филми в тази категория.</string>
     <string name="home_empty_hint">Това, което гледате и отбелязвате като любимо, ще се появи тук.</string>
@@ -314,9 +312,6 @@
     <string name="vod_language_title">Тук има само на %1$s</string>
     <string name="vod_language_body_tv">Този телевизор не може да пусне версия на вашия език.</string>
     <string name="vod_language_body_device">Това устройство не може да пусне версия на вашия език.</string>
-    <string name="error_tmdb_key_rejected">TMDB не прие този ключ. Проверете дали сте копирали целия API Key и опитайте отново.</string>
-    <string name="error_tmdb_unreachable_tv">Няма връзка с TMDB. Проверете дали този телевизор е онлайн и опитайте отново.</string>
-    <string name="error_tmdb_unreachable_device">Няма връзка с TMDB. Проверете дали това устройство е онлайн и опитайте отново.</string>
     <string name="error_database_checking_tv">Settee не може да прочете запазеното на този телевизор. Търся актуализация, която да го поправи.</string>
     <string name="error_database_checking_device">Settee не може да прочете запазеното на това устройство. Търся актуализация, която да го поправи.</string>
     <string name="error_database_update_tv">Settee не може да прочете запазеното на този телевизор, но има актуализация, която го поправя.</string>
@@ -327,7 +322,6 @@
     <string name="error_database_offline_device">Settee не може да прочете запазеното на това устройство и не успя да потърси актуализация. Свържете устройството с интернет и проверете отново или изчистете данните му в настройките на приложението, с което губите доставчиците, любимите и историята на гледане.</string>
     <string name="database_check_again">Провери отново</string>
     <string name="database_see_update">Виж актуализацията</string>
-    <string name="error_tmdb_trouble">TMDB има проблеми. Те са от тяхна страна, затова опитайте отново по-късно.</string>
     <string name="error_opensubtitles_none">OpenSubtitles все още няма субтитри за това.</string>
     <string name="error_opensubtitles_unreachable_tv">Няма връзка с OpenSubtitles. Проверете дали този телевизор е онлайн и опитайте отново.</string>
     <string name="error_opensubtitles_unreachable_device">Няма връзка с OpenSubtitles. Проверете дали това устройство е онлайн и опитайте отново.</string>

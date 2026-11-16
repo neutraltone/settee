@@ -63,11 +63,11 @@ How big a picture a stream promises, such as HD, FHD or 4K. A Channel's streams 
 _Avoid_: Variant (in user-facing text), feed
 
 **TMDB**:
-The free online film and TV database Settee asks for what a Provider left out: posters, backdrops, synopses, cast and the IMDb match add-ons need. It never supplies anything to play, and it has its own section in Settings. Settee only asks it once the viewer has saved a TMDB Key.
+The free online film and TV database Settee asks for what a Provider left out: posters, backdrops, synopses, cast and the IMDb match add-ons need. It never supplies anything to play. Settee asks it with its own TMDB Key, with nothing for the viewer to set up.
 _Avoid_: Provider, metadata provider, scraper
 
 **TMDB Key**:
-The viewer's own free key from their TMDB account, which lets this box ask TMDB for details. Each viewer gets their own; Settee never ships one. It stays on the box it was entered on and isn't synced.
+Settee's own key from TMDB, built into release builds, which lets every box ask TMDB for details. Viewers never enter one. A build made without it (debug builds, forks) never asks TMDB.
 _Avoid_: Token, API key (except when pointing at the field of that name on TMDB's site), connecting your TMDB account
 
 **Version**:

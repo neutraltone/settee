@@ -9,6 +9,7 @@ import androidx.test.core.app.ApplicationProvider
 import app.opentv.data.model.Series
 import app.opentv.data.model.recommendedTmdbIds
 import app.opentv.data.remote.TmdbMeta
+import app.opentv.data.repo.CatalogRepository
 import app.opentv.data.repo.SeriesTmdb
 import app.opentv.data.repo.SeriesTmdbPass
 import com.google.common.truth.Truth.assertThat
@@ -20,7 +21,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
 /**
- * TMDB filling in series, with the viewer's TMDB Key: the background pass asks about each series
+ * TMDB filling in series, in a build with a TMDB Key: the background pass asks about each series
  * once and again six months on, and opening a series asks at once when its details are missing or
  * that old. Nothing TMDB filled in is ever cleared without a key.
  */
@@ -33,7 +34,6 @@ class SeriesTmdbTest {
 
     @After
     fun close() {
-        test.settings.setTmdbApiKey("")
         test.close()
     }
 
@@ -202,21 +202,55 @@ class SeriesTmdbTest {
 
     // ---- Opening a series ----------------------------------------------------------------------
 
-    /** TMDB answering a search for any show with one whose synopsis is [overview]. */
-    private fun tmdbAnswers(overview: String) {
-        test.settings.setTmdbApiKey(KEY)
+    /**
+     * TMDB answering a search for any show with one whose synopsis is [overview], and the catalogue
+     * of a build with a TMDB Key, which asks it.
+     */
+    private fun tmdbAnswers(overview: String): CatalogRepository {
         panel.replies["/3/search/tv"] = """{"results": [{"id": 22}]}"""
         panel.replies["/3/tv/22"] = """{"id": 22, "overview": "$overview", "backdrop_path": "/b.jpg"}"""
+        return test.catalogWithTmdb()
     }
 
     private fun askedTmdb() = panel.requests.any { it.url.host == "api.themoviedb.org" }
 
+    // ---- The build's key ----------------------------------------------------------------------
+
+    /** A panel with one film and one show, and TMDB ready to answer about either. */
+    private fun panelWithTitles() {
+        panel.replies["get_series"] = """[{"series_id": 7, "name": "Show 7"}]"""
+        panel.replies["get_vod_streams"] = """[{"stream_id": 8, "name": "Film 8", "container_extension": "mp4"}]"""
+        panel.replies["/3/search/tv"] = """{"results": [{"id": 22}]}"""
+        panel.replies["/3/tv/22"] = """{"id": 22, "overview": "A show."}"""
+        panel.replies["/3/search/movie"] = """{"results": [{"id": 11}]}"""
+        panel.replies["/3/movie/11"] = """{"id": 11, "overview": "A film."}"""
+    }
+
+    @Test
+    fun `a sync in a build with a TMDB Key fills in its films and shows from TMDB`() = runTest {
+        panelWithTitles()
+
+        test.syncVod(test.catalogWithTmdb())
+
+        assertThat(stored("7").plot).isEqualTo("A show.")
+        assertThat(test.db.movies().forSource(PANEL_SOURCE.id).single().plot).isEqualTo("A film.")
+    }
+
+    @Test
+    fun `a sync in a build with no TMDB Key never asks TMDB`() = runTest {
+        panelWithTitles()
+
+        test.syncVod()
+
+        assertThat(askedTmdb()).isFalse()
+    }
+
     @Test
     fun `opening a series with details missing asks TMDB for them`() = runTest {
         save(series("7"))
-        tmdbAnswers("A show.")
+        val catalog = tmdbAnswers("A show.")
 
-        val opened = test.catalog.seriesDetail(stored("7").id, now = NOW)
+        val opened = catalog.seriesDetail(stored("7").id, now = NOW)
 
         assertThat(opened?.plot).isEqualTo("A show.")
         assertThat(stored("7").tmdbAnsweredAt).isEqualTo(NOW)
@@ -225,9 +259,9 @@ class SeriesTmdbTest {
     @Test
     fun `opening a series TMDB answered about recently asks nothing`() = runTest {
         save(complete("7", tmdbAt = NOW - FIVE_MONTHS))
-        tmdbAnswers("A show.")
+        val catalog = tmdbAnswers("A show.")
 
-        test.catalog.seriesDetail(stored("7").id, now = NOW)
+        catalog.seriesDetail(stored("7").id, now = NOW)
 
         assertThat(askedTmdb()).isFalse()
     }
@@ -235,9 +269,9 @@ class SeriesTmdbTest {
     @Test
     fun `opening a series TMDB answered about over six months ago asks again`() = runTest {
         save(complete("7", tmdbAt = NOW - SEVEN_MONTHS))
-        tmdbAnswers("A show.")
+        val catalog = tmdbAnswers("A show.")
 
-        test.catalog.seriesDetail(stored("7").id, now = NOW)
+        catalog.seriesDetail(stored("7").id, now = NOW)
 
         assertThat(askedTmdb()).isTrue()
         assertThat(stored("7").tmdbAnsweredAt).isEqualTo(NOW)
@@ -246,9 +280,9 @@ class SeriesTmdbTest {
     @Test
     fun `opening a series filled in by the provider, never asked of TMDB, asks it`() = runTest {
         save(complete("7", tmdbAt = null))
-        tmdbAnswers("A show.")
+        val catalog = tmdbAnswers("A show.")
 
-        test.catalog.seriesDetail(stored("7").id, now = NOW)
+        catalog.seriesDetail(stored("7").id, now = NOW)
 
         assertThat(askedTmdb()).isTrue()
     }
@@ -343,8 +377,5 @@ class SeriesTmdbTest {
         const val NOW = 400 * DAY
         const val FIVE_MONTHS = 152 * DAY
         const val SEVEN_MONTHS = 213 * DAY
-
-        /** A placeholder, low-entropy so gitleaks sees no secret. */
-        val KEY = "c".repeat(32)
     }
 }

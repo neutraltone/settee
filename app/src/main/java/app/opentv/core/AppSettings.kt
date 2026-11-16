@@ -519,31 +519,10 @@ class AppSettings private constructor(context: Context, fileName: String = "open
         prefs.edit { stamps.forEach(::remove) }
     }
 
-    /**
-     * The viewer's own TMDB Key (a v3 API Key or a v4 Read Access Token), stored on-device only
-     * exactly like provider credentials and never synced (ADR 0004), used to fill in what a
-     * provider left blank. Blank = TMDB is off. Each viewer brings their own key, so no single key
-     * carries everyone's traffic. Saved through `TmdbKeys`, which checks it with TMDB first.
-     */
-    private val _tmdbApiKey = MutableStateFlow(prefs.getString(KEY_TMDB_KEY, "").orEmpty())
-    val tmdbApiKey: StateFlow<String> = _tmdbApiKey.asStateFlow()
-
-    fun setTmdbApiKey(key: String) {
-        val trimmed = key.trim()
-        prefs.edit { putString(KEY_TMDB_KEY, trimmed) }
-        _tmdbApiKey.value = trimmed
-    }
-
-    /** Forgets the TMDB Key, which stops every call to TMDB; what it already filled in stays. */
-    fun removeTmdbApiKey() {
-        prefs.edit { remove(KEY_TMDB_KEY) }
-        _tmdbApiKey.value = ""
-    }
-
     // ---- OpenSubtitles Account --------------------------------------------------------------
 
     /**
-     * The box's OpenSubtitles Account, shared by every Profile and never synced, like the TMDB Key.
+     * The box's OpenSubtitles Account, shared by every Profile and never synced.
      * The password is kept only as `OpenSubtitlesAccount` sealed it, so the 24-hour token can renew
      * without asking. Read and written only through `OpenSubtitlesAccount`.
      */
@@ -667,7 +646,6 @@ class AppSettings private constructor(context: Context, fileName: String = "open
         // No longer written: the background pass asks TMDB about each film once a key is set. Still
         // cleared with a provider's other stamps, so it doesn't linger on devices that had it.
         private const val KEY_TMDB_BLANKS_RETRIED = "tmdb_blanks_retried_"
-        private const val KEY_TMDB_KEY = "tmdb_api_key"
         private const val KEY_OS_USERNAME = "opensubtitles_username"
         private const val KEY_OS_PASSWORD = "opensubtitles_password_sealed"
         private const val KEY_OS_TOKEN = "opensubtitles_token"

@@ -1,6 +1,6 @@
 # TMDB's logo
 
-Settings › TMDB and About show TMDB's approved "Alt short" logo (blue), which TMDB offers to apps that use
+About shows TMDB's approved "Alt short" logo (blue), which TMDB offers to apps that use
 its API on [Logos & Attribution](https://www.themoviedb.org/about/logos-attribution). It's not the GPL's:
 TMDB owns the mark, and Settee shows it only to attribute TMDB, as section 3 of the
 [TMDB API Terms of Use](https://www.themoviedb.org/api-terms-of-use) requires of every app using the API.

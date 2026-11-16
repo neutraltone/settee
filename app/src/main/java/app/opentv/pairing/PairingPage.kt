@@ -103,69 +103,6 @@ object PairingPage {
     )
 
     /**
-     * The TMDB Key's paste box, with how to get a key under it: the steps in full from Settings, or
-     * behind "How do I get one?" during Onboarding ([onboarding]), where the key is optional and the
-     * page says so. [error] is why the TV turned the last key down, a sentence and a detail line.
-     */
-    fun tmdbKey(token: String, text: (Int) -> String, error: Error?, onboarding: Boolean): String {
-        val steps = """
-            <ol class="steps">
-              <li><a href="$TMDB_SIGNUP" target="_blank" rel="noopener">${escape(
-            text(R.string.pairing_phone_tmdb_step1),
-        )}</a></li>
-              <li><a href="$TMDB_API_SETTINGS" target="_blank" rel="noopener">${escape(
-            text(R.string.pairing_phone_tmdb_step2),
-        )}</a></li>
-              <li>${escape(text(R.string.pairing_phone_tmdb_step3))}</li>
-              <li>${escape(text(R.string.pairing_phone_tmdb_step4))}</li>
-            </ol>
-        """.trimIndent()
-        val errorBox = error?.let {
-            "<div class=\"error\">${escape(it.sentence)}" +
-                (if (it.detail.isNotBlank()) "<span class=\"detail\">${escape(it.detail)}</span>" else "") +
-                "</div>"
-        }.orEmpty()
-        return page(
-            token = token,
-            content = """
-            <h1>${escape(text(R.string.onboarding_tmdb_title))}</h1>
-            <p class="sub">${escape(
-                text(if (onboarding) R.string.onboarding_tmdb_help else R.string.pairing_phone_tmdb_sub),
-            )}</p>
-
-            $errorBox
-
-            <form id="form" method="post" action="/key" autocomplete="off">
-              <input type="hidden" name="t" value="${escape(token)}">
-              <label for="key">${escape(text(R.string.pairing_phone_tmdb_label))}</label>
-              <input id="key" name="key" type="text" required
-                     autocapitalize="off" autocorrect="off" spellcheck="false">
-              <button id="send" type="submit">${escape(text(R.string.pairing_phone_tmdb_send))}</button>
-            </form>
-
-            ${if (onboarding) skipButton(token, text) else ""}
-
-            ${if (onboarding) {
-                "<details><summary>${escape(
-                    text(R.string.pairing_phone_tmdb_how),
-                )}</summary>$steps</details>"
-            } else {
-                steps
-            }}
-
-            <script>
-              // The TV checks the key with TMDB before it answers, so the button says it's working.
-              document.getElementById('form').addEventListener('submit', function () {
-                var send = document.getElementById('send');
-                send.disabled = true;
-                send.innerHTML = '<span class="spin" aria-hidden="true"></span>' + send.textContent;
-              });
-            </script>
-            """.trimIndent(),
-        )
-    }
-
-    /**
      * Signing the TV in to OpenSubtitles: username and password, which go to the TV and from there
      * only to OpenSubtitles, with where to make a free account. Setup's ([onboarding]) has Not now.
      */
@@ -211,8 +148,8 @@ object PairingPage {
             "</div>"
     }.orEmpty()
 
-    /** Onboarding's Skip for now, under Send to TV: the key is optional there, as on the TV. */
-    private fun skipButton(token: String, text: (Int) -> String, label: Int = R.string.onboarding_tmdb_skip): String =
+    /** Setup's [label] (Not now), under the form's own button: the step is optional there, as on the TV. */
+    private fun skipButton(token: String, text: (Int) -> String, label: Int): String =
         """
         <form method="post" action="/skip">
           <input type="hidden" name="t" value="${escape(token)}">
@@ -220,7 +157,7 @@ object PairingPage {
         </form>
         """.trimIndent()
 
-    /** Why the TV turned a key down: the sentence and detail line `ErrorMessage` draws on the TV. */
+    /** Why the TV turned a sign-in down: the sentence and detail line `ErrorMessage` draws on the TV. */
     data class Error(val sentence: String, val detail: String)
 
     fun message(title: String, body: String): String = page(
@@ -313,9 +250,6 @@ object PairingPage {
             border-top:1px solid var(--line); }
     """
 
-    /** Where a viewer signs up for TMDB, and where its account settings hand out the key. */
-    private const val TMDB_SIGNUP = "https://www.themoviedb.org/signup"
-    private const val TMDB_API_SETTINGS = "https://www.themoviedb.org/settings/api"
     private const val OPENSUBTITLES_SIGNUP = "https://www.opensubtitles.com/"
 
     /** Settee's fonts, fetched from the TV's own server. */

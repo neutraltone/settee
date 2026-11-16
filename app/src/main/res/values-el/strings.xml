@@ -211,7 +211,6 @@
     <string name="vod_addon_sources">Πηγές πρόσθετων</string>
     <string name="vod_addon_pick_title">Επιλέξτε μια ροή</string>
     <string name="vod_addon_loading">Εύρεση ροών από τα πρόσθετά σας…</string>
-    <string name="vod_addon_none">Δεν βρέθηκαν ροές από τα πρόσθετά σας για αυτόν τον τίτλο. Χρειάζεται ένα ορισμένο κλειδί TMDB (για την αντιστοίχιση IMDb) και ένα πρόσθετο που να το διαθέτει.</string>
     <string name="vod_season">Σεζόν %1$d</string>
     <string name="vod_detail_loading">Φόρτωση…</string>
     <string name="reminder_starting_now">Ξεκινά τώρα στο %1$s</string>
@@ -237,7 +236,6 @@
     <string name="rec_switch_keep_watching">Συνέχιση παρακολούθησης</string>
     <string name="rec_switch_channel_name">Αυτόματη εναλλαγή εγγραφής</string>
     <string name="rec_switch_channel_desc">Προειδοποιεί πριν από τη μετάβαση της οθόνης σε μια προγραμματισμένη εγγραφή</string>
-    <string name="settings_tmdb_key_label">Κλειδί API TMDB</string>
     <string name="guide_next_prefix">Επόμενο  %1$s  %2$s</string>
     <string name="vod_empty_category_movies">Δεν υπάρχουν ταινίες σε αυτή την κατηγορία.</string>
     <string name="home_empty_hint">Ό,τι παρακολουθείτε και βάζετε στα αγαπημένα θα εμφανίζεται εδώ.</string>
@@ -314,9 +312,6 @@
     <string name="vod_language_title">Εδώ μόνο στα %1$s</string>
     <string name="vod_language_body_tv">Αυτή η τηλεόραση δεν μπορεί να παίξει έκδοση στη γλώσσα σας.</string>
     <string name="vod_language_body_device">Αυτή η συσκευή δεν μπορεί να παίξει έκδοση στη γλώσσα σας.</string>
-    <string name="error_tmdb_key_rejected">Το TMDB δεν δέχτηκε αυτό το κλειδί. Ελέγξτε ότι αντιγράψατε ολόκληρο το API Key και δοκιμάστε ξανά.</string>
-    <string name="error_tmdb_unreachable_tv">Δεν είναι δυνατή η σύνδεση με το TMDB. Ελέγξτε ότι αυτή η τηλεόραση είναι συνδεδεμένη και δοκιμάστε ξανά.</string>
-    <string name="error_tmdb_unreachable_device">Δεν είναι δυνατή η σύνδεση με το TMDB. Ελέγξτε ότι αυτή η συσκευή είναι συνδεδεμένη και δοκιμάστε ξανά.</string>
     <string name="error_database_checking_tv">Το Settee δεν μπορεί να διαβάσει όσα αποθήκευσε σε αυτή την τηλεόραση. Αναζητώ ενημέρωση που το διορθώνει.</string>
     <string name="error_database_checking_device">Το Settee δεν μπορεί να διαβάσει όσα αποθήκευσε σε αυτή τη συσκευή. Αναζητώ ενημέρωση που το διορθώνει.</string>
     <string name="error_database_update_tv">Το Settee δεν μπορεί να διαβάσει όσα αποθήκευσε σε αυτή την τηλεόραση, αλλά υπάρχει ενημέρωση που το διορθώνει.</string>
@@ -327,7 +322,6 @@
     <string name="error_database_offline_device">Το Settee δεν μπορεί να διαβάσει όσα αποθήκευσε σε αυτή τη συσκευή και δεν μπόρεσε να αναζητήσει ενημέρωση. Συνδέστε τη συσκευή στο διαδίκτυο και ελέγξτε ξανά ή διαγράψτε τα δεδομένα του από τις ρυθμίσεις της εφαρμογής, χάνοντας παρόχους, αγαπημένα και ιστορικό προβολής.</string>
     <string name="database_check_again">Έλεγχος ξανά</string>
     <string name="database_see_update">Δείτε την ενημέρωση</string>
-    <string name="error_tmdb_trouble">Το TMDB αντιμετωπίζει προβλήματα. Είναι από τη δική τους πλευρά, οπότε δοκιμάστε ξανά αργότερα.</string>
     <string name="error_opensubtitles_none">Το OpenSubtitles δεν έχει ακόμη υπότιτλους για αυτό.</string>
     <string name="error_opensubtitles_unreachable_tv">Δεν είναι δυνατή η σύνδεση με το OpenSubtitles. Ελέγξτε ότι αυτή η τηλεόραση είναι συνδεδεμένη και δοκιμάστε ξανά.</string>
     <string name="error_opensubtitles_unreachable_device">Δεν είναι δυνατή η σύνδεση με το OpenSubtitles. Ελέγξτε ότι αυτή η συσκευή είναι συνδεδεμένη και δοκιμάστε ξανά.</string>

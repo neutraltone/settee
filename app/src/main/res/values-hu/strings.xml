@@ -211,7 +211,6 @@
     <string name="vod_addon_sources">Bővítményforrások</string>
     <string name="vod_addon_pick_title">Válasszon adatfolyamot</string>
     <string name="vod_addon_loading">Adatfolyamok keresése a bővítményekből…</string>
-    <string name="vod_addon_none">Nem található adatfolyam a bővítményeiből ehhez a címhez. Ehhez egy beállított TMDB kulcs szükséges (az IMDb-egyezéshez), valamint egy olyan bővítmény, amely rendelkezik vele.</string>
     <string name="vod_season">%1$d. évad</string>
     <string name="vod_detail_loading">Betöltés…</string>
     <string name="reminder_starting_now">Most kezdődik: %1$s</string>
@@ -237,7 +236,6 @@
     <string name="rec_switch_keep_watching">Nézés folytatása</string>
     <string name="rec_switch_channel_name">Felvétel automatikus váltása</string>
     <string name="rec_switch_channel_desc">Figyelmeztet, mielőtt a képernyő átvált egy ütemezett felvételre</string>
-    <string name="settings_tmdb_key_label">TMDB API-kulcs</string>
     <string name="guide_next_prefix">Következő  %1$s  %2$s</string>
     <string name="vod_empty_category_movies">Ebben a kategóriában nincsenek filmek.</string>
     <string name="home_empty_hint">Amit néz, és amit kedvencnek jelöl, itt jelenik meg.</string>
@@ -314,9 +312,6 @@
     <string name="vod_language_title">Itt csak %1$s nyelven</string>
     <string name="vod_language_body_tv">Ez a tévé nem tud lejátszani a te nyelveden készült változatot.</string>
     <string name="vod_language_body_device">Ez az eszköz nem tud lejátszani a te nyelveden készült változatot.</string>
-    <string name="error_tmdb_key_rejected">A TMDB nem fogadta el ezt a kulcsot. Ellenőrizd, hogy a teljes API Key-t másoltad-e, majd próbáld újra.</string>
-    <string name="error_tmdb_unreachable_tv">A TMDB nem érhető el. Ellenőrizd, hogy ez a tévé online van-e, majd próbáld újra.</string>
-    <string name="error_tmdb_unreachable_device">A TMDB nem érhető el. Ellenőrizd, hogy ez az eszköz online van-e, majd próbáld újra.</string>
     <string name="error_database_checking_tv">A Settee nem tudja beolvasni, amit ezen a tévén mentett. Olyan frissítést keresek, amely megoldja.</string>
     <string name="error_database_checking_device">A Settee nem tudja beolvasni, amit ezen az eszközön mentett. Olyan frissítést keresek, amely megoldja.</string>
     <string name="error_database_update_tv">A Settee nem tudja beolvasni, amit ezen a tévén mentett, de van frissítés, amely megoldja.</string>
@@ -327,7 +322,6 @@
     <string name="error_database_offline_device">A Settee nem tudja beolvasni, amit ezen az eszközön mentett, és nem tudott frissítést keresni. Csatlakoztassa az eszközt az internethez, és nézze meg újra, vagy törölje az adatait az alkalmazás beállításaiban, amivel elvesznek a szolgáltatói, kedvencei és megtekintési előzményei.</string>
     <string name="database_check_again">Újra megnézem</string>
     <string name="database_see_update">Frissítés megtekintése</string>
-    <string name="error_tmdb_trouble">A TMDB-nél gondok vannak. Ez az ő oldalukon van, ezért próbáld újra később.</string>
     <string name="error_opensubtitles_none">Az OpenSubtitlesen még nincs felirat ehhez.</string>
     <string name="error_opensubtitles_unreachable_tv">Az OpenSubtitles nem érhető el. Ellenőrizd, hogy ez a tévé online van-e, majd próbáld újra.</string>
     <string name="error_opensubtitles_unreachable_device">Az OpenSubtitles nem érhető el. Ellenőrizd, hogy ez az eszköz online van-e, majd próbáld újra.</string>

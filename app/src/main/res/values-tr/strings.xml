@@ -211,7 +211,6 @@
     <string name="vod_addon_sources">Eklenti kaynakları</string>
     <string name="vod_addon_pick_title">Bir yayın seçin</string>
     <string name="vod_addon_loading">Eklentilerinizden yayınlar bulunuyor…</string>
-    <string name="vod_addon_none">Bu başlık için eklentilerinizden yayın bulunamadı. Bir TMDB anahtarının ayarlanmış olması (IMDb eşleşmesi için) ve buna sahip bir eklenti gerekir.</string>
     <string name="vod_season">%1$d. Sezon</string>
     <string name="vod_detail_loading">Yükleniyor…</string>
     <string name="reminder_starting_now">%1$s kanalında şimdi başlıyor</string>
@@ -237,7 +236,6 @@
     <string name="rec_switch_keep_watching">Bu kanalda kal</string>
     <string name="rec_switch_channel_name">Kayıt otomatik geçişi</string>
     <string name="rec_switch_channel_desc">Ekran planlanan bir kayda geçmeden önce uyarır</string>
-    <string name="settings_tmdb_key_label">TMDB API anahtarı</string>
     <string name="guide_next_prefix">Sıradaki  %1$s  %2$s</string>
     <string name="vod_empty_category_movies">Bu kategoride film yok.</string>
     <string name="home_empty_hint">İzledikleriniz ve favorilerinize ekledikleriniz burada görünür.</string>
@@ -314,9 +312,6 @@
     <string name="vod_language_title">Burada yalnızca %1$s</string>
     <string name="vod_language_body_tv">Bu TV, dilinizde bir sürümü oynatamıyor.</string>
     <string name="vod_language_body_device">Bu cihaz, dilinizde bir sürümü oynatamıyor.</string>
-    <string name="error_tmdb_key_rejected">TMDB bu anahtarı kabul etmedi. API Key\'in tamamını kopyaladığınızdan emin olun, sonra tekrar deneyin.</string>
-    <string name="error_tmdb_unreachable_tv">TMDB\'ye ulaşılamıyor. Bu televizyonun çevrimiçi olduğundan emin olun, sonra tekrar deneyin.</string>
-    <string name="error_tmdb_unreachable_device">TMDB\'ye ulaşılamıyor. Bu cihazın çevrimiçi olduğundan emin olun, sonra tekrar deneyin.</string>
     <string name="error_database_checking_tv">Settee bu televizyona kaydettiklerini okuyamıyor. Bunu düzelten bir güncelleme aranıyor.</string>
     <string name="error_database_checking_device">Settee bu cihaza kaydettiklerini okuyamıyor. Bunu düzelten bir güncelleme aranıyor.</string>
     <string name="error_database_update_tv">Settee bu televizyona kaydettiklerini okuyamıyor, ama bunu düzelten bir güncelleme var.</string>
@@ -327,7 +322,6 @@
     <string name="error_database_offline_device">Settee bu cihaza kaydettiklerini okuyamıyor ve güncelleme arayamadı. Cihazı internete bağlayıp yeniden kontrol edin ya da uygulama ayarlarından verilerini temizleyin; bu, sağlayıcılarınızı, favorilerinizi ve izleme geçmişinizi siler.</string>
     <string name="database_check_again">Yeniden kontrol et</string>
     <string name="database_see_update">Güncellemeyi gör</string>
-    <string name="error_tmdb_trouble">TMDB sorun yaşıyor. Sorun onlarda, bu yüzden daha sonra tekrar deneyin.</string>
     <string name="error_opensubtitles_none">OpenSubtitles\'ta bunun için henüz altyazı yok.</string>
     <string name="error_opensubtitles_unreachable_tv">OpenSubtitles\'a ulaşılamıyor. Bu televizyonun çevrimiçi olduğunu kontrol edip tekrar deneyin.</string>
     <string name="error_opensubtitles_unreachable_device">OpenSubtitles\'a ulaşılamıyor. Bu cihazın çevrimiçi olduğunu kontrol edip tekrar deneyin.</string>

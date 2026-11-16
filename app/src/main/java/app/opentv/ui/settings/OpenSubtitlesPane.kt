@@ -141,8 +141,7 @@ internal fun OpenSubtitlesSignInRows(
         entry.signIn(name, password).also { why -> if (why == null) onSignedIn() }
 
     // The server is the app's one, so until this screen has started it for OpenSubtitles its state may
-    // be the screen before's: Setup's TMDB step skipped from the phone leaves a skip this step isn't
-    // to take as its own Not now.
+    // be the screen before's, which this step isn't to take as its own answer.
     var listening by remember { mutableStateOf(false) }
     LaunchedEffect(phone, listening) {
         if (!listening) return@LaunchedEffect
@@ -179,7 +178,7 @@ internal fun OpenSubtitlesSignInRows(
                     beside = {
                         PhoneQrCode(
                             codeState.session.url,
-                            stringResource(R.string.settings_tmdb_qr_desc),
+                            stringResource(R.string.opensubtitles_qr_desc),
                             SIGN_IN_QR_SIZE,
                         )
                     },

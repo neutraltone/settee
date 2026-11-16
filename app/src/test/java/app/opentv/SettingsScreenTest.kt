@@ -159,7 +159,6 @@ class SettingsScreenTest {
             "Parental lock",
             "Your devices",
             "Add-ons",
-            "TMDB",
             "Manage on phone or laptop",
             "About",
         ).inOrder()
@@ -681,8 +680,7 @@ class SettingsScreenTest {
     fun `Display and playback no longer has a TMDB row`() {
         show(SettingsMemory(SettingsSection.Display))
 
-        // Only the pane: the sections beside it list TMDB's own.
-        compose.onNode(hasText("TMDB", substring = true) and !hasTestTag(SettingsTags.SECTION)).assertDoesNotExist()
+        compose.onNode(hasText("TMDB", substring = true)).assertDoesNotExist()
     }
 
     @Test

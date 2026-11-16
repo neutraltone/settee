@@ -211,7 +211,6 @@
     <string name="vod_addon_sources">Tilføjelseskilder</string>
     <string name="vod_addon_pick_title">Vælg en stream</string>
     <string name="vod_addon_loading">Finder streams fra dine tilføjelser…</string>
-    <string name="vod_addon_none">Der blev ikke fundet nogen streams fra dine tilføjelser til denne titel. Det kræver en angivet TMDB-nøgle (til IMDb-matchet) og en tilføjelse, der har den.</string>
     <string name="vod_season">Sæson %1$d</string>
     <string name="vod_detail_loading">Indlæser…</string>
     <string name="reminder_starting_now">Starter nu på %1$s</string>
@@ -237,7 +236,6 @@
     <string name="rec_switch_keep_watching">Fortsæt med at se</string>
     <string name="rec_switch_channel_name">Automatisk optageskift</string>
     <string name="rec_switch_channel_desc">Advarer, før skærmen skifter til en planlagt optagelse</string>
-    <string name="settings_tmdb_key_label">TMDB API-nøgle</string>
     <string name="guide_next_prefix">Næste  %1$s  %2$s</string>
     <string name="vod_empty_category_movies">Ingen film i denne kategori.</string>
     <string name="home_empty_hint">Det, du ser og gør til favoritter, vises her.</string>
@@ -314,9 +312,6 @@
     <string name="vod_language_title">Kun på %1$s her</string>
     <string name="vod_language_body_tv">Dette tv kan ikke afspille en version på dit sprog.</string>
     <string name="vod_language_body_device">Denne enhed kan ikke afspille en version på dit sprog.</string>
-    <string name="error_tmdb_key_rejected">TMDB accepterede ikke den nøgle. Tjek, at du har kopieret hele API Key, og prøv igen.</string>
-    <string name="error_tmdb_unreachable_tv">Kan ikke nå TMDB. Tjek, at dette tv er online, og prøv igen.</string>
-    <string name="error_tmdb_unreachable_device">Kan ikke nå TMDB. Tjek, at denne enhed er online, og prøv igen.</string>
     <string name="error_database_checking_tv">Settee kan ikke læse det, den har gemt på dette tv. Leder efter en opdatering, der løser det.</string>
     <string name="error_database_checking_device">Settee kan ikke læse det, den har gemt på denne enhed. Leder efter en opdatering, der løser det.</string>
     <string name="error_database_update_tv">Settee kan ikke læse det, den har gemt på dette tv, og der er en opdatering, der løser det.</string>
@@ -327,7 +322,6 @@
     <string name="error_database_offline_device">Settee kan ikke læse det, den har gemt på denne enhed, og kunne ikke søge efter en opdatering. Forbind enheden til internettet og tjek igen, eller ryd dens data i appens indstillinger, så du mister dine udbydere, favoritter og din historik.</string>
     <string name="database_check_again">Tjek igen</string>
     <string name="database_see_update">Se opdateringen</string>
-    <string name="error_tmdb_trouble">TMDB har problemer. Det er hos dem, så prøv igen senere.</string>
     <string name="error_opensubtitles_none">OpenSubtitles har endnu ingen undertekster til dette.</string>
     <string name="error_opensubtitles_unreachable_tv">Kan ikke nå OpenSubtitles. Tjek, at dette tv er online, og prøv igen.</string>
     <string name="error_opensubtitles_unreachable_device">Kan ikke nå OpenSubtitles. Tjek, at denne enhed er online, og prøv igen.</string>

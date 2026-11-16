@@ -20,6 +20,13 @@ Only your provider, and only at the address you entered. Channel logos and poste
 from whatever URLs your provider puts in its catalogue, which are usually its own servers but
 may be third parties — that is your provider's choice, not ours.
 
+[TMDB](https://www.themoviedb.org), for the posters, synopses and cast your provider left out, and
+the IMDb match that add-ons need. With no setup at all, after every catalogue refresh Settee asks
+TMDB about every film and show in your catalogue, by title and year (or the TMDB id your provider
+gave), and asks again whenever you open a title's page. It sends the title being looked up and
+Settee's own key, nothing about you or what you watch, though TMDB sees your device's IP address as
+any website does. A build made without Settee's key, such as a debug build or a fork, never asks TMDB.
+
 ## Cleartext HTTP
 
 The app allows plain HTTP (`usesCleartextTraffic="true"`). The overwhelming majority of IPTV

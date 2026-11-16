@@ -211,7 +211,6 @@
     <string name="vod_addon_sources">Sumber add-on</string>
     <string name="vod_addon_pick_title">Pilih stream</string>
     <string name="vod_addon_loading">Mencari stream dari add-on Anda…</string>
-    <string name="vod_addon_none">Tidak ditemukan stream dari add-on Anda untuk judul ini. Diperlukan kunci TMDB (untuk pencocokan IMDb) dan add-on yang memilikinya.</string>
     <string name="vod_season">Musim %1$d</string>
     <string name="vod_detail_loading">Memuat…</string>
     <string name="reminder_starting_now">Dimulai sekarang di %1$s</string>
@@ -237,7 +236,6 @@
     <string name="rec_switch_keep_watching">Tetap menonton</string>
     <string name="rec_switch_channel_name">Alih otomatis rekaman</string>
     <string name="rec_switch_channel_desc">Memperingatkan sebelum mengalihkan layar ke rekaman terjadwal</string>
-    <string name="settings_tmdb_key_label">Kunci API TMDB</string>
     <string name="guide_next_prefix">Berikutnya  %1$s  %2$s</string>
     <string name="vod_empty_category_movies">Tidak ada film di kategori ini.</string>
     <string name="home_empty_hint">Yang Anda tonton dan favoritkan akan muncul di sini.</string>
@@ -314,9 +312,6 @@
     <string name="vod_language_title">Di sini hanya dalam bahasa %1$s</string>
     <string name="vod_language_body_tv">TV ini tidak bisa memutar versi dalam bahasamu.</string>
     <string name="vod_language_body_device">Perangkat ini tidak bisa memutar versi dalam bahasamu.</string>
-    <string name="error_tmdb_key_rejected">TMDB tidak menerima kunci itu. Pastikan Anda menyalin seluruh API Key, lalu coba lagi.</string>
-    <string name="error_tmdb_unreachable_tv">Tidak dapat menjangkau TMDB. Pastikan TV ini online, lalu coba lagi.</string>
-    <string name="error_tmdb_unreachable_device">Tidak dapat menjangkau TMDB. Pastikan perangkat ini online, lalu coba lagi.</string>
     <string name="error_database_checking_tv">Settee tidak bisa membaca data yang disimpannya di TV ini. Mencari pembaruan yang memperbaikinya.</string>
     <string name="error_database_checking_device">Settee tidak bisa membaca data yang disimpannya di perangkat ini. Mencari pembaruan yang memperbaikinya.</string>
     <string name="error_database_update_tv">Settee tidak bisa membaca data yang disimpannya di TV ini, dan ada pembaruan yang memperbaikinya.</string>
@@ -327,7 +322,6 @@
     <string name="error_database_offline_device">Settee tidak bisa membaca data yang disimpannya di perangkat ini, dan tidak bisa memeriksa pembaruan. Sambungkan perangkat ke internet lalu periksa lagi, atau hapus datanya di setelan aplikasi, yang menghilangkan penyedia, favorit, dan riwayat tontonan Anda.</string>
     <string name="database_check_again">Periksa lagi</string>
     <string name="database_see_update">Lihat pembaruan</string>
-    <string name="error_tmdb_trouble">TMDB sedang bermasalah. Itu di pihak mereka, jadi coba lagi nanti.</string>
     <string name="error_opensubtitles_none">OpenSubtitles belum punya subtitel untuk ini.</string>
     <string name="error_opensubtitles_unreachable_tv">Tidak dapat menjangkau OpenSubtitles. Pastikan TV ini online, lalu coba lagi.</string>
     <string name="error_opensubtitles_unreachable_device">Tidak dapat menjangkau OpenSubtitles. Pastikan perangkat ini online, lalu coba lagi.</string>

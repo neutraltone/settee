@@ -114,12 +114,9 @@ import kotlinx.coroutines.withContext
 
 class SourcesViewModel @JvmOverloads constructor(
     app: Application,
-    /** Public for the TMDB step, which saves its key in the graph this provider is saved through. */
+    /** Public for the OpenSubtitles step, which signs in through the graph this provider is saved through. */
     val graph: ServiceLocator.Graph = ServiceLocator.get(app),
 ) : AndroidViewModel(app) {
-
-    /** Whether a first provider is followed by Onboarding's TMDB step: only while there's no TMDB Key. */
-    fun offersTmdbKey(): Boolean = graph.settings.tmdbApiKey.value.isBlank()
 
     data class UiState(
         val sources: List<Source> = emptyList(),
@@ -1005,8 +1002,8 @@ class VodViewModel @JvmOverloads constructor(
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), settings.stremioAddons.value.isNotEmpty())
 
     /**
-     * The streams the configured add-ons offer for [movie], resolved through the user's TMDB key for
-     * the IMDb id. Empty when there's no key, no add-ons, no IMDb match, or nothing came back. Each
+     * The streams the configured add-ons offer for [movie], resolved through Settee's TMDB Key for
+     * the IMDb id. Empty in a build without one, no add-ons, no IMDb match, or nothing came back. Each
      * add-on is queried independently so one failing doesn't sink the rest.
      */
     suspend fun addonStreams(movie: Movie): List<StremioStream> {

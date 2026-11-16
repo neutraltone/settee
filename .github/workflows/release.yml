@@ -64,6 +64,8 @@ jobs:
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
           # Settee's one OpenSubtitles key; without it the release simply has no OpenSubtitles.
           OPENSUBTITLES_API_KEY: ${{ secrets.OPENSUBTITLES_API_KEY }}
+          # Settee's one TMDB key; without it the release simply never asks TMDB.
+          TMDB_API_KEY: ${{ secrets.TMDB_API_KEY }}
         run: ./gradlew assembleRelease
 
       # Two copies of the same APK: the fixed-name settee.apk makes releases/latest/download/settee.apk

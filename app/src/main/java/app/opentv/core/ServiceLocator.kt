@@ -12,7 +12,6 @@ import app.opentv.data.db.OpenTvDatabase
 import app.opentv.data.remote.OpenSubtitlesClient
 import app.opentv.data.remote.StalkerApi
 import app.opentv.data.remote.StremioClient
-import app.opentv.data.remote.TmdbClient
 import app.opentv.data.remote.XtreamApi
 import app.opentv.data.repo.CatalogRepository
 import app.opentv.data.repo.CatalogueRefresh
@@ -30,7 +29,6 @@ import app.opentv.data.repo.RefreshMessages
 import app.opentv.data.repo.ReminderRepository
 import app.opentv.data.repo.SourceRepository
 import app.opentv.data.repo.TitleIndex
-import app.opentv.data.repo.TmdbKeys
 import app.opentv.data.repo.ViewerLibrary
 import app.opentv.data.repo.VodQualities
 import app.opentv.data.repo.WaitingProgress
@@ -46,7 +44,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 
 /**
@@ -148,6 +145,7 @@ object ServiceLocator {
                 stalkerApi = stalkerApi,
                 http = httpClient,
                 settings = settings,
+                tmdbKey = tmdbKey,
                 wording = errorWording,
             ).apply { staging = appContext.cacheDir }
         }
@@ -208,13 +206,11 @@ object ServiceLocator {
 
         val refreshMessages: RefreshMessages by lazy { RefreshMessages(appContext) }
 
-        /** TMDB, for checking a TMDB Key before it's saved. Holds nothing, so the catalogue's own is no conflict. */
-        private val tmdbClient: TmdbClient by lazy { TmdbClient(httpClient, settings) }
-
-        /** Saving and removing the TMDB Key, each key checked with TMDB first, off the main thread. */
-        val tmdbKeys: TmdbKeys by lazy {
-            TmdbKeys(settings) { key -> withContext(Dispatchers.IO) { tmdbClient.check(key) } }
-        }
+        /**
+         * Settee's built-in TMDB Key; blank, as in a build without one, leaves TMDB unasked. A test sets
+         * its own before [catalogRepository] is first used, to have TMDB whatever the build has.
+         */
+        internal var tmdbKey: String = BuildConfig.TMDB_API_KEY
 
         /**
          * Settee's OpenSubtitles key; blank, as in a build without one, leaves OpenSubtitles out. A test
@@ -243,8 +239,8 @@ object ServiceLocator {
         }
 
         /**
-         * The phone's way in, for providers and the TMDB Key. One for the app, so Onboarding's TMDB step
-         * carries on with the address the phone sent the first provider through.
+         * The phone's way in, for providers and OpenSubtitles' sign-in. One for the app, so only one
+         * address is ever open on the network.
          */
         val pairingServer: PairingServer by lazy {
             PairingServer(appScope, PairingFonts(appContext), appContext::getString)

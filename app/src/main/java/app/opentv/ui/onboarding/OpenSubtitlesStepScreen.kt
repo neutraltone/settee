@@ -27,11 +27,10 @@ import app.opentv.ui.settings.OpenSubtitlesAttribution
 import app.opentv.ui.settings.OpenSubtitlesSignInRows
 
 /**
- * Setup's optional OpenSubtitles step, straight after the TMDB step whether a key was added or not,
- * laid out as that step is: the phone's QR code on the left, and on the right what an account gives,
+ * Setup's optional OpenSubtitles step, straight after the first provider is saved, laid out as the
+ * phone pairing screen is: the phone's QR code on the left, and on the right what an account gives,
  * Sign in on this TV, and Not now. Signed in, from the phone or the TV, it says so and waits for Carry
- * on, as the TMDB step does once its key is saved: moving on by itself left nothing on screen long
- * enough to read. [onDone] goes on, signed in or not.
+ * on: moving on by itself left nothing on screen long enough to read. [onDone] goes on, signed in or not.
  */
 @Composable
 fun OpenSubtitlesStepScreen(graph: ServiceLocator.Graph, openSubtitles: OpenSubtitles, onDone: () -> Unit) {
@@ -66,7 +65,7 @@ fun OpenSubtitlesStepScreen(graph: ServiceLocator.Graph, openSubtitles: OpenSubt
 
 /**
  * Signed in: who as, and what it gives, in the sign-in rows' place, with Carry on where Not now was.
- * The QR code's space stays, empty, as the TMDB step's does once its key is saved.
+ * The QR code's space stays, empty, so nothing beside it moves.
  */
 @Composable
 private fun SignedIn(openSubtitles: OpenSubtitles, onDone: () -> Unit) {
@@ -87,7 +86,7 @@ private fun SignedIn(openSubtitles: OpenSubtitles, onDone: () -> Unit) {
         },
         actions = {
             PillButton(
-                stringResource(R.string.onboarding_tmdb_carry_on),
+                stringResource(R.string.onboarding_carry_on),
                 onClick = onDone,
                 modifier = Modifier.takesHighlight(),
             )

@@ -211,7 +211,6 @@
     <string name="vod_addon_sources">Zdroje z doplnkov</string>
     <string name="vod_addon_pick_title">Vyberte stream</string>
     <string name="vod_addon_loading">Hľadajú sa streamy z vašich doplnkov…</string>
-    <string name="vod_addon_none">Pre tento titul sa nenašli žiadne streamy z vašich doplnkov. Je potrebný nastavený kľúč TMDB (na priradenie IMDb) a doplnok, ktorý ho má.</string>
     <string name="vod_season">Séria %1$d</string>
     <string name="vod_detail_loading">Načítava sa…</string>
     <string name="reminder_starting_now">Práve začína na %1$s</string>
@@ -237,7 +236,6 @@
     <string name="rec_switch_keep_watching">Pokračovať v sledovaní</string>
     <string name="rec_switch_channel_name">Automatické prepnutie pri nahrávaní</string>
     <string name="rec_switch_channel_desc">Upozorní pred prepnutím obrazovky na naplánované nahrávanie</string>
-    <string name="settings_tmdb_key_label">API kľúč TMDB</string>
     <string name="guide_next_prefix">Ďalej  %1$s  %2$s</string>
     <string name="vod_empty_category_movies">V tejto kategórii nie sú žiadne filmy.</string>
     <string name="home_empty_hint">Tu sa zobrazí, čo sledujete a čo si označíte ako obľúbené.</string>
@@ -314,9 +312,6 @@
     <string name="vod_language_title">Tu len v jazyku %1$s</string>
     <string name="vod_language_body_tv">Tento televízor nedokáže prehrať verziu vo vašom jazyku.</string>
     <string name="vod_language_body_device">Toto zariadenie nedokáže prehrať verziu vo vašom jazyku.</string>
-    <string name="error_tmdb_key_rejected">TMDB tento kľúč neprijal. Skontrolujte, či ste skopírovali celý API Key, a skúste to znova.</string>
-    <string name="error_tmdb_unreachable_tv">TMDB nie je dostupné. Skontrolujte, či je tento televízor online, a skúste to znova.</string>
-    <string name="error_tmdb_unreachable_device">TMDB nie je dostupné. Skontrolujte, či je toto zariadenie online, a skúste to znova.</string>
     <string name="error_database_checking_tv">Settee nedokáže prečítať, čo si uložil na tomto televízore. Hľadám aktualizáciu, ktorá to opraví.</string>
     <string name="error_database_checking_device">Settee nedokáže prečítať, čo si uložil na tomto zariadení. Hľadám aktualizáciu, ktorá to opraví.</string>
     <string name="error_database_update_tv">Settee nedokáže prečítať, čo si uložil na tomto televízore, a je dostupná aktualizácia, ktorá to opraví.</string>
@@ -327,7 +322,6 @@
     <string name="error_database_offline_device">Settee nedokáže prečítať, čo si uložil na tomto zariadení, a nemohol vyhľadať aktualizáciu. Pripojte zariadenie na internet a skontrolujte to znova, alebo vymažte jeho údaje v nastaveniach aplikácie, čím prídete o poskytovateľov, obľúbené a históriu pozerania.</string>
     <string name="database_check_again">Skontrolovať znova</string>
     <string name="database_see_update">Zobraziť aktualizáciu</string>
-    <string name="error_tmdb_trouble">TMDB má problémy. Sú na ich strane, skúste to teda neskôr.</string>
     <string name="error_opensubtitles_none">OpenSubtitles pre toto zatiaľ nemá titulky.</string>
     <string name="error_opensubtitles_unreachable_tv">OpenSubtitles nie sú dostupné. Skontrolujte, či je tento televízor online, a skúste to znova.</string>
     <string name="error_opensubtitles_unreachable_device">OpenSubtitles nie sú dostupné. Skontrolujte, či je toto zariadenie online, a skúste to znova.</string>

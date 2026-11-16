@@ -211,7 +211,6 @@
     <string name="vod_addon_sources">منابع افزونه</string>
     <string name="vod_addon_pick_title">یک جریان را انتخاب کنید</string>
     <string name="vod_addon_loading">در حال یافتن جریان‌ها از افزونه‌های شما…</string>
-    <string name="vod_addon_none">هیچ جریانی از افزونه‌های شما برای این عنوان یافت نشد. به یک کلید TMDB تنظیم‌شده (برای تطبیق با IMDb) و افزونه‌ای که آن را داشته باشد نیاز است.</string>
     <string name="vod_season">فصل %1$d</string>
     <string name="vod_detail_loading">در حال بارگذاری…</string>
     <string name="reminder_starting_now">هم‌اکنون در %1$s شروع می‌شود</string>
@@ -237,7 +236,6 @@
     <string name="rec_switch_keep_watching">ادامه تماشا</string>
     <string name="rec_switch_channel_name">تعویض خودکار ضبط</string>
     <string name="rec_switch_channel_desc">پیش از تغییر صفحه به یک ضبط زمان‌بندی‌شده هشدار می‌دهد</string>
-    <string name="settings_tmdb_key_label">کلید API از TMDB</string>
     <string name="guide_next_prefix">بعدی  %1$s  %2$s</string>
     <string name="vod_empty_category_movies">در این دسته فیلمی وجود ندارد.</string>
     <string name="home_empty_hint">آنچه تماشا می‌کنید و به علاقه‌مندی‌ها اضافه می‌کنید اینجا نمایش داده می‌شود.</string>
@@ -314,9 +312,6 @@
     <string name="vod_language_title">اینجا فقط به %1$s</string>
     <string name="vod_language_body_tv">این تلویزیون نمی‌تواند نسخه‌ای به زبان شما را پخش کند.</string>
     <string name="vod_language_body_device">این دستگاه نمی‌تواند نسخه‌ای به زبان شما را پخش کند.</string>
-    <string name="error_tmdb_key_rejected">TMDB این کلید را نپذیرفت. بررسی کنید کل API Key را کپی کرده‌اید، سپس دوباره امتحان کنید.</string>
-    <string name="error_tmdb_unreachable_tv">دسترسی به TMDB ممکن نیست. بررسی کنید این تلویزیون آنلاین باشد، سپس دوباره امتحان کنید.</string>
-    <string name="error_tmdb_unreachable_device">دسترسی به TMDB ممکن نیست. بررسی کنید این دستگاه آنلاین باشد، سپس دوباره امتحان کنید.</string>
     <string name="error_database_checking_tv">Settee نمی‌تواند آنچه را روی این تلویزیون ذخیره کرده بخواند. در حال جستجوی به‌روزرسانی‌ای که آن را درست کند.</string>
     <string name="error_database_checking_device">Settee نمی‌تواند آنچه را روی این دستگاه ذخیره کرده بخواند. در حال جستجوی به‌روزرسانی‌ای که آن را درست کند.</string>
     <string name="error_database_update_tv">Settee نمی‌تواند آنچه را روی این تلویزیون ذخیره کرده بخواند، و به‌روزرسانی‌ای هست که آن را درست می‌کند.</string>
@@ -327,7 +322,6 @@
     <string name="error_database_offline_device">Settee نمی‌تواند آنچه را روی این دستگاه ذخیره کرده بخواند، و نتوانست به‌روزرسانی را بررسی کند. دستگاه را به اینترنت وصل کنید و دوباره بررسی کنید، یا داده‌هایش را در تنظیمات برنامه پاک کنید، که ارائه‌دهندگان، علاقه‌مندی‌ها و سابقه تماشای شما را از بین می‌برد.</string>
     <string name="database_check_again">بررسی دوباره</string>
     <string name="database_see_update">دیدن به‌روزرسانی</string>
-    <string name="error_tmdb_trouble">TMDB با مشکل روبه‌رو است. مشکل از طرف آن‌هاست، پس بعداً دوباره امتحان کنید.</string>
     <string name="error_opensubtitles_none">OpenSubtitles هنوز زیرنویسی برای این ندارد.</string>
     <string name="error_opensubtitles_unreachable_tv">دسترسی به OpenSubtitles ممکن نیست. بررسی کنید این تلویزیون به اینترنت وصل باشد و دوباره امتحان کنید.</string>
     <string name="error_opensubtitles_unreachable_device">دسترسی به OpenSubtitles ممکن نیست. بررسی کنید این دستگاه به اینترنت وصل باشد و دوباره امتحان کنید.</string>

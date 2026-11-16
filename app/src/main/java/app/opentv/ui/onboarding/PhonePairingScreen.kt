@@ -60,21 +60,19 @@ import app.opentv.update.startsFocused
 fun PhonePairingScreen(
     onReceived: (PairingServer.State.Received) -> Unit,
     onCancel: () -> Unit,
-    mode: PairingServer.Mode = PairingServer.Mode.Provider(),
-    /** True once the TMDB step is taking the address over, so leaving doesn't close it. */
-    keepListening: () -> Boolean = { false },
+    mode: PairingServer.Mode = PairingServer.Mode.Provider,
 ) {
     val context = LocalContext.current
     val server = remember(context) { ServiceLocator.get(context).pairingServer }
     val state by server.state.collectAsState()
 
-    ScreenKeptOnWhile(state is PairingServer.State.Listening && !keepListening())
+    ScreenKeptOnWhile(state is PairingServer.State.Listening)
     DisposableEffect(Unit) {
         server.start(mode)
         onDispose {
             // Never leave a socket listening on someone's home network after they have
-            // navigated away, unless the TMDB step is carrying on with it.
-            if (!keepListening()) server.stop()
+            // navigated away.
+            server.stop()
         }
     }
 
@@ -84,13 +82,6 @@ fun PhonePairingScreen(
 
     ScreenFrame {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            // Handed on to the TMDB step, it stays on Got it: the server listens again for the key as
-            // the channels come in, which would otherwise show the code again for the moment before
-            // the TMDB step opens.
-            if (keepListening()) {
-                PairingConnecting()
-                return@Box
-            }
             when (val current = state) {
                 is PairingServer.State.Listening -> Listening(current.session, onCancel)
 
@@ -113,10 +104,9 @@ fun PhonePairingScreen(
                     }
                 }
 
-                // A TMDB Key or an OpenSubtitles sign-in only arrives once a later step has taken over, so
-                // neither is seen here.
+                // An OpenSubtitles sign-in only arrives once a later step has taken over, so it isn't
+                // seen here.
                 is PairingServer.State.Received,
-                is PairingServer.State.KeyReceived,
                 is PairingServer.State.SignInReceived,
                 PairingServer.State.KeySkipped,
                 -> PairingConnecting()
