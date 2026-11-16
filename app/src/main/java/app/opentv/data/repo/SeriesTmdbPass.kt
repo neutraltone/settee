@@ -49,10 +49,9 @@ class SeriesTmdbPass(
                     found = { _, answer -> answer },
                     save = { found ->
                         seriesDao.inTransaction {
-                            val filled = found.mapNotNull { (series, answer) ->
-                                seriesDao.byId(series.id)?.withTmdb(answer.meta, now)
+                            found.forEach { (series, answer) ->
+                                seriesDao.saveLookedUp(series.id) { it.withTmdb(answer.meta, now) }
                             }
-                            seriesDao.saveLookedUp(filled)
                         }
                     },
                 )
