@@ -543,6 +543,17 @@ class TitleHistory internal constructor(
             .mapNotNull { it.movieId }
             .take(limit)
 
+    /**
+     * The media keys of the last [limit] films and episodes [profileId] played, newest first, Watched
+     * or not: what Who's watching? shows behind each Profile. Not one marked Unwatched, as for
+     * [startedMovieIds].
+     */
+    suspend fun lastPlayed(profileId: Long, limit: Int): List<String> = positions.forProfile(profileId)
+        .filter { it.mark != HandMark.UNWATCHED }
+        .sortedByDescending { it.updatedAtMillis }
+        .take(limit)
+        .map { it.mediaKey }
+
     /** The last [limit] series [profileId] played an episode of, newest first. See [recentMovieIds]. */
     suspend fun recentSeries(profileId: Long, limit: Int = RECENT_TITLES): List<SeriesRef> =
         episodes.startedSeries(profileId, except = HandMark.UNWATCHED).take(limit)

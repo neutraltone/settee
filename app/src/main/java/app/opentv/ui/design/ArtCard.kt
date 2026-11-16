@@ -118,7 +118,13 @@ private val TEXT_INSET = 10.dp
 /** The lower part of the art the fade covers: enough for two lines of title and the status lines. */
 private const val FADE_HEIGHT = 0.6f
 
+/**
+ * Dark early, so the first line of a two-line title, a little over halfway down the fade, has at
+ * least 0.75 of the background behind it. A straight ramp left it at about half, and a title over a
+ * white cover (or one with its own printed title) was hard to read from the sofa.
+ */
 private val Fade = Brush.verticalGradient(
     0f to Color.Transparent,
+    0.4f to SetteeColors.Background.copy(alpha = 0.72f),
     1f to SetteeColors.Background.copy(alpha = 0.92f),
 )

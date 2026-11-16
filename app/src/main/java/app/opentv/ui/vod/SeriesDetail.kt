@@ -124,7 +124,7 @@ internal fun SeriesDetailContent(
     BackHandler(enabled = nav.backGoesToPills(shown)) { nav.pillTarget = PillTarget() }
 
     val backdrop: (@Composable BoxScope.() -> Unit)? =
-        if (nav.heroAway) null else ({ HeroBackdrop(series.backdropUrl, series.posterUrl) })
+        if (nav.heroAway) null else ({ HeroBackdrop(series.backdropUrl, series.posterUrl, HeroFade.AboveRows) })
     ScreenFrame(backdrop = backdrop) {
         Column(Modifier.fillMaxWidth()) {
             Text(series.displayTitle, style = SetteeType.Hero, maxLines = 2)

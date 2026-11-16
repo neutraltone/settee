@@ -1812,6 +1812,44 @@ class ProfilesViewModel @JvmOverloads constructor(
 
     val activeProfileId: StateFlow<Long> = settings.activeProfileId
 
+    /**
+     * A picture for each Profile on Who's watching?, by Profile id: a frame from the last film or
+     * episode they played, so each card is recognisable at a glance and not just a letter. A Profile
+     * that hasn't played anything still in the catalogue has none, and its card shows the letter alone.
+     *
+     * Never from a Parental-Locked category, even while the session is unlocked: Who's watching? is
+     * what everyone in the room sees first, before anyone has chosen who they are.
+     */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val stills: StateFlow<Map<Long, String>> =
+        combine(graph.profiles.observeAll(), settings.hiddenCategories) { profiles, locked -> profiles to locked }
+            .mapLatest { (profiles, locked) ->
+                val lockedCheck = LockedTitles(graph.catalogRepository, locked)
+                profiles.mapNotNull { profile -> stillFor(profile.id, lockedCheck)?.let { profile.id to it } }.toMap()
+            }
+            .flowOn(Dispatchers.IO)
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())
+
+    private suspend fun stillFor(profileId: Long, locked: LockedTitles): String? {
+        val catalog = graph.catalogRepository
+        // A few, not one: the newest may have left the catalogue or be in a locked category.
+        return graph.viewerLibrary.history.lastPlayed(profileId, STILL_CANDIDATES).firstNotNullOfOrNull { stored ->
+            when (val key = MediaKey.parse(stored)) {
+                is MediaKey.Movie -> catalog.movie(key.movieId)
+                    ?.takeUnless { locked.has(StreamKind.MOVIE, it.sourceId, it.categoryId) }
+                    // The card is square-ish and the picture sits behind a letter: the wide backdrop, a
+                    // frame from the film, reads better cropped than a cover with its printed title.
+                    ?.let { it.backdropUrl ?: it.posterUrl }
+                is MediaKey.Episode -> catalog.episode(key.episodeId)?.let { ep ->
+                    catalog.seriesOf(ep)
+                        ?.takeUnless { locked.has(StreamKind.SERIES, it.sourceId, it.categoryId) }
+                        ?.let { ep.stillUrl ?: it.backdropUrl ?: it.posterUrl }
+                }
+                else -> null
+            }
+        }
+    }
+
     /** Adds a Profile and switches to it. A taken name is refused; the name entry says so first. */
     fun addProfile(name: String) {
         viewModelScope.launch { graph.profiles.create(name)?.let(settings::setActiveProfile) }
@@ -1827,6 +1865,26 @@ class ProfilesViewModel @JvmOverloads constructor(
 
     fun remove(id: Long) {
         viewModelScope.launch { graph.profiles.remove(id) }
+    }
+
+    private companion object {
+        const val STILL_CANDIDATES = 5
+    }
+}
+
+/**
+ * Whether a title is in one of the [locked] category groups. Each kind's categories are read once,
+ * and only when something is locked.
+ */
+private class LockedTitles(private val catalog: CatalogRepository, private val locked: Set<String>) {
+    private val keys = mutableMapOf<StreamKind, Map<Pair<Long, String>, String>>()
+
+    suspend fun has(kind: StreamKind, sourceId: Long, categoryId: String?): Boolean {
+        if (locked.isEmpty() || categoryId == null) return false
+        val byId = keys.getOrPut(kind) {
+            catalog.observeCategories(kind).first().associate { (it.sourceId to it.id) to categoryGroupKey(it) }
+        }
+        return byId[sourceId to categoryId] in locked
     }
 }
 

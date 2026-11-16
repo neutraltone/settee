@@ -5,18 +5,16 @@
  */
 package app.opentv.ui
 
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -32,18 +30,24 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import app.opentv.R
 import app.opentv.data.model.Profile
 import app.opentv.data.model.Source
+import app.opentv.ui.design.HighlightStyle
+import app.opentv.ui.design.HighlightSurface
+import app.opentv.ui.design.ScreenFrame
 import app.opentv.ui.design.SetteeColors
-import app.opentv.ui.design.SetteeShapes
 import app.opentv.ui.design.SetteeType
 import app.opentv.ui.design.Text
+import coil.compose.AsyncImage
 
 /** The screen the app opens on. */
 enum class FirstScreen { ADD_SOURCE, WHOS_WATCHING, HOME }
@@ -84,10 +88,16 @@ object WhosWatchingAsked {
 
 /**
  * Who's watching?: one card per Profile, starting on [lastActiveId]. There's no Back handling of
- * its own; nothing sits behind it, so Back leaves the app as it does from Home.
+ * its own; nothing sits behind it, so Back leaves the app as it does from Home. [stills] holds a frame
+ * from what each Profile last played, by Profile id, to sit behind their initial.
  */
 @Composable
-fun WhosWatchingScreen(profiles: List<Profile>, lastActiveId: Long, onChoose: (Long) -> Unit) {
+fun WhosWatchingScreen(
+    profiles: List<Profile>,
+    lastActiveId: Long,
+    stills: Map<Long, String> = emptyMap(),
+    onChoose: (Long) -> Unit,
+) {
     val start = profiles.indexOfFirst { it.id == lastActiveId }.coerceAtLeast(0)
     val row = rememberLazyListState(initialFirstVisibleItemIndex = start)
     val highlight = remember { FocusRequester() }
@@ -97,66 +107,89 @@ fun WhosWatchingScreen(profiles: List<Profile>, lastActiveId: Long, onChoose: (L
         runCatching { highlight.requestFocus() }
     }
 
-    Column(
-        Modifier.fillMaxSize().padding(32.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
-    ) {
-        Text(stringResource(R.string.whos_watching_heading), style = SetteeType.ScreenTitle)
-        Spacer(Modifier.height(40.dp))
-        LazyRow(
-            state = row,
-            horizontalArrangement = Arrangement.spacedBy(28.dp),
-            contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 16.dp, vertical = 12.dp),
+    ScreenFrame {
+        Column(
+            Modifier.fillMaxSize(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
         ) {
-            items(profiles, key = { it.id }) { profile ->
-                ProfileCard(
-                    profile = profile,
-                    modifier = if (profile.id == profiles[start].id) Modifier.focusRequester(highlight) else Modifier,
-                    onClick = { onChoose(profile.id) },
-                )
+            Text(stringResource(R.string.whos_watching_heading), style = SetteeType.ScreenTitle)
+            Spacer(Modifier.height(HEADING_GAP))
+            LazyRow(
+                state = row,
+                horizontalArrangement = Arrangement.spacedBy(CARD_GAP),
+                // Room round the cards for the Highlight's lift and glow, which the row would cut off.
+                contentPadding = PaddingValues(horizontal = LIFT_ROOM, vertical = LIFT_ROOM),
+            ) {
+                items(profiles, key = { it.id }) { profile ->
+                    ProfileCard(
+                        profile = profile,
+                        still = stills[profile.id],
+                        modifier = if (profile.id == profiles[start].id) {
+                            Modifier.focusRequester(highlight)
+                        } else {
+                            Modifier
+                        },
+                        onClick = { onChoose(profile.id) },
+                    )
+                }
             }
         }
     }
 }
 
-/** A Profile's initial over its name; the focused card scales up and gains the app's primary border. */
+/**
+ * A Profile's card: their initial over a frame from what they last watched, with their name beneath.
+ * It takes the Highlight as every card does (the ring, the lift and the one glow). The name sits
+ * outside the card, so the lift doesn't move it out of line with the others, and turns coral with
+ * the card so the row still says whose it is from across the room.
+ */
 @Composable
-private fun ProfileCard(profile: Profile, modifier: Modifier, onClick: () -> Unit) {
-    var focused by remember { mutableStateOf(false) }
-    val scale by animateFloatAsState(if (focused) 1.06f else 1f, label = "profileScale")
-    val shape = SetteeShapes.Card
-    Column(
-        modifier
-            .graphicsLayer {
-                scaleX = scale
-                scaleY = scale
-            }
-            .onFocusChanged { focused = it.isFocused }
-            .clickable(onClick = onClick),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        Box(
-            Modifier
-                .size(140.dp)
-                .background(SetteeColors.Raised, shape)
-                .then(if (focused) Modifier.border(3.dp, SetteeColors.Accent, shape) else Modifier),
-            contentAlignment = Alignment.Center,
+private fun ProfileCard(profile: Profile, still: String?, modifier: Modifier, onClick: () -> Unit) {
+    var highlighted by remember { mutableStateOf(false) }
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        HighlightSurface(
+            onClick = onClick,
+            style = HighlightStyle.Card,
+            modifier = modifier
+                .onFocusChanged { highlighted = it.isFocused }
+                .semantics { contentDescription = profile.name },
         ) {
-            Text(
-                profile.name.take(1).uppercase(),
-                style = SetteeType.Display,
-                color = SetteeColors.QuietText,
-            )
+            Box(Modifier.size(CARD_SIZE).background(SetteeColors.Raised), contentAlignment = Alignment.Center) {
+                if (still != null) {
+                    AsyncImage(
+                        model = still,
+                        contentDescription = null,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                    // Even, not a fade: the letter sits in the middle. Enough background over a white
+                    // frame for the Display-size letter to keep 4:1.
+                    Box(Modifier.fillMaxSize().background(StillShade))
+                }
+                Text(profile.name.take(1).uppercase(), style = SetteeType.Display)
+            }
         }
-        Spacer(Modifier.height(12.dp))
+        Spacer(Modifier.height(NAME_GAP))
         Text(
             profile.name,
             style = SetteeType.RowTitle,
+            color = if (highlighted) SetteeColors.Accent else SetteeColors.Text,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
             textAlign = TextAlign.Center,
-            modifier = Modifier.size(width = 140.dp, height = 28.dp),
+            // Read out with the card, which carries the name.
+            modifier = Modifier.width(CARD_SIZE).clearAndSetSemantics {},
         )
     }
 }
+
+private val CARD_SIZE = 160.dp
+private val CARD_GAP = 32.dp
+private val HEADING_GAP = 40.dp
+private val NAME_GAP = 14.dp
+
+/** A 1.05 lift on a 160 dp card reaches 4 dp past it; the glow, 14 dp. */
+private val LIFT_ROOM = 16.dp
+
+private val StillShade = SetteeColors.Background.copy(alpha = 0.6f)
