@@ -7,6 +7,7 @@ package app.opentv.ui.player
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -42,6 +43,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
@@ -368,6 +370,13 @@ internal fun PlayerChoicePanel(
                 if (isBack && event.type == KeyEventType.KeyUp) onClose()
                 isBack
             }
+            // The panel is drawn over the control bar, whose buttons stay composed underneath, so
+            // an arrow off the panel's edge would land on the hidden Close or seek bar (#425). The
+            // highlight is kept to the panel's rows and footer instead. Rejected: a Dialog, as
+            // SidePanel does, would put a second window over the video and change picture-in-picture
+            // and Back; a flag that stops the bar taking focus needs every player to pass it.
+            .focusProperties { onExit = { if (requestedFocusDirection in Arrows) cancelFocusChange() } }
+            .focusGroup()
             .fillMaxHeight()
             .width(ChoicePanelWidth)
             .background(SetteeColors.Surface)
@@ -431,6 +440,14 @@ private fun ChoiceRow(choice: PlayerChoice, modifier: Modifier) {
 }
 
 private val ChoicePanelWidth = 360.dp
+private val Arrows = setOf(
+    FocusDirection.Up,
+    FocusDirection.Down,
+    FocusDirection.Left,
+    FocusDirection.Right,
+    FocusDirection.Next,
+    FocusDirection.Previous,
+)
 private val PillRowHeight = 42.dp
 private val Scrim = SetteeColors.Background.copy(alpha = 0.92f)
 

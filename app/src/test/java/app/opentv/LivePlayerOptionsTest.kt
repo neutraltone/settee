@@ -11,6 +11,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertIsFocused
+import androidx.compose.ui.test.assertIsNotFocused
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isDialog
@@ -294,6 +295,75 @@ class LivePlayerOptionsTest {
         chooseByRemote("Subtitles")
 
         compose.onNodeWithText("Off").assertIsFocused()
+    }
+
+    /** The controls up, Down to the bar's Subtitles button and Select: its picker, on Off. */
+    private fun openSubtitlesFromTheBar() {
+        openControls()
+        press(Key.DirectionDown)
+        press(Key.DirectionCenter)
+        compose.mainClock.advanceTimeBy(FOCUS_MILLIS)
+        compose.waitForIdle()
+        compose.onNodeWithText("Off").assertIsFocused()
+    }
+
+    @Test
+    fun `Up from a picker's top row stays in the picker, so Select doesn't close the player`() {
+        showChannel()
+        openSubtitlesFromTheBar()
+
+        press(Key.DirectionUp)
+
+        compose.onNodeWithText("Off").assertIsFocused()
+        compose.onNodeWithContentDescription("Close").assertIsNotFocused()
+        press(Key.DirectionCenter)
+        assertThat(backs).isEqualTo(0)
+        assertThat(controller.player.playWhenReady).isTrue()
+    }
+
+    @Test
+    fun `Down from a picker's last row stays in the picker`() {
+        showChannel()
+        openSubtitlesFromTheBar()
+
+        press(Key.DirectionDown)
+
+        compose.onNodeWithText("Off").assertIsFocused()
+        compose.onNodeWithContentDescription("Subtitles").assertIsNotFocused()
+        compose.onNodeWithContentDescription("Audio").assertIsNotFocused()
+    }
+
+    @Test
+    fun `Left and Right on a picker's row stay on it rather than reaching the seek bar`() {
+        showChannel()
+        openSubtitlesFromTheBar()
+        val before = controller.player.currentPosition
+
+        press(Key.DirectionLeft)
+        compose.onNodeWithText("Off").assertIsFocused()
+        press(Key.DirectionRight)
+        compose.onNodeWithText("Off").assertIsFocused()
+
+        assertThat(compose.seekBarIsFocused()).isFalse()
+        assertThat(controller.player.currentPosition).isEqualTo(before)
+        assertThat(backs).isEqualTo(0)
+    }
+
+    @Test
+    fun `Up from the top of the Aspect ratio picker stays in it too`() {
+        showChannel()
+        openControls()
+        press(Key.DirectionDown)
+        press(Key.DirectionDown)
+        compose.onNodeWithText("Aspect ratio").performKeyInput { pressKey(Key.DirectionCenter) }
+        compose.mainClock.advanceTimeBy(FOCUS_MILLIS)
+        compose.waitForIdle()
+        compose.onNodeWithText("Fit").assertIsFocused()
+
+        press(Key.DirectionUp)
+
+        compose.onNodeWithText("Fit").assertIsFocused()
+        compose.onNodeWithContentDescription("Close").assertIsNotFocused()
     }
 
     @Test
