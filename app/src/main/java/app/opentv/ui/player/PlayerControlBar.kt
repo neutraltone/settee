@@ -364,7 +364,7 @@ internal fun PlayerChoicePanel(
             // Left to itself, Compose spends the first Back on taking focus off the row, so the
             // panel would stay up with nothing highlighted.
             .onPreviewKeyEvent { event ->
-                val isBack = event.key == Key.Back || event.key == Key.Escape
+                val isBack = event.isBack()
                 if (isBack && event.type == KeyEventType.KeyUp) onClose()
                 isBack
             }

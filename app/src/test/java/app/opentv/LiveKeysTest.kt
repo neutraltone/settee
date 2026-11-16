@@ -46,14 +46,17 @@ class LiveKeysTest {
     }
 
     @Test
-    fun `on an error trying again could fix, Back leaves the player itself`() {
-        assertThat(liveKey(Key.Back, retryableError)).isEqualTo(LiveKey.Leave)
-        assertThat(liveKey(Key.Escape, retryableError)).isEqualTo(LiveKey.Leave)
-    }
-
-    @Test
-    fun `with nothing showing, Back is left to the back handler`() {
-        assertThat(liveKey(Key.Back, nothingShowing)).isEqualTo(LiveKey.PassThrough)
+    fun `Back is left to whatever has focus, and then the player's own Back step, whatever is showing`() {
+        val screens = listOf(
+            nothingShowing,
+            retryableError,
+            retryableError.copy(controlsVisible = true),
+            retryableError.copy(overlayOpen = true),
+        )
+        for (screen in screens) {
+            assertThat(liveKey(Key.Back, screen)).isEqualTo(LiveKey.PassThrough)
+            assertThat(liveKey(Key.Escape, screen)).isEqualTo(LiveKey.PassThrough)
+        }
     }
 
     @Test
@@ -63,20 +66,18 @@ class LiveKeysTest {
     }
 
     @Test
-    fun `with the controls up over an error, OK presses the control and Back closes them`() {
+    fun `with the controls up over an error, OK presses the control and the channel keys still zap`() {
         val barUp = retryableError.copy(controlsVisible = true)
 
         assertThat(liveKey(Key.DirectionCenter, barUp)).isEqualTo(LiveKey.ToFocused)
-        assertThat(liveKey(Key.Back, barUp)).isEqualTo(LiveKey.PassThrough)
         assertThat(liveKey(Key.ChannelDown, barUp)).isEqualTo(LiveKey.Zap(1))
     }
 
     @Test
-    fun `with the channel list over an error, it keeps the d-pad and Back closes it`() {
+    fun `with the channel list over an error, it keeps the d-pad`() {
         val listOpen = retryableError.copy(overlayOpen = true)
 
         assertThat(liveKey(Key.DirectionCenter, listOpen)).isEqualTo(LiveKey.ToFocused)
-        assertThat(liveKey(Key.Back, listOpen)).isEqualTo(LiveKey.PassThrough)
     }
 
     @Test
