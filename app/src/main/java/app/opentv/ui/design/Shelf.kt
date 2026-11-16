@@ -5,7 +5,10 @@
  */
 package app.opentv.ui.design
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.focusGroup
+import androidx.compose.foundation.gestures.BringIntoViewSpec
+import androidx.compose.foundation.gestures.LocalBringIntoViewSpec
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -15,15 +18,23 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.focus.FocusDirection
+import androidx.compose.ui.focus.FocusManager
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.unit.dp
 
@@ -32,8 +43,10 @@ import androidx.compose.ui.unit.dp
  * card on the margin. Cards share a bottom edge unless [verticalAlignment] says otherwise: tiles
  * with text of varying length under them line up at the top instead. Up and Down always leave the
  * row, and coming into it they land on the card the viewer was last on ([ShelfMemory]). The
- * padding above and below leaves room for a highlighted card's lift and glow.
+ * padding above and below leaves room for a highlighted card's lift and glow, and a highlighted card
+ * always stops inside the screen margin ([KeepInsideMargin]).
  */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun ScreenFrameScope.Shelf(
     title: String,
@@ -44,53 +57,107 @@ fun ScreenFrameScope.Shelf(
     cards: LazyListScope.() -> Unit,
 ) {
     val focusManager = LocalFocusManager.current
+    val density = LocalDensity.current
+    val keepInside = remember(density) { KeepInsideMargin(with(density) { SetteeSpace.ScreenSide.toPx() }) }
     Column(modifier.fillMaxWidth()) {
         Text(title, style = SetteeType.Section, maxLines = 1)
-        LazyRow(
-            state = state,
-            // The side padding is the bleed's, which puts the first card back on the margin.
-            contentPadding = PaddingValues(horizontal = SetteeSpace.ScreenSide, vertical = LIFT_ROOM),
-            horizontalArrangement = Arrangement.spacedBy(SetteeSpace.CardGap),
-            verticalAlignment = verticalAlignment,
-            modifier = Modifier
-                .bleed()
-                // Up and Down always leave the row. Searched for by position, a taller card in the
-                // same row (Home's large first one) reaches above and below the others, so the
-                // press would move along the row to it. With the other cards out of reach for that
-                // one search, it finds the next row, or nothing in the top and bottom rows.
-                .onPreviewKeyEvent { event ->
-                    val direction = when (event.key) {
-                        Key.DirectionUp -> FocusDirection.Up
-                        Key.DirectionDown -> FocusDirection.Down
-                        else -> return@onPreviewKeyEvent false
-                    }
-                    if (event.type == KeyEventType.KeyDown) {
-                        memory.leaving = true
-                        try {
-                            focusManager.moveFocus(direction)
-                        } finally {
-                            memory.leaving = false
-                        }
-                    }
-                    true
-                }
-                // Only for Up and Down: a card asked for by name (coming back to a picked one) keeps
-                // its request. When the remembered card can't take it (scrolled out of the row),
-                // focus falls back to the nearest card, as it would with no memory at all.
-                .focusProperties {
-                    onEnter = {
-                        if (requestedFocusDirection == FocusDirection.Up ||
-                            requestedFocusDirection == FocusDirection.Down
-                        ) {
-                            runCatching { memory.requester.requestFocus() }
-                        }
-                    }
-                }
-                .focusGroup(),
-            content = cards,
-        )
+        CompositionLocalProvider(LocalBringIntoViewSpec provides keepInside) {
+            ShelfRow(state, verticalAlignment, memory, focusManager, cards)
+        }
     }
 }
+
+@Composable
+private fun ScreenFrameScope.ShelfRow(
+    state: LazyListState,
+    verticalAlignment: Alignment.Vertical,
+    memory: ShelfMemory,
+    focusManager: FocusManager,
+    cards: LazyListScope.() -> Unit,
+) {
+    LazyRow(
+        state = state,
+        // The side padding is the bleed's, which puts the first card back on the margin.
+        contentPadding = PaddingValues(horizontal = SetteeSpace.ScreenSide, vertical = LIFT_ROOM),
+        horizontalArrangement = Arrangement.spacedBy(SetteeSpace.CardGap),
+        verticalAlignment = verticalAlignment,
+        modifier = Modifier
+            .bleed()
+            .fadeBehindTheMargin()
+            // Up and Down always leave the row. Searched for by position, a taller card in the
+            // same row (Home's large first one) reaches above and below the others, so the
+            // press would move along the row to it. With the other cards out of reach for that
+            // one search, it finds the next row, or nothing in the top and bottom rows.
+            .onPreviewKeyEvent { event ->
+                val direction = when (event.key) {
+                    Key.DirectionUp -> FocusDirection.Up
+                    Key.DirectionDown -> FocusDirection.Down
+                    else -> return@onPreviewKeyEvent false
+                }
+                if (event.type == KeyEventType.KeyDown) {
+                    memory.leaving = true
+                    try {
+                        focusManager.moveFocus(direction)
+                    } finally {
+                        memory.leaving = false
+                    }
+                }
+                true
+            }
+            // Only for Up and Down: a card asked for by name (coming back to a picked one) keeps
+            // its request. When the remembered card can't take it (scrolled out of the row),
+            // focus falls back to the nearest card, as it would with no memory at all.
+            .focusProperties {
+                onEnter = {
+                    if (requestedFocusDirection == FocusDirection.Up ||
+                        requestedFocusDirection == FocusDirection.Down
+                    ) {
+                        runCatching { memory.requester.requestFocus() }
+                    }
+                }
+            }
+            .focusGroup(),
+        content = cards,
+    )
+}
+
+/**
+ * Scrolls a row so the highlighted card stops at least [margin] from either edge of the bled row,
+ * which is the screen's margin. The default brings a card only just into the row, and a row bleeds
+ * to the screen's edge, so the last card along sat against it with its ring and glow cut off.
+ */
+@OptIn(ExperimentalFoundationApi::class)
+private class KeepInsideMargin(private val margin: Float) : BringIntoViewSpec {
+    override fun calculateScrollDistance(offset: Float, size: Float, containerSize: Float): Float {
+        val start = margin
+        val end = containerSize - margin
+        return when {
+            // Too wide to keep inside both: line it up on the start.
+            size > end - start -> offset - start
+            offset < start -> offset - start
+            offset + size > end -> offset + size - end
+            else -> 0f
+        }
+    }
+}
+
+/**
+ * Fades the part of the row that runs past the margin at the start into the background. Beside the
+ * rail that strip isn't the screen's edge, and a card scrolled past showed there as a hard fragment of
+ * art and title. Drawn over the row rather than through an offscreen layer, which costs a Stick
+ * frames; the strip is plain background on every screen with a row.
+ */
+private fun Modifier.fadeBehindTheMargin() = drawWithContent {
+    drawContent()
+    val width = MARGIN_FADE.toPx()
+    drawRect(
+        Brush.horizontalGradient(0f to SetteeColors.Background, 1f to Color.Transparent, endX = width),
+        size = Size(width, size.height),
+    )
+}
+
+/** Short of the 48 dp margin, so the first card's ring, at the margin, stays clear of it. */
+private val MARGIN_FADE = 36.dp
 
 /** Above and below a row's cards: half of a Portrait cover's 1.05 lift, plus the ring. */
 private val LIFT_ROOM = 12.dp

@@ -454,7 +454,15 @@ internal fun ScreenFrameScope.ContinueWatchingShelf(
 ) {
     val memory = rememberShelfMemory(remember(cards) { cards.map { it.key.stored } })
     val openOptions = LocalOpenOptions.current
-    Shelf(stringResource(R.string.vod_continue_watching), memory, state = rememberRowState(focus)) {
+    Shelf(
+        stringResource(R.string.vod_continue_watching),
+        memory,
+        state = rememberRowState(focus),
+        // With the large first card, the cards hang from the top, right under the row's title. On a
+        // shared bottom edge the smaller cards sat under an empty band the large one's extra height
+        // tall, which read as something missing above them.
+        verticalAlignment = if (large) Alignment.Top else Alignment.Bottom,
+    ) {
         itemsIndexed(cards, key = { _, card -> card.key.stored }) { index, card ->
             ArtCard(
                 title = card.title,

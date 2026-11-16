@@ -43,7 +43,11 @@ import kotlinx.coroutines.flow.map
  * posters, so the fallback follows load errors rather than trusting a non-null URL.
  */
 @Composable
-internal fun BoxScope.HeroBackdrop(backdropUrl: String?, posterUrl: String?) {
+internal fun BoxScope.HeroBackdrop(
+    backdropUrl: String?,
+    posterUrl: String?,
+    fade: HeroFade = HeroFade.UnderHero,
+) {
     val candidates = remember(backdropUrl, posterUrl) { listOfNotNull(backdropUrl, posterUrl).distinct() }
     var index by remember(candidates) { mutableIntStateOf(0) }
     candidates.getOrNull(index)?.let { url ->
@@ -57,12 +61,40 @@ internal fun BoxScope.HeroBackdrop(backdropUrl: String?, posterUrl: String?) {
             onError = { if (index < candidates.lastIndex) index++ },
         )
     }
-    // Text sits at the left and the episodes below, so the art fades into the background towards both.
-    Box(Modifier.fillMaxSize().background(Brush.horizontalGradient(0f to Scrim, 0.65f to Clear)))
-    Box(Modifier.fillMaxSize().background(Brush.verticalGradient(0.35f to Clear, 0.85f to SetteeColors.Background)))
+    // Text sits at the left and the rows below, so the art fades into the background towards both.
+    Box(Modifier.fillMaxSize().background(AcrossHero))
+    Box(
+        Modifier.fillMaxSize().background(
+            Brush.verticalGradient(fade.clearUntil to Clear, fade.solidFrom to SetteeColors.Background),
+        ),
+    )
 }
 
-private val Scrim = SetteeColors.Background.copy(alpha = 0.92f)
+/**
+ * Where a details page's art fades into the background going down, as fractions of the screen's
+ * height: clear above [clearUntil], solid from [solidFrom].
+ */
+internal enum class HeroFade(val clearUntil: Float, val solidFrom: Float) {
+    /** A film's page, whose hero sits low: the art shows above and behind it. */
+    UnderHero(0.35f, 0.85f),
+
+    /**
+     * A show's page, whose episodes start under the buttons, about 40% down. They're rows of quiet text
+     * across the whole width, out where the across fade has cleared, so they need solid background
+     * under them: over the art, "7 min left" landed on bright poster colours.
+     */
+    AboveRows(0.15f, 0.45f),
+}
+
+/**
+ * Dark under the hero's text, which runs to a little over half the width, and clear past it. Fading
+ * out from the left edge left a synopsis's line ends on the art at about 0.15 of the background.
+ */
+private val AcrossHero = Brush.horizontalGradient(
+    0f to SetteeColors.Background.copy(alpha = 0.94f),
+    0.5f to SetteeColors.Background.copy(alpha = 0.85f),
+    0.8f to SetteeColors.Background.copy(alpha = 0f),
+)
 private val Clear = SetteeColors.Background.copy(alpha = 0f)
 
 /** A hero's meta line: the parts the provider gave, joined with middle dots. */

@@ -1508,6 +1508,10 @@ interface PlaybackPositionDao {
     @Query("SELECT * FROM playback_positions WHERE profileId = :profileId AND mediaKey LIKE :prefix || '%'")
     suspend fun ofKind(profileId: Long, prefix: String): List<PlaybackPosition>
 
+    /** One profile's [limit] most recently played titles, newest first. */
+    @Query("SELECT * FROM playback_positions WHERE profileId = :profileId ORDER BY updatedAtMillis DESC LIMIT :limit")
+    suspend fun newestFor(profileId: Long, limit: Int): List<PlaybackPosition>
+
     /** One profile's whole watch history — the input to genre-affinity recommendations. */
     @Query("SELECT * FROM playback_positions WHERE profileId = :profileId")
     suspend fun forProfile(profileId: Long): List<PlaybackPosition>

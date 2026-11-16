@@ -9,7 +9,7 @@ import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.junit4.createComposeRule
-import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
@@ -39,17 +39,24 @@ class WhosWatchingScreenTest {
         Profile(id = 3, name = "Kids"),
     )
 
+    @get:Rule
+    val artwork = PlaceholderArtwork()
+
     private val chosen = mutableListOf<Long>()
 
+    // Kids has played nothing yet, so their card shows the letter alone.
+    private val stills = mapOf(1L to "https://example.com/tony.jpg", 2L to "https://example.com/sam.jpg")
+
     private fun setScreen(lastActive: Long) = compose.setTvContent {
-        WhosWatchingScreen(profiles = profiles, lastActiveId = lastActive, onChoose = { chosen += it })
+        WhosWatchingScreen(profiles = profiles, lastActiveId = lastActive, stills = stills, onChoose = { chosen += it })
     }
 
     @Test
     fun `the highlight starts on whoever was watching last`() {
         setScreen(lastActive = 2)
 
-        compose.onNodeWithText("Sam").assertIsFocused()
+        compose.onNodeWithContentDescription("Sam").assertIsFocused()
+        compose.waitUntil { artwork.hasLoaded }
         captureScreen("whos_watching_initial")
     }
 
@@ -62,7 +69,7 @@ class WhosWatchingScreenTest {
             pressKey(Key.DirectionCenter)
         }
 
-        compose.onNodeWithText("Kids").assertIsFocused()
+        compose.onNodeWithContentDescription("Kids").assertIsFocused()
         assertThat(chosen).containsExactly(3L)
     }
 }

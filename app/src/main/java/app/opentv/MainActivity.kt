@@ -362,7 +362,8 @@ private fun OpenTvApp(isTelevision: Boolean, launchedToPlay: Boolean) {
     // Nothing is built behind Who's watching?, so the boot-to-last-channel jump and any reminder or
     // recording that arrives meanwhile wait, and then run as the chosen Profile.
     if (first == FirstScreen.WHOS_WATCHING) {
-        WhosWatchingScreen(profiles = knownProfiles, lastActiveId = activeProfileId) { id ->
+        val stills by profilesViewModel.stills.collectAsState()
+        WhosWatchingScreen(profiles = knownProfiles, lastActiveId = activeProfileId, stills = stills) { id ->
             profilesViewModel.select(id)
             navGeneration++
             WhosWatchingAsked.settled = true

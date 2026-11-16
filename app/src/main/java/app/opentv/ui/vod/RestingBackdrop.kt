@@ -188,10 +188,18 @@ private const val BACKDROP_WIDTH = 0.7f
 private const val BACKDROP_TEXT_WIDTH = 0.55f
 private val BACKDROP_TEXT_HEIGHT = 150.dp
 
-/** From the screen's background at the art's left edge to the art itself. */
+/**
+ * From the screen's background at the art's left edge to the art itself. It stays dark under the
+ * whole text column (the first [BACKDROP_TEXT_WIDTH]) and clears only past it: fading out from the
+ * art's edge left the synopsis's line ends on the bright middle of a backdrop at under 2:1. At least
+ * 0.9 of the background stays under the quiet facts line and 0.7 under the synopsis's last words,
+ * enough for 4.5:1 on a white backdrop.
+ */
 private val AcrossFade = Brush.horizontalGradient(
     0.3f to SetteeColors.Background,
-    0.75f to Color.Transparent,
+    0.42f to SetteeColors.Background.copy(alpha = 0.9f),
+    0.55f to SetteeColors.Background.copy(alpha = 0.72f),
+    0.85f to Color.Transparent,
 )
 
 /** Into the background under the art, where the rows start. */

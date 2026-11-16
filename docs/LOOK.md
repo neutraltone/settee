@@ -125,7 +125,8 @@ Two treatments, because they suit different surfaces.
 - **A row picked up to move** (Settings → Display → Home rows): the card ring on a Raised fill, lifted 1.02, with ordinary text, so it never looks like a coral Highlight. A quiet line, "Up and down to move, select to place", shows while it's held.
 - **Progress on a highlighted card:** inset 6 dp, inside the dark edge, with the text moved up clear of it.
 - **Guide cells, sidebar rows, rail items, buttons and episode rows:** a solid coral fill with dark text.
-- **Text on artwork:** a gradient across the lower part of the card.
+- **Text on artwork:** a gradient across the lower part of the card, dark early, so the first line of a two-line title has at least 0.75 of Background behind it.
+- **Every fade follows its text, not the art.** Wherever text sits on artwork (cards, the Movies and Shows backdrop, a details page's hero), the fade under it is at least 0.7 of Background under its words and 0.9 under quiet text, enough for 4.5:1 on a white picture, and clears only past the text.
 
 ## Rail
 
@@ -141,7 +142,7 @@ Home, Live TV, Movies, Shows and Recordings, with Search at the top, and the Pro
 
 From the top: Live Preview only when live TV was the Profile's last playback, Continue Watching, Because you watched, Recently added shows, Recently added movies, Favourite shows, Favourite movies, Favourite channels. No hero, and no Favourites item on the rail. Letting the viewer reorder the rows is for after 1.0 ([#212](https://github.com/neutraltone/settee/issues/212)).
 
-- **Continue Watching:** landscape cards, 186 dp wide, with the first 300 dp wide when there's no Live Preview. Home opens on the first card. The picture is a frame from the title where the provider has one: the episode's own still, else the show's wide backdrop; a movie's wide backdrop, else its cover. The title keeps to one line, cut off at rest, and scrolls while the card has the Highlight.
+- **Continue Watching:** landscape cards, 186 dp wide, with the first 300 dp wide when there's no Live Preview. Home opens on the first card. The picture is a frame from the title where the provider has one: the episode's own still, else the show's wide backdrop; a movie's wide backdrop, else its cover. The title keeps to one line, cut off at rest, and scrolls while the card has the Highlight. With the large first card, the row's cards hang from the top, right under its title: on a shared bottom edge the smaller cards sat under an empty band.
 - **Because you watched <title>:** one row of portrait covers, like the film or show the Profile most recently finished: the newest film or episode it watched past 93%, an episode standing for its show. Films suggest films and shows suggest shows, chosen as More like this is (see Details), up to 20 and never the title it's based on. It changes only when the Profile finishes something else, and there's no row when it has finished nothing or nothing matches. Its covers and statuses are Recently Added's.
 - **Recently Added:** two rows, shows then movies, each the 20 the providers added most recently, newest first. A title the provider never dated is left out. Release dates aren't used because providers fill them unreliably, and the rows aren't called New, so they can't be confused with a New Episode.
 - **Covers:** Because you watched, Recently Added and Favourites use portrait covers, 118 dp wide, with the title on a dark fade at the foot of the art, and the title's Quality in the top corner when its name has one. On Because you watched and Recently Added, a quiet status says where the Profile is: `S4 E3` over `22 min left`, `22 min left`, `S4 E4` (Up Next), `New episode` or `Watched`, with a thin progress bar along the bottom edge for anything part-watched. An unstarted title shows only its name.
@@ -156,7 +157,7 @@ A backdrop with the highlighted title's name, status and synopsis over it, then 
 
 - **Opens:** on the first cover of the first row, which is where OK on the tab in the rail lands. There's no search bar, because Search is on the rail.
 - **Backdrop:** changes once the Highlight has rested on a title for about 400 ms, not on each press, so moving quickly along a row doesn't load a backdrop for every title. Changing on each press cost a few frames on a Stick. Loading the new backdrop still costs something, and can land on the next press, so measure it again when it's built, including a press just after it changes.
-- **Gradient:** must move with the text. With the sidebar open, text today lands on the bright part of the backdrop and drops as low as 1.5:1, so this is a required fix.
+- **Gradient:** moves with the text, and stays dark under the whole text column (a little over half the width), clearing only past it. Fading out from the art's edge left the synopsis's line ends at under 2:1.
 - **Rows:** "For you" keeps the tab's rows. There's no Popular row, because the app has no popularity data.
 - **Grids:** any other category opens its whole grid, with the same covers as the rows. A grid reads only what its cards show, not each title's full details, so a category of thousands opens quickly and stays light on a 1 GB Stick.
 - **No blank covers while scrolling:** covers are fetched about four rows ahead in the direction the viewer is moving, so a normal pace of scrolling never shows a blank card. Holding Down as fast as the remote repeats may still outrun it.
@@ -259,6 +260,14 @@ Sections are Providers, TV guide, Channels, Display and playback, Recording, Par
 
 Profiles, behind the Rail's Profile, is a screen of its own built from the same parts: a row per Profile and an "Add a profile" row. OK renames a Profile, and switching to it and removing it are in its options.
 
+## Who's watching?
+
+A row of cards, one per Profile, under the screen title, starting on whoever watched last.
+
+- **Cards:** 160 dp square, each the Profile's initial in cream Display over a frame from the last film or episode they played (the episode's still, else the show's or film's wide backdrop), under an even 0.6 shade of Background. A Profile that hasn't played anything still in the catalogue shows the initial on Raised.
+- **Never locked:** the frame never comes from a Parental-Locked category, even while the session is unlocked. This is what everyone in the room sees before anyone has said who they are.
+- **Highlight:** the card treatment, ring, lift and glow, like any other card. The name sits under the card, outside the lift, so names stay in line, and turns coral with its card.
+
 ## Onboarding
 
 One page: the welcome and the choice of provider together.
@@ -336,7 +345,7 @@ Set from measurements on a Fire TV Stick (`AFTSS`) in [#156](https://github.com/
 ## Known risks
 
 - **Printed titles:** real covers often carry their own title, which runs into ours. Nothing here fixes it yet, so try it with real artwork when `ArtCard` is built.
-- **Rows at the edge:** rows run to the screen's edge, so partly hidden text sits outside the margin.
+- **Rows at the edge:** rows run to the screen's edge. A highlighted card always stops inside the margin, so its ring and glow are never cut off, and the strip past the margin at the start fades into the background, so a card scrolled past beside the rail isn't a hard fragment. Partly hidden cards still show at the far edge, saying there's more.
 - **Colour:** everything so far was judged on a monitor. Check colour and legibility on a real TV.
 - **Back to Home from a player rebuilds Home:** the main screen now stays built under every other screen (`KeptShell`, #192), so Back from Settings, Profiles, Search or a title's page shows it as it was, rows and highlight included. Under a player it's still let go, on purpose: Home waits for rows that know what was just watched rather than highlight a card about to move. Rebuilding Home took about 345 ms on a Stick, over the 300 ms budget.
 - **Setup's bar can't tell much yet:** no step reports how far through it is today, so without new reporting the bar moves in three jumps. Measure how long each step takes on a Stick with a big provider before sharing the bar out.
