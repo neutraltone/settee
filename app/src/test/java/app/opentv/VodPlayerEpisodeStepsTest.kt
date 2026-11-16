@@ -143,14 +143,15 @@ class VodPlayerEpisodeStepsTest {
     }
 
     @Test
-    fun `a second press while moving to the next episode is ignored, rather than starting it again`() = runTest {
+    fun `two quick presses of Next move on two episodes, starting each once`() = runTest {
         graph.database.episodes().upsertAll((1..3).map { testEpisode(1, it) })
         val vm = VodPlayerViewModel(app, graph)
         vm.attach(testEpisode(1, 1).key, playback)
 
         listOf(launch { vm.toNextEpisode() }, launch { vm.toNextEpisode() }).joinAll()
 
-        assertThat(playback.played.map { it.first }).containsExactly(testEpisode(1, 1).key, testEpisode(1, 2).key)
+        assertThat(playback.played.map { it.first })
+            .containsExactly(testEpisode(1, 1).key, testEpisode(1, 2).key, testEpisode(1, 3).key)
             .inOrder()
     }
 

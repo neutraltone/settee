@@ -236,8 +236,9 @@ class VodPlayerRowTest {
     @Test
     fun `a bar picked up and left alone goes back to where it started, keeping the Highlight`() {
         showFilmPartWay()
+        // Settling after the last press has already used SETTLE_MILLIS of the wait.
         startSeekingOnTheBar()
-        compose.mainClock.advanceTimeBy(WITHIN_GRACE_MILLIS)
+        compose.mainClock.advanceTimeBy(WITHIN_GRACE_MILLIS - SETTLE_MILLIS)
         assertThat(barPosition()).isEqualTo(TEN_MINUTES + STEP)
 
         compose.mainClock.advanceTimeBy(PAST_GRACE_MILLIS - WITHIN_GRACE_MILLIS)
@@ -466,7 +467,16 @@ class VodPlayerRowTest {
             settle()
 
             hold.release()
-            compose.waitUntil(WAIT_MILLIS) { loading.episodeSteps.value.next }
+            try {
+                compose.waitUntil(WAIT_MILLIS) { loading.episodeSteps.value.next }
+            } catch (timedOut: androidx.compose.ui.test.ComposeTimeoutException) {
+                val stored = runBlocking { fetching.database.episodes().forSeries(1, "s").map { it.episodeId } }
+                throw AssertionError(
+                    "steps ${loading.episodeSteps.value}, panel asked ${panel.asked}, " +
+                        "held request passed ${hold.passed}, stored $stored",
+                    timedOut,
+                )
+            }
             compose.onNodeWithContentDescription("Next episode").assertDoesNotExist()
             compose.onNodeWithContentDescription("Previous episode").assertDoesNotExist()
 

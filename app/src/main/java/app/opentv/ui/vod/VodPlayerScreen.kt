@@ -393,7 +393,8 @@ fun VodPlayerContent(
         subtitles?.load(playing)
     }
 
-    PutsBackWhenLeft(seek, dragging)
+    // A finger can't still be scrubbing a bar that's hidden, whatever its last drag said.
+    PutsBackWhenLeft(seek, dragging = dragging && controlsVisible)
 
     // Auto-hide when playing and not paused and no picker open, and no finger on the bar. A growing
     // recording dips in and out of Buffering as it rides the write head, so for that case Buffering

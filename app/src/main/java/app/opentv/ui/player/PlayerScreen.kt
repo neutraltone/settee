@@ -419,7 +419,7 @@ fun LivePlayerContent(
     val seek = remember { UnfinishedSeek() }
     val barInteractions = remember { MutableInteractionSource() }
     val dragging by barInteractions.collectIsDraggedAsState()
-    PutsBackWhenLeft(seek, dragging)
+    PutsBackWhenLeft(seek, dragging = dragging && controlsVisible)
 
     // Picture-in-picture. While the player is on it is "eligible" to shrink to a floating window
     // (pressing Home does it, handled in MainActivity); [inPip] drives hiding all the chrome.

@@ -25,6 +25,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 
 /**
@@ -136,7 +137,7 @@ class VodPlayerViewModel(
     /** The episodes either side of what's playing, as far as they're known, for moving to one. */
     internal val episodesAround: Pair<Episode?, Episode?> get() = previous to next
 
-    /** Held while moving to another episode, so a second press during the move is ignored. */
+    /** Held while moving to another episode, so a second press waits for the move before it. */
     internal val moving = Mutex()
     private var fetchingNext: Job? = null
     private val lookup = NextEpisodeLookup(graph)
@@ -315,16 +316,12 @@ suspend fun VodPlayerViewModel.toPreviousEpisode() = moveTo { it.first }
 
 // Unlike moving on at the card, this doesn't count as finishing the episode: it keeps the progress
 // it had, saved first so the seconds since the last save aren't lost. A press while a move is under
-// way is dropped rather than queued: it read the episodes either side of the one being left, so it
-// would start the same episode again.
-private suspend fun VodPlayerViewModel.moveTo(which: (Pair<Episode?, Episode?>) -> Episode?) {
-    if (!moving.tryLock()) return
-    try {
-        val episode = which(episodesAround) ?: return
+// way waits for it, then reads the episodes either side of where that move landed: read before, it
+// would start the same episode again, and dropped, a quick second press would go unheard.
+private suspend fun VodPlayerViewModel.moveTo(which: (Pair<Episode?, Episode?>) -> Episode?) = moving.withLock {
+    which(episodesAround)?.let { episode ->
         saveProgress()
         start(MediaKey.Episode(episode.id))
-    } finally {
-        moving.unlock()
     }
 }
 
