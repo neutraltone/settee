@@ -53,8 +53,8 @@ class SettingsSectionsScrollTest {
     @Test
     fun `each section comes into view as the Highlight goes down to About, into its settings, and back up`() {
         val app = ApplicationProvider.getApplicationContext<Application>()
-        // With OpenSubtitles, as a build with Settee's key has it: more sections than the left
-        // side has room for.
+        // With OpenSubtitles, as a build with Settee's key has it: the most sections Settings has
+        // (TMDB's went with #515).
         val openSubtitles = FakeOpenSubtitles().openSubtitles(ServiceLocator.get(app), app.filesDir)
         compose.setTvContent {
             view = LocalView.current
@@ -62,7 +62,7 @@ class SettingsSectionsScrollTest {
         }
         val sections = compose.onAllNodesWithTag(SettingsTags.SECTION).fetchSemanticsNodes()
             .map { it.config[SemanticsProperties.Text].joinToString("") }
-        assertThat(sections).hasSize(12)
+        assertThat(sections).hasSize(11)
 
         sections.drop(1).forEach { section ->
             press(KeyEvent.KEYCODE_DPAD_DOWN)
