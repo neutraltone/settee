@@ -80,6 +80,7 @@ import app.opentv.ui.design.Text
 import app.opentv.ui.options.ItemOption
 import app.opentv.ui.options.OptionsFor
 import app.opentv.ui.options.label
+import app.opentv.ui.player.BackOnRelease
 import app.opentv.ui.player.PlayerChoice
 import app.opentv.ui.player.PlayerChoicePanel
 import app.opentv.ui.player.PlayerControlBar
@@ -90,6 +91,7 @@ import app.opentv.ui.player.SleepTimerEffect
 import app.opentv.ui.player.SleepTimerPanel
 import app.opentv.ui.player.SubtitlePicks
 import app.opentv.ui.player.WhenBehindAnotherApp
+import app.opentv.ui.player.isBack
 import app.opentv.ui.player.trackLabel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -406,7 +408,7 @@ fun VodPlayerContent(
         }
     }
 
-    BackHandler {
+    fun stepBack() {
         val activelyPlaying = state is PlayerController.State.Playing ||
             (growingRec && state is PlayerController.State.Buffering)
         when {
@@ -418,6 +420,9 @@ fun VodPlayerContent(
         }
     }
 
+    BackHandler { stepBack() }
+    val backOnRelease = remember { BackOnRelease() }
+
     Box(
         Modifier
             .fillMaxSize()
@@ -425,7 +430,19 @@ fun VodPlayerContent(
             .countsAsInput(viewModel)
             .onPreviewKeyEvent { event ->
                 when {
-                    event.key == Key.Back || event.key == Key.Escape -> false
+                    backOnRelease.consume(event) -> true
+                    // With the highlight on the bar, Back is the bar's to take (BackOnRelease). A picker,
+                    // the error sentence and the Next Episode card each deal with Back themselves.
+                    event.isBack() &&
+                        event.type == KeyEventType.KeyDown &&
+                        controlsVisible &&
+                        vodPanel == VodPanel.NONE &&
+                        !failed &&
+                        !overlayShowing -> {
+                        backOnRelease.hold(::stepBack)
+                        true
+                    }
+                    event.isBack() -> false
                     // Keys belong to the card or the question while one is up, OK above all.
                     overlayShowing -> false
                     failed -> false

@@ -9,12 +9,16 @@ import androidx.compose.ui.input.key.Key
 
 /** What the live player has up when a key comes in, as far as where the key goes. */
 internal data class LiveScreen(
-    /** The channel list or a picker, which owns the whole d-pad while it's up. */
-    val overlayOpen: Boolean,
+    val channelListOpen: Boolean,
+    /** One of the bar's choice panels (Subtitles, Audio, Quality, Aspect), which handles Back itself. */
+    val pickerOpen: Boolean,
     val controlsVisible: Boolean,
     /** A failure trying again could fix, so Try again is on screen. */
     val retryableError: Boolean,
 ) {
+    /** The channel list or a picker, which owns the whole d-pad while it's up. */
+    val overlayOpen: Boolean get() = channelListOpen || pickerOpen
+
     /** Try again holds the highlight only when there's nothing over it. */
     val onTryAgain: Boolean get() = retryableError && !overlayOpen && !controlsVisible
 }
@@ -37,16 +41,22 @@ internal sealed interface LiveKey {
 
     /** Back leaves the player: Compose would otherwise spend the first press taking focus off Try again. */
     data object Leave : LiveKey
+
+    /**
+     * Back takes away the channel list or the bar, one layer as the back handler would: Compose would
+     * otherwise spend the press taking focus off them and leave them up (#427).
+     */
+    data object StepBack : LiveKey
 }
 
 /**
  * Where a key pressed down in the live player goes. Media keys, a held OK and the release of a Back
- * that's leaving are dealt with before this.
+ * the player has taken are dealt with before this.
  */
 internal fun liveKey(key: Key, screen: LiveScreen): LiveKey {
     val digit = keyToDigit(key)
     return when {
-        key == Key.Back || key == Key.Escape -> if (screen.onTryAgain) LiveKey.Leave else LiveKey.PassThrough
+        key == Key.Back || key == Key.Escape -> backKey(screen)
         // Typing a channel number jumps to it, TiviMate-style.
         digit != null -> LiveKey.Digit(digit)
         screen.overlayOpen -> LiveKey.ToFocused
@@ -56,6 +66,16 @@ internal fun liveKey(key: Key, screen: LiveScreen): LiveKey {
         screen.controlsVisible && key != Key.ChannelUp && key != Key.ChannelDown -> LiveKey.ToFocused
         else -> overPicture(key, screen.retryableError)
     }
+}
+
+private fun backKey(screen: LiveScreen): LiveKey = when {
+    screen.onTryAgain -> LiveKey.Leave
+    // In the back handler's order: the list, then a picker, then the bar.
+    screen.channelListOpen -> LiveKey.StepBack
+    screen.pickerOpen -> LiveKey.PassThrough
+    screen.controlsVisible -> LiveKey.StepBack
+    // Nothing's focused but the player's own catcher, so the back handler hears it.
+    else -> LiveKey.PassThrough
 }
 
 /** With nothing over the picture, or Try again alone. */

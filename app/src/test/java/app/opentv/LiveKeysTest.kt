@@ -24,7 +24,12 @@ import org.robolectric.annotation.Config
 @Config(sdk = [34], application = android.app.Application::class)
 class LiveKeysTest {
 
-    private val nothingShowing = LiveScreen(overlayOpen = false, controlsVisible = false, retryableError = false)
+    private val nothingShowing = LiveScreen(
+        channelListOpen = false,
+        pickerOpen = false,
+        controlsVisible = false,
+        retryableError = false,
+    )
     private val retryableError = nothingShowing.copy(retryableError = true)
 
     @Test
@@ -63,20 +68,29 @@ class LiveKeysTest {
     }
 
     @Test
-    fun `with the controls up over an error, OK presses the control and Back closes them`() {
+    fun `with the controls up over an error, OK presses the control and Back steps back out of them`() {
         val barUp = retryableError.copy(controlsVisible = true)
 
         assertThat(liveKey(Key.DirectionCenter, barUp)).isEqualTo(LiveKey.ToFocused)
-        assertThat(liveKey(Key.Back, barUp)).isEqualTo(LiveKey.PassThrough)
+        assertThat(liveKey(Key.Back, barUp)).isEqualTo(LiveKey.StepBack)
+        assertThat(liveKey(Key.Escape, barUp)).isEqualTo(LiveKey.StepBack)
         assertThat(liveKey(Key.ChannelDown, barUp)).isEqualTo(LiveKey.Zap(1))
     }
 
     @Test
-    fun `with the channel list over an error, it keeps the d-pad and Back closes it`() {
-        val listOpen = retryableError.copy(overlayOpen = true)
+    fun `with the channel list over an error, it keeps the d-pad and Back steps back out of it`() {
+        val listOpen = retryableError.copy(channelListOpen = true)
 
         assertThat(liveKey(Key.DirectionCenter, listOpen)).isEqualTo(LiveKey.ToFocused)
-        assertThat(liveKey(Key.Back, listOpen)).isEqualTo(LiveKey.PassThrough)
+        assertThat(liveKey(Key.Back, listOpen)).isEqualTo(LiveKey.StepBack)
+    }
+
+    @Test
+    fun `with a picker open on the bar, Back is left to the picker`() {
+        val pickerOpen = nothingShowing.copy(controlsVisible = true, pickerOpen = true)
+
+        assertThat(liveKey(Key.Back, pickerOpen)).isEqualTo(LiveKey.PassThrough)
+        assertThat(liveKey(Key.DirectionDown, pickerOpen)).isEqualTo(LiveKey.ToFocused)
     }
 
     @Test

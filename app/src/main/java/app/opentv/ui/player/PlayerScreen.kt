@@ -404,7 +404,7 @@ fun LivePlayerContent(
     var cardVisible by remember { mutableStateOf(false) }
     var cardShows by remember { mutableIntStateOf(0) }
     var openingPress by remember { mutableStateOf(false) }
-    var leavingPress by remember { mutableStateOf(false) }
+    val backOnRelease = remember { BackOnRelease() }
     var panel by remember { mutableStateOf(PlayerPanel.NONE) }
     var channelListVisible by remember { mutableStateOf(false) }
     var optionsOpen by remember { mutableStateOf(false) }
@@ -491,7 +491,8 @@ fun LivePlayerContent(
     // Read when asked rather than when last drawn: a key can arrive between the state changing and
     // the screen being drawn again.
     fun liveScreen() = LiveScreen(
-        overlayOpen = channelListVisible || panel != PlayerPanel.NONE,
+        channelListOpen = channelListVisible,
+        pickerOpen = panel != PlayerPanel.NONE,
         controlsVisible = controlsVisible,
         retryableError = (controller.state.value as? PlayerController.State.Error)?.canRetry == true,
     )
@@ -589,7 +590,7 @@ fun LivePlayerContent(
     // and only leaves the player once nothing is on screen. From immersive it's a single press out,
     // so it never traps you, but it also no longer throws you all the way to the guide just because
     // you wanted to dismiss the bar.
-    BackHandler {
+    fun stepBack() {
         when {
             channelListVisible -> channelListVisible = false
             panel != PlayerPanel.NONE -> panel = PlayerPanel.NONE
@@ -597,6 +598,7 @@ fun LivePlayerContent(
             else -> leave()
         }
     }
+    BackHandler { stepBack() }
 
     // Number entry: once digits stop coming, jump to that channel number in the browsing list.
     LaunchedEffect(numberEntry) {
@@ -639,21 +641,16 @@ fun LivePlayerContent(
                     if (!repeating) openingPress = false
                     if (releasing || repeating) return@onPreviewKeyEvent true
                 }
-                // Leaving on the release, as the back handler would, so the press can't reach whatever
-                // the screen underneath focuses next. Decided on the way down: the screen can change
-                // before the release, which Android would then get without the press that began it.
-                if (leavingPress && (event.key == Key.Back || event.key == Key.Escape)) {
-                    if (event.type == KeyEventType.KeyUp) {
-                        leavingPress = false
-                        leave()
-                    }
-                    return@onPreviewKeyEvent true
-                }
+                if (backOnRelease.consume(event)) return@onPreviewKeyEvent true
                 if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
                 when (val key = liveKey(event.key, liveScreen())) {
                     LiveKey.PassThrough -> false
                     LiveKey.Leave -> {
-                        leavingPress = true
+                        backOnRelease.hold(::leave)
+                        true
+                    }
+                    LiveKey.StepBack -> {
+                        backOnRelease.hold(::stepBack)
                         true
                     }
                     is LiveKey.Digit -> {
