@@ -231,12 +231,11 @@ class CatalogRepository(
     fun observeChannels(sourceId: Long? = null, categoryId: String? = null): Flow<List<Channel>> =
         channelDao.observe(sourceId, categoryId)
 
-    fun observeChannelsIn(categoryIds: List<String>): Flow<List<Channel>> = channelDao.observeInCategories(categoryIds)
-
     /**
-     * Channels in a set of categories INCLUDING hidden ones, optionally scoped to one source — the
-     * channel manager's browse feed. Separate from [observeChannelsIn] (which drops `hidden` rows
-     * for the guide) because the manager must show hidden channels so they can be un-hidden.
+     * Channels in a set of categories INCLUDING hidden ones, optionally scoped to one source. Category
+     * ids are only unique within a provider, so without [sourceId] this also finds other providers'
+     * categories of the same ids: Live and the channel manager read groups through
+     * [ChannelLineup.channels], which matches on both (#350).
      */
     fun observeChannelsInIncludingHidden(sourceId: Long?, categoryIds: List<String>): Flow<List<Channel>> =
         channelDao.observeInCategoriesIncludingHidden(sourceId, categoryIds)
