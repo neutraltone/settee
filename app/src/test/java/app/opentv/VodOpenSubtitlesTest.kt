@@ -14,6 +14,7 @@ import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.isFocused
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
@@ -90,6 +91,7 @@ class VodOpenSubtitlesTest {
 
     private val subtitles = vodSubtitles()
     private val noPicks = SubtitlePicks(onOff = {}, onPicked = {})
+    private var backs = 0
     private val heat = SubtitleTitle.film(source = "Provider", streamId = "1")
 
     // The OpenSubtitles entry and the Timing row, by what they say.
@@ -124,7 +126,7 @@ class VodOpenSubtitlesTest {
     private fun showFilm(withOpenSubtitles: VodSubtitles? = subtitles) {
         compose.setTvContent {
             CompositionLocalProvider(LocalVodSubtitles provides withOpenSubtitles) {
-                VodPlayerContent(controller, viewModel, false, noPicks, onBack = {})
+                VodPlayerContent(controller, viewModel, false, noPicks, onBack = { backs++ })
             }
         }
         players.play(controller)
@@ -208,6 +210,33 @@ class VodOpenSubtitlesTest {
         settle()
         assertThat(exists(OPENSUBTITLES_RESULTS_TAG)).isFalse()
         compose.onNode(entryRow).assertIsDisplayed()
+    }
+
+    @Test
+    fun `a search that finds nothing still keeps the remote, so Up and Select don't leave the player`() {
+        site.replies["GET /subtitles"] = """{"data": []}"""
+        showFilm()
+        until { subtitles.subject.value != null }
+        openSubtitleList()
+        press(Key.DirectionUp)
+        compose.onNode(entryRow).assertIsFocused()
+
+        press(Key.DirectionCenter)
+        until { compose.onAllNodes(hasText("Looking for subtitles…")).fetchSemanticsNodes().isEmpty() }
+        compose.onNodeWithText("Subtitles provided by OpenSubtitles.com").assertIsDisplayed()
+
+        press(Key.DirectionUp)
+        press(Key.DirectionLeft)
+        press(Key.DirectionCenter)
+
+        // The bar may or may not be drawn under the panel; either way its Close mustn't have the highlight.
+        assertThat(compose.onAllNodes(hasContentDescription("Close") and isFocused()).fetchSemanticsNodes()).isEmpty()
+        assertThat(compose.seekBarIsFocused()).isFalse()
+        assertThat(backs).isEqualTo(0)
+        assertThat(exists(OPENSUBTITLES_RESULTS_TAG)).isTrue()
+        Espresso.pressBack()
+        settle()
+        assertThat(exists(OPENSUBTITLES_RESULTS_TAG)).isFalse()
     }
 
     @Test

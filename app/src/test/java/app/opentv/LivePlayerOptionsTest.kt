@@ -33,6 +33,7 @@ import app.opentv.player.PlayerController
 import app.opentv.ui.player.CardChannel
 import app.opentv.ui.player.LivePlayerContent
 import app.opentv.ui.player.SubtitlePicks
+import com.google.common.collect.Range
 import com.google.common.truth.Truth.assertThat
 import org.junit.After
 import org.junit.Rule
@@ -345,25 +346,35 @@ class LivePlayerOptionsTest {
         compose.onNodeWithText("Off").assertIsFocused()
 
         assertThat(compose.seekBarIsFocused()).isFalse()
-        assertThat(controller.player.currentPosition).isEqualTo(before)
+        // A live stream plays on meanwhile; a seek would have jumped by far more than this.
+        assertThat(controller.player.currentPosition).isIn(Range.closed(before, before + ONE_SECOND))
         assertThat(backs).isEqualTo(0)
     }
 
     @Test
-    fun `Up from the top of the Aspect ratio picker stays in it too`() {
+    fun `the Aspect ratio picker keeps the highlight at its top and its bottom too`() {
         showChannel()
         openControls()
         press(Key.DirectionDown)
         press(Key.DirectionDown)
-        compose.onNodeWithText("Aspect ratio").performKeyInput { pressKey(Key.DirectionCenter) }
+        compose.onNodeWithText("Record").assertIsFocused()
+        press(Key.DirectionRight)
+        compose.onNodeWithText("Aspect ratio").assertIsFocused()
+        press(Key.DirectionCenter)
         compose.mainClock.advanceTimeBy(FOCUS_MILLIS)
         compose.waitForIdle()
         compose.onNodeWithText("Fit").assertIsFocused()
 
         press(Key.DirectionUp)
-
         compose.onNodeWithText("Fit").assertIsFocused()
         compose.onNodeWithContentDescription("Close").assertIsNotFocused()
+
+        press(Key.DirectionDown)
+        press(Key.DirectionDown)
+        compose.onNodeWithText("Stretch").assertIsFocused()
+        press(Key.DirectionDown)
+        compose.onNodeWithText("Stretch").assertIsFocused()
+        compose.onNodeWithContentDescription("Subtitles").assertIsNotFocused()
     }
 
     @Test
@@ -444,6 +455,7 @@ class LivePlayerOptionsTest {
         const val FOCUS_MILLIS = 100L
         const val CARD_TIMEOUT_MILLIS = 5_000L
         const val CONTROLS_TIMEOUT_MILLIS = 6_000L
+        const val ONE_SECOND = 1_000L
 
         val CHANNELS = listOf(
             PlaybackQueue.Item(10L, "One", logoUrl = null, number = 1),

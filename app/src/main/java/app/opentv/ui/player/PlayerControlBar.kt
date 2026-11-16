@@ -8,6 +8,7 @@ package app.opentv.ui.player
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusGroup
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -37,6 +38,7 @@ import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -361,6 +363,12 @@ internal fun PlayerChoicePanel(
     empty: String? = null,
 ) {
     val start = choices.indexOfFirst { it.selected }.coerceAtLeast(0)
+    val hasRows = choices.isNotEmpty()
+    // With no rows (nothing found, still searching, none available) there'd be nothing in the panel
+    // to take the highlight, so it would stay on the hidden bar. The panel takes it itself then, and
+    // hands it to the rows when they arrive, or takes it back when they go.
+    var hadFocus by remember { mutableStateOf(false) }
+    LaunchedEffect(hasRows) { if (hadFocus) runCatching { startFocus.requestFocus() } }
     Column(
         modifier
             // Left to itself, Compose spends the first Back on taking focus off the row, so the
@@ -375,8 +383,17 @@ internal fun PlayerChoicePanel(
             // highlight is kept to the panel's rows and footer instead. Rejected: a Dialog, as
             // SidePanel does, would put a second window over the video and change picture-in-picture
             // and Back; a flag that stops the bar taking focus needs every player to pass it.
-            .focusProperties { onExit = { if (requestedFocusDirection in Arrows) cancelFocusChange() } }
+            .onFocusChanged { if (it.hasFocus) hadFocus = true }
+            .focusProperties {
+                onExit = {
+                    // Enter and Exit are code moving or clearing the highlight; the rest are keys.
+                    val byCode = requestedFocusDirection == FocusDirection.Enter ||
+                        requestedFocusDirection == FocusDirection.Exit
+                    if (!byCode) cancelFocusChange()
+                }
+            }
             .focusGroup()
+            .then(if (hasRows) Modifier else Modifier.focusRequester(startFocus).focusable())
             .fillMaxHeight()
             .width(ChoicePanelWidth)
             .background(SetteeColors.Surface)
@@ -440,14 +457,6 @@ private fun ChoiceRow(choice: PlayerChoice, modifier: Modifier) {
 }
 
 private val ChoicePanelWidth = 360.dp
-private val Arrows = setOf(
-    FocusDirection.Up,
-    FocusDirection.Down,
-    FocusDirection.Left,
-    FocusDirection.Right,
-    FocusDirection.Next,
-    FocusDirection.Previous,
-)
 private val PillRowHeight = 42.dp
 private val Scrim = SetteeColors.Background.copy(alpha = 0.92f)
 
