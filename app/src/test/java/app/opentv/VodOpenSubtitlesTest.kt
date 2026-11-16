@@ -14,6 +14,7 @@ import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.isFocused
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
@@ -144,8 +145,10 @@ class VodOpenSubtitlesTest {
     }
 
     /** From the bar: Down to Subtitles, and open it. */
+    /** From the seek bar, or from Subtitles itself, where a closed panel leaves the Highlight (#452). */
     private fun openSubtitleList() {
-        press(Key.DirectionDown)
+        val onSubtitles = hasContentDescription("Subtitles") and isFocused()
+        if (compose.onAllNodes(onSubtitles).fetchSemanticsNodes().isEmpty()) press(Key.DirectionDown)
         press(Key.DirectionCenter)
     }
 
