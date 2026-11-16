@@ -113,9 +113,8 @@ class MainActivity : ComponentActivity() {
             statusBarStyle = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT),
             navigationBarStyle = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT),
         )
-        handlePlayIntent(intent)
         val isTelevision = isRunningOnTelevision(this)
-        val toPlay = launchedToPlay(intent, restored = savedInstanceState != null)
+        val toPlay = consumePlayIntent(intent, restored = savedInstanceState != null)
 
         setContent {
             SetteeTheme {
@@ -156,17 +155,36 @@ class MainActivity : ComponentActivity() {
     // onCreate. Either way the requested channel is handed to the nav graph via [PlayRequests].
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
-        setIntent(intent)
-        handlePlayIntent(intent)
+        consumePlayIntent(intent, restored = false)
     }
 
-    private fun handlePlayIntent(intent: Intent?) {
-        val id = intent?.getLongExtra(EXTRA_PLAY_CHANNEL, 0L) ?: 0L
-        if (id != 0L) app.opentv.core.PlayRequests.request(id)
-        val recId = intent?.getLongExtra(EXTRA_WATCH_RECORDING, 0L) ?: 0L
-        if (recId != 0L) {
-            app.opentv.core.RecordingSignals.requestWatch(recId, System.currentTimeMillis())
+    /**
+     * Makes [delivered] the activity's intent and hands what it asks to play to the nav graph, once:
+     * only if it [isFreshDelivery], and with the extras taken off what's kept, so nothing that reads
+     * the intent later acts on them again (#357). A restore after the process was killed still gets
+     * the original intent back from Android, which is why the rule matters as well as the stripping.
+     * Returns whether this delivery opened the app to play, as [launchedToPlay] answers it.
+     */
+    private fun consumePlayIntent(delivered: Intent, restored: Boolean): Boolean {
+        val request = playRequestOf(delivered, restored)
+        if (request != null) {
+            if (request.channelId != 0L) app.opentv.core.PlayRequests.request(request.channelId)
+            if (request.recordingId != 0L) {
+                app.opentv.core.RecordingSignals.requestWatch(request.recordingId, System.currentTimeMillis())
+            }
         }
+        val asksToPlay = delivered.hasExtra(EXTRA_PLAY_CHANNEL) || delivered.hasExtra(EXTRA_WATCH_RECORDING)
+        setIntent(
+            if (!asksToPlay) {
+                delivered
+            } else {
+                Intent(delivered).apply {
+                    removeExtra(EXTRA_PLAY_CHANNEL)
+                    removeExtra(EXTRA_WATCH_RECORDING)
+                }
+            },
+        )
+        return request != null
     }
 
     // ---- Picture-in-picture ------------------------------------------------------------------
@@ -278,14 +296,32 @@ object Routes {
  * Whether this launch asks to play something: a tapped reminder, or a recording switching the
  * screen to itself. Read from the intent that created the activity, not from [app.opentv.core.PlayRequests] or
  * [app.opentv.core.RecordingSignals]: a recording alarm sets those with no launch at all, sometimes long before the
- * viewer next opens the app, and that mustn't stop them being asked who's watching. A restore
- * redelivers the old intent, so it never counts.
+ * viewer next opens the app, and that mustn't stop them being asked who's watching. Only an intent
+ * that [isFreshDelivery] counts.
  */
-internal fun launchedToPlay(intent: Intent?, restored: Boolean): Boolean {
-    if (restored || intent == null) return false
-    return intent.getLongExtra(MainActivity.EXTRA_PLAY_CHANNEL, 0L) != 0L ||
-        intent.getLongExtra(MainActivity.EXTRA_WATCH_RECORDING, 0L) != 0L
+internal fun launchedToPlay(intent: Intent?, restored: Boolean): Boolean = playRequestOf(intent, restored) != null
+
+/** What a freshly delivered intent asks to play: a reminder's channel or a recording that's starting. */
+internal data class PlayRequest(val channelId: Long, val recordingId: Long)
+
+/** What [intent] asks to play, or null when it asks for nothing or doesn't count ([isFreshDelivery]). */
+internal fun playRequestOf(intent: Intent?, restored: Boolean): PlayRequest? {
+    if (intent == null || !isFreshDelivery(intent, restored)) return null
+    val request = PlayRequest(
+        channelId = intent.getLongExtra(MainActivity.EXTRA_PLAY_CHANNEL, 0L),
+        recordingId = intent.getLongExtra(MainActivity.EXTRA_WATCH_RECORDING, 0L),
+    )
+    return request.takeIf { it.channelId != 0L || it.recordingId != 0L }
 }
+
+/**
+ * Whether [intent] is being delivered now, so what it asks for should happen, rather than handed back
+ * again: a restore after Android killed the process, a recreate (a language change), and a reopen
+ * from Recents all redeliver the intent the activity started with, extras and all (#357). Both the
+ * play dispatch and [launchedToPlay] ask this, so they can't disagree about which intents count.
+ */
+internal fun isFreshDelivery(intent: Intent, restored: Boolean): Boolean =
+    !restored && (intent.flags and Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY) == 0
 
 @Composable
 private fun OpenTvApp(isTelevision: Boolean, launchedToPlay: Boolean) {
