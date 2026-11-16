@@ -12,7 +12,10 @@ import app.opentv.core.AppSettings
 import app.opentv.core.LocaleUtils
 import app.opentv.core.ServiceLocator
 import app.opentv.core.carryLivePreviewFromBefore
+import app.opentv.data.model.StreamKind
 import app.opentv.data.repo.CatalogueRefresh
+import app.opentv.data.repo.LAST_ASCII_KEY_NORMALIZER
+import app.opentv.data.repo.carriedCategoryLocks
 import app.opentv.data.work.SyncWorker
 import coil.ImageLoader
 import coil.ImageLoaderFactory
@@ -117,7 +120,18 @@ open class OpenTvApp :
      */
     protected open fun onFirstOpen() {
         val graph = ServiceLocator.get(this)
-        val catchUpNormaliser = NormaliserCatchUp(this, renormalise = { graph.catalogRepository.renormalizeAll() })
+        val catchUpNormaliser = NormaliserCatchUp(
+            this,
+            renormalise = { graph.catalogRepository.renormalizeAll() },
+            carryLocks = { from ->
+                if (from <= LAST_ASCII_KEY_NORMALIZER) {
+                    val categories = StreamKind.entries.flatMap { graph.database.categories().allByKind(it) }
+                    graph.settings.importCategoryLocks(
+                        carriedCategoryLocks(categories, graph.settings.exportCategoryLocks()),
+                    )
+                }
+            },
+        )
         val work = FirstOpenWork(
             nasAutoSync = graph.settings.nasAutoSync.value,
             // Free, server-less "cloud" sync through the user's own NAS, if they've opted in. Writes

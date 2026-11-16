@@ -129,6 +129,21 @@ class ChannelLineupTest {
     }
 
     @Test
+    fun `channels named in Arabic are a channel each, not one per region`() = runTest {
+        seed("AR| الجزيرة", "AR| العربية", "AR| الحدث")
+
+        assertThat(all().names()).containsExactly(listOf("AR| الجزيرة"), listOf("AR| العربية"), listOf("AR| الحدث"))
+    }
+
+    @Test
+    fun `rows named only a region and a quality stay separate channels`() = runTest {
+        seed("RU| HD")
+        seed("RU| HD", sourceId = 2)
+
+        assertThat(all()).hasSize(2)
+    }
+
+    @Test
     fun `a row with no region stays on its own when its name has several regions`() = runTest {
         seed("UK| ITV", "US| ITV", "ITV")
 

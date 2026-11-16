@@ -103,6 +103,21 @@ device zone, and converts to local time only at draw time. `XmltvTimeTest` chang
 default zone between assertions specifically to catch the "works on my machine, an hour out on
 yours" bug.
 
+### Channels meet their guide by name
+
+With no guide id from the provider, `EpgMatcher` joins a channel to a guide channel by the key
+`ChannelNameNormalizer` makes of each name: lowercase letters, marks and digits in any script,
+with the region prefix, quality tags and decoration gone, so `UK| BBC ONE FHD` and `BBC One` both
+key to `bbc1`. Each script stays as written (no transliteration), but one name spelled two ways
+meets itself: composed and decomposed accents, full-width letters, superscript and small-capital
+decoration all fold first.
+
+A name with nothing left once its prefix and tags go (`RU| HD`, `4K`) has an empty channel key
+(#345). Its rows stay separate channels and get no guide by name, only a provider id or a manual
+override: falling back to the raw name would key every such row of a region alike, and match them
+to whatever guide channel shares their tags. Guide and category matching still use that fallback
+(`Normalized.groupKey`), where a name of only tags is the guide's own and does say something.
+
 ### An open guide while a sync writes
 
 Each batch re-runs every Room query on `programmes`, so an open guide used to regroup and rebuild

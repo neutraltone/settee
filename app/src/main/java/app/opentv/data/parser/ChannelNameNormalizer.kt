@@ -5,6 +5,8 @@
  */
 package app.opentv.data.parser
 
+import java.text.Normalizer
+
 /**
  * Turns the channel names IPTV providers actually ship into something usable.
  *
@@ -33,7 +35,12 @@ object ChannelNameNormalizer {
     data class Normalized(
         /** Human-readable name with the junk removed: `BBC One`. */
         val baseName: String,
-        /** Join/group key: lowercase alphanumerics only: `bbcone`. */
+        /**
+         * The key guide matching and category locks join on: lowercase letters, marks and digits, in
+         * any script (`bbc1`). When no name is left it falls back to the whole raw name's key, which
+         * is fine for a guide's or a category's own name. Anything that groups *rows* by name, as
+         * channels and titles do, uses [nameKey] or [channelKey] instead.
+         */
         val groupKey: String,
         /** Higher is better. 0 when the name carries no quality information. */
         val qualityRank: Int,
@@ -41,13 +48,24 @@ object ChannelNameNormalizer {
         val qualityLabel: String,
         /** Country hint from a stripped prefix (`UK`, `US`…), or null. */
         val region: String?,
+        /**
+         * The key of the name alone, once prefix and tags are gone: [groupKey] with no fallback, so
+         * empty when nothing is left (`RU| HD`). What rows group on, as an empty one groups nothing.
+         */
+        val nameKey: String,
     ) {
         /**
          * What a channel row is stored under: [groupKey] with the region in front (`uk:itv`), so
          * `UK| ITV` and `US| ITV` stay two channels. Guide matching and category locks use the bare
-         * [groupKey]: a guide calls both of them `ITV`.
+         * [groupKey]: a guide calls both of them `ITV`. Empty when there's no [nameKey]: the raw-name
+         * fallback is only the region and tags, and would fold unrelated channels into one (#345).
          */
-        val channelKey: String get() = region?.let { "${it.lowercase()}:$groupKey" } ?: groupKey
+        val channelKey: String
+            get() = when {
+                nameKey.isEmpty() -> ""
+                region == null -> nameKey
+                else -> "${region.lowercase()}:$nameKey"
+            }
     }
 
     /** Quality/codec tokens, matched as whole words, case-insensitively. */
@@ -88,7 +106,11 @@ object ChannelNameNormalizer {
         val lower = "ᵃ:a,ᵇ:b,ᶜ:c,ᵈ:d,ᵉ:e,ᶠ:f,ᵍ:g,ʰ:h,ᶦ:i,ʲ:j,ᵏ:k,ˡ:l,ᵐ:m,ⁿ:n," +
             "ᵒ:o,ᵖ:p,ʳ:r,ˢ:s,ᵗ:t,ᵘ:u,ᵛ:v,ʷ:w,ˣ:x,ʸ:y,ᶻ:z"
         val digits = "⁰:0,¹:1,²:2,³:3,⁴:4,⁵:5,⁶:6,⁷:7,⁸:8,⁹:9"
-        for (chunk in "$upper,$lower,$digits".split(',')) {
+        // Small capitals (`ꜱᴘᴏʀᴛꜱ`), the same decoration. Dropped with everything non-ASCII until
+        // #345; now that keys keep every script, unfolded they'd keep a name from its guide.
+        val smallCaps = "ᴀ:A,ʙ:B,ᴄ:C,ᴅ:D,ᴇ:E,ꜰ:F,ɢ:G,ʜ:H,ɪ:I,ᴊ:J,ᴋ:K,ʟ:L,ᴍ:M,ɴ:N," +
+            "ᴏ:O,ᴘ:P,ꞯ:Q,ʀ:R,ꜱ:S,ᴛ:T,ᴜ:U,ᴠ:V,ᴡ:W,ʏ:Y,ᴢ:Z"
+        for (chunk in "$upper,$lower,$digits,$smallCaps".split(',')) {
             if (chunk.length >= 3) put(chunk[0], chunk[2])
         }
     }
@@ -113,7 +135,7 @@ object ChannelNameNormalizer {
      * The groupKey ignores all of it anyway, so matching is unaffected either way; this is
      * purely so the name on screen reads like a channel and not a ransom note.
      */
-    private val DECORATION = Regex("""[^\p{L}\p{Nd} &+.\-/:|()']+""")
+    private val DECORATION = Regex("""[^\p{L}\p{M}\p{Nd} &+.\-/:|()']+""")
 
     private val MULTI_SPACE = Regex("""\s+""")
 
@@ -150,7 +172,7 @@ object ChannelNameNormalizer {
 
     fun normalize(raw: String): Normalized {
         // Fold superscript decorations (ᴴᴰ → HD) so the token pass can see them.
-        var working = foldSuperscripts(raw.trim())
+        var working = foldSuperscripts(canonical(raw.trim()))
 
         // Country prefix BEFORE decoration stripping: the brackets in `[UK]` are the
         // delimiter, and the decoration pass would eat them and lose the tag.
@@ -200,23 +222,67 @@ object ChannelNameNormalizer {
             qualityRank = bestRank,
             qualityLabel = labelParts.joinToString(" "),
             region = region,
+            nameKey = key,
         )
     }
 
     /**
-     * The canonical join key: lowercase letters and digits only.
+     * The canonical join key: lowercase letters and digits only, in any script.
      *
      * Aggressive on purpose. `BBC One`, `BBC1`, `bbc-one` and `B B C One` should all meet in
      * the middle — false negatives here mean channels with no guide, which is the failure
      * users actually notice. The word-number folding handles `BBC ONE` vs `BBC 1`.
      */
-    fun groupKeyOf(name: String): String {
+    fun groupKeyOf(name: String): String = keyOf(canonical(name), CAMEL_BOUNDARY, NON_ALNUM)
+
+    /**
+     * [Normalized.groupKey] as `NORMALIZER_VERSION` 3 and earlier made it, from ASCII letters and
+     * digits only: what Parental lock saved its category keys under then, so they can be carried to
+     * today's keys (#345). Nothing else should use it.
+     */
+    internal fun asciiOnlyGroupKey(raw: String): String =
+        keyOf(normalize(raw).baseName, ASCII_CAMEL_BOUNDARY, ASCII_NON_ALNUM)
+            .ifEmpty { keyOf(raw, ASCII_CAMEL_BOUNDARY, ASCII_NON_ALNUM) }
+
+    /**
+     * One spelling for text that reads the same: composed accents (NFC, so `é` typed as `e` and a
+     * combining accent meets `é`) and full-width ASCII (`ＮＨＫ`, `ＨＤ`) as ordinary letters. Not NFKC,
+     * which would also make `™` into `TM` and `½` into `1⁄2`, words in the key that weren't there.
+     */
+    private fun canonical(text: String): String {
+        if (text.all { it < '\u0080' }) return text
+        val composed = Normalizer.normalize(text, Normalizer.Form.NFC)
+        return if (composed.none { it in FULL_WIDTH || it == IDEOGRAPHIC_SPACE }) {
+            composed
+        } else {
+            buildString(composed.length) {
+                for (c in composed) {
+                    append(
+                        when (c) {
+                            in FULL_WIDTH -> c - FULL_WIDTH_OFFSET
+                            IDEOGRAPHIC_SPACE -> ' '
+                            else -> c
+                        },
+                    )
+                }
+            }
+        }
+    }
+
+    private val FULL_WIDTH = '\uFF01'..'\uFF5E'
+    private const val FULL_WIDTH_OFFSET = 0xFEE0
+    private const val IDEOGRAPHIC_SPACE = '\u3000'
+    private const val DOTTED_I = "i\u0307"
+
+    private fun keyOf(name: String, camelBoundary: Regex, separators: Regex): String {
         // Split CamelCase first so `BbcOne` sees the same words as `BBC One`, then fold
         // number WORDS to digits — whole words only, never substrings, or `money` becomes
         // `m1y` on one side of a match and not the other.
-        val spaced = CAMEL_BOUNDARY.replace(name, "$1 $2")
-        return spaced.lowercase()
-            .split(NON_ALNUM)
+        val spaced = camelBoundary.replace(name, "$1 $2")
+        // Lowercasing Turkish `İ` gives `i` plus a combining dot, which the key now keeps as a mark:
+        // without dropping it, `TRT İzle` would stop meeting a guide's `TRT Izle`.
+        return spaced.lowercase().replace(DOTTED_I, "i")
+            .split(separators)
             .filter { it.isNotEmpty() }
             .joinToString("") { word -> NUMBER_WORDS[word] ?: word }
     }
@@ -224,8 +290,15 @@ object ChannelNameNormalizer {
     /** The [Normalized.groupKey] inside a stored [Normalized.channelKey], region dropped. */
     fun nameKeyOf(channelKey: String): String = channelKey.substringAfter(':')
 
-    private val CAMEL_BOUNDARY = Regex("""([a-z])([A-Z])""")
-    private val NON_ALNUM = Regex("""[^a-zA-Z0-9]+""")
+    private val CAMEL_BOUNDARY = Regex("""(\p{Ll})(\p{Lu})""")
+
+    // Every script, not only ASCII: an ASCII-only key left `RU| НТВ` as just its region, so every
+    // Cyrillic channel of a region folded into one (#345). Each script stays as written: no
+    // transliteration, so `Россия 1` and `Rossiya 1` don't meet. Marks stay too: they're the
+    // vowels of Devanagari, Thai and Bengali, and dropping them folds different names into one.
+    private val NON_ALNUM = Regex("""[^\p{L}\p{M}\p{Nd}]+""")
+    private val ASCII_CAMEL_BOUNDARY = Regex("""([a-z])([A-Z])""")
+    private val ASCII_NON_ALNUM = Regex("""[^a-zA-Z0-9]+""")
     private val NUMBER_WORDS = mapOf(
         "one" to "1", "two" to "2", "three" to "3", "four" to "4", "five" to "5",
         "six" to "6", "seven" to "7", "eight" to "8", "nine" to "9",
