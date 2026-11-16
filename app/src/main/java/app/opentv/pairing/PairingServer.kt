@@ -76,8 +76,11 @@ class PairingServer(
 
     /** What the phone is sent to fill in. */
     sealed interface Mode {
-        /** A provider's details. */
-        data object Provider : Mode
+        /**
+         * A provider's details; [thenOpenSubtitles], once its channels are in, Setup's OpenSubtitles
+         * sign-in on the same address, for the first provider, as the TV goes on to that step.
+         */
+        data class Provider(val thenOpenSubtitles: Boolean = false) : Mode
 
         /** Signing the TV in to OpenSubtitles; [onboarding] adds Not now, for Setup's step. */
         data class OpenSubtitles(val onboarding: Boolean = false) : Mode
@@ -169,7 +172,7 @@ class PairingServer(
     @Volatile private var session: Session? = null
 
     /** What the phone is filling in. */
-    @Volatile private var mode: Mode = Mode.Provider
+    @Volatile private var mode: Mode = Mode.Provider()
 
     /** What the phone waiting on the TV will be told; null when none is waiting. */
     @Volatile private var pending: CompletableDeferred<Reply>? = null
@@ -178,7 +181,7 @@ class PairingServer(
      * Starts listening for [mode]. Already listening, it carries on with the same address, now for
      * [mode], with a whole session of its own: what came before may have used most of one.
      */
-    fun start(mode: Mode = Mode.Provider) {
+    fun start(mode: Mode = Mode.Provider()) {
         this.mode = mode
         if (!running) {
             open()
@@ -294,7 +297,8 @@ class PairingServer(
 
             method == "GET" -> output.write(html(phonePage(token, null, asked, text)))
 
-            method == "POST" && path.startsWith("/submit") && asked is Mode.Provider -> handleSubmit(output, body)
+            method == "POST" && path.startsWith("/submit") && asked is Mode.Provider ->
+                handleSubmit(output, body, asked)
 
             method == "POST" && answersAt(asked, path) -> handleAnswered(output, body, asked)
 
@@ -312,7 +316,7 @@ class PairingServer(
         return PairingHttp.httpResponse("200 OK", "font/ttf", bytes)
     }
 
-    private fun handleSubmit(output: java.io.OutputStream, body: String) {
+    private fun handleSubmit(output: java.io.OutputStream, body: String, asked: Mode.Provider) {
         val token = address?.token.orEmpty()
         val form = PairingHttp.parseFormEncoded(body)
         if (!codeMatches(output, form, token)) return
@@ -335,6 +339,16 @@ class PairingServer(
                 // the page goes, or the phone could have it, and try again, while this still says received.
                 session?.let { _state.value = State.Listening(it) }
                 output.write(html(PairingPage.form(token, answer.reason)))
+            }
+            answer == Reply.AllDone && asked.thenOpenSubtitles -> {
+                // Straight on to OpenSubtitles' sign-in, on the same address, as the TV moves to that
+                // step: a new address would mean scanning a new code. A whole session of its own, since
+                // the channels loading may have used most of this one.
+                val next = Mode.OpenSubtitles(onboarding = true)
+                mode = next
+                timer.arm()
+                session?.let { _state.value = State.Listening(it) }
+                output.write(html(phonePage(token, null, next, text)))
             }
             else -> finish(output, afterProvider(answer, text))
         }
@@ -470,7 +484,7 @@ private fun afterProvider(answer: PairingServer.Reply?, text: (Int) -> String): 
 /** The page the QR code opens for [asked], with why the TV turned the last try down when it did. */
 private fun phonePage(token: String, problem: ViewerError?, asked: PairingServer.Mode, text: (Int) -> String) =
     when (asked) {
-        PairingServer.Mode.Provider -> PairingPage.form(token, null)
+        is PairingServer.Mode.Provider -> PairingPage.form(token, null)
         is PairingServer.Mode.OpenSubtitles -> PairingPage.openSubtitles(
             token,
             text,
@@ -482,13 +496,13 @@ private fun phonePage(token: String, problem: ViewerError?, asked: PairingServer
 /** Whether a POST to [path] is what [asked]'s page sends for the TV to check. */
 private fun answersAt(asked: PairingServer.Mode, path: String): Boolean = when (asked) {
     is PairingServer.Mode.OpenSubtitles -> path.startsWith("/signin")
-    PairingServer.Mode.Provider -> false
+    is PairingServer.Mode.Provider -> false
 }
 
 /** Whether [this] is one of Setup's optional steps, whose page has Skip. */
 private fun PairingServer.Mode.isSetupStep(): Boolean = when (this) {
     is PairingServer.Mode.OpenSubtitles -> onboarding
-    PairingServer.Mode.Provider -> false
+    is PairingServer.Mode.Provider -> false
 }
 
 /** What the TV is handed from [form], or null when the form left out what it needs. */
@@ -508,7 +522,7 @@ private fun receivedFrom(
             PairingServer.State.SignInReceived(username, password, reply)
         }
     }
-    PairingServer.Mode.Provider -> null
+    is PairingServer.Mode.Provider -> null
 }
 
 /** What the phone is told once the TV has answered: saved, or the TV left before it did. */

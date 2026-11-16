@@ -67,7 +67,7 @@ The free online film and TV database Settee asks for what a Provider left out: p
 _Avoid_: Provider, metadata provider, scraper
 
 **TMDB Key**:
-Settee's own key from TMDB, built into release builds, which lets every box ask TMDB for details. Viewers never enter one. A build made without it (debug builds, forks) never asks TMDB.
+Settee's own key from TMDB, built into release builds, which lets every box ask TMDB for details. Viewers never enter one. A build made without it (a fork, or a developer's build with no key of their own) never asks TMDB.
 _Avoid_: Token, API key (except when pointing at the field of that name on TMDB's site), connecting your TMDB account
 
 **Version**:

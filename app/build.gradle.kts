@@ -16,16 +16,21 @@ plugins {
 // CHANGELOG.md but not the APK's version.
 val appVersionName = "1.2.0" // x-release-please-version
 
+/** local.properties, which git ignores, read once for the built-in keys below; empty without one. */
+val localProperties = Properties().apply {
+    rootProject.file("local.properties").takeIf { it.isFile }?.inputStream()?.use { load(it) }
+}
+
+/** A built-in key: [env] in CI, else [property] in local.properties, else blank. */
+fun builtInKey(env: String, property: String): String =
+    providers.environmentVariable(env).orNull ?: localProperties.getProperty(property) ?: ""
+
 /*
  * Settee's own OpenSubtitles key (one per app: OpenSubtitles bans apps that make viewers bring their
  * own). From the OPENSUBTITLES_API_KEY secret in CI, or opensubtitles.apiKey in local.properties,
  * which git ignores. Never committed. Blank leaves OpenSubtitles out of the app entirely.
  */
-val openSubtitlesApiKey: String = providers.environmentVariable("OPENSUBTITLES_API_KEY").orNull
-    ?: rootProject.file("local.properties").takeIf { it.isFile }?.let { file ->
-        Properties().apply { file.inputStream().use { load(it) } }.getProperty("opensubtitles.apiKey")
-    }
-    ?: ""
+val openSubtitlesApiKey: String = builtInKey("OPENSUBTITLES_API_KEY", "opensubtitles.apiKey")
 
 /*
  * Settee's own TMDB key: viewers no longer bring their own. From the TMDB_API_KEY secret in CI, or
@@ -34,11 +39,7 @@ val openSubtitlesApiKey: String = providers.environmentVariable("OPENSUBTITLES_A
  * below). Blank leaves TMDB unasked. It can't be kept secret in an APK, and needn't be: TMDB rate-limits
  * by IP address.
  */
-val tmdbApiKey: String = providers.environmentVariable("TMDB_API_KEY").orNull
-    ?: rootProject.file("local.properties").takeIf { it.isFile }?.let { file ->
-        Properties().apply { file.inputStream().use { load(it) } }.getProperty("tmdb.apiKey")
-    }
-    ?: ""
+val tmdbApiKey: String = builtInKey("TMDB_API_KEY", "tmdb.apiKey")
 
 // The profile generator's builds of the app take this plus a suffix (androidComponents below).
 val releaseApplicationId = "uk.neutraltone.settee"

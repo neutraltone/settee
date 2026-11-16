@@ -45,7 +45,7 @@ class PairingServerTest {
         scope.cancel()
     }
 
-    private fun listening(mode: PairingServer.Mode = PairingServer.Mode.Provider): PairingServer.Session {
+    private fun listening(mode: PairingServer.Mode = PairingServer.Mode.Provider()): PairingServer.Session {
         server.start(mode)
         val session = (server.state.value as? PairingServer.State.Listening)?.session
         assumeTrue("needs a private LAN address to serve on", session != null)
@@ -333,6 +333,36 @@ class PairingServerTest {
         assertThat(shown(page)).contains("OpenSubtitles didn't accept that username or password.")
         assertThat(page).contains("action=\"/signin\"")
         assertThat(server.state.value).isInstanceOf(PairingServer.State.Listening::class.java)
+    }
+
+    @Test
+    fun `after the first provider, the phone carries on to OpenSubtitles' sign-in at the same address`() {
+        val session = listening(PairingServer.Mode.Provider(thenOpenSubtitles = true))
+
+        val reply = scope.async(Dispatchers.IO) { submit(session) }
+        received().answer(error = null)
+        val (_, page) = runBlocking { reply.await() }
+
+        assertThat(page).contains("action=\"/signin\"")
+        assertThat(page).contains("action=\"/skip\"")
+        assertThat(server.state.value).isInstanceOf(PairingServer.State.Listening::class.java)
+        // As the TV's OpenSubtitles step takes the server over, the address stays the same.
+        server.start(PairingServer.Mode.OpenSubtitles(onboarding = true))
+        val signedIn = scope.async(Dispatchers.IO) { signIn(session) }
+        receivedSignIn().answer(problem = null)
+        assertThat(runBlocking { signedIn.await() }.second)
+            .contains(context.getString(R.string.pairing_phone_opensubtitles_saved_title))
+    }
+
+    @Test
+    fun `a later provider leaves the phone done, with nothing to carry on to`() {
+        val session = listening(PairingServer.Mode.Provider())
+
+        val reply = scope.async(Dispatchers.IO) { submit(session) }
+        received().answer(error = null)
+        val (_, page) = runBlocking { reply.await() }
+
+        assertThat(page).doesNotContain("action=\"/signin\"")
     }
 
     @Test

@@ -239,8 +239,8 @@ object ServiceLocator {
         }
 
         /**
-         * The phone's way in, for providers and OpenSubtitles' sign-in. One for the app, so only one
-         * address is ever open on the network.
+         * The phone's way in, for providers and OpenSubtitles' sign-in. One for the app, so Setup's
+         * OpenSubtitles step carries on with the address the phone sent the first provider through.
          */
         val pairingServer: PairingServer by lazy {
             PairingServer(appScope, PairingFonts(appContext), appContext::getString)

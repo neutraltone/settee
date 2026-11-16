@@ -30,7 +30,7 @@ import app.opentv.ui.design.Text
 import app.opentv.ui.onboarding.describePairingFailure
 
 /**
- * The QR code for Onboarding's TMDB step, laid out as the phone pairing screen before it lays its own:
+ * The QR code for Setup's OpenSubtitles step, laid out as the phone pairing screen before it lays its own:
  * the code, white and 300 dp square, with the address to type under it for a camera that won't scan.
  * Its space is fixed, so nothing moves when the code appears after its server starts, or the server
  * can't start and Try again says why in its place.

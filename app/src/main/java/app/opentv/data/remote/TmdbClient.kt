@@ -55,7 +55,7 @@ data class TmdbMeta(
  * The key is Settee's, set at build time (`BuildConfig.TMDB_API_KEY`) and passed in, never entered
  * by a viewer. It can be the "API Key" (v3) or the "API Read Access Token" (v4); [authorised] sends
  * whichever it is. It can't be kept secret in an APK and needn't be: TMDB rate-limits by IP address.
- * A build without one (debug, forks, CI's PR builds) has [isConfigured] false and every lookup
+ * A build without one (forks, CI's PR builds, a developer's with no key) has [isConfigured] false and every lookup
  * short-circuits to null, so TMDB is never asked and nothing TMDB fills shows broken.
  *
  * ## Blocking on purpose

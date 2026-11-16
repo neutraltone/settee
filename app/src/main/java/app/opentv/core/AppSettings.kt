@@ -33,6 +33,12 @@ class AppSettings private constructor(context: Context, fileName: String = "open
 
     private val prefs = context.applicationContext.getSharedPreferences(fileName, Context.MODE_PRIVATE)
 
+    init {
+        // Viewers no longer enter a TMDB Key (#515). One saved before would otherwise stay in this file,
+        // and in Android's backups of it, with nothing left to read or remove it.
+        if (prefs.contains(KEY_OLD_TMDB_KEY)) prefs.edit { remove(KEY_OLD_TMDB_KEY) }
+    }
+
     private val addonJson = Json { ignoreUnknownKeys = true }
 
     /** Whether the selected channel plays live inside the guide's preview pane. */
@@ -643,9 +649,12 @@ class AppSettings private constructor(context: Context, fileName: String = "open
         private const val KEY_VOD_FETCHED_AT = "vod_fetched_at_"
         private const val KEY_SETUP_SOURCE = "setup_source_id"
 
-        // No longer written: the background pass asks TMDB about each film once a key is set. Still
-        // cleared with a provider's other stamps, so it doesn't linger on devices that had it.
+        // No longer written: the background pass asks TMDB about each film, in a build with a TMDB key.
+        // Still cleared with a provider's other stamps, so it doesn't linger on devices that had it.
         private const val KEY_TMDB_BLANKS_RETRIED = "tmdb_blanks_retried_"
+
+        // The TMDB Key viewers used to enter, cleared wherever it's found.
+        private const val KEY_OLD_TMDB_KEY = "tmdb_api_key"
         private const val KEY_OS_USERNAME = "opensubtitles_username"
         private const val KEY_OS_PASSWORD = "opensubtitles_password_sealed"
         private const val KEY_OS_TOKEN = "opensubtitles_token"

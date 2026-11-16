@@ -60,19 +60,21 @@ import app.opentv.update.startsFocused
 fun PhonePairingScreen(
     onReceived: (PairingServer.State.Received) -> Unit,
     onCancel: () -> Unit,
-    mode: PairingServer.Mode = PairingServer.Mode.Provider,
+    mode: PairingServer.Mode = PairingServer.Mode.Provider(),
+    /** True once Setup's OpenSubtitles step is taking the address over, so leaving doesn't close it. */
+    keepListening: () -> Boolean = { false },
 ) {
     val context = LocalContext.current
     val server = remember(context) { ServiceLocator.get(context).pairingServer }
     val state by server.state.collectAsState()
 
-    ScreenKeptOnWhile(state is PairingServer.State.Listening)
+    ScreenKeptOnWhile(state is PairingServer.State.Listening && !keepListening())
     DisposableEffect(Unit) {
         server.start(mode)
         onDispose {
             // Never leave a socket listening on someone's home network after they have
-            // navigated away.
-            server.stop()
+            // navigated away, unless the OpenSubtitles step is carrying on with it.
+            if (!keepListening()) server.stop()
         }
     }
 
@@ -82,6 +84,13 @@ fun PhonePairingScreen(
 
     ScreenFrame {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            // Handed on to the OpenSubtitles step, it stays on Got it: the server listens again for the
+            // sign-in as the channels come in, which would otherwise show the code again for the moment
+            // before that step opens.
+            if (keepListening()) {
+                PairingConnecting()
+                return@Box
+            }
             when (val current = state) {
                 is PairingServer.State.Listening -> Listening(current.session, onCancel)
 
