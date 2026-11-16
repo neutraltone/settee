@@ -213,6 +213,26 @@ class LivePlayerOptionsTest {
     }
 
     @Test
+    fun `OK on the seek bar picks it up rather than pausing, Back puts it down, and Pause is one Left of it`() {
+        showChannel()
+        openControls()
+
+        press(Key.DirectionCenter)
+        press(Key.DirectionLeft)
+        assertThat(compose.seekBarIsFocused()).isTrue()
+        assertThat(controller.player.playWhenReady).isTrue()
+
+        Espresso.pressBack()
+        compose.waitForIdle()
+        assertThat(backs).isEqualTo(0)
+        press(Key.DirectionLeft)
+        compose.onNodeWithContentDescription("Pause").assertIsFocused()
+        press(Key.DirectionCenter)
+
+        assertThat(controller.player.playWhenReady).isFalse()
+    }
+
+    @Test
     fun `Up from the seek bar reaches close, which leaves the player`() {
         showChannel()
         openControls()

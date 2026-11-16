@@ -216,15 +216,18 @@ A hero with a full backdrop, title, status, synopsis, Resume and Favourite.
 
 Movies, episodes and live TV share one layout.
 
-- **First press:** the title and one row: a pause or play icon, the seek bar, then Subtitles and Audio as icon buttons. A close button sits at the top right. The Highlight starts on the seek bar.
-- **On the seek bar:** Left and Right move through the video, and OK plays and pauses. They can't also move along the row, so the play icon only shows the state, and is a target for touch.
-- **Down** moves the Highlight to Subtitles and brings up the less-used buttons as pills. Right reaches Audio, and Down again reaches the pills. **Up** reaches close.
+- **First press:** the title and one row: pause or play, the seek bar, then Subtitles and Audio, all icon buttons. On an episode, Previous episode and Next episode sit either side of pause: `|<  ▶  >|  seek bar  Subtitles  Audio`. A close button sits at the top right. The Highlight starts on the seek bar.
+- **Along the row:** Left and Right move the Highlight from one to the next, the bar included, and stop at the ends. From the bar, Left reaches Next episode (or pause, on a film), then pause, then Previous episode; Right reaches Subtitles, then Audio. So Next episode is three presses from a bare picture: OK, Left, OK.
+- **On the seek bar:** OK picks it up. The thumb grows in coral with the time in a bubble over it, and the rest of the row dims. Left and Right then move the thumb only, faster the longer they're held, and the picture stays put. OK puts it down and jumps there; Back puts it down where it started, and goes no further. Left alone for three seconds, it goes back as with Back. The Highlight stays on the bar each way. OK on the bar never pauses: that's OK on pause, or the remote's play/pause key.
+- **Episode buttons:** an episode's first has no Previous, and its last no Next, rather than a button that does nothing. A series still loading when the episode starts gets its buttons the next time the controls open, never while they're up. Either button leaves the episode's progress as it was (not Watched, unlike Play now on Up Next), and the other episode starts at its resume point, or at the start if it's Watched. If the button the Highlight was on goes, as on reaching the last episode, the Highlight moves to pause. The remote's next and previous keys do the same with or without the controls showing.
+- **Media keys:** rewind and fast-forward skip 15 seconds at once wherever the Highlight is, putting the bar down if it was picked up. Live TV's bar, when live pause can rewind, works the same way.
+- **Down** from the bar moves the Highlight to Subtitles. The less-used buttons come up as pills whenever the Highlight leaves the bar for a button, and Down from any button reaches them. **Up** reaches close.
 - **Pills:** on movies and episodes, Mark as watched, Sleep timer and Options. On live TV, Record, Quality, Aspect ratio and Sleep timer. Check these against today's options.
 - **Subtitles and audio:** a panel on the right, with the current choice ticked.
 - **Up Next:** a card in the bottom right with a still, the episode, a countdown, Play now and Watch credits.
 - **Still watching:** centred over a dimmed picture, with Keep watching and Stop.
 
-This focus design has never been tried with a remote, so try it first and change it if it doesn't work.
+This focus design, the picked-up bar included, has never been tried with a remote, so try it first and change it if it doesn't work.
 
 ## Live TV
 

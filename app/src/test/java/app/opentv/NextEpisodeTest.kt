@@ -97,4 +97,23 @@ class NextEpisodeTest {
 
         assertThat(library.nextEpisodes.after(testEpisode(2, 5))).isNull()
     }
+
+    @Test
+    fun `the episode before a season's first is the last season's finale`() = runTest {
+        storeSeries()
+
+        assertThat(library.nextEpisodes.before(testEpisode(2, 1))).isEqualTo(testEpisode(1, 5))
+    }
+
+    @Test
+    fun `a series' first episode has nothing before it`() = runTest {
+        storeSeries()
+
+        assertThat(library.nextEpisodes.before(testEpisode(1, 1))).isNull()
+    }
+
+    @Test
+    fun `with the series' episodes not loaded there's nothing before an episode`() = runTest {
+        assertThat(library.nextEpisodes.before(testEpisode(1, 3))).isNull()
+    }
 }

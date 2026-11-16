@@ -73,6 +73,13 @@ class VodPlayerViewModel(
      */
     data class NextEpisodeCard(val season: Int, val episode: Int, val title: String, val imageUrl: String?)
 
+    /**
+     * Whether [of] has an episode before it and one after it, for the player's Previous and Next
+     * episode buttons. [of] is what they belong to, so the screen can tell a new episode's from ones
+     * found late for the same episode, which it holds back while the controls show.
+     */
+    data class EpisodeSteps(val previous: Boolean, val next: Boolean, val of: MediaKey? = null)
+
     /** What the player is playing: what the route named, until moving on replaces it. */
     private val _current = MutableStateFlow<MediaKey?>(null)
     val current: StateFlow<MediaKey?> = _current.asStateFlow()
@@ -84,6 +91,11 @@ class VodPlayerViewModel(
 
     /** The Next Episode after what's playing; null for a movie, recording or a series' last episode. */
     val nextEpisode: StateFlow<NextEpisodeCard?> = _nextEpisode.asStateFlow()
+
+    private val _episodeSteps = MutableStateFlow(EpisodeSteps(previous = false, next = false))
+
+    /** Whether what's playing has an episode either side: neither, for a movie, recording or catch-up. */
+    val episodeSteps: StateFlow<EpisodeSteps> = _episodeSteps.asStateFlow()
 
     private val _overlay = MutableStateFlow<Overlay>(Overlay.None)
 
@@ -118,6 +130,10 @@ class VodPlayerViewModel(
     private var playback: Playback? = null
     private var route: MediaKey? = null
     private var next: Episode? = null
+    private var previous: Episode? = null
+
+    /** The episodes either side of what's playing, as far as they're known, for moving to one. */
+    internal val episodesAround: Pair<Episode?, Episode?> get() = previous to next
     private var fetchingNext: Job? = null
     private val lookup = NextEpisodeLookup(graph)
 
@@ -247,6 +263,7 @@ class VodPlayerViewModel(
             _nextEpisode.value = episode?.let { lookup.card(it) }
             countdown.newEpisode(hasNext = episode != null)
             _overlay.value = countdown.overlay
+            _episodeSteps.value = EpisodeSteps(previous = previous != null, next = episode != null, of = _current.value)
         }
 
         fetchingNext?.cancel()
@@ -264,13 +281,38 @@ class VodPlayerViewModel(
         _qualityChoices.value = graph.vodQualities.choicesFor(key)
         _canMarkWatched.value = graph.canMarkWatched(key)
         val episode = (key as? MediaKey.Episode)?.let { graph.catalogRepository.episode(it.episodeId) }
-        offer(episode?.let { graph.viewerLibrary.nextEpisodes.after(it) })
+        val (before, after) = graph.viewerLibrary.nextEpisodes.around(episode)
+        previous = before
+        offer(after)
         if (episode != null && next == null) {
             fetchingNext = viewModelScope.launch {
-                lookup.fetchNext(episode)?.let { found -> if (_current.value == key) offer(found) }
+                // The fetch loads the whole series, so the one before can turn up too, with no next.
+                val (foundBefore, found) = lookup.fetchAround(episode)
+                if (_current.value == key) {
+                    previous = foundBefore
+                    if (found != null) {
+                        offer(found)
+                    } else {
+                        _episodeSteps.value = _episodeSteps.value.copy(previous = foundBefore != null)
+                    }
+                }
             }
         }
     }
+}
+
+/** Next episode on the player's controls, or the remote's next key. */
+suspend fun VodPlayerViewModel.toNextEpisode() = moveTo(episodesAround.second)
+
+/** Previous episode on the player's controls, or the remote's previous key. */
+suspend fun VodPlayerViewModel.toPreviousEpisode() = moveTo(episodesAround.first)
+
+// Unlike moving on at the card, this doesn't count as finishing the episode: it keeps the progress
+// it had, saved first so the seconds since the last save aren't lost.
+private suspend fun VodPlayerViewModel.moveTo(episode: Episode?) {
+    episode ?: return
+    saveProgress()
+    start(MediaKey.Episode(episode.id))
 }
 
 /**
@@ -325,10 +367,10 @@ private class NextEpisodeLookup(private val graph: ServiceLocator.Graph) {
     // A series' episodes are fetched only when its page is opened, and Continue Watching can start
     // one without that, or the provider may have added one since. The fetch runs beside playback,
     // not before polling, so a slow provider can't hold up the card's countdown or saving progress.
-    suspend fun fetchNext(episode: Episode): Episode? {
-        val source = graph.sourceRepository.byId(episode.sourceId) ?: return null
+    suspend fun fetchAround(episode: Episode): Pair<Episode?, Episode?> {
+        val source = graph.sourceRepository.byId(episode.sourceId) ?: return null to null
         graph.catalogRepository.ensureEpisodes(source, episode.seriesId)
-        return graph.viewerLibrary.nextEpisodes.after(episode)
+        return graph.viewerLibrary.nextEpisodes.around(episode)
     }
 
     suspend fun card(episode: Episode): VodPlayerViewModel.NextEpisodeCard {

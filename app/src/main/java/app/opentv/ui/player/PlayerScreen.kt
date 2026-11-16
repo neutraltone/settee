@@ -410,11 +410,18 @@ fun LivePlayerContent(
     var optionsOpen by remember { mutableStateOf(false) }
     var choosingSleep by remember { mutableStateOf(false) }
     var interaction by remember { mutableIntStateOf(0) }
-    // The seek bar, on a stream that can rewind: where playback is in what's buffered, and where a
-    // Left or Right held on the bar has got to, which it shows until the key comes up.
+    // The seek bar, on a stream that can rewind: where playback is in what's buffered, and, while
+    // the bar is picked up, where Left and Right have moved it to, which it shows until it's put down.
     var livePositionMs by remember { mutableLongStateOf(0L) }
     var liveDurationMs by remember { mutableLongStateOf(0L) }
     var scrubTo by remember { mutableStateOf<Long?>(null) }
+    // Left alone, a picked-up bar goes back, as the on-demand players' does.
+    LaunchedEffect(scrubTo) {
+        if (scrubTo != null) {
+            delay(PICKED_UP_WAIT_MILLIS)
+            scrubTo = null
+        }
+    }
 
     // Picture-in-picture. While the player is on it is "eligible" to shrink to a floating window
     // (pressing Home does it, handled in MainActivity); [inPip] drives hiding all the chrome.
@@ -629,8 +636,14 @@ fun LivePlayerContent(
                     val firstPress = event.nativeKeyEvent.repeatCount == 0
                     if (event.type == KeyEventType.KeyDown) {
                         when (event.key) {
-                            Key.MediaRewind -> if (livePause) controller.seekBackward()
-                            Key.MediaFastForward -> if (livePause) controller.seekForward()
+                            Key.MediaRewind -> if (livePause) {
+                                scrubTo = null
+                                controller.seekBackward()
+                            }
+                            Key.MediaFastForward -> if (livePause) {
+                                scrubTo = null
+                                controller.seekForward()
+                            }
                             Key.MediaPlay -> if (firstPress) setPaused(false)
                             Key.MediaPause -> if (firstPress) setPaused(true)
                             else -> if (firstPress) togglePause()
@@ -795,13 +808,20 @@ fun LivePlayerContent(
                 paused = paused,
                 positionMs = scrubTo ?: livePositionMs,
                 durationMs = liveDurationMs,
+                seekPickedUp = scrubTo != null,
+                onPickUp = {
+                    scrubTo = livePositionMs
+                    interaction++
+                },
                 onScrub = { to ->
                     scrubTo = to
                     interaction++
                 },
-                onScrubEnd = {
-                    scrubTo?.let { controller.player.seekTo(it) }
-                    livePositionMs = scrubTo ?: livePositionMs
+                onPutDown = { jump ->
+                    scrubTo?.takeIf { jump }?.let {
+                        controller.player.seekTo(it)
+                        livePositionMs = it
+                    }
                     scrubTo = null
                     interaction++
                 },
@@ -1122,3 +1142,6 @@ private const val BACK_TO_LIVE_MESSAGE_MILLIS = 4_000L
 internal val OK_KEYS = setOf(Key.DirectionCenter, Key.Enter, Key.NumPadEnter, Key.ButtonA)
 private val MEDIA_KEYS =
     setOf(Key.MediaPlayPause, Key.MediaPlay, Key.MediaPause, Key.MediaRewind, Key.MediaFastForward)
+
+/** How long a picked-up seek bar waits for a press before going back, as in the on-demand players. */
+private const val PICKED_UP_WAIT_MILLIS = 3_000L

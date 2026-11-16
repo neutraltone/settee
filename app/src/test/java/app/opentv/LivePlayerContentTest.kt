@@ -434,17 +434,6 @@ class LivePlayerContentTest {
     }
 
     @Test
-    fun `OK pressed again once the controls are up presses the button`() {
-        showChannel(livePause = false)
-        press(Key.DirectionCenter)
-        compose.mainClock.advanceTimeBy(FOCUS_MILLIS)
-
-        press(Key.DirectionCenter)
-
-        compose.onNodeWithText("Pause live TV?").assertExists()
-    }
-
-    @Test
     fun `another key with nothing showing passes through and doesn't open the controls`() {
         showChannel()
 
