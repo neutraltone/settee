@@ -429,6 +429,8 @@ fun LivePlayerContent(
     }
     LaunchedEffect(paused) { app.opentv.core.PipState.isPlaying = !paused }
     val barFocus = remember { FocusRequester() }
+    // Where the Highlight was on the controls, for a panel closing to give it back to.
+    val barReturn = remember { FocusRequester() }
     val panelFocus = remember { FocusRequester() }
     val rootFocus = remember { FocusRequester() }
     val listFocus = remember { FocusRequester() }
@@ -566,7 +568,7 @@ fun LivePlayerContent(
     val retryError = (state as? PlayerController.State.Error)?.takeIf { it.canRetry }
     val focusOn = when {
         channelListVisible -> listFocus
-        controlsVisible -> if (panel != PlayerPanel.NONE) panelFocus else barFocus
+        controlsVisible -> if (panel != PlayerPanel.NONE) panelFocus else barReturn
         retryError != null -> retryFocus
         else -> rootFocus
     }
@@ -848,6 +850,7 @@ fun LivePlayerContent(
                     onOptions = { optionsOpen = true },
                 ),
                 startFocus = barFocus,
+                returnFocus = barReturn,
                 seekable = controller.isSeekable,
                 showPlayPause = canPause,
                 onBarFocusChanged = { onBar -> if (!onBar) scrubTo = null },

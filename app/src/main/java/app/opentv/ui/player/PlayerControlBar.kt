@@ -7,6 +7,7 @@ package app.opentv.ui.player
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -36,6 +37,7 @@ import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -88,6 +90,11 @@ internal class PlayerPill(val label: String, val icon: ImageVector, val onClick:
  * A stream that can't seek ([seekable] false: most live TV) has no bar, so the play icon takes the
  * Highlight in its place, or Subtitles where [showPlayPause] is false because there's nothing to
  * pause. [startFocus] is wherever it starts.
+ *
+ * [returnFocus] follows the Highlight round the controls, so a panel opened from Subtitles, Audio or a
+ * pill can hand it back to that button when it closes. A FocusRequester on the bar's group with a
+ * focus restorer was the obvious way, but the player asks for the bar by name ([startFocus]) when it
+ * first opens, which goes straight to the start and never through the restorer.
  */
 @Composable
 internal fun PlayerControlBar(
@@ -109,6 +116,7 @@ internal fun PlayerControlBar(
     barInteractions: MutableInteractionSource? = null,
     onBarFocusChanged: (Boolean) -> Unit = {},
     badge: (@Composable () -> Unit)? = null,
+    returnFocus: FocusRequester? = null,
 ) {
     val close = remember { FocusRequester() }
     // Whatever starts the row (the bar, or the play icon where there's no bar) has startFocus.
@@ -120,6 +128,9 @@ internal fun PlayerControlBar(
     var pillsUp by remember { mutableStateOf(false) }
     val lower = Modifier.onFocusChanged { if (it.hasFocus) pillsUp = true }
     val toPills = if (pillsUp && pills.isNotEmpty()) firstPill else FocusRequester.Cancel
+    val lastHighlight = remember { LastHighlight() }
+    val returnTo = lastHighlight.returnTo(pillsUp, pills.size)
+    fun Modifier.remembered(key: Any) = then(lastHighlight.modifier(key, returnTo, returnFocus))
 
     Box(modifier.fillMaxSize()) {
         IconAction(
@@ -131,6 +142,7 @@ internal fun PlayerControlBar(
                 .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Top + WindowInsetsSides.End))
                 .padding(horizontal = SetteeSpace.ScreenSide, vertical = SetteeSpace.ScreenTopBottom)
                 .focusRequester(close)
+                .remembered(LastHighlight.CLOSE)
                 .focusProperties { down = startFocus }
                 .onFocusChanged { if (it.hasFocus) pillsUp = false },
         )
@@ -157,6 +169,7 @@ internal fun PlayerControlBar(
                         takesHighlight = !seekable,
                         modifier = lower
                             .focusRequester(startFocus)
+                            .remembered(LastHighlight.START)
                             .focusProperties {
                                 up = close
                                 down = toPills
@@ -176,6 +189,7 @@ internal fun PlayerControlBar(
                         modifier = Modifier
                             .weight(1f)
                             .focusRequester(startFocus)
+                            .remembered(LastHighlight.START)
                             .focusProperties {
                                 up = close
                                 down = subtitles
@@ -197,6 +211,7 @@ internal fun PlayerControlBar(
                     onClick = onSubtitles,
                     modifier = lower
                         .focusRequester(subtitles)
+                        .remembered(if (rowStarts) LastHighlight.SUBTITLES else LastHighlight.START)
                         .focusProperties {
                             up = close
                             down = toPills
@@ -211,6 +226,7 @@ internal fun PlayerControlBar(
                     onClick = onAudio,
                     modifier = lower
                         .focusRequester(audio)
+                        .remembered(LastHighlight.AUDIO)
                         .focusProperties {
                             up = close
                             down = toPills
@@ -222,7 +238,9 @@ internal fun PlayerControlBar(
             Spacer(Modifier.height(16.dp))
             // Kept at the pills' height while they're away, so the row above doesn't move as they come.
             Box(Modifier.height(PillRowHeight)) {
-                if (pillsUp) PillRow(pills, firstPill = firstPill, up = subtitles, modifier = lower)
+                if (pillsUp) {
+                    PillRow(pills, firstPill = firstPill, up = subtitles) { index -> lower.remembered(index) }
+                }
             }
         }
     }
@@ -237,14 +255,44 @@ private fun PlaybackTimes(positionMs: Long, durationMs: Long) {
     )
 }
 
-/** The pills, with Up back to the row above ([up]) and the remote kept inside the row's ends. */
+/** Where the Highlight was last on the controls: START, CLOSE, SUBTITLES, AUDIO or a pill's index. */
+@Stable
+private class LastHighlight {
+    private var last by mutableStateOf<Any>(START)
+
+    // Every element keeps a requester, so the one the Highlight is on isn't rebuilt (and dropped) as
+    // returnFocus moves; the others get one nothing asks for.
+    private val unasked = FocusRequester()
+
+    /** Where a panel closing should give the Highlight back: the start, if the pill it was on has gone. */
+    fun returnTo(pillsUp: Boolean, pillCount: Int): Any {
+        val pill = last as? Int ?: return last
+        return if (pillsUp && pill < pillCount) pill else START
+    }
+
+    fun modifier(key: Any, returnTo: Any, returnFocus: FocusRequester?): Modifier = Modifier
+        .onFocusChanged { if (it.hasFocus) last = key }
+        .focusRequester(returnFocus?.takeIf { returnTo == key } ?: unasked)
+
+    companion object {
+        const val START = "start"
+        const val CLOSE = "close"
+        const val SUBTITLES = "subtitles"
+        const val AUDIO = "audio"
+    }
+}
+
+/**
+ * The pills, with Up back to the row above ([up]) and the remote kept inside the row's ends. [each]
+ * is the modifier for the pill at an index.
+ */
 @Composable
-private fun PillRow(pills: List<PlayerPill>, firstPill: FocusRequester, up: FocusRequester, modifier: Modifier) {
+private fun PillRow(pills: List<PlayerPill>, firstPill: FocusRequester, up: FocusRequester, each: (Int) -> Modifier) {
     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         pills.forEachIndexed { index, pill ->
             Pill(
                 pill,
-                modifier = modifier
+                modifier = each(index)
                     .then(if (index == 0) Modifier.focusRequester(firstPill) else Modifier)
                     .focusProperties {
                         this.up = up
@@ -345,6 +393,9 @@ internal sealed interface RowEnd {
  * A picker over the player (subtitles, audio, quality, aspect ratio): a panel down the right of the
  * picture with the current choice ticked, where the Highlight starts. Back closes it through
  * [onClose].
+ *
+ * With no rows the panel takes the Highlight itself, and keeps the remote's arrows in, so the
+ * Highlight isn't left on the button under it, where Back would only take it off that button.
  */
 @Composable
 internal fun PlayerChoicePanel(
@@ -359,6 +410,19 @@ internal fun PlayerChoicePanel(
     empty: String? = null,
 ) {
     val start = choices.indexOfFirst { it.selected }.coerceAtLeast(0)
+    val holdsHighlight = if (choices.isEmpty()) {
+        Modifier
+            .focusRequester(startFocus)
+            .focusProperties {
+                left = FocusRequester.Cancel
+                right = FocusRequester.Cancel
+                up = FocusRequester.Cancel
+                down = FocusRequester.Cancel
+            }
+            .focusable()
+    } else {
+        Modifier
+    }
     Column(
         modifier
             // Left to itself, Compose spends the first Back on taking focus off the row, so the
@@ -368,6 +432,7 @@ internal fun PlayerChoicePanel(
                 if (isBack && event.type == KeyEventType.KeyUp) onClose()
                 isBack
             }
+            .then(holdsHighlight)
             .fillMaxHeight()
             .width(ChoicePanelWidth)
             .background(SetteeColors.Surface)
