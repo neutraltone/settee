@@ -2,6 +2,26 @@
 
 Settee is based on OpenTV 0.11.8; everything before this is in [OpenTV's changelog](https://github.com/opentvproject/opentv/blob/v0.11.8/CHANGELOG.md).
 
+## [1.2.0](https://github.com/neutraltone/settee/compare/v1.1.0...v1.2.0) (2026-11-16)
+
+
+### Features
+
+* **#206:** a show's page and Home suggest what to watch next, from TMDB's recommendations where there's a key ([#412](https://github.com/neutraltone/settee/issues/412)) ([c4f5c3c](https://github.com/neutraltone/settee/commit/c4f5c3c340131aebbfbfdfeae0c8320cafb6c271))
+* **#490:** text over artwork is easier to read, and Who's watching? shows what each person last watched ([#491](https://github.com/neutraltone/settee/issues/491)) ([a373994](https://github.com/neutraltone/settee/commit/a3739945fe81ff3c0316dd627fdc68aa3a6ab0ee))
+
+
+### Bug fixes
+
+* **#194:** screens switch straight away instead of fading over a blank background ([#413](https://github.com/neutraltone/settee/issues/413)) ([83c917a](https://github.com/neutraltone/settee/commit/83c917a9a0a753f0ebc4f435c67b52c91d72d6e8))
+* **#345:** channels, films and shows named in Cyrillic, Arabic, Greek or another script each show on their own instead of merging into one ([#422](https://github.com/neutraltone/settee/issues/422)) ([e9cea28](https://github.com/neutraltone/settee/commit/e9cea28ffd2e6bc69bdae71a170feb15a2db7dda))
+* **#346:** catch-up starts at the programme's start on a provider whose panel is in another time zone ([#415](https://github.com/neutraltone/settee/issues/415)) ([4b862db](https://github.com/neutraltone/settee/commit/4b862db9a9d93f626bd8686e8dccad0852aa7b1f))
+* **#347:** a guide with a bare & or an HTML entity like &nbsp; loads in full ([#420](https://github.com/neutraltone/settee/issues/420)) ([92dc5c0](https://github.com/neutraltone/settee/commit/92dc5c077bc67cf641d6ab4d6ebc0c5af9334c7b))
+* **#350:** a channel category lists only its own channels, not another provider's that share its number ([#416](https://github.com/neutraltone/settee/issues/416)) ([ff534f1](https://github.com/neutraltone/settee/commit/ff534f11441f06936ccee37c2517b9eddd3eaa1c))
+* **#357:** changing the language after a reminder opened a channel no longer jumps back into that channel ([#418](https://github.com/neutraltone/settee/issues/418)) ([184e58a](https://github.com/neutraltone/settee/commit/184e58a212e552e5eab41d4d2bc4b5e1e314ef92))
+* **#358:** reordering a big group of channels from your phone saves every time ([#419](https://github.com/neutraltone/settee/issues/419)) ([6d58fb2](https://github.com/neutraltone/settee/commit/6d58fb2984ee3673f1ebdcca1af0919dacbc687c))
+* **#366:** a film or show opened while the catalogue refreshes keeps its refreshed name, artwork and category ([#417](https://github.com/neutraltone/settee/issues/417)) ([d60371e](https://github.com/neutraltone/settee/commit/d60371e937e9c1f49ab7136110300d448c4dc270))
+
 ## [1.1.0](https://github.com/neutraltone/settee/compare/v1.0.0...v1.1.0) (2026-11-15)
 
 
