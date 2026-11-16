@@ -98,6 +98,3 @@ internal fun ProvidersPane(
 @Composable
 private fun activityOwner(): ViewModelStoreOwner =
     LocalContext.current.findActivity() as? ViewModelStoreOwner ?: checkNotNull(LocalViewModelStoreOwner.current)
-
-/** Host only: the full URL carries the login and has no place on a settings list. */
-internal fun hostOnly(url: String): String = runCatching { java.net.URI(url).host ?: url }.getOrDefault(url)

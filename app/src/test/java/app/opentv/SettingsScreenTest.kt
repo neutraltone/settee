@@ -35,10 +35,6 @@ import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.test.requestFocus
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.espresso.Espresso
-import androidx.test.espresso.UiController
-import androidx.test.espresso.ViewAction
-import androidx.test.espresso.matcher.RootMatchers
-import androidx.test.espresso.matcher.ViewMatchers
 import app.opentv.core.AppSettings
 import app.opentv.core.ServiceLocator
 import app.opentv.core.SleepTimer
@@ -132,40 +128,6 @@ class SettingsScreenTest {
         compose.waitUntil(5_000) { compose.onAllNodes(row and isFocused()).fetchSemanticsNodes().isNotEmpty() }
         compose.onNode(row).performKeyInput { pressKey(key) }
         compose.waitForIdle()
-    }
-
-    /**
-     * Waits for what a press saved. A condition that only reads the database never lets the main
-     * thread run, and the save resumes there between its steps, so on its own it would never finish:
-     * each check here lets it catch up first.
-     */
-    private fun waitUntilSaved(saved: () -> Boolean) {
-        val until = System.currentTimeMillis() + 5_000
-        while (true) {
-            compose.waitForIdle()
-            if (saved()) return
-            check(System.currentTimeMillis() < until) { "what was saved still isn't there after 5 seconds" }
-            Thread.sleep(10)
-        }
-    }
-
-    private fun feed(url: String) =
-        runBlocking { graph.epgRepository.observeFeeds().first() }.firstOrNull { it.url == url }
-
-    /** The keyboard over an entry screen, which is a window of its own over Settings. */
-    private fun entryKeyboard(): DeviceKeyboard {
-        compose.waitForIdle()
-        var root: View? = null
-        Espresso.onView(ViewMatchers.isRoot()).inRoot(RootMatchers.isDialog()).perform(
-            object : ViewAction {
-                override fun getConstraints() = ViewMatchers.isRoot()
-                override fun getDescription() = "find the entry screen's window"
-                override fun perform(controller: UiController, view: View) {
-                    root = view
-                }
-            },
-        )
-        return DeviceKeyboard(compose) { checkNotNull(root) }
     }
 
     private fun holdSelectOn(text: String) {
@@ -336,7 +298,7 @@ class SettingsScreenTest {
         pressInPanel("Keep it", Key.DirectionUp)
         compose.onNode(hasText("Yes, remove Old films on 168") and isFocused()).assertExists()
         pressInPanel("Yes, remove Old films on 168", Key.DirectionCenter)
-        waitUntilSaved { runBlocking { graph.sourceRepository.byId(id) } == null }
+        compose.waitUntilSaved { runBlocking { graph.sourceRepository.byId(id) } == null }
         compose.waitUntil(5_000) { compose.onAllNodes(hasText("Old films on 168")).fetchSemanticsNodes().isEmpty() }
         // The row that had the Highlight has gone, so it moves on rather than vanishing with it.
         highlighted().assertExists()
@@ -353,15 +315,15 @@ class SettingsScreenTest {
 
         compose.onNodeWithText("Add your own guide").requestFocus()
         press(KeyEvent.KEYCODE_DPAD_CENTER)
-        val entry = entryKeyboard()
+        val entry = compose.entryKeyboard()
         assertThat(entry.connection().first.inputType)
             .isEqualTo(InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_URI)
         entry.type("http://127.0.0.1:9/guide168.xml")
         entry.pressAction()
 
-        waitUntilSaved { feed("http://127.0.0.1:9/guide168.xml") != null }
+        compose.waitUntilSaved { graph.epgRepository.savedFeed("http://127.0.0.1:9/guide168.xml") != null }
         // Named by its host: a provider's guide link can carry the login.
-        assertThat(feed("http://127.0.0.1:9/guide168.xml")?.name).isEqualTo("127.0.0.1")
+        assertThat(graph.epgRepository.savedFeed("http://127.0.0.1:9/guide168.xml")?.name).isEqualTo("127.0.0.1")
         compose.onNode(hasText("guide168", substring = true)).assertDoesNotExist()
         compose.onNode(hasText("Add your own guide") and isFocused()).assertExists()
     }
@@ -381,13 +343,13 @@ class SettingsScreenTest {
         compose.onNode(hasText("Own guide 168") and hasAnyAncestor(isDialog())).assertExists()
         captureScreen("settings_guide_details")
         pressInPanel("Use this guide", Key.DirectionCenter)
-        waitUntilSaved { feed("http://127.0.0.1:9/own168.xml")?.enabled == false }
+        compose.waitUntilSaved { graph.epgRepository.savedFeed("http://127.0.0.1:9/own168.xml")?.enabled == false }
 
         pressInPanel("Use this guide", Key.DirectionDown)
         pressInPanel("Remove", Key.DirectionCenter)
         pressInPanel("Keep it", Key.DirectionUp)
         pressInPanel("Yes, remove Own guide 168", Key.DirectionCenter)
-        waitUntilSaved { feed("http://127.0.0.1:9/own168.xml") == null }
+        compose.waitUntilSaved { graph.epgRepository.savedFeed("http://127.0.0.1:9/own168.xml") == null }
         // Its row has gone, so the Highlight goes back into the pane rather than to the sections.
         compose.waitUntil(5_000) {
             compose.onAllNodes(hasText("Update the guide now") and isFocused()).fetchSemanticsNodes().isNotEmpty()
@@ -414,7 +376,7 @@ class SettingsScreenTest {
         val fromPhone = "You can also set this from your phone, in Manage on phone or laptop"
         compose.onNode(hasText("Server") and hasText(fromPhone)).assertExists()
         press(KeyEvent.KEYCODE_DPAD_CENTER)
-        entryKeyboard().run {
+        compose.entryKeyboard().run {
             type("nas.example.com")
             pressAction()
         }
@@ -429,7 +391,7 @@ class SettingsScreenTest {
 
         compose.onNodeWithText("Password").requestFocus()
         press(KeyEvent.KEYCODE_DPAD_CENTER)
-        entryKeyboard().run {
+        compose.entryKeyboard().run {
             assertThat(connection().first.inputType)
                 .isEqualTo(InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD)
             type("p")
@@ -476,7 +438,7 @@ class SettingsScreenTest {
         captureScreen("settings_parental_locked")
 
         press(KeyEvent.KEYCODE_DPAD_CENTER)
-        entryKeyboard().run {
+        compose.entryKeyboard().run {
             assertThat(connection().first.inputType)
                 .isEqualTo(InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_VARIATION_PASSWORD)
             type("9999")
@@ -565,12 +527,12 @@ class SettingsScreenTest {
 
         compose.onNodeWithText("Set a PIN").requestFocus()
         press(KeyEvent.KEYCODE_DPAD_CENTER)
-        entryKeyboard().run {
+        compose.entryKeyboard().run {
             type("2468")
             pressAction()
         }
         compose.onNodeWithText("Type the PIN again").assertExists()
-        entryKeyboard().run {
+        compose.entryKeyboard().run {
             type("2468")
             pressAction()
         }
@@ -589,7 +551,7 @@ class SettingsScreenTest {
 
         compose.onNodeWithText("Get from another device").requestFocus()
         press(KeyEvent.KEYCODE_DPAD_CENTER)
-        entryKeyboard().run {
+        compose.entryKeyboard().run {
             // Without the code, it asks for it rather than letting the other device refuse.
             type("127.0.0.1:9")
             compose.onNodeWithText("Add # and the code the other device shows.").assertExists()
@@ -652,7 +614,7 @@ class SettingsScreenTest {
 
         compose.onNodeWithText("Add an add-on").requestFocus()
         press(KeyEvent.KEYCODE_DPAD_CENTER)
-        entryKeyboard().run {
+        compose.entryKeyboard().run {
             assertThat(connection().first.inputType)
                 .isEqualTo(InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_URI)
             type("http://127.0.0.1:9/manifest.json")
@@ -737,7 +699,7 @@ class SettingsScreenTest {
         pressInPanel("On", Key.DirectionUp)
         pressInPanel("Off", Key.DirectionCenter)
 
-        waitUntilSaved { runBlocking { graph.profileSettings.subtitlePreference.first() }?.enabled == false }
+        compose.waitUntilSaved { runBlocking { graph.profileSettings.subtitlePreference.first() }?.enabled == false }
     }
 
     @Test

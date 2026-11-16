@@ -190,6 +190,7 @@
     <string name="settings_guide_updating">Updating the guide…</string>
     <string name="settings_guide_add_own">Add your own guide</string>
     <string name="settings_guide_own_address">Your guide\'s address</string>
+    <string name="settings_guide_own_name">Your own guide</string>
     <string name="settings_guide_use">Use this guide</string>
     <string name="settings_row_channels">Show, hide and star channels</string>
     <string name="settings_row_not_set">Not set</string>

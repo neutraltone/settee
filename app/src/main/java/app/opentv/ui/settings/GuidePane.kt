@@ -45,6 +45,7 @@ internal fun GuidePane(viewModel: EpgViewModel = viewModel()) {
     var adding by remember { mutableStateOf(false) }
     val on = stringResource(R.string.settings_row_on)
     val off = stringResource(R.string.settings_row_off)
+    val ownGuide = stringResource(R.string.settings_guide_own_name)
 
     ListRow(
         stringResource(if (ui.syncing) R.string.settings_guide_updating else R.string.settings_guide_update),
@@ -100,8 +101,9 @@ internal fun GuidePane(viewModel: EpgViewModel = viewModel()) {
             onSave = { url ->
                 adding = false
                 // Named by its host: the full address is the row's label otherwise, and a
-                // provider's guide link can carry the login.
-                viewModel.addCustom(hostOnly(url.trim()), url)
+                // provider's guide link can carry the login. One with no host gets a plain name,
+                // since a blank one would be saved as the address.
+                viewModel.addCustom(hostOnly(url).ifEmpty { ownGuide }, url)
             },
             onCancel = { adding = false },
         )

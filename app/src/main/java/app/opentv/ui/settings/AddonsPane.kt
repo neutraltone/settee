@@ -77,7 +77,9 @@ internal fun AddonsPane(viewModel: AddonsViewModel = viewModel()) {
         SidePanel(onBack = { details = null }) {
             PanelTitle(addon.name)
             // Host only: a personalised manifest address can hold a key, which has no place on screen.
-            Text(hostOnly(addon.manifestUrl), SetteeType.Body, color = SetteeColors.QuietText)
+            hostOnly(addon.manifestUrl).takeIf { it.isNotEmpty() }?.let {
+                Text(it, SetteeType.Body, color = SetteeColors.QuietText)
+            }
             PanelRow(stringResource(R.string.common_remove), onClick = {
                 details = null
                 removing = addon

@@ -144,12 +144,15 @@ class EpgRepository(
 
     // ---- Feed management -------------------------------------------------------------------
 
+    /**
+     * [name] must not be blank: it used to fall back to the address, which can carry the login and
+     * would then be the guide's label on screen (#487).
+     */
     suspend fun addCustomFeed(name: String, url: String) {
+        require(name.isNotBlank()) { "a custom guide needs a name" }
         val trimmed = url.trim()
         if (trimmed.isEmpty() || feedDao.byUrl(trimmed) != null) return
-        feedDao.insert(
-            EpgFeed(name = name.trim().ifBlank { trimmed }, url = trimmed, enabled = true),
-        )
+        feedDao.insert(EpgFeed(name = name.trim(), url = trimmed, enabled = true))
     }
 
     suspend fun setFeedEnabled(feed: EpgFeed, enabled: Boolean) {
