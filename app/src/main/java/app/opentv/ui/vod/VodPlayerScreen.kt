@@ -564,7 +564,9 @@ fun VodPlayerContent(
                 },
                 onPutDown = { jump ->
                     val target = seek.putDown()
-                    if (jump && target != null) {
+                    // The bar going from under a resting finger (the Next Episode card hid the controls)
+                    // reads as the finger lifting: that puts it back, never jumps.
+                    if (jump && target != null && controlsVisible) {
                         controller.player.seekTo(target)
                         positionMs = target
                     }

@@ -816,7 +816,8 @@ fun LivePlayerContent(
                     interaction++
                 },
                 onPutDown = { jump ->
-                    seek.putDown()?.takeIf { jump }?.let {
+                    // The bar going from under a resting finger reads as it lifting: that puts it back.
+                    seek.putDown()?.takeIf { jump && controlsVisible }?.let {
                         controller.player.seekTo(it)
                         livePositionMs = it
                     }

@@ -5,6 +5,7 @@
  */
 package app.opentv
 
+import android.os.Looper
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.semantics.SemanticsProperties
@@ -34,6 +35,7 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.Shadows
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
@@ -144,6 +146,17 @@ class VodPlayerRowTest {
         compose.onNode(seekBar).performTouchInput {
             down(center)
             moveBy(Offset(100f, 0f))
+        }
+        compose.waitForIdle()
+    }
+
+    /** Waits for [done], running the main thread's queue meanwhile. */
+    private fun untilOnMain(done: () -> Boolean) {
+        val until = System.currentTimeMillis() + WAIT_MILLIS
+        while (!done()) {
+            check(System.currentTimeMillis() < until) { "Still waiting after $WAIT_MILLIS ms" }
+            Thread.sleep(POLL_MILLIS)
+            Shadows.shadowOf(Looper.getMainLooper()).idle()
         }
         compose.waitForIdle()
     }
@@ -422,7 +435,8 @@ class VodPlayerRowTest {
         press(Key.DirectionLeft)
 
         press(Key.DirectionCenter)
-        compose.waitUntil(WAIT_MILLIS) { viewModel.current.value == testEpisode(1, 3).key }
+        // The buttons follow once the move has worked out the new episode's neighbours, after it starts.
+        compose.waitUntil(WAIT_MILLIS) { viewModel.episodeSteps.value.of == testEpisode(1, 3).key }
 
         compose.onNodeWithContentDescription("Next episode").assertDoesNotExist()
         compose.onNodeWithContentDescription("Pause").assertIsFocused()
@@ -467,16 +481,9 @@ class VodPlayerRowTest {
             settle()
 
             hold.release()
-            try {
-                compose.waitUntil(WAIT_MILLIS) { loading.episodeSteps.value.next }
-            } catch (timedOut: androidx.compose.ui.test.ComposeTimeoutException) {
-                val stored = runBlocking { fetching.database.episodes().forSeries(1, "s").map { it.episodeId } }
-                throw AssertionError(
-                    "steps ${loading.episodeSteps.value}, panel asked ${panel.asked}, " +
-                        "held request passed ${hold.passed}, stored $stored",
-                    timedOut,
-                )
-            }
+            // The reply comes back on another thread and finishes on the main one, whose queue
+            // waitUntil doesn't run, so this runs it while waiting.
+            untilOnMain { loading.episodeSteps.value.next }
             compose.onNodeWithContentDescription("Next episode").assertDoesNotExist()
             compose.onNodeWithContentDescription("Previous episode").assertDoesNotExist()
 
@@ -508,5 +515,6 @@ class VodPlayerRowTest {
         const val STEP = 10_000L
         const val WITHIN_GRACE_MILLIS = 2_800L
         const val PAST_GRACE_MILLIS = 3_200L
+        const val POLL_MILLIS = 20L
     }
 }
