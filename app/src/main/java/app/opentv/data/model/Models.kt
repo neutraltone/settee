@@ -280,6 +280,12 @@ data class EpgChannelAlias(
 )
 
 /**
+ * An [EpgChannelAlias] as the matcher reads it: with whether its feed is the provider's own guide,
+ * which decides whose id wins when two guides name the same channel.
+ */
+data class GuideAlias(val feedId: Long, val epgId: String, val displayName: String, val fromProvider: Boolean)
+
+/**
  * One programme in the guide.
  *
  * Times are epoch millis in UTC. Rendering converts to the device zone at draw time;

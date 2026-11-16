@@ -5,6 +5,7 @@
  */
 package app.opentv
 
+import app.opentv.data.model.GuideAlias
 import app.opentv.data.parser.ChannelNameNormalizer
 import app.opentv.data.repo.EpgMatcher
 import com.google.common.truth.Truth.assertThat
@@ -172,6 +173,84 @@ class EpgMatcherTest {
         assertThat(index("x.uk" to "E").match("e4")).isNull()
         assertThat(index("x.uk" to "Ochre").match("o")).isNull()
         assertThat(index("x.uk" to "Ochre").match("")).isNull()
+    }
+
+    /** A (epgId, displayName) alias from the feed with this [feedId]. */
+    private fun Pair<String, String>.from(feedId: Long, provider: Boolean = false) =
+        GuideAlias(feedId = feedId, epgId = first, displayName = second, fromProvider = provider)
+
+    @Test
+    fun `two guides naming the same channel match the earlier guide's id`() {
+        val idx = EpgMatcher.buildIndex(
+            listOf(
+                ("BBCOne.HD.uk" to "BBC One").from(feedId = 2),
+                ("bbc1.freeview" to "BBC One").from(feedId = 1),
+            ),
+        )
+
+        assertThat(idx.match(keyOf("UK| BBC ONE FHD"))).isEqualTo("bbc1.freeview")
+    }
+
+    @Test
+    fun `the provider's own guide wins over a lower-numbered one naming the same channel`() {
+        val idx = EpgMatcher.buildIndex(
+            listOf(
+                ("bbc1.freeview" to "BBC One").from(feedId = 1),
+                ("BBCOne.HD.uk" to "BBC One").from(feedId = 2, provider = true),
+            ),
+        )
+
+        assertThat(idx.match(keyOf("UK| BBC ONE FHD"))).isEqualTo("BBCOne.HD.uk")
+    }
+
+    @Test
+    fun `a name the winning guide gives two channels matches nothing, whatever another guide says`() {
+        val idx = EpgMatcher.buildIndex(
+            listOf(
+                ("cnn.us" to "CNN").from(feedId = 1),
+                ("cnn.int" to "CNN").from(feedId = 1),
+                ("CNN.uk" to "CNN").from(feedId = 2),
+            ),
+        )
+
+        assertThat(idx.match(keyOf("CNN"))).isNull()
+    }
+
+    @Test
+    fun `two guides spelling a channel differently still match it by prefix, to the earlier guide`() {
+        val idx = EpgMatcher.buildIndex(
+            listOf(
+                ("london.freeview" to "Ochre Valley London").from(feedId = 1),
+                ("Ochre.Ldn.uk" to "Ochre Valley Ldn").from(feedId = 2),
+            ),
+        )
+
+        assertThat(idx.match("ochrevalley")).isEqualTo("london.freeview")
+    }
+
+    @Test
+    fun `the earlier guide disagreeing with itself refuses the prefix tier, whatever another guide says`() {
+        val idx = EpgMatcher.buildIndex(
+            listOf(
+                ("london" to "Ochre Valley London").from(feedId = 1),
+                ("wales" to "Ochre Valley Wales").from(feedId = 1),
+                ("Ochre.uk" to "Ochre Valley Extra").from(feedId = 2),
+            ),
+        )
+
+        assertThat(idx.match("ochrevalley")).isNull()
+    }
+
+    @Test
+    fun `an exact name in a later guide beats a prefix in an earlier one`() {
+        val idx = EpgMatcher.buildIndex(
+            listOf(
+                ("london" to "Ochre Valley London").from(feedId = 1, provider = true),
+                ("plain" to "Ochre Valley").from(feedId = 2),
+            ),
+        )
+
+        assertThat(idx.match("ochrevalley")).isEqualTo("plain")
     }
 
     @Test
