@@ -412,9 +412,7 @@ class EpgRepository(
                     programmeDao.insertOrReplace(batch)
                     written += batch.size
                 }
-                if (aliases.isNotEmpty()) {
-                    aliases.chunked(BATCH_SIZE).forEach { aliasDao.upsertAll(it) }
-                }
+                saveAliases(aliases)
 
                 if (written == 0 && stats.programmeCount == 0) {
                     return FeedResult.Failed(wording.of(R.string.error_guide_empty, "NoProgrammes"))
@@ -428,10 +426,24 @@ class EpgRepository(
             throw e
         } catch (e: Exception) {
             // Deliberately no cleanup. Whatever was written is newer than what was there,
-            // and what was there is still there.
+            // and what was there is still there. The same goes for the channels read before the
+            // failure: saved, the matcher can still join them to the programmes already written (#347).
             Log.w(TAG, "Feed '${feed.name}' download failed", e)
+            try {
+                saveAliases(aliases)
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (ignored: Exception) {
+                // Whatever stopped the save (the database may be what failed), the feed's own failure
+                // is the one to report, and the rest of the feeds still get their turn.
+                Log.w(TAG, "Feed '${feed.name}': couldn't save the channels read before it failed", ignored)
+            }
             return FeedResult.Failed(wording.of(e, R.string.error_guide))
         }
+    }
+
+    private suspend fun saveAliases(aliases: List<EpgChannelAlias>) {
+        aliases.chunked(BATCH_SIZE).forEach { aliasDao.upsertAll(it) }
     }
 
     /**

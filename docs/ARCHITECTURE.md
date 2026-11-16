@@ -97,6 +97,17 @@ scratch. It fixes nothing. The next refresh fails the same way.
 data for a large provider is comfortably 150 MB of XML; nothing about that fits in the heap of
 a cheap TV stick, and `String`-based parsing is an OOM waiting to happen.
 
+**Guide parsing is deliberately lenient about entities, and only about entities** (#347). Scraped
+guides carry bare `&`s and HTML entities (`&nbsp;`, `&eacute;`) that strict XML stops at, every
+sync, losing every channel after them. `LenientEntityStream` rewrites them in the byte stream
+before KXmlParser sees it: a bare `&` becomes `&amp;`, HTML's Latin-1 and typographic entities
+become numeric references, any other unknown entity comes through as literal text, including
+ones a guide declares in its own DOCTYPE: resolving those needs KXmlParser's DOCTYPE processing,
+which would let a hostile guide expand entities until the Stick runs out of memory. KXmlParser's
+relaxed mode was rejected because it also tolerates broken structure, so a guide cut off part way
+could pass as whole and prune programmes it never replaced. When a feed does fail part way, the
+channel aliases read before the failure are still saved, like the programmes already written.
+
 **Times are stored as UTC epoch millis, always.** `XmltvParser.parseXmltvTime` normalises the
 `+0100`-style offsets that XMLTV uses, treats a missing offset as UTC rather than guessing the
 device zone, and converts to local time only at draw time. `XmltvTimeTest` changes the JVM's

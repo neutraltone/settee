@@ -145,6 +145,23 @@ class EpgRepositoryTest {
     }
 
     @Test
+    fun `a guide cut off part way still keeps the channels it read, and counts as failed`() = runTest {
+        catalogue.db.sources().insert(PANEL_SOURCE)
+        catalogue.panel.replies["xmltv.php"] = "<tv>" +
+            """<channel id="bbc1.uk"><display-name>BBC One</display-name></channel>""" +
+            """<channel id="itv1.uk"><display-name>ITV1</display-name></channel>""" +
+            """<channel id="ch4.uk"><display-na"""
+
+        val summary = guide.syncAll(nowUtcMillis = NOW)
+
+        assertThat(summary.feedsFailed).isEqualTo(1)
+        assertThat(catalogue.db.epgAliases().all().map { it.epgId to it.displayName }).containsExactly(
+            "bbc1.uk" to "BBC One",
+            "itv1.uk" to "ITV1",
+        )
+    }
+
+    @Test
     fun `a programme too old to keep in a refreshed guide doesn't cost the ones that aired since`() = runTest {
         catalogue.db.sources().insert(PANEL_SOURCE)
         catalogue.panel.replies["xmltv.php"] = feed(airing("c1", "1200", "1300", "Lunchtime", day = "20251231"))
