@@ -80,6 +80,7 @@ import app.opentv.ui.design.Text
 import app.opentv.ui.options.ItemOption
 import app.opentv.ui.options.OptionsFor
 import app.opentv.ui.options.label
+import app.opentv.ui.player.BackOnRelease
 import app.opentv.ui.player.PlayerChoice
 import app.opentv.ui.player.PlayerChoicePanel
 import app.opentv.ui.player.PlayerControlBar
@@ -90,6 +91,8 @@ import app.opentv.ui.player.SleepTimerEffect
 import app.opentv.ui.player.SleepTimerPanel
 import app.opentv.ui.player.SubtitlePicks
 import app.opentv.ui.player.WhenBehindAnotherApp
+import app.opentv.ui.player.backOnRelease
+import app.opentv.ui.player.isBack
 import app.opentv.ui.player.trackLabel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -408,26 +411,35 @@ fun VodPlayerContent(
         }
     }
 
-    BackHandler {
+    fun backStep(): () -> Unit {
         val activelyPlaying = state is PlayerController.State.Playing ||
             (growingRec && state is PlayerController.State.Buffering)
-        when {
+        return when {
             // The bar and any picker on it are hidden behind the sentence, so Back can't mean them.
-            failed -> onBack()
-            vodPanel != VodPanel.NONE -> vodPanel = VodPanel.NONE
-            controlsVisible && activelyPlaying && !paused -> controlsVisible = false
-            else -> onBack()
+            failed -> onBack
+            vodPanel != VodPanel.NONE -> {
+                { vodPanel = VodPanel.NONE }
+            }
+            controlsVisible && activelyPlaying && !paused -> {
+                { controlsVisible = false }
+            }
+            else -> onBack
         }
     }
+
+    BackHandler { backStep()() }
+    val backOnRelease = remember { BackOnRelease() }
 
     Box(
         Modifier
             .fillMaxSize()
             .background(Color.Black)
             .countsAsInput(viewModel)
+            // The Next Episode card and its question answer Back with back handlers of their own.
+            .backOnRelease(backOnRelease) { if (overlayShowing) null else backStep() }
             .onPreviewKeyEvent { event ->
                 when {
-                    event.key == Key.Back || event.key == Key.Escape -> false
+                    event.isBack() -> false
                     // Keys belong to the card or the question while one is up, OK above all.
                     overlayShowing -> false
                     failed -> false

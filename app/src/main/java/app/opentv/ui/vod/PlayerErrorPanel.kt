@@ -22,9 +22,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
-import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.res.stringResource
@@ -35,6 +33,7 @@ import app.opentv.ui.design.ErrorMessage
 import app.opentv.ui.design.PillButton
 import app.opentv.ui.design.SetteeType
 import app.opentv.ui.design.Text
+import app.opentv.ui.player.isBack
 
 /**
  * Why a film or episode can't go on, with somewhere to go. Takes focus itself: a remote has no other way
@@ -51,7 +50,7 @@ internal fun PlayerErrorPanel(error: PlayerController.State.Error, onRetry: () -
             // Left to itself, Compose spends the first Back on taking focus off the button, so the
             // press would seem to do nothing.
             .onPreviewKeyEvent { event ->
-                val isBack = event.key == Key.Back || event.key == Key.Escape
+                val isBack = event.isBack()
                 if (isBack && event.type == KeyEventType.KeyUp) onBack()
                 isBack
             },

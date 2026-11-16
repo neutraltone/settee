@@ -14,14 +14,11 @@ internal data class LiveScreen(
     val controlsVisible: Boolean,
     /** A failure trying again could fix, so Try again is on screen. */
     val retryableError: Boolean,
-) {
-    /** Try again holds the highlight only when there's nothing over it. */
-    val onTryAgain: Boolean get() = retryableError && !overlayOpen && !controlsVisible
-}
+)
 
 /** What a key press does in the live player. */
 internal sealed interface LiveKey {
-    /** Not the player's: it goes on to whatever has focus, and to the back handler. */
+    /** Not this handler's: it goes on to whatever has focus, and Back then to the player's [backOnRelease]. */
     data object PassThrough : LiveKey
 
     /** The channel list, a picker or the control bar takes it: it moves their highlight or presses a row. */
@@ -34,19 +31,17 @@ internal sealed interface LiveKey {
     data object OpenOptions : LiveKey
     data object Reveal : LiveKey
     data object Retry : LiveKey
-
-    /** Back leaves the player: Compose would otherwise spend the first press taking focus off Try again. */
-    data object Leave : LiveKey
 }
 
 /**
- * Where a key pressed down in the live player goes. Media keys, a held OK and the release of a Back
- * that's leaving are dealt with before this.
+ * Where a key pressed down in the live player goes. Media keys and a held OK are dealt with before
+ * this.
  */
 internal fun liveKey(key: Key, screen: LiveScreen): LiveKey {
     val digit = keyToDigit(key)
     return when {
-        key == Key.Back || key == Key.Escape -> if (screen.onTryAgain) LiveKey.Leave else LiveKey.PassThrough
+        // Whatever has focus gets the first say, a picker above all (BackOnRelease).
+        key == Key.Back || key == Key.Escape -> LiveKey.PassThrough
         // Typing a channel number jumps to it, TiviMate-style.
         digit != null -> LiveKey.Digit(digit)
         screen.overlayOpen -> LiveKey.ToFocused
