@@ -146,4 +146,81 @@ class ChannelNameNormalizerTest {
 
         assertThat(keys.distinct()).hasSize(1)
     }
+
+    @Test
+    fun `Cyrillic channels are keyed by their own names, not their region and quality`() {
+        val keys = listOf("RU| Первый канал HD", "RU| НТВ", "Россия 1", "Беларусь 1")
+            .map { ChannelNameNormalizer.normalize(it).channelKey }
+
+        assertThat(keys.distinct()).hasSize(4)
+        assertThat(keys).containsNoneOf("ru:ruhd", "ru:", "1")
+    }
+
+    @Test
+    fun `quality variants of a Cyrillic channel still share a channel key`() {
+        val hd = ChannelNameNormalizer.normalize("RU| НТВ HD")
+        val fhd = ChannelNameNormalizer.normalize("RU| НТВ FHD")
+
+        assertThat(hd.channelKey).isEqualTo(fhd.channelKey)
+    }
+
+    @Test
+    fun `spellings of a Latin name still meet, CamelCase and number words included`() {
+        val keys = listOf("BBC One", "BBC1", "bbc-one", "BbcOne").map { ChannelNameNormalizer.groupKeyOf(it) }
+
+        assertThat(keys.distinct()).containsExactly("bbc1")
+    }
+
+    @Test
+    fun `a name that is only a region and a quality has no channel key, so its rows stay apart`() {
+        val n = ChannelNameNormalizer.normalize("RU| HD")
+
+        assertThat(n.channelKey).isEmpty()
+        // Guide and category matching still get the raw name's key.
+        assertThat(n.groupKey).isNotEmpty()
+    }
+
+    @Test
+    fun `Devanagari names keep their vowel signs, on screen and in the key`() {
+        val kala = ChannelNameNormalizer.normalize("IN| कला")
+        val kaal = ChannelNameNormalizer.normalize("IN| काल")
+
+        assertThat(kala.baseName).isEqualTo("कला")
+        assertThat(kala.channelKey).isNotEqualTo(kaal.channelKey)
+    }
+
+    @Test
+    fun `an accented name meets itself whether its accents are composed or not`() {
+        val composed = ChannelNameNormalizer.normalize("T\u00e9l\u00e9 Loisirs")
+        val decomposed = ChannelNameNormalizer.normalize("Te\u0301le\u0301 Loisirs")
+
+        assertThat(decomposed.groupKey).isEqualTo(composed.groupKey)
+        assertThat(decomposed.baseName).isEqualTo(composed.baseName)
+    }
+
+    @Test
+    fun `small-capital decoration reads as the letters it imitates`() {
+        val decorated = ChannelNameNormalizer.normalize("UK| Sky ꜱᴘᴏʀᴛꜱ Main Event")
+
+        assertThat(decorated.groupKey).isEqualTo("skysportsmainevent")
+    }
+
+    @Test
+    fun `a Turkish dotted capital I meets a plain i`() {
+        assertThat(ChannelNameNormalizer.groupKeyOf("TRT İzle")).isEqualTo(ChannelNameNormalizer.groupKeyOf("TRT Izle"))
+    }
+
+    @Test
+    fun `full-width letters meet their ordinary ones, quality tags included`() {
+        val wide = ChannelNameNormalizer.normalize("ＮＨＫ総合 ＨＤ")
+
+        assertThat(wide.groupKey).isEqualTo(ChannelNameNormalizer.normalize("NHK総合").groupKey)
+        assertThat(wide.qualityLabel).isEqualTo("HD")
+    }
+
+    @Test
+    fun `Greek and Arabic names are keyed by their own letters`() {
+        assertThat(ChannelNameNormalizer.normalize("GR| ΕΡΤ 1 HD").groupKey).isEqualTo("ερτ1")
+        assertThat(ChannelNameNormalizer.normalize("AR| الجزيرة").groupKey).isEqualTo("الجزيرة")
+    }
 }

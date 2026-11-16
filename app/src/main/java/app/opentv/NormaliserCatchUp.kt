@@ -15,12 +15,23 @@ import app.opentv.data.repo.CatalogRepository
  * fix shows up on the next launch rather than the next 6-hour sync, and it costs nothing when the
  * version has not changed.
  */
-internal class NormaliserCatchUp(private val context: Context, private val renormalise: suspend () -> Unit) {
+internal class NormaliserCatchUp(
+    private val context: Context,
+    private val renormalise: suspend () -> Unit,
+    /**
+     * Moves Parental lock's saved category keys to the ones the new normaliser gives, told which
+     * version made them. First, as it's quick and the categories show until it's done; cleaning the
+     * catalogue isn't.
+     */
+    private val carryLocks: suspend (from: Int) -> Unit = {},
+) {
     // Opened here rather than passed in, so the file is read on the launch work's thread, not the
     // main one that builds it as the first screen opens.
     suspend operator fun invoke() {
         val prefs = context.getSharedPreferences(APP_PREFS, Context.MODE_PRIVATE)
-        if (prefs.getInt(KEY, 0) < CatalogRepository.NORMALIZER_VERSION) {
+        val from = prefs.getInt(KEY, 0)
+        if (from < CatalogRepository.NORMALIZER_VERSION) {
+            carryLocks(from)
             renormalise()
             prefs.edit { putInt(KEY, CatalogRepository.NORMALIZER_VERSION) }
         }

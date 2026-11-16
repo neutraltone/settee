@@ -86,6 +86,15 @@ class EpgMatcherTest {
     }
 
     @Test
+    fun `a channel named only its region and quality matches no guide by name`() {
+        // Its stored key is empty (#345): the region and tags it would fall back to name no channel.
+        val idx = index("ruhd" to "Russia HD Promo")
+        val stored = ChannelNameNormalizer.normalize("RU| HD").channelKey
+
+        assertThat(idx.match(ChannelNameNormalizer.nameKeyOf(stored))).isNull()
+    }
+
+    @Test
     fun `end to end - the exact names from the reporting provider`() {
         // The names that started all this, verbatim from the screen.
         val idx = index(

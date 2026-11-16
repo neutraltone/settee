@@ -55,6 +55,32 @@ class NormaliserCatchUpTest {
     }
 
     @Test
+    fun `an older normaliser's category locks are carried over before the catalogue is cleaned`() = runTest {
+        prefs.edit { putInt("normalizer_version", CatalogRepository.NORMALIZER_VERSION - 1) }
+        val steps = mutableListOf<String>()
+        val ordered = NormaliserCatchUp(
+            app,
+            renormalise = { steps += "clean" },
+            carryLocks = { from -> steps += "carry from $from" },
+        )
+
+        ordered()
+
+        assertThat(steps).containsExactly("carry from ${CatalogRepository.NORMALIZER_VERSION - 1}", "clean").inOrder()
+    }
+
+    @Test
+    fun `locks aren't carried again once the catalogue is cleaned by this normaliser`() = runTest {
+        prefs.edit { putInt("normalizer_version", CatalogRepository.NORMALIZER_VERSION) }
+        var carried = 0
+        val upToDate = NormaliserCatchUp(app, renormalise = {}, carryLocks = { carried++ })
+
+        upToDate()
+
+        assertThat(carried).isEqualTo(0)
+    }
+
+    @Test
     fun `a clean that fails is tried again on the next launch`() = runTest {
         val failing = NormaliserCatchUp(app, renormalise = { error("database unavailable") })
 

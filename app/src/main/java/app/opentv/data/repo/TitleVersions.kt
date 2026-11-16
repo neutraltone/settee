@@ -38,7 +38,9 @@ internal fun <T> groupVersions(
     val titles = LinkedHashMap<String, MutableList<T>>()
     items.forEachIndexed { i, item ->
         val id = ids[i] ?: idsByName[names[i]]?.singleOrNull()
-        val key = id?.let { "tmdb:$it" } ?: "name:${names[i]}"
+        // A row with no name left to join by is a title of its own: a shared empty name would make
+        // one title of every such film of a year (#345).
+        val key = id?.let { "tmdb:$it" } ?: names[i]?.let { "name:$it" } ?: "row:$i"
         titles.getOrPut(key) { ArrayList(1) } += item
     }
     return titles.values.toList()
@@ -100,11 +102,15 @@ internal fun sameTmdbTitle(one: String?, other: String?): Boolean =
 /** A standalone 4-digit release year (19xx/20xx) as it appears inside a VOD title. */
 private val TITLE_YEAR = Regex("""\b(19|20)\d{2}\b""")
 
-/** The name without its shelf, Quality and year, plus the year: the field's, else the one in the name. */
-private fun nameKey(name: String, year: Int?): String {
+/**
+ * The name without its shelf, Quality and year, plus the year: the field's, else the one in the name.
+ * Null when no name is left, not the normalizer's fallback to the raw name: that's the shelf and
+ * Quality, which unrelated films share.
+ */
+private fun nameKey(name: String, year: Int?): String? {
     // The cleaner takes off the shelf (`4K-EN -`, `NF -`), which the normalizer would keep as words.
     val normalized = ChannelNameNormalizer.normalize(VodTitleCleaner.clean(TITLE_YEAR.replace(name, " ")))
-    return normalized.groupKey + "|" + titleYear(name, year)
+    return normalized.nameKey.takeIf { it.isNotEmpty() }?.let { it + "|" + titleYear(name, year) }
 }
 
 /** A title's year: the field's, else the one in its name, else empty. */

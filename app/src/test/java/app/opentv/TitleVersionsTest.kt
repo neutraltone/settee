@@ -42,6 +42,31 @@ class TitleVersionsTest {
     }
 
     @Test
+    fun `Cyrillic films with no TMDB id group by their own names, not just their year`() {
+        val titles = group(
+            movie(1, "RU| Брат", year = 2000),
+            movie(2, "RU| Стиляги", year = 2000),
+            movie(3, "RU| Брат 4K", year = 2000),
+        )
+
+        assertThat(titles.map { versions -> versions.map { it.id } })
+            .containsExactly(listOf(1L, 3L), listOf(2L))
+    }
+
+    @Test
+    fun `rows whose names clean to nothing are never grouped together`() {
+        val titles = group(
+            movie(1, "★★★", year = 2020),
+            movie(2, "✦✦✦", year = 2020),
+            movie(3, "HD", year = 2020),
+            movie(4, "HD", year = 2020),
+        )
+
+        assertThat(titles.map { versions -> versions.map { it.id } })
+            .containsExactly(listOf(1L), listOf(2L), listOf(3L), listOf(4L))
+    }
+
+    @Test
     fun `rows whose TMDB ids differ never group, even with the same name and year`() {
         val titles = group(
             movie(1, "EN - Life Itself (2018)", tmdbId = "419478"),
