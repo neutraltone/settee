@@ -45,6 +45,27 @@ class HostOnlyTest {
     }
 
     @Test
+    fun `a login before the host of an address with no scheme is left out`() {
+        assertThat(hostOnly("u:p@example.com/list.m3u")).isEqualTo("example.com")
+    }
+
+    @Test
+    fun `a hash in the password doesn't leave the username showing`() {
+        assertThat(hostOnly("http://u:p#x@my_host.example.com/list.m3u")).isEqualTo("my_host.example.com")
+    }
+
+    @Test
+    fun `an IPv6 host keeps its brackets and loses its port`() {
+        assertThat(hostOnly("[::1]:8080/list.m3u")).isEqualTo("[::1]")
+    }
+
+    @Test
+    fun `text with no spaces that isn't a host gives nothing, not the text`() {
+        assertThat(hostOnly("key=p")).isEmpty()
+        assertThat(hostOnly("token:p")).isEmpty()
+    }
+
+    @Test
     fun `something that isn't an address gives nothing`() {
         assertThat(hostOnly("not a url")).isEmpty()
         assertThat(hostOnly("")).isEmpty()

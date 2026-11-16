@@ -31,7 +31,6 @@ import app.opentv.ui.design.SetteeColors
 import app.opentv.ui.design.SetteeType
 import app.opentv.ui.design.SidePanel
 import app.opentv.ui.design.Text
-import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 
 /**
  * Providers: a row per provider, which OK edits, and a row to add one. A provider's other actions
@@ -99,30 +98,3 @@ internal fun ProvidersPane(
 @Composable
 private fun activityOwner(): ViewModelStoreOwner =
     LocalContext.current.findActivity() as? ViewModelStoreOwner ?: checkNotNull(LocalViewModelStoreOwner.current)
-
-/**
- * Host only: the full URL carries the login and has no place on a settings list. Empty when no
- * host can be found, never the address itself.
- *
- * M3U addresses are stored as typed, so `java.net.URI` meets ones it rejects (a `|User-Agent=…`
- * suffix, a space) or parses without a host (an underscore in it). It still goes first, so the
- * addresses it handles show as they always have; OkHttp takes most of the rest, and whatever both
- * refuse has its host taken out by hand.
- */
-internal fun hostOnly(url: String): String {
-    val address = url.trim()
-    return runCatching { java.net.URI(address).host }.getOrNull()
-        ?: address.toHttpUrlOrNull()?.host
-        ?: hostByHand(address)
-}
-
-/** After any scheme and `user:pass@`, before the path, query, fragment, `|` suffix or port. */
-private fun hostByHand(address: String): String {
-    val authority = address.substringAfter("://").takeWhile { it !in "/?#|" }.substringAfterLast('@')
-    val host = if (authority.startsWith('[')) {
-        authority.substringBefore(']', missingDelimiterValue = "").let { if (it.isEmpty()) it else "$it]" }
-    } else {
-        authority.substringBefore(':')
-    }
-    return host.takeUnless { it.any(Char::isWhitespace) }.orEmpty()
-}

@@ -10,19 +10,18 @@ import android.view.KeyEvent
 import android.view.View
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.semantics.getOrNull
+import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.isDialog
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.requestFocus
 import androidx.test.core.app.ApplicationProvider
-import androidx.test.espresso.Espresso
-import androidx.test.espresso.UiController
-import androidx.test.espresso.ViewAction
-import androidx.test.espresso.matcher.RootMatchers
-import androidx.test.espresso.matcher.ViewMatchers
 import app.opentv.core.ServiceLocator
 import app.opentv.data.model.Source
 import app.opentv.data.model.SourceKind
+import app.opentv.data.model.StremioAddon
 import app.opentv.data.repo.EpgRepository
 import app.opentv.ui.settings.SettingsMemory
 import app.opentv.ui.settings.SettingsScreen
@@ -79,14 +78,33 @@ class SettingsHideAddressesTest {
 
         compose.onNodeWithText("Add your own guide").requestFocus()
         device.remote(KeyEvent.KEYCODE_DPAD_CENTER)
-        entryKeyboard().run {
+        compose.entryKeyboard().run {
             type("guide 487 password=p")
             pressAction()
         }
 
-        waitUntilSaved { feed("guide 487 password=p") != null }
-        assertThat(feed("guide 487 password=p")?.name).isEqualTo("Your own guide")
+        compose.waitUntilSaved { graph.epgRepository.savedFeed("guide 487 password=p") != null }
+        assertThat(graph.epgRepository.savedFeed("guide 487 password=p")?.name).isEqualTo("Your own guide")
         compose.onNode(hasText("password", substring = true)).assertDoesNotExist()
+    }
+
+    @Test
+    fun `an add-on whose address has no host shows no address line in its details`() {
+        graph.settings.addStremioAddon(StremioAddon("odd add-on 487 password=p", "Odd add-on 487"))
+        show(SettingsMemory(SettingsSection.Addons))
+        device.remote(KeyEvent.KEYCODE_DPAD_RIGHT)
+
+        compose.onNodeWithText("Odd add-on 487").requestFocus()
+        device.remote(KeyEvent.KEYCODE_DPAD_CENTER)
+        compose.waitUntil(5_000) {
+            compose.onAllNodes(hasText("Remove") and hasAnyAncestor(isDialog())).fetchSemanticsNodes().isNotEmpty()
+        }
+
+        val shown = compose.onAllNodes(hasAnyAncestor(isDialog()), useUnmergedTree = true).fetchSemanticsNodes()
+            .flatMap { node -> node.config.getOrNull(SemanticsProperties.Text).orEmpty().map { it.text } }
+        assertThat(shown).contains("Odd add-on 487")
+        assertThat(shown).doesNotContain("")
+        assertThat(shown.filter { "password" in it }).isEmpty()
     }
 
     private fun show(memory: SettingsMemory = SettingsMemory()) = compose.setTvContent {
@@ -104,35 +122,5 @@ class SettingsHideAddressesTest {
 
     private fun waitFor(text: String) = compose.waitUntil(5_000) {
         compose.onAllNodes(hasText(text)).fetchSemanticsNodes().isNotEmpty()
-    }
-
-    // The save resumes on the main thread between its steps, so each check lets it catch up first.
-    private fun waitUntilSaved(saved: () -> Boolean) {
-        val until = System.currentTimeMillis() + 5_000
-        while (true) {
-            compose.waitForIdle()
-            if (saved()) return
-            check(System.currentTimeMillis() < until) { "what was saved still isn't there after 5 seconds" }
-            Thread.sleep(10)
-        }
-    }
-
-    private fun feed(url: String) =
-        runBlocking { graph.epgRepository.observeFeeds().first() }.firstOrNull { it.url == url }
-
-    /** The keyboard over an entry screen, which is a window of its own over Settings. */
-    private fun entryKeyboard(): DeviceKeyboard {
-        compose.waitForIdle()
-        var root: View? = null
-        Espresso.onView(ViewMatchers.isRoot()).inRoot(RootMatchers.isDialog()).perform(
-            object : ViewAction {
-                override fun getConstraints() = ViewMatchers.isRoot()
-                override fun getDescription() = "find the entry screen's window"
-                override fun perform(controller: UiController, view: View) {
-                    root = view
-                }
-            },
-        )
-        return DeviceKeyboard(compose) { checkNotNull(root) }
     }
 }

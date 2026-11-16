@@ -35,9 +35,9 @@ import androidx.compose.ui.unit.dp
  * - none: an action, or an item in a list.
  *
  * [note] is a quiet line under the label, such as which Profile a setting belongs to, or an error's
- * sentence, left out when blank; [detail] is that error's code, status and format, in a smaller quiet line (LOOK.md,
- * Voice), never left out where an error has one. [onOptions]
- * gives the row options (hold Select), for an item with more to do than its main thing.
+ * sentence, left out when blank; [detail] is that error's code, status and format, in a smaller
+ * quiet line (LOOK.md, Voice), never left out where an error has one. [onOptions] gives the row
+ * options (hold Select), for an item with more to do than its main thing.
  *
  * [lifted] draws the row as picked up to be moved ([HighlightStyle.LiftedRow]), and [leading] goes
  * before the label, such as the grip a finger drags that row by.
