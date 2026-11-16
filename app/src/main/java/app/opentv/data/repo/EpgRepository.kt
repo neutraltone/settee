@@ -33,6 +33,8 @@ import java.util.zip.GZIPInputStream
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -144,17 +146,32 @@ class EpgRepository(
 
     // ---- Feed management -------------------------------------------------------------------
 
+    /**
+     * [name] must not be blank: it used to fall back to the address, which can carry the login and
+     * would then be the guide's label on screen (#487).
+     */
     suspend fun addCustomFeed(name: String, url: String) {
+        require(name.isNotBlank()) { "a custom guide needs a name" }
         val trimmed = url.trim()
         if (trimmed.isEmpty() || feedDao.byUrl(trimmed) != null) return
-        feedDao.insert(
-            EpgFeed(name = name.trim().ifBlank { trimmed }, url = trimmed, enabled = true),
-        )
+        feedDao.insert(EpgFeed(name = name.trim(), url = trimmed, enabled = true))
     }
 
     suspend fun setFeedEnabled(feed: EpgFeed, enabled: Boolean) {
         if (feed.isSelfEnabled(selfEnabledGuide.name)) selfEnabledGuide.name = null
         feedDao.setEnabled(feed.id, enabled)
+        // Matching reads only switched-on guides, so it's redone now rather than at the next sync:
+        // switching a guide off would otherwise leave its matches standing until then, and switching
+        // one on would wait for its download, which the refresh after it redoes the match for. Off
+        // the caller's thread, which is the main one, since a big lineup takes a moment to match.
+        try {
+            withContext(Dispatchers.Default) { runMatcher() }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            // The toggle itself is saved, and the next sync matches again; not worth a crash.
+            Log.w(TAG, "Matching after a guide toggle failed", e)
+        }
     }
 
     suspend fun removeFeed(feed: EpgFeed) {
@@ -490,12 +507,12 @@ class EpgRepository(
      * Joins every channel to the merged guide by normalised name.
      * Returns (channels with a working guide id, total channels).
      */
-    suspend fun runMatcher(): Pair<Int, Int> {
-        val aliases = aliasDao.all()
-        val index = EpgMatcher.buildIndex(aliases.map { it.epgId to it.displayName })
+    suspend fun runMatcher(): Pair<Int, Int> = matching.withLock {
+        val aliases = aliasDao.ofEnabledFeeds()
+        val index = EpgMatcher.buildIndex(aliases)
         // Only ids that actually have programmes count as "working" — a match against a
         // channel the guide lists but never fills is a guide that looks broken.
-        val populated = programmeDao.channelIdsWithProgrammes().toHashSet()
+        val populated = aliasDao.populatedOfEnabledFeeds().toHashSet()
 
         val channels = channelDao.matcherInputs()
         var matched = 0
@@ -517,8 +534,14 @@ class EpgRepository(
             "Matcher: $matched of ${channels.size} channels have a working guide " +
                 "(${aliases.size} guide aliases, ${populated.size} populated guide channels)",
         )
-        return matched to channels.size
+        matched to channels.size
     }
+
+    /**
+     * One matcher run at a time. A sync's run and a guide toggle's can overlap, and a run that read
+     * the aliases before the toggle would otherwise write its stale matches over the toggle's.
+     */
+    private val matching = Mutex()
 
     suspend fun setManualOverride(channelId: Long, epgId: String?) = channelDao.setEpgOverride(channelId, epgId)
 

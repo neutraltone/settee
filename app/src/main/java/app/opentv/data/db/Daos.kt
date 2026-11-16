@@ -26,6 +26,7 @@ import app.opentv.data.model.EpgChannelAlias
 import app.opentv.data.model.EpgFeed
 import app.opentv.data.model.Episode
 import app.opentv.data.model.Favourite
+import app.opentv.data.model.GuideAlias
 import app.opentv.data.model.GuideFingerprint
 import app.opentv.data.model.GuideProgramme
 import app.opentv.data.model.GuideSpan
@@ -790,8 +791,30 @@ interface EpgFeedDao {
 
 @Dao
 interface EpgChannelAliasDao {
+    /** Every guide's aliases, switched off or not; matching reads [ofEnabledFeeds]. */
     @Query("SELECT * FROM epg_channels")
     suspend fun all(): List<EpgChannelAlias>
+
+    /**
+     * The aliases the matcher uses: switched-off guides keep theirs, so switching one back on
+     * needs no download, but take no part.
+     */
+    @Query(
+        "SELECT a.feedId, a.epgId, a.displayName, f.providerSourceId IS NOT NULL AS fromProvider " +
+            "FROM epg_channels a JOIN epg_feeds f ON f.id = a.feedId WHERE f.enabled = 1",
+    )
+    suspend fun ofEnabledFeeds(): List<GuideAlias>
+
+    /**
+     * Guide channel ids that switched-on guides have programmes for: [ProgrammeDao.channelIdsWithProgrammes]
+     * without the switched-off ones, so the matcher's count goes back to what it was when a guide is
+     * switched off. The `feedId` lead of the programmes' unique index answers it.
+     */
+    @Query(
+        "SELECT DISTINCT epgChannelId FROM programmes " +
+            "WHERE feedId IN (SELECT id FROM epg_feeds WHERE enabled = 1)",
+    )
+    suspend fun populatedOfEnabledFeeds(): List<String>
 
     @Query("SELECT COUNT(*) FROM epg_channels")
     suspend fun count(): Int

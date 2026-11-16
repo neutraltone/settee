@@ -214,6 +214,16 @@ class EpgRepositoryTest {
     }
 
     @Test
+    fun `a custom guide with no name is refused, not named after its address, which can carry the login`() = runTest {
+        val url = "http://example.com/xmltv.php?username=u&password=p"
+
+        val refused = runCatching { guide.addCustomFeed("  ", url) }.exceptionOrNull()
+
+        assertThat(refused).isInstanceOf(IllegalArgumentException::class.java)
+        assertThat(guide.observeFeeds().first().map { it.url }).doesNotContain(url)
+    }
+
+    @Test
     fun `a refreshed guide leaves another guide's programmes for the same channel alone`() = runTest {
         catalogue.db.sources().insert(PANEL_SOURCE)
         guide.addCustomFeed("Other", "http://example.com/other/xmltv.php")
