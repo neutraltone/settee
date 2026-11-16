@@ -561,7 +561,8 @@ fun LivePlayerContent(
         }
     }
 
-    // Focus: the channel list when it's open, a picker's first row, the bar, and with none of them Try
+    // Focus: the channel list when it's open, a picker's first row, the controls (back where the
+    // Highlight was on them, such as the button that opened a picker just closed), and with none of them Try
     // again or else the full-screen catcher (so OK can bring the bar back, and up and down can change
     // channel). One effect, so every way out of a layer hands the highlight on alike. Side panels
     // aren't here: they're dialogs, with focus of their own, and this window's waits for them.

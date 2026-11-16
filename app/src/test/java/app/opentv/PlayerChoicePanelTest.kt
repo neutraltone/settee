@@ -5,16 +5,24 @@
  */
 package app.opentv
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.test.assert
+import androidx.compose.ui.test.assertIsFocused
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isFocused
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
 import app.opentv.ui.design.SetteeType
 import app.opentv.ui.design.Text
+import app.opentv.ui.player.PlayerChoice
 import app.opentv.ui.player.PlayerChoicePanel
 import com.google.common.truth.Truth.assertThat
 import org.junit.Rule
@@ -55,5 +63,21 @@ class PlayerChoicePanelTest {
         compose.onRoot().performKeyInput { pressKey(Key.Back) }
         compose.waitForIdle()
         assertThat(closed).isEqualTo(1)
+    }
+
+    @Test
+    fun `rows arriving while the empty panel has the highlight take it, on the selected one`() {
+        val start = FocusRequester()
+        var choices by mutableStateOf(emptyList<PlayerChoice>())
+        compose.setTvContent {
+            PlayerChoicePanel(title = "Audio", choices = choices, startFocus = start, onClose = {})
+        }
+        compose.runOnIdle { start.requestFocus() }
+        compose.onNode(isFocused()).assert(hasText("None available"))
+
+        choices = listOf(PlayerChoice("English", selected = false, onClick = {}), PlayerChoice("French", true, {}))
+        compose.waitForIdle()
+
+        compose.onNodeWithText("French").assertIsFocused()
     }
 }

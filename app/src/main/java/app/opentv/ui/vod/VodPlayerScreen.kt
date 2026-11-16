@@ -316,6 +316,8 @@ fun VodPlayerContent(
         onBack = { controller.behindAnotherApp = false },
     )
     val panelFocus = remember { FocusRequester() }
+    // Where the Highlight was on the controls, for a panel closing to give it back to.
+    val barReturn = remember { FocusRequester() }
     var positionMs by remember { mutableLongStateOf(0L) }
     var durationMs by remember { mutableLongStateOf(0L) }
     val barInteractions = remember { MutableInteractionSource() }
@@ -400,7 +402,7 @@ fun VodPlayerContent(
             failed -> Unit
             controlsVisible -> {
                 delay(40)
-                runCatching { if (vodPanel != VodPanel.NONE) panelFocus.requestFocus() else barFocus.requestFocus() }
+                runCatching { if (vodPanel != VodPanel.NONE) panelFocus.requestFocus() else barReturn.requestFocus() }
             }
             !overlayShowing -> runCatching { rootFocus.requestFocus() }
         }
@@ -551,6 +553,7 @@ fun VodPlayerContent(
                     onQuality = { choosingQuality = true }.takeIf { qualityChoices.size > 1 },
                 ),
                 startFocus = barFocus,
+                returnFocus = barReturn,
                 barInteractions = barInteractions,
                 onBarFocusChanged = { onBar -> if (onBar) seek.reached() else seek.left() },
                 badge = if (growingRec) ({ RecordingBadge() }) else null,
