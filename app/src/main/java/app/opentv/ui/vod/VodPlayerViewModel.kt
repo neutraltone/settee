@@ -24,6 +24,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.withContext
 
 /**
@@ -134,6 +135,9 @@ class VodPlayerViewModel(
 
     /** The episodes either side of what's playing, as far as they're known, for moving to one. */
     internal val episodesAround: Pair<Episode?, Episode?> get() = previous to next
+
+    /** Held while moving to another episode, so a second press during the move is ignored. */
+    internal val moving = Mutex()
     private var fetchingNext: Job? = null
     private val lookup = NextEpisodeLookup(graph)
 
@@ -289,11 +293,13 @@ class VodPlayerViewModel(
                 // The fetch loads the whole series, so the one before can turn up too, with no next.
                 val (foundBefore, found) = lookup.fetchAround(episode)
                 if (_current.value == key) {
-                    previous = foundBefore
+                    // A fetch that couldn't reach the provider finds nothing, which mustn't undo what
+                    // the catalogue already knew.
+                    previous = foundBefore ?: previous
                     if (found != null) {
                         offer(found)
                     } else {
-                        _episodeSteps.value = _episodeSteps.value.copy(previous = foundBefore != null)
+                        _episodeSteps.value = _episodeSteps.value.copy(previous = previous != null)
                     }
                 }
             }
@@ -302,17 +308,24 @@ class VodPlayerViewModel(
 }
 
 /** Next episode on the player's controls, or the remote's next key. */
-suspend fun VodPlayerViewModel.toNextEpisode() = moveTo(episodesAround.second)
+suspend fun VodPlayerViewModel.toNextEpisode() = moveTo { it.second }
 
 /** Previous episode on the player's controls, or the remote's previous key. */
-suspend fun VodPlayerViewModel.toPreviousEpisode() = moveTo(episodesAround.first)
+suspend fun VodPlayerViewModel.toPreviousEpisode() = moveTo { it.first }
 
 // Unlike moving on at the card, this doesn't count as finishing the episode: it keeps the progress
-// it had, saved first so the seconds since the last save aren't lost.
-private suspend fun VodPlayerViewModel.moveTo(episode: Episode?) {
-    episode ?: return
-    saveProgress()
-    start(MediaKey.Episode(episode.id))
+// it had, saved first so the seconds since the last save aren't lost. A press while a move is under
+// way is dropped rather than queued: it read the episodes either side of the one being left, so it
+// would start the same episode again.
+private suspend fun VodPlayerViewModel.moveTo(which: (Pair<Episode?, Episode?>) -> Episode?) {
+    if (!moving.tryLock()) return
+    try {
+        val episode = which(episodesAround) ?: return
+        saveProgress()
+        start(MediaKey.Episode(episode.id))
+    } finally {
+        moving.unlock()
+    }
 }
 
 /**

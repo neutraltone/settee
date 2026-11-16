@@ -171,7 +171,8 @@ internal fun PlayerControlBar(
         ) {
             badge?.invoke()
             Text(title, SetteeType.Hero, maxLines = 2)
-            Spacer(Modifier.height(12.dp))
+            // Room for the picked-up bar's time bubble, which hangs above the row.
+            Spacer(Modifier.height(18.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
                 RowButton(
                     icon = Icons.Filled.SkipPrevious,

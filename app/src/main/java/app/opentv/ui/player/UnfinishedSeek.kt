@@ -3,12 +3,15 @@
  * Copyright (C) 2026 The OpenTV Contributors
  * Licensed under the GNU General Public License v3.0 or later.
  */
-package app.opentv.ui.vod
+package app.opentv.ui.player
 
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import kotlinx.coroutines.delay
 
 /**
  * The seek bar while it's picked up: where the viewer has moved it to, before they put it down.
@@ -47,3 +50,22 @@ class UnfinishedSeek {
         position = null
     }
 }
+
+/**
+ * Puts a picked-up bar back where it started after [PICKED_UP_WAIT_MILLIS] with no press, in every
+ * player. Not tied to the controls hiding: a paused film never hides, and the Next Episode card can take
+ * the Highlight from a picked-up bar. A held key repeats, so it counts as activity; a finger can rest
+ * without moving, so the wait doesn't start while one is [dragging].
+ */
+@Composable
+internal fun PutsBackWhenLeft(seek: UnfinishedSeek, dragging: Boolean) {
+    LaunchedEffect(seek.activity, dragging) {
+        if (seek.position != null && !dragging) {
+            delay(PICKED_UP_WAIT_MILLIS)
+            seek.drop()
+        }
+    }
+}
+
+/** How long a picked-up bar waits for a press before going back. To adjust once tried on the Stick. */
+internal const val PICKED_UP_WAIT_MILLIS = 3_000L

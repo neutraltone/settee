@@ -15,6 +15,8 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsDraggedAsState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -414,14 +416,10 @@ fun LivePlayerContent(
     // the bar is picked up, where Left and Right have moved it to, which it shows until it's put down.
     var livePositionMs by remember { mutableLongStateOf(0L) }
     var liveDurationMs by remember { mutableLongStateOf(0L) }
-    var scrubTo by remember { mutableStateOf<Long?>(null) }
-    // Left alone, a picked-up bar goes back, as the on-demand players' does.
-    LaunchedEffect(scrubTo) {
-        if (scrubTo != null) {
-            delay(PICKED_UP_WAIT_MILLIS)
-            scrubTo = null
-        }
-    }
+    val seek = remember { UnfinishedSeek() }
+    val barInteractions = remember { MutableInteractionSource() }
+    val dragging by barInteractions.collectIsDraggedAsState()
+    PutsBackWhenLeft(seek, dragging)
 
     // Picture-in-picture. While the player is on it is "eligible" to shrink to a floating window
     // (pressing Home does it, handled in MainActivity); [inPip] drives hiding all the chrome.
@@ -637,11 +635,11 @@ fun LivePlayerContent(
                     if (event.type == KeyEventType.KeyDown) {
                         when (event.key) {
                             Key.MediaRewind -> if (livePause) {
-                                scrubTo = null
+                                seek.drop()
                                 controller.seekBackward()
                             }
                             Key.MediaFastForward -> if (livePause) {
-                                scrubTo = null
+                                seek.drop()
                                 controller.seekForward()
                             }
                             Key.MediaPlay -> if (firstPress) setPaused(false)
@@ -806,23 +804,22 @@ fun LivePlayerContent(
             PlayerControlBar(
                 title = channelTitle,
                 paused = paused,
-                positionMs = scrubTo ?: livePositionMs,
+                positionMs = seek.position?.toLong() ?: livePositionMs,
                 durationMs = liveDurationMs,
-                seekPickedUp = scrubTo != null,
+                seekPickedUp = seek.position != null,
                 onPickUp = {
-                    scrubTo = livePositionMs
+                    seek.pickUp(at = livePositionMs.toFloat())
                     interaction++
                 },
                 onScrub = { to ->
-                    scrubTo = to
+                    seek.pressed(to = to.toFloat())
                     interaction++
                 },
                 onPutDown = { jump ->
-                    scrubTo?.takeIf { jump }?.let {
+                    seek.putDown()?.takeIf { jump }?.let {
                         controller.player.seekTo(it)
                         livePositionMs = it
                     }
-                    scrubTo = null
                     interaction++
                 },
                 onPlayPause = {
@@ -866,7 +863,8 @@ fun LivePlayerContent(
                 returnFocus = barReturn,
                 seekable = controller.isSeekable,
                 showPlayPause = canPause,
-                onBarFocusChanged = { onBar -> if (!onBar) scrubTo = null },
+                barInteractions = barInteractions,
+                onBarFocusChanged = { onBar -> if (!onBar) seek.drop() },
                 badge = if (paused && livePause) {
                     {
                         SetteeText(
@@ -1142,6 +1140,3 @@ private const val BACK_TO_LIVE_MESSAGE_MILLIS = 4_000L
 internal val OK_KEYS = setOf(Key.DirectionCenter, Key.Enter, Key.NumPadEnter, Key.ButtonA)
 private val MEDIA_KEYS =
     setOf(Key.MediaPlayPause, Key.MediaPlay, Key.MediaPause, Key.MediaRewind, Key.MediaFastForward)
-
-/** How long a picked-up seek bar waits for a press before going back, as in the on-demand players. */
-private const val PICKED_UP_WAIT_MILLIS = 3_000L

@@ -21,3 +21,10 @@ fun testEpisode(season: Int, number: Int) = Episode(
     stillUrl = null,
     streamUrl = "https://example.com/$season-$number.mkv",
 )
+
+/** Episodes 1 to 3 of season 1 of series `s`, as a panel lists them, with the ids [testEpisode] stores. */
+const val SERIES_OF_THREE = """{"info": {}, "episodes": {"1": [
+    {"id": "1-1", "episode_num": 1, "title": "Episode 1"},
+    {"id": "1-2", "episode_num": 2, "title": "Episode 2"},
+    {"id": "1-3", "episode_num": 3, "title": "Episode 3"}
+]}}"""

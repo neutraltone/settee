@@ -253,7 +253,7 @@ private fun TimeBubble(text: String, fraction: Float, modifier: Modifier) {
                 maxLines = 1,
                 modifier = Modifier
                     .background(SetteeColors.Accent, SetteeShapes.Pill)
-                    .padding(horizontal = 10.dp, vertical = 2.dp),
+                    .padding(horizontal = 10.dp, vertical = 1.dp),
             )
         },
         modifier = modifier,
@@ -281,5 +281,5 @@ private const val FASTEST_AFTER_MILLIS = 3_000L
 private val TrackHeight = 4.dp
 private val ThumbSize = 18.dp
 private val PickedUpThumbSize = 26.dp
-private val BubbleGap = 6.dp
+private val BubbleGap = 4.dp
 private val TrackColor = Color.White.copy(alpha = 0.3f)

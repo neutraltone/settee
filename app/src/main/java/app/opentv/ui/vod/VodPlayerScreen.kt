@@ -87,9 +87,11 @@ import app.opentv.ui.player.PlayerControlBar
 import app.opentv.ui.player.PlayerNotice
 import app.opentv.ui.player.PlayerOptions
 import app.opentv.ui.player.PlayerPill
+import app.opentv.ui.player.PutsBackWhenLeft
 import app.opentv.ui.player.SleepTimerEffect
 import app.opentv.ui.player.SleepTimerPanel
 import app.opentv.ui.player.SubtitlePicks
+import app.opentv.ui.player.UnfinishedSeek
 import app.opentv.ui.player.WhenBehindAnotherApp
 import app.opentv.ui.player.backOnRelease
 import app.opentv.ui.player.isBack
@@ -339,10 +341,15 @@ fun VodPlayerContent(
 
     // The episode buttons the row shows. A new episode's come at once; ones found late for the same
     // episode (its series loading beside playback) wait while the controls show, so a button never
-    // appears beside the Highlight while the viewer is moving along the row.
+    // appears beside the Highlight while the viewer is moving along the row. One that has gone goes
+    // at once, since pressing it would do nothing.
     var shownSteps by remember { mutableStateOf(steps) }
     LaunchedEffect(steps, controlsVisible) {
-        if (!controlsVisible || steps.of != shownSteps.of) shownSteps = steps
+        shownSteps = if (!controlsVisible || steps.of != shownSteps.of) {
+            steps
+        } else {
+            steps.copy(previous = steps.previous && shownSteps.previous, next = steps.next && shownSteps.next)
+        }
     }
 
     fun moveEpisode(forward: Boolean) {
@@ -386,15 +393,7 @@ fun VodPlayerContent(
         subtitles?.load(playing)
     }
 
-    // A bar picked up and left alone goes back to where it started. Not tied to the controls hiding:
-    // a paused film never hides, and the Next Episode card can take the Highlight from a picked-up
-    // bar. A held key repeats, so it counts as activity; a finger can rest without moving.
-    LaunchedEffect(seek.activity, dragging) {
-        if (seek.position != null && !dragging) {
-            delay(UNFINISHED_SEEK_GRACE_MILLIS)
-            seek.drop()
-        }
-    }
+    PutsBackWhenLeft(seek, dragging)
 
     // Auto-hide when playing and not paused and no picker open, and no finger on the bar. A growing
     // recording dips in and out of Buffering as it rides the write head, so for that case Buffering
@@ -675,9 +674,6 @@ fun VodPlayerContent(
 }
 
 private const val POLL_MILLIS = 500L
-
-/** How long a picked-up bar waits for a press before going back. To adjust once tried on the Stick. */
-private const val UNFINISHED_SEEK_GRACE_MILLIS = 3_000L
 
 /** How often progress is written while playing, so a crash or power cut loses little. */
 private const val SAVE_EVERY_MILLIS = 15_000L

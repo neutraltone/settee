@@ -449,6 +449,38 @@ class VodPlayerRowTest {
     }
 
     @Test
+    fun `episode buttons found while the controls show wait until they next open`() {
+        val panel = FakePanel()
+        val fetching = ServiceLocator.Graph(app, http = panel.http)
+        val loading = VodPlayerViewModel(app, fetching)
+        try {
+            runBlocking {
+                fetching.database.sources().insert(PANEL_SOURCE)
+                fetching.database.episodes().upsertAll(listOf(testEpisode(1, 2)))
+            }
+            panel.replies["get_series_info:s"] = SERIES_OF_THREE
+            val hold = panel.hold("get_series_info:s")
+            compose.setTvContent { VodPlayerContent(controller, loading, false, noPicks, onBack = {}) }
+            players.play(controller)
+            runBlocking { loading.attach(testEpisode(1, 2).key, FakePlayback()) }
+            settle()
+
+            hold.release()
+            compose.waitUntil(WAIT_MILLIS) { loading.episodeSteps.value.next }
+            compose.onNodeWithContentDescription("Next episode").assertDoesNotExist()
+            compose.onNodeWithContentDescription("Previous episode").assertDoesNotExist()
+
+            hideControls()
+            press(Key.DirectionCenter)
+            settle()
+            compose.onNodeWithContentDescription("Next episode").assertExists()
+            compose.onNodeWithContentDescription("Previous episode").assertExists()
+        } finally {
+            fetching.database.close()
+        }
+    }
+
+    @Test
     fun `a film has no episode buttons, and its next key does nothing`() {
         showFilmPartWay()
 
