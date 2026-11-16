@@ -11,7 +11,7 @@ import app.opentv.R
 import app.opentv.ui.design.ConfirmPanel
 
 /**
- * Asks before removing a provider, Profile, guide source, add-on or the TMDB Key: "Yes, remove <name>"
+ * Asks before removing a provider, Profile, guide source or add-on: "Yes, remove <name>"
  * or "Keep it", with [note] above them where what stays needs saying.
  */
 @Composable

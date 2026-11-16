@@ -30,7 +30,6 @@ class VodResyncTest {
 
     @After
     fun close() {
-        test.settings.setTmdbApiKey("")
         test.close()
     }
 
@@ -187,19 +186,19 @@ class VodResyncTest {
         panel.replies["get_series_info:7"] = """{"info": {"genre": "Drama", "cast": "Someone"}, "episodes": {}}"""
         panel.replies["/3/search/tv"] = """{"results": [{"id": 22}]}"""
         panel.replies["/3/tv/22"] = """{"id": 22, "overview": "A show."}"""
-        test.settings.setTmdbApiKey("k")
+        val catalog = test.catalogWithTmdb()
         val hold = panel.hold("/3/tv/22")
 
-        val opening = async(Dispatchers.Default) { test.catalog.openSeries(show.id).toList() }
+        val opening = async(Dispatchers.Default) { catalog.openSeries(show.id).toList() }
         during(hold) {
             panel.replies["get_series"] =
                 """[{"series_id": 7, "name": "Show Redux", "category_id": "2", "last_modified": "300"}]"""
             // Not syncVod, which waits for the background TMDB pass, held here too.
-            test.catalog.fetchVod(PANEL_SOURCE, nowUtcMillis = 0)
+            catalog.fetchVod(PANEL_SOURCE, nowUtcMillis = 0)
             hold.release()
         }
         val shown = opening.await().last()
-        test.catalog.awaitBackground()
+        catalog.awaitBackground()
 
         val stored = db.series().byId(show.id)!!
         assertThat(stored.name).isEqualTo("Show Redux")
@@ -269,10 +268,10 @@ class VodResyncTest {
         val film = test.catalog.allMovies().single()
         panel.replies["/3/search/movie"] = """{"results": [{"id": 11}]}"""
         panel.replies["/3/movie/11"] = """{"id": 11, "overview": "The page's answer."}"""
-        test.settings.setTmdbApiKey("k")
+        val catalog = test.catalogWithTmdb()
         val hold = panel.hold("/3/movie/11")
 
-        val opening = async(Dispatchers.Default) { test.catalog.movieDetail(film.id, now = NOW) }
+        val opening = async(Dispatchers.Default) { catalog.movieDetail(film.id, now = NOW) }
         during(hold) {
             // As the background pass saves its own answer.
             db.movies().saveLookedUp(film.id) { it.copy(plot = "The pass's answer.", tmdbAnsweredAt = NOW - 1) }

@@ -90,7 +90,7 @@ fun TextField(
 
 /**
  * The same box for a screen that holds its text as a String, as the forms do. [onValueChange] may
- * change what it's given (the TMDB key trims it), and the box and keyboard then show the change.
+ * change what it's given (trim it, say), and the box and keyboard then show the change.
  */
 @Composable
 fun TextField(
@@ -110,8 +110,8 @@ fun TextField(
     val latestValue by rememberUpdatedState(value)
     val latestOnChange by rememberUpdatedState(onValueChange)
     // The last edit handed to the screen. Being state, it recomposes this box in the same frame as
-    // the screen's own change, so the box sees the screen's answer: kept, changed (the TMDB key is
-    // trimmed) or turned down (a PIN keeps four digits), when the value wouldn't change at all.
+    // the screen's own change, so the box sees the screen's answer: kept, changed (trimmed, say)
+    // or turned down (a PIN keeps four digits), when the value wouldn't change at all.
     var handedOver by remember { mutableStateOf<String?>(null) }
     LaunchedEffect(value) {
         if (state.text.toString() != value) state.setTextAndPlaceCursorAtEnd(value)

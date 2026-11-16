@@ -51,7 +51,6 @@ class ShowPageFetchTest {
 
     @After
     fun close() {
-        graph.settings.setTmdbApiKey("")
         viewModels.clear()
         graph.database.close()
         Dispatchers.resetMain()
@@ -128,8 +127,8 @@ class ShowPageFetchTest {
 
     @Test
     fun `another Version's episodes are stored before TMDB answers about the show`() = runBlocking<Unit> {
+        graph.tmdbKey = TMDB_KEY
         saveTwoVersions()
-        graph.settings.setTmdbApiKey("k")
         // By its id, which these shows already have, rather than a search.
         val tmdb = panel.hold("/3/tv/94997")
         val show = viewModel.openShow(1)

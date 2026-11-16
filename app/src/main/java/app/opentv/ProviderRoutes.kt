@@ -16,7 +16,6 @@ import app.opentv.ui.Tab
 import app.opentv.ui.hasProvider
 import app.opentv.ui.onboarding.AddSourceScreen
 import app.opentv.ui.onboarding.OpenSubtitlesStepScreen
-import app.opentv.ui.onboarding.TmdbStepScreen
 import app.opentv.ui.onboarding.offersOpenSubtitles
 import app.opentv.ui.setup.SetupScreen
 
@@ -39,24 +38,9 @@ fun NavGraphBuilder.providerRoutes(nav: NavController, sources: SourcesViewModel
                     popUpTo(Routes.ADD_SOURCE) { inclusive = true }
                 }
             },
-            // The first provider's Setup is already loading; while there's no TMDB Key, the TMDB
-            // step comes first, in front of it.
+            // The first provider's Setup is already loading; OpenSubtitles' step, when there is one,
+            // comes first, in front of it.
             onSetup = { nav.navigate(firstStep(sources)) },
-            offerTmdbKey = sources::offersTmdbKey,
-        )
-    }
-
-    composable(Routes.TMDB_STEP) {
-        val setup by sources.setup.collectAsState()
-        // A failed login goes back to the form, which says why, as from Setup itself.
-        LaunchedEffect(setup?.loginFailed) { if (setup?.loginFailed == true) nav.popBackStack() }
-        TmdbStepScreen(
-            graph = sources.graph,
-            // On to OpenSubtitles whether a key was added or skipped.
-            onDone = {
-                val next = if (sources.graph.offersOpenSubtitles()) Routes.OPENSUBTITLES_STEP else Routes.SETUP
-                nav.navigate(next) { popUpTo(Routes.TMDB_STEP) { inclusive = true } }
-            },
         )
     }
 
@@ -99,18 +83,15 @@ fun NavGraphBuilder.providerRoutes(nav: NavController, sources: SourcesViewModel
     }
 }
 
-/** Where a first provider goes once saved: the TMDB step while there's no key, then OpenSubtitles', then Setup. */
-private fun firstStep(sources: SourcesViewModel): String = when {
-    sources.offersTmdbKey() -> Routes.TMDB_STEP
-    sources.graph.offersOpenSubtitles() -> Routes.OPENSUBTITLES_STEP
-    else -> Routes.SETUP
-}
+/** Where a first provider goes once saved: OpenSubtitles' step when there is one, then Setup. */
+private fun firstStep(sources: SourcesViewModel): String =
+    if (sources.graph.offersOpenSubtitles()) Routes.OPENSUBTITLES_STEP else Routes.SETUP
 
-/** Setup's optional OpenSubtitles step, after the TMDB step whether a key was added or not. */
+/** Setup's optional OpenSubtitles step. */
 private fun NavGraphBuilder.openSubtitlesStep(nav: NavController, sources: SourcesViewModel) {
     composable(Routes.OPENSUBTITLES_STEP) {
         val setup by sources.setup.collectAsState()
-        // A failed login goes back to the form, which says why, as from the TMDB step.
+        // A failed login goes back to the form, which says why, as from Setup itself.
         LaunchedEffect(setup?.loginFailed) { if (setup?.loginFailed == true) nav.popBackStack() }
         val openSubtitles = sources.graph.openSubtitles
         val carryOn = { nav.navigate(Routes.SETUP) { popUpTo(Routes.OPENSUBTITLES_STEP) { inclusive = true } } }

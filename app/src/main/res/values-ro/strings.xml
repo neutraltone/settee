@@ -211,7 +211,6 @@
     <string name="vod_addon_sources">Surse din suplimente</string>
     <string name="vod_addon_pick_title">Alege un flux</string>
     <string name="vod_addon_loading">Se caută fluxuri din suplimentele tale…</string>
-    <string name="vod_addon_none">Nu s-au găsit fluxuri din suplimentele tale pentru acest titlu. Este nevoie de o cheie TMDB setată (pentru potrivirea IMDb) și de un supliment care să o aibă.</string>
     <string name="vod_season">Sezonul %1$d</string>
     <string name="vod_detail_loading">Se încarcă…</string>
     <string name="reminder_starting_now">Începe acum pe %1$s</string>
@@ -237,7 +236,6 @@
     <string name="rec_switch_keep_watching">Continuă vizionarea</string>
     <string name="rec_switch_channel_name">Comutare automată la înregistrare</string>
     <string name="rec_switch_channel_desc">Avertizează înainte de a comuta ecranul la o înregistrare programată</string>
-    <string name="settings_tmdb_key_label">Cheie API TMDB</string>
     <string name="guide_next_prefix">Următorul  %1$s  %2$s</string>
     <string name="vod_empty_category_movies">Nu există filme în această categorie.</string>
     <string name="home_empty_hint">Ce urmărești și ce pui la favorite va apărea aici.</string>
@@ -314,9 +312,6 @@
     <string name="vod_language_title">Aici doar în %1$s</string>
     <string name="vod_language_body_tv">Acest televizor nu poate reda o versiune în limba ta.</string>
     <string name="vod_language_body_device">Acest dispozitiv nu poate reda o versiune în limba ta.</string>
-    <string name="error_tmdb_key_rejected">TMDB nu a acceptat această cheie. Verifică dacă ai copiat întreaga API Key, apoi încearcă din nou.</string>
-    <string name="error_tmdb_unreachable_tv">Nu se poate accesa TMDB. Verifică dacă acest televizor este online, apoi încearcă din nou.</string>
-    <string name="error_tmdb_unreachable_device">Nu se poate accesa TMDB. Verifică dacă acest dispozitiv este online, apoi încearcă din nou.</string>
     <string name="error_database_checking_tv">Settee nu poate citi ce a salvat pe acest televizor. Caut o actualizare care rezolvă problema.</string>
     <string name="error_database_checking_device">Settee nu poate citi ce a salvat pe acest dispozitiv. Caut o actualizare care rezolvă problema.</string>
     <string name="error_database_update_tv">Settee nu poate citi ce a salvat pe acest televizor, dar există o actualizare care rezolvă problema.</string>
@@ -327,7 +322,6 @@
     <string name="error_database_offline_device">Settee nu poate citi ce a salvat pe acest dispozitiv și nu a putut căuta o actualizare. Conectează dispozitivul la internet și verifică din nou, sau șterge-i datele din setările aplicației, pierzând furnizorii, favoritele și istoricul vizionărilor.</string>
     <string name="database_check_again">Verifică din nou</string>
     <string name="database_see_update">Vezi actualizarea</string>
-    <string name="error_tmdb_trouble">TMDB are probleme. Sunt de partea lor, așa că încearcă din nou mai târziu.</string>
     <string name="error_opensubtitles_none">OpenSubtitles nu are încă subtitrări pentru asta.</string>
     <string name="error_opensubtitles_unreachable_tv">OpenSubtitles nu poate fi accesat. Verifică dacă acest televizor este online, apoi încearcă din nou.</string>
     <string name="error_opensubtitles_unreachable_device">OpenSubtitles nu poate fi accesat. Verifică dacă acest dispozitiv este online, apoi încearcă din nou.</string>

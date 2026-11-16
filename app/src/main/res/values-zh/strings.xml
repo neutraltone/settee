@@ -211,7 +211,6 @@
     <string name="vod_addon_sources">插件来源</string>
     <string name="vod_addon_pick_title">选择播放源</string>
     <string name="vod_addon_loading">正在从你的插件中查找播放源…</string>
-    <string name="vod_addon_none">未能从你的插件中找到该内容的播放源。需要设置 TMDB 密钥（用于匹配 IMDb）并安装带有该内容的插件。</string>
     <string name="vod_season">第 %1$d 季</string>
     <string name="vod_detail_loading">加载中…</string>
     <string name="reminder_starting_now">正在 %1$s 开始播出</string>
@@ -237,7 +236,6 @@
     <string name="rec_switch_keep_watching">继续观看</string>
     <string name="rec_switch_channel_name">录制自动切换</string>
     <string name="rec_switch_channel_desc">在画面切换到预约录制前发出提醒</string>
-    <string name="settings_tmdb_key_label">TMDB API 密钥</string>
     <string name="guide_next_prefix">接下来  %1$s  %2$s</string>
     <string name="vod_empty_category_movies">此分类中没有电影。</string>
     <string name="home_empty_hint">你观看和收藏的内容会显示在这里。</string>
@@ -314,9 +312,6 @@
     <string name="vod_language_title">这里只有%1$s版本</string>
     <string name="vod_language_body_tv">这台电视无法播放你所用语言的版本。</string>
     <string name="vod_language_body_device">这台设备无法播放你所用语言的版本。</string>
-    <string name="error_tmdb_key_rejected">TMDB 未接受该密钥。请确认已复制完整的 API Key，然后重试。</string>
-    <string name="error_tmdb_unreachable_tv">无法连接 TMDB。请确认这台电视已联网，然后重试。</string>
-    <string name="error_tmdb_unreachable_device">无法连接 TMDB。请确认此设备已联网，然后重试。</string>
     <string name="error_database_checking_tv">Settee 无法读取它在这台电视上保存的内容。正在查找能修复此问题的更新。</string>
     <string name="error_database_checking_device">Settee 无法读取它在这台设备上保存的内容。正在查找能修复此问题的更新。</string>
     <string name="error_database_update_tv">Settee 无法读取它在这台电视上保存的内容，但已有能修复此问题的更新。</string>
@@ -327,7 +322,6 @@
     <string name="error_database_offline_device">Settee 无法读取它在这台设备上保存的内容，也无法检查更新。请将设备连接到互联网后再检查一次，或在应用设置中清除它的数据，这会丢失你的提供商、收藏和观看记录。</string>
     <string name="database_check_again">再检查一次</string>
     <string name="database_see_update">查看更新</string>
-    <string name="error_tmdb_trouble">TMDB 出现问题。问题在他们那边，请稍后重试。</string>
     <string name="error_opensubtitles_none">OpenSubtitles 上还没有这部的字幕。</string>
     <string name="error_opensubtitles_unreachable_tv">无法连接 OpenSubtitles。请检查这台电视是否联网，然后重试。</string>
     <string name="error_opensubtitles_unreachable_device">无法连接 OpenSubtitles。请检查此设备是否联网，然后重试。</string>

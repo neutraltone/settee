@@ -75,8 +75,6 @@ fun AddSourceScreen(
     onFinished: () -> Unit,
     editingSourceId: Long? = null,
     onSetup: () -> Unit = {},
-    /** Whether a first provider goes on to Onboarding's TMDB step, so the phone carries on to it too. */
-    offerTmdbKey: () -> Boolean = { false },
 ) {
     val context = LocalContext.current
     // The QR flow serves a setup page FROM this device for a phone to fill in, so only a TV offers
@@ -97,7 +95,7 @@ fun AddSourceScreen(
             cameFrom = option
             opened = option
         }
-        AddOption.PHONE -> PhoneProvider(viewModel, offerTmdbKey, onSetup, onFinished, onCancel = { opened = null })
+        AddOption.PHONE -> PhoneProvider(viewModel, onSetup, onFinished, onCancel = { opened = null })
         else -> ProviderForm(viewModel, onFinished, onSetup, editingSourceId = null, kind = open.kind)
     }
     if (opened != null) BackHandler { opened = null }

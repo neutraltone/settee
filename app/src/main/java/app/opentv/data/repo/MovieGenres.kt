@@ -12,7 +12,7 @@ import app.opentv.data.remote.TmdbMeta
 import app.opentv.data.remote.XtreamApi
 
 /**
- * Asks the provider, and TMDB when the viewer has set a key, about each film neither has answered
+ * Asks the provider, and TMDB in a build with a key, about each film neither has answered
  * about yet, for For you's genre rows and people's pages: most providers leave the genre, cast and
  * director out of their film list, and file films by service ("NETFLIX MOVIES") rather than genre,
  * so without this only the films someone opened would have them.

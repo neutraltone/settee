@@ -61,7 +61,7 @@ fun PhonePairingScreen(
     onReceived: (PairingServer.State.Received) -> Unit,
     onCancel: () -> Unit,
     mode: PairingServer.Mode = PairingServer.Mode.Provider(),
-    /** True once the TMDB step is taking the address over, so leaving doesn't close it. */
+    /** True once Setup's OpenSubtitles step is taking the address over, so leaving doesn't close it. */
     keepListening: () -> Boolean = { false },
 ) {
     val context = LocalContext.current
@@ -73,7 +73,7 @@ fun PhonePairingScreen(
         server.start(mode)
         onDispose {
             // Never leave a socket listening on someone's home network after they have
-            // navigated away, unless the TMDB step is carrying on with it.
+            // navigated away, unless the OpenSubtitles step is carrying on with it.
             if (!keepListening()) server.stop()
         }
     }
@@ -84,9 +84,9 @@ fun PhonePairingScreen(
 
     ScreenFrame {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            // Handed on to the TMDB step, it stays on Got it: the server listens again for the key as
-            // the channels come in, which would otherwise show the code again for the moment before
-            // the TMDB step opens.
+            // Handed on to the OpenSubtitles step, it stays on Got it: the server listens again for the
+            // sign-in as the channels come in, which would otherwise show the code again for the moment
+            // before that step opens.
             if (keepListening()) {
                 PairingConnecting()
                 return@Box
@@ -113,10 +113,9 @@ fun PhonePairingScreen(
                     }
                 }
 
-                // A TMDB Key or an OpenSubtitles sign-in only arrives once a later step has taken over, so
-                // neither is seen here.
+                // An OpenSubtitles sign-in only arrives once a later step has taken over, so it isn't
+                // seen here.
                 is PairingServer.State.Received,
-                is PairingServer.State.KeyReceived,
                 is PairingServer.State.SignInReceived,
                 PairingServer.State.KeySkipped,
                 -> PairingConnecting()

@@ -6,7 +6,6 @@
 package app.opentv.data.remote
 
 import android.util.Log
-import app.opentv.core.AppSettings
 import app.opentv.data.model.knownTmdbId
 import app.opentv.data.parser.parseReleaseDate
 import java.io.IOException
@@ -47,32 +46,17 @@ data class TmdbMeta(
     val recommendations: List<String> = emptyList(),
 )
 
-/** What TMDB said about a TMDB Key before it's saved. */
-sealed interface TmdbCheck {
-    /** TMDB took it: safe to save. */
-    data object Accepted : TmdbCheck
-
-    /** TMDB turned it down: a wrong or mistyped key. */
-    data object Rejected : TmdbCheck
-
-    /**
-     * TMDB didn't answer ([status] null), or answered [status] for trouble of its own, so nothing is
-     * known about the key.
-     */
-    data class Unreachable(val cause: Throwable, val status: Int? = null) : TmdbCheck
-}
-
 /**
  * A thin, read-only TMDB v3 client used to enrich VOD detail pages when the provider's own
  * metadata is thin — the "match Plex" back-fill for posters, backdrops, synopsis, cast, director
  * and genre.
  *
- * ## Per-user key, on device only
- * There is no bundled key. Each viewer saves their own free TMDB Key in Settings › TMDB, either the
- * "API Key" (v3) or the "API Read Access Token" (v4); [authorised] sends whichever it is. It lives in
- * [AppSettings] (SharedPreferences) exactly like a provider credential and never leaves the box.
- * With no key set [isConfigured] is false and every lookup short-circuits to null, so the whole
- * feature is simply inert until the user opts in — no traffic, nothing to leak.
+ * ## Settee's own key, built in
+ * The key is Settee's, set at build time (`BuildConfig.TMDB_API_KEY`) and passed in, never entered
+ * by a viewer. It can be the "API Key" (v3) or the "API Read Access Token" (v4); [authorised] sends
+ * whichever it is. It can't be kept secret in an APK and needn't be: TMDB rate-limits by IP address.
+ * A build without one (forks, CI's PR builds, a developer's with no key) has [isConfigured] false and every lookup
+ * short-circuits to null, so TMDB is never asked and nothing TMDB fills shows broken.
  *
  * ## Blocking on purpose
  * The methods block on the calling thread. The one caller ([app.opentv.data.repo.CatalogRepository]
@@ -81,15 +65,18 @@ sealed interface TmdbCheck {
  */
 class TmdbClient(
     private val http: OkHttpClient,
-    private val settings: AppSettings,
+    /** The built-in TMDB Key; blank in a build that has none. */
+    apiKey: String,
     private val json: Json = Json {
         ignoreUnknownKeys = true
         isLenient = true
     },
 ) {
 
-    /** True once the user has saved a key. Callers gate on this so nothing runs without one. */
-    fun isConfigured(): Boolean = settings.tmdbApiKey.value.isNotBlank()
+    private val credential: Credential? = Credential.of(apiKey)
+
+    /** True when the build has a key. Callers gate on this so nothing runs without one. */
+    fun isConfigured(): Boolean = credential != null
 
     /**
      * Metadata for a film: by [tmdbId] when the provider already gave one, else a title(+year)
@@ -104,7 +91,7 @@ class TmdbClient(
         metaOrFailure(TmdbTitle(isMovie = false, title, year, tmdbId))
 
     private fun metaOrFailure(title: TmdbTitle): Result<TmdbMeta?> = runCatching {
-        val key = Credential.of(settings.tmdbApiKey.value) ?: return@runCatching null
+        val key = credential ?: return@runCatching null
         if (title.query.isBlank() && title.tmdbId == null) return@runCatching null
         val read = { url: HttpUrl -> fetch(url, key) }
         val id = title.tmdbId ?: searchId(title, read)
@@ -117,7 +104,7 @@ class TmdbClient(
      * (top-level) or the TV `external_ids` endpoint. Null with no key, no match, or no IMDb mapping.
      */
     fun imdbId(title: String, year: Int?, isMovie: Boolean, tmdbId: String?): String? {
-        val key = Credential.of(settings.tmdbApiKey.value) ?: return null
+        val key = credential ?: return null
         val asked = TmdbTitle(isMovie, title, year, tmdbId)
         val id = asked.tmdbId ?: searchId(asked) { get(it, key) } ?: return null
         val builder = TMDB_BASE.newBuilder()
@@ -207,28 +194,6 @@ class TmdbClient(
         )
     }
 
-    /**
-     * Whether TMDB takes [key], asked before it's saved so a mistyped key is caught while the viewer
-     * is still there. A wrong key and no answer are told apart: only TMDB saying 401 means the key is
-     * wrong, and anything else it can't vouch for is [TmdbCheck.Unreachable], so a viewer whose
-     * network is down isn't told to go and fetch a new key.
-     */
-    fun check(key: String): TmdbCheck {
-        val credential = Credential.of(key) ?: return TmdbCheck.Rejected
-        val url = TMDB_BASE.newBuilder().addPathSegment("authentication").build()
-        return try {
-            http.newCall(authorised(url, credential)).execute().use { response ->
-                when {
-                    response.isSuccessful -> TmdbCheck.Accepted
-                    response.code == HTTP_UNAUTHORISED -> TmdbCheck.Rejected
-                    else -> TmdbCheck.Unreachable(IOException("TMDB answered ${response.code}"), response.code)
-                }
-            }
-        } catch (e: IOException) {
-            TmdbCheck.Unreachable(e)
-        }
-    }
-
     // Only the exception's type: an HTTP client's message can hold the URL, and with it an API Key.
     private fun get(url: HttpUrl, key: Credential): JsonElement? = runCatching { fetch(url, key) }
         .onFailure { Log.w(TAG, "TMDB request failed: ${it.javaClass.simpleName}") }
@@ -252,7 +217,6 @@ class TmdbClient(
         const val TOP_CAST = 12
         const val TOP_STUDIOS = 4
         const val HTTP_NOT_FOUND = 404
-        const val HTTP_UNAUTHORISED = 401
 
         /** The crew jobs that count as writing it: TMDB files writers under several. */
         val WRITING_JOBS = setOf("Screenplay", "Writer", "Story", "Novel", "Author")
@@ -285,17 +249,17 @@ private data class TmdbTitle(val isMovie: Boolean, val title: String, val year: 
     val query: String get() = searchTitle(title)
 }
 
-/** The viewer's TMDB Key, with which kind it is worked out once for every request a look-up makes. */
+/** The built-in TMDB Key, with which kind it is worked out once for every request a look-up makes. */
 private class Credential private constructor(val key: String, val readAccessToken: Boolean) {
     companion object {
-        /** [saved] as a credential; null when there's no key. */
-        fun of(saved: String): Credential? =
-            saved.trim().takeIf { it.isNotEmpty() }?.let { Credential(it, isReadAccessToken(it)) }
+        /** [key] as a credential; null when there's no key. */
+        fun of(key: String): Credential? =
+            key.trim().takeIf { it.isNotEmpty() }?.let { Credential(it, isReadAccessToken(it)) }
     }
 }
 
 /**
- * The one place a request gets the viewer's [credential], so every call sends it the same way: a Read
+ * The one place a request gets the [credential], so every call sends it the same way: a Read
  * Access Token (v4) as a Bearer header, which TMDB rejects as an `api_key`, and an API Key (v3)
  * as that parameter, which TMDB rejects as a Bearer.
  */

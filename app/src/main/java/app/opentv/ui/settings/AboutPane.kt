@@ -8,6 +8,10 @@ package app.opentv.ui.settings
 import android.content.Context
 import android.content.Intent
 import android.widget.Toast
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -15,9 +19,11 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalResources
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
@@ -139,3 +145,21 @@ private fun Context.openLink(url: String) {
         startActivity(Intent(Intent.ACTION_VIEW, url.toUri()).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
     }.onFailure { Toast.makeText(this, url, Toast.LENGTH_LONG).show() }
 }
+
+/** TMDB's logo and the sentence its terms ask for. */
+@Composable
+private fun TmdbAttribution(modifier: Modifier = Modifier) {
+    Row(modifier, verticalAlignment = Alignment.CenterVertically) {
+        // Smaller than Settee's own mark anywhere, as TMDB's terms ask.
+        Image(
+            painterResource(R.drawable.tmdb_logo),
+            contentDescription = stringResource(R.string.tmdb_logo_desc),
+            modifier = Modifier.height(LOGO_HEIGHT),
+        )
+        Column(Modifier.padding(start = 16.dp)) {
+            Text(stringResource(R.string.tmdb_attribution), SetteeType.Body, color = SetteeColors.QuietText)
+        }
+    }
+}
+
+private val LOGO_HEIGHT = 16.dp

@@ -36,7 +36,7 @@ import kotlinx.coroutines.runBlocking
  * [viewerLibrary] records progress at [clock]; [lineup] folds its channels.
  */
 class TestCatalog(
-    context: Context,
+    private val context: Context,
     val db: OpenTvDatabase = Room.inMemoryDatabaseBuilder(context, OpenTvDatabase::class.java)
         .allowMainThreadQueries()
         .build(),
@@ -61,7 +61,13 @@ class TestCatalog(
         selfEnabledGuide = EpgRepository.SelfEnabledGuide.InMemory(),
     )
 
-    val catalog: CatalogRepository = CatalogRepository(
+    /** The catalogue as a build with no TMDB Key has it, so TMDB is never asked. */
+    val catalog: CatalogRepository = catalogue(tmdbKey = "")
+
+    /** The catalogue as a build with [tmdbKey] built in has it, over the same database and panel. */
+    fun catalogWithTmdb(tmdbKey: String = TMDB_KEY): CatalogRepository = catalogue(tmdbKey)
+
+    private fun catalogue(tmdbKey: String) = CatalogRepository(
         database = db,
         viewerLibrary = viewerLibrary,
         guide = guide,
@@ -69,6 +75,7 @@ class TestCatalog(
         stalkerApi = StalkerApi(panel.http),
         http = panel.http,
         settings = AppSettings.get(context),
+        tmdbKey = tmdbKey,
         wording = ErrorWording(context, onTelevision = false),
     ).apply {
         genrePauseMillis = 0
@@ -127,7 +134,7 @@ class TestCatalog(
      * waits for the films' genres the sync looks up afterwards, so what a test asks the panel next
      * isn't mixed up with those lookups.
      */
-    suspend fun syncVod() {
+    suspend fun syncVod(catalog: CatalogRepository = this.catalog) {
         db.sources().insert(PANEL_SOURCE)
         catalog.detectNewEpisodes(PANEL_SOURCE, catalog.fetchVod(PANEL_SOURCE, nowUtcMillis = 0).updated, 0)
         catalog.awaitBackground()
@@ -161,3 +168,6 @@ class TestCatalog(
 
 /** When [TestCatalog.seedProviderGuide]'s programme starts: in 2033, so nothing prunes it by age. */
 const val SEEDED_START = 2_000_000_000_000L
+
+/** A placeholder in the shape of a v3 TMDB Key (32 hex digits), built so gitleaks sees no secret. */
+val TMDB_KEY = "c".repeat(32)

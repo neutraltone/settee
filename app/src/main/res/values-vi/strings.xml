@@ -211,7 +211,6 @@
     <string name="vod_addon_sources">Nguồn tiện ích</string>
     <string name="vod_addon_pick_title">Chọn một luồng</string>
     <string name="vod_addon_loading">Đang tìm luồng từ tiện ích của bạn…</string>
-    <string name="vod_addon_none">Không tìm thấy luồng nào từ tiện ích của bạn cho tựa đề này. Cần thiết lập khóa TMDB (để khớp IMDb) và một tiện ích có khóa đó.</string>
     <string name="vod_season">Mùa %1$d</string>
     <string name="vod_detail_loading">Đang tải…</string>
     <string name="reminder_starting_now">Đang bắt đầu trên %1$s</string>
@@ -237,7 +236,6 @@
     <string name="rec_switch_keep_watching">Tiếp tục xem</string>
     <string name="rec_switch_channel_name">Tự động chuyển khi ghi hình</string>
     <string name="rec_switch_channel_desc">Cảnh báo trước khi chuyển màn hình sang bản ghi đã lên lịch</string>
-    <string name="settings_tmdb_key_label">Khóa API TMDB</string>
     <string name="guide_next_prefix">Tiếp theo  %1$s  %2$s</string>
     <string name="vod_empty_category_movies">Không có phim nào trong danh mục này.</string>
     <string name="home_empty_hint">Những gì bạn xem và yêu thích sẽ hiện ở đây.</string>
@@ -314,9 +312,6 @@
     <string name="vod_language_title">Ở đây chỉ có tiếng %1$s</string>
     <string name="vod_language_body_tv">TV này không phát được phiên bản bằng ngôn ngữ của bạn.</string>
     <string name="vod_language_body_device">Thiết bị này không phát được phiên bản bằng ngôn ngữ của bạn.</string>
-    <string name="error_tmdb_key_rejected">TMDB không chấp nhận khóa đó. Hãy kiểm tra bạn đã sao chép toàn bộ API Key, rồi thử lại.</string>
-    <string name="error_tmdb_unreachable_tv">Không kết nối được TMDB. Hãy kiểm tra TV này đang trực tuyến, rồi thử lại.</string>
-    <string name="error_tmdb_unreachable_device">Không kết nối được TMDB. Hãy kiểm tra thiết bị này đang trực tuyến, rồi thử lại.</string>
     <string name="error_database_checking_tv">Settee không đọc được dữ liệu đã lưu trên TV này. Đang tìm bản cập nhật để sửa lỗi này.</string>
     <string name="error_database_checking_device">Settee không đọc được dữ liệu đã lưu trên thiết bị này. Đang tìm bản cập nhật để sửa lỗi này.</string>
     <string name="error_database_update_tv">Settee không đọc được dữ liệu đã lưu trên TV này, và đã có bản cập nhật sửa lỗi này.</string>
@@ -327,7 +322,6 @@
     <string name="error_database_offline_device">Settee không đọc được dữ liệu đã lưu trên thiết bị này, và không thể kiểm tra bản cập nhật. Hãy kết nối thiết bị với internet rồi kiểm tra lại, hoặc xóa dữ liệu trong phần cài đặt của ứng dụng, khi đó bạn sẽ mất nhà cung cấp, mục yêu thích và lịch sử xem.</string>
     <string name="database_check_again">Kiểm tra lại</string>
     <string name="database_see_update">Xem bản cập nhật</string>
-    <string name="error_tmdb_trouble">TMDB đang gặp sự cố. Lỗi ở phía họ, vì vậy hãy thử lại sau.</string>
     <string name="error_opensubtitles_none">OpenSubtitles chưa có phụ đề cho nội dung này.</string>
     <string name="error_opensubtitles_unreachable_tv">Không kết nối được OpenSubtitles. Hãy kiểm tra TV này đang trực tuyến rồi thử lại.</string>
     <string name="error_opensubtitles_unreachable_device">Không kết nối được OpenSubtitles. Hãy kiểm tra thiết bị này đang trực tuyến rồi thử lại.</string>

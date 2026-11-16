@@ -156,7 +156,7 @@ class OpenSubtitlesSettingsTest {
         show(with = null, section = SettingsSection.Providers)
 
         compose.onNode(hasTestTag(SettingsTags.SECTION) and hasText("OpenSubtitles")).assertDoesNotExist()
-        compose.onNode(hasTestTag(SettingsTags.SECTION) and hasText("TMDB")).assertExists()
+        compose.onNode(hasTestTag(SettingsTags.SECTION) and hasText("Add-ons")).assertExists()
         compose.onNodeWithTag(OPENSUBTITLES_PANE_TAG).assertDoesNotExist()
     }
 

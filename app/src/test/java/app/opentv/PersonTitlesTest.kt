@@ -146,7 +146,7 @@ class PersonTitlesTest {
         assertThat(titlesWith("Adam Bronstein")).isEmpty()
     }
 
-    /** The background pass with the viewer's TMDB key, TMDB answering every film with [meta]. */
+    /** The background pass in a build with a TMDB key, TMDB answering every film with [meta]. */
     private fun passWithTmdb(meta: TmdbMeta) = MovieGenres(
         test.db.movies(),
         XtreamApi(panel.http),

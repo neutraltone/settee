@@ -27,7 +27,7 @@ Stick. Touch works too.
   you've watched. A film or show is listed once, with a Quality pill when your provider has more
   than one version.
 - **Film and show pages** show the cast, and each person opens a page of everything they're in.
-  Settee fetches these details from TMDB with your own free key.
+  Settee fetches these details from TMDB, with nothing to set up.
 - **The player** resumes where you left off, plays the next episode on its own, and keeps your
   subtitle language from one title to the next. If a film has no subtitles, Settee can find some
   on OpenSubtitles and let you adjust their timing.

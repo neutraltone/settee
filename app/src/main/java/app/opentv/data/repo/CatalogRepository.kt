@@ -143,6 +143,8 @@ class CatalogRepository(
     private val stalkerApi: StalkerApi,
     private val http: OkHttpClient,
     private val settings: AppSettings,
+    /** Settee's built-in TMDB Key (`BuildConfig.TMDB_API_KEY`); blank in a build without one, which never asks TMDB. */
+    tmdbKey: String,
     /**
      * Words a failed download for the viewer; nothing here shows an exception's own message. Public
      * so the channel manager, which adds and tests providers through this module, words them the same.
@@ -156,8 +158,8 @@ class CatalogRepository(
     private val seriesDao = database.series()
     private val episodeDao = database.episodes()
 
-    /** TMDB back-fill for VOD detail pages, gated on the viewer's TMDB Key. See [TmdbClient]. */
-    private val tmdb = TmdbClient(http, settings)
+    /** TMDB back-fill for VOD detail pages, gated on the build having a TMDB Key. See [TmdbClient]. */
+    private val tmdb = TmdbClient(http, tmdbKey)
 
     /** Where work that outlives a sync runs, such as [MovieGenres]. */
     private val background = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -171,7 +173,7 @@ class CatalogRepository(
     /** Sources with a [fillGenresInBackground] job running. */
     private val sourcesGettingGenres: MutableSet<Long> = java.util.concurrent.ConcurrentHashMap.newKeySet()
 
-    // TMDB only with the viewer's own key. Every film once: its directors, writers and studios are
+    // TMDB only in a build with a key. Every film once: its directors, writers and studios are
     // worth the calls, and TMDB's free key allows far more than a batch of 200 a minute.
     private val movieGenres by lazy {
         MovieGenres(
@@ -272,7 +274,7 @@ class CatalogRepository(
     suspend fun movie(id: Long): Movie? = movieDao.byId(id)
 
     /**
-     * The IMDb id for a film, for Stremio add-on stream lookups. Resolved through the user's TMDB
+     * The IMDb id for a film, for Stremio add-on stream lookups. Resolved through Settee's TMDB
      * key (using the provider's TMDB id when present, else a title+year search). Null without a key
      * or a match — the add-on feature stays inert rather than guessing.
      */
@@ -449,7 +451,7 @@ class CatalogRepository(
         }
         val filled = if (info != null) movie.filledFrom(info) else movie
 
-        // 2) TMDB, with the viewer's key, once per film and again six months on: for what the
+        // 2) TMDB, in a build with a key, once per film and again six months on: for what the
         //    provider left blank and for the directors, writers and studios. Usually the background
         //    pass has asked already; this is for a film opened before the pass reached it.
         val answer = if (tmdb.isConfigured() && tmdbDue(filled.tmdbAnsweredAt, now)) tmdbMetaOf(filled) else null
@@ -518,7 +520,7 @@ class CatalogRepository(
         }
         if (!shownFirst) emit(result)
 
-        // 2) TMDB, with the viewer's key, at once when something is still missing or TMDB's answer
+        // 2) TMDB, in a build with a key, at once when something is still missing or TMDB's answer
         //    is six months old, so a series the background pass hasn't reached still fills in.
         tmdbAnswered(result, now)?.let { emit(it) }
     }.flowOn(Dispatchers.IO)
@@ -565,7 +567,7 @@ class CatalogRepository(
 
     /**
      * A film's More like this, from stored data only, so the row never waits on TMDB: the films TMDB
-     * recommends, with the viewer's key, then genre matches ([MoreLikeThis]).
+     * recommends, in a build with a TMDB key, then genre matches ([MoreLikeThis]).
      */
     suspend fun moreLikeThis(
         movie: Movie,

@@ -11,7 +11,7 @@ import app.opentv.data.model.Source
 import app.opentv.data.remote.TmdbMeta
 
 /**
- * Asks TMDB, with the viewer's TMDB Key, about each series once, and again once its answer is six
+ * Asks TMDB, in a build with a TMDB Key, about each series once, and again once its answer is six
  * months old ([tmdbDue]), so series nobody has opened get their posters, synopses and cast too.
  * [MovieGenres]' counterpart, at the same pace: [count] at a time, newest first, [pauseMillis]
  * between batches. A separate pass because series have no provider look-up to share it with:
@@ -69,7 +69,7 @@ class SeriesTmdbPass(
 
 /** TMDB as [SeriesTmdbPass] asks it. */
 interface SeriesTmdb {
-    /** Whether the viewer has saved a TMDB Key. */
+    /** Whether the build has a TMDB Key. */
     val ready: Boolean
 
     /** What TMDB has for [series]: null for no match, or a failure when TMDB couldn't be reached. */
