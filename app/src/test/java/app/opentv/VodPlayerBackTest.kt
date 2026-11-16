@@ -98,6 +98,19 @@ class VodPlayerBackTest {
     }
 
     @Test
+    fun `Back held while the bar times out still only hides it`() {
+        showFilm()
+
+        compose.onRoot().performKeyInput { keyDown(Key.Back) }
+        compose.mainClock.advanceTimeBy(CONTROLS_TIMEOUT_MILLIS)
+        compose.onRoot().performKeyInput { keyUp(Key.Back) }
+        settle()
+
+        compose.onNode(seekBar).assertDoesNotExist()
+        assertThat(backs).isEqualTo(0)
+    }
+
+    @Test
     fun `one Back on the bar of a paused film leaves the player`() {
         showFilm()
         press(Key.MediaPause)

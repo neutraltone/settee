@@ -491,8 +491,7 @@ fun LivePlayerContent(
     // Read when asked rather than when last drawn: a key can arrive between the state changing and
     // the screen being drawn again.
     fun liveScreen() = LiveScreen(
-        channelListOpen = channelListVisible,
-        pickerOpen = panel != PlayerPanel.NONE,
+        overlayOpen = channelListVisible || panel != PlayerPanel.NONE,
         controlsVisible = controlsVisible,
         retryableError = (controller.state.value as? PlayerController.State.Error)?.canRetry == true,
     )
@@ -590,15 +589,19 @@ fun LivePlayerContent(
     // and only leaves the player once nothing is on screen. From immersive it's a single press out,
     // so it never traps you, but it also no longer throws you all the way to the guide just because
     // you wanted to dismiss the bar.
-    fun stepBack() {
-        when {
-            channelListVisible -> channelListVisible = false
-            panel != PlayerPanel.NONE -> panel = PlayerPanel.NONE
-            controlsVisible -> controlsVisible = false
-            else -> leave()
+    fun backStep(): () -> Unit = when {
+        channelListVisible -> {
+            { channelListVisible = false }
         }
+        panel != PlayerPanel.NONE -> {
+            { panel = PlayerPanel.NONE }
+        }
+        controlsVisible -> {
+            { controlsVisible = false }
+        }
+        else -> ::leave
     }
-    BackHandler { stepBack() }
+    BackHandler { backStep()() }
 
     // Number entry: once digits stop coming, jump to that channel number in the browsing list.
     LaunchedEffect(numberEntry) {
@@ -614,6 +617,7 @@ fun LivePlayerContent(
         Modifier
             .fillMaxSize()
             .background(Color.Black)
+            .backOnRelease(backOnRelease) { backStep() }
             .onPreviewKeyEvent { event ->
                 // Media keys act whether or not the bar or a picker is up, and are always consumed.
                 if (event.key in MEDIA_KEYS) {
@@ -641,18 +645,9 @@ fun LivePlayerContent(
                     if (!repeating) openingPress = false
                     if (releasing || repeating) return@onPreviewKeyEvent true
                 }
-                if (backOnRelease.consume(event)) return@onPreviewKeyEvent true
                 if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
                 when (val key = liveKey(event.key, liveScreen())) {
                     LiveKey.PassThrough -> false
-                    LiveKey.Leave -> {
-                        backOnRelease.hold(::leave)
-                        true
-                    }
-                    LiveKey.StepBack -> {
-                        backOnRelease.hold(::stepBack)
-                        true
-                    }
                     is LiveKey.Digit -> {
                         numberEntry = (numberEntry + key.digit).take(4)
                         interaction++

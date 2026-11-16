@@ -143,6 +143,22 @@ class LivePlayerBackTest {
     }
 
     @Test
+    fun `one Back on a picker closes only the picker, leaving the bar up with its highlight`() {
+        showPlayer()
+        openControls()
+        press(Key.DirectionDown)
+        press(Key.DirectionCenter)
+        compose.mainClock.advanceTimeBy(FOCUS_MILLIS)
+        compose.onNodeWithText("Off").assertExists()
+
+        back()
+
+        compose.onNodeWithText("Off").assertDoesNotExist()
+        assertThat(compose.seekBarIsFocused()).isTrue()
+        assertThat(backs).isEqualTo(0)
+    }
+
+    @Test
     fun `one Back closes the channel list and stays in the player`() {
         showPlayer()
         press(Key.DirectionLeft)
