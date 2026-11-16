@@ -27,6 +27,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
 import kotlinx.coroutines.withTimeout
 import org.junit.After
@@ -62,6 +63,9 @@ class ProfileStillsTest {
         graph.settings.setHiddenCategories(emptySet())
         watching.cancel()
         graph.database.close()
+        // Left in place, the test dispatcher stays Main for every test after this one in the same JVM,
+        // and those driving a player on the main looper (QualityStepDownTest) stop seeing their time pass.
+        Dispatchers.resetMain()
     }
 
     private fun film(id: Long, category: Category) = Movie(
