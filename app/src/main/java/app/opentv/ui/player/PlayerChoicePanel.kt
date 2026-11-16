@@ -35,6 +35,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
@@ -91,8 +92,8 @@ internal sealed interface RowEnd {
  * picture with the current choice ticked, where the Highlight starts. Back closes it through
  * [onClose].
  *
- * With no rows its message (or, with none, its footer) takes the Highlight, and the remote's arrows
- * stay in the panel, so the Highlight isn't left on the button under it, where Back would only take
+ * The remote's arrows always stay in the panel. With no rows its message (or, with none, its footer)
+ * takes the Highlight, so the Highlight isn't left on the button under it, where Back would only take
  * it off that button.
  */
 @Composable
@@ -128,9 +129,20 @@ internal fun PlayerChoicePanel(
                 if (isBack && event.type == KeyEventType.KeyUp) onClose()
                 isBack
             }
-            // With no rows the remote stays in the panel, rather than moving a Highlight the viewer
-            // can't see along the controls under it; within it, a footer's buttons are still reachable.
-            .focusProperties { if (noRows) onExit = { cancelFocusChange() } }
+            // The panel is drawn over the control bar, whose buttons stay composed underneath, so an
+            // arrow off its edge would move a Highlight the viewer can't see onto the hidden Close
+            // (which quits) or seek bar (#425). So the remote stays in the panel; within it, rows and
+            // a footer's buttons are still reachable. With rows, code may still move the Highlight
+            // out (Enter and Exit; the rest are keys). Rejected: a Dialog, as SidePanel does, would
+            // put a second window over the video and change picture-in-picture and Back; a flag that
+            // stops the bar taking focus needs every player to pass it.
+            .focusProperties {
+                onExit = {
+                    val byCode = requestedFocusDirection == FocusDirection.Enter ||
+                        requestedFocusDirection == FocusDirection.Exit
+                    if (noRows || !byCode) cancelFocusChange()
+                }
+            }
             .focusGroup()
             .fillMaxHeight()
             .width(ChoicePanelWidth)
