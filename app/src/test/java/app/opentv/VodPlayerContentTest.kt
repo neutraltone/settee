@@ -314,7 +314,8 @@ class VodPlayerContentTest {
         Espresso.pressBack()
         settle()
         compose.onNodeWithText("Off").assertDoesNotExist()
-        assertThat(compose.seekBarIsFocused()).isTrue()
+        // Back on the button that opened it (#452).
+        compose.onNodeWithContentDescription("Subtitles").assertIsFocused()
     }
 
     @Test
