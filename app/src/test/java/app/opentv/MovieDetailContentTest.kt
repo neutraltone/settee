@@ -5,6 +5,7 @@
  */
 package app.opentv
 
+import android.app.Application
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.test.ExperimentalTestApi
@@ -18,10 +19,13 @@ import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isFocused
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
+import androidx.test.core.app.ApplicationProvider
 import androidx.test.espresso.Espresso
+import app.opentv.core.ServiceLocator
 import app.opentv.data.model.Movie
 import app.opentv.data.model.StremioStream
 import app.opentv.data.repo.CoverStatus
@@ -29,9 +33,11 @@ import app.opentv.data.repo.MediaKey
 import app.opentv.data.repo.VersionTraits
 import app.opentv.data.repo.VodQualities
 import app.opentv.ui.vod.MovieDetailContent
+import app.opentv.ui.vod.MovieDetailScreen
 import app.opentv.ui.vod.PageVersions
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.runBlocking
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -465,5 +471,39 @@ class MovieDetailContentTest {
 
         assertThat(chosen).containsExactly(MediaKey.Movie(2))
         assertThat(plays).isEqualTo(1)
+    }
+
+    @Test
+    fun `a film page opened for a film that isn't stored says it's gone, and its highlighted Back leaves`() {
+        // The whole screen with its real view model, which only this state needs (#495).
+        val app = ApplicationProvider.getApplicationContext<Application>()
+        val graph = ServiceLocator.Graph(app, http = FakePanel().http)
+        val viewModels = TestViewModels()
+        try {
+            runBlocking { graph.database.sources().insert(PANEL_SOURCE) }
+            var left = false
+            compose.setTvContent {
+                MovieDetailScreen(
+                    movieId = 404,
+                    onPlay = {},
+                    onPlayAddonStream = {},
+                    onOpenMovie = {},
+                    onOpenPerson = {},
+                    onBack = { left = true },
+                    viewModel = viewModels.vod(app, graph),
+                )
+            }
+
+            compose.waitUntilAtLeastOneExists(hasText(app.getString(R.string.error_gone)), 10_000)
+            compose.onNodeWithText(app.getString(R.string.common_back)).assertIsFocused()
+            captureScreen("movie_detail_gone")
+            compose.onRoot().performKeyInput { pressKey(Key.DirectionCenter) }
+            compose.waitForIdle()
+
+            assertThat(left).isTrue()
+        } finally {
+            viewModels.clear()
+            graph.database.close()
+        }
     }
 }

@@ -49,6 +49,7 @@ import app.opentv.data.model.StremioStream
 import app.opentv.data.parser.displayTitle
 import app.opentv.data.repo.CoverStatus
 import app.opentv.data.repo.MediaKey
+import app.opentv.data.repo.Opened
 import app.opentv.ui.VodViewModel
 import app.opentv.ui.design.ArtCard
 import app.opentv.ui.design.ArtCardSize
@@ -75,7 +76,8 @@ import kotlinx.coroutines.launch
 
 /**
  * A film's page. Opening it enriches the row from the provider (backdrop, genre and so on) if those
- * fields are still bare, so a title that was plain in a grid fills out here.
+ * fields are still bare, so a title that was plain in a grid fills out here. A film no longer stored
+ * says so, with a Back that calls [onBack].
  */
 @Composable
 fun MovieDetailScreen(
@@ -84,9 +86,11 @@ fun MovieDetailScreen(
     onPlayAddonStream: (MediaKey.AddonStream) -> Unit,
     onOpenMovie: (Movie) -> Unit,
     onOpenPerson: (String) -> Unit,
+    onBack: () -> Unit,
     viewModel: VodViewModel = viewModel(),
 ) {
     var movie by remember(movieId) { mutableStateOf<Movie?>(null) }
+    var gone by remember(movieId) { mutableStateOf(false) }
     var similar by remember(movieId) { mutableStateOf<List<Movie>?>(null) }
     var resumes by remember(movieId) { mutableStateOf(false) }
     var versions by remember(movieId) { mutableStateOf(PageVersions()) }
@@ -96,7 +100,12 @@ fun MovieDetailScreen(
     // The page waits for everything its buttons depend on, read side by side, so they're all there when it
     // shows rather than arriving one by one: Resume replacing Play, the Quality pill pushing the star along.
     LaunchedEffect(movieId) {
-        val loaded = viewModel.movieDetail(movieId) ?: return@LaunchedEffect
+        val opened = viewModel.openMovie(movieId)
+        if (opened !is Opened.Found) {
+            gone = true
+            return@LaunchedEffect
+        }
+        val loaded = opened.title
         coroutineScope {
             val resuming = async { viewModel.resumesPartway(loaded) }
             val versionsOf = async { viewModel.pageVersions(MediaKey.Movie(loaded.id)) }
@@ -107,6 +116,11 @@ fun MovieDetailScreen(
     }
     // Apart from the film's own load, so the hero never waits on the row.
     LaunchedEffect(movie?.id) { movie?.let { similar = viewModel.moreLikeThis(it) } }
+
+    if (gone) {
+        GoneDetail(onBack)
+        return
+    }
 
     val m = movie
     // Waited for as well: the line it adds to the hero would push the buttons up.
