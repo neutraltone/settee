@@ -11,13 +11,16 @@ import app.opentv.core.ServiceLocator
 import app.opentv.data.model.Series
 import app.opentv.data.model.Source
 import app.opentv.data.model.SourceKind
+import app.opentv.data.repo.Opened
 import app.opentv.ui.OpenedShow
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -95,7 +98,7 @@ class ShowPageFetchTest {
         runBlocking<Unit> {
             saveTwoVersions()
 
-            val opened = withTimeout(10_000) { viewModel.openShow(1).first { it.fetched } }
+            val opened = withTimeout(10_000) { viewModel.openShow(1).found().first { it.fetched } }
 
             assertThat(opened.series.genre).isEqualTo("Drama")
             assertThat(timesAsked(1)).isEqualTo(1)
@@ -110,7 +113,7 @@ class ShowPageFetchTest {
             saveTwoVersions(first = series(1, "Dragons").copy(genre = "Comedy"))
             val answer = panel.hold("get_series_info:1")
             val shown = java.util.Collections.synchronizedList(mutableListOf<OpenedShow>())
-            val show = viewModel.openShow(1)
+            val show = viewModel.openShow(1).found()
             val opening = launch(Dispatchers.Default) { show.collect { shown += it } }
 
             during(answer) {
@@ -150,7 +153,7 @@ class ShowPageFetchTest {
         panel.replies["get_series_info:1"] = "!timeout"
         panel.replies["get_series_info:2"] = "!timeout"
 
-        val opened = withTimeout(10_000) { viewModel.openShow(1).first { it.fetched } }
+        val opened = withTimeout(10_000) { viewModel.openShow(1).found().first { it.fetched } }
 
         assertThat(opened.noEpisodes).isTrue()
         assertThat(opened.failure?.sentence).isEqualTo(app.getString(R.string.error_timed_out))
@@ -161,7 +164,7 @@ class ShowPageFetchTest {
         saveTwoVersions()
         panel.replies["get_series_info:1"] = "!503"
 
-        val opened = withTimeout(10_000) { viewModel.openShow(1).first { it.fetched } }
+        val opened = withTimeout(10_000) { viewModel.openShow(1).found().first { it.fetched } }
 
         assertThat(opened.failure).isNull()
         assertThat(episodeIds(2)).containsExactly("201")
@@ -173,7 +176,7 @@ class ShowPageFetchTest {
         graph.database.series().upsertAll(listOf(series(1, "Dragons").copy(tmdbId = null)))
         panel.replies["get_series_info:1"] = """{"episodes": {}}"""
 
-        val opened = withTimeout(10_000) { viewModel.openShow(1).first { it.fetched } }
+        val opened = withTimeout(10_000) { viewModel.openShow(1).found().first { it.fetched } }
 
         assertThat(opened.noEpisodes).isTrue()
         assertThat(opened.failure).isNull()
@@ -185,7 +188,7 @@ class ShowPageFetchTest {
         graph.database.sources().insert(playlist)
         graph.database.series().upsertAll(listOf(series(1, "Dragons").copy(sourceId = playlist.id, tmdbId = null)))
 
-        val opened = withTimeout(10_000) { viewModel.openShow(1).first { it.fetched } }
+        val opened = withTimeout(10_000) { viewModel.openShow(1).found().first { it.fetched } }
 
         assertThat(opened.failure).isNull()
     }
@@ -199,9 +202,12 @@ class ShowPageFetchTest {
             graph.database.episodes().upsertAll(listOf(stored))
             panel.replies["get_series_info:1"] = "!timeout"
 
-            val opened = withTimeout(10_000) { viewModel.openShow(1).first { it.fetched } }
+            val opened = withTimeout(10_000) { viewModel.openShow(1).found().first { it.fetched } }
 
             assertThat(opened.noEpisodes).isFalse()
             assertThat(opened.failure).isNull()
         }
+
+    /** The show as each opening gives it, as these shows are all stored. */
+    private fun Flow<Opened<OpenedShow>>.found() = mapNotNull { (it as? Opened.Found)?.title }
 }
