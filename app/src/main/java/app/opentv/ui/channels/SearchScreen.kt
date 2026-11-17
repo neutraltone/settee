@@ -34,8 +34,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -158,10 +160,18 @@ internal fun SearchContent(
     // A chosen Recent Search whose results haven't arrived. They take a moment (the view models
     // debounce), so the highlight waits in the box, and stays there if the viewer does anything else.
     var awaitingResultsOf by remember { mutableStateOf<String?>(null) }
+    // Search is built again on Back from a result it opened (a title page or the player covered it),
+    // so the result is saved by its list key, and the highlight goes back to it, not to the box (#431).
+    var opened by rememberSaveable { mutableStateOf<String?>(null) }
+    // Decided once, as Search is built: the results it comes back to are the ones it had.
+    val returnTo = remember {
+        opened?.takeIf { itemIndexOf(it, channelResults, movieResults, seriesResults) != null }
+    }
 
-    LaunchedEffect(Unit) { runCatching { searchBox.requestFocus() } }
+    LaunchedEffect(Unit) { if (returnTo == null) runCatching { searchBox.requestFocus() } }
+    // Only while the Recent Searches show: built again over results, the box mustn't take the highlight.
     LaunchedEffect(recentSearches?.isEmpty()) {
-        if (recentSearches?.isEmpty() == true) runCatching { searchBox.requestFocus() }
+        if (recentSearches?.isEmpty() == true && typed.isBlank()) runCatching { searchBox.requestFocus() }
     }
     LaunchedEffect(typed, channelResults, movieResults, seriesResults) {
         val awaited = awaitingResultsOf ?: return@LaunchedEffect
@@ -221,21 +231,27 @@ internal fun SearchContent(
                     channelResults = channelResults,
                     movieResults = movieResults,
                     seriesResults = seriesResults,
-                    onPlayChannel = {
+                    returnTo = returnTo,
+                    // A channel counts as opened once its play is confirmed: kept, it's left alone.
+                    onPlayChannel = { row ->
                         confirmLive {
+                            opened = row.resultKey
                             onResultOpened(typed)
-                            onPlayChannel(it)
+                            onPlayChannel(row.primary)
                         }
                     },
                     onPlayMovie = {
+                        opened = it.resultKey
                         onResultOpened(typed)
                         onPlayMovie(it)
                     },
                     onOpenSeries = {
+                        opened = it.resultKey
                         onResultOpened(typed)
                         onOpenSeries(it)
                     },
-                    onLeave = { go ->
+                    onLeave = { key, go ->
+                        opened = key
                         onResultOpened(typed)
                         go()
                     },
@@ -245,42 +261,91 @@ internal fun SearchContent(
     }
 }
 
+// Each result's key in SearchResults' list, and what Search saves of the one it opened.
+private val ChannelsViewModel.Row.resultKey get() = "c$key"
+private val Movie.resultKey get() = "m$id"
+private val Series.resultKey get() = "s$id"
+
+/** Where the result keyed [key] stands in [SearchResults]' list, headers counted; null if it isn't there. */
+private fun itemIndexOf(
+    key: String,
+    channelResults: List<ChannelsViewModel.Row>,
+    movieResults: List<Movie>,
+    seriesResults: List<Series>,
+): Int? {
+    val sections = listOf(
+        channelResults.map { it.resultKey },
+        movieResults.map { it.resultKey },
+        seriesResults.map { it.resultKey },
+    )
+    var start = 0
+    for (section in sections) {
+        if (section.isEmpty()) continue
+        val row = section.indexOf(key)
+        // Each section's rows follow its header.
+        if (row >= 0) return start + 1 + row
+        start += 1 + section.size
+    }
+    return null
+}
+
+/**
+ * The results, the highlight going to the one keyed [returnTo] as they're first shown, scrolled to
+ * if it's out of sight. [onLeave] is told the key of the result whose options leave Search.
+ */
 @Composable
 private fun SearchResults(
     channelResults: List<ChannelsViewModel.Row>,
     movieResults: List<Movie>,
     seriesResults: List<Series>,
-    onPlayChannel: (Channel) -> Unit,
+    returnTo: String?,
+    onPlayChannel: (ChannelsViewModel.Row) -> Unit,
     onPlayMovie: (Movie) -> Unit,
     onOpenSeries: (Series) -> Unit,
-    onLeave: LeaveScreen,
+    onLeave: (key: String, go: () -> Unit) -> Unit,
 ) {
     val listState = rememberLazyListState()
     // The rows start after the section's header.
     val highlight = rememberRowHighlight(channelResults, listState, firstRowItem = 1) { it.key }
+    val returnRequester = remember { FocusRequester() }
+    LaunchedEffect(Unit) {
+        val index = returnTo?.let { itemIndexOf(it, channelResults, movieResults, seriesResults) }
+            ?: return@LaunchedEffect
+        // A frame for the list to be laid out where its saved scroll left it.
+        withFrameNanos {}
+        if (listState.layoutInfo.visibleItemsInfo.none { it.index == index }) {
+            listState.scrollToItem(index)
+            // The row is composed, with the requester, on the frame after it's scrolled to.
+            withFrameNanos {}
+        }
+        runCatching { returnRequester.requestFocus() }
+    }
+    fun Modifier.returning(key: String) = if (key == returnTo) focusRequester(returnRequester) else this
+    fun leave(key: String): LeaveScreen = { go -> onLeave(key, go) }
     LazyColumn(state = listState, verticalArrangement = Arrangement.spacedBy(6.dp)) {
         if (channelResults.isNotEmpty()) {
             item(contentType = "header") { SearchSectionHeader(stringResource(R.string.common_channels)) }
             itemsIndexed(
                 channelResults,
-                key = { _, row -> "c${row.key}" },
+                key = { _, row -> row.resultKey },
                 contentType = { _, _ -> "channel" },
             ) { index, row ->
                 SearchResultRow(
                     row = row,
-                    onClick = { onPlayChannel(row.primary) },
-                    modifier = highlight.modifier(index, row.key),
+                    onClick = { onPlayChannel(row) },
+                    modifier = highlight.modifier(index, row.key).returning(row.resultKey),
                 )
             }
         }
         if (movieResults.isNotEmpty()) {
             item(contentType = "header") { SearchSectionHeader(stringResource(R.string.nav_movies)) }
-            items(movieResults, key = { "m${it.id}" }, contentType = { "title" }) { movie ->
+            items(movieResults, key = { it.resultKey }, contentType = { "title" }) { movie ->
                 VodResultRow(
                     movie.displayTitle,
                     movie.posterUrl,
                     movie.year?.toString(),
-                    onOptions = openOptionsOn(OptionsSubject.OfMovie(movie), onLeave),
+                    onOptions = openOptionsOn(OptionsSubject.OfMovie(movie), leave(movie.resultKey)),
+                    modifier = Modifier.returning(movie.resultKey),
                 ) {
                     onPlayMovie(movie)
                 }
@@ -288,12 +353,13 @@ private fun SearchResults(
         }
         if (seriesResults.isNotEmpty()) {
             item(contentType = "header") { SearchSectionHeader(stringResource(R.string.nav_shows)) }
-            items(seriesResults, key = { "s${it.id}" }, contentType = { "title" }) { show ->
+            items(seriesResults, key = { it.resultKey }, contentType = { "title" }) { show ->
                 VodResultRow(
                     show.displayTitle,
                     show.posterUrl,
                     show.year?.toString(),
-                    onOptions = openOptionsOn(OptionsSubject.OfSeries(show), onLeave),
+                    onOptions = openOptionsOn(OptionsSubject.OfSeries(show), leave(show.resultKey)),
+                    modifier = Modifier.returning(show.resultKey),
                 ) {
                     onOpenSeries(show)
                 }
@@ -354,9 +420,10 @@ private fun VodResultRow(
     posterUrl: String?,
     subtitle: String?,
     onOptions: (() -> Unit)?,
+    modifier: Modifier = Modifier,
     onClick: () -> Unit,
 ) {
-    SearchRow(onClick = onClick, onOptions = onOptions) {
+    SearchRow(onClick = onClick, modifier = modifier, onOptions = onOptions) {
         AsyncImage(
             model = posterUrl,
             contentDescription = null,

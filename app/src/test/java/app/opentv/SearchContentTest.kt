@@ -15,16 +15,21 @@ import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
+import androidx.compose.ui.test.hasClickAction
+import androidx.compose.ui.test.hasScrollAction
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performKeyInput
+import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.test.requestFocus
 import app.opentv.data.model.Channel
@@ -34,6 +39,7 @@ import app.opentv.data.repo.LineupChannel
 import app.opentv.ui.ChannelsViewModel
 import app.opentv.ui.channels.SearchContent
 import app.opentv.ui.options.LeaveScreen
+import app.opentv.ui.options.LocalConfirmLive
 import app.opentv.ui.options.LocalOpenOptions
 import app.opentv.ui.options.OptionsSubject
 import com.google.common.truth.Truth.assertThat
@@ -68,6 +74,12 @@ class SearchContentTest {
     private var leaveThroughOptions: LeaveScreen? = null
     private var cleared = false
 
+    /** While true, something covers Search, as a title page or the player does: it's disposed, its saved state kept. */
+    private var covered by mutableStateOf(false)
+
+    /** What asks before a channel plays; by default nothing asks. */
+    private var confirmLive: (start: () -> Unit) -> Unit = { start -> start() }
+
     private fun show(
         channels: List<ChannelsViewModel.Row> = emptyList(),
         movies: List<Movie> = emptyList(),
@@ -75,31 +87,49 @@ class SearchContentTest {
     ) {
         compose.setTvContent {
             view = LocalView.current
+            // As a NavHost keeps a destination's saved state while another covers it.
+            val saved = rememberSaveableStateHolder()
             CompositionLocalProvider(
                 LocalOpenOptions provides { subject, leave ->
                     optionsOpenedOn += subject
                     leaveThroughOptions = leave
                 },
+                LocalConfirmLive provides confirmLive,
             ) {
-                SearchContent(
-                    query = query,
-                    channelResults = channels + liveChannels,
-                    movieResults = movies + liveMovies,
-                    seriesResults = series,
-                    onPlayChannel = {},
-                    onPlayMovie = {},
-                    onOpenSeries = {},
-                    onBack = {},
-                    recentSearches = recentSearches,
-                    onResultOpened = { opened += it },
-                    onClearRecentSearches = { cleared = true },
-                )
+                if (!covered) {
+                    saved.SaveableStateProvider("search") {
+                        SearchContent(
+                            query = query,
+                            channelResults = channels + liveChannels,
+                            movieResults = movies + liveMovies,
+                            seriesResults = series,
+                            onPlayChannel = {},
+                            onPlayMovie = {},
+                            onOpenSeries = {},
+                            onBack = {},
+                            recentSearches = recentSearches,
+                            onResultOpened = { opened += it },
+                            onClearRecentSearches = { cleared = true },
+                        )
+                    }
+                }
             }
         }
         compose.waitForIdle()
     }
 
     private val device = DeviceKeyboard(compose) { view }
+
+    /** Covers Search and uncovers it, as opening a result and pressing Back does, doing [whileCovered] meanwhile. */
+    private fun comeBack(whileCovered: () -> Unit = {}) {
+        covered = true
+        compose.waitForIdle()
+        whileCovered()
+        covered = false
+        compose.waitForIdle()
+    }
+
+    private fun resultRow(name: String) = compose.onNode(hasText(name) and hasClickAction())
 
     @Test
     fun `search opens with the highlight in the search box`() {
@@ -406,6 +436,77 @@ class SearchContentTest {
         assertThat(left).isTrue()
     }
 
+    // The return itself, for each kind of result, is in RecentSearchesScreenTest's NavHost (#431).
+    @Test
+    fun `back to Search after the opened result has gone, the highlight is in the box`() {
+        query.setTextAndPlaceCursorAtEnd("film")
+        liveMovies = listOf(movie("Film", id = 1), movie("Second Film", id = 2))
+        show()
+        resultRow("Second Film").performClick()
+
+        comeBack { liveMovies = listOf(movie("Film", id = 1)) }
+
+        assertThat(device.highlighted()).isTrue()
+    }
+
+    @Test
+    fun `back to Search, a result now out of sight is scrolled to and highlighted`() {
+        query.setTextAndPlaceCursorAtEnd("film")
+        liveMovies = (1..30L).map { movie("Film $it", id = it) }
+        show()
+        compose.onNode(hasScrollAction()).performScrollToNode(hasText("Film 25"))
+        resultRow("Film 25").performClick()
+
+        // Channels arriving above push the film down past where the list was left.
+        comeBack { liveChannels = (1..30).map { channelRow("Channel $it") } }
+
+        resultRow("Film 25").assertIsFocused().assertIsDisplayed()
+        assertThat(device.highlighted()).isFalse()
+    }
+
+    @Test
+    fun `a channel whose play is cancelled isn't returned to`() {
+        query.setTextAndPlaceCursorAtEnd("bbc")
+        var asked = false
+        // The viewer keeps the recording: the channel never starts.
+        confirmLive = { asked = true }
+        show(channels = listOf(channelRow("BBC One"), channelRow("BBC Two")))
+        resultRow("BBC Two").performClick()
+        assertThat(asked).isTrue()
+
+        comeBack()
+
+        assertThat(device.highlighted()).isTrue()
+    }
+
+    @Test
+    fun `a channel whose play is confirmed is returned to`() {
+        query.setTextAndPlaceCursorAtEnd("bbc")
+        var confirm: (() -> Unit)? = null
+        confirmLive = { start -> confirm = start }
+        show(channels = listOf(channelRow("BBC One"), channelRow("BBC Two")))
+        resultRow("BBC Two").performClick()
+        confirm!!()
+
+        comeBack()
+
+        resultRow("BBC Two").assertIsFocused()
+        assertThat(device.highlighted()).isFalse()
+    }
+
+    @Test
+    fun `back to Search after leaving through a result's options, the highlight is on that result`() {
+        query.setTextAndPlaceCursorAtEnd("film")
+        liveMovies = listOf(movie("Film", id = 1), movie("Second Film", id = 2))
+        show()
+        resultRow("Second Film").requestFocus().performKeyInput { pressKey(Key.Menu) }
+        leaveThroughOptions!! {}
+
+        comeBack()
+
+        resultRow("Second Film").assertIsFocused()
+    }
+
     @Test
     fun `Menu on a Recent Search opens its options`() {
         recentSearches = listOf("bbc")
@@ -505,7 +606,8 @@ class SearchContentTest {
         compose.waitForIdle()
     }
 
-    private fun movie(name: String) = Movie(
+    private fun movie(name: String, id: Long = 0) = Movie(
+        id = id,
         sourceId = 1,
         streamId = name,
         name = name,
