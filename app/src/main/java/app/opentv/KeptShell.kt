@@ -202,7 +202,10 @@ private suspend fun returnHighlight(memory: HighlightMemory, shellReturn: ShellR
     if (!inContent) runCatching { anywhere.requestFocus() }
 }
 
-private const val RETURN_FRAMES = 3
+// Enough for the slowest answer: Home and For you recompose with the card to go back to, scroll the
+// list to its row, which composes it, scroll the row to the card, then wait a frame to ask for it.
+// With 3 the tab's first card had the Highlight first whenever the row was off screen, a visible jump.
+private const val RETURN_FRAMES = 6
 
 /**
  * Measured, so its lazy lists keep their items, but placed only when [placed]: an unplaced node is

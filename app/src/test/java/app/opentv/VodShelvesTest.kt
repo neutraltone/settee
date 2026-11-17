@@ -554,20 +554,24 @@ class VodShelvesTest {
 
     private val threeShows = listOf(series(1, "Severance"), series(5, "Andor"), series(6, "Slow Horses"))
 
-    private fun setShows(resume: () -> List<ResumeItem> = { emptyList() }, favourites: () -> List<Series>) =
-        compose.setTvContent {
-            ScreenFrame {
-                SeriesShelves(
-                    resume = resume(),
-                    favourites = favourites(),
-                    recommended = emptyList(),
-                    recentlyAdded = listOf(series(7, "Dark"), series(8, "Lost")),
-                    genreRows = emptyList(),
-                    onResume = {},
-                    onOpenSeries = {},
-                )
-            }
+    private fun setShows(
+        resume: () -> List<ResumeItem> = { emptyList() },
+        recommending: Boolean = false,
+        favourites: () -> List<Series>,
+    ) = compose.setTvContent {
+        ScreenFrame {
+            SeriesShelves(
+                resume = resume(),
+                favourites = favourites(),
+                recommended = emptyList(),
+                recentlyAdded = listOf(series(7, "Dark"), series(8, "Lost")),
+                genreRows = emptyList(),
+                onResume = {},
+                onOpenSeries = {},
+                recommending = recommending,
+            )
         }
+    }
 
     @Test
     fun `removing the highlighted last Favourite on For you highlights the row's new last card`() {
@@ -601,6 +605,28 @@ class VodShelvesTest {
         favourites = emptyList()
 
         compose.onNode(isFocused()).assert(hasText("Dark") or hasText("Lost"))
+    }
+
+    @Test
+    fun `removing the only Favourite while Recommended is still being worked out highlights the row under it`() {
+        var favourites by mutableStateOf(listOf(series(1, "Severance")))
+        setShows(resume = { resume }, recommending = true) { favourites }
+        compose.onNodeWithText("Severance").requestFocus()
+
+        favourites = emptyList()
+
+        compose.onNodeWithText("Dark").assertIsFocused()
+    }
+
+    @Test
+    fun `a card leaving a row the viewer isn't on leaves the Highlight where it is`() {
+        var favourites by mutableStateOf(threeShows)
+        setShows { favourites }
+        compose.onNodeWithText("Lost").requestFocus()
+
+        favourites = threeShows.filterNot { it.name == "Andor" }
+
+        compose.onNodeWithText("Lost").assertIsFocused()
     }
 
     @Test

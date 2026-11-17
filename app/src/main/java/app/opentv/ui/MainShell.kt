@@ -35,6 +35,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
@@ -68,6 +69,7 @@ import app.opentv.ui.design.SetteeType
 import app.opentv.ui.design.Text
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.filter
 
 // LOOK.md's Rail: closed, 104 dp, the items on the 48 dp screen margin. Open, wide enough for the
 // longest label in the languages Settee ships in at 16 sp.
@@ -348,6 +350,18 @@ class ShellReturn {
 }
 
 val LocalShellReturn = staticCompositionLocalOf { ShellReturn() }
+
+/**
+ * Runs [answer] each time Back to the main screen asks the tab on show to put the Highlight back
+ * ([ShellReturn.asked]). Collected rather than keyed on `asked`: KeptShell lowers it after a few frames,
+ * and an effect keyed on it was cancelled there, mid-scroll, before it put the Highlight back.
+ */
+@Composable
+internal fun OnShellReturn(answer: suspend () -> Unit) {
+    val shellReturn = LocalShellReturn.current
+    val latest by rememberUpdatedState(answer)
+    LaunchedEffect(shellReturn) { snapshotFlow { shellReturn.asked }.filter { it }.collect { latest() } }
+}
 
 /** Marks a row (or the guide) as where Right out of the rail goes back to once it has had the Highlight. */
 @Composable

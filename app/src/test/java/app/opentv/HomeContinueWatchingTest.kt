@@ -20,6 +20,7 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
 import app.opentv.data.model.Movie
+import app.opentv.data.model.Series
 import app.opentv.data.repo.MediaKey
 import app.opentv.data.repo.VodTitle
 import app.opentv.ui.Cover
@@ -84,6 +85,22 @@ class HomeContinueWatchingTest {
         ),
     )
 
+    private fun showCover(id: Long, name: String) = Cover(
+        VodTitle.OfSeries(
+            Series(
+                id = id,
+                sourceId = 1,
+                seriesId = "$id",
+                name = name,
+                categoryId = null,
+                posterUrl = "https://example.com/$id.jpg",
+                rating = null,
+                year = null,
+                plot = null,
+            ),
+        ),
+    )
+
     /** Whether Home is on screen; false while the viewer is off in the player. */
     private var home by mutableStateOf(true)
 
@@ -91,14 +108,18 @@ class HomeContinueWatchingTest {
      * Shows Home the way the app's navigation does, with a row of Favourite movies under [cards]:
      * going to another screen drops Home but keeps its saved state, which comes back when Home does.
      */
-    private fun setHome(cards: () -> List<ResumeItem>) = compose.setTvContent {
+    private fun setHome(
+        shows: () -> List<Cover> = { emptyList() },
+        films: () -> List<Cover> = { listOf(cover(1, "Sicario"), cover(2, "Heat")) },
+        cards: () -> List<ResumeItem>,
+    ) = compose.setTvContent {
         val saved = rememberSaveableStateHolder()
         if (home) {
             saved.SaveableStateProvider("home") {
                 HomeContent(
                     continueWatching = cards(),
-                    favouriteShows = emptyList(),
-                    favouriteMovies = listOf(cover(1, "Sicario"), cover(2, "Heat")),
+                    favouriteShows = shows(),
+                    favouriteMovies = films(),
                     favouriteChannels = emptyList(),
                     onResume = {},
                     onOpenSeries = {},
@@ -167,5 +188,60 @@ class HomeContinueWatchingTest {
         press(Key.DirectionUp)
 
         card("Pachinko").assertIsFocused()
+    }
+
+    // Remove from Continue Watching, Mark watched or Remove from Favourites on the highlighted card.
+    @Test
+    fun `removing the highlighted Continue Watching card highlights the one taking its place`() {
+        val four = listOf(film(9, "Collateral"), film(7, "Insomnia"), film(8, "Memento"), film(10, "Thief"))
+        var cards by mutableStateOf(four)
+        setHome { cards }
+        press(Key.DirectionRight)
+        press(Key.DirectionRight)
+        card("Memento").assertIsFocused()
+
+        cards = four.filterNot { it.title == "Memento" }
+
+        card("Thief").assertIsFocused()
+        captureScreen("home_card_removed")
+    }
+
+    private val threeShows = listOf(showCover(11, "Severance"), showCover(15, "Andor"), showCover(16, "Slow Horses"))
+
+    @Test
+    fun `removing a highlighted Favourite show highlights the one taking its place`() {
+        var shows by mutableStateOf(threeShows)
+        setHome(shows = { shows }) { emptyList() }
+        press(Key.DirectionRight)
+        card("Andor").assertIsFocused()
+
+        shows = threeShows.filterNot { it.title.name == "Andor" }
+
+        card("Slow Horses").assertIsFocused()
+    }
+
+    @Test
+    fun `removing the last card of a row highlights the row's new last card`() {
+        var shows by mutableStateOf(threeShows)
+        setHome(shows = { shows }) { emptyList() }
+        press(Key.DirectionRight)
+        press(Key.DirectionRight)
+        card("Slow Horses").assertIsFocused()
+
+        shows = threeShows.dropLast(1)
+
+        card("Andor").assertIsFocused()
+    }
+
+    @Test
+    fun `a card leaving a row the viewer isn't on leaves the Highlight where it is`() {
+        var films by mutableStateOf(listOf(cover(1, "Sicario"), cover(2, "Heat")))
+        setHome(films = { films }) { listOf(film(9, "Collateral"), film(7, "Insomnia")) }
+        press(Key.DirectionRight)
+        card("Insomnia").assertIsFocused()
+
+        films = films.filterNot { it.title.name == "Heat" }
+
+        card("Insomnia").assertIsFocused()
     }
 }
