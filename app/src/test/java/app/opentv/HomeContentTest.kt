@@ -197,6 +197,7 @@ class HomeContentTest {
         channels: List<HomeChannel> = listOf(favourite(3, "BBC One")),
         recent: List<Cover> = emptyList(),
         favouritesNow: () -> List<Cover> = { favourites },
+        resumeNow: () -> List<ResumeItem> = { resume },
     ) = compose.setTvContent {
         CompositionLocalProvider(LocalOpenOptions provides { _, leave -> leaveThroughOptions = leave }) {
             HomeContent(
@@ -207,7 +208,7 @@ class HomeContentTest {
                 },
                 onOpenLive = { openedLive = true },
                 stopPreview = { events += "stop" },
-                continueWatching = resume,
+                continueWatching = resumeNow(),
                 favouriteShows = favouritesNow().shows(),
                 favouriteMovies = favouritesNow().movies(),
                 favouriteChannels = channels,
@@ -749,6 +750,24 @@ class HomeContentTest {
         press(Key.DirectionUp)
 
         compose.onNodeWithText("Ronin").assertIsFocused()
+    }
+
+    // A position synced from another device moves the card on while the viewer is elsewhere on Home.
+    @Test
+    fun `coming back into Continue Watching lands on the show last highlighted even after its card moved on an episode`() {
+        var cards by mutableStateOf(
+            listOf(resumeItem(9, "Collateral"), resumeItem(7, "Insomnia"), episodeItem(43, "Pachinko", 1, 3)),
+        )
+        setHome(favourites = threeFavourites, resumeNow = { cards })
+        press(Key.DirectionRight)
+        press(Key.DirectionRight)
+        press(Key.DirectionDown)
+
+        cards = listOf(resumeItem(9, "Collateral"), resumeItem(7, "Insomnia"), episodeItem(44, "Pachinko", 1, 4))
+        compose.waitForIdle()
+        press(Key.DirectionUp)
+
+        compose.onNode(hasText("Pachinko") and hasClickAction()).assertIsFocused()
     }
 
     @Test
