@@ -6,6 +6,7 @@
 package app.opentv
 
 import android.app.Application
+import android.os.Looper
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -39,6 +40,7 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
@@ -143,8 +145,11 @@ class NextEpisodeOverlayTest {
         }
         showPlayer()
         // The timings are read beside playback: poll 3 s into the credits until they've placed the card.
-        // A bound, not a wait: it's met in moments, but a CI runner under load took longer than 5 s once.
+        // They reach the view model through the main thread's queue, which waitUntil never runs (it only
+        // moves Compose's clock), so the loop runs it. Without that, timings found after setTvContent
+        // had idled never landed and the wait ran out, as it did on CI for the class's first timed test.
         compose.waitUntil(10_000) {
+            shadowOf(Looper.getMainLooper()).idle()
             playback.positionMillis = TIMED_CREDITS_MILLIS + 3_000
             runBlocking { vm.poll() }
             vm.overlay.value != Overlay.None
