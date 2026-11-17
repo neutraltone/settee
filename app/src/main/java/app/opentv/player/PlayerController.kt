@@ -311,11 +311,15 @@ class PlayerController(
                         Player.STATE_READY -> {
                             consecutiveFailures = 0
                             hadPlayed = true
-                            guard.ready()
+                            guard.arrived()
                             State.Playing(_title.value)
                         }
                         Player.STATE_IDLE -> _state.value
-                        Player.STATE_ENDED -> State.Idle
+                        // A stream can end without ever being ready, such as one started at its very end.
+                        Player.STATE_ENDED -> {
+                            guard.arrived()
+                            State.Idle
+                        }
                         else -> _state.value
                     }
                 }
@@ -439,7 +443,7 @@ class PlayerController(
                 stop()
                 gaveUp = false
                 hadPlayed = false
-                guard.started()
+                guard.started(limitStartUp = !options.liveRecording)
                 clearMediaItems()
                 // Each stream starts with text off, then applySubtitlePreference picks its track.
                 // Left on from the last stream, the selector would choose a track itself, in the

@@ -162,6 +162,17 @@ class StartUpLimitTest {
         assertThat(controller.state.value).isEqualTo(PlayerController.State.Idle)
     }
 
+    @Test
+    fun `a recording still being written has no limit, since it waits on the recording, not a provider`() {
+        players.liveRecording = true
+        val controller = hangingController()
+        start(controller)
+
+        players.advance(LIMIT_MILLIS * 2)
+
+        assertThat(controller.state.value).isEqualTo(PlayerController.State.Buffering("Film"))
+    }
+
     private fun hangingController(failing: Int = 0): PlayerController {
         players.hanging = true
         return players.controller(failing = failing)

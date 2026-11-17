@@ -145,10 +145,13 @@ class TestPlayers(private val context: Context) {
     var showPictures = true
 
     /**
-     * Whether the streams of controllers made from now on never start and never fail, after any
+     * Whether the streams of [controller]s made from now on never start and never fail, after any
      * failing ones, as from a panel that takes the connection and sends nothing.
      */
     var hanging = false
+
+    /** Whether [controller]s made from now on are the recording player's, for one still being written. */
+    var liveRecording = false
 
     /** How a controller's failing streams fail: by default, as a dropped connection does. */
     var failure: () -> IOException = { IOException("Connection dropped") }
@@ -175,6 +178,7 @@ class TestPlayers(private val context: Context) {
         PlayerController.Options(
             preview = preview,
             dvr = dvr,
+            liveRecording = liveRecording,
             buildPlayer = {
                 val starts = window.takeUnless { hanging }
                 TestExoPlayerBuilder(context)

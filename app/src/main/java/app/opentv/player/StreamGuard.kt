@@ -75,22 +75,25 @@ internal class StreamGuard(
         startUp.end()
     }
 
-    /** A stream has just been handed to the player. */
-    fun started() {
+    /**
+     * A stream has just been handed to the player. [limitStartUp] gives up on it if it never starts (see
+     * [StartUpWatch]); not for a recording still being written, which waits on the recording growing,
+     * from a local file or the viewer's NAS, where the timed-out sentence blames a provider that isn't there.
+     */
+    fun started(limitStartUp: Boolean = true) {
         firstFrame.newStream()
-        startUp.newStream()
+        if (limitStartUp) startUp.newStream()
         loggedTracks.clear()
     }
 
-    /** The stream on the player is ready to play, for the first time or again. */
-    fun ready() = startUp.end()
+    /**
+     * The stream on the player is ready to play, for the first time or again, or has already ended:
+     * either way it got somewhere, so it isn't the start-up limit's business any more.
+     */
+    fun arrived() = startUp.end()
 
     /** Whether the controller is holding playback back on purpose, which the start-up limit doesn't count. */
-    var held: Boolean
-        get() = startUp.held
-        set(value) {
-            startUp.held = value
-        }
+    var held: Boolean by startUp::held
 
     fun tracksChanged(tracks: Tracks, soundWanted: Boolean) {
         DecoderLog.logTracks(tracks, decoders, loggedTracks)
