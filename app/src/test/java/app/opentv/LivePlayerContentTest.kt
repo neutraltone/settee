@@ -609,7 +609,7 @@ class LivePlayerContentTest {
         val failing = players.controller(LIVE, failing = 100)
         showChannel(failing, queue = CHANNELS, currentId = 11L, start = {
             tuneWithoutWaiting(it)
-            players.until { players.played.size == 3 && it.state.value is PlayerController.State.Error }
+            players.untilItStopsRestarting(it)
         })
         // The rule's clock hasn't moved while the controller gave up, so the banner's still in time.
         compose.onNodeWithText("Two").assertExists()

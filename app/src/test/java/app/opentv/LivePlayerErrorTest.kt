@@ -221,10 +221,9 @@ class LivePlayerErrorTest {
 
     @Test
     fun `a stream that fails until it stops restarting ends on Try again, and OK plays it again`() {
-        val failing = players.controller(LIVE, failing = 3)
+        val failing = players.controller(LIVE, failing = TestPlayers.AUTO_TRIES)
         show(failing)
-        players.until { players.played.size == 3 && failed(retryable = true) }
-        players.advance(RESTARTS_MILLIS)
+        players.untilItStopsRestarting(failing)
         compose.waitForIdle()
         compose.mainClock.advanceTimeBy(CARD_TIMEOUT_MILLIS)
         compose.onNodeWithText("Try again").assertIsFocused()
@@ -255,9 +254,6 @@ class LivePlayerErrorTest {
         const val CARD_TIMEOUT_MILLIS = 5_000L
         const val HOLD_MILLIS = 1_000L
         const val TRY_MILLIS = 500L
-
-        /** Longer than the player waits before restarting by itself, twice over. */
-        const val RESTARTS_MILLIS = 10_000L
 
         val CHANNELS = listOf(
             PlaybackQueue.Item(10L, "One", logoUrl = null, number = 1),

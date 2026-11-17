@@ -44,7 +44,8 @@ internal object PlaybackRecovery {
      * Two silent restarts: the count goes up before it's checked, so the third failure in a row
      * stops restarting by itself, and on a portal stops asking for new links. The common case they
      * cover is a provider dropping the connection when another device on the account starts
-     * streaming. It limits only silent restarts: Retry stays on offer, and starts the count afresh.
+     * streaming. It limits only silent restarts: Retry stays on offer, and [PlayerController.retry]
+     * starts the count afresh.
      */
     private const val MAX_AUTO_RESTARTS = 3
 
