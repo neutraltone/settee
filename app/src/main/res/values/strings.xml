@@ -255,7 +255,7 @@
     <string name="addons_added">Added %1$s</string>
 
     <!-- ============================ Display & playback settings ============================ -->
-    <string name="settings_content_refreshing">Refreshing…</string>
+    <string name="providers_refresh_again">Refresh again</string>
     <string name="settings_language_system">System default</string>
     <string name="settings_language_english">English</string>
     <string name="settings_language_spanish">Español</string>
@@ -796,6 +796,14 @@
     <plurals name="refresh_done_with_problems">
         <item quantity="one">Refreshed %1$d channel, %2$s. See Guide settings.</item>
         <item quantity="other">Refreshed %1$d channels, %2$s. See Guide settings.</item>
+    </plurals>
+    <plurals name="refresh_done_with_provider_problems">
+        <item quantity="one">Refreshed %1$d channel, %2$s. See Providers.</item>
+        <item quantity="other">Refreshed %1$d channels, %2$s. See Providers.</item>
+    </plurals>
+    <plurals name="refresh_done_with_provider_and_guide_problems">
+        <item quantity="one">Refreshed %1$d channel, %2$s. See Providers and Guide settings.</item>
+        <item quantity="other">Refreshed %1$d channels, %2$s. See Providers and Guide settings.</item>
     </plurals>
     <plurals name="refresh_problems">
         <item quantity="one">%d problem</item>

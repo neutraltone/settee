@@ -100,7 +100,6 @@
     <string name="player_subtitles_off">Изключени</string>
     <string name="addons_checking">Проверка…</string>
     <string name="addons_added">%1$s е добавена</string>
-    <string name="settings_content_refreshing">Опресняване…</string>
     <string name="settings_language_system">По подразбиране от системата</string>
     <string name="settings_language_english">English</string>
     <string name="settings_language_spanish">Español</string>

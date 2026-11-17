@@ -100,7 +100,6 @@
     <string name="player_subtitles_off">Disattivati</string>
     <string name="addons_checking">Verifica in corso…</string>
     <string name="addons_added">%1$s aggiunto</string>
-    <string name="settings_content_refreshing">Aggiornamento in corso…</string>
     <string name="settings_language_system">Predefinita di sistema</string>
     <string name="settings_language_english">English</string>
     <string name="settings_language_spanish">Español</string>

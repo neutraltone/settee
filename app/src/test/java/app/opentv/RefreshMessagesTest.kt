@@ -38,11 +38,24 @@ class RefreshMessagesTest {
     }
 
     @Test
-    fun `a refresh with problems counts them and points at Guide settings`() {
+    fun `a refresh whose guide feeds failed counts them and points at Guide settings`() {
         assertThat(messages.of(Outcome.Refreshed(120, guide(90, 120, failed = 1))))
             .isEqualTo("Refreshed 120 channels, 1 problem. See Guide settings.")
         assertThat(messages.of(Outcome.Refreshed(1, guide(0, 1, failed = 3))))
             .isEqualTo("Refreshed 1 channel, 3 problems. See Guide settings.")
+    }
+
+    @Test
+    fun `a refresh whose provider failed points at Providers`() {
+        assertThat(messages.of(Outcome.Refreshed(120, guide(90, 120), mapOf(1L to ViewerError("No.", "HTTP 401")))))
+            .isEqualTo("Refreshed 120 channels, 1 problem. See Providers.")
+    }
+
+    @Test
+    fun `a refresh whose provider and guide feeds both failed points at both`() {
+        val failures = mapOf(1L to ViewerError("No.", "HTTP 401"), 2L to ViewerError("No.", "HTTP 503"))
+        assertThat(messages.of(Outcome.Refreshed(120, guide(90, 120, failed = 1), failures)))
+            .isEqualTo("Refreshed 120 channels, 3 problems. See Providers and Guide settings.")
     }
 
     @Test

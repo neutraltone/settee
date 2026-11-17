@@ -16,6 +16,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModelStoreOwner
 import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
@@ -23,7 +24,9 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import app.opentv.R
 import app.opentv.core.findActivity
 import app.opentv.data.model.Source
+import app.opentv.data.model.refreshFailure
 import app.opentv.ui.SourcesViewModel
+import app.opentv.ui.design.ErrorMessage
 import app.opentv.ui.design.ListRow
 import app.opentv.ui.design.PanelRow
 import app.opentv.ui.design.PanelTitle
@@ -58,6 +61,17 @@ internal fun ProvidersPane(
                 note = hostOnly(source.url),
                 onOptions = { options = source },
             )
+            source.refreshFailure?.let { failure ->
+                // Lined up with the row's label, and kept under it, so it reads as that provider's.
+                ErrorMessage(
+                    failure.sentence,
+                    failure.detail,
+                    Modifier.padding(horizontal = ROW_SIDE, vertical = 6.dp),
+                    textAlign = TextAlign.Start,
+                )
+                // Every provider, as the refresh row does: refreshing one alone isn't worth its own path.
+                ListRow(stringResource(R.string.providers_refresh_again), onClick = viewModel::refreshAll)
+            }
         }
     }
     val add = screenRow("add-provider", onAddProvider)
@@ -66,6 +80,13 @@ internal fun ProvidersPane(
         onClick = add.open,
         modifier = add.modifier,
         opens = true,
+    )
+    // Background work, so leaving Settings doesn't cut it short. The row itself says it's running and
+    // then how it went, and each provider's failure appears under its own row as it's saved.
+    ListRow(
+        stringResource(R.string.settings_row_refresh_content),
+        onClick = viewModel::refreshAll,
+        note = if (ui.refreshing) stringResource(R.string.refresh_refreshing) else ui.syncMessage,
     )
     // Only once the list has loaded, so it doesn't flash up before the providers do.
     if (ui.loaded && ui.sources.isEmpty()) {
@@ -93,6 +114,9 @@ internal fun ProvidersPane(
         })
     }
 }
+
+/** A [ListRow]'s own inset, so text under a row starts where its label does. */
+private val ROW_SIDE = 10.dp
 
 /** The activity, which owns the view models the app shares across its screens. */
 @Composable

@@ -100,7 +100,6 @@
     <string name="player_subtitles_off">Nonaktif</string>
     <string name="addons_checking">Memeriksa…</string>
     <string name="addons_added">%1$s ditambahkan</string>
-    <string name="settings_content_refreshing">Menyegarkan…</string>
     <string name="settings_language_system">Default sistem</string>
     <string name="settings_language_english">English</string>
     <string name="settings_language_spanish">Español</string>

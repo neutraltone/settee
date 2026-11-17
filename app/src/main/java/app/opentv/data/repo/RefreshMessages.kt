@@ -51,8 +51,14 @@ class RefreshMessages(private val context: Context) {
             outcome.guide.channelsTotal,
         )
     } else {
+        // Points where the viewer can fix each: a provider's under its row, a feed's in Guide settings.
+        val where = when {
+            outcome.feedProblems == 0 -> R.plurals.refresh_done_with_provider_problems
+            outcome.providerProblems == 0 -> R.plurals.refresh_done_with_problems
+            else -> R.plurals.refresh_done_with_provider_and_guide_problems
+        }
         resources.getQuantityString(
-            R.plurals.refresh_done_with_problems,
+            where,
             outcome.channels,
             outcome.channels,
             resources.getQuantityString(R.plurals.refresh_problems, outcome.problems, outcome.problems),

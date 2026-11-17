@@ -100,7 +100,6 @@
     <string name="player_subtitles_off">Vypnuto</string>
     <string name="addons_checking">Kontrola…</string>
     <string name="addons_added">Přidáno: %1$s</string>
-    <string name="settings_content_refreshing">Obnovování…</string>
     <string name="settings_language_system">Výchozí podle systému</string>
     <string name="settings_language_english">English</string>
     <string name="settings_language_spanish">Español</string>

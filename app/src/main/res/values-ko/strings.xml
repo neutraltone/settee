@@ -100,7 +100,6 @@
     <string name="player_subtitles_off">끄기</string>
     <string name="addons_checking">확인 중…</string>
     <string name="addons_added">%1$s 추가됨</string>
-    <string name="settings_content_refreshing">새로고침 중…</string>
     <string name="settings_language_system">시스템 기본값</string>
     <string name="settings_language_english">English</string>
     <string name="settings_language_spanish">Español</string>

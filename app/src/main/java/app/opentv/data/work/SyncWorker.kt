@@ -50,7 +50,7 @@ class SyncWorker(context: Context, params: WorkerParameters) : CoroutineWorker(c
     companion object {
         private const val TAG = "SyncWorker"
         internal const val WORK_NAME = "opentv-periodic-sync"
-        private const val ONE_SHOT_WORK_NAME = "opentv-manual-sync"
+        internal const val MANUAL_WORK_NAME = "opentv-manual-sync"
         private const val KEY_MANUAL = "manual"
 
         /**
@@ -64,7 +64,7 @@ class SyncWorker(context: Context, params: WorkerParameters) : CoroutineWorker(c
                 .setInputData(workDataOf(KEY_MANUAL to true))
                 .build()
             WorkManager.getInstance(context).enqueueUniqueWork(
-                ONE_SHOT_WORK_NAME,
+                MANUAL_WORK_NAME,
                 ExistingWorkPolicy.KEEP,
                 request,
             )

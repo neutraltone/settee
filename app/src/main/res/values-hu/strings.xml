@@ -100,7 +100,6 @@
     <string name="player_subtitles_off">Kikapcsolva</string>
     <string name="addons_checking">Ellenőrzés…</string>
     <string name="addons_added">%1$s hozzáadva</string>
-    <string name="settings_content_refreshing">Frissítés…</string>
     <string name="settings_language_system">Rendszer alapértelmezett</string>
     <string name="settings_language_english">Angol</string>
     <string name="settings_language_spanish">Español</string>

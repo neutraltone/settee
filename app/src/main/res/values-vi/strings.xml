@@ -100,7 +100,6 @@
     <string name="player_subtitles_off">Tắt</string>
     <string name="addons_checking">Đang kiểm tra…</string>
     <string name="addons_added">Đã thêm %1$s</string>
-    <string name="settings_content_refreshing">Đang làm mới…</string>
     <string name="settings_language_system">Mặc định hệ thống</string>
     <string name="settings_language_english">English</string>
     <string name="settings_language_spanish">Español</string>

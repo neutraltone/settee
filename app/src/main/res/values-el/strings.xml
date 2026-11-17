@@ -100,7 +100,6 @@
     <string name="player_subtitles_off">Απενεργοποιημένοι</string>
     <string name="addons_checking">Έλεγχος…</string>
     <string name="addons_added">Προστέθηκε %1$s</string>
-    <string name="settings_content_refreshing">Ανανέωση…</string>
     <string name="settings_language_system">Προεπιλογή συστήματος</string>
     <string name="settings_language_english">Αγγλικά</string>
     <string name="settings_language_spanish">Español</string>

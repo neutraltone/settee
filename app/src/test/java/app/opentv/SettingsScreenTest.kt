@@ -35,21 +35,30 @@ import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.test.requestFocus
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.espresso.Espresso
+import androidx.work.WorkManager
+import androidx.work.testing.WorkManagerTestInitHelper
 import app.opentv.core.AppSettings
 import app.opentv.core.ServiceLocator
 import app.opentv.core.SleepTimer
+import app.opentv.core.ViewerError
 import app.opentv.data.model.Category
 import app.opentv.data.model.Source
 import app.opentv.data.model.SourceKind
 import app.opentv.data.model.StreamKind
 import app.opentv.data.model.StremioAddon
+import app.opentv.data.repo.CatalogueRefresh
 import app.opentv.data.repo.EpgRepository
+import app.opentv.data.work.SyncWorker
 import app.opentv.ui.settings.SettingsMemory
 import app.opentv.ui.settings.SettingsScreen
 import app.opentv.ui.settings.SettingsSection
 import app.opentv.ui.settings.SettingsTags
 import app.opentv.update.UpdateChecker
 import com.google.common.truth.Truth.assertThat
+import java.net.ServerSocket
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
+import kotlin.concurrent.thread
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.After
@@ -61,6 +70,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
+import org.robolectric.shadows.ShadowToast
 
 /** Settings: sections on the left, the highlighted one's settings beside them (#168). */
 @OptIn(ExperimentalTestApi::class)
@@ -104,6 +114,8 @@ class SettingsScreenTest {
         )
     }
 
+    private fun app() = ApplicationProvider.getApplicationContext<Application>()
+
     private fun press(vararg keys: Int) = keys.forEach(device::remote)
 
     private fun highlighted() = compose.onNode(isFocused())
@@ -113,8 +125,15 @@ class SettingsScreenTest {
     }
 
     /** A provider nothing will reach: port 9 refuses at once. */
-    private fun saveProvider(name: String): Long = runBlocking {
-        graph.sourceRepository.save(Source(name = name, kind = SourceKind.M3U, url = "http://127.0.0.1:9/list.m3u"))
+    private fun saveProvider(name: String, failure: ViewerError? = null): Long = runBlocking {
+        graph.sourceRepository.save(
+            Source(
+                name = name,
+                kind = SourceKind.M3U,
+                url = "http://127.0.0.1:9/list.m3u",
+                lastRefreshFailure = failure?.stored(),
+            ),
+        )
     }
 
     /**
@@ -269,6 +288,74 @@ class SettingsScreenTest {
         compose.onNodeWithText("Add a provider").requestFocus()
         press(KeyEvent.KEYCODE_DPAD_CENTER)
         assertThat(opened).containsExactly("edit provider $id", "add provider").inOrder()
+    }
+
+    @Test
+    fun `a provider whose last refresh failed says why under its row, with Refresh again`() {
+        WorkManagerTestInitHelper.initializeTestWorkManager(ApplicationProvider.getApplicationContext())
+        saveProvider("Fine films on 464")
+        saveProvider("Locked films on 464", ViewerError(app().getString(R.string.error_login), "LoginRejected"))
+        show()
+        waitFor("Locked films on 464")
+        press(KeyEvent.KEYCODE_DPAD_RIGHT)
+
+        compose.onNodeWithText("Locked films on 464").requestFocus()
+        press(KeyEvent.KEYCODE_DPAD_DOWN)
+        highlighted().assertTextContains("Refresh again")
+        compose.onNodeWithText(app().getString(R.string.error_login)).assertExists()
+        compose.onNodeWithText("LoginRejected").assertExists()
+        captureScreen("settings_providers_refresh_failed")
+        // Under its own row: the Highlight came straight down from it.
+        press(KeyEvent.KEYCODE_DPAD_UP)
+        highlighted().assertTextContains("Locked films on 464")
+
+        press(KeyEvent.KEYCODE_DPAD_DOWN, KeyEvent.KEYCODE_DPAD_CENTER)
+        val manual = WorkManager.getInstance(app()).getWorkInfosForUniqueWork(SyncWorker.MANUAL_WORK_NAME).get()
+        assertThat(manual).isNotEmpty()
+    }
+
+    @Test
+    fun `the refresh row is under the providers, reads Refreshing while one runs, then says how it went`() {
+        WorkManagerTestInitHelper.initializeTestWorkManager(app())
+        // Answers nothing until it's let go, so the refresh is still running while the row is looked at.
+        val silent = ServerSocket(0)
+        val letGo = CountDownLatch(1)
+        thread { silent.accept().use { letGo.await(10, TimeUnit.SECONDS) } }
+        runBlocking {
+            graph.sourceRepository.save(
+                Source(name = "Slow films on 464", kind = SourceKind.M3U, url = "http://127.0.0.1:${silent.localPort}/a.m3u"),
+            )
+        }
+        show()
+        waitFor("Slow films on 464")
+        press(KeyEvent.KEYCODE_DPAD_RIGHT)
+        val refreshRow = "Fetch your providers' lists again"
+        compose.onNodeWithText(refreshRow).performScrollTo().requestFocus()
+        press(KeyEvent.KEYCODE_DPAD_UP)
+        highlighted().assertTextContains("Add a provider")
+        press(KeyEvent.KEYCODE_DPAD_DOWN, KeyEvent.KEYCODE_DPAD_CENTER)
+        assertThat(WorkManager.getInstance(app()).getWorkInfosForUniqueWork(SyncWorker.MANUAL_WORK_NAME).get())
+            .isNotEmpty()
+        assertThat(ShadowToast.shownToastCount()).isEqualTo(0)
+
+        // As the work it queued would: the test's WorkManager doesn't run it.
+        val refreshing = thread { runBlocking { graph.catalogueRefresh.refresh(CatalogueRefresh.Trigger.Manual) } }
+        waitFor("Refreshing…")
+        highlighted().assertTextContains(refreshRow)
+        letGo.countDown()
+        refreshing.join(20_000)
+        silent.close()
+        compose.waitUntil(5_000) {
+            compose.onAllNodes(hasText("See Providers", substring = true)).fetchSemanticsNodes().isNotEmpty()
+        }
+        highlighted().assertTextContains(refreshRow)
+    }
+
+    @Test
+    fun `Display and playback has no refresh row, since it's under the providers`() {
+        show(SettingsMemory(SettingsSection.Display))
+
+        compose.onNode(hasText("Fetch your providers' lists again")).assertDoesNotExist()
     }
 
     @Test

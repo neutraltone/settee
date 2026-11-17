@@ -100,7 +100,6 @@
     <string name="player_subtitles_off">Av</string>
     <string name="addons_checking">Kontrollerar…</string>
     <string name="addons_added">%1$s tillagd</string>
-    <string name="settings_content_refreshing">Uppdaterar…</string>
     <string name="settings_language_system">Systemstandard</string>
     <string name="settings_language_english">English</string>
     <string name="settings_language_spanish">Español</string>

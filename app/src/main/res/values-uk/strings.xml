@@ -100,7 +100,6 @@
     <string name="player_subtitles_off">Вимкнено</string>
     <string name="addons_checking">Перевірка…</string>
     <string name="addons_added">Додано %1$s</string>
-    <string name="settings_content_refreshing">Оновлення…</string>
     <string name="settings_language_system">Системна мова</string>
     <string name="settings_language_english">English</string>
     <string name="settings_language_spanish">Español</string>

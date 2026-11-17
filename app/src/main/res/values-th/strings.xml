@@ -100,7 +100,6 @@
     <string name="player_subtitles_off">ปิด</string>
     <string name="addons_checking">กำลังตรวจสอบ…</string>
     <string name="addons_added">เพิ่ม %1$s แล้ว</string>
-    <string name="settings_content_refreshing">กำลังรีเฟรช…</string>
     <string name="settings_language_system">ค่าเริ่มต้นของระบบ</string>
     <string name="settings_language_english">English</string>
     <string name="settings_language_spanish">Español</string>

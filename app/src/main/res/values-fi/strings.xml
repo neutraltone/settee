@@ -100,7 +100,6 @@
     <string name="player_subtitles_off">Pois</string>
     <string name="addons_checking">Tarkistetaan…</string>
     <string name="addons_added">Lisätty %1$s</string>
-    <string name="settings_content_refreshing">Päivitetään…</string>
     <string name="settings_language_system">Järjestelmän oletus</string>
     <string name="settings_language_english">English</string>
     <string name="settings_language_spanish">Español</string>

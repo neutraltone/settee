@@ -100,7 +100,6 @@
     <string name="player_subtitles_off">خاموش</string>
     <string name="addons_checking">در حال بررسی…</string>
     <string name="addons_added">%1$s اضافه شد</string>
-    <string name="settings_content_refreshing">در حال بازخوانی…</string>
     <string name="settings_language_system">پیش‌فرض سیستم</string>
     <string name="settings_language_english">English</string>
     <string name="settings_language_spanish">Español</string>

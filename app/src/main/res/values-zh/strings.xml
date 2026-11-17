@@ -100,7 +100,6 @@
     <string name="player_subtitles_off">关闭</string>
     <string name="addons_checking">检查中…</string>
     <string name="addons_added">已添加 %1$s</string>
-    <string name="settings_content_refreshing">刷新中…</string>
     <string name="settings_language_system">系统默认</string>
     <string name="settings_language_english">English</string>
     <string name="settings_language_spanish">Español</string>

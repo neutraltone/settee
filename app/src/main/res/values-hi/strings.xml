@@ -100,7 +100,6 @@
     <string name="player_subtitles_off">बंद</string>
     <string name="addons_checking">जांच हो रही है…</string>
     <string name="addons_added">%1$s जोड़ा गया</string>
-    <string name="settings_content_refreshing">रीफ्रेश हो रहा है…</string>
     <string name="settings_language_system">सिस्टम डिफ़ॉल्ट</string>
     <string name="settings_language_english">English</string>
     <string name="settings_language_spanish">Español</string>

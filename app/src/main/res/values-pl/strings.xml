@@ -100,7 +100,6 @@
     <string name="player_subtitles_off">Wyłączone</string>
     <string name="addons_checking">Sprawdzanie…</string>
     <string name="addons_added">Dodano %1$s</string>
-    <string name="settings_content_refreshing">Odświeżanie…</string>
     <string name="settings_language_system">Domyślny systemowy</string>
     <string name="settings_language_english">English</string>
     <string name="settings_language_spanish">Español</string>
