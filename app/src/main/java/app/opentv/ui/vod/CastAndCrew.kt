@@ -57,18 +57,16 @@ internal fun PeopleRows(
     modifier: Modifier = Modifier,
 ) {
     val billed = personNames(movie.cast)
-    val crew = listOf(
-        R.string.vod_director to personNames(movie.director),
-        R.string.vod_writer to personNames(movie.writer),
-        R.string.vod_studio to personNames(movie.studio),
-    ).filter { (_, names) -> names.isNotEmpty() }
+    val crew = crewOf(movie)
     if (billed.isEmpty() && crew.isEmpty()) return
     // It all comes into view together, so the columns aren't left off the bottom of the screen while
     // the Highlight is on the Cast row above them.
     val wholeBlock = remember { BringIntoViewRequester() }
     val scope = rememberCoroutineScope()
     val castRow = rememberLazyListState()
-    LaunchedEffect(Unit) { castRow.bringOut(billed.indexOfFirst { castSpot(it) == spot.key }) }
+    LaunchedEffect(Unit) {
+        castRow.bringOut(billed.indexOfFirst { PageSpot.Person(PeopleRow.Cast, it) == spot.start })
+    }
     Column(
         modifier
             .bringIntoViewRequester(wholeBlock)
@@ -83,35 +81,55 @@ internal fun PeopleRows(
                         label = name,
                         selected = false,
                         onClick = { onOpenPerson(name) },
-                        modifier = Modifier.returnSpot(spot, castSpot(name)),
+                        modifier = Modifier.returnSpot(spot, PageSpot.Person(PeopleRow.Cast, name)),
                     )
                 }
             }
         }
         if (billed.isNotEmpty() && crew.isNotEmpty()) Spacer(Modifier.height(SetteeSpace.RowGap))
         Row(horizontalArrangement = Arrangement.spacedBy(CREW_COLUMN_GAP)) {
-            crew.forEach { (heading, names) -> CrewColumn(heading, names, onOpenPerson, spot) }
+            crew.forEach { (row, names) -> CrewColumn(row, names, onOpenPerson, spot) }
         }
     }
 }
 
 /** One of the crew columns: a heading, then its names as pills, one under another. */
 @Composable
-private fun CrewColumn(@StringRes heading: Int, names: List<String>, onOpenPerson: (String) -> Unit, spot: ReturnSpot) {
+private fun CrewColumn(row: PeopleRow, names: List<String>, onOpenPerson: (String) -> Unit, spot: ReturnSpot) {
     Column(Modifier.width(CREW_COLUMN_WIDTH), verticalArrangement = Arrangement.spacedBy(PILL_GAP)) {
-        Text(stringResource(heading), SetteeType.Section)
+        Text(stringResource(row.heading), SetteeType.Section)
         names.forEach { name ->
             Pill(
                 label = name,
                 selected = false,
                 onClick = { onOpenPerson(name) },
-                modifier = Modifier.returnSpot(spot, "crew$heading:$name"),
+                modifier = Modifier.returnSpot(spot, PageSpot.Person(row, name)),
             )
         }
     }
 }
 
-private fun castSpot(name: String) = "cast:$name"
+/** Who directed, wrote and made [movie], under each heading it has anyone for. */
+private fun crewOf(movie: Movie): List<Pair<PeopleRow, List<String>>> = listOf(
+    PeopleRow.Director to personNames(movie.director),
+    PeopleRow.Writer to personNames(movie.writer),
+    PeopleRow.Studio to personNames(movie.studio),
+).filter { (_, names) -> names.isNotEmpty() }
+
+/** Every name pill [PeopleRows] draws for [movie], as the spots they're kept as. */
+internal fun peopleSpots(movie: Movie): Set<PageSpot> =
+    (listOf(PeopleRow.Cast to personNames(movie.cast)) + crewOf(movie))
+        .flatMap { (row, names) -> names.map { PageSpot.Person(row, it) } }
+        .toSet()
+
+@get:StringRes
+private val PeopleRow.heading: Int
+    get() = when (this) {
+        PeopleRow.Cast -> R.string.vod_cast
+        PeopleRow.Director -> R.string.vod_director
+        PeopleRow.Writer -> R.string.vod_writer
+        PeopleRow.Studio -> R.string.vod_studio
+    }
 
 /**
  * A show's cast in a side panel under [title], a row each in billing order. OK on a row calls

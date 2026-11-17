@@ -123,7 +123,7 @@ internal fun SeriesDetailContent(
     val showingLikeThis = nav.showsLikeThis(shown)
     val pillRow = rememberLazyListState()
     val episodeList = rememberLazyListState()
-    ShowPageFocusEffects(nav, shown, pillRow, episodeList, showingLikeThis)
+    ShowPageFocusEffects(nav, shown, pillRow, episodeList, showingLikeThis, comingBack = spot.start != null)
     ReturnEffect(nav, spot, shown, ShowCovers(suggestions, suggestionsKnown))
     EpisodeListScrollEffects(nav, shown, episodeList)
     BackHandler(enabled = nav.backGoesToPills(shown)) { nav.pillTarget = PillTarget() }
@@ -149,7 +149,7 @@ internal fun SeriesDetailContent(
                             label = stringResource(R.string.vod_cast),
                             icon = Icons.Filled.People,
                             onClick = { castShown = true },
-                            modifier = Modifier.returnSpot(spot, CAST_SPOT),
+                            modifier = Modifier.returnSpot(spot, PageSpot.Cast),
                         )
                     }
                 }
@@ -369,7 +369,7 @@ private fun EpisodeList(
                 onPlay = onPlayEpisode,
                 modifier = Modifier
                     .then(if (targeted) Modifier.focusRequester(nav.focus.episode) else Modifier)
-                    .returnSpot(spot, "$EPISODE_SPOT${ep.id}")
+                    .returnSpot(spot, PageSpot.Episode(ep.id))
                     .onFocusChanged { if (it.isFocused) nav.focusedEpisode = ep.id },
             )
         }
@@ -397,6 +397,7 @@ private fun ShowPageFocusEffects(
     pillRow: LazyListState,
     episodeList: LazyListState,
     showingLikeThis: Boolean,
+    comingBack: Boolean,
 ) {
     val latest by rememberUpdatedState(shown)
     val onLikeThis by rememberUpdatedState(showingLikeThis)
@@ -406,9 +407,8 @@ private fun ShowPageFocusEffects(
     val hasMainAction = shown.mainAction != null
     LaunchedEffect(hasMainAction) {
         delay(FIRST_HIGHLIGHT_DELAY_MILLIS)
-        // Back to the page, the Highlight goes where the viewer left from instead (ReturnEffect).
-        snapshotFlow { nav.returning }.first { !it }
-        if (nav.returned) nav.highlightPlaced = true
+        // Back to the page, ReturnEffect places the first highlight, where the viewer left from.
+        if (comingBack && !nav.highlightPlaced) return@LaunchedEffect
         if (nav.highlightPlaced && !nav.favouriteFocused) return@LaunchedEffect
         runCatching { nav.focus.button(hasMainAction).requestFocus() }
         nav.highlightPlaced = true
@@ -472,40 +472,40 @@ private fun ReturnEffect(nav: ShowPageNav, spot: ReturnSpot, shown: ShowSeasons,
     val latest by rememberUpdatedState(shown)
     val latestCovers by rememberUpdatedState(covers)
     LaunchedEffect(Unit) {
-        val key = spot.key ?: return@LaunchedEffect
-        nav.returning = true
+        val start = spot.start ?: return@LaunchedEffect
         delay(FIRST_HIGHLIGHT_DELAY_MILLIS)
-        val back = when {
-            key.startsWith(EPISODE_SPOT) -> {
-                val ep = latest.all.flatMap { it.episodes }.firstOrNull { "$EPISODE_SPOT${it.id}" == key }
-                // Highlighted again in its season, as Down onto another season's episode is.
-                ep?.let { nav.episodeTarget = EpisodeTarget(it) } != null
-            }
-            key.startsWith(LIKE_THIS_SPOT) -> {
-                // More like this is read after the page shows, so its covers have to be there first.
-                withTimeoutOrNull(LIKE_THIS_WAIT_MILLIS) { snapshotFlow { latestCovers.known }.first { it } }
-                val index = latestCovers.covers.indexOfFirst { coverSpot(it.id) == key }
-                index >= 0 &&
+        val back = when (start) {
+            is PageSpot.Episode -> {
+                val ep = latest.all.flatMap { it.episodes }.firstOrNull { it.id == start.id }
+                ep != null &&
                     run {
-                        // Highlighting More like this's pill is what shows the grid; here there's no pill press.
-                        // The grid scrolls to the cover itself, so it's ready a frame or two on.
-                        nav.likeThis = true
-                        spot.restoreSoon()
+                        // Highlighted again in its season, as Down onto another season's episode is.
+                        nav.episodeTarget = EpisodeTarget(ep)
+                        withTimeoutOrNull(EPISODE_WAIT_MILLIS) {
+                            snapshotFlow { nav.focusedEpisode }.first { it == ep.id }
+                        } != null
                     }
             }
-            else -> spot.restore()
+            // Highlighting More like this's pill is what shows the grid; here there's no pill press. The grid
+            // scrolls to the cover itself.
+            is PageSpot.Show ->
+                spot.restoreAmong({ latestCovers.takeIf { it.known }?.covers }, { PageSpot.Show(it.id) }) {
+                    nav.likeThis = true
+                }
+            PageSpot.Cast -> spot.restore()
+            else -> false
         }
-        if (!back) nav.likeThis = false
-        nav.returning = false
-        nav.returned = back
+        if (!back) {
+            nav.likeThis = false
+            runCatching { nav.focus.button(latest.mainAction != null).requestFocus() }
+        }
+        spot.settled()
+        nav.highlightPlaced = true
     }
 }
 
-private const val EPISODE_SPOT = "ep:"
-private const val CAST_SPOT = "cast"
-
-/** Long enough for More like this to be read on a Stick; Back lands on the main button if it takes longer. */
-private const val LIKE_THIS_WAIT_MILLIS = 2_000L
+/** For the episode list to change season and scroll to the episode being returned to. */
+private const val EPISODE_WAIT_MILLIS = 500L
 
 /** Where the episode list scrolls by itself, apart from following the Highlight. */
 @Composable
@@ -574,9 +574,6 @@ private class ShowPageNav {
     var favouriteFocused by mutableStateOf(false)
     var highlightPlaced by mutableStateOf(false)
 
-    /** While the page is putting the Highlight back where the viewer left from, and then whether it did. */
-    var returning by mutableStateOf(false)
-    var returned = false
     var inList by mutableStateOf(false)
         private set
     var inGrid by mutableStateOf(false)
@@ -592,6 +589,7 @@ private class ShowPageNav {
     /** Whether the list is holding the Highlight itself while it changes season. */
     var parking by mutableStateOf(false)
 
+    /** Set from outside the class too, by ReturnEffect: a returnTo() would take ShowPageNav past detekt's limit. */
     var episodeTarget by mutableStateOf<EpisodeTarget?>(null)
     var pillTarget by mutableStateOf<PillTarget?>(null)
     var likeThisTarget by mutableStateOf<LikeThisTarget?>(null)

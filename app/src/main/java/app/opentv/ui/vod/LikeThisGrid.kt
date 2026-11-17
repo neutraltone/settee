@@ -72,12 +72,12 @@ internal fun LikeThisGrid(
     onUpFromFirstRow: () -> Unit,
     onOpenSeries: (Long) -> Unit,
 ) {
-    val state = rememberLazyGridState()
-    LaunchedEffect(Unit) { state.bringOut(covers.indexOfFirst { coverSpot(it.id) == spot.key }) }
+    val grid = rememberLazyGridState()
+    LaunchedEffect(Unit) { grid.bringOut(covers.indexOfFirst { PageSpot.Show(it.id) == spot.start }) }
     // By id, not place: the covers can be read again while one is highlighted.
     var highlighted by remember { mutableStateOf<Long?>(null) }
     LazyVerticalGrid(
-        state = state,
+        state = grid,
         columns = GridCells.FixedSize(ArtCardSize.Portrait.width),
         contentPadding = PaddingValues(vertical = LIFT_ROOM),
         horizontalArrangement = Arrangement.spacedBy(SetteeSpace.CardGap),
@@ -87,14 +87,14 @@ internal fun LikeThisGrid(
             .onFocusChanged { onFocusChanged(it.hasFocus) }
             .onPreviewKeyEvent { e ->
                 val up = e.type == KeyEventType.KeyDown && e.key == Key.DirectionUp
-                (up && state.inFirstRow(highlighted)).also { if (it) onUpFromFirstRow() }
+                (up && grid.inFirstRow(highlighted)).also { if (it) onUpFromFirstRow() }
             },
     ) {
         itemsIndexed(covers, key = { _, cover -> cover.id }) { index, cover ->
             TitleArt(
                 cover = cover,
                 modifier = (if (index == 0) Modifier.focusRequester(firstCover) else Modifier)
-                    .returnSpot(spot, coverSpot(cover.id)),
+                    .returnSpot(spot, PageSpot.Show(cover.id)),
                 onHighlight = { highlighted = cover.id },
                 onOpen = { onOpenSeries(cover.id) },
                 onOptions = null,
@@ -147,11 +147,6 @@ internal fun LikeThisPeek(covers: List<TitleCover>) {
 
 private fun LazyGridState.inFirstRow(coverId: Long?): Boolean =
     coverId != null && layoutInfo.visibleItemsInfo.firstOrNull { it.key == coverId }?.row == 0
-
-/** A cover's key as the page's [ReturnSpot] keeps it. */
-internal fun coverSpot(id: Long) = "$LIKE_THIS_SPOT$id"
-
-internal const val LIKE_THIS_SPOT = "show:"
 
 /** Above and below the covers, for a highlighted one's lift and ring. */
 private val LIFT_ROOM = 12.dp

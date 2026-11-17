@@ -5,30 +5,19 @@
  */
 package app.opentv
 
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.key.Key
-import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
-import androidx.compose.ui.test.hasClickAction
-import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isFocused
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
-import androidx.compose.ui.test.performKeyInput
-import androidx.compose.ui.test.pressKey
-import androidx.navigation.NavHostController
-import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.composable
-import androidx.navigation.compose.rememberNavController
+import app.opentv.PageBack.Companion.isClickable
 import app.opentv.data.model.Movie
 import app.opentv.ui.vod.MovieDetailContent
 import com.google.common.truth.Truth.assertThat
@@ -40,8 +29,9 @@ import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
 /**
- * Back to a film's page from a person or a film opened on it (#429). The page sits in a NavHost, as the
- * app has it, so it's disposed while the other screen covers it and built again on Back.
+ * Back to a film's page from a person or a film opened on it (#429). Apart from [MovieDetailContentTest],
+ * and with its own screenshots of the page as Back finds it, because only a page in a NavHost is disposed
+ * and built again, which is what loses where the Highlight was.
  */
 // Plain Application: OpenTvApp schedules WorkManager on start, which a lone composable doesn't need.
 @RunWith(RobolectricTestRunner::class)
@@ -55,6 +45,8 @@ class MoviePageBackTest {
 
     @get:Rule
     val artwork = PlaceholderArtwork()
+
+    private val page = PageBack(compose)
 
     private val film = Movie(
         id = 7,
@@ -81,132 +73,123 @@ class MoviePageBackTest {
 
     private val manySimilar = (1L..10L).map { similarFilm(100 + it) }
 
-    private lateinit var nav: NavHostController
-
     /**
-     * [movie]'s page in a NavHost beside a stand-in for wherever it leads. More like this is read each
-     * time the page is built, after it shows, as [app.opentv.ui.vod.MovieDetailScreen] reads it, from
-     * [similar].
+     * [movie]'s page. More like this is read each time the page is built, after it shows, as
+     * [app.opentv.ui.vod.MovieDetailScreen] reads it, from [similar].
      */
-    private fun showPageInApp(movie: Movie, similar: () -> List<Movie>) {
-        compose.setTvContent {
-            nav = rememberNavController()
-            NavHost(nav, startDestination = "film") {
-                composable("film") {
-                    var row by remember { mutableStateOf<List<Movie>?>(null) }
-                    LaunchedEffect(Unit) { row = similar() }
-                    MovieDetailContent(
-                        movie = movie,
-                        resumes = false,
-                        status = null,
-                        favourite = false,
-                        findAddonStreams = null,
-                        similar = row,
-                        onOpenMovie = { nav.navigate("elsewhere") },
-                        onOpenPerson = { nav.navigate("elsewhere") },
-                        onPlay = { nav.navigate("elsewhere") },
-                        onPlayAddonStream = {},
-                        onSetFavourite = {},
-                    )
-                }
-                composable("elsewhere") { Box(Modifier.fillMaxSize()) }
-            }
-        }
-        settle()
+    private fun showPage(movie: Movie, similar: () -> List<Movie>) = page.show { leave ->
+        var row by remember { mutableStateOf<List<Movie>?>(null) }
+        LaunchedEffect(Unit) { row = similar() }
+        MovieDetailContent(
+            movie = movie,
+            resumes = false,
+            status = null,
+            favourite = false,
+            findAddonStreams = null,
+            similar = row,
+            onOpenMovie = { leave() },
+            onOpenPerson = { leave() },
+            onPlay = leave,
+            onPlayAddonStream = {},
+            onSetFavourite = {},
+        )
     }
-
-    private fun settle() {
-        compose.waitForIdle()
-        compose.mainClock.advanceTimeBy(500)
-        compose.waitForIdle()
-    }
-
-    private fun press(key: Key) {
-        compose.onNode(isFocused()).performKeyInput { pressKey(key) }
-        settle()
-    }
-
-    private fun openHighlighted() {
-        press(Key.DirectionCenter)
-        compose.runOnIdle { assertThat(nav.currentDestination?.route).isEqualTo("elsewhere") }
-    }
-
-    private fun backToPage() {
-        compose.runOnIdle { nav.popBackStack() }
-        settle()
-    }
-
-    private fun clickable(text: String) = compose.onNode(hasText(text) and hasClickAction())
 
     @Test
     fun `Back from a person opened from the cast puts the highlight back on their name`() {
-        showPageInApp(film) { emptyList() }
-        press(Key.DirectionDown)
-        press(Key.DirectionRight)
-        clickable("Second Billing").assertIsFocused()
-        openHighlighted()
+        showPage(film) { emptyList() }
+        page.press(Key.DirectionDown)
+        page.press(Key.DirectionRight)
+        page.clickable("Second Billing").assertIsFocused()
+        page.openHighlighted()
 
-        backToPage()
+        page.back()
 
-        clickable("Second Billing").assertIsFocused().assertIsDisplayed()
+        page.clickable("Second Billing").assertIsFocused().assertIsDisplayed()
         captureScreen("movie_detail_back_from_person")
     }
 
     @Test
     fun `Back from the director who is also in the cast puts the highlight back on the director, not the cast`() {
-        showPageInApp(film) { emptyList() }
-        press(Key.DirectionDown)
-        press(Key.DirectionDown)
-        openHighlighted()
+        showPage(film) { emptyList() }
+        page.press(Key.DirectionDown)
+        page.press(Key.DirectionDown)
+        page.openHighlighted()
 
-        backToPage()
+        page.back()
 
+        assertThat(page.highlightedText()).isEqualTo("Someone Else")
         // The director's pill is the lower of the two with that name.
         val focused = compose.onNode(isFocused()).fetchSemanticsNode().boundsInRoot
-        val inCast = compose.onAllNodes(hasText("Someone Else") and hasClickAction())
-            .fetchSemanticsNodes().minOf { it.boundsInRoot.top }
-        assertThat(compose.onNode(isFocused()).fetchSemanticsNode().config[SemanticsProperties.Text].joinToString())
-            .isEqualTo("Someone Else")
+        val inCast = compose.onAllNodes(isClickable("Someone Else")).fetchSemanticsNodes().minOf { it.boundsInRoot.top }
         assertThat(focused.top).isGreaterThan(inCast)
     }
 
     @Test
     fun `Back from a film opened from More like this puts the highlight back on its cover`() {
-        showPageInApp(uncredited) { manySimilar }
-        press(Key.DirectionDown)
-        repeat(RIGHT_PRESSES) { press(Key.DirectionRight) }
-        clickable("Like 107").assertIsFocused()
-        openHighlighted()
+        showPage(uncredited) { manySimilar }
+        page.press(Key.DirectionDown)
+        repeat(RIGHT_PRESSES) { page.press(Key.DirectionRight) }
+        page.clickable("Like 107").assertIsFocused()
+        page.openHighlighted()
 
-        backToPage()
+        page.back()
 
-        clickable("Like 107").assertIsFocused().assertIsDisplayed()
+        page.clickable("Like 107").assertIsFocused().assertIsDisplayed()
         captureScreen("movie_detail_back_from_like_this")
     }
 
     @Test
     fun `Back to the page when the film opened has left More like this puts the highlight on Play`() {
         var similar = manySimilar
-        showPageInApp(uncredited) { similar }
-        press(Key.DirectionDown)
-        press(Key.DirectionRight)
-        openHighlighted()
+        showPage(uncredited) { similar }
+        page.press(Key.DirectionDown)
+        page.press(Key.DirectionRight)
+        page.openHighlighted()
         similar = manySimilar.filterNot { it.name == "Like 102" }
 
-        backToPage()
+        page.back()
 
         compose.onNodeWithText("Play").assertIsFocused()
         compose.onNodeWithText("A long drive home, and everything said on the way.").assertIsDisplayed()
     }
 
     @Test
-    fun `Back from playing the film puts the highlight back on Play`() {
-        showPageInApp(film) { manySimilar }
-        press(Key.DirectionDown)
-        press(Key.DirectionUp)
-        openHighlighted()
+    fun `Back to the page when the person opened is no longer credited puts the highlight on Play`() {
+        var movie = film
+        page.show { leave ->
+            MovieDetailContent(
+                movie = movie,
+                resumes = false,
+                status = null,
+                favourite = false,
+                findAddonStreams = null,
+                similar = emptyList(),
+                onOpenMovie = {},
+                onOpenPerson = { leave() },
+                onPlay = {},
+                onPlayAddonStream = {},
+                onSetFavourite = {},
+            )
+        }
+        page.press(Key.DirectionDown)
+        page.press(Key.DirectionRight)
+        page.openHighlighted()
+        movie = film.copy(cast = "Somebody Famous")
 
-        backToPage()
+        page.back()
+
+        compose.onNodeWithText("Play").assertIsFocused()
+    }
+
+    @Test
+    fun `Back from playing the film puts the highlight back on Play`() {
+        showPage(film) { manySimilar }
+        page.press(Key.DirectionDown)
+        page.press(Key.DirectionUp)
+        page.openHighlighted()
+
+        page.back()
 
         compose.onNodeWithText("Play").assertIsFocused()
     }

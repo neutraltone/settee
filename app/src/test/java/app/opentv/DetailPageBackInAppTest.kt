@@ -6,31 +6,20 @@
 package app.opentv
 
 import android.app.Application
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.test.ExperimentalTestApi
-import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
-import androidx.compose.ui.test.hasClickAction
-import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.isFocused
 import androidx.compose.ui.test.junit4.createComposeRule
-import androidx.compose.ui.test.performKeyInput
-import androidx.compose.ui.test.pressKey
-import androidx.navigation.NavHostController
-import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.composable
-import androidx.navigation.compose.rememberNavController
 import androidx.test.core.app.ApplicationProvider
+import app.opentv.PageBack.Companion.isClickable
 import app.opentv.core.ServiceLocator
 import app.opentv.data.model.Movie
 import app.opentv.data.model.Series
 import app.opentv.ui.vod.MovieDetailScreen
 import app.opentv.ui.vod.SeriesDetailScreen
-import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Rule
@@ -42,8 +31,9 @@ import org.robolectric.annotation.GraphicsMode
 
 /**
  * Back to a film's or a show's page with its real view model (#429): the page is read again from the
- * database each time it's built, its buttons wait for what they depend on, and only then does the
- * Highlight go back where the viewer left from.
+ * database each time it's built, its buttons wait for what they depend on, More like this is read after
+ * it shows, and only then does the Highlight go back where the viewer left from. The database is read on
+ * its own threads, so the tests wait for the Highlight rather than advancing the clock to it.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], qualifiers = TV_1080P, application = android.app.Application::class)
@@ -57,12 +47,12 @@ class DetailPageBackInAppTest {
     @get:Rule
     val artwork = PlaceholderArtwork()
 
+    private val page = PageBack(compose)
+
     private val app: Application = ApplicationProvider.getApplicationContext()
     private val panel = FakePanel()
     private val graph = ServiceLocator.Graph(app, http = panel.http)
     private val viewModels = TestViewModels()
-
-    private lateinit var nav: NavHostController
 
     @After
     fun close() {
@@ -87,6 +77,9 @@ class DetailPageBackInAppTest {
         cast = "Somebody Famous, Second Billing, Third Billing",
     )
 
+    /** Other dramas, which More like this picks from by genre without TMDB. */
+    private val otherFilms = (8L..10L).map { film.copy(id = it, streamId = "$it", name = "Film $it", cast = null) }
+
     private val show = Series(
         id = 7,
         sourceId = PANEL_SOURCE.id,
@@ -100,73 +93,35 @@ class DetailPageBackInAppTest {
         genre = "Drama",
     )
 
-    private fun settle() {
-        compose.waitForIdle()
-        compose.mainClock.advanceTimeBy(500)
-        compose.waitForIdle()
-    }
+    private val otherShows = (8L..10L).map { show.copy(id = it, seriesId = "$it", name = "Show $it") }
 
-    private fun press(key: Key) {
-        compose.onNode(isFocused()).performKeyInput { pressKey(key) }
-        settle()
-    }
+    private fun waitForHighlightOn(text: String) =
+        compose.waitUntilAtLeastOneExists(isClickable(text) and isFocused(), TIMEOUT_MILLIS)
 
-    private fun waitForFocus(matcher: SemanticsMatcher) =
-        compose.waitUntilAtLeastOneExists(matcher and isFocused(), TIMEOUT_MILLIS)
-
-    private fun openHighlighted() {
-        press(Key.DirectionCenter)
-        compose.runOnIdle { assertThat(nav.currentDestination?.route).isEqualTo("elsewhere") }
-    }
-
-    private fun backToPage() {
-        compose.runOnIdle { nav.popBackStack() }
-        settle()
-    }
-
-    private fun clickable(text: String) = hasText(text) and hasClickAction()
-
-    @Test
-    fun `Back from a person opened from a film's cast puts the highlight back on their name`() {
+    private fun showFilmPage() {
         runBlocking {
             graph.database.sources().insert(PANEL_SOURCE)
-            graph.database.movies().upsertAll(listOf(film))
+            graph.database.movies().upsertAll(listOf(film) + otherFilms)
         }
         val viewModel = viewModels.vod(app, graph)
-        compose.setTvContent {
-            nav = rememberNavController()
-            NavHost(nav, startDestination = "film") {
-                composable("film") {
-                    MovieDetailScreen(
-                        movieId = film.id,
-                        onPlay = {},
-                        onPlayAddonStream = {},
-                        onOpenMovie = {},
-                        onOpenPerson = { nav.navigate("elsewhere") },
-                        viewModel = viewModel,
-                    )
-                }
-                composable("elsewhere") { Box(Modifier.fillMaxSize()) }
-            }
+        page.show { leave ->
+            MovieDetailScreen(
+                movieId = film.id,
+                onPlay = {},
+                onPlayAddonStream = {},
+                onOpenMovie = { leave() },
+                onOpenPerson = { leave() },
+                viewModel = viewModel,
+            )
         }
-        waitForFocus(clickable("Play"))
-        press(Key.DirectionDown)
-        press(Key.DirectionRight)
-        compose.onNode(clickable("Second Billing")).assertIsFocused()
-        openHighlighted()
-
-        backToPage()
-
-        waitForFocus(clickable("Second Billing"))
-        compose.onNode(clickable("Second Billing")).assertIsDisplayed()
+        waitForHighlightOn("Play")
     }
 
-    @Test
-    fun `Back from an episode played puts the highlight back on it`() {
+    private fun showShowPage() {
         val stored = (1..4).map { testEpisode(1, it).copy(sourceId = PANEL_SOURCE.id, seriesId = "7") }
         runBlocking {
             graph.database.sources().insert(PANEL_SOURCE)
-            graph.database.series().upsertAll(listOf(show))
+            graph.database.series().upsertAll(listOf(show) + otherShows)
             graph.database.episodes().upsertAll(stored)
         }
         panel.replies["get_series_info:7"] = """
@@ -176,31 +131,79 @@ class DetailPageBackInAppTest {
                                 {"id": "1-4", "episode_num": 4, "title": "Episode 4"}]}}
         """.trimIndent()
         val viewModel = viewModels.vod(app, graph)
-        compose.setTvContent {
-            nav = rememberNavController()
-            NavHost(nav, startDestination = "show") {
-                composable("show") {
-                    SeriesDetailScreen(
-                        seriesId = show.id,
-                        onPlayEpisode = { nav.navigate("elsewhere") },
-                        onOpenPerson = {},
-                        viewModel = viewModel,
-                    )
-                }
-                composable("elsewhere") { Box(Modifier.fillMaxSize()) }
-            }
+        page.show { leave ->
+            SeriesDetailScreen(
+                seriesId = show.id,
+                onPlayEpisode = { leave() },
+                onOpenPerson = {},
+                onOpenSeries = { leave() },
+                viewModel = viewModel,
+            )
         }
-        waitForFocus(clickable("Play S1 E1"))
-        press(Key.DirectionDown)
-        press(Key.DirectionDown)
-        press(Key.DirectionDown)
-        compose.onNode(clickable("S1 E3")).assertIsFocused()
-        openHighlighted()
+        waitForHighlightOn("Play S1 E1")
+    }
 
-        backToPage()
+    @Test
+    fun `Back from a person opened from a film's cast puts the highlight back on their name`() {
+        showFilmPage()
+        page.press(Key.DirectionDown)
+        page.press(Key.DirectionRight)
+        page.clickable("Second Billing").assertIsFocused()
+        page.openHighlighted()
 
-        waitForFocus(clickable("S1 E3"))
-        compose.onNode(clickable("S1 E3")).assertIsDisplayed()
+        page.back()
+
+        waitForHighlightOn("Second Billing")
+        page.clickable("Second Billing").assertIsDisplayed()
+    }
+
+    @Test
+    fun `Back from a film opened from More like this puts the highlight back on its cover`() {
+        showFilmPage()
+        compose.waitUntilAtLeastOneExists(isClickable("Film 8"), TIMEOUT_MILLIS)
+        page.press(Key.DirectionDown)
+        page.press(Key.DirectionDown)
+        page.press(Key.DirectionRight)
+        val picked = page.highlightedText()
+        page.openHighlighted()
+
+        page.back()
+
+        waitForHighlightOn(picked)
+        page.clickable(picked).assertIsDisplayed()
+    }
+
+    @Test
+    fun `Back from an episode played puts the highlight back on it`() {
+        showShowPage()
+        page.press(Key.DirectionDown)
+        page.press(Key.DirectionDown)
+        page.press(Key.DirectionDown)
+        page.clickable("S1 E3").assertIsFocused()
+        page.openHighlighted()
+
+        page.back()
+
+        waitForHighlightOn("S1 E3")
+        page.clickable("S1 E3").assertIsDisplayed()
+    }
+
+    @Test
+    fun `Back from a show opened from More like this puts the highlight back on its cover`() {
+        showShowPage()
+        compose.waitUntilAtLeastOneExists(isClickable("More like this"), TIMEOUT_MILLIS)
+        page.press(Key.DirectionDown)
+        page.press(Key.DirectionUp)
+        page.press(Key.DirectionRight)
+        page.press(Key.DirectionDown)
+        page.press(Key.DirectionRight)
+        val picked = page.highlightedText()
+        page.openHighlighted()
+
+        page.back()
+
+        waitForHighlightOn(picked)
+        page.clickable("More like this").assertIsSelected()
     }
 
     private companion object {
