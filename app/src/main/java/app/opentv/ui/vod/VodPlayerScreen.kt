@@ -448,10 +448,14 @@ fun VodPlayerContent(
         }
     }
 
-    // The button above the row going from under the Highlight hands it back to the row. Only on the
-    // bare controls: a track panel or menu open over them keeps its own place.
+    // The button above the row going from under the Highlight hands it back to the row. Only when it
+    // goes, not as the player opens (an error's Try again has the Highlight then), and only on the bare
+    // controls: a track panel or menu open over them keeps its own place.
+    var skipWasShowing by remember { mutableStateOf(false) }
     LaunchedEffect(skipping != null) {
-        if (controlsVisible && vodPanel == VodPanel.NONE && !menuOpen) {
+        val went = skipWasShowing && skipping == null
+        skipWasShowing = skipping != null
+        if (went && controlsVisible && !failed && vodPanel == VodPanel.NONE && !menuOpen) {
             delay(40)
             runCatching { barReturn.requestFocus() }
         }
