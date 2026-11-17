@@ -142,13 +142,13 @@ class NextEpisodeOverlayTest {
             }
         }
         showPlayer()
-        // The timings are read beside playback: poll 3 s into the credits until they've placed the card.
-        // A bound, not a wait: it's met in moments, but a CI runner under load took longer than 5 s once.
-        compose.waitUntil(10_000) {
+        // The timings are read beside playback: wait for them, then poll 3 s into the credits.
+        runBlocking {
+            vm.timingsArrived()
             playback.positionMillis = TIMED_CREDITS_MILLIS + 3_000
-            runBlocking { vm.poll() }
-            vm.overlay.value != Overlay.None
+            vm.poll()
         }
+        assertThat(vm.overlay.value).isNotEqualTo(Overlay.None)
         compose.waitForIdle()
     }
 

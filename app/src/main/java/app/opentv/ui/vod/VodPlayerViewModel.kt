@@ -24,8 +24,10 @@ import app.opentv.player.SkipButton
 import app.opentv.player.SkipCue
 import app.opentv.player.UpNextCue
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -150,6 +152,12 @@ class VodPlayerViewModel(
     internal val moving = Mutex()
     private var fetchingNext: Job? = null
     private val timings = PlayingTimings(graph)
+
+    /**
+     * Waits for what's playing's timings to be looked up and places them, as they're placed when they
+     * arrive. For tests, which would otherwise poll against the clock until they had.
+     */
+    internal val timingsArrived: suspend () -> Unit = timings::arrived
 
     /** Skip intro and Skip recap, for [controlsShowing] and [skipStretch]. */
     internal val skips = Skips(
@@ -482,7 +490,11 @@ private class PlayingTimings(private val graph: ServiceLocator.Graph) {
 
     /** What's playing's found timings, for its Skip intro and Skip recap; null until they arrive. */
     @Volatile private var episodeTimings: EpisodeTimings? = null
+    private var lookup: Job? = null
     private var job: Job? = null
+
+    /** Waits for the lookup and places what it found; nothing while nothing is being looked up. */
+    private var placing: suspend () -> Unit = {}
 
     /** The intros and recaps to offer in a stream [streamMillis] long. */
     fun stretches(streamMillis: Long): List<SkipCue.Stretch> = SkipCue.place(episodeTimings, streamMillis)
@@ -496,18 +508,32 @@ private class PlayingTimings(private val graph: ServiceLocator.Graph) {
      */
     fun lookUp(scope: CoroutineScope, episode: Episode?, stillPlaying: () -> Boolean, placed: (CuePlacement) -> Unit) {
         job?.cancel()
+        lookup?.cancel()
+        placing = {}
         cue = UpNextCue::fallback
         episodeTimings = null
         if (episode == null || !wanted) return
-        job = scope.launch {
+        // Looked up off the main thread and awaited, rather than inside the launch below, so [arrived]
+        // can wait for it from the main thread, as a test does, without needing the main thread free.
+        val found = scope.async(Dispatchers.IO) {
             // Timings only ever improve on the fallback: nothing about them is worth an error on screen.
-            val found = runCatching { graph.episodeTimings.timingsFor(episode) }.getOrNull()
-            if (found == null || !stillPlaying()) return@launch
-            cue = { streamMillis -> UpNextCue.place(found.timings, found.restOfShow, streamMillis) }
-            episodeTimings = found.timings
+            runCatching { graph.episodeTimings.timingsFor(episode) }.getOrNull()
+        }
+        lookup = found
+        // Placing twice places the same thing, so the launch and [arrived] can both do it.
+        val place: suspend () -> Unit = place@{
+            val timings = found.await()
+            if (timings == null || !stillPlaying()) return@place
+            cue = { streamMillis -> UpNextCue.place(timings.timings, timings.restOfShow, streamMillis) }
+            episodeTimings = timings.timings
             placed(cue)
         }
+        placing = place
+        job = scope.launch { place() }
     }
+
+    /** Waits for the lookup [lookUp] started and places what it found, on the caller's thread. */
+    suspend fun arrived() = placing()
 
     /** Looks up the Next Episode's timings, whenever it's found, so they're there when it starts. */
     fun lookAhead(scope: CoroutineScope, next: Episode?) {
