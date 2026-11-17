@@ -1454,6 +1454,8 @@ internal suspend fun resumeItem(catalog: CatalogRepository, card: ContinueWatchi
             card = card,
             name = it.name,
             titleId = it.id,
+            // As Home's cover rows key a title, so a refresh renumbering local ids can't lose the card.
+            titleKey = "movie:${it.sourceId}:${it.streamId}",
         )
     }
     is ContinueWatchingCard.Series -> {
@@ -1470,6 +1472,8 @@ internal suspend fun resumeItem(catalog: CatalogRepository, card: ContinueWatchi
                 newEpisode = card.newEpisode,
                 card = card,
                 titleId = it.id,
+                // The show, not the episode, which changes each time the card moves on to Up Next.
+                titleKey = "series:${it.sourceId}:${it.seriesId}",
             )
         }
     }
