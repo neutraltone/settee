@@ -122,7 +122,7 @@ private fun NextEpisodeCardView(
     // Keyed to the card arriving, not to [showing]: the countdown replaces it every second, and a
     // rise on each would bob the card up and down until it plays.
     val arrival = remember { Animatable(0f) }
-    LaunchedEffect(Unit) { arrival.animateTo(1f, tween(ARRIVAL_MILLIS, easing = SetteeMotion.EaseOut)) }
+    LaunchedEffect(Unit) { arrival.animateTo(1f, tween(ARRIVAL_MILLIS, easing = SetteeMotion.Arrive)) }
     Column(
         modifier
             .graphicsLayer {
@@ -209,10 +209,9 @@ private fun OverlayButton(label: String, onClick: () -> Unit, modifier: Modifier
 
 private val CARD_WIDTH = 340.dp
 
-/**
- * How the card comes up: it's the one overlay that arrives without a press, so it eases in rather
- * than cutting into the picture. If a frame of it misses on a Stick, set this to 0, not longer.
- */
+// How the card comes up: it's the one overlay that arrives without a press, so it fades in as it
+// rises [ARRIVAL_RISE] over [ARRIVAL_MILLIS] rather than cutting into the picture. If a frame of it
+// misses on a Stick, set the time to 0, never longer (docs/LOOK.md, Motion and cost).
 private const val ARRIVAL_MILLIS = 250
 private val ARRIVAL_RISE = 24.dp
 private const val COUNTDOWN_SECONDS = 15f

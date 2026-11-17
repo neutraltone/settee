@@ -115,7 +115,7 @@ catalogue refresh, playback or Xtream parsing. The big picture:
   from the players is decided there too.
 - **Settings** are in `core/AppSettings.kt` (exposed as `StateFlow`s, e.g. `activeProfileId`).
 - **Look:** `ui/design` is Settee's design system (ADR 0006, values from `docs/LOOK.md`): tokens
-  (`SetteeColors`, `SetteeType`, `SetteeShapes`, `SetteeSpace`), `SetteeTheme`, `HighlightSurface`, `Text`,
+  (`SetteeColors`, `SetteeType`, `SetteeShapes`, `SetteeSpace`, `SetteeMotion`), `SetteeTheme`, `HighlightSurface`, `Text`,
   `Icon`, `ScreenFrame`, the Side Panel family (`SidePanel`, `ConfirmPanel`, `NotesPanel`) and `AerialTv`
   for waiting. Settee is always dark, and has no Material 3: build from `ui/design` and Compose foundation
   (`material-icons-extended` is only icons). `ui/design` never imports `app.opentv.data` (`DesignBoundaryTest`).

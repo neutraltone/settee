@@ -10,10 +10,7 @@ import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.MotionDurationScale
-import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.junit4.createComposeRule
-import androidx.compose.ui.test.onNodeWithText
 import androidx.test.core.app.ApplicationProvider
 import app.opentv.core.ServiceLocator
 import app.opentv.ui.vod.NextEpisodeOverlay
@@ -37,13 +34,11 @@ import org.robolectric.annotation.GraphicsMode
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class NextEpisodeOverlayAnimationsOffTest {
 
-    /** The system's animation scale at 0, as "Remove animations" sets it. */
-    private object AnimationsOff : MotionDurationScale {
-        override val scaleFactor = 0f
-    }
-
     @get:Rule
     val compose = createComposeRule(effectContext = AnimationsOff)
+
+    @get:Rule
+    val artwork = PlaceholderArtwork()
 
     private val app: Application = ApplicationProvider.getApplicationContext()
     private val graph = ServiceLocator.Graph(app)
@@ -53,26 +48,22 @@ class NextEpisodeOverlayAnimationsOffTest {
     @After
     fun close() = graph.database.close()
 
-    private fun cardTop() = compose.onNodeWithText("Episode 2").getUnclippedBoundsInRoot().top
-
+    // Its very first frame is drawn before the animation has had a frame to finish on, so it's
+    // checked from the second: one invisible frame, which nobody sees.
     @Test
-    fun `with the system's animations removed the card is in place from its first frame`() {
-        runBlocking {
-            graph.database.episodes().upsertAll((1..6).map { testEpisode(1, it) })
-            vm.attach(testEpisode(1, 1).key, playback)
-        }
+    fun `with the system's animations removed the card doesn't rise`() {
+        runBlocking { vm.startSeason(graph, playback) }
         compose.setTvContent {
             Box(Modifier.fillMaxSize().focusable()) { NextEpisodeOverlay(vm, onStop = {}) }
         }
         compose.mainClock.autoAdvance = false
 
-        playback.positionMillis = EPISODE_MILLIS - 12_000L
-        runBlocking { vm.poll() }
+        runBlocking { vm.pollWithSecondsLeft(playback, 12) }
         compose.mainClock.advanceTimeByFrame()
         compose.mainClock.advanceTimeByFrame()
-        val early = cardTop()
+        val secondFrame = compose.cardTop()
         compose.mainClock.advanceTimeBy(1_000)
 
-        assertThat(early).isEqualTo(cardTop())
+        assertThat(secondFrame).isEqualTo(compose.cardTop())
     }
 }
