@@ -260,6 +260,10 @@
     <string name="error_no_first_frame_device">Цей пристрій не зміг показати відео. Спробуйте ще раз або виберіть щось інше.</string>
     <string name="error_login">Провайдер не прийняв ваш логін. Перевірте дані провайдера в налаштуваннях.</string>
     <string name="error_catalogue">Не вдалося завантажити канали провайдера. Спробуйте ще раз трохи згодом.</string>
+    <string name="error_movies_list">Список фільмів від провайдера не надійшов. Спробуйте ще раз трохи згодом.</string>
+    <string name="error_shows_list">Список серіалів від провайдера не надійшов. Спробуйте ще раз трохи згодом.</string>
+    <string name="vod_movies_load_failed">Не вдалося завантажити ваші фільми</string>
+    <string name="vod_shows_load_failed">Не вдалося завантажити ваші серіали</string>
     <string name="error_channel_list_memory_tv">Списку каналів провайдера потрібно більше пам\'яті, ніж є в цього телевізора.</string>
     <string name="error_channel_list_memory_device">Списку каналів провайдера потрібно більше пам\'яті, ніж є в цього пристрою.</string>
     <string name="error_no_channels">Провайдер не надіслав жодного каналу. Можливо, у вашому обліковому записі їх поки немає, тож уточніть у провайдера.</string>

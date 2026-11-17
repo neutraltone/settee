@@ -260,6 +260,10 @@
     <string name="error_no_first_frame_device">Denne enheten kunne ikke vise videoen. Prøv igjen, eller velg noe annet.</string>
     <string name="error_login">Leverandøren din godtok ikke innloggingen din. Sjekk leverandørdetaljene dine i Innstillinger.</string>
     <string name="error_catalogue">Kunne ikke laste kanalene fra leverandøren din. Prøv igjen om litt.</string>
+    <string name="error_movies_list">Filmlisten fra leverandøren din kom ikke frem. Prøv igjen om litt.</string>
+    <string name="error_shows_list">Serielisten fra leverandøren din kom ikke frem. Prøv igjen om litt.</string>
+    <string name="vod_movies_load_failed">Kunne ikke laste filmene dine</string>
+    <string name="vod_shows_load_failed">Kunne ikke laste seriene dine</string>
     <string name="error_channel_list_memory_tv">Leverandørens kanalliste trenger mer minne enn denne TV-en har.</string>
     <string name="error_channel_list_memory_device">Leverandørens kanalliste trenger mer minne enn denne enheten har.</string>
     <string name="error_no_channels">Leverandøren din sendte ingen kanaler. Kontoen din har kanskje ingen ennå, så sjekk med dem.</string>

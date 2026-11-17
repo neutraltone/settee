@@ -25,7 +25,7 @@ fun NavGraphBuilder.settingsRoutes(nav: NavController, memory: SettingsMemory) {
             memory = memory,
             onBack = { nav.popBackStack() },
             onAddProvider = { nav.openAddProvider() },
-            onEditProvider = { id -> nav.navigate(Routes.editSource(id)) },
+            onEditProvider = { id -> nav.openEditProvider(id) },
             onOpenChannels = { nav.navigate(Routes.CHANNELS) },
             onOpenLockedCategories = { nav.navigate(Routes.LOCKED_CATEGORIES) },
             onOpenFontLicences = { nav.navigate(Routes.FONT_LICENCES) },

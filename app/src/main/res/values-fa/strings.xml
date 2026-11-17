@@ -260,6 +260,10 @@
     <string name="error_no_first_frame_device">این دستگاه نتوانست این ویدیو را نمایش دهد. دوباره تلاش کنید، یا چیز دیگری انتخاب کنید.</string>
     <string name="error_login">ارائه‌دهنده شما ورودتان را نپذیرفت. اطلاعات ارائه‌دهنده خود را در تنظیمات بررسی کنید.</string>
     <string name="error_catalogue">بارگذاری کانال‌های ارائه‌دهنده شما ممکن نشد. کمی بعد دوباره تلاش کنید.</string>
+    <string name="error_movies_list">فهرست فیلم‌های ارائه‌دهنده شما نرسید. کمی بعد دوباره تلاش کنید.</string>
+    <string name="error_shows_list">فهرست سریال‌های ارائه‌دهنده شما نرسید. کمی بعد دوباره تلاش کنید.</string>
+    <string name="vod_movies_load_failed">بارگذاری فیلم‌ها ممکن نشد</string>
+    <string name="vod_shows_load_failed">بارگذاری سریال‌ها ممکن نشد</string>
     <string name="error_channel_list_memory_tv">فهرست کانال‌های ارائه‌دهنده شما به حافظه‌ای بیش از آنچه این تلویزیون دارد نیاز دارد.</string>
     <string name="error_channel_list_memory_device">فهرست کانال‌های ارائه‌دهنده شما به حافظه‌ای بیش از آنچه این دستگاه دارد نیاز دارد.</string>
     <string name="error_no_channels">ارائه‌دهنده شما هیچ کانالی نفرستاد. ممکن است حساب شما هنوز کانالی نداشته باشد، پس از آن‌ها بپرسید.</string>

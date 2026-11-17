@@ -5,10 +5,13 @@
  */
 package app.opentv.ui.vod
 
+import androidx.annotation.StringRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.focusGroup
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.items
@@ -43,6 +46,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import androidx.lifecycle.viewmodel.compose.viewModel
 import app.opentv.R
+import app.opentv.core.ViewerError
 import app.opentv.data.model.Category
 import app.opentv.data.model.Movie
 import app.opentv.data.model.Series
@@ -54,11 +58,14 @@ import app.opentv.data.repo.TitleCover
 import app.opentv.ui.Backdrop
 import app.opentv.ui.LocalRailReturn
 import app.opentv.ui.ResumeItem
+import app.opentv.ui.VodLoadFailure
 import app.opentv.ui.VodViewModel
 import app.opentv.ui.activityViewModelStoreOwner
 import app.opentv.ui.browseKey
+import app.opentv.ui.design.ActionButton
 import app.opentv.ui.design.CategoriesSidebar
 import app.opentv.ui.design.CategoriesSidebarWidth
+import app.opentv.ui.design.Message
 import app.opentv.ui.design.ScreenFrame
 import app.opentv.ui.design.ScreenFrameScope
 import app.opentv.ui.design.SetteeColors
@@ -83,6 +90,7 @@ fun MoviesScreen(
     onResume: (MediaKey) -> Unit,
     hasSources: Boolean,
     isSyncing: Boolean,
+    onEditProvider: (sourceId: Long) -> Unit = {},
     viewModel: VodViewModel = viewModel(activityViewModelStoreOwner()),
 ) {
     val resume = viewModel.continueWatchingMovies.collectAsState().value
@@ -92,6 +100,7 @@ fun MoviesScreen(
     val recentlyAdded by viewModel.recentlyAddedMovies.collectAsState()
     val genreRows by viewModel.movieGenreRows.collectAsState()
     val vodLoading by viewModel.vodLoading.collectAsState()
+    val loadFailure = viewModel.moviesLoadFailure.collectAsState().value
 
     // Pull the movie library the first time this tab is opened, not at login; refresh the computed
     // rows (recommended, by genre) on open too: cheap, and covers a library already on disk.
@@ -134,14 +143,14 @@ fun MoviesScreen(
         },
         hasForYou = hasForYou,
         forYouLoaded = resume != null && favourites != null,
-        empty = when {
-            vodLoading || isSyncing -> VodEmpty.Loading(stringResource(R.string.vod_loading_movies))
-            hasSources -> VodEmpty.Hint(
-                stringResource(R.string.vod_no_movies),
-                stringResource(R.string.vod_no_movies_provider),
-            )
-            else -> VodEmpty.Hint(stringResource(R.string.vod_no_movies), stringResource(R.string.vod_no_movies_add))
-        },
+        empty = vodEmpty(
+            loading = vodLoading || isSyncing,
+            hasSources = hasSources,
+            failure = loadFailure,
+            words = MOVIES_EMPTY,
+            onRetry = viewModel::retryVod,
+            onEditProvider = onEditProvider,
+        ),
     ) { onHighlight ->
         MovieShelves(
             resume.orEmpty(),
@@ -164,6 +173,7 @@ fun SeriesScreen(
     onResume: (MediaKey) -> Unit,
     hasSources: Boolean,
     isSyncing: Boolean,
+    onEditProvider: (sourceId: Long) -> Unit = {},
     viewModel: VodViewModel = viewModel(activityViewModelStoreOwner()),
 ) {
     val resume = viewModel.continueWatchingSeries.collectAsState().value
@@ -173,6 +183,7 @@ fun SeriesScreen(
     val recentlyAdded by viewModel.recentlyAddedSeries.collectAsState()
     val genreRows by viewModel.seriesGenreRows.collectAsState()
     val vodLoading by viewModel.vodLoading.collectAsState()
+    val loadFailure = viewModel.showsLoadFailure.collectAsState().value
 
     LaunchedEffect(Unit) {
         if (hasSources) viewModel.ensureVodLoaded()
@@ -213,14 +224,14 @@ fun SeriesScreen(
         },
         hasForYou = hasForYou,
         forYouLoaded = resume != null && favourites != null,
-        empty = when {
-            vodLoading || isSyncing -> VodEmpty.Loading(stringResource(R.string.vod_loading_shows))
-            hasSources -> VodEmpty.Hint(
-                stringResource(R.string.vod_no_shows),
-                stringResource(R.string.vod_no_shows_provider),
-            )
-            else -> VodEmpty.Hint(stringResource(R.string.vod_no_shows), stringResource(R.string.vod_no_shows_add))
-        },
+        empty = vodEmpty(
+            loading = vodLoading || isSyncing,
+            hasSources = hasSources,
+            failure = loadFailure,
+            words = SHOWS_EMPTY,
+            onRetry = viewModel::retryVod,
+            onEditProvider = onEditProvider,
+        ),
     ) { onHighlight ->
         SeriesShelves(
             resume.orEmpty(),
@@ -317,11 +328,67 @@ internal class TitleRow<T>(
     val pending: Boolean = false,
 )
 
+/** Movies' or Shows' own words for [vodEmpty]. */
+internal class EmptyWords(
+    @StringRes val loading: Int,
+    @StringRes val none: Int,
+    @StringRes val providerSentNone: Int,
+    @StringRes val addProvider: Int,
+    @StringRes val failed: Int,
+)
+
+private val MOVIES_EMPTY = EmptyWords(
+    R.string.vod_loading_movies,
+    R.string.vod_no_movies,
+    R.string.vod_no_movies_provider,
+    R.string.vod_no_movies_add,
+    R.string.vod_movies_load_failed,
+)
+
+private val SHOWS_EMPTY = EmptyWords(
+    R.string.vod_loading_shows,
+    R.string.vod_no_shows,
+    R.string.vod_no_shows_provider,
+    R.string.vod_no_shows_add,
+    R.string.vod_shows_load_failed,
+)
+
+/**
+ * What an empty Movies or Shows says: loading, why its download failed (only once that's known and
+ * with nothing of it stored, which is when this is asked), that the provider sent none, or to add one.
+ */
+@Composable
+private fun vodEmpty(
+    loading: Boolean,
+    hasSources: Boolean,
+    failure: VodLoadFailure?,
+    words: EmptyWords,
+    onRetry: () -> Unit,
+    onEditProvider: (sourceId: Long) -> Unit,
+): VodEmpty = when {
+    loading -> VodEmpty.Loading(stringResource(words.loading))
+    hasSources && failure != null -> VodEmpty.Failed(
+        stringResource(words.failed),
+        failure.reason,
+        onRetry = onRetry,
+        onEditProvider = { onEditProvider(failure.sourceId) },
+    )
+    hasSources -> VodEmpty.Hint(stringResource(words.none), stringResource(words.providerSentNone))
+    else -> VodEmpty.Hint(stringResource(words.none), stringResource(words.addProvider))
+}
+
 /** What Movies or Shows says when For you has nothing in it. */
 internal sealed interface VodEmpty {
-    class Loading(val message: String) : VodEmpty
+    /** Words alone, with nothing to press. */
+    sealed interface Lines : VodEmpty
 
-    class Hint(val title: String, val body: String?) : VodEmpty
+    class Loading(val message: String) : Lines
+
+    class Hint(val title: String, val body: String?) : Lines
+
+    /** The latest download of this kind failed and nothing of it is stored: why, and what to do. */
+    class Failed(val title: String, val reason: ViewerError, val onRetry: () -> Unit, val onEditProvider: () -> Unit) :
+        VodEmpty
 }
 
 /**
@@ -460,24 +527,27 @@ private fun BrowseSidebar(
 
 private const val FOR_YOU = "for-you"
 private const val FIND_MAX_LENGTH = 40
+private val BUTTON_GAP = 12.dp
 
 @Composable
 internal fun EmptyBrowse(empty: VodEmpty) {
-    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            when (empty) {
-                is VodEmpty.Loading -> {
-                    Text(empty.message, SetteeType.Section)
-                    Text(
-                        stringResource(R.string.vod_large_provider_note),
-                        SetteeType.Body,
-                        color = SetteeColors.QuietText,
-                    )
-                }
-                is VodEmpty.Hint -> {
-                    Text(empty.title, SetteeType.Section)
-                    empty.body?.let { Text(it, SetteeType.Body, color = SetteeColors.QuietText) }
-                }
+    // Drawn as Live's channels that failed to load are, its buttons first in the content, so
+    // coming in from the rail lands on Try again.
+    when (empty) {
+        is VodEmpty.Failed -> Message(empty.reason.sentence, title = empty.title, detail = empty.reason.detail) {
+            Row(horizontalArrangement = Arrangement.spacedBy(BUTTON_GAP)) {
+                ActionButton(stringResource(R.string.common_try_again), empty.onRetry)
+                ActionButton(stringResource(R.string.guide_edit_provider), empty.onEditProvider)
+            }
+        }
+        is VodEmpty.Lines -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            val (title, body) = when (empty) {
+                is VodEmpty.Loading -> empty.message to stringResource(R.string.vod_large_provider_note)
+                is VodEmpty.Hint -> empty.title to empty.body
+            }
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(title, SetteeType.Section)
+                body?.let { Text(it, SetteeType.Body, color = SetteeColors.QuietText) }
             }
         }
     }

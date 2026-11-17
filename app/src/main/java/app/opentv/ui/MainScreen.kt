@@ -90,6 +90,7 @@ fun MainScreen(
     onOpenSeries: (Series) -> Unit,
     onResume: (MediaKey) -> Unit,
     onAddSource: () -> Unit,
+    onEditProvider: (sourceId: Long) -> Unit,
     onRefresh: () -> Unit,
     onOpenSearch: () -> Unit,
     onOpenSettings: () -> Unit,
@@ -165,12 +166,14 @@ fun MainScreen(
                     onResume = onResume,
                     hasSources = hasSources,
                     isSyncing = isSyncing,
+                    onEditProvider = onEditProvider,
                 )
                 Tab.SHOWS -> SeriesScreen(
                     onOpenSeries = onOpenSeries,
                     onResume = onResume,
                     hasSources = hasSources,
                     isSyncing = isSyncing,
+                    onEditProvider = onEditProvider,
                 )
                 Tab.RECORDINGS -> RecordingsScreen(onPlay = onPlayRecording)
             }

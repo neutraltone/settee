@@ -286,6 +286,20 @@ class ProviderRoutesTest {
     }
 
     @Test
+    fun `Provider setup on Movies or Shows that failed opens that provider's form`() {
+        runBlocking { graph.database.sources().insert(PANEL_SOURCE) }
+        setApp(start = Routes.MAIN, sources = SourcesViewModel(app, graph))
+
+        compose.runOnIdle { nav.openEditProvider(PANEL_SOURCE.id) }
+
+        assertThat(route()).isEqualTo(Routes.EDIT_SOURCE)
+        assertThat(compose.runOnIdle { nav.currentBackStackEntry?.arguments?.getString("sourceId") })
+            .isEqualTo("${PANEL_SOURCE.id}")
+        // Its form, not the empty one for adding a provider.
+        compose.onNodeWithText("Xtream login").assertDoesNotExist()
+    }
+
+    @Test
     fun `Live TV's Add opens the same page`() {
         setApp(start = Routes.MAIN)
 

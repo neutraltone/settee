@@ -974,6 +974,10 @@ interface MovieDao {
     @Query("SELECT * FROM movies WHERE name LIKE '%' || :query || '%' ORDER BY name LIMIT :limit")
     fun search(query: String, limit: Int = 200): Flow<List<Movie>>
 
+    /** Whether any movie is stored, from any provider. */
+    @Query("SELECT EXISTS(SELECT 1 FROM movies)")
+    fun observeAny(): Flow<Boolean>
+
     /** Newest-first, for the "Recently Added" home row. Reactive so it fills in as VOD sync lands. */
     @Query(RECENT_MOVIES)
     fun observeRecentlyAdded(limit: Int): Flow<List<Movie>>
@@ -1317,6 +1321,10 @@ interface SeriesDao {
 
     @Query("SELECT * FROM series WHERE name LIKE '%' || :query || '%' ORDER BY name LIMIT :limit")
     fun search(query: String, limit: Int = 200): Flow<List<Series>>
+
+    /** Whether any show is stored, from any provider. */
+    @Query("SELECT EXISTS(SELECT 1 FROM series)")
+    fun observeAny(): Flow<Boolean>
 
     /** Newest-first, for the "Recently Added" home row. Reactive so it fills in as VOD sync lands. */
     @Query(RECENT_SERIES)

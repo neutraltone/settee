@@ -260,6 +260,10 @@
     <string name="error_no_first_frame_device">Acest dispozitiv nu a putut afișa acest videoclip. Încearcă din nou sau alege altceva.</string>
     <string name="error_login">Furnizorul tău nu ți-a acceptat autentificarea. Verifică detaliile furnizorului în Setări.</string>
     <string name="error_catalogue">Canalele furnizorului tău nu au putut fi încărcate. Încearcă din nou peste puțin timp.</string>
+    <string name="error_movies_list">Lista de filme a furnizorului tău nu a sosit. Încearcă din nou peste puțin timp.</string>
+    <string name="error_shows_list">Lista de seriale a furnizorului tău nu a sosit. Încearcă din nou peste puțin timp.</string>
+    <string name="vod_movies_load_failed">Filmele nu au putut fi încărcate</string>
+    <string name="vod_shows_load_failed">Serialele nu au putut fi încărcate</string>
     <string name="error_channel_list_memory_tv">Lista de canale a furnizorului tău are nevoie de mai multă memorie decât are acest televizor.</string>
     <string name="error_channel_list_memory_device">Lista de canale a furnizorului tău are nevoie de mai multă memorie decât are acest dispozitiv.</string>
     <string name="error_no_channels">Furnizorul tău nu a trimis niciun canal. Poate contul tău nu are încă niciunul, așa că întreabă-i.</string>

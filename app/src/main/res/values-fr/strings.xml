@@ -260,6 +260,10 @@
     <string name="error_no_first_frame_device">Cet appareil n\'a pas pu afficher cette vidéo. Réessayez, ou choisissez autre chose.</string>
     <string name="error_login">Votre fournisseur n\'a pas accepté votre identifiant. Vérifiez les informations de votre fournisseur dans les Paramètres.</string>
     <string name="error_catalogue">Impossible de charger les chaînes de votre fournisseur. Réessayez dans un instant.</string>
+    <string name="error_movies_list">La liste des films de votre fournisseur n\'est pas arrivée. Réessayez dans un instant.</string>
+    <string name="error_shows_list">La liste des séries de votre fournisseur n\'est pas arrivée. Réessayez dans un instant.</string>
+    <string name="vod_movies_load_failed">Impossible de charger vos films</string>
+    <string name="vod_shows_load_failed">Impossible de charger vos séries</string>
     <string name="error_channel_list_memory_tv">La liste de chaînes de votre fournisseur demande plus de mémoire que cette télévision n\'en a.</string>
     <string name="error_channel_list_memory_device">La liste de chaînes de votre fournisseur demande plus de mémoire que cet appareil n\'en a.</string>
     <string name="error_no_channels">Votre fournisseur n\'a envoyé aucune chaîne. Votre compte n\'en a peut-être pas encore, alors renseignez-vous auprès de lui.</string>
