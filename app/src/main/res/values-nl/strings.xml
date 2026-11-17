@@ -203,6 +203,8 @@
     <string name="vod_no_shows_provider">Je provider heeft nog geen series gestuurd.</string>
     <string name="vod_no_shows_add">De series van je provider verschijnen hier. Voeg een provider toe om te beginnen.</string>
     <string name="vod_loading_episodes">Afleveringen laden…</string>
+    <string name="vod_episodes_failed">De afleveringen van deze serie konden niet worden geladen. Probeer het zo opnieuw.</string>
+    <string name="vod_no_episodes">Je provider heeft nog geen afleveringen van deze serie toegevoegd.</string>
     <string name="vod_continue_watching">Verdergaan met kijken</string>
     <string name="vod_large_provider_note">Bij een grote provider kan dit de eerste keer een paar minuten duren.</string>
     <string name="vod_recommended">Aanbevolen voor jou</string>

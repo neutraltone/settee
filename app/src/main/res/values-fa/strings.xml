@@ -203,6 +203,8 @@
     <string name="vod_no_shows_provider">ارائه‌دهنده شما هنوز هیچ سریالی نفرستاده است.</string>
     <string name="vod_no_shows_add">سریال‌های ارائه‌دهنده شما اینجا نمایش داده می‌شوند. برای شروع، یک ارائه‌دهنده اضافه کنید.</string>
     <string name="vod_loading_episodes">در حال بارگذاری قسمت‌ها…</string>
+    <string name="vod_episodes_failed">قسمت‌های این سریال بارگذاری نشد. کمی بعد دوباره تلاش کنید.</string>
+    <string name="vod_no_episodes">ارائه‌دهنده شما هیچ قسمتی از این سریال اضافه نکرده است.</string>
     <string name="vod_continue_watching">ادامه تماشا</string>
     <string name="vod_large_provider_note">برای ارائه‌دهنده‌های بزرگ، بار اول ممکن است چند دقیقه طول بکشد.</string>
     <string name="vod_recommended">پیشنهادشده برای شما</string>

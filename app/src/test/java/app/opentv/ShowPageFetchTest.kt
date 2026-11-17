@@ -9,6 +9,8 @@ import android.app.Application
 import androidx.test.core.app.ApplicationProvider
 import app.opentv.core.ServiceLocator
 import app.opentv.data.model.Series
+import app.opentv.data.model.Source
+import app.opentv.data.model.SourceKind
 import app.opentv.ui.OpenedShow
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.Dispatchers
@@ -141,4 +143,65 @@ class ShowPageFetchTest {
         assertThat(episodeIds(2)).containsExactly("201")
         assertThat(timesAsked(2)).isEqualTo(1)
     }
+
+    @Test
+    fun `a show whose every Version's fetch times out says so`() = runBlocking<Unit> {
+        saveTwoVersions()
+        panel.replies["get_series_info:1"] = "!timeout"
+        panel.replies["get_series_info:2"] = "!timeout"
+
+        val opened = withTimeout(10_000) { viewModel.openShow(1).first { it.fetched } }
+
+        assertThat(opened.noEpisodes).isTrue()
+        assertThat(opened.failure?.sentence).isEqualTo(app.getString(R.string.error_timed_out))
+    }
+
+    @Test
+    fun `a show with one Version that fails and one that answers reports no failure`() = runBlocking<Unit> {
+        saveTwoVersions()
+        panel.replies["get_series_info:1"] = "!503"
+
+        val opened = withTimeout(10_000) { viewModel.openShow(1).first { it.fetched } }
+
+        assertThat(opened.failure).isNull()
+        assertThat(episodeIds(2)).containsExactly("201")
+    }
+
+    @Test
+    fun `a show whose panel answers with no episodes hasn't failed`() = runBlocking<Unit> {
+        graph.database.sources().insert(PANEL_SOURCE)
+        graph.database.series().upsertAll(listOf(series(1, "Dragons").copy(tmdbId = null)))
+        panel.replies["get_series_info:1"] = """{"episodes": {}}"""
+
+        val opened = withTimeout(10_000) { viewModel.openShow(1).first { it.fetched } }
+
+        assertThat(opened.noEpisodes).isTrue()
+        assertThat(opened.failure).isNull()
+    }
+
+    @Test
+    fun `a show on a playlist, with nothing to fetch, never reports a failure`() = runBlocking<Unit> {
+        val playlist = Source(id = 3, name = "Playlist", kind = SourceKind.M3U, url = "http://example.com/list.m3u")
+        graph.database.sources().insert(playlist)
+        graph.database.series().upsertAll(listOf(series(1, "Dragons").copy(sourceId = playlist.id, tmdbId = null)))
+
+        val opened = withTimeout(10_000) { viewModel.openShow(1).first { it.fetched } }
+
+        assertThat(opened.failure).isNull()
+    }
+
+    @Test
+    fun `a show with episodes stored reports no failure when its panel fails, so the page shows them`() =
+        runBlocking<Unit> {
+            graph.database.sources().insert(PANEL_SOURCE)
+            graph.database.series().upsertAll(listOf(series(1, "Dragons").copy(tmdbId = null)))
+            val stored = testEpisode(1, 1).copy(sourceId = PANEL_SOURCE.id, seriesId = "1")
+            graph.database.episodes().upsertAll(listOf(stored))
+            panel.replies["get_series_info:1"] = "!timeout"
+
+            val opened = withTimeout(10_000) { viewModel.openShow(1).first { it.fetched } }
+
+            assertThat(opened.noEpisodes).isFalse()
+            assertThat(opened.failure).isNull()
+        }
 }

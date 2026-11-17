@@ -24,6 +24,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.HighQuality
 import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
@@ -48,8 +49,10 @@ import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import app.opentv.R
+import app.opentv.core.ViewerError
 import app.opentv.data.model.Episode
 import app.opentv.data.model.Series
 import app.opentv.data.model.personNames
@@ -59,6 +62,7 @@ import app.opentv.data.repo.EpisodeStatuses
 import app.opentv.data.repo.MediaKey
 import app.opentv.data.repo.SeriesMainAction
 import app.opentv.data.repo.TitleCover
+import app.opentv.ui.design.ErrorMessage
 import app.opentv.ui.design.Pill
 import app.opentv.ui.design.PillButton
 import app.opentv.ui.design.ScreenFrame
@@ -79,7 +83,8 @@ import kotlinx.coroutines.delay
  * Quality pill for the whole show, as the film page has it. [suggestions] are its More like this: with
  * any, a More like this pill comes last in the pill row, and highlighting it shows them as a grid in the
  * episodes' place; OK on one calls [onOpenSeries]. Until [suggestionsKnown], a one-season show's episodes
- * wait, since a pill row may yet come above them.
+ * wait, since a pill row may yet come above them. When the fetch on opening leaves it with none, the
+ * page says why ([episodeFetch]).
  */
 @Composable
 internal fun SeriesDetailContent(
@@ -97,6 +102,7 @@ internal fun SeriesDetailContent(
     suggestions: List<TitleCover> = emptyList(),
     onOpenSeries: (Long) -> Unit = {},
     suggestionsKnown: Boolean = true,
+    episodeFetch: EpisodeFetch = EpisodeFetch(),
 ) {
     val cast = remember(series.cast) { personNames(series.cast) }
     var castShown by remember(series.id) { mutableStateOf(false) }
@@ -167,7 +173,11 @@ internal fun SeriesDetailContent(
                     onOpenSeries = onOpenSeries,
                 )
             } else {
-                EpisodeList(series, nav, shown, statuses, episodeList, play, suggestions)
+                if (shown.selected == null && episodeFetch.noEpisodes) {
+                    NoEpisodes(nav, episodeFetch.failure, episodeFetch.onTryAgain)
+                } else {
+                    EpisodeList(series, nav, shown, statuses, episodeList, play, suggestions)
+                }
             }
         }
     }
@@ -309,6 +319,43 @@ private fun SeasonPills(nav: ShowPageNav, shown: ShowSeasons, pillRow: LazyListS
                 )
             }
         }
+    }
+}
+
+/**
+ * How the fetch on opening a show went, for its page: whether it left the show with [noEpisodes] stored,
+ * why when every fetch [failure]d, and [onTryAgain] to ask again.
+ */
+@Stable
+class EpisodeFetch(val noEpisodes: Boolean = false, val failure: ViewerError? = null, val onTryAgain: () -> Unit = {})
+
+/**
+ * In the episodes' place when a show has none once they've been asked for: why, with Try again, when
+ * every fetch failed ([failure]), or else a plain line, as a provider listing none isn't an error.
+ */
+@Composable
+private fun NoEpisodes(nav: ShowPageNav, failure: ViewerError?, onTryAgain: () -> Unit) {
+    if (failure == null) {
+        Text(stringResource(R.string.vod_no_episodes), style = SetteeType.Body, color = SetteeColors.QuietText)
+        return
+    }
+    Column(verticalArrangement = Arrangement.spacedBy(SetteeSpace.RowGap)) {
+        ErrorMessage(
+            failure.sentence,
+            failure.detail,
+            textAlign = TextAlign.Start,
+            modifier = Modifier.fillMaxWidth(SYNOPSIS_WIDTH),
+        )
+        PillButton(
+            label = stringResource(R.string.common_try_again),
+            icon = Icons.Filled.Refresh,
+            onClick = {
+                // Up to the hero first: this button goes while it asks, and the Highlight would go with
+                // it. From there it moves on to Play when the episodes come, as on a first opening.
+                nav.backToHero()
+                onTryAgain()
+            },
+        )
     }
 }
 

@@ -203,6 +203,8 @@
     <string name="vod_no_shows_provider">Leverandøren din har ikke sendt noen serier ennå.</string>
     <string name="vod_no_shows_add">Seriene fra leverandøren din vises her. Legg til en leverandør for å komme i gang.</string>
     <string name="vod_loading_episodes">Laster episoder…</string>
+    <string name="vod_episodes_failed">Kunne ikke laste inn episodene i denne serien. Prøv igjen om litt.</string>
+    <string name="vod_no_episodes">Leverandøren din har ikke lagt til noen episoder av denne serien.</string>
     <string name="vod_continue_watching">Fortsett å se</string>
     <string name="vod_large_provider_note">Hos en stor leverandør kan dette ta et par minutter første gang.</string>
     <string name="vod_recommended">Anbefalt for deg</string>
