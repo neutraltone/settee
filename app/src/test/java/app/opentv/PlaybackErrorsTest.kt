@@ -277,22 +277,16 @@ class PlaybackErrorsTest {
 
     @Test
     fun `the other playback failures follow Voice, with Media3's name for them on the detail line`() {
+        val webPage = "Your provider sent a web page instead of video. The link may have expired, " +
+            "so try refreshing your provider in Settings."
         val expected = mapOf(
             PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_FAILED to
                 "Can't reach your provider. Check this TV is online and the address is right.",
             PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_TIMEOUT to
                 "Your provider stopped responding. It may be busy, so try again in a moment.",
-            PlaybackException.ERROR_CODE_IO_INVALID_HTTP_CONTENT_TYPE to
-                "Your provider sent a web page instead of video. The link may have expired, " +
-                "so try refreshing your provider in Settings.",
-            // An expired or blocked Xtream account answers 200 with an HTML page, which Media3
-            // reports as an unsupported container (TS) or manifest (HLS without #EXTM3U) (#462).
-            PlaybackException.ERROR_CODE_PARSING_CONTAINER_UNSUPPORTED to
-                "Your provider sent a web page instead of video. The link may have expired, " +
-                "so try refreshing your provider in Settings.",
-            PlaybackException.ERROR_CODE_PARSING_MANIFEST_UNSUPPORTED to
-                "Your provider sent a web page instead of video. The link may have expired, " +
-                "so try refreshing your provider in Settings.",
+            PlaybackException.ERROR_CODE_IO_INVALID_HTTP_CONTENT_TYPE to webPage,
+            PlaybackException.ERROR_CODE_PARSING_CONTAINER_UNSUPPORTED to webPage,
+            PlaybackException.ERROR_CODE_PARSING_MANIFEST_UNSUPPORTED to webPage,
             PlaybackException.ERROR_CODE_PARSING_CONTAINER_MALFORMED to
                 "This video is damaged and won't play. That's at your provider's end, so try something else.",
             PlaybackException.ERROR_CODE_PARSING_MANIFEST_MALFORMED to
