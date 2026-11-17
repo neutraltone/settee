@@ -754,7 +754,7 @@ class HomeContentTest {
 
     // A position synced from another device moves the card on while the viewer is elsewhere on Home.
     @Test
-    fun `coming back into Continue Watching lands on the show last highlighted even after its card moved on an episode`() {
+    fun `back into Continue Watching, the show last highlighted keeps the highlight once its card moves on`() {
         var cards by mutableStateOf(
             listOf(resumeItem(9, "Collateral"), resumeItem(7, "Insomnia"), episodeItem(43, "Pachinko", 1, 3)),
         )
