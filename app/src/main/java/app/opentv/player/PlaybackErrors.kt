@@ -80,7 +80,14 @@ object PlaybackErrors {
 
             PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_TIMEOUT -> context.getString(R.string.error_timed_out)
 
-            PlaybackException.ERROR_CODE_IO_INVALID_HTTP_CONTENT_TYPE -> context.getString(R.string.error_web_page)
+            // The player's data source checks no content type, so an expired or blocked account's
+            // HTML page (sent with a 200) only fails when it's parsed. A text/html check was
+            // rejected: some panels label real streams wrongly, and it would stop those (#462).
+            PlaybackException.ERROR_CODE_IO_INVALID_HTTP_CONTENT_TYPE,
+            PlaybackException.ERROR_CODE_PARSING_CONTAINER_UNSUPPORTED,
+            PlaybackException.ERROR_CODE_PARSING_MANIFEST_UNSUPPORTED,
+            ->
+                context.getString(R.string.error_web_page)
 
             PlaybackException.ERROR_CODE_PARSING_CONTAINER_MALFORMED,
             PlaybackException.ERROR_CODE_PARSING_MANIFEST_MALFORMED,
