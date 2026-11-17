@@ -107,6 +107,7 @@ class DetailPageBackInAppTest {
         page.show { leave ->
             MovieDetailScreen(
                 movieId = film.id,
+                onBack = {},
                 onPlay = {},
                 onPlayAddonStream = {},
                 onOpenMovie = { leave() },
@@ -134,6 +135,7 @@ class DetailPageBackInAppTest {
         page.show { leave ->
             SeriesDetailScreen(
                 seriesId = show.id,
+                onBack = {},
                 onPlayEpisode = { leave() },
                 onOpenPerson = {},
                 onOpenSeries = { leave() },

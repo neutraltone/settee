@@ -6,7 +6,6 @@
 package app.opentv.data.repo
 
 import android.util.Log
-import androidx.annotation.StringRes
 import androidx.room.withTransaction
 import app.opentv.R
 import app.opentv.core.AppSettings
@@ -239,31 +238,6 @@ class CatalogRepository(
         data class Failed(val reason: ViewerError, val cause: Throwable?) : SyncResult
     }
 
-    /**
-     * Series the provider updated, for New Episode detection, whether every list came back, and how
-     * each of [movies] and [shows] went, for a tab whose list failed to say why: null when it wasn't
-     * asked for, so it says nothing either way.
-     */
-    data class VodFetch(
-        val updated: List<Series>,
-        val complete: Boolean,
-        val movies: ListFetch? = null,
-        val shows: ListFetch? = null,
-    ) {
-        companion object {
-            fun of(movies: ListFetch?, shows: ListFetch?) = VodFetch(
-                shows?.updated.orEmpty(),
-                // Nothing at all may be a struggling panel's empty reply, so it isn't worth trusting
-                // for 12 hours; an account with no VOD just asks again, which is a quick request.
-                movies?.complete != false &&
-                    shows?.complete != false &&
-                    ((movies?.count ?: 0) > 0 || (shows?.count ?: 0) > 0),
-                movies,
-                shows,
-            )
-        }
-    }
-
     fun observeChannels(sourceId: Long? = null, categoryId: String? = null): Flow<List<Channel>> =
         channelDao.observe(sourceId, categoryId)
 
@@ -362,12 +336,6 @@ class CatalogRepository(
 
     /** "Recently Added" series, newest first. Reactive. */
     fun recentlyAddedSeries(limit: Int = 30): Flow<List<Series>> = seriesDao.observeRecentlyAdded(limit)
-
-    /** Whether any movie is stored, from any provider. */
-    fun hasMovies(): Flow<Boolean> = movieDao.observeAny()
-
-    /** Whether any show is stored, from any provider. */
-    fun hasSeries(): Flow<Boolean> = seriesDao.observeAny()
 
     /** Every movie, newest first — for a caller that wants to build its own groupings. */
     suspend fun allMovies(): List<Movie> = withContext(Dispatchers.IO) { movieDao.all() }
@@ -952,16 +920,6 @@ class CatalogRepository(
         )
     }
 
-    /**
-     * One of an Xtream provider's lists, movies or shows: how many titles it had, whether it came
-     * back (a failed list still leaves the other to be saved, but mustn't count as fetched), and for
-     * shows, the ones updated since they were last saved. A list that didn't come back has the
-     * [failure] in words.
-     */
-    data class ListFetch(val count: Int, val failure: ViewerError? = null, val updated: List<Series> = emptyList()) {
-        val complete: Boolean get() = failure == null
-    }
-
     /** How far through saving a list: its [share], 0 to 1, and how many titles are [saved] so far. */
     data class SaveProgress(val share: Float, val saved: Int)
 
@@ -1240,16 +1198,3 @@ class CatalogRepository(
 /** About as many as fit across Home twice: enough to browse, few enough to stay recent. */
 private const val RECENTLY_ADDED = 20
 private const val MORE_LIKE_THIS_LIMIT = 20
-
-/**
- * Movies and shows that failed as a whole, outside either list: each list switched on failed with
- * it, so the tab still says why rather than that the provider sent nothing.
- */
-fun vodFailed(error: Throwable, wording: ErrorWording, settings: AppSettings): CatalogRepository.VodFetch {
-    fun failed(on: Boolean, @StringRes fallback: Int) =
-        CatalogRepository.ListFetch(0, wording.ofProvider(error, fallback)).takeIf { on }
-    return CatalogRepository.VodFetch.of(
-        failed(settings.moviesEnabled.value, R.string.error_movies_list),
-        failed(settings.seriesEnabled.value, R.string.error_shows_list),
-    )
-}

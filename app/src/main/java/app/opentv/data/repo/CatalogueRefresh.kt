@@ -116,10 +116,10 @@ class CatalogueRefresh(
         val movies: Map<Long, ViewerError> = emptyMap(),
         val shows: Map<Long, ViewerError> = emptyMap(),
     ) {
-        fun after(sourceId: Long, vod: CatalogRepository.VodFetch) =
+        fun after(sourceId: Long, vod: VodFetch) =
             VodFailures(movies.after(sourceId, vod.movies), shows.after(sourceId, vod.shows))
 
-        private fun Map<Long, ViewerError>.after(sourceId: Long, list: CatalogRepository.ListFetch?) = when {
+        private fun Map<Long, ViewerError>.after(sourceId: Long, list: ListFetch?) = when {
             list == null -> this
             list.failure == null -> this - sourceId
             else -> this + (sourceId to list.failure)
@@ -324,15 +324,15 @@ class CatalogueRefresh(
         }
 
         /** Movies then shows, those of them in this setup, as one shared download's worth. */
-        suspend fun fetchLists(source: Source): CatalogRepository.VodFetch {
+        suspend fun fetchLists(source: Source): VodFetch {
             val movies = list(SetupStep.MOVIES) { catalog.fetchMovies(source, it) }
             val shows = list(SetupStep.SHOWS) { catalog.fetchShows(source, it) }
-            return CatalogRepository.VodFetch.of(movies, shows)
+            return VodFetch.of(movies, shows)
         }
 
         private suspend fun list(
             step: SetupStep,
-            fetch: suspend ((CatalogRepository.SaveProgress) -> Unit) -> CatalogRepository.ListFetch,
+            fetch: suspend ((CatalogRepository.SaveProgress) -> Unit) -> ListFetch,
         ) = if (step in steps) {
             running(step)
             fetch { saving ->

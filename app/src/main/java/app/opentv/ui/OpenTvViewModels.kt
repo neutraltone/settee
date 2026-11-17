@@ -1245,9 +1245,9 @@ class VodViewModel @JvmOverloads constructor(
      * null when none did. The tab shows it only with nothing of that kind stored, since titles win.
      */
     val moviesLoadFailure: StateFlow<VodLoadFailure?> =
-        vodLoadFailure(graph.catalogRepository.hasMovies()) { it.movies }
+        vodLoadFailure(graph.database.movies().observeAny()) { it.movies }
     val showsLoadFailure: StateFlow<VodLoadFailure?> =
-        vodLoadFailure(graph.catalogRepository.hasSeries()) { it.shows }
+        vodLoadFailure(graph.database.series().observeAny()) { it.shows }
 
     // Only once the store has said it holds none: the tab's rows are worked out after it opens, and
     // waiting on them instead flashed the error over titles that were there all along. Against the
