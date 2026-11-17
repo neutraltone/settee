@@ -112,10 +112,16 @@ class VodPlayerBackTest {
     }
 
     @Test
-    fun `one Back on the bar of a paused film leaves the player`() {
+    fun `Back on the bar of a paused film hides it first, and a second Back leaves`() {
         showFilm()
         press(Key.MediaPause)
         settle()
+
+        Espresso.pressBack()
+        settle()
+
+        compose.onNode(seekBar).assertDoesNotExist()
+        assertThat(backs).isEqualTo(0)
 
         Espresso.pressBackUnconditionally()
         settle()

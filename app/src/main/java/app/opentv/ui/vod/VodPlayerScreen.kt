@@ -462,22 +462,20 @@ fun VodPlayerContent(
         }
     }
 
-    fun backStep(): () -> Unit {
-        val activelyPlaying = state is PlayerController.State.Playing ||
-            (growingRec && state is PlayerController.State.Buffering)
-        return when {
-            // The bar and any picker on it are hidden behind the sentence, so Back can't mean them.
-            failed -> onBack
-            vodPanel != VodPanel.NONE -> {
-                { vodPanel = VodPanel.NONE }
-            }
-            // Back on Skip intro on its own puts it away, as it does the Next Episode card.
-            skipAlone -> viewModel::dismissSkip
-            controlsVisible && activelyPlaying && !paused -> {
-                { controlsVisible = false }
-            }
-            else -> onBack
+    fun backStep(): () -> Unit = when {
+        // The bar and any picker on it are hidden behind the sentence, so Back can't mean them.
+        failed -> onBack
+        vodPanel != VodPanel.NONE -> {
+            { vodPanel = VodPanel.NONE }
         }
+        // Back on Skip intro on its own puts it away, as it does the Next Episode card.
+        skipAlone -> viewModel::dismissSkip
+        // Paused or buffering too: Back always puts away what's showing before it leaves, and any
+        // key brings the controls back over a paused picture.
+        controlsVisible -> {
+            { controlsVisible = false }
+        }
+        else -> onBack
     }
 
     BackHandler { backStep()() }
