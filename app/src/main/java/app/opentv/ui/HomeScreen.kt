@@ -7,13 +7,11 @@ package app.opentv.ui
 
 import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.layout.Arrangement
-import app.opentv.ui.design.Banner
-import androidx.compose.ui.res.pluralStringResource
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -32,6 +30,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.viewmodel.compose.viewModel
 import app.opentv.R
@@ -47,6 +46,7 @@ import app.opentv.data.repo.MediaKey
 import app.opentv.data.repo.VodTitle
 import app.opentv.ui.design.ArtCard
 import app.opentv.ui.design.ArtCardSize
+import app.opentv.ui.design.Banner
 import app.opentv.ui.design.ScreenFrame
 import app.opentv.ui.design.ScreenFrameScope
 import app.opentv.ui.design.SetteeColors

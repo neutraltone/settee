@@ -108,10 +108,25 @@ row as stored. A show with no episodes stored by then reads as a timeout in
 
 ## Provider connection
 
-A failed Catalogue Refresh as the guide shows it (`Outcome.Refreshed.failure`), adding a provider
-(`Outcome.AddFailed`, also on the phone's channel manager page) and the provider's Test button.
-`ErrorWording.ofProvider` words them, except a channel list too big for memory, which is about this
-hardware and worded by `ErrorWording.ofHardware`.
+A failed Catalogue Refresh, adding a provider (`Outcome.AddFailed`, also on the phone's channel
+manager page) and the provider's Test button. `ErrorWording.ofProvider` words them, except a channel
+list too big for memory, which is about this hardware and worded by `ErrorWording.ofHardware`.
+
+Every refresh, whatever triggered it, saves each provider's channel-list failure on its row
+(`Source.lastRefreshFailure`, as `ViewerError.stored`), and a later refresh that works clears it
+(#464). Movies and shows failing don't count. A saved failure shows:
+
+- under its provider's row in Settings › Providers, with Refresh again;
+- on Home's banner, above the first shelf, for an enabled provider whose failure only the viewer can
+  fix: `LoginRejected`, `AccountInactive`, `BadAddress`, HTTP 401 or 403. One provider shows its name
+  and the sentence, several a count, never the detail line. Network drops, timeouts and 5xx don't
+  raise it, since the next refresh usually clears them;
+- in Live TV's empty state, titled `guide_load_failed_title_named` with the provider's name, when
+  there are no channels at all.
+
+The refresh row in Settings › Providers reads Refreshing… and then the result line, which points to
+Providers (`refresh_done_with_provider_problems`), Guide settings (`refresh_done_with_problems`) or
+both (`refresh_done_with_provider_and_guide_problems`), by what failed.
 
 | Trigger | String key | Sentence | Detail | Whose end, likely cause |
 |---|---|---|---|---|
@@ -128,7 +143,7 @@ hardware and worded by `ErrorWording.ofHardware`.
 | Playlist with no channels | `error_playlist_empty` | There are no channels at that address. Check it's the link your provider gave you. | NoChannels | Viewer's setup |
 | Anything else while downloading | `error_catalogue` | Couldn't load your provider's channels. Try again in a moment. | exception type, or HTTP status | Unknown |
 | Test button, anything else | `error_test_failed` | Couldn't connect to your provider with these details. Check them and try again. | exception type | Unknown |
-| The guide with no channels and no failure known this session | `guide_load_failed_desc` | Try again in a moment, or check your provider's details in Settings. | none | Unknown |
+| The guide with no channels and no failure saved on a provider | `guide_load_failed_desc` | Try again in a moment, or check your provider's details in Settings. | none | Unknown |
 
 ## Show page episodes
 

@@ -25,12 +25,12 @@ import app.opentv.data.model.Programme
 import app.opentv.data.model.Series
 import app.opentv.data.model.SeriesRef
 import app.opentv.data.model.Source
-import app.opentv.data.model.refreshFailure
 import app.opentv.data.model.SourceKind
 import app.opentv.data.model.StreamKind
 import app.opentv.data.model.StremioStream
 import app.opentv.data.model.liveAt
 import app.opentv.data.model.ref
+import app.opentv.data.model.refreshFailure
 import app.opentv.data.parser.VodTitleCleaner
 import app.opentv.data.parser.displayTitle
 import app.opentv.data.repo.CatalogRepository
@@ -143,8 +143,8 @@ class SourcesViewModel @JvmOverloads constructor(
         val syncMessage: String? = null,
         /** Why adding this provider just failed, shown in place of [syncMessage]. */
         val addFailure: ViewerError? = null,
-        /** Why the latest refresh or add couldn't download a provider's channels; null once one works. */
-        val loadFailure: ViewerError? = null,
+        /** Why the first enabled provider whose channels couldn't be downloaded failed, as saved on it. */
+        val loadFailure: ProviderFailure? = null,
     ) {
         val syncing: Boolean get() = adding || refreshing
     }
@@ -158,7 +158,12 @@ class SourcesViewModel @JvmOverloads constructor(
     init {
         viewModelScope.launch {
             graph.sourceRepository.observeAll().collect { sources ->
-                _ui.update { it.copy(sources = sources, loaded = true) }
+                // Saved on the providers by every refresh, so it's there after a restart and gone once
+                // one works, whichever refresh that was.
+                val failure = sources.firstNotNullOfOrNull { source ->
+                    source.refreshFailure?.takeIf { source.enabled }?.let { ProviderFailure(source.name, it) }
+                }
+                _ui.update { it.copy(sources = sources, loaded = true, loadFailure = failure) }
             }
         }
         // A refresh runs as background work, so this is how its progress and result reach the screen.
@@ -182,7 +187,6 @@ class SourcesViewModel @JvmOverloads constructor(
                     announced = status
                     _ui.update {
                         it.copy(
-                            loadFailure = failureOf(state.last) ?: it.loadFailure.takeUnless { state.last.worked() },
                             refreshing = state.refreshing,
                             syncMessage = when {
                                 state.refreshing -> messages.of(RefreshMessages.Step.Refreshing)
@@ -215,15 +219,6 @@ class SourcesViewModel @JvmOverloads constructor(
             )
         }
     }
-
-    private fun failureOf(outcome: CatalogueRefresh.Outcome?): ViewerError? = when (outcome) {
-        is CatalogueRefresh.Outcome.Refreshed -> outcome.failures.values.firstOrNull()
-        is CatalogueRefresh.Outcome.AddFailed -> outcome.reason
-        else -> null
-    }
-
-    private fun CatalogueRefresh.Outcome?.worked() = this is CatalogueRefresh.Outcome.ChannelsLoaded ||
-        (this is CatalogueRefresh.Outcome.Refreshed && failures.isEmpty())
 
     fun test(draft: Source) {
         viewModelScope.launch {
@@ -1624,6 +1619,9 @@ data class HomeState(
  */
 data class BecauseYouWatched(val basedOn: String, val covers: List<Cover>)
 
+/** A provider's saved refresh failure, with the provider's name for the screen to say whose it is. */
+data class ProviderFailure(val provider: String, val error: ViewerError)
+
 /**
  * Home's banner: each enabled provider whose last refresh failed in a way only the viewer can put right,
  * with why, in the providers' order. Failures that usually go by the next refresh aren't here.
@@ -1634,8 +1632,7 @@ data class ProviderBanner(val providers: List<Pair<Source, ViewerError>>)
  * Whether only the viewer can put this right: a login, account or address the provider turned down.
  * Read from the detail line's codes, the one part of a saved failure that isn't in the viewer's language.
  */
-internal fun ViewerError.isTheViewersToFix(): Boolean =
-    detail.split(" · ").any { it in VIEWERS_TO_FIX }
+internal fun ViewerError.isTheViewersToFix(): Boolean = detail.split(" · ").any { it in VIEWERS_TO_FIX }
 
 private val VIEWERS_TO_FIX = setOf("LoginRejected", "AccountInactive", "BadAddress", "HTTP 401", "HTTP 403")
 

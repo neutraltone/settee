@@ -64,6 +64,9 @@ import kotlinx.coroutines.flow.Flow
 private const val WRITE_CHUNK = 500
 
 @Dao
+// A query per column a refresh writes on its own (sync time, zone, failure), so an edit saved meanwhile
+// isn't put back: that's what grows the count, not the interface doing more than one thing.
+@Suppress("TooManyFunctions")
 interface SourceDao {
     @Query("SELECT * FROM sources ORDER BY id")
     fun observeAll(): Flow<List<Source>>

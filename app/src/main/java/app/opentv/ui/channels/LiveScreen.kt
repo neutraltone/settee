@@ -55,7 +55,6 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import app.opentv.R
 import app.opentv.core.ServiceLocator
 import app.opentv.core.StatusBus
-import app.opentv.core.ViewerError
 import app.opentv.core.findActivity
 import app.opentv.data.model.Channel
 import app.opentv.data.model.GuideProgramme
@@ -65,6 +64,7 @@ import app.opentv.player.PlayerController
 import app.opentv.ui.ChannelsViewModel
 import app.opentv.ui.LocalRailReturn
 import app.opentv.ui.LocalShellCovered
+import app.opentv.ui.ProviderFailure
 import app.opentv.ui.design.ActionButton
 import app.opentv.ui.design.CategoriesSidebar
 import app.opentv.ui.design.CategoriesSidebarWidth
@@ -97,8 +97,8 @@ fun LiveScreen(
     isTelevision: Boolean,
     hasSources: Boolean,
     isSyncing: Boolean,
-    /** Why the last Catalogue Refresh couldn't download the channels, for the guide's empty state. */
-    loadFailure: ViewerError? = null,
+    /** Why a provider's last Catalogue Refresh couldn't download its channels, for the guide's empty state. */
+    loadFailure: ProviderFailure? = null,
     onPlayChannel: (Channel) -> Unit,
     onAddSource: () -> Unit,
     onRefresh: () -> Unit,
@@ -475,12 +475,13 @@ private fun NothingToShow(openSidebar: () -> Unit) {
  * came back empty. Something to act on, rather than an endless loading message.
  */
 @Composable
-private fun LoadFailed(failure: ViewerError?, onRetry: () -> Unit, onEditProvider: () -> Unit) {
-    // With no refresh this session to say why, the generic sentence; it has no detail to show.
+private fun LoadFailed(failure: ProviderFailure?, onRetry: () -> Unit, onEditProvider: () -> Unit) {
+    // With no saved failure to say why, the generic sentence; it has no detail to show.
     Message(
-        failure?.sentence ?: stringResource(R.string.guide_load_failed_desc),
-        title = stringResource(R.string.guide_load_failed_title),
-        detail = failure?.detail.orEmpty(),
+        failure?.error?.sentence ?: stringResource(R.string.guide_load_failed_desc),
+        title = failure?.let { stringResource(R.string.guide_load_failed_title_named, it.provider) }
+            ?: stringResource(R.string.guide_load_failed_title),
+        detail = failure?.error?.detail.orEmpty(),
     ) {
         Row(horizontalArrangement = Arrangement.spacedBy(BUTTON_GAP)) {
             ActionButton(stringResource(R.string.common_try_again), onRetry)

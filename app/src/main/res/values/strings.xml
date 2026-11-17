@@ -61,6 +61,7 @@
     <string name="guide_add_provider_desc">Your provider\'s channels will show up here. Add your provider to get started.</string>
     <string name="guide_add_provider_button">Add a provider</string>
     <string name="guide_load_failed_title">Couldn\'t load your channels</string>
+    <string name="guide_load_failed_title_named">Couldn\'t load your channels from %1$s</string>
     <string name="guide_load_failed_desc">Try again in a moment, or check your provider\'s details in Settings.</string>
     <string name="guide_edit_provider">Provider setup</string>
     <string name="guide_today">Today</string>

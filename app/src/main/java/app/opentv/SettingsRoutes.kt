@@ -12,9 +12,9 @@ import app.opentv.ui.settings.FontLicencesScreen
 import app.opentv.ui.settings.HomeRowsScreen
 import app.opentv.ui.settings.LockedCategoriesScreen
 import app.opentv.ui.settings.SettingsMemory
+import app.opentv.ui.settings.SettingsScreen
 import app.opentv.ui.settings.SettingsSection
 import app.opentv.ui.settings.providerRow
-import app.opentv.ui.settings.SettingsScreen
 
 /**
  * Settings, one route for every section, and the screens its rows open that aren't anyone else's.
