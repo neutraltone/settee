@@ -176,6 +176,7 @@ of glossy tiles, no promotional hero, no badges shouting for attention.
 - Young Serif for names and headings, Alegreya Sans for reading, nothing under 16 sp.
 - Every question opens in a Side Panel down the right, never a dialog in the middle.
 - Two Highlight treatments: a ring and lift on artwork, a solid coral fill on everything list-like.
+  One exception: the player's previous, play or pause and next are bare icons that turn coral.
 
 ## Colors
 
@@ -373,7 +374,8 @@ status and format. Never a provider URL, username, password or MAC.
 - **Do** build from `ui/design` and Compose foundation: `HighlightSurface`, `PillButton`, `Pill`,
   `ListRow`, `ArtCard`, `SidePanel`, `ScreenFrame`, `AerialTv`, `ErrorMessage`.
 - **Do** make every new element reachable and obvious with a D-pad. If it can take the Highlight, it
-  draws one of the two treatments: ring and lift on artwork, solid coral fill on everything else.
+  draws one of the two treatments: ring and lift on artwork, solid coral fill on everything else. The
+  player's previous, play or pause and next are the one exception: bare icons that turn coral.
 - **Do** switch text and icons to Plum Ink on anything coral, including a switch's track and the small
   aerial TV.
 - **Do** keep text 16 sp or larger, with lining, tabular figures.

@@ -124,6 +124,15 @@ class HighlightStyle(val resting: HighlightLook, val highlighted: HighlightLook)
             highlighted = HighlightLook(SetteeShapes.Pill, fill = SetteeColors.Raised),
         )
 
+        /**
+         * The player's previous, play or pause and next: a bare icon with nothing behind it, resting or
+         * highlighted. The surface draws nothing; the icon shows the Highlight by turning coral.
+         */
+        val Glyph = HighlightStyle(
+            resting = HighlightLook(SetteeShapes.Pill),
+            highlighted = HighlightLook(SetteeShapes.Pill),
+        )
+
         private fun ring(shape: Shape, lift: Float) = HighlightStyle(
             resting = HighlightLook(shape),
             highlighted = HighlightLook(shape, ring = HighlightRing(), scale = lift, glow = 14.dp),

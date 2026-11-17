@@ -220,7 +220,7 @@ internal fun PlayerControlBar(
                         },
                 )
                 if (seekable) {
-                    Spacer(Modifier.width(2.dp))
+                    Spacer(Modifier.width(8.dp))
                     SeekBar(
                         positionMs = positionMs,
                         durationMs = durationMs,
@@ -421,12 +421,23 @@ private fun PillRow(
     }
 }
 
-/** A button on the row with the gap after it, or nothing where there's no [onClick]. */
+/**
+ * Previous, play or pause, or next: a bare icon, cream at rest and coral with the Highlight, with the
+ * gap after it, or nothing where there's no [onClick]. Bare rather than a filled circle like the
+ * buttons around it, so the transport reads as one group, apart from Subtitles and Audio.
+ */
 @Composable
 private fun RowButton(icon: ImageVector, label: String, onClick: (() -> Unit)?, modifier: Modifier) {
     onClick ?: return
-    IconAction(icon, label, onClick, modifier)
-    Spacer(Modifier.width(10.dp))
+    HighlightSurface(onClick = onClick, style = HighlightStyle.Glyph, modifier = modifier) { highlighted ->
+        Icon(
+            icon,
+            contentDescription = label,
+            tint = if (highlighted) SetteeColors.Accent else SetteeColors.Text,
+            modifier = Modifier.padding(7.dp).size(32.dp),
+        )
+    }
+    Spacer(Modifier.width(4.dp))
 }
 
 @Composable
