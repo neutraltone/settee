@@ -225,7 +225,7 @@ Movies, episodes and live TV share one layout.
 - **Down** from the bar moves the Highlight to Subtitles. The less-used buttons come up as pills whenever the Highlight leaves the bar for a button, and Down from any button reaches them. **Up** reaches close.
 - **Pills:** on movies and episodes, Mark as watched, Sleep timer and Options. On live TV, Record, Quality, Aspect ratio and Sleep timer. Check these against today's options.
 - **Subtitles and audio:** a panel on the right, with the current choice ticked.
-- **Up Next:** a card in the bottom right with a still, the episode, a countdown, Play now and Watch credits.
+- **Up Next:** a card in the bottom right with a still, the episode, a countdown, Play now and Watch credits. It's the one overlay that comes up without a press, so it eases in rather than cutting into the picture: it fades in as it rises 24 dp into place, over 250 ms on `SetteeMotion.EaseOut`, once each time it appears and not again as the countdown ticks. The Highlight is on Play now from its first frame, so OK during the rise plays at once. It leaves in a single frame, however it goes. With the system's animations removed it just appears.
 - **Still watching:** centred over a dimmed picture, with Keep watching and Stop.
 
 This focus design, the picked-up bar included, has never been tried with a remote, so try it first and change it if it doesn't work.

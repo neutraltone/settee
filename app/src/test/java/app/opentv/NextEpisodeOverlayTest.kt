@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.test.assertIsFocused
+import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
@@ -98,6 +99,65 @@ class NextEpisodeOverlayTest {
         compose.onNodeWithText("Episode 2").assertExists()
         compose.onNodeWithText("Play now").assertIsFocused()
         captureScreen("vod_player_next_episode_card")
+    }
+
+    /** Where the card's episode line is drawn, its rise included. */
+    private fun cardTop() = compose.onNodeWithText("Episode 2").getUnclippedBoundsInRoot().top
+
+    @Test
+    fun `the card rises into place once, not again as the countdown ticks`() {
+        showPlayer()
+        compose.mainClock.autoAdvance = false
+
+        secondsLeft(12)
+        compose.mainClock.advanceTimeByFrame()
+        val firstFrame = cardTop()
+        compose.mainClock.advanceTimeBy(100)
+        val midway = cardTop()
+        compose.mainClock.advanceTimeBy(1_000)
+        val settled = cardTop()
+
+        assertThat(firstFrame).isGreaterThan(midway)
+        assertThat(midway).isGreaterThan(settled)
+
+        secondsLeft(11)
+        compose.mainClock.advanceTimeByFrame()
+        compose.onNodeWithText("Next episode in 11").assertExists()
+        assertThat(cardTop()).isEqualTo(settled)
+    }
+
+    /** The card 50 ms into its rise, with the clock held there. */
+    private fun cardRising(): Long {
+        showPlayer()
+        compose.mainClock.autoAdvance = false
+        secondsLeft(12)
+        compose.mainClock.advanceTimeByFrame()
+        val appeared = compose.mainClock.currentTime
+        compose.mainClock.advanceTimeBy(50)
+        return appeared
+    }
+
+    @Test
+    fun `OK while the card is still rising plays the Next Episode without waiting for it`() {
+        val appeared = cardRising()
+
+        compose.onNodeWithText("Play now").assertIsFocused()
+        press(Key.DirectionCenter)
+
+        waitForEpisode(12)
+        assertThat(compose.mainClock.currentTime - appeared).isLessThan(250)
+    }
+
+    @Test
+    fun `Watch credits while the card is still rising takes it away in one frame`() {
+        cardRising()
+
+        press(Key.DirectionRight)
+        compose.onNodeWithText("Watch credits").assertIsFocused()
+        press(Key.DirectionCenter)
+        compose.mainClock.advanceTimeByFrame()
+
+        compose.onNodeWithText("Episode 2").assertDoesNotExist()
     }
 
     @Test
