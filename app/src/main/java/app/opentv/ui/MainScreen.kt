@@ -94,6 +94,8 @@ fun MainScreen(
     onRefresh: () -> Unit,
     onOpenSearch: () -> Unit,
     onOpenSettings: () -> Unit,
+    /** Settings › Providers on a provider's row, from Home's banner. */
+    onOpenProviders: (sourceId: Long) -> Unit = {},
     onOpenProfiles: () -> Unit,
     onPlayRecording: (Recording) -> Unit,
     onPlayCatchup: (MediaKey.Catchup) -> Unit,
@@ -149,6 +151,7 @@ fun MainScreen(
                     onOpenLive = { onSelectTab(Tab.LIVE) },
                     takeFocus = takeFocus,
                     onNothingToShow = onNothingToShow,
+                    onOpenProviders = onOpenProviders,
                 )
                 Tab.LIVE -> LiveScreen(
                     isTelevision = isTelevision,

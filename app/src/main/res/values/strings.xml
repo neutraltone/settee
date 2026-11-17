@@ -256,6 +256,12 @@
 
     <!-- ============================ Display & playback settings ============================ -->
     <string name="providers_refresh_again">Refresh again</string>
+    <string name="home_provider_banner_one">%1$s: %2$s</string>
+    <plurals name="home_provider_banner_many">
+        <item quantity="one">%d provider needs attention</item>
+        <item quantity="other">%d providers need attention</item>
+    </plurals>
+    <string name="home_provider_banner_open">Open Providers</string>
     <string name="settings_language_system">System default</string>
     <string name="settings_language_english">English</string>
     <string name="settings_language_spanish">Español</string>

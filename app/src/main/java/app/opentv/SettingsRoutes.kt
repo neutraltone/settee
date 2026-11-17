@@ -12,6 +12,8 @@ import app.opentv.ui.settings.FontLicencesScreen
 import app.opentv.ui.settings.HomeRowsScreen
 import app.opentv.ui.settings.LockedCategoriesScreen
 import app.opentv.ui.settings.SettingsMemory
+import app.opentv.ui.settings.SettingsSection
+import app.opentv.ui.settings.providerRow
 import app.opentv.ui.settings.SettingsScreen
 
 /**
@@ -19,6 +21,13 @@ import app.opentv.ui.settings.SettingsScreen
  * Kept apart from the rest of the graph, as [providerRoutes] is, so a test can build them with the
  * real screens and check where each row leads. The channel manager's route is the app's own.
  */
+/** Settings › Providers, with the Highlight on [sourceId]'s row, as Home's banner opens it. */
+fun NavController.openProviders(memory: SettingsMemory, sourceId: Long) {
+    memory.section = SettingsSection.Providers
+    memory.openedRow = providerRow(sourceId)
+    navigate(Routes.SETTINGS)
+}
+
 fun NavGraphBuilder.settingsRoutes(nav: NavController, memory: SettingsMemory) {
     composable(Routes.SETTINGS) {
         SettingsScreen(

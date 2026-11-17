@@ -440,6 +440,7 @@ private fun OpenTvApp(isTelevision: Boolean, launchedToPlay: Boolean) {
                             onRefresh = sourcesViewModel::refreshAll,
                             onOpenSearch = { navController.navigate(Routes.SEARCH) },
                             onOpenSettings = { navController.navigate(Routes.SETTINGS) },
+                            onOpenProviders = { id -> navController.openProviders(settingsMemory, id) },
                             onOpenProfiles = { navController.navigate(Routes.PROFILES) },
                             // The player works out where the recording is stored, and follows one still capturing.
                             onPlayRecording = { rec ->

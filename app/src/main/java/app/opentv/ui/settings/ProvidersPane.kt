@@ -53,7 +53,7 @@ internal fun ProvidersPane(
     ui.sources.forEach { source ->
         // Keyed, so the Highlight stays on its provider when the list changes around it.
         key(source.id) {
-            val row = screenRow("provider:${source.id}") { onEditProvider(source.id) }
+            val row = screenRow(providerRow(source.id)) { onEditProvider(source.id) }
             ListRow(
                 source.name,
                 onClick = row.open,
@@ -114,6 +114,9 @@ internal fun ProvidersPane(
         })
     }
 }
+
+/** A provider's row, as [SettingsMemory.openedRow] names it. */
+internal fun providerRow(sourceId: Long) = "provider:$sourceId"
 
 /** A [ListRow]'s own inset, so text under a row starts where its label does. */
 private val ROW_SIDE = 10.dp

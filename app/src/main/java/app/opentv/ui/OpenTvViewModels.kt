@@ -25,6 +25,7 @@ import app.opentv.data.model.Programme
 import app.opentv.data.model.Series
 import app.opentv.data.model.SeriesRef
 import app.opentv.data.model.Source
+import app.opentv.data.model.refreshFailure
 import app.opentv.data.model.SourceKind
 import app.opentv.data.model.StreamKind
 import app.opentv.data.model.StremioStream
@@ -1623,6 +1624,21 @@ data class HomeState(
  */
 data class BecauseYouWatched(val basedOn: String, val covers: List<Cover>)
 
+/**
+ * Home's banner: each enabled provider whose last refresh failed in a way only the viewer can put right,
+ * with why, in the providers' order. Failures that usually go by the next refresh aren't here.
+ */
+data class ProviderBanner(val providers: List<Pair<Source, ViewerError>>)
+
+/**
+ * Whether only the viewer can put this right: a login, account or address the provider turned down.
+ * Read from the detail line's codes, the one part of a saved failure that isn't in the viewer's language.
+ */
+internal fun ViewerError.isTheViewersToFix(): Boolean =
+    detail.split(" · ").any { it in VIEWERS_TO_FIX }
+
+private val VIEWERS_TO_FIX = setOf("LoginRejected", "AccountInactive", "BadAddress", "HTTP 401", "HTTP 403")
+
 /** A show's or movie's cover on Home, with where the active Profile is with it; null when never started. */
 data class Cover(val title: VodTitle, val status: CoverStatus? = null)
 
@@ -1853,6 +1869,18 @@ class HomeViewModel @JvmOverloads constructor(
     @OptIn(ExperimentalCoroutinesApi::class)
     val state: StateFlow<HomeState?> = settings.activeProfileId
         .flatMapLatest { rows.onStart<HomeState?> { emit(null) } }
+        .stateIn(viewModelScope, WhileDrawnOrKeptLive(graph.homeKeptLive), null)
+
+    /** Apart from [state], so a provider failing or coming right never holds up or redraws the rows. */
+    val providerBanner: StateFlow<ProviderBanner?> = graph.sourceRepository.observeAll()
+        .map { sources ->
+            sources
+                .filter { it.enabled }
+                .mapNotNull { source -> source.refreshFailure?.takeIf { it.isTheViewersToFix() }?.let { source to it } }
+                .takeIf { it.isNotEmpty() }
+                ?.let(::ProviderBanner)
+        }
+        .distinctUntilChanged()
         .stateIn(viewModelScope, WhileDrawnOrKeptLive(graph.homeKeptLive), null)
 
     /** Channel up and down go through every Channel, as Home has no list of its own. */
