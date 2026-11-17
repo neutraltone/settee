@@ -94,6 +94,16 @@ aren't `ErrorMessage`s and have no detail line.
 | None of the title's Versions plays here (only 4K ones on a 1080p Stick) | `vod_cant_play_tv` / `_device` | This TV can't play 4K | This hardware: Play is off |
 | Only Versions in another language play here | `vod_language_title`, `vod_language_body_tv` / `_device` | Only in German here. This TV can't play a version in your language. | This hardware, or the provider's shelves: Play asks first |
 
+## Film and show pages
+
+Drawn by `GoneDetail` (`ui/vod`) in place of the page, with Back highlighted (#495). A panel that's slow
+with a title's details isn't an error: past `CatalogRepository.OPENING_LIMIT` the page draws from the
+row as stored.
+
+| Trigger | String key | Sentence | Detail | Whose end, likely cause |
+|---|---|---|---|---|
+| A film or show page opened for a title no longer in the catalogue (`Opened.Gone`), from a Home row, the back stack or a restored app | `error_gone` | This isn't on your provider any more. Try refreshing your provider in Settings. | Gone | Provider's: a refresh removed it |
+
 ## Provider connection
 
 A failed Catalogue Refresh as the guide shows it (`Outcome.Refreshed.failure`), adding a provider

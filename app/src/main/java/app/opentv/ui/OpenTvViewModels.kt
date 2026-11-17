@@ -44,6 +44,7 @@ import app.opentv.data.repo.LineupChannel
 import app.opentv.data.repo.LineupScope
 import app.opentv.data.repo.LivePreview
 import app.opentv.data.repo.MediaKey
+import app.opentv.data.repo.Opened
 import app.opentv.data.repo.RefreshMessages
 import app.opentv.data.repo.ShowEpisodes
 import app.opentv.data.repo.TitleCover
@@ -1266,22 +1267,30 @@ class VodViewModel @JvmOverloads constructor(
      * (#181), and once TMDB has answered, any Version its TMDB id newly matches; [OpenedShow.fetched]
      * once they all have been. Episodes are fetched here rather than during catalogue sync: pulling
      * every episode of every series up front is what makes a first sync take twenty minutes on a
-     * large provider, and most of it is never looked at.
+     * large provider, and most of it is never looked at. [Opened.Gone] if the show isn't stored; past
+     * [CatalogRepository.OPENING_LIMIT] the show as stored, fetched, though its own episodes may still
+     * be on their way (#495).
      */
-    fun openShow(id: Long): Flow<OpenedShow> = channelFlow {
+    fun openShow(id: Long): Flow<Opened<OpenedShow>> = channelFlow {
         // Only touched by one coroutine at a time: the first fetch is joined before the second.
         val asked = mutableSetOf(id)
         var opened: Series? = null
         var others: Job? = null
-        graph.catalogRepository.openSeries(id).collect {
-            if (others == null) others = launch { fetchVersions(it, asked) }
-            opened = it
-            send(OpenedShow(it, fetched = false))
+        graph.catalogRepository.openSeriesPage(id).collect { page ->
+            when (page) {
+                Opened.Gone -> send(Opened.Gone)
+                is Opened.Found -> {
+                    val shown = page.title
+                    if (others == null) others = launch { fetchVersions(shown, asked) }
+                    opened = shown
+                    send(Opened.Found(OpenedShow(shown, fetched = false)))
+                }
+            }
         }
         val series = opened ?: return@channelFlow
         others?.join()
         fetchVersions(series, asked)
-        send(OpenedShow(series, fetched = true))
+        send(Opened.Found(OpenedShow(series, fetched = true)))
     }
 
     /** Episodes for each of [series]' Versions not [asked] for yet, all at once. */
@@ -1327,8 +1336,11 @@ class VodViewModel @JvmOverloads constructor(
     // keyed on the id, so each detail instance owns its own state and a "More like this" hop to
     // another title loads cleanly without two screens fighting over one shared StateFlow.
 
-    /** Loads a movie, lazily enriching backdrop/cast/genre on first open. See CatalogRepository.movieDetail. */
-    suspend fun movieDetail(id: Long): Movie? = graph.catalogRepository.movieDetail(id)
+    /**
+     * A film opened on its page, lazily enriching backdrop/cast/genre on first open, or [Opened.Gone].
+     * See [CatalogRepository.openMoviePage].
+     */
+    suspend fun openMovie(id: Long): Opened<Movie> = graph.catalogRepository.openMoviePage(id)
 
     /** Whether playing [movie] would pick up partway: the Quality that plays keeps the resume point. */
     /** A film's More like this. */

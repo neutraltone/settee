@@ -500,6 +500,7 @@ private fun OpenTvApp(isTelevision: Boolean, launchedToPlay: Boolean) {
                                 onPlayEpisode = { key -> navController.navigate(Routes.vodPlayer(key)) },
                                 onOpenPerson = { name -> navController.navigate(Routes.person(name)) },
                                 onOpenSeries = { id -> navController.navigate(Routes.seriesDetail(id)) },
+                                onBack = { navController.popBackStack() },
                             )
                         }
 
@@ -514,6 +515,7 @@ private fun OpenTvApp(isTelevision: Boolean, launchedToPlay: Boolean) {
                                 onPlayAddonStream = { key -> navController.navigate(Routes.vodPlayer(key)) },
                                 onOpenMovie = { movie -> navController.navigate(Routes.movieDetail(movie.id)) },
                                 onOpenPerson = { name -> navController.navigate(Routes.person(name)) },
+                                onBack = { navController.popBackStack() },
                             )
                         }
 

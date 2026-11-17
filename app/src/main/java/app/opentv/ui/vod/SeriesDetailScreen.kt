@@ -18,6 +18,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import app.opentv.data.model.Series
 import app.opentv.data.repo.EpisodeStatuses
 import app.opentv.data.repo.MediaKey
+import app.opentv.data.repo.Opened
 import app.opentv.data.repo.ShowEpisodes
 import app.opentv.data.repo.TitleCover
 import app.opentv.ui.VodViewModel
@@ -34,20 +35,31 @@ fun SeriesDetailScreen(
     onPlayEpisode: (MediaKey) -> Unit,
     onOpenPerson: (String) -> Unit,
     onOpenSeries: (Long) -> Unit = {},
+    onBack: () -> Unit,
     viewModel: VodViewModel = viewModel(),
 ) {
     var series by remember(seriesId) { mutableStateOf<Series?>(null) }
     var fetched by remember(seriesId) { mutableStateOf(false) }
+    var gone by remember(seriesId) { mutableStateOf(false) }
 
     LaunchedEffect(seriesId) {
         viewModel.openShow(seriesId).collect {
-            series = it.series
-            fetched = it.fetched
+            when (it) {
+                Opened.Gone -> gone = true
+                is Opened.Found -> {
+                    series = it.title.series
+                    fetched = it.title.fetched
+                }
+            }
         }
     }
 
     val s = series
-    if (s == null) LoadingDetail() else ShowPage(s, fetched, onPlayEpisode, onOpenPerson, onOpenSeries, viewModel)
+    when {
+        gone -> GoneDetail(onBack)
+        s == null -> LoadingDetail()
+        else -> ShowPage(s, fetched, onPlayEpisode, onOpenPerson, onOpenSeries, viewModel)
+    }
 }
 
 /** [series]' page once its row is read, [fetched] once its episodes have been asked for. */
