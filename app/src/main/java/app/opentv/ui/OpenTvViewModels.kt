@@ -68,13 +68,14 @@ import app.opentv.sync.SyncEngine
 import app.opentv.sync.SyncServer
 import app.opentv.ui.vod.PageVersions
 import java.net.HttpURLConnection
+import java.util.concurrent.ConcurrentHashMap
+import kotlin.time.TimeSource
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -101,10 +102,12 @@ import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.transformLatest
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 
 /**
  * View models for the whole app.
@@ -1267,34 +1270,47 @@ class VodViewModel @JvmOverloads constructor(
      * (#181), and once TMDB has answered, any Version its TMDB id newly matches; [OpenedShow.fetched]
      * once they all have been. Episodes are fetched here rather than during catalogue sync: pulling
      * every episode of every series up front is what makes a first sync take twenty minutes on a
-     * large provider, and most of it is never looked at. [Opened.Gone] if the show isn't stored; past
-     * [CatalogRepository.OPENING_LIMIT] the show as stored, fetched, though its own episodes may still
-     * be on their way (#495).
+     * large provider, and most of it is never looked at. [Opened.Gone] if the show isn't stored.
+     * [CatalogRepository.OPENING_LIMIT] covers all of it, the other Versions too: once it passes, the
+     * show is sent fetched, though episodes may still be on their way, and the page lists them as they're
+     * stored (#495). A page that leaves before then cancels the fetches.
      */
     fun openShow(id: Long): Flow<Opened<OpenedShow>> = channelFlow {
-        // Only touched by one coroutine at a time: the first fetch is joined before the second.
-        val asked = mutableSetOf(id)
+        val opening = TimeSource.Monotonic.markNow()
+        // A set the fetches share, as they run side by side: each Version is asked for once.
+        val asked: MutableSet<Long> = ConcurrentHashMap.newKeySet<Long>().apply { add(id) }
+        val fetching = mutableListOf<Job>()
         var opened: Series? = null
-        var others: Job? = null
-        graph.catalogRepository.openSeriesPage(id).collect { page ->
-            when (page) {
-                Opened.Gone -> send(Opened.Gone)
-                is Opened.Found -> {
-                    val shown = page.title
-                    if (others == null) others = launch { fetchVersions(shown, asked) }
-                    opened = shown
-                    send(Opened.Found(OpenedShow(shown, fetched = false)))
+        var outlived = false
+        try {
+            graph.catalogRepository.openSeriesPage(id).collect { page ->
+                when (page) {
+                    Opened.Gone -> send(Opened.Gone)
+                    is Opened.Found -> {
+                        val shown = page.title
+                        if (fetching.isEmpty()) fetching += fetchVersions(shown, asked)
+                        opened = shown
+                        send(Opened.Found(OpenedShow(shown, fetched = false)))
+                    }
                 }
             }
+            val series = opened ?: return@channelFlow
+            // Again once TMDB has answered, for any Version its TMDB id newly matches.
+            fetching += fetchVersions(series, asked)
+            val left = CatalogRepository.OPENING_LIMIT - opening.elapsedNow()
+            outlived = withTimeoutOrNull(left) { fetching.joinAll() } == null
+            send(Opened.Found(OpenedShow(series, fetched = true)))
+        } finally {
+            // Nothing's waiting for them any more; past the limit they carry on, and store what they find.
+            if (!outlived) fetching.forEach { it.cancel() }
         }
-        val series = opened ?: return@channelFlow
-        others?.join()
-        fetchVersions(series, asked)
-        send(Opened.Found(OpenedShow(series, fetched = true)))
     }
 
-    /** Episodes for each of [series]' Versions not [asked] for yet, all at once. */
-    private suspend fun fetchVersions(series: Series, asked: MutableSet<Long>) = coroutineScope {
+    /**
+     * Episodes for each of [series]' Versions not [asked] for yet, all at once; on [viewModelScope], so
+     * that past the limit they outlive the page that asked.
+     */
+    private fun fetchVersions(series: Series, asked: MutableSet<Long>): Job = viewModelScope.launch {
         val versions = graph.database.versionsOf(series, graph.titleIndex.versionIds).filter { asked.add(it.id) }
         versions.forEach { version ->
             launch {

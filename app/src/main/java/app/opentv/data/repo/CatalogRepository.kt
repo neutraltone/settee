@@ -43,11 +43,14 @@ import kotlin.coroutines.CoroutineContext
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.channels.ChannelResult
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
@@ -59,6 +62,7 @@ import kotlinx.coroutines.flow.onCompletion
 import kotlinx.coroutines.job
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.selects.select
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import okhttp3.OkHttpClient
@@ -482,22 +486,24 @@ class CatalogRepository(
      * A film opened on its page: [movieDetail] if it answers within [OPENING_LIMIT], else the row as
      * it's stored then; [Opened.Gone] if the film isn't stored. The request is left running past the
      * limit rather than cancelled, so what it finds is saved for the next visit; the open page doesn't
-     * redraw for it, as it draws once, with everything in place.
+     * redraw for it, as it draws once, with everything in place. A page that leaves before the limit
+     * cancels it. [timer] keeps the limit's time: real time, whatever the caller's dispatcher, unless a
+     * test passes its scheduler.
      */
     // On [background], not the caller's coroutine: XtreamApi blocks a thread on OkHttp's execute(),
     // which cancelling can't interrupt, so a timeout around the call itself would wait for it anyway.
-    suspend fun openMoviePage(id: Long): Opened<Movie> {
+    suspend fun openMoviePage(id: Long, timer: CoroutineContext = Dispatchers.Default): Opened<Movie> {
         val asking = background.async { movieDetail(id) }
-        val movie = withContext(openingTimer) { withTimeoutOrNull(OPENING_LIMIT) { asking.await() } }
-            ?: movieDao.byId(id)
+        val answered = try {
+            withContext(timer) { withTimeoutOrNull(OPENING_LIMIT) { asking.await() } }
+        } catch (e: CancellationException) {
+            // Nothing's waiting for what it finds: its TMDB look-up and save needn't run.
+            asking.cancel()
+            throw e
+        }
+        val movie = answered ?: movieDao.byId(id)
         return if (movie != null) Opened.Found(movie) else Opened.Gone
     }
-
-    /**
-     * Where [OPENING_LIMIT]'s time is kept: real time, whatever the caller's dispatcher. A test sets
-     * its scheduler here to pass the limit in virtual time, as [genrePauseMillis] is set.
-     */
-    internal var openingTimer: CoroutineContext = Dispatchers.Default
 
     /**
      * Loads a series and lazily back-fills a still-bare row from `get_series_info`. See [movieDetail].
@@ -519,35 +525,69 @@ class CatalogRepository(
         seriesDetails(id, now, opening = true)
 
     /**
-     * A show opened on its page: [openSeries]' series, if its first comes within [OPENING_LIMIT], and
-     * then the rest of them; else the row as it's stored then, and nothing more. [Opened.Gone] if the
-     * show isn't stored. Past the limit [openSeries] carries on, so the episodes and details it finds
-     * are saved; the page reads the episodes from the database, so they still appear.
+     * A show opened on its page: [openSeries]' series as they come within [OPENING_LIMIT], the details
+     * and the episode fetch alike, so a show whose details are already in doesn't wait out a slow panel
+     * either. If none has come when the limit passes, the row as it's stored then; [Opened.Gone] if the
+     * show isn't stored, or a refresh removed it meanwhile. The flow ends at the limit, and [openSeries]
+     * carries on, so the episodes and details it finds are saved; the page reads the episodes from the
+     * database, so they still appear. A page that leaves before the limit cancels it. [timer] as for
+     * [openMoviePage].
      */
-    // On [background] and passed through a channel, for the reason [openMoviePage] runs its request there.
-    fun openSeriesPage(id: Long, now: Long = System.currentTimeMillis()): Flow<Opened<Series>> = flow {
-        val stored = seriesDao.byId(id)
-        if (stored == null) {
+    // On [background] and passed through a channel, for the reason [openMoviePage] runs its request
+    // there. The limit is a timer raced with each series rather than a timeout around the collection,
+    // as a flow can't emit from inside another coroutine context.
+    fun openSeriesPage(
+        id: Long,
+        now: Long = System.currentTimeMillis(),
+        timer: CoroutineContext = Dispatchers.Default,
+    ): Flow<Opened<Series>> = flow {
+        if (seriesDao.byId(id) == null) {
             emit(Opened.Gone)
             return@flow
         }
         val shown = Channel<Series>(Channel.UNLIMITED)
-        background.launch {
+        val asking = background.launch {
             openSeries(id, now)
                 .onCompletion { shown.close(it) }
                 // Reaches the page through the channel instead.
                 .catch { }
                 .collect { shown.send(it) }
         }
-        val first = withContext(openingTimer) { withTimeoutOrNull(OPENING_LIMIT) { shown.receiveCatching() } }
-        when {
-            first == null -> emit(Opened.Found(seriesDao.byId(id) ?: stored))
-            // Removed since it was read: openSeries had nothing to show.
-            first.isClosed && first.exceptionOrNull() == null -> emit(Opened.Gone)
-            else -> {
-                emit(Opened.Found(first.getOrThrow()))
-                for (series in shown) emit(Opened.Found(series))
+        val passed = CompletableDeferred<Unit>()
+        val clock = background.launch(timer) {
+            delay(OPENING_LIMIT)
+            passed.complete(Unit)
+        }
+        var outlived = false
+        try {
+            var emitted = false
+            var open = true
+            while (open) {
+                val next = select<ChannelResult<Series>?> {
+                    shown.onReceiveCatching { it }
+                    passed.onAwait { null }
+                }
+                when {
+                    next == null -> {
+                        outlived = true
+                        open = false
+                        if (!emitted) emit(seriesDao.byId(id)?.let { Opened.Found(it) } ?: Opened.Gone)
+                    }
+                    next.isClosed -> {
+                        next.exceptionOrNull()?.let { throw it }
+                        open = false
+                        // Removed since it was read: openSeries had nothing to show.
+                        if (!emitted) emit(Opened.Gone)
+                    }
+                    else -> {
+                        emit(Opened.Found(next.getOrThrow()))
+                        emitted = true
+                    }
+                }
             }
+        } finally {
+            clock.cancel()
+            if (!outlived) asking.cancel()
         }
     }
 
