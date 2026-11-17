@@ -15,10 +15,12 @@ import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.junit4.ComposeContentTestRule
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
+import androidx.compose.ui.unit.height
 import androidx.test.core.app.ApplicationProvider
 import app.opentv.core.ServiceLocator
 import app.opentv.data.model.EpisodeTimings
@@ -26,6 +28,7 @@ import app.opentv.data.model.Series
 import app.opentv.data.model.TimingsSource
 import app.opentv.data.repo.MediaKey
 import app.opentv.player.NextEpisodeCountdown.Overlay
+import app.opentv.ui.vod.NEXT_EPISODE_CARD_TAG
 import app.opentv.ui.vod.NextEpisodeOverlay
 import app.opentv.ui.vod.VodPlayerViewModel
 import app.opentv.ui.vod.countsAsInput
@@ -102,7 +105,8 @@ class NextEpisodeOverlayTest {
 
     /**
      * The player over S1 E1 of a show whose episode TheIntroDB timed, credits at 38:00 of 40:00, with
-     * [sceneAfter] a scene after them; kept on the device already, so nothing is asked.
+     * [sceneAfter] a scene after them; kept on the device already, with the next episode's, so nothing
+     * is asked.
      */
     private fun showTimedPlayer(sceneAfter: Boolean = false) {
         runBlocking {
@@ -121,21 +125,26 @@ class NextEpisodeOverlayTest {
                     ),
                 ),
             )
-            graph.database.episodeTimings().upsert(
-                EpisodeTimings(
-                    show = "tmdb:1396",
-                    season = 1,
-                    episode = 1,
-                    creditsStartMillis = TIMED_CREDITS_MILLIS,
-                    sceneAfterCredits = sceneAfter,
-                    source = TimingsSource.THE_INTRO_DB,
-                    fetchedAtMillis = System.currentTimeMillis(),
-                ),
-            )
+            // Episode 2's too: the player looks ahead to the Next Episode's, which would otherwise go to
+            // TheIntroDB for real.
+            (1..2).forEach { number ->
+                graph.database.episodeTimings().upsert(
+                    EpisodeTimings(
+                        show = "tmdb:1396",
+                        season = 1,
+                        episode = number,
+                        creditsStartMillis = TIMED_CREDITS_MILLIS,
+                        sceneAfterCredits = sceneAfter,
+                        source = TimingsSource.THE_INTRO_DB,
+                        fetchedAtMillis = System.currentTimeMillis(),
+                    ),
+                )
+            }
         }
         showPlayer()
         // The timings are read beside playback: poll 3 s into the credits until they've placed the card.
-        compose.waitUntil(5_000) {
+        // A bound, not a wait: it's met in moments, but a CI runner under load took longer than 5 s once.
+        compose.waitUntil(10_000) {
             playback.positionMillis = TIMED_CREDITS_MILLIS + 3_000
             runBlocking { vm.poll() }
             vm.overlay.value != Overlay.None
@@ -160,6 +169,20 @@ class NextEpisodeOverlayTest {
         compose.onNodeWithText("Episode 2").assertExists()
         compose.onNodeWithText("Play now").assertIsFocused()
         captureScreen("vodplayer_upnext_after_credits_scene")
+    }
+
+    @Test
+    fun `the card is the same height counting down as waiting for OK`() {
+        showPlayer()
+        secondsLeft(12)
+        val counting = compose.onNodeWithTag(NEXT_EPISODE_CARD_TAG).getUnclippedBoundsInRoot().height
+
+        graph.settings.setPlayNextAutomatically(false)
+        secondsLeft(11)
+        compose.onNodeWithText("Press OK to play").assertExists()
+        val waiting = compose.onNodeWithTag(NEXT_EPISODE_CARD_TAG).getUnclippedBoundsInRoot().height
+
+        assertThat(counting).isEqualTo(waiting)
     }
 
     @Test
