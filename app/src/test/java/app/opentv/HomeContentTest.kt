@@ -80,6 +80,7 @@ class HomeContentTest {
             "Collateral",
             posterUrl = "https://example.com/9.jpg",
             progress = 0.4f,
+            titleKey = "movie:1:9",
         ),
     )
 
@@ -315,6 +316,7 @@ class HomeContentTest {
         title,
         posterUrl = "https://example.com/$id.jpg",
         progress = 0.4f,
+        titleKey = "movie:1:$id",
     )
 
     /** [show]'s card at its episode [id], titled with the show as Continue Watching titles it. */
@@ -501,6 +503,7 @@ class HomeContentTest {
             progress = null,
             episode = SeasonEpisode(season = 3, episode = 1),
             newEpisode = true,
+            titleKey = "series:1:31",
         )
         setHome(resume = listOf(newEpisode) + resume)
 

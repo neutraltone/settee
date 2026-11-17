@@ -10,6 +10,7 @@ import app.opentv.data.model.Movie
 import app.opentv.data.model.Series
 import app.opentv.data.repo.ContinueWatchingCard
 import app.opentv.ui.resumeItem
+import app.opentv.ui.resumeItems
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.test.runTest
 import org.junit.After
@@ -94,5 +95,17 @@ class ResumeCardIdentityTest {
         val after = resumeItem(test.catalog, ContinueWatchingCard.Movie(200, 0.4f))!!
 
         assertThat(after.titleKey).isEqualTo(before.titleKey)
+    }
+
+    @Test
+    fun `handed two cards for one title, Continue Watching draws only the first`() = runTest {
+        db.movies().upsertAll(listOf(heat(id = 100)))
+
+        val cards = resumeItems(
+            test.catalog,
+            listOf(ContinueWatchingCard.Movie(100, 0.4f), ContinueWatchingCard.Movie(100, 0.2f)),
+        )
+
+        assertThat(cards.map { it.progress }).containsExactly(0.4f)
     }
 }

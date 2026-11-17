@@ -18,6 +18,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
+import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
@@ -32,6 +33,7 @@ import app.opentv.data.model.Series
 import app.opentv.data.repo.GenreGroup
 import app.opentv.data.repo.MediaKey
 import app.opentv.ui.ResumeItem
+import app.opentv.ui.SeasonEpisode
 import app.opentv.ui.design.ScreenFrame
 import app.opentv.ui.vod.MovieShelves
 import app.opentv.ui.vod.SeriesShelves
@@ -63,6 +65,7 @@ class VodShelvesTest {
             "Collateral",
             posterUrl = null,
             progress = 0.4f,
+            titleKey = "movie:1:9",
         ),
     )
 
@@ -156,6 +159,46 @@ class VodShelvesTest {
         assertThat(topOf("Favourites")).isGreaterThan(topOf("Continue watching"))
         assertThat(topOf("Favourites")).isLessThan(topOf("Recently added"))
         captureScreen("shows_favourites")
+    }
+
+    /** [show]'s Continue Watching card at its episode [id]. */
+    private fun episodeCard(id: Long, show: String, episode: Int) = ResumeItem(
+        MediaKey.Episode(id),
+        show,
+        posterUrl = null,
+        progress = 0.4f,
+        episode = SeasonEpisode(1, episode),
+        titleKey = "series:1:$show",
+    )
+
+    // A position synced from another device moves the card on while the viewer is elsewhere on Shows.
+    @Test
+    fun `back into Shows' Continue Watching, the show last highlighted keeps the highlight once its card moves on`() {
+        var resume by mutableStateOf(
+            listOf(episodeCard(11, "Dark", 2), episodeCard(21, "Ozark", 5), episodeCard(43, "Pachinko", 3)),
+        )
+        compose.setTvContent {
+            ScreenFrame {
+                SeriesShelves(
+                    resume = resume,
+                    favourites = listOf(series(1, "Severance")),
+                    recommended = emptyList(),
+                    recentlyAdded = emptyList(),
+                    genreRows = emptyList(),
+                    onResume = {},
+                    onOpenSeries = {},
+                )
+            }
+        }
+        compose.onNode(hasText("Pachinko") and hasClickAction()).requestFocus()
+        compose.onNodeWithText("Severance").requestFocus()
+
+        resume = listOf(episodeCard(11, "Dark", 2), episodeCard(21, "Ozark", 5), episodeCard(44, "Pachinko", 4))
+        compose.waitForIdle()
+        compose.onRoot().performKeyInput { pressKey(Key.DirectionUp) }
+        compose.waitForIdle()
+
+        compose.onNode(hasText("Pachinko") and hasClickAction()).assertIsFocused()
     }
 
     @Test

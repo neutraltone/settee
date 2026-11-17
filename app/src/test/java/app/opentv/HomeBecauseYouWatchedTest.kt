@@ -62,7 +62,8 @@ class HomeBecauseYouWatchedTest {
 
     private fun cover(movie: Movie) = Cover(VodTitle.OfMovie(movie))
 
-    private val resume = listOf(ResumeItem(MediaKey.Movie(9), "Collateral", posterUrl = null, progress = 0.4f))
+    private val resume =
+        listOf(ResumeItem(MediaKey.Movie(9), "Collateral", posterUrl = null, progress = 0.4f, titleKey = "movie:1:9"))
 
     private val likeHeat = BecauseYouWatched("Heat", listOf(cover(movie(21, "Ronin")), cover(movie(22, "Thief"))))
 

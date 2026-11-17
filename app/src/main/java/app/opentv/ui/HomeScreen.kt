@@ -401,7 +401,7 @@ private const val LIVE_PICK = "live"
 
 // A pick is kept by the provider's ids rather than the local row id, which a catalogue refresh can
 // change while the viewer is away. Movies and shows share a row, so each says which it is.
-private val VodTitle.pickKey
+internal val VodTitle.pickKey
     get() = when (this) {
         is VodTitle.OfMovie -> "movie:${movie.sourceId}:${movie.streamId}"
         is VodTitle.OfSeries -> "series:${series.sourceId}:${series.seriesId}"

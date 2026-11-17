@@ -53,6 +53,7 @@ class ContinueWatchingRowTest {
         posterUrl = "https://example.com/backdrop.jpg",
         progress = 0.25f,
         episode = SeasonEpisode(season = 2, episode = 4),
+        titleKey = "series:1:s",
     )
 
     private var played: MediaKey? = null
