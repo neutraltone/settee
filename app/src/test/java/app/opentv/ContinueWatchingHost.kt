@@ -29,7 +29,7 @@ internal fun ContinueWatching(
 ) {
     val row = @Composable {
         ScreenFrame {
-            ContinueWatchingShelf(items, large = false, focus = null, onResume = onResume, leave = onLeave)
+            ContinueWatchingShelf(items, large = false, focus = null, onResume = { onResume(it.key) }, leave = onLeave)
         }
     }
     if (onOptions == null) {
