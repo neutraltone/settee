@@ -203,6 +203,8 @@
     <string name="vod_no_shows_provider">आपके प्रदाता ने अभी तक कोई शो नहीं भेजा है।</string>
     <string name="vod_no_shows_add">आपके प्रदाता के शोज़ यहां दिखेंगे। शुरू करने के लिए एक प्रदाता जोड़ें।</string>
     <string name="vod_loading_episodes">एपिसोड लोड हो रहे हैं…</string>
+    <string name="vod_episodes_failed">इस सीरीज़ के एपिसोड लोड नहीं हो सके। थोड़ी देर में फिर कोशिश करें।</string>
+    <string name="vod_no_episodes">आपके प्रदाता ने इस सीरीज़ का कोई एपिसोड नहीं जोड़ा है।</string>
     <string name="vod_continue_watching">देखना जारी रखें</string>
     <string name="vod_large_provider_note">बड़े प्रदाता के लिए पहली बार में कुछ मिनट लग सकते हैं।</string>
     <string name="vod_recommended">आपके लिए अनुशंसित</string>

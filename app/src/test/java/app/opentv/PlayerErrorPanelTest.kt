@@ -155,5 +155,24 @@ class PlayerErrorPanelTest {
 
         compose.onNodeWithText("Try again").assertIsFocused()
         compose.onNodeWithText("Back").assertExists()
+        captureScreen("vod_player_retry")
+    }
+
+    @Test
+    fun `a movie that fails until it stops restarting ends on Try again, and pressing it plays the movie again`() {
+        val controller = players.controller(failing = TestPlayers.AUTO_TRIES)
+        show(controller)
+        players.untilItStopsRestarting(controller)
+        compose.waitUntil(5_000) {
+            players.advance(100)
+            compose.onAllNodes(hasText("Try again")).fetchSemanticsNodes().isNotEmpty()
+        }
+        compose.onNodeWithText("Try again").assertIsFocused()
+
+        compose.onRoot().performKeyInput { pressKey(Key.DirectionCenter) }
+        compose.waitForIdle()
+        players.until { controller.state.value is PlayerController.State.Playing }
+
+        assertThat(players.played).hasSize(4)
     }
 }

@@ -98,7 +98,8 @@ aren't `ErrorMessage`s and have no detail line.
 
 Drawn by `GoneDetail` (`ui/vod`) in place of the page, with Back highlighted (#495). A panel that's slow
 with a title's details isn't an error: past `CatalogRepository.OPENING_LIMIT` the page draws from the
-row as stored.
+row as stored. A show with no episodes stored by then reads as a timeout in
+[Show page episodes](#show-page-episodes).
 
 | Trigger | String key | Sentence | Detail | Whose end, likely cause |
 |---|---|---|---|---|
@@ -127,6 +128,21 @@ hardware and worded by `ErrorWording.ofHardware`.
 | Anything else while downloading | `error_catalogue` | Couldn't load your provider's channels. Try again in a moment. | exception type, or HTTP status | Unknown |
 | Test button, anything else | `error_test_failed` | Couldn't connect to your provider with these details. Check them and try again. | exception type | Unknown |
 | The guide with no channels and no failure known this session | `guide_load_failed_desc` | Try again in a moment, or check your provider's details in Settings. | none | Unknown |
+
+## Show page episodes
+
+A show's page asks each of its Versions' panels for `get_series_info` when it opens
+(`VodViewModel.openShow`). When no Version has episodes stored afterwards, it says so in the
+episodes' place, as an error only when every Version's fetch failed: one that answered, even with
+nothing in it, means there's no error to show. Stored episodes always show instead of either. `ErrorWording.ofProvider` words
+the failure of the opened Version, or of the first other one, so a timeout, a rejected login, a 429 or
+a 5xx read as in [Provider connection](#provider-connection). Under it, Try again asks every panel again.
+
+| Trigger | String key | Sentence | Detail | Whose end, likely cause |
+|---|---|---|---|---|
+| Every fetch failed with nothing more specific (a reply that won't parse, any other HTTP status) | `vod_episodes_failed` | Couldn't load the episodes of this series. Try again in a moment. | exception type, or HTTP status | Provider's |
+| No episodes stored once `CatalogRepository.OPENING_LIMIT` has passed, fetches still out (#495); episodes they store later replace it | `error_timed_out` | Your provider stopped responding. It may be busy, so try again in a moment. | SocketTimeout | Provider's: slow |
+| A fetch answered, but no Version has episodes (a plain line, not an error, and no Try again) | `vod_no_episodes` | Your provider hasn't added any episodes of this series. | none | Provider's: none listed yet |
 
 ## Guides
 

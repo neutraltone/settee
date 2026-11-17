@@ -24,6 +24,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.HighQuality
 import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
@@ -32,6 +33,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
@@ -47,8 +49,10 @@ import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import app.opentv.R
+import app.opentv.core.ViewerError
 import app.opentv.data.model.Episode
 import app.opentv.data.model.Series
 import app.opentv.data.model.personNames
@@ -58,6 +62,7 @@ import app.opentv.data.repo.EpisodeStatuses
 import app.opentv.data.repo.MediaKey
 import app.opentv.data.repo.SeriesMainAction
 import app.opentv.data.repo.TitleCover
+import app.opentv.ui.design.ErrorMessage
 import app.opentv.ui.design.Pill
 import app.opentv.ui.design.PillButton
 import app.opentv.ui.design.ScreenFrame
@@ -78,7 +83,8 @@ import kotlinx.coroutines.delay
  * Quality pill for the whole show, as the film page has it. [suggestions] are its More like this: with
  * any, a More like this pill comes last in the pill row, and highlighting it shows them as a grid in the
  * episodes' place; OK on one calls [onOpenSeries]. Until [suggestionsKnown], a one-season show's episodes
- * wait, since a pill row may yet come above them.
+ * wait, since a pill row may yet come above them. When the fetch on opening leaves it with none, the
+ * page says why ([episodeFetch]).
  */
 @Composable
 internal fun SeriesDetailContent(
@@ -96,6 +102,7 @@ internal fun SeriesDetailContent(
     suggestions: List<TitleCover> = emptyList(),
     onOpenSeries: (Long) -> Unit = {},
     suggestionsKnown: Boolean = true,
+    episodeFetch: EpisodeFetch = EpisodeFetch(),
 ) {
     val cast = remember(series.cast) { personNames(series.cast) }
     var castShown by remember(series.id) { mutableStateOf(false) }
@@ -118,7 +125,13 @@ internal fun SeriesDetailContent(
     }
     val showingLikeThis = nav.showsLikeThis(shown)
     val pillRow = rememberLazyListState()
-    val episodeList = rememberLazyListState()
+    // A list position per season listed, so a season starts at its first episode and Down from its pill
+    // reaches Episode 1 (#428); one shared position opened each season where the last had been. Coming
+    // back from More like this lists from the top too. Wherever a season should open elsewhere (the main
+    // button's episode, an episode chosen from the list) the effects scroll this season's own position.
+    val episodeList = rememberSaveable(shown.selected?.number, showingLikeThis, saver = LazyListState.Saver) {
+        LazyListState()
+    }
     ShowPageFocusEffects(nav, shown, pillRow, episodeList, showingLikeThis)
     EpisodeListScrollEffects(nav, shown, episodeList)
     BackHandler(enabled = nav.backGoesToPills(shown)) { nav.pillTarget = PillTarget() }
@@ -160,7 +173,11 @@ internal fun SeriesDetailContent(
                     onOpenSeries = onOpenSeries,
                 )
             } else {
-                EpisodeList(series, nav, shown, statuses, episodeList, play, suggestions)
+                if (shown.selected == null && episodeFetch.noEpisodes) {
+                    NoEpisodes(nav, episodeFetch.failure, episodeFetch.onTryAgain)
+                } else {
+                    EpisodeList(series, nav, shown, statuses, episodeList, play, suggestions)
+                }
             }
         }
     }
@@ -305,6 +322,43 @@ private fun SeasonPills(nav: ShowPageNav, shown: ShowSeasons, pillRow: LazyListS
     }
 }
 
+/**
+ * How the fetch on opening a show went, for its page: whether it left the show with [noEpisodes] stored,
+ * why when every fetch [failure]d, and [onTryAgain] to ask again.
+ */
+@Stable
+class EpisodeFetch(val noEpisodes: Boolean = false, val failure: ViewerError? = null, val onTryAgain: () -> Unit = {})
+
+/**
+ * In the episodes' place when a show has none once they've been asked for: why, with Try again, when
+ * every fetch failed ([failure]), or else a plain line, as a provider listing none isn't an error.
+ */
+@Composable
+private fun NoEpisodes(nav: ShowPageNav, failure: ViewerError?, onTryAgain: () -> Unit) {
+    if (failure == null) {
+        Text(stringResource(R.string.vod_no_episodes), style = SetteeType.Body, color = SetteeColors.QuietText)
+        return
+    }
+    Column(verticalArrangement = Arrangement.spacedBy(SetteeSpace.RowGap)) {
+        ErrorMessage(
+            failure.sentence,
+            failure.detail,
+            textAlign = TextAlign.Start,
+            modifier = Modifier.fillMaxWidth(SYNOPSIS_WIDTH),
+        )
+        PillButton(
+            label = stringResource(R.string.common_try_again),
+            icon = Icons.Filled.Refresh,
+            onClick = {
+                // Up to the hero first: this button goes while it asks, and the Highlight would go with
+                // it. From there it moves on to Play when the episodes come, as on a first opening.
+                nav.backToHero()
+                onTryAgain()
+            },
+        )
+    }
+}
+
 /** The selected season's episodes, or a line saying they're on their way. */
 @Composable
 private fun EpisodeList(
@@ -379,6 +433,8 @@ private fun ShowPageFocusEffects(
 ) {
     val latest by rememberUpdatedState(shown)
     val onLikeThis by rememberUpdatedState(showingLikeThis)
+    // Choosing an episode in another season lists that season, which brings its own list position.
+    val latestList by rememberUpdatedState(episodeList)
     // Episodes are fetched on demand, so the main button can appear after the page does: the
     // highlight waits on the favourite toggle until then, and moves across only if it is still
     // there, never pulling a viewer back up from wherever they have gone since.
@@ -406,7 +462,7 @@ private fun ShowPageFocusEffects(
             pillRow.keepInView(latest.selectedIndex)
         }
         val index = latest.selected?.episodes?.indexOfFirst { it.id == ep.id } ?: -1
-        if (index >= 0) episodeList.scrollToItem(index)
+        if (index >= 0) latestList.scrollToItem(index)
         withFrameNanos {}
         runCatching { nav.focus.episode.requestFocus() }
         nav.parking = false
@@ -439,6 +495,7 @@ private fun ShowPageFocusEffects(
 @Composable
 private fun EpisodeListScrollEffects(nav: ShowPageNav, shown: ShowSeasons, episodeList: LazyListState) {
     val latest by rememberUpdatedState(shown)
+    val latestList by rememberUpdatedState(episodeList)
     // Opens with the main button's episode at the top of the list, so the Down that reaches it
     // doesn't also scroll the list under the viewer. Only until they've chosen a season themselves.
     val opening = shown.mainAction?.episode
@@ -452,7 +509,7 @@ private fun EpisodeListScrollEffects(nav: ShowPageNav, shown: ShowSeasons, episo
     LaunchedEffect(nav.focusedEpisode) {
         val season = latest.selected ?: return@LaunchedEffect
         val onLast = nav.focusedEpisode == season.episodes.lastOrNull()?.id
-        if (onLast && latest.hasPeekAfter(season)) episodeList.animateScrollToItem(season.episodes.size)
+        if (onLast && latest.hasPeekAfter(season)) latestList.animateScrollToItem(season.episodes.size)
     }
 }
 

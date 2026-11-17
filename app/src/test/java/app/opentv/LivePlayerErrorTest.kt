@@ -14,12 +14,15 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
+import androidx.media3.common.Format
+import androidx.media3.common.MimeTypes
 import androidx.media3.common.util.UnstableApi
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.espresso.Espresso
 import app.opentv.core.AppSettings
 import app.opentv.data.repo.MediaKey
 import app.opentv.data.repo.Playable
+import app.opentv.player.DecoderSize
 import app.opentv.player.PlaybackQueue
 import app.opentv.player.PlayerController
 import app.opentv.ui.player.CardChannel
@@ -217,8 +220,27 @@ class LivePlayerErrorTest {
     }
 
     @Test
+    fun `a stream that fails until it stops restarting ends on Try again, and OK plays it again`() {
+        val failing = players.controller(LIVE, failing = TestPlayers.AUTO_TRIES)
+        show(failing)
+        players.untilItStopsRestarting(failing)
+        compose.waitForIdle()
+        compose.mainClock.advanceTimeBy(CARD_TIMEOUT_MILLIS)
+        compose.onNodeWithText("Try again").assertIsFocused()
+
+        press(Key.DirectionCenter)
+        players.until { failing.state.value is PlayerController.State.Playing }
+
+        assertThat(players.played).hasSize(4)
+    }
+
+    @Test
     fun `on an error trying again can't fix, there's no Try again and OK opens the controls`() {
-        show(players.controller(LIVE, failing = 100), retryable = false)
+        players.decoders = FakeDecoders(MimeTypes.VIDEO_H265 to DecoderSize(1920, 1088))
+        players.formats = listOf(
+            Format.Builder().setSampleMimeType(MimeTypes.VIDEO_H265).setWidth(3840).setHeight(2160).build(),
+        )
+        show(players.controller(LIVE), retryable = false)
         compose.onNodeWithText("Try again").assertDoesNotExist()
 
         press(Key.DirectionCenter)

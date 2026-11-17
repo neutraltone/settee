@@ -203,6 +203,8 @@
     <string name="vod_no_shows_provider">Ваш провайдер пока не прислал ни одного сериала.</string>
     <string name="vod_no_shows_add">Здесь появятся сериалы вашего провайдера. Добавьте провайдера, чтобы начать.</string>
     <string name="vod_loading_episodes">Загрузка эпизодов…</string>
+    <string name="vod_episodes_failed">Не удалось загрузить эпизоды этого сериала. Повторите попытку чуть позже.</string>
+    <string name="vod_no_episodes">Ваш провайдер не добавил ни одного эпизода этого сериала.</string>
     <string name="vod_continue_watching">Продолжить просмотр</string>
     <string name="vod_large_provider_note">У крупных провайдеров первая загрузка может занять пару минут.</string>
     <string name="vod_recommended">Рекомендуем вам</string>
