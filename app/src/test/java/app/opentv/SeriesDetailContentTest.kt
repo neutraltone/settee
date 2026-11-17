@@ -91,8 +91,8 @@ class SeriesDetailContentTest {
 
     private val mainAction = mutableStateOf<SeriesMainAction?>(null)
 
-    // What the page shows of the show's Versions; set before [show].
-    private var versions = PageVersions()
+    // What the page shows of the show's Versions; set before [show], or after to change them on the page.
+    private var versions by mutableStateOf(PageVersions())
 
     private val chosen = mutableListOf<MediaKey>()
 
@@ -823,6 +823,28 @@ class SeriesDetailContentTest {
         press(Key.DirectionDown)
         episodeRow(1, 1).assertIsFocused()
         press(Key.DirectionUp)
+
+        compose.onNodeWithText("Favourite").assertIsFocused()
+    }
+
+    @Test
+    fun `on a show this TV can't play, episodes arriving late leave the highlight on Favourite`() {
+        versions = PageVersions(cantPlay = "4K")
+        show(initial = null)
+
+        mainAction.value = SeriesMainAction.Play(testEpisode(1, 1))
+        settle()
+
+        compose.onNodeWithText("Favourite").assertIsFocused()
+    }
+
+    @Test
+    fun `a show that stops playing here while its main button is highlighted moves the highlight to Favourite`() {
+        show(SeriesMainAction.Play(testEpisode(1, 1)))
+        compose.onNodeWithText("Play S1 E1").assertIsFocused()
+
+        versions = PageVersions(cantPlay = "4K")
+        settle()
 
         compose.onNodeWithText("Favourite").assertIsFocused()
     }

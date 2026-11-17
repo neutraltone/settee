@@ -112,7 +112,7 @@ internal fun SeriesDetailContent(
     // either: the hero says why, and the player would only fail (#181).
     val play: (MediaKey) -> Unit = { key ->
         when {
-            versions.cantPlay != null -> Unit
+            !versions.plays -> Unit
             versions.otherLanguage != null -> askingFor = key
             else -> onPlayEpisode(key)
         }
@@ -132,14 +132,16 @@ internal fun SeriesDetailContent(
     val episodeList = rememberSaveable(shown.selected?.number, showingLikeThis, saver = LazyListState.Saver) {
         LazyListState()
     }
-    ShowPageFocusEffects(nav, shown, pillRow, episodeList, showingLikeThis, plays = versions.cantPlay == null)
+    // The one rule for where "the hero's button" is, for the first highlight and every move back (#433).
+    val mainTakesHighlight = shown.mainAction != null && versions.plays
+    ShowPageFocusEffects(nav, shown, pillRow, episodeList, showingLikeThis, mainTakesHighlight)
     EpisodeListScrollEffects(nav, shown, episodeList)
     BackHandler(enabled = nav.backGoesToPills(shown)) { nav.pillTarget = PillTarget() }
 
     val backdrop: (@Composable BoxScope.() -> Unit)? =
         if (nav.heroAway) null else ({ HeroBackdrop(series.backdropUrl, series.posterUrl, HeroFade.AboveRows) })
     ScreenFrame(backdrop = backdrop) {
-        Column(Modifier.fillMaxWidth()) {
+        Column(Modifier.fillMaxWidth().onFocusChanged { nav.pageHasFocus = it.hasFocus }) {
             Text(series.displayTitle, style = SetteeType.Hero, maxLines = 2)
             if (!nav.heroAway) {
                 ShowHero(series, nav, shown, status, favourite, versions.cantPlay, play, onSetFavourite) {
@@ -430,20 +432,21 @@ private fun ShowPageFocusEffects(
     pillRow: LazyListState,
     episodeList: LazyListState,
     showingLikeThis: Boolean,
-    plays: Boolean,
+    mainTakesHighlight: Boolean,
 ) {
     val latest by rememberUpdatedState(shown)
-    val latestPlays by rememberUpdatedState(plays)
+    val latestMainTakesHighlight by rememberUpdatedState(mainTakesHighlight)
     val onLikeThis by rememberUpdatedState(showingLikeThis)
     // Choosing an episode in another season lists that season, which brings its own list position.
     val latestList by rememberUpdatedState(episodeList)
     // Episodes are fetched on demand, so the main button can appear after the page does: the
     // highlight waits on the favourite toggle until then, and moves across only if it is still
-    // there, never pulling a viewer back up from wherever they have gone since.
-    val mainTakesHighlight = shown.mainAction != null && plays
+    // there, never pulling a viewer back up from wherever they have gone since. When nothing of the
+    // show plays here the main button is turned off and never takes it, so Favourite keeps it; and a
+    // main button turned off under the Highlight drops it off the page, which puts it back on Favourite.
     LaunchedEffect(mainTakesHighlight) {
         delay(FIRST_HIGHLIGHT_DELAY_MILLIS)
-        if (nav.highlightPlaced && !nav.favouriteFocused) return@LaunchedEffect
+        if (nav.highlightPlaced && !nav.favouriteFocused && nav.pageHasFocus) return@LaunchedEffect
         runCatching { nav.focus.button(mainTakesHighlight).requestFocus() }
         nav.highlightPlaced = true
     }
@@ -489,7 +492,7 @@ private fun ShowPageFocusEffects(
     LaunchedEffect(nav.buttonTarget) {
         nav.buttonTarget ?: return@LaunchedEffect
         withFrameNanos {}
-        runCatching { nav.focus.button(latest.mainAction != null && latestPlays).requestFocus() }
+        runCatching { nav.focus.button(latestMainTakesHighlight).requestFocus() }
     }
 }
 
@@ -559,6 +562,9 @@ private class ShowPageNav {
 
     var focusedEpisode by mutableStateOf<Long?>(null)
     var favouriteFocused by mutableStateOf(false)
+
+    /** Whether the Highlight is anywhere on the page; a button turned off under it drops it. */
+    var pageHasFocus by mutableStateOf(false)
     var highlightPlaced by mutableStateOf(false)
     var inList by mutableStateOf(false)
         private set

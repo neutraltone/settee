@@ -32,6 +32,9 @@ data class PageVersions(
     val otherLanguage: OtherLanguage? = null,
     val cantPlay: String? = null,
 ) {
+    /** Whether anything of the title plays here; when not, Play is turned off and [cantPlay] says why. */
+    val plays: Boolean get() = cantPlay == null
+
     /** Two or more entries: anything less leaves nothing to choose. */
     val showsPill: Boolean get() = choices.size > 1
 
