@@ -67,12 +67,15 @@ import app.opentv.sync.SyncEngine
 import app.opentv.sync.SyncServer
 import app.opentv.ui.vod.PageVersions
 import java.net.HttpURLConnection
+import java.util.concurrent.atomic.AtomicReference
 import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
@@ -857,8 +860,11 @@ data class ResumeItem(
     val titleId: Long? = null,
 )
 
-/** A show on its page: [series] as far as it's filled in, and whether its episodes have been [fetched]. */
-data class OpenedShow(val series: Series, val fetched: Boolean)
+/**
+ * A show on its page: [series] as far as it's filled in, whether its episodes have been [fetched], and
+ * once they have, why none came when every Version's fetch failed ([failure]).
+ */
+data class OpenedShow(val series: Series, val fetched: Boolean, val failure: ViewerError? = null)
 
 /**
  * What Movies' and Shows' backdrop shows for the highlighted title: its name, where the Profile is
@@ -1266,34 +1272,46 @@ class VodViewModel @JvmOverloads constructor(
      * (#181), and once TMDB has answered, any Version its TMDB id newly matches; [OpenedShow.fetched]
      * once they all have been. Episodes are fetched here rather than during catalogue sync: pulling
      * every episode of every series up front is what makes a first sync take twenty minutes on a
-     * large provider, and most of it is never looked at.
+     * large provider, and most of it is never looked at. Collected again for the page's Try again.
      */
     fun openShow(id: Long): Flow<OpenedShow> = channelFlow {
         // Only touched by one coroutine at a time: the first fetch is joined before the second.
         val asked = mutableSetOf(id)
+        // Set on the repository's thread, read here once the series has stopped coming.
+        val own = AtomicReference<Result<Unit>?>(null)
         var opened: Series? = null
-        var others: Job? = null
-        graph.catalogRepository.openSeries(id).collect {
-            if (others == null) others = launch { fetchVersions(it, asked) }
+        var others: Deferred<List<Result<Unit>>>? = null
+        graph.catalogRepository.openSeries(id, onFetched = own::set).collect {
+            if (others == null) others = async { fetchVersions(it, asked) }
             opened = it
             send(OpenedShow(it, fetched = false))
         }
         val series = opened ?: return@channelFlow
-        others?.join()
-        fetchVersions(series, asked)
-        send(OpenedShow(series, fetched = true))
+        val outcomes = listOfNotNull(own.get()) + others?.await().orEmpty() + fetchVersions(series, asked)
+        send(OpenedShow(series, fetched = true, failure = episodesFailure(outcomes)))
     }
 
-    /** Episodes for each of [series]' Versions not [asked] for yet, all at once. */
-    private suspend fun fetchVersions(series: Series, asked: MutableSet<Long>) = coroutineScope {
+    /** Episodes for each of [series]' Versions not [asked] for yet, all at once, and how each fetch went. */
+    private suspend fun fetchVersions(series: Series, asked: MutableSet<Long>): List<Result<Unit>> = coroutineScope {
         val versions = graph.database.versionsOf(series, graph.titleIndex.versionIds).filter { asked.add(it.id) }
-        versions.forEach { version ->
-            launch {
-                val source = graph.sourceRepository.byId(version.sourceId) ?: return@launch
-                graph.catalogRepository.ensureEpisodes(source, version.seriesId)
+        versions.map { version ->
+            async {
+                val source = graph.sourceRepository.byId(version.sourceId) ?: return@async null
+                graph.catalogRepository.fetchEpisodes(source, version.seriesId)
             }
-        }
+        }.awaitAll().filterNotNull()
     }
+
+    /**
+     * Why a show's episodes didn't come, worded for its page, when every fetch for its Versions failed;
+     * the opened Version's failure first. One that worked, even with nothing in it, means the panel has
+     * spoken, and a failure beside it isn't the viewer's business (ADR 0007).
+     */
+    private fun episodesFailure(outcomes: List<Result<Unit>>): ViewerError? =
+        outcomes.takeIf { all -> all.none { it.isSuccess } }
+            ?.firstOrNull()
+            ?.exceptionOrNull()
+            ?.let { graph.errorWording.ofProvider(it, R.string.vod_episodes_failed) }
 
     /** [series]' episodes across its Versions, for its page (#181, ADR 0007). */
     @OptIn(ExperimentalCoroutinesApi::class)

@@ -9,12 +9,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.viewmodel.compose.viewModel
+import app.opentv.core.ViewerError
 import app.opentv.data.model.Series
 import app.opentv.data.repo.EpisodeStatuses
 import app.opentv.data.repo.MediaKey
@@ -38,23 +40,40 @@ fun SeriesDetailScreen(
 ) {
     var series by remember(seriesId) { mutableStateOf<Series?>(null) }
     var fetched by remember(seriesId) { mutableStateOf(false) }
+    var failure by remember(seriesId) { mutableStateOf<ViewerError?>(null) }
+    // Try again opens the show once more, which asks every Version's panel again.
+    var attempt by remember(seriesId) { mutableIntStateOf(0) }
 
-    LaunchedEffect(seriesId) {
+    LaunchedEffect(seriesId, attempt) {
         viewModel.openShow(seriesId).collect {
             series = it.series
             fetched = it.fetched
+            failure = it.failure
         }
     }
 
     val s = series
-    if (s == null) LoadingDetail() else ShowPage(s, fetched, onPlayEpisode, onOpenPerson, onOpenSeries, viewModel)
+    if (s == null) {
+        LoadingDetail()
+    } else {
+        // Back to waiting at once, so the page says Loading episodes while it asks rather than the old failure.
+        val episodes = FetchedEpisodes(fetched, failure) {
+            fetched = false
+            failure = null
+            attempt++
+        }
+        ShowPage(s, episodes, onPlayEpisode, onOpenPerson, onOpenSeries, viewModel)
+    }
 }
 
-/** [series]' page once its row is read, [fetched] once its episodes have been asked for. */
+/** Whether a show's episodes have been [fetched], why none came if [failure], and how to ask again. */
+private class FetchedEpisodes(val fetched: Boolean, val failure: ViewerError?, val onTryAgain: () -> Unit)
+
+/** [series]' page once its row is read, with how the fetch of its [episodes] went. */
 @Composable
 private fun ShowPage(
     series: Series,
-    fetched: Boolean,
+    episodes: FetchedEpisodes,
     onPlayEpisode: (MediaKey) -> Unit,
     onOpenPerson: (String) -> Unit,
     onOpenSeries: (Long) -> Unit,
@@ -85,7 +104,7 @@ private fun ShowPage(
     // Only the first showing waits: a choice or a finished episode then updates the page in place.
     var ready by remember(series.id) { mutableStateOf(false) }
     if (!ready && status != null) {
-        ready = showButtonsKnown(read, fetched, action != null, versions?.first, versionKey)
+        ready = showButtonsKnown(read, episodes.fetched, action != null, versions?.first, versionKey)
     }
     if (favourites == null || !ready) {
         LoadingDetail()
@@ -112,6 +131,9 @@ private fun ShowPage(
         suggestions = suggestions.orEmpty(),
         onOpenSeries = onOpenSeries,
         suggestionsKnown = suggestions != null,
+        episodesFetched = episodes.fetched,
+        episodesFailure = episodes.failure,
+        onTryAgain = episodes.onTryAgain,
     )
 }
 

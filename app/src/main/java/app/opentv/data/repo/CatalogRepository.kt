@@ -484,13 +484,23 @@ class CatalogRepository(
      * A series being opened on its page: one `get_series_info` gives its episodes and, for a
      * still-bare row, its details, and the series is emitted once they're stored, so the page shows
      * with its episodes before TMDB is asked; then again with what TMDB filled in, if it was asked.
-     * A row whose details are already in is emitted before that request instead.
+     * A row whose details are already in is emitted before that request instead. [onFetched] hears
+     * how that request went, once it has, so the page can say why no episodes came: reported beside
+     * the series rather than with it, as a failure changes nothing about the row to show again.
      */
-    fun openSeries(id: Long, now: Long = System.currentTimeMillis()): Flow<Series> =
-        seriesDetails(id, now, opening = true)
+    fun openSeries(
+        id: Long,
+        now: Long = System.currentTimeMillis(),
+        onFetched: (Result<Unit>) -> Unit = {},
+    ): Flow<Series> = seriesDetails(id, now, opening = true, onFetched)
 
     /** [seriesDetail], or with [opening] [openSeries]: the panel always asked, and its episodes stored. */
-    private fun seriesDetails(id: Long, now: Long, opening: Boolean): Flow<Series> = flow {
+    private fun seriesDetails(
+        id: Long,
+        now: Long,
+        opening: Boolean,
+        onFetched: (Result<Unit>) -> Unit = {},
+    ): Flow<Series> = flow {
         val series = seriesDao.byId(id) ?: return@flow
         val panel = sourceDao.byId(series.sourceId)?.takeIf { it.kind == SourceKind.XTREAM }
 
@@ -503,6 +513,8 @@ class CatalogRepository(
         if (shownFirst) emit(series)
         val info = if (panel != null && (opening || !series.isEnriched)) {
             fetchSeries(panel, series.seriesId, now, storeEpisodes = opening)
+                .also { fetched -> onFetched(fetched.map {}) }
+                .getOrNull()
         } else {
             null
         }
@@ -656,20 +668,33 @@ class CatalogRepository(
         source: Source,
         seriesId: String,
         nowUtcMillis: Long = System.currentTimeMillis(),
-    ): Boolean = source.kind != SourceKind.XTREAM ||
-        fetchSeries(source, seriesId, nowUtcMillis, storeEpisodes = true) != null
+    ): Boolean = fetchEpisodes(source, seriesId, nowUtcMillis).isSuccess
+
+    /**
+     * [ensureEpisodes] with what went wrong when it fails, for a page that words it: a timeout and a
+     * rejected login need different sentences.
+     */
+    suspend fun fetchEpisodes(
+        source: Source,
+        seriesId: String,
+        nowUtcMillis: Long = System.currentTimeMillis(),
+    ): Result<Unit> = if (source.kind != SourceKind.XTREAM) {
+        Result.success(Unit)
+    } else {
+        fetchSeries(source, seriesId, nowUtcMillis, storeEpisodes = true).map {}
+    }
 
     /**
      * Asks the panel for [seriesId]'s `get_series_info`, storing its episodes when [storeEpisodes],
-     * and returns its details, or null when the fetch failed. One request serves both, so opening a
-     * series never asks for the same reply twice.
+     * and returns its details, or the failure. One request serves both, so opening a series never asks
+     * for the same reply twice. A reply without details has still answered: they're just empty.
      */
     private suspend fun fetchSeries(
         source: Source,
         seriesId: String,
         nowUtcMillis: Long,
         storeEpisodes: Boolean,
-    ): XtreamApi.SeriesInfo? = runCatching {
+    ): Result<XtreamApi.SeriesInfo> = runCatching {
         val reply = api.seriesInfo(source, seriesId)
         if (storeEpisodes && reply.episodes.isNotEmpty()) storeEpisodes(source, seriesId, reply.episodes, nowUtcMillis)
         reply.info
@@ -678,7 +703,6 @@ class CatalogRepository(
         // The exception's kind only: some clients put the request's address, with the account's
         // login in it, in the message, and the browse backdrop can fail here on every highlight.
         .onFailure { Log.w(TAG, "Series info failed for series $seriesId: ${it.javaClass.simpleName}") }
-        .getOrNull()
 
     private suspend fun storeEpisodes(source: Source, seriesId: String, fetched: List<Episode>, nowUtcMillis: Long) {
         // Matched to the stored rows like a catalogue refresh: an upsert without the local id would

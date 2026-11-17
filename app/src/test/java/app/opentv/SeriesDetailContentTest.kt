@@ -5,6 +5,7 @@
  */
 package app.opentv
 
+import android.content.Context
 import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
@@ -32,7 +33,9 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.test.requestFocus
+import androidx.test.core.app.ApplicationProvider
 import androidx.test.espresso.Espresso
+import app.opentv.core.ViewerError
 import app.opentv.data.model.Series
 import app.opentv.data.repo.CoverStatus
 import app.opentv.data.repo.EpisodeStatuses
@@ -114,6 +117,9 @@ class SeriesDetailContentTest {
 
     private var openedSeries: Long? = null
 
+    // Why the fetch on opening brought no episodes, if it failed; set before [show].
+    private var episodesFailure: ViewerError? = null
+
     private fun show(initial: SeriesMainAction?) {
         mainAction.value = initial
         compose.setTvContent {
@@ -134,9 +140,22 @@ class SeriesDetailContentTest {
                 suggestions = suggestions,
                 onOpenSeries = { openedSeries = it },
                 suggestionsKnown = suggestionsKnown.value,
+                episodesFetched = true,
+                episodesFailure = episodesFailure,
             )
         }
         settle()
+    }
+
+    @Test
+    fun `stored episodes show, and no error, when the fetch on opening failed`() {
+        episodesFailure = ViewerError("Your provider stopped responding.")
+        show(SeriesMainAction.Play(testEpisode(1, 1)))
+
+        episodeRow(1, 1).assertExists()
+        compose.onNodeWithText("Your provider stopped responding.").assertDoesNotExist()
+        val tryAgain = ApplicationProvider.getApplicationContext<Context>().getString(R.string.common_try_again)
+        compose.onNodeWithText(tryAgain).assertDoesNotExist()
     }
 
     // The page places its highlight a moment after it appears, once its rows are laid out.
