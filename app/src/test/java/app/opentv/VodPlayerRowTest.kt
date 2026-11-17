@@ -442,7 +442,9 @@ class VodPlayerRowTest {
         compose.onNodeWithContentDescription("Pause").assertIsFocused()
         press(Key.DirectionLeft)
         press(Key.DirectionCenter)
-        compose.waitUntil(WAIT_MILLIS) { viewModel.current.value == testEpisode(1, 2).key }
+        // The move finishes on whichever thread the database answered on, so what's playing can
+        // change a moment before the player is asked: wait for the player itself.
+        compose.waitUntil(WAIT_MILLIS) { fake.played.size == 3 }
         assertThat(fake.played.map { it.first }).containsExactly(
             testEpisode(1, 2).key,
             testEpisode(1, 3).key,

@@ -20,7 +20,9 @@ class FakePlayback : VodPlayerViewModel.Playback {
     var durationMillis = 0L
     var paused = false
     var stopped = false
-    val played = mutableListOf<Pair<MediaKey, Long>>()
+
+    // Synchronised: a move can finish on the thread the database answered on, while a test reads it.
+    val played: MutableList<Pair<MediaKey, Long>> = java.util.Collections.synchronizedList(mutableListOf())
     var steppedDownTo: MediaKey? = null
 
     var ended = false
