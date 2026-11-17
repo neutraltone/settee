@@ -54,6 +54,10 @@ class FakePlayback : VodPlayerViewModel.Playback {
         paused = true
     }
 
+    override fun seekTo(positionMillis: Long) {
+        this.positionMillis = positionMillis
+    }
+
     override fun stop() {
         stopped = true
     }

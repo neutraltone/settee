@@ -124,6 +124,8 @@ class VodPlayerRowTest {
 
         override fun pause() = Unit
 
+        override fun seekTo(positionMillis: Long) = player.player.seekTo(positionMillis)
+
         override fun stop() = Unit
     }
 

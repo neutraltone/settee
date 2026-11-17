@@ -29,7 +29,7 @@ object UpNextCue {
      * [restOfShow]'s usual credits length stands in when this one isn't timed.
      */
     fun place(timings: EpisodeTimings?, restOfShow: List<ShowEpisode>, streamMillis: Long): Cue {
-        val timed = timings?.creditsStartMillis?.takeIf { fits(it, streamMillis) }
+        val timed = timings?.creditsStartMillis?.takeIf { creditsFit(it, streamMillis) }
         // Someone confirmed there are no credits: the show's usual length would be a guess at nothing.
         val usual = if (timed != null || timings?.noCredits == true) null else usualStart(restOfShow, streamMillis)
         return when {
@@ -48,20 +48,20 @@ object UpNextCue {
     private fun usualStart(restOfShow: List<ShowEpisode>, streamMillis: Long): Long? = restOfShow
         .filter { other ->
             val length = other.lengthMillis ?: return@filter true
-            other.timings.creditsStartMillis?.let { fits(it, length) } == true
+            other.timings.creditsStartMillis?.let { creditsFit(it, length) } == true
         }
         .mapNotNull { it.timings.creditsMillis }
         .filter { it > 0 }
         .median()
         ?.let { streamMillis - it }
-        ?.takeIf { fits(it, streamMillis) }
+        ?.takeIf { creditsFit(it, streamMillis) }
 
     /**
      * Whether credits starting at [startMillis] can belong to this stream: inside it, in its second half
      * and within 12 minutes of its end. The longest credits measured ran 6 minutes; anything outside
      * these is another cut's timings or a mistake.
      */
-    private fun fits(startMillis: Long, streamMillis: Long): Boolean = startMillis < streamMillis &&
+    internal fun creditsFit(startMillis: Long, streamMillis: Long): Boolean = startMillis < streamMillis &&
         startMillis >= streamMillis / 2 &&
         streamMillis - startMillis <= LONGEST_CREDITS_MILLIS
 

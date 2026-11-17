@@ -202,8 +202,9 @@ private fun StillWatchingPrompt(onContinue: () -> Unit, onStop: () -> Unit) {
     }
 }
 
+/** A button drawn over the picture: the Next Episode card's, the question's, and Skip intro's. */
 @Composable
-private fun OverlayButton(label: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
+internal fun OverlayButton(label: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
     HighlightSurface(onClick = onClick, style = HighlightStyle.Button, modifier = modifier) { highlighted ->
         Text(
             label,
