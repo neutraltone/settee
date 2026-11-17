@@ -15,10 +15,12 @@ import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.junit4.ComposeContentTestRule
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
+import androidx.compose.ui.unit.height
 import androidx.test.core.app.ApplicationProvider
 import app.opentv.core.ServiceLocator
 import app.opentv.data.model.EpisodeTimings
@@ -26,6 +28,7 @@ import app.opentv.data.model.Series
 import app.opentv.data.model.TimingsSource
 import app.opentv.data.repo.MediaKey
 import app.opentv.player.NextEpisodeCountdown.Overlay
+import app.opentv.ui.vod.NEXT_EPISODE_CARD_TAG
 import app.opentv.ui.vod.NextEpisodeOverlay
 import app.opentv.ui.vod.VodPlayerViewModel
 import app.opentv.ui.vod.countsAsInput
@@ -160,6 +163,20 @@ class NextEpisodeOverlayTest {
         compose.onNodeWithText("Episode 2").assertExists()
         compose.onNodeWithText("Play now").assertIsFocused()
         captureScreen("vodplayer_upnext_after_credits_scene")
+    }
+
+    @Test
+    fun `the card is the same height counting down as waiting for OK`() {
+        showPlayer()
+        secondsLeft(12)
+        val counting = compose.onNodeWithTag(NEXT_EPISODE_CARD_TAG).getUnclippedBoundsInRoot().height
+
+        graph.settings.setPlayNextAutomatically(false)
+        secondsLeft(11)
+        compose.onNodeWithText("Press OK to play").assertExists()
+        val waiting = compose.onNodeWithTag(NEXT_EPISODE_CARD_TAG).getUnclippedBoundsInRoot().height
+
+        assertThat(counting).isEqualTo(waiting)
     }
 
     @Test

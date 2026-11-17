@@ -39,6 +39,7 @@ import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -129,6 +130,7 @@ private fun NextEpisodeCardView(
                 alpha = arrival.value
                 translationY = (1f - arrival.value) * ARRIVAL_RISE.toPx()
             }
+            .testTag(NEXT_EPISODE_CARD_TAG)
             .width(CARD_WIDTH)
             .background(SetteeColors.Surface, SetteeShapes.Card)
             .clip(SetteeShapes.Card),
@@ -142,9 +144,14 @@ private fun NextEpisodeCardView(
                     modifier = Modifier.matchParentSize(),
                 )
             }
-        }
-        if (showing.counting) {
-            ProgressBar(showing.secondsLeft / COUNTDOWN_SECONDS, Modifier.fillMaxWidth())
+            // Along the still's foot rather than a row of its own, so the card is one height whether
+            // it counts down or waits for OK.
+            if (showing.counting) {
+                ProgressBar(
+                    showing.secondsLeft / COUNTDOWN_SECONDS,
+                    Modifier.fillMaxWidth().align(Alignment.BottomStart),
+                )
+            }
         }
         Column(Modifier.padding(16.dp)) {
             Text(stringResource(R.string.player_next_episode_label), SetteeType.Body, color = SetteeColors.Accent)
@@ -208,6 +215,9 @@ private fun OverlayButton(label: String, onClick: () -> Unit, modifier: Modifier
 }
 
 private val CARD_WIDTH = 340.dp
+
+/** The Next Episode card, for tests to measure. */
+internal const val NEXT_EPISODE_CARD_TAG = "next_episode_card"
 
 // How the card comes up: it's the one overlay that arrives without a press, so it fades in as it
 // rises [ARRIVAL_RISE] over [ARRIVAL_MILLIS] rather than cutting into the picture. If a frame of it
