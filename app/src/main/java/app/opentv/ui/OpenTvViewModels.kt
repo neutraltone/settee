@@ -957,6 +957,9 @@ class VodViewModel @JvmOverloads constructor(
         /** As long as the tab's other flows: through a quick trip to a title's page and back. */
         const val KEEP_CATEGORIES_MILLIS = 5_000L
 
+        /** As long as the tab's other flows, so a trip to a title's page and back doesn't ask again. */
+        const val LOAD_FAILURE_KEEP_MILLIS = 5_000L
+
         /** Two genres keep the backdrop's line of facts to one line. */
         const val BACKDROP_GENRES = 2
     }
@@ -1237,18 +1240,25 @@ class VodViewModel @JvmOverloads constructor(
      * Why Movies' or Shows' latest download failed, for the first enabled provider it failed for;
      * null when none did. The tab shows it only with nothing of that kind stored, since titles win.
      */
-    val moviesLoadFailure: StateFlow<VodLoadFailure?> = vodLoadFailure { it.movies }
-    val showsLoadFailure: StateFlow<VodLoadFailure?> = vodLoadFailure { it.shows }
+    val moviesLoadFailure: StateFlow<VodLoadFailure?> =
+        vodLoadFailure(graph.catalogRepository.hasMovies()) { it.movies }
+    val showsLoadFailure: StateFlow<VodLoadFailure?> =
+        vodLoadFailure(graph.catalogRepository.hasSeries()) { it.shows }
 
-    // Against the providers there are now: a deleted one's failure would offer to edit nothing.
-    private fun vodLoadFailure(kind: (CatalogueRefresh.VodFailures) -> Map<Long, ViewerError>) = combine(
-        graph.catalogueRefresh.state.map { kind(it.vodFailures) }.distinctUntilChanged(),
-        graph.sourceRepository.observeAll(),
-    ) { failures, sources ->
-        sources.firstNotNullOfOrNull { source ->
-            failures[source.id]?.takeIf { source.enabled }?.let { VodLoadFailure(source.id, it) }
-        }
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(KEEP_CATEGORIES_MILLIS), null)
+    // Only once the store has said it holds none: the tab's rows are worked out after it opens, and
+    // waiting on them instead flashed the error over titles that were there all along. Against the
+    // providers there are now, too: a deleted one's failure would offer to edit nothing.
+    private fun vodLoadFailure(stored: Flow<Boolean>, kind: (CatalogueRefresh.VodFailures) -> Map<Long, ViewerError>) =
+        combine(
+            graph.catalogueRefresh.state.map { kind(it.vodFailures) }.distinctUntilChanged(),
+            graph.sourceRepository.observeAll(),
+            stored,
+        ) { failures, sources, anyStored ->
+            if (anyStored) return@combine null
+            sources.firstNotNullOfOrNull { source ->
+                failures[source.id]?.takeIf { source.enabled }?.let { VodLoadFailure(source.id, it) }
+            }
+        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(LOAD_FAILURE_KEEP_MILLIS), null)
 
     // ---- VOD search (shared by the unified search screen) --------------------------------------
     private val vodSearchInput = MutableStateFlow("")

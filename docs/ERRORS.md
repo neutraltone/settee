@@ -146,8 +146,8 @@ instead, with no error. `ErrorWording.ofProvider` words the failure, so a timeou
 
 | Trigger | String key | Sentence | Detail | Whose end, likely cause |
 |---|---|---|---|---|
-| Movies' list or categories failed with nothing more specific (a reply that won't parse, any other HTTP status) | `error_movies_list` | Couldn't load your provider's movies. Try again in a moment. | exception type, or HTTP status | Provider's |
-| Shows' list or categories failed with nothing more specific | `error_shows_list` | Couldn't load your provider's shows. Try again in a moment. | exception type, or HTTP status | Provider's |
+| Movies' list or categories failed with nothing more specific (a reply that won't parse, any other HTTP status) | `error_movies_list` | Your provider's list of movies didn't come through. Try again in a moment. | exception type, or HTTP status | Provider's |
+| Shows' list or categories failed with nothing more specific | `error_shows_list` | Your provider's list of shows didn't come through. Try again in a moment. | exception type, or HTTP status | Provider's |
 | The list downloaded with nothing in it (a plain line, not an error, and no Try again) | `vod_no_movies_provider` / `vod_no_shows_provider` | Your provider hasn't sent any movies yet. | none | Provider's: none in the account |
 
 ## Guides

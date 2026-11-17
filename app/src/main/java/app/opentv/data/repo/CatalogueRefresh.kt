@@ -119,8 +119,8 @@ class CatalogueRefresh(
         fun after(sourceId: Long, vod: CatalogRepository.VodFetch) =
             VodFailures(movies.after(sourceId, vod.movies), shows.after(sourceId, vod.shows))
 
-        private fun Map<Long, ViewerError>.after(sourceId: Long, list: CatalogRepository.ListFetch) = when {
-            !list.fetched -> this
+        private fun Map<Long, ViewerError>.after(sourceId: Long, list: CatalogRepository.ListFetch?) = when {
+            list == null -> this
             list.failure == null -> this - sourceId
             else -> this + (sourceId to list.failure)
         }
@@ -327,12 +327,7 @@ class CatalogueRefresh(
         suspend fun fetchLists(source: Source): CatalogRepository.VodFetch {
             val movies = list(SetupStep.MOVIES) { catalog.fetchMovies(source, it) }
             val shows = list(SetupStep.SHOWS) { catalog.fetchShows(source, it) }
-            return CatalogRepository.VodFetch(
-                shows.updated,
-                movies.complete && shows.complete && (movies.count > 0 || shows.count > 0),
-                movies,
-                shows,
-            )
+            return CatalogRepository.VodFetch.of(movies, shows)
         }
 
         private suspend fun list(
@@ -345,7 +340,7 @@ class CatalogueRefresh(
             }
                 .also { stepDone(StepDone(step, it.count, failed = !it.complete)) }
         } else {
-            CatalogRepository.ListFetch.SKIPPED
+            null
         }
     }
 
@@ -408,6 +403,7 @@ class CatalogueRefresh(
             }.getOrElse { e ->
                 if (e is CancellationException) throw e
                 Log.w(TAG, "Movies and shows failed for source ${source.id}", e)
+                _state.update { it.copy(vodFailures = it.vodFailures.after(source.id, catalog.vodFailed(e))) }
                 return@share null
             }
             _state.update { it.copy(vodFailures = it.vodFailures.after(source.id, vod)) }

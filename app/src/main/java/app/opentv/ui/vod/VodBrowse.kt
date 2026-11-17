@@ -379,9 +379,12 @@ private fun vodEmpty(
 
 /** What Movies or Shows says when For you has nothing in it. */
 internal sealed interface VodEmpty {
-    class Loading(val message: String) : VodEmpty
+    /** Words alone, with nothing to press. */
+    sealed interface Lines : VodEmpty
 
-    class Hint(val title: String, val body: String?) : VodEmpty
+    class Loading(val message: String) : Lines
+
+    class Hint(val title: String, val body: String?) : Lines
 
     /** The latest download of this kind failed and nothing of it is stored: why, and what to do. */
     class Failed(val title: String, val reason: ViewerError, val onRetry: () -> Unit, val onEditProvider: () -> Unit) :
@@ -530,30 +533,21 @@ private val BUTTON_GAP = 12.dp
 internal fun EmptyBrowse(empty: VodEmpty) {
     // Drawn as Live's channels that failed to load are, its buttons first in the content, so
     // coming in from the rail lands on Try again.
-    if (empty is VodEmpty.Failed) {
-        return Message(empty.reason.sentence, title = empty.title, detail = empty.reason.detail) {
+    when (empty) {
+        is VodEmpty.Failed -> Message(empty.reason.sentence, title = empty.title, detail = empty.reason.detail) {
             Row(horizontalArrangement = Arrangement.spacedBy(BUTTON_GAP)) {
                 ActionButton(stringResource(R.string.common_try_again), empty.onRetry)
                 ActionButton(stringResource(R.string.guide_edit_provider), empty.onEditProvider)
             }
         }
-    }
-    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            when (empty) {
-                is VodEmpty.Loading -> {
-                    Text(empty.message, SetteeType.Section)
-                    Text(
-                        stringResource(R.string.vod_large_provider_note),
-                        SetteeType.Body,
-                        color = SetteeColors.QuietText,
-                    )
-                }
-                is VodEmpty.Hint -> {
-                    Text(empty.title, SetteeType.Section)
-                    empty.body?.let { Text(it, SetteeType.Body, color = SetteeColors.QuietText) }
-                }
-                is VodEmpty.Failed -> Unit
+        is VodEmpty.Lines -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            val (title, body) = when (empty) {
+                is VodEmpty.Loading -> empty.message to stringResource(R.string.vod_large_provider_note)
+                is VodEmpty.Hint -> empty.title to empty.body
+            }
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(title, SetteeType.Section)
+                body?.let { Text(it, SetteeType.Body, color = SetteeColors.QuietText) }
             }
         }
     }

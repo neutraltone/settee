@@ -29,6 +29,7 @@ import androidx.compose.ui.test.requestFocus
 import androidx.test.core.app.ApplicationProvider
 import app.opentv.core.ServiceLocator
 import app.opentv.data.model.Movie
+import app.opentv.data.repo.CatalogueRefresh
 import app.opentv.ui.MainShell
 import app.opentv.ui.Tab
 import app.opentv.ui.visibleTabs
@@ -159,7 +160,7 @@ class VodLoadFailedTest {
         setMovies()
 
         // TV or device wording, whichever this configuration counts as.
-        awaitText("Can't reach your provider.")
+        awaitText(UNREACHABLE)
         awaitText(app.getString(R.string.common_try_again))
         assertNone(app.getString(R.string.vod_no_movies_provider))
         captureScreen("movies_load_failed")
@@ -177,14 +178,35 @@ class VodLoadFailedTest {
         press(Key.DirectionCenter)
 
         awaitText("Drive")
-        assertNone("Can't reach your provider.")
+        assertNone(UNREACHABLE)
+    }
+
+    @Test
+    fun `Try again says it's loading while it asks, and says why again if it fails again`() {
+        panel.replies["get_vod_streams"] = "!host"
+        setMovies()
+        awaitText(UNREACHABLE)
+        enter("Movies")
+        val asking = panel.hold("get_vod_streams")
+
+        press(Key.DirectionCenter)
+
+        compose.waitUntil(10_000) {
+            shadowOf(Looper.getMainLooper()).idle()
+            asking.reached.count == 0L
+        }
+        awaitText(app.getString(R.string.vod_loading_movies))
+        assertNone(UNREACHABLE)
+        asking.release()
+        awaitText(UNREACHABLE)
+        awaitText(app.getString(R.string.common_try_again))
     }
 
     @Test
     fun `Shows whose download can't reach the provider says so, and Try again shows them once it answers`() {
         panel.replies["get_series"] = "!host"
         setShows()
-        awaitText("Can't reach your provider.")
+        awaitText(UNREACHABLE)
         assertNone(app.getString(R.string.vod_no_shows_provider))
         captureScreen("shows_load_failed")
         enter("Shows")
@@ -194,7 +216,7 @@ class VodLoadFailedTest {
         press(Key.DirectionCenter)
 
         awaitText("Taskmaster")
-        assertNone("Can't reach your provider.")
+        assertNone(UNREACHABLE)
     }
 
     @Test
@@ -204,11 +226,11 @@ class VodLoadFailedTest {
         setShows()
 
         awaitText("Taskmaster")
-        assertNone("Can't reach your provider.")
+        assertNone(UNREACHABLE)
 
         shown = Tab.MOVIES
 
-        awaitText("Can't reach your provider.")
+        awaitText(UNREACHABLE)
     }
 
     @Test
@@ -222,8 +244,30 @@ class VodLoadFailedTest {
             shadowOf(Looper.getMainLooper()).idle()
             panel.asked.contains("get_vod_streams") && !viewModel.vodLoading.value
         }
-        assertNone("Can't reach your provider.")
+        assertNone(UNREACHABLE)
         awaitText("Heat")
+    }
+
+    @Test
+    fun `a failure from before never shows over stored movies, even while their rows are worked out`() {
+        runBlocking {
+            graph.database.movies().upsertAll(listOf(storedMovie))
+            panel.replies["get_vod_streams"] = "!host"
+            // Recorded before the tab opens, as Setup's or a background refresh's would be.
+            graph.catalogueRefresh.refresh(CatalogueRefresh.Trigger.OpenedMoviesOrShows)
+        }
+        var errorShown = false
+        setMovies()
+
+        compose.waitUntil(10_000) {
+            shadowOf(Looper.getMainLooper()).idle()
+            if (compose.onAllNodes(hasText(UNREACHABLE, substring = true)).fetchSemanticsNodes().isNotEmpty()) {
+                errorShown = true
+            }
+            compose.onAllNodes(hasText("Heat")).fetchSemanticsNodes().isNotEmpty()
+        }
+
+        assertThat(errorShown).isFalse()
     }
 
     @Test
@@ -268,3 +312,6 @@ class VodLoadFailedTest {
         check(found.isEmpty()) { "Didn't expect \"$text\" on screen" }
     }
 }
+
+/** The start of what a provider that can't be found says, on a TV or not (core/ErrorWording). */
+private const val UNREACHABLE = "Can't reach your provider."
