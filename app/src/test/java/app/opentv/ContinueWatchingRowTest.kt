@@ -184,7 +184,7 @@ class ContinueWatchingRowTest {
 
     @Test
     fun `when the highlighted card is removed the highlight moves to the one taking its place`() {
-        val other = inProgress.copy(key = MediaKey.Movie(5), title = "A Film", episode = null)
+        val other = inProgress.copy(key = MediaKey.Movie(5), title = "A Film", episode = null, titleKey = "movie:1:5")
         var items by mutableStateOf(listOf(inProgress, other))
         compose.setTvContent { ContinueWatching(items, onResume = {}, onOptions = {}) }
         compose.onNode(hasText("The Show") and hasClickAction()).requestFocus()

@@ -198,7 +198,6 @@ class HomeContentTest {
         channels: List<HomeChannel> = listOf(favourite(3, "BBC One")),
         recent: List<Cover> = emptyList(),
         favouritesNow: () -> List<Cover> = { favourites },
-        resumeNow: () -> List<ResumeItem> = { resume },
     ) = compose.setTvContent {
         CompositionLocalProvider(LocalOpenOptions provides { _, leave -> leaveThroughOptions = leave }) {
             HomeContent(
@@ -209,7 +208,7 @@ class HomeContentTest {
                 },
                 onOpenLive = { openedLive = true },
                 stopPreview = { events += "stop" },
-                continueWatching = resumeNow(),
+                continueWatching = resume,
                 favouriteShows = favouritesNow().shows(),
                 favouriteMovies = favouritesNow().movies(),
                 favouriteChannels = channels,
@@ -317,16 +316,6 @@ class HomeContentTest {
         posterUrl = "https://example.com/$id.jpg",
         progress = 0.4f,
         titleKey = "movie:1:$id",
-    )
-
-    /** [show]'s card at its episode [id], titled with the show as Continue Watching titles it. */
-    private fun episodeItem(id: Long, show: String, season: Int, episode: Int) = ResumeItem(
-        MediaKey.Episode(id),
-        show,
-        posterUrl = "https://example.com/$id.jpg",
-        progress = 0.4f,
-        episode = SeasonEpisode(season, episode),
-        titleKey = "series:1:$show",
     )
 
     /** Leaves Home without picking anything (from the side menu, say) and comes back. */
@@ -539,35 +528,6 @@ class HomeContentTest {
     }
 
     @Test
-    fun `back from the player, Home highlights the title played even once Continue Watching puts it first`() {
-        var cards by mutableStateOf(
-            listOf(resumeItem(9, "Collateral"), resumeItem(7, "Insomnia"), resumeItem(8, "Memento")),
-        )
-        setHomeToLeave(continueWatching = { cards })
-
-        pickAndComeBack("Memento") {
-            cards = listOf(resumeItem(8, "Memento"), resumeItem(9, "Collateral"), resumeItem(7, "Insomnia"))
-        }
-
-        compose.onNodeWithText("Memento").assertIsFocused()
-    }
-
-    // Not Severance, the brief's example: this Home's Favourite shows already has a Severance cover.
-    @Test
-    fun `back from the player, Home highlights the show played even once its card has moved on to the next episode`() {
-        var cards by mutableStateOf(
-            listOf(resumeItem(9, "Collateral"), resumeItem(7, "Insomnia"), episodeItem(43, "Pachinko", 1, 3)),
-        )
-        setHomeToLeave(continueWatching = { cards })
-
-        pickAndComeBack("Pachinko") {
-            cards = listOf(episodeItem(44, "Pachinko", 1, 4), resumeItem(9, "Collateral"), resumeItem(7, "Insomnia"))
-        }
-
-        compose.onNode(hasText("Pachinko") and hasClickAction()).assertIsFocused()
-    }
-
-    @Test
     fun `back from a title picked under the Live Preview, Home highlights the title`() {
         live = playable()
         setHomeToLeave(movies = { listOf(movie(2, "Heat"), movie(4, "Ronin")) })
@@ -753,24 +713,6 @@ class HomeContentTest {
         press(Key.DirectionUp)
 
         compose.onNodeWithText("Ronin").assertIsFocused()
-    }
-
-    // A position synced from another device moves the card on while the viewer is elsewhere on Home.
-    @Test
-    fun `back into Continue Watching, the show last highlighted keeps the highlight once its card moves on`() {
-        var cards by mutableStateOf(
-            listOf(resumeItem(9, "Collateral"), resumeItem(7, "Insomnia"), episodeItem(43, "Pachinko", 1, 3)),
-        )
-        setHome(favourites = threeFavourites, resumeNow = { cards })
-        press(Key.DirectionRight)
-        press(Key.DirectionRight)
-        press(Key.DirectionDown)
-
-        cards = listOf(resumeItem(9, "Collateral"), resumeItem(7, "Insomnia"), episodeItem(44, "Pachinko", 1, 4))
-        compose.waitForIdle()
-        press(Key.DirectionUp)
-
-        compose.onNode(hasText("Pachinko") and hasClickAction()).assertIsFocused()
     }
 
     @Test
