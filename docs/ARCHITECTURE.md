@@ -345,6 +345,30 @@ own. A build without one has no `ServiceLocator.openSubtitles`, and with it noth
 OpenSubtitles. The files and their index live in `filesDir/subtitles` rather than Room: they never
 sync, are files anyway, and a table would cost a migration for what one JSON index does.
 
+### Up Next comes up at the credits, placed from the start
+
+The Next Episode card comes up 3 seconds into an episode's credits (#517), from timings TheIntroDB
+has (by TMDB id), or IntroDB (by IMDb id) when TheIntroDB hasn't timed the credits. `UpNextCue`
+decides where; `NextEpisodeCountdown` counts 15 seconds from there.
+
+The timings are used as the databases give them, not measured back from the stream's end, which was
+the first plan. Measuring the household provider's copies showed they line up with the databases' at
+the start and differ in length at the end (end cards, a missing ident), so measuring from the end
+put the card out by the whole difference. Timings that can't fit the stream (starting after it ends,
+in its first half, or more than 12 minutes before its end) are thrown away: a card in the middle of
+a scene is worse than one 30 seconds before the end. IntroDB's scene-after-credits rule of thumb
+(credits ending well before the stream) misfired on a measured episode, so only a database's own
+marking of a scene after the credits holds the countdown, and only where its credits fit; TheIntroDB's
+credits timed in two parts aren't taken as one, since it doesn't say what's between them. TheIntroDB
+is never sent the stream's length: given it, it picked another cut and put one episode's credits 107
+seconds early. A show's other episodes count towards its usual credits length only where their
+credits fit the length the provider gave them, which keeps out another cut's timings.
+
+The answers are kept in `episode_timings`, a cache that isn't synced, once they're settled: credits
+timed or confirmed absent, or every database asked having answered. A database that couldn't be
+reached is never kept as "nothing timed". Lookups run beside playback, so a slow or missing network
+only leaves the card at 30 seconds before the end.
+
 ## Defensive parsing of Xtream responses
 
 `XtreamApi` reads `JsonElement` by hand instead of deserialising into `@Serializable` data

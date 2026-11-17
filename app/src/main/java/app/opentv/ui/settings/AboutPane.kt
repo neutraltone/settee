@@ -135,6 +135,13 @@ internal fun AboutPane(onOpenFontLicences: () -> Unit, checkForUpdate: UpdateChe
     )
 
     TmdbAttribution(Modifier.padding(top = 12.dp))
+    // IntroDB's data is ODbL, which asks for this; TheIntroDB may ask for credit, and gets it anyway.
+    Text(
+        stringResource(R.string.timings_attribution),
+        SetteeType.Body,
+        color = SetteeColors.QuietText,
+        modifier = Modifier.padding(top = 12.dp),
+    )
 
     whatsNew?.let { WhatsNewDialog(BuildConfig.VERSION_NAME, it) { whatsNew = null } }
 }

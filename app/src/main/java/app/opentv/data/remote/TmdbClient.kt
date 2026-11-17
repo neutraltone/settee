@@ -115,6 +115,14 @@ class TmdbClient(
         return o["imdb_id"]?.jsonPrimitive?.contentOrNull?.takeIf { it.startsWith("tt") }
     }
 
+    /** The TMDB id of the show called [title], by a title(+year) search; null with no key or no match. */
+    fun seriesId(title: String, year: Int?): String? {
+        val key = credential ?: return null
+        return TmdbTitle(isMovie = false, title, year, providersId = null)
+            .takeIf { it.query.isNotBlank() }
+            ?.let { asked -> searchId(asked) { get(it, key) } }
+    }
+
     /** Finds the best-matching TMDB id, retrying without the year filter if a year search comes back empty. */
     private fun searchId(title: TmdbTitle, read: (HttpUrl) -> JsonElement?): String? {
         val (isMovie, _, year) = title

@@ -27,6 +27,15 @@ gave), and asks again whenever you open a title's page. It sends the title being
 Settee's own key, nothing about you or what you watch, though TMDB sees your device's IP address as
 any website does. A build made without Settee's key, such as a fork, never asks TMDB.
 
+[TheIntroDB](https://theintrodb.org) and [IntroDB](https://introdb.app), for when an episode's
+credits start, so the Next Episode card comes up then rather than near the end. When an episode
+starts, and again in the background for the episode after it, Settee asks TheIntroDB for that
+episode by the show's TMDB id, season and episode number, and asks IntroDB the same by the show's
+IMDb id only when TheIntroDB hasn't timed its credits. Unlike TMDB's lookups, these say which
+episode you're watching: nothing else about you, though both see your device's IP address. What
+they answer stays on your device, isn't synced, and is asked again only for an episode nobody had
+timed, after a week. Turn off Settings → Display → Skip intros and credits and neither is asked.
+
 ## Cleartext HTTP
 
 The app allows plain HTTP (`usesCleartextTraffic="true"`). The overwhelming majority of IPTV

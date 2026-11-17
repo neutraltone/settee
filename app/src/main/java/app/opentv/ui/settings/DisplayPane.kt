@@ -39,6 +39,7 @@ internal fun DisplayPane(onOpenHomeRows: () -> Unit = {}) {
     val subtitles by graph.profileSettings.subtitlePreference.collectAsState(initial = null)
     val profileName = activeProfileName()
     val playNext by settings.playNextAutomatically.collectAsState()
+    val skipIntros by settings.skipIntrosAndCredits.collectAsState()
     val previewVideo by settings.guidePreviewVideo.collectAsState()
     val previewSound by settings.guidePreviewSound.collectAsState()
     val language by settings.languageTag.collectAsState()
@@ -66,6 +67,12 @@ internal fun DisplayPane(onOpenHomeRows: () -> Unit = {}) {
         stringResource(R.string.settings_row_play_next),
         onClick = { settings.setPlayNextAutomatically(!playNext) },
         switch = playNext,
+    )
+    ListRow(
+        stringResource(R.string.settings_row_skip_intros),
+        onClick = { settings.setSkipIntrosAndCredits(!skipIntros) },
+        switch = skipIntros,
+        note = stringResource(R.string.settings_row_skip_intros_note),
     )
     // A Profile's, like the Subtitle Preference: its own screen, as moving rows needs room.
     val homeRows = screenRow("home-rows", onOpenHomeRows)

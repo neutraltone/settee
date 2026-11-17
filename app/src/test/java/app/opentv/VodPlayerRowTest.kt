@@ -334,7 +334,9 @@ class VodPlayerRowTest {
 
     @Test
     fun `the Next Episode card coming up counts as leaving the bar`() {
-        val nearTheEnd = 3_588_000L
+        // 24 s before the end of the hour: the card's up, with 9 s of its countdown left (no timings,
+        // so it runs from 30 to 15 s before the end).
+        val nearTheEnd = 3_576_000L
         runBlocking { graph.database.episodes().upsertAll((1..2).map { testEpisode(1, it) }) }
         compose.setTvContent { VodPlayerContent(controller, viewModel, false, noPicks, onBack = {}) }
         runBlocking { viewModel.attach(testEpisode(1, 1).key, playback) }
@@ -358,7 +360,9 @@ class VodPlayerRowTest {
 
     @Test
     fun `a finger on the bar when the Next Episode card comes up doesn't leave the bar stuck`() {
-        val nearTheEnd = 3_588_000L
+        // 24 s before the end of the hour: the card's up, with 9 s of its countdown left (no timings,
+        // so it runs from 30 to 15 s before the end).
+        val nearTheEnd = 3_576_000L
         runBlocking { graph.database.episodes().upsertAll((1..2).map { testEpisode(1, it) }) }
         compose.setTvContent { VodPlayerContent(controller, viewModel, false, noPicks, onBack = {}) }
         runBlocking { viewModel.attach(testEpisode(1, 1).key, playback) }

@@ -252,9 +252,9 @@ class VodPlayerViewModelTest {
         graph.database.episodes().upsertAll((1..3).map { testEpisode(1, it) })
         val vm = VodPlayerViewModel(app, graph)
         vm.attach(testEpisode(1, 1).key, playback)
-        // Three minutes long, the card up with 10 seconds left: under 93% through.
+        // Three minutes long, the card up with 10 seconds of its countdown left: under 93% through.
         playback.durationMillis = 180_000
-        playback.positionMillis = 170_000
+        playback.positionMillis = 155_000
         vm.poll()
 
         vm.ok()

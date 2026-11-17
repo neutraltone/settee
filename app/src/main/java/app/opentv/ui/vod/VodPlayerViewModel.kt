@@ -14,10 +14,13 @@ import app.opentv.data.model.Episode
 import app.opentv.data.repo.MediaKey
 import app.opentv.data.repo.VodQualities
 import app.opentv.data.repo.WatchStatus
+import app.opentv.player.CuePlacement
 import app.opentv.player.NextEpisodeCountdown
 import app.opentv.player.NextEpisodeCountdown.Decision
 import app.opentv.player.NextEpisodeCountdown.Overlay
 import app.opentv.player.PlayerController
+import app.opentv.player.UpNextCue
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -140,6 +143,7 @@ class VodPlayerViewModel(
     /** Held while moving to another episode, so a second press waits for the move before it. */
     internal val moving = Mutex()
     private var fetchingNext: Job? = null
+    private val timings = UpNextTimings(graph)
     private val lookup = NextEpisodeLookup(graph)
 
     /**
@@ -267,6 +271,8 @@ class VodPlayerViewModel(
             next = episode
             _nextEpisode.value = episode?.let { lookup.card(it) }
             countdown.newEpisode(hasNext = episode != null)
+            countdown.cue = timings.cue
+            timings.lookAhead(viewModelScope, episode)
             _overlay.value = countdown.overlay
             _episodeSteps.value = EpisodeSteps(previous = previous != null, next = episode != null, of = _current.value)
         }
@@ -288,6 +294,7 @@ class VodPlayerViewModel(
         val episode = (key as? MediaKey.Episode)?.let { graph.catalogRepository.episode(it.episodeId) }
         val (before, after) = graph.viewerLibrary.nextEpisodes.around(episode)
         previous = before
+        timings.lookUp(viewModelScope, episode, stillPlaying = { _current.value == key }) { countdown.cue = it }
         offer(after)
         if (episode != null && next == null) {
             fetchingNext = viewModelScope.launch {
@@ -388,5 +395,42 @@ private class NextEpisodeLookup(private val graph: ServiceLocator.Graph) {
         // The card is landscape, like an episode still: the wide backdrop fits it best.
         val image = episode.stillUrl ?: series?.backdropUrl ?: series?.posterUrl
         return VodPlayerViewModel.NextEpisodeCard(episode.season, episode.episodeNumber, episode.title, image)
+    }
+}
+
+/**
+ * Where the Next Episode card comes up in what's playing (#517): 30 seconds before the end until the
+ * episode's timings arrive. Held here as well as in the countdown, which forgets it on every
+ * newEpisode, because a Next Episode found late is offered again for the same episode.
+ */
+private class UpNextTimings(private val graph: ServiceLocator.Graph) {
+    var cue: CuePlacement = UpNextCue::fallback
+        private set
+    private var job: Job? = null
+
+    private val wanted: Boolean get() = graph.settings.skipIntrosAndCredits.value
+
+    /**
+     * Starts again at the fallback for [episode], then looks up its timings beside playback, not before
+     * it, so a slow or missing network only leaves the card at 30 seconds before the end. [placed] gets
+     * the cue they give, while the episode is [stillPlaying].
+     */
+    fun lookUp(scope: CoroutineScope, episode: Episode?, stillPlaying: () -> Boolean, placed: (CuePlacement) -> Unit) {
+        job?.cancel()
+        cue = UpNextCue::fallback
+        if (episode == null || !wanted) return
+        job = scope.launch {
+            // Timings only ever improve on the fallback: nothing about them is worth an error on screen.
+            val found = runCatching { graph.episodeTimings.timingsFor(episode) }.getOrNull()
+            if (found == null || !stillPlaying()) return@launch
+            cue = { streamMillis -> UpNextCue.place(found.timings, found.restOfShow, streamMillis) }
+            placed(cue)
+        }
+    }
+
+    /** Looks up the Next Episode's timings, whenever it's found, so they're there when it starts. */
+    fun lookAhead(scope: CoroutineScope, next: Episode?) {
+        if (next == null || !wanted) return
+        scope.launch { runCatching { graph.episodeTimings.timingsFor(next) } }
     }
 }

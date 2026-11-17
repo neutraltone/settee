@@ -20,6 +20,7 @@ import app.opentv.data.model.ChannelHiddenChange
 import app.opentv.data.model.EpgChannelAlias
 import app.opentv.data.model.EpgFeed
 import app.opentv.data.model.Episode
+import app.opentv.data.model.EpisodeTimings
 import app.opentv.data.model.Favourite
 import app.opentv.data.model.LivePlayback
 import app.opentv.data.model.LiveStreamFormat
@@ -40,6 +41,7 @@ import app.opentv.data.model.SeriesRule
 import app.opentv.data.model.Source
 import app.opentv.data.model.SourceKind
 import app.opentv.data.model.StreamKind
+import app.opentv.data.model.TimingsSource
 
 class Converters {
     @TypeConverter fun sourceKindToString(value: SourceKind): String = value.name
@@ -61,6 +63,11 @@ class Converters {
 
     @TypeConverter fun stringToRecordingStatus(value: String): RecordingStatus =
         runCatching { RecordingStatus.valueOf(value) }.getOrDefault(RecordingStatus.FAILED)
+
+    @TypeConverter fun timingsSourceToString(value: TimingsSource?): String? = value?.name
+
+    @TypeConverter fun stringToTimingsSource(value: String?): TimingsSource? =
+        value?.let { runCatching { TimingsSource.valueOf(it) }.getOrNull() }
 }
 
 @Database(
@@ -88,8 +95,9 @@ class Converters {
         Recording::class,
         SeriesRule::class,
         Reminder::class,
+        EpisodeTimings::class,
     ],
-    version = 19,
+    version = 20,
     exportSchema = true,
 )
 @TypeConverters(Converters::class)
@@ -115,6 +123,7 @@ abstract class OpenTvDatabase : RoomDatabase() {
     abstract fun recordings(): RecordingDao
     abstract fun seriesRules(): SeriesRuleDao
     abstract fun reminders(): ReminderDao
+    abstract fun episodeTimings(): EpisodeTimingsDao
 
     companion object {
         const val FILE_NAME = "opentv.db"
@@ -348,6 +357,23 @@ abstract class OpenTvDatabase : RoomDatabase() {
         }
 
         /**
+         * 19 → 20: where episodes' intros, recaps and credits fall, looked up from TheIntroDB and IntroDB
+         * so the Next Episode card comes up as the credits start (#517). A cache that starts empty.
+         */
+        private val EPISODE_TIMINGS = object : Migration(19, 20) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `episode_timings` (`show` TEXT NOT NULL, `season` INTEGER NOT NULL, " +
+                        "`episode` INTEGER NOT NULL, `introStartMillis` INTEGER, `introEndMillis` INTEGER, " +
+                        "`recapStartMillis` INTEGER, `recapEndMillis` INTEGER, `creditsStartMillis` INTEGER, " +
+                        "`creditsEndMillis` INTEGER, `sceneAfterCredits` INTEGER NOT NULL, " +
+                        "`noIntro` INTEGER NOT NULL, `noRecap` INTEGER NOT NULL, `noCredits` INTEGER NOT NULL, " +
+                        "`source` TEXT, `fetchedAtMillis` INTEGER NOT NULL, PRIMARY KEY(`show`, `season`, `episode`))",
+                )
+            }
+        }
+
+        /**
          * Every migration, in order. Shared with the migration test so neither list can lag. None
          * before 9: those schemas are wiped instead (see [WIPED_SCHEMAS]).
          */
@@ -362,6 +388,7 @@ abstract class OpenTvDatabase : RoomDatabase() {
                 POSTER_REASK,
                 TMDB_RECOMMENDATIONS,
                 SERVER_TIME_ZONE,
+                EPISODE_TIMINGS,
             )
 
         /** The schemas opened empty rather than migrated; see [build]. */

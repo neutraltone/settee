@@ -249,6 +249,19 @@ class AppSettings private constructor(context: Context, fileName: String = "open
         _playNextAutomatically.value = enabled
     }
 
+    /**
+     * Whether episodes' timings are looked up on TheIntroDB and IntroDB, so the Next Episode card comes
+     * up as the credits start (#517). On by default; off, nothing is asked and the card comes up 30
+     * seconds before the end.
+     */
+    private val _skipIntrosAndCredits = MutableStateFlow(prefs.getBoolean(KEY_SKIP_INTROS_CREDITS, true))
+    val skipIntrosAndCredits: StateFlow<Boolean> = _skipIntrosAndCredits.asStateFlow()
+
+    fun setSkipIntrosAndCredits(enabled: Boolean) {
+        prefs.edit { putBoolean(KEY_SKIP_INTROS_CREDITS, enabled) }
+        _skipIntrosAndCredits.value = enabled
+    }
+
     // ---- Recording behaviour -----------------------------------------------------------------
 
     /** Minutes to start a scheduled recording early, so a late start isn't clipped. */
@@ -619,6 +632,7 @@ class AppSettings private constructor(context: Context, fileName: String = "open
         private const val KEY_PROFILE_ADDS = "profile_adds"
         private const val KEY_LIVE_PREVIEW_HOME_BEFORE = "live_preview_on_home"
         private const val KEY_PLAY_NEXT = "play_next_automatically"
+        private const val KEY_SKIP_INTROS_CREDITS = "skip_intros_and_credits"
         private const val KEY_CONTENT_LIVE = "content_live"
         private const val KEY_CONTENT_MOVIES = "content_movies"
         private const val KEY_CONTENT_SERIES = "content_series"

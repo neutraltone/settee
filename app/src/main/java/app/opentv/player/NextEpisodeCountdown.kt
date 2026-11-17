@@ -5,12 +5,16 @@
  */
 package app.opentv.player
 
+/** Where the Next Episode card comes up in a stream of a given length. */
+typealias CuePlacement = (streamMillis: Long) -> NextEpisodeCountdown.Cue
+
 /**
  * Decides when the episode player offers the Next Episode and when it plays it.
  *
- * The countdown is the time left in the episode rather than a timer of its own, so pausing holds
- * it and seeking moves it with no extra bookkeeping, and "the countdown ran out" and "the episode
- * ended" are the same moment. [autoPlay] is read on every update, so the setting applies at once.
+ * The card comes up at the episode's [cue] and counts down 15 seconds from there. The countdown is
+ * worked out from the position rather than kept as a timer of its own, so pausing holds it and
+ * seeking moves it with no extra bookkeeping. [autoPlay] is read on every update, so the setting
+ * applies at once.
  */
 class NextEpisodeCountdown(
     private val autoPlay: () -> Boolean = { true },
@@ -23,11 +27,17 @@ class NextEpisodeCountdown(
      */
     data class Playback(val positionMillis: Long, val durationMillis: Long, val ended: Boolean = false)
 
+    /**
+     * Where the card comes up, [cardAtMillis] into the stream, and whether it [countsDown] from there:
+     * not when a scene follows the credits, which the countdown would skip.
+     */
+    data class Cue(val cardAtMillis: Long, val countsDown: Boolean = true)
+
     /** What the player draws over the picture. */
     sealed interface Overlay {
         data object None : Overlay
 
-        /** The Next Episode card, [secondsLeft] before the episode ends; [counting] when it will play on its own. */
+        /** The Next Episode card, [secondsLeft] before it plays; [counting] when it will play on its own. */
         data class Card(val secondsLeft: Int, val counting: Boolean) : Overlay
 
         /** "Are you still watching?", with playback paused; [streamStopped] once the provider connection is let go. */
@@ -49,10 +59,17 @@ class NextEpisodeCountdown(
     var overlay: Overlay = Overlay.None
         private set
 
+    /**
+     * Where the card comes up in a stream [durationMillis] long. A function of the length because the
+     * timings are placed against the stream, whose length isn't known until it plays; replaced when the
+     * episode's timings arrive, and put back to [UpNextCue.fallback] by [newEpisode].
+     */
+    var cue: CuePlacement = UpNextCue::fallback
+
     private var hasNext = false
 
-    // Cancel holds only while playback stays in the last 15 seconds: a viewer who seeks back out
-    // and lets it reach the end again gets the card again.
+    // Cancel holds only while playback stays past the card: a viewer who seeks back before it and
+    // lets it reach the credits again gets the card again.
     private var cancelled = false
 
     /** Episodes in a row the countdown started with nobody touching the remote. */
@@ -63,6 +80,7 @@ class NextEpisodeCountdown(
     /** A new episode started; [hasNext] is whether it has a Next Episode. */
     fun newEpisode(hasNext: Boolean) {
         this.hasNext = hasNext
+        cue = UpNextCue::fallback
         cancelled = false
         overlay = Overlay.None
     }
@@ -70,30 +88,41 @@ class NextEpisodeCountdown(
     /** Takes where playback is now, polled while the episode plays; returns what to do, if anything. */
     fun update(playback: Playback): Decision? {
         (overlay as? Overlay.StillWatching)?.let { return whileAsking(it) }
-        val leftMillis = playback.durationMillis - playback.positionMillis
-        // Without a known length there is no "15 seconds before the end"; and a card that comes
-        // up almost as soon as a short clip starts would be in the way rather than helpful.
-        val offered = hasNext && playback.durationMillis >= MIN_PLAY_MILLIS + CARD_MILLIS
-        val inCredits = leftMillis <= CARD_MILLIS
+        return if (showCard(playback)) runOut() else null
+    }
+
+    /** Puts the card up or takes it down for [playback]; true when its time has run out. */
+    private fun showCard(playback: Playback): Boolean {
+        // Without a known length there is nothing to place the card against, and a card that comes up
+        // almost as soon as a short clip starts would be in the way rather than helpful.
+        val cue = playback.durationMillis.takeIf { it > 0 }?.let(cue)
+        if (!hasNext || cue == null || cue.cardAtMillis < MIN_PLAY_MILLIS) {
+            overlay = Overlay.None
+            return false
+        }
+        // A stream can stop short of its cue, when the timings were for a longer cut: it still moves on.
+        val inCredits = playback.positionMillis >= cue.cardAtMillis || playback.ended
         if (!inCredits) cancelled = false
-        overlay = if (offered && inCredits && !cancelled) {
-            Overlay.Card(secondsLeft = ((leftMillis + 999) / 1_000).toInt(), counting = autoPlay())
+        val leftMillis = (cue.cardAtMillis + COUNTDOWN_MILLIS - playback.positionMillis).coerceIn(0, COUNTDOWN_MILLIS)
+        val counting = autoPlay() && cue.countsDown
+        val showing = inCredits && !cancelled
+        overlay = if (showing) {
+            Overlay.Card(secondsLeft = ((leftMillis + 999) / 1_000).toInt(), counting = counting)
         } else {
             Overlay.None
         }
-        val card = overlay as? Overlay.Card
-        return when {
-            card?.counting != true || (leftMillis > 0 && !playback.ended) -> null
-            unattended >= UNATTENDED_RUN -> {
-                overlay = Overlay.StillWatching(streamStopped = false)
-                askedAtMillis = clock()
-                Decision.Pause
-            }
-            else -> {
-                unattended++
-                moveOn()
-            }
-        }
+        // Without a countdown, as when a scene follows the credits, the episode's end is when it moves on.
+        return showing && ((playback.ended && autoPlay()) || (counting && leftMillis == 0L))
+    }
+
+    /** The card's time ran out: on to the Next Episode, unless nobody seems to be watching. */
+    private fun runOut(): Decision = if (unattended >= UNATTENDED_RUN) {
+        overlay = Overlay.StillWatching(streamStopped = false)
+        askedAtMillis = clock()
+        Decision.Pause
+    } else {
+        unattended++
+        moveOn()
     }
 
     /** While "Are you still watching?" waits: nothing plays, and after a while the stream goes. */
@@ -137,7 +166,7 @@ class NextEpisodeCountdown(
     }
 
     private companion object {
-        const val CARD_MILLIS = 15_000L
+        const val COUNTDOWN_MILLIS = 15_000L
         const val MIN_PLAY_MILLIS = 30_000L
         const val UNATTENDED_RUN = 3
         const val STOP_STREAM_AFTER_MILLIS = 5 * 60_000L
