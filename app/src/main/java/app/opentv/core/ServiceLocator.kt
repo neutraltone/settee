@@ -9,15 +9,19 @@ import android.content.Context
 import android.util.Log
 import app.opentv.BuildConfig
 import app.opentv.data.db.OpenTvDatabase
+import app.opentv.data.remote.IntroDbClient
 import app.opentv.data.remote.OpenSubtitlesClient
 import app.opentv.data.remote.StalkerApi
 import app.opentv.data.remote.StremioClient
+import app.opentv.data.remote.TheIntroDbClient
+import app.opentv.data.remote.TmdbClient
 import app.opentv.data.remote.XtreamApi
 import app.opentv.data.repo.CatalogRepository
 import app.opentv.data.repo.CatalogueRefresh
 import app.opentv.data.repo.ChannelLineup
 import app.opentv.data.repo.DownloadedSubtitles
 import app.opentv.data.repo.EpgRepository
+import app.opentv.data.repo.EpisodeTimingsRepository
 import app.opentv.data.repo.KeystoreSealer
 import app.opentv.data.repo.OpenSubtitles
 import app.opentv.data.repo.OpenSubtitlesAccount
@@ -148,6 +152,18 @@ object ServiceLocator {
                 tmdbKey = tmdbKey,
                 wording = errorWording,
             ).apply { staging = appContext.cacheDir }
+        }
+
+        /** Where episodes' intros and credits fall, for the Next Episode card (#517). */
+        val episodeTimings: EpisodeTimingsRepository by lazy {
+            EpisodeTimingsRepository(
+                dao = database.episodeTimings(),
+                theIntroDb = TheIntroDbClient(httpClient),
+                introDb = IntroDbClient(httpClient),
+                tmdb = TmdbClient(httpClient, tmdbKey),
+                seriesOf = catalogRepository::seriesOf,
+                clock = clock,
+            )
         }
 
         /** The one place a title becomes something playable (see [PlaybackSources]). */

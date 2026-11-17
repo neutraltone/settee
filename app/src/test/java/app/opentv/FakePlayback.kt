@@ -64,7 +64,8 @@ val Episode.key get() = MediaKey.Episode(id)
 
 /** Plays what [playback] has on through the Next Episode card to its end, polling as the screen does. */
 suspend fun VodPlayerViewModel.playToEnd(playback: FakePlayback) {
-    playback.positionMillis = EPISODE_MILLIS - 10_000
+    // Inside the countdown, which with no timings runs from 30 to 15 seconds before the end.
+    playback.positionMillis = EPISODE_MILLIS - 20_000
     poll()
     playback.positionMillis = EPISODE_MILLIS
     poll()

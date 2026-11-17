@@ -227,6 +227,30 @@ class RoomMigrationTest {
         }
     }
 
+    @Test
+    fun `20 adds an empty table for episode timings and keeps every Favourite and resume point`() {
+        val name = "episode-timings.db"
+        helper.createDatabase(name, 19).use { db ->
+            db.execSQL(
+                "INSERT INTO playback_positions (profileId, mediaKey, positionMillis, durationMillis, " +
+                    "updatedAtMillis, mark) VALUES (1, 'ep:7', 600000, 2400000, 50, NULL)",
+            )
+        }
+
+        helper.runMigrationsAndValidate(name, 20, true, *OpenTvDatabase.MIGRATIONS).use { db ->
+            assertThat(db.first("SELECT COUNT(*) FROM episode_timings")).isEqualTo("0")
+            db.execSQL(
+                "INSERT INTO episode_timings (show, season, episode, creditsStartMillis, sceneAfterCredits, " +
+                    "noIntro, noRecap, noCredits, source, fetchedAtMillis) " +
+                    "VALUES ('tmdb:1', 1, 1, 3432884, 0, 0, 0, 0, 'theintrodb', 5)",
+            )
+            assertThat(db.first("SELECT creditsStartMillis FROM episode_timings WHERE show = 'tmdb:1'"))
+                .isEqualTo("3432884")
+            assertThat(db.first("SELECT positionMillis FROM playback_positions WHERE mediaKey = 'ep:7'"))
+                .isEqualTo("600000")
+        }
+    }
+
     /** The first column of [sql]'s first row. */
     private fun SupportSQLiteDatabase.first(sql: String): String = query(sql).use { row ->
         row.moveToFirst()

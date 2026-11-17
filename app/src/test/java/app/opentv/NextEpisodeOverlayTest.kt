@@ -21,7 +21,10 @@ import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
 import androidx.test.core.app.ApplicationProvider
 import app.opentv.core.ServiceLocator
+import app.opentv.data.model.EpisodeTimings
+import app.opentv.data.model.Series
 import app.opentv.data.repo.MediaKey
+import app.opentv.player.NextEpisodeCountdown.Overlay
 import app.opentv.ui.vod.NextEpisodeOverlay
 import app.opentv.ui.vod.VodPlayerViewModel
 import app.opentv.ui.vod.countsAsInput
@@ -85,7 +88,7 @@ class NextEpisodeOverlayTest {
     }
 
     @Test
-    fun `15 seconds from the end the Next Episode card comes up with focus and a countdown`() {
+    fun `with no timings, 30 seconds from the end the Next Episode card comes up with focus and a countdown`() {
         showPlayer()
 
         secondsLeft(12)
@@ -94,6 +97,68 @@ class NextEpisodeOverlayTest {
         compose.onNodeWithText("Episode 2").assertExists()
         compose.onNodeWithText("Play now").assertIsFocused()
         captureScreen("vod_player_next_episode_card")
+    }
+
+    /**
+     * The player over S1 E1 of a show whose episode TheIntroDB timed, credits at 38:00 of 40:00, with
+     * [sceneAfter] a scene after them; kept on the device already, so nothing is asked.
+     */
+    private fun showTimedPlayer(sceneAfter: Boolean = false) {
+        runBlocking {
+            graph.database.series().upsertAll(
+                listOf(
+                    Series(
+                        sourceId = 1,
+                        seriesId = "s",
+                        name = "The Show",
+                        categoryId = null,
+                        posterUrl = null,
+                        rating = null,
+                        year = null,
+                        plot = null,
+                        tmdbId = "1396",
+                    ),
+                ),
+            )
+            graph.database.episodeTimings().upsert(
+                EpisodeTimings(
+                    show = "tmdb:1396",
+                    season = 1,
+                    episode = 1,
+                    creditsStartMillis = TIMED_CREDITS_MILLIS,
+                    sceneAfterCredits = sceneAfter,
+                    source = EpisodeTimings.THE_INTRO_DB,
+                    fetchedAtMillis = System.currentTimeMillis(),
+                ),
+            )
+        }
+        showPlayer()
+        // The timings are read beside playback: poll 3 s into the credits until they've placed the card.
+        compose.waitUntil(5_000) {
+            playback.positionMillis = TIMED_CREDITS_MILLIS + 3_000
+            runBlocking { vm.poll() }
+            vm.overlay.value != Overlay.None
+        }
+        compose.waitForIdle()
+    }
+
+    @Test
+    fun `on a timed episode the card comes up 3 seconds into the credits and counts down from 15`() {
+        showTimedPlayer()
+
+        compose.onNodeWithText("Next episode in 15").assertExists()
+        compose.onNodeWithText("Play now").assertIsFocused()
+        captureScreen("vod_player_next_episode_card_credits")
+    }
+
+    @Test
+    fun `before a scene after the credits the card comes up without a countdown`() {
+        showTimedPlayer(sceneAfter = true)
+
+        compose.onNodeWithText("Next episode in 15").assertDoesNotExist()
+        compose.onNodeWithText("Episode 2").assertExists()
+        compose.onNodeWithText("Play now").assertIsFocused()
+        captureScreen("vod_player_next_episode_card_after_credits_scene")
     }
 
     @Test
@@ -267,11 +332,17 @@ internal suspend fun VodPlayerViewModel.startSeason(graph: ServiceLocator.Graph,
     attach(testEpisode(1, 1).key, playback)
 }
 
-/** Moves [playback] to [seconds] from the episode's end and polls, as the player screen does. */
+/**
+ * Moves [playback] to [seconds] before the card's countdown runs out and polls, as the player screen
+ * does. With no timings the countdown runs out 15 seconds before the episode's end.
+ */
 internal suspend fun VodPlayerViewModel.pollWithSecondsLeft(playback: FakePlayback, seconds: Int) {
-    playback.positionMillis = EPISODE_MILLIS - seconds * 1_000L
+    playback.positionMillis = EPISODE_MILLIS - 15_000L - seconds * 1_000L
     poll()
 }
 
 /** Where the Next Episode card's episode line is drawn, its rise included. */
 internal fun ComposeContentTestRule.cardTop() = onNodeWithText("Episode 2").getUnclippedBoundsInRoot().top
+
+/** Where the timed episode's credits start: 38:00 of the 40-minute episode. */
+private const val TIMED_CREDITS_MILLIS = EPISODE_MILLIS - 120_000L

@@ -182,6 +182,8 @@
     <string name="settings_row_sleep_timer">Sleep timer</string>
     <string name="settings_row_sleep_left">%1$d min left</string>
     <string name="settings_row_play_next">Play the next episode by itself</string>
+    <string name="settings_row_skip_intros">Skip intros and credits</string>
+    <string name="settings_row_skip_intros_note">Uses TheIntroDB and IntroDB, free community lists of when intros and credits start. They\'re told which episode you\'re watching, nothing else.</string>
     <string name="settings_row_guide_preview">Play the highlighted channel in the guide</string>
     <string name="settings_row_guide_preview_sound">Guide preview sound</string>
     <string name="settings_row_language">Language</string>
@@ -636,6 +638,7 @@
     <string name="settings_pane_opensubtitles_hint">Subtitles for films and episodes that have none</string>
     <string name="opensubtitles_qr_desc">QR code for signing in to OpenSubtitles from your phone</string>
     <string name="tmdb_attribution">This product uses the TMDB API but is not endorsed or certified by TMDB.</string>
+    <string name="timings_attribution">Intro and credits timings from TheIntroDB (theintrodb.org), and from IntroDB (introdb.app) under the Open Database License.</string>
     <string name="tmdb_logo_desc">TMDB</string>
     <string name="onboarding_carry_on">Carry on</string>
     <string name="pairing_phone_skipped_title">Skipped for now</string>

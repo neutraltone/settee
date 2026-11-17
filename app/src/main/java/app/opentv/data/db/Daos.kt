@@ -25,6 +25,7 @@ import app.opentv.data.model.CreditedTitle
 import app.opentv.data.model.EpgChannelAlias
 import app.opentv.data.model.EpgFeed
 import app.opentv.data.model.Episode
+import app.opentv.data.model.EpisodeTimings
 import app.opentv.data.model.Favourite
 import app.opentv.data.model.GuideAlias
 import app.opentv.data.model.GuideFingerprint
@@ -2004,3 +2005,17 @@ internal const val EPISODES_OF_PLAYED_SERIES =
         "FROM playback_positions JOIN episodes AS played ON playback_positions.mediaKey = 'ep:' || played.id " +
         "WHERE playback_positions.profileId = :profileId) AS played_series " +
         "ON episodes.sourceId = played_series.sourceId AND episodes.seriesId = played_series.seriesId"
+
+/** The intro, recap and credits timings looked up for episodes (#517); a cache, so never synced. */
+@Dao
+interface EpisodeTimingsDao {
+    @Query("SELECT * FROM episode_timings WHERE show = :show AND season = :season AND episode = :episode")
+    suspend fun get(show: String, season: Int, episode: Int): EpisodeTimings?
+
+    /** Every episode of [show] looked up so far, for its usual credits length. */
+    @Query("SELECT * FROM episode_timings WHERE show = :show")
+    suspend fun forShow(show: String): List<EpisodeTimings>
+
+    @Upsert
+    suspend fun upsert(timings: EpisodeTimings)
+}

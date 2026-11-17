@@ -563,7 +563,7 @@ class VodPlayerContentTest {
         press(Key.Menu)
         inList("Sleep timer").assertExists()
 
-        fake.positionMillis = EPISODE_MILLIS - 10_000
+        fake.positionMillis = EPISODE_MILLIS - 25_000
         runBlocking { viewModel.poll() }
         compose.waitForIdle()
         inList("Sleep timer").assertDoesNotExist()
