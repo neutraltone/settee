@@ -283,7 +283,7 @@ private fun SeasonPills(nav: ShowPageNav, shown: ShowSeasons, pillRow: LazyListS
                 onOptions = openOptions,
                 modifier = Modifier
                     .then(if (isSelected) Modifier.focusRequester(nav.focus.pill) else Modifier)
-                    .onFocusChanged { if (it.isFocused) nav.pickSeason(season.number) },
+                    .onFocusChanged { if (it.isFocused) nav.pickSeason(season.number, shown) },
             )
         }
         if (shown.hasLikeThis) {
@@ -447,6 +447,12 @@ private fun EpisodeListScrollEffects(nav: ShowPageNav, shown: ShowSeasons, episo
         val index = shown.selected?.episodes?.indexOfFirst { it.id == opening?.id } ?: -1
         if (index >= 0) episodeList.scrollToItem(index)
     }
+    // A season picked on the pills lists from its first episode. Not one chosen from the list: that
+    // scrolls to its own episode (ShowPageFocusEffects).
+    LaunchedEffect(nav.listTopTarget) {
+        nav.listTopTarget ?: return@LaunchedEffect
+        episodeList.scrollToItem(0)
+    }
     // On a season's last episode, bring what's faded beneath it into view: the next season's first
     // episode, or More like this. Asking for the last item scrolls only as far as the end of the list.
     LaunchedEffect(nav.focusedEpisode) {
@@ -523,6 +529,8 @@ private class ShowPageNav {
         private set
     var buttonTarget by mutableStateOf<ButtonTarget?>(null)
         private set
+    var listTopTarget by mutableStateOf<ListTopTarget?>(null)
+        private set
 
     fun listFocusChanged(hasFocus: Boolean) {
         inList = hasFocus
@@ -543,8 +551,14 @@ private class ShowPageNav {
         if (hasFocus) heroAway = true
     }
 
-    /** The Highlight moved onto [season]'s pill, which selects it. */
-    fun pickSeason(season: Int) {
+    /**
+     * The Highlight moved onto [season]'s pill, which selects it. A season listed this way starts at its
+     * first episode, so Down from the pill reaches Episode 1 (#428): the seasons share one list, which
+     * would otherwise keep the last season's scroll. Arriving back on the pill already selected (Back, Up
+     * from the first episode) leaves the list where it was.
+     */
+    fun pickSeason(season: Int, shown: ShowSeasons) {
+        if (season != shown.selected?.number || likeThis) listTopTarget = ListTopTarget()
         pickedSeason = season
         likeThis = false
     }
@@ -620,6 +634,9 @@ private class PillTarget
 
 /** A request to move from the episodes onto More like this's first cover. */
 private class LikeThisTarget
+
+/** A request to scroll the episode list back to its first episode. */
+private class ListTopTarget
 
 /** A request to highlight [episode]; a fresh one each time, so asking twice for the same episode still moves. */
 private class EpisodeTarget(val episode: Episode)
