@@ -11,10 +11,9 @@ typealias CuePlacement = (streamMillis: Long) -> NextEpisodeCountdown.Cue
 /**
  * Decides when the episode player offers the Next Episode and when it plays it.
  *
- * The card comes up at the episode's [cue] and counts down 15 seconds from there. The countdown is
- * worked out from the position rather than kept as a timer of its own, so pausing holds it and
- * seeking moves it with no extra bookkeeping. [autoPlay] is read on every update, so the setting
- * applies at once.
+ * The card comes up at the episode's [cue] and counts down 15 seconds from there, or from wherever a
+ * seek lands in the credits. The countdown is worked out from the position rather than kept as a timer
+ * of its own, so pausing holds it. [autoPlay] is read on every update, so the setting applies at once.
  */
 class NextEpisodeCountdown(
     private val autoPlay: () -> Boolean = { true },
@@ -72,6 +71,8 @@ class NextEpisodeCountdown(
     // lets it reach the credits again gets the card again.
     private var cancelled = false
 
+    private val start = CountdownStart()
+
     /** Episodes in a row the countdown started with nobody touching the remote. */
     private var unattended = 0
 
@@ -82,6 +83,7 @@ class NextEpisodeCountdown(
         this.hasNext = hasNext
         cue = UpNextCue::fallback
         cancelled = false
+        start.clear()
         overlay = Overlay.None
     }
 
@@ -103,7 +105,9 @@ class NextEpisodeCountdown(
         // A stream can stop short of its cue, when the timings were for a longer cut: it still moves on.
         val inCredits = playback.positionMillis >= cue.cardAtMillis || playback.ended
         if (!inCredits) cancelled = false
-        val leftMillis = (cue.cardAtMillis + COUNTDOWN_MILLIS - playback.positionMillis).coerceIn(0, COUNTDOWN_MILLIS)
+        val countFrom = start.update(cue.cardAtMillis, playback, inCredits)
+        if (start.landedAtEnd) cancelled = true
+        val leftMillis = (countFrom + COUNTDOWN_MILLIS - playback.positionMillis).coerceIn(0, COUNTDOWN_MILLIS)
         val counting = autoPlay() && cue.countsDown
         val showing = inCredits && !cancelled
         overlay = if (showing) {
@@ -165,8 +169,51 @@ class NextEpisodeCountdown(
         return Decision.PlayNext
     }
 
+    /**
+     * Where the countdown runs from while playback is in the credits. Played into, that's the cue, or
+     * where playback was if late timings moved the cue behind it. Seeked or resumed into, it's where
+     * playback landed: counting from the cue would move on before the viewer saw any of what they chose,
+     * at once if they landed 15 seconds past it. Landing in the last 15 seconds is taken as choosing the
+     * end, so it plays out with no card, as after Watch credits.
+     */
+    private class CountdownStart {
+        /** Where the last update found playback, to tell playing into the credits from a seek into them. */
+        private var lastPositionMillis: Long? = null
+        private var fromMillis: Long? = null
+
+        /** Whether the last update was a seek into the last 15 seconds. */
+        var landedAtEnd = false
+            private set
+
+        fun clear() {
+            lastPositionMillis = null
+            fromMillis = null
+        }
+
+        /** Where the countdown runs from at [playback], with the card's cue at [cueMillis]. */
+        fun update(cueMillis: Long, playback: Playback, inCredits: Boolean): Long {
+            val previous = lastPositionMillis
+            lastPositionMillis = playback.positionMillis
+            landedAtEnd = false
+            fromMillis = if (inCredits) fromMillis ?: arrive(cueMillis, previous, playback) else null
+            return fromMillis ?: cueMillis
+        }
+
+        private fun arrive(cueMillis: Long, previous: Long?, playback: Playback): Long {
+            val position = playback.positionMillis
+            val playedFrom = previous?.takeIf { position - it in 0..JUMP_MILLIS }
+            landedAtEnd = playedFrom == null &&
+                !playback.ended &&
+                playback.durationMillis - position < COUNTDOWN_MILLIS
+            return maxOf(cueMillis, playedFrom ?: position)
+        }
+    }
+
     private companion object {
         const val COUNTDOWN_MILLIS = 15_000L
+
+        /** More than playback moves between two polls, half a second apart, even on a busy Stick. */
+        const val JUMP_MILLIS = 2_000L
         const val MIN_PLAY_MILLIS = 30_000L
         const val UNATTENDED_RUN = 3
         const val STOP_STREAM_AFTER_MILLIS = 5 * 60_000L

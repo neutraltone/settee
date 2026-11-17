@@ -19,10 +19,12 @@ import androidx.test.core.app.ApplicationProvider
 import androidx.test.espresso.Espresso
 import app.opentv.core.ServiceLocator
 import app.opentv.core.SleepTimer
+import app.opentv.data.repo.MediaKey
 import app.opentv.ui.player.SubtitlePicks
 import app.opentv.ui.vod.VodPlayerContent
 import app.opentv.ui.vod.VodPlayerViewModel
 import com.google.common.truth.Truth.assertThat
+import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Rule
 import org.junit.Test
@@ -75,6 +77,28 @@ class VodPlayerBackTest {
         players.play(controller)
         settle()
         assertThat(compose.seekBarIsFocused()).isTrue()
+    }
+
+    /** S1 E1 of a two-episode season, with the Next Episode card up 12 seconds before it plays. */
+    private fun showEpisodeCard() {
+        runBlocking { graph.database.episodes().upsertAll((1..2).map { testEpisode(1, it) }) }
+        val playback = FakePlayback()
+        compose.setTvContent {
+            VodPlayerContent(
+                controller,
+                viewModel,
+                false,
+                SubtitlePicks(onOff = {}, onPicked = {}),
+                onBack = { backs++ },
+            )
+        }
+        players.play(controller)
+        runBlocking {
+            viewModel.attach(testEpisode(1, 1).key, playback)
+            viewModel.pollWithSecondsLeft(playback, 12)
+        }
+        settle()
+        compose.onNodeWithText("Episode 2").assertExists()
     }
 
     private fun settle() {
@@ -156,6 +180,18 @@ class VodPlayerBackTest {
         compose.waitForIdle()
 
         assertThat(backs).isEqualTo(1)
+    }
+
+    @Test
+    fun `one Back on the Next Episode card closes it and the episode plays on`() {
+        showEpisodeCard()
+
+        Espresso.pressBack()
+        settle()
+
+        compose.onNodeWithText("Episode 2").assertDoesNotExist()
+        assertThat(backs).isEqualTo(0)
+        assertThat(viewModel.current.value).isEqualTo(MediaKey.Episode(11))
     }
 
     private companion object {

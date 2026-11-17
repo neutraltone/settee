@@ -358,9 +358,16 @@ internal suspend fun VodPlayerViewModel.startSeason(graph: ServiceLocator.Graph,
 
 /**
  * Moves [playback] to [seconds] before the card's countdown runs out and polls, as the player screen
- * does. With no timings the countdown runs out 15 seconds before the episode's end.
+ * does. With no timings the card comes up 30 seconds before the episode's end and its countdown runs
+ * out 15 seconds before it. Playback reaches the card first, as it would playing on: a jump straight
+ * into the credits is a seek, which counts down afresh from where it lands.
  */
 internal suspend fun VodPlayerViewModel.pollWithSecondsLeft(playback: FakePlayback, seconds: Int) {
+    val cardAt = EPISODE_MILLIS - 30_000L
+    if (playback.positionMillis < cardAt) {
+        playback.positionMillis = cardAt
+        poll()
+    }
     playback.positionMillis = EPISODE_MILLIS - 15_000L - seconds * 1_000L
     poll()
 }
