@@ -44,6 +44,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.job
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Before
@@ -116,6 +117,16 @@ class VodOpenSubtitlesTest {
 
     @After
     fun release() {
+        // What the subtitles launched finishes first. Cancelling doesn't stop a write already running on
+        // Room's own thread (the Subtitle Preference, written after a pick is drawn), and closing the
+        // database under it failed whichever test had just ended there. Short of the wait if the test
+        // failed with something still held, so its own failure is the one reported.
+        runCatching {
+            compose.waitUntil(WAIT_MILLIS) {
+                compose.mainClock.advanceTimeBy(FRAME_MILLIS)
+                scope.coroutineContext.job.children.none()
+            }
+        }
         scope.cancel()
         controller.release()
         players.close()

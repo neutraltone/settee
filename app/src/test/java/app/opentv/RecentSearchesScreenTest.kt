@@ -6,12 +6,15 @@
 package app.opentv
 
 import android.app.Application
+import android.view.KeyEvent
 import android.view.View
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.SemanticsNodeInteraction
+import androidx.compose.ui.test.assertIsFocused
+import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isFocused
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -31,6 +34,7 @@ import app.opentv.core.ServiceLocator
 import app.opentv.data.db.OpenTvDatabase
 import app.opentv.data.model.Channel
 import app.opentv.data.model.Movie
+import app.opentv.data.model.Series
 import app.opentv.data.model.Source
 import app.opentv.data.model.SourceKind
 import app.opentv.ui.VodViewModel
@@ -179,6 +183,42 @@ class RecentSearchesScreenTest {
         captureScreen("search_back_from_title")
     }
 
+    // Search is built again under a title page or the player, and used to put the highlight back in
+    // the box, so the viewer pressed Down through the results again (#431).
+    @Test
+    fun `back from a film opened in the results, the highlight is on that film, not the box`() = withVod { vod ->
+        showSearchInApp(vod)
+        device.type("zebra")
+
+        openFirstResultAndComeBack("Zebra Crossing")
+
+        assertBackOn("Zebra Crossing")
+    }
+
+    @Test
+    fun `back from a show opened in the results, the highlight is on that show, not the box`() =
+        withVod(movies = emptyList(), series = listOf(series("Zebra Stripes"))) { vod ->
+            showSearchInApp(vod)
+            device.type("zebra")
+
+            openFirstResultAndComeBack("Zebra Stripes")
+
+            assertBackOn("Zebra Stripes")
+            captureScreen("search_back_on_result")
+        }
+
+    @Test
+    fun `back from a channel played from the results, the highlight is on that channel, not the box`() =
+        withVod(movies = emptyList()) { vod ->
+            addChannel("Quokka News")
+            showSearchInApp(vod)
+            device.type("quokka")
+
+            openFirstResultAndComeBack("Quokka News")
+
+            assertBackOn("Quokka News")
+        }
+
     @Test
     fun `Search left and opened again at once keeps the new visit's movies as the old one finishes leaving`() =
         withVod { vod ->
@@ -207,7 +247,7 @@ class RecentSearchesScreenTest {
 
     private fun act(block: NavHostController.() -> Unit) = compose.runOnIdle { nav.block() }
 
-    /** Search in a NavHost as the app has it, over Home, with a title page it can open. */
+    /** Search in a NavHost as the app has it, over Home, with the pages and player its results open. */
     private fun showSearchInApp(vod: VodViewModel) {
         compose.setTvContent {
             view = LocalView.current
@@ -217,14 +257,16 @@ class RecentSearchesScreenTest {
                     composable(Routes.MAIN) { BasicText("Home") }
                     composable(Routes.SEARCH) {
                         SearchScreen(
-                            onPlayChannel = {},
-                            onPlayMovie = {},
-                            onOpenSeries = {},
+                            onPlayChannel = { nav.navigate(Routes.player(it.id)) },
+                            onPlayMovie = { nav.navigate(Routes.movieDetail(it.id)) },
+                            onOpenSeries = { nav.navigate(Routes.seriesDetail(it.id)) },
                             onBack = { nav.popBackStack() },
                             vodViewModel = vod,
                         )
                     }
                     composable(Routes.MOVIE_DETAIL) { BasicText("Title") }
+                    composable(Routes.SERIES_DETAIL) { BasicText("Show page") }
+                    composable(Routes.PLAYER) { BasicText("Player") }
                 }
             }
         }
@@ -233,10 +275,14 @@ class RecentSearchesScreenTest {
     }
 
     /**
-     * Runs [block] with a VodViewModel over a graph and database of its own holding one film, so the
-     * app's shared one, which outlives each test, doesn't gain a film every run.
+     * Runs [block] with a VodViewModel over a graph and database of its own holding [movies] and
+     * [series], so the app's shared one, which outlives each test, doesn't gain a film every run.
      */
-    private fun withVod(block: (VodViewModel) -> Unit) {
+    private fun withVod(
+        movies: List<Movie> = listOf(movie("Zebra Crossing")),
+        series: List<Series> = emptyList(),
+        block: (VodViewModel) -> Unit,
+    ) {
         val app = ApplicationProvider.getApplicationContext<Application>()
         val vodGraph = ServiceLocator.Graph(
             app,
@@ -249,7 +295,8 @@ class RecentSearchesScreenTest {
             vodGraph.database.sources().insert(
                 Source(id = 1, name = "Provider", kind = SourceKind.XTREAM, url = "http://example.com"),
             )
-            vodGraph.database.movies().upsertAll(listOf(movie("Zebra Crossing")))
+            vodGraph.database.movies().upsertAll(movies)
+            vodGraph.database.series().upsertAll(series)
         }
         val vod = VodViewModel(app, vodGraph)
         try {
@@ -261,6 +308,31 @@ class RecentSearchesScreenTest {
         }
     }
 
+    /** Opens the result [name], the first in the list, and comes back to Search as Back does. */
+    private fun openFirstResultAndComeBack(name: String) {
+        waitFor(name)
+        device.remote(KeyEvent.KEYCODE_DPAD_DOWN)
+        compose.onNode(hasText(name) and hasClickAction()).assertIsFocused()
+        device.remote(KeyEvent.KEYCODE_DPAD_CENTER)
+        compose.waitForIdle()
+        compose.onNode(hasText(name) and hasClickAction()).assertDoesNotExist()
+
+        act { popBackStack() }
+    }
+
+    private fun assertBackOn(name: String) {
+        compose.waitUntilAtLeastOneExists(hasText(name) and hasClickAction() and isFocused(), TIMEOUT_MILLIS)
+        assertThat(device.highlighted()).isFalse()
+    }
+
+    private fun addChannel(name: String) = runBlocking {
+        graph.database.sources().insert(
+            Source(id = 1, name = "Provider", kind = SourceKind.XTREAM, url = "http://example.com"),
+        )
+        graph.database.channels().replaceCatalogue(1, listOf(channel(name)), syncStamp = 1)
+        graph.catalogRepository.renormalizeAll()
+    }
+
     private fun channel(name: String) = Channel(
         sourceId = 1,
         streamId = name,
@@ -270,6 +342,17 @@ class RecentSearchesScreenTest {
         epgChannelId = null,
         number = null,
         streamUrl = "https://example.com/$name.ts",
+    )
+
+    private fun series(name: String) = Series(
+        sourceId = 1,
+        seriesId = name,
+        name = name,
+        categoryId = null,
+        posterUrl = null,
+        rating = null,
+        year = null,
+        plot = null,
     )
 
     private fun movie(name: String) = Movie(

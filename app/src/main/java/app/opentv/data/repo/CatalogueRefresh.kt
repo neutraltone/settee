@@ -104,7 +104,27 @@ class CatalogueRefresh(
         val last: Outcome? = null,
         /** The running or latest [Trigger.Setup]; null until one starts. */
         val setup: Setup? = null,
+        val vodFailures: VodFailures = VodFailures(),
     )
+
+    /**
+     * Each provider whose latest download of its movies or of its shows failed, with why, whatever
+     * trigger fetched it, so a tab with nothing to show can say. A download of that list that works
+     * takes the provider off again. Kept apart: one list can fail while the other arrives.
+     */
+    data class VodFailures(
+        val movies: Map<Long, ViewerError> = emptyMap(),
+        val shows: Map<Long, ViewerError> = emptyMap(),
+    ) {
+        fun after(sourceId: Long, vod: VodFetch) =
+            VodFailures(movies.after(sourceId, vod.movies), shows.after(sourceId, vod.shows))
+
+        private fun Map<Long, ViewerError>.after(sourceId: Long, list: ListFetch?) = when {
+            list == null -> this
+            list.failure == null -> this - sourceId
+            else -> this + (sourceId to list.failure)
+        }
+    }
 
     /** Where a [Trigger.Setup] has got to. [steps] are the ones that apply, in the order they run. */
     data class Setup(
@@ -304,18 +324,15 @@ class CatalogueRefresh(
         }
 
         /** Movies then shows, those of them in this setup, as one shared download's worth. */
-        suspend fun fetchLists(source: Source): CatalogRepository.VodFetch {
+        suspend fun fetchLists(source: Source): VodFetch {
             val movies = list(SetupStep.MOVIES) { catalog.fetchMovies(source, it) }
             val shows = list(SetupStep.SHOWS) { catalog.fetchShows(source, it) }
-            return CatalogRepository.VodFetch(
-                shows.updated,
-                movies.complete && shows.complete && (movies.count > 0 || shows.count > 0),
-            )
+            return VodFetch.of(movies, shows)
         }
 
         private suspend fun list(
             step: SetupStep,
-            fetch: suspend ((CatalogRepository.SaveProgress) -> Unit) -> CatalogRepository.ListFetch,
+            fetch: suspend ((CatalogRepository.SaveProgress) -> Unit) -> ListFetch,
         ) = if (step in steps) {
             running(step)
             fetch { saving ->
@@ -323,7 +340,7 @@ class CatalogueRefresh(
             }
                 .also { stepDone(StepDone(step, it.count, failed = !it.complete)) }
         } else {
-            CatalogRepository.ListFetch.SKIPPED
+            null
         }
     }
 
@@ -386,8 +403,12 @@ class CatalogueRefresh(
             }.getOrElse { e ->
                 if (e is CancellationException) throw e
                 Log.w(TAG, "Movies and shows failed for source ${source.id}", e)
+                _state.update {
+                    it.copy(vodFailures = it.vodFailures.after(source.id, vodFailed(e, catalog.wording, settings)))
+                }
                 return@share null
             }
+            _state.update { it.copy(vodFailures = it.vodFailures.after(source.id, vod)) }
             // Recorded by whichever refresh fetched, so opening Movies straight after doesn't repeat it.
             // Failing to must not cost the shows below their one chance at New Episode detection.
             runCatching {

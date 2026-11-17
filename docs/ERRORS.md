@@ -58,7 +58,7 @@ change channel.
 | HTTP 5xx | `error_http_5xx` | Your provider is having problems. That's at their end, so try again later. | code · HTTP 5xx · format | Provider's server |
 | `UnknownHostException`, `ERROR_CODE_IO_NETWORK_CONNECTION_FAILED` | `error_cant_reach_tv` / `_device` | Can't reach your provider. Check this TV is online and the address is right. | code · format | Viewer's network, or a wrong address |
 | `SocketTimeoutException`, `ERROR_CODE_IO_NETWORK_CONNECTION_TIMEOUT` | `error_timed_out` | Your provider stopped responding. It may be busy, so try again in a moment. | code · format | Provider's: overloaded |
-| `ERROR_CODE_IO_INVALID_HTTP_CONTENT_TYPE` | `error_web_page` | Your provider sent a web page instead of video. The link may have expired, so try refreshing your provider in Settings. | code · format | Provider's: expired link or captive page |
+| `ERROR_CODE_PARSING_CONTAINER_UNSUPPORTED`, `ERROR_CODE_PARSING_MANIFEST_UNSUPPORTED`, `ERROR_CODE_IO_INVALID_HTTP_CONTENT_TYPE` (not raised today: the player checks no content type) | `error_web_page` | Your provider sent a web page instead of video. The link may have expired, so try refreshing your provider in Settings. | code · format | Provider's: an expired account or blocked channel answering 200 with an HTML page, which won't parse as a TS container or HLS manifest; or a captive page |
 | `ERROR_CODE_PARSING_CONTAINER_MALFORMED`, `ERROR_CODE_PARSING_MANIFEST_MALFORMED` | `error_damaged` | This video is damaged and won't play. That's at your provider's end, so try something else. | code · format | Provider's: broken stream |
 | `ERROR_CODE_BEHIND_LIVE_WINDOW` | `error_behind_live` | This channel fell too far behind live. Try again to catch up. | code · format | Neither: a slow connection or a short live window |
 | Decoder failed with a video format | `error_video_format_tv` / `_device` | This TV can't play this video format. | code · format | This hardware's decoders |
@@ -143,6 +143,24 @@ a 5xx read as in [Provider connection](#provider-connection). Under it, Try agai
 | Every fetch failed with nothing more specific (a reply that won't parse, any other HTTP status) | `vod_episodes_failed` | Couldn't load the episodes of this series. Try again in a moment. | exception type, or HTTP status | Provider's |
 | No episodes stored once `CatalogRepository.OPENING_LIMIT` has passed, fetches still out (#495); episodes they store later replace it | `error_timed_out` | Your provider stopped responding. It may be busy, so try again in a moment. | SocketTimeout | Provider's: slow |
 | A fetch answered, but no Version has episodes (a plain line, not an error, and no Try again) | `vod_no_episodes` | Your provider hasn't added any episodes of this series. | none | Provider's: none listed yet |
+
+## Movies and Shows lists
+
+An Xtream provider's movies and its shows are separate downloads, and either can fail while the other
+arrives. Whatever fetched it (opening the tab, Setup's Movies or Shows step, a periodic or manual
+refresh), a failed list is kept per provider in `CatalogueRefresh.State.vodFailures` until a later
+download of that list works. When nothing of that kind is stored from any provider, the tab shows the
+first enabled provider's failure under "Couldn't load your movies" (`vod_movies_load_failed`) or
+"Couldn't load your shows" (`vod_shows_load_failed`), with Try again, which downloads again however
+often it has this run, and Provider setup, which opens that provider's form. Stored titles always show
+instead, with no error. `ErrorWording.ofProvider` words the failure, so a timeout, a rejected login, a
+429 or a 5xx read as in [Provider connection](#provider-connection).
+
+| Trigger | String key | Sentence | Detail | Whose end, likely cause |
+|---|---|---|---|---|
+| Movies' list or categories failed with nothing more specific (a reply that won't parse, any other HTTP status) | `error_movies_list` | Your provider's list of movies didn't come through. Try again in a moment. | exception type, or HTTP status | Provider's |
+| Shows' list or categories failed with nothing more specific | `error_shows_list` | Your provider's list of shows didn't come through. Try again in a moment. | exception type, or HTTP status | Provider's |
+| The list downloaded with nothing in it (a plain line, not an error, and no Try again) | `vod_no_movies_provider` / `vod_no_shows_provider` | Your provider hasn't sent any movies yet. | none | Provider's: none in the account |
 
 ## Guides
 

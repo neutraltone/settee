@@ -2,6 +2,35 @@
 
 Settee is based on OpenTV 0.11.8; everything before this is in [OpenTV's changelog](https://github.com/opentvproject/opentv/blob/v0.11.8/CHANGELOG.md).
 
+## [1.3.0](https://github.com/neutraltone/settee/compare/v1.2.0...v1.3.0) (2026-11-17)
+
+
+### Features
+
+* **#455:** the next episode card eases into the picture instead of popping up ([#523](https://github.com/neutraltone/settee/issues/523)) ([1101ecc](https://github.com/neutraltone/settee/commit/1101ecc8c7f4470d5f7d7b5ad72b609325b8b01b))
+* **#515:** posters, synopses and cast fill in from TMDB with no key to set up ([#520](https://github.com/neutraltone/settee/issues/520)) ([858b3b2](https://github.com/neutraltone/settee/commit/858b3b27dc93e67033ff76237a9ab70579d5d780))
+* **#516:** episodes get Previous and Next buttons, and the seek bar is picked up with OK before it moves ([#522](https://github.com/neutraltone/settee/issues/522)) ([7e39822](https://github.com/neutraltone/settee/commit/7e39822fa253cf5a922fc184bc0fa0289821422e))
+* **#517:** the next episode card comes up as the credits start, not 15 seconds before the end ([#524](https://github.com/neutraltone/settee/issues/524)) ([44f6494](https://github.com/neutraltone/settee/commit/44f649436c2fd9bbe82afdb7666465143ce77663))
+* **#518:** a Skip intro or Skip recap button jumps past a timed intro or recap ([#526](https://github.com/neutraltone/settee/issues/526)) ([d300091](https://github.com/neutraltone/settee/commit/d30009141bdea5c285acaba9c7882dee568389ad))
+
+
+### Bug fixes
+
+* **#353:** turning on a second guide no longer takes the guide away from channels both guides list ([#508](https://github.com/neutraltone/settee/issues/508)) ([e43af81](https://github.com/neutraltone/settee/commit/e43af8190395ddd24d709eaccd2f34b4e92abc99))
+* **#425:** the remote stays in the player's pickers, so an arrow off the edge no longer quits or seeks ([#519](https://github.com/neutraltone/settee/issues/519)) ([a2ec4d5](https://github.com/neutraltone/settee/commit/a2ec4d543aeac041eb9b86d87f708a90f95dc703))
+* **#426:** back on Home after watching a show, the highlight goes back to that show's card ([#531](https://github.com/neutraltone/settee/issues/531)) ([cf548a2](https://github.com/neutraltone/settee/commit/cf548a2811f0620b7d9960497e6d0aa965f2775d))
+* **#427:** one Back press hides the player's bar or channel list, instead of only taking the highlight off it ([#512](https://github.com/neutraltone/settee/issues/512)) ([27c45d8](https://github.com/neutraltone/settee/commit/27c45d835575cdaac99ffb8834541832b283007a))
+* **#428:** a season picked on the season pills lists from its first episode, so Down reaches Episode 1 ([#529](https://github.com/neutraltone/settee/issues/529)) ([e1b8300](https://github.com/neutraltone/settee/commit/e1b8300b44aa874a759a35ad5d75331721e51f3e))
+* **#429:** Back to a film or show page puts the highlight back where you left it ([#533](https://github.com/neutraltone/settee/issues/533)) ([219fb5e](https://github.com/neutraltone/settee/commit/219fb5efe0adf6670bcaae47a7e1b656e4c357db))
+* **#431:** back to Search from a title or channel, the highlight goes back to the result you opened ([#536](https://github.com/neutraltone/settee/issues/536)) ([ddb11e3](https://github.com/neutraltone/settee/commit/ddb11e3ef4beb059fe03b29b85ca8930844796d7))
+* **#452:** an Audio panel with nothing to choose holds the highlight, and closing a player panel returns it to the button that opened it ([#514](https://github.com/neutraltone/settee/issues/514)) ([89e73cd](https://github.com/neutraltone/settee/commit/89e73cdd2d225db068a8eb3513f4385a7db641bb))
+* **#459:** a show whose episodes won't load says why, with Try again, instead of loading for ever ([#530](https://github.com/neutraltone/settee/issues/530)) ([0939a6e](https://github.com/neutraltone/settee/commit/0939a6ec3c6d4e42a856a1c62a3c2da7f57c7cf3))
+* **#460:** Try again stays on offer after a stream stops restarting by itself ([#528](https://github.com/neutraltone/settee/issues/528)) ([317ed32](https://github.com/neutraltone/settee/commit/317ed32b92a83cb570bbb0417487e3ad39e2a021))
+* **#462:** a provider sending a web page instead of video says so, rather than asking you to try again ([#535](https://github.com/neutraltone/settee/issues/535)) ([17e46d5](https://github.com/neutraltone/settee/commit/17e46d5c16ea39d5722e5aa878b7ab73713a5453))
+* **#487:** Settings never shows a provider's, add-on's or guide's full address, login included ([#494](https://github.com/neutraltone/settee/issues/494)) ([07198d0](https://github.com/neutraltone/settee/commit/07198d0d3bbd5b268cde10086508332a22239f28))
+* **#495:** a film or show page whose title has gone says so, and a slow provider holds it 10 seconds at most ([#532](https://github.com/neutraltone/settee/issues/532)) ([902c052](https://github.com/neutraltone/settee/commit/902c0526176a553c36338f8620be62f34914a935))
+* **#517:** the next episode card stays the same height with or without its countdown bar ([#525](https://github.com/neutraltone/settee/issues/525)) ([6988706](https://github.com/neutraltone/settee/commit/6988706a04e628c090bd251e44090707d79ff0b6))
+
 ## [1.2.0](https://github.com/neutraltone/settee/compare/v1.1.0...v1.2.0) (2026-11-16)
 
 

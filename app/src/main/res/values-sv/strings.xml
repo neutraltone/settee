@@ -260,6 +260,10 @@
     <string name="error_no_first_frame_device">Den här enheten kunde inte visa videon. Försök igen, eller välj något annat.</string>
     <string name="error_login">Din leverantör godkände inte din inloggning. Kontrollera din leverantörs uppgifter i Inställningar.</string>
     <string name="error_catalogue">Det gick inte att läsa in din leverantörs kanaler. Försök igen om en stund.</string>
+    <string name="error_movies_list">Din leverantörs lista med filmer kom inte fram. Försök igen om en stund.</string>
+    <string name="error_shows_list">Din leverantörs lista med serier kom inte fram. Försök igen om en stund.</string>
+    <string name="vod_movies_load_failed">Det gick inte att läsa in dina filmer</string>
+    <string name="vod_shows_load_failed">Det gick inte att läsa in dina serier</string>
     <string name="error_channel_list_memory_tv">Din leverantörs kanallista behöver mer minne än den här TV:n har.</string>
     <string name="error_channel_list_memory_device">Din leverantörs kanallista behöver mer minne än den här enheten har.</string>
     <string name="error_no_channels">Din leverantör skickade inga kanaler. Ditt konto kanske inte har några än, så kontakta dem.</string>

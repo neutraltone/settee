@@ -25,6 +25,9 @@ import app.opentv.ui.setup.SetupScreen
  */
 fun NavController.openAddProvider() = navigate(Routes.ADD_SOURCE)
 
+/** A provider's own form, from Settings or from Movies or Shows that failed to download. */
+fun NavController.openEditProvider(sourceId: Long) = navigate(Routes.editSource(sourceId))
+
 /**
  * The screens for adding and editing providers. Kept apart from the rest of the graph so
  * a test can build them with the real screens and check where each Add leads.

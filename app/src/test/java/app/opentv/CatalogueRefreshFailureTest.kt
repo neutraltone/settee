@@ -107,4 +107,38 @@ class CatalogueRefreshFailureTest {
 
         assertThat(refresh.refresh(CatalogueRefresh.Trigger.Manual).failure).isNull()
     }
+
+    private val unreachable = ViewerError(
+        "Can't reach your provider. Check this device is online and the address is right.",
+        "UnknownHost",
+    )
+
+    @Test
+    fun `movies that fail during setup are kept as that provider's failure, apart from its shows`() = runTest {
+        db.sources().insert(PANEL_SOURCE)
+        panel.replies["get_vod_streams"] = "!host"
+        panel.replies["get_series"] = """[{"series_id": 7, "name": "Taskmaster"}]"""
+
+        refresh.refresh(CatalogueRefresh.Trigger.Setup(PANEL_SOURCE))
+        test.awaitRefresh()
+
+        val failures = refresh.state.value.vodFailures
+        assertThat(failures.movies).containsExactly(PANEL_SOURCE.id, unreachable)
+        assertThat(failures.shows).isEmpty()
+    }
+
+    @Test
+    fun `shows that fail in a background refresh are kept, until a later refresh downloads them`() = runTest {
+        db.sources().insert(PANEL_SOURCE)
+        panel.replies["get_series"] = "!host"
+
+        refresh.refresh(CatalogueRefresh.Trigger.Periodic)
+
+        assertThat(refresh.state.value.vodFailures.shows).containsExactly(PANEL_SOURCE.id, unreachable)
+
+        panel.replies["get_series"] = """[{"series_id": 7, "name": "Taskmaster"}]"""
+        refresh.refresh(CatalogueRefresh.Trigger.Periodic)
+
+        assertThat(refresh.state.value.vodFailures.shows).isEmpty()
+    }
 }
