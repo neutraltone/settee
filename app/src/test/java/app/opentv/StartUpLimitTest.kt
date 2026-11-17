@@ -30,7 +30,7 @@ import org.robolectric.annotation.Config
 class StartUpLimitTest {
 
     private val context = ApplicationProvider.getApplicationContext<Context>()
-    private val players = TestPlayers(context)
+    private val players = TestPlayers(context).apply { limitStartUp = true }
 
     @After
     fun close() = players.close()

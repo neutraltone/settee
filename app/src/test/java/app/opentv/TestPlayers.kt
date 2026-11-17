@@ -153,6 +153,13 @@ class TestPlayers(private val context: Context) {
     /** Whether [controller]s made from now on are the recording player's, for one still being written. */
     var liveRecording = false
 
+    /**
+     * Whether [controller]s made from now on give up on a stream that never starts. Off, because [untilReady]
+     * jumps the main looper's clock to the limit before a fake stream is ready (see
+     * [PlayerController.Options.limitStartUp]); [StartUpLimitTest] turns it on.
+     */
+    var limitStartUp = false
+
     /** How a controller's failing streams fail: by default, as a dropped connection does. */
     var failure: () -> IOException = { IOException("Connection dropped") }
 
@@ -179,6 +186,7 @@ class TestPlayers(private val context: Context) {
             preview = preview,
             dvr = dvr,
             liveRecording = liveRecording,
+            limitStartUp = limitStartUp,
             buildPlayer = {
                 val starts = window.takeUnless { hanging }
                 TestExoPlayerBuilder(context)
@@ -209,6 +217,7 @@ class TestPlayers(private val context: Context) {
         resolve = resolve,
         PlayerController.Options(
             preview = preview,
+            limitStartUp = limitStartUp,
             buildPlayer = { builder ->
                 builder
                     .setClock(FakeClock(true))
