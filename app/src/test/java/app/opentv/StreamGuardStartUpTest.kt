@@ -81,11 +81,11 @@ class StreamGuardStartUpTest {
     }
 
     @Test
-    fun `a stream that played in time is left alone, however long it waits afterwards`() {
+    fun `a stream that played or ended in time is left alone, however long it waits afterwards`() {
         guard.started()
         wait(LIMIT_MILLIS - 1)
 
-        guard.ready()
+        guard.arrived()
         wait(LIMIT_MILLIS * 10)
 
         assertThat(gaveUp).isEmpty()
@@ -148,7 +148,7 @@ class StreamGuardStartUpTest {
     fun `a stream that played while held is left alone once it's let go`() {
         guard.started()
         guard.held = true
-        guard.ready()
+        guard.arrived()
 
         guard.held = false
         wait(LIMIT_MILLIS * 2)
