@@ -20,6 +20,7 @@ import app.opentv.core.ViewerError
 import app.opentv.data.model.Series
 import app.opentv.data.repo.EpisodeStatuses
 import app.opentv.data.repo.MediaKey
+import app.opentv.data.repo.Opened
 import app.opentv.data.repo.ShowEpisodes
 import app.opentv.data.repo.TitleCover
 import app.opentv.ui.VodViewModel
@@ -36,24 +37,33 @@ fun SeriesDetailScreen(
     onPlayEpisode: (MediaKey) -> Unit,
     onOpenPerson: (String) -> Unit,
     onOpenSeries: (Long) -> Unit = {},
+    onBack: () -> Unit,
     viewModel: VodViewModel = viewModel(),
 ) {
     var series by remember(seriesId) { mutableStateOf<Series?>(null) }
     var noEpisodes by remember(seriesId) { mutableStateOf(false) }
     var failure by remember(seriesId) { mutableStateOf<ViewerError?>(null) }
+    var gone by remember(seriesId) { mutableStateOf(false) }
     // Try again opens the show once more, which asks every Version's panel again.
     var attempt by remember(seriesId) { mutableIntStateOf(0) }
 
     LaunchedEffect(seriesId, attempt) {
         viewModel.openShow(seriesId).collect {
-            series = it.series
-            noEpisodes = it.noEpisodes
-            failure = it.failure
+            when (it) {
+                Opened.Gone -> gone = true
+                is Opened.Found -> {
+                    series = it.title.series
+                    noEpisodes = it.title.noEpisodes
+                    failure = it.title.failure
+                }
+            }
         }
     }
 
     val s = series
-    if (s == null) {
+    if (gone) {
+        GoneDetail(onBack)
+    } else if (s == null) {
         LoadingDetail()
     } else {
         // Back to waiting at once, so the page says Loading episodes while it asks rather than the old failure.
