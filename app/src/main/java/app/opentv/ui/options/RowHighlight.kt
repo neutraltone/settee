@@ -64,7 +64,8 @@ internal class RowHighlight {
     }
 
     suspend fun restore(from: Int, lastIndex: Int, listState: LazyListState, firstRowItem: Int) {
-        val target = from.coerceAtMost(lastIndex)
+        // Empty now (a guide emptied as it refreshes), the target is -1 and there's nowhere to go.
+        val target = from.coerceAtMost(lastIndex).coerceAtLeast(0)
         // A row that can't take the Highlight (For you's placeholder for a row still being worked out)
         // passes it on: to the rows below first, which moved up into the gap, then those above.
         // A sequence, as a guide's list can run to twenty thousand rows.
