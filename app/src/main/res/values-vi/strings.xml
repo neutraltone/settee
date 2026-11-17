@@ -260,6 +260,10 @@
     <string name="error_no_first_frame_device">Thiết bị này không thể hiển thị video này. Thử lại, hoặc chọn nội dung khác.</string>
     <string name="error_login">Nhà cung cấp không chấp nhận đăng nhập của bạn. Kiểm tra thông tin nhà cung cấp trong Cài đặt.</string>
     <string name="error_catalogue">Không thể tải các kênh của nhà cung cấp. Thử lại sau giây lát.</string>
+    <string name="error_movies_list">Danh sách phim của nhà cung cấp chưa đến. Hãy thử lại sau giây lát.</string>
+    <string name="error_shows_list">Danh sách phim bộ của nhà cung cấp chưa đến. Hãy thử lại sau giây lát.</string>
+    <string name="vod_movies_load_failed">Không thể tải phim của bạn</string>
+    <string name="vod_shows_load_failed">Không thể tải phim bộ của bạn</string>
     <string name="error_channel_list_memory_tv">Danh sách kênh của nhà cung cấp cần nhiều bộ nhớ hơn TV này có.</string>
     <string name="error_channel_list_memory_device">Danh sách kênh của nhà cung cấp cần nhiều bộ nhớ hơn thiết bị này có.</string>
     <string name="error_no_channels">Nhà cung cấp không gửi kênh nào. Tài khoản của bạn có thể chưa có kênh, vì vậy hãy hỏi lại họ.</string>

@@ -260,6 +260,10 @@
     <string name="error_no_first_frame_device">Dit apparaat kon deze video niet tonen. Probeer het opnieuw, of kies iets anders.</string>
     <string name="error_login">Je provider heeft je inloggegevens niet geaccepteerd. Controleer je providergegevens in Instellingen.</string>
     <string name="error_catalogue">Kan de zenders van je provider niet laden. Probeer het zo opnieuw.</string>
+    <string name="error_movies_list">De filmlijst van je provider is niet aangekomen. Probeer het zo opnieuw.</string>
+    <string name="error_shows_list">De serielijst van je provider is niet aangekomen. Probeer het zo opnieuw.</string>
+    <string name="vod_movies_load_failed">Kan je films niet laden</string>
+    <string name="vod_shows_load_failed">Kan je series niet laden</string>
     <string name="error_channel_list_memory_tv">De zenderlijst van je provider heeft meer geheugen nodig dan deze tv heeft.</string>
     <string name="error_channel_list_memory_device">De zenderlijst van je provider heeft meer geheugen nodig dan dit apparaat heeft.</string>
     <string name="error_no_channels">Je provider heeft geen zenders gestuurd. Je account heeft er misschien nog geen, dus vraag het na bij je provider.</string>
