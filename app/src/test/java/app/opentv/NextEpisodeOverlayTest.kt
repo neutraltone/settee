@@ -105,7 +105,8 @@ class NextEpisodeOverlayTest {
 
     /**
      * The player over S1 E1 of a show whose episode TheIntroDB timed, credits at 38:00 of 40:00, with
-     * [sceneAfter] a scene after them; kept on the device already, so nothing is asked.
+     * [sceneAfter] a scene after them; kept on the device already, with the next episode's, so nothing
+     * is asked.
      */
     private fun showTimedPlayer(sceneAfter: Boolean = false) {
         runBlocking {
@@ -124,21 +125,26 @@ class NextEpisodeOverlayTest {
                     ),
                 ),
             )
-            graph.database.episodeTimings().upsert(
-                EpisodeTimings(
-                    show = "tmdb:1396",
-                    season = 1,
-                    episode = 1,
-                    creditsStartMillis = TIMED_CREDITS_MILLIS,
-                    sceneAfterCredits = sceneAfter,
-                    source = TimingsSource.THE_INTRO_DB,
-                    fetchedAtMillis = System.currentTimeMillis(),
-                ),
-            )
+            // Episode 2's too: the player looks ahead to the Next Episode's, which would otherwise go to
+            // TheIntroDB for real.
+            (1..2).forEach { number ->
+                graph.database.episodeTimings().upsert(
+                    EpisodeTimings(
+                        show = "tmdb:1396",
+                        season = 1,
+                        episode = number,
+                        creditsStartMillis = TIMED_CREDITS_MILLIS,
+                        sceneAfterCredits = sceneAfter,
+                        source = TimingsSource.THE_INTRO_DB,
+                        fetchedAtMillis = System.currentTimeMillis(),
+                    ),
+                )
+            }
         }
         showPlayer()
         // The timings are read beside playback: poll 3 s into the credits until they've placed the card.
-        compose.waitUntil(5_000) {
+        // A bound, not a wait: it's met in moments, but a CI runner under load took longer than 5 s once.
+        compose.waitUntil(10_000) {
             playback.positionMillis = TIMED_CREDITS_MILLIS + 3_000
             runBlocking { vm.poll() }
             vm.overlay.value != Overlay.None
