@@ -144,6 +144,12 @@ class TestPlayers(private val context: Context) {
     /** Whether the fake decoder shows anything. Without, it starts and never shows a frame. */
     var showPictures = true
 
+    /**
+     * Whether the streams of controllers made from now on never start and never fail, after any
+     * failing ones, as from a panel that takes the connection and sends nothing.
+     */
+    var hanging = false
+
     /** How a controller's failing streams fail: by default, as a dropped connection does. */
     var failure: () -> IOException = { IOException("Connection dropped") }
 
@@ -170,13 +176,14 @@ class TestPlayers(private val context: Context) {
             preview = preview,
             dvr = dvr,
             buildPlayer = {
+                val starts = window.takeUnless { hanging }
                 TestExoPlayerBuilder(context)
                     .setClock(clock)
                     .setRenderersFactory { handler, video, audio, _, _ ->
                         val events = clock.createHandler(handler.looper, null)
                         arrayOf(PicturingRenderer(events, video) { showPictures }, FakeAudioRenderer(events, audio))
                     }
-                    .setMediaSourceFactory(FakeSources(window, played, failing, formats, formatsAt, failure))
+                    .setMediaSourceFactory(FakeSources(starts, played, failing, formats, formatsAt, failure))
                     .build()
             },
             decoders = decoders,
@@ -268,8 +275,9 @@ class TestPlayers(private val context: Context) {
         }
     }
 
+    /** With no [window], the player waits for one for ever, buffering, and never reports an error. */
     private class FakeSources(
-        private val window: FakeTimeline.TimelineWindowDefinition,
+        private val window: FakeTimeline.TimelineWindowDefinition?,
         private val played: MutableList<String>,
         private var failing: Int,
         private val formats: List<Format>,
@@ -280,7 +288,10 @@ class TestPlayers(private val context: Context) {
             val address = mediaItem.localConfiguration?.uri.toString()
             played += address
             if (failing-- > 0) return FailingSource(failure)
-            return FakeMediaSource(FakeTimeline(window), *formatsAt.getOrDefault(address, formats).toTypedArray())
+            return FakeMediaSource(
+                window?.let(::FakeTimeline),
+                *formatsAt.getOrDefault(address, formats).toTypedArray(),
+            )
         }
 
         override fun setDrmSessionManagerProvider(provider: DrmSessionManagerProvider) = this
