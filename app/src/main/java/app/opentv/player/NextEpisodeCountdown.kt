@@ -71,6 +71,12 @@ class NextEpisodeCountdown(
     // lets it reach the credits again gets the card again.
     private var cancelled = false
 
+    /** Whether the last update found the episode ended. */
+    private var ended = false
+
+    /** Cancel or Back on the card brought back at the end: the viewer is done, so the player can close. */
+    private var doneAtEnd = false
+
     private val start = CountdownStart()
 
     /** Episodes in a row the countdown started with nobody touching the remote. */
@@ -83,6 +89,7 @@ class NextEpisodeCountdown(
         this.hasNext = hasNext
         cue = UpNextCue::fallback
         cancelled = false
+        doneAtEnd = false
         start.clear()
         overlay = Overlay.None
     }
@@ -90,7 +97,17 @@ class NextEpisodeCountdown(
     /** Takes where playback is now, polled while the episode plays; returns what to do, if anything. */
     fun update(playback: Playback): Decision? {
         (overlay as? Overlay.StillWatching)?.let { return whileAsking(it) }
-        return if (showCard(playback)) runOut() else null
+        // Watch credits, or a seek to the very end, lets the episode play out, not the series: at its
+        // end the Next Episode plays, or with auto-play off the card comes back to wait for OK. Going
+        // back to the listings instead read as the player giving up on the viewer.
+        ended = playback.ended
+        val playedOut = cancelled && ended && hasNext && !doneAtEnd
+        if (playedOut && !autoPlay()) cancelled = false
+        return when {
+            showCard(playback) -> runOut()
+            playedOut && autoPlay() -> moveOn()
+            else -> null
+        }
     }
 
     /** Puts the card up or takes it down for [playback]; true when its time has run out. */
@@ -155,9 +172,11 @@ class NextEpisodeCountdown(
         unattended = 0
     }
 
-    /** Cancel ("Watch credits") or Back on the card: let this episode play out. */
+    /** Cancel ("Watch credits") or Back on the card: let this episode play out. Someone is plainly watching. */
     fun cancel() {
+        unattended = 0
         cancelled = true
+        if (ended) doneAtEnd = true
         overlay = Overlay.None
     }
 
