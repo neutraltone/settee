@@ -251,6 +251,27 @@ class RoomMigrationTest {
         }
     }
 
+    @Test
+    fun `21 gives every provider an empty refresh failure and keeps every Favourite`() {
+        val name = "refresh-failure.db"
+        helper.createDatabase(name, 20).use { db ->
+            db.execSQL(
+                "INSERT INTO sources (id, name, kind, url, userAgent, liveFormat, enabled, lastCatalogSyncMillis) " +
+                    "VALUES (1, 'Home', 'XTREAM', 'http://example.com', 'ua', 'HLS', 1, 0)",
+            )
+            db.execSQL(
+                "INSERT INTO favourites (profileId, kind, source, itemId, changedAtMillis, removed) " +
+                    "VALUES (1, 'CHANNEL', 'Home', '7', 9, 0)",
+            )
+        }
+
+        helper.runMigrationsAndValidate(name, 21, true, *OpenTvDatabase.MIGRATIONS).use { db ->
+            assertThat(db.first("SELECT IFNULL(lastRefreshFailure, '-') FROM sources WHERE id = 1")).isEqualTo("-")
+            assertThat(db.first("SELECT source || ':' || itemId FROM favourites WHERE profileId = 1"))
+                .isEqualTo("Home:7")
+        }
+    }
+
     /** The first column of [sql]'s first row. */
     private fun SupportSQLiteDatabase.first(sql: String): String = query(sql).use { row ->
         row.moveToFirst()

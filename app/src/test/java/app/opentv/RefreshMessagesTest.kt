@@ -27,21 +27,21 @@ class RefreshMessagesTest {
 
     @Test
     fun `a clean refresh counts channels and the guide match`() {
-        assertThat(messages.of(Outcome.Refreshed(120, 0, guide(90, 120))))
+        assertThat(messages.of(Outcome.Refreshed(120, guide(90, 120))))
             .isEqualTo("Refreshed 120 channels, guide matched 90 of 120.")
     }
 
     @Test
     fun `one channel is singular`() {
-        assertThat(messages.of(Outcome.Refreshed(1, 0, guide(1, 1))))
+        assertThat(messages.of(Outcome.Refreshed(1, guide(1, 1))))
             .isEqualTo("Refreshed 1 channel, guide matched 1 of 1.")
     }
 
     @Test
     fun `a refresh with problems counts them and points at Guide settings`() {
-        assertThat(messages.of(Outcome.Refreshed(120, 1, guide(90, 120))))
+        assertThat(messages.of(Outcome.Refreshed(120, guide(90, 120, failed = 1))))
             .isEqualTo("Refreshed 120 channels, 1 problem. See Guide settings.")
-        assertThat(messages.of(Outcome.Refreshed(1, 3, guide(0, 1))))
+        assertThat(messages.of(Outcome.Refreshed(1, guide(0, 1, failed = 3))))
             .isEqualTo("Refreshed 1 channel, 3 problems. See Guide settings.")
     }
 

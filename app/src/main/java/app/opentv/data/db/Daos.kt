@@ -102,6 +102,10 @@ interface SourceDao {
         update(source.copy(serverTimeZone = stored?.serverTimeZone?.takeIf { samePanel }))
     }
 
+    /** Only the failure, so a refresh doesn't put back what an edit changed meanwhile. */
+    @Query("UPDATE sources SET lastRefreshFailure = :stored WHERE id = :id")
+    suspend fun setRefreshFailure(id: Long, stored: String?)
+
     /** Only the zone, so a sync doesn't put back what an edit changed meanwhile. */
     @Query("UPDATE sources SET serverTimeZone = :zone WHERE id = :id")
     suspend fun setServerTimeZone(id: Long, zone: String?)

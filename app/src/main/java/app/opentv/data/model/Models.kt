@@ -9,6 +9,7 @@ import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.PrimaryKey
+import app.opentv.core.ViewerError
 import kotlinx.serialization.Serializable
 
 /**
@@ -84,11 +85,19 @@ data class Source(
      * Null for other kinds, and for a panel that hasn't said.
      */
     val serverTimeZone: String? = null,
+    /**
+     * Why the latest Catalogue Refresh couldn't download this provider's channels, as
+     * [ViewerError.stored]; null once one worked. Read it as [refreshFailure].
+     */
+    val lastRefreshFailure: String? = null,
 ) {
     companion object {
         const val DEFAULT_USER_AGENT: String = "OpenTV/0.1 (Android)"
     }
 }
+
+/** Why the latest Catalogue Refresh couldn't download this provider's channels; null once one worked. */
+val Source.refreshFailure: ViewerError? get() = lastRefreshFailure?.let { ViewerError.fromStored(it) }
 
 enum class StreamKind { LIVE, MOVIE, SERIES }
 

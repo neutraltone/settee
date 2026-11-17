@@ -216,13 +216,13 @@ class SourcesViewModel @JvmOverloads constructor(
     }
 
     private fun failureOf(outcome: CatalogueRefresh.Outcome?): ViewerError? = when (outcome) {
-        is CatalogueRefresh.Outcome.Refreshed -> outcome.failure
+        is CatalogueRefresh.Outcome.Refreshed -> outcome.failures.values.firstOrNull()
         is CatalogueRefresh.Outcome.AddFailed -> outcome.reason
         else -> null
     }
 
     private fun CatalogueRefresh.Outcome?.worked() = this is CatalogueRefresh.Outcome.ChannelsLoaded ||
-        (this is CatalogueRefresh.Outcome.Refreshed && failure == null)
+        (this is CatalogueRefresh.Outcome.Refreshed && failures.isEmpty())
 
     fun test(draft: Source) {
         viewModelScope.launch {
