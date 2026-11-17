@@ -6,7 +6,6 @@
 package app.opentv.ui.player
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -30,7 +29,10 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ClosedCaption
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.SkipNext
+import androidx.compose.material.icons.filled.SkipPrevious
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -38,6 +40,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.focus.FocusProperties
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
@@ -46,7 +50,6 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import app.opentv.R
 import app.opentv.ui.design.HighlightStyle
@@ -60,17 +63,22 @@ import app.opentv.ui.design.Text
 import app.opentv.ui.formatPlaybackTime
 
 /**
- * The player's controls (docs/LOOK.md, Player): the title and one row of a play or pause icon, the
- * seek bar, then Subtitles and Audio, with close at the top right. The Highlight starts on the bar.
+ * The player's controls (docs/LOOK.md, Player): the title and one row of Previous episode, play or
+ * pause, Next episode, the seek bar, then Subtitles and Audio, with close at the top right. The
+ * Highlight starts on the bar. Only an episode has the episode buttons ([onPreviousEpisode] and
+ * [onNextEpisode]), and only where there is one that way: a button that does nothing is a dead end
+ * on a remote.
  *
- * The routes are set by hand, since the row's shape defeats Compose's search: Down from the bar
- * goes sideways to Subtitles (the nearest thing below would be a pill under the bar's middle), and
- * Up from anywhere on the row goes to close, which is nowhere near above it.
+ * Left and Right go along the row, one after another, the bar included: it's picked up with OK
+ * ([seekPickedUp], [onPickUp]) before they move it, and then the rest of the row dims. The routes are
+ * set by hand all the same, since the row's shape defeats Compose's search: Down from the bar goes
+ * sideways to Subtitles (the nearest thing below would be a pill under the bar's middle), and Up from
+ * anywhere on the row goes to close, which is nowhere near above it.
  *
- * [pills] come up as the Highlight leaves the bar for Subtitles, into space kept for them, so the
+ * [pills] come up as the Highlight leaves the bar for a button, into space kept for them, so the
  * controls don't jump as they appear.
  *
- * A stream that can't seek ([seekable] false: most live TV) has no bar, so the play icon takes the
+ * A stream that can't seek ([seekable] false: most live TV) has no bar, so the play button takes the
  * Highlight in its place, or Subtitles where [showPlayPause] is false because there's nothing to
  * pause. [startFocus] is wherever it starts.
  *
@@ -85,8 +93,10 @@ internal fun PlayerControlBar(
     paused: Boolean,
     positionMs: Long,
     durationMs: Long,
+    seekPickedUp: Boolean,
+    onPickUp: () -> Unit,
     onScrub: (toMs: Long) -> Unit,
-    onScrubEnd: () -> Unit,
+    onPutDown: (jump: Boolean) -> Unit,
     onPlayPause: () -> Unit,
     onSubtitles: () -> Unit,
     onAudio: () -> Unit,
@@ -96,24 +106,42 @@ internal fun PlayerControlBar(
     modifier: Modifier = Modifier,
     seekable: Boolean = true,
     showPlayPause: Boolean = true,
+    onPreviousEpisode: (() -> Unit)? = null,
+    onNextEpisode: (() -> Unit)? = null,
     barInteractions: MutableInteractionSource? = null,
     onBarFocusChanged: (Boolean) -> Unit = {},
     badge: (@Composable () -> Unit)? = null,
     returnFocus: FocusRequester? = null,
 ) {
     val close = remember { FocusRequester() }
-    // Whatever starts the row (the bar, or the play icon where there's no bar) has startFocus.
-    val rowStarts = seekable || showPlayPause
-    val ownSubtitles = remember { FocusRequester() }
-    val subtitles = if (rowStarts) ownSubtitles else startFocus
-    val audio = remember { FocusRequester() }
     val firstPill = remember { FocusRequester() }
+    val hasPrevious = onPreviousEpisode != null
+    val hasNext = onNextEpisode != null
+    val requesters = remember { RowRequesters() }
+    val focus = RowFocus(requesters, startFocus, seekable, showPlayPause, hasPrevious, hasNext)
+    val previous = requesters.previous
+    val next = requesters.next
+    val playPause = focus.playPause
+    val subtitles = focus.subtitles
+    val audio = requesters.audio
     var pillsUp by remember { mutableStateOf(false) }
     val lower = Modifier.onFocusChanged { if (it.hasFocus) pillsUp = true }
     val toPills = if (pillsUp && pills.isNotEmpty()) firstPill else FocusRequester.Cancel
+    fun FocusProperties.along(spot: FocusRequester) {
+        up = close
+        left = focus.leftOf(spot)
+        right = focus.rightOf(spot)
+    }
+    val dimmed = Modifier.alpha(if (seekPickedUp) DIMMED_ALPHA else 1f)
     val lastHighlight = remember { LastHighlight() }
-    val returnTo = lastHighlight.returnTo(pillsUp, pills)
+    val returnTo = lastHighlight.returnTo(pillsUp, pills, hasPrevious, hasNext)
     fun Modifier.remembered(spot: BarSpot) = then(lastHighlight.modifier(spot, returnTo, returnFocus))
+
+    // The episode moved to can have nothing further that way, and its button goes from under the
+    // Highlight; play/pause beside it is where the viewer was looking.
+    LaunchedEffect(hasPrevious, hasNext) {
+        if (lastHighlight.lostWith(hasPrevious, hasNext)) runCatching { playPause.requestFocus() }
+    }
 
     Box(modifier.fillMaxSize()) {
         IconAction(
@@ -143,38 +171,71 @@ internal fun PlayerControlBar(
         ) {
             badge?.invoke()
             Text(title, SetteeType.Hero, maxLines = 2)
-            Spacer(Modifier.height(12.dp))
+            // Room for the picked-up bar's time bubble, which hangs above the row.
+            Spacer(Modifier.height(18.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
-                if (showPlayPause) {
-                    PlayPause(
-                        paused,
-                        onPlayPause,
-                        takesHighlight = !seekable,
-                        modifier = lower
-                            .focusRequester(startFocus)
-                            .remembered(BarSpot.Start)
-                            .focusProperties {
-                                up = close
-                                down = toPills
-                                left = FocusRequester.Cancel
-                                right = subtitles
-                            },
-                    )
-                }
+                RowButton(
+                    icon = Icons.Filled.SkipPrevious,
+                    label = stringResource(R.string.player_previous_episode),
+                    onClick = onPreviousEpisode,
+                    modifier = lower
+                        .then(dimmed)
+                        .focusRequester(previous)
+                        .remembered(BarSpot.Previous)
+                        .focusProperties {
+                            along(previous)
+                            down = toPills
+                        },
+                )
+                val (playIcon, playLabel) =
+                    if (paused) {
+                        Icons.Filled.PlayArrow to R.string.common_play
+                    } else {
+                        Icons.Filled.Pause to R.string.player_pause
+                    }
+                RowButton(
+                    icon = playIcon,
+                    label = stringResource(playLabel),
+                    onClick = onPlayPause.takeIf { showPlayPause },
+                    modifier = lower
+                        .then(dimmed)
+                        .focusRequester(playPause)
+                        .remembered(focus.playSpot)
+                        .focusProperties {
+                            along(playPause)
+                            down = toPills
+                        },
+                )
+                RowButton(
+                    icon = Icons.Filled.SkipNext,
+                    label = stringResource(R.string.player_next_episode),
+                    onClick = onNextEpisode,
+                    modifier = lower
+                        .then(dimmed)
+                        .focusRequester(next)
+                        .remembered(BarSpot.Next)
+                        .focusProperties {
+                            along(next)
+                            down = toPills
+                        },
+                )
                 if (seekable) {
+                    Spacer(Modifier.width(8.dp))
                     SeekBar(
                         positionMs = positionMs,
                         durationMs = durationMs,
+                        pickedUp = seekPickedUp,
+                        onPickUp = onPickUp,
                         onScrub = onScrub,
-                        onScrubEnd = onScrubEnd,
-                        onPlayPause = onPlayPause,
+                        onPutDown = onPutDown,
+                        timeLabel = ::formatPlaybackTime,
                         interactionSource = barInteractions,
                         modifier = Modifier
                             .weight(1f)
                             .focusRequester(startFocus)
                             .remembered(BarSpot.Start)
                             .focusProperties {
-                                up = close
+                                along(startFocus)
                                 down = subtitles
                             }
                             .onFocusChanged {
@@ -193,13 +254,12 @@ internal fun PlayerControlBar(
                     label = stringResource(R.string.player_subtitles),
                     onClick = onSubtitles,
                     modifier = lower
+                        .then(dimmed)
                         .focusRequester(subtitles)
-                        .remembered(if (rowStarts) BarSpot.Subtitles else BarSpot.Start)
+                        .remembered(focus.subtitlesSpot)
                         .focusProperties {
-                            up = close
+                            along(subtitles)
                             down = toPills
-                            left = if (rowStarts) startFocus else FocusRequester.Cancel
-                            right = audio
                         },
                 )
                 Spacer(Modifier.width(10.dp))
@@ -208,13 +268,12 @@ internal fun PlayerControlBar(
                     label = stringResource(R.string.player_audio),
                     onClick = onAudio,
                     modifier = lower
+                        .then(dimmed)
                         .focusRequester(audio)
                         .remembered(BarSpot.Audio)
                         .focusProperties {
-                            up = close
+                            along(audio)
                             down = toPills
-                            left = subtitles
-                            right = FocusRequester.Cancel
                         },
                 )
             }
@@ -229,6 +288,46 @@ internal fun PlayerControlBar(
             }
         }
     }
+}
+
+/** The requesters for the row's buttons, kept across recompositions as the buttons come and go. */
+private class RowRequesters {
+    val previous = FocusRequester()
+    val playPause = FocusRequester()
+    val next = FocusRequester()
+    val subtitles = FocusRequester()
+    val audio = FocusRequester()
+}
+
+/**
+ * The row's order, left to right, for this composition: whatever starts it (the bar, or else play or
+ * pause, or else Subtitles) has [startFocus] in place of its own requester.
+ */
+private class RowFocus(
+    requesters: RowRequesters,
+    startFocus: FocusRequester,
+    seekable: Boolean,
+    showPlayPause: Boolean,
+    hasPrevious: Boolean,
+    hasNext: Boolean,
+) {
+    val playPause = if (seekable) requesters.playPause else startFocus
+    val playSpot: BarSpot = if (seekable) BarSpot.PlayPause else BarSpot.Start
+    private val rowStarts = seekable || showPlayPause
+    val subtitles = if (rowStarts) requesters.subtitles else startFocus
+    val subtitlesSpot: BarSpot = if (rowStarts) BarSpot.Subtitles else BarSpot.Start
+    private val row = listOfNotNull(
+        requesters.previous.takeIf { hasPrevious },
+        playPause.takeIf { showPlayPause },
+        requesters.next.takeIf { hasNext },
+        startFocus.takeIf { seekable },
+        subtitles,
+        requesters.audio,
+    )
+
+    fun leftOf(spot: FocusRequester) = row.getOrNull(row.indexOf(spot) - 1) ?: FocusRequester.Cancel
+
+    fun rightOf(spot: FocusRequester) = row.getOrNull(row.indexOf(spot) + 1) ?: FocusRequester.Cancel
 }
 
 @Composable
@@ -249,6 +348,12 @@ private sealed interface BarSpot {
 
     data object Close : BarSpot
 
+    data object Previous : BarSpot
+
+    data object PlayPause : BarSpot
+
+    data object Next : BarSpot
+
     data object Subtitles : BarSpot
 
     data object Audio : BarSpot
@@ -265,11 +370,23 @@ private class LastHighlight {
     // returnFocus moves; the others get one nothing asks for.
     private val unasked = FocusRequester()
 
-    /** Where a panel closing should give the Highlight back: the start, if the pill it was on has gone. */
-    fun returnTo(pillsUp: Boolean, pills: List<PlayerPill>): BarSpot {
-        val pill = last as? BarSpot.Pill ?: return last
-        return if (pillsUp && pills.any { it.label == pill.label }) pill else BarSpot.Start
+    /**
+     * Where a panel closing should give the Highlight back: the start, if the pill or episode button
+     * it was on has gone.
+     */
+    fun returnTo(pillsUp: Boolean, pills: List<PlayerPill>, hasPrevious: Boolean, hasNext: Boolean): BarSpot {
+        val pill = last as? BarSpot.Pill
+        return when {
+            lostWith(hasPrevious, hasNext) -> BarSpot.Start
+            pill == null -> last
+            pillsUp && pills.any { it.label == pill.label } -> pill
+            else -> BarSpot.Start
+        }
     }
+
+    /** Whether the Highlight was last on an episode button that has gone. */
+    fun lostWith(hasPrevious: Boolean, hasNext: Boolean) =
+        (last == BarSpot.Previous && !hasPrevious) || (last == BarSpot.Next && !hasNext)
 
     fun modifier(spot: BarSpot, returnTo: BarSpot, returnFocus: FocusRequester?): Modifier = Modifier
         .onFocusChanged { if (it.hasFocus) last = spot }
@@ -305,39 +422,22 @@ private fun PillRow(
 }
 
 /**
- * Play or pause at the start of the row. With no bar beside it ([takesHighlight]) it's a button that
- * starts with the Highlight, and [modifier] carries its routes; beside the bar it's only an icon.
+ * Previous, play or pause, or next: a bare icon, cream at rest and coral with the Highlight, with the
+ * gap after it, or nothing where there's no [onClick]. Bare rather than a filled circle like the
+ * buttons around it, so the transport reads as one group, apart from Subtitles and Audio.
  */
 @Composable
-private fun PlayPause(paused: Boolean, onPlayPause: () -> Unit, takesHighlight: Boolean, modifier: Modifier) {
-    if (takesHighlight) {
-        IconAction(
-            icon = if (paused) Icons.Filled.PlayArrow else Icons.Filled.Pause,
-            label = stringResource(if (paused) R.string.common_play else R.string.player_pause),
-            onClick = onPlayPause,
-            modifier = modifier,
+private fun RowButton(icon: ImageVector, label: String, onClick: (() -> Unit)?, modifier: Modifier) {
+    onClick ?: return
+    HighlightSurface(onClick = onClick, style = HighlightStyle.Glyph, modifier = modifier) { highlighted ->
+        Icon(
+            icon,
+            contentDescription = label,
+            tint = if (highlighted) SetteeColors.Accent else SetteeColors.Text,
+            modifier = Modifier.padding(7.dp).size(32.dp),
         )
-    } else {
-        PlayPauseIcon(paused, onPlayPause)
-        Spacer(Modifier.width(12.dp))
     }
-}
-
-/**
- * Shows whether the video is playing, beside the bar. It can't take the Highlight, since Left and
- * Right on the bar next to it seek, so it's only a target for touch; OK on the bar does the same.
- */
-@Composable
-private fun PlayPauseIcon(paused: Boolean, onPlayPause: () -> Unit) {
-    Icon(
-        if (paused) Icons.Filled.PlayArrow else Icons.Filled.Pause,
-        contentDescription = stringResource(if (paused) R.string.common_play else R.string.player_pause),
-        tint = SetteeColors.Text,
-        modifier = Modifier
-            .focusProperties { canFocus = false }
-            .clickable(role = Role.Button, onClick = onPlayPause)
-            .size(36.dp),
-    )
+    Spacer(Modifier.width(4.dp))
 }
 
 @Composable
@@ -365,4 +465,7 @@ private fun Pill(pill: PlayerPill, modifier: Modifier = Modifier) {
 }
 
 private val PillRowHeight = 42.dp
+
+/** The rest of the row while the bar is picked up, so the eye stays on the thumb. */
+private const val DIMMED_ALPHA = 0.35f
 private val Scrim = SetteeColors.Background.copy(alpha = 0.92f)

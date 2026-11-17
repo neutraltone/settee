@@ -15,6 +15,8 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsDraggedAsState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -410,11 +412,14 @@ fun LivePlayerContent(
     var optionsOpen by remember { mutableStateOf(false) }
     var choosingSleep by remember { mutableStateOf(false) }
     var interaction by remember { mutableIntStateOf(0) }
-    // The seek bar, on a stream that can rewind: where playback is in what's buffered, and where a
-    // Left or Right held on the bar has got to, which it shows until the key comes up.
+    // The seek bar, on a stream that can rewind: where playback is in what's buffered, and, while
+    // the bar is picked up, where Left and Right have moved it to, which it shows until it's put down.
     var livePositionMs by remember { mutableLongStateOf(0L) }
     var liveDurationMs by remember { mutableLongStateOf(0L) }
-    var scrubTo by remember { mutableStateOf<Long?>(null) }
+    val seek = remember { UnfinishedSeek() }
+    val barInteractions = remember { MutableInteractionSource() }
+    val dragging by barInteractions.collectIsDraggedAsState()
+    PutsBackWhenLeft(seek, dragging = dragging && controlsVisible)
 
     // Picture-in-picture. While the player is on it is "eligible" to shrink to a floating window
     // (pressing Home does it, handled in MainActivity); [inPip] drives hiding all the chrome.
@@ -629,8 +634,14 @@ fun LivePlayerContent(
                     val firstPress = event.nativeKeyEvent.repeatCount == 0
                     if (event.type == KeyEventType.KeyDown) {
                         when (event.key) {
-                            Key.MediaRewind -> if (livePause) controller.seekBackward()
-                            Key.MediaFastForward -> if (livePause) controller.seekForward()
+                            Key.MediaRewind -> if (livePause) {
+                                seek.drop()
+                                controller.seekBackward()
+                            }
+                            Key.MediaFastForward -> if (livePause) {
+                                seek.drop()
+                                controller.seekForward()
+                            }
                             Key.MediaPlay -> if (firstPress) setPaused(false)
                             Key.MediaPause -> if (firstPress) setPaused(true)
                             else -> if (firstPress) togglePause()
@@ -793,16 +804,23 @@ fun LivePlayerContent(
             PlayerControlBar(
                 title = channelTitle,
                 paused = paused,
-                positionMs = scrubTo ?: livePositionMs,
+                positionMs = seek.position?.toLong() ?: livePositionMs,
                 durationMs = liveDurationMs,
-                onScrub = { to ->
-                    scrubTo = to
+                seekPickedUp = seek.position != null,
+                onPickUp = {
+                    seek.pickUp(at = livePositionMs.toFloat())
                     interaction++
                 },
-                onScrubEnd = {
-                    scrubTo?.let { controller.player.seekTo(it) }
-                    livePositionMs = scrubTo ?: livePositionMs
-                    scrubTo = null
+                onScrub = { to ->
+                    seek.pressed(to = to.toFloat())
+                    interaction++
+                },
+                onPutDown = { jump ->
+                    // The bar going from under a resting finger reads as it lifting: that puts it back.
+                    seek.putDown()?.takeIf { jump && controlsVisible }?.let {
+                        controller.player.seekTo(it)
+                        livePositionMs = it
+                    }
                     interaction++
                 },
                 onPlayPause = {
@@ -846,7 +864,8 @@ fun LivePlayerContent(
                 returnFocus = barReturn,
                 seekable = controller.isSeekable,
                 showPlayPause = canPause,
-                onBarFocusChanged = { onBar -> if (!onBar) scrubTo = null },
+                barInteractions = barInteractions,
+                onBarFocusChanged = { onBar -> if (!onBar) seek.drop() },
                 badge = if (paused && livePause) {
                     {
                         SetteeText(

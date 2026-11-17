@@ -87,9 +87,11 @@ import app.opentv.ui.player.PlayerControlBar
 import app.opentv.ui.player.PlayerNotice
 import app.opentv.ui.player.PlayerOptions
 import app.opentv.ui.player.PlayerPill
+import app.opentv.ui.player.PutsBackWhenLeft
 import app.opentv.ui.player.SleepTimerEffect
 import app.opentv.ui.player.SleepTimerPanel
 import app.opentv.ui.player.SubtitlePicks
+import app.opentv.ui.player.UnfinishedSeek
 import app.opentv.ui.player.WhenBehindAnotherApp
 import app.opentv.ui.player.backOnRelease
 import app.opentv.ui.player.isBack
@@ -302,6 +304,7 @@ fun VodPlayerContent(
     val qualityChoices by viewModel.qualityChoices.collectAsState()
     val canMarkWatched by viewModel.canMarkWatched.collectAsState()
     val marking = rememberCoroutineScope()
+    val steps by viewModel.episodeSteps.collectAsState()
 
     // The pill and the options list both mark it; marking it leaves the player.
     fun markWatched() {
@@ -333,6 +336,24 @@ fun VodPlayerContent(
 
     fun reveal() {
         controlsVisible = true
+        interaction++
+    }
+
+    // The episode buttons the row shows. A new episode's come at once; ones found late for the same
+    // episode (its series loading beside playback) wait while the controls show, so a button never
+    // appears beside the Highlight while the viewer is moving along the row. One that has gone goes
+    // at once, since pressing it would do nothing.
+    var shownSteps by remember { mutableStateOf(steps) }
+    LaunchedEffect(steps, controlsVisible) {
+        shownSteps = if (!controlsVisible || steps.of != shownSteps.of) {
+            steps
+        } else {
+            steps.copy(previous = steps.previous && shownSteps.previous, next = steps.next && shownSteps.next)
+        }
+    }
+
+    fun moveEpisode(forward: Boolean) {
+        marking.launch { if (forward) viewModel.toNextEpisode() else viewModel.toPreviousEpisode() }
         interaction++
     }
 
@@ -372,15 +393,8 @@ fun VodPlayerContent(
         subtitles?.load(playing)
     }
 
-    // Not tied to the bar losing focus or the controls hiding: a key-up can go missing with the bar
-    // still focused and a paused film never hides, and neither may leave the bar stuck. A held key
-    // repeats, so it counts as activity; a finger can rest without moving, but can't get lost.
-    LaunchedEffect(seek.activity, dragging) {
-        if (seek.position != null && !dragging) {
-            delay(UNFINISHED_SEEK_GRACE_MILLIS)
-            seek.drop()
-        }
-    }
+    // A finger can't still be scrubbing a bar that's hidden, whatever its last drag said.
+    PutsBackWhenLeft(seek, dragging = dragging && controlsVisible)
 
     // Auto-hide when playing and not paused and no picker open, and no finger on the bar. A growing
     // recording dips in and out of Buffering as it rides the write head, so for that case Buffering
@@ -453,6 +467,12 @@ fun VodPlayerContent(
                                 else -> paused
                             }
                             reveal()
+                        }
+                        true
+                    }
+                    event.key == Key.MediaNext || event.key == Key.MediaPrevious -> {
+                        if (event.type == KeyEventType.KeyDown && event.nativeKeyEvent.repeatCount == 0) {
+                            moveEpisode(forward = event.key == Key.MediaNext)
                         }
                         true
                     }
@@ -533,12 +553,20 @@ fun VodPlayerContent(
                 paused = paused,
                 positionMs = seek.position?.toLong() ?: positionMs,
                 durationMs = durationMs,
+                seekPickedUp = seek.position != null,
+                onPickUp = {
+                    seek.pickUp(at = positionMs.toFloat())
+                    interaction++
+                },
                 onScrub = { to ->
                     seek.pressed(to = to.toFloat())
                     interaction++
                 },
-                onScrubEnd = {
-                    seek.released()?.let { target ->
+                onPutDown = { jump ->
+                    val target = seek.putDown()
+                    // The bar going from under a resting finger (the Next Episode card hid the controls)
+                    // reads as the finger lifting: that puts it back, never jumps.
+                    if (jump && target != null && controlsVisible) {
                         controller.player.seekTo(target)
                         positionMs = target
                     }
@@ -566,8 +594,9 @@ fun VodPlayerContent(
                 ),
                 startFocus = barFocus,
                 returnFocus = barReturn,
+                onPreviousEpisode = { moveEpisode(forward = false) }.takeIf { shownSteps.previous },
+                onNextEpisode = { moveEpisode(forward = true) }.takeIf { shownSteps.next },
                 barInteractions = barInteractions,
-                onBarFocusChanged = { onBar -> if (onBar) seek.reached() else seek.left() },
                 badge = if (growingRec) ({ RecordingBadge() }) else null,
             )
         }
@@ -648,9 +677,6 @@ fun VodPlayerContent(
 }
 
 private const val POLL_MILLIS = 500L
-
-/** How long an unfinished seek waits for the viewer to come back to the bar. To adjust once tried on the Stick. */
-private const val UNFINISHED_SEEK_GRACE_MILLIS = 3_000L
 
 /** How often progress is written while playing, so a crash or power cut loses little. */
 private const val SAVE_EVERY_MILLIS = 15_000L

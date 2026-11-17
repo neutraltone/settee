@@ -114,6 +114,8 @@
     <!-- ============================ Player controls ============================ -->
     <string name="player_pause">Pause</string>
     <string name="player_close">Close</string>
+    <string name="player_previous_episode">Previous episode</string>
+    <string name="player_next_episode">Next episode</string>
     <string name="player_paused_left">Paused · %1$s left</string>
     <string name="player_no_sound_tv">This TV can\'t play this audio format (%1$s). If your TV or soundbar supports it, turning on surround sound in its settings may help.</string>
     <string name="player_no_sound_device">This device can\'t play this audio format (%1$s). If your TV or soundbar supports it, turning on surround sound in this device\'s settings may help.</string>

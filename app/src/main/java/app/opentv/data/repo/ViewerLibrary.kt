@@ -489,10 +489,22 @@ class NextEpisodes internal constructor(
      * whatever the Profile last Watched (unlike Up Next). Null after a series' last episode, or
      * when the series' episodes aren't loaded.
      */
-    suspend fun after(episode: Episode): Episode? {
-        val ordered = episodes.forSeries(episode.sourceId, episode.seriesId).sortedWith(EPISODE_ORDER)
-        val at = ordered.indexOfFirst { it.id == episode.id }
-        return if (at < 0) null else ordered.getOrNull(at + 1)
+    suspend fun after(episode: Episode): Episode? = around(episode).second
+
+    /**
+     * The episode before [episode] in the same order as [after], for the player's Previous episode.
+     * Null for a series' first episode, or when the series' episodes aren't loaded.
+     */
+    suspend fun before(episode: Episode): Episode? = around(episode).first
+
+    /**
+     * [before] and [after] [episode] together, from one read of the series; neither when there's no
+     * episode, or its series' episodes aren't loaded.
+     */
+    suspend fun around(episode: Episode?): Pair<Episode?, Episode?> {
+        val ordered = episode?.let { episodes.forSeries(it.sourceId, it.seriesId).sortedWith(EPISODE_ORDER) }.orEmpty()
+        val at = ordered.indexOfFirst { it.id == episode?.id }
+        return if (at < 0) null to null else ordered.getOrNull(at - 1) to ordered.getOrNull(at + 1)
     }
 
     /**

@@ -347,7 +347,7 @@
     ],
     "dos": [
       "Do build from `ui/design` and Compose foundation: `HighlightSurface`, `PillButton`, `Pill`, `ListRow`, `ArtCard`, `SidePanel`, `ScreenFrame`, `AerialTv`, `ErrorMessage`.",
-      "Do make every new element reachable and obvious with a D-pad. If it can take the Highlight, it draws one of the two treatments: ring and lift on artwork, solid coral fill on everything else.",
+      "Do make every new element reachable and obvious with a D-pad. If it can take the Highlight, it draws one of the two treatments: ring and lift on artwork, solid coral fill on everything else. The player's previous, play or pause and next are the one exception: bare icons that turn coral.",
       "Do switch text and icons to Plum Ink on anything coral, including a switch's track and the small aerial TV.",
       "Do keep text 16 sp or larger, with lining, tabular figures.",
       "Do put the fade under any text that sits on artwork, and make it follow the text, not the art: at least 0.7 of Aubergine Dusk under words and 0.9 under quiet text.",
