@@ -94,6 +94,17 @@ aren't `ErrorMessage`s and have no detail line.
 | None of the title's Versions plays here (only 4K ones on a 1080p Stick) | `vod_cant_play_tv` / `_device` | This TV can't play 4K | This hardware: Play is off |
 | Only Versions in another language play here | `vod_language_title`, `vod_language_body_tv` / `_device` | Only in German here. This TV can't play a version in your language. | This hardware, or the provider's shelves: Play asks first |
 
+## Film and show pages
+
+Drawn by `GoneDetail` (`ui/vod`) in place of the page, with Back highlighted (#495). A panel that's slow
+with a title's details isn't an error: past `CatalogRepository.OPENING_LIMIT` the page draws from the
+row as stored. A show with no episodes stored by then reads as a timeout in
+[Show page episodes](#show-page-episodes).
+
+| Trigger | String key | Sentence | Detail | Whose end, likely cause |
+|---|---|---|---|---|
+| A film or show page opened for a title no longer in the catalogue (`Opened.Gone`), from a Home row, the back stack or a restored app | `error_gone` | This isn't on your provider any more. Try refreshing your provider in Settings. | Gone | Provider's: a refresh removed it |
+
 ## Provider connection
 
 A failed Catalogue Refresh as the guide shows it (`Outcome.Refreshed.failure`), adding a provider
@@ -130,6 +141,7 @@ a 5xx read as in [Provider connection](#provider-connection). Under it, Try agai
 | Trigger | String key | Sentence | Detail | Whose end, likely cause |
 |---|---|---|---|---|
 | Every fetch failed with nothing more specific (a reply that won't parse, any other HTTP status) | `vod_episodes_failed` | Couldn't load the episodes of this series. Try again in a moment. | exception type, or HTTP status | Provider's |
+| No episodes stored once `CatalogRepository.OPENING_LIMIT` has passed, fetches still out (#495); episodes they store later replace it | `error_timed_out` | Your provider stopped responding. It may be busy, so try again in a moment. | SocketTimeout | Provider's: slow |
 | A fetch answered, but no Version has episodes (a plain line, not an error, and no Try again) | `vod_no_episodes` | Your provider hasn't added any episodes of this series. | none | Provider's: none listed yet |
 
 ## Guides

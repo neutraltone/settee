@@ -44,6 +44,7 @@ import app.opentv.data.repo.LineupChannel
 import app.opentv.data.repo.LineupScope
 import app.opentv.data.repo.LivePreview
 import app.opentv.data.repo.MediaKey
+import app.opentv.data.repo.Opened
 import app.opentv.data.repo.RefreshMessages
 import app.opentv.data.repo.ShowEpisodes
 import app.opentv.data.repo.TitleCover
@@ -67,7 +68,10 @@ import app.opentv.sync.SyncEngine
 import app.opentv.sync.SyncServer
 import app.opentv.ui.vod.PageVersions
 import java.net.HttpURLConnection
+import java.net.SocketTimeoutException
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicReference
+import kotlin.time.TimeSource
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
@@ -76,7 +80,6 @@ import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -107,6 +110,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 
 /**
  * View models for the whole app.
@@ -1286,37 +1290,70 @@ class VodViewModel @JvmOverloads constructor(
      * once they all have been. Episodes are fetched here rather than during catalogue sync: pulling
      * every episode of every series up front is what makes a first sync take twenty minutes on a
      * large provider, and most of it is never looked at. Collected again for the page's Try again.
+     * [Opened.Gone] if the show isn't stored. [CatalogRepository.OPENING_LIMIT] covers all of it, the
+     * other Versions too (#495): once it passes, the show is sent fetched, and with no episodes stored
+     * yet, the page says the provider stopped responding, with Try again; episodes still on their way
+     * replace that as they're stored. A page that leaves before then cancels the fetches.
      */
-    fun openShow(id: Long): Flow<OpenedShow> = channelFlow {
-        // Only touched by one coroutine at a time: the first fetch is joined before the second.
-        val asked = mutableSetOf(id)
+    fun openShow(id: Long): Flow<Opened<OpenedShow>> = channelFlow {
+        val opening = TimeSource.Monotonic.markNow()
+        // A set the fetches share, as they run side by side: each Version is asked for once.
+        val asked: MutableSet<Long> = ConcurrentHashMap.newKeySet<Long>().apply { add(id) }
         // Set on the repository's thread, read here once the series has stopped coming.
         val own = AtomicReference<Result<Unit>?>(null)
+        val fetching = mutableListOf<Deferred<List<Result<Unit>>>>()
         var opened: Series? = null
-        var others: Deferred<List<Result<Unit>>>? = null
-        graph.catalogRepository.openSeries(id, onFetched = own::set).collect {
-            if (others == null) others = async { fetchVersions(it, asked) }
-            opened = it
-            send(OpenedShow(it, fetched = false))
+        var outlived = false
+        try {
+            graph.catalogRepository.openSeriesPage(id, onFetched = own::set).collect { page ->
+                when (page) {
+                    Opened.Gone -> send(Opened.Gone)
+                    is Opened.Found -> {
+                        val shown = page.title
+                        if (fetching.isEmpty()) fetching += fetchVersions(shown, asked)
+                        opened = shown
+                        send(Opened.Found(OpenedShow(shown, fetched = false)))
+                    }
+                }
+            }
+            val series = opened ?: return@channelFlow
+            // Again once TMDB has answered, for any Version its TMDB id newly matches.
+            fetching += fetchVersions(series, asked)
+            val left = CatalogRepository.OPENING_LIMIT - opening.elapsedNow()
+            val others = withTimeoutOrNull(left) { fetching.awaitAll().flatten() }
+            outlived = others == null
+            // The show's own fetch unheard of once its flow has ended at the limit, too.
+            val timedOut = outlived || (own.get() == null && opening.elapsedNow() >= CatalogRepository.OPENING_LIMIT)
+            val outcomes = listOfNotNull(own.get()) + others.orEmpty()
+            // Read here, after the fetches stored them, rather than left to the page's live read, which can
+            // come a moment later and would have the page say there are none just before they show.
+            val none = showEpisodes(series).first().all.isEmpty()
+            val failure = when {
+                !none -> null
+                timedOut -> graph.errorWording.ofProvider(SocketTimeoutException(), R.string.vod_episodes_failed)
+                else -> episodesFailure(outcomes)
+            }
+            send(Opened.Found(OpenedShow(series, fetched = true, noEpisodes = none, failure = failure)))
+        } finally {
+            // Nothing's waiting for them any more; past the limit they carry on, and store what they find.
+            if (!outlived) fetching.forEach { it.cancel() }
         }
-        val series = opened ?: return@channelFlow
-        val outcomes = listOfNotNull(own.get()) + others?.await().orEmpty() + fetchVersions(series, asked)
-        // Read here, after the fetches stored them, rather than left to the page's live read, which can
-        // come a moment later and would have the page say there are none just before they show.
-        val none = showEpisodes(series).first().all.isEmpty()
-        send(OpenedShow(series, fetched = true, noEpisodes = none, failure = episodesFailure(outcomes).takeIf { none }))
     }
 
-    /** Episodes for each of [series]' Versions not [asked] for yet, all at once, and how each fetch went. */
-    private suspend fun fetchVersions(series: Series, asked: MutableSet<Long>): List<Result<Unit>> = coroutineScope {
-        val versions = graph.database.versionsOf(series, graph.titleIndex.versionIds).filter { asked.add(it.id) }
-        versions.map { version ->
-            async {
-                val source = graph.sourceRepository.byId(version.sourceId) ?: return@async null
-                graph.catalogRepository.fetchEpisodes(source, version.seriesId)
-            }
-        }.awaitAll().filterNotNull()
-    }
+    /**
+     * Episodes for each of [series]' Versions not [asked] for yet, all at once, and how each fetch went;
+     * on [viewModelScope], so that past the limit they outlive the page that asked.
+     */
+    private fun fetchVersions(series: Series, asked: MutableSet<Long>): Deferred<List<Result<Unit>>> =
+        viewModelScope.async {
+            val versions = graph.database.versionsOf(series, graph.titleIndex.versionIds).filter { asked.add(it.id) }
+            versions.map { version ->
+                async {
+                    val source = graph.sourceRepository.byId(version.sourceId) ?: return@async null
+                    graph.catalogRepository.fetchEpisodes(source, version.seriesId)
+                }
+            }.awaitAll().filterNotNull()
+        }
 
     /**
      * Why a show's episodes didn't come, worded for its page, when every fetch for its Versions failed;
@@ -1361,8 +1398,11 @@ class VodViewModel @JvmOverloads constructor(
     // keyed on the id, so each detail instance owns its own state and a "More like this" hop to
     // another title loads cleanly without two screens fighting over one shared StateFlow.
 
-    /** Loads a movie, lazily enriching backdrop/cast/genre on first open. See CatalogRepository.movieDetail. */
-    suspend fun movieDetail(id: Long): Movie? = graph.catalogRepository.movieDetail(id)
+    /**
+     * A film opened on its page, lazily enriching backdrop/cast/genre on first open, or [Opened.Gone].
+     * See [CatalogRepository.openMoviePage].
+     */
+    suspend fun openMovie(id: Long): Opened<Movie> = graph.catalogRepository.openMoviePage(id)
 
     /** Whether playing [movie] would pick up partway: the Quality that plays keeps the resume point. */
     /** A film's More like this. */

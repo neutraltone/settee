@@ -21,6 +21,7 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -59,17 +60,20 @@ import coil.compose.AsyncImage
 /**
  * A show's More like this, where its episodes were: a grid of the same covers as a category's. The first
  * cover takes [firstCover], for Down from the More like this pill; Up from the first row calls
- * [onUpFromFirstRow], back to that pill; OK on a cover calls [onOpenSeries].
+ * [onUpFromFirstRow], back to that pill; OK on a cover calls [onOpenSeries]. Back to the page, the grid
+ * scrolls to the cover kept in [spot], for the page to highlight.
  */
 @Composable
 internal fun LikeThisGrid(
     covers: List<TitleCover>,
+    spot: ReturnSpot,
     firstCover: FocusRequester,
     onFocusChanged: (hasFocus: Boolean) -> Unit,
     onUpFromFirstRow: () -> Unit,
     onOpenSeries: (Long) -> Unit,
 ) {
     val grid = rememberLazyGridState()
+    LaunchedEffect(Unit) { grid.bringOut(covers.indexOfFirst { PageSpot.Show(it.id) == spot.start }) }
     // By id, not place: the covers can be read again while one is highlighted.
     var highlighted by remember { mutableStateOf<Long?>(null) }
     LazyVerticalGrid(
@@ -89,7 +93,8 @@ internal fun LikeThisGrid(
         itemsIndexed(covers, key = { _, cover -> cover.id }) { index, cover ->
             TitleArt(
                 cover = cover,
-                modifier = if (index == 0) Modifier.focusRequester(firstCover) else Modifier,
+                modifier = (if (index == 0) Modifier.focusRequester(firstCover) else Modifier)
+                    .returnSpot(spot, PageSpot.Show(cover.id)),
                 onHighlight = { highlighted = cover.id },
                 onOpen = { onOpenSeries(cover.id) },
                 onOptions = null,
