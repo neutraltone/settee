@@ -311,6 +311,7 @@ class PlayerController(
                         Player.STATE_READY -> {
                             consecutiveFailures = 0
                             hadPlayed = true
+                            guard.ready()
                             State.Playing(_title.value)
                         }
                         Player.STATE_IDLE -> _state.value
@@ -601,6 +602,8 @@ class PlayerController(
         set(behind) {
             if (behind == field) return
             field = behind
+            // Paused, a stream needn't play; stopped, none is on its way. Either way, not its fault.
+            guard.held = behind
             if (behind) {
                 // Nothing playing yet counts as live: then nothing connects unseen.
                 val live = current?.key.let { it == null || it is MediaKey.Live }
