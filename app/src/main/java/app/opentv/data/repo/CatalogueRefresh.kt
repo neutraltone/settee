@@ -403,7 +403,9 @@ class CatalogueRefresh(
             }.getOrElse { e ->
                 if (e is CancellationException) throw e
                 Log.w(TAG, "Movies and shows failed for source ${source.id}", e)
-                _state.update { it.copy(vodFailures = it.vodFailures.after(source.id, catalog.vodFailed(e))) }
+                _state.update {
+                    it.copy(vodFailures = it.vodFailures.after(source.id, vodFailed(e, catalog.wording, settings)))
+                }
                 return@share null
             }
             _state.update { it.copy(vodFailures = it.vodFailures.after(source.id, vod)) }

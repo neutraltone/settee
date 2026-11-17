@@ -781,20 +781,7 @@ class CatalogRepository(
         runCatching { syncXtreamVod(source, nowUtcMillis) }
             .onFailure { if (it is CancellationException) throw it }
             .onFailure { Log.w(TAG, "VOD sync failed for source ${source.id}", it) }
-            .getOrElse { vodFailed(it) }
-    }
-
-    /**
-     * Movies and shows that failed as a whole, outside either list: each list switched on failed
-     * with it, so the tab still says why rather than that the provider sent nothing.
-     */
-    fun vodFailed(error: Throwable): VodFetch {
-        fun failed(on: Boolean, @StringRes fallback: Int) =
-            ListFetch(0, wording.ofProvider(error, fallback)).takeIf { on }
-        return VodFetch.of(
-            failed(settings.moviesEnabled.value, R.string.error_movies_list),
-            failed(settings.seriesEnabled.value, R.string.error_shows_list),
-        )
+            .getOrElse { vodFailed(it, wording, settings) }
     }
 
     suspend fun detectNewEpisodes(source: Source, updated: List<Series>, nowUtcMillis: Long) =
@@ -1144,3 +1131,16 @@ class CatalogRepository(
 /** About as many as fit across Home twice: enough to browse, few enough to stay recent. */
 private const val RECENTLY_ADDED = 20
 private const val MORE_LIKE_THIS_LIMIT = 20
+
+/**
+ * Movies and shows that failed as a whole, outside either list: each list switched on failed with
+ * it, so the tab still says why rather than that the provider sent nothing.
+ */
+fun vodFailed(error: Throwable, wording: ErrorWording, settings: AppSettings): CatalogRepository.VodFetch {
+    fun failed(on: Boolean, @StringRes fallback: Int) =
+        CatalogRepository.ListFetch(0, wording.ofProvider(error, fallback)).takeIf { on }
+    return CatalogRepository.VodFetch.of(
+        failed(settings.moviesEnabled.value, R.string.error_movies_list),
+        failed(settings.seriesEnabled.value, R.string.error_shows_list),
+    )
+}
