@@ -465,6 +465,27 @@ class SearchContentTest {
     }
 
     @Test
+    fun `the result Search came back to doesn't take the highlight again when the search is retyped`() {
+        query.setTextAndPlaceCursorAtEnd("film")
+        liveMovies = listOf(movie("Film", id = 1))
+        show()
+        resultRow("Film").performClick()
+        comeBack()
+        resultRow("Film").assertIsFocused()
+        device.remote(KeyEvent.KEYCODE_DPAD_UP)
+        assertThat(device.highlighted()).isTrue()
+
+        // Down to one letter the results give way to a hint, and come back as the rest is typed.
+        query.setTextAndPlaceCursorAtEnd("f")
+        compose.waitForIdle()
+        query.setTextAndPlaceCursorAtEnd("film")
+        compose.waitForIdle()
+
+        resultRow("Film").assertExists()
+        assertThat(device.highlighted()).isTrue()
+    }
+
+    @Test
     fun `a channel whose play is cancelled isn't returned to`() {
         query.setTextAndPlaceCursorAtEnd("bbc")
         var asked = false

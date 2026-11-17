@@ -162,10 +162,12 @@ internal fun SearchContent(
     var awaitingResultsOf by remember { mutableStateOf<String?>(null) }
     // Search is built again on Back from a result it opened (a title page or the player covered it),
     // so the result is saved by its list key, and the highlight goes back to it, not to the box (#431).
-    var opened by rememberSaveable { mutableStateOf<String?>(null) }
-    // Decided once, as Search is built: the results it comes back to are the ones it had.
-    val returnTo = remember {
-        opened?.takeIf { itemIndexOf(it, channelResults, movieResults, seriesResults) != null }
+    var openedResult by rememberSaveable { mutableStateOf<String?>(null) }
+    // Decided as Search is built, from the results it comes back to, and used once: the results
+    // give way to a hint as the search is cut to one letter, and retyping it mustn't pull the
+    // highlight out of the box.
+    var returnTo by remember {
+        mutableStateOf(openedResult?.takeIf { itemIndexOf(it, channelResults, movieResults, seriesResults) != null })
     }
 
     LaunchedEffect(Unit) { if (returnTo == null) runCatching { searchBox.requestFocus() } }
@@ -232,26 +234,28 @@ internal fun SearchContent(
                     movieResults = movieResults,
                     seriesResults = seriesResults,
                     returnTo = returnTo,
+                    returnFallback = searchBox,
+                    onReturned = { returnTo = null },
                     // A channel counts as opened once its play is confirmed: kept, it's left alone.
                     onPlayChannel = { row ->
                         confirmLive {
-                            opened = row.resultKey
+                            openedResult = row.resultKey
                             onResultOpened(typed)
                             onPlayChannel(row.primary)
                         }
                     },
                     onPlayMovie = {
-                        opened = it.resultKey
+                        openedResult = it.resultKey
                         onResultOpened(typed)
                         onPlayMovie(it)
                     },
                     onOpenSeries = {
-                        opened = it.resultKey
+                        openedResult = it.resultKey
                         onResultOpened(typed)
                         onOpenSeries(it)
                     },
                     onLeave = { key, go ->
-                        opened = key
+                        openedResult = key
                         onResultOpened(typed)
                         go()
                     },
@@ -266,7 +270,10 @@ private val ChannelsViewModel.Row.resultKey get() = "c$key"
 private val Movie.resultKey get() = "m$id"
 private val Series.resultKey get() = "s$id"
 
-/** Where the result keyed [key] stands in [SearchResults]' list, headers counted; null if it isn't there. */
+/**
+ * Where the result keyed [key] stands in [SearchResults]' list, headers counted; null if it isn't
+ * there. Kept in step with that list's sections, each a header and then its rows.
+ */
 private fun itemIndexOf(
     key: String,
     channelResults: List<ChannelsViewModel.Row>,
@@ -282,7 +289,6 @@ private fun itemIndexOf(
     for (section in sections) {
         if (section.isEmpty()) continue
         val row = section.indexOf(key)
-        // Each section's rows follow its header.
         if (row >= 0) return start + 1 + row
         start += 1 + section.size
     }
@@ -291,7 +297,8 @@ private fun itemIndexOf(
 
 /**
  * The results, the highlight going to the one keyed [returnTo] as they're first shown, scrolled to
- * if it's out of sight. [onLeave] is told the key of the result whose options leave Search.
+ * if it's out of sight, or to [returnFallback] if it can't; then [onReturned] is told. [onLeave] is
+ * told the key of the result whose options leave Search.
  */
 @Composable
 private fun SearchResults(
@@ -299,6 +306,8 @@ private fun SearchResults(
     movieResults: List<Movie>,
     seriesResults: List<Series>,
     returnTo: String?,
+    returnFallback: FocusRequester,
+    onReturned: () -> Unit,
     onPlayChannel: (ChannelsViewModel.Row) -> Unit,
     onPlayMovie: (Movie) -> Unit,
     onOpenSeries: (Series) -> Unit,
@@ -315,10 +324,14 @@ private fun SearchResults(
         withFrameNanos {}
         if (listState.layoutInfo.visibleItemsInfo.none { it.index == index }) {
             listState.scrollToItem(index)
-            // The row is composed, with the requester, on the frame after it's scrolled to.
-            withFrameNanos {}
+            // As RowHighlight waits: a frame resumes this before it recomposes, so the row wears the
+            // requester a frame later.
+            repeat(2) { withFrameNanos {} }
         }
+        // Failing that, the fallback (the box): the highlight must land somewhere.
         runCatching { returnRequester.requestFocus() }
+            .onFailure { runCatching { returnFallback.requestFocus() } }
+        onReturned()
     }
     fun Modifier.returning(key: String) = if (key == returnTo) focusRequester(returnRequester) else this
     fun leave(key: String): LeaveScreen = { go -> onLeave(key, go) }
