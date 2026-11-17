@@ -82,7 +82,7 @@ class NextEpisodeCountdownTest {
 
     @Test
     fun `a scene after the credits gets the card without a countdown, and the episode plays to its end`() {
-        countdown.cue = { NextEpisodeCountdown.Cue(cardAtMillis = CREDITS_CARD_MILLIS, counts = false) }
+        countdown.cue = { NextEpisodeCountdown.Cue(cardAtMillis = CREDITS_CARD_MILLIS, countsDown = false) }
 
         countdown.update(atMillis(CREDITS_CARD_MILLIS))
         assertThat(countdown.overlay).isEqualTo(Overlay.Card(secondsLeft = 15, counting = false))

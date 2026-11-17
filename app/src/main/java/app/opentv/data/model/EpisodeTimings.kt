@@ -34,20 +34,40 @@ data class EpisodeTimings(
     val noIntro: Boolean = false,
     val noRecap: Boolean = false,
     val noCredits: Boolean = false,
-    /** Which database answered, [THE_INTRO_DB] or [INTRO_DB]; null when neither had the episode. */
-    val source: String? = null,
+    /**
+     * Which database the credits came from, or the rest when it has no credits; null when neither had
+     * the episode.
+     */
+    val source: TimingsSource? = null,
     val fetchedAtMillis: Long = 0,
 ) {
     /** How long the credits run, where both ends are timed. */
     val creditsMillis: Long?
         get() = creditsStartMillis?.let { start -> creditsEndMillis?.let { it - start } }
 
-    companion object {
-        const val THE_INTRO_DB = "theintrodb"
-        const val INTRO_DB = "introdb"
+    /**
+     * Whether the credits are settled: timed, or confirmed not to be there. Neither changes, so neither
+     * is asked again.
+     */
+    val creditsKnown: Boolean get() = creditsStartMillis != null || noCredits
 
-        /** The [show] key for a series, from whichever id it has. */
-        fun showKey(tmdbId: String?, imdbId: String?): String? =
-            tmdbId?.let { "tmdb:$it" } ?: imdbId?.let { "imdb:$it" }
+    companion object {
+        /** The [show] key of a show TMDB knows as [id]. */
+        fun tmdbShow(id: String): String = "tmdb:$id"
+
+        /** The [show] key of a show IMDb knows as [id], for one with no TMDB id. */
+        fun imdbShow(id: String): String = "imdb:$id"
+
+        /** The [show] key for a series, from whichever id it has, TMDB's first. */
+        fun showKey(tmdbId: String?, imdbId: String?): String? = tmdbId?.let(::tmdbShow) ?: imdbId?.let(::imdbShow)
     }
 }
+
+/** The community databases timings come from (#517). Stored by name. */
+enum class TimingsSource { THE_INTRO_DB, INTRO_DB }
+
+/**
+ * Another episode of the same show, for its usual credits length: its [timings], and its length as the
+ * provider gave it, [lengthMillis], to check them against when it's known.
+ */
+data class ShowEpisode(val timings: EpisodeTimings, val lengthMillis: Long?)

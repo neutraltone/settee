@@ -358,11 +358,16 @@ put the card out by the whole difference. Timings that can't fit the stream (sta
 in its first half, or more than 12 minutes before its end) are thrown away: a card in the middle of
 a scene is worse than one 30 seconds before the end. IntroDB's scene-after-credits rule of thumb
 (credits ending well before the stream) misfired on a measured episode, so only a database's own
-marking of a scene after the credits holds the countdown. TheIntroDB is never sent the stream's
-length: given it, it picked another cut and put one episode's credits 107 seconds early.
+marking of a scene after the credits holds the countdown, and only where its credits fit; TheIntroDB's
+credits timed in two parts aren't taken as one, since it doesn't say what's between them. TheIntroDB
+is never sent the stream's length: given it, it picked another cut and put one episode's credits 107
+seconds early. A show's other episodes count towards its usual credits length only where their
+credits fit the length the provider gave them, which keeps out another cut's timings.
 
-The answers are kept in `episode_timings`, a cache that isn't synced. Lookups run beside playback,
-so a slow or missing network only leaves the card at 30 seconds before the end.
+The answers are kept in `episode_timings`, a cache that isn't synced, once they're settled: credits
+timed or confirmed absent, or every database asked having answered. A database that couldn't be
+reached is never kept as "nothing timed". Lookups run beside playback, so a slow or missing network
+only leaves the card at 30 seconds before the end.
 
 ## Defensive parsing of Xtream responses
 

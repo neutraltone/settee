@@ -12,7 +12,6 @@ import app.opentv.data.model.Series
 import app.opentv.player.NextEpisodeCountdown.Overlay
 import app.opentv.ui.vod.VodPlayerViewModel
 import com.google.common.truth.Truth.assertThat
-import java.util.Collections
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
@@ -22,11 +21,6 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
-import okhttp3.MediaType.Companion.toMediaType
-import okhttp3.OkHttpClient
-import okhttp3.Protocol
-import okhttp3.Response
-import okhttp3.ResponseBody.Companion.toResponseBody
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -44,21 +38,15 @@ class VodPlayerTimingsTest {
 
     /** What TheIntroDB answers; IntroDB and TMDB answer with nothing. `"!"` fails every request. */
     @Volatile private var theIntroDb = """{"credits":[{"start_ms":2280000,"end_ms":null}]}"""
-    private val askedHosts: MutableList<String> = Collections.synchronizedList(mutableListOf())
-
-    private val http = OkHttpClient.Builder().addInterceptor { chain ->
-        val request = chain.request()
-        askedHosts += request.url.host
-        val body = if (request.url.host == "api.theintrodb.org") theIntroDb else "{}"
-        if (theIntroDb == "!") throw java.io.IOException("Offline")
-        Response.Builder()
-            .request(request)
-            .protocol(Protocol.HTTP_1_1)
-            .code(200)
-            .message("OK")
-            .body(body.toResponseBody("application/json".toMediaType()))
-            .build()
-    }.build()
+    private val network = FakeJsonHttp { request ->
+        when {
+            theIntroDb == "!" -> "!"
+            request.url.host == "api.theintrodb.org" -> theIntroDb
+            else -> "{}"
+        }
+    }
+    private val http = network.http
+    private val askedHosts get() = network.hosts()
 
     private val graph = ServiceLocator.Graph(app, http = http).apply { tmdbKey = "key" }
     private val playback = FakePlayback()

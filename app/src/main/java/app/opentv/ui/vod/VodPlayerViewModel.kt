@@ -14,6 +14,7 @@ import app.opentv.data.model.Episode
 import app.opentv.data.repo.MediaKey
 import app.opentv.data.repo.VodQualities
 import app.opentv.data.repo.WatchStatus
+import app.opentv.player.CuePlacement
 import app.opentv.player.NextEpisodeCountdown
 import app.opentv.player.NextEpisodeCountdown.Decision
 import app.opentv.player.NextEpisodeCountdown.Overlay
@@ -271,6 +272,7 @@ class VodPlayerViewModel(
             _nextEpisode.value = episode?.let { lookup.card(it) }
             countdown.newEpisode(hasNext = episode != null)
             countdown.cue = timings.cue
+            timings.lookAhead(viewModelScope, episode)
             _overlay.value = countdown.overlay
             _episodeSteps.value = EpisodeSteps(previous = previous != null, next = episode != null, of = _current.value)
         }
@@ -292,9 +294,7 @@ class VodPlayerViewModel(
         val episode = (key as? MediaKey.Episode)?.let { graph.catalogRepository.episode(it.episodeId) }
         val (before, after) = graph.viewerLibrary.nextEpisodes.around(episode)
         previous = before
-        timings.lookUp(viewModelScope, episode, stillPlaying = { _current.value == key }, following = { next }) {
-            countdown.cue = it
-        }
+        timings.lookUp(viewModelScope, episode, stillPlaying = { _current.value == key }) { countdown.cue = it }
         offer(after)
         if (episode != null && next == null) {
             fetchingNext = viewModelScope.launch {
@@ -404,33 +404,33 @@ private class NextEpisodeLookup(private val graph: ServiceLocator.Graph) {
  * newEpisode, because a Next Episode found late is offered again for the same episode.
  */
 private class UpNextTimings(private val graph: ServiceLocator.Graph) {
-    var cue: (Long) -> NextEpisodeCountdown.Cue = UpNextCue::fallback
+    var cue: CuePlacement = UpNextCue::fallback
         private set
     private var job: Job? = null
+
+    private val wanted: Boolean get() = graph.settings.skipIntrosAndCredits.value
 
     /**
      * Starts again at the fallback for [episode], then looks up its timings beside playback, not before
      * it, so a slow or missing network only leaves the card at 30 seconds before the end. [placed] gets
-     * the cue they give, while the episode is [stillPlaying]; then the [following] episode's are looked
-     * up, to be there when it starts.
+     * the cue they give, while the episode is [stillPlaying].
      */
-    fun lookUp(
-        scope: CoroutineScope,
-        episode: Episode?,
-        stillPlaying: () -> Boolean,
-        following: () -> Episode?,
-        placed: (cue: (Long) -> NextEpisodeCountdown.Cue) -> Unit,
-    ) {
+    fun lookUp(scope: CoroutineScope, episode: Episode?, stillPlaying: () -> Boolean, placed: (CuePlacement) -> Unit) {
         job?.cancel()
         cue = UpNextCue::fallback
-        if (episode == null || !graph.settings.skipIntrosAndCredits.value) return
+        if (episode == null || !wanted) return
         job = scope.launch {
             // Timings only ever improve on the fallback: nothing about them is worth an error on screen.
-            val known = runCatching { graph.episodeTimings.timingsFor(episode) }.getOrNull()
-            if (known == null || !stillPlaying()) return@launch
-            cue = { streamMillis -> UpNextCue.place(known.timings, known.others, streamMillis) }
+            val found = runCatching { graph.episodeTimings.timingsFor(episode) }.getOrNull()
+            if (found == null || !stillPlaying()) return@launch
+            cue = { streamMillis -> UpNextCue.place(found.timings, found.restOfShow, streamMillis) }
             placed(cue)
-            following()?.let { runCatching { graph.episodeTimings.timingsFor(it) } }
         }
+    }
+
+    /** Looks up the Next Episode's timings, whenever it's found, so they're there when it starts. */
+    fun lookAhead(scope: CoroutineScope, next: Episode?) {
+        if (next == null || !wanted) return
+        scope.launch { runCatching { graph.episodeTimings.timingsFor(next) } }
     }
 }

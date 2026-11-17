@@ -9,6 +9,8 @@ import android.content.Context
 import android.util.Log
 import app.opentv.BuildConfig
 import app.opentv.data.db.OpenTvDatabase
+import app.opentv.data.model.Episode
+import app.opentv.data.model.Series
 import app.opentv.data.remote.IntroDbClient
 import app.opentv.data.remote.OpenSubtitlesClient
 import app.opentv.data.remote.StalkerApi
@@ -161,7 +163,12 @@ object ServiceLocator {
                 theIntroDb = TheIntroDbClient(httpClient),
                 introDb = IntroDbClient(httpClient),
                 tmdb = TmdbClient(httpClient, tmdbKey),
-                seriesOf = catalogRepository::seriesOf,
+                shows = object : EpisodeTimingsRepository.Shows {
+                    override suspend fun seriesOf(episode: Episode) = catalogRepository.seriesOf(episode)
+
+                    override suspend fun episodesOf(series: Series) =
+                        database.episodes().forSeries(series.sourceId, series.seriesId)
+                },
                 clock = clock,
             )
         }

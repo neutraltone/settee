@@ -9,20 +9,15 @@ import android.app.Application
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import app.opentv.data.db.OpenTvDatabase
-import app.opentv.data.model.EpisodeTimings
+import app.opentv.data.model.Episode
 import app.opentv.data.model.Series
+import app.opentv.data.model.TimingsSource
 import app.opentv.data.remote.IntroDbClient
 import app.opentv.data.remote.TheIntroDbClient
 import app.opentv.data.remote.TmdbClient
 import app.opentv.data.repo.EpisodeTimingsRepository
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.test.runTest
-import okhttp3.MediaType.Companion.toMediaType
-import okhttp3.OkHttpClient
-import okhttp3.Protocol
-import okhttp3.Request
-import okhttp3.Response
-import okhttp3.ResponseBody.Companion.toResponseBody
 import org.junit.After
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -42,29 +37,20 @@ class EpisodeTimingsRepositoryTest {
     @After
     fun close() = database.close()
 
-    /** What each host answers, by host (TMDB by path too); `"!"` fails the request. */
+    /** What each host answers, by host (TMDB by path too); see [FakeJsonHttp] for failures. */
     private val replies = mutableMapOf(
         "api.theintrodb.org" to """{"credits":[{"start_ms":3432884,"end_ms":null}]}""",
         "api.introdb.app" to """{"outro":{"start_ms":3431000,"end_ms":3500000}}""",
         "/3/tv/1396/external_ids" to """{"imdb_id":"tt0903747"}""",
         "/3/search/tv" to """{"results":[{"id":1396}]}""",
     )
-    private val asked = mutableListOf<Request>()
-
-    private val http = OkHttpClient.Builder().addInterceptor { chain ->
-        val request = chain.request().also { asked += it }
-        val body = replies[request.url.encodedPath].takeIf { request.url.host == "api.themoviedb.org" }
+    private val network = FakeJsonHttp { request ->
+        replies[request.url.encodedPath].takeIf { request.url.host == "api.themoviedb.org" }
             ?: replies[request.url.host]
             ?: "{}"
-        if (body == "!") throw java.io.IOException("Offline")
-        Response.Builder()
-            .request(request)
-            .protocol(Protocol.HTTP_1_1)
-            .code(if (body == "404") 404 else 200)
-            .message("Answer")
-            .body(body.toResponseBody("application/json".toMediaType()))
-            .build()
-    }.build()
+    }
+    private val asked get() = network.asked
+    private val http get() = network.http
 
     private val show = Series(
         id = 5,
@@ -87,18 +73,22 @@ class EpisodeTimingsRepositoryTest {
         theIntroDb = TheIntroDbClient(http),
         introDb = IntroDbClient(http),
         tmdb = TmdbClient(http, tmdbKey),
-        seriesOf = { series },
+        shows = object : EpisodeTimingsRepository.Shows {
+            override suspend fun seriesOf(episode: Episode) = series
+
+            override suspend fun episodesOf(series: Series) = (1..3).map { testEpisode(1, it) }
+        },
         clock = { now },
     )
 
-    private fun hosts() = asked.map { it.url.host }
+    private fun hosts() = network.hosts()
 
     @Test
     fun `TheIntroDB's credits are used, without asking IntroDB`() = runTest {
         val known = repository().timingsFor(testEpisode(1, 1))
 
         assertThat(known.timings?.creditsStartMillis).isEqualTo(3_432_884)
-        assertThat(known.timings?.source).isEqualTo(EpisodeTimings.THE_INTRO_DB)
+        assertThat(known.timings?.source).isEqualTo(TimingsSource.THE_INTRO_DB)
         assertThat(hosts()).doesNotContain("api.introdb.app")
         assertThat(asked.first { it.url.host == "api.theintrodb.org" }.url.queryParameter("tmdb_id")).isEqualTo("1396")
     }
@@ -118,7 +108,7 @@ class EpisodeTimingsRepositoryTest {
             assertThat(known.timings?.creditsStartMillis).isEqualTo(3_431_000)
             assertThat(known.timings?.creditsEndMillis).isEqualTo(3_500_000)
             assertThat(known.timings?.introStartMillis).isEqualTo(228_665)
-            assertThat(known.timings?.source).isEqualTo(EpisodeTimings.INTRO_DB)
+            assertThat(known.timings?.source).isEqualTo(TimingsSource.INTRO_DB)
         }
 
     @Test
@@ -179,7 +169,9 @@ class EpisodeTimingsRepositoryTest {
 
         val known = timings.timingsFor(testEpisode(1, 3))
 
-        assertThat(known.others.map { it.episode }).containsExactly(1, 2)
+        assertThat(known.restOfShow.map { it.timings.episode }).containsExactly(1, 2)
+        // With their lengths as the provider gave them, to check their credits against.
+        assertThat(known.restOfShow.map { it.lengthMillis }).containsExactly(2_400_000L, 2_400_000L)
     }
 
     @Test
@@ -191,6 +183,56 @@ class EpisodeTimingsRepositoryTest {
         assertThat(repository().timingsFor(testEpisode(1, 1)).timings).isNull()
 
         assertThat(hosts()).containsNoneOf("api.theintrodb.org", "api.introdb.app")
+    }
+
+    @Test
+    fun `when TheIntroDB can't be reached, IntroDB having nothing isn't kept as nothing timed`() = runTest {
+        replies["api.theintrodb.org"] = "!"
+        replies["api.introdb.app"] = "{}"
+        val timings = repository()
+        assertThat(timings.timingsFor(testEpisode(1, 1)).timings?.creditsStartMillis).isNull()
+
+        replies["api.theintrodb.org"] = """{"credits":[{"start_ms":3432884,"end_ms":null}]}"""
+
+        assertThat(timings.timingsFor(testEpisode(1, 1)).timings?.creditsStartMillis).isEqualTo(3_432_884)
+    }
+
+    @Test
+    fun `when IntroDB can't be reached, TheIntroDB having no credits isn't kept as nothing timed`() = runTest {
+        replies["api.theintrodb.org"] = """{"intro":[{"start_ms":228665,"end_ms":246498}],"credits":[]}"""
+        replies["api.introdb.app"] = "!"
+        val timings = repository()
+        assertThat(timings.timingsFor(testEpisode(1, 1)).timings?.introStartMillis).isEqualTo(228_665)
+
+        replies["api.introdb.app"] = """{"outro":{"start_ms":3431000,"end_ms":3500000}}"""
+
+        assertThat(timings.timingsFor(testEpisode(1, 1)).timings?.creditsStartMillis).isEqualTo(3_431_000)
+    }
+
+    @Test
+    fun `a series with an IMDb id whose TMDB lookup failed tries TMDB again on its next episode`() = runTest {
+        series = show.copy(seriesId = "tt0903747", tmdbId = null)
+        replies["/3/search/tv"] = "!"
+        val timings = repository()
+        timings.timingsFor(testEpisode(1, 1))
+        assertThat(hosts()).doesNotContain("api.theintrodb.org")
+
+        replies["/3/search/tv"] = """{"results":[{"id":1396}]}"""
+        timings.timingsFor(testEpisode(1, 2))
+
+        assertThat(hosts()).contains("api.theintrodb.org")
+    }
+
+    @Test
+    fun `the show's IMDb id is looked up on TMDB once, not for every episode IntroDB is asked about`() = runTest {
+        replies["api.theintrodb.org"] = "404"
+        val timings = repository()
+
+        timings.timingsFor(testEpisode(1, 1))
+        timings.timingsFor(testEpisode(1, 2))
+
+        assertThat(asked.count { it.url.encodedPath == "/3/tv/1396/external_ids" }).isEqualTo(1)
+        assertThat(hosts().count { it == "api.introdb.app" }).isEqualTo(2)
     }
 
     private companion object {

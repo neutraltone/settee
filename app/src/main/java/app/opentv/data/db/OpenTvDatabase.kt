@@ -41,6 +41,7 @@ import app.opentv.data.model.SeriesRule
 import app.opentv.data.model.Source
 import app.opentv.data.model.SourceKind
 import app.opentv.data.model.StreamKind
+import app.opentv.data.model.TimingsSource
 
 class Converters {
     @TypeConverter fun sourceKindToString(value: SourceKind): String = value.name
@@ -62,6 +63,11 @@ class Converters {
 
     @TypeConverter fun stringToRecordingStatus(value: String): RecordingStatus =
         runCatching { RecordingStatus.valueOf(value) }.getOrDefault(RecordingStatus.FAILED)
+
+    @TypeConverter fun timingsSourceToString(value: TimingsSource?): String? = value?.name
+
+    @TypeConverter fun stringToTimingsSource(value: String?): TimingsSource? =
+        value?.let { runCatching { TimingsSource.valueOf(it) }.getOrNull() }
 }
 
 @Database(

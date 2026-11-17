@@ -5,6 +5,9 @@
  */
 package app.opentv.player
 
+/** Where the Next Episode card comes up in a stream of a given length. */
+typealias CuePlacement = (streamMillis: Long) -> NextEpisodeCountdown.Cue
+
 /**
  * Decides when the episode player offers the Next Episode and when it plays it.
  *
@@ -25,10 +28,10 @@ class NextEpisodeCountdown(
     data class Playback(val positionMillis: Long, val durationMillis: Long, val ended: Boolean = false)
 
     /**
-     * Where the card comes up, [cardAtMillis] into the stream, and whether it [counts] down from there:
+     * Where the card comes up, [cardAtMillis] into the stream, and whether it [countsDown] from there:
      * not when a scene follows the credits, which the countdown would skip.
      */
-    data class Cue(val cardAtMillis: Long, val counts: Boolean = true)
+    data class Cue(val cardAtMillis: Long, val countsDown: Boolean = true)
 
     /** What the player draws over the picture. */
     sealed interface Overlay {
@@ -61,7 +64,7 @@ class NextEpisodeCountdown(
      * timings are placed against the stream, whose length isn't known until it plays; replaced when the
      * episode's timings arrive, and put back to [UpNextCue.fallback] by [newEpisode].
      */
-    var cue: (durationMillis: Long) -> Cue = UpNextCue::fallback
+    var cue: CuePlacement = UpNextCue::fallback
 
     private var hasNext = false
 
@@ -101,7 +104,7 @@ class NextEpisodeCountdown(
         val inCredits = playback.positionMillis >= cue.cardAtMillis || playback.ended
         if (!inCredits) cancelled = false
         val leftMillis = (cue.cardAtMillis + COUNTDOWN_MILLIS - playback.positionMillis).coerceIn(0, COUNTDOWN_MILLIS)
-        val counting = autoPlay() && cue.counts
+        val counting = autoPlay() && cue.countsDown
         val showing = inCredits && !cancelled
         overlay = if (showing) {
             Overlay.Card(secondsLeft = ((leftMillis + 999) / 1_000).toInt(), counting = counting)
@@ -109,7 +112,7 @@ class NextEpisodeCountdown(
             Overlay.None
         }
         // Without a countdown, as when a scene follows the credits, the episode's end is when it moves on.
-        return showing && (playback.ended && (counting || autoPlay()) || counting && leftMillis == 0L)
+        return showing && ((playback.ended && autoPlay()) || (counting && leftMillis == 0L))
     }
 
     /** The card's time ran out: on to the Next Episode, unless nobody seems to be watching. */

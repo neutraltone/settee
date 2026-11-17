@@ -23,6 +23,7 @@ import androidx.test.core.app.ApplicationProvider
 import app.opentv.core.ServiceLocator
 import app.opentv.data.model.EpisodeTimings
 import app.opentv.data.model.Series
+import app.opentv.data.model.TimingsSource
 import app.opentv.data.repo.MediaKey
 import app.opentv.player.NextEpisodeCountdown.Overlay
 import app.opentv.ui.vod.NextEpisodeOverlay
@@ -127,7 +128,7 @@ class NextEpisodeOverlayTest {
                     episode = 1,
                     creditsStartMillis = TIMED_CREDITS_MILLIS,
                     sceneAfterCredits = sceneAfter,
-                    source = EpisodeTimings.THE_INTRO_DB,
+                    source = TimingsSource.THE_INTRO_DB,
                     fetchedAtMillis = System.currentTimeMillis(),
                 ),
             )
@@ -148,7 +149,7 @@ class NextEpisodeOverlayTest {
 
         compose.onNodeWithText("Next episode in 15").assertExists()
         compose.onNodeWithText("Play now").assertIsFocused()
-        captureScreen("vod_player_next_episode_card_credits")
+        captureScreen("vodplayer_upnext_credits")
     }
 
     @Test
@@ -158,7 +159,7 @@ class NextEpisodeOverlayTest {
         compose.onNodeWithText("Next episode in 15").assertDoesNotExist()
         compose.onNodeWithText("Episode 2").assertExists()
         compose.onNodeWithText("Play now").assertIsFocused()
-        captureScreen("vod_player_next_episode_card_after_credits_scene")
+        captureScreen("vodplayer_upnext_after_credits_scene")
     }
 
     @Test

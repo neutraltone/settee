@@ -6,6 +6,7 @@
 package app.opentv.player
 
 import app.opentv.data.model.EpisodeTimings
+import app.opentv.data.model.ShowEpisode
 import app.opentv.player.NextEpisodeCountdown.Cue
 
 /**
@@ -24,28 +25,36 @@ object UpNextCue {
     fun fallback(streamMillis: Long): Cue = Cue(cardAtMillis = streamMillis - FALLBACK_MILLIS)
 
     /**
-     * The card for an episode with [timings], if it has any, in a stream [streamMillis] long; [others]
-     * are the same show's other episodes' timings, whose usual credits length stands in when this one
-     * isn't timed.
+     * The card for an episode with [timings], if it has any, in a stream [streamMillis] long; the
+     * [restOfShow]'s usual credits length stands in when this one isn't timed.
      */
-    fun place(timings: EpisodeTimings?, others: List<EpisodeTimings>, streamMillis: Long): Cue {
-        val counts = timings?.sceneAfterCredits != true
+    fun place(timings: EpisodeTimings?, restOfShow: List<ShowEpisode>, streamMillis: Long): Cue {
         val timed = timings?.creditsStartMillis?.takeIf { fits(it, streamMillis) }
         // Someone confirmed there are no credits: the show's usual length would be a guess at nothing.
-        val usual = if (timings?.noCredits == true) null else usualStart(others, streamMillis)
-        val start = timed ?: usual
-        return if (start != null) {
-            Cue(cardAtMillis = start + INTO_CREDITS_MILLIS, counts = counts)
-        } else {
-            fallback(streamMillis).copy(counts = counts)
+        val usual = if (timed != null || timings?.noCredits == true) null else usualStart(restOfShow, streamMillis)
+        return when {
+            // The scene-after-credits marking belongs to the timings, so it counts only where they fit.
+            timed != null -> Cue(timed + INTO_CREDITS_MILLIS, countsDown = timings?.sceneAfterCredits != true)
+            usual != null -> Cue(usual)
+            else -> fallback(streamMillis)
         }
     }
 
-    /** Where the show's usual credits would start, back from this stream's end, if that can fit it. */
-    private fun usualStart(others: List<EpisodeTimings>, streamMillis: Long): Long? =
-        others.mapNotNull { it.creditsMillis }.filter { it > 0 }.median()
-            ?.let { streamMillis - it }
-            ?.takeIf { fits(it, streamMillis) }
+    /**
+     * Where the show's usual credits would start, measured back from this stream's end, if that can fit
+     * it. An episode whose own credits don't fit its length, where the provider gave one, is another
+     * cut's or a mistake, and doesn't count.
+     */
+    private fun usualStart(restOfShow: List<ShowEpisode>, streamMillis: Long): Long? = restOfShow
+        .filter { other ->
+            val length = other.lengthMillis ?: return@filter true
+            other.timings.creditsStartMillis?.let { fits(it, length) } == true
+        }
+        .mapNotNull { it.timings.creditsMillis }
+        .filter { it > 0 }
+        .median()
+        ?.let { streamMillis - it }
+        ?.takeIf { fits(it, streamMillis) }
 
     /**
      * Whether credits starting at [startMillis] can belong to this stream: inside it, in its second half
@@ -65,7 +74,10 @@ object UpNextCue {
 
     private const val FALLBACK_MILLIS = 30_000L
 
-    /** Far enough in that the credits have plainly started when the card arrives. */
+    /**
+     * Far enough into timed credits that they've plainly started when the card arrives. Not added to the
+     * show's usual length, which is an estimate already.
+     */
     private const val INTO_CREDITS_MILLIS = 3_000L
     private const val LONGEST_CREDITS_MILLIS = 12 * 60_000L
 }

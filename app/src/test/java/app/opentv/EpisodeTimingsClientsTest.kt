@@ -6,15 +6,10 @@
 package app.opentv
 
 import app.opentv.data.model.EpisodeTimings
+import app.opentv.data.model.TimingsSource
 import app.opentv.data.remote.IntroDbClient
 import app.opentv.data.remote.TheIntroDbClient
 import com.google.common.truth.Truth.assertThat
-import okhttp3.MediaType.Companion.toMediaType
-import okhttp3.OkHttpClient
-import okhttp3.Protocol
-import okhttp3.Request
-import okhttp3.Response
-import okhttp3.ResponseBody.Companion.toResponseBody
 import org.junit.Test
 
 /**
@@ -23,20 +18,14 @@ import org.junit.Test
  */
 class EpisodeTimingsClientsTest {
 
-    private val asked = mutableListOf<Request>()
+    private var answer = "{}"
+    private val network = FakeJsonHttp { answer }
+    private val asked get() = network.asked
 
-    /** A client whose every request gets [code] and [body]; `"!"` fails it as a dropped connection would. */
-    private fun answering(body: String, code: Int = 200) = OkHttpClient.Builder().addInterceptor { chain ->
-        val request = chain.request().also { asked += it }
-        if (body == "!") throw java.io.IOException("Connection dropped")
-        Response.Builder()
-            .request(request)
-            .protocol(Protocol.HTTP_1_1)
-            .code(code)
-            .message("Answer")
-            .body(body.toResponseBody("application/json".toMediaType()))
-            .build()
-    }.build()
+    /** The network, answering every request with [body]; see [FakeJsonHttp] for failures and statuses. */
+    private fun answering(body: String, code: Int = 200) = network.http.also {
+        answer = if (code == 200) body else "!$code"
+    }
 
     @Test
     fun `TheIntroDB is asked by TMDB id, season and episode, without the stream's length`() {
@@ -67,7 +56,7 @@ class EpisodeTimingsClientsTest {
                 introEndMillis = 246_498,
                 creditsStartMillis = 3_432_884,
                 creditsEndMillis = null,
-                source = EpisodeTimings.THE_INTRO_DB,
+                source = TimingsSource.THE_INTRO_DB,
             ),
         )
     }
@@ -87,14 +76,15 @@ class EpisodeTimingsClientsTest {
     }
 
     @Test
-    fun `credits TheIntroDB times in two parts have a scene between them`() {
+    fun `credits TheIntroDB times in two parts start at the first, without guessing at a scene between`() {
         val body = """{"credits":[{"start_ms":5801777,"end_ms":6371111},{"start_ms":6408000,"end_ms":null}]}"""
 
         val timings = TheIntroDbClient(answering(body)).timings("1", 1, 1).getOrThrow()
 
         assertThat(timings?.creditsStartMillis).isEqualTo(5_801_777)
         assertThat(timings?.creditsEndMillis).isEqualTo(6_371_111)
-        assertThat(timings?.sceneAfterCredits).isTrue()
+        // Only IntroDB's post-credits marking holds the countdown (#517, revised rules).
+        assertThat(timings?.sceneAfterCredits).isFalse()
     }
 
     @Test
@@ -150,7 +140,7 @@ class EpisodeTimingsClientsTest {
                 creditsStartMillis = 2_786_000,
                 creditsEndMillis = 2_848_000,
                 noRecap = true,
-                source = EpisodeTimings.INTRO_DB,
+                source = TimingsSource.INTRO_DB,
             ),
         )
     }
