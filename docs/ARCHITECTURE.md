@@ -311,7 +311,9 @@ and backing that off, then restarting, kept the spinner up for about 50 seconds 
 showed (#255). `PlaybackRecovery` decides the restarts: a stream that won't parse from the start
 isn't restarted silently, but Retry stays on offer, as it does for running out of memory; one that
 played and then broke is restarted, since that's more likely a bad segment than an HTML page. A
-format this device can't decode gets neither.
+format this device can't decode gets neither. The limit of two silent restarts stops only the
+restarts: Retry stays on offer after them, because the viewer may have since stopped the stream on
+their other device, and it starts the count afresh with two more silent restarts (#460).
 
 ### Errors say what to do
 
