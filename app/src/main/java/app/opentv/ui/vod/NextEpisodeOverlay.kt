@@ -6,6 +6,8 @@
 package app.opentv.ui.vod
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -29,6 +31,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
@@ -45,6 +48,7 @@ import app.opentv.ui.design.HighlightStyle
 import app.opentv.ui.design.HighlightSurface
 import app.opentv.ui.design.ProgressBar
 import app.opentv.ui.design.SetteeColors
+import app.opentv.ui.design.SetteeMotion
 import app.opentv.ui.design.SetteeShapes
 import app.opentv.ui.design.SetteeType
 import app.opentv.ui.design.Text
@@ -115,8 +119,16 @@ private fun NextEpisodeCardView(
 ) {
     val focus = remember { FocusRequester() }
     LaunchedEffect(Unit) { runCatching { focus.requestFocus() } }
+    // Keyed to the card arriving, not to [showing]: the countdown replaces it every second, and a
+    // rise on each would bob the card up and down until it plays.
+    val arrival = remember { Animatable(0f) }
+    LaunchedEffect(Unit) { arrival.animateTo(1f, tween(ARRIVAL_MILLIS, easing = SetteeMotion.Arrive)) }
     Column(
         modifier
+            .graphicsLayer {
+                alpha = arrival.value
+                translationY = (1f - arrival.value) * ARRIVAL_RISE.toPx()
+            }
             .width(CARD_WIDTH)
             .background(SetteeColors.Surface, SetteeShapes.Card)
             .clip(SetteeShapes.Card),
@@ -196,6 +208,12 @@ private fun OverlayButton(label: String, onClick: () -> Unit, modifier: Modifier
 }
 
 private val CARD_WIDTH = 340.dp
+
+// How the card comes up: it's the one overlay that arrives without a press, so it fades in as it
+// rises [ARRIVAL_RISE] over [ARRIVAL_MILLIS] rather than cutting into the picture. If a frame of it
+// misses on a Stick, set the time to 0, never longer (docs/LOOK.md, Motion and cost).
+private const val ARRIVAL_MILLIS = 250
+private val ARRIVAL_RISE = 24.dp
 private const val COUNTDOWN_SECONDS = 15f
 
 // A plain dim over the picture: LOOK.md rules out blur.
