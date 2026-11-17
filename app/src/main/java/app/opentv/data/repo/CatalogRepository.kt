@@ -48,7 +48,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
-import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.ChannelResult
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
@@ -545,7 +544,7 @@ class CatalogRepository(
             emit(Opened.Gone)
             return@flow
         }
-        val shown = Channel<Series>(Channel.UNLIMITED)
+        val shown = kotlinx.coroutines.channels.Channel<Series>(kotlinx.coroutines.channels.Channel.UNLIMITED)
         val asking = background.launch {
             openSeries(id, now)
                 .onCompletion { shown.close(it) }
