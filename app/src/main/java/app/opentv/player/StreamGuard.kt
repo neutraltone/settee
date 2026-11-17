@@ -61,10 +61,7 @@ internal class StreamGuard(
 
     // Straight to the sentence: a panel that sends nothing usually does so on every Quality, so stepping
     // down would only make the viewer wait the limit again for each. Try again is theirs to choose.
-    private val startUp = StartUpWatch(scope) {
-        stopSaying()
-        onCantPlay(PlaybackErrors.didntStart(context), true)
-    }
+    private val startUp = StartUpWatch(scope) { giveUp(PlaybackErrors.didntStart(context), canRetry = true) }
 
     /** What the player reports its decoders to, for the first-frame limit. */
     val firstFrameListener: AnalyticsListener get() = firstFrame
@@ -80,7 +77,7 @@ internal class StreamGuard(
      * [StartUpWatch]); not for a recording still being written, which waits on the recording growing,
      * from a local file or the viewer's NAS, where the timed-out sentence blames a provider that isn't there.
      */
-    fun started(limitStartUp: Boolean = true) {
+    fun started(limitStartUp: Boolean) {
         firstFrame.newStream()
         if (limitStartUp) startUp.newStream()
         loggedTracks.clear()
@@ -157,11 +154,21 @@ internal class StreamGuard(
     private fun cantPlay(reason: ViewerError, canRetry: Boolean) {
         val step = moveDown(false)
         if (step == null) {
-            stopSaying()
-            onCantPlay(reason, canRetry)
+            giveUp(reason, canRetry)
         } else {
             steppedDown(step.from, step.to)
         }
+    }
+
+    /**
+     * Stops watching the stream before saying why it can't play. The controller only stops the player, so
+     * a limit still counting would fire later and cover the sentence with its own, or step down a Quality
+     * behind it: a decoder that started late on a stream the start-up limit gave up on, say.
+     */
+    private fun giveUp(reason: ViewerError, canRetry: Boolean) {
+        leaving()
+        stopSaying()
+        onCantPlay(reason, canRetry)
     }
 
     /** Takes down what's showing: it would only contradict what's about to be said. */
