@@ -486,8 +486,16 @@ fun VodPlayerContent(
             .fillMaxSize()
             .background(Color.Black)
             .countsAsInput(viewModel)
-            // The Next Episode card and its question answer Back with back handlers of their own.
-            .backOnRelease(backOnRelease) { if (overlayShowing) null else backStep() }
+            // The card and the question take a remote's Back here too: left to their back handlers, the
+            // press was spent taking the Highlight off Play now and the card stayed up. Their handlers
+            // still answer a phone's Back gesture, which never comes as a key.
+            .backOnRelease(backOnRelease) {
+                when (overlay) {
+                    is NextEpisodeCountdown.Overlay.Card -> viewModel::cancel
+                    is NextEpisodeCountdown.Overlay.StillWatching -> onBack
+                    NextEpisodeCountdown.Overlay.None -> backStep()
+                }
+            }
             .onPreviewKeyEvent { event ->
                 when {
                     event.isBack() -> false
