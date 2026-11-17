@@ -436,7 +436,7 @@ private fun OpenTvApp(isTelevision: Boolean, launchedToPlay: Boolean) {
                             },
                             onResume = { key -> navController.navigate(Routes.vodPlayer(key)) },
                             onAddSource = { navController.openAddProvider() },
-                            onEditSource = { navController.navigate(Routes.editSource(it)) },
+                            onEditSource = { navController.openEditProvider(it) },
                             onRefresh = sourcesViewModel::refreshAll,
                             onOpenSearch = { navController.navigate(Routes.SEARCH) },
                             onOpenSettings = { navController.navigate(Routes.SETTINGS) },

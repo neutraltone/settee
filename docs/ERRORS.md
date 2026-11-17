@@ -132,6 +132,24 @@ a 5xx read as in [Provider connection](#provider-connection). Under it, Try agai
 | Every fetch failed with nothing more specific (a reply that won't parse, any other HTTP status) | `vod_episodes_failed` | Couldn't load the episodes of this series. Try again in a moment. | exception type, or HTTP status | Provider's |
 | A fetch answered, but no Version has episodes (a plain line, not an error, and no Try again) | `vod_no_episodes` | Your provider hasn't added any episodes of this series. | none | Provider's: none listed yet |
 
+## Movies and Shows lists
+
+An Xtream provider's movies and its shows are separate downloads, and either can fail while the other
+arrives. Whatever fetched it (opening the tab, Setup's Movies or Shows step, a periodic or manual
+refresh), a failed list is kept per provider in `CatalogueRefresh.State.vodFailures` until a later
+download of that list works. When nothing of that kind is stored from any provider, the tab shows the
+first enabled provider's failure under "Couldn't load your movies" (`vod_movies_load_failed`) or
+"Couldn't load your shows" (`vod_shows_load_failed`), with Try again, which downloads again however
+often it has this run, and Provider setup, which opens that provider's form. Stored titles always show
+instead, with no error. `ErrorWording.ofProvider` words the failure, so a timeout, a rejected login, a
+429 or a 5xx read as in [Provider connection](#provider-connection).
+
+| Trigger | String key | Sentence | Detail | Whose end, likely cause |
+|---|---|---|---|---|
+| Movies' list or categories failed with nothing more specific (a reply that won't parse, any other HTTP status) | `error_movies_list` | Couldn't load your provider's movies. Try again in a moment. | exception type, or HTTP status | Provider's |
+| Shows' list or categories failed with nothing more specific | `error_shows_list` | Couldn't load your provider's shows. Try again in a moment. | exception type, or HTTP status | Provider's |
+| The list downloaded with nothing in it (a plain line, not an error, and no Try again) | `vod_no_movies_provider` / `vod_no_shows_provider` | Your provider hasn't sent any movies yet. | none | Provider's: none in the account |
+
 ## Guides
 
 A guide feed's failure is stored on its row (`ViewerError.stored`) and shown in Guide settings.
