@@ -78,12 +78,23 @@ class PlaybackRecoveryTest {
     }
 
     @Test
-    fun `the third failure in a row stops restarting`() {
+    fun `the third failure in a row stops restarting, but the viewer can still retry`() {
         val dropped = error(PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_FAILED)
 
-        assertThat(PlaybackRecovery.after(dropped, failuresInARow = 2, hadPlayed = false).canRestart).isTrue()
+        assertThat(PlaybackRecovery.after(dropped, failuresInARow = 2, hadPlayed = false))
+            .isEqualTo(Recovery(canRetry = true, canRestart = true))
         assertThat(PlaybackRecovery.after(dropped, failuresInARow = 3, hadPlayed = false))
-            .isEqualTo(Recovery(canRetry = false, canRestart = false))
+            .isEqualTo(Recovery(canRetry = true, canRestart = false))
+    }
+
+    @Test
+    fun `a format this device can't decode is never offered again, however many times it failed`() {
+        PlaybackRecovery.UNPLAYABLE_FORMATS.forEach { code ->
+            (1..4).forEach { failures ->
+                assertThat(PlaybackRecovery.after(error(code), failuresInARow = failures, hadPlayed = false))
+                    .isEqualTo(Recovery(canRetry = false, canRestart = false))
+            }
+        }
     }
 
     private fun error(code: Int) = PlaybackException(null, null, code)

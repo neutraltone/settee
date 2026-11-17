@@ -22,8 +22,9 @@ internal object PlaybackRecovery {
      */
     fun after(error: PlaybackException, failuresInARow: Int, hadPlayed: Boolean): Recovery {
         // Restarting can't change what this device can decode, and on a portal it would only mint
-        // more links for a stream that will fail the same way.
-        val canRetry = error.errorCode !in UNPLAYABLE_FORMATS && failuresInARow < MAX_AUTO_RESTARTS
+        // more links for a stream that will fail the same way. How many times it failed doesn't
+        // count here: the viewer may have stopped the stream on their other device since (#460).
+        val canRetry = error.errorCode !in UNPLAYABLE_FORMATS
         // Running out of memory took the Stick over a minute (#180), so a silent restart would hide
         // the message for another minute. Retry stays on offer: the memory may be free by the time
         // the viewer asks.
@@ -33,13 +34,17 @@ internal object PlaybackRecovery {
         // when the viewer has sorted the account out. One that played first and then broke is more
         // likely a bad segment, which a restart gets past.
         val hopeless = PlaybackErrors.isOutOfMemory(error) || (error.errorCode in PARSE_FAILURES && !hadPlayed)
-        return Recovery(canRetry = canRetry, canRestart = canRetry && !hopeless)
+        return Recovery(
+            canRetry = canRetry,
+            canRestart = canRetry && !hopeless && failuresInARow < MAX_AUTO_RESTARTS,
+        )
     }
 
     /**
      * Two silent restarts: the count goes up before it's checked, so the third failure in a row
-     * stops. The common case they cover is a provider dropping the connection when another device on
-     * the account starts streaming.
+     * stops restarting by itself, and on a portal stops asking for new links. The common case they
+     * cover is a provider dropping the connection when another device on the account starts
+     * streaming. It limits only silent restarts: Retry stays on offer, and starts the count afresh.
      */
     private const val MAX_AUTO_RESTARTS = 3
 

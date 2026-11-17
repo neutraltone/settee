@@ -84,10 +84,26 @@ class PlayerControllerTest {
         val controller = players.controller(LIVE, failing = 100, resolve = sources::forWatching)
 
         controller.play(PlayerController.Request(MediaKey.Live(channels.first())), debounce = false)
-        players.until { (controller.state.value as? PlayerController.State.Error)?.canRetry == false }
+        players.until { players.played.size == 3 && controller.state.value is PlayerController.State.Error }
         players.advance(10_000)
 
         assertThat(panel.asked.count { it == "create_link" }).isEqualTo(3)
+    }
+
+    @Test
+    fun `once it stops restarting, the viewer can still retry, and that gets its own restarts`() {
+        val controller = players.controller(LIVE, failing = 100, resolve = sources::forWatching)
+        controller.play(PlayerController.Request(MediaKey.Live(channels.first())), debounce = false)
+        players.until { players.played.size == 3 && controller.state.value is PlayerController.State.Error }
+        players.advance(10_000)
+        assertThat((controller.state.value as PlayerController.State.Error).canRetry).isTrue()
+
+        controller.retry()
+        players.until { players.played.size == 6 && controller.state.value is PlayerController.State.Error }
+        players.advance(10_000)
+
+        assertThat(panel.asked.count { it == "create_link" }).isEqualTo(6)
+        assertThat((controller.state.value as PlayerController.State.Error).canRetry).isTrue()
     }
 
     @Test
