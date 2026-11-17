@@ -203,6 +203,8 @@
     <string name="vod_no_shows_provider">Il tuo provider non ha ancora inviato nessuna serie.</string>
     <string name="vod_no_shows_add">Le serie del tuo provider compariranno qui. Aggiungi un provider per iniziare.</string>
     <string name="vod_loading_episodes">Caricamento episodi…</string>
+    <string name="vod_episodes_failed">Impossibile caricare gli episodi di questa serie. Riprova tra un momento.</string>
+    <string name="vod_no_episodes">Il tuo provider non ha aggiunto nessun episodio di questa serie.</string>
     <string name="vod_continue_watching">Continua a guardare</string>
     <string name="vod_large_provider_note">Con un provider di grandi dimensioni la prima volta può richiedere qualche minuto.</string>
     <string name="vod_recommended">Consigliati per te</string>

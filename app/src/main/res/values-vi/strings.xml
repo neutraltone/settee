@@ -203,6 +203,8 @@
     <string name="vod_no_shows_provider">Nhà cung cấp của bạn chưa gửi phim bộ nào.</string>
     <string name="vod_no_shows_add">Phim bộ từ nhà cung cấp của bạn sẽ hiện ở đây. Thêm nhà cung cấp để bắt đầu.</string>
     <string name="vod_loading_episodes">Đang tải tập phim…</string>
+    <string name="vod_episodes_failed">Không thể tải các tập của phim bộ này. Hãy thử lại sau giây lát.</string>
+    <string name="vod_no_episodes">Nhà cung cấp của bạn chưa thêm tập nào của phim bộ này.</string>
     <string name="vod_continue_watching">Tiếp tục xem</string>
     <string name="vod_large_provider_note">Với nhà cung cấp lớn, lần đầu có thể mất vài phút.</string>
     <string name="vod_recommended">Đề xuất cho bạn</string>

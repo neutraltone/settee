@@ -203,6 +203,8 @@
     <string name="vod_no_shows_provider">Вашият доставчик все още не е изпратил сериали.</string>
     <string name="vod_no_shows_add">Сериалите на вашия доставчик ще се появят тук. Добавете доставчик, за да започнете.</string>
     <string name="vod_loading_episodes">Зареждане на епизоди…</string>
+    <string name="vod_episodes_failed">Епизодите на този сериал не можаха да се заредят. Опитайте отново след малко.</string>
+    <string name="vod_no_episodes">Вашият доставчик не е добавил епизоди от този сериал.</string>
     <string name="vod_continue_watching">Продължи гледането</string>
     <string name="vod_large_provider_note">При голям доставчик първия път може да отнеме няколко минути.</string>
     <string name="vod_recommended">Препоръчано за вас</string>

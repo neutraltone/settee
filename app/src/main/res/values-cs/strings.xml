@@ -203,6 +203,8 @@
     <string name="vod_no_shows_provider">Váš poskytovatel zatím neposlal žádné seriály.</string>
     <string name="vod_no_shows_add">Zde se zobrazí seriály vašeho poskytovatele. Pro začátek přidejte poskytovatele.</string>
     <string name="vod_loading_episodes">Načítání epizod…</string>
+    <string name="vod_episodes_failed">Epizody tohoto seriálu se nepodařilo načíst. Zkuste to za chvíli znovu.</string>
+    <string name="vod_no_episodes">Váš poskytovatel nepřidal žádné epizody tohoto seriálu.</string>
     <string name="vod_continue_watching">Rozkoukané</string>
     <string name="vod_large_provider_note">U velkého poskytovatele to může poprvé trvat několik minut.</string>
     <string name="vod_recommended">Doporučené pro vás</string>
