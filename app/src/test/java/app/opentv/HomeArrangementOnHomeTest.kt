@@ -53,7 +53,13 @@ class HomeArrangementOnHomeTest {
     val artwork = PlaceholderArtwork()
 
     private val resume = listOf(
-        ResumeItem(MediaKey.Movie(9), "Collateral", posterUrl = "https://example.com/9.jpg", progress = 0.4f),
+        ResumeItem(
+            MediaKey.Movie(9),
+            "Collateral",
+            posterUrl = "https://example.com/9.jpg",
+            progress = 0.4f,
+            titleKey = "movie:1:9",
+        ),
     )
 
     private fun movie(id: Long, name: String) = Movie(

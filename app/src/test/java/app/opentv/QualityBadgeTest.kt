@@ -78,6 +78,7 @@ class QualityBadgeTest {
                             "https://example.com/5.png",
                             0.4f,
                             name = "4K-EN - Dune",
+                            titleKey = "movie:1:5",
                         ),
                     ),
                     onResume = {},

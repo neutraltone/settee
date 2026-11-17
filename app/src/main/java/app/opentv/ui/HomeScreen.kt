@@ -280,8 +280,8 @@ private fun ScreenFrameScope.HomeRows(shelves: List<HomeShelf>, takeFocus: Boole
                         // The large first card is only for when nothing sits above it.
                         large = shelves.first() === shelf,
                         rowFocus,
-                        onResume = { key -> pick(key.stored) { actions.onResume(key) } },
-                        leave = { card -> leave(card.key.stored) },
+                        onResume = { card -> pick(card.titleKey) { actions.onResume(card.key) } },
+                        leave = { card -> leave(card.titleKey) },
                     )
                     is HomeShelf.Covers -> CoverShelf(
                         stringResource(shelf.title, *shelf.titleArgs),
@@ -330,7 +330,7 @@ private sealed class HomeShelf(key: String, items: List<String>) {
     class Live(val tile: LiveTile) : HomeShelf("live", listOf(LIVE_PICK))
 
     class Resume(val cards: List<ResumeItem>) :
-        HomeShelf(HomeRowKind.CONTINUE_WATCHING.key, cards.map { it.key.stored })
+        HomeShelf(HomeRowKind.CONTINUE_WATCHING.key, cards.map { it.titleKey })
 
     /**
      * A row of covers; [showsStatus] when each says where the Profile is with its title. [titleArg]
@@ -401,7 +401,7 @@ private const val LIVE_PICK = "live"
 
 // A pick is kept by the provider's ids rather than the local row id, which a catalogue refresh can
 // change while the viewer is away. Movies and shows share a row, so each says which it is.
-private val VodTitle.pickKey
+internal val VodTitle.pickKey
     get() = when (this) {
         is VodTitle.OfMovie -> "movie:${movie.sourceId}:${movie.streamId}"
         is VodTitle.OfSeries -> "series:${series.sourceId}:${series.seriesId}"
@@ -448,11 +448,11 @@ internal fun ScreenFrameScope.ContinueWatchingShelf(
     cards: List<ResumeItem>,
     large: Boolean,
     focus: CardFocus?,
-    onResume: (MediaKey) -> Unit,
+    onResume: (ResumeItem) -> Unit,
     leave: (ResumeItem) -> LeaveScreen,
     onHighlight: (ResumeItem) -> Unit = {},
 ) {
-    val memory = rememberShelfMemory(remember(cards) { cards.map { it.key.stored } })
+    val memory = rememberShelfMemory(remember(cards) { cards.map { it.titleKey } })
     val openOptions = LocalOpenOptions.current
     Shelf(
         stringResource(R.string.vod_continue_watching),
@@ -463,15 +463,15 @@ internal fun ScreenFrameScope.ContinueWatchingShelf(
         // tall, which read as something missing above them.
         verticalAlignment = if (large) Alignment.Top else Alignment.Bottom,
     ) {
-        itemsIndexed(cards, key = { _, card -> card.key.stored }) { index, card ->
+        itemsIndexed(cards, key = { _, card -> card.titleKey }) { index, card ->
             ArtCard(
                 title = card.title,
                 artworkUrl = card.posterUrl,
-                onClick = { onResume(card.key) },
+                onClick = { onResume(card) },
                 size = if (large && index == 0) ArtCardSize.Large else ArtCardSize.Landscape,
                 modifier = Modifier
                     .takesFocus(index, focus)
-                    .shelfCard(memory, card.key.stored)
+                    .shelfCard(memory, card.titleKey)
                     .onFocusChanged { if (it.isFocused) onHighlight(card) },
                 status = resumeStatusText(card),
                 progress = card.progress,

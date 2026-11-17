@@ -858,6 +858,13 @@ data class ResumeItem(
     val name: String = title,
     /** The film's or the show's local id, which Movies' and Shows' backdrop looks it up by. */
     val titleId: Long? = null,
+    /**
+     * Which title the card stands for, by the provider's ids, so Home can find the card again after
+     * it has moved on: a show's [key] changes each time its card moves on to the next episode, and
+     * local ids can change in a catalogue refresh. Required, though only [resumeItem] knows the
+     * title: a fallback to [key] would quietly bring that back for any card built without it.
+     */
+    val titleKey: String,
 )
 
 /**
@@ -908,13 +915,13 @@ class VodViewModel @JvmOverloads constructor(
     @OptIn(ExperimentalCoroutinesApi::class)
     val continueWatchingMovies: StateFlow<List<ResumeItem>?> =
         graph.viewerLibrary.continueWatchingMovies()
-            .mapLatest { cards -> cards.mapNotNull { resumeItem(graph.catalogRepository, it) } }
+            .mapLatest { cards -> resumeItems(graph.catalogRepository, cards) }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val continueWatchingSeries: StateFlow<List<ResumeItem>?> =
         graph.viewerLibrary.continueWatchingSeries()
-            .mapLatest { cards -> cards.mapNotNull { resumeItem(graph.catalogRepository, it) } }
+            .mapLatest { cards -> resumeItems(graph.catalogRepository, cards) }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
     /** Each episode's Watched / In Progress / Unwatched status for the active Profile. */
@@ -1461,6 +1468,14 @@ class VodViewModel @JvmOverloads constructor(
     }
 }
 
+/**
+ * [cards] as Continue Watching draws them, one per title: a row keys its cards by [ResumeItem.titleKey],
+ * and two cards under one key would crash it. ViewerLibrary already gives each title one card, so
+ * this only holds should that ever slip.
+ */
+internal suspend fun resumeItems(catalog: CatalogRepository, cards: List<ContinueWatchingCard>): List<ResumeItem> =
+    cards.mapNotNull { resumeItem(catalog, it) }.distinctBy { it.titleKey }
+
 /** [card] as Continue Watching draws it, or null when its title has left the catalogue. */
 internal suspend fun resumeItem(catalog: CatalogRepository, card: ContinueWatchingCard): ResumeItem? = when (card) {
     is ContinueWatchingCard.Movie -> catalog.movie(card.movieId)?.let {
@@ -1474,6 +1489,8 @@ internal suspend fun resumeItem(catalog: CatalogRepository, card: ContinueWatchi
             card = card,
             name = it.name,
             titleId = it.id,
+            // As Home's cover rows key a title, so a refresh renumbering local ids can't lose the card.
+            titleKey = VodTitle.OfMovie(it).pickKey,
         )
     }
     is ContinueWatchingCard.Series -> {
@@ -1490,6 +1507,8 @@ internal suspend fun resumeItem(catalog: CatalogRepository, card: ContinueWatchi
                 newEpisode = card.newEpisode,
                 card = card,
                 titleId = it.id,
+                // The show, not the episode, which changes each time the card moves on to Up Next.
+                titleKey = VodTitle.OfSeries(it).pickKey,
             )
         }
     }
@@ -1544,7 +1563,7 @@ class HomeViewModel @JvmOverloads constructor(
     @OptIn(ExperimentalCoroutinesApi::class)
     private val watching: Flow<Pair<List<ResumeItem>, CoverStatuses>> = combine(
         graph.viewerLibrary.home().mapLatest { home ->
-            home.continueWatching.mapNotNull { resumeItem(graph.catalogRepository, it) } to home.covers
+            resumeItems(graph.catalogRepository, home.continueWatching) to home.covers
         },
         settings.moviesEnabled,
         settings.seriesEnabled,
