@@ -114,6 +114,14 @@ object PlaybackErrors {
         format.displayNameAndSize,
     )
 
+    /**
+     * Why a stream that never played within [StartUpWatch]'s limit has stopped. Nothing arrived, so
+     * there's no code, status or format to show; the detail line names the route instead, as
+     * [Playable.Failure]'s do.
+     */
+    fun didntStart(context: Context): ViewerError =
+        ViewerError(context.getString(R.string.error_timed_out), "StartUpLimit")
+
     /** Why a video whose decoder started and showed nothing has stopped; [format] is null if it never said. */
     fun noFirstFrame(context: Context, format: Format?, onTelevision: Boolean): ViewerError = ViewerError(
         context.getString(
