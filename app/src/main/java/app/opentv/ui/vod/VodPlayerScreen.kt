@@ -452,10 +452,11 @@ fun VodPlayerContent(
     // goes, not as the player opens (an error's Try again has the Highlight then), and only on the bare
     // controls: a track panel or menu open over them keeps its own place.
     var skipWasShowing by remember { mutableStateOf(false) }
+    val bareControls = controlsVisible && !failed && vodPanel == VodPanel.NONE && !menuOpen
     LaunchedEffect(skipping != null) {
         val went = skipWasShowing && skipping == null
         skipWasShowing = skipping != null
-        if (went && controlsVisible && !failed && vodPanel == VodPanel.NONE && !menuOpen) {
+        if (went && bareControls) {
             delay(40)
             runCatching { barReturn.requestFocus() }
         }
