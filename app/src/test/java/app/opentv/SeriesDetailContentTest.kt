@@ -33,7 +33,6 @@ import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.test.requestFocus
 import androidx.test.espresso.Espresso
-import app.opentv.data.model.Series
 import app.opentv.data.repo.CoverStatus
 import app.opentv.data.repo.EpisodeStatuses
 import app.opentv.data.repo.MediaKey
@@ -72,18 +71,7 @@ class SeriesDetailContentTest {
     @get:Rule
     val artwork = PlaceholderArtwork()
 
-    private var series = Series(
-        id = 1,
-        sourceId = 1,
-        seriesId = "s",
-        name = "The Long Way Round",
-        categoryId = null,
-        posterUrl = "https://example.com/poster.jpg",
-        rating = null,
-        year = 2024,
-        plot = "Two friends and a lot of road.",
-        backdropUrl = "https://example.com/backdrop.jpg",
-    )
+    private var series = testSeries()
 
     private var episodes = listOf(1, 2).flatMap { season -> (1..5).map { testEpisode(season, it) } }
 
@@ -139,11 +127,7 @@ class SeriesDetailContentTest {
         settle()
     }
 
-    // The page places its highlight a moment after it appears, once its rows are laid out.
-    private fun settle() {
-        compose.waitForIdle()
-        compose.mainClock.advanceTimeBy(500)
-    }
+    private fun settle() = compose.settleShowPage()
 
     @Test
     fun `with an Up Next the main button plays it and starts highlighted`() {
@@ -184,11 +168,7 @@ class SeriesDetailContentTest {
         compose.onNode(hasText("S2 E4") and hasClickAction()).assertIsFocused()
     }
 
-    /** Presses [key] on whatever has the Highlight, and lets the page settle. */
-    private fun press(key: Key) {
-        compose.onNode(isFocused()).performKeyInput { pressKey(key) }
-        settle()
-    }
+    private fun press(key: Key) = compose.pressOnShowPage(key)
 
     /** [press] in a side panel, a window of its own with its own highlight beside the page's. */
     private fun pressInPanel(key: Key) {
@@ -196,11 +176,9 @@ class SeriesDetailContentTest {
         settle()
     }
 
-    private fun episodeRow(season: Int, episode: Int) = compose.onNode(
-        hasText("S$season E$episode") and hasClickAction(),
-    )
+    private fun episodeRow(season: Int, episode: Int) = compose.episodeRow(season, episode)
 
-    private fun pill(label: String) = compose.onNode(hasText(label) and hasClickAction())
+    private fun pill(label: String) = compose.showPagePill(label)
 
     private fun cover(title: String) = compose.onNode(hasText(title) and hasClickAction())
 

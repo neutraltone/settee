@@ -32,6 +32,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
@@ -118,7 +119,13 @@ internal fun SeriesDetailContent(
     }
     val showingLikeThis = nav.showsLikeThis(shown)
     val pillRow = rememberLazyListState()
-    val episodeList = rememberLazyListState()
+    // A list position per season listed, so a season starts at its first episode and Down from its pill
+    // reaches Episode 1 (#428); one shared position opened each season where the last had been. Coming
+    // back from More like this lists from the top too. Wherever a season should open elsewhere (the main
+    // button's episode, an episode chosen from the list) the effects scroll this season's own position.
+    val episodeList = rememberSaveable(shown.selected?.number, showingLikeThis, saver = LazyListState.Saver) {
+        LazyListState()
+    }
     ShowPageFocusEffects(nav, shown, pillRow, episodeList, showingLikeThis)
     EpisodeListScrollEffects(nav, shown, episodeList)
     BackHandler(enabled = nav.backGoesToPills(shown)) { nav.pillTarget = PillTarget() }
@@ -283,7 +290,7 @@ private fun SeasonPills(nav: ShowPageNav, shown: ShowSeasons, pillRow: LazyListS
                 onOptions = openOptions,
                 modifier = Modifier
                     .then(if (isSelected) Modifier.focusRequester(nav.focus.pill) else Modifier)
-                    .onFocusChanged { if (it.isFocused) nav.pickSeason(season.number, shown) },
+                    .onFocusChanged { if (it.isFocused) nav.pickSeason(season.number) },
             )
         }
         if (shown.hasLikeThis) {
@@ -379,6 +386,8 @@ private fun ShowPageFocusEffects(
 ) {
     val latest by rememberUpdatedState(shown)
     val onLikeThis by rememberUpdatedState(showingLikeThis)
+    // Choosing an episode in another season lists that season, which brings its own list position.
+    val latestList by rememberUpdatedState(episodeList)
     // Episodes are fetched on demand, so the main button can appear after the page does: the
     // highlight waits on the favourite toggle until then, and moves across only if it is still
     // there, never pulling a viewer back up from wherever they have gone since.
@@ -406,7 +415,7 @@ private fun ShowPageFocusEffects(
             pillRow.keepInView(latest.selectedIndex)
         }
         val index = latest.selected?.episodes?.indexOfFirst { it.id == ep.id } ?: -1
-        if (index >= 0) episodeList.scrollToItem(index)
+        if (index >= 0) latestList.scrollToItem(index)
         withFrameNanos {}
         runCatching { nav.focus.episode.requestFocus() }
         nav.parking = false
@@ -439,6 +448,7 @@ private fun ShowPageFocusEffects(
 @Composable
 private fun EpisodeListScrollEffects(nav: ShowPageNav, shown: ShowSeasons, episodeList: LazyListState) {
     val latest by rememberUpdatedState(shown)
+    val latestList by rememberUpdatedState(episodeList)
     // Opens with the main button's episode at the top of the list, so the Down that reaches it
     // doesn't also scroll the list under the viewer. Only until they've chosen a season themselves.
     val opening = shown.mainAction?.episode
@@ -447,18 +457,12 @@ private fun EpisodeListScrollEffects(nav: ShowPageNav, shown: ShowSeasons, episo
         val index = shown.selected?.episodes?.indexOfFirst { it.id == opening?.id } ?: -1
         if (index >= 0) episodeList.scrollToItem(index)
     }
-    // A season picked on the pills lists from its first episode. Not one chosen from the list: that
-    // scrolls to its own episode (ShowPageFocusEffects).
-    LaunchedEffect(nav.listTopTarget) {
-        nav.listTopTarget ?: return@LaunchedEffect
-        episodeList.scrollToItem(0)
-    }
     // On a season's last episode, bring what's faded beneath it into view: the next season's first
     // episode, or More like this. Asking for the last item scrolls only as far as the end of the list.
     LaunchedEffect(nav.focusedEpisode) {
         val season = latest.selected ?: return@LaunchedEffect
         val onLast = nav.focusedEpisode == season.episodes.lastOrNull()?.id
-        if (onLast && latest.hasPeekAfter(season)) episodeList.animateScrollToItem(season.episodes.size)
+        if (onLast && latest.hasPeekAfter(season)) latestList.animateScrollToItem(season.episodes.size)
     }
 }
 
@@ -529,8 +533,6 @@ private class ShowPageNav {
         private set
     var buttonTarget by mutableStateOf<ButtonTarget?>(null)
         private set
-    var listTopTarget by mutableStateOf<ListTopTarget?>(null)
-        private set
 
     fun listFocusChanged(hasFocus: Boolean) {
         inList = hasFocus
@@ -551,14 +553,8 @@ private class ShowPageNav {
         if (hasFocus) heroAway = true
     }
 
-    /**
-     * The Highlight moved onto [season]'s pill, which selects it. A season listed this way starts at its
-     * first episode, so Down from the pill reaches Episode 1 (#428): the seasons share one list, which
-     * would otherwise keep the last season's scroll. Arriving back on the pill already selected (Back, Up
-     * from the first episode) leaves the list where it was.
-     */
-    fun pickSeason(season: Int, shown: ShowSeasons) {
-        if (season != shown.selected?.number || likeThis) listTopTarget = ListTopTarget()
+    /** The Highlight moved onto [season]'s pill, which selects it. */
+    fun pickSeason(season: Int) {
         pickedSeason = season
         likeThis = false
     }
@@ -634,9 +630,6 @@ private class PillTarget
 
 /** A request to move from the episodes onto More like this's first cover. */
 private class LikeThisTarget
-
-/** A request to scroll the episode list back to its first episode. */
-private class ListTopTarget
 
 /** A request to highlight [episode]; a fresh one each time, so asking twice for the same episode still moves. */
 private class EpisodeTarget(val episode: Episode)
