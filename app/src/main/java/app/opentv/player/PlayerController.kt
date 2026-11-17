@@ -171,6 +171,12 @@ class PlayerController(
     /** Decided once, as the app does at launch, so sentences say "this TV" or "this device". */
     private val onTelevision = isRunningOnTelevision(context)
 
+    /**
+     * Not for a recording still being written, which waits on the recording growing, from a local file or
+     * the viewer's NAS, so the start-up limit's sentence would blame a provider that isn't there.
+     */
+    private val limitStartUp = options.limitStartUp && !options.liveRecording
+
     private val guard: StreamGuard = StreamGuard(
         strings,
         scope,
@@ -450,7 +456,7 @@ class PlayerController(
                 stop()
                 gaveUp = false
                 hadPlayed = false
-                guard.started(limitStartUp = options.limitStartUp && !options.liveRecording)
+                guard.started(limitStartUp)
                 clearMediaItems()
                 // Each stream starts with text off, then applySubtitlePreference picks its track.
                 // Left on from the last stream, the selector would choose a track itself, in the
