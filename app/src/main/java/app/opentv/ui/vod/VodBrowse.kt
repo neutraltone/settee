@@ -5,6 +5,7 @@
  */
 package app.opentv.ui.vod
 
+import androidx.annotation.StringRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.layout.Arrangement
@@ -57,6 +58,7 @@ import app.opentv.data.repo.TitleCover
 import app.opentv.ui.Backdrop
 import app.opentv.ui.LocalRailReturn
 import app.opentv.ui.ResumeItem
+import app.opentv.ui.VodLoadFailure
 import app.opentv.ui.VodViewModel
 import app.opentv.ui.activityViewModelStoreOwner
 import app.opentv.ui.browseKey
@@ -141,20 +143,14 @@ fun MoviesScreen(
         },
         hasForYou = hasForYou,
         forYouLoaded = resume != null && favourites != null,
-        empty = when {
-            vodLoading || isSyncing -> VodEmpty.Loading(stringResource(R.string.vod_loading_movies))
-            hasSources && loadFailure != null -> VodEmpty.Failed(
-                stringResource(R.string.vod_movies_load_failed),
-                loadFailure.reason,
-                onRetry = viewModel::retryVod,
-                onEditProvider = { onEditProvider(loadFailure.sourceId) },
-            )
-            hasSources -> VodEmpty.Hint(
-                stringResource(R.string.vod_no_movies),
-                stringResource(R.string.vod_no_movies_provider),
-            )
-            else -> VodEmpty.Hint(stringResource(R.string.vod_no_movies), stringResource(R.string.vod_no_movies_add))
-        },
+        empty = vodEmpty(
+            loading = vodLoading || isSyncing,
+            hasSources = hasSources,
+            failure = loadFailure,
+            words = MOVIES_EMPTY,
+            onRetry = viewModel::retryVod,
+            onEditProvider = onEditProvider,
+        ),
     ) { onHighlight ->
         MovieShelves(
             resume.orEmpty(),
@@ -228,20 +224,14 @@ fun SeriesScreen(
         },
         hasForYou = hasForYou,
         forYouLoaded = resume != null && favourites != null,
-        empty = when {
-            vodLoading || isSyncing -> VodEmpty.Loading(stringResource(R.string.vod_loading_shows))
-            hasSources && loadFailure != null -> VodEmpty.Failed(
-                stringResource(R.string.vod_shows_load_failed),
-                loadFailure.reason,
-                onRetry = viewModel::retryVod,
-                onEditProvider = { onEditProvider(loadFailure.sourceId) },
-            )
-            hasSources -> VodEmpty.Hint(
-                stringResource(R.string.vod_no_shows),
-                stringResource(R.string.vod_no_shows_provider),
-            )
-            else -> VodEmpty.Hint(stringResource(R.string.vod_no_shows), stringResource(R.string.vod_no_shows_add))
-        },
+        empty = vodEmpty(
+            loading = vodLoading || isSyncing,
+            hasSources = hasSources,
+            failure = loadFailure,
+            words = SHOWS_EMPTY,
+            onRetry = viewModel::retryVod,
+            onEditProvider = onEditProvider,
+        ),
     ) { onHighlight ->
         SeriesShelves(
             resume.orEmpty(),
@@ -337,6 +327,55 @@ internal class TitleRow<T>(
     val modifier: Modifier = Modifier,
     val pending: Boolean = false,
 )
+
+/** Movies' or Shows' own words for [vodEmpty]. */
+internal class EmptyWords(
+    @StringRes val loading: Int,
+    @StringRes val none: Int,
+    @StringRes val providerSentNone: Int,
+    @StringRes val addProvider: Int,
+    @StringRes val failed: Int,
+)
+
+private val MOVIES_EMPTY = EmptyWords(
+    R.string.vod_loading_movies,
+    R.string.vod_no_movies,
+    R.string.vod_no_movies_provider,
+    R.string.vod_no_movies_add,
+    R.string.vod_movies_load_failed,
+)
+
+private val SHOWS_EMPTY = EmptyWords(
+    R.string.vod_loading_shows,
+    R.string.vod_no_shows,
+    R.string.vod_no_shows_provider,
+    R.string.vod_no_shows_add,
+    R.string.vod_shows_load_failed,
+)
+
+/**
+ * What an empty Movies or Shows says: loading, why its download failed (only once that's known and
+ * with nothing of it stored, which is when this is asked), that the provider sent none, or to add one.
+ */
+@Composable
+private fun vodEmpty(
+    loading: Boolean,
+    hasSources: Boolean,
+    failure: VodLoadFailure?,
+    words: EmptyWords,
+    onRetry: () -> Unit,
+    onEditProvider: (sourceId: Long) -> Unit,
+): VodEmpty = when {
+    loading -> VodEmpty.Loading(stringResource(words.loading))
+    hasSources && failure != null -> VodEmpty.Failed(
+        stringResource(words.failed),
+        failure.reason,
+        onRetry = onRetry,
+        onEditProvider = { onEditProvider(failure.sourceId) },
+    )
+    hasSources -> VodEmpty.Hint(stringResource(words.none), stringResource(words.providerSentNone))
+    else -> VodEmpty.Hint(stringResource(words.none), stringResource(words.addProvider))
+}
 
 /** What Movies or Shows says when For you has nothing in it. */
 internal sealed interface VodEmpty {

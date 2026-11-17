@@ -1248,7 +1248,7 @@ class VodViewModel @JvmOverloads constructor(
         sources.firstNotNullOfOrNull { source ->
             failures[source.id]?.takeIf { source.enabled }?.let { VodLoadFailure(source.id, it) }
         }
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(KEEP_CATEGORIES_MILLIS), null)
 
     // ---- VOD search (shared by the unified search screen) --------------------------------------
     private val vodSearchInput = MutableStateFlow("")
