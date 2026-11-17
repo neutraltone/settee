@@ -36,8 +36,11 @@ class NextEpisodeCountdown(
     sealed interface Overlay {
         data object None : Overlay
 
-        /** The Next Episode card, [secondsLeft] before it plays; [counting] when it will play on its own. */
-        data class Card(val secondsLeft: Int, val counting: Boolean) : Overlay
+        /**
+         * The Next Episode card, [secondsLeft] before it plays; [counting] when it will play on its own.
+         * [atEnd] once the episode has ended under it, with no credits left to watch.
+         */
+        data class Card(val secondsLeft: Int, val counting: Boolean, val atEnd: Boolean = false) : Overlay
 
         /** "Are you still watching?", with playback paused; [streamStopped] once the provider connection is let go. */
         data class StillWatching(val streamStopped: Boolean) : Overlay
@@ -71,12 +74,6 @@ class NextEpisodeCountdown(
     // lets it reach the credits again gets the card again.
     private var cancelled = false
 
-    /** Whether the last update found the episode ended. */
-    private var ended = false
-
-    /** Cancel or Back on the card brought back at the end: the viewer is done, so the player can close. */
-    private var doneAtEnd = false
-
     private val start = CountdownStart()
 
     /** Episodes in a row the countdown started with nobody touching the remote. */
@@ -89,7 +86,6 @@ class NextEpisodeCountdown(
         this.hasNext = hasNext
         cue = UpNextCue::fallback
         cancelled = false
-        doneAtEnd = false
         start.clear()
         overlay = Overlay.None
     }
@@ -97,12 +93,11 @@ class NextEpisodeCountdown(
     /** Takes where playback is now, polled while the episode plays; returns what to do, if anything. */
     fun update(playback: Playback): Decision? {
         (overlay as? Overlay.StillWatching)?.let { return whileAsking(it) }
-        // Watch credits, or a seek to the very end, lets the episode play out, not the series: at its
-        // end the Next Episode plays, or with auto-play off the card comes back to wait for OK. Going
-        // back to the listings instead read as the player giving up on the viewer.
-        ended = playback.ended
-        val playedOut = cancelled && ended && hasNext && !doneAtEnd
-        if (playedOut && !autoPlay()) cancelled = false
+        // Watch credits, or a seek to the very end, lets the episode play out, not the series: with
+        // auto-play on, the Next Episode plays at its end. Going back to the listings instead read as
+        // the player giving up on the viewer. With auto-play off the viewer has already turned the card
+        // down, so it doesn't come back with nothing left to watch: the player closes.
+        val playedOut = cancelled && playback.ended && hasNext
         return when {
             showCard(playback) -> runOut()
             playedOut && autoPlay() -> moveOn()
@@ -128,7 +123,11 @@ class NextEpisodeCountdown(
         val counting = autoPlay() && cue.countsDown
         val showing = inCredits && !cancelled
         overlay = if (showing) {
-            Overlay.Card(secondsLeft = ((leftMillis + 999) / 1_000).toInt(), counting = counting)
+            Overlay.Card(
+                secondsLeft = ((leftMillis + 999) / 1_000).toInt(),
+                counting = counting,
+                atEnd = playback.ended,
+            )
         } else {
             Overlay.None
         }
@@ -176,7 +175,6 @@ class NextEpisodeCountdown(
     fun cancel() {
         unattended = 0
         cancelled = true
-        if (ended) doneAtEnd = true
         overlay = Overlay.None
     }
 

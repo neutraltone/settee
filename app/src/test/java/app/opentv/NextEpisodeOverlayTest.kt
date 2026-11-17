@@ -293,6 +293,28 @@ class NextEpisodeOverlayTest {
         captureScreen("vod_player_next_episode_card_waiting")
     }
 
+    @Test
+    fun `with auto-play off, a card still up when the episode ends offers Back in place of Watch credits`() {
+        graph.settings.setPlayNextAutomatically(false)
+        showPlayer()
+        secondsLeft(12)
+
+        playback.positionMillis = EPISODE_MILLIS
+        playback.ended = true
+        runBlocking { vm.poll() }
+        compose.waitForIdle()
+
+        compose.onNodeWithText("Watch credits").assertDoesNotExist()
+        press(Key.DirectionRight)
+        compose.onNodeWithText("Back").assertIsFocused()
+        captureScreen("vodplayer_upnext_at_end")
+        press(Key.DirectionCenter)
+        runBlocking { vm.poll() }
+
+        assertThat(vm.finished.value).isTrue()
+        assertThat(vm.current.value).isEqualTo(MediaKey.Episode(11))
+    }
+
     private fun runUnattended(episodes: Int) = repeat(episodes) {
         secondsLeft(10)
         secondsLeft(0)

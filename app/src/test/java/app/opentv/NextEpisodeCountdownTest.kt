@@ -135,25 +135,24 @@ class NextEpisodeCountdownTest {
     }
 
     @Test
-    fun `with auto-play off, the end of the credits after Cancel brings the card back to wait for OK`() {
+    fun `with auto-play off, the end of the credits after Cancel moves on to nothing, so the player can close`() {
         val manual = NextEpisodeCountdown(autoPlay = { false }).apply { newEpisode(hasNext = true) }
         manual.update(at(secondsLeft = 27))
         manual.cancel()
 
         assertThat(manual.update(at(secondsLeft = 0).copy(ended = true))).isNull()
-        assertThat(manual.overlay).isEqualTo(Overlay.Card(secondsLeft = 0, counting = false))
-        assertThat(manual.ok()).isEqualTo(Decision.PlayNext)
+        assertThat(manual.overlay).isEqualTo(Overlay.None)
     }
 
     @Test
-    fun `with auto-play off, Cancel on the card brought back at the end leaves it away for good`() {
+    fun `with auto-play off, a card still up when the episode ends says so, and Cancel then takes it away`() {
         val manual = NextEpisodeCountdown(autoPlay = { false }).apply { newEpisode(hasNext = true) }
         manual.update(at(secondsLeft = 27))
-        manual.cancel()
-        manual.update(at(secondsLeft = 0).copy(ended = true))
+
+        assertThat(manual.update(at(secondsLeft = 0).copy(ended = true))).isNull()
+        assertThat(manual.overlay).isEqualTo(Overlay.Card(secondsLeft = 0, counting = false, atEnd = true))
 
         manual.cancel()
-
         assertThat(manual.update(at(secondsLeft = 0).copy(ended = true))).isNull()
         assertThat(manual.overlay).isEqualTo(Overlay.None)
     }

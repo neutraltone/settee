@@ -173,7 +173,9 @@ private fun NextEpisodeCardView(
             Spacer(Modifier.height(14.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 OverlayButton(stringResource(R.string.player_play_now), onPlay, Modifier.focusRequester(focus))
-                OverlayButton(stringResource(R.string.player_watch_credits), onCancel)
+                // With the credits over there is nothing to watch: the same press leaves the player.
+                val leave = if (showing.atEnd) R.string.common_back else R.string.player_watch_credits
+                OverlayButton(stringResource(leave), onCancel)
             }
         }
     }
