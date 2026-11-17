@@ -285,6 +285,14 @@ class PlaybackErrorsTest {
             PlaybackException.ERROR_CODE_IO_INVALID_HTTP_CONTENT_TYPE to
                 "Your provider sent a web page instead of video. The link may have expired, " +
                 "so try refreshing your provider in Settings.",
+            // An expired or blocked Xtream account answers 200 with an HTML page, which Media3
+            // reports as an unsupported container (TS) or manifest (HLS without #EXTM3U) (#462).
+            PlaybackException.ERROR_CODE_PARSING_CONTAINER_UNSUPPORTED to
+                "Your provider sent a web page instead of video. The link may have expired, " +
+                "so try refreshing your provider in Settings.",
+            PlaybackException.ERROR_CODE_PARSING_MANIFEST_UNSUPPORTED to
+                "Your provider sent a web page instead of video. The link may have expired, " +
+                "so try refreshing your provider in Settings.",
             PlaybackException.ERROR_CODE_PARSING_CONTAINER_MALFORMED to
                 "This video is damaged and won't play. That's at your provider's end, so try something else.",
             PlaybackException.ERROR_CODE_PARSING_MANIFEST_MALFORMED to
