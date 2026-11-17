@@ -10,6 +10,7 @@ import androidx.test.core.app.ApplicationProvider
 import app.opentv.data.model.Source
 import app.opentv.data.model.SourceKind
 import com.google.common.truth.Truth.assertThat
+import java.net.SocketTimeoutException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runTest
@@ -45,6 +46,24 @@ class EpisodeFetchResultTest {
         test.panel.replies["get_series_info:7"] = "!"
 
         assertThat(test.catalog.ensureEpisodes(PANEL_SOURCE, "7")).isFalse()
+    }
+
+    @Test
+    fun `a panel that times out reports the timeout, so the page can say so`() = runTest {
+        test.db.sources().insert(PANEL_SOURCE)
+        test.panel.replies["get_series_info:7"] = "!timeout"
+
+        val failure = test.catalog.fetchEpisodes(PANEL_SOURCE, "7").exceptionOrNull()
+
+        assertThat(failure).isInstanceOf(SocketTimeoutException::class.java)
+    }
+
+    @Test
+    fun `a panel that answers with no episodes and no details has still answered`() = runTest {
+        test.db.sources().insert(PANEL_SOURCE)
+        test.panel.replies["get_series_info:7"] = "{}"
+
+        assertThat(test.catalog.fetchEpisodes(PANEL_SOURCE, "7").isSuccess).isTrue()
     }
 
     @Test

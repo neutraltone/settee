@@ -5,8 +5,6 @@
  */
 package app.opentv.ui.vod
 
-import androidx.compose.foundation.lazy.LazyListState
-import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.Stable
@@ -118,32 +116,6 @@ internal fun rememberReturnSpot(page: Any): ReturnSpot {
 internal fun Modifier.returnSpot(returnSpot: ReturnSpot, spot: PageSpot?): Modifier =
     (if (spot != null && spot == returnSpot.start) focusRequester(returnSpot.requester) else this)
         .onFocusChanged { if (it.isFocused) returnSpot.highlighted(spot) }
-
-/**
- * Scrolls a lazy row to item [index], once the row is laid out, unless it shows already: an item
- * scrolled out of the row isn't there to take the Highlight. Usually the row's own saved scroll has it
- * in view; this is for when what the row holds changed while the page was away. Nothing for -1.
- */
-internal suspend fun LazyListState.bringOut(index: Int) = bringOut(
-    index,
-    laidOut = { layoutInfo.totalItemsCount > 0 },
-    showing = { layoutInfo.visibleItemsInfo.any { it.index == index } },
-    scroll = { scrollToItem(index) },
-)
-
-/** [LazyListState.bringOut] for a grid. */
-internal suspend fun LazyGridState.bringOut(index: Int) = bringOut(
-    index,
-    laidOut = { layoutInfo.totalItemsCount > 0 },
-    showing = { layoutInfo.visibleItemsInfo.any { it.index == index } },
-    scroll = { scrollToItem(index) },
-)
-
-private suspend fun bringOut(index: Int, laidOut: () -> Boolean, showing: () -> Boolean, scroll: suspend () -> Unit) {
-    if (index < 0) return
-    snapshotFlow(laidOut).first { it }
-    if (!showing()) scroll()
-}
 
 /** Saved as text, which a Bundle holds: the kind, then what picks it out. */
 private val PageSpotSaver = Saver<MutableState<PageSpot?>, String>(

@@ -263,15 +263,28 @@ class ReadmeScreenshotsTest {
     @Test
     fun `Home, with something to pick up and rows of favourites`() {
         val resume = listOf(
-            ResumeItem(MediaKey.Movie(sintel.id), sintel.name, sintel.backdropUrl, progress = 0.4f),
+            ResumeItem(
+                MediaKey.Movie(sintel.id),
+                sintel.name,
+                sintel.backdropUrl,
+                progress = 0.4f,
+                titleKey = "movie:${sintel.id}",
+            ),
             ResumeItem(
                 MediaKey.Episode(chapters[3].id),
                 flashGordon.name,
                 flashGordon.backdropUrl,
                 progress = 0.65f,
                 episode = SeasonEpisode(1, 4),
+                titleKey = "series:${flashGordon.id}",
             ),
-            ResumeItem(MediaKey.Movie(theGeneral.id), theGeneral.name, theGeneral.posterUrl, progress = 0.2f),
+            ResumeItem(
+                MediaKey.Movie(theGeneral.id),
+                theGeneral.name,
+                theGeneral.posterUrl,
+                progress = 0.2f,
+                titleKey = "movie:${theGeneral.id}",
+            ),
         )
         compose.setTvContent {
             MainShell(

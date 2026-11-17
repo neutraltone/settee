@@ -89,6 +89,7 @@ class ItemOptionsHostTest {
         posterUrl = null,
         progress = 0.5f,
         card = ContinueWatchingCard.Movie(movie.id, 0.5f),
+        titleKey = "movie:${movie.id}",
     )
     private val upNextCard = ResumeItem(
         MediaKey.Episode(episode.id),
@@ -96,6 +97,7 @@ class ItemOptionsHostTest {
         posterUrl = null,
         progress = null,
         card = ContinueWatchingCard.Series(episode, progress = null),
+        titleKey = "series:${series.id}",
     )
 
     // The graph is process-wide, so its database outlives each test.
@@ -203,6 +205,7 @@ class ItemOptionsHostTest {
                 posterUrl = null,
                 progress = 0.5f,
                 card = ContinueWatchingCard.Movie(gone, 0.5f),
+                titleKey = "movie:$gone",
             ),
         )
 

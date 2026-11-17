@@ -109,7 +109,7 @@ internal fun <T> ScreenFrameScope.ForYou(
                             resume,
                             large = false,
                             focus = null,
-                            onResume = onResume,
+                            onResume = { card -> onResume(card.key) },
                             leave = { LeaveDirectly },
                             // The film or show the card plays, so it shows in the backdrop as a cover's does.
                             onHighlight = { card -> card.titleId?.let(onHighlight) },

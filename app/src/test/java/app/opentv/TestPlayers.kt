@@ -244,6 +244,16 @@ class TestPlayers(private val context: Context) {
     fun advance(millis: Long) = shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(millis))
 
     /**
+     * Runs [controller], whose streams keep failing, until it stops restarting them by itself:
+     * [AUTO_TRIES] more streams than [before] were handed over and the last one failed. Then waits
+     * out [RESTARTS_MILLIS], so a restart that shouldn't happen would have.
+     */
+    fun untilItStopsRestarting(controller: PlayerController, before: Int = 0) {
+        until { played.size == before + AUTO_TRIES && controller.state.value is PlayerController.State.Error }
+        advance(RESTARTS_MILLIS)
+    }
+
+    /**
      * The fake decoder reports its first frame only on a surface, and a [androidx.media3.ui.PlayerView]
      * has none under Robolectric. So this one reports it by itself, as soon as it has a format.
      */
@@ -285,8 +295,14 @@ class TestPlayers(private val context: Context) {
         override fun maybeThrowSourceInfoRefreshError() = throw failure()
     }
 
-    private companion object {
-        fun placeholder(key: MediaKey) = Playable.Ready(
+    companion object {
+        /** How many times a stream is tried before the player stops restarting it by itself: once, and twice again. */
+        const val AUTO_TRIES = 3
+
+        /** Longer than the player waits before restarting by itself, twice over. */
+        const val RESTARTS_MILLIS = 10_000L
+
+        private fun placeholder(key: MediaKey) = Playable.Ready(
             key,
             "https://example.com/stream",
             userAgent = "",
@@ -294,7 +310,7 @@ class TestPlayers(private val context: Context) {
             isLive = key is MediaKey.Live,
         )
 
-        const val TICK_MILLIS = 10L
-        const val MAX_TICKS = 500
+        private const val TICK_MILLIS = 10L
+        private const val MAX_TICKS = 500
     }
 }

@@ -67,12 +67,15 @@ import app.opentv.sync.SyncEngine
 import app.opentv.sync.SyncServer
 import app.opentv.ui.vod.PageVersions
 import java.net.HttpURLConnection
+import java.util.concurrent.atomic.AtomicReference
 import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
@@ -855,10 +858,26 @@ data class ResumeItem(
     val name: String = title,
     /** The film's or the show's local id, which Movies' and Shows' backdrop looks it up by. */
     val titleId: Long? = null,
+    /**
+     * Which title the card stands for, by the provider's ids, so Home can find the card again after
+     * it has moved on: a show's [key] changes each time its card moves on to the next episode, and
+     * local ids can change in a catalogue refresh. Required, though only [resumeItem] knows the
+     * title: a fallback to [key] would quietly bring that back for any card built without it.
+     */
+    val titleKey: String,
 )
 
-/** A show on its page: [series] as far as it's filled in, and whether its episodes have been [fetched]. */
-data class OpenedShow(val series: Series, val fetched: Boolean)
+/**
+ * A show on its page: [series] as far as it's filled in, and whether its episodes have been [fetched].
+ * Once they have, whether it has [noEpisodes] stored for any Version, and if so why, when every
+ * Version's fetch failed ([failure]).
+ */
+data class OpenedShow(
+    val series: Series,
+    val fetched: Boolean,
+    val noEpisodes: Boolean = false,
+    val failure: ViewerError? = null,
+)
 
 /**
  * What Movies' and Shows' backdrop shows for the highlighted title: its name, where the Profile is
@@ -896,13 +915,13 @@ class VodViewModel @JvmOverloads constructor(
     @OptIn(ExperimentalCoroutinesApi::class)
     val continueWatchingMovies: StateFlow<List<ResumeItem>?> =
         graph.viewerLibrary.continueWatchingMovies()
-            .mapLatest { cards -> cards.mapNotNull { resumeItem(graph.catalogRepository, it) } }
+            .mapLatest { cards -> resumeItems(graph.catalogRepository, cards) }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val continueWatchingSeries: StateFlow<List<ResumeItem>?> =
         graph.viewerLibrary.continueWatchingSeries()
-            .mapLatest { cards -> cards.mapNotNull { resumeItem(graph.catalogRepository, it) } }
+            .mapLatest { cards -> resumeItems(graph.catalogRepository, cards) }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
     /** Each episode's Watched / In Progress / Unwatched status for the active Profile. */
@@ -1266,34 +1285,49 @@ class VodViewModel @JvmOverloads constructor(
      * (#181), and once TMDB has answered, any Version its TMDB id newly matches; [OpenedShow.fetched]
      * once they all have been. Episodes are fetched here rather than during catalogue sync: pulling
      * every episode of every series up front is what makes a first sync take twenty minutes on a
-     * large provider, and most of it is never looked at.
+     * large provider, and most of it is never looked at. Collected again for the page's Try again.
      */
     fun openShow(id: Long): Flow<OpenedShow> = channelFlow {
         // Only touched by one coroutine at a time: the first fetch is joined before the second.
         val asked = mutableSetOf(id)
+        // Set on the repository's thread, read here once the series has stopped coming.
+        val own = AtomicReference<Result<Unit>?>(null)
         var opened: Series? = null
-        var others: Job? = null
-        graph.catalogRepository.openSeries(id).collect {
-            if (others == null) others = launch { fetchVersions(it, asked) }
+        var others: Deferred<List<Result<Unit>>>? = null
+        graph.catalogRepository.openSeries(id, onFetched = own::set).collect {
+            if (others == null) others = async { fetchVersions(it, asked) }
             opened = it
             send(OpenedShow(it, fetched = false))
         }
         val series = opened ?: return@channelFlow
-        others?.join()
-        fetchVersions(series, asked)
-        send(OpenedShow(series, fetched = true))
+        val outcomes = listOfNotNull(own.get()) + others?.await().orEmpty() + fetchVersions(series, asked)
+        // Read here, after the fetches stored them, rather than left to the page's live read, which can
+        // come a moment later and would have the page say there are none just before they show.
+        val none = showEpisodes(series).first().all.isEmpty()
+        send(OpenedShow(series, fetched = true, noEpisodes = none, failure = episodesFailure(outcomes).takeIf { none }))
     }
 
-    /** Episodes for each of [series]' Versions not [asked] for yet, all at once. */
-    private suspend fun fetchVersions(series: Series, asked: MutableSet<Long>) = coroutineScope {
+    /** Episodes for each of [series]' Versions not [asked] for yet, all at once, and how each fetch went. */
+    private suspend fun fetchVersions(series: Series, asked: MutableSet<Long>): List<Result<Unit>> = coroutineScope {
         val versions = graph.database.versionsOf(series, graph.titleIndex.versionIds).filter { asked.add(it.id) }
-        versions.forEach { version ->
-            launch {
-                val source = graph.sourceRepository.byId(version.sourceId) ?: return@launch
-                graph.catalogRepository.ensureEpisodes(source, version.seriesId)
+        versions.map { version ->
+            async {
+                val source = graph.sourceRepository.byId(version.sourceId) ?: return@async null
+                graph.catalogRepository.fetchEpisodes(source, version.seriesId)
             }
-        }
+        }.awaitAll().filterNotNull()
     }
+
+    /**
+     * Why a show's episodes didn't come, worded for its page, when every fetch for its Versions failed;
+     * the opened Version's failure first. Not when any worked: even with nothing in it, the provider has
+     * answered, and the viewer can't do anything about the other Versions' panels.
+     */
+    private fun episodesFailure(outcomes: List<Result<Unit>>): ViewerError? =
+        outcomes.takeIf { all -> all.none { it.isSuccess } }
+            ?.firstOrNull()
+            ?.exceptionOrNull()
+            ?.let { graph.errorWording.ofProvider(it, R.string.vod_episodes_failed) }
 
     /** [series]' episodes across its Versions, for its page (#181, ADR 0007). */
     @OptIn(ExperimentalCoroutinesApi::class)
@@ -1434,6 +1468,14 @@ class VodViewModel @JvmOverloads constructor(
     }
 }
 
+/**
+ * [cards] as Continue Watching draws them, one per title: a row keys its cards by [ResumeItem.titleKey],
+ * and two cards under one key would crash it. ViewerLibrary already gives each title one card, so
+ * this only holds should that ever slip.
+ */
+internal suspend fun resumeItems(catalog: CatalogRepository, cards: List<ContinueWatchingCard>): List<ResumeItem> =
+    cards.mapNotNull { resumeItem(catalog, it) }.distinctBy { it.titleKey }
+
 /** [card] as Continue Watching draws it, or null when its title has left the catalogue. */
 internal suspend fun resumeItem(catalog: CatalogRepository, card: ContinueWatchingCard): ResumeItem? = when (card) {
     is ContinueWatchingCard.Movie -> catalog.movie(card.movieId)?.let {
@@ -1447,6 +1489,8 @@ internal suspend fun resumeItem(catalog: CatalogRepository, card: ContinueWatchi
             card = card,
             name = it.name,
             titleId = it.id,
+            // As Home's cover rows key a title, so a refresh renumbering local ids can't lose the card.
+            titleKey = VodTitle.OfMovie(it).pickKey,
         )
     }
     is ContinueWatchingCard.Series -> {
@@ -1463,6 +1507,8 @@ internal suspend fun resumeItem(catalog: CatalogRepository, card: ContinueWatchi
                 newEpisode = card.newEpisode,
                 card = card,
                 titleId = it.id,
+                // The show, not the episode, which changes each time the card moves on to Up Next.
+                titleKey = VodTitle.OfSeries(it).pickKey,
             )
         }
     }
@@ -1517,7 +1563,7 @@ class HomeViewModel @JvmOverloads constructor(
     @OptIn(ExperimentalCoroutinesApi::class)
     private val watching: Flow<Pair<List<ResumeItem>, CoverStatuses>> = combine(
         graph.viewerLibrary.home().mapLatest { home ->
-            home.continueWatching.mapNotNull { resumeItem(graph.catalogRepository, it) } to home.covers
+            resumeItems(graph.catalogRepository, home.continueWatching) to home.covers
         },
         settings.moviesEnabled,
         settings.seriesEnabled,

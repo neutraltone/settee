@@ -203,6 +203,8 @@
     <string name="vod_no_shows_provider">Din leverantör har inte skickat några serier än.</string>
     <string name="vod_no_shows_add">Din leverantörs serier visas här. Lägg till en leverantör för att komma igång.</string>
     <string name="vod_loading_episodes">Läser in avsnitt…</string>
+    <string name="vod_episodes_failed">Det gick inte att läsa in avsnitten i den här serien. Försök igen om en stund.</string>
+    <string name="vod_no_episodes">Din leverantör har inte lagt till några avsnitt av den här serien.</string>
     <string name="vod_continue_watching">Fortsätt titta</string>
     <string name="vod_large_provider_note">En stor leverantör kan ta ett par minuter första gången.</string>
     <string name="vod_recommended">Rekommenderat för dig</string>
