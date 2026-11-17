@@ -35,6 +35,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
@@ -73,6 +74,8 @@ import app.opentv.ui.design.Text
 import app.opentv.ui.options.OptionsSubject
 import app.opentv.ui.options.openOptionsOn
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.withTimeoutOrNull
 
 /**
  * A show's page once the show is known: the hero with its main button (Resume or Play the right
@@ -119,6 +122,7 @@ internal fun SeriesDetailContent(
     }
     val seasons = remember(episodes) { seasonsOf(episodes) }
     val nav = remember(series.id) { ShowPageNav() }
+    val spot = rememberReturnSpot(series.id)
     val hasLikeThis = suggestions.isNotEmpty()
     val shown = remember(seasons, mainAction, nav.pickedSeason, hasLikeThis, suggestionsKnown) {
         ShowSeasons(seasons, mainAction, nav.pickedSeason, hasLikeThis, suggestionsKnown)
@@ -134,7 +138,16 @@ internal fun SeriesDetailContent(
     }
     // The one rule for where "the hero's button" is, for the first highlight and every move back (#433).
     val mainTakesHighlight = shown.mainAction != null && versions.plays
-    ShowPageFocusEffects(nav, shown, pillRow, episodeList, showingLikeThis, mainTakesHighlight)
+    ShowPageFocusEffects(
+        nav,
+        shown,
+        pillRow,
+        episodeList,
+        showingLikeThis,
+        mainTakesHighlight,
+        comingBack = spot.start != null,
+    )
+    ReturnEffect(nav, spot, shown, ShowCovers(suggestions, suggestionsKnown), mainTakesHighlight)
     EpisodeListScrollEffects(nav, shown, episodeList)
     BackHandler(enabled = nav.backGoesToPills(shown)) { nav.pillTarget = PillTarget() }
 
@@ -144,31 +157,35 @@ internal fun SeriesDetailContent(
         Column(Modifier.fillMaxWidth().onFocusChanged { nav.pageHasFocus = it.hasFocus }) {
             Text(series.displayTitle, style = SetteeType.Hero, maxLines = 2)
             if (!nav.heroAway) {
-                ShowHero(series, nav, shown, status, favourite, versions.cantPlay, play, onSetFavourite) {
+                ShowHero(series, nav, spot, shown, status, favourite, versions.cantPlay, play, onSetFavourite) {
                     if (versions.showsPill) {
                         PillButton(
                             label = stringResource(R.string.vod_quality),
                             icon = Icons.Filled.HighQuality,
                             onClick = { choosingQuality = true },
+                            modifier = Modifier.returnSpot(spot, null),
                         )
                     }
                     if (cast.isNotEmpty()) {
+                        // Back from a person picked in the panel comes back here, with the panel closed.
                         PillButton(
                             label = stringResource(R.string.vod_cast),
                             icon = Icons.Filled.People,
                             onClick = { castShown = true },
+                            modifier = Modifier.returnSpot(spot, PageSpot.Cast),
                         )
                     }
                 }
             }
             Spacer(Modifier.height(SetteeSpace.RowGap))
             if (shown.hasPills) {
-                SeasonPills(nav, shown, pillRow, showingLikeThis)
+                SeasonPills(nav, spot, shown, pillRow, showingLikeThis)
                 Spacer(Modifier.height(SetteeSpace.RowGap))
             }
             if (showingLikeThis) {
                 LikeThisGrid(
                     suggestions,
+                    spot = spot,
                     firstCover = nav.focus.firstCover,
                     onFocusChanged = nav::gridFocusChanged,
                     onUpFromFirstRow = { nav.pillTarget = PillTarget() },
@@ -178,7 +195,7 @@ internal fun SeriesDetailContent(
                 if (shown.selected == null && episodeFetch.noEpisodes) {
                     NoEpisodes(nav, episodeFetch.failure, episodeFetch.onTryAgain)
                 } else {
-                    EpisodeList(series, nav, shown, statuses, episodeList, play, suggestions)
+                    EpisodeList(series, nav, spot, shown, statuses, episodeList, play, suggestions)
                 }
             }
         }
@@ -214,6 +231,7 @@ internal fun SeriesDetailContent(
 private fun ShowHero(
     series: Series,
     nav: ShowPageNav,
+    spot: ReturnSpot,
     shown: ShowSeasons,
     status: CoverStatus?,
     favourite: Boolean?,
@@ -246,7 +264,7 @@ private fun ShowHero(
                 label = mainActionLabel(action),
                 icon = Icons.Filled.PlayArrow,
                 onClick = { onPlayEpisode(MediaKey.Episode(action.episode.id)) },
-                modifier = Modifier.focusRequester(nav.focus.main),
+                modifier = Modifier.focusRequester(nav.focus.main).returnSpot(spot, null),
                 enabled = cantPlay == null,
             )
         }
@@ -255,6 +273,7 @@ private fun ShowHero(
             onSetFavourite = onSetFavourite,
             modifier = Modifier
                 .focusRequester(nav.focus.favourite)
+                .returnSpot(spot, null)
                 .onFocusChanged { nav.favouriteFocused = it.isFocused },
         )
         moreButtons()
@@ -284,7 +303,13 @@ private fun mainActionLabel(action: SeriesMainAction): String = stringResource(
  * onto one selects it: a season's episodes, or the suggestions, show beneath.
  */
 @Composable
-private fun SeasonPills(nav: ShowPageNav, shown: ShowSeasons, pillRow: LazyListState, showingLikeThis: Boolean) {
+private fun SeasonPills(
+    nav: ShowPageNav,
+    spot: ReturnSpot,
+    shown: ShowSeasons,
+    pillRow: LazyListState,
+    showingLikeThis: Boolean,
+) {
     LazyRow(
         state = pillRow,
         horizontalArrangement = Arrangement.spacedBy(SetteeSpace.CardGap),
@@ -302,6 +327,7 @@ private fun SeasonPills(nav: ShowPageNav, shown: ShowSeasons, pillRow: LazyListS
                 onOptions = openOptions,
                 modifier = Modifier
                     .then(if (isSelected) Modifier.focusRequester(nav.focus.pill) else Modifier)
+                    .returnSpot(spot, null)
                     .onFocusChanged { if (it.isFocused) nav.pickSeason(season.number) },
             )
         }
@@ -315,6 +341,7 @@ private fun SeasonPills(nav: ShowPageNav, shown: ShowSeasons, pillRow: LazyListS
                     modifier = Modifier
                         .then(if (showingLikeThis) Modifier.focusRequester(nav.focus.pill) else Modifier)
                         .focusRequester(nav.focus.likeThisPill)
+                        .returnSpot(spot, null)
                         .onFocusChanged { if (it.isFocused) nav.likeThis = true }
                         // To the first cover, which the focus search wouldn't pick from a pill this far along.
                         .onPreviewKeyEvent { e -> e.isPress(Key.DirectionDown) && nav.goDownToGrid() },
@@ -366,6 +393,7 @@ private fun NoEpisodes(nav: ShowPageNav, failure: ViewerError?, onTryAgain: () -
 private fun EpisodeList(
     series: Series,
     nav: ShowPageNav,
+    spot: ReturnSpot,
     shown: ShowSeasons,
     statuses: EpisodeStatuses,
     episodeList: LazyListState,
@@ -405,6 +433,7 @@ private fun EpisodeList(
                 onPlay = onPlayEpisode,
                 modifier = Modifier
                     .then(if (targeted) Modifier.focusRequester(nav.focus.episode) else Modifier)
+                    .returnSpot(spot, PageSpot.Episode(ep.id))
                     .onFocusChanged { if (it.isFocused) nav.focusedEpisode = ep.id },
             )
         }
@@ -433,6 +462,7 @@ private fun ShowPageFocusEffects(
     episodeList: LazyListState,
     showingLikeThis: Boolean,
     mainTakesHighlight: Boolean,
+    comingBack: Boolean,
 ) {
     val latest by rememberUpdatedState(shown)
     val latestMainTakesHighlight by rememberUpdatedState(mainTakesHighlight)
@@ -446,6 +476,8 @@ private fun ShowPageFocusEffects(
     // main button turned off under the Highlight drops it off the page, which puts it back on Favourite.
     LaunchedEffect(mainTakesHighlight) {
         delay(FIRST_HIGHLIGHT_DELAY_MILLIS)
+        // Back to the page, ReturnEffect places the first highlight, where the viewer left from.
+        if (comingBack && !nav.highlightPlaced) return@LaunchedEffect
         if (nav.highlightPlaced && !nav.favouriteFocused && nav.pageHasFocus) return@LaunchedEffect
         runCatching { nav.focus.button(mainTakesHighlight).requestFocus() }
         nav.highlightPlaced = true
@@ -495,6 +527,61 @@ private fun ShowPageFocusEffects(
         runCatching { nav.focus.button(latestMainTakesHighlight).requestFocus() }
     }
 }
+
+/** A show's More like this as the page has it, and whether it has been read yet. */
+private class ShowCovers(val covers: List<TitleCover>, val known: Boolean)
+
+/**
+ * Back to the page from an episode played, a person picked under Cast or a show opened from More like
+ * this puts the Highlight back there ([spot]), in place of the page's first highlight on the main button,
+ * which it falls back to when that place has gone.
+ */
+@Composable
+private fun ReturnEffect(
+    nav: ShowPageNav,
+    spot: ReturnSpot,
+    shown: ShowSeasons,
+    covers: ShowCovers,
+    mainTakesHighlight: Boolean,
+) {
+    val latest by rememberUpdatedState(shown)
+    val latestMainTakesHighlight by rememberUpdatedState(mainTakesHighlight)
+    val latestCovers by rememberUpdatedState(covers)
+    LaunchedEffect(Unit) {
+        val start = spot.start ?: return@LaunchedEffect
+        delay(FIRST_HIGHLIGHT_DELAY_MILLIS)
+        val back = when (start) {
+            is PageSpot.Episode -> {
+                val ep = latest.all.flatMap { it.episodes }.firstOrNull { it.id == start.id }
+                ep != null &&
+                    run {
+                        // Highlighted again in its season, as Down onto another season's episode is.
+                        nav.episodeTarget = EpisodeTarget(ep)
+                        withTimeoutOrNull(EPISODE_WAIT_MILLIS) {
+                            snapshotFlow { nav.focusedEpisode }.first { it == ep.id }
+                        } != null
+                    }
+            }
+            // Highlighting More like this's pill is what shows the grid; here there's no pill press. The grid
+            // scrolls to the cover itself.
+            is PageSpot.Show ->
+                spot.restoreAmong({ latestCovers.takeIf { it.known }?.covers }, { PageSpot.Show(it.id) }) {
+                    nav.likeThis = true
+                }
+            PageSpot.Cast -> spot.restore()
+            else -> false
+        }
+        if (!back) {
+            nav.likeThis = false
+            runCatching { nav.focus.button(latestMainTakesHighlight).requestFocus() }
+        }
+        spot.settled()
+        nav.highlightPlaced = true
+    }
+}
+
+/** For the episode list to change season and scroll to the episode being returned to. */
+private const val EPISODE_WAIT_MILLIS = 500L
 
 /** Where the episode list scrolls by itself, apart from following the Highlight. */
 @Composable
@@ -566,6 +653,7 @@ private class ShowPageNav {
     /** Whether the Highlight is anywhere on the page; a button turned off under it drops it. */
     var pageHasFocus by mutableStateOf(false)
     var highlightPlaced by mutableStateOf(false)
+
     var inList by mutableStateOf(false)
         private set
     var inGrid by mutableStateOf(false)
@@ -581,8 +669,8 @@ private class ShowPageNav {
     /** Whether the list is holding the Highlight itself while it changes season. */
     var parking by mutableStateOf(false)
 
+    /** Set from outside the class too, by ReturnEffect: a returnTo() would take ShowPageNav past detekt's limit. */
     var episodeTarget by mutableStateOf<EpisodeTarget?>(null)
-        private set
     var pillTarget by mutableStateOf<PillTarget?>(null)
     var likeThisTarget by mutableStateOf<LikeThisTarget?>(null)
         private set
@@ -702,16 +790,3 @@ private const val LIKE_THIS_KEY = "more-like-this"
 
 private const val FIRST_HIGHLIGHT_DELAY_MILLIS = 60L
 private const val SYNOPSIS_WIDTH = 0.6f
-
-/**
- * Scrolls the pill row so pill [index] is wholly in view, leaving the one before it showing where
- * there is one, so the row still says there's more that way.
- */
-private suspend fun LazyListState.keepInView(index: Int) {
-    val info = layoutInfo
-    val item = info.visibleItemsInfo.firstOrNull { it.index == index }
-    val inView = item != null &&
-        item.offset >= info.viewportStartOffset &&
-        item.offset + item.size <= info.viewportEndOffset
-    if (index >= 0 && !inView) scrollToItem((index - 1).coerceAtLeast(0))
-}
