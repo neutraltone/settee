@@ -790,4 +790,40 @@ class SeriesDetailContentTest {
 
         assertThat(played).isNull()
     }
+
+    @Test
+    fun `a show this TV can't play opens on Favourite`() {
+        versions = PageVersions(cantPlay = "4K")
+        show(SeriesMainAction.Play(testEpisode(1, 1)))
+
+        compose.onNodeWithText("Favourite").assertIsFocused()
+        captureScreen("series_detail_cant_play")
+    }
+
+    @Test
+    fun `on a show this TV can't play, Up past the pills gets back to Favourite`() {
+        versions = PageVersions(cantPlay = "4K")
+        show(SeriesMainAction.Play(testEpisode(1, 1)))
+
+        press(Key.DirectionDown)
+        episodeRow(1, 1).assertIsFocused()
+        press(Key.DirectionUp)
+        pill("Season 1").assertIsFocused()
+        press(Key.DirectionUp)
+
+        compose.onNodeWithText("Favourite").assertIsFocused()
+    }
+
+    @Test
+    fun `on a one-season show this TV can't play, Up from the first episode gets back to Favourite`() {
+        versions = PageVersions(cantPlay = "4K")
+        episodes = (1..3).map { testEpisode(1, it) }
+        show(SeriesMainAction.Play(testEpisode(1, 1)))
+
+        press(Key.DirectionDown)
+        episodeRow(1, 1).assertIsFocused()
+        press(Key.DirectionUp)
+
+        compose.onNodeWithText("Favourite").assertIsFocused()
+    }
 }

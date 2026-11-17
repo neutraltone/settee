@@ -132,7 +132,7 @@ internal fun SeriesDetailContent(
     val episodeList = rememberSaveable(shown.selected?.number, showingLikeThis, saver = LazyListState.Saver) {
         LazyListState()
     }
-    ShowPageFocusEffects(nav, shown, pillRow, episodeList, showingLikeThis)
+    ShowPageFocusEffects(nav, shown, pillRow, episodeList, showingLikeThis, plays = versions.cantPlay == null)
     EpisodeListScrollEffects(nav, shown, episodeList)
     BackHandler(enabled = nav.backGoesToPills(shown)) { nav.pillTarget = PillTarget() }
 
@@ -430,19 +430,21 @@ private fun ShowPageFocusEffects(
     pillRow: LazyListState,
     episodeList: LazyListState,
     showingLikeThis: Boolean,
+    plays: Boolean,
 ) {
     val latest by rememberUpdatedState(shown)
+    val latestPlays by rememberUpdatedState(plays)
     val onLikeThis by rememberUpdatedState(showingLikeThis)
     // Choosing an episode in another season lists that season, which brings its own list position.
     val latestList by rememberUpdatedState(episodeList)
     // Episodes are fetched on demand, so the main button can appear after the page does: the
     // highlight waits on the favourite toggle until then, and moves across only if it is still
     // there, never pulling a viewer back up from wherever they have gone since.
-    val hasMainAction = shown.mainAction != null
-    LaunchedEffect(hasMainAction) {
+    val mainTakesHighlight = shown.mainAction != null && plays
+    LaunchedEffect(mainTakesHighlight) {
         delay(FIRST_HIGHLIGHT_DELAY_MILLIS)
         if (nav.highlightPlaced && !nav.favouriteFocused) return@LaunchedEffect
-        runCatching { nav.focus.button(hasMainAction).requestFocus() }
+        runCatching { nav.focus.button(mainTakesHighlight).requestFocus() }
         nav.highlightPlaced = true
     }
     LaunchedEffect(nav.episodeTarget) {
@@ -487,7 +489,7 @@ private fun ShowPageFocusEffects(
     LaunchedEffect(nav.buttonTarget) {
         nav.buttonTarget ?: return@LaunchedEffect
         withFrameNanos {}
-        runCatching { nav.focus.button(latest.mainAction != null).requestFocus() }
+        runCatching { nav.focus.button(latest.mainAction != null && latestPlays).requestFocus() }
     }
 }
 
@@ -665,11 +667,14 @@ private class DetailFocus {
     /** More like this's pill, selected or not. */
     val likeThisPill = FocusRequester()
 
-    /** The main button, or Favourite while there's no main button. */
-    fun button(hasMainAction: Boolean) = if (hasMainAction) main else favourite
+    /**
+     * The main button, or Favourite while there's none or it's turned off because nothing of the show
+     * plays here: a turned-off button can't take the Highlight, and asking it to fails quietly (#433).
+     */
+    fun button(mainTakesHighlight: Boolean) = if (mainTakesHighlight) main else favourite
 }
 
-/** A request to highlight the hero's main button, or Favourite while there's no main button. */
+/** A request to highlight the hero's main button, or Favourite when the main button can't take it. */
 private class ButtonTarget
 
 /** A request to highlight the selected season's pill. */
