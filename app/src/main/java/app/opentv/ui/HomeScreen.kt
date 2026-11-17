@@ -57,6 +57,7 @@ import app.opentv.ui.options.LocalConfirmLive
 import app.opentv.ui.options.LocalOpenOptions
 import app.opentv.ui.options.OptionsSubject
 import app.opentv.ui.options.openOptionsOn
+import app.opentv.ui.options.rememberRowHighlight
 import app.opentv.ui.vod.CardFocus
 import app.opentv.ui.vod.rememberCoverBadge
 import app.opentv.ui.vod.rememberRowState
@@ -454,10 +455,14 @@ internal fun ScreenFrameScope.ContinueWatchingShelf(
 ) {
     val memory = rememberShelfMemory(remember(cards) { cards.map { it.titleKey } })
     val openOptions = LocalOpenOptions.current
+    val rowState = rememberRowState(focus)
+    // A card removed while highlighted (Remove from Continue Watching, Mark watched) hands the
+    // highlight to the one taking its place, not the row's first.
+    val highlight = rememberRowHighlight(cards, rowState) { it.titleKey }
     Shelf(
         stringResource(R.string.vod_continue_watching),
         memory,
-        state = rememberRowState(focus),
+        state = rowState,
         // With the large first card, the cards hang from the top, right under the row's title. On a
         // shared bottom edge the smaller cards sat under an empty band the large one's extra height
         // tall, which read as something missing above them.
@@ -472,6 +477,7 @@ internal fun ScreenFrameScope.ContinueWatchingShelf(
                 modifier = Modifier
                     .takesFocus(index, focus)
                     .shelfCard(memory, card.titleKey)
+                    .then(highlight.modifier(index, card.titleKey))
                     .onFocusChanged { if (it.isFocused) onHighlight(card) },
                 status = resumeStatusText(card),
                 progress = card.progress,
@@ -505,7 +511,9 @@ private fun ScreenFrameScope.CoverShelf(
     leave: (VodTitle) -> LeaveScreen,
 ) {
     val memory = rememberShelfMemory(remember(covers) { covers.map { it.title.pickKey } })
-    Shelf(title, memory, state = rememberRowState(focus)) {
+    val rowState = rememberRowState(focus)
+    val highlight = rememberRowHighlight(covers, rowState) { it.title.pickKey }
+    Shelf(title, memory, state = rowState) {
         itemsIndexed(covers, key = { _, cover -> cover.title.pickKey }) { index, cover ->
             val subject = when (val t = cover.title) {
                 is VodTitle.OfMovie -> OptionsSubject.OfMovie(t.movie)
@@ -516,7 +524,10 @@ private fun ScreenFrameScope.CoverShelf(
                 artworkUrl = cover.title.posterUrl,
                 onClick = { onOpen(cover.title) },
                 size = ArtCardSize.Portrait,
-                modifier = Modifier.takesFocus(index, focus).shelfCard(memory, cover.title.pickKey),
+                modifier = Modifier
+                    .takesFocus(index, focus)
+                    .shelfCard(memory, cover.title.pickKey)
+                    .then(highlight.modifier(index, cover.title.pickKey)),
                 status = if (showsStatus) coverStatusText(cover.status) else emptyList(),
                 progress = (cover.status as? CoverStatus.InProgress)?.progress?.takeIf { showsStatus },
                 badge = rememberCoverBadge(cover.title.kind, cover.title.id, cover.title.name),

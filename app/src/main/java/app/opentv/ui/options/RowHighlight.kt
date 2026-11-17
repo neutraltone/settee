@@ -34,10 +34,14 @@ internal class RowHighlight {
     private var highlighted: Any? = null
     private var listed: Set<Any> = emptySet()
 
-    fun modifier(index: Int, key: Any): Modifier {
+    /**
+     * [group] for a row that is itself a row of cards (For you's shelves): it has the highlight while
+     * one of its cards does, and putting the highlight back on it puts it on one of them.
+     */
+    fun modifier(index: Int, key: Any, group: Boolean = false): Modifier {
         val restoring = if (restoringTo == index) Modifier.focusRequester(requester) else Modifier
         return restoring.onFocusChanged {
-            if (it.isFocused) {
+            if (if (group) it.hasFocus else it.isFocused) {
                 highlighted = key
             } else if (highlighted == key) {
                 // Still listed means the highlight just moved off it, rather than leaving with it.
