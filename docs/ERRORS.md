@@ -121,16 +121,16 @@ hardware and worded by `ErrorWording.ofHardware`.
 ## Show page episodes
 
 A show's page asks each of its Versions' panels for `get_series_info` when it opens
-(`VodViewModel.openShow`). When it has no episodes stored afterwards, it says why in the episodes'
-place. Only when every Version's fetch failed: one that answered, even with nothing in it, means
-there's no error to show, and stored episodes always show instead. `ErrorWording.ofProvider` words
+(`VodViewModel.openShow`). When no Version has episodes stored afterwards, it says so in the
+episodes' place, as an error only when every Version's fetch failed: one that answered, even with
+nothing in it, means there's no error to show. Stored episodes always show instead of either. `ErrorWording.ofProvider` words
 the failure of the opened Version, or of the first other one, so a timeout, a rejected login, a 429 or
 a 5xx read as in [Provider connection](#provider-connection). Under it, Try again asks every panel again.
 
 | Trigger | String key | Sentence | Detail | Whose end, likely cause |
 |---|---|---|---|---|
-| Every fetch failed with nothing more specific (a reply that won't parse, any other HTTP status) | `vod_episodes_failed` | Couldn't load this show's episodes. Try again in a moment. | exception type, or HTTP status | Provider's |
-| A fetch answered, but no Version has episodes (a plain line, not an error, and no Try again) | `vod_no_episodes` | Your provider hasn't added any episodes of this show. | none | Provider's shelves |
+| Every fetch failed with nothing more specific (a reply that won't parse, any other HTTP status) | `vod_episodes_failed` | Couldn't load the episodes of this series. Try again in a moment. | exception type, or HTTP status | Provider's |
+| A fetch answered, but no Version has episodes (a plain line, not an error, and no Try again) | `vod_no_episodes` | Your provider hasn't added any episodes of this series. | none | Provider's: none listed yet |
 
 ## Guides
 

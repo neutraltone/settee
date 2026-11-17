@@ -477,7 +477,7 @@ class CatalogRepository(
      * series page uses [openSeries].
      */
     suspend fun seriesDetail(id: Long, now: Long = System.currentTimeMillis()): Series? = withContext(Dispatchers.IO) {
-        seriesDetails(id, now, opening = false).lastOrNull()
+        seriesDetails(id, now, opening = false, onFetched = {}).lastOrNull()
     }
 
     /**
@@ -495,47 +495,43 @@ class CatalogRepository(
     ): Flow<Series> = seriesDetails(id, now, opening = true, onFetched)
 
     /** [seriesDetail], or with [opening] [openSeries]: the panel always asked, and its episodes stored. */
-    private fun seriesDetails(
-        id: Long,
-        now: Long,
-        opening: Boolean,
-        onFetched: (Result<Unit>) -> Unit = {},
-    ): Flow<Series> = flow {
-        val series = seriesDao.byId(id) ?: return@flow
-        val panel = sourceDao.byId(series.sourceId)?.takeIf { it.kind == SourceKind.XTREAM }
+    private fun seriesDetails(id: Long, now: Long, opening: Boolean, onFetched: (Result<Unit>) -> Unit): Flow<Series> =
+        flow {
+            val series = seriesDao.byId(id) ?: return@flow
+            val panel = sourceDao.byId(series.sourceId)?.takeIf { it.kind == SourceKind.XTREAM }
 
-        // 1) The provider's get_series_info, on an Xtream source: on opening for its episodes, and
-        //    for a still-bare row its details.
-        // A row whose details are in is shown first, with its stored episodes: a slow panel would
-        // otherwise keep the page on Loading for details it already has (#326). The page reads the
-        // episodes the request stores from the database, so the row isn't shown again for them.
-        val shownFirst = panel != null && opening && series.isEnriched
-        if (shownFirst) emit(series)
-        val info = if (panel != null && (opening || !series.isEnriched)) {
-            fetchSeries(panel, series.seriesId, now, storeEpisodes = opening)
-                .also { fetched -> onFetched(fetched.map {}) }
-                .getOrNull()
-        } else {
-            null
-        }
-        // Each save goes onto the row as it's stored then, not the copy read before asking: a refresh
-        // while the panel or TMDB was out would otherwise be undone, or a show it deleted brought back.
-        // Bare is as it was when it asked: a refresh may have given it a cover since, and filledFrom
-        // only fills blanks. With nothing to fill it's read, not saved, so it doesn't wait for
-        // SQLite's writer, which a refresh may hold for a whole batch.
-        val found = info?.takeIf { !series.isEnriched }
-        val result = if (found != null) seriesDao.saveLookedUp(id) { it.filledFrom(found) } else seriesDao.byId(id)
-        if (result == null) {
-            // Gone while it asked: shown as it was, so the page doesn't wait for ever, and not saved.
-            if (!shownFirst) emit(series)
-            return@flow
-        }
-        if (!shownFirst) emit(result)
+            // 1) The provider's get_series_info, on an Xtream source: on opening for its episodes, and
+            //    for a still-bare row its details.
+            // A row whose details are in is shown first, with its stored episodes: a slow panel would
+            // otherwise keep the page on Loading for details it already has (#326). The page reads the
+            // episodes the request stores from the database, so the row isn't shown again for them.
+            val shownFirst = panel != null && opening && series.isEnriched
+            if (shownFirst) emit(series)
+            val info = if (panel != null && (opening || !series.isEnriched)) {
+                fetchSeries(panel, series.seriesId, now, storeEpisodes = opening)
+                    .also { fetched -> onFetched(fetched.map {}) }
+                    .getOrNull()
+            } else {
+                null
+            }
+            // Each save goes onto the row as it's stored then, not the copy read before asking: a refresh
+            // while the panel or TMDB was out would otherwise be undone, or a show it deleted brought back.
+            // Bare is as it was when it asked: a refresh may have given it a cover since, and filledFrom
+            // only fills blanks. With nothing to fill it's read, not saved, so it doesn't wait for
+            // SQLite's writer, which a refresh may hold for a whole batch.
+            val found = info?.takeIf { !series.isEnriched }
+            val result = if (found != null) seriesDao.saveLookedUp(id) { it.filledFrom(found) } else seriesDao.byId(id)
+            if (result == null) {
+                // Gone while it asked: shown as it was, so the page doesn't wait for ever, and not saved.
+                if (!shownFirst) emit(series)
+                return@flow
+            }
+            if (!shownFirst) emit(result)
 
-        // 2) TMDB, in a build with a key, at once when something is still missing or TMDB's answer
-        //    is six months old, so a series the background pass hasn't reached still fills in.
-        tmdbAnswered(result, now)?.let { emit(it) }
-    }.flowOn(Dispatchers.IO)
+            // 2) TMDB, in a build with a key, at once when something is still missing or TMDB's answer
+            //    is six months old, so a series the background pass hasn't reached still fills in.
+            tmdbAnswered(result, now)?.let { emit(it) }
+        }.flowOn(Dispatchers.IO)
 
     /**
      * [series] with TMDB's answer saved onto it as it's stored now, if it [wantsTmdb]; null if TMDB

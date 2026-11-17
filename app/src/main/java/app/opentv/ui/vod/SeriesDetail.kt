@@ -82,9 +82,8 @@ import kotlinx.coroutines.delay
  * Quality pill for the whole show, as the film page has it. [suggestions] are its More like this: with
  * any, a More like this pill comes last in the pill row, and highlighting it shows them as a grid in the
  * episodes' place; OK on one calls [onOpenSeries]. Until [suggestionsKnown], a one-season show's episodes
- * wait, since a pill row may yet come above them. With no episodes once they've been [episodesFetched],
- * the page says why: [episodesFailure] with a Try again that calls [onTryAgain], or else that the
- * provider has none.
+ * wait, since a pill row may yet come above them. When the fetch on opening leaves it with none, the
+ * page says why ([episodeFetch]).
  */
 @Composable
 internal fun SeriesDetailContent(
@@ -102,9 +101,7 @@ internal fun SeriesDetailContent(
     suggestions: List<TitleCover> = emptyList(),
     onOpenSeries: (Long) -> Unit = {},
     suggestionsKnown: Boolean = true,
-    episodesFetched: Boolean = false,
-    episodesFailure: ViewerError? = null,
-    onTryAgain: () -> Unit = {},
+    episodeFetch: EpisodeFetch = EpisodeFetch(),
 ) {
     val cast = remember(series.cast) { personNames(series.cast) }
     var castShown by remember(series.id) { mutableStateOf(false) }
@@ -169,8 +166,8 @@ internal fun SeriesDetailContent(
                     onOpenSeries = onOpenSeries,
                 )
             } else {
-                if (shown.selected == null && episodesFetched) {
-                    NoEpisodes(nav, episodesFailure, onTryAgain)
+                if (shown.selected == null && episodeFetch.noEpisodes) {
+                    NoEpisodes(nav, episodeFetch.failure, episodeFetch.onTryAgain)
                 } else {
                     EpisodeList(series, nav, shown, statuses, episodeList, play, suggestions)
                 }
@@ -317,6 +314,13 @@ private fun SeasonPills(nav: ShowPageNav, shown: ShowSeasons, pillRow: LazyListS
         }
     }
 }
+
+/**
+ * How the fetch on opening a show went, for its page: whether it left the show with [noEpisodes] stored,
+ * why when every fetch [failure]d, and [onTryAgain] to ask again.
+ */
+@Stable
+class EpisodeFetch(val noEpisodes: Boolean = false, val failure: ViewerError? = null, val onTryAgain: () -> Unit = {})
 
 /**
  * In the episodes' place when a show has none once they've been asked for: why, with Try again, when

@@ -39,7 +39,7 @@ fun SeriesDetailScreen(
     viewModel: VodViewModel = viewModel(),
 ) {
     var series by remember(seriesId) { mutableStateOf<Series?>(null) }
-    var fetched by remember(seriesId) { mutableStateOf(false) }
+    var noEpisodes by remember(seriesId) { mutableStateOf(false) }
     var failure by remember(seriesId) { mutableStateOf<ViewerError?>(null) }
     // Try again opens the show once more, which asks every Version's panel again.
     var attempt by remember(seriesId) { mutableIntStateOf(0) }
@@ -47,7 +47,7 @@ fun SeriesDetailScreen(
     LaunchedEffect(seriesId, attempt) {
         viewModel.openShow(seriesId).collect {
             series = it.series
-            fetched = it.fetched
+            noEpisodes = it.noEpisodes
             failure = it.failure
         }
     }
@@ -57,8 +57,8 @@ fun SeriesDetailScreen(
         LoadingDetail()
     } else {
         // Back to waiting at once, so the page says Loading episodes while it asks rather than the old failure.
-        val episodes = FetchedEpisodes(fetched, failure) {
-            fetched = false
+        val episodes = EpisodeFetch(noEpisodes, failure) {
+            noEpisodes = false
             failure = null
             attempt++
         }
@@ -66,14 +66,11 @@ fun SeriesDetailScreen(
     }
 }
 
-/** Whether a show's episodes have been [fetched], why none came if [failure], and how to ask again. */
-private class FetchedEpisodes(val fetched: Boolean, val failure: ViewerError?, val onTryAgain: () -> Unit)
-
-/** [series]' page once its row is read, with how the fetch of its [episodes] went. */
+/** [series]' page once its row is read, with how the fetch of its episodes on opening went ([episodes]). */
 @Composable
 private fun ShowPage(
     series: Series,
-    episodes: FetchedEpisodes,
+    episodes: EpisodeFetch,
     onPlayEpisode: (MediaKey) -> Unit,
     onOpenPerson: (String) -> Unit,
     onOpenSeries: (Long) -> Unit,
@@ -104,7 +101,7 @@ private fun ShowPage(
     // Only the first showing waits: a choice or a finished episode then updates the page in place.
     var ready by remember(series.id) { mutableStateOf(false) }
     if (!ready && status != null) {
-        ready = showButtonsKnown(read, episodes.fetched, action != null, versions?.first, versionKey)
+        ready = showButtonsKnown(read, episodes.noEpisodes, action != null, versions?.first, versionKey)
     }
     if (favourites == null || !ready) {
         LoadingDetail()
@@ -131,9 +128,7 @@ private fun ShowPage(
         suggestions = suggestions.orEmpty(),
         onOpenSeries = onOpenSeries,
         suggestionsKnown = suggestions != null,
-        episodesFetched = episodes.fetched,
-        episodesFailure = episodes.failure,
-        onTryAgain = episodes.onTryAgain,
+        episodeFetch = episodes,
     )
 }
 
@@ -141,16 +136,17 @@ private fun ShowPage(
  * Whether a show page's buttons are all known, so they're there when it shows rather than arriving one by
  * one: its episodes [read], its main episode [hasAction], and the Versions read for [versionKey] ([versionsFor]).
  * Stored episodes are enough, as the fetch on every open rarely changes them; only a show opened for the first
- * time waits for that fetch ([fetched]), and shows without a Play button if it finds none.
+ * time waits for that fetch, and shows without a Play button once it has left [noneStored]. Until then an
+ * empty read waits, as episodes the fetch stored may be a moment behind it.
  */
 private fun showButtonsKnown(
     read: ShowEpisodes?,
-    fetched: Boolean,
+    noneStored: Boolean,
     hasAction: Boolean,
     versionsFor: MediaKey?,
     versionKey: MediaKey?,
 ): Boolean = when {
     read == null -> false
-    read.all.isEmpty() -> fetched
+    read.all.isEmpty() -> noneStored
     else -> hasAction && versionsFor == versionKey
 }

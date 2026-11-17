@@ -152,6 +152,7 @@ class ShowPageFetchTest {
 
         val opened = withTimeout(10_000) { viewModel.openShow(1).first { it.fetched } }
 
+        assertThat(opened.noEpisodes).isTrue()
         assertThat(opened.failure?.sentence).isEqualTo(app.getString(R.string.error_timed_out))
     }
 
@@ -174,6 +175,7 @@ class ShowPageFetchTest {
 
         val opened = withTimeout(10_000) { viewModel.openShow(1).first { it.fetched } }
 
+        assertThat(opened.noEpisodes).isTrue()
         assertThat(opened.failure).isNull()
     }
 
@@ -187,4 +189,19 @@ class ShowPageFetchTest {
 
         assertThat(opened.failure).isNull()
     }
+
+    @Test
+    fun `a show with episodes stored reports no failure when its panel fails, so the page shows them`() =
+        runBlocking<Unit> {
+            graph.database.sources().insert(PANEL_SOURCE)
+            graph.database.series().upsertAll(listOf(series(1, "Dragons").copy(tmdbId = null)))
+            val stored = testEpisode(1, 1).copy(sourceId = PANEL_SOURCE.id, seriesId = "1")
+            graph.database.episodes().upsertAll(listOf(stored))
+            panel.replies["get_series_info:1"] = "!timeout"
+
+            val opened = withTimeout(10_000) { viewModel.openShow(1).first { it.fetched } }
+
+            assertThat(opened.noEpisodes).isFalse()
+            assertThat(opened.failure).isNull()
+        }
 }

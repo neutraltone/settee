@@ -500,8 +500,8 @@
     <string name="vod_no_shows_provider">Your provider hasn\'t sent any shows yet.</string>
     <string name="vod_no_shows_add">Your provider\'s shows will show up here. Add a provider to get started.</string>
     <string name="vod_loading_episodes">Loading episodes…</string>
-    <string name="vod_episodes_failed">Couldn\'t load this show\'s episodes. Try again in a moment.</string>
-    <string name="vod_no_episodes">Your provider hasn\'t added any episodes of this show.</string>
+    <string name="vod_episodes_failed">Couldn\'t load the episodes of this series. Try again in a moment.</string>
+    <string name="vod_no_episodes">Your provider hasn\'t added any episodes of this series.</string>
     <string name="vod_continue_watching">Continue watching</string>
     <string name="vod_large_provider_note">A large provider can take a couple of minutes the first time.</string>
     <string name="vod_favourites">Favourites</string>

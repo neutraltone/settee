@@ -861,10 +861,16 @@ data class ResumeItem(
 )
 
 /**
- * A show on its page: [series] as far as it's filled in, whether its episodes have been [fetched], and
- * once they have, why none came when every Version's fetch failed ([failure]).
+ * A show on its page: [series] as far as it's filled in, and whether its episodes have been [fetched].
+ * Once they have, whether it has [noEpisodes] stored for any Version, and if so why, when every
+ * Version's fetch failed ([failure]).
  */
-data class OpenedShow(val series: Series, val fetched: Boolean, val failure: ViewerError? = null)
+data class OpenedShow(
+    val series: Series,
+    val fetched: Boolean,
+    val noEpisodes: Boolean = false,
+    val failure: ViewerError? = null,
+)
 
 /**
  * What Movies' and Shows' backdrop shows for the highlighted title: its name, where the Profile is
@@ -1288,7 +1294,10 @@ class VodViewModel @JvmOverloads constructor(
         }
         val series = opened ?: return@channelFlow
         val outcomes = listOfNotNull(own.get()) + others?.await().orEmpty() + fetchVersions(series, asked)
-        send(OpenedShow(series, fetched = true, failure = episodesFailure(outcomes)))
+        // Read here, after the fetches stored them, rather than left to the page's live read, which can
+        // come a moment later and would have the page say there are none just before they show.
+        val none = showEpisodes(series).first().all.isEmpty()
+        send(OpenedShow(series, fetched = true, noEpisodes = none, failure = episodesFailure(outcomes).takeIf { none }))
     }
 
     /** Episodes for each of [series]' Versions not [asked] for yet, all at once, and how each fetch went. */
@@ -1304,8 +1313,8 @@ class VodViewModel @JvmOverloads constructor(
 
     /**
      * Why a show's episodes didn't come, worded for its page, when every fetch for its Versions failed;
-     * the opened Version's failure first. One that worked, even with nothing in it, means the panel has
-     * spoken, and a failure beside it isn't the viewer's business (ADR 0007).
+     * the opened Version's failure first. Not when any worked: even with nothing in it, the provider has
+     * answered, and the viewer can't do anything about the other Versions' panels.
      */
     private fun episodesFailure(outcomes: List<Result<Unit>>): ViewerError? =
         outcomes.takeIf { all -> all.none { it.isSuccess } }
