@@ -21,6 +21,7 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -59,21 +60,24 @@ import coil.compose.AsyncImage
 /**
  * A show's More like this, where its episodes were: a grid of the same covers as a category's. The first
  * cover takes [firstCover], for Down from the More like this pill; Up from the first row calls
- * [onUpFromFirstRow], back to that pill; OK on a cover calls [onOpenSeries].
+ * [onUpFromFirstRow], back to that pill; OK on a cover calls [onOpenSeries]. Back to the page, the grid
+ * scrolls to the cover kept in [spot], for the page to highlight.
  */
 @Composable
 internal fun LikeThisGrid(
     covers: List<TitleCover>,
+    spot: ReturnSpot,
     firstCover: FocusRequester,
     onFocusChanged: (hasFocus: Boolean) -> Unit,
     onUpFromFirstRow: () -> Unit,
     onOpenSeries: (Long) -> Unit,
 ) {
-    val grid = rememberLazyGridState()
+    val state = rememberLazyGridState()
+    LaunchedEffect(Unit) { state.bringOut(covers.indexOfFirst { coverSpot(it.id) == spot.key }) }
     // By id, not place: the covers can be read again while one is highlighted.
     var highlighted by remember { mutableStateOf<Long?>(null) }
     LazyVerticalGrid(
-        state = grid,
+        state = state,
         columns = GridCells.FixedSize(ArtCardSize.Portrait.width),
         contentPadding = PaddingValues(vertical = LIFT_ROOM),
         horizontalArrangement = Arrangement.spacedBy(SetteeSpace.CardGap),
@@ -83,13 +87,14 @@ internal fun LikeThisGrid(
             .onFocusChanged { onFocusChanged(it.hasFocus) }
             .onPreviewKeyEvent { e ->
                 val up = e.type == KeyEventType.KeyDown && e.key == Key.DirectionUp
-                (up && grid.inFirstRow(highlighted)).also { if (it) onUpFromFirstRow() }
+                (up && state.inFirstRow(highlighted)).also { if (it) onUpFromFirstRow() }
             },
     ) {
         itemsIndexed(covers, key = { _, cover -> cover.id }) { index, cover ->
             TitleArt(
                 cover = cover,
-                modifier = if (index == 0) Modifier.focusRequester(firstCover) else Modifier,
+                modifier = (if (index == 0) Modifier.focusRequester(firstCover) else Modifier)
+                    .returnSpot(spot, coverSpot(cover.id)),
                 onHighlight = { highlighted = cover.id },
                 onOpen = { onOpenSeries(cover.id) },
                 onOptions = null,
@@ -142,6 +147,11 @@ internal fun LikeThisPeek(covers: List<TitleCover>) {
 
 private fun LazyGridState.inFirstRow(coverId: Long?): Boolean =
     coverId != null && layoutInfo.visibleItemsInfo.firstOrNull { it.key == coverId }?.row == 0
+
+/** A cover's key as the page's [ReturnSpot] keeps it. */
+internal fun coverSpot(id: Long) = "$LIKE_THIS_SPOT$id"
+
+internal const val LIKE_THIS_SPOT = "show:"
 
 /** Above and below the covers, for a highlighted one's lift and ring. */
 private val LIFT_ROOM = 12.dp

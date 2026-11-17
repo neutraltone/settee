@@ -5,6 +5,7 @@
  */
 package app.opentv.ui.vod
 
+import androidx.annotation.StringRes
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -14,9 +15,11 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.relocation.BringIntoViewRequester
 import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
@@ -42,11 +45,17 @@ import kotlinx.coroutines.launch
 /**
  * A film's people beneath its hero: a Cast row of pills, everyone billed, then who directed, wrote and
  * made it as columns side by side, each name a pill. OK on a pill calls [onOpenPerson] with that
- * name. A heading only for what the film has, and nothing at all when it credits nobody.
+ * name, and [spot] keeps which pill it was, by row as well as name, since a director is often billed
+ * too. A heading only for what the film has, and nothing at all when it credits nobody.
  */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-internal fun PeopleRows(movie: Movie, onOpenPerson: (String) -> Unit, modifier: Modifier = Modifier) {
+internal fun PeopleRows(
+    movie: Movie,
+    onOpenPerson: (String) -> Unit,
+    spot: ReturnSpot,
+    modifier: Modifier = Modifier,
+) {
     val billed = personNames(movie.cast)
     val crew = listOf(
         R.string.vod_director to personNames(movie.director),
@@ -58,6 +67,8 @@ internal fun PeopleRows(movie: Movie, onOpenPerson: (String) -> Unit, modifier: 
     // the Highlight is on the Cast row above them.
     val wholeBlock = remember { BringIntoViewRequester() }
     val scope = rememberCoroutineScope()
+    val castRow = rememberLazyListState()
+    LaunchedEffect(Unit) { castRow.bringOut(billed.indexOfFirst { castSpot(it) == spot.key }) }
     Column(
         modifier
             .bringIntoViewRequester(wholeBlock)
@@ -66,27 +77,41 @@ internal fun PeopleRows(movie: Movie, onOpenPerson: (String) -> Unit, modifier: 
         if (billed.isNotEmpty()) {
             Text(stringResource(R.string.vod_cast), SetteeType.Section)
             Spacer(Modifier.height(HEADING_GAP))
-            LazyRow(horizontalArrangement = Arrangement.spacedBy(PILL_GAP)) {
-                items(billed, key = {
-                    it
-                }) { name -> Pill(label = name, selected = false, onClick = { onOpenPerson(name) }) }
+            LazyRow(state = castRow, horizontalArrangement = Arrangement.spacedBy(PILL_GAP)) {
+                items(billed, key = { it }) { name ->
+                    Pill(
+                        label = name,
+                        selected = false,
+                        onClick = { onOpenPerson(name) },
+                        modifier = Modifier.returnSpot(spot, castSpot(name)),
+                    )
+                }
             }
         }
         if (billed.isNotEmpty() && crew.isNotEmpty()) Spacer(Modifier.height(SetteeSpace.RowGap))
         Row(horizontalArrangement = Arrangement.spacedBy(CREW_COLUMN_GAP)) {
-            crew.forEach { (heading, names) -> CrewColumn(stringResource(heading), names, onOpenPerson) }
+            crew.forEach { (heading, names) -> CrewColumn(heading, names, onOpenPerson, spot) }
         }
     }
 }
 
 /** One of the crew columns: a heading, then its names as pills, one under another. */
 @Composable
-private fun CrewColumn(heading: String, names: List<String>, onOpenPerson: (String) -> Unit) {
+private fun CrewColumn(@StringRes heading: Int, names: List<String>, onOpenPerson: (String) -> Unit, spot: ReturnSpot) {
     Column(Modifier.width(CREW_COLUMN_WIDTH), verticalArrangement = Arrangement.spacedBy(PILL_GAP)) {
-        Text(heading, SetteeType.Section)
-        names.forEach { name -> Pill(label = name, selected = false, onClick = { onOpenPerson(name) }) }
+        Text(stringResource(heading), SetteeType.Section)
+        names.forEach { name ->
+            Pill(
+                label = name,
+                selected = false,
+                onClick = { onOpenPerson(name) },
+                modifier = Modifier.returnSpot(spot, "crew$heading:$name"),
+            )
+        }
     }
 }
+
+private fun castSpot(name: String) = "cast:$name"
 
 /**
  * A show's cast in a side panel under [title], a row each in billing order. OK on a row calls
