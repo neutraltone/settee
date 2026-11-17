@@ -95,6 +95,27 @@ class SkipButtonTest {
     }
 
     @Test
+    fun `put away, the button stays away for the rest of the stretch, but the controls still bring it back`() {
+        button.update(positionMillis = 61_000, controlsShowing = false)
+
+        button.dismiss()
+
+        assertThat(button.update(positionMillis = 62_000, controlsShowing = false)).isNull()
+        assertThat(button.update(positionMillis = 63_000, controlsShowing = true)).isEqualTo(intro)
+    }
+
+    @Test
+    fun `put away in one stretch, the next still comes up`() {
+        val recap = Stretch(Kind.RECAP, fromMillis = 0, toMillis = 30_000)
+        button.stretches = listOf(recap, intro)
+        button.update(positionMillis = 1_000, controlsShowing = false)
+
+        button.dismiss()
+
+        assertThat(button.update(positionMillis = 60_000, controlsShowing = false)).isEqualTo(intro)
+    }
+
+    @Test
     fun `with no stretches nothing shows`() {
         button.stretches = emptyList()
 

@@ -81,13 +81,13 @@ class SkipCueTest {
     }
 
     @Test
-    fun `an intro ending within 5 seconds of the recap is skipped with it in one go`() {
+    fun `an intro ending within 5 seconds of the recap is skipped with it in one go, named in that order`() {
         val stretches = SkipCue.place(
             timings(intro = "0:30" to "1:00", recap = "1:05" to "2:10"),
             streamMillis = ms("50:00"),
         )
 
-        assertThat(stretches).containsExactly(Stretch(Kind.RECAP_AND_INTRO, ms("0:30"), ms("2:10")))
+        assertThat(stretches).containsExactly(Stretch(Kind.INTRO_AND_RECAP, ms("0:30"), ms("2:10")))
     }
 
     @Test

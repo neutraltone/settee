@@ -66,7 +66,7 @@ class VodPlayerSkipIntroTest {
      * S1 E1 of a show whose episodes are timed with [recap] and an intro at 2:00 to 2:50, kept on the
      * device already so nothing is asked; playing with the controls gone.
      */
-    private fun showTimedEpisode(recap: LongRange? = null) {
+    private fun showTimedEpisode(recap: LongRange? = null, onBack: () -> Unit = {}) {
         runBlocking {
             graph.database.series().upsertAll(listOf(show))
             graph.database.episodes().upsertAll((1..2).map { testEpisode(1, it) })
@@ -89,7 +89,7 @@ class VodPlayerSkipIntroTest {
                 )
             }
         }
-        compose.setTvContent { VodPlayerContent(controller, viewModel, false, noPicks, onBack = {}) }
+        compose.setTvContent { VodPlayerContent(controller, viewModel, false, noPicks, onBack) }
         players.play(controller)
         runBlocking { viewModel.attach(testEpisode(1, 1).key, playback) }
         compose.mainClock.advanceTimeBy(CONTROLS_TIMEOUT_MILLIS)
@@ -154,6 +154,20 @@ class VodPlayerSkipIntroTest {
         press(Key.DirectionCenter)
 
         assertThat(playback.positionMillis).isEqualTo(INTRO_END)
+    }
+
+    @Test
+    fun `Back on the button puts it away and leaves the episode playing`() {
+        var left = false
+        showTimedEpisode(onBack = { left = true })
+        playUntilButtonAt(INTRO_START + 1_000)
+
+        press(Key.Back)
+
+        compose.onNodeWithText("Skip intro").assertDoesNotExist()
+        assertThat(left).isFalse()
+        pollAt(INTRO_START + 2_000)
+        compose.onNodeWithText("Skip intro").assertDoesNotExist()
     }
 
     @Test

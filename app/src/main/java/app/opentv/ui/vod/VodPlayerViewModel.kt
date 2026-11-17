@@ -149,7 +149,7 @@ class VodPlayerViewModel(
     /** Held while moving to another episode, so a second press waits for the move before it. */
     internal val moving = Mutex()
     private var fetchingNext: Job? = null
-    private val timings = UpNextTimings(graph)
+    private val timings = PlayingTimings(graph)
 
     /** Skip intro and Skip recap, for [controlsShowing] and [skipStretch]. */
     internal val skips = Skips(
@@ -340,6 +340,9 @@ fun VodPlayerViewModel.controlsShowing(showing: Boolean) = skips.controlsShowing
 /** Skip intro or Skip recap: jumps to the end of what the button skips. */
 fun VodPlayerViewModel.skipStretch() = skips.skip()
 
+/** Back on Skip intro or Skip recap: puts it away for the rest of the stretch. */
+fun VodPlayerViewModel.dismissSkip() = skips.dismiss()
+
 /**
  * The Skip button's state (#518), on the [stretches] the playing episode's timings offer: what shows
  * at each [progress], jumping with [seekTo], and nothing while the Next Episode card or "Are you still
@@ -371,6 +374,11 @@ internal class Skips(
     fun skip() {
         val stretch = shown.value ?: return
         seekTo(stretch.toMillis)
+        shown.value = null
+    }
+
+    fun dismiss() {
+        skip.dismiss()
         shown.value = null
     }
 
@@ -468,16 +476,16 @@ private class NextEpisodeLookup(private val graph: ServiceLocator.Graph) {
  * Held here as well as in the countdown, which forgets it on every newEpisode, because a Next Episode
  * found late is offered again for the same episode.
  */
-private class UpNextTimings(private val graph: ServiceLocator.Graph) {
+private class PlayingTimings(private val graph: ServiceLocator.Graph) {
     var cue: CuePlacement = UpNextCue::fallback
         private set
 
     /** What's playing's found timings, for its Skip intro and Skip recap; null until they arrive. */
-    @Volatile private var playingTimings: EpisodeTimings? = null
+    @Volatile private var episodeTimings: EpisodeTimings? = null
     private var job: Job? = null
 
     /** The intros and recaps to offer in a stream [streamMillis] long. */
-    fun stretches(streamMillis: Long): List<SkipCue.Stretch> = SkipCue.place(playingTimings, streamMillis)
+    fun stretches(streamMillis: Long): List<SkipCue.Stretch> = SkipCue.place(episodeTimings, streamMillis)
 
     private val wanted: Boolean get() = graph.settings.skipIntrosAndCredits.value
 
@@ -489,14 +497,14 @@ private class UpNextTimings(private val graph: ServiceLocator.Graph) {
     fun lookUp(scope: CoroutineScope, episode: Episode?, stillPlaying: () -> Boolean, placed: (CuePlacement) -> Unit) {
         job?.cancel()
         cue = UpNextCue::fallback
-        playingTimings = null
+        episodeTimings = null
         if (episode == null || !wanted) return
         job = scope.launch {
             // Timings only ever improve on the fallback: nothing about them is worth an error on screen.
             val found = runCatching { graph.episodeTimings.timingsFor(episode) }.getOrNull()
             if (found == null || !stillPlaying()) return@launch
             cue = { streamMillis -> UpNextCue.place(found.timings, found.restOfShow, streamMillis) }
-            playingTimings = found.timings
+            episodeTimings = found.timings
             placed(cue)
         }
     }

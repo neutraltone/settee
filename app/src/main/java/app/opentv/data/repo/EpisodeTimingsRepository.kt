@@ -79,9 +79,10 @@ class EpisodeTimingsRepository(
     }
 
     /**
-     * Asks TheIntroDB and, for credits it doesn't have, IntroDB. What they said is kept once it's settled:
-     * the credits known, or every database asked having answered, so a failure is never kept as nothing
-     * timed. Null when no database could be asked: the next start asks again.
+     * Asks TheIntroDB and, for credits or an intro it doesn't have, IntroDB. What they said is kept when
+     * the credits are known or every database asked answered, so a failure is never kept as nothing
+     * timed; kept after a failure, it's asked about again on the next start. Null when no database could
+     * be asked: the next start asks again.
      */
     // The clients block; this runs on the IO dispatcher [timingsFor] moved to.
     private suspend fun lookUp(series: Series, show: ShowIds, key: String, episode: Episode): EpisodeTimings? {
@@ -89,34 +90,61 @@ class EpisodeTimingsRepository(
         val number = episode.episodeNumber
         val theIntroDbAnswer = show.tmdbId?.let { theIntroDb.timings(it, season, number) }
         val fromTheIntroDb = theIntroDbAnswer?.getOrNull()
-        val introDbAnswer = if (fromTheIntroDb?.creditsStartMillis != null) {
+        // An intro matters as much as credits now Skip intro uses it (#518), and on the household's
+        // episodes the intros timed were IntroDB's.
+        val introDbAnswer = if (fromTheIntroDb?.creditsStartMillis != null && fromTheIntroDb.introKnown) {
             null
         } else {
             imdbIdOf(series, show)?.let { introDb.timings(it, season, number) }
         }
         val answers = listOfNotNull(theIntroDbAnswer, introDbAnswer)
         if (answers.none { it.isSuccess }) return null
+        val answered = answers.all { it.isSuccess }
         val timings = (merge(fromTheIntroDb, introDbAnswer?.getOrNull()) ?: EpisodeTimings(key, season, number))
-            .copy(show = key, fetchedAtMillis = clock())
-        if (timings.creditsKnown || answers.all { it.isSuccess }) dao.upsert(timings)
+            .copy(show = key, fetchedAtMillis = if (answered) clock() else ASK_AGAIN)
+        if (timings.creditsKnown || answered) dao.upsert(timings)
         return timings
     }
 
-    /** TheIntroDB's timings with IntroDB's credits in place of credits it didn't have. */
+    /** TheIntroDB's timings with IntroDB's credits, intro and recap in place of ones it didn't have. */
     private fun merge(fromTheIntroDb: EpisodeTimings?, fromIntroDb: EpisodeTimings?): EpisodeTimings? = when {
         fromTheIntroDb == null -> fromIntroDb
-        fromIntroDb?.creditsKnown != true -> fromTheIntroDb
-        else -> fromTheIntroDb.copy(
-            creditsStartMillis = fromIntroDb.creditsStartMillis,
-            creditsEndMillis = fromIntroDb.creditsEndMillis,
-            sceneAfterCredits = fromIntroDb.sceneAfterCredits,
-            noCredits = fromIntroDb.noCredits,
-            source = fromIntroDb.source,
+        fromIntroDb == null -> fromTheIntroDb
+        else -> fromTheIntroDb.withCreditsOf(fromIntroDb).withIntroAndRecapOf(fromIntroDb)
+    }
+
+    private fun EpisodeTimings.withCreditsOf(other: EpisodeTimings): EpisodeTimings =
+        if (creditsKnown || !other.creditsKnown) {
+            this
+        } else {
+            copy(
+                creditsStartMillis = other.creditsStartMillis,
+                creditsEndMillis = other.creditsEndMillis,
+                sceneAfterCredits = other.sceneAfterCredits,
+                noCredits = other.noCredits,
+                source = other.source,
+            )
+        }
+
+    private fun EpisodeTimings.withIntroAndRecapOf(other: EpisodeTimings): EpisodeTimings {
+        val intro = if (introKnown) this else other
+        val recap = if (recapStartMillis != null || noRecap) this else other
+        return copy(
+            introStartMillis = intro.introStartMillis,
+            introEndMillis = intro.introEndMillis,
+            noIntro = intro.noIntro,
+            recapStartMillis = recap.recapStartMillis,
+            recapEndMillis = recap.recapEndMillis,
+            noRecap = recap.noRecap,
         )
     }
 
-    /** Timed credits, or credits confirmed not to be there, don't change; nothing timed is asked again in a week. */
-    private fun EpisodeTimings.isFresh(): Boolean = creditsKnown || clock() - fetchedAtMillis < REASK_MILLIS
+    /**
+     * Credits and intro both timed, or confirmed not to be there, don't change. Anything less is asked
+     * again in a week, since the community keeps adding timings; sooner after a failure.
+     */
+    private fun EpisodeTimings.isFresh(): Boolean =
+        (creditsKnown && introKnown) || clock() - fetchedAtMillis < REASK_MILLIS
 
     private fun showIds(series: Series): ShowIds? = ids[series.memo] ?: run {
         // Stremio add-ons name a series by its IMDb id.
@@ -139,5 +167,8 @@ class EpisodeTimingsRepository(
 
     private companion object {
         const val REASK_MILLIS = 7 * 24 * 60 * 60_000L
+
+        /** When timings kept after a failure count as fetched: long enough ago to be asked again at once. */
+        const val ASK_AGAIN = 0L
     }
 }

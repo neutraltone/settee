@@ -40,7 +40,15 @@ class SkipButton {
         return inside.takeIf { controlsShowing || positionMillis < cameAt + SHOWS_FOR_MILLIS }
     }
 
+    /** Back on the button: it stays away until playback leaves the stretch, unless the controls come up. */
+    fun dismiss() {
+        entered = entered?.let { (stretch, _) -> stretch to PUT_AWAY }
+    }
+
     private companion object {
         const val SHOWS_FOR_MILLIS = 10_000L
+
+        /** Where a put-away button counts as having come up: long enough ago that it never shows by itself. */
+        const val PUT_AWAY = Long.MIN_VALUE
     }
 }

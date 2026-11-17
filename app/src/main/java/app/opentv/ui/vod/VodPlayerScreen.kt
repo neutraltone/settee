@@ -419,7 +419,9 @@ fun VodPlayerContent(
     // Skip intro or Skip recap (#518): on its own in the bottom right, with the Highlight, while the
     // controls are away; above the row, a press Up from it, while they're up.
     val skipping by viewModel.skipButton.collectAsState()
-    val skipAlone = skipping != null && !controlsVisible && !failed
+    // A menu over the picture keeps the Highlight while it's open; the button takes it once it closes.
+    val menuOpen = optionsOpen || choosingSleep || choosingQuality
+    val skipAlone = skipping != null && !controlsVisible && !failed && !menuOpen
     val skipFocus = remember { FocusRequester() }
     val skipInBarFocus = remember { FocusRequester() }
     LaunchedEffect(controlsVisible) { viewModel.controlsShowing(controlsVisible) }
@@ -430,9 +432,7 @@ fun VodPlayerContent(
         interaction++
     }
 
-    // Keyed on the button too: one that goes from under the Highlight hands it back to the row, or to
-    // the picture.
-    LaunchedEffect(controlsVisible, vodPanel, overlayShowing, failed, skipping != null) {
+    LaunchedEffect(controlsVisible, vodPanel, overlayShowing, failed, skipAlone) {
         when {
             // The sentence's own buttons take focus, and there's nothing under them to control.
             failed -> Unit
@@ -448,6 +448,15 @@ fun VodPlayerContent(
         }
     }
 
+    // The button above the row going from under the Highlight hands it back to the row. Only on the
+    // bare controls: a track panel or menu open over them keeps its own place.
+    LaunchedEffect(skipping != null) {
+        if (controlsVisible && vodPanel == VodPanel.NONE && !menuOpen) {
+            delay(40)
+            runCatching { barReturn.requestFocus() }
+        }
+    }
+
     fun backStep(): () -> Unit {
         val activelyPlaying = state is PlayerController.State.Playing ||
             (growingRec && state is PlayerController.State.Buffering)
@@ -457,6 +466,8 @@ fun VodPlayerContent(
             vodPanel != VodPanel.NONE -> {
                 { vodPanel = VodPanel.NONE }
             }
+            // Back on Skip intro on its own puts it away, as it does the Next Episode card.
+            skipAlone -> viewModel::dismissSkip
             controlsVisible && activelyPlaying && !paused -> {
                 { controlsVisible = false }
             }

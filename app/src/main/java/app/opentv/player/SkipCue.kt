@@ -18,7 +18,8 @@ import app.opentv.data.model.EpisodeTimings
  */
 object SkipCue {
 
-    enum class Kind { INTRO, RECAP, RECAP_AND_INTRO }
+    /** What a button skips; the two together are named in the order they play. */
+    enum class Kind { INTRO, RECAP, RECAP_AND_INTRO, INTRO_AND_RECAP }
 
     /** A stretch from [fromMillis] to [toMillis] that one press skips to the end of. */
     data class Stretch(val kind: Kind, val fromMillis: Long, val toMillis: Long)
@@ -45,7 +46,8 @@ object SkipCue {
         val (first, second) = ordered
         // Two buttons a few seconds apart would be pressed one after the other anyway.
         return if (second.fromMillis - first.toMillis <= TOGETHER_MILLIS) {
-            listOf(Stretch(Kind.RECAP_AND_INTRO, first.fromMillis, maxOf(first.toMillis, second.toMillis)))
+            val both = if (first.kind == Kind.RECAP) Kind.RECAP_AND_INTRO else Kind.INTRO_AND_RECAP
+            listOf(Stretch(both, first.fromMillis, maxOf(first.toMillis, second.toMillis)))
         } else {
             ordered
         }
