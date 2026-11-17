@@ -855,6 +855,13 @@ data class ResumeItem(
     val name: String = title,
     /** The film's or the show's local id, which Movies' and Shows' backdrop looks it up by. */
     val titleId: Long? = null,
+    /**
+     * Which title the card stands for, by the provider's ids, so Home can find the card again after
+     * it has moved on: a show's [key] changes each time its card moves on to the next episode, and
+     * local ids can change in a catalogue refresh. Only a card built without its title, in a test or
+     * a preview, falls back to [key].
+     */
+    val titleKey: String = key.stored,
 )
 
 /** A show on its page: [series] as far as it's filled in, and whether its episodes have been [fetched]. */

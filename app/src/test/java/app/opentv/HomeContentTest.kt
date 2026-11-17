@@ -316,6 +316,16 @@ class HomeContentTest {
         progress = 0.4f,
     )
 
+    /** [show]'s card at its episode [id], titled with the show as Continue Watching titles it. */
+    private fun episodeItem(id: Long, show: String, season: Int, episode: Int) = ResumeItem(
+        MediaKey.Episode(id),
+        show,
+        posterUrl = "https://example.com/$id.jpg",
+        progress = 0.4f,
+        episode = SeasonEpisode(season, episode),
+        titleKey = "series:1:$show",
+    )
+
     /** Leaves Home without picking anything (from the side menu, say) and comes back. */
     private fun leaveAndComeBack() {
         home = false
@@ -536,6 +546,21 @@ class HomeContentTest {
         }
 
         compose.onNodeWithText("Memento").assertIsFocused()
+    }
+
+    // Not Severance, the brief's example: this Home's Favourite shows already has a Severance cover.
+    @Test
+    fun `back from the player, Home highlights the show played even once its card has moved on to the next episode`() {
+        var cards by mutableStateOf(
+            listOf(resumeItem(9, "Collateral"), resumeItem(7, "Insomnia"), episodeItem(43, "Pachinko", 1, 3)),
+        )
+        setHomeToLeave(continueWatching = { cards })
+
+        pickAndComeBack("Pachinko") {
+            cards = listOf(episodeItem(44, "Pachinko", 1, 4), resumeItem(9, "Collateral"), resumeItem(7, "Insomnia"))
+        }
+
+        compose.onNode(hasText("Pachinko") and hasClickAction()).assertIsFocused()
     }
 
     @Test
