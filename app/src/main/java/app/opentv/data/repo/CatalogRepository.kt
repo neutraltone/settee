@@ -227,8 +227,16 @@ class CatalogRepository(
         data class Failed(val reason: ViewerError, val cause: Throwable?) : SyncResult
     }
 
-    /** Series the provider updated, for New Episode detection, and whether every list came back. */
-    data class VodFetch(val updated: List<Series>, val complete: Boolean)
+    /**
+     * Series the provider updated, for New Episode detection, whether every list came back, and how
+     * each of [movies] and [shows] went, for a tab whose list failed to say why.
+     */
+    data class VodFetch(
+        val updated: List<Series>,
+        val complete: Boolean,
+        val movies: ListFetch = ListFetch.SKIPPED,
+        val shows: ListFetch = ListFetch.SKIPPED,
+    )
 
     fun observeChannels(sourceId: Long? = null, categoryId: String? = null): Flow<List<Channel>> =
         channelDao.observe(sourceId, categoryId)
@@ -823,17 +831,27 @@ class CatalogRepository(
             // Nothing at all may be a struggling panel's empty reply, so it isn't worth trusting for
             // 12 hours; an account with no VOD just asks again, which is a quick request.
             movies.complete && series.complete && (movies.count > 0 || series.count > 0),
+            movies,
+            series,
         )
     }
 
     /**
      * One of an Xtream provider's lists, movies or shows: how many titles it had, whether it came
      * back (a failed list still leaves the other to be saved, but mustn't count as fetched), and for
-     * shows, the ones updated since they were last saved.
+     * shows, the ones updated since they were last saved. A list that didn't come back has the
+     * [failure] in words; one not asked for at all wasn't [fetched], so it says nothing either way.
      */
-    data class ListFetch(val count: Int, val complete: Boolean, val updated: List<Series> = emptyList()) {
+    data class ListFetch(
+        val count: Int,
+        val failure: ViewerError? = null,
+        val updated: List<Series> = emptyList(),
+        val fetched: Boolean = true,
+    ) {
+        val complete: Boolean get() = failure == null
+
         companion object {
-            val SKIPPED = ListFetch(0, complete = true)
+            val SKIPPED = ListFetch(0, fetched = false)
         }
     }
 
@@ -855,7 +873,7 @@ class CatalogRepository(
                 if (saved.count > 0) viewerLibrary.retired.movies(source.id, saved.stamp)
             }
             if (count > 0) fillGenresInBackground(source)
-            ListFetch(count, categories && list)
+            ListFetch(count, (list ?: categories)?.let { wording.ofProvider(it, R.string.error_movies_list) })
         }
 
     /** [source]'s shows, saved as in VodLists, with [progress] as for [fetchMovies]. */
@@ -870,7 +888,11 @@ class CatalogRepository(
                 }
             }
             if (saved.count > 0) fillGenresInBackground(source)
-            ListFetch(saved.count, categories && list, saved.moved)
+            ListFetch(
+                saved.count,
+                (list ?: categories)?.let { wording.ofProvider(it, R.string.error_shows_list) },
+                saved.moved,
+            )
         }
 
     /** How many of [step]'s titles (movies or shows) [sourceId] has stored. */
@@ -880,11 +902,11 @@ class CatalogRepository(
         SetupStep.CHANNELS, SetupStep.GUIDE -> 0
     }
 
-    /** Whether [fetch] worked; anything but cancelling counts as a list that didn't come back. */
-    private suspend fun fetchList(fetch: suspend () -> Unit): Boolean = runCatching { fetch() }
+    /** Why [fetch] failed, or null if it worked; anything but cancelling counts as a list that didn't come back. */
+    private suspend fun fetchList(fetch: suspend () -> Unit): Throwable? = runCatching { fetch() }
         .onFailure { if (it is CancellationException) throw it }
         .onFailure { Log.w(TAG, "A movie or show list failed", it) }
-        .isSuccess
+        .exceptionOrNull()
 
     /** [fillGenresInBackground] for every provider that has films: Xtream's. */
     suspend fun fillEveryProvidersGenres() =

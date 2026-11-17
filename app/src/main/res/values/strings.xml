@@ -499,6 +499,8 @@
     <string name="vod_no_shows">No shows</string>
     <string name="vod_no_shows_provider">Your provider hasn\'t sent any shows yet.</string>
     <string name="vod_no_shows_add">Your provider\'s shows will show up here. Add a provider to get started.</string>
+    <string name="vod_movies_load_failed">Couldn\'t load your movies</string>
+    <string name="vod_shows_load_failed">Couldn\'t load your shows</string>
     <string name="vod_loading_episodes">Loading episodes…</string>
     <string name="vod_episodes_failed">Couldn\'t load the episodes of this series. Try again in a moment.</string>
     <string name="vod_no_episodes">Your provider hasn\'t added any episodes of this series.</string>
@@ -719,6 +721,8 @@
     <string name="error_no_first_frame_device">This device couldn\'t show this video. Try again, or pick something else.</string>
     <string name="error_login">Your provider didn\'t accept your login. Check your provider\'s details in Settings.</string>
     <string name="error_catalogue">Couldn\'t load your provider\'s channels. Try again in a moment.</string>
+    <string name="error_movies_list">Couldn\'t load your provider\'s movies. Try again in a moment.</string>
+    <string name="error_shows_list">Couldn\'t load your provider\'s shows. Try again in a moment.</string>
     <string name="error_channel_list_memory_tv">Your provider\'s channel list needs more memory than this TV has.</string>
     <string name="error_channel_list_memory_device">Your provider\'s channel list needs more memory than this device has.</string>
     <string name="error_no_channels">Your provider sent no channels. Your account may not have any yet, so check with them.</string>

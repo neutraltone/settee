@@ -898,6 +898,9 @@ data class Backdrop(
 /** What Movies and Shows know a category by: its id is only unique within its provider. */
 val Category.browseKey: String get() = "$sourceId:$id"
 
+/** A Movies or Shows download that failed: which provider, so Provider setup can open it, and why. */
+data class VodLoadFailure(val sourceId: Long, val reason: ViewerError)
+
 class VodViewModel @JvmOverloads constructor(
     app: Application,
     private val graph: ServiceLocator.Graph = ServiceLocator.get(app),
@@ -1210,12 +1213,42 @@ class VodViewModel @JvmOverloads constructor(
     fun ensureVodLoaded() {
         if (vodRequested) return
         vodRequested = true
+        checkVod()
+    }
+
+    /**
+     * Try again on a tab whose download failed: asks again however many times this run already has.
+     * A failed list is never recorded as fresh, so the check downloads it without being forced.
+     */
+    fun retryVod() {
+        vodRequested = true
+        checkVod()
+    }
+
+    private fun checkVod() {
         viewModelScope.launch {
             graph.catalogueRefresh.refresh(CatalogueRefresh.Trigger.OpenedMoviesOrShows)
             // The catalogue may have grown — recompute the computed home rows off the fresh data.
             loadHomeFeeds()
         }
     }
+
+    /**
+     * Why Movies' or Shows' latest download failed, for the first enabled provider it failed for;
+     * null when none did. The tab shows it only with nothing of that kind stored, since titles win.
+     */
+    val moviesLoadFailure: StateFlow<VodLoadFailure?> = vodLoadFailure { it.movies }
+    val showsLoadFailure: StateFlow<VodLoadFailure?> = vodLoadFailure { it.shows }
+
+    // Against the providers there are now: a deleted one's failure would offer to edit nothing.
+    private fun vodLoadFailure(kind: (CatalogueRefresh.VodFailures) -> Map<Long, ViewerError>) = combine(
+        graph.catalogueRefresh.state.map { kind(it.vodFailures) }.distinctUntilChanged(),
+        graph.sourceRepository.observeAll(),
+    ) { failures, sources ->
+        sources.firstNotNullOfOrNull { source ->
+            failures[source.id]?.takeIf { source.enabled }?.let { VodLoadFailure(source.id, it) }
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
     // ---- VOD search (shared by the unified search screen) --------------------------------------
     private val vodSearchInput = MutableStateFlow("")
