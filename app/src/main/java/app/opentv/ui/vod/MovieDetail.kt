@@ -18,8 +18,10 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -33,6 +35,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
@@ -182,6 +185,8 @@ internal fun MovieDetailContent(
     onChooseVersion: (MediaKey) -> Unit = {},
 ) {
     val playFocus = remember { FocusRequester() }
+    val spot = rememberReturnSpot(movie.id)
+    val likeThisRow = rememberLazyListState()
     var choosingQuality by remember(movie.id) { mutableStateOf(false) }
     var askingLanguage by remember(movie.id) { mutableStateOf(false) }
     val plays = versions.cantPlay == null
@@ -191,10 +196,7 @@ internal fun MovieDetailContent(
     // Closing the picker cancels its lookup, so an answer arriving later can't open it again.
     var lookup by remember(movie.id) { mutableStateOf<Job?>(null) }
 
-    LaunchedEffect(movie.id) {
-        delay(60)
-        runCatching { playFocus.requestFocus() }
-    }
+    FirstHighlight(movie, spot, similar, likeThisRow, playFocus)
 
     val page = rememberScrollState()
     ScreenFrame(backdrop = { HeroBackdrop(movie.backdropUrl, movie.posterUrl) }) {
@@ -218,7 +220,8 @@ internal fun MovieDetailContent(
                             label = stringResource(if (resumes) R.string.vod_resume else R.string.vod_play),
                             icon = Icons.Filled.PlayArrow,
                             onClick = { if (versions.otherLanguage != null) askingLanguage = true else onPlay() },
-                            modifier = if (plays) Modifier.focusRequester(playFocus) else Modifier,
+                            modifier = (if (plays) Modifier.focusRequester(playFocus) else Modifier)
+                                .returnSpot(spot, null),
                             enabled = plays,
                         )
                         if (versions.showsPill) {
@@ -226,13 +229,14 @@ internal fun MovieDetailContent(
                                 label = stringResource(R.string.vod_quality),
                                 icon = Icons.Filled.HighQuality,
                                 onClick = { choosingQuality = true },
+                                modifier = Modifier.returnSpot(spot, null),
                             )
                         }
                         // With Play off, the page opens on the star instead.
                         FavouriteButton(
                             favourite,
                             onSetFavourite,
-                            if (plays) Modifier else Modifier.focusRequester(playFocus),
+                            (if (plays) Modifier else Modifier.focusRequester(playFocus)).returnSpot(spot, null),
                         )
                         if (findAddonStreams != null) {
                             PillButton(
@@ -243,6 +247,7 @@ internal fun MovieDetailContent(
                                     lookup?.cancel()
                                     lookup = scope.launch { picker = AddonPicker.Found(findAddonStreams()) }
                                 },
+                                modifier = Modifier.returnSpot(spot, null),
                             )
                         }
                     }
@@ -255,7 +260,7 @@ internal fun MovieDetailContent(
                         modifier = Modifier.padding(top = 10.dp),
                     )
                 }
-                PeopleRows(movie, onOpenPerson, Modifier.padding(top = SetteeSpace.RowGap))
+                PeopleRows(movie, onOpenPerson, spot, Modifier.padding(top = SetteeSpace.RowGap))
                 if (similar == null) {
                     Spacer(Modifier.height(SetteeSpace.RowGap))
                     PlaceholderShelf(stringResource(R.string.vod_more_like_this))
@@ -264,6 +269,8 @@ internal fun MovieDetailContent(
                     MoreLikeThis(
                         similar,
                         onOpenMovie,
+                        likeThisRow,
+                        spot,
                         Modifier.onFocusChanged {
                             if (it.hasFocus) scope.launch { page.animateScrollTo(page.maxValue) }
                         },
@@ -301,6 +308,32 @@ internal fun MovieDetailContent(
     }
 }
 
+/**
+ * Puts the Highlight on Play when the page opens, or back where the viewer left from ([spot]) when they
+ * come back to it: a person's name, or a cover in More like this ([likeThisRow]), once [similar] is read.
+ */
+@Composable
+private fun FirstHighlight(
+    movie: Movie,
+    spot: ReturnSpot,
+    similar: List<Movie>?,
+    likeThisRow: LazyListState,
+    playFocus: FocusRequester,
+) {
+    val similarNow by rememberUpdatedState(similar)
+    LaunchedEffect(movie.id) {
+        delay(60)
+        val back = when (val start = spot.start) {
+            is PageSpot.Film -> spot.restoreAmong({ similarNow }, { PageSpot.Film(it.id) }) { likeThisRow.bringOut(it) }
+            // Its row scrolls to it as the page is built (PeopleRows), so it may take a frame or two.
+            is PageSpot.Person -> start in peopleSpots(movie) && spot.restoreSoon()
+            else -> false
+        }
+        spot.settled()
+        if (!back) runCatching { playFocus.requestFocus() }
+    }
+}
+
 /** The film's title, meta line, synopsis and credits. */
 @Composable
 private fun MovieHero(movie: Movie, status: CoverStatus?) {
@@ -332,16 +365,22 @@ private fun MovieHero(movie: Movie, status: CoverStatus?) {
 
 /** Films like this one, as covers that open their own page. */
 @Composable
-private fun ScreenFrameScope.MoreLikeThis(similar: List<Movie>, onOpenMovie: (Movie) -> Unit, modifier: Modifier) {
+private fun ScreenFrameScope.MoreLikeThis(
+    similar: List<Movie>,
+    onOpenMovie: (Movie) -> Unit,
+    state: LazyListState,
+    spot: ReturnSpot,
+    modifier: Modifier,
+) {
     val memory = rememberShelfMemory(remember(similar) { similar.map { "movie:${it.id}" } })
-    Shelf(stringResource(R.string.vod_more_like_this), memory, modifier) {
+    Shelf(stringResource(R.string.vod_more_like_this), memory, modifier, state) {
         items(similar, key = { it.id }) { film ->
             ArtCard(
                 title = film.displayTitle,
                 artworkUrl = film.posterUrl,
                 onClick = { onOpenMovie(film) },
                 size = ArtCardSize.Portrait,
-                modifier = Modifier.shelfCard(memory, "movie:${film.id}"),
+                modifier = Modifier.returnSpot(spot, PageSpot.Film(film.id)).shelfCard(memory, "movie:${film.id}"),
                 onOptions = openOptionsOn(OptionsSubject.OfMovie(film)),
             )
         }
@@ -350,6 +389,7 @@ private fun ScreenFrameScope.MoreLikeThis(similar: List<Movie>, onOpenMovie: (Mo
 
 /** The top of More like this showing under the hero: its title and the tops of its covers. */
 private val ROW_PEEK = 84.dp
+
 private const val SYNOPSIS_WIDTH = 0.6f
 
 /** What the add-on picker shows. */
