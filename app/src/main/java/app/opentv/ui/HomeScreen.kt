@@ -452,7 +452,7 @@ internal fun ScreenFrameScope.ContinueWatchingShelf(
     leave: (ResumeItem) -> LeaveScreen,
     onHighlight: (ResumeItem) -> Unit = {},
 ) {
-    val memory = rememberShelfMemory(remember(cards) { cards.map { it.key.stored } })
+    val memory = rememberShelfMemory(remember(cards) { cards.map { it.titleKey } })
     val openOptions = LocalOpenOptions.current
     Shelf(
         stringResource(R.string.vod_continue_watching),
@@ -471,7 +471,7 @@ internal fun ScreenFrameScope.ContinueWatchingShelf(
                 size = if (large && index == 0) ArtCardSize.Large else ArtCardSize.Landscape,
                 modifier = Modifier
                     .takesFocus(index, focus)
-                    .shelfCard(memory, card.key.stored)
+                    .shelfCard(memory, card.titleKey)
                     .onFocusChanged { if (it.isFocused) onHighlight(card) },
                 status = resumeStatusText(card),
                 progress = card.progress,
