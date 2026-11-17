@@ -265,6 +265,10 @@
     <string name="player_next_episode_press_ok">Press OK to play</string>
     <string name="player_watch_credits">Watch credits</string>
     <string name="player_play_now">Play now</string>
+    <string name="player_skip_intro">Skip intro</string>
+    <string name="player_skip_recap">Skip recap</string>
+    <string name="player_skip_recap_and_intro">Skip recap and intro</string>
+    <string name="player_skip_intro_and_recap">Skip intro and recap</string>
     <string name="player_still_watching">Are you still watching?</string>
     <string name="player_continue_watching">Keep watching</string>
     <string name="player_stop">Stop</string>

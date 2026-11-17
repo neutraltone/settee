@@ -39,7 +39,8 @@ class EpisodeTimingsRepositoryTest {
 
     /** What each host answers, by host (TMDB by path too); see [FakeJsonHttp] for failures. */
     private val replies = mutableMapOf(
-        "api.theintrodb.org" to """{"credits":[{"start_ms":3432884,"end_ms":null}]}""",
+        "api.theintrodb.org" to
+            """{"intro":[{"start_ms":228665,"end_ms":246498}],"credits":[{"start_ms":3432884,"end_ms":null}]}""",
         "api.introdb.app" to """{"outro":{"start_ms":3431000,"end_ms":3500000}}""",
         "/3/tv/1396/external_ids" to """{"imdb_id":"tt0903747"}""",
         "/3/search/tv" to """{"results":[{"id":1396}]}""",
@@ -84,7 +85,7 @@ class EpisodeTimingsRepositoryTest {
     private fun hosts() = network.hosts()
 
     @Test
-    fun `TheIntroDB's credits are used, without asking IntroDB`() = runTest {
+    fun `TheIntroDB's credits and intro are used, without asking IntroDB`() = runTest {
         val known = repository().timingsFor(testEpisode(1, 1))
 
         assertThat(known.timings?.creditsStartMillis).isEqualTo(3_432_884)
@@ -110,6 +111,71 @@ class EpisodeTimingsRepositoryTest {
             assertThat(known.timings?.introStartMillis).isEqualTo(228_665)
             assertThat(known.timings?.source).isEqualTo(TimingsSource.INTRO_DB)
         }
+
+    @Test
+    fun `with credits but no intro from TheIntroDB, IntroDB's intro and recap fill in`() = runTest {
+        replies["api.theintrodb.org"] = CREDITS_ONLY
+        replies["api.introdb.app"] = """
+            {"intro":{"start_ms":514000,"end_ms":557000},"recap":{"start_ms":null,"end_ms":30000},
+             "outro":{"start_ms":3431000,"end_ms":3500000}}
+        """.trimIndent()
+
+        val known = repository().timingsFor(testEpisode(1, 1)).timings
+
+        assertThat(known?.introStartMillis).isEqualTo(514_000)
+        assertThat(known?.introEndMillis).isEqualTo(557_000)
+        assertThat(known?.recapStartMillis).isEqualTo(0)
+        assertThat(known?.recapEndMillis).isEqualTo(30_000)
+        // TheIntroDB's credits still win.
+        assertThat(known?.creditsStartMillis).isEqualTo(3_432_884)
+        assertThat(known?.source).isEqualTo(TimingsSource.THE_INTRO_DB)
+    }
+
+    @Test
+    fun `an episode with credits but no intro timed anywhere is asked about again after a week`() = runTest {
+        replies["api.theintrodb.org"] = CREDITS_ONLY
+        val timings = repository()
+        timings.timingsFor(testEpisode(1, 1))
+        asked.clear()
+
+        now += 6 * DAY_MILLIS
+        timings.timingsFor(testEpisode(1, 1))
+        assertThat(hosts()).doesNotContain("api.theintrodb.org")
+
+        now += DAY_MILLIS
+        replies["api.introdb.app"] = """{"intro":{"start_ms":514000,"end_ms":557000}}"""
+        val known = timings.timingsFor(testEpisode(1, 1)).timings
+
+        assertThat(known?.introStartMillis).isEqualTo(514_000)
+        assertThat(known?.creditsStartMillis).isEqualTo(3_432_884)
+    }
+
+    @Test
+    fun `an intro confirmed not to be there settles the episode`() = runTest {
+        replies["api.theintrodb.org"] = CREDITS_ONLY
+        replies["api.introdb.app"] = """{"no_intro":true}"""
+        val timings = repository()
+        timings.timingsFor(testEpisode(1, 1))
+        asked.clear()
+
+        now += 30 * DAY_MILLIS
+        timings.timingsFor(testEpisode(1, 1))
+
+        assertThat(asked).isEmpty()
+    }
+
+    @Test
+    fun `when IntroDB can't be reached for the intro, the credits are used and the next start asks again`() = runTest {
+        replies["api.theintrodb.org"] = CREDITS_ONLY
+        replies["api.introdb.app"] = "!"
+        val timings = repository()
+        assertThat(timings.timingsFor(testEpisode(1, 1)).timings?.creditsStartMillis).isEqualTo(3_432_884)
+        asked.clear()
+
+        timings.timingsFor(testEpisode(1, 1))
+
+        assertThat(hosts()).contains("api.introdb.app")
+    }
 
     @Test
     fun `a series without a TMDB id is found on TMDB by its name`() = runTest {
@@ -237,5 +303,6 @@ class EpisodeTimingsRepositoryTest {
 
     private companion object {
         const val DAY_MILLIS = 24 * 60 * 60_000L
+        const val CREDITS_ONLY = """{"credits":[{"start_ms":3432884,"end_ms":null}]}"""
     }
 }

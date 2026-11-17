@@ -81,6 +81,7 @@ import app.opentv.ui.options.ItemOption
 import app.opentv.ui.options.OptionsFor
 import app.opentv.ui.options.label
 import app.opentv.ui.player.BackOnRelease
+import app.opentv.ui.player.OK_KEYS
 import app.opentv.ui.player.PlayerChoice
 import app.opentv.ui.player.PlayerChoicePanel
 import app.opentv.ui.player.PlayerControlBar
@@ -240,6 +241,8 @@ internal fun PlayerController.vodPlayback() = object : VodPlayerViewModel.Playba
     override fun pause() {
         player.playWhenReady = false
     }
+
+    override fun seekTo(positionMillis: Long) = player.seekTo(positionMillis)
 
     override fun stop() = this@vodPlayback.stop()
 }
@@ -413,7 +416,23 @@ fun VodPlayerContent(
 
     val failed = state is PlayerController.State.Error
 
-    LaunchedEffect(controlsVisible, vodPanel, overlayShowing, failed) {
+    // Skip intro or Skip recap (#518): on its own in the bottom right, with the Highlight, while the
+    // controls are away; above the row, a press Up from it, while they're up.
+    val skipping by viewModel.skipButton.collectAsState()
+    // A menu over the picture keeps the Highlight while it's open; the button takes it once it closes.
+    val menuOpen = optionsOpen || choosingSleep || choosingQuality
+    val skipAlone = skipping != null && !controlsVisible && !failed && !menuOpen
+    val skipFocus = remember { FocusRequester() }
+    val skipInBarFocus = remember { FocusRequester() }
+    LaunchedEffect(controlsVisible) { viewModel.controlsShowing(controlsVisible) }
+
+    fun skipStretch() {
+        seek.drop()
+        viewModel.skipStretch()
+        interaction++
+    }
+
+    LaunchedEffect(controlsVisible, vodPanel, overlayShowing, failed, skipAlone) {
         when {
             // The sentence's own buttons take focus, and there's nothing under them to control.
             failed -> Unit
@@ -421,24 +440,42 @@ fun VodPlayerContent(
                 delay(40)
                 runCatching { if (vodPanel != VodPanel.NONE) panelFocus.requestFocus() else barReturn.requestFocus() }
             }
+            skipAlone -> {
+                delay(40)
+                runCatching { skipFocus.requestFocus() }
+            }
             !overlayShowing -> runCatching { rootFocus.requestFocus() }
         }
     }
 
-    fun backStep(): () -> Unit {
-        val activelyPlaying = state is PlayerController.State.Playing ||
-            (growingRec && state is PlayerController.State.Buffering)
-        return when {
-            // The bar and any picker on it are hidden behind the sentence, so Back can't mean them.
-            failed -> onBack
-            vodPanel != VodPanel.NONE -> {
-                { vodPanel = VodPanel.NONE }
-            }
-            controlsVisible && activelyPlaying && !paused -> {
-                { controlsVisible = false }
-            }
-            else -> onBack
+    // The button above the row going from under the Highlight hands it back to the row. Only when it
+    // goes, not as the player opens (an error's Try again has the Highlight then), and only on the bare
+    // controls: a track panel or menu open over them keeps its own place.
+    var skipWasShowing by remember { mutableStateOf(false) }
+    val bareControls = controlsVisible && !failed && vodPanel == VodPanel.NONE && !menuOpen
+    LaunchedEffect(skipping != null) {
+        val went = skipWasShowing && skipping == null
+        skipWasShowing = skipping != null
+        if (went && bareControls) {
+            delay(40)
+            runCatching { barReturn.requestFocus() }
         }
+    }
+
+    fun backStep(): () -> Unit = when {
+        // The bar and any picker on it are hidden behind the sentence, so Back can't mean them.
+        failed -> onBack
+        vodPanel != VodPanel.NONE -> {
+            { vodPanel = VodPanel.NONE }
+        }
+        // Back on Skip intro on its own puts it away, as it does the Next Episode card.
+        skipAlone -> viewModel::dismissSkip
+        // Paused or buffering too: Back always puts away what's showing before it leaves, and any
+        // key brings the controls back over a paused picture.
+        controlsVisible -> {
+            { controlsVisible = false }
+        }
+        else -> onBack
     }
 
     BackHandler { backStep()() }
@@ -449,14 +486,24 @@ fun VodPlayerContent(
             .fillMaxSize()
             .background(Color.Black)
             .countsAsInput(viewModel)
-            // The Next Episode card and its question answer Back with back handlers of their own.
-            .backOnRelease(backOnRelease) { if (overlayShowing) null else backStep() }
+            // The card and the question take a remote's Back here too: left to their back handlers, the
+            // press was spent taking the Highlight off Play now and the card stayed up. Their handlers
+            // still answer a phone's Back gesture, which never comes as a key.
+            .backOnRelease(backOnRelease) {
+                when (overlay) {
+                    is NextEpisodeCountdown.Overlay.Card -> viewModel::cancel
+                    is NextEpisodeCountdown.Overlay.StillWatching -> onBack
+                    NextEpisodeCountdown.Overlay.None -> backStep()
+                }
+            }
             .onPreviewKeyEvent { event ->
                 when {
                     event.isBack() -> false
                     // Keys belong to the card or the question while one is up, OK above all.
                     overlayShowing -> false
                     failed -> false
+                    // OK is the Skip button's while it's up on its own: the one thing asking for it.
+                    skipAlone && event.key in OK_KEYS -> false
                     // Media keys act whether or not the bar is up, so they come before "reveal".
                     event.key == Key.MediaPlayPause || event.key == Key.MediaPlay || event.key == Key.MediaPause -> {
                         // A held key repeats; acting on each repeat would flick between paused and playing.
@@ -598,6 +645,18 @@ fun VodPlayerContent(
                 onNextEpisode = { moveEpisode(forward = true) }.takeIf { shownSteps.next },
                 barInteractions = barInteractions,
                 badge = if (growingRec) ({ RecordingBadge() }) else null,
+                aboveRow = skipping?.let { stretch ->
+                    { SkipStretchButton(stretch, ::skipStretch, Modifier.focusRequester(skipInBarFocus)) }
+                },
+                aboveRowFocus = skipInBarFocus.takeIf { skipping != null },
+            )
+        }
+
+        skipping?.takeIf { skipAlone }?.let { stretch ->
+            SkipStretchButton(
+                stretch,
+                ::skipStretch,
+                Modifier.align(Alignment.BottomEnd).padding(48.dp).focusRequester(skipFocus),
             )
         }
 

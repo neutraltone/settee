@@ -124,6 +124,8 @@ class VodPlayerRowTest {
 
         override fun pause() = Unit
 
+        override fun seekTo(positionMillis: Long) = player.player.seekTo(positionMillis)
+
         override fun stop() = Unit
     }
 
@@ -334,8 +336,8 @@ class VodPlayerRowTest {
 
     @Test
     fun `the Next Episode card coming up counts as leaving the bar`() {
-        // 24 s before the end of the hour: the card's up, with 9 s of its countdown left (no timings,
-        // so it runs from 30 to 15 s before the end).
+        // 24 s before the end of the hour: the card's up (no timings, so it comes up 30 s before the
+        // end), counting down from there, since a seek landed playback in the credits.
         val nearTheEnd = 3_576_000L
         runBlocking { graph.database.episodes().upsertAll((1..2).map { testEpisode(1, it) }) }
         compose.setTvContent { VodPlayerContent(controller, viewModel, false, noPicks, onBack = {}) }
@@ -360,8 +362,8 @@ class VodPlayerRowTest {
 
     @Test
     fun `a finger on the bar when the Next Episode card comes up doesn't leave the bar stuck`() {
-        // 24 s before the end of the hour: the card's up, with 9 s of its countdown left (no timings,
-        // so it runs from 30 to 15 s before the end).
+        // 24 s before the end of the hour: the card's up (no timings, so it comes up 30 s before the
+        // end), counting down from there, since a seek landed playback in the credits.
         val nearTheEnd = 3_576_000L
         runBlocking { graph.database.episodes().upsertAll((1..2).map { testEpisode(1, it) }) }
         compose.setTvContent { VodPlayerContent(controller, viewModel, false, noPicks, onBack = {}) }

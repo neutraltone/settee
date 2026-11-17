@@ -86,6 +86,9 @@ import app.opentv.ui.formatPlaybackTime
  * pill can hand it back to that button when it closes. A FocusRequester on the bar's group with a
  * focus restorer was the obvious way, but the player asks for the bar by name ([startFocus]) when it
  * first opens, which goes straight to the start and never through the restorer.
+ *
+ * [aboveRow] sits at the right above the row, level with the title: the episode player's Skip intro
+ * while the controls are up. Up from the row goes to it ([aboveRowFocus]) rather than to close.
  */
 @Composable
 internal fun PlayerControlBar(
@@ -112,6 +115,8 @@ internal fun PlayerControlBar(
     onBarFocusChanged: (Boolean) -> Unit = {},
     badge: (@Composable () -> Unit)? = null,
     returnFocus: FocusRequester? = null,
+    aboveRow: (@Composable () -> Unit)? = null,
+    aboveRowFocus: FocusRequester? = null,
 ) {
     val close = remember { FocusRequester() }
     val firstPill = remember { FocusRequester() }
@@ -128,7 +133,7 @@ internal fun PlayerControlBar(
     val lower = Modifier.onFocusChanged { if (it.hasFocus) pillsUp = true }
     val toPills = if (pillsUp && pills.isNotEmpty()) firstPill else FocusRequester.Cancel
     fun FocusProperties.along(spot: FocusRequester) {
-        up = close
+        up = aboveRowFocus ?: close
         left = focus.leftOf(spot)
         right = focus.rightOf(spot)
     }
@@ -170,7 +175,7 @@ internal fun PlayerControlBar(
                 .padding(horizontal = SetteeSpace.ScreenSide, vertical = SetteeSpace.ScreenTopBottom),
         ) {
             badge?.invoke()
-            Text(title, SetteeType.Hero, maxLines = 2)
+            TitleLine(title, aboveRow)
             // Room for the picked-up bar's time bubble, which hangs above the row.
             Spacer(Modifier.height(18.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -286,6 +291,18 @@ internal fun PlayerControlBar(
                     }
                 }
             }
+        }
+    }
+}
+
+/** The title, with [aboveRow] at the right of it when there is one. */
+@Composable
+private fun TitleLine(title: String, aboveRow: (@Composable () -> Unit)?) {
+    Row(verticalAlignment = Alignment.Bottom) {
+        Text(title, SetteeType.Hero, Modifier.weight(1f), maxLines = 2)
+        if (aboveRow != null) {
+            Spacer(Modifier.width(24.dp))
+            aboveRow()
         }
     }
 }

@@ -51,6 +51,9 @@ data class EpisodeTimings(
      */
     val creditsKnown: Boolean get() = creditsStartMillis != null || noCredits
 
+    /** Whether the intro is settled the same way, for Skip intro (#518). */
+    val introKnown: Boolean get() = introStartMillis != null || noIntro
+
     companion object {
         /** The [show] key of a show TMDB knows as [id]. */
         fun tmdbShow(id: String): String = "tmdb:$id"

@@ -11,6 +11,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import app.opentv.core.ServiceLocator
 import app.opentv.data.model.Episode
+import app.opentv.data.model.EpisodeTimings
 import app.opentv.data.repo.MediaKey
 import app.opentv.data.repo.VodQualities
 import app.opentv.data.repo.WatchStatus
@@ -19,6 +20,8 @@ import app.opentv.player.NextEpisodeCountdown
 import app.opentv.player.NextEpisodeCountdown.Decision
 import app.opentv.player.NextEpisodeCountdown.Overlay
 import app.opentv.player.PlayerController
+import app.opentv.player.SkipButton
+import app.opentv.player.SkipCue
 import app.opentv.player.UpNextCue
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -68,6 +71,9 @@ class VodPlayerViewModel(
         fun steppedDownTo(): MediaKey? = null
 
         fun pause()
+
+        /** Jumps to [positionMillis] in what's playing. */
+        fun seekTo(positionMillis: Long)
 
         fun stop()
     }
@@ -143,7 +149,18 @@ class VodPlayerViewModel(
     /** Held while moving to another episode, so a second press waits for the move before it. */
     internal val moving = Mutex()
     private var fetchingNext: Job? = null
-    private val timings = UpNextTimings(graph)
+    private val timings = PlayingTimings(graph)
+
+    /** Skip intro and Skip recap, for [controlsShowing] and [skipStretch]. */
+    internal val skips = Skips(
+        stretches = timings::stretches,
+        progress = { playback?.progress() },
+        seekTo = { playback?.seekTo(it) },
+        overlaid = { _overlay.value !is Overlay.None },
+    )
+
+    /** The intro or recap whose Skip button shows, if one does (#518). */
+    val skipButton: StateFlow<SkipCue.Stretch?> = skips.button
     private val lookup = NextEpisodeLookup(graph)
 
     /**
@@ -197,6 +214,7 @@ class VodPlayerViewModel(
         if (progress.durationMillis > 0) lastSeen = progress
         val decision = countdown.update(progress)
         act(decision)
+        skips.show(progress)
         // Not while the card, the question or the search for a Next Episode could still move on from here.
         _finished.value = decision == null &&
             progress.ended &&
@@ -285,6 +303,7 @@ class VodPlayerViewModel(
         startedAtZero = fromMillis == 0L || (startedAtZero && key == _current.value)
         _current.value = key
         lastSeen = null
+        skips.clear()
         planned?.let { (request, skipped) ->
             requestedFrom = fromMillis
             playback?.play(request, skipped)
@@ -312,6 +331,59 @@ class VodPlayerViewModel(
                 }
             }
         }
+    }
+}
+
+/** Whether the player's controls are up, which bring back a Skip button that has gone. */
+fun VodPlayerViewModel.controlsShowing(showing: Boolean) = skips.controlsShowing(showing)
+
+/** Skip intro or Skip recap: jumps to the end of what the button skips. */
+fun VodPlayerViewModel.skipStretch() = skips.skip()
+
+/** Back on Skip intro or Skip recap: puts it away for the rest of the stretch. */
+fun VodPlayerViewModel.dismissSkip() = skips.dismiss()
+
+/**
+ * The Skip button's state (#518), on the [stretches] the playing episode's timings offer: what shows
+ * at each [progress], jumping with [seekTo], and nothing while the Next Episode card or "Are you still
+ * watching?" is [overlaid], since each wants OK for itself.
+ */
+internal class Skips(
+    private val stretches: (streamMillis: Long) -> List<SkipCue.Stretch>,
+    private val progress: () -> NextEpisodeCountdown.Playback?,
+    private val seekTo: (Long) -> Unit,
+    private val overlaid: () -> Boolean,
+) {
+    private val shown = MutableStateFlow<SkipCue.Stretch?>(null)
+    val button: StateFlow<SkipCue.Stretch?> = shown.asStateFlow()
+
+    private val skip = SkipButton()
+    private var controlsShowing = false
+
+    fun show(at: NextEpisodeCountdown.Playback) {
+        val now = stretches(at.durationMillis)
+        if (now != skip.stretches) skip.stretches = now
+        shown.value = skip.update(at.positionMillis, controlsShowing).takeIf { !overlaid() }
+    }
+
+    fun controlsShowing(showing: Boolean) {
+        controlsShowing = showing
+        progress()?.let(::show)
+    }
+
+    fun skip() {
+        val stretch = shown.value ?: return
+        seekTo(stretch.toMillis)
+        shown.value = null
+    }
+
+    fun dismiss() {
+        skip.dismiss()
+        shown.value = null
+    }
+
+    fun clear() {
+        shown.value = null
     }
 }
 
@@ -399,14 +471,21 @@ private class NextEpisodeLookup(private val graph: ServiceLocator.Graph) {
 }
 
 /**
- * Where the Next Episode card comes up in what's playing (#517): 30 seconds before the end until the
- * episode's timings arrive. Held here as well as in the countdown, which forgets it on every
- * newEpisode, because a Next Episode found late is offered again for the same episode.
+ * Where the Next Episode card comes up in what's playing (#517), and what Skip intro and Skip recap
+ * offer (#518): 30 seconds before the end and nothing to skip until the episode's timings arrive.
+ * Held here as well as in the countdown, which forgets it on every newEpisode, because a Next Episode
+ * found late is offered again for the same episode.
  */
-private class UpNextTimings(private val graph: ServiceLocator.Graph) {
+private class PlayingTimings(private val graph: ServiceLocator.Graph) {
     var cue: CuePlacement = UpNextCue::fallback
         private set
+
+    /** What's playing's found timings, for its Skip intro and Skip recap; null until they arrive. */
+    @Volatile private var episodeTimings: EpisodeTimings? = null
     private var job: Job? = null
+
+    /** The intros and recaps to offer in a stream [streamMillis] long. */
+    fun stretches(streamMillis: Long): List<SkipCue.Stretch> = SkipCue.place(episodeTimings, streamMillis)
 
     private val wanted: Boolean get() = graph.settings.skipIntrosAndCredits.value
 
@@ -418,12 +497,14 @@ private class UpNextTimings(private val graph: ServiceLocator.Graph) {
     fun lookUp(scope: CoroutineScope, episode: Episode?, stillPlaying: () -> Boolean, placed: (CuePlacement) -> Unit) {
         job?.cancel()
         cue = UpNextCue::fallback
+        episodeTimings = null
         if (episode == null || !wanted) return
         job = scope.launch {
             // Timings only ever improve on the fallback: nothing about them is worth an error on screen.
             val found = runCatching { graph.episodeTimings.timingsFor(episode) }.getOrNull()
             if (found == null || !stillPlaying()) return@launch
             cue = { streamMillis -> UpNextCue.place(found.timings, found.restOfShow, streamMillis) }
+            episodeTimings = found.timings
             placed(cue)
         }
     }

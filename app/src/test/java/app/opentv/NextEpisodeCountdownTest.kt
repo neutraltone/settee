@@ -108,6 +108,7 @@ class NextEpisodeCountdownTest {
 
     @Test
     fun `pausing holds the countdown where it is`() {
+        countdown.update(at(secondsLeft = 30))
         countdown.update(at(secondsLeft = 24))
         assertThat(countdown.update(at(secondsLeft = 24))).isNull()
 
@@ -122,7 +123,7 @@ class NextEpisodeCountdownTest {
     }
 
     @Test
-    fun `Cancel dismisses the card and the episode plays to its end without advancing`() {
+    fun `Cancel dismisses the card, the credits play to their end, and then the Next Episode plays`() {
         countdown.update(at(secondsLeft = 27))
 
         countdown.cancel()
@@ -130,18 +131,103 @@ class NextEpisodeCountdownTest {
         assertThat(countdown.overlay).isEqualTo(Overlay.None)
         assertThat(countdown.update(at(secondsLeft = 5))).isNull()
         assertThat(countdown.overlay).isEqualTo(Overlay.None)
-        assertThat(countdown.update(at(secondsLeft = 0).copy(ended = true))).isNull()
+        assertThat(countdown.update(at(secondsLeft = 0).copy(ended = true))).isEqualTo(Decision.PlayNext)
     }
 
     @Test
-    fun `seeking back before the card hides it, and back past it shows it with the time left from there`() {
+    fun `with auto-play off, the end of the credits after Cancel moves on to nothing, so the player can close`() {
+        val manual = NextEpisodeCountdown(autoPlay = { false }).apply { newEpisode(hasNext = true) }
+        manual.update(at(secondsLeft = 27))
+        manual.cancel()
+
+        assertThat(manual.update(at(secondsLeft = 0).copy(ended = true))).isNull()
+        assertThat(manual.overlay).isEqualTo(Overlay.None)
+    }
+
+    @Test
+    fun `with auto-play off, a card still up when the episode ends says so, and Cancel then takes it away`() {
+        val manual = NextEpisodeCountdown(autoPlay = { false }).apply { newEpisode(hasNext = true) }
+        manual.update(at(secondsLeft = 27))
+
+        assertThat(manual.update(at(secondsLeft = 0).copy(ended = true))).isNull()
+        assertThat(manual.overlay).isEqualTo(Overlay.Card(secondsLeft = 0, counting = false, atEnd = true))
+
+        manual.cancel()
+        assertThat(manual.update(at(secondsLeft = 0).copy(ended = true))).isNull()
+        assertThat(manual.overlay).isEqualTo(Overlay.None)
+    }
+
+    @Test
+    fun `Cancel shows someone is watching, so the episode it plays on to starts the run again`() {
+        repeat(3) { countdown.runToEnd() }
+
+        countdown.update(at(secondsLeft = 27))
+        countdown.cancel()
+        assertThat(countdown.update(at(secondsLeft = 0).copy(ended = true))).isEqualTo(Decision.PlayNext)
+        countdown.newEpisode(hasNext = true)
+
+        repeat(3) { assertThat(countdown.runToEnd()).isEqualTo(Decision.PlayNext) }
+    }
+
+    @Test
+    fun `seeking back before the card hides it, and back past it counts down afresh from where it lands`() {
         countdown.update(at(secondsLeft = 27))
 
         countdown.update(at(secondsLeft = 300))
         assertThat(countdown.overlay).isEqualTo(Overlay.None)
 
         countdown.update(at(secondsLeft = 23))
-        assertThat(countdown.overlay).isEqualTo(Overlay.Card(secondsLeft = 8, counting = true))
+        assertThat(countdown.overlay).isEqualTo(Overlay.Card(secondsLeft = 15, counting = true))
+    }
+
+    @Test
+    fun `a seek past the card's countdown brings the card up with all 15 seconds, rather than moving on`() {
+        // The owner's report: a seek to 44:32 played the Next Episode before any of the credits.
+        countdown.cue = { NextEpisodeCountdown.Cue(cardAtMillis = CREDITS_CARD_MILLIS) }
+        countdown.update(atMillis(CREDITS_CARD_MILLIS - 600_000))
+
+        assertThat(countdown.update(atMillis(CREDITS_CARD_MILLIS + 60_000))).isNull()
+        assertThat(countdown.overlay).isEqualTo(Overlay.Card(secondsLeft = 15, counting = true))
+
+        assertThat(countdown.update(atMillis(CREDITS_CARD_MILLIS + 74_000))).isNull()
+        assertThat(countdown.update(atMillis(CREDITS_CARD_MILLIS + 75_000))).isEqualTo(Decision.PlayNext)
+    }
+
+    @Test
+    fun `starting partway through the credits, as a resume point can, counts down all 15 seconds`() {
+        countdown.update(at(secondsLeft = 22))
+
+        assertThat(countdown.overlay).isEqualTo(Overlay.Card(secondsLeft = 15, counting = true))
+    }
+
+    @Test
+    fun `a seek into the last 15 seconds brings no card, and the Next Episode plays when the episode ends`() {
+        countdown.update(at(secondsLeft = 300))
+
+        assertThat(countdown.update(at(secondsLeft = 10))).isNull()
+        assertThat(countdown.overlay).isEqualTo(Overlay.None)
+        assertThat(countdown.update(at(secondsLeft = 0).copy(ended = true))).isEqualTo(Decision.PlayNext)
+    }
+
+    @Test
+    fun `after a seek into the last 15 seconds, seeking back before the credits and into them brings the card back`() {
+        countdown.update(at(secondsLeft = 300))
+        countdown.update(at(secondsLeft = 10))
+
+        countdown.update(at(secondsLeft = 300))
+        countdown.update(at(secondsLeft = 25))
+
+        assertThat(countdown.overlay).isEqualTo(Overlay.Card(secondsLeft = 15, counting = true))
+    }
+
+    @Test
+    fun `timings that arrive with playback already past the new cue count down from where it is`() {
+        countdown.update(atMillis(CREDITS_CARD_MILLIS + 40_000))
+
+        countdown.cue = { NextEpisodeCountdown.Cue(cardAtMillis = CREDITS_CARD_MILLIS) }
+
+        assertThat(countdown.update(atMillis(CREDITS_CARD_MILLIS + 40_500))).isNull()
+        assertThat(countdown.overlay).isEqualTo(Overlay.Card(secondsLeft = 15, counting = true))
     }
 
     @Test
@@ -152,13 +238,14 @@ class NextEpisodeCountdownTest {
         countdown.update(at(secondsLeft = 300))
         countdown.update(at(secondsLeft = 27))
 
-        assertThat(countdown.overlay).isEqualTo(Overlay.Card(secondsLeft = 12, counting = true))
+        assertThat(countdown.overlay).isEqualTo(Overlay.Card(secondsLeft = 15, counting = true))
     }
 
     @Test
     fun `with auto-play off the card shows but waits for OK`() {
         val manual = NextEpisodeCountdown(autoPlay = { false }).apply { newEpisode(hasNext = true) }
 
+        manual.update(at(secondsLeft = 30))
         manual.update(at(secondsLeft = 25))
         assertThat(manual.overlay).isEqualTo(Overlay.Card(secondsLeft = 10, counting = false))
         assertThat(manual.update(at(secondsLeft = 0).copy(ended = true))).isNull()
@@ -228,7 +315,8 @@ class NextEpisodeCountdownTest {
 
     @Test
     fun `the Next Episode is asked for once, however often the end is polled before it starts`() {
-        countdown.update(at(secondsLeft = 0))
+        countdown.update(at(secondsLeft = 30))
+        assertThat(countdown.update(at(secondsLeft = 0))).isEqualTo(Decision.PlayNext)
 
         assertThat(countdown.update(at(secondsLeft = 0))).isNull()
         assertThat(countdown.ok()).isNull()
