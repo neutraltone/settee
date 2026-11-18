@@ -52,8 +52,13 @@ class CatalogueRefresh(
         /** Refresh now in Settings and Home's refresh: the viewer asked, so the guide is forced. */
         data object Manual : Catalogue
 
-        /** On the TV or from a phone: channels now, to show the login works, the guide afterwards. */
-        data class ProviderAdded(val source: Source) : Trigger
+        /**
+         * On the TV or from a phone: channels now, to show the login works, the guide afterwards.
+         * Without [keepIfFails], a provider whose channels don't load is removed again: a phone puts
+         * the details right and sends them again, and can't say which provider it means, so keeping
+         * the first would make that try a second copy.
+         */
+        data class ProviderAdded(val source: Source, val keepIfFails: Boolean = true) : Trigger
 
         /**
          * The first provider, saved while none was: [ProviderAdded], with movies and shows fetched
@@ -210,6 +215,7 @@ class CatalogueRefresh(
             is CatalogRepository.SyncResult.Failed -> Outcome.AddFailed(result.reason)
             is CatalogRepository.SyncResult.Success -> Outcome.ChannelsLoaded(result.channelCount)
         }
+        if (outcome is Outcome.AddFailed && !trigger.keepIfFails) catalog.deleteSource(trigger.source.id)
         _state.update { it.copy(last = outcome) }
         if (outcome is Outcome.ChannelsLoaded) {
             scope.launch {

@@ -425,7 +425,9 @@ class ManagerServer(
         val id = sourceRepository.save(draft)
         val saved = sourceRepository.byId(id)
             ?: return AddResultDto(ok = false, error = wording.of(R.string.refresh_save_failed).sentence)
-        return when (val r = refresh.refresh(CatalogueRefresh.Trigger.ProviderAdded(saved))) {
+        // The page can't edit a provider it sent, so one kept after failing would make the corrected
+        // retry a second copy.
+        return when (val r = refresh.refresh(CatalogueRefresh.Trigger.ProviderAdded(saved, keepIfFails = false))) {
             is CatalogueRefresh.Outcome.ChannelsLoaded -> AddResultDto(ok = true, channels = r.channels)
             is CatalogueRefresh.Outcome.AddFailed ->
                 AddResultDto(ok = false, error = r.reason.sentence, detail = r.reason.detail)

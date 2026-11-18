@@ -52,14 +52,14 @@ class ManagerAddSourceTest {
         test.close()
     }
 
-    private fun addProvider(): String {
+    private fun addProvider(username: String = "u"): String {
         server.start()
         val session = (server.state.value as? ManagerServer.State.Listening)?.session
         assumeTrue("needs a private LAN address to serve on", session != null)
         val add = Request.Builder()
             .url(session!!.url.replace("/?", "/source?"))
             .post(
-                """{"kind":"xtream","name":"Test","url":"http://example.com","username":"u","password":"p"}"""
+                """{"kind":"xtream","name":"Test","url":"http://example.com","username":"$username","password":"p"}"""
                     .toRequestBody("application/json".toMediaType()),
             )
             .build()
@@ -100,6 +100,24 @@ class ManagerAddSourceTest {
         assertThat(reply).contains("no channels")
         assertThat(panel.asked).doesNotContain("xmltv.php")
     }
+
+    @Test
+    fun `a provider whose channels won't load from a phone isn't kept, so sending it again corrected stores one`() =
+        runBlocking {
+            panel.replies[""] = """{"user_info": {"status": "Active"}}"""
+            panel.replies["v/get_live_streams"] = """[{"stream_id": 1, "name": "BBC One"}]"""
+
+            addProvider(username = "w")
+            test.awaitRefresh()
+            val afterFailure = test.db.sources().all()
+            val reply = addProvider(username = "v")
+            test.awaitRefresh()
+
+            assertThat(afterFailure).isEmpty()
+            assertThat(reply).contains("\"ok\":true")
+            assertThat(test.db.sources().all().map { it.username }).containsExactly("v")
+            Unit
+        }
 
     private companion object {
         const val RESCAN = "rescan series rules"

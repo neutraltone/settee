@@ -19,10 +19,12 @@ import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.requestFocus
+import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.espresso.Espresso
 import androidx.test.platform.app.InstrumentationRegistry
 import app.opentv.core.ServiceLocator
+import app.opentv.data.db.OpenTvDatabase
 import app.opentv.data.model.Source
 import app.opentv.data.model.SourceKind
 import app.opentv.ui.SourcesViewModel
@@ -33,6 +35,7 @@ import java.net.InetAddress
 import java.net.ServerSocket
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
+import org.junit.After
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -159,6 +162,85 @@ class AddSourceScreenTest {
         restoration.emulateSavedInstanceStateRestore()
 
         assertThat(device.textShownBy(device.box(SERVER))).isEqualTo("http://example.com")
+    }
+
+    @Test
+    fun `saving a provider again after its channels failed, even once the screen is rebuilt, keeps one copy`() {
+        val restoration = showM3uFormBesideAnother()
+
+        saveAndWaitForFailure()
+        saveAndWaitForFailure()
+        restoration.emulateSavedInstanceStateRestore()
+        saveAndWaitForFailure()
+
+        assertThat(storedUrls()).containsExactly("http://example.com/a.m3u", "http://example.com/b.m3u")
+    }
+
+    @Test
+    fun `a screen rebuilt while its Save is still loading saves that provider again, not a second`() {
+        val restoration = showM3uFormBesideAnother()
+        val loading = panel.hold("")
+
+        compose.onNodeWithText("Save and load").performClick()
+        compose.waitUntilSaved { loading.reached.count == 0L }
+        restoration.emulateSavedInstanceStateRestore()
+        loading.release()
+        compose.waitUntilSaved { viewModel.ui.value.let { !it.adding && it.addFailure != null } }
+        saveAndWaitForFailure()
+
+        assertThat(storedUrls()).containsExactly("http://example.com/a.m3u", "http://example.com/b.m3u")
+    }
+
+    // A playlist with no channels in it, answered at once, so each Save fails without reaching out.
+    private val panel = FakePanel("" to "#EXTM3U\n")
+    private val openPanelGraph = lazy {
+        val app = ApplicationProvider.getApplicationContext<Application>()
+        ServiceLocator.Graph(
+            app,
+            http = panel.http,
+            settingsFile = "add-source-again-test",
+            openDatabase = {
+                Room.inMemoryDatabaseBuilder(app, OpenTvDatabase::class.java).allowMainThreadQueries().build()
+            },
+        )
+    }
+    private val panelGraph by openPanelGraph
+
+    @After
+    fun closePanelGraph() {
+        if (openPanelGraph.isInitialized()) panelGraph.database.close()
+    }
+
+    /** The M3U form on [panelGraph], filled in, with a provider already added so this isn't Setup. */
+    private fun showM3uFormBesideAnother(): StateRestorationTester {
+        val app = ApplicationProvider.getApplicationContext<Application>()
+        runBlocking {
+            panelGraph.sourceRepository.save(
+                Source(
+                    name = "First",
+                    kind = SourceKind.M3U,
+                    url = "http://example.com/a.m3u",
+                    lastCatalogSyncMillis = 1,
+                ),
+            )
+        }
+        viewModel = SourcesViewModel(app, panelGraph)
+        val restoration = StateRestorationTester(compose)
+        InstrumentationRegistry.getInstrumentation().setInTouchMode(false)
+        restoration.setContent {
+            view = LocalView.current
+            SetteeTheme { AddSourceScreen(viewModel = viewModel, onFinished = {}) }
+        }
+        compose.onNodeWithText(M3U).performClick()
+        device.type("http://example.com/b.m3u", device.box(SERVER))
+        return restoration
+    }
+
+    private fun storedUrls() = runBlocking { panelGraph.sourceRepository.all() }.map { it.url }
+
+    private fun saveAndWaitForFailure() {
+        compose.onNodeWithText("Save and load").performClick()
+        compose.waitUntilSaved { viewModel.ui.value.let { !it.adding && it.addFailure != null } }
     }
 
     private fun showXtreamForm() {
