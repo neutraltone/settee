@@ -73,6 +73,7 @@ change channel.
 | `Playable.Failure.LINK_REFUSED` | `playback_link_refused` | Your provider didn't give a link for this channel. Try refreshing your provider in Settings. | LinkRefused | Provider's portal |
 | `Playable.Failure.NO_CATCHUP` | `playback_no_catchup` | Your provider doesn't offer catch-up, so past programmes can't be played. | NoCatchup | Provider's: playlists and portals have no catch-up |
 | `Playable.Failure.GONE` | `error_gone` | This isn't on your provider any more. Try refreshing your provider in Settings. | Gone | Provider's: removed from the catalogue |
+| `Playable.Failure.BAD_ADDRESS`: a catch-up whose provider address no longer parses, so no archive URL can be built (#497) | `error_bad_address` | That address doesn't look right. Check your provider's details in Settings. | BadAddress | Viewer's setup |
 | Recording: storage missing (`RecordingStorage.Unavailable`) | `rec_error_usb_no_folder`, `rec_error_usb_unavailable` | There's no folder to record to. Pick one on your USB drive in Recording settings. / Can't find your USB drive. Plug it back in, then pick its folder again in Recording settings. | StorageUnavailable | Viewer's: drive or folder |
 | Recording: no free file name (`… (999).ts` taken too, #354) | `rec_error_failed` | This recording stopped. Try recording it again. | IOException | Recording folder full of one name |
 | Recording: any other exception | `rec_error_failed` | This recording stopped. Try recording it again. | exception type | Unknown |

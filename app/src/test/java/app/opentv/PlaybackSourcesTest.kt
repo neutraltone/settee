@@ -169,6 +169,18 @@ class PlaybackSourcesTest {
     }
 
     @Test
+    fun `catch-up from a provider whose address isn't one says so instead of crashing`() = runTest {
+        db.sources().insert(PANEL_SOURCE.copy(url = "not an address"))
+        val id = channel(streamUrl = "http://example.com/live/u/p/9.m3u8")
+        db.programmes().insertOrReplace(listOf(news()))
+        val key = MediaKey.Catchup(id, NEWS_START)
+
+        val playable = inUtc { sources.forWatching(key) }
+
+        assertThat(playable).isEqualTo(Playable.Failed(key, Playable.Failure.BAD_ADDRESS, ""))
+    }
+
+    @Test
     fun `catch-up asks the panel for the programme's start in the panel's own time zone`() = runTest {
         // November: London is on GMT and Amsterdam an hour ahead, so 21:00 UTC is 22:00 to the panel.
         db.sources().insert(PANEL_SOURCE.copy(serverTimeZone = "Europe/Amsterdam"))

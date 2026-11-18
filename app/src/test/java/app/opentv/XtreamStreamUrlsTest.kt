@@ -5,6 +5,7 @@
  */
 package app.opentv
 
+import app.opentv.data.model.Source
 import app.opentv.data.remote.XtreamApi
 import com.google.common.truth.Truth.assertThat
 import okhttp3.HttpUrl.Companion.toHttpUrl
@@ -44,7 +45,7 @@ class XtreamStreamUrlsTest {
     @Test
     fun `a catch-up URL carries a login of awkward characters as typed`() {
         val source = AWKWARD_SOURCE.copy(serverTimeZone = "UTC")
-        val url = api.catchupUrl(source, "9", NOV_18_2030_UTC, 60).toHttpUrl()
+        val url = api.catchupUrl(source, "9", CATCHUP_START, 60).toHttpUrl()
 
         assertThat(url.pathSegments)
             .containsExactly("timeshift", AWKWARD_USER, AWKWARD, "60", "2026-11-18:20-30", "9.ts").inOrder()
@@ -52,22 +53,32 @@ class XtreamStreamUrlsTest {
 
     @Test
     fun `a plain login gives the same URLs as before`() {
-        assertThat(api.liveStreamUrl(PANEL_SOURCE, "9")).isEqualTo("http://example.com/live/u/p/9.m3u8")
-        assertThat(api.vodStreamUrl(PANEL_SOURCE, "7", null)).isEqualTo("http://example.com/movie/u/p/7.mp4")
-        assertThat(api.seriesStreamUrl(PANEL_SOURCE, "5", "mkv")).isEqualTo("http://example.com/series/u/p/5.mkv")
-        assertThat(api.catchupUrl(PANEL_SOURCE.copy(serverTimeZone = "UTC"), "9", NOV_18_2030_UTC, 60))
-            .isEqualTo("http://example.com/timeshift/u/p/60/2026-11-18:20-30/9.ts")
+        assertThat(everyKind(PANEL_SOURCE)).containsExactly(
+            "http://example.com/live/u/p/9.m3u8",
+            "http://example.com/movie/u/p/7.mp4",
+            "http://example.com/series/u/p/5.mkv",
+            "http://example.com/timeshift/u/p/60/2026-11-18:20-30/9.ts",
+        ).inOrder()
     }
 
     @Test
     fun `a path in the server address stays in front of the stream's`() {
-        val source = PANEL_SOURCE.copy(url = "http://example.com:8080/sub", serverTimeZone = "UTC")
+        assertThat(everyKind(PANEL_SOURCE.copy(url = "http://example.com:8080/sub"))).containsExactly(
+            "http://example.com:8080/sub/live/u/p/9.m3u8",
+            "http://example.com:8080/sub/movie/u/p/7.mp4",
+            "http://example.com:8080/sub/series/u/p/5.mkv",
+            "http://example.com:8080/sub/timeshift/u/p/60/2026-11-18:20-30/9.ts",
+        ).inOrder()
+    }
 
-        assertThat(api.liveStreamUrl(source, "9")).isEqualTo("http://example.com:8080/sub/live/u/p/9.m3u8")
-        assertThat(api.vodStreamUrl(source, "7", null)).isEqualTo("http://example.com:8080/sub/movie/u/p/7.mp4")
-        assertThat(api.seriesStreamUrl(source, "5", null)).isEqualTo("http://example.com:8080/sub/series/u/p/5.mp4")
-        assertThat(api.catchupUrl(source, "9", NOV_18_2030_UTC, 60))
-            .isEqualTo("http://example.com:8080/sub/timeshift/u/p/60/2026-11-18:20-30/9.ts")
+    /** One URL of each kind, a live channel, a film, an episode and a catch-up, from [source] on UTC. */
+    private fun everyKind(source: Source): List<String> = source.copy(serverTimeZone = "UTC").let {
+        listOf(
+            api.liveStreamUrl(it, "9"),
+            api.vodStreamUrl(it, "7", null),
+            api.seriesStreamUrl(it, "5", "mkv"),
+            api.catchupUrl(it, "9", CATCHUP_START, 60),
+        )
     }
 
     private companion object {
@@ -75,7 +86,7 @@ class XtreamStreamUrlsTest {
         const val AWKWARD = "p#1/ ?%"
         val AWKWARD_SOURCE = PANEL_SOURCE.copy(username = AWKWARD_USER, password = AWKWARD)
 
-        /** 18 Nov 2026, 20:30 UTC. */
-        const val NOV_18_2030_UTC = 1_795_033_800_000L
+        /** 18 Nov 2026, 20:30 UTC: `2026-11-18:20-30` in a panel on UTC. */
+        const val CATCHUP_START = 1_795_033_800_000L
     }
 }
