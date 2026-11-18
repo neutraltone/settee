@@ -27,6 +27,16 @@ class MarkTest(unittest.TestCase):
         self.assertIn("tools/launcher-art/settee-icon-debug.svg", written)
         self.assertIn("tools/launcher-art/settee-banner-debug.svg", written)
 
+    def test_the_local_release_build_overrides_each_launcher_drawable_and_has_its_own_png_sources(self):
+        written = {path.relative_to(ROOT).as_posix() for path in mark.outputs(ROOT)}
+
+        self.assertEqual({p for p in written if p.startswith("app/src/local/")}, {
+            "app/src/local/res/drawable/ic_launcher_foreground.xml",
+            "app/src/local/res/drawable/ic_launcher_monochrome.xml",
+        })
+        self.assertIn("tools/launcher-art/settee-icon-local.svg", written)
+        self.assertIn("tools/launcher-art/settee-banner-local.svg", written)
+
     def test_release_builds_get_only_the_main_copies_they_always_had(self):
         written = {path.relative_to(ROOT).as_posix() for path in mark.outputs(ROOT)}
 
@@ -53,17 +63,21 @@ class MarkTest(unittest.TestCase):
             "tools/launcher-art/settee-banner.svg",
             "tools/launcher-art/settee-icon-debug.svg",
             "tools/launcher-art/settee-banner-debug.svg",
+            "tools/launcher-art/settee-icon-local.svg",
+            "tools/launcher-art/settee-banner-local.svg",
         } | {f"app/src/{s}/res/mipmap-{d}/ic_launcher.png"
-             for s in ("main", "debug") for d in ("xhdpi", "xxhdpi", "xxxhdpi")}
-          | {f"app/src/{s}/res/mipmap-xhdpi/banner.png" for s in ("main", "debug")})
+             for s in ("main", "debug", "local") for d in ("xhdpi", "xxhdpi", "xxxhdpi")}
+          | {f"app/src/{s}/res/mipmap-xhdpi/banner.png" for s in ("main", "debug", "local")})
         for path, digest in recorded.items():
             with self.subTest(path=path):
                 self.assertEqual(hashlib.sha256((ROOT / path).read_bytes()).hexdigest(), digest,
                                  "run tools/render-launcher-art.sh and commit the result")
 
-    def test_no_launcher_mask_clips_the_debug_badge(self):
+    def test_no_launcher_mask_clips_either_badge(self):
         # Android keeps a circle of radius 33 (of the adaptive icon's 108) inside every mask shape.
-        self.assertLess(mark.badge_reach(ROOT / "tools/launcher-art"), 33)
+        for name in ("debug-badge.svg", "local-badge.svg"):
+            with self.subTest(badge=name):
+                self.assertLess(mark.badge_reach(ROOT / "tools/launcher-art", name), 33)
 
     def test_the_colour_resources_are_the_mark_s_colours(self):
         colours = (ROOT / "app/src/main/res/values/colors.xml").read_text()

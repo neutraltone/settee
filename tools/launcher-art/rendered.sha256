@@ -1,7 +1,9 @@
 ca5589c02871cd99bb0d9e2100ca85ad0208cc89342f14d40492b4bdbae0f19d  tools/launcher-art/settee-icon.svg
 856cd47d77434f0058e1a6b81904c79400b9900a0a11a547985b00cf9d4baae8  tools/launcher-art/settee-icon-debug.svg
+856d3b352a613ce39253acb578f17c7d880c602dfae18f72c641728f8e65b2db  tools/launcher-art/settee-icon-local.svg
 ebfab1a9cc6f08781d95c0808c2ff1785414cb42fbe86fad1d54a9a073fd5073  tools/launcher-art/settee-banner.svg
 f0e6bd7816da8f6124c88082308e9de88a0418c5b95ff1307c47a504905409f9  tools/launcher-art/settee-banner-debug.svg
+752d8032c4f36d752ddf8539c0288a27a6513079cbf16154d563ad84d7522f90  tools/launcher-art/settee-banner-local.svg
 e0bb8fbe4e18cf935ec7f6d4144eafe2236456798bc02b40a3f90d252f61b5aa  app/src/main/res/mipmap-xhdpi/ic_launcher.png
 64c7350122a70aae1a6d870e1854b1a04f1f2066e4f33e6cd1ea7cb647c7450b  app/src/main/res/mipmap-xxhdpi/ic_launcher.png
 e20090c1909135f556fd7fdb1db8f511a509d0bd8e7f73858aaeb5c3c082b56b  app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
@@ -10,3 +12,7 @@ c3028440c1058c6bb7e3e8805fbfab2b5a73ace7610547cff932ca365336f708  app/src/debug/
 e8cf9206f7ff4d14d844a5085c7ffa13eded57dfbbccf03500d8b63767781f86  app/src/debug/res/mipmap-xxhdpi/ic_launcher.png
 26e1a90e299e743c0ae2147a7bf08198174098e2b5751a0e45b54f24b896b368  app/src/debug/res/mipmap-xxxhdpi/ic_launcher.png
 913107ee98699af5e8fa79b9e98e24fbae9300797b1189154464786a42aec4a5  app/src/debug/res/mipmap-xhdpi/banner.png
+5c3a50b375d07458142611100912a0c3278096433be40eb97dde793cf921ae20  app/src/local/res/mipmap-xhdpi/ic_launcher.png
+a360d3af8bb31a3cceaaeaa8c83004fb4bc6ebdc898171cb2823d9442c33af82  app/src/local/res/mipmap-xxhdpi/ic_launcher.png
+fccd4530a9ccc283028c631f204ea9e90892710b583473f4bae26f50b47e93df  app/src/local/res/mipmap-xxxhdpi/ic_launcher.png
+48104fccee0a797a06eeab6ad59023e183fb3659bc5ae7b279850b8c7f2d74f5  app/src/local/res/mipmap-xhdpi/banner.png

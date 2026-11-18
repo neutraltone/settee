@@ -113,7 +113,9 @@ cd settee
 
 You need JDK 17 or newer and the Android SDK (API 37), which Android Studio provides. The debug
 APK lands in `app/build/outputs/apk/debug/`. It's called Settee Debug, carries a DEBUG badge, and
-installs as `uk.neutraltone.settee.debug` beside a release build without touching its data.
+installs as `uk.neutraltone.settee.debug` beside a release build without touching its data. A
+release build made locally (`./gradlew assembleRelease`, without the release keystore) is called
+Settee Release, carries a RELEASE badge, and installs as `uk.neutraltone.settee.pr`.
 
 Run the tests:
 

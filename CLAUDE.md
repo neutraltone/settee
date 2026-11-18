@@ -90,7 +90,9 @@ previous one). It only reports, never fails, and skips Dependabot and release-pl
 committed: there are no reference images.
 
 The debug build has `applicationIdSuffix = ".debug"` (`uk.neutraltone.settee.debug`), so it installs
-alongside a release build without touching its data.
+alongside a release build without touching its data. A release build made without `KEYSTORE_PATH` (any
+local `./gradlew assembleRelease`) is debug-signed, so it gets `.pr` (`uk.neutraltone.settee.pr`), the
+label "Settee Release" and a RELEASE badge from `app/src/local`; CI's signed builds never do.
 
 ## Architecture
 
