@@ -11,7 +11,6 @@ import app.opentv.R
 import app.opentv.data.remote.OpenSubtitlesFailure
 import app.opentv.data.remote.ProviderException
 import app.opentv.data.remote.ProviderException.Problem
-import app.opentv.data.repo.TestOutcomeWording
 import java.io.InterruptedIOException
 import java.net.ConnectException
 import java.net.HttpURLConnection
@@ -39,8 +38,8 @@ interface HttpStatus {
 }
 
 class ErrorWording(private val context: Context, private val onTelevision: Boolean) {
-    /** What a Test connection that passed says, for whatever words its failures with this. */
-    val tests: TestOutcomeWording by lazy { TestOutcomeWording(context) }
+    /** What Test connection says when it passes, in the same language as its failures. */
+    val tests = TestOutcomeWording { resources }
 
     // Looked up each time, as RefreshMessages does: changing language only recreates the activity.
     private val resources get() = LocaleUtils.wrap(context).resources
@@ -76,7 +75,7 @@ class ErrorWording(private val context: Context, private val onTelevision: Boole
             Problem.ACCOUNT_INACTIVE -> R.string.error_account_inactive
             Problem.BAD_ADDRESS -> R.string.error_bad_address
             Problem.DEVICE_REFUSED -> R.string.error_device_refused
-            Problem.NO_CHANNELS -> R.string.error_playlist_empty
+            Problem.NOT_A_PLAYLIST -> R.string.error_playlist_empty
             Problem.HTTP_STATUS, Problem.BAD_REPLY -> fallback
         }
         return ViewerError(resources.getString(sentence), codeName(error.problem.name))

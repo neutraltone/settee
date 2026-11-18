@@ -187,6 +187,26 @@ class PairingServerTest {
     }
 
     @Test
+    fun `the provider form's words come from the app's strings, both kinds' labels included`() {
+        val session = listening()
+
+        val page = shown(get(session.url).second)
+
+        listOf(
+            R.string.pairing_phone_form_title,
+            R.string.pairing_phone_form_body,
+            R.string.onboarding_xtream_login,
+            R.string.onboarding_m3u_url,
+            R.string.onboarding_server_address,
+            R.string.onboarding_playlist_url,
+            R.string.onboarding_playlist_help,
+            R.string.pairing_phone_code,
+            R.string.pairing_phone_send,
+            R.string.pairing_phone_sending,
+        ).forEach { assertThat(page).contains(context.getString(it)) }
+    }
+
+    @Test
     fun `the address typed from the screen opens the form`() {
         val session = listening()
 

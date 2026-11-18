@@ -29,7 +29,7 @@ open class ProviderException(
         HTTP_STATUS,
 
         /** An address that answered, but not with a playlist: a web page, say, or an error in words. */
-        NO_CHANNELS,
+        NOT_A_PLAYLIST,
 
         /** Empty, not JSON, or missing what every panel sends. */
         BAD_REPLY,

@@ -22,7 +22,6 @@
     <ID>LambdaParameterInRestartableEffect:PlayerScreen.kt$onBack</ID>
     <ID>LambdaParameterInRestartableEffect:VodPlayerScreen.kt$onBack</ID>
     <ID>LongMethod:ManagerPage.kt$ManagerPage$fun page(token: String): String</ID>
-    <ID>LongMethod:PairingPage.kt$PairingPage$fun form(token: String, error: Error?): String</ID>
     <ID>LongMethod:RecordingService.kt$RecordingService$private suspend fun runCapture(id: Long)</ID>
     <ID>LongMethod:SyncEngine.kt$SyncEngine$suspend fun apply(bundle: SyncBundle): MergeResult</ID>
     <ID>LongMethod:XmltvParser.kt$XmltvParser$private fun readProgramme(parser: XmlPullParser, feedId: Long): Programme?</ID>

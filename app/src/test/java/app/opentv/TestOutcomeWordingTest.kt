@@ -7,9 +7,9 @@ package app.opentv
 
 import android.app.Application
 import androidx.test.core.app.ApplicationProvider
+import app.opentv.core.ErrorWording
 import app.opentv.core.LocaleUtils
 import app.opentv.data.repo.TestOutcome
-import app.opentv.data.repo.TestOutcomeWording
 import com.google.common.truth.Truth.assertThat
 import java.util.Locale
 import org.junit.After
@@ -33,7 +33,7 @@ class TestOutcomeWordingTest {
     fun restore() = Locale.setDefault(locale)
 
     /** Wording in [language], as MainActivity's attachBaseContext puts the app's chosen language on. */
-    private fun wording(language: String) = TestOutcomeWording(LocaleUtils.wrap(context, language))
+    private fun wording(language: String) = ErrorWording(LocaleUtils.wrap(context, language), onTelevision = true).tests
 
     @Test
     fun `an Xtream login's account comes from the app's strings, with its expiry in the app's language`() {

@@ -94,7 +94,7 @@ class SourceRepository(
             while (start.size < PLAYLIST_START_BYTES && body.read(start, PLAYLIST_START_BYTES - start.size) != -1L) Unit
             val text = start.readUtf8()
             if (PLAYLIST_MARKERS.none { it in text }) {
-                throw ProviderException("Not a playlist", problem = ProviderException.Problem.NO_CHANNELS)
+                throw ProviderException("Not a playlist", problem = ProviderException.Problem.NOT_A_PLAYLIST)
             }
         }
     }

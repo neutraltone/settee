@@ -460,6 +460,16 @@
     <string name="pairing_phone_all_done_body">Carry on on your TV.</string>
     <string name="pairing_phone_stopped_title">Setup stopped on your TV</string>
     <string name="pairing_phone_stopped_body">Start setting up from your phone again on the TV to send your details.</string>
+    <string name="pairing_phone_form_title">Set up Settee</string>
+    <string name="pairing_phone_form_body">Filling this in here beats using the remote.</string>
+    <string name="pairing_phone_name_optional">Name, optional</string>
+    <string name="pairing_phone_name_example">Living room provider</string>
+    <string name="pairing_phone_server_help">You can paste the whole line from your provider, and the extra bits get trimmed.</string>
+    <string name="pairing_phone_code">Code shown on your TV</string>
+    <string name="pairing_phone_code_help">This proves it\'s you in front of the TV.</string>
+    <string name="pairing_phone_send">Send to TV</string>
+    <string name="pairing_phone_sending">Sending to your TV…</string>
+    <string name="pairing_phone_local_only">Only a phone on the same network as your TV can open this page.</string>
     <string name="pairing_phone_missing_address">Add your provider\'s address, then send it again.</string>
     <string name="pairing_phone_too_many_title">Too many wrong codes</string>
     <string name="pairing_phone_too_many_body">Start setting up from your phone again on the TV to get a new code.</string>

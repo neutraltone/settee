@@ -40,7 +40,11 @@ class PlaylistTestConnectionTest {
     /** What the playlist's address answers: a status and a body. */
     private var answer: () -> Response.Builder = { ok("#EXTM3U\n") }
 
+    /** Every request the playlist's address got. */
+    private val asked = mutableListOf<okhttp3.Request>()
+
     private val http = OkHttpClient.Builder().addInterceptor { chain ->
+        asked += chain.request()
         answer().request(chain.request()).protocol(Protocol.HTTP_1_1).build()
     }.build()
 
@@ -69,6 +73,7 @@ class PlaylistTestConnectionTest {
 
         val failure = wording.ofProvider(result.exceptionOrNull()!!, R.string.error_test_failed)
         assertThat(failure.sentence).isEqualTo(context.getString(R.string.error_playlist_empty))
+        assertThat(failure.detail).isEqualTo("NotAPlaylist")
     }
 
     @Test
@@ -80,6 +85,13 @@ class PlaylistTestConnectionTest {
 
         assertThat(result.isSuccess).isTrue()
         assertThat(body.served).isLessThan(1024L * 1024)
+    }
+
+    @Test
+    fun `the playlist is fetched as the provider's own player, with the User-Agent set on the source`() = runTest {
+        sources.test(playlist.copy(userAgent = "VLC/3.0.20"))
+
+        assertThat(asked.single().header("User-Agent")).isEqualTo("VLC/3.0.20")
     }
 
     private fun ok(body: String) = status(200, "OK", body)
