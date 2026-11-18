@@ -5,23 +5,35 @@
  */
 package app.opentv
 
+import androidx.compose.foundation.focusable
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.size
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
+import androidx.compose.ui.test.requestFocus
+import androidx.compose.ui.unit.dp
 import app.opentv.data.model.Channel
 import app.opentv.data.model.GuideProgramme
 import app.opentv.data.repo.LineupChannel
 import app.opentv.ui.ChannelsViewModel
+import app.opentv.ui.LocalRailReturn
+import app.opentv.ui.RailReturn
 import app.opentv.ui.channels.GuideGrid
 import com.google.common.truth.Truth.assertThat
 import org.junit.Rule
@@ -182,11 +194,108 @@ class GuideScrollingTest {
         compose.onNode(programme("B 12")).assertIsFocused()
     }
 
+    @Test
+    fun `when the window moves past the highlighted programme, the Highlight moves to the one now on`() {
+        var windowStart by mutableStateOf(EIGHT_PM)
+        val highlighted = mutableListOf<String>()
+        compose.setTvContent {
+            GuideGrid(
+                rows = listOf(row(1, programmes("News", EIGHT_PM, listOf(30, 30)))),
+                windowStartMillis = windowStart,
+                onWatch = {},
+                onHighlight = { _, programme -> highlighted += programme?.title ?: "channel" },
+                nowMillis = windowStart,
+            )
+        }
+        compose.onNode(programme("News 0")).requestFocus()
+
+        windowStart = EIGHT_PM + 30 * MINUTE_MS
+        compose.waitForIdle()
+
+        compose.onNode(programme("News 1")).assertIsFocused()
+        compose.runOnIdle { assertThat(highlighted.last()).isEqualTo("News 1") }
+        captureScreen("guide_window_moved_on")
+    }
+
+    @Test
+    fun `when the window moves past a row's only programme, the Highlight goes to its channel`() {
+        var windowStart by mutableStateOf(EIGHT_PM)
+        compose.setTvContent {
+            GuideGrid(
+                // Second, so it isn't the channel the guide's first focusable would be anyway.
+                rows = listOf(
+                    row(1, programmes("Film", EIGHT_PM, listOf(120))),
+                    row(2, programmes("News", EIGHT_PM, listOf(30))),
+                ),
+                windowStartMillis = windowStart,
+                onWatch = {},
+                nowMillis = windowStart,
+            )
+        }
+        compose.onNode(programme("News 0")).requestFocus()
+
+        windowStart = EIGHT_PM + 30 * MINUTE_MS
+        compose.waitForIdle()
+
+        compose.onNode(hasText("Channel 2") and hasClickAction()).assertIsFocused()
+    }
+
+    @Test
+    fun `when the window moves past another row's programme, the Highlight stays where it is`() {
+        var windowStart by mutableStateOf(EIGHT_PM)
+        compose.setTvContent {
+            GuideGrid(
+                rows = listOf(
+                    row(1, programmes("News", EIGHT_PM, listOf(30, 30))),
+                    row(2, programmes("Film", EIGHT_PM, listOf(120))),
+                ),
+                windowStartMillis = windowStart,
+                onWatch = {},
+                nowMillis = windowStart,
+            )
+        }
+        compose.onNode(programme("Film 0")).requestFocus()
+
+        windowStart = EIGHT_PM + 30 * MINUTE_MS
+        compose.waitForIdle()
+
+        compose.onNode(programme("Film 0")).assertIsFocused()
+    }
+
+    @Test
+    fun `after the window moves past the highlighted programme, coming back from the sidebar finds the one now on`() {
+        var windowStart by mutableStateOf(EIGHT_PM)
+        val rail = RailReturn()
+        compose.setTvContent {
+            CompositionLocalProvider(LocalRailReturn provides rail) {
+                Row {
+                    // Stands in for the sidebar.
+                    Box(Modifier.size(48.dp).testTag("sidebar").focusable())
+                    GuideGrid(
+                        rows = listOf(row(1, programmes("News", EIGHT_PM, listOf(30, 30)))),
+                        windowStartMillis = windowStart,
+                        onWatch = {},
+                        nowMillis = windowStart,
+                    )
+                }
+            }
+        }
+        compose.onNode(programme("News 0")).requestFocus()
+        windowStart = EIGHT_PM + 30 * MINUTE_MS
+        compose.waitForIdle()
+
+        compose.onNodeWithTag("sidebar").requestFocus()
+        compose.runOnIdle { rail.target?.requestFocus() }
+
+        compose.onNode(programme("News 1")).assertIsFocused()
+    }
+
     private fun List<String>.dropConsecutiveRepeats() = filterIndexed { i, title -> i == 0 || this[i - 1] != title }
 
     private companion object {
         const val MINUTE_MS = 60_000L
         const val DAY_MS = 24 * 60 * MINUTE_MS
+        const val EIGHT_PM = 20 * 60 * MINUTE_MS
 
         // Seven half hours on screen, the one the scroll position is part-way into, one past each
         // edge, and the day's first and last, which paging to this day lands on: 12, with one to

@@ -364,6 +364,17 @@ private fun GuideRow(
             onLanded()
         }
     }
+    // The window moves on at :00 and :30, and a programme ending then leaves the row, its cell and
+    // the Highlight with it. Worked out as the row composes, while that cell is still there: once
+    // it's gone, so is any sign it had the Highlight.
+    val focusedStart = remember { FocusedStart() }
+    val lostHighlight = remember(shown) { focusedStart.isOutside(shown) }
+    LaunchedEffect(shown) {
+        if (lostHighlight && land == null) {
+            withFrameNanos {}
+            runCatching { (if (shown.isEmpty()) channel else first).requestFocus() }
+        }
+    }
     Row(
         Modifier
             .fillMaxWidth()
@@ -414,6 +425,7 @@ private fun GuideRow(
                     onPrevDay = onPrevDay,
                     first = first,
                     last = last,
+                    focusedStart = focusedStart,
                 )
             }
         }
@@ -495,6 +507,7 @@ private fun ProgrammeCells(
     onPrevDay: (() -> Unit)?,
     first: FocusRequester,
     last: FocusRequester,
+    focusedStart: FocusedStart,
 ) {
     // By start rather than index, so a guide refresh that adds or drops a programme keeps the same one.
     var highlightedStart by remember { mutableLongStateOf(Long.MIN_VALUE) }
@@ -518,8 +531,10 @@ private fun ProgrammeCells(
                 isNow = programme.isLiveAt(nowMillis),
                 onHighlight = {
                     highlightedStart = programme.startUtcMillis
+                    focusedStart.start = programme.startUtcMillis
                     onHighlight(programme)
                 },
+                onBlur = { if (focusedStart.start == programme.startUtcMillis) focusedStart.start = null },
                 onClick = { onProgramme(programme) },
                 onPastEnd = onNextDay.takeIf { i == shown.lastIndex },
                 onBeforeStart = onPrevDay.takeIf { i == 0 },
@@ -532,12 +547,26 @@ private fun ProgrammeCells(
     if (stripEnd > x) Spacer(Modifier.width(stripEnd - x))
 }
 
+/**
+ * The start of the row's programme that has the Highlight, or null when none does. Plain, not
+ * state: it's read as the row composes, and a change to it is no reason to compose again.
+ */
+private class FocusedStart {
+    var start: Long? = null
+
+    fun isOutside(shown: List<GuideProgramme>): Boolean {
+        val s = start ?: return false
+        return shown.none { it.startUtcMillis == s }
+    }
+}
+
 @Composable
 private fun ProgrammeCell(
     programme: GuideProgramme,
     width: Dp,
     isNow: Boolean,
     onHighlight: () -> Unit,
+    onBlur: () -> Unit,
     onClick: () -> Unit,
     onPastEnd: (() -> Unit)?,
     onBeforeStart: (() -> Unit)?,
@@ -555,6 +584,8 @@ private fun ProgrammeCell(
                 if (it.isFocused) {
                     railReturn.target = self
                     onHighlight()
+                } else {
+                    onBlur()
                 }
             }
             .onPreviewKeyEvent { event ->
