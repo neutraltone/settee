@@ -262,9 +262,9 @@ on a Stick."). The plan leaves it. The feel check asks the executor to report ho
     summary starts after the title, and both settle without overshooting. Reset with
     `adb shell settings put global animator_duration_scale 1`.
   - Remove animations (`animator_duration_scale 0`): the finished text appears at once.
-- **Budget** (release build, `uk.neutraltone.settee`, on the Stick): run Setup against a real or mock
-  provider, `adb shell dumpsys gfxinfo uk.neutraltone.settee reset` just before the last step
-  ends, then `adb shell dumpsys gfxinfo uk.neutraltone.settee framestats > setup-finish.txt` a
+- **Budget** (release build, `uk.neutraltone.settee.pr`, on the Stick): run Setup against a real or mock
+  provider, `adb shell dumpsys gfxinfo uk.neutraltone.settee.pr reset` just before the last step
+  ends, then `adb shell dumpsys gfxinfo uk.neutraltone.settee.pr framestats > setup-finish.txt` a
   second after. Leave out the one frame where the column changes height. Every other frame must be
   under 16.7 ms. Put the median and worst frame in the PR. **If it misses:** set
   `FINISH_RISE_MILLIS = 0` and `FINISH_SECOND_BEAT_MILLIS = 0`, say so in the PR with the numbers,

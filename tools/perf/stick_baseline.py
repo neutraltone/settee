@@ -254,7 +254,9 @@ def parser():
     top = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     top.add_argument("--adb", default="adb")
     top.add_argument("--serial", default=os.environ.get("ANDROID_SERIAL"))
-    top.add_argument("--package", default="uk.neutraltone.settee")
+    # A local release build's id (app/build.gradle.kts, isLocalRelease), which is what docs/PERFORMANCE.md
+    # measures: the real release can't be built here, and a debug build is no guide.
+    top.add_argument("--package", default="uk.neutraltone.settee.pr")
     commands = top.add_subparsers(dest="command", required=True)
 
     highlight = commands.add_parser("highlight", help="how quickly single presses draw")

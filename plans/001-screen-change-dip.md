@@ -292,11 +292,11 @@ animate [...] There's no slower animation as a middle ground." The fallback is a
     so video can appear before the controls finish dipping in. Note whether that looks wrong on the
     Stick and report it. Don't try to fix it in this plan.
   - Cold start straight onto Home: no dip, Home is just there.
-- **Budget** (release build on the Stick, `uk.neutraltone.settee`; see `docs/PERFORMANCE.md`).
+- **Budget** (release build on the Stick, `uk.neutraltone.settee.pr`; see `docs/PERFORMANCE.md`).
   For each movement, one at a time:
-  1. `adb shell dumpsys gfxinfo uk.neutraltone.settee reset`
+  1. `adb shell dumpsys gfxinfo uk.neutraltone.settee.pr reset`
   2. Do the one movement (e.g. Back from Settings to Home), then wait 1 s.
-  3. `adb shell dumpsys gfxinfo uk.neutraltone.settee framestats > dip-<movement>.txt`
+  3. `adb shell dumpsys gfxinfo uk.neutraltone.settee.pr framestats > dip-<movement>.txt`
 
   Measure Home → Settings, Settings → Home (Back), Home → a film's page, film's page → Home (Back).
   Leave out the first two frames after the press and the one frame where layout changes size.

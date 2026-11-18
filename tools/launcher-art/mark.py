@@ -240,7 +240,8 @@ def pill_and_gap(art, name):
 
 def badge_shape(art, name="debug-badge.svg"):
     pill, gap, word = pill_and_gap(art, name)
-    return Badge(pill, gap, word, pill[2] / pill_and_gap(art, "debug-badge.svg")[0][2])
+    debug_pill = pill if name == "debug-badge.svg" else pill_and_gap(art, "debug-badge.svg")[0]
+    return Badge(pill, gap, word, pill[2] / debug_pill[2])
 
 
 def badge_place(badge, width, centre_x, centre_y):

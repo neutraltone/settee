@@ -213,10 +213,10 @@ arriving over video. It costs one offscreen layer the size of the card (340 dp w
     card moves straight up 24 dp while it fades in, from its final place's bottom edge, not from
     the corner of the screen. Reset with `adb shell settings put global animator_duration_scale 1`.
   - Remove animations (`animator_duration_scale 0`): the card appears in one frame, as before.
-- **Budget** (release build, `uk.neutraltone.settee`, on the Stick, during playback):
+- **Budget** (release build, `uk.neutraltone.settee.pr`, on the Stick, during playback):
   1. Seek to about 20 s before the end and let it play.
-  2. `adb shell dumpsys gfxinfo uk.neutraltone.settee reset` at about 17 s.
-  3. After the card has settled, `adb shell dumpsys gfxinfo uk.neutraltone.settee framestats > card-enter.txt`.
+  2. `adb shell dumpsys gfxinfo uk.neutraltone.settee.pr reset` at about 17 s.
+  3. After the card has settled, `adb shell dumpsys gfxinfo uk.neutraltone.settee.pr framestats > card-enter.txt`.
 
   The card isn't a response to a press, so no frames are left out. Every frame from the card's
   first to its last must be under 16.7 ms. Put the median and worst frame in the PR.

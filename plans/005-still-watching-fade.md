@@ -219,9 +219,9 @@ When the prompt appears, the dim and the prompt fade up together:
     rectangle or banding where the text sits. Reset with
     `adb shell settings put global animator_duration_scale 1`.
   - Remove animations (`animator_duration_scale 0`): the prompt appears at once.
-- **Budget** (release build, `uk.neutraltone.settee`, on the Stick): get to the prompt as above,
-  `adb shell dumpsys gfxinfo uk.neutraltone.settee reset` just before it's due, then
-  `adb shell dumpsys gfxinfo uk.neutraltone.settee framestats > still-watching.txt` a second after.
+- **Budget** (release build, `uk.neutraltone.settee.pr`, on the Stick): get to the prompt as above,
+  `adb shell dumpsys gfxinfo uk.neutraltone.settee.pr reset` just before it's due, then
+  `adb shell dumpsys gfxinfo uk.neutraltone.settee.pr framestats > still-watching.txt` a second after.
   Every frame of the fade must be under 16.7 ms. Put the median and worst frame in the PR.
   **If it misses:** set `STILL_WATCHING_FADE_MILLIS = 0`, say so in the PR with the numbers, and
   leave the `LOOK.md` sentence from step 5 out.
