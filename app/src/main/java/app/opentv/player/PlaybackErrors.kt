@@ -188,6 +188,7 @@ object PlaybackErrors {
                 Playable.Failure.LINK_REFUSED -> R.string.playback_link_refused
                 Playable.Failure.NO_CATCHUP -> R.string.playback_no_catchup
                 Playable.Failure.GONE -> R.string.error_gone
+                Playable.Failure.BAD_ADDRESS -> R.string.error_bad_address
             },
         ),
         ErrorWording.codeName(failure.name),

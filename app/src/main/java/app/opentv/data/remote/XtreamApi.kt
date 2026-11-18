@@ -313,13 +313,13 @@ class XtreamApi(
     // ---- URL construction ----------------------------------------------------------------
 
     fun liveStreamUrl(source: Source, streamId: String): String =
-        "${source.url}/live/${source.username}/${source.password}/$streamId.${source.liveFormat.extension}"
+        streamUrl(source, StreamPath.LIVE, "$streamId.${source.liveFormat.extension}")
 
     fun vodStreamUrl(source: Source, streamId: String, extension: String?): String =
-        "${source.url}/movie/${source.username}/${source.password}/$streamId.${extension ?: "mp4"}"
+        streamUrl(source, StreamPath.MOVIE, "$streamId.${extension ?: "mp4"}")
 
     fun seriesStreamUrl(source: Source, episodeId: String, extension: String?): String =
-        "${source.url}/series/${source.username}/${source.password}/$episodeId.${extension ?: "mp4"}"
+        streamUrl(source, StreamPath.SERIES, "$episodeId.${extension ?: "mp4"}")
 
     /**
      * Catch-up / archive stream for a past programme. Uses the widely-supported path form
@@ -337,7 +337,28 @@ class XtreamApi(
             ?: ZoneId.systemDefault()
         val stamp = CATCHUP_STAMP.format(Instant.ofEpochMilli(startUtcMillis).atZone(zone))
         val minutes = durationMinutes.coerceAtLeast(1)
-        return "${source.url}/timeshift/${source.username}/${source.password}/$minutes/$stamp/$streamId.ts"
+        return streamUrl(source, StreamPath.TIMESHIFT, "$minutes", stamp, "$streamId.ts")
+    }
+
+    /**
+     * `{server}/{path}/{user}/{pass}/{rest…}`, each part one path segment, so the login reaches the
+     * panel as typed: pasted into the string, a password's `#` would start a fragment, `?` a query
+     * and `/` another segment.
+     */
+    private fun streamUrl(source: Source, path: StreamPath, vararg rest: String): String = baseUrl(source).newBuilder()
+        .addPathSegment(path.segment)
+        .addPathSegment(source.username.orEmpty())
+        .addPathSegment(source.password.orEmpty())
+        .apply { rest.forEach { addPathSegment(it) } }
+        .build()
+        .toString()
+
+    /** The first path segment of each kind of stream an Xtream panel serves. */
+    private enum class StreamPath(val segment: String) {
+        LIVE("live"),
+        MOVIE("movie"),
+        SERIES("series"),
+        TIMESHIFT("timeshift"),
     }
 
     private fun xmltvUrl(source: Source): HttpUrl = baseUrl(source).newBuilder()

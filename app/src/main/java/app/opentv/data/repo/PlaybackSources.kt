@@ -117,6 +117,9 @@ sealed interface Playable {
 
         /** The title, or the channel it comes from, is no longer in the catalogue. */
         GONE,
+
+        /** The provider's address isn't one, so no catch-up URL can be built from it. */
+        BAD_ADDRESS,
     }
 }
 
@@ -223,7 +226,13 @@ class PlaybackSources(
             ?.let { epgId -> db.programmes().startingAt(epgId, key.startUtcMillis) }
             .or(Failure.GONE)
         val minutes = TimeUnit.MILLISECONDS.toMinutes(programme.durationMillis).toInt()
-        val url = xtreamApi.catchupUrl(source, channel.streamId, key.startUtcMillis, minutes)
+        // Unlike a stored stream URL, this one is built now, from an address the viewer may have
+        // edited since the last sync.
+        val url = try {
+            xtreamApi.catchupUrl(source, channel.streamId, key.startUtcMillis, minutes)
+        } catch (e: XtreamApi.XtreamException) {
+            throw Unplayable(Failure.BAD_ADDRESS).apply { initCause(e) }
+        }
         return Playable.Ready(
             key,
             url,
