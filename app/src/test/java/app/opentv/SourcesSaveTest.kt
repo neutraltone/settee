@@ -123,7 +123,7 @@ class SourcesSaveTest {
     /** Saves [draft] as the Add provider form's Save does, and waits to hear whether its channels loaded. */
     private suspend fun save(viewModel: SourcesViewModel, draft: Source): Boolean {
         val done = CompletableDeferred<Boolean>()
-        viewModel.saveAndSync(draft, onDone = { done.complete(it) })
+        viewModel.saveAndSync(draft, onChannels = { failure -> done.complete(failure == null) })
         return withContext(Dispatchers.Default) { withTimeout(5_000) { done.await() } }
     }
 }
