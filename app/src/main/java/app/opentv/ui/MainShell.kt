@@ -114,13 +114,14 @@ internal fun MainShell(
     val railReturn = remember(current) { RailReturn() }
     val contentFocus = remember { FocusRequester() }
     val shellReturn = LocalShellReturn.current
-    SideEffect { shellReturn.tabTakesHighlight = current == Tab.HOME || current == Tab.LIVE }
+    SideEffect { shellReturn.tabTakesHighlight = current.takesHighlightItself }
     DisposableEffect(shellReturn, contentFocus, currentItem) {
         shellReturn.content = contentFocus
         shellReturn.tabItem = currentItem
         onDispose {
             if (shellReturn.content === contentFocus) shellReturn.content = null
             if (shellReturn.tabItem === currentItem) shellReturn.tabItem = null
+            shellReturn.tabTakesHighlight = false
         }
     }
     val entry = remember { RailEntry() }
@@ -262,6 +263,9 @@ private fun rememberRailSlide(): RailSlide {
     return slide
 }
 
+/** Home and the guide take the Highlight themselves as they appear, once loaded (`takeFocus`). */
+private val Tab.takesHighlightItself get() = this == Tab.HOME || this == Tab.LIVE
+
 /** OK on a tab sends the Highlight into that tab, until it gets there or the viewer moves on in the rail. */
 private class RailEntry {
     var entering by mutableStateOf(false)
@@ -273,7 +277,7 @@ private class RailEntry {
     var tabTakesItself = false
 
     fun pick(tab: Tab, current: Tab) {
-        tabTakesItself = tab != current && (tab == Tab.HOME || tab == Tab.LIVE)
+        tabTakesItself = tab != current && tab.takesHighlightItself
         entering = true
     }
 }
@@ -361,6 +365,12 @@ class ShellReturn {
      */
     var tabItem: FocusRequester? = null
 
+    /**
+     * How many of the tab's [OnShellReturn]s are ready to answer: none while its rows are still
+     * loading, which KeptShell waits out for a tab built again.
+     */
+    var readyToAnswer = 0
+
     /** Whether the tab on show takes the Highlight itself as it appears, as Home and Live do. */
     var tabTakesHighlight = false
 }
@@ -369,14 +379,21 @@ val LocalShellReturn = staticCompositionLocalOf { ShellReturn() }
 
 /**
  * Runs [answer] each time Back to the main screen asks the tab on show to put the Highlight back
- * ([ShellReturn.asked]). Collected rather than keyed on `asked`: KeptShell lowers it after a few frames,
- * and an effect keyed on it was cancelled there, mid-scroll, before it put the Highlight back.
+ * ([ShellReturn.asked]), once the tab is [ready] to: a tab whose rows are still coming says so, and
+ * answers when they come if it's still being asked. Collected rather than keyed on `asked`: KeptShell
+ * lowers it after a few frames, and an effect keyed on it was cancelled there, mid-scroll, before it
+ * put the Highlight back.
  */
 @Composable
-internal fun OnShellReturn(answer: suspend () -> Unit) {
+internal fun OnShellReturn(ready: Boolean = true, answer: suspend () -> Unit) {
     val shellReturn = LocalShellReturn.current
     val latest by rememberUpdatedState(answer)
-    LaunchedEffect(shellReturn) { snapshotFlow { shellReturn.asked }.filter { it }.collect { latest() } }
+    val isReady by rememberUpdatedState(ready)
+    DisposableEffect(shellReturn, ready) {
+        if (ready) shellReturn.readyToAnswer++
+        onDispose { if (ready) shellReturn.readyToAnswer-- }
+    }
+    LaunchedEffect(shellReturn) { snapshotFlow { shellReturn.asked && isReady }.filter { it }.collect { latest() } }
 }
 
 /** Marks a row (or the guide) as where Right out of the rail goes back to once it has had the Highlight. */

@@ -16,6 +16,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
@@ -70,6 +71,7 @@ import app.opentv.ui.vod.CoverGrid
 import app.opentv.ui.vod.MovieShelves
 import app.opentv.ui.vod.SeriesShelves
 import com.google.common.truth.Truth.assertThat
+import kotlinx.coroutines.delay
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -186,10 +188,22 @@ class KeptShellTest {
         )
     }
 
+    /** Whether Recordings' rows come [LOAD_MILLIS] after it's built, as a new view model's do. */
+    private var recordingsLoadLate = false
+
     /** Recordings, whose OK plays the recording. */
     @Composable
-    private fun Recordings(recordings: () -> List<Recording>) = RecordingsContent(
-        sections = recordingsSections(recordings(), emptyList(), emptyList(), NOW),
+    private fun Recordings(recordings: () -> List<Recording>) {
+        val loaded by produceState(!recordingsLoadLate) {
+            delay(LOAD_MILLIS)
+            value = true
+        }
+        RecordingsList(if (loaded) recordings() else emptyList())
+    }
+
+    @Composable
+    private fun RecordingsList(recordings: List<Recording>) = RecordingsContent(
+        sections = recordingsSections(recordings, emptyList(), emptyList(), NOW),
         profileNames = emptyMap(),
         onPlay = { nav.navigate(Routes.vodPlayer(MediaKey.Recording(it.id))) },
         onRetry = {},
@@ -665,9 +679,13 @@ class KeptShellTest {
     )
 
     /** The app, shown so that [StateRestorationTester.emulateSavedInstanceStateRestore] can rebuild it. */
-    private fun setRestorableApp(recordings: List<Recording> = (1L..3L).map(::recording)): StateRestorationTester {
+    private fun setRestorableApp(
+        recordings: List<Recording> = (1L..3L).map(::recording),
+        recordingsLoadLate: Boolean = false,
+    ): StateRestorationTester {
         val restoration = StateRestorationTester(compose)
         InstrumentationRegistry.getInstrumentation().setInTouchMode(false)
+        this.recordingsLoadLate = recordingsLoadLate
         setApp(recordings = { recordings }) { app ->
             restoration.setContent {
                 val inputMode = LocalInputModeManager.current
@@ -703,6 +721,22 @@ class KeptShellTest {
 
         assertThat(highlightedText()).containsMatch("Favourite|New|Drama")
         assertThat(railItemFocused("Movies")).isFalse()
+    }
+
+    @Test
+    fun `brought back on Recordings whose rows load late, the highlight is on the row it was on once they arrive`() {
+        // As a view model made anew does: no recordings at first, then the database's a moment later.
+        val restoration = setRestorableApp(recordingsLoadLate = true)
+        homeShowing()
+        compose.runOnIdle { nav.selectShellTab(Tab.RECORDINGS) }
+        compose.waitUntil(5_000) { compose.onAllNodes(hasText("Recording 1")).fetchSemanticsNodes().isNotEmpty() }
+        recordingRow("Recording 2").requestFocus()
+
+        restoration.emulateSavedInstanceStateRestore()
+        compose.waitForIdle()
+
+        recordingRow("Recording 2").assertIsFocused()
+        assertThat(railItemFocused("Recordings")).isFalse()
     }
 
     @Test
@@ -768,6 +802,9 @@ class KeptShellTest {
 
         /** Frames enough for any screen change: a fade would take at least 18. */
         const val SWITCH_FRAMES = 6
+
+        /** Longer than the tab is given to answer, as the database can take on a Stick. */
+        const val LOAD_MILLIS = 400L
 
         const val NOW = 1_800_000_000_000L
         const val HOUR = 3_600_000L

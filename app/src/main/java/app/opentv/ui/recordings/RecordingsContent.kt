@@ -186,18 +186,15 @@ fun RecordingsContent(
 private fun rememberRowReturn(sections: List<RecordingsSection>, heir: Heir, listState: LazyListState): RowReturn {
     val last = rememberSaveable { mutableStateOf<String?>(null) }
     val latest by rememberUpdatedState(sections)
-    OnShellReturn {
+    // Built again after Android let the app go, the list starts empty until the database answers.
+    OnShellReturn(ready = sections.isNotEmpty()) {
         // In the list's own order, headings and all, so a key's place is its index in the list.
         val items = latest.flatMap { listOf<Any>(it.heading) + it.rows.map { row -> row.key } }
         val rows = latest.flatMap { it.rows }.map { it.key }
         val target = last.value?.takeIf { it in rows } ?: rows.firstOrNull() ?: return@OnShellReturn
         heir.aimAt(target)
-        if (listState.layoutInfo.visibleItemsInfo.none {
-                it.key == target
-            }
-        ) {
-            listState.scrollToItem(items.indexOf(target))
-        }
+        val shown = listState.layoutInfo.visibleItemsInfo.any { it.key == target }
+        if (!shown) listState.scrollToItem(items.indexOf(target))
         // The requester goes on the row when it's next composed, scrolled to or not.
         withFrameNanos {}
         heir.take()
@@ -207,7 +204,12 @@ private fun rememberRowReturn(sections: List<RecordingsSection>, heir: Heir, lis
 
 /** Keeps [last] on the row that last had the Highlight. */
 private class RowReturn(private val heir: Heir, private val last: MutableState<String?>) {
-    fun modifierFor(row: String): Modifier = heir.modifierFor(row).onFocusChanged { if (it.hasFocus) last.value = row }
+    // One per row, kept, so a row composed again gets the same modifier rather than a new one to apply.
+    private val tracking = mutableMapOf<String, Modifier>()
+
+    fun modifierFor(row: String): Modifier = heir.modifierFor(row).then(
+        tracking.getOrPut(row) { Modifier.onFocusChanged { if (it.hasFocus) last.value = row } },
+    )
 }
 
 /** Which row's options are open, by key, and what it's being asked about. */
