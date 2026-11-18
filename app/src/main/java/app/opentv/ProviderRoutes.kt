@@ -33,12 +33,18 @@ fun NavController.openEditProvider(sourceId: Long) = navigate(Routes.editSource(
  * a test can build them with the real screens and check where each Add leads.
  */
 fun NavGraphBuilder.providerRoutes(nav: NavController, sources: SourcesViewModel) {
-    composable(Routes.ADD_SOURCE) {
+    composable(Routes.ADD_SOURCE) { entry ->
         AddSourceScreen(
             viewModel = sources,
+            // Back to the screen it was opened from, as a screen opened from a row returns to it
+            // (LOOK.md). Pushing Home instead would leave a second main screen over the first.
             onFinished = {
-                nav.navigate(Routes.MAIN) {
-                    popUpTo(Routes.ADD_SOURCE) { inclusive = true }
+                nav.ifStillOn(entry) {
+                    if (previousBackStackEntry != null) {
+                        popBackStack()
+                    } else {
+                        navigate(Routes.MAIN) { popUpTo(Routes.ADD_SOURCE) { inclusive = true } }
+                    }
                 }
             },
             // The first provider's Setup is already loading; OpenSubtitles' step, when there is one,
@@ -81,7 +87,7 @@ fun NavGraphBuilder.providerRoutes(nav: NavController, sources: SourcesViewModel
         AddSourceScreen(
             viewModel = sources,
             editingSourceId = sourceId,
-            onFinished = { nav.popBackStack() },
+            onFinished = { nav.ifStillOn(entry) { popBackStack() } },
         )
     }
 }

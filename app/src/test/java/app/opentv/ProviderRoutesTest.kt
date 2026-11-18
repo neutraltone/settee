@@ -25,8 +25,10 @@ import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import app.opentv.core.ServiceLocator
 import app.opentv.data.db.OpenTvDatabase
+import app.opentv.data.model.Source
 import app.opentv.data.model.SourceKind
 import app.opentv.ui.SourcesViewModel
+import app.opentv.ui.Tab
 import app.opentv.ui.design.SetteeType
 import app.opentv.ui.design.Text
 import app.opentv.ui.onboarding.STEP_ACTIONS
@@ -88,11 +90,27 @@ class ProviderRoutesTest {
                     val tab by entry.shellTab()
                     Text("Main on $tab", SetteeType.Body)
                 }
+                composable(Routes.MOVIE_DETAIL) { Text("A movie", SetteeType.Body) }
             }
         }
     }
 
     private fun route() = compose.runOnIdle { nav.currentDestination?.route }
+
+    /** How many entries of [route] are on the back stack. */
+    private fun entriesOf(route: String) =
+        compose.runOnIdle { nav.currentBackStack.value.count { it.destination.route == route } }
+
+    /**
+     * Waits for the save to reach [hold]. Through runOnIdle: the save runs on the main looper, and
+     * a condition that doesn't idle Compose never lets it turn.
+     */
+    private fun held(hold: FakePanel.Hold) = compose.waitUntil(5_000) { compose.runOnIdle { hold.reached.count == 0L } }
+
+    /** Waits for the save started from a provider's form to finish, channels and all. */
+    private fun saveFinishes(sources: SourcesViewModel) {
+        compose.waitUntil(5_000) { compose.runOnIdle { !sources.ui.value.adding } }
+    }
 
     /** Saves a playlist from its form, as the viewer would on the TV. */
     private fun savePlaylist() {
@@ -259,13 +277,120 @@ class ProviderRoutesTest {
     }
 
     @Test
-    fun `a provider added while there's one already doesn't open Setup, or the OpenSubtitles step`() {
+    fun `a provider added in Settings while there's one already goes back to Settings, not to Setup`() {
         runBlocking { graph.sourceRepository.save(PANEL_SOURCE.copy(id = 0, lastCatalogSyncMillis = 1)) }
-        setApp(start = Routes.ADD_SOURCE, sources = SourcesViewModel(app, graph))
+        val sources = SourcesViewModel(app, graph)
+        setApp(start = Routes.MAIN, sources = sources)
+        compose.runOnIdle {
+            nav.navigate(Routes.SETTINGS)
+            nav.openAddProvider()
+        }
 
         savePlaylist()
+        saveFinishes(sources)
 
-        compose.waitUntil(5_000) { route() == Routes.MAIN }
+        assertThat(route()).isEqualTo(Routes.SETTINGS)
+        assertThat(entriesOf(Routes.MAIN)).isEqualTo(1)
+    }
+
+    @Test
+    fun `a provider added from Live TV while there's one already goes back to Live TV`() {
+        runBlocking { graph.sourceRepository.save(PANEL_SOURCE.copy(id = 0, lastCatalogSyncMillis = 1)) }
+        val sources = SourcesViewModel(app, graph)
+        setApp(start = Routes.MAIN, sources = sources)
+        compose.runOnIdle {
+            nav.selectShellTab(Tab.LIVE)
+            nav.openAddProvider()
+        }
+
+        savePlaylist()
+        saveFinishes(sources)
+
+        compose.onNodeWithText("Main on LIVE").assertExists()
+        assertThat(entriesOf(Routes.MAIN)).isEqualTo(1)
+    }
+
+    @Test
+    fun `a save that finishes after the viewer left the add page doesn't take them anywhere`() {
+        runBlocking { graph.sourceRepository.save(PANEL_SOURCE.copy(id = 0, lastCatalogSyncMillis = 1)) }
+        val playlist = panel.hold("")
+        val sources = SourcesViewModel(app, graph)
+        setApp(start = Routes.MAIN, sources = sources)
+        compose.runOnIdle {
+            nav.navigate(Routes.SETTINGS)
+            nav.openAddProvider()
+        }
+
+        savePlaylist()
+        held(playlist)
+        compose.runOnIdle {
+            nav.popBackStack()
+            nav.popBackStack()
+            nav.navigate(Routes.movieDetail(9))
+        }
+        playlist.release()
+        saveFinishes(sources)
+
+        assertThat(route()).isEqualTo(Routes.MOVIE_DETAIL)
+        assertThat(entriesOf(Routes.MAIN)).isEqualTo(1)
+    }
+
+    /** A playlist provider already saved, for the tests that edit one. */
+    private fun savedPlaylist() = runBlocking {
+        graph.sourceRepository.save(
+            Source(
+                name = "Playlist",
+                kind = SourceKind.M3U,
+                url = "http://example.com/list.m3u",
+                lastCatalogSyncMillis = 1,
+            ),
+        )
+    }
+
+    /** Saves the provider on the form already open, once it has filled in from the provider. */
+    private fun saveEdited() {
+        compose.waitUntil(5_000) { compose.onAllNodesWithText("Edit provider").fetchSemanticsNodes().isNotEmpty() }
+        compose.onNodeWithText("Save and load").performClick()
+    }
+
+    @Test
+    fun `a save that finishes after the viewer left a provider's form doesn't close the screen they went to`() {
+        val id = savedPlaylist()
+        val channels = panel.hold("")
+        val sources = SourcesViewModel(app, graph)
+        setApp(start = Routes.MAIN, sources = sources)
+        compose.runOnIdle { nav.openEditProvider(id) }
+
+        saveEdited()
+        held(channels)
+        compose.runOnIdle {
+            nav.popBackStack()
+            nav.navigate(Routes.movieDetail(9))
+        }
+        channels.release()
+        saveFinishes(sources)
+
+        assertThat(sources.ui.value.addFailure).isNull()
+        assertThat(route()).isEqualTo(Routes.MOVIE_DETAIL)
+        assertThat(compose.runOnIdle { nav.previousBackStackEntry?.destination?.route }).isEqualTo(Routes.MAIN)
+    }
+
+    @Test
+    fun `a provider's form saved while still on it goes back to Settings`() {
+        val id = savedPlaylist()
+        val sources = SourcesViewModel(app, graph)
+        setApp(start = Routes.MAIN, sources = sources)
+        compose.runOnIdle {
+            nav.navigate(Routes.SETTINGS)
+            nav.openEditProvider(id)
+        }
+
+        saveEdited()
+        saveFinishes(sources)
+
+        assertThat(sources.ui.value.addFailure).isNull()
+        assertThat(route()).isEqualTo(Routes.SETTINGS)
+        assertThat(entriesOf(Routes.MAIN)).isEqualTo(1)
     }
 
     @Test

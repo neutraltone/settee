@@ -97,6 +97,15 @@ fun NavController.leaveLivePlayer(from: NavBackStackEntry) {
 }
 
 /**
+ * Runs [action] only while [from] is still the screen on top. For what finishes after the viewer
+ * may have left, such as a provider's save: it carries on in the background, and acting on the
+ * back stack then would close or cover whatever they went to instead.
+ */
+fun NavController.ifStillOn(from: NavBackStackEntry, action: NavController.() -> Unit) {
+    if (currentBackStackEntry == from) action()
+}
+
+/**
  * Leaves the movie and episode player shown by [from] for [titlePage] (see [titlePageFor]). When
  * that page is already under the player it goes back to it; otherwise the page takes the player's
  * place, so Back from the page goes to wherever the viewer started instead of into the player
