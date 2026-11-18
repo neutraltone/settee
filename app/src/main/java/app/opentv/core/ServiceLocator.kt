@@ -268,7 +268,7 @@ object ServiceLocator {
          * OpenSubtitles step carries on with the address the phone sent the first provider through.
          */
         val pairingServer: PairingServer by lazy {
-            PairingServer(appScope, PairingFonts(appContext), appContext::getString)
+            PairingServer(appScope, PairingFonts(appContext), resources = { LocaleUtils.wrap(appContext).resources })
         }
 
         /** Says "this TV" or "this device" as the app decided at launch, with [isRunningOnTelevision]. */

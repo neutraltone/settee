@@ -9,6 +9,7 @@ import android.app.Application
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import app.opentv.core.ServiceLocator
+import app.opentv.core.ViewerError
 import app.opentv.data.db.OpenTvDatabase
 import app.opentv.data.model.Source
 import app.opentv.data.model.SourceKind
@@ -58,7 +59,7 @@ class SourcesSaveTest {
     fun `a later provider sent from the phone whose login fails isn't kept, so trying again doesn't add two`() {
         runBlocking {
             graph.sourceRepository.save(PANEL_SOURCE.copy(id = 0, lastCatalogSyncMillis = 1))
-            val failure = CompletableDeferred<String?>()
+            val failure = CompletableDeferred<ViewerError?>()
 
             SourcesViewModel(app, graph).saveAndSync(
                 Source(name = "", kind = SourceKind.M3U, url = "http://example.com/list.m3u"),
@@ -67,7 +68,7 @@ class SourcesSaveTest {
             )
 
             val reason = withContext(Dispatchers.Default) { withTimeout(5_000) { failure.await() } }
-            assertThat(reason).contains("There are no channels at that address")
+            assertThat(reason?.sentence).contains("There are no channels at that address")
             assertThat(graph.sourceRepository.all().map { it.kind }).containsExactly(SourceKind.XTREAM)
         }
     }

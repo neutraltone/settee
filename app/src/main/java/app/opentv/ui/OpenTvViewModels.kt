@@ -263,7 +263,7 @@ class SourcesViewModel @JvmOverloads constructor(
         draft: Source,
         keepIfFails: Boolean = true,
         onSetup: () -> Unit = {},
-        onChannels: (failure: String?) -> Unit = {},
+        onChannels: (failure: ViewerError?) -> Unit = {},
         onDone: (Boolean) -> Unit = {},
     ) {
         viewModelScope.launch {
@@ -284,7 +284,7 @@ class SourcesViewModel @JvmOverloads constructor(
             if (saved == null) {
                 val failed = messages.of(RefreshMessages.Step.SaveFailed)
                 _ui.update { it.copy(adding = false, syncMessage = failed) }
-                onChannels(failed)
+                onChannels(ViewerError(failed))
                 onDone(false)
                 return@launch
             }
@@ -299,7 +299,7 @@ class SourcesViewModel @JvmOverloads constructor(
                 // A failed login is back on the form, with why.
                 val failure = (outcome as? CatalogueRefresh.Outcome.AddFailed)?.reason
                 _ui.update { it.copy(adding = false, addFailure = failure, syncMessage = messages.of(outcome)) }
-                onChannels(failure?.sentence)
+                onChannels(failure)
                 return@launch
             }
 
@@ -317,7 +317,7 @@ class SourcesViewModel @JvmOverloads constructor(
                     syncMessage = messages.of(outcome),
                 )
             }
-            onChannels(failure?.sentence)
+            onChannels(failure)
             onDone(outcome is CatalogueRefresh.Outcome.ChannelsLoaded)
         }
     }

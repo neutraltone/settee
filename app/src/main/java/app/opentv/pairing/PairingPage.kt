@@ -20,13 +20,13 @@ import app.opentv.ui.design.SetteeColors
  */
 object PairingPage {
 
-    fun form(token: String, error: String?): String = page(
+    fun form(token: String, error: Error?): String = page(
         token = token,
         content = """
         <h1>Set up Settee</h1>
         <p class="sub">Filling this in here beats using the remote.</p>
 
-        ${if (error != null) "<div class=\"error\">${escape(error)}</div>" else ""}
+        ${errorBox(error)}
 
         <form id="form" method="post" action="/submit" autocomplete="off">
           <input type="hidden" name="t" value="${escape(token)}">

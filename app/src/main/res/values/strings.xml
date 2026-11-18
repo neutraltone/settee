@@ -460,6 +460,11 @@
     <string name="pairing_phone_all_done_body">Carry on on your TV.</string>
     <string name="pairing_phone_stopped_title">Setup stopped on your TV</string>
     <string name="pairing_phone_stopped_body">Start setting up from your phone again on the TV to send your details.</string>
+    <string name="pairing_phone_missing_address">Add your provider\'s address, then send it again.</string>
+    <string name="pairing_phone_too_many_title">Too many wrong codes</string>
+    <string name="pairing_phone_too_many_body">Start setting up from your phone again on the TV to get a new code.</string>
+    <string name="pairing_phone_sent_title">Sent to your TV</string>
+    <string name="pairing_phone_sent_body">You can put your phone down. Carry on on your TV.</string>
     <string name="pairing_starting">Getting pairing ready</string>
     <string name="pairing_got_it">Got it. Connecting to your provider…</string>
     <string name="pairing_qr_desc">QR code linking to the setup page on this device</string>
@@ -821,6 +826,10 @@
     <plurals name="refresh_problems">
         <item quantity="one">%d problem</item>
         <item quantity="other">%d problems</item>
+    </plurals>
+    <plurals name="pairing_phone_wrong_code">
+        <item quantity="one">That code doesn\'t match the one on your TV. %d try left.</item>
+        <item quantity="other">That code doesn\'t match the one on your TV. %d tries left.</item>
     </plurals>
     <plurals name="test_ok_xtream_connections">
         <item quantity="one">Watch on %d screen at a time.</item>
