@@ -22,8 +22,8 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
 /**
- * Where [leaveProviderPage] goes, through the app's real routes. Each screen is a stand-in that
- * only says which screen it is (and, for the main screen, which tab it's on).
+ * Where [leaveProviderPage] goes, with the app's route names. Each screen is a stand-in that only
+ * says which screen it is (and, for the main screen, which tab it's on).
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], application = android.app.Application::class)
@@ -51,7 +51,7 @@ class LeaveProviderPageTest {
 
     private fun page(): NavBackStackEntry = compose.runOnIdle { nav.currentBackStackEntry!! }
 
-    private fun routes() = compose.runOnIdle { nav.currentBackStack.value.mapNotNull { it.destination.route } }
+    private fun routes() = compose.runOnIdle { nav.backStackRoutes }
 
     @Test
     fun `the page Settee opened on goes to Home, as there's nothing under it`() {

@@ -272,14 +272,17 @@ class ProviderRoutesTest {
     }
 
     /** How many main screens are on the back stack: more than one and Back from Home asks to leave Settee. */
-    private fun mainScreens() = compose.runOnIdle {
-        nav.currentBackStack.value.count { it.destination.route == Routes.MAIN }
-    }
+    private fun mainScreens() = routes().count { it == Routes.MAIN }
 
-    /** Saves a playlist with its channels held back, then lets them in once [meanwhile] has run. */
-    private fun saveHeld(sources: SourcesViewModel, meanwhile: () -> Unit) {
+    private fun routes() = compose.runOnIdle { nav.backStackRoutes }
+
+    /**
+     * Saves with [save] (by default a new playlist) with its channels held back, then lets them in
+     * once [meanwhile] has run.
+     */
+    private fun saveHeld(sources: SourcesViewModel, save: () -> Unit = ::savePlaylist, meanwhile: () -> Unit) {
         val channels = panel.hold("")
-        savePlaylist()
+        save()
         // Through runOnIdle, which lets the main thread take the database's replies; waiting on the
         // latch alone never would.
         compose.waitUntil(5_000) { compose.runOnIdle { channels.reached.count == 0L } }
@@ -325,7 +328,11 @@ class ProviderRoutesTest {
         )
     }
 
-    private fun routes() = compose.runOnIdle { nav.currentBackStack.value.mapNotNull { it.destination.route } }
+    /** Saves the provider form that's open, once it has loaded. */
+    private fun saveForm() {
+        compose.waitUntil(5_000) { compose.onAllNodesWithText("Save and load").fetchSemanticsNodes().isNotEmpty() }
+        compose.onNodeWithText("Save and load").performClick()
+    }
 
     @Test
     fun `a provider's form saved and left before its channels came in doesn't close what's open since`() {
@@ -336,19 +343,30 @@ class ProviderRoutesTest {
             nav.navigate(Routes.SETTINGS)
             nav.openEditProvider(id)
         }
-        compose.waitUntil(5_000) { compose.onAllNodesWithText("Save and load").fetchSemanticsNodes().isNotEmpty() }
 
-        val channels = panel.hold("")
-        compose.onNodeWithText("Save and load").performClick()
-        compose.waitUntil(5_000) { compose.runOnIdle { channels.reached.count == 0L } }
-        compose.runOnIdle {
-            nav.popBackStack()
-            nav.navigate(Routes.movieDetail(9))
+        saveHeld(sources, save = ::saveForm) {
+            compose.runOnIdle {
+                nav.popBackStack()
+                nav.navigate(Routes.movieDetail(9))
+            }
         }
-        channels.release()
-        compose.waitUntil(5_000) { compose.runOnIdle { !sources.ui.value.adding } }
 
         assertThat(routes()).containsExactly(Routes.MAIN, Routes.SETTINGS, Routes.MOVIE_DETAIL).inOrder()
+    }
+
+    @Test
+    fun `a provider's form saved from Settings goes back to Settings once its channels are in`() {
+        val id = savedPlaylist()
+        setApp(start = Routes.MAIN, sources = SourcesViewModel(app, graph))
+        compose.runOnIdle {
+            nav.navigate(Routes.SETTINGS)
+            nav.openEditProvider(id)
+        }
+
+        saveForm()
+
+        compose.waitUntil(5_000) { route() == Routes.SETTINGS }
+        assertThat(routes()).containsExactly(Routes.MAIN, Routes.SETTINGS).inOrder()
     }
 
     @Test
