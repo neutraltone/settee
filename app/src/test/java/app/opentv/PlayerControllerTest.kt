@@ -21,6 +21,7 @@ import app.opentv.data.repo.PlaybackSources
 import app.opentv.player.PlayerController
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Before
@@ -136,6 +137,80 @@ class PlayerControllerTest {
     }
 
     @Test
+    fun `a live channel whose stream ends is restarted, then says it stopped, with Try again`() {
+        val controller = players.controller(ENDING_LIVE)
+        val states = statesOf(controller)
+
+        controller.play(PlayerController.Request(MediaKey.Live(1)), debounce = false)
+        players.untilItStopsRestarting(controller)
+
+        val error = controller.state.value as PlayerController.State.Error
+        assertThat(error.reason.sentence).isEqualTo("This channel stopped. Try again, or pick another channel.")
+        assertThat(error.reason.detail).isEqualTo("StreamEnded")
+        assertThat(error.canRetry).isTrue()
+        assertThat(players.played).hasSize(TestPlayers.AUTO_TRIES)
+        // Idle before it was asked for anything, and never again.
+        assertThat(states.drop(1)).doesNotContain(PlayerController.State.Idle)
+        assertThat(states.filterIsInstance<PlayerController.State.Buffering>().size)
+            .isAtLeast(TestPlayers.AUTO_TRIES)
+    }
+
+    @Test
+    fun `a channel cut off now and then is restarted every time, however long it's watched`() {
+        val controller = players.controller(SESSION_LIMITED_LIVE)
+        controller.play(PlayerController.Request(MediaKey.Live(1)), debounce = false)
+
+        repeat(TestPlayers.AUTO_TRIES) { cut ->
+            players.untilReady(controller.player)
+            players.clock.advanceTime(SESSION_MILLIS)
+            players.until { players.played.size == cut + 2 }
+        }
+
+        assertThat(controller.state.value).isNotInstanceOf(PlayerController.State.Error::class.java)
+    }
+
+    @Test
+    fun `the last channel ending while the next is being asked for leaves the loading line up`() {
+        val asked = CompletableDeferred<Unit>()
+        val controller = players.controller(ENDING_LIVE) { key ->
+            if (key == MediaKey.Live(2)) asked.await()
+            stream(key)
+        }
+        controller.play(PlayerController.Request(MediaKey.Live(1)), debounce = false)
+        players.untilReady(controller.player)
+
+        controller.play(PlayerController.Request(MediaKey.Live(2)), debounce = false)
+        players.until { controller.player.playbackState == Player.STATE_ENDED }
+
+        assertThat(controller.state.value).isInstanceOf(PlayerController.State.Buffering::class.java)
+        asked.complete(Unit)
+    }
+
+    @Test
+    fun `picking a channel again after it stopped gets its own restarts`() {
+        val controller = players.controller(ENDING_LIVE)
+        controller.play(PlayerController.Request(MediaKey.Live(1)), debounce = false)
+        players.untilItStopsRestarting(controller)
+
+        controller.play(PlayerController.Request(MediaKey.Live(1)), debounce = false)
+        players.untilItStopsRestarting(controller, before = TestPlayers.AUTO_TRIES)
+
+        assertThat(players.played).hasSize(2 * TestPlayers.AUTO_TRIES)
+    }
+
+    @Test
+    fun `a film that ends is finished, not restarted or shown as an error`() {
+        val controller = players.controller(ENDING_LIVE)
+
+        controller.play(PlayerController.Request(MediaKey.Movie(1)), debounce = false)
+        players.until { controller.player.playbackState == Player.STATE_ENDED }
+        players.advance(TestPlayers.RESTARTS_MILLIS)
+
+        assertThat(controller.state.value).isEqualTo(PlayerController.State.Idle)
+        assertThat(players.played).hasSize(1)
+    }
+
+    @Test
     fun `a channel the provider gives no link for says so, with what went wrong on the detail line`() {
         val controller = players.controller(LIVE) { key -> Playable.Failed(key, Playable.Failure.LINK_REFUSED) }
 
@@ -218,6 +293,13 @@ class PlayerControllerTest {
         controller.play(PlayerController.Request(MediaKey.Live(2)), debounce = false)
         players.until { controller.state.value is PlayerController.State.Error }
         return controller
+    }
+
+    /** Every state [controller] is in from now on, in order, as the screens see them. */
+    private fun statesOf(controller: PlayerController): List<PlayerController.State> {
+        val states = mutableListOf<PlayerController.State>()
+        players.scope.launch { controller.state.collect { states += it } }
+        return states
     }
 
     private fun stream(key: MediaKey) =

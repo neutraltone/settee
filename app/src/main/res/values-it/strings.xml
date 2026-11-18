@@ -249,6 +249,7 @@
     <string name="error_anything_else">La riproduzione non è partita. Riprova, oppure scegli qualcos\'altro.</string>
     <string name="error_cant_reach_tv">Impossibile raggiungere il tuo provider. Controlla che questo televisore sia online e che l\'indirizzo sia corretto.</string>
     <string name="error_cant_reach_device">Impossibile raggiungere il tuo provider. Controlla che questo dispositivo sia online e che l\'indirizzo sia corretto.</string>
+    <string name="error_live_ended">Questo canale si è fermato. Riprova, oppure scegli un altro canale.</string>
     <string name="error_timed_out">Il tuo provider ha smesso di rispondere. Potrebbe essere sovraccarico, quindi riprova tra un momento.</string>
     <string name="error_web_page">Il tuo provider ha inviato una pagina web invece del video. Il link potrebbe essere scaduto, quindi prova ad aggiornare il tuo provider in Impostazioni.</string>
     <string name="error_damaged">Questo video è danneggiato e non si può riprodurre. Dipende dal tuo provider, quindi scegli qualcos\'altro.</string>

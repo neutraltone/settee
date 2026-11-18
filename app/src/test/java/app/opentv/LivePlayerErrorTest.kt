@@ -131,6 +131,16 @@ class LivePlayerErrorTest {
     }
 
     @Test
+    fun `a channel whose stream ends says it stopped, with the highlight on Try again`() {
+        show(players.controller(ENDING_LIVE))
+        compose.mainClock.advanceTimeBy(CARD_TIMEOUT_MILLIS)
+
+        compose.onNodeWithText("This channel stopped. Try again, or pick another channel.").assertExists()
+        compose.onNodeWithText("Try again").assertIsFocused()
+        captureScreen("live_player_stream_ended")
+    }
+
+    @Test
     fun `OK tries the channel again, without opening the controls`() {
         show(deadChannel())
         val before = tries

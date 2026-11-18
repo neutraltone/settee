@@ -249,6 +249,7 @@
     <string name="error_anything_else">Das wurde nicht abgespielt. Versuch es erneut, oder wähle etwas anderes.</string>
     <string name="error_cant_reach_tv">Dein Anbieter ist nicht erreichbar. Überprüfe, ob dieser Fernseher online ist und die Adresse stimmt.</string>
     <string name="error_cant_reach_device">Dein Anbieter ist nicht erreichbar. Überprüfe, ob dieses Gerät online ist und die Adresse stimmt.</string>
+    <string name="error_live_ended">Dieser Sender ist stehen geblieben. Versuch es erneut, oder wähle einen anderen Sender.</string>
     <string name="error_timed_out">Dein Anbieter antwortet nicht mehr. Vielleicht ist er ausgelastet, also versuch es gleich noch einmal.</string>
     <string name="error_web_page">Dein Anbieter hat eine Webseite statt eines Videos geschickt. Der Link ist vielleicht abgelaufen, also aktualisiere deinen Anbieter in den Einstellungen.</string>
     <string name="error_damaged">Dieses Video ist beschädigt und lässt sich nicht abspielen. Das liegt an deinem Anbieter, also wähle etwas anderes.</string>

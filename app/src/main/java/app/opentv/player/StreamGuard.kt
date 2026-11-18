@@ -61,7 +61,10 @@ internal class StreamGuard(
 
     // Straight to the sentence: a panel that sends nothing usually does so on every Quality, so stepping
     // down would only make the viewer wait the limit again for each. Try again is theirs to choose.
-    private val startUp = StartUpWatch(scope) { giveUp(PlaybackErrors.didntStart(context), canRetry = true) }
+    private val startUp =
+        StartUpWatch(scope) {
+            giveUp(PlaybackErrors.describe(context, PlaybackErrors.Stopped.START_UP_LIMIT), canRetry = true)
+        }
 
     /** What the player reports its decoders to, for the first-frame limit. */
     val firstFrameListener: AnalyticsListener get() = firstFrame

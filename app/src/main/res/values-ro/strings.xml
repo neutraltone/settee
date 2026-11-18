@@ -249,6 +249,7 @@
     <string name="error_anything_else">Acest conținut nu a putut fi redat. Încearcă din nou sau alege altceva.</string>
     <string name="error_cant_reach_tv">Furnizorul tău nu poate fi contactat. Verifică dacă acest televizor este online și dacă adresa este corectă.</string>
     <string name="error_cant_reach_device">Furnizorul tău nu poate fi contactat. Verifică dacă acest dispozitiv este online și dacă adresa este corectă.</string>
+    <string name="error_live_ended">Acest canal s-a oprit. Încearcă din nou sau alege alt canal.</string>
     <string name="error_timed_out">Furnizorul tău nu mai răspunde. Poate fi ocupat, așa că încearcă din nou peste puțin timp.</string>
     <string name="error_web_page">Furnizorul tău a trimis o pagină web în loc de video. Este posibil ca linkul să fi expirat, așa că încearcă să reîmprospătezi furnizorul în Setări.</string>
     <string name="error_damaged">Acest videoclip este deteriorat și nu poate fi redat. Problema e la furnizorul tău, așa că încearcă altceva.</string>
