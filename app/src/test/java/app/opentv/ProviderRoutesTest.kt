@@ -25,6 +25,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
+import androidx.test.espresso.Espresso
 import app.opentv.core.ServiceLocator
 import app.opentv.data.db.OpenTvDatabase
 import app.opentv.data.model.Source
@@ -281,6 +282,55 @@ class ProviderRoutesTest {
         compose.waitUntil(5_000) { route() == Routes.SETUP }
         assertThat(compose.runOnIdle { nav.previousBackStackEntry?.destination?.route })
             .isNotEqualTo(Routes.OPENSUBTITLES_STEP)
+    }
+
+    @Test
+    fun `Back on the OpenSubtitles step carries on to Setup, never back to the saved provider's form`() {
+        // Setup still loading, as it is when the viewer reads the step.
+        val guide = panel.hold("xmltv.php")
+        setApp(start = Routes.ADD_SOURCE, sources = SourcesViewModel(app, withOpenSubtitles))
+        savePlaylist()
+        compose.waitUntil(5_000) { route() == Routes.OPENSUBTITLES_STEP }
+
+        Espresso.pressBack()
+
+        compose.waitUntil(5_000) { route() == Routes.SETUP }
+        assertThat(runBlocking { withOpenSubtitles.sourceRepository.all() }).hasSize(1)
+        guide.release()
+        compose.waitUntil(5_000) { compose.onAllNodesWithText("Take me to Settee").fetchSemanticsNodes().isNotEmpty() }
+        assertThat(route()).isEqualTo(Routes.SETUP)
+        assertThat(runBlocking { withOpenSubtitles.sourceRepository.all() }).hasSize(1)
+    }
+
+    @Test
+    fun `a login that fails while the OpenSubtitles step is open goes back to the form, which says why`() {
+        panel.replies[""] = "#EXTM3U\n"
+        val playlist = panel.hold("")
+        setApp(start = Routes.ADD_SOURCE, sources = SourcesViewModel(app, withOpenSubtitles))
+        savePlaylist()
+        compose.waitUntil(5_000) { route() == Routes.OPENSUBTITLES_STEP }
+
+        playlist.release()
+
+        compose.waitUntil(5_000) {
+            compose.onAllNodesWithText(NO_CHANNELS, substring = true).fetchSemanticsNodes().isNotEmpty()
+        }
+        assertThat(route()).isEqualTo(Routes.ADD_SOURCE)
+        compose.onNodeWithText("Playlist URL").assertExists()
+    }
+
+    @Test
+    fun `Back in Sign in on this TV's window closes the window and stays on the OpenSubtitles step`() {
+        setApp(start = Routes.ADD_SOURCE, sources = SourcesViewModel(app, withOpenSubtitles))
+        savePlaylist()
+        compose.waitUntil(5_000) { route() == Routes.OPENSUBTITLES_STEP }
+        compose.onNodeWithText("Sign in on this TV").performClick()
+        compose.onNodeWithText("Username").assertExists()
+
+        Espresso.pressBack()
+
+        compose.onNodeWithText("Username").assertDoesNotExist()
+        assertThat(route()).isEqualTo(Routes.OPENSUBTITLES_STEP)
     }
 
     @Test
