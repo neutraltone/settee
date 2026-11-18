@@ -189,7 +189,7 @@ internal fun MovieDetailContent(
     val likeThisRow = rememberLazyListState()
     var choosingQuality by remember(movie.id) { mutableStateOf(false) }
     var askingLanguage by remember(movie.id) { mutableStateOf(false) }
-    val plays = versions.cantPlay == null
+    val plays = versions.plays
     val scope = rememberCoroutineScope()
     // Null while the picker is closed; Loading while the add-ons are asked.
     var picker by remember(movie.id) { mutableStateOf<AddonPicker?>(null) }
