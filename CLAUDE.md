@@ -221,7 +221,10 @@ keep it up to date whenever a mapping changes or a new failure can reach the scr
   when `BaselineProfileTest` fails, or when preparing a release whose changes reworked the screens the
   journeys walk (check with the `git diff` in that doc). When regenerating, follow that doc's steps for
   fixing a journey before doing full runs.
-- Before opening a PR, ask the user whether to run `/code-review` against `main` first.
+- **When a ticket's fix is green, carry on to review; don't stop at the commit.** Run
+  `/mattpocock-skills:code-review` against `origin/main` (not the built-in `/code-review`, and not local
+  `main`, which lags in a worktree), ask the user which findings to fix, fix only those, then open the
+  PR with `/pr` and Auto-fix on (`docs/WORKFLOW.md`, steps 6 and 7).
 
 ## Agent skills
 
