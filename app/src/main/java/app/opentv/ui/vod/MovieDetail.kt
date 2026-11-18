@@ -407,7 +407,7 @@ private sealed interface AddonPicker {
     data object Loading : AddonPicker
 
     /** What the add-ons came back with. */
-    data class Answered(val streams: AddonStreams) : AddonPicker
+    data class Answered(val result: AddonStreams) : AddonPicker
 }
 
 /**
@@ -430,17 +430,16 @@ private fun AddonStreamPicker(
         ) {
             Text(stringResource(R.string.vod_addon_pick_title), style = SetteeType.Section)
             Spacer(Modifier.height(12.dp))
-            when {
-                picker is AddonPicker.Loading -> Text(
+            val result = (picker as? AddonPicker.Answered)?.result
+            when (result) {
+                null -> Text(
                     stringResource(R.string.vod_addon_loading),
                     style = SetteeType.Body,
                     color = SetteeColors.QuietText,
                 )
-                picker is AddonPicker.Answered && picker.streams is AddonStreams.Found ->
-                    StreamList(picker.streams.streams, onPick)
-                picker is AddonPicker.Answered && picker.streams is AddonStreams.Failed ->
-                    AddonsFailed(picker.streams.error, onRetry)
-                else -> Text(
+                is AddonStreams.Found -> StreamList(result.streams, onPick)
+                is AddonStreams.Failed -> AddonsFailed(result.error, onRetry)
+                AddonStreams.NoneFound -> Text(
                     stringResource(R.string.vod_addon_none),
                     style = SetteeType.Body,
                     color = SetteeColors.QuietText,
@@ -450,15 +449,24 @@ private fun AddonStreamPicker(
     }
 }
 
-/** Why every add-on failed, and Try again, which has the Highlight so OK asks them again. */
+/**
+ * Gives [requester] the Highlight once the picker's window is up, again whenever [shown] changes.
+ * Asked from inside the dialog: its window composes after the page's, and a FocusRequester asked
+ * before it is attached throws.
+ */
+@Composable
+private fun FocusOnceShown(requester: FocusRequester, shown: Any) {
+    LaunchedEffect(shown) {
+        withFrameNanos {}
+        runCatching { requester.requestFocus() }
+    }
+}
+
+/** Why the add-ons gave nothing, and Try again, which has the Highlight so OK asks them again. */
 @Composable
 private fun AddonsFailed(error: ViewerError, onRetry: () -> Unit) {
     val retry = remember { FocusRequester() }
-    // As StreamList: asked from inside the dialog, once its window is attached.
-    LaunchedEffect(error) {
-        withFrameNanos {}
-        runCatching { retry.requestFocus() }
-    }
+    FocusOnceShown(retry, error)
     ErrorMessage(error.sentence, error.detail, textAlign = TextAlign.Start)
     Spacer(Modifier.height(18.dp))
     PillButton(
@@ -471,12 +479,7 @@ private fun AddonsFailed(error: ViewerError, onRetry: () -> Unit) {
 @Composable
 private fun StreamList(streams: List<StremioStream>, onPick: (StremioStream) -> Unit) {
     val first = remember { FocusRequester() }
-    // Asked from inside the dialog: its window composes after the page's, and a FocusRequester asked
-    // before it is attached throws.
-    LaunchedEffect(streams) {
-        withFrameNanos {}
-        runCatching { first.requestFocus() }
-    }
+    FocusOnceShown(first, streams)
     LazyColumn(verticalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.heightIn(max = 360.dp)) {
         // Not keyed by URL: two add-ons can offer the same link, and a repeated key would crash the list.
         itemsIndexed(streams) { index, stream ->

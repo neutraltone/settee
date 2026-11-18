@@ -44,6 +44,15 @@ class StremioClientTest {
     }
 
     @Test
+    fun `a 403 is not an add-on either, not trouble to wait out`() {
+        val failure = assertThrows(AddonFailure.NotAnAddon::class.java) {
+            client("403").fetchManifest(manifest)
+        }
+
+        assertThat(failure.status).isEqualTo(403)
+    }
+
+    @Test
     fun `a 503 is the add-on's server in trouble`() {
         val failure = assertThrows(AddonFailure.Http::class.java) {
             client("503").fetchManifest(manifest)

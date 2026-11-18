@@ -28,12 +28,14 @@ import app.opentv.data.model.SeriesRef
 import app.opentv.data.model.Source
 import app.opentv.data.model.SourceKind
 import app.opentv.data.model.StreamKind
+import app.opentv.data.model.StremioAddon
 import app.opentv.data.model.StremioStream
 import app.opentv.data.model.liveAt
 import app.opentv.data.model.ref
 import app.opentv.data.model.refreshFailure
 import app.opentv.data.parser.VodTitleCleaner
 import app.opentv.data.parser.displayTitle
+import app.opentv.data.remote.AddonFailure
 import app.opentv.data.remote.ProviderException
 import app.opentv.data.repo.CatalogRepository
 import app.opentv.data.repo.CatalogueRefresh
@@ -936,12 +938,12 @@ val Category.browseKey: String get() = "$sourceId:$id"
 /** What a film's add-ons came back with, for its Add-on sources picker. */
 sealed interface AddonStreams {
     /** TMDB couldn't match the film to IMDb, or the add-ons answered with nothing that plays directly. */
-    data object NoMatch : AddonStreams
+    data object NoneFound : AddonStreams
 
     /** The streams that play directly, from every add-on that answered. */
     data class Found(val streams: List<StremioStream>) : AddonStreams
 
-    /** Every add-on failed: [error] says why the first did. */
+    /** Every add-on failed, or TMDB didn't answer: [error] says why. */
     data class Failed(val error: ViewerError) : AddonStreams
 }
 
@@ -1076,27 +1078,37 @@ class VodViewModel @JvmOverloads constructor(
     /**
      * The streams the configured add-ons offer for [movie], resolved through TMDB for the IMDb id.
      * Each add-on is asked on its own, so one failing doesn't sink the rest: it's [AddonStreams.Failed]
-     * only when every one failed, saying why the first did.
+     * only when every one failed, saying why the first did, or when TMDB didn't answer.
      */
     suspend fun addonStreams(movie: Movie): AddonStreams {
         val addons = settings.stremioAddons.value
-        val imdb = if (addons.isEmpty()) null else graph.catalogRepository.imdbIdFor(movie)
-        val answers = if (imdb == null) {
-            emptyList()
-        } else {
-            withContext(Dispatchers.IO) {
-                addons.map { addon ->
-                    runCatching { graph.stremioClient.streams(addon.manifestUrl, addon.name, "movie", imdb) }
-                }
-            }
-        }
-        val streams = answers.flatMap { it.getOrDefault(emptyList()) }
-        val failure = answers.firstOrNull()?.exceptionOrNull()
+        val imdb = if (addons.isEmpty()) Result.success(null) else graph.catalogRepository.imdbIdFor(movie)
+        val answers = imdb.fold(
+            onSuccess = { id ->
+                if (id == null) emptyList() else withContext(Dispatchers.IO) { addons.map { askAddon(it, id) } }
+            },
+            onFailure = { listOf(AddonAnswer.Failed(AddonFailure.NoLookup(it))) },
+        )
+        val streams = answers.filterIsInstance<AddonAnswer.Streams>().flatMap { it.streams }
+        val firstFailure = (answers.firstOrNull() as? AddonAnswer.Failed)?.failure
         return when {
             streams.isNotEmpty() -> AddonStreams.Found(streams)
-            failure != null && answers.none { it.isSuccess } -> AddonStreams.Failed(graph.errorWording.ofAddon(failure))
-            else -> AddonStreams.NoMatch
+            firstFailure != null && answers.all { it is AddonAnswer.Failed } ->
+                AddonStreams.Failed(graph.errorWording.ofAddon(firstFailure))
+            else -> AddonStreams.NoneFound
         }
+    }
+
+    // Only an AddonFailure: anything else, cancellation above all, isn't the add-on's to word.
+    private fun askAddon(addon: StremioAddon, imdb: String): AddonAnswer = try {
+        AddonAnswer.Streams(graph.stremioClient.streams(addon.manifestUrl, addon.name, "movie", imdb))
+    } catch (failure: AddonFailure) {
+        AddonAnswer.Failed(failure)
+    }
+
+    private sealed interface AddonAnswer {
+        data class Streams(val streams: List<StremioStream>) : AddonAnswer
+        data class Failed(val failure: AddonFailure) : AddonAnswer
     }
 
     // ---- Netflix-style home rows ----------------------------------------------------------------

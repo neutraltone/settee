@@ -278,6 +278,8 @@
     <string name="error_addon_trouble">アドオン側で問題が起きています。アドオン側の問題なので、しばらくしてからもう一度お試しください。</string>
     <string name="error_not_an_addon_tv">そのアドレスからアドオンを取得できませんでした。manifest.jsonのリンクか、このテレビのインターネットが先にログインを求めていないかを確認してください。</string>
     <string name="error_not_an_addon_device">そのアドレスからアドオンを取得できませんでした。manifest.jsonのリンクか、この端末のインターネットが先にログインを求めていないかを確認してください。</string>
+    <string name="error_addon_lookup_tv">アドオンに問い合わせるための映画の検索ができませんでした。このテレビがオンラインか確認して、もう一度お試しください。</string>
+    <string name="error_addon_lookup_device">アドオンに問い合わせるための映画の検索ができませんでした。この端末がオンラインか確認して、もう一度お試しください。</string>
     <string name="error_device_refused">プロバイダーがこの情報を受け付けませんでした。「設定」でプロバイダーの情報を確認してください。</string>
     <string name="error_guide">この番組表をダウンロードできませんでした。少し待ってからもう一度お試しください。</string>
     <string name="error_guide_empty">この番組表はダウンロードできましたが、番組が入っていませんでした。正しいリンクかどうかを確認してください。</string>

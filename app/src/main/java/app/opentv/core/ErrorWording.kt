@@ -123,27 +123,30 @@ class ErrorWording(private val context: Context, private val onTelevision: Boole
      * Why a Stremio add-on couldn't be used, in its own words rather than [ofProvider]'s: an add-on
      * isn't "your provider", and the viewer pasted its address themselves.
      */
-    fun ofAddon(error: Throwable): ViewerError {
-        val failure = error as? AddonFailure ?: AddonFailure.Unreachable(error)
-        return when (failure) {
-            is AddonFailure.NotAnAddon -> ofHardware(
-                R.string.error_not_an_addon_tv,
-                R.string.error_not_an_addon_device,
-                ViewerError.detailOf("NotAnAddon", failure.status?.let { "HTTP $it" }),
+    fun ofAddon(failure: AddonFailure): ViewerError = when (failure) {
+        is AddonFailure.NotAnAddon -> ofHardware(
+            R.string.error_not_an_addon_tv,
+            R.string.error_not_an_addon_device,
+            ViewerError.detailOf("NotAnAddon", failure.status?.let { "HTTP $it" }),
+        )
+        is AddonFailure.Http -> of(R.string.error_addon_trouble, "HTTP ${failure.status}")
+        is AddonFailure.NoLookup ->
+            ofHardware(
+                R.string.error_addon_lookup_tv,
+                R.string.error_addon_lookup_device,
+                codeOf(failure.cause ?: failure),
             )
-            is AddonFailure.Http -> of(R.string.error_addon_trouble, "HTTP ${failure.status}")
-            is AddonFailure.Unreachable -> {
-                val cause = failure.cause ?: failure
-                // SocketTimeoutException is one of these.
-                if (cause is InterruptedIOException) {
-                    of(R.string.error_addon_timed_out, codeOf(cause))
-                } else {
-                    ofHardware(
-                        R.string.error_addon_cant_reach_tv,
-                        R.string.error_addon_cant_reach_device,
-                        codeOf(cause),
-                    )
-                }
+        is AddonFailure.Unreachable -> {
+            val cause = failure.cause ?: failure
+            // SocketTimeoutException is one of these.
+            if (cause is InterruptedIOException) {
+                of(R.string.error_addon_timed_out, codeOf(cause))
+            } else {
+                ofHardware(
+                    R.string.error_addon_cant_reach_tv,
+                    R.string.error_addon_cant_reach_device,
+                    codeOf(cause),
+                )
             }
         }
     }

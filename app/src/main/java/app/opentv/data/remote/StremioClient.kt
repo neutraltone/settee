@@ -9,6 +9,7 @@ import android.util.Log
 import app.opentv.core.HttpStatus
 import app.opentv.data.model.StremioStream
 import java.io.IOException
+import java.net.HttpURLConnection
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
@@ -33,14 +34,23 @@ sealed class AddonFailure(message: String, cause: Throwable? = null) :
         override val status: Int? = null
     }
 
-    /** The add-on's server answered with trouble of its own, such as a 5xx. */
+    /** The add-on's server answered with trouble of its own: a 5xx. */
     class Http(override val status: Int) : AddonFailure("The add-on answered $status")
 
     /**
-     * What answered isn't an add-on: a 404 ([status]), a web page such as a Wi-Fi sign-in, or JSON
-     * that isn't a manifest. The address is what's wrong, not something to wait out.
+     * What answered isn't an add-on: a 4xx such as 404 ([status]), a web page such as a Wi-Fi
+     * sign-in, or JSON that isn't a manifest. The address (or the key a personalised one carries) is
+     * what's wrong, not something to wait out.
      */
     class NotAnAddon(override val status: Int? = null) : AddonFailure("That isn't an add-on")
+
+    /**
+     * A film's add-ons were never asked: TMDB, which turns the film into the IMDb id they're asked
+     * by, didn't answer. Not the add-ons' fault, so worded apart from [Unreachable].
+     */
+    class NoLookup(cause: Throwable) : AddonFailure("TMDB didn't answer", cause) {
+        override val status: Int? = null
+    }
 }
 
 /**
@@ -94,7 +104,7 @@ class StremioClient(
             get(url)
         } catch (notFound: AddonFailure.NotAnAddon) {
             // Some add-ons answer 404 for a title they have nothing for: an answer, not a failure.
-            if (notFound.status == HTTP_NOT_FOUND) return emptyList() else throw notFound
+            if (notFound.status == HttpURLConnection.HTTP_NOT_FOUND) return emptyList() else throw notFound
         }
         val streams = (reply as? JsonObject)?.get("streams") as? JsonArray ?: return emptyList()
         return streams.mapNotNull { element ->
@@ -109,7 +119,7 @@ class StremioClient(
 
     /** The JSON at [url], or the [AddonFailure] that stopped it. Never logs the address. */
     private fun get(url: HttpUrl): JsonElement {
-        val body = read(url).getOrThrow()
+        val body = read(url)
         // A Wi-Fi sign-in page or any other web page answers 200 with HTML.
         return try {
             json.parseToJsonElement(body)
@@ -118,21 +128,26 @@ class StremioClient(
         }
     }
 
-    private fun read(url: HttpUrl): Result<String> {
+    private fun read(url: HttpUrl): String {
         val request = Request.Builder().url(url).header("User-Agent", "OpenTV").build()
         return try {
             http.newCall(request).execute().use { response ->
-                val status = response.code
-                when {
-                    status == HTTP_NOT_FOUND -> Result.failure(AddonFailure.NotAnAddon(status))
-                    !response.isSuccessful -> Result.failure(AddonFailure.Http(status))
-                    else -> Result.success(response.body.string())
-                }
+                failureOf(response.code)?.let { throw it }
+                response.body.string()
             }
         } catch (e: IOException) {
-            Log.w(TAG, "Stremio request failed: ${e.javaClass.simpleName}")
-            Result.failure(AddonFailure.Unreachable(e))
+            // An AddonFailure is an IOException too, and passes through as it is.
+            throw e as? AddonFailure ?: AddonFailure.Unreachable(e).also {
+                Log.w(TAG, "Stremio request failed: ${e.javaClass.simpleName}")
+            }
         }
+    }
+
+    /** Only a 5xx is the add-on's own trouble; any other refusal says the address isn't right. */
+    private fun failureOf(status: Int): AddonFailure? = when (status) {
+        in SUCCESS -> null
+        in SERVER_ERRORS -> AddonFailure.Http(status)
+        else -> AddonFailure.NotAnAddon(status)
     }
 
     // By hand rather than with jsonPrimitive, which throws on an object or array where text was expected (#364).
@@ -140,6 +155,7 @@ class StremioClient(
 
     private companion object {
         const val TAG = "StremioClient"
-        const val HTTP_NOT_FOUND = 404
+        val SUCCESS = 200..299
+        val SERVER_ERRORS = 500..599
     }
 }

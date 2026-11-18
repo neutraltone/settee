@@ -278,6 +278,8 @@
     <string name="error_addon_trouble">Add-on sedang bermasalah. Masalahnya ada di pihaknya, jadi coba lagi nanti.</string>
     <string name="error_not_an_addon_tv">Alamat itu tidak memberikan add-on. Periksa apakah itu tautan manifest.json, dan internet TV ini tidak meminta Anda masuk terlebih dahulu.</string>
     <string name="error_not_an_addon_device">Alamat itu tidak memberikan add-on. Periksa apakah itu tautan manifest.json, dan internet perangkat ini tidak meminta Anda masuk terlebih dahulu.</string>
+    <string name="error_addon_lookup_tv">Tidak dapat mencari film ini untuk ditanyakan ke add-on Anda. Periksa apakah TV ini online, lalu coba lagi.</string>
+    <string name="error_addon_lookup_device">Tidak dapat mencari film ini untuk ditanyakan ke add-on Anda. Periksa apakah perangkat ini online, lalu coba lagi.</string>
     <string name="error_device_refused">Penyedia Anda tidak menerima detail ini. Periksa detail penyedia Anda di Pengaturan.</string>
     <string name="error_guide">Gagal mengunduh panduan ini. Coba lagi sebentar lagi.</string>
     <string name="error_guide_empty">Panduan ini berhasil diunduh, tetapi tidak berisi acara. Periksa apakah tautannya benar.</string>

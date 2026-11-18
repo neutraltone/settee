@@ -160,7 +160,7 @@ class EpisodeTimingsRepository(
     /** The show's IMDb id, from TMDB when the series didn't come with one, kept once found. */
     private fun imdbIdOf(series: Series, show: ShowIds): String? = show.imdbId
         ?: show.tmdbId
-            ?.let { tmdb.imdbId(title = series.name, year = series.year, isMovie = false, tmdbId = it) }
+            ?.let { tmdb.imdbId(title = series.name, year = series.year, isMovie = false, tmdbId = it).getOrNull() }
             ?.also { ids[series.memo] = show.copy(imdbId = it) }
 
     private val Series.memo: Pair<Long, String> get() = sourceId to seriesId

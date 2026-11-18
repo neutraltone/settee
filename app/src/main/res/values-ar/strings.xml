@@ -278,6 +278,8 @@
     <string name="error_addon_trouble">تواجه الإضافة مشكلات. المشكلة من جهتها، لذا أعد المحاولة لاحقًا.</string>
     <string name="error_not_an_addon_tv">لم يُعطِ هذا العنوان إضافة. تحقق من أنه رابط manifest.json، وأن إنترنت هذا التلفاز لا يطلب منك تسجيل الدخول أولًا.</string>
     <string name="error_not_an_addon_device">لم يُعطِ هذا العنوان إضافة. تحقق من أنه رابط manifest.json، وأن إنترنت هذا الجهاز لا يطلب منك تسجيل الدخول أولًا.</string>
+    <string name="error_addon_lookup_tv">تعذر البحث عن هذا الفيلم لسؤال إضافاتك. تأكد من أن هذا التلفاز متصل بالإنترنت، ثم أعد المحاولة.</string>
+    <string name="error_addon_lookup_device">تعذر البحث عن هذا الفيلم لسؤال إضافاتك. تأكد من أن هذا الجهاز متصل بالإنترنت، ثم أعد المحاولة.</string>
     <string name="error_device_refused">لم يقبل مزوّدك هذه البيانات. تحقق من بيانات مزوّدك في الإعدادات.</string>
     <string name="error_guide">تعذر تنزيل دليل البرامج هذا. أعد المحاولة بعد قليل.</string>
     <string name="error_guide_empty">تم تنزيل دليل البرامج هذا، لكنه لا يحتوي على أي برامج. تأكد من أنه الرابط الصحيح.</string>

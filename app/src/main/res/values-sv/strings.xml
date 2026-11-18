@@ -278,6 +278,8 @@
     <string name="error_addon_trouble">Tillägget har problem. Det ligger hos det, så försök igen senare.</string>
     <string name="error_not_an_addon_tv">Adressen gav inget tillägg. Kontrollera att det är länken till manifest.json och att internet på den här TV:n inte kräver att du loggar in först.</string>
     <string name="error_not_an_addon_device">Adressen gav inget tillägg. Kontrollera att det är länken till manifest.json och att internet på den här enheten inte kräver att du loggar in först.</string>
+    <string name="error_addon_lookup_tv">Kunde inte slå upp filmen för att fråga dina tillägg. Kontrollera att den här TV:n är ansluten till internet och försök igen.</string>
+    <string name="error_addon_lookup_device">Kunde inte slå upp filmen för att fråga dina tillägg. Kontrollera att den här enheten är ansluten till internet och försök igen.</string>
     <string name="error_device_refused">Din leverantör godkände inte uppgifterna. Kontrollera din leverantörs uppgifter i Inställningar.</string>
     <string name="error_guide">Det gick inte att ladda ner guiden. Försök igen om en stund.</string>
     <string name="error_guide_empty">Guiden laddades ner men innehöll inga program. Kontrollera att det är rätt länk.</string>

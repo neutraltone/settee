@@ -101,19 +101,22 @@ class TmdbClient(
     /**
      * The IMDb id (`tt…`) for a title, for handing to Stremio add-ons. Uses the provider's TMDB id
      * when it gave one, otherwise a title(+year) search, then reads `imdb_id` from the movie details
-     * (top-level) or the TV `external_ids` endpoint. Null with no key, no match, or no IMDb mapping.
+     * (top-level) or the TV `external_ids` endpoint. Null with no key, no match, or no IMDb mapping;
+     * a failure when TMDB didn't answer, so a film's Add-on sources can say so rather than that
+     * nothing was found.
      */
-    fun imdbId(title: String, year: Int?, isMovie: Boolean, tmdbId: String?): String? {
-        val key = credential ?: return null
+    fun imdbId(title: String, year: Int?, isMovie: Boolean, tmdbId: String?): Result<String?> = runCatching {
+        val key = credential ?: return@runCatching null
+        val read = { url: HttpUrl -> fetch(url, key) }
         val asked = TmdbTitle(isMovie, title, year, tmdbId)
-        val id = asked.tmdbId ?: searchId(asked) { get(it, key) } ?: return null
+        val id = asked.tmdbId ?: searchId(asked, read) ?: return@runCatching null
         val builder = TMDB_BASE.newBuilder()
             .addPathSegment(if (isMovie) "movie" else "tv")
             .addPathSegment(id)
         if (!isMovie) builder.addPathSegment("external_ids")
-        val o = get(builder.build(), key)?.jsonObject ?: return null
-        return o["imdb_id"]?.jsonPrimitive?.contentOrNull?.takeIf { it.startsWith("tt") }
-    }
+        val o = read(builder.build())?.jsonObject ?: return@runCatching null
+        o["imdb_id"]?.jsonPrimitive?.contentOrNull?.takeIf { it.startsWith("tt") }
+    }.onFailure { Log.w(TAG, "TMDB request failed: ${it.javaClass.simpleName}") }
 
     /** The TMDB id of the show called [title], by a title(+year) search; null with no key or no match. */
     fun seriesId(title: String, year: Int?): String? {

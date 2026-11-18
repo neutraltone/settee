@@ -278,6 +278,8 @@
     <string name="error_addon_trouble">Lisäosalla on ongelmia. Vika on sen päässä, joten yritä myöhemmin uudelleen.</string>
     <string name="error_not_an_addon_tv">Osoitteesta ei löytynyt lisäosaa. Tarkista, että se on manifest.json-linkki ja ettei tämän television internetyhteys vaadi ensin kirjautumista.</string>
     <string name="error_not_an_addon_device">Osoitteesta ei löytynyt lisäosaa. Tarkista, että se on manifest.json-linkki ja ettei tämän laitteen internetyhteys vaadi ensin kirjautumista.</string>
+    <string name="error_addon_lookup_tv">Elokuvaa ei voitu hakea lisäosiltasi kysymistä varten. Tarkista, että tämä televisio on verkossa, ja yritä sitten uudelleen.</string>
+    <string name="error_addon_lookup_device">Elokuvaa ei voitu hakea lisäosiltasi kysymistä varten. Tarkista, että tämä laite on verkossa, ja yritä sitten uudelleen.</string>
     <string name="error_device_refused">Palveluntarjoajasi ei hyväksynyt näitä tietoja. Tarkista palveluntarjoajasi tiedot Asetuksista.</string>
     <string name="error_guide">Opasta ei voitu ladata. Yritä hetken päästä uudelleen.</string>
     <string name="error_guide_empty">Opas ladattiin, mutta siinä ei ollut ohjelmia. Tarkista, että linkki on oikea.</string>

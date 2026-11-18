@@ -278,6 +278,8 @@
     <string name="error_addon_trouble">O add-on está com problemas. É do lado dele, por isso tente novamente mais tarde.</string>
     <string name="error_not_an_addon_tv">Esse endereço não deu um add-on. Verifique se é a ligação para manifest.json e se a internet desta televisão não pede para iniciar sessão primeiro.</string>
     <string name="error_not_an_addon_device">Esse endereço não deu um add-on. Verifique se é a ligação para manifest.json e se a internet deste dispositivo não pede para iniciar sessão primeiro.</string>
+    <string name="error_addon_lookup_tv">Não foi possível procurar este filme para perguntar aos seus add-ons. Verifique se esta televisão está online e tente novamente.</string>
+    <string name="error_addon_lookup_device">Não foi possível procurar este filme para perguntar aos seus add-ons. Verifique se este dispositivo está online e tente novamente.</string>
     <string name="error_device_refused">O seu fornecedor não aceitou estes dados. Verifique os dados do seu fornecedor nas Definições.</string>
     <string name="error_guide">Não foi possível transferir este guia. Tente novamente daqui a pouco.</string>
     <string name="error_guide_empty">Este guia foi transferido, mas não tinha programas. Verifique se é o link certo.</string>

@@ -750,6 +750,8 @@
     <string name="error_addon_trouble">The add-on is having problems. That\'s at its end, so try again later.</string>
     <string name="error_not_an_addon_tv">That address didn\'t give an add-on. Check it\'s the manifest.json link, and that this TV\'s internet doesn\'t need you to sign in first.</string>
     <string name="error_not_an_addon_device">That address didn\'t give an add-on. Check it\'s the manifest.json link, and that this device\'s internet doesn\'t need you to sign in first.</string>
+    <string name="error_addon_lookup_tv">Couldn\'t look this film up to ask your add-ons. Check this TV is online, then try again.</string>
+    <string name="error_addon_lookup_device">Couldn\'t look this film up to ask your add-ons. Check this device is online, then try again.</string>
     <string name="error_test_failed">Couldn\'t connect to your provider with these details. Check them and try again.</string>
     <string name="sync_wrong_code">That code doesn\'t match the one on the other device. Check it and try again.</string>
     <string name="sync_receive_failed">Couldn\'t get anything from the other device. Check it\'s still sharing, then try again.</string>

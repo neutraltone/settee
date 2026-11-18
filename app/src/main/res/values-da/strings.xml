@@ -278,6 +278,8 @@
     <string name="error_addon_trouble">Tilføjelsen har problemer. Det er hos den, så prøv igen senere.</string>
     <string name="error_not_an_addon_tv">Den adresse gav ikke en tilføjelse. Tjek, at det er linket til manifest.json, og at dette tv\'s internet ikke kræver, at du logger ind først.</string>
     <string name="error_not_an_addon_device">Den adresse gav ikke en tilføjelse. Tjek, at det er linket til manifest.json, og at denne enheds internet ikke kræver, at du logger ind først.</string>
+    <string name="error_addon_lookup_tv">Kunne ikke slå filmen op for at spørge dine tilføjelser. Tjek, at dette tv er online, og prøv så igen.</string>
+    <string name="error_addon_lookup_device">Kunne ikke slå filmen op for at spørge dine tilføjelser. Tjek, at denne enhed er online, og prøv så igen.</string>
     <string name="error_device_refused">Din udbyder godkendte ikke oplysningerne. Tjek din udbyders oplysninger i Indstillinger.</string>
     <string name="error_guide">Kunne ikke downloade guiden. Prøv igen om lidt.</string>
     <string name="error_guide_empty">Guiden blev downloadet, men der var ingen programmer i den. Tjek, at det er det rigtige link.</string>

@@ -278,6 +278,8 @@
     <string name="error_addon_trouble">Eklenti sorun yaşıyor. Sorun onun tarafında, bu yüzden daha sonra tekrar deneyin.</string>
     <string name="error_not_an_addon_tv">Bu adres bir eklenti vermedi. manifest.json bağlantısı olduğunu ve bu TV\'nin internetinin önce oturum açmanızı istemediğini kontrol edin.</string>
     <string name="error_not_an_addon_device">Bu adres bir eklenti vermedi. manifest.json bağlantısı olduğunu ve bu cihazın internetinin önce oturum açmanızı istemediğini kontrol edin.</string>
+    <string name="error_addon_lookup_tv">Eklentilerinize sormak için bu film aranamadı. Bu TV\'nin internete bağlı olduğunu kontrol edip tekrar deneyin.</string>
+    <string name="error_addon_lookup_device">Eklentilerinize sormak için bu film aranamadı. Bu cihazın internete bağlı olduğunu kontrol edip tekrar deneyin.</string>
     <string name="error_device_refused">Sağlayıcınız bu bilgileri kabul etmedi. Ayarlar\'dan sağlayıcı bilgilerinizi kontrol edin.</string>
     <string name="error_guide">Bu rehber indirilemedi. Birazdan tekrar deneyin.</string>
     <string name="error_guide_empty">Bu rehber indirildi ama içinde hiç program yoktu. Doğru bağlantı olduğunu kontrol edin.</string>

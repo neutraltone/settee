@@ -40,16 +40,15 @@ class VodAddonStreamsTest {
 
     private val app: Application = ApplicationProvider.getApplicationContext()
 
-    // What each add-on's host answers; TMDB always knows the film.
+    // What each add-on's host answers; TMDB knows the film unless told to drop the connection.
     private val addonReplies = mutableMapOf<String, String>()
+    private var tmdbDown = false
     private val network = FakeJsonHttp { request: Request ->
         when (request.url.host) {
-            "api.themoviedb.org" -> if (request.url.encodedPath ==
-                "/3/movie/949"
-            ) {
-                """{"imdb_id": "tt0113277"}"""
-            } else {
-                "404"
+            "api.themoviedb.org" -> when {
+                tmdbDown -> "!"
+                request.url.encodedPath == "/3/movie/949" -> """{"imdb_id": "tt0113277"}"""
+                else -> "404"
             }
             else -> addonReplies[request.url.host] ?: "404"
         }
@@ -127,7 +126,25 @@ class VodAddonStreamsTest {
 
         val found = VodViewModel(app, graph).addonStreams(heat.copy(tmdbId = "1"))
 
-        assertThat(found).isEqualTo(AddonStreams.NoMatch)
+        assertThat(found).isEqualTo(AddonStreams.NoneFound)
+        assertThat(network.hosts()).doesNotContain("films.example.com")
+    }
+
+    @Test
+    fun `when TMDB doesn't answer, the lookup failed and says so, without blaming the add-ons`() = runBlocking {
+        addon("films.example.com", "Films", streams("https://example.com/heat.mkv"))
+        tmdbDown = true
+
+        val found = VodViewModel(app, graph).addonStreams(heat)
+
+        assertThat(found).isEqualTo(
+            AddonStreams.Failed(
+                ViewerError(
+                    "Couldn't look this film up to ask your add-ons. Check this device is online, then try again.",
+                    "IO",
+                ),
+            ),
+        )
         assertThat(network.hosts()).doesNotContain("films.example.com")
     }
 }

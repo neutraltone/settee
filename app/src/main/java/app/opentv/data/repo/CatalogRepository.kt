@@ -284,9 +284,10 @@ class CatalogRepository(
     /**
      * The IMDb id for a film, for Stremio add-on stream lookups. Resolved through Settee's TMDB
      * key (using the provider's TMDB id when present, else a title+year search). Null without a key
-     * or a match — the add-on feature stays inert rather than guessing.
+     * or a match — the add-on feature stays inert rather than guessing — and a failure when TMDB
+     * didn't answer.
      */
-    suspend fun imdbIdFor(movie: Movie): String? = withContext(Dispatchers.IO) {
+    suspend fun imdbIdFor(movie: Movie): Result<String?> = withContext(Dispatchers.IO) {
         tmdb.imdbId(title = movie.name, year = movie.year, isMovie = true, tmdbId = movie.tmdbId)
     }
 

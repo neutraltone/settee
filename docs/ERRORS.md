@@ -211,17 +211,18 @@ A guide feed's failure is stored on its row (`ViewerError.stored`) and shown in 
 
 Worded by `ErrorWording.ofAddon` from the `AddonFailure` `StremioClient` throws. In Settings › Add-ons,
 under Add an add-on, when a pasted address couldn't be added; and in a film's Add-on sources picker,
-with a Try again that asks the add-ons again, only when every add-on failed. When at least one answered,
+with a Try again that asks the add-ons again, only when every add-on failed or TMDB didn't answer. When at least one answered,
 the picker lists its streams, or says "No streams found from your add-ons for this title." (an empty
-state, not an error: no detail line), and the failing ones stay quiet. So does a film TMDB can't match to IMDb: that's
-"No streams found" too. An add-on that answers 404 for a film's streams has nothing for it, not a failure.
+state, not an error: no detail line), and the failing ones stay quiet. So does a film TMDB answers for but can't match
+to IMDb: that's "No streams found" too. An add-on that answers 404 for a film's streams has nothing for it, not a failure.
 
 | Trigger | String key | Sentence | Detail | Whose end, likely cause |
 |---|---|---|---|---|
 | No answer: unknown host, refused, no route (`AddonFailure.Unreachable`) | `error_addon_cant_reach_tv` / `_device` | Can't reach the add-on. Check this TV is online and the address is right. | exception type | Viewer's network, or a mistyped host |
 | Timed out (`Unreachable` from a `SocketTimeoutException` or other `InterruptedIOException`) | `error_addon_timed_out` | The add-on stopped responding. It may be busy, so try again in a moment. | exception type | The add-on's server |
-| Any status but 2xx and 404 (`AddonFailure.Http`) | `error_addon_trouble` | The add-on is having problems. That's at its end, so try again later. | HTTP status | The add-on's server |
-| A 404 for the manifest, a web page or anything else that isn't JSON, or JSON with no `id` or `name` (`AddonFailure.NotAnAddon`) | `error_not_an_addon_tv` / `_device` | That address didn't give an add-on. Check it's the manifest.json link, and that this TV's internet doesn't need you to sign in first. | NotAnAddon · HTTP 404 (status when there was one) | The address, or Wi-Fi asking to sign in |
+| A 5xx (`AddonFailure.Http`) | `error_addon_trouble` | The add-on is having problems. That's at its end, so try again later. | HTTP status | The add-on's server |
+| Any other status but 2xx (a 404 for the manifest, a 401 or 403 from a personalised address), a web page or anything else that isn't JSON, or JSON with no `id` or `name` (`AddonFailure.NotAnAddon`) | `error_not_an_addon_tv` / `_device` | That address didn't give an add-on. Check it's the manifest.json link, and that this TV's internet doesn't need you to sign in first. | NotAnAddon · HTTP 404 (status when there was one) | The address or the key in it, or Wi-Fi asking to sign in |
+| Add-on sources only: TMDB, which turns the film into an IMDb id, didn't answer, so no add-on was asked (`AddonFailure.NoLookup`) | `error_addon_lookup_tv` / `_device` | Couldn't look this film up to ask your add-ons. Check this TV is online, then try again. | exception type | Viewer's network, or TMDB |
 
 ## OpenSubtitles
 
