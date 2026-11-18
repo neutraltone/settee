@@ -8,14 +8,20 @@ package app.opentv
 import android.app.Application
 import android.content.Context
 import android.view.View
+import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.test.assertIsFocused
+import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performKeyInput
+import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.test.requestFocus
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.espresso.Espresso
@@ -32,6 +38,7 @@ import app.opentv.ui.settings.SettingsScreen
 import app.opentv.ui.settings.SettingsSection
 import app.opentv.ui.settings.SettingsTags
 import com.google.common.truth.Truth.assertThat
+import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Rule
 import org.junit.Test
@@ -83,6 +90,13 @@ class OpenSubtitlesSettingsTest {
         )
         return DeviceKeyboard(compose) { checkNotNull(root) }
     }
+
+    private fun press(key: Key, times: Int = 1) = repeat(times) {
+        compose.onRoot().performKeyInput { pressKey(key) }
+        compose.waitForIdle()
+    }
+
+    private fun row(label: String) = compose.onNode(hasText(label) and hasClickAction())
 
     private fun waitFor(text: String, substring: Boolean = false) = compose.waitUntil(5_000) {
         compose.onAllNodes(hasText(text, substring = substring)).fetchSemanticsNodes().isNotEmpty()
@@ -140,6 +154,81 @@ class OpenSubtitlesSettingsTest {
         assertThat(openSubtitles.account.signedInAs.value).isNull()
     }
 
+    /** Signed in, then OpenSubtitles turns down the token and the saved password alike. */
+    private fun signedOutByOpenSubtitles() {
+        runBlocking { assertThat(openSubtitles.account.signIn("u", "p").isSuccess).isTrue() }
+        site.replies["GET /infos/user"] = """!401 {"message": "invalid token"}"""
+        site.replies["POST /login"] = """!401 {"message": "Invalid username/password"}"""
+    }
+
+    @Test
+    fun `when OpenSubtitles has signed the TV out, it says so and offers Sign in again the remote can reach`() {
+        signedOutByOpenSubtitles()
+        show()
+
+        waitFor(SIGNED_OUT, substring = true)
+        compose.onNodeWithText("Signed in as u").assertExists()
+        compose.onNodeWithText("Sign in again").requestFocus().assertIsFocused()
+        captureScreen("opensubtitles_signed_out_by_server")
+    }
+
+    @Test
+    fun `Sign in again asks for the password under the saved username, then shows the downloads left`() {
+        signedOutByOpenSubtitles()
+        show()
+        waitFor("Sign in again")
+        site.replies["POST /login"] = """{"user": {"allowed_downloads": 20, "remaining_downloads": 9}, "token": "t2"}"""
+
+        compose.onNodeWithText("Sign in again").requestFocus()
+        compose.onNodeWithText("Sign in again").performClick()
+        entryKeyboard().run {
+            assertThat(textShownBy()).isEqualTo("u")
+            pressAction()
+        }
+        entryKeyboard().run {
+            type("new password")
+            pressAction()
+        }
+
+        waitFor("9 downloads left today")
+        compose.onNodeWithText(SIGNED_OUT, substring = true).assertDoesNotExist()
+        compose.onNodeWithText("Sign in again").assertDoesNotExist()
+        // The row it was on has gone, so the highlight moves to the one that took its place.
+        row("Sign out").assertIsFocused()
+        assertThat(site.bodies.last()).contains("\"username\":\"u\"")
+    }
+
+    @Test
+    fun `when OpenSubtitles can't be reached, it says why under the account and offers no Sign in again`() {
+        runBlocking { assertThat(openSubtitles.account.signIn("u", "p").isSuccess).isTrue() }
+        site.replies["GET /infos/user"] = "!"
+        show()
+
+        waitFor("Can't reach OpenSubtitles.", substring = true)
+        compose.onNodeWithText("IO").assertExists()
+        compose.onNodeWithText("Sign in again").assertDoesNotExist()
+        compose.onNodeWithText("Sign out").assertExists()
+        captureScreen("opensubtitles_unreachable")
+    }
+
+    @Test
+    fun `the remote goes from the section to Sign in again, then down through Sign out to automatic downloads`() {
+        signedOutByOpenSubtitles()
+        show()
+        waitFor("Sign in again")
+        // The error arriving leaves the highlight on the section it started on.
+        compose.onNode(hasTestTag(SettingsTags.SECTION) and hasText("OpenSubtitles")).assertIsFocused()
+
+        press(Key.DirectionRight)
+        row("Sign in again").assertIsFocused()
+        press(Key.DirectionDown)
+        row("Sign out").assertIsFocused()
+        press(Key.DirectionDown)
+        row("Fetch missing subtitles by themselves").assertIsFocused()
+        press(Key.DirectionUp, times = 2)
+        row("Sign in again").assertIsFocused()
+    }
+
     @Test
     fun `the automatic download switch turns off and stays off`() {
         show()
@@ -162,5 +251,9 @@ class OpenSubtitlesSettingsTest {
 
     private companion object {
         const val SETTINGS = "opensubtitles-settings-test"
+
+        // The app's one graph words errors for a TV or a phone by whichever test built it first, so these
+        // match what both say; OpenSubtitlesSignInTest pins the TV's sentence.
+        const val SIGNED_OUT = "out. Sign in again in Settings."
     }
 }

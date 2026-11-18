@@ -18,7 +18,6 @@ import androidx.compose.runtime.Stable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -34,6 +33,8 @@ import app.opentv.R
 import app.opentv.core.ErrorWording
 import app.opentv.core.ServiceLocator
 import app.opentv.core.ViewerError
+import app.opentv.data.remote.OpenSubtitlesFailure
+import app.opentv.data.remote.OpenSubtitlesSession
 import app.opentv.data.repo.OpenSubtitles
 import app.opentv.data.repo.OpenSubtitlesAccount
 import app.opentv.pairing.PairingServer
@@ -56,14 +57,29 @@ internal fun OpenSubtitlesPane(openSubtitles: OpenSubtitles) {
     val account = openSubtitles.account
     val signedInAs by account.signedInAs.collectAsState()
     val auto by account.autoDownload.collectAsState()
+    val entry = remember(account, graph) { OpenSubtitlesSignIn(account, graph.errorWording) }
+    val scope = rememberCoroutineScope()
+    var signingInAgainAs by remember { mutableStateOf<String?>(null) }
     Column(Modifier.testTag(OPENSUBTITLES_PANE_TAG), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         val name = signedInAs
         if (name != null) {
-            val left by produceState<Int?>(null, name) { value = account.allowance().getOrNull()?.remaining }
+            LaunchedEffect(name) { entry.checkAllowance() }
+            val left = entry.allowance?.getOrNull()?.remaining
             CodeBlock(
                 lead = stringResource(R.string.opensubtitles_signed_in_as, name),
                 code = left?.let { stringResource(R.string.opensubtitles_downloads_left, it) }.orEmpty(),
             )
+            entry.accountProblem?.let {
+                ErrorMessage(it.sentence, it.detail, textAlign = TextAlign.Start)
+            }
+            if (entry.offersSignInAgain) {
+                ListRow(
+                    stringResource(R.string.opensubtitles_sign_in_again),
+                    onClick = { signingInAgainAs = name },
+                    opens = true,
+                )
+                SignInStatus(entry.signingIn, entry.problem)
+            }
             ListRow(stringResource(R.string.opensubtitles_sign_out), onClick = account::signOut)
         } else {
             Text(stringResource(R.string.opensubtitles_not_signed_in), SetteeType.Body, color = SetteeColors.QuietText)
@@ -77,6 +93,11 @@ internal fun OpenSubtitlesPane(openSubtitles: OpenSubtitles) {
         )
         OpenSubtitlesAttribution(Modifier.padding(top = 12.dp))
     }
+    SignInWindows(
+        asking = signingInAgainAs,
+        onAsked = { signingInAgainAs = null },
+        onSignIn = { username, password -> scope.launch { entry.signIn(username, password) } },
+    )
 }
 
 /** The line OpenSubtitles' terms ask for wherever subtitles are found or picked. */
@@ -90,7 +111,10 @@ internal fun OpenSubtitlesAttribution(modifier: Modifier = Modifier) {
     )
 }
 
-/** Where signing in has got to: signing in, and why the last try failed. */
+/**
+ * Where signing in has got to (signing in, and why the last try failed) and, once signed in, what the
+ * account's allowance check last said.
+ */
 @Stable
 internal class OpenSubtitlesSignIn(private val account: OpenSubtitlesAccount, private val wording: ErrorWording) {
     var signingIn by mutableStateOf(false)
@@ -98,11 +122,32 @@ internal class OpenSubtitlesSignIn(private val account: OpenSubtitlesAccount, pr
     var problem by mutableStateOf<ViewerError?>(null)
         private set
 
+    /** The last allowance check, the failure kept as well as the number; null until one has finished. */
+    var allowance by mutableStateOf<Result<OpenSubtitlesSession>?>(null)
+        private set
+
+    /** Why the last allowance check failed, worded; null when it worked or hasn't finished. */
+    val accountProblem: ViewerError? get() = allowance?.exceptionOrNull()?.let(wording::ofOpenSubtitles)
+
+    /**
+     * Whether OpenSubtitles has signed this box out: it turned down the token and then the saved password.
+     * The account stays as it is (see [OpenSubtitlesAccount]), so only signing in again mends it.
+     */
+    val offersSignInAgain: Boolean get() = allowance?.exceptionOrNull() is OpenSubtitlesFailure.TokenRejected
+
+    suspend fun checkAllowance() {
+        allowance = account.allowance()
+    }
+
     /** Signs in; why not, or null once signed in. */
     suspend fun signIn(username: String, password: String): ViewerError? {
         signingIn = true
         problem = null
-        val why = account.signIn(username, password).exceptionOrNull()?.let(wording::ofOpenSubtitles)
+        val signedIn = account.signIn(username, password)
+        val why = signedIn.exceptionOrNull()?.let(wording::ofOpenSubtitles)
+        // A sign-in's answer carries the allowance, so it stands in for checking it again: signing in again
+        // under the same name changes nothing the pane would otherwise re-check on.
+        if (signedIn.isSuccess) allowance = signedIn
         signingIn = false
         problem = why
         return why
@@ -134,7 +179,6 @@ internal fun OpenSubtitlesSignInRows(
     val codeState = codeShown(phone)
     val scope = rememberCoroutineScope()
     var askingUsername by remember { mutableStateOf(false) }
-    var username by remember { mutableStateOf<String?>(null) }
     ScreenKeptOnWhile(codeState is PairingServer.State.Listening)
 
     suspend fun signIn(name: String, password: String): ViewerError? =
@@ -197,22 +241,40 @@ internal fun OpenSubtitlesSignInRows(
         },
     )
 
-    if (askingUsername) {
+    SignInWindows(
+        asking = if (askingUsername) "" else null,
+        onAsked = { askingUsername = false },
+        onSignIn = { name, password -> scope.launch { signIn(name, password) } },
+    )
+}
+
+/**
+ * Sign in on this TV's windows: the username, starting from [asking] while it isn't null, then the
+ * password. [onAsked] hears the username window close, either way; [onSignIn], both typed in.
+ */
+@Composable
+private fun SignInWindows(
+    asking: String?,
+    onAsked: () -> Unit,
+    onSignIn: (username: String, password: String) -> Unit,
+) {
+    var username by remember { mutableStateOf<String?>(null) }
+    asking?.let { initial ->
         EntryWindow(
             title = stringResource(R.string.opensubtitles_username),
-            initial = username.orEmpty(),
+            initial = initial,
             onSave = {
-                askingUsername = false
+                onAsked()
                 username = it.trim()
             },
-            onCancel = { askingUsername = false },
+            onCancel = onAsked,
         )
     }
     username?.let { name ->
         PasswordWindow(
             onSave = { password ->
                 username = null
-                scope.launch { signIn(name, password) }
+                onSignIn(name, password)
             },
             onCancel = { username = null },
         )
