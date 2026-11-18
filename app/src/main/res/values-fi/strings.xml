@@ -249,6 +249,7 @@
     <string name="error_anything_else">Tätä ei voitu toistaa. Yritä uudelleen tai valitse jotain muuta.</string>
     <string name="error_cant_reach_tv">Palveluntarjoajaasi ei tavoiteta. Tarkista, että tämä televisio on verkossa ja että osoite on oikein.</string>
     <string name="error_cant_reach_device">Palveluntarjoajaasi ei tavoiteta. Tarkista, että tämä laite on verkossa ja että osoite on oikein.</string>
+    <string name="error_live_ended">Tämä kanava pysähtyi. Yritä uudelleen tai valitse toinen kanava.</string>
     <string name="error_timed_out">Palveluntarjoajasi lakkasi vastaamasta. Se voi olla ruuhkautunut, joten yritä hetken päästä uudelleen.</string>
     <string name="error_web_page">Palveluntarjoajasi lähetti verkkosivun videon sijaan. Linkki on ehkä vanhentunut, joten kokeile päivittää palveluntarjoajasi Asetuksista.</string>
     <string name="error_damaged">Tämä video on vioittunut eikä toistu. Vika on palveluntarjoajasi päässä, joten kokeile jotain muuta.</string>

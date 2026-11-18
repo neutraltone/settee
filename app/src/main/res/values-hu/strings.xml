@@ -249,6 +249,7 @@
     <string name="error_anything_else">Ez nem indult el. Próbálja újra, vagy válasszon mást.</string>
     <string name="error_cant_reach_tv">A szolgáltató nem érhető el. Ellenőrizze, hogy ez a TV csatlakozik-e az internethez, és hogy helyes-e a cím.</string>
     <string name="error_cant_reach_device">A szolgáltató nem érhető el. Ellenőrizze, hogy ez az eszköz csatlakozik-e az internethez, és hogy helyes-e a cím.</string>
+    <string name="error_live_ended">Ez a csatorna leállt. Próbálja újra, vagy válasszon másik csatornát.</string>
     <string name="error_timed_out">A szolgáltató nem válaszol. Lehet, hogy túlterhelt, ezért próbálja újra egy kicsit később.</string>
     <string name="error_web_page">A szolgáltató videó helyett egy weboldalt küldött. Lehet, hogy a link lejárt, ezért próbálja frissíteni a szolgáltatót a Beállításokban.</string>
     <string name="error_damaged">Ez a videó sérült, és nem játszható le. Ez a szolgáltató oldalán van, ezért válasszon mást.</string>

@@ -20,16 +20,22 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Repeat
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -46,6 +52,7 @@ import androidx.compose.ui.unit.dp
 import app.opentv.R
 import app.opentv.core.ViewerError
 import app.opentv.data.model.Recording
+import app.opentv.ui.OnShellReturn
 import app.opentv.ui.design.ERROR_DETAIL_TAG
 import app.opentv.ui.design.ErrorMessage
 import app.opentv.ui.design.HighlightStyle
@@ -94,6 +101,8 @@ fun RecordingsContent(
     var hadFocus by remember { mutableStateOf(false) }
     val rows = remember(sections) { sections.flatMap { it.rows } }
     val heir = rememberHeir(remember(rows) { rows.map { it.key } })
+    val listState = rememberLazyListState()
+    val rowReturn = rememberRowReturn(sections, heir, listState)
     val room = with(LocalDensity.current) { HEADING_ROOM.toPx() }
     ScreenFrame(modifier) {
         // Also cleared when the Highlight leaves the screen (for the rail, or another tab), whose
@@ -127,6 +136,7 @@ fun RecordingsContent(
                 CompositionLocalProvider(LocalBringIntoViewSpec provides remember(room) { RoomForHeading(room) }) {
                     LazyColumn(
                         heir.watchPresses.then(dismissOnPress),
+                        state = listState,
                         verticalArrangement = Arrangement.spacedBy(ROW_GAP),
                     ) {
                         sections.forEach { section ->
@@ -150,7 +160,7 @@ fun RecordingsContent(
                                             }
                                         },
                                         onOptions = { panels.optionsOn = row.key },
-                                        modifier = heir.modifierFor(row.key),
+                                        modifier = rowReturn.modifierFor(row.key),
                                     )
                                 }
                             }
@@ -161,6 +171,45 @@ fun RecordingsContent(
         }
     }
     RowPanels(panels, rows, heir, onChoose)
+}
+
+/**
+ * Where the Highlight goes back to when Back to the main screen couldn't put it straight back on its
+ * row (KeptShell asks, [OnShellReturn]): the row last highlighted, by key so it's found wherever the
+ * list has moved it, and the first row when it has gone. Saved, so it outlives the screen being built
+ * again under a player. Without this nothing in Recordings answered, and the Highlight fell to the
+ * rail (#432). Through [Heir], the list's one way of asking for a row.
+ *
+ * Its [RowReturn.modifierFor] goes on each row, in place of [Heir.modifierFor].
+ */
+@Composable
+private fun rememberRowReturn(sections: List<RecordingsSection>, heir: Heir, listState: LazyListState): RowReturn {
+    val last = rememberSaveable { mutableStateOf<String?>(null) }
+    val latest by rememberUpdatedState(sections)
+    // Built again after Android let the app go, the list starts empty until the database answers.
+    OnShellReturn(ready = sections.isNotEmpty()) {
+        // In the list's own order, headings and all, so a key's place is its index in the list.
+        val items = latest.flatMap { listOf<Any>(it.heading) + it.rows.map { row -> row.key } }
+        val rows = latest.flatMap { it.rows }.map { it.key }
+        val target = last.value?.takeIf { it in rows } ?: rows.firstOrNull() ?: return@OnShellReturn
+        heir.aimAt(target)
+        val shown = listState.layoutInfo.visibleItemsInfo.any { it.key == target }
+        if (!shown) listState.scrollToItem(items.indexOf(target))
+        // The requester goes on the row when it's next composed, scrolled to or not.
+        withFrameNanos {}
+        heir.take()
+    }
+    return remember(heir, last) { RowReturn(heir, last) }
+}
+
+/** Keeps [last] on the row that last had the Highlight. */
+private class RowReturn(private val heir: Heir, private val last: MutableState<String?>) {
+    // One per row, kept, so a row composed again gets the same modifier rather than a new one to apply.
+    private val tracking = mutableMapOf<String, Modifier>()
+
+    fun modifierFor(row: String): Modifier = heir.modifierFor(row).then(
+        tracking.getOrPut(row) { Modifier.onFocusChanged { if (it.hasFocus) last.value = row } },
+    )
 }
 
 /** Which row's options are open, by key, and what it's being asked about. */

@@ -1844,6 +1844,10 @@ interface RecordingDao {
     )
     suspend fun bookingAt(channelId: Long, startMillis: Long): Recording?
 
+    /** What [channelId] is capturing right now, if anything: a second capture would be a second connection. */
+    @Query("SELECT * FROM recordings WHERE channelId = :channelId AND status = 'RECORDING' LIMIT 1")
+    suspend fun recordingOn(channelId: Long): Recording?
+
     @Insert
     suspend fun insert(recording: Recording): Long
 

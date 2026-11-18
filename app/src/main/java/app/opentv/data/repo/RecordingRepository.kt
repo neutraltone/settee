@@ -142,4 +142,7 @@ class RecordingRepository(
 
     /** An existing live/scheduled booking for this exact airing (channel + start), or null. */
     suspend fun bookingAt(channelId: Long, startMillis: Long): Recording? = dao.bookingAt(channelId, startMillis)
+
+    /** For starting a recording: one already capturing this Quality is joined, not opened twice (#498). */
+    suspend fun recordingOn(channelId: Long): Recording? = dao.recordingOn(channelId)
 }

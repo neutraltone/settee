@@ -162,6 +162,11 @@ order, so the triggers can't drift apart.
   so its panel requests don't overlap another download from that provider.
 - **A VOD download with a login the provider no longer has doesn't run, or count as fresh if it already had.**
 - **`RecordingEngine` books one rule's airings at a time,** because booking checks for a row and then inserts one.
+- **`RecordingEngine` starts one capture per channel id at a time,** so a double press of Record joins the
+  recording already running rather than opening a second connection, which a one-connection line refuses
+  or bans. Each Quality has its own id, so HD and SD still record side by side. It's its own lock, not
+  the booking one: a rule's booking holds that while it starts an airing that's on now, and a Kotlin
+  `Mutex` can't be taken twice.
 - **Manual refreshes run as background work,** so they outlive the screen, which watches `state` instead.
 
 ## Catalogue refresh preserves what the user did
@@ -314,6 +319,18 @@ played and then broke is restarted, since that's more likely a bad segment than 
 format this device can't decode gets neither. The limit of two silent restarts stops only the
 restarts: Retry stays on offer after them, because the viewer may have since stopped the stream on
 their other device, and it starts the count afresh with two more silent restarts (#460).
+
+A live stream can also simply end, with no error: a provider closes the TS connection cleanly when
+another device on the account connects or a session runs out, and an HLS playlist gains
+`EXT-X-ENDLIST` when a channel goes off air. ExoPlayer reports that as finished, which is right for a
+film and left live TV on its last frame with nothing to say why (#472). So a live stream that ends is
+treated as a dropped connection: restarted silently, up to two times, then
+`PlaybackErrors.Stopped.STREAM_ENDED` with Retry. Playing again in between doesn't clear that count,
+as it does a failure's, because a playlist that ended replays its last few minutes and would restart
+for ever. Endings more than ten minutes apart don't count together, so a panel cutting the session
+off every so often is restarted every time. `RestartCounts` keeps both counts; only the controller's
+own restarts keep counting, and anything a screen asks for, the same channel picked again included,
+starts them afresh.
 
 ### Errors say what to do
 

@@ -220,7 +220,7 @@ private fun ProviderForm(
         ui.addFailure?.let { ErrorMessage(it.sentence, it.detail, textAlign = TextAlign.Start) }
         ui.syncMessage?.let { Text(it, SetteeType.Body) }
 
-        FormButtons(viewModel, details, defaultName, onSetup)
+        FormButtons(viewModel, details, defaultName, adds = editingSourceId == null, onSetup)
 
         AdvancedFields(details)
 
@@ -235,6 +235,7 @@ private fun FormButtons(
     viewModel: SourcesViewModel,
     details: ProviderDetails,
     defaultName: String,
+    adds: Boolean,
     onSetup: () -> Unit,
 ) {
     val ui by viewModel.ui.collectAsState()
@@ -246,14 +247,18 @@ private fun FormButtons(
             label = stringResource(
                 if (ui.testing) R.string.onboarding_working else R.string.recset_test_connection,
             ),
-            onClick = { if (!working) viewModel.test(details.draft(defaultName)) },
+            onClick = { if (!working) viewModel.test(details.draft(defaultName, storedId = null)) },
             enabled = details.canSubmit,
         )
         PillButton(
             label = stringResource(if (ui.adding) R.string.onboarding_working else R.string.onboarding_save_load),
             onClick = {
                 if (!working) {
-                    viewModel.saveAndSync(details.draft(defaultName), onSetup = onSetup)
+                    viewModel.saveAndSync(
+                        details.draft(defaultName, storedId = ui.storedSourceId),
+                        onSetup = onSetup,
+                        adds = adds,
+                    )
                 }
             },
             enabled = details.canSubmit,
@@ -283,16 +288,22 @@ private class ProviderDetails(private val existing: Source?, val kind: SourceKin
                 SourceKind.STALKER -> mac.isNotBlank()
             }
 
-    fun draft(defaultName: String): Source = (existing ?: Source(name = "", kind = kind, url = "")).copy(
-        name = name.ifBlank { defaultName },
-        kind = kind,
-        url = url,
-        username = username.takeIf { it.isNotBlank() },
-        password = password.takeIf { it.isNotBlank() },
-        macAddress = mac.takeIf { it.isNotBlank() },
-        epgUrl = epgUrl.takeIf { it.isNotBlank() },
-        userAgent = userAgent.ifBlank { Source.DEFAULT_USER_AGENT },
-    )
+    /**
+     * What Save and Test connection send. [storedId] is a provider an earlier Save of this form stored,
+     * so saving again after its channels failed puts that one right rather than adding a second.
+     */
+    fun draft(defaultName: String, storedId: Long?): Source =
+        (existing ?: Source(name = "", kind = kind, url = "")).copy(
+            id = storedId ?: existing?.id ?: 0L,
+            name = name.ifBlank { defaultName },
+            kind = kind,
+            url = url,
+            username = username.takeIf { it.isNotBlank() },
+            password = password.takeIf { it.isNotBlank() },
+            macAddress = mac.takeIf { it.isNotBlank() },
+            epgUrl = epgUrl.takeIf { it.isNotBlank() },
+            userAgent = userAgent.ifBlank { Source.DEFAULT_USER_AGENT },
+        )
 
     companion object {
         /** Keeps what's typed across the screen being rebuilt; [existing] and [kind] come from the caller again. */

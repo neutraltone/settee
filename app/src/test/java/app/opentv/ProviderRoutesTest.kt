@@ -301,6 +301,29 @@ class ProviderRoutesTest {
     }
 
     @Test
+    fun `a provider added again after its channels failed goes back to Settings once they're in`() {
+        runBlocking { graph.sourceRepository.save(PANEL_SOURCE.copy(id = 0, lastCatalogSyncMillis = 1)) }
+        panel.replies[""] = "#EXTM3U\n"
+        val sources = SourcesViewModel(app, graph)
+        setApp(start = Routes.MAIN, sources = sources)
+        compose.runOnIdle {
+            nav.navigate(Routes.SETTINGS)
+            nav.openAddProvider()
+        }
+        savePlaylist()
+        saveFinishes(sources)
+        assertThat(route()).isEqualTo(Routes.ADD_SOURCE)
+
+        panel.replies[""] = "#EXTM3U\n#EXTINF:-1,BBC One\nhttp://example.com/1.ts\n"
+        compose.onNodeWithText("Save and load").performClick()
+        saveFinishes(sources)
+
+        assertThat(route()).isEqualTo(Routes.SETTINGS)
+        assertThat(runBlocking { graph.sourceRepository.all() }.map { it.kind })
+            .containsExactly(SourceKind.XTREAM, SourceKind.M3U)
+    }
+
+    @Test
     fun `a provider added on an add page with nothing under it goes to Home`() {
         runBlocking { graph.sourceRepository.save(PANEL_SOURCE.copy(id = 0, lastCatalogSyncMillis = 1)) }
         val sources = SourcesViewModel(app, graph)

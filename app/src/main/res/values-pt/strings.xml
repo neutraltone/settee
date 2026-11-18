@@ -249,6 +249,7 @@
     <string name="error_anything_else">Isto não foi reproduzido. Tente novamente, ou escolha outra coisa.</string>
     <string name="error_cant_reach_tv">Não é possível contactar o seu fornecedor. Verifique se esta televisão está online e se o endereço está correto.</string>
     <string name="error_cant_reach_device">Não é possível contactar o seu fornecedor. Verifique se este dispositivo está online e se o endereço está correto.</string>
+    <string name="error_live_ended">Este canal parou. Tente novamente, ou escolha outro canal.</string>
     <string name="error_timed_out">O seu fornecedor deixou de responder. Pode estar sobrecarregado, por isso tente novamente daqui a pouco.</string>
     <string name="error_web_page">O seu fornecedor enviou uma página web em vez de vídeo. O link pode ter expirado, por isso experimente atualizar o seu fornecedor nas Definições.</string>
     <string name="error_damaged">Este vídeo está danificado e não reproduz. É do lado do seu fornecedor, por isso escolha outra coisa.</string>
