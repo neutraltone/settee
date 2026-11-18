@@ -87,6 +87,42 @@ class CatalogueRefreshFailureTest {
     }
 
     @Test
+    fun `adding an address that answers with a web page says to check the address, not to try again`() = runTest {
+        db.sources().insert(PANEL_SOURCE)
+        panel.replies[""] = "<!DOCTYPE html><html><body>Welcome to our website</body></html>"
+
+        val outcome = refresh.refresh(CatalogueRefresh.Trigger.ProviderAdded(PANEL_SOURCE))
+
+        assertThat((outcome as CatalogueRefresh.Outcome.AddFailed).reason).isEqualTo(
+            ViewerError(notAPanel, "NotAPanel"),
+        )
+    }
+
+    @Test
+    fun `adding a provider whose channel list is cut off still says to try again`() = runTest {
+        db.sources().insert(PANEL_SOURCE)
+        panel.replies["get_live_streams"] = """[{"stream_id": 1, "name": "BBC One"}, {"stream_id": 2, "na"""
+
+        val outcome = refresh.refresh(CatalogueRefresh.Trigger.ProviderAdded(PANEL_SOURCE))
+
+        assertThat((outcome as CatalogueRefresh.Outcome.AddFailed).reason).isEqualTo(
+            ViewerError("Couldn't load your provider's channels. Try again in a moment.", "BadReply"),
+        )
+    }
+
+    @Test
+    fun `adding an address with nothing where an Xtream login should be says to check the address`() = runTest {
+        db.sources().insert(PANEL_SOURCE)
+        panel.replies[""] = "!404"
+
+        val outcome = refresh.refresh(CatalogueRefresh.Trigger.ProviderAdded(PANEL_SOURCE))
+
+        assertThat((outcome as CatalogueRefresh.Outcome.AddFailed).reason).isEqualTo(
+            ViewerError(notAPanel, "NotAPanel · HTTP 404"),
+        )
+    }
+
+    @Test
     fun `a refresh keeps each provider's reason by its id, and counts them apart from the guide's feeds`() = runTest {
         db.sources().insert(PANEL_SOURCE)
         db.sources().insert(PANEL_SOURCE.copy(id = 2, name = "Second", username = "u2"))
@@ -149,6 +185,10 @@ class CatalogueRefreshFailureTest {
 
         assertThat(db.sources().byId(1)?.refreshFailure).isNull()
     }
+
+    private val notAPanel =
+        "That address didn't answer like an IPTV provider. " +
+            "Check the address and port in your provider's details, or sign in to your Wi-Fi if it asks."
 
     private val unreachable = ViewerError(
         "Can't reach your provider. Check this device is online and the address is right.",

@@ -82,6 +82,8 @@ class XtreamApi(
          */
         const val CATALOGUE_BATCH = 500
 
+        private const val HTTP_NOT_FOUND = 404
+
         private val CATCHUP_STAMP = DateTimeFormatter.ofPattern("yyyy-MM-dd:HH-mm", Locale.US)
     }
 
@@ -388,7 +390,8 @@ class XtreamApi(
             response.close()
             throw XtreamException(
                 "The panel answered HTTP ${response.code}.",
-                problem = Problem.HTTP_STATUS,
+                // No player_api.php at all: a website, or the wrong port, rather than a panel in trouble.
+                problem = if (response.code == HTTP_NOT_FOUND) Problem.NOT_A_PANEL else Problem.HTTP_STATUS,
                 status = response.code,
             )
         }
@@ -519,11 +522,16 @@ class XtreamApi(
 
 private fun parsed(json: Json, text: String): JsonElement {
     if (text.isBlank()) throw XtreamApi.XtreamException("The server returned an empty response.")
-    return readingCatalogue { json.parseToJsonElement(text) }
+    // Only a reply that isn't JSON from its first character is a website or a sign-in page: JSON that
+    // breaks off later is a panel whose reply was cut short, and trying again can help with that.
+    val startsAsJson = text.trimStart().first() in "{[\""
+    return readingCatalogue(if (startsAsJson) Problem.BAD_REPLY else Problem.NOT_A_PANEL) {
+        json.parseToJsonElement(text)
+    }
 }
 
 /** Panels behind a captive portal or Cloudflare return HTML; "not valid JSON" means nothing to a viewer. */
-private inline fun <T> readingCatalogue(read: () -> T): T = try {
+private inline fun <T> readingCatalogue(problem: Problem = Problem.BAD_REPLY, read: () -> T): T = try {
     read()
 } catch (e: IllegalArgumentException) {
     // kotlinx.serialization's decoding failures are all IllegalArgumentExceptions.
@@ -531,6 +539,7 @@ private inline fun <T> readingCatalogue(read: () -> T): T = try {
         "The server replied with something that is not a valid catalogue. " +
             "Check the address and port are correct.",
         e,
+        problem,
     )
 }
 

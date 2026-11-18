@@ -66,15 +66,20 @@ class ErrorWording(private val context: Context, private val onTelevision: Boole
 
     private fun ofProvider(error: ProviderException, @StringRes fallback: Int): ViewerError {
         val status = error.status
-        if (status != null) return ofHttpStatus(status, fallback)
+        // A 404 where an Xtream login should be is the address that's wrong, not a status to wait out.
+        if (status != null && error.problem != Problem.NOT_A_PANEL) return ofHttpStatus(status, fallback)
         val sentence = when (error.problem) {
             Problem.LOGIN_REJECTED -> R.string.error_login
             Problem.ACCOUNT_INACTIVE -> R.string.error_account_inactive
             Problem.BAD_ADDRESS -> R.string.error_bad_address
             Problem.DEVICE_REFUSED -> R.string.error_device_refused
+            Problem.NOT_A_PANEL -> R.string.error_not_a_panel
             Problem.HTTP_STATUS, Problem.BAD_REPLY -> fallback
         }
-        return ViewerError(resources.getString(sentence), codeName(error.problem.name))
+        return ViewerError(
+            resources.getString(sentence),
+            ViewerError.detailOf(codeName(error.problem.name), status?.let { "HTTP $it" }),
+        )
     }
 
     /** A failure that's about the hardware: [tv]'s sentence on a television, [device]'s elsewhere. */

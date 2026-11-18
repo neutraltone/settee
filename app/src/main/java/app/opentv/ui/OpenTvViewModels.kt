@@ -1651,12 +1651,14 @@ fun List<Source>.providerFailures(): List<ProviderFailure> = mapNotNull { source
 data class ProviderBanner(val providers: List<ProviderFailure>)
 
 /**
- * Whether only the viewer can put this right: a login, account or address the provider turned down.
+ * Whether only the viewer can put this right: a login, account or address the provider turned down, or an
+ * address that answered like a website.
  * Read from the detail line's codes, the one part of a saved failure that isn't in the viewer's language.
  */
 internal fun ViewerError.isTheViewersToFix(): Boolean = detail.split(" · ").any { it in VIEWERS_TO_FIX }
 
-private val VIEWERS_TO_FIX = setOf("LoginRejected", "AccountInactive", "BadAddress", "HTTP 401", "HTTP 403")
+private val VIEWERS_TO_FIX =
+    setOf("LoginRejected", "AccountInactive", "BadAddress", "NotAPanel", "HTTP 401", "HTTP 403")
 
 /** A show's or movie's cover on Home, with where the active Profile is with it; null when never started. */
 data class Cover(val title: VodTitle, val status: CoverStatus? = null)

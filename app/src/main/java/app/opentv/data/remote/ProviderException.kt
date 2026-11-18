@@ -28,7 +28,10 @@ open class ProviderException(
         DEVICE_REFUSED,
         HTTP_STATUS,
 
-        /** Empty, not JSON, or missing what every panel sends. */
+        /** A web page or a 404 where `player_api.php` should be: a wrong address or port, or a Wi-Fi sign-in page. */
+        NOT_A_PANEL,
+
+        /** Empty, JSON that breaks off, or missing what every panel sends. */
         BAD_REPLY,
     }
 }
