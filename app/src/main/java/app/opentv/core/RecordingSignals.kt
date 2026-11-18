@@ -5,6 +5,7 @@
  */
 package app.opentv.core
 
+import androidx.annotation.VisibleForTesting
 import java.util.concurrent.ConcurrentHashMap
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -65,5 +66,13 @@ object RecordingSignals {
         suppressed.add(recordingId)
         if (_imminent.value?.recordingId == recordingId) _imminent.value = null
         if (_watch.value?.recordingId == recordingId) _watch.value = null
+    }
+
+    /** Forgets everything: the object lives as long as the process, so one test's booking would reach the next. */
+    @VisibleForTesting
+    internal fun reset() {
+        suppressed.clear()
+        _imminent.value = null
+        _watch.value = null
     }
 }
