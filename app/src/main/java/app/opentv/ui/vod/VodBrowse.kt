@@ -88,9 +88,11 @@ import kotlinx.coroutines.launch
 fun MoviesScreen(
     onOpenMovie: (Movie) -> Unit,
     onResume: (MediaKey) -> Unit,
-    hasSources: Boolean,
+    providers: ProvidersCarry,
     isSyncing: Boolean,
     onEditProvider: (sourceId: Long) -> Unit = {},
+    onAddProvider: () -> Unit = {},
+    onOpenSettings: () -> Unit = {},
     viewModel: VodViewModel = viewModel(activityViewModelStoreOwner()),
 ) {
     val resume = viewModel.continueWatchingMovies.collectAsState().value
@@ -104,9 +106,10 @@ fun MoviesScreen(
 
     // Pull the movie library the first time this tab is opened, not at login; refresh the computed
     // rows (recommended, by genre) on open too: cheap, and covers a library already on disk.
-    LaunchedEffect(Unit) {
-        if (hasSources) viewModel.ensureVodLoaded()
-        viewModel.loadHomeFeeds()
+    LaunchedEffect(Unit) { viewModel.loadHomeFeeds() }
+    // Keyed on what the providers carry, so switching an Xtream login on while here fetches its titles.
+    LaunchedEffect(providers) {
+        if (providers == ProvidersCarry.MOVIES_AND_SHOWS) viewModel.ensureVodLoaded()
     }
 
     val hasForYou = !resume.isNullOrEmpty() ||
@@ -145,11 +148,13 @@ fun MoviesScreen(
         forYouLoaded = resume != null && favourites != null,
         empty = vodEmpty(
             loading = vodLoading || isSyncing,
-            hasSources = hasSources,
+            providers = providers,
             failure = loadFailure,
             words = MOVIES_EMPTY,
             onRetry = viewModel::retryVod,
             onEditProvider = onEditProvider,
+            onAddProvider = onAddProvider,
+            onOpenSettings = onOpenSettings,
         ),
     ) { onHighlight ->
         MovieShelves(
@@ -171,9 +176,11 @@ fun MoviesScreen(
 fun SeriesScreen(
     onOpenSeries: (Series) -> Unit,
     onResume: (MediaKey) -> Unit,
-    hasSources: Boolean,
+    providers: ProvidersCarry,
     isSyncing: Boolean,
     onEditProvider: (sourceId: Long) -> Unit = {},
+    onAddProvider: () -> Unit = {},
+    onOpenSettings: () -> Unit = {},
     viewModel: VodViewModel = viewModel(activityViewModelStoreOwner()),
 ) {
     val resume = viewModel.continueWatchingSeries.collectAsState().value
@@ -185,9 +192,10 @@ fun SeriesScreen(
     val vodLoading by viewModel.vodLoading.collectAsState()
     val loadFailure = viewModel.showsLoadFailure.collectAsState().value
 
-    LaunchedEffect(Unit) {
-        if (hasSources) viewModel.ensureVodLoaded()
-        viewModel.loadHomeFeeds()
+    LaunchedEffect(Unit) { viewModel.loadHomeFeeds() }
+    // Keyed on what the providers carry, so switching an Xtream login on while here fetches its titles.
+    LaunchedEffect(providers) {
+        if (providers == ProvidersCarry.MOVIES_AND_SHOWS) viewModel.ensureVodLoaded()
     }
 
     val hasForYou = !resume.isNullOrEmpty() ||
@@ -226,11 +234,13 @@ fun SeriesScreen(
         forYouLoaded = resume != null && favourites != null,
         empty = vodEmpty(
             loading = vodLoading || isSyncing,
-            hasSources = hasSources,
+            providers = providers,
             failure = loadFailure,
             words = SHOWS_EMPTY,
             onRetry = viewModel::retryVod,
             onEditProvider = onEditProvider,
+            onAddProvider = onAddProvider,
+            onOpenSettings = onOpenSettings,
         ),
     ) { onHighlight ->
         SeriesShelves(
@@ -334,6 +344,7 @@ internal class EmptyWords(
     @StringRes val none: Int,
     @StringRes val providerSentNone: Int,
     @StringRes val addProvider: Int,
+    @StringRes val xtreamOnly: Int,
     @StringRes val failed: Int,
 )
 
@@ -342,6 +353,7 @@ private val MOVIES_EMPTY = EmptyWords(
     R.string.vod_no_movies,
     R.string.vod_no_movies_provider,
     R.string.vod_no_movies_add,
+    R.string.vod_no_movies_xtream_only,
     R.string.vod_movies_load_failed,
 )
 
@@ -350,31 +362,49 @@ private val SHOWS_EMPTY = EmptyWords(
     R.string.vod_no_shows,
     R.string.vod_no_shows_provider,
     R.string.vod_no_shows_add,
+    R.string.vod_no_shows_xtream_only,
     R.string.vod_shows_load_failed,
 )
 
 /**
- * What an empty Movies or Shows says: loading, why its download failed (only once that's known and
- * with nothing of it stored, which is when this is asked), that the provider sent none, or to add one.
+ * What an empty Movies or Shows says. With no provider that carries these titles, that comes first:
+ * a sync or a failure from an Xtream login since switched off would only say to wait or try again.
+ * Otherwise: loading, why its download failed (only once that's known and with nothing of it stored,
+ * which is when this is asked), or that the provider sent none.
  */
 @Composable
 private fun vodEmpty(
     loading: Boolean,
-    hasSources: Boolean,
+    providers: ProvidersCarry,
     failure: VodLoadFailure?,
     words: EmptyWords,
     onRetry: () -> Unit,
     onEditProvider: (sourceId: Long) -> Unit,
-): VodEmpty = when {
-    loading -> VodEmpty.Loading(stringResource(words.loading))
-    hasSources && failure != null -> VodEmpty.Failed(
-        stringResource(words.failed),
-        failure.reason,
-        onRetry = onRetry,
-        onEditProvider = { onEditProvider(failure.sourceId) },
+    onAddProvider: () -> Unit,
+    onOpenSettings: () -> Unit,
+): VodEmpty = when (providers) {
+    ProvidersCarry.NO_PROVIDER -> VodEmpty.WayForward(
+        stringResource(words.none),
+        stringResource(words.addProvider),
+        stringResource(R.string.guide_add_provider_button),
+        onAddProvider,
     )
-    hasSources -> VodEmpty.Hint(stringResource(words.none), stringResource(words.providerSentNone))
-    else -> VodEmpty.Hint(stringResource(words.none), stringResource(words.addProvider))
+    ProvidersCarry.LIVE_ONLY -> VodEmpty.WayForward(
+        stringResource(words.none),
+        stringResource(words.xtreamOnly),
+        stringResource(R.string.vod_open_settings_button),
+        onOpenSettings,
+    )
+    ProvidersCarry.MOVIES_AND_SHOWS -> when {
+        loading -> VodEmpty.Loading(stringResource(words.loading))
+        failure != null -> VodEmpty.Failed(
+            stringResource(words.failed),
+            failure.reason,
+            onRetry = onRetry,
+            onEditProvider = { onEditProvider(failure.sourceId) },
+        )
+        else -> VodEmpty.Hint(stringResource(words.none), stringResource(words.providerSentNone))
+    }
 }
 
 /** What Movies or Shows says when For you has nothing in it. */
@@ -385,6 +415,9 @@ internal sealed interface VodEmpty {
     class Loading(val message: String) : Lines
 
     class Hint(val title: String, val body: String?) : Lines
+
+    /** Why there's nothing, and the one thing to press about it. */
+    class WayForward(val title: String, val body: String, val button: String, val onPress: () -> Unit) : VodEmpty
 
     /** The latest download of this kind failed and nothing of it is stored: why, and what to do. */
     class Failed(val title: String, val reason: ViewerError, val onRetry: () -> Unit, val onEditProvider: () -> Unit) :
@@ -539,6 +572,9 @@ internal fun EmptyBrowse(empty: VodEmpty) {
                 ActionButton(stringResource(R.string.common_try_again), empty.onRetry)
                 ActionButton(stringResource(R.string.guide_edit_provider), empty.onEditProvider)
             }
+        }
+        is VodEmpty.WayForward -> Message(empty.body, title = empty.title) {
+            ActionButton(empty.button, empty.onPress)
         }
         is VodEmpty.Lines -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             val (title, body) = when (empty) {

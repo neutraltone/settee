@@ -86,6 +86,7 @@ import app.opentv.ui.vod.MovieDetailScreen
 import app.opentv.ui.vod.PersonScreen
 import app.opentv.ui.vod.SeriesDetailScreen
 import app.opentv.ui.vod.VodPlayerScreen
+import app.opentv.ui.vod.providersCarry
 import app.opentv.ui.vod.rememberCoverBadges
 import app.opentv.update.UpdateGate
 import app.opentv.update.UpdateUiState
@@ -424,7 +425,7 @@ private fun OpenTvApp(isTelevision: Boolean, launchedToPlay: Boolean) {
                         val tab by entry.shellTab()
                         MainScreen(
                             isTelevision = isTelevision,
-                            hasSources = sourcesUi.sources.isNotEmpty(),
+                            providers = providersCarry(sourcesUi.sources),
                             isSyncing = sourcesUi.syncing,
                             loadFailure = sourcesUi.loadFailure,
                             onPlayChannel = { channel -> navController.navigate(Routes.player(channel.id)) },

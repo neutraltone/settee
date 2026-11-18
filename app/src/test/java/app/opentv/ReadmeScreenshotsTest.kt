@@ -46,6 +46,7 @@ import app.opentv.ui.Tab
 import app.opentv.ui.visibleTabs
 import app.opentv.ui.vod.MovieDetailContent
 import app.opentv.ui.vod.MoviesScreen
+import app.opentv.ui.vod.ProvidersCarry
 import app.opentv.ui.vod.SeriesDetailContent
 import coil.Coil
 import coil.ImageLoader
@@ -394,7 +395,7 @@ class ReadmeScreenshotsTest {
                 MoviesScreen(
                     onOpenMovie = {},
                     onResume = {},
-                    hasSources = false,
+                    providers = ProvidersCarry.NO_PROVIDER,
                     isSyncing = false,
                     viewModel = viewModel,
                 )

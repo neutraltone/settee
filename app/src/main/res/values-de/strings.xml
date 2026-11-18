@@ -271,6 +271,7 @@
     <string name="error_playlist_empty">Unter dieser Adresse gibt es keine Sender. Überprüfe, ob es der Link ist, den dir dein Anbieter gegeben hat.</string>
     <string name="error_account_inactive">Laut deinem Anbieter ist dieses Konto nicht aktiv. Frag bei ihm nach und versuch es dann erneut.</string>
     <string name="error_bad_address">Diese Adresse sieht nicht richtig aus. Überprüfe deine Anbieterdaten in den Einstellungen.</string>
+    <string name="error_not_a_panel">Diese Adresse hat nicht wie ein IPTV-Anbieter geantwortet. Überprüfe Adresse und Port in deinen Anbieterdaten oder melde dich im WLAN an, falls es danach fragt.</string>
     <string name="error_device_refused">Dein Anbieter hat diese Angaben nicht akzeptiert. Überprüfe deine Anbieterdaten in den Einstellungen.</string>
     <string name="error_guide">Dieser Guide konnte nicht heruntergeladen werden. Versuch es gleich noch einmal.</string>
     <string name="error_guide_empty">Dieser Guide wurde heruntergeladen, enthielt aber keine Sendungen. Überprüfe, ob es der richtige Link ist.</string>
