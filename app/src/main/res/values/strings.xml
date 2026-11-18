@@ -694,6 +694,7 @@
     <string name="opensubtitles_sign_in">Sign in</string>
     <string name="opensubtitles_sign_out">Sign out</string>
     <string name="opensubtitles_sign_in_here">Sign in on this TV</string>
+    <string name="opensubtitles_sign_in_again">Sign in again</string>
     <string name="opensubtitles_sign_in_phone">Or scan with your phone to sign in there</string>
     <string name="opensubtitles_username">Username</string>
     <string name="opensubtitles_password">Password</string>

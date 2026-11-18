@@ -31,12 +31,13 @@ import app.opentv.ui.design.Text
 /**
  * The one thing in a pane that isn't a row: something to read off the TV and type or scan on
  * another device, such as Manage on phone or laptop's address, or the code while sharing. It can't
- * take the Highlight, so the remote goes straight past it to the rows below.
+ * take the Highlight, so the remote goes straight past it to the rows below. Without a [code], only the
+ * lead and note show.
  */
 @Composable
 internal fun CodeBlock(
     lead: String,
-    code: String,
+    code: String?,
     modifier: Modifier = Modifier,
     note: String? = null,
     beside: @Composable () -> Unit = {},
@@ -53,7 +54,7 @@ internal fun CodeBlock(
         beside()
         Column(verticalArrangement = Arrangement.spacedBy(LINE_GAP)) {
             Text(lead, SetteeType.Body, color = SetteeColors.QuietText)
-            Text(code, SetteeType.ScreenTitle)
+            code?.let { Text(it, SetteeType.ScreenTitle) }
             note?.let { Text(it, SetteeType.Body, color = SetteeColors.QuietText) }
         }
     }
