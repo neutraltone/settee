@@ -249,6 +249,7 @@
     <string name="error_anything_else">Bu oynatılamadı. Tekrar deneyin veya başka bir şey seçin.</string>
     <string name="error_cant_reach_tv">Sağlayıcınıza ulaşılamıyor. Bu TV\'nin internete bağlı olduğunu ve adresin doğru olduğunu kontrol edin.</string>
     <string name="error_cant_reach_device">Sağlayıcınıza ulaşılamıyor. Bu cihazın internete bağlı olduğunu ve adresin doğru olduğunu kontrol edin.</string>
+    <string name="error_live_ended">Bu kanal durdu. Tekrar deneyin veya başka bir kanal seçin.</string>
     <string name="error_timed_out">Sağlayıcınız yanıt vermeyi bıraktı. Yoğun olabilir, bu yüzden birazdan tekrar deneyin.</string>
     <string name="error_web_page">Sağlayıcınız video yerine bir web sayfası gönderdi. Bağlantının süresi dolmuş olabilir, bu yüzden Ayarlar\'dan sağlayıcınızı yenilemeyi deneyin.</string>
     <string name="error_damaged">Bu video bozuk ve oynatılamıyor. Sorun sağlayıcınızın tarafında, bu yüzden başka bir şey deneyin.</string>

@@ -249,6 +249,7 @@
     <string name="error_anything_else">재생되지 않았습니다. 다시 시도하거나 다른 항목을 선택하세요.</string>
     <string name="error_cant_reach_tv">공급자에 연결할 수 없습니다. 이 TV가 온라인 상태인지, 주소가 올바른지 확인하세요.</string>
     <string name="error_cant_reach_device">공급자에 연결할 수 없습니다. 이 기기가 온라인 상태인지, 주소가 올바른지 확인하세요.</string>
+    <string name="error_live_ended">이 채널이 멈췄습니다. 다시 시도하거나 다른 채널을 선택하세요.</string>
     <string name="error_timed_out">공급자가 응답을 멈췄습니다. 사용량이 많을 수 있으니 잠시 후 다시 시도하세요.</string>
     <string name="error_web_page">공급자가 동영상 대신 웹페이지를 보냈습니다. 링크가 만료되었을 수 있으니 설정에서 공급자를 새로고침해 보세요.</string>
     <string name="error_damaged">이 동영상은 손상되어 재생할 수 없습니다. 공급자 쪽 문제이니 다른 항목을 시도해 보세요.</string>

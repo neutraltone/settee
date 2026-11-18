@@ -249,6 +249,7 @@
     <string name="error_anything_else">Toto sa neprehralo. Skúste to znova alebo vyberte niečo iné.</string>
     <string name="error_cant_reach_tv">Poskytovateľ nie je dostupný. Skontrolujte, či je tento televízor pripojený na internet a adresa je správna.</string>
     <string name="error_cant_reach_device">Poskytovateľ nie je dostupný. Skontrolujte, či je toto zariadenie pripojené na internet a adresa je správna.</string>
+    <string name="error_live_ended">Tento kanál prestal vysielať. Skúste to znova alebo vyberte iný kanál.</string>
     <string name="error_timed_out">Poskytovateľ prestal odpovedať. Možno je vyťažený, preto to skúste o chvíľu znova.</string>
     <string name="error_web_page">Poskytovateľ namiesto videa poslal webovú stránku. Odkaz možno vypršal, preto skúste obnoviť poskytovateľa v Nastaveniach.</string>
     <string name="error_damaged">Toto video je poškodené a neprehrá sa. Je to na strane poskytovateľa, preto vyberte niečo iné.</string>

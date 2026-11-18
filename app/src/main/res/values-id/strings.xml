@@ -249,6 +249,7 @@
     <string name="error_anything_else">Ini tidak dapat diputar. Coba lagi, atau pilih yang lain.</string>
     <string name="error_cant_reach_tv">Tidak dapat menjangkau penyedia Anda. Periksa apakah TV ini online dan alamatnya sudah benar.</string>
     <string name="error_cant_reach_device">Tidak dapat menjangkau penyedia Anda. Periksa apakah perangkat ini online dan alamatnya sudah benar.</string>
+    <string name="error_live_ended">Saluran ini berhenti. Coba lagi, atau pilih saluran lain.</string>
     <string name="error_timed_out">Penyedia Anda berhenti merespons. Mungkin sedang sibuk, jadi coba lagi sebentar lagi.</string>
     <string name="error_web_page">Penyedia Anda mengirim halaman web, bukan video. Tautannya mungkin sudah kedaluwarsa, jadi coba segarkan penyedia Anda di Pengaturan.</string>
     <string name="error_damaged">Video ini rusak dan tidak dapat diputar. Masalahnya ada di pihak penyedia Anda, jadi coba yang lain.</string>

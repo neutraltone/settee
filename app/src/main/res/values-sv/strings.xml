@@ -249,6 +249,7 @@
     <string name="error_anything_else">Det här gick inte att spela upp. Försök igen, eller välj något annat.</string>
     <string name="error_cant_reach_tv">Når inte din leverantör. Kontrollera att den här TV:n är ansluten till internet och att adressen stämmer.</string>
     <string name="error_cant_reach_device">Når inte din leverantör. Kontrollera att den här enheten är ansluten till internet och att adressen stämmer.</string>
+    <string name="error_live_ended">Den här kanalen stannade. Försök igen, eller välj en annan kanal.</string>
     <string name="error_timed_out">Din leverantör slutade svara. Den kan vara upptagen, så försök igen om en stund.</string>
     <string name="error_web_page">Din leverantör skickade en webbsida i stället för video. Länken kan ha gått ut, så prova att uppdatera din leverantör i Inställningar.</string>
     <string name="error_damaged">Den här videon är skadad och kan inte spelas upp. Det ligger hos din leverantör, så prova något annat.</string>

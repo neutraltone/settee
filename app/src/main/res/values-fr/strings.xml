@@ -249,6 +249,7 @@
     <string name="error_anything_else">La lecture n\'a pas démarré. Réessayez, ou choisissez autre chose.</string>
     <string name="error_cant_reach_tv">Impossible de joindre votre fournisseur. Vérifiez que cette télévision est connectée et que l\'adresse est correcte.</string>
     <string name="error_cant_reach_device">Impossible de joindre votre fournisseur. Vérifiez que cet appareil est connecté et que l\'adresse est correcte.</string>
+    <string name="error_live_ended">Cette chaîne s\'est arrêtée. Réessayez, ou choisissez une autre chaîne.</string>
     <string name="error_timed_out">Votre fournisseur ne répond plus. Il est peut-être surchargé, alors réessayez dans un instant.</string>
     <string name="error_web_page">Votre fournisseur a envoyé une page web au lieu d\'une vidéo. Le lien a peut-être expiré, alors essayez d\'actualiser votre fournisseur dans les Paramètres.</string>
     <string name="error_damaged">Cette vidéo est endommagée et ne peut pas être lue. Cela vient de votre fournisseur, alors choisissez autre chose.</string>

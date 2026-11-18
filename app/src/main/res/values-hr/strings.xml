@@ -249,6 +249,7 @@
     <string name="error_anything_else">Ovo se nije reproduciralo. Pokušajte ponovno ili odaberite nešto drugo.</string>
     <string name="error_cant_reach_tv">Nije moguće doći do vašeg pružatelja usluge. Provjerite je li ovaj TV povezan s internetom i je li adresa točna.</string>
     <string name="error_cant_reach_device">Nije moguće doći do vašeg pružatelja usluge. Provjerite je li ovaj uređaj povezan s internetom i je li adresa točna.</string>
+    <string name="error_live_ended">Ovaj se kanal zaustavio. Pokušajte ponovno ili odaberite drugi kanal.</string>
     <string name="error_timed_out">Vaš pružatelj usluge prestao je odgovarati. Možda je zauzet, pa pokušajte ponovno za trenutak.</string>
     <string name="error_web_page">Vaš pružatelj usluge poslao je web-stranicu umjesto videa. Poveznica je možda istekla, pa pokušajte osvježiti pružatelja usluge u Postavkama.</string>
     <string name="error_damaged">Ovaj video je oštećen i neće se reproducirati. To je na strani vašeg pružatelja usluge, pa pokušajte nešto drugo.</string>

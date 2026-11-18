@@ -249,6 +249,7 @@
     <string name="error_anything_else">Nie udało się tego odtworzyć. Spróbuj ponownie lub wybierz coś innego.</string>
     <string name="error_cant_reach_tv">Nie można połączyć się z dostawcą. Sprawdź, czy ten telewizor ma dostęp do internetu i czy adres jest poprawny.</string>
     <string name="error_cant_reach_device">Nie można połączyć się z dostawcą. Sprawdź, czy to urządzenie ma dostęp do internetu i czy adres jest poprawny.</string>
+    <string name="error_live_ended">Ten kanał przestał działać. Spróbuj ponownie lub wybierz inny kanał.</string>
     <string name="error_timed_out">Dostawca przestał odpowiadać. Może być przeciążony, więc spróbuj ponownie za chwilę.</string>
     <string name="error_web_page">Dostawca przesłał stronę internetową zamiast wideo. Link mógł wygasnąć, więc spróbuj odświeżyć dostawcę w Ustawieniach.</string>
     <string name="error_damaged">To wideo jest uszkodzone i nie da się go odtworzyć. Problem leży po stronie dostawcy, więc wybierz coś innego.</string>

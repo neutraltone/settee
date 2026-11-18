@@ -249,6 +249,7 @@
     <string name="error_anything_else">Det kunne ikke afspilles. Prøv igen, eller vælg noget andet.</string>
     <string name="error_cant_reach_tv">Kan ikke nå din udbyder. Tjek, at dette tv er online, og at adressen er rigtig.</string>
     <string name="error_cant_reach_device">Kan ikke nå din udbyder. Tjek, at denne enhed er online, og at adressen er rigtig.</string>
+    <string name="error_live_ended">Kanalen stoppede. Prøv igen, eller vælg en anden kanal.</string>
     <string name="error_timed_out">Din udbyder holdt op med at svare. Den har måske travlt, så prøv igen om lidt.</string>
     <string name="error_web_page">Din udbyder sendte en webside i stedet for video. Linket er måske udløbet, så prøv at opdatere din udbyder i Indstillinger.</string>
     <string name="error_damaged">Denne video er beskadiget og kan ikke afspilles. Det er hos din udbyder, så prøv noget andet.</string>

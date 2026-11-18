@@ -249,6 +249,7 @@
     <string name="error_anything_else">Dette ble ikke spilt av. Prøv igjen, eller velg noe annet.</string>
     <string name="error_cant_reach_tv">Får ikke kontakt med leverandøren din. Sjekk at denne TV-en er på nett, og at adressen stemmer.</string>
     <string name="error_cant_reach_device">Får ikke kontakt med leverandøren din. Sjekk at denne enheten er på nett, og at adressen stemmer.</string>
+    <string name="error_live_ended">Denne kanalen stoppet. Prøv igjen, eller velg en annen kanal.</string>
     <string name="error_timed_out">Leverandøren din sluttet å svare. Den kan være opptatt, så prøv igjen om litt.</string>
     <string name="error_web_page">Leverandøren din sendte en nettside i stedet for video. Lenken kan ha utløpt, så prøv å oppdatere leverandøren din i Innstillinger.</string>
     <string name="error_damaged">Denne videoen er skadet og kan ikke spilles av. Det er på leverandørens side, så prøv noe annet.</string>
