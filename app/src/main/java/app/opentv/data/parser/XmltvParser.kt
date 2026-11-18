@@ -12,6 +12,10 @@ import java.io.InputStream
 import java.util.Calendar
 import java.util.TimeZone
 import org.xmlpull.v1.XmlPullParser
+import org.xmlpull.v1.XmlPullParserException
+
+/** What should have been a guide opened as something else: a web page, plain text, JSON. */
+class NotAGuideException(why: String, cause: Throwable? = null) : IOException("Not XMLTV: $why", cause)
 
 /**
  * Streaming XMLTV guide parser.
@@ -30,9 +34,6 @@ import org.xmlpull.v1.XmlPullParser
  *    the single most-reported EPG bug in this category of app. We normalise to epoch
  *    millis at parse time and never store anything else.
  */
-/** What should have been a guide opened as some other document, such as [root] `html`. */
-class NotAGuideException(root: String) : IOException("Not XMLTV: the document's root is <$root>")
-
 object XmltvParser {
 
     /** Result of a parse run, for logging and for surfacing honest errors to the user. */
@@ -66,15 +67,9 @@ object XmltvParser {
         // Strict about structure, lenient about entities: see LenientEntityStream (#347).
         parser.setInput(LenientEntityStream(input), null)
 
-        var event = parser.eventType
-        var rootSeen = false
+        var event = openRoot(parser)
         while (event != XmlPullParser.END_DOCUMENT) {
             if (event == XmlPullParser.START_TAG) {
-                // A web page where the guide should be (an expired share link, a Wi-Fi sign-in page)
-                // would otherwise read as a guide with nothing in it, and say to check the link
-                // without saying why (#471).
-                if (!rootSeen && parser.name != "tv") throw NotAGuideException(parser.name)
-                rootSeen = true
                 when (parser.name) {
                     "channel" -> {
                         val id = parser.getAttributeValue(null, "id")
@@ -100,6 +95,25 @@ object XmltvParser {
         }
 
         return Stats(channelCount, programmeCount, skipped)
+    }
+
+    /**
+     * Reads up to the document's root and returns its event, refusing anything that isn't `<tv>`. A
+     * web page where the guide should be (an expired share link, a Wi-Fi sign-in page) would otherwise
+     * read as a guide with nothing in it, or, as plain text or sloppy HTML, as one that broke off: both
+     * worded as if trying again could help (#471). Past the root, a broken document is a guide cut off.
+     */
+    private fun openRoot(parser: XmlPullParser): Int {
+        val event = try {
+            var next = parser.eventType
+            while (next != XmlPullParser.START_TAG && next != XmlPullParser.END_DOCUMENT) next = parser.next()
+            next
+        } catch (e: XmlPullParserException) {
+            throw NotAGuideException("not XML before its first element", e)
+        }
+        val root = if (event == XmlPullParser.START_TAG) parser.name else null
+        if (root != "tv") throw NotAGuideException("the document's root is ${root?.let { "<$it>" } ?: "missing"}")
+        return event
     }
 
     private fun readChannelDisplayName(parser: XmlPullParser): String? {

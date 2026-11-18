@@ -8,6 +8,7 @@ package app.opentv
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import app.opentv.core.ViewerError
+import app.opentv.data.model.EpgFeed
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
@@ -71,6 +72,27 @@ class GuideDownloadFailureTest {
 
         assertThat(failure.sentence).isEqualTo(string(R.string.error_not_a_guide))
         assertThat(failure.detail).isEqualTo("NotAGuide")
+    }
+
+    @Test
+    fun `an own guide's address that answers with a page that isn't even XML says it isn't a guide`() = runTest {
+        for (page in listOf("Service unavailable", "<html lang=en><body>Sign in</body></html>")) {
+            val failure = ownGuideAnswering(page)
+
+            assertThat(failure.sentence).isEqualTo(string(R.string.error_not_a_guide))
+            assertThat(failure.detail).isEqualTo("NotAGuide")
+        }
+    }
+
+    @Test
+    fun `an own guide saved with an address that won't parse says it isn't a guide`() = runTest {
+        catalogue.db.epgFeeds().insert(EpgFeed(name = "Old guide", url = "not a url", enabled = true))
+
+        guide.syncAll(nowUtcMillis = NOW, force = true)
+
+        val failure = checkNotNull(ViewerError.fromStored(checkNotNull(guide.savedFeed("not a url")).lastResult))
+        assertThat(failure.sentence).isEqualTo(string(R.string.error_not_a_guide))
+        assertThat(failure.detail).isEqualTo("GuideAddress")
     }
 
     @Test

@@ -198,7 +198,8 @@ provider"; the provider's own guide (`xmltv.php`) is worded as the provider is (
 | Trigger | String key | Sentence | Detail | Whose end, likely cause |
 |---|---|---|---|---|
 | Own guide answers 404, 410, 401 or 403 | `error_not_a_guide` | That address isn't a guide. Check it's the right link, or sign in to your Wi-Fi if it asks. | HTTP status | The viewer's: a wrong or dead link |
-| Any guide answers 200 with something other than XMLTV (a web page) | `error_not_a_guide` | (as above) | NotAGuide | The viewer's: an expired share link, a host's landing page, a Wi-Fi sign-in page |
+| Any guide answers 200 with something other than XMLTV (a web page, plain text, JSON) | `error_not_a_guide` | (as above) | NotAGuide | The viewer's: an expired share link, a host's landing page, a Wi-Fi sign-in page |
+| Own guide saved with an address that isn't a web address (before entry checked it) | `error_not_a_guide` | (as above) | GuideAddress | The viewer's: a mistyped address |
 | Own guide answers any other status (429, 5xx, …) | `error_guide` | Couldn't download this guide. Try again in a moment. | HTTP status | The feed's server |
 | Provider's guide answers 401/403, 429, 5xx | `error_login`, `error_http_429`, `error_http_5xx` | (as in Providers) | HTTP status | The provider's |
 | Downloaded, no programmes | `error_guide_empty` | This guide downloaded, but had no programmes in it. Check it's the right link. | NoProgrammes | The feed's |

@@ -15,3 +15,9 @@ import app.opentv.core.HttpStatus
 class GuideDownloadException(override val status: Int) :
     Exception("Guide download failed (HTTP $status)."),
     HttpStatus
+
+/**
+ * A guide of the viewer's own saved with an address that isn't a web address. Guide settings no longer
+ * saves one, but one saved before would otherwise fail every download worded as "try again".
+ */
+class GuideAddressException : Exception("Guide address isn't a web address.")

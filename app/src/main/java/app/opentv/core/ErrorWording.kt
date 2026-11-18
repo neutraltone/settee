@@ -9,6 +9,7 @@ import android.content.Context
 import androidx.annotation.StringRes
 import app.opentv.R
 import app.opentv.data.parser.NotAGuideException
+import app.opentv.data.remote.GuideAddressException
 import app.opentv.data.remote.GuideDownloadException
 import app.opentv.data.remote.OpenSubtitlesFailure
 import app.opentv.data.remote.ProviderException
@@ -74,7 +75,7 @@ class ErrorWording(private val context: Context, private val onTelevision: Boole
      * is, so a login it turns down says so; any other guide has no provider to blame.
      */
     fun ofGuide(error: Throwable, fromProvider: Boolean): ViewerError = when {
-        error is NotAGuideException -> of(error, R.string.error_not_a_guide)
+        error is NotAGuideException || error is GuideAddressException -> of(error, R.string.error_not_a_guide)
         fromProvider -> ofProvider(error, R.string.error_guide)
         // Only the status: the exception's type says nothing the status doesn't.
         error is GuideDownloadException -> ViewerError(

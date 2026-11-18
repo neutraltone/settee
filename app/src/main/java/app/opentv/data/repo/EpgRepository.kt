@@ -25,6 +25,7 @@ import app.opentv.data.model.Source
 import app.opentv.data.parser.ChannelNameNormalizer
 import app.opentv.data.parser.XmltvParser
 import app.opentv.data.remote.CountingInputStream
+import app.opentv.data.remote.GuideAddressException
 import app.opentv.data.remote.GuideDownloadException
 import app.opentv.data.remote.XtreamApi
 import java.io.BufferedInputStream
@@ -482,7 +483,8 @@ class EpgRepository(
                 api.openEpg(source)
             }
             feed.url != null -> {
-                val response = http.newCall(Request.Builder().url(feed.url).build()).execute()
+                val url = feed.url.toHttpUrlOrNull() ?: throw GuideAddressException()
+                val response = http.newCall(Request.Builder().url(url).build()).execute()
                 if (!response.isSuccessful) {
                     response.close()
                     throw GuideDownloadException(response.code)

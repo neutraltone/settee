@@ -105,8 +105,10 @@ internal fun GuidePane(viewModel: EpgViewModel = viewModel()) {
                 // Named by its host: the full address is the row's label otherwise, and a
                 // provider's guide link can carry the login. One with no host gets a plain name,
                 // since a blank one would be saved as the address.
-                val url = EpgRepository.guideAddress(typed) ?: typed
-                viewModel.addCustom(hostOnly(url).ifEmpty { ownGuide }, url)
+                // The refusal below has already turned down an address this can't make one of.
+                EpgRepository.guideAddress(typed)?.let { url ->
+                    viewModel.addCustom(hostOnly(url).ifEmpty { ownGuide }, url)
+                }
             },
             refusal = { typed ->
                 badAddress.takeIf { typed.isNotBlank() && EpgRepository.guideAddress(typed) == null }
