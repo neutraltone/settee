@@ -479,7 +479,7 @@ private fun LoadFailed(failure: ProviderFailure?, onRetry: () -> Unit, onEditPro
     // With no saved failure to say why, the generic sentence; it has no detail to show.
     Message(
         failure?.error?.sentence ?: stringResource(R.string.guide_load_failed_desc),
-        title = failure?.let { stringResource(R.string.guide_load_failed_title_named, it.provider) }
+        title = failure?.let { stringResource(R.string.guide_load_failed_title_named, it.name) }
             ?: stringResource(R.string.guide_load_failed_title),
         detail = failure?.error?.detail.orEmpty(),
     ) {

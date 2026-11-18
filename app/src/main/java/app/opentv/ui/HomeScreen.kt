@@ -219,13 +219,13 @@ internal fun HomeContent(
 @Composable
 private fun ProviderBannerLine(banner: ProviderBanner, onOpenProviders: (sourceId: Long) -> Unit) {
     val providers = banner.providers
-    val text = providers.singleOrNull()?.let { (source, failure) ->
-        stringResource(R.string.home_provider_banner_one, source.name, failure.sentence)
+    val text = providers.singleOrNull()?.let {
+        stringResource(R.string.home_provider_banner_one, it.name, it.error.sentence)
     } ?: pluralStringResource(R.plurals.home_provider_banner_many, providers.size, providers.size)
     Banner(
         text,
         stringResource(R.string.home_provider_banner_open),
-        onAction = { onOpenProviders(providers.first().first.id) },
+        onAction = { onOpenProviders(providers.first().sourceId) },
     )
 }
 

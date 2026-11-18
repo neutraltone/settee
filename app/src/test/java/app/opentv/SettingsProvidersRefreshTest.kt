@@ -22,6 +22,7 @@ import androidx.work.WorkManager
 import androidx.work.testing.WorkManagerTestInitHelper
 import app.opentv.core.ServiceLocator
 import app.opentv.core.ViewerError
+import app.opentv.data.model.Channel
 import app.opentv.data.model.Source
 import app.opentv.data.model.SourceKind
 import app.opentv.data.repo.CatalogueRefresh
@@ -35,6 +36,8 @@ import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import kotlin.concurrent.thread
 import kotlinx.coroutines.runBlocking
+import org.junit.After
+import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -80,22 +83,60 @@ class SettingsProvidersRefreshTest {
     }
 
     /** A provider nothing will reach: port 9 refuses at once. */
-    private fun saveProvider(name: String, failure: ViewerError? = null): Long = runBlocking {
+    /** Every provider a test saved, removed after it: the process's database outlives each test. */
+    private val saved = mutableListOf<Long>()
+
+    @Before
+    fun clearOtherTestsFailures() = runBlocking {
+        // Other test classes' providers share the database: only these tests' failures count here.
+        graph.sourceRepository.all().forEach { graph.sourceRepository.saveRefreshResult(it.id, null) }
+    }
+
+    @After
+    fun removeProviders() = runBlocking { saved.forEach { graph.catalogRepository.deleteSource(it) } }
+
+    private fun saveProvider(
+        name: String,
+        failure: ViewerError? = null,
+        enabled: Boolean = true,
+        url: String = "http://127.0.0.1:9/list.m3u",
+    ): Long = runBlocking {
         graph.sourceRepository.save(
             Source(
                 name = name,
                 kind = SourceKind.M3U,
-                url = "http://127.0.0.1:9/list.m3u",
+                url = url,
+                enabled = enabled,
                 lastRefreshFailure = failure?.stored(),
+            ),
+        ).also { saved += it }
+    }
+
+    /** Channels from an earlier refresh that worked: a later failure keeps them, so the guide isn't empty. */
+    private fun storeChannels(sourceId: Long) = runBlocking {
+        graph.database.channels().upsertAll(
+            listOf(
+                Channel(
+                    sourceId = sourceId,
+                    streamId = "1",
+                    name = "News",
+                    categoryId = null,
+                    logoUrl = null,
+                    epgChannelId = null,
+                    number = 1,
+                    streamUrl = "http://example.com/1.ts",
+                ),
             ),
         )
     }
 
+    private val loginRejected get() = ViewerError(app().getString(R.string.error_login), "LoginRejected")
+
     @Test
     fun `a provider whose last refresh failed says why under its row, with Refresh again`() {
         WorkManagerTestInitHelper.initializeTestWorkManager(ApplicationProvider.getApplicationContext())
-        saveProvider("Fine films on 464")
-        saveProvider("Locked films on 464", ViewerError(app().getString(R.string.error_login), "LoginRejected"))
+        storeChannels(saveProvider("Fine films on 464"))
+        storeChannels(saveProvider("Locked films on 464", loginRejected))
         show()
         waitFor("Locked films on 464")
         press(KeyEvent.KEYCODE_DPAD_RIGHT)
@@ -122,15 +163,7 @@ class SettingsProvidersRefreshTest {
         val silent = ServerSocket(0)
         val letGo = CountDownLatch(1)
         thread { silent.accept().use { letGo.await(10, TimeUnit.SECONDS) } }
-        runBlocking {
-            graph.sourceRepository.save(
-                Source(
-                    name = "Slow films on 464",
-                    kind = SourceKind.M3U,
-                    url = "http://127.0.0.1:${silent.localPort}/a.m3u",
-                ),
-            )
-        }
+        saveProvider("Slow films on 464", url = "http://127.0.0.1:${silent.localPort}/a.m3u")
         show()
         waitFor("Slow films on 464")
         press(KeyEvent.KEYCODE_DPAD_RIGHT)
@@ -154,6 +187,50 @@ class SettingsProvidersRefreshTest {
             compose.onAllNodes(hasText("See Providers", substring = true)).fetchSemanticsNodes().isNotEmpty()
         }
         highlighted().assertTextContains(refreshRow)
+        // Saved on the provider as the refresh ended, and drawn under its row without leaving the pane.
+        compose.onNodeWithText("Refresh again").assertExists()
+    }
+
+    @Test
+    fun `adding a provider doesn't put its own result on the refresh row`() {
+        WorkManagerTestInitHelper.initializeTestWorkManager(app())
+        saveProvider("Unreachable films on 464")
+        show()
+        waitFor("Unreachable films on 464")
+        runBlocking { graph.catalogueRefresh.refresh(CatalogueRefresh.Trigger.Manual) }
+        compose.waitUntil(5_000) {
+            compose.onAllNodes(hasText("See Providers", substring = true)).fetchSemanticsNodes().isNotEmpty()
+        }
+
+        val added = Source(id = 99, name = "Another on 464", kind = SourceKind.M3U, url = "http://127.0.0.1:9/b.m3u")
+        runBlocking { graph.catalogueRefresh.refresh(CatalogueRefresh.Trigger.ProviderAdded(added)) }
+        compose.waitForIdle()
+
+        compose.onNode(hasText("See Providers", substring = true)).assertExists()
+    }
+
+    @Test
+    fun `a disabled provider's old failure isn't shown, since it won't be refreshed to clear it`() {
+        saveProvider("Switched-off films on 464", loginRejected, enabled = false)
+        show()
+        waitFor("Switched-off films on 464")
+
+        compose.onNodeWithText(app().getString(R.string.error_login)).assertDoesNotExist()
+        compose.onNodeWithText("Refresh again").assertDoesNotExist()
+    }
+
+    @Test
+    fun `when a failure clears from under Refresh again, the Highlight goes back to its provider`() {
+        val id = saveProvider("Mended films on 464", loginRejected)
+        show()
+        waitFor("Mended films on 464")
+        press(KeyEvent.KEYCODE_DPAD_RIGHT)
+        compose.onNodeWithText("Refresh again").requestFocus()
+
+        runBlocking { graph.sourceRepository.saveRefreshResult(id, null) }
+        compose.waitUntil(5_000) { compose.onAllNodes(hasText("Refresh again")).fetchSemanticsNodes().isEmpty() }
+
+        highlighted().assertTextContains("Mended films on 464")
     }
 
     @Test

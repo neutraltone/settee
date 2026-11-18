@@ -33,6 +33,12 @@
     <string name="nav_settings">Settings</string>
 
     <!-- ============================ Live TV guide / home ============================ -->
+    <string name="home_provider_banner_one">%1$s: %2$s</string>
+    <plurals name="home_provider_banner_many">
+        <item quantity="one">%d provider needs attention</item>
+        <item quantity="other">%d providers need attention</item>
+    </plurals>
+    <string name="home_provider_banner_open">Open Providers</string>
     <string name="guide_search_channels">🔍  Search channels</string>
     <string name="guide_favourites">Favourites</string>
     <string name="guide_all_channels">All channels</string>
@@ -256,13 +262,6 @@
     <string name="addons_added">Added %1$s</string>
 
     <!-- ============================ Display & playback settings ============================ -->
-    <string name="providers_refresh_again">Refresh again</string>
-    <string name="home_provider_banner_one">%1$s: %2$s</string>
-    <plurals name="home_provider_banner_many">
-        <item quantity="one">%d provider needs attention</item>
-        <item quantity="other">%d providers need attention</item>
-    </plurals>
-    <string name="home_provider_banner_open">Open Providers</string>
     <string name="settings_language_system">System default</string>
     <string name="settings_language_english">English</string>
     <string name="settings_language_spanish">Español</string>
@@ -302,6 +301,7 @@
     <string name="profiles_name_taken">Another profile is already called %1$s.</string>
 
     <!-- ============================ Providers ============================ -->
+    <string name="providers_refresh_again">Refresh again</string>
 
     <!-- ============================ Recording settings ============================ -->
     <string name="recset_save_to">Save recordings to</string>

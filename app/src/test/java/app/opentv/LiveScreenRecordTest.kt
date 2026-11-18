@@ -110,6 +110,7 @@ class LiveScreenRecordTest {
                 hasSources = true,
                 isSyncing = false,
                 loadFailure = ProviderFailure(
+                    1,
                     "Acme TV",
                     ViewerError(
                         "Can't reach your provider. Check this TV is online and the address is right.",
