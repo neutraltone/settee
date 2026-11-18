@@ -117,6 +117,20 @@ val UNSEEKABLE_LIVE = FakeTimeline.TimelineWindowDefinition(
     LIVE.mediaItem,
 )
 
+/**
+ * A live channel whose stream comes to an end, as an HLS playlist does when it gains `EXT-X-ENDLIST`, or a
+ * TS connection the provider closes cleanly: a short window that isn't dynamic, so ExoPlayer ends it.
+ */
+@UnstableApi
+val ENDING_LIVE = FakeTimeline.TimelineWindowDefinition(
+    /* isSeekable= */
+    false,
+    /* isDynamic= */
+    false,
+    /* durationUs= */
+    100L * C.MICROS_PER_SECOND / 1000,
+)
+
 /** What a stream carries, for the tests that care about its sound. */
 @UnstableApi
 val PICTURE_AND_SOUND = listOf(ExoPlayerTestRunner.VIDEO_FORMAT, ExoPlayerTestRunner.AUDIO_FORMAT)

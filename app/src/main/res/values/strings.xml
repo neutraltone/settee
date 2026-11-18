@@ -710,6 +710,7 @@
     <string name="error_anything_else">This didn\'t play. Try again, or pick something else.</string>
     <string name="error_cant_reach_tv">Can\'t reach your provider. Check this TV is online and the address is right.</string>
     <string name="error_cant_reach_device">Can\'t reach your provider. Check this device is online and the address is right.</string>
+    <string name="error_live_ended">This channel stopped. Try again, or pick another channel.</string>
     <string name="error_timed_out">Your provider stopped responding. It may be busy, so try again in a moment.</string>
     <string name="error_web_page">Your provider sent a web page instead of video. The link may have expired, so try refreshing your provider in Settings.</string>
     <string name="error_damaged">This video is damaged and won\'t play. That\'s at your provider\'s end, so try something else.</string>

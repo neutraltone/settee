@@ -20,6 +20,7 @@ import androidx.media3.datasource.okhttp.OkHttpDataSource
 import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
+import app.opentv.R
 import app.opentv.core.ViewerError
 import app.opentv.data.model.Source
 import app.opentv.data.repo.MediaKey
@@ -225,6 +226,14 @@ class PlayerController(
     private var loaded: MediaKey? = null
     private var consecutiveFailures = 0
 
+    /**
+     * The live stream asked for, and how many times it has come to an end since. Unlike
+     * [consecutiveFailures], playing doesn't clear it: a playlist that ended plays its last minute
+     * again on each restart, which would otherwise restart it for ever. Asking for another stream
+     * starts the count afresh, as it no longer matches.
+     */
+    private var ending: Pair<Request, Int>? = null
+
     /** Whether the stream on the player has played since it loaded, for [PlaybackRecovery]. */
     private var hadPlayed = false
 
@@ -331,7 +340,8 @@ class PlayerController(
                         // A stream can end without ever being ready, such as one started at its very end.
                         Player.STATE_ENDED -> {
                             guard.arrived()
-                            State.Idle
+                            current?.takeIf { it.key is MediaKey.Live && !isSwitching }?.let(::liveStreamEnded)
+                                ?: State.Idle
                         }
                         else -> _state.value
                     }
@@ -362,11 +372,33 @@ class PlayerController(
                         ),
                         canRetry = recovery.canRetry,
                     )
-                    if (recovery.canRestart && request != null) {
-                        scope.launch {
-                            delay(AUTO_RESTART_DELAY_MILLIS)
-                            if (current == request) play(request, debounce = false)
-                        }
+                    if (recovery.canRestart && request != null) restartLater(request)
+                }
+
+                /**
+                 * A live stream that ends raises no error: the provider closed the connection cleanly (another device
+                 * on the account took it, or a session limit), or the playlist was marked ended as the channel went
+                 * off air. Left as [State.Idle], the viewer would see the last frame with nothing to say why, so it's
+                 * treated as a dropped connection: restarted, then a sentence with Try again.
+                 */
+                private fun liveStreamEnded(request: Request): State {
+                    val ends = (ending?.takeIf { it.first == request }?.second ?: 0) + 1
+                    ending = request to ends
+                    val recovery = PlaybackRecovery.afterEnding(ends)
+                    if (recovery.canRestart) {
+                        restartLater(request)
+                        return State.Buffering(_title.value)
+                    }
+                    // Built here rather than by PlaybackErrors: no error was raised to describe, so the detail
+                    // line names what happened, as the start-up limit's does.
+                    val reason = ViewerError(strings.getString(R.string.error_live_ended), "StreamEnded")
+                    return State.Error(_title.value, reason, recovery.canRetry)
+                }
+
+                private fun restartLater(request: Request) {
+                    scope.launch {
+                        delay(AUTO_RESTART_DELAY_MILLIS)
+                        if (current == request) play(request, debounce = false)
                     }
                 }
             })
@@ -481,6 +513,7 @@ class PlayerController(
 
     fun retry() {
         consecutiveFailures = 0
+        ending = null
         current?.let { play(it, debounce = false) }
     }
 
@@ -640,6 +673,7 @@ class PlayerController(
                 hold = Hold.NONE
                 if (was == Hold.STOPPED && _state.value !is State.Error) {
                     consecutiveFailures = 0
+                    ending = null
                     // Asked for afresh, as a portal's link may have expired meanwhile.
                     current?.let { play(it, debounce = false) }
                 }

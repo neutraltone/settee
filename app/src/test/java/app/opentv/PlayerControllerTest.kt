@@ -136,6 +136,31 @@ class PlayerControllerTest {
     }
 
     @Test
+    fun `a live channel whose stream ends is restarted, then says it stopped, with Try again`() {
+        val controller = players.controller(ENDING_LIVE)
+
+        controller.play(PlayerController.Request(MediaKey.Live(1)), debounce = false)
+        players.untilItStopsRestarting(controller)
+
+        val error = controller.state.value as PlayerController.State.Error
+        assertThat(error.reason.sentence).isEqualTo("This channel stopped. Try again, or pick another channel.")
+        assertThat(error.canRetry).isTrue()
+        assertThat(players.played).hasSize(TestPlayers.AUTO_TRIES)
+    }
+
+    @Test
+    fun `a film that ends is finished, not restarted or shown as an error`() {
+        val controller = players.controller(ENDING_LIVE)
+
+        controller.play(PlayerController.Request(MediaKey.Movie(1)), debounce = false)
+        players.until { controller.player.playbackState == Player.STATE_ENDED }
+        players.advance(TestPlayers.RESTARTS_MILLIS)
+
+        assertThat(controller.state.value).isEqualTo(PlayerController.State.Idle)
+        assertThat(players.played).hasSize(1)
+    }
+
+    @Test
     fun `a channel the provider gives no link for says so, with what went wrong on the detail line`() {
         val controller = players.controller(LIVE) { key -> Playable.Failed(key, Playable.Failure.LINK_REFUSED) }
 

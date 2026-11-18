@@ -41,6 +41,12 @@ internal object PlaybackRecovery {
     }
 
     /**
+     * After a live stream has come to an end, the [endsInARow]th time on this request. Nothing failed, so
+     * Retry is always on offer; it's restarted as a dropped connection is, as the same number of times.
+     */
+    fun afterEnding(endsInARow: Int): Recovery = Recovery(canRetry = true, canRestart = endsInARow < MAX_AUTO_RESTARTS)
+
+    /**
      * Two silent restarts: the count goes up before it's checked, so the third failure in a row
      * stops restarting by itself, and on a portal stops asking for new links. The common case they
      * cover is a provider dropping the connection when another device on the account starts
