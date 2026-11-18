@@ -234,7 +234,6 @@
     <string name="rec_switch_now_text">%1$s에서 녹화 중 - 탭하여 시청</string>
     <string name="rec_switch_soon_title">곧 녹화 시작: %1$s</string>
     <string name="rec_switch_soon_text">%1$s에서 30초 후 시작 - 이 화면이 자동으로 전환됩니다</string>
-    <string name="rec_switch_banner">\'%1$s\'을(를) %2$s에서 녹화 - 이 화면이 전환됩니다</string>
     <string name="rec_switch_keep_watching">계속 시청</string>
     <string name="rec_switch_channel_name">녹화 자동 전환</string>
     <string name="rec_switch_channel_desc">예약된 녹화로 화면이 전환되기 전에 알려줍니다</string>
@@ -348,4 +347,6 @@
     <string name="error_opensubtitles_sign_in">OpenSubtitles에서 사용자 이름 또는 비밀번호를 받아들이지 않았습니다. 확인한 후 다시 시도하세요.</string>
     <string name="error_opensubtitles_token_tv">OpenSubtitles에서 이 TV를 로그아웃했습니다. 설정에서 다시 로그인하세요.</string>
     <string name="error_opensubtitles_token_device">OpenSubtitles에서 이 기기를 로그아웃했습니다. 설정에서 다시 로그인하세요.</string>
+    <string name="error_not_a_guide">이 주소는 편성표가 아닙니다. 올바른 링크인지 확인하거나, Wi-Fi 로그인을 요청하면 로그인하세요.</string>
+    <string name="settings_guide_bad_address">웹 주소가 아닙니다. 편성표 링크에 표시된 대로 입력했는지 확인하세요(예: example.com/guide.xml).</string>
 </resources>

@@ -234,7 +234,6 @@
     <string name="rec_switch_now_text">Spelar nu in på %1$s – tryck för att titta</string>
     <string name="rec_switch_soon_title">Spelas in snart: %1$s</string>
     <string name="rec_switch_soon_text">Börjar på %1$s om 30 sek – den här skärmen byter till det</string>
-    <string name="rec_switch_banner">“%1$s” spelas in på %2$s – den här skärmen byter</string>
     <string name="rec_switch_keep_watching">Fortsätt titta</string>
     <string name="rec_switch_channel_name">Automatiskt inspelningsbyte</string>
     <string name="rec_switch_channel_desc">Varnar innan skärmen byter till en schemalagd inspelning</string>
@@ -348,4 +347,6 @@
     <string name="error_opensubtitles_sign_in">OpenSubtitles godkände inte det användarnamnet eller lösenordet. Kontrollera dem och försök igen.</string>
     <string name="error_opensubtitles_token_tv">OpenSubtitles har loggat ut den här tv:n. Logga in igen i Inställningar.</string>
     <string name="error_opensubtitles_token_device">OpenSubtitles har loggat ut den här enheten. Logga in igen i Inställningar.</string>
+    <string name="error_not_a_guide">Adressen är ingen programguide. Kontrollera att det är rätt länk, eller logga in på ditt wifi om det ber om det.</string>
+    <string name="settings_guide_bad_address">Det är ingen webbadress. Kontrollera att den är skriven som guidens länk visar den, till exempel example.com/guide.xml.</string>
 </resources>

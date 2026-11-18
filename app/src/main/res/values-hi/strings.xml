@@ -234,7 +234,6 @@
     <string name="rec_switch_now_text">अभी %1$s पर रिकॉर्ड हो रहा है — देखने के लिए टैप करें</string>
     <string name="rec_switch_soon_title">जल्द रिकॉर्ड होगा: %1$s</string>
     <string name="rec_switch_soon_text">30 सेकंड में %1$s पर शुरू होगा — यह स्क्रीन उस पर स्विच हो जाएगी</string>
-    <string name="rec_switch_banner">“%1$s” %2$s पर रिकॉर्ड होगा — यह स्क्रीन स्विच हो जाएगी</string>
     <string name="rec_switch_keep_watching">देखते रहें</string>
     <string name="rec_switch_channel_name">रिकॉर्डिंग ऑटो-स्विच</string>
     <string name="rec_switch_channel_desc">किसी शेड्यूल्ड रिकॉर्डिंग पर स्क्रीन स्विच करने से पहले चेतावनी देता है</string>
@@ -348,4 +347,6 @@
     <string name="error_opensubtitles_sign_in">OpenSubtitles ने यह यूज़रनेम या पासवर्ड स्वीकार नहीं किया। इन्हें जाँचें और फिर से कोशिश करें।</string>
     <string name="error_opensubtitles_token_tv">OpenSubtitles ने इस टीवी को साइन आउट कर दिया। सेटिंग में फिर से साइन इन करें।</string>
     <string name="error_opensubtitles_token_device">OpenSubtitles ने इस डिवाइस को साइन आउट कर दिया। सेटिंग में फिर से साइन इन करें।</string>
+    <string name="error_not_a_guide">यह पता गाइड नहीं है। जांचें कि यह सही लिंक है, या अगर आपका Wi-Fi साइन इन मांगे तो साइन इन करें।</string>
+    <string name="settings_guide_bad_address">यह वेब पता नहीं है। जांचें कि यह वैसे ही लिखा है जैसा गाइड के लिंक में है, जैसे example.com/guide.xml।</string>
 </resources>

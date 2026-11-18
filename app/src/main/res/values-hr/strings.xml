@@ -234,7 +234,6 @@
     <string name="rec_switch_now_text">Trenutno snima na %1$s — dodirnite za gledanje</string>
     <string name="rec_switch_soon_title">Snimanje uskoro: %1$s</string>
     <string name="rec_switch_soon_text">Počinje na %1$s za 30 s — ovaj zaslon prijeći će na to</string>
-    <string name="rec_switch_banner">„%1$s” snima na %2$s — ovaj zaslon će prijeći</string>
     <string name="rec_switch_keep_watching">Nastavi gledati</string>
     <string name="rec_switch_channel_name">Automatski prijelaz snimanja</string>
     <string name="rec_switch_channel_desc">Upozorava prije prebacivanja zaslona na zakazano snimanje</string>
@@ -348,4 +347,6 @@
     <string name="error_opensubtitles_sign_in">OpenSubtitles nije prihvatio to korisničko ime ili lozinku. Provjerite ih i pokušajte ponovno.</string>
     <string name="error_opensubtitles_token_tv">OpenSubtitles je odjavio ovaj televizor. Ponovno se prijavite u Postavkama.</string>
     <string name="error_opensubtitles_token_device">OpenSubtitles je odjavio ovaj uređaj. Ponovno se prijavite u Postavkama.</string>
+    <string name="error_not_a_guide">Ta adresa nije vodič. Provjerite je li poveznica ispravna ili se prijavite na Wi-Fi ako to traži.</string>
+    <string name="settings_guide_bad_address">To nije web-adresa. Provjerite je li upisana onako kako je prikazuje poveznica vodiča, npr. example.com/guide.xml.</string>
 </resources>

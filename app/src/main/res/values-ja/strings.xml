@@ -234,7 +234,6 @@
     <string name="rec_switch_now_text">%1$sで録画中——タップして視聴</string>
     <string name="rec_switch_soon_title">まもなく録画：%1$s</string>
     <string name="rec_switch_soon_text">%1$sで30秒後に開始——この画面は自動的に切り替わります</string>
-    <string name="rec_switch_banner">「%1$s」を%2$sで録画——この画面は切り替わります</string>
     <string name="rec_switch_keep_watching">そのまま視聴を続ける</string>
     <string name="rec_switch_channel_name">録画の自動切り替え</string>
     <string name="rec_switch_channel_desc">予約録画に画面を切り替える前に通知します</string>
@@ -348,4 +347,6 @@
     <string name="error_opensubtitles_sign_in">OpenSubtitles がそのユーザー名またはパスワードを受け付けませんでした。確認してもう一度お試しください。</string>
     <string name="error_opensubtitles_token_tv">OpenSubtitles がこのテレビをサインアウトしました。設定でもう一度サインインしてください。</string>
     <string name="error_opensubtitles_token_device">OpenSubtitles がこのデバイスをサインアウトしました。設定でもう一度サインインしてください。</string>
+    <string name="error_not_a_guide">そのアドレスは番組表ではありません。正しいリンクか確認するか、Wi-Fiのログインを求められた場合はログインしてください。</string>
+    <string name="settings_guide_bad_address">ウェブアドレスではありません。番組表のリンクのとおりに入力されているか確認してください（例：example.com/guide.xml）。</string>
 </resources>

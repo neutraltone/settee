@@ -234,7 +234,6 @@
     <string name="rec_switch_now_text">正在 %1$s 上录制——点按观看</string>
     <string name="rec_switch_soon_title">即将开始录制：%1$s</string>
     <string name="rec_switch_soon_text">将在 30 秒后于 %1$s 开始——画面将自动切换</string>
-    <string name="rec_switch_banner">“%1$s”将在 %2$s 上录制——画面即将切换</string>
     <string name="rec_switch_keep_watching">继续观看</string>
     <string name="rec_switch_channel_name">录制自动切换</string>
     <string name="rec_switch_channel_desc">在画面切换到预约录制前发出提醒</string>
@@ -348,4 +347,6 @@
     <string name="error_opensubtitles_sign_in">OpenSubtitles 不接受该用户名或密码。请检查后重试。</string>
     <string name="error_opensubtitles_token_tv">OpenSubtitles 已将这台电视退出登录。请在设置中重新登录。</string>
     <string name="error_opensubtitles_token_device">OpenSubtitles 已将此设备退出登录。请在设置中重新登录。</string>
+    <string name="error_not_a_guide">该地址不是节目指南。请检查链接是否正确，或在 Wi-Fi 要求时登录。</string>
+    <string name="settings_guide_bad_address">这不是网址。请检查是否按指南链接所示输入，例如 example.com/guide.xml。</string>
 </resources>

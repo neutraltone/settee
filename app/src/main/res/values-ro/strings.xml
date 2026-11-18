@@ -234,7 +234,6 @@
     <string name="rec_switch_now_text">Se înregistrează acum pe %1$s — atinge pentru a urmări</string>
     <string name="rec_switch_soon_title">Înregistrare în curând: %1$s</string>
     <string name="rec_switch_soon_text">Începe pe %1$s în 30 de secunde — acest ecran va comuta la el</string>
-    <string name="rec_switch_banner">„%1$s” se înregistrează pe %2$s — acest ecran va comuta</string>
     <string name="rec_switch_keep_watching">Continuă vizionarea</string>
     <string name="rec_switch_channel_name">Comutare automată la înregistrare</string>
     <string name="rec_switch_channel_desc">Avertizează înainte de a comuta ecranul la o înregistrare programată</string>
@@ -348,4 +347,6 @@
     <string name="error_opensubtitles_sign_in">OpenSubtitles nu a acceptat acest nume de utilizator sau această parolă. Verifică-le și încearcă din nou.</string>
     <string name="error_opensubtitles_token_tv">OpenSubtitles a deconectat acest televizor. Conectează-te din nou din Setări.</string>
     <string name="error_opensubtitles_token_device">OpenSubtitles a deconectat acest dispozitiv. Conectează-te din nou din Setări.</string>
+    <string name="error_not_a_guide">Adresa nu este un ghid. Verifică dacă este linkul corect sau conectează-te la Wi-Fi dacă îți cere.</string>
+    <string name="settings_guide_bad_address">Aceasta nu este o adresă web. Verifică dacă este scrisă așa cum o arată linkul ghidului, de exemplu example.com/guide.xml.</string>
 </resources>

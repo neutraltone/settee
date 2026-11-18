@@ -234,7 +234,6 @@
     <string name="rec_switch_now_text">Tar nå opp på %1$s — trykk for å se</string>
     <string name="rec_switch_soon_title">Opptak snart: %1$s</string>
     <string name="rec_switch_soon_text">Starter på %1$s om 30 sek — denne skjermen bytter til den</string>
-    <string name="rec_switch_banner">«%1$s» tas opp på %2$s — denne skjermen bytter</string>
     <string name="rec_switch_keep_watching">Fortsett å se</string>
     <string name="rec_switch_channel_name">Automatisk bytte ved opptak</string>
     <string name="rec_switch_channel_desc">Varsler før skjermen bytter til et planlagt opptak</string>
@@ -348,4 +347,6 @@
     <string name="error_opensubtitles_sign_in">OpenSubtitles godtok ikke det brukernavnet eller passordet. Sjekk dem, og prøv igjen.</string>
     <string name="error_opensubtitles_token_tv">OpenSubtitles har logget denne TV-en av. Logg på igjen i Innstillinger.</string>
     <string name="error_opensubtitles_token_device">OpenSubtitles har logget denne enheten av. Logg på igjen i Innstillinger.</string>
+    <string name="error_not_a_guide">Den adressen er ikke en programguide. Sjekk at det er riktig lenke, eller logg på Wi-Fi hvis det ber om det.</string>
+    <string name="settings_guide_bad_address">Det er ikke en nettadresse. Sjekk at den er skrevet slik guidens lenke viser den, for eksempel example.com/guide.xml.</string>
 </resources>

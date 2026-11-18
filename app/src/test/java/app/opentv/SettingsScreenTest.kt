@@ -329,6 +329,29 @@ class SettingsScreenTest {
     }
 
     @Test
+    fun `an address that isn't one keeps the guide's entry screen open, saying why`() {
+        val app = ApplicationProvider.getApplicationContext<Application>()
+        show(SettingsMemory(SettingsSection.Guide))
+        waitFor(EpgRepository.BUILT_IN_FEEDS.first().first)
+        press(KeyEvent.KEYCODE_DPAD_RIGHT)
+        val before = runBlocking { graph.epgRepository.observeFeeds().first() }
+
+        compose.onNodeWithText("Add your own guide").requestFocus()
+        press(KeyEvent.KEYCODE_DPAD_CENTER)
+        val entry = compose.entryKeyboard()
+        entry.type("not a guide")
+        entry.pressAction()
+
+        val why = app.getString(R.string.settings_guide_bad_address)
+        compose.waitUntil(5_000) { compose.onAllNodes(hasText(why)).fetchSemanticsNodes().isNotEmpty() }
+        compose.onNode(hasText(app.getString(R.string.common_save))).assertExists()
+        captureScreen("settings_guide_bad_address")
+        assertThat(runBlocking { graph.epgRepository.observeFeeds().first() }).isEqualTo(before)
+        // Still on the box, to put it right (Down from it to Save is EntryScreenTest's).
+        assertThat(entry.highlighted()).isTrue()
+    }
+
+    @Test
     fun `OK on a guide opens its details, which turn it off and remove it`() {
         runBlocking { graph.epgRepository.addCustomFeed("Own guide 168", "http://127.0.0.1:9/own168.xml") }
         show(SettingsMemory(SettingsSection.Guide))

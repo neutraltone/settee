@@ -7,10 +7,15 @@ package app.opentv.data.parser
 
 import android.util.Xml
 import app.opentv.data.model.Programme
+import java.io.IOException
 import java.io.InputStream
 import java.util.Calendar
 import java.util.TimeZone
 import org.xmlpull.v1.XmlPullParser
+import org.xmlpull.v1.XmlPullParserException
+
+/** What should have been a guide opened as something else: a web page, plain text, JSON. */
+class NotAGuideException(why: String, cause: Throwable? = null) : IOException("Not XMLTV: $why", cause)
 
 /**
  * Streaming XMLTV guide parser.
@@ -62,7 +67,7 @@ object XmltvParser {
         // Strict about structure, lenient about entities: see LenientEntityStream (#347).
         parser.setInput(LenientEntityStream(input), null)
 
-        var event = parser.eventType
+        var event = openRoot(parser)
         while (event != XmlPullParser.END_DOCUMENT) {
             if (event == XmlPullParser.START_TAG) {
                 when (parser.name) {
@@ -90,6 +95,25 @@ object XmltvParser {
         }
 
         return Stats(channelCount, programmeCount, skipped)
+    }
+
+    /**
+     * Reads up to the document's root and returns its event, refusing anything that isn't `<tv>`. A
+     * web page where the guide should be (an expired share link, a Wi-Fi sign-in page) would otherwise
+     * read as a guide with nothing in it, or, as plain text or sloppy HTML, as one that broke off: both
+     * worded as if trying again could help (#471). Past the root, a broken document is a guide cut off.
+     */
+    private fun openRoot(parser: XmlPullParser): Int {
+        val event = try {
+            var next = parser.eventType
+            while (next != XmlPullParser.START_TAG && next != XmlPullParser.END_DOCUMENT) next = parser.next()
+            next
+        } catch (e: XmlPullParserException) {
+            throw NotAGuideException("not XML before its first element", e)
+        }
+        val root = if (event == XmlPullParser.START_TAG) parser.name else null
+        if (root != "tv") throw NotAGuideException("the document's root is ${root?.let { "<$it>" } ?: "missing"}")
+        return event
     }
 
     private fun readChannelDisplayName(parser: XmlPullParser): String? {

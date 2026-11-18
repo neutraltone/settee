@@ -234,7 +234,6 @@
     <string name="rec_switch_now_text">Registrazione in corso su %1$s — tocca per guardare</string>
     <string name="rec_switch_soon_title">Registrazione a breve: %1$s</string>
     <string name="rec_switch_soon_text">Inizia su %1$s tra 30 s — questa schermata passerà automaticamente ad esso</string>
-    <string name="rec_switch_banner">“%1$s” registra su %2$s — questa schermata cambierà</string>
     <string name="rec_switch_keep_watching">Resta qui</string>
     <string name="rec_switch_channel_name">Cambio automatico registrazione</string>
     <string name="rec_switch_channel_desc">Avvisa prima di passare a una registrazione programmata</string>
@@ -348,4 +347,6 @@
     <string name="error_opensubtitles_sign_in">OpenSubtitles non ha accettato quel nome utente o quella password. Controllali e riprova.</string>
     <string name="error_opensubtitles_token_tv">OpenSubtitles ha disconnesso questa TV. Accedi di nuovo nelle Impostazioni.</string>
     <string name="error_opensubtitles_token_device">OpenSubtitles ha disconnesso questo dispositivo. Accedi di nuovo nelle Impostazioni.</string>
+    <string name="error_not_a_guide">Quell\'indirizzo non è una guida. Controlla che sia il link giusto, oppure accedi al Wi-Fi se te lo chiede.</string>
+    <string name="settings_guide_bad_address">Questo non è un indirizzo web. Controlla che sia scritto come lo mostra il link della guida, ad esempio example.com/guide.xml.</string>
 </resources>

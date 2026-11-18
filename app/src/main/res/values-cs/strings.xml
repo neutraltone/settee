@@ -234,7 +234,6 @@
     <string name="rec_switch_now_text">Nyní se nahrává na %1$s — klepnutím zobrazíte</string>
     <string name="rec_switch_soon_title">Nahrávání brzy: %1$s</string>
     <string name="rec_switch_soon_text">Začíná na %1$s za 30 s — tato obrazovka se na něj přepne</string>
-    <string name="rec_switch_banner">„%1$s“ se nahrává na %2$s — tato obrazovka se přepne</string>
     <string name="rec_switch_keep_watching">Pokračovat ve sledování</string>
     <string name="rec_switch_channel_name">Automatické přepnutí při nahrávání</string>
     <string name="rec_switch_channel_desc">Upozorní před přepnutím obrazovky na naplánované nahrávání</string>
@@ -348,4 +347,6 @@
     <string name="error_opensubtitles_sign_in">OpenSubtitles nepřijaly toto uživatelské jméno nebo heslo. Zkontrolujte je a zkuste to znovu.</string>
     <string name="error_opensubtitles_token_tv">OpenSubtitles tuto televizi odhlásily. Přihlaste se znovu v Nastavení.</string>
     <string name="error_opensubtitles_token_device">OpenSubtitles toto zařízení odhlásily. Přihlaste se znovu v Nastavení.</string>
+    <string name="error_not_a_guide">Tato adresa není průvodce. Zkontrolujte, že jde o správný odkaz, nebo se přihlaste k Wi-Fi, pokud o to žádá.</string>
+    <string name="settings_guide_bad_address">To není webová adresa. Zkontrolujte, že je zadaná tak, jak ji ukazuje odkaz na průvodce, například example.com/guide.xml.</string>
 </resources>

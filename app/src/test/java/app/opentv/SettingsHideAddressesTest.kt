@@ -70,8 +70,10 @@ class SettingsHideAddressesTest {
         assertThat(row.config[SemanticsProperties.Text].map { it.text }).containsExactly("No host 487")
     }
 
+    // An address with no host to name it by isn't saved at all now (#471), so the one to check is a
+    // login in an address typed without its scheme: named by its host, the login nowhere on screen.
     @Test
-    fun `a guide whose address has no host to name it by is called Your own guide, not its address`() {
+    fun `a guide whose address carries a login is named by its host, not its address`() {
         show(SettingsMemory(SettingsSection.Guide))
         waitFor(EpgRepository.BUILT_IN_FEEDS.first().first)
         device.remote(KeyEvent.KEYCODE_DPAD_RIGHT)
@@ -79,12 +81,13 @@ class SettingsHideAddressesTest {
         compose.onNodeWithText("Add your own guide").requestFocus()
         device.remote(KeyEvent.KEYCODE_DPAD_CENTER)
         compose.entryKeyboard().run {
-            type("guide 487 password=p")
+            type("guide487.example.com/xmltv.php?password=p")
             pressAction()
         }
 
-        compose.waitUntilSaved { graph.epgRepository.savedFeed("guide 487 password=p") != null }
-        assertThat(graph.epgRepository.savedFeed("guide 487 password=p")?.name).isEqualTo("Your own guide")
+        val saved = "http://guide487.example.com/xmltv.php?password=p"
+        compose.waitUntilSaved { graph.epgRepository.savedFeed(saved) != null }
+        assertThat(graph.epgRepository.savedFeed(saved)?.name).isEqualTo("guide487.example.com")
         compose.onNode(hasText("password", substring = true)).assertDoesNotExist()
     }
 

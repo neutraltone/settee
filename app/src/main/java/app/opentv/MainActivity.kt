@@ -20,17 +20,9 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.annotation.ChecksSdkIntAtLeast
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.FiberManualRecord
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
@@ -44,13 +36,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -68,17 +55,14 @@ import app.opentv.ui.WhosWatchingAsked
 import app.opentv.ui.WhosWatchingScreen
 import app.opentv.ui.channels.ChannelManagerScreen
 import app.opentv.ui.channels.SearchScreen
-import app.opentv.ui.design.Icon
 import app.opentv.ui.design.SetteeColors
-import app.opentv.ui.design.SetteeShapes
 import app.opentv.ui.design.SetteeTheme
-import app.opentv.ui.design.SetteeType
-import app.opentv.ui.design.Text
 import app.opentv.ui.firstScreen
 import app.opentv.ui.hasProvider
 import app.opentv.ui.options.ItemOptionsHost
 import app.opentv.ui.options.OptionsDestination
 import app.opentv.ui.player.PlayerScreen
+import app.opentv.ui.recordings.RecordingSwitchWarning
 import app.opentv.ui.settings.ProfilesScreen
 import app.opentv.ui.settings.SettingsMemory
 import app.opentv.ui.vod.LocalCoverBadges
@@ -571,66 +555,9 @@ private fun OpenTvApp(isTelevision: Boolean, launchedToPlay: Boolean) {
 
                 KeepHomeLive(navController, ServiceLocator.get(bootContext).homeKeptLive)
 
-                // "About to switch to a recording" banner — shows 30s before an auto-switch fires.
-                RecordingSwitchBanner()
+                // Warns in a Side Panel, over any screen, 30s before a recording takes this one over.
+                RecordingSwitchWarning()
             }
-        }
-    }
-}
-
-/**
- * A slim banner shown 30 seconds before a scheduled recording takes over the screen (single-
- * connection auto-switch). It gives the viewer a heads-up and a way out: "Keep watching" suppresses
- * the switch for that booking. It clears itself once the switch would have happened.
- */
-@Composable
-private fun RecordingSwitchBanner() {
-    val imminent by app.opentv.core.RecordingSignals.imminent.collectAsState()
-    val current = imminent ?: return
-
-    // Auto-clear a little after the switch instant, in case the switch itself never lands.
-    LaunchedEffect(current.recordingId) {
-        val wait = (current.startAtMillis + 5_000L) - System.currentTimeMillis()
-        kotlinx.coroutines.delay(wait.coerceIn(5_000L, 60_000L))
-        if (app.opentv.core.RecordingSignals.imminent.value?.recordingId == current.recordingId) {
-            app.opentv.core.RecordingSignals.clearImminent()
-        }
-    }
-
-    Box(Modifier.fillMaxSize().padding(20.dp), contentAlignment = Alignment.TopCenter) {
-        Row(
-            Modifier
-                .clip(SetteeShapes.Card)
-                .background(SetteeColors.Raised)
-                .padding(horizontal = 18.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Icon(
-                Icons.Filled.FiberManualRecord,
-                contentDescription = null,
-                tint = SetteeColors.Recording,
-                modifier = Modifier.size(18.dp),
-            )
-            Spacer(Modifier.width(10.dp))
-            Text(
-                stringResource(R.string.rec_switch_banner, current.title, current.channelName),
-                style = SetteeType.Body,
-                color = SetteeColors.Text,
-            )
-            Spacer(Modifier.width(14.dp))
-            var focused by remember { mutableStateOf(false) }
-            Text(
-                stringResource(R.string.rec_switch_keep_watching),
-                style = SetteeType.Body,
-                color = if (focused) SetteeColors.OnAccent else SetteeColors.Accent,
-                modifier = Modifier
-                    .clip(SetteeShapes.Thumbnail)
-                    .background(if (focused) SetteeColors.Accent else Color.Transparent)
-                    .onFocusChanged { focused = it.isFocused }
-                    .focusable()
-                    .clickable { app.opentv.core.RecordingSignals.suppress(current.recordingId) }
-                    .padding(horizontal = 12.dp, vertical = 6.dp),
-            )
         }
     }
 }

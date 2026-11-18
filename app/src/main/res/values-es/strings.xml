@@ -234,7 +234,6 @@
     <string name="rec_switch_now_text">Grabando ahora en %1$s — toca para ver</string>
     <string name="rec_switch_soon_title">Grabación pronto: %1$s</string>
     <string name="rec_switch_soon_text">Empieza en %1$s en 30 s — esta pantalla cambiará a ese canal</string>
-    <string name="rec_switch_banner">«%1$s» se graba en %2$s — esta pantalla cambiará</string>
     <string name="rec_switch_keep_watching">Seguir viendo</string>
     <string name="rec_switch_channel_name">Cambio automático de grabación</string>
     <string name="rec_switch_channel_desc">Avisa antes de cambiar la pantalla a una grabación programada</string>
@@ -348,4 +347,6 @@
     <string name="error_opensubtitles_sign_in">OpenSubtitles no ha aceptado ese usuario o contraseña. Revísalos y vuelve a intentarlo.</string>
     <string name="error_opensubtitles_token_tv">OpenSubtitles ha cerrado la sesión de esta tele. Vuelve a iniciar sesión en Ajustes.</string>
     <string name="error_opensubtitles_token_device">OpenSubtitles ha cerrado la sesión de este dispositivo. Vuelve a iniciar sesión en Ajustes.</string>
+    <string name="error_not_a_guide">Esa dirección no es una guía. Comprueba que sea el enlace correcto, o inicia sesión en tu Wi-Fi si te lo pide.</string>
+    <string name="settings_guide_bad_address">Eso no es una dirección web. Comprueba que esté escrita como la muestra el enlace de la guía, por ejemplo example.com/guide.xml.</string>
 </resources>
