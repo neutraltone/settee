@@ -131,6 +131,19 @@ val ENDING_LIVE = FakeTimeline.TimelineWindowDefinition(
     100L * C.MICROS_PER_SECOND / 1000,
 )
 
+/** A live channel whose provider closes the connection after [SESSION_MILLIS], as a panel limiting sessions does. */
+@UnstableApi
+val SESSION_LIMITED_LIVE = FakeTimeline.TimelineWindowDefinition(
+    /* isSeekable= */
+    false,
+    /* isDynamic= */
+    false,
+    /* durationUs= */
+    SESSION_MILLIS * 1000,
+)
+
+const val SESSION_MILLIS = 20L * 60 * 1000
+
 /** What a stream carries, for the tests that care about its sound. */
 @UnstableApi
 val PICTURE_AND_SOUND = listOf(ExoPlayerTestRunner.VIDEO_FORMAT, ExoPlayerTestRunner.AUDIO_FORMAT)

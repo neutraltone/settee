@@ -315,6 +315,18 @@ format this device can't decode gets neither. The limit of two silent restarts s
 restarts: Retry stays on offer after them, because the viewer may have since stopped the stream on
 their other device, and it starts the count afresh with two more silent restarts (#460).
 
+A live stream can also simply end, with no error: a provider closes the TS connection cleanly when
+another device on the account connects or a session runs out, and an HLS playlist gains
+`EXT-X-ENDLIST` when a channel goes off air. ExoPlayer reports that as finished, which is right for a
+film and left live TV on its last frame with nothing to say why (#472). So a live stream that ends is
+treated as a dropped connection: restarted silently, up to two times, then
+`PlaybackErrors.Stopped.STREAM_ENDED` with Retry. Playing again in between doesn't clear that count,
+as it does a failure's, because a playlist that ended replays its last few minutes and would restart
+for ever. Endings more than ten minutes apart don't count together, so a panel cutting the session
+off every so often is restarted every time. `RestartCounts` keeps both counts; only the controller's
+own restarts keep counting, and anything a screen asks for, the same channel picked again included,
+starts them afresh.
+
 ### Errors say what to do
 
 `PlaybackErrors` turns playback failures into a sentence and a detail line, and `ErrorWording`

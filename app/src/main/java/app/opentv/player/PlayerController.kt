@@ -20,7 +20,6 @@ import androidx.media3.datasource.okhttp.OkHttpDataSource
 import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
-import app.opentv.R
 import app.opentv.core.ViewerError
 import app.opentv.data.model.Source
 import app.opentv.data.repo.MediaKey
@@ -224,15 +223,7 @@ class PlayerController(
     val title: StateFlow<String> = _title.asStateFlow()
     private var titled: MediaKey? = null
     private var loaded: MediaKey? = null
-    private var consecutiveFailures = 0
-
-    /**
-     * The live stream asked for, and how many times it has come to an end since. Unlike
-     * [consecutiveFailures], playing doesn't clear it: a playlist that ended plays its last minute
-     * again on each restart, which would otherwise restart it for ever. Asking for another stream
-     * starts the count afresh, as it no longer matches.
-     */
-    private var ending: Pair<Request, Int>? = null
+    private val counts = RestartCounts()
 
     /** Whether the stream on the player has played since it loaded, for [PlaybackRecovery]. */
     private var hadPlayed = false
@@ -331,17 +322,17 @@ class PlayerController(
                     _state.value = when (playbackState) {
                         Player.STATE_BUFFERING -> State.Buffering(_title.value)
                         Player.STATE_READY -> {
-                            consecutiveFailures = 0
+                            counts.played()
                             hadPlayed = true
                             guard.arrived()
                             State.Playing(_title.value)
                         }
                         Player.STATE_IDLE -> _state.value
                         // A stream can end without ever being ready, such as one started at its very end.
+                        // The last stream ending while the next is on its way says nothing about that one.
                         Player.STATE_ENDED -> {
                             guard.arrived()
-                            current?.takeIf { it.key is MediaKey.Live && !isSwitching }?.let(::liveStreamEnded)
-                                ?: State.Idle
+                            if (isSwitching) _state.value else current?.let(::streamEnded) ?: State.Idle
                         }
                         else -> _state.value
                     }
@@ -355,11 +346,10 @@ class PlayerController(
                         player.stop()
                         return
                     }
-                    consecutiveFailures++
                     guard.leaving()
                     DecoderLog.logFailure(error)
                     val request = current
-                    val recovery = PlaybackRecovery.after(error, consecutiveFailures, hadPlayed)
+                    val recovery = counts.failed(error, hadPlayed)
                     _state.value = State.Error(
                         title = _title.value,
                         // The last stream's format lingers until this one's tracks are known, so only a
@@ -381,24 +371,26 @@ class PlayerController(
                  * off air. Left as [State.Idle], the viewer would see the last frame with nothing to say why, so it's
                  * treated as a dropped connection: restarted, then a sentence with Try again.
                  */
-                private fun liveStreamEnded(request: Request): State {
-                    val ends = (ending?.takeIf { it.first == request }?.second ?: 0) + 1
-                    ending = request to ends
-                    val recovery = PlaybackRecovery.afterEnding(ends)
-                    if (recovery.canRestart) {
-                        restartLater(request)
-                        return State.Buffering(_title.value)
+                private fun streamEnded(request: Request): State? {
+                    val recovery = counts.ended(request.key, player.clock.elapsedRealtime())
+                    return when {
+                        recovery == null -> null
+                        recovery.canRestart -> {
+                            restartLater(request)
+                            State.Buffering(_title.value)
+                        }
+                        else -> State.Error(
+                            _title.value,
+                            PlaybackErrors.describe(strings, PlaybackErrors.Stopped.STREAM_ENDED),
+                            recovery.canRetry,
+                        )
                     }
-                    // Built here rather than by PlaybackErrors: no error was raised to describe, so the detail
-                    // line names what happened, as the start-up limit's does.
-                    val reason = ViewerError(strings.getString(R.string.error_live_ended), "StreamEnded")
-                    return State.Error(_title.value, reason, recovery.canRetry)
                 }
 
                 private fun restartLater(request: Request) {
                     scope.launch {
                         delay(AUTO_RESTART_DELAY_MILLIS)
-                        if (current == request) play(request, debounce = false)
+                        if (current == request) play(request, debounce = false, restart = true)
                     }
                 }
             })
@@ -427,15 +419,16 @@ class PlayerController(
      * @param debounce when true (the default for channel surfing) the switch waits briefly so
      * that rapid presses collapse into a single tune. Pass false for a deliberate selection.
      * @param skipped what the Quality this device isn't going to try is called, if this plays in its place.
+     * @param restart only for the controller's own restarts, which keep counting towards their limit.
      */
-    fun play(request: Request, debounce: Boolean = true, skipped: String? = null) {
+    fun play(request: Request, debounce: Boolean = true, skipped: String? = null, restart: Boolean = false) {
         // Cancelling here is what makes fast channel-changing safe: the previous switch never
         // reaches the player, so we never stack prepares.
         switchJob?.cancel()
-        // An automatic restart plays the same request again and keeps counting, so a stream that
-        // keeps dropping stops after a couple of restarts rather than retrying (and, on a portal,
-        // minting a link) forever.
-        if (request != current) consecutiveFailures = 0
+        // An automatic restart keeps counting, so a stream that keeps dropping stops after a couple
+        // of restarts rather than retrying (and, on a portal, minting a link) forever. Anything else
+        // is asked for, even the same channel picked again, so it gets restarts of its own.
+        if (!restart) counts.forget()
         if (request.key != current?.key) guard.forgetNotices()
         current = request
         guard.leaving()
@@ -512,8 +505,6 @@ class PlayerController(
     val isSwitching: Boolean get() = switchJob?.isActive == true
 
     fun retry() {
-        consecutiveFailures = 0
-        ending = null
         current?.let { play(it, debounce = false) }
     }
 
@@ -672,8 +663,6 @@ class PlayerController(
                 val was = hold
                 hold = Hold.NONE
                 if (was == Hold.STOPPED && _state.value !is State.Error) {
-                    consecutiveFailures = 0
-                    ending = null
                     // Asked for afresh, as a portal's link may have expired meanwhile.
                     current?.let { play(it, debounce = false) }
                 }

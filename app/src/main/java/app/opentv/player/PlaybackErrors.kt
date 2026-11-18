@@ -121,13 +121,28 @@ object PlaybackErrors {
         format.displayNameAndSize,
     )
 
+    /** Why the player stopped a stream that raised no error. */
+    enum class Stopped {
+        /** Nothing played within [StartUpWatch]'s limit. */
+        START_UP_LIMIT,
+
+        /** A live stream came to an end, and restarting it hasn't helped (#472). */
+        STREAM_ENDED,
+    }
+
     /**
-     * Why a stream that never played within [StartUpWatch]'s limit has stopped. Nothing arrived, so
-     * there's no code, status or format to show; the detail line names the route instead, as
-     * [Playable.Failure]'s do.
+     * Why [stopped]. Nothing failed, so there's no code, status or format to show; the detail line names
+     * what happened instead, as [Playable.Failure]'s do.
      */
-    fun didntStart(context: Context): ViewerError =
-        ViewerError(context.getString(R.string.error_timed_out), "StartUpLimit")
+    fun describe(context: Context, stopped: Stopped): ViewerError = ViewerError(
+        context.getString(
+            when (stopped) {
+                Stopped.START_UP_LIMIT -> R.string.error_timed_out
+                Stopped.STREAM_ENDED -> R.string.error_live_ended
+            },
+        ),
+        ErrorWording.codeName(stopped.name),
+    )
 
     /** Why a video whose decoder started and showed nothing has stopped; [format] is null if it never said. */
     fun noFirstFrame(context: Context, format: Format?, onTelevision: Boolean): ViewerError = ViewerError(

@@ -6,6 +6,7 @@
 package app.opentv.player
 
 import androidx.media3.common.PlaybackException
+import app.opentv.data.repo.MediaKey
 
 /** What can be done about a failed stream: the viewer offered Retry, the player restarting it by itself. */
 internal data class Recovery(val canRetry: Boolean, val canRestart: Boolean)
@@ -41,17 +42,17 @@ internal object PlaybackRecovery {
     }
 
     /**
-     * After a live stream has come to an end, the [endsInARow]th time on this request. Nothing failed, so
-     * Retry is always on offer; it's restarted as a dropped connection is, as the same number of times.
+     * After a live stream has come to an end, the [endsInARow]th time in a row (see [RestartCounts.ended]).
+     * Nothing failed, so Retry is always on offer; it's restarted as a dropped connection is, as many times.
      */
     fun afterEnding(endsInARow: Int): Recovery = Recovery(canRetry = true, canRestart = endsInARow < MAX_AUTO_RESTARTS)
 
     /**
-     * Two silent restarts: the count goes up before it's checked, so the third failure in a row
-     * stops restarting by itself, and on a portal stops asking for new links. The common case they
-     * cover is a provider dropping the connection when another device on the account starts
-     * streaming. It limits only silent restarts: Retry stays on offer, and [PlayerController.retry]
-     * starts the count afresh.
+     * Two silent restarts: the count goes up before it's checked, so the third failure in a row, or a
+     * live stream's third ending in a row, stops restarting by itself, and on a portal stops asking for
+     * new links. The common case they cover is a provider dropping the connection, or closing it
+     * cleanly, when another device on the account starts streaming. It limits only silent restarts:
+     * Retry stays on offer, and [PlayerController.retry] starts the count afresh.
      */
     private const val MAX_AUTO_RESTARTS = 3
 
@@ -73,4 +74,52 @@ internal object PlaybackRecovery {
         PlaybackException.ERROR_CODE_PARSING_CONTAINER_UNSUPPORTED,
         PlaybackException.ERROR_CODE_PARSING_MANIFEST_UNSUPPORTED,
     )
+}
+
+/**
+ * How many times in a row [PlayerController]'s stream has failed, and how many times it has come to an
+ * end, deciding [Recovery] from them. Only the controller's own restarts keep counting: anything the
+ * viewer or a screen asks for, Try again and picking the same channel again included, starts afresh.
+ */
+internal class RestartCounts {
+    private var failures = 0
+    private var endings = 0
+    private var lastEndedAtMillis = 0L
+
+    /** After [error]; [hadPlayed] is whether the stream reached playing since it last loaded. */
+    fun failed(error: PlaybackException, hadPlayed: Boolean): Recovery =
+        PlaybackRecovery.after(error, ++failures, hadPlayed)
+
+    /**
+     * The stream is playing. That clears its failures but not its endings: a playlist that ended plays
+     * its last minute again on each restart, so clearing them would restart it for ever.
+     */
+    fun played() {
+        failures = 0
+    }
+
+    /**
+     * After the stream for [key] came to an end at [nowMillis], on a clock that counts while the app
+     * sleeps: null when that's simply where it ends, as a film's does.
+     *
+     * Endings further apart than [ENDINGS_FORGOTTEN_MILLIS] don't count together. A panel that limits
+     * how long a session lasts cuts the channel off every so often, and each cut is worth a restart
+     * however long the evening; a playlist that ended replays its last few minutes and ends again well
+     * inside it.
+     */
+    fun ended(key: MediaKey, nowMillis: Long): Recovery? {
+        if (key !is MediaKey.Live) return null
+        if (nowMillis - lastEndedAtMillis > ENDINGS_FORGOTTEN_MILLIS) endings = 0
+        lastEndedAtMillis = nowMillis
+        return PlaybackRecovery.afterEnding(++endings)
+    }
+
+    fun forget() {
+        failures = 0
+        endings = 0
+    }
+
+    private companion object {
+        const val ENDINGS_FORGOTTEN_MILLIS = 10L * 60 * 1000
+    }
 }
