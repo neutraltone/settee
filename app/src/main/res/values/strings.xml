@@ -33,6 +33,12 @@
     <string name="nav_settings">Settings</string>
 
     <!-- ============================ Live TV guide / home ============================ -->
+    <string name="home_provider_banner_one">%1$s: %2$s</string>
+    <plurals name="home_provider_banner_many">
+        <item quantity="one">%d provider needs attention</item>
+        <item quantity="other">%d providers need attention</item>
+    </plurals>
+    <string name="home_provider_banner_open">Open Providers</string>
     <string name="guide_search_channels">🔍  Search channels</string>
     <string name="guide_favourites">Favourites</string>
     <string name="guide_all_channels">All channels</string>
@@ -61,6 +67,7 @@
     <string name="guide_add_provider_desc">Your provider\'s channels will show up here. Add your provider to get started.</string>
     <string name="guide_add_provider_button">Add a provider</string>
     <string name="guide_load_failed_title">Couldn\'t load your channels</string>
+    <string name="guide_load_failed_title_named">Couldn\'t load your channels from %1$s</string>
     <string name="guide_load_failed_desc">Try again in a moment, or check your provider\'s details in Settings.</string>
     <string name="guide_edit_provider">Provider setup</string>
     <string name="guide_today">Today</string>
@@ -255,7 +262,6 @@
     <string name="addons_added">Added %1$s</string>
 
     <!-- ============================ Display & playback settings ============================ -->
-    <string name="settings_content_refreshing">Refreshing…</string>
     <string name="settings_language_system">System default</string>
     <string name="settings_language_english">English</string>
     <string name="settings_language_spanish">Español</string>
@@ -295,6 +301,7 @@
     <string name="profiles_name_taken">Another profile is already called %1$s.</string>
 
     <!-- ============================ Providers ============================ -->
+    <string name="providers_refresh_again">Refresh again</string>
 
     <!-- ============================ Recording settings ============================ -->
     <string name="recset_save_to">Save recordings to</string>
@@ -796,6 +803,14 @@
     <plurals name="refresh_done_with_problems">
         <item quantity="one">Refreshed %1$d channel, %2$s. See Guide settings.</item>
         <item quantity="other">Refreshed %1$d channels, %2$s. See Guide settings.</item>
+    </plurals>
+    <plurals name="refresh_done_with_provider_problems">
+        <item quantity="one">Refreshed %1$d channel, %2$s. See Providers.</item>
+        <item quantity="other">Refreshed %1$d channels, %2$s. See Providers.</item>
+    </plurals>
+    <plurals name="refresh_done_with_provider_and_guide_problems">
+        <item quantity="one">Refreshed %1$d channel, %2$s. See Providers and Guide settings.</item>
+        <item quantity="other">Refreshed %1$d channels, %2$s. See Providers and Guide settings.</item>
     </plurals>
     <plurals name="refresh_problems">
         <item quantity="one">%d problem</item>

@@ -24,6 +24,7 @@ import app.opentv.data.model.Programme
 import app.opentv.data.model.Source
 import app.opentv.data.model.SourceKind
 import app.opentv.data.model.StreamKind
+import app.opentv.ui.ProviderFailure
 import app.opentv.ui.channels.LiveScreen
 import app.opentv.ui.design.ERROR_DETAIL_TAG
 import com.google.common.truth.Truth.assertThat
@@ -98,7 +99,7 @@ class LiveScreenRecordTest {
     }
 
     @Test
-    fun `a guide whose channels couldn't load says why, with the detail line, and offers Try again`() {
+    fun `a guide whose channels couldn't load names the provider, says why, and offers Try again`() {
         // The graph is process-wide, so another test's channels would leave this guide loading.
         runBlocking {
             graph.database.sources().observeAll().first().forEach { graph.catalogRepository.deleteSource(it.id) }
@@ -108,9 +109,13 @@ class LiveScreenRecordTest {
                 isTelevision = true,
                 hasSources = true,
                 isSyncing = false,
-                loadFailure = ViewerError(
-                    "Can't reach your provider. Check this TV is online and the address is right.",
-                    "UnknownHost",
+                loadFailure = ProviderFailure(
+                    1,
+                    "Acme TV",
+                    ViewerError(
+                        "Can't reach your provider. Check this TV is online and the address is right.",
+                        "UnknownHost",
+                    ),
                 ),
                 onPlayChannel = {},
                 onAddSource = {},
@@ -124,6 +129,7 @@ class LiveScreenRecordTest {
             ).fetchSemanticsNodes().isNotEmpty()
         }
 
+        compose.onNodeWithText("Couldn't load your channels from Acme TV").assertExists()
         compose.onNodeWithTag(ERROR_DETAIL_TAG).assertTextEquals("UnknownHost")
         compose.onNodeWithText("Try again").assertExists()
         captureScreen("live_guide_load_failed")

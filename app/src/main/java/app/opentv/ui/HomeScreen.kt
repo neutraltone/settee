@@ -8,7 +8,10 @@ package app.opentv.ui
 import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -27,6 +30,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.viewmodel.compose.viewModel
 import app.opentv.R
@@ -42,6 +46,7 @@ import app.opentv.data.repo.MediaKey
 import app.opentv.data.repo.VodTitle
 import app.opentv.ui.design.ArtCard
 import app.opentv.ui.design.ArtCardSize
+import app.opentv.ui.design.Banner
 import app.opentv.ui.design.ScreenFrame
 import app.opentv.ui.design.ScreenFrameScope
 import app.opentv.ui.design.SetteeColors
@@ -76,8 +81,11 @@ internal fun HomeScreen(
     onOpenLive: () -> Unit,
     takeFocus: Boolean,
     onNothingToShow: () -> Unit,
+    /** Settings › Providers, on the given provider's row. */
+    onOpenProviders: (sourceId: Long) -> Unit = {},
     viewModel: HomeViewModel = viewModel(),
 ) {
+    val banner by viewModel.providerBanner.collectAsState()
     val state = viewModel.state.collectAsState().value ?: return
     val live = state.live
     // A Live Preview the Profile turned off doesn't play unseen; Home still hears of it, for its hint.
@@ -106,6 +114,8 @@ internal fun HomeScreen(
         onOpenLive = onOpenLive,
         stopPreview = preview.stop,
         arrangement = state.arrangement,
+        banner = banner,
+        onOpenProviders = onOpenProviders,
     )
 }
 
@@ -136,6 +146,8 @@ internal fun HomeContent(
     stopPreview: () -> Unit = {},
     arrangement: HomeArrangement = HomeArrangement.USUAL,
     becauseYouWatched: BecauseYouWatched? = null,
+    banner: ProviderBanner? = null,
+    onOpenProviders: (sourceId: Long) -> Unit = {},
 ) {
     val all =
         remember(
@@ -159,40 +171,62 @@ internal fun HomeContent(
         }
     val shelves = all.shown
     ScreenFrame {
-        if (shelves.isEmpty()) {
-            // A hint can't take the highlight, so hand it to the side menu rather than leave the remote
-            // with nothing to move. It waits a frame, as the request for the first card does below.
-            LaunchedEffect(Unit) {
-                if (!takeFocus) return@LaunchedEffect
-                withFrameNanos {}
-                onNothingToShow()
+        // Above the rows rather than one of them, so the rows' list still hands its first card the
+        // opening Highlight; Up from the top row reaches the banner's button.
+        Column(Modifier.fillMaxSize()) {
+            banner?.let {
+                ProviderBannerLine(it, onOpenProviders)
+                Spacer(Modifier.height(SetteeSpace.RowGap))
             }
-            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                // Rows with something in them that the Profile hid would otherwise leave it wondering
-                // where its Favourites went.
-                val hint = if (all.anyHidden) R.string.home_hidden_rows_hint else R.string.home_empty_hint
-                Text(stringResource(hint), style = SetteeType.Body, color = SetteeColors.QuietText)
+            if (shelves.isEmpty()) {
+                // A hint can't take the highlight, so hand it to the side menu rather than leave the remote
+                // with nothing to move. It waits a frame, as the request for the first card does below.
+                LaunchedEffect(Unit) {
+                    if (!takeFocus) return@LaunchedEffect
+                    withFrameNanos {}
+                    onNothingToShow()
+                }
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    // Rows with something in them that the Profile hid would otherwise leave it wondering
+                    // where its Favourites went.
+                    val hint = if (all.anyHidden) R.string.home_hidden_rows_hint else R.string.home_empty_hint
+                    Text(stringResource(hint), style = SetteeType.Body, color = SetteeColors.QuietText)
+                }
+                return@Column
             }
-            return@ScreenFrame
+            HomeRows(
+                shelves,
+                takeFocus,
+                HomeActions(
+                    onResume,
+                    onOpenTitle = { title ->
+                        when (title) {
+                            is VodTitle.OfMovie -> onOpenMovie(title.movie)
+                            is VodTitle.OfSeries -> onOpenSeries(title.series)
+                        }
+                    },
+                    onPlayChannel,
+                    onWatchLive,
+                    onOpenLive,
+                    stopPreview,
+                ),
+            )
         }
-        HomeRows(
-            shelves,
-            takeFocus,
-            HomeActions(
-                onResume,
-                onOpenTitle = { title ->
-                    when (title) {
-                        is VodTitle.OfMovie -> onOpenMovie(title.movie)
-                        is VodTitle.OfSeries -> onOpenSeries(title.series)
-                    }
-                },
-                onPlayChannel,
-                onWatchLive,
-                onOpenLive,
-                stopPreview,
-            ),
-        )
     }
+}
+
+/** One provider by name with its failure's sentence, or how many when there are more; never the detail line. */
+@Composable
+private fun ProviderBannerLine(banner: ProviderBanner, onOpenProviders: (sourceId: Long) -> Unit) {
+    val providers = banner.providers
+    val text = providers.singleOrNull()?.let {
+        stringResource(R.string.home_provider_banner_one, it.name, it.error.sentence)
+    } ?: pluralStringResource(R.plurals.home_provider_banner_many, providers.size, providers.size)
+    Banner(
+        text,
+        stringResource(R.string.home_provider_banner_open),
+        onAction = { onOpenProviders(providers.first().sourceId) },
+    )
 }
 
 /** What Home's cards do when they're picked. */

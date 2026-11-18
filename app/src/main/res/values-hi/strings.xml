@@ -45,6 +45,7 @@
     <string name="guide_add_provider_desc">आपके प्रदाता के चैनल यहां दिखेंगे। शुरू करने के लिए अपना प्रदाता जोड़ें।</string>
     <string name="guide_add_provider_button">प्रदाता जोड़ें</string>
     <string name="guide_load_failed_title">आपके चैनल लोड नहीं हो सके</string>
+    <string name="guide_load_failed_title_named">%1$s से आपके चैनल लोड नहीं हो सके</string>
     <string name="guide_load_failed_desc">थोड़ी देर में फिर कोशिश करें, या सेटिंग्स में अपने प्रदाता का विवरण जांचें।</string>
     <string name="guide_edit_provider">प्रदाता सेटअप</string>
     <string name="guide_today">आज</string>
@@ -100,7 +101,6 @@
     <string name="player_subtitles_off">बंद</string>
     <string name="addons_checking">जांच हो रही है…</string>
     <string name="addons_added">%1$s जोड़ा गया</string>
-    <string name="settings_content_refreshing">रीफ्रेश हो रहा है…</string>
     <string name="settings_language_system">सिस्टम डिफ़ॉल्ट</string>
     <string name="settings_language_english">English</string>
     <string name="settings_language_spanish">Español</string>

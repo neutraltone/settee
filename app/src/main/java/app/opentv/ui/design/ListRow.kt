@@ -139,6 +139,9 @@ fun Switch(on: Boolean, highlighted: Boolean, modifier: Modifier = Modifier) {
 private const val NOTE_LINES = 4
 private val ROW_HEIGHT = 52.dp
 private val SIDE = 10.dp
+
+/** A [ListRow]'s own inset, so text set under a row can start where its label does. */
+val ListRowInset = SIDE
 private val TOP_BOTTOM = 8.dp
 private val GAP = 8.dp
 private val TRACK_WIDTH = 44.dp

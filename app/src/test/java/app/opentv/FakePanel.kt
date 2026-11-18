@@ -39,7 +39,8 @@ val PANEL_SOURCE =
  * `"!host"` fails it as an address that can't be found, with the request's own address, login and a
  * MAC in the exception's message, as some clients put them there. `"!503"`
  * (any three digits) answers with that HTTP status, and `"!oom"` with a body that runs out of memory
- * as it's read, as a list too big for the device would.
+ * as it's read, as a list too big for the device would. A reply keyed `<username>/<action>` answers
+ * only that login's requests, so two providers on one panel can be told apart.
  */
 class FakePanel(vararg initial: Pair<String, String>) {
     val replies = initial.toMap().toMutableMap()
@@ -97,7 +98,8 @@ class FakePanel(vararg initial: Pair<String, String>) {
             ?.let { "$action:$it" }
         asked += keyed ?: action
         if (action == "create_link") cmds += request.url.queryParameter("cmd").orEmpty()
-        val body = keyed?.let { replies[it] } ?: replies[action] ?: "[]"
+        val user = request.url.queryParameter("username")
+        val body = keyed?.let { replies[it] } ?: replies["$user/$action"] ?: replies[action] ?: "[]"
         (keyed?.let { holds[it] } ?: holds[action])?.pass()
         if (body == "!") throw java.io.IOException("Panel timed out")
         if (body == "!timeout") throw java.net.SocketTimeoutException("timeout")

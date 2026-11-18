@@ -45,6 +45,7 @@
     <string name="guide_add_provider_desc">Din udbyders kanaler vises her. Tilføj din udbyder for at komme i gang.</string>
     <string name="guide_add_provider_button">Tilføj udbyder</string>
     <string name="guide_load_failed_title">Dine kanaler kunne ikke indlæses</string>
+    <string name="guide_load_failed_title_named">Dine kanaler fra %1$s kunne ikke indlæses</string>
     <string name="guide_load_failed_desc">Prøv igen om lidt, eller tjek din udbyders oplysninger i Indstillinger.</string>
     <string name="guide_edit_provider">Udbyderopsætning</string>
     <string name="guide_today">I dag</string>
@@ -100,7 +101,6 @@
     <string name="player_subtitles_off">Fra</string>
     <string name="addons_checking">Kontrollerer…</string>
     <string name="addons_added">%1$s tilføjet</string>
-    <string name="settings_content_refreshing">Opdaterer…</string>
     <string name="settings_language_system">Systemstandard</string>
     <string name="settings_language_english">English</string>
     <string name="settings_language_spanish">Español</string>

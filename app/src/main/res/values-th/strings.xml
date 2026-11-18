@@ -45,6 +45,7 @@
     <string name="guide_add_provider_desc">ช่องจากผู้ให้บริการของคุณจะแสดงที่นี่ เพิ่มผู้ให้บริการของคุณเพื่อเริ่มต้นใช้งาน</string>
     <string name="guide_add_provider_button">เพิ่มผู้ให้บริการ</string>
     <string name="guide_load_failed_title">โหลดช่องของคุณไม่สำเร็จ</string>
+    <string name="guide_load_failed_title_named">โหลดช่องของคุณจาก %1$s ไม่สำเร็จ</string>
     <string name="guide_load_failed_desc">ลองอีกครั้งในอีกสักครู่ หรือตรวจสอบรายละเอียดผู้ให้บริการของคุณในการตั้งค่า</string>
     <string name="guide_edit_provider">ตั้งค่าผู้ให้บริการ</string>
     <string name="guide_today">วันนี้</string>
@@ -100,7 +101,6 @@
     <string name="player_subtitles_off">ปิด</string>
     <string name="addons_checking">กำลังตรวจสอบ…</string>
     <string name="addons_added">เพิ่ม %1$s แล้ว</string>
-    <string name="settings_content_refreshing">กำลังรีเฟรช…</string>
     <string name="settings_language_system">ค่าเริ่มต้นของระบบ</string>
     <string name="settings_language_english">English</string>
     <string name="settings_language_spanish">Español</string>

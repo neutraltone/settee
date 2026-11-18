@@ -45,6 +45,7 @@
     <string name="guide_add_provider_desc">Zde se zobrazí kanály vašeho poskytovatele. Pro začátek přidejte poskytovatele.</string>
     <string name="guide_add_provider_button">Přidat poskytovatele</string>
     <string name="guide_load_failed_title">Kanály se nepodařilo načíst</string>
+    <string name="guide_load_failed_title_named">Kanály od %1$s se nepodařilo načíst</string>
     <string name="guide_load_failed_desc">Zkuste to za chvíli znovu, nebo zkontrolujte údaje poskytovatele v Nastavení.</string>
     <string name="guide_edit_provider">Nastavení poskytovatele</string>
     <string name="guide_today">Dnes</string>
@@ -100,7 +101,6 @@
     <string name="player_subtitles_off">Vypnuto</string>
     <string name="addons_checking">Kontrola…</string>
     <string name="addons_added">Přidáno: %1$s</string>
-    <string name="settings_content_refreshing">Obnovování…</string>
     <string name="settings_language_system">Výchozí podle systému</string>
     <string name="settings_language_english">English</string>
     <string name="settings_language_spanish">Español</string>

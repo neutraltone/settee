@@ -7,6 +7,7 @@ package app.opentv
 
 import androidx.test.core.app.ApplicationProvider
 import app.opentv.core.ViewerError
+import app.opentv.data.model.refreshFailure
 import app.opentv.data.repo.CatalogueRefresh
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.test.runTest
@@ -86,18 +87,25 @@ class CatalogueRefreshFailureTest {
     }
 
     @Test
-    fun `a refresh whose provider can't be reached keeps the reason, for the guide to show`() = runTest {
+    fun `a refresh keeps each provider's reason by its id, and counts them apart from the guide's feeds`() = runTest {
         db.sources().insert(PANEL_SOURCE)
-        panel.replies[""] = "!host"
+        db.sources().insert(PANEL_SOURCE.copy(id = 2, name = "Second", username = "u2"))
+        panel.replies["u/"] = "!host"
+        panel.replies["xmltv.php"] =
+            """<tv><programme start="20260101000000 +0000" stop="20260101010000 +0000" channel="bbc1">""" +
+            "<title>News</title></programme></tv>"
 
         val outcome = refresh.refresh(CatalogueRefresh.Trigger.Manual)
 
-        assertThat(outcome.failure).isEqualTo(
+        assertThat(outcome.failures).containsExactly(
+            1L,
             ViewerError(
                 "Can't reach your provider. Check this device is online and the address is right.",
                 "UnknownHost",
             ),
         )
+        assertThat(outcome.providerProblems).isEqualTo(1)
+        assertThat(outcome.feedProblems).isEqualTo(0)
         assertThat(refresh.state.value.last).isEqualTo(outcome)
     }
 
@@ -105,7 +113,41 @@ class CatalogueRefreshFailureTest {
     fun `a refresh that worked has no failure to show`() = runTest {
         db.sources().insert(PANEL_SOURCE)
 
-        assertThat(refresh.refresh(CatalogueRefresh.Trigger.Manual).failure).isNull()
+        assertThat(refresh.refresh(CatalogueRefresh.Trigger.Manual).failures).isEmpty()
+    }
+
+    @Test
+    fun `a refresh saves a rejected login on that provider only, and a later refresh that works clears it`() = runTest {
+        val second = PANEL_SOURCE.copy(id = 2, name = "Second", username = "u2")
+        db.sources().insert(PANEL_SOURCE)
+        db.sources().insert(second)
+        panel.replies["u2/"] = """{"user_info": {"auth": 0}}"""
+
+        refresh.refresh(CatalogueRefresh.Trigger.Manual)
+
+        assertThat(db.sources().byId(2)?.refreshFailure).isEqualTo(
+            ViewerError(
+                "Your provider didn't accept your login. Check your provider's details in Settings.",
+                "LoginRejected",
+            ),
+        )
+        assertThat(db.sources().byId(1)?.refreshFailure).isNull()
+
+        panel.replies.remove("u2/")
+        refresh.refresh(CatalogueRefresh.Trigger.Periodic)
+
+        assertThat(db.sources().byId(2)?.refreshFailure).isNull()
+    }
+
+    @Test
+    fun `movies and shows that fail to download save no failure on the provider`() = runTest {
+        db.sources().insert(PANEL_SOURCE)
+        panel.replies["get_vod_streams"] = "!503"
+        panel.replies["get_series"] = "!503"
+
+        refresh.refresh(CatalogueRefresh.Trigger.Manual)
+
+        assertThat(db.sources().byId(1)?.refreshFailure).isNull()
     }
 
     private val unreachable = ViewerError(

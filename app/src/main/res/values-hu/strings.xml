@@ -45,6 +45,7 @@
     <string name="guide_add_provider_desc">A szolgáltatója csatornái itt jelennek meg. Kezdéshez adja hozzá a szolgáltatóját.</string>
     <string name="guide_add_provider_button">Szolgáltató hozzáadása</string>
     <string name="guide_load_failed_title">Nem sikerült betölteni a csatornákat</string>
+    <string name="guide_load_failed_title_named">Nem sikerült betölteni a csatornákat innen: %1$s</string>
     <string name="guide_load_failed_desc">Próbálja újra egy kicsit később, vagy ellenőrizze a szolgáltató adatait a Beállításokban.</string>
     <string name="guide_edit_provider">Szolgáltató beállítása</string>
     <string name="guide_today">Ma</string>
@@ -100,7 +101,6 @@
     <string name="player_subtitles_off">Kikapcsolva</string>
     <string name="addons_checking">Ellenőrzés…</string>
     <string name="addons_added">%1$s hozzáadva</string>
-    <string name="settings_content_refreshing">Frissítés…</string>
     <string name="settings_language_system">Rendszer alapértelmezett</string>
     <string name="settings_language_english">Angol</string>
     <string name="settings_language_spanish">Español</string>

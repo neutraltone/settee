@@ -45,6 +45,7 @@
     <string name="guide_add_provider_desc">Saluran dari penyedia Anda akan muncul di sini. Tambahkan penyedia Anda untuk memulai.</string>
     <string name="guide_add_provider_button">Tambah penyedia</string>
     <string name="guide_load_failed_title">Gagal memuat saluran Anda</string>
+    <string name="guide_load_failed_title_named">Gagal memuat saluran Anda dari %1$s</string>
     <string name="guide_load_failed_desc">Coba lagi sebentar lagi, atau periksa detail penyedia Anda di Pengaturan.</string>
     <string name="guide_edit_provider">Pengaturan penyedia</string>
     <string name="guide_today">Hari ini</string>
@@ -100,7 +101,6 @@
     <string name="player_subtitles_off">Nonaktif</string>
     <string name="addons_checking">Memeriksa…</string>
     <string name="addons_added">%1$s ditambahkan</string>
-    <string name="settings_content_refreshing">Menyegarkan…</string>
     <string name="settings_language_system">Default sistem</string>
     <string name="settings_language_english">English</string>
     <string name="settings_language_spanish">Español</string>

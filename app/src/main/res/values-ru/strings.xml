@@ -45,6 +45,7 @@
     <string name="guide_add_provider_desc">Здесь появятся каналы вашего провайдера. Добавьте провайдера, чтобы начать.</string>
     <string name="guide_add_provider_button">Добавить провайдера</string>
     <string name="guide_load_failed_title">Не удалось загрузить каналы</string>
+    <string name="guide_load_failed_title_named">Не удалось загрузить каналы из %1$s</string>
     <string name="guide_load_failed_desc">Повторите попытку чуть позже или проверьте данные провайдера в настройках.</string>
     <string name="guide_edit_provider">Настройка провайдера</string>
     <string name="guide_today">Сегодня</string>
@@ -100,7 +101,6 @@
     <string name="player_subtitles_off">Выкл.</string>
     <string name="addons_checking">Проверка…</string>
     <string name="addons_added">Добавлено: %1$s</string>
-    <string name="settings_content_refreshing">Обновление…</string>
     <string name="settings_language_system">Как в системе</string>
     <string name="settings_language_english">English</string>
     <string name="settings_language_spanish">Español</string>

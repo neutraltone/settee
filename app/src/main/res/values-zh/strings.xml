@@ -45,6 +45,7 @@
     <string name="guide_add_provider_desc">你的提供商的频道会显示在这里。添加你的提供商以开始使用。</string>
     <string name="guide_add_provider_button">添加提供商</string>
     <string name="guide_load_failed_title">无法加载你的频道</string>
+    <string name="guide_load_failed_title_named">无法从 %1$s 加载你的频道</string>
     <string name="guide_load_failed_desc">请稍后重试，或在“设置”中检查提供商信息。</string>
     <string name="guide_edit_provider">提供商设置</string>
     <string name="guide_today">今天</string>
@@ -100,7 +101,6 @@
     <string name="player_subtitles_off">关闭</string>
     <string name="addons_checking">检查中…</string>
     <string name="addons_added">已添加 %1$s</string>
-    <string name="settings_content_refreshing">刷新中…</string>
     <string name="settings_language_system">系统默认</string>
     <string name="settings_language_english">English</string>
     <string name="settings_language_spanish">Español</string>

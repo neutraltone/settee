@@ -45,6 +45,7 @@
     <string name="guide_add_provider_desc">プロバイダーのチャンネルがここに表示されます。プロバイダーを追加して始めましょう。</string>
     <string name="guide_add_provider_button">プロバイダーを追加</string>
     <string name="guide_load_failed_title">チャンネルを読み込めませんでした</string>
+    <string name="guide_load_failed_title_named">%1$s のチャンネルを読み込めませんでした</string>
     <string name="guide_load_failed_desc">少し待ってからもう一度お試しいただくか、「設定」でプロバイダーの情報を確認してください。</string>
     <string name="guide_edit_provider">プロバイダー設定</string>
     <string name="guide_today">今日</string>
@@ -100,7 +101,6 @@
     <string name="player_subtitles_off">オフ</string>
     <string name="addons_checking">確認中…</string>
     <string name="addons_added">%1$s を追加しました</string>
-    <string name="settings_content_refreshing">更新中…</string>
     <string name="settings_language_system">システムのデフォルト</string>
     <string name="settings_language_english">English</string>
     <string name="settings_language_spanish">Español</string>

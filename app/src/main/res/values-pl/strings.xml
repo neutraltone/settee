@@ -45,6 +45,7 @@
     <string name="guide_add_provider_desc">Tutaj pojawią się kanały Twojego dostawcy. Dodaj dostawcę, aby rozpocząć.</string>
     <string name="guide_add_provider_button">Dodaj dostawcę</string>
     <string name="guide_load_failed_title">Nie udało się wczytać kanałów</string>
+    <string name="guide_load_failed_title_named">Nie udało się wczytać kanałów z %1$s</string>
     <string name="guide_load_failed_desc">Spróbuj ponownie za chwilę lub sprawdź dane dostawcy w Ustawieniach.</string>
     <string name="guide_edit_provider">Konfiguracja dostawcy</string>
     <string name="guide_today">Dziś</string>
@@ -100,7 +101,6 @@
     <string name="player_subtitles_off">Wyłączone</string>
     <string name="addons_checking">Sprawdzanie…</string>
     <string name="addons_added">Dodano %1$s</string>
-    <string name="settings_content_refreshing">Odświeżanie…</string>
     <string name="settings_language_system">Domyślny systemowy</string>
     <string name="settings_language_english">English</string>
     <string name="settings_language_spanish">Español</string>

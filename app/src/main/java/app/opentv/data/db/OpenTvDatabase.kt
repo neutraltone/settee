@@ -97,7 +97,7 @@ class Converters {
         Reminder::class,
         EpisodeTimings::class,
     ],
-    version = 20,
+    version = 21,
     exportSchema = true,
 )
 @TypeConverters(Converters::class)
@@ -373,6 +373,13 @@ abstract class OpenTvDatabase : RoomDatabase() {
             }
         }
 
+        /** 20 → 21: why each provider's latest Catalogue Refresh failed, for Settings and Home to show (#464). */
+        private val REFRESH_FAILURE = object : Migration(20, 21) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE `sources` ADD COLUMN `lastRefreshFailure` TEXT")
+            }
+        }
+
         /**
          * Every migration, in order. Shared with the migration test so neither list can lag. None
          * before 9: those schemas are wiped instead (see [WIPED_SCHEMAS]).
@@ -389,6 +396,7 @@ abstract class OpenTvDatabase : RoomDatabase() {
                 TMDB_RECOMMENDATIONS,
                 SERVER_TIME_ZONE,
                 EPISODE_TIMINGS,
+                REFRESH_FAILURE,
             )
 
         /** The schemas opened empty rather than migrated; see [build]. */

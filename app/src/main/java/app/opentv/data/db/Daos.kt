@@ -64,6 +64,9 @@ import kotlinx.coroutines.flow.Flow
 private const val WRITE_CHUNK = 500
 
 @Dao
+// A query per column a refresh writes on its own (sync time, zone, failure), so an edit saved meanwhile
+// isn't put back: that's what grows the count, not the interface doing more than one thing.
+@Suppress("TooManyFunctions")
 interface SourceDao {
     @Query("SELECT * FROM sources ORDER BY id")
     fun observeAll(): Flow<List<Source>>
@@ -101,6 +104,10 @@ interface SourceDao {
         val samePanel = stored != null && stored.url == source.url && stored.kind == source.kind
         update(source.copy(serverTimeZone = stored?.serverTimeZone?.takeIf { samePanel }))
     }
+
+    /** Only the failure, so a refresh doesn't put back what an edit changed meanwhile. */
+    @Query("UPDATE sources SET lastRefreshFailure = :stored WHERE id = :id")
+    suspend fun setRefreshFailure(id: Long, stored: String?)
 
     /** Only the zone, so a sync doesn't put back what an edit changed meanwhile. */
     @Query("UPDATE sources SET serverTimeZone = :zone WHERE id = :id")

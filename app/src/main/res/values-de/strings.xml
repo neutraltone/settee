@@ -45,6 +45,7 @@
     <string name="guide_add_provider_desc">Die Sender deines Anbieters erscheinen hier. Füge deinen Anbieter hinzu, um loszulegen.</string>
     <string name="guide_add_provider_button">Anbieter hinzufügen</string>
     <string name="guide_load_failed_title">Deine Sender konnten nicht geladen werden</string>
+    <string name="guide_load_failed_title_named">Deine Sender von %1$s konnten nicht geladen werden</string>
     <string name="guide_load_failed_desc">Versuch es gleich noch einmal, oder überprüfe deine Anbieterdaten in den Einstellungen.</string>
     <string name="guide_edit_provider">Anbieter-Einrichtung</string>
     <string name="guide_today">Heute</string>
@@ -100,7 +101,6 @@
     <string name="player_subtitles_off">Aus</string>
     <string name="addons_checking">Wird geprüft…</string>
     <string name="addons_added">%1$s hinzugefügt</string>
-    <string name="settings_content_refreshing">Wird aktualisiert…</string>
     <string name="settings_language_system">Systemstandard</string>
     <string name="settings_language_english">English</string>
     <string name="settings_language_spanish">Español</string>

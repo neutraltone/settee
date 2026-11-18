@@ -45,6 +45,7 @@
     <string name="guide_add_provider_desc">I canali del tuo provider compariranno qui. Aggiungi il tuo provider per iniziare.</string>
     <string name="guide_add_provider_button">Aggiungi un provider</string>
     <string name="guide_load_failed_title">Impossibile caricare i tuoi canali</string>
+    <string name="guide_load_failed_title_named">Impossibile caricare i tuoi canali da %1$s</string>
     <string name="guide_load_failed_desc">Riprova tra un momento, oppure controlla i dati del tuo provider in Impostazioni.</string>
     <string name="guide_edit_provider">Configurazione provider</string>
     <string name="guide_today">Oggi</string>
@@ -100,7 +101,6 @@
     <string name="player_subtitles_off">Disattivati</string>
     <string name="addons_checking">Verifica in corso…</string>
     <string name="addons_added">%1$s aggiunto</string>
-    <string name="settings_content_refreshing">Aggiornamento in corso…</string>
     <string name="settings_language_system">Predefinita di sistema</string>
     <string name="settings_language_english">English</string>
     <string name="settings_language_spanish">Español</string>

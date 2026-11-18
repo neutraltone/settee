@@ -45,6 +45,7 @@
     <string name="guide_add_provider_desc">Kanalene fra leverandøren din vises her. Legg til leverandøren din for å komme i gang.</string>
     <string name="guide_add_provider_button">Legg til leverandør</string>
     <string name="guide_load_failed_title">Kunne ikke laste kanalene dine</string>
+    <string name="guide_load_failed_title_named">Kunne ikke laste kanalene dine fra %1$s</string>
     <string name="guide_load_failed_desc">Prøv igjen om litt, eller sjekk leverandørdetaljene dine i Innstillinger.</string>
     <string name="guide_edit_provider">Leverandøroppsett</string>
     <string name="guide_today">I dag</string>
@@ -100,7 +101,6 @@
     <string name="player_subtitles_off">Av</string>
     <string name="addons_checking">Sjekker…</string>
     <string name="addons_added">La til %1$s</string>
-    <string name="settings_content_refreshing">Oppdaterer…</string>
     <string name="settings_language_system">Systemstandard</string>
     <string name="settings_language_english">English</string>
     <string name="settings_language_spanish">Español</string>

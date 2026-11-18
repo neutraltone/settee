@@ -45,6 +45,7 @@
     <string name="guide_add_provider_desc">Les chaînes de votre fournisseur apparaîtront ici. Ajoutez votre fournisseur pour commencer.</string>
     <string name="guide_add_provider_button">Ajouter un fournisseur</string>
     <string name="guide_load_failed_title">Impossible de charger vos chaînes</string>
+    <string name="guide_load_failed_title_named">Impossible de charger vos chaînes de %1$s</string>
     <string name="guide_load_failed_desc">Réessayez dans un instant, ou vérifiez les informations de votre fournisseur dans les Paramètres.</string>
     <string name="guide_edit_provider">Configuration du fournisseur</string>
     <string name="guide_today">Aujourd\'hui</string>
@@ -100,7 +101,6 @@
     <string name="player_subtitles_off">Désactivés</string>
     <string name="addons_checking">Vérification…</string>
     <string name="addons_added">%1$s ajouté</string>
-    <string name="settings_content_refreshing">Actualisation…</string>
     <string name="settings_language_system">Langue du système</string>
     <string name="settings_language_english">English</string>
     <string name="settings_language_spanish">Español</string>

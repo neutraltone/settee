@@ -31,10 +31,12 @@ import kotlinx.coroutines.sync.withLock
  * are; what to fetch, in what order and how fresh is fresh enough is decided here, so the triggers
  * can't drift apart. [CatalogRepository] still does each provider's fetching and merging.
  */
-// One refresh() per trigger is the point of the module, so its count grows with the triggers.
-@Suppress("TooManyFunctions")
+// One refresh() per trigger is the point of the module, so its count grows with the triggers. sources
+// writes each provider's refresh result on its row, since CatalogRepository is already too large to.
+@Suppress("TooManyFunctions", "LongParameterList")
 class CatalogueRefresh(
     private val catalog: CatalogRepository,
+    private val sources: SourceRepository,
     private val guide: EpgRepository,
     private val settings: AppSettings,
     private val rescanSeriesRules: suspend () -> Unit,
@@ -69,13 +71,16 @@ class CatalogueRefresh(
     }
 
     sealed interface Outcome {
-        /** [failure] is the first provider's that couldn't be downloaded, for the guide to show. */
         data class Refreshed(
             val channels: Int,
-            val problems: Int,
             val guide: EpgRepository.SyncSummary,
-            val failure: ViewerError? = null,
-        ) : Outcome
+            /** Why each provider whose channels couldn't be downloaded failed, by source id. */
+            val failures: Map<Long, ViewerError> = emptyMap(),
+        ) : Outcome {
+            val providerProblems: Int get() = failures.size
+            val feedProblems: Int get() = guide.feedsFailed
+            val problems: Int get() = providerProblems + feedProblems
+        }
 
         sealed interface Added : Outcome
 
@@ -171,8 +176,7 @@ class CatalogueRefresh(
         // Finishing and the result are one state, so a result equal to the last still reaches screens.
         return marking(refreshes, { copy(refreshing = it, last = outcome ?: last) }) {
             var channels = 0
-            var problems = 0
-            var failure: ViewerError? = null
+            val failures = LinkedHashMap<Long, ViewerError>()
             for (source in catalog.enabledSources()) {
                 // Already-fetched rows are left untouched by a switch that's off: turning the type
                 // back on and refreshing restores it.
@@ -184,10 +188,7 @@ class CatalogueRefresh(
                     CatalogRepository.SyncResult.Success(0, 0, 0)
                 }
                 when (live) {
-                    is CatalogRepository.SyncResult.Failed -> {
-                        problems++
-                        if (failure == null) failure = live.reason
-                    }
+                    is CatalogRepository.SyncResult.Failed -> failures[source.id] = live.reason
                     is CatalogRepository.SyncResult.Success -> {
                         channels += live.channelCount
                         // Nobody is watching this one, and waiting lets providers take turns.
@@ -197,7 +198,7 @@ class CatalogueRefresh(
             }
             val summary = syncGuide(force = trigger == Trigger.Manual)
             rescan()
-            Outcome.Refreshed(channels, problems + summary.feedsFailed, summary, failure).also { outcome = it }
+            Outcome.Refreshed(channels, summary, failures).also { outcome = it }
         }
     }
 
@@ -388,8 +389,19 @@ class CatalogueRefresh(
 
     private fun vodIsStale(source: Source) = clock() - settings.vodFetchedAtMillis(source.id) >= VOD_FRESH_MILLIS
 
-    private suspend fun live(source: Source): CatalogRepository.SyncResult =
-        liveDownloads.share(source) { catalog.fetchLive(source, clock()) }
+    /**
+     * Saved on the provider by whichever trigger downloaded, inside the shared download so a second
+     * caller doesn't write it twice: a later success replaces an old failure, and screens read it there.
+     */
+    private suspend fun live(source: Source): CatalogRepository.SyncResult = liveDownloads.share(source) {
+        catalog.fetchLive(source, clock()).also { result ->
+            val failure = (result as? CatalogRepository.SyncResult.Failed)?.reason
+            runCatching { sources.saveRefreshResult(source.id, failure) }.onFailure { e ->
+                if (e is CancellationException) throw e
+                Log.w(TAG, "Couldn't save how source ${source.id}'s refresh went", e)
+            }
+        }
+    }
 
     /** With [setup], movies and shows are fetched as its steps, those it has only. */
     private suspend fun vod(source: Source, waitForNewEpisodes: Boolean, setup: SetupRun? = null) {

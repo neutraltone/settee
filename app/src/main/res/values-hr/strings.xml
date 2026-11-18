@@ -45,6 +45,7 @@
     <string name="guide_add_provider_desc">Kanali vašeg pružatelja usluge pojavit će se ovdje. Dodajte svog pružatelja usluge za početak.</string>
     <string name="guide_add_provider_button">Dodaj pružatelja usluge</string>
     <string name="guide_load_failed_title">Nije moguće učitati kanale</string>
+    <string name="guide_load_failed_title_named">Nije moguće učitati kanale s %1$s</string>
     <string name="guide_load_failed_desc">Pokušajte ponovno za trenutak ili provjerite podatke pružatelja usluge u Postavkama.</string>
     <string name="guide_edit_provider">Postavljanje pružatelja usluge</string>
     <string name="guide_today">Danas</string>
@@ -100,7 +101,6 @@
     <string name="player_subtitles_off">Isključeno</string>
     <string name="addons_checking">Provjera…</string>
     <string name="addons_added">Dodano: %1$s</string>
-    <string name="settings_content_refreshing">Osvježavanje…</string>
     <string name="settings_language_system">Zadano sustavom</string>
     <string name="settings_language_english">English</string>
     <string name="settings_language_spanish">Español</string>

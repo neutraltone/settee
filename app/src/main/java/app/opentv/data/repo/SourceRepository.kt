@@ -5,6 +5,7 @@
  */
 package app.opentv.data.repo
 
+import app.opentv.core.ViewerError
 import app.opentv.data.db.SourceDao
 import app.opentv.data.model.Source
 import app.opentv.data.model.SourceKind
@@ -23,6 +24,10 @@ class SourceRepository(private val dao: SourceDao, private val api: XtreamApi, p
     suspend fun all(): List<Source> = dao.all()
 
     suspend fun byId(id: Long): Source? = dao.byId(id)
+
+    /** Saves how [sourceId]'s latest channel download went: [failure], or null when it worked. */
+    suspend fun saveRefreshResult(sourceId: Long, failure: ViewerError?) =
+        dao.setRefreshFailure(sourceId, failure?.stored())
 
     suspend fun save(source: Source): Long = withContext(Dispatchers.IO) {
         val normalised = source.copy(url = normaliseUrl(source.url, source.kind), name = uniqueName(source))

@@ -45,6 +45,7 @@
     <string name="guide_add_provider_desc">Din leverantörs kanaler visas här. Lägg till din leverantör för att komma igång.</string>
     <string name="guide_add_provider_button">Lägg till leverantör</string>
     <string name="guide_load_failed_title">Det gick inte att läsa in dina kanaler</string>
+    <string name="guide_load_failed_title_named">Det gick inte att läsa in dina kanaler från %1$s</string>
     <string name="guide_load_failed_desc">Försök igen om en stund, eller kontrollera din leverantörs uppgifter i Inställningar.</string>
     <string name="guide_edit_provider">Leverantörsinställning</string>
     <string name="guide_today">Idag</string>
@@ -100,7 +101,6 @@
     <string name="player_subtitles_off">Av</string>
     <string name="addons_checking">Kontrollerar…</string>
     <string name="addons_added">%1$s tillagd</string>
-    <string name="settings_content_refreshing">Uppdaterar…</string>
     <string name="settings_language_system">Systemstandard</string>
     <string name="settings_language_english">English</string>
     <string name="settings_language_spanish">Español</string>

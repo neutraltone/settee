@@ -30,6 +30,7 @@ import app.opentv.data.model.StreamKind
 import app.opentv.data.model.StremioStream
 import app.opentv.data.model.liveAt
 import app.opentv.data.model.ref
+import app.opentv.data.model.refreshFailure
 import app.opentv.data.parser.VodTitleCleaner
 import app.opentv.data.parser.displayTitle
 import app.opentv.data.repo.CatalogRepository
@@ -140,10 +141,12 @@ class SourcesViewModel @JvmOverloads constructor(
         val adding: Boolean = false,
         val refreshing: Boolean = false,
         val syncMessage: String? = null,
+        /** How the latest periodic or manual refresh went, for its row: never adding a provider's news. */
+        val refreshResult: String? = null,
         /** Why adding this provider just failed, shown in place of [syncMessage]. */
         val addFailure: ViewerError? = null,
-        /** Why the latest refresh or add couldn't download a provider's channels; null once one works. */
-        val loadFailure: ViewerError? = null,
+        /** Why the first enabled provider whose channels couldn't be downloaded failed, as saved on it. */
+        val loadFailure: ProviderFailure? = null,
     ) {
         val syncing: Boolean get() = adding || refreshing
     }
@@ -157,7 +160,11 @@ class SourcesViewModel @JvmOverloads constructor(
     init {
         viewModelScope.launch {
             graph.sourceRepository.observeAll().collect { sources ->
-                _ui.update { it.copy(sources = sources, loaded = true) }
+                // Saved on the providers by every refresh, so it's there after a restart and gone once
+                // one works, whichever refresh that was.
+                _ui.update {
+                    it.copy(sources = sources, loaded = true, loadFailure = sources.providerFailures().firstOrNull())
+                }
             }
         }
         // A refresh runs as background work, so this is how its progress and result reach the screen.
@@ -181,13 +188,14 @@ class SourcesViewModel @JvmOverloads constructor(
                     announced = status
                     _ui.update {
                         it.copy(
-                            loadFailure = failureOf(state.last) ?: it.loadFailure.takeUnless { state.last.worked() },
                             refreshing = state.refreshing,
                             syncMessage = when {
                                 state.refreshing -> messages.of(RefreshMessages.Step.Refreshing)
                                 news != null -> messages.of(news)
                                 else -> it.syncMessage
                             },
+                            refreshResult = (news as? CatalogueRefresh.Outcome.Refreshed)?.let(messages::of)
+                                ?: it.refreshResult,
                         )
                     }
                 }
@@ -214,15 +222,6 @@ class SourcesViewModel @JvmOverloads constructor(
             )
         }
     }
-
-    private fun failureOf(outcome: CatalogueRefresh.Outcome?): ViewerError? = when (outcome) {
-        is CatalogueRefresh.Outcome.Refreshed -> outcome.failure
-        is CatalogueRefresh.Outcome.AddFailed -> outcome.reason
-        else -> null
-    }
-
-    private fun CatalogueRefresh.Outcome?.worked() = this is CatalogueRefresh.Outcome.ChannelsLoaded ||
-        (this is CatalogueRefresh.Outcome.Refreshed && failure == null)
 
     fun test(draft: Source) {
         viewModelScope.launch {
@@ -1623,6 +1622,31 @@ data class HomeState(
  */
 data class BecauseYouWatched(val basedOn: String, val covers: List<Cover>)
 
+/** A provider's saved refresh failure, with its [name] for the screen to say whose it is. */
+data class ProviderFailure(val sourceId: Long, val name: String, val error: ViewerError)
+
+/**
+ * Each enabled provider's saved refresh failure, in the providers' order. A disabled one's is left out:
+ * it isn't refreshed, so nothing would ever clear it.
+ */
+fun List<Source>.providerFailures(): List<ProviderFailure> = mapNotNull { source ->
+    source.refreshFailure?.takeIf { source.enabled }?.let { ProviderFailure(source.id, source.name, it) }
+}
+
+/**
+ * Home's banner: each enabled provider whose last refresh failed in a way only the viewer can put right,
+ * in the providers' order. Failures that usually go by the next refresh aren't here.
+ */
+data class ProviderBanner(val providers: List<ProviderFailure>)
+
+/**
+ * Whether only the viewer can put this right: a login, account or address the provider turned down.
+ * Read from the detail line's codes, the one part of a saved failure that isn't in the viewer's language.
+ */
+internal fun ViewerError.isTheViewersToFix(): Boolean = detail.split(" · ").any { it in VIEWERS_TO_FIX }
+
+private val VIEWERS_TO_FIX = setOf("LoginRejected", "AccountInactive", "BadAddress", "HTTP 401", "HTTP 403")
+
 /** A show's or movie's cover on Home, with where the active Profile is with it; null when never started. */
 data class Cover(val title: VodTitle, val status: CoverStatus? = null)
 
@@ -1853,6 +1877,17 @@ class HomeViewModel @JvmOverloads constructor(
     @OptIn(ExperimentalCoroutinesApi::class)
     val state: StateFlow<HomeState?> = settings.activeProfileId
         .flatMapLatest { rows.onStart<HomeState?> { emit(null) } }
+        .stateIn(viewModelScope, WhileDrawnOrKeptLive(graph.homeKeptLive), null)
+
+    /** Apart from [state], so a provider failing or coming right never holds up or redraws the rows. */
+    val providerBanner: StateFlow<ProviderBanner?> = graph.sourceRepository.observeAll()
+        .map { sources ->
+            sources.providerFailures()
+                .filter { it.error.isTheViewersToFix() }
+                .takeIf { it.isNotEmpty() }
+                ?.let(::ProviderBanner)
+        }
+        .distinctUntilChanged()
         .stateIn(viewModelScope, WhileDrawnOrKeptLive(graph.homeKeptLive), null)
 
     /** Channel up and down go through every Channel, as Home has no list of its own. */

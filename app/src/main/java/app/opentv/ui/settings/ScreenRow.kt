@@ -17,8 +17,11 @@ import androidx.compose.ui.focus.focusRequester
 /** The open Settings' memory, for rows that open a screen of their own. */
 internal val LocalSettingsMemory = staticCompositionLocalOf<SettingsMemory?> { null }
 
-/** A row that opens a screen of its own: [modifier] goes on the row, and [open] is its OK. */
-internal class ScreenRow(val modifier: Modifier, val open: () -> Unit)
+/**
+ * A row that opens a screen of its own: [modifier] goes on the row, and [open] is its OK. [requester]
+ * is the row's, for something under it that goes away with the Highlight on it.
+ */
+internal class ScreenRow(val modifier: Modifier, val requester: FocusRequester, val open: () -> Unit)
 
 /**
  * For a row that opens a screen of its own, such as the channel manager. Settings is rebuilt when
@@ -34,7 +37,7 @@ internal fun screenRow(key: String, open: () -> Unit): ScreenRow {
         withFrameNanos {}
         if (runCatching { requester.requestFocus() }.getOrNull() == true) memory.openedRow = null
     }
-    return ScreenRow(Modifier.focusRequester(requester)) {
+    return ScreenRow(Modifier.focusRequester(requester), requester) {
         memory?.openedRow = key
         open()
     }

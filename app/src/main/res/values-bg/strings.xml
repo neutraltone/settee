@@ -45,6 +45,7 @@
     <string name="guide_add_provider_desc">Каналите на вашия доставчик ще се появят тук. Добавете доставчика си, за да започнете.</string>
     <string name="guide_add_provider_button">Добавяне на доставчик</string>
     <string name="guide_load_failed_title">Каналите не можаха да се заредят</string>
+    <string name="guide_load_failed_title_named">Каналите от %1$s не можаха да се заредят</string>
     <string name="guide_load_failed_desc">Опитайте отново след малко или проверете данните на доставчика в Настройки.</string>
     <string name="guide_edit_provider">Настройка на доставчик</string>
     <string name="guide_today">Днес</string>
@@ -100,7 +101,6 @@
     <string name="player_subtitles_off">Изключени</string>
     <string name="addons_checking">Проверка…</string>
     <string name="addons_added">%1$s е добавена</string>
-    <string name="settings_content_refreshing">Опресняване…</string>
     <string name="settings_language_system">По подразбиране от системата</string>
     <string name="settings_language_english">English</string>
     <string name="settings_language_spanish">Español</string>

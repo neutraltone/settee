@@ -45,6 +45,7 @@
     <string name="guide_add_provider_desc">Palveluntarjoajasi kanavat näkyvät täällä. Aloita lisäämällä palveluntarjoajasi.</string>
     <string name="guide_add_provider_button">Lisää palveluntarjoaja</string>
     <string name="guide_load_failed_title">Kanavia ei voitu ladata</string>
+    <string name="guide_load_failed_title_named">Kanavia ei voitu ladata palvelusta %1$s</string>
     <string name="guide_load_failed_desc">Yritä hetken päästä uudelleen tai tarkista palveluntarjoajasi tiedot Asetuksista.</string>
     <string name="guide_edit_provider">Palveluntarjoajan asetukset</string>
     <string name="guide_today">Tänään</string>
@@ -100,7 +101,6 @@
     <string name="player_subtitles_off">Pois</string>
     <string name="addons_checking">Tarkistetaan…</string>
     <string name="addons_added">Lisätty %1$s</string>
-    <string name="settings_content_refreshing">Päivitetään…</string>
     <string name="settings_language_system">Järjestelmän oletus</string>
     <string name="settings_language_english">English</string>
     <string name="settings_language_spanish">Español</string>

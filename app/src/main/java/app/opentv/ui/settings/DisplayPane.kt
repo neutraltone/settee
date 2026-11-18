@@ -6,7 +6,6 @@
 package app.opentv.ui.settings
 
 import android.content.Context
-import android.widget.Toast
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -23,7 +22,6 @@ import app.opentv.core.AppSettings
 import app.opentv.core.ServiceLocator
 import app.opentv.core.SleepTimer
 import app.opentv.core.findActivity
-import app.opentv.data.work.SyncWorker
 import app.opentv.ui.design.ListRow
 import app.opentv.ui.design.PanelRow
 import app.opentv.ui.design.SidePanel
@@ -108,15 +106,6 @@ internal fun DisplayPane(onOpenHomeRows: () -> Unit = {}) {
     ListRow(stringResource(R.string.nav_shows), onClick = {
         settings.setSeriesEnabled(!seriesEnabled)
     }, switch = seriesEnabled)
-    val refreshing = stringResource(R.string.settings_content_refreshing)
-    ListRow(
-        stringResource(R.string.settings_row_refresh_content),
-        onClick = {
-            // Background work, so it isn't cut short by leaving Settings; the Toast says it started.
-            SyncWorker.refreshNow(context)
-            Toast.makeText(context, refreshing, Toast.LENGTH_SHORT).show()
-        },
-    )
 
     when (val choice = choosing) {
         null -> Unit

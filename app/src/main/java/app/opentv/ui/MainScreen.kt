@@ -35,7 +35,6 @@ import androidx.compose.ui.unit.dp
 import app.opentv.R
 import app.opentv.core.AppSettings
 import app.opentv.core.StatusBus
-import app.opentv.core.ViewerError
 import app.opentv.core.findActivity
 import app.opentv.data.model.Channel
 import app.opentv.data.model.Movie
@@ -84,7 +83,7 @@ fun MainScreen(
     isTelevision: Boolean,
     hasSources: Boolean,
     isSyncing: Boolean,
-    loadFailure: ViewerError? = null,
+    loadFailure: ProviderFailure? = null,
     onPlayChannel: (Channel) -> Unit,
     onOpenMovie: (Movie) -> Unit,
     onOpenSeries: (Series) -> Unit,
@@ -94,6 +93,8 @@ fun MainScreen(
     onRefresh: () -> Unit,
     onOpenSearch: () -> Unit,
     onOpenSettings: () -> Unit,
+    /** Settings › Providers on a provider's row, from Home's banner. */
+    onOpenProviders: (sourceId: Long) -> Unit = {},
     onOpenProfiles: () -> Unit,
     onPlayRecording: (Recording) -> Unit,
     onPlayCatchup: (MediaKey.Catchup) -> Unit,
@@ -149,6 +150,7 @@ fun MainScreen(
                     onOpenLive = { onSelectTab(Tab.LIVE) },
                     takeFocus = takeFocus,
                     onNothingToShow = onNothingToShow,
+                    onOpenProviders = onOpenProviders,
                 )
                 Tab.LIVE -> LiveScreen(
                     isTelevision = isTelevision,
