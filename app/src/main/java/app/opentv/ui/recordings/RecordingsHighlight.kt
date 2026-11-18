@@ -56,6 +56,11 @@ internal class Heir {
         return key != null
     }
 
+    /** Puts the requester on [row], for [take] once it's next composed: Back to the main screen asks for it. */
+    fun aimAt(row: String) {
+        key = row
+    }
+
     fun take() {
         runCatching { requester.requestFocus() }
     }

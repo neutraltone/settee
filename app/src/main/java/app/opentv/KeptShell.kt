@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
@@ -20,6 +21,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.SaveableStateHolder
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
@@ -28,6 +30,9 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.navigation.NavBackStackEntry
@@ -144,23 +149,35 @@ private fun ShellLayer(
     val anywhere = remember { FocusRequester() }
     val memory = remember { HighlightMemory() }
     val shellReturn = remember { ShellReturn() }
+    val presses = remember { Presses() }
     var hasFocus by remember { mutableStateOf(false) }
     var wasCovered by remember { mutableStateOf(covered) }
     val focusManager = LocalFocusManager.current
-    LaunchedEffect(covered) {
-        if (covered) {
-            wasCovered = true
-            // Every screen takes the highlight as it opens. One that didn't would leave it on the
-            // hidden shell, where OK would still press whatever has it. [memory] still knows it.
-            withFrameNanos {}
-            withFrameNanos {}
-            if (hasFocus) focusManager.clearFocus(force = true)
-        } else if (wasCovered) {
-            wasCovered = false
-            returnHighlight(memory, shellReturn, anywhere)
-        }
-    }
     entry.LocalOwnersProvider(saveable) {
+        val builtAgain = rememberBuiltAgain()
+        var returnOnShow by remember { mutableStateOf(builtAgain) }
+        // One job for every way back, restarted (so cancelled) whenever the shell is covered or
+        // uncovered: two returns at once, each raising and lowering [ShellReturn.asked], could
+        // land the highlight on one item and then move it to another.
+        LaunchedEffect(covered) {
+            if (covered) {
+                wasCovered = true
+                returnOnShow = false
+                // Every screen takes the highlight as it opens. One that didn't would leave it on the
+                // hidden shell, where OK would still press whatever has it. [memory] still knows it.
+                withFrameNanos {}
+                withFrameNanos {}
+                if (hasFocus) focusManager.clearFocus(force = true)
+            } else if (wasCovered) {
+                wasCovered = false
+                returnHighlight(memory, shellReturn, anywhere)
+            } else if (returnOnShow) {
+                returnOnShow = false
+                // A frame, so the tab on show has said whether it takes the highlight itself.
+                withFrameNanos {}
+                if (!shellReturn.tabTakesHighlight) returnHighlight(memory, shellReturn, anywhere, presses)
+            }
+        }
         CompositionLocalProvider(
             LocalShellCovered provides covered,
             LocalShellReturn provides shellReturn,
@@ -171,6 +188,10 @@ private fun ShellLayer(
                     .fillMaxSize()
                     .placedOnlyIf(drawn)
                     .onFocusChanged { hasFocus = it.hasFocus }
+                    .onPreviewKeyEvent {
+                        if (it.type == KeyEventType.KeyDown) presses.count++
+                        false
+                    }
                     // Placed but covered while a screen opens over it: keep the remote out, so a
                     // press then goes to the screen opening.
                     .focusProperties { onEnter = { if (coveredNow) cancelFocusChange() } }
@@ -183,24 +204,77 @@ private fun ShellLayer(
     }
 }
 
+/** The remote's presses on the main screen, counted, so a wait can tell the viewer has moved on. */
+private class Presses {
+    var count = 0
+}
+
+/**
+ * Whether the shell is being built again, on show or under a screen: Back from a player went straight
+ * to it (a recording has no title page to go back to), or Android brought the app back after letting
+ * it go. Either way nothing has the highlight, and on show nothing covered the shell for
+ * [returnHighlight] to run on uncovering it, so the remote's first press went to the rail (#432).
+ *
+ * Told apart from the shell built for the first time by a flag saved with the main screen's state,
+ * which only a shell built before has. Not by running on every first build with nothing focused: a
+ * cold start onto Home whose rows are still loading would have put the highlight in the rail, where
+ * Home no longer takes it ([MainShell]'s `takeFocus`). Home and Live take it themselves anyway.
+ */
+@Composable
+private fun rememberBuiltAgain(): Boolean {
+    var builtBefore by rememberSaveable { mutableStateOf(false) }
+    val again = remember { builtBefore }
+    SideEffect { builtBefore = true }
+    return again
+}
+
 /**
  * Back on the main screen: the highlight goes to the item that had it as the screen opened over it.
  * When that's gone (the shell was built again after a player let it go, or the card went), the tab
  * on show gets a few frames to place it ([ShellReturn]). Failing that it goes into the tab's content,
- * and only with nothing there to take it, anywhere in the shell rather than nowhere: the shell's
- * nearest item is the rail's, which left a viewer back from a title's page on the rail (#384).
+ * and with nothing there to take it, the tab's own item in the rail, as a tab with nothing to show
+ * puts it. Only failing that, anywhere in the shell rather than nowhere: the shell's nearest item is
+ * the rail's, which left a viewer back from a title's page on the rail (#384).
  */
-private suspend fun returnHighlight(memory: HighlightMemory, shellReturn: ShellReturn, anywhere: FocusRequester) {
+private suspend fun returnHighlight(
+    memory: HighlightMemory,
+    shellReturn: ShellReturn,
+    anywhere: FocusRequester,
+    waitForTab: Presses? = null,
+) {
     if (memory.restore()) return
     shellReturn.asked = true
-    repeat(RETURN_FRAMES) { withFrameNanos {} }
-    shellReturn.asked = false
+    try {
+        if (waitForTab != null) untilTabReady(shellReturn, waitForTab)
+        repeat(RETURN_FRAMES) { withFrameNanos {} }
+    } finally {
+        shellReturn.asked = false
+    }
     // Only the tab's content counts: the rail may have been handed it as the screen over the
     // shell went, and a viewer back from a title's page belongs in the rows (#384).
     if (shellReturn.contentHasFocus) return
-    val inContent = runCatching { shellReturn.content?.requestFocus() }.getOrNull() == true
-    if (!inContent) runCatching { anywhere.requestFocus() }
+    listOfNotNull(shellReturn.content, shellReturn.tabItem, anywhere)
+        .firstOrNull { runCatching { it.requestFocus() }.getOrNull() == true }
 }
+
+/**
+ * Waits, for up to [TAB_LOAD_NANOS], for the tab built again to be ready to put the highlight back
+ * ([ShellReturn.readyToAnswer]), unless the viewer presses something first. Its rows can come a while
+ * after it's built: a view model made anew starts with none, and the database's arrive later, so
+ * [RETURN_FRAMES] alone left the highlight on the rail for good after Android restored the app. A tab
+ * with nothing to show is never ready, so it waits the whole time and then gets its rail item.
+ */
+private suspend fun untilTabReady(shellReturn: ShellReturn, presses: Presses) {
+    val pressed = presses.count
+    val start = withFrameNanos { it }
+    while (shellReturn.readyToAnswer == 0 && presses.count == pressed) {
+        if (withFrameNanos { it } - start > TAB_LOAD_NANOS) return
+    }
+}
+
+// Like the rail's wait for a tab to take the highlight once picked: long enough for a big provider's
+// rows on a Stick, short enough that an empty tab isn't left with nothing highlighted for long.
+private const val TAB_LOAD_NANOS = 2_000_000_000L
 
 // Enough for the slowest answer: Home and For you recompose with the card to go back to, scroll the
 // list to its row, which composes it, scroll the row to the card, then wait a frame to ask for it.
