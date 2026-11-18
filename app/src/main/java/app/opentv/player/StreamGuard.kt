@@ -26,8 +26,11 @@ import kotlinx.coroutines.launch
 /**
  * Watches one [PlayerController]'s streams for what no error would ever report: a video this device
  * can't take, a decoder that shows nothing, sound nobody will hear. Asks [moveDown] for another Quality
- * first; without one, calls [onCantPlay] with the reason and whether a Retry could help.
+ * first; without one, calls [onCantPlay] with the reason and whether a Retry could help. A stream that
+ * never starts at all goes straight to [onCantPlay] (see [StartUpWatch]).
  */
+// One function for each thing that can happen to a stream, which the controller tells it about.
+@Suppress("TooManyFunctions")
 @OptIn(UnstableApi::class)
 internal class StreamGuard(
     private val context: Context,
@@ -56,17 +59,38 @@ internal class StreamGuard(
         cantPlay(PlaybackErrors.noFirstFrame(context, format, onTelevision), canRetry = true)
     }
 
+    // Straight to the sentence: a panel that sends nothing usually does so on every Quality, so stepping
+    // down would only make the viewer wait the limit again for each. Try again is theirs to choose.
+    private val startUp = StartUpWatch(scope) { giveUp(PlaybackErrors.didntStart(context), canRetry = true) }
+
     /** What the player reports its decoders to, for the first-frame limit. */
     val firstFrameListener: AnalyticsListener get() = firstFrame
 
     /** The stream playing is on its way out, however late its first frame is. */
-    fun leaving() = firstFrame.newStream()
-
-    /** A stream has just been handed to the player. */
-    fun started() {
+    fun leaving() {
         firstFrame.newStream()
+        startUp.end()
+    }
+
+    /**
+     * A stream has just been handed to the player. [limitStartUp] gives up on it if it never starts (see
+     * [StartUpWatch]); not for a recording still being written, which waits on the recording growing,
+     * from a local file or the viewer's NAS, where the timed-out sentence blames a provider that isn't there.
+     */
+    fun started(limitStartUp: Boolean) {
+        firstFrame.newStream()
+        if (limitStartUp) startUp.newStream()
         loggedTracks.clear()
     }
+
+    /**
+     * The stream on the player is ready to play, for the first time or again, or has already ended:
+     * either way it got somewhere, so it isn't the start-up limit's business any more.
+     */
+    fun arrived() = startUp.end()
+
+    /** Whether the controller is holding playback back on purpose, which the start-up limit doesn't count. */
+    var held: Boolean by startUp::held
 
     fun tracksChanged(tracks: Tracks, soundWanted: Boolean) {
         DecoderLog.logTracks(tracks, decoders, loggedTracks)
@@ -98,7 +122,7 @@ internal class StreamGuard(
     }
 
     fun release() {
-        firstFrame.newStream()
+        leaving()
         noticeJob?.cancel()
     }
 
@@ -130,11 +154,21 @@ internal class StreamGuard(
     private fun cantPlay(reason: ViewerError, canRetry: Boolean) {
         val step = moveDown(false)
         if (step == null) {
-            stopSaying()
-            onCantPlay(reason, canRetry)
+            giveUp(reason, canRetry)
         } else {
             steppedDown(step.from, step.to)
         }
+    }
+
+    /**
+     * Stops watching the stream before saying why it can't play. The controller only stops the player, so
+     * a limit still counting would fire later and cover the sentence with its own, or step down a Quality
+     * behind it: a decoder that started late on a stream the start-up limit gave up on, say.
+     */
+    private fun giveUp(reason: ViewerError, canRetry: Boolean) {
+        leaving()
+        stopSaying()
+        onCantPlay(reason, canRetry)
     }
 
     /** Takes down what's showing: it would only contradict what's about to be said. */

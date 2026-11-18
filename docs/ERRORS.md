@@ -68,6 +68,7 @@ change channel.
 | `OutOfMemoryError` anywhere in the cause chain | `error_out_of_memory_tv` / `_device` + `playback_try_other_quality` | This stream needs more memory than this TV has. A different quality may work. | code · format | This hardware: stream too big |
 | `DecoderList` refuses the video track | `error_too_big_tv` / `_device` | This video is too big for this TV to play. | format | This hardware |
 | No first frame within the limit | `error_no_first_frame_tv` / `_device` | This TV couldn't show this video. Try again, or pick something else. | format | This hardware, or a broken stream |
+| Nothing played within the start-up limit: 45 s from a stream being handed to the player, with a full 45 s again on coming back from another app; not for a recording still being written; no step down to another Quality, and no restart by itself (#463) | `error_timed_out` | Your provider stopped responding. It may be busy, so try again in a moment. | StartUpLimit | Provider's: took the connection and sent nothing |
 | Any other Media3 code | `error_anything_else` | This didn't play. Try again, or pick something else. | code · format | Unknown |
 | `Playable.Failure.LINK_REFUSED` | `playback_link_refused` | Your provider didn't give a link for this channel. Try refreshing your provider in Settings. | LinkRefused | Provider's portal |
 | `Playable.Failure.NO_CATCHUP` | `playback_no_catchup` | Your provider doesn't offer catch-up, so past programmes can't be played. | NoCatchup | Provider's: playlists and portals have no catch-up |

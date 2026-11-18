@@ -116,6 +116,13 @@ class PlayerController(
          */
         val liveRecording: Boolean = false,
         /**
+         * Whether a stream that never starts playing is given up on (see [StartUpWatch]). Always on in the
+         * app. Tests that wait on the player with Media3's run helpers turn it off: those run the main
+         * looper a task at a time, which jumps its clock straight to the limit's delay whenever nothing
+         * else is due, so a fake stream that would be ready a moment later is given up on first.
+         */
+        val limitStartUp: Boolean = true,
+        /**
          * Builds the player from the configured builder. Tests swap in a player with fake media sources
          * and a fake clock; everything else keeps the default.
          */
@@ -163,6 +170,12 @@ class PlayerController(
 
     /** Decided once, as the app does at launch, so sentences say "this TV" or "this device". */
     private val onTelevision = isRunningOnTelevision(context)
+
+    /**
+     * Not for a recording still being written, which waits on the recording growing, from a local file or
+     * the viewer's NAS, so the start-up limit's sentence would blame a provider that isn't there.
+     */
+    private val limitStartUp = options.limitStartUp && !options.liveRecording
 
     private val guard: StreamGuard = StreamGuard(
         strings,
@@ -311,10 +324,15 @@ class PlayerController(
                         Player.STATE_READY -> {
                             consecutiveFailures = 0
                             hadPlayed = true
+                            guard.arrived()
                             State.Playing(_title.value)
                         }
                         Player.STATE_IDLE -> _state.value
-                        Player.STATE_ENDED -> State.Idle
+                        // A stream can end without ever being ready, such as one started at its very end.
+                        Player.STATE_ENDED -> {
+                            guard.arrived()
+                            State.Idle
+                        }
                         else -> _state.value
                     }
                 }
@@ -438,7 +456,7 @@ class PlayerController(
                 stop()
                 gaveUp = false
                 hadPlayed = false
-                guard.started()
+                guard.started(limitStartUp)
                 clearMediaItems()
                 // Each stream starts with text off, then applySubtitlePreference picks its track.
                 // Left on from the last stream, the selector would choose a track itself, in the
@@ -601,6 +619,8 @@ class PlayerController(
         set(behind) {
             if (behind == field) return
             field = behind
+            // Paused, a stream needn't play; stopped, none is on its way. Either way, not its fault.
+            guard.held = behind
             if (behind) {
                 // Nothing playing yet counts as live: then nothing connects unseen.
                 val live = current?.key.let { it == null || it is MediaKey.Live }
