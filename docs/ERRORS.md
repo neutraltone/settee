@@ -179,7 +179,6 @@ instead, with no error. `ErrorWording.ofProvider` words the failure, so a timeou
 | Movies' list or categories failed with nothing more specific (a reply that won't parse, any other HTTP status) | `error_movies_list` | Your provider's list of movies didn't come through. Try again in a moment. | exception type, or HTTP status | Provider's |
 | Shows' list or categories failed with nothing more specific | `error_shows_list` | Your provider's list of shows didn't come through. Try again in a moment. | exception type, or HTTP status | Provider's |
 | The list downloaded with nothing in it (a plain line, not an error, and no Try again) | `vod_no_movies_provider` / `vod_no_shows_provider` | Your provider hasn't sent any movies yet. | none | Provider's: none in the account |
-| No switched-on provider is an Xtream login, the only kind that carries films and shows (not an error, and shown even while a sync runs or after an earlier failure; Open Settings, where Display and playback hides the tab) | `vod_no_movies_xtream_only` / `vod_no_shows_xtream_only` | Movies come only from an Xtream login, the kind with a server address, username and password. Playlists and portals don't send any. You can hide Movies in Settings › Display and playback. | none | The viewer's: no provider of that kind |
 
 ## Guides
 
