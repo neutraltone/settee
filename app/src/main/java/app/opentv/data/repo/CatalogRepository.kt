@@ -773,7 +773,7 @@ class CatalogRepository(
         source: Source,
         seriesId: String,
         nowUtcMillis: Long = System.currentTimeMillis(),
-    ): Result<Unit> = if (source.kind != SourceKind.XTREAM) {
+    ): Result<Unit> = if (!source.kind.carriesMoviesAndShows) {
         Result.success(Unit)
     } else {
         fetchSeries(source, seriesId, nowUtcMillis, storeEpisodes = true).map {}
@@ -847,7 +847,7 @@ class CatalogRepository(
      * at [VodFetch.updated].
      */
     suspend fun fetchVod(source: Source, nowUtcMillis: Long): VodFetch = withContext(Dispatchers.IO) {
-        if (source.kind != SourceKind.XTREAM) return@withContext VodFetch(emptyList(), complete = true)
+        if (!source.kind.carriesMoviesAndShows) return@withContext VodFetch(emptyList(), complete = true)
         runCatching { syncXtreamVod(source, nowUtcMillis) }
             .onFailure { if (it is CancellationException) throw it }
             .onFailure { Log.w(TAG, "VOD sync failed for source ${source.id}", it) }
@@ -975,7 +975,7 @@ class CatalogRepository(
 
     /** [fillGenresInBackground] for every provider that has films: Xtream's. */
     suspend fun fillEveryProvidersGenres() =
-        enabledSources().filter { it.kind == SourceKind.XTREAM }.forEach(::fillGenresInBackground)
+        enabledSources().filter { it.kind.carriesMoviesAndShows }.forEach(::fillGenresInBackground)
 
     /**
      * Works through [source]'s films not looked up in the background ([MovieGenres.fillAll]): the

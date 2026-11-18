@@ -9,7 +9,6 @@ import android.util.Log
 import app.opentv.core.AppSettings
 import app.opentv.core.ViewerError
 import app.opentv.data.model.Source
-import app.opentv.data.model.SourceKind
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
@@ -237,8 +236,7 @@ class CatalogueRefresh(
             add(SetupStep.CHANNELS)
             // The guide is only for live channels.
             if (settings.liveEnabled.value) add(SetupStep.GUIDE)
-            // Only Xtream has movies and shows.
-            if (source.kind == SourceKind.XTREAM) {
+            if (source.kind.carriesMoviesAndShows) {
                 if (settings.moviesEnabled.value) add(SetupStep.MOVIES)
                 if (settings.seriesEnabled.value) add(SetupStep.SHOWS)
             }
@@ -357,7 +355,7 @@ class CatalogueRefresh(
         // Whether or not the list is due a fetch: tied to the fetch alone, it ran at most twice a day.
         if (settings.moviesEnabled.value) catalog.fillEveryProvidersGenres()
         // Only Xtream has movies and shows; the others would flash "Loading" over nothing.
-        val stale = catalog.enabledSources().filter { wanted && it.kind == SourceKind.XTREAM && vodIsStale(it) }
+        val stale = catalog.enabledSources().filter { wanted && it.kind.carriesMoviesAndShows && vodIsStale(it) }
         if (stale.isEmpty()) return Outcome.VodChecked(0)
         return marking(vodChecks, { copy(loadingVod = it) }) {
             // Checked again each time: a big provider's list takes minutes, and another refresh

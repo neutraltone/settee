@@ -34,6 +34,7 @@ import app.opentv.ui.MainShell
 import app.opentv.ui.Tab
 import app.opentv.ui.visibleTabs
 import app.opentv.ui.vod.MoviesScreen
+import app.opentv.ui.vod.ProvidersCarry
 import app.opentv.ui.vod.SeriesScreen
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.runBlocking
@@ -98,6 +99,9 @@ class VodLoadFailedTest {
     /** The tab drawn: a test can move it, as picking another in the rail would. */
     private var shown by mutableStateOf(Tab.MOVIES)
 
+    /** What the providers carry: a test can switch the Xtream login off, as Settings would. */
+    private var providers by mutableStateOf(ProvidersCarry.MOVIES_AND_SHOWS)
+
     @Composable
     private fun Tabs() {
         val tab = shown
@@ -116,7 +120,7 @@ class VodLoadFailedTest {
                 MoviesScreen(
                     onOpenMovie = {},
                     onResume = {},
-                    hasSources = true,
+                    providers = providers,
                     isSyncing = false,
                     onEditProvider = { edited += it },
                     viewModel = viewModel,
@@ -125,7 +129,7 @@ class VodLoadFailedTest {
                 SeriesScreen(
                     onOpenSeries = {},
                     onResume = {},
-                    hasSources = true,
+                    providers = providers,
                     isSyncing = false,
                     onEditProvider = { edited += it },
                     viewModel = viewModel,
@@ -276,6 +280,19 @@ class VodLoadFailedTest {
         setMovies()
 
         awaitText(app.getString(R.string.vod_no_movies_provider))
+        assertNone(app.getString(R.string.common_try_again))
+    }
+
+    @Test
+    fun `switching off the Xtream login whose movies failed says movies need one, not why they failed`() {
+        panel.replies["get_vod_streams"] = "!host"
+        setMovies()
+        awaitText(UNREACHABLE)
+
+        providers = ProvidersCarry.LIVE_ONLY
+
+        awaitText(app.getString(R.string.vod_no_movies_xtream_only))
+        assertNone(UNREACHABLE)
         assertNone(app.getString(R.string.common_try_again))
     }
 

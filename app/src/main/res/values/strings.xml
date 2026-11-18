@@ -502,10 +502,13 @@
     <string name="vod_no_movies">No movies</string>
     <string name="vod_no_movies_provider">Your provider hasn\'t sent any movies yet.</string>
     <string name="vod_no_movies_add">Your provider\'s movies will show up here. Add a provider to get started.</string>
+    <string name="vod_no_movies_xtream_only">Movies come only from an Xtream login, the kind with a server address, username and password. Playlists and portals don\'t send any. You can hide Movies in Settings › Display and playback.</string>
     <string name="vod_loading_shows">Loading shows</string>
     <string name="vod_no_shows">No shows</string>
     <string name="vod_no_shows_provider">Your provider hasn\'t sent any shows yet.</string>
     <string name="vod_no_shows_add">Your provider\'s shows will show up here. Add a provider to get started.</string>
+    <string name="vod_no_shows_xtream_only">Shows come only from an Xtream login, the kind with a server address, username and password. Playlists and portals don\'t send any. You can hide Shows in Settings › Display and playback.</string>
+    <string name="vod_open_settings_button">Open Settings</string>
     <string name="vod_movies_load_failed">Couldn\'t load your movies</string>
     <string name="vod_shows_load_failed">Couldn\'t load your shows</string>
     <string name="vod_loading_episodes">Loading episodes…</string>

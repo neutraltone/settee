@@ -35,6 +35,10 @@ enum class SourceKind {
      * carry a [Channel.cmd] resolved to a real URL on demand at play time.
      */
     STALKER,
+    ;
+
+    /** Only an Xtream panel has a movies and shows API; the others bring live channels alone. */
+    val carriesMoviesAndShows: Boolean get() = this == XTREAM
 }
 
 /** Live-stream container the panel is asked for. Xtream panels serve one or both. */
