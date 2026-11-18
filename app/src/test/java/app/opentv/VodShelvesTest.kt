@@ -16,10 +16,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.isFocused
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -548,5 +550,102 @@ class VodShelvesTest {
             .map { it.boundsInRoot }
             .filter { it.height > 0f && it.top < rowTop }
         assertThat(above).isEmpty()
+    }
+
+    private val threeShows = listOf(series(1, "Severance"), series(5, "Andor"), series(6, "Slow Horses"))
+
+    private fun setShows(
+        resume: () -> List<ResumeItem> = { emptyList() },
+        recommending: Boolean = false,
+        favourites: () -> List<Series>,
+    ) = compose.setTvContent {
+        ScreenFrame {
+            SeriesShelves(
+                resume = resume(),
+                favourites = favourites(),
+                recommended = emptyList(),
+                recentlyAdded = listOf(series(7, "Dark"), series(8, "Lost")),
+                genreRows = emptyList(),
+                onResume = {},
+                onOpenSeries = {},
+                recommending = recommending,
+            )
+        }
+    }
+
+    @Test
+    fun `removing the highlighted last Favourite on For you highlights the row's new last card`() {
+        var favourites by mutableStateOf(threeShows)
+        setShows { favourites }
+        compose.onNodeWithText("Slow Horses").requestFocus()
+
+        favourites = threeShows.dropLast(1)
+
+        compose.onNodeWithText("Andor").assertIsFocused()
+        captureScreen("shows_for_you_card_removed")
+    }
+
+    @Test
+    fun `removing a highlighted Favourite from the middle on For you highlights the one taking its place`() {
+        var favourites by mutableStateOf(threeShows)
+        setShows { favourites }
+        compose.onNodeWithText("Andor").requestFocus()
+
+        favourites = threeShows.filterNot { it.name == "Andor" }
+
+        compose.onNodeWithText("Slow Horses").assertIsFocused()
+    }
+
+    @Test
+    fun `removing the only Favourite on For you highlights the row now in its place`() {
+        var favourites by mutableStateOf(listOf(series(1, "Severance")))
+        setShows(resume = { resume }) { favourites }
+        compose.onNodeWithText("Severance").requestFocus()
+
+        favourites = emptyList()
+
+        compose.onNode(isFocused()).assert(hasText("Dark") or hasText("Lost"))
+    }
+
+    @Test
+    fun `removing the only Favourite while Recommended is still being worked out highlights the row under it`() {
+        var favourites by mutableStateOf(listOf(series(1, "Severance")))
+        setShows(resume = { resume }, recommending = true) { favourites }
+        compose.onNodeWithText("Severance").requestFocus()
+
+        favourites = emptyList()
+
+        compose.onNodeWithText("Dark").assertIsFocused()
+    }
+
+    @Test
+    fun `a card leaving a row the viewer isn't on leaves the Highlight where it is`() {
+        var favourites by mutableStateOf(threeShows)
+        setShows { favourites }
+        compose.onNodeWithText("Lost").requestFocus()
+
+        favourites = threeShows.filterNot { it.name == "Andor" }
+
+        compose.onNodeWithText("Lost").assertIsFocused()
+    }
+
+    @Test
+    fun `removing the highlighted Continue Watching card on For you highlights the one taking its place`() {
+        val three = listOf("Collateral", "Insomnia", "Memento").mapIndexed { i, title ->
+            ResumeItem(
+                MediaKey.Movie(i + 20L),
+                title,
+                posterUrl = null,
+                progress = 0.4f,
+                titleKey = "movie:1:${i + 20}",
+            )
+        }
+        var resume by mutableStateOf(three)
+        setShows(resume = { resume }) { emptyList() }
+        compose.onNodeWithText("Insomnia").requestFocus()
+
+        resume = three.filterNot { it.title == "Insomnia" }
+
+        compose.onNodeWithText("Memento").assertIsFocused()
     }
 }

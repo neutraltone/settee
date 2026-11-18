@@ -103,6 +103,7 @@ class KeptShellTest {
     private fun setApp(
         recent: () -> List<Cover> = { covers("Added", 1L..8L) },
         grid: (() -> List<TitleCover>)? = null,
+        favourites: () -> List<Movie> = { (1L..8L).map { movie(it, "Favourite $it") } },
     ) = compose.setTvContent {
         nav = rememberNavController()
         KeptShell(
@@ -121,7 +122,7 @@ class KeptShellTest {
                     modifier = Modifier.fillMaxSize(),
                 ) { shown, takeFocus, onNothingToShow ->
                     if (shown == Tab.MOVIES) {
-                        Movies(grid)
+                        Movies(grid, favourites)
                     } else {
                         HomeContent(
                             continueWatching = emptyList(),
@@ -151,7 +152,7 @@ class KeptShellTest {
 
     /** Movies: three rows of films, or a category's [grid] of covers when there is one. */
     @Composable
-    private fun Movies(grid: (() -> List<TitleCover>)?) = ScreenFrame {
+    private fun Movies(grid: (() -> List<TitleCover>)?, favourites: () -> List<Movie>) = ScreenFrame {
         if (grid != null) {
             CoverGrid(
                 grid(),
@@ -164,7 +165,7 @@ class KeptShellTest {
         } else {
             MovieShelves(
                 resume = emptyList(),
-                favourites = (1L..8L).map { movie(it, "Favourite $it") },
+                favourites = favourites(),
                 recommended = emptyList(),
                 recentlyAdded = (11L..18L).map { movie(it, "New $it") },
                 genreRows = listOf(GenreGroup("Drama", (21L..28L).map { movie(it, "Drama $it") })),
@@ -474,6 +475,47 @@ class KeptShellTest {
             .joinToString()
         assertThat(highlighted).containsMatch("Favourite|New|Drama")
         assertThat(railItemFocused("Movies")).isFalse()
+    }
+
+    @Test
+    fun `Back to Movies when the title opened has left its row puts the highlight on the card now in its place`() {
+        var favourites by mutableStateOf((1L..8L).map { movie(it, "Favourite $it") })
+        setApp(favourites = { favourites })
+        homeShowing()
+        compose.runOnIdle { nav.selectShellTab(Tab.MOVIES) }
+        compose.waitUntil(5_000) { compose.onAllNodes(hasText("Drama 21")).fetchSemanticsNodes().isNotEmpty() }
+        compose.onNodeWithText("Favourite 1").requestFocus()
+        press(Key.DirectionRight, times = 2)
+        press(Key.DirectionCenter)
+        assertThat(opened).isEqualTo("Favourite 3")
+        compose.waitUntil(5_000) { focused("Movie option 1") }
+        favourites = favourites.filterNot { it.name == "Favourite 3" }
+        compose.waitForIdle()
+
+        back()
+
+        compose.onNodeWithText("Favourite 4").assertIsFocused()
+        captureScreen("movies_for_you_back_title_gone")
+    }
+
+    @Test
+    fun `Back to Movies when the title opened has left after a player let Movies go still lands on its row`() {
+        var favourites by mutableStateOf((1L..8L).map { movie(it, "Favourite $it") })
+        setApp(favourites = { favourites })
+        homeShowing()
+        compose.runOnIdle { nav.selectShellTab(Tab.MOVIES) }
+        compose.waitUntil(5_000) { compose.onAllNodes(hasText("Drama 21")).fetchSemanticsNodes().isNotEmpty() }
+        compose.onNodeWithText("Favourite 1").requestFocus()
+        press(Key.DirectionRight, times = 2)
+        press(Key.DirectionCenter)
+        compose.waitUntil(5_000) { focused("Movie option 1") }
+        playAndLeave(3)
+        favourites = favourites.filterNot { it.name == "Favourite 3" }
+        compose.waitForIdle()
+
+        back()
+
+        compose.onNodeWithText("Favourite 4").assertIsFocused()
     }
 
     private fun gridCovers(ids: LongRange) = ids.map {

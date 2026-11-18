@@ -19,7 +19,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
@@ -57,6 +56,7 @@ import app.opentv.ui.options.LocalConfirmLive
 import app.opentv.ui.options.LocalOpenOptions
 import app.opentv.ui.options.OptionsSubject
 import app.opentv.ui.options.openOptionsOn
+import app.opentv.ui.options.rememberRowHighlight
 import app.opentv.ui.vod.CardFocus
 import app.opentv.ui.vod.rememberCoverBadge
 import app.opentv.ui.vod.rememberRowState
@@ -210,7 +210,7 @@ private fun ScreenFrameScope.HomeRows(shelves: List<HomeShelf>, takeFocus: Boole
     // The card picked last, kept while the viewer is off in the player or on a title's page so the
     // highlight can go back to it. It's spent the first time Home comes back, highlight or not:
     // Home reached any other way opens on its first card, as it always has.
-    var picked by rememberSaveable(stateSaver = HomePick.Saver) { mutableStateOf<HomePick?>(null) }
+    var picked by rememberSaveable(stateSaver = RowPick.Saver) { mutableStateOf<RowPick?>(null) }
     // Until its card has the highlight, the pick being restored follows the rows as they change, so
     // it lands on the card itself rather than on where the card stood.
     var restoring by remember { mutableStateOf(picked?.takeIf { takeFocus }) }
@@ -261,7 +261,7 @@ private fun ScreenFrameScope.HomeRows(shelves: List<HomeShelf>, takeFocus: Boole
             railReturnItem(key = shelf.row.key, contentType = shelf::class) {
                 val rowFocus = focus?.takeIf { target?.row == shelf.row.key }
                 fun pick(item: String, open: () -> Unit) {
-                    picked = HomePick(shelf.row.key, rowIndex, item, shelf.row.items.indexOf(item))
+                    picked = RowPick(shelf.row.key, rowIndex, item, shelf.row.items.indexOf(item))
                     // Before the next screen starts: a second stream can cut off a single-connection
                     // line, and waiting for the lifecycle change leaves both running for a moment.
                     actions.stopPreview()
@@ -310,7 +310,7 @@ private fun ScreenFrameScope.HomeRows(shelves: List<HomeShelf>, takeFocus: Boole
  * to move.
  */
 @Composable
-private fun rememberRestoreFocus(target: HomePick?, fallback: FocusRequester, onDone: () -> Unit): CardFocus? =
+private fun rememberRestoreFocus(target: RowPick?, fallback: FocusRequester, onDone: () -> Unit): CardFocus? =
     remember(target) {
         target?.let {
             CardFocus(it.index) { focused ->
@@ -320,12 +320,9 @@ private fun rememberRestoreFocus(target: HomePick?, fallback: FocusRequester, on
         }
     }
 
-/** One of Home's rows as the highlight sees it: its list key and its cards' keys, in order. */
-internal class HomeRow(val key: String, val items: List<String>)
-
 /** One of Home's rows and what it shows; the one list both draws Home and places its highlight. */
 private sealed class HomeShelf(key: String, items: List<String>) {
-    val row = HomeRow(key, items)
+    val row = PickRow(key, items)
 
     class Live(val tile: LiveTile) : HomeShelf("live", listOf(LIVE_PICK))
 
@@ -408,41 +405,6 @@ internal val VodTitle.pickKey
     }
 private val Channel.pickKey get() = "$sourceId:$streamId"
 
-/**
- * A card the viewer picked on Home: its row and the card's key, with where each stood, so the
- * highlight has somewhere to go if the card itself has gone by the time they come back.
- */
-internal data class HomePick(val row: String, val rowIndex: Int, val item: String, val index: Int) {
-    companion object {
-        val Saver = listSaver<HomePick?, Any>(
-            save = { pick -> pick?.run { listOf(row, rowIndex, item, index) }.orEmpty() },
-            restore = {
-                it.takeIf {
-                    it.size == 4
-                }?.let { HomePick(it[0] as String, it[1] as Int, it[2] as String, it[3] as Int) }
-            },
-        )
-    }
-}
-
-/** Where the highlight goes on coming back to Home after [pick], given the [rows] Home has now. */
-internal fun restoreTarget(rows: List<HomeRow>, pick: HomePick): HomePick? {
-    val rowIndex = rows.indexOfFirst { it.key == pick.row }
-    return when {
-        rows.isEmpty() -> null
-        // The whole row has gone (its last Favourite removed, say): the row that now stands where it
-        // stood takes the highlight, as it does when a row goes while the viewer is on Home.
-        rowIndex < 0 -> pick.rowIndex.coerceAtMost(rows.lastIndex).let {
-            HomePick(rows[it].key, it, rows[it].items.first(), 0)
-        }
-        else -> {
-            val items = rows[rowIndex].items
-            val index = items.indexOf(pick.item).takeIf { it >= 0 } ?: pick.index.coerceAtMost(items.lastIndex)
-            HomePick(pick.row, rowIndex, items[index], index)
-        }
-    }
-}
-
 @Composable
 internal fun ScreenFrameScope.ContinueWatchingShelf(
     cards: List<ResumeItem>,
@@ -450,14 +412,18 @@ internal fun ScreenFrameScope.ContinueWatchingShelf(
     focus: CardFocus?,
     onResume: (ResumeItem) -> Unit,
     leave: (ResumeItem) -> LeaveScreen,
-    onHighlight: (ResumeItem) -> Unit = {},
+    onHighlight: (index: Int, card: ResumeItem) -> Unit = { _, _ -> },
 ) {
     val memory = rememberShelfMemory(remember(cards) { cards.map { it.titleKey } })
     val openOptions = LocalOpenOptions.current
+    val rowState = rememberRowState(focus)
+    // A card removed while highlighted (Remove from Continue Watching, Mark watched) hands the
+    // Highlight to the one taking its place, not the row's first.
+    val highlight = rememberRowHighlight(cards, rowState) { it.titleKey }
     Shelf(
         stringResource(R.string.vod_continue_watching),
         memory,
-        state = rememberRowState(focus),
+        state = rowState,
         // With the large first card, the cards hang from the top, right under the row's title. On a
         // shared bottom edge the smaller cards sat under an empty band the large one's extra height
         // tall, which read as something missing above them.
@@ -472,7 +438,8 @@ internal fun ScreenFrameScope.ContinueWatchingShelf(
                 modifier = Modifier
                     .takesFocus(index, focus)
                     .shelfCard(memory, card.titleKey)
-                    .onFocusChanged { if (it.isFocused) onHighlight(card) },
+                    .then(highlight.modifier(index, card.titleKey))
+                    .onFocusChanged { if (it.isFocused) onHighlight(index, card) },
                 status = resumeStatusText(card),
                 progress = card.progress,
                 badge = rememberCoverBadge(
@@ -505,7 +472,9 @@ private fun ScreenFrameScope.CoverShelf(
     leave: (VodTitle) -> LeaveScreen,
 ) {
     val memory = rememberShelfMemory(remember(covers) { covers.map { it.title.pickKey } })
-    Shelf(title, memory, state = rememberRowState(focus)) {
+    val rowState = rememberRowState(focus)
+    val highlight = rememberRowHighlight(covers, rowState) { it.title.pickKey }
+    Shelf(title, memory, state = rowState) {
         itemsIndexed(covers, key = { _, cover -> cover.title.pickKey }) { index, cover ->
             val subject = when (val t = cover.title) {
                 is VodTitle.OfMovie -> OptionsSubject.OfMovie(t.movie)
@@ -516,7 +485,10 @@ private fun ScreenFrameScope.CoverShelf(
                 artworkUrl = cover.title.posterUrl,
                 onClick = { onOpen(cover.title) },
                 size = ArtCardSize.Portrait,
-                modifier = Modifier.takesFocus(index, focus).shelfCard(memory, cover.title.pickKey),
+                modifier = Modifier
+                    .takesFocus(index, focus)
+                    .shelfCard(memory, cover.title.pickKey)
+                    .then(highlight.modifier(index, cover.title.pickKey)),
                 status = if (showsStatus) coverStatusText(cover.status) else emptyList(),
                 progress = (cover.status as? CoverStatus.InProgress)?.progress?.takeIf { showsStatus },
                 badge = rememberCoverBadge(cover.title.kind, cover.title.id, cover.title.name),

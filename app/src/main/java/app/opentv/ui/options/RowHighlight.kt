@@ -16,13 +16,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.FocusState
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 
 /**
  * Keeps the highlight in place on a lazy list when its highlighted row leaves it (a channel just
  * hidden, say). Left alone, Compose hands the highlight to the list's first row, a long way from
- * where the viewer was. Each row wears [modifier], ahead of what makes it focusable.
+ * where the viewer was. Each row wears [modifier] (or [groupModifier]), ahead of what makes it focusable.
  */
 internal class RowHighlight {
     private val requester = FocusRequester()
@@ -32,13 +33,24 @@ internal class RowHighlight {
     var leftFrom by mutableStateOf<Int?>(null)
         private set
     private var highlighted: Any? = null
+    private var highlightedIndex: Int? = null
     private var listed: Set<Any> = emptySet()
 
-    fun modifier(index: Int, key: Any): Modifier {
+    /** A row's modifier, ahead of what makes it focusable. */
+    fun modifier(index: Int, key: Any): Modifier = watch(index, key) { it.isFocused }
+
+    /**
+     * For a row that is itself a row of cards (For you's shelves): it has the Highlight while one of
+     * its cards does, and putting the Highlight back on it puts it on one of them.
+     */
+    fun groupModifier(index: Int, key: Any): Modifier = watch(index, key) { it.hasFocus }
+
+    private fun watch(index: Int, key: Any, has: (FocusState) -> Boolean): Modifier {
         val restoring = if (restoringTo == index) Modifier.focusRequester(requester) else Modifier
         return restoring.onFocusChanged {
-            if (it.isFocused) {
+            if (has(it)) {
                 highlighted = key
+                highlightedIndex = index
             } else if (highlighted == key) {
                 // Still listed means the highlight just moved off it, rather than leaving with it.
                 highlighted = null
@@ -52,20 +64,33 @@ internal class RowHighlight {
     }
 
     suspend fun restore(from: Int, lastIndex: Int, listState: LazyListState, firstRowItem: Int) {
-        val target = from.coerceAtMost(lastIndex)
-        if (target >= 0) {
-            restoringTo = target
-            listState.scrollToItem(firstRowItem + target)
-            // A frame resumes this before it recomposes, so the row wears the requester a frame later.
-            repeat(FRAMES_TO_SETTLE) { withFrameNanos {} }
-            runCatching { requester.requestFocus() }
-            restoringTo = null
+        // Empty now (a guide emptied as it refreshes), the target is -1 and there's nowhere to go.
+        val target = from.coerceAtMost(lastIndex).coerceAtLeast(0)
+        // A row that can't take the Highlight (For you's placeholder for a row still being worked out)
+        // passes it on: to the rows below first, which moved up into the gap, then those above.
+        // A sequence, as a guide's list can run to twenty thousand rows.
+        val nearest = ((target..lastIndex).asSequence() + (target - 1 downTo 0).asSequence()).take(MOST_TRIES)
+        for (index in nearest) {
+            if (restoreTo(index, listState, firstRowItem)) break
         }
         leftFrom = null
     }
 
+    private suspend fun restoreTo(index: Int, listState: LazyListState, firstRowItem: Int): Boolean {
+        restoringTo = index
+        highlightedIndex = null
+        listState.scrollToItem(firstRowItem + index)
+        // A frame resumes this before it recomposes, so the row wears the requester a frame later.
+        repeat(FRAMES_TO_SETTLE) { withFrameNanos {} }
+        runCatching { requester.requestFocus() }
+        restoringTo = null
+        withFrameNanos {}
+        return highlightedIndex == index
+    }
+
     private companion object {
         const val FRAMES_TO_SETTLE = 2
+        const val MOST_TRIES = 3
     }
 }
 

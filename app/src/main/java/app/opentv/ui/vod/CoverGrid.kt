@@ -38,7 +38,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import app.opentv.data.repo.TitleCover
-import app.opentv.ui.LocalShellReturn
+import app.opentv.ui.OnShellReturn
 import app.opentv.ui.design.ArtCard
 import app.opentv.ui.design.ArtCardSize
 import app.opentv.ui.design.ScreenFrameScope
@@ -47,7 +47,6 @@ import app.opentv.ui.railReturnTarget
 import coil.imageLoader
 import coil.request.ImageRequest
 import coil.size.Size
-import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.filterNotNull
 
 /**
@@ -79,7 +78,7 @@ internal fun ScreenFrameScope.CoverGrid(
 
 /**
  * Where the Highlight goes back to in the grid when Back to the main screen couldn't put it straight
- * back on its cover (KeptShell asks, [LocalShellReturn]): the title last highlighted, so it's found
+ * back on its cover (KeptShell asks, [OnShellReturn]): the title last highlighted, so it's found
  * after the grid was built again under a player, and the first cover when it has gone (#384).
  * Without this nothing in Movies or Shows answered, and the Highlight fell to the rail.
  *
@@ -110,18 +109,13 @@ private fun rememberCoverReturn(state: LazyGridState, covers: List<TitleCover>):
     val lastTitle = rememberSaveable { mutableStateOf<String?>(null) }
     val coverReturn = remember(lastId, lastTitle) { CoverReturn(lastId, lastTitle) }
     val latestCovers by rememberUpdatedState(covers)
-    val shellReturn = LocalShellReturn.current
-    // Collected rather than keyed on `asked`: KeptShell lowers it after a few frames, and an effect
-    // keyed on it was cancelled there, mid-scroll, before it put the Highlight back.
-    LaunchedEffect(shellReturn) {
-        snapshotFlow { shellReturn.asked }.filter { it }.collect {
-            val index = coverReturn.indexIn(latestCovers)
-            coverReturn.target = latestCovers[index].id
-            if (state.layoutInfo.visibleItemsInfo.none { it.index == index }) state.scrollToItem(index)
-            // The requester goes on the target cover when it's next composed, scrolled to or not.
-            withFrameNanos {}
-            runCatching { coverReturn.requester.requestFocus() }
-        }
+    OnShellReturn {
+        val index = coverReturn.indexIn(latestCovers)
+        coverReturn.target = latestCovers[index].id
+        if (state.layoutInfo.visibleItemsInfo.none { it.index == index }) state.scrollToItem(index)
+        // The requester goes on the target cover when it's next composed, scrolled to or not.
+        withFrameNanos {}
+        runCatching { coverReturn.requester.requestFocus() }
     }
     return coverReturn
 }
