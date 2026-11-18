@@ -20,12 +20,7 @@ import app.opentv.ui.hasProvider
  * OpenSubtitles' sign-in on the phone, as the TV goes to that step: the address stays open for it.
  */
 @Composable
-internal fun PhoneProvider(
-    viewModel: SourcesViewModel,
-    onSetup: () -> Unit,
-    onFinished: () -> Unit,
-    onCancel: () -> Unit,
-) {
+internal fun PhoneProvider(viewModel: SourcesViewModel, onSetup: () -> Unit, onCancel: () -> Unit) {
     val ui by viewModel.ui.collectAsState()
     // The server starts once, for what it was started for: so not until the providers have loaded,
     // or a first provider couldn't be told from a later one and wouldn't carry on to OpenSubtitles.
@@ -41,7 +36,7 @@ internal fun PhoneProvider(
         // The TV stays on "Got it" while the channels load, and the phone waits with it: a
         // failed login is put right on the phone, which shows why, and the TV listens again.
         // Once the channels are in, a first provider carries on in Setup, already past its
-        // first step; a later one goes to Home as before.
+        // first step; a later one leaves through the add page's route, as one typed on the TV does.
         onReceived = { received ->
             var setup = false
             viewModel.saveAndSync(
@@ -52,7 +47,7 @@ internal fun PhoneProvider(
                     // Before the answer, so leaving for the OpenSubtitles step doesn't close the address.
                     if (failure == null && setup && carriesOn) handedOn = true
                     received.answer(failure)
-                    if (failure == null) if (setup) onSetup() else onFinished()
+                    if (failure == null && setup) onSetup()
                 },
             )
         },

@@ -95,7 +95,7 @@ fun AddSourceScreen(
             cameFrom = option
             opened = option
         }
-        AddOption.PHONE -> PhoneProvider(viewModel, onSetup, onFinished, onCancel = { opened = null })
+        AddOption.PHONE -> PhoneProvider(viewModel, onSetup, onCancel = { opened = null })
         else -> ProviderForm(viewModel, onFinished, onSetup, editingSourceId = null, kind = open.kind)
     }
     if (opened != null) BackHandler { opened = null }
@@ -220,7 +220,7 @@ private fun ProviderForm(
         ui.addFailure?.let { ErrorMessage(it.sentence, it.detail, textAlign = TextAlign.Start) }
         ui.syncMessage?.let { Text(it, SetteeType.Body) }
 
-        FormButtons(viewModel, details, defaultName, onFinished, onSetup)
+        FormButtons(viewModel, details, defaultName, onSetup)
 
         AdvancedFields(details)
 
@@ -235,7 +235,6 @@ private fun FormButtons(
     viewModel: SourcesViewModel,
     details: ProviderDetails,
     defaultName: String,
-    onFinished: () -> Unit,
     onSetup: () -> Unit,
 ) {
     val ui by viewModel.ui.collectAsState()
@@ -254,7 +253,7 @@ private fun FormButtons(
             label = stringResource(if (ui.adding) R.string.onboarding_working else R.string.onboarding_save_load),
             onClick = {
                 if (!working) {
-                    viewModel.saveAndSync(details.draft(defaultName), onSetup = onSetup) { ok -> if (ok) onFinished() }
+                    viewModel.saveAndSync(details.draft(defaultName), onSetup = onSetup)
                 }
             },
             enabled = details.canSubmit,

@@ -7,12 +7,14 @@ package app.opentv
 
 import android.app.Application
 import android.view.View
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isFocused
+import androidx.compose.ui.test.junit4.StateRestorationTester
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
@@ -79,19 +81,24 @@ class ProviderRoutesTest {
     @After
     fun close() = graph.database.close()
 
-    private fun setApp(start: String, sources: SourcesViewModel = SourcesViewModel(app)) {
-        compose.setTvContent {
-            view = LocalView.current
-            nav = rememberNavController()
-            NavHost(nav, startDestination = start) {
-                providerRoutes(nav, sources)
-                settingsRoutes(nav, SettingsMemory())
-                composable(Routes.MAIN) { entry ->
-                    val tab by entry.shellTab()
-                    Text("Main on $tab", SetteeType.Body)
-                }
-                composable(Routes.MOVIE_DETAIL) { Text("A movie", SetteeType.Body) }
+    private fun setApp(start: String, sources: SourcesViewModel = SourcesViewModel(app)) =
+        compose.setTvContent(appContent(start, sources))
+
+    /** The app [setApp] shows, in a screen Android can rebuild, as it does when a phone turns round. */
+    private fun setRebuildableApp(start: String, sources: SourcesViewModel) =
+        StateRestorationTester(compose).apply { setTvContent(appContent(start, sources)) }
+
+    private fun appContent(start: String, sources: SourcesViewModel): @Composable () -> Unit = {
+        view = LocalView.current
+        nav = rememberNavController()
+        NavHost(nav, startDestination = start) {
+            providerRoutes(nav, sources)
+            settingsRoutes(nav, SettingsMemory())
+            composable(Routes.MAIN) { entry ->
+                val tab by entry.shellTab()
+                Text("Main on $tab", SetteeType.Body)
             }
+            composable(Routes.MOVIE_DETAIL) { Text("A movie", SetteeType.Body) }
         }
     }
 
@@ -294,6 +301,19 @@ class ProviderRoutesTest {
     }
 
     @Test
+    fun `a provider added on an add page with nothing under it goes to Home`() {
+        runBlocking { graph.sourceRepository.save(PANEL_SOURCE.copy(id = 0, lastCatalogSyncMillis = 1)) }
+        val sources = SourcesViewModel(app, graph)
+        setApp(start = Routes.ADD_SOURCE, sources = sources)
+
+        savePlaylist()
+        saveFinishes(sources)
+
+        compose.onNodeWithText("Main on HOME").assertExists()
+        assertThat(compose.runOnIdle { nav.previousBackStackEntry }).isNull()
+    }
+
+    @Test
     fun `a provider added from Live TV while there's one already goes back to Live TV`() {
         runBlocking { graph.sourceRepository.save(PANEL_SOURCE.copy(id = 0, lastCatalogSyncMillis = 1)) }
         val sources = SourcesViewModel(app, graph)
@@ -351,6 +371,53 @@ class ProviderRoutesTest {
     private fun saveEdited() {
         compose.waitUntil(5_000) { compose.onAllNodesWithText("Edit provider").fetchSemanticsNodes().isNotEmpty() }
         compose.onNodeWithText("Save and load").performClick()
+    }
+
+    @Test
+    fun `an add page opened again while the last save runs goes back once that save is in`() {
+        runBlocking { graph.sourceRepository.save(PANEL_SOURCE.copy(id = 0, lastCatalogSyncMillis = 1)) }
+        val playlist = panel.hold("")
+        val sources = SourcesViewModel(app, graph)
+        setApp(start = Routes.MAIN, sources = sources)
+        compose.runOnIdle {
+            nav.navigate(Routes.SETTINGS)
+            nav.openAddProvider()
+        }
+        savePlaylist()
+        held(playlist)
+
+        compose.runOnIdle {
+            nav.popBackStack()
+            nav.openAddProvider()
+        }
+        playlist.release()
+        saveFinishes(sources)
+
+        assertThat(route()).isEqualTo(Routes.SETTINGS)
+        assertThat(entriesOf(Routes.MAIN)).isEqualTo(1)
+        assertThat(runBlocking { graph.sourceRepository.all() }.map { it.kind })
+            .containsExactly(SourceKind.XTREAM, SourceKind.M3U)
+    }
+
+    @Test
+    fun `an add page rebuilt while its save runs, as a phone turning round does, still goes back once it's in`() {
+        runBlocking { graph.sourceRepository.save(PANEL_SOURCE.copy(id = 0, lastCatalogSyncMillis = 1)) }
+        val playlist = panel.hold("")
+        val sources = SourcesViewModel(app, graph)
+        val screen = setRebuildableApp(start = Routes.MAIN, sources = sources)
+        compose.runOnIdle {
+            nav.navigate(Routes.SETTINGS)
+            nav.openAddProvider()
+        }
+        savePlaylist()
+        held(playlist)
+
+        screen.emulateSavedInstanceStateRestore()
+        playlist.release()
+        saveFinishes(sources)
+
+        assertThat(route()).isEqualTo(Routes.SETTINGS)
+        assertThat(entriesOf(Routes.MAIN)).isEqualTo(1)
     }
 
     @Test

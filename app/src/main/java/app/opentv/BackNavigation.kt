@@ -92,14 +92,13 @@ suspend fun titlePageFor(mediaKey: MediaKey, seriesOfEpisode: suspend (episodeId
  * Back button stays tappable while the player animates out, and a second tap would otherwise pop
  * the screen under it too, leaving nothing on screen.
  */
-fun NavController.leaveLivePlayer(from: NavBackStackEntry) {
-    if (currentBackStackEntry == from) popBackStack()
-}
+fun NavController.leaveLivePlayer(from: NavBackStackEntry) = ifStillOn(from) { popBackStack() }
 
 /**
- * Runs [action] only while [from] is still the screen on top. For what finishes after the viewer
- * may have left, such as a provider's save: it carries on in the background, and acting on the
- * back stack then would close or cover whatever they went to instead.
+ * Runs [action] only while [from] is still the screen on top. For what can arrive after the viewer
+ * has left it: a second tap on a player's Back as it animates out, or a provider's save, which
+ * carries on in the background. Acting on the back stack then would close or cover whatever they
+ * went to instead.
  */
 fun NavController.ifStillOn(from: NavBackStackEntry, action: NavController.() -> Unit) {
     if (currentBackStackEntry == from) action()
@@ -112,14 +111,13 @@ fun NavController.ifStillOn(from: NavBackStackEntry, action: NavController.() ->
  * again. Without a page it just goes back. Ignored once [from] is no longer on top, as for
  * [leaveLivePlayer].
  */
-fun NavController.leaveVodPlayer(from: NavBackStackEntry, titlePage: String?) {
-    if (currentBackStackEntry != from) return
+fun NavController.leaveVodPlayer(from: NavBackStackEntry, titlePage: String?) = ifStillOn(from) {
     if (titlePage == null || previousBackStackEntry?.filledRoute() == titlePage) {
         popBackStack()
-        return
-    }
-    navigate(titlePage) {
-        popUpTo(from.destination.id) { inclusive = true }
+    } else {
+        navigate(titlePage) {
+            popUpTo(from.destination.id) { inclusive = true }
+        }
     }
 }
 
