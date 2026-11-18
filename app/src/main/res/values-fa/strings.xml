@@ -340,4 +340,6 @@
     <string name="error_opensubtitles_sign_in">OpenSubtitles این نام کاربری یا گذرواژه را نپذیرفت. آن‌ها را بررسی کنید و دوباره امتحان کنید.</string>
     <string name="error_opensubtitles_token_tv">OpenSubtitles این تلویزیون را از حساب خارج کرد. دوباره در تنظیمات وارد شوید.</string>
     <string name="error_opensubtitles_token_device">OpenSubtitles این دستگاه را از حساب خارج کرد. دوباره در تنظیمات وارد شوید.</string>
+    <string name="error_not_a_guide">این نشانی راهنمای برنامه نیست. بررسی کنید که پیوند درست باشد، یا اگر Wi-Fi درخواست ورود کرد، وارد شوید.</string>
+    <string name="settings_guide_bad_address">این یک نشانی وب نیست. بررسی کنید که همان‌طور که پیوند راهنما نشان می‌دهد نوشته شده باشد، مثلاً example.com/guide.xml.</string>
 </resources>

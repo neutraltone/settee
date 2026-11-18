@@ -340,4 +340,6 @@
     <string name="error_opensubtitles_sign_in">OpenSubtitles godtok ikke det brukernavnet eller passordet. Sjekk dem, og prøv igjen.</string>
     <string name="error_opensubtitles_token_tv">OpenSubtitles har logget denne TV-en av. Logg på igjen i Innstillinger.</string>
     <string name="error_opensubtitles_token_device">OpenSubtitles har logget denne enheten av. Logg på igjen i Innstillinger.</string>
+    <string name="error_not_a_guide">Den adressen er ikke en programguide. Sjekk at det er riktig lenke, eller logg på Wi-Fi hvis det ber om det.</string>
+    <string name="settings_guide_bad_address">Det er ikke en nettadresse. Sjekk at den er skrevet slik guidens lenke viser den, for eksempel example.com/guide.xml.</string>
 </resources>

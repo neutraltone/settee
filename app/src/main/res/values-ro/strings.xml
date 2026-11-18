@@ -340,4 +340,6 @@
     <string name="error_opensubtitles_sign_in">OpenSubtitles nu a acceptat acest nume de utilizator sau această parolă. Verifică-le și încearcă din nou.</string>
     <string name="error_opensubtitles_token_tv">OpenSubtitles a deconectat acest televizor. Conectează-te din nou din Setări.</string>
     <string name="error_opensubtitles_token_device">OpenSubtitles a deconectat acest dispozitiv. Conectează-te din nou din Setări.</string>
+    <string name="error_not_a_guide">Adresa nu este un ghid. Verifică dacă este linkul corect sau conectează-te la Wi-Fi dacă îți cere.</string>
+    <string name="settings_guide_bad_address">Aceasta nu este o adresă web. Verifică dacă este scrisă așa cum o arată linkul ghidului, de exemplu example.com/guide.xml.</string>
 </resources>

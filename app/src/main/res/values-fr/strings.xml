@@ -340,4 +340,6 @@
     <string name="error_opensubtitles_sign_in">OpenSubtitles n\'a pas accepté ce nom d\'utilisateur ou ce mot de passe. Vérifiez-les et réessayez.</string>
     <string name="error_opensubtitles_token_tv">OpenSubtitles a déconnecté ce téléviseur. Reconnectez-vous dans les Réglages.</string>
     <string name="error_opensubtitles_token_device">OpenSubtitles a déconnecté cet appareil. Reconnectez-vous dans les Réglages.</string>
+    <string name="error_not_a_guide">Cette adresse n\'est pas un guide. Vérifiez que c\'est le bon lien, ou connectez-vous à votre Wi-Fi s\'il le demande.</string>
+    <string name="settings_guide_bad_address">Ce n\'est pas une adresse web. Vérifiez qu\'elle est saisie comme l\'indique le lien du guide, par exemple example.com/guide.xml.</string>
 </resources>

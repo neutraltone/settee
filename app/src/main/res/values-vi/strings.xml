@@ -340,4 +340,6 @@
     <string name="error_opensubtitles_sign_in">OpenSubtitles không chấp nhận tên người dùng hoặc mật khẩu đó. Hãy kiểm tra rồi thử lại.</string>
     <string name="error_opensubtitles_token_tv">OpenSubtitles đã đăng xuất TV này. Hãy đăng nhập lại trong Cài đặt.</string>
     <string name="error_opensubtitles_token_device">OpenSubtitles đã đăng xuất thiết bị này. Hãy đăng nhập lại trong Cài đặt.</string>
+    <string name="error_not_a_guide">Địa chỉ đó không phải lịch phát sóng. Kiểm tra xem đó có đúng liên kết không, hoặc đăng nhập Wi-Fi nếu được yêu cầu.</string>
+    <string name="settings_guide_bad_address">Đó không phải địa chỉ web. Kiểm tra xem đã nhập đúng như liên kết của lịch phát sóng chưa, ví dụ example.com/guide.xml.</string>
 </resources>

@@ -340,4 +340,6 @@
     <string name="error_opensubtitles_sign_in">OpenSubtitles ไม่ยอมรับชื่อผู้ใช้หรือรหัสผ่านนั้น ตรวจสอบแล้วลองอีกครั้ง</string>
     <string name="error_opensubtitles_token_tv">OpenSubtitles ออกจากระบบทีวีเครื่องนี้แล้ว ลงชื่อเข้าใช้อีกครั้งในการตั้งค่า</string>
     <string name="error_opensubtitles_token_device">OpenSubtitles ออกจากระบบอุปกรณ์นี้แล้ว ลงชื่อเข้าใช้อีกครั้งในการตั้งค่า</string>
+    <string name="error_not_a_guide">ที่อยู่นั้นไม่ใช่ผังรายการ ตรวจสอบว่าเป็นลิงก์ที่ถูกต้อง หรือลงชื่อเข้าใช้ Wi-Fi หากระบบขอ</string>
+    <string name="settings_guide_bad_address">นี่ไม่ใช่ที่อยู่เว็บ ตรวจสอบว่าพิมพ์ตามที่ลิงก์ของผังรายการแสดง เช่น example.com/guide.xml</string>
 </resources>

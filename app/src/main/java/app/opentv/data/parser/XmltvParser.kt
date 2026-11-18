@@ -7,6 +7,7 @@ package app.opentv.data.parser
 
 import android.util.Xml
 import app.opentv.data.model.Programme
+import java.io.IOException
 import java.io.InputStream
 import java.util.Calendar
 import java.util.TimeZone
@@ -29,6 +30,9 @@ import org.xmlpull.v1.XmlPullParser
  *    the single most-reported EPG bug in this category of app. We normalise to epoch
  *    millis at parse time and never store anything else.
  */
+/** What should have been a guide opened as some other document, such as [root] `html`. */
+class NotAGuideException(root: String) : IOException("Not XMLTV: the document's root is <$root>")
+
 object XmltvParser {
 
     /** Result of a parse run, for logging and for surfacing honest errors to the user. */
@@ -63,8 +67,14 @@ object XmltvParser {
         parser.setInput(LenientEntityStream(input), null)
 
         var event = parser.eventType
+        var rootSeen = false
         while (event != XmlPullParser.END_DOCUMENT) {
             if (event == XmlPullParser.START_TAG) {
+                // A web page where the guide should be (an expired share link, a Wi-Fi sign-in page)
+                // would otherwise read as a guide with nothing in it, and say to check the link
+                // without saying why (#471).
+                if (!rootSeen && parser.name != "tv") throw NotAGuideException(parser.name)
+                rootSeen = true
                 when (parser.name) {
                     "channel" -> {
                         val id = parser.getAttributeValue(null, "id")

@@ -340,4 +340,6 @@
     <string name="error_opensubtitles_sign_in">OpenSubtitles accepteerde die gebruikersnaam of dat wachtwoord niet. Controleer ze en probeer het opnieuw.</string>
     <string name="error_opensubtitles_token_tv">OpenSubtitles heeft deze tv afgemeld. Log opnieuw in via Instellingen.</string>
     <string name="error_opensubtitles_token_device">OpenSubtitles heeft dit apparaat afgemeld. Log opnieuw in via Instellingen.</string>
+    <string name="error_not_a_guide">Dat adres is geen gids. Controleer of het de juiste link is, of meld je aan bij je wifi als daarom wordt gevraagd.</string>
+    <string name="settings_guide_bad_address">Dat is geen webadres. Controleer of het is getypt zoals de link van de gids het toont, bijvoorbeeld example.com/guide.xml.</string>
 </resources>

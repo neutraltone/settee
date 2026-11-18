@@ -340,4 +340,6 @@
     <string name="error_opensubtitles_sign_in">OpenSubtitles ने यह यूज़रनेम या पासवर्ड स्वीकार नहीं किया। इन्हें जाँचें और फिर से कोशिश करें।</string>
     <string name="error_opensubtitles_token_tv">OpenSubtitles ने इस टीवी को साइन आउट कर दिया। सेटिंग में फिर से साइन इन करें।</string>
     <string name="error_opensubtitles_token_device">OpenSubtitles ने इस डिवाइस को साइन आउट कर दिया। सेटिंग में फिर से साइन इन करें।</string>
+    <string name="error_not_a_guide">यह पता गाइड नहीं है। जांचें कि यह सही लिंक है, या अगर आपका Wi-Fi साइन इन मांगे तो साइन इन करें।</string>
+    <string name="settings_guide_bad_address">यह वेब पता नहीं है। जांचें कि यह वैसे ही लिखा है जैसा गाइड के लिंक में है, जैसे example.com/guide.xml।</string>
 </resources>

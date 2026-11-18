@@ -340,4 +340,6 @@
     <string name="error_opensubtitles_sign_in">OpenSubtitles не прие това потребителско име или парола. Проверете ги и опитайте отново.</string>
     <string name="error_opensubtitles_token_tv">OpenSubtitles излезе от профила на този телевизор. Влезте отново от Настройки.</string>
     <string name="error_opensubtitles_token_device">OpenSubtitles излезе от профила на това устройство. Влезте отново от Настройки.</string>
+    <string name="error_not_a_guide">Този адрес не е програма. Проверете дали връзката е правилна или влезте в Wi-Fi мрежата, ако ви поиска.</string>
+    <string name="settings_guide_bad_address">Това не е уеб адрес. Проверете дали е въведен както в връзката на програмата, например example.com/guide.xml.</string>
 </resources>

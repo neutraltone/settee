@@ -224,6 +224,23 @@ class EpgRepositoryTest {
     }
 
     @Test
+    fun `a custom guide's address typed without http is saved with it`() = runTest {
+        guide.addCustomFeed("Mine", "example.com/guide.xml")
+
+        assertThat(guide.observeFeeds().first().map { it.url }).contains("http://example.com/guide.xml")
+    }
+
+    @Test
+    fun `a custom guide's address that still isn't one is never saved`() = runTest {
+        val before = guide.observeFeeds().first()
+
+        guide.addCustomFeed("Mine", "http://")
+        guide.addCustomFeed("Mine", "not a url")
+
+        assertThat(guide.observeFeeds().first()).isEqualTo(before)
+    }
+
+    @Test
     fun `a refreshed guide leaves another guide's programmes for the same channel alone`() = runTest {
         catalogue.db.sources().insert(PANEL_SOURCE)
         guide.addCustomFeed("Other", "http://example.com/other/xmltv.php")

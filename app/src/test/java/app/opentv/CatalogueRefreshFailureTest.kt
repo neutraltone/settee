@@ -9,7 +9,10 @@ import androidx.test.core.app.ApplicationProvider
 import app.opentv.core.ViewerError
 import app.opentv.data.model.refreshFailure
 import app.opentv.data.repo.CatalogueRefresh
+import app.opentv.ui.isTheViewersToFix
+import app.opentv.ui.providerFailures
 import com.google.common.truth.Truth.assertThat
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Test
@@ -155,6 +158,18 @@ class CatalogueRefreshFailureTest {
         assertThat(outcome.providerProblems).isEqualTo(1)
         assertThat(outcome.feedProblems).isEqualTo(0)
         assertThat(refresh.state.value.last).isEqualTo(outcome)
+    }
+
+    @Test
+    fun `a provider's guide turning down the login raises no banner on Home`() = runTest {
+        db.sources().insert(PANEL_SOURCE)
+        panel.replies["xmltv.php"] = "!401"
+
+        refresh.refresh(CatalogueRefresh.Trigger.Manual)
+
+        val guide = test.guide.observeFeeds().first().single { it.providerSourceId == PANEL_SOURCE.id }
+        assertThat(ViewerError.fromStored(guide.lastResult)?.detail).contains("HTTP 401")
+        assertThat(db.sources().all().providerFailures().filter { it.error.isTheViewersToFix() }).isEmpty()
     }
 
     @Test
