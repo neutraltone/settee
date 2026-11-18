@@ -208,7 +208,7 @@ A guide feed's failure is stored on its row (`ViewerError.stored`) and shown in 
 
 ## OpenSubtitles
 
-Worded by `ErrorWording.ofOpenSubtitles`. In the film and episode players' OpenSubtitles results (searching and picking), the note an automatic download leaves over the picture, Settings › OpenSubtitles, Setup's OpenSubtitles step and the phone's sign-in page. An automatic download that fails never stops playback: it shows only as the note. In Settings › OpenSubtitles, a signed-in account whose allowance check fails shows the failure under Signed in as, in place of the downloads left; when it's `TokenRejected`, a Sign in again row follows, which asks for the password under the saved username.
+Worded by `ErrorWording.ofOpenSubtitles`. In the film and episode players' OpenSubtitles results (searching and picking), the note an automatic download leaves over the picture, Settings › OpenSubtitles, Setup's OpenSubtitles step and the phone's sign-in page. An automatic download that fails never stops playback: it shows only as the note. In Settings › OpenSubtitles, a signed-in account whose allowance check fails shows the failure under Signed in as, in place of the downloads left; when it's `TokenRejected`, a Sign in again row follows, which opens the username window with the saved username filled in, then the password window.
 
 | Trigger | String key | Sentence | Detail | Whose end, likely cause |
 |---|---|---|---|---|

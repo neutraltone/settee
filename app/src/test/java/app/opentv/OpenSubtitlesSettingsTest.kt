@@ -11,7 +11,9 @@ import android.view.View
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsFocused
+import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
@@ -169,7 +171,7 @@ class OpenSubtitlesSettingsTest {
         waitFor(SIGNED_OUT, substring = true)
         compose.onNodeWithText("Signed in as u").assertExists()
         compose.onNodeWithText("Sign in again").requestFocus().assertIsFocused()
-        captureScreen("opensubtitles_signed_out_by_server")
+        captureScreen("settings_opensubtitles_signed_out_by_server")
     }
 
     @Test
@@ -206,9 +208,36 @@ class OpenSubtitlesSettingsTest {
 
         waitFor("Can't reach OpenSubtitles.", substring = true)
         compose.onNodeWithText("IO").assertExists()
+        // The error stands in for the downloads left, rather than under an empty line where they'd be.
+        compose.onAllNodes(hasText("") and hasAnyAncestor(hasTestTag(SettingsTags.CODE_BLOCK)), useUnmergedTree = true)
+            .assertCountEquals(0)
         compose.onNodeWithText("Sign in again").assertDoesNotExist()
         compose.onNodeWithText("Sign out").assertExists()
-        captureScreen("opensubtitles_unreachable")
+        captureScreen("settings_opensubtitles_unreachable")
+    }
+
+    @Test
+    fun `signing out and in again starts afresh, without the last account's error or Sign in again`() {
+        signedOutByOpenSubtitles()
+        show()
+        waitFor("Sign in again")
+
+        compose.onNodeWithText("Sign out").performClick()
+        waitFor("Not signed in", substring = true)
+        site.replies["POST /login"] =
+            """{"user": {"allowed_downloads": 20, "remaining_downloads": 18}, "token": "t2"}"""
+        site.replies["GET /infos/user"] = """{"data": {"allowed_downloads": 20, "remaining_downloads": 18}}"""
+        val held = java.util.concurrent.CountDownLatch(1)
+        site.accountHeld = held
+        try {
+            signInOnTheTv(password = "p")
+            waitFor("Signed in as u")
+
+            compose.onNodeWithText(SIGNED_OUT, substring = true).assertDoesNotExist()
+            compose.onNodeWithText("Sign in again").assertDoesNotExist()
+        } finally {
+            held.countDown()
+        }
     }
 
     @Test

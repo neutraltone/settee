@@ -57,7 +57,8 @@ internal fun OpenSubtitlesPane(openSubtitles: OpenSubtitles) {
     val account = openSubtitles.account
     val signedInAs by account.signedInAs.collectAsState()
     val auto by account.autoDownload.collectAsState()
-    val entry = remember(account, graph) { OpenSubtitlesSignIn(account, graph.errorWording) }
+    // One per account signed in, so signing out and in again never shows the last one's check or error.
+    val entry = remember(account, graph, signedInAs) { OpenSubtitlesSignIn(account, graph.errorWording) }
     val scope = rememberCoroutineScope()
     var signingInAgainAs by remember { mutableStateOf<String?>(null) }
     Column(Modifier.testTag(OPENSUBTITLES_PANE_TAG), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -67,7 +68,9 @@ internal fun OpenSubtitlesPane(openSubtitles: OpenSubtitles) {
             val left = entry.allowance?.getOrNull()?.remaining
             CodeBlock(
                 lead = stringResource(R.string.opensubtitles_signed_in_as, name),
-                code = left?.let { stringResource(R.string.opensubtitles_downloads_left, it) }.orEmpty(),
+                // Room kept while checking, so the number arriving moves nothing; none once the error stands in for it.
+                code = left?.let { stringResource(R.string.opensubtitles_downloads_left, it) }
+                    ?: "".takeIf { entry.accountProblem == null },
             )
             entry.accountProblem?.let {
                 ErrorMessage(it.sentence, it.detail, textAlign = TextAlign.Start)
