@@ -271,6 +271,7 @@
     <string name="error_playlist_empty">لا توجد قنوات على هذا العنوان. تأكد من أنه الرابط الذي أعطاك إياه مزوّدك.</string>
     <string name="error_account_inactive">يقول مزوّدك إن هذا الحساب غير نشط. تواصل معه، ثم أعد المحاولة.</string>
     <string name="error_bad_address">لا يبدو هذا العنوان صحيحًا. تحقق من بيانات مزوّدك في الإعدادات.</string>
+    <string name="error_not_a_panel">لم يستجب هذا العنوان كمزوّد IPTV. تحقق من العنوان والمنفذ في بيانات مزوّدك، أو سجّل الدخول إلى شبكة Wi-Fi إذا طُلب منك ذلك.</string>
     <string name="error_device_refused">لم يقبل مزوّدك هذه البيانات. تحقق من بيانات مزوّدك في الإعدادات.</string>
     <string name="error_guide">تعذر تنزيل دليل البرامج هذا. أعد المحاولة بعد قليل.</string>
     <string name="error_guide_empty">تم تنزيل دليل البرامج هذا، لكنه لا يحتوي على أي برامج. تأكد من أنه الرابط الصحيح.</string>

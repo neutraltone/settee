@@ -271,6 +271,7 @@
     <string name="error_playlist_empty">Det finnes ingen kanaler på den adressen. Sjekk at det er lenken leverandøren din ga deg.</string>
     <string name="error_account_inactive">Leverandøren din sier at denne kontoen ikke er aktiv. Sjekk med dem, og prøv så igjen.</string>
     <string name="error_bad_address">Den adressen ser ikke riktig ut. Sjekk leverandørdetaljene dine i Innstillinger.</string>
+    <string name="error_not_a_panel">Den adressen svarte ikke som en IPTV-leverandør. Sjekk adressen og porten i leverandørdetaljene dine, eller logg på Wi-Fi hvis det ber om det.</string>
     <string name="error_device_refused">Leverandøren din godtok ikke disse detaljene. Sjekk leverandørdetaljene dine i Innstillinger.</string>
     <string name="error_guide">Kunne ikke laste ned denne guiden. Prøv igjen om litt.</string>
     <string name="error_guide_empty">Guiden ble lastet ned, men inneholdt ingen programmer. Sjekk at det er riktig lenke.</string>

@@ -271,6 +271,7 @@
     <string name="error_playlist_empty">Na toj adresi nema kanala. Provjerite je li to poveznica koju vam je dao pružatelj usluge.</string>
     <string name="error_account_inactive">Vaš pružatelj usluge kaže da ovaj račun nije aktivan. Provjerite kod njega, zatim pokušajte ponovno.</string>
     <string name="error_bad_address">Ta adresa ne izgleda ispravno. Provjerite podatke pružatelja usluge u Postavkama.</string>
+    <string name="error_not_a_panel">Ta adresa nije odgovorila kao IPTV pružatelj usluge. Provjerite adresu i priključak u podacima pružatelja usluge ili se prijavite na Wi-Fi ako to traži.</string>
     <string name="error_device_refused">Vaš pružatelj usluge nije prihvatio ove podatke. Provjerite podatke pružatelja usluge u Postavkama.</string>
     <string name="error_guide">Nije moguće preuzeti ovaj vodič. Pokušajte ponovno za trenutak.</string>
     <string name="error_guide_empty">Ovaj vodič je preuzet, ali u njemu nema emisija. Provjerite je li to prava poveznica.</string>

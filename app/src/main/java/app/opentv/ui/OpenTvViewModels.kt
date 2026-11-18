@@ -9,6 +9,7 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import app.opentv.R
+import app.opentv.core.ErrorWording
 import app.opentv.core.ServerProblem
 import app.opentv.core.ServiceLocator
 import app.opentv.core.StatusBus
@@ -33,6 +34,7 @@ import app.opentv.data.model.ref
 import app.opentv.data.model.refreshFailure
 import app.opentv.data.parser.VodTitleCleaner
 import app.opentv.data.parser.displayTitle
+import app.opentv.data.remote.ProviderException
 import app.opentv.data.repo.CatalogRepository
 import app.opentv.data.repo.CatalogueRefresh
 import app.opentv.data.repo.CategoryGroup
@@ -1670,12 +1672,15 @@ fun List<Source>.providerFailures(): List<ProviderFailure> = mapNotNull { source
 data class ProviderBanner(val providers: List<ProviderFailure>)
 
 /**
- * Whether only the viewer can put this right: a login, account or address the provider turned down.
+ * Whether only the viewer can put this right: a login, account or address the provider turned down, or an
+ * address that answered like a website.
  * Read from the detail line's codes, the one part of a saved failure that isn't in the viewer's language.
  */
 internal fun ViewerError.isTheViewersToFix(): Boolean = detail.split(" · ").any { it in VIEWERS_TO_FIX }
 
-private val VIEWERS_TO_FIX = setOf("LoginRejected", "AccountInactive", "BadAddress", "HTTP 401", "HTTP 403")
+private val VIEWERS_TO_FIX = ProviderException.Problem.entries.filter { it.viewersToFix }
+    .map { ErrorWording.codeName(it.name) }
+    .toSet() + setOf("HTTP 401", "HTTP 403")
 
 /** A show's or movie's cover on Home, with where the active Profile is with it; null when never started. */
 data class Cover(val title: VodTitle, val status: CoverStatus? = null)

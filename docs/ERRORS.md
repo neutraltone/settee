@@ -120,7 +120,7 @@ Every refresh, whatever triggered it, saves each provider's channel-list failure
 
 - under its provider's row in Settings › Providers, with Refresh again;
 - on Home's banner, above the first shelf, for an enabled provider whose failure only the viewer can
-  fix: `LoginRejected`, `AccountInactive`, `BadAddress`, HTTP 401 or 403. One provider shows its name
+  fix (`Problem.viewersToFix`): `LoginRejected`, `AccountInactive`, `BadAddress`, `NotAPanel`, HTTP 401 or 403. One provider shows its name
   and the sentence, several a count, never the detail line. Network drops, timeouts and 5xx don't
   raise it, since the next refresh usually clears them;
 - in Live TV's empty state, titled `guide_load_failed_title_named` with the provider's name, when
@@ -137,6 +137,7 @@ both (`refresh_done_with_provider_and_guide_problems`), by what failed.
 | Xtream `auth: 0` (`Problem.LOGIN_REJECTED`), HTTP 401 or 403 | `error_login` | Your provider didn't accept your login. Check your provider's details in Settings. | LoginRejected, or HTTP 401/403 | Viewer's login |
 | Xtream account not Active (`Problem.ACCOUNT_INACTIVE`) | `error_account_inactive` | Your provider says this account isn't active. Check with them, then try again. | AccountInactive | Provider's: expired or disabled |
 | Not a valid address (`Problem.BAD_ADDRESS`) | `error_bad_address` | That address doesn't look right. Check your provider's details in Settings. | BadAddress | Viewer's setup |
+| Xtream address answered with a web page, or 404 for `player_api.php` (`Problem.NOT_A_PANEL`): the provider's website, the wrong port, or a Wi-Fi sign-in page | `error_not_a_panel` | That address didn't answer like an IPTV provider. Check the address and port in your provider's details, or sign in to your Wi-Fi if it asks. | NotAPanel, or NotAPanel · HTTP 404 | Viewer's setup, or the network |
 | Portal refused the MAC, or none set (`Problem.DEVICE_REFUSED`) | `error_device_refused` | Your provider didn't accept these details. Check your provider's details in Settings. | DeviceRefused | Viewer's setup, or the portal |
 | HTTP 429 | `error_http_429` | Your provider is getting too many requests from this device. Wait a minute, then try again. | HTTP 429 | Provider's rate limit |
 | HTTP 5xx | `error_http_5xx` | Your provider is having problems. That's at their end, so try again later. | HTTP 5xx | Provider's server |
@@ -158,7 +159,7 @@ a 5xx read as in [Provider connection](#provider-connection). Under it, Try agai
 
 | Trigger | String key | Sentence | Detail | Whose end, likely cause |
 |---|---|---|---|---|
-| Every fetch failed with nothing more specific (a reply that won't parse, any other HTTP status) | `vod_episodes_failed` | Couldn't load the episodes of this series. Try again in a moment. | exception type, or HTTP status | Provider's |
+| Every fetch failed with nothing more specific (an empty or broken reply, any other HTTP status) | `vod_episodes_failed` | Couldn't load the episodes of this series. Try again in a moment. | exception type, or HTTP status | Provider's |
 | No episodes stored once `CatalogRepository.OPENING_LIMIT` has passed, fetches still out (#495); episodes they store later replace it | `error_timed_out` | Your provider stopped responding. It may be busy, so try again in a moment. | SocketTimeout | Provider's: slow |
 | A fetch answered, but no Version has episodes (a plain line, not an error, and no Try again) | `vod_no_episodes` | Your provider hasn't added any episodes of this series. | none | Provider's: none listed yet |
 

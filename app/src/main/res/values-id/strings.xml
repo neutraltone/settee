@@ -271,6 +271,7 @@
     <string name="error_playlist_empty">Tidak ada saluran di alamat itu. Periksa apakah itu tautan yang diberikan penyedia Anda.</string>
     <string name="error_account_inactive">Penyedia Anda menyatakan akun ini tidak aktif. Tanyakan kepada mereka, lalu coba lagi.</string>
     <string name="error_bad_address">Alamat itu sepertinya tidak benar. Periksa detail penyedia Anda di Pengaturan.</string>
+    <string name="error_not_a_panel">Alamat itu tidak menjawab seperti penyedia IPTV. Periksa alamat dan port di detail penyedia Anda, atau masuk ke Wi-Fi Anda jika diminta.</string>
     <string name="error_device_refused">Penyedia Anda tidak menerima detail ini. Periksa detail penyedia Anda di Pengaturan.</string>
     <string name="error_guide">Gagal mengunduh panduan ini. Coba lagi sebentar lagi.</string>
     <string name="error_guide_empty">Panduan ini berhasil diunduh, tetapi tidak berisi acara. Periksa apakah tautannya benar.</string>

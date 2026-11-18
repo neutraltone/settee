@@ -170,6 +170,16 @@ class HomeProviderBannerTest {
     }
 
     @Test
+    fun `an address that answered like a website raises the banner, since only the viewer can correct it`() {
+        val notAPanel = ViewerError(app.getString(R.string.error_not_a_panel), "NotAPanel · HTTP 404")
+        provider(ACME, "Acme TV", notAPanel)
+        setApp()
+        waitFor("Superbad")
+
+        compose.onNodeWithText("Acme TV: ${notAPanel.sentence}").assertExists()
+    }
+
+    @Test
     fun `two providers to fix are counted rather than named`() {
         provider(ACME, "Acme TV", login)
         provider(OTHER, "Other TV", ViewerError(app.getString(R.string.error_account_inactive), "AccountInactive"))

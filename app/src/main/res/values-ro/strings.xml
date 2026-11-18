@@ -271,6 +271,7 @@
     <string name="error_playlist_empty">Nu există canale la acea adresă. Verifică dacă este linkul primit de la furnizorul tău.</string>
     <string name="error_account_inactive">Furnizorul tău spune că acest cont nu este activ. Întreabă-i, apoi încearcă din nou.</string>
     <string name="error_bad_address">Adresa nu pare corectă. Verifică detaliile furnizorului în Setări.</string>
+    <string name="error_not_a_panel">Adresa nu a răspuns ca un furnizor IPTV. Verifică adresa și portul în detaliile furnizorului sau conectează-te la Wi-Fi dacă îți cere.</string>
     <string name="error_device_refused">Furnizorul tău nu a acceptat aceste detalii. Verifică detaliile furnizorului în Setări.</string>
     <string name="error_guide">Acest ghid nu a putut fi descărcat. Încearcă din nou peste puțin timp.</string>
     <string name="error_guide_empty">Ghidul s-a descărcat, dar nu conținea nicio emisiune. Verifică dacă este linkul corect.</string>

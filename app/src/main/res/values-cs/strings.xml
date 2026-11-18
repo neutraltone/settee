@@ -271,6 +271,7 @@
     <string name="error_playlist_empty">Na této adrese nejsou žádné kanály. Zkontrolujte, že je to odkaz od vašeho poskytovatele.</string>
     <string name="error_account_inactive">Podle poskytovatele tento účet není aktivní. Ověřte si to u něj a pak to zkuste znovu.</string>
     <string name="error_bad_address">Tato adresa nevypadá správně. Zkontrolujte údaje poskytovatele v Nastavení.</string>
+    <string name="error_not_a_panel">Tato adresa neodpověděla jako poskytovatel IPTV. Zkontrolujte adresu a port v údajích poskytovatele, nebo se přihlaste k Wi-Fi, pokud o to žádá.</string>
     <string name="error_device_refused">Poskytovatel tyto údaje nepřijal. Zkontrolujte údaje poskytovatele v Nastavení.</string>
     <string name="error_guide">Tohoto průvodce se nepodařilo stáhnout. Zkuste to za chvíli znovu.</string>
     <string name="error_guide_empty">Průvodce se stáhl, ale nejsou v něm žádné pořady. Zkontrolujte, že je to správný odkaz.</string>

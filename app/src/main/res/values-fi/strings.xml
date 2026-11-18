@@ -271,6 +271,7 @@
     <string name="error_playlist_empty">Osoitteessa ei ole kanavia. Tarkista, että se on palveluntarjoajaltasi saamasi linkki.</string>
     <string name="error_account_inactive">Palveluntarjoajasi mukaan tämä tili ei ole aktiivinen. Tarkista asia heiltä ja yritä sitten uudelleen.</string>
     <string name="error_bad_address">Osoite ei näytä oikealta. Tarkista palveluntarjoajasi tiedot Asetuksista.</string>
+    <string name="error_not_a_panel">Osoite ei vastannut kuin IPTV-palveluntarjoaja. Tarkista osoite ja portti palveluntarjoajasi tiedoista tai kirjaudu Wi-Fi-verkkoon, jos se pyytää.</string>
     <string name="error_device_refused">Palveluntarjoajasi ei hyväksynyt näitä tietoja. Tarkista palveluntarjoajasi tiedot Asetuksista.</string>
     <string name="error_guide">Opasta ei voitu ladata. Yritä hetken päästä uudelleen.</string>
     <string name="error_guide_empty">Opas ladattiin, mutta siinä ei ollut ohjelmia. Tarkista, että linkki on oikea.</string>

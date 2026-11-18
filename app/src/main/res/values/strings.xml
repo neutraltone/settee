@@ -738,6 +738,7 @@
     <string name="error_playlist_empty">There are no channels at that address. Check it\'s the link your provider gave you.</string>
     <string name="error_account_inactive">Your provider says this account isn\'t active. Check with them, then try again.</string>
     <string name="error_bad_address">That address doesn\'t look right. Check your provider\'s details in Settings.</string>
+    <string name="error_not_a_panel">That address didn\'t answer like an IPTV provider. Check the address and port in your provider\'s details, or sign in to your Wi-Fi if it asks.</string>
     <string name="error_device_refused">Your provider didn\'t accept these details. Check your provider\'s details in Settings.</string>
     <string name="error_guide">Couldn\'t download this guide. Try again in a moment.</string>
     <string name="error_guide_empty">This guide downloaded, but had no programmes in it. Check it\'s the right link.</string>
