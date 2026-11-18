@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -21,7 +22,9 @@ import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.input.InputMode
 import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.platform.LocalInputModeManager
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertIsFocused
@@ -30,6 +33,7 @@ import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isDisplayed
 import androidx.compose.ui.test.isFocused
+import androidx.compose.ui.test.junit4.StateRestorationTester
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithTag
@@ -41,7 +45,11 @@ import androidx.compose.ui.test.requestFocus
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.test.platform.app.InstrumentationRegistry
 import app.opentv.data.model.Movie
+import app.opentv.data.model.Recording
+import app.opentv.data.model.RecordingStatus
+import app.opentv.data.model.Series
 import app.opentv.data.repo.GenreGroup
 import app.opentv.data.repo.MediaKey
 import app.opentv.data.repo.TitleCover
@@ -52,11 +60,15 @@ import app.opentv.ui.MainShell
 import app.opentv.ui.Tab
 import app.opentv.ui.design.ScreenFrame
 import app.opentv.ui.design.SetteeColors
+import app.opentv.ui.design.SetteeTheme
 import app.opentv.ui.design.SetteeType
 import app.opentv.ui.design.Text
+import app.opentv.ui.recordings.RecordingsContent
+import app.opentv.ui.recordings.recordingsSections
 import app.opentv.ui.visibleTabs
 import app.opentv.ui.vod.CoverGrid
 import app.opentv.ui.vod.MovieShelves
+import app.opentv.ui.vod.SeriesShelves
 import com.google.common.truth.Truth.assertThat
 import org.junit.Rule
 import org.junit.Test
@@ -98,13 +110,16 @@ class KeptShellTest {
 
     /**
      * The rail over Home, which shows a row of [recent] titles, and Movies, which shows three rows, or
-     * a category's [grid] of covers when there is one.
+     * a category's [grid] of covers when there is one. Shown by [host]: the test rule, unless a test
+     * needs it restored as Android would.
      */
     private fun setApp(
         recent: () -> List<Cover> = { covers("Added", 1L..8L) },
         grid: (() -> List<TitleCover>)? = null,
         favourites: () -> List<Movie> = { (1L..8L).map { movie(it, "Favourite $it") } },
-    ) = compose.setTvContent {
+        recordings: () -> List<Recording> = { (1L..3L).map(::recording) },
+        host: (@Composable () -> Unit) -> Unit = { compose.setTvContent(it) },
+    ) = host {
         nav = rememberNavController()
         KeptShell(
             nav,
@@ -123,6 +138,10 @@ class KeptShellTest {
                 ) { shown, takeFocus, onNothingToShow ->
                     if (shown == Tab.MOVIES) {
                         Movies(grid, favourites)
+                    } else if (shown == Tab.SHOWS) {
+                        Shows()
+                    } else if (shown == Tab.RECORDINGS) {
+                        Recordings(recordings)
                     } else {
                         HomeContent(
                             continueWatching = emptyList(),
@@ -149,6 +168,34 @@ class KeptShellTest {
             }
         }
     }
+
+    /** The shows in Shows' first row, so a test can take one away as the database would. */
+    private var shows by mutableStateOf((1L..8L).map(::series))
+
+    /** Shows: a row of [shows] over a row of others. */
+    @Composable
+    private fun Shows() = ScreenFrame {
+        SeriesShelves(
+            resume = emptyList(),
+            favourites = shows,
+            recommended = emptyList(),
+            recentlyAdded = (11L..18L).map(::series),
+            genreRows = emptyList(),
+            onResume = {},
+            onOpenSeries = {},
+        )
+    }
+
+    /** Recordings, whose OK plays the recording. */
+    @Composable
+    private fun Recordings(recordings: () -> List<Recording>) = RecordingsContent(
+        sections = recordingsSections(recordings(), emptyList(), emptyList(), NOW),
+        profileNames = emptyMap(),
+        onPlay = { nav.navigate(Routes.vodPlayer(MediaKey.Recording(it.id))) },
+        onRetry = {},
+        onChoose = { _, _ -> },
+        now = { NOW },
+    )
 
     /** Movies: three rows of films, or a category's [grid] of covers when there is one. */
     @Composable
@@ -518,6 +565,182 @@ class KeptShellTest {
         compose.onNodeWithText("Favourite 4").assertIsFocused()
     }
 
+    /** Opens Recordings and waits for its rows. */
+    private fun openRecordings() {
+        homeShowing()
+        compose.runOnIdle { nav.selectShellTab(Tab.RECORDINGS) }
+        compose.waitUntil(5_000) { compose.onAllNodes(hasText("Recording 1")).fetchSemanticsNodes().isNotEmpty() }
+    }
+
+    private fun recordingRow(title: String) = compose.onNode(hasText(title) and hasClickAction())
+
+    /** Plays the highlighted recording, then Back from the player, which has no title page to go to. */
+    private fun playRecordingAndLeave() {
+        press(Key.DirectionCenter)
+        compose.waitUntil(5_000) { focused("Player option 1") }
+        compose.runOnIdle { nav.leaveVodPlayer(nav.currentBackStackEntry!!, null) }
+        compose.waitForIdle()
+    }
+
+    @Test
+    fun `Back from a recording puts the highlight back on its row, not the rail`() {
+        setApp()
+        openRecordings()
+        recordingRow("Recording 2").requestFocus()
+
+        playRecordingAndLeave()
+
+        recordingRow("Recording 2").assertIsFocused()
+        assertThat(railItemFocused("Recordings")).isFalse()
+        captureScreen("recordings_back_from_recording")
+    }
+
+    @Test
+    fun `Back from a recording deleted while it played puts the highlight on the first row`() {
+        var recordings by mutableStateOf((1L..3L).map(::recording))
+        setApp(recordings = { recordings })
+        openRecordings()
+        recordingRow("Recording 2").requestFocus()
+        press(Key.DirectionCenter)
+        compose.waitUntil(5_000) { focused("Player option 1") }
+        recordings = recordings.filterNot { it.id == 2L }
+
+        compose.runOnIdle { nav.leaveVodPlayer(nav.currentBackStackEntry!!, null) }
+        compose.waitForIdle()
+
+        recordingRow("Recording 1").assertIsFocused()
+        assertThat(railItemFocused("Recordings")).isFalse()
+    }
+
+    @Test
+    fun `Back from the last recording, deleted while it played, puts the highlight on the rail's Recordings item`() {
+        var recordings by mutableStateOf(listOf(recording(1)))
+        setApp(recordings = { recordings })
+        openRecordings()
+        recordingRow("Recording 1").requestFocus()
+        press(Key.DirectionCenter)
+        compose.waitUntil(5_000) { focused("Player option 1") }
+        recordings = emptyList()
+
+        compose.runOnIdle { nav.leaveVodPlayer(nav.currentBackStackEntry!!, null) }
+        compose.waitForIdle()
+
+        assertThat(railItemFocused("Recordings")).isTrue()
+    }
+
+    @Test
+    fun `Back from an episode whose series has gone puts the highlight on a cover in Shows, not the rail`() {
+        setApp()
+        homeShowing()
+        compose.runOnIdle { nav.selectShellTab(Tab.SHOWS) }
+        compose.waitUntil(5_000) { compose.onAllNodes(hasText("Show 1")).fetchSemanticsNodes().isNotEmpty() }
+        compose.onNode(hasText("Show 3") and hasClickAction()).requestFocus()
+        compose.runOnIdle { nav.navigate(Routes.vodPlayer(MediaKey.Episode(30))) }
+        compose.waitUntil(5_000) { focused("Player option 1") }
+        shows = shows.filterNot { it.id == 3L }
+
+        // The series has gone, so the episode has no title page to go back to.
+        compose.runOnIdle { nav.leaveVodPlayer(nav.currentBackStackEntry!!, null) }
+        compose.waitForIdle()
+
+        assertThat(highlightedText()).contains("Show")
+        assertThat(railItemFocused("Shows")).isFalse()
+    }
+
+    /** The text of whatever has the highlight, or nothing when nothing has it. */
+    private fun highlightedText(): String = compose.onAllNodes(isFocused()).fetchSemanticsNodes().joinToString {
+        it.config.getOrElse(androidx.compose.ui.semantics.SemanticsProperties.Text) { emptyList() }.joinToString()
+    }
+
+    private fun series(id: Long) = Series(
+        id = id,
+        sourceId = 1,
+        seriesId = "$id",
+        name = "Show $id",
+        categoryId = null,
+        posterUrl = "https://example.com/s$id.jpg",
+        rating = null,
+        year = null,
+        plot = null,
+    )
+
+    /** The app, shown so that [StateRestorationTester.emulateSavedInstanceStateRestore] can rebuild it. */
+    private fun setRestorableApp(recordings: List<Recording> = (1L..3L).map(::recording)): StateRestorationTester {
+        val restoration = StateRestorationTester(compose)
+        InstrumentationRegistry.getInstrumentation().setInTouchMode(false)
+        setApp(recordings = { recordings }) { app ->
+            restoration.setContent {
+                val inputMode = LocalInputModeManager.current
+                SideEffect { inputMode.requestInputMode(InputMode.Keyboard) }
+                SetteeTheme { Box(Modifier.fillMaxSize().background(SetteeColors.Background)) { app() } }
+            }
+        }
+        return restoration
+    }
+
+    /** Opens [tab] and waits for [shown] in it, then has Android let the app go and bring it back. */
+    private fun restoreOn(
+        tab: Tab,
+        shown: String,
+        highlight: String? = null,
+        recordings: List<Recording> = (1L..3L).map(::recording),
+    ) {
+        val restoration = setRestorableApp(recordings)
+        homeShowing()
+        compose.runOnIdle { nav.selectShellTab(tab) }
+        compose.waitUntil(5_000) {
+            compose.onAllNodes(hasText(shown, substring = true)).fetchSemanticsNodes().isNotEmpty()
+        }
+        highlight?.let { compose.onNode(hasText(it) and hasClickAction()).requestFocus() }
+
+        restoration.emulateSavedInstanceStateRestore()
+        compose.waitForIdle()
+    }
+
+    @Test
+    fun `brought back on Movies, the highlight is in Movies' rows, not the rail`() {
+        restoreOn(Tab.MOVIES, shown = "Drama 21")
+
+        assertThat(highlightedText()).containsMatch("Favourite|New|Drama")
+        assertThat(railItemFocused("Movies")).isFalse()
+    }
+
+    @Test
+    fun `brought back on Recordings with none, the highlight is on the rail's Recordings item`() {
+        restoreOn(Tab.RECORDINGS, shown = "No recordings yet", recordings = emptyList())
+
+        assertThat(railItemFocused("Recordings")).isTrue()
+    }
+
+    @Test
+    fun `brought back on Recordings, the highlight is on the row it was on`() {
+        restoreOn(Tab.RECORDINGS, shown = "Recording 1", highlight = "Recording 2")
+
+        recordingRow("Recording 2").assertIsFocused()
+        assertThat(railItemFocused("Recordings")).isFalse()
+    }
+
+    @Test
+    fun `brought back on Shows, the highlight is on a cover in Shows, not the rail`() {
+        restoreOn(Tab.SHOWS, shown = "Show 1")
+
+        assertThat(highlightedText()).contains("Show")
+        assertThat(railItemFocused("Shows")).isFalse()
+    }
+
+    private fun recording(id: Long) = Recording(
+        id = id,
+        channelId = id,
+        sourceId = 1,
+        channelName = "Channel $id",
+        title = "Recording $id",
+        filePath = "/rec/$id.ts",
+        streamUrl = "",
+        startedAtMillis = NOW - id * HOUR,
+        endedAtMillis = NOW - id * HOUR + HOUR / 2,
+        status = RecordingStatus.COMPLETED,
+    )
+
     private fun gridCovers(ids: LongRange) = ids.map {
         TitleCover(it, "Grid $it", "Grid $it", "https://example.com/$it.jpg")
     }
@@ -545,5 +768,8 @@ class KeptShellTest {
 
         /** Frames enough for any screen change: a fade would take at least 18. */
         const val SWITCH_FRAMES = 6
+
+        const val NOW = 1_800_000_000_000L
+        const val HOUR = 3_600_000L
     }
 }

@@ -20,6 +20,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.SaveableStateHolder
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
@@ -161,6 +162,7 @@ private fun ShellLayer(
         }
     }
     entry.LocalOwnersProvider(saveable) {
+        ReturnWhenBuiltAgain(shellReturn, { coveredNow }) { returnHighlight(memory, shellReturn, anywhere) }
         CompositionLocalProvider(
             LocalShellCovered provides covered,
             LocalShellReturn provides shellReturn,
@@ -184,11 +186,39 @@ private fun ShellLayer(
 }
 
 /**
+ * The shell built again on show, with nothing covering it: Back from a player went straight to it
+ * (a recording has no title page to go back to), or Android brought the app back after letting it
+ * go. Either way nothing has the highlight, and nothing covered the shell for [returnHighlight] to
+ * run on uncovering it, so the remote's first press went to the rail (#432).
+ *
+ * Told apart from the shell built for the first time by a flag saved with the main screen's state,
+ * which only a shell built before has. Not by running on every first build with nothing focused: a
+ * cold start onto Home whose rows are still loading would have put the highlight in the rail, where
+ * Home no longer takes it ([MainShell]'s `takeFocus`). Home and Live take it themselves anyway.
+ */
+@Composable
+private fun ReturnWhenBuiltAgain(
+    shellReturn: ShellReturn,
+    coveredNow: () -> Boolean,
+    returnHighlight: suspend () -> Unit,
+) {
+    var builtBefore by rememberSaveable { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        val again = builtBefore
+        builtBefore = true
+        // A frame, so the tab on show has said whether it takes the highlight itself.
+        withFrameNanos {}
+        if (again && !coveredNow() && !shellReturn.tabTakesHighlight) returnHighlight()
+    }
+}
+
+/**
  * Back on the main screen: the highlight goes to the item that had it as the screen opened over it.
  * When that's gone (the shell was built again after a player let it go, or the card went), the tab
  * on show gets a few frames to place it ([ShellReturn]). Failing that it goes into the tab's content,
- * and only with nothing there to take it, anywhere in the shell rather than nowhere: the shell's
- * nearest item is the rail's, which left a viewer back from a title's page on the rail (#384).
+ * and with nothing there to take it, the tab's own item in the rail, as a tab with nothing to show
+ * puts it. Only failing that, anywhere in the shell rather than nowhere: the shell's nearest item is
+ * the rail's, which left a viewer back from a title's page on the rail (#384).
  */
 private suspend fun returnHighlight(memory: HighlightMemory, shellReturn: ShellReturn, anywhere: FocusRequester) {
     if (memory.restore()) return
@@ -198,8 +228,8 @@ private suspend fun returnHighlight(memory: HighlightMemory, shellReturn: ShellR
     // Only the tab's content counts: the rail may have been handed it as the screen over the
     // shell went, and a viewer back from a title's page belongs in the rows (#384).
     if (shellReturn.contentHasFocus) return
-    val inContent = runCatching { shellReturn.content?.requestFocus() }.getOrNull() == true
-    if (!inContent) runCatching { anywhere.requestFocus() }
+    listOfNotNull(shellReturn.content, shellReturn.tabItem, anywhere)
+        .firstOrNull { runCatching { it.requestFocus() }.getOrNull() == true }
 }
 
 // Enough for the slowest answer: Home and For you recompose with the card to go back to, scroll the

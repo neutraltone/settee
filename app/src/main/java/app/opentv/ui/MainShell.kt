@@ -27,6 +27,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.derivedStateOf
@@ -113,9 +114,14 @@ internal fun MainShell(
     val railReturn = remember(current) { RailReturn() }
     val contentFocus = remember { FocusRequester() }
     val shellReturn = LocalShellReturn.current
-    DisposableEffect(shellReturn, contentFocus) {
+    SideEffect { shellReturn.tabTakesHighlight = current == Tab.HOME || current == Tab.LIVE }
+    DisposableEffect(shellReturn, contentFocus, currentItem) {
         shellReturn.content = contentFocus
-        onDispose { if (shellReturn.content === contentFocus) shellReturn.content = null }
+        shellReturn.tabItem = currentItem
+        onDispose {
+            if (shellReturn.content === contentFocus) shellReturn.content = null
+            if (shellReturn.tabItem === currentItem) shellReturn.tabItem = null
+        }
     }
     val entry = remember { RailEntry() }
     EnterContentAfterPick(entry, railFocused, railReturn, contentFocus)
@@ -347,6 +353,16 @@ class ShellReturn {
      * that had it goes in one frame, Android hands it to the shell's first item, the rail's (#194).
      */
     var contentHasFocus = false
+
+    /**
+     * The tab's own item in the rail, where the Highlight goes when the tab has nothing to take it, as
+     * a tab with nothing to show puts it (`onNothingToShow`): anywhere in the shell would be the rail's
+     * first item, a tab the viewer isn't on (#432).
+     */
+    var tabItem: FocusRequester? = null
+
+    /** Whether the tab on show takes the Highlight itself as it appears, as Home and Live do. */
+    var tabTakesHighlight = false
 }
 
 val LocalShellReturn = staticCompositionLocalOf { ShellReturn() }
