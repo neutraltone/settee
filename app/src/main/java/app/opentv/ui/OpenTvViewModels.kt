@@ -235,7 +235,7 @@ class SourcesViewModel @JvmOverloads constructor(
             val result = graph.sourceRepository.test(draft)
             _ui.value = _ui.value.copy(
                 testing = false,
-                testResult = result.getOrNull()?.let(graph.testOutcomeWording::of),
+                testResult = result.getOrNull()?.let(graph.errorWording.tests::of),
                 testError = result.exceptionOrNull()?.let {
                     graph.errorWording.ofProvider(it, R.string.error_test_failed)
                 },
@@ -2186,7 +2186,6 @@ class WebManagerViewModel(app: Application) : AndroidViewModel(app) {
             graph.sourceRepository,
             graph.channelLineup,
             graph.catalogueRefresh,
-            graph.testOutcomeWording,
         )
 
     val state: StateFlow<ManagerServer.State> = server.state

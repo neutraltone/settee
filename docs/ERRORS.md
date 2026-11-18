@@ -126,6 +126,12 @@ Every refresh, whatever triggered it, saves each provider's channel-list failure
 - in Live TV's empty state, titled `guide_load_failed_title_named` with the provider's name, when
   there are no channels at all.
 
+Test connection on an M3U playlist fetches its address, with the provider's User-Agent, and reads only
+its first 16 KB (#469): an HTTP or network failure is worded by the rows below, so a 404 is
+`error_test_failed` with HTTP 404 on the detail line, and an answer that isn't a playlist is
+`error_playlist_empty`. A test that passes says what it found, from `test_ok_*`, worded on the TV
+(`TestOutcomeWording`) and sent to the phone's channel manager as the same sentence.
+
 The refresh row in Settings › Providers reads Refreshing… and then the result line, which points to
 Providers (`refresh_done_with_provider_problems`), Guide settings (`refresh_done_with_problems`) or
 both (`refresh_done_with_provider_and_guide_problems`), by what failed.
@@ -142,9 +148,9 @@ both (`refresh_done_with_provider_and_guide_problems`), by what failed.
 | HTTP 5xx | `error_http_5xx` | Your provider is having problems. That's at their end, so try again later. | HTTP 5xx | Provider's server |
 | Provider answered with no channels | `error_no_channels` | Your provider sent no channels. Your account may not have any yet, so check with them. | NoChannels | Provider's: no package |
 | Channel list too big for memory (`OutOfMemoryError` while syncing) | `error_channel_list_memory_tv` / `_device` | Your provider's channel list needs more memory than this TV has. | OutOfMemory | This hardware: list too big |
-| Playlist with no channels | `error_playlist_empty` | There are no channels at that address. Check it's the link your provider gave you. | NoChannels | Viewer's setup |
+| Playlist with no channels, or Test finding no `#EXTM3U` or `#EXTINF` at the start of the address's answer (`Problem.NO_CHANNELS`) | `error_playlist_empty` | There are no channels at that address. Check it's the link your provider gave you. | NoChannels | Viewer's setup: a web page or the wrong link |
 | Anything else while downloading | `error_catalogue` | Couldn't load your provider's channels. Try again in a moment. | exception type, or HTTP status | Unknown |
-| Test button, anything else | `error_test_failed` | Couldn't connect to your provider with these details. Check them and try again. | exception type | Unknown |
+| Test button, anything else, including a playlist address answering 404 | `error_test_failed` | Couldn't connect to your provider with these details. Check them and try again. | exception type, or HTTP status | Unknown, or a wrong playlist link |
 | The guide with no channels and no failure saved on a provider | `guide_load_failed_desc` | Try again in a moment, or check your provider's details in Settings. | none | Unknown |
 
 ## Show page episodes
@@ -203,6 +209,10 @@ A guide feed's failure is stored on its row (`ViewerError.stored`) and shown in 
 | NAS sync: any exception | `sync_nas_failed` | Couldn't reach your NAS. Check it's on and the details in Recording settings are right. | exception type | The NAS, or the network |
 | Recording settings' Test connection (also the channel manager page's) | `recset_status_failed` | Couldn't connect to your NAS. Check it's on and these details are right. | exception type | The NAS, or its details |
 | Pairing, the channel manager: no network, wouldn't start, timed out, too many codes | `pairing_*`, `manager_*` (`_no_network_tv`/`_device`, `_failed_tv`/`_device`, `_timed_out`, `_too_many_codes`) | As sharing, for pairing or the channel manager | exception type when one was behind it | As sharing |
+| Phone's setup page: sent without an address | `pairing_phone_missing_address` | Add your provider's address, then send it again. | none | Viewer's typing |
+| Phone's setup page: wrong code | `pairing_phone_wrong_code` (plurals) | That code doesn't match the one on your TV. 4 tries left. | none | Viewer's typing |
+| Phone's setup page: fifth wrong code | `pairing_phone_too_many_title`, `pairing_phone_too_many_body` | Too many wrong codes. Start setting up from your phone again on the TV to get a new code. | none | Viewer's typing, or someone guessing |
+| Phone's setup page: the provider's channels didn't load | As Provider connection | The TV's sentence, with its detail line under it | As Provider connection | As Provider connection |
 | Update check couldn't reach a release (`Outcome.CouldNotCheck`) | `about_check_failed` | Couldn't check for updates. Try again later. | HTTP status, EmptyReply, NoApk, or exception type | GitHub, the network, or a release missing its APK |
 | Update download failed | `update_failed_tv` / `_device` | Couldn't download the update. Check this TV is online, then try again. | exception type | The network |
 

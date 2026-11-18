@@ -10,7 +10,6 @@ import androidx.test.core.app.ApplicationProvider
 import app.opentv.data.remote.StalkerApi
 import app.opentv.data.remote.XtreamApi
 import app.opentv.data.repo.SourceRepository
-import app.opentv.data.repo.TestOutcomeWording
 import app.opentv.pairing.ManagerServer
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.CoroutineScope
@@ -44,7 +43,6 @@ class ManagerAddSourceTest {
         SourceRepository(test.db.sources(), XtreamApi(panel.http), StalkerApi(panel.http), panel.http),
         test.lineup,
         test.refresh { panel.asked += RESCAN },
-        TestOutcomeWording(ApplicationProvider.getApplicationContext()),
     )
 
     @After

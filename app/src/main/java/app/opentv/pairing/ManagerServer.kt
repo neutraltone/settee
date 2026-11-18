@@ -17,7 +17,6 @@ import app.opentv.data.repo.CatalogRepository
 import app.opentv.data.repo.CatalogueRefresh
 import app.opentv.data.repo.ChannelLineup
 import app.opentv.data.repo.SourceRepository
-import app.opentv.data.repo.TestOutcomeWording
 import app.opentv.recording.SmbClient
 import app.opentv.recording.SmbConfig
 import java.io.OutputStream
@@ -70,10 +69,11 @@ class ManagerServer(
     private val sourceRepository: SourceRepository,
     private val lineup: ChannelLineup,
     private val refresh: CatalogueRefresh,
-    /** Words a passing test as the TV does, so the page and the TV say the same. */
-    private val testWording: TestOutcomeWording,
 ) {
-    /** Words a failed test or add for the page; it never sends an exception's own message. */
+    /**
+     * Words a test or add for the page as the TV does, so both say the same; it never sends an
+     * exception's own message.
+     */
     private val wording get() = catalog.wording
 
     data class Session(
@@ -450,7 +450,7 @@ class ManagerServer(
         }
         val result = runBlocking { sourceRepository.test(draft) }
         val dto = if (result.isSuccess) {
-            TestResultDto(ok = true, message = result.getOrNull()?.let(testWording::of))
+            TestResultDto(ok = true, message = result.getOrNull()?.let(wording.tests::of))
         } else {
             val reason = wording.ofProvider(result.exceptionOrNull()!!, R.string.error_test_failed)
             TestResultDto(ok = false, error = reason.sentence, detail = reason.detail)

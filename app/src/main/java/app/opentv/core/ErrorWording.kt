@@ -11,6 +11,7 @@ import app.opentv.R
 import app.opentv.data.remote.OpenSubtitlesFailure
 import app.opentv.data.remote.ProviderException
 import app.opentv.data.remote.ProviderException.Problem
+import app.opentv.data.repo.TestOutcomeWording
 import java.io.InterruptedIOException
 import java.net.ConnectException
 import java.net.HttpURLConnection
@@ -38,6 +39,9 @@ interface HttpStatus {
 }
 
 class ErrorWording(private val context: Context, private val onTelevision: Boolean) {
+    /** What a Test connection that passed says, for whatever words its failures with this. */
+    val tests: TestOutcomeWording by lazy { TestOutcomeWording(context) }
+
     // Looked up each time, as RefreshMessages does: changing language only recreates the activity.
     private val resources get() = LocaleUtils.wrap(context).resources
 

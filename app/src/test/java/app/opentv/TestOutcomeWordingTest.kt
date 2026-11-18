@@ -37,7 +37,9 @@ class TestOutcomeWordingTest {
 
     @Test
     fun `an Xtream login's account comes from the app's strings, with its expiry in the app's language`() {
-        val said = wording("de").of(TestOutcome.Xtream(username = "u", maxConnections = 2, expiresAtMillis = newYearsEve2026))
+        val account = TestOutcome.Xtream(username = "u", maxConnections = 2, expiresAtMillis = newYearsEve2026)
+
+        val said = wording("de").of(account)
 
         assertThat(said).isEqualTo(
             "Your login works. Signed in as u. Watch on 2 screens at a time. Your subscription runs until 31.12.2026.",
