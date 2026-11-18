@@ -102,6 +102,7 @@ object ManagerPage {
           .save { margin-top:6px; padding:12px 18px; font-size:15px; font-weight:600;
                   background:var(--accent2); color:var(--text); border:1px solid var(--accent); border-radius:10px; cursor:pointer; }
           .save:active { transform:scale(.97); }
+          .save[disabled] { opacity:.5; pointer-events:none; }
           .field select { width:100%; padding:11px 12px; font-size:16px; background:var(--bg); color:var(--text);
                           border:1px solid var(--line); border-radius:9px; }
           .field select:focus { outline:none; border-color:var(--accent); }
@@ -536,9 +537,12 @@ object ManagerPage {
           };
           el('provSave').onclick = function(){
             var b = provBody(); var bad = provInvalid(b); if (bad){ setStatus(bad, 'err'); return; }
+            // One request at a time: a second tap while the first loads would store the provider twice.
+            var save = el('provSave'); save.disabled = true;
             setStatus('Adding & loading channels…');
             post('/source', b)
               .then(function(r){
+                save.disabled = false;
                 if (r && r.ok){
                   setStatus('Added. ' + (r.channels || 0) + ' channels loaded.', 'ok');
                   el('provUrl').value = ''; el('provUser').value = ''; el('provPass').value = '';
@@ -546,7 +550,7 @@ object ManagerPage {
                   loadMeta();
                 } else setStatus((r && r.error) || "Couldn't add your provider. Try again in a moment.", 'err', r && r.detail);
               })
-              .catch(function(){ setStatus(UNREACH, 'err'); });
+              .catch(function(){ save.disabled = false; setStatus(UNREACH, 'err'); });
           };
 
           loadMeta();

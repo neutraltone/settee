@@ -28,6 +28,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.mapSaver
@@ -254,7 +255,14 @@ private fun FormButtons(
             label = stringResource(if (ui.adding) R.string.onboarding_working else R.string.onboarding_save_load),
             onClick = {
                 if (!working) {
-                    viewModel.saveAndSync(details.draft(defaultName), onSetup = onSetup) { ok -> if (ok) onFinished() }
+                    viewModel.saveAndSync(
+                        details.draft(defaultName),
+                        onSetup = onSetup,
+                        onDone = { ok, storedId ->
+                            if (storedId != null) details.storedId = storedId
+                            if (ok) onFinished()
+                        },
+                    )
                 }
             },
             enabled = details.canSubmit,
@@ -265,6 +273,8 @@ private fun FormButtons(
 /**
  * What's typed into a form. Editing starts from [existing] and copies onto it, so its id, enabled
  * state, live format and last-sync stamp are kept; a fresh add starts blank (id 0, so save() inserts).
+ * Once a Save has stored it, the form carries on as an edit of [storedId], so saving again after its
+ * channels failed puts the details right on that provider rather than adding a second.
  */
 @Stable
 private class ProviderDetails(private val existing: Source?, val kind: SourceKind) {
@@ -275,6 +285,7 @@ private class ProviderDetails(private val existing: Source?, val kind: SourceKin
     var mac by mutableStateOf(existing?.macAddress.orEmpty())
     var epgUrl by mutableStateOf(existing?.epgUrl.orEmpty())
     var userAgent by mutableStateOf(existing?.userAgent ?: Source.DEFAULT_USER_AGENT)
+    var storedId by mutableLongStateOf(existing?.id ?: 0L)
 
     val canSubmit: Boolean
         get() = url.isNotBlank() &&
@@ -285,6 +296,7 @@ private class ProviderDetails(private val existing: Source?, val kind: SourceKin
             }
 
     fun draft(defaultName: String): Source = (existing ?: Source(name = "", kind = kind, url = "")).copy(
+        id = storedId,
         name = name.ifBlank { defaultName },
         kind = kind,
         url = url,
@@ -307,6 +319,7 @@ private class ProviderDetails(private val existing: Source?, val kind: SourceKin
                     "mac" to it.mac,
                     "epgUrl" to it.epgUrl,
                     "userAgent" to it.userAgent,
+                    "storedId" to it.storedId,
                 )
             },
             restore = { saved ->
@@ -318,6 +331,7 @@ private class ProviderDetails(private val existing: Source?, val kind: SourceKin
                     mac = saved["mac"] as String
                     epgUrl = saved["epgUrl"] as String
                     userAgent = saved["userAgent"] as String
+                    storedId = saved["storedId"] as Long
                 }
             },
         )

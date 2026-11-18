@@ -73,6 +73,35 @@ class SourcesSaveTest {
     }
 
     @Test
+    fun `a later provider whose channels fail stays as one copy, which saving it again corrected loads`() {
+        runBlocking {
+            graph.sourceRepository.save(PANEL_SOURCE.copy(id = 0, name = "First", lastCatalogSyncMillis = 1))
+            panel.replies[""] = """{"user_info": {"status": "Active"}}"""
+            panel.replies["v/get_live_streams"] = """[{"stream_id": 1, "name": "BBC One"}]"""
+            val viewModel = SourcesViewModel(app, graph)
+            val wrong = PANEL_SOURCE.copy(id = 0, name = "Second", username = "w")
+
+            val stored = save(viewModel, wrong).storedId!!
+            save(viewModel, wrong.copy(id = stored))
+            val again = save(viewModel, wrong.copy(id = stored, username = "v"))
+
+            assertThat(again.loaded).isTrue()
+            val sources = graph.sourceRepository.all()
+            assertThat(sources.map { it.name }).containsExactly("First", "Second")
+            assertThat(sources.single { it.name == "Second" }.lastCatalogSyncMillis).isGreaterThan(0L)
+        }
+    }
+
+    private class Saved(val storedId: Long?, val loaded: Boolean)
+
+    /** Saves [draft] as the Add provider form's Save does, and waits for its channels to load or fail. */
+    private suspend fun save(viewModel: SourcesViewModel, draft: Source): Saved {
+        val done = CompletableDeferred<Saved>()
+        viewModel.saveAndSync(draft, onDone = { loaded, storedId -> done.complete(Saved(storedId, loaded)) })
+        return withContext(Dispatchers.Default) { withTimeout(5_000) { done.await() } }
+    }
+
+    @Test
     fun `editing a provider keeps the time zone its panel last gave, which catch-up asks in`() {
         runBlocking {
             val id = graph.sourceRepository.save(PANEL_SOURCE.copy(id = 0, serverTimeZone = "Europe/Amsterdam"))

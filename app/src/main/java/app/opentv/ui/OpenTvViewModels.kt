@@ -250,13 +250,15 @@ class SourcesViewModel @JvmOverloads constructor(
      * [onChannels] hears either way once the channels are in (null) or why they didn't load.
      * Without [keepIfFails], a new provider whose channels don't load is removed again: the phone
      * puts the login right and sends it again, which would otherwise save a second one.
+     * [onDone] hears whether the channels loaded, and the id of the provider it kept, if it kept one:
+     * a form left open after a failed load saves that row again rather than adding another.
      */
     fun saveAndSync(
         draft: Source,
         keepIfFails: Boolean = true,
         onSetup: () -> Unit = {},
         onChannels: (failure: String?) -> Unit = {},
-        onDone: (Boolean) -> Unit = {},
+        onDone: (loaded: Boolean, storedId: Long?) -> Unit = { _, _ -> },
     ) {
         viewModelScope.launch {
             _ui.update {
@@ -277,7 +279,7 @@ class SourcesViewModel @JvmOverloads constructor(
                 val failed = messages.of(RefreshMessages.Step.SaveFailed)
                 _ui.update { it.copy(adding = false, syncMessage = failed) }
                 onChannels(failed)
-                onDone(false)
+                onDone(false, null)
                 return@launch
             }
             if (first) {
@@ -298,7 +300,8 @@ class SourcesViewModel @JvmOverloads constructor(
             _ui.update { it.copy(syncMessage = messages.of(RefreshMessages.Step.LoadingChannels)) }
             val outcome = refresh.refresh(CatalogueRefresh.Trigger.ProviderAdded(saved))
             val failure = (outcome as? CatalogueRefresh.Outcome.AddFailed)?.reason
-            if (failure != null && !keepIfFails && draft.id == 0L) graph.catalogRepository.deleteSource(saved.id)
+            val removed = failure != null && !keepIfFails && draft.id == 0L
+            if (removed) graph.catalogRepository.deleteSource(saved.id)
             _ui.update {
                 it.copy(
                     adding = false,
@@ -307,7 +310,7 @@ class SourcesViewModel @JvmOverloads constructor(
                 )
             }
             onChannels(failure?.sentence)
-            onDone(outcome is CatalogueRefresh.Outcome.ChannelsLoaded)
+            onDone(outcome is CatalogueRefresh.Outcome.ChannelsLoaded, saved.id.takeUnless { removed })
         }
     }
 
