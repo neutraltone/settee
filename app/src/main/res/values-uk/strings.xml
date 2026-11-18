@@ -339,4 +339,6 @@
     <string name="error_opensubtitles_sign_in">OpenSubtitles не прийняв це ім\'я користувача або пароль. Перевірте їх і спробуйте ще раз.</string>
     <string name="error_opensubtitles_token_tv">OpenSubtitles вийшов з облікового запису на цьому телевізорі. Увійдіть знову в Налаштуваннях.</string>
     <string name="error_opensubtitles_token_device">OpenSubtitles вийшов з облікового запису на цьому пристрої. Увійдіть знову в Налаштуваннях.</string>
+    <string name="error_not_a_guide">Ця адреса не програма передач. Перевірте, чи посилання правильне, або увійдіть у мережу Wi-Fi, якщо вона просить.</string>
+    <string name="settings_guide_bad_address">Це не вебадреса. Перевірте, чи її введено так, як у посиланні на програму, наприклад example.com/guide.xml.</string>
 </resources>

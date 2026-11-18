@@ -339,4 +339,6 @@
     <string name="error_opensubtitles_sign_in">OpenSubtitles no ha aceptado ese usuario o contraseña. Revísalos y vuelve a intentarlo.</string>
     <string name="error_opensubtitles_token_tv">OpenSubtitles ha cerrado la sesión de esta tele. Vuelve a iniciar sesión en Ajustes.</string>
     <string name="error_opensubtitles_token_device">OpenSubtitles ha cerrado la sesión de este dispositivo. Vuelve a iniciar sesión en Ajustes.</string>
+    <string name="error_not_a_guide">Esa dirección no es una guía. Comprueba que sea el enlace correcto, o inicia sesión en tu Wi-Fi si te lo pide.</string>
+    <string name="settings_guide_bad_address">Eso no es una dirección web. Comprueba que esté escrita como la muestra el enlace de la guía, por ejemplo example.com/guide.xml.</string>
 </resources>

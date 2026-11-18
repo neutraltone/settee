@@ -22,6 +22,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import app.opentv.R
 import app.opentv.core.ViewerError
 import app.opentv.data.model.EpgFeed
+import app.opentv.data.repo.EpgRepository
 import app.opentv.ui.EpgViewModel
 import app.opentv.ui.design.ErrorMessage
 import app.opentv.ui.design.ListRow
@@ -46,6 +47,7 @@ internal fun GuidePane(viewModel: EpgViewModel = viewModel()) {
     val on = stringResource(R.string.settings_row_on)
     val off = stringResource(R.string.settings_row_off)
     val ownGuide = stringResource(R.string.settings_guide_own_name)
+    val badAddress = stringResource(R.string.settings_guide_bad_address)
 
     ListRow(
         stringResource(if (ui.syncing) R.string.settings_guide_updating else R.string.settings_guide_update),
@@ -98,12 +100,18 @@ internal fun GuidePane(viewModel: EpgViewModel = viewModel()) {
             title = stringResource(R.string.settings_guide_own_address),
             initial = "",
             keyboardType = KeyboardType.Uri,
-            onSave = { url ->
+            onSave = { typed ->
                 adding = false
                 // Named by its host: the full address is the row's label otherwise, and a
                 // provider's guide link can carry the login. One with no host gets a plain name,
                 // since a blank one would be saved as the address.
-                viewModel.addCustom(hostOnly(url).ifEmpty { ownGuide }, url)
+                // The refusal below has already turned down an address this can't make one of.
+                EpgRepository.guideAddress(typed)?.let { url ->
+                    viewModel.addCustom(hostOnly(url).ifEmpty { ownGuide }, url)
+                }
+            },
+            refusal = { typed ->
+                badAddress.takeIf { typed.isNotBlank() && EpgRepository.guideAddress(typed) == null }
             },
             onCancel = { adding = false },
         )

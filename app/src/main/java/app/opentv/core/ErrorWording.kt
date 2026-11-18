@@ -8,6 +8,9 @@ package app.opentv.core
 import android.content.Context
 import androidx.annotation.StringRes
 import app.opentv.R
+import app.opentv.data.parser.NotAGuideException
+import app.opentv.data.remote.GuideAddressException
+import app.opentv.data.remote.GuideDownloadException
 import app.opentv.data.remote.OpenSubtitlesFailure
 import app.opentv.data.remote.ProviderException
 import app.opentv.data.remote.ProviderException.Problem
@@ -66,6 +69,21 @@ class ErrorWording(private val context: Context, private val onTelevision: Boole
         resources.getString(sentence),
         ViewerError.detailOf(codeOf(error), (error as? HttpStatus)?.status?.let { "HTTP $it" }),
     )
+
+    /**
+     * A guide's [error] in words. The provider's own guide ([fromProvider]) is worded as the provider
+     * is, so a login it turns down says so; any other guide has no provider to blame.
+     */
+    fun ofGuide(error: Throwable, fromProvider: Boolean): ViewerError = when {
+        error is NotAGuideException || error is GuideAddressException -> of(error, R.string.error_not_a_guide)
+        fromProvider -> ofProvider(error, R.string.error_guide)
+        // Only the status: the exception's type says nothing the status doesn't.
+        error is GuideDownloadException -> ViewerError(
+            resources.getString(if (error.status in NOT_A_GUIDE) R.string.error_not_a_guide else R.string.error_guide),
+            ViewerError.detailOf("HTTP ${error.status}"),
+        )
+        else -> of(error, R.string.error_guide)
+    }
 
     private fun ofProvider(error: ProviderException, @StringRes fallback: Int): ViewerError {
         val status = error.status
@@ -178,6 +196,17 @@ class ErrorWording(private val context: Context, private val onTelevision: Boole
     companion object {
         private const val TOO_MANY_REQUESTS = 429
         private val SERVER_ERRORS = 500..599
+
+        /**
+         * A guide's address answering one of these is wrong or dead: trying again won't help. A
+         * login a guide wants is one no setting here can give it, so 401 and 403 are the same.
+         */
+        private val NOT_A_GUIDE = setOf(
+            HttpURLConnection.HTTP_NOT_FOUND,
+            HttpURLConnection.HTTP_GONE,
+            HttpURLConnection.HTTP_UNAUTHORIZED,
+            HttpURLConnection.HTTP_FORBIDDEN,
+        )
 
         /** An exception's type as the detail line shows it: "UnknownHost" for UnknownHostException. */
         fun codeOf(error: Throwable): String = error.javaClass.simpleName.removeSuffix("Exception")

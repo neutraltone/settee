@@ -339,4 +339,6 @@
     <string name="error_opensubtitles_sign_in">OpenSubtitles nije prihvatio to korisničko ime ili lozinku. Provjerite ih i pokušajte ponovno.</string>
     <string name="error_opensubtitles_token_tv">OpenSubtitles je odjavio ovaj televizor. Ponovno se prijavite u Postavkama.</string>
     <string name="error_opensubtitles_token_device">OpenSubtitles je odjavio ovaj uređaj. Ponovno se prijavite u Postavkama.</string>
+    <string name="error_not_a_guide">Ta adresa nije vodič. Provjerite je li poveznica ispravna ili se prijavite na Wi-Fi ako to traži.</string>
+    <string name="settings_guide_bad_address">To nije web-adresa. Provjerite je li upisana onako kako je prikazuje poveznica vodiča, npr. example.com/guide.xml.</string>
 </resources>

@@ -339,4 +339,6 @@
     <string name="error_opensubtitles_sign_in">OpenSubtitles hat diesen Benutzernamen oder dieses Passwort nicht akzeptiert. Prüfe beides und versuche es erneut.</string>
     <string name="error_opensubtitles_token_tv">OpenSubtitles hat diesen Fernseher abgemeldet. Melde dich in den Einstellungen erneut an.</string>
     <string name="error_opensubtitles_token_device">OpenSubtitles hat dieses Gerät abgemeldet. Melde dich in den Einstellungen erneut an.</string>
+    <string name="error_not_a_guide">Diese Adresse ist kein Programmführer. Überprüfe, ob es der richtige Link ist, oder melde dich im WLAN an, falls es danach fragt.</string>
+    <string name="settings_guide_bad_address">Das ist keine Webadresse. Überprüfe, ob sie so eingegeben ist, wie der Link des Programmführers sie zeigt, etwa example.com/guide.xml.</string>
 </resources>

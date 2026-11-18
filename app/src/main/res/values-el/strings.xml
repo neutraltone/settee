@@ -339,4 +339,6 @@
     <string name="error_opensubtitles_sign_in">Το OpenSubtitles δεν δέχτηκε αυτό το όνομα χρήστη ή τον κωδικό. Ελέγξτε τα και δοκιμάστε ξανά.</string>
     <string name="error_opensubtitles_token_tv">Το OpenSubtitles αποσύνδεσε αυτή την τηλεόραση. Συνδεθείτε ξανά από τις Ρυθμίσεις.</string>
     <string name="error_opensubtitles_token_device">Το OpenSubtitles αποσύνδεσε αυτή τη συσκευή. Συνδεθείτε ξανά από τις Ρυθμίσεις.</string>
+    <string name="error_not_a_guide">Αυτή η διεύθυνση δεν είναι οδηγός προγράμματος. Ελέγξτε ότι είναι ο σωστός σύνδεσμος ή συνδεθείτε στο Wi-Fi, αν σας το ζητά.</string>
+    <string name="settings_guide_bad_address">Αυτή δεν είναι διεύθυνση ιστού. Ελέγξτε ότι είναι γραμμένη όπως τη δείχνει ο σύνδεσμος του οδηγού, π.χ. example.com/guide.xml.</string>
 </resources>

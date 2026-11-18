@@ -339,4 +339,6 @@
     <string name="error_opensubtitles_sign_in">لم يقبل OpenSubtitles اسم المستخدم أو كلمة المرور. تحقّق منهما وحاول مرة أخرى.</string>
     <string name="error_opensubtitles_token_tv">سجّل OpenSubtitles خروج هذا التلفاز. سجّل الدخول مرة أخرى في الإعدادات.</string>
     <string name="error_opensubtitles_token_device">سجّل OpenSubtitles خروج هذا الجهاز. سجّل الدخول مرة أخرى في الإعدادات.</string>
+    <string name="error_not_a_guide">هذا العنوان ليس دليل برامج. تحقق من أنه الرابط الصحيح، أو سجّل الدخول إلى شبكة Wi-Fi إذا طُلب منك ذلك.</string>
+    <string name="settings_guide_bad_address">هذا ليس عنوان ويب. تحقق من كتابته كما يظهر في رابط الدليل، مثل example.com/guide.xml.</string>
 </resources>

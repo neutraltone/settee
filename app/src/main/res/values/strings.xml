@@ -200,6 +200,7 @@
     <string name="settings_guide_updating">Updating the guide…</string>
     <string name="settings_guide_add_own">Add your own guide</string>
     <string name="settings_guide_own_address">Your guide\'s address</string>
+    <string name="settings_guide_bad_address">That isn\'t a web address. Check it\'s typed as the guide\'s link shows it, such as example.com/guide.xml.</string>
     <string name="settings_guide_own_name">Your own guide</string>
     <string name="settings_guide_use">Use this guide</string>
     <string name="settings_row_channels">Show, hide and star channels</string>
@@ -758,6 +759,7 @@
     <string name="error_not_a_panel">That address didn\'t answer like an IPTV provider. Check the address and port in your provider\'s details, or sign in to your Wi-Fi if it asks.</string>
     <string name="error_device_refused">Your provider didn\'t accept these details. Check your provider\'s details in Settings.</string>
     <string name="error_guide">Couldn\'t download this guide. Try again in a moment.</string>
+    <string name="error_not_a_guide">That address isn\'t a guide. Check it\'s the right link, or sign in to your Wi-Fi if it asks.</string>
     <string name="error_guide_empty">This guide downloaded, but had no programmes in it. Check it\'s the right link.</string>
     <string name="test_ok_xtream">Your login works.</string>
     <string name="test_ok_xtream_user">Signed in as %1$s.</string>

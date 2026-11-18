@@ -56,6 +56,9 @@ class FakePanel(vararg initial: Pair<String, String>) {
 
     private val holds = java.util.concurrent.ConcurrentHashMap<String, Hold>()
 
+    /** Actions whose replies are sent gzipped, with nothing in the headers to say so. */
+    val gzipped: MutableSet<String> = java.util.Collections.synchronizedSet(mutableSetOf())
+
     /** Actions whose replies don't say how big they are, as a server streaming them wouldn't. */
     val unsized: MutableSet<String> = java.util.Collections.synchronizedSet(mutableSetOf())
 
@@ -111,7 +114,7 @@ class FakePanel(vararg initial: Pair<String, String>) {
             .code(status ?: 200)
             .message(if (status == null) "OK" else "Error")
             .body(
-                body.toResponseBody("application/json".toMediaType()).let { sized ->
+                body.encoded(gzip = action in gzipped).let { sized ->
                     if (body == "!oom") {
                         OutOfMemorySource().buffer().asResponseBody("application/json".toMediaType())
                     } else if (action !in unsized) {
@@ -149,3 +152,10 @@ val STALKER_SOURCE =
         url = "http://example.com",
         macAddress = "00:1A:79:00:00:01",
     )
+
+private fun String.encoded(gzip: Boolean): okhttp3.ResponseBody {
+    if (!gzip) return toResponseBody("application/json".toMediaType())
+    val bytes = java.io.ByteArrayOutputStream()
+    java.util.zip.GZIPOutputStream(bytes).use { it.write(toByteArray()) }
+    return bytes.toByteArray().toResponseBody("application/octet-stream".toMediaType())
+}

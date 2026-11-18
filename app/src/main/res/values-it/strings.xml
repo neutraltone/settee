@@ -339,4 +339,6 @@
     <string name="error_opensubtitles_sign_in">OpenSubtitles non ha accettato quel nome utente o quella password. Controllali e riprova.</string>
     <string name="error_opensubtitles_token_tv">OpenSubtitles ha disconnesso questa TV. Accedi di nuovo nelle Impostazioni.</string>
     <string name="error_opensubtitles_token_device">OpenSubtitles ha disconnesso questo dispositivo. Accedi di nuovo nelle Impostazioni.</string>
+    <string name="error_not_a_guide">Quell\'indirizzo non è una guida. Controlla che sia il link giusto, oppure accedi al Wi-Fi se te lo chiede.</string>
+    <string name="settings_guide_bad_address">Questo non è un indirizzo web. Controlla che sia scritto come lo mostra il link della guida, ad esempio example.com/guide.xml.</string>
 </resources>

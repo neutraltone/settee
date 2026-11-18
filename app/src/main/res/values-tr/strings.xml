@@ -339,4 +339,6 @@
     <string name="error_opensubtitles_sign_in">OpenSubtitles bu kullanıcı adını veya şifreyi kabul etmedi. Kontrol edip tekrar deneyin.</string>
     <string name="error_opensubtitles_token_tv">OpenSubtitles bu televizyonun oturumunu kapattı. Ayarlar\'dan tekrar giriş yapın.</string>
     <string name="error_opensubtitles_token_device">OpenSubtitles bu cihazın oturumunu kapattı. Ayarlar\'dan tekrar giriş yapın.</string>
+    <string name="error_not_a_guide">Bu adres bir rehber değil. Doğru bağlantı olduğunu kontrol edin veya Wi-Fi isterse oturum açın.</string>
+    <string name="settings_guide_bad_address">Bu bir web adresi değil. Rehberin bağlantısında göründüğü gibi yazıldığını kontrol edin, örneğin example.com/guide.xml.</string>
 </resources>

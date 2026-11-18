@@ -25,6 +25,8 @@ import app.opentv.data.model.Source
 import app.opentv.data.parser.ChannelNameNormalizer
 import app.opentv.data.parser.XmltvParser
 import app.opentv.data.remote.CountingInputStream
+import app.opentv.data.remote.GuideAddressException
+import app.opentv.data.remote.GuideDownloadException
 import app.opentv.data.remote.XtreamApi
 import java.io.BufferedInputStream
 import java.io.InputStream
@@ -36,6 +38,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.ResponseBody
@@ -148,13 +151,14 @@ class EpgRepository(
 
     /**
      * [name] must not be blank: it used to fall back to the address, which can carry the login and
-     * would then be the guide's label on screen (#487).
+     * would then be the guide's label on screen (#487). [url] is saved as [guideAddress] has it, and
+     * not at all when that refuses it.
      */
     suspend fun addCustomFeed(name: String, url: String) {
         require(name.isNotBlank()) { "a custom guide needs a name" }
-        val trimmed = url.trim()
-        if (trimmed.isEmpty() || feedDao.byUrl(trimmed) != null) return
-        feedDao.insert(EpgFeed(name = name.trim(), url = trimmed, enabled = true))
+        val address = guideAddress(url) ?: return
+        if (feedDao.byUrl(address) != null) return
+        feedDao.insert(EpgFeed(name = name.trim(), url = address, enabled = true))
     }
 
     suspend fun setFeedEnabled(feed: EpgFeed, enabled: Boolean) {
@@ -455,7 +459,7 @@ class EpgRepository(
                 // is the one to report, and the rest of the feeds still get their turn.
                 Log.w(TAG, "Feed '${feed.name}': couldn't save the channels read before it failed", ignored)
             }
-            return FeedResult.Failed(wording.of(e, R.string.error_guide))
+            return FeedResult.Failed(wording.ofGuide(e, fromProvider = feed.providerSourceId != null))
         }
     }
 
@@ -479,10 +483,11 @@ class EpgRepository(
                 api.openEpg(source)
             }
             feed.url != null -> {
-                val response = http.newCall(Request.Builder().url(feed.url).build()).execute()
+                val url = feed.url.toHttpUrlOrNull() ?: throw GuideAddressException()
+                val response = http.newCall(Request.Builder().url(url).build()).execute()
                 if (!response.isSuccessful) {
                     response.close()
-                    throw IllegalStateException("Guide download failed (HTTP ${response.code}).")
+                    throw GuideDownloadException(response.code)
                 }
                 response.body
             }
@@ -585,6 +590,17 @@ class EpgRepository(
 
     companion object {
         private const val TAG = "EpgRepository"
+
+        /**
+         * [typed] as a guide's address, with `http://` in front when it has no scheme, since that's
+         * how most are typed on a remote; null when it still isn't a web address. One that won't
+         * parse would fail every download with nothing a viewer could make of it (#471).
+         */
+        fun guideAddress(typed: String): String? {
+            val trimmed = typed.trim()
+            val address = if ("://" in trimmed) trimmed else "http://$trimmed"
+            return address.takeIf { it.toHttpUrlOrNull() != null }
+        }
 
         /** Writes per transaction. Large enough to be fast, small enough not to hold WAL open. */
         const val BATCH_SIZE = 500
