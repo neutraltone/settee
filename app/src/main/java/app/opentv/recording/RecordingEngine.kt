@@ -52,13 +52,26 @@ class RecordingEngine(
      */
     private val bookingLock = Mutex()
 
-    /** Start recording [channel] now. [programme], when given, names and time-bounds the capture. */
+    /**
+     * Starting checks for a capture already on the channel and then inserts one, and a double press
+     * of Record arrives before the first insert lands, so without this both pass the check and open
+     * two connections, which a one-connection line refuses or bans (#498). Not [bookingLock]: a rule's
+     * booking holds that while it starts an airing that's on now, and a [Mutex] can't be re-entered.
+     */
+    private val startLock = Mutex()
+
+    /**
+     * Start recording [channel] now, or give the id of the recording it's already capturing.
+     * [programme], when given, names and time-bounds the capture.
+     */
     suspend fun startChannel(
         channel: Channel,
         programme: Programme? = null,
         ruleId: Long? = null,
         profileId: Long = settings.activeProfileId.value,
-    ): Long {
+    ): Long = startLock.withLock {
+        // One Quality's id: HD and SD of a channel are different ids, so both can still record.
+        repo.recordingOn(channel.id)?.let { return@withLock it.id }
         val source = sources.byId(channel.sourceId)
         val ua = source?.userAgent ?: Source.DEFAULT_USER_AGENT
         val now = clock()
@@ -88,7 +101,7 @@ class RecordingEngine(
         )
         val id = repo.insert(recording)
         RecordingService.start(appContext, id)
-        return id
+        id
     }
 
     /** Stop an in-progress recording. */

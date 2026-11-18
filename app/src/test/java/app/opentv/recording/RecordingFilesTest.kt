@@ -7,17 +7,7 @@ package app.opentv.recording
 
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
-import app.opentv.PANEL_SOURCE
-import app.opentv.TestCatalog
-import app.opentv.core.AppSettings
-import app.opentv.core.ErrorWording
-import app.opentv.data.model.Channel
 import app.opentv.data.model.RecordingStatus
-import app.opentv.data.remote.StalkerApi
-import app.opentv.data.remote.XtreamApi
-import app.opentv.data.repo.EpgRepository
-import app.opentv.data.repo.RecordingRepository
-import app.opentv.data.repo.SourceRepository
 import com.google.common.truth.Truth.assertThat
 import java.io.File
 import kotlinx.coroutines.test.runTest
@@ -34,45 +24,10 @@ import org.robolectric.annotation.Config
 class RecordingFilesTest {
 
     private val context: Context = ApplicationProvider.getApplicationContext()
-    private val test = TestCatalog(context)
-    private val db = test.db
-    private val recordings = RecordingRepository(db.recordings(), db.seriesRules())
-    private val engine = RecordingEngine(
-        context,
-        recordings,
-        SourceRepository(db.sources(), XtreamApi(test.panel.http), StalkerApi(test.panel.http)),
-        AppSettings.get(context),
-        EpgRepository(
-            programmeDao = db.programmes(),
-            refreshDao = db.guideRefresh(),
-            feedDao = db.epgFeeds(),
-            aliasDao = db.epgAliases(),
-            channelDao = db.channels(),
-            sourceDao = db.sources(),
-            api = XtreamApi(test.panel.http),
-            http = test.panel.http,
-            wording = ErrorWording(context, onTelevision = false),
-            selfEnabledGuide = EpgRepository.SelfEnabledGuide.InMemory(),
-        ),
-        test.lineup,
-        ErrorWording(context, onTelevision = false),
-        clock = { NOW },
-    )
-
-    private val bbcOne = Channel(
-        id = 7,
-        sourceId = PANEL_SOURCE.id,
-        streamId = "7",
-        name = "UK| BBC One HD",
-        displayName = "BBC One",
-        groupKey = "uk:bbcone",
-        qualityRank = 200,
-        categoryId = null,
-        logoUrl = null,
-        epgChannelId = null,
-        number = null,
-        streamUrl = "http://example.com/live/u/p/7.ts",
-    )
+    private val fixture = RecordingFixture(context)
+    private val recordings = fixture.recordings
+    private val engine = fixture.engine
+    private val bbcOne = fixture.bbcOne
 
     @Before
     fun emptyRecordingsFolder() {
@@ -80,12 +35,13 @@ class RecordingFilesTest {
     }
 
     @After
-    fun close() = test.close()
+    fun close() = fixture.close()
 
     @Test
     fun `recording a channel twice in one minute keeps both recordings`() = runTest {
         val first = engine.startChannel(bbcOne)
         engine.openSink(recordings.byId(first)!!).apply { output.write("first".toByteArray()) }.close()
+        recordings.setStatus(first, RecordingStatus.COMPLETED)
         val second = engine.startChannel(bbcOne)
         engine.openSink(recordings.byId(second)!!).apply { output.write("second".toByteArray()) }.close()
 
@@ -99,17 +55,19 @@ class RecordingFilesTest {
     @Test
     fun `deleting one of two recordings of one file keeps the file until the last goes`() = runTest {
         val file = File(RecordingStorage.internalDir(context), "BBC One - 2026-11-15 1430.ts").apply { writeText("x") }
-        val first = recordings.byId(engine.startChannel(bbcOne))!!.copy(status = RecordingStatus.COMPLETED)
-        val second = recordings.byId(engine.startChannel(bbcOne))!!.copy(status = RecordingStatus.COMPLETED)
+        val first = recordings.byId(engine.startChannel(bbcOne))!!
+        recordings.setStatus(first.id, RecordingStatus.COMPLETED)
+        val second = recordings.byId(engine.startChannel(bbcOne))!!
+        recordings.setStatus(second.id, RecordingStatus.COMPLETED)
         recordings.setFilePath(first.id, file.path)
         recordings.setFilePath(second.id, file.path)
 
-        engine.delete(first.copy(filePath = file.path))
+        engine.delete(recordings.byId(first.id)!!)
 
         assertThat(recordings.byId(first.id)).isNull()
         assertThat(file.exists()).isTrue()
 
-        engine.delete(second.copy(filePath = file.path))
+        engine.delete(recordings.byId(second.id)!!)
 
         assertThat(recordings.byId(second.id)).isNull()
         assertThat(file.exists()).isFalse()
@@ -128,9 +86,5 @@ class RecordingFilesTest {
         assertThat(recordings.byId(id)!!.filePath).isEqualTo(planned)
         assertThat(RecordingStorage.internalDir(context).list()).asList().containsExactly(File(planned).name)
         assertThat(File(planned).readText()).isEqualTo("again")
-    }
-
-    private companion object {
-        const val NOW = 1_763_217_000_000L
     }
 }
