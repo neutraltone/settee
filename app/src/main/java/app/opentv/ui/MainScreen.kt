@@ -52,6 +52,7 @@ import app.opentv.ui.design.Text
 import app.opentv.ui.design.percentText
 import app.opentv.ui.recordings.RecordingsScreen
 import app.opentv.ui.vod.MoviesScreen
+import app.opentv.ui.vod.ProvidersCarry
 import app.opentv.ui.vod.SeriesScreen
 
 /** The main screen's tabs, each an item in the rail ([MainShell]). */
@@ -81,7 +82,7 @@ internal fun visibleTabs(liveEnabled: Boolean, moviesEnabled: Boolean, seriesEna
 @Composable
 fun MainScreen(
     isTelevision: Boolean,
-    hasSources: Boolean,
+    providers: ProvidersCarry,
     isSyncing: Boolean,
     loadFailure: ProviderFailure? = null,
     onPlayChannel: (Channel) -> Unit,
@@ -154,7 +155,7 @@ fun MainScreen(
                 )
                 Tab.LIVE -> LiveScreen(
                     isTelevision = isTelevision,
-                    hasSources = hasSources,
+                    hasSources = providers.hasProvider,
                     isSyncing = isSyncing,
                     loadFailure = loadFailure,
                     onPlayChannel = onPlayChannel,
@@ -166,16 +167,20 @@ fun MainScreen(
                 Tab.MOVIES -> MoviesScreen(
                     onOpenMovie = onOpenMovie,
                     onResume = onResume,
-                    hasSources = hasSources,
+                    providers = providers,
                     isSyncing = isSyncing,
                     onEditProvider = onEditProvider,
+                    onAddProvider = onAddSource,
+                    onOpenSettings = onOpenSettings,
                 )
                 Tab.SHOWS -> SeriesScreen(
                     onOpenSeries = onOpenSeries,
                     onResume = onResume,
-                    hasSources = hasSources,
+                    providers = providers,
                     isSyncing = isSyncing,
                     onEditProvider = onEditProvider,
+                    onAddProvider = onAddSource,
+                    onOpenSettings = onOpenSettings,
                 )
                 Tab.RECORDINGS -> RecordingsScreen(onPlay = onPlayRecording)
             }

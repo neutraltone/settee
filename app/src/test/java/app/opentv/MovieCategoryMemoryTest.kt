@@ -36,6 +36,7 @@ import app.opentv.data.model.Series
 import app.opentv.data.model.StreamKind
 import app.opentv.ui.design.SetteeTheme
 import app.opentv.ui.vod.MoviesScreen
+import app.opentv.ui.vod.ProvidersCarry
 import app.opentv.ui.vod.SeriesScreen
 import kotlinx.coroutines.runBlocking
 import org.junit.After
@@ -133,7 +134,7 @@ class MovieCategoryMemoryTest {
                     MoviesScreen(
                         onOpenMovie = {},
                         onResume = {},
-                        hasSources = false,
+                        providers = ProvidersCarry.NO_PROVIDER,
                         isSyncing = false,
                         viewModel = viewModel,
                     )
@@ -179,7 +180,7 @@ class MovieCategoryMemoryTest {
                     SeriesScreen(
                         onOpenSeries = {},
                         onResume = {},
-                        hasSources = false,
+                        providers = ProvidersCarry.NO_PROVIDER,
                         isSyncing = false,
                         viewModel = viewModel,
                     )

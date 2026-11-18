@@ -43,6 +43,7 @@ import app.opentv.ui.MainShell
 import app.opentv.ui.Tab
 import app.opentv.ui.visibleTabs
 import app.opentv.ui.vod.MoviesScreen
+import app.opentv.ui.vod.ProvidersCarry
 import app.opentv.ui.vod.SeriesScreen
 import coil.size.Size
 import com.google.common.truth.Truth.assertThat
@@ -139,7 +140,7 @@ class VodBrowseTest {
                 MoviesScreen(
                     onOpenMovie = {},
                     onResume = {},
-                    hasSources = false,
+                    providers = ProvidersCarry.NO_PROVIDER,
                     isSyncing = false,
                     viewModel = viewModel,
                 )
@@ -396,7 +397,7 @@ class VodBrowseTest {
                 modifier = Modifier.fillMaxSize(),
             ) { _, _, _ ->
                 SeriesScreen(onOpenSeries = {
-                }, onResume = {}, hasSources = false, isSyncing = false, viewModel = viewModel)
+                }, onResume = {}, providers = ProvidersCarry.NO_PROVIDER, isSyncing = false, viewModel = viewModel)
             }
         }
         awaitRecommended { !viewModel.recommendingSeries.value && viewModel.recommendedSeries.value.isNotEmpty() }
@@ -499,7 +500,7 @@ class VodBrowseTest {
                 modifier = Modifier.fillMaxSize(),
             ) { _, _, _ ->
                 SeriesScreen(onOpenSeries = {
-                }, onResume = {}, hasSources = false, isSyncing = false, viewModel = viewModel)
+                }, onResume = {}, providers = ProvidersCarry.NO_PROVIDER, isSyncing = false, viewModel = viewModel)
             }
         }
         compose.waitUntilAtLeastOneExists(cover("Slow Horses"), 5_000)
