@@ -15,6 +15,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.InputMode
 import androidx.compose.ui.platform.LocalInputModeManager
 import androidx.compose.ui.test.junit4.ComposeContentTestRule
+import androidx.compose.ui.test.junit4.StateRestorationTester
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.platform.app.InstrumentationRegistry
 import app.opentv.pairing.ServerSecrets
@@ -66,7 +67,19 @@ fun ComposeContentTestRule.setTvContent(content: @Composable () -> Unit) {
     setTvScreen(content)
 }
 
-private fun ComposeContentTestRule.setTvScreen(content: @Composable () -> Unit) = setContent {
+/**
+ * [setTvContent] for a test of what survives Android rebuilding the screen, as it does when a phone
+ * turns round: [StateRestorationTester.emulateSavedInstanceStateRestore] rebuilds it.
+ */
+fun StateRestorationTester.setTvContent(content: @Composable () -> Unit) {
+    InstrumentationRegistry.getInstrumentation().setInTouchMode(false)
+    setContent { TvScreen(content) }
+}
+
+private fun ComposeContentTestRule.setTvScreen(content: @Composable () -> Unit) = setContent { TvScreen(content) }
+
+@Composable
+private fun TvScreen(content: @Composable () -> Unit) {
     val inputMode = LocalInputModeManager.current
     SideEffect { inputMode.requestInputMode(InputMode.Keyboard) }
     SetteeTheme {

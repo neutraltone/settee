@@ -5,9 +5,14 @@
  */
 package app.opentv
 
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavController
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
@@ -33,17 +38,14 @@ fun NavController.openEditProvider(sourceId: Long) = navigate(Routes.editSource(
  * a test can build them with the real screens and check where each Add leads.
  */
 fun NavGraphBuilder.providerRoutes(nav: NavController, sources: SourcesViewModel) {
-    composable(Routes.ADD_SOURCE) {
+    composable(Routes.ADD_SOURCE) { entry ->
+        LeavesOnceSaved(sources, nav, entry, isMine = { it.added }) { leaveAddPage() }
         AddSourceScreen(
             viewModel = sources,
-            onFinished = {
-                nav.navigate(Routes.MAIN) {
-                    popUpTo(Routes.ADD_SOURCE) { inclusive = true }
-                }
-            },
+            onFinished = { nav.ifStillOn(entry) { leaveAddPage() } },
             // The first provider's Setup is already loading; OpenSubtitles' step, when there is one,
-            // comes first, in front of it.
-            onSetup = { nav.navigate(firstStep(sources)) },
+            // comes first, in front of it. Not once the viewer has left: the save carries on without it.
+            onSetup = { nav.ifStillOn(entry) { navigate(firstStep(sources)) } },
         )
     }
 
@@ -78,11 +80,56 @@ fun NavGraphBuilder.providerRoutes(nav: NavController, sources: SourcesViewModel
 
     composable(Routes.EDIT_SOURCE) { entry ->
         val sourceId = entry.arguments?.getString("sourceId")?.toLongOrNull() ?: return@composable
+        LeavesOnceSaved(sources, nav, entry, isMine = { !it.added && it.sourceId == sourceId }) { popBackStack() }
         AddSourceScreen(
             viewModel = sources,
             editingSourceId = sourceId,
-            onFinished = { nav.popBackStack() },
+            onFinished = { nav.ifStillOn(entry) { popBackStack() } },
         )
+    }
+}
+
+/**
+ * Back to the screen the add page was opened from, as a screen opened from a row returns to it
+ * (LOOK.md). Pushing Home instead would leave a second main screen over the first. Home only when
+ * the page has nothing under it.
+ */
+private fun NavController.leaveAddPage() {
+    if (previousBackStackEntry != null) {
+        popBackStack()
+    } else {
+        navigate(Routes.MAIN) { popUpTo(Routes.ADD_SOURCE) { inclusive = true } }
+    }
+}
+
+/**
+ * Leaves the provider page shown by [entry], by [leave], once a save [isMine] has its channels in.
+ * Watched here rather than handed to the save as a callback, which would hold the page and
+ * NavController it started on: a page opened again while the save ran, or rebuilt by a phone
+ * turning round, would never leave. Only while [entry] is on top, so a save that finishes after the
+ * viewer has gone elsewhere takes them nowhere.
+ */
+@Composable
+private fun LeavesOnceSaved(
+    sources: SourcesViewModel,
+    nav: NavController,
+    entry: NavBackStackEntry,
+    isMine: (SourcesViewModel.SavedProvider) -> Boolean,
+    leave: NavController.() -> Unit,
+) {
+    // Saveable, so only a page newly opened forgets a save that finished before it: that one isn't
+    // its to act on. A page rebuilt by a phone turning round still acts on the save it started.
+    var opened by rememberSaveable { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        if (!opened) sources.forgetSaved()
+        opened = true
+        sources.ui.collect { ui ->
+            val saved = ui.saved
+            if (saved != null && isMine(saved)) {
+                sources.forgetSaved()
+                nav.ifStillOn(entry, leave)
+            }
+        }
     }
 }
 

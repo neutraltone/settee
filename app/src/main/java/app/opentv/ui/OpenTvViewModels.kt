@@ -152,9 +152,18 @@ class SourcesViewModel @JvmOverloads constructor(
         val storedSourceId: Long? = null,
         /** Why the first enabled provider whose channels couldn't be downloaded failed, as saved on it. */
         val loadFailure: ProviderFailure? = null,
+        /** The provider whose save has just finished with its channels in, until its page leaves. */
+        val saved: SavedProvider? = null,
     ) {
         val syncing: Boolean get() = adding || refreshing
     }
+
+    /**
+     * A provider saved from its page, added or edited, now its channels are in. The page that saved
+     * it may have been left, or rebuilt by a phone turning round, while the save ran, so it's state
+     * here that whichever page is showing then acts on, not a callback holding the page it started on.
+     */
+    data class SavedProvider(val sourceId: Long, val added: Boolean)
 
     private val _ui = MutableStateFlow(UiState())
     val ui: StateFlow<UiState> = _ui.asStateFlow()
@@ -215,6 +224,9 @@ class SourcesViewModel @JvmOverloads constructor(
      * Forgets the last test and save, so a form doesn't open showing another's. A refresh still
      * running keeps its progress: that's news about now, not about another form.
      */
+    /** Forgets [UiState.saved]: its page has left, or a page opened after it finished mustn't. */
+    fun forgetSaved() = _ui.update { it.copy(saved = null) }
+
     fun clearFormMessages() {
         _ui.update {
             it.copy(
@@ -252,23 +264,30 @@ class SourcesViewModel @JvmOverloads constructor(
     /**
      * Saves, then immediately pulls the channels so the viewer sees them, not a spinner. The first
      * provider, saved while none was, goes through Setup instead: [onSetup] opens its screen as soon
-     * as it's saved, and [onDone] isn't called, since Setup's screen decides where to go next.
+     * as it's saved. Any other, once its channels are in, is [UiState.saved] for its page to leave;
+     * Setup's screen decides where the first goes next.
      * [onChannels] hears either way once the channels are in (null) or why they didn't load.
      * Without [keepIfFails], a new provider whose channels don't load is removed again: the phone
      * puts the login right and sends it again, which would otherwise save a second one.
      * A provider kept other than through Setup becomes [UiState.storedSourceId], so a form left open
-     * after a failed load saves that row again rather than adding another.
+     * after a failed load saves that row again rather than adding another. So [adds] says whether
+     * this came from adding a provider, which a draft's id alone no longer tells.
      */
     fun saveAndSync(
         draft: Source,
         keepIfFails: Boolean = true,
         onSetup: () -> Unit = {},
         onChannels: (failure: ViewerError?) -> Unit = {},
-        onDone: (Boolean) -> Unit = {},
+        adds: Boolean = draft.id == 0L,
     ) {
         viewModelScope.launch {
             _ui.update {
-                it.copy(adding = true, addFailure = null, syncMessage = messages.of(RefreshMessages.Step.SavingSource))
+                it.copy(
+                    adding = true,
+                    addFailure = null,
+                    saved = null,
+                    syncMessage = messages.of(RefreshMessages.Step.SavingSource),
+                )
             }
             // Editing a provider is never the first.
             val existing = if (draft.id == 0L) graph.sourceRepository.all() else null
@@ -285,7 +304,6 @@ class SourcesViewModel @JvmOverloads constructor(
                 val failed = messages.of(RefreshMessages.Step.SaveFailed)
                 _ui.update { it.copy(adding = false, syncMessage = failed) }
                 onChannels(ViewerError(failed))
-                onDone(false)
                 return@launch
             }
             if (first) {
@@ -315,10 +333,11 @@ class SourcesViewModel @JvmOverloads constructor(
                     addFailure = failure,
                     storedSourceId = saved.id.takeUnless { removed },
                     syncMessage = messages.of(outcome),
+                    saved = SavedProvider(saved.id, added = adds)
+                        .takeIf { outcome is CatalogueRefresh.Outcome.ChannelsLoaded },
                 )
             }
             onChannels(failure)
-            onDone(outcome is CatalogueRefresh.Outcome.ChannelsLoaded)
         }
     }
 
