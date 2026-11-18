@@ -162,6 +162,11 @@ order, so the triggers can't drift apart.
   so its panel requests don't overlap another download from that provider.
 - **A VOD download with a login the provider no longer has doesn't run, or count as fresh if it already had.**
 - **`RecordingEngine` books one rule's airings at a time,** because booking checks for a row and then inserts one.
+- **`RecordingEngine` starts one capture per channel id at a time,** so a double press of Record joins the
+  recording already running rather than opening a second connection, which a one-connection line refuses
+  or bans. Each Quality has its own id, so HD and SD still record side by side. It's its own lock, not
+  the booking one: a rule's booking holds that while it starts an airing that's on now, and a Kotlin
+  `Mutex` can't be taken twice.
 - **Manual refreshes run as background work,** so they outlive the screen, which watches `state` instead.
 
 ## Catalogue refresh preserves what the user did
