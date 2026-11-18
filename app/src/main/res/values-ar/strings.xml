@@ -234,7 +234,6 @@
     <string name="rec_switch_now_text">جارٍ التسجيل الآن على %1$s — اضغط للمشاهدة</string>
     <string name="rec_switch_soon_title">تسجيل قريبًا: %1$s</string>
     <string name="rec_switch_soon_text">يبدأ على %1$s خلال 30 ثانية — سينتقل هذا العرض إليه</string>
-    <string name="rec_switch_banner">يتم تسجيل «%1$s» على %2$s — سينتقل هذا العرض</string>
     <string name="rec_switch_keep_watching">البقاء على هذه القناة</string>
     <string name="rec_switch_channel_name">التبديل التلقائي للتسجيل</string>
     <string name="rec_switch_channel_desc">يُنبّه قبل تبديل العرض إلى تسجيل مجدول</string>

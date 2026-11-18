@@ -234,7 +234,6 @@
     <string name="rec_switch_now_text">Nu aan het opnemen op %1$s — tik om te kijken</string>
     <string name="rec_switch_soon_title">Binnenkort opname: %1$s</string>
     <string name="rec_switch_soon_text">Begint over 30s op %1$s — dit scherm schakelt hierheen over</string>
-    <string name="rec_switch_banner">“%1$s” wordt opgenomen op %2$s — dit scherm schakelt over</string>
     <string name="rec_switch_keep_watching">Blijven kijken</string>
     <string name="rec_switch_channel_name">Automatisch wisselen bij opname</string>
     <string name="rec_switch_channel_desc">Waarschuwt voordat het scherm overschakelt naar een geplande opname</string>

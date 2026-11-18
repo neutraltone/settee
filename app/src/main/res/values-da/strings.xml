@@ -234,7 +234,6 @@
     <string name="rec_switch_now_text">Optager nu på %1$s – tryk for at se</string>
     <string name="rec_switch_soon_title">Optages snart: %1$s</string>
     <string name="rec_switch_soon_text">Starter på %1$s om 30 sek – denne skærm skifter til det</string>
-    <string name="rec_switch_banner">“%1$s” optages på %2$s – denne skærm skifter</string>
     <string name="rec_switch_keep_watching">Fortsæt med at se</string>
     <string name="rec_switch_channel_name">Automatisk optageskift</string>
     <string name="rec_switch_channel_desc">Advarer, før skærmen skifter til en planlagt optagelse</string>

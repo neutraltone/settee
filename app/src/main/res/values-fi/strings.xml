@@ -234,7 +234,6 @@
     <string name="rec_switch_now_text">Tallennetaan nyt kanavalla %1$s — napauta katsoaksesi</string>
     <string name="rec_switch_soon_title">Tallennus pian: %1$s</string>
     <string name="rec_switch_soon_text">Alkaa kanavalla %1$s 30 s kuluttua — tämä näyttö vaihtuu siihen</string>
-    <string name="rec_switch_banner">“%1$s” tallentaa kanavalla %2$s — tämä näyttö vaihtuu</string>
     <string name="rec_switch_keep_watching">Jatka katselua</string>
     <string name="rec_switch_channel_name">Tallennuksen automaattinen vaihto</string>
     <string name="rec_switch_channel_desc">Varoittaa ennen näytön vaihtamista ajastettuun tallennukseen</string>

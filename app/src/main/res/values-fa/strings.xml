@@ -234,7 +234,6 @@
     <string name="rec_switch_now_text">اکنون در حال ضبط در %1$s — برای تماشا ضربه بزنید</string>
     <string name="rec_switch_soon_title">ضبط به‌زودی: %1$s</string>
     <string name="rec_switch_soon_text">تا ۳۰ ثانیه دیگر در %1$s شروع می‌شود — این صفحه به آن تغییر می‌کند</string>
-    <string name="rec_switch_banner">«%1$s» در %2$s ضبط می‌شود — این صفحه تغییر خواهد کرد</string>
     <string name="rec_switch_keep_watching">ادامه تماشا</string>
     <string name="rec_switch_channel_name">تعویض خودکار ضبط</string>
     <string name="rec_switch_channel_desc">پیش از تغییر صفحه به یک ضبط زمان‌بندی‌شده هشدار می‌دهد</string>

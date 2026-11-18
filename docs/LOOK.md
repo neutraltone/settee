@@ -196,6 +196,7 @@ Every question, choice and notice opens in a Side Panel: down the right of the s
 - **Prompts** that need explaining have a title, then a short body paragraph, then their choices as rows.
 - **Confirmations start on the safe choice,** such as Stay or Keep recording, and Back takes it too, so a stray OK changes nothing.
 - **Offers** start on what they offer, such as Turn on and pause or Allow.
+- **Warnings** of something about to happen on its own, such as the screen switching to a recording, start on the way out, such as Keep watching. Back only closes them, and what was going to happen still does.
 - **Long notes,** such as release notes, scroll inside the panel and never take the Highlight. It starts on the main choice, such as Got it or Update, where Up and Down scroll the notes. Once they reach their end, Down carries on to the other choices.
 - **Progress** in a panel shows real progress only, as a percentage and a bar.
 - **Errors** in a panel follow Voice: the sentence, then the quiet detail line, then the way on, such as Try again.
