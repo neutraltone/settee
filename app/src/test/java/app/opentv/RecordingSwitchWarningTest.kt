@@ -76,14 +76,7 @@ class RecordingSwitchWarningTest {
     }
 
     private fun warn() {
-        RecordingSignals.warn(
-            RecordingSignals.Imminent(
-                recordingId = BOOKING,
-                title = "The News",
-                channelName = "BBC One",
-                startAtMillis = System.currentTimeMillis() + 30_000L,
-            ),
-        )
+        warnOfRecording()
         compose.waitForIdle()
     }
 
@@ -93,8 +86,24 @@ class RecordingSwitchWarningTest {
 
         warn()
 
+        compose.onNodeWithText("Recording soon: The News").assertIsInSidePanel()
+        compose.onNodeWithText("Starts on Delta Four in 30s. This screen will switch to it.").assertExists()
         compose.onNodeWithText("Keep watching").assertIsFocused().assertIsInSidePanel()
         captureScreen("recording_switch_warning")
+    }
+
+    @Test
+    fun `a warning for another recording while one is open starts on its own Keep watching`() {
+        showOverPlayer()
+        warn()
+
+        warnOfRecording(recordingId = WARNED_BOOKING + 1, title = "The Film")
+        compose.waitForIdle()
+
+        compose.onNodeWithText("Recording soon: The Film").assertExists()
+        compose.onNodeWithText("Keep watching").assertIsFocused()
+        compose.pressKeyOnPanel(KeyEvent.KEYCODE_DPAD_CENTER)
+        assertThat(switchesWhenRecordingStarts(WARNED_BOOKING + 1)).isFalse()
     }
 
     @Test
@@ -107,8 +116,7 @@ class RecordingSwitchWarningTest {
         assertThat(RecordingSignals.imminent.value).isNull()
         compose.onNodeWithText("Keep watching").assertDoesNotExist()
         compose.onNodeWithTag(PLAYER).assertIsFocused()
-        RecordingSignals.requestWatch(BOOKING, System.currentTimeMillis())
-        assertThat(RecordingSignals.watch.value).isNull()
+        assertThat(switchesWhenRecordingStarts()).isFalse()
     }
 
     @Test
@@ -134,8 +142,7 @@ class RecordingSwitchWarningTest {
         assertThat(RecordingSignals.imminent.value).isNull()
         compose.onNodeWithText("Keep watching").assertDoesNotExist()
         compose.onNodeWithTag(PLAYER).assertIsFocused()
-        RecordingSignals.requestWatch(BOOKING, System.currentTimeMillis())
-        assertThat(RecordingSignals.watch.value?.recordingId).isEqualTo(BOOKING)
+        assertThat(switchesWhenRecordingStarts()).isTrue()
     }
 
     @Test
@@ -152,6 +159,5 @@ class RecordingSwitchWarningTest {
 
     private companion object {
         const val PLAYER = "player"
-        const val BOOKING = 7L
     }
 }

@@ -9,10 +9,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.res.stringResource
 import app.opentv.R
 import app.opentv.core.RecordingSignals
@@ -29,7 +25,8 @@ import kotlinx.coroutines.delay
  * A Side Panel rather than the banner it was (#437): the banner sat outside every screen's focus
  * path, and the live player takes the arrow keys before focus search runs, so the viewer could never
  * reach Keep watching. The panel is a window of its own, so it owns the remote while it's open, and
- * it starts on Keep watching. Back only closes it: switching stays the default.
+ * it starts on Keep watching, as LOOK.md's Warnings do. Back only closes it: switching stays the
+ * default, since that is what keeps the recording on one connection.
  */
 @Composable
 fun RecordingSwitchWarning() {
@@ -45,14 +42,14 @@ fun RecordingSwitchWarning() {
         }
     }
 
-    val keepWatching = remember(current.recordingId) { FocusRequester() }
-    SidePanel(onBack = RecordingSignals::clearImminent, startOn = keepWatching) {
+    // Keep watching is the only row, so the panel starts on it. A warning for another booking while
+    // this one is open redraws the same panel, and the highlight stays on that row.
+    SidePanel(onBack = RecordingSignals::clearImminent) {
         PanelTitle(stringResource(R.string.rec_switch_soon_title, current.title))
-        PanelBody(stringResource(R.string.rec_switch_banner, current.title, current.channelName))
+        PanelBody(stringResource(R.string.rec_switch_soon_text, current.channelName))
         PanelRow(
             stringResource(R.string.rec_switch_keep_watching),
             onClick = { RecordingSignals.suppress(current.recordingId) },
-            modifier = Modifier.focusRequester(keepWatching),
         )
     }
 }

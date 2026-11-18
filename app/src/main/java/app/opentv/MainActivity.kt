@@ -555,7 +555,7 @@ private fun OpenTvApp(isTelevision: Boolean, launchedToPlay: Boolean) {
 
                 KeepHomeLive(navController, ServiceLocator.get(bootContext).homeKeptLive)
 
-                // "About to switch to a recording" banner — shows 30s before an auto-switch fires.
+                // Warns in a Side Panel, over any screen, 30s before a recording takes this one over.
                 RecordingSwitchWarning()
             }
         }

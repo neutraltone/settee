@@ -88,14 +88,7 @@ class PlayerScreenRecordingSwitchTest {
             RecordingSwitchWarning()
         }
         compose.waitUntilAtLeastOneExists(hasText("Bravo Two", substring = true), TIMEOUT_MILLIS)
-        RecordingSignals.warn(
-            RecordingSignals.Imminent(
-                recordingId = BOOKING,
-                title = "The News",
-                channelName = "Delta Four",
-                startAtMillis = System.currentTimeMillis() + 30_000L,
-            ),
-        )
+        warnOfRecording()
         compose.waitForIdle()
     }
 
@@ -126,15 +119,25 @@ class PlayerScreenRecordingSwitchTest {
 
         compose.onNodeWithText("Keep watching").assertDoesNotExist()
         assertThat(RecordingSignals.imminent.value).isNull()
-        RecordingSignals.requestWatch(BOOKING, System.currentTimeMillis())
-        assertThat(RecordingSignals.watch.value).isNull()
+        assertThat(switchesWhenRecordingStarts()).isFalse()
+        compose.onRoot().performKeyInput { pressKey(Key.DirectionDown) }
+        compose.waitUntil(TIMEOUT_MILLIS) { zapped() }
+    }
+
+    @Test
+    fun `Back closes the warning over the live player, gives it the remote back, and the switch stays`() {
+        showPlayingWithWarning()
+
+        compose.pressBackOnPanel()
+
+        compose.onNodeWithText("Keep watching").assertDoesNotExist()
+        assertThat(switchesWhenRecordingStarts()).isTrue()
         compose.onRoot().performKeyInput { pressKey(Key.DirectionDown) }
         compose.waitUntil(TIMEOUT_MILLIS) { zapped() }
     }
 
     private companion object {
         const val TIMEOUT_MILLIS = 5_000L
-        const val BOOKING = 7L
 
         // Past the player's 350 ms zap debounce.
         const val ZAP_SETTLE_MILLIS = 1_000L

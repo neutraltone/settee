@@ -34,7 +34,7 @@ object RecordingSignals {
     private val _watch = MutableStateFlow<Watch?>(null)
     val watch: StateFlow<Watch?> = _watch.asStateFlow()
 
-    /** A booking about to start — shown as a brief "we're about to switch" banner. */
+    /** A booking about to start: the UI warns, in a Side Panel, that it's about to switch to it. */
     data class Imminent(val recordingId: Long, val title: String, val channelName: String, val startAtMillis: Long)
 
     private val _imminent = MutableStateFlow<Imminent?>(null)
