@@ -263,14 +263,14 @@ class GuideScrollingTest {
     }
 
     @Test
-    fun `after the window moves past the highlighted programme, coming back from the sidebar finds the one now on`() {
+    fun `after the window moves past the highlighted programme, coming back from the Rail finds the one now on`() {
         var windowStart by mutableStateOf(EIGHT_PM)
         val rail = RailReturn()
         compose.setTvContent {
             CompositionLocalProvider(LocalRailReturn provides rail) {
                 Row {
-                    // Stands in for the sidebar.
-                    Box(Modifier.size(48.dp).testTag("sidebar").focusable())
+                    // Stands in for the Rail.
+                    Box(Modifier.size(48.dp).testTag("rail").focusable())
                     GuideGrid(
                         rows = listOf(row(1, programmes("News", EIGHT_PM, listOf(30, 30)))),
                         windowStartMillis = windowStart,
@@ -284,8 +284,78 @@ class GuideScrollingTest {
         windowStart = EIGHT_PM + 30 * MINUTE_MS
         compose.waitForIdle()
 
-        compose.onNodeWithTag("sidebar").requestFocus()
+        compose.onNodeWithTag("rail").requestFocus()
         compose.runOnIdle { rail.target?.requestFocus() }
+
+        compose.onNode(programme("News 1")).assertIsFocused()
+    }
+
+    @Test
+    fun `when the window moves past the programme left for the Rail, coming back from it finds the one now on`() {
+        var windowStart by mutableStateOf(EIGHT_PM)
+        val rail = RailReturn()
+        compose.setTvContent {
+            CompositionLocalProvider(LocalRailReturn provides rail) {
+                Row {
+                    // Stands in for the Rail.
+                    Box(Modifier.size(48.dp).testTag("rail").focusable())
+                    GuideGrid(
+                        rows = listOf(row(1, programmes("News", EIGHT_PM, listOf(30, 30)))),
+                        windowStartMillis = windowStart,
+                        onWatch = {},
+                        nowMillis = windowStart,
+                    )
+                }
+            }
+        }
+        compose.onNode(programme("News 0")).requestFocus()
+        compose.onNodeWithTag("rail").requestFocus()
+
+        windowStart = EIGHT_PM + 30 * MINUTE_MS
+        compose.waitForIdle()
+
+        compose.onNodeWithTag("rail").assertIsFocused()
+        compose.runOnIdle { rail.target?.requestFocus() }
+        compose.onNode(programme("News 1")).assertIsFocused()
+    }
+
+    @Test
+    fun `after the Highlight falls back to a channel and moves on, later window moves leave it where it is`() {
+        var windowStart by mutableStateOf(EIGHT_PM)
+        compose.setTvContent {
+            GuideGrid(
+                rows = listOf(
+                    row(1, programmes("Film", EIGHT_PM, listOf(180))),
+                    row(2, programmes("News", EIGHT_PM, listOf(30))),
+                ),
+                windowStartMillis = windowStart,
+                onWatch = {},
+                nowMillis = windowStart,
+            )
+        }
+        compose.onNode(programme("News 0")).requestFocus()
+        windowStart = EIGHT_PM + 30 * MINUTE_MS
+        compose.waitForIdle()
+        compose.onNode(hasText("Channel 2") and hasClickAction()).assertIsFocused()
+
+        compose.onNode(programme("Film 0")).requestFocus()
+        windowStart = EIGHT_PM + 60 * MINUTE_MS
+        compose.waitForIdle()
+
+        compose.onNode(programme("Film 0")).assertIsFocused()
+    }
+
+    @Test
+    fun `a guide refresh that keeps the highlighted programme leaves the Highlight on it`() {
+        var rows by mutableStateOf(listOf(row(1, programmes("News", EIGHT_PM, listOf(30, 30)))))
+        compose.setTvContent {
+            GuideGrid(rows = rows, windowStartMillis = EIGHT_PM, onWatch = {}, nowMillis = EIGHT_PM)
+        }
+        compose.onNode(programme("News 1")).requestFocus()
+
+        // The same programmes again, as a refresh brings them: new objects, the same starts.
+        rows = listOf(row(1, programmes("News", EIGHT_PM, listOf(30, 30))))
+        compose.waitForIdle()
 
         compose.onNode(programme("News 1")).assertIsFocused()
     }
