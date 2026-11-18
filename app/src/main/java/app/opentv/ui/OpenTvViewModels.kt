@@ -145,6 +145,11 @@ class SourcesViewModel @JvmOverloads constructor(
         val refreshResult: String? = null,
         /** Why adding this provider just failed, shown in place of [syncMessage]. */
         val addFailure: ViewerError? = null,
+        /**
+         * The provider the open form's last Save stored and kept, so saving again edits it. Here, not
+         * in the form, because a phone turning round mid-save rebuilds the form before the save ends.
+         */
+        val storedSourceId: Long? = null,
         /** Why the first enabled provider whose channels couldn't be downloaded failed, as saved on it. */
         val loadFailure: ProviderFailure? = null,
     ) {
@@ -216,6 +221,7 @@ class SourcesViewModel @JvmOverloads constructor(
                 testResult = null,
                 testError = null,
                 addFailure = null,
+                storedSourceId = null,
                 syncMessage = it.syncMessage.takeIf { _ ->
                     it.syncing
                 },
@@ -250,15 +256,15 @@ class SourcesViewModel @JvmOverloads constructor(
      * [onChannels] hears either way once the channels are in (null) or why they didn't load.
      * Without [keepIfFails], a new provider whose channels don't load is removed again: the phone
      * puts the login right and sends it again, which would otherwise save a second one.
-     * [onDone] hears whether the channels loaded, and the id of the provider it kept, if it kept one:
-     * a form left open after a failed load saves that row again rather than adding another.
+     * A provider kept other than through Setup becomes [UiState.storedSourceId], so a form left open
+     * after a failed load saves that row again rather than adding another.
      */
     fun saveAndSync(
         draft: Source,
         keepIfFails: Boolean = true,
         onSetup: () -> Unit = {},
         onChannels: (failure: String?) -> Unit = {},
-        onDone: (loaded: Boolean, storedId: Long?) -> Unit = { _, _ -> },
+        onDone: (Boolean) -> Unit = {},
     ) {
         viewModelScope.launch {
             _ui.update {
@@ -279,7 +285,7 @@ class SourcesViewModel @JvmOverloads constructor(
                 val failed = messages.of(RefreshMessages.Step.SaveFailed)
                 _ui.update { it.copy(adding = false, syncMessage = failed) }
                 onChannels(failed)
-                onDone(false, null)
+                onDone(false)
                 return@launch
             }
             if (first) {
@@ -298,19 +304,21 @@ class SourcesViewModel @JvmOverloads constructor(
             }
 
             _ui.update { it.copy(syncMessage = messages.of(RefreshMessages.Step.LoadingChannels)) }
-            val outcome = refresh.refresh(CatalogueRefresh.Trigger.ProviderAdded(saved))
+            // Editing a provider never removes it, whatever its channels do.
+            val keep = keepIfFails || draft.id != 0L
+            val outcome = refresh.refresh(CatalogueRefresh.Trigger.ProviderAdded(saved, keepIfFails = keep))
             val failure = (outcome as? CatalogueRefresh.Outcome.AddFailed)?.reason
-            val removed = failure != null && !keepIfFails && draft.id == 0L
-            if (removed) graph.catalogRepository.deleteSource(saved.id)
+            val removed = failure != null && !keep
             _ui.update {
                 it.copy(
                     adding = false,
                     addFailure = failure,
+                    storedSourceId = saved.id.takeUnless { removed },
                     syncMessage = messages.of(outcome),
                 )
             }
             onChannels(failure?.sentence)
-            onDone(outcome is CatalogueRefresh.Outcome.ChannelsLoaded, saved.id.takeUnless { removed })
+            onDone(outcome is CatalogueRefresh.Outcome.ChannelsLoaded)
         }
     }
 

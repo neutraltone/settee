@@ -28,7 +28,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.mapSaver
@@ -248,7 +247,7 @@ private fun FormButtons(
             label = stringResource(
                 if (ui.testing) R.string.onboarding_working else R.string.recset_test_connection,
             ),
-            onClick = { if (!working) viewModel.test(details.draft(defaultName)) },
+            onClick = { if (!working) viewModel.test(details.draft(defaultName, storedId = null)) },
             enabled = details.canSubmit,
         )
         PillButton(
@@ -256,12 +255,9 @@ private fun FormButtons(
             onClick = {
                 if (!working) {
                     viewModel.saveAndSync(
-                        details.draft(defaultName),
+                        details.draft(defaultName, storedId = ui.storedSourceId),
                         onSetup = onSetup,
-                        onDone = { ok, storedId ->
-                            if (storedId != null) details.storedId = storedId
-                            if (ok) onFinished()
-                        },
+                        onDone = { ok -> if (ok) onFinished() },
                     )
                 }
             },
@@ -273,8 +269,6 @@ private fun FormButtons(
 /**
  * What's typed into a form. Editing starts from [existing] and copies onto it, so its id, enabled
  * state, live format and last-sync stamp are kept; a fresh add starts blank (id 0, so save() inserts).
- * Once a Save has stored it, the form carries on as an edit of [storedId], so saving again after its
- * channels failed puts the details right on that provider rather than adding a second.
  */
 @Stable
 private class ProviderDetails(private val existing: Source?, val kind: SourceKind) {
@@ -285,7 +279,6 @@ private class ProviderDetails(private val existing: Source?, val kind: SourceKin
     var mac by mutableStateOf(existing?.macAddress.orEmpty())
     var epgUrl by mutableStateOf(existing?.epgUrl.orEmpty())
     var userAgent by mutableStateOf(existing?.userAgent ?: Source.DEFAULT_USER_AGENT)
-    var storedId by mutableLongStateOf(existing?.id ?: 0L)
 
     val canSubmit: Boolean
         get() = url.isNotBlank() &&
@@ -295,17 +288,22 @@ private class ProviderDetails(private val existing: Source?, val kind: SourceKin
                 SourceKind.STALKER -> mac.isNotBlank()
             }
 
-    fun draft(defaultName: String): Source = (existing ?: Source(name = "", kind = kind, url = "")).copy(
-        id = storedId,
-        name = name.ifBlank { defaultName },
-        kind = kind,
-        url = url,
-        username = username.takeIf { it.isNotBlank() },
-        password = password.takeIf { it.isNotBlank() },
-        macAddress = mac.takeIf { it.isNotBlank() },
-        epgUrl = epgUrl.takeIf { it.isNotBlank() },
-        userAgent = userAgent.ifBlank { Source.DEFAULT_USER_AGENT },
-    )
+    /**
+     * What Save and Test connection send. [storedId] is a provider an earlier Save of this form stored,
+     * so saving again after its channels failed puts that one right rather than adding a second.
+     */
+    fun draft(defaultName: String, storedId: Long?): Source =
+        (existing ?: Source(name = "", kind = kind, url = "")).copy(
+            id = storedId ?: existing?.id ?: 0L,
+            name = name.ifBlank { defaultName },
+            kind = kind,
+            url = url,
+            username = username.takeIf { it.isNotBlank() },
+            password = password.takeIf { it.isNotBlank() },
+            macAddress = mac.takeIf { it.isNotBlank() },
+            epgUrl = epgUrl.takeIf { it.isNotBlank() },
+            userAgent = userAgent.ifBlank { Source.DEFAULT_USER_AGENT },
+        )
 
     companion object {
         /** Keeps what's typed across the screen being rebuilt; [existing] and [kind] come from the caller again. */
@@ -319,7 +317,6 @@ private class ProviderDetails(private val existing: Source?, val kind: SourceKin
                     "mac" to it.mac,
                     "epgUrl" to it.epgUrl,
                     "userAgent" to it.userAgent,
-                    "storedId" to it.storedId,
                 )
             },
             restore = { saved ->
@@ -331,7 +328,6 @@ private class ProviderDetails(private val existing: Source?, val kind: SourceKin
                     mac = saved["mac"] as String
                     epgUrl = saved["epgUrl"] as String
                     userAgent = saved["userAgent"] as String
-                    storedId = saved["storedId"] as Long
                 }
             },
         )

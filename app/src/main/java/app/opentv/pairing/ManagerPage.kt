@@ -537,7 +537,7 @@ object ManagerPage {
           };
           el('provSave').onclick = function(){
             var b = provBody(); var bad = provInvalid(b); if (bad){ setStatus(bad, 'err'); return; }
-            // One request at a time: a second tap while the first loads would store the provider twice.
+            // One request at a time: a second tap queues behind the first, and stores a second copy if it worked.
             var save = el('provSave'); save.disabled = true;
             setStatus('Adding & loading channels…');
             post('/source', b)

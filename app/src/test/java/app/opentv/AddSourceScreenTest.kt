@@ -35,6 +35,7 @@ import java.net.InetAddress
 import java.net.ServerSocket
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
+import org.junit.After
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -165,18 +166,56 @@ class AddSourceScreenTest {
 
     @Test
     fun `saving a provider again after its channels failed, even once the screen is rebuilt, keeps one copy`() {
+        val restoration = showM3uFormBesideAnother()
+
+        saveAndWaitForFailure()
+        saveAndWaitForFailure()
+        restoration.emulateSavedInstanceStateRestore()
+        saveAndWaitForFailure()
+
+        assertThat(storedUrls()).containsExactly("http://example.com/a.m3u", "http://example.com/b.m3u")
+    }
+
+    @Test
+    fun `a screen rebuilt while its Save is still loading saves that provider again, not a second`() {
+        val restoration = showM3uFormBesideAnother()
+        val loading = panel.hold("")
+
+        compose.onNodeWithText("Save and load").performClick()
+        compose.waitUntilSaved { loading.reached.count == 0L }
+        restoration.emulateSavedInstanceStateRestore()
+        loading.release()
+        compose.waitUntilSaved { viewModel.ui.value.let { !it.adding && it.addFailure != null } }
+        saveAndWaitForFailure()
+
+        assertThat(storedUrls()).containsExactly("http://example.com/a.m3u", "http://example.com/b.m3u")
+    }
+
+    // A playlist with no channels in it, answered at once, so each Save fails without reaching out.
+    private val panel = FakePanel("" to "#EXTM3U\n")
+    private val openPanelGraph = lazy {
         val app = ApplicationProvider.getApplicationContext<Application>()
-        // A playlist with no channels in it, answered at once, so each Save fails without reaching out.
-        val graph = ServiceLocator.Graph(
+        ServiceLocator.Graph(
             app,
-            http = FakePanel("" to "#EXTM3U\n").http,
+            http = panel.http,
             settingsFile = "add-source-again-test",
             openDatabase = {
                 Room.inMemoryDatabaseBuilder(app, OpenTvDatabase::class.java).allowMainThreadQueries().build()
             },
         )
+    }
+    private val panelGraph by openPanelGraph
+
+    @After
+    fun closePanelGraph() {
+        if (openPanelGraph.isInitialized()) panelGraph.database.close()
+    }
+
+    /** The M3U form on [panelGraph], filled in, with a provider already added so this isn't Setup. */
+    private fun showM3uFormBesideAnother(): StateRestorationTester {
+        val app = ApplicationProvider.getApplicationContext<Application>()
         runBlocking {
-            graph.sourceRepository.save(
+            panelGraph.sourceRepository.save(
                 Source(
                     name = "First",
                     kind = SourceKind.M3U,
@@ -185,7 +224,7 @@ class AddSourceScreenTest {
                 ),
             )
         }
-        viewModel = SourcesViewModel(app, graph)
+        viewModel = SourcesViewModel(app, panelGraph)
         val restoration = StateRestorationTester(compose)
         InstrumentationRegistry.getInstrumentation().setInTouchMode(false)
         restoration.setContent {
@@ -194,16 +233,10 @@ class AddSourceScreenTest {
         }
         compose.onNodeWithText(M3U).performClick()
         device.type("http://example.com/b.m3u", device.box(SERVER))
-
-        saveAndWaitForFailure()
-        saveAndWaitForFailure()
-        restoration.emulateSavedInstanceStateRestore()
-        saveAndWaitForFailure()
-
-        val sources = runBlocking { graph.sourceRepository.all() }
-        graph.database.close()
-        assertThat(sources.map { it.url }).containsExactly("http://example.com/a.m3u", "http://example.com/b.m3u")
+        return restoration
     }
+
+    private fun storedUrls() = runBlocking { panelGraph.sourceRepository.all() }.map { it.url }
 
     private fun saveAndWaitForFailure() {
         compose.onNodeWithText("Save and load").performClick()
