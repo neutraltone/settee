@@ -52,10 +52,16 @@ Where a skill and this repo disagree, the repo wins. In particular:
 5. **Check little locally, let CI check the rest.** Run the test class you're working on and
    `tools/check/check.py quick` (ktlint and detekt). The full suite, Lint and gitleaks run on the PR.
    Run Gradle through `tools/check/check.py`, which explains failures and stops frozen test runs.
-6. **Review before opening the PR** with `/code-review` against `main`, then write the description
-   with `/pr`. A screen change adds a `captureScreen` line to that screen's tests, and the
-   Screenshots workflow puts a before and after table in the PR.
-7. **Merge by squash.** The PR title becomes the commit on `main`, and release-please turns `feat`,
+6. **Review as soon as the fix is green, without waiting to be asked.** Run
+   `/mattpocock-skills:code-review` against `origin/main`. Not the built-in `/code-review`, a bug hunt
+   that shares the name, and not local `main`, which lags behind in a worktree. It reports Standards
+   and Spec separately; the owner picks which findings to fix, and only those get fixed. Stopping at
+   the commit is the step most often missed.
+7. **Then open the PR with Auto-fix on.** Commit, rebase on `origin/main`, push, write the description
+   with `/pr`, open the PR and turn on Auto-fix, so CI failures, merge conflicts and review comments
+   come back to the session. A screen change adds a `captureScreen` line to that screen's tests, and
+   the Screenshots workflow puts a before and after table in the PR.
+8. **Merge by squash.** The PR title becomes the commit on `main`, and release-please turns `feat`,
    `fix` and `perf` titles into the changelog and the app's What's new (`docs/RELEASING.md`).
 
 For design work, run `/impeccable critique` on the screen first, agree what to change, then use the
