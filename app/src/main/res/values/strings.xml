@@ -246,7 +246,6 @@
     <string name="settings_addons_add_note">By the address of its manifest. If it uses a debrid service, set your key up on the add-on\'s own site first.</string>
     <string name="settings_addons_address">Your add-on\'s address</string>
     <string name="settings_addons_address_hint">The link to its manifest, ending in manifest.json</string>
-    <string name="settings_addons_invalid">That isn\'t an add-on\'s address. Check it ends in manifest.json and try again.</string>
     <string name="settings_manager_scan">Scan this with your phone\'s camera, or type the address into a browser on the same wifi:</string>
     <string name="settings_manager_new_address">Get a new address</string>
     <string name="settings_manager_new_address_note">If the typed address has stopped working after a few wrong tries</string>
@@ -745,6 +744,12 @@
     <string name="error_device_refused">Your provider didn\'t accept these details. Check your provider\'s details in Settings.</string>
     <string name="error_guide">Couldn\'t download this guide. Try again in a moment.</string>
     <string name="error_guide_empty">This guide downloaded, but had no programmes in it. Check it\'s the right link.</string>
+    <string name="error_addon_cant_reach_tv">Can\'t reach the add-on. Check this TV is online and the address is right.</string>
+    <string name="error_addon_cant_reach_device">Can\'t reach the add-on. Check this device is online and the address is right.</string>
+    <string name="error_addon_timed_out">The add-on stopped responding. It may be busy, so try again in a moment.</string>
+    <string name="error_addon_trouble">The add-on is having problems. That\'s at its end, so try again later.</string>
+    <string name="error_not_an_addon_tv">That address didn\'t give an add-on. Check it\'s the manifest.json link, and that this TV\'s internet doesn\'t need you to sign in first.</string>
+    <string name="error_not_an_addon_device">That address didn\'t give an add-on. Check it\'s the manifest.json link, and that this device\'s internet doesn\'t need you to sign in first.</string>
     <string name="error_test_failed">Couldn\'t connect to your provider with these details. Check them and try again.</string>
     <string name="sync_wrong_code">That code doesn\'t match the one on the other device. Check it and try again.</string>
     <string name="sync_receive_failed">Couldn\'t get anything from the other device. Check it\'s still sharing, then try again.</string>

@@ -272,6 +272,12 @@
     <string name="error_account_inactive">プロバイダーによると、このアカウントは有効になっていません。プロバイダーに確認してから、もう一度お試しください。</string>
     <string name="error_bad_address">そのアドレスは正しくないようです。「設定」でプロバイダーの情報を確認してください。</string>
     <string name="error_not_a_panel">そのアドレスはIPTVプロバイダーとして応答しませんでした。プロバイダーの情報でアドレスとポートを確認するか、Wi-Fiのログインを求められた場合はログインしてください。</string>
+    <string name="error_addon_cant_reach_tv">アドオンに接続できません。このテレビがオンラインか、アドレスが正しいかを確認してください。</string>
+    <string name="error_addon_cant_reach_device">アドオンに接続できません。この端末がオンラインか、アドレスが正しいかを確認してください。</string>
+    <string name="error_addon_timed_out">アドオンからの応答がなくなりました。混み合っている可能性があるので、少し待ってからもう一度お試しください。</string>
+    <string name="error_addon_trouble">アドオン側で問題が起きています。アドオン側の問題なので、しばらくしてからもう一度お試しください。</string>
+    <string name="error_not_an_addon_tv">そのアドレスからアドオンを取得できませんでした。manifest.jsonのリンクか、このテレビのインターネットが先にログインを求めていないかを確認してください。</string>
+    <string name="error_not_an_addon_device">そのアドレスからアドオンを取得できませんでした。manifest.jsonのリンクか、この端末のインターネットが先にログインを求めていないかを確認してください。</string>
     <string name="error_device_refused">プロバイダーがこの情報を受け付けませんでした。「設定」でプロバイダーの情報を確認してください。</string>
     <string name="error_guide">この番組表をダウンロードできませんでした。少し待ってからもう一度お試しください。</string>
     <string name="error_guide_empty">この番組表はダウンロードできましたが、番組が入っていませんでした。正しいリンクかどうかを確認してください。</string>

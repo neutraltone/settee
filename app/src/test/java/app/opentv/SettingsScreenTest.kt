@@ -44,6 +44,7 @@ import app.opentv.data.model.SourceKind
 import app.opentv.data.model.StreamKind
 import app.opentv.data.model.StremioAddon
 import app.opentv.data.repo.EpgRepository
+import app.opentv.ui.design.ERROR_DETAIL_TAG
 import app.opentv.ui.settings.SettingsMemory
 import app.opentv.ui.settings.SettingsScreen
 import app.opentv.ui.settings.SettingsSection
@@ -607,7 +608,7 @@ class SettingsScreenTest {
     }
 
     @Test
-    fun `Add an add-on asks for its address on an entry screen, and says when it isn't one`() {
+    fun `Add an add-on asks for its address on an entry screen, and says why one couldn't be added`() {
         show(SettingsMemory(SettingsSection.Addons))
         press(KeyEvent.KEYCODE_DPAD_RIGHT)
 
@@ -616,15 +617,18 @@ class SettingsScreenTest {
         compose.entryKeyboard().run {
             assertThat(connection().first.inputType)
                 .isEqualTo(InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_URI)
+            // Nothing listens on port 9 here, so the connection is refused.
             type("http://127.0.0.1:9/manifest.json")
             pressAction()
         }
 
         compose.waitUntil(10_000) {
-            compose.onAllNodes(hasText("Add an add-on") and hasText("That isn't an add-on's address", substring = true))
-                .fetchSemanticsNodes().isNotEmpty()
+            compose.onAllNodes(hasText("Can't reach the add-on.", substring = true)).fetchSemanticsNodes().isNotEmpty()
         }
+        compose.onNode(hasTestTag(ERROR_DETAIL_TAG) and hasText("Connect"), useUnmergedTree = true).assertExists()
+        compose.onNodeWithText("That address didn't give an add-on", substring = true).assertDoesNotExist()
         compose.onNode(hasText("Add an add-on") and isFocused()).assertExists()
+        captureScreen("settings_addons_failed")
     }
 
     @Test

@@ -43,19 +43,23 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.viewmodel.compose.viewModel
 import app.opentv.R
+import app.opentv.core.ViewerError
 import app.opentv.data.model.Movie
 import app.opentv.data.model.StremioStream
 import app.opentv.data.parser.displayTitle
 import app.opentv.data.repo.CoverStatus
 import app.opentv.data.repo.MediaKey
 import app.opentv.data.repo.Opened
+import app.opentv.ui.AddonStreams
 import app.opentv.ui.VodViewModel
 import app.opentv.ui.design.ArtCard
 import app.opentv.ui.design.ArtCardSize
+import app.opentv.ui.design.ErrorMessage
 import app.opentv.ui.design.HighlightStyle
 import app.opentv.ui.design.HighlightSurface
 import app.opentv.ui.design.PillButton
@@ -174,7 +178,7 @@ internal fun MovieDetailContent(
     resumes: Boolean,
     status: CoverStatus?,
     favourite: Boolean?,
-    findAddonStreams: (suspend () -> List<StremioStream>)?,
+    findAddonStreams: (suspend () -> AddonStreams)?,
     similar: List<Movie>?,
     onOpenMovie: (Movie) -> Unit,
     onOpenPerson: (String) -> Unit,
@@ -195,6 +199,15 @@ internal fun MovieDetailContent(
     var picker by remember(movie.id) { mutableStateOf<AddonPicker?>(null) }
     // Closing the picker cancels its lookup, so an answer arriving later can't open it again.
     var lookup by remember(movie.id) { mutableStateOf<Job?>(null) }
+
+    // Asks the add-ons, from Add-on sources and again from the picker's Try again.
+    val askAddons: () -> Unit = {
+        if (findAddonStreams != null) {
+            picker = AddonPicker.Loading
+            lookup?.cancel()
+            lookup = scope.launch { picker = AddonPicker.Answered(findAddonStreams()) }
+        }
+    }
 
     FirstHighlight(movie, spot, similar, likeThisRow, playFocus)
 
@@ -242,11 +255,7 @@ internal fun MovieDetailContent(
                             PillButton(
                                 label = stringResource(R.string.vod_addon_sources),
                                 icon = Icons.Filled.Extension,
-                                onClick = {
-                                    picker = AddonPicker.Loading
-                                    lookup?.cancel()
-                                    lookup = scope.launch { picker = AddonPicker.Found(findAddonStreams()) }
-                                },
+                                onClick = askAddons,
                                 modifier = Modifier.returnSpot(spot, null),
                             )
                         }
@@ -295,6 +304,7 @@ internal fun MovieDetailContent(
     picker?.let { shown ->
         AddonStreamPicker(
             picker = shown,
+            onRetry = askAddons,
             onPick = { stream ->
                 lookup?.cancel()
                 picker = null
@@ -396,13 +406,21 @@ private const val SYNOPSIS_WIDTH = 0.6f
 private sealed interface AddonPicker {
     data object Loading : AddonPicker
 
-    /** The streams the add-ons returned, already only those that play directly. */
-    data class Found(val streams: List<StremioStream>) : AddonPicker
+    /** What the add-ons came back with. */
+    data class Answered(val streams: AddonStreams) : AddonPicker
 }
 
-/** The streams a film's add-ons offer: a line while they're asked, then one row per stream. */
+/**
+ * The streams a film's add-ons offer: a line while they're asked, then one row per stream, or why
+ * none came with Try again when every add-on failed.
+ */
 @Composable
-private fun AddonStreamPicker(picker: AddonPicker, onPick: (StremioStream) -> Unit, onDismiss: () -> Unit) {
+private fun AddonStreamPicker(
+    picker: AddonPicker,
+    onRetry: () -> Unit,
+    onPick: (StremioStream) -> Unit,
+    onDismiss: () -> Unit,
+) {
     Dialog(onDismissRequest = onDismiss) {
         Column(
             Modifier
@@ -418,15 +436,36 @@ private fun AddonStreamPicker(picker: AddonPicker, onPick: (StremioStream) -> Un
                     style = SetteeType.Body,
                     color = SetteeColors.QuietText,
                 )
-                picker is AddonPicker.Found && picker.streams.isEmpty() -> Text(
+                picker is AddonPicker.Answered && picker.streams is AddonStreams.Found ->
+                    StreamList(picker.streams.streams, onPick)
+                picker is AddonPicker.Answered && picker.streams is AddonStreams.Failed ->
+                    AddonsFailed(picker.streams.error, onRetry)
+                else -> Text(
                     stringResource(R.string.vod_addon_none),
                     style = SetteeType.Body,
                     color = SetteeColors.QuietText,
                 )
-                picker is AddonPicker.Found -> StreamList(picker.streams, onPick)
             }
         }
     }
+}
+
+/** Why every add-on failed, and Try again, which has the Highlight so OK asks them again. */
+@Composable
+private fun AddonsFailed(error: ViewerError, onRetry: () -> Unit) {
+    val retry = remember { FocusRequester() }
+    // As StreamList: asked from inside the dialog, once its window is attached.
+    LaunchedEffect(error) {
+        withFrameNanos {}
+        runCatching { retry.requestFocus() }
+    }
+    ErrorMessage(error.sentence, error.detail, textAlign = TextAlign.Start)
+    Spacer(Modifier.height(18.dp))
+    PillButton(
+        label = stringResource(R.string.common_try_again),
+        onClick = onRetry,
+        modifier = Modifier.focusRequester(retry),
+    )
 }
 
 @Composable

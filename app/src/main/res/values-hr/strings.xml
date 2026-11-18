@@ -272,6 +272,12 @@
     <string name="error_account_inactive">Vaš pružatelj usluge kaže da ovaj račun nije aktivan. Provjerite kod njega, zatim pokušajte ponovno.</string>
     <string name="error_bad_address">Ta adresa ne izgleda ispravno. Provjerite podatke pružatelja usluge u Postavkama.</string>
     <string name="error_not_a_panel">Ta adresa nije odgovorila kao IPTV pružatelj usluge. Provjerite adresu i priključak u podacima pružatelja usluge ili se prijavite na Wi-Fi ako to traži.</string>
+    <string name="error_addon_cant_reach_tv">Nije moguće doći do dodatka. Provjerite je li ovaj TV povezan s internetom i je li adresa točna.</string>
+    <string name="error_addon_cant_reach_device">Nije moguće doći do dodatka. Provjerite je li ovaj uređaj povezan s internetom i je li adresa točna.</string>
+    <string name="error_addon_timed_out">Dodatak je prestao odgovarati. Možda je zauzet, pa pokušajte ponovno za trenutak.</string>
+    <string name="error_addon_trouble">Dodatak ima problema. To je na njegovoj strani, pa pokušajte ponovno kasnije.</string>
+    <string name="error_not_an_addon_tv">Ta adresa nije dala dodatak. Provjerite je li to poveznica na manifest.json i da internet ovog TV-a ne traži da se prvo prijavite.</string>
+    <string name="error_not_an_addon_device">Ta adresa nije dala dodatak. Provjerite je li to poveznica na manifest.json i da internet ovog uređaja ne traži da se prvo prijavite.</string>
     <string name="error_device_refused">Vaš pružatelj usluge nije prihvatio ove podatke. Provjerite podatke pružatelja usluge u Postavkama.</string>
     <string name="error_guide">Nije moguće preuzeti ovaj vodič. Pokušajte ponovno za trenutak.</string>
     <string name="error_guide_empty">Ovaj vodič je preuzet, ali u njemu nema emisija. Provjerite je li to prava poveznica.</string>

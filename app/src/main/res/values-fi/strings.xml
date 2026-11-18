@@ -272,6 +272,12 @@
     <string name="error_account_inactive">Palveluntarjoajasi mukaan tämä tili ei ole aktiivinen. Tarkista asia heiltä ja yritä sitten uudelleen.</string>
     <string name="error_bad_address">Osoite ei näytä oikealta. Tarkista palveluntarjoajasi tiedot Asetuksista.</string>
     <string name="error_not_a_panel">Osoite ei vastannut kuin IPTV-palveluntarjoaja. Tarkista osoite ja portti palveluntarjoajasi tiedoista tai kirjaudu Wi-Fi-verkkoon, jos se pyytää.</string>
+    <string name="error_addon_cant_reach_tv">Lisäosaa ei tavoiteta. Tarkista, että tämä televisio on verkossa ja että osoite on oikein.</string>
+    <string name="error_addon_cant_reach_device">Lisäosaa ei tavoiteta. Tarkista, että tämä laite on verkossa ja että osoite on oikein.</string>
+    <string name="error_addon_timed_out">Lisäosa lakkasi vastaamasta. Se voi olla ruuhkautunut, joten yritä hetken päästä uudelleen.</string>
+    <string name="error_addon_trouble">Lisäosalla on ongelmia. Vika on sen päässä, joten yritä myöhemmin uudelleen.</string>
+    <string name="error_not_an_addon_tv">Osoitteesta ei löytynyt lisäosaa. Tarkista, että se on manifest.json-linkki ja ettei tämän television internetyhteys vaadi ensin kirjautumista.</string>
+    <string name="error_not_an_addon_device">Osoitteesta ei löytynyt lisäosaa. Tarkista, että se on manifest.json-linkki ja ettei tämän laitteen internetyhteys vaadi ensin kirjautumista.</string>
     <string name="error_device_refused">Palveluntarjoajasi ei hyväksynyt näitä tietoja. Tarkista palveluntarjoajasi tiedot Asetuksista.</string>
     <string name="error_guide">Opasta ei voitu ladata. Yritä hetken päästä uudelleen.</string>
     <string name="error_guide_empty">Opas ladattiin, mutta siinä ei ollut ohjelmia. Tarkista, että linkki on oikea.</string>

@@ -272,6 +272,12 @@
     <string name="error_account_inactive">你的提供商表示此账户未激活。请向他们确认后重试。</string>
     <string name="error_bad_address">该地址看起来不正确。请在“设置”中检查提供商信息。</string>
     <string name="error_not_a_panel">该地址的响应不像 IPTV 提供商。请在提供商信息中检查地址和端口，或在 Wi-Fi 要求时登录。</string>
+    <string name="error_addon_cant_reach_tv">无法连接到插件。请检查这台电视是否已联网，以及地址是否正确。</string>
+    <string name="error_addon_cant_reach_device">无法连接到插件。请检查本设备是否已联网，以及地址是否正确。</string>
+    <string name="error_addon_timed_out">插件停止了响应。它可能正忙，请稍后重试。</string>
+    <string name="error_addon_trouble">插件出现了问题。这是插件那边的问题，请稍后重试。</string>
+    <string name="error_not_an_addon_tv">该地址没有给出插件。请检查它是否为 manifest.json 链接，以及这台电视的网络是否要求你先登录。</string>
+    <string name="error_not_an_addon_device">该地址没有给出插件。请检查它是否为 manifest.json 链接，以及本设备的网络是否要求你先登录。</string>
     <string name="error_device_refused">你的提供商未接受这些信息。请在“设置”中检查提供商信息。</string>
     <string name="error_guide">无法下载此节目单。请稍后重试。</string>
     <string name="error_guide_empty">此节目单已下载，但其中没有节目。请确认链接是否正确。</string>

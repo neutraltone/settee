@@ -272,6 +272,12 @@
     <string name="error_account_inactive">Sağlayıcınız bu hesabın etkin olmadığını söylüyor. Onlara danışın, ardından tekrar deneyin.</string>
     <string name="error_bad_address">Bu adres doğru görünmüyor. Ayarlar\'dan sağlayıcı bilgilerinizi kontrol edin.</string>
     <string name="error_not_a_panel">Bu adres bir IPTV sağlayıcısı gibi yanıt vermedi. Sağlayıcı bilgilerinizdeki adresi ve bağlantı noktasını kontrol edin veya Wi-Fi isterse oturum açın.</string>
+    <string name="error_addon_cant_reach_tv">Eklentiye ulaşılamıyor. Bu TV\'nin internete bağlı olduğunu ve adresin doğru olduğunu kontrol edin.</string>
+    <string name="error_addon_cant_reach_device">Eklentiye ulaşılamıyor. Bu cihazın internete bağlı olduğunu ve adresin doğru olduğunu kontrol edin.</string>
+    <string name="error_addon_timed_out">Eklenti yanıt vermeyi bıraktı. Yoğun olabilir, bu yüzden birazdan tekrar deneyin.</string>
+    <string name="error_addon_trouble">Eklenti sorun yaşıyor. Sorun onun tarafında, bu yüzden daha sonra tekrar deneyin.</string>
+    <string name="error_not_an_addon_tv">Bu adres bir eklenti vermedi. manifest.json bağlantısı olduğunu ve bu TV\'nin internetinin önce oturum açmanızı istemediğini kontrol edin.</string>
+    <string name="error_not_an_addon_device">Bu adres bir eklenti vermedi. manifest.json bağlantısı olduğunu ve bu cihazın internetinin önce oturum açmanızı istemediğini kontrol edin.</string>
     <string name="error_device_refused">Sağlayıcınız bu bilgileri kabul etmedi. Ayarlar\'dan sağlayıcı bilgilerinizi kontrol edin.</string>
     <string name="error_guide">Bu rehber indirilemedi. Birazdan tekrar deneyin.</string>
     <string name="error_guide_empty">Bu rehber indirildi ama içinde hiç program yoktu. Doğru bağlantı olduğunu kontrol edin.</string>

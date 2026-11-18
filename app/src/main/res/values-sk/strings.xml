@@ -272,6 +272,12 @@
     <string name="error_account_inactive">Podľa poskytovateľa tento účet nie je aktívny. Overte si to u neho a potom to skúste znova.</string>
     <string name="error_bad_address">Táto adresa nevyzerá správne. Skontrolujte údaje poskytovateľa v Nastaveniach.</string>
     <string name="error_not_a_panel">Táto adresa neodpovedala ako poskytovateľ IPTV. Skontrolujte adresu a port v údajoch poskytovateľa alebo sa prihláste do Wi-Fi, ak o to žiada.</string>
+    <string name="error_addon_cant_reach_tv">Doplnok nie je dostupný. Skontrolujte, či je tento televízor pripojený na internet a adresa je správna.</string>
+    <string name="error_addon_cant_reach_device">Doplnok nie je dostupný. Skontrolujte, či je toto zariadenie pripojené na internet a adresa je správna.</string>
+    <string name="error_addon_timed_out">Doplnok prestal odpovedať. Možno je vyťažený, preto to skúste o chvíľu znova.</string>
+    <string name="error_addon_trouble">Doplnok má problémy. Je to na jeho strane, preto to skúste neskôr.</string>
+    <string name="error_not_an_addon_tv">Táto adresa nevrátila doplnok. Skontrolujte, či ide o odkaz na manifest.json a či internet tohto televízora od vás najprv nežiada prihlásenie.</string>
+    <string name="error_not_an_addon_device">Táto adresa nevrátila doplnok. Skontrolujte, či ide o odkaz na manifest.json a či internet tohto zariadenia od vás najprv nežiada prihlásenie.</string>
     <string name="error_device_refused">Poskytovateľ tieto údaje neprijal. Skontrolujte údaje poskytovateľa v Nastaveniach.</string>
     <string name="error_guide">Tento program sa nepodarilo stiahnuť. Skúste to o chvíľu znova.</string>
     <string name="error_guide_empty">Program sa stiahol, ale nie sú v ňom žiadne relácie. Skontrolujte, či je to správny odkaz.</string>

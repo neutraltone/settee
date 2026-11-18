@@ -272,6 +272,12 @@
     <string name="error_account_inactive">Dostawca informuje, że to konto nie jest aktywne. Skontaktuj się z nim, a potem spróbuj ponownie.</string>
     <string name="error_bad_address">Ten adres wygląda na niepoprawny. Sprawdź dane dostawcy w Ustawieniach.</string>
     <string name="error_not_a_panel">Ten adres nie odpowiedział jak dostawca IPTV. Sprawdź adres i port w danych dostawcy albo zaloguj się do Wi-Fi, jeśli o to prosi.</string>
+    <string name="error_addon_cant_reach_tv">Nie można połączyć się z dodatkiem. Sprawdź, czy ten telewizor ma dostęp do internetu i czy adres jest poprawny.</string>
+    <string name="error_addon_cant_reach_device">Nie można połączyć się z dodatkiem. Sprawdź, czy to urządzenie ma dostęp do internetu i czy adres jest poprawny.</string>
+    <string name="error_addon_timed_out">Dodatek przestał odpowiadać. Może być przeciążony, więc spróbuj ponownie za chwilę.</string>
+    <string name="error_addon_trouble">Dodatek ma problemy. To leży po jego stronie, więc spróbuj ponownie później.</string>
+    <string name="error_not_an_addon_tv">Pod tym adresem nie ma dodatku. Sprawdź, czy to link do manifest.json i czy internet tego telewizora nie wymaga najpierw zalogowania.</string>
+    <string name="error_not_an_addon_device">Pod tym adresem nie ma dodatku. Sprawdź, czy to link do manifest.json i czy internet tego urządzenia nie wymaga najpierw zalogowania.</string>
     <string name="error_device_refused">Dostawca nie zaakceptował tych danych. Sprawdź dane dostawcy w Ustawieniach.</string>
     <string name="error_guide">Nie udało się pobrać tego przewodnika. Spróbuj ponownie za chwilę.</string>
     <string name="error_guide_empty">Przewodnik został pobrany, ale nie ma w nim programów. Sprawdź, czy to właściwy link.</string>

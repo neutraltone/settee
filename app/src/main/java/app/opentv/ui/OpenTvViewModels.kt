@@ -933,6 +933,18 @@ data class Backdrop(
 /** What Movies and Shows know a category by: its id is only unique within its provider. */
 val Category.browseKey: String get() = "$sourceId:$id"
 
+/** What a film's add-ons came back with, for its Add-on sources picker. */
+sealed interface AddonStreams {
+    /** TMDB couldn't match the film to IMDb, or the add-ons answered with nothing that plays directly. */
+    data object NoMatch : AddonStreams
+
+    /** The streams that play directly, from every add-on that answered. */
+    data class Found(val streams: List<StremioStream>) : AddonStreams
+
+    /** Every add-on failed: [error] says why the first did. */
+    data class Failed(val error: ViewerError) : AddonStreams
+}
+
 /** A Movies or Shows download that failed: which provider, so Provider setup can open it, and why. */
 data class VodLoadFailure(val sourceId: Long, val reason: ViewerError)
 
@@ -1062,19 +1074,28 @@ class VodViewModel @JvmOverloads constructor(
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), settings.stremioAddons.value.isNotEmpty())
 
     /**
-     * The streams the configured add-ons offer for [movie], resolved through Settee's TMDB Key for
-     * the IMDb id. Empty in a build without one, no add-ons, no IMDb match, or nothing came back. Each
-     * add-on is queried independently so one failing doesn't sink the rest.
+     * The streams the configured add-ons offer for [movie], resolved through TMDB for the IMDb id.
+     * Each add-on is asked on its own, so one failing doesn't sink the rest: it's [AddonStreams.Failed]
+     * only when every one failed, saying why the first did.
      */
-    suspend fun addonStreams(movie: Movie): List<StremioStream> {
+    suspend fun addonStreams(movie: Movie): AddonStreams {
         val addons = settings.stremioAddons.value
-        if (addons.isEmpty()) return emptyList()
-        val imdb = graph.catalogRepository.imdbIdFor(movie) ?: return emptyList()
-        return withContext(Dispatchers.IO) {
-            addons.flatMap { addon ->
-                runCatching { graph.stremioClient.streams(addon.manifestUrl, addon.name, "movie", imdb) }
-                    .getOrDefault(emptyList())
+        val imdb = if (addons.isEmpty()) null else graph.catalogRepository.imdbIdFor(movie)
+        val answers = if (imdb == null) {
+            emptyList()
+        } else {
+            withContext(Dispatchers.IO) {
+                addons.map { addon ->
+                    runCatching { graph.stremioClient.streams(addon.manifestUrl, addon.name, "movie", imdb) }
+                }
             }
+        }
+        val streams = answers.flatMap { it.getOrDefault(emptyList()) }
+        val failure = answers.firstOrNull()?.exceptionOrNull()
+        return when {
+            streams.isNotEmpty() -> AddonStreams.Found(streams)
+            failure != null && answers.none { it.isSuccess } -> AddonStreams.Failed(graph.errorWording.ofAddon(failure))
+            else -> AddonStreams.NoMatch
         }
     }
 
