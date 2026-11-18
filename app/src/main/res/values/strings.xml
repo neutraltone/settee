@@ -459,6 +459,21 @@
     <string name="pairing_phone_all_done_body">Carry on on your TV.</string>
     <string name="pairing_phone_stopped_title">Setup stopped on your TV</string>
     <string name="pairing_phone_stopped_body">Start setting up from your phone again on the TV to send your details.</string>
+    <string name="pairing_phone_form_title">Set up Settee</string>
+    <string name="pairing_phone_form_body">Filling this in here beats using the remote.</string>
+    <string name="pairing_phone_name_optional">Name, optional</string>
+    <string name="pairing_phone_name_example">Living room provider</string>
+    <string name="pairing_phone_server_help">You can paste the whole line from your provider, and the extra bits get trimmed.</string>
+    <string name="pairing_phone_code">Code shown on your TV</string>
+    <string name="pairing_phone_code_help">This proves it\'s you in front of the TV.</string>
+    <string name="pairing_phone_send">Send to TV</string>
+    <string name="pairing_phone_sending">Sending to your TV…</string>
+    <string name="pairing_phone_local_only">Only a phone on the same network as your TV can open this page.</string>
+    <string name="pairing_phone_missing_address">Add your provider\'s address, then send it again.</string>
+    <string name="pairing_phone_too_many_title">Too many wrong codes</string>
+    <string name="pairing_phone_too_many_body">Start setting up from your phone again on the TV to get a new code.</string>
+    <string name="pairing_phone_sent_title">Sent to your TV</string>
+    <string name="pairing_phone_sent_body">You can put your phone down. Carry on on your TV.</string>
     <string name="pairing_starting">Getting pairing ready</string>
     <string name="pairing_got_it">Got it. Connecting to your provider…</string>
     <string name="pairing_qr_desc">QR code linking to the setup page on this device</string>
@@ -752,6 +767,11 @@
     <string name="error_not_an_addon_device">That address didn\'t give an add-on. Check it\'s the manifest.json link, and that this device\'s internet doesn\'t need you to sign in first.</string>
     <string name="error_addon_lookup_tv">Couldn\'t look this film up to ask your add-ons. Check this TV is online, then try again.</string>
     <string name="error_addon_lookup_device">Couldn\'t look this film up to ask your add-ons. Check this device is online, then try again.</string>
+    <string name="test_ok_xtream">Your login works.</string>
+    <string name="test_ok_xtream_user">Signed in as %1$s.</string>
+    <string name="test_ok_xtream_expires">Your subscription runs until %1$s.</string>
+    <string name="test_ok_stalker">Your portal accepted the MAC address.</string>
+    <string name="test_ok_playlist">Found your playlist. Save to load its channels.</string>
     <string name="error_test_failed">Couldn\'t connect to your provider with these details. Check them and try again.</string>
     <string name="sync_wrong_code">That code doesn\'t match the one on the other device. Check it and try again.</string>
     <string name="sync_receive_failed">Couldn\'t get anything from the other device. Check it\'s still sharing, then try again.</string>
@@ -828,6 +848,14 @@
     <plurals name="refresh_problems">
         <item quantity="one">%d problem</item>
         <item quantity="other">%d problems</item>
+    </plurals>
+    <plurals name="pairing_phone_wrong_code">
+        <item quantity="one">That code doesn\'t match the one on your TV. %d try left.</item>
+        <item quantity="other">That code doesn\'t match the one on your TV. %d tries left.</item>
+    </plurals>
+    <plurals name="test_ok_xtream_connections">
+        <item quantity="one">Watch on %d screen at a time.</item>
+        <item quantity="other">Watch on %d screens at a time.</item>
     </plurals>
     <plurals name="refresh_channels_loaded">
         <item quantity="one">Loaded %d channel. The guide is loading in the background; Movies and Shows load when you open them.</item>

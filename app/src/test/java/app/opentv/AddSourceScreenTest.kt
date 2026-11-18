@@ -8,6 +8,7 @@ package app.opentv
 import android.app.Application
 import android.content.ClipData
 import android.content.ClipboardManager
+import android.os.Looper
 import android.text.InputType
 import android.view.KeyEvent
 import android.view.View
@@ -33,6 +34,7 @@ import app.opentv.ui.onboarding.AddSourceScreen
 import com.google.common.truth.Truth.assertThat
 import java.net.InetAddress
 import java.net.ServerSocket
+import kotlin.concurrent.thread
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.After
@@ -130,15 +132,51 @@ class AddSourceScreenTest {
     }
 
     @Test
+    fun `a playlist that passes Test says it was found, and nothing about loading`() {
+        // A playlist served from this machine, so Test fetches a real one.
+        ServerSocket(0, 1, InetAddress.getLoopbackAddress()).use { playlist ->
+            thread(isDaemon = true) { runCatching { playlist.accept().use(::servePlaylist) } }
+            show()
+            compose.onNodeWithText(M3U).performClick()
+            device.type("http://127.0.0.1:${playlist.localPort}/list.m3u", device.box(SERVER))
+            compose.onNodeWithText("Test connection").requestFocus()
+
+            device.remote(KeyEvent.KEYCODE_DPAD_CENTER)
+            // The answer comes back on the main looper, which nothing else runs while this waits.
+            compose.waitUntil(5_000) {
+                shadowOf(Looper.getMainLooper()).idle()
+                viewModel.ui.value.let { !it.testing && it.testResult != null }
+            }
+
+            compose.onNodeWithText("Found your playlist. Save to load its channels.").assertExists()
+            captureScreen("add_source_test_ok")
+        }
+    }
+
+    /** Answers one request on [client] with a two-channel playlist. */
+    private fun servePlaylist(client: java.net.Socket) {
+        val reader = client.getInputStream().bufferedReader()
+        while (reader.readLine().orEmpty().isNotEmpty()) Unit
+        val body = "#EXTM3U\n#EXTINF:-1,One\nhttp://example.com/1.ts\n#EXTINF:-1,Two\nhttp://example.com/2.ts\n"
+        client.getOutputStream().write(
+            (
+                "HTTP/1.1 200 OK\r\nContent-Type: audio/x-mpegurl\r\nContent-Length: ${body.length}\r\n" +
+                    "Connection: close\r\n\r\n$body"
+                ).toByteArray(),
+        )
+    }
+
+    @Test
     fun `a test's result isn't shown on the next form opened`() {
         show()
         compose.onNodeWithText(M3U).performClick()
         device.type(UNREACHABLE, device.box(SERVER))
         compose.onNodeWithText("Test connection").requestFocus()
         device.remote(KeyEvent.KEYCODE_DPAD_CENTER)
-        compose.waitUntil(5_000) { viewModel.ui.value.let { !it.testing && it.testResult != null } }
-        val result = viewModel.ui.value.testResult!!
+        compose.waitUntil(5_000) { viewModel.ui.value.let { !it.testing && it.testError != null } }
+        val result = viewModel.ui.value.testError!!.sentence
         compose.onNodeWithText(result).assertExists()
+        captureScreen("add_source_test_failed")
 
         Espresso.pressBack()
         compose.onNodeWithText(STALKER).performClick()
