@@ -66,8 +66,9 @@ class ErrorWording(private val context: Context, private val onTelevision: Boole
 
     private fun ofProvider(error: ProviderException, @StringRes fallback: Int): ViewerError {
         val status = error.status
-        // A 404 where an Xtream login should be is the address that's wrong, not a status to wait out.
-        if (status != null && error.problem != Problem.NOT_A_PANEL) return ofHttpStatus(status, fallback)
+        // Only a bare status is worded by its number: a 404 where an Xtream login should be keeps its
+        // NOT_A_PANEL sentence, since the address is what's wrong, not a status to wait out.
+        if (status != null && error.problem == Problem.HTTP_STATUS) return ofHttpStatus(status, fallback)
         val sentence = when (error.problem) {
             Problem.LOGIN_REJECTED -> R.string.error_login
             Problem.ACCOUNT_INACTIVE -> R.string.error_account_inactive

@@ -111,6 +111,18 @@ class CatalogueRefreshFailureTest {
     }
 
     @Test
+    fun `a broken login reply that starts with a byte-order mark still says to try again`() = runTest {
+        db.sources().insert(PANEL_SOURCE)
+        panel.replies[""] = "\uFEFF{\"user_info\": {\"status\": \"Act"
+
+        val outcome = refresh.refresh(CatalogueRefresh.Trigger.ProviderAdded(PANEL_SOURCE))
+
+        assertThat((outcome as CatalogueRefresh.Outcome.AddFailed).reason).isEqualTo(
+            ViewerError("Couldn't load your provider's channels. Try again in a moment.", "BadReply"),
+        )
+    }
+
+    @Test
     fun `adding an address with nothing where an Xtream login should be says to check the address`() = runTest {
         db.sources().insert(PANEL_SOURCE)
         panel.replies[""] = "!404"

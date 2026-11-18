@@ -235,7 +235,7 @@ class XtreamApi(
      */
     suspend fun movieInfo(source: Source, streamId: String): VodInfo? = withContext(Dispatchers.IO) {
         val body = runCatching {
-            getJson(source, "get_vod_info") { it.addQueryParameter("vod_id", streamId) }
+            getJson(source, "get_vod_info", oneTitle = true) { it.addQueryParameter("vod_id", streamId) }
         }.getOrNull() ?: return@withContext null
         val info = body.jsonObjectOrNull?.get("info").jsonObjectOrNull ?: JsonObject(emptyMap())
         VodInfo(
@@ -261,7 +261,9 @@ class XtreamApi(
      * the panel doesn't answer, so callers can tell that apart from a series with nothing to give.
      */
     suspend fun seriesInfo(source: Source, seriesId: String): SeriesReply = withContext(Dispatchers.IO) {
-        val body = getJson(source, "get_series_info") { it.addQueryParameter("series_id", seriesId) }.jsonObjectOrNull
+        val body = getJson(source, "get_series_info", oneTitle = true) {
+            it.addQueryParameter("series_id", seriesId)
+        }.jsonObjectOrNull
         val info = body?.get("info").jsonObjectOrNull ?: JsonObject(emptyMap())
         SeriesReply(
             info = SeriesInfo(
@@ -374,10 +376,23 @@ class XtreamApi(
 
     // ---- Plumbing ------------------------------------------------------------------------
 
-    private fun getJson(source: Source, action: String?, extra: (HttpUrl.Builder) -> Unit = {}): JsonElement =
-        open(source, action, extra).use { parsed(json, it.body.string()) }
+    /**
+     * [action]'s reply as JSON. A [oneTitle] request is to a panel whose login and lists already worked,
+     * so a web page or a 404 from it is about that title, never [Problem.NOT_A_PANEL].
+     */
+    private fun getJson(
+        source: Source,
+        action: String?,
+        oneTitle: Boolean = false,
+        extra: (HttpUrl.Builder) -> Unit = {},
+    ): JsonElement = open(source, action, oneTitle, extra).use { parsed(json, it.body.string(), oneTitle) }
 
-    private fun open(source: Source, action: String?, extra: (HttpUrl.Builder) -> Unit = {}): Response {
+    private fun open(
+        source: Source,
+        action: String?,
+        oneTitle: Boolean = false,
+        extra: (HttpUrl.Builder) -> Unit = {},
+    ): Response {
         val builder = baseUrl(source).newBuilder()
             .encodedPath("/player_api.php")
             .addQueryParameter("username", source.username.orEmpty())
@@ -388,10 +403,11 @@ class XtreamApi(
         val response = http.newCall(request(source, builder.build())).execute()
         if (!response.isSuccessful) {
             response.close()
+            // No player_api.php at all: a website, or the wrong port, rather than a panel in trouble.
+            val notAPanel = response.code == HTTP_NOT_FOUND && !oneTitle
             throw XtreamException(
                 "The panel answered HTTP ${response.code}.",
-                // No player_api.php at all: a website, or the wrong port, rather than a panel in trouble.
-                problem = if (response.code == HTTP_NOT_FOUND) Problem.NOT_A_PANEL else Problem.HTTP_STATUS,
+                problem = if (notAPanel) Problem.NOT_A_PANEL else Problem.HTTP_STATUS,
                 status = response.code,
             )
         }
@@ -520,14 +536,14 @@ class XtreamApi(
     data class SeriesReply(val info: SeriesInfo, val episodes: List<Episode>)
 }
 
-private fun parsed(json: Json, text: String): JsonElement {
+private fun parsed(json: Json, text: String, oneTitle: Boolean = false): JsonElement {
     if (text.isBlank()) throw XtreamApi.XtreamException("The server returned an empty response.")
-    // Only a reply that isn't JSON from its first character is a website or a sign-in page: JSON that
-    // breaks off later is a panel whose reply was cut short, and trying again can help with that.
+    // Only a reply that isn't a JSON object, array or string from its first character is a website or a
+    // sign-in page (panels send nothing else at the top): JSON that breaks off later is a panel whose
+    // reply was cut short, and trying again can help with that.
     val startsAsJson = text.trimStart().first() in "{[\""
-    return readingCatalogue(if (startsAsJson) Problem.BAD_REPLY else Problem.NOT_A_PANEL) {
-        json.parseToJsonElement(text)
-    }
+    val problem = if (startsAsJson || oneTitle) Problem.BAD_REPLY else Problem.NOT_A_PANEL
+    return readingCatalogue(problem) { json.parseToJsonElement(text) }
 }
 
 /** Panels behind a captive portal or Cloudflare return HTML; "not valid JSON" means nothing to a viewer. */

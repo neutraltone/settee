@@ -120,7 +120,7 @@ Every refresh, whatever triggered it, saves each provider's channel-list failure
 
 - under its provider's row in Settings › Providers, with Refresh again;
 - on Home's banner, above the first shelf, for an enabled provider whose failure only the viewer can
-  fix: `LoginRejected`, `AccountInactive`, `BadAddress`, `NotAPanel`, HTTP 401 or 403. One provider shows its name
+  fix (`Problem.viewersToFix`): `LoginRejected`, `AccountInactive`, `BadAddress`, `NotAPanel`, HTTP 401 or 403. One provider shows its name
   and the sentence, several a count, never the detail line. Network drops, timeouts and 5xx don't
   raise it, since the next refresh usually clears them;
 - in Live TV's empty state, titled `guide_load_failed_title_named` with the provider's name, when
