@@ -82,6 +82,12 @@ Without a keystore, `app/build.gradle.kts` signs release builds with the Android
 be rejected by the installer with an error that explains nothing. Those builds are never
 published.
 
+A build like that also installs as its own app, `uk.neutraltone.settee.pr`, called Settee Release
+with a RELEASE badge on its icon and banner (`app/src/local`), since Android won't update the real
+release with an APK signed by another key. It keeps its own data between installs, so
+`adb install -r` of a newer one updates it in place. The same `KEYSTORE_PATH` check decides the key
+and the badge, so a build signed with the release key never carries it.
+
 ### Setting up the release key
 
 This is the owner's job. The passwords and backups stay with them, not with CI or an agent.

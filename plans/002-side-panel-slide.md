@@ -275,11 +275,11 @@ language) by its own full width:
     from the left edge.
   - Over a playing channel: the Subtitles panel slides over the picture without the video
     stuttering.
-- **Budget** (release build, `uk.neutraltone.settee`, on the Stick): for a Settings panel, a
+- **Budget** (release build, `uk.neutraltone.settee.pr`, on the Stick): for a Settings panel, a
   confirmation and the live player's Subtitles panel, one at a time:
-  1. `adb shell dumpsys gfxinfo uk.neutraltone.settee reset`
+  1. `adb shell dumpsys gfxinfo uk.neutraltone.settee.pr reset`
   2. Open the panel, wait 1 s.
-  3. `adb shell dumpsys gfxinfo uk.neutraltone.settee framestats > slide-<panel>.txt`
+  3. `adb shell dumpsys gfxinfo uk.neutraltone.settee.pr framestats > slide-<panel>.txt`
 
   Leave out the first two frames after the press. Every other frame must be under 16.7 ms. Put the
   median and worst frame for each in the PR description. **If one misses:** set

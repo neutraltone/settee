@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The local release build's launcher label (see the local AndroidManifest.xml). -->
+    <string name="launcher_label_local" translatable="false">Settee Release</string>
+</resources>

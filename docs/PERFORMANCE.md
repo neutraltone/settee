@@ -63,7 +63,7 @@ The slowest of both was the first run. Memory at Home after a cold start was 86 
 
 ## How to measure
 
-1. Build from `main` with `./gradlew assembleRelease` and install it. A local release build is a separate app from the debug build, with its own data, and both are called Settee on the launcher. `dumpsys activity activities | grep mResumedActivity` says which is in front.
+1. Build from `main` with `./gradlew assembleRelease` and install it. A local release build is a separate app (`uk.neutraltone.settee.pr`, "Settee Release") from both the real release and the debug build, with its own data. `stick_baseline.py` measures it unless given another `--package`, and the `<package>` in the commands below is it. `dumpsys activity activities | grep mResumedActivity` says which is in front.
 2. Add a provider and fill Home, and record what's on it and the catalogue's size, along with the commit. This baseline's Home is described above, so note any difference. Wait until the app is idle, because the guide matcher runs on after its progress bar has gone: `/proc/<pid>/stat` fields 14 and 15 should stop rising. The last channel count is in `adb logcat -d -s EpgRepository:I`.
 3. Stop the debug build so it isn't taking memory: `adb shell am force-stop uk.neutraltone.settee.debug`.
 4. Put the highlight in place and check with a screenshot, before and after each run:

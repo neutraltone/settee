@@ -15,7 +15,7 @@ sys.path.insert(0, os.path.dirname(__file__))
 
 import stick_baseline
 
-PACKAGE = "uk.neutraltone.settee"
+PACKAGE = "uk.neutraltone.settee.pr"
 NO_INPUT = "9223372036854775807,0"
 HEADER = (
     "Flags,IntendedVsync,Vsync,OldestInputEvent,NewestInputEvent,HandleInputStart,"
@@ -41,7 +41,7 @@ def press_reply(*rows, pressed_ms=0):
 
 SUMMARY = textwrap.dedent(
     """\
-    ** Graphics info for pid 1 [uk.neutraltone.settee] **
+    ** Graphics info for pid 1 [uk.neutraltone.settee.pr] **
 
     Stats since: 1533615777090ns
     Total frames rendered: 200
@@ -59,7 +59,7 @@ SUMMARY = textwrap.dedent(
     HISTOGRAM: 5ms=0 14ms=150 97ms=49 300ms=1 650ms=0
     Profile data in ms:
 
-    Window: uk.neutraltone.settee/app.opentv.MainActivity
+    Window: uk.neutraltone.settee.pr/app.opentv.MainActivity
     Stats since: 1533615775705ns
     Total frames rendered: 999
     Janky frames: 999 (99.00%)
@@ -78,11 +78,11 @@ GETEVENT = textwrap.dedent(
 PACKAGE_DUMP = textwrap.dedent(
     """\
     Packages:
-      Package [uk.neutraltone.settee] (abc):
+      Package [uk.neutraltone.settee.pr] (abc):
         versionName=0.4.0
         pkgFlags=[ HAS_CODE ALLOW_CLEAR_USER_DATA ]
     Dexopt state:
-      [uk.neutraltone.settee]
+      [uk.neutraltone.settee.pr]
         path: /data/app/base.apk
           arm: [status=quicken] [reason=install]
     """

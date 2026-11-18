@@ -44,6 +44,10 @@ val tmdbApiKey: String = builtInKey("TMDB_API_KEY", "tmdb.apiKey")
 // The profile generator's builds of the app take this plus a suffix (androidComponents below).
 val releaseApplicationId = "uk.neutraltone.settee"
 
+// A release build made without the release keystore, which only CI has: this Mac's, for trying a
+// branch on a device. It falls back to the debug key, so it gets its own id, label and badge.
+val isLocalRelease = providers.environmentVariable("KEYSTORE_PATH").orNull == null
+
 android {
     namespace = "app.opentv"
     compileSdk = 37
@@ -87,6 +91,11 @@ android {
 
     buildTypes {
         release {
+            // A local release build is its own app, "Settee Release" with a RELEASE badge, beside
+            // the real one: Android won't update an app with an APK signed by another key, so it
+            // could never replace the release install anyway, and on a device it needs telling
+            // apart from both that and the debug build. The badge is in src/local (sourceSets).
+            if (isLocalRelease) applicationIdSuffix = ".pr"
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(
@@ -106,10 +115,10 @@ android {
              * build (docs/RELEASING.md).
              */
             signingConfig =
-                if (providers.environmentVariable("KEYSTORE_PATH").orNull != null) {
-                    signingConfigs.getByName("upload")
-                } else {
+                if (isLocalRelease) {
                     signingConfigs.getByName("debug")
+                } else {
+                    signingConfigs.getByName("upload")
                 }
         }
         debug {
@@ -154,6 +163,14 @@ android {
         // MigrationTestHelper reads exported schemas from assets, and Robolectric only sees the
         // variant's merged assets. Debug only, so the release APK doesn't carry the JSON.
         getByName("debug").assets.directories += "$projectDir/schemas"
+        // Only the build signed with the debug key wears the RELEASE badge, so the one that ships
+        // can't: release.yml has the keystore, and refuses a debug-key APK besides.
+        if (isLocalRelease) {
+            getByName("release") {
+                manifest.srcFile("src/local/AndroidManifest.xml")
+                res.directories += "src/local/res"
+            }
+        }
     }
 
     testOptions {

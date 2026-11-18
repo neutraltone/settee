@@ -15,8 +15,12 @@ Outputs, relative to the repo root:
   tools/launcher-art/settee-banner-debug.svg  settee-banner.svg with the DEBUG badge
   app/src/debug/res/drawable/ic_launcher_foreground.xml  the debug build's, with the badge
   app/src/debug/res/drawable/ic_launcher_monochrome.xml  the debug build's, with the badge
+  tools/launcher-art/settee-icon-local.svg    the same four for the local release build, with a
+  tools/launcher-art/settee-banner-local.svg  RELEASE badge, in app/src/local
+  app/src/local/res/drawable/ic_launcher_foreground.xml
+  app/src/local/res/drawable/ic_launcher_monochrome.xml
 
-The words come from settee-wordmark.svg and debug-badge.svg (see outline_wordmark.py), so this
+The words come from settee-wordmark.svg and the *-badge.svg files (see outline_wordmark.py), so this
 needs no font and only the standard library. tools/render-launcher-art.sh runs it before rendering
 the PNGs, and test_mark.py fails when a committed file no longer matches what this writes.
 
@@ -66,8 +70,14 @@ SAFE_RADIUS = 32  # a unit inside the adaptive icon's 33 (of 108), so antialiasi
 # the icon rather than in a corner: inside the safe circle a corner leaves room for type too small
 # to read on Fire TV Home's tiles.
 BADGE_PAD_X, BADGE_PAD_Y, BADGE_GAP = 5, 3.5, 2
-# Width of the pill on each copy: the adaptive icon (of 108), the tile (of 100) and the banner (px).
+# Width of DEBUG's pill on each copy: the adaptive icon (of 108), the tile (of 100) and the banner
+# (px). A longer word's pill is wider by as much, so every badge's letters are the same size.
 BADGE_WIDTH_ADAPTIVE, BADGE_WIDTH_TILE, BADGE_WIDTH_BANNER = 46, 64, 96
+# The builds that wear a badge: (source set, word file, word, who for the comments). The local
+# release build is a release build signed with this Mac's debug key, for trying a branch on a
+# device beside the real release, so it needs telling apart from both.
+BADGED_BUILDS = [("debug", "debug-badge.svg", "DEBUG", "debug build"),
+                 ("local", "local-badge.svg", "RELEASE", "local release build")]
 WRAP = 100
 
 
@@ -208,34 +218,43 @@ def extent():
 
 
 class Badge(NamedTuple):
-    """The badge in debug-badge.svg's units, the text's baseline starting at the origin.
+    """A badge in its word file's units, the text's baseline starting at the origin.
 
-    pill and gap (the coral ring around it) are (x, y, w, h, r); text is path data.
+    pill and gap (the coral ring around it) are (x, y, w, h, r); text is path data. widen is how
+    much wider its pill is than DEBUG's, which the BADGE_WIDTH_* constants are set for.
     """
     pill: tuple
     gap: tuple
     text: str
+    widen: float = 1.0
 
 
-def badge_shape(art):
-    word, advance, top, bottom = read_word(art, "debug-badge.svg")
+def pill_and_gap(art, name):
+    word, advance, top, bottom = read_word(art, name)
     h = bottom - top + 2 * BADGE_PAD_Y
     inset = BADGE_PAD_X + h / 2 - BADGE_PAD_Y  # the text's margin, measured from the end caps' centres
     pill = (-inset, top - BADGE_PAD_Y, advance + 2 * inset, h, h / 2)
     g = BADGE_GAP
-    return Badge(pill, (pill[0] - g, pill[1] - g, pill[2] + 2 * g, pill[3] + 2 * g, pill[4] + g), word)
+    return pill, (pill[0] - g, pill[1] - g, pill[2] + 2 * g, pill[3] + 2 * g, pill[4] + g), word
+
+
+def badge_shape(art, name="debug-badge.svg"):
+    pill, gap, word = pill_and_gap(art, name)
+    debug_pill = pill if name == "debug-badge.svg" else pill_and_gap(art, "debug-badge.svg")[0]
+    return Badge(pill, gap, word, pill[2] / debug_pill[2])
 
 
 def badge_place(badge, width, centre_x, centre_y):
-    """(scale, translate x, translate y) drawing the pill `width` wide, centred on the point."""
+    """(scale, translate x, translate y) drawing DEBUG's pill `width` wide (this badge's in step
+    with it), centred on the point."""
     x, y, w, h, _ = badge.gap
-    s = width / badge.pill[2]
+    s = width * badge.widen / badge.pill[2]
     return s, centre_x - (x + w / 2) * s, centre_y - (y + h / 2) * s
 
 
 def adaptive_badge_place(badge):
     """As low on the adaptive icon as it goes with its gap still inside the safe circle."""
-    s = BADGE_WIDTH_ADAPTIVE / badge.pill[2]
+    s = BADGE_WIDTH_ADAPTIVE * badge.widen / badge.pill[2]
     half_w, half_h = badge.gap[2] * s / 2, badge.gap[3] * s / 2
     room = (SAFE_RADIUS - half_h) ** 2 - (half_w - half_h) ** 2
     if room < 0:
@@ -250,9 +269,9 @@ def placed(rect, place):
     return tx + x * s, ty + y * s, w * s, h * s, r * s
 
 
-def badge_reach(art):
+def badge_reach(art, name="debug-badge.svg"):
     """How far the adaptive icon's badge, gap included, reaches from the icon's centre."""
-    badge = badge_shape(art)
+    badge = badge_shape(art, name)
     x, y, w, _, r = placed(badge.gap, adaptive_badge_place(badge))
     return max(math.dist((54, 54), (cx, y + r)) for cx in (x + r, x + w - r)) + r
 
@@ -400,23 +419,25 @@ def outputs(root):
         "mark in one colour with the screen and seat slit cut out, placed as in "
         "ic_launcher_foreground."), [(adaptive, silhouette("#FF000000"))])
 
-    # The debug build's copies: the same, with the badge across the foot (#244). Only the debug
-    # source set gets them, so a release build's resources stay exactly as they were.
-    debug_res = root / "app/src/debug/res/drawable"
-    badge = badge_shape(art)
-    badged = adaptive_badge_place(badge)
-    files[debug_res / "ic_launcher_foreground.xml"] = vector(108, 108, (
-        "The debug build's adaptive-icon foreground, written by tools/launcher-art/mark.py: "
-        "ic_launcher_foreground with a DEBUG badge across its foot, kept inside the safe circle, so "
-        "it can't be mistaken for the release build."),
-        [(adaptive, colour_mark(PLUM_RES, CORAL_RES)), (None, [fill(skirt(badge, badged, 108), CORAL_RES)]),
-         (badged, badge_paths(badge, PLUM_RES, CORAL_RES, CREAM_RES, gap=False))])
-    files[debug_res / "ic_launcher_monochrome.xml"] = vector(108, 108, (
-        "The debug build's monochrome layer, written by tools/launcher-art/mark.py: "
-        "ic_launcher_monochrome with the DEBUG badge, the mark clipped clear of the badge's gap "
-        "because a themed icon is drawn from alpha alone."),
-        [Group(adaptive, silhouette("#FF000000"), clip=outside(badge, badged, 108)),
-         (badged, badge_silhouette(badge, "#FF000000"))])
+    # The badged builds' copies: the same, with the badge across the foot (#244). Only each one's
+    # own source set gets them, so a release build's resources stay exactly as they were.
+    badges = {}
+    for source_set, name, word, who in BADGED_BUILDS:
+        badged_res = root / f"app/src/{source_set}/res/drawable"
+        badge = badges[source_set] = badge_shape(art, name)
+        badged = adaptive_badge_place(badge)
+        files[badged_res / "ic_launcher_foreground.xml"] = vector(108, 108, (
+            f"The {who}'s adaptive-icon foreground, written by tools/launcher-art/mark.py: "
+            f"ic_launcher_foreground with a {word} badge across its foot, kept inside the safe circle, so "
+            "it can't be mistaken for the release build."),
+            [(adaptive, colour_mark(PLUM_RES, CORAL_RES)), (None, [fill(skirt(badge, badged, 108), CORAL_RES)]),
+             (badged, badge_paths(badge, PLUM_RES, CORAL_RES, CREAM_RES, gap=False))])
+        files[badged_res / "ic_launcher_monochrome.xml"] = vector(108, 108, (
+            f"The {who}'s monochrome layer, written by tools/launcher-art/mark.py: "
+            f"ic_launcher_monochrome with the {word} badge, the mark clipped clear of the badge's gap "
+            "because a themed icon is drawn from alpha alone."),
+            [Group(adaptive, silhouette("#FF000000"), clip=outside(badge, badged, 108)),
+             (badged, badge_silhouette(badge, "#FF000000"))])
 
     # Notification: Android keeps only the alpha. The mark fills 20dp of 24, the usual 2dp inset.
     n = 20 / max(box[2] - box[0], box[3] - box[1])
@@ -450,11 +471,13 @@ def outputs(root):
 
     files[art / "settee-icon.svg"] = icon_svg(
         "Written by mark.py: the mark in its coral tile at 74%, the API 24-25 launcher icon.", [])
-    # The gap's foot 4 units above the tile's.
-    gap_h = badge.gap[3] * BADGE_WIDTH_TILE / badge.pill[2]
-    files[art / "settee-icon-debug.svg"] = icon_svg(
-        "Written by mark.py: settee-icon.svg with the DEBUG badge, the debug build's API 24-25 icon.",
-        badge_svg(badge, badge_place(badge, BADGE_WIDTH_TILE, 50, 100 - 4 - gap_h / 2)))
+    for source_set, _, word, who in BADGED_BUILDS:
+        badge = badges[source_set]
+        # The gap's foot 4 units above the tile's.
+        gap_h = badge.gap[3] * BADGE_WIDTH_TILE * badge.widen / badge.pill[2]
+        files[art / f"settee-icon-{source_set}.svg"] = icon_svg(
+            f"Written by mark.py: settee-icon.svg with the {word} badge, the {who}'s API 24-25 icon.",
+            badge_svg(badge, badge_place(badge, BADGE_WIDTH_TILE, 50, 100 - 4 - gap_h / 2)))
 
     # Banner, laid out as the prototype: the mark 30% of the width, a 4% gap, then the word, the
     # whole row centred, and the word's ink centred on the banner's middle.
@@ -474,9 +497,11 @@ def outputs(root):
     files[art / "settee-banner.svg"] = banner_svg(
         "Written by mark.py: the TV banner, the mark beside settee-wordmark.svg.", [])
     # Under the name, centred on it, where the banner has room.
-    files[art / "settee-banner-debug.svg"] = banner_svg(
-        "Written by mark.py: settee-banner.svg with the DEBUG badge under the name.",
-        badge_svg(badge, badge_place(badge, BADGE_WIDTH_BANNER, word_x + advance / 2, 146)))
+    for source_set, _, badge_word, _ in BADGED_BUILDS:
+        badge = badges[source_set]
+        files[art / f"settee-banner-{source_set}.svg"] = banner_svg(
+            f"Written by mark.py: settee-banner.svg with the {badge_word} badge under the name.",
+            badge_svg(badge, badge_place(badge, BADGE_WIDTH_BANNER, word_x + advance / 2, 146)))
 
     # The phone page's lockup, for a dark screen: the tile beside the name in cream, the word's ink
     # centred on the tile. A Kotlin constant rather than an asset, so every page can include it

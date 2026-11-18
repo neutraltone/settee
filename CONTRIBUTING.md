@@ -51,7 +51,9 @@ git config core.hooksPath .githooks   # checks each commit message
 ```
 
 JDK 17+ and Android SDK API 37. Android Studio handles both. The debug build installs as
-`uk.neutraltone.settee.debug`, beside a release build, without touching its data. A Fire TV Stick
+`uk.neutraltone.settee.debug`, beside a release build, without touching its data. A release build
+made locally (`./gradlew assembleRelease`, without the release keystore) is debug-signed, so it
+installs as its own app too: `uk.neutraltone.settee.pr`, called Settee Release. A Fire TV Stick
 connects over wifi with `adb connect <stick-ip>:5555` once ADB debugging is on.
 
 To run tests, run the class you're working on through `tools/check/check.py`, which prints why a

@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # Writes every copy of Settee's mark: tools/launcher-art/mark.py writes the vector drawables and the
 # SVGs, then this renders the launcher icon PNGs (for API 24-25, which has no adaptive icons) and the
-# TV banner from those SVGs, and the debug build's badged copies of both into its own source set
-# (#244). The words are already outlined (outline_wordmark.py), so no font is needed. Needs python3,
+# TV banner from those SVGs, and the badged copies of both for the debug and local release builds into
+# their own source sets (#244). The words are already outlined (outline_wordmark.py), so no font is needed. Needs python3,
 # librsvg (rsvg-convert) and ImageMagick 7: ImageMagick's own SVG renderer draws the mark's curves
 # badly, so it only post-processes. CI has neither, so the last step records the hashes of what it
 # rendered from and to in launcher-art/rendered.sha256, which test_mark.py checks.
@@ -14,6 +14,7 @@ here="$(dirname "$0")"
 art="$here/launcher-art"
 res="$here/../app/src/main/res"
 debug_res="$here/../app/src/debug/res"
+local_res="$here/../app/src/local/res"
 
 # The committed PNGs came from these versions. Others antialias a little differently, so the PNGs
 # would change with no change to the artwork: don't commit that churn on its own.
@@ -46,11 +47,13 @@ render_banner() { # svg, res dir
 
 render_icons settee-icon.svg "$res"
 render_icons settee-icon-debug.svg "$debug_res"
+render_icons settee-icon-local.svg "$local_res"
 render_banner settee-banner.svg "$res"
 render_banner settee-banner-debug.svg "$debug_res"
+render_banner settee-banner-local.svg "$local_res"
 
 (
   cd "$here/.."
-  shasum -a 256 tools/launcher-art/settee-{icon,banner}{,-debug}.svg \
-    app/src/{main,debug}/res/mipmap-*/{ic_launcher,banner}.png
+  shasum -a 256 tools/launcher-art/settee-{icon,banner}{,-debug,-local}.svg \
+    app/src/{main,debug,local}/res/mipmap-*/{ic_launcher,banner}.png
 ) >"$art/rendered.sha256"

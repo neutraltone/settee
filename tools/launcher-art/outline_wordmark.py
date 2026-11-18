@@ -3,6 +3,7 @@
 
   settee-wordmark.svg  "Settee" in Young Serif 3.003, beside the mark on the banner
   debug-badge.svg      "DEBUG" in Alegreya Sans Bold, on the debug build's badge
+  local-badge.svg      "RELEASE" in Alegreya Sans Bold, on the local release build's badge
 
 Run only when a word changes: the output is committed, so mark.py and the PNG render need no font.
 Young Serif is pinned at 3.003, the exact Google Fonts file (see docs/LOOK.md), because upstream
@@ -13,6 +14,7 @@ Needs fontTools and uharfbuzz (pip install fonttools uharfbuzz) and Young Serif 
 https://raw.githubusercontent.com/google/fonts/447b80922b0da6c69353c337337590dd8e24217a/ofl/youngserif/YoungSerif-Regular.ttf
 
     python3 tools/launcher-art/outline_wordmark.py path/to/YoungSerif-Regular.ttf
+    python3 tools/launcher-art/outline_wordmark.py --badges    # only the badges' words
 """
 import hashlib
 import sys
@@ -76,15 +78,25 @@ def outline(font_path, data, word, size, name, out, use):
         "</svg>\n")
 
 
+def outline_badges(art):
+    # Caps 10px tall, near enough: mark.py scales the badge to fit each copy.
+    data = read_font(ALEGREYA_SANS_BOLD, ALEGREYA_SANS_BOLD_SHA256, "Alegreya Sans Bold")
+    outline(ALEGREYA_SANS_BOLD, data, "DEBUG", 15, "Alegreya Sans Bold", art / "debug-badge.svg",
+            "on the debug build's badge")
+    outline(ALEGREYA_SANS_BOLD, data, "RELEASE", 15, "Alegreya Sans Bold", art / "local-badge.svg",
+            "on the local release build's badge")
+
+
 def main():
     art = Path(__file__).resolve().parent
+    if sys.argv[1:] == ["--badges"]:  # the badges' font ships in the repo, so they need no download
+        outline_badges(art)
+        return
     young_serif = Path(sys.argv[1])
     # 57.6px is 18% of the banner's 320, as the prototype sets it.
     outline(young_serif, read_font(young_serif, YOUNG_SERIF_SHA256, "Young Serif 3.003 from Google Fonts"),
             "Settee", 57.6, "Young Serif 3.003", art / "settee-wordmark.svg", "on the banner")
-    # Caps 10px tall, near enough: mark.py scales the badge to fit each copy.
-    outline(ALEGREYA_SANS_BOLD, read_font(ALEGREYA_SANS_BOLD, ALEGREYA_SANS_BOLD_SHA256, "Alegreya Sans Bold"),
-            "DEBUG", 15, "Alegreya Sans Bold", art / "debug-badge.svg", "on the debug build's badge")
+    outline_badges(art)
 
 
 if __name__ == "__main__":

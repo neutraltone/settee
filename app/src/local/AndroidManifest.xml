@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  This file is part of OpenTV.
+  Copyright (C) 2026 The OpenTV Contributors
+  Licensed under the GNU General Public License v3.0 or later.
+-->
+<!--
+  The local release build's own launcher label: a release build made on a Mac without the release
+  keystore (app/build.gradle.kts, isLocalRelease), installed beside the real release and the debug
+  build. Only the launcher entry changes: in-app text keeps app_name's "Settee".
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <application
+        android:label="@string/launcher_label_local"
+        tools:replace="android:label" />
+</manifest>
