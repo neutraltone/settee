@@ -249,7 +249,7 @@ class SourcesViewModel @JvmOverloads constructor(
             val result = graph.sourceRepository.test(draft)
             _ui.value = _ui.value.copy(
                 testing = false,
-                testResult = result.getOrNull(),
+                testResult = result.getOrNull()?.let(graph.errorWording.tests::of),
                 testError = result.exceptionOrNull()?.let {
                     graph.errorWording.ofProvider(it, R.string.error_test_failed)
                 },
@@ -279,7 +279,7 @@ class SourcesViewModel @JvmOverloads constructor(
         draft: Source,
         keepIfFails: Boolean = true,
         onSetup: () -> Unit = {},
-        onChannels: (failure: String?) -> Unit = {},
+        onChannels: (failure: ViewerError?) -> Unit = {},
         adds: Boolean = draft.id == 0L,
     ) {
         viewModelScope.launch {
@@ -305,7 +305,7 @@ class SourcesViewModel @JvmOverloads constructor(
             if (saved == null) {
                 val failed = messages.of(RefreshMessages.Step.SaveFailed)
                 _ui.update { it.copy(adding = false, syncMessage = failed) }
-                onChannels(failed)
+                onChannels(ViewerError(failed))
                 return@launch
             }
             if (first) {
@@ -319,7 +319,7 @@ class SourcesViewModel @JvmOverloads constructor(
                 // A failed login is back on the form, with why.
                 val failure = (outcome as? CatalogueRefresh.Outcome.AddFailed)?.reason
                 _ui.update { it.copy(adding = false, addFailure = failure, syncMessage = messages.of(outcome)) }
-                onChannels(failure?.sentence)
+                onChannels(failure)
                 return@launch
             }
 
@@ -339,7 +339,7 @@ class SourcesViewModel @JvmOverloads constructor(
                         .takeIf { outcome is CatalogueRefresh.Outcome.ChannelsLoaded },
                 )
             }
-            onChannels(failure?.sentence)
+            onChannels(failure)
         }
     }
 

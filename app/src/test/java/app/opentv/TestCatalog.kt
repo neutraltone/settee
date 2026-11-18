@@ -104,7 +104,7 @@ class TestCatalog(
     /** A [CatalogueRefresh] over this catalogue, at [clock]; [awaitRefresh] waits for its background work. */
     fun refresh(rescanSeriesRules: suspend () -> Unit = {}) = CatalogueRefresh(
         catalog = catalog,
-        sources = SourceRepository(db.sources(), XtreamApi(panel.http), StalkerApi(panel.http)),
+        sources = SourceRepository(db.sources(), XtreamApi(panel.http), StalkerApi(panel.http), panel.http),
         guide = guide,
         settings = settings,
         rescanSeriesRules = rescanSeriesRules,

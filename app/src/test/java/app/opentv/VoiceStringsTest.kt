@@ -64,6 +64,17 @@ class VoiceStringsTest {
         "guide_no_favourites_hint",
     )
 
+    /**
+     * The phone's setup page, worded from the app's strings by #469, which adds them in English only:
+     * translating them is #492's. They fall back to English until then.
+     */
+    private val awaitingTranslation = setOf(
+        "pairing_phone_missing_address",
+        "pairing_phone_too_many_title",
+        "pairing_phone_too_many_body",
+        "pairing_phone_local_only",
+    )
+
     @Test
     fun `docs ERRORS md names only strings that exist, and lists the playback and provider sentences`() {
         assertWithMessage("error keys found in docs/ERRORS.md").that(errorKeys).containsAtLeast(
@@ -75,7 +86,7 @@ class VoiceStringsTest {
     @Test
     fun `every error and empty state has a translation in every language`() {
         val missing = locales.filterKeys { it != "values" }.flatMap { (locale, strings) ->
-            (voiceKeys - untranslatedBefore).filter { it !in strings }.map { "$locale/$it" }
+            (voiceKeys - untranslatedBefore - awaitingTranslation).filter { it !in strings }.map { "$locale/$it" }
         }
 
         assertWithMessage("errors and empty states with no translation").that(missing).isEmpty()

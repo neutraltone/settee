@@ -43,7 +43,7 @@ class SeriesRuleRescanTest {
     private val engine = RecordingEngine(
         context,
         recordings,
-        SourceRepository(db.sources(), XtreamApi(test.panel.http), StalkerApi(test.panel.http)),
+        SourceRepository(db.sources(), XtreamApi(test.panel.http), StalkerApi(test.panel.http), test.panel.http),
         AppSettings.get(context),
         EpgRepository(
             programmeDao = db.programmes(),

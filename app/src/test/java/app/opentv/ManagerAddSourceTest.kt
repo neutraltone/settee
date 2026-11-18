@@ -40,7 +40,7 @@ class ManagerAddSourceTest {
         scope,
         test.catalog,
         test.settings,
-        SourceRepository(test.db.sources(), XtreamApi(panel.http), StalkerApi(panel.http)),
+        SourceRepository(test.db.sources(), XtreamApi(panel.http), StalkerApi(panel.http), panel.http),
         test.lineup,
         test.refresh { panel.asked += RESCAN },
     )
@@ -52,12 +52,14 @@ class ManagerAddSourceTest {
         test.close()
     }
 
-    private fun addProvider(username: String = "u"): String {
+    private fun addProvider(username: String = "u"): String = sendProvider("/source", username)
+
+    private fun sendProvider(path: String, username: String = "u"): String {
         server.start()
         val session = (server.state.value as? ManagerServer.State.Listening)?.session
         assumeTrue("needs a private LAN address to serve on", session != null)
         val add = Request.Builder()
-            .url(session!!.url.replace("/?", "/source?"))
+            .url(session!!.url.replace("/?", "$path?"))
             .post(
                 """{"kind":"xtream","name":"Test","url":"http://example.com","username":"$username","password":"p"}"""
                     .toRequestBody("application/json".toMediaType()),
@@ -87,6 +89,17 @@ class ManagerAddSourceTest {
             "xmltv.php",
             RESCAN,
         ).inOrder()
+    }
+
+    @Test
+    fun `testing a login from a phone says what the TV says, about the account, and nothing about channels`() {
+        panel.replies[""] = """{"user_info": {"status": "Active", "username": "u", "max_connections": "2"}}"""
+
+        val reply = sendProvider("/source/test")
+
+        assertThat(reply).contains("\"ok\":true")
+        assertThat(reply).contains("Your login works. Signed in as u. Watch on 2 screens at a time.")
+        assertThat(reply).doesNotContain("Loading channels")
     }
 
     @Test

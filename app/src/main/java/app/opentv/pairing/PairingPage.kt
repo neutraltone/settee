@@ -20,13 +20,19 @@ import app.opentv.ui.design.SetteeColors
  */
 object PairingPage {
 
-    fun form(token: String, error: String?): String = page(
-        token = token,
-        content = """
-        <h1>Set up Settee</h1>
-        <p class="sub">Filling this in here beats using the remote.</p>
+    /**
+     * A provider's details, [error] saying why the last try came back. The script swaps the address's
+     * label and hint between the two kinds, so both are on the page, as data attributes, in [text]'s words.
+     */
+    fun form(token: String, text: (Int) -> String, error: Error?): String {
+        fun t(id: Int) = escape(text(id))
+        return page(
+            token = token,
+            content = """
+        <h1>${t(R.string.pairing_phone_form_title)}</h1>
+        <p class="sub">${t(R.string.pairing_phone_form_body)}</p>
 
-        ${if (error != null) "<div class=\"error\">${escape(error)}</div>" else ""}
+        ${errorBox(error)}
 
         <form id="form" method="post" action="/submit" autocomplete="off">
           <input type="hidden" name="t" value="${escape(token)}">
@@ -34,73 +40,89 @@ object PairingPage {
           <div class="seg">
             <label class="segbtn">
               <input type="radio" name="kind" value="xtream" checked onchange="toggle()">
-              <span>Xtream login</span>
+              <span>${t(R.string.onboarding_xtream_login)}</span>
             </label>
             <label class="segbtn">
               <input type="radio" name="kind" value="m3u" onchange="toggle()">
-              <span>M3U playlist</span>
+              <span>${t(R.string.onboarding_m3u_url)}</span>
             </label>
           </div>
 
-          <label for="name">Name <span class="opt">optional</span></label>
-          <input id="name" name="name" type="text" placeholder="Living room provider">
+          <label for="name">${t(R.string.pairing_phone_name_optional)}</label>
+          <input id="name" name="name" type="text" placeholder="${t(R.string.pairing_phone_name_example)}">
 
-          <label for="url" id="url-label">Server address</label>
+          <label for="url" id="url-label" data-xtream="${t(R.string.onboarding_server_address)}"
+                 data-m3u="${t(R.string.onboarding_playlist_url)}">${t(R.string.onboarding_server_address)}</label>
           <input id="url" name="url" type="url" inputmode="url" required
                  placeholder="http://example.com:8080"
                  autocapitalize="off" autocorrect="off" spellcheck="false">
-          <p class="hint" id="url-hint">
-            You can paste the whole line from your provider, and the extra bits get trimmed.
-          </p>
+          <p class="hint" id="url-hint" data-xtream="${t(R.string.pairing_phone_server_help)}"
+             data-m3u="${t(R.string.onboarding_playlist_help)}">${t(R.string.pairing_phone_server_help)}</p>
 
-          <div id="creds">
-            <label for="username">Username</label>
-            <input id="username" name="username" type="text"
-                   autocapitalize="off" autocorrect="off" spellcheck="false">
-
-            <label for="password">Password</label>
-            <input id="password" name="password" type="password">
-          </div>
-
-          <label for="epg">Guide (XMLTV) URL <span class="opt">optional</span></label>
-          <input id="epg" name="epg" type="url" inputmode="url"
-                 autocapitalize="off" autocorrect="off" spellcheck="false">
-          <p class="hint">Leave blank to use your provider's guide automatically.</p>
+${loginAndGuideFields(::t)}
 
           <hr>
 
-          <label for="code">Code shown on the TV</label>
+          <label for="code">${t(R.string.pairing_phone_code)}</label>
           <input id="code" name="code" type="text" inputmode="numeric" pattern="[0-9]*"
                  maxlength="6" required class="code" placeholder="000000"
                  autocomplete="one-time-code">
-          <p class="hint">This is what proves it's you standing in front of the telly.</p>
+          <p class="hint">${t(R.string.pairing_phone_code_help)}</p>
 
-          <button id="send" type="submit">Send to TV</button>
+          <button id="send" type="submit" data-sending="${t(R.string.pairing_phone_sending)}">${t(
+                R.string.pairing_phone_send,
+            )}</button>
         </form>
 
+$PROVIDER_FORM_SCRIPT
+            """.trimIndent(),
+        )
+    }
+
+    /** The provider form's login, for Xtream only, and its guide address; indented as the form is, which it goes in. */
+    private fun loginAndGuideFields(t: (Int) -> String): String = """
+          <div id="creds">
+            <label for="username">${t(R.string.recset_field_username)}</label>
+            <input id="username" name="username" type="text"
+                   autocapitalize="off" autocorrect="off" spellcheck="false">
+
+            <label for="password">${t(R.string.recset_field_password)}</label>
+            <input id="password" name="password" type="password">
+          </div>
+
+          <label for="epg">${t(R.string.onboarding_guide_url_optional)}</label>
+          <input id="epg" name="epg" type="url" inputmode="url"
+                 autocapitalize="off" autocorrect="off" spellcheck="false">
+          <p class="hint">${t(R.string.onboarding_guide_blank_help)}</p>
+    """
+
+    /**
+     * Swaps the address's label and hint for the kind chosen, from their data attributes, and says the
+     * TV is working once sent: it loads the channels before it answers, which takes a while on a big
+     * provider, so the button can't be pressed twice either.
+     */
+    private const val PROVIDER_FORM_SCRIPT = """
         <script>
           function toggle() {
-            var isM3u = document.querySelector('input[name=kind]:checked').value === 'm3u';
+            var kind = document.querySelector('input[name=kind]:checked').value;
+            var isM3u = kind === 'm3u';
             document.getElementById('creds').style.display = isM3u ? 'none' : 'block';
-            document.getElementById('url-label').textContent =
-              isM3u ? 'Playlist URL' : 'Server address';
-            document.getElementById('url-hint').textContent = isM3u
-              ? 'The full http link to your .m3u or .m3u8 file.'
-              : "You can paste the whole line from your provider.";
+            ['url-label', 'url-hint'].forEach(function (id) {
+              var el = document.getElementById(id);
+              el.textContent = el.dataset[kind];
+            });
             document.getElementById('username').required = !isM3u;
             document.getElementById('password').required = !isM3u;
           }
           toggle();
-          // The TV loads the channels before it answers, which takes a while on a big provider, so
-          // the button says it's working and can't be pressed twice.
           document.getElementById('form').addEventListener('submit', function () {
             var send = document.getElementById('send');
             send.disabled = true;
-            send.innerHTML = '<span class="spin" aria-hidden="true"></span>Sending to your TV\u2026';
+            send.innerHTML = '<span class="spin" aria-hidden="true"></span>';
+            send.appendChild(document.createTextNode(send.dataset.sending));
           });
         </script>
-        """.trimIndent(),
-    )
+    """
 
     /**
      * Signing the TV in to OpenSubtitles: username and password, which go to the TV and from there

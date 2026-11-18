@@ -9,14 +9,23 @@ import app.opentv.core.ViewerError
 import app.opentv.data.db.SourceDao
 import app.opentv.data.model.Source
 import app.opentv.data.model.SourceKind
+import app.opentv.data.remote.ProviderException
 import app.opentv.data.remote.StalkerApi
 import app.opentv.data.remote.XtreamApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okio.Buffer
 
-class SourceRepository(private val dao: SourceDao, private val api: XtreamApi, private val stalkerApi: StalkerApi) {
+class SourceRepository(
+    private val dao: SourceDao,
+    private val api: XtreamApi,
+    private val stalkerApi: StalkerApi,
+    private val http: OkHttpClient,
+) {
     fun observeAll(): Flow<List<Source>> = dao.observeAll()
 
     suspend fun enabled(): List<Source> = dao.enabled()
@@ -49,32 +58,51 @@ class SourceRepository(private val dao: SourceDao, private val api: XtreamApi, p
     }
 
     /** Checks the details work before the user is committed to them. */
-    suspend fun test(source: Source): Result<String> = withContext(Dispatchers.IO) {
+    suspend fun test(source: Source): Result<TestOutcome> = withContext(Dispatchers.IO) {
         runCatching {
+            val normalised = source.copy(url = normaliseUrl(source.url, source.kind))
             when (source.kind) {
-                SourceKind.XTREAM -> {
-                    val info = api.authenticate(
-                        source.copy(url = normaliseUrl(source.url, source.kind)),
-                    )
-                    buildString {
-                        append("Connected")
-                        info.username?.let { append(" as $it") }
-                        info.maxConnections?.let { append(" · $it connection(s)") }
-                        info.expiryMillis?.let {
-                            append(" · expires ${java.text.DateFormat.getDateInstance().format(java.util.Date(it))}")
-                        }
-                    }
+                SourceKind.XTREAM -> api.authenticate(normalised).let {
+                    TestOutcome.Xtream(it.username, it.maxConnections, it.expiryMillis)
                 }
-                SourceKind.M3U -> "Playlist address looks valid. It will be checked on first sync."
+                SourceKind.M3U -> {
+                    checkPlaylist(normalised)
+                    TestOutcome.PlaylistFound
+                }
                 SourceKind.STALKER -> {
-                    stalkerApi.handshakeTest(source.copy(url = normaliseUrl(source.url, source.kind)))
-                    "Portal accepted the MAC address. Loading channels…"
+                    stalkerApi.handshakeTest(normalised)
+                    TestOutcome.StalkerAccepted
                 }
             }
         }
     }
 
+    private fun checkPlaylist(source: Source) {
+        val request = Request.Builder().url(source.url).header("User-Agent", source.userAgent).build()
+        http.newCall(request).execute().use { response ->
+            if (!response.isSuccessful) {
+                throw ProviderException(
+                    "Playlist answered ${response.code}",
+                    problem = ProviderException.Problem.HTTP_STATUS,
+                    status = response.code,
+                )
+            }
+            // Only the start: a playlist can be tens of MB, and its first lines are enough to tell it
+            // from a sign-in page or an error. The channels themselves are Save's to load.
+            val start = Buffer()
+            val body = response.body.source()
+            while (start.size < PLAYLIST_START_BYTES && body.read(start, PLAYLIST_START_BYTES - start.size) != -1L) Unit
+            val text = start.readUtf8()
+            if (PLAYLIST_MARKERS.none { it in text }) {
+                throw ProviderException("Not a playlist", problem = ProviderException.Problem.NOT_A_PLAYLIST)
+            }
+        }
+    }
+
     companion object {
+        private const val PLAYLIST_START_BYTES = 16L * 1024
+        private val PLAYLIST_MARKERS = listOf("#EXTM3U", "#EXTINF")
+
         /**
          * Users paste all sorts of things. Accept them all rather than making someone guess
          * the format: a trailing slash, a missing scheme, or a full `get.php` URL copied out

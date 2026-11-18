@@ -38,6 +38,9 @@ interface HttpStatus {
 }
 
 class ErrorWording(private val context: Context, private val onTelevision: Boolean) {
+    /** What Test connection says when it passes, in the same language as its failures. */
+    val tests = TestOutcomeWording { resources }
+
     // Looked up each time, as RefreshMessages does: changing language only recreates the activity.
     private val resources get() = LocaleUtils.wrap(context).resources
 
@@ -74,6 +77,7 @@ class ErrorWording(private val context: Context, private val onTelevision: Boole
             Problem.ACCOUNT_INACTIVE -> R.string.error_account_inactive
             Problem.BAD_ADDRESS -> R.string.error_bad_address
             Problem.DEVICE_REFUSED -> R.string.error_device_refused
+            Problem.NOT_A_PLAYLIST -> R.string.error_playlist_empty
             Problem.NOT_A_PANEL -> R.string.error_not_a_panel
             Problem.HTTP_STATUS, Problem.BAD_REPLY -> fallback
         }
