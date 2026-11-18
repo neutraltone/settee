@@ -271,6 +271,7 @@
     <string name="error_playlist_empty">No hay canales en esa dirección. Comprueba que sea el enlace que te dio tu proveedor.</string>
     <string name="error_account_inactive">Tu proveedor dice que esta cuenta no está activa. Consúltalo con ellos y vuelve a intentarlo.</string>
     <string name="error_bad_address">Esa dirección no parece correcta. Revisa los datos de tu proveedor en Ajustes.</string>
+    <string name="error_not_a_panel">Esa dirección no respondió como un proveedor de IPTV. Revisa la dirección y el puerto en los datos de tu proveedor, o inicia sesión en tu Wi-Fi si te lo pide.</string>
     <string name="error_device_refused">Tu proveedor no aceptó estos datos. Revisa los datos de tu proveedor en Ajustes.</string>
     <string name="error_guide">No se pudo descargar esta guía. Vuelve a intentarlo en un momento.</string>
     <string name="error_guide_empty">Esta guía se descargó, pero no tenía programas. Comprueba que sea el enlace correcto.</string>

@@ -271,6 +271,7 @@
     <string name="error_playlist_empty">Pod tym adresem nie ma kanałów. Sprawdź, czy to link otrzymany od dostawcy.</string>
     <string name="error_account_inactive">Dostawca informuje, że to konto nie jest aktywne. Skontaktuj się z nim, a potem spróbuj ponownie.</string>
     <string name="error_bad_address">Ten adres wygląda na niepoprawny. Sprawdź dane dostawcy w Ustawieniach.</string>
+    <string name="error_not_a_panel">Ten adres nie odpowiedział jak dostawca IPTV. Sprawdź adres i port w danych dostawcy albo zaloguj się do Wi-Fi, jeśli o to prosi.</string>
     <string name="error_device_refused">Dostawca nie zaakceptował tych danych. Sprawdź dane dostawcy w Ustawieniach.</string>
     <string name="error_guide">Nie udało się pobrać tego przewodnika. Spróbuj ponownie za chwilę.</string>
     <string name="error_guide_empty">Przewodnik został pobrany, ale nie ma w nim programów. Sprawdź, czy to właściwy link.</string>
