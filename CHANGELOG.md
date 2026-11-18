@@ -2,6 +2,16 @@
 
 Settee is based on OpenTV 0.11.8; everything before this is in [OpenTV's changelog](https://github.com/opentvproject/opentv/blob/v0.11.8/CHANGELOG.md).
 
+## [1.3.1](https://github.com/neutraltone/settee/compare/v1.3.0...v1.3.1) (2026-11-18)
+
+
+### Bug fixes
+
+* **#430:** removing a card from a Home or For you row leaves the highlight on its neighbour ([#537](https://github.com/neutraltone/settee/issues/537)) ([67df0bb](https://github.com/neutraltone/settee/commit/67df0bbeb05b7367550a3134bd778808c575aaf6))
+* **#433:** a show this TV can't play opens on Favourite, and Up from the seasons gets back to it ([#534](https://github.com/neutraltone/settee/issues/534)) ([bdb77ba](https://github.com/neutraltone/settee/commit/bdb77baa40dcca8ac53a1ecb733b4aaef11fce98))
+* **#461:** Movies and Shows that failed to download say why and offer Try again, instead of saying your provider sent none ([#538](https://github.com/neutraltone/settee/issues/538)) ([e1aab27](https://github.com/neutraltone/settee/commit/e1aab2712d62bbf58120ec8adcd083de724d3e90))
+* **#463:** a stream that never starts playing stops after 45 seconds with Try again, instead of loading for ten minutes ([#543](https://github.com/neutraltone/settee/issues/543)) ([339ba68](https://github.com/neutraltone/settee/commit/339ba68bd7983bbc500792e601543e6d10250a19))
+
 ## [1.3.0](https://github.com/neutraltone/settee/compare/v1.2.0...v1.3.0) (2026-11-17)
 
 
