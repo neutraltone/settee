@@ -1157,11 +1157,6 @@ class CatalogRepository(
         channelDao.switchLiveFormat(sourceId, format, api::liveStreamUrl)
     }
 
-    /** Saves how [sourceId]'s latest channel download went: [failure], or null when it worked. */
-    suspend fun saveRefreshResult(sourceId: Long, failure: ViewerError?) = withContext(Dispatchers.IO) {
-        sourceDao.setRefreshFailure(sourceId, failure?.stored())
-    }
-
     suspend fun deleteSource(sourceId: Long) = withContext(Dispatchers.IO) {
         // One transaction: cut off partway, a provider would be left with no channels or no guide.
         database.withTransaction {

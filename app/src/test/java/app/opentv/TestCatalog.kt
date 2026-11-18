@@ -18,6 +18,7 @@ import app.opentv.data.repo.CatalogRepository
 import app.opentv.data.repo.CatalogueRefresh
 import app.opentv.data.repo.ChannelLineup
 import app.opentv.data.repo.EpgRepository
+import app.opentv.data.repo.SourceRepository
 import app.opentv.data.repo.ViewerLibrary
 import app.opentv.data.repo.VodTitle
 import java.io.File
@@ -103,6 +104,7 @@ class TestCatalog(
     /** A [CatalogueRefresh] over this catalogue, at [clock]; [awaitRefresh] waits for its background work. */
     fun refresh(rescanSeriesRules: suspend () -> Unit = {}) = CatalogueRefresh(
         catalog = catalog,
+        sources = SourceRepository(db.sources(), XtreamApi(panel.http), StalkerApi(panel.http)),
         guide = guide,
         settings = settings,
         rescanSeriesRules = rescanSeriesRules,

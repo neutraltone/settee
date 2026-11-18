@@ -275,6 +275,7 @@ object ServiceLocator {
         val catalogueRefresh: CatalogueRefresh by lazy {
             CatalogueRefresh(
                 catalog = catalogRepository,
+                sources = sourceRepository,
                 guide = epgRepository,
                 settings = settings,
                 rescanSeriesRules = { recordingEngine.rescanSeriesRules() },

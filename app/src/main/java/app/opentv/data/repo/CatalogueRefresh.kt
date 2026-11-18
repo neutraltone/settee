@@ -31,10 +31,12 @@ import kotlinx.coroutines.sync.withLock
  * are; what to fetch, in what order and how fresh is fresh enough is decided here, so the triggers
  * can't drift apart. [CatalogRepository] still does each provider's fetching and merging.
  */
-// One refresh() per trigger is the point of the module, so its count grows with the triggers.
-@Suppress("TooManyFunctions")
+// One refresh() per trigger is the point of the module, so its count grows with the triggers. sources
+// writes each provider's refresh result on its row, since CatalogRepository is already too large to.
+@Suppress("TooManyFunctions", "LongParameterList")
 class CatalogueRefresh(
     private val catalog: CatalogRepository,
+    private val sources: SourceRepository,
     private val guide: EpgRepository,
     private val settings: AppSettings,
     private val rescanSeriesRules: suspend () -> Unit,
@@ -394,7 +396,7 @@ class CatalogueRefresh(
     private suspend fun live(source: Source): CatalogRepository.SyncResult = liveDownloads.share(source) {
         catalog.fetchLive(source, clock()).also { result ->
             val failure = (result as? CatalogRepository.SyncResult.Failed)?.reason
-            runCatching { catalog.saveRefreshResult(source.id, failure) }.onFailure { e ->
+            runCatching { sources.saveRefreshResult(source.id, failure) }.onFailure { e ->
                 if (e is CancellationException) throw e
                 Log.w(TAG, "Couldn't save how source ${source.id}'s refresh went", e)
             }
