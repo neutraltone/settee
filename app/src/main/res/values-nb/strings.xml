@@ -45,6 +45,7 @@
     <string name="guide_add_provider_desc">Kanalene fra leverandøren din vises her. Legg til leverandøren din for å komme i gang.</string>
     <string name="guide_add_provider_button">Legg til leverandør</string>
     <string name="guide_load_failed_title">Kunne ikke laste kanalene dine</string>
+    <string name="guide_load_failed_title_named">Kunne ikke laste kanalene dine fra %1$s</string>
     <string name="guide_load_failed_desc">Prøv igjen om litt, eller sjekk leverandørdetaljene dine i Innstillinger.</string>
     <string name="guide_edit_provider">Leverandøroppsett</string>
     <string name="guide_today">I dag</string>

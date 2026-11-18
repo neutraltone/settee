@@ -45,6 +45,7 @@
     <string name="guide_add_provider_desc">Canalele furnizorului tău vor apărea aici. Adaugă-ți furnizorul ca să începi.</string>
     <string name="guide_add_provider_button">Adaugă un furnizor</string>
     <string name="guide_load_failed_title">Canalele nu au putut fi încărcate</string>
+    <string name="guide_load_failed_title_named">Canalele de la %1$s nu au putut fi încărcate</string>
     <string name="guide_load_failed_desc">Încearcă din nou peste puțin timp sau verifică detaliile furnizorului în Setări.</string>
     <string name="guide_edit_provider">Configurare furnizor</string>
     <string name="guide_today">Astăzi</string>

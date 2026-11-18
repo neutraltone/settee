@@ -45,6 +45,7 @@
     <string name="guide_add_provider_desc">Tu sa zobrazia kanály vášho poskytovateľa. Ak chcete začať, pridajte poskytovateľa.</string>
     <string name="guide_add_provider_button">Pridať poskytovateľa</string>
     <string name="guide_load_failed_title">Kanály sa nepodarilo načítať</string>
+    <string name="guide_load_failed_title_named">Kanály od %1$s sa nepodarilo načítať</string>
     <string name="guide_load_failed_desc">Skúste to o chvíľu znova alebo skontrolujte údaje poskytovateľa v Nastaveniach.</string>
     <string name="guide_edit_provider">Nastavenie poskytovateľa</string>
     <string name="guide_today">Dnes</string>

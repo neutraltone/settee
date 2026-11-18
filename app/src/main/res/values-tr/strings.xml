@@ -45,6 +45,7 @@
     <string name="guide_add_provider_desc">Sağlayıcınızın kanalları burada görünür. Başlamak için sağlayıcınızı ekleyin.</string>
     <string name="guide_add_provider_button">Sağlayıcı ekle</string>
     <string name="guide_load_failed_title">Kanallarınız yüklenemedi</string>
+    <string name="guide_load_failed_title_named">%1$s kanallarınız yüklenemedi</string>
     <string name="guide_load_failed_desc">Birazdan tekrar deneyin veya Ayarlar\'dan sağlayıcı bilgilerinizi kontrol edin.</string>
     <string name="guide_edit_provider">Sağlayıcı kurulumu</string>
     <string name="guide_today">Bugün</string>

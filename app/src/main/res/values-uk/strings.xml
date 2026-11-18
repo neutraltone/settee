@@ -45,6 +45,7 @@
     <string name="guide_add_provider_desc">Тут з\'являться канали вашого провайдера. Додайте провайдера, щоб почати.</string>
     <string name="guide_add_provider_button">Додати провайдера</string>
     <string name="guide_load_failed_title">Не вдалося завантажити ваші канали</string>
+    <string name="guide_load_failed_title_named">Не вдалося завантажити ваші канали з %1$s</string>
     <string name="guide_load_failed_desc">Спробуйте ще раз трохи згодом або перевірте дані провайдера в налаштуваннях.</string>
     <string name="guide_edit_provider">Налаштування провайдера</string>
     <string name="guide_today">Сьогодні</string>

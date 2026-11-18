@@ -45,6 +45,7 @@
     <string name="guide_add_provider_desc">Los canales de tu proveedor aparecerán aquí. Agrega tu proveedor para empezar.</string>
     <string name="guide_add_provider_button">Agregar un proveedor</string>
     <string name="guide_load_failed_title">No se pudieron cargar tus canales</string>
+    <string name="guide_load_failed_title_named">No se pudieron cargar tus canales de %1$s</string>
     <string name="guide_load_failed_desc">Vuelve a intentarlo en un momento, o revisa los datos de tu proveedor en Ajustes.</string>
     <string name="guide_edit_provider">Configuración del proveedor</string>
     <string name="guide_today">Hoy</string>

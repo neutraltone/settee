@@ -87,9 +87,9 @@ class SettingsProvidersRefreshTest {
     private val saved = mutableListOf<Long>()
 
     @Before
-    fun clearOtherTestsFailures() = runBlocking {
-        // Other test classes' providers share the database: only these tests' failures count here.
-        graph.sourceRepository.all().forEach { graph.sourceRepository.saveRefreshResult(it.id, null) }
+    fun removeOtherTestsProviders() = runBlocking {
+        // Other test classes' providers share the process's database, and a refresh would try them too.
+        graph.sourceRepository.all().forEach { graph.catalogRepository.deleteSource(it.id) }
     }
 
     @After
@@ -221,6 +221,8 @@ class SettingsProvidersRefreshTest {
 
     @Test
     fun `when a failure clears from under Refresh again, the Highlight goes back to its provider`() {
+        // Above it, so a Highlight that only fell to the top of the list doesn't pass.
+        saveProvider("First films on 464")
         val id = saveProvider("Mended films on 464", loginRejected)
         show()
         waitFor("Mended films on 464")

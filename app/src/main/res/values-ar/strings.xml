@@ -45,6 +45,7 @@
     <string name="guide_add_provider_desc">ستظهر قنوات مزوّدك هنا. أضف مزوّدك للبدء.</string>
     <string name="guide_add_provider_button">إضافة مزوّد خدمة</string>
     <string name="guide_load_failed_title">تعذر تحميل قنواتك</string>
+    <string name="guide_load_failed_title_named">تعذر تحميل قنواتك من %1$s</string>
     <string name="guide_load_failed_desc">أعد المحاولة بعد قليل، أو تحقق من بيانات مزوّدك في الإعدادات.</string>
     <string name="guide_edit_provider">إعداد المزوّد</string>
     <string name="guide_today">اليوم</string>

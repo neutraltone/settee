@@ -45,6 +45,7 @@
     <string name="guide_add_provider_desc">공급자의 채널이 여기에 표시됩니다. 공급자를 추가하여 시작하세요.</string>
     <string name="guide_add_provider_button">공급자 추가</string>
     <string name="guide_load_failed_title">채널을 불러오지 못했습니다</string>
+    <string name="guide_load_failed_title_named">%1$s의 채널을 불러오지 못했습니다</string>
     <string name="guide_load_failed_desc">잠시 후 다시 시도하거나 설정에서 공급자 정보를 확인하세요.</string>
     <string name="guide_edit_provider">공급자 설정</string>
     <string name="guide_today">오늘</string>

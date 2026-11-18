@@ -45,6 +45,7 @@
     <string name="guide_add_provider_desc">De zenders van je provider verschijnen hier. Voeg je provider toe om te beginnen.</string>
     <string name="guide_add_provider_button">Provider toevoegen</string>
     <string name="guide_load_failed_title">Kan je zenders niet laden</string>
+    <string name="guide_load_failed_title_named">Kan je zenders van %1$s niet laden</string>
     <string name="guide_load_failed_desc">Probeer het zo opnieuw, of controleer je providergegevens in Instellingen.</string>
     <string name="guide_edit_provider">Providerinstellingen</string>
     <string name="guide_today">Vandaag</string>

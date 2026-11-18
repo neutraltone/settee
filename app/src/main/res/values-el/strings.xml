@@ -45,6 +45,7 @@
     <string name="guide_add_provider_desc">Τα κανάλια του παρόχου σας θα εμφανίζονται εδώ. Προσθέστε τον πάροχό σας για να ξεκινήσετε.</string>
     <string name="guide_add_provider_button">Προσθήκη παρόχου</string>
     <string name="guide_load_failed_title">Δεν ήταν δυνατή η φόρτωση των καναλιών σας</string>
+    <string name="guide_load_failed_title_named">Δεν ήταν δυνατή η φόρτωση των καναλιών σας από %1$s</string>
     <string name="guide_load_failed_desc">Δοκιμάστε ξανά σε λίγο ή ελέγξτε τα στοιχεία του παρόχου σας στις Ρυθμίσεις.</string>
     <string name="guide_edit_provider">Ρύθμιση παρόχου</string>
     <string name="guide_today">Σήμερα</string>

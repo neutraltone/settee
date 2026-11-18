@@ -45,6 +45,7 @@
     <string name="guide_add_provider_desc">Các kênh từ nhà cung cấp của bạn sẽ hiện ở đây. Thêm nhà cung cấp của bạn để bắt đầu.</string>
     <string name="guide_add_provider_button">Thêm nhà cung cấp</string>
     <string name="guide_load_failed_title">Không thể tải kênh của bạn</string>
+    <string name="guide_load_failed_title_named">Không thể tải kênh của bạn từ %1$s</string>
     <string name="guide_load_failed_desc">Thử lại sau giây lát, hoặc kiểm tra thông tin nhà cung cấp trong Cài đặt.</string>
     <string name="guide_edit_provider">Thiết lập nhà cung cấp</string>
     <string name="guide_today">Hôm nay</string>

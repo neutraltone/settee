@@ -7,13 +7,16 @@ package app.opentv.ui.settings
 
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
@@ -56,6 +59,17 @@ internal fun ProvidersPane(
         // Keyed, so the Highlight stays on its provider when the list changes around it.
         key(source.id) {
             val row = screenRow(providerRow(source.id)) { onEditProvider(source.id) }
+            val failure = failures[source.id]?.error
+            var againHighlighted by remember { mutableStateOf(false) }
+            // Read as the failure goes, before Refresh again leaves: with the Highlight on it, Compose
+            // would hand it to the top of the list, so it goes back to this provider's row instead.
+            val giveBack = failure == null && againHighlighted
+            LaunchedEffect(failure) {
+                if (!giveBack) return@LaunchedEffect
+                againHighlighted = false
+                withFrameNanos {}
+                runCatching { row.requester.requestFocus() }
+            }
             ListRow(
                 source.name,
                 onClick = row.open,
@@ -63,7 +77,7 @@ internal fun ProvidersPane(
                 note = hostOnly(source.url),
                 onOptions = { options = source },
             )
-            failures[source.id]?.error?.let { failure ->
+            failure?.let { failure ->
                 // Lined up with the row's label, and kept under it, so it reads as that provider's.
                 ErrorMessage(
                     failure.sentence,
@@ -72,7 +86,11 @@ internal fun ProvidersPane(
                     textAlign = TextAlign.Start,
                 )
                 // Every provider, as the refresh row does: refreshing one alone isn't worth its own path.
-                ListRow(stringResource(R.string.providers_refresh_again), onClick = viewModel::refreshAll)
+                ListRow(
+                    stringResource(R.string.providers_refresh_again),
+                    onClick = viewModel::refreshAll,
+                    modifier = Modifier.onFocusChanged { againHighlighted = it.isFocused },
+                )
             }
         }
     }

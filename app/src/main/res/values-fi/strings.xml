@@ -45,6 +45,7 @@
     <string name="guide_add_provider_desc">Palveluntarjoajasi kanavat näkyvät täällä. Aloita lisäämällä palveluntarjoajasi.</string>
     <string name="guide_add_provider_button">Lisää palveluntarjoaja</string>
     <string name="guide_load_failed_title">Kanavia ei voitu ladata</string>
+    <string name="guide_load_failed_title_named">Kanavia ei voitu ladata palvelusta %1$s</string>
     <string name="guide_load_failed_desc">Yritä hetken päästä uudelleen tai tarkista palveluntarjoajasi tiedot Asetuksista.</string>
     <string name="guide_edit_provider">Palveluntarjoajan asetukset</string>
     <string name="guide_today">Tänään</string>

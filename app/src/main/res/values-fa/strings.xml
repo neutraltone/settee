@@ -45,6 +45,7 @@
     <string name="guide_add_provider_desc">کانال‌های ارائه‌دهنده شما اینجا نمایش داده می‌شوند. برای شروع، ارائه‌دهنده خود را اضافه کنید.</string>
     <string name="guide_add_provider_button">افزودن ارائه‌دهنده</string>
     <string name="guide_load_failed_title">بارگذاری کانال‌ها ممکن نشد</string>
+    <string name="guide_load_failed_title_named">بارگذاری کانال‌ها از %1$s ممکن نشد</string>
     <string name="guide_load_failed_desc">کمی بعد دوباره تلاش کنید، یا اطلاعات ارائه‌دهنده خود را در تنظیمات بررسی کنید.</string>
     <string name="guide_edit_provider">تنظیم ارائه‌دهنده</string>
     <string name="guide_today">امروز</string>
