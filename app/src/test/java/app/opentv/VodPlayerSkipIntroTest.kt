@@ -96,13 +96,14 @@ class VodPlayerSkipIntroTest {
         compose.onNodeWithContentDescription("Pause").assertDoesNotExist()
     }
 
-    /** Polls at [millis], as the player screen does, until the timings read beside playback put the button up. */
+    /** Waits for the timings read beside playback, then polls at [millis], as the player screen does. */
     private fun playUntilButtonAt(millis: Long) {
-        compose.waitUntil(10_000) {
+        runBlocking {
+            viewModel.timingsArrived()
             playback.positionMillis = millis
-            runBlocking { viewModel.poll() }
-            viewModel.skipButton.value != null
+            viewModel.poll()
         }
+        assertThat(viewModel.skipButton.value).isNotNull()
         settle()
     }
 

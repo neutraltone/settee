@@ -14,13 +14,10 @@ import app.opentv.ui.vod.VodPlayerViewModel
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
-import kotlinx.coroutines.withContext
-import kotlinx.coroutines.withTimeout
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -73,11 +70,10 @@ class VodPlayerTimingsTest {
         return overlay.value
     }
 
-    /** Polls at [millis] until the timings, looked up beside playback, have placed the card. */
-    private suspend fun VodPlayerViewModel.waitForCardAt(millis: Long) = withContext(Dispatchers.Default) {
-        withTimeout(10_000) {
-            while (at(millis) == Overlay.None) delay(10)
-        }
+    /** Waits for the timings, looked up beside playback, to place the card, and polls at [millis]. */
+    private suspend fun VodPlayerViewModel.waitForCardAt(millis: Long) {
+        timingsArrived()
+        assertThat(at(millis)).isNotEqualTo(Overlay.None)
     }
 
     @Test
@@ -106,9 +102,8 @@ class VodPlayerTimingsTest {
     fun `with no network the card comes up 30 seconds before the end, with nothing else shown`() = runTest {
         theIntroDb = "!"
         val vm = startSeries()
-        withContext(Dispatchers.Default) {
-            withTimeout(10_000) { while ("api.theintrodb.org" !in askedHosts) delay(10) }
-        }
+        vm.timingsArrived()
+        assertThat(askedHosts).contains("api.theintrodb.org")
 
         assertThat(vm.at(CREDITS_MILLIS + 3_000)).isEqualTo(Overlay.None)
         assertThat(vm.at(EPISODE_MILLIS - 30_000)).isEqualTo(Overlay.Card(secondsLeft = 15, counting = true))

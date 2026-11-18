@@ -17,13 +17,10 @@ import app.opentv.ui.vod.skipStretch
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
-import kotlinx.coroutines.withContext
-import kotlinx.coroutines.withTimeout
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -76,11 +73,10 @@ class VodPlayerSkipTest {
         return skipButton.value
     }
 
-    /** Polls at [millis] until the timings, looked up beside playback, have put the button up. */
-    private suspend fun VodPlayerViewModel.waitForButtonAt(millis: Long) = withContext(Dispatchers.Default) {
-        withTimeout(10_000) {
-            while (at(millis) == null) delay(10)
-        }
+    /** Waits for the timings, looked up beside playback, and polls at [millis] to put the button up. */
+    private suspend fun VodPlayerViewModel.waitForButtonAt(millis: Long) {
+        timingsArrived()
+        assertThat(at(millis)).isNotNull()
     }
 
     @Test

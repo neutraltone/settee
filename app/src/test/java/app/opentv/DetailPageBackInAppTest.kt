@@ -112,7 +112,6 @@ class DetailPageBackInAppTest {
                 onPlayAddonStream = {},
                 onOpenMovie = { leave() },
                 onOpenPerson = { leave() },
-                onBack = {},
                 viewModel = viewModel,
             )
         }
@@ -140,7 +139,6 @@ class DetailPageBackInAppTest {
                 onPlayEpisode = { leave() },
                 onOpenPerson = {},
                 onOpenSeries = { leave() },
-                onBack = {},
                 viewModel = viewModel,
             )
         }
