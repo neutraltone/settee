@@ -94,4 +94,24 @@ class OpenSubtitlesStepTest {
 
         assertThat(done).isTrue()
     }
+
+    @Test
+    fun `Back once signed in carries on, as Carry on does`() {
+        var done = false
+        compose.setTvContent { OpenSubtitlesStepScreen(graph, openSubtitles, onDone = { done = true }) }
+        compose.onNodeWithTag(OPENSUBTITLES_SIGN_IN_HERE_TAG).performClick()
+        entryKeyboard().run {
+            type("u")
+            pressAction()
+        }
+        entryKeyboard().run {
+            type("p")
+            pressAction()
+        }
+        compose.waitUntil(5_000) { compose.onAllNodes(hasText("Signed in as u")).fetchSemanticsNodes().isNotEmpty() }
+
+        Espresso.pressBack()
+
+        assertThat(done).isTrue()
+    }
 }

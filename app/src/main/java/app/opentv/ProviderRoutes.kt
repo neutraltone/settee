@@ -5,7 +5,6 @@
  */
 package app.opentv
 
-import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -142,19 +141,15 @@ private fun firstStep(sources: SourcesViewModel): String =
 private fun NavGraphBuilder.openSubtitlesStep(nav: NavController, sources: SourcesViewModel) {
     composable(Routes.OPENSUBTITLES_STEP) {
         val setup by sources.setup.collectAsState()
-        // A failed login goes back to the form, which says why, as from Setup itself.
+        // A failed login goes back to the form, which says why, as from Setup itself. That's why the
+        // add page stays under this step rather than being popped: the step's own Back goes to Setup.
         LaunchedEffect(setup?.loginFailed) { if (setup?.loginFailed == true) nav.popBackStack() }
         val openSubtitles = sources.graph.openSubtitles
-        val carryOn = { nav.navigate(Routes.SETUP) { popUpTo(Routes.OPENSUBTITLES_STEP) { inclusive = true } } }
-        // Back goes on to Setup, as Not now does, rather than doing nothing: Setup itself takes Back as
-        // moving forward, and the add page under this, its provider already saved and loading, must
-        // never come back. It stays on the stack for the failed login's popBackStack above.
-        // Sign in on this TV's windows are dialogs, so they take Back first.
-        BackHandler(onBack = carryOn)
+        val goToSetup = { nav.navigate(Routes.SETUP) { popUpTo(Routes.OPENSUBTITLES_STEP) { inclusive = true } } }
         if (openSubtitles == null) {
-            LaunchedEffect(Unit) { carryOn() }
+            LaunchedEffect(Unit) { goToSetup() }
         } else {
-            OpenSubtitlesStepScreen(sources.graph, openSubtitles, onDone = carryOn)
+            OpenSubtitlesStepScreen(sources.graph, openSubtitles, onDone = goToSetup)
         }
     }
 }
