@@ -97,6 +97,23 @@ fun NavController.leaveLivePlayer(from: NavBackStackEntry) {
 }
 
 /**
+ * Leaves the page for adding or editing a provider shown by [from], back to where the viewer opened
+ * it. Its save carries on after the viewer has left, so this is ignored once [from] is no longer on
+ * top: going back then would close whatever the viewer has opened since. The page Settee opened on
+ * has nothing under it, so that one is replaced by Home.
+ */
+fun NavController.leaveProviderPage(from: NavBackStackEntry) {
+    if (currentBackStackEntry != from) return
+    if (previousBackStackEntry != null) {
+        popBackStack()
+        return
+    }
+    navigate(Routes.MAIN) {
+        popUpTo(from.destination.id) { inclusive = true }
+    }
+}
+
+/**
  * Leaves the movie and episode player shown by [from] for [titlePage] (see [titlePageFor]). When
  * that page is already under the player it goes back to it; otherwise the page takes the player's
  * place, so Back from the page goes to wherever the viewer started instead of into the player

@@ -25,8 +25,10 @@ import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import app.opentv.core.ServiceLocator
 import app.opentv.data.db.OpenTvDatabase
+import app.opentv.data.model.Source
 import app.opentv.data.model.SourceKind
 import app.opentv.ui.SourcesViewModel
+import app.opentv.ui.Tab
 import app.opentv.ui.design.SetteeType
 import app.opentv.ui.design.Text
 import app.opentv.ui.onboarding.STEP_ACTIONS
@@ -88,6 +90,7 @@ class ProviderRoutesTest {
                     val tab by entry.shellTab()
                     Text("Main on $tab", SetteeType.Body)
                 }
+                composable(Routes.MOVIE_DETAIL) { Text("A movie", SetteeType.Body) }
             }
         }
     }
@@ -266,6 +269,117 @@ class ProviderRoutesTest {
         savePlaylist()
 
         compose.waitUntil(5_000) { route() == Routes.MAIN }
+    }
+
+    /** How many main screens are on the back stack: more than one and Back from Home asks to leave Settee. */
+    private fun mainScreens() = compose.runOnIdle {
+        nav.currentBackStack.value.count { it.destination.route == Routes.MAIN }
+    }
+
+    /** Saves a playlist with its channels held back, then lets them in once [meanwhile] has run. */
+    private fun saveHeld(sources: SourcesViewModel, meanwhile: () -> Unit) {
+        val channels = panel.hold("")
+        savePlaylist()
+        // Through runOnIdle, which lets the main thread take the database's replies; waiting on the
+        // latch alone never would.
+        compose.waitUntil(5_000) { compose.runOnIdle { channels.reached.count == 0L } }
+        meanwhile()
+        channels.release()
+        compose.waitUntil(5_000) { compose.runOnIdle { !sources.ui.value.adding } }
+    }
+
+    @Test
+    fun `a provider whose channels come in after the viewer has left its page doesn't take them anywhere`() {
+        runBlocking { graph.sourceRepository.save(PANEL_SOURCE.copy(id = 0, lastCatalogSyncMillis = 1)) }
+        val sources = SourcesViewModel(app, graph)
+        setApp(start = Routes.MAIN, sources = sources)
+        compose.runOnIdle {
+            nav.navigate(Routes.SETTINGS)
+            nav.openAddProvider()
+        }
+
+        saveHeld(sources) {
+            compose.runOnIdle {
+                nav.popBackStack()
+                nav.popBackStack()
+                nav.navigate(Routes.movieDetail(9))
+            }
+        }
+
+        assertThat(route()).isEqualTo(Routes.MOVIE_DETAIL)
+        assertThat(mainScreens()).isEqualTo(1)
+        // The save still finished.
+        assertThat(runBlocking { graph.sourceRepository.all() }.map { it.kind })
+            .containsExactly(SourceKind.XTREAM, SourceKind.M3U)
+    }
+
+    /** A playlist provider the viewer added earlier, whose channels came in. */
+    private fun savedPlaylist(): Long = runBlocking {
+        graph.sourceRepository.save(
+            Source(
+                name = "List",
+                kind = SourceKind.M3U,
+                url = "http://example.com/list.m3u",
+                lastCatalogSyncMillis = 1,
+            ),
+        )
+    }
+
+    private fun routes() = compose.runOnIdle { nav.currentBackStack.value.mapNotNull { it.destination.route } }
+
+    @Test
+    fun `a provider's form saved and left before its channels came in doesn't close what's open since`() {
+        val id = savedPlaylist()
+        val sources = SourcesViewModel(app, graph)
+        setApp(start = Routes.MAIN, sources = sources)
+        compose.runOnIdle {
+            nav.navigate(Routes.SETTINGS)
+            nav.openEditProvider(id)
+        }
+        compose.waitUntil(5_000) { compose.onAllNodesWithText("Save and load").fetchSemanticsNodes().isNotEmpty() }
+
+        val channels = panel.hold("")
+        compose.onNodeWithText("Save and load").performClick()
+        compose.waitUntil(5_000) { compose.runOnIdle { channels.reached.count == 0L } }
+        compose.runOnIdle {
+            nav.popBackStack()
+            nav.navigate(Routes.movieDetail(9))
+        }
+        channels.release()
+        compose.waitUntil(5_000) { compose.runOnIdle { !sources.ui.value.adding } }
+
+        assertThat(routes()).containsExactly(Routes.MAIN, Routes.SETTINGS, Routes.MOVIE_DETAIL).inOrder()
+    }
+
+    @Test
+    fun `another provider added from Settings goes back to Settings once its channels are in`() {
+        runBlocking { graph.sourceRepository.save(PANEL_SOURCE.copy(id = 0, lastCatalogSyncMillis = 1)) }
+        setApp(start = Routes.MAIN, sources = SourcesViewModel(app, graph))
+        compose.runOnIdle {
+            nav.navigate(Routes.SETTINGS)
+            nav.openAddProvider()
+        }
+
+        savePlaylist()
+
+        compose.waitUntil(5_000) { route() == Routes.SETTINGS }
+        assertThat(routes()).containsExactly(Routes.MAIN, Routes.SETTINGS).inOrder()
+    }
+
+    @Test
+    fun `another provider added from Live TV's empty state goes back to Live TV once its channels are in`() {
+        runBlocking { graph.sourceRepository.save(PANEL_SOURCE.copy(id = 0, lastCatalogSyncMillis = 1)) }
+        setApp(start = Routes.MAIN, sources = SourcesViewModel(app, graph))
+        compose.runOnIdle {
+            nav.selectShellTab(Tab.LIVE)
+            nav.openAddProvider()
+        }
+
+        savePlaylist()
+
+        compose.waitUntil(5_000) { route() == Routes.MAIN }
+        compose.onNodeWithText("Main on LIVE").assertExists()
+        assertThat(routes()).containsExactly(Routes.MAIN)
     }
 
     @Test
