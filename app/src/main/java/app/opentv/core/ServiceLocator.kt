@@ -32,6 +32,7 @@ import app.opentv.data.repo.ProfileSettings
 import app.opentv.data.repo.Profiles
 import app.opentv.data.repo.RecordingRepository
 import app.opentv.data.repo.RefreshMessages
+import app.opentv.data.repo.TestOutcomeWording
 import app.opentv.data.repo.ReminderRepository
 import app.opentv.data.repo.SourceRepository
 import app.opentv.data.repo.TitleIndex
@@ -139,7 +140,7 @@ object ServiceLocator {
         val stremioClient: StremioClient by lazy { StremioClient(httpClient) }
 
         val sourceRepository: SourceRepository by lazy {
-            SourceRepository(database.sources(), xtreamApi, stalkerApi)
+            SourceRepository(database.sources(), xtreamApi, stalkerApi, httpClient)
         }
 
         val catalogRepository: CatalogRepository by lazy {
@@ -228,6 +229,7 @@ object ServiceLocator {
         )
 
         val refreshMessages: RefreshMessages by lazy { RefreshMessages(appContext) }
+        val testOutcomeWording: TestOutcomeWording by lazy { TestOutcomeWording(appContext) }
 
         /**
          * Settee's built-in TMDB Key; blank, as in a build without one, leaves TMDB unasked. A test sets

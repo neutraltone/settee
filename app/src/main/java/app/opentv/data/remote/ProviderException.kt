@@ -28,6 +28,9 @@ open class ProviderException(
         DEVICE_REFUSED,
         HTTP_STATUS,
 
+        /** An address that answered, but not with a playlist: a web page, say, or an error in words. */
+        NO_CHANNELS,
+
         /** Empty, not JSON, or missing what every panel sends. */
         BAD_REPLY,
     }

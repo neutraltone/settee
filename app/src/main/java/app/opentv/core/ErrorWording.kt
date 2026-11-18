@@ -72,6 +72,7 @@ class ErrorWording(private val context: Context, private val onTelevision: Boole
             Problem.ACCOUNT_INACTIVE -> R.string.error_account_inactive
             Problem.BAD_ADDRESS -> R.string.error_bad_address
             Problem.DEVICE_REFUSED -> R.string.error_device_refused
+            Problem.NO_CHANNELS -> R.string.error_playlist_empty
             Problem.HTTP_STATUS, Problem.BAD_REPLY -> fallback
         }
         return ViewerError(resources.getString(sentence), codeName(error.problem.name))

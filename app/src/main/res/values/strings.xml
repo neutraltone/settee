@@ -740,6 +740,11 @@
     <string name="error_device_refused">Your provider didn\'t accept these details. Check your provider\'s details in Settings.</string>
     <string name="error_guide">Couldn\'t download this guide. Try again in a moment.</string>
     <string name="error_guide_empty">This guide downloaded, but had no programmes in it. Check it\'s the right link.</string>
+    <string name="test_ok_xtream">Your login works.</string>
+    <string name="test_ok_xtream_user">Signed in as %1$s.</string>
+    <string name="test_ok_xtream_expires">Your subscription runs until %1$s.</string>
+    <string name="test_ok_stalker">Your portal accepted the MAC address.</string>
+    <string name="test_ok_playlist">Found your playlist. Save to load its channels.</string>
     <string name="error_test_failed">Couldn\'t connect to your provider with these details. Check them and try again.</string>
     <string name="sync_wrong_code">That code doesn\'t match the one on the other device. Check it and try again.</string>
     <string name="sync_receive_failed">Couldn\'t get anything from the other device. Check it\'s still sharing, then try again.</string>
@@ -816,6 +821,10 @@
     <plurals name="refresh_problems">
         <item quantity="one">%d problem</item>
         <item quantity="other">%d problems</item>
+    </plurals>
+    <plurals name="test_ok_xtream_connections">
+        <item quantity="one">Watch on %d screen at a time.</item>
+        <item quantity="other">Watch on %d screens at a time.</item>
     </plurals>
     <plurals name="refresh_channels_loaded">
         <item quantity="one">Loaded %d channel. The guide is loading in the background; Movies and Shows load when you open them.</item>

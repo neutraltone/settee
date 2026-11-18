@@ -12,6 +12,7 @@ import app.opentv.data.model.Channel
 import app.opentv.data.remote.StalkerApi
 import app.opentv.data.remote.XtreamApi
 import app.opentv.data.repo.SourceRepository
+import app.opentv.data.repo.TestOutcomeWording
 import app.opentv.pairing.ManagerServer
 import com.google.common.truth.Truth.assertThat
 import java.net.Socket
@@ -58,9 +59,10 @@ class ManagerServerTest {
         scope,
         test.catalog,
         AppSettings.get(context),
-        SourceRepository(test.db.sources(), XtreamApi(test.panel.http), StalkerApi(test.panel.http)),
+        SourceRepository(test.db.sources(), XtreamApi(test.panel.http), StalkerApi(test.panel.http), test.panel.http),
         test.lineup,
         test.refresh(),
+        TestOutcomeWording(context),
     ).apply {
         saveOrder = { ids ->
             if (holdFirstCommit && firstCommitting.count > 0) {

@@ -27,7 +27,7 @@ import org.robolectric.annotation.Config
 class SourceNamesTest {
 
     private val test = TestCatalog(ApplicationProvider.getApplicationContext<Application>())
-    private val sources = SourceRepository(test.db.sources(), XtreamApi(test.panel.http), StalkerApi(test.panel.http))
+    private val sources = SourceRepository(test.db.sources(), XtreamApi(test.panel.http), StalkerApi(test.panel.http), test.panel.http)
 
     private fun source(name: String, id: Long = 0) =
         Source(id = id, name = name, kind = SourceKind.M3U, url = "http://example.com/list.m3u")
