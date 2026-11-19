@@ -316,6 +316,8 @@ class SourcesViewModel @JvmOverloads constructor(
                 }
                 onSetup()
                 val outcome = setup.await()
+                // Back on the step after saving took the provider away, and the form says nothing.
+                if (outcome == CatalogueRefresh.Outcome.Undone) return@launch
                 // A failed login is back on the form, with why.
                 val failure = (outcome as? CatalogueRefresh.Outcome.AddFailed)?.reason
                 _ui.update { it.copy(adding = false, addFailure = failure, syncMessage = messages.of(outcome)) }
@@ -340,6 +342,22 @@ class SourcesViewModel @JvmOverloads constructor(
                 )
             }
             onChannels(failure?.sentence)
+        }
+    }
+
+    /**
+     * Takes back the first provider's save, for Back on the step after it: Setup stops, the provider
+     * goes, and its form, still filled in, can save again once it has gone, never before, or the
+     * second save would be a second provider.
+     */
+    fun undoSetup() {
+        _ui.update { it.copy(adding = true, addFailure = null, saved = null) }
+        viewModelScope.launch {
+            try {
+                refresh.undoSetup()
+            } finally {
+                _ui.update { it.copy(adding = false, syncMessage = null) }
+            }
         }
     }
 

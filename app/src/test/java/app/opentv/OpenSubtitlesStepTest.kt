@@ -71,7 +71,7 @@ class OpenSubtitlesStepTest {
     @Test
     fun `signing in says so and waits on Carry on, so there's time to read it`() {
         var done = false
-        compose.setTvContent { OpenSubtitlesStepScreen(graph, openSubtitles, onDone = { done = true }) }
+        compose.setTvContent { OpenSubtitlesStepScreen(graph, openSubtitles, onDone = { done = true }, onBack = {}) }
 
         compose.onNodeWithTag(OPENSUBTITLES_SIGN_IN_HERE_TAG).performClick()
         entryKeyboard().run {
@@ -96,9 +96,12 @@ class OpenSubtitlesStepTest {
     }
 
     @Test
-    fun `Back once signed in carries on, as Carry on does`() {
+    fun `Back once signed in goes back a step, not on to Setup`() {
         var done = false
-        compose.setTvContent { OpenSubtitlesStepScreen(graph, openSubtitles, onDone = { done = true }) }
+        var back = false
+        compose.setTvContent {
+            OpenSubtitlesStepScreen(graph, openSubtitles, onDone = { done = true }, onBack = { back = true })
+        }
         compose.onNodeWithTag(OPENSUBTITLES_SIGN_IN_HERE_TAG).performClick()
         entryKeyboard().run {
             type("u")
@@ -112,6 +115,7 @@ class OpenSubtitlesStepTest {
 
         Espresso.pressBack()
 
-        assertThat(done).isTrue()
+        assertThat(back).isTrue()
+        assertThat(done).isFalse()
     }
 }

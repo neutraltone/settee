@@ -80,6 +80,9 @@ fun PhonePairingScreen(
 
     LaunchedEffect(state) {
         (state as? PairingServer.State.Received)?.let(onReceived)
+        // Back from Setup's OpenSubtitles step, which stops the server as it goes, after this screen
+        // has started it again: listen again, with a new address, as the step does the other way round.
+        if (state == PairingServer.State.Idle && !keepListening()) server.start(mode)
     }
 
     ScreenFrame {

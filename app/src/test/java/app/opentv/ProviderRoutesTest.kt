@@ -309,23 +309,38 @@ class ProviderRoutesTest {
     }
 
     @Test
-    fun `Back on the OpenSubtitles step carries on to Setup, never back to the saved provider's form`() {
+    fun `Back on the OpenSubtitles step goes back to the form, still filled in, and takes the provider away`() {
         // Setup still loading, as it is when the viewer reads the step.
         val guide = panel.hold("xmltv.php")
         openStep()
 
         Espresso.pressBack()
-
-        compose.waitUntil(5_000) { route() == Routes.SETUP }
-        assertThat(runBlocking { withOpenSubtitles.sourceRepository.all() }).hasSize(1)
+        // Undoing waits for the download it stopped to let go.
         guide.release()
+
+        compose.waitUntil(5_000) { route() == Routes.ADD_SOURCE }
+        compose.waitUntil(5_000) { runBlocking { withOpenSubtitles.sourceRepository.all() }.isEmpty() }
+        compose.waitUntil(5_000) { compose.onAllNodesWithText("Save and load").fetchSemanticsNodes().isNotEmpty() }
+        assertThat(device.textShownBy(device.box(1))).isEqualTo("http://example.com/list.m3u")
+        assertThat(compose.runOnIdle { withOpenSubtitles.settings.setupSourceId }).isEqualTo(0L)
+    }
+
+    @Test
+    fun `saving again after Back on the OpenSubtitles step adds the provider once`() {
+        openStep()
+        Espresso.pressBack()
+        compose.waitUntil(5_000) { compose.onAllNodesWithText("Save and load").fetchSemanticsNodes().isNotEmpty() }
+
+        compose.onNodeWithText("Save and load").performClick()
+
+        compose.waitUntil(5_000) { route() == Routes.OPENSUBTITLES_STEP }
+        openSubtitlesStepButton("Not now").performClick()
         compose.waitUntil(5_000) { compose.onAllNodesWithText("Take me to Settee").fetchSemanticsNodes().isNotEmpty() }
-        assertThat(route()).isEqualTo(Routes.SETUP)
         assertThat(runBlocking { withOpenSubtitles.sourceRepository.all() }).hasSize(1)
     }
 
     @Test
-    fun `Back on the OpenSubtitles step after a provider sent from the phone carries on to Setup`() {
+    fun `Back on the OpenSubtitles step after a provider sent from the phone goes back to the phone screen`() {
         // Only a TV offers the phone.
         shadowOf(app.packageManager).setSystemFeature("android.software.leanback", true)
         setApp(start = Routes.ADD_SOURCE, sources = SourcesViewModel(app, withOpenSubtitles))
@@ -340,10 +355,14 @@ class ProviderRoutesTest {
 
         Espresso.pressBack()
 
-        compose.waitUntil(5_000) { route() == Routes.SETUP }
-        compose.waitUntil(5_000) { compose.onAllNodesWithText("Take me to Settee").fetchSemanticsNodes().isNotEmpty() }
-        assertThat(route()).isEqualTo(Routes.SETUP)
-        assertThat(runBlocking { withOpenSubtitles.sourceRepository.all() }).hasSize(1)
+        compose.waitUntil(5_000) { route() == Routes.ADD_SOURCE }
+        compose.waitUntil(5_000) { runBlocking { withOpenSubtitles.sourceRepository.all() }.isEmpty() }
+        // The step stops the server as it goes, after the phone screen is back: in the app they share
+        // it, but here the step has the test graph's, so it's stopped as the step would.
+        compose.runOnIdle { server.stop() }
+        // Listening again, with its code showing, for the phone to send a provider again.
+        compose.waitUntil(5_000) { compose.runOnIdle { server.state.value is PairingServer.State.Listening } }
+        compose.onNodeWithText("Then enter this code on your phone").assertExists()
         phone.join(5_000)
         server.stop()
     }

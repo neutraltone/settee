@@ -141,15 +141,25 @@ private fun firstStep(sources: SourcesViewModel): String =
 private fun NavGraphBuilder.openSubtitlesStep(nav: NavController, sources: SourcesViewModel) {
     composable(Routes.OPENSUBTITLES_STEP) {
         val setup by sources.setup.collectAsState()
-        // A failed login goes back to the form, which says why, as from Setup itself. That's why the
-        // add page stays under this step rather than being popped: the step's own Back goes to Setup.
+        // A failed login goes back to the form, which says why, as from Setup itself.
         LaunchedEffect(setup?.loginFailed) { if (setup?.loginFailed == true) nav.popBackStack() }
         val openSubtitles = sources.graph.openSubtitles
         val goToSetup = { nav.navigate(Routes.SETUP) { popUpTo(Routes.OPENSUBTITLES_STEP) { inclusive = true } } }
         if (openSubtitles == null) {
             LaunchedEffect(Unit) { goToSetup() }
         } else {
-            OpenSubtitlesStepScreen(sources.graph, openSubtitles, onDone = goToSetup)
+            OpenSubtitlesStepScreen(
+                sources.graph,
+                openSubtitles,
+                onDone = goToSetup,
+                // Back to the form the provider was saved from, still filled in, which is why it stays
+                // under this step. The save is taken back, or the form would show a provider already
+                // loading, and saving it again would add a second.
+                onBack = {
+                    sources.undoSetup()
+                    nav.popBackStack()
+                },
+            )
         }
     }
 }

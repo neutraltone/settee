@@ -31,15 +31,18 @@ import app.opentv.ui.settings.OpenSubtitlesSignInRows
  * Setup's optional OpenSubtitles step, straight after the first provider is saved, laid out as the
  * phone pairing screen is: the phone's QR code on the left, and on the right what an account gives,
  * Sign in on this TV, and Not now. Signed in, from the phone or the TV, it says so and waits for Carry
- * on: moving on by itself left nothing on screen long enough to read. [onDone] goes on, signed in or not,
- * and is what Back does too.
+ * on: moving on by itself left nothing on screen long enough to read. [onDone] goes on, signed in or not;
+ * [onBack] is Back, signed in or not, to the step before.
  */
 @Composable
-fun OpenSubtitlesStepScreen(graph: ServiceLocator.Graph, openSubtitles: OpenSubtitles, onDone: () -> Unit) {
-    // Back goes on rather than doing nothing, because Setup also takes Back as moving forward. Going
-    // back is not an option: the provider page under this step is already saved and loading, and must
-    // never come back. The username and password windows are dialogs, so a Back there closes the window.
-    BackHandler(onBack = onDone)
+fun OpenSubtitlesStepScreen(
+    graph: ServiceLocator.Graph,
+    openSubtitles: OpenSubtitles,
+    onDone: () -> Unit,
+    onBack: () -> Unit,
+) {
+    // The username and password windows are dialogs, so a Back there closes the window instead.
+    BackHandler(onBack = onBack)
     var signedIn by remember { mutableStateOf(false) }
     if (signedIn) {
         SignedIn(openSubtitles, onDone)

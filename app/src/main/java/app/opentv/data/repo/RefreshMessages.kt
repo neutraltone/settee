@@ -37,6 +37,7 @@ class RefreshMessages(private val context: Context) {
             resources.getQuantityString(R.plurals.refresh_channels_loaded, outcome.channels, outcome.channels)
         // Shown by ErrorMessage with its detail line, so not as a status line too.
         is Outcome.AddFailed -> null
+        Outcome.Undone -> null
         is Outcome.GuideLoaded -> guideLoaded(outcome.guide)
         is Outcome.GuideRefreshed -> guideRefreshed(outcome.guide)
         is Outcome.VodChecked -> null
