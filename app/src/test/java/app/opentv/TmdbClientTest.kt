@@ -96,7 +96,7 @@ class TmdbClientTest {
     fun `an API Key finds a film's IMDb match as an api_key parameter`() {
         val tmdb = tmdbWith(API_KEY)
 
-        assertThat(tmdb.imdbId("A Film", year = null, isMovie = true, tmdbId = null)).isEqualTo("tt0000011")
+        assertThat(tmdb.imdbId("A Film", year = null, isMovie = true, tmdbId = null).getOrNull()).isEqualTo("tt0000011")
         assertSentAsApiKey(API_KEY)
     }
 
@@ -104,7 +104,9 @@ class TmdbClientTest {
     fun `a Read Access Token finds a series' IMDb match as a Bearer header`() {
         val tmdb = tmdbWith(READ_TOKEN)
 
-        assertThat(tmdb.imdbId("A Show", year = null, isMovie = false, tmdbId = null)).isEqualTo("tt0000022")
+        assertThat(
+            tmdb.imdbId("A Show", year = null, isMovie = false, tmdbId = null).getOrNull(),
+        ).isEqualTo("tt0000022")
         assertSentAsBearer(READ_TOKEN)
     }
 
@@ -156,7 +158,7 @@ class TmdbClientTest {
     fun `a film a panel gave TMDB id 0 finds its IMDb match by its title`() {
         val tmdb = tmdbWith(API_KEY)
 
-        assertThat(tmdb.imdbId("A Film", year = null, isMovie = true, tmdbId = "0")).isEqualTo("tt0000011")
+        assertThat(tmdb.imdbId("A Film", year = null, isMovie = true, tmdbId = "0").getOrNull()).isEqualTo("tt0000011")
         assertThat(pathsAsked()).contains("/3/search/movie")
         assertThat(pathsAsked()).doesNotContain("/3/movie/0")
     }

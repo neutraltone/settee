@@ -16,10 +16,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import app.opentv.R
 import app.opentv.data.model.StremioAddon
+import app.opentv.ui.design.ErrorMessage
 import app.opentv.ui.design.ListRow
 import app.opentv.ui.design.PanelRow
 import app.opentv.ui.design.PanelTitle
@@ -61,9 +63,13 @@ internal fun AddonsPane(viewModel: AddonsViewModel = viewModel()) {
             AddonsViewModel.Status.Idle -> stringResource(R.string.settings_addons_add_note)
             AddonsViewModel.Status.Checking -> stringResource(R.string.addons_checking)
             is AddonsViewModel.Status.Added -> stringResource(R.string.addons_added, current.name)
-            AddonsViewModel.Status.Invalid -> stringResource(R.string.settings_addons_invalid)
+            // Said beneath, with its detail line, rather than squeezed into the row's note.
+            is AddonsViewModel.Status.Failed -> stringResource(R.string.settings_addons_add_note)
         },
     )
+    (status as? AddonsViewModel.Status.Failed)?.let {
+        ErrorMessage(it.error.sentence, it.error.detail, Modifier.padding(top = 12.dp), textAlign = TextAlign.Start)
+    }
     if (addons.isEmpty()) {
         Text(
             stringResource(R.string.addons_empty),

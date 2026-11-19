@@ -9,6 +9,7 @@ import android.content.Context
 import androidx.annotation.StringRes
 import app.opentv.R
 import app.opentv.data.parser.NotAGuideException
+import app.opentv.data.remote.AddonFailure
 import app.opentv.data.remote.GuideAddressException
 import app.opentv.data.remote.GuideDownloadException
 import app.opentv.data.remote.OpenSubtitlesFailure
@@ -61,7 +62,8 @@ class ErrorWording(private val context: Context, private val onTelevision: Boole
      */
     fun ofProvider(error: Throwable, @StringRes fallback: Int): ViewerError {
         if (error is ProviderException) return ofProvider(error, fallback)
-        return ViewerError(resources.getString(sentenceOf(error) ?: fallback), ViewerError.detailOf(codeOf(error)))
+        val sentence = networkSentenceOf(error, onTelevision) ?: fallback
+        return ViewerError(resources.getString(sentence), ViewerError.detailOf(codeOf(error)))
     }
 
     /** Anything else's [error]: always [sentence], with what went wrong on the detail line. */
@@ -140,6 +142,38 @@ class ErrorWording(private val context: Context, private val onTelevision: Boole
         ViewerError.detailOf("HTTP $status"),
     )
 
+    /**
+     * Why a Stremio add-on couldn't be used, in its own words rather than [ofProvider]'s: an add-on
+     * isn't "your provider", and the viewer pasted its address themselves.
+     */
+    fun ofAddon(failure: AddonFailure): ViewerError = when (failure) {
+        is AddonFailure.NotAnAddon -> ofHardware(
+            R.string.error_not_an_addon_tv,
+            R.string.error_not_an_addon_device,
+            ViewerError.detailOf("NotAnAddon", failure.status?.let { "HTTP $it" }),
+        )
+        is AddonFailure.Http -> of(R.string.error_addon_trouble, "HTTP ${failure.status}")
+        is AddonFailure.NoLookup ->
+            ofHardware(
+                R.string.error_addon_lookup_tv,
+                R.string.error_addon_lookup_device,
+                codeOf(failure.cause ?: failure),
+            )
+        is AddonFailure.Unreachable -> {
+            val cause = failure.cause ?: failure
+            // SocketTimeoutException is one of these.
+            if (cause is InterruptedIOException) {
+                of(R.string.error_addon_timed_out, codeOf(cause))
+            } else {
+                ofHardware(
+                    R.string.error_addon_cant_reach_tv,
+                    R.string.error_addon_cant_reach_device,
+                    codeOf(cause),
+                )
+            }
+        }
+    }
+
     /** What went wrong with OpenSubtitles: finding, downloading or signing in. */
     fun ofOpenSubtitles(error: Throwable): ViewerError = when (error) {
         is OpenSubtitlesFailure.NoResults -> of(R.string.error_opensubtitles_none, "NoResults")
@@ -189,9 +223,6 @@ class ErrorWording(private val context: Context, private val onTelevision: Boole
             codeOf(error),
         )
     }
-
-    @StringRes
-    private fun sentenceOf(error: Throwable): Int? = networkSentenceOf(error, onTelevision)
 
     companion object {
         private const val TOO_MANY_REQUESTS = 429

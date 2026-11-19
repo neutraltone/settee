@@ -271,6 +271,14 @@
     <string name="error_account_inactive">आपका प्रदाता कहता है कि यह खाता सक्रिय नहीं है। उनसे पूछें, फिर कोशिश करें।</string>
     <string name="error_bad_address">वह पता सही नहीं लगता। सेटिंग्स में अपने प्रदाता का विवरण जांचें।</string>
     <string name="error_not_a_panel">उस पते ने IPTV प्रदाता की तरह जवाब नहीं दिया। अपने प्रदाता के विवरण में पता और पोर्ट जांचें, या अगर आपका Wi-Fi साइन इन मांगे तो साइन इन करें।</string>
+    <string name="error_addon_cant_reach_tv">ऐड-ऑन तक नहीं पहुंचा जा सका। जांचें कि यह टीवी ऑनलाइन है और पता सही है।</string>
+    <string name="error_addon_cant_reach_device">ऐड-ऑन तक नहीं पहुंचा जा सका। जांचें कि यह डिवाइस ऑनलाइन है और पता सही है।</string>
+    <string name="error_addon_timed_out">ऐड-ऑन ने जवाब देना बंद कर दिया। हो सकता है वह व्यस्त हो, इसलिए थोड़ी देर में फिर कोशिश करें।</string>
+    <string name="error_addon_trouble">ऐड-ऑन को दिक्कत आ रही है। यह उसकी तरफ़ की समस्या है, इसलिए बाद में फिर कोशिश करें।</string>
+    <string name="error_not_an_addon_tv">उस पते से कोई ऐड-ऑन नहीं मिला। जांचें कि यह manifest.json लिंक है, और इस टीवी का इंटरनेट पहले साइन इन करने को नहीं कह रहा।</string>
+    <string name="error_not_an_addon_device">उस पते से कोई ऐड-ऑन नहीं मिला। जांचें कि यह manifest.json लिंक है, और इस डिवाइस का इंटरनेट पहले साइन इन करने को नहीं कह रहा।</string>
+    <string name="error_addon_lookup_tv">आपके ऐड-ऑन से पूछने के लिए यह फ़िल्म खोजी नहीं जा सकी। जांचें कि यह टीवी ऑनलाइन है, फिर कोशिश करें।</string>
+    <string name="error_addon_lookup_device">आपके ऐड-ऑन से पूछने के लिए यह फ़िल्म खोजी नहीं जा सकी। जांचें कि यह डिवाइस ऑनलाइन है, फिर कोशिश करें।</string>
     <string name="error_device_refused">आपके प्रदाता ने ये विवरण स्वीकार नहीं किए। सेटिंग्स में अपने प्रदाता का विवरण जांचें।</string>
     <string name="error_guide">यह गाइड डाउनलोड नहीं हो सकी। थोड़ी देर में फिर कोशिश करें।</string>
     <string name="error_guide_empty">यह गाइड डाउनलोड हो गई, लेकिन इसमें कोई प्रोग्राम नहीं था। जांचें कि यह सही लिंक है।</string>

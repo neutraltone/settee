@@ -271,6 +271,14 @@
     <string name="error_account_inactive">Je provider zegt dat dit account niet actief is. Vraag het na bij je provider en probeer het dan opnieuw.</string>
     <string name="error_bad_address">Dat adres lijkt niet te kloppen. Controleer je providergegevens in Instellingen.</string>
     <string name="error_not_a_panel">Dat adres antwoordde niet als een IPTV-provider. Controleer het adres en de poort in je providergegevens, of meld je aan bij je wifi als daarom wordt gevraagd.</string>
+    <string name="error_addon_cant_reach_tv">Kan de add-on niet bereiken. Controleer of deze tv online is en het adres klopt.</string>
+    <string name="error_addon_cant_reach_device">Kan de add-on niet bereiken. Controleer of dit apparaat online is en het adres klopt.</string>
+    <string name="error_addon_timed_out">De add-on reageert niet meer. Misschien is het er druk, dus probeer het zo opnieuw.</string>
+    <string name="error_addon_trouble">De add-on heeft problemen. Dat ligt aan hun kant, dus probeer het later opnieuw.</string>
+    <string name="error_not_an_addon_tv">Dat adres gaf geen add-on. Controleer of het de link naar manifest.json is, en of het internet van deze tv niet eerst vraagt om je aan te melden.</string>
+    <string name="error_not_an_addon_device">Dat adres gaf geen add-on. Controleer of het de link naar manifest.json is, en of het internet van dit apparaat niet eerst vraagt om je aan te melden.</string>
+    <string name="error_addon_lookup_tv">Kon deze film niet opzoeken om je add-ons te vragen. Controleer of deze tv online is en probeer het opnieuw.</string>
+    <string name="error_addon_lookup_device">Kon deze film niet opzoeken om je add-ons te vragen. Controleer of dit apparaat online is en probeer het opnieuw.</string>
     <string name="error_device_refused">Je provider heeft deze gegevens niet geaccepteerd. Controleer je providergegevens in Instellingen.</string>
     <string name="error_guide">Kan deze gids niet downloaden. Probeer het zo opnieuw.</string>
     <string name="error_guide_empty">Deze gids is gedownload, maar er stonden geen programma\'s in. Controleer of het de juiste link is.</string>

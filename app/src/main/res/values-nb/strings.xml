@@ -271,6 +271,14 @@
     <string name="error_account_inactive">Leverandøren din sier at denne kontoen ikke er aktiv. Sjekk med dem, og prøv så igjen.</string>
     <string name="error_bad_address">Den adressen ser ikke riktig ut. Sjekk leverandørdetaljene dine i Innstillinger.</string>
     <string name="error_not_a_panel">Den adressen svarte ikke som en IPTV-leverandør. Sjekk adressen og porten i leverandørdetaljene dine, eller logg på Wi-Fi hvis det ber om det.</string>
+    <string name="error_addon_cant_reach_tv">Får ikke kontakt med tillegget. Sjekk at denne TV-en er på nett, og at adressen stemmer.</string>
+    <string name="error_addon_cant_reach_device">Får ikke kontakt med tillegget. Sjekk at denne enheten er på nett, og at adressen stemmer.</string>
+    <string name="error_addon_timed_out">Tillegget sluttet å svare. Det kan være opptatt, så prøv igjen om litt.</string>
+    <string name="error_addon_trouble">Tillegget har problemer. Det er på deres side, så prøv igjen senere.</string>
+    <string name="error_not_an_addon_tv">Den adressen ga ikke et tillegg. Sjekk at det er lenken til manifest.json, og at internett på denne TV-en ikke krever at du logger på først.</string>
+    <string name="error_not_an_addon_device">Den adressen ga ikke et tillegg. Sjekk at det er lenken til manifest.json, og at internett på denne enheten ikke krever at du logger på først.</string>
+    <string name="error_addon_lookup_tv">Kunne ikke slå opp filmen for å spørre tilleggene dine. Sjekk at denne TV-en er på nett, og prøv igjen.</string>
+    <string name="error_addon_lookup_device">Kunne ikke slå opp filmen for å spørre tilleggene dine. Sjekk at denne enheten er på nett, og prøv igjen.</string>
     <string name="error_device_refused">Leverandøren din godtok ikke disse detaljene. Sjekk leverandørdetaljene dine i Innstillinger.</string>
     <string name="error_guide">Kunne ikke laste ned denne guiden. Prøv igjen om litt.</string>
     <string name="error_guide_empty">Guiden ble lastet ned, men inneholdt ingen programmer. Sjekk at det er riktig lenke.</string>
