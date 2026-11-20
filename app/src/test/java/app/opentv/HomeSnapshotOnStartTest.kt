@@ -16,10 +16,12 @@ import app.opentv.data.repo.HomeRowKind
 import app.opentv.data.repo.LivePreview
 import app.opentv.data.repo.Profiles
 import app.opentv.data.repo.VodTitle
+import app.opentv.ui.BecauseYouWatched
 import app.opentv.ui.Cover
 import app.opentv.ui.HomeState
 import app.opentv.ui.HomeViewModel
 import app.opentv.ui.LiveNow
+import app.opentv.ui.SourcesViewModel
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -87,8 +89,9 @@ class HomeSnapshotOnStartTest {
         assertThat(first.loading).doesNotContain(HomeRowKind.RECENT_MOVIES)
 
         catalogue.release()
-        val fresh = home.whenDrawn { it.recentMovies.names() == listOf("Superbad") }
-        assertThat(fresh.loading).isEmpty()
+        // Each row comes on its own, so this waits for all of them.
+        val fresh = home.whenDrawn { it.loading.isEmpty() }
+        assertThat(fresh.recentMovies.names()).containsExactly("Superbad")
     }
 
     @Test
@@ -158,6 +161,77 @@ class HomeSnapshotOnStartTest {
         assertThat(fresh.live?.preview?.channel?.streamUrl).isEqualTo(bbcOne.streamUrl)
     }
 
+    @Test
+    fun `back on Home after its rows stopped, it waits for fresh ones rather than drawing saved ones again`() =
+        runTest {
+            graph.homeSnapshots.save(Profiles.BASE_PROFILE_ID, lastSeen(heat))
+            val home = viewModels.track(HomeViewModel(app, graph))
+            val shown = backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { home.state.collect {} }
+            home.whenDrawn { it.recentMovies.names() == listOf("Superbad") }
+            // Into a player, long enough for Home's rows to stop: what's saved could be a card about to go.
+            shown.cancel()
+            advanceTimeBy(15_000)
+            catalogue.hold()
+
+            val again = home.whenDrawn { HomeRowKind.RECENT_SHOWS in it.loading }
+
+            assertThat(again.loading).contains(HomeRowKind.RECENT_MOVIES)
+        }
+
+    @Test
+    fun `the first Home drawn holds a place for a row the saved one didn't have`() = runTest {
+        graph.viewerLibrary.recordProgress("movie:1", positionMillis = FILM_MILLIS / 2, durationMillis = FILM_MILLIS)
+        graph.homeSnapshots.save(Profiles.BASE_PROFILE_ID, lastSeen(heat))
+        catalogue.hold()
+        val home = viewModels.track(HomeViewModel(app, graph))
+
+        // The very first: Continue Watching coming in above it a moment later would move every row.
+        val first = home.whenDrawn { true }
+
+        assertThat(first.loading).contains(HomeRowKind.CONTINUE_WATCHING)
+        assertThat(first.recentMovies.names()).containsExactly("Heat")
+    }
+
+    @Test
+    fun `while Because you watched is worked out, the saved one holds its place`() = runTest {
+        graph.viewerLibrary.recordProgress("movie:1", positionMillis = FILM_MILLIS, durationMillis = FILM_MILLIS)
+        val because = BecauseYouWatched("Superbad", listOf(Cover(VodTitle.OfMovie(heat))))
+        graph.homeSnapshots.save(Profiles.BASE_PROFILE_ID, lastSeen().copy(becauseYouWatched = because))
+        catalogue.hold()
+        val home = viewModels.track(HomeViewModel(app, graph))
+
+        val first = home.whenDrawn { HomeRowKind.RECENT_SHOWS in it.loading }
+
+        assertThat(first.becauseYouWatched?.basedOn).isEqualTo("Superbad")
+        assertThat(first.becauseYouWatched?.covers.orEmpty().names()).containsExactly("Heat")
+    }
+
+    @Test
+    fun `removing a Profile forgets its saved Home, so a new Profile given its id never draws it`() = runTest {
+        db.profiles().insert(Profile(id = 2, name = "Second", createdAtMillis = 1))
+        graph.homeSnapshots.save(2, lastSeen(heat))
+
+        graph.profiles.remove(2)
+
+        assertThat(graph.homeSnapshots.read(2)).isNull()
+    }
+
+    @Test
+    fun `removing a provider forgets every saved Home, as another provider can be given its row ids`() = runTest {
+        graph.homeSnapshots.save(Profiles.BASE_PROFILE_ID, lastSeen(heat))
+        val providers = viewModels.track(SourcesViewModel(app, graph))
+
+        providers.delete(db.sources().all().single())
+
+        val forgotten = withContext(Dispatchers.Default) {
+            withTimeout(5_000) {
+                while (graph.homeSnapshots.read(Profiles.BASE_PROFILE_ID) != null) delay(10)
+                true
+            }
+        }
+        assertThat(forgotten).isTrue()
+    }
+
     /** Home's state once [drawn] holds of it, waiting in real time: the reads run on Room's own threads. */
     private suspend fun HomeViewModel.whenDrawn(drawn: (HomeState) -> Boolean): HomeState =
         withContext(Dispatchers.Default) { withTimeout(5_000) { state.filterNotNull().first(drawn) } }
@@ -199,6 +273,10 @@ class HomeSnapshotOnStartTest {
         number = 1,
         streamUrl = "http://example.com/live/u/p/1.ts",
     )
+
+    private companion object {
+        const val FILM_MILLIS = 6_000_000L
+    }
 
     // Only in what was saved: the provider has since dropped it.
     private val heat = superbad.copy(id = 2, streamId = "2", name = "Heat", streamUrl = "")

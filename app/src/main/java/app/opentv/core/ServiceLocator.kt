@@ -331,7 +331,14 @@ object ServiceLocator {
         }
 
         val profiles: Profiles by lazy {
-            Profiles(database, viewerLibrary, profileSettings, recordingRepository, settings, clock)
+            Profiles(
+                database,
+                viewerLibrary,
+                profileSettings,
+                recordingRepository,
+                settings,
+                clock,
+            ).apply { onRemoved = homeSnapshots::forget }
         }
 
         val recordingRepository: RecordingRepository by lazy {

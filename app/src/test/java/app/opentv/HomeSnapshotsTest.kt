@@ -6,14 +6,17 @@
 package app.opentv
 
 import app.opentv.data.model.Channel
+import app.opentv.data.model.Episode
 import app.opentv.data.model.Movie
 import app.opentv.data.model.Series
+import app.opentv.data.repo.CoverStatus
 import app.opentv.data.repo.HomeArrangement
 import app.opentv.data.repo.HomeRowKind
 import app.opentv.data.repo.LineupChannel
 import app.opentv.data.repo.LivePreview
 import app.opentv.data.repo.MediaKey
 import app.opentv.data.repo.VodTitle
+import app.opentv.ui.BecauseYouWatched
 import app.opentv.ui.Cover
 import app.opentv.ui.HomeChannel
 import app.opentv.ui.HomeSnapshots
@@ -45,6 +48,12 @@ class HomeSnapshotsTest {
         posterUrl = "https://example.com/severance.jpg", rating = null, year = 2022, plot = null,
     )
 
+    private val ronin = heat.copy(id = 6, streamId = "102", name = "Ronin", year = 1998)
+    private val upNext = Episode(
+        id = 31, sourceId = 1, seriesId = "202", episodeId = "e31", season = 2, episodeNumber = 3,
+        title = "Who Is Alive?", plot = null, durationSeconds = null, stillUrl = null, streamUrl = "",
+    )
+
     private val bbcOne = Channel(
         id = 3, sourceId = 1, streamId = "9", name = "UK| BBC One FHD", displayName = "BBC One",
         groupKey = "uk:bbc1", qualityRank = 3, qualityLabel = "FHD", categoryId = null,
@@ -67,13 +76,22 @@ class HomeSnapshotsTest {
                 titleId = 7, titleKey = "series:1:202",
             ),
         ),
-        favouriteShows = listOf(Cover(VodTitle.OfSeries(severance))),
+        // With the statuses the covers draw, so none appears a moment later.
+        favouriteShows = listOf(Cover(VodTitle.OfSeries(severance), CoverStatus.UpNext(upNext))),
         favouriteMovies = emptyList(),
         favouriteChannels = listOf(
             HomeChannel(LineupChannel(bbcOne, listOf(bbcOne), favourite = true), nowOn = "News"),
         ),
         recentShows = emptyList(),
-        recentMovies = listOf(Cover(VodTitle.OfMovie(heat))),
+        recentMovies = listOf(Cover(VodTitle.OfMovie(heat), CoverStatus.InProgress(0.4f, remainingMillis = 1_200_000))),
+        becauseYouWatched = BecauseYouWatched(
+            basedOn = "Heat",
+            covers = listOf(
+                Cover(VodTitle.OfMovie(ronin), CoverStatus.Watched),
+                Cover(VodTitle.OfSeries(severance), CoverStatus.InProgress(0.2f, null, upNext)),
+                Cover(VodTitle.OfSeries(severance.copy(id = 8, seriesId = "203")), CoverStatus.NewEpisode),
+            ),
+        ),
         live = LiveNow(LivePreview.Playable(bbcOne), nowTitle = "News", nextTitle = "Weather"),
         // Rearranged, so it's never drawn once in the usual order and then moved.
         arrangement = HomeArrangement.USUAL.moved(from = 4, to = 0).withShown(HomeRowKind.RECENT_SHOWS, false),
@@ -131,5 +149,27 @@ class HomeSnapshotsTest {
         // And what's read back has none to play: anything that plays looks the title up again.
         val cover = store().read(profileId = 1)!!.recentMovies.single().title as VodTitle.OfMovie
         assertThat(cover.movie.streamUrl).isEmpty()
+    }
+
+    @Test
+    fun `a forgotten Profile's Home is gone, and only its`() = runTest {
+        store().save(profileId = 1, home)
+        store().save(profileId = 2, home)
+
+        store().forget(profileId = 2)
+
+        assertThat(store().read(profileId = 2)).isNull()
+        assertThat(store().read(profileId = 1)).isNotNull()
+    }
+
+    @Test
+    fun `forgetting every Profile's Home leaves none`() = runTest {
+        store().save(profileId = 1, home)
+        store().save(profileId = 2, home)
+
+        store().forgetAll()
+
+        assertThat(store().read(profileId = 1)).isNull()
+        assertThat(store().read(profileId = 2)).isNull()
     }
 }

@@ -375,7 +375,12 @@ class SourcesViewModel @JvmOverloads constructor(
     }
 
     fun delete(source: Source) {
-        viewModelScope.launch { graph.catalogRepository.deleteSource(source.id) }
+        viewModelScope.launch {
+            graph.catalogRepository.deleteSource(source.id)
+            // Every Profile's saved Home: another provider can be given this one's row ids (#595). Only
+            // here, where a viewer removes a provider: Setup's other removals are of one that never loaded.
+            graph.homeSnapshots.forgetAll()
+        }
     }
 
     /**
@@ -1704,6 +1709,11 @@ data class HomeState(
      * as nothing has checked its channel can play yet.
      */
     val liveStill: Boolean = false,
+    /**
+     * Whether Because you watched is still being worked out, after a cold start: Home draws the saved
+     * one meanwhile rather than have it come in later and move the rows below (#595).
+     */
+    val becausePending: Boolean = false,
 )
 
 /**
@@ -1796,7 +1806,7 @@ class HomeViewModel @JvmOverloads constructor(
      * for it: back on Home it starts from the row it last had for this Profile, or none.
      */
     @OptIn(ExperimentalCoroutinesApi::class)
-    private val becauseYouWatched: Flow<Pair<String, List<VodTitle>>?> =
+    private val becauseYouWatched: Flow<BecauseRow> =
         combine(settings.moviesEnabled, settings.seriesEnabled, ::Pair)
             .flatMapLatest { (movies, shows) ->
                 graph.viewerLibrary.lastFinished { if (it is VodTitle.OfMovie) movies else shows }
@@ -1804,9 +1814,16 @@ class HomeViewModel @JvmOverloads constructor(
             .distinctUntilChanged { a, b -> a?.kind == b?.kind && a?.id == b?.id }
             .mapLatest { basis ->
                 val profile = settings.activeProfileId.value
-                basis?.let { VodTitleCleaner.clean(it.name) to likeThis(it) }.also { lastBecause = profile to it }
+                val row = basis?.let { VodTitleCleaner.clean(it.name) to likeThis(it) }.also {
+                    lastBecause =
+                        profile to it
+                }
+                BecauseRow(row)
             }
-            .onStart { emit(lastBecause?.takeIf { it.first == settings.activeProfileId.value }?.second) }
+            .onStart {
+                val last = lastBecause?.takeIf { it.first == settings.activeProfileId.value }
+                emit(if (last == null) BecauseRow(null, pending = true) else BecauseRow(last.second))
+            }
 
     private suspend fun likeThis(basis: VodTitle): List<VodTitle> {
         val catalog = graph.catalogRepository
@@ -1991,9 +2008,10 @@ class HomeViewModel @JvmOverloads constructor(
             recentMovies = arrived.recentMovies?.value.orEmpty().withStatuses(statuses),
             live = live?.value,
             arrangement = arrangement,
-            becauseYouWatched = because
+            becauseYouWatched = because.row
                 ?.let { (basedOn, titles) -> BecauseYouWatched(basedOn, titles.withStatuses(statuses)) }
                 ?.takeIf { it.covers.isNotEmpty() },
+            becausePending = because.pending,
             loading = (expected - arrived.kinds()).filterTo(mutableSetOf(), arrangement::isShown),
             liveLoading = live == null && expectedLive && arrangement.livePreview,
         )
@@ -2020,14 +2038,17 @@ class HomeViewModel @JvmOverloads constructor(
      */
     @OptIn(FlowPreview::class)
     private fun homeOf(profileId: Long): Flow<HomeState?> = channelFlow {
-        val saved = graph.homeSnapshots.read(profileId)
-        send(saved)
+        // At once, so the last Profile's rows are dropped as soon as the Profile changes.
+        send(null)
+        // Drawn only with the fresh rows' quick checks, which say which rows to hold places for: a row the
+        // saved Home lacks would otherwise come in a moment later and move every row below it.
+        val saved = graph.homeSnapshots.readOnStart(profileId)
         val finished = MutableStateFlow<HomeState?>(null)
         launch {
             finished.filterNotNull().debounce(SAVE_PAUSE_MILLIS).collect { graph.homeSnapshots.save(profileId, it) }
         }
         rows.collect { fresh ->
-            if (fresh.loading.isEmpty() && !fresh.liveLoading) finished.value = fresh
+            if (fresh.loading.isEmpty() && !fresh.liveLoading && !fresh.becausePending) finished.value = fresh
             send(saved?.let(fresh::over) ?: fresh)
         }
     }
@@ -2062,35 +2083,34 @@ class HomeViewModel @JvmOverloads constructor(
  * there. A row [saved] has that's no longer expected stays off: it would only vanish a moment later.
  */
 private fun HomeState.over(saved: HomeState): HomeState {
-    fun <T> pick(kind: HomeRowKind, fresh: List<T>, kept: List<T>): List<T> =
-        if (kind in loading && kept.isNotEmpty()) kept else fresh
-    val continueWatching = pick(HomeRowKind.CONTINUE_WATCHING, continueWatching, saved.continueWatching)
-    val favouriteShows = pick(HomeRowKind.FAVOURITE_SHOWS, favouriteShows, saved.favouriteShows)
-    val favouriteMovies = pick(HomeRowKind.FAVOURITE_MOVIES, favouriteMovies, saved.favouriteMovies)
-    val favouriteChannels = pick(HomeRowKind.FAVOURITE_CHANNELS, favouriteChannels, saved.favouriteChannels)
-    val recentShows = pick(HomeRowKind.RECENT_SHOWS, recentShows, saved.recentShows)
-    val recentMovies = pick(HomeRowKind.RECENT_MOVIES, recentMovies, saved.recentMovies)
-    val drawnFromSaved = buildSet {
-        if (continueWatching !== this@over.continueWatching) add(HomeRowKind.CONTINUE_WATCHING)
-        if (favouriteShows !== this@over.favouriteShows) add(HomeRowKind.FAVOURITE_SHOWS)
-        if (favouriteMovies !== this@over.favouriteMovies) add(HomeRowKind.FAVOURITE_MOVIES)
-        if (favouriteChannels !== this@over.favouriteChannels) add(HomeRowKind.FAVOURITE_CHANNELS)
-        if (recentShows !== this@over.recentShows) add(HomeRowKind.RECENT_SHOWS)
-        if (recentMovies !== this@over.recentMovies) add(HomeRowKind.RECENT_MOVIES)
-    }
-    return copy(
-        continueWatching = continueWatching,
-        favouriteShows = favouriteShows,
-        favouriteMovies = favouriteMovies,
-        favouriteChannels = favouriteChannels,
-        recentShows = recentShows,
-        recentMovies = recentMovies,
-        loading = loading - drawnFromSaved,
-    ).let { rows ->
-        val live = saved.live?.takeIf { liveLoading } ?: return@let rows
-        rows.copy(live = live, liveLoading = false, liveStill = true)
-    }
+    val fromSaved = loading.filterTo(mutableSetOf()) { saved.hasCards(it) }
+    fun <T> pick(kind: HomeRowKind, fresh: List<T>, kept: List<T>) = if (kind in fromSaved) kept else fresh
+    val rows = copy(
+        continueWatching = pick(HomeRowKind.CONTINUE_WATCHING, continueWatching, saved.continueWatching),
+        favouriteShows = pick(HomeRowKind.FAVOURITE_SHOWS, favouriteShows, saved.favouriteShows),
+        favouriteMovies = pick(HomeRowKind.FAVOURITE_MOVIES, favouriteMovies, saved.favouriteMovies),
+        favouriteChannels = pick(HomeRowKind.FAVOURITE_CHANNELS, favouriteChannels, saved.favouriteChannels),
+        recentShows = pick(HomeRowKind.RECENT_SHOWS, recentShows, saved.recentShows),
+        recentMovies = pick(HomeRowKind.RECENT_MOVIES, recentMovies, saved.recentMovies),
+        loading = loading - fromSaved,
+        becauseYouWatched = becauseYouWatched ?: saved.becauseYouWatched?.takeIf { becausePending },
+    )
+    val live = saved.live?.takeIf { liveLoading } ?: return rows
+    return rows.copy(live = live, liveLoading = false, liveStill = true)
 }
+
+private fun HomeState.hasCards(kind: HomeRowKind): Boolean = when (kind) {
+    HomeRowKind.CONTINUE_WATCHING -> continueWatching.isNotEmpty()
+    HomeRowKind.BECAUSE_YOU_WATCHED -> becauseYouWatched != null
+    HomeRowKind.RECENT_SHOWS -> recentShows.isNotEmpty()
+    HomeRowKind.RECENT_MOVIES -> recentMovies.isNotEmpty()
+    HomeRowKind.FAVOURITE_SHOWS -> favouriteShows.isNotEmpty()
+    HomeRowKind.FAVOURITE_MOVIES -> favouriteMovies.isNotEmpty()
+    HomeRowKind.FAVOURITE_CHANNELS -> favouriteChannels.isNotEmpty()
+}
+
+/** Because you watched as [HomeViewModel] works it out: [pending] until it has, on a cold start. */
+private data class BecauseRow(val row: Pair<String, List<VodTitle>>?, val pending: Boolean = false)
 
 /**
  * Shares while anything collects or [keptLive] holds; once neither has for [STOP_MILLIS], stops and

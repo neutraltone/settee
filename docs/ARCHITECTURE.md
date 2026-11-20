@@ -281,16 +281,20 @@ nothing on that path reads a whole catalogue table (#582):
   table.
 
 Even so, a cold start on a Stick takes seconds to build Home's rows, most of it the process
-starting. So each Profile's last finished Home is kept (`HomeSnapshots`, #595) and drawn at once:
-each row still on its way shows the saved cards in place of its skeleton, and the fresh row replaces
-them when it comes. The saved Live Preview is a still tile until then.
+starting. So each Profile's last finished Home is kept (`HomeSnapshots`, #595) and drawn with the
+quick checks' first answer: each row still on its way shows the saved cards in place of its
+skeleton, and the fresh row replaces them when it comes. The saved Live Preview is a still tile and
+the saved Because you watched stands in until theirs come. Only a Profile's first Home since Settee
+started draws it: back from a player or the background, Home waits for fresh rows (#192).
 
 - A file per Profile in app storage, not a table: nothing queries it, it would need a migration
   whenever its shape changed, and sync never sees it. It keeps only what cards draw and their row
   ids, never a stream URL (ADR 0004); anything that plays reads the row again by id, which a
   refresh keeps.
 - Saved only once every row has come and Home has stayed put for 2 s, never while rows are still
-  loading. Passed over after a week, under another schema version or file format.
+  loading. Passed over after a week, under another schema version or file format. Removing a
+  Profile forgets its file and removing a provider forgets them all, since Room can give a new
+  Profile or provider's rows the ids a saved card holds.
 - The Highlight stays on its title when fresh rows replace saved ones because shelves follow the
   card's key (source and provider id), which saved cards share with fresh ones.
 

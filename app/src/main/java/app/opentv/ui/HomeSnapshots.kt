@@ -6,14 +6,17 @@
 package app.opentv.ui
 
 import app.opentv.data.model.Channel
+import app.opentv.data.model.Episode
 import app.opentv.data.model.Movie
 import app.opentv.data.model.Series
+import app.opentv.data.repo.CoverStatus
 import app.opentv.data.repo.HomeArrangement
 import app.opentv.data.repo.LineupChannel
 import app.opentv.data.repo.LivePreview
 import app.opentv.data.repo.MediaKey
 import app.opentv.data.repo.VodTitle
 import java.io.File
+import java.util.concurrent.ConcurrentHashMap
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
@@ -51,6 +54,7 @@ class HomeSnapshots(
             favouriteMovies = home.favouriteMovies.map(::SavedCover),
             recentShows = home.recentShows.map(::SavedCover),
             recentMovies = home.recentMovies.map(::SavedCover),
+            becauseYouWatched = home.becauseYouWatched?.let(::SavedBecause),
         )
         // Written aside and moved into place, so a cold start never reads half a file.
         val next = File(dir, "$profileId.json.tmp")
@@ -75,14 +79,35 @@ class HomeSnapshots(
             arrangement = HomeArrangement.decode(saved.arrangement),
             live = saved.live?.toLive(),
             liveStill = saved.live != null,
+            becauseYouWatched = saved.becauseYouWatched?.toBecause(),
         )
+    }
+
+    /** The Profiles whose saved Home has been read for a start since Settee started. */
+    private val started = ConcurrentHashMap.newKeySet<Long>()
+
+    /**
+     * [profileId]'s saved Home for its first Home since Settee started; null every time after. Home
+     * coming back later, after a player or the background, waits for fresh rows rather than drawing old
+     * ones, where it would highlight a card that's about to move or go (#192).
+     */
+    suspend fun readOnStart(profileId: Long): HomeState? = if (started.add(profileId)) read(profileId) else null
+
+    /** Forgets [profileId]'s saved Home, as when the Profile is removed: a new one can be given its id. */
+    suspend fun forget(profileId: Long) {
+        withContext(Dispatchers.IO) { file(profileId).delete() }
+    }
+
+    /** Forgets every Profile's saved Home, as when a provider is removed: another can be given its row ids. */
+    suspend fun forgetAll() {
+        withContext(Dispatchers.IO) { dir.listFiles()?.forEach { it.delete() } }
     }
 
     private fun file(profileId: Long) = File(dir, "$profileId.json")
 
     private companion object {
         /** Raised whenever what's saved changes meaning, so an old file is passed over rather than misread. */
-        const val FORMAT = 1
+        const val FORMAT = 2
         const val MAX_AGE_MILLIS = 7L * 24 * 60 * 60 * 1000
     }
 }
@@ -101,7 +126,15 @@ private data class SavedHome(
     val favouriteMovies: List<SavedCover>,
     val recentShows: List<SavedCover>,
     val recentMovies: List<SavedCover>,
+    val becauseYouWatched: SavedBecause?,
 )
+
+@Serializable
+private data class SavedBecause(val basedOn: String, val covers: List<SavedCover>) {
+    constructor(because: BecauseYouWatched) : this(because.basedOn, because.covers.map(::SavedCover))
+
+    fun toBecause() = BecauseYouWatched(basedOn, covers.map(SavedCover::toCover))
+}
 
 @Serializable
 private data class SavedResume(
@@ -140,29 +173,8 @@ private data class SavedCover(
     val name: String,
     val posterUrl: String?,
     val year: Int?,
+    val status: SavedStatus? = null,
 ) {
-    constructor(cover: Cover) : this(
-        series = cover.title is VodTitle.OfSeries,
-        id = cover.title.id,
-        sourceId = when (val title = cover.title) {
-            is VodTitle.OfMovie -> title.movie.sourceId
-            is VodTitle.OfSeries -> title.series.sourceId
-        },
-        providerId = when (val title = cover.title) {
-            is VodTitle.OfMovie -> title.movie.streamId
-            is VodTitle.OfSeries -> title.series.seriesId
-        },
-        name = cover.title.name,
-        posterUrl = when (val title = cover.title) {
-            is VodTitle.OfMovie -> title.movie.posterUrl
-            is VodTitle.OfSeries -> title.series.posterUrl
-        },
-        year = when (val title = cover.title) {
-            is VodTitle.OfMovie -> title.movie.year
-            is VodTitle.OfSeries -> title.series.year
-        },
-    )
-
     fun toCover(): Cover = Cover(
         if (series) {
             VodTitle.OfSeries(
@@ -180,6 +192,79 @@ private data class SavedCover(
                 ),
             )
         },
+        status?.toStatus(),
+    )
+}
+
+private fun SavedCover(cover: Cover): SavedCover {
+    val status = cover.status?.let(::SavedStatus)
+    return when (val title = cover.title) {
+        is VodTitle.OfMovie -> with(title.movie) {
+            SavedCover(false, id, sourceId, streamId, name, posterUrl, year, status)
+        }
+        is VodTitle.OfSeries -> with(title.series) {
+            SavedCover(true, id, sourceId, seriesId, name, posterUrl, year, status)
+        }
+    }
+}
+
+/** A cover's status as it draws it: how far, how long left, and which episode. */
+@Serializable
+private data class SavedStatus(
+    val kind: Kind,
+    val progress: Float? = null,
+    val remainingMillis: Long? = null,
+    val episode: SavedEpisode? = null,
+) {
+    enum class Kind { IN_PROGRESS, UP_NEXT, NEW_EPISODE, WATCHED }
+
+    constructor(status: CoverStatus) : this(
+        kind = when (status) {
+            is CoverStatus.InProgress -> Kind.IN_PROGRESS
+            is CoverStatus.UpNext -> Kind.UP_NEXT
+            CoverStatus.NewEpisode -> Kind.NEW_EPISODE
+            CoverStatus.Watched -> Kind.WATCHED
+        },
+        progress = (status as? CoverStatus.InProgress)?.progress,
+        remainingMillis = (status as? CoverStatus.InProgress)?.remainingMillis,
+        episode = when (status) {
+            is CoverStatus.InProgress -> status.episode
+            is CoverStatus.UpNext -> status.episode
+            else -> null
+        }?.let(::SavedEpisode),
+    )
+
+    fun toStatus(): CoverStatus? = when (kind) {
+        Kind.IN_PROGRESS -> progress?.let { CoverStatus.InProgress(it, remainingMillis, episode?.toEpisode()) }
+        Kind.UP_NEXT -> episode?.let { CoverStatus.UpNext(it.toEpisode()) }
+        Kind.NEW_EPISODE -> CoverStatus.NewEpisode
+        Kind.WATCHED -> CoverStatus.Watched
+    }
+}
+
+@Serializable
+private data class SavedEpisode(
+    val id: Long,
+    val sourceId: Long,
+    val seriesId: String,
+    val episodeId: String,
+    val season: Int,
+    val number: Int,
+    val title: String,
+) {
+    constructor(episode: Episode) : this(
+        episode.id,
+        episode.sourceId,
+        episode.seriesId,
+        episode.episodeId,
+        episode.season,
+        episode.episodeNumber,
+        episode.title,
+    )
+
+    fun toEpisode() = Episode(
+        id = id, sourceId = sourceId, seriesId = seriesId, episodeId = episodeId, season = season,
+        episodeNumber = number, title = title, plot = null, durationSeconds = null, stillUrl = null, streamUrl = "",
     )
 }
 
