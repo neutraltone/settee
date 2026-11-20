@@ -36,7 +36,6 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.unit.dp
 import app.opentv.data.repo.TitleCover
 import app.opentv.ui.OnShellReturn
 import app.opentv.ui.design.ArtCard
@@ -198,7 +197,6 @@ private fun PrefetchCovers(state: LazyGridState, covers: List<TitleCover>) {
 private data class ShownCovers(val first: Int, val last: Int, val columns: Int)
 
 private const val PREFETCH_ROWS = 4
-
 
 /** A title's cover, the same in a row and a grid. */
 @Composable

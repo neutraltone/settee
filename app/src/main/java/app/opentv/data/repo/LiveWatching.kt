@@ -63,19 +63,19 @@ class LiveWatching internal constructor(
      */
     @OptIn(ExperimentalCoroutinesApi::class)
     fun preview(): Flow<LivePreview?> = settled().flatMapLatest { played ->
-            if (played == null) {
-                flowOf(null)
-            } else {
-                live.observeChannel(played.source, played.streamId).map { channel ->
-                    when {
-                        channel == null -> LivePreview.Gone(played.name, played.logoUrl)
-                        // Hidden on purpose: Home doesn't bring it back up, not even as a reminder.
-                        channel.hidden -> null
-                        else -> LivePreview.Playable(channel)
-                    }
+        if (played == null) {
+            flowOf(null)
+        } else {
+            live.observeChannel(played.source, played.streamId).map { channel ->
+                when {
+                    channel == null -> LivePreview.Gone(played.name, played.logoUrl)
+                    // Hidden on purpose: Home doesn't bring it back up, not even as a reminder.
+                    channel.hidden -> null
+                    else -> LivePreview.Playable(channel)
                 }
             }
         }
+    }
 
     /**
      * Whether the active Profile will likely have a Live Preview, from its own row alone, without the

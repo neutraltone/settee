@@ -34,7 +34,6 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.rememberTextMeasurer
-import androidx.compose.ui.unit.dp
 import app.opentv.R
 import app.opentv.data.repo.MediaKey
 import app.opentv.data.repo.TitleCover
@@ -55,6 +54,7 @@ import app.opentv.ui.design.shelfCard
 import app.opentv.ui.options.LeaveDirectly
 import app.opentv.ui.options.rememberRowHighlight
 import app.opentv.ui.railReturnItem
+import app.opentv.ui.rememberOpeningPlace
 import app.opentv.ui.restoreTarget
 
 /**
@@ -86,7 +86,8 @@ internal fun <T> ScreenFrameScope.ForYou(
     val titles = rememberTextMeasurer()
     val density = LocalDensity.current
     val coverTop = remember(density) {
-        titles.measure("Ag", SetteeType.Section, maxLines = 1).size.height + with(density) { SetteeSpace.LiftRoom.toPx() }
+        titles.measure("Ag", SetteeType.Section, maxLines = 1).size.height +
+            with(density) { SetteeSpace.LiftRoom.toPx() }
     }
     val toTheTop = remember(coverTop) { RowToTheTop(coverTop) }
 
@@ -98,7 +99,11 @@ internal fun <T> ScreenFrameScope.ForYou(
     val back = rememberForYouReturn()
     val target = back.rememberTarget(column, rowKeys) { pickRows(rowKeys, resume, rows, cover) }
     val focus = remember(target) { target?.let { CardFocus(it.index) { back.restoring = null } } }
-    fun focusIn(row: String) = focus?.takeIf { target?.row == row }
+    // The top row's place holds the Highlight For you opens on until the row lands (#581).
+    val topRow = rowKeys.all.firstOrNull()
+    val opening = rememberOpeningPlace(placeNow = rowKeys.topIsPlace)
+    fun focusIn(row: String) = opening.focusFor(row == topRow, otherwise = focus?.takeIf { target?.row == row })
+    fun openingIn(row: String) = opening.modifierIf(row == topRow)
     fun highlighted(row: String, item: String, index: Int) =
         back.highlighted(RowPick(row, rowKeys.withCards.indexOf(row), item, index))
 
@@ -136,6 +141,7 @@ internal fun <T> ScreenFrameScope.ForYou(
                             SkeletonShelf(
                                 stringResource(R.string.vod_continue_watching),
                                 SkeletonCards.ContinueWatching(largeFirst = false),
+                                opening = openingIn(CONTINUE_WATCHING),
                             )
                             return@RowAtTop
                         }
@@ -158,7 +164,7 @@ internal fun <T> ScreenFrameScope.ForYou(
                 railReturnItem(key = row.key, contentType = "covers") {
                     RowAtTop(first + i, row.modifier) {
                         if (row.titles.isEmpty()) {
-                            SkeletonShelf(row.title)
+                            SkeletonShelf(row.title, opening = openingIn(row.key))
                             return@RowAtTop
                         }
                         val covers = remember(row.titles) { row.titles.map { it to cover(it) } }
@@ -238,7 +244,10 @@ private fun rememberForYouReturn(): ForYouReturn {
 }
 
 /** For you's rows by key, top to bottom: [all] as the list draws them, [withCards] as a [RowPick] counts them. */
-private class RowKeys(val all: List<String>, val withCards: List<String>)
+private class RowKeys(val all: List<String>, val withCards: List<String>) {
+    /** Whether the top row is still a place held by a skeleton, which takes the opening Highlight. */
+    val topIsPlace get() = all.isNotEmpty() && all.first() !in withCards
+}
 
 private fun rowKeys(resume: List<ResumeItem>, rows: List<TitleRow<*>>, resumeLoading: Boolean): RowKeys {
     val cw = listOfNotNull(CONTINUE_WATCHING.takeIf { resume.isNotEmpty() })
@@ -265,4 +274,3 @@ private fun <T> pickRows(
 private val TitleCover.cardKey get() = "$id"
 
 private const val CONTINUE_WATCHING = "cw"
-

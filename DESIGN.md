@@ -368,8 +368,9 @@ and phone pairing; row and grid screens wait with skeletons.
 ### Skeleton (waiting)
 A loading row's real title over blank cards in Surface with Card corners, each the size of the card it
 stands for, filling the screen's width; a loading grid of blank covers; a guide of blank channel cells
-and programmes. Every blank card pulses together, its opacity easing between full and 65% every 1.8 s,
-never a shimmer. Only the card a screen opens on can take the Highlight, and OK does nothing on it.
+and programmes. The blank cards pulse as one layer, its opacity easing between full and 65% every 1.8 s,
+never a shimmer. Only the card a screen opens on can take the Highlight, outside the pulse so the
+Highlight holds steady, and OK does nothing on it.
 
 ### Error message
 A sentence in the Voice saying what happened and what to do, then a small Mushroom line with the code,

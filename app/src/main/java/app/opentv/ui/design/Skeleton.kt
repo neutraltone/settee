@@ -153,7 +153,11 @@ fun SkeletonGuide(
         val cell = Modifier.width(channelColumn - GUIDE_GAP).height(rowHeight).padding(vertical = GUIDE_GAP / 2)
         // First, so it's the first blank card in reading order; it sits over the first row's place.
         if (opening != null) {
-            OpeningBlank(HighlightStyle.Cell, SetteeShapes.Cell, Modifier.padding(top = header).then(cell).then(opening))
+            OpeningBlank(
+                HighlightStyle.Cell,
+                SetteeShapes.Cell,
+                Modifier.padding(top = header).then(cell).then(opening),
+            )
         }
         Column(Modifier.padding(top = header).then(pulse)) {
             repeat(rows) { row ->

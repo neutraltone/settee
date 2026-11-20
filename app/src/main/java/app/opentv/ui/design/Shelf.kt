@@ -158,4 +158,3 @@ private fun Modifier.fadeBehindTheMargin() = drawWithContent {
 
 /** Short of the 48 dp margin, so the first card's ring, at the margin, stays clear of it. */
 private val MARGIN_FADE = 36.dp
-

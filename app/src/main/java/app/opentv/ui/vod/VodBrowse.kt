@@ -115,12 +115,7 @@ fun MoviesScreen(
         if (providers == ProvidersCarry.MOVIES_AND_SHOWS) viewModel.ensureVodLoaded()
     }
 
-    val loading = ForYouLoading.of(expected, resume, favourites, recentlyAdded)
-    val hasForYou = !resume.isNullOrEmpty() ||
-        !favourites.isNullOrEmpty() ||
-        recommended.isNotEmpty() ||
-        !recentlyAdded.isNullOrEmpty() ||
-        genreRows.isNotEmpty()
+    val loading = ForYouLoading.of(expected, resume, favourites, recentlyAdded, listOf(recommended, genreRows))
     val categories by viewModel.movieCategories.collectAsState()
     // null is For you, else a category's browseKey. Saved, since opening a title disposes this screen
     // and Back should land on the category it was opened from.
@@ -147,7 +142,7 @@ fun MoviesScreen(
                 },
             )
         },
-        forYou = loading.shown(hasForYou),
+        forYou = loading.shown,
         empty = vodEmpty(
             loading = vodLoading || isSyncing,
             providers = providers,
@@ -202,12 +197,7 @@ fun SeriesScreen(
         if (providers == ProvidersCarry.MOVIES_AND_SHOWS) viewModel.ensureVodLoaded()
     }
 
-    val loading = ForYouLoading.of(expected, resume, favourites, recentlyAdded)
-    val hasForYou = !resume.isNullOrEmpty() ||
-        !favourites.isNullOrEmpty() ||
-        recommended.isNotEmpty() ||
-        !recentlyAdded.isNullOrEmpty() ||
-        genreRows.isNotEmpty()
+    val loading = ForYouLoading.of(expected, resume, favourites, recentlyAdded, listOf(recommended, genreRows))
     val categories by viewModel.seriesCategories.collectAsState()
     // null is For you, else a category's browseKey. Saved, since opening a title disposes this screen
     // and Back should land on the category it was opened from.
@@ -234,7 +224,7 @@ fun SeriesScreen(
                 },
             )
         },
-        forYou = loading.shown(hasForYou),
+        forYou = loading.shown,
         empty = vodEmpty(
             loading = vodLoading || isSyncing,
             providers = providers,
@@ -356,27 +346,36 @@ internal data class ForYouLoading(
     val favourites: Boolean,
     val recentlyAdded: Boolean,
     /** Whether the quick checks are back, so For you knows which places to hold. */
-    val known: Boolean = true,
+    val known: Boolean,
+    /** Whether a row with cards in it has come. */
+    val anyCards: Boolean = false,
 ) {
-    private val any get() = continueWatching || favourites || recentlyAdded
-
     /** What Movies or Shows draws: nothing until the checks are back (a moment), then rows or why there are none. */
-    fun shown(hasForYou: Boolean): ForYouShown = when {
-        !known -> ForYouShown.WAITING
-        any || hasForYou -> ForYouShown.ROWS
-        else -> ForYouShown.EMPTY
-    }
+    val shown: ForYouShown
+        get() = when {
+            !known -> ForYouShown.WAITING
+            continueWatching || favourites || recentlyAdded || anyCards -> ForYouShown.ROWS
+            else -> ForYouShown.EMPTY
+        }
 
     companion object {
-        val NONE = ForYouLoading(continueWatching = false, favourites = false, recentlyAdded = false)
+        val NONE = ForYouLoading(continueWatching = false, favourites = false, recentlyAdded = false, known = true)
 
-        fun of(expected: ExpectedRows?, resume: List<*>?, favourites: List<*>?, recentlyAdded: List<*>?) =
-            ForYouLoading(
-                continueWatching = expected?.continueWatching == true && resume == null,
-                favourites = expected?.favourites == true && favourites == null,
-                recentlyAdded = recentlyAdded == null,
-                known = expected != null,
-            )
+        fun of(
+            expected: ExpectedRows?,
+            resume: List<*>?,
+            favourites: List<*>?,
+            recentlyAdded: List<*>?,
+            /** Rows never held as skeletons here: Recommended has its own placeholder, genres come later. */
+            others: List<List<*>>,
+        ) = ForYouLoading(
+            continueWatching = expected?.continueWatching == true && resume == null,
+            favourites = expected?.favourites == true && favourites == null,
+            recentlyAdded = recentlyAdded == null,
+            known = expected != null,
+            anyCards = (listOf(resume.orEmpty(), favourites.orEmpty(), recentlyAdded.orEmpty()) + others)
+                .any { it.isNotEmpty() },
+        )
     }
 }
 

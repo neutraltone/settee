@@ -21,14 +21,14 @@ import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
 import app.opentv.data.model.Channel
 import app.opentv.data.model.Movie
-import app.opentv.data.repo.LivePreview
-import app.opentv.ui.LiveNow
-import app.opentv.ui.LiveTile
 import app.opentv.data.repo.HomeRowKind
+import app.opentv.data.repo.LivePreview
 import app.opentv.data.repo.MediaKey
 import app.opentv.data.repo.VodTitle
 import app.opentv.ui.Cover
 import app.opentv.ui.HomeContent
+import app.opentv.ui.LiveNow
+import app.opentv.ui.LiveTile
 import app.opentv.ui.ResumeItem
 import app.opentv.ui.design.SKELETON_CARD
 import com.google.common.truth.Truth.assertThat

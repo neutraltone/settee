@@ -6,12 +6,29 @@
 package app.opentv
 
 import android.app.Application
+import androidx.compose.foundation.focusable
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.size
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.test.assertIsFocused
+import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
+import androidx.compose.ui.test.onFirst
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onRoot
+import androidx.compose.ui.test.performKeyInput
+import androidx.compose.ui.test.pressKey
+import androidx.compose.ui.test.requestFocus
+import androidx.compose.ui.unit.dp
 import androidx.test.core.app.ApplicationProvider
 import app.opentv.data.model.Movie
 import app.opentv.data.model.Series
@@ -75,8 +92,8 @@ class VodSkeletonTest {
     }
 
     @Test
-    fun `Movies holds places for Continue Watching and Favourites while they load`() {
-        compose.setTvContent {
+    fun `Movies holds places for Continue Watching and Favourites while they load, the first card highlighted`() {
+        setBesideRail {
             MoviesScreen(
                 onOpenMovie = {},
                 onResume = {},
@@ -87,6 +104,8 @@ class VodSkeletonTest {
         }
         compose.waitUntilAtLeastOneExists(hasTestTag(SKELETON_CARD), 5_000)
 
+        intoTheScreen()
+        compose.onAllNodesWithTag(SKELETON_CARD).onFirst().assertIsFocused()
         compose.onNodeWithText("Continue watching").assertExists()
         compose.onNodeWithText("Favourites").assertExists()
         // Recently added's place is further down, under Recommended's, off the screen.
@@ -95,8 +114,8 @@ class VodSkeletonTest {
     }
 
     @Test
-    fun `Shows holds places for Continue Watching and Favourites while they load`() {
-        compose.setTvContent {
+    fun `Shows holds places for Continue Watching and Favourites while they load, the first card highlighted`() {
+        setBesideRail {
             SeriesScreen(
                 onOpenSeries = {},
                 onResume = {},
@@ -107,10 +126,51 @@ class VodSkeletonTest {
         }
         compose.waitUntilAtLeastOneExists(hasTestTag(SKELETON_CARD), 5_000)
 
+        intoTheScreen()
+        compose.onAllNodesWithTag(SKELETON_CARD).onFirst().assertIsFocused()
         compose.onNodeWithText("Continue watching").assertExists()
         compose.onNodeWithText("Favourites").assertExists()
         // Recently added's place is further down, under Recommended's, off the screen.
         captureScreen("shows_skeleton")
+    }
+
+    @Test
+    fun `Movies' Continue Watching lands with the Highlight on its first card`() {
+        setBesideRail {
+            MoviesScreen(
+                onOpenMovie = {},
+                onResume = {},
+                providers = ProvidersCarry.NO_PROVIDER,
+                isSyncing = false,
+                viewModel = viewModels.vod(app, graph),
+            )
+        }
+        compose.waitUntilAtLeastOneExists(hasTestTag(SKELETON_CARD), 5_000)
+        intoTheScreen()
+
+        catalogue.release()
+        // Its card and its Favourite's: Continue Watching's is the first, at the top.
+        compose.waitUntilNodeCount(hasText("Heat") and hasClickAction(), 2, 5_000)
+        compose.waitForIdle()
+
+        compose.onAllNodes(hasText("Heat") and hasClickAction())[0].assertIsFocused()
+    }
+
+    /** [screen] beside something focusable standing in for the rail, which has the Highlight. */
+    private fun setBesideRail(screen: @Composable () -> Unit) {
+        compose.setTvContent {
+            Row {
+                Box(Modifier.size(40.dp).focusable().testTag(RAIL))
+                Box(Modifier.weight(1f)) { screen() }
+            }
+        }
+        compose.onNodeWithTag(RAIL).requestFocus()
+    }
+
+    /** Right from the rail into the screen, as the rail hands it the Highlight. */
+    private fun intoTheScreen() {
+        compose.onRoot().performKeyInput { pressKey(Key.DirectionRight) }
+        compose.waitForIdle()
     }
 
     @Test
@@ -154,5 +214,6 @@ class VodSkeletonTest {
 
     private companion object {
         const val HALF = 3_000_000L
+        const val RAIL = "rail"
     }
 }

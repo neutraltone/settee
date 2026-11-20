@@ -46,13 +46,13 @@ import app.opentv.data.model.Channel
 import app.opentv.data.repo.MediaKey
 import app.opentv.player.PlayerController
 import app.opentv.ui.channels.PreviewVideo
-import app.opentv.ui.design.SetteeSpace
 import app.opentv.ui.design.ErrorMessage
 import app.opentv.ui.design.HighlightStyle
 import app.opentv.ui.design.HighlightSurface
 import app.opentv.ui.design.QuietLabel
 import app.opentv.ui.design.ScreenFrameScope
 import app.opentv.ui.design.SetteeColors
+import app.opentv.ui.design.SetteeSpace
 import app.opentv.ui.design.SetteeType
 import app.opentv.ui.design.Text
 import app.opentv.ui.vod.CardFocus

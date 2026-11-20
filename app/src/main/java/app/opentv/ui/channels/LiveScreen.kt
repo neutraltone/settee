@@ -259,13 +259,13 @@ fun LiveScreen(
                         // every cold start: the guide's shape, its first row holding the Highlight,
                         // so the rows fill in rather than replace a message (#581).
                         channelsPresent == true && !rowsBuilt -> OpeningGuideSkeleton(takeFocus)
-                        // The catalogue check is only a moment: nothing, rather than a flash of words.
-                        channelsPresent == null -> Unit
                         // Built, with channels on the device, and nothing here: every one is hidden.
                         channelsPresent == true -> NothingToShow(openSidebar)
                         // No channels on the device yet and a sync under way: the first, which takes
                         // a while on a big provider, and "No channels" during it reads as failure.
                         isSyncing -> Loading()
+                        // The catalogue check is only a moment: nothing, rather than a flash of words.
+                        channelsPresent == null -> Unit
                         // Nothing is syncing and the catalogue is confirmed empty: with a provider set
                         // up, the last load failed or returned nothing.
                         hasSources -> LoadFailed(loadFailure, onRetry = onRefresh, onEditProvider = onAddSource)

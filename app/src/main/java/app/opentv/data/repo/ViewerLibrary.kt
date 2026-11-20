@@ -352,10 +352,6 @@ class TitleStatus internal constructor(
 }
 
 /**
- * Removes a Profile from every table the library owns, in one transaction so a removal cut short
- * leaves the Profile whole rather than half forgotten. Reached as `viewerLibrary.profileRemoval`.
- */
-/**
  * Quick looks at the active Profile's own small tables, for a screen to hold a row's place with a
  * skeleton before the row's cards are built (#581): building them reads the catalogue, which on a
  * big provider takes seconds, and these never do.
@@ -384,6 +380,10 @@ class QuickChecks internal constructor(
         activeProfileId.flatMapLatest { favourites.observeAny(it, kind) }
 }
 
+/**
+ * Removes a Profile from every table the library owns, in one transaction so a removal cut short
+ * leaves the Profile whole rather than half forgotten. Reached as `viewerLibrary.profileRemoval`.
+ */
 class ProfileRemoval internal constructor(private val db: OpenTvDatabase) {
     suspend fun forget(profileId: Long) = db.withTransaction {
         db.positions().deleteFor(profileId)
