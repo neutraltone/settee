@@ -348,4 +348,9 @@
     <string name="error_opensubtitles_token_device">OpenSubtitles вышел из аккаунта на этом устройстве. Войдите снова в Настройках.</string>
     <string name="error_not_a_guide">Этот адрес не программа передач. Проверьте, что ссылка верная, или войдите в сеть Wi-Fi, если она просит.</string>
     <string name="settings_guide_bad_address">Это не веб-адрес. Проверьте, что он введён так, как в ссылке на программу, например example.com/guide.xml.</string>
+    <string name="diagnostics_database_failed">Settee не удалось прочитать свою базу данных, поэтому этих цифр нет.</string>
+    <string name="diagnostics_table_failed">Не удалось посчитать эту таблицу, возможно, часть базы данных повреждена.</string>
+    <string name="diagnostics_storage_failed">Settee не удалось измерить своё хранилище.</string>
+    <string name="diagnostics_memory_failed">Settee не удалось измерить свою память.</string>
+    <string name="diagnostics_log_failed">Settee не удалось прочитать свои записи, поэтому этого списка нет.</string>
 </resources>

@@ -348,4 +348,9 @@
     <string name="error_opensubtitles_token_device">O OpenSubtitles desconectou este dispositivo. Entre novamente nas Configurações.</string>
     <string name="error_not_a_guide">Esse endereço não é um guia. Verifique se é a ligação certa, ou inicie sessão no Wi-Fi se este o pedir.</string>
     <string name="settings_guide_bad_address">Isso não é um endereço web. Verifique se está escrito como a ligação do guia o mostra, por exemplo example.com/guide.xml.</string>
+    <string name="diagnostics_database_failed">O Settee não conseguiu ler a sua base de dados, por isso estes números estão em falta.</string>
+    <string name="diagnostics_table_failed">Não foi possível contar esta tabela, por isso parte da base de dados pode estar danificada.</string>
+    <string name="diagnostics_storage_failed">O Settee não conseguiu medir o seu armazenamento.</string>
+    <string name="diagnostics_memory_failed">O Settee não conseguiu medir a sua memória.</string>
+    <string name="diagnostics_log_failed">O Settee não conseguiu ler o que tinha anotado, por isso esta lista está em falta.</string>
 </resources>

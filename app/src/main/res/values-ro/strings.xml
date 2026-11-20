@@ -348,4 +348,9 @@
     <string name="error_opensubtitles_token_device">OpenSubtitles a deconectat acest dispozitiv. Conectează-te din nou din Setări.</string>
     <string name="error_not_a_guide">Adresa nu este un ghid. Verifică dacă este linkul corect sau conectează-te la Wi-Fi dacă îți cere.</string>
     <string name="settings_guide_bad_address">Aceasta nu este o adresă web. Verifică dacă este scrisă așa cum o arată linkul ghidului, de exemplu example.com/guide.xml.</string>
+    <string name="diagnostics_database_failed">Settee nu și-a putut citi baza de date, așa că aceste cifre lipsesc.</string>
+    <string name="diagnostics_table_failed">Acest tabel nu a putut fi numărat, așa că o parte din baza de date poate fi deteriorată.</string>
+    <string name="diagnostics_storage_failed">Settee nu și-a putut măsura spațiul de stocare.</string>
+    <string name="diagnostics_memory_failed">Settee nu și-a putut măsura memoria.</string>
+    <string name="diagnostics_log_failed">Settee nu a putut citi ce notase, așa că această listă lipsește.</string>
 </resources>

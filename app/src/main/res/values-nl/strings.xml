@@ -348,4 +348,9 @@
     <string name="error_opensubtitles_token_device">OpenSubtitles heeft dit apparaat afgemeld. Log opnieuw in via Instellingen.</string>
     <string name="error_not_a_guide">Dat adres is geen gids. Controleer of het de juiste link is, of meld je aan bij je wifi als daarom wordt gevraagd.</string>
     <string name="settings_guide_bad_address">Dat is geen webadres. Controleer of het is getypt zoals de link van de gids het toont, bijvoorbeeld example.com/guide.xml.</string>
+    <string name="diagnostics_database_failed">Settee kon zijn database niet lezen, dus deze cijfers ontbreken.</string>
+    <string name="diagnostics_table_failed">Deze tabel kon niet worden geteld, dus een deel van de database is mogelijk beschadigd.</string>
+    <string name="diagnostics_storage_failed">Settee kon zijn opslag niet meten.</string>
+    <string name="diagnostics_memory_failed">Settee kon zijn geheugen niet meten.</string>
+    <string name="diagnostics_log_failed">Settee kon niet lezen wat het had genoteerd, dus deze lijst ontbreekt.</string>
 </resources>

@@ -348,4 +348,9 @@
     <string name="error_opensubtitles_token_device">OpenSubtitles kirjasi tämän laitteen ulos. Kirjaudu uudelleen asetuksissa.</string>
     <string name="error_not_a_guide">Osoite ei ole ohjelmaopas. Tarkista, että linkki on oikea, tai kirjaudu Wi-Fi-verkkoon, jos se pyytää.</string>
     <string name="settings_guide_bad_address">Tämä ei ole verkko-osoite. Tarkista, että se on kirjoitettu kuten oppaan linkki sen näyttää, esimerkiksi example.com/guide.xml.</string>
+    <string name="diagnostics_database_failed">Settee ei voinut lukea tietokantaansa, joten nämä luvut puuttuvat.</string>
+    <string name="diagnostics_table_failed">Tätä taulukkoa ei voitu laskea, joten osa tietokannasta voi olla vaurioitunut.</string>
+    <string name="diagnostics_storage_failed">Settee ei voinut mitata tallennustilaansa.</string>
+    <string name="diagnostics_memory_failed">Settee ei voinut mitata muistiaan.</string>
+    <string name="diagnostics_log_failed">Settee ei voinut lukea muistiinpanojaan, joten tämä luettelo puuttuu.</string>
 </resources>

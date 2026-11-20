@@ -75,13 +75,9 @@ class NasSync(private val graph: ServiceLocator.Graph) {
     /** `<folder>/OpenTV/sync` within the share — the shared rendezvous every device agrees on. */
     private fun syncFolderPath(config: SmbConfig): String {
         val base = config.folder.split('/', '\\').filter { it.isNotBlank() }
-        return (base + listOf(SYNC_DIR, "sync")).joinToString("/")
+        return (base + listOf(NasFolder.NAME, "sync")).joinToString("/")
     }
 
     private fun locatorFor(config: SmbConfig, fileName: String): String =
         "smb://${config.host}/${config.share}/${syncFolderPath(config)}/$fileName"
-
-    private companion object {
-        const val SYNC_DIR = "Settee"
-    }
 }

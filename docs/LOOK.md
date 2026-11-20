@@ -260,7 +260,7 @@ Up and Down still zap while nothing is showing, and Right opens the Quality pick
 
 Two panes: sections on the left, their settings beside them, so nothing has to be opened to see what's inside.
 
-Sections are Providers, TV guide, Channels, Display and playback, Recording, Parental lock, Your devices, Add-ons, Manage on phone or laptop, and About. There's no Light theme.
+Sections are Providers, TV guide, Channels, Display and playback, Recording, Parental lock, Your devices, Add-ons, Manage on phone or laptop, Diagnostics, and About. There's no Light theme.
 
 - **Moving between the panes:** highlighting a section shows its settings straight away, with no OK. Right or OK moves into the pane, and Left comes back to the sections. Back from the pane goes back to the sections, and Back from the sections leaves Settings. Settings opens on Providers, and coming back while the app runs returns to the section it was on.
 - **Each pane** opens with its title and one hint line in the [Voice](#voice).
@@ -272,6 +272,7 @@ Sections are Providers, TV guide, Channels, Display and playback, Recording, Par
 - **Row options:** a row with more than one thing to do does the main one on OK. The rest are in its options, opened by holding Select or pressing Menu, in the same right-hand panel.
 - **Removing** a provider, a Profile, a TV guide source or an add-on asks first, in that panel: "Yes, remove <name>" and "Keep it", with the Highlight starting on "Keep it". Back also keeps it.
 - **A setting that belongs to the Profile** shows a quiet line under the value, such as "For Sam".
+- **Diagnostics:** a "Save a report to your NAS" row first, then a row for each part of the report (Database, Storage, Memory, Opens, Errors, This device) with its gist as the note. OK on any part opens the full report, a screen of its own scrolled from its Done button, to photograph when there's no NAS. A part that couldn't be gathered shows its sentence and detail line, never an empty value.
 - **Parental lock:** with a PIN set, the pane shows one row, "Enter your PIN", until it's entered, then the settings until the app closes. With no PIN, it shows the settings and a "Set a PIN" row. The PIN has its own number entry. The categories to lock are on a screen of their own, behind a "Locked categories" row that says how many are locked: a big provider has hundreds of them. That screen opens on the first category, and has Find a category at the top, which works as the [Categories Sidebar](#categories-sidebar)'s does.
 
 Profiles, behind the Rail's Profile, is a screen of its own built from the same parts: a row per Profile and an "Add a profile" row. OK renames a Profile, and switching to it and removing it are in its options.

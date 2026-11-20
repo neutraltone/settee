@@ -62,7 +62,7 @@ class SettingsSectionsScrollTest {
         }
         val sections = compose.onAllNodesWithTag(SettingsTags.SECTION).fetchSemanticsNodes()
             .map { it.config[SemanticsProperties.Text].joinToString("") }
-        assertThat(sections).hasSize(11)
+        assertThat(sections).hasSize(12)
 
         sections.drop(1).forEach { section ->
             press(KeyEvent.KEYCODE_DPAD_DOWN)

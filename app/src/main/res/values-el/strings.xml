@@ -348,4 +348,9 @@
     <string name="error_opensubtitles_token_device">Το OpenSubtitles αποσύνδεσε αυτή τη συσκευή. Συνδεθείτε ξανά από τις Ρυθμίσεις.</string>
     <string name="error_not_a_guide">Αυτή η διεύθυνση δεν είναι οδηγός προγράμματος. Ελέγξτε ότι είναι ο σωστός σύνδεσμος ή συνδεθείτε στο Wi-Fi, αν σας το ζητά.</string>
     <string name="settings_guide_bad_address">Αυτή δεν είναι διεύθυνση ιστού. Ελέγξτε ότι είναι γραμμένη όπως τη δείχνει ο σύνδεσμος του οδηγού, π.χ. example.com/guide.xml.</string>
+    <string name="diagnostics_database_failed">Το Settee δεν μπόρεσε να διαβάσει τη βάση δεδομένων του, γι\' αυτό λείπουν αυτοί οι αριθμοί.</string>
+    <string name="diagnostics_table_failed">Δεν ήταν δυνατή η καταμέτρηση αυτού του πίνακα, μέρος της βάσης δεδομένων ίσως έχει καταστραφεί.</string>
+    <string name="diagnostics_storage_failed">Το Settee δεν μπόρεσε να μετρήσει τον αποθηκευτικό του χώρο.</string>
+    <string name="diagnostics_memory_failed">Το Settee δεν μπόρεσε να μετρήσει τη μνήμη του.</string>
+    <string name="diagnostics_log_failed">Το Settee δεν μπόρεσε να διαβάσει όσα είχε σημειώσει, γι\' αυτό λείπει αυτή η λίστα.</string>
 </resources>

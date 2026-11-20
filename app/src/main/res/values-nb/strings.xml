@@ -348,4 +348,9 @@
     <string name="error_opensubtitles_token_device">OpenSubtitles har logget denne enheten av. Logg på igjen i Innstillinger.</string>
     <string name="error_not_a_guide">Den adressen er ikke en programguide. Sjekk at det er riktig lenke, eller logg på Wi-Fi hvis det ber om det.</string>
     <string name="settings_guide_bad_address">Det er ikke en nettadresse. Sjekk at den er skrevet slik guidens lenke viser den, for eksempel example.com/guide.xml.</string>
+    <string name="diagnostics_database_failed">Settee kunne ikke lese databasen sin, så disse tallene mangler.</string>
+    <string name="diagnostics_table_failed">Kunne ikke telle denne tabellen, så en del av databasen kan være skadet.</string>
+    <string name="diagnostics_storage_failed">Settee kunne ikke måle lagringsplassen sin.</string>
+    <string name="diagnostics_memory_failed">Settee kunne ikke måle minnet sitt.</string>
+    <string name="diagnostics_log_failed">Settee kunne ikke lese det den hadde notert, så denne listen mangler.</string>
 </resources>

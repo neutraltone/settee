@@ -348,4 +348,9 @@
     <string name="error_opensubtitles_token_device">OpenSubtitles mengeluarkan perangkat ini dari akun. Masuk lagi di Setelan.</string>
     <string name="error_not_a_guide">Alamat itu bukan panduan acara. Periksa apakah tautannya benar, atau masuk ke Wi-Fi Anda jika diminta.</string>
     <string name="settings_guide_bad_address">Itu bukan alamat web. Periksa apakah sudah diketik seperti yang ditunjukkan tautan panduan, misalnya example.com/guide.xml.</string>
+    <string name="diagnostics_database_failed">Settee tidak dapat membaca databasenya, jadi angka ini tidak tersedia.</string>
+    <string name="diagnostics_table_failed">Tabel ini tidak dapat dihitung, jadi sebagian database mungkin rusak.</string>
+    <string name="diagnostics_storage_failed">Settee tidak dapat mengukur penyimpanannya.</string>
+    <string name="diagnostics_memory_failed">Settee tidak dapat mengukur memorinya.</string>
+    <string name="diagnostics_log_failed">Settee tidak dapat membaca catatannya, jadi daftar ini tidak tersedia.</string>
 </resources>

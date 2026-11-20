@@ -348,4 +348,9 @@
     <string name="error_opensubtitles_token_device">Az OpenSubtitles kijelentkeztette ezt az eszközt. Jelentkezz be újra a Beállításokban.</string>
     <string name="error_not_a_guide">Ez a cím nem műsorújság. Ellenőrizze, hogy a megfelelő hivatkozás-e, vagy jelentkezzen be a Wi-Fi-hálózatba, ha kéri.</string>
     <string name="settings_guide_bad_address">Ez nem webcím. Ellenőrizze, hogy úgy írta-e be, ahogy a műsorújság hivatkozása mutatja, például example.com/guide.xml.</string>
+    <string name="diagnostics_database_failed">A Settee nem tudta beolvasni az adatbázisát, ezért ezek a számok hiányoznak.</string>
+    <string name="diagnostics_table_failed">Ezt a táblát nem sikerült megszámolni, az adatbázis egy része sérült lehet.</string>
+    <string name="diagnostics_storage_failed">A Settee nem tudta megmérni a tárhelyét.</string>
+    <string name="diagnostics_memory_failed">A Settee nem tudta megmérni a memóriáját.</string>
+    <string name="diagnostics_log_failed">A Settee nem tudta beolvasni a feljegyzéseit, ezért ez a lista hiányzik.</string>
 </resources>
