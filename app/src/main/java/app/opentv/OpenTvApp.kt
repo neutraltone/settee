@@ -125,7 +125,11 @@ open class OpenTvApp :
         appScope.launch { graph.titleIndex }
         val catchUpNormaliser = NormaliserCatchUp(
             this,
-            renormalise = { graph.catalogRepository.renormalizeAll() },
+            renormalise = {
+                // New keys need matching to the guide; the launch's guide pass only matches when a guide
+                // comes in (#582).
+                if (graph.catalogRepository.renormalizeAll() > 0) graph.epgRepository.runMatcher()
+            },
             carryLocks = { from ->
                 if (from <= LAST_ASCII_KEY_NORMALIZER) {
                     val categories = StreamKind.entries.flatMap { graph.database.categories().allByKind(it) }

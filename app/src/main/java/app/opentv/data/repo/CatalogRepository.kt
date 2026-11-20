@@ -1076,10 +1076,8 @@ class CatalogRepository(
                     if (rank == 0) rank = c.qualityRank
                 }
             }
-            channel.copy(
+            channel.withGroupKey(n.channelKey).copy(
                 displayName = n.baseName,
-                groupKey = n.channelKey,
-                nameKey = ChannelNameNormalizer.nameKeyOf(n.channelKey),
                 qualityRank = rank,
                 qualityLabel = label,
                 // Providers ship decorative separator rows ('#### UK GENERAL ####') as

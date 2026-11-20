@@ -244,7 +244,8 @@ class EpgRepository(
     // ---- Sync ------------------------------------------------------------------------------
 
     /**
-     * Downloads every enabled feed, merges, prunes, and re-runs the matcher. [skipFetchedSince] leaves
+     * Downloads every enabled feed, merges, prunes, and re-runs the matcher when a feed came in or
+     * [channelsChanged] says the caller has just written channels. [skipFetchedSince] leaves
      * out feeds already downloaded at or after that time, even when [force]d. [progress] hears how far
      * through it is, 0 to 1, never backwards; see [GuideProgress].
      */
@@ -252,6 +253,7 @@ class EpgRepository(
         nowUtcMillis: Long,
         force: Boolean = false,
         skipFetchedSince: Long? = null,
+        channelsChanged: Boolean = true,
         progress: (SyncProgress) -> Unit = {},
     ): SyncSummary = withContext(Dispatchers.IO) {
         ensureFeeds()
@@ -260,6 +262,7 @@ class EpgRepository(
         var succeeded = 0
         var failed = 0
         var written = 0
+        var downloaded = 0
 
         val (due, fresh) = feedDao.enabled().partition { feed ->
             val inWindow = !force && nowUtcMillis - feed.lastSyncMillis < REFRESH_INTERVAL_MILLIS
@@ -283,6 +286,7 @@ class EpgRepository(
             when (result) {
                 is FeedResult.Success -> {
                     succeeded++
+                    downloaded++
                     written += result.programmes
                     feedDao.markSynced(
                         feed.id,
@@ -306,7 +310,9 @@ class EpgRepository(
             programmeDao.deleteEndedBefore(nowUtcMillis - RETENTION_PAST_MILLIS)
         }
 
-        val (matched, total) = runMatcher()
+        // Matching reads and cleans every channel's name, so it's skipped when neither side has changed:
+        // the launch's pass, which mostly finds every guide fresh, ran it each time (#582).
+        val (matched, total) = if (downloaded > 0 || channelsChanged) runMatcher() else countMatched()
         reporting.done()
         SyncSummary(succeeded, failed, written, matched, total)
     }
@@ -507,6 +513,13 @@ class EpgRepository(
     }
 
     // ---- Matching --------------------------------------------------------------------------
+
+    /** What [runMatcher] returns, from the matches already stored: no names cleaned, nothing written. */
+    private suspend fun countMatched(): Pair<Int, Int> = matching.withLock {
+        val populated = aliasDao.populatedOfEnabledFeeds().toHashSet()
+        val channels = channelDao.matcherInputs()
+        channels.count { channel -> channel.epgCandidates.any { it in populated } } to channels.size
+    }
 
     /**
      * Joins every channel to the merged guide by normalised name.

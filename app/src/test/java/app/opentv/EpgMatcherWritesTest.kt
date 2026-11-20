@@ -147,6 +147,30 @@ class EpgMatcherWritesTest {
     }
 
     @Test
+    fun `a guide pass that downloads nothing and follows no channel change leaves the matches, and counts them`() =
+        runTest {
+            // The launch's guide pass: matching again would read and clean every channel's name (#582).
+            db.channels().upsertAll(listOf(channel(0, matchedEpgId = epgId(0))) + (1..2).map { channel(it) })
+            db.epgFeeds().markSynced(guideFor(0..2), NOW, "")
+
+            val summary = guide.syncAll(NOW, channelsChanged = false)
+
+            assertThat(channels.writes).isEmpty()
+            assertThat(summary.channelsMatched to summary.channelsTotal).isEqualTo(1 to 3)
+        }
+
+    @Test
+    fun `a guide pass after the channels changed matches them even when it downloads nothing`() = runTest {
+        db.channels().upsertAll((0..2).map { channel(it) })
+        db.epgFeeds().markSynced(guideFor(0..2), NOW, "")
+
+        val summary = guide.syncAll(NOW, channelsChanged = true)
+
+        assertThat(channels.writes).containsExactly(3)
+        assertThat(summary.channelsMatched to summary.channelsTotal).isEqualTo(3 to 3)
+    }
+
+    @Test
     fun `a channel the guide no longer lists loses its match, and others keep theirs`() = runTest {
         db.channels().upsertAll((0..2).map { channel(it, matchedEpgId = "old.guide") })
         guideFor(listOf(0, 1))
@@ -212,3 +236,9 @@ class EpgMatcherWritesTest {
         }
     }
 }
+
+/**
+ * When each test's guide pass runs; its guide was downloaded then too. Near the start of time, so the
+ * pass's pruning of ended programmes leaves the guide's, which end at 1.
+ */
+private const val NOW = 1_000L

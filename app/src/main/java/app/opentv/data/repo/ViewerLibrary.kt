@@ -818,17 +818,16 @@ private class ContinueWatchingCards(
     }
 
     /** A card's title: its first Version's row id as lists group them, or else its TMDB id. */
-    private suspend fun titleOf(card: ContinueWatchingCard, movieTitles: Map<Long, String?>): String? =
-        when (card) {
-            is ContinueWatchingCard.Movie -> versionIds.of(StreamKind.MOVIE, card.movieId)?.minOrNull()
-                ?.let { "movie:#$it" }
-                ?: knownTmdbId(movieTitles[card.movieId])?.let { "movie:$it" }
-            is ContinueWatchingCard.Series -> series.bySeriesId(card.episode.sourceId, card.episode.seriesId)
-                ?.let { row ->
-                    versionIds.of(StreamKind.SERIES, row.id)?.minOrNull()?.let { "series:#$it" }
-                        ?: knownTmdbId(row.tmdbId)?.let { "series:$it" }
-                }
-        }
+    private suspend fun titleOf(card: ContinueWatchingCard, movieTitles: Map<Long, String?>): String? = when (card) {
+        is ContinueWatchingCard.Movie -> versionIds.of(StreamKind.MOVIE, card.movieId)?.minOrNull()
+            ?.let { "movie:#$it" }
+            ?: knownTmdbId(movieTitles[card.movieId])?.let { "movie:$it" }
+        is ContinueWatchingCard.Series -> series.bySeriesId(card.episode.sourceId, card.episode.seriesId)
+            ?.let { row ->
+                versionIds.of(StreamKind.SERIES, row.id)?.minOrNull()?.let { "series:#$it" }
+                    ?: knownTmdbId(row.tmdbId)?.let { "series:$it" }
+            }
+    }
     fun movies(pid: Long): Flow<List<Played>> = positions.observeNewestFirst(pid).map(::moviesFrom)
 
     /** [list] (one Profile's positions, newest first) as Continue Watching's movie cards. */

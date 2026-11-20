@@ -428,7 +428,8 @@ class CatalogueRefresh(
 
     suspend fun refresh(trigger: Trigger.GuideOnly): Outcome.GuideRefreshed {
         if (trigger == Trigger.AppLaunch && settings.moviesEnabled.value) catalog.fillEveryProvidersGenres()
-        return Outcome.GuideRefreshed(syncGuide(force = trigger == Trigger.GuideSettings))
+        // No channels were written, so matching is only redone if a guide comes in.
+        return Outcome.GuideRefreshed(syncGuide(force = trigger == Trigger.GuideSettings, channelsChanged = false))
     }
 
     /**
@@ -513,6 +514,7 @@ class CatalogueRefresh(
      */
     private suspend fun syncGuide(
         force: Boolean,
+        channelsChanged: Boolean = true,
         progress: (EpgRepository.SyncProgress) -> Unit = {},
     ): EpgRepository.SyncSummary {
         val runningSince = guidePassStarted.get()
@@ -520,7 +522,13 @@ class CatalogueRefresh(
             val now = clock()
             guidePassStarted.set(now)
             try {
-                guide.syncAll(now, force, skipFetchedSince = runningSince.takeIf { force && it > 0 }, progress)
+                guide.syncAll(
+                    now,
+                    force,
+                    skipFetchedSince = runningSince.takeIf { force && it > 0 },
+                    channelsChanged = channelsChanged,
+                    progress = progress,
+                )
             } finally {
                 guidePassStarted.set(0)
             }

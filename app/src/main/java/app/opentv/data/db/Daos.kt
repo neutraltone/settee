@@ -13,7 +13,6 @@ import androidx.room.Query
 import androidx.room.Transaction
 import androidx.room.Update
 import androidx.room.Upsert
-import app.opentv.data.parser.ChannelNameNormalizer
 import app.opentv.data.model.Category
 import app.opentv.data.model.Channel
 import app.opentv.data.model.ChannelEdits
@@ -58,6 +57,7 @@ import app.opentv.data.model.StreamKind
 import app.opentv.data.model.VersionRow
 import app.opentv.data.model.movieCredits
 import app.opentv.data.model.seriesCredits
+import app.opentv.data.parser.ChannelNameNormalizer
 import app.opentv.sync.SyncHiddenChannel
 import kotlinx.coroutines.flow.Flow
 
