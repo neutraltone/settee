@@ -1477,13 +1477,9 @@ interface EpisodeDao {
 
     /**
      * Every episode [profileId] has any progress on. A join rather than `IN (:ids)`: a long watch
-     * history would run past SQLite's bound-variable limit. `'ep:' || id` is
-     * [app.opentv.data.repo.MediaKey.Episode]'s stored form, which a query can't build through it.
+     * history would run past SQLite's bound-variable limit. See [EPISODE_OF_POSITION] for the join.
      */
-    @Query(
-        "SELECT episodes.* FROM episodes JOIN playback_positions " +
-            "ON playback_positions.mediaKey = 'ep:' || episodes.id WHERE playback_positions.profileId = :profileId",
-    )
+    @Query(PLAYED_EPISODES)
     fun observePlayed(profileId: Long): Flow<List<Episode>>
 
     /**
@@ -1492,12 +1488,7 @@ interface EpisodeDao {
      * home feed reads this each time a tab opens, and a long watch history's plots and stream URLs
      * would be felt on a Fire TV Stick.
      */
-    @Query(
-        "SELECT episodes.sourceId, episodes.seriesId FROM episodes JOIN playback_positions " +
-            "ON playback_positions.mediaKey = 'ep:' || episodes.id WHERE playback_positions.profileId = :profileId " +
-            "AND (playback_positions.mark IS NULL OR playback_positions.mark != :except) " +
-            "GROUP BY episodes.sourceId, episodes.seriesId ORDER BY MAX(playback_positions.updatedAtMillis) DESC",
-    )
+    @Query(STARTED_SERIES)
     suspend fun startedSeries(profileId: Long, except: HandMark): List<SeriesRef>
 
     /** Every episode of each series [profileId] has played any of, by a join for the same reason. */
@@ -2049,6 +2040,30 @@ internal const val SERIES_WITH_PERSON = """
 """
 
 /**
+ * A position's episode, joined by the id read out of its key rather than by building `'ep:' || id`
+ * from each episode: a key built per episode no index can serve, so every stored episode was read
+ * whenever a position, episode or dismissal changed (#582). This way SQLite reads the Profile's
+ * positions and finds each episode by its primary key. `ep:` is
+ * [app.opentv.data.repo.MediaKey.Episode]'s stored form. [EPISODES_OF_PLAYED_SERIES] spells it out
+ * again for its alias `played`.
+ */
+private const val EPISODE_OF_POSITION =
+    "substr(playback_positions.mediaKey, 1, 3) = 'ep:' " +
+        "AND episodes.id = CAST(substr(playback_positions.mediaKey, 4) AS INTEGER)"
+
+/** Every episode a Profile has any progress on. See [EpisodeDao.observePlayed]. */
+internal const val PLAYED_EPISODES =
+    "SELECT episodes.* FROM episodes JOIN playback_positions " +
+        "ON " + EPISODE_OF_POSITION + " WHERE playback_positions.profileId = :profileId"
+
+/** The series a Profile has started, played most recently first. See [EpisodeDao.startedSeries]. */
+internal const val STARTED_SERIES =
+    "SELECT episodes.sourceId, episodes.seriesId FROM episodes JOIN playback_positions " +
+        "ON " + EPISODE_OF_POSITION + " WHERE playback_positions.profileId = :profileId " +
+        "AND (playback_positions.mark IS NULL OR playback_positions.mark != :except) " +
+        "GROUP BY episodes.sourceId, episodes.seriesId ORDER BY MAX(playback_positions.updatedAtMillis) DESC"
+
+/**
  * Every episode of each series a Profile has played any of. See [EpisodeDao.ofPlayedSeries].
  *
  * Joined from the played series rather than asking `EXISTS` of each episode: SQLite 3.22 on Fire OS 7
@@ -2056,7 +2071,8 @@ internal const val SERIES_WITH_PERSON = """
  */
 internal const val EPISODES_OF_PLAYED_SERIES =
     "SELECT episodes.* FROM episodes JOIN (SELECT DISTINCT played.sourceId, played.seriesId " +
-        "FROM playback_positions JOIN episodes AS played ON playback_positions.mediaKey = 'ep:' || played.id " +
+        "FROM playback_positions JOIN episodes AS played ON substr(playback_positions.mediaKey, 1, 3) = 'ep:' " +
+        "AND played.id = CAST(substr(playback_positions.mediaKey, 4) AS INTEGER) " +
         "WHERE playback_positions.profileId = :profileId) AS played_series " +
         "ON episodes.sourceId = played_series.sourceId AND episodes.seriesId = played_series.seriesId"
 
