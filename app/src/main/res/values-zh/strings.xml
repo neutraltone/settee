@@ -348,4 +348,9 @@
     <string name="error_opensubtitles_token_device">OpenSubtitles 已将此设备退出登录。请在设置中重新登录。</string>
     <string name="error_not_a_guide">该地址不是节目指南。请检查链接是否正确，或在 Wi-Fi 要求时登录。</string>
     <string name="settings_guide_bad_address">这不是网址。请检查是否按指南链接所示输入，例如 example.com/guide.xml。</string>
+    <string name="diagnostics_database_failed">Settee 无法读取自己的数据库，因此缺少这些数字。</string>
+    <string name="diagnostics_table_failed">无法统计此表，数据库的一部分可能已损坏。</string>
+    <string name="diagnostics_storage_failed">Settee 无法测量自己的存储空间。</string>
+    <string name="diagnostics_memory_failed">Settee 无法测量自己的内存。</string>
+    <string name="diagnostics_log_failed">Settee 无法读取自己记下的内容，因此缺少此列表。</string>
 </resources>

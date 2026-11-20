@@ -348,4 +348,9 @@
     <string name="error_opensubtitles_token_device">OpenSubtitles je odjavio ovaj uređaj. Ponovno se prijavite u Postavkama.</string>
     <string name="error_not_a_guide">Ta adresa nije vodič. Provjerite je li poveznica ispravna ili se prijavite na Wi-Fi ako to traži.</string>
     <string name="settings_guide_bad_address">To nije web-adresa. Provjerite je li upisana onako kako je prikazuje poveznica vodiča, npr. example.com/guide.xml.</string>
+    <string name="diagnostics_database_failed">Settee nije mogao pročitati svoju bazu podataka, pa ovi brojevi nedostaju.</string>
+    <string name="diagnostics_table_failed">Ova tablica nije se mogla prebrojati, pa je dio baze podataka možda oštećen.</string>
+    <string name="diagnostics_storage_failed">Settee nije mogao izmjeriti svoju pohranu.</string>
+    <string name="diagnostics_memory_failed">Settee nije mogao izmjeriti svoju memoriju.</string>
+    <string name="diagnostics_log_failed">Settee nije mogao pročitati što je zabilježio, pa ovaj popis nedostaje.</string>
 </resources>

@@ -348,4 +348,9 @@
     <string name="error_opensubtitles_token_device">OpenSubtitles wylogował to urządzenie. Zaloguj się ponownie w Ustawieniach.</string>
     <string name="error_not_a_guide">Ten adres nie jest przewodnikiem. Sprawdź, czy to właściwy link, albo zaloguj się do Wi-Fi, jeśli o to prosi.</string>
     <string name="settings_guide_bad_address">To nie jest adres internetowy. Sprawdź, czy jest wpisany tak, jak pokazuje go link przewodnika, np. example.com/guide.xml.</string>
+    <string name="diagnostics_database_failed">Settee nie mógł odczytać swojej bazy danych, więc brakuje tych liczb.</string>
+    <string name="diagnostics_table_failed">Nie udało się policzyć tej tabeli, więc część bazy danych może być uszkodzona.</string>
+    <string name="diagnostics_storage_failed">Settee nie mógł zmierzyć swojej pamięci masowej.</string>
+    <string name="diagnostics_memory_failed">Settee nie mógł zmierzyć swojej pamięci.</string>
+    <string name="diagnostics_log_failed">Settee nie mógł odczytać swoich notatek, więc brakuje tej listy.</string>
 </resources>

@@ -348,4 +348,9 @@
     <string name="error_opensubtitles_token_device">OpenSubtitles излезе от профила на това устройство. Влезте отново от Настройки.</string>
     <string name="error_not_a_guide">Този адрес не е програма. Проверете дали връзката е правилна или влезте в Wi-Fi мрежата, ако ви поиска.</string>
     <string name="settings_guide_bad_address">Това не е уеб адрес. Проверете дали е въведен както в връзката на програмата, например example.com/guide.xml.</string>
+    <string name="diagnostics_database_failed">Settee не можа да прочете базата си данни, затова тези числа липсват.</string>
+    <string name="diagnostics_table_failed">Тази таблица не можа да бъде преброена, затова част от базата данни може да е повредена.</string>
+    <string name="diagnostics_storage_failed">Settee не можа да измери хранилището си.</string>
+    <string name="diagnostics_memory_failed">Settee не можа да измери паметта си.</string>
+    <string name="diagnostics_log_failed">Settee не можа да прочете записаното, затова този списък липсва.</string>
 </resources>

@@ -348,4 +348,9 @@
     <string name="error_opensubtitles_token_device">OpenSubtitles ha disconnesso questo dispositivo. Accedi di nuovo nelle Impostazioni.</string>
     <string name="error_not_a_guide">Quell\'indirizzo non è una guida. Controlla che sia il link giusto, oppure accedi al Wi-Fi se te lo chiede.</string>
     <string name="settings_guide_bad_address">Questo non è un indirizzo web. Controlla che sia scritto come lo mostra il link della guida, ad esempio example.com/guide.xml.</string>
+    <string name="diagnostics_database_failed">Settee non è riuscito a leggere il suo database, quindi questi numeri mancano.</string>
+    <string name="diagnostics_table_failed">Impossibile contare questa tabella, quindi una parte del database potrebbe essere danneggiata.</string>
+    <string name="diagnostics_storage_failed">Settee non è riuscito a misurare il suo spazio di archiviazione.</string>
+    <string name="diagnostics_memory_failed">Settee non è riuscito a misurare la sua memoria.</string>
+    <string name="diagnostics_log_failed">Settee non è riuscito a leggere ciò che aveva annotato, quindi questo elenco manca.</string>
 </resources>

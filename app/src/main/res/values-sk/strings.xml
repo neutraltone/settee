@@ -348,4 +348,9 @@
     <string name="error_opensubtitles_token_device">OpenSubtitles toto zariadenie odhlásili. Prihláste sa znova v Nastaveniach.</string>
     <string name="error_not_a_guide">Táto adresa nie je sprievodca. Skontrolujte, že ide o správny odkaz, alebo sa prihláste do Wi-Fi, ak o to žiada.</string>
     <string name="settings_guide_bad_address">To nie je webová adresa. Skontrolujte, že je zadaná tak, ako ju ukazuje odkaz na sprievodcu, napríklad example.com/guide.xml.</string>
+    <string name="diagnostics_database_failed">Settee nemohol prečítať svoju databázu, preto tieto čísla chýbajú.</string>
+    <string name="diagnostics_table_failed">Túto tabuľku sa nepodarilo spočítať, časť databázy môže byť poškodená.</string>
+    <string name="diagnostics_storage_failed">Settee nemohol zmerať svoje úložisko.</string>
+    <string name="diagnostics_memory_failed">Settee nemohol zmerať svoju pamäť.</string>
+    <string name="diagnostics_log_failed">Settee nemohol prečítať, čo si zapísal, preto tento zoznam chýba.</string>
 </resources>

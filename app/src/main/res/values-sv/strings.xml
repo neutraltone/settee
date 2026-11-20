@@ -348,4 +348,9 @@
     <string name="error_opensubtitles_token_device">OpenSubtitles har loggat ut den här enheten. Logga in igen i Inställningar.</string>
     <string name="error_not_a_guide">Adressen är ingen programguide. Kontrollera att det är rätt länk, eller logga in på ditt wifi om det ber om det.</string>
     <string name="settings_guide_bad_address">Det är ingen webbadress. Kontrollera att den är skriven som guidens länk visar den, till exempel example.com/guide.xml.</string>
+    <string name="diagnostics_database_failed">Settee kunde inte läsa sin databas, så de här siffrorna saknas.</string>
+    <string name="diagnostics_table_failed">Det gick inte att räkna den här tabellen, så en del av databasen kan vara skadad.</string>
+    <string name="diagnostics_storage_failed">Settee kunde inte mäta sitt lagringsutrymme.</string>
+    <string name="diagnostics_memory_failed">Settee kunde inte mäta sitt minne.</string>
+    <string name="diagnostics_log_failed">Settee kunde inte läsa det den hade antecknat, så den här listan saknas.</string>
 </resources>

@@ -348,4 +348,9 @@
     <string name="error_opensubtitles_token_device">OpenSubtitles har logget denne enhed ud. Log ind igen under Indstillinger.</string>
     <string name="error_not_a_guide">Den adresse er ikke en programguide. Tjek, at det er det rigtige link, eller log ind på dit Wi-Fi, hvis det beder om det.</string>
     <string name="settings_guide_bad_address">Det er ikke en webadresse. Tjek, at den er skrevet, som guidens link viser den, fx example.com/guide.xml.</string>
+    <string name="diagnostics_database_failed">Settee kunne ikke læse sin database, så disse tal mangler.</string>
+    <string name="diagnostics_table_failed">Kunne ikke tælle denne tabel, så en del af databasen kan være beskadiget.</string>
+    <string name="diagnostics_storage_failed">Settee kunne ikke måle sin lagerplads.</string>
+    <string name="diagnostics_memory_failed">Settee kunne ikke måle sin hukommelse.</string>
+    <string name="diagnostics_log_failed">Settee kunne ikke læse det, den havde noteret, så denne liste mangler.</string>
 </resources>

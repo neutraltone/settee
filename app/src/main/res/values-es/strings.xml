@@ -348,4 +348,9 @@
     <string name="error_opensubtitles_token_device">OpenSubtitles ha cerrado la sesión de este dispositivo. Vuelve a iniciar sesión en Ajustes.</string>
     <string name="error_not_a_guide">Esa dirección no es una guía. Comprueba que sea el enlace correcto, o inicia sesión en tu Wi-Fi si te lo pide.</string>
     <string name="settings_guide_bad_address">Eso no es una dirección web. Comprueba que esté escrita como la muestra el enlace de la guía, por ejemplo example.com/guide.xml.</string>
+    <string name="diagnostics_database_failed">Settee no pudo leer su base de datos, así que faltan estas cifras.</string>
+    <string name="diagnostics_table_failed">No se pudo contar esta tabla, así que parte de la base de datos puede estar dañada.</string>
+    <string name="diagnostics_storage_failed">Settee no pudo medir su almacenamiento.</string>
+    <string name="diagnostics_memory_failed">Settee no pudo medir su memoria.</string>
+    <string name="diagnostics_log_failed">Settee no pudo leer lo que había anotado, así que falta esta lista.</string>
 </resources>

@@ -348,4 +348,9 @@
     <string name="error_opensubtitles_token_device">OpenSubtitles đã đăng xuất thiết bị này. Hãy đăng nhập lại trong Cài đặt.</string>
     <string name="error_not_a_guide">Địa chỉ đó không phải lịch phát sóng. Kiểm tra xem đó có đúng liên kết không, hoặc đăng nhập Wi-Fi nếu được yêu cầu.</string>
     <string name="settings_guide_bad_address">Đó không phải địa chỉ web. Kiểm tra xem đã nhập đúng như liên kết của lịch phát sóng chưa, ví dụ example.com/guide.xml.</string>
+    <string name="diagnostics_database_failed">Settee không đọc được cơ sở dữ liệu của mình, nên không có các con số này.</string>
+    <string name="diagnostics_table_failed">Không đếm được bảng này, nên một phần cơ sở dữ liệu có thể bị hỏng.</string>
+    <string name="diagnostics_storage_failed">Settee không đo được dung lượng lưu trữ của mình.</string>
+    <string name="diagnostics_memory_failed">Settee không đo được bộ nhớ của mình.</string>
+    <string name="diagnostics_log_failed">Settee không đọc được những gì đã ghi lại, nên không có danh sách này.</string>
 </resources>
