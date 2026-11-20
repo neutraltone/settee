@@ -18,21 +18,23 @@ import app.opentv.ui.design.SkeletonGuide
  * The guide's shape while its rows are first built from channels on the device, in the guide's own
  * measures ([SkeletonGuide]). Its first row takes the Highlight when the guide is to ([takeFocus]), as
  * the real guide's first row would; when the rows come, the guide takes it over as it opens.
+ * [opening] goes on that row's cell too, for the screen to hear the Highlight come and go
+ * ([app.opentv.ui.OpeningPlace]).
  */
 @Composable
-internal fun OpeningGuideSkeleton(takeFocus: Boolean) {
-    val opening = remember { FocusRequester() }
+internal fun OpeningGuideSkeleton(takeFocus: Boolean, opening: Modifier?) {
+    val requester = remember { FocusRequester() }
     LaunchedEffect(takeFocus) {
         if (!takeFocus) return@LaunchedEffect
         // Once laid out, which is when it can take the Highlight.
         withFrameNanos {}
-        runCatching { opening.requestFocus() }
+        runCatching { requester.requestFocus() }
     }
     SkeletonGuide(
         header = HEADER_HEIGHT,
         rowHeight = ROW_HEIGHT,
         channelColumn = CHANNEL_COLUMN,
         halfHour = HALF_HOUR_WIDTH,
-        opening = Modifier.focusRequester(opening),
+        opening = Modifier.focusRequester(requester).then(opening ?: Modifier),
     )
 }

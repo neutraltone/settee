@@ -76,6 +76,7 @@ import app.opentv.ui.design.SetteeColors
 import app.opentv.ui.design.SidebarEntry
 import app.opentv.ui.design.TextField
 import app.opentv.ui.options.LocalConfirmLive
+import app.opentv.ui.rememberOpeningPlace
 import app.opentv.ui.vod.rememberSidebarSlide
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -252,13 +253,17 @@ fun LiveScreen(
             )
             Spacer(Modifier.height(GUIDE_GAP))
             Box(Modifier.weight(1f)) {
+                // The guide's skeleton holds the Highlight while it shows; losing its cell as the rows
+                // come sent the Highlight back to the rail, where the guide wouldn't take it from.
+                val skeleton = rows.isEmpty() && !favouritesOnly && channelsPresent == true && !rowsBuilt
+                val opening = rememberOpeningPlace(placeNow = skeleton)
                 if (rows.isEmpty()) {
                     when {
                         favouritesOnly -> NoFavourites(openSidebar)
                         // Channels on the device and the guide still being built from them, as on
                         // every cold start: the guide's shape, its first row holding the Highlight,
                         // so the rows fill in rather than replace a message (#581).
-                        channelsPresent == true && !rowsBuilt -> OpeningGuideSkeleton(takeFocus)
+                        skeleton -> OpeningGuideSkeleton(takeFocus, opening.modifierIf(true))
                         // Built, with channels on the device, and nothing here: every one is hidden.
                         channelsPresent == true -> NothingToShow(openSidebar)
                         // No channels on the device yet and a sync under way: the first, which takes
@@ -299,7 +304,7 @@ fun LiveScreen(
                             viewModel.nudgeGuideDay(-1)
                         }.takeIf { guideDayOffset > 0 },
                         returnToChannelId = returnToChannelId,
-                        takeFocus = takeFocus,
+                        takeFocus = takeFocus || opening.held,
                         onReturnToRow = { highlighted = it to null },
                         landOnRow = landOn?.first,
                         landAtEnd = landOn?.second == true,

@@ -25,7 +25,8 @@ import app.opentv.ui.vod.CardFocus
 @Stable
 internal class OpeningPlace(private val placeNow: State<Boolean>) {
     /** Whether the place had the Highlight when it went, so the row taking over takes it. */
-    private var held by mutableStateOf(false)
+    var held by mutableStateOf(false)
+        private set
 
     private var handing: CardFocus? = null
 
