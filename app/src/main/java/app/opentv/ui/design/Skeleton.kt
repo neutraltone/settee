@@ -57,7 +57,7 @@ fun ScreenFrameScope.SkeletonShelf(
     Column {
         Text(title, SetteeType.Section, maxLines = 1)
         BoxWithConstraints(Modifier.bleed().padding(vertical = SetteeSpace.LiftRoom)) {
-            val count = cardsToFill(maxWidth - SetteeSpace.ScreenSide, cards)
+            val count = cardsToFill(maxWidth.bounded(FALLBACK_WIDTH) - SetteeSpace.ScreenSide, cards)
             Row(
                 horizontalArrangement = Arrangement.spacedBy(SetteeSpace.CardGap),
                 verticalAlignment = cards.alignment,
@@ -117,8 +117,11 @@ fun SkeletonGrid(modifier: Modifier = Modifier) {
     val cover = ArtCardSize.Portrait
     BoxWithConstraints(modifier.fillMaxSize().padding(vertical = SetteeSpace.LiftRoom)) {
         // As many whole columns as the grid fits, and as many rows as reach the bottom.
-        val columns = ((maxWidth + SetteeSpace.CardGap) / (cover.width + SetteeSpace.CardGap)).toInt().coerceAtLeast(1)
-        val rows = ceil(maxHeight / (cover.height + SetteeSpace.RowGap)).toInt().coerceAtLeast(1)
+        val columns = ((maxWidth.bounded(FALLBACK_WIDTH) + SetteeSpace.CardGap) / (cover.width + SetteeSpace.CardGap))
+            .toInt().coerceAtLeast(1)
+        val rows = ceil(
+            maxHeight.bounded(FALLBACK_HEIGHT) / (cover.height + SetteeSpace.RowGap),
+        ).toInt().coerceAtLeast(1)
         Column(pulse, verticalArrangement = Arrangement.spacedBy(SetteeSpace.RowGap)) {
             repeat(rows) {
                 Row(horizontalArrangement = Arrangement.spacedBy(SetteeSpace.CardGap)) {
@@ -148,8 +151,8 @@ fun SkeletonGuide(
 ) {
     val pulse = rememberSkeletonPulse()
     BoxWithConstraints(modifier.fillMaxSize()) {
-        val rows = ceil((maxHeight - header) / rowHeight).toInt().coerceAtLeast(1)
-        val width = maxWidth
+        val rows = ceil((maxHeight.bounded(FALLBACK_HEIGHT) - header) / rowHeight).toInt().coerceAtLeast(1)
+        val width = maxWidth.bounded(FALLBACK_WIDTH)
         val cell = Modifier.width(channelColumn - GUIDE_GAP).height(rowHeight).padding(vertical = GUIDE_GAP / 2)
         // First, so it's the first blank card in reading order; it sits over the first row's place.
         if (opening != null) {
@@ -191,6 +194,12 @@ fun SkeletonGuide(
         }
     }
 }
+
+/**
+ * This size, or [fallback] when there's no limit (a skeleton inside something that scrolls that way):
+ * the cards and rows are counted to fill the space, which without a limit would never end.
+ */
+private fun Dp.bounded(fallback: Dp): Dp = if (this != Dp.Infinity && !value.isNaN()) this else fallback
 
 /** How many [cards] it takes to reach across [width]: the last may run past the edge, none wholly beyond it. */
 private fun cardsToFill(width: Dp, cards: SkeletonCards): Int {
@@ -264,6 +273,10 @@ private const val PULSE_MILLIS = 1_800L
 
 /** How far the pulse dims the cards: a third, enough to see it breathe, not to see it blink. */
 private const val PULSE_LOW = 0.65f
+
+/** The space a skeleton fills when it has no limit: a 1080p TV screen's. */
+private val FALLBACK_WIDTH = 960.dp
+private val FALLBACK_HEIGHT = 540.dp
 
 /** A guide skeleton's programmes, in half hours, in turn. */
 private val PROGRAMME_HALF_HOURS = listOf(2, 1, 3, 2, 1, 4)

@@ -5,8 +5,14 @@
  */
 package app.opentv
 
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.captureToImage
@@ -14,9 +20,12 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onRoot
+import androidx.compose.ui.unit.dp
 import app.opentv.ui.design.SKELETON_CARD
 import app.opentv.ui.design.ScreenFrame
 import app.opentv.ui.design.SkeletonCards
+import app.opentv.ui.design.SkeletonGrid
+import app.opentv.ui.design.SkeletonGuide
 import app.opentv.ui.design.SkeletonShelf
 import com.google.common.truth.Truth.assertThat
 import org.junit.Rule
@@ -53,6 +62,25 @@ class SkeletonTest {
         }
 
         assertThat(frames.distinct().size).isGreaterThan(1)
+    }
+
+    @Test
+    fun `measured with no limit, as inside something that scrolls, each skeleton still draws`() {
+        compose.mainClock.autoAdvance = false
+        compose.setTvContent {
+            ScreenFrame {
+                Row(Modifier.horizontalScroll(rememberScrollState())) {
+                    Column(Modifier.verticalScroll(rememberScrollState())) {
+                        SkeletonShelf("Row")
+                        Box(Modifier.width(800.dp)) { SkeletonGrid() }
+                        SkeletonGuide(header = 32.dp, rowHeight = 56.dp, channelColumn = 220.dp, halfHour = 120.dp)
+                    }
+                }
+            }
+        }
+        compose.mainClock.advanceTimeBy(100)
+
+        assertThat(compose.onAllNodesWithTag(SKELETON_CARD).fetchSemanticsNodes()).isNotEmpty()
     }
 
     @Test
